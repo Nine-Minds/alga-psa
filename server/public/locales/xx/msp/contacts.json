@@ -1,733 +1,733 @@
 {
   "common": {
     "actions": {
-      "add": "11111",
-      "back": "11111",
-      "cancel": "11111",
-      "close": "11111",
-      "create": "11111",
-      "delete": "11111",
-      "downloadCsv": "11111",
-      "edit": "11111",
-      "import": "11111",
-      "reactivate": "11111",
-      "remove": "11111",
-      "retry": "11111",
-      "save": "11111",
-      "saving": "11111",
-      "search": "11111",
-      "select": "11111",
-      "update": "11111",
-      "uploadCsv": "11111",
-      "view": "11111"
+      "add": "⟦Ȧḓḓ⟧",
+      "back": "⟦Ɓȧƈķ⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "close": "⟦Ƈŀȯşḗ⟧",
+      "create": "⟦Ƈřḗȧŧḗ⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ⟧",
+      "downloadCsv": "⟦Ḓȯẇƞŀȯȧḓ ƇŞṼ⟧",
+      "edit": "⟦Ḗḓīŧ⟧",
+      "import": "⟦Īḿƥȯřŧ⟧",
+      "reactivate": "⟦Řḗȧƈŧīṽȧŧḗ⟧",
+      "remove": "⟦Řḗḿȯṽḗ⟧",
+      "retry": "⟦Řḗŧřẏ⟧",
+      "save": "⟦Şȧṽḗ⟧",
+      "saving": "⟦Şȧṽīƞɠ...⟧",
+      "search": "⟦Şḗȧřƈħ⟧",
+      "select": "⟦Şḗŀḗƈŧ⟧",
+      "update": "⟦Ŭƥḓȧŧḗ⟧",
+      "uploadCsv": "⟦Ŭƥŀȯȧḓ ƇŞṼ⟧",
+      "view": "⟦Ṽīḗẇ⟧"
     },
     "states": {
-      "active": "11111",
-      "inactive": "11111",
-      "loading": "11111",
-      "na": "11111",
-      "none": "11111"
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ⟧",
+      "loading": "⟦Ŀȯȧḓīƞɠ...⟧",
+      "na": "⟦Ƞ/Ȧ⟧",
+      "none": "⟦Ƞȯƞḗ⟧"
     },
-    "no": "11111",
-    "yes": "11111"
+    "no": "⟦Ƞȯ⟧",
+    "yes": "⟦Ẏḗş⟧"
   },
   "contactsPage": {
-    "title": "11111",
-    "description": "11111",
-    "heading": "11111",
-    "addContact": "11111",
-    "actions": "11111",
-    "searchPlaceholder": "11111",
-    "resetFilters": "11111",
-    "unknownClient": "11111",
-    "noClient": "11111",
-    "thisContact": "11111",
-    "actionsMenuSrOnly": "11111",
-    "quickView": "11111",
-    "deleteValidationError": "11111",
-    "deleteSuccess": "11111 {{name}} 11111",
-    "deleteError": "11111",
-    "markInactiveSuccess": "11111 {{name}} 11111",
-    "markInactiveError": "11111",
+    "title": "⟦Ƈȯƞŧȧƈŧş Ƥȧɠḗ⟧",
+    "description": "⟦Ḿȧīƞ ƈȯƞŧȧƈŧş ḿȧƞȧɠḗḿḗƞŧ ƥȧɠḗ ẇīŧħ şḗȧřƈħ, ƒīŀŧḗřş, ŀīşŧ ṽīḗẇ, ȧƞḓ ƀŭŀķ ȧƈŧīȯƞş⟧",
+    "heading": "⟦Ƈȯƞŧȧƈŧş⟧",
+    "addContact": "⟦+ Ȧḓḓ Ƈȯƞŧȧƈŧ⟧",
+    "actions": "⟦Ȧƈŧīȯƞş⟧",
+    "searchPlaceholder": "⟦Şḗȧřƈħ ƈȯƞŧȧƈŧş, ƞȯŧḗş, ȧƞḓ īƞŧḗřȧƈŧīȯƞş⟧",
+    "resetFilters": "⟦Řḗşḗŧ⟧",
+    "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧",
+    "noClient": "⟦Ƞȯ Ƈŀīḗƞŧ⟧",
+    "thisContact": "⟦ŧħīş ƈȯƞŧȧƈŧ⟧",
+    "actionsMenuSrOnly": "⟦Ȯƥḗƞ ḿḗƞŭ⟧",
+    "quickView": "⟦Ɋŭīƈķ Ṽīḗẇ⟧",
+    "deleteValidationError": "⟦Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+    "deleteSuccess": "⟦{{name}} ħȧş ƀḗḗƞ ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ.⟧",
+    "deleteError": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧȧƈŧ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+    "markInactiveSuccess": "⟦{{name}} ħȧş ƀḗḗƞ ḿȧřķḗḓ ȧş īƞȧƈŧīṽḗ şŭƈƈḗşşƒŭŀŀẏ.⟧",
+    "markInactiveError": "⟦Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ ḿȧřķīƞɠ ŧħḗ ƈȯƞŧȧƈŧ ȧş īƞȧƈŧīṽḗ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
     "statusOptions": {
-      "all": "11111",
-      "active": "11111",
-      "inactive": "11111"
+      "all": "⟦Ȧŀŀ ƈȯƞŧȧƈŧş⟧",
+      "active": "⟦Ȧƈŧīṽḗ ƈȯƞŧȧƈŧş⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ ƈȯƞŧȧƈŧş⟧"
     },
     "table": {
-      "name": "11111",
-      "created": "11111",
-      "email": "11111",
-      "phoneNumber": "11111",
-      "client": "11111",
-      "tags": "11111",
-      "actions": "11111"
+      "name": "⟦Ƞȧḿḗ⟧",
+      "created": "⟦Ƈřḗȧŧḗḓ⟧",
+      "email": "⟦Ḗḿȧīŀ⟧",
+      "phoneNumber": "⟦Ƥħȯƞḗ Ƞŭḿƀḗř⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "tags": "⟦Ŧȧɠş⟧",
+      "actions": "⟦Ȧƈŧīȯƞş⟧"
     },
     "lastPhoneTypeUsage": {
-      "title": "11111",
-      "message_one": "11111 {{labels}} 11111",
-      "message_other": "11111 {{labels}} 11111",
-      "deleteType": "11111",
-      "keepType": "11111"
+      "title": "⟦Ŀȧşŧ Ƥħȯƞḗ Ŧẏƥḗ Ŭşȧɠḗ⟧",
+      "message_one": "⟦Ŧħḗ ƒȯŀŀȯẇīƞɠ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ īş ƞȯ ŀȯƞɠḗř ŭşḗḓ ƀẏ ȧƞẏ ƈȯƞŧȧƈŧ: {{labels}}. Ḓḗŀḗŧḗ ŧħḗ ŧẏƥḗ ḓḗƒīƞīŧīȯƞ, ȯř ķḗḗƥ īŧ ƒȯř ƒŭŧŭřḗ ŭşḗ?⟧",
+      "message_other": "⟦Ŧħḗ ƒȯŀŀȯẇīƞɠ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗş ȧřḗ ƞȯ ŀȯƞɠḗř ŭşḗḓ ƀẏ ȧƞẏ ƈȯƞŧȧƈŧ: {{labels}}. Ḓḗŀḗŧḗ ŧħḗ ŧẏƥḗ ḓḗƒīƞīŧīȯƞş, ȯř ķḗḗƥ ŧħḗḿ ƒȯř ƒŭŧŭřḗ ŭşḗ?⟧",
+      "deleteType": "⟦Ḓḗŀḗŧḗ Ŧẏƥḗ⟧",
+      "keepType": "⟦Ķḗḗƥ Ŧẏƥḗ⟧"
     },
     "print": {
-      "title": "11111",
-      "subtitle": "11111 {{count}} 11111",
-      "noContacts": "11111",
-      "emptyValue": "11111",
+      "title": "⟦Ƈȯƞŧȧƈŧş⟧",
+      "subtitle": "⟦{{count}} ƈȯƞŧȧƈŧş⟧",
+      "noContacts": "⟦Ƞȯ ƈȯƞŧȧƈŧş ŧȯ ƥřīƞŧ⟧",
+      "emptyValue": "⟦-⟧",
       "columns": {
-        "name": "11111",
-        "email": "11111",
-        "phone": "11111",
-        "client": "11111",
-        "status": "11111"
+        "name": "⟦Ƞȧḿḗ⟧",
+        "email": "⟦Ḗḿȧīŀ⟧",
+        "phone": "⟦Ƥħȯƞḗ⟧",
+        "client": "⟦Ƈŀīḗƞŧ⟧",
+        "status": "⟦Şŧȧŧŭş⟧"
       },
       "optionsDialog": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ƥřīƞŧ ȯƥŧīȯƞş⟧",
+        "description": "⟦Ƈħȯȯşḗ ẇħīƈħ ƈȯŀŭḿƞş ŧȯ īƞƈŀŭḓḗ ẇħḗƞ ƥřīƞŧīƞɠ ƈȯƞŧȧƈŧş.⟧"
       }
     },
-    "shareTooltip": "11111"
+    "shareTooltip": "⟦Ƥřīƞŧ, īḿƥȯřŧ ȧƞḓ ḗẋƥȯřŧ⟧"
   },
   "contactDetails": {
-    "title": "11111",
-    "description": "11111",
-    "backToContacts": "11111",
-    "inactiveBadge": "11111",
+    "title": "⟦Ƈȯƞŧȧƈŧ Ḓḗŧȧīŀş⟧",
+    "description": "⟦Ƈȯƞŧȧƈŧ ḓḗŧȧīŀ ṽīḗẇ ẇīŧħ ŧȧƀş, īƞŀīƞḗ ḗḓīŧīƞɠ, ƥȯřŧȧŀ ȧƈƈḗşş, ŧȧɠş, ȧƞḓ ƞȯŧḗş⟧",
+    "backToContacts": "⟦Ɓȧƈķ ŧȯ Ƈȯƞŧȧƈŧş⟧",
+    "inactiveBadge": "⟦īƞȧƈŧīṽḗ⟧",
     "actions": {
-      "goToContact": "11111",
-      "saveChanges": "11111"
+      "goToContact": "⟦Ɠȯ ŧȯ ƈȯƞŧȧƈŧ⟧",
+      "saveChanges": "⟦Şȧṽḗ Ƈħȧƞɠḗş⟧"
     },
     "tabs": {
-      "details": "11111",
-      "tickets": "11111",
-      "documents": "11111",
-      "interactions": "11111",
-      "notes": "11111",
-      "portal": "11111"
+      "details": "⟦Ḓḗŧȧīŀş⟧",
+      "tickets": "⟦Ŧīƈķḗŧş⟧",
+      "documents": "⟦Ḓȯƈŭḿḗƞŧş⟧",
+      "interactions": "⟦Īƞŧḗřȧƈŧīȯƞş⟧",
+      "notes": "⟦Ƞȯŧḗş⟧",
+      "portal": "⟦Ƥȯřŧȧŀ⟧"
     },
     "fields": {
-      "fullName": "11111",
-      "client": "11111",
-      "email": "11111",
-      "role": "11111",
-      "inboundTicketDestinationOverride": "11111",
-      "useClientDestination": "11111",
-      "inboundTicketDestinationHelp": "11111",
-      "tags": "11111",
-      "notes": "11111",
-      "status": "11111",
-      "phone": "11111"
+      "fullName": "⟦Ƒŭŀŀ Ƞȧḿḗ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "email": "⟦Ḗḿȧīŀ⟧",
+      "role": "⟦Řȯŀḗ⟧",
+      "inboundTicketDestinationOverride": "⟦Īƞƀȯŭƞḓ ŧīƈķḗŧ ḓḗşŧīƞȧŧīȯƞ ȯṽḗřřīḓḗ⟧",
+      "useClientDestination": "⟦Ŭşḗ ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ⟧",
+      "inboundTicketDestinationHelp": "⟦Īƒ şḗŧ, ŧħīş ȯṽḗřřīḓḗş ŧħḗ ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ ƒȯř ŧħīş ḗẋȧƈŧ şḗƞḓḗř ƈȯƞŧȧƈŧ. Ƥřḗƈḗḓḗƞƈḗ: Ƈȯƞŧȧƈŧ ȯṽḗřřīḓḗ -> Ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ -> Ƥřȯṽīḓḗř ḓḗƒȧŭŀŧ.⟧",
+      "tags": "⟦Ŧȧɠş⟧",
+      "notes": "⟦Ƞȯŧḗş⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "phone": "⟦Ƥħȯƞḗ⟧"
     },
     "status": {
-      "label": "11111",
-      "helper": "11111",
-      "active": "11111",
-      "inactive": "11111"
+      "label": "⟦Şŧȧŧŭş⟧",
+      "helper": "⟦Şḗŧ ƈȯƞŧȧƈŧ şŧȧŧŭş ȧş ȧƈŧīṽḗ ȯř īƞȧƈŧīṽḗ⟧",
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ⟧"
     },
     "loading": {
-      "destinations": "11111",
-      "ticketFilters": "11111"
+      "destinations": "⟦Ŀȯȧḓīƞɠ ḓḗşŧīƞȧŧīȯƞş...⟧",
+      "ticketFilters": "⟦Ŀȯȧḓīƞɠ ŧīƈķḗŧ ƒīŀŧḗřş...⟧"
     },
     "empty": {
-      "notSet": "11111",
-      "unknownClient": "11111"
+      "notSet": "⟦Ƞȯŧ şḗŧ⟧",
+      "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧"
     },
     "client": {
-      "noClientAssigned": "11111"
+      "noClientAssigned": "⟦Ƞȯ ƈŀīḗƞŧ ȧşşīɠƞḗḓ⟧"
     },
     "delete": {
-      "successTitle": "11111",
-      "successDescription": "11111",
-      "validationFailed": "11111",
-      "failed": "11111"
+      "successTitle": "⟦Ƈȯƞŧȧƈŧ Ḓḗŀḗŧḗḓ⟧",
+      "successDescription": "⟦Ƈȯƞŧȧƈŧ ħȧş ƀḗḗƞ ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ.⟧",
+      "validationFailed": "⟦Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+      "failed": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧȧƈŧ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     },
     "deactivate": {
-      "successTitle": "11111",
-      "successDescription": "11111"
+      "successTitle": "⟦Ƈȯƞŧȧƈŧ Ḓḗȧƈŧīṽȧŧḗḓ⟧",
+      "successDescription": "⟦Ƈȯƞŧȧƈŧ ħȧş ƀḗḗƞ ḿȧřķḗḓ ȧş īƞȧƈŧīṽḗ şŭƈƈḗşşƒŭŀŀẏ.⟧"
     },
     "reactivate": {
-      "successTitle": "11111",
-      "successDescription": "11111"
+      "successTitle": "⟦Ƈȯƞŧȧƈŧ Řḗȧƈŧīṽȧŧḗḓ⟧",
+      "successDescription": "⟦Ƈȯƞŧȧƈŧ ħȧş ƀḗḗƞ řḗȧƈŧīṽȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ.⟧"
     },
     "update": {
-      "successTitle": "11111",
-      "successDescription": "11111"
+      "successTitle": "⟦Ƈȯƞŧȧƈŧ Ŭƥḓȧŧḗḓ⟧",
+      "successDescription": "⟦Ƈȯƞŧȧƈŧ ḓḗŧȧīŀş ħȧṽḗ ƀḗḗƞ şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ.⟧"
     },
     "saveFailed": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Şȧṽḗ Ƒȧīŀḗḓ⟧",
+      "description": "⟦Ƈȯŭŀḓ ƞȯŧ şȧṽḗ ƈȯƞŧȧƈŧ ḓḗŧȧīŀş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     },
     "error": {
-      "title": "11111"
+      "title": "⟦Ḗřřȯř⟧"
     },
     "errors": {
-      "permissionDenied": "11111",
-      "markInactiveFailed": "11111",
-      "reactivateFailed": "11111"
+      "permissionDenied": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ. Ƥŀḗȧşḗ ƈȯƞŧȧƈŧ ẏȯŭř ȧḓḿīƞīşŧřȧŧȯř īƒ ẏȯŭ ƞḗḗḓ ȧḓḓīŧīȯƞȧŀ ȧƈƈḗşş.⟧",
+      "markInactiveFailed": "⟦Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ ḿȧřķīƞɠ ŧħḗ ƈȯƞŧȧƈŧ ȧş īƞȧƈŧīṽḗ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+      "reactivateFailed": "⟦Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ řḗȧƈŧīṽȧŧīƞɠ ŧħḗ ƈȯƞŧȧƈŧ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     }
   },
   "contactsImportDialog": {
-    "title": "11111",
-    "description": "11111",
+    "title": "⟦Īḿƥȯřŧ Ƈȯƞŧȧƈŧş⟧",
+    "description": "⟦ƇŞṼ īḿƥȯřŧ ḓīȧŀȯɠ ƒȯř ƈȯƞŧȧƈŧ ḿȧƥƥīƞɠ, ƥřḗṽīḗẇ, ṽȧŀīḓȧŧīȯƞ, ȧƞḓ řḗşŭŀŧş⟧",
     "fields": {
-      "name": "11111",
-      "email": "11111",
-      "defaultPhoneNumber": "11111",
-      "client": "11111",
-      "tags": "11111",
-      "role": "11111",
-      "notes": "11111",
-      "primaryEmailLabel": "11111",
-      "additionalEmails": "11111"
+      "name": "⟦Ƞȧḿḗ *⟧",
+      "email": "⟦Ḗḿȧīŀ *⟧",
+      "defaultPhoneNumber": "⟦Ḓḗƒȧŭŀŧ Ƥħȯƞḗ Ƞŭḿƀḗř⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "tags": "⟦Ŧȧɠş⟧",
+      "role": "⟦Řȯŀḗ⟧",
+      "notes": "⟦Ƞȯŧḗş⟧",
+      "primaryEmailLabel": "⟦Ƥřīḿȧřẏ Ḗḿȧīŀ Ŀȧƀḗŀ⟧",
+      "additionalEmails": "⟦Ȧḓḓīŧīȯƞȧŀ Ḗḿȧīŀ Ȧḓḓřḗşşḗş⟧"
     },
-    "unassigned": "11111",
+    "unassigned": "⟦Şḗŀḗƈŧ ƒīḗŀḓ⟧",
     "errors": {
-      "emptyCsv": "11111",
-      "readingCsv": "11111 {{message}} 11111",
-      "unknownError": "11111",
-      "requiredFieldNotMapped": "11111 {{field}} 11111",
-      "nameRequired": "11111",
-      "emailRequired": "11111",
-      "invalidEmail": "11111",
-      "processingCsv": "11111",
-      "importFailed": "11111"
+      "emptyCsv": "⟦ƇŞṼ ƒīŀḗ īş ḗḿƥŧẏ ȯř īƞṽȧŀīḓ⟧",
+      "readingCsv": "⟦Ḗřřȯř řḗȧḓīƞɠ ƇŞṼ ƒīŀḗ: {{message}}⟧",
+      "unknownError": "⟦Ŭƞķƞȯẇƞ ḗřřȯř⟧",
+      "requiredFieldNotMapped": "⟦Řḗʠŭīřḗḓ ƒīḗŀḓ \"{{field}}\" īş ƞȯŧ ḿȧƥƥḗḓ⟧",
+      "nameRequired": "⟦Ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",
+      "emailRequired": "⟦Ḗḿȧīŀ īş řḗʠŭīřḗḓ⟧",
+      "invalidEmail": "⟦Īƞṽȧŀīḓ ḗḿȧīŀ ƒȯřḿȧŧ⟧",
+      "processingCsv": "⟦Ḗřřȯř ƥřȯƈḗşşīƞɠ ƇŞṼ ḓȧŧȧ⟧",
+      "importFailed": "⟦Īḿƥȯřŧ ƒȧīŀḗḓ⟧"
     },
     "importOptions": {
       "updateExisting": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ŭƥḓȧŧḗ ḗẋīşŧīƞɠ ƈȯƞŧȧƈŧş⟧",
+        "description": "⟦Řḗƥŀȧƈḗ ḓȧŧȧ ƒȯř ḗẋīşŧīƞɠ ƈȯƞŧȧƈŧş⟧"
       },
       "skipInvalid": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Şķīƥ īƞṽȧŀīḓ řḗƈȯřḓş⟧",
+        "description": "⟦Ƈȯƞŧīƞŭḗ īḿƥȯřŧ ḗṽḗƞ īƒ şȯḿḗ řḗƈȯřḓş ħȧṽḗ ṽȧŀīḓȧŧīȯƞ ḗřřȯřş⟧"
       }
     },
     "results": {
-      "title": "11111",
-      "downloadFailedRecords": "11111"
+      "title": "⟦Īḿƥȯřŧ Řḗşŭŀŧş⟧",
+      "downloadFailedRecords": "⟦Ḓȯẇƞŀȯȧḓ Ƒȧīŀḗḓ Řḗƈȯřḓş⟧"
     },
     "table": {
-      "status": "11111",
-      "name": "11111",
-      "email": "11111",
-      "message": "11111",
-      "exists": "11111",
-      "issues": "11111"
+      "status": "⟦Şŧȧŧŭş⟧",
+      "name": "⟦Ƞȧḿḗ⟧",
+      "email": "⟦Ḗḿȧīŀ⟧",
+      "message": "⟦Ḿḗşşȧɠḗ⟧",
+      "exists": "⟦Ḗẋīşŧş⟧",
+      "issues": "⟦Īşşŭḗş⟧"
     },
     "tooltips": {
-      "importSuccessful": "11111",
-      "importFailed": "11111",
-      "validReady": "11111",
-      "invalidHasErrors": "11111"
+      "importSuccessful": "⟦Īḿƥȯřŧ şŭƈƈḗşşƒŭŀ⟧",
+      "importFailed": "⟦Īḿƥȯřŧ ƒȧīŀḗḓ⟧",
+      "validReady": "⟦Ṽȧŀīḓ - Řḗȧḓẏ ŧȯ īḿƥȯřŧ⟧",
+      "invalidHasErrors": "⟦Īƞṽȧŀīḓ - Ħȧş ḗřřȯřş⟧"
     },
     "upload": {
-      "help": "11111",
-      "requiredLabel": "11111",
-      "contactFieldsLabel": "11111",
-      "contactFieldsDescription": "11111",
-      "clientFieldLabel": "11111",
-      "clientFieldDescription": "11111",
-      "noteLabel": "11111",
-      "noteDescription": "11111",
-      "downloadTemplate": "11111",
-      "emailFieldsLabel": "11111",
-      "emailFieldsDescription": "11111",
-      "hybridEmailNote": "11111"
+      "help": "⟦Ŭƥŀȯȧḓ ȧ ƇŞṼ ƒīŀḗ ẇīŧħ ƈȯƞŧȧƈŧ ḓȧŧȧ⟧",
+      "requiredLabel": "⟦Řḗʠŭīřḗḓ:⟧",
+      "contactFieldsLabel": "⟦Ƈȯƞŧȧƈŧ ƒīḗŀḓş:⟧",
+      "contactFieldsDescription": "⟦ƥħȯƞḗ_ƞŭḿƀḗř (īḿƥȯřŧş ȧş ŧħḗ ḓḗƒȧŭŀŧ ẇȯřķ ƥħȯƞḗ), řȯŀḗ, ƞȯŧḗş, ŧȧɠş⟧",
+      "clientFieldLabel": "⟦Ƈŀīḗƞŧ ƒīḗŀḓ:⟧",
+      "clientFieldDescription": "⟦ƈŀīḗƞŧ (ḿȧŧƈħḗş ḗẋīşŧīƞɠ ƈŀīḗƞŧş ƀẏ ƞȧḿḗ)⟧",
+      "noteLabel": "⟦Ƞȯŧḗ:⟧",
+      "noteDescription": "⟦ƇŞṼ īḿƥȯřŧ/ḗẋƥȯřŧ īƞ ṽ1 ħȧƞḓŀḗş ȯƞḗ ḓḗƒȧŭŀŧ ƥħȯƞḗ ƞŭḿƀḗř ƥḗř ƈȯƞŧȧƈŧ. Ŧȧɠş şħȯŭŀḓ ƀḗ ƈȯḿḿȧ-şḗƥȧřȧŧḗḓ ṽȧŀŭḗş.⟧",
+      "downloadTemplate": "⟦Ḓȯẇƞŀȯȧḓ ƇŞṼ Ŧḗḿƥŀȧŧḗ⟧",
+      "emailFieldsLabel": "⟦Ḗḿȧīŀ ƒīḗŀḓş:⟧",
+      "emailFieldsDescription": "⟦ƥřīḿȧřẏ_ḗḿȧīŀ_ŧẏƥḗ (ẇȯřķ/ƥḗřşȯƞȧŀ/ƀīŀŀīƞɠ/ȯŧħḗř ȯř ȧ ƈŭşŧȯḿ ŀȧƀḗŀ), ȧḓḓīŧīȯƞȧŀ_ḗḿȧīŀ_ȧḓḓřḗşşḗş (ŭşḗ `ŀȧƀḗŀ:ḗḿȧīŀ@ḗẋȧḿƥŀḗ.ƈȯḿ | ŀȧƀḗŀ:ḗḿȧīŀ@ḗẋȧḿƥŀḗ.ƈȯḿ`)⟧",
+      "hybridEmailNote": "⟦ƇŞṼ īḿƥȯřŧ/ḗẋƥȯřŧ ķḗḗƥş `ḗḿȧīŀ` ȧş ŧħḗ ƥřīḿȧřẏ/ḓḗƒȧŭŀŧ ƈȯƞŧȧƈŧ ḗḿȧīŀ. Ŧȧɠş şħȯŭŀḓ ƀḗ ƈȯḿḿȧ-şḗƥȧřȧŧḗḓ ṽȧŀŭḗş.⟧"
     },
     "mapping": {
-      "title": "11111",
-      "description": "11111",
-      "contactFieldHeader": "11111",
-      "csvColumnHeader": "11111",
-      "notMapped": "11111",
-      "requiredFieldsNote": "11111",
-      "largeImportWarning": "11111 {{count}} 11111",
-      "processing": "11111",
-      "preview": "11111"
+      "title": "⟦Ḿȧƥ Ƈȯƞŧȧƈŧ Ƒīḗŀḓş ŧȯ ƇŞṼ Ƈȯŀŭḿƞş⟧",
+      "description": "⟦Şḗŀḗƈŧ ẇħīƈħ ƇŞṼ ƈȯŀŭḿƞ ƈȯƞŧȧīƞş ŧħḗ ḓȧŧȧ ƒȯř ḗȧƈħ ƈȯƞŧȧƈŧ ƒīḗŀḓ. Ƒīḗŀḓş ḿȧřķḗḓ ẇīŧħ * ȧřḗ řḗʠŭīřḗḓ.⟧",
+      "contactFieldHeader": "⟦Ƈȯƞŧȧƈŧ Ƒīḗŀḓ⟧",
+      "csvColumnHeader": "⟦Şḗŀḗƈŧ ƇŞṼ Ƈȯŀŭḿƞ⟧",
+      "notMapped": "⟦Ƞȯŧ ḿȧƥƥḗḓ⟧",
+      "requiredFieldsNote": "⟦* Řḗʠŭīřḗḓ ƒīḗŀḓş ḿŭşŧ ƀḗ ḿȧƥƥḗḓ ƒȯř īḿƥȯřŧ ŧȯ ƥřȯƈḗḗḓ⟧",
+      "largeImportWarning": "⟦Ẏȯŭ ȧřḗ īḿƥȯřŧīƞɠ {{count}} řḗƈȯřḓş. Ƥřȯƈḗşşīƞɠ ḿȧẏ ŧȧķḗ ȧ ḿȯḿḗƞŧ.⟧",
+      "processing": "⟦Ƥřȯƈḗşşīƞɠ...⟧",
+      "preview": "⟦Ƥřḗṽīḗẇ⟧"
     },
     "preview": {
-      "title": "11111",
-      "totalRecords": "11111",
-      "valid": "11111",
-      "invalid": "11111"
+      "title": "⟦Ƥřḗṽīḗẇ Īḿƥȯřŧ⟧",
+      "totalRecords": "⟦Ŧȯŧȧŀ řḗƈȯřḓş:⟧",
+      "valid": "⟦Ṽȧŀīḓ:⟧",
+      "invalid": "⟦Īƞṽȧŀīḓ:⟧"
     },
     "importing": {
-      "title": "11111",
-      "processing": "11111 {{current}} 11111 {{total}} 11111",
-      "currentItem": "11111 {{item}} 11111"
+      "title": "⟦Īḿƥȯřŧīƞɠ Ƈȯƞŧȧƈŧş⟧",
+      "processing": "⟦Ƥřȯƈḗşşīƞɠ: {{current}} ȯƒ {{total}}⟧",
+      "currentItem": "⟦Ƈŭřřḗƞŧŀẏ ƥřȯƈḗşşīƞɠ: {{item}}⟧"
     },
     "complete": {
-      "title": "11111",
-      "successMessage": "11111 {{count}} 11111"
+      "title": "⟦Īḿƥȯřŧ Ƈȯḿƥŀḗŧḗ⟧",
+      "successMessage": "⟦Şŭƈƈḗşşƒŭŀŀẏ īḿƥȯřŧḗḓ {{count}} ƈȯƞŧȧƈŧş⟧"
     },
     "confirmUpdate": {
-      "title": "11111",
-      "message": "11111 {{count}} 11111"
+      "title": "⟦Ŭƥḓȧŧḗ Ḗẋīşŧīƞɠ Ƈȯƞŧȧƈŧş⟧",
+      "message": "⟦{{count}} ƈȯƞŧȧƈŧş ȧŀřḗȧḓẏ ḗẋīşŧ. Ḓȯ ẏȯŭ ẇȧƞŧ ŧȯ ŭƥḓȧŧḗ ŧħḗḿ ẇīŧħ ŧħḗ ƞḗẇ ḓȧŧȧ?⟧"
     }
   },
   "contactEmailAddressesEditor": {
-    "title": "11111",
-    "description": "11111",
+    "title": "⟦Ḗḿȧīŀ Ȧḓḓřḗşşḗş⟧",
+    "description": "⟦Ȧḓḓ ȯƞḗ ȯř ḿȯřḗ ḗḿȧīŀ ȧḓḓřḗşşḗş ȧƞḓ ƈħȯȯşḗ ḗẋȧƈŧŀẏ ȯƞḗ ḓḗƒȧŭŀŧ.⟧",
     "actions": {
-      "addEmail": "11111"
+      "addEmail": "⟦Ȧḓḓ Ḗḿȧīŀ⟧"
     },
     "emailTypes": {
-      "work": "11111",
-      "personal": "11111",
-      "billing": "11111",
-      "other": "11111",
-      "custom": "11111"
+      "work": "⟦Ẇȯřķ⟧",
+      "personal": "⟦Ƥḗřşȯƞȧŀ⟧",
+      "billing": "⟦Ɓīŀŀīƞɠ⟧",
+      "other": "⟦Ȯŧħḗř⟧",
+      "custom": "⟦Ƈŭşŧȯḿ⟧"
     },
     "primary": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ƥřīḿȧřẏ ḗḿȧīŀ⟧",
+      "description": "⟦Ŧħīş řḗḿȧīƞş ŧħḗ ḓḗƒȧŭŀŧ ȧḓḓřḗşş şŧȯřḗḓ ȯƞ ŧħḗ ƈȯƞŧȧƈŧ řḗƈȯřḓ⟧"
     },
     "row": {
-      "title": "11111 {{number}} 11111",
-      "secondaryDescription": "11111",
-      "defaultLabel": "11111",
-      "noEmailYet": "11111",
-      "editLabel": "11111",
-      "edit": "11111 {{number}} 11111",
-      "doneLabel": "11111",
-      "done": "11111 {{number}} 11111",
-      "moveUp": "11111 {{number}} 11111",
-      "moveDown": "11111 {{number}} 11111",
-      "remove": "11111 {{number}} 11111"
+      "title": "⟦Ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}}⟧",
+      "secondaryDescription": "⟦Şŧȯřḗḓ ȧş ȧ ƞȯƞ-ḓḗƒȧŭŀŧ ḗḿȧīŀ ȧḓḓřḗşş⟧",
+      "defaultLabel": "⟦Ḓḗƒȧŭŀŧ⟧",
+      "noEmailYet": "⟦Ƞȯ ḗḿȧīŀ ḗƞŧḗřḗḓ ẏḗŧ⟧",
+      "editLabel": "⟦Ḗḓīŧ⟧",
+      "edit": "⟦Ḗḓīŧ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}}⟧",
+      "doneLabel": "⟦Ḓȯƞḗ⟧",
+      "done": "⟦Ḓȯƞḗ ḗḓīŧīƞɠ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}}⟧",
+      "moveUp": "⟦Ḿȯṽḗ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}} ŭƥ⟧",
+      "moveDown": "⟦Ḿȯṽḗ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}} ḓȯẇƞ⟧",
+      "remove": "⟦Řḗḿȯṽḗ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}}⟧"
     },
     "fields": {
-      "emailAddress": "11111",
-      "emailPlaceholder": "11111",
-      "emailLabel": "11111",
-      "customEmailLabel": "11111",
-      "customTypePlaceholder": "11111",
-      "customTypeSearchPlaceholder": "11111",
-      "customTypeEmpty": "11111",
-      "customTypeUseValue": "11111 {{value}} 11111"
+      "emailAddress": "⟦Ḗḿȧīŀ Ȧḓḓřḗşş⟧",
+      "emailPlaceholder": "⟦ƞȧḿḗ@ḗẋȧḿƥŀḗ.ƈȯḿ⟧",
+      "emailLabel": "⟦Ḗḿȧīŀ Ŀȧƀḗŀ⟧",
+      "customEmailLabel": "⟦Ƈŭşŧȯḿ Ḗḿȧīŀ Ŀȧƀḗŀ⟧",
+      "customTypePlaceholder": "⟦Şḗŀḗƈŧ ȯř ḗƞŧḗř ȧ ƈŭşŧȯḿ ḗḿȧīŀ ŀȧƀḗŀ⟧",
+      "customTypeSearchPlaceholder": "⟦Şḗȧřƈħ ȯř ḗƞŧḗř ȧ ƈŭşŧȯḿ ḗḿȧīŀ ŀȧƀḗŀ...⟧",
+      "customTypeEmpty": "⟦Ƞȯ ḿȧŧƈħīƞɠ ƈŭşŧȯḿ ḗḿȧīŀ ŀȧƀḗŀş.⟧",
+      "customTypeUseValue": "⟦Ŭşḗ \"{{value}}\"⟧"
     }
   },
   "contactPhoneNumbersEditor": {
-    "title": "11111",
-    "description": "11111",
+    "title": "⟦Ƥħȯƞḗ Ƞŭḿƀḗřş⟧",
+    "description": "⟦Ƥħȯƞḗ ƞŭḿƀḗř ḗḓīŧȯř ẇīŧħ ŧẏƥḗ ḿȧƞȧɠḗḿḗƞŧ, ṽȧŀīḓȧŧīȯƞ, ḓḗƒȧŭŀŧş, ȧƞḓ ḗẋŧḗƞşīȯƞ şŭƥƥȯřŧ⟧",
     "actions": {
-      "addPhone": "11111"
+      "addPhone": "⟦Ȧḓḓ ƥħȯƞḗ⟧"
     },
-    "empty": "11111",
+    "empty": "⟦Ƞȯ ƥħȯƞḗ ƞŭḿƀḗřş ẏḗŧ.⟧",
     "phoneTypes": {
-      "work": "11111",
-      "mobile": "11111",
-      "home": "11111",
-      "fax": "11111",
-      "other": "11111",
-      "custom": "11111"
+      "work": "⟦Ẇȯřķ⟧",
+      "mobile": "⟦Ḿȯƀīŀḗ⟧",
+      "home": "⟦Ħȯḿḗ⟧",
+      "fax": "⟦Ƒȧẋ⟧",
+      "other": "⟦Ȯŧħḗř⟧",
+      "custom": "⟦Ƈŭşŧȯḿ⟧"
     },
     "row": {
-      "title": "11111 {{number}} 11111",
-      "defaultDescription": "11111",
-      "secondaryDescription": "11111",
-      "defaultLabel": "11111",
-      "moveUp": "11111 {{number}} 11111",
-      "moveDown": "11111 {{number}} 11111",
-      "remove": "11111 {{number}} 11111"
+      "title": "⟦Ƥħȯƞḗ {{number}}⟧",
+      "defaultDescription": "⟦Ḓḗƒȧŭŀŧ ƥħȯƞḗ ƞŭḿƀḗř⟧",
+      "secondaryDescription": "⟦Şḗƈȯƞḓȧřẏ ƥħȯƞḗ ƞŭḿƀḗř⟧",
+      "defaultLabel": "⟦Ḓḗƒȧŭŀŧ⟧",
+      "moveUp": "⟦Ḿȯṽḗ ƥħȯƞḗ {{number}} ŭƥ⟧",
+      "moveDown": "⟦Ḿȯṽḗ ƥħȯƞḗ {{number}} ḓȯẇƞ⟧",
+      "remove": "⟦Řḗḿȯṽḗ ƥħȯƞḗ {{number}}⟧"
     },
     "fields": {
-      "phoneNumber": "11111",
-      "extension": "11111",
-      "phoneType": "11111",
-      "customPhoneType": "11111",
-      "customTypePlaceholder": "11111",
-      "customTypeSearchPlaceholder": "11111",
-      "customTypeEmpty": "11111",
-      "customTypeUseValue": "11111 {{value}} 11111"
+      "phoneNumber": "⟦Ƥħȯƞḗ⟧",
+      "extension": "⟦Ḗẋŧḗƞşīȯƞ⟧",
+      "phoneType": "⟦Ƥħȯƞḗ Ŧẏƥḗ⟧",
+      "customPhoneType": "⟦Ƈŭşŧȯḿ Ƥħȯƞḗ Ŧẏƥḗ⟧",
+      "customTypePlaceholder": "⟦Şḗŀḗƈŧ ȯř ḗƞŧḗř ȧ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ⟧",
+      "customTypeSearchPlaceholder": "⟦Şḗȧřƈħ ȯř ḗƞŧḗř ȧ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ...⟧",
+      "customTypeEmpty": "⟦Ƞȯ ḿȧŧƈħīƞɠ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗş.⟧",
+      "customTypeUseValue": "⟦Ŭşḗ \"{{value}}\"⟧"
     },
     "validation": {
-      "selectExactlyOneDefault": "11111",
-      "phoneRow": "11111 {{number}} 11111",
-      "enterCompletePhoneNumber": "11111",
-      "includeCountryCallingCode": "11111",
-      "enterCustomPhoneType": "11111",
-      "customTypesUnique": "11111"
+      "selectExactlyOneDefault": "⟦Şḗŀḗƈŧ ḗẋȧƈŧŀẏ ȯƞḗ ḓḗƒȧŭŀŧ ƥħȯƞḗ ƞŭḿƀḗř.⟧",
+      "phoneRow": "⟦Ƥħȯƞḗ {{number}}⟧",
+      "enterCompletePhoneNumber": "⟦Ḗƞŧḗř ȧ ƈȯḿƥŀḗŧḗ ƥħȯƞḗ ƞŭḿƀḗř.⟧",
+      "includeCountryCallingCode": "⟦Īƞƈŀŭḓḗ ŧħḗ ƈȯŭƞŧřẏ ƈȧŀŀīƞɠ ƈȯḓḗ, şŧȧřŧīƞɠ ẇīŧħ +.⟧",
+      "enterCustomPhoneType": "⟦Ḗƞŧḗř ȧ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ.⟧",
+      "customTypesUnique": "⟦Ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ ŀȧƀḗŀş ḿŭşŧ ƀḗ ŭƞīʠŭḗ.⟧"
     },
     "lastTypeUsage": {
-      "title": "11111",
-      "message": "11111 {{label}} 11111",
-      "removeAndDelete": "11111",
-      "removeAndKeep": "11111"
+      "title": "⟦Ŀȧşŧ Ƥħȯƞḗ Ŧẏƥḗ Ŭşȧɠḗ⟧",
+      "message": "⟦Ŧħīş īş ŧħḗ ŀȧşŧ ŭşḗ ȯƒ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ \"{{label}}\". Ḓḗŀḗŧḗ ŧħḗ ŧẏƥḗ ḓḗƒīƞīŧīȯƞ, ȯř ķḗḗƥ īŧ ƒȯř ƒŭŧŭřḗ ŭşḗ?⟧",
+      "removeAndDelete": "⟦Řḗḿȯṽḗ & Ḓḗŀḗŧḗ Ŧẏƥḗ⟧",
+      "removeAndKeep": "⟦Řḗḿȯṽḗ & Ķḗḗƥ Ŧẏƥḗ⟧"
     }
   },
   "contactPortalTab": {
-    "boardCount_one": "11111 {{count}} 11111",
-    "boardCount_other": "11111 {{count}} 11111",
-    "title": "11111",
-    "description": "11111",
-    "loadingDescription": "11111",
-    "information": "11111",
-    "activeAccess": "11111",
+    "boardCount_one": "⟦{{count}} ƀȯȧřḓ⟧",
+    "boardCount_other": "⟦{{count}} ƀȯȧřḓş⟧",
+    "title": "⟦Ƥȯřŧȧŀ Ȧƈƈḗşş⟧",
+    "description": "⟦Ƈŀīḗƞŧ ƥȯřŧȧŀ ȧƈƈḗşş ḿȧƞȧɠḗḿḗƞŧ ƒȯř ȧ ƈȯƞŧȧƈŧ, īƞƈŀŭḓīƞɠ īƞṽīŧȧŧīȯƞş ȧƞḓ řȯŀḗ ŭƥḓȧŧḗş⟧",
+    "loadingDescription": "⟦Ŀȯȧḓīƞɠ ƥȯřŧȧŀ īƞƒȯřḿȧŧīȯƞ...⟧",
+    "information": "⟦Īƞṽīŧȧŧīȯƞ ḗḿȧīŀş ẇīŀŀ ƀḗ şḗƞŧ ƒřȯḿ ẏȯŭř ȯřɠȧƞīẑȧŧīȯƞ'ş ḗḿȧīŀ şẏşŧḗḿ. Řḗƥŀīḗş ẇīŀŀ ɠȯ ŧȯ ẏȯŭř ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ŀȯƈȧŧīȯƞ ḗḿȧīŀ ȧḓḓřḗşş.⟧",
+    "activeAccess": "⟦Ƥȯřŧȧŀ ȧƈƈḗşş ȧƈŧīṽḗ⟧",
     "noAccess": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ƞȯ Ƥȯřŧȧŀ Ȧƈƈḗşş⟧",
+      "description": "⟦Ŧħīş ƈȯƞŧȧƈŧ ḓȯḗş ƞȯŧ ħȧṽḗ ƈŀīḗƞŧ ƥȯřŧȧŀ ȧƈƈḗşş ẏḗŧ⟧"
     },
     "noClient": {
-      "description": "11111"
+      "description": "⟦Ȧşşīɠƞ ŧħīş ƈȯƞŧȧƈŧ ŧȯ ȧ ƈŀīḗƞŧ ŧȯ ḿȧƞȧɠḗ ƥȯřŧȧŀ ȧƈƈḗşş.⟧"
     },
     "portalAdmin": {
-      "label": "11111",
-      "helper": "11111"
+      "label": "⟦Ƥȯřŧȧŀ Ȧḓḿīƞīşŧřȧŧȯř⟧",
+      "helper": "⟦Ẇħḗƞ ḗƞȧƀŀḗḓ, ŧħḗ ŭşḗř ẇīŀŀ ƀḗ ƈřḗȧŧḗḓ ẇīŧħ Ƈŀīḗƞŧ Ȧḓḿīƞ řȯŀḗ. Ẇħḗƞ ḓīşȧƀŀḗḓ, ŧħḗẏ'ŀŀ ɠḗŧ Ƈŀīḗƞŧ Ŭşḗř řȯŀḗ.⟧"
     },
     "roles": {
-      "label": "11111",
-      "none": "11111",
-      "placeholder": "11111",
-      "addButton": "11111"
+      "label": "⟦Ƥȯřŧȧŀ Řȯŀḗş⟧",
+      "none": "⟦Ƞȯ řȯŀḗş ȧşşīɠƞḗḓ⟧",
+      "placeholder": "⟦Şḗŀḗƈŧ řȯŀḗ ŧȯ ȧḓḓ⟧",
+      "addButton": "⟦Ȧḓḓ Řȯŀḗ⟧"
     },
     "userStatus": {
-      "label": "11111",
-      "active": "11111",
-      "inactive": "11111"
+      "label": "⟦Ŭşḗř Şŧȧŧŭş⟧",
+      "active": "⟦Ŭşḗř īş ƈŭřřḗƞŧŀẏ ȧƈŧīṽḗ⟧",
+      "inactive": "⟦Ŭşḗř īş ƈŭřřḗƞŧŀẏ īƞȧƈŧīṽḗ⟧"
     },
     "lastLogin": {
-      "label": "11111",
-      "via": "11111 {{method}} 11111"
+      "label": "⟦Ŀȧşŧ Ŀȯɠīƞ⟧",
+      "via": "⟦ṽīȧ {{method}}⟧"
     },
     "history": {
-      "title": "11111",
-      "description": "11111",
-      "empty": "11111",
-      "sentPrefix": "11111",
-      "expiresPrefix": "11111",
-      "usedPrefix": "11111",
+      "title": "⟦Īƞṽīŧȧŧīȯƞ Ħīşŧȯřẏ⟧",
+      "description": "⟦Řḗƈḗƞŧ ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞş şḗƞŧ ŧȯ ŧħīş ƈȯƞŧȧƈŧ⟧",
+      "empty": "⟦Ƞȯ ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞş ħȧṽḗ ƀḗḗƞ şḗƞŧ ŧȯ ŧħīş ƈȯƞŧȧƈŧ ẏḗŧ.⟧",
+      "sentPrefix": "⟦Şḗƞŧ:⟧",
+      "expiresPrefix": "⟦Ḗẋƥīřḗş:⟧",
+      "usedPrefix": "⟦Ŭşḗḓ:⟧",
       "status": {
-        "pending": "11111",
-        "used": "11111",
-        "expired": "11111",
-        "revoked": "11111"
+        "pending": "⟦Ƥḗƞḓīƞɠ⟧",
+        "used": "⟦Ŭşḗḓ⟧",
+        "expired": "⟦Ḗẋƥīřḗḓ⟧",
+        "revoked": "⟦Řḗṽȯķḗḓ⟧"
       }
     },
     "actions": {
-      "sendInvitation": "11111",
-      "sending": "11111",
-      "refresh": "11111",
-      "refreshing": "11111",
-      "resend": "11111",
-      "resending": "11111",
-      "revoke": "11111"
+      "sendInvitation": "⟦Şḗƞḓ Ƥȯřŧȧŀ Īƞṽīŧȧŧīȯƞ⟧",
+      "sending": "⟦Şḗƞḓīƞɠ...⟧",
+      "refresh": "⟦Řḗƒřḗşħ⟧",
+      "refreshing": "⟦Řḗƒřḗşħīƞɠ...⟧",
+      "resend": "⟦Řḗşḗƞḓ⟧",
+      "resending": "⟦Řḗşḗƞḓīƞɠ...⟧",
+      "revoke": "⟦Řḗṽȯķḗ⟧"
     },
     "toast": {
-      "successTitle": "11111",
-      "errorTitle": "11111",
-      "permissionDeniedTitle": "11111",
-      "loadError": "11111",
-      "refreshHistoryError": "11111",
-      "sendInvitePermissionDenied": "11111",
-      "sendInviteSuccess": "11111",
-      "sendInviteFailed": "11111",
-      "revokeInviteSuccess": "11111",
-      "revokeInviteFailed": "11111",
-      "resendInviteSuccess": "11111",
-      "resendInviteFailed": "11111",
-      "updatePortalSettingsPermissionDenied": "11111",
-      "portalAdminEnabled": "11111",
-      "portalAdminDisabled": "11111",
-      "updatePortalAdminFailed": "11111",
-      "updateAdminFailed": "11111",
-      "updateRolesPermissionDenied": "11111",
-      "roleAdded": "11111",
-      "addRoleFailed": "11111",
-      "roleRemoved": "11111",
-      "removeRoleFailed": "11111",
-      "updateStatusPermissionDenied": "11111",
-      "userActivated": "11111",
-      "userDeactivated": "11111",
-      "updateUserStatusFailed": "11111",
+      "successTitle": "⟦Şŭƈƈḗşş⟧",
+      "errorTitle": "⟦Ḗřřȯř⟧",
+      "permissionDeniedTitle": "⟦Ƥḗřḿīşşīȯƞ Ḓḗƞīḗḓ⟧",
+      "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥȯřŧȧŀ īƞƒȯřḿȧŧīȯƞ⟧",
+      "refreshHistoryError": "⟦Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ īƞṽīŧȧŧīȯƞ ħīşŧȯřẏ⟧",
+      "sendInvitePermissionDenied": "⟦Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ şḗƞḓ īƞṽīŧȧŧīȯƞş⟧",
+      "sendInviteSuccess": "⟦Ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞ şḗƞŧ şŭƈƈḗşşƒŭŀŀẏ!⟧",
+      "sendInviteFailed": "⟦Ƒȧīŀḗḓ ŧȯ şḗƞḓ īƞṽīŧȧŧīȯƞ⟧",
+      "revokeInviteSuccess": "⟦Īƞṽīŧȧŧīȯƞ řḗṽȯķḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "revokeInviteFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗṽȯķḗ īƞṽīŧȧŧīȯƞ⟧",
+      "resendInviteSuccess": "⟦Ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞ řḗşḗƞŧ şŭƈƈḗşşƒŭŀŀẏ!⟧",
+      "resendInviteFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗşḗƞḓ īƞṽīŧȧŧīȯƞ⟧",
+      "updatePortalSettingsPermissionDenied": "⟦Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ŭƥḓȧŧḗ ƈŀīḗƞŧ şḗŧŧīƞɠş⟧",
+      "portalAdminEnabled": "⟦Ƈȯƞŧȧƈŧ ḿȧřķḗḓ ȧş ȧḓḿīƞ ƒȯř ƈŀīḗƞŧ ƥȯřŧȧŀ⟧",
+      "portalAdminDisabled": "⟦Ƈȯƞŧȧƈŧ ŭƞḿȧřķḗḓ ȧş ȧḓḿīƞ ƒȯř ƈŀīḗƞŧ ƥȯřŧȧŀ⟧",
+      "updatePortalAdminFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ şŧȧŧŭş⟧",
+      "updateAdminFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ȧḓḿīƞ ƒŀȧɠ⟧",
+      "updateRolesPermissionDenied": "⟦Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ŭƥḓȧŧḗ ŭşḗř řȯŀḗş⟧",
+      "roleAdded": "⟦Řȯŀḗ ȧḓḓḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "addRoleFailed": "⟦Ƒȧīŀḗḓ ŧȯ ȧḓḓ řȯŀḗ⟧",
+      "roleRemoved": "⟦Řȯŀḗ řḗḿȯṽḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "removeRoleFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ řȯŀḗ⟧",
+      "updateStatusPermissionDenied": "⟦Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ŭƥḓȧŧḗ ŭşḗř şŧȧŧŭş⟧",
+      "userActivated": "⟦Ŭşḗř ȧƈŧīṽȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "userDeactivated": "⟦Ŭşḗř ḓḗȧƈŧīṽȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "updateUserStatusFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŭşḗř şŧȧŧŭş⟧",
       "errors": {
-        "permissionDeniedInvite": "11111",
-        "emailNotConfigured": "11111",
-        "contactNotFound": "11111",
-        "contactMissingEmail": "11111",
-        "contactInvalidEmail": "11111",
-        "userExistsForContact": "11111",
-        "noDefaultClient": "11111",
-        "noDefaultLocation": "11111",
-        "noLocationEmail": "11111",
-        "noBaseUrl": "11111",
-        "invitationNotFound": "11111"
+        "permissionDeniedInvite": "⟦Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ īƞṽīŧḗ ŭşḗřş.⟧",
+        "emailNotConfigured": "⟦Ḗḿȧīŀ şḗřṽīƈḗ īş ḓīşȧƀŀḗḓ ȯř ƞȯŧ ƈȯƞƒīɠŭřḗḓ.⟧",
+        "contactNotFound": "⟦Ƈȯƞŧȧƈŧ ƞȯŧ ƒȯŭƞḓ.⟧",
+        "contactMissingEmail": "⟦Ƈȯƞŧȧƈŧ ḓȯḗş ƞȯŧ ħȧṽḗ ȧƞ ḗḿȧīŀ ȧḓḓřḗşş. Ƥŀḗȧşḗ ȧḓḓ ȧƞ ḗḿȧīŀ ȧḓḓřḗşş ŧȯ ŧħḗ ƈȯƞŧȧƈŧ ƀḗƒȯřḗ şḗƞḓīƞɠ ȧƞ īƞṽīŧȧŧīȯƞ.⟧",
+        "contactInvalidEmail": "⟦Ƈȯƞŧȧƈŧ ħȧş ȧƞ īƞṽȧŀīḓ ḗḿȧīŀ ȧḓḓřḗşş. Ƥŀḗȧşḗ ŭƥḓȧŧḗ ŧħḗ ƈȯƞŧȧƈŧ ẇīŧħ ȧ ṽȧŀīḓ ḗḿȧīŀ ȧḓḓřḗşş ƀḗƒȯřḗ şḗƞḓīƞɠ ȧƞ īƞṽīŧȧŧīȯƞ.⟧",
+        "userExistsForContact": "⟦Ȧ ŭşḗř ȧƈƈȯŭƞŧ ȧŀřḗȧḓẏ ḗẋīşŧş ƒȯř ŧħīş ƈȯƞŧȧƈŧ. Ŭşḗ ƥȧşşẇȯřḓ řḗşḗŧ īƞşŧḗȧḓ ȯƒ şḗƞḓīƞɠ ȧƞ īƞṽīŧȧŧīȯƞ.⟧",
+        "noDefaultClient": "⟦Ƞȯ ḓḗƒȧŭŀŧ ƈŀīḗƞŧ ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ŧḗƞȧƞŧ. Ƥŀḗȧşḗ şḗŧ ȧ ḓḗƒȧŭŀŧ ƈŀīḗƞŧ īƞ Ɠḗƞḗřȧŀ Şḗŧŧīƞɠş.⟧",
+        "noDefaultLocation": "⟦Ḓḗƒȧŭŀŧ ƈŀīḗƞŧ ḿŭşŧ ħȧṽḗ ȧ ḓḗƒȧŭŀŧ ŀȯƈȧŧīȯƞ ƈȯƞƒīɠŭřḗḓ ŧȯ şḗƞḓ ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞş.⟧",
+        "noLocationEmail": "⟦Ḓḗƒȧŭŀŧ ƈŀīḗƞŧ'ş ŀȯƈȧŧīȯƞ ḿŭşŧ ħȧṽḗ ȧ ƈȯƞŧȧƈŧ ḗḿȧīŀ ƈȯƞƒīɠŭřḗḓ.⟧",
+        "noBaseUrl": "⟦Ɓȧşḗ ŬŘĿ īş ƞȯŧ ƈȯƞƒīɠŭřḗḓ ƒȯř ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞş.⟧",
+        "invitationNotFound": "⟦Īƞṽīŧȧŧīȯƞ ƞȯŧ ƒȯŭƞḓ ȯř ȧŀřḗȧḓẏ ŭşḗḓ.⟧"
       },
-      "userNotFound": "11111"
+      "userNotFound": "⟦Ƈŀīḗƞŧ ŭşḗř ƞȯŧ ƒȯŭƞḓ⟧"
     }
   },
   "quickAddContact": {
-    "title": "11111",
-    "description": "11111",
+    "title": "⟦Ȧḓḓ Ƞḗẇ Ƈȯƞŧȧƈŧ⟧",
+    "description": "⟦Ɋŭīƈķ-ȧḓḓ ƒȯřḿ ƒȯř ƈřḗȧŧīƞɠ ȧ ƈȯƞŧȧƈŧ ẇīŧħ ƈŀīḗƞŧ, řȯŀḗ, ƥħȯƞḗ, ȧƞḓ ŧȧɠ ƒīḗŀḓş⟧",
     "dialog": {
-      "title": "11111"
+      "title": "⟦Ȧḓḓ Ƞḗẇ Ƈȯƞŧȧƈŧ⟧"
     },
     "errorFallback": {
-      "title": "11111",
-      "tryAgain": "11111"
+      "title": "⟦Şȯḿḗŧħīƞɠ ẇḗƞŧ ẇřȯƞɠ:⟧",
+      "tryAgain": "⟦Ŧřẏ ȧɠȧīƞ⟧"
     },
     "actions": {
-      "submit": "11111"
+      "submit": "⟦Ȧḓḓ Ƈȯƞŧȧƈŧ⟧"
     },
     "fields": {
-      "fullName": "11111",
-      "email": "11111",
-      "clientOptional": "11111",
-      "role": "11111",
-      "rolePlaceholder": "11111",
-      "notes": "11111",
-      "notesPlaceholder": "11111"
+      "fullName": "⟦Ƒŭŀŀ Ƞȧḿḗ *⟧",
+      "email": "⟦Ḗḿȧīŀ *⟧",
+      "clientOptional": "⟦Ƈŀīḗƞŧ (Ȯƥŧīȯƞȧŀ)⟧",
+      "role": "⟦Řȯŀḗ⟧",
+      "rolePlaceholder": "⟦ḗ.ɠ., Ḿȧƞȧɠḗř, Ḓḗṽḗŀȯƥḗř, ḗŧƈ.⟧",
+      "notes": "⟦Ƞȯŧḗş⟧",
+      "notesPlaceholder": "⟦Ȧḓḓ ȧƞẏ ȧḓḓīŧīȯƞȧŀ ƞȯŧḗş ȧƀȯŭŧ ŧħḗ ƈȯƞŧȧƈŧ...⟧"
     },
     "status": {
-      "label": "11111",
-      "active": "11111",
-      "inactive": "11111"
+      "label": "⟦Şŧȧŧŭş⟧",
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ⟧"
     },
     "validation": {
-      "alertIntro": "11111",
-      "fullNameRequired": "11111",
-      "fullNameEmpty": "11111",
-      "fullNameSpaces": "11111",
-      "emailRequired": "11111",
-      "emailSpaces": "11111",
-      "roleSpaces": "11111",
-      "roleLength": "11111",
-      "roleCharacters": "11111",
-      "notesSpaces": "11111"
+      "alertIntro": "⟦Ƥŀḗȧşḗ ƒīẋ ŧħḗ ƒȯŀŀȯẇīƞɠ ḗřřȯřş:⟧",
+      "fullNameRequired": "⟦Ƒŭŀŀ ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",
+      "fullNameEmpty": "⟦Ƒŭŀŀ ƞȧḿḗ ƈȧƞƞȯŧ ƀḗ ḗḿƥŧẏ⟧",
+      "fullNameSpaces": "⟦Ƒŭŀŀ ƞȧḿḗ ƈȧƞƞȯŧ ƈȯƞŧȧīƞ ȯƞŀẏ şƥȧƈḗş⟧",
+      "emailRequired": "⟦Ḗḿȧīŀ ȧḓḓřḗşş īş řḗʠŭīřḗḓ⟧",
+      "emailSpaces": "⟦Ḗḿȧīŀ ȧḓḓřḗşş ƈȧƞƞȯŧ ƈȯƞŧȧīƞ ȯƞŀẏ şƥȧƈḗş⟧",
+      "roleSpaces": "⟦Řȯŀḗ ƈȧƞƞȯŧ ƈȯƞŧȧīƞ ȯƞŀẏ şƥȧƈḗş⟧",
+      "roleLength": "⟦Řȯŀḗ ḿŭşŧ ƀḗ 100 ƈħȧřȧƈŧḗřş ȯř ŀḗşş⟧",
+      "roleCharacters": "⟦Řȯŀḗ ḿŭşŧ ƈȯƞŧȧīƞ ŀḗŧŧḗřş ȯř ƞŭḿƀḗřş⟧",
+      "notesSpaces": "⟦Ƞȯŧḗş ƈȧƞƞȯŧ ƈȯƞŧȧīƞ ȯƞŀẏ şƥȧƈḗş⟧"
     },
     "toasts": {
-      "warningTitle": "11111",
-      "tagsFailed": "11111 {{count}} 11111",
-      "contactCreated": "11111",
-      "contactAdded": "11111 {{name}} 11111"
+      "warningTitle": "⟦Ẇȧřƞīƞɠ⟧",
+      "tagsFailed": "⟦{{count}} ŧȧɠ(ş) ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
+      "contactCreated": "⟦Ƈȯƞŧȧƈŧ ƈřḗȧŧḗḓ⟧",
+      "contactAdded": "⟦{{name}} ħȧş ƀḗḗƞ ȧḓḓḗḓ şŭƈƈḗşşƒŭŀŀẏ.⟧"
     },
     "errors": {
-      "createContactTitle": "11111",
-      "unexpected": "11111",
-      "validationTitle": "11111",
-      "emailExistsTitle": "11111",
-      "invalidReferenceTitle": "11111",
-      "systemTitle": "11111",
-      "genericTitle": "11111",
-      "closeMessage": "11111",
-      "createContactHeading": "11111",
-      "validationPrefix": "11111",
-      "emailExistsPrefix": "11111",
-      "invalidReferencePrefix": "11111",
-      "systemPrefix": "11111"
+      "createContactTitle": "⟦Ḗřřȯř ƈřḗȧŧīƞɠ ƈȯƞŧȧƈŧ⟧",
+      "unexpected": "⟦Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+      "validationTitle": "⟦Ṽȧŀīḓȧŧīȯƞ Ḗřřȯř⟧",
+      "emailExistsTitle": "⟦Ḗḿȧīŀ Ȧŀřḗȧḓẏ Ḗẋīşŧş⟧",
+      "invalidReferenceTitle": "⟦Īƞṽȧŀīḓ Řḗƒḗřḗƞƈḗ⟧",
+      "systemTitle": "⟦Şẏşŧḗḿ Ḗřřȯř⟧",
+      "genericTitle": "⟦Ḗřřȯř⟧",
+      "closeMessage": "⟦Ƈŀȯşḗ ḗřřȯř ḿḗşşȧɠḗ⟧",
+      "createContactHeading": "⟦Ḗřřȯř ƈřḗȧŧīƞɠ ƈȯƞŧȧƈŧ:⟧",
+      "validationPrefix": "⟦Ƥŀḗȧşḗ ƒīẋ ŧħḗ ƒȯŀŀȯẇīƞɠ:⟧",
+      "emailExistsPrefix": "⟦Ḗḿȧīŀ ȧŀřḗȧḓẏ ḗẋīşŧş:⟧",
+      "invalidReferencePrefix": "⟦Īƞṽȧŀīḓ řḗƒḗřḗƞƈḗ:⟧",
+      "systemPrefix": "⟦Şẏşŧḗḿ ḗřřȯř:⟧"
     }
   },
   "contactDetailsEdit": {
-    "title": "11111 {{name}} 11111",
-    "heading": "11111 {{name}} 11111",
-    "inactiveBadge": "11111",
-    "description": "11111",
+    "title": "⟦Ḗḓīŧ Ƈȯƞŧȧƈŧ - {{name}}⟧",
+    "heading": "⟦Ḗḓīŧ Ƈȯƞŧȧƈŧ: {{name}}⟧",
+    "inactiveBadge": "⟦īƞȧƈŧīṽḗ⟧",
+    "description": "⟦Ḗḓīŧȧƀŀḗ ƈȯƞŧȧƈŧ ƒȯřḿ ŭşḗḓ ƒřȯḿ ŧħḗ ḓḗŧȧīŀ ṽīḗẇ ȧƞḓ ḓřȧẇḗř ƒŀȯẇş⟧",
     "validation": {
-      "fullNameRequired": "11111",
-      "emailRequired": "11111",
-      "invalidEmail": "11111"
+      "fullNameRequired": "⟦Ƒŭŀŀ ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",
+      "emailRequired": "⟦Ḗḿȧīŀ ȧḓḓřḗşş īş řḗʠŭīřḗḓ⟧",
+      "invalidEmail": "⟦Ƥŀḗȧşḗ ḗƞŧḗř ȧ ṽȧŀīḓ ḗḿȧīŀ ȧḓḓřḗşş⟧"
     },
     "errors": {
-      "validationPrefix": "11111",
-      "emailExists": "11111",
-      "invalidReferencePrefix": "11111",
-      "systemPrefix": "11111",
-      "saveFailed": "11111",
-      "unexpected": "11111"
+      "validationPrefix": "⟦Ƥŀḗȧşḗ ƒīẋ ŧħḗ ƒȯŀŀȯẇīƞɠ:⟧",
+      "emailExists": "⟦Ḗḿȧīŀ ȧŀřḗȧḓẏ ḗẋīşŧş: Ȧ ƈȯƞŧȧƈŧ ẇīŧħ ŧħīş ḗḿȧīŀ ȧḓḓřḗşş ȧŀřḗȧḓẏ ḗẋīşŧş īƞ ŧħḗ şẏşŧḗḿ⟧",
+      "invalidReferencePrefix": "⟦Īƞṽȧŀīḓ řḗƒḗřḗƞƈḗ:⟧",
+      "systemPrefix": "⟦Şẏşŧḗḿ ḗřřȯř:⟧",
+      "saveFailed": "⟦Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ şȧṽīƞɠ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+      "unexpected": "⟦Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     },
     "fields": {
-      "fullName": "11111",
-      "email": "11111",
-      "role": "11111",
-      "rolePlaceholder": "11111",
-      "phoneNumbers": "11111",
-      "inboundTicketDestinationOverride": "11111",
-      "inboundTicketDestinationHelp": "11111",
-      "useClientDestination": "11111",
-      "client": "11111",
-      "status": "11111",
-      "notes": "11111",
-      "notesPlaceholder": "11111",
-      "tags": "11111",
-      "emailAddresses": "11111"
+      "fullName": "⟦Ƒŭŀŀ Ƞȧḿḗ⟧",
+      "email": "⟦Ḗḿȧīŀ⟧",
+      "role": "⟦Řȯŀḗ⟧",
+      "rolePlaceholder": "⟦ḗ.ɠ., Ḿȧƞȧɠḗř, Ḓḗṽḗŀȯƥḗř, ḗŧƈ.⟧",
+      "phoneNumbers": "⟦Ƥħȯƞḗ ƞŭḿƀḗřş:⟧",
+      "inboundTicketDestinationOverride": "⟦Īƞƀȯŭƞḓ ŧīƈķḗŧ ḓḗşŧīƞȧŧīȯƞ ȯṽḗřřīḓḗ:⟧",
+      "inboundTicketDestinationHelp": "⟦Ƥřḗƈḗḓḗƞƈḗ: Ƈȯƞŧȧƈŧ ȯṽḗřřīḓḗ -> Ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ -> Ƥřȯṽīḓḗř ḓḗƒȧŭŀŧ.⟧",
+      "useClientDestination": "⟦Ŭşḗ ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ⟧",
+      "client": "⟦Ƈŀīḗƞŧ:⟧",
+      "status": "⟦Şŧȧŧŭş:⟧",
+      "notes": "⟦Ƞȯŧḗş:⟧",
+      "notesPlaceholder": "⟦Ȧḓḓ ȧƞẏ ȧḓḓīŧīȯƞȧŀ ƞȯŧḗş ȧƀȯŭŧ ŧħḗ ƈȯƞŧȧƈŧ...⟧",
+      "tags": "⟦Ŧȧɠş:⟧",
+      "emailAddresses": "⟦Ḗḿȧīŀ ȧḓḓřḗşşḗş:⟧"
     },
     "loading": {
-      "destinations": "11111"
+      "destinations": "⟦Ŀȯȧḓīƞɠ ḓḗşŧīƞȧŧīȯƞş...⟧"
     },
     "status": {
-      "active": "11111",
-      "inactive": "11111"
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ⟧"
     }
   },
   "contactDetailsView": {
-    "title": "11111 {{name}} 11111",
-    "description": "11111",
+    "title": "⟦Ƈȯƞŧȧƈŧ Ḓḗŧȧīŀş - {{name}}⟧",
+    "description": "⟦Řḗȧḓ-ȯřīḗƞŧḗḓ ƈȯƞŧȧƈŧ şŭḿḿȧřẏ ẇīŧħ ȧşşȯƈīȧŧḗḓ ƈŀīḗƞŧ, ƥħȯƞḗş, ȧƞḓ ḿḗŧȧḓȧŧȧ⟧",
     "actions": {
-      "goToContact": "11111"
+      "goToContact": "⟦Ɠȯ ŧȯ ƈȯƞŧȧƈŧ⟧"
     },
     "empty": {
-      "notSet": "11111",
-      "unknownClient": "11111"
+      "notSet": "⟦Ƞȯŧ şḗŧ⟧",
+      "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧"
     },
     "phoneTypes": {
-      "work": "11111",
-      "mobile": "11111",
-      "home": "11111",
-      "fax": "11111",
-      "other": "11111"
+      "work": "⟦Ẇȯřķ⟧",
+      "mobile": "⟦Ḿȯƀīŀḗ⟧",
+      "home": "⟦Ħȯḿḗ⟧",
+      "fax": "⟦Ƒȧẋ⟧",
+      "other": "⟦Ȯŧħḗř⟧"
     },
     "fields": {
-      "fullName": "11111",
-      "email": "11111",
-      "phone": "11111",
-      "defaultPhone": "11111",
-      "client": "11111",
-      "noClientAssigned": "11111",
-      "role": "11111",
-      "status": "11111",
-      "createdAt": "11111",
-      "updatedAt": "11111",
-      "notes": "11111",
-      "tags": "11111",
-      "emailAddresses": "11111",
-      "defaultEmail": "11111"
+      "fullName": "⟦Ƒŭŀŀ Ƞȧḿḗ⟧",
+      "email": "⟦Ḗḿȧīŀ⟧",
+      "phone": "⟦Ƥħȯƞḗ:⟧",
+      "defaultPhone": "⟦Ḓḗƒȧŭŀŧ⟧",
+      "client": "⟦Ƈŀīḗƞŧ:⟧",
+      "noClientAssigned": "⟦Ƞȯ ƈŀīḗƞŧ ȧşşīɠƞḗḓ⟧",
+      "role": "⟦Řȯŀḗ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "createdAt": "⟦Ƈřḗȧŧḗḓ Ȧŧ⟧",
+      "updatedAt": "⟦Ŭƥḓȧŧḗḓ Ȧŧ⟧",
+      "notes": "⟦Ƞȯŧḗş:⟧",
+      "tags": "⟦Ŧȧɠş:⟧",
+      "emailAddresses": "⟦Ḗḿȧīŀ ȧḓḓřḗşşḗş:⟧",
+      "defaultEmail": "⟦Ḓḗƒȧŭŀŧ⟧"
     },
     "status": {
-      "active": "11111",
-      "inactive": "11111"
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ⟧"
     },
     "sections": {
-      "documents": "11111"
+      "documents": "⟦Ḓȯƈŭḿḗƞŧş⟧"
     },
     "errors": {
-      "loadTagsSystem": "11111",
-      "loadTagsFailed": "11111",
-      "unexpected": "11111",
-      "clientNotFound": "11111",
-      "loadClientSystem": "11111",
-      "clientMissing": "11111",
-      "loadClientFailed": "11111",
-      "updateClientFailedWithMessage": "11111 {{message}} 11111",
-      "updateClientFailed": "11111"
+      "loadTagsSystem": "⟦Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ ŀȯȧḓīƞɠ ŧȧɠş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ȯř ƈȯƞŧȧƈŧ şŭƥƥȯřŧ.⟧",
+      "loadTagsFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧɠş. Ƥŀḗȧşḗ ŧřẏ řḗƒřḗşħīƞɠ ŧħḗ ƥȧɠḗ.⟧",
+      "unexpected": "⟦Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+      "clientNotFound": "⟦Ƈŀīḗƞŧ ƞȯŧ ƒȯŭƞḓ. Ŧħḗ ƈŀīḗƞŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ.⟧",
+      "loadClientSystem": "⟦Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ ŀȯȧḓīƞɠ ƈŀīḗƞŧ ḓḗŧȧīŀş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ȯř ƈȯƞŧȧƈŧ şŭƥƥȯřŧ.⟧",
+      "clientMissing": "⟦Ŧħḗ ƈŀīḗƞŧ ƞȯ ŀȯƞɠḗř ḗẋīşŧş īƞ ŧħḗ şẏşŧḗḿ.⟧",
+      "loadClientFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈŀīḗƞŧ ḓḗŧȧīŀş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+      "updateClientFailedWithMessage": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈŀīḗƞŧ: {{message}}⟧",
+      "updateClientFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈŀīḗƞŧ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     }
   },
   "clientContactsList": {
-    "title": "11111",
-    "description": "11111",
+    "title": "⟦Ƈŀīḗƞŧ Ƈȯƞŧȧƈŧş⟧",
+    "description": "⟦Ḗḿƀḗḓḓḗḓ ƈŀīḗƞŧ-şƥḗƈīƒīƈ ƈȯƞŧȧƈŧş ŀīşŧ ẇīŧħ ƒīŀŧḗřş ȧƞḓ řȯẇ ȧƈŧīȯƞş⟧",
     "table": {
-      "name": "11111",
-      "email": "11111",
-      "phoneNumber": "11111",
-      "actions": "11111",
-      "role": "11111"
+      "name": "⟦Ƞȧḿḗ⟧",
+      "email": "⟦Ḗḿȧīŀ⟧",
+      "phoneNumber": "⟦Ƥħȯƞḗ Ƞŭḿƀḗř⟧",
+      "actions": "⟦Ȧƈŧīȯƞş⟧",
+      "role": "⟦Řȯŀḗ⟧"
     },
     "filter": {
-      "show": "11111",
-      "active": "11111",
-      "inactive": "11111",
-      "all": "11111",
-      "searchPlaceholder": "11111"
+      "show": "⟦Şħȯẇ:⟧",
+      "active": "⟦Ȧƈŧīṽḗ Ƈȯƞŧȧƈŧş⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ Ƈȯƞŧȧƈŧş⟧",
+      "all": "⟦Ȧŀŀ Ƈȯƞŧȧƈŧş⟧",
+      "searchPlaceholder": "⟦Şḗȧřƈħ ƈȯƞŧȧƈŧş...⟧"
     },
     "actions": {
-      "openMenu": "11111",
-      "quickView": "11111",
-      "addNewContact": "11111"
+      "openMenu": "⟦Ȯƥḗƞ ḿḗƞŭ⟧",
+      "quickView": "⟦Ɋŭīƈķ Ṽīḗẇ⟧",
+      "addNewContact": "⟦Ȧḓḓ ƈȯƞŧȧƈŧ⟧"
     },
     "errors": {
-      "loadFailed": "11111",
-      "loadingTitle": "11111",
-      "retryFailed": "11111"
+      "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧȧƈŧş.⟧",
+      "loadingTitle": "⟦Ḗřřȯř ŀȯȧḓīƞɠ ƈȯƞŧȧƈŧş⟧",
+      "retryFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧȧƈŧş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     }
   },
   "contactsLayout": {
-    "title": "11111",
-    "description": "11111"
+    "title": "⟦Ƈȯƞŧȧƈŧş Ŀȧẏȯŭŧ⟧",
+    "description": "⟦Ƈȯƞŧȧƈŧş řȯŭŧḗ şħḗŀŀ ȧƞḓ ƥȧɠḗ ƈħřȯḿḗ⟧"
   },
   "contactsSkeleton": {
-    "title": "11111",
-    "description": "11111"
+    "title": "⟦Ƈȯƞŧȧƈŧş Ŀȯȧḓīƞɠ Şŧȧŧḗ⟧",
+    "description": "⟦Ŀȯȧḓīƞɠ ƥŀȧƈḗħȯŀḓḗřş ƒȯř ƈȯƞŧȧƈŧş ŀīşŧ ȧƞḓ ḓḗŧȧīŀ şŭřƒȧƈḗş⟧"
   },
   "contactAvatarUpload": {
-    "title": "11111",
-    "description": "11111"
+    "title": "⟦Ƈȯƞŧȧƈŧ Ȧṽȧŧȧř Ŭƥŀȯȧḓ⟧",
+    "description": "⟦Ȧṽȧŧȧř ŭƥŀȯȧḓ ȧƒƒȯřḓȧƞƈḗ ƒȯř ƈȯƞŧȧƈŧ ƥřȯƒīŀḗ īḿȧɠḗş⟧"
   },
   "contactNotesPanel": {
-    "title": "11111",
-    "description": "11111",
+    "title": "⟦Ƞȯŧḗş⟧",
+    "description": "⟦Řīƈħ ŧḗẋŧ ƞȯŧḗş ƥȧƞḗŀ ẇīŧħ ŀḗɠȧƈẏ ƞȯŧḗ ḓīşƥŀȧẏ ȧƞḓ şȧṽḗ/řḗŧřẏ ȧƈŧīȯƞş⟧",
     "legacy": {
-      "initialNote": "11111"
+      "initialNote": "⟦Īƞīŧīȧŀ Ƞȯŧḗ⟧"
     },
     "errors": {
-      "loadTitle": "11111",
-      "unknown": "11111"
+      "loadTitle": "⟦Ƞȯŧḗş ƒȧīŀḗḓ ŧȯ ŀȯȧḓ⟧",
+      "unknown": "⟦Ŭƞķƞȯẇƞ ḗřřȯř⟧"
     },
-    "lastUpdated": "11111 {{date}} 11111"
+    "lastUpdated": "⟦Ŀȧşŧ ŭƥḓȧŧḗḓ: {{date}}⟧"
   },
   "notes": {
     "messages": {
-      "saveSuccess": "11111",
-      "saveFailed": "11111"
+      "saveSuccess": "⟦Ƞȯŧḗş şȧṽḗḓ⟧",
+      "saveFailed": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƞȯŧḗş⟧"
     }
   },
   "actions": {
-    "print": "11111",
-    "printOptions": "11111"
+    "print": "⟦Ƥřīƞŧ⟧",
+    "printOptions": "⟦Ƥřīƞŧ ȯƥŧīȯƞş⟧"
   },
   "contactTabs": {
     "tickets": {
-      "addTicket": "11111",
-      "empty": "11111",
+      "addTicket": "⟦Ȧḓḓ Ŧīƈķḗŧ⟧",
+      "empty": "⟦Ƞȯ ŧīƈķḗŧş ƒȯŭƞḓ ƒȯř ŧħīş ƈȯƞŧȧƈŧ⟧",
       "filters": {
-        "allAssignees": "11111",
-        "allPriorities": "11111",
-        "categoryPlaceholder": "11111",
-        "reset": "11111",
-        "searchPlaceholder": "11111",
-        "statusPlaceholder": "11111"
+        "allAssignees": "⟦Ȧŀŀ Ȧşşīɠƞḗḗş⟧",
+        "allPriorities": "⟦Ȧŀŀ Ƥřīȯřīŧīḗş⟧",
+        "categoryPlaceholder": "⟦Ƒīŀŧḗř ƀẏ ƈȧŧḗɠȯřẏ⟧",
+        "reset": "⟦Řḗşḗŧ⟧",
+        "searchPlaceholder": "⟦Şḗȧřƈħ ŧīƈķḗŧş...⟧",
+        "statusPlaceholder": "⟦Şḗŀḗƈŧ Şŧȧŧŭş⟧"
       },
       "loadMore": {
-        "label": "11111",
-        "loading": "11111"
+        "label": "⟦Ŀȯȧḓ Ḿȯřḗ Ŧīƈķḗŧş⟧",
+        "loading": "⟦Ŀȯȧḓīƞɠ...⟧"
       },
-      "loading": "11111",
-      "title": "11111",
+      "loading": "⟦Ŀȯȧḓīƞɠ...⟧",
+      "title": "⟦Ƈȯƞŧȧƈŧ Ŧīƈķḗŧş⟧",
       "toasts": {
-        "clientNotFound": "11111",
-        "loadClientFailed": "11111",
-        "loadTicketFailed": "11111",
-        "openTicketFailed": "11111",
-        "userNotAuthenticated": "11111"
+        "clientNotFound": "⟦Ƈŀīḗƞŧ ƞȯŧ ƒȯŭƞḓ⟧",
+        "loadClientFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈŀīḗƞŧ ḓḗŧȧīŀş⟧",
+        "loadTicketFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ⟧",
+        "openTicketFailed": "⟦Ƒȧīŀḗḓ ŧȯ ȯƥḗƞ ŧīƈķḗŧ⟧",
+        "userNotAuthenticated": "⟦Ŭşḗř ƞȯŧ ȧŭŧħḗƞŧīƈȧŧḗḓ⟧"
       }
     }
   },
   "contactBento": {
     "toast": {
-      "saved": "11111",
-      "saveFailed": "11111",
-      "saveFailedDescription": "11111"
+      "saved": "⟦Ƈȯƞŧȧƈŧ ŭƥḓȧŧḗḓ⟧",
+      "saveFailed": "⟦Ƈȯŭŀḓ ƞȯŧ ŭƥḓȧŧḗ ƈȯƞŧȧƈŧ⟧",
+      "saveFailedDescription": "⟦Ŧħḗ ƈȯƞŧȧƈŧ ƈȯŭŀḓ ƞȯŧ ƀḗ ŭƥḓȧŧḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     }
   },
   "errors": {
     "contact": {
-      "notFound": "11111",
-      "otherClient": "11111",
-      "notAssociatedWithClient": "11111",
-      "emailExists": "11111",
-      "fieldRequired": "11111 {{field}} 11111",
-      "clientInvalid": "11111",
-      "duplicate": "11111",
-      "destinationInvalid": "11111",
-      "invalidDataRefresh": "11111",
-      "invalidDataFields": "11111",
-      "bulkEmailExists": "11111",
-      "invalidReference": "11111",
-      "visibilityMissingField": "11111",
-      "visibilityMissingFieldNamed": "11111 {{field}} 11111",
-      "visibilityReferenceInvalid": "11111",
-      "visibilityDuplicate": "11111",
-      "visibilityInvalidData": "11111",
-      "groupNameRequired": "11111",
-      "readPermission": "11111"
+      "notFound": "⟦Ƈȯƞŧȧƈŧ ƞȯŧ ƒȯŭƞḓ⟧",
+      "otherClient": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḿȧƞȧɠḗ ƈȯƞŧȧƈŧş ƒȯř ȧƞȯŧħḗř ƈŀīḗƞŧ⟧",
+      "notAssociatedWithClient": "⟦Ƈȯƞŧȧƈŧ īş ƞȯŧ ȧşşȯƈīȧŧḗḓ ẇīŧħ ȧ ƈŀīḗƞŧ⟧",
+      "emailExists": "⟦Ȧ ƈȯƞŧȧƈŧ ẇīŧħ ŧħīş ḗḿȧīŀ ȧḓḓřḗşş ȧŀřḗȧḓẏ ḗẋīşŧş īƞ ŧħḗ şẏşŧḗḿ⟧",
+      "fieldRequired": "⟦Ŧħḗ {{field}} īş řḗʠŭīřḗḓ⟧",
+      "clientInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ⟧",
+      "duplicate": "⟦Ȧ ƈȯƞŧȧƈŧ ẇīŧħ ŧħḗşḗ ḓḗŧȧīŀş ȧŀřḗȧḓẏ ḗẋīşŧş.⟧",
+      "destinationInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ ȯř īƞƀȯŭƞḓ ŧīƈķḗŧ ḓḗşŧīƞȧŧīȯƞ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ⟧",
+      "invalidDataRefresh": "⟦Īƞṽȧŀīḓ ƈȯƞŧȧƈŧ ḓȧŧȧ ƥřȯṽīḓḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "invalidDataFields": "⟦Īƞṽȧŀīḓ ƈȯƞŧȧƈŧ ḓȧŧȧ ƥřȯṽīḓḗḓ. Ƥŀḗȧşḗ ƈħḗƈķ ȧŀŀ ƒīḗŀḓş ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "bulkEmailExists": "⟦Ȯƞḗ ȯř ḿȯřḗ ƈȯƞŧȧƈŧş ȧŀřḗȧḓẏ ħȧṽḗ ŧħīş ḗḿȧīŀ ȧḓḓřḗşş⟧",
+      "invalidReference": "⟦Īƞṽȧŀīḓ řḗƒḗřḗƞƈḗ īƞ ŭƥḓȧŧḗ ḓȧŧȧ⟧",
+      "visibilityMissingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ṽīşīƀīŀīŧẏ ɠřȯŭƥ ƒīḗŀḓ.⟧",
+      "visibilityMissingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ṽīşīƀīŀīŧẏ ɠřȯŭƥ ƒīḗŀḓ: {{field}}.⟧",
+      "visibilityReferenceInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈȯƞŧȧƈŧ, ṽīşīƀīŀīŧẏ ɠřȯŭƥ, ȯř ƀȯȧřḓ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "visibilityDuplicate": "⟦Ȧ ṽīşīƀīŀīŧẏ ɠřȯŭƥ ẇīŧħ ŧħḗşḗ ḓḗŧȧīŀş ȧŀřḗȧḓẏ ḗẋīşŧş ƒȯř ŧħīş ƈŀīḗƞŧ.⟧",
+      "visibilityInvalidData": "⟦Īƞṽȧŀīḓ ṽīşīƀīŀīŧẏ ɠřȯŭƥ ḓȧŧȧ ƥřȯṽīḓḗḓ. Ƥŀḗȧşḗ ƈħḗƈķ ŧħḗ ɠřȯŭƥ ḓḗŧȧīŀş ȧƞḓ şḗŀḗƈŧḗḓ ƀȯȧřḓş.⟧",
+      "groupNameRequired": "⟦Ɠřȯŭƥ ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",
+      "readPermission": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗȧḓ ƈȯƞŧȧƈŧş⟧"
     }
   }
 }

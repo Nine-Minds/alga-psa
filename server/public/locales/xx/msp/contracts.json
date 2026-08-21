@@ -1,2431 +1,2431 @@
 {
   "common": {
     "actions": {
-      "back": "11111",
-      "cancel": "11111",
-      "close": "11111",
-      "create": "11111",
-      "delete": "11111",
-      "discard": "11111",
-      "edit": "11111",
-      "refresh": "11111",
-      "remove": "11111",
-      "retry": "11111",
-      "save": "11111",
-      "saveChanges": "11111",
-      "saveChangesDirty": "11111",
-      "saving": "11111",
-      "view": "11111",
-      "openMenu": "11111"
+      "back": "⟦Ɓȧƈķ⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "close": "⟦Ƈŀȯşḗ⟧",
+      "create": "⟦Ƈřḗȧŧḗ⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ⟧",
+      "discard": "⟦Ḓīşƈȧřḓ⟧",
+      "edit": "⟦Ḗḓīŧ⟧",
+      "refresh": "⟦Řḗƒřḗşħ⟧",
+      "remove": "⟦Řḗḿȯṽḗ⟧",
+      "retry": "⟦Řḗŧřẏ⟧",
+      "save": "⟦Şȧṽḗ⟧",
+      "saveChanges": "⟦Şȧṽḗ Ƈħȧƞɠḗş⟧",
+      "saveChangesDirty": "⟦Şȧṽḗ Ƈħȧƞɠḗş *⟧",
+      "saving": "⟦Şȧṽīƞɠ...⟧",
+      "view": "⟦Ṽīḗẇ⟧",
+      "openMenu": "⟦Ȯƥḗƞ ḿḗƞŭ⟧"
     },
     "alerts": {
-      "saveSuccess": "11111",
-      "systemManagedDefault": "11111"
+      "saveSuccess": "⟦Ƈħȧƞɠḗş şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ.⟧",
+      "systemManagedDefault": "⟦Ŧħīş īş ȧ şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ.⟧"
     },
     "empty": {
-      "none": "11111",
-      "notAvailable": "11111",
-      "notSpecified": "11111",
-      "ongoing": "11111"
+      "none": "⟦Ƞȯƞḗ⟧",
+      "notAvailable": "⟦Ƞ/Ȧ⟧",
+      "notSpecified": "⟦Ƞȯŧ şƥḗƈīƒīḗḓ⟧",
+      "ongoing": "⟦Ȯƞɠȯīƞɠ⟧"
     },
     "errors": {
-      "failedToLoad": "11111",
-      "failedToSave": "11111",
-      "validationPrefix": "11111"
+      "failedToLoad": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓȧŧȧ.⟧",
+      "failedToSave": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƈħȧƞɠḗş.⟧",
+      "validationPrefix": "⟦Ƥŀḗȧşḗ ƈȯřřḗƈŧ ŧħḗ ƒȯŀŀȯẇīƞɠ:⟧"
     },
     "labels": {
-      "created": "11111",
-      "currency": "11111",
-      "description": "11111",
-      "lastUpdated": "11111",
-      "name": "11111",
-      "no": "11111",
-      "status": "11111",
-      "yes": "11111"
+      "created": "⟦Ƈřḗȧŧḗḓ⟧",
+      "currency": "⟦Ƈŭřřḗƞƈẏ⟧",
+      "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+      "lastUpdated": "⟦Ŀȧşŧ Ŭƥḓȧŧḗḓ⟧",
+      "name": "⟦Ƞȧḿḗ⟧",
+      "no": "⟦Ƞȯ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "yes": "⟦Ẏḗş⟧"
     },
     "tabs": {
-      "clientContracts": "11111",
-      "drafts": "11111",
-      "templates": "11111"
+      "clientContracts": "⟦Ƈŀīḗƞŧ Ƈȯƞŧřȧƈŧş⟧",
+      "drafts": "⟦Ḓřȧƒŧş⟧",
+      "templates": "⟦Ŧḗḿƥŀȧŧḗş⟧"
     },
-    "moneyPlaceholder": "11111",
-    "notAvailable": "11111"
+    "moneyPlaceholder": "⟦—⟧",
+    "notAvailable": "⟦-⟧"
   },
   "status": {
-    "active": "11111",
-    "draft": "11111",
-    "expired": "11111",
-    "terminated": "11111"
+    "active": "⟦Ȧƈŧīṽḗ⟧",
+    "draft": "⟦Ḓřȧƒŧ⟧",
+    "expired": "⟦Ḗẋƥīřḗḓ⟧",
+    "terminated": "⟦Ŧḗřḿīƞȧŧḗḓ⟧"
   },
   "renewal": {
     "labels": {
-      "decisionDue": "11111",
-      "mode": "11111",
-      "noticeDays": "11111",
-      "source": "11111",
-      "termMonths": "11111"
+      "decisionDue": "⟦Ḓḗƈīşīȯƞ Ḓŭḗ⟧",
+      "mode": "⟦Řḗƞḗẇȧŀ Ḿȯḓḗ⟧",
+      "noticeDays": "⟦Ƞȯŧīƈḗ Ƥḗřīȯḓ⟧",
+      "source": "⟦Řḗƞḗẇȧŀ Şȯŭřƈḗ⟧",
+      "termMonths": "⟦Řḗƞḗẇȧŀ Ŧḗřḿ⟧"
     },
     "modes": {
-      "auto": "11111",
-      "manual": "11111",
-      "none": "11111"
+      "auto": "⟦Ȧŭŧȯ-řḗƞḗẇ⟧",
+      "manual": "⟦Ḿȧƞŭȧŀ řḗƞḗẇȧŀ⟧",
+      "none": "⟦Ƞȯƞ-řḗƞḗẇīƞɠ⟧"
     },
     "source": {
-      "contract": "11111",
-      "tenantDefault": "11111"
+      "contract": "⟦Ƈȯƞŧřȧƈŧ⟧",
+      "tenantDefault": "⟦Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ⟧"
     }
   },
   "billing": {
     "cadenceOwner": {
-      "client": "11111",
-      "contract": "11111"
+      "client": "⟦Ƈŀīḗƞŧ şƈħḗḓŭŀḗ⟧",
+      "contract": "⟦Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ⟧"
     },
     "frequency": {
-      "annually": "11111",
-      "biweekly": "11111",
-      "monthly": "11111",
-      "quarterly": "11111",
-      "weekly": "11111"
+      "annually": "⟦Ȧƞƞŭȧŀŀẏ⟧",
+      "biweekly": "⟦Ɓīẇḗḗķŀẏ⟧",
+      "monthly": "⟦Ḿȯƞŧħŀẏ⟧",
+      "quarterly": "⟦Ɋŭȧřŧḗřŀẏ⟧",
+      "weekly": "⟦Ẇḗḗķŀẏ⟧"
     },
     "labels": {
-      "billingFrequency": "11111",
-      "timing": "11111",
-      "cadenceOwner": "11111"
+      "billingFrequency": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
+      "timing": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧",
+      "cadenceOwner": "⟦Ƈȧḓḗƞƈḗ Ȯẇƞḗř⟧"
     },
     "timing": {
-      "advance": "11111",
-      "arrears": "11111"
+      "advance": "⟦Īƞ Ȧḓṽȧƞƈḗ⟧",
+      "arrears": "⟦Īƞ Ȧřřḗȧřş⟧"
     }
   },
   "po": {
     "labels": {
-      "amount": "11111",
-      "number": "11111",
-      "required": "11111"
+      "amount": "⟦ƤȮ Ȧḿȯŭƞŧ⟧",
+      "number": "⟦ƤȮ Ƞŭḿƀḗř⟧",
+      "required": "⟦ƤȮ Řḗʠŭīřḗḓ⟧"
     }
   },
   "contractDetail": {
     "alerts": {
-      "saveSuccess": "11111",
-      "unsavedChanges": "11111"
+      "saveSuccess": "⟦Ƈȯƞŧřȧƈŧ şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ!⟧",
+      "unsavedChanges": "⟦Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Ƈŀīƈķ \"Şȧṽḗ Ƈħȧƞɠḗş\" ŧȯ ȧƥƥŀẏ ŧħḗḿ.⟧"
     },
     "cards": {
-      "assignment": "11111",
-      "clientOwnership": "11111",
-      "contractDetails": "11111",
-      "header": "11111",
-      "quickActions": "11111",
-      "renewalHandling": "11111"
+      "assignment": "⟦Ƈŀīḗƞŧ Ȧşşīɠƞḿḗƞŧ⟧",
+      "clientOwnership": "⟦Ƈŀīḗƞŧ Ȯẇƞḗřşħīƥ⟧",
+      "contractDetails": "⟦Ƈȯƞŧřȧƈŧ Ḓḗŧȧīŀş⟧",
+      "header": "⟦Ƈȯƞŧřȧƈŧ Ħḗȧḓḗř⟧",
+      "quickActions": "⟦Ɋŭīƈķ Ȧƈŧīȯƞş⟧",
+      "renewalHandling": "⟦Řḗƞḗẇȧŀ Ħȧƞḓŀīƞɠ⟧"
     },
     "clientAssignment": {
-      "clientContractId": "11111 {{id}} 11111",
-      "creditDrawdownOptOut": "11111",
-      "empty": "11111",
-      "endDate": "11111",
-      "endDateLabel": "11111",
-      "loadingStatuses": "11111",
-      "notRequired": "11111",
-      "noticePeriodDays": "11111",
-      "noticePeriodPlaceholder": "11111",
-      "noticePrefix": "11111",
-      "renewalHandling": "11111",
-      "renewalTermMonths": "11111",
-      "renewalTermPlaceholder": "11111",
-      "renewalTicketBoard": "11111",
-      "renewalTicketStatus": "11111",
-      "required": "11111",
-      "selectBoard": "11111",
-      "selectBoardFirst": "11111",
-      "selectRenewalMode": "11111",
-      "selectStartDate": "11111",
-      "selectStatus": "11111",
-      "startDate": "11111",
-      "startDateLabel": "11111",
-      "startDateLocked": "11111",
-      "title": "11111",
-      "useTenantRenewalDefaults": "11111",
-      "usingCustomSettings": "11111",
-      "usingTenantDefaults": "11111"
+      "clientContractId": "⟦Ƈŀīḗƞŧ Ƈȯƞŧřȧƈŧ ĪḒ: {{id}}⟧",
+      "creditDrawdownOptOut": "⟦Ḗẋƈŀŭḓḗ ƒřȯḿ ƈřḗḓīŧ ḓřȧẇ-ḓȯẇƞ⟧",
+      "empty": "⟦Ŧħīş ƈȯƞŧřȧƈŧ īş ƞȯŧ ȧşşīɠƞḗḓ ŧȯ ȧ ƈŀīḗƞŧ ẏḗŧ.⟧",
+      "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+      "endDateLabel": "⟦Ȧşşīɠƞḿḗƞŧ ḗƞḓ ḓȧŧḗ⟧",
+      "loadingStatuses": "⟦Ŀȯȧḓīƞɠ şŧȧŧŭşḗş...⟧",
+      "notRequired": "⟦Ƞȯŧ řḗʠŭīřḗḓ⟧",
+      "noticePeriodDays": "⟦Ƞȯŧīƈḗ Ƥḗřīȯḓ (Ḓȧẏş)⟧",
+      "noticePeriodPlaceholder": "⟦ḗ.ɠ., 30⟧",
+      "noticePrefix": "⟦Ƞȯŧīƈḗ:⟧",
+      "renewalHandling": "⟦Řḗƞḗẇȧŀ Ħȧƞḓŀīƞɠ⟧",
+      "renewalTermMonths": "⟦Řḗƞḗẇȧŀ Ŧḗřḿ (Ḿȯƞŧħş)⟧",
+      "renewalTermPlaceholder": "⟦ḗ.ɠ., 12⟧",
+      "renewalTicketBoard": "⟦Řḗƞḗẇȧŀ Ŧīƈķḗŧ Ɓȯȧřḓ⟧",
+      "renewalTicketStatus": "⟦Řḗƞḗẇȧŀ Ŧīƈķḗŧ Şŧȧŧŭş⟧",
+      "required": "⟦Řḗʠŭīřḗḓ⟧",
+      "selectBoard": "⟦Şḗŀḗƈŧ ƀȯȧřḓ⟧",
+      "selectBoardFirst": "⟦Şḗŀḗƈŧ ȧ ƀȯȧřḓ ƒīřşŧ⟧",
+      "selectRenewalMode": "⟦Şḗŀḗƈŧ řḗƞḗẇȧŀ ḿȯḓḗ⟧",
+      "selectStartDate": "⟦Şḗŀḗƈŧ şŧȧřŧ ḓȧŧḗ⟧",
+      "selectStatus": "⟦Şḗŀḗƈŧ şŧȧŧŭş⟧",
+      "startDate": "⟦Şŧȧřŧ Ḓȧŧḗ⟧",
+      "startDateLabel": "⟦Ȧşşīɠƞḿḗƞŧ şŧȧřŧ ḓȧŧḗ⟧",
+      "startDateLocked": "⟦Şŧȧřŧ ḓȧŧḗ ƈȧƞƞȯŧ ƀḗ ƈħȧƞɠḗḓ ƒȯř ȧƈŧīṽḗ ƈȯƞŧřȧƈŧş⟧",
+      "title": "⟦Ƈŀīḗƞŧ Ȧşşīɠƞḿḗƞŧ⟧",
+      "useTenantRenewalDefaults": "⟦Ŭşḗ ŧḗƞȧƞŧ řḗƞḗẇȧŀ ḓḗƒȧŭŀŧş⟧",
+      "usingCustomSettings": "⟦Ŭşīƞɠ ƈŭşŧȯḿ ȧşşīɠƞḿḗƞŧ şḗŧŧīƞɠş⟧",
+      "usingTenantDefaults": "⟦Ŭşīƞɠ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧş⟧"
     },
     "clientOwnership": {
-      "assignmentStatus": "11111",
-      "clientName": "11111",
-      "endDate": "11111",
-      "ownerClient": "11111",
-      "required": "11111",
-      "startDate": "11111",
-      "systemManaged": "11111",
-      "title": "11111"
+      "assignmentStatus": "⟦Ȧşşīɠƞḿḗƞŧ Şŧȧŧŭş⟧",
+      "clientName": "⟦Ƈŀīḗƞŧ Ƞȧḿḗ⟧",
+      "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+      "ownerClient": "⟦Ȯẇƞḗř Ƈŀīḗƞŧ⟧",
+      "required": "⟦Řḗʠŭīřḗḓ⟧",
+      "startDate": "⟦Şŧȧřŧ Ḓȧŧḗ⟧",
+      "systemManaged": "⟦Ȯẇƞḗřşħīƥ īş şẏşŧḗḿ-ḿȧƞȧɠḗḓ ƒȯř ŧħīş ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ.⟧",
+      "title": "⟦Ƈŀīḗƞŧ Ȯẇƞḗřşħīƥ⟧"
     },
     "detailsCard": {
       "actions": {
-        "cancelDescription": "11111",
-        "cancelName": "11111",
-        "editDescription": "11111",
-        "editName": "11111",
-        "saveDescription": "11111",
-        "saveName": "11111"
+        "cancelDescription": "⟦Ƈȧƞƈḗŀ ḓḗşƈřīƥŧīȯƞ ḗḓīŧş⟧",
+        "cancelName": "⟦Ƈȧƞƈḗŀ ƈȯƞŧřȧƈŧ ƞȧḿḗ⟧",
+        "editDescription": "⟦Ḗḓīŧ ƈȯƞŧřȧƈŧ ḓḗşƈřīƥŧīȯƞ⟧",
+        "editName": "⟦Ḗḓīŧ ƈȯƞŧřȧƈŧ ƞȧḿḗ⟧",
+        "saveDescription": "⟦Şȧṽḗ ḓḗşƈřīƥŧīȯƞ⟧",
+        "saveName": "⟦Şȧṽḗ ƈȯƞŧřȧƈŧ ƞȧḿḗ⟧"
       },
-      "contractNameLabel": "11111",
-      "contractNamePlaceholder": "11111",
-      "descriptionLabel": "11111",
-      "descriptionPlaceholder": "11111",
-      "title": "11111"
+      "contractNameLabel": "⟦Ƈȯƞŧřȧƈŧ Ƞȧḿḗ *⟧",
+      "contractNamePlaceholder": "⟦Ḗƞŧḗř ƈȯƞŧřȧƈŧ ƞȧḿḗ⟧",
+      "descriptionLabel": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+      "descriptionPlaceholder": "⟦Ḗƞŧḗř ƈȯƞŧřȧƈŧ ḓḗşƈřīƥŧīȯƞ⟧",
+      "title": "⟦Ƈȯƞŧřȧƈŧ Ḓḗŧȧīŀş⟧"
     },
     "headerCard": {
-      "assignmentLifecycleHint": "11111",
-      "assignmentStatus": "11111",
-      "billingFrequencyLabel": "11111",
-      "billingFrequencyPlaceholder": "11111",
-      "customSettings": "11111",
-      "expiredStatusNote": "11111",
-      "notice": "11111",
-      "noticeDay": "11111 {{count}} 11111",
-      "noticeDays": "11111 {{count}} 11111",
-      "ongoingNoEndDate": "11111",
-      "renewalHeading": "11111",
-      "tenantDefaults": "11111",
-      "title": "11111"
+      "assignmentLifecycleHint": "⟦Ŀīṽḗ ƈŀīḗƞŧ şŧȧŧŭş īş ƈȯƞŧřȯŀŀḗḓ ƀẏ ŧħḗ ȧşşīɠƞḿḗƞŧ ŀīƒḗƈẏƈŀḗ ƀḗŀȯẇ.⟧",
+      "assignmentStatus": "⟦Ȧşşīɠƞḿḗƞŧ Şŧȧŧŭş⟧",
+      "billingFrequencyLabel": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ *⟧",
+      "billingFrequencyPlaceholder": "⟦Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
+      "customSettings": "⟦Ƈŭşŧȯḿ şḗŧŧīƞɠş⟧",
+      "expiredStatusNote": "⟦Ḗẋƥīřḗḓ ƈȯƞŧřȧƈŧş ƈȧƞƞȯŧ ƀḗ ƈħȧƞɠḗḓ ŧȯ ȧƞȯŧħḗř şŧȧŧŭş⟧",
+      "notice": "⟦Ƞȯŧīƈḗ⟧",
+      "noticeDay": "⟦{{count}} ḓȧẏ⟧",
+      "noticeDays": "⟦{{count}} ḓȧẏş⟧",
+      "ongoingNoEndDate": "⟦Ȯƞɠȯīƞɠ (ƞȯ ḗƞḓ ḓȧŧḗ)⟧",
+      "renewalHeading": "⟦Řḗƞḗẇȧŀ⟧",
+      "tenantDefaults": "⟦Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧş⟧",
+      "title": "⟦Ƈȯƞŧřȧƈŧ Ħḗȧḓḗř⟧"
     },
     "dialogs": {
       "delete": {
-        "cancel": "11111",
-        "confirm": "11111",
-        "deleting": "11111",
-        "description": "11111",
-        "message": "11111",
-        "title": "11111"
+        "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+        "confirm": "⟦Ḓḗŀḗŧḗ Ƈȯƞŧřȧƈŧ⟧",
+        "deleting": "⟦Ḓḗŀḗŧīƞɠ…⟧",
+        "description": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħīş ƈȯƞŧřȧƈŧ? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧",
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħīş ƈȯƞŧřȧƈŧ? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ ȧƞḓ ẇīŀŀ řḗḿȯṽḗ ȧŀŀ ȧşşȯƈīȧŧḗḓ ḓȧŧȧ.⟧",
+        "title": "⟦Ḓḗŀḗŧḗ Ƈȯƞŧřȧƈŧ⟧"
       },
       "discard": {
-        "cancel": "11111",
-        "confirm": "11111",
-        "description": "11111",
-        "message": "11111",
-        "title": "11111"
+        "cancel": "⟦Ƈȯƞŧīƞŭḗ Ḗḓīŧīƞɠ⟧",
+        "confirm": "⟦Ḓīşƈȧřḓ Ƈħȧƞɠḗş⟧",
+        "description": "⟦Ḓīşƈȧřḓ ẏȯŭř ŭƞşȧṽḗḓ ƈħȧƞɠḗş?⟧",
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓīşƈȧřḓ ȧŀŀ ƈħȧƞɠḗş? Ȧƞẏ ŭƞşȧṽḗḓ ƈħȧƞɠḗş ẇīŀŀ ƀḗ ŀȯşŧ.⟧",
+        "title": "⟦Ḓīşƈȧřḓ Ƈħȧƞɠḗş⟧"
       },
       "leave": {
-        "confirm": "11111",
-        "description": "11111",
-        "title": "11111"
+        "confirm": "⟦Ŀḗȧṽḗ Ƥȧɠḗ⟧",
+        "description": "⟦Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Ŀḗȧṽḗ ŧħīş ƥȧɠḗ ẇīŧħȯŭŧ şȧṽīƞɠ?⟧",
+        "title": "⟦Ŭƞşȧṽḗḓ Ƈħȧƞɠḗş⟧"
       },
       "unsaved": {
-        "cancel": "11111",
-        "confirm": "11111",
-        "message": "11111",
-        "title": "11111"
+        "cancel": "⟦Şŧȧẏ ȯƞ Ƥȧɠḗ⟧",
+        "confirm": "⟦Ŀḗȧṽḗ Ƥȧɠḗ⟧",
+        "message": "⟦Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ŀḗȧṽḗ ŧħīş ƥȧɠḗ? Ȧŀŀ ƈħȧƞɠḗş ẇīŀŀ ƀḗ ŀȯşŧ.⟧",
+        "title": "⟦Ŭƞşȧṽḗḓ Ƈħȧƞɠḗş⟧"
       }
     },
     "invoices": {
       "columns": {
-        "amount": "11111",
-        "createdAt": "11111",
-        "dueDate": "11111",
-        "invoiceDate": "11111",
-        "invoiceNumber": "11111",
-        "preview": "11111",
-        "status": "11111"
+        "amount": "⟦Ȧḿȯŭƞŧ⟧",
+        "createdAt": "⟦Ƈřḗȧŧḗḓ⟧",
+        "dueDate": "⟦Ḓŭḗ Ḓȧŧḗ⟧",
+        "invoiceDate": "⟦Īƞṽȯīƈḗ Ḓȧŧḗ⟧",
+        "invoiceNumber": "⟦Īƞṽȯīƈḗ #⟧",
+        "preview": "⟦Ƥřḗṽīḗẇ⟧",
+        "status": "⟦Şŧȧŧŭş⟧"
       },
-      "empty": "11111",
-      "loading": "11111",
-      "noTemplatesAvailable": "11111",
-      "preview": "11111",
-      "selectForPreview": "11111",
-      "title": "11111"
+      "empty": "⟦Ƞȯ īƞṽȯīƈḗş ƒȯŭƞḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ.⟧",
+      "loading": "⟦Ŀȯȧḓīƞɠ īƞṽȯīƈḗş...⟧",
+      "noTemplatesAvailable": "⟦Ƞȯ īƞṽȯīƈḗ ŧḗḿƥŀȧŧḗş ȧřḗ ȧṽȧīŀȧƀŀḗ ƒȯř ƥřḗṽīḗẇ.⟧",
+      "preview": "⟦Ƥřḗṽīḗẇ⟧",
+      "selectForPreview": "⟦Şḗŀḗƈŧ ȧƞ īƞṽȯīƈḗ ŧȯ ȯƥḗƞ ȧ ƒŭŀŀ ƥřḗṽīḗẇ īƞ ŧħḗ ḓřȧẇḗř.⟧",
+      "title": "⟦Ƈȯƞŧřȧƈŧ Īƞṽȯīƈḗş⟧"
     },
     "labels": {
-      "client": "11111",
-      "contractName": "11111",
-      "description": "11111",
-      "noClientAssigned": "11111",
-      "noDescription": "11111",
-      "systemManagedDefault": "11111",
-      "useTenantDefaults": "11111"
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "contractName": "⟦Ƈȯƞŧřȧƈŧ Ƞȧḿḗ⟧",
+      "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+      "noClientAssigned": "⟦Ƞȯ ƈŀīḗƞŧ ȧşşīɠƞḗḓ⟧",
+      "noDescription": "⟦Ƞȯ ḓḗşƈřīƥŧīȯƞ⟧",
+      "systemManagedDefault": "⟦Şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ⟧",
+      "useTenantDefaults": "⟦Ŭşḗ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧş⟧"
     },
     "quickActions": {
-      "deleteContract": "11111",
-      "manageContractLines": "11111",
-      "managePricingSchedules": "11111",
-      "title": "11111",
-      "viewDocuments": "11111",
-      "viewInvoices": "11111"
+      "deleteContract": "⟦Ḓḗŀḗŧḗ Ƈȯƞŧřȧƈŧ⟧",
+      "manageContractLines": "⟦Ḿȧƞȧɠḗ Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧",
+      "managePricingSchedules": "⟦Ḿȧƞȧɠḗ Ƥřīƈīƞɠ Şƈħḗḓŭŀḗş⟧",
+      "title": "⟦Ɋŭīƈķ Ȧƈŧīȯƞş⟧",
+      "viewDocuments": "⟦Ṽīḗẇ Ḓȯƈŭḿḗƞŧş⟧",
+      "viewInvoices": "⟦Ṽīḗẇ Īƞṽȯīƈḗş⟧"
     },
     "systemManaged": {
-      "attributionOnly": "11111",
-      "configureCustom": "11111",
-      "createdAutomatically": "11111",
-      "title": "11111"
+      "attributionOnly": "⟦Ŧħīş ƈȯƞŧřȧƈŧ īş ȧŧŧřīƀŭŧīȯƞ-ȯƞŀẏ ȧƞḓ ḓȯḗş ƞȯŧ ƈȯƞŧřȯŀ řḗƈŭřřīƞɠ ƀīŀŀīƞɠ ƀḗħȧṽīȯř.⟧",
+      "configureCustom": "⟦Ŧȯ ƈȯƞƒīɠŭřḗ ƈŭşŧȯḿ ƀīŀŀīƞɠ ƀḗħȧṽīȯř, ƈřḗȧŧḗ ȯř ḗḓīŧ ȧ ƞȯřḿȧŀ ŭşḗř-ȧŭŧħȯřḗḓ ƈȯƞŧřȧƈŧ.⟧",
+      "createdAutomatically": "⟦Ƈřḗȧŧḗḓ ȧŭŧȯḿȧŧīƈȧŀŀẏ ƒȯř ŭƞƈȯƞŧřȧƈŧḗḓ ẇȯřķ.⟧",
+      "title": "⟦Şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ⟧"
     },
     "tabs": {
-      "documents": "11111",
-      "invoices": "11111",
-      "lines": "11111",
-      "overview": "11111",
-      "pricing": "11111",
-      "simulator": "11111"
+      "documents": "⟦Ḓȯƈŭḿḗƞŧş⟧",
+      "invoices": "⟦Īƞṽȯīƈḗş⟧",
+      "lines": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧",
+      "overview": "⟦Ȯṽḗřṽīḗẇ⟧",
+      "pricing": "⟦Ƥřīƈīƞɠ Şƈħḗḓŭŀḗş⟧",
+      "simulator": "⟦Şīḿŭŀȧŧḗ⟧"
     },
     "validation": {
-      "billingFrequencyRequired": "11111",
-      "billingFrequency": "11111",
-      "contractName": "11111",
-      "contractNameRequired": "11111",
-      "failedToUpdate": "11111",
-      "fixErrors": "11111"
+      "billingFrequencyRequired": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ.⟧",
+      "billingFrequency": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
+      "contractName": "⟦Ƈȯƞŧřȧƈŧ ƞȧḿḗ⟧",
+      "contractNameRequired": "⟦Ƈȯƞŧřȧƈŧ ƞȧḿḗ īş řḗʠŭīřḗḓ.⟧",
+      "failedToUpdate": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈȯƞŧřȧƈŧ⟧",
+      "fixErrors": "⟦Ƥŀḗȧşḗ ƒīẋ ŧħḗ ƒȯŀŀȯẇīƞɠ ḗřřȯřş:⟧"
     },
     "documents": {
-      "loading": "11111"
+      "loading": "⟦Ŀȯȧḓīƞɠ ḓȯƈŭḿḗƞŧş...⟧"
     }
   },
   "contractHeader": {
     "badges": {
-      "clientOwned": "11111",
-      "template": "11111"
+      "clientOwned": "⟦Ƈŀīḗƞŧ-ȯẇƞḗḓ⟧",
+      "template": "⟦Ŧḗḿƥŀȧŧḗ⟧"
     },
     "labels": {
-      "billingFrequency": "11111",
-      "contractLines": "11111",
-      "currency": "11111",
-      "endDate": "11111",
-      "lastUpdated": "11111",
-      "startDate": "11111"
+      "billingFrequency": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
+      "contractLines": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧",
+      "currency": "⟦Ƈŭřřḗƞƈẏ⟧",
+      "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+      "lastUpdated": "⟦Ŀȧşŧ Ŭƥḓȧŧḗḓ⟧",
+      "startDate": "⟦Şŧȧřŧ Ḓȧŧḗ⟧"
     },
     "po": {
-      "prefix": "11111",
-      "requiredForContract": "11111"
+      "prefix": "⟦ƤȮ⟧",
+      "requiredForContract": "⟦Ƥŭřƈħȧşḗ ȯřḓḗř řḗʠŭīřḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ.⟧"
     },
     "status": {
-      "active": "11111",
-      "draft": "11111",
-      "expired": "11111",
-      "terminated": "11111"
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "draft": "⟦Ḓřȧƒŧ⟧",
+      "expired": "⟦Ḗẋƥīřḗḓ⟧",
+      "terminated": "⟦Ŧḗřḿīƞȧŧḗḓ⟧"
     },
     "values": {
-      "ongoing": "11111"
+      "ongoing": "⟦Ȯƞɠȯīƞɠ⟧"
     }
   },
   "contractOverview": {
     "errors": {
-      "failedToLoadOverview": "11111"
+      "failedToLoadOverview": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȯṽḗřṽīḗẇ⟧"
     },
     "frequency": {
-      "annually": "11111",
-      "biweekly": "11111",
-      "semi_annually": "11111",
-      "weekly": "11111"
+      "annually": "⟦Ȧƞƞŭȧŀŀẏ⟧",
+      "biweekly": "⟦Ɓīẇḗḗķŀẏ⟧",
+      "semi_annually": "⟦Şḗḿī-Ȧƞƞŭȧŀŀẏ⟧",
+      "weekly": "⟦Ẇḗḗķŀẏ⟧"
     },
     "lines": {
-      "addContractLines": "11111",
-      "collapseAll": "11111",
-      "expandAll": "11111",
-      "includedServices": "11111",
-      "noContractLinesDescription": "11111",
-      "noContractLinesYet": "11111",
-      "noServicesConfigured": "11111",
-      "serviceCountOne": "11111 {{count}} 11111",
-      "serviceCountOther": "11111 {{count}} 11111"
+      "addContractLines": "⟦Ȧḓḓ Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧",
+      "collapseAll": "⟦Ƈȯŀŀȧƥşḗ ȧŀŀ⟧",
+      "expandAll": "⟦Ḗẋƥȧƞḓ ȧŀŀ⟧",
+      "includedServices": "⟦Īƞƈŀŭḓḗḓ Şḗřṽīƈḗş⟧",
+      "noContractLinesDescription": "⟦Ȧḓḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ŧȯ ḓḗƒīƞḗ ẇħȧŧ'ş īƞƈŀŭḓḗḓ īƞ ŧħīş ƈȯƞŧřȧƈŧ⟧",
+      "noContractLinesYet": "⟦Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗş ẏḗŧ⟧",
+      "noServicesConfigured": "⟦Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ⟧",
+      "serviceCountOne": "⟦{{count}} şḗřṽīƈḗ⟧",
+      "serviceCountOther": "⟦{{count}} şḗřṽīƈḗş⟧"
     },
     "stats": {
-      "contractLines": "11111",
-      "estimatedMonthlyValue": "11111",
-      "totalServices": "11111",
-      "variable": "11111",
-      "variableSuffix": "11111",
-      "viewDetails": "11111"
+      "contractLines": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧",
+      "estimatedMonthlyValue": "⟦Ḗşŧ. Ḿȯƞŧħŀẏ Ṽȧŀŭḗ⟧",
+      "totalServices": "⟦Ŧȯŧȧŀ Şḗřṽīƈḗş⟧",
+      "variable": "⟦Ṽȧřīȧƀŀḗ⟧",
+      "variableSuffix": "⟦+ ṽȧřīȧƀŀḗ (ħȯŭřŀẏ/ŭşȧɠḗ)⟧",
+      "viewDetails": "⟦Ṽīḗẇ ḓḗŧȧīŀş⟧"
     },
-    "title": "11111"
+    "title": "⟦Ẇħȧŧ'ş Īƞƈŀŭḓḗḓ⟧"
   },
   "contractDialog": {
     "actions": {
-      "createContract": "11111",
-      "saveAsDraft": "11111",
-      "updateContract": "11111"
+      "createContract": "⟦Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ⟧",
+      "saveAsDraft": "⟦Şȧṽḗ ȧş Ḓřȧƒŧ⟧",
+      "updateContract": "⟦Ŭƥḓȧŧḗ Ƈȯƞŧřȧƈŧ⟧"
     },
     "documents": {
-      "loading": "11111"
+      "loading": "⟦Ŀȯȧḓīƞɠ ḓȯƈŭḿḗƞŧş...⟧"
     },
     "form": {
-      "billingFrequencyLabel": "11111",
-      "billingFrequencyPlaceholder": "11111",
-      "clientLabel": "11111",
-      "clientPlaceholder": "11111",
-      "contractNameLabel": "11111",
-      "contractNamePlaceholder": "11111",
-      "currencyHint": "11111",
-      "descriptionLabel": "11111",
-      "descriptionPlaceholder": "11111",
-      "endDateHint": "11111",
-      "endDateLabel": "11111",
-      "noticePeriodLabel": "11111",
-      "noticePeriodPlaceholder": "11111",
-      "renewalModePlaceholder": "11111",
-      "renewalSettingsDescription": "11111",
-      "renewalSettingsTitle": "11111",
-      "renewalTermLabel": "11111",
-      "renewalTermPlaceholder": "11111",
-      "selectClientFirst": "11111",
-      "startDateLabel": "11111",
-      "useTenantDefaultsDescription": "11111",
-      "useTenantDefaultsLabel": "11111"
+      "billingFrequencyLabel": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ *⟧",
+      "billingFrequencyPlaceholder": "⟦Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
+      "clientLabel": "⟦Ƈŀīḗƞŧ *⟧",
+      "clientPlaceholder": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ⟧",
+      "contractNameLabel": "⟦Ƈȯƞŧřȧƈŧ Ƞȧḿḗ *⟧",
+      "contractNamePlaceholder": "⟦ḗ.ɠ., Şŧȧƞḓȧřḓ ḾŞƤ Şḗřṽīƈḗş⟧",
+      "currencyHint": "⟦Ƈŭřřḗƞƈẏ īş ƀȧşḗḓ ȯƞ ŧħḗ ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ƈŭřřḗƞƈẏ şḗŧŧīƞɠ.⟧",
+      "descriptionLabel": "⟦Ḓḗşƈřīƥŧīȯƞ (Ȯƥŧīȯƞȧŀ)⟧",
+      "descriptionPlaceholder": "⟦Ȧḓḓ ȧƞẏ ȧḓḓīŧīȯƞȧŀ ƞȯŧḗş ȧƀȯŭŧ ŧħīş ƈȯƞŧřȧƈŧ...⟧",
+      "endDateHint": "⟦Ŀḗȧṽḗ ƀŀȧƞķ ƒȯř ȯƞɠȯīƞɠ ƈȯƞŧřȧƈŧş ŧħȧŧ ḓȯƞ'ŧ ħȧṽḗ ȧ ƒīẋḗḓ ḗƞḓ ḓȧŧḗ.⟧",
+      "endDateLabel": "⟦Ḗƞḓ Ḓȧŧḗ (Ȯƥŧīȯƞȧŀ)⟧",
+      "noticePeriodLabel": "⟦Ƞȯŧīƈḗ Ƥḗřīȯḓ (Ḓȧẏş)⟧",
+      "noticePeriodPlaceholder": "⟦ḗ.ɠ., 30⟧",
+      "renewalModePlaceholder": "⟦Şḗŀḗƈŧ řḗƞḗẇȧŀ ḿȯḓḗ⟧",
+      "renewalSettingsDescription": "⟦Ƈȯƞƒīɠŭřḗ řḗƞḗẇȧŀ ƀḗħȧṽīȯř ƒȯř ŧħīş ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ ȧşşīɠƞḿḗƞŧ.⟧",
+      "renewalSettingsTitle": "⟦Řḗƞḗẇȧŀ Şḗŧŧīƞɠş⟧",
+      "renewalTermLabel": "⟦Řḗƞḗẇȧŀ Ŧḗřḿ (Ḿȯƞŧħş)⟧",
+      "renewalTermPlaceholder": "⟦ḗ.ɠ., 12⟧",
+      "selectClientFirst": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ƒīřşŧ⟧",
+      "startDateLabel": "⟦Şŧȧřŧ Ḓȧŧḗ *⟧",
+      "useTenantDefaultsDescription": "⟦Ȧƥƥŀẏ ȯřɠȧƞīẑȧŧīȯƞ-ŀḗṽḗŀ řḗƞḗẇȧŀ ḿȯḓḗ ȧƞḓ ƞȯŧīƈḗ ƥḗřīȯḓ şḗŧŧīƞɠş.⟧",
+      "useTenantDefaultsLabel": "⟦Ŭşḗ Ŧḗƞȧƞŧ Řḗƞḗẇȧŀ Ḓḗƒȧŭŀŧş⟧"
     },
     "po": {
-      "amountLabel": "11111",
-      "amountPlaceholder": "11111",
-      "comingSoon": "11111",
-      "noteLabel": "11111",
-      "numberLabel": "11111",
-      "numberPlaceholder": "11111",
-      "requirePurchaseOrder": "11111",
-      "requirePurchaseOrderTooltip": "11111"
+      "amountLabel": "⟦ƤȮ Ȧḿȯŭƞŧ (Ȯƥŧīȯƞȧŀ)⟧",
+      "amountPlaceholder": "⟦0.00⟧",
+      "comingSoon": "⟦Īƞṽȯīƈḗ īƞŧḗɠřȧŧīȯƞ ƈȯḿīƞɠ şȯȯƞ. Şḗŧŧīƞɠş ẇīŀŀ ƀḗ şȧṽḗḓ ƀŭŧ ƤȮ ḗƞƒȯřƈḗḿḗƞŧ ẇȯƞ'ŧ ƀḗ ȧƈŧīṽḗ ŭƞŧīŀ ȧ ƒŭŧŭřḗ řḗŀḗȧşḗ.⟧",
+      "noteLabel": "⟦Ƞȯŧḗ:⟧",
+      "numberLabel": "⟦ƤȮ Ƞŭḿƀḗř *⟧",
+      "numberPlaceholder": "⟦ḗ.ɠ., ƤȮ-2024-12345⟧",
+      "requirePurchaseOrder": "⟦Řḗʠŭīřḗ Ƥŭřƈħȧşḗ Ȯřḓḗř⟧",
+      "requirePurchaseOrderTooltip": "⟦Ẇħḗƞ ḗƞȧƀŀḗḓ, īƞṽȯīƈḗş ƈȧƞƞȯŧ ƀḗ ɠḗƞḗřȧŧḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ŭƞŀḗşş ȧ ƤȮ ƞŭḿƀḗř īş ƥřȯṽīḓḗḓ.⟧"
     },
     "presetDetails": {
-      "defaultBaseRate": "11111",
-      "defaultRatePlaceholder": "11111 {{rate}} 11111",
-      "defaultRateValue": "11111 {{rate}} 11111",
-      "enterBaseRate": "11111",
-      "fixedRateConfiguration": "11111",
-      "fixedServicesReferenceHelp": "11111",
-      "hourlyRate": "11111",
-      "leaveBlankDefaultRate": "11111",
-      "minimumBillableMinutes": "11111",
-      "noServicesConfigured": "11111",
-      "notSet": "11111",
-      "overrideBaseRate": "11111",
-      "quantity": "11111",
-      "quantityShort": "11111 {{quantity}} 11111",
-      "ratePerUnit": "11111",
-      "roundUpToNearestMinutes": "11111",
-      "servicesConfiguration": "11111",
-      "servicesHourlyRates": "11111",
-      "servicesIncludedReference": "11111",
-      "timeBillingConfiguration": "11111",
-      "unitOfMeasure": "11111",
-      "unitOfMeasureHint": "11111"
+      "defaultBaseRate": "⟦Ḓḗƒȧŭŀŧ Ɓȧşḗ Řȧŧḗ:⟧",
+      "defaultRatePlaceholder": "⟦Ḓḗƒȧŭŀŧ: ${{rate}}⟧",
+      "defaultRateValue": "⟦Ḓḗƒȧŭŀŧ: ${{rate}}⟧",
+      "enterBaseRate": "⟦Ḗƞŧḗř ƀȧşḗ řȧŧḗ⟧",
+      "fixedRateConfiguration": "⟦Ƒīẋḗḓ Řȧŧḗ Ƈȯƞƒīɠŭřȧŧīȯƞ⟧",
+      "fixedServicesReferenceHelp": "⟦Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ īƞƈŀŭḓḗḓ ƒȯř řḗƒḗřḗƞƈḗ ȯƞŀẏ. Ŧħḗ ƒīẋḗḓ řȧŧḗ ȧƀȯṽḗ ḓḗŧḗřḿīƞḗş ŧħḗ ƀīŀŀīƞɠ ȧḿȯŭƞŧ.⟧",
+      "hourlyRate": "⟦Ħȯŭřŀẏ Řȧŧḗ⟧",
+      "leaveBlankDefaultRate": "⟦Ŀḗȧṽḗ ƀŀȧƞķ ŧȯ ŭşḗ ŧħḗ ḓḗƒȧŭŀŧ řȧŧḗ⟧",
+      "minimumBillableMinutes": "⟦Ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ḿīƞŭŧḗş⟧",
+      "noServicesConfigured": "⟦Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƥřḗşḗŧ⟧",
+      "notSet": "⟦Ƞȯŧ şḗŧ⟧",
+      "overrideBaseRate": "⟦Ȯṽḗřřīḓḗ Ɓȧşḗ Řȧŧḗ⟧",
+      "quantity": "⟦Ɋŭȧƞŧīŧẏ⟧",
+      "quantityShort": "⟦Ɋŧẏ: {{quantity}}⟧",
+      "ratePerUnit": "⟦Řȧŧḗ (ƥḗř ŭƞīŧ)⟧",
+      "roundUpToNearestMinutes": "⟦Řȯŭƞḓ ŭƥ ŧȯ ƞḗȧřḗşŧ (ḿīƞŭŧḗş)⟧",
+      "servicesConfiguration": "⟦Şḗřṽīƈḗş Ƈȯƞƒīɠŭřȧŧīȯƞ⟧",
+      "servicesHourlyRates": "⟦Şḗřṽīƈḗş & Ħȯŭřŀẏ Řȧŧḗş⟧",
+      "servicesIncludedReference": "⟦Şḗřṽīƈḗş Īƞƈŀŭḓḗḓ (Řḗƒḗřḗƞƈḗ)⟧",
+      "timeBillingConfiguration": "⟦Ŧīḿḗ Ɓīŀŀīƞɠ Ƈȯƞƒīɠŭřȧŧīȯƞ⟧",
+      "unitOfMeasure": "⟦Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ⟧",
+      "unitOfMeasureHint": "⟦ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř⟧"
     },
     "presets": {
-      "allTypes": "11111",
-      "empty": "11111",
-      "heading": "11111",
-      "headingTooltip": "11111",
-      "loading": "11111",
-      "noMatches": "11111",
-      "resetFilters": "11111",
-      "searchPlaceholder": "11111",
-      "selectedPlural": "11111 {{count}} 11111",
-      "selectedSingle": "11111 {{count}} 11111",
-      "serviceCountPlural": "11111 {{count}} 11111",
-      "serviceCountSingle": "11111 {{count}} 11111",
-      "typePlaceholder": "11111"
+      "allTypes": "⟦Ȧŀŀ ŧẏƥḗş⟧",
+      "empty": "⟦Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş ȧṽȧīŀȧƀŀḗ. Ẏȯŭ ƈȧƞ ȧḓḓ ŧħḗḿ ŀȧŧḗř.⟧",
+      "heading": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƥřḗşḗŧş (Ȯƥŧīȯƞȧŀ)⟧",
+      "headingTooltip": "⟦Şḗŀḗƈŧ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş ŧȯ ƈȯƥẏ īƞŧȯ ŧħīş ƈȯƞŧřȧƈŧ. Ẏȯŭ ƈȧƞ ȧḓḓ ḿȯřḗ ŀȧŧḗř.⟧",
+      "loading": "⟦Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş...⟧",
+      "noMatches": "⟦Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ.⟧",
+      "resetFilters": "⟦Řḗşḗŧ⟧",
+      "searchPlaceholder": "⟦Şḗȧřƈħ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş...⟧",
+      "selectedPlural": "⟦{{count}} ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş şḗŀḗƈŧḗḓ⟧",
+      "selectedSingle": "⟦{{count}} ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧ şḗŀḗƈŧḗḓ⟧",
+      "serviceCountPlural": "⟦{{count}} şḗřṽīƈḗş⟧",
+      "serviceCountSingle": "⟦{{count}} şḗřṽīƈḗ⟧",
+      "typePlaceholder": "⟦Şḗŀḗƈŧ ŧẏƥḗ⟧"
     },
     "title": {
-      "create": "11111",
-      "edit": "11111"
+      "create": "⟦Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ⟧",
+      "edit": "⟦Ḗḓīŧ Ƈȯƞŧřȧƈŧ⟧"
     },
     "validation": {
-      "billingFrequency": "11111",
-      "client": "11111",
-      "contractName": "11111",
-      "failedToSave": "11111",
-      "noticePeriodInvalid": "11111",
-      "poNumberRequired": "11111",
-      "renewalTermInvalid": "11111",
-      "requiredFields": "11111",
-      "startDate": "11111"
+      "billingFrequency": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "contractName": "⟦Ƈȯƞŧřȧƈŧ ƞȧḿḗ⟧",
+      "failedToSave": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƈȯƞŧřȧƈŧ⟧",
+      "noticePeriodInvalid": "⟦Ƞȯŧīƈḗ ƥḗřīȯḓ ḓȧẏş ḿŭşŧ ƀḗ ȧ ƞȯƞ-ƞḗɠȧŧīṽḗ ẇħȯŀḗ ƞŭḿƀḗř⟧",
+      "poNumberRequired": "⟦ƤȮ ƞŭḿƀḗř (řḗʠŭīřḗḓ ẇħḗƞ ƤȮ īş ḗƞȧƀŀḗḓ)⟧",
+      "renewalTermInvalid": "⟦Řḗƞḗẇȧŀ ŧḗřḿ ḿȯƞŧħş ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ ẇħȯŀḗ ƞŭḿƀḗř ƒȯř ȧŭŧȯ-řḗƞḗẇ ƈȯƞŧřȧƈŧş⟧",
+      "requiredFields": "⟦Ƥŀḗȧşḗ ƒīŀŀ īƞ ŧħḗ řḗʠŭīřḗḓ ƒīḗŀḓş:⟧",
+      "startDate": "⟦Şŧȧřŧ ḓȧŧḗ⟧"
     }
   },
   "contractForm": {
     "actions": {
-      "saveChanges": "11111",
-      "saving": "11111"
+      "saveChanges": "⟦Şȧṽḗ Ƈħȧƞɠḗş⟧",
+      "saving": "⟦Şȧṽīƞɠ...⟧"
     },
     "errors": {
-      "failedToUpdateContract": "11111"
+      "failedToUpdateContract": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈȯƞŧřȧƈŧ⟧"
     },
     "fields": {
-      "billingFrequency": "11111",
-      "billingFrequencyPlaceholder": "11111",
-      "contractName": "11111",
-      "contractNamePlaceholder": "11111",
-      "currency": "11111",
-      "currencyPlaceholder": "11111",
-      "description": "11111",
-      "descriptionPlaceholder": "11111",
-      "status": "11111"
+      "billingFrequency": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
+      "billingFrequencyPlaceholder": "⟦Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
+      "contractName": "⟦Ƈȯƞŧřȧƈŧ Ƞȧḿḗ⟧",
+      "contractNamePlaceholder": "⟦Ḗƞŧḗř ƈȯƞŧřȧƈŧ ƞȧḿḗ⟧",
+      "currency": "⟦Ƈŭřřḗƞƈẏ⟧",
+      "currencyPlaceholder": "⟦Şḗŀḗƈŧ ƈŭřřḗƞƈẏ⟧",
+      "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+      "descriptionPlaceholder": "⟦Ḗƞŧḗř ƈȯƞŧřȧƈŧ ḓḗşƈřīƥŧīȯƞ⟧",
+      "status": "⟦Şŧȧŧŭş⟧"
     },
-    "heading": "11111",
+    "heading": "⟦Ƈȯƞŧřȧƈŧ Ḓḗŧȧīŀş⟧",
     "status": {
-      "active": "11111",
-      "draft": "11111",
-      "expired": "11111",
-      "expiredHelper": "11111",
-      "terminated": "11111"
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "draft": "⟦Ḓřȧƒŧ⟧",
+      "expired": "⟦Ḗẋƥīřḗḓ⟧",
+      "expiredHelper": "⟦Ḗẋƥīřḗḓ ƈȯƞŧřȧƈŧş ƈȧƞƞȯŧ ƀḗ ƈħȧƞɠḗḓ ŧȯ ȧƞȯŧħḗř şŧȧŧŭş⟧",
+      "terminated": "⟦Ŧḗřḿīƞȧŧḗḓ⟧"
     },
     "validation": {
-      "billingFrequency": "11111",
-      "contractName": "11111",
-      "requiredFields": "11111"
+      "billingFrequency": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
+      "contractName": "⟦Ƈȯƞŧřȧƈŧ ƞȧḿḗ⟧",
+      "requiredFields": "⟦Ƥŀḗȧşḗ ƒīŀŀ īƞ ŧħḗ řḗʠŭīřḗḓ ƒīḗŀḓş:⟧"
     }
   },
   "contractLines": {
     "actions": {
-      "addFromPresets": "11111",
-      "collapseLine": "11111",
-      "createCustom": "11111",
-      "expandLine": "11111"
+      "addFromPresets": "⟦Ȧḓḓ ƒřȯḿ Ƥřḗşḗŧş⟧",
+      "collapseLine": "⟦Ƈȯŀŀȧƥşḗ ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+      "createCustom": "⟦Ƈřḗȧŧḗ Ƈŭşŧȯḿ⟧",
+      "expandLine": "⟦Ḗẋƥȧƞḓ ƈȯƞŧřȧƈŧ ŀīƞḗ⟧"
     },
     "billingProfile": {
-      "hint": "11111",
-      "label": "11111",
-      "none": "11111",
-      "updated": "11111"
+      "hint": "⟦Ƈħȧřɠḗş ƒřȯḿ ŧħīş ŀīƞḗ ȧřḗ ƀīŀŀḗḓ ŧȯ ŧħīş ƥřȯƒīŀḗ, ȯṽḗřřīḓīƞɠ ŧħḗ ƈȯƞŧřȧƈŧ.⟧",
+      "label": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
+      "none": "⟦Ŭşḗ ŧħḗ ƈȯƞŧřȧƈŧ'ş ƥřȯƒīŀḗ⟧",
+      "updated": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ ŭƥḓȧŧḗḓ⟧"
     },
     "bucket": {
-      "billingPeriod": "11111 {{period}} 11111",
-      "defaultUnit": "11111",
-      "defaultUnits": "11111",
-      "enableTracking": "11111",
-      "hour": "11111",
-      "hoursValue": "11111 {{hours}} 11111",
-      "included": "11111 {{value}} 11111",
-      "overageRate": "11111 {{rate}} 11111 {{unit}} 11111",
-      "rolloverEnabled": "11111",
-      "title": "11111",
-      "unitsValue": "11111 {{count}} 11111 {{units}} 11111"
+      "billingPeriod": "⟦Ɓīŀŀīƞɠ Ƥḗřīȯḓ: {{period}}⟧",
+      "defaultUnit": "⟦ŭƞīŧ⟧",
+      "defaultUnits": "⟦ŭƞīŧş⟧",
+      "enableTracking": "⟦Ḗƞȧƀŀḗ ƀŭƈķḗŧ ŭşȧɠḗ ŧřȧƈķīƞɠ⟧",
+      "hour": "⟦ħȯŭř⟧",
+      "hoursValue": "⟦{{hours}} ħȯŭřş⟧",
+      "included": "⟦Īƞƈŀŭḓḗḓ: {{value}}⟧",
+      "overageRate": "⟦Ȯṽḗřȧɠḗ Řȧŧḗ: {{rate}} ƥḗř {{unit}}⟧",
+      "rolloverEnabled": "⟦Řȯŀŀȯṽḗř: Ḗƞȧƀŀḗḓ⟧",
+      "title": "⟦Ɓŭƈķḗŧ Ƈȯƞƒīɠŭřȧŧīȯƞ⟧",
+      "unitsValue": "⟦{{count}} {{units}}⟧"
     },
     "columns": {
-      "actions": "11111",
-      "frequency": "11111",
-      "name": "11111",
-      "rate": "11111",
-      "services": "11111",
-      "type": "11111"
+      "actions": "⟦Ȧƈŧīȯƞş⟧",
+      "frequency": "⟦Ƒřḗʠŭḗƞƈẏ⟧",
+      "name": "⟦Ƞȧḿḗ⟧",
+      "rate": "⟦Řȧŧḗ⟧",
+      "services": "⟦Şḗřṽīƈḗş⟧",
+      "type": "⟦Ŧẏƥḗ⟧"
     },
     "configuration": {
-      "description": "11111",
-      "fixedInfo": "11111",
-      "fixedInfoDetails": "11111",
-      "fixedInfoHeading": "11111",
-      "minimumBillableTime": "11111",
-      "minutesValue": "11111 {{count}} 11111",
-      "roundUpToNearest": "11111",
-      "title": "11111",
-      "usageInfo": "11111"
+      "description": "⟦Şḗŧŧīƞɠş ŧħȧŧ ȧƥƥŀẏ ŧȯ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+      "fixedInfo": "⟦Ƒīẋḗḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ƀīŀŀ ȧ ƒŀȧŧ řḗƈŭřřīƞɠ ƒḗḗ řḗɠȧřḓŀḗşş ȯƒ īƞḓīṽīḓŭȧŀ şḗřṽīƈḗ řȧŧḗş.⟧",
+      "fixedInfoDetails": "⟦Ƒȯř ƒīẋḗḓ ƒḗḗ ŀīƞḗş, ŧħḗ şḗřṽīƈḗ řȧŧḗ ȧƞḓ ʠŭȧƞŧīŧẏ ȧřḗ ŭşḗḓ ȯƞŀẏ ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ ƥŭřƥȯşḗş. Ŧħḗẏ ḓḗŧḗřḿīƞḗ ħȯẇ ŧħḗ ƒīẋḗḓ ƒḗḗ īş ƥřȯƥȯřŧīȯƞȧŀŀẏ ȧŧŧřīƀŭŧḗḓ ȧƈřȯşş şḗřṽīƈḗş ƒȯř ŧȧẋ ƈȧŀƈŭŀȧŧīȯƞş. Ŧħḗ ȧƈŧŭȧŀ ƀīŀŀḗḓ ȧḿȯŭƞŧ īş ŧħḗ ƈȯƞŧřȧƈŧ ŀīƞḗ'ş ƀȧşḗ řȧŧḗ şħȯẇƞ ȧƀȯṽḗ.⟧",
+      "fixedInfoHeading": "⟦Ȧƀȯŭŧ şḗřṽīƈḗ řȧŧḗş ƀḗŀȯẇ:⟧",
+      "minimumBillableTime": "⟦Ḿīƞīḿŭḿ Ɓīŀŀȧƀŀḗ Ŧīḿḗ (ḿīƞŭŧḗş)⟧",
+      "minutesValue": "⟦{{count}} ḿīƞŭŧḗş⟧",
+      "roundUpToNearest": "⟦Řȯŭƞḓ Ŭƥ Ŧȯ Ƞḗȧřḗşŧ (ḿīƞŭŧḗş)⟧",
+      "title": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƈȯƞƒīɠŭřȧŧīȯƞ⟧",
+      "usageInfo": "⟦Ŭşȧɠḗ-ƀȧşḗḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ȧřḗ ƈȯƞƒīɠŭřḗḓ ƥḗř şḗřṽīƈḗ ẇīŧħ ŭƞīŧ řȧŧḗş.⟧"
     },
-    "customRate": "11111",
+    "customRate": "⟦Ƈŭşŧȯḿ⟧",
     "description": {
-      "default": "11111",
-      "readOnly": "11111"
+      "default": "⟦Ḿȧƞȧɠḗ ŧħḗ ƈȯƞŧřȧƈŧ ŀīƞḗş ȧƞḓ şḗřṽīƈḗş ƒȯř ŧħīş ƈȯƞŧřȧƈŧ⟧",
+      "readOnly": "⟦Ŧħīş şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ īş ȧŧŧřīƀŭŧīȯƞ-ȯƞŀẏ. Ƈȯƞŧřȧƈŧ ŀīƞḗ ȧŭŧħȯřīƞɠ īş ḓīşȧƀŀḗḓ.⟧"
     },
     "dialogs": {
-      "confirmRemove": "11111 {{name}} 11111"
+      "confirmRemove": "⟦Řḗḿȯṽḗ ƈȯƞŧřȧƈŧ ŀīƞḗ \"{{name}}\"?⟧"
     },
     "empty": {
-      "noneAdded": "11111",
-      "selectAbove": "11111"
+      "noneAdded": "⟦Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗş ȧḓḓḗḓ ẏḗŧ.⟧",
+      "selectAbove": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧřȧƈŧ ŀīƞḗ ȧƀȯṽḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ.⟧"
     },
     "errors": {
-      "cannotEditWithInvoices": "11111",
-      "failedToCheckEditable": "11111",
-      "failedToLoad": "11111",
-      "failedToRefresh": "11111",
-      "failedToRemove": "11111",
-      "failedToUpdate": "11111"
+      "cannotEditWithInvoices": "⟦Ƈȧƞƞȯŧ ḗḓīŧ ƈȯƞŧřȧƈŧ ŀīƞḗ: Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ȧşşȯƈīȧŧḗḓ īƞṽȯīƈḗş. Ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȧƞƞȯŧ ƀḗ ḗḓīŧḗḓ ȯƞƈḗ īƞṽȯīƈḗş ħȧṽḗ ƀḗḗƞ ɠḗƞḗřȧŧḗḓ.⟧",
+      "failedToCheckEditable": "⟦Ƒȧīŀḗḓ ŧȯ ƈħḗƈķ īƒ ƈȯƞŧřȧƈŧ ƈȧƞ ƀḗ ḗḓīŧḗḓ⟧",
+      "failedToLoad": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ŀīƞḗş⟧",
+      "failedToRefresh": "⟦Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ ƈȯƞŧřȧƈŧ ŀīƞḗş⟧",
+      "failedToRemove": "⟦Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+      "failedToUpdate": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈȯƞŧřȧƈŧ ŀīƞḗ⟧"
     },
     "loading": {
-      "contractLines": "11111",
-      "inline": "11111"
+      "contractLines": "⟦Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧ ŀīƞḗş⟧",
+      "inline": "⟦Ŀȯȧḓīƞɠ...⟧"
     },
     "location": {
-      "addLocation": "11111",
-      "fallback": "11111",
-      "label": "11111",
-      "lineCountPlural": "11111 {{count}} 11111",
-      "lineCountSingle": "11111 {{count}} 11111",
-      "none": "11111",
-      "pendingEmptyHint": "11111",
-      "placeholder": "11111",
-      "removePendingGroup": "11111",
-      "unassigned": "11111",
-      "unnamed": "11111"
+      "addLocation": "⟦+ Ȧḓḓ ŀȯƈȧŧīȯƞ⟧",
+      "fallback": "⟦Ŀȯƈȧŧīȯƞ⟧",
+      "label": "⟦Ŀȯƈȧŧīȯƞ⟧",
+      "lineCountPlural": "⟦{{count}} ŀīƞḗş⟧",
+      "lineCountSingle": "⟦{{count}} ŀīƞḗ⟧",
+      "none": "⟦Ƞȯ ŀȯƈȧŧīȯƞ ȧşşīɠƞḗḓ⟧",
+      "pendingEmptyHint": "⟦Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗş ẏḗŧ ƒȯř ŧħīş ŀȯƈȧŧīȯƞ. Ȧḓḓ ȧ ŀīƞḗ, ŧħḗƞ ȧşşīɠƞ īŧ ŧȯ ŧħīş ŀȯƈȧŧīȯƞ ṽīȧ īŧş Ḗḓīŧ ƥȧƞḗŀ.⟧",
+      "placeholder": "⟦Şḗŀḗƈŧ ȧ ŀȯƈȧŧīȯƞ⟧",
+      "removePendingGroup": "⟦Řḗḿȯṽḗ ḗḿƥŧẏ ŀȯƈȧŧīȯƞ ɠřȯŭƥ⟧",
+      "unassigned": "⟦Ƞȯ ŀȯƈȧŧīȯƞ ȧşşīɠƞḗḓ⟧",
+      "unnamed": "⟦Ŀȯƈȧŧīȯƞ⟧"
     },
-    "serviceCountPlural": "11111 {{count}} 11111",
-    "serviceCountSingle": "11111 {{count}} 11111",
+    "serviceCountPlural": "⟦{{count}} şḗřṽīƈḗş⟧",
+    "serviceCountSingle": "⟦{{count}} şḗřṽīƈḗ⟧",
     "services": {
-      "empty": "11111",
-      "hourlyRate": "11111",
-      "quantity": "11111",
-      "quantityShort": "11111 {{quantity}} 11111",
-      "quantityTaxAllocation": "11111",
-      "rateTaxAllocation": "11111",
-      "title": "11111 {{count}} 11111",
-      "typeLabel": "11111 {{type}} 11111",
-      "unitOfMeasure": "11111",
-      "unitPlaceholder": "11111",
-      "unitRate": "11111"
+      "empty": "⟦Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ.⟧",
+      "hourlyRate": "⟦Ħȯŭřŀẏ Řȧŧḗ⟧",
+      "quantity": "⟦Ɋŭȧƞŧīŧẏ⟧",
+      "quantityShort": "⟦Ɋŧẏ: {{quantity}}⟧",
+      "quantityTaxAllocation": "⟦Ɋŭȧƞŧīŧẏ (ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ)⟧",
+      "rateTaxAllocation": "⟦Řȧŧḗ (ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ)⟧",
+      "title": "⟦Şḗřṽīƈḗş ({{count}})⟧",
+      "typeLabel": "⟦{{type}} Şḗřṽīƈḗ⟧",
+      "unitOfMeasure": "⟦Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ⟧",
+      "unitPlaceholder": "⟦ŭƞīŧ⟧",
+      "unitRate": "⟦Ŭƞīŧ Řȧŧḗ⟧"
     },
-    "title": "11111"
+    "title": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧"
   },
   "contractLineEdit": {
     "actions": {
-      "cancel": "11111",
-      "saveChanges": "11111",
-      "saving": "11111"
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "saveChanges": "⟦Şȧṽḗ Ƈħȧƞɠḗş⟧",
+      "saving": "⟦Şȧṽīƞɠ...⟧"
     },
     "errors": {
-      "failedToSaveChanges": "11111"
+      "failedToSaveChanges": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƈħȧƞɠḗş⟧"
     },
     "fields": {
-      "billingTimingQuestion": "11111",
-      "rate": "11111"
+      "billingTimingQuestion": "⟦Ẇħḗƞ şħȯŭŀḓ ŧħīş ŀīƞḗ ƀḗ ƀīŀŀḗḓ?⟧",
+      "rate": "⟦Řȧŧḗ⟧"
     },
     "sections": {
-      "billingTiming": "11111",
-      "pricing": "11111"
+      "billingTiming": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧",
+      "pricing": "⟦Ƥřīƈīƞɠ⟧"
     },
     "timingDescriptions": {
-      "advance": "11111",
-      "arrears": "11111"
+      "advance": "⟦Ƈħȧřɠḗş ẇīŀŀ ƀḗ ƀīŀŀḗḓ ƀḗƒȯřḗ ŧħḗ şḗřṽīƈḗ īş ƥřȯṽīḓḗḓ⟧",
+      "arrears": "⟦Ƈħȧřɠḗş ẇīŀŀ ƀḗ ƀīŀŀḗḓ ȧƒŧḗř ŧħḗ şḗřṽīƈḗ īş ƥřȯṽīḓḗḓ⟧"
     },
     "timingOptions": {
-      "advance": "11111",
-      "arrears": "11111"
+      "advance": "⟦Īƞ Ȧḓṽȧƞƈḗ (ȧŧ şŧȧřŧ ȯƒ ƀīŀŀīƞɠ ƥḗřīȯḓ)⟧",
+      "arrears": "⟦Īƞ Ȧřřḗȧřş (ȧŧ ḗƞḓ ȯƒ ƀīŀŀīƞɠ ƥḗřīȯḓ)⟧"
     },
-    "title": "11111 {{name}} 11111",
+    "title": "⟦Ḗḓīŧ Ƈȯƞŧřȧƈŧ Ŀīƞḗ: {{name}}⟧",
     "validation": {
-      "validRateRequired": "11111"
+      "validRateRequired": "⟦Ƥŀḗȧşḗ ḗƞŧḗř ȧ ṽȧŀīḓ řȧŧḗ (ḿŭşŧ ƀḗ ȧ ƞȯƞ-ƞḗɠȧŧīṽḗ ƞŭḿƀḗř)⟧"
     },
     "values": {
-      "unnamedLine": "11111"
+      "unnamedLine": "⟦Ŭƞƞȧḿḗḓ ŀīƞḗ⟧"
     }
   },
   "contractLineRate": {
     "actions": {
-      "cancel": "11111",
-      "saveRate": "11111"
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "saveRate": "⟦Şȧṽḗ Řȧŧḗ⟧"
     },
     "fields": {
-      "rate": "11111"
+      "rate": "⟦Řȧŧḗ⟧"
     },
-    "title": "11111 {{name}} 11111",
+    "title": "⟦Şḗŧ Ƈŭşŧȯḿ Řȧŧḗ ƒȯř {{name}}⟧",
     "validation": {
-      "validRateRequired": "11111"
+      "validRateRequired": "⟦Ƥŀḗȧşḗ ḗƞŧḗř ȧ ṽȧŀīḓ řȧŧḗ (ḿŭşŧ ƀḗ ȧ ƞȯƞ-ƞḗɠȧŧīṽḗ ƞŭḿƀḗř)⟧"
     }
   },
   "addLines": {
     "actions": {
-      "addPlural": "11111 {{count}} 11111",
-      "addSingle": "11111 {{count}} 11111",
-      "adding": "11111"
+      "addPlural": "⟦Ȧḓḓ ({{count}}) Ƥřḗşḗŧş⟧",
+      "addSingle": "⟦Ȧḓḓ ({{count}}) Ƥřḗşḗŧ⟧",
+      "adding": "⟦Ȧḓḓīƞɠ...⟧"
     },
     "empty": {
-      "noMatches": "11111",
-      "noneAvailable": "11111"
+      "noMatches": "⟦Ƞȯ ƥřḗşḗŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ.⟧",
+      "noneAvailable": "⟦Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş ȧṽȧīŀȧƀŀḗ.⟧"
     },
     "errors": {
-      "failedToAddPresets": "11111",
-      "failedToLoadPresetDetails": "11111",
-      "failedToLoadPresets": "11111"
+      "failedToAddPresets": "⟦Ƒȧīŀḗḓ ŧȯ ȧḓḓ şḗŀḗƈŧḗḓ ƥřḗşḗŧş.⟧",
+      "failedToLoadPresetDetails": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřḗşḗŧ ḓḗŧȧīŀş.⟧",
+      "failedToLoadPresets": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş.⟧"
     },
     "filters": {
-      "allTypes": "11111",
-      "reset": "11111",
-      "searchPlaceholder": "11111",
-      "typePlaceholder": "11111"
+      "allTypes": "⟦Ȧŀŀ ŧẏƥḗş⟧",
+      "reset": "⟦Řḗşḗŧ⟧",
+      "searchPlaceholder": "⟦Şḗȧřƈħ ƥřḗşḗŧş...⟧",
+      "typePlaceholder": "⟦Şḗŀḗƈŧ ŧẏƥḗ⟧"
     },
     "fixedConfig": {
-      "defaultBaseRate": "11111",
-      "defaultRatePlaceholder": "11111 {{rate}} 11111",
-      "enterBaseRate": "11111",
-      "leaveBlankDefault": "11111",
-      "notSet": "11111",
-      "overrideBaseRate": "11111",
-      "title": "11111"
+      "defaultBaseRate": "⟦Ḓḗƒȧŭŀŧ Ɓȧşḗ Řȧŧḗ:⟧",
+      "defaultRatePlaceholder": "⟦Ḓḗƒȧŭŀŧ: ${{rate}}⟧",
+      "enterBaseRate": "⟦Ḗƞŧḗř ƀȧşḗ řȧŧḗ⟧",
+      "leaveBlankDefault": "⟦Ŀḗȧṽḗ ƀŀȧƞķ ŧȯ ŭşḗ ŧħḗ ḓḗƒȧŭŀŧ řȧŧḗ⟧",
+      "notSet": "⟦Ƞȯŧ şḗŧ⟧",
+      "overrideBaseRate": "⟦Ȯṽḗřřīḓḗ Ɓȧşḗ Řȧŧḗ⟧",
+      "title": "⟦Ƒīẋḗḓ Řȧŧḗ Ƈȯƞƒīɠŭřȧŧīȯƞ⟧"
     },
     "hourlyConfig": {
-      "defaultRate": "11111 {{rate}} 11111",
-      "hourlyRate": "11111",
-      "minimumBillableMinutes": "11111",
-      "roundUpToNearest": "11111",
-      "servicesAndRates": "11111",
-      "title": "11111"
+      "defaultRate": "⟦Ḓḗƒȧŭŀŧ: ${{rate}}⟧",
+      "hourlyRate": "⟦Ħȯŭřŀẏ Řȧŧḗ⟧",
+      "minimumBillableMinutes": "⟦Ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ḿīƞŭŧḗş⟧",
+      "roundUpToNearest": "⟦Řȯŭƞḓ ŭƥ ŧȯ ƞḗȧřḗşŧ (ḿīƞŭŧḗş)⟧",
+      "servicesAndRates": "⟦Şḗřṽīƈḗş & Ħȯŭřŀẏ Řȧŧḗş⟧",
+      "title": "⟦Ŧīḿḗ Ɓīŀŀīƞɠ Ƈȯƞƒīɠŭřȧŧīȯƞ⟧"
     },
-    "loading": "11111",
+    "loading": "⟦Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş...⟧",
     "selection": {
-      "deselectPreset": "11111",
-      "selectPreset": "11111",
-      "selectedPlural": "11111 {{count}} 11111",
-      "selectedSingle": "11111 {{count}} 11111"
+      "deselectPreset": "⟦Ḓḗşḗŀḗƈŧ ƥřḗşḗŧ⟧",
+      "selectPreset": "⟦Şḗŀḗƈŧ ƥřḗşḗŧ⟧",
+      "selectedPlural": "⟦{{count}} ƥřḗşḗŧş şḗŀḗƈŧḗḓ⟧",
+      "selectedSingle": "⟦{{count}} ƥřḗşḗŧ şḗŀḗƈŧḗḓ⟧"
     },
-    "serviceCountPlural": "11111 {{count}} 11111",
-    "serviceCountSingle": "11111 {{count}} 11111",
+    "serviceCountPlural": "⟦{{count}} şḗřṽīƈḗş⟧",
+    "serviceCountSingle": "⟦{{count}} şḗřṽīƈḗ⟧",
     "services": {
-      "configuration": "11111",
-      "empty": "11111",
-      "fixedReferenceHelp": "11111",
-      "includedReference": "11111",
-      "quantityShort": "11111 {{quantity}} 11111",
-      "unknownService": "11111"
+      "configuration": "⟦Şḗřṽīƈḗş Ƈȯƞƒīɠŭřȧŧīȯƞ⟧",
+      "empty": "⟦Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƥřḗşḗŧ⟧",
+      "fixedReferenceHelp": "⟦Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ īƞƈŀŭḓḗḓ ƒȯř řḗƒḗřḗƞƈḗ ȯƞŀẏ. Ŧħḗ ƒīẋḗḓ řȧŧḗ ȧƀȯṽḗ ḓḗŧḗřḿīƞḗş ŧħḗ ƀīŀŀīƞɠ ȧḿȯŭƞŧ.⟧",
+      "includedReference": "⟦Şḗřṽīƈḗş Īƞƈŀŭḓḗḓ (Řḗƒḗřḗƞƈḗ)⟧",
+      "quantityShort": "⟦Ɋŧẏ: {{quantity}}⟧",
+      "unknownService": "⟦Ŭƞķƞȯẇƞ Şḗřṽīƈḗ⟧"
     },
-    "title": "11111",
+    "title": "⟦Ȧḓḓ Ƈȯƞŧřȧƈŧ Ŀīƞḗş ƒřȯḿ Ƥřḗşḗŧş⟧",
     "usageConfig": {
-      "defaultRate": "11111 {{rate}} 11111",
-      "quantity": "11111",
-      "ratePerUnit": "11111",
-      "unitHint": "11111",
-      "unitOfMeasure": "11111",
-      "unitPlaceholder": "11111"
+      "defaultRate": "⟦Ḓḗƒȧŭŀŧ: ${{rate}}⟧",
+      "quantity": "⟦Ɋŭȧƞŧīŧẏ⟧",
+      "ratePerUnit": "⟦Řȧŧḗ (ƥḗř ŭƞīŧ)⟧",
+      "unitHint": "⟦ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř⟧",
+      "unitOfMeasure": "⟦Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ⟧",
+      "unitPlaceholder": "⟦ŭƞīŧ⟧"
     }
   },
   "createCustomLine": {
-    "addBucketOfConsumption": "11111",
-    "addBucketOfHours": "11111",
-    "addHourlyService": "11111",
-    "addItem": "11111",
-    "addUsageService": "11111",
-    "adjustForPartialPeriods": "11111",
-    "adjustForPartialPeriodsHelp": "11111",
-    "basicsDescription": "11111",
-    "basicsTitle": "11111",
-    "billingFrequencyLabel": "11111",
-    "billingFrequencyPlaceholder": "11111",
+    "addBucketOfConsumption": "⟦Ȧḓḓ ƀŭƈķḗŧ ȯƒ ƈȯƞşŭḿƥŧīȯƞ⟧",
+    "addBucketOfHours": "⟦Ȧḓḓ ƀŭƈķḗŧ ȯƒ ħȯŭřş⟧",
+    "addHourlyService": "⟦Ȧḓḓ Ħȯŭřŀẏ Şḗřṽīƈḗ⟧",
+    "addItem": "⟦Ȧḓḓ Īŧḗḿ⟧",
+    "addUsageService": "⟦Ȧḓḓ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗ⟧",
+    "adjustForPartialPeriods": "⟦Ȧḓĵŭşŧ ƒȯř Ƥȧřŧīȧŀ Ƥḗřīȯḓş⟧",
+    "adjustForPartialPeriodsHelp": "⟦Ẇħḗƞ ḗƞȧƀŀḗḓ, ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ şƈȧŀḗş ŧȯ ŧħḗ ƈȯṽḗřḗḓ ƥȯřŧīȯƞ ȯƒ ȧ şḗřṽīƈḗ ƥḗřīȯḓ ẇħḗƞ ŧħḗ ƈȯƞŧřȧƈŧ şŧȧřŧş ȯř ḗƞḓş īƞşīḓḗ ŧħȧŧ ƥḗřīȯḓ.⟧",
+    "basicsDescription": "⟦Ƈřḗȧŧḗ ȧ ƈŭşŧȯḿ ƈȯƞŧřȧƈŧ ŀīƞḗ ḓīřḗƈŧŀẏ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ.⟧",
+    "basicsTitle": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ɓȧşīƈş⟧",
+    "billingFrequencyLabel": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ *⟧",
+    "billingFrequencyPlaceholder": "⟦Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
     "billingModel": {
-      "fixedDescription": "11111",
-      "fixedTitle": "11111",
-      "hourlyDescription": "11111",
-      "hourlyTitle": "11111",
-      "usageDescription": "11111",
-      "usageTitle": "11111"
+      "fixedDescription": "⟦Ƈħȧřɠḗ ȧ ƒŀȧŧ ȧḿȯŭƞŧ ḗṽḗřẏ ƀīŀŀīƞɠ ƥḗřīȯḓ.⟧",
+      "fixedTitle": "⟦Ƒīẋḗḓ Ƒḗḗ⟧",
+      "hourlyDescription": "⟦Ɓīŀŀ ƀȧşḗḓ ȯƞ ȧƥƥřȯṽḗḓ ŧīḿḗ ḗƞŧřīḗş.⟧",
+      "hourlyTitle": "⟦Ħȯŭřŀẏ⟧",
+      "usageDescription": "⟦Īƞṽȯīƈḗ ƒȯř ŭƞīŧş ƈȯƞşŭḿḗḓ.⟧",
+      "usageTitle": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ⟧"
     },
     "billingTiming": {
-      "advance": "11111",
-      "arrears": "11111"
+      "advance": "⟦Ȧḓṽȧƞƈḗ (ƀīŀŀ ȧŧ şŧȧřŧ ȯƒ ƥḗřīȯḓ)⟧",
+      "arrears": "⟦Ȧřřḗȧřş (ƀīŀŀ ȧŧ ḗƞḓ ȯƒ ƥḗřīȯḓ)⟧"
     },
-    "billingTimingHelp": "11111",
-    "chooseBillingModel": "11111",
-    "chooseBillingModelDescription": "11111",
-    "contractLineNameLabel": "11111",
-    "contractLineNamePlaceholder": "11111",
-    "create": "11111",
-    "creating": "11111",
-    "defaultUnit": "11111",
-    "defaultUnits": "11111",
-    "enterHourlyRate": "11111",
-    "enterUnitRate": "11111",
-    "fixedServicesAlertBaseRate": "11111",
-    "fixedServicesAlertHeading": "11111",
-    "fixedServicesAlertProducts": "11111",
-    "fixedServicesDescription": "11111",
-    "fixedServicesTitle": "11111",
-    "hourlyRateDisplay": "11111 {{rate}} 11111",
-    "hourlyRateLabel": "11111",
-    "hourlyServicesAlertDescription": "11111",
-    "hourlyServicesAlertHeading": "11111",
-    "hourlyServicesDescription": "11111",
-    "hourlyServicesLabel": "11111",
-    "hourlyServicesTitle": "11111",
-    "itemLabel": "11111 {{index}} 11111",
-    "moneyPlaceholder": "11111",
-    "minimumBillableTimeLabel": "11111",
-    "noFixedItems": "11111",
-    "noHourlyServices": "11111",
-    "noUsageServices": "11111",
-    "quantityLabel": "11111",
-    "ratePerUnitLabel": "11111",
-    "recurringBaseRateHelp": "11111",
-    "recurringBaseRateLabel": "11111",
-    "roundUpToNearestLabel": "11111",
-    "selectItemPlaceholder": "11111",
-    "selectServicePlaceholder": "11111",
-    "serviceLabel": "11111 {{index}} 11111",
-    "servicesAndProductsLabel": "11111",
-    "title": "11111",
-    "unitOfMeasureLabel": "11111",
-    "unitOfMeasurePlaceholder": "11111",
-    "unitRateDisplay": "11111 {{rate}} 11111 {{unit}} 11111",
-    "usageServicesAlertDescription": "11111",
-    "usageServicesAlertHeading": "11111",
-    "usageServicesDescription": "11111",
-    "usageServicesLabel": "11111",
-    "usageServicesTitle": "11111",
+    "billingTimingHelp": "⟦Ȧḓṽȧƞƈḗ ƀīŀŀīƞɠ īş ŧẏƥīƈȧŀ ƒȯř ƒīẋḗḓ ƒḗḗş; ȧřřḗȧřş ƒȯř ŧīḿḗ/ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗş.⟧",
+    "chooseBillingModel": "⟦Ƈħȯȯşḗ ȧ Ɓīŀŀīƞɠ Ḿȯḓḗŀ *⟧",
+    "chooseBillingModelDescription": "⟦Şḗŀḗƈŧ ŧħḗ ƀīŀŀīƞɠ ƀḗħȧṽīȯř ŧħȧŧ ƒīŧş ŧħīş ȯƒƒḗřīƞɠ.⟧",
+    "contractLineNameLabel": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƞȧḿḗ *⟧",
+    "contractLineNamePlaceholder": "⟦ḗ.ɠ. Ḿȧƞȧɠḗḓ Şŭƥƥȯřŧ - Ɠȯŀḓ⟧",
+    "create": "⟦Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ Ŀīƞḗ⟧",
+    "creating": "⟦Ƈřḗȧŧīƞɠ...⟧",
+    "defaultUnit": "⟦ŭƞīŧ⟧",
+    "defaultUnits": "⟦ŭƞīŧş⟧",
+    "enterHourlyRate": "⟦Ḗƞŧḗř ħȯŭřŀẏ řȧŧḗ⟧",
+    "enterUnitRate": "⟦Ḗƞŧḗř ŭƞīŧ řȧŧḗ⟧",
+    "fixedServicesAlertBaseRate": "⟦Ŧħḗ ƈȯƞŧřȧƈŧ ŀīƞḗ'ş ƀȧşḗ řȧŧḗ (şḗŧ ƀḗŀȯẇ) īş ŧħḗ ƀīŀŀḗḓ ȧḿȯŭƞŧ.⟧",
+    "fixedServicesAlertHeading": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş⟧",
+    "fixedServicesAlertProducts": "⟦Ẏȯŭ ƈȧƞ ȧŀşȯ ȧŧŧȧƈħ ƥřȯḓŭƈŧş ŧȯ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ; ƥřȯḓŭƈŧ ʠŭȧƞŧīŧīḗş ȧřḗ ƀīŀŀḗḓ ȧş ŭƞīŧş, ẇħīŀḗ ƒīẋḗḓ-ƒḗḗ şḗřṽīƈḗ ʠŭȧƞŧīŧīḗş ȧřḗ ŭşḗḓ ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ ȯƞŀẏ.⟧",
+    "fixedServicesDescription": "⟦Şḗŧ ŭƥ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ȧŧ ȧ ƒīẋḗḓ řḗƈŭřřīƞɠ řȧŧḗ.⟧",
+    "fixedServicesTitle": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş⟧",
+    "hourlyRateDisplay": "⟦{{rate}}/ħȯŭř⟧",
+    "hourlyRateLabel": "⟦Ħȯŭřŀẏ Řȧŧḗ⟧",
+    "hourlyServicesAlertDescription": "⟦Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ŧīḿḗ ŧřȧƈķḗḓ.⟧",
+    "hourlyServicesAlertHeading": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
+    "hourlyServicesDescription": "⟦Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŧīḿḗ ŧřȧƈķḗḓ.⟧",
+    "hourlyServicesLabel": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
+    "hourlyServicesTitle": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
+    "itemLabel": "⟦Īŧḗḿ {{index}}⟧",
+    "moneyPlaceholder": "⟦0.00⟧",
+    "minimumBillableTimeLabel": "⟦Ḿīƞīḿŭḿ Ɓīŀŀȧƀŀḗ Ŧīḿḗ (ḿīƞŭŧḗş)⟧",
+    "noFixedItems": "⟦Ƞȯ ƒīẋḗḓ ƒḗḗ īŧḗḿş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ \"Ȧḓḓ Īŧḗḿ\" ȧƀȯṽḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ.⟧",
+    "noHourlyServices": "⟦Ƞȯ ħȯŭřŀẏ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ \"Ȧḓḓ Ħȯŭřŀẏ Şḗřṽīƈḗ\" ȧƀȯṽḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ.⟧",
+    "noUsageServices": "⟦Ƞȯ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ \"Ȧḓḓ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗ\" ȧƀȯṽḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ.⟧",
+    "quantityLabel": "⟦Ɋŭȧƞŧīŧẏ⟧",
+    "ratePerUnitLabel": "⟦Řȧŧḗ ƥḗř Ŭƞīŧ⟧",
+    "recurringBaseRateHelp": "⟦Řḗƈŭřřīƞɠ ƒḗḗ ƒȯř ȧŀŀ ƒīẋḗḓ şḗřṽīƈḗş.⟧",
+    "recurringBaseRateLabel": "⟦Řḗƈŭřřīƞɠ Ɓȧşḗ Řȧŧḗ⟧",
+    "roundUpToNearestLabel": "⟦Řȯŭƞḓ Ŭƥ Ŧȯ Ƞḗȧřḗşŧ (ḿīƞŭŧḗş)⟧",
+    "selectItemPlaceholder": "⟦Şḗŀḗƈŧ ȧƞ īŧḗḿ⟧",
+    "selectServicePlaceholder": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+    "serviceLabel": "⟦Şḗřṽīƈḗ {{index}}⟧",
+    "servicesAndProductsLabel": "⟦Şḗřṽīƈḗş & Ƥřȯḓŭƈŧş⟧",
+    "title": "⟦Ƈřḗȧŧḗ Ƈŭşŧȯḿ Ƈȯƞŧřȧƈŧ Ŀīƞḗ⟧",
+    "unitOfMeasureLabel": "⟦Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ⟧",
+    "unitOfMeasurePlaceholder": "⟦ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř⟧",
+    "unitRateDisplay": "⟦{{rate}}/{{unit}}⟧",
+    "usageServicesAlertDescription": "⟦Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ƈȯƞşŭḿƥŧīȯƞ.⟧",
+    "usageServicesAlertHeading": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧",
+    "usageServicesDescription": "⟦Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŭşȧɠḗ ȯř ƈȯƞşŭḿƥŧīȯƞ.⟧",
+    "usageServicesLabel": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧",
+    "usageServicesTitle": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧",
     "validation": {
-      "billingFrequencyRequired": "11111",
-      "contractLineNameRequired": "11111",
-      "contractLineTypeRequired": "11111",
-      "failedToCreate": "11111",
-      "fixedServiceRequired": "11111",
-      "fixedServiceSelectRequired": "11111 {{index}} 11111",
-      "hourlyRateRequired": "11111 {{index}} 11111",
-      "hourlyServiceRequired": "11111",
-      "hourlyServiceSelectRequired": "11111 {{index}} 11111",
-      "unitOfMeasureRequired": "11111 {{index}} 11111",
-      "unitRateRequired": "11111 {{index}} 11111",
-      "usageServiceRequired": "11111",
-      "usageServiceSelectRequired": "11111 {{index}} 11111"
+      "billingFrequencyRequired": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ⟧",
+      "contractLineNameRequired": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",
+      "contractLineTypeRequired": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ŧẏƥḗ īş řḗʠŭīřḗḓ⟧",
+      "failedToCreate": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+      "fixedServiceRequired": "⟦Ȧŧ ŀḗȧşŧ ȯƞḗ ƒīẋḗḓ şḗřṽīƈḗ ȯř ƥřȯḓŭƈŧ īş řḗʠŭīřḗḓ⟧",
+      "fixedServiceSelectRequired": "⟦Īŧḗḿ {{index}}: Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ şḗřṽīƈḗ ȯř ƥřȯḓŭƈŧ⟧",
+      "hourlyRateRequired": "⟦Şḗřṽīƈḗ {{index}}: Ħȯŭřŀẏ řȧŧḗ īş řḗʠŭīřḗḓ⟧",
+      "hourlyServiceRequired": "⟦Ȧŧ ŀḗȧşŧ ȯƞḗ ħȯŭřŀẏ şḗřṽīƈḗ īş řḗʠŭīřḗḓ⟧",
+      "hourlyServiceSelectRequired": "⟦Şḗřṽīƈḗ {{index}}: Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+      "unitOfMeasureRequired": "⟦Şḗřṽīƈḗ {{index}}: Ŭƞīŧ ȯƒ ḿḗȧşŭřḗ īş řḗʠŭīřḗḓ⟧",
+      "unitRateRequired": "⟦Şḗřṽīƈḗ {{index}}: Ŭƞīŧ řȧŧḗ īş řḗʠŭīřḗḓ⟧",
+      "usageServiceRequired": "⟦Ȧŧ ŀḗȧşŧ ȯƞḗ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗ īş řḗʠŭīřḗḓ⟧",
+      "usageServiceSelectRequired": "⟦Şḗřṽīƈḗ {{index}}: Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧"
     }
   },
   "pricingSchedules": {
     "list": {
       "actions": {
-        "addSchedule": "11111",
-        "deleteSchedule": "11111",
-        "editSchedule": "11111"
+        "addSchedule": "⟦Ȧḓḓ Şƈħḗḓŭŀḗ⟧",
+        "deleteSchedule": "⟦Ḓḗŀḗŧḗ Şƈħḗḓŭŀḗ⟧",
+        "editSchedule": "⟦Ḗḓīŧ şƈħḗḓŭŀḗ⟧"
       },
       "columns": {
-        "actions": "11111",
-        "customRate": "11111",
-        "effectiveDate": "11111",
-        "endDate": "11111",
-        "notes": "11111"
+        "actions": "⟦Ȧƈŧīȯƞş⟧",
+        "customRate": "⟦Ƈŭşŧȯḿ Řȧŧḗ⟧",
+        "effectiveDate": "⟦Ḗƒƒḗƈŧīṽḗ Ḓȧŧḗ⟧",
+        "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+        "notes": "⟦Ƞȯŧḗş⟧"
       },
       "dialogs": {
-        "confirmDeleteSchedule": "11111"
+        "confirmDeleteSchedule": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħīş ƥřīƈīƞɠ şƈħḗḓŭŀḗ?⟧"
       },
       "empty": {
-        "description": "11111",
-        "noPricingSchedules": "11111"
+        "description": "⟦Ȧḓḓ ƥřīƈīƞɠ şƈħḗḓŭŀḗş ŧȯ ḓḗƒīƞḗ ŧīḿḗ-ƀȧşḗḓ řȧŧḗ ƈħȧƞɠḗş ƒȯř ŧħīş ƈȯƞŧřȧƈŧ⟧",
+        "noPricingSchedules": "⟦Ƞȯ ƥřīƈīƞɠ şƈħḗḓŭŀḗş ẏḗŧ⟧"
       },
       "errors": {
-        "failedToDeletePricingSchedule": "11111",
-        "failedToLoadPricingSchedules": "11111"
+        "failedToDeletePricingSchedule": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƥřīƈīƞɠ şƈħḗḓŭŀḗ⟧",
+        "failedToLoadPricingSchedules": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřīƈīƞɠ şƈħḗḓŭŀḗş⟧"
       },
-      "loading": "11111",
-      "readOnlyNotice": "11111",
+      "loading": "⟦Ŀȯȧḓīƞɠ ƥřīƈīƞɠ şƈħḗḓŭŀḗş⟧",
+      "readOnlyNotice": "⟦Ŧħīş şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ īş ȧŧŧřīƀŭŧīȯƞ-ȯƞŀẏ. Ƥřīƈīƞɠ şƈħḗḓŭŀḗ ȧŭŧħȯřīƞɠ īş ḓīşȧƀŀḗḓ.⟧",
       "timeline": {
-        "title": "11111"
+        "title": "⟦Ƥřīƈīƞɠ Ŧīḿḗŀīƞḗ⟧"
       },
-      "title": "11111",
+      "title": "⟦Ƥřīƈīƞɠ Şƈħḗḓŭŀḗş⟧",
       "values": {
-        "defaultRate": "11111",
-        "ongoing": "11111",
-        "useDefaultRate": "11111"
+        "defaultRate": "⟦Ḓḗƒȧŭŀŧ řȧŧḗ⟧",
+        "ongoing": "⟦Ȯƞɠȯīƞɠ⟧",
+        "useDefaultRate": "⟦Ŭşḗ ḓḗƒȧŭŀŧ řȧŧḗ⟧"
       }
     },
     "dialog": {
       "actions": {
-        "addSchedule": "11111",
-        "cancel": "11111",
-        "saving": "11111",
-        "updateSchedule": "11111"
+        "addSchedule": "⟦Ȧḓḓ Şƈħḗḓŭŀḗ⟧",
+        "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+        "saving": "⟦Şȧṽīƞɠ...⟧",
+        "updateSchedule": "⟦Ŭƥḓȧŧḗ Şƈħḗḓŭŀḗ⟧"
       },
       "durationUnits": {
-        "days": "11111",
-        "months": "11111",
-        "weeks": "11111",
-        "years": "11111"
+        "days": "⟦Ḓȧẏş⟧",
+        "months": "⟦Ḿȯƞŧħş⟧",
+        "weeks": "⟦Ẇḗḗķş⟧",
+        "years": "⟦Ẏḗȧřş⟧"
       },
       "errors": {
-        "failedToSavePricingSchedule": "11111"
+        "failedToSavePricingSchedule": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƥřīƈīƞɠ şƈħḗḓŭŀḗ⟧"
       },
       "fields": {
-        "customRate": "11111",
-        "customRatePlaceholder": "11111",
-        "duration": "11111",
-        "durationPlaceholder": "11111",
-        "effectiveDate": "11111",
-        "endDate": "11111",
-        "hasEndDate": "11111",
-        "notes": "11111",
-        "notesPlaceholder": "11111",
-        "unit": "11111",
-        "useDefaultRate": "11111",
-        "useDuration": "11111"
+        "customRate": "⟦Ƈŭşŧȯḿ Řȧŧḗ⟧",
+        "customRatePlaceholder": "⟦0.00⟧",
+        "duration": "⟦Ḓŭřȧŧīȯƞ⟧",
+        "durationPlaceholder": "⟦ḗ.ɠ., 6⟧",
+        "effectiveDate": "⟦Ḗƒƒḗƈŧīṽḗ Ḓȧŧḗ⟧",
+        "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+        "hasEndDate": "⟦Ħȧş ḗƞḓ ḓȧŧḗ⟧",
+        "notes": "⟦Ƞȯŧḗş⟧",
+        "notesPlaceholder": "⟦Ȧḓḓ ƞȯŧḗş ȧƀȯŭŧ ŧħīş ƥřīƈīƞɠ ƈħȧƞɠḗ (ḗ.ɠ., 'Ȧƞƞŭȧŀ řȧŧḗ īƞƈřḗȧşḗ')⟧",
+        "unit": "⟦Ŭƞīŧ⟧",
+        "useDefaultRate": "⟦Ŭşḗ ḓḗƒȧŭŀŧ řȧŧḗ⟧",
+        "useDuration": "⟦Ŭşḗ ḓŭřȧŧīȯƞ⟧"
       },
       "title": {
-        "addPricingSchedule": "11111",
-        "editPricingSchedule": "11111"
+        "addPricingSchedule": "⟦Ȧḓḓ Ƥřīƈīƞɠ Şƈħḗḓŭŀḗ⟧",
+        "editPricingSchedule": "⟦Ḗḓīŧ Ƥřīƈīƞɠ Şƈħḗḓŭŀḗ⟧"
       },
       "validation": {
-        "currencySettingsLoading": "11111",
-        "customRatePositive": "11111",
-        "customRateRequired": "11111",
-        "durationPositive": "11111",
-        "durationRequired": "11111",
-        "effectiveDateRequired": "11111",
-        "endDateAfterEffectiveDate": "11111",
-        "endDateRequiredWhenEnabled": "11111"
+        "currencySettingsLoading": "⟦Ƈŭřřḗƞƈẏ şḗŧŧīƞɠş ȧřḗ şŧīŀŀ ŀȯȧḓīƞɠ; ŧřẏ ȧɠȧīƞ īƞ ȧ ḿȯḿḗƞŧ⟧",
+        "customRatePositive": "⟦Ƈŭşŧȯḿ řȧŧḗ ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ ƞŭḿƀḗř⟧",
+        "customRateRequired": "⟦Ƈŭşŧȯḿ řȧŧḗ īş řḗʠŭīřḗḓ ẇħḗƞ ƞȯŧ ŭşīƞɠ ḓḗƒȧŭŀŧ řȧŧḗ⟧",
+        "durationPositive": "⟦Ḓŭřȧŧīȯƞ ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ ƞŭḿƀḗř⟧",
+        "durationRequired": "⟦Ḓŭřȧŧīȯƞ ṽȧŀŭḗ īş řḗʠŭīřḗḓ ẇħḗƞ ŭşīƞɠ ḓŭřȧŧīȯƞ⟧",
+        "effectiveDateRequired": "⟦Ḗƒƒḗƈŧīṽḗ ḓȧŧḗ īş řḗʠŭīřḗḓ⟧",
+        "endDateAfterEffectiveDate": "⟦Ḗƞḓ ḓȧŧḗ ḿŭşŧ ƀḗ ȧƒŧḗř ḗƒƒḗƈŧīṽḗ ḓȧŧḗ⟧",
+        "endDateRequiredWhenEnabled": "⟦Ḗƞḓ ḓȧŧḗ īş řḗʠŭīřḗḓ ẇħḗƞ \"Ħȧş ḗƞḓ ḓȧŧḗ\" īş ḗƞȧƀŀḗḓ⟧"
       }
     }
   },
   "contractsList": {
     "actions": {
-      "deleting": "11111",
-      "createContract": "11111",
-      "createTemplate": "11111",
-      "openMenu": "11111",
-      "quickAdd": "11111",
-      "resume": "11111",
-      "restore": "11111",
-      "setToActive": "11111",
-      "terminate": "11111"
+      "deleting": "⟦Ḓḗŀḗŧīƞɠ…⟧",
+      "createContract": "⟦Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ⟧",
+      "createTemplate": "⟦Ƈřḗȧŧḗ Ŧḗḿƥŀȧŧḗ⟧",
+      "openMenu": "⟦Ȯƥḗƞ ḿḗƞŭ⟧",
+      "quickAdd": "⟦Ɋŭīƈķ Ȧḓḓ⟧",
+      "resume": "⟦Řḗşŭḿḗ⟧",
+      "restore": "⟦Řḗşŧȯřḗ⟧",
+      "setToActive": "⟦Şḗŧ ŧȯ Ȧƈŧīṽḗ⟧",
+      "terminate": "⟦Ŧḗřḿīƞȧŧḗ⟧"
     },
     "columns": {
-      "actions": "11111",
-      "client": "11111",
-      "contractName": "11111",
-      "created": "11111",
-      "description": "11111",
-      "endDate": "11111",
-      "lastModified": "11111",
-      "sourceTemplate": "11111",
-      "startDate": "11111",
-      "status": "11111"
+      "actions": "⟦Ȧƈŧīȯƞş⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "contractName": "⟦Ƈȯƞŧřȧƈŧ Ƞȧḿḗ⟧",
+      "created": "⟦Ƈřḗȧŧḗḓ⟧",
+      "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+      "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+      "lastModified": "⟦Ŀȧşŧ Ḿȯḓīƒīḗḓ⟧",
+      "sourceTemplate": "⟦Şȯŭřƈḗ Ŧḗḿƥŀȧŧḗ⟧",
+      "startDate": "⟦Şŧȧřŧ Ḓȧŧḗ⟧",
+      "status": "⟦Şŧȧŧŭş⟧"
     },
     "dialogs": {
       "deleteClient": {
-        "clientSuffix": "11111 {{clientName}} 11111",
-        "message": "11111 {{contractName}} 11111 {{clientSuffix}} 11111",
-        "title": "11111"
+        "clientSuffix": "⟦ ƒȯř {{clientName}}⟧",
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ ŧħḗ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ \"{{contractName}}\"{{clientSuffix}}? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧",
+        "title": "⟦Ḓḗŀḗŧḗ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ?⟧"
       },
       "deleteTemplate": {
-        "message": "11111 {{contractName}} 11111",
-        "title": "11111"
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ ŧħḗ ŧḗḿƥŀȧŧḗ \"{{contractName}}\"? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧",
+        "title": "⟦Ḓḗŀḗŧḗ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ?⟧"
       },
       "discardDraft": {
-        "message": "11111 {{contractName}} 11111 {{clientName}} 11111",
-        "title": "11111"
+        "message": "⟦Ŧħīş ẇīŀŀ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ ŧħḗ ḓřȧƒŧ \"{{contractName}}\" ƒȯř {{clientName}}.\nŦħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧",
+        "title": "⟦Ḓīşƈȧřḓ Ḓřȧƒŧ Ƈȯƞŧřȧƈŧ?⟧"
       }
     },
     "drafts": {
-      "badgeCount": "11111 {{count}} 11111"
+      "badgeCount": "⟦{{count}} ḓřȧƒŧ ƈȯƞŧřȧƈŧş⟧"
     },
     "empty": {
-      "dash": "11111",
-      "noClientContracts": "11111",
-      "noDescription": "11111",
-      "noDraftMatches": "11111",
-      "noDrafts": "11111",
-      "noTemplates": "11111",
-      "unknownClient": "11111",
-      "untitledContract": "11111",
-      "untitledDraft": "11111",
-      "untitledTemplate": "11111"
+      "dash": "⟦—⟧",
+      "noClientContracts": "⟦Ƞȯ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ.⟧",
+      "noDescription": "⟦Ƞȯ ḓḗşƈřīƥŧīȯƞ⟧",
+      "noDraftMatches": "⟦Ƞȯ ḓřȧƒŧ ƈȯƞŧřȧƈŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ.⟧",
+      "noDrafts": "⟦Ƞȯ ḓřȧƒŧ ƈȯƞŧřȧƈŧş. Şŧȧřŧ ƈřḗȧŧīƞɠ ȧ ƞḗẇ ƈȯƞŧřȧƈŧ ŧȯ şȧṽḗ ȧş ḓřȧƒŧ.⟧",
+      "noTemplates": "⟦Ƞȯ ŧḗḿƥŀȧŧḗş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ.⟧",
+      "unknownClient": "⟦Ŭƞķƞȯẇƞ ƈŀīḗƞŧ⟧",
+      "untitledContract": "⟦Ŭƞŧīŧŀḗḓ ƈȯƞŧřȧƈŧ⟧",
+      "untitledDraft": "⟦Ŭƞŧīŧŀḗḓ ḓřȧƒŧ⟧",
+      "untitledTemplate": "⟦Ŭƞŧīŧŀḗḓ ŧḗḿƥŀȧŧḗ⟧"
     },
     "errors": {
-      "failedToFetch": "11111"
+      "failedToFetch": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ƈȯƞŧřȧƈŧş⟧"
     },
     "heading": {
-      "description": "11111",
-      "title": "11111"
+      "description": "⟦Ŧḗḿƥŀȧŧḗş ȧřḗ řḗŭşȧƀŀḗ ḓḗƒīƞīŧīȯƞş. Ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ȧřḗ ƈŀīḗƞŧ-ȯẇƞḗḓ īƞşŧȧƞƈḗş.⟧",
+      "title": "⟦Ƈȯƞŧřȧƈŧş⟧"
     },
     "loading": {
-      "contracts": "11111"
+      "contracts": "⟦Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧş...⟧"
     },
     "search": {
-      "clientContractsAriaLabel": "11111",
-      "clientContractsPlaceholder": "11111",
-      "draftsAriaLabel": "11111",
-      "draftsPlaceholder": "11111",
-      "templatesAriaLabel": "11111",
-      "templatesPlaceholder": "11111"
+      "clientContractsAriaLabel": "⟦Şḗȧřƈħ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş⟧",
+      "clientContractsPlaceholder": "⟦Şḗȧřƈħ ƀẏ ƈŀīḗƞŧ ȯř ƈȯƞŧřȧƈŧ...⟧",
+      "draftsAriaLabel": "⟦Şḗȧřƈħ ḓřȧƒŧ ƈȯƞŧřȧƈŧş⟧",
+      "draftsPlaceholder": "⟦Şḗȧřƈħ ḓřȧƒŧş...⟧",
+      "templatesAriaLabel": "⟦Şḗȧřƈħ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗş⟧",
+      "templatesPlaceholder": "⟦Şḗȧřƈħ ŧḗḿƥŀȧŧḗş...⟧"
     },
     "status": {
-      "archived": "11111",
-      "published": "11111"
+      "archived": "⟦Ȧřƈħīṽḗḓ⟧",
+      "published": "⟦Ƥŭƀŀīşħḗḓ⟧"
     },
     "toasts": {
-      "draftDiscarded": "11111",
-      "failedToActivateContract": "11111",
-      "failedToDeleteContract": "11111",
-      "failedToDiscardDraft": "11111",
-      "failedToRestoreContract": "11111",
-      "failedToResumeDraft": "11111",
-      "failedToTerminateContract": "11111"
+      "draftDiscarded": "⟦Ḓřȧƒŧ ḓīşƈȧřḓḗḓ⟧",
+      "failedToActivateContract": "⟦Ƒȧīŀḗḓ ŧȯ ȧƈŧīṽȧŧḗ ƈȯƞŧřȧƈŧ⟧",
+      "failedToDeleteContract": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧřȧƈŧ⟧",
+      "failedToDiscardDraft": "⟦Ƒȧīŀḗḓ ŧȯ ḓīşƈȧřḓ ḓřȧƒŧ⟧",
+      "failedToRestoreContract": "⟦Ƒȧīŀḗḓ ŧȯ řḗşŧȯřḗ ƈȯƞŧřȧƈŧ⟧",
+      "failedToResumeDraft": "⟦Ƒȧīŀḗḓ ŧȯ řḗşŭḿḗ ḓřȧƒŧ⟧",
+      "failedToTerminateContract": "⟦Ƒȧīŀḗḓ ŧȯ ŧḗřḿīƞȧŧḗ ƈȯƞŧřȧƈŧ⟧"
     }
   },
   "clientContracts": {
     "actions": {
-      "viewDetails": "11111"
+      "viewDetails": "⟦Ṽīḗẇ ḓḗŧȧīŀş⟧"
     },
     "columns": {
-      "actions": "11111",
-      "billingFrequency": "11111",
-      "client": "11111",
-      "contractName": "11111",
-      "endDate": "11111",
-      "poIndicator": "11111",
-      "sourceTemplate": "11111",
-      "startDate": "11111",
-      "status": "11111"
+      "actions": "⟦Ȧƈŧīȯƞş⟧",
+      "billingFrequency": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "contractName": "⟦Ƈȯƞŧřȧƈŧ Ƞȧḿḗ⟧",
+      "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+      "poIndicator": "⟦ƤȮ⟧",
+      "sourceTemplate": "⟦Şȯŭřƈḗ Ŧḗḿƥŀȧŧḗ⟧",
+      "startDate": "⟦Şŧȧřŧ Ḓȧŧḗ⟧",
+      "status": "⟦Şŧȧŧŭş⟧"
     },
     "dialogs": {
       "terminate": {
-        "clientSuffix": "11111 {{clientName}} 11111",
-        "message": "11111 {{contractName}} 11111 {{clientSuffix}} 11111",
-        "title": "11111"
+        "clientSuffix": "⟦ ƒȯř {{clientName}}⟧",
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ŧḗřḿīƞȧŧḗ \"{{contractName}}\"{{clientSuffix}}?⟧",
+        "title": "⟦Ŧḗřḿīƞȧŧḗ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ?⟧"
       }
     },
     "empty": {
-      "noMatches": "11111"
+      "noMatches": "⟦Ƞȯ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ.⟧"
     },
     "errors": {
-      "failedToFetch": "11111"
+      "failedToFetch": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş⟧"
     },
-    "loading": "11111",
+    "loading": "⟦Ŀȯȧḓīƞɠ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş...⟧",
     "po": {
-      "notRequired": "11111",
-      "required": "11111"
+      "notRequired": "⟦Ƞȯŧ řḗʠŭīřḗḓ⟧",
+      "required": "⟦Řḗʠŭīřḗḓ⟧"
     },
     "search": {
-      "ariaLabel": "11111",
-      "placeholder": "11111"
+      "ariaLabel": "⟦Şḗȧřƈħ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş⟧",
+      "placeholder": "⟦Şḗȧřƈħ ƀẏ ƈŀīḗƞŧ ȯř ƈȯƞŧřȧƈŧ...⟧"
     },
     "tabs": {
-      "contracts": "11111",
-      "upcomingRenewals": "11111 {{count}} 11111"
+      "contracts": "⟦Ƈȯƞŧřȧƈŧş⟧",
+      "upcomingRenewals": "⟦Ŭƥƈȯḿīƞɠ Řḗƞḗẇȧŀş ({{count}})⟧"
     },
     "toasts": {
-      "failedToActivate": "11111",
-      "failedToDelete": "11111",
-      "failedToMarkNonRenewing": "11111",
-      "failedToMarkRenewing": "11111",
-      "failedToRestore": "11111",
-      "failedToResumeDraft": "11111",
-      "failedToTerminate": "11111"
+      "failedToActivate": "⟦Ƒȧīŀḗḓ ŧȯ ȧƈŧīṽȧŧḗ ƈȯƞŧřȧƈŧ⟧",
+      "failedToDelete": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧřȧƈŧ⟧",
+      "failedToMarkNonRenewing": "⟦Ƒȧīŀḗḓ ŧȯ ḿȧřķ řḗƞḗẇȧŀ ȧş ƞȯƞ-řḗƞḗẇīƞɠ⟧",
+      "failedToMarkRenewing": "⟦Ƒȧīŀḗḓ ŧȯ ḿȧřķ řḗƞḗẇȧŀ ȧş řḗƞḗẇīƞɠ⟧",
+      "failedToRestore": "⟦Ƒȧīŀḗḓ ŧȯ řḗşŧȯřḗ ƈȯƞŧřȧƈŧ⟧",
+      "failedToResumeDraft": "⟦Ƒȧīŀḗḓ ŧȯ řḗşŭḿḗ ḓřȧƒŧ⟧",
+      "failedToTerminate": "⟦Ƒȧīŀḗḓ ŧȯ ŧḗřḿīƞȧŧḗ ƈȯƞŧřȧƈŧ⟧"
     },
     "upcoming": {
       "actions": {
-        "markNonRenewing": "11111",
-        "markRenewing": "11111",
-        "openMenu": "11111"
+        "markNonRenewing": "⟦Ḿȧřķ ƞȯƞ-řḗƞḗẇīƞɠ⟧",
+        "markRenewing": "⟦Ḿȧřķ řḗƞḗẇīƞɠ⟧",
+        "openMenu": "⟦Ȯƥḗƞ řḗƞḗẇȧŀ ȧƈŧīȯƞş⟧"
       },
       "columns": {
-        "actions": "11111",
-        "client": "11111",
-        "contract": "11111",
-        "daysUntilDue": "11111",
-        "decisionDue": "11111",
-        "status": "11111",
-        "type": "11111"
+        "actions": "⟦Ȧƈŧīȯƞş⟧",
+        "client": "⟦Ƈŀīḗƞŧ⟧",
+        "contract": "⟦Ƈȯƞŧřȧƈŧ⟧",
+        "daysUntilDue": "⟦Ḓȧẏş Ŭƞŧīŀ Ḓŭḗ⟧",
+        "decisionDue": "⟦Ḓḗƈīşīȯƞ Ḓŭḗ⟧",
+        "status": "⟦Şŧȧŧŭş⟧",
+        "type": "⟦Ŧẏƥḗ⟧"
       },
-      "description": "11111",
-      "empty": "11111",
-      "filterAriaLabel": "11111",
-      "filterPlaceholder": "11111",
+      "description": "⟦Ƈȯƞŧřȧƈŧş ẇīŧħ řḗƞḗẇȧŀ ḓḗƈīşīȯƞş ḓŭḗ ẇīŧħīƞ ŧħḗ şḗŀḗƈŧḗḓ ẇīƞḓȯẇ.⟧",
+      "empty": "⟦Ƞȯ ŭƥƈȯḿīƞɠ řḗƞḗẇȧŀş ƒȯř ŧħḗ şḗŀḗƈŧḗḓ ẇīƞḓȯẇ.⟧",
+      "filterAriaLabel": "⟦Ƒīŀŧḗř ŭƥƈȯḿīƞɠ řḗƞḗẇȧŀş⟧",
+      "filterPlaceholder": "⟦Ƒīŀŧḗř ŭƥƈȯḿīƞɠ řḗƞḗẇȧŀş...⟧",
       "status": {
-        "completed": "11111",
-        "nonRenewing": "11111",
-        "pending": "11111",
-        "renewing": "11111",
-        "snoozed": "11111"
+        "completed": "⟦Ƈȯḿƥŀḗŧḗḓ⟧",
+        "nonRenewing": "⟦Ƞȯƞ-řḗƞḗẇīƞɠ⟧",
+        "pending": "⟦Ƥḗƞḓīƞɠ⟧",
+        "renewing": "⟦Řḗƞḗẇīƞɠ⟧",
+        "snoozed": "⟦Şƞȯȯẑḗḓ⟧"
       },
-      "title": "11111",
+      "title": "⟦Ŭƥƈȯḿīƞɠ Řḗƞḗẇȧŀş⟧",
       "type": {
-        "evergreen": "11111",
-        "fixedTerm": "11111"
+        "evergreen": "⟦Ḗṽḗřɠřḗḗƞ⟧",
+        "fixedTerm": "⟦Ƒīẋḗḓ-ŧḗřḿ⟧"
       },
       "window": {
-        "all": "11111",
-        "next30": "11111",
-        "next60": "11111",
-        "next90": "11111"
+        "all": "⟦Ȧŀŀ⟧",
+        "next30": "⟦Ƞḗẋŧ 30 ḓȧẏş⟧",
+        "next60": "⟦Ƞḗẋŧ 60 ḓȧẏş⟧",
+        "next90": "⟦Ƞḗẋŧ 90 ḓȧẏş⟧"
       },
-      "windowPlaceholder": "11111"
+      "windowPlaceholder": "⟦Şḗŀḗƈŧ řḗƞḗẇȧŀ ẇīƞḓȯẇ⟧"
     }
   },
   "templatesTab": {
     "actions": {
-      "createTemplate": "11111",
-      "delete": "11111",
-      "edit": "11111"
+      "createTemplate": "⟦Ƈřḗȧŧḗ Ŧḗḿƥŀȧŧḗ⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ⟧",
+      "edit": "⟦Ḗḓīŧ⟧"
     },
     "columns": {
-      "actions": "11111",
-      "description": "11111",
-      "status": "11111",
-      "templateName": "11111"
+      "actions": "⟦Ȧƈŧīȯƞş⟧",
+      "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "templateName": "⟦Ŧḗḿƥŀȧŧḗ Ƞȧḿḗ⟧"
     },
     "empty": {
-      "createFirstTemplate": "11111",
-      "noSearchMatches": "11111",
-      "noTemplates": "11111",
-      "tryDifferentSearch": "11111"
+      "createFirstTemplate": "⟦Ƈřḗȧŧḗ ẏȯŭř ƒīřşŧ ŧḗḿƥŀȧŧḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ.⟧",
+      "noSearchMatches": "⟦Ƞȯ ŧḗḿƥŀȧŧḗş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ⟧",
+      "noTemplates": "⟦Ƞȯ ŧḗḿƥŀȧŧḗş ẏḗŧ⟧",
+      "tryDifferentSearch": "⟦Ŧřẏ ȧ ḓīƒƒḗřḗƞŧ şḗȧřƈħ ŧḗřḿ.⟧"
     },
     "errors": {
-      "failedToDeleteContract": "11111",
-      "failedToFetchTemplates": "11111"
+      "failedToDeleteContract": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧřȧƈŧ⟧",
+      "failedToFetchTemplates": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ŧḗḿƥŀȧŧḗş⟧"
     },
-    "loading": "11111",
+    "loading": "⟦Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗş...⟧",
     "search": {
-      "ariaLabel": "11111",
-      "placeholder": "11111"
+      "ariaLabel": "⟦Şḗȧřƈħ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗş⟧",
+      "placeholder": "⟦Şḗȧřƈħ ŧḗḿƥŀȧŧḗş...⟧"
     },
     "status": {
-      "active": "11111",
-      "archived": "11111",
-      "draft": "11111",
-      "expired": "11111",
-      "published": "11111",
-      "terminated": "11111"
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "archived": "⟦Ȧřƈħīṽḗḓ⟧",
+      "draft": "⟦Ḓřȧƒŧ⟧",
+      "expired": "⟦Ḗẋƥīřḗḓ⟧",
+      "published": "⟦Ƥŭƀŀīşħḗḓ⟧",
+      "terminated": "⟦Ŧḗřḿīƞȧŧḗḓ⟧"
     },
     "values": {
-      "noDescription": "11111"
+      "noDescription": "⟦Ƞȯ ḓḗşƈřīƥŧīȯƞ⟧"
     }
   },
   "detailSwitcher": {
     "errors": {
-      "contractNotFound": "11111",
-      "failedToLoadContractDetails": "11111",
-      "missingContractIdentifier": "11111",
-      "noContractSelected": "11111",
-      "unableToLoadContractDetails": "11111"
+      "contractNotFound": "⟦Ƈȯƞŧřȧƈŧ ƞȯŧ ƒȯŭƞḓ⟧",
+      "failedToLoadContractDetails": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş⟧",
+      "missingContractIdentifier": "⟦Ḿīşşīƞɠ ƈȯƞŧřȧƈŧ īḓḗƞŧīƒīḗř⟧",
+      "noContractSelected": "⟦Ƞȯ ƈȯƞŧřȧƈŧ şḗŀḗƈŧḗḓ.⟧",
+      "unableToLoadContractDetails": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş⟧"
     },
     "loading": {
-      "contract": "11111"
+      "contract": "⟦Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧ...⟧"
     }
   },
   "templateDetail": {
-    "backToTemplates": "11111",
-    "backToTemplatesArrow": "11111",
+    "backToTemplates": "⟦Ɓȧƈķ ŧȯ Ŧḗḿƥŀȧŧḗş⟧",
+    "backToTemplatesArrow": "⟦← Ɓȧƈķ ŧȯ Ŧḗḿƥŀȧŧḗş⟧",
     "composition": {
-      "addContractLinesBeforeManaging": "11111",
-      "additionalPlans": "11111",
-      "bucketSummary": "11111 {{minutes}} 11111 {{overage}} 11111",
-      "closeManager": "11111",
-      "editRate": "11111",
-      "fixedFeeBundles": "11111",
-      "fixedFeeRate": "11111",
-      "hourlyPlans": "11111",
-      "manageServices": "11111",
-      "manageTemplateServices": "11111",
-      "minimumTimeLabel": "11111",
-      "minutesValue": "11111 {{count}} 11111",
-      "noFixedFeeLines": "11111",
-      "noHourlyLines": "11111",
-      "noServicesAssigned": "11111",
-      "noUsageLines": "11111",
-      "notSet": "11111",
-      "quantityLabel": "11111",
-      "roundUpLabel": "11111",
-      "serviceCountPlural": "11111 {{count}} 11111",
-      "serviceCountSingle": "11111 {{count}} 11111",
-      "serviceFallback": "11111",
-      "title": "11111",
-      "unitLabel": "11111",
-      "usageBasedPlans": "11111"
+      "addContractLinesBeforeManaging": "⟦Ȧḓḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ŧȯ ŧħīş ŧḗḿƥŀȧŧḗ ƀḗƒȯřḗ ḿȧƞȧɠīƞɠ şḗřṽīƈḗş.⟧",
+      "additionalPlans": "⟦Ȧḓḓīŧīȯƞȧŀ Ƥŀȧƞş⟧",
+      "bucketSummary": "⟦Ɓŭƈķḗŧ: {{minutes}} ḿīƞ • Ȯṽḗřȧɠḗ ${{overage}}⟧",
+      "closeManager": "⟦Ƈŀȯşḗ Ḿȧƞȧɠḗř⟧",
+      "editRate": "⟦Ḗḓīŧ Řȧŧḗ⟧",
+      "fixedFeeBundles": "⟦Ƒīẋḗḓ Ƒḗḗ Ɓŭƞḓŀḗş⟧",
+      "fixedFeeRate": "⟦Ƒīẋḗḓ Ƒḗḗ Řȧŧḗ:⟧",
+      "hourlyPlans": "⟦Ħȯŭřŀẏ Ƥŀȧƞş⟧",
+      "manageServices": "⟦Ḿȧƞȧɠḗ Şḗřṽīƈḗş⟧",
+      "manageTemplateServices": "⟦Ḿȧƞȧɠḗ Ŧḗḿƥŀȧŧḗ Şḗřṽīƈḗş⟧",
+      "minimumTimeLabel": "⟦Ḿīƞīḿŭḿ Ŧīḿḗ:⟧",
+      "minutesValue": "⟦{{count}} ḿīƞ⟧",
+      "noFixedFeeLines": "⟦Ƞȯ ƒīẋḗḓ ƒḗḗ ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȯƞƒīɠŭřḗḓ ẏḗŧ.⟧",
+      "noHourlyLines": "⟦Ƞȯ ħȯŭřŀẏ ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȯƞƒīɠŭřḗḓ ẏḗŧ.⟧",
+      "noServicesAssigned": "⟦Ƞȯ şḗřṽīƈḗş ȧşşīɠƞḗḓ ŧȯ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ.⟧",
+      "noUsageLines": "⟦Ƞȯ ŭşȧɠḗ-ƀȧşḗḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȯƞƒīɠŭřḗḓ ẏḗŧ.⟧",
+      "notSet": "⟦Ƞȯŧ şḗŧ⟧",
+      "quantityLabel": "⟦Ɋŭȧƞŧīŧẏ:⟧",
+      "roundUpLabel": "⟦Řȯŭƞḓ Ŭƥ:⟧",
+      "serviceCountPlural": "⟦{{count}} şḗřṽīƈḗş⟧",
+      "serviceCountSingle": "⟦{{count}} şḗřṽīƈḗ⟧",
+      "serviceFallback": "⟦Şḗřṽīƈḗ⟧",
+      "title": "⟦Ŧḗḿƥŀȧŧḗ Ƈȯḿƥȯşīŧīȯƞ⟧",
+      "unitLabel": "⟦Ŭƞīŧ:⟧",
+      "usageBasedPlans": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Ƥŀȧƞş⟧"
     },
-    "editBasicsTitle": "11111",
-    "editGuidanceTitle": "11111",
-    "failedToLoadTemplate": "11111",
+    "editBasicsTitle": "⟦Ḗḓīŧ Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş⟧",
+    "editGuidanceTitle": "⟦Ḗḓīŧ Ŧḗḿƥŀȧŧḗ Ɠŭīḓȧƞƈḗ⟧",
+    "failedToLoadTemplate": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ⟧",
     "form": {
-      "currencyPlaceholder": "11111",
-      "internalNotesLabel": "11111",
-      "internalNotesPlaceholder": "11111",
-      "recommendedBillingFrequencyLabel": "11111",
-      "recommendedBillingFrequencyPlaceholder": "11111",
-      "templateNameLabel": "11111",
-      "templateNamePlaceholder": "11111"
+      "currencyPlaceholder": "⟦Şḗŀḗƈŧ ƈŭřřḗƞƈẏ⟧",
+      "internalNotesLabel": "⟦Īƞŧḗřƞȧŀ Ƞȯŧḗş⟧",
+      "internalNotesPlaceholder": "⟦Ḓḗşƈřīƀḗ ẇħḗřḗ ŧħīş ŧḗḿƥŀȧŧḗ ȧƥƥŀīḗş, ȯƞƀȯȧřḓīƞɠ ŧīƥş, ȯř ȧƥƥřȯṽȧŀ řḗʠŭīřḗḿḗƞŧş.⟧",
+      "recommendedBillingFrequencyLabel": "⟦Řḗƈȯḿḿḗƞḓḗḓ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ *⟧",
+      "recommendedBillingFrequencyPlaceholder": "⟦Şḗŀḗƈŧ ƀīŀŀīƞɠ ƈȧḓḗƞƈḗ⟧",
+      "templateNameLabel": "⟦Ŧḗḿƥŀȧŧḗ Ƞȧḿḗ *⟧",
+      "templateNamePlaceholder": "⟦Ḿȧƞȧɠḗḓ Şḗřṽīƈḗş Şŧȧřŧḗř, Ƥřḗḿīŭḿ Şŭƥƥȯřŧ Ɓŭƞḓŀḗ, ḗŧƈ.⟧"
     },
     "guidance": {
-      "noCadenceProvided": "11111",
-      "recommendedCadenceLabel": "11111",
-      "recommendedCadencePlaceholder": "11111",
-      "tagsHint": "11111",
-      "tagsLabel": "11111",
-      "tagsPlaceholder": "11111",
-      "title": "11111",
-      "usageNotesLabel": "11111",
-      "usageNotesPlaceholder": "11111"
+      "noCadenceProvided": "⟦Ƞȯ řḗƈȯḿḿḗƞḓḗḓ ƈȧḓḗƞƈḗ ƥřȯṽīḓḗḓ.⟧",
+      "recommendedCadenceLabel": "⟦Řḗƈȯḿḿḗƞḓḗḓ Ƈȧḓḗƞƈḗ⟧",
+      "recommendedCadencePlaceholder": "⟦Şḗŀḗƈŧ ȧ ƈȧḓḗƞƈḗ⟧",
+      "tagsHint": "⟦Ŧȧɠş ħḗŀƥ ŧḗȧḿş ƒīƞḓ řḗŀḗṽȧƞŧ ŧḗḿƥŀȧŧḗş ʠŭīƈķŀẏ.⟧",
+      "tagsLabel": "⟦Ŧȧɠş⟧",
+      "tagsPlaceholder": "⟦Ƈȯḿḿȧ şḗƥȧřȧŧḗḓ (ḗ.ɠ., ȯƞƀȯȧřḓīƞɠ, ƒīƞȧƞƈḗ)⟧",
+      "title": "⟦Ŧḗḿƥŀȧŧḗ Ɠŭīḓȧƞƈḗ⟧",
+      "usageNotesLabel": "⟦Ŭşȧɠḗ Ƞȯŧḗş⟧",
+      "usageNotesPlaceholder": "⟦Ȧḓḓ ɠŭīḓȧƞƈḗ ŧȯ ħḗŀƥ ȯŧħḗřş ŭƞḓḗřşŧȧƞḓ ħȯẇ ŧȯ ŭşḗ ŧħīş ŧḗḿƥŀȧŧḗ.⟧"
     },
-    "loadingTemplate": "11111",
-    "servicesLabel": "11111",
-    "templateBadge": "11111",
-    "templateNotFound": "11111",
-    "templateSnapshotTitle": "11111",
+    "loadingTemplate": "⟦Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗ...⟧",
+    "servicesLabel": "⟦Şḗřṽīƈḗş⟧",
+    "templateBadge": "⟦Ŧḗḿƥŀȧŧḗ⟧",
+    "templateNotFound": "⟦Ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ ƞȯŧ ƒȯŭƞḓ⟧",
+    "templateSnapshotTitle": "⟦Ŧḗḿƥŀȧŧḗ Şƞȧƥşħȯŧ⟧",
     "validation": {
-      "billingFrequencyRequired": "11111",
-      "failedToUpdateBasics": "11111",
-      "failedToUpdateGuidance": "11111",
-      "templateNameRequired": "11111"
+      "billingFrequencyRequired": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ⟧",
+      "failedToUpdateBasics": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧḗḿƥŀȧŧḗ ƀȧşīƈş⟧",
+      "failedToUpdateGuidance": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧḗḿƥŀȧŧḗ ɠŭīḓȧƞƈḗ⟧",
+      "templateNameRequired": "⟦Ŧḗḿƥŀȧŧḗ ƞȧḿḗ īş řḗʠŭīřḗḓ⟧"
     },
     "clientAssignments": {
-      "title": "11111",
-      "totalAssignments": "11111",
-      "activeClients": "11111",
-      "purchaseOrders": "11111",
-      "poRequiredCount": "11111 {{count}} 11111",
-      "noPoRequirements": "11111",
-      "noClientContracts": "11111",
-      "reviewBelow": "11111"
+      "title": "⟦Ƈŀīḗƞŧ Ȧşşīɠƞḿḗƞŧş⟧",
+      "totalAssignments": "⟦Ŧȯŧȧŀ Ȧşşīɠƞḿḗƞŧş⟧",
+      "activeClients": "⟦Ȧƈŧīṽḗ Ƈŀīḗƞŧş⟧",
+      "purchaseOrders": "⟦Ƥŭřƈħȧşḗ Ȯřḓḗřş⟧",
+      "poRequiredCount": "⟦{{count}} ȧşşīɠƞḿḗƞŧş řḗʠŭīřḗ ƤȮ⟧",
+      "noPoRequirements": "⟦Ƞȯ ƤȮ řḗʠŭīřḗḿḗƞŧş ƈȧƥŧŭřḗḓ.⟧",
+      "noClientContracts": "⟦Ƞȯ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ȧřḗ ƈŭřřḗƞŧŀẏ ŭşīƞɠ ŧħīş ŧḗḿƥŀȧŧḗ.⟧",
+      "reviewBelow": "⟦Řḗṽīḗẇ ŧħḗ ƒŭŀŀ ȧşşīɠƞḿḗƞŧ ŀīşŧ īƞ ŧħḗ ḓḗŧȧīŀş şḗƈŧīȯƞ ƀḗŀȯẇ.⟧"
     },
     "assignmentDetails": {
-      "title": "11111",
-      "empty": "11111",
-      "contractId": "11111 {{id}} 11111",
-      "ongoing": "11111",
-      "notRequired": "11111",
+      "title": "⟦Ȧşşīɠƞḿḗƞŧ Ḓḗŧȧīŀş⟧",
+      "empty": "⟦Ẇħḗƞ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ȧḓȯƥŧ ŧħīş ŧḗḿƥŀȧŧḗ ŧħḗẏ ẇīŀŀ ƀḗ ŀīşŧḗḓ ħḗřḗ ẇīŧħ ƥŭřƈħȧşḗ ȯřḓḗř ƈȯƞŧḗẋŧ.⟧",
+      "contractId": "⟦Ƈȯƞŧřȧƈŧ ĪḒ: {{id}}⟧",
+      "ongoing": "⟦Ȯƞɠȯīƞɠ⟧",
+      "notRequired": "⟦Ƞȯŧ řḗʠŭīřḗḓ⟧",
       "columns": {
-        "client": "11111",
-        "status": "11111",
-        "start": "11111",
-        "end": "11111",
-        "poRequired": "11111",
-        "poNumber": "11111",
-        "poAmount": "11111"
+        "client": "⟦Ƈŀīḗƞŧ⟧",
+        "status": "⟦Şŧȧŧŭş⟧",
+        "start": "⟦Şŧȧřŧ⟧",
+        "end": "⟦Ḗƞḓ⟧",
+        "poRequired": "⟦ƤȮ Řḗʠŭīřḗḓ⟧",
+        "poNumber": "⟦ƤȮ Ƞŭḿƀḗř⟧",
+        "poAmount": "⟦ƤȮ Ȧḿȯŭƞŧ⟧"
       },
       "status": {
-        "active": "11111",
-        "inactive": "11111"
+        "active": "⟦Ȧƈŧīṽḗ⟧",
+        "inactive": "⟦Īƞȧƈŧīṽḗ⟧"
       }
     },
     "simulation": {
-      "client": "11111",
-      "hypothetical": "11111",
-      "open": "11111",
-      "title": "11111"
+      "client": "⟦Ƈŀīḗƞŧ ƈȯƞŧḗẋŧ⟧",
+      "hypothetical": "⟦Ħẏƥȯŧħḗŧīƈȧŀ ƈŀīḗƞŧ ƥřȯƒīŀḗ⟧",
+      "open": "⟦Şīḿŭŀȧŧḗ⟧",
+      "title": "⟦Ŧḗḿƥŀȧŧḗ şīḿŭŀȧŧīȯƞ⟧"
     }
   },
   "quickStart": {
     "actions": {
-      "createFirstContract": "11111",
-      "dismiss": "11111",
-      "minimize": "11111",
-      "showGuide": "11111"
+      "createFirstContract": "⟦Ƈřḗȧŧḗ Ẏȯŭř Ƒīřşŧ Ƈȯƞŧřȧƈŧ⟧",
+      "dismiss": "⟦Ḓīşḿīşş⟧",
+      "minimize": "⟦Ḿīƞīḿīẑḗ⟧",
+      "showGuide": "⟦Şħȯẇ Ɠŭīḓḗ⟧"
     },
     "badge": {
-      "new": "11111"
+      "new": "⟦Ƞḗẇ⟧"
     },
     "bestPractices": {
       "items": {
-        "clearNames": "11111",
-        "endDates": "11111",
-        "partialPeriodAdjustment": "11111",
-        "poNumbers": "11111"
+        "clearNames": "⟦Ŭşḗ ƈŀḗȧř, ḓḗşƈřīƥŧīṽḗ ƈȯƞŧřȧƈŧ ƞȧḿḗş (ḗ.ɠ., \"Ȧƈḿḗ Ƈȯřƥ - ḾŞƤ Şḗřṽīƈḗş Ɋ4 2024\")⟧",
+        "endDates": "⟦Şḗŧ ḗƞḓ ḓȧŧḗş ƒȯř ƒīẋḗḓ-ŧḗřḿ ƈȯƞŧřȧƈŧş ŧȯ ŧřȧƈķ řḗƞḗẇȧŀ ḓȧŧḗş⟧",
+        "partialPeriodAdjustment": "⟦Ŭşḗ ƥȧřŧīȧŀ-ƥḗřīȯḓ ȧḓĵŭşŧḿḗƞŧ ẇħḗƞ ƈȯƞŧřȧƈŧ ḓȧŧḗş ƈȯṽḗř ȯƞŀẏ ƥȧřŧ ȯƒ ȧ şḗřṽīƈḗ ƥḗřīȯḓ⟧",
+        "poNumbers": "⟦Ȧḓḓ ƤȮ ƞŭḿƀḗřş ẇħḗƞ řḗʠŭīřḗḓ ƀẏ ƈŀīḗƞŧ ƥřȯƈŭřḗḿḗƞŧ ƥȯŀīƈīḗş⟧"
       },
-      "title": "11111"
+      "title": "⟦Ɓḗşŧ Ƥřȧƈŧīƈḗş⟧"
     },
     "billingModels": {
       "bucketHours": {
-        "description": "11111",
-        "label": "11111"
+        "description": "⟦Ƥřḗƥȧīḓ ħȯŭřş + ȯṽḗřȧɠḗ⟧",
+        "label": "⟦Ɓŭƈķḗŧ Ħȯŭřş:⟧"
       },
       "fixedFee": {
-        "description": "11111",
-        "label": "11111"
+        "description": "⟦Şȧḿḗ ƥřīƈḗ ḗṽḗřẏ ḿȯƞŧħ⟧",
+        "label": "⟦Ƒīẋḗḓ Ƒḗḗ:⟧"
       },
       "hourly": {
-        "description": "11111",
-        "label": "11111"
+        "description": "⟦Ɓīŀŀ ƀẏ ŧīḿḗ ŧřȧƈķḗḓ⟧",
+        "label": "⟦Ħȯŭřŀẏ:⟧"
       },
       "usageBased": {
-        "description": "11111",
-        "label": "11111"
+        "description": "⟦Ɓīŀŀ ƀẏ ƈȯƞşŭḿƥŧīȯƞ/ŭşȧɠḗ⟧",
+        "label": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ:⟧"
       }
     },
     "steps": {
       "configureBilling": {
-        "description": "11111",
-        "title": "11111"
+        "description": "⟦Ƈħȯȯşḗ ẏȯŭř ƀīŀŀīƞɠ ḿȯḓḗŀ(ş). Ẏȯŭ ƈȧƞ ƈȯḿƀīƞḗ ḿŭŀŧīƥŀḗ ŧẏƥḗş:⟧",
+        "title": "⟦Ƈȯƞƒīɠŭřḗ Ɓīŀŀīƞɠ⟧"
       },
       "createContract": {
-        "description": "11111",
-        "requiredFields": "11111",
-        "title": "11111"
+        "description": "⟦Ƈŀīƈķ \"Ƞḗẇ Ƈȯƞŧřȧƈŧ\" ŧȯ şŧȧřŧ ŧħḗ ẇīẑȧřḓ. Ƈħȯȯşḗ ȧ ƈŀīḗƞŧ ȧƞḓ ƞȧḿḗ ẏȯŭř ƈȯƞŧřȧƈŧ.⟧",
+        "requiredFields": "⟦Řḗʠŭīřḗḓ: Ƈŀīḗƞŧ, Ƈȯƞŧřȧƈŧ Ƞȧḿḗ, Şŧȧřŧ Ḓȧŧḗ⟧",
+        "title": "⟦Ƈřḗȧŧḗ ȧ Ƈȯƞŧřȧƈŧ⟧"
       },
       "reviewCreate": {
-        "description": "11111",
-        "tip": "11111",
-        "title": "11111"
+        "description": "⟦Ḓȯŭƀŀḗ-ƈħḗƈķ ḗṽḗřẏŧħīƞɠ ƀḗƒȯřḗ ƈřḗȧŧīƞɠ. Ẏȯŭ ƈȧƞ ȧŀẇȧẏş ḗḓīŧ ŀȧŧḗř.⟧",
+        "tip": "⟦Ŧīƥ: Ȧŧ ŀḗȧşŧ ȯƞḗ şḗřṽīƈḗ ŀīƞḗ īş řḗʠŭīřḗḓ⟧",
+        "title": "⟦Řḗṽīḗẇ & Ƈřḗȧŧḗ⟧"
       }
     },
-    "subtitle": "11111",
-    "title": "11111"
+    "subtitle": "⟦Ŀḗȧřƞ ħȯẇ ŧȯ ƈřḗȧŧḗ ȧƞḓ ḿȧƞȧɠḗ ƈȯƞŧřȧƈŧş⟧",
+    "title": "⟦Ɋŭīƈķ Şŧȧřŧ Ɠŭīḓḗ⟧"
   },
   "servicePicker": {
-    "emptyMessage": "11111",
-    "placeholder": "11111",
-    "searchPlaceholder": "11111",
+    "emptyMessage": "⟦Ƞȯ şḗřṽīƈḗ ƒȯŭƞḓ.⟧",
+    "placeholder": "⟦Şḗŀḗƈŧ şḗřṽīƈḗ...⟧",
+    "searchPlaceholder": "⟦Şḗȧřƈħ şḗřṽīƈḗş...⟧",
     "catalog": {
       "badges": {
-        "product": "11111",
-        "service": "11111"
+        "product": "⟦Ƥřȯḓŭƈŧ⟧",
+        "service": "⟦Şḗřṽīƈḗ⟧"
       },
       "custom": {
-        "addAsCustomItem": "11111 {{name}} 11111",
-        "badge": "11111",
-        "typeNameHint": "11111"
+        "addAsCustomItem": "⟦Ȧḓḓ “{{name}}” ȧş ƈŭşŧȯḿ īŧḗḿ⟧",
+        "badge": "⟦Ƈŭşŧȯḿ⟧",
+        "typeNameHint": "⟦Ŧẏƥḗ ȧ ƞȧḿḗ ŧȯ ȧḓḓ ȧ ƈŭşŧȯḿ īŧḗḿ⟧"
       },
-      "emptyMessage": "11111",
-      "placeholder": "11111",
-      "searchPlaceholder": "11111"
+      "emptyMessage": "⟦Ƞȯ ḿȧŧƈħīƞɠ īŧḗḿş.⟧",
+      "placeholder": "⟦Şḗŀḗƈŧ īŧḗḿ...⟧",
+      "searchPlaceholder": "⟦Şḗȧřƈħ īŧḗḿş...⟧"
     }
   },
   "bucketOverlay": {
-    "includedLabel": "11111 {{units}} 11111",
-    "includedPlaceholderHours": "11111",
-    "includedPlaceholderUnits": "11111",
-    "includedTooltip": "11111 {{units}} 11111",
-    "overageRateLabel": "11111",
-    "overageRateTooltip": "11111 {{unit}} 11111",
-    "rolloverDescription": "11111",
-    "rolloverLabel": "11111 {{units}} 11111",
+    "includedLabel": "⟦Īƞƈŀŭḓḗḓ {{units}}⟧",
+    "includedPlaceholderHours": "⟦ḗ.ɠ., 40⟧",
+    "includedPlaceholderUnits": "⟦ḗ.ɠ., 1000⟧",
+    "includedTooltip": "⟦Ȧḿȯŭƞŧ ȯƒ {{units}} īƞƈŀŭḓḗḓ ḗȧƈħ ƀīŀŀīƞɠ ƥḗřīȯḓ ƀḗƒȯřḗ ȯṽḗřȧɠḗş ȧƥƥŀẏ.⟧",
+    "overageRateLabel": "⟦Ȯṽḗřȧɠḗ Řȧŧḗ⟧",
+    "overageRateTooltip": "⟦Ƈħȧřɠḗ ȧƥƥŀīḗḓ ƒȯř ḗȧƈħ {{unit}} ƀḗẏȯƞḓ ŧħḗ īƞƈŀŭḓḗḓ ȧḿȯŭƞŧ.⟧",
+    "rolloverDescription": "⟦Īƒ ḗƞȧƀŀḗḓ, ȧƞẏ ŭƞŭşḗḓ ƀȧŀȧƞƈḗ ƈȧřřīḗş īƞŧȯ ŧħḗ ƞḗẋŧ ƥḗřīȯḓ.⟧",
+    "rolloverLabel": "⟦Ȧŀŀȯẇ ŭƞŭşḗḓ {{units}} ŧȯ řȯŀŀ ȯṽḗř⟧",
     "units": {
-      "hour": "11111",
-      "hours": "11111",
-      "units": "11111"
+      "hour": "⟦ħȯŭř⟧",
+      "hours": "⟦ħȯŭřş⟧",
+      "units": "⟦ŭƞīŧş⟧"
     }
   },
   "frequencyOverride": {
-    "confirmation": "11111 {{lineFrequency}} 11111 {{contractFrequency}} 11111",
-    "description": "11111 {{frequency}} 11111",
-    "label": "11111",
-    "optionAlreadySetForContract": "11111 {{label}} 11111",
-    "placeholder": "11111 {{frequency}} 11111"
+    "confirmation": "⟦Ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ ẇīŀŀ ƀḗ ƀīŀŀḗḓ {{lineFrequency}} īƞşŧḗȧḓ ȯƒ {{contractFrequency}}.⟧",
+    "description": "⟦Ȯƥŧīȯƞȧŀ: Ȯṽḗřřīḓḗ ŧħḗ ƈȯƞŧřȧƈŧ'ş ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ({{frequency}}) ƒȯř ŧħīş şƥḗƈīƒīƈ ƈȯƞŧřȧƈŧ ŀīƞḗ.⟧",
+    "label": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ Ȯṽḗřřīḓḗ⟧",
+    "optionAlreadySetForContract": "⟦{{label}} (ȧŀřḗȧḓẏ şḗŧ ƒȯř ƈȯƞŧřȧƈŧ)⟧",
+    "placeholder": "⟦Ŭşḗ ƈȯƞŧřȧƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ({{frequency}})⟧"
   },
   "wizard": {
     "dialogs": {
       "unsavedChanges": {
-        "cancel": "11111",
-        "confirm": "11111",
-        "message": "11111",
-        "title": "11111"
+        "cancel": "⟦Şŧȧẏ⟧",
+        "confirm": "⟦Ḓīşƈȧřḓ Ƈħȧƞɠḗş⟧",
+        "message": "⟦Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Īƒ ẏȯŭ ƈŀȯşḗ ŧħīş ḓīȧŀȯɠ ƞȯẇ, ẏȯŭř ƈħȧƞɠḗş ẇīŀŀ ƀḗ ḓīşƈȧřḓḗḓ.⟧",
+        "title": "⟦Ḓīşƈȧřḓ ƈħȧƞɠḗş?⟧"
       }
     },
     "errors": {
-      "failedToCreateContract": "11111",
-      "failedToLoadTemplateDetails": "11111",
-      "failedToLoadTemplates": "11111",
-      "failedToSaveDraft": "11111"
+      "failedToCreateContract": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ƈȯƞŧřȧƈŧ⟧",
+      "failedToLoadTemplateDetails": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧḗḿƥŀȧŧḗ ḓḗŧȧīŀş⟧",
+      "failedToLoadTemplates": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧḗḿƥŀȧŧḗş⟧",
+      "failedToSaveDraft": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ḓřȧƒŧ⟧"
     },
     "steps": {
-      "contractBasics": "11111",
-      "fixedFeeServices": "11111",
-      "hourlyServices": "11111",
-      "products": "11111",
-      "reviewCreate": "11111",
-      "usageBasedServices": "11111"
+      "contractBasics": "⟦Ƈȯƞŧřȧƈŧ Ɓȧşīƈş⟧",
+      "fixedFeeServices": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş⟧",
+      "hourlyServices": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
+      "products": "⟦Ƥřȯḓŭƈŧş⟧",
+      "reviewCreate": "⟦Řḗṽīḗẇ & Ƈřḗȧŧḗ⟧",
+      "usageBasedServices": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧"
     },
     "title": {
-      "createNewContract": "11111",
-      "editContract": "11111"
+      "createNewContract": "⟦Ƈřḗȧŧḗ Ƞḗẇ Ƈȯƞŧřȧƈŧ⟧",
+      "editContract": "⟦Ḗḓīŧ Ƈȯƞŧřȧƈŧ⟧"
     },
     "validation": {
-      "addAtLeastOneService": "11111",
-      "baseRateRequiredWhenFixedServices": "11111",
-      "billingFrequencyRequired": "11111",
-      "clientRequired": "11111",
-      "contractNameRequired": "11111",
-      "noticePeriodRange": "11111 {{min}} 11111 {{max}} 11111",
-      "noticePeriodWholeNumber": "11111",
+      "addAtLeastOneService": "⟦Ȧḓḓ ȧŧ ŀḗȧşŧ ȯƞḗ şḗřṽīƈḗ ƀḗƒȯřḗ ƈřḗȧŧīƞɠ ŧħḗ ƈȯƞŧřȧƈŧ⟧",
+      "baseRateRequiredWhenFixedServices": "⟦Ɓȧşḗ řȧŧḗ īş řḗʠŭīřḗḓ ẇħḗƞ ƒīẋḗḓ şḗřṽīƈḗş ȧřḗ īƞƈŀŭḓḗḓ⟧",
+      "billingFrequencyRequired": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ⟧",
+      "clientRequired": "⟦Ƈŀīḗƞŧ īş řḗʠŭīřḗḓ⟧",
+      "contractNameRequired": "⟦Ƈȯƞŧřȧƈŧ ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",
+      "noticePeriodRange": "⟦Ƞȯŧīƈḗ ƥḗřīȯḓ ḿŭşŧ ƀḗ ƀḗŧẇḗḗƞ {{min}} ȧƞḓ {{max}} ḓȧẏş⟧",
+      "noticePeriodWholeNumber": "⟦Ƞȯŧīƈḗ ƥḗřīȯḓ ḿŭşŧ ƀḗ ȧ ẇħȯŀḗ ƞŭḿƀḗř ȯƒ ḓȧẏş⟧",
       "recurring": {
         "frequency": {
-          "annually": "11111",
-          "biweekly": "11111",
-          "monthly": "11111",
-          "quarterly": "11111",
-          "semi-annually": "11111",
-          "weekly": "11111"
+          "annually": "⟦ȧƞƞŭȧŀŀẏ⟧",
+          "biweekly": "⟦ƀīẇḗḗķŀẏ⟧",
+          "monthly": "⟦ḿȯƞŧħŀẏ⟧",
+          "quarterly": "⟦ʠŭȧřŧḗřŀẏ⟧",
+          "semi-annually": "⟦şḗḿī-ȧƞƞŭȧŀŀẏ⟧",
+          "weekly": "⟦ẇḗḗķŀẏ⟧"
         },
         "lineType": {
-          "fixed": "11111",
-          "hourly": "11111",
-          "product": "11111",
-          "usage": "11111"
+          "fixed": "⟦Ƒīẋḗḓ⟧",
+          "hourly": "⟦Ħȯŭřŀẏ⟧",
+          "product": "⟦Ƥřȯḓŭƈŧ⟧",
+          "usage": "⟦Ŭşȧɠḗ⟧"
         }
       },
-      "renewalModeRequiredWithEndDate": "11111",
-      "renewalTermPositiveWhole": "11111",
-      "selectClientBeforeDraft": "11111",
-      "selectProductForEachLine": "11111",
-      "startDateRequired": "11111",
-      "unsupportedRecurringAuthoringCombination": "11111 {{lineType}} 11111 {{supportedFrequencies}} 11111 {{billingFrequency}} 11111"
+      "renewalModeRequiredWithEndDate": "⟦Řḗƞḗẇȧŀ ḿȯḓḗ īş řḗʠŭīřḗḓ ẇħḗƞ ȧƞ ḗƞḓ ḓȧŧḗ īş şḗŧ⟧",
+      "renewalTermPositiveWhole": "⟦Řḗƞḗẇȧŀ ŧḗřḿ ḿȯƞŧħş ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ ẇħȯŀḗ ƞŭḿƀḗř⟧",
+      "selectClientBeforeDraft": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ƀḗƒȯřḗ şȧṽīƞɠ ȧş ḓřȧƒŧ⟧",
+      "selectProductForEachLine": "⟦Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ ƥřȯḓŭƈŧ ƒȯř ḗȧƈħ ƥřȯḓŭƈŧ ŀīƞḗ⟧",
+      "startDateRequired": "⟦Şŧȧřŧ ḓȧŧḗ īş řḗʠŭīřḗḓ⟧",
+      "unsupportedRecurringAuthoringCombination": "⟦Ŭƞşŭƥƥȯřŧḗḓ řḗƈŭřřīƞɠ ȧŭŧħȯřīƞɠ ƈȯḿƀīƞȧŧīȯƞ ƒȯř {{lineType}} şḗřṽīƈḗş: ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ƈȧḓḗƞƈḗ ƈŭřřḗƞŧŀẏ şŭƥƥȯřŧş {{supportedFrequencies}} ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈīḗş. {{billingFrequency}} īş ƞȯŧ şŭƥƥȯřŧḗḓ ẏḗŧ. Ŭşḗ ȯƞḗ ȯƒ ŧħḗ şŭƥƥȯřŧḗḓ ƒřḗʠŭḗƞƈīḗş ȯř īƞṽȯīƈḗ ȯƞ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ īƞşŧḗȧḓ.⟧"
     },
     "nav": {
-      "back": "11111",
-      "next": "11111",
-      "skip": "11111",
-      "finish": "11111",
-      "saveDraft": "11111",
-      "saving": "11111",
-      "completing": "11111"
+      "back": "⟦Ɓȧƈķ⟧",
+      "next": "⟦Ƞḗẋŧ⟧",
+      "skip": "⟦Şķīƥ⟧",
+      "finish": "⟦Ƒīƞīşħ Şḗŧŭƥ⟧",
+      "saveDraft": "⟦Şȧṽḗ ȧş Ḓřȧƒŧ⟧",
+      "saving": "⟦Şȧṽīƞɠ...⟧",
+      "completing": "⟦Ƈȯḿƥŀḗŧīƞɠ...⟧"
     },
     "simulation": {
-      "description": "11111",
-      "title": "11111"
+      "description": "⟦Ŧḗşŧ ŧħīş ŭƞşȧṽḗḓ ḓřȧƒŧ ẇīŧħ ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ. Şīḿŭŀȧŧīȯƞ ḓȯḗş ƞȯŧ şȧṽḗ ȯř īşşŭḗ ȧƞẏŧħīƞɠ.⟧",
+      "title": "⟦Şīḿŭŀȧŧḗ ƀḗƒȯřḗ ƈřḗȧŧīƞɠ⟧"
     }
   },
   "wizardBasics": {
     "additionalDescription": {
-      "hint": "11111",
-      "label": "11111",
-      "placeholder": "11111"
+      "hint": "⟦Īƞŧḗřƞȧŀ ƞȯŧḗş ȯř ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş.⟧",
+      "label": "⟦Ḓḗşƈřīƥŧīȯƞ (Ȯƥŧīȯƞȧŀ)⟧",
+      "placeholder": "⟦Ȧḓḓ ȧƞẏ ȧḓḓīŧīȯƞȧŀ ƞȯŧḗş ȧƀȯŭŧ ŧħīş ƈȯƞŧřȧƈŧ...⟧"
     },
     "billingFrequency": {
-      "hint": "11111",
-      "label": "11111",
-      "placeholder": "11111"
+      "hint": "⟦Ħȯẇ ȯƒŧḗƞ şħȯŭŀḓ ŧħīş ƈȯƞŧřȧƈŧ ƀḗ ƀīŀŀḗḓ?⟧",
+      "label": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
+      "placeholder": "⟦Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧"
     },
     "cadenceOwner": {
-      "description": "11111",
-      "label": "11111",
+      "description": "⟦Şḗŧş ŧħḗ ḓḗƒȧŭŀŧ ƈȧḓḗƞƈḗ ȯẇƞḗř ȧƥƥŀīḗḓ ŧȯ řḗƈŭřřīƞɠ ŀīƞḗş ƈřḗȧŧḗḓ īƞ ŧħīş ẇīẑȧřḓ.⟧",
+      "label": "⟦Řḗƈŭřřīƞɠ Ƈȧḓḗƞƈḗ Ḓḗƒȧŭŀŧ⟧",
       "options": {
         "client": {
-          "description": "11111",
-          "label": "11111"
+          "description": "⟦Ŭşḗ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ ƈȧŀḗƞḓȧř şȯ řḗƈŭřřīƞɠ ŀīƞḗş şŧȧẏ ȧŀīɠƞḗḓ ẇīŧħ ŧħḗ ƈŀīḗƞŧ’ş ƞȯřḿȧŀ īƞṽȯīƈḗ ƈȧḓḗƞƈḗ.⟧",
+          "label": "⟦Īƞṽȯīƈḗ ȯƞ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ⟧"
         },
         "contract": {
-          "description": "11111",
-          "label": "11111"
+          "description": "⟦Ŭşḗ ƈȯƞŧřȧƈŧ-ȧƞƞīṽḗřşȧřẏ şḗřṽīƈḗ ƥḗřīȯḓş ƒȯř řḗƈŭřřīƞɠ ŀīƞḗş ŧħȧŧ şħȯŭŀḓ ƒȯŀŀȯẇ ŧħḗ ƈȯƞŧřȧƈŧ ŧīḿḗŀīƞḗ.⟧",
+          "label": "⟦Īƞṽȯīƈḗ ȯƞ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ⟧"
         }
       }
     },
     "client": {
-      "chooseClientHint": "11111",
-      "clientLabel": "11111",
-      "loadingClients": "11111",
-      "selectClient": "11111"
+      "chooseClientHint": "⟦Ƈħȯȯşḗ ŧħḗ ƈŀīḗƞŧ ŧħīş ƈȯƞŧřȧƈŧ īş ƒȯř.⟧",
+      "clientLabel": "⟦Ƈŀīḗƞŧ⟧",
+      "loadingClients": "⟦Ŀȯȧḓīƞɠ ƈŀīḗƞŧş…⟧",
+      "selectClient": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ⟧"
     },
     "contractName": {
-      "hint": "11111",
-      "label": "11111",
-      "placeholder": "11111"
+      "hint": "⟦Ɠīṽḗ ŧħīş ƈȯƞŧřȧƈŧ ȧ ḓḗşƈřīƥŧīṽḗ ƞȧḿḗ.⟧",
+      "label": "⟦Ƈȯƞŧřȧƈŧ Ƞȧḿḗ⟧",
+      "placeholder": "⟦ḗ.ɠ., Şŧȧƞḓȧřḓ ḾŞƤ Şḗřṽīƈḗş, Ƥřḗḿīŭḿ Şŭƥƥȯřŧ Ƥȧƈķȧɠḗ⟧"
     },
     "currency": {
-      "hint": "11111",
-      "label": "11111",
-      "placeholder": "11111"
+      "hint": "⟦Ƈŭřřḗƞƈẏ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ. Ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ƈŀīḗƞŧ'ş ƥřḗƒḗřřḗḓ ƈŭřřḗƞƈẏ.⟧",
+      "label": "⟦Ƈŭřřḗƞƈẏ⟧",
+      "placeholder": "⟦Şḗŀḗƈŧ ƈŭřřḗƞƈẏ⟧"
     },
     "dates": {
-      "endDateAfterStartValidation": "11111",
-      "endDateLabel": "11111",
-      "endDateOngoingHint": "11111",
-      "endDateTooltip": "11111",
-      "startDateHint": "11111",
-      "startDateLabel": "11111"
+      "endDateAfterStartValidation": "⟦Ḗƞḓ ḓȧŧḗ ḿŭşŧ ƀḗ ȧƒŧḗř şŧȧřŧ ḓȧŧḗ⟧",
+      "endDateLabel": "⟦Ḗƞḓ Ḓȧŧḗ (Ȯƥŧīȯƞȧŀ)⟧",
+      "endDateOngoingHint": "⟦Ŀḗȧṽḗ ƀŀȧƞķ ƒȯř ȧƞ ȯƞɠȯīƞɠ ƈȯƞŧřȧƈŧ.⟧",
+      "endDateTooltip": "⟦Ŀḗȧṽḗ ƀŀȧƞķ ƒȯř ȯƞɠȯīƞɠ ƈȯƞŧřȧƈŧş ŧħȧŧ ḓȯƞ'ŧ ħȧṽḗ ȧ ƒīẋḗḓ ḗƞḓ ḓȧŧḗ. Ẏȯŭ ƈȧƞ ȧŀẇȧẏş şḗŧ ȧƞ ḗƞḓ ḓȧŧḗ ŀȧŧḗř ẇħḗƞ ŧħḗ ƈȯƞŧřȧƈŧ īş ŧḗřḿīƞȧŧḗḓ ȯř ḗẋƥīřḗş.⟧",
+      "startDateHint": "⟦Ẇħḗƞ ḓȯḗş ŧħīş ƈȯƞŧřȧƈŧ ƀḗƈȯḿḗ ȧƈŧīṽḗ?⟧",
+      "startDateLabel": "⟦Şŧȧřŧ Ḓȧŧḗ⟧"
     },
-    "description": "11111",
-    "heading": "11111",
+    "description": "⟦Ƈħȯȯşḗ ȧ ŧḗḿƥŀȧŧḗ (ȯƥŧīȯƞȧŀ), şḗŀḗƈŧ ŧħḗ ƈŀīḗƞŧ, ȧƞḓ şḗŧ ƒȯŭƞḓȧŧīȯƞȧŀ ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş. Şḗřṽīƈḗ ḓḗŧȧīŀş ŀȯȧḓ īƞ ŧħḗ ƞḗẋŧ şŧḗƥş.⟧",
+    "heading": "⟦Ƈȯƞŧřȧƈŧ Ɓȧşīƈş⟧",
     "po": {
-      "amountHint": "11111",
-      "amountLabel": "11111",
-      "noteLabel": "11111",
-      "noteText": "11111",
-      "numberHint": "11111",
-      "numberLabel": "11111",
-      "numberPlaceholder": "11111",
-      "requireForInvoicing": "11111",
-      "requireHint": "11111",
-      "requireTooltip": "11111",
-      "title": "11111"
+      "amountHint": "⟦Ŧȯŧȧŀ ȧŭŧħȯřīẑḗḓ ȧḿȯŭƞŧ ȯƞ ŧħḗ ƥŭřƈħȧşḗ ȯřḓḗř.⟧",
+      "amountLabel": "⟦ƤȮ Ȧḿȯŭƞŧ⟧",
+      "noteLabel": "⟦Ƞȯŧḗ:⟧",
+      "noteText": "⟦ƤȮ ḗƞƒȯřƈḗḿḗƞŧ ẇīŀŀ ȧƥƥŀẏ ẇħḗƞ īƞṽȯīƈḗ ȧŭŧȯḿȧŧīȯƞ īş ḗƞȧƀŀḗḓ. Ƈȯƞƒīɠŭřḗ ƞȯẇ ŧȯ şŧȧẏ ȧħḗȧḓ.⟧",
+      "numberHint": "⟦Ƈŀīḗƞŧ'ş ƥŭřƈħȧşḗ ȯřḓḗř řḗƒḗřḗƞƈḗ ƞŭḿƀḗř.⟧",
+      "numberLabel": "⟦ƤȮ Ƞŭḿƀḗř⟧",
+      "numberPlaceholder": "⟦ḗ.ɠ., ƤȮ-2024-12345⟧",
+      "requireForInvoicing": "⟦Řḗʠŭīřḗ Ƥŭřƈħȧşḗ Ȯřḓḗř ƒȯř īƞṽȯīƈīƞɠ⟧",
+      "requireHint": "⟦Ɓŀȯƈķ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ īƒ ƤȮ īş ƞȯŧ ƥřȯṽīḓḗḓ.⟧",
+      "requireTooltip": "⟦Ẇħḗƞ ḗƞȧƀŀḗḓ, īƞṽȯīƈḗş ƈȧƞƞȯŧ ƀḗ ɠḗƞḗřȧŧḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ŭƞŀḗşş ȧ ƤȮ ƞŭḿƀḗř īş ƥřȯṽīḓḗḓ.⟧",
+      "title": "⟦Ƥŭřƈħȧşḗ Ȯřḓḗř (Ȯƥŧīȯƞȧŀ)⟧"
     },
     "renewal": {
       "evergreen": {
-        "description": "11111",
-        "title": "11111"
+        "description": "⟦Ŧħīş ƈȯƞŧřȧƈŧ īş ȯƞɠȯīƞɠ. Ƈȯƞƒīɠŭřḗ ȧƞƞŭȧŀ řḗṽīḗẇ ƈȧḓḗƞƈḗ ȧƞḓ ƞȯŧīƈḗ ŧīḿīƞɠ.⟧",
+        "title": "⟦Ḗṽḗřɠřḗḗƞ Řḗṽīḗẇ Şḗŧŧīƞɠş⟧"
       },
       "fixedTerm": {
-        "description": "11111",
-        "title": "11111"
+        "description": "⟦Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ȧ ƒīẋḗḓ ḗƞḓ ḓȧŧḗ. Ƈȯƞƒīɠŭřḗ řḗƞḗẇȧŀ ƀḗħȧṽīȯř ȧƞḓ ƞȯŧīƈḗ ŧīḿīƞɠ.⟧",
+        "title": "⟦Řḗƞḗẇȧŀ Şḗŧŧīƞɠş⟧"
       },
-      "modeLabel": "11111",
+      "modeLabel": "⟦Řḗƞḗẇȧŀ Ḿȯḓḗ⟧",
       "modeOptions": {
-        "auto": "11111",
-        "manual": "11111",
-        "none": "11111"
+        "auto": "⟦Ȧŭŧȯ Řḗƞḗẇ⟧",
+        "manual": "⟦Ḿȧƞŭȧŀ Řḗƞḗẇȧŀ⟧",
+        "none": "⟦Ƞȯ Řḗƞḗẇȧŀ⟧"
       },
-      "modePlaceholder": "11111",
-      "noticePeriodLabel": "11111",
-      "noticePeriodPlaceholder": "11111",
-      "termLabel": "11111",
-      "termPlaceholder": "11111",
-      "useTenantDefaultsDescription": "11111",
-      "useTenantDefaultsLabel": "11111"
+      "modePlaceholder": "⟦Şḗŀḗƈŧ řḗƞḗẇȧŀ ḿȯḓḗ⟧",
+      "noticePeriodLabel": "⟦Ƞȯŧīƈḗ Ƥḗřīȯḓ (Ḓȧẏş)⟧",
+      "noticePeriodPlaceholder": "⟦ḗ.ɠ., 30⟧",
+      "termLabel": "⟦Řḗƞḗẇȧŀ Ŧḗřḿ (Ḿȯƞŧħş)⟧",
+      "termPlaceholder": "⟦ḗ.ɠ., 12⟧",
+      "useTenantDefaultsDescription": "⟦Ȧƥƥŀẏ ȯřɠȧƞīẑȧŧīȯƞ-ŀḗṽḗŀ řḗƞḗẇȧŀ şḗŧŧīƞɠş ŭƞŀḗşş ḗẋƥŀīƈīŧŀẏ ȯṽḗřřīḓḓḗƞ.⟧",
+      "useTenantDefaultsLabel": "⟦Ŭşḗ Ŧḗƞȧƞŧ Řḗƞḗẇȧŀ Ḓḗƒȧŭŀŧş⟧"
     },
     "summary": {
       "labels": {
-        "billingFrequency": "11111",
-        "client": "11111",
-        "contract": "11111",
-        "currency": "11111",
-        "noticePeriod": "11111",
-        "period": "11111",
-        "poAmount": "11111",
-        "poNumber": "11111",
-        "poRequired": "11111",
-        "renewalMode": "11111",
-        "renewalTerm": "11111"
+        "billingFrequency": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ:⟧",
+        "client": "⟦Ƈŀīḗƞŧ:⟧",
+        "contract": "⟦Ƈȯƞŧřȧƈŧ:⟧",
+        "currency": "⟦Ƈŭřřḗƞƈẏ:⟧",
+        "noticePeriod": "⟦Ƞȯŧīƈḗ Ƥḗřīȯḓ:⟧",
+        "period": "⟦Ƥḗřīȯḓ:⟧",
+        "poAmount": "⟦ƤȮ Ȧḿȯŭƞŧ:⟧",
+        "poNumber": "⟦ƤȮ Ƞŭḿƀḗř:⟧",
+        "poRequired": "⟦ƤȮ Řḗʠŭīřḗḓ:⟧",
+        "renewalMode": "⟦Řḗƞḗẇȧŀ Ḿȯḓḗ:⟧",
+        "renewalTerm": "⟦Řḗƞḗẇȧŀ Ŧḗřḿ:⟧"
       },
-      "title": "11111",
+      "title": "⟦Ƈȯƞŧřȧƈŧ Şŭḿḿȧřẏ⟧",
       "values": {
-        "notSelected": "11111",
-        "noticePeriodDays_one": "11111 {{count}} 11111",
-        "noticePeriodDays_other": "11111 {{count}} 11111",
-        "ongoing": "11111",
-        "renewalTermMonths_one": "11111 {{count}} 11111",
-        "renewalTermMonths_other": "11111 {{count}} 11111",
-        "noticePeriodDays": "11111 {{count}} 11111",
-        "renewalTermMonths": "11111 {{count}} 11111"
+        "notSelected": "⟦Ƞȯŧ şḗŀḗƈŧḗḓ⟧",
+        "noticePeriodDays_one": "⟦{{count}} ḓȧẏ⟧",
+        "noticePeriodDays_other": "⟦{{count}} ḓȧẏş⟧",
+        "ongoing": "⟦Ȯƞɠȯīƞɠ⟧",
+        "renewalTermMonths_one": "⟦{{count}} ḿȯƞŧħ⟧",
+        "renewalTermMonths_other": "⟦{{count}} ḿȯƞŧħş⟧",
+        "noticePeriodDays": "⟦{{count}} ḓȧẏ⟧",
+        "renewalTermMonths": "⟦{{count}} ḿȯƞŧħ⟧"
       }
     },
     "template": {
-      "loadingTemplateDetails": "11111",
-      "loadingTemplates": "11111",
-      "prefillHint": "11111",
+      "loadingTemplateDetails": "⟦Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗ ḓḗŧȧīŀş…⟧",
+      "loadingTemplates": "⟦Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗş…⟧",
+      "prefillHint": "⟦Ƥřḗƒīŀŀ şḗřṽīƈḗş, ƞȯŧḗş, ȧƞḓ ƀīŀŀīƞɠ ƈȧḓḗƞƈḗ ƒřȯḿ ȧƞ ḗẋīşŧīƞɠ ŧḗḿƥŀȧŧḗ. Ẏȯŭ ƈȧƞ şŧīŀŀ ȧḓĵŭşŧ ḗṽḗřẏŧħīƞɠ ƀḗƒȯřḗ ƥŭƀŀīşħīƞɠ.⟧",
       "preview": {
-        "billingCadenceLabel": "11111",
-        "notSpecified": "11111",
-        "templateLabel": "11111"
+        "billingCadenceLabel": "⟦Ɓīŀŀīƞɠ ƈȧḓḗƞƈḗ:⟧",
+        "notSpecified": "⟦Ƞȯŧ şƥḗƈīƒīḗḓ⟧",
+        "templateLabel": "⟦Ŧḗḿƥŀȧŧḗ:⟧"
       },
-      "selectTemplateOptional": "11111",
-      "startFromTemplate": "11111"
+      "selectTemplateOptional": "⟦Şḗŀḗƈŧ ȧ ŧḗḿƥŀȧŧḗ (ȯƥŧīȯƞȧŀ)⟧",
+      "startFromTemplate": "⟦Şŧȧřŧ Ƒřȯḿ Ŧḗḿƥŀȧŧḗ⟧"
     }
   },
   "wizardFixed": {
-    "alternateFrequencyLabel": "11111",
+    "alternateFrequencyLabel": "⟦Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ (Ȯƥŧīȯƞȧŀ)⟧",
     "baseRate": {
-      "hint": "11111",
-      "label": "11111",
-      "placeholder": "11111"
+      "hint": "⟦Ŧȯŧȧŀ řḗƈŭřřīƞɠ ƒḗḗ ƒȯř ȧŀŀ ƒīẋḗḓ şḗřṽīƈḗş ƈȯḿƀīƞḗḓ.⟧",
+      "label": "⟦Řḗƈŭřřīƞɠ Ɓȧşḗ Řȧŧḗ⟧",
+      "placeholder": "⟦0.00⟧"
     },
-    "description": "11111",
-    "emptyState": "11111",
+    "description": "⟦Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ȧŧ ȧ ƒīẋḗḓ řȧŧḗ ḗȧƈħ ƀīŀŀīƞɠ ƈẏƈŀḗ. Ẏȯŭ ƈȧƞ şŧīŀŀ ŧřȧƈķ ŧīḿḗ, ƀŭŧ ƀīŀŀīƞɠ īş ƀȧşḗḓ ȯƞ ŧħīş ƒŀȧŧ ȧḿȯŭƞŧ.⟧",
+    "emptyState": "⟦Ƞȯ ƒīẋḗḓ ƒḗḗ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ “Ȧḓḓ Şḗřṽīƈḗ” ȧƀȯṽḗ ȯř “Şķīƥ” ŧȯ ḿȯṽḗ ȯƞ.⟧",
     "explainer": {
-      "description": "11111",
-      "title": "11111"
+      "description": "⟦Ŧħḗşḗ şḗřṽīƈḗş ħȧṽḗ ȧ şḗŧ řḗƈŭřřīƞɠ ƥřīƈḗ. Ẏȯŭ'ŀŀ şŧīŀŀ ŧřȧƈķ ŧīḿḗ ḗƞŧřīḗş ƒȯř ŧħḗşḗ şḗřṽīƈḗş, ƀŭŧ ƀīŀŀīƞɠ īş ƀȧşḗḓ ȯƞ ŧħḗ ƒīẋḗḓ řȧŧḗ, ƞȯŧ ħȯŭřş ẇȯřķḗḓ.⟧",
+      "title": "⟦Ẇħȧŧ ȧřḗ Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş?⟧"
     },
-    "heading": "11111",
+    "heading": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş⟧",
     "preview": {
       "labels": {
-        "alternateFrequency": "11111",
-        "billingTiming": "11111",
-        "cadenceOwner": "11111",
-        "invoiceWindow": "11111",
-        "recurringRate": "11111",
-        "service": "11111",
-        "services": "11111"
+        "alternateFrequency": "⟦Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ:⟧",
+        "billingTiming": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ:⟧",
+        "cadenceOwner": "⟦Ƈȧḓḗƞƈḗ Ȯẇƞḗř:⟧",
+        "invoiceWindow": "⟦Īƞṽȯīƈḗ ẇīƞḓȯẇ:⟧",
+        "recurringRate": "⟦Řḗƈŭřřīƞɠ Řȧŧḗ:⟧",
+        "service": "⟦Şḗřṽīƈḗ:⟧",
+        "services": "⟦Şḗřṽīƈḗş:⟧"
       },
       "materializedPeriods": {
-        "tooltip": "11111"
+        "tooltip": "⟦Ȧ ƥřḗṽīḗẇ ȯƒ ŧħḗ ƞḗẋŧ ƒḗẇ şḗřṽīƈḗ ƥḗřīȯḓş ȧƞḓ ŧħḗ īƞṽȯīƈḗ ẇīƞḓȯẇş ŧħȧŧ ẇȯŭŀḓ ƀḗ ɠḗƞḗřȧŧḗḓ ƒȯř ŧħḗḿ ƀȧşḗḓ ȯƞ ŧħḗ ƈŭřřḗƞŧ şḗŧŧīƞɠş. Ŧħḗşḗ ħḗŀƥ ẏȯŭ şȧƞīŧẏ-ƈħḗƈķ ŧħḗ ƈȧḓḗƞƈḗ ƀḗƒȯřḗ şȧṽīƞɠ — ȧƈŧŭȧŀ īƞṽȯīƈḗş ȧřḗ ƥřȯḓŭƈḗḓ ŀȧŧḗř ƀẏ ŧħḗ ƀīŀŀīƞɠ řŭƞ.⟧"
       },
-      "title": "11111"
+      "title": "⟦Řḗƈŭřřīƞɠ Ƥřḗṽīḗẇ Ɓḗƒȯřḗ Şȧṽḗ⟧"
     },
     "proration": {
-      "label": "11111",
-      "tooltip": "11111"
+      "label": "⟦Ȧḓĵŭşŧ ƒȯř Ƥȧřŧīȧŀ Ƥḗřīȯḓş⟧",
+      "tooltip": "⟦Ȧḓĵŭşŧ ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ ẇħḗƞ ƈȯƞŧřȧƈŧ ḓȧŧḗş ƈȯṽḗř ȯƞŀẏ ƥȧřŧ ȯƒ ȧ şḗřṽīƈḗ ƥḗřīȯḓ.⟧"
     },
     "services": {
-      "addService": "11111",
-      "label": "11111",
-      "quantityLabel": "11111",
-      "selectServicePlaceholder": "11111",
-      "serviceItemLabel": "11111 {{index}} 11111"
+      "addService": "⟦Ȧḓḓ Şḗřṽīƈḗ⟧",
+      "label": "⟦Şḗřṽīƈḗş⟧",
+      "quantityLabel": "⟦Ɋŭȧƞŧīŧẏ⟧",
+      "selectServicePlaceholder": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+      "serviceItemLabel": "⟦Şḗřṽīƈḗ {{index}}⟧"
     }
   },
   "wizardProducts": {
     "actions": {
-      "addProduct": "11111"
+      "addProduct": "⟦Ȧḓḓ Ƥřȯḓŭƈŧ⟧"
     },
-    "description": "11111",
-    "emptyState": "11111",
-    "heading": "11111",
+    "description": "⟦Ȧŧŧȧƈħ ƥřȯḓŭƈŧş ŧħȧŧ ẇīŀŀ ƀḗ ƀīŀŀḗḓ ḗȧƈħ ƈẏƈŀḗ. Ƥřȯḓŭƈŧş ŭşḗ ŧħḗ ƈȧŧȧŀȯɠ ƥřīƈḗ ƒȯř ŧħḗ ƈȯƞŧřȧƈŧ ƈŭřřḗƞƈẏ ŭƞŀḗşş ẏȯŭ ḗƞŧḗř ȧƞ ȯṽḗřřīḓḗ.⟧",
+    "emptyState": "⟦Ƞȯ ƥřȯḓŭƈŧş ȧŧŧȧƈħḗḓ ẏḗŧ. Ȧḓḓ ȧ ƥřȯḓŭƈŧ īƒ ẏȯŭ ẇȧƞŧ īŧ ŧȯ ƀīŀŀ ḗṽḗřẏ ƈẏƈŀḗ.⟧",
+    "heading": "⟦Ƥřȯḓŭƈŧş⟧",
     "labels": {
-      "defaultCatalogPrice": "11111",
-      "overrideUnitPriceOptional": "11111",
-      "productItem": "11111 {{index}} 11111",
-      "products": "11111",
-      "quantity": "11111",
-      "selectProductPlaceholder": "11111",
-      "catalogPriceInCurrency": "11111 {{currency}} 11111"
+      "defaultCatalogPrice": "⟦Ḓḗƒȧŭŀŧ ƈȧŧȧŀȯɠ ƥřīƈḗ:⟧",
+      "overrideUnitPriceOptional": "⟦Ȯṽḗřřīḓḗ ŭƞīŧ ƥřīƈḗ (ȯƥŧīȯƞȧŀ)⟧",
+      "productItem": "⟦Ƥřȯḓŭƈŧ {{index}}⟧",
+      "products": "⟦Ƥřȯḓŭƈŧş⟧",
+      "quantity": "⟦Ɋŭȧƞŧīŧẏ⟧",
+      "selectProductPlaceholder": "⟦Şḗŀḗƈŧ ȧ ƥřȯḓŭƈŧ⟧",
+      "catalogPriceInCurrency": "⟦Ƈȧŧȧŀȯɠ ƥřīƈḗ īƞ {{currency}}:⟧"
     },
     "validation": {
-      "noDefaultPriceEnterUnitPrice": "11111",
-      "productMissingPrice": "11111",
-      "noCurrencyPriceEnterUnitPrice": "11111 {{currency}} 11111",
-      "noCurrencyPriceWithLegacyHint": "11111 {{currency}} 11111 {{rate}} 11111 {{currency}} 11111"
+      "noDefaultPriceEnterUnitPrice": "⟦Ƞȯ ḓḗƒȧŭŀŧ ƥřīƈḗ şḗŧ. Ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ.⟧",
+      "productMissingPrice": "⟦Ŧħīş ƥřȯḓŭƈŧ ħȧş ƞȯ ḓḗƒȧŭŀŧ ƥřīƈḗ ȧƞḓ ƞȯ ȯṽḗřřīḓḗ. Īŧ ƈȧƞƞȯŧ ƀḗ ƀīŀŀḗḓ ŭƞŧīŀ ẏȯŭ ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ.⟧",
+      "noCurrencyPriceEnterUnitPrice": "⟦Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ.⟧",
+      "noCurrencyPriceWithLegacyHint": "⟦Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ŀḗɠȧƈẏ ḓḗƒȧŭŀŧ řȧŧḗ: {{rate}}. Ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ īƞ {{currency}}.⟧"
     }
   },
   "wizardHourly": {
     "actions": {
-      "addHourlyService": "11111"
+      "addHourlyService": "⟦Ȧḓḓ Ħȯŭřŀẏ Şḗřṽīƈḗ⟧"
     },
-    "alternateFrequencyLabel": "11111",
-    "description": "11111",
-    "emptyState": "11111",
+    "alternateFrequencyLabel": "⟦Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ (Ȯƥŧīȯƞȧŀ)⟧",
+    "description": "⟦Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŧīḿḗ ŧřȧƈķḗḓ. Ƥḗřƒḗƈŧ ƒȯř Ŧ&Ḿ (Ŧīḿḗ & Ḿȧŧḗřīȧŀş) ẇȯřķ.⟧",
+    "emptyState": "⟦Ƞȯ ħȯŭřŀẏ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ “Ȧḓḓ Ħȯŭřŀẏ Şḗřṽīƈḗ” ȧƀȯṽḗ ȯř “Şķīƥ” īƒ ẏȯŭ ḓȯƞ’ŧ ƞḗḗḓ ŧīḿḗ & ḿȧŧḗřīȧŀş ƀīŀŀīƞɠ.⟧",
     "explainer": {
-      "description": "11111",
-      "title": "11111"
+      "description": "⟦Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ŧīḿḗ ŧřȧƈķḗḓ. Ḗȧƈħ ŧīḿḗ ḗƞŧřẏ ẇīŀŀ ƀḗ ḿŭŀŧīƥŀīḗḓ ƀẏ ŧħḗ ħȯŭřŀẏ řȧŧḗ ŧȯ ƈȧŀƈŭŀȧŧḗ ŧħḗ īƞṽȯīƈḗ ȧḿȯŭƞŧ.⟧",
+      "title": "⟦Ẇħȧŧ ȧřḗ Ħȯŭřŀẏ Şḗřṽīƈḗş?⟧"
     },
-    "heading": "11111",
+    "heading": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
     "labels": {
-      "enterHourlyRate": "11111",
-      "hourlyRate": "11111",
-      "hourlyRatePerHour": "11111 {{rate}} 11111",
-      "hourlyRatePlaceholder": "11111",
-      "hourlyServices": "11111",
-      "selectServicePlaceholder": "11111",
-      "serviceItem": "11111 {{index}} 11111",
-      "setBucketOfHours": "11111",
-      "noCurrencyPriceEnterRate": "11111 {{currency}} 11111",
-      "noCurrencyPriceWithLegacyHint": "11111 {{currency}} 11111 {{rate}} 11111 {{currency}} 11111"
+      "enterHourlyRate": "⟦Ḗƞŧḗř ŧħḗ ħȯŭřŀẏ řȧŧḗ⟧",
+      "hourlyRate": "⟦Ħȯŭřŀẏ Řȧŧḗ⟧",
+      "hourlyRatePerHour": "⟦{{rate}}/ħȯŭř⟧",
+      "hourlyRatePlaceholder": "⟦0.00⟧",
+      "hourlyServices": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
+      "selectServicePlaceholder": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+      "serviceItem": "⟦Şḗřṽīƈḗ {{index}}⟧",
+      "setBucketOfHours": "⟦Şḗŧ ƀŭƈķḗŧ ȯƒ ħȯŭřş⟧",
+      "noCurrencyPriceEnterRate": "⟦Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ḗƞŧḗř ȧƞ ħȯŭřŀẏ řȧŧḗ.⟧",
+      "noCurrencyPriceWithLegacyHint": "⟦Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ŀḗɠȧƈẏ ḓḗƒȧŭŀŧ řȧŧḗ: {{rate}}. Ḗƞŧḗř ȧƞ ħȯŭřŀẏ řȧŧḗ īƞ {{currency}}.⟧"
     },
     "minimumBillableTime": {
-      "hint": "11111",
-      "label": "11111",
-      "placeholder": "11111"
+      "hint": "⟦ḗ.ɠ., 15 ḿīƞŭŧḗş - ȧƞẏ ŧīḿḗ ḗƞŧřẏ ŀḗşş ŧħȧƞ ŧħīş ẇīŀŀ ƀḗ řȯŭƞḓḗḓ ŭƥ⟧",
+      "label": "⟦Ḿīƞīḿŭḿ Ɓīŀŀȧƀŀḗ Ŧīḿḗ (ḿīƞŭŧḗş)⟧",
+      "placeholder": "⟦15⟧"
     },
     "roundUpToNearest": {
-      "hint": "11111",
-      "label": "11111",
-      "placeholder": "11111"
+      "hint": "⟦ḗ.ɠ., 15 ḿīƞŭŧḗş - ŧīḿḗ ḗƞŧřīḗş ẇīŀŀ ƀḗ řȯŭƞḓḗḓ ŭƥ ŧȯ ŧħḗ ƞḗȧřḗşŧ īƞŧḗřṽȧŀ⟧",
+      "label": "⟦Řȯŭƞḓ Ŭƥ Ŧȯ Ƞḗȧřḗşŧ (ḿīƞŭŧḗş)⟧",
+      "placeholder": "⟦15⟧"
     },
     "summary": {
       "labels": {
-        "alternateFrequency": "11111",
-        "bucketsHeading": "11111",
-        "includedHours": "11111",
-        "minimumTime": "11111",
-        "overageRate": "11111",
-        "rollover": "11111",
-        "roundUp": "11111",
-        "serviceFallback": "11111 {{index}} 11111",
-        "services": "11111"
+        "alternateFrequency": "⟦Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ:⟧",
+        "bucketsHeading": "⟦Ɓŭƈķḗŧş:⟧",
+        "includedHours": "⟦Īƞƈŀŭḓḗḓ Ħȯŭřş:⟧",
+        "minimumTime": "⟦Ḿīƞīḿŭḿ Ŧīḿḗ:⟧",
+        "overageRate": "⟦Ȯṽḗřȧɠḗ Řȧŧḗ:⟧",
+        "rollover": "⟦Řȯŀŀȯṽḗř:⟧",
+        "roundUp": "⟦Řȯŭƞḓ Ŭƥ:⟧",
+        "serviceFallback": "⟦Şḗřṽīƈḗ {{index}}⟧",
+        "services": "⟦Şḗřṽīƈḗş:⟧"
       },
-      "title": "11111",
+      "title": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş Şŭḿḿȧřẏ⟧",
       "values": {
-        "everyMinutes": "11111 {{count}} 11111",
-        "hours": "11111 {{count}} 11111",
-        "minutes": "11111 {{count}} 11111",
-        "overageRatePerHour": "11111 {{rate}} 11111",
-        "rolloverDisabled": "11111",
-        "rolloverEnabled": "11111"
+        "everyMinutes": "⟦Ḗṽḗřẏ {{count}} ḿīƞŭŧḗş⟧",
+        "hours": "⟦{{count}} ħȯŭřş⟧",
+        "minutes": "⟦{{count}} ḿīƞŭŧḗş⟧",
+        "overageRatePerHour": "⟦{{rate}}/ħȯŭř⟧",
+        "rolloverDisabled": "⟦Ḓīşȧƀŀḗḓ⟧",
+        "rolloverEnabled": "⟦Ḗƞȧƀŀḗḓ⟧"
       }
     }
   },
   "wizardUsage": {
     "actions": {
-      "addUsageBasedService": "11111"
+      "addUsageBasedService": "⟦Ȧḓḓ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗ⟧"
     },
-    "alternateFrequencyLabel": "11111",
-    "description": "11111",
-    "emptyState": "11111",
+    "alternateFrequencyLabel": "⟦Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ (Ȯƥŧīȯƞȧŀ)⟧",
+    "description": "⟦Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŭşȧɠḗ ȯř ƈȯƞşŭḿƥŧīȯƞ. Ƥḗřƒḗƈŧ ƒȯř ḿḗŧḗřḗḓ şḗřṽīƈḗş ŀīķḗ ḓȧŧȧ ŧřȧƞşƒḗř, ȦƤĪ ƈȧŀŀş, ȯř şŧȯřȧɠḗ.⟧",
+    "emptyState": "⟦Ƞȯ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ “Ȧḓḓ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗ” ȧƀȯṽḗ ȯř “Şķīƥ” īƒ ẏȯŭ ḓȯƞ’ŧ ƞḗḗḓ ƈȯƞşŭḿƥŧīȯƞ ƀīŀŀīƞɠ.⟧",
     "explainer": {
-      "description": "11111",
-      "title": "11111"
+      "description": "⟦Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ƈȯƞşŭḿƥŧīȯƞ ȯř ŭşȧɠḗ ḿḗŧřīƈş. Ḗȧƈħ ŭƞīŧ ƈȯƞşŭḿḗḓ ẇīŀŀ ƀḗ ḿŭŀŧīƥŀīḗḓ ƀẏ ŧħḗ ŭƞīŧ řȧŧḗ ŧȯ ƈȧŀƈŭŀȧŧḗ ŧħḗ īƞṽȯīƈḗ ȧḿȯŭƞŧ.⟧",
+      "title": "⟦Ẇħȧŧ ȧřḗ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş?⟧"
     },
-    "heading": "11111",
+    "heading": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧",
     "labels": {
-      "enterUnitRate": "11111",
-      "ratePerUnit": "11111",
-      "ratePerUnitPlaceholder": "11111",
-      "ratePerUnitValue": "11111 {{rate}} 11111 {{unit}} 11111",
-      "selectServicePlaceholder": "11111",
-      "serviceItem": "11111 {{index}} 11111",
-      "services": "11111",
-      "setBucketAllocation": "11111",
-      "unitOfMeasure": "11111",
-      "unitOfMeasureHint": "11111",
-      "unitOfMeasurePlaceholder": "11111",
-      "noCurrencyPriceEnterRate": "11111 {{currency}} 11111",
-      "noCurrencyPriceWithLegacyHint": "11111 {{currency}} 11111 {{rate}} 11111 {{currency}} 11111"
+      "enterUnitRate": "⟦Ḗƞŧḗř ŧħḗ ŭƞīŧ řȧŧḗ⟧",
+      "ratePerUnit": "⟦Řȧŧḗ ƥḗř Ŭƞīŧ⟧",
+      "ratePerUnitPlaceholder": "⟦0.00⟧",
+      "ratePerUnitValue": "⟦{{rate}}/{{unit}}⟧",
+      "selectServicePlaceholder": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+      "serviceItem": "⟦Şḗřṽīƈḗ {{index}}⟧",
+      "services": "⟦Şḗřṽīƈḗş⟧",
+      "setBucketAllocation": "⟦Şḗŧ ƀŭƈķḗŧ ȧŀŀȯƈȧŧīȯƞ⟧",
+      "unitOfMeasure": "⟦Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ⟧",
+      "unitOfMeasureHint": "⟦Ƈħȯȯşḗ ŧħḗ ŭƞīŧ ŧħīş şḗřṽīƈḗ ƀīŀŀş ȯƞ.⟧",
+      "unitOfMeasurePlaceholder": "⟦ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř⟧",
+      "noCurrencyPriceEnterRate": "⟦Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ḗƞŧḗř ȧ ŭƞīŧ řȧŧḗ.⟧",
+      "noCurrencyPriceWithLegacyHint": "⟦Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ŀḗɠȧƈẏ ḓḗƒȧŭŀŧ řȧŧḗ: {{rate}}. Ḗƞŧḗř ȧ ŭƞīŧ řȧŧḗ īƞ {{currency}}.⟧"
     },
     "summary": {
       "labels": {
-        "services": "11111"
+        "services": "⟦Şḗřṽīƈḗş:⟧"
       },
-      "title": "11111"
+      "title": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şŭḿḿȧřẏ⟧"
     },
     "values": {
-      "defaultUnit": "11111"
+      "defaultUnit": "⟦ŭƞīŧ⟧"
     }
   },
   "wizardReview": {
-    "heading": "11111",
-    "description": "11111",
+    "heading": "⟦Řḗṽīḗẇ Ƈȯƞŧřȧƈŧ⟧",
+    "description": "⟦Řḗṽīḗẇ ȧŀŀ ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş ƀḗƒȯřḗ ƈřḗȧŧīƞɠ. Ẏȯŭ ƈȧƞ şŧīŀŀ ḗḓīŧ ȧƒŧḗř ƈřḗȧŧīȯƞ īƒ ƞḗḗḓḗḓ.⟧",
     "sections": {
-      "contractBasics": "11111",
-      "fixedFeeServices": "11111",
-      "products": "11111",
-      "hourlyServices": "11111",
-      "usageBasedServices": "11111"
+      "contractBasics": "⟦Ƈȯƞŧřȧƈŧ Ɓȧşīƈş⟧",
+      "fixedFeeServices": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş⟧",
+      "products": "⟦Ƥřȯḓŭƈŧş⟧",
+      "hourlyServices": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
+      "usageBasedServices": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧"
     },
     "fields": {
-      "client": "11111",
-      "contractName": "11111",
-      "billingFrequency": "11111",
-      "currency": "11111",
-      "startDate": "11111",
-      "endDate": "11111",
-      "renewalMode": "11111",
-      "noticePeriod": "11111",
-      "renewalTerm": "11111"
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "contractName": "⟦Ƈȯƞŧřȧƈŧ Ƞȧḿḗ⟧",
+      "billingFrequency": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
+      "currency": "⟦Ƈŭřřḗƞƈẏ⟧",
+      "startDate": "⟦Şŧȧřŧ Ḓȧŧḗ⟧",
+      "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+      "renewalMode": "⟦Řḗƞḗẇȧŀ Ḿȯḓḗ⟧",
+      "noticePeriod": "⟦Ƞȯŧīƈḗ Ƥḗřīȯḓ⟧",
+      "renewalTerm": "⟦Řḗƞḗẇȧŀ Ŧḗřḿ⟧"
     },
     "fallback": {
-      "notSelected": "11111",
-      "notSpecified": "11111",
-      "ongoing": "11111",
-      "notApplicable": "11111"
+      "notSelected": "⟦Ƞȯŧ şḗŀḗƈŧḗḓ⟧",
+      "notSpecified": "⟦Ƞȯŧ şƥḗƈīƒīḗḓ⟧",
+      "ongoing": "⟦Ȯƞɠȯīƞɠ⟧",
+      "notApplicable": "⟦Ƞ/Ȧ⟧"
     },
     "renewalMode": {
-      "none": "11111",
-      "manual": "11111",
-      "auto": "11111"
+      "none": "⟦Ƞȯ Řḗƞḗẇȧŀ⟧",
+      "manual": "⟦Ḿȧƞŭȧŀ Řḗƞḗẇȧŀ⟧",
+      "auto": "⟦Ȧŭŧȯ Řḗƞḗẇ⟧"
     },
     "noticePeriod": {
-      "one": "11111 {{count}} 11111",
-      "other": "11111 {{count}} 11111"
+      "one": "⟦{{count}} ḓȧẏ⟧",
+      "other": "⟦{{count}} ḓȧẏş⟧"
     },
     "renewalTerm": {
-      "one": "11111 {{count}} 11111",
-      "other": "11111 {{count}} 11111"
+      "one": "⟦{{count}} ḿȯƞŧħ⟧",
+      "other": "⟦{{count}} ḿȯƞŧħş⟧"
     },
     "common": {
-      "yes": "11111",
-      "no": "11111",
-      "enabled": "11111",
-      "disabled": "11111",
-      "bucketLabel": "11111",
-      "billingFrequencyOverrideLabel": "11111",
-      "serviceQuantityRow": "11111 {{serviceName}} 11111 {{quantity}} 11111",
-      "unitSingular": "11111",
-      "unitsFallback": "11111",
-      "hourSingular": "11111"
+      "yes": "⟦Ẏḗş⟧",
+      "no": "⟦Ƞȯ⟧",
+      "enabled": "⟦Ḗƞȧƀŀḗḓ⟧",
+      "disabled": "⟦Ḓīşȧƀŀḗḓ⟧",
+      "bucketLabel": "⟦Ɓŭƈķḗŧ:⟧",
+      "billingFrequencyOverrideLabel": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ Ȯṽḗřřīḓḗ:⟧",
+      "serviceQuantityRow": "⟦{{serviceName}} (Ɋŧẏ: {{quantity}})⟧",
+      "unitSingular": "⟦ŭƞīŧ⟧",
+      "unitsFallback": "⟦ŭƞīŧş⟧",
+      "hourSingular": "⟦ħȯŭř⟧"
     },
     "po": {
-      "title": "11111",
-      "requiredLabel": "11111",
-      "numberLabel": "11111",
-      "amountLabel": "11111"
+      "title": "⟦Ƥŭřƈħȧşḗ Ȯřḓḗř Řḗʠŭīřḗḿḗƞŧş⟧",
+      "requiredLabel": "⟦ƤȮ Řḗʠŭīřḗḓ:⟧",
+      "numberLabel": "⟦ƤȮ Ƞŭḿƀḗř:⟧",
+      "amountLabel": "⟦ƤȮ Ȧḿȯŭƞŧ:⟧"
     },
     "bucket": {
-      "includedHours": "11111 {{formattedValue}} 11111",
-      "includedUnits": "11111 {{formattedValue}} 11111 {{unitLabel}} 11111",
-      "overageLabel": "11111 {{rate}} 11111 {{unit}} 11111",
-      "rolloverEnabled": "11111",
-      "rolloverDisabled": "11111",
-      "summaryWithOverage": "11111 {{included}} 11111 {{overage}} 11111 {{rollover}} 11111",
-      "summaryWithoutOverage": "11111 {{included}} 11111 {{rollover}} 11111"
+      "includedHours": "⟦{{formattedValue}} ħȯŭřş⟧",
+      "includedUnits": "⟦{{formattedValue}} {{unitLabel}}⟧",
+      "overageLabel": "⟦{{rate}}/{{unit}} ȯṽḗřȧɠḗ⟧",
+      "rolloverEnabled": "⟦řȯŀŀȯṽḗř ḗƞȧƀŀḗḓ⟧",
+      "rolloverDisabled": "⟦ƞȯ řȯŀŀȯṽḗř⟧",
+      "summaryWithOverage": "⟦{{included}}, {{overage}}, {{rollover}}⟧",
+      "summaryWithoutOverage": "⟦{{included}}, {{rollover}}⟧"
     },
     "fixed": {
       "badgeCount": {
-        "one": "11111 {{count}} 11111",
-        "other": "11111 {{count}} 11111"
+        "one": "⟦{{count}} şḗřṽīƈḗ⟧",
+        "other": "⟦{{count}} şḗřṽīƈḗş⟧"
       },
-      "monthlyBaseRate": "11111",
-      "partialPeriodAdjustment": "11111"
+      "monthlyBaseRate": "⟦Ḿȯƞŧħŀẏ Ɓȧşḗ Řȧŧḗ:⟧",
+      "partialPeriodAdjustment": "⟦Ƥȧřŧīȧŀ-Ƥḗřīȯḓ Ȧḓĵŭşŧḿḗƞŧ:⟧"
     },
     "recurring": {
       "cadenceOwner": {
-        "label": "11111",
-        "contractAnniversary": "11111",
-        "clientBillingSchedule": "11111"
+        "label": "⟦Ƈȧḓḗƞƈḗ ȯẇƞḗř:⟧",
+        "contractAnniversary": "⟦Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ⟧",
+        "clientBillingSchedule": "⟦Ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ⟧"
       },
       "firstInvoice": {
         "contract": {
-          "advance": "11111",
-          "arrears": "11111"
+          "advance": "⟦Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ẇīƞḓȯẇ ŧħȧŧ ȯƥḗƞş ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ.⟧",
+          "arrears": "⟦Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƞḗẋŧ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ẇīƞḓȯẇ ȧƒŧḗř ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş.⟧"
         },
         "client": {
-          "advance": "11111",
-          "arrears": "11111"
+          "advance": "⟦Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƒīřşŧ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ẇīƞḓȯẇ ƈȯṽḗřīƞɠ ŧħḗ şḗřṽīƈḗ ƥḗřīȯḓ.⟧",
+          "arrears": "⟦Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƞḗẋŧ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ẇīƞḓȯẇ ȧƒŧḗř ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş.⟧"
         }
       },
       "partialPeriod": {
-        "enabled": "11111",
-        "disabled": "11111"
+        "enabled": "⟦Ƥȧřŧīȧŀ ƥḗřīȯḓş ȧḓĵŭşŧ ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ ŧȯ ŧħḗ ƈȯṽḗřḗḓ ƥȯřŧīȯƞ ȯƒ ŧħḗ şḗřṽīƈḗ ƥḗřīȯḓ.⟧",
+        "disabled": "⟦Ƥȧřŧīȧŀ ƥḗřīȯḓş ķḗḗƥ ŧħḗ ƒŭŀŀ řḗƈŭřřīƞɠ ƒḗḗ ḗṽḗƞ ẇħḗƞ ƈȯƞŧřȧƈŧ ḓȧŧḗş ŀȧƞḓ īƞşīḓḗ ȧ şḗřṽīƈḗ ƥḗřīȯḓ.⟧"
       },
       "materialized": {
-        "heading": "11111",
-        "serviceLabel": "11111",
-        "invoiceWindowLabel": "11111",
+        "heading": "⟦Īŀŀŭşŧřȧŧīṽḗ ƒŭŧŭřḗ ḿȧŧḗřīȧŀīẑḗḓ ƥḗřīȯḓş⟧",
+        "serviceLabel": "⟦Şḗřṽīƈḗ:⟧",
+        "invoiceWindowLabel": "⟦Īƞṽȯīƈḗ ẇīƞḓȯẇ:⟧",
         "summary": {
-          "contract": "11111",
-          "client": "11111"
+          "contract": "⟦Īƒ ẏȯŭ şȧṽḗ ŧħīş řḗƈŭřřīƞɠ ŀīƞḗ, ƒŭŧŭřḗ ƥḗřīȯḓş ẇȯŭŀḓ ḿȧŧḗřīȧŀīẑḗ ȯƞ ȧƞ ȧƞƞīṽḗřşȧřẏ-şŧẏŀḗ ƥřḗṽīḗẇ ȧƞƈħȯřḗḓ ŧȯ ŧħḗ 8ŧħ ƀḗƒȯřḗ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ.⟧",
+          "client": "⟦Īƒ ẏȯŭ şȧṽḗ ŧħīş řḗƈŭřřīƞɠ ŀīƞḗ, ƒŭŧŭřḗ ƥḗřīȯḓş ẇȯŭŀḓ ḿȧŧḗřīȧŀīẑḗ ȯƞ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ƥřḗṽīḗẇ ƀḗƒȯřḗ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ.⟧"
         }
       }
     },
     "products": {
       "badgeCount": {
-        "one": "11111 {{count}} 11111",
-        "other": "11111 {{count}} 11111"
+        "one": "⟦{{count}} ƥřȯḓŭƈŧ⟧",
+        "other": "⟦{{count}} ƥřȯḓŭƈŧş⟧"
       },
-      "overrideRate": "11111 {{rate}} 11111 {{currencyCode}} 11111"
+      "overrideRate": "⟦- ȯṽḗřřīḓḗ {{rate}}/{{currencyCode}}⟧"
     },
     "hourly": {
       "badgeCount": {
-        "one": "11111 {{count}} 11111",
-        "other": "11111 {{count}} 11111"
+        "one": "⟦{{count}} şḗřṽīƈḗ⟧",
+        "other": "⟦{{count}} şḗřṽīƈḗş⟧"
       },
-      "servicesAndRates": "11111",
-      "serviceRateRow": "11111 {{serviceName}} 11111 {{rate}} 11111",
-      "minimumTimeLabel": "11111",
-      "roundUpLabel": "11111",
-      "minutesValue": "11111 {{count}} 11111"
+      "servicesAndRates": "⟦Şḗřṽīƈḗş ȧƞḓ Řȧŧḗş⟧",
+      "serviceRateRow": "⟦{{serviceName}} - {{rate}}/ħȯŭř⟧",
+      "minimumTimeLabel": "⟦Ḿīƞīḿŭḿ Ŧīḿḗ:⟧",
+      "roundUpLabel": "⟦Řȯŭƞḓ Ŭƥ:⟧",
+      "minutesValue": "⟦{{count}} ḿīƞŭŧḗş⟧"
     },
     "usage": {
       "badgeCount": {
-        "one": "11111 {{count}} 11111",
-        "other": "11111 {{count}} 11111"
+        "one": "⟦{{count}} şḗřṽīƈḗ⟧",
+        "other": "⟦{{count}} şḗřṽīƈḗş⟧"
       },
-      "serviceRateRow": "11111 {{serviceName}} 11111 {{rate}} 11111 {{unit}} 11111"
+      "serviceRateRow": "⟦{{serviceName}} - {{rate}}/{{unit}}⟧"
     },
     "total": {
-      "title": "11111",
-      "description": "11111",
-      "perMonth": "11111"
+      "title": "⟦Ḗşŧīḿȧŧḗḓ Ḿȯƞŧħŀẏ Ŧȯŧȧŀ⟧",
+      "description": "⟦Ƒīẋḗḓ ƈħȧřɠḗş ȯƞŀẏ. Ħȯŭřŀẏ ȧƞḓ ŭşȧɠḗ şḗřṽīƈḗş ƀīŀŀ şḗƥȧřȧŧḗŀẏ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ŭşȧɠḗ.⟧",
+      "perMonth": "⟦ƥḗř ḿȯƞŧħ⟧"
     },
     "finalChecklist": {
-      "title": "11111",
-      "itemRates": "11111",
-      "itemPo": "11111",
-      "itemDates": "11111",
-      "itemEditLater": "11111"
+      "title": "⟦Ɓḗƒȯřḗ ẏȯŭ ƒīƞīşħ:⟧",
+      "itemRates": "⟦Ḓȯŭƀŀḗ-ƈħḗƈķ ȧŀŀ řȧŧḗş, ʠŭȧƞŧīŧīḗş, ȧƞḓ ƀŭƈķḗŧş⟧",
+      "itemPo": "⟦Ƈȯƞƒīřḿ ƤȮ řḗʠŭīřḗḿḗƞŧş (īƒ ȧƞẏ)⟧",
+      "itemDates": "⟦Ṽḗřīƒẏ ŧħḗ şŧȧřŧ ȧƞḓ ḗƞḓ ḓȧŧḗş⟧",
+      "itemEditLater": "⟦Řḗḿḗḿƀḗř: ẏȯŭ ƈȧƞ ḗḓīŧ ŧħḗ ƈȯƞŧřȧƈŧ ŀȧŧḗř īƒ ƞḗḗḓḗḓ⟧"
     }
   },
   "templateWizard": {
     "title": {
-      "createContractTemplate": "11111"
+      "createContractTemplate": "⟦Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ Ŧḗḿƥŀȧŧḗ⟧"
     },
     "steps": {
-      "templateBasics": "11111",
-      "fixedFeeBlocks": "11111",
-      "products": "11111",
-      "hourlyBlocks": "11111",
-      "usageBasedBlocks": "11111",
-      "reviewPublish": "11111"
+      "templateBasics": "⟦Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş⟧",
+      "fixedFeeBlocks": "⟦Ƒīẋḗḓ Ƒḗḗ Ɓŀȯƈķş⟧",
+      "products": "⟦Ƥřȯḓŭƈŧş⟧",
+      "hourlyBlocks": "⟦Ħȯŭřŀẏ Ɓŀȯƈķş⟧",
+      "usageBasedBlocks": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Ɓŀȯƈķş⟧",
+      "reviewPublish": "⟦Řḗṽīḗẇ & Ƥŭƀŀīşħ⟧"
     },
     "actions": {
-      "continue": "11111",
-      "publishTemplate": "11111"
+      "continue": "⟦Ƈȯƞŧīƞŭḗ⟧",
+      "publishTemplate": "⟦Ƥŭƀŀīşħ Ŧḗḿƥŀȧŧḗ⟧"
     },
     "errors": {
-      "failedToCreateTemplate": "11111"
+      "failedToCreateTemplate": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ŧḗḿƥŀȧŧḗ⟧"
     },
     "validation": {
-      "templateNameRequired": "11111",
-      "billingFrequencyRequired": "11111",
-      "duplicateNameExists": "11111",
-      "templateNameAlreadyInUse": "11111",
-      "atLeastOneServiceRequired": "11111",
-      "unsupportedRecurringAuthoringCombination": "11111 {{lineType}} 11111 {{supportedFrequencies}} 11111 {{billingFrequency}} 11111",
+      "templateNameRequired": "⟦Ŧḗḿƥŀȧŧḗ ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",
+      "billingFrequencyRequired": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ⟧",
+      "duplicateNameExists": "⟦Ȧ ŧḗḿƥŀȧŧḗ ẇīŧħ ŧħīş ƞȧḿḗ ȧŀřḗȧḓẏ ḗẋīşŧş⟧",
+      "templateNameAlreadyInUse": "⟦Ŧḗḿƥŀȧŧḗ ƞȧḿḗ īş ȧŀřḗȧḓẏ īƞ ŭşḗ⟧",
+      "atLeastOneServiceRequired": "⟦Ȧŧ ŀḗȧşŧ ȯƞḗ şḗřṽīƈḗ īş řḗʠŭīřḗḓ⟧",
+      "unsupportedRecurringAuthoringCombination": "⟦Ŭƞşŭƥƥȯřŧḗḓ řḗƈŭřřīƞɠ ȧŭŧħȯřīƞɠ ƈȯḿƀīƞȧŧīȯƞ ƒȯř {{lineType}} şḗřṽīƈḗş: ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ƈȧḓḗƞƈḗ ƈŭřřḗƞŧŀẏ şŭƥƥȯřŧş {{supportedFrequencies}} ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈīḗş. {{billingFrequency}} īş ƞȯŧ şŭƥƥȯřŧḗḓ ẏḗŧ. Ŭşḗ ȯƞḗ ȯƒ ŧħḗ şŭƥƥȯřŧḗḓ ƒřḗʠŭḗƞƈīḗş ȯř īƞṽȯīƈḗ ȯƞ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ īƞşŧḗȧḓ.⟧",
       "recurring": {
         "frequency": {
-          "monthly": "11111",
-          "quarterly": "11111",
-          "semi-annually": "11111",
-          "annually": "11111",
-          "weekly": "11111",
-          "biweekly": "11111"
+          "monthly": "⟦ḿȯƞŧħŀẏ⟧",
+          "quarterly": "⟦ʠŭȧřŧḗřŀẏ⟧",
+          "semi-annually": "⟦şḗḿī-ȧƞƞŭȧŀŀẏ⟧",
+          "annually": "⟦ȧƞƞŭȧŀŀẏ⟧",
+          "weekly": "⟦ẇḗḗķŀẏ⟧",
+          "biweekly": "⟦ƀīẇḗḗķŀẏ⟧"
         },
         "lineType": {
-          "fixed": "11111",
-          "product": "11111",
-          "hourly": "11111",
-          "usage": "11111"
+          "fixed": "⟦Ƒīẋḗḓ⟧",
+          "product": "⟦Ƥřȯḓŭƈŧ⟧",
+          "hourly": "⟦Ħȯŭřŀẏ⟧",
+          "usage": "⟦Ŭşȧɠḗ⟧"
         }
       }
     }
   },
   "templateBasics": {
-    "heading": "11111",
-    "description": "11111",
+    "heading": "⟦Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş⟧",
+    "description": "⟦Ƞȧḿḗ ŧħīş ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ ȧƞḓ ƈȧƥŧŭřḗ ħīɠħ-ŀḗṽḗŀ ɠŭīḓȧƞƈḗ. Ƥřīƈīƞɠ ȧƞḓ ƈŀīḗƞŧ şƥḗƈīƒīƈş ẇīŀŀ ƀḗ ƒīƞȧŀīẑḗḓ ẇħḗƞ ŧħḗ ŧḗḿƥŀȧŧḗ īş ȧƥƥŀīḗḓ ŧȯ ȧ ƈŀīḗƞŧ.⟧",
     "fields": {
-      "templateName": "11111",
-      "internalNotes": "11111",
-      "recommendedBillingFrequency": "11111"
+      "templateName": "⟦Ŧḗḿƥŀȧŧḗ Ƞȧḿḗ *⟧",
+      "internalNotes": "⟦Īƞŧḗřƞȧŀ Ƞȯŧḗş⟧",
+      "recommendedBillingFrequency": "⟦Řḗƈȯḿḿḗƞḓḗḓ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ *⟧"
     },
     "placeholders": {
-      "templateName": "11111",
-      "internalNotes": "11111",
-      "billingFrequency": "11111"
+      "templateName": "⟦Ḿȧƞȧɠḗḓ Şḗřṽīƈḗş Şŧȧřŧḗř, Ƥřḗḿīŭḿ Şŭƥƥȯřŧ Ɓŭƞḓŀḗ, ḗŧƈ.⟧",
+      "internalNotes": "⟦Ḓḗşƈřīƀḗ ẇħḗřḗ ŧħīş ŧḗḿƥŀȧŧḗ ȧƥƥŀīḗş, ȯƞƀȯȧřḓīƞɠ ŧīƥş, ȯř ȧƥƥřȯṽȧŀ řḗʠŭīřḗḿḗƞŧş.⟧",
+      "billingFrequency": "⟦Şḗŀḗƈŧ ƀīŀŀīƞɠ ƈȧḓḗƞƈḗ⟧"
     },
     "help": {
-      "templateName": "11111",
-      "internalNotes": "11111",
-      "billingFrequency": "11111"
+      "templateName": "⟦Ŭşḗ ȧ ḓḗşƈřīƥŧīṽḗ ƞȧḿḗ şȯ ŧḗȧḿş ƈȧƞ ʠŭīƈķŀẏ īḓḗƞŧīƒẏ ŧħḗ řīɠħŧ ŧḗḿƥŀȧŧḗ.⟧",
+      "internalNotes": "⟦Ŧħḗşḗ ƞȯŧḗş şŧȧẏ ẇīŧħ ŧħḗ ŧḗḿƥŀȧŧḗ ŧȯ ƥřȯṽīḓḗ ƈȯƞŧḗẋŧ ẇħḗƞ ŧḗȧḿḿȧŧḗş ŭşḗ īŧ.⟧",
+      "billingFrequency": "⟦Şḗŧş ŧħḗ ḓḗƒȧŭŀŧ ƈȧḓḗƞƈḗ ẇħḗƞ ŧħḗ ŧḗḿƥŀȧŧḗ īş ȧƥƥŀīḗḓ. Īŧ ƈȧƞ şŧīŀŀ ƀḗ ȧḓĵŭşŧḗḓ ƥḗř ƈŀīḗƞŧ.⟧"
     }
   },
   "templateFixed": {
-    "heading": "11111",
-    "description": "11111",
+    "heading": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş⟧",
+    "description": "⟦Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ȧŧ ȧ ƒīẋḗḓ řȧŧḗ ḗȧƈħ ƀīŀŀīƞɠ ƈẏƈŀḗ. Ẏȯŭ ƈȧƞ şŧīŀŀ ŧřȧƈķ ŧīḿḗ, ƀŭŧ ƀīŀŀīƞɠ īş ƀȧşḗḓ ȯƞ ŧħīş ƒŀȧŧ ȧḿȯŭƞŧ.⟧",
     "info": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ẇħȧŧ ȧřḗ Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş?⟧",
+      "description": "⟦Ŧħḗşḗ şḗřṽīƈḗş ħȧṽḗ ȧ şḗŧ řḗƈŭřřīƞɠ ƥřīƈḗ. Ẏȯŭ'ŀŀ şŧīŀŀ ŧřȧƈķ ŧīḿḗ ḗƞŧřīḗş ƒȯř ŧħḗşḗ şḗřṽīƈḗş, ƀŭŧ ƀīŀŀīƞɠ īş ƀȧşḗḓ ȯƞ ŧħḗ ƒīẋḗḓ řȧŧḗ, ƞȯŧ ħȯŭřş ẇȯřķḗḓ.⟧"
     },
     "cadenceOwner": {
-      "label": "11111",
-      "help": "11111",
+      "label": "⟦Ƈȧḓḗƞƈḗ Ȯẇƞḗř⟧",
+      "help": "⟦Ƈħȯȯşḗ ẇħīƈħ şƈħḗḓŭŀḗ şħȯŭŀḓ ḓḗƒīƞḗ řḗƈŭřřīƞɠ şḗřṽīƈḗ ƥḗřīȯḓş ƒȯř ƈȯƞŧřȧƈŧş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ŧḗḿƥŀȧŧḗ.⟧",
       "client": {
-        "label": "11111",
-        "description": "11111"
+        "label": "⟦Īƞṽȯīƈḗ ȯƞ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ⟧",
+        "description": "⟦Ŭşḗ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ ƈȧŀḗƞḓȧř şȯ ƈȯƞŧřȧƈŧş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ŧḗḿƥŀȧŧḗ şŧȧẏ ȧŀīɠƞḗḓ ẇīŧħ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ ƈȧḓḗƞƈḗ.⟧"
       },
       "contract": {
-        "label": "11111",
-        "description": "11111"
+        "label": "⟦Īƞṽȯīƈḗ ȯƞ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ⟧",
+        "description": "⟦Ŭşḗ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ ȧƞƞīṽḗřşȧřẏ şƈħḗḓŭŀḗ. Ƈȯƞŧřȧƈŧ ƈȧḓḗƞƈḗ ƈŭřřḗƞŧŀẏ şŭƥƥȯřŧş ḿȯƞŧħŀẏ, ʠŭȧřŧḗřŀẏ, şḗḿī-ȧƞƞŭȧŀ, ȧƞḓ ȧƞƞŭȧŀ řḗƈŭřřīƞɠ ƀīŀŀīƞɠ.⟧"
       }
     },
     "billingTiming": {
-      "arrears": "11111",
-      "advance": "11111"
+      "arrears": "⟦Ȧřřḗȧřş - īƞṽȯīƈḗ ȧƒŧḗř ŧħḗ ƥḗřīȯḓ ƈŀȯşḗş⟧",
+      "advance": "⟦Ȧḓṽȧƞƈḗ - īƞṽȯīƈḗ ȧŧ ŧħḗ şŧȧřŧ ȯƒ ŧħḗ ƥḗřīȯḓ⟧"
     },
     "fields": {
-      "billingTiming": "11111",
-      "adjustPartialPeriods": "11111",
-      "services": "11111",
-      "serviceNumber": "11111 {{index}} 11111",
-      "quantityOptional": "11111"
+      "billingTiming": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧",
+      "adjustPartialPeriods": "⟦Ȧḓĵŭşŧ ƒȯř Ƥȧřŧīȧŀ Ƥḗřīȯḓş⟧",
+      "services": "⟦Şḗřṽīƈḗş⟧",
+      "serviceNumber": "⟦Şḗřṽīƈḗ {{index}}⟧",
+      "quantityOptional": "⟦Ɋŭȧƞŧīŧẏ (Ȯƥŧīȯƞȧŀ)⟧"
     },
     "placeholders": {
-      "billingTiming": "11111",
-      "selectService": "11111"
+      "billingTiming": "⟦Şḗŀḗƈŧ ƀīŀŀīƞɠ ŧīḿīƞɠ⟧",
+      "selectService": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧"
     },
     "help": {
-      "adjustPartialPeriods": "11111",
-      "quantity": "11111"
+      "adjustPartialPeriods": "⟦Ŭşḗ ŧħīş ẇħḗƞ ƈȯƞŧřȧƈŧş ƈřḗȧŧḗḓ ƒřȯḿ ŧħḗ ŧḗḿƥŀȧŧḗ şħȯŭŀḓ şƈȧŀḗ ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ īƒ şḗřṽīƈḗ şŧȧřŧş ȯř ḗƞḓş īƞşīḓḗ ȧ ƥḗřīȯḓ.⟧",
+      "quantity": "⟦Şŭɠɠḗşŧḗḓ ʠŭȧƞŧīŧẏ ẇħḗƞ ƈřḗȧŧīƞɠ ƈȯƞŧřȧƈŧş⟧"
     },
     "preview": {
-      "unknownService": "11111",
-      "cadenceOwnerLabel": "11111",
-      "billingTimingLabel": "11111",
-      "serviceLabel": "11111",
-      "invoiceWindowLabel": "11111"
+      "unknownService": "⟦Ŭƞķƞȯẇƞ Şḗřṽīƈḗ⟧",
+      "cadenceOwnerLabel": "⟦Ƈȧḓḗƞƈḗ Ȯẇƞḗř:⟧",
+      "billingTimingLabel": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ:⟧",
+      "serviceLabel": "⟦Şḗřṽīƈḗ:⟧",
+      "invoiceWindowLabel": "⟦Īƞṽȯīƈḗ ẇīƞḓȯẇ:⟧"
     },
     "actions": {
-      "addService": "11111"
+      "addService": "⟦Ȧḓḓ Şḗřṽīƈḗ⟧"
     }
   },
   "templateProducts": {
-    "heading": "11111",
-    "description": "11111",
+    "heading": "⟦Ƥřȯḓŭƈŧş⟧",
+    "description": "⟦Ȧŧŧȧƈħ ƥřȯḓŭƈŧş ŧȯ ŧħḗ ŧḗḿƥŀȧŧḗ. Ẇħḗƞ ȧ ƈȯƞŧřȧƈŧ īş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ŧḗḿƥŀȧŧḗ, ƥřȯḓŭƈŧş ẇīŀŀ ƀḗ ƀīŀŀḗḓ ḗȧƈħ ƈẏƈŀḗ ŭşīƞɠ ŧħḗ ƥřȯḓŭƈŧ ƈȧŧȧŀȯɠ ƥřīƈḗ ƒȯř ŧħḗ ƈȯƞŧřȧƈŧ ƈŭřřḗƞƈẏ.⟧",
     "fields": {
-      "products": "11111",
-      "productNumber": "11111 {{index}} 11111",
-      "quantityOptional": "11111"
+      "products": "⟦Ƥřȯḓŭƈŧş⟧",
+      "productNumber": "⟦Ƥřȯḓŭƈŧ {{index}}⟧",
+      "quantityOptional": "⟦Ɋŭȧƞŧīŧẏ (Ȯƥŧīȯƞȧŀ)⟧"
     },
     "placeholders": {
-      "selectProduct": "11111"
+      "selectProduct": "⟦Şḗŀḗƈŧ ȧ ƥřȯḓŭƈŧ⟧"
     },
     "help": {
-      "quantity": "11111"
+      "quantity": "⟦Şŭɠɠḗşŧḗḓ ʠŭȧƞŧīŧẏ ẇħḗƞ ƈřḗȧŧīƞɠ ƈȯƞŧřȧƈŧş⟧"
     },
     "actions": {
-      "addProduct": "11111"
+      "addProduct": "⟦Ȧḓḓ Ƥřȯḓŭƈŧ⟧"
     },
     "preview": {
-      "unknownProduct": "11111"
+      "unknownProduct": "⟦Ŭƞķƞȯẇƞ Ƥřȯḓŭƈŧ⟧"
     }
   },
   "templateHourly": {
-    "heading": "11111",
-    "description": "11111",
+    "heading": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
+    "description": "⟦Şḗŀḗƈŧ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŧīḿḗ ŧřȧƈķḗḓ. Řȧŧḗş ẇīŀŀ ƀḗ ḓḗŧḗřḿīƞḗḓ ƀẏ ŧħḗ şḗřṽīƈḗ'ş ƥřīƈīƞɠ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ẇħḗƞ ŧħḗ ƈȯƞŧřȧƈŧ īş ƈřḗȧŧḗḓ.⟧",
     "info": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ẇħȧŧ ȧřḗ Ħȯŭřŀẏ Şḗřṽīƈḗş?⟧",
+      "description": "⟦Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ŧīḿḗ ŧřȧƈķḗḓ. Ḗȧƈħ ŧīḿḗ ḗƞŧřẏ īş ḿŭŀŧīƥŀīḗḓ ƀẏ ŧħḗ şḗřṽīƈḗ'ş ħȯŭřŀẏ řȧŧḗ ŧȯ ƈȧŀƈŭŀȧŧḗ ŧħḗ īƞṽȯīƈḗ ȧḿȯŭƞŧ.⟧"
     },
     "rounding": {
-      "heading": "11111",
-      "minimumBillableTime": "11111",
-      "minimumBillableTimeHelp": "11111",
-      "roundUpToNearest": "11111",
-      "roundUpToNearestHelp": "11111",
-      "defaultIntervalPlaceholder": "11111"
+      "heading": "⟦Ŧīḿḗ Řȯŭƞḓīƞɠ Şḗŧŧīƞɠş⟧",
+      "minimumBillableTime": "⟦Ḿīƞīḿŭḿ Ɓīŀŀȧƀŀḗ Ŧīḿḗ (ḿīƞŭŧḗş)⟧",
+      "minimumBillableTimeHelp": "⟦Ḗẋȧḿƥŀḗ: 15 ḿīƞŭŧḗş. Ȧƞẏ ŧīḿḗ ḗƞŧřẏ ƀḗŀȯẇ ŧħīş ŧħřḗşħȯŀḓ īş řȯŭƞḓḗḓ ŭƥ.⟧",
+      "roundUpToNearest": "⟦Řȯŭƞḓ Ŭƥ Ŧȯ Ƞḗȧřḗşŧ (ḿīƞŭŧḗş)⟧",
+      "roundUpToNearestHelp": "⟦Ḗẋȧḿƥŀḗ: 15 ḿīƞŭŧḗş. Ŧīḿḗ ḗƞŧřīḗş ȧřḗ řȯŭƞḓḗḓ ŭƥ ŧȯ ŧħḗ ƞḗȧřḗşŧ īƞŧḗřṽȧŀ.⟧",
+      "defaultIntervalPlaceholder": "⟦15⟧"
     },
     "fields": {
-      "services": "11111",
-      "serviceNumber": "11111 {{index}} 11111",
-      "setBucketOfHours": "11111"
+      "services": "⟦Şḗřṽīƈḗş⟧",
+      "serviceNumber": "⟦Şḗřṽīƈḗ {{index}}⟧",
+      "setBucketOfHours": "⟦Şḗŧ ƀŭƈķḗŧ ȯƒ ħȯŭřş⟧"
     },
     "placeholders": {
-      "selectService": "11111"
+      "selectService": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧"
     },
     "preview": {
-      "unknownService": "11111"
+      "unknownService": "⟦Ŭƞķƞȯẇƞ Şḗřṽīƈḗ⟧"
     },
     "actions": {
-      "addService": "11111"
+      "addService": "⟦Ȧḓḓ Şḗřṽīƈḗ⟧"
     }
   },
   "templateUsage": {
-    "heading": "11111",
-    "description": "11111",
+    "heading": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧",
+    "description": "⟦Şḗŀḗƈŧ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŭşȧɠḗ ȯř ƈȯƞşŭḿƥŧīȯƞ. Řȧŧḗş ẇīŀŀ ƀḗ ḓḗŧḗřḿīƞḗḓ ƀẏ ŧħḗ şḗřṽīƈḗ'ş ƥřīƈīƞɠ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ẇħḗƞ ŧħḗ ƈȯƞŧřȧƈŧ īş ƈřḗȧŧḗḓ.⟧",
     "info": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ẇħȧŧ ȧřḗ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş?⟧",
+      "description": "⟦Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ƈȯƞşŭḿƥŧīȯƞ ȯř ŭşȧɠḗ ḿḗŧřīƈş. Ḗȧƈħ ŭƞīŧ ƈȯƞşŭḿḗḓ īş ḿŭŀŧīƥŀīḗḓ ƀẏ ŧħḗ şḗřṽīƈḗ'ş ŭƞīŧ řȧŧḗ ŧȯ ƈȧŀƈŭŀȧŧḗ ŧħḗ īƞṽȯīƈḗ ȧḿȯŭƞŧ.⟧"
     },
     "fields": {
-      "services": "11111",
-      "serviceNumber": "11111 {{index}} 11111",
-      "unitOfMeasureOptional": "11111",
-      "setBucketAllocation": "11111"
+      "services": "⟦Şḗřṽīƈḗş⟧",
+      "serviceNumber": "⟦Şḗřṽīƈḗ {{index}}⟧",
+      "unitOfMeasureOptional": "⟦Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ (Ȯƥŧīȯƞȧŀ)⟧",
+      "setBucketAllocation": "⟦Şḗŧ ƀŭƈķḗŧ ȧŀŀȯƈȧŧīȯƞ⟧"
     },
     "placeholders": {
-      "selectService": "11111",
-      "unitOfMeasure": "11111"
+      "selectService": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+      "unitOfMeasure": "⟦ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř⟧"
     },
     "help": {
-      "unitOfMeasure": "11111"
+      "unitOfMeasure": "⟦Ȯṽḗřřīḓḗ ŧħḗ ḓḗƒȧŭŀŧ ŭƞīŧ ȯƒ ḿḗȧşŭřḗ ƒȯř ŧħīş şḗřṽīƈḗ.⟧"
     },
     "preview": {
-      "unknownService": "11111"
+      "unknownService": "⟦Ŭƞķƞȯẇƞ Şḗřṽīƈḗ⟧"
     },
     "actions": {
-      "addService": "11111"
+      "addService": "⟦Ȧḓḓ Şḗřṽīƈḗ⟧"
     }
   },
   "templateReview": {
-    "heading": "11111",
-    "description": "11111",
+    "heading": "⟦Řḗṽīḗẇ Ŧḗḿƥŀȧŧḗ⟧",
+    "description": "⟦Ƈȯƞƒīřḿ ŧħḗ ŧḗḿƥŀȧŧḗ ƈȯƞŧḗƞŧş. Řȧŧḗş ȧřḗ ḓḗŧḗřḿīƞḗḓ ƀẏ ḗȧƈħ şḗřṽīƈḗ'ş ƥřīƈīƞɠ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ẇħḗƞ ȧ ƈȯƞŧřȧƈŧ īş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ŧḗḿƥŀȧŧḗ.⟧",
     "sections": {
-      "basics": "11111",
-      "fixedFeeServices": "11111",
-      "products": "11111",
-      "hourlyServices": "11111",
-      "usageBasedServices": "11111"
+      "basics": "⟦Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş⟧",
+      "fixedFeeServices": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş⟧",
+      "products": "⟦Ƥřȯḓŭƈŧş⟧",
+      "hourlyServices": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
+      "usageBasedServices": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧"
     },
     "fields": {
-      "templateName": "11111",
-      "billingFrequency": "11111",
-      "internalNotes": "11111"
+      "templateName": "⟦Ŧḗḿƥŀȧŧḗ Ƞȧḿḗ⟧",
+      "billingFrequency": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
+      "internalNotes": "⟦Īƞŧḗřƞȧŀ Ƞȯŧḗş⟧"
     },
     "fallback": {
-      "none": "11111",
-      "noNotes": "11111",
-      "unnamedService": "11111",
-      "unnamedProduct": "11111"
+      "none": "⟦—⟧",
+      "noNotes": "⟦Ƞȯ ƞȯŧḗş ȧḓḓḗḓ.⟧",
+      "unnamedService": "⟦Ŭƞƞȧḿḗḓ Şḗřṽīƈḗ⟧",
+      "unnamedProduct": "⟦Ŭƞƞȧḿḗḓ Ƥřȯḓŭƈŧ⟧"
     },
     "empty": {
-      "fixed": "11111",
-      "products": "11111",
-      "hourly": "11111",
-      "usage": "11111"
+      "fixed": "⟦Ƞȯ ƒīẋḗḓ ƒḗḗ şḗřṽīƈḗş şḗŀḗƈŧḗḓ.⟧",
+      "products": "⟦Ƞȯ ƥřȯḓŭƈŧş şḗŀḗƈŧḗḓ.⟧",
+      "hourly": "⟦Ƞȯ ħȯŭřŀẏ şḗřṽīƈḗş şḗŀḗƈŧḗḓ.⟧",
+      "usage": "⟦Ƞȯ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗş şḗŀḗƈŧḗḓ.⟧"
     },
     "common": {
-      "quantity": "11111",
-      "bucket": "11111",
-      "enabled": "11111",
-      "disabled": "11111"
+      "quantity": "⟦Ɋŭȧƞŧīŧẏ:⟧",
+      "bucket": "⟦Ɓŭƈķḗŧ:⟧",
+      "enabled": "⟦Ḗƞȧƀŀḗḓ⟧",
+      "disabled": "⟦Ḓīşȧƀŀḗḓ⟧"
     },
     "fixed": {
-      "cadenceOwnerLabel": "11111",
+      "cadenceOwnerLabel": "⟦Ƈȧḓḗƞƈḗ ȯẇƞḗř:⟧",
       "cadenceOwner": {
-        "contract": "11111",
-        "client": "11111"
+        "contract": "⟦Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ⟧",
+        "client": "⟦Ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ⟧"
       },
-      "billingTimingLabel": "11111",
+      "billingTimingLabel": "⟦Ɓīŀŀīƞɠ ŧīḿīƞɠ:⟧",
       "billingTiming": {
-        "advance": "11111",
-        "arrears": "11111"
+        "advance": "⟦Ȧḓṽȧƞƈḗ⟧",
+        "arrears": "⟦Ȧřřḗȧřş⟧"
       },
-      "partialPeriodLabel": "11111",
-      "serviceLabel": "11111",
-      "invoiceWindowLabel": "11111"
+      "partialPeriodLabel": "⟦Ƥȧřŧīȧŀ-ƥḗřīȯḓ ȧḓĵŭşŧḿḗƞŧ:⟧",
+      "serviceLabel": "⟦Şḗřṽīƈḗ:⟧",
+      "invoiceWindowLabel": "⟦Īƞṽȯīƈḗ ẇīƞḓȯẇ:⟧"
     },
     "hourly": {
-      "minimumBillableTimeLabel": "11111",
-      "roundUpLabel": "11111",
-      "minutes": "11111 {{count}} 11111"
+      "minimumBillableTimeLabel": "⟦Ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ŧīḿḗ:⟧",
+      "roundUpLabel": "⟦Řȯŭƞḓ ŭƥ:⟧",
+      "minutes": "⟦{{count}} ḿīƞŭŧḗş⟧"
     },
     "usage": {
-      "unitLabel": "11111"
+      "unitLabel": "⟦Ŭƞīŧ:⟧"
     },
     "bucket": {
-      "hoursIncluded": "11111 {{value}} 11111",
-      "unitsIncluded": "11111 {{value}} 11111 {{unit}} 11111",
-      "unitsFallback": "11111",
-      "overage": "11111 {{amount}} 11111 {{unit}} 11111",
-      "hourSingular": "11111",
-      "unitSingular": "11111",
-      "rolloverEnabled": "11111",
-      "period": "11111 {{period}} 11111"
+      "hoursIncluded": "⟦{{value}} ħȯŭřş īƞƈŀŭḓḗḓ⟧",
+      "unitsIncluded": "⟦{{value}} {{unit}} īƞƈŀŭḓḗḓ⟧",
+      "unitsFallback": "⟦ŭƞīŧş⟧",
+      "overage": "⟦Ȯṽḗřȧɠḗ ${{amount}}/{{unit}}⟧",
+      "hourSingular": "⟦ħȯŭř⟧",
+      "unitSingular": "⟦ŭƞīŧ⟧",
+      "rolloverEnabled": "⟦Řȯŀŀȯṽḗř ḗƞȧƀŀḗḓ⟧",
+      "period": "⟦Ƥḗřīȯḓ: {{period}}⟧"
     }
   },
   "templatePreview": {
     "serviceType": {
-      "fixedFee": "11111",
-      "products": "11111",
-      "hourly": "11111",
-      "usageBased": "11111"
+      "fixedFee": "⟦Ƒīẋḗḓ Ƒḗḗ⟧",
+      "products": "⟦Ƥřȯḓŭƈŧş⟧",
+      "hourly": "⟦Ħȯŭřŀẏ⟧",
+      "usageBased": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ⟧"
     },
-    "selectedHeading": "11111 {{type}} 11111 {{count}} 11111",
+    "selectedHeading": "⟦Şḗŀḗƈŧḗḓ {{type}} Şḗřṽīƈḗş ({{count}})⟧",
     "labels": {
-      "qty": "11111"
+      "qty": "⟦Ɋŧẏ:⟧"
     },
     "removeDialog": {
-      "title": "11111",
-      "message": "11111 {{serviceName}} 11111 {{presetName}} 11111",
-      "confirm": "11111",
-      "cancel": "11111"
+      "title": "⟦Řḗḿȯṽḗ Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƥřḗşḗŧ⟧",
+      "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ řḗḿȯṽḗ \"{{serviceName}}\" ƒřȯḿ \"{{presetName}}\"? Ŧħīş ẇīŀŀ řḗḿȯṽḗ ȧŀŀ ȯŧħḗř şḗřṽīƈḗş ȧşşȯƈīȧŧḗḓ ẇīŧħ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧ ȧş ẇḗŀŀ.⟧",
+      "confirm": "⟦Řḗḿȯṽḗ Ȧŀŀ⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧"
     }
   },
   "recurringPreview": {
-    "rangeSeparator": "11111 {{start}} 11111 {{end}} 11111",
+    "rangeSeparator": "⟦{{start}} ŧȯ {{end}}⟧",
     "cadenceOwner": {
       "contract": {
-        "label": "11111",
-        "summary": "11111"
+        "label": "⟦Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ⟧",
+        "summary": "⟦Şḗřṽīƈḗ ƥḗřīȯḓş ȧƞḓ īƞṽȯīƈḗ ẇīƞḓȯẇş ƒȯŀŀȯẇ ŧħḗ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ḓȧŧḗş.⟧"
       },
       "client": {
-        "label": "11111",
-        "summary": "11111"
+        "label": "⟦Ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ⟧",
+        "summary": "⟦Şḗřṽīƈḗ ƥḗřīȯḓş ȧƞḓ īƞṽȯīƈḗ ẇīƞḓȯẇş şŧȧẏ ȧŀīɠƞḗḓ ŧȯ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ ƈȧŀḗƞḓȧř.⟧"
       }
     },
     "billingTiming": {
       "advance": {
-        "label": "11111",
-        "summary": "11111"
+        "label": "⟦Ȧḓṽȧƞƈḗ⟧",
+        "summary": "⟦Īƞṽȯīƈḗş ƥȯşŧ ȧŧ ŧħḗ ȯƥḗƞīƞɠ ȯƒ ŧħḗ ḓŭḗ şḗřṽīƈḗ ƥḗřīȯḓ.⟧"
       },
       "arrears": {
-        "label": "11111",
-        "summary": "11111"
+        "label": "⟦Ȧřřḗȧřş⟧",
+        "summary": "⟦Īƞṽȯīƈḗş ƥȯşŧ ȧƒŧḗř ŧħḗ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş.⟧"
       }
     },
     "firstInvoice": {
       "contract": {
-        "advance": "11111",
-        "arrears": "11111"
+        "advance": "⟦Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ẇīƞḓȯẇ ŧħȧŧ ȯƥḗƞş ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ.⟧",
+        "arrears": "⟦Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƞḗẋŧ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ẇīƞḓȯẇ ȧƒŧḗř ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş.⟧"
       },
       "client": {
-        "advance": "11111",
-        "arrears": "11111"
+        "advance": "⟦Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƒīřşŧ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ẇīƞḓȯẇ ƈȯṽḗřīƞɠ ŧħḗ şḗřṽīƈḗ ƥḗřīȯḓ.⟧",
+        "arrears": "⟦Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƞḗẋŧ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ẇīƞḓȯẇ ȧƒŧḗř ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş.⟧"
       }
     },
     "partialPeriod": {
-      "prorated": "11111",
-      "full": "11111"
+      "prorated": "⟦Ƥȧřŧīȧŀ ƥḗřīȯḓş ȧḓĵŭşŧ ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ ŧȯ ŧħḗ ƈȯṽḗřḗḓ ƥȯřŧīȯƞ ȯƒ ŧħḗ şḗřṽīƈḗ ƥḗřīȯḓ.⟧",
+      "full": "⟦Ƥȧřŧīȧŀ ƥḗřīȯḓş ķḗḗƥ ŧħḗ ƒŭŀŀ řḗƈŭřřīƞɠ ƒḗḗ ḗṽḗƞ ẇħḗƞ ƈȯƞŧřȧƈŧ ḓȧŧḗş ŀȧƞḓ īƞşīḓḗ ȧ şḗřṽīƈḗ ƥḗřīȯḓ.⟧"
     },
     "materializedPeriods": {
-      "heading": "11111",
+      "heading": "⟦Īŀŀŭşŧřȧŧīṽḗ ƒŭŧŭřḗ ḿȧŧḗřīȧŀīẑḗḓ ƥḗřīȯḓş⟧",
       "summary": {
-        "contract": "11111",
-        "client": "11111"
+        "contract": "⟦Īƒ ẏȯŭ şȧṽḗ ŧħīş řḗƈŭřřīƞɠ ŀīƞḗ, ƒŭŧŭřḗ ƥḗřīȯḓş ẇȯŭŀḓ ḿȧŧḗřīȧŀīẑḗ ȯƞ ȧƞ ȧƞƞīṽḗřşȧřẏ-şŧẏŀḗ ƥřḗṽīḗẇ ȧƞƈħȯřḗḓ ŧȯ ŧħḗ 8ŧħ ƀḗƒȯřḗ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ.⟧",
+        "client": "⟦Īƒ ẏȯŭ şȧṽḗ ŧħīş řḗƈŭřřīƞɠ ŀīƞḗ, ƒŭŧŭřḗ ƥḗřīȯḓş ẇȯŭŀḓ ḿȧŧḗřīȧŀīẑḗ ȯƞ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ƥřḗṽīḗẇ ƀḗƒȯřḗ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ.⟧"
       }
     }
   },
   "contractSimulator": {
     "assumptions": {
-      "empty": "11111",
-      "hoursUnit": "11111",
-      "inputLabel": "11111 {{unit}} 11111 {{service}} 11111",
-      "loadReplay": "11111",
-      "periodLabel": "11111 {{number}} 11111",
-      "replayEnd": "11111",
-      "replayStart": "11111",
-      "replayTitle": "11111",
-      "rowLabel": "11111 {{service}} 11111 {{unit}} 11111",
-      "subtitle": "11111",
-      "title": "11111",
-      "useRecent": "11111",
-      "varyByPeriod": "11111",
-      "arrearsHint": "11111",
-      "advanceHint": "11111",
-      "invoicePeriodLabel": "11111 {{period}} 11111",
-      "overrideInputLabel": "11111 {{period}} 11111 {{unit}} 11111 {{service}} 11111",
-      "zeroActivity": "11111",
-      "averageLoaded": "11111 {{window}} 11111 {{count}} 11111",
-      "replayLoaded": "11111 {{window}} 11111 {{count}} 11111 {{changed}} 11111",
-      "replayRangeLoaded": "11111 {{count}} 11111 {{window}} 11111",
-      "prefillNextStep": "11111",
-      "prefillUnchanged": "11111 {{window}} 11111",
-      "loadingHistory": "11111",
-      "prefillChange": "11111 {{before}} 11111 {{after}} 11111 {{unit}} 11111",
-      "prefillOverrides": "11111 {{count}} 11111"
+      "empty": "⟦Ƒīẋḗḓ-ȯƞŀẏ şƈḗƞȧřīȯ — ƞȯŧħīƞɠ ŧȯ ȧşşŭḿḗ.⟧",
+      "hoursUnit": "⟦ħřş⟧",
+      "inputLabel": "⟦Ȧşşŭḿḗḓ {{unit}} ƥḗř şḗřṽīƈḗ ƥḗřīȯḓ — {{service}}⟧",
+      "loadReplay": "⟦Ŀȯȧḓ ȧƈŧīṽīŧẏ ȧƞḓ īƞṽȯīƈḗş⟧",
+      "periodLabel": "⟦Ƥ{{number}}⟧",
+      "replayEnd": "⟦Ŧħřȯŭɠħ⟧",
+      "replayStart": "⟦Ƒřȯḿ⟧",
+      "replayTitle": "⟦Ƈȯḿƥȧřḗ ẇīŧħ ƥȧşŧ īƞṽȯīƈḗş⟧",
+      "rowLabel": "⟦{{service}} — ȧşşŭḿḗḓ {{unit}} ƥḗř şḗřṽīƈḗ ƥḗřīȯḓ⟧",
+      "subtitle": "⟦Ḗƞŧḗř ḗẋƥḗƈŧḗḓ ẇȯřķ ȯř ŭşȧɠḗ ƀẏ şḗřṽīƈḗ ƥḗřīȯḓ. Ƒȯř ȧřřḗȧřş, ḗȧƈħ īƞṽȯīƈḗ ŭşḗş ŧħḗ ƥřḗṽīȯŭş şḗřṽīƈḗ ƥḗřīȯḓ.⟧",
+      "title": "⟦Ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ⟧",
+      "useRecent": "⟦Ŭşḗ ȧṽḗřȧɠḗ ƒřȯḿ ŀȧşŧ 3 ƀīŀŀīƞɠ ƥḗřīȯḓş⟧",
+      "varyByPeriod": "⟦Şḗŧ ȧƈŧīṽīŧẏ ƒȯř ḗȧƈħ īƞṽȯīƈḗ⟧",
+      "arrearsHint": "⟦Ḗȧƈħ īƞṽȯīƈḗ ƀīŀŀş ŧħḗ ƥřḗṽīȯŭş şḗřṽīƈḗ ƥḗřīȯḓ.⟧",
+      "advanceHint": "⟦Ḗȧƈħ īƞṽȯīƈḗ ƀīŀŀş īŧş ƈŭřřḗƞŧ şḗřṽīƈḗ ƥḗřīȯḓ.⟧",
+      "invoicePeriodLabel": "⟦{{period}} īƞṽȯīƈḗ⟧",
+      "overrideInputLabel": "⟦{{period}} īƞṽȯīƈḗ — {{unit}} ƒřȯḿ īŧş şḗřṽīƈḗ ƥḗřīȯḓ — {{service}}⟧",
+      "zeroActivity": "⟦Ŧħīş şḗřṽīƈḗ ƈȯƞŧřīƀŭŧḗş ƞȯŧħīƞɠ ŭƞŧīŀ ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ īş ɠřḗȧŧḗř ŧħȧƞ ẑḗřȯ.⟧",
+      "averageLoaded": "⟦Ȧƈŧīṽīŧẏ ȧṽḗřȧɠḗ ŀȯȧḓḗḓ ƒřȯḿ {{window}}. {{count}} ȧşşŭḿḗḓ ṽȧŀŭḗş ƈħȧƞɠḗḓ.⟧",
+      "replayLoaded": "⟦Ħīşŧȯřīƈȧŀ ȧƈŧīṽīŧẏ ŀȯȧḓḗḓ ƒřȯḿ {{window}} ẇīŧħ {{count}} īşşŭḗḓ īƞṽȯīƈḗş. {{changed}} ȧşşŭḿḗḓ ṽȧŀŭḗş ƈħȧƞɠḗḓ.⟧",
+      "replayRangeLoaded": "⟦Ħīşŧȯřīƈȧŀ ȧƈŧīṽīŧẏ ȧƞḓ {{count}} īşşŭḗḓ īƞṽȯīƈḗş ŀȯȧḓḗḓ ƒřȯḿ {{window}}. Ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ īş ŭƞƈħȧƞɠḗḓ.⟧",
+      "prefillNextStep": "⟦Ŭƥḓȧŧḗḓ ṽȧŀŭḗş ȧřḗ ħīɠħŀīɠħŧḗḓ. Ŭƥḓȧŧḗ ŧħḗ şīḿŭŀȧŧīȯƞ ŧȯ řḗƈȧŀƈŭŀȧŧḗ īƞṽȯīƈḗş.⟧",
+      "prefillUnchanged": "⟦Ŀȯȧḓḗḓ ṽȧŀŭḗş ƒřȯḿ {{window}} ḿȧŧƈħ ŧħḗ ƈŭřřḗƞŧ ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ.⟧",
+      "loadingHistory": "⟦Ŀȯȧḓīƞɠ ħīşŧȯřīƈȧŀ ȧƈŧīṽīŧẏ…⟧",
+      "prefillChange": "⟦Ŀȯȧḓḗḓ ṽȧŀŭḗ: {{before}} → {{after}} {{unit}} ƥḗř şḗřṽīƈḗ ƥḗřīȯḓ⟧",
+      "prefillOverrides": "⟦{{count}} ƥḗřīȯḓ ṽȧŀŭḗş ŀȯȧḓḗḓ⟧"
     },
     "compare": {
-      "added": "11111",
-      "changed": "11111",
-      "horizonImpact": "11111 {{count}} 11111",
-      "horizonImpactHint": "11111",
-      "noChange": "11111",
-      "removed": "11111"
+      "added": "⟦Ȧḓḓḗḓ⟧",
+      "changed": "⟦Ƈħȧƞɠḗḓ⟧",
+      "horizonImpact": "⟦Ŧȯŧȧŀ ƈħȧƞɠḗ ȯṽḗř {{count}} ƀīŀŀīƞɠ ƥḗřīȯḓş⟧",
+      "horizonImpactHint": "⟦Ƈȯḿƥȧřḗḓ ẇīŧħ ŧħḗ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ⟧",
+      "noChange": "⟦Ƞȯ şīḿŭŀȧŧḗḓ ƈħȧƞɠḗ⟧",
+      "removed": "⟦Řḗḿȯṽḗḓ ƒřȯḿ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ⟧"
     },
     "emptyScenario": {
-      "description": "11111",
-      "title": "11111"
+      "description": "⟦Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗş. Ȧḓḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ƒīřşŧ, ŧħḗƞ ƈȯḿḗ ƀȧƈķ ŧȯ şīḿŭŀȧŧḗ.⟧",
+      "title": "⟦Ƞȯŧħīƞɠ ŧȯ şīḿŭŀȧŧḗ ẏḗŧ⟧"
     },
     "diagnostics": {
-      "title": "11111"
+      "title": "⟦Şīḿŭŀȧŧīȯƞ ƞȯŧḗş⟧"
     },
     "explanation": {
-      "amount": "11111",
-      "close": "11111",
-      "inputs": "11111",
-      "noBreakdown": "11111",
-      "steps": "11111",
-      "title": "11111"
+      "amount": "⟦Ȧḿȯŭƞŧ⟧",
+      "close": "⟦Ƈŀȯşḗ⟧",
+      "inputs": "⟦Īƞƥŭŧş⟧",
+      "noBreakdown": "⟦Ƞȯ ƀřḗȧķḓȯẇƞ ȧṽȧīŀȧƀŀḗ⟧",
+      "steps": "⟦Ȧřīŧħḿḗŧīƈ⟧",
+      "title": "⟦Ƈħȧřɠḗ ƀřḗȧķḓȯẇƞ⟧"
     },
-    "featureName": "11111",
+    "featureName": "⟦Ƈȯƞŧřȧƈŧ Şīḿŭŀȧŧȯř⟧",
     "invoiceDetail": {
       "columns": {
-        "amount": "11111",
-        "line": "11111",
-        "qty": "11111",
-        "rate": "11111"
+        "amount": "⟦Ȧḿȯŭƞŧ⟧",
+        "line": "⟦Ŀīƞḗ⟧",
+        "qty": "⟦Ɋŭȧƞŧīŧẏ⟧",
+        "rate": "⟦Řȧŧḗ⟧"
       },
-      "draftNote": "11111",
-      "billedInAdvance": "11111",
-      "billedInArrears": "11111",
-      "explainHint": "11111",
-      "renderedPreview": "11111",
-      "invoicePeriod": "11111 {{start}} 11111 {{end}} 11111",
-      "servicePeriod": "11111 {{start}} 11111 {{end}} 11111",
-      "subtotal": "11111",
-      "tax": "11111",
-      "title": "11111 {{period}} 11111",
-      "total": "11111"
+      "draftNote": "⟦ḓřȧƒŧ, ƞȯŧ īşşŭḗḓ⟧",
+      "billedInAdvance": "⟦Ɓīŀŀḗḓ īƞ ȧḓṽȧƞƈḗ⟧",
+      "billedInArrears": "⟦Ɓīŀŀḗḓ īƞ ȧřřḗȧřş⟧",
+      "explainHint": "⟦Şħȯẇ ħȯẇ ŧħīş ȧḿȯŭƞŧ ẇȧş ƈȯḿƥŭŧḗḓ⟧",
+      "renderedPreview": "⟦Ƥřḗṽīḗẇ īƞṽȯīƈḗ ŀȧẏȯŭŧ⟧",
+      "invoicePeriod": "⟦Īƞṽȯīƈḗ ƥḗřīȯḓ: {{start}} – {{end}}⟧",
+      "servicePeriod": "⟦Şḗřṽīƈḗ ƥḗřīȯḓ: {{start}} – {{end}}⟧",
+      "subtotal": "⟦Şŭƀŧȯŧȧŀ⟧",
+      "tax": "⟦Ŧȧẋ⟧",
+      "title": "⟦{{period}} şīḿŭŀȧŧḗḓ īƞṽȯīƈḗ⟧",
+      "total": "⟦Ŧȯŧȧŀ⟧"
     },
-    "loadFailed": "11111",
-    "loadingSnapshot": "11111",
-    "preparingDraft": "11111",
+    "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧħḗ ƈȯƞŧřȧƈŧ şƈḗƞȧřīȯ.⟧",
+    "loadingSnapshot": "⟦Ŀȯȧḓīƞɠ şƈḗƞȧřīȯ…⟧",
+    "preparingDraft": "⟦Ƥřḗƥȧřīƞɠ şīḿŭŀȧŧīȯƞ…⟧",
     "markers": {
-      "bucketOverage": "11111",
-      "cadenceCoincidence": "11111",
-      "contractEnd": "11111",
-      "oneTime": "11111",
-      "prorated": "11111"
+      "bucketOverage": "⟦Ɓŭƈķḗŧ ȯṽḗřȧɠḗ⟧",
+      "cadenceCoincidence": "⟦Ƈȧḓḗƞƈḗ ȯṽḗřŀȧƥ⟧",
+      "contractEnd": "⟦Ƈȯƞŧřȧƈŧ ḗƞḓş⟧",
+      "oneTime": "⟦Ȯƞḗ-ŧīḿḗ⟧",
+      "prorated": "⟦Ƥřȯřȧŧḗḓ⟧"
     },
     "replay": {
-      "actualInvoice": "11111 {{number}} 11111",
-      "issued": "11111",
-      "previewIssued": "11111",
-      "projected": "11111",
-      "simulatedDelta": "11111"
+      "actualInvoice": "⟦Īşşŭḗḓ īƞṽȯīƈḗ {{number}}⟧",
+      "issued": "⟦īşşŭḗḓ⟧",
+      "previewIssued": "⟦Ƥřḗṽīḗẇ īşşŭḗḓ īƞṽȯīƈḗ⟧",
+      "projected": "⟦şīḿŭŀȧŧḗḓ⟧",
+      "simulatedDelta": "⟦şīḿŭŀȧŧḗḓ ḓīƒƒḗřḗƞƈḗ⟧"
     },
     "runBar": {
-      "compareToggle": "11111",
-      "horizonOption": "11111 {{count}} 11111",
-      "lastRun": "11111 {{count}} 11111",
-      "neverRun": "11111",
-      "simulate": "11111",
-      "simulating": "11111",
-      "stale": "11111",
-      "staleBanner": "11111",
-      "updateSimulation": "11111"
+      "compareToggle": "⟦Şħȯẇ ƈħȧƞɠḗş ƒřȯḿ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ⟧",
+      "horizonOption": "⟦{{count}} ƀīŀŀīƞɠ ƥḗřīȯḓş⟧",
+      "lastRun": "⟦Şīḿŭŀȧŧīȯƞ ƈŭřřḗƞŧ · {{count}} ƀīŀŀīƞɠ ƥḗřīȯḓş⟧",
+      "neverRun": "⟦Ƞȯŧ şīḿŭŀȧŧḗḓ ẏḗŧ⟧",
+      "simulate": "⟦Şīḿŭŀȧŧḗ⟧",
+      "simulating": "⟦Şīḿŭŀȧŧīƞɠ…⟧",
+      "stale": "⟦Ƈħȧƞɠḗş ƞȯŧ şīḿŭŀȧŧḗḓ⟧",
+      "staleBanner": "⟦Ŧħḗşḗ ȧḿȯŭƞŧş ȧřḗ ƒřȯḿ ŧħḗ ƥřḗṽīȯŭş şīḿŭŀȧŧīȯƞ. Ŭƥḓȧŧḗ ŧħḗ şīḿŭŀȧŧīȯƞ ŧȯ īƞƈŀŭḓḗ ẏȯŭř ŀȧŧḗşŧ ƈħȧƞɠḗş.⟧",
+      "updateSimulation": "⟦Ŭƥḓȧŧḗ şīḿŭŀȧŧīȯƞ⟧"
     },
     "scenario": {
-      "addAdjustment": "11111",
-      "advancedChanges": "11111",
-      "advancedSummary": "11111 {{schedules}} 11111 {{discounts}} 11111 {{adjustments}} 11111",
-      "addBucket": "11111",
-      "addCatalogService": "11111",
-      "addCatalogServiceOption": "11111",
-      "addDiscount": "11111",
-      "addIncludedHours": "11111",
-      "addIncludedUnits": "11111",
-      "addLine": "11111",
-      "addSchedule": "11111",
-      "addTier": "11111",
-      "adjustments": "11111",
-      "allocationRate": "11111",
-      "catalogRate": "11111",
-      "allLines": "11111",
-      "bucketIncluded": "11111 {{hours}} 11111",
+      "addAdjustment": "⟦+ ȧḓḓ ȧḓĵŭşŧḿḗƞŧ⟧",
+      "advancedChanges": "⟦Ȧḓṽȧƞƈḗḓ ƈȯƞŧřȧƈŧ ƈħȧƞɠḗş⟧",
+      "advancedSummary": "⟦{{schedules}} şƈħḗḓŭŀḗş · {{discounts}} ḓīşƈȯŭƞŧş · {{adjustments}} ȧḓĵŭşŧḿḗƞŧş⟧",
+      "addBucket": "⟦Ȧḓḓ īƞƈŀŭḓḗḓ ħȯŭřş⟧",
+      "addCatalogService": "⟦Ȧḓḓ ƈȧŧȧŀȯɠ şḗřṽīƈḗ⟧",
+      "addCatalogServiceOption": "⟦+ Ȧḓḓ ƈȧŧȧŀȯɠ şḗřṽīƈḗ…⟧",
+      "addDiscount": "⟦+ ȧḓḓ ḓīşƈȯŭƞŧ⟧",
+      "addIncludedHours": "⟦Ȧḓḓ īƞƈŀŭḓḗḓ ħȯŭřş⟧",
+      "addIncludedUnits": "⟦Ȧḓḓ īƞƈŀŭḓḗḓ ŭƞīŧş⟧",
+      "addLine": "⟦Ȧḓḓ ŀīƞḗ⟧",
+      "addSchedule": "⟦+ ȧḓḓ şƈħḗḓŭŀḗ⟧",
+      "addTier": "⟦+ ȧḓḓ ŧīḗř⟧",
+      "adjustments": "⟦Ȧḓĵŭşŧḿḗƞŧş⟧",
+      "allocationRate": "⟦Ȧŀŀȯƈȧŧīȯƞ řȧŧḗ⟧",
+      "catalogRate": "⟦Ƈȧŧȧŀȯɠ řȧŧḗ⟧",
+      "allLines": "⟦ȧŀŀ ŀīƞḗş⟧",
+      "bucketIncluded": "⟦Īƞƈŀŭḓḗş {{hours}} ħřş; řȧŧḗ ȧƀȯṽḗ īş ŧħḗ ȯṽḗřȧɠḗ řȧŧḗ⟧",
       "cadence": {
-        "client": "11111",
-        "contract": "11111"
+        "client": "⟦Ŭşḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ⟧",
+        "contract": "⟦Ŭşḗ ƈȯƞŧřȧƈŧ ŀīƞḗ şƈħḗḓŭŀḗ⟧"
       },
-      "defaultRate": "11111",
+      "defaultRate": "⟦ḓḗƒȧŭŀŧ⟧",
       "discountTypes": {
-        "fixed": "11111",
-        "percentage": "11111"
+        "fixed": "⟦ƒīẋḗḓ⟧",
+        "percentage": "⟦ƥḗřƈḗƞŧ⟧"
       },
-      "discounts": "11111",
+      "discounts": "⟦Ḓīşƈȯŭƞŧş⟧",
       "fields": {
-        "adjustmentAmount": "11111",
-        "adjustmentDescription": "11111",
-        "adjustmentPeriod": "11111",
-        "billingFrequency": "11111",
-        "billingTiming": "11111",
-        "bucketQuantity": "11111",
-        "cadenceOwner": "11111",
-        "configurationType": "11111",
-        "discountLine": "11111",
-        "discountName": "11111",
-        "discountType": "11111",
-        "discountValue": "11111",
-        "lineName": "11111",
-        "lineType": "11111",
-        "minimumBillableMinutes": "11111",
-        "minimumUsage": "11111",
-        "includedHours": "11111",
-        "includedUnits": "11111",
-        "overtimeRate": "11111",
-        "overtimeThreshold": "11111",
-        "roundUpMinutes": "11111",
-        "scheduleEffectiveDate": "11111",
-        "scheduleEndDate": "11111",
-        "scheduleRate": "11111",
-        "serviceQuantity": "11111",
-        "tierMaximum": "11111",
-        "tierMinimum": "11111",
-        "tierRate": "11111",
-        "usageUnit": "11111"
+        "adjustmentAmount": "⟦Ȧḓĵŭşŧḿḗƞŧ ȧḿȯŭƞŧ ḓȯŀŀȧřş⟧",
+        "adjustmentDescription": "⟦Ȧḓĵŭşŧḿḗƞŧ ḓḗşƈřīƥŧīȯƞ⟧",
+        "adjustmentPeriod": "⟦Ȧḓĵŭşŧḿḗƞŧ ƥḗřīȯḓ⟧",
+        "billingFrequency": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
+        "billingTiming": "⟦Ɓīŀŀīƞɠ ŧīḿīƞɠ⟧",
+        "bucketQuantity": "⟦Īƞƈŀŭḓḗḓ ƀŭƈķḗŧ ʠŭȧƞŧīŧẏ⟧",
+        "cadenceOwner": "⟦Ɓīŀŀīƞɠ şƈħḗḓŭŀḗ⟧",
+        "configurationType": "⟦Şḗřṽīƈḗ ƀīŀŀīƞɠ ḿḗŧħȯḓ⟧",
+        "discountLine": "⟦Ḓīşƈȯŭƞŧ ŀīƞḗ⟧",
+        "discountName": "⟦Ḓīşƈȯŭƞŧ ƞȧḿḗ⟧",
+        "discountType": "⟦Ḓīşƈȯŭƞŧ ŧẏƥḗ⟧",
+        "discountValue": "⟦Ḓīşƈȯŭƞŧ ṽȧŀŭḗ⟧",
+        "lineName": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ ƞȧḿḗ⟧",
+        "lineType": "⟦Ŀīƞḗ ŧẏƥḗ⟧",
+        "minimumBillableMinutes": "⟦Ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ḿīƞŭŧḗş⟧",
+        "minimumUsage": "⟦Ḿīƞīḿŭḿ ŭşȧɠḗ⟧",
+        "includedHours": "⟦Īƞƈŀŭḓḗḓ ħȯŭřş⟧",
+        "includedUnits": "⟦Īƞƈŀŭḓḗḓ ŭƞīŧş⟧",
+        "overtimeRate": "⟦Ȯṽḗřŧīḿḗ řȧŧḗ ($/ħř)⟧",
+        "overtimeThreshold": "⟦Ȯṽḗřŧīḿḗ ŧħřḗşħȯŀḓ (ħȯŭřş)⟧",
+        "roundUpMinutes": "⟦Řȯŭƞḓ ŭƥ ŧȯ ḿīƞŭŧḗş⟧",
+        "scheduleEffectiveDate": "⟦Şƈħḗḓŭŀḗ ḗƒƒḗƈŧīṽḗ ḓȧŧḗ⟧",
+        "scheduleEndDate": "⟦Şƈħḗḓŭŀḗ ḗƞḓ ḓȧŧḗ⟧",
+        "scheduleRate": "⟦Şƈħḗḓŭŀḗ řȧŧḗ ḓȯŀŀȧřş⟧",
+        "serviceQuantity": "⟦Ŀīƈḗƞşḗ ȯř ƥřȯḓŭƈŧ ʠŭȧƞŧīŧẏ⟧",
+        "tierMaximum": "⟦Ŧīḗř ḿȧẋīḿŭḿ⟧",
+        "tierMinimum": "⟦Ŧīḗř ḿīƞīḿŭḿ⟧",
+        "tierRate": "⟦Ŧīḗř řȧŧḗ ḓȯŀŀȧřş⟧",
+        "usageUnit": "⟦Ŭşȧɠḗ ŭƞīŧ⟧"
       },
       "frequencies": {
-        "annually": "11111",
-        "monthly": "11111",
-        "quarterly": "11111",
-        "semi-annually": "11111"
+        "annually": "⟦Ȧƞƞŭȧŀŀẏ⟧",
+        "monthly": "⟦Ḿȯƞŧħŀẏ⟧",
+        "quarterly": "⟦Ɋŭȧřŧḗřŀẏ⟧",
+        "semi-annually": "⟦Şḗḿī-ȧƞƞŭȧŀŀẏ⟧"
       },
-      "licenseSuffix": "11111",
-      "lineCount": "11111 {{count}} 11111",
-      "lineSummary": "11111 {{type}} 11111 {{frequency}} 11111 {{timing}} 11111 {{services}} 11111",
-      "oneService": "11111",
-      "serviceCount": "11111 {{count}} 11111",
-      "collapseDetailsFor": "11111 {{line}} 11111",
-      "editDetails": "11111",
-      "editDetailsFor": "11111 {{line}} 11111",
-      "modified": "11111",
-      "newAdjustmentName": "11111",
-      "newDiscountName": "11111",
-      "newLineName": "11111 {{number}} 11111",
-      "oneTime": "11111",
-      "overtime": "11111",
+      "licenseSuffix": "⟦ · ŀīƈḗƞşḗ⟧",
+      "lineCount": "⟦{{count}} ŀīƞḗş⟧",
+      "lineSummary": "⟦{{type}} · {{frequency}} · {{timing}} · {{services}}⟧",
+      "oneService": "⟦1 şḗřṽīƈḗ⟧",
+      "serviceCount": "⟦{{count}} şḗřṽīƈḗş⟧",
+      "collapseDetailsFor": "⟦Ƈȯŀŀȧƥşḗ ḓḗŧȧīŀş ƒȯř {{line}}⟧",
+      "editDetails": "⟦Ḗḓīŧ řŭŀḗş⟧",
+      "editDetailsFor": "⟦Ḗḓīŧ ḓḗŧȧīŀş ƒȯř {{line}}⟧",
+      "modified": "⟦Ḿȯḓīƒīḗḓ⟧",
+      "newAdjustmentName": "⟦Ȯƞḗ-ŧīḿḗ ȧḓĵŭşŧḿḗƞŧ⟧",
+      "newDiscountName": "⟦Şƈḗƞȧřīȯ ḓīşƈȯŭƞŧ⟧",
+      "newLineName": "⟦Şƈḗƞȧřīȯ ŀīƞḗ {{number}}⟧",
+      "oneTime": "⟦ȯƞḗ-ŧīḿḗ⟧",
+      "overtime": "⟦ȯṽḗřŧīḿḗ⟧",
       "placeholders": {
-        "minimum": "11111",
-        "minimumMinutes": "11111",
-        "overtimeRate": "11111",
-        "roundMinutes": "11111",
-        "thresholdHours": "11111"
+        "minimum": "⟦ḿīƞīḿŭḿ⟧",
+        "minimumMinutes": "⟦ḿīƞīḿŭḿ ḿīƞŭŧḗş⟧",
+        "overtimeRate": "⟦ȯṽḗřŧīḿḗ $/ħř⟧",
+        "roundMinutes": "⟦řȯŭƞḓ ḿīƞŭŧḗş⟧",
+        "thresholdHours": "⟦ŧħřḗşħȯŀḓ ħȯŭřş⟧"
       },
-      "pricingSchedules": "11111",
-      "productUnitPrice": "11111",
-      "hourlyRate": "11111",
-      "usageRate": "11111",
-      "overageRate": "11111",
-      "serviceBaseRate": "11111",
-      "rateOverriddenByLine": "11111",
-      "fromServiceRates": "11111",
-      "proration": "11111",
-      "removeAdjustment": "11111",
-      "removeDiscount": "11111",
-      "removeLine": "11111",
-      "removeSchedule": "11111",
-      "removeTier": "11111",
-      "removeService": "11111",
-      "recurringLinePrice": "11111",
-      "resetAll": "11111",
-      "resetLine": "11111",
-      "rollover": "11111",
-      "tieredPricing": "11111",
+      "pricingSchedules": "⟦Ƥřīƈīƞɠ şƈħḗḓŭŀḗş⟧",
+      "productUnitPrice": "⟦Ŭƞīŧ ƥřīƈḗ⟧",
+      "hourlyRate": "⟦Ħȯŭřŀẏ řȧŧḗ⟧",
+      "usageRate": "⟦Ŭşȧɠḗ řȧŧḗ⟧",
+      "overageRate": "⟦Ȯṽḗřȧɠḗ řȧŧḗ⟧",
+      "serviceBaseRate": "⟦Şḗřṽīƈḗ ƀȧşḗ řȧŧḗ⟧",
+      "rateOverriddenByLine": "⟦Řȧŧḗ řḗƥŀȧƈḗḓ ƀẏ řḗƈŭřřīƞɠ ŀīƞḗ ƥřīƈḗ⟧",
+      "fromServiceRates": "⟦Ƒřȯḿ şḗřṽīƈḗ řȧŧḗş⟧",
+      "proration": "⟦ƥřȯřȧŧīȯƞ⟧",
+      "removeAdjustment": "⟦Řḗḿȯṽḗ ȧḓĵŭşŧḿḗƞŧ⟧",
+      "removeDiscount": "⟦Řḗḿȯṽḗ ḓīşƈȯŭƞŧ⟧",
+      "removeLine": "⟦Řḗḿȯṽḗ⟧",
+      "removeSchedule": "⟦Řḗḿȯṽḗ ƥřīƈīƞɠ şƈħḗḓŭŀḗ⟧",
+      "removeTier": "⟦Řḗḿȯṽḗ ŧīḗř⟧",
+      "removeService": "⟦řḗḿȯṽḗ⟧",
+      "recurringLinePrice": "⟦Řḗƈŭřřīƞɠ ŀīƞḗ ƥřīƈḗ⟧",
+      "resetAll": "⟦Řḗşḗŧ ȧŀŀ⟧",
+      "resetLine": "⟦Řḗşḗŧ⟧",
+      "rollover": "⟦řȯŀŀȯṽḗř⟧",
+      "tieredPricing": "⟦ŧīḗřḗḓ ƥřīƈīƞɠ⟧",
       "timing": {
-        "advance": "11111",
-        "arrears": "11111"
+        "advance": "⟦Ɓīŀŀ īƞ ȧḓṽȧƞƈḗ⟧",
+        "arrears": "⟦Ɓīŀŀ īƞ ȧřřḗȧřş⟧"
       },
       "types": {
-        "bucket": "11111",
-        "fixed": "11111",
-        "hourly": "11111",
-        "usage": "11111"
+        "bucket": "⟦Ɓŭƈķḗŧ ȯṽḗřŀȧẏ⟧",
+        "fixed": "⟦Ƒīẋḗḓ⟧",
+        "hourly": "⟦Ħȯŭřŀẏ⟧",
+        "usage": "⟦Ŭşȧɠḗ⟧"
       },
-      "title": "11111",
+      "title": "⟦Ƈȯƞŧřȧƈŧ ƈħȧƞɠḗş⟧",
       "columns": {
-        "name": "11111",
-        "type": "11111",
-        "value": "11111",
-        "appliesTo": "11111",
-        "description": "11111",
-        "amount": "11111",
-        "billingPeriod": "11111",
-        "timing": "11111"
+        "name": "⟦Ƞȧḿḗ⟧",
+        "type": "⟦Ŧẏƥḗ⟧",
+        "value": "⟦Ṽȧŀŭḗ⟧",
+        "appliesTo": "⟦Ȧƥƥŀīḗş ŧȯ⟧",
+        "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+        "amount": "⟦Ȧḿȯŭƞŧ ($)⟧",
+        "billingPeriod": "⟦Ɓīŀŀīƞɠ ƥḗřīȯḓ⟧",
+        "timing": "⟦Ŧīḿīƞɠ⟧"
       }
     },
     "timeline": {
-      "deltaDown": "11111 {{amount}} 11111",
-      "deltaUp": "11111 {{amount}} 11111",
-      "empty": "11111",
-      "noDelta": "11111",
-      "noPreviousDelta": "11111",
-      "invoicePeriod": "11111",
-      "periodAria": "11111 {{period}} 11111 {{total}} 11111",
-      "previousDelta": "11111 {{sign}} 11111 {{amount}} 11111 {{period}} 11111",
-      "title": "11111"
+      "deltaDown": "⟦−{{amount}} ƒřȯḿ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ⟧",
+      "deltaUp": "⟦+{{amount}} ƒřȯḿ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ⟧",
+      "empty": "⟦Şīḿŭŀȧŧḗ ŧȯ şḗḗ ŭƥƈȯḿīƞɠ ƀīŀŀīƞɠ ƥḗřīȯḓş ȧƞḓ īƞşƥḗƈŧ ḗȧƈħ ƈħȧřɠḗ.⟧",
+      "noDelta": "⟦ƞȯ ƈħȧƞɠḗ ṽş ŀīṽḗ⟧",
+      "noPreviousDelta": "⟦ƞȯ ƈħȧƞɠḗ ṽş ƥřḗṽīȯŭş⟧",
+      "invoicePeriod": "⟦Īƞṽȯīƈḗ ƥḗřīȯḓ⟧",
+      "periodAria": "⟦{{period}}, {{total}}⟧",
+      "previousDelta": "⟦{{sign}}{{amount}} ƒřȯḿ {{period}} īƞṽȯīƈḗ⟧",
+      "title": "⟦Şīḿŭŀȧŧḗḓ īƞṽȯīƈḗ ƥḗřīȯḓş⟧"
     },
     "unavailable": {
-      "description": "11111",
-      "title": "11111"
+      "description": "⟦Ŧħḗ ƈȯƞŧřȧƈŧ şīḿŭŀȧŧȯř īş ȧṽȧīŀȧƀŀḗ īƞ ȦŀɠȧƤŞȦ Ƥřȯ.⟧",
+      "title": "⟦Ƥřȯ Ƒḗȧŧŭřḗ⟧"
     }
   },
   "bucketPools": {
-    "heading": "11111",
+    "heading": "⟦Ɓŭƈķḗŧ Ƥȯȯŀş⟧",
     "actions": {
-      "addPool": "11111",
-      "create": "11111",
-      "cancel": "11111",
-      "remove": "11111",
-      "applyRule": "11111"
+      "addPool": "⟦Ȧḓḓ Ƥȯȯŀ⟧",
+      "create": "⟦Ƈřḗȧŧḗ ƥȯȯŀ⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "remove": "⟦Řḗḿȯṽḗ⟧",
+      "applyRule": "⟦Ȧƥƥŀẏ ȧƒŧḗř-ħȯŭřş řŭŀḗ⟧"
     },
-    "loading": "11111",
-    "empty": "11111",
+    "loading": "⟦Ŀȯȧḓīƞɠ ƀŭƈķḗŧ ƥȯȯŀş…⟧",
+    "empty": "⟦Ƞȯ ƀŭƈķḗŧ ƥȯȯŀş ȯƞ ŧħīş ŀīƞḗ. Ȧḓḓ ȧ ƥȯȯŀ ŧȯ īƞƈŀŭḓḗ ƥřḗƥȧīḓ ħȯŭřş.⟧",
     "labels": {
-      "catchAll": "11111",
-      "pool": "11111",
-      "scopeCatchAll": "11111",
-      "scopeMembers": "11111",
-      "totalHours": "11111",
-      "overageRate": "11111",
-      "rollover": "11111",
-      "afterHours": "11111",
-      "afterHoursMultiplier": "11111",
-      "schedule": "11111",
-      "default": "11111",
-      "members": "11111",
-      "multiplier": "11111",
-      "noMembers": "11111",
-      "selectService": "11111",
-      "poolName": "11111",
-      "poolNamePlaceholder": "11111",
-      "coversAll": "11111"
+      "catchAll": "⟦Ȧŀŀ şḗřṽīƈḗş ȯƞ ŧħīş ŀīƞḗ⟧",
+      "pool": "⟦Ɓŭƈķḗŧ ƥȯȯŀ⟧",
+      "scopeCatchAll": "⟦Ƈȯṽḗřş ȧŀŀ şḗřṽīƈḗş ȯƞ ŧħḗ ŀīƞḗ (ḿḗḿƀḗřş ȧřḗ ḿŭŀŧīƥŀīḗř ȯṽḗřřīḓḗş)⟧",
+      "scopeMembers": "⟦Ḿḗḿƀḗř şḗřṽīƈḗş ȯƞŀẏ⟧",
+      "totalHours": "⟦Ŧȯŧȧŀ ħȯŭřş⟧",
+      "overageRate": "⟦Ȯṽḗřȧɠḗ řȧŧḗ ($/ħř)⟧",
+      "rollover": "⟦Ȧŀŀȯẇ řȯŀŀȯṽḗř⟧",
+      "afterHours": "⟦Ȧƒŧḗř-ħȯŭřş ƀŭřƞ ḿŭŀŧīƥŀīḗř⟧",
+      "afterHoursMultiplier": "⟦Ḿŭŀŧīƥŀīḗř (ḗ.ɠ. 1.5)⟧",
+      "schedule": "⟦Ɓŭşīƞḗşş ħȯŭřş şƈħḗḓŭŀḗ⟧",
+      "default": "⟦ḓḗƒȧŭŀŧ⟧",
+      "members": "⟦Ḿḗḿƀḗř şḗřṽīƈḗş⟧",
+      "multiplier": "⟦×⟧",
+      "noMembers": "⟦Ƞȯ ḿḗḿƀḗř şḗřṽīƈḗş ȧŧŧȧƈħḗḓ.⟧",
+      "selectService": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ…⟧",
+      "poolName": "⟦Ƥȯȯŀ ƞȧḿḗ (ȯƥŧīȯƞȧŀ)⟧",
+      "poolNamePlaceholder": "⟦ḗ.ɠ. Şŧȧƞḓȧřḓ ħȯŭřş⟧",
+      "coversAll": "⟦Ƈȯṽḗřş ȧŀŀ şḗřṽīƈḗş ȯƞ ŧħīş ŀīƞḗ⟧"
     },
     "badges": {
-      "dormant": "11111"
+      "dormant": "⟦ƞȯ şḗřṽīƈḗş ȧŧŧȧƈħḗḓ — ƞȯŧħīƞɠ ƀŭřƞş ƒřȯḿ ŧħīş ƥȯȯŀ⟧"
     },
     "errors": {
-      "catchAllExists": "11111"
+      "catchAllExists": "⟦Ŧħīş ŀīƞḗ ȧŀřḗȧḓẏ ħȧş ȧ ƈȧŧƈħ-ȧŀŀ ƥȯȯŀ.⟧"
     }
   },
   "wizardBucketPools": {
-    "heading": "11111",
-    "empty": "11111"
+    "heading": "⟦Ɓŭƈķḗŧ ƥȯȯŀş ƒȯř ŧħīş ŀīƞḗ⟧",
+    "empty": "⟦Ƞȯ ƀŭƈķḗŧ ƥȯȯŀş ȯƞ ŧħīş ŀīƞḗ ẏḗŧ. Ȧḓḓ ȧ ƥȯȯŀ ŧȯ īƞƈŀŭḓḗ ƥřḗƥȧīḓ ħȯŭřş.⟧"
   },
   "errors": {
     "permissions": {
-      "modifyLines": "11111",
-      "deleteContracts": "11111"
+      "modifyLines": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḿȯḓīƒẏ ƈȯƞŧřȧƈŧ ŀīƞḗş⟧",
+      "deleteContracts": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḓḗŀḗŧḗ ƀīŀŀīƞɠ ƈȯƞŧřȧƈŧş⟧"
     },
     "contract": {
-      "hasInvoices": "11111",
-      "invalidValue": "11111",
-      "referenceMissing": "11111",
-      "conflict": "11111",
-      "notAllowed": "11111",
-      "missingField": "11111",
-      "missingFieldNamed": "11111 {{field}} 11111"
+      "hasInvoices": "⟦Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ȧşşȯƈīȧŧḗḓ īƞṽȯīƈḗş ȧƞḓ ƈȧƞƞȯŧ ƀḗ ḓḗŀḗŧḗḓ.⟧",
+      "invalidValue": "⟦Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ƈȯƞŧřȧƈŧ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "referenceMissing": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈȯƞŧřȧƈŧ, ƈŀīḗƞŧ, ȯř řḗŀȧŧḗḓ řḗƈȯřḓ ƞȯ ŀȯƞɠḗř ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "conflict": "⟦Ŧħīş ƈȯƞŧřȧƈŧ ƈħȧƞɠḗ ƈȯƞƒŀīƈŧş ẇīŧħ ȧƞ ḗẋīşŧīƞɠ řḗƈȯřḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "notAllowed": "⟦Ȯƞḗ ȯƒ ŧħḗ ƈȯƞŧřȧƈŧ ṽȧŀŭḗş īş ƞȯŧ ȧŀŀȯẇḗḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "missingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ƈȯƞŧřȧƈŧ ƒīḗŀḓ.⟧",
+      "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ƈȯƞŧřȧƈŧ ƒīḗŀḓ: {{field}}.⟧"
     },
     "wizard": {
       "permissions": {
-        "createTemplates": "11111",
-        "createContracts": "11111",
-        "listTemplates": "11111",
-        "viewSnapshot": "11111",
-        "resumeContracts": "11111"
+        "createTemplates": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ƈřḗȧŧḗ ƀīŀŀīƞɠ ŧḗḿƥŀȧŧḗş⟧",
+        "createContracts": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ƈřḗȧŧḗ ƀīŀŀīƞɠ ƈȯƞŧřȧƈŧş⟧",
+        "listTemplates": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ŀīşŧ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗş⟧",
+        "viewSnapshot": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ṽīḗẇ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ şƞȧƥşħȯŧ⟧",
+        "resumeContracts": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗşŭḿḗ ƀīŀŀīƞɠ ƈȯƞŧřȧƈŧş⟧"
       },
-      "templateNotFound": "11111",
-      "contractNotFound": "11111",
-      "notDraft": "11111",
-      "missingClient": "11111",
-      "invalidStartDate": "11111",
-      "recordInvalid": "11111",
-      "duplicate": "11111"
+      "templateNotFound": "⟦Ŧḗḿƥŀȧŧḗ ƞȯŧ ƒȯŭƞḓ⟧",
+      "contractNotFound": "⟦Ƈȯƞŧřȧƈŧ ƞȯŧ ƒȯŭƞḓ⟧",
+      "notDraft": "⟦Ƈȯƞŧřȧƈŧ īş ƞȯŧ ȧ ḓřȧƒŧ⟧",
+      "missingClient": "⟦Ḓřȧƒŧ ƈȯƞŧřȧƈŧ īş ḿīşşīƞɠ ƈŀīḗƞŧ ȧşşīɠƞḿḗƞŧ⟧",
+      "invalidStartDate": "⟦Ḓřȧƒŧ ƈȯƞŧřȧƈŧ ħȧş ȧƞ īƞṽȧŀīḓ şŧȧřŧ ḓȧŧḗ⟧",
+      "recordInvalid": "⟦Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ƈȯƞŧřȧƈŧ ẇīẑȧřḓ řḗƈȯřḓş īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "duplicate": "⟦Ȧ ḿȧŧƈħīƞɠ ƈȯƞŧřȧƈŧ ẇīẑȧřḓ řḗƈȯřḓ ȧŀřḗȧḓẏ ḗẋīşŧş.⟧"
     },
     "pricingSchedule": {
-      "endAfterEffective": "11111",
-      "overlaps": "11111",
-      "wouldOverlap": "11111",
-      "notFound": "11111"
+      "endAfterEffective": "⟦Ḗƞḓ ḓȧŧḗ ḿŭşŧ ƀḗ ȧƒŧḗř ḗƒƒḗƈŧīṽḗ ḓȧŧḗ⟧",
+      "overlaps": "⟦Ŧħīş şƈħḗḓŭŀḗ ȯṽḗřŀȧƥş ẇīŧħ ȧƞ ḗẋīşŧīƞɠ ƥřīƈīƞɠ şƈħḗḓŭŀḗ⟧",
+      "wouldOverlap": "⟦Ŧħīş şƈħḗḓŭŀḗ ẇȯŭŀḓ ȯṽḗřŀȧƥ ẇīŧħ ȧƞ ḗẋīşŧīƞɠ ƥřīƈīƞɠ şƈħḗḓŭŀḗ⟧",
+      "notFound": "⟦Ƥřīƈīƞɠ şƈħḗḓŭŀḗ ƞȯŧ ƒȯŭƞḓ⟧"
     },
     "renewals": {
       "permissions": {
-        "read": "11111",
-        "update": "11111",
-        "ownerOtherTenant": "11111",
-        "contractOtherTenant": "11111"
+        "read": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗȧḓ řḗƞḗẇȧŀş ʠŭḗŭḗ⟧",
+        "update": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ŭƥḓȧŧḗ řḗƞḗẇȧŀş ʠŭḗŭḗ⟧",
+        "ownerOtherTenant": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ȧşşīɠƞ řḗƞḗẇȧŀş ŧȯ ȧ ŭşḗř ƒřȯḿ ȧƞȯŧħḗř ŧḗƞȧƞŧ.⟧",
+        "contractOtherTenant": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ƈȯḿƥŀḗŧḗ řḗƞḗẇȧŀ ẇīŧħ ȧ ƈȯƞŧřȧƈŧ ƒřȯḿ ȧƞȯŧħḗř ŧḗƞȧƞŧ.⟧"
       },
-      "clientContractIdRequired": "11111",
-      "workItemNotFound": "11111",
-      "snoozeDateRequired": "11111",
-      "snoozeDateInvalid": "11111",
-      "snoozeDateFuture": "11111",
-      "ownerInvalid": "11111",
-      "ownerUnavailable": "11111",
-      "activatedContractIdRequired": "11111",
-      "contractNotActive": "11111",
-      "manualRetryDueOnly": "11111"
+      "clientContractIdRequired": "⟦Ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ īḓ īş řḗʠŭīřḗḓ.⟧",
+      "workItemNotFound": "⟦Řḗƞḗẇȧŀ ẇȯřķ īŧḗḿ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ŭƥḓȧŧḗḓ ȯř ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "snoozeDateRequired": "⟦Ƈħȯȯşḗ ȧ şƞȯȯẑḗ ḓȧŧḗ ƀḗƒȯřḗ şȧṽīƞɠ.⟧",
+      "snoozeDateInvalid": "⟦Ƈħȯȯşḗ ȧ ṽȧŀīḓ şƞȯȯẑḗ ḓȧŧḗ.⟧",
+      "snoozeDateFuture": "⟦Ƈħȯȯşḗ ȧ ƒŭŧŭřḗ şƞȯȯẑḗ ḓȧŧḗ.⟧",
+      "ownerInvalid": "⟦Ƈħȯȯşḗ ȧ ṽȧŀīḓ řḗƞḗẇȧŀ ȯẇƞḗř.⟧",
+      "ownerUnavailable": "⟦Ŧħḗ şḗŀḗƈŧḗḓ řḗƞḗẇȧŀ ȯẇƞḗř īş ƞȯ ŀȯƞɠḗř ȧṽȧīŀȧƀŀḗ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "activatedContractIdRequired": "⟦Ȧƈŧīṽȧŧḗḓ řḗƞḗẇȧŀ ƈȯƞŧřȧƈŧ īḓ īş řḗʠŭīřḗḓ.⟧",
+      "contractNotActive": "⟦Ŧħḗ ȧƈŧīṽȧŧḗḓ řḗƞḗẇȧŀ ƈȯƞŧřȧƈŧ īş ƞȯ ŀȯƞɠḗř ȧƈŧīṽḗ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "manualRetryDueOnly": "⟦Ḿȧƞŭȧŀ řḗŧřẏ īş ȯƞŀẏ ȧṽȧīŀȧƀŀḗ ƒȯř ḓŭḗ řḗƞḗẇȧŀ ƈẏƈŀḗş.⟧"
     }
   }
 }

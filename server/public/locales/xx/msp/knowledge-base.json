@@ -1,321 +1,321 @@
 {
   "page": {
-    "title": "11111",
-    "subtitle": "11111",
+    "title": "⟦Ķƞȯẇŀḗḓɠḗ Ɓȧşḗ⟧",
+    "subtitle": "⟦Ƈřḗȧŧḗ ȧƞḓ ḿȧƞȧɠḗ ķƞȯẇŀḗḓɠḗ ƀȧşḗ ȧřŧīƈŀḗş⟧",
     "actions": {
-      "import": "11111",
-      "newArticle": "11111"
+      "import": "⟦Īḿƥȯřŧ⟧",
+      "newArticle": "⟦Ƞḗẇ Ȧřŧīƈŀḗ⟧"
     },
     "tabs": {
-      "articles": "11111",
-      "reviewDashboard": "11111"
+      "articles": "⟦Ȧřŧīƈŀḗş⟧",
+      "reviewDashboard": "⟦Řḗṽīḗẇ Ḓȧşħƀȯȧřḓ⟧"
     },
     "feedback": {
-      "loadError": "11111",
-      "createError": "11111",
-      "userLoadError": "11111"
+      "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧřŧīƈŀḗş⟧",
+      "createError": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ȧřŧīƈŀḗ⟧",
+      "userLoadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŭşḗř. Ȧřŧīƈŀḗ ḗḓīŧīƞɠ īş ŭƞȧṽȧīŀȧƀŀḗ.⟧"
     },
-    "newArticleTitle": "11111"
+    "newArticleTitle": "⟦Ƞḗẇ Ȧřŧīƈŀḗ⟧"
   },
   "shared": {
     "statusLabels": {
-      "draft": "11111",
-      "review": "11111",
-      "published": "11111",
-      "archived": "11111"
+      "draft": "⟦Ḓřȧƒŧ⟧",
+      "review": "⟦Īƞ Řḗṽīḗẇ⟧",
+      "published": "⟦Ƥŭƀŀīşħḗḓ⟧",
+      "archived": "⟦Ȧřƈħīṽḗḓ⟧"
     },
     "audienceLabels": {
-      "internal": "11111",
-      "client": "11111",
-      "public": "11111"
+      "internal": "⟦Īƞŧḗřƞȧŀ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "public": "⟦Ƥŭƀŀīƈ⟧"
     },
     "typeLabels": {
-      "how_to": "11111",
-      "faq": "11111",
-      "troubleshooting": "11111",
-      "reference": "11111"
+      "how_to": "⟦Ħȯẇ-Ŧȯ⟧",
+      "faq": "⟦ƑȦɊ⟧",
+      "troubleshooting": "⟦Ŧřȯŭƀŀḗşħȯȯŧīƞɠ⟧",
+      "reference": "⟦Řḗƒḗřḗƞƈḗ⟧"
     },
     "reviewCycleOptions": {
-      "30": "11111",
-      "60": "11111",
-      "90": "11111",
-      "180": "11111",
-      "365": "11111",
-      "none": "11111"
+      "30": "⟦30 ḓȧẏş⟧",
+      "60": "⟦60 ḓȧẏş⟧",
+      "90": "⟦90 ḓȧẏş⟧",
+      "180": "⟦180 ḓȧẏş⟧",
+      "365": "⟦1 ẏḗȧř⟧",
+      "none": "⟦Ƞȯ řḗṽīḗẇ ƈẏƈŀḗ⟧"
     },
     "fallbacks": {
-      "emptyDate": "11111"
+      "emptyDate": "⟦-⟧"
     }
   },
   "list": {
-    "title": "11111",
-    "countSummary": "11111 {{count}} 11111",
-    "itemLabel": "11111",
-    "empty": "11111",
-    "createFirst": "11111",
+    "title": "⟦Ķƞȯẇŀḗḓɠḗ Ɓȧşḗ Ȧřŧīƈŀḗş⟧",
+    "countSummary": "⟦{{count}} ȧřŧīƈŀḗ(ş)⟧",
+    "itemLabel": "⟦ȧřŧīƈŀḗş⟧",
+    "empty": "⟦Ƞȯ ȧřŧīƈŀḗş ƒȯŭƞḓ⟧",
+    "createFirst": "⟦Ƈřḗȧŧḗ Ẏȯŭř Ƒīřşŧ Ȧřŧīƈŀḗ⟧",
     "table": {
-      "title": "11111",
-      "type": "11111",
-      "audience": "11111",
-      "status": "11111",
-      "tags": "11111",
-      "stats": "11111",
-      "updated": "11111",
-      "actions": "11111"
+      "title": "⟦Ŧīŧŀḗ⟧",
+      "type": "⟦Ŧẏƥḗ⟧",
+      "audience": "⟦Ȧŭḓīḗƞƈḗ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "tags": "⟦Ŧȧɠş⟧",
+      "stats": "⟦Şŧȧŧş⟧",
+      "updated": "⟦Ŭƥḓȧŧḗḓ⟧",
+      "actions": "⟦Ȧƈŧīȯƞş⟧"
     },
     "stats": {
-      "views": "11111",
-      "helpful": "11111",
-      "notHelpful": "11111"
+      "views": "⟦Ṽīḗẇş⟧",
+      "helpful": "⟦Ħḗŀƥƒŭŀ⟧",
+      "notHelpful": "⟦Ƞȯŧ ħḗŀƥƒŭŀ⟧"
     },
     "actions": {
-      "edit": "11111",
-      "submitForReview": "11111",
-      "publish": "11111",
-      "archive": "11111",
-      "delete": "11111"
+      "edit": "⟦Ḗḓīŧ⟧",
+      "submitForReview": "⟦Şŭƀḿīŧ ƒȯř Řḗṽīḗẇ⟧",
+      "publish": "⟦Ƥŭƀŀīşħ⟧",
+      "archive": "⟦Ȧřƈħīṽḗ⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ ƥḗřḿȧƞḗƞŧŀẏ⟧"
     },
     "pagination": {
       "itemsPerPage": {
-        "10": "11111",
-        "20": "11111",
-        "50": "11111"
+        "10": "⟦10 īŧḗḿş/ƥȧɠḗ⟧",
+        "20": "⟦20 īŧḗḿş/ƥȧɠḗ⟧",
+        "50": "⟦50 īŧḗḿş/ƥȧɠḗ⟧"
       }
     },
     "stale": {
-      "reviewOverdue": "11111"
+      "reviewOverdue": "⟦Řḗṽīḗẇ ȯṽḗřḓŭḗ⟧"
     },
     "dialogs": {
       "archive": {
-        "title": "11111",
-        "message": "11111 {{title}} 11111"
+        "title": "⟦Ȧřƈħīṽḗ Ȧřŧīƈŀḗ⟧",
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ȧřƈħīṽḗ \"{{title}}\"? Ŧħīş ẇīŀŀ řḗḿȯṽḗ īŧ ƒřȯḿ ƈŀīḗƞŧ ṽīşīƀīŀīŧẏ.⟧"
       },
       "delete": {
-        "title": "11111",
-        "message": "11111 {{title}} 11111"
+        "title": "⟦Ḓḗŀḗŧḗ Ȧřŧīƈŀḗ⟧",
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ \"{{title}}\"? Ŧħīş ẇīŀŀ řḗḿȯṽḗ ŧħḗ ȧřŧīƈŀḗ ȧƞḓ īŧş ƈȯƞŧḗƞŧ, ȧƞḓ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧"
       }
     },
     "feedback": {
-      "archiveError": "11111",
-      "archiveSuccess": "11111",
-      "deleteError": "11111",
-      "deleteSuccess": "11111"
+      "archiveError": "⟦Ƒȧīŀḗḓ ŧȯ ȧřƈħīṽḗ ȧřŧīƈŀḗ⟧",
+      "archiveSuccess": "⟦Ȧřŧīƈŀḗ ȧřƈħīṽḗḓ⟧",
+      "deleteError": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ȧřŧīƈŀḗ⟧",
+      "deleteSuccess": "⟦Ȧřŧīƈŀḗ ḓḗŀḗŧḗḓ ƥḗřḿȧƞḗƞŧŀẏ⟧"
     }
   },
   "editor": {
     "header": {
-      "untitled": "11111",
-      "back": "11111"
+      "untitled": "⟦Ŭƞŧīŧŀḗḓ Ȧřŧīƈŀḗ⟧",
+      "back": "⟦Ɓȧƈķ⟧"
     },
     "actions": {
-      "submitForReview": "11111",
-      "publish": "11111",
-      "archive": "11111",
-      "delete": "11111",
-      "saveMetadata": "11111",
-      "saving": "11111",
-      "saveContent": "11111"
+      "submitForReview": "⟦Şŭƀḿīŧ ƒȯř Řḗṽīḗẇ⟧",
+      "publish": "⟦Ƥŭƀŀīşħ⟧",
+      "archive": "⟦Ȧřƈħīṽḗ⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ ƥḗřḿȧƞḗƞŧŀẏ⟧",
+      "saveMetadata": "⟦Şȧṽḗ Ḿḗŧȧḓȧŧȧ⟧",
+      "saving": "⟦Şȧṽīƞɠ...⟧",
+      "saveContent": "⟦Şȧṽḗ⟧"
     },
     "feedback": {
-      "permissionDenied": "11111",
-      "notFound": "11111",
-      "loadError": "11111",
-      "noChanges": "11111",
-      "saveError": "11111",
-      "saveSuccess": "11111",
-      "publishError": "11111",
-      "publishSuccess": "11111",
-      "statusChangeError": "11111",
-      "submitForReviewSuccess": "11111",
-      "archiveSuccess": "11111",
-      "deleteError": "11111",
-      "deleteSuccess": "11111"
+      "permissionDenied": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ⟧",
+      "notFound": "⟦Ȧřŧīƈŀḗ ƞȯŧ ƒȯŭƞḓ⟧",
+      "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧřŧīƈŀḗ⟧",
+      "noChanges": "⟦Ƞȯ ƈħȧƞɠḗş ŧȯ şȧṽḗ⟧",
+      "saveError": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ȧřŧīƈŀḗ⟧",
+      "saveSuccess": "⟦Ȧřŧīƈŀḗ ḿḗŧȧḓȧŧȧ şȧṽḗḓ⟧",
+      "publishError": "⟦Ƒȧīŀḗḓ ŧȯ ƥŭƀŀīşħ ȧřŧīƈŀḗ⟧",
+      "publishSuccess": "⟦Ȧřŧīƈŀḗ ƥŭƀŀīşħḗḓ⟧",
+      "statusChangeError": "⟦Ƒȧīŀḗḓ ŧȯ ƈħȧƞɠḗ ȧřŧīƈŀḗ şŧȧŧŭş⟧",
+      "submitForReviewSuccess": "⟦Ȧřŧīƈŀḗ şŭƀḿīŧŧḗḓ ƒȯř řḗṽīḗẇ⟧",
+      "archiveSuccess": "⟦Ȧřŧīƈŀḗ ȧřƈħīṽḗḓ⟧",
+      "deleteError": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ȧřŧīƈŀḗ⟧",
+      "deleteSuccess": "⟦Ȧřŧīƈŀḗ ḓḗŀḗŧḗḓ ƥḗřḿȧƞḗƞŧŀẏ⟧"
     },
     "dialogs": {
       "delete": {
-        "title": "11111",
-        "message": "11111 {{title}} 11111"
+        "title": "⟦Ḓḗŀḗŧḗ Ȧřŧīƈŀḗ⟧",
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ \"{{title}}\"? Ŧħīş ẇīŀŀ řḗḿȯṽḗ ŧħḗ ȧřŧīƈŀḗ ȧƞḓ īŧş ƈȯƞŧḗƞŧ, ȧƞḓ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧"
       },
       "archive": {
-        "message": "11111 {{title}} 11111",
-        "title": "11111"
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ȧřƈħīṽḗ \"{{title}}\"? Ȧřƈħīṽḗḓ ȧřŧīƈŀḗş ȧřḗ ħīḓḓḗƞ ƒřȯḿ ŧħḗ ƈŀīḗƞŧ ƥȯřŧȧŀ ȧƞḓ ƈȧƞ ƀḗ ḓḗŀḗŧḗḓ ƥḗřḿȧƞḗƞŧŀẏ ŀȧŧḗř.⟧",
+        "title": "⟦Ȧřƈħīṽḗ Ȧřŧīƈŀḗ⟧"
       }
     },
     "badges": {
-      "reviewOverdue": "11111"
+      "reviewOverdue": "⟦Řḗṽīḗẇ Ȯṽḗřḓŭḗ⟧"
     },
     "stats": {
-      "title": "11111",
-      "views": "11111",
-      "helpful": "11111",
-      "notHelpful": "11111",
-      "published": "11111"
+      "title": "⟦Şŧȧŧīşŧīƈş⟧",
+      "views": "⟦Ṽīḗẇş⟧",
+      "helpful": "⟦Ħḗŀƥƒŭŀ⟧",
+      "notHelpful": "⟦Ƞȯŧ ħḗŀƥƒŭŀ⟧",
+      "published": "⟦Ƥŭƀŀīşħḗḓ⟧"
     },
     "metadata": {
-      "title": "11111",
+      "title": "⟦Ḿḗŧȧḓȧŧȧ⟧",
       "fields": {
-        "title": "11111",
-        "slug": "11111",
-        "articleType": "11111",
-        "audience": "11111",
-        "category": "11111",
-        "reviewCycle": "11111",
-        "nextReview": "11111",
-        "noCategory": "11111"
+        "title": "⟦Ŧīŧŀḗ⟧",
+        "slug": "⟦ŬŘĿ Şŀŭɠ⟧",
+        "articleType": "⟦Ȧřŧīƈŀḗ Ŧẏƥḗ⟧",
+        "audience": "⟦Ȧŭḓīḗƞƈḗ⟧",
+        "category": "⟦Ƈȧŧḗɠȯřẏ⟧",
+        "reviewCycle": "⟦Řḗṽīḗẇ Ƈẏƈŀḗ⟧",
+        "nextReview": "⟦Ƞḗẋŧ řḗṽīḗẇ⟧",
+        "noCategory": "⟦Ƞȯ ƈȧŧḗɠȯřẏ⟧"
       }
     },
     "tags": {
-      "title": "11111"
+      "title": "⟦Ŧȧɠş⟧"
     }
   },
   "filters": {
-    "title": "11111",
+    "title": "⟦Ƒīŀŧḗřş⟧",
     "actions": {
-      "clear": "11111"
+      "clear": "⟦Ƈŀḗȧř⟧"
     },
     "labels": {
-      "search": "11111",
-      "status": "11111",
-      "audience": "11111",
-      "articleType": "11111",
-      "category": "11111",
-      "tags": "11111"
+      "search": "⟦Şḗȧřƈħ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "audience": "⟦Ȧŭḓīḗƞƈḗ⟧",
+      "articleType": "⟦Ȧřŧīƈŀḗ Ŧẏƥḗ⟧",
+      "category": "⟦Ƈȧŧḗɠȯřẏ⟧",
+      "tags": "⟦Ŧȧɠş⟧"
     },
     "placeholders": {
-      "search": "11111",
-      "status": "11111",
-      "audience": "11111",
-      "articleType": "11111",
-      "category": "11111",
-      "tags": "11111"
+      "search": "⟦Şḗȧřƈħ ȧřŧīƈŀḗş...⟧",
+      "status": "⟦Şḗŀḗƈŧ şŧȧŧŭş...⟧",
+      "audience": "⟦Şḗŀḗƈŧ ȧŭḓīḗƞƈḗ...⟧",
+      "articleType": "⟦Şḗŀḗƈŧ ŧẏƥḗ...⟧",
+      "category": "⟦Şḗŀḗƈŧ ƈȧŧḗɠȯřẏ...⟧",
+      "tags": "⟦Ƒīŀŧḗř ƀẏ ŧȧɠş...⟧"
     },
     "options": {
       "status": {
-        "all": "11111"
+        "all": "⟦Ȧŀŀ Şŧȧŧŭşḗş⟧"
       },
       "audience": {
-        "all": "11111"
+        "all": "⟦Ȧŀŀ Ȧŭḓīḗƞƈḗş⟧"
       },
       "articleType": {
-        "all": "11111"
+        "all": "⟦Ȧŀŀ Ŧẏƥḗş⟧"
       },
       "category": {
-        "all": "11111"
+        "all": "⟦Ȧŀŀ Ƈȧŧḗɠȯřīḗş⟧"
       }
     }
   },
   "categoryTree": {
-    "allCategories": "11111",
-    "empty": "11111"
+    "allCategories": "⟦Ȧŀŀ Ƈȧŧḗɠȯřīḗş⟧",
+    "empty": "⟦Ƞȯ ƈȧŧḗɠȯřīḗş ḓḗƒīƞḗḓ⟧"
   },
   "publishing": {
-    "title": "11111",
-    "currentStatus": "11111",
+    "title": "⟦Ƥŭƀŀīşħīƞɠ⟧",
+    "currentStatus": "⟦Ƈŭřřḗƞŧ Şŧȧŧŭş⟧",
     "actions": {
-      "submitForReview": "11111",
-      "publish": "11111",
-      "approveAndPublish": "11111",
-      "archive": "11111",
-      "republish": "11111",
-      "delete": "11111"
+      "submitForReview": "⟦Şŭƀḿīŧ ƒȯř Řḗṽīḗẇ⟧",
+      "publish": "⟦Ƥŭƀŀīşħ⟧",
+      "approveAndPublish": "⟦Ȧƥƥřȯṽḗ & Ƥŭƀŀīşħ⟧",
+      "archive": "⟦Ȧřƈħīṽḗ⟧",
+      "republish": "⟦Řḗƥŭƀŀīşħ⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ ƥḗřḿȧƞḗƞŧŀẏ⟧"
     },
     "flow": {
-      "draft": "11111",
-      "review": "11111",
-      "published": "11111"
+      "draft": "⟦Ḓřȧƒŧ⟧",
+      "review": "⟦Řḗṽīḗẇ⟧",
+      "published": "⟦Ƥŭƀŀīşħḗḓ⟧"
     },
     "warnings": {
-      "audience": "11111 {{audience}} 11111"
+      "audience": "⟦Ƥŭƀŀīşħīƞɠ ẇīŀŀ ḿȧķḗ ŧħīş ȧřŧīƈŀḗ ṽīşīƀŀḗ ŧȯ {{audience}} ŭşḗřş.⟧"
     },
     "dialogs": {
       "publish": {
-        "title": "11111",
-        "message": "11111",
-        "messageWithAudience": "11111 {{audience}} 11111"
+        "title": "⟦Ƥŭƀŀīşħ Ȧřŧīƈŀḗ⟧",
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ƥŭƀŀīşħ ŧħīş ȧřŧīƈŀḗ?⟧",
+        "messageWithAudience": "⟦Ŧħīş ẇīŀŀ ƥŭƀŀīşħ ŧħḗ ȧřŧīƈŀḗ ȧƞḓ ḿȧķḗ īŧ ṽīşīƀŀḗ ŧȯ {{audience}} ŭşḗřş. Ȧřḗ ẏȯŭ şŭřḗ?⟧"
       },
       "archive": {
-        "title": "11111",
-        "message": "11111"
+        "title": "⟦Ȧřƈħīṽḗ Ȧřŧīƈŀḗ⟧",
+        "message": "⟦Ŧħīş ẇīŀŀ ȧřƈħīṽḗ ŧħḗ ȧřŧīƈŀḗ ȧƞḓ řḗḿȯṽḗ īŧ ƒřȯḿ ƈŀīḗƞŧ ṽīşīƀīŀīŧẏ. Ȧřḗ ẏȯŭ şŭřḗ?⟧"
       },
       "delete": {
-        "title": "11111",
-        "message": "11111"
+        "title": "⟦Ḓḗŀḗŧḗ Ȧřŧīƈŀḗ⟧",
+        "message": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ ŧħīş ȧřŧīƈŀḗ? Ŧħīş ẇīŀŀ řḗḿȯṽḗ ŧħḗ ȧřŧīƈŀḗ ȧƞḓ īŧş ƈȯƞŧḗƞŧ, ȧƞḓ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧"
       }
     },
     "feedback": {
-      "publishError": "11111",
-      "publishSuccess": "11111",
-      "archiveError": "11111",
-      "archiveSuccess": "11111",
-      "deleteError": "11111",
-      "deleteSuccess": "11111"
+      "publishError": "⟦Ƒȧīŀḗḓ ŧȯ ƥŭƀŀīşħ ȧřŧīƈŀḗ⟧",
+      "publishSuccess": "⟦Ȧřŧīƈŀḗ ƥŭƀŀīşħḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "archiveError": "⟦Ƒȧīŀḗḓ ŧȯ ȧřƈħīṽḗ ȧřŧīƈŀḗ⟧",
+      "archiveSuccess": "⟦Ȧřŧīƈŀḗ ȧřƈħīṽḗḓ⟧",
+      "deleteError": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ȧřŧīƈŀḗ⟧",
+      "deleteSuccess": "⟦Ȧřŧīƈŀḗ ḓḗŀḗŧḗḓ ƥḗřḿȧƞḗƞŧŀẏ⟧"
     }
   },
   "reviewDashboard": {
     "summary": {
-      "awaitingReview": "11111",
-      "overdueReviews": "11111"
+      "awaitingReview": "⟦Ȧẇȧīŧīƞɠ Řḗṽīḗẇ⟧",
+      "overdueReviews": "⟦Ȯṽḗřḓŭḗ Řḗṽīḗẇş⟧"
     },
-    "empty": "11111",
+    "empty": "⟦Ȧŀŀ ƈȧŭɠħŧ ŭƥ! Ƞȯ ȧřŧīƈŀḗş ƞḗḗḓ řḗṽīḗẇ.⟧",
     "sections": {
-      "awaitingReview": "11111",
-      "overdue": "11111"
+      "awaitingReview": "⟦Ȧřŧīƈŀḗş Ȧẇȧīŧīƞɠ Řḗṽīḗẇ⟧",
+      "overdue": "⟦Ȯṽḗřḓŭḗ ƒȯř Řḗṽīḗẇ⟧"
     },
     "labels": {
-      "submitted": "11111",
-      "due": "11111",
-      "lastReviewed": "11111",
-      "never": "11111"
+      "submitted": "⟦Şŭƀḿīŧŧḗḓ⟧",
+      "due": "⟦Ḓŭḗ⟧",
+      "lastReviewed": "⟦Ŀȧşŧ řḗṽīḗẇḗḓ⟧",
+      "never": "⟦Ƞḗṽḗř⟧"
     },
     "actions": {
-      "view": "11111",
-      "review": "11111",
-      "reviewNow": "11111"
+      "view": "⟦Ṽīḗẇ⟧",
+      "review": "⟦Řḗṽīḗẇ⟧",
+      "reviewNow": "⟦Řḗṽīḗẇ Ƞȯẇ⟧"
     },
     "feedback": {
-      "loadError": "11111"
+      "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗṽīḗẇ ḓȧŧȧ⟧"
     }
   },
   "importDialog": {
-    "title": "11111",
+    "title": "⟦Īḿƥȯřŧ Ȧřŧīƈŀḗş⟧",
     "dropzone": {
-      "title": "11111",
-      "formats": "11111"
+      "title": "⟦Ḓřȯƥ ƒīŀḗş ħḗřḗ ȯř ƈŀīƈķ ŧȯ ƀřȯẇşḗ⟧",
+      "formats": "⟦Şŭƥƥȯřŧş .ḿḓ ȧƞḓ .ħŧḿŀ ƒīŀḗş⟧"
     },
     "fields": {
-      "audience": "11111",
-      "articleType": "11111"
+      "audience": "⟦Ȧŭḓīḗƞƈḗ⟧",
+      "articleType": "⟦Ȧřŧīƈŀḗ Ŧẏƥḗ⟧"
     },
     "actions": {
-      "import": "11111 {{count}} 11111",
-      "importing": "11111"
+      "import": "⟦Īḿƥȯřŧ {{count}} ƒīŀḗ(ş)⟧",
+      "importing": "⟦Īḿƥȯřŧīƞɠ...⟧"
     },
     "feedback": {
-      "unsupportedFileType": "11111 {{fileName}} 11111",
-      "permissionDenied": "11111",
-      "importSuccess": "11111 {{imported}} 11111 {{total}} 11111",
-      "allFailed": "11111",
-      "importError": "11111"
+      "unsupportedFileType": "⟦{{fileName}}: ŭƞşŭƥƥȯřŧḗḓ ƒīŀḗ ŧẏƥḗ. Ŭşḗ .ḿḓ ȯř .ħŧḿŀ⟧",
+      "permissionDenied": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ⟧",
+      "importSuccess": "⟦Īḿƥȯřŧḗḓ {{imported}} ȯƒ {{total}} ȧřŧīƈŀḗ(ş)⟧",
+      "allFailed": "⟦Ȧŀŀ īḿƥȯřŧş ƒȧīŀḗḓ⟧",
+      "importError": "⟦Īḿƥȯřŧ ƒȧīŀḗḓ⟧"
     },
     "results": {
-      "summary": "11111 {{imported}} 11111 {{total}} 11111",
-      "failedCount": "11111 {{count}} 11111"
+      "summary": "⟦{{imported}} ȯƒ {{total}} ȧřŧīƈŀḗ(ş) īḿƥȯřŧḗḓ⟧",
+      "failedCount": "⟦{{count}} ƒȧīŀḗḓ:⟧"
     }
   },
   "staleness": {
     "badges": {
-      "reviewOverdue": "11111",
-      "reviewDueSoon": "11111",
-      "overdueBy": "11111 {{count}} 11111",
-      "dueIn": "11111 {{count}} 11111"
+      "reviewOverdue": "⟦Řḗṽīḗẇ Ȯṽḗřḓŭḗ⟧",
+      "reviewDueSoon": "⟦Řḗṽīḗẇ Ḓŭḗ Şȯȯƞ⟧",
+      "overdueBy": "⟦Ȯṽḗřḓŭḗ ƀẏ {{count}} ḓȧẏş⟧",
+      "dueIn": "⟦Ḓŭḗ īƞ {{count}} ḓȧẏş⟧"
     },
     "tooltips": {
-      "reviewOverdue": "11111 {{date}} 11111",
-      "reviewDue": "11111 {{date}} 11111"
+      "reviewOverdue": "⟦Řḗṽīḗẇ ẇȧş ḓŭḗ {{date}}⟧",
+      "reviewDue": "⟦Řḗṽīḗẇ ḓŭḗ {{date}}⟧"
     }
   },
   "common": {
-    "done": "11111",
-    "cancel": "11111"
+    "done": "⟦Ḓȯƞḗ⟧",
+    "cancel": "⟦Ƈȧƞƈḗŀ⟧"
   }
 }

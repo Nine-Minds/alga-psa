@@ -1,499 +1,499 @@
 {
   "common": {
-    "loading": "11111"
+    "loading": "⟦Ŀȯȧḓīƞɠ...⟧"
   },
   "moduleFrame": {
-    "title": "11111",
-    "description": "11111",
-    "badge": "11111",
+    "title": "⟦Ƈŭşŧȯḿḗř Şȧŧīşƒȧƈŧīȯƞ Şŭřṽḗẏş⟧",
+    "description": "⟦Ḿȯƞīŧȯř řḗşƥȯƞşḗ ʠŭȧŀīŧẏ, ȧƞȧŀẏşḗ şȧŧīşƒȧƈŧīȯƞ ŧřḗƞḓş, ȧƞḓ ƒȯŀŀȯẇ ŭƥ ȯƞ ƒḗḗḓƀȧƈķ.⟧",
+    "badge": "⟦Şȧŧīşƒȧƈŧīȯƞ Īƞşīɠħŧş⟧",
     "nav": {
-      "dashboard": "11111",
-      "responses": "11111",
-      "analytics": "11111",
-      "setup": "11111"
+      "dashboard": "⟦Ḓȧşħƀȯȧřḓ⟧",
+      "responses": "⟦Řḗşƥȯƞşḗş⟧",
+      "analytics": "⟦Ȧƞȧŀẏŧīƈş⟧",
+      "setup": "⟦Şḗŧŭƥ⟧"
     }
   },
   "settings": {
-    "tabLabel": "11111",
-    "title": "11111",
-    "subtitle": "11111",
+    "tabLabel": "⟦Şŭřṽḗẏş⟧",
+    "title": "⟦Ƈŭşŧȯḿḗř Şȧŧīşƒȧƈŧīȯƞ Şŭřṽḗẏş⟧",
+    "subtitle": "⟦Ƈȯƞƒīɠŭřḗ ŧḗḿƥŀȧŧḗş, ŧřīɠɠḗřş, ȧƞḓ ḓḗŀīṽḗřẏ ŧȯ ƈȯŀŀḗƈŧ ƥȯşŧ-ŧīƈķḗŧ ƒḗḗḓƀȧƈķ.⟧",
     "tabs": {
-      "templates": "11111",
-      "triggers": "11111"
+      "templates": "⟦Ŧḗḿƥŀȧŧḗş⟧",
+      "triggers": "⟦Ŧřīɠɠḗřş⟧"
     },
     "templateList": {
-      "title": "11111",
-      "description": "11111",
-      "createButton": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
-      "defaultBadge": "11111",
+      "title": "⟦Şŭřṽḗẏ ŧḗḿƥŀȧŧḗş⟧",
+      "description": "⟦Ḿȧƞȧɠḗ ŧħḗ ƥřȯḿƥŧş ȧƞḓ řȧŧīƞɠ şƈȧŀḗş şḗƞŧ ŧȯ ẏȯŭř ƈŀīḗƞŧş.⟧",
+      "createButton": "⟦Ƞḗẇ ŧḗḿƥŀȧŧḗ⟧",
+      "emptyTitle": "⟦Ƞȯ şŭřṽḗẏ ŧḗḿƥŀȧŧḗş ẏḗŧ⟧",
+      "emptyDescription": "⟦Ƈřḗȧŧḗ ẏȯŭř ƒīřşŧ ŧḗḿƥŀȧŧḗ ŧȯ ḓḗƒīƞḗ ŧħḗ şŭřṽḗẏ ẇȯřḓīƞɠ ȧƞḓ řȧŧīƞɠ şƈȧŀḗ.⟧",
+      "defaultBadge": "⟦Ḓḗƒȧŭŀŧ⟧",
       "table": {
-        "name": "11111",
-        "rating": "11111",
-        "status": "11111",
-        "updated": "11111",
-        "actions": "11111"
+        "name": "⟦Ŧḗḿƥŀȧŧḗ⟧",
+        "rating": "⟦Řȧŧīƞɠ şƈȧŀḗ⟧",
+        "status": "⟦Şŧȧŧŭş⟧",
+        "updated": "⟦Ŭƥḓȧŧḗḓ⟧",
+        "actions": "⟦Ȧƈŧīȯƞş⟧"
       },
       "status": {
-        "enabled": "11111",
-        "disabled": "11111"
+        "enabled": "⟦Ḗƞȧƀŀḗḓ⟧",
+        "disabled": "⟦Ḓīşȧƀŀḗḓ⟧"
       },
       "actions": {
-        "setDefault": "11111"
+        "setDefault": "⟦Şḗŧ ȧş ḓḗƒȧŭŀŧ⟧"
       },
       "toasts": {
-        "created": "11111",
-        "updated": "11111",
-        "deleted": "11111",
-        "error": "11111",
-        "setDefault": "11111"
+        "created": "⟦Ŧḗḿƥŀȧŧḗ ƈřḗȧŧḗḓ⟧",
+        "updated": "⟦Ŧḗḿƥŀȧŧḗ ŭƥḓȧŧḗḓ⟧",
+        "deleted": "⟦Ŧḗḿƥŀȧŧḗ ḓḗŀḗŧḗḓ⟧",
+        "error": "⟦Ŭƞȧƀŀḗ ŧȯ şȧṽḗ ŧḗḿƥŀȧŧḗ⟧",
+        "setDefault": "⟦Ḓḗƒȧŭŀŧ ŧḗḿƥŀȧŧḗ ŭƥḓȧŧḗḓ⟧"
       },
       "errors": {
-        "load": "11111"
+        "load": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ şŭřṽḗẏ ŧḗḿƥŀȧŧḗş.⟧"
       },
       "delete": {
-        "validationFailed": "11111",
-        "error": "11111",
-        "entityFallback": "11111"
+        "validationFailed": "⟦Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+        "error": "⟦Ŭƞȧƀŀḗ ŧȯ ḓḗŀḗŧḗ ŧḗḿƥŀȧŧḗ⟧",
+        "entityFallback": "⟦ŧħīş şŭřṽḗẏ ŧḗḿƥŀȧŧḗ⟧"
       },
-      "actionsMenuAria": "11111 {{name}} 11111"
+      "actionsMenuAria": "⟦Ȯƥḗƞ ȧƈŧīȯƞş ƒȯř {{name}}⟧"
     },
     "templateForm": {
-      "titleCreate": "11111",
-      "titleEdit": "11111",
+      "titleCreate": "⟦Ƈřḗȧŧḗ şŭřṽḗẏ ŧḗḿƥŀȧŧḗ⟧",
+      "titleEdit": "⟦Ḗḓīŧ şŭřṽḗẏ ŧḗḿƥŀȧŧḗ⟧",
       "ratingTypes": {
-        "stars": "11111",
-        "numbers": "11111",
-        "emojis": "11111"
+        "stars": "⟦Şŧȧřş⟧",
+        "numbers": "⟦Ƞŭḿƀḗřş⟧",
+        "emojis": "⟦Ḗḿȯĵīş⟧"
       },
       "defaults": {
-        "promptText": "11111",
-        "commentPrompt": "11111",
-        "thankYouText": "11111"
+        "promptText": "⟦Şŭřṽḗẏ ƥřȯḿƥŧ⟧",
+        "commentPrompt": "⟦Ȧḓḓīŧīȯƞȧŀ ƈȯḿḿḗƞŧş (ȯƥŧīȯƞȧŀ)⟧",
+        "thankYouText": "⟦Ŧħȧƞķ ẏȯŭ!⟧"
       },
       "labels": {
-        "name": "11111",
-        "ratingType": "11111",
-        "ratingScale": "11111",
-        "ratingLabels": "11111",
-        "preview": "11111",
-        "promptText": "11111",
-        "commentPrompt": "11111",
-        "thankYouText": "11111",
-        "isDefault": "11111",
-        "enabled": "11111"
+        "name": "⟦Ŧḗḿƥŀȧŧḗ ƞȧḿḗ⟧",
+        "ratingType": "⟦Řȧŧīƞɠ ŧẏƥḗ⟧",
+        "ratingScale": "⟦Řȧŧīƞɠ şƈȧŀḗ⟧",
+        "ratingLabels": "⟦Řȧŧīƞɠ ŀȧƀḗŀş⟧",
+        "preview": "⟦Ƥřḗṽīḗẇ⟧",
+        "promptText": "⟦Şŭřṽḗẏ ƥřȯḿƥŧ⟧",
+        "commentPrompt": "⟦Ƈȯḿḿḗƞŧ ƥřȯḿƥŧ⟧",
+        "thankYouText": "⟦Ŧħȧƞķ-ẏȯŭ ḿḗşşȧɠḗ⟧",
+        "isDefault": "⟦Şḗŧ ȧş ḓḗƒȧŭŀŧ ŧḗḿƥŀȧŧḗ⟧",
+        "enabled": "⟦Ŧḗḿƥŀȧŧḗ ḗƞȧƀŀḗḓ⟧"
       },
       "placeholders": {
-        "ratingLabels": "11111"
+        "ratingLabels": "⟦Ḗẋȧḿƥŀḗ:\nṼḗřẏ Ƥȯȯř\nƤȯȯř\nȦṽḗřȧɠḗ\nƓȯȯḓ\nḖẋƈḗŀŀḗƞŧ⟧"
       },
       "help": {
-        "ratingLabels": "11111"
+        "ratingLabels": "⟦Ƥřȯṽīḓḗ ȯƞḗ ŀȧƀḗŀ ƥḗř ŀīƞḗ, īƞ ȯřḓḗř ƒřȯḿ ŀȯẇḗşŧ ŧȯ ħīɠħḗşŧ řȧŧīƞɠ.⟧"
       },
       "actions": {
-        "create": "11111",
-        "save": "11111",
-        "delete": "11111"
+        "create": "⟦Ƈřḗȧŧḗ ŧḗḿƥŀȧŧḗ⟧",
+        "save": "⟦Şȧṽḗ ƈħȧƞɠḗş⟧",
+        "delete": "⟦Ḓḗŀḗŧḗ ŧḗḿƥŀȧŧḗ⟧"
       },
       "delete": {
-        "validationFailed": "11111",
-        "error": "11111",
-        "entityFallback": "11111"
+        "validationFailed": "⟦Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+        "error": "⟦Ŭƞȧƀŀḗ ŧȯ ḓḗŀḗŧḗ ŧḗḿƥŀȧŧḗ⟧",
+        "entityFallback": "⟦ŧħīş şŭřṽḗẏ ŧḗḿƥŀȧŧḗ⟧"
       }
     },
     "triggerList": {
-      "title": "11111",
-      "description": "11111",
-      "createButton": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "⟦Şŭřṽḗẏ ŧřīɠɠḗřş⟧",
+      "description": "⟦Ȧŭŧȯḿȧŧīƈȧŀŀẏ şḗƞḓ īƞṽīŧȧŧīȯƞş ẇħḗƞ ŧīƈķḗŧş ȯř ƥřȯĵḗƈŧş řḗȧƈħ ƈȯḿƥŀḗŧīȯƞ.⟧",
+      "createButton": "⟦Ƞḗẇ ŧřīɠɠḗř⟧",
+      "emptyTitle": "⟦Ƞȯ şŭřṽḗẏ ŧřīɠɠḗřş ƈȯƞƒīɠŭřḗḓ⟧",
+      "emptyDescription": "⟦Ƈřḗȧŧḗ ȧ ŧřīɠɠḗř ŧȯ şḗƞḓ şŭřṽḗẏş ẇħḗƞ ŧīƈķḗŧş ƈŀȯşḗ ȯř ƥřȯĵḗƈŧş ƒīƞīşħ.⟧",
       "table": {
-        "template": "11111",
-        "type": "11111",
-        "conditions": "11111",
-        "status": "11111",
-        "updated": "11111",
-        "actions": "11111"
+        "template": "⟦Ŧḗḿƥŀȧŧḗ⟧",
+        "type": "⟦Ŧřīɠɠḗř⟧",
+        "conditions": "⟦Ƈȯƞḓīŧīȯƞş⟧",
+        "status": "⟦Şŧȧŧŭş⟧",
+        "updated": "⟦Ŭƥḓȧŧḗḓ⟧",
+        "actions": "⟦Ȧƈŧīȯƞş⟧"
       },
       "status": {
-        "enabled": "11111",
-        "disabled": "11111"
+        "enabled": "⟦Ḗƞȧƀŀḗḓ⟧",
+        "disabled": "⟦Ḓīşȧƀŀḗḓ⟧"
       },
       "conditions": {
-        "unrestricted": "11111",
-        "boards": "11111",
-        "statuses": "11111",
-        "priorities": "11111",
-        "any": "11111"
+        "unrestricted": "⟦Ȧƥƥŀīḗş ŧȯ ḗṽḗřẏ ŧīƈķḗŧ ȧƞḓ ƥřȯĵḗƈŧ⟧",
+        "boards": "⟦Ɓȯȧřḓş⟧",
+        "statuses": "⟦Şŧȧŧŭşḗş⟧",
+        "priorities": "⟦Ƥřīȯřīŧīḗş⟧",
+        "any": "⟦Ȧƞẏ⟧"
       },
       "toasts": {
-        "created": "11111",
-        "updated": "11111",
-        "deleted": "11111",
-        "error": "11111",
-        "deleteError": "11111"
+        "created": "⟦Ŧřīɠɠḗř ƈřḗȧŧḗḓ⟧",
+        "updated": "⟦Ŧřīɠɠḗř ŭƥḓȧŧḗḓ⟧",
+        "deleted": "⟦Ŧřīɠɠḗř ḓḗŀḗŧḗḓ⟧",
+        "error": "⟦Ŭƞȧƀŀḗ ŧȯ şȧṽḗ ŧřīɠɠḗř⟧",
+        "deleteError": "⟦Ŭƞȧƀŀḗ ŧȯ ḓḗŀḗŧḗ ŧřīɠɠḗř⟧"
       },
       "errors": {
-        "load": "11111"
+        "load": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ şŭřṽḗẏ ŧřīɠɠḗřş.⟧"
       },
-      "deleteConfirm": "11111",
-      "actionsMenuAria": "11111 {{target}} 11111"
+      "deleteConfirm": "⟦Ḓḗŀḗŧḗ ŧħīş ŧřīɠɠḗř? Īƞṽīŧȧŧīȯƞş ȧŀřḗȧḓẏ ʠŭḗŭḗḓ ẇīŀŀ şŧīŀŀ ƀḗ şḗƞŧ.⟧",
+      "actionsMenuAria": "⟦Ȯƥḗƞ ȧƈŧīȯƞş ƒȯř ŧřīɠɠḗř ŧȧřɠḗŧīƞɠ {{target}}⟧"
     },
     "triggerForm": {
-      "titleCreate": "11111",
-      "titleEdit": "11111",
+      "titleCreate": "⟦Ƈřḗȧŧḗ şŭřṽḗẏ ŧřīɠɠḗř⟧",
+      "titleEdit": "⟦Ḗḓīŧ şŭřṽḗẏ ŧřīɠɠḗř⟧",
       "triggerTypes": {
-        "ticket_closed": "11111",
-        "project_completed": "11111"
+        "ticket_closed": "⟦Ŧīƈķḗŧ ƈŀȯşḗḓ⟧",
+        "project_completed": "⟦Ƥřȯĵḗƈŧ ƈȯḿƥŀḗŧḗḓ⟧"
       },
       "labels": {
-        "template": "11111",
-        "triggerType": "11111",
-        "boardIds": "11111",
-        "statusIds": "11111",
-        "priorities": "11111",
-        "enabled": "11111"
+        "template": "⟦Şŭřṽḗẏ ŧḗḿƥŀȧŧḗ⟧",
+        "triggerType": "⟦Ŧřīɠɠḗř ŧẏƥḗ⟧",
+        "boardIds": "⟦Ɓȯȧřḓş⟧",
+        "statusIds": "⟦Şŧȧŧŭşḗş⟧",
+        "priorities": "⟦Ƥřīȯřīŧīḗş⟧",
+        "enabled": "⟦Ŧřīɠɠḗř ḗƞȧƀŀḗḓ⟧"
       },
       "placeholders": {
-        "boardIds": "11111",
-        "statusIds": "11111",
-        "priorities": "11111"
+        "boardIds": "⟦Şḗŀḗƈŧ ƀȯȧřḓ⟧",
+        "statusIds": "⟦Ȧḓḓ şŧȧŧŭş⟧",
+        "priorities": "⟦Ȧḓḓ ƥřīȯřīŧẏ⟧"
       },
       "boardFilters": {
-        "active": "11111",
-        "inactive": "11111",
-        "all": "11111"
+        "active": "⟦Ȧƈŧīṽḗ ƀȯȧřḓş⟧",
+        "inactive": "⟦Īƞȧƈŧīṽḗ ƀȯȧřḓş⟧",
+        "all": "⟦Ȧŀŀ ƀȯȧřḓş⟧"
       },
       "help": {
-        "conditions": "11111"
+        "conditions": "⟦Ŀḗȧṽḗ ȧ ƒīḗŀḓ ƀŀȧƞķ ŧȯ ḿȧŧƈħ ȧƞẏ ṽȧŀŭḗ.⟧"
       },
       "actions": {
-        "create": "11111",
-        "save": "11111",
-        "delete": "11111"
+        "create": "⟦Ƈřḗȧŧḗ ŧřīɠɠḗř⟧",
+        "save": "⟦Şȧṽḗ ƈħȧƞɠḗş⟧",
+        "delete": "⟦Ḓḗŀḗŧḗ ŧřīɠɠḗř⟧"
       },
-      "noTemplates": "11111",
-      "prioritiesMixed": "11111",
+      "noTemplates": "⟦Ƈřḗȧŧḗ ȧ şŭřṽḗẏ ŧḗḿƥŀȧŧḗ ƀḗƒȯřḗ ȧḓḓīƞɠ ŧřīɠɠḗřş.⟧",
+      "prioritiesMixed": "⟦Şḗŀḗƈŧḗḓ ƀȯȧřḓş ŭşḗ ḓīƒƒḗřḗƞŧ ƥřīȯřīŧẏ ŧẏƥḗş. Şħȯẇīƞɠ ȧŀŀ ƥřīȯřīŧīḗş.⟧",
       "errors": {
-        "reference": "11111"
+        "reference": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ŧřīɠɠḗř ȯƥŧīȯƞş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
       }
     }
   },
   "response": {
-    "pageTitle": "11111",
-    "invalidTitle": "11111",
-    "invalidMessage": "11111",
-    "ratingPrompt": "11111",
-    "ratingAssistive": "11111 {{scale}} 11111",
-    "commentLabel": "11111",
-    "submitButton": "11111",
-    "submitting": "11111",
-    "submittedTitle": "11111",
-    "submittedMessage": "11111 {{thankYouText}} 11111",
-    "ratingSubmitted": "11111",
-    "retryButton": "11111",
-    "selectRatingError": "11111",
-    "errorMessage": "11111",
-    "supportMessage": "11111"
+    "pageTitle": "⟦Ƈŭşŧȯḿḗř Şȧŧīşƒȧƈŧīȯƞ Şŭřṽḗẏ⟧",
+    "invalidTitle": "⟦Şŭřṽḗẏ ŭƞȧṽȧīŀȧƀŀḗ⟧",
+    "invalidMessage": "⟦Ŧħīş ƒḗḗḓƀȧƈķ ŀīƞķ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ ȯř ħȧş ȧŀřḗȧḓẏ ƀḗḗƞ ŭşḗḓ.⟧",
+    "ratingPrompt": "⟦Ħȯẇ ẇȧş ẏȯŭř ḗẋƥḗřīḗƞƈḗ?⟧",
+    "ratingAssistive": "⟦Şḗŀḗƈŧ ȧ şƈȯřḗ ƒřȯḿ 1 ŧȯ {{scale}}⟧",
+    "commentLabel": "⟦Ȧḓḓīŧīȯƞȧŀ ƈȯḿḿḗƞŧş (ȯƥŧīȯƞȧŀ)⟧",
+    "submitButton": "⟦Şŭƀḿīŧ ƒḗḗḓƀȧƈķ⟧",
+    "submitting": "⟦Şŭƀḿīŧŧīƞɠ ƒḗḗḓƀȧƈķ...⟧",
+    "submittedTitle": "⟦Ŧħȧƞķ ẏȯŭ ƒȯř ẏȯŭř řḗşƥȯƞşḗ!⟧",
+    "submittedMessage": "⟦{{thankYouText}}⟧",
+    "ratingSubmitted": "⟦Ƒḗḗḓƀȧƈķ şŭƀḿīŧŧḗḓ⟧",
+    "retryButton": "⟦Ŧřẏ ȧɠȧīƞ⟧",
+    "selectRatingError": "⟦Şḗŀḗƈŧ ȧ řȧŧīƞɠ ƀḗƒȯřḗ şŭƀḿīŧŧīƞɠ.⟧",
+    "errorMessage": "⟦Ẇḗ ƈȯŭŀḓ ƞȯŧ řḗƈȯřḓ ẏȯŭř ƒḗḗḓƀȧƈķ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+    "supportMessage": "⟦Īƒ ẏȯŭ ħȧṽḗ ʠŭḗşŧīȯƞş, ƥŀḗȧşḗ ƈȯƞŧȧƈŧ ẏȯŭř ŧḗƈħƞīƈīȧƞ.⟧"
   },
   "rating": {
-    "buttonAriaWithLabel": "11111 {{rating}} 11111 {{label}} 11111",
-    "buttonAria": "11111 {{rating}} 11111 {{scale}} 11111",
+    "buttonAriaWithLabel": "⟦{{rating}} - {{label}}⟧",
+    "buttonAria": "⟦Řȧŧīƞɠ {{rating}} ȯƒ {{scale}}⟧",
     "defaults": {
       "3": {
-        "1": "11111",
-        "2": "11111",
-        "3": "11111"
+        "1": "⟦Ƥȯȯř⟧",
+        "2": "⟦Ɠȯȯḓ⟧",
+        "3": "⟦Ḗẋƈḗŀŀḗƞŧ⟧"
       },
       "5": {
-        "1": "11111",
-        "2": "11111",
-        "3": "11111",
-        "4": "11111",
-        "5": "11111"
+        "1": "⟦Ṽḗřẏ Ƥȯȯř⟧",
+        "2": "⟦Ƥȯȯř⟧",
+        "3": "⟦Ȧṽḗřȧɠḗ⟧",
+        "4": "⟦Ɠȯȯḓ⟧",
+        "5": "⟦Ḗẋƈḗŀŀḗƞŧ⟧"
       },
       "10": {
-        "1": "11111",
-        "2": "11111",
-        "3": "11111",
-        "4": "11111",
-        "5": "11111",
-        "6": "11111",
-        "7": "11111",
-        "8": "11111",
-        "9": "11111",
-        "10": "11111"
+        "1": "⟦Ŧḗřřīƀŀḗ⟧",
+        "2": "⟦Ṽḗřẏ Ƥȯȯř⟧",
+        "3": "⟦Ƥȯȯř⟧",
+        "4": "⟦Ɓḗŀȯẇ Ȧṽḗřȧɠḗ⟧",
+        "5": "⟦Ȧṽḗřȧɠḗ⟧",
+        "6": "⟦Ȧƀȯṽḗ Ȧṽḗřȧɠḗ⟧",
+        "7": "⟦Ɠȯȯḓ⟧",
+        "8": "⟦Ṽḗřẏ Ɠȯȯḓ⟧",
+        "9": "⟦Ḗẋƈḗŀŀḗƞŧ⟧",
+        "10": "⟦Ƥḗřƒḗƈŧ⟧"
       }
     }
   },
   "responses": {
     "filters": {
       "labels": {
-        "template": "11111",
-        "technician": "11111",
-        "client": "11111",
-        "dateRange": "11111"
+        "template": "⟦Ŧḗḿƥŀȧŧḗ⟧",
+        "technician": "⟦Ŧḗƈħƞīƈīȧƞ⟧",
+        "client": "⟦Ƈŀīḗƞŧ⟧",
+        "dateRange": "⟦Ḓȧŧḗ Řȧƞɠḗ⟧"
       },
       "placeholders": {
-        "allTemplates": "11111",
-        "allTechnicians": "11111",
-        "allClients": "11111"
+        "allTemplates": "⟦Ȧŀŀ ŧḗḿƥŀȧŧḗş⟧",
+        "allTechnicians": "⟦Ȧŀŀ ŧḗƈħƞīƈīȧƞş⟧",
+        "allClients": "⟦Ȧŀŀ ƈŀīḗƞŧş⟧"
       },
       "actions": {
-        "apply": "11111",
-        "reset": "11111"
+        "apply": "⟦Ȧƥƥŀẏ⟧",
+        "reset": "⟦Řḗşḗŧ⟧"
       }
     },
     "page": {
-      "filterTitle": "11111",
-      "loading": "11111",
-      "error": "11111",
+      "filterTitle": "⟦Ƒīŀŧḗř Řḗşƥȯƞşḗş⟧",
+      "loading": "⟦Řḗƒřḗşħīƞɠ řḗşƥȯƞşḗş...⟧",
+      "error": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ şŭřṽḗẏ řḗşƥȯƞşḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
       "pageSizeOptions": {
-        "10": "11111",
-        "25": "11111",
-        "50": "11111"
+        "10": "⟦10 ƥḗř ƥȧɠḗ⟧",
+        "25": "⟦25 ƥḗř ƥȧɠḗ⟧",
+        "50": "⟦50 ƥḗř ƥȧɠḗ⟧"
       },
-      "itemLabel": "11111"
+      "itemLabel": "⟦řḗşƥȯƞşḗş⟧"
     },
     "detail": {
-      "title": "11111",
-      "empty": "11111",
+      "title": "⟦Şŭřṽḗẏ Řḗşƥȯƞşḗ Ḓḗŧȧīŀ⟧",
+      "empty": "⟦Ƞȯ řḗşƥȯƞşḗ şḗŀḗƈŧḗḓ.⟧",
       "labels": {
-        "submittedAt": "11111",
-        "client": "11111",
-        "contact": "11111",
-        "technician": "11111",
-        "ticket": "11111",
-        "rating": "11111",
-        "comment": "11111"
+        "submittedAt": "⟦Şŭƀḿīŧŧḗḓ Ȧŧ⟧",
+        "client": "⟦Ƈŀīḗƞŧ⟧",
+        "contact": "⟦Ƈȯƞŧȧƈŧ⟧",
+        "technician": "⟦Ŧḗƈħƞīƈīȧƞ⟧",
+        "ticket": "⟦Ŧīƈķḗŧ⟧",
+        "rating": "⟦Řȧŧīƞɠ⟧",
+        "comment": "⟦Ƈȯḿḿḗƞŧ⟧"
       },
       "fallbacks": {
-        "unknown": "11111",
-        "unassigned": "11111",
-        "none": "11111",
-        "noComment": "11111"
+        "unknown": "⟦Ŭƞķƞȯẇƞ⟧",
+        "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+        "none": "⟦-⟧",
+        "noComment": "⟦Ƞȯ ƈȯḿḿḗƞŧ ƥřȯṽīḓḗḓ.⟧"
       }
     }
   },
   "dashboard": {
-    "loadingInsights": "11111",
-    "printTitle": "11111",
+    "loadingInsights": "⟦Ŀȯȧḓīƞɠ şŭřṽḗẏ īƞşīɠħŧş...⟧",
+    "printTitle": "⟦Şŭřṽḗẏ Ḓȧşħƀȯȧřḓ⟧",
     "responseMetrics": {
       "cards": {
-        "sent": "11111",
-        "responses": "11111",
-        "responseRate": "11111",
-        "averageRating": "11111",
-        "outstanding": "11111",
-        "negative": "11111"
+        "sent": "⟦Īƞṽīŧȧŧīȯƞş Şḗƞŧ⟧",
+        "responses": "⟦Řḗşƥȯƞşḗş Řḗƈḗīṽḗḓ⟧",
+        "responseRate": "⟦Řḗşƥȯƞşḗ Řȧŧḗ⟧",
+        "averageRating": "⟦Ȧṽḗřȧɠḗ Řȧŧīƞɠ⟧",
+        "outstanding": "⟦Ȯŭŧşŧȧƞḓīƞɠ Īƞṽīŧȧŧīȯƞş⟧",
+        "negative": "⟦Ƞḗɠȧŧīṽḗ Řḗşƥȯƞşḗş (<= 2 şŧȧřş)⟧"
       },
       "badges": {
-        "awaitingResponses": "11111",
-        "needsReview": "11111"
+        "awaitingResponses": "⟦Ȧẇȧīŧīƞɠ řḗşƥȯƞşḗş⟧",
+        "needsReview": "⟦Ƞḗḗḓş řḗṽīḗẇ⟧"
       }
     },
     "responseTrend": {
-      "title": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "⟦Řḗşƥȯƞşḗ Ŧřḗƞḓ⟧",
+      "emptyTitle": "⟦Ƞȯ řḗşƥȯƞşḗş ƈȧƥŧŭřḗḓ ƒȯř ŧħḗ şḗŀḗƈŧḗḓ ƥḗřīȯḓ.⟧",
+      "emptyDescription": "⟦Ƈħḗƈķ ƀȧƈķ ȧƒŧḗř ƈŭşŧȯḿḗřş şŭƀḿīŧ ƒḗḗḓƀȧƈķ.⟧",
       "tooltip": {
-        "averageRating": "11111",
-        "responses": "11111",
-        "date": "11111 {{label}} 11111"
+        "averageRating": "⟦Ȧṽḗřȧɠḗ Řȧŧīƞɠ⟧",
+        "responses": "⟦Řḗşƥȯƞşḗş⟧",
+        "date": "⟦Ḓȧŧḗ: {{label}}⟧"
       }
     },
     "responsesList": {
-      "title": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "⟦Řḗƈḗƞŧ Řḗşƥȯƞşḗş⟧",
+      "emptyTitle": "⟦Ƞȯ şŭřṽḗẏ řḗşƥȯƞşḗş ȧṽȧīŀȧƀŀḗ ẏḗŧ.⟧",
+      "emptyDescription": "⟦Ḗƞƈȯŭřȧɠḗ ƈŭşŧȯḿḗřş ŧȯ ƥřȯṽīḓḗ ƒḗḗḓƀȧƈķ ŧȯ ƥȯƥŭŀȧŧḗ ŧħīş ṽīḗẇ.⟧",
       "table": {
-        "submitted": "11111",
-        "client": "11111",
-        "technician": "11111",
-        "rating": "11111",
-        "comment": "11111",
-        "ticket": "11111"
+        "submitted": "⟦Şŭƀḿīŧŧḗḓ⟧",
+        "client": "⟦Ƈŀīḗƞŧ⟧",
+        "technician": "⟦Ŧḗƈħƞīƈīȧƞ⟧",
+        "rating": "⟦Řȧŧīƞɠ⟧",
+        "comment": "⟦Ƈȯḿḿḗƞŧ⟧",
+        "ticket": "⟦Ŧīƈķḗŧ⟧"
       },
       "fallbacks": {
-        "unknownClient": "11111",
-        "unassigned": "11111",
-        "noComment": "11111"
+        "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧",
+        "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+        "noComment": "⟦Ƞȯ ƈȯḿḿḗƞŧ⟧"
       }
     },
     "satisfactionDistribution": {
-      "title": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "⟦Şȧŧīşƒȧƈŧīȯƞ Ḓīşŧřīƀŭŧīȯƞ⟧",
+      "emptyTitle": "⟦Ƞȯ şŭřṽḗẏ řȧŧīƞɠş řḗƈȯřḓḗḓ ẏḗŧ.⟧",
+      "emptyDescription": "⟦Ḓīşŧřīƀŭŧīȯƞ ẇīŀŀ ȧƥƥḗȧř ȧƒŧḗř ƒḗḗḓƀȧƈķ īş ƈȯŀŀḗƈŧḗḓ.⟧",
       "axes": {
-        "rating": "11111",
-        "responses": "11111"
+        "rating": "⟦Řȧŧīƞɠ⟧",
+        "responses": "⟦Řḗşƥȯƞşḗş⟧"
       },
       "tooltip": {
-        "percent": "11111",
-        "responses": "11111",
-        "rating": "11111 {{label}} 11111"
+        "percent": "⟦Ƥḗřƈḗƞŧ⟧",
+        "responses": "⟦Řḗşƥȯƞşḗş⟧",
+        "rating": "⟦Řȧŧīƞɠ: {{label}}⟧"
       }
     },
     "topIssues": {
-      "title": "11111",
-      "emptyTitle": "11111",
-      "emptyDescription": "11111",
+      "title": "⟦Ŧȯƥ Īşşŭḗş⟧",
+      "emptyTitle": "⟦Ƞȯ ƞḗɠȧŧīṽḗ ƒḗḗḓƀȧƈķ řḗƈȯřḓḗḓ ƒȯř ŧħḗ şḗŀḗƈŧḗḓ ƒīŀŧḗřş.⟧",
+      "emptyDescription": "⟦Ŧħīş īş ȧ ɠȯȯḓ şīɠƞ! Ķḗḗƥ ŭƥ ŧħḗ ɠřḗȧŧ ẇȯřķ.⟧",
       "fallbacks": {
-        "unknownClient": "11111",
-        "ticket": "11111 {{ticket}} 11111",
-        "noComment": "11111",
-        "assignedTo": "11111 {{name}} 11111"
+        "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧",
+        "ticket": "⟦Ŧīƈķḗŧ {{ticket}}⟧",
+        "noComment": "⟦Ƞȯ ƈȯḿḿḗƞŧ ŀḗƒŧ.⟧",
+        "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ: {{name}}⟧"
       }
     }
   },
   "analytics": {
     "filters": {
       "labels": {
-        "customerSegment": "11111",
-        "surveyTemplate": "11111",
-        "timeframe": "11111",
-        "calendarView": "11111"
+        "customerSegment": "⟦Ƈŭşŧȯḿḗř Şḗɠḿḗƞŧ⟧",
+        "surveyTemplate": "⟦Şŭřṽḗẏ Ŧḗḿƥŀȧŧḗ⟧",
+        "timeframe": "⟦Ŧīḿḗƒřȧḿḗ⟧",
+        "calendarView": "⟦Ƈȧŀḗƞḓȧř Ṽīḗẇ⟧"
       },
       "defaults": {
         "segments": {
-          "all": "11111",
-          "managed": "11111",
-          "project": "11111"
+          "all": "⟦Ȧŀŀ ƈŭşŧȯḿḗřş⟧",
+          "managed": "⟦Ḿȧƞȧɠḗḓ ƈŀīḗƞŧş⟧",
+          "project": "⟦Ƥřȯĵḗƈŧ-ȯƞŀẏ ƈŀīḗƞŧş⟧"
         },
         "templates": {
-          "all": "11111",
-          "default": "11111"
+          "all": "⟦Ȧŀŀ ŧḗḿƥŀȧŧḗş⟧",
+          "default": "⟦Ƥħȧşḗ 1 ƇŞȦŦ ŧḗḿƥŀȧŧḗ⟧"
         },
         "timeframes": {
-          "30d": "11111",
-          "90d": "11111",
-          "365d": "11111"
+          "30d": "⟦Ŀȧşŧ 30 ḓȧẏş⟧",
+          "90d": "⟦Ŀȧşŧ 90 ḓȧẏş⟧",
+          "365d": "⟦Ẏḗȧř ŧȯ ḓȧŧḗ⟧"
         }
       },
       "actions": {
-        "apply": "11111",
-        "reset": "11111",
-        "calendar": "11111"
+        "apply": "⟦Ȧƥƥŀẏ Ƒīŀŧḗřş⟧",
+        "reset": "⟦Řḗşḗŧ⟧",
+        "calendar": "⟦Ƈȯḿīƞɠ şȯȯƞ⟧"
       }
     },
     "page": {
-      "filtersTitle": "11111",
-      "overviewTitle": "11111",
-      "overviewDescription": "11111"
+      "filtersTitle": "⟦Ȧƞȧŀẏŧīƈş Ƒīŀŧḗřş⟧",
+      "overviewTitle": "⟦Şȧŧīşƒȧƈŧīȯƞ Ȯṽḗřṽīḗẇ⟧",
+      "overviewDescription": "⟦Ƈȯḿƥȧřḗ ȧṽḗřȧɠḗ şȧŧīşƒȧƈŧīȯƞ ȧƞḓ řḗşƥȯƞşḗ řȧŧḗş ȯṽḗř ŧīḿḗ. Ȧḓḓīŧīȯƞȧŀ şḗɠḿḗƞŧȧŧīȯƞ ẇīŀŀ ȧřřīṽḗ īƞ ŀȧŧḗř īŧḗřȧŧīȯƞş.⟧"
     },
     "chart": {
-      "empty": "11111",
+      "empty": "⟦Şḗŀḗƈŧ ƒīŀŧḗřş ȧƀȯṽḗ ŧȯ ḗẋƥŀȯřḗ ȧḓṽȧƞƈḗḓ ȧƞȧŀẏŧīƈş. (Ƈȯḿīƞɠ şȯȯƞ)⟧",
       "tooltip": {
-        "averageRating": "11111",
-        "responseRate": "11111"
+        "averageRating": "⟦Ȧṽḗřȧɠḗ Řȧŧīƞɠ⟧",
+        "responseRate": "⟦Řḗşƥȯƞşḗ Řȧŧḗ⟧"
       },
       "legend": {
-        "averageRating": "11111",
-        "responseRate": "11111"
+        "averageRating": "⟦Ȧṽḗřȧɠḗ Řȧŧīƞɠ⟧",
+        "responseRate": "⟦Řḗşƥȯƞşḗ Řȧŧḗ⟧"
       }
     },
     "export": {
-      "csv": "11111",
-      "shareSnapshot": "11111",
-      "emailDigest": "11111"
+      "csv": "⟦Ḗẋƥȯřŧ ƇŞṼ⟧",
+      "shareSnapshot": "⟦Şħȧřḗ Şƞȧƥşħȯŧ⟧",
+      "emailDigest": "⟦Ḗḿȧīŀ Ḓīɠḗşŧ⟧"
     }
   },
   "clientSummary": {
-    "title": "11111",
-    "empty": "11111",
+    "title": "⟦Şȧŧīşƒȧƈŧīȯƞ⟧",
+    "empty": "⟦Ƞȯ şŭřṽḗẏ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ƈŀīḗƞŧ ẏḗŧ. Şŭřṽḗẏş şḗƞŧ ȧƒŧḗř ŧīƈķḗŧ ƈŀȯşŭřḗş ẇīŀŀ ƥȯƥŭŀȧŧḗ ŧħīş ṽīḗẇ.⟧",
     "labels": {
-      "averageRating": "11111",
-      "responseRate": "11111",
-      "totalResponses": "11111",
-      "lastResponse": "11111",
-      "rollingTrend": "11111"
+      "averageRating": "⟦Ȧṽḗřȧɠḗ Řȧŧīƞɠ⟧",
+      "responseRate": "⟦Řḗşƥȯƞşḗ Řȧŧḗ⟧",
+      "totalResponses": "⟦Ŧȯŧȧŀ řḗşƥȯƞşḗş⟧",
+      "lastResponse": "⟦Ŀȧşŧ řḗşƥȯƞşḗ⟧",
+      "rollingTrend": "⟦Řȯŀŀīƞɠ Ŧřḗƞḓ⟧"
     },
     "fallbacks": {
-      "none": "11111",
-      "noResponsesYet": "11111"
+      "none": "⟦-⟧",
+      "noResponsesYet": "⟦Ƞȯ řḗşƥȯƞşḗş ẏḗŧ⟧"
     }
   },
   "ticketSummary": {
-    "title": "11111",
-    "empty": "11111",
+    "title": "⟦Ƈŭşŧȯḿḗř Ƒḗḗḓƀȧƈķ⟧",
+    "empty": "⟦Ƞȯ şŭřṽḗẏ řḗşƥȯƞşḗş řḗƈḗīṽḗḓ ƒȯř ŧħīş ŧīƈķḗŧ ẏḗŧ.⟧",
     "labels": {
-      "latestRating": "11111",
-      "comment": "11111",
-      "totalResponses": "11111"
+      "latestRating": "⟦Ŀȧŧḗşŧ Řȧŧīƞɠ⟧",
+      "comment": "⟦Ƈȯḿḿḗƞŧ⟧",
+      "totalResponses": "⟦Ŧȯŧȧŀ řḗşƥȯƞşḗş⟧"
     },
     "fallbacks": {
-      "none": "11111"
+      "none": "⟦-⟧"
     }
   },
   "print": {
-    "emptyValue": "11111",
+    "emptyValue": "⟦—⟧",
     "columns": {
-      "date": "11111",
-      "averageRating": "11111",
-      "responses": "11111",
-      "rating": "11111",
-      "share": "11111",
-      "ticket": "11111",
-      "client": "11111",
-      "contact": "11111",
-      "agent": "11111",
-      "technician": "11111",
-      "submitted": "11111",
-      "comment": "11111"
+      "date": "⟦Ḓȧŧḗ⟧",
+      "averageRating": "⟦Ȧṽḗřȧɠḗ Řȧŧīƞɠ⟧",
+      "responses": "⟦Řḗşƥȯƞşḗş⟧",
+      "rating": "⟦Řȧŧīƞɠ⟧",
+      "share": "⟦Şħȧřḗ⟧",
+      "ticket": "⟦Ŧīƈķḗŧ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "contact": "⟦Ƈȯƞŧȧƈŧ⟧",
+      "agent": "⟦Ȧɠḗƞŧ⟧",
+      "technician": "⟦Ŧḗƈħƞīƈīȧƞ⟧",
+      "submitted": "⟦Şŭƀḿīŧŧḗḓ⟧",
+      "comment": "⟦Ƈȯḿḿḗƞŧ⟧"
     },
     "metrics": {
-      "invitations": "11111",
-      "responses": "11111",
-      "responseRate": "11111",
-      "averageRating": "11111",
-      "outstanding": "11111",
-      "recentNegative": "11111"
+      "invitations": "⟦Īƞṽīŧȧŧīȯƞş⟧",
+      "responses": "⟦Řḗşƥȯƞşḗş⟧",
+      "responseRate": "⟦Řḗşƥȯƞşḗ Řȧŧḗ⟧",
+      "averageRating": "⟦Ȧṽḗřȧɠḗ Řȧŧīƞɠ⟧",
+      "outstanding": "⟦Ȯŭŧşŧȧƞḓīƞɠ⟧",
+      "recentNegative": "⟦Řḗƈḗƞŧ Ƞḗɠȧŧīṽḗ⟧"
     },
     "sections": {
-      "trend": "11111",
-      "distribution": "11111",
-      "topIssues": "11111",
-      "recentResponses": "11111"
+      "trend": "⟦Řḗşƥȯƞşḗ Ŧřḗƞḓ⟧",
+      "distribution": "⟦Şȧŧīşƒȧƈŧīȯƞ Ḓīşŧřīƀŭŧīȯƞ⟧",
+      "topIssues": "⟦Ŧȯƥ Īşşŭḗş⟧",
+      "recentResponses": "⟦Řḗƈḗƞŧ Řḗşƥȯƞşḗş⟧"
     },
     "empty": {
-      "trend": "11111",
-      "distribution": "11111",
-      "topIssues": "11111",
-      "recentResponses": "11111"
+      "trend": "⟦Ƞȯ řḗşƥȯƞşḗş īƞ ŧħīş ƥḗřīȯḓ.⟧",
+      "distribution": "⟦Ƞȯ řȧŧḗḓ řḗşƥȯƞşḗş īƞ ŧħīş ƥḗřīȯḓ.⟧",
+      "topIssues": "⟦Ƞȯ ƞḗɠȧŧīṽḗ řḗşƥȯƞşḗş īƞ ŧħīş ƥḗřīȯḓ.⟧",
+      "recentResponses": "⟦Ƞȯ řḗşƥȯƞşḗş īƞ ŧħīş ƥḗřīȯḓ.⟧"
     }
   },
   "errors": {
     "template": {
-      "notFound": "11111"
+      "notFound": "⟦Şŭřṽḗẏ ŧḗḿƥŀȧŧḗ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧"
     },
     "trigger": {
-      "notFound": "11111",
-      "templateRequired": "11111"
+      "notFound": "⟦Şŭřṽḗẏ ŧřīɠɠḗř ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "templateRequired": "⟦Ƈħȯȯşḗ ȧƞ ḗẋīşŧīƞɠ şŭřṽḗẏ ŧḗḿƥŀȧŧḗ ƀḗƒȯřḗ şȧṽīƞɠ ŧħḗ ŧřīɠɠḗř.⟧"
     },
     "survey": {
-      "invalidValue": "11111",
-      "referenceMissing": "11111",
-      "duplicate": "11111",
-      "notAllowed": "11111",
-      "missingField": "11111",
-      "missingFieldNamed": "11111 {{field}} 11111",
-      "invalidData": "11111"
+      "invalidValue": "⟦Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ şŭřṽḗẏ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "referenceMissing": "⟦Ŧħḗ şḗŀḗƈŧḗḓ şŭřṽḗẏ ŧḗḿƥŀȧŧḗ ȯř řḗŀȧŧḗḓ řḗƈȯřḓ ƞȯ ŀȯƞɠḗř ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "duplicate": "⟦Ȧ şŭřṽḗẏ řḗƈȯřḓ ẇīŧħ ŧħḗşḗ ḓḗŧȧīŀş ȧŀřḗȧḓẏ ḗẋīşŧş.⟧",
+      "notAllowed": "⟦Ȯƞḗ ȯƒ ŧħḗ şŭřṽḗẏ ṽȧŀŭḗş īş ƞȯŧ ȧŀŀȯẇḗḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "missingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ şŭřṽḗẏ ƒīḗŀḓ.⟧",
+      "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ şŭřṽḗẏ ƒīḗŀḓ: {{field}}.⟧",
+      "invalidData": "⟦Şŭřṽḗẏ ḓȧŧȧ īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧"
     },
     "options": {
-      "boardsFailed": "11111",
-      "statusesFailed": "11111",
-      "prioritiesFailed": "11111",
-      "triggerOptionsFailed": "11111"
+      "boardsFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ƀȯȧřḓş.⟧",
+      "statusesFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ şŧȧŧŭşḗş.⟧",
+      "prioritiesFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ƥřīȯřīŧīḗş.⟧",
+      "triggerOptionsFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ şŭřṽḗẏ ŧřīɠɠḗř ȯƥŧīȯƞş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     },
     "response": {
-      "linkInvalidOrUsed": "11111",
-      "ratingRequired": "11111",
-      "linkInvalidOrExpired": "11111",
-      "ticketInactive": "11111",
-      "alreadyCompleted": "11111",
-      "missingField": "11111",
-      "missingFieldNamed": "11111 {{field}} 11111",
-      "invalidData": "11111"
+      "linkInvalidOrUsed": "⟦Ŧħīş ƒḗḗḓƀȧƈķ ŀīƞķ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ ȯř ħȧş ȧŀřḗȧḓẏ ƀḗḗƞ ŭşḗḓ.⟧",
+      "ratingRequired": "⟦Şḗŀḗƈŧ ȧ řȧŧīƞɠ ƒřȯḿ ŧħḗ ƈħȯīƈḗş şħȯẇƞ ƀḗƒȯřḗ şŭƀḿīŧŧīƞɠ.⟧",
+      "linkInvalidOrExpired": "⟦Ŧħīş ƒḗḗḓƀȧƈķ ŀīƞķ īş īƞṽȧŀīḓ ȯř ḗẋƥīřḗḓ.⟧",
+      "ticketInactive": "⟦Ŧħīş ƒḗḗḓƀȧƈķ ŀīƞķ īş ƞȯ ŀȯƞɠḗř ƈȯƞƞḗƈŧḗḓ ŧȯ ȧƞ ȧƈŧīṽḗ ŧīƈķḗŧ. Ƥŀḗȧşḗ ƈȯƞŧȧƈŧ ẏȯŭř ŧḗƈħƞīƈīȧƞ.⟧",
+      "alreadyCompleted": "⟦Ŧħīş şŭřṽḗẏ ħȧş ȧŀřḗȧḓẏ ƀḗḗƞ ƈȯḿƥŀḗŧḗḓ.⟧",
+      "missingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ƒḗḗḓƀȧƈķ ƒīḗŀḓ.⟧",
+      "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ƒḗḗḓƀȧƈķ ƒīḗŀḓ: {{field}}.⟧",
+      "invalidData": "⟦Şŭřṽḗẏ řḗşƥȯƞşḗ ḓȧŧȧ īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ẏȯŭř ƒḗḗḓƀȧƈķ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧"
     }
   }
 }

@@ -1,361 +1,361 @@
 {
   "reduceModal": {
-    "title": "11111",
-    "enterpriseOnly": "11111"
+    "title": "⟦Řḗḓŭƈḗ Ŀīƈḗƞşḗş⟧",
+    "enterpriseOnly": "⟦Ŧħīş ƒḗȧŧŭřḗ īş ȯƞŀẏ ȧṽȧīŀȧƀŀḗ īƞ Ƥřȯ.⟧"
   },
   "purchaseForm": {
-    "title": "11111",
-    "enterpriseOnlyHosted": "11111",
-    "communityEditionUnlimited": "11111"
+    "title": "⟦Ŀīƈḗƞşḗ Ƥŭřƈħȧşḗ⟧",
+    "enterpriseOnlyHosted": "⟦Ŀīƈḗƞşḗ ƥŭřƈħȧşīƞɠ īş ȧṽȧīŀȧƀŀḗ īƞ Ƥřȯ ƒȯř ħȯşŧḗḓ ḓḗƥŀȯẏḿḗƞŧş.⟧",
+    "communityEditionUnlimited": "⟦Şḗŀƒ-ħȯşŧḗḓ Ƈȯḿḿŭƞīŧẏ Ḗḓīŧīȯƞ ħȧş ŭƞŀīḿīŧḗḓ ŭşḗřş ȧŧ ƞȯ ȧḓḓīŧīȯƞȧŀ ƈȯşŧ.⟧"
   },
   "purchasePage": {
-    "title": "11111",
-    "description": "11111"
+    "title": "⟦Ƥŭřƈħȧşḗ Ŀīƈḗƞşḗş⟧",
+    "description": "⟦Ȧḓḓ ḿȯřḗ ŭşḗř ŀīƈḗƞşḗş ŧȯ ẏȯŭř ȦŀɠȧƤŞȦ ȧƈƈȯŭƞŧ⟧"
   },
   "purchaseSuccess": {
-    "metaTitle": "11111",
-    "scheduledTitle": "11111",
-    "updatedTitle": "11111",
-    "scheduledDescription": "11111",
-    "updatedDescription": "11111",
-    "loadingSubscriptionDetails": "11111",
-    "updatingLicenseCount": "11111",
-    "licenseInformation": "11111",
-    "youNowHave": "11111",
-    "totalLicenses": "11111",
-    "changeEffective": "11111",
-    "whatsNext": "11111",
+    "metaTitle": "⟦Ƥŭřƈħȧşḗ Şŭƈƈḗşş⟧",
+    "scheduledTitle": "⟦Ƈħȧƞɠḗ Şƈħḗḓŭŀḗḓ Şŭƈƈḗşşƒŭŀŀẏ!⟧",
+    "updatedTitle": "⟦Ŭƥḓȧŧḗ Şŭƈƈḗşşƒŭŀ!⟧",
+    "scheduledDescription": "⟦Ẏȯŭř ŀīƈḗƞşḗ ƈħȧƞɠḗ ħȧş ƀḗḗƞ şƈħḗḓŭŀḗḓ ȧƞḓ ẇīŀŀ ŧȧķḗ ḗƒƒḗƈŧ ȧŧ ŧħḗ ḗƞḓ ȯƒ ẏȯŭř ƈŭřřḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓ.⟧",
+    "updatedDescription": "⟦Ẏȯŭř ŀīƈḗƞşḗ ŭƥḓȧŧḗ ħȧş ƀḗḗƞ ƥřȯƈḗşşḗḓ şŭƈƈḗşşƒŭŀŀẏ!⟧",
+    "loadingSubscriptionDetails": "⟦Ŀȯȧḓīƞɠ şŭƀşƈřīƥŧīȯƞ ḓḗŧȧīŀş...⟧",
+    "updatingLicenseCount": "⟦Ŭƥḓȧŧīƞɠ ŀīƈḗƞşḗ ƈȯŭƞŧ...⟧",
+    "licenseInformation": "⟦Ŀīƈḗƞşḗ Īƞƒȯřḿȧŧīȯƞ⟧",
+    "youNowHave": "⟦Ẏȯŭ ƞȯẇ ħȧṽḗ⟧",
+    "totalLicenses": "⟦ŧȯŧȧŀ ŀīƈḗƞşḗş⟧",
+    "changeEffective": "⟦Ƈħȧƞɠḗ ḗƒƒḗƈŧīṽḗ⟧",
+    "whatsNext": "⟦Ẇħȧŧ'ş ƞḗẋŧ?⟧",
     "scheduledSteps": {
-      "currentLicenses": "11111",
-      "autoUpdate": "11111",
-      "emailConfirmation": "11111"
+      "currentLicenses": "⟦Ẏȯŭř ƈŭřřḗƞŧ ŀīƈḗƞşḗş řḗḿȧīƞ ȧƈŧīṽḗ ŭƞŧīŀ ŧħḗ ḗƞḓ ȯƒ ŧħḗ ƀīŀŀīƞɠ ƥḗřīȯḓ⟧",
+      "autoUpdate": "⟦Ŧħḗ ŀīƈḗƞşḗ ƈȯŭƞŧ ẇīŀŀ ȧŭŧȯḿȧŧīƈȧŀŀẏ ŭƥḓȧŧḗ ȯƞ ŧħḗ şƈħḗḓŭŀḗḓ ḓȧŧḗ⟧",
+      "emailConfirmation": "⟦Ẏȯŭ'ŀŀ řḗƈḗīṽḗ ȧƞ ḗḿȧīŀ ƈȯƞƒīřḿȧŧīȯƞ ẇħḗƞ ŧħḗ ƈħȧƞɠḗ ŧȧķḗş ḗƒƒḗƈŧ⟧"
     },
     "updatedSteps": {
-      "activeReady": "11111",
-      "createUsers": "11111",
-      "invoiceProrated": "11111"
+      "activeReady": "⟦Ẏȯŭř ŀīƈḗƞşḗş ȧřḗ ƞȯẇ ȧƈŧīṽḗ ȧƞḓ řḗȧḓẏ ŧȯ ŭşḗ⟧",
+      "createUsers": "⟦Ẏȯŭ ƈȧƞ ƈřḗȧŧḗ ƞḗẇ ŭşḗřş īḿḿḗḓīȧŧḗŀẏ ƒřȯḿ Ŭşḗř Ḿȧƞȧɠḗḿḗƞŧ⟧",
+      "invoiceProrated": "⟦Ẏȯŭř ƞḗẋŧ īƞṽȯīƈḗ ẇīŀŀ īƞƈŀŭḓḗ ŧħḗ ƥřȯřȧŧḗḓ ƈħȧřɠḗş⟧"
     },
-    "sessionDetails": "11111",
-    "sessionId": "11111",
-    "goToAccountManagement": "11111"
+    "sessionDetails": "⟦Şḗşşīȯƞ Ḓḗŧȧīŀş (ƒȯř şŭƥƥȯřŧ)⟧",
+    "sessionId": "⟦Şḗşşīȯƞ ĪḒ:⟧",
+    "goToAccountManagement": "⟦Ɠȯ ŧȯ Ȧƈƈȯŭƞŧ Ḿȧƞȧɠḗḿḗƞŧ⟧"
   },
   "subscriptionForm": {
-    "title": "11111",
+    "title": "⟦Ḿȧƞȧɠḗ Ŀīƈḗƞşḗ Şŭƀşƈřīƥŧīȯƞ⟧",
     "errors": {
-      "loadPricing": "11111",
-      "loadLicenseInformation": "11111",
-      "prepareUpdate": "11111",
-      "processUpdate": "11111",
-      "missingCheckoutSessionData": "11111"
+      "loadPricing": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřīƈīƞɠ⟧",
+      "loadLicenseInformation": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŀīƈḗƞşḗ īƞƒȯřḿȧŧīȯƞ⟧",
+      "prepareUpdate": "⟦Ƒȧīŀḗḓ ŧȯ ƥřḗƥȧřḗ ŀīƈḗƞşḗ ŭƥḓȧŧḗ⟧",
+      "processUpdate": "⟦Ƒȧīŀḗḓ ŧȯ ƥřȯƈḗşş ŀīƈḗƞşḗ ŭƥḓȧŧḗ⟧",
+      "missingCheckoutSessionData": "⟦Ḿīşşīƞɠ ƈħḗƈķȯŭŧ şḗşşīȯƞ ḓȧŧȧ⟧"
     },
     "checkout": {
-      "title": "11111",
-      "summary": "11111 {{quantity}} 11111 {{licenseLabel}} 11111 {{price}} 11111 {{interval}} 11111",
-      "total": "11111 {{total}} 11111 {{interval}} 11111",
-      "cancel": "11111"
+      "title": "⟦Ƈȯḿƥŀḗŧḗ Ẏȯŭř Ƥŭřƈħȧşḗ⟧",
+      "summary": "⟦Ẏȯŭ ȧřḗ ƥŭřƈħȧşīƞɠ {{quantity}} {{licenseLabel}} ȧŧ {{price}} ƥḗř ŀīƈḗƞşḗ ƥḗř {{interval}}.⟧",
+      "total": "⟦Ŧȯŧȧŀ: {{total}}/{{interval}}⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧"
     },
     "confirmation": {
-      "title": "11111",
-      "increaseDescription": "11111",
-      "decreaseDescription": "11111",
-      "currentMonthlyCost": "11111",
-      "currentLicenseCount": "11111",
-      "newMonthlyCost": "11111",
-      "newLicenseCount": "11111",
-      "monthlyIncrease": "11111",
-      "monthlySavings": "11111",
-      "paymentMethod": "11111",
-      "changePaymentMethod": "11111",
-      "immediateChargeTitle": "11111",
-      "immediateChargeDescription": "11111 {{amountDue}} 11111",
-      "prorationDescription": "11111 {{amount}} 11111",
-      "scheduledTitle": "11111",
-      "scheduledDescription": "11111 {{date}} 11111",
-      "scheduledKeepAccess": "11111 {{count}} 11111",
-      "cancel": "11111",
-      "confirmPayNow": "11111",
-      "confirmSchedule": "11111"
+      "title": "⟦Ƈȯƞƒīřḿ Ŀīƈḗƞşḗ Ŭƥḓȧŧḗ⟧",
+      "increaseDescription": "⟦Řḗṽīḗẇ ŧħḗ ḓḗŧȧīŀş ȯƒ ẏȯŭř ŀīƈḗƞşḗ īƞƈřḗȧşḗ ƀḗƒȯřḗ ƈȯƞƒīřḿīƞɠ.⟧",
+      "decreaseDescription": "⟦Řḗṽīḗẇ ŧħḗ ḓḗŧȧīŀş ȯƒ ẏȯŭř ŀīƈḗƞşḗ ḓḗƈřḗȧşḗ. Ƈħȧƞɠḗş ẇīŀŀ ŧȧķḗ ḗƒƒḗƈŧ ȧŧ ŧħḗ ḗƞḓ ȯƒ ẏȯŭř ƀīŀŀīƞɠ ƥḗřīȯḓ.⟧",
+      "currentMonthlyCost": "⟦Ƈŭřřḗƞŧ Ḿȯƞŧħŀẏ Ƈȯşŧ⟧",
+      "currentLicenseCount": "⟦Ƈŭřřḗƞŧ Ŀīƈḗƞşḗ Ƈȯŭƞŧ⟧",
+      "newMonthlyCost": "⟦Ƞḗẇ Ḿȯƞŧħŀẏ Ƈȯşŧ⟧",
+      "newLicenseCount": "⟦Ƞḗẇ Ŀīƈḗƞşḗ Ƈȯŭƞŧ⟧",
+      "monthlyIncrease": "⟦Ḿȯƞŧħŀẏ Īƞƈřḗȧşḗ⟧",
+      "monthlySavings": "⟦Ḿȯƞŧħŀẏ Şȧṽīƞɠş⟧",
+      "paymentMethod": "⟦Ƥȧẏḿḗƞŧ Ḿḗŧħȯḓ⟧",
+      "changePaymentMethod": "⟦Ƈħȧƞɠḗ⟧",
+      "immediateChargeTitle": "⟦Īḿḿḗḓīȧŧḗ ƈħȧřɠḗ⟧",
+      "immediateChargeDescription": "⟦Ẏȯŭ ẇīŀŀ ƀḗ ƈħȧřɠḗḓ {{amountDue}} ƞȯẇ ƒȯř ŧħḗ ƥřȯřȧŧḗḓ ȧḿȯŭƞŧ.⟧",
+      "prorationDescription": "⟦Ƥřȯřȧŧīȯƞ: {{amount}} ƒȯř ŧħḗ řḗḿȧīƞḓḗř ȯƒ ŧħīş ƀīŀŀīƞɠ ƥḗřīȯḓ⟧",
+      "scheduledTitle": "⟦Şƈħḗḓŭŀḗḓ ƒȯř ƥḗřīȯḓ ḗƞḓ⟧",
+      "scheduledDescription": "⟦Ŀīƈḗƞşḗ ḓḗƈřḗȧşḗ ẇīŀŀ ŧȧķḗ ḗƒƒḗƈŧ ȯƞ {{date}} ȧŧ ŧħḗ ḗƞḓ ȯƒ ẏȯŭř ƈŭřřḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓ.⟧",
+      "scheduledKeepAccess": "⟦Ẏȯŭ'ŀŀ ķḗḗƥ ȧƈƈḗşş ŧȯ ȧŀŀ {{count}} ŀīƈḗƞşḗş ŭƞŧīŀ ŧħḗƞ.⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "confirmPayNow": "⟦Ƈȯƞƒīřḿ & Ƥȧẏ Ƞȯẇ⟧",
+      "confirmSchedule": "⟦Ƈȯƞƒīřḿ Şƈħḗḓŭŀḗ⟧"
     },
     "usage": {
-      "title": "11111",
-      "licensesUsed": "11111"
+      "title": "⟦Ƈŭřřḗƞŧ Ŀīƈḗƞşḗ Ŭşȧɠḗ⟧",
+      "licensesUsed": "⟦ŀīƈḗƞşḗş ŭşḗḓ⟧"
     },
     "fields": {
-      "totalLicenseCount": "11111"
+      "totalLicenseCount": "⟦Ŧȯŧȧŀ Ŀīƈḗƞşḗ Ƈȯŭƞŧ⟧"
     },
     "help": {
-      "totalLicenseCount": "11111 {{minimum}} 11111 {{current}} 11111",
-      "reduceViaAccount": "11111",
-      "quantityWarning": "11111 {{used}} 11111 {{quantity}} 11111"
+      "totalLicenseCount": "⟦Ḗƞŧḗř ŧħḗ ƞḗẇ ŧȯŧȧŀ ƞŭḿƀḗř ȯƒ ŀīƈḗƞşḗş (ḿīƞīḿŭḿ: {{minimum}}). Ƈŭřřḗƞŧŀẏ: {{current}}⟧",
+      "reduceViaAccount": "⟦Ŧȯ řḗḓŭƈḗ ŀīƈḗƞşḗş, ṽīşīŧ Ȧƈƈȯŭƞŧ Ḿȧƞȧɠḗḿḗƞŧ⟧",
+      "quantityWarning": "⟦Ẇȧřƞīƞɠ: Ẏȯŭ ħȧṽḗ {{used}} ŭşḗřş ƀŭŧ ȧřḗ şḗŧŧīƞɠ ŧħḗ ŧȯŧȧŀ ŧȯ {{quantity}}⟧"
     },
     "pricing": {
-      "pricePerLicense": "11111",
-      "quantity": "11111",
-      "total": "11111"
+      "pricePerLicense": "⟦Ƥřīƈḗ ƥḗř ŀīƈḗƞşḗ:⟧",
+      "quantity": "⟦Ɋŭȧƞŧīŧẏ:⟧",
+      "total": "⟦Ŧȯŧȧŀ:⟧"
     },
     "actions": {
-      "creatingCheckout": "11111",
-      "noChange": "11111",
-      "updateToTotal": "11111 {{quantity}} 11111 {{difference}} 11111 {{licenseLabel}} 11111"
+      "creatingCheckout": "⟦Ƈřḗȧŧīƞɠ Ƈħḗƈķȯŭŧ...⟧",
+      "noChange": "⟦Ƞȯ Ƈħȧƞɠḗ⟧",
+      "updateToTotal": "⟦Ŭƥḓȧŧḗ ŧȯ {{quantity}} Ŧȯŧȧŀ ({{difference}} {{licenseLabel}})⟧"
     },
     "info": {
-      "totalQuantity": "11111",
-      "increasingImmediate": "11111",
-      "billedMonthly": "11111"
+      "totalQuantity": "⟦Ŧħīş şḗŧş ẏȯŭř ŧȯŧȧŀ şŭƀşƈřīƥŧīȯƞ ʠŭȧƞŧīŧẏ (ƞȯŧ ȧƞ ȧḓḓīŧīȯƞ ŧȯ ƈŭřřḗƞŧ ŀīƈḗƞşḗş)⟧",
+      "increasingImmediate": "⟦Īƞƈřḗȧşīƞɠ ŀīƈḗƞşḗş: Īḿḿḗḓīȧŧḗ ȧƈƈḗşş ẇīŧħ ƥřȯřȧŧḗḓ ƈħȧřɠḗ⟧",
+      "billedMonthly": "⟦Ŀīƈḗƞşḗş ȧřḗ ƀīŀŀḗḓ ḿȯƞŧħŀẏ ȧƞḓ ƈȧƞ ƀḗ ƈȧƞƈḗŀḗḓ ȧƞẏŧīḿḗ⟧"
     },
     "solo": {
-      "title": "11111",
-      "description": "11111",
-      "upgradeCta": "11111"
+      "title": "⟦Şȯŀȯ īƞƈŀŭḓḗş ȯƞḗ ŭşḗř⟧",
+      "description": "⟦Ŧħḗ Şȯŀȯ ƥŀȧƞ īş ḓḗşīɠƞḗḓ ƒȯř ȧ şīƞɠŀḗ ŭşḗř ȧƞḓ ḓȯḗş ƞȯŧ şŭƥƥȯřŧ ȧḓḓīƞɠ ŀīƈḗƞşḗş. Ŭƥɠřȧḓḗ ŧȯ Ƥřȯ ŧȯ ȧḓḓ ḿȯřḗ ŭşḗřş ŧȯ ẏȯŭř ŧḗȧḿ.⟧",
+      "upgradeCta": "⟦Ŭƥɠřȧḓḗ ŧȯ Ƥřȯ⟧"
     }
   },
   "removalModal": {
-    "title": "11111",
-    "description": "11111",
+    "title": "⟦Řḗḿȯṽḗ Ŀīƈḗƞşḗş⟧",
+    "description": "⟦Řḗḿȯṽḗ ŀīƈḗƞşḗş ƒřȯḿ ẏȯŭř ȧƈƈȯŭƞŧ. Ƈħȧƞɠḗş ẇīŀŀ ŧȧķḗ ḗƒƒḗƈŧ ȧŧ ŧħḗ ḗƞḓ ȯƒ ẏȯŭř ƈŭřřḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓ.⟧",
     "stats": {
-      "currentLicenses": "11111",
-      "activeUsers": "11111"
+      "currentLicenses": "⟦Ƈŭřřḗƞŧ Ŀīƈḗƞşḗş⟧",
+      "activeUsers": "⟦Ȧƈŧīṽḗ Ŭşḗřş⟧"
     },
     "fields": {
-      "newLicenseCount": "11111",
-      "minimum": "11111 {{count}} 11111"
+      "newLicenseCount": "⟦Ƞḗẇ Ŀīƈḗƞşḗ Ƈȯŭƞŧ⟧",
+      "minimum": "⟦Ḿīƞīḿŭḿ: {{count}} (ŧȯ ȧƈƈȯḿḿȯḓȧŧḗ ȧŀŀ ȧƈŧīṽḗ ŭşḗřş)⟧"
     },
     "validation": {
-      "positiveInteger": "11111",
-      "useAddFlow": "11111",
-      "deactivateUsers": "11111 {{activeUsers}} 11111 {{usersToDeactivate}} 11111 {{userLabel}} 11111"
+      "positiveInteger": "⟦Ŀīƈḗƞşḗ ʠŭȧƞŧīŧẏ ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ īƞŧḗɠḗř (ḿīƞīḿŭḿ 1)⟧",
+      "useAddFlow": "⟦Ŭşḗ ŧħḗ \"Ȧḓḓ Ŀīƈḗƞşḗş\" ƒŀȯẇ ŧȯ īƞƈřḗȧşḗ ŀīƈḗƞşḗş⟧",
+      "deactivateUsers": "⟦Ẏȯŭ ħȧṽḗ {{activeUsers}} ȧƈŧīṽḗ ŭşḗřş. Ƥŀḗȧşḗ ḓḗȧƈŧīṽȧŧḗ {{usersToDeactivate}} {{userLabel}} ƒīřşŧ.⟧"
     },
     "actions": {
-      "goToUserManagement": "11111",
-      "reviewRemoval": "11111",
-      "confirmRemoval": "11111"
+      "goToUserManagement": "⟦Ɠȯ ŧȯ Ŭşḗř Ḿȧƞȧɠḗḿḗƞŧ⟧",
+      "reviewRemoval": "⟦Řḗṽīḗẇ Řḗḿȯṽȧŀ⟧",
+      "confirmRemoval": "⟦Ƈȯƞƒīřḿ Řḗḿȯṽȧŀ⟧"
     },
     "scheduled": {
-      "title": "11111",
-      "description": "11111 {{current}} 11111 {{next}} 11111",
-      "creditDescription": "11111"
+      "title": "⟦Řḗḿȯṽȧŀ ẇīŀŀ ƀḗ şƈħḗḓŭŀḗḓ⟧",
+      "description": "⟦Ẏȯŭř ŀīƈḗƞşḗ ƈȯŭƞŧ ẇīŀŀ ḓḗƈřḗȧşḗ ƒřȯḿ {{current}} ŧȯ {{next}} ȧŧ ŧħḗ ḗƞḓ ȯƒ ẏȯŭř ƈŭřřḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓ.⟧",
+      "creditDescription": "⟦Ẏȯŭ'ŀŀ řḗƈḗīṽḗ ȧ ƈřḗḓīŧ ȯƞ ẏȯŭř ƞḗẋŧ īƞṽȯīƈḗ ƒȯř ŧħḗ ŭƞŭşḗḓ ŀīƈḗƞşḗş.⟧"
     },
     "confirmation": {
-      "description": "11111",
-      "currentMonthlyCost": "11111",
-      "currentLicenseCount": "11111",
-      "newMonthlyCost": "11111",
-      "newLicenseCount": "11111",
-      "monthlySavings": "11111",
-      "creditNotice": "11111"
+      "description": "⟦Ƥŀḗȧşḗ řḗṽīḗẇ ȧƞḓ ƈȯƞƒīřḿ ẏȯŭř ŀīƈḗƞşḗ řḗḿȯṽȧŀ:⟧",
+      "currentMonthlyCost": "⟦Ƈŭřřḗƞŧ Ḿȯƞŧħŀẏ Ƈȯşŧ⟧",
+      "currentLicenseCount": "⟦Ƈŭřřḗƞŧ Ŀīƈḗƞşḗ Ƈȯŭƞŧ⟧",
+      "newMonthlyCost": "⟦Ƞḗẇ Ḿȯƞŧħŀẏ Ƈȯşŧ⟧",
+      "newLicenseCount": "⟦Ƞḗẇ Ŀīƈḗƞşḗ Ƈȯŭƞŧ⟧",
+      "monthlySavings": "⟦Ḿȯƞŧħŀẏ Şȧṽīƞɠş⟧",
+      "creditNotice": "⟦Ƈħȧƞɠḗş ẇīŀŀ ŧȧķḗ ḗƒƒḗƈŧ ȧŧ ŧħḗ ḗƞḓ ȯƒ ẏȯŭř ƈŭřřḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓ. Ẏȯŭ'ŀŀ řḗƈḗīṽḗ ȧ ƥřȯřȧŧḗḓ ƈřḗḓīŧ ȯƞ ẏȯŭř ƞḗẋŧ īƞṽȯīƈḗ.⟧"
     },
     "errors": {
-      "deactivateUsersFirst": "11111",
-      "reduceFailed": "11111",
-      "removeFailed": "11111"
+      "deactivateUsersFirst": "⟦Ƥŀḗȧşḗ ḓḗȧƈŧīṽȧŧḗ ŭşḗřş ƒīřşŧ⟧",
+      "reduceFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗḓŭƈḗ ŀīƈḗƞşḗş⟧",
+      "removeFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ ŀīƈḗƞşḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     },
     "success": {
-      "scheduled": "11111 {{current}} 11111 {{next}} 11111 {{effectiveDate}} 11111"
+      "scheduled": "⟦Ŀīƈḗƞşḗ řḗḿȯṽȧŀ şƈħḗḓŭŀḗḓ! Ẏȯŭř ŀīƈḗƞşḗ ƈȯŭƞŧ ẇīŀŀ ƈħȧƞɠḗ ƒřȯḿ {{current}} ŧȯ {{next}} ȯƞ {{effectiveDate}}.⟧"
     }
   },
   "shared": {
-    "licenseSingular": "11111",
-    "licensePlural": "11111",
-    "userSingular": "11111",
-    "userPlural": "11111",
-    "licenseCount": "11111 {{count}} 11111 {{licenseLabel}} 11111",
-    "perInterval": "11111 {{amount}} 11111 {{interval}} 11111",
-    "none": "11111",
+    "licenseSingular": "⟦ŀīƈḗƞşḗ⟧",
+    "licensePlural": "⟦ŀīƈḗƞşḗş⟧",
+    "userSingular": "⟦ŭşḗř⟧",
+    "userPlural": "⟦ŭşḗřş⟧",
+    "licenseCount": "⟦{{count}} {{licenseLabel}}⟧",
+    "perInterval": "⟦{{amount}}/{{interval}}⟧",
+    "none": "⟦Ƞȯƞḗ⟧",
     "intervals": {
-      "month": "11111",
-      "year": "11111"
+      "month": "⟦ḿȯƞŧħ⟧",
+      "year": "⟦ẏḗȧř⟧"
     }
   },
   "workflowDesigner": {
-    "enterpriseHeading": "11111",
-    "unavailable": "11111"
+    "enterpriseHeading": "⟦Ƥřȯ Ƒḗȧŧŭřḗ⟧",
+    "unavailable": "⟦Ẇȯřķƒŀȯẇ ḓḗşīɠƞḗř řḗʠŭīřḗş Ƥřȯ. Ƥŀḗȧşḗ ŭƥɠřȧḓḗ ŧȯ ȧƈƈḗşş ŧħīş ƒḗȧŧŭřḗ.⟧"
   },
   "runStudio": {
-    "unavailable": "11111 {{runId}} 11111"
+    "unavailable": "⟦Ẇȯřķƒŀȯẇ Řŭƞ Şŧŭḓīȯ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ īƞ ŧħīş ḗḓīŧīȯƞ. (řŭƞĪḓ: {{runId}})⟧"
   },
   "aiConsent": {
-    "title": "11111",
-    "subtitle": "11111",
+    "title": "⟦ȦĪ ḓȧŧȧ şħȧřīƞɠ⟧",
+    "subtitle": "⟦Řḗʠŭīřḗḓ ƒȯř ȦĪ ƒḗȧŧŭřḗş ȯƞ ŧħīş ȧƥƥŀīȧƞƈḗ. Řḗṽīḗẇ ẇħȧŧ ŀḗȧṽḗş ẏȯŭř ƞḗŧẇȯřķ ƀḗƒȯřḗ ŧŭřƞīƞɠ ȦĪ ȯƞ.⟧",
     "status": {
-      "granted": "11111",
-      "revoked": "11111",
-      "missing": "11111"
+      "granted": "⟦Ƈȯƞşḗƞŧ ɠřȧƞŧḗḓ⟧",
+      "revoked": "⟦Ƈȯƞşḗƞŧ řḗṽȯķḗḓ⟧",
+      "missing": "⟦Ƞȯŧ ɠřȧƞŧḗḓ⟧"
     },
-    "unreachable": "11111",
-    "explainer": "11111",
-    "termsVersion": "11111",
-    "grantedAt": "11111",
-    "revoke": "11111",
-    "accept": "11111",
+    "unreachable": "⟦Ƈȯŭŀḓ ƞȯŧ řḗȧƈħ ŧħḗ ȦĪ şḗřṽīƈḗ ŧȯ ŀȯȧḓ ŧħḗ ƈŭřřḗƞŧ ƈȯƞşḗƞŧ şŧȧŧŭş. Ŧřẏ ȧɠȧīƞ şħȯřŧŀẏ.⟧",
+    "explainer": "⟦Ẇħḗƞ ȦĪ īş ḗƞȧƀŀḗḓ, ŧħḗ ƈȯƞŧḗƞŧ ȦĪ ẇȯřķş ȯƞ — īƞƈŀŭḓīƞɠ ŧīƈķḗŧ ŧḗẋŧ, ḗḿȧīŀ ƀȯḓīḗş, ȧƞḓ ƈħȧŧ ḿḗşşȧɠḗş — īş şḗƞŧ ƒřȯḿ ŧħīş ȧƥƥŀīȧƞƈḗ ŧȯ ŧħḗ Ƞīƞḗ Ḿīƞḓş ƈŀȯŭḓ ȦĪ şḗřṽīƈḗ, ȧƞḓ ƒřȯḿ ŧħḗřḗ ŧȯ ŧħīřḓ-ƥȧřŧẏ ḿȯḓḗŀ ƥřȯṽīḓḗřş ŧȯ ɠḗƞḗřȧŧḗ řḗşƥȯƞşḗş. Ƞȯŧħīƞɠ īş şḗƞŧ ŭƞŧīŀ ẏȯŭ ɠřȧƞŧ ƈȯƞşḗƞŧ ƀḗŀȯẇ.⟧",
+    "termsVersion": "⟦Ŧḗřḿş ṽḗřşīȯƞ⟧",
+    "grantedAt": "⟦Ɠřȧƞŧḗḓ⟧",
+    "revoke": "⟦Řḗṽȯķḗ ƈȯƞşḗƞŧ⟧",
+    "accept": "⟦Ȧƈƈḗƥŧ ȧƞḓ ḗƞȧƀŀḗ ȦĪ⟧",
     "acceptDialog": {
-      "title": "11111",
-      "confirming": "11111",
-      "confirm": "11111",
-      "body": "11111",
-      "termsVersion": "11111 {{version}} 11111"
+      "title": "⟦Ḗƞȧƀŀḗ ȦĪ ḓȧŧȧ şħȧřīƞɠ?⟧",
+      "confirming": "⟦Ḗƞȧƀŀīƞɠ…⟧",
+      "confirm": "⟦Ī ȧɠřḗḗ, ḗƞȧƀŀḗ ȦĪ⟧",
+      "body": "⟦Ɓẏ ƈȯƞŧīƞŭīƞɠ ẏȯŭ ȧɠřḗḗ ŧħȧŧ ȦĪ ƒḗȧŧŭřḗş ḿȧẏ ŧřȧƞşḿīŧ ŧīƈķḗŧ, ḗḿȧīŀ, ȧƞḓ ƈħȧŧ ƈȯƞŧḗƞŧ ƒřȯḿ ŧħīş ȧƥƥŀīȧƞƈḗ ŧȯ ŧħḗ Ƞīƞḗ Ḿīƞḓş ƈŀȯŭḓ ȦĪ şḗřṽīƈḗ ȧƞḓ ȯƞẇȧřḓ ŧȯ ŧħīřḓ-ƥȧřŧẏ ḿȯḓḗŀ ƥřȯṽīḓḗřş ƒȯř ƥřȯƈḗşşīƞɠ.⟧",
+      "termsVersion": "⟦Ḓȧŧȧ-şħȧřīƞɠ ŧḗřḿş ṽḗřşīȯƞ: {{version}}⟧"
     },
     "revokeDialog": {
-      "title": "11111",
-      "confirming": "11111",
-      "confirm": "11111",
-      "body": "11111"
+      "title": "⟦Řḗṽȯķḗ ȦĪ ḓȧŧȧ şħȧřīƞɠ?⟧",
+      "confirming": "⟦Řḗṽȯķīƞɠ…⟧",
+      "confirm": "⟦Řḗṽȯķḗ ƈȯƞşḗƞŧ⟧",
+      "body": "⟦ȦĪ ƒḗȧŧŭřḗş şŧȯƥ ẇȯřķīƞɠ īḿḿḗḓīȧŧḗŀẏ ȧƈřȯşş ŧħīş ȧƥƥŀīȧƞƈḗ. Ƞȯ ƒŭřŧħḗř ƈȯƞŧḗƞŧ ẇīŀŀ ƀḗ şḗƞŧ ŧȯ ŧħḗ ƈŀȯŭḓ ȦĪ şḗřṽīƈḗ ŭƞŧīŀ ƈȯƞşḗƞŧ īş ɠřȧƞŧḗḓ ȧɠȧīƞ.⟧"
     }
   },
   "aiBalance": {
-    "title": "11111",
-    "subtitle": "11111",
-    "refresh": "11111",
-    "unreachable": "11111",
-    "blockedPendingConsent": "11111",
+    "title": "⟦ȦĪ ƈřḗḓīŧş⟧",
+    "subtitle": "⟦Ƥřḗƥȧīḓ ƈřḗḓīŧş ƒŭƞḓ ȦĪ ƒḗȧŧŭřḗş ȯƞ ŧħīş ȧƥƥŀīȧƞƈḗ. Ƥŭřƈħȧşḗş ȧřḗ ḿȧḓḗ īƞ ŧħḗ Ƞīƞḗ Ḿīƞḓş şŧȯřḗ.⟧",
+    "refresh": "⟦Řḗƒřḗşħ⟧",
+    "unreachable": "⟦Ƈȯŭŀḓ ƞȯŧ řḗȧƈħ ŧħḗ ȦĪ şḗřṽīƈḗ ŧȯ ŀȯȧḓ ẏȯŭř ƈřḗḓīŧ ƀȧŀȧƞƈḗ. Ŧřẏ ȧɠȧīƞ şħȯřŧŀẏ.⟧",
+    "blockedPendingConsent": "⟦ȦĪ īş ƀŀȯƈķḗḓ ŭƞŧīŀ ḓȧŧȧ-şħȧřīƞɠ ƈȯƞşḗƞŧ īş ɠřȧƞŧḗḓ ȧƀȯṽḗ. Ƈřḗḓīŧş ȧřḗ ƞȯŧ ƈȯƞşŭḿḗḓ ẇħīŀḗ ȦĪ īş ȯƒƒ.⟧",
     "upsell": {
-      "heading": "11111",
-      "body": "11111",
-      "subscribe": "11111"
+      "heading": "⟦Şŭƀşƈřīƀḗ ŧȯ ŧħḗ ȦĪ ȧḓḓ-ȯƞ⟧",
+      "body": "⟦Ŧħḗřḗ īş ƞȯ ȧƈŧīṽḗ ȦĪ şŭƀşƈřīƥŧīȯƞ ƒȯř ŧħīş ȧƥƥŀīȧƞƈḗ. Şŭƀşƈřīƀḗ īƞ ŧħḗ Ƞīƞḗ Ḿīƞḓş şŧȯřḗ ŧȯ řḗƈḗīṽḗ ȧ ḿȯƞŧħŀẏ ƈřḗḓīŧ ȧŀŀȯŧḿḗƞŧ; ŧħḗ şŧȯřḗ ḿȧƞȧɠḗş ƥȧẏḿḗƞŧ ȧƞḓ ŧȯƥ-ŭƥş.⟧",
+      "subscribe": "⟦Şŭƀşƈřīƀḗ īƞ ŧħḗ şŧȯřḗ⟧"
     },
-    "grace": "11111 {{grace}} 11111",
-    "low": "11111",
-    "total": "11111",
-    "creditsUnit": "11111",
-    "included": "11111",
-    "resetsMonthly": "11111",
-    "topup": "11111",
-    "carriesOver": "11111",
+    "grace": "⟦Ƈřḗḓīŧş ȧřḗ ḗẋħȧŭşŧḗḓ. ȦĪ ķḗḗƥş ẇȯřķīƞɠ ẇīŧħīƞ ȧ şḿȧŀŀ ɠřȧƈḗ ƀŭƒƒḗř ȯƒ {{grace}} ƈřḗḓīŧş ƀḗƒȯřḗ īŧ ħȧřḓ-şŧȯƥş — ŧȯƥ ŭƥ ŧȯ ȧṽȯīḓ īƞŧḗřřŭƥŧīȯƞ.⟧",
+    "low": "⟦Ƈřḗḓīŧ ƀȧŀȧƞƈḗ īş řŭƞƞīƞɠ ŀȯẇ. Ŧȯƥ ŭƥ īƞ ŧħḗ şŧȯřḗ ŧȯ ȧṽȯīḓ īƞŧḗřřŭƥŧīȯƞş.⟧",
+    "total": "⟦Ŧȯŧȧŀ ƀȧŀȧƞƈḗ⟧",
+    "creditsUnit": "⟦ƈřḗḓīŧş⟧",
+    "included": "⟦Īƞƈŀŭḓḗḓ (ḿȯƞŧħŀẏ)⟧",
+    "resetsMonthly": "⟦řḗşḗŧş ḗȧƈħ ƈẏƈŀḗ⟧",
+    "topup": "⟦Ŧȯƥ-ŭƥ (ƥḗřşīşŧş)⟧",
+    "carriesOver": "⟦ƈȧřřīḗş ȯṽḗř⟧",
     "manage": {
-      "heading": "11111",
-      "body": "11111",
-      "openStore": "11111"
+      "heading": "⟦Ɓŭẏ ƈřḗḓīŧş ȯř ḿȧƞȧɠḗ ŧħḗ şŭƀşƈřīƥŧīȯƞ⟧",
+      "body": "⟦Ŧȯƥ-ŭƥş, ȧŭŧȯ-ŧȯƥ-ŭƥ, ȧƞḓ şŭƀşƈřīƥŧīȯƞ ƈħȧƞɠḗş ȧřḗ ħȧƞḓŀḗḓ īƞ ŧħḗ Ƞīƞḗ Ḿīƞḓş şŧȯřḗ.⟧",
+      "openStore": "⟦Ȯƥḗƞ ŧħḗ şŧȯřḗ⟧"
     },
     "status": {
-      "none": "11111",
-      "active": "11111",
-      "trialing": "11111",
-      "past_due": "11111",
-      "canceled": "11111",
-      "unpaid": "11111"
+      "none": "⟦Ƞȯ şŭƀşƈřīƥŧīȯƞ⟧",
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "trialing": "⟦Ŧřīȧŀ⟧",
+      "past_due": "⟦Ƥȧşŧ ḓŭḗ⟧",
+      "canceled": "⟦Ƈȧƞƈḗŀḗḓ⟧",
+      "unpaid": "⟦Ŭƞƥȧīḓ⟧"
     }
   },
   "managementPage": {
-    "metaTitle": "11111",
-    "eyebrow": "11111",
-    "title": "11111",
-    "subtitle": "11111",
+    "metaTitle": "⟦Ŀīƈḗƞşḗ⟧",
+    "eyebrow": "⟦Ȧƥƥŀīȧƞƈḗ ŀīƈḗƞşīƞɠ⟧",
+    "title": "⟦Ŀīƈḗƞşḗ⟧",
+    "subtitle": "⟦Ḿȧƞȧɠḗ ŧħḗ ƒḗȧŧŭřḗ ŧīḗř ƒȯř ŧħīş şḗŀƒ-ħȯşŧḗḓ ȧƥƥŀīȧƞƈḗ.⟧",
     "notSelfHost": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ŀīƈḗƞşḗ⟧",
+      "description": "⟦Ŀīƈḗƞşḗ ḿȧƞȧɠḗḿḗƞŧ īş ȯƞŀẏ ȧṽȧīŀȧƀŀḗ ƒȯř şḗŀƒ-ħȯşŧḗḓ īƞşŧȧŀŀȧŧīȯƞş.⟧"
     },
     "tiers": {
-      "unknown": "11111",
-      "essentials": "11111",
-      "solo": "11111",
-      "pro": "11111"
+      "unknown": "⟦Ŭƞķƞȯẇƞ ŧīḗř⟧",
+      "essentials": "⟦Ḗşşḗƞŧīȧŀş⟧",
+      "solo": "⟦Şȯŀȯ⟧",
+      "pro": "⟦Ƥřȯ⟧"
     },
     "status": {
       "trial": {
-        "eyebrow": "11111",
-        "title": "11111",
-        "description_one": "11111 {{count}} 11111",
-        "description_other": "11111 {{count}} 11111",
-        "descriptionNoDays": "11111",
-        "badge": "11111"
+        "eyebrow": "⟦Ƥřȯ ŧřīȧŀ⟧",
+        "title": "⟦Ẏȯŭř Ƥřȯ ŧřīȧŀ īş ȧƈŧīṽḗ⟧",
+        "description_one": "⟦Ẏȯŭ ħȧṽḗ {{count}} ḓȧẏ ŀḗƒŧ ŧȯ ŭşḗ ȧŀŀ Ƥřȯ ƒḗȧŧŭřḗş.⟧",
+        "description_other": "⟦Ẏȯŭ ħȧṽḗ {{count}} ḓȧẏş ŀḗƒŧ ŧȯ ŭşḗ ȧŀŀ Ƥřȯ ƒḗȧŧŭřḗş.⟧",
+        "descriptionNoDays": "⟦Ẏȯŭ ƈȧƞ ŭşḗ ȧŀŀ Ƥřȯ ƒḗȧŧŭřḗş ḓŭřīƞɠ ŧħḗ ŧřīȧŀ ƥḗřīȯḓ.⟧",
+        "badge": "⟦Ŧřīȧŀ ȧƈŧīṽḗ⟧"
       },
       "licensed": {
-        "eyebrow": "11111",
-        "title": "11111 {{tier}} 11111",
-        "description": "11111",
-        "descriptionWithExpiry": "11111 {{date}} 11111",
-        "badge": "11111"
+        "eyebrow": "⟦Ƥȧīḓ ŀīƈḗƞşḗ⟧",
+        "title": "⟦{{tier}} īş ȧƈŧīṽḗ⟧",
+        "description": "⟦Ẏȯŭř ƥȧīḓ ŀīƈḗƞşḗ īş ȧƈŧīṽḗ ȯƞ ŧħīş ȧƥƥŀīȧƞƈḗ.⟧",
+        "descriptionWithExpiry": "⟦Ẏȯŭř ŀīƈḗƞşḗ īş ȧƈŧīṽḗ ŧħřȯŭɠħ {{date}}.⟧",
+        "badge": "⟦Ŀīƈḗƞşḗḓ⟧"
       },
       "licenseExpired": {
-        "eyebrow": "11111",
-        "title": "11111",
-        "description": "11111",
-        "badge": "11111"
+        "eyebrow": "⟦Ŀīƈḗƞşḗ ƞḗḗḓş ȧŧŧḗƞŧīȯƞ⟧",
+        "title": "⟦Ẏȯŭř ŀīƈḗƞşḗ ħȧş ḗẋƥīřḗḓ⟧",
+        "description": "⟦Ŧħḗ ȧƥƥŀīȧƞƈḗ īş řŭƞƞīƞɠ Ḗşşḗƞŧīȧŀş ƒḗȧŧŭřḗş ŭƞŧīŀ ẏȯŭ ȧƈŧīṽȧŧḗ ȧ ƞḗẇ ŀīƈḗƞşḗ ķḗẏ ȯř ƈŀȧīḿ ƈȯḓḗ.⟧",
+        "badge": "⟦Ḗẋƥīřḗḓ⟧"
       },
       "licenseWrongTenant": {
-        "eyebrow": "11111",
-        "title": "11111",
-        "description": "11111",
-        "badge": "11111"
+        "eyebrow": "⟦Ŀīƈḗƞşḗ ƞḗḗḓş ȧŧŧḗƞŧīȯƞ⟧",
+        "title": "⟦Ŧħīş ŀīƈḗƞşḗ īş ƞȯŧ ṽȧŀīḓ ħḗřḗ⟧",
+        "description": "⟦Ŧħḗ şŧȯřḗḓ ŀīƈḗƞşḗ ẇȧş īşşŭḗḓ ƒȯř ȧ ḓīƒƒḗřḗƞŧ ȧƥƥŀīȧƞƈḗ ŧḗƞȧƞŧ. Ȧƈŧīṽȧŧḗ ŧħḗ ƈȯřřḗƈŧ ŀīƈḗƞşḗ ŧȯ ŭƞŀȯƈķ ƥȧīḓ ƒḗȧŧŭřḗş.⟧",
+        "badge": "⟦Ẇřȯƞɠ īƞşŧȧŀŀ⟧"
       },
       "trialExpired": {
-        "eyebrow": "11111",
-        "title": "11111",
-        "description": "11111",
-        "badge": "11111"
+        "eyebrow": "⟦Ḗşşḗƞŧīȧŀş⟧",
+        "title": "⟦Ẏȯŭ’řḗ řŭƞƞīƞɠ Ḗşşḗƞŧīȧŀş⟧",
+        "description": "⟦Ẏȯŭř Ƥřȯ ŧřīȧŀ ħȧş ḗƞḓḗḓ. Ḗşşḗƞŧīȧŀş řḗḿȧīƞş ȧƈŧīṽḗ ƒȯř ŧħḗ ƈȯřḗ ƤŞȦ ƒḗȧŧŭřḗ şḗŧ.⟧",
+        "badge": "⟦Ḗşşḗƞŧīȧŀş ȧƈŧīṽḗ⟧"
       },
       "essentials": {
-        "eyebrow": "11111",
-        "title": "11111",
-        "description": "11111",
-        "badge": "11111"
+        "eyebrow": "⟦Ḗşşḗƞŧīȧŀş⟧",
+        "title": "⟦Ẏȯŭ’řḗ řŭƞƞīƞɠ Ḗşşḗƞŧīȧŀş⟧",
+        "description": "⟦Ḗşşḗƞŧīȧŀş īş ȧƈŧīṽḗ ȯƞ ŧħīş ȧƥƥŀīȧƞƈḗ. Ķḗḗƥ ŭşīƞɠ ŧħḗ ƈȯřḗ ƒḗȧŧŭřḗ şḗŧ, ȯř şŧȧřŧ ȧ ȯƞḗ-ŧīḿḗ 15-ḓȧẏ Ƥřȯ ŧřīȧŀ.⟧",
+        "badge": "⟦Ḗşşḗƞŧīȧŀş ȧƈŧīṽḗ⟧"
       }
     },
     "trialCta": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ŧřẏ Ƥřȯ ƒȯř 15 ḓȧẏş⟧",
+      "description": "⟦Ŭƞŀȯƈķ ȧŭŧȯḿȧŧīȯƞ, ȧḓṽȧƞƈḗḓ īƞŧḗɠřȧŧīȯƞş, ȧƞḓ ŧħḗ ƒŭŀŀ Ƥřȯ ƒḗȧŧŭřḗ şḗŧ. Ƞȯ ƈřḗḓīŧ ƈȧřḓ řḗʠŭīřḗḓ; ŧħḗ ȧƥƥŀīȧƞƈḗ řḗŧŭřƞş ŧȯ Ḗşşḗƞŧīȧŀş ẇħḗƞ ŧħḗ ŧřīȧŀ ḗƞḓş.⟧"
     },
     "details": {
-      "currentTier": "11111",
-      "expires": "11111",
-      "daysRemaining_one": "11111 {{count}} 11111",
-      "daysRemaining_other": "11111 {{count}} 11111",
-      "licensedTo": "11111",
-      "refreshLabel": "11111",
-      "connected": "11111",
-      "lastCheckIn": "11111 {{timestamp}} 11111",
-      "refreshHelp": "11111"
+      "currentTier": "⟦Ƈŭřřḗƞŧ ŧīḗř⟧",
+      "expires": "⟦Ḗẋƥīřḗş⟧",
+      "daysRemaining_one": "⟦{{count}} ḓȧẏ řḗḿȧīƞīƞɠ⟧",
+      "daysRemaining_other": "⟦{{count}} ḓȧẏş řḗḿȧīƞīƞɠ⟧",
+      "licensedTo": "⟦Ŀīƈḗƞşḗḓ ŧȯ⟧",
+      "refreshLabel": "⟦Ŀīƈḗƞşḗ řḗƒřḗşħ⟧",
+      "connected": "⟦Ƈȯƞƞḗƈŧḗḓ⟧",
+      "lastCheckIn": "⟦Ŀȧşŧ ƈħḗƈķ-īƞ: {{timestamp}}⟧",
+      "refreshHelp": "⟦Ȧƥƥŀīḗş şḗȧŧ ȯř ƥŀȧƞ ƈħȧƞɠḗş ḿȧḓḗ īƞ ŧħḗ ƥȯřŧȧŀ īḿḿḗḓīȧŧḗŀẏ.⟧"
     },
     "portal": {
-      "manageTitle": "11111",
-      "manageDescription": "11111",
-      "buyTitle": "11111",
-      "buyDescription": "11111"
+      "manageTitle": "⟦Şḗȧŧş, ƀīŀŀīƞɠ, ȧƞḓ ȧƈŧīṽȧŧīȯƞ ƈȯḓḗş⟧",
+      "manageDescription": "⟦Ȧḓḓ ȯř řḗḿȯṽḗ şḗȧŧş, ŭƥḓȧŧḗ ƀīŀŀīƞɠ, ȯř řḗīşşŭḗ ȧƞ ȧƈŧīṽȧŧīȯƞ ƈȯḓḗ īƞ ŧħḗ ŀīƈḗƞşīƞɠ ƥȯřŧȧŀ. Şīɠƞ īƞ ẇīŧħ ẏȯŭř řḗɠīşŧḗřḗḓ ḗḿȧīŀ — ƞȯ ƥȧşşẇȯřḓ ƞḗḗḓḗḓ.⟧",
+      "buyTitle": "⟦Řḗȧḓẏ ŧȯ ƀŭẏ ȦŀɠȧƤŞȦ Ƥřȯ?⟧",
+      "buyDescription": "⟦Ƥŭřƈħȧşḗ īƞ ŧħḗ ŀīƈḗƞşīƞɠ ƥȯřŧȧŀ — şīɠƞ īƞ ẇīŧħ ẏȯŭř řḗɠīşŧḗřḗḓ ḗḿȧīŀ, ƥīƈķ ẏȯŭř şḗȧŧ ƈȯŭƞŧ, ȧƞḓ ẏȯŭ'ŀŀ ɠḗŧ ȧ ȯƞḗ-ŧīḿḗ ȧƈŧīṽȧŧīȯƞ ƈȯḓḗ ŧȯ ḗƞŧḗř ƀḗŀȯẇ. Ẏȯŭř ȧƥƥŀīȧƞƈḗ ŭƥɠřȧḓḗş īƞ ƥŀȧƈḗ.⟧"
     },
     "advanced": {
-      "summary": "11111",
-      "introPrefix": "11111",
-      "introLink": "11111",
-      "introSuffix": "11111",
+      "summary": "⟦Ħȧṽḗ ȧ ŀīƈḗƞşḗ ƈȯḓḗ ȯř ķḗẏ?⟧",
+      "introPrefix": "⟦Ḗƞŧḗř ŧħḗ ȧƈŧīṽȧŧīȯƞ ƈȯḓḗ ȯř ȯƒƒŀīƞḗ ķḗẏ ẏȯŭ řḗƈḗīṽḗḓ ƒřȯḿ ŧħḗ⟧",
+      "introLink": "⟦ŀīƈḗƞşīƞɠ ƥȯřŧȧŀ⟧",
+      "introSuffix": "⟦ȯř ƒřȯḿ Ƞīƞḗ Ḿīƞḓş şŭƥƥȯřŧ.⟧",
       "claimCode": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ȧƈŧīṽȧŧḗ ẇīŧħ ƈŀȧīḿ ƈȯḓḗ⟧",
+        "description": "⟦Ŭşḗ ŧħḗ 8-ƈħȧřȧƈŧḗř ƈȯḓḗ ƒřȯḿ ŧħḗ ŀīƈḗƞşīƞɠ ƥȯřŧȧŀ ȯř ȧ ƥȧīḓ-ŀīƈḗƞşḗ ḗḿȧīŀ. Ŧħīş ȧŀşȯ ḗƞȧƀŀḗş ȧŭŧȯḿȧŧīƈ ŀīƈḗƞşḗ řḗƒřḗşħ.⟧"
       },
       "licenseKey": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ƥȧşŧḗ ȧ ŀīƈḗƞşḗ ķḗẏ⟧",
+        "description": "⟦Ŭşḗ ŧħīş ƒȯř ȯƒƒŀīƞḗ ķḗẏş ḓȯẇƞŀȯȧḓḗḓ ƒřȯḿ ŧħḗ ŀīƈḗƞşīƞɠ ƥȯřŧȧŀ (ȧīř-ɠȧƥƥḗḓ īƞşŧȧŀŀş) ȯř īşşŭḗḓ ƀẏ şŭƥƥȯřŧ.⟧"
       },
       "installationId": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Īƞşŧȧŀŀȧŧīȯƞ ĪḒ⟧",
+        "description": "⟦Şŭƥƥȯřŧ ḿȧẏ ȧşķ ƒȯř ŧħīş ĪḒ ẇħḗƞ īşşŭīƞɠ ȧ ḿȧƞŭȧŀ ŀīƈḗƞşḗ ķḗẏ.⟧"
       }
     },
     "actions": {
-      "startTrial": "11111",
-      "startingTrial": "11111",
-      "refreshNow": "11111",
-      "refreshing": "11111",
-      "manageInPortal": "11111",
-      "buyInPortal": "11111",
-      "applyClaimCode": "11111",
-      "activateLicenseKey": "11111",
-      "activating": "11111"
+      "startTrial": "⟦Şŧȧřŧ 15-ḓȧẏ Ƥřȯ ŧřīȧŀ⟧",
+      "startingTrial": "⟦Şŧȧřŧīƞɠ…⟧",
+      "refreshNow": "⟦Řḗƒřḗşħ ŀīƈḗƞşḗ ƞȯẇ⟧",
+      "refreshing": "⟦Řḗƒřḗşħīƞɠ…⟧",
+      "manageInPortal": "⟦Ḿȧƞȧɠḗ ŀīƈḗƞşḗ īƞ ƥȯřŧȧŀ⟧",
+      "buyInPortal": "⟦Ɓŭẏ Ƥřȯ īƞ ŧħḗ ƥȯřŧȧŀ⟧",
+      "applyClaimCode": "⟦Ȧƥƥŀẏ ƈŀȧīḿ ƈȯḓḗ⟧",
+      "activateLicenseKey": "⟦Ȧƈŧīṽȧŧḗ ŀīƈḗƞşḗ ķḗẏ⟧",
+      "activating": "⟦Ȧƈŧīṽȧŧīƞɠ…⟧"
     },
     "success": {
-      "licenseKeyActivated": "11111",
-      "claimCodeActivated": "11111",
-      "trialStarted": "11111",
-      "licenseRefreshed": "11111"
+      "licenseKeyActivated": "⟦Ŀīƈḗƞşḗ ķḗẏ ȧƈŧīṽȧŧḗḓ. Ƥȧīḓ ƒḗȧŧŭřḗş ȧřḗ ƞȯẇ ȧṽȧīŀȧƀŀḗ ȯƞ ŧħīş ȧƥƥŀīȧƞƈḗ.⟧",
+      "claimCodeActivated": "⟦Ƈŀȧīḿ ƈȯḓḗ ȧƈŧīṽȧŧḗḓ. Ȧŭŧȯḿȧŧīƈ ŀīƈḗƞşḗ řḗƒřḗşħ īş ƞȯẇ ƈȯƞƒīɠŭřḗḓ.⟧",
+      "trialStarted": "⟦15-ḓȧẏ Ƥřȯ ŧřīȧŀ şŧȧřŧḗḓ.⟧",
+      "licenseRefreshed": "⟦Ŀīƈḗƞşḗ řḗƒřḗşħḗḓ. Şḗȧŧ ȯř ƥŀȧƞ ƈħȧƞɠḗş ƒřȯḿ ŧħḗ ƥȯřŧȧŀ ȧřḗ ƞȯẇ ȧƈŧīṽḗ.⟧"
     },
     "errors": {
-      "loadStatus": "11111",
-      "activateLicenseKey": "11111",
-      "activateClaimCode": "11111",
-      "startTrial": "11111",
-      "refreshLicense": "11111"
+      "loadStatus": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŀīƈḗƞşḗ şŧȧŧŭş.⟧",
+      "activateLicenseKey": "⟦Ƒȧīŀḗḓ ŧȯ ȧƈŧīṽȧŧḗ ŀīƈḗƞşḗ ķḗẏ.⟧",
+      "activateClaimCode": "⟦Ƒȧīŀḗḓ ŧȯ ȧƈŧīṽȧŧḗ ƈŀȧīḿ ƈȯḓḗ.⟧",
+      "startTrial": "⟦Ƒȧīŀḗḓ ŧȯ şŧȧřŧ ŧřīȧŀ.⟧",
+      "refreshLicense": "⟦Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ ŧħḗ ŀīƈḗƞşḗ.⟧"
     }
   },
   "errors": {
-    "notSignedIn": "11111",
-    "accountManagementRead": "11111"
+    "notSignedIn": "⟦Ŭƞȧŭŧħȯřīẑḗḓ. Şīɠƞ īƞ ŧȯ ḿȧƞȧɠḗ ŀīƈḗƞşīƞɠ.⟧",
+    "accountManagementRead": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ȧƈƈȯŭƞŧ_ḿȧƞȧɠḗḿḗƞŧ řḗȧḓ řḗʠŭīřḗḓ⟧"
   }
 }

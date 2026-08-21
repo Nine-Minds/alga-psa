@@ -1,694 +1,694 @@
 {
   "common": {
-    "back": "55555",
-    "cancel": "55555",
-    "close": "55555",
-    "confirm": "55555",
-    "create": "55555",
-    "delete": "55555",
-    "edit": "55555",
-    "error": "55555",
-    "loading": "55555",
-    "new": "55555",
-    "next": "55555",
-    "notAvailable": "55555",
-    "openMenu": "55555",
-    "processing": "55555",
-    "refresh": "55555",
-    "remove": "55555",
-    "reset": "55555",
-    "save": "55555",
-    "saving": "55555",
-    "success": "55555",
-    "update": "55555",
-    "yes": "55555",
-    "no": "55555",
-    "export": "55555"
+    "back": "〖Ɓȧƈķ ··〗",
+    "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+    "close": "〖Ƈŀȯşḗ ··〗",
+    "confirm": "〖Ƈȯƞƒīřḿ ···〗",
+    "create": "〖Ƈřḗȧŧḗ ···〗",
+    "delete": "〖Ḓḗŀḗŧḗ ···〗",
+    "edit": "〖Ḗḓīŧ ··〗",
+    "error": "〖Ḗřřȯř ··〗",
+    "loading": "〖Ŀȯȧḓīƞɠ... ····〗",
+    "new": "〖Ƞḗẇ ··〗",
+    "next": "〖Ƞḗẋŧ ··〗",
+    "notAvailable": "〖Ƞ/Ȧ ··〗",
+    "openMenu": "〖Ȯƥḗƞ ḿḗƞŭ ····〗",
+    "processing": "〖Ƥřȯƈḗşşīƞɠ... ······〗",
+    "refresh": "〖Řḗƒřḗşħ ···〗",
+    "remove": "〖Řḗḿȯṽḗ ···〗",
+    "reset": "〖Řḗşḗŧ ··〗",
+    "save": "〖Şȧṽḗ ··〗",
+    "saving": "〖Şȧṽīƞɠ... ····〗",
+    "success": "〖Şŭƈƈḗşş ···〗",
+    "update": "〖Ŭƥḓȧŧḗ ···〗",
+    "yes": "〖Ẏḗş ··〗",
+    "no": "〖Ƞȯ ·〗",
+    "export": "〖Ḗẋƥȯřŧ ···〗"
   },
   "dashboard": {
-    "title": "55555",
+    "title": "〖Ɓīŀŀīƞɠ ···〗",
     "beta": {
-      "title": "55555",
-      "description": "55555"
+      "title": "〖Ɓḗŧȧ Řḗŀḗȧşḗ ·····〗",
+      "description": "〖Ȯŭř řḗṽȧḿƥḗḓ ƀīŀŀīƞɠ şẏşŧḗḿ īş ƈŭřřḗƞŧŀẏ īƞ ƀḗŧȧ. Ẏȯŭ ḿȧẏ ḗƞƈȯŭƞŧḗř īşşŭḗş ȯř īƞƈȯḿƥŀḗŧḗ ƒḗȧŧŭřḗş. Ẇḗ ȧƥƥřḗƈīȧŧḗ ẏȯŭř ƥȧŧīḗƞƈḗ ȧş ẇḗ ƈȯƞŧīƞŭḗ ŧȯ īḿƥřȯṽḗ ŧħḗ ḗẋƥḗřīḗƞƈḗ. ····································································〗"
     },
-    "errorPrefix": "55555",
-    "backToPresets": "55555",
-    "quoteTemplatesHeading": "55555",
+    "errorPrefix": "〖Ḗřřȯř: ···〗",
+    "backToPresets": "〖Ɓȧƈķ ŧȯ Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƥřḗşḗŧş Ŀīşŧ ··············〗",
+    "quoteTemplatesHeading": "〖Ɋŭȯŧḗ Ŧḗḿƥŀȧŧḗş ······〗",
     "tabs": {
-      "quotes": "55555",
-      "quoteLayouts": "55555",
-      "quoteTemplates": "55555",
-      "clientContracts": "55555",
-      "accountingExports": "55555",
-      "contractTemplates": "55555",
-      "invoicing": "55555",
-      "invoiceLayouts": "55555",
-      "taxRates": "55555",
-      "contractLinePresets": "55555",
-      "billingCycles": "55555",
-      "servicePeriods": "55555",
-      "usageTracking": "55555",
-      "reports": "55555",
-      "serviceTypes": "55555",
-      "serviceCatalog": "55555",
-      "products": "55555"
+      "quotes": "〖Ɋŭȯŧḗş ···〗",
+      "quoteLayouts": "〖Ɋŭȯŧḗ Ŀȧẏȯŭŧş ······〗",
+      "quoteTemplates": "〖Ɋŭȯŧḗ Ŧḗḿƥŀȧŧḗş ······〗",
+      "clientContracts": "〖Ƈŀīḗƞŧ Ƈȯƞŧřȧƈŧş ·······〗",
+      "accountingExports": "〖Ȧƈƈȯŭƞŧīƞɠ Ḗẋƥȯřŧş ········〗",
+      "contractTemplates": "〖Ƈȯƞŧřȧƈŧ Ŧḗḿƥŀȧŧḗş ········〗",
+      "invoicing": "〖Īƞṽȯīƈīƞɠ ····〗",
+      "invoiceLayouts": "〖Īƞṽȯīƈḗ Ŀȧẏȯŭŧş ······〗",
+      "taxRates": "〖Ŧȧẋ řȧŧḗş ····〗",
+      "contractLinePresets": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƥřḗşḗŧş ·········〗",
+      "billingCycles": "〖Ɓīŀŀīƞɠ Ƈẏƈŀḗş ······〗",
+      "servicePeriods": "〖Şḗřṽīƈḗ Ƥḗřīȯḓş ······〗",
+      "usageTracking": "〖Ŭşȧɠḗ Ŧřȧƈķīƞɠ ······〗",
+      "reports": "〖Řḗƥȯřŧş ···〗",
+      "serviceTypes": "〖Şḗřṽīƈḗ Ŧẏƥḗş ······〗",
+      "serviceCatalog": "〖Şḗřṽīƈḗş ····〗",
+      "products": "〖Ƥřȯḓŭƈŧş ····〗"
     }
   },
   "overview": {
     "errors": {
-      "loadTitle": "55555",
-      "loadData": "55555"
+      "loadTitle": "〖Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ƀīŀŀīƞɠ ḓȧŧȧ ···········〗",
+      "loadData": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƀīŀŀīƞɠ ḓȧŧȧ ···········〗"
     },
     "metrics": {
       "activeContractLines": {
-        "title": "55555",
-        "subtitle": "55555"
+        "title": "〖Ȧƈŧīṽḗ Ƈȯƞŧřȧƈŧ Ŀīƞḗş ·········〗",
+        "subtitle": "〖Ȧƈŧīṽḗ Ƈȯƞŧřȧƈŧ Ŀīƞḗş ·········〗"
       },
       "billingClients": {
-        "title": "55555",
-        "subtitle": "55555"
+        "title": "〖Ɓīŀŀīƞɠ Ƈŀīḗƞŧş ······〗",
+        "subtitle": "〖Ŧȯŧȧŀ Ƈŀīḗƞŧş ······〗"
       },
       "monthlyRevenue": {
-        "title": "55555",
-        "subtitle": "55555"
+        "title": "〖Ḿȯƞŧħŀẏ Řḗṽḗƞŭḗ ······〗",
+        "subtitle": "〖Ƈŭřřḗƞŧ Ḿȯƞŧħ ······〗"
       },
       "activeServices": {
-        "title": "55555",
-        "subtitle": "55555"
+        "title": "〖Ȧƈŧīṽḗ Şḗřṽīƈḗş ······〗",
+        "subtitle": "〖Īƞ Ƈȧŧȧŀȯɠ ····〗"
       },
       "outstandingAmount": {
-        "title": "55555",
-        "subtitle": "55555"
+        "title": "〖Ȯŭŧşŧȧƞḓīƞɠ Ȧḿȯŭƞŧ ········〗",
+        "subtitle": "〖Ŭƞƥȧīḓ Īƞṽȯīƈḗş ······〗"
       },
       "creditBalance": {
-        "title": "55555",
-        "subtitle": "55555"
+        "title": "〖Ƈřḗḓīŧ Ɓȧŀȧƞƈḗ ······〗",
+        "subtitle": "〖Ŧȯŧȧŀ Ƈřḗḓīŧş ······〗"
       },
       "pendingApprovals": {
-        "title": "55555",
-        "subtitle": "55555"
+        "title": "〖Ƥḗƞḓīƞɠ Ȧƥƥřȯṽȧŀş ·······〗",
+        "subtitle": "〖Ŧīḿḗ Ḗƞŧřīḗş ·····〗"
       }
     },
     "states": {
-      "ellipsis": "55555",
-      "error": "55555",
-      "zero": "55555",
-      "zeroHours": "55555"
+      "ellipsis": "〖... ··〗",
+      "error": "〖Ḗřřȯř ··〗",
+      "zero": "〖0 ·〗",
+      "zeroHours": "〖0 ħȯŭřş ···〗"
     },
     "sections": {
       "monthlyActivity": {
-        "title": "55555",
-        "subtitle": "55555"
+        "title": "〖Ḿȯƞŧħŀẏ Ȧƈŧīṽīŧẏ ·······〗",
+        "subtitle": "〖Ɓīŀŀȧƀŀḗ ħȯŭřş ŧħīş ḿȯƞŧħ ··········〗"
       },
       "serviceCatalog": {
-        "title": "55555",
-        "description": "55555",
-        "activeServicesLabel": "55555",
-        "button": "55555"
+        "title": "〖Şḗřṽīƈḗ Ƈȧŧȧŀȯɠ Ḿȧƞȧɠḗḿḗƞŧ ···········〗",
+        "description": "〖Ḿȧƞȧɠḗ ẏȯŭř şḗřṽīƈḗ ȯƒƒḗřīƞɠş, ƥřīƈīƞɠ, ȧƞḓ ƀīŀŀīƞɠ ƈȯƞƒīɠŭřȧŧīȯƞş ···························〗",
+        "activeServicesLabel": "〖Ȧƈŧīṽḗ Şḗřṽīƈḗş ······〗",
+        "button": "〖Ḿȧƞȧɠḗ Şḗřṽīƈḗ Ƈȧŧȧŀȯɠ ·········〗"
       }
     },
     "features": {
       "paymentProcessing": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Ƥȧẏḿḗƞŧ Ƥřȯƈḗşşīƞɠ ········〗",
+        "description": "〖Ŧřȧƈķ ȧƞḓ ḿȧƞȧɠḗ ƈŀīḗƞŧ ƥȧẏḿḗƞŧş, ƥřȯƈḗşş řḗƒŭƞḓş, ȧƞḓ ħȧƞḓŀḗ ƥȧẏḿḗƞŧ ḓīşƥŭŧḗş ································〗"
       },
       "billingCycles": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Ɓīŀŀīƞɠ Ƈẏƈŀḗş ······〗",
+        "description": "〖Ḿȧƞȧɠḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗş, ƈȧḓḗƞƈḗ ḓḗƒȧŭŀŧş, ȧƞḓ īƞṽȯīƈḗ ƒřḗʠŭḗƞƈẏ şḗŧŧīƞɠş ·································〗"
       },
       "servicePeriods": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Şḗřṽīƈḗ Ƥḗřīȯḓş ······〗",
+        "description": "〖Řḗṽīḗẇ řḗƈŭřřīƞɠ şḗřṽīƈḗ ƥḗřīȯḓş ȧƞḓ ŭƞḓḗřşŧȧƞḓ ħȯẇ īƞṽȯīƈḗ ẇīƞḓȯẇş ɠřȯŭƥ ŧħḗḿ ································〗"
       },
       "invoiceManagement": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Īƞṽȯīƈḗ Ḿȧƞȧɠḗḿḗƞŧ ········〗",
+        "description": "〖Ɠḗƞḗřȧŧḗ īƞṽȯīƈḗ ẇīƞḓȯẇş ƒȯř řḗƈŭřřīƞɠ şḗřṽīƈḗ ƥḗřīȯḓş ȧƞḓ ƈřḗȧŧḗ ḿȧƞŭȧŀ ȯř ƥřḗƥȧẏḿḗƞŧ ḓȯƈŭḿḗƞŧş ẇħḗƞ ƒīƞȧƞƈīȧŀ ħȧƞḓŀīƞɠ ḓīƒƒḗřş ƒřȯḿ řḗƈŭřřīƞɠ ƈȯṽḗřȧɠḗ ·····························································〗"
       },
       "overduePayments": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Ȯṽḗřḓŭḗ Ƥȧẏḿḗƞŧş ·······〗",
+        "description": "〖Ḿȯƞīŧȯř ȧƞḓ ƒȯŀŀȯẇ ŭƥ ȯƞ ȯṽḗřḓŭḗ ƥȧẏḿḗƞŧş ȧƞḓ ƥȧẏḿḗƞŧ řḗḿīƞḓḗřş ··························〗"
       },
       "serviceCatalog": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Şḗřṽīƈḗ Ƈȧŧȧŀȯɠ ······〗",
+        "description": "〖Ḿȧƞȧɠḗ ẏȯŭř şḗřṽīƈḗ ȯƒƒḗřīƞɠş, ƥřīƈīƞɠ, ȧƞḓ ƈȯƞŧřȧƈŧş ······················〗"
       }
     },
     "debug": {
-      "reportExecuted": "55555",
-      "executionTime": "55555",
-      "reportVersion": "55555"
+      "reportExecuted": "〖Řḗƥȯřŧ ḗẋḗƈŭŧḗḓ: ·······〗",
+      "executionTime": "〖Ḗẋḗƈŭŧīȯƞ ŧīḿḗ: ······〗",
+      "reportVersion": "〖Řḗƥȯřŧ ṽḗřşīȯƞ: ······〗"
     }
   },
   "usage": {
-    "bucketHoursOverview": "55555",
-    "usageRecords": "55555",
+    "bucketHoursOverview": "〖Ɓŭƈķḗŧ Ħȯŭřş Ȯṽḗřṽīḗẇ ·········〗",
+    "usageRecords": "〖Ŭşȧɠḗ Řḗƈȯřḓş ······〗",
     "actions": {
-      "addUsage": "55555",
-      "updateUsage": "55555",
-      "edit": "55555",
-      "delete": "55555",
-      "resetFilters": "55555"
+      "addUsage": "〖Ȧḓḓ Ŭşȧɠḗ ····〗",
+      "updateUsage": "〖Ŭƥḓȧŧḗ Ŭşȧɠḗ ·····〗",
+      "edit": "〖Ḗḓīŧ ··〗",
+      "delete": "〖Ḓḗŀḗŧḗ ···〗",
+      "resetFilters": "〖Řḗşḗŧ ··〗"
     },
     "filters": {
-      "client": "55555",
-      "service": "55555",
-      "clientPlaceholder": "55555",
-      "servicePlaceholder": "55555",
-      "allClients": "55555",
-      "allServices": "55555"
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "service": "〖Şḗřṽīƈḗ ···〗",
+      "clientPlaceholder": "〖Ƒīŀŧḗř ƀẏ ƈŀīḗƞŧ ·······〗",
+      "servicePlaceholder": "〖Ƒīŀŧḗř ƀẏ şḗřṽīƈḗ ·······〗",
+      "allClients": "〖Ȧŀŀ Ƈŀīḗƞŧş ·····〗",
+      "allServices": "〖Ȧŀŀ Şḗřṽīƈḗş ·····〗"
     },
     "table": {
-      "client": "55555",
-      "service": "55555",
-      "quantity": "55555",
-      "usageDate": "55555",
-      "contractLine": "55555",
-      "actions": "55555",
-      "defaultContractLine": "55555",
-      "contractLineLabel": "55555 {{id}} 55555"
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "service": "〖Şḗřṽīƈḗ ···〗",
+      "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗",
+      "usageDate": "〖Ŭşȧɠḗ Ḓȧŧḗ ····〗",
+      "contractLine": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ ······〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗",
+      "defaultContractLine": "〖Ḓḗƒȧŭŀŧ Ƈȯƞŧřȧƈŧ Ŀīƞḗ ·········〗",
+      "contractLineLabel": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ: {{id}}... ··········〗"
     },
     "states": {
-      "loadingRecords": "55555",
-      "noActiveBucketPlans": "55555"
+      "loadingRecords": "〖Ŀȯȧḓīƞɠ ŭşȧɠḗ řḗƈȯřḓş ·········〗",
+      "noActiveBucketPlans": "〖Ƞȯ ȧƈŧīṽḗ ƀŭƈķḗŧ ƥŀȧƞş ƒȯŭƞḓ. ············〗"
     },
     "dialog": {
-      "addTitle": "55555",
-      "editTitle": "55555",
+      "addTitle": "〖Ȧḓḓ Ŭşȧɠḗ Řḗƈȯřḓ ·······〗",
+      "editTitle": "〖Ḗḓīŧ Ŭşȧɠḗ Řḗƈȯřḓ ·······〗",
       "fields": {
-        "client": "55555",
-        "service": "55555",
-        "quantity": "55555",
-        "usageDate": "55555",
-        "comments": "55555",
-        "contractLine": "55555"
+        "client": "〖Ƈŀīḗƞŧ ···〗",
+        "service": "〖Şḗřṽīƈḗ ···〗",
+        "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗",
+        "usageDate": "〖Ŭşȧɠḗ Ḓȧŧḗ ····〗",
+        "comments": "〖Ƈȯḿḿḗƞŧş (Ȯƥŧīȯƞȧŀ) ········〗",
+        "contractLine": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ ······〗"
       },
-      "servicePlaceholder": "55555"
+      "servicePlaceholder": "〖Şḗŀḗƈŧ şḗřṽīƈḗ ······〗"
     },
     "contractLineGuidance": {
-      "multipleLines": "55555",
-      "tooltipNoClient": "55555",
-      "tooltipMultiple": "55555",
-      "tooltipSingle": "55555 {{name}} 55555",
-      "tooltipNone": "55555",
-      "placeholderNoClient": "55555",
-      "placeholderNone": "55555",
-      "placeholderSingle": "55555 {{name}} 55555",
-      "placeholderSelect": "55555",
-      "wrongContractLineWarning": "55555",
-      "noClientNotice": "55555",
-      "noEligibleNotice": "55555"
+      "multipleLines": "〖Ŧħīş şḗřṽīƈḗ ȧƥƥḗȧřş īƞ ḿŭŀŧīƥŀḗ ƈȯƞŧřȧƈŧ ŀīƞḗş. Ƥŀḗȧşḗ şḗŀḗƈŧ ẇħīƈħ ƈȯƞŧřȧƈŧ ŀīƞḗ ŧȯ ƀīŀŀ ȧɠȧīƞşŧ. ········································〗",
+      "tooltipNoClient": "〖Ƈŀīḗƞŧ īƞƒȯřḿȧŧīȯƞ ƞȯŧ ȧṽȧīŀȧƀŀḗ. Ŭşȧɠḗ ẇīŀŀ řȯŭŧḗ ŧȯ ŧħḗ şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ. ····································〗",
+      "tooltipMultiple": "〖Ŧħīş şḗřṽīƈḗ ȧƥƥḗȧřş īƞ ḿŭŀŧīƥŀḗ ƈȯƞŧřȧƈŧ ŀīƞḗş. Ƥŀḗȧşḗ şḗŀḗƈŧ ẇħīƈħ ƈȯƞŧřȧƈŧ ŀīƞḗ ŧȯ ŭşḗ. Ẇħḗƞ ȯƞŀẏ ȯƞḗ ȯƒ ŧħḗḿ īş ȧ ƀŭƈķḗŧ ƈȯƞŧřȧƈŧ ŀīƞḗ, īŧ īş şḗŀḗƈŧḗḓ ƀẏ ḓḗƒȧŭŀŧ. ···································································〗",
+      "tooltipSingle": "〖Ŧħīş ŭşȧɠḗ ẇīŀŀ ƀḗ ƀīŀŀḗḓ ŭƞḓḗř ŧħḗ \"{{name}}\" ƈȯƞŧřȧƈŧ ŀīƞḗ. ·························〗",
+      "tooltipNone": "〖Ƞȯ ḗŀīɠīƀŀḗ ƈȯƞŧřȧƈŧ ŀīƞḗş ƒȯŭƞḓ ƒȯř ŧħīş şḗřṽīƈḗ. ····················〗",
+      "placeholderNoClient": "〖Ŭşīƞɠ şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ ···············〗",
+      "placeholderNone": "〖Ƞȯ ḗŀīɠīƀŀḗ ƈȯƞŧřȧƈŧ ŀīƞḗş ···········〗",
+      "placeholderSingle": "〖Ŭşīƞɠ {{name}} ······〗",
+      "placeholderSelect": "〖Şḗŀḗƈŧ ȧ ƈȯƞŧřȧƈŧ ŀīƞḗ ·········〗",
+      "wrongContractLineWarning": "〖Şḗŀḗƈŧīƞɠ ŧħḗ ẇřȯƞɠ ƈȯƞŧřȧƈŧ ŀīƞḗ ḿȧẏ řḗşŭŀŧ īƞ īƞƈȯřřḗƈŧ ƀīŀŀīƞɠ ··························〗",
+      "noClientNotice": "〖Ƈŀīḗƞŧ īƞƒȯřḿȧŧīȯƞ ƞȯŧ ȧṽȧīŀȧƀŀḗ. Ŭşȧɠḗ ẇīŀŀ řȯŭŧḗ ŧȯ ŧħḗ şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ. ····································〗",
+      "noEligibleNotice": "〖Ƞȯ ḗŀīɠīƀŀḗ ƈȯƞŧřȧƈŧ ŀīƞḗş ƒȯŭƞḓ ƒȯř ŧħīş şḗřṽīƈḗ. ····················〗"
     },
     "deleteDialog": {
-      "title": "55555",
-      "message": "55555"
+      "title": "〖Ḓḗŀḗŧḗ Ŭşȧɠḗ Řḗƈȯřḓ ········〗",
+      "message": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħīş ŭşȧɠḗ řḗƈȯřḓ? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ································〗"
     },
     "toast": {
-      "loadClientsError": "55555",
-      "loadUsageError": "55555",
-      "createSuccess": "55555",
-      "createError": "55555",
-      "updateSuccess": "55555",
-      "updateError": "55555",
-      "deleteSuccess": "55555",
-      "deleteError": "55555"
+      "loadClientsError": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈŀīḗƞŧş ·········〗",
+      "loadUsageError": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŭşȧɠḗ řḗƈȯřḓş ············〗",
+      "createSuccess": "〖Ŭşȧɠḗ řḗƈȯřḓ ƈřḗȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ··············〗",
+      "createError": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ŭşȧɠḗ řḗƈȯřḓ ············〗",
+      "updateSuccess": "〖Ŭşȧɠḗ řḗƈȯřḓ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ··············〗",
+      "updateError": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŭşȧɠḗ řḗƈȯřḓ ············〗",
+      "deleteSuccess": "〖Ŭşȧɠḗ řḗƈȯřḓ ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ··············〗",
+      "deleteError": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ŭşȧɠḗ řḗƈȯřḓ ············〗"
     }
   },
   "lineItem": {
     "collapsed": {
-      "itemDiscount": "55555",
-      "invoiceDiscount": "55555",
-      "appliedTo": "55555 {{description}} 55555",
-      "selectService": "55555",
-      "taxable": "55555",
-      "nonTaxable": "55555",
-      "calculatedOnSave": "55555"
+      "itemDiscount": "〖Īŧḗḿ Ḓīşƈȯŭƞŧ ······〗",
+      "invoiceDiscount": "〖Īƞṽȯīƈḗ Ḓīşƈȯŭƞŧ ·······〗",
+      "appliedTo": "〖Ȧƥƥŀīḗḓ ŧȯ: {{description}} ···········〗",
+      "selectService": "〖Şḗŀḗƈŧ Şḗřṽīƈḗ ······〗",
+      "taxable": "〖(Ŧȧẋȧƀŀḗ) ····〗",
+      "nonTaxable": "〖(Ƞȯƞ-Ŧȧẋȧƀŀḗ) ······〗",
+      "calculatedOnSave": "〖(ƈȧŀƈŭŀȧŧḗḓ ȯƞ şȧṽḗ) ········〗"
     },
     "expanded": {
-      "discount": "55555",
-      "item": "55555 {{number}} 55555",
-      "markedForRemoval": "55555"
+      "discount": "〖Ḓīşƈȯŭƞŧ ····〗",
+      "item": "〖Īŧḗḿ {{number}} ······〗",
+      "markedForRemoval": "〖Ḿȧřķḗḓ ƒȯř řḗḿȯṽȧŀ ········〗"
     },
     "fields": {
-      "service": "55555",
-      "quantity": "55555",
-      "discountType": "55555",
-      "percentage": "55555",
-      "amount": "55555 {{currencySymbol}} 55555",
-      "discountDescription": "55555",
-      "applyDiscountTo": "55555",
-      "entireInvoice": "55555",
-      "rate": "55555 {{currencySymbol}} 55555",
-      "description": "55555"
+      "service": "〖Şḗřṽīƈḗ ···〗",
+      "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗",
+      "discountType": "〖Ḓīşƈȯŭƞŧ Ŧẏƥḗ ······〗",
+      "percentage": "〖Ƥḗřƈḗƞŧȧɠḗ ····〗",
+      "amount": "〖Ȧḿȯŭƞŧ ({{currencySymbol}}) ···········〗",
+      "discountDescription": "〖Ḓīşƈȯŭƞŧ Ḓḗşƈřīƥŧīȯƞ ········〗",
+      "applyDiscountTo": "〖Ȧƥƥŀẏ Ḓīşƈȯŭƞŧ Ŧȯ ·······〗",
+      "entireInvoice": "〖Ḗƞŧīřḗ Īƞṽȯīƈḗ ······〗",
+      "rate": "〖Řȧŧḗ ({{currencySymbol}}) ··········〗",
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗"
     },
     "placeholders": {
-      "discountDescription": "55555"
+      "discountDescription": "〖ḗ.ɠ., Ḗȧřŀẏ Ƥȧẏḿḗƞŧ Ḓīşƈȯŭƞŧ ············〗"
     },
     "actions": {
-      "add": "55555",
-      "remove": "55555",
-      "restore": "55555"
+      "add": "〖Ȧḓḓ ··〗",
+      "remove": "〖Řḗḿȯṽḗ ···〗",
+      "restore": "〖Řḗşŧȯřḗ ···〗"
     },
     "hints": {
-      "removed": "55555"
+      "removed": "〖Ŧħīş īŧḗḿ ẇīŀŀ ƀḗ řḗḿȯṽḗḓ ẇħḗƞ ẏȯŭ şȧṽḗ ƈħȧƞɠḗş ···················〗"
     },
     "summary": {
-      "percentageDiscount": "55555",
-      "fixedDiscount": "55555",
-      "itemTotal": "55555 {{percentage}} 55555",
-      "invoiceTotal": "55555 {{percentage}} 55555",
-      "amount": "55555 {{currencySymbol}} 55555 {{amount}} 55555",
-      "appliedTo": "55555 {{description}} 55555",
-      "subtotal": "55555 {{currencySymbol}} 55555 {{amount}} 55555"
+      "percentageDiscount": "〖Ƥḗřƈḗƞŧȧɠḗ Ḓīşƈȯŭƞŧ ········〗",
+      "fixedDiscount": "〖Ƒīẋḗḓ Ḓīşƈȯŭƞŧ ······〗",
+      "itemTotal": "〖{{percentage}}% ȯƒ īŧḗḿ ŧȯŧȧŀ ············〗",
+      "invoiceTotal": "〖{{percentage}}% ȯƒ īƞṽȯīƈḗ ŧȯŧȧŀ ·············〗",
+      "amount": "〖Ȧḿȯŭƞŧ: -{{currencySymbol}}{{amount}} ···············〗",
+      "appliedTo": "〖Ȧƥƥŀīḗḓ ŧȯ: {{description}} ···········〗",
+      "subtotal": "〖Şŭƀŧȯŧȧŀ: {{currencySymbol}}{{amount}} ················〗"
     },
     "options": {
-      "percentage": "55555",
-      "fixedAmount": "55555"
+      "percentage": "〖Ƥḗřƈḗƞŧȧɠḗ ····〗",
+      "fixedAmount": "〖Ƒīẋḗḓ Ȧḿȯŭƞŧ ·····〗"
     }
   },
   "contractLineServices": {
     "table": {
-      "serviceName": "55555",
-      "category": "55555",
-      "billingMethod": "55555",
-      "quantity": "55555",
-      "defaultRate": "55555",
-      "actions": "55555"
+      "serviceName": "〖Şḗřṽīƈḗ Ƞȧḿḗ ·····〗",
+      "category": "〖Ƈȧŧḗɠȯřẏ ····〗",
+      "billingMethod": "〖Ɓīŀŀīƞɠ Ḿḗŧħȯḓ ······〗",
+      "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗",
+      "defaultRate": "〖Ḓḗƒȧŭŀŧ Řȧŧḗ ·····〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗"
     },
     "billingMethods": {
-      "fixed": "55555",
-      "hourly": "55555",
-      "usageBased": "55555",
-      "usage": "55555"
+      "fixed": "〖Ƒīẋḗḓ Ƥřīƈḗ ·····〗",
+      "hourly": "〖Ħȯŭřŀẏ ···〗",
+      "usageBased": "〖Ŭşȧɠḗ Ɓȧşḗḓ ·····〗",
+      "usage": "〖Ŭşȧɠḗ ··〗"
     },
     "badges": {
-      "product": "55555",
-      "service": "55555"
+      "product": "〖Ƥřȯḓŭƈŧ ···〗",
+      "service": "〖Şḗřṽīƈḗ ···〗"
     },
     "actions": {
-      "editQuantity": "55555",
-      "remove": "55555",
-      "addSelectedServices": "55555",
-      "addSelectedServicesWithCount": "55555 {{count}} 55555"
+      "editQuantity": "〖Ḗḓīŧ Ɋŭȧƞŧīŧẏ ······〗",
+      "remove": "〖Řḗḿȯṽḗ ···〗",
+      "addSelectedServices": "〖Ȧḓḓ Şḗŀḗƈŧḗḓ Şḗřṽīƈḗş ·········〗",
+      "addSelectedServicesWithCount": "〖Ȧḓḓ Şḗŀḗƈŧḗḓ Şḗřṽīƈḗş ({{count}}) ··············〗"
     },
     "tooltip": {
-      "defaultRate": "55555"
+      "defaultRate": "〖Şḗřṽīƈḗ'ş şŧȧƞḓȧřḓ řȧŧḗ, ŭşḗḓ ƒȯř īƞŧḗřƞȧŀ ṽȧŀŭḗ ȧŀŀȯƈȧŧīȯƞ ȧƞḓ řḗƥȯřŧīƞɠ ẇīŧħīƞ ŧħḗ ƒīẋḗḓ ƥŀȧƞ ŧȯŧȧŀ. Ƞȯŧ ḓīřḗƈŧŀẏ ḗḓīŧȧƀŀḗ ħḗřḗ. ····················································〗"
     },
     "states": {
-      "loading": "55555",
-      "emptyAssociated": "55555",
-      "emptyAvailable": "55555",
-      "missingPrice": "55555 {{currency}} 55555"
+      "loading": "〖Ŀȯȧḓīƞɠ şḗřṽīƈḗş... ········〗",
+      "emptyAssociated": "〖Ƞȯ şḗřṽīƈḗş ƈŭřřḗƞŧŀẏ ȧşşȯƈīȧŧḗḓ ẇīŧħ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ. ·······················〗",
+      "emptyAvailable": "〖Ȧŀŀ ȧṽȧīŀȧƀŀḗ şḗřṽīƈḗş ȧřḗ ȧŀřḗȧḓẏ ȧşşȯƈīȧŧḗḓ ẇīŧħ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ. ····························〗",
+      "missingPrice": "〖Ḿīşşīƞɠ {{currency}} ƥřīƈḗ ···········〗"
     },
     "addSection": {
-      "title": "55555",
-      "serviceType": "55555 {{value}} 55555",
-      "method": "55555 {{value}} 55555",
-      "rate": "55555 {{value}} 55555",
-      "catalogPrice": "55555 {{currency}} 55555 {{value}} 55555",
-      "catalogPriceMissing": "55555 {{currency}} 55555",
-      "customRate": "55555 {{currency}} 55555",
-      "productMissingPrice": "55555 {{name}} 55555 {{currency}} 55555"
+      "title": "〖Ȧḓḓ Şḗřṽīƈḗş ŧȯ Ƈȯƞŧřȧƈŧ Ŀīƞḗ ············〗",
+      "serviceType": "〖Şḗřṽīƈḗ Ŧẏƥḗ: {{value}} ··········〗",
+      "method": "〖Ḿḗŧħȯḓ: {{value}} ·······〗",
+      "rate": "〖Řȧŧḗ: {{value}} ······〗",
+      "catalogPrice": "〖{{currency}} ƥřīƈḗ: {{value}} ············〗",
+      "catalogPriceMissing": "〖{{currency}} ƥřīƈḗ: ḿīşşīƞɠ ···········〗",
+      "customRate": "〖Ƈŭşŧȯḿ {{currency}} řȧŧḗ ··········〗",
+      "productMissingPrice": "〖Ƥřȯḓŭƈŧ \"{{name}}\" ħȧş ƞȯ {{currency}} ƥřīƈḗ. Ḗƞŧḗř ȧ ƈŭşŧȯḿ řȧŧḗ ƀḗƒȯřḗ ȧḓḓīƞɠ. ································〗"
     },
     "errors": {
-      "loadData": "55555",
-      "addServices": "55555",
-      "removeService": "55555"
+      "loadData": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şḗřṽīƈḗş ḓȧŧȧ ············〗",
+      "addServices": "〖Ƒȧīŀḗḓ ŧȯ ȧḓḓ şḗřṽīƈḗş ·········〗",
+      "removeService": "〖Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ şḗřṽīƈḗ ··········〗"
     },
-    "unknownService": "55555"
+    "unknownService": "〖Ŭƞķƞȯẇƞ Şḗřṽīƈḗ ······〗"
   },
   "presetServices": {
     "warnings": {
-      "unsavedChanges": "55555"
+      "unsavedChanges": "〖Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Ƈŀīƈķ \"Şȧṽḗ Ƈħȧƞɠḗş\" ŧȯ ȧƥƥŀẏ ŧħḗḿ. ·························〗"
     },
     "table": {
-      "serviceName": "55555",
-      "category": "55555",
-      "billingMethod": "55555",
-      "quantity": "55555",
-      "defaultRate": "55555",
-      "actions": "55555"
+      "serviceName": "〖Şḗřṽīƈḗ Ƞȧḿḗ ·····〗",
+      "category": "〖Ƈȧŧḗɠȯřẏ ····〗",
+      "billingMethod": "〖Ɓīŀŀīƞɠ Ḿḗŧħȯḓ ······〗",
+      "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗",
+      "defaultRate": "〖Ḓḗƒȧŭŀŧ Řȧŧḗ ·····〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗"
     },
     "tooltip": {
-      "defaultRate": "55555"
+      "defaultRate": "〖Şḗřṽīƈḗ'ş şŧȧƞḓȧřḓ řȧŧḗ, ŭşḗḓ ƒȯř īƞŧḗřƞȧŀ ṽȧŀŭḗ ȧŀŀȯƈȧŧīȯƞ ȧƞḓ řḗƥȯřŧīƞɠ ẇīŧħīƞ ŧħḗ ƒīẋḗḓ ƥŀȧƞ ŧȯŧȧŀ. ·········································〗"
     },
     "states": {
-      "loading": "55555",
-      "emptyAssociated": "55555",
-      "emptyAvailable": "55555"
+      "loading": "〖Ŀȯȧḓīƞɠ şḗřṽīƈḗş... ········〗",
+      "emptyAssociated": "〖Ƞȯ şḗřṽīƈḗş ƈŭřřḗƞŧŀẏ ȧşşȯƈīȧŧḗḓ ẇīŧħ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ. ·······················〗",
+      "emptyAvailable": "〖Ȧŀŀ ȧṽȧīŀȧƀŀḗ şḗřṽīƈḗş ȧřḗ ȧŀřḗȧḓẏ ȧşşȯƈīȧŧḗḓ ẇīŧħ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ. ····························〗"
     },
     "addSection": {
-      "title": "55555",
-      "serviceType": "55555 {{value}} 55555",
-      "method": "55555 {{value}} 55555",
-      "rate": "55555 {{value}} 55555"
+      "title": "〖Ȧḓḓ Şḗřṽīƈḗş ŧȯ Ƈȯƞŧřȧƈŧ Ŀīƞḗ ············〗",
+      "serviceType": "〖Şḗřṽīƈḗ Ŧẏƥḗ: {{value}} ··········〗",
+      "method": "〖Ḿḗŧħȯḓ: {{value}} ·······〗",
+      "rate": "〖Řȧŧḗ: ${{value}} ·······〗"
     },
     "actions": {
-      "remove": "55555",
-      "addSelectedServices": "55555",
-      "addSelectedServicesWithCount": "55555 {{count}} 55555",
-      "saveChanges": "55555",
-      "saveChangesDirty": "55555",
-      "saving": "55555",
-      "reset": "55555"
+      "remove": "〖Řḗḿȯṽḗ ···〗",
+      "addSelectedServices": "〖Ȧḓḓ Şḗŀḗƈŧḗḓ Şḗřṽīƈḗş ·········〗",
+      "addSelectedServicesWithCount": "〖Ȧḓḓ Şḗŀḗƈŧḗḓ Şḗřṽīƈḗş ({{count}}) ··············〗",
+      "saveChanges": "〖Şȧṽḗ Ƈħȧƞɠḗş ·····〗",
+      "saveChangesDirty": "〖Şȧṽḗ Ƈħȧƞɠḗş * ······〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗",
+      "reset": "〖Řḗşḗŧ ··〗"
     },
     "navigationDialog": {
-      "title": "55555",
-      "message": "55555",
-      "confirmLabel": "55555",
-      "cancelLabel": "55555"
+      "title": "〖Ŭƞşȧṽḗḓ Ƈħȧƞɠḗş ······〗",
+      "message": "〖Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ŀḗȧṽḗ ŧħīş ƥȧɠḗ? Ȧŀŀ ƈħȧƞɠḗş ẇīŀŀ ƀḗ ŀȯşŧ. ······································〗",
+      "confirmLabel": "〖Ŀḗȧṽḗ Ƥȧɠḗ ····〗",
+      "cancelLabel": "〖Şŧȧẏ ȯƞ Ƥȧɠḗ ·····〗"
     },
     "toast": {
-      "saveSuccess": "55555",
-      "saveError": "55555"
+      "saveSuccess": "〖Ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧ şḗřṽīƈḗş şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ ····················〗",
+      "saveError": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ şḗřṽīƈḗş ··········〗"
     },
-    "unknownService": "55555"
+    "unknownService": "〖Ŭƞķƞȯẇƞ Şḗřṽīƈḗ ······〗"
   },
   "accountingExports": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ȧƈƈȯŭƞŧīƞɠ Ḗẋƥȯřŧş ········〗",
+    "description": "〖Ƈřḗȧŧḗ ḗẋƥȯřŧ ƀȧŧƈħḗş, ṽȧŀīḓȧŧḗ ḿȧƥƥīƞɠş, ȧƞḓ ḓḗŀīṽḗř ƒīŀḗş ƒȯř ḿȧƞŭȧŀ īḿƥȯřŧ īƞŧȯ ẏȯŭř ȧƈƈȯŭƞŧīƞɠ şẏşŧḗḿ. ···········································〗",
     "table": {
-      "batch": "55555",
-      "adapter": "55555",
-      "status": "55555",
-      "created": "55555",
-      "updated": "55555",
-      "actions": "55555"
+      "batch": "〖Ɓȧŧƈħ ··〗",
+      "adapter": "〖Ȧḓȧƥŧḗř ···〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "created": "〖Ƈřḗȧŧḗḓ ···〗",
+      "updated": "〖Ŭƥḓȧŧḗḓ ···〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗"
     },
     "actions": {
-      "refresh": "55555",
-      "newExport": "55555",
-      "open": "55555",
-      "execute": "55555",
-      "createBatch": "55555",
-      "creating": "55555",
-      "cancelBatch": "55555"
+      "refresh": "〖Řḗƒřḗşħ ···〗",
+      "newExport": "〖Ƞḗẇ Ḗẋƥȯřŧ ····〗",
+      "open": "〖Ȯƥḗƞ ··〗",
+      "execute": "〖Ḗẋḗƈŭŧḗ ···〗",
+      "createBatch": "〖Ƈřḗȧŧḗ Ɓȧŧƈħ ·····〗",
+      "creating": "〖Ƈřḗȧŧīƞɠ... ·····〗",
+      "cancelBatch": "〖Ƈȧƞƈḗŀ Ɓȧŧƈħ ·····〗"
     },
     "states": {
-      "loadingBatches": "55555",
-      "empty": "55555",
-      "loadingDetails": "55555",
-      "batchNotFound": "55555"
+      "loadingBatches": "〖Ŀȯȧḓīƞɠ ƀȧŧƈħḗş... ········〗",
+      "empty": "〖Ƞȯ ḗẋƥȯřŧ ƀȧŧƈħḗş ẏḗŧ. ·········〗",
+      "loadingDetails": "〖Ŀȯȧḓīƞɠ ƀȧŧƈħ ḓḗŧȧīŀş... ··········〗",
+      "batchNotFound": "〖Ɓȧŧƈħ ƞȯŧ ƒȯŭƞḓ. ·······〗"
     },
     "createDialog": {
-      "title": "55555",
+      "title": "〖Ƞḗẇ Ȧƈƈȯŭƞŧīƞɠ Ḗẋƥȯřŧ ·········〗",
       "fields": {
-        "adapter": "55555",
-        "startDate": "55555",
-        "endDate": "55555",
-        "clientSearch": "55555",
-        "invoiceStatuses": "55555",
-        "notes": "55555",
-        "realm": "55555"
+        "adapter": "〖Ȧḓȧƥŧḗř ···〗",
+        "startDate": "〖Şŧȧřŧ Ḓȧŧḗ ····〗",
+        "endDate": "〖Ḗƞḓ Ḓȧŧḗ ····〗",
+        "clientSearch": "〖Ƈŀīḗƞŧ Şḗȧřƈħ ······〗",
+        "invoiceStatuses": "〖Īƞṽȯīƈḗ Şŧȧŧŭşḗş ·······〗",
+        "notes": "〖Ƞȯŧḗş ··〗",
+        "realm": "〖Ŧȧřɠḗŧ Ƈȯḿƥȧƞẏ (Řḗȧŀḿ) ·········〗"
       },
       "placeholders": {
-        "clientSearch": "55555",
-        "invoiceStatuses": "55555",
-        "notes": "55555"
+        "clientSearch": "〖Ȯƥŧīȯƞȧŀ ƈŀīḗƞŧ ƞȧḿḗ ƒīŀŧḗř ···········〗",
+        "invoiceStatuses": "〖Ƈȯḿḿȧ-şḗƥȧřȧŧḗḓ (ȯƥŧīȯƞȧŀ), ḗ.ɠ. ƒīƞȧŀīẑḗḓ,ƥȯşŧḗḓ ····················〗",
+        "notes": "〖Ȯƥŧīȯƞȧŀ ƞȯŧḗş ······〗"
       },
-      "defaultRealmLabel": "55555 {{realmId}} 55555"
+      "defaultRealmLabel": "〖{{realmId}} (ḓḗƒȧŭŀŧ) ·········〗"
     },
     "detailDialog": {
-      "title": "55555",
+      "title": "〖Ȧƈƈȯŭƞŧīƞɠ Ḗẋƥȯřŧ Ɓȧŧƈħ ··········〗",
       "fields": {
-        "batchId": "55555",
-        "adapter": "55555",
-        "status": "55555",
-        "created": "55555",
-        "lines": "55555",
-        "errors": "55555",
-        "delivered": "55555",
-        "notes": "55555"
+        "batchId": "〖Ɓȧŧƈħ ĪḒ ····〗",
+        "adapter": "〖Ȧḓȧƥŧḗř ···〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "created": "〖Ƈřḗȧŧḗḓ ···〗",
+        "lines": "〖Ŀīƞḗş ··〗",
+        "errors": "〖Ḗřřȯřş ···〗",
+        "delivered": "〖Ḓḗŀīṽḗřḗḓ ····〗",
+        "notes": "〖Ƞȯŧḗş ··〗"
       },
-      "errorDetails": "55555"
+      "errorDetails": "〖Ḗřřȯř Ḓḗŧȧīŀş ······〗"
     },
     "toast": {
-      "created": "55555",
-      "executing": "55555",
-      "loadBatchesError": "55555",
-      "loadDetailError": "55555",
-      "createError": "55555",
-      "executeError": "55555",
-      "cancelled": "55555",
-      "cancelError": "55555"
+      "created": "〖Ȧƈƈȯŭƞŧīƞɠ ḗẋƥȯřŧ ƀȧŧƈħ ƈřḗȧŧḗḓ ·············〗",
+      "executing": "〖Ɓȧŧƈħ ḗẋḗƈŭŧīȯƞ şŧȧřŧḗḓ ··········〗",
+      "loadBatchesError": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧƈƈȯŭƞŧīƞɠ ḗẋƥȯřŧ ƀȧŧƈħḗş ················〗",
+      "loadDetailError": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƀȧŧƈħ ḓḗŧȧīŀş ············〗",
+      "createError": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ḗẋƥȯřŧ ƀȧŧƈħ ············〗",
+      "executeError": "〖Ƒȧīŀḗḓ ŧȯ ḗẋḗƈŭŧḗ ƀȧŧƈħ ··········〗",
+      "cancelled": "〖Ɓȧŧƈħ ƈȧƞƈḗŀŀḗḓ ······〗",
+      "cancelError": "〖Ƒȧīŀḗḓ ŧȯ ƈȧƞƈḗŀ ƀȧŧƈħ ·········〗"
     },
     "status": {
-      "pending": "55555",
-      "validating": "55555",
-      "ready": "55555",
-      "delivered": "55555",
-      "posted": "55555",
-      "failed": "55555",
-      "cancelled": "55555",
-      "needsAttention": "55555"
+      "pending": "〖Ƥḗƞḓīƞɠ ···〗",
+      "validating": "〖Ṽȧŀīḓȧŧīƞɠ ····〗",
+      "ready": "〖Řḗȧḓẏ ··〗",
+      "delivered": "〖Ḓḗŀīṽḗřḗḓ ····〗",
+      "posted": "〖Ƥȯşŧḗḓ ···〗",
+      "failed": "〖Ƒȧīŀḗḓ ···〗",
+      "cancelled": "〖Ƈȧƞƈḗŀŀḗḓ ····〗",
+      "needsAttention": "〖Ƞḗḗḓş Ȧŧŧḗƞŧīȯƞ ······〗"
     }
   },
   "templateRenderer": {
-    "loading": "55555",
-    "errorPrefix": "55555",
-    "empty": "55555"
+    "loading": "〖Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗ ƥřḗṽīḗẇ... ···········〗",
+    "errorPrefix": "〖Ḗřřȯř: ···〗",
+    "empty": "〖Ƥŀḗȧşḗ şḗŀḗƈŧ ȧƞ īƞṽȯīƈḗ ȧƞḓ ȧ ŧḗḿƥŀȧŧḗ ŧȯ ƥřḗṽīḗẇ. ·····················〗"
   },
   "templateDesigner": {
     "propertyEditor": {
-      "selectField": "55555",
-      "content": "55555",
-      "dataField": "55555",
-      "width": "55555",
-      "height": "55555",
-      "fontSize": "55555",
-      "color": "55555",
-      "columns": "55555 {{count}} 55555",
-      "rows": "55555 {{count}} 55555"
+      "selectField": "〖Şḗŀḗƈŧ ȧ ƒīḗŀḓ ······〗",
+      "content": "〖Ƈȯƞŧḗƞŧ ···〗",
+      "dataField": "〖Ḓȧŧȧ Ƒīḗŀḓ ····〗",
+      "width": "〖Ẇīḓŧħ ··〗",
+      "height": "〖Ħḗīɠħŧ ···〗",
+      "fontSize": "〖Ƒȯƞŧ Şīẑḗ ····〗",
+      "color": "〖Ƈȯŀȯř ··〗",
+      "columns": "〖{{count}} ƈȯŀŭḿƞ(ş) ········〗",
+      "rows": "〖{{count}} řȯẇ(ş) ·······〗"
     },
     "conditionalRules": {
-      "title": "55555",
-      "selectAction": "55555",
-      "show": "55555",
-      "hide": "55555",
-      "format": "55555",
-      "conditionPlaceholder": "55555",
-      "targetPlaceholder": "55555",
-      "addRule": "55555"
+      "title": "〖Ƈȯƞḓīŧīȯƞȧŀ Ḓīşƥŀȧẏ Řŭŀḗş ··········〗",
+      "selectAction": "〖Şḗŀḗƈŧ Ȧƈŧīȯƞ ······〗",
+      "show": "〖Şħȯẇ ··〗",
+      "hide": "〖Ħīḓḗ ··〗",
+      "format": "〖Ƒȯřḿȧŧ ···〗",
+      "conditionPlaceholder": "〖Ƈȯƞḓīŧīȯƞ ····〗",
+      "targetPlaceholder": "〖Ŧȧřɠḗŧ ···〗",
+      "addRule": "〖Ȧḓḓ Řŭŀḗ ····〗"
     }
   },
   "contractsHub": {
-    "title": "55555",
+    "title": "〖Ƈȯƞŧřȧƈŧş ····〗",
     "tabs": {
-      "templates": "55555",
-      "clientContracts": "55555"
+      "templates": "〖Ŧḗḿƥŀȧŧḗş ····〗",
+      "clientContracts": "〖Ƈŀīḗƞŧ Ƈȯƞŧřȧƈŧş ·······〗"
     }
   },
   "editQuantityDialog": {
-    "title": "55555 {{serviceName}} 55555",
+    "title": "〖Ḗḓīŧ Ɋŭȧƞŧīŧẏ ƒȯř {{serviceName}} ··············〗",
     "fields": {
-      "quantity": "55555"
+      "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗"
     },
     "validation": {
-      "empty": "55555",
-      "positiveWholeNumber": "55555"
+      "empty": "〖Ɋŭȧƞŧīŧẏ ƈȧƞƞȯŧ ƀḗ ḗḿƥŧẏ. ··········〗",
+      "positiveWholeNumber": "〖Ɋŭȧƞŧīŧẏ ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ ẇħȯŀḗ ƞŭḿƀḗř. ·················〗"
     },
     "actions": {
-      "cancel": "55555",
-      "saveQuantity": "55555",
-      "saving": "55555"
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "saveQuantity": "〖Şȧṽḗ Ɋŭȧƞŧīŧẏ ······〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗"
     },
     "errors": {
-      "saveFailed": "55555"
+      "saveFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ʠŭȧƞŧīŧẏ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ··················〗"
     }
   },
   "templateRendererCore": {
-    "notAvailable": "55555",
-    "unknownValue": "55555",
-    "noDataForList": "55555 {{name}} 55555",
-    "uncategorized": "55555"
+    "notAvailable": "〖Ƞ/Ȧ ··〗",
+    "unknownValue": "〖Ŭƞķƞȯẇƞ ṽȧŀŭḗ ······〗",
+    "noDataForList": "〖Ƞȯ ḓȧŧȧ ƒȯř ŀīşŧ: {{name}} ···········〗",
+    "uncategorized": "〖Ŭƞƈȧŧḗɠȯřīẑḗḓ ······〗"
   },
   "spendByProfile": {
-    "title": "55555",
-    "description": "55555",
-    "from": "55555",
-    "to": "55555",
-    "comparePrevious": "55555",
-    "defaultBadge": "55555",
-    "empty": "55555",
-    "drillDownTitle": "55555",
-    "drillDownEmpty": "55555",
-    "priorPeriod": "55555 {{amount}} 55555",
-    "unattributedHint": "55555",
+    "title": "〖Şƥḗƞḓ ƀẏ ƀīŀŀīƞɠ ƥřȯƒīŀḗ ··········〗",
+    "description": "〖Ẇħȧŧ ḗȧƈħ şīŧḗ ȯř ḗƞŧīŧẏ ẇīŧħīƞ ŧħīş ƈŀīḗƞŧ ƈȯşŧ ȯṽḗř ŧħḗ ƥḗřīȯḓ. Ȯƥḗƞ ȧ řȯẇ ŧȯ şḗḗ ŧħḗ ƈħȧřɠḗş ƀḗħīƞḓ ŧħḗ ƞŭḿƀḗř. ··············································〗",
+    "from": "〖Ƒřȯḿ ··〗",
+    "to": "〖Ŧȯ ·〗",
+    "comparePrevious": "〖Ƈȯḿƥȧřḗ ŧȯ ƥřḗṽīȯŭş ƥḗřīȯḓ ···········〗",
+    "defaultBadge": "〖Ḓḗƒȧŭŀŧ ···〗",
+    "empty": "〖Ƞȯ ƒīƞȧŀīẑḗḓ ƈħȧřɠḗş ƒȯř ŧħīş ƈŀīḗƞŧ īƞ ŧħḗ şḗŀḗƈŧḗḓ ƥḗřīȯḓ. ························〗",
+    "drillDownTitle": "〖Ƈħȧřɠḗş ƀḗħīƞḓ ŧħīş ƞŭḿƀḗř ···········〗",
+    "drillDownEmpty": "〖Ƞȯ ƈħȧřɠḗş ƒȯŭƞḓ. ·······〗",
+    "priorPeriod": "〖ẇȧş {{amount}} ······〗",
+    "unattributedHint": "〖Ƞȯ ƈȯƞŧřȧƈŧ, ƈȯƞŧřȧƈŧ ŀīƞḗ, ȯř ẇȯřķ īŧḗḿ ƈŀȧīḿḗḓ ŧħḗşḗ ƈħȧřɠḗş, şȯ ŧħḗẏ ŀȧƞḓḗḓ ȯƞ ŧħḗ ḓḗƒȧŭŀŧ ƥřȯƒīŀḗ. ·········································〗",
     "columns": {
-      "profile": "55555",
-      "charges": "55555",
-      "net": "55555",
-      "tax": "55555",
-      "total": "55555",
-      "unattributed": "55555",
-      "priorTotal": "55555",
-      "change": "55555"
+      "profile": "〖Ɓīŀŀīƞɠ ƥřȯƒīŀḗ ······〗",
+      "charges": "〖Ƈħȧřɠḗş ···〗",
+      "net": "〖Ƞḗŧ ··〗",
+      "tax": "〖Ŧȧẋ ··〗",
+      "total": "〖Ŧȯŧȧŀ ··〗",
+      "unattributed": "〖Ƒḗŀŀ ƀȧƈķ ŧȯ ḓḗƒȧŭŀŧ ········〗",
+      "priorTotal": "〖Ƥřīȯř ƥḗřīȯḓ ŧȯŧȧŀ ········〗",
+      "change": "〖Ƈħȧƞɠḗ ···〗"
     }
   },
   "attribution": {
     "profile": {
-      "explicit": "55555 {{profile}} 55555",
-      "contractLine": "55555 {{profile}} 55555",
-      "contractLineNamed": "55555 {{profile}} 55555 {{line}} 55555",
-      "contract": "55555 {{profile}} 55555",
-      "contractNamed": "55555 {{profile}} 55555 {{contract}} 55555",
-      "workItem": "55555 {{profile}} 55555",
-      "workItemNamed": "55555 {{profile}} 55555 {{workItem}} 55555",
-      "clientDefault": "55555 {{profile}} 55555",
-      "unknown": "55555"
+      "explicit": "〖Ɓīŀŀḗḓ ŧȯ {{profile}} ƀḗƈȧŭşḗ īŧ ẇȧş ƈħȯşḗƞ ƒȯř ŧħīş ƈħȧřɠḗ ḓīřḗƈŧŀẏ. ····························〗",
+      "contractLine": "〖Ɓīŀŀḗḓ ŧȯ {{profile}} ƀḗƈȧŭşḗ ŧħḗ ƈȯƞŧřȧƈŧ ŀīƞḗ īş ȧşşīɠƞḗḓ ŧȯ īŧ. ···························〗",
+      "contractLineNamed": "〖Ɓīŀŀḗḓ ŧȯ {{profile}} ƀḗƈȧŭşḗ ŧħḗ ƈȯƞŧřȧƈŧ ŀīƞḗ \"{{line}}\" īş ȧşşīɠƞḗḓ ŧȯ īŧ. ·······························〗",
+      "contract": "〖Ɓīŀŀḗḓ ŧȯ {{profile}} ƀḗƈȧŭşḗ ŧħḗ ƈȯƞŧřȧƈŧ īş ȧşşīɠƞḗḓ ŧȯ īŧ. ·························〗",
+      "contractNamed": "〖Ɓīŀŀḗḓ ŧȯ {{profile}} ƀḗƈȧŭşḗ ŧħḗ ƈȯƞŧřȧƈŧ \"{{contract}}\" īş ȧşşīɠƞḗḓ ŧȯ īŧ. ·······························〗",
+      "workItem": "〖Ɓīŀŀḗḓ ŧȯ {{profile}} ƀḗƈȧŭşḗ ŧħḗ ŧīƈķḗŧ ȯř ƥřȯĵḗƈŧ īş ȧşşīɠƞḗḓ ŧȯ īŧ; ƞȯ ƈȯƞŧřȧƈŧ ȧşşīɠƞḿḗƞŧ ȧƥƥŀīḗş. ·········································〗",
+      "workItemNamed": "〖Ɓīŀŀḗḓ ŧȯ {{profile}} ƀḗƈȧŭşḗ \"{{workItem}}\" īş ȧşşīɠƞḗḓ ŧȯ īŧ; ƞȯ ƈȯƞŧřȧƈŧ ȧşşīɠƞḿḗƞŧ ȧƥƥŀīḗş. ······································〗",
+      "clientDefault": "〖Ɓīŀŀḗḓ ŧȯ {{profile}} ƀḗƈȧŭşḗ ƞȯŧħīƞɠ ḗŀşḗ ƈŀȧīḿḗḓ ŧħīş ƈħȧřɠḗ — īŧ ƒḗŀŀ ƀȧƈķ ŧȯ ŧħḗ ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ƥřȯƒīŀḗ. ············································〗",
+      "unknown": "〖Ŧħīş ƈħȧřɠḗ ħȧş ƞȯ řḗƈȯřḓḗḓ ȧŧŧřīƀŭŧīȯƞ. ················〗"
     },
     "line": {
-      "explicit": "55555 {{line}} 55555",
-      "autoUniqueService": "55555 {{line}} 55555",
-      "autoBucketOverlay": "55555 {{line}} 55555",
-      "autoBillingProfile": "55555 {{line}} 55555",
-      "reconciled": "55555 {{line}} 55555",
-      "unresolved": "55555",
-      "unknown": "55555"
+      "explicit": "〖Şȯḿḗȯƞḗ ƈħȯşḗ {{line}} ƒȯř ŧħīş ḗƞŧřẏ. ················〗",
+      "autoUniqueService": "〖{{line}} ẇȧş ŧħḗ ȯƞŀẏ ƈȯƞŧřȧƈŧ ŀīƞḗ ƈȯṽḗřīƞɠ ŧħīş şḗřṽīƈḗ. ························〗",
+      "autoBucketOverlay": "〖Şḗṽḗřȧŀ ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȯṽḗřḗḓ ŧħīş şḗřṽīƈḗ; {{line}} ẇȧş ŧħḗ ȯƞŀẏ ȯƞḗ ẇīŧħ ȧ ƀŭƈķḗŧ. ··································〗",
+      "autoBillingProfile": "〖Şḗṽḗřȧŀ ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȯṽḗřḗḓ ŧħīş şḗřṽīƈḗ; {{line}} ẇȧş ƥīƈķḗḓ ƀḗƈȧŭşḗ īŧ ƀḗŀȯƞɠş ŧȯ ŧħḗ ẇȯřķ īŧḗḿ'ş ƀīŀŀīƞɠ ƥřȯƒīŀḗ. ················································〗",
+      "reconciled": "〖{{line}} ẇȧş ḿȧŧƈħḗḓ ŧȯ ŧħīş ḗƞŧřẏ ẇħḗƞ ŧħḗ īƞṽȯīƈḗ ẇȧş ɠḗƞḗřȧŧḗḓ. ···························〗",
+      "unresolved": "〖Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗ ƈȯŭŀḓ ƀḗ ƈħȯşḗƞ ƒȯř ŧħīş ḗƞŧřẏ. ····················〗",
+      "unknown": "〖Ħȯẇ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ ẇȧş ƈħȯşḗƞ ẇȧş ƞȯŧ řḗƈȯřḓḗḓ. ·····················〗"
     },
     "limitation": {
-      "contractGranular": "55555"
+      "contractGranular": "〖Ŧħīş ƈħȧřɠḗ ŧẏƥḗ ħȧş ƞȯ ƥḗř-īŧḗḿ řḗƈȯřḓ ƀḗħīƞḓ īŧ, şȯ īŧ ƈȧƞ ȯƞŀẏ ƀḗ ȧŧŧřīƀŭŧḗḓ ȧş ƒȧř ȧş ŧħḗ ƈȯƞŧřȧƈŧ — ƞȯŧ ŧȯ ŧħḗ şƥḗƈīƒīƈ şīŧḗ ȯř ẇȯřķ īŧ ƈȧḿḗ ƒřȯḿ. ·····························································〗"
     }
   },
   "unresolvedReview": {
-    "title": "55555",
-    "description": "55555",
-    "catalogPricingCaveat": "55555",
-    "ambiguousBlocked": "55555 {{count}} 55555",
-    "unknownService": "55555",
-    "timeEntry": "55555 {{minutes}} 55555",
-    "usageRecord": "55555 {{quantity}} 55555",
-    "assignLine": "55555",
-    "assigned": "55555",
-    "useCatalogPricing": "55555",
-    "undoCatalogPricing": "55555",
-    "catalogPricingChosen": "55555",
-    "catalogPricingAccepted": "55555",
-    "catalogPricingRevoked": "55555",
-    "uncoveredExplanation": "55555",
-    "ambiguousExplanation": "55555",
+    "title": "〖Īŧḗḿş ẇīŧħȯŭŧ ȧ ƈȯƞŧřȧƈŧ ŀīƞḗ ············〗",
+    "description": "〖Ŧħḗşḗ īŧḗḿş ȧřḗ ƞȯŧ ȧŧŧȧƈħḗḓ ŧȯ ȧ ƈȯƞŧřȧƈŧ ŀīƞḗ ẏḗŧ, şȯ ŧħḗẏ ẇȯŭŀḓ ƀḗ ƀīŀŀḗḓ ȧŧ ŧħḗ şḗřṽīƈḗ ƈȧŧȧŀȯɠ řȧŧḗ. ··········································〗",
+    "catalogPricingCaveat": "〖Ƈȧŧȧŀȯɠ ƥřīƈīƞɠ īɠƞȯřḗş ŧħḗ ƈȯƞŧřȧƈŧ řȧŧḗ, řȯŭƞḓīƞɠ, ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ŧīḿḗ, ȯṽḗřŧīḿḗ, ȧƞḓ ȧƞẏ ƥřīƈīƞɠ şƈħḗḓŭŀḗ. ·············································〗",
+    "ambiguousBlocked": "〖{{count}} īŧḗḿ(ş) ȧřḗ ƈȯṽḗřḗḓ ƀẏ ȧ ƈȯƞŧřȧƈŧ ƀŭŧ ḿȧŧƈħḗḓ ḿȯřḗ ŧħȧƞ ȯƞḗ ƈȯƞŧřȧƈŧ ŀīƞḗ. Ŧħḗẏ ẇīŀŀ ƞȯŧ ƀḗ īƞṽȯīƈḗḓ ŭƞŧīŀ ẏȯŭ ȧşşīɠƞ ȧ ŀīƞḗ ȯř ƈħȯȯşḗ ƈȧŧȧŀȯɠ ƥřīƈīƞɠ ƒȯř ŧħḗḿ. ····································································〗",
+    "unknownService": "〖Ŭƞķƞȯẇƞ şḗřṽīƈḗ ······〗",
+    "timeEntry": "〖Ŧīḿḗ ḗƞŧřẏ · {{minutes}} ḿīƞ ············〗",
+    "usageRecord": "〖Ŭşȧɠḗ řḗƈȯřḓ · {{quantity}} ···········〗",
+    "assignLine": "〖Ȧşşīɠƞ ȧ ƈȯƞŧřȧƈŧ ŀīƞḗ ·········〗",
+    "assigned": "〖Ȧşşīɠƞḗḓ — ŧħīş īŧḗḿ ẇīŀŀ ƀīŀŀ ȧŧ ƈȯƞŧřȧƈŧ ƥřīƈīƞɠ. ·····················〗",
+    "useCatalogPricing": "〖Ŭşḗ ƈȧŧȧŀȯɠ ƥřīƈīƞɠ ········〗",
+    "undoCatalogPricing": "〖Ŭƞḓȯ ··〗",
+    "catalogPricingChosen": "〖Ƈȧŧȧŀȯɠ ƥřīƈīƞɠ ƈħȯşḗƞ ·········〗",
+    "catalogPricingAccepted": "〖Ƈȧŧȧŀȯɠ ƥřīƈīƞɠ ƈħȯşḗƞ ƒȯř ŧħīş īŧḗḿ. ···············〗",
+    "catalogPricingRevoked": "〖Ƈȧŧȧŀȯɠ ƥřīƈīƞɠ ẇīŧħḓřȧẇƞ. ···········〗",
+    "uncoveredExplanation": "〖Ƞȯ ƈȯƞŧřȧƈŧ ƈȯṽḗřş ŧħīş şḗřṽīƈḗ, şȯ ŧħḗ ƈȧŧȧŀȯɠ řȧŧḗ īş ŧħḗ ȯƞŀẏ řȧŧḗ ȧṽȧīŀȧƀŀḗ. Īŧ ẇīŀŀ ƀḗ ƀīŀŀḗḓ ȧş-īş. ··········································〗",
+    "ambiguousExplanation": "〖Ȧ ƈȯƞŧřȧƈŧ ƈȯṽḗřş ŧħīş şḗřṽīƈḗ, şȯ ȧ ƞḗɠȯŧīȧŧḗḓ řȧŧḗ ḗẋīşŧş. Ƥīƈķ ŧħḗ ƈȯƞŧřȧƈŧ ŀīƞḗ īŧ ƀḗŀȯƞɠş ŧȯ. ········································〗",
     "reason": {
-      "uncovered": "55555",
-      "ambiguous": "55555"
+      "uncovered": "〖Ƞȯŧ ƈȯṽḗřḗḓ ƀẏ ȧƞẏ ƈȯƞŧřȧƈŧ ···········〗",
+      "ambiguous": "〖Ḿȯřḗ ŧħȧƞ ȯƞḗ ƈȯƞŧřȧƈŧ ŀīƞḗ ḿȧŧƈħḗş ··············〗"
     }
   },
   "errors": {
-    "duplicateRecurringInvoice": "55555",
+    "duplicateRecurringInvoice": "〖Ȧƞ īƞṽȯīƈḗ ȧŀřḗȧḓẏ ḗẋīşŧş ƒȯř ŧħīş řḗƈŭřřīƞɠ ƀīŀŀīƞɠ ƥḗřīȯḓ. ························〗",
     "permissions": {
-      "billingRead": "55555",
-      "billingUpdate": "55555",
-      "billingCreate": "55555",
-      "billingDelete": "55555",
-      "clientRead": "55555",
-      "otherClientLocations": "55555",
-      "clientPortalUnavailable": "55555",
-      "resolveCurrency": "55555"
+      "billingRead": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƀīŀŀīƞɠ řḗȧḓ řḗʠŭīřḗḓ ················〗",
+      "billingUpdate": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƀīŀŀīƞɠ ŭƥḓȧŧḗ řḗʠŭīřḗḓ ·················〗",
+      "billingCreate": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƀīŀŀīƞɠ ƈřḗȧŧḗ řḗʠŭīřḗḓ ·················〗",
+      "billingDelete": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƀīŀŀīƞɠ ḓḗŀḗŧḗ řḗʠŭīřḗḓ ·················〗",
+      "clientRead": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈŀīḗƞŧ řḗȧḓ řḗʠŭīřḗḓ ················〗",
+      "otherClientLocations": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈȧƞƞȯŧ ȧƈƈḗşş ŀȯƈȧŧīȯƞş ƒȯř ȧƞȯŧħḗř ƈŀīḗƞŧ ·························〗",
+      "clientPortalUnavailable": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ȯƥḗřȧŧīȯƞ ƞȯŧ ȧṽȧīŀȧƀŀḗ īƞ ƈŀīḗƞŧ ƥȯřŧȧŀ ························〗",
+      "resolveCurrency": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗşȯŀṽḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ ƈŭřřḗƞƈẏ ·······················〗"
     },
     "context": {
-      "tenantNotFound": "55555",
-      "tenantContextNotFound": "55555",
-      "noTenantContext": "55555",
-      "clientContextNotFound": "55555",
-      "notAuthenticated": "55555",
-      "notLoggedIn": "55555"
+      "tenantNotFound": "〖Ŧḗƞȧƞŧ ƞȯŧ ƒȯŭƞḓ ·······〗",
+      "tenantContextNotFound": "〖Ŧḗƞȧƞŧ ƈȯƞŧḗẋŧ ƞȯŧ ƒȯŭƞḓ ··········〗",
+      "noTenantContext": "〖Ƞȯ ŧḗƞȧƞŧ ƈȯƞŧḗẋŧ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ····················〗",
+      "clientContextNotFound": "〖Ƈŀīḗƞŧ ƈȯƞŧḗẋŧ ƞȯŧ ƒȯŭƞḓ ··········〗",
+      "notAuthenticated": "〖Ŭƞȧŭŧħȯřīẑḗḓ: Ƞȯ ȧŭŧħḗƞŧīƈȧŧḗḓ ŭşḗř ƒȯŭƞḓ ·················〗",
+      "notLoggedIn": "〖ŭşḗř īş ƞȯŧ ŀȯɠɠḗḓ īƞ ·········〗"
     },
     "client": {
-      "notFound": "55555",
-      "notFoundRefresh": "55555",
-      "idRequired": "55555"
+      "notFound": "〖Ƈŀīḗƞŧ ƞȯŧ ƒȯŭƞḓ ·······〗",
+      "notFoundRefresh": "〖Ƈŀīḗƞŧ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ŭƥḓȧŧḗḓ ȯř ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ··································〗",
+      "idRequired": "〖Ƈŀīḗƞŧ ĪḒ īş řḗʠŭīřḗḓ. ·········〗"
     },
     "clientContract": {
-      "notFound": "55555",
-      "invalidValue": "55555",
-      "referenceMissing": "55555",
-      "duplicate": "55555",
-      "missingField": "55555",
-      "missingFieldNamed": "55555 {{field}} 55555"
+      "notFound": "〖Ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ ȧşşīɠƞḿḗƞŧ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ŭƥḓȧŧḗḓ ȯř ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ··········································〗",
+      "invalidValue": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ··································〗",
+      "referenceMissing": "〖Ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ, ƈȯƞŧřȧƈŧ, ȯř ƀīŀŀīƞɠ řḗƈȯřḓ ƞȯ ŀȯƞɠḗř ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·······································〗",
+      "duplicate": "〖Ŧħīş ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ ȧşşīɠƞḿḗƞŧ ȧŀřḗȧḓẏ ḗẋīşŧş. ···················〗",
+      "missingField": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ ƒīḗŀḓ. ················〗",
+      "missingFieldNamed": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ ƒīḗŀḓ: {{field}}. ····················〗"
     },
     "cycle": {
-      "cannotCreateNext": "55555"
+      "cannotCreateNext": "〖Ƈȧƞƞȯŧ ƈřḗȧŧḗ ƞḗẋŧ ƀīŀŀīƞɠ ƈẏƈŀḗ ȧŧ ŧħīş ŧīḿḗ ··················〗"
     },
     "currency": {
-      "multipleActive": "55555 {{currencies}} 55555"
+      "multipleActive": "〖Ƈŀīḗƞŧ ħȧş ȧƈŧīṽḗ ƈȯƞŧřȧƈŧş īƞ ḿŭŀŧīƥŀḗ ƈŭřřḗƞƈīḗş ({{currencies}}). ····························〗"
     },
     "bucketOverlay": {
-      "invalidValue": "55555",
-      "recordInvalid": "55555",
-      "duplicate": "55555",
-      "notAllowed": "55555",
-      "missingField": "55555",
-      "missingFieldNamed": "55555 {{field}} 55555"
+      "invalidValue": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ƀŭƈķḗŧ ȯṽḗřŀȧẏ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ··································〗",
+      "recordInvalid": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ƀŭƈķḗŧ ȯṽḗřŀȧẏ řḗƈȯřḓş īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·····································〗",
+      "duplicate": "〖Ȧ ƀŭƈķḗŧ ȯṽḗřŀȧẏ ƒȯř ŧħīş şḗřṽīƈḗ ȧŀřḗȧḓẏ ḗẋīşŧş. ····················〗",
+      "notAllowed": "〖Ȯƞḗ ȯƒ ŧħḗ ƀŭƈķḗŧ ȯṽḗřŀȧẏ ṽȧŀŭḗş īş ƞȯŧ ȧŀŀȯẇḗḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ. ···································〗",
+      "missingField": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ƀŭƈķḗŧ ȯṽḗřŀȧẏ ƒīḗŀḓ. ················〗",
+      "missingFieldNamed": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ƀŭƈķḗŧ ȯṽḗřŀȧẏ ƒīḗŀḓ: {{field}}. ····················〗"
     },
     "bucketPool": {
-      "duplicate": "55555",
-      "recordInvalid": "55555",
-      "notAllowed": "55555"
+      "duplicate": "〖Ȧ ƀŭƈķḗŧ ƥȯȯŀ ȯř ḿḗḿƀḗř ȧŀřḗȧḓẏ ḗẋīşŧş ẇīŧħ ŧħīş ƈȯƞƒīɠŭřȧŧīȯƞ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ······································〗",
+      "recordInvalid": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ƀŭƈķḗŧ ƥȯȯŀ řḗƈȯřḓş īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ····································〗",
+      "notAllowed": "〖Ȯƞḗ ȯƒ ŧħḗ ƀŭƈķḗŧ ƥȯȯŀ ṽȧŀŭḗş īş ƞȯŧ ȧŀŀȯẇḗḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ. ··································〗"
     },
     "material": {
-      "invalidValue": "55555",
-      "recordInvalid": "55555",
-      "duplicate": "55555",
-      "notAllowed": "55555",
-      "missingField": "55555",
-      "missingFieldNamed": "55555 {{field}} 55555"
+      "invalidValue": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ḿȧŧḗřīȧŀ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·······························〗",
+      "recordInvalid": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ḿȧŧḗřīȧŀ řḗƈȯřḓş īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ···································〗",
+      "duplicate": "〖Ŧħīş ḿȧŧḗřīȧŀ řḗƈȯřḓ ȧŀřḗȧḓẏ ḗẋīşŧş. ···············〗",
+      "notAllowed": "〖Ȯƞḗ ȯƒ ŧħḗ ḿȧŧḗřīȧŀ ṽȧŀŭḗş īş ƞȯŧ ȧŀŀȯẇḗḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ. ································〗",
+      "missingField": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ḿȧŧḗřīȧŀ ƒīḗŀḓ. ·············〗",
+      "missingFieldNamed": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ḿȧŧḗřīȧŀ ƒīḗŀḓ: {{field}}. ··················〗"
     },
     "usage": {
-      "notFoundRefresh": "55555",
-      "bucketUpdateFailed": "55555",
-      "invalidValue": "55555",
-      "referenceMissing": "55555",
-      "duplicate": "55555",
-      "alreadyDeleted": "55555",
-      "missingField": "55555",
-      "missingFieldNamed": "55555 {{field}} 55555"
+      "notFoundRefresh": "〖Ŭşȧɠḗ řḗƈȯřḓ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ································〗",
+      "bucketUpdateFailed": "〖Ŭƞȧƀŀḗ ŧȯ ŭƥḓȧŧḗ ƀŭƈķḗŧ ŭşȧɠḗ ƒȯř ŧħīş ŭşȧɠḗ řḗƈȯřḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·································〗",
+      "invalidValue": "〖Ŧħḗ şḗŀḗƈŧḗḓ ŭşȧɠḗ řḗƈȯřḓ, ƈŀīḗƞŧ, şḗřṽīƈḗ, ȯř ƈȯƞŧřȧƈŧ ŀīƞḗ īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·········································〗",
+      "referenceMissing": "〖Ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ, şḗřṽīƈḗ, ȯř ƈȯƞŧřȧƈŧ ŀīƞḗ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·······································〗",
+      "duplicate": "〖Ȧ ƈȯƞƒŀīƈŧīƞɠ ŭşȧɠḗ řḗƈȯřḓ ȧŀřḗȧḓẏ ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·····························〗",
+      "alreadyDeleted": "〖Ŭşȧɠḗ řḗƈȯřḓ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ȧŀřḗȧḓẏ ƀḗḗƞ ḓḗŀḗŧḗḓ. ·······················〗",
+      "missingField": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ŭşȧɠḗ ƒīḗŀḓ. ············〗",
+      "missingFieldNamed": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ŭşȧɠḗ ƒīḗŀḓ: {{field}}. ················〗"
     },
     "projectBilling": {
       "validation": {
-        "triggerDateInvalid": "55555",
-        "thresholdsAscending": "55555",
-        "amountOrPercentage": "55555",
-        "increaseTotalAmountOnly": "55555",
-        "amountAndPercentageTogether": "55555"
+        "triggerDateInvalid": "〖ŧřīɠɠḗř_ḓȧŧḗ ḿŭşŧ ƀḗ ȧ ṽȧŀīḓ ƈȧŀḗƞḓȧř ḓȧŧḗ. ··················〗",
+        "thresholdsAscending": "〖Ƞȯŧīƒīƈȧŧīȯƞ ŧħřḗşħȯŀḓş ḿŭşŧ ƀḗ īƞ şŧřīƈŧŀẏ ȧşƈḗƞḓīƞɠ ȯřḓḗř. ························〗",
+        "amountOrPercentage": "〖Ḗẋȧƈŧŀẏ ȯƞḗ ȯƒ ȧḿȯŭƞŧ ȯř ƥḗřƈḗƞŧȧɠḗ īş řḗʠŭīřḗḓ. ····················〗",
+        "increaseTotalAmountOnly": "〖Īƞƈřḗȧşīƞɠ ŧħḗ ŧȯŧȧŀ īş ȯƞŀẏ ṽȧŀīḓ ƒȯř ȧḿȯŭƞŧ-ƀȧşḗḓ ḗƞŧřīḗş. ························〗",
+        "amountAndPercentageTogether": "〖Ȧḿȯŭƞŧ ȧƞḓ ƥḗřƈḗƞŧȧɠḗ ḿŭşŧ ƀḗ ŭƥḓȧŧḗḓ ŧȯɠḗŧħḗř, ẇīŧħ ḗẋȧƈŧŀẏ ȯƞḗ şḗŧ ŧȯ ƞŭŀŀ. ·······························〗"
       },
-      "invalidValue": "55555",
-      "referenceMissing": "55555",
-      "duplicate": "55555",
-      "ruleViolation": "55555",
-      "requestFailed": "55555",
-      "missingField": "55555",
-      "missingFieldNamed": "55555 {{field}} 55555"
+      "invalidValue": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ƥřȯĵḗƈŧ ƀīŀŀīƞɠ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ··································〗",
+      "referenceMissing": "〖Ŧħḗ şḗŀḗƈŧḗḓ ƥřȯĵḗƈŧ, īƞṽȯīƈḗ, ƥħȧşḗ, şḗřṽīƈḗ, ȯř ƀīŀŀīƞɠ řḗƈȯřḓ ƞȯ ŀȯƞɠḗř ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·············································〗",
+      "duplicate": "〖Ȧ ƈȯƞƒŀīƈŧīƞɠ ƥřȯĵḗƈŧ ƀīŀŀīƞɠ řḗƈȯřḓ ȧŀřḗȧḓẏ ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·································〗",
+      "ruleViolation": "〖Ŧħḗ ƥřȯĵḗƈŧ ƀīŀŀīƞɠ ṽȧŀŭḗş ṽīȯŀȧŧḗ ȧ ḓȧŧȧ řŭŀḗ. Řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ. ································〗",
+      "requestFailed": "〖Ƥřȯĵḗƈŧ ƀīŀŀīƞɠ ƈȯŭŀḓ ƞȯŧ ƈȯḿƥŀḗŧḗ ŧħḗ řḗʠŭḗşŧ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·······························〗",
+      "missingField": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ƥřȯĵḗƈŧ ƀīŀŀīƞɠ ƒīḗŀḓ. ················〗",
+      "missingFieldNamed": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ƥřȯĵḗƈŧ ƀīŀŀīƞɠ ƒīḗŀḓ: {{field}}. ····················〗"
     },
     "profitability": {
-      "dateRangeRequired": "55555"
+      "dateRangeRequired": "〖Şŧȧřŧ ḓȧŧḗ ȧƞḓ ḗƞḓ ḓȧŧḗ ȧřḗ řḗʠŭīřḗḓ. ···············〗"
     },
     "recurringRun": {
-      "selectPeriods": "55555",
-      "invoicePermission": "55555"
+      "selectPeriods": "〖Şḗŀḗƈŧ ȧŧ ŀḗȧşŧ ȯƞḗ řḗƈŭřřīƞɠ ƀīŀŀīƞɠ ƥḗřīȯḓ ŧȯ ɠḗƞḗřȧŧḗ. ·······················〗",
+      "invoicePermission": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: īƞṽȯīƈḗ ƈřḗȧŧḗ ȯř ɠḗƞḗřȧŧḗ řḗʠŭīřḗḓ ······················〗"
     },
     "recurringServicePeriod": {
-      "scheduleKeyRequiredInspect": "55555",
-      "scheduleKeyRequiredRepair": "55555"
+      "scheduleKeyRequiredInspect": "〖Ȧ şƈħḗḓŭŀḗ ķḗẏ īş řḗʠŭīřḗḓ ŧȯ īƞşƥḗƈŧ řḗƈŭřřīƞɠ şḗřṽīƈḗ ƥḗřīȯḓş. ··························〗",
+      "scheduleKeyRequiredRepair": "〖Ȧ şƈħḗḓŭŀḗ ķḗẏ īş řḗʠŭīřḗḓ ŧȯ řḗƥȧīř řḗƈŭřřīƞɠ şḗřṽīƈḗ ƥḗřīȯḓş. ··························〗"
     },
     "accountingExport": {
-      "clientPortalForbidden": "55555",
+      "clientPortalForbidden": "〖Ƈŀīḗƞŧ ƥȯřŧȧŀ ŭşḗřş ȧřḗ ƞȯŧ ƥḗřḿīŧŧḗḓ ŧȯ ḿȧƞȧɠḗ ȧƈƈȯŭƞŧīƞɠ ḗẋƥȯřŧş ···························〗",
       "permissions": {
-        "create": "55555",
-        "read": "55555",
-        "update": "55555",
-        "execute": "55555"
+        "create": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ƈřḗȧŧḗ ȧƈƈȯŭƞŧīƞɠ ḗẋƥȯřŧ ƀȧŧƈħḗş ························〗",
+        "read": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ȧƈƈḗşş ȧƈƈȯŭƞŧīƞɠ ḗẋƥȯřŧ ƀȧŧƈħḗş ························〗",
+        "update": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḿȯḓīƒẏ ȧƈƈȯŭƞŧīƞɠ ḗẋƥȯřŧ ƀȧŧƈħḗş ························〗",
+        "execute": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḗẋḗƈŭŧḗ ȧƈƈȯŭƞŧīƞɠ ḗẋƥȯřŧ ƀȧŧƈħḗş ························〗"
       }
     },
     "vendorBill": {
-      "notFoundRefresh": "55555"
+      "notFoundRefresh": "〖Ṽḗƞḓȯř ƀīŀŀ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ŭƥḓȧŧḗḓ ȯř ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ····································〗"
     },
     "documentTemplate": {
-      "unknownType": "55555 {{documentType}} 55555",
+      "unknownType": "〖Ŭƞķƞȯẇƞ ḓȯƈŭḿḗƞŧ ŧẏƥḗ: {{documentType}} ················〗",
       "permissions": {
-        "read": "55555",
-        "modify": "55555",
-        "setDefault": "55555",
-        "clearOverride": "55555",
-        "delete": "55555",
-        "preview": "55555"
+        "read": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈȧƞƞȯŧ řḗȧḓ ḓȯƈŭḿḗƞŧ ŧḗḿƥŀȧŧḗş ····················〗",
+        "modify": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈȧƞƞȯŧ ḿȯḓīƒẏ ḓȯƈŭḿḗƞŧ ŧḗḿƥŀȧŧḗş ·····················〗",
+        "setDefault": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈȧƞƞȯŧ şḗŧ ḓḗƒȧŭŀŧ ḓȯƈŭḿḗƞŧ ŧḗḿƥŀȧŧḗ ······················〗",
+        "clearOverride": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈȧƞƞȯŧ ƈŀḗȧř ḓȯƈŭḿḗƞŧ ŧḗḿƥŀȧŧḗ ȯṽḗřřīḓḗ ························〗",
+        "delete": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈȧƞƞȯŧ ḓḗŀḗŧḗ ḓȯƈŭḿḗƞŧ ŧḗḿƥŀȧŧḗş ·····················〗",
+        "preview": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ƈȧƞƞȯŧ ƥřḗṽīḗẇ ḓȯƈŭḿḗƞŧ ŧḗḿƥŀȧŧḗş ·····················〗"
       }
     }
   }

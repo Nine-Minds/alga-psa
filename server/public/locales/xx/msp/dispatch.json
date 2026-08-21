@@ -1,159 +1,159 @@
 {
   "page": {
-    "title": "11111",
-    "filteredWorkItems": "11111"
+    "title": "⟦Ŧḗƈħƞīƈīȧƞ Ḓīşƥȧŧƈħ⟧",
+    "filteredWorkItems": "⟦Şħȯẇīƞɠ ƒīŀŧḗřḗḓ ẇȯřķ īŧḗḿş⟧"
   },
   "workItems": {
-    "title": "11111",
-    "searchPlaceholder": "11111",
-    "filterPlaceholder": "11111",
+    "title": "⟦Ẇȯřķ Īŧḗḿş⟧",
+    "searchPlaceholder": "⟦Şḗȧřƈħ ẇȯřķ īŧḗḿş...⟧",
+    "filterPlaceholder": "⟦Ƒīŀŧḗř ƀẏ şŧȧŧŭş...⟧",
     "status": {
-      "unscheduled": "11111",
-      "scheduled": "11111"
+      "unscheduled": "⟦Ŭƞşƈħḗḓŭŀḗḓ⟧",
+      "scheduled": "⟦Şƈħḗḓŭŀḗḓ⟧"
     },
     "pagination": {
-      "previous": "11111",
-      "next": "11111",
-      "pageInfo": "11111 {{current}} 11111 {{total}} 11111",
-      "showing": "11111 {{count}} 11111 {{total}} 11111"
+      "previous": "⟦Ƥřḗṽīȯŭş⟧",
+      "next": "⟦Ƞḗẋŧ⟧",
+      "pageInfo": "⟦Ƥȧɠḗ {{current}} ȯƒ {{total}}⟧",
+      "showing": "⟦Şħȯẇīƞɠ {{count}} ȯƒ {{total}} īŧḗḿş⟧"
     }
   },
   "schedule": {
-    "showInactive": "11111",
-    "prev": "11111",
-    "next": "11111",
-    "today": "11111",
-    "viewDay": "11111",
-    "viewWeek": "11111",
-    "prevAria": "11111 {{mode}} 11111",
-    "nextAria": "11111 {{mode}} 11111",
-    "viewWeekTooltip": "11111",
-    "viewWeekAria": "11111 {{name}} 11111",
-    "viewWeekAriaInactive": "11111 {{name}} 11111",
-    "compareAll": "11111",
-    "clearAll": "11111",
-    "compare": "11111",
-    "stopComparing": "11111",
-    "compareAria": "11111 {{name}} 11111",
-    "compareAriaInactive": "11111 {{name}} 11111"
+    "showInactive": "⟦Şħȯẇ Īƞȧƈŧīṽḗ Ŭşḗřş⟧",
+    "prev": "⟦< Ƥřḗṽ⟧",
+    "next": "⟦Ƞḗẋŧ >⟧",
+    "today": "⟦Ŧȯḓȧẏ⟧",
+    "viewDay": "⟦Ḓȧẏ⟧",
+    "viewWeek": "⟦Ẇḗḗķ⟧",
+    "prevAria": "⟦Ƥřḗṽīȯŭş {{mode}}⟧",
+    "nextAria": "⟦Ƞḗẋŧ {{mode}}⟧",
+    "viewWeekTooltip": "⟦Ṽīḗẇ Ẇḗḗķ⟧",
+    "viewWeekAria": "⟦Ṽīḗẇ ẇḗḗķ ƒȯř {{name}}⟧",
+    "viewWeekAriaInactive": "⟦Ṽīḗẇ ẇḗḗķ ƒȯř {{name}} (Īƞȧƈŧīṽḗ)⟧",
+    "compareAll": "⟦Ƈȯḿƥȧřḗ Ȧŀŀ⟧",
+    "clearAll": "⟦Ƈŀḗȧř Ȧŀŀ⟧",
+    "compare": "⟦Ƈȯḿƥȧřḗ⟧",
+    "stopComparing": "⟦Şŧȯƥ Ƈȯḿƥȧřīƞɠ⟧",
+    "compareAria": "⟦Ƈȯḿƥȧřḗ {{name}}⟧",
+    "compareAriaInactive": "⟦Ƈȯḿƥȧřḗ {{name}} (Īƞȧƈŧīṽḗ)⟧"
   },
   "details": {
     "appointmentRequest": {
-      "title": "11111"
+      "title": "⟦Ȧƥƥȯīƞŧḿḗƞŧ Řḗʠŭḗşŧ Ḓḗŧȧīŀş⟧"
     },
     "sections": {
-      "approvalInformation": "11111"
+      "approvalInformation": "⟦Ȧƥƥřȯṽȧŀ Īƞƒȯřḿȧŧīȯƞ⟧"
     },
     "fields": {
-      "service": "11111",
-      "status": "11111",
-      "client": "11111",
-      "contact": "11111",
-      "company": "11111",
-      "requester": "11111",
-      "email": "11111",
-      "phone": "11111",
-      "requestedDate": "11111",
-      "requestedTime": "11111",
-      "duration": "11111",
-      "preferredTechnician": "11111",
-      "description": "11111",
-      "declineReason": "11111",
-      "approvedBy": "11111",
-      "approvedAt": "11111",
-      "opportunity": "11111",
-      "assignedTo": "11111",
-      "dueDate": "11111"
+      "service": "⟦Şḗřṽīƈḗ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "contact": "⟦Ƈȯƞŧȧƈŧ⟧",
+      "company": "⟦Ƈȯḿƥȧƞẏ⟧",
+      "requester": "⟦Řḗʠŭḗşŧḗř⟧",
+      "email": "⟦Ḗḿȧīŀ⟧",
+      "phone": "⟦Ƥħȯƞḗ⟧",
+      "requestedDate": "⟦Řḗʠŭḗşŧḗḓ Ḓȧŧḗ⟧",
+      "requestedTime": "⟦Řḗʠŭḗşŧḗḓ Ŧīḿḗ⟧",
+      "duration": "⟦Ḓŭřȧŧīȯƞ⟧",
+      "preferredTechnician": "⟦Ƥřḗƒḗřřḗḓ Ŧḗƈħƞīƈīȧƞ⟧",
+      "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+      "declineReason": "⟦Ḓḗƈŀīƞḗ Řḗȧşȯƞ⟧",
+      "approvedBy": "⟦Ȧƥƥřȯṽḗḓ ƀẏ:⟧",
+      "approvedAt": "⟦Ȧƥƥřȯṽḗḓ ȧŧ:⟧",
+      "opportunity": "⟦Ȯƥƥȯřŧŭƞīŧẏ⟧",
+      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧",
+      "dueDate": "⟦Ḓŭḗ⟧"
     },
     "messages": {
-      "notAvailable": "11111",
-      "unsupportedWorkItemType": "11111"
+      "notAvailable": "⟦Ƞ/Ȧ⟧",
+      "unsupportedWorkItemType": "⟦Ŭƞşŭƥƥȯřŧḗḓ ẇȯřķ īŧḗḿ ŧẏƥḗ⟧"
     },
     "toasts": {
-      "noUsersAvailable": "11111",
-      "noUserSession": "11111",
-      "failedToLoadTicketData": "11111",
-      "failedToLoadProjectTaskData": "11111",
-      "failedToLoadAdHocEntryData": "11111",
-      "failedToLoadInteractionData": "11111",
-      "failedToLoadAppointmentRequestData": "11111",
-      "failedToLoadOpportunityStepData": "11111"
+      "noUsersAvailable": "⟦Ƞȯ ŭşḗřş ȧṽȧīŀȧƀŀḗ īƞ ŧħḗ şẏşŧḗḿ⟧",
+      "noUserSession": "⟦Ƞȯ ŭşḗř şḗşşīȯƞ ƒȯŭƞḓ⟧",
+      "failedToLoadTicketData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ḓȧŧȧ⟧",
+      "failedToLoadProjectTaskData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřȯĵḗƈŧ ŧȧşķ ḓȧŧȧ⟧",
+      "failedToLoadAdHocEntryData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧḓ-ħȯƈ ḗƞŧřẏ ḓȧŧȧ⟧",
+      "failedToLoadInteractionData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ īƞŧḗřȧƈŧīȯƞ ḓȧŧȧ⟧",
+      "failedToLoadAppointmentRequestData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧƥƥȯīƞŧḿḗƞŧ řḗʠŭḗşŧ ḓȧŧȧ⟧",
+      "failedToLoadOpportunityStepData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓḗȧŀ şŧḗƥ ḓȧŧȧ⟧"
     },
     "errors": {
-      "loadUsers": "11111",
-      "loadingContent": "11111",
-      "tryAgain": "11111"
+      "loadUsers": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŭşḗřş. Ƥŀḗȧşḗ ŧřẏ řḗƒřḗşħīƞɠ ŧħḗ ƥȧɠḗ.⟧",
+      "loadingContent": "⟦Ḗřřȯř ŀȯȧḓīƞɠ ƈȯƞŧḗƞŧ⟧",
+      "tryAgain": "⟦Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ⟧"
     },
     "units": {
-      "minutes": "11111"
+      "minutes": "⟦ḿīƞŭŧḗş⟧"
     },
     "actions": {
-      "openOpportunity": "11111"
+      "openOpportunity": "⟦Ȯƥḗƞ ȯƥƥȯřŧŭƞīŧẏ⟧"
     }
   },
   "dashboard": {
     "filters": {
-      "allOpen": "11111",
-      "allClosed": "11111"
+      "allOpen": "⟦Ȧŀŀ Ȯƥḗƞ⟧",
+      "allClosed": "⟦Ȧŀŀ Ƈŀȯşḗḓ⟧"
     },
     "messages": {
-      "accessDenied": "11111",
-      "unknownError": "11111",
-      "permissionDeniedSchedule": "11111",
-      "couldNotLoadWorkItemDetails": "11111"
+      "accessDenied": "⟦Ȧƈƈḗşş Ḓḗƞīḗḓ: Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ṽīḗẇ ŧħḗ Ŧḗƈħƞīƈīȧƞ Ḓīşƥȧŧƈħ ḓȧşħƀȯȧřḓ.⟧",
+      "unknownError": "⟦Ȧƞ ŭƞķƞȯẇƞ ḗřřȯř ȯƈƈŭřřḗḓ.⟧",
+      "permissionDeniedSchedule": "⟦Ẏȯŭ ḓȯƞ'ŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ şƈħḗḓŭŀḗ ƒȯř ŧħīş ŧḗƈħƞīƈīȧƞ.⟧",
+      "couldNotLoadWorkItemDetails": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ ẇȯřķ īŧḗḿ ḓḗŧȧīŀş.⟧"
     },
     "errors": {
-      "searchWorkItems": "11111",
-      "loadStatusFilterOptions": "11111",
-      "refreshScheduleEntries": "11111",
-      "refreshData": "11111",
-      "loadPermissions": "11111",
-      "fetchScheduleEntries": "11111",
-      "fetchData": "11111",
-      "updateSchedule": "11111",
-      "createScheduleEntry": "11111",
-      "deleteScheduleEntry": "11111",
-      "updateTask": "11111",
-      "updateScheduleEntry": "11111",
-      "saveScheduleEntry": "11111",
-      "openWorkItemDetails": "11111"
+      "searchWorkItems": "⟦Ƒȧīŀḗḓ ŧȯ şḗȧřƈħ ẇȯřķ īŧḗḿş⟧",
+      "loadStatusFilterOptions": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şŧȧŧŭş ƒīŀŧḗř ȯƥŧīȯƞş.⟧",
+      "refreshScheduleEntries": "⟦Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ şƈħḗḓŭŀḗ ḗƞŧřīḗş⟧",
+      "refreshData": "⟦Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ ḓȧŧȧ⟧",
+      "loadPermissions": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥḗřḿīşşīȯƞş.⟧",
+      "fetchScheduleEntries": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ şƈħḗḓŭŀḗ ḗƞŧřīḗş⟧",
+      "fetchData": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ḓȧŧȧ⟧",
+      "updateSchedule": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ şƈħḗḓŭŀḗ⟧",
+      "createScheduleEntry": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ şƈħḗḓŭŀḗ ḗƞŧřẏ⟧",
+      "deleteScheduleEntry": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ şƈħḗḓŭŀḗ ḗƞŧřẏ⟧",
+      "updateTask": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧȧşķ⟧",
+      "updateScheduleEntry": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ şƈħḗḓŭŀḗ ḗƞŧřẏ⟧",
+      "saveScheduleEntry": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ şƈħḗḓŭŀḗ ḗƞŧřẏ⟧",
+      "openWorkItemDetails": "⟦Ƒȧīŀḗḓ ŧȯ ȯƥḗƞ ẇȯřķ īŧḗḿ ḓḗŧȧīŀş.⟧"
     },
     "success": {
-      "taskUpdated": "11111",
-      "scheduleEntryUpdated": "11111",
-      "scheduleEntryCreated": "11111"
+      "taskUpdated": "⟦Ŧȧşķ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "scheduleEntryUpdated": "⟦Şƈħḗḓŭŀḗ ḗƞŧřẏ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "scheduleEntryCreated": "⟦Şƈħḗḓŭŀḗ ḗƞŧřẏ ƈřḗȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧"
     }
   },
   "events": {
     "actions": {
-      "viewDetails": "11111",
-      "delete": "11111",
-      "deleteScheduleEntry": "11111"
+      "viewDetails": "⟦Ṽīḗẇ Ḓḗŧȧīŀş⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ⟧",
+      "deleteScheduleEntry": "⟦Ḓḗŀḗŧḗ şƈħḗḓŭŀḗ ḗƞŧřẏ⟧"
     },
     "fallbacks": {
-      "busy": "11111",
-      "unknown": "11111",
-      "unassigned": "11111",
-      "unknownAgent": "11111",
-      "untitled": "11111",
-      "thisScheduleEntry": "11111"
+      "busy": "⟦Ɓŭşẏ⟧",
+      "unknown": "⟦Ŭƞķƞȯẇƞ⟧",
+      "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+      "unknownAgent": "⟦Ŭƞķƞȯẇƞ Ȧɠḗƞŧ⟧",
+      "untitled": "⟦Ŭƞŧīŧŀḗḓ⟧",
+      "thisScheduleEntry": "⟦ŧħīş şƈħḗḓŭŀḗ ḗƞŧřẏ⟧"
     },
     "tooltip": {
-      "privateEvent": "11111 {{start}} 11111 {{end}} 11111",
-      "eventDetails": "11111 {{title}} 11111 {{assigned}} 11111 {{start}} 11111 {{end}} 11111"
+      "privateEvent": "⟦Ɓŭşẏ\nŞŧȧřŧ: {{start}}\nḖƞḓ: {{end}}⟧",
+      "eventDetails": "⟦{{title}}\nȦşşīɠƞḗḓ ŧȯ: {{assigned}}\nŞŧȧřŧ: {{start}}\nḖƞḓ: {{end}}⟧"
     },
     "errors": {
-      "validateDeletion": "11111"
+      "validateDeletion": "⟦Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     }
   },
   "badges": {
-    "needsDispatch": "11111",
-    "needsDispatchFor": "11111 {{agents}} 11111"
+    "needsDispatch": "⟦Ƞḗḗḓş Ḓīşƥȧŧƈħ⟧",
+    "needsDispatchFor": "⟦Ƞḗḗḓş ḓīşƥȧŧƈħ ƒȯř: {{agents}}⟧"
   },
   "time": {
     "suffixes": {
-      "am": "11111",
-      "pm": "11111"
+      "am": "⟦ ȦḾ⟧",
+      "pm": "⟦ ƤḾ⟧"
     }
   }
 }

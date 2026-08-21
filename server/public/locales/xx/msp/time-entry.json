@@ -1,504 +1,504 @@
 {
   "common": {
     "actions": {
-      "view": "11111",
-      "back": "11111",
-      "save": "11111",
-      "saveGeneric": "11111",
-      "saving": "11111",
-      "cancel": "11111",
-      "reset": "11111",
-      "delete": "11111",
-      "change": "11111",
-      "select": "11111",
-      "getStarted": "11111",
-      "addItem": "11111",
-      "addEntry": "11111",
-      "addComment": "11111",
-      "adding": "11111",
-      "approve": "11111",
-      "reject": "11111",
-      "requestChanges": "11111",
-      "reverseApproval": "11111",
-      "reopen": "11111",
-      "reopenForEdits": "11111",
-      "submitTimeSheet": "11111",
-      "showDetails": "11111",
-      "hideDetails": "11111",
-      "copyToAnotherDay": "11111",
-      "viewDetails": "11111",
-      "manageTimePeriods": "11111",
-      "selectWorkItem": "11111",
-      "clearFilter": "11111",
-      "remove": "11111",
-      "clear": "11111"
+      "view": "⟦Ṽīḗẇ⟧",
+      "back": "⟦Ɓȧƈķ⟧",
+      "save": "⟦Şȧṽḗ Ḗƞŧřẏ⟧",
+      "saveGeneric": "⟦Şȧṽḗ⟧",
+      "saving": "⟦Şȧṽīƞɠ...⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "reset": "⟦Řḗşḗŧ⟧",
+      "delete": "⟦Ḓḗŀḗŧḗ⟧",
+      "change": "⟦Ƈħȧƞɠḗ⟧",
+      "select": "⟦Şḗŀḗƈŧ⟧",
+      "getStarted": "⟦Ɠḗŧ Şŧȧřŧḗḓ⟧",
+      "addItem": "⟦Ȧḓḓ Īŧḗḿ⟧",
+      "addEntry": "⟦Ḗƞŧřẏ⟧",
+      "addComment": "⟦Ȧḓḓ Ƈȯḿḿḗƞŧ⟧",
+      "adding": "⟦Ȧḓḓīƞɠ...⟧",
+      "approve": "⟦Ȧƥƥřȯṽḗ⟧",
+      "reject": "⟦Řḗĵḗƈŧ⟧",
+      "requestChanges": "⟦Řḗʠŭḗşŧ Ƈħȧƞɠḗş⟧",
+      "reverseApproval": "⟦Řḗṽḗřşḗ Ȧƥƥřȯṽȧŀ⟧",
+      "reopen": "⟦Řḗȯƥḗƞ⟧",
+      "reopenForEdits": "⟦Řḗȯƥḗƞ ƒȯř ḗḓīŧş⟧",
+      "submitTimeSheet": "⟦Şŭƀḿīŧ Ŧīḿḗ Şħḗḗŧ⟧",
+      "showDetails": "⟦Şħȯẇ Ḓḗŧȧīŀş⟧",
+      "hideDetails": "⟦Ħīḓḗ Ḓḗŧȧīŀş⟧",
+      "copyToAnotherDay": "⟦Ƈȯƥẏ ŧȯ ȧƞȯŧħḗř ḓȧẏ⟧",
+      "viewDetails": "⟦Ṽīḗẇ ḓḗŧȧīŀş⟧",
+      "manageTimePeriods": "⟦Ḿȧƞȧɠḗ Ŧīḿḗ Ƥḗřīȯḓş⟧",
+      "selectWorkItem": "⟦Şḗŀḗƈŧ Ẇȯřķ Īŧḗḿ⟧",
+      "clearFilter": "⟦Ƈŀḗȧř ƒīŀŧḗř⟧",
+      "remove": "⟦Řḗḿȯṽḗ⟧",
+      "clear": "⟦Ƈŀḗȧř⟧"
     },
     "states": {
-      "inProgress": "11111",
-      "submitted": "11111",
-      "approved": "11111",
-      "changesRequested": "11111",
-      "unknown": "11111",
-      "current": "11111",
-      "active": "11111",
-      "addressed": "11111",
-      "changeRequested": "11111",
-      "loading": "11111"
+      "inProgress": "⟦Īƞ Ƥřȯɠřḗşş⟧",
+      "submitted": "⟦Şŭƀḿīŧŧḗḓ⟧",
+      "approved": "⟦Ȧƥƥřȯṽḗḓ⟧",
+      "changesRequested": "⟦Ƈħȧƞɠḗş Řḗʠŭḗşŧḗḓ⟧",
+      "unknown": "⟦Ŭƞķƞȯẇƞ⟧",
+      "current": "⟦Ƈŭřřḗƞŧ⟧",
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "addressed": "⟦Ȧḓḓřḗşşḗḓ⟧",
+      "changeRequested": "⟦Ƈħȧƞɠḗ řḗʠŭḗşŧḗḓ⟧",
+      "loading": "⟦Ŀȯȧḓīƞɠ...⟧"
     },
     "fallbacks": {
-      "na": "11111",
-      "none": "11111",
-      "notFound": "11111",
-      "untitled": "11111",
-      "unassigned": "11111",
-      "noDueDate": "11111",
-      "noServiceSelected": "11111",
-      "noNotes": "11111",
-      "noUserFound": "11111"
+      "na": "⟦Ƞ/Ȧ⟧",
+      "none": "⟦Ƞȯ ḗƞŧřīḗş⟧",
+      "notFound": "⟦Ƞȯŧ ƒȯŭƞḓ⟧",
+      "untitled": "⟦Ŭƞŧīŧŀḗḓ⟧",
+      "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+      "noDueDate": "⟦Ƞȯ ḓŭḗ ḓȧŧḗ⟧",
+      "noServiceSelected": "⟦Ƞȯ şḗřṽīƈḗ şḗŀḗƈŧḗḓ⟧",
+      "noNotes": "⟦Ƞȯ ƞȯŧḗş⟧",
+      "noUserFound": "⟦Ƞȯ ŭşḗř ƒȯŭƞḓ⟧"
     },
     "units": {
-      "hoursShort": "11111",
-      "minutesShort": "11111",
-      "hoursAbbrev": "11111",
-      "dayOne": "11111",
-      "dayOther": "11111",
-      "percentBillable": "11111 {{value}} 11111"
+      "hoursShort": "⟦ħ⟧",
+      "minutesShort": "⟦ḿ⟧",
+      "hoursAbbrev": "⟦ħřş⟧",
+      "dayOne": "⟦ḓȧẏ⟧",
+      "dayOther": "⟦ḓȧẏş⟧",
+      "percentBillable": "⟦{{value}}% ƀīŀŀȧƀŀḗ⟧"
     },
     "types": {
-      "all": "11111",
-      "ticket": "11111",
-      "tickets": "11111",
-      "projectTask": "11111",
-      "projectTasks": "11111",
-      "interaction": "11111",
-      "interactions": "11111",
-      "adHocEntry": "11111",
-      "adHocEntries": "11111",
-      "billable": "11111"
+      "all": "⟦Ȧŀŀ Ŧẏƥḗş⟧",
+      "ticket": "⟦Ŧīƈķḗŧ⟧",
+      "tickets": "⟦Ŧīƈķḗŧş⟧",
+      "projectTask": "⟦Ƥřȯĵḗƈŧ Ŧȧşķ⟧",
+      "projectTasks": "⟦Ƥřȯĵḗƈŧ Ŧȧşķş⟧",
+      "interaction": "⟦Īƞŧḗřȧƈŧīȯƞ⟧",
+      "interactions": "⟦Īƞŧḗřȧƈŧīȯƞş⟧",
+      "adHocEntry": "⟦Ȧḓ-ħȯƈ Ḗƞŧřẏ⟧",
+      "adHocEntries": "⟦Ȧḓ-ħȯƈ Ḗƞŧřīḗş⟧",
+      "billable": "⟦Ɓīŀŀȧƀŀḗ⟧"
     }
   },
   "timeTracking": {
-    "subjectUserLabel": "11111"
+    "subjectUserLabel": "⟦Ŭşḗř⟧"
   },
   "timeEntryProvider": {
     "errors": {
-      "initialize": "11111"
+      "initialize": "⟦Ƒȧīŀḗḓ ŧȯ īƞīŧīȧŀīẑḗ ŧīḿḗ ḗƞŧřīḗş⟧"
     }
   },
   "timePeriodList": {
-    "title": "11111",
+    "title": "⟦Şḗŀḗƈŧ ȧ Ŧīḿḗ Ƥḗřīȯḓ⟧",
     "columns": {
-      "period": "11111",
-      "status": "11111",
-      "hoursEntered": "11111",
-      "daysLogged": "11111",
-      "lastEntry": "11111",
-      "actions": "11111"
+      "period": "⟦Ƥḗřīȯḓ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "hoursEntered": "⟦Ħȯŭřş Ḗƞŧḗřḗḓ⟧",
+      "daysLogged": "⟦Ḓȧẏş Ŀȯɠɠḗḓ⟧",
+      "lastEntry": "⟦Ŀȧşŧ Ḗƞŧřẏ⟧",
+      "actions": "⟦Ȧƈŧīȯƞş⟧"
     },
     "lastEntry": {
-      "none": "11111"
+      "none": "⟦Ƞȯ ḗƞŧřīḗş⟧"
     },
     "bulk": {
-      "selectedCount": "11111 {{count}} 11111"
+      "selectedCount": "⟦{{count}} şḗŀḗƈŧḗḓ⟧"
     },
     "delete": {
-      "success": "11111 {{count}} 11111",
-      "partialFailure": "11111 {{count}} 11111",
-      "error": "11111"
+      "success": "⟦{{count}} ŧīḿḗ şħḗḗŧ(ş) řḗḿȯṽḗḓ⟧",
+      "partialFailure": "⟦{{count}} ŧīḿḗ şħḗḗŧ(ş) ƈȯŭŀḓƞ'ŧ ƀḗ řḗḿȯṽḗḓ⟧",
+      "error": "⟦Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ ŧīḿḗ şħḗḗŧ(ş)⟧"
     },
     "removePeriod": {
-      "success": "11111 {{count}} 11111",
-      "partialFailure": "11111 {{count}} 11111",
-      "error": "11111"
+      "success": "⟦{{count}} ŧīḿḗ ƥḗřīȯḓ(ş) řḗḿȯṽḗḓ⟧",
+      "partialFailure": "⟦{{count}} ŧīḿḗ ƥḗřīȯḓ(ş) ƈȯŭŀḓƞ'ŧ ƀḗ řḗḿȯṽḗḓ⟧",
+      "error": "⟦Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ ŧīḿḗ ƥḗřīȯḓ(ş)⟧"
     },
     "remove": {
-      "title": "11111",
-      "message": "11111 {{count}} 11111",
-      "timesheetMessage": "11111 {{count}} 11111"
+      "title": "⟦Řḗḿȯṽḗ ŭƞŭşḗḓ īŧḗḿş⟧",
+      "message": "⟦Řḗḿȯṽḗ {{count}} şḗŀḗƈŧḗḓ ƥḗřīȯḓ(ş)? Ŭƞŭşḗḓ ƥȧẏ ƥḗřīȯḓş ȧřḗ řḗḿȯṽḗḓ ƒȯř ŧħḗ ẇħȯŀḗ ȯřɠȧƞīẑȧŧīȯƞ, ȧŀȯƞɠ ẇīŧħ ȧƞẏ ḗḿƥŧẏ ḓřȧƒŧ ŧīḿḗ ŀȯɠɠḗḓ īƞ ŧħḗḿ. Ŧħīş ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧",
+      "timesheetMessage": "⟦Řḗḿȯṽḗ {{count}} ŭƞŭşḗḓ ŧīḿḗ şħḗḗŧ(ş)? Ȯƞŀẏ ḗḿƥŧẏ ḓřȧƒŧ ŧīḿḗ şħḗḗŧş ȧřḗ řḗḿȯṽḗḓ ȧƞḓ ŧħīş ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧"
     }
   },
   "timeEntryForm": {
     "labels": {
-      "service": "11111",
-      "date": "11111",
-      "startTime": "11111",
-      "endTime": "11111",
-      "duration": "11111",
-      "billable": "11111",
-      "notes": "11111",
-      "deleteTimeEntry": "11111",
-      "unsavedChanges": "11111"
+      "service": "⟦Şḗřṽīƈḗ⟧",
+      "date": "⟦Ḓȧŧḗ⟧",
+      "startTime": "⟦Şŧȧřŧ Ŧīḿḗ⟧",
+      "endTime": "⟦Ḗƞḓ Ŧīḿḗ⟧",
+      "duration": "⟦Ḓŭřȧŧīȯƞ⟧",
+      "billable": "⟦Ɓīŀŀȧƀŀḗ⟧",
+      "notes": "⟦Ƞȯŧḗş⟧",
+      "deleteTimeEntry": "⟦Ḓḗŀḗŧḗ Ŧīḿḗ Ḗƞŧřẏ⟧",
+      "unsavedChanges": "⟦Ŭƞşȧṽḗḓ ƈħȧƞɠḗş⟧"
     },
     "placeholders": {
-      "selectService": "11111",
-      "selectDate": "11111",
-      "addNotes": "11111"
+      "selectService": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+      "selectDate": "⟦Şḗŀḗƈŧ ḓȧŧḗ⟧",
+      "addNotes": "⟦Ȧḓḓ ƞȯŧḗş⟧"
     },
     "validation": {
-      "startBeforeEnd": "11111",
-      "endAfterStart": "11111",
-      "durationMinimum": "11111",
-      "minimumDuration": "11111",
-      "serviceRequired": "11111",
-      "timePeriodRange": "11111 {{periodRange}} 11111",
-      "endAfterStartPicker": "11111",
-      "durationSameDay": "11111",
-      "endSameDay": "11111",
-      "invalidTimeRange": "11111"
+      "startBeforeEnd": "⟦Şŧȧřŧ ŧīḿḗ ḿŭşŧ ƀḗ ḗȧřŀīḗř ŧħȧƞ ḗƞḓ ŧīḿḗ⟧",
+      "endAfterStart": "⟦Ḗƞḓ ŧīḿḗ ḿŭşŧ ƀḗ ŀȧŧḗř ŧħȧƞ şŧȧřŧ ŧīḿḗ⟧",
+      "durationMinimum": "⟦Ḓŭřȧŧīȯƞ ḿŭşŧ ƀḗ ȧŧ ŀḗȧşŧ 1 ḿīƞŭŧḗ⟧",
+      "minimumDuration": "⟦Ḿīƞīḿŭḿ ḓŭřȧŧīȯƞ īş 1 ḿīƞŭŧḗ⟧",
+      "serviceRequired": "⟦Şḗřṽīƈḗ īş řḗʠŭīřḗḓ ƒȯř ŧīḿḗ ḗƞŧřīḗş⟧",
+      "timePeriodRange": "⟦Ḓȧŧḗ ḿŭşŧ ƀḗ ẇīŧħīƞ ŧħḗ ƈŭřřḗƞŧ ƥḗřīȯḓ ({{periodRange}})⟧",
+      "endAfterStartPicker": "⟦Ḗƞḓ ŧīḿḗ ḿŭşŧ ƀḗ ȧƒŧḗř şŧȧřŧ ŧīḿḗ⟧",
+      "durationSameDay": "⟦Ḓŭřȧŧīȯƞ ḿŭşŧ ḗƞḓ ȯƞ ŧħḗ şȧḿḗ ḓȧẏ⟧",
+      "endSameDay": "⟦Ḗƞḓ ŧīḿḗ ḿŭşŧ ƀḗ ȯƞ ŧħḗ şȧḿḗ ḓȧẏ ȧş şŧȧřŧ ŧīḿḗ⟧",
+      "invalidTimeRange": "⟦Ḗƞŧḗř ȧ ṽȧŀīḓ ŧīḿḗ řȧƞɠḗ⟧"
     }
   },
   "workItemPicker": {
     "actions": {
-      "createAdHocEntry": "11111"
+      "createAdHocEntry": "⟦Ƈřḗȧŧḗ Ȧḓ-ħȯƈ Ḗƞŧřẏ⟧"
     },
     "placeholders": {
-      "search": "11111",
-      "adHocTitle": "11111",
-      "startTime": "11111",
-      "endTime": "11111"
+      "search": "⟦Şḗȧřƈħ ẇȯřķ īŧḗḿş...⟧",
+      "adHocTitle": "⟦Ḗƞŧḗř ŧīŧŀḗ ƒȯř ȧḓ-ħȯƈ ḗƞŧřẏ⟧",
+      "startTime": "⟦Şŧȧřŧ ŧīḿḗ⟧",
+      "endTime": "⟦Ḗƞḓ ŧīḿḗ⟧"
     },
     "filters": {
-      "includeInactive": "11111",
-      "filters": "11111",
-      "assignedTo": "11111",
-      "assignedToMe": "11111",
-      "startDate": "11111",
-      "endDate": "11111"
+      "includeInactive": "⟦Īƞƈŀŭḓḗ īƞȧƈŧīṽḗ⟧",
+      "filters": "⟦Ƒīŀŧḗřş⟧",
+      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧",
+      "assignedToMe": "⟦Ȧşşīɠƞḗḓ ŧȯ ḿḗ⟧",
+      "startDate": "⟦Şŧȧřŧ ḓȧŧḗ⟧",
+      "endDate": "⟦Ḗƞḓ ḓȧŧḗ⟧"
     },
     "empty": {
-      "searching": "11111",
-      "noWorkItems": "11111"
+      "searching": "⟦Şḗȧřƈħīƞɠ...⟧",
+      "noWorkItems": "⟦Ƞȯ ẇȯřķ īŧḗḿş ƒȯŭƞḓ⟧"
     },
-    "paymentWarningTitle": "11111",
-    "paymentWarning": "11111"
+    "paymentWarningTitle": "⟦Ƥȧẏḿḗƞŧ ƥřḗřḗʠŭīşīŧḗ ẇȧřƞīƞɠ⟧",
+    "paymentWarning": "⟦Ƥȧẏḿḗƞŧ īş řḗʠŭīřḗḓ ƒȯř ȧ ƒŀȧɠɠḗḓ ƥřȯĵḗƈŧ ƀīŀŀīƞɠ ḿīŀḗşŧȯƞḗ ȧƞḓ ħȧş ƞȯŧ ƀḗḗƞ ƈȯƞƒīřḿḗḓ. Ƈȯƞƒīřḿ ƥȧẏḿḗƞŧ ƀḗƒȯřḗ ƈȯƞŧīƞŭīƞɠ ẇȯřķ.⟧"
   },
   "workItemList": {
     "meta": {
-      "assignedTo": "11111 {{value}} 11111",
-      "dueDate": "11111 {{value}} 11111",
-      "contact": "11111 {{value}} 11111",
-      "scheduledEnd": "11111 {{value}} 11111"
+      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ: {{value}}⟧",
+      "dueDate": "⟦Ḓŭḗ Ḓȧŧḗ: {{value}}⟧",
+      "contact": "⟦Ƈȯƞŧȧƈŧ: {{value}}⟧",
+      "scheduledEnd": "⟦Şƈħḗḓŭŀḗḓ ḗƞḓ: {{value}}⟧"
     },
     "assignment": {
-      "oneUser": "11111",
-      "multipleUsers": "11111 {{count}} 11111",
-      "additionalUsers": "11111 {{name}} 11111 {{count}} 11111",
-      "additionalUsersOther": "11111 {{name}} 11111 {{count}} 11111"
+      "oneUser": "⟦1 ŭşḗř ȧşşīɠƞḗḓ⟧",
+      "multipleUsers": "⟦{{count}} ŭşḗřş ȧşşīɠƞḗḓ⟧",
+      "additionalUsers": "⟦{{name}}, +{{count}} ŭşḗř⟧",
+      "additionalUsersOther": "⟦{{name}}, +{{count}} ŭşḗřş⟧"
     },
-    "bundledUnder": "11111 {{number}} 11111",
-    "bundled": "11111",
+    "bundledUnder": "⟦Ɓŭƞḓŀḗḓ → {{number}}⟧",
+    "bundled": "⟦Ɓŭƞḓŀḗḓ⟧",
     "pagination": {
-      "previous": "11111",
-      "next": "11111",
-      "pageInfo": "11111 {{current}} 11111 {{total}} 11111 {{records}} 11111"
+      "previous": "⟦Ƥřḗṽīȯŭş⟧",
+      "next": "⟦Ƞḗẋŧ⟧",
+      "pageInfo": "⟦Ƥȧɠḗ {{current}} ȯƒ {{total}} ({{records}} ŧȯŧȧŀ řḗƈȯřḓş)⟧"
     },
-    "interactionType": "11111 {{type}} 11111 {{client}} 11111",
-    "currentSelection": "11111"
+    "interactionType": "⟦{{type}} • {{client}}⟧",
+    "currentSelection": "⟦Ƈŭřřḗƞŧ ẇȯřķ īŧḗḿ⟧"
   },
   "timeSheetHeader": {
-    "title": "11111",
-    "titleFor": "11111 {{name}} 11111",
-    "editedBy": "11111 {{name}} 11111",
+    "title": "⟦Ŧīḿḗ Şħḗḗŧ⟧",
+    "titleFor": "⟦Ŧīḿḗ Şħḗḗŧ ƒȯř {{name}}⟧",
+    "editedBy": "⟦Ḗḓīŧḗḓ ƀẏ {{name}}⟧",
     "aria": {
-      "previousWeek": "11111",
-      "nextWeek": "11111"
+      "previousWeek": "⟦Ƥřḗṽīȯŭş ẇḗḗķ⟧",
+      "nextWeek": "⟦Ƞḗẋŧ ẇḗḗķ⟧"
     },
     "pagination": {
-      "pageInfo": "11111 {{current}} 11111 {{total}} 11111"
+      "pageInfo": "⟦Ƥȧɠḗ {{current}} ȯƒ {{total}}⟧"
     },
     "labels": {
-      "status": "11111",
-      "showIntervals": "11111",
-      "grid": "11111",
-      "list": "11111"
+      "status": "⟦Şŧȧŧŭş:⟧",
+      "showIntervals": "⟦Şħȯẇ īƞŧḗřṽȧŀş⟧",
+      "grid": "⟦Ɠřīḓ⟧",
+      "list": "⟦Ŀīşŧ⟧"
     }
   },
   "approval": {
-    "titleFor": "11111 {{name}} 11111",
+    "titleFor": "⟦Ŧīḿḗ Şħḗḗŧ Ȧƥƥřȯṽȧŀ ƒȯř {{name}}⟧",
     "sections": {
-      "summary": "11111",
-      "breakdownByWorkItemType": "11111",
-      "dailyBreakdown": "11111",
-      "detailedEntries": "11111",
-      "comments": "11111",
-      "timeEntryDetails": "11111"
+      "summary": "⟦Şŭḿḿȧřẏ⟧",
+      "breakdownByWorkItemType": "⟦Ɓřḗȧķḓȯẇƞ ƀẏ Ẇȯřķ Īŧḗḿ Ŧẏƥḗ⟧",
+      "dailyBreakdown": "⟦Ḓȧīŀẏ Ɓřḗȧķḓȯẇƞ⟧",
+      "detailedEntries": "⟦Ḓḗŧȧīŀḗḓ Ŧīḿḗ Ḗƞŧřīḗş⟧",
+      "comments": "⟦Ƈȯḿḿḗƞŧş⟧",
+      "timeEntryDetails": "⟦Ŧīḿḗ Ḗƞŧřẏ Ḓḗŧȧīŀş⟧"
     },
     "labels": {
-      "period": "11111",
-      "submitted": "11111",
-      "total": "11111",
-      "billable": "11111",
-      "nonBillable": "11111",
-      "workItem": "11111",
-      "service": "11111",
-      "duration": "11111",
-      "notes": "11111",
-      "entryChangeSuggestion": "11111",
-      "approver": "11111",
-      "employee": "11111"
+      "period": "⟦Ƥḗřīȯḓ⟧",
+      "submitted": "⟦Şŭƀḿīŧŧḗḓ⟧",
+      "total": "⟦Ŧȯŧȧŀ⟧",
+      "billable": "⟦Ɓīŀŀȧƀŀḗ⟧",
+      "nonBillable": "⟦Ƞȯƞ-Ɓīŀŀȧƀŀḗ⟧",
+      "workItem": "⟦Ẇȯřķ Īŧḗḿ⟧",
+      "service": "⟦Şḗřṽīƈḗ⟧",
+      "duration": "⟦Ḓŭřȧŧīȯƞ⟧",
+      "notes": "⟦Ƞȯŧḗş⟧",
+      "entryChangeSuggestion": "⟦Ḗƞŧřẏ Ƈħȧƞɠḗ Şŭɠɠḗşŧīȯƞ⟧",
+      "approver": "⟦Ȧƥƥřȯṽḗř⟧",
+      "employee": "⟦Ḗḿƥŀȯẏḗḗ⟧"
     },
     "table": {
-      "date": "11111",
-      "workItem": "11111",
-      "start": "11111",
-      "end": "11111",
-      "billable": "11111",
-      "status": "11111"
+      "date": "⟦Ḓȧŧḗ⟧",
+      "workItem": "⟦Ẇȯřķ Īŧḗḿ⟧",
+      "start": "⟦Şŧȧřŧ⟧",
+      "end": "⟦Ḗƞḓ⟧",
+      "billable": "⟦Ɓīŀŀȧƀŀḗ⟧",
+      "status": "⟦Şŧȧŧŭş⟧"
     },
     "comments": {
-      "changesRequestedHint": "11111",
-      "responsePlaceholder": "11111",
-      "placeholder": "11111",
-      "respondToChanges": "11111"
+      "changesRequestedHint": "⟦(Ƈħȧƞɠḗş ħȧṽḗ ƀḗḗƞ řḗʠŭḗşŧḗḓ - ƥŀḗȧşḗ řḗṽīḗẇ ƈȯḿḿḗƞŧş)⟧",
+      "responsePlaceholder": "⟦Ȧḓḓ ẏȯŭř řḗşƥȯƞşḗ ŧȯ ŧħḗ řḗʠŭḗşŧḗḓ ƈħȧƞɠḗş...⟧",
+      "placeholder": "⟦Ȧḓḓ ȧ ƈȯḿḿḗƞŧ...⟧",
+      "respondToChanges": "⟦Řḗşƥȯƞḓ ŧȯ Ƈħȧƞɠḗş⟧"
     },
-    "changeSuggestionPlaceholder": "11111"
+    "changeSuggestionPlaceholder": "⟦Ŧḗŀŀ ŧħḗ ḗḿƥŀȯẏḗḗ ḗẋȧƈŧŀẏ ẇħȧŧ ŧȯ ƒīẋ ȯƞ ŧħīş ḗƞŧřẏ⟧"
   },
   "approvalActions": {
     "dialogs": {
-      "rejectTitle": "11111",
-      "requestChangesTitle": "11111"
+      "rejectTitle": "⟦Řḗĵḗƈŧ Ŧīḿḗ Şħḗḗŧ⟧",
+      "requestChangesTitle": "⟦Řḗʠŭḗşŧ Ƈħȧƞɠḗş⟧"
     },
     "labels": {
-      "rejectionReason": "11111"
+      "rejectionReason": "⟦Řḗĵḗƈŧīȯƞ Řḗȧşȯƞ⟧"
     },
     "placeholders": {
-      "rejectionReason": "11111"
+      "rejectionReason": "⟦Ḗƞŧḗř řḗȧşȯƞ ƒȯř řḗĵḗƈŧīȯƞ⟧"
     },
     "confirm": {
-      "reject": "11111",
-      "changes": "11111"
+      "reject": "⟦Ƈȯƞƒīřḿ Řḗĵḗƈŧ⟧",
+      "changes": "⟦Ƈȯƞƒīřḿ Ƈħȧƞɠḗş⟧"
     }
   },
   "comments": {
-    "placeholder": "11111",
-    "responsePlaceholder": "11111",
-    "respondToChanges": "11111"
+    "placeholder": "⟦Ȧḓḓ ȧ ƈȯḿḿḗƞŧ...⟧",
+    "responsePlaceholder": "⟦Řḗşƥȯƞḓ ŧȯ ŧħḗ řḗʠŭḗşŧḗḓ ƈħȧƞɠḗş...⟧",
+    "respondToChanges": "⟦Řḗşƥȯƞḓ ŧȯ Ƈħȧƞɠḗş⟧"
   },
   "feedback": {
-    "approverFeedback": "11111",
-    "viewHistory": "11111",
-    "approverOn": "11111 {{name}} 11111 {{value}} 11111"
+    "approverFeedback": "⟦Ȧƥƥřȯṽḗř ƒḗḗḓƀȧƈķ⟧",
+    "viewHistory": "⟦Ṽīḗẇ ƒḗḗḓƀȧƈķ ħīşŧȯřẏ⟧",
+    "approverOn": "⟦{{name}} ȯƞ {{value}}⟧"
   },
   "managerDashboard": {
     "access": {
-      "title": "11111",
-      "description": "11111",
-      "goToTeamSettings": "11111"
+      "title": "⟦Ŧḗȧḿ ŀḗȧḓ ȧƈƈḗşş řḗʠŭīřḗḓ⟧",
+      "description": "⟦Ŧȯ ȧƥƥřȯṽḗ ŧīḿḗ şħḗḗŧş ƒȯř ẏȯŭř ŧḗȧḿ ḿḗḿƀḗřş, ẏȯŭ ƞḗḗḓ ŧȯ ƀḗ ȧ ŧḗȧḿ ŀḗȧḓ.⟧",
+      "goToTeamSettings": "⟦Ɠȯ ŧȯ Ŧḗȧḿ Şḗŧŧīƞɠş⟧"
     },
-    "title": "11111",
+    "title": "⟦Ŧīḿḗ Şħḗḗŧ Ȧƥƥřȯṽȧŀş⟧",
     "actions": {
-      "hideApproved": "11111",
-      "showApproved": "11111",
-      "bulkApproveSelected": "11111",
-      "reverse": "11111"
+      "hideApproved": "⟦Ħīḓḗ Ȧƥƥřȯṽḗḓ⟧",
+      "showApproved": "⟦Şħȯẇ Ȧƥƥřȯṽḗḓ⟧",
+      "bulkApproveSelected": "⟦Ɓŭŀķ Ȧƥƥřȯṽḗ Şḗŀḗƈŧḗḓ⟧",
+      "reverse": "⟦Řḗṽḗřşḗ⟧"
     },
     "columns": {
-      "select": "11111",
-      "employee": "11111",
-      "period": "11111",
-      "status": "11111",
-      "actions": "11111"
+      "select": "⟦Şḗŀḗƈŧ⟧",
+      "employee": "⟦Ḗḿƥŀȯẏḗḗ⟧",
+      "period": "⟦Ƥḗřīȯḓ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "actions": "⟦Ȧƈŧīȯƞş⟧"
     },
     "reverseApproval": {
-      "reason": "11111",
-      "error": "11111 {{error}} 11111"
+      "reason": "⟦Ȧƥƥřȯṽȧŀ řḗṽḗřşḗḓ ƀẏ ḿȧƞȧɠḗř⟧",
+      "error": "⟦Ƒȧīŀḗḓ ŧȯ řḗṽḗřşḗ ȧƥƥřȯṽȧŀ: {{error}}⟧"
     }
   },
   "workItemDrawer": {
     "errors": {
-      "genericTitle": "11111",
-      "genericDescription": "11111",
-      "failedInteraction": "11111",
-      "interactionNotFound": "11111",
-      "noUserSession": "11111",
-      "failedTicket": "11111",
-      "failedTask": "11111",
-      "failedTaskPhase": "11111",
-      "failedTaskProjectMetadata": "11111",
-      "failedAdHoc": "11111",
-      "unsupportedType": "11111",
-      "failedOpportunityStep": "11111"
+      "genericTitle": "⟦Ḗřřȯř ŀȯȧḓīƞɠ ƈȯƞŧḗƞŧ⟧",
+      "genericDescription": "⟦Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ⟧",
+      "failedInteraction": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ īƞŧḗřȧƈŧīȯƞ ḓḗŧȧīŀş⟧",
+      "interactionNotFound": "⟦Īƞŧḗřȧƈŧīȯƞ ƞȯŧ ƒȯŭƞḓ⟧",
+      "noUserSession": "⟦Ƞȯ ŭşḗř şḗşşīȯƞ ƒȯŭƞḓ⟧",
+      "failedTicket": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ⟧",
+      "failedTask": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧşķ⟧",
+      "failedTaskPhase": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧşķ ƥħȧşḗ⟧",
+      "failedTaskProjectMetadata": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧşķ ƥřȯĵḗƈŧ ḿḗŧȧḓȧŧȧ⟧",
+      "failedAdHoc": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧḓ-ħȯƈ ḗƞŧřẏ ḓȧŧȧ⟧",
+      "unsupportedType": "⟦Ŭƞşŭƥƥȯřŧḗḓ ẇȯřķ īŧḗḿ ŧẏƥḗ⟧",
+      "failedOpportunityStep": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓḗȧŀ şŧḗƥ ḓȧŧȧ⟧"
     },
     "opportunityStep": {
-      "opportunity": "11111",
-      "client": "11111",
-      "assignedTo": "11111",
-      "openOpportunity": "11111"
+      "opportunity": "⟦Ȯƥƥȯřŧŭƞīŧẏ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧",
+      "openOpportunity": "⟦Ȯƥḗƞ ȯƥƥȯřŧŭƞīŧẏ⟧"
     }
   },
   "timeSheetClient": {
     "errors": {
-      "delegationDisabled": "11111",
-      "failedReopen": "11111"
+      "delegationDisabled": "⟦Ḓḗŀḗɠȧŧḗḓ ŧīḿḗ ḗƞŧřẏ īş ḓīşȧƀŀḗḓ⟧",
+      "failedReopen": "⟦Ƒȧīŀḗḓ ŧȯ řḗȯƥḗƞ ŧīḿḗ şħḗḗŧ⟧"
     },
     "reopen": {
-      "success": "11111",
-      "reason": "11111",
-      "title": "11111",
-      "message": "11111"
+      "success": "⟦Ŧīḿḗ şħḗḗŧ řḗȯƥḗƞḗḓ ƒȯř ḗḓīŧş⟧",
+      "reason": "⟦Řḗȯƥḗƞḗḓ ƒȯř ḗḓīŧş⟧",
+      "title": "⟦Řḗȯƥḗƞ ƒȯř ḗḓīŧş?⟧",
+      "message": "⟦Ŧħīş ẇīŀŀ ḿȯṽḗ ŧħḗ ŧīḿḗ şħḗḗŧ ƀȧƈķ ŧȯ Ƈħȧƞɠḗş Řḗʠŭḗşŧḗḓ şȯ ŧīḿḗ ḗƞŧřīḗş ƈȧƞ ƀḗ ḗḓīŧḗḓ.⟧"
     }
   },
   "timeSheetTable": {
     "empty": {
-      "title": "11111",
-      "description": "11111",
-      "getStarted": "11111"
+      "title": "⟦Ƞȯ ẇȯřķ īŧḗḿş ȯƞ ẏȯŭř ŧīḿḗ şħḗḗŧ⟧",
+      "description": "⟦Ȧḓḓ ȧ ƞḗẇ ẇȯřķ īŧḗḿ ŧȯ ɠḗŧ şŧȧřŧḗḓ ŧřȧƈķīƞɠ ẏȯŭř ŧīḿḗ ƒȯř ŧħīş ẇḗḗķ.⟧",
+      "getStarted": "⟦Ɠḗŧ Şŧȧřŧḗḓ⟧"
     }
   },
   "timeSheetList": {
     "delete": {
-      "title": "11111",
-      "message": "11111"
+      "title": "⟦Ḓḗŀḗŧḗ Ẇȯřķ Īŧḗḿ⟧",
+      "message": "⟦Ŧħīş ẇīŀŀ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ ȧŀŀ ŧīḿḗ ḗƞŧřīḗş ƒȯř ŧħīş ẇȯřķ īŧḗḿ. Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧"
     },
     "summary": {
-      "entryOne": "11111",
-      "entryOther": "11111",
-      "total": "11111 {{value}} 11111",
-      "billable": "11111 {{value}} 11111"
+      "entryOne": "⟦ḗƞŧřẏ⟧",
+      "entryOther": "⟦ḗƞŧřīḗş⟧",
+      "total": "⟦Ŧȯŧȧŀ: {{value}}⟧",
+      "billable": "⟦Ɓīŀŀȧƀŀḗ: {{value}}⟧"
     },
     "empty": {
-      "title": "11111",
-      "description": "11111",
-      "noEntries": "11111"
+      "title": "⟦Ƞȯ ŧīḿḗ ḗƞŧřīḗş ẏḗŧ⟧",
+      "description": "⟦Ȧḓḓ ȧ ẇȯřķ īŧḗḿ ȧƞḓ şŧȧřŧ ŧřȧƈķīƞɠ ẏȯŭř ŧīḿḗ.⟧",
+      "noEntries": "⟦Ƞȯ ḗƞŧřīḗş⟧"
     },
     "columns": {
-      "workItem": "11111",
-      "timeEntry": "11111",
-      "duration": "11111",
-      "billableDuration": "11111",
-      "actions": "11111"
+      "workItem": "⟦Ẇȯřķ Īŧḗḿ⟧",
+      "timeEntry": "⟦Ŧīḿḗ Ḗƞŧřẏ⟧",
+      "duration": "⟦Ḓŭřȧŧīȯƞ⟧",
+      "billableDuration": "⟦Ɓīŀŀȧƀŀḗ Ḓŭřȧŧīȯƞ⟧",
+      "actions": "⟦Ȧƈŧīȯƞş⟧"
     },
     "dayGroup": {
-      "entryOne": "11111 {{count}} 11111",
-      "entryOther": "11111 {{count}} 11111"
+      "entryOne": "⟦{{count}} ḗƞŧřẏ⟧",
+      "entryOther": "⟦{{count}} ḗƞŧřīḗş⟧"
     },
     "focusFilter": {
-      "summary": "11111 {{count}} 11111 {{workItem}} 11111 {{date}} 11111",
-      "description": "11111",
-      "backToGrid": "11111"
+      "summary": "⟦Şħȯẇīƞɠ {{count}} ḗƞŧřīḗş ƒȯř {{workItem}} ȯƞ {{date}}⟧",
+      "description": "⟦Ȯƞŀẏ ḗƞŧřīḗş ƒřȯḿ ŧħḗ şḗŀḗƈŧḗḓ ɠřīḓ ƈḗŀŀ ȧřḗ ṽīşīƀŀḗ.⟧",
+      "backToGrid": "⟦Ɓȧƈķ ŧȯ ɠřīḓ⟧"
     }
   },
   "selectedWorkItem": {
-    "adHocNoWorkItem": "11111"
+    "adHocNoWorkItem": "⟦Ȧḓ-ħȯƈ ḗƞŧřẏ (ƞȯ ẇȯřķ īŧḗḿ)⟧"
   },
   "contractInfo": {
-    "noContract": "11111",
-    "contract": "11111 {{name}} 11111",
-    "defaultContract": "11111",
-    "multipleLines": "11111"
+    "noContract": "⟦Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗ ƒȯŭƞḓ ƒȯř ŧħīş şḗřṽīƈḗ. Ŧīḿḗ ẇīŀŀ ƀḗ řȯŭŧḗḓ ŧȯ ŧħḗ şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ.⟧",
+    "contract": "⟦Ƈȯƞŧřȧƈŧ: {{name}}⟧",
+    "defaultContract": "⟦Şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ⟧",
+    "multipleLines": "⟦Ḿŭŀŧīƥŀḗ ƈȯƞŧřȧƈŧ ŀīƞḗş ȧṽȧīŀȧƀŀḗ - ŭşīƞɠ ḓḗƒȧŭŀŧ şḗŀḗƈŧīȯƞ⟧"
   },
   "billableLegend": {
-    "title": "11111",
-    "description": "11111"
+    "title": "⟦Ɓīŀŀȧƀŀḗ Ŀḗɠḗƞḓ⟧",
+    "description": "⟦Ƈȯŀȯř īƞḓīƈȧŧȯřş ƒȯř ƀīŀŀȧƀŀḗ ŧīḿḗ řȧŧīȯş⟧"
   },
   "intervalItem": {
-    "now": "11111",
-    "autoClosed": "11111",
-    "active": "11111"
+    "now": "⟦Ƞȯẇ⟧",
+    "autoClosed": "⟦Ȧŭŧȯ-ƈŀȯşḗḓ⟧",
+    "active": "⟦Ȧƈŧīṽḗ⟧"
   },
   "intervals": {
-    "createdFromNote_one": "11111 {{count}} 11111",
-    "createdFromNote_other": "11111 {{count}} 11111",
-    "selectedCount_one": "11111 {{count}} 11111",
-    "selectedCount_other": "11111 {{count}} 11111",
-    "title": "11111",
-    "hideShortIntervals": "11111",
-    "totalTime": "11111 {{value}} 11111",
-    "selectedOne": "11111 {{count}} 11111",
-    "selectedOther": "11111 {{count}} 11111",
+    "createdFromNote_one": "⟦Ƈřḗȧŧḗḓ ƒřȯḿ {{count}} īƞŧḗřṽȧŀ⟧",
+    "createdFromNote_other": "⟦Ƈřḗȧŧḗḓ ƒřȯḿ {{count}} īƞŧḗřṽȧŀş⟧",
+    "selectedCount_one": "⟦{{count}} īƞŧḗřṽȧŀ şḗŀḗƈŧḗḓ⟧",
+    "selectedCount_other": "⟦{{count}} īƞŧḗřṽȧŀş şḗŀḗƈŧḗḓ⟧",
+    "title": "⟦Ŧīƈķḗŧ Ŧīḿḗ Īƞŧḗřṽȧŀş⟧",
+    "hideShortIntervals": "⟦Ħīḓḗ īƞŧḗřṽȧŀş ŭƞḓḗř 1 ḿīƞŭŧḗ⟧",
+    "totalTime": "⟦Ŧȯŧȧŀ ŧīḿḗ: {{value}}⟧",
+    "selectedOne": "⟦{{count}} īƞŧḗřṽȧŀ şḗŀḗƈŧḗḓ⟧",
+    "selectedOther": "⟦{{count}} īƞŧḗřṽȧŀş şḗŀḗƈŧḗḓ⟧",
     "tooltips": {
-      "createTimeEntry": "11111",
-      "deleteSelected": "11111",
-      "mergeSelected": "11111"
+      "createTimeEntry": "⟦Ƈřḗȧŧḗ ŧīḿḗ ḗƞŧřẏ ƒřȯḿ şḗŀḗƈŧḗḓ īƞŧḗřṽȧŀş⟧",
+      "deleteSelected": "⟦Ḓḗŀḗŧḗ şḗŀḗƈŧḗḓ īƞŧḗřṽȧŀş⟧",
+      "mergeSelected": "⟦Ḿḗřɠḗ şḗŀḗƈŧḗḓ īƞŧḗřṽȧŀş⟧"
     },
     "actions": {
-      "selectAll": "11111",
-      "deselectAll": "11111",
-      "merge": "11111"
+      "selectAll": "⟦Şḗŀḗƈŧ Ȧŀŀ⟧",
+      "deselectAll": "⟦Ḓḗşḗŀḗƈŧ Ȧŀŀ⟧",
+      "merge": "⟦Ḿḗřɠḗ⟧"
     },
     "states": {
-      "loading": "11111",
-      "noIntervalsThisPeriod": "11111",
-      "noIntervalsThisTicket": "11111",
-      "noIntervalsLongerThanMinute": "11111"
+      "loading": "⟦Ŀȯȧḓīƞɠ īƞŧḗřṽȧŀş...⟧",
+      "noIntervalsThisPeriod": "⟦Ƞȯ īƞŧḗřṽȧŀş ƒȯŭƞḓ ƒȯř ŧħīş ŧīḿḗ ƥḗřīȯḓ⟧",
+      "noIntervalsThisTicket": "⟦Ƞȯ īƞŧḗřṽȧŀş ƒȯŭƞḓ ƒȯř ŧħīş ŧīƈķḗŧ⟧",
+      "noIntervalsLongerThanMinute": "⟦Ƞȯ īƞŧḗřṽȧŀş ŀȯƞɠḗř ŧħȧƞ 1 ḿīƞŭŧḗ ƒȯŭƞḓ⟧"
     },
-    "entryName": "11111",
+    "entryName": "⟦Ŧīƈķḗŧ Ŧīḿḗ Ḗƞŧřẏ⟧",
     "messages": {
-      "cannotFindTimeSheet": "11111",
-      "mergeFirst": "11111",
-      "sameTicketOnly": "11111",
-      "mergeSameTicketOnly": "11111",
-      "mergeSuccess": "11111",
-      "failedMerge": "11111",
-      "noActivePeriod": "11111",
-      "failedFetchTimeSheet": "11111",
-      "failedPrepareTimeEntry": "11111",
-      "savedSuccess": "11111",
-      "failedSave": "11111"
+      "cannotFindTimeSheet": "⟦Ƈȧƞƞȯŧ ƈřḗȧŧḗ ŧīḿḗ ḗƞŧřẏ - ƈȯŭŀḓ ƞȯŧ ƒīƞḓ ȯř ƈřḗȧŧḗ ŧīḿḗ şħḗḗŧ⟧",
+      "mergeFirst": "⟦Ƥŀḗȧşḗ ḿḗřɠḗ īƞŧḗřṽȧŀş ƒīřşŧ ƀḗƒȯřḗ ƈřḗȧŧīƞɠ ȧ ŧīḿḗ ḗƞŧřẏ⟧",
+      "sameTicketOnly": "⟦Ƈȧƞ ȯƞŀẏ ƈřḗȧŧḗ ŧīḿḗ ḗƞŧřīḗş ƒřȯḿ īƞŧḗřṽȧŀş ȯƒ ŧħḗ şȧḿḗ ŧīƈķḗŧ⟧",
+      "mergeSameTicketOnly": "⟦Ƈȧƞ ȯƞŀẏ ḿḗřɠḗ īƞŧḗřṽȧŀş ƒřȯḿ ŧħḗ şȧḿḗ ŧīƈķḗŧ⟧",
+      "mergeSuccess": "⟦Īƞŧḗřṽȧŀş ḿḗřɠḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "failedMerge": "⟦Ƒȧīŀḗḓ ŧȯ ḿḗřɠḗ īƞŧḗřṽȧŀş⟧",
+      "noActivePeriod": "⟦Ƞȯ ȧƈŧīṽḗ ŧīḿḗ ƥḗřīȯḓ ƒȯŭƞḓ⟧",
+      "failedFetchTimeSheet": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ȯř ƒḗŧƈħ ŧīḿḗ şħḗḗŧ⟧",
+      "failedPrepareTimeEntry": "⟦Ƒȧīŀḗḓ ŧȯ ƥřḗƥȧřḗ ŧīḿḗ ḗƞŧřẏ⟧",
+      "savedSuccess": "⟦Ŧīḿḗ ḗƞŧřẏ şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+      "failedSave": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ŧīḿḗ ḗƞŧřẏ⟧"
     }
   },
   "addWorkItemDialog": {
-    "title": "11111",
-    "description": "11111",
-    "close": "11111",
-    "focus": "11111"
+    "title": "⟦Ȧḓḓ Ẇȯřķ Īŧḗḿ⟧",
+    "description": "⟦Şḗŀḗƈŧ ȧ ẇȯřķ īŧḗḿ ŧȯ ȧḓḓ ŧȯ ŧīḿḗşħḗḗŧ⟧",
+    "close": "⟦Ƈŀȯşḗ ȧḓḓ ẇȯřķ īŧḗḿ ḓīȧŀȯɠ⟧",
+    "focus": "⟦Ƒȯƈŭş ȯƞ ȧḓḓ ẇȯřķ īŧḗḿ ḓīȧŀȯɠ⟧"
   },
   "timeEntryReadOnly": {
-    "viewEntryDetails": "11111"
+    "viewEntryDetails": "⟦Ṽīḗẇ ḗƞŧřẏ ḓḗŧȧīŀş⟧"
   },
   "messages": {
-    "serviceRequired": "11111",
-    "invalidService": "11111",
-    "taxRegionRequired": "11111",
-    "invalidTimeEntry": "11111",
-    "savingEntry": "11111",
-    "entrySaved": "11111",
-    "entrySavedSuccess": "11111",
-    "taskUpdated": "11111",
-    "saveChangesFailed": "11111",
-    "changesSaved": "11111",
-    "workItemDeleted": "11111",
-    "submitFailed": "11111"
+    "serviceRequired": "⟦Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ şḗřṽīƈḗ ƀḗƒȯřḗ şȧṽīƞɠ ŧīḿḗ ḗƞŧřīḗş⟧",
+    "invalidService": "⟦Īƞṽȧŀīḓ şḗřṽīƈḗ şḗŀḗƈŧḗḓ⟧",
+    "taxRegionRequired": "⟦Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ ŧȧẋ řḗɠīȯƞ ƒȯř ŧȧẋȧƀŀḗ şḗřṽīƈḗş⟧",
+    "invalidTimeEntry": "⟦Ƥŀḗȧşḗ ƈħḗƈķ ŧħḗ ŧīḿḗ ḗƞŧřẏ ṽȧŀŭḗş⟧",
+    "savingEntry": "⟦Şȧṽīƞɠ ŧīḿḗ ḗƞŧřẏ...⟧",
+    "entrySaved": "⟦Ŧīḿḗ ḗƞŧřẏ şȧṽḗḓ⟧",
+    "entrySavedSuccess": "⟦Ŧīḿḗ ḗƞŧřẏ şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "taskUpdated": "⟦Ŧȧşķ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "saveChangesFailed": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƈħȧƞɠḗş⟧",
+    "changesSaved": "⟦Ƈħȧƞɠḗş şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "workItemDeleted": "⟦Ẇȯřķ īŧḗḿ ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "submitFailed": "⟦Ƒȧīŀḗḓ ŧȯ şŭƀḿīŧ ŧīḿḗ şħḗḗŧ⟧"
   },
   "bundleNotice": {
-    "withNumber": "11111 {{number}} 11111",
-    "withoutNumber": "11111"
+    "withNumber": "⟦Ŧħīş ŧīƈķḗŧ īş ƀŭƞḓŀḗḓ ŭƞḓḗř {{number}}. Ɓŭƞḓŀḗ ŧīḿḗ īş ŭşŭȧŀŀẏ ŀȯɠɠḗḓ ȯƞ ŧħḗ ḿȧşŧḗř ŧīƈķḗŧ.⟧",
+    "withoutNumber": "⟦Ŧħīş ŧīƈķḗŧ īş ƥȧřŧ ȯƒ ȧ ƀŭƞḓŀḗ. Ɓŭƞḓŀḗ ŧīḿḗ īş ŭşŭȧŀŀẏ ŀȯɠɠḗḓ ȯƞ ŧħḗ ḿȧşŧḗř ŧīƈķḗŧ.⟧"
   },
   "errors": {
     "timeSheet": {
-      "notFoundRefresh": "11111",
-      "onlySubmittedApprovable": "11111",
-      "idRequired": "11111",
-      "ticketIdRequired": "11111",
-      "workItemRemoveFailed": "11111",
-      "onlyDraftRemovable": "11111",
-      "removeEntriesFirst": "11111",
-      "onlyApprovedReopenable": "11111",
-      "invoicedCannotReopen": "11111"
+      "notFoundRefresh": "⟦Ŧīḿḗ şħḗḗŧ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "onlySubmittedApprovable": "⟦Ȯƞŀẏ şŭƀḿīŧŧḗḓ ŧīḿḗ şħḗḗŧş ƈȧƞ ƀḗ ȧƥƥřȯṽḗḓ.⟧",
+      "idRequired": "⟦Ŧīḿḗ şħḗḗŧ ĪḒ īş řḗʠŭīřḗḓ.⟧",
+      "ticketIdRequired": "⟦Ŧīƈķḗŧ ĪḒ īş řḗʠŭīřḗḓ.⟧",
+      "workItemRemoveFailed": "⟦Ŭƞȧƀŀḗ ŧȯ řḗḿȯṽḗ ŧħȧŧ ẇȯřķ īŧḗḿ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "onlyDraftRemovable": "⟦Ȯƞŀẏ ḓřȧƒŧ ŧīḿḗ şħḗḗŧş ƈȧƞ ƀḗ řḗḿȯṽḗḓ.⟧",
+      "removeEntriesFirst": "⟦Řḗḿȯṽḗ ŧīḿḗ ḗƞŧřīḗş ƀḗƒȯřḗ řḗḿȯṽīƞɠ ŧħīş ŧīḿḗ şħḗḗŧ.⟧",
+      "onlyApprovedReopenable": "⟦Ȯƞŀẏ ȧƥƥřȯṽḗḓ ŧīḿḗ şħḗḗŧş ƈȧƞ ƀḗ řḗȯƥḗƞḗḓ.⟧",
+      "invoicedCannotReopen": "⟦Ŧħīş ŧīḿḗ şħḗḗŧ ƈȯƞŧȧīƞş īƞṽȯīƈḗḓ ŧīḿḗ ȧƞḓ ƈȧƞƞȯŧ ƀḗ řḗȯƥḗƞḗḓ.⟧"
     },
     "timeEntry": {
-      "notFoundRefresh": "11111",
-      "serviceRequired": "11111",
-      "alreadyInvoiced": "11111",
-      "workItemTypeUnsupported": "11111",
-      "bucketUpdateFailed": "11111",
-      "wrongTimeSheet": "11111",
-      "outsidePeriod": "11111",
-      "invalidReference": "11111",
-      "referenceMissing": "11111",
-      "duplicate": "11111",
-      "missingField": "11111",
-      "missingFieldNamed": "11111 {{field}} 11111"
+      "notFoundRefresh": "⟦Ŧīḿḗ ḗƞŧřẏ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "serviceRequired": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ ƀḗƒȯřḗ şȧṽīƞɠ ŧħīş ŧīḿḗ ḗƞŧřẏ.⟧",
+      "alreadyInvoiced": "⟦Ŧħīş ŧīḿḗ ḗƞŧřẏ ħȧş ȧŀřḗȧḓẏ ƀḗḗƞ īƞṽȯīƈḗḓ ȧƞḓ ƈȧƞƞȯŧ ƀḗ ƈħȧƞɠḗḓ.⟧",
+      "workItemTypeUnsupported": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ẇȯřķ īŧḗḿ ŧẏƥḗ īş ƞȯŧ şŭƥƥȯřŧḗḓ ƒȯř ŧīḿḗ ḗƞŧřīḗş.⟧",
+      "bucketUpdateFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŭƥḓȧŧḗ ƀŭƈķḗŧ ŭşȧɠḗ ƒȯř ŧħīş ŧīḿḗ ḗƞŧřẏ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "wrongTimeSheet": "⟦Ŧħīş ŧīḿḗ ḗƞŧřẏ ḓȯḗş ƞȯŧ ƀḗŀȯƞɠ ŧȯ ŧħḗ şḗŀḗƈŧḗḓ ŧīḿḗ şħḗḗŧ.⟧",
+      "outsidePeriod": "⟦Ŧīḿḗ ḗƞŧřẏ ḿŭşŧ ƒȧŀŀ ẇīŧħīƞ ŧħḗ şḗŀḗƈŧḗḓ ŧīḿḗ şħḗḗŧ ƥḗřīȯḓ.⟧",
+      "invalidReference": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ŧīḿḗ ḗƞŧřẏ, ŧīḿḗ şħḗḗŧ, ȯř ẇȯřķ īŧḗḿ īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "referenceMissing": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ŧīḿḗ şħḗḗŧ, ŧīḿḗ ḗƞŧřẏ, ẇȯřķ īŧḗḿ, ȯř ŭşḗř īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "duplicate": "⟦Ȧ ƈȯƞƒŀīƈŧīƞɠ ŧīḿḗ ḗƞŧřẏ ȧŀřḗȧḓẏ ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "missingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ŧīḿḗ şħḗḗŧ ȯř ŧīḿḗ ḗƞŧřẏ ƒīḗŀḓ.⟧",
+      "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ŧīḿḗ şħḗḗŧ ȯř ŧīḿḗ ḗƞŧřẏ ƒīḗŀḓ: {{field}}.⟧"
     },
     "timePeriod": {
-      "datesRequired": "11111"
+      "datesRequired": "⟦Ḗƞŧḗř ṽȧŀīḓ şŧȧřŧ ȧƞḓ ḗƞḓ ḓȧŧḗş.⟧"
     },
     "timePeriodSettings": {
-      "invalidValue": "11111",
-      "referenceMissing": "11111",
-      "duplicate": "11111",
-      "missingField": "11111",
-      "missingFieldNamed": "11111 {{field}} 11111"
+      "invalidValue": "⟦Ȯƞḗ ȯƒ ŧħḗ ŧīḿḗ ƥḗřīȯḓ şḗŧŧīƞɠ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "referenceMissing": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ŧīḿḗ ƥḗřīȯḓ şḗŧŧīƞɠ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "duplicate": "⟦Ȧ ƈȯƞƒŀīƈŧīƞɠ ŧīḿḗ ƥḗřīȯḓ şḗŧŧīƞɠ ȧŀřḗȧḓẏ ḗẋīşŧş.⟧",
+      "missingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ŧīḿḗ ƥḗřīȯḓ şḗŧŧīƞɠ ƒīḗŀḓ.⟧",
+      "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ŧīḿḗ ƥḗřīȯḓ şḗŧŧīƞɠ ƒīḗŀḓ: {{field}}.⟧"
     }
   }
 }

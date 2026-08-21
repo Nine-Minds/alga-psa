@@ -40,6 +40,9 @@ function collectLeafValues(value: unknown, prefix = ''): Array<[string, string]>
   );
 }
 
+// scripts/generate-pseudo-locales.cjs wraps every xx value in these markers.
+const PSEUDO_MARKERS = /^⟦.*⟧$/s;
+
 describe('app-wide search i18n contracts', () => {
   it('T147 defines the required English msp/core search keys', () => {
     const core = readCoreLocale('en');
@@ -132,7 +135,7 @@ describe('app-wide search i18n contracts', () => {
 
     for (const [key, pseudoValue] of pseudoValues) {
       expect(pseudoValue, key).not.toBe(englishValues.get(key));
-      expect(pseudoValue, key).toContain('11111');
+      expect(pseudoValue, key).toMatch(PSEUDO_MARKERS);
     }
   });
 
@@ -146,8 +149,16 @@ describe('app-wide search i18n contracts', () => {
     expect(pseudoValues.length).toBeGreaterThan(60);
 
     for (const [key, value] of pseudoValues) {
-      expect(value, key).toContain('11111');
+      expect(value, key).toMatch(PSEUDO_MARKERS);
       expect(value.replace(/\{\{[^}]+\}\}/g, ''), key).not.toMatch(/[A-Za-z]{3,}/);
     }
+
+    // Distinct English strings must stay distinct once pseudo-localized, or
+    // components keyed on a translated label collide in the DOM.
+    const distinctEnglish = new Set(
+      collectLeafValues(getPath(readCoreLocale('en'), 'search')).map(([, value]) => value),
+    );
+    const distinctPseudo = new Set(pseudoValues.map(([, value]) => value));
+    expect(distinctPseudo.size).toBe(distinctEnglish.size);
   });
 });

@@ -1,71 +1,71 @@
 {
   "catalog": {
-    "title": "55555",
-    "description": "55555",
-    "myRequests": "55555",
-    "empty": "55555",
-    "fallbackCategory": "55555",
-    "noDescription": "55555",
-    "newRequestHeading": "55555"
+    "title": "〖Şḗřṽīƈḗ Řḗʠŭḗşŧş ·······〗",
+    "description": "〖Şŭƀḿīŧ ȧ şŧřŭƈŧŭřḗḓ řḗʠŭḗşŧ ȧƞḓ ẇḗ'ŀŀ ƈřḗȧŧḗ ȧ ŧīƈķḗŧ ƒȯř īŧ ȧŭŧȯḿȧŧīƈȧŀŀẏ. ······························〗",
+    "myRequests": "〖Ḿẏ Řḗʠŭḗşŧş ·····〗",
+    "empty": "〖Ƞȯ řḗʠŭḗşŧ şḗřṽīƈḗş ȧřḗ ƈŭřřḗƞŧŀẏ ȧṽȧīŀȧƀŀḗ. ··················〗",
+    "fallbackCategory": "〖Şḗřṽīƈḗ ···〗",
+    "noDescription": "〖Ƞȯ ḓḗşƈřīƥŧīȯƞ ƥřȯṽīḓḗḓ ··········〗",
+    "newRequestHeading": "〖Şŭƀḿīŧ ȧ ƞḗẇ řḗʠŭḗşŧ ········〗"
   },
   "detail": {
-    "version": "55555 {{version}} 55555",
-    "submitted": "55555",
-    "requestIdLabel": "55555",
-    "ticketIdLabel": "55555",
-    "unableToSubmit": "55555",
-    "formTitle": "55555",
-    "noFields": "55555",
-    "selectOption": "55555",
-    "datePlaceholder": "55555",
-    "optionLabel": "55555 {{index}} 55555",
-    "submit": "55555",
-    "initialValuesTitle": "55555",
-    "noInitialValues": "55555"
+    "version": "〖Ṽḗřşīȯƞ {{version}} ········〗",
+    "submitted": "〖Řḗʠŭḗşŧ şŭƀḿīŧŧḗḓ ·······〗",
+    "requestIdLabel": "〖Řḗʠŭḗşŧ ĪḒ:  ·····〗",
+    "ticketIdLabel": "〖Ŧīƈķḗŧ ĪḒ:  ·····〗",
+    "unableToSubmit": "〖Ŭƞȧƀŀḗ ŧȯ şŭƀḿīŧ řḗʠŭḗşŧ ··········〗",
+    "formTitle": "〖Řḗʠŭḗşŧ Ƒȯřḿ ·····〗",
+    "noFields": "〖Ƞȯ ƒīḗŀḓş ƈȯƞƒīɠŭřḗḓ. ·········〗",
+    "selectOption": "〖Şḗŀḗƈŧ ȧƞ ȯƥŧīȯƞ ·······〗",
+    "datePlaceholder": "〖Şḗŀḗƈŧ ḓȧŧḗ ·····〗",
+    "optionLabel": "〖Ȯƥŧīȯƞ {{index}} ·······〗",
+    "submit": "〖Şŭƀḿīŧ Řḗʠŭḗşŧ ······〗",
+    "initialValuesTitle": "〖Īƞīŧīȧŀ Ṽȧŀŭḗş ······〗",
+    "noInitialValues": "〖Ƞȯ şŧȧŧīƈ ḓḗƒȧŭŀŧş ƈȯƞƒīɠŭřḗḓ. ············〗"
   },
   "myRequests": {
-    "title": "55555",
-    "browseServices": "55555",
-    "empty": "55555",
+    "title": "〖Ḿẏ Řḗʠŭḗşŧş ·····〗",
+    "browseServices": "〖Ɓřȯẇşḗ Şḗřṽīƈḗş ······〗",
+    "empty": "〖Ẏȯŭ ħȧṽḗ ƞȯŧ şŭƀḿīŧŧḗḓ ȧƞẏ şḗřṽīƈḗ řḗʠŭḗşŧş ẏḗŧ. ····················〗",
     "columns": {
-      "request": "55555",
-      "submitted": "55555",
-      "status": "55555",
-      "details": "55555",
-      "ticket": "55555"
+      "request": "〖Řḗʠŭḗşŧ ···〗",
+      "submitted": "〖Şŭƀḿīŧŧḗḓ ····〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "details": "〖Ḓḗŧȧīŀş ···〗",
+      "ticket": "〖Ŧīƈķḗŧ ···〗"
     },
-    "view": "55555",
-    "unknownDate": "55555",
+    "view": "〖Ṽīḗẇ ··〗",
+    "unknownDate": "〖Ŭƞķƞȯẇƞ ···〗",
     "statuses": {
-      "pending": "55555",
-      "succeeded": "55555",
-      "failed": "55555"
+      "pending": "〖Ƥḗƞḓīƞɠ ···〗",
+      "succeeded": "〖Şŭƈƈḗḗḓḗḓ ····〗",
+      "failed": "〖Ƒȧīŀḗḓ ···〗"
     },
-    "noTicket": "55555"
+    "noTicket": "〖Ƞȯ ŧīƈķḗŧ ····〗"
   },
   "submissionDetail": {
-    "backToMyRequests": "55555",
-    "requestIdLabel": "55555",
-    "statusSection": "55555",
-    "submittedAt": "55555 {{date}} 55555",
-    "executionStatus": "55555 {{status}} 55555",
-    "ticketLabel": "55555",
-    "workflowLabel": "55555 {{id}} 55555",
-    "submittedAnswersTitle": "55555",
-    "noResponse": "55555",
-    "attachmentsTitle": "55555",
-    "noAttachments": "55555",
-    "fileIdLabel": "55555 {{id}} 55555",
-    "fileTypeLabel": "55555 {{mime}} 55555"
+    "backToMyRequests": "〖Ɓȧƈķ ŧȯ Ḿẏ Řḗʠŭḗşŧş ········〗",
+    "requestIdLabel": "〖Řḗʠŭḗşŧ ĪḒ: ·····〗",
+    "statusSection": "〖Şŧȧŧŭş ···〗",
+    "submittedAt": "〖Şŭƀḿīŧŧḗḓ: {{date}} ········〗",
+    "executionStatus": "〖Ḗẋḗƈŭŧīȯƞ şŧȧŧŭş: {{status}} ············〗",
+    "ticketLabel": "〖Ŧīƈķḗŧ: ···〗",
+    "workflowLabel": "〖Ẇȯřķƒŀȯẇ: {{id}} ·······〗",
+    "submittedAnswersTitle": "〖Şŭƀḿīŧŧḗḓ Ȧƞşẇḗřş ·······〗",
+    "noResponse": "〖Ƞȯ řḗşƥȯƞşḗ ·····〗",
+    "attachmentsTitle": "〖Ȧŧŧȧƈħḿḗƞŧş ·····〗",
+    "noAttachments": "〖Ƞȯ ȧŧŧȧƈħḿḗƞŧş īƞƈŀŭḓḗḓ. ··········〗",
+    "fileIdLabel": "〖Ƒīŀḗ ĪḒ: {{id}} ······〗",
+    "fileTypeLabel": "〖Ŧẏƥḗ: {{mime}} ······〗"
   },
   "recent": {
-    "title": "55555",
-    "viewAll": "55555",
-    "empty": "55555",
-    "ticket": "55555 {{number}} 55555",
-    "noTicket": "55555"
+    "title": "〖Ẏȯŭř řḗƈḗƞŧ řḗʠŭḗşŧş ········〗",
+    "viewAll": "〖Ṽīḗẇ ȧŀŀ ····〗",
+    "empty": "〖Ƞȯ řḗʠŭḗşŧş şŭƀḿīŧŧḗḓ ẏḗŧ. ···········〗",
+    "ticket": "〖Ŧīƈķḗŧ #{{number}} ········〗",
+    "noTicket": "〖Ƞȯ ŧīƈķḗŧ ẏḗŧ ······〗"
   },
   "myRequestsAll": {
-    "title": "55555"
+    "title": "〖Ẏȯŭř řḗʠŭḗşŧş ······〗"
   }
 }
