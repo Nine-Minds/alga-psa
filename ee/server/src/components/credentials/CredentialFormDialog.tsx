@@ -82,19 +82,20 @@ function randomChar(chars: string): string {
   const value = new Uint32Array(1);
   crypto.getRandomValues(value);
   // rejection sampling avoids modulo bias for the small alphabets used here
-  const limit = Math.floor(0xffffffff / chars.length) * chars.length;
+  const limit = Math.floor(0x100000000 / chars.length) * chars.length;
   while (value[0] >= limit) crypto.getRandomValues(value);
   return chars[value[0] % chars.length];
 }
 
 function randomIndex(upperBound: number): number {
   const value = new Uint32Array(1);
-  const limit = Math.floor(0xffffffff / upperBound) * upperBound;
+  const limit = Math.floor(0x100000000 / upperBound) * upperBound;
   do crypto.getRandomValues(value); while (value[0] >= limit);
   return value[0] % upperBound;
 }
 
 export function generatePassword(length: number, selected: Array<keyof typeof PASSWORD_SETS>): string {
+  length = Math.max(8, Math.min(64, Math.floor(length)));
   if (!selected.length || length < selected.length) return '';
   const alphabet = selected.map((key) => PASSWORD_SETS[key]).join('');
   const chars = selected.map((key) => randomChar(PASSWORD_SETS[key]));
@@ -245,6 +246,11 @@ export function CredentialFormDialog({
         setInitialSnapshot(JSON.stringify([defaultClientId ?? '', '', '', '', '', '', '', 'alga']));
       }
       setPasswordVisible(false);
+      setCopied(false);
+      setGeneratorOpen(false);
+      setDiscardOpen(false);
+      setGenLength(20);
+      setGenSets({ uppercase: true, lowercase: true, digits: true, symbols: true });
       setQrDataUrl(null);
     }
   }, [isOpen, editing, defaultClientId, entityType, entityId]);
@@ -396,7 +402,7 @@ export function CredentialFormDialog({
                     max={64}
                     className="w-20"
                     value={genLength}
-                    onChange={(event) => setGenLength(Number(event.target.value) || 16)}
+                    onChange={(event) => setGenLength(Math.max(8, Math.min(64, Number(event.target.value) || 20)))}
                   />
                 </div>
                 {(Object.keys(PASSWORD_SETS) as Array<keyof typeof PASSWORD_SETS>).map((key) => (

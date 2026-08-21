@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { act, fireEvent, render, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -238,6 +238,8 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
     </select>
   ),
 }));
+
+vi.mock('qrcode/lib/browser', () => ({ default: { toDataURL: vi.fn(async () => 'data:image/png;base64,local-preview') } }));
 
 import { CredentialsScreen } from '@ee/components/credentials/CredentialsScreen';
 import { TotpCountdown } from '@ee/components/credentials/TotpCountdown';
@@ -477,6 +479,76 @@ describe('CredentialsScreen — filters and flags', () => {
 });
 
 describe('CredentialsScreen — create dialog destination picker', () => {
+  it('hides Hudu filter and destination when the integration is inactive', async () => {
+    await renderScreen();
+    expect(document.querySelector('#credentials-screen-source-filter option[value="hudu"]')).toBeNull();
+    fireEvent.click(document.getElementById('credentials-screen-new')!);
+    await waitFor(() => expect(document.getElementById('credential-form-name')).toBeTruthy());
+    fireEvent.change(document.getElementById('credential-form-client')!, { target: { value: CLIENT_ID } });
+    expect(getHuduClientContextMock).not.toHaveBeenCalled();
+    expect(document.getElementById('credential-form-destination-hudu')).toBeNull();
+  });
+
+  it('uses the picker globally and locks the client on preselected entity create', async () => {
+    await renderScreen();
+    fireEvent.click(document.getElementById('credentials-screen-new')!);
+    await waitFor(() => expect(document.getElementById('credential-form-client')).toBeTruthy());
+    cleanup();
+    render(<CredentialsScreen entityType="asset" entityId="asset-1" defaultClientId={CLIENT_ID} />);
+    await waitFor(() => expect(document.getElementById('credentials-screen-new')).toBeTruthy());
+    fireEvent.click(document.getElementById('credentials-screen-new')!);
+    await waitFor(() => expect(document.getElementById('credential-form-name')).toBeTruthy());
+    expect(document.getElementById('credential-form-client')).toBeNull();
+  });
+
+  it('only requests discard confirmation after meaningful inline changes, including Back', async () => {
+    render(<CredentialsScreen entityType="asset" entityId="asset-1" defaultClientId={CLIENT_ID} />);
+    await waitFor(() => expect(document.getElementById('credentials-screen-new')).toBeTruthy());
+    fireEvent.click(document.getElementById('credentials-screen-new')!);
+    await waitFor(() => expect(document.getElementById('credential-form-cancel')).toBeTruthy());
+    fireEvent.click(document.getElementById('credential-form-cancel')!);
+    expect(document.getElementById('credential-form-discard')).toBeNull();
+    fireEvent.click(document.getElementById('credentials-screen-new')!);
+    await waitFor(() => expect(document.getElementById('credential-form-name')).toBeTruthy());
+    fireEvent.change(document.getElementById('credential-form-name')!, { target: { value: 'changed' } });
+    fireEvent.click(document.getElementById('credentials-screen-back')!);
+    expect(document.getElementById('credential-form-discard')).toBeTruthy();
+  });
+
+  it('generates covered character sets, supports reveal/copy, and shows TOTP QR previews', async () => {
+    getCredentialsContextMock.mockResolvedValue({ tierOk: true, huduConnected: true, state: 'ok', flagIrrelevantHere: true });
+    await renderScreen();
+    fireEvent.click(document.getElementById('credentials-screen-new')!);
+    await waitFor(() => expect(document.getElementById('credential-form-generate')).toBeTruthy());
+    fireEvent.click(document.getElementById('credential-form-generate')!);
+    const checks = document.querySelectorAll('#credential-form-generator input[type="checkbox"]');
+    checks.forEach((check) => fireEvent.click(check));
+    expect((document.getElementById('credential-form-generator-apply') as HTMLButtonElement).disabled).toBe(true);
+    checks.forEach((check) => fireEvent.click(check));
+    fireEvent.click(document.getElementById('credential-form-generator-apply')!);
+    const password = (document.getElementById('credential-form-password') as HTMLInputElement).value;
+    expect(password).toMatch(/[A-Z]/); expect(password).toMatch(/[a-z]/); expect(password).toMatch(/[0-9]/); expect(password).toMatch(/[!@#$%^&*]/);
+    expect((document.getElementById('credential-form-password') as HTMLInputElement).type).toBe('text');
+    fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'GEZDGNBVGY3TQOJQ' } });
+    await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeTruthy());
+    fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'invalid!' } });
+    await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeNull());
+  });
+
+  it('shows a safe expected save message and falls back for unknown failures', async () => {
+    createCredentialMock
+      .mockRejectedValueOnce(Object.assign(new Error('HUDU_UNMAPPED'), { code: 'HUDU_UNMAPPED' }))
+      .mockRejectedValueOnce(new Error('arbitrary raw failure'));
+    await renderScreen();
+    fireEvent.click(document.getElementById('credentials-screen-new')!);
+    await waitFor(() => expect(document.getElementById('credential-form-name')).toBeTruthy());
+    fireEvent.change(document.getElementById('credential-form-name')!, { target: { value: 'A' } });
+    fireEvent.change(document.getElementById('credential-form-client')!, { target: { value: CLIENT_ID } });
+    fireEvent.click(document.getElementById('credential-form-submit')!);
+    await waitFor(() => expect(document.getElementById('credential-form-error')?.textContent).toContain('credentials.form.errors.huduUnmapped'));
+    fireEvent.click(document.getElementById('credential-form-submit')!);
+    await waitFor(() => expect(document.getElementById('credential-form-error')?.textContent).toContain('credentials.form.createFailed'));
+  });
   it('shows the destination picker only when the SELECTED CLIENT is mapped to a Hudu company', async () => {
     getCredentialsContextMock.mockResolvedValue({
       tierOk: true,

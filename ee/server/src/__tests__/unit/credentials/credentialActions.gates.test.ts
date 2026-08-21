@@ -23,6 +23,9 @@ const {
   loadAssociationsForEntityMock,
   pruneAssociationRefsMock,
   resolveEntityClientIdMock,
+  nativeCreateMock,
+  nativeUpdateMock,
+  loggerErrorMock,
 } = vi.hoisted(() => {
   class TierAccessErrorMock extends Error {
     readonly statusCode = 403;
@@ -44,11 +47,14 @@ const {
     loadAssociationsForEntityMock: vi.fn(async () => []),
     pruneAssociationRefsMock: vi.fn(async () => undefined),
     resolveEntityClientIdMock: vi.fn(async () => null),
+    nativeCreateMock: vi.fn(),
+    nativeUpdateMock: vi.fn(),
+    loggerErrorMock: vi.fn(),
   };
 });
 
 vi.mock('@alga-psa/core/logger', () => ({
-  default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+  default: { error: loggerErrorMock, warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock('next/cache', () => ({
@@ -92,6 +98,8 @@ vi.mock('@ee/lib/credentials/nativeSource', () => ({
     list: nativeListMock,
     listByIds: nativeListByIdsMock,
     resolveOwnerClientId: nativeResolveOwnerClientIdMock,
+    create: nativeCreateMock,
+    update: nativeUpdateMock,
   },
 }));
 
@@ -141,6 +149,9 @@ beforeEach(() => {
   loadAssociationsForEntityMock.mockReset();
   pruneAssociationRefsMock.mockReset();
   resolveEntityClientIdMock.mockReset();
+  nativeCreateMock.mockReset();
+  nativeUpdateMock.mockReset();
+  loggerErrorMock.mockReset();
   getHuduIntegrationMock.mockReset();
   getHuduCompanyMappingRowsMock.mockReset();
   nativeListMock.mockResolvedValue([]);
@@ -179,6 +190,29 @@ describe('credentials actions — tier gate', () => {
     const { listCredentials } = await importActions();
 
     await expect(listCredentials({})).rejects.toThrow(/Forbidden/);
+  });
+});
+
+describe('credential save safe-error boundary', () => {
+  const secretInput = { destination: 'alga' as const, clientId: 'client-1', name: 'secret-name', password: 'do-not-log', otpSecret: 'GEZDGNBVGY3TQOJQ', username: 'admin', url: '', description: '' };
+
+  it('converts authorization and tier failures before the handler into PERMISSION_DENIED and redacted logs', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+    const { createCredential } = await importActions();
+    await expect(createCredential(secretInput)).rejects.toMatchObject({ code: 'PERMISSION_DENIED', message: 'PERMISSION_DENIED' });
+    expect(loggerErrorMock).toHaveBeenCalledWith('[CredentialActions] credential save failed', expect.objectContaining({ operation: 'create', code: 'PERMISSION_DENIED', tenant: 'tenant-1', userId: 'user-1', clientId: 'client-1' }));
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('do-not-log');
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('GEZDGNBVGY3TQOJQ');
+  });
+
+  it('logs create and update source failures with safe context only', async () => {
+    nativeCreateMock.mockRejectedValue(Object.assign(new Error('client mismatch'), { code: 'CREDENTIAL_CLIENT_MISMATCH' }));
+    nativeUpdateMock.mockRejectedValue(new Error('unexpected query payload password=do-not-log'));
+    const { createCredential, updateCredential } = await importActions();
+    await expect(createCredential(secretInput)).rejects.toMatchObject({ code: 'CLIENT_MISMATCH' });
+    await expect(updateCredential('credential-1', { clientId: 'client-1', password: 'do-not-log' })).rejects.toMatchObject({ code: 'UNKNOWN' });
+    expect(loggerErrorMock).toHaveBeenCalledWith('[CredentialActions] credential save failed', expect.objectContaining({ operation: 'update', credentialId: 'credential-1', code: 'UNKNOWN' }));
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('do-not-log');
   });
 });
 
