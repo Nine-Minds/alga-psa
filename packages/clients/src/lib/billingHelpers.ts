@@ -606,8 +606,8 @@ export const getPrepaidReplenishmentContractOverridesAsync = withAuth(async (
   { tenant },
   clientId: string,
 ): Promise<PrepaidReplenishmentContractOverride[] | ActionMessageError | ActionPermissionError> => {
-  if (!tenant || !(await prepaidAlertFeatureEnabled(tenant))) return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE);
-  if (!(await hasPermission(_user, 'billing_settings', 'read'))) return permissionError('Permission denied: billing_settings read required');
+  if (!tenant || !(await prepaidAlertFeatureEnabled(tenant))) return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE, 'msp/clients:errors.billingSettings.prepaidAlertsDisabled');
+  if (!(await hasPermission(_user, 'billing_settings', 'read'))) return permissionError('Permission denied: billing_settings read required', 'msp/clients:errors.billingSettings.readRequired');
   const { knex } = await createTenantKnex();
   return getPrepaidReplenishmentContractOverridesDb(knex, tenant, clientId);
 });
@@ -624,14 +624,14 @@ export const updatePrepaidReplenishmentContractOverrideAsync = withAuth(async (
     prepaidReplenishmentHorizonDays: number | null;
   },
 ): Promise<{ success: true } | ActionMessageError | ActionPermissionError> => {
-  if (!tenant || !(await prepaidAlertFeatureEnabled(tenant))) return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE);
-  if (!(await hasPermission(_user, 'billing_settings', 'update'))) return permissionError('Permission denied: billing_settings update required');
+  if (!tenant || !(await prepaidAlertFeatureEnabled(tenant))) return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE, 'msp/clients:errors.billingSettings.prepaidAlertsDisabled');
+  if (!(await hasPermission(_user, 'billing_settings', 'update'))) return permissionError('Permission denied: billing_settings update required', 'msp/clients:errors.billingSettings.updateRequired');
   try {
     const { knex } = await createTenantKnex();
     await updatePrepaidReplenishmentContractOverrideDb(knex, tenant, input);
     return { success: true };
   } catch {
-    return actionError('Failed to update contract replenishment policy');
+    return actionError('Failed to update contract replenishment policy', 'msp/clients:errors.billingSettings.contractReplenishmentUpdateFailed');
   }
 });
 

@@ -1790,7 +1790,8 @@
       "clientContextMissing": "Contexte de client introuvable",
       "prepaidAlertsDisabled": "Les alertes de solde prépayé ne sont pas activées pour cet espace de travail",
       "invalidPrepaidAlertSettings": "Paramètres d’alerte de solde prépayé non valides",
-      "prepaidAlertUpdateFailed": "Échec de la mise à jour des paramètres d’alerte de solde prépayé"
+      "prepaidAlertUpdateFailed": "Échec de la mise à jour des paramètres d’alerte de solde prépayé",
+      "contractReplenishmentUpdateFailed": "Impossible de mettre à jour la politique de réapprovisionnement du contrat"
     },
     "billingProfile": {
       "signInRequired": "Vous devez être connecté pour gérer les profils de facturation.",

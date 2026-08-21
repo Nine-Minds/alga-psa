@@ -1790,7 +1790,8 @@
       "clientContextMissing": "Client context not found",
       "prepaidAlertsDisabled": "Prepaid balance alerts are not enabled for this workspace",
       "invalidPrepaidAlertSettings": "Invalid prepaid balance alert settings",
-      "prepaidAlertUpdateFailed": "Failed to update prepaid balance alert settings"
+      "prepaidAlertUpdateFailed": "Failed to update prepaid balance alert settings",
+      "contractReplenishmentUpdateFailed": "Failed to update contract replenishment policy"
     },
     "billingProfile": {
       "signInRequired": "You must be signed in to manage billing profiles.",

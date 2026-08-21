@@ -1790,7 +1790,8 @@
       "clientContextMissing": "Kundenkontext nicht gefunden",
       "prepaidAlertsDisabled": "Warnungen zum Guthabenstand sind für diesen Arbeitsbereich nicht aktiviert",
       "invalidPrepaidAlertSettings": "Ungültige Einstellungen für Guthabenwarnungen",
-      "prepaidAlertUpdateFailed": "Die Einstellungen für Guthabenwarnungen konnten nicht aktualisiert werden"
+      "prepaidAlertUpdateFailed": "Die Einstellungen für Guthabenwarnungen konnten nicht aktualisiert werden",
+      "contractReplenishmentUpdateFailed": "Vertragsauffüllungsrichtlinie konnte nicht aktualisiert werden"
     },
     "billingProfile": {
       "signInRequired": "Sie müssen angemeldet sein, um Abrechnungsprofile zu verwalten.",

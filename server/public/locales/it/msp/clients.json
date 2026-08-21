@@ -1790,7 +1790,8 @@
       "clientContextMissing": "Contesto del cliente non trovato",
       "prepaidAlertsDisabled": "Gli avvisi sul saldo prepagato non sono abilitati per questo spazio di lavoro",
       "invalidPrepaidAlertSettings": "Impostazioni degli avvisi sul saldo prepagato non valide",
-      "prepaidAlertUpdateFailed": "Impossibile aggiornare le impostazioni degli avvisi sul saldo prepagato"
+      "prepaidAlertUpdateFailed": "Impossibile aggiornare le impostazioni degli avvisi sul saldo prepagato",
+      "contractReplenishmentUpdateFailed": "Impossibile aggiornare il criterio di ricarica del contratto"
     },
     "billingProfile": {
       "signInRequired": "È necessario aver effettuato l’accesso per gestire i profili di fatturazione.",

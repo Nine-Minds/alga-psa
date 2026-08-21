@@ -1790,7 +1790,8 @@
       "clientContextMissing": "Klantcontext niet gevonden",
       "prepaidAlertsDisabled": "Waarschuwingen voor prepaidsaldo zijn niet ingeschakeld voor deze werkruimte",
       "invalidPrepaidAlertSettings": "Ongeldige instellingen voor prepaidsaldowaarschuwingen",
-      "prepaidAlertUpdateFailed": "De instellingen voor prepaidsaldowaarschuwingen konden niet worden bijgewerkt"
+      "prepaidAlertUpdateFailed": "De instellingen voor prepaidsaldowaarschuwingen konden niet worden bijgewerkt",
+      "contractReplenishmentUpdateFailed": "Contractaanvullingsbeleid kon niet worden bijgewerkt"
     },
     "billingProfile": {
       "signInRequired": "U moet aangemeld zijn om facturatieprofielen te beheren.",

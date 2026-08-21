@@ -1842,7 +1842,8 @@
       "clientContextMissing": "Nie znaleziono kontekstu klienta",
       "prepaidAlertsDisabled": "Alerty o saldzie przedpłaconym nie są włączone dla tego obszaru roboczego",
       "invalidPrepaidAlertSettings": "Nieprawidłowe ustawienia alertów o saldzie przedpłaconym",
-      "prepaidAlertUpdateFailed": "Nie udało się zaktualizować ustawień alertów o saldzie przedpłaconym"
+      "prepaidAlertUpdateFailed": "Nie udało się zaktualizować ustawień alertów o saldzie przedpłaconym",
+      "contractReplenishmentUpdateFailed": "Nie udało się zaktualizować zasady doładowania umowy"
     },
     "billingProfile": {
       "signInRequired": "Musisz być zalogowany, aby zarządzać profilami rozliczeniowymi.",

@@ -1790,7 +1790,8 @@
       "clientContextMissing": "Contexto de cliente não encontrado",
       "prepaidAlertsDisabled": "Os alertas de saldo pré-pago não estão habilitados para este espaço de trabalho",
       "invalidPrepaidAlertSettings": "Configurações de alerta de saldo pré-pago inválidas",
-      "prepaidAlertUpdateFailed": "Não foi possível atualizar as configurações de alerta de saldo pré-pago"
+      "prepaidAlertUpdateFailed": "Não foi possível atualizar as configurações de alerta de saldo pré-pago",
+      "contractReplenishmentUpdateFailed": "Não foi possível atualizar a política de reabastecimento do contrato"
     },
     "billingProfile": {
       "signInRequired": "Você precisa estar conectado para gerenciar perfis de faturamento.",
