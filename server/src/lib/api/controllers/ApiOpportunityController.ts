@@ -4,6 +4,7 @@ import { ApiBaseController } from './ApiBaseController';
 import { OpportunityService } from '../services/OpportunityService';
 import {
   completeOpportunityActionApiSchema,
+  completeOpportunityStepApiSchema,
   correctOpportunityEvidenceApiSchema,
   createOpportunityApiSchema,
   declaredOpportunityEvidenceApiSchema,
@@ -102,6 +103,40 @@ export class ApiOpportunityController extends ApiBaseController {
           const id = await this.extractIdFromPath(apiRequest);
           const timeline = await this.opportunityService.listTimeline(id, apiRequest.context);
           return createSuccessResponse(timeline);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  listSteps() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+          const id = await this.extractIdFromPath(apiRequest);
+          const steps = await this.opportunityService.listSteps(id, apiRequest.context);
+          return createSuccessResponse(steps);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  completeStep() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const id = await this.extractIdFromPath(apiRequest);
+          const stepId = await this.extractNestedUuid(apiRequest, 'stepId');
+          const data = await this.validateData(apiRequest, completeOpportunityStepApiSchema);
+          const steps = await this.opportunityService.completeStep(id, stepId, data, apiRequest.context);
+          return createSuccessResponse(steps);
         });
       } catch (error) {
         return handleApiError(error);

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   completeNextActionSchema,
+  completeOpportunityStepSchema,
   correctEvidenceSchema,
   createOpportunitySchema,
   loseOpportunitySchema,
@@ -22,6 +23,7 @@ export const updateOpportunityApiSchema = updateOpportunitySchema;
 export const winOpportunityApiSchema = winOpportunitySchema;
 export const loseOpportunityApiSchema = loseOpportunitySchema;
 export const completeOpportunityActionApiSchema = completeNextActionSchema;
+export const completeOpportunityStepApiSchema = completeOpportunityStepSchema;
 export const declaredOpportunityEvidenceApiSchema = recordDeclaredEvidenceSchema;
 export const correctOpportunityEvidenceApiSchema = correctEvidenceSchema;
 export const acceptOpportunitySuggestionApiSchema = acceptSuggestionOverridesSchema;
@@ -55,6 +57,7 @@ export type UpdateOpportunityApi = z.infer<typeof updateOpportunityApiSchema>;
 export type WinOpportunityApi = z.infer<typeof winOpportunityApiSchema>;
 export type LoseOpportunityApi = z.infer<typeof loseOpportunityApiSchema>;
 export type CompleteOpportunityActionApi = z.infer<typeof completeOpportunityActionApiSchema>;
+export type CompleteOpportunityStepApi = z.infer<typeof completeOpportunityStepApiSchema>;
 export type DeclaredOpportunityEvidenceApi = z.infer<typeof declaredOpportunityEvidenceApiSchema>;
 export type CorrectOpportunityEvidenceApi = z.infer<typeof correctOpportunityEvidenceApiSchema>;
 export type AcceptOpportunitySuggestionApi = z.infer<typeof acceptOpportunitySuggestionApiSchema>;
