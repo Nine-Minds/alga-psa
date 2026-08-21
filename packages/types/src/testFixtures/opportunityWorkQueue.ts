@@ -1,8 +1,11 @@
-import type { IWorkQueue } from '../interfaces/opportunity.interfaces';
-
 /**
  * Shared contract fixture for consumers of the opportunity work-queue API.
  * Keep this shaped as the service response, not as any individual UI's view model.
+ *
+ * Deliberately import-free: ee/mobile typechecks this file from its own
+ * isolated project, so any import here drags packages/types (react,
+ * @js-temporal/polyfill) into the mobile TS program and breaks mobile CI.
+ * Type conformance is enforced by opportunityWorkQueue.contract.ts instead.
  */
 export const opportunityWorkQueueFixture = {
   user_first_name: 'Avery',
@@ -103,4 +106,4 @@ export const opportunityWorkQueueFixture = {
     action_label: { key: 'opportunities.queue.lesson.reviewPipeline' },
     action_href: '/msp/opportunities?tab=pipeline',
   },
-} satisfies IWorkQueue;
+} as const;

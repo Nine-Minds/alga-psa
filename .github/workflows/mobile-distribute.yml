@@ -92,7 +92,7 @@ jobs:
           set -euo pipefail
           case "$TARGET" in
             testflight)
-              npx eas-cli build --platform ios --profile testflight --non-interactive --wait
+              npx eas-cli build --platform ios --profile testflight --auto-submit-with-profile testflight --non-interactive --wait
               ;;
             playInternal)
               npx eas-cli build --platform android --profile playInternal --non-interactive --wait
@@ -103,24 +103,11 @@ jobs:
               ;;
           esac
 
-      - name: EAS submit (latest)
+      - name: EAS submit Android build (latest)
+        if: inputs.target == 'playInternal'
         working-directory: ee/mobile
-        env:
-          TARGET: ${{ inputs.target }}
         run: |
-          set -euo pipefail
-          case "$TARGET" in
-            testflight)
-              npx eas-cli submit --platform ios --profile testflight --latest --non-interactive
-              ;;
-            playInternal)
-              npx eas-cli submit --platform android --profile playInternal --latest --non-interactive
-              ;;
-            *)
-              echo "Unknown target: $TARGET"
-              exit 1
-              ;;
-          esac
+          npx eas-cli submit --platform android --profile playInternal --latest --non-interactive
 
       - name: Remove Google Play service account
         if: always() && inputs.target == 'playInternal'
