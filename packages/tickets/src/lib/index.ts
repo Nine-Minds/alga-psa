@@ -44,6 +44,7 @@ export {
   serializeTicketMobileRichTextDocument,
   serializeTicketRichTextContent,
 } from './ticketRichText';
+export { extractTicketRichTextHtml } from './ticketRichTextHtml';
 export {
   parseTicketMobileEditorNativeToWebMessage,
   parseTicketMobileEditorWebToNativeMessage,

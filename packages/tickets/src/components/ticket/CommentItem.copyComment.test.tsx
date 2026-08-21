@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { IComment } from '@alga-psa/types';
 import CommentItem from './CommentItem';
 
@@ -48,6 +48,21 @@ const NOTE = JSON.stringify([
   },
 ]);
 
+const RICH_NOTE = JSON.stringify([
+  {
+    type: 'paragraph',
+    props: {
+      textAlignment: 'left',
+      backgroundColor: 'default',
+      textColor: 'default',
+    },
+    content: [
+      { type: 'text', text: 'Restart ', styles: {} },
+      { type: 'text', text: 'now', styles: { bold: true } },
+    ],
+  },
+]);
+
 function buildComment(overrides: Partial<IComment>): IComment {
   return {
     tenant: 'tenant-1',
@@ -71,13 +86,35 @@ const userMap = {
   },
 };
 
-function stubClipboard(writeText: (text: string) => Promise<void>) {
+function stubClipboard(clipboard: Record<string, unknown>) {
   Object.defineProperty(navigator, 'clipboard', {
-    value: { writeText },
+    value: clipboard,
     configurable: true,
     writable: true,
   });
 }
+
+class FakeClipboardItem {
+  constructor(public readonly data: Record<string, Blob>) {}
+}
+
+// jsdom's Blob has no text(); read the flavor through FileReader instead.
+function readBlobText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+}
+
+function stubClipboardItem() {
+  (globalThis as Record<string, unknown>).ClipboardItem = FakeClipboardItem;
+}
+
+afterEach(() => {
+  delete (globalThis as Record<string, unknown>).ClipboardItem;
+});
 
 function renderComment(overrides: Partial<IComment> = {}, props: Record<string, unknown> = {}) {
   return render(
@@ -112,7 +149,7 @@ describe('CommentItem copy control', () => {
   it('copies the comment plain text and confirms the copied state', async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
-    stubClipboard(writeText);
+    stubClipboard({ writeText });
 
     renderComment();
 
@@ -125,6 +162,47 @@ describe('CommentItem copy control', () => {
     expect(screen.queryByRole('button', { name: 'Copy comment text' })).not.toBeInTheDocument();
   });
 
+  it('copies rich text alongside plain text when the browser supports it', async () => {
+    const user = userEvent.setup();
+    const write = vi.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard({ write, writeText });
+    stubClipboardItem();
+
+    renderComment({ note: RICH_NOTE });
+
+    await user.click(screen.getByRole('button', { name: 'Copy comment text' }));
+
+    expect(writeText).not.toHaveBeenCalled();
+    expect(write).toHaveBeenCalledTimes(1);
+
+    const [items] = write.mock.calls[0] as [FakeClipboardItem[]];
+    expect(items).toHaveLength(1);
+    expect(await readBlobText(items[0].data['text/html'])).toBe('<p>Restart <strong>now</strong></p>');
+    expect(await readBlobText(items[0].data['text/plain'])).toBe('Restart now');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    });
+  });
+
+  it('falls back to plain text when the rich clipboard write is refused', async () => {
+    const user = userEvent.setup();
+    const write = vi.fn().mockRejectedValue(new Error('unsupported flavor'));
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard({ write, writeText });
+    stubClipboardItem();
+
+    renderComment({ note: RICH_NOTE });
+
+    await user.click(screen.getByRole('button', { name: 'Copy comment text' }));
+
+    expect(writeText).toHaveBeenCalledWith('Restart now');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    });
+  });
+
   it('hides copy on a soft-deleted comment', () => {
     renderComment({ deleted_at: new Date().toISOString(), note: '[deleted]' });
 
@@ -134,7 +212,7 @@ describe('CommentItem copy control', () => {
   it('surfaces a failure state when the clipboard rejects', async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockRejectedValue(new Error('denied'));
-    stubClipboard(writeText);
+    stubClipboard({ writeText });
 
     renderComment();
 

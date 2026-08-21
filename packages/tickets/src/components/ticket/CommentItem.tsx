@@ -23,6 +23,7 @@ import ResponseSourceBadge from '../ResponseSourceBadge';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
+import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
 
@@ -114,6 +115,30 @@ function parseCommentNoteContent(
       });
     },
   });
+}
+
+async function writeCommentToClipboard(html: string, text: string): Promise<void> {
+  const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+
+  if (html && typeof clipboard?.write === 'function' && typeof ClipboardItem === 'function') {
+    try {
+      await clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        }),
+      ]);
+      return;
+    } catch {
+      // Browsers that refuse the rich flavor still take plain text — fall through.
+    }
+  }
+
+  if (typeof clipboard?.writeText !== 'function') {
+    throw new Error('Clipboard unavailable');
+  }
+
+  await clipboard.writeText(text);
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -227,10 +252,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   const handleCopyComment = useCallback(async () => {
     try {
-      if (typeof navigator === 'undefined' || typeof navigator.clipboard?.writeText !== 'function') {
-        throw new Error('Clipboard unavailable');
-      }
-      await navigator.clipboard.writeText(plainTextForCopy);
+      // Serialized on demand: only the copy click needs the HTML flavor.
+      await writeCommentToClipboard(extractTicketRichTextHtml(conversation.note), plainTextForCopy);
       setCopyState('copied');
     } catch {
       setCopyState('error');
@@ -243,7 +266,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       copyResetTimeoutRef.current = null;
       setCopyState('idle');
     }, 2000);
-  }, [plainTextForCopy]);
+  }, [conversation.note, plainTextForCopy]);
 
   const copyCommentLabel =
     copyState === 'copied'
