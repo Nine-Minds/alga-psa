@@ -149,7 +149,7 @@ export default function AddCreditButton() {
             <div>
               <Label className="text-sm font-medium">
                 {t('addCredit.fields.client', { defaultValue: 'Client' })}{' '}
-                <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+                <span className="text-[rgb(var(--color-destructive))]">*</span>
               </Label>
               <div className="mt-1">
                 <ClientPicker

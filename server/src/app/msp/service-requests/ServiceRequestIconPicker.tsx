@@ -31,7 +31,7 @@ export function ServiceRequestIconPicker({
                 className={`flex h-9 w-9 items-center justify-center rounded border transition-colors ${
                   selected
                     ? 'border-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
-                    : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-100))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-200))]'
+                    : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-200))]'
                 }`}
                 onClick={() => onChange(option.value)}
               >

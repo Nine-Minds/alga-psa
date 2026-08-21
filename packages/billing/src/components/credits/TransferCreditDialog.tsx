@@ -122,7 +122,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
             <div>
               <Label className="text-sm font-medium">
                 {t('transferDialog.fields.targetClient', { defaultValue: 'To Client' })}{' '}
-                <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+                <span className="text-[rgb(var(--color-destructive))]">*</span>
               </Label>
               <div className="mt-1">
                 <ClientPicker
@@ -167,7 +167,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
               />
             </div>
 
-            <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-md">
+            <div className="bg-[rgb(var(--color-border-100))] p-4 rounded-md">
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <span className="text-[rgb(var(--color-text-500))]">
                   {t('transferDialog.impact.current', { defaultValue: 'Current Remaining' })}:

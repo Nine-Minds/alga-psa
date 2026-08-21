@@ -44,7 +44,7 @@ export function QueueSnapshot({
       </p>
 
       {loadFailed ? (
-        <p className="mt-4 rounded-md bg-[rgb(var(--color-warning-50))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
+        <p className="mt-4 rounded-md bg-[rgb(var(--badge-warning-bg))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
           {t(
             'opportunities.snapshot.unavailable',
             'Opportunity totals are temporarily unavailable. Open Opportunities to continue working.',
