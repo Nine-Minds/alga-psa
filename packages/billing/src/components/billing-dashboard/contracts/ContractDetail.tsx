@@ -1783,7 +1783,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       <span className="font-medium">{formatDate(contract.updated_at)}</span>
                     </div>
                     {primaryAssignment && (
-                      <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50))] p-3 space-y-1.5">
+                      <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3 space-y-1.5">
                         <p className="text-xs uppercase tracking-wide text-muted-foreground">
                           {t('contractDetail.headerCard.renewalHeading', { defaultValue: 'Renewal' })}
                         </p>
@@ -2133,7 +2133,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 })}
                               </Label>
                               {isEditing ? (
-                                <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50))] p-3">
+                                <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3">
                                   <div className="flex items-center justify-between">
                                     <Label
                                       htmlFor={`assignment-use-tenant-renewal-defaults-${assignment.client_contract_id}`}

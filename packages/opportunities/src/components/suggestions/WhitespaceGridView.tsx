@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Plus } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -83,7 +83,7 @@ export function WhitespaceGridView({
                         id={`whitespace-cell-${client.client_id}-${cat.category_id}`}
                         variant="ghost"
                         size="xs"
-                        className="mx-auto h-5 w-5 rounded border border-dashed border-[rgb(var(--color-border-300))] p-0 hover:border-[rgb(var(--color-primary-400))] hover:bg-[rgb(var(--color-primary-50))]"
+                        className="mx-auto flex h-5 w-5 items-center justify-center rounded p-0 text-[rgb(var(--color-text-400))] hover:bg-[rgb(var(--color-primary-500)/0.15)] hover:text-[rgb(var(--color-primary-500))]"
                         aria-label={t('opportunities.whitespace.sell', 'Start {{category}} for {{client}}', {
                           category: cat.category_name,
                           client: client.client_name,
@@ -94,7 +94,9 @@ export function WhitespaceGridView({
                             { category_id: cat.category_id, category_name: cat.category_name },
                           )
                         }
-                      />
+                      >
+                        <Plus className="h-3.5 w-3.5" aria-hidden />
+                      </Button>
                     )}
                   </td>
                 );

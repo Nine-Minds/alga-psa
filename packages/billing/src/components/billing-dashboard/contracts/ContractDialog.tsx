@@ -739,7 +739,7 @@ export function ContractDialog({
               />
             </div>
 
-            <div className="border rounded-md p-4 space-y-3 bg-[rgb(var(--color-surface-50))]">
+            <div className="border rounded-md p-4 space-y-3 bg-[rgb(var(--color-border-50))]">
               <div>
                 <h4 className="text-sm font-semibold">
                   {t('contractDialog.form.renewalSettingsTitle', { defaultValue: 'Renewal Settings' })}

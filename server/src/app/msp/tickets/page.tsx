@@ -262,7 +262,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     }
 
     return (
-      <div id="tickets-page-container" className="bg-gray-100">
+      <div id="tickets-page-container" className="bg-[rgb(var(--color-app-ground))]">
         <MspTicketsPageClient
           consolidatedData={consolidatedData}
           initialFormOptions={consolidatedData.options}

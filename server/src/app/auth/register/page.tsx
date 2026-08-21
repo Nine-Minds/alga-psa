@@ -115,7 +115,7 @@ function Register() {
     !hasStartedTyping ? null : met ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />;
 
   return (
-    <div className="flex min-h-screen bg-[rgb(var(--color-background-50))]">
+    <div className="flex min-h-screen bg-[rgb(var(--color-border-50))]">
 
     <Alert
         type={alertInfo.type}

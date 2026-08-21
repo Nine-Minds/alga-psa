@@ -118,9 +118,9 @@ export default function TicketNavigation({ currentTicketId, initialAdjacent }: T
   if (isLoading) {
     return (
       <div className="flex items-center gap-1">
-        <div className="h-7 w-7 animate-pulse bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-7 w-7 animate-pulse skeleton-fill rounded" />
         <span className="text-xs text-gray-400 px-1">...</span>
-        <div className="h-7 w-7 animate-pulse bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-7 w-7 animate-pulse skeleton-fill rounded" />
       </div>
     );
   }

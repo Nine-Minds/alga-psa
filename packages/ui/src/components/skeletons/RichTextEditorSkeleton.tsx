@@ -17,10 +17,10 @@ const RichTextEditorSkeleton = ({
 }: RichTextEditorSkeletonProps) => {
   const { t } = useTranslation('common');
   return (
-    <div className="animate-pulse border rounded-lg overflow-hidden bg-white dark:bg-[rgb(var(--color-border-100))]">
+    <div className="animate-pulse border rounded-lg overflow-hidden bg-[rgb(var(--color-card))] dark:bg-[rgb(var(--color-border-100))]">
       {/* Toolbar Skeleton */}
       {showToolbar && (
-        <div className="border-b bg-gray-50 dark:bg-[rgb(var(--color-border-50))] p-2">
+        <div className="border-b bg-[rgb(var(--color-border-50))] p-2">
           <div className="flex items-center space-x-1">
             {/* Formatting buttons */}
             <div className="flex items-center space-x-1 mr-3">
@@ -86,7 +86,7 @@ const RichTextEditorSkeleton = ({
           </div>
 
           {/* Simulated quote block */}
-          <div className="border-l-4 border-gray-300 dark:border-[rgb(var(--color-border-100))] pl-4 space-y-2">
+          <div className="border-l-4 border-[rgb(var(--color-border-300))] dark:border-[rgb(var(--color-border-100))] pl-4 space-y-2">
             <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-4/5"></div>
             <div className="h-4 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-2/3"></div>
           </div>
@@ -98,7 +98,7 @@ const RichTextEditorSkeleton = ({
         </div>
         
         {/* Loading overlay */}
-        <div className="absolute inset-0 bg-white/50 dark:bg-black/50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-[rgb(var(--color-card))]/50 dark:bg-black/50 flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
             <p className="text-gray-500 dark:text-[rgb(var(--color-text-400))] text-sm">{t('richTextEditorSkeleton.loading', 'Loading editor…')}</p>
@@ -107,7 +107,7 @@ const RichTextEditorSkeleton = ({
       </div>
       
       {/* Footer/Status Bar */}
-      <div className="border-t bg-gray-50 dark:bg-[rgb(var(--color-border-50))] px-4 py-2 flex items-center justify-between text-xs text-gray-500 dark:text-[rgb(var(--color-text-400))]">
+      <div className="border-t bg-[rgb(var(--color-border-50))] px-4 py-2 flex items-center justify-between text-xs text-gray-500 dark:text-[rgb(var(--color-text-400))]">
         <div className="flex items-center space-x-4">
           <div className="h-3 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-16"></div>
           <div className="h-3 skeleton-fill dark:bg-[rgb(var(--color-border-200))] rounded w-12"></div>

@@ -11,7 +11,9 @@ describe('CommentItem clipboard image rendering contract', () => {
     expect(source).toContain('function parseCommentNoteContent(');
     expect(source).toContain('parseTicketRichTextContent(noteContent');
     expect(source).toContain('<RichTextViewer');
-    expect(source).toContain('content={parsed as any}');
+    // Memoised so the viewer keeps a stable content identity across renders.
+    expect(source).toContain('const displayContent = useMemo(');
+    expect(source).toContain('content={displayContent as any}');
   });
 
   it('wires clipboard image upload for edit-mode TextEditor in existing comments', () => {

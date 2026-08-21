@@ -1374,7 +1374,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           id="add-first-phase"
                           variant="ghost"
                           size="sm"
-                          className="text-purple-600 hover:text-purple-700 mt-1"
+                          className="text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] mt-1"
                           onClick={handleAddPhase}
                         >
                           {t('templates.editor.addFirstPhase', 'Add your first phase')}
@@ -1399,10 +1399,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           onDragEnd={handlePhaseDragEnd}
                           className={`${styles.phaseItem} relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group ${
                             selectedPhase?.template_phase_id === phase.template_phase_id
-                              ? 'bg-purple-50 dark:bg-purple-500/10'
+                              ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-500)/0.1)]'
                               : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'
                           } ${draggedPhaseId === phase.template_phase_id ? 'opacity-50' : ''} ${
-                            isPhaseDrop ? styles.dragOver + ' ring-2 ring-purple-400' : ''
+                            isPhaseDrop ? styles.dragOver + ' ring-2 ring-[rgb(var(--color-primary-400))]' : ''
                           } ${
                             isTaskDrop && !isCurrentPhaseForTask
                               ? 'ring-2 ring-blue-400 bg-primary/10 scale-[1.02]'
@@ -1512,7 +1512,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 <div className="flex items-start justify-between gap-2">
                                   <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
                                   {phaseTaskCounts[phase.template_phase_id] !== undefined && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-500)/0.2)] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))] shrink-0">
                                       {phaseTaskCounts[phase.template_phase_id]} {t(phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks.title', phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks')}
                                     </span>
                                   )}
@@ -1977,7 +1977,7 @@ function TemplateStatusColumn({
   return (
     <div
       className={`${styles.kanbanColumn} rounded-lg transition-all duration-200 border-2 border-solid ${
-        isDraggedOver && draggedTaskId ? 'border-purple-500 ' + styles.dragOver : ''
+        isDraggedOver && draggedTaskId ? 'border-[rgb(var(--color-primary-500))] ' + styles.dragOver : ''
       }`}
       style={{
         width: `${columnWidth}px`,
@@ -2241,7 +2241,7 @@ function TaskCard({
             id={`toggle-title-${task.template_task_id}`}
             variant="ghost"
             size="sm"
-            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
+            className={`${zoomScales.metaSize} text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
             onClick={(e) => {
               e.stopPropagation();
               setIsTitleExpanded(!isTitleExpanded);
@@ -2268,7 +2268,7 @@ function TaskCard({
               id={`toggle-desc-${task.template_task_id}`}
               variant="ghost"
               size="sm"
-              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
+              className={`${zoomScales.metaSize} text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);

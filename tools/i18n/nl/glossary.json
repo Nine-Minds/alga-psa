@@ -807,6 +807,7 @@
       "Product",
       "Product {{index}}",
       "Project",
+      "Prospect",
       "QBO #",
       "QuickBooks",
       "QuickBooks CSV",
@@ -934,6 +935,7 @@
       "workflow-id",
       "workflow.event",
       "{{count}} apps",
+      "{{count}} asset",
       "{{count}} assets",
       "{{count}} backorder",
       "{{count}} contact",
@@ -957,8 +959,7 @@
       "• Database",
       "• Printer",
       "• Server",
-      "• VPN",
-      "{{count}} asset"
+      "• VPN"
     ],
     "caseInsensitive": [
       "account",

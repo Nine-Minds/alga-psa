@@ -52,7 +52,7 @@ const TaskFormSkeleton = ({
           {/* Row 3: Created At and Due Date */}
           <div>
             <div className="h-4 skeleton-fill rounded w-20 mb-1"></div>
-            <div className="h-9 bg-gray-100 rounded w-full"></div>
+            <div className="h-9 skeleton-fill rounded w-full"></div>
           </div>
           <div>
             <div className="h-4 skeleton-fill rounded w-16 mb-1"></div>
@@ -76,7 +76,7 @@ const TaskFormSkeleton = ({
           </div>
           <div>
             <div className="h-4 skeleton-fill rounded w-32 mb-1"></div>
-            <div className="h-20 bg-gray-100 rounded w-full"></div>
+            <div className="h-20 skeleton-fill rounded w-full"></div>
           </div>
         </div>
           
@@ -127,7 +127,7 @@ const TaskFormSkeleton = ({
           <div className="flex items-center gap-2 mb-2">
             <div className="h-5 skeleton-fill rounded w-32"></div>
           </div>
-          <div className="h-20 bg-gray-100 rounded w-full"></div>
+          <div className="h-20 skeleton-fill rounded w-full"></div>
         </div>
 
         {/* Full width Attachments section (Edit mode only) */}
@@ -137,7 +137,7 @@ const TaskFormSkeleton = ({
               <Paperclip className="h-5 w-5 text-gray-300" />
               <div className="h-5 skeleton-fill rounded w-24"></div>
             </div>
-            <div className="h-16 bg-gray-100 rounded w-full"></div>
+            <div className="h-16 skeleton-fill rounded w-full"></div>
           </div>
         )}
         
@@ -160,7 +160,7 @@ const TaskFormSkeleton = ({
         {/* Loading indicator */}
         <div className="flex items-center justify-center py-4">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mb-2"></div>
+            <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[rgb(var(--color-primary-600))] mb-2"></div>
             <p className="text-gray-500 text-sm">Loading task form...</p>
           </div>
         </div>

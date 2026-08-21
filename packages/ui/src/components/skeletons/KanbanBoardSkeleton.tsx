@@ -7,7 +7,7 @@ const KanbanBoardSkeleton = () => {
       {mockStatuses.map((status, index) => (
         <div key={status} className="flex flex-col w-[350px] min-w-[350px] max-w-[350px] flex-shrink-0 h-[calc(100vh-200px)] max-h-[calc(100vh-200px)] overflow-hidden">
           {/* Column Header */}
-          <div className="bg-gray-100 rounded-t-lg p-3 animate-pulse">
+          <div className="bg-[rgb(var(--color-border-100))] rounded-t-lg p-3 animate-pulse">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 skeleton-fill-strong rounded"></div>
@@ -21,10 +21,10 @@ const KanbanBoardSkeleton = () => {
           </div>
 
           {/* Column Body */}
-          <div className="p-2 flex-1 overflow-y-auto overflow-x-hidden rounded-b-lg bg-gray-50 border-x border-b border-gray-200">
+          <div className="p-2 flex-1 overflow-y-auto overflow-x-hidden rounded-b-lg bg-[rgb(var(--color-border-50))] border-x border-b border-[rgb(var(--color-border-200))]">
             {/* Mock task cards */}
             {[1, 2, 3].map((cardIndex) => (
-              <div key={cardIndex} className="mb-2 p-3 bg-white border border-gray-200 rounded-lg animate-pulse">
+              <div key={cardIndex} className="mb-2 p-3 bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-lg animate-pulse">
                 {/* Task header with checkbox and menu */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-start gap-3 flex-1">
@@ -41,7 +41,7 @@ const KanbanBoardSkeleton = () => {
 
                 {/* Assignee */}
                 <div className="mb-3">
-                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 w-fit">
+                  <div className="flex items-center gap-2 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md px-3 py-2 w-fit">
                     <div className="w-6 h-6 skeleton-fill-strong rounded-full"></div>
                     <div className="h-4 skeleton-fill-strong rounded w-24"></div>
                     <div className="w-4 h-4 skeleton-fill rounded"></div>
@@ -67,9 +67,9 @@ const KanbanBoardSkeleton = () => {
 
                 {/* Tags */}
                 <div className="flex items-center gap-2">
-                  <div className="h-6 bg-gray-100 rounded-full px-3 w-16"></div>
-                  <div className="h-6 bg-gray-100 rounded-full px-3 w-20"></div>
-                  <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+                  <div className="h-6 skeleton-fill rounded-full px-3 w-16"></div>
+                  <div className="h-6 skeleton-fill rounded-full px-3 w-20"></div>
+                  <div className="w-6 h-6 skeleton-fill rounded flex items-center justify-center">
                     <div className="w-3 h-3 skeleton-fill-strong rounded"></div>
                   </div>
                 </div>

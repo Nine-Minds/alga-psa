@@ -27,7 +27,7 @@ const SettingsTabSkeleton = ({
     <>
       {/* Dropdown Section Skeleton */}
       {showDropdowns && (
-        <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="p-4 bg-[rgb(var(--color-border-50))] rounded-lg">
           <div className="flex items-end gap-3">
             <div className="space-y-2">
               <div className="h-5 skeleton-fill rounded w-20"></div>
@@ -58,7 +58,7 @@ const SettingsTabSkeleton = ({
         <div className="space-y-4">              
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <div className="bg-gray-50 border-b">
+            <div className="bg-[rgb(var(--color-border-50))] border-b">
               <div className="grid grid-cols-4 gap-4 p-4">
                 <div className="h-4 skeleton-fill rounded w-24"></div>
                 <div className="h-4 skeleton-fill rounded w-32"></div>
@@ -69,7 +69,7 @@ const SettingsTabSkeleton = ({
             
             {/* Table Rows */}
             {Array.from({ length: 5 }, (_, rowIndex) => (
-              <div key={rowIndex} className="border-b last:border-b-0 bg-white">
+              <div key={rowIndex} className="border-b last:border-b-0 bg-[rgb(var(--color-card))]">
                 <div className="grid grid-cols-4 gap-4 p-4">
                   <div className="h-4 skeleton-fill rounded"></div>
                   <div className="h-4 skeleton-fill rounded"></div>

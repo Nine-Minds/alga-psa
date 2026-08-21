@@ -132,8 +132,8 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
   // Don't render anything if loading
   if (contractInfo.loading) {
     return (
-      <div className="p-3 bg-gray-50 border border-gray-200 rounded-md animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      <div className="p-3 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md animate-pulse">
+        <div className="h-4 skeleton-fill rounded w-3/4"></div>
       </div>
     );
   }

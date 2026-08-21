@@ -86,7 +86,7 @@ export const AssetInventoryProvenanceSection: React.FC<AssetInventoryProvenanceS
             {data.rma_history.map((rma) => (
               <li key={rma.rma_id} className="flex items-center gap-3 text-sm text-[rgb(var(--color-text-700))]">
                 <span className="font-medium">{rma.rma_number || 'RMA'}</span>
-                <span className="rounded bg-[rgb(var(--color-background-100))] px-1.5 py-0.5 text-xs">
+                <span className="rounded bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 text-xs">
                   {String(rma.status).replace(/_/g, ' ')}
                 </span>
                 <span className="text-xs text-[rgb(var(--color-text-500))]">{shortDate(rma.created_at)}</span>

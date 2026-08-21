@@ -960,18 +960,19 @@
     "noteUpdatedSuccess": "La note de crédit externe a été mise à jour."
   },
   "clientGridCard": {
-    "actions": "Actions des clients",
     "quickView": "Aperçu rapide",
-    "defaultClient": "Client par défaut",
     "taxExempt": "Exonéré d'impôt",
     "taxExemptTooltip": "Ce client est exonéré de taxe - aucune taxe ne sera appliquée à ses factures",
-    "type": "Type :",
-    "address": "Adresse:",
-    "phone": "Téléphone:",
-    "url": "URL :",
     "clientActions": "Actions des clients",
     "default": "Défaut",
-    "selectClient": "Sélectionnez le client {{name}}"
+    "selectClient": "Sélectionnez le client {{name}}",
+    "openTickets_one": "{{count}} ouvert",
+    "openTickets_other": "{{count}} ouverts",
+    "lifecycle": {
+      "prospect": "Prospect",
+      "former": "Ancien"
+    },
+    "noContactDetails": "Aucune coordonnée"
   },
   "clientLanguagePreference": {
     "title": "Paramètres de langue du client",

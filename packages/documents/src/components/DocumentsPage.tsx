@@ -343,7 +343,7 @@ export default function DocumentsPage() {
             onClick={() => setShowDefaultFolders(prev => !prev)}
             className={`p-2 rounded-md border transition-colors ${
               showDefaultFolders
-                ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300'
+                ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-900)/0.2)] border-[rgb(var(--color-primary-300))] dark:border-[rgb(var(--color-primary-700))] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))]'
                 : 'border-gray-200 dark:border-[rgb(var(--color-border-200))] text-gray-500 dark:text-[rgb(var(--color-text-400))] hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-50))]'
             }`}
             title="Configure default folders"

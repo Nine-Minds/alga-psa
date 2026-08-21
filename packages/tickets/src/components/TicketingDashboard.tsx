@@ -2146,7 +2146,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         value={activeBoardTabId}
         onChange={handleBoardTabSelect}
       />
-      <div className="bg-white dark:bg-[rgb(var(--color-card))] shadow rounded-lg">
+      <div className="bg-[rgb(var(--color-card))] shadow rounded-lg">
         {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
             second board-selection derivation: the highlighted tab, the
             board-scoped status options and this header must agree by
@@ -2160,7 +2160,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             t={t as (key: string, fallback: string) => string}
           />
         )}
-        <div className={`sticky top-0 z-40 bg-white dark:bg-[rgb(var(--color-card))] rounded-t-lg border-b border-gray-100 dark:border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
+        <div className={`sticky top-0 z-40 bg-[rgb(var(--color-card))] rounded-t-lg border-b border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
               {/* Candidate #1: always-visible search + Filters toggle + density */}

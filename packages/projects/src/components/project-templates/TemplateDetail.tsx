@@ -127,7 +127,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                 {t('common:actions.back', 'Back')}
               </Button>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
+                <div className="flex items-center gap-2 px-3 py-1 bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-900))] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))] rounded-full text-sm font-medium">
                   <FileText className="h-4 w-4" />
                   {t('templates.editor.templateBadge', 'Template')}
                 </div>
@@ -207,7 +207,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                         onClick={() => setSelectedPhase(phase)}
                         className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                           selectedPhase?.template_phase_id === phase.template_phase_id
-                            ? 'bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-200 font-medium'
+                            ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-900))] text-[rgb(var(--color-primary-900))] dark:text-[rgb(var(--color-primary-200))] font-medium'
                             : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))] text-gray-700 dark:text-gray-300'
                         }`}
                       >

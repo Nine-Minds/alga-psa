@@ -177,7 +177,7 @@ export const EntityAvatar = ({
         <div className="relative h-full w-full">
           {/* Loading shimmer effect */}
           {showShimmer && (
-            <div className={cn('absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse overflow-hidden', radiusClass)}>
+            <div className={cn('absolute inset-0 flex items-center justify-center skeleton-fill animate-pulse overflow-hidden', radiusClass)}>
               <Spinner size="sm" className="opacity-70 scale-75" />
             </div>
           )}

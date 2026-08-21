@@ -30,7 +30,7 @@ const EditorSkeleton = ({
         </div>
       )}
       
-      <div className="border rounded-md overflow-hidden bg-gray-50" style={{ height }}>
+      <div className="border rounded-md overflow-hidden bg-[rgb(var(--color-border-50))]" style={{ height }}>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>

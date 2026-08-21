@@ -346,21 +346,21 @@ export function TimeSheetTable({
                 <tbody>
                     {isLoading ? (
                         Array.from({ length: 3 }).map((_, rowIndex) => (
-                            <tr key={`skeleton-${rowIndex}`} className="border-b border-gray-200">
-                                <td className="px-4 py-3 border-b border-r border-gray-200 sticky left-0 z-10 bg-white min-w-[160px]">
+                            <tr key={`skeleton-${rowIndex}`} className="border-b border-[rgb(var(--color-border-200))]">
+                                <td className="px-4 py-3 border-b border-r border-[rgb(var(--color-border-200))] sticky left-0 z-10 bg-[rgb(var(--color-card))] min-w-[160px]">
                                     <div className="animate-pulse space-y-2 pr-6">
-                                        <div className="h-3 w-28 bg-gray-200 rounded" />
-                                        <div className="h-3 w-20 bg-gray-200 rounded" />
-                                        <div className="h-4 w-14 bg-gray-200 rounded-full" />
+                                        <div className="h-3 w-28 skeleton-fill rounded" />
+                                        <div className="h-3 w-20 skeleton-fill rounded" />
+                                        <div className="h-4 w-14 skeleton-fill rounded-full" />
                                     </div>
                                 </td>
                                 {visibleDates.map((date): React.JSX.Element => (
                                     <td
                                         key={`skeleton-${rowIndex}-${date.toISOString()}`}
-                                        className="px-3 py-3 border-b border-r border-gray-200 last:border-r-0 h-20"
+                                        className="px-3 py-3 border-b border-r border-[rgb(var(--color-border-200))] last:border-r-0 h-20"
                                     >
                                         <div className="h-full w-full flex items-center justify-center">
-                                            <div className="animate-pulse w-12 h-12 bg-gray-200 rounded-lg" />
+                                            <div className="animate-pulse w-12 h-12 skeleton-fill rounded-lg" />
                                         </div>
                                     </td>
                                 ))}

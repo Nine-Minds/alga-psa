@@ -329,11 +329,11 @@ export default function ConnectSsoClient({
                     borderColor:
                       provider.id === "google" ? "#4285F4" :
                       provider.id === "azure-ad" || provider.id === "microsoft" ? "#6264A7" :
-                      "var(--color-primary)",
+                      "rgb(var(--color-primary-500))",
                     backgroundColor:
                       provider.id === "google" ? "rgba(66, 133, 244, 0.05)" :
                       provider.id === "azure-ad" || provider.id === "microsoft" ? "rgba(98, 100, 167, 0.05)" :
-                      "rgba(var(--color-primary-rgb), 0.05)"
+                      "rgb(var(--color-primary-500) / 0.05)"
                   }}
                 >
                   <div className="flex flex-col items-center text-center space-y-4">

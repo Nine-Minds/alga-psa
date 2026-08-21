@@ -73,7 +73,7 @@ export const AssetMetricsBanner: React.FC<AssetMetricsBannerProps> = ({
   const { t } = useTranslation('msp/assets');
   if (isLoading || !metrics) {
     return (
-      <div className="h-14 w-full animate-pulse bg-gray-50 border border-gray-200 rounded-lg mb-6" />
+      <div className="h-14 w-full animate-pulse skeleton-fill border border-[rgb(var(--color-border-200))] rounded-lg mb-6" />
     );
   }
 

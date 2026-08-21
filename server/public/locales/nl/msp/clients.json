@@ -960,18 +960,19 @@
     "noteUpdatedSuccess": "De notitie over het externe tegoed is bijgewerkt."
   },
   "clientGridCard": {
-    "actions": "Klantacties",
     "quickView": "Snelle weergave",
-    "defaultClient": "Standaardklant",
     "taxExempt": "Belasting vrijgesteld",
     "taxExemptTooltip": "Deze klant is vrijgesteld van belasting. Er wordt geen belasting geheven op zijn facturen",
-    "type": "Type:",
-    "address": "Adres:",
-    "phone": "Telefoon:",
-    "url": "URL:",
     "clientActions": "Klantacties",
     "default": "Standaard",
-    "selectClient": "Selecteer klant {{name}}"
+    "selectClient": "Selecteer klant {{name}}",
+    "openTickets_one": "{{count}} open",
+    "openTickets_other": "{{count}} open",
+    "lifecycle": {
+      "prospect": "Prospect",
+      "former": "Voormalig"
+    },
+    "noContactDetails": "Geen contactgegevens"
   },
   "clientLanguagePreference": {
     "title": "Taalinstellingen van de client",

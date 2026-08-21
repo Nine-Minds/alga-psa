@@ -21,7 +21,7 @@ export function TemplateClientPortalStep({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-4">
-        <Eye className="w-5 h-5 text-purple-600" />
+        <Eye className="w-5 h-5 text-[rgb(var(--color-primary-600))]" />
         <h3 className="text-lg font-medium">
           {t('templates.wizard.clientPortal.title', 'Client Portal Visibility')}
         </h3>

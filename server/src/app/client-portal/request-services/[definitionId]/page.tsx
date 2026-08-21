@@ -103,7 +103,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         </Alert>
       )}
 
-      <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
+      <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
         <h2 className="text-base font-semibold mb-2">{t('detail.formTitle')}</h2>
         {visibleFields.length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">{t('detail.noFields')}</p>
@@ -137,7 +137,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         )}
       </section>
 
-      <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
+      <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
         <h2 className="text-base font-semibold mb-2">{t('detail.initialValuesTitle')}</h2>
         {Object.keys(detail.initialValues).length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">

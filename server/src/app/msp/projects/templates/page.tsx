@@ -105,7 +105,7 @@ export default function ProjectTemplatesPage() {
     return (
       <div className="relative">
         <TemplatesListSkeleton />
-        <div className="absolute inset-0 flex items-center justify-center bg-[rgb(var(--color-background-50))/0.5]">
+        <div className="absolute inset-0 flex items-center justify-center bg-[rgb(var(--color-border-50))/0.5]">
           <Spinner size="lg" />
         </div>
       </div>

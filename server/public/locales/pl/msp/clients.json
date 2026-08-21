@@ -1010,18 +1010,21 @@
     "noteUpdatedSuccess": "Zaktualizowano notatkę o kredycie zewnętrznym."
   },
   "clientGridCard": {
-    "actions": "Działania klienta",
     "quickView": "Szybki podgląd",
-    "defaultClient": "Klient domyślny",
     "taxExempt": "Zwolnione z podatku",
     "taxExemptTooltip": "Ten klient jest zwolniony z podatku — na jego fakturach nie zostaną naliczone żadne podatki",
-    "type": "Typ:",
-    "address": "Adres:",
-    "phone": "Telefon:",
-    "url": "Adres URL:",
     "clientActions": "Działania klienta",
     "default": "Domyślny",
-    "selectClient": "Wybierz klienta {{name}}"
+    "selectClient": "Wybierz klienta {{name}}",
+    "openTickets_one": "{{count}} otwarte",
+    "openTickets_few": "{{count}} otwarte",
+    "openTickets_many": "{{count}} otwartych",
+    "openTickets_other": "{{count}} otwartych",
+    "lifecycle": {
+      "prospect": "Potencjalny",
+      "former": "Byly"
+    },
+    "noContactDetails": "Brak danych kontaktowych"
   },
   "clientLanguagePreference": {
     "title": "Ustawienia języka klienta",

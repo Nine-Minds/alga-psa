@@ -99,19 +99,19 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-md bg-[rgb(var(--color-surface-100))] p-3">
+              <div className="rounded-md bg-[rgb(var(--color-border-100))] p-3">
                 <p className="text-xs text-[rgb(var(--color-text-500))]">{t('detail.total', { defaultValue: 'Total' })}</p>
                 <p className="mt-1 text-lg font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
                   {(Number(data.block.total_minutes) / 60).toFixed(1)} hrs
                 </p>
               </div>
-              <div className="rounded-md bg-[rgb(var(--color-surface-100))] p-3">
+              <div className="rounded-md bg-[rgb(var(--color-border-100))] p-3">
                 <p className="text-xs text-[rgb(var(--color-text-500))]">{t('detail.remaining', { defaultValue: 'Remaining' })}</p>
                 <p className="mt-1 text-lg font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
                   {remainingHours.toFixed(1)} hrs
                 </p>
               </div>
-              <div className="rounded-md bg-[rgb(var(--color-surface-100))] p-3">
+              <div className="rounded-md bg-[rgb(var(--color-border-100))] p-3">
                 <p className="text-xs text-[rgb(var(--color-text-500))]">{t('detail.used', { defaultValue: 'Used' })}</p>
                 <p className="mt-1 text-lg font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
                   {usedHours.toFixed(1)} hrs

@@ -328,9 +328,9 @@ export default function SearchPageClient({
       {isUpdatingQuery ? (
         <section className="space-y-2" aria-label={t('search.loading')}>
           {skeletonRows.map((index) => (
-            <div key={index} className="animate-pulse rounded-md border border-gray-200 bg-white px-4 py-3">
-              <div className="h-4 w-2/3 rounded bg-gray-200" />
-              <div className="mt-2 h-3 w-1/3 rounded bg-gray-100" />
+            <div key={index} className="animate-pulse rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4 py-3">
+              <div className="h-4 w-2/3 rounded skeleton-fill" />
+              <div className="mt-2 h-3 w-1/3 rounded skeleton-fill" />
             </div>
           ))}
         </section>

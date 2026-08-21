@@ -250,7 +250,7 @@ export default function SellHourBlockDialog({ clientId, currencyCode, isOpen, on
             <TextArea id="hb-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
 
-          <div className="flex items-center justify-between rounded-md bg-[rgb(var(--color-surface-100))] px-3 py-2">
+          <div className="flex items-center justify-between rounded-md bg-[rgb(var(--color-border-100))] px-3 py-2">
             <span className="text-sm text-[rgb(var(--color-text-500))]">{t('sell.totalLabel', { defaultValue: 'Total' })}</span>
             <span className="text-base font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
               {formatCurrencyFromMinorUnits(total, undefined, currencyCode)}

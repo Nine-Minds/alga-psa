@@ -1071,7 +1071,7 @@ const fetchContacts = async (): Promise<void> => {
                     placeholder={t('users.search')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+                    className="border-2 border-gray-200 focus:border-[rgb(var(--color-primary-500))] rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
                   />
                   <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 </div>
@@ -1183,7 +1183,7 @@ const fetchContacts = async (): Promise<void> => {
                     placeholder={t('users.search')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+                    className="border-2 border-gray-200 focus:border-[rgb(var(--color-primary-500))] rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
                   />
                   <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 </div>

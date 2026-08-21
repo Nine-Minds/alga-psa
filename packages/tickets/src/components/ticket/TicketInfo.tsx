@@ -1222,7 +1222,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     onBlur={() => onLiveEditingFieldChange?.(null)}
                     autoFocus
                     disabled={isFieldFrozen('title')}
-                    className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
                     containerClassName="mb-0 flex-1"
                     style={{ minWidth: '300px', width: '100%' }}
                   />
@@ -1505,7 +1505,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </h5>
                 <div className={`w-fit transition-opacity ${isFieldRemotelyEdited('category_id') ? 'opacity-60' : ''}`}>
                   {isLoadingBoardConfig ? (
-                    <div className="h-10 w-48 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-md flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                    <div className="h-10 w-48 skeleton-fill animate-pulse rounded-md flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
                       {t('info.loadingBoardConfig', 'Loading...')}
                     </div>
                   ) : (

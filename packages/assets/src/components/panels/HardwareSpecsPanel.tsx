@@ -17,7 +17,7 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
 }) => {
   const { t } = useTranslation('msp/assets');
   if (isLoading) {
-    return <Card className="h-64 animate-pulse bg-gray-50" />;
+    return <Card className="h-64 animate-pulse skeleton-fill" />;
   }
 
   const fallbackData = asset?.workstation || asset?.server

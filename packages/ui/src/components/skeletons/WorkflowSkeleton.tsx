@@ -16,7 +16,7 @@ const WorkflowSkeleton = ({
   return (
     <div className="workflow-visualizer relative animate-pulse" style={{ height, width }}>
       {/* Main visualization area */}
-      <div className="absolute inset-0 bg-gray-50 border rounded-lg">
+      <div className="absolute inset-0 bg-[rgb(var(--color-border-50))] border rounded-lg">
         {/* Simulated workflow nodes */}
         <div className="absolute top-8 left-8 w-20 h-12 skeleton-fill-strong rounded-lg"></div>
         <div className="absolute top-8 left-36 w-20 h-12 skeleton-fill-strong rounded-lg"></div>
@@ -56,7 +56,7 @@ const WorkflowSkeleton = ({
       
       {/* Legend skeleton */}
       {showLegend && (
-        <div className="absolute bottom-4 right-4 bg-white p-3 rounded-md shadow-md border border-gray-200 w-40">
+        <div className="absolute bottom-4 right-4 bg-[rgb(var(--color-card))] p-3 rounded-md shadow-md border border-[rgb(var(--color-border-200))] w-40">
           <div className="h-4 skeleton-fill rounded mb-2"></div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">

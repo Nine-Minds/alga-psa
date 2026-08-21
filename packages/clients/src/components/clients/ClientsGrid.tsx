@@ -19,6 +19,8 @@ interface ClientsGridProps {
     clientTags?: Record<string, ITag[]>;
     allUniqueTags?: ITag[];
     onTagsChange?: (clientId: string, tags: ITag[]) => void;
+    /** Loaded out of band; empty until the batch lands. */
+    openTicketCounts?: Record<string, number>;
 }
 
 type ItemsPerPage = 9 | 18 | 27 | 36;
@@ -37,7 +39,8 @@ const ClientsGrid = ({
     onPageSizeChange,
     clientTags = {},
     allUniqueTags = [],
-    onTagsChange
+    onTagsChange,
+    openTicketCounts = {}
 }: ClientsGridProps) => {
     const { t } = useTranslation('msp/clients');
     
@@ -50,7 +53,7 @@ const ClientsGrid = ({
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {filteredClients.map((client): React.JSX.Element => (
                     <div key={client.client_id} className="relative">
                         <ClientGridCard
@@ -63,6 +66,7 @@ const ClientsGrid = ({
                             tags={clientTags[client.client_id] || []}
                             allUniqueTags={allUniqueTags.map(tag => tag.tag_text)}
                             onTagsChange={onTagsChange}
+                            openTicketCount={openTicketCounts[client.client_id]}
                         />
                     </div>
                 ))}
