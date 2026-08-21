@@ -114,7 +114,9 @@
       "delete": "Nie udało się usunąć wyceny.",
       "duplicate": "Nie udało się zduplikować wyceny.",
       "load": "Nie udało się załadować wycen",
-      "send": "Nie udało się wysłać wyceny."
+      "send": "Nie udało się wysłać wyceny.",
+      "resend": "Nie udało się ponownie wysłać wyceny.",
+      "sendReminder": "Nie udało się wysłać przypomnienia o wycenie."
     },
     "loading": "Ładowanie wycen...",
     "rowActions": {

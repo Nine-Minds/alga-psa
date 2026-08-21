@@ -1677,9 +1677,26 @@
     "percentRangeError": "Introduzca un número entero del 1 al 100",
     "notifyClient": "Enviar también un correo al destinatario de facturación del cliente",
     "notifyClientHelp": "Envía la alerta al destinatario de facturación canónico del cliente",
+    "replenishmentTier": "Cuando se activa una alerta",
+    "replenishmentNotifyOnly": "Solo notificar",
+    "replenishmentDraft": "Crear un borrador de factura de reposición y notificar",
+    "replenishmentAutoIssue": "Crear y emitir una factura de reposición",
+    "replenishmentAmount": "Importe de reposición de crédito",
+    "replenishmentAmountHelp": "Importe en la moneda seleccionada. Las alertas de paquete usan los minutos de abajo.",
+    "replenishmentAmountError": "Introduzca un importe de reposición positivo en la moneda seleccionada",
+    "replenishmentMinutes": "Minutos de reposición del paquete",
+    "replenishmentMinutesError": "Introduzca un número entero positivo de minutos",
+    "replenishmentHorizon": "Omitir la reposición dentro de estos días antes del fin del contrato",
+    "replenishmentHorizonError": "Introduzca un número de días del 0 al 3650",
     "save": "Guardar",
     "saveSuccess": "Parámetros de alerta de saldo prepagado guardados",
     "saveError": "No se pudieron guardar los parámetros de alerta de saldo prepagado",
-    "loadError": "No se pudieron cargar los parámetros de alerta de saldo prepagado"
+    "loadError": "No se pudieron cargar los parámetros de alerta de saldo prepagado",
+    "contractOverrideTitle": "Anulación de reposición del contrato",
+    "contractOverrideContract": "Contrato",
+    "contractOverrideInherit": "Usar valor predeterminado del cliente",
+    "saveContractOverride": "Guardar anulación del contrato",
+    "contractSaveSuccess": "Política de reposición del contrato guardada",
+    "contractSaveError": "No se pudo guardar la política de reposición del contrato"
   }
 }

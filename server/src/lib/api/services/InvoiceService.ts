@@ -35,6 +35,8 @@ import {
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import { clearPrepaidReplenishmentForInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
+import { settlePrepaidReplenishmentInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
@@ -685,6 +687,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       const previousStatus = String(existing.status);
       const newStatus = updateData.status ? String(updateData.status) : previousStatus;
 
+      if (newStatus === 'paid') {
+        await settlePrepaidReplenishmentInvoice(trx, context.tenant, id);
+      }
+
       const previousDueDate = toIsoDateString(existing.due_date);
       const nextDueDate = updateData.due_date ? toIsoDateString(updateData.due_date) : previousDueDate;
 
@@ -836,6 +842,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         invoice.status === 'paid' ||
         hasCanonicalRecurringDetailPeriods
       );
+
+      await clearPrepaidReplenishmentForInvoice(trx, context.tenant, id);
 
       if (softCancelled) {
         // Soft delete - mark as cancelled
@@ -1240,6 +1248,10 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
+      if (newStatus === 'paid') {
+        await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
+      }
+
         const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
 
 	      // Audit log
@@ -1391,6 +1403,10 @@ export class InvoiceService extends BaseService<IInvoice> {
             updated_by: context.userId,
             updated_at: new Date()
           });
+
+        if (newStatus === 'paid') {
+          await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
+        }
 
         // Calculate remaining balance after credit application
         const remainingBalance = invoice.total_amount - totalPaid;

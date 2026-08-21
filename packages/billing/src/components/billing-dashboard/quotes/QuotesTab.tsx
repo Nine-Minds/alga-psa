@@ -25,7 +25,7 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, Edit, Send, Copy, Download, Trash2, RefreshCw, Bell, FileText, XCircle, FilePenLine } from 'lucide-react';
 import { REVISABLE_QUOTE_STATUSES, type ColumnDefinition, type IQuoteDocumentTemplate, type IQuoteListItem, type QuoteStatus } from '@alga-psa/types';
-import { listQuotes, downloadQuotePdf, deleteQuote, duplicateQuote, sendQuote, createQuoteRevision } from '../../../actions/quoteActions';
+import { listQuotes, downloadQuotePdf, deleteQuote, duplicateQuote, sendQuote, resendQuote, sendQuoteReminder, createQuoteRevision } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import QuoteApprovalDashboard from './QuoteApprovalDashboard';
 import QuoteForm from './QuoteForm';
@@ -55,6 +55,8 @@ interface QuoteSubTabContentProps {
   onDownload: () => Promise<void>;
   onEdit: (quoteId: string) => void;
   onSend: (quoteId: string) => void;
+  onResend: (quoteId: string) => Promise<void>;
+  onSendReminder: (quoteId: string) => Promise<void>;
   onRevise: (quoteId: string) => Promise<void>;
   onDuplicate: (quoteId: string) => Promise<void>;
   onDownloadPdf: (quoteId: string) => Promise<void>;
@@ -71,6 +73,8 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
   onDownload,
   onEdit,
   onSend,
+  onResend,
+  onSendReminder,
   onRevise,
   onDuplicate,
   onDownloadPdf,
@@ -168,7 +172,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                 )}
                 {status === 'sent' && (
                   <DropdownMenuItem
-                    onClick={() => onSend(record.quote_id)}
+                    onClick={() => void onResend(record.quote_id)}
                     className="flex items-center gap-2"
                     id={`resend-quote-${record.quote_id}-menu-item`}
                   >
@@ -178,7 +182,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                 )}
                 {status === 'sent' && (
                   <DropdownMenuItem
-                    onClick={() => onSend(record.quote_id)}
+                    onClick={() => void onSendReminder(record.quote_id)}
                     className="flex items-center gap-2"
                     id={`remind-quote-${record.quote_id}-menu-item`}
                   >
@@ -228,7 +232,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
         );
       },
     },
-  ], [formatCurrency, formatDate, onDelete, onDownloadPdf, onDuplicate, onEdit, onRevise, onSend, t]);
+  ], [formatCurrency, formatDate, onDelete, onDownloadPdf, onDuplicate, onEdit, onResend, onRevise, onSend, onSendReminder, t]);
 
   if (filteredByStatus.length === 0) {
     return (
@@ -454,6 +458,44 @@ const QuotesTab: React.FC = () => {
     }
   };
 
+  const handleResendQuote = async (quoteId: string) => {
+    setError(null);
+    try {
+      const result = await resendQuote(quoteId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      void loadData();
+    } catch (err) {
+      console.error('Failed to resend quote:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('quotesTab.errors.resend', { defaultValue: 'Failed to resend quote.' }),
+      );
+    }
+  };
+
+  const handleSendReminder = async (quoteId: string) => {
+    setError(null);
+    try {
+      const result = await sendQuoteReminder(quoteId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      void loadData();
+    } catch (err) {
+      console.error('Failed to send quote reminder:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('quotesTab.errors.sendReminder', { defaultValue: 'Failed to send quote reminder.' }),
+      );
+    }
+  };
+
   const handleReviseQuote = async (quoteId: string) => {
     setError(null);
     try {
@@ -592,6 +634,8 @@ const QuotesTab: React.FC = () => {
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
                   onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onResend={handleResendQuote}
+                  onSendReminder={handleSendReminder}
                   onRevise={handleReviseQuote}
                   onDuplicate={handleDuplicateQuote}
                   onDownloadPdf={triggerPdfDownload}
@@ -613,6 +657,8 @@ const QuotesTab: React.FC = () => {
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
                   onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onResend={handleResendQuote}
+                  onSendReminder={handleSendReminder}
                   onRevise={handleReviseQuote}
                   onDuplicate={handleDuplicateQuote}
                   onDownloadPdf={triggerPdfDownload}
@@ -634,6 +680,8 @@ const QuotesTab: React.FC = () => {
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
                   onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onResend={handleResendQuote}
+                  onSendReminder={handleSendReminder}
                   onRevise={handleReviseQuote}
                   onDuplicate={handleDuplicateQuote}
                   onDownloadPdf={triggerPdfDownload}

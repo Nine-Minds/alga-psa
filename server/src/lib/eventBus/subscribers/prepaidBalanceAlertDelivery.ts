@@ -45,9 +45,14 @@ import {
   BUCKET_THRESHOLD_REACHED_TEMPLATE,
   CREDIT_LOW_BALANCE_SUBTYPE,
   CREDIT_LOW_BALANCE_TEMPLATE,
+  PREPAID_REPLENISHMENT_SUBTYPE,
+  PREPAID_REPLENISHMENT_TEMPLATE,
   buildBucketAlertContext,
   buildCreditAlertContext,
   buildInternalAlertContext,
+  buildPrepaidReplenishmentContext,
+  buildInternalPrepaidReplenishmentContext,
+  replenishmentOutcomeFromStatus,
   clientAlertLink,
   managerAlertLink,
 } from '../../notifications/prepaidBalanceAlertTemplates';
@@ -90,6 +95,8 @@ interface AlertForDelivery {
   period_start: string | Date | null;
   period_end: string | Date | null;
   notify_client_on_prepaid_alert: boolean;
+  replenishment_status: string | null;
+  replenishment_invoice_number: string | null;
   account_manager_id: string | null;
   billing_email: string | null;
   billing_contact_id: string | null;
@@ -159,6 +166,8 @@ async function loadOpenAlerts(knex: Knex, tenantId: string): Promise<AlertForDel
       'a.period_start',
       'a.period_end',
       'cbs.notify_client_on_prepaid_alert',
+      'a.replenishment_status',
+      'ri.invoice_number as replenishment_invoice_number',
       'cl.account_manager_id',
       'cl.billing_email',
       'cl.billing_contact_id',
@@ -166,6 +175,7 @@ async function loadOpenAlerts(knex: Knex, tenantId: string): Promise<AlertForDel
     );
   db.tenantJoin(query, 'clients as cl', 'a.client_id', 'cl.client_id');
   db.tenantJoin(query, 'client_billing_settings as cbs', 'a.client_id', 'cbs.client_id', { type: 'left' });
+  db.tenantJoin(query, 'invoices as ri', 'a.replenishment_invoice_id', 'ri.invoice_id', { type: 'left' });
   query
     .where('a.tenant', tenantId)
     .whereNull('a.resolved_at');
@@ -435,6 +445,8 @@ async function claimDeliveries(
         'a.observed_capacity',
         'a.period_start',
         'a.period_end',
+        'a.replenishment_status',
+        trx.raw('(SELECT i.invoice_number FROM invoices AS i WHERE i.tenant = a.tenant AND i.invoice_id = a.replenishment_invoice_id) AS replenishment_invoice_number'),
         'cl.account_manager_id',
         'cl.billing_email',
         'cl.billing_contact_id',
@@ -540,6 +552,8 @@ async function claimDeliveries(
           observed_capacity: row.observed_capacity as number | string | null,
           period_start: row.period_start as string | Date | null,
           period_end: row.period_end as string | Date | null,
+          replenishment_status: row.replenishment_status as string | null,
+          replenishment_invoice_number: row.replenishment_invoice_number as string | null,
           notify_client_on_prepaid_alert: true,
           account_manager_id: row.account_manager_id as string | null,
           billing_email: row.billing_email as string | null,
@@ -717,7 +731,7 @@ async function resolveEmailRoles(
   knex: Knex,
   tenantId: string,
   delivery: ClaimedDelivery & { alert: AlertForDelivery },
-  subtypeName: string
+  subtypeForRole: (role: string) => string
 ): Promise<EmailRoleResolution> {
   const authorizedRoles = await authorizedRolesForClaim(knex, tenantId, delivery);
   const deliverableRoles: string[] = [];
@@ -728,7 +742,7 @@ async function resolveEmailRoles(
     const managerPreferences = await emailPreferencesEnabled(
       knex,
       tenantId,
-      subtypeName,
+      subtypeForRole(RECIPIENT_ROLE_ACCOUNT_MANAGER),
       delivery.recipient_user_id
     );
     if (managerPreferences.enabled) {
@@ -741,7 +755,11 @@ async function resolveEmailRoles(
     // Client delivery has tenant/subtype/category preferences but must not
     // inherit an internal user's personal email preference merely because the
     // two roles normalize to the same address.
-    const clientPreferences = await emailPreferencesEnabled(knex, tenantId, subtypeName);
+    const clientPreferences = await emailPreferencesEnabled(
+      knex,
+      tenantId,
+      subtypeForRole(RECIPIENT_ROLE_CLIENT_BILLING)
+    );
     if (clientPreferences.enabled) {
       deliverableRoles.push(RECIPIENT_ROLE_CLIENT_BILLING);
       clientSubtypeId = clientPreferences.subtypeId;
@@ -764,7 +782,23 @@ async function resolveEmailRoles(
   };
 }
 
-function subtypeAndTemplateFor(alertType: 'credit' | 'bucket'): { subtypeName: string; templateName: string } {
+/**
+ * The replenishment notice names a top-up invoice the MSP has not sent yet, so
+ * it is account-manager-facing only. A client billing recipient keeps the plain
+ * low-balance alert: telling a customer about an unissued draft invoice is the
+ * surprise-invoice complaint the replenishment tiers exist to avoid.
+ */
+function replenishmentTemplateAllowedForRole(role: string | null): boolean {
+  return role === RECIPIENT_ROLE_ACCOUNT_MANAGER;
+}
+
+function subtypeAndTemplateFor(
+  alertType: 'credit' | 'bucket',
+  hasReplenishment: boolean,
+): { subtypeName: string; templateName: string } {
+  if (hasReplenishment) {
+    return { subtypeName: PREPAID_REPLENISHMENT_SUBTYPE, templateName: PREPAID_REPLENISHMENT_TEMPLATE };
+  }
   if (alertType === 'credit') {
     return { subtypeName: CREDIT_LOW_BALANCE_SUBTYPE, templateName: CREDIT_LOW_BALANCE_TEMPLATE };
   }
@@ -792,8 +826,20 @@ function formatPeriodDate(value: string | Date | null, locale: string): string {
 async function buildEmailContext(
   alert: AlertForDelivery,
   locale: string,
-  link: string
+  link: string,
+  useReplenishmentTemplate: boolean
 ): Promise<Record<string, unknown>> {
+  if (useReplenishmentTemplate) {
+    return buildPrepaidReplenishmentContext(
+      alert.client_name,
+      {
+        invoiceNumber: alert.replenishment_invoice_number as string,
+        outcome: replenishmentOutcomeFromStatus(alert.replenishment_status),
+        link,
+      },
+      locale
+    );
+  }
   const currency = alert.credit_currency_code || alert.default_currency_code || 'USD';
   if (alert.alert_type === 'credit') {
     const available = Number(alert.observed_value) || 0;
@@ -828,8 +874,20 @@ async function buildEmailContext(
 function buildInternalAlertContextForDelivery(
   alert: AlertForDelivery,
   locale: string,
-  link: string
+  link: string,
+  useReplenishmentTemplate: boolean
 ): Record<string, unknown> {
+  if (useReplenishmentTemplate) {
+    return buildInternalPrepaidReplenishmentContext(
+      alert.client_name,
+      {
+        invoiceNumber: alert.replenishment_invoice_number as string,
+        outcome: replenishmentOutcomeFromStatus(alert.replenishment_status),
+        link,
+      },
+      locale
+    );
+  }
   const currency = alert.credit_currency_code || alert.default_currency_code || 'USD';
   if (alert.alert_type === 'credit') {
     const available = Number(alert.observed_value) || 0;
@@ -863,7 +921,19 @@ async function processDelivery(
   summary: DeliverySummary
 ): Promise<void> {
   const db = tenantDb(knex, tenantId);
-  const { subtypeName, templateName } = subtypeAndTemplateFor(delivery.alert.alert_type);
+  const hasReplenishment = Boolean(
+    delivery.alert.replenishment_status && delivery.alert.replenishment_invoice_number,
+  );
+  // Which notice this delivery carries depends on who receives it, so the
+  // subtype (and therefore the preference lookup) is resolved per role.
+  const forRole = (role: string | null) =>
+    subtypeAndTemplateFor(
+      delivery.alert.alert_type,
+      hasReplenishment && replenishmentTemplateAllowedForRole(role),
+    );
+  // The internal channel is account-manager-only, so it always renders the
+  // manager-side template; the email channel picks its own below.
+  const { templateName } = forRole(RECIPIENT_ROLE_ACCOUNT_MANAGER);
 
   const markSkipped = async () => {
     const updated = await db.table('prepaid_balance_alert_deliveries')
@@ -965,7 +1035,9 @@ async function processDelivery(
         email: delivery.recipient_email ?? '',
         userId: delivery.recipient_user_id as string,
       });
-      const data = buildInternalAlertContextForDelivery(delivery.alert, locale, link);
+      // The internal channel is account-manager-only (asserted just above), so
+      // the replenishment notice is always the right one here.
+      const data = buildInternalAlertContextForDelivery(delivery.alert, locale, link, hasReplenishment);
       const created = await createNotificationFromTemplateInternal(trx, {
         tenant: tenantId,
         user_id: delivery.recipient_user_id as string,
@@ -1038,7 +1110,7 @@ async function processDelivery(
       await supersedeClaimedDelivery(knex, tenantId, delivery, summary);
       return;
     }
-    let roleResolution = await resolveEmailRoles(knex, tenantId, delivery, subtypeName);
+    let roleResolution = await resolveEmailRoles(knex, tenantId, delivery, (role) => forRole(role).subtypeName);
     if (roleResolution.authorizedRoles.length === 0) {
       await supersedeClaimedDelivery(knex, tenantId, delivery, summary);
       return;
@@ -1058,11 +1130,13 @@ async function processDelivery(
       const link = isManager
         ? managerAlertLink(delivery.alert.client_id)
         : clientAlertLink();
+      const useReplenishment = hasReplenishment && replenishmentTemplateAllowedForRole(selectedRole);
       return {
         isManager,
         recipientUserId,
         locale,
-        context: await buildEmailContext(delivery.alert, locale, link),
+        templateName: forRole(selectedRole).templateName,
+        context: await buildEmailContext(delivery.alert, locale, link, useReplenishment),
       };
     };
     let prepared = await prepareForRole(roleResolution.selectedRole);
@@ -1071,7 +1145,7 @@ async function processDelivery(
     // them again after formatting and, if the manager role stopped being
     // deliverable while the opted-in client role remains, switch the one send
     // to the client route rather than skipping the shared-address row.
-    const finalRoleResolution = await resolveEmailRoles(knex, tenantId, delivery, subtypeName);
+    const finalRoleResolution = await resolveEmailRoles(knex, tenantId, delivery, (role) => forRole(role).subtypeName);
     if (finalRoleResolution.authorizedRoles.length === 0) {
       await supersedeClaimedDelivery(knex, tenantId, delivery, summary);
       return;
@@ -1095,7 +1169,7 @@ async function processDelivery(
       tenantId,
       to: delivery.recipient_email,
       subject: 'Prepaid balance alert',
-      template: templateName,
+      template: prepared.templateName,
       context: prepared.context,
       locale: prepared.locale,
       notificationSubtypeId: roleResolution.subtypeId,

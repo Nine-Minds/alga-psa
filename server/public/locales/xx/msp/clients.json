@@ -1677,9 +1677,26 @@
     "percentRangeError": "11111",
     "notifyClient": "11111",
     "notifyClientHelp": "11111",
+    "replenishmentTier": "11111",
+    "replenishmentNotifyOnly": "11111",
+    "replenishmentDraft": "11111",
+    "replenishmentAutoIssue": "11111",
+    "replenishmentAmount": "11111",
+    "replenishmentAmountHelp": "11111",
+    "replenishmentAmountError": "11111",
+    "replenishmentMinutes": "11111",
+    "replenishmentMinutesError": "11111",
+    "replenishmentHorizon": "11111",
+    "replenishmentHorizonError": "11111",
     "save": "11111",
     "saveSuccess": "11111",
     "saveError": "11111",
-    "loadError": "11111"
+    "loadError": "11111",
+    "contractOverrideTitle": "11111",
+    "contractOverrideContract": "11111",
+    "contractOverrideInherit": "11111",
+    "saveContractOverride": "11111",
+    "contractSaveSuccess": "11111",
+    "contractSaveError": "11111"
   }
 }

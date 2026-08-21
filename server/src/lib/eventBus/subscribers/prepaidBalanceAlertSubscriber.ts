@@ -16,6 +16,7 @@ import { EventSchemas } from '@alga-psa/event-schemas';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { evaluatePrepaidBalanceAlertsForTenant } from './prepaidBalanceAlertEvaluator';
 import { planAndDrainDeliveriesForTenant } from './prepaidBalanceAlertDelivery';
+import { replenishOpenPrepaidBalanceAlerts } from './prepaidAutoReplenishment';
 
 export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1-5-feature';
 
@@ -66,6 +67,24 @@ export async function handlePrepaidBalanceAlertScanRequested(event: unknown): Pr
 
       const { knex } = await createTenantKnex();
       const evaluation = await evaluatePrepaidBalanceAlertsForTenant(knex, tenantId, clientId);
+      // Replenishment is the action half of this same alert episode. It runs
+      // after evaluation has opened/rearmed subjects, and before delivery so
+      // the existing alert notification can mention the linked draft/issued
+      // action without creating a second detector or scan rail.
+      const replenishmentEnabled = await featureEnabled(tenantId);
+      const replenishment = replenishmentEnabled
+        ? await replenishOpenPrepaidBalanceAlerts(knex, tenantId, clientId)
+        : {
+            considered: 0,
+            created: 0,
+            autoIssued: 0,
+            skipped: 0,
+            unchanged: 0,
+            failed: 0,
+          };
+      if (!replenishmentEnabled) {
+        logger.info('[PrepaidBalanceAlertSubscriber] Feature flag disabled before replenishment; skipping action', { tenantId });
+      }
       // Delivery has its own fail-closed boundary. If the flag is disabled
       // while a scan is evaluating, no recipient planning, claim, retry, or
       // notification side effect proceeds from that point.
@@ -87,6 +106,11 @@ export async function handlePrepaidBalanceAlertScanRequested(event: unknown): Pr
         bucketAlertsResolved: evaluation.bucketAlertsResolved,
         bucketAlertsDeduplicated: evaluation.bucketAlertsDeduplicated,
         invalidSubjects: evaluation.invalidSubjects,
+        replenishmentConsidered: replenishment.considered,
+        replenishmentsCreated: replenishment.created,
+        replenishmentsAutoIssued: replenishment.autoIssued,
+        replenishmentsSkipped: replenishment.skipped,
+        replenishmentsFailed: replenishment.failed,
         plannedInternal: delivery.plannedInternal,
         plannedEmail: delivery.plannedEmail,
         sent: delivery.sent,

@@ -11,9 +11,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { ADD_ONS, type AddOnKey } from '@alga-psa/types';
-import { ENTRA_SYNC_FEATURE_FLAG } from './integrationsFeatureFlags';
 import {
   Building2,
   Monitor,
@@ -149,10 +147,6 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   const isEEAvailable = isCalendarEnterpriseEdition();
   const huduGate = useHuduIntegrationEnabled();
   const isHuduEnabled = huduGate.enabled;
-  // Gates the Identity tab only. Off while the flag is still loading and off if
-  // PostHog cannot be reached, so the tab appears once it is known to be on
-  // rather than flashing and withdrawing.
-  const { enabled: isEntraSyncFlagEnabled } = useFeatureFlag(ENTRA_SYNC_FEATURE_FLAG);
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get('category');
   const visibleCategoryIds = useMemo(() => getVisibleIntegrationCategoryIds(isEEAvailable), [isEEAvailable]);
@@ -293,11 +287,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
       description: t('integrations.categories.identity.description'),
       icon: Shield,
       integrations: [
-        // Dropping the entry empties the category, and the existing
-        // "filter out empty categories" rule below takes the tab with it —
-        // which is also why a future non-Entra identity integration would
-        // keep the tab rather than inherit this flag.
-        ...(isEEAvailable && isEntraSyncFlagEnabled ? [{
+        ...(isEEAvailable ? [{
           id: 'entra',
           name: t('integrations.items.entra.name'),
           description: t('integrations.items.entra.description'),
@@ -331,7 +321,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraSyncFlagEnabled, isHuduEnabled, t]);
+  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isHuduEnabled, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {

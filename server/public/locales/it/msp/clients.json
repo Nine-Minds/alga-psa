@@ -1677,9 +1677,26 @@
     "percentRangeError": "Inserire un numero intero da 1 a 100",
     "notifyClient": "Invia anche un’e-mail al destinatario di fatturazione del cliente",
     "notifyClientHelp": "Invia l’avviso al destinatario di fatturazione canonico del cliente",
+    "replenishmentTier": "Quando scatta un avviso",
+    "replenishmentNotifyOnly": "Solo notifica",
+    "replenishmentDraft": "Creare una bozza di fattura di ricarica e notificare",
+    "replenishmentAutoIssue": "Creare ed emettere una fattura di ricarica",
+    "replenishmentAmount": "Importo di ricarica del credito",
+    "replenishmentAmountHelp": "Importo nella valuta selezionata. Gli avvisi dei pacchetti usano i minuti sottostanti.",
+    "replenishmentAmountError": "Inserire un importo di ricarica positivo nella valuta selezionata",
+    "replenishmentMinutes": "Minuti di ricarica del pacchetto",
+    "replenishmentMinutesError": "Inserire un numero intero positivo di minuti",
+    "replenishmentHorizon": "Saltare la ricarica entro questi giorni dalla fine del contratto",
+    "replenishmentHorizonError": "Inserire un numero di giorni da 0 a 3650",
     "save": "Salva",
     "saveSuccess": "Impostazioni avviso saldo prepagato salvate",
     "saveError": "Impossibile salvare le impostazioni avviso saldo prepagato",
-    "loadError": "Impossibile caricare le impostazioni avviso saldo prepagato"
+    "loadError": "Impossibile caricare le impostazioni avviso saldo prepagato",
+    "contractOverrideTitle": "Sostituzione della ricarica del contratto",
+    "contractOverrideContract": "Contratto",
+    "contractOverrideInherit": "Usa impostazione predefinita del cliente",
+    "saveContractOverride": "Salva sostituzione del contratto",
+    "contractSaveSuccess": "Criterio di ricarica del contratto salvato",
+    "contractSaveError": "Impossibile salvare il criterio di ricarica del contratto"
   }
 }

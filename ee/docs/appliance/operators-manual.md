@@ -21,6 +21,21 @@ Status reports:
 
 ## Support Bundle
 
+Connected Pro and Premium appliances can use Manage → Support to authorize a
+recorded, outbound-only remote support window for one, four, or eight hours.
+The administrator must confirm root-equivalent access and share the one-time
+code with an authorized Nine Minds operator. The administrator can extend up to
+eight hours from the original activation or revoke immediately. Rebooting does
+not extend the window or change the bound operator. Closed recordings remain on
+the appliance for verification, playback, download, or deletion and are pruned
+after 30 days. See `remote-support.md` for the complete security and recording
+contract.
+
+Essentials, disconnected appliances, and appliances without a compatible
+support-agent release continue to use the redacted support bundle described
+below. The support bundle remains available to every edition and is the fallback
+whenever remote support is unavailable.
+
 Use the status UI button or API to generate a redacted support bundle.
 
 Bundle includes:

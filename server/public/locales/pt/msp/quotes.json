@@ -114,7 +114,9 @@
       "delete": "Falha ao excluir cotação.",
       "duplicate": "Falha ao duplicar a cotação.",
       "load": "Falha ao carregar cotações",
-      "send": "Falha ao enviar cotação."
+      "send": "Falha ao enviar cotação.",
+      "resend": "Falha ao reenviar cotação.",
+      "sendReminder": "Falha ao enviar lembrete da cotação."
     },
     "loading": "Carregando cotações...",
     "rowActions": {
