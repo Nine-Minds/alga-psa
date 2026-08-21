@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { SEARCH_OBJECT_TYPES } from '@alga-psa/types';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function readCoreLocale(locale: string): Record<string, unknown> {
   return JSON.parse(
@@ -39,9 +40,6 @@ function collectLeafValues(value: unknown, prefix = ''): Array<[string, string]>
     collectLeafValues(child, prefix ? `${prefix}.${key}` : key),
   );
 }
-
-// scripts/generate-pseudo-locales.cjs wraps every xx value in these markers.
-const PSEUDO_MARKERS = /^⟦.*⟧$/s;
 
 describe('app-wide search i18n contracts', () => {
   it('T147 defines the required English msp/core search keys', () => {
@@ -135,7 +133,7 @@ describe('app-wide search i18n contracts', () => {
 
     for (const [key, pseudoValue] of pseudoValues) {
       expect(pseudoValue, key).not.toBe(englishValues.get(key));
-      expect(pseudoValue, key).toMatch(PSEUDO_MARKERS);
+      expect(pseudoValue, key).toMatch(pseudoPattern('xx'));
     }
   });
 
@@ -149,7 +147,7 @@ describe('app-wide search i18n contracts', () => {
     expect(pseudoValues.length).toBeGreaterThan(60);
 
     for (const [key, value] of pseudoValues) {
-      expect(value, key).toMatch(PSEUDO_MARKERS);
+      expect(value, key).toMatch(pseudoPattern('xx'));
       expect(value.replace(/\{\{[^}]+\}\}/g, ''), key).not.toMatch(/[A-Za-z]{3,}/);
     }
 

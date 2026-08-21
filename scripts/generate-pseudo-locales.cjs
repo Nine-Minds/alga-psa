@@ -20,6 +20,9 @@
  * layout truncation.  {{interpolation}} tokens and <tags> are passed through
  * untouched so i18next and <Trans> keep working.
  *
+ * The transform itself lives in tools/i18n/lib/pseudo-locale.mjs, which the
+ * tests assert against.
+ *
  * Usage:
  *   node scripts/generate-pseudo-locales.cjs
  *
@@ -33,50 +36,13 @@ const path = require('path');
 const LOCALES_DIR = path.resolve(__dirname, '../server/public/locales');
 const EN_DIR = path.join(LOCALES_DIR, 'en');
 
-const PSEUDO_LOCALES = {
-  xx: { open: '⟦', close: '⟧', expand: 0 },
-  yy: { open: '〖', close: '〗', expand: 0.4 },
-};
-
-const ACCENTS = {
-  a: 'ȧ', b: 'ƀ', c: 'ƈ', d: 'ḓ', e: 'ḗ', f: 'ƒ', g: 'ɠ', h: 'ħ', i: 'ī',
-  j: 'ĵ', k: 'ķ', l: 'ŀ', m: 'ḿ', n: 'ƞ', o: 'ȯ', p: 'ƥ', q: 'ʠ', r: 'ř',
-  s: 'ş', t: 'ŧ', u: 'ŭ', v: 'ṽ', w: 'ẇ', x: 'ẋ', y: 'ẏ', z: 'ẑ',
-  A: 'Ȧ', B: 'Ɓ', C: 'Ƈ', D: 'Ḓ', E: 'Ḗ', F: 'Ƒ', G: 'Ɠ', H: 'Ħ', I: 'Ī',
-  J: 'Ĵ', K: 'Ķ', L: 'Ŀ', M: 'Ḿ', N: 'Ƞ', O: 'Ȯ', P: 'Ƥ', Q: 'Ɋ', R: 'Ř',
-  S: 'Ş', T: 'Ŧ', U: 'Ŭ', V: 'Ṽ', W: 'Ẇ', X: 'Ẋ', Y: 'Ẏ', Z: 'Ẑ',
-};
-
-// {{variable}} tokens and <strong>/<1> markup must survive verbatim.
-const PROTECTED = /(\{\{[^}]*\}\}|<\/?[^<>]+>)/g;
-
-function accent(text) {
-  let out = '';
-  for (const char of text) {
-    out += ACCENTS[char] ?? char;
-  }
-  return out;
-}
-
-function pseudoString(value, { open, close, expand }) {
-  if (!value.trim()) return value;
-
-  const body = value
-    .split(PROTECTED)
-    .map((segment, index) => (index % 2 === 1 ? segment : accent(segment)))
-    .join('');
-
-  const padding = expand ? ` ${'·'.repeat(Math.ceil(value.length * expand))}` : '';
-  return `${open}${body}${padding}${close}`;
-}
-
-function replaceValues(input, style) {
-  if (typeof input === 'string') return pseudoString(input, style);
-  if (Array.isArray(input)) return input.map((entry) => replaceValues(entry, style));
+function replaceValues(input, pseudoString, locale) {
+  if (typeof input === 'string') return pseudoString(input, locale);
+  if (Array.isArray(input)) return input.map((entry) => replaceValues(entry, pseudoString, locale));
   if (input && typeof input === 'object') {
     const out = {};
     for (const [key, value] of Object.entries(input)) {
-      out[key] = replaceValues(value, style);
+      out[key] = replaceValues(value, pseudoString, locale);
     }
     return out;
   }
@@ -96,20 +62,31 @@ function walkDir(dir) {
   return results;
 }
 
-const enFiles = walkDir(EN_DIR);
-let totalFiles = 0;
+async function main() {
+  const { PSEUDO_LOCALES, pseudoString } = await import(
+    require('url').pathToFileURL(path.resolve(__dirname, '../tools/i18n/lib/pseudo-locale.mjs')).href
+  );
 
-for (const enFile of enFiles) {
-  const rel = path.relative(EN_DIR, enFile);
-  const data = JSON.parse(fs.readFileSync(enFile, 'utf8'));
+  const enFiles = walkDir(EN_DIR);
+  let totalFiles = 0;
 
-  for (const [locale, style] of Object.entries(PSEUDO_LOCALES)) {
-    const outFile = path.join(LOCALES_DIR, locale, rel);
-    fs.mkdirSync(path.dirname(outFile), { recursive: true });
-    const pseudo = replaceValues(data, style);
-    fs.writeFileSync(outFile, JSON.stringify(pseudo, null, 2) + '\n', 'utf8');
-    totalFiles++;
+  for (const enFile of enFiles) {
+    const rel = path.relative(EN_DIR, enFile);
+    const data = JSON.parse(fs.readFileSync(enFile, 'utf8'));
+
+    for (const locale of Object.keys(PSEUDO_LOCALES)) {
+      const outFile = path.join(LOCALES_DIR, locale, rel);
+      fs.mkdirSync(path.dirname(outFile), { recursive: true });
+      const pseudo = replaceValues(data, pseudoString, locale);
+      fs.writeFileSync(outFile, JSON.stringify(pseudo, null, 2) + '\n', 'utf8');
+      totalFiles++;
+    }
   }
+
+  console.log(`Generated ${totalFiles} pseudo-locale files from ${enFiles.length} English sources.`);
 }
 
-console.log(`Generated ${totalFiles} pseudo-locale files from ${enFiles.length} English sources.`);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

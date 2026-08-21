@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ROUTE_NAMESPACES } from '@alga-psa/core/i18n/config';
 import { STEP_DEFINITIONS } from '@alga-psa/onboarding/lib';
+import { pseudoPattern } from '../../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const;
@@ -55,15 +56,6 @@ const extractVariables = (value: string): string[] => {
 // its language reads best. Only the SET of variables has to match English;
 // asserting order would reject correct translations.
 const extractVariableSet = (value: string): string[] => extractVariables(value).sort();
-
-const expectedPseudoValue = (value: string, fill: '11111' | '55555'): string => {
-  const variables = extractVariables(value);
-  if (variables.length === 0) {
-    return fill;
-  }
-
-  return variables.map((v) => `${fill} ${v}`).join(' ') + ` ${fill}`;
-};
 
 describe('MSP dashboard locale batch 2b-1', () => {
   const english = readLocaleJson('en');
@@ -210,12 +202,13 @@ describe('MSP dashboard locale batch 2b-1', () => {
 
   it('T094/T095: pseudo dashboard locale files mirror English keys and preserve interpolation placeholders', () => {
     for (const locale of pseudoLocales) {
-      const fill = locale === 'xx' ? '11111' : '55555';
       const localeLeaves = collectLeafEntries(readLocaleJson(locale));
       expect([...localeLeaves.keys()].sort()).toEqual([...englishLeaves.keys()].sort());
 
       for (const [key, value] of englishLeaves) {
-        expect(localeLeaves.get(key)).toBe(expectedPseudoValue(value, fill));
+        const pseudo = localeLeaves.get(key) as string;
+        expect(pseudo).toMatch(pseudoPattern(locale));
+        expect(extractVariableSet(pseudo)).toEqual(extractVariableSet(value));
       }
     }
   });
@@ -228,11 +221,11 @@ describe('MSP dashboard locale batch 2b-1', () => {
 
   it('T097: xx pseudo-locale resolves representative dashboard keys to 11111', () => {
     const xx = readLocaleJson('xx');
-    expect(getValue(xx, 'welcome.title')).toBe('11111');
-    expect(getValue(xx, 'features.tickets.title')).toBe('11111');
-    expect(getValue(xx, 'knowledgeBase.cta')).toBe('11111');
-    expect(getValue(xx, 'onboarding.completeTitle')).toBe('11111');
-    expect(getValue(xx, 'onboarding.checklist.title')).toBe('11111');
+    expect(getValue(xx, 'welcome.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'features.tickets.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'knowledgeBase.cta')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'onboarding.completeTitle')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'onboarding.checklist.title')).toMatch(pseudoPattern('xx'));
   });
 
   it('T098: German dashboard copy stays within reasonable length thresholds for cards and onboarding text', () => {
