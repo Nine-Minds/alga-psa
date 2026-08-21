@@ -960,18 +960,19 @@
     "noteUpdatedSuccess": "11111"
   },
   "clientGridCard": {
-    "actions": "11111",
     "quickView": "11111",
-    "defaultClient": "11111",
     "taxExempt": "11111",
     "taxExemptTooltip": "11111",
-    "type": "11111",
-    "address": "11111",
-    "phone": "11111",
-    "url": "11111",
     "clientActions": "11111",
     "default": "11111",
-    "selectClient": "11111 {{name}} 11111"
+    "selectClient": "11111 {{name}} 11111",
+    "openTickets_one": "11111 {{count}} 11111",
+    "openTickets_other": "11111 {{count}} 11111",
+    "lifecycle": {
+      "prospect": "11111",
+      "former": "11111"
+    },
+    "noContactDetails": "11111"
   },
   "clientLanguagePreference": {
     "title": "11111",

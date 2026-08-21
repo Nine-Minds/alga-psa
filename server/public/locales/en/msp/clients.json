@@ -960,18 +960,19 @@
     "noteUpdatedSuccess": "External credit note updated."
   },
   "clientGridCard": {
-    "actions": "Client Actions",
     "quickView": "Quick View",
-    "defaultClient": "Default Client",
     "taxExempt": "Tax Exempt",
     "taxExemptTooltip": "This client is tax exempt - no taxes will be applied to their invoices",
-    "type": "Type:",
-    "address": "Address:",
-    "phone": "Phone:",
-    "url": "URL:",
     "clientActions": "Client Actions",
     "default": "Default",
-    "selectClient": "Select client {{name}}"
+    "selectClient": "Select client {{name}}",
+    "openTickets_one": "{{count}} open",
+    "openTickets_other": "{{count}} open",
+    "lifecycle": {
+      "prospect": "Prospect",
+      "former": "Former"
+    },
+    "noContactDetails": "No contact details"
   },
   "clientLanguagePreference": {
     "title": "Client Language Settings",

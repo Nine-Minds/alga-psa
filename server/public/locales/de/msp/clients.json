@@ -960,18 +960,19 @@
     "noteUpdatedSuccess": "Der Hinweis zum externen Guthaben wurde aktualisiert."
   },
   "clientGridCard": {
-    "actions": "Client-Aktionen",
     "quickView": "Schnellansicht",
-    "defaultClient": "Standard-Client",
     "taxExempt": "Steuerbefreit",
     "taxExemptTooltip": "Dieser Kunde ist steuerbefreit – auf seine Rechnungen werden keine Steuern erhoben",
-    "type": "Typ:",
-    "address": "Adresse:",
-    "phone": "Telefon:",
-    "url": "URL:",
     "clientActions": "Client-Aktionen",
     "default": "Standard",
-    "selectClient": "Wählen Sie den Kunden {{name}} aus."
+    "selectClient": "Wählen Sie den Kunden {{name}} aus.",
+    "openTickets_one": "{{count}} offen",
+    "openTickets_other": "{{count}} offen",
+    "lifecycle": {
+      "prospect": "Interessent",
+      "former": "Ehemalig"
+    },
+    "noContactDetails": "Keine Kontaktdaten"
   },
   "clientLanguagePreference": {
     "title": "Client-Spracheinstellungen",

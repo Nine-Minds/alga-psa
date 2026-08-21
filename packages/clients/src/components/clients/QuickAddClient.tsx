@@ -738,7 +738,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   }}
                   placeholder={t('quickAddClient.enterClientName', { defaultValue: 'Enter client name' })}
                   disabled={isSubmitting}
-                  className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.client_name ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${fieldErrors.client_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
                 {fieldErrors.client_name && (
                   <p className="text-sm text-red-600 mt-1">{fieldErrors.client_name}</p>
@@ -841,7 +841,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     validateField('address_line1', locationData.address_line1);
                   }}
                   disabled={isSubmitting}
-                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.address_line1 ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${fieldErrors.address_line1 ? 'border-red-500' : 'border-gray-300'}`}
                 />
                 {fieldErrors.address_line1 && (
                   <p className="text-sm text-red-600 mt-1">{fieldErrors.address_line1}</p>
@@ -862,7 +862,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                       validateField('city', locationData.city);
                     }}
                     disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.city ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${fieldErrors.city ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {fieldErrors.city && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.city}</p>
@@ -882,7 +882,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                       validateField('state_province', locationData.state_province || '');
                     }}
                     disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.state_province ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${fieldErrors.state_province ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {fieldErrors.state_province && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.state_province}</p>
@@ -902,7 +902,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                       validateField('postal_code', locationData.postal_code || '', { countryCode: locationData.country_code });
                     }}
                     disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.postal_code ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${fieldErrors.postal_code ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {fieldErrors.postal_code && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.postal_code}</p>
@@ -979,7 +979,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                       validateField('location_email', locationData.email || '');
                     }}
                     disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.location_email ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${fieldErrors.location_email ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {fieldErrors.location_email && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.location_email}</p>
@@ -1019,7 +1019,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     validateField('contact_name', contactData.full_name);
                   }}
                   disabled={isSubmitting}
-                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_name ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${fieldErrors.contact_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
                 {fieldErrors.contact_name && (
                   <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_name}</p>
@@ -1101,7 +1101,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                       validateField('industry', formData.properties?.industry || '');
                     }}
                     disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.industry ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${fieldErrors.industry ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {fieldErrors.industry && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.industry}</p>
@@ -1122,7 +1122,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     }}
                     placeholder="https://example.com"
                     disabled={isSubmitting}
-                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.url ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${fieldErrors.url ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {fieldErrors.url && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.url}</p>
@@ -1147,7 +1147,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     defaultValue: 'Add any initial notes (optional)',
                   })}
                   disabled={isSubmitting}
-                  className={`w-full p-2 border rounded-md resize-none focus:outline-none focus:ring-2 ${fieldErrors.notes ? 'border-red-500' : 'border-gray-300'} ${fieldErrors.notes ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
+                  className={`w-full p-2 border rounded-md resize-none focus:outline-none focus:ring-2 ${fieldErrors.notes ? 'border-red-500' : 'border-gray-300'} ${fieldErrors.notes ? 'focus:ring-red-500' : 'focus:ring-[rgb(var(--color-primary-500))]'}`}
                   rows={3}
                 />
                 {fieldErrors.notes && (
