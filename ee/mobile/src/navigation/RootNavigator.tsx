@@ -26,6 +26,7 @@ import { OpportunityDetailScreen } from "../screens/OpportunityDetailScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useNotifications } from "../notifications/useNotifications";
+import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -58,6 +59,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
         contentStyle: {
           backgroundColor: theme.colors.background,
         },
+        headerRight: () => <HeaderTimerChip />,
       }}
     >
       {isSignedIn ? (
