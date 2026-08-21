@@ -28,6 +28,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient } from '@alga-psa/types';
 import type { CredentialsContext } from '../../lib/actions/credentials/credentialActions';
+import type { CredentialSaveResult } from '../../lib/actions/credentials/credentialActions';
 import type { CredentialAttachment, CredentialAssociationEntityType, CredentialSummary } from '../../lib/credentials/contracts';
 
 // Client-safe TOTP seed validation. The server-side RFC 6238 util lives in
@@ -59,7 +60,7 @@ interface CredentialFormDialogProps {
    * view) — a dialog stacked on a dialog reads as broken chrome.
    */
   inline?: boolean;
-  onSubmit: (value: CredentialFormValue) => Promise<void>;
+  onSubmit: (value: CredentialFormValue) => Promise<CredentialSaveResult>;
   /** When set, prefill client (unified client tab / entity sections). */
   defaultClientId?: string | null;
   /** When set with `entityId`, this is an entity-scoped create (the entity is
@@ -123,6 +124,16 @@ function isValidOtpSeed(value: string): boolean {
   }
   return BASE32_REGEX.test(secret.replace(/[=\s-]/g, ''));
 }
+
+const SAVE_ERROR_KEY: Partial<Record<Exclude<CredentialSaveResult, { ok: true }>['code'], string>> = {
+  PERMISSION_DENIED: 'permissionDenied',
+  CLIENT_MISMATCH: 'clientMismatch',
+  HUDU_UNMAPPED: 'huduUnmapped',
+  HUDU_API: 'huduApi',
+  VALIDATION: 'validation',
+  NOT_FOUND: 'notFound',
+  CONFIGURATION: 'configuration',
+};
 
 /** Read-only edit-dialog summary of the credential's entity attachments. */
 function associationSummaryLabel(
@@ -292,7 +303,7 @@ export function CredentialFormDialog({
     setIsSaving(true);
     setError(null);
     try {
-      await onSubmit({
+      const result = await onSubmit({
         clientId,
         name: name.trim(),
         username: username.trim(),
@@ -306,10 +317,15 @@ export function CredentialFormDialog({
         destination,
         attachments: editing ? [] : attachments,
       });
+      if (result.ok === false) {
+        const key = SAVE_ERROR_KEY[result.code];
+        setError(t(key ? `credentials.form.errors.${key}` : editing ? 'credentials.form.updateFailed' : 'credentials.form.createFailed'));
+        onError?.();
+      }
     } catch (caught) {
-      const code = (caught as { code?: string; message?: string } | null)?.code ?? (caught as Error)?.message;
-      const key = ({ PERMISSION_DENIED: 'permissionDenied', CLIENT_MISMATCH: 'clientMismatch', HUDU_UNMAPPED: 'huduUnmapped', HUDU_API: 'huduApi', VALIDATION: 'validation', NOT_FOUND: 'notFound' } as Record<string, string>)[code ?? ''];
-      setError(t(key ? `credentials.form.errors.${key}` : editing ? 'credentials.form.updateFailed' : 'credentials.form.createFailed'));
+      // A transport/rendering failure has no trusted semantic code. Never use
+      // its message: server actions can redact or replace thrown errors.
+      setError(t(editing ? 'credentials.form.updateFailed' : 'credentials.form.createFailed'));
       onError?.();
     } finally {
       setIsSaving(false);

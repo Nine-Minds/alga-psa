@@ -53,6 +53,7 @@ import {
   removeCredentialFromEntity,
   updateCredential,
 } from '../../lib/actions/credentials/credentialActions';
+import type { CredentialSaveResult } from '../../lib/actions/credentials/credentialActions';
 import type {
   CredentialAssociationEntityType,
   CredentialSummary,
@@ -205,8 +206,9 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   }, [flagEnabled, entityScoped]);
 
   const handleFormSubmit = async (value: CredentialFormValue) => {
+    let result: CredentialSaveResult;
     if (editing) {
-      await updateCredential(editing.id, {
+      result = await updateCredential(editing.id, {
         clientId: value.clientId,
         name: value.name,
         username: value.username,
@@ -216,7 +218,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
         description: value.description,
       });
     } else {
-      await createCredential({
+      result = await createCredential({
         destination: value.destination,
         clientId: value.clientId,
         name: value.name,
@@ -228,10 +230,12 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
         attachments: value.attachments,
       });
     }
+    if (result.ok === false) return result;
     setFormOpen(false);
     setEditing(null);
     setEntityView('list');
     await load();
+    return result;
   };
 
   const handleLink = async (credential: CredentialSummary) => {

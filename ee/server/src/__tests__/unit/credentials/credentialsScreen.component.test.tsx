@@ -308,7 +308,8 @@ beforeEach(() => {
   });
   listCredentialsMock.mockResolvedValue([credential()]);
   revealCredentialMock.mockResolvedValue({ state: 'ok', password: SECRET_VALUE, otpCode: null });
-  createCredentialMock.mockResolvedValue(credential());
+  createCredentialMock.mockResolvedValue({ ok: true, credential: credential() });
+  updateCredentialMock.mockResolvedValue({ ok: true, credential: credential() });
   getAllClientsMock.mockResolvedValue([{ client_id: CLIENT_ID, client_name: 'Acme Corp' }]);
   getHuduClientContextMock.mockResolvedValue({ connected: true, mapped: true });
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: clipboardWriteMock.mockResolvedValue(undefined) } });
@@ -580,10 +581,10 @@ describe('CredentialsScreen — create dialog destination picker', () => {
     await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeNull());
   });
 
-  it('shows a safe expected save message and falls back for unknown failures', async () => {
+  it('shows a safe server save code and falls back for unknown codes', async () => {
     createCredentialMock
-      .mockRejectedValueOnce(Object.assign(new Error('HUDU_UNMAPPED'), { code: 'HUDU_UNMAPPED' }))
-      .mockRejectedValueOnce(new Error('arbitrary raw failure'));
+      .mockResolvedValueOnce({ ok: false, code: 'HUDU_UNMAPPED' })
+      .mockResolvedValueOnce({ ok: false, code: 'UNKNOWN' });
     await renderScreen();
     fireEvent.click(document.getElementById('credentials-screen-new')!);
     await waitFor(() => expect(document.getElementById('credential-form-name')).toBeTruthy());
@@ -656,7 +657,7 @@ describe('CredentialsScreen — create dialog destination picker', () => {
 
   it('pre-attaches the entity when created from an entity section', async () => {
     getHuduClientContextMock.mockResolvedValue({ connected: false, mapped: false });
-    createCredentialMock.mockResolvedValue({ id: 'new-credential' });
+    createCredentialMock.mockResolvedValue({ ok: true, credential: { id: 'new-credential' } });
     listCredentialsMock.mockResolvedValue([credential()]);
 
     render(<CredentialsScreen entityType="asset" entityId="asset-1" defaultClientId={CLIENT_ID} />);
