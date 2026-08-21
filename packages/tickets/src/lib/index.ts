@@ -38,6 +38,7 @@ export {
   convertProseMirrorToTicketRichTextBlocks,
   createEmptyTicketMobileRichTextDocument,
   createTicketRichTextParagraph,
+  extractTicketRichTextPlainText,
   parseTicketMobileRichTextDocument,
   parseTicketRichTextContent,
   serializeTicketMobileRichTextDocument,
