@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { getTicketPriorities, updateTicketPriority, type TicketPriority } from "../../../api/tickets";
+import { getTicketPriorities, updateTicketPriority, type TicketNotificationSuppressionOptions, type TicketPriority } from "../../../api/tickets";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { invalidateTicketsListCache } from "../../../cache/ticketsCache";
 import { getCachedTicketPriorities, setCachedTicketPriorities } from "../../../cache/referenceDataCache";
 import type { TicketDetailDeps } from "../types";
-import { getApiErrorMessage } from "../utils";
+import { getApiErrorMessage, ticketUpdateSuccessMessage } from "../utils";
 
 export function useTicketPriority(
   deps: TicketDetailDeps & {
     fetchTicket: () => Promise<void>;
   },
 ) {
-  const { client, session, ticketId, t, fetchTicket } = deps;
+  const { client, session, ticketId, t, showToast, fetchTicket } = deps;
 
   const [priorityPickerOpen, setPriorityPickerOpen] = useState(false);
   const [priorityOptions, setPriorityOptions] = useState<TicketPriority[]>([]);
@@ -45,7 +45,7 @@ export function useTicketPriority(
     }
   };
 
-  const submitPriority = async (priorityId: string) => {
+  const submitPriority = async (priorityId: string, notificationSuppression?: TicketNotificationSuppressionOptions) => {
     if (!client || !session) return;
     if (priorityUpdating) return;
     setPriorityUpdateError(null);
@@ -56,6 +56,7 @@ export function useTicketPriority(
         apiKey: session.accessToken,
         ticketId,
         priority_id: priorityId,
+        notificationSuppression,
         auditHeaders,
       });
       if (!res.ok) {
@@ -74,6 +75,10 @@ export function useTicketPriority(
       invalidateTicketsListCache();
       await fetchTicket();
       setPriorityPickerOpen(false);
+      showToast({
+        message: ticketUpdateSuccessMessage(t, notificationSuppression, t("detail.priority")),
+        tone: "success",
+      });
     } finally {
       setPriorityUpdating(false);
     }

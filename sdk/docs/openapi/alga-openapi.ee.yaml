@@ -5772,7 +5772,6 @@ components:
                   type: string
                 website:
                   type: string
-                  format: uri
                 parent_client_id:
                   type: string
                   format: uuid
@@ -5972,7 +5971,6 @@ components:
                     type: string
                   website:
                     type: string
-                    format: uri
                   parent_client_id:
                     type: string
                     format: uuid
@@ -6269,7 +6267,15 @@ components:
                 type:
                   - string
                   - "null"
+              phone_extension:
+                type:
+                  - string
+                  - "null"
               fax:
+                type:
+                  - string
+                  - "null"
+              fax_extension:
                 type:
                   - string
                   - "null"
@@ -6375,7 +6381,15 @@ components:
               type:
                 - string
                 - "null"
+            phone_extension:
+              type:
+                - string
+                - "null"
             fax:
+              type:
+                - string
+                - "null"
+            fax_extension:
               type:
                 - string
                 - "null"
@@ -15057,6 +15071,150 @@ components:
         status_id:
           type: string
           format: uuid
+    WorkV1TicketUpdateBody:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        url:
+          type: string
+          format: uri
+        board_id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        contact_name_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        status_id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+        subcategory_id:
+          type: string
+          format: uuid
+        assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+        priority_id:
+          type: string
+          format: uuid
+        attributes:
+          type:
+            - object
+            - "null"
+          additionalProperties: {}
+        tags:
+          type: array
+          items:
+            type: string
+        override_close_rules:
+          type: boolean
+        override_close_rules_reason:
+          type:
+            - string
+            - "null"
+        suppressContactNotifications:
+          type: boolean
+          description: When true, suppresses customer-facing email and portal
+            notifications for this operation.
+        suppressInternalNotifications:
+          type: boolean
+          description: When true, also suppresses agent and watcher notifications.
+            Requires suppressContactNotifications=true.
+      description: Ticket fields to update. Notification suppression applies only to
+        this operation.
+    WorkV1TicketStatusUpdateBody:
+      type: object
+      properties:
+        status_id:
+          type: string
+          format: uuid
+        closed_at:
+          type: string
+          format: date-time
+        closed_by:
+          type: string
+          format: uuid
+        override_close_rules:
+          type: boolean
+        override_close_rules_reason:
+          type:
+            - string
+            - "null"
+        suppressContactNotifications:
+          type: boolean
+          description: When true, suppresses customer-facing email and portal
+            notifications for this operation.
+        suppressInternalNotifications:
+          type: boolean
+          description: When true, also suppresses agent and watcher notifications.
+            Requires suppressContactNotifications=true.
+      required:
+        - status_id
+    WorkV1TicketAssignmentUpdateBody:
+      type: object
+      properties:
+        assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+        suppressContactNotifications:
+          type: boolean
+          description: When true, suppresses customer-facing email and portal
+            notifications for this operation.
+        suppressInternalNotifications:
+          type: boolean
+          description: When true, also suppresses agent and watcher notifications.
+            Requires suppressContactNotifications=true.
+    WorkV1TicketCommentCreateBody:
+      type: object
+      properties:
+        comment_text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        is_internal:
+          type: boolean
+          default: false
+        is_resolution:
+          type: boolean
+          default: false
+        time_spent:
+          type: number
+          minimum: 0
+        metadata:
+          type: object
+          additionalProperties: {}
+        parent_comment_id:
+          type: string
+          format: uuid
+        suppressContactNotifications:
+          type: boolean
+          description: When true, suppresses customer-facing email and portal
+            notifications for this operation.
+        suppressInternalNotifications:
+          type: boolean
+          description: When true, also suppresses agent and watcher notifications.
+            Requires suppressContactNotifications=true.
+      required:
+        - comment_text
+      description: Comment to add. Silent flags suppress the comment notification
+        while preserving the comment and audit history.
     WorkV1CreateTagBody:
       type: object
       properties:
@@ -15250,6 +15408,44 @@ components:
         - quantity
         - rate
         - currency_code
+    WorkV1TicketChecklistItemParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Ticket UUID.
+        itemId:
+          type: string
+          format: uuid
+          description: Ticket checklist item UUID.
+      required:
+        - id
+        - itemId
+    WorkV1TicketChecklistCreateBody:
+      type: object
+      properties:
+        item_name:
+          type: string
+          minLength: 1
+          description: Checklist item name.
+        description:
+          type:
+            - string
+            - "null"
+        is_required:
+          type: boolean
+          description: Whether the item gates ticket closure. Defaults to true.
+      required:
+        - item_name
+    WorkV1TicketChecklistCompletionBody:
+      type: object
+      properties:
+        completed:
+          type: boolean
+          description: True to complete the item; false to remove its completion signoff.
+      required:
+        - completed
     WorkV1TicketAgentParams:
       type: object
       properties:
@@ -15275,6 +15471,14 @@ components:
           type: string
           maxLength: 50
           description: Resource role recorded on the assignment; defaults to support.
+        suppressContactNotifications:
+          type: boolean
+          description: When true, suppresses customer-facing email and portal
+            notifications for this operation.
+        suppressInternalNotifications:
+          type: boolean
+          description: When true, also suppresses agent and watcher notifications.
+            Requires suppressContactNotifications=true.
       required:
         - user_id
     WorkV1TicketTeamAssignBody:
@@ -15286,8 +15490,12 @@ components:
           description: Team to assign to the ticket.
         suppressContactNotifications:
           type: boolean
+          description: When true, suppresses customer-facing email and portal
+            notifications for this operation.
         suppressInternalNotifications:
           type: boolean
+          description: When true, also suppresses agent and watcher notifications.
+            Requires suppressContactNotifications=true.
       required:
         - team_id
     WorkV1TicketTeamRemoveBody:
@@ -15513,6 +15721,20 @@ components:
       required:
         - id
         - evidenceId
+    OpportunityStepParamsV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Opportunity UUID from opportunities.opportunity_id.
+        stepId:
+          type: string
+          format: uuid
+          description: Step UUID from opportunity_steps.step_id.
+      required:
+        - id
+        - stepId
     OpportunityQuoteParamsV1:
       type: object
       properties:
@@ -15828,6 +16050,35 @@ components:
       required:
         - next_action
         - next_action_due
+    CompleteOpportunityStepBodyV1:
+      type: object
+      properties:
+        next_step_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        next_action:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 300
+        next_action_due:
+          type:
+            - string
+            - "null"
+          format: date-time
+        checkpoint:
+          type:
+            - string
+            - "null"
+          enum:
+            - qualified
+            - assessment
+            - proposed
+            - verbal
+            - won
     DeclaredOpportunityEvidenceBodyV1:
       type: object
       properties:
@@ -17129,9 +17380,12 @@ components:
                   type: boolean
                 opportunities:
                   type: boolean
+                opportunitiesCreate:
+                  type: boolean
               required:
                 - inventory
                 - opportunities
+                - opportunitiesCreate
           required:
             - features
       required:
@@ -59487,7 +59741,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     put:
       summary: Update ticket
-      description: Updates ticket UUID.
+      description: Updates ticket fields. Optional suppression flags make this
+        operation silent for customer notifications or for all human
+        notifications while preserving audit, workflow, and webhook records.
       tags:
         - Work Management v1
       security:
@@ -59515,7 +59771,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkV1GenericBody"
+              $ref: "#/components/schemas/WorkV1TicketUpdateBody"
       responses:
         "200":
           description: Operation succeeded.
@@ -59556,7 +59812,8 @@ paths:
   /api/v1/tickets/{id}/assignment:
     put:
       summary: Update ticket assignment
-      description: Updates ticket assignment target.
+      description: Updates the primary ticket assignment, with optional per-operation
+        notification suppression.
       tags:
         - Work Management v1
       security:
@@ -59584,7 +59841,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkV1GenericBody"
+              $ref: "#/components/schemas/WorkV1TicketAssignmentUpdateBody"
       responses:
         "200":
           description: Operation succeeded.
@@ -59723,7 +59980,8 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Add ticket comment
-      description: Adds comment to ticket UUID.
+      description: Adds a comment to the ticket, with optional per-operation
+        notification suppression.
       tags:
         - Work Management v1
       security:
@@ -59787,7 +60045,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkV1GenericBody"
+              $ref: "#/components/schemas/WorkV1TicketCommentCreateBody"
       responses:
         "200":
           description: Operation succeeded.
@@ -59834,7 +60092,8 @@ paths:
   /api/v1/tickets/{id}/status:
     put:
       summary: Update ticket status
-      description: Updates status for ticket UUID.
+      description: Updates ticket status, with optional per-operation notification
+        suppression.
       tags:
         - Work Management v1
       security:
@@ -59862,7 +60121,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkV1GenericBody"
+              $ref: "#/components/schemas/WorkV1TicketStatusUpdateBody"
       responses:
         "200":
           description: Operation succeeded.
@@ -63884,6 +64143,211 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/{id}/checklist:
+    get:
+      summary: List ticket checklist items
+      description: Returns ticket checklist items in display order, including required
+        state and completion attribution.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Ticket checklist items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    post:
+      summary: Add a ticket checklist item
+      description: Adds a manual checklist item to the end of the ticket checklist.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketChecklistCreateBody"
+      responses:
+        "201":
+          description: Checklist item created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/{id}/checklist/{itemId}:
+    patch:
+      summary: Set ticket checklist item completion
+      description: Completes or uncompletes an item. Completion records the
+        authenticated user and time; uncompletion clears the current signoff
+        while preserving it in ticket audit history.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket UUID.
+          required: true
+          description: Ticket UUID.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket checklist item UUID.
+          required: true
+          description: Ticket checklist item UUID.
+          name: itemId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketChecklistCompletionBody"
+      responses:
+        "200":
+          description: Checklist item completion updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
   /api/v1/tickets/{id}/documents/{documentId}:
     get:
       summary: Download a ticket document
@@ -64082,9 +64546,9 @@ paths:
       summary: Add a ticket additional agent
       description: Adds a user as an additional agent on the ticket and publishes
         TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the
-        UI. A ticket with no primary agent promotes the user to primary instead
-        (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns
-        409.
+        UI unless suppressed. A ticket with no primary agent promotes the user
+        to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a
+        duplicate returns 409.
       tags:
         - Work Management v1
       security:
@@ -64226,8 +64690,9 @@ paths:
       summary: Assign a team to a ticket
       description: Sets assigned_team_id, resolves the primary agent (the existing
         assignee, else the team lead) and records the team's active members as
-        team_member additional agents. Returns the updated ticket. A team
-        without a lead is rejected with 400.
+        team_member additional agents. Optional suppression flags silence the
+        assignment notification. Returns the updated ticket. A team without a
+        lead is rejected with 400.
       tags:
         - Work Management v1
       security:
@@ -66852,6 +67317,156 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OpportunityTimelineSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "401":
+          description: API key missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "403":
+          description: RBAC denied for the opportunities resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "404":
+          description: Opportunity or nested resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "409":
+          description: Opportunity state conflicts with the requested operation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "500":
+          description: Unexpected controller or service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+  /api/v1/opportunities/{id}/steps:
+    get:
+      summary: List opportunity steps
+      description: Lists the current opportunity plan, including done, current, and
+        planned steps.
+      tags:
+        - Opportunities v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: opportunities
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Opportunity UUID from opportunities.opportunity_id.
+          required: true
+          description: Opportunity UUID from opportunities.opportunity_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiArraySuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "401":
+          description: API key missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "403":
+          description: RBAC denied for the opportunities resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "404":
+          description: Opportunity or nested resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "409":
+          description: Opportunity state conflicts with the requested operation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+        "500":
+          description: Unexpected controller or service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiErrorV1"
+  /api/v1/opportunities/{id}/steps/{stepId}/complete:
+    post:
+      summary: Complete opportunity step
+      description: Completes a current step and promotes an existing planned successor
+        or creates a replacement action.
+      tags:
+        - Opportunities v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: opportunities
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Opportunity UUID from opportunities.opportunity_id.
+          required: true
+          description: Opportunity UUID from opportunities.opportunity_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Step UUID from opportunity_steps.step_id.
+          required: true
+          description: Step UUID from opportunity_steps.step_id.
+          name: stepId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteOpportunityStepBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityApiSuccessV1"
         "400":
           description: Validation or request parsing failure.
           content:
@@ -72343,7 +72958,7 @@ paths:
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
-        x-rbac-resource: inventory/read and opportunities/read
+        x-rbac-resource: inventory/read and opportunities/read/create
       x-alga-products:
         - psa
         - algadesk

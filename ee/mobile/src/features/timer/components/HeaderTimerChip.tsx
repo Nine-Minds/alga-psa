@@ -1,16 +1,21 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../../../navigation/types";
 import { hitSlop } from "../../../ui/a11y";
 import { useTheme } from "../../../ui/ThemeContext";
 import { useTimer, useTimerElapsedMs } from "../TimerContext";
 import { formatElapsedClock } from "../timerLogic";
 
-export function TimerBanner({ onOpenTicket }: { onOpenTicket: (ticketId: string) => void }) {
+export function HeaderTimerChip() {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("timeEntries");
   const { status, session, openStopModal } = useTimer();
   const elapsedMs = useTimerElapsedMs();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   if (status !== "running" || !session || elapsedMs === null) return null;
 
@@ -20,42 +25,34 @@ export function TimerBanner({ onOpenTicket }: { onOpenTicket: (ticketId: string)
   return (
     <View
       style={{
-        backgroundColor: colors.card,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
-        gap: spacing.md,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: colors.primary,
+        backgroundColor: colors.card,
+        paddingLeft: spacing.sm,
       }}
       accessibilityRole="summary"
       accessibilityLabel={t("timer.banner.accessibility", { title })}
     >
       <Pressable
-        onPress={ticketId ? () => onOpenTicket(ticketId) : undefined}
+        onPress={ticketId ? () => navigation.navigate("TicketDetail", { ticketId }) : undefined}
         disabled={!ticketId}
         accessibilityRole="button"
         accessibilityLabel={t("timer.banner.openWorkItem", { title })}
-        style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, flex: 1 }}
+        hitSlop={hitSlop}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          gap: spacing.xs,
+          paddingVertical: 4,
+          opacity: pressed ? 0.7 : 1,
+        })}
       >
-        <View
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: colors.primary,
-          }}
-        />
-        <Text style={{ ...typography.body, color: colors.text, fontWeight: "600" }}>
+        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary }} />
+        <Text style={{ ...typography.caption, color: colors.text, fontWeight: "700", fontVariant: ["tabular-nums"] }}>
           {formatElapsedClock(elapsedMs)}
-        </Text>
-        <Text
-          style={{ ...typography.caption, color: colors.textSecondary, flexShrink: 1 }}
-          numberOfLines={1}
-        >
-          {title}
         </Text>
       </Pressable>
       <Pressable
@@ -63,10 +60,13 @@ export function TimerBanner({ onOpenTicket }: { onOpenTicket: (ticketId: string)
         accessibilityRole="button"
         accessibilityLabel={t("timer.banner.stop")}
         hitSlop={hitSlop}
+        style={({ pressed }) => ({
+          paddingHorizontal: spacing.sm,
+          paddingVertical: 4,
+          opacity: pressed ? 0.7 : 1,
+        })}
       >
-        <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600" }}>
-          {t("timer.banner.stop")}
-        </Text>
+        <Feather name="stop-circle" size={16} color={colors.primary} />
       </Pressable>
     </View>
   );

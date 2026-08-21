@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { TicketDetail } from "../../../api/tickets";
+import type { TicketDetail, TicketNotificationSuppressionOptions } from "../../../api/tickets";
 import { updateTicketAttributes } from "../../../api/tickets";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { invalidateTicketsListCache, setCachedTicketDetail } from "../../../cache/ticketsCache";
@@ -10,7 +10,7 @@ import {
 } from "../../ticketRichText/helpers";
 import type { TicketRichTextEditorRef } from "../../ticketRichText/TicketRichTextEditor";
 import type { TicketDetailDeps } from "../types";
-import { extractDescription, getApiErrorMessage, getTicketAttributes } from "../utils";
+import { extractDescription, getApiErrorMessage, getTicketAttributes, ticketUpdateSuccessMessage } from "../utils";
 
 export function useDescriptionEditor(
   deps: TicketDetailDeps & {
@@ -39,7 +39,11 @@ export function useDescriptionEditor(
   }, [descriptionEditing, ticket]);
 
   const persistDescriptionContent = useCallback(
-    async (serializedDescription: string, nextPlainText: string): Promise<boolean> => {
+    async (
+      serializedDescription: string,
+      nextPlainText: string,
+      notificationSuppression?: TicketNotificationSuppressionOptions,
+    ): Promise<boolean> => {
       if (!client || !session || !ticket || descriptionSaving) {
         return false;
       }
@@ -61,6 +65,7 @@ export function useDescriptionEditor(
           apiKey: session.accessToken,
           ticketId,
           attributes: Object.keys(nextAttributes).length === 0 ? null : nextAttributes,
+          notificationSuppression,
           auditHeaders,
         });
 
@@ -84,7 +89,10 @@ export function useDescriptionEditor(
         setDescriptionDraft(serializedDescription);
         setDescriptionPlainText(nextPlainText);
         setDescriptionEditing(false);
-        showToast({ message: t("description.descriptionUpdated"), tone: "success" });
+        showToast({
+          message: ticketUpdateSuccessMessage(t, notificationSuppression, t("description.descriptionUpdated")),
+          tone: "success",
+        });
         return true;
       } finally {
         setDescriptionSaving(false);
@@ -111,25 +119,25 @@ export function useDescriptionEditor(
     setDescriptionEditing(false);
   };
 
-  const saveDescription = async () => {
+  const saveDescription = async (notificationSuppression?: TicketNotificationSuppressionOptions) => {
     if (!client || !session || descriptionSaving) {
-      return;
+      return false;
     }
 
     if (!descriptionEditorRef.current) {
       setDescriptionError(t("description.editorStillLoading"));
-      return;
+      return false;
     }
 
     const nextJson = await descriptionEditorRef.current.getJSON().catch(() => null);
     if (!nextJson) {
       setDescriptionError(t("description.unableToReadEditor"));
-      return;
+      return false;
     }
 
     const serializedDescription = serializeRichEditorJson(nextJson);
     const nextPlainText = extractPlainTextFromRichEditorJson(nextJson).trim();
-    await persistDescriptionContent(serializedDescription, nextPlainText);
+    return persistDescriptionContent(serializedDescription, nextPlainText, notificationSuppression);
   };
 
   return {

@@ -213,8 +213,8 @@ vi.mock("../features/ticketDetail/components/ActionChip", () => ({
   ActionChip: (props: Record<string, unknown>) => React.createElement("MockActionChip", props),
 }));
 
-vi.mock("../features/ticketDetail/components/TicketActions", () => ({
-  TicketActions: (props: Record<string, unknown>) => React.createElement("MockTicketActions", props),
+vi.mock("../features/ticketDetail/components/MoreActionsSheet", () => ({
+  MoreActionsSheet: (props: Record<string, unknown>) => React.createElement("MockMoreActionsSheet", props),
 }));
 
 vi.mock("../features/ticketDetail/components/DueDateModal", () => ({
@@ -420,6 +420,14 @@ function renderScreen(ticketOverrides: Record<string, unknown> = {}) {
   );
 }
 
+function expandDetails(renderer: ReactTestRenderer): void {
+  const details = renderer.root.find((node) => node.props.accessibilityLabel === "detail.details");
+  const toggle = details.find((node) => (node.type as string) === "Pressable");
+  act(() => {
+    toggle.props.onPress();
+  });
+}
+
 describe("TicketDetailScreen avatars", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -427,6 +435,7 @@ describe("TicketDetailScreen avatars", () => {
 
   it("T006/T007: renders avatar components with contact and client image URLs", () => {
     const renderer = renderScreen();
+    expandDetails(renderer);
     const avatars = renderer.root.findAll((node) => node.type === MockAvatar);
 
     expect(avatars).toHaveLength(2);
@@ -441,6 +450,7 @@ describe("TicketDetailScreen avatars", () => {
       contact_avatar_url: null,
       client_logo_url: null,
     });
+    expandDetails(renderer);
 
     const textNodes = renderer.root.findAllByType(Text).map((node) => {
       const value = node.props.children;

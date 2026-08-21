@@ -2,6 +2,7 @@ import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import type { ZodTypeAny } from 'zod';
 import {
   completeOpportunityActionApiSchema,
+  completeOpportunityStepApiSchema,
   correctOpportunityEvidenceApiSchema,
   createOpportunityApiSchema,
   declaredOpportunityEvidenceApiSchema,
@@ -26,6 +27,13 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       id: zOpenApi.string().uuid().describe('Opportunity UUID from opportunities.opportunity_id.'),
       evidenceId: zOpenApi.string().uuid().describe('Evidence UUID from opportunity_evidence.evidence_id.'),
+    }),
+  );
+  const OpportunityStepParams = registry.registerSchema(
+    'OpportunityStepParamsV1',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Opportunity UUID from opportunities.opportunity_id.'),
+      stepId: zOpenApi.string().uuid().describe('Step UUID from opportunity_steps.step_id.'),
     }),
   );
   const OpportunityQuoteParams = registry.registerSchema(
@@ -63,6 +71,7 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
   const WinBody = registry.registerSchema('WinOpportunityBodyV1', winOpportunityApiSchema);
   const LoseBody = registry.registerSchema('LoseOpportunityBodyV1', loseOpportunityApiSchema);
   const CompleteActionBody = registry.registerSchema('CompleteOpportunityActionBodyV1', completeOpportunityActionApiSchema);
+  const CompleteStepBody = registry.registerSchema('CompleteOpportunityStepBodyV1', completeOpportunityStepApiSchema);
   const EvidenceBody = registry.registerSchema('DeclaredOpportunityEvidenceBodyV1', declaredOpportunityEvidenceApiSchema);
   const CorrectEvidenceBody = registry.registerSchema('CorrectOpportunityEvidenceBodyV1', correctOpportunityEvidenceApiSchema);
   const SuggestionListQuery = registry.registerSchema('OpportunitySuggestionListQueryV1', opportunitySuggestionListQuerySchema);
@@ -184,6 +193,8 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/opportunities/work-queue', summary: 'Get the current user work queue', description: 'Returns the shared server-composed opportunity work queue for the authenticated API-key user.' },
     { method: 'get', path: '/api/v1/opportunities/{id}', summary: 'Get opportunity', description: 'Gets one opportunity by UUID.', params: OpportunityIdParam },
     { method: 'get', path: '/api/v1/opportunities/{id}/timeline', summary: 'List opportunity timeline', description: 'Lists interactions linked to the opportunity, newest first.', params: OpportunityIdParam },
+    { method: 'get', path: '/api/v1/opportunities/{id}/steps', summary: 'List opportunity steps', description: 'Lists the current opportunity plan, including done, current, and planned steps.', params: OpportunityIdParam },
+    { method: 'post', path: '/api/v1/opportunities/{id}/steps/{stepId}/complete', summary: 'Complete opportunity step', description: 'Completes a current step and promotes an existing planned successor or creates a replacement action.', body: CompleteStepBody, params: OpportunityStepParams },
     { method: 'put', path: '/api/v1/opportunities/{id}', summary: 'Update opportunity', description: 'Updates editable opportunity fields; status and stage use dedicated flows.', body: UpdateBody, params: OpportunityIdParam },
     { method: 'delete', path: '/api/v1/opportunities/{id}', summary: 'Delete opportunity', description: 'Deletes an open opportunity after linked quotes are removed.', successStatus: 204, params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/win', summary: 'Win opportunity', description: 'Marks an open opportunity won, optionally converting an accepted linked quote to a draft agreement.', body: WinBody, params: OpportunityIdParam },
@@ -229,6 +240,7 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
                   : def.method === 'get' && (
                       def.path === '/api/v1/opportunities/suggestions'
                       || def.path === '/api/v1/opportunities/{id}/evidence'
+                      || def.path === '/api/v1/opportunities/{id}/steps'
                       || def.path === '/api/v1/opportunities/calibration'
                       || def.path === '/api/v1/opportunities/{id}/commitments'
                       || def.path === '/api/v1/opportunities/qbr/yield'

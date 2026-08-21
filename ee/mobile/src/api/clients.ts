@@ -12,6 +12,8 @@ export type ClientListItem = {
   address?: string | null;
   is_inactive?: boolean;
   client_type?: string | null;
+  lifecycle_status?: "prospect" | "active" | "former" | null;
+  default_currency_code?: string | null;
   account_manager_full_name?: string | null;
   logoUrl?: string | null;
   created_at?: string | null;

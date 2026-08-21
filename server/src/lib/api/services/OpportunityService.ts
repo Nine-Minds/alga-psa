@@ -14,6 +14,7 @@ import type {
   IOpportunityEvidence,
   IOpportunityListItem,
   IOpportunitySuggestion,
+  IOpportunityStep,
   IQuote,
   OpportunityListFilters,
   OpportunitySuggestionStatus,
@@ -21,10 +22,12 @@ import type {
 } from '@alga-psa/types';
 import {
   OpportunityModel,
+  OpportunityStepModel,
   assembleWorkQueue,
   buildOpportunityCreatedPayload,
   buildOpportunityStatusChangedPayload,
   completeOpportunityNextAction,
+  completeOpportunityStepCore,
   correctEvidence,
   declareStage,
   getOpportunityDetail,
@@ -51,6 +54,7 @@ import {
 } from '../middleware/apiMiddleware';
 import type {
   CompleteOpportunityActionApi,
+  CompleteOpportunityStepApi,
   CorrectOpportunityEvidenceApi,
   CreateOpportunityApi,
   DeclaredOpportunityEvidenceApi,
@@ -72,6 +76,7 @@ function throwOpportunityApiError(error: unknown): never {
     'Linked quote not found',
     'Active opportunity evidence not found',
     'Suggestion not found',
+    'Step not found',
   ].includes(error.message)) {
     throw new NotFoundError(error.message);
   }
@@ -85,6 +90,10 @@ function throwOpportunityApiError(error: unknown): never {
 
   if (
     error.message === 'Only open opportunities have next actions' ||
+    error.message === 'Only open opportunities have steps' ||
+    error.message === 'Opportunity has no current step to complete' ||
+    error.message === 'Step is already done' ||
+    error.message === 'Next step must be a planned step of this opportunity' ||
     error.message === 'Opportunity has no current next action to complete' ||
     error.message === 'Only open opportunities can be closed' ||
     error.message === 'Only open opportunities can be deleted' ||
@@ -176,6 +185,43 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
     if (!opportunity) throw new NotFoundError('Opportunity not found');
 
     return listOpportunityTimelineCore(knex, context.tenant, id);
+  }
+
+  async listSteps(id: string, context: ServiceContext): Promise<IOpportunityStep[]> {
+    const knex = await this.getDbForContext(context);
+    const opportunity = await OpportunityModel.getById(knex, context.tenant, id);
+    if (!opportunity) throw new NotFoundError('Opportunity not found');
+    return OpportunityStepModel.listForOpportunity(knex, context.tenant, id);
+  }
+
+  async completeStep(
+    opportunityId: string,
+    stepId: string,
+    data: CompleteOpportunityStepApi,
+    context: ServiceContext,
+  ): Promise<IOpportunityStep[]> {
+    const knex = await this.getDbForContext(context);
+    return withTransaction(knex, async (trx) => {
+      const result = await completeOpportunityStepCore(
+        trx,
+        context.tenant,
+        opportunityId,
+        stepId,
+        context.userId,
+        data,
+      );
+      if (data.checkpoint && data.checkpoint !== 'won') {
+        await declareStage(
+          trx,
+          context.tenant,
+          opportunityId,
+          data.checkpoint,
+          context.userId,
+          result.completed.title,
+        );
+      }
+      return OpportunityStepModel.listForOpportunity(trx, context.tenant, opportunityId);
+    }).catch(throwOpportunityApiError);
   }
 
   async listSuggestions(
