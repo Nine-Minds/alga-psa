@@ -12,15 +12,18 @@
  * secret or an `otpauth://` URI and is normalized server-side.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Dice5, RefreshCw } from 'lucide-react';
+import { Copy, Dice5, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import QRCode from 'qrcode/lib/browser';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient } from '@alga-psa/types';
@@ -67,21 +70,40 @@ interface CredentialFormDialogProps {
   clients?: IClient[];
   context: CredentialsContext | null;
   onError?: () => void;
+  /** Lets an inline host route its Back affordance through this form's dirty guard. */
+  onRequestClose?: (requestClose: () => void) => void;
 }
 
-const PASSWORD_ALPHABET =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-const PASSWORD_ALPHABET_SYMBOLS = '!@#$%^&*()_+-=[]{};:,.<>?';
+const PASSWORD_SETS = {
+  uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', lowercase: 'abcdefghijklmnopqrstuvwxyz', digits: '0123456789', symbols: '!@#$%^&*()_+-=[]{};:,.<>?',
+} as const;
 
-function generatePassword(length: number, includeSymbols: boolean): string {
-  const alphabet = includeSymbols ? PASSWORD_ALPHABET + PASSWORD_ALPHABET_SYMBOLS : PASSWORD_ALPHABET;
-  const randomValues = new Uint32Array(length);
-  crypto.getRandomValues(randomValues);
-  let password = '';
-  for (let i = 0; i < length; i += 1) {
-    password += alphabet[randomValues[i] % alphabet.length];
+function randomChar(chars: string): string {
+  const value = new Uint32Array(1);
+  crypto.getRandomValues(value);
+  // rejection sampling avoids modulo bias for the small alphabets used here
+  const limit = Math.floor(0xffffffff / chars.length) * chars.length;
+  while (value[0] >= limit) crypto.getRandomValues(value);
+  return chars[value[0] % chars.length];
+}
+
+function randomIndex(upperBound: number): number {
+  const value = new Uint32Array(1);
+  const limit = Math.floor(0xffffffff / upperBound) * upperBound;
+  do crypto.getRandomValues(value); while (value[0] >= limit);
+  return value[0] % upperBound;
+}
+
+export function generatePassword(length: number, selected: Array<keyof typeof PASSWORD_SETS>): string {
+  if (!selected.length || length < selected.length) return '';
+  const alphabet = selected.map((key) => PASSWORD_SETS[key]).join('');
+  const chars = selected.map((key) => randomChar(PASSWORD_SETS[key]));
+  while (chars.length < length) chars.push(randomChar(alphabet));
+  for (let i = chars.length - 1; i > 0; i -= 1) {
+    const j = randomIndex(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
   }
-  return password;
+  return chars.join('');
 }
 
 function isValidOtpSeed(value: string): boolean {
@@ -127,7 +149,9 @@ export function CredentialFormDialog({
   entityId,
   editing,
   clients: clientsProp,
+  context,
   onError,
+  onRequestClose,
 }: CredentialFormDialogProps) {
   const { t } = useTranslation('msp/credentials');
 
@@ -143,8 +167,13 @@ export function CredentialFormDialog({
   const [attachments, setAttachments] = useState<CredentialAttachment[]>([]);
 
   const [generatorOpen, setGeneratorOpen] = useState(false);
-  const [genLength, setGenLength] = useState(16);
-  const [genSymbols, setGenSymbols] = useState(true);
+  const [genLength, setGenLength] = useState(20);
+  const [genSets, setGenSets] = useState<Record<keyof typeof PASSWORD_SETS, boolean>>({ uppercase: true, lowercase: true, digits: true, symbols: true });
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState('');
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +191,7 @@ export function CredentialFormDialog({
   }, [clientsProp]);
 
   useEffect(() => {
-    if (!isOpen || editing || !clientId) {
+    if (!isOpen || editing || !clientId || context?.huduConnected !== true) {
       setHuduClientMapped(null);
       return;
     }
@@ -182,7 +211,7 @@ export function CredentialFormDialog({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, editing, clientId]);
+  }, [isOpen, editing, clientId, context?.huduConnected]);
 
   useEffect(() => {
     if (isOpen) {
@@ -200,6 +229,7 @@ export function CredentialFormDialog({
         // read-only summary, never edited from the credential form
         // (associations are managed from the entity side).
         setAttachments(editing.attachments ?? []);
+        setInitialSnapshot(JSON.stringify([editing.clientId, editing.name, editing.username ?? '', '', '', editing.url ?? '', editing.description ?? '', 'alga']));
       } else {
         setClientId(defaultClientId ?? '');
         setName('');
@@ -212,11 +242,33 @@ export function CredentialFormDialog({
         // Entity-section create is pre-attached: the new credential must carry
         // the entity it was created from so it appears in the section's list.
         setAttachments(entityType && entityId ? [{ entityType, entityId }] : []);
+        setInitialSnapshot(JSON.stringify([defaultClientId ?? '', '', '', '', '', '', '', 'alga']));
       }
+      setPasswordVisible(false);
+      setQrDataUrl(null);
     }
   }, [isOpen, editing, defaultClientId, entityType, entityId]);
 
   const canUseHudu = huduClientMapped === true;
+  const snapshot = useMemo(() => JSON.stringify([clientId, name, username, password, otpSecret, url, description, destination]), [clientId, name, username, password, otpSecret, url, description, destination]);
+  const isDirty = snapshot !== initialSnapshot;
+  const requestClose = () => { if (isSaving) return; if (isDirty) setDiscardOpen(true); else onClose(); };
+
+  useEffect(() => { onRequestClose?.(requestClose); }, [onRequestClose, requestClose]);
+
+  useEffect(() => {
+    const value = otpSecret.trim();
+    if (!value || !isValidOtpSeed(value)) { setQrDataUrl(null); return; }
+    let uri = value;
+    if (!/^otpauth:\/\/totp\//i.test(uri)) {
+      const label = encodeURIComponent(username.trim() || name.trim() || 'Credential');
+      const issuer = encodeURIComponent(name.trim() || 'Credential');
+      uri = `otpauth://totp/${label}?secret=${encodeURIComponent(value.replace(/[\s-]/g, ''))}&issuer=${issuer}`;
+    }
+    let cancelled = false;
+    QRCode.toDataURL(uri).then((data) => { if (!cancelled) setQrDataUrl(data); }).catch(() => { if (!cancelled) setQrDataUrl(null); });
+    return () => { cancelled = true; };
+  }, [otpSecret, name, username]);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -248,8 +300,10 @@ export function CredentialFormDialog({
         destination,
         attachments: editing ? [] : attachments,
       });
-    } catch {
-      setError(t('credentials.form.createFailed'));
+    } catch (caught) {
+      const code = (caught as { code?: string; message?: string } | null)?.code ?? (caught as Error)?.message;
+      const key = ({ PERMISSION_DENIED: 'permissionDenied', CLIENT_MISMATCH: 'clientMismatch', HUDU_UNMAPPED: 'huduUnmapped', HUDU_API: 'huduApi', VALIDATION: 'validation', NOT_FOUND: 'notFound' } as Record<string, string>)[code ?? ''];
+      setError(t(key ? `credentials.form.errors.${key}` : editing ? 'credentials.form.updateFailed' : 'credentials.form.createFailed'));
       onError?.();
     } finally {
       setIsSaving(false);
@@ -257,7 +311,7 @@ export function CredentialFormDialog({
   };
 
   const cancelButton = (
-    <Button id="credential-form-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
+    <Button id="credential-form-cancel" variant="outline" onClick={requestClose} disabled={isSaving}>
       {t('credentials.form.cancel')}
     </Button>
   );
@@ -282,19 +336,13 @@ export function CredentialFormDialog({
           {!defaultClientId && (
             <div className="space-y-1">
               <Label htmlFor="credential-form-client">{t('credentials.form.client')}</Label>
-              <select
+              <ClientPicker
                 id="credential-form-client"
-                className="h-9 w-full rounded-md border border-gray-200 px-2 text-sm"
-                value={clientId}
-                onChange={(event) => setClientId(event.target.value)}
-              >
-                <option value="">{t('credentials.form.selectClient')}</option>
-                {clients.map((client) => (
-                  <option key={client.client_id} value={client.client_id}>
-                    {client.client_name}
-                  </option>
-                ))}
-              </select>
+                clients={clients}
+                selectedClientId={clientId || null}
+                onSelect={(id) => setClientId(id ?? '')}
+                placeholder={t('credentials.form.selectClient')}
+              />
             </div>
           )}
 
@@ -313,11 +361,17 @@ export function CredentialFormDialog({
             <div className="flex items-center gap-2">
               <Input
                 id="credential-form-password"
-                type="password"
+                type={passwordVisible ? 'text' : 'password'}
                 placeholder={t('credentials.form.passwordPlaceholder')}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
+              <Button id="credential-form-password-visibility" type="button" variant="ghost" size="sm" aria-label={t(passwordVisible ? 'credentials.form.passwordHide' : 'credentials.form.passwordShow')} onClick={() => setPasswordVisible((visible) => !visible)}>
+                {passwordVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button id="credential-form-password-copy" type="button" variant="ghost" size="sm" disabled={!password} onClick={async () => { await navigator.clipboard?.writeText(password); setCopied(true); }}>
+                <Copy className="h-4 w-4" />
+              </Button>
               <Button
                 id="credential-form-generate"
                 type="button"
@@ -345,16 +399,16 @@ export function CredentialFormDialog({
                     onChange={(event) => setGenLength(Number(event.target.value) || 16)}
                   />
                 </div>
-                <SwitchWithLabel
-                  label={t('credentials.form.passwordGeneratorSymbols')}
-                  checked={genSymbols}
-                  onCheckedChange={setGenSymbols}
-                />
+                {(Object.keys(PASSWORD_SETS) as Array<keyof typeof PASSWORD_SETS>).map((key) => (
+                  <SwitchWithLabel key={key} label={t(`credentials.form.gen${key[0].toUpperCase()}${key.slice(1)}`)} checked={genSets[key]} onCheckedChange={(checked) => setGenSets((sets) => ({ ...sets, [key]: checked }))} />
+                ))}
+                {!Object.values(genSets).some(Boolean) && <p id="credential-form-generator-empty" className="text-xs text-red-600 dark:text-red-400">{t('credentials.form.genNoSetSelected')}</p>}
                 <Button
                   id="credential-form-generator-apply"
                   type="button"
                   size="sm"
-                  onClick={() => setPassword(generatePassword(genLength, genSymbols))}
+                  disabled={!Object.values(genSets).some(Boolean) || genLength < Object.values(genSets).filter(Boolean).length}
+                  onClick={() => { const selected = (Object.keys(genSets) as Array<keyof typeof PASSWORD_SETS>).filter((key) => genSets[key]); setPassword(generatePassword(genLength, selected)); setPasswordVisible(true); }}
                 >
                   <RefreshCw className="mr-1 h-3.5 w-3.5" />
                   {t('credentials.form.passwordGeneratorGenerate')}
@@ -371,7 +425,9 @@ export function CredentialFormDialog({
               value={otpSecret}
               onChange={(event) => setOtpSecret(event.target.value)}
             />
-            <p className="text-xs text-gray-500">{t('credentials.form.otpSecretHelp')}</p>
+            <p className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpSecretHelp')}</p>
+            <p className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpWhatSaving')}</p>
+            {qrDataUrl && <div className="pt-2"><p className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpQrPreview')}</p><img id="credential-form-otp-qr" src={qrDataUrl} alt={t('credentials.form.otpQrPreview')} className="mt-1 h-32 w-32" /></div>}
           </div>
 
           <div className="space-y-1">
@@ -457,6 +513,7 @@ export function CredentialFormDialog({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          {copied && <span id="credential-form-password-copied" className="sr-only">{t('credentials.form.passwordCopied')}</span>}
         </div>
   );
 
@@ -471,6 +528,7 @@ export function CredentialFormDialog({
           {cancelButton}
           {submitButton}
         </div>
+        <ConfirmationDialog id="credential-form-discard" isOpen={discardOpen} onClose={() => setDiscardOpen(false)} onConfirm={() => { setDiscardOpen(false); onClose(); }} title={t('credentials.form.discardTitle')} message={t('credentials.form.discardMessage')} confirmLabel={t('credentials.form.discardConfirm')} cancelLabel={t('credentials.form.keepEditing')} />
       </div>
     );
   }
@@ -480,7 +538,7 @@ export function CredentialFormDialog({
     <Dialog
       id="credential-form-dialog"
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={requestClose}
       title={editing ? t('credentials.form.editTitle') : t('credentials.form.title')}
       className="max-w-lg"
       footer={
@@ -491,6 +549,7 @@ export function CredentialFormDialog({
       }
     >
       {body}
+      <ConfirmationDialog id="credential-form-discard" isOpen={discardOpen} onClose={() => setDiscardOpen(false)} onConfirm={() => { setDiscardOpen(false); onClose(); }} title={t('credentials.form.discardTitle')} message={t('credentials.form.discardMessage')} confirmLabel={t('credentials.form.discardConfirm')} cancelLabel={t('credentials.form.keepEditing')} />
     </Dialog>
   );
 }

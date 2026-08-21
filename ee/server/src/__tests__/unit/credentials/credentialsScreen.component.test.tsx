@@ -228,6 +228,17 @@ vi.mock('@alga-psa/ui/components/SwitchWithLabel', () => ({
   ),
 }));
 
+// Keep the test surface focused on credential behavior while preserving the
+// picker contract (the production implementation is the searchable picker).
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
+  ClientPicker: ({ id, clients, selectedClientId, onSelect }: { id: string; clients: Array<{ client_id: string; client_name: string }>; selectedClientId: string | null; onSelect: (id: string | null) => void }) => (
+    <select id={id} value={selectedClientId ?? ''} onChange={(event) => onSelect(event.target.value || null)}>
+      <option value="" />
+      {clients.map((client) => <option key={client.client_id} value={client.client_id}>{client.client_name}</option>)}
+    </select>
+  ),
+}));
+
 import { CredentialsScreen } from '@ee/components/credentials/CredentialsScreen';
 import { TotpCountdown } from '@ee/components/credentials/TotpCountdown';
 import { AssetCredentialsSection as EeAssetCredentialsSection } from '@ee/components/credentials/AssetCredentialsSection';
@@ -447,6 +458,7 @@ describe('CredentialsScreen — filters and flags', () => {
   });
 
   it('filters rows by source', async () => {
+    getCredentialsContextMock.mockResolvedValue({ tierOk: true, huduConnected: true, state: 'ok', flagIrrelevantHere: true });
     listCredentialsMock.mockResolvedValue([
       credential({ id: 'native-1', source: 'alga', name: 'Native' }),
       credential({ id: 'hudu-1', source: 'hudu', name: 'Hudu Row' }),

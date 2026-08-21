@@ -267,11 +267,28 @@ export interface CreateCredentialInput extends CredentialWriteInput {
   destination: 'alga' | 'hudu';
 }
 
+type CredentialSaveCode = 'PERMISSION_DENIED' | 'CLIENT_MISMATCH' | 'HUDU_UNMAPPED' | 'HUDU_API' | 'VALIDATION' | 'NOT_FOUND' | 'UNKNOWN';
+
+function throwSafeCredentialSaveError(operation: 'create' | 'update', error: unknown, details: { tenant: string; userId: string; clientId?: string; credentialId?: string; source?: string }): never {
+  const rawCode = (error as { code?: string } | null)?.code;
+  const rawMessage = error instanceof Error ? error.message : '';
+  let code: CredentialSaveCode = 'UNKNOWN';
+  if (rawCode === 'CREDENTIAL_CLIENT_MISMATCH') code = 'CLIENT_MISMATCH';
+  else if (rawCode === 'HUDU_UNMAPPED') code = 'HUDU_UNMAPPED';
+  else if (rawCode === 'CREDENTIAL_NOT_FOUND') code = 'NOT_FOUND';
+  else if (rawCode === 'TIER_ACCESS_DENIED' || /^Forbidden/.test(rawMessage)) code = 'PERMISSION_DENIED';
+  else if (/validation|invalid|base32|otp/i.test(rawMessage)) code = 'VALIDATION';
+  else if (details.source === 'hudu') code = 'HUDU_API';
+  logger.error('[CredentialActions] credential save failed', { operation, code, tenant: details.tenant, userId: details.userId, credentialId: details.credentialId, clientId: details.clientId, source: details.source });
+  throw Object.assign(new Error(code), { code });
+}
+
 export const createCredential = withCredentialAccess(
   'create',
   async (user, { tenant }, input: CreateCredentialInput): Promise<CredentialSummary> => {
     const { destination, ...write } = input;
-    const ctx = sourceContext(user, tenant);
+    try {
+      const ctx = sourceContext(user, tenant);
 
     // Create-preattached same-client enforcement: the new credential's owner
     // is `clientId`; a pre-attached client-bound entity must resolve to that
@@ -294,19 +311,26 @@ export const createCredential = withCredentialAccess(
 
     revalidatePath('/msp/credentials');
     revalidatePath(`/msp/clients/${write.clientId}`);
-    return summary;
+      return summary;
+    } catch (error) {
+      return throwSafeCredentialSaveError('create', error, { tenant, userId: user.user_id, clientId: write.clientId, source: destination });
+    }
   }
 );
 
 export const updateCredential = withCredentialAccess(
   'update',
   async (user, { tenant }, id: string, input: Partial<CredentialWriteInput>): Promise<CredentialSummary> => {
-    const summary = isHuduCredentialId(id)
-      ? await huduCredentialSource.update(sourceContext(user, tenant), id, input)
-      : await nativeCredentialSource.update(sourceContext(user, tenant), id, input);
-    revalidatePath('/msp/credentials');
-    if (input.clientId) revalidatePath(`/msp/clients/${input.clientId}`);
-    return summary;
+    try {
+      const summary = isHuduCredentialId(id)
+        ? await huduCredentialSource.update(sourceContext(user, tenant), id, input)
+        : await nativeCredentialSource.update(sourceContext(user, tenant), id, input);
+      revalidatePath('/msp/credentials');
+      if (input.clientId) revalidatePath(`/msp/clients/${input.clientId}`);
+      return summary;
+    } catch (error) {
+      return throwSafeCredentialSaveError('update', error, { tenant, userId: user.user_id, clientId: input.clientId, credentialId: id, source: isHuduCredentialId(id) ? 'hudu' : 'alga' });
+    }
   }
 );
 
