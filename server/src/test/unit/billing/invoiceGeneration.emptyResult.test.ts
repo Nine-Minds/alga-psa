@@ -234,6 +234,9 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
     }
   },
   BillingEngine: class {
+    static forTransaction() {
+      return new this();
+    }
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;

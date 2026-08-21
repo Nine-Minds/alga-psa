@@ -374,12 +374,23 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
     }
   },
   BillingEngine: class {
+    static forTransaction() {
+      return new this();
+    }
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;
     calculateBillingForExecutionWindow = mocks.calculateBillingForExecutionWindow;
     rolloverUnapprovedTime = vi.fn(async () => undefined);
   },
+}));
+
+// Generation runs reconcile -> calculate -> persist inside one transaction.
+// Reconciliation is covered by contractLineAttributionWriter.test.ts and the
+// real-PostgreSQL billingInvoiceTiming integration suite; this filter-based
+// knex stub cannot express the writer's query shape, so it is stubbed out.
+vi.mock('../../../../../packages/billing/src/lib/billing/contractLineAttributionWriter', () => ({
+  reconcileWindowAttribution: vi.fn(async () => ({ assigned: 0, markedUnresolved: 0 })),
 }));
 
 vi.mock('@alga-psa/billing/models/invoice', () => ({

@@ -25,7 +25,10 @@ type LineCandidate = {
  * failed, and is gated like `ambiguous`: a human decides.
  */
 export type { ContractLineSelectionReason } from '@alga-psa/types';
-import type { ContractLineSelectionReason } from '@alga-psa/types';
+import type {
+  ContractLineSelectionReason,
+  ContractLineSource,
+} from '@alga-psa/types';
 
 export interface ContractLineSelectionResult {
   selectedContractLineId: string | null;
@@ -46,6 +49,87 @@ export interface ContractLineSelectionOptions {
    * selection turn out to be the same question (F133).
    */
   billingProfileId?: string | null;
+}
+
+/** Reasons allowed by the attribution columns' production CHECK constraint. */
+export type ContractLineAttributionUnresolvedReason = Extract<
+  ContractLineSelectionReason,
+  'ambiguous' | 'no_match' | 'error'
+>;
+
+function toAttributionUnresolvedReason(
+  reason: ContractLineSelectionReason,
+): ContractLineAttributionUnresolvedReason {
+  switch (reason) {
+    case 'no_match':
+    case 'ambiguous':
+    case 'error':
+      return reason;
+    case 'bucket_overlay':
+      return 'ambiguous';
+    // A selected line is required for these successful classifications. Keep
+    // the fallback safe if a malformed selection reaches this boundary.
+    case 'single_candidate':
+    case 'billing_profile':
+      return 'ambiguous';
+  }
+}
+
+export type ContractLineAttributionDecision =
+  | {
+      kind: 'time_entry' | 'usage_record';
+      recordId: string;
+      action: 'assign';
+      contractLineId: string;
+      source: ContractLineSource;
+    }
+  | {
+      kind: 'time_entry' | 'usage_record';
+      recordId: string;
+      action: 'mark_unresolved';
+      reason: ContractLineAttributionUnresolvedReason;
+    };
+
+/**
+ * Convert the shared deterministic selection into the in-memory write proposal
+ * used by generation reconciliation. The resolver remains the only place that
+ * decides whether a candidate is unique, ambiguous, or absent.
+ */
+export function buildContractLineAttributionDecision(input: {
+  kind: 'time_entry' | 'usage_record';
+  recordId: string;
+  selection: ContractLineSelectionResult;
+  /** Usage/time-entry create/edit may persist the deterministic overlay choice. */
+  allowBucketOverlay?: boolean;
+}): ContractLineAttributionDecision {
+  const { kind, recordId, selection, allowBucketOverlay = false } = input;
+  if (
+    selection.selectedContractLineId &&
+    (selection.decision === 'explicit' ||
+      selection.decision === 'billing_profile' ||
+      (allowBucketOverlay && selection.reason === 'bucket_overlay'))
+  ) {
+    return {
+      kind,
+      recordId,
+      action: 'assign',
+      contractLineId: selection.selectedContractLineId,
+      source:
+        allowBucketOverlay && selection.reason === 'bucket_overlay'
+          ? 'auto_bucket_overlay'
+          : 'reconciled_at_generation',
+    };
+  }
+
+  return {
+    kind,
+    recordId,
+    action: 'mark_unresolved',
+    // A unique overlay is a deterministic record-write choice, but generation
+    // deliberately does not reconcile that tie-break automatically. Keep the
+    // generation proposal within the production CHECK constraint.
+    reason: toAttributionUnresolvedReason(selection.reason),
+  };
 }
 
 const belongsToProfile = (

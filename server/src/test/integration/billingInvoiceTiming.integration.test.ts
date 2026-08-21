@@ -2,7 +2,7 @@ import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import {
   setupClientTaxConfiguration,
@@ -16,6 +16,7 @@ import { createUser } from '../../../test-utils/testDataFactory';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
 import { BillingEngine } from '@alga-psa/billing/services';
+import { ATTRIBUTION_TABLES } from '@alga-psa/billing/lib/billing/contractLineAttributionWriter';
 import Invoice from '@alga-psa/billing/models/invoice';
 import type { IRecurringServicePeriodRecord } from '@alga-psa/types';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
@@ -41,8 +42,10 @@ let db: Knex;
 let tenantId: string;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let generateInvoiceForSelectionInput: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoiceForSelectionInput;
+let generateInvoiceForSelectionInputs: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoiceForSelectionInputs;
 let calculateBillingForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').calculateBillingForSelectionInput;
 let previewInvoiceForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').previewInvoiceForSelectionInput;
+let getPurchaseOrderOverageForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').getPurchaseOrderOverageForSelectionInput;
 let getAvailableRecurringDueWorkAction: typeof import('@alga-psa/billing/actions/billingAndTax').getAvailableRecurringDueWork;
 let hardDeleteInvoiceAction: typeof import('@alga-psa/billing/actions/invoiceModification').hardDeleteInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
@@ -167,6 +170,16 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 describe('Billing Invoice Timing Integration', () => {
   const HOOK_TIMEOUT = 180_000;
 
+  async function withRealTransactions<T>(callback: () => Promise<T>): Promise<T> {
+    const transactionMock = vi.mocked(withTransaction);
+    transactionMock.mockImplementation(async (knex: any, handler: any) => knex.transaction(handler));
+    try {
+      return await callback();
+    } finally {
+      transactionMock.mockImplementation(async (_knex: any, handler: any) => handler(db));
+    }
+  }
+
   beforeAll(async () => {
     wireLocalTestDbEnv();
     process.env.APP_ENV = process.env.APP_ENV || 'test';
@@ -185,8 +198,10 @@ describe('Billing Invoice Timing Integration', () => {
     ({
       generateInvoice,
       generateInvoiceForSelectionInput,
+      generateInvoiceForSelectionInputs,
       calculateBillingForSelectionInput: calculateBillingForSelectionInputAction,
       previewInvoiceForSelectionInput: previewInvoiceForSelectionInputAction,
+      getPurchaseOrderOverageForSelectionInput: getPurchaseOrderOverageForSelectionInputAction,
     } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({
       getAvailableRecurringDueWork: getAvailableRecurringDueWorkAction,
@@ -5006,6 +5021,370 @@ it('T326: DB-backed mixed cadence-owner recurring obligations materialize distin
   expect(normalizeDateValue(contractRows[0]?.invoice_window_start)).toBe('2025-01-08');
 }, HOOK_TIMEOUT);
 
+it('T154: recurring due-work listing is byte-stable and performs no source-row DML, including unassigned usage', async () => {
+  setupCommonMocks({ tenantId, userId: 'read-only-due-work-user', permissionCheck: () => true });
+
+  const { contextLike, clientId, currentPeriodStart, nextPeriodStart } = await createClientWithRecurringCycles({
+    clientName: 'Read-Only Due Work Client',
+    previousPeriodStart: '2025-01-01',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const serviceId = await createTestService(contextLike as any, {
+    service_name: 'Read-Only Unassigned Usage',
+    billing_method: 'usage',
+    default_rate: 125,
+    unit_of_measure: 'unit',
+    tax_region: 'US-NY',
+  } as any);
+  const usageId = uuidv4();
+  await tenantTable(db, tenantId, 'usage_tracking').insert({
+    tenant: tenantId,
+    usage_id: usageId,
+    client_id: clientId,
+    service_id: serviceId,
+    usage_date: '2025-02-15',
+    quantity: 2,
+    invoiced: false,
+    contract_line_id: null,
+    contract_line_source: null,
+    contract_line_unresolved_reason: null,
+  });
+  const timeServiceId = await createTestService(contextLike as any, {
+    service_name: 'Read-Only Unassigned Time',
+    billing_method: 'hourly',
+    default_rate: 12500,
+    unit_of_measure: 'hour',
+    tax_region: 'US-NY',
+  } as any);
+  const timeEntry = await createApprovedTimeEntryForContractLine({
+    clientId,
+    serviceId: timeServiceId,
+    contractLineId: null,
+    startTime: '2025-02-15T10:00:00.000Z',
+    endTime: '2025-02-15T11:00:00.000Z',
+  });
+
+  const beforeUsage = await tenantTable(db, tenantId, 'usage_tracking')
+    .where({ tenant: tenantId, usage_id: usageId })
+    .first();
+  const beforeTime = await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: timeEntry.entry_id })
+    .first();
+  const dml: string[] = [];
+  const listener = (queryData: { sql?: string }) => {
+    if (typeof queryData.sql === 'string' && /^(update|delete|insert)\s/i.test(queryData.sql.trim())) {
+      dml.push(queryData.sql);
+    }
+  };
+  db.on('query', listener);
+
+  const first = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Read-Only Due Work Client',
+    dateRange: { from: currentPeriodStart, to: nextPeriodStart },
+  });
+  const second = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Read-Only Due Work Client',
+    dateRange: { from: currentPeriodStart, to: nextPeriodStart },
+  });
+  db.removeListener('query', listener);
+
+  const afterUsage = await tenantTable(db, tenantId, 'usage_tracking')
+    .where({ tenant: tenantId, usage_id: usageId })
+    .first();
+  const afterTime = await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: timeEntry.entry_id })
+    .first();
+  expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+  expect(afterUsage).toEqual(beforeUsage);
+  expect(afterTime).toEqual(beforeTime);
+  expect(dml.filter((sql) => /time_entries|usage_tracking/i.test(sql))).toEqual([]);
+  expect(first.invoiceCandidates.flatMap((candidate) => candidate.members)).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ recordId: `unresolved:usage:${usageId}`, clientId }),
+    ]),
+  );
+}, HOOK_TIMEOUT);
+
+it('T155: real-schema classification keeps unique, ambiguous, and no-match billing reads deterministic', async () => {
+  setupCommonMocks({ tenantId, userId: 'deterministic-classification-user', permissionCheck: () => true });
+
+  const uniqueClient = await createClientWithRecurringCycles({ clientName: 'Unique Classification Client' });
+  const ambiguousClient = await createClientWithRecurringCycles({ clientName: 'Ambiguous Classification Client' });
+  const noMatchClient = await createClientWithRecurringCycles({ clientName: 'No Match Classification Client' });
+  const uniqueLine = await createHourlyContractLine(uniqueClient.contextLike, {
+    serviceName: 'Unique Classification Service',
+    planName: 'Unique Classification Plan',
+    baseRateCents: 10000,
+    startDate: '2024-12-01',
+    billingTiming: 'advance',
+  });
+  const ambiguousFirst = await createHourlyContractLine(ambiguousClient.contextLike, {
+    serviceName: 'Ambiguous Classification Service',
+    planName: 'Ambiguous Classification Plan A',
+    baseRateCents: 10000,
+    startDate: '2024-12-01',
+    billingTiming: 'advance',
+  });
+  const ambiguousSecond = await createHourlyContractLine(ambiguousClient.contextLike, {
+    serviceName: 'Ambiguous Classification Service B',
+    planName: 'Ambiguous Classification Plan B',
+    baseRateCents: 10000,
+    startDate: '2024-12-01',
+    billingTiming: 'advance',
+  });
+  // Force the second line to cover the first line's service, creating the
+  // exact multi-candidate case without introducing an arbitrary tie-break.
+  await tenantTable(db, tenantId, 'contract_line_services')
+    .insert({
+      tenant: tenantId,
+      contract_line_id: ambiguousSecond.contractLineId,
+      service_id: ambiguousFirst.serviceId,
+      quantity: 1,
+      custom_rate: null,
+    });
+  const noMatchServiceId = await createTestService(noMatchClient.contextLike as any, {
+    service_name: 'No Match Classification Service',
+    billing_method: 'hourly',
+    default_rate: 10000,
+    unit_of_measure: 'hour',
+    tax_region: 'US-NY',
+  } as any);
+  await createApprovedTimeEntryForContractLine({
+    clientId: uniqueClient.clientId,
+    serviceId: uniqueLine.serviceId,
+    contractLineId: null,
+    startTime: '2025-01-15T10:00:00.000Z',
+    endTime: '2025-01-15T11:00:00.000Z',
+  });
+  await createApprovedTimeEntryForContractLine({
+    clientId: ambiguousClient.clientId,
+    serviceId: ambiguousFirst.serviceId,
+    contractLineId: null,
+    startTime: '2025-01-15T10:00:00.000Z',
+    endTime: '2025-01-15T11:00:00.000Z',
+  });
+  await createApprovedTimeEntryForContractLine({
+    clientId: noMatchClient.clientId,
+    serviceId: noMatchServiceId,
+    contractLineId: null,
+    startTime: '2025-01-15T10:00:00.000Z',
+    endTime: '2025-01-15T11:00:00.000Z',
+  });
+
+  const engine = new BillingEngine();
+  const unique = await engine.calculateUnresolvedNonContractChargesForExecutionWindow({
+    clientId: uniqueClient.clientId,
+    windowStart: '2025-01-01',
+    windowEnd: '2025-02-01',
+  });
+  const ambiguous = await engine.calculateUnresolvedNonContractChargesForExecutionWindow({
+    clientId: ambiguousClient.clientId,
+    windowStart: '2025-01-01',
+    windowEnd: '2025-02-01',
+  });
+  const noMatch = await engine.calculateUnresolvedNonContractChargesForExecutionWindow({
+    clientId: noMatchClient.clientId,
+    windowStart: '2025-01-01',
+    windowEnd: '2025-02-01',
+  });
+  expect(unique).toHaveLength(0);
+  expect(ambiguous).toEqual(expect.arrayContaining([expect.objectContaining({ unresolved_reason: 'ambiguous' })]));
+  expect(noMatch).toEqual(expect.arrayContaining([expect.objectContaining({ unresolved_reason: 'no_match' })]));
+}, HOOK_TIMEOUT);
+
+it('T156: generation reconciles before calculation, bills the newly covered entry once, and retries do not duplicate it', async () => {
+  setupCommonMocks({ tenantId, userId: 'same-run-reconciliation-user', permissionCheck: () => true });
+  const { contextLike, clientId } = await createClientWithRecurringCycles({
+    clientName: 'Same-Run Reconciliation Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: 'Same-Run Reconciliation Service',
+    planName: 'Same-Run Reconciliation Plan',
+    baseRateCents: 10000,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  await syncContractLineRecurringPeriods(line.contractLineId);
+  const usageLine = await createUsageContractLine(contextLike, {
+    serviceName: 'Same-Run Reconciliation Usage Service',
+    planName: 'Same-Run Reconciliation Usage Plan',
+    baseRateCents: 2000,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  await syncContractLineRecurringPeriods(usageLine.contractLineId);
+  const entry = await createApprovedTimeEntryForContractLine({
+    clientId,
+    serviceId: line.serviceId,
+    contractLineId: null,
+    startTime: '2025-02-15T10:00:00.000Z',
+    endTime: '2025-02-15T11:00:00.000Z',
+  });
+  const usage = await createUsageRecordForContractLine({
+    clientId,
+    serviceId: usageLine.serviceId,
+    contractLineId: null,
+    usageDate: '2025-02-15',
+    quantity: 3,
+  });
+  const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Same-Run Reconciliation Client' });
+  const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
+  const dueRow = dueRows
+    .find((row) => row.contractLineId === line.contractLineId
+      && row.invoiceWindowStart === '2025-02-01'
+      && row.invoiceWindowEnd === '2025-03-01');
+  const usageDueRow = dueRows
+    .find((row) => row.contractLineId === usageLine.contractLineId
+      && row.invoiceWindowStart === '2025-02-01'
+      && row.invoiceWindowEnd === '2025-03-01');
+  expect(dueRow).toBeTruthy();
+  expect(usageDueRow).toBeTruthy();
+
+  const selectorInputs = [dueRow!.selectorInput, usageDueRow!.selectorInput];
+  const invoice = await generateInvoiceForSelectionInputs(selectorInputs);
+  expect(invoice).toBeTruthy();
+  const persistedEntry = await tenantTable(db, tenantId, 'time_entries').where({ entry_id: entry.entry_id }).first();
+  expect(persistedEntry).toMatchObject({
+    contract_line_id: line.contractLineId,
+    contract_line_source: 'reconciled_at_generation',
+  });
+  const linkedCharges = await tenantTable(db, tenantId, 'invoice_time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id })
+    .select('invoice_id');
+  expect(linkedCharges).toHaveLength(1);
+  const persistedUsage = await tenantTable(db, tenantId, 'usage_tracking')
+    .where({ tenant: tenantId, usage_id: usage.usage_id })
+    .first(['contract_line_id', 'contract_line_source', 'invoiced']);
+  expect(persistedUsage).toMatchObject({
+    contract_line_id: usageLine.contractLineId,
+    contract_line_source: 'reconciled_at_generation',
+    invoiced: true,
+  });
+  const linkedUsageCharges = await tenantTable(db, tenantId, 'invoice_usage_records')
+    .where({ tenant: tenantId, usage_id: usage.usage_id })
+    .select('invoice_id');
+  expect(linkedUsageCharges).toHaveLength(1);
+  await expect(generateInvoiceForSelectionInputs(selectorInputs)).resolves.toMatchObject({
+    actionError: expect.stringMatching(/already exists|duplicate/i),
+  });
+  expect(await tenantTable(db, tenantId, 'invoice_time_entries').where({ entry_id: entry.entry_id })).toHaveLength(1);
+  expect(await tenantTable(db, tenantId, 'invoice_usage_records').where({ usage_id: usage.usage_id })).toHaveLength(1);
+}, HOOK_TIMEOUT);
+
+it('T157: preview and PO-overage calculation reconcile for pricing but roll back attribution writes', async () => {
+  setupCommonMocks({ tenantId, userId: 'rollback-reconciliation-user', permissionCheck: () => true });
+  const { contextLike, clientId } = await createClientWithRecurringCycles({
+    clientName: 'Rollback Reconciliation Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: 'Rollback Reconciliation Service',
+    planName: 'Rollback Reconciliation Plan',
+    baseRateCents: 10000,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  await syncContractLineRecurringPeriods(line.contractLineId);
+  const entry = await createApprovedTimeEntryForContractLine({
+    clientId,
+    serviceId: line.serviceId,
+    contractLineId: null,
+    startTime: '2025-02-15T10:00:00.000Z',
+    endTime: '2025-02-15T11:00:00.000Z',
+  });
+  const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Rollback Reconciliation Client' });
+  const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+    .find((row) => row.contractLineId === line.contractLineId
+      && row.invoiceWindowStart === '2025-02-01'
+      && row.invoiceWindowEnd === '2025-03-01')?.selectorInput;
+  expect(selectorInput).toBeTruthy();
+
+  const preview = await withRealTransactions(() => previewInvoiceForSelectionInputAction(selectorInput!));
+  expect(preview).toMatchObject({ success: true });
+  expect(await tenantTable(db, tenantId, 'time_entries').where({ entry_id: entry.entry_id }).first('contract_line_id'))
+    .toMatchObject({ contract_line_id: null });
+
+  await tenantTable(db, tenantId, 'client_contracts').where({ client_contract_id: line.clientContractId }).update({
+    po_amount: 1,
+    po_required: false,
+  });
+  await withRealTransactions(() => getPurchaseOrderOverageForSelectionInputAction(selectorInput!));
+  expect(await tenantTable(db, tenantId, 'time_entries').where({ entry_id: entry.entry_id }).first('contract_line_id'))
+    .toMatchObject({ contract_line_id: null });
+}, HOOK_TIMEOUT);
+
+it('T158: failed generation rolls back reconciliation and a corrected retry can reconcile once', async () => {
+  setupCommonMocks({ tenantId, userId: 'failed-generation-retry-user', permissionCheck: () => true });
+  const { contextLike, clientId } = await createClientWithRecurringCycles({
+    clientName: 'Failed Generation Retry Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: 'Failed Generation Retry Service',
+    planName: 'Failed Generation Retry Plan',
+    baseRateCents: 10000,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  await syncContractLineRecurringPeriods(line.contractLineId);
+  const entry = await createApprovedTimeEntryForContractLine({
+    clientId,
+    serviceId: line.serviceId,
+    contractLineId: null,
+    startTime: '2025-02-15T10:00:00.000Z',
+    endTime: '2025-02-15T11:00:00.000Z',
+  });
+  const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Failed Generation Retry Client' });
+  const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+    .find((row) => row.contractLineId === line.contractLineId
+      && row.invoiceWindowStart === '2025-02-01'
+      && row.invoiceWindowEnd === '2025-03-01')?.selectorInput;
+  expect(selectorInput).toBeTruthy();
+
+  const calculationFailure = vi.spyOn(BillingEngine.prototype, 'calculateBillingForExecutionWindow')
+    .mockRejectedValue(new Error('forced calculation failure after reconciliation'));
+  let failedGeneration: unknown;
+  try {
+    failedGeneration = await withRealTransactions(() => generateInvoiceForSelectionInput(selectorInput!));
+  } catch (error) {
+    failedGeneration = error;
+  } finally {
+    calculationFailure.mockRestore();
+  }
+  expect(String(failedGeneration)).toMatch(/forced calculation failure|actionError/);
+  expect(await tenantTable(db, tenantId, 'time_entries').where({ entry_id: entry.entry_id }).first('contract_line_id'))
+    .toMatchObject({ contract_line_id: null });
+  await expect(withRealTransactions(() => generateInvoiceForSelectionInput(selectorInput!))).resolves.toBeTruthy();
+  expect(await tenantTable(db, tenantId, 'time_entries').where({ entry_id: entry.entry_id }).first('contract_line_id'))
+    .toMatchObject({ contract_line_id: line.contractLineId });
+}, HOOK_TIMEOUT);
+
+it('T159: production schema has time-entry updated_at but no usage_tracking updated_at', async () => {
+  const columns = await schemaTable(db, 'information_schema.columns', 'recurring attribution schema conformance')
+    .where({ table_schema: 'public' })
+    .whereIn('table_name', ['time_entries', 'usage_tracking'])
+    .where('column_name', 'updated_at')
+    .select('table_name', 'column_name');
+  const tablesWithUpdatedAt = new Set(columns.map((column) => column.table_name));
+  for (const descriptor of Object.values(ATTRIBUTION_TABLES)) {
+    expect(tablesWithUpdatedAt.has(descriptor.table)).toBe(descriptor.hasUpdatedAt);
+  }
+  expect(tablesWithUpdatedAt.has('usage_tracking')).toBe(false);
+});
+
 });
 
 interface ClientSetupResult {
@@ -5556,7 +5935,7 @@ async function createApprovedTimeEntryForContractLine(params: {
 async function createUsageRecordForContractLine(params: {
   clientId: string;
   serviceId: string;
-  contractLineId: string;
+  contractLineId?: string | null;
   usageDate: string;
   quantity: number;
 }) {

@@ -91,6 +91,7 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       if (typeof columnOrCriteria === 'function') {
         const scopedWhere: any = {
           where: vi.fn(() => scopedWhere),
+          orWhere: vi.fn(() => scopedWhere),
           orWhereNull: vi.fn(() => scopedWhere),
         };
         columnOrCriteria.call(scopedWhere);
@@ -111,6 +112,7 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       );
       return builder;
     }),
+    orWhere: vi.fn(() => builder),
     whereIn: vi.fn((column: string, values: any[]) => {
       const normalized = normalizeColumn(column);
       resultRows = resultRows.filter((row) => values.includes(row[normalized]));
@@ -118,6 +120,10 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
     }),
     whereNotNull: vi.fn((column: string) => {
       resultRows = resultRows.filter((row) => row[normalizeColumn(column)] != null);
+      return builder;
+    }),
+    whereNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => row[normalizeColumn(column)] == null);
       return builder;
     }),
     whereNotIn: vi.fn((column: string, values: any[]) => {
@@ -349,6 +355,9 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
     }
   },
   BillingEngine: class {
+    static forTransaction() {
+      return new this();
+    }
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;
