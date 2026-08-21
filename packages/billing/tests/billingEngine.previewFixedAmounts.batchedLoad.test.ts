@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Imported statically, not via `await import(...)` inside a test: compiling the
+// billingEngine graph costs seconds, and lazily importing it billed that whole
+// cost to whichever test ran first, which timed it out on a loaded CI runner.
+// Module load happens during collection, which no test timeout applies to.
+// vi.mock is hoisted above imports, so the mocks below still apply.
+import { BillingEngine, createFixedChargePreviewSession } from '../src/lib/billing/billingEngine';
+import { resolveFixedPlanLevelBaseRate } from '../src/lib/billing/compute/computeFixedCharges';
+
 type Row = Record<string, any>;
 
 const store = vi.hoisted(() => ({
@@ -258,7 +266,6 @@ const planService = (
 });
 
 async function createEngine() {
-  const { BillingEngine } = await import('../src/lib/billing/billingEngine');
   const engine = new BillingEngine();
   (engine as any).knex = knexMock;
   (engine as any).tenant = TENANT;
@@ -541,10 +548,6 @@ describe('previewFixedChargeAmountsForInvoiceWindow batched load', () => {
     services,
     expectedMajorUnits,
   }) => {
-    const { resolveFixedPlanLevelBaseRate } = await import(
-      '../src/lib/billing/compute/computeFixedCharges'
-    );
-
     expect(
       resolveFixedPlanLevelBaseRate({
         clientContractLine: { custom_rate: assignmentRate ?? undefined },
@@ -571,7 +574,6 @@ describe('previewFixedChargeAmountsForInvoiceWindow batched load', () => {
 
   it('never recomputes an unpriceable line across windows sharing a session', async () => {
     const engine = await createEngine();
-    const { createFixedChargePreviewSession } = await import('../src/lib/billing/billingEngine');
     const session = createFixedChargePreviewSession();
     const baseRateError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
