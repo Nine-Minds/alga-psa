@@ -10,16 +10,19 @@ import { Card } from "../../../ui/components/Card";
 import { SectionHeader } from "../../../ui/components/SectionHeader";
 import { useTheme } from "../../../ui/ThemeContext";
 import type { RootStackParamList } from "../../../navigation/types";
+import { SectionCollapseToggle } from "./SectionCollapseToggle";
 
 /** Assets linked to the ticket. Read-only here — linking happens from the asset side. */
 export function AssetsSection({
   client,
   apiKey,
   ticketId,
+  initiallyCollapsed = false,
 }: {
   client: ApiClient | null;
   apiKey: string;
   ticketId: string;
+  initiallyCollapsed?: boolean;
 }) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -27,6 +30,7 @@ export function AssetsSection({
   const [assets, setAssets] = useState<TicketAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(initiallyCollapsed);
 
   const load = useCallback(async () => {
     if (!client || !apiKey) return;
@@ -54,9 +58,19 @@ export function AssetsSection({
     <Card accessibilityLabel={t("assets.title", "Linked devices")}>
       <SectionHeader
         title={t("assets.title", "Linked devices")}
-        action={assets.length > 0 ? <Badge label={String(assets.length)} tone="neutral" /> : undefined}
+        action={(
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+            {assets.length > 0 ? <Badge label={String(assets.length)} tone="neutral" /> : null}
+            <SectionCollapseToggle
+              collapsed={collapsed}
+              onToggle={() => setCollapsed((value) => !value)}
+              sectionLabel={t("assets.title", "Linked devices")}
+            />
+          </View>
+        )}
       />
 
+      {collapsed ? null : <>
       {error ? (
         <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>{error}</Text>
       ) : null}
@@ -103,6 +117,7 @@ export function AssetsSection({
           })}
         </View>
       )}
+      </>}
     </Card>
   );
 }

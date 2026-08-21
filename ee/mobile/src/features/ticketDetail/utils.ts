@@ -1,4 +1,18 @@
-import type { TicketDetail } from "../../api/tickets";
+import type { TicketDetail, TicketNotificationSuppressionOptions } from "../../api/tickets";
+
+export function ticketUpdateSuccessMessage(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  notificationSuppression: TicketNotificationSuppressionOptions | undefined,
+  fallback: string,
+): string {
+  if (notificationSuppression?.suppressInternalNotifications) {
+    return t("notifications.suppression.successAll", { defaultValue: "Ticket updated with no notifications." });
+  }
+  if (notificationSuppression?.suppressContactNotifications) {
+    return t("notifications.suppression.successCustomer", { defaultValue: "Ticket updated without notifying the customer." });
+  }
+  return fallback;
+}
 
 export function stringOrDash(value: unknown): string {
   return typeof value === "string" && value.trim() ? value : "—";

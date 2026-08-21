@@ -81,6 +81,7 @@
     "recentlyUpdated": "Recently updated"
   },
   "detail": {
+    "details": "Details",
     "loadingTicket": "Loading ticket…",
     "ticketNotFound": "Ticket not found",
     "ticketNotFoundDescription": "This ticket may have been deleted.",
@@ -91,7 +92,11 @@
     "unableToLoadDescription": "Please try again.",
     "changeStatus": "Change status",
     "changePriority": "Change priority",
+    "priority": "Priority",
     "dueDate": "Due date",
+    "dueOn": "Due {{date}}",
+    "more": "More",
+    "moreTitle": "More actions",
     "watch": "Watch",
     "unwatch": "Unwatch",
     "addTime": "Add time",
@@ -165,9 +170,12 @@
     "loadingEditor": "Loading description editor…",
     "loadingDescription": "Loading description…",
     "tapToAdd": "Tap to add description…",
+    "empty": "Empty",
     "editorStillLoading": "Editor is still loading. Please try again.",
     "unableToReadEditor": "Unable to read the editor content right now. Please try again.",
     "descriptionUpdated": "Description updated",
+    "save": "Save description",
+    "cancel": "Cancel description editing",
     "errors": {
       "permission": "You don't have permission to edit this ticket description.",
       "validation": "Description update was rejected by the server.",
@@ -192,6 +200,7 @@
     "resolutionChecked": "Resolution ✓",
     "closeStatus": "Close status",
     "doNotChangeStatus": "Do not change status",
+    "closeNotificationHelper": "These settings apply to closing the ticket. The resolution comment follows its internal/customer visibility.",
     "event": "Event",
     "richComment": "Rich comment",
     "commentSent": "Comment sent",
@@ -292,14 +301,17 @@
   "tags": {
     "title": "Tags",
     "addTag": "Add tag",
+    "editTags": "Edit tags",
     "removeTag": "Remove tag {{tag}}",
     "tagAccessibility": "Tag {{tag}}",
     "empty": "No tags.",
-    "pickerTitle": "Add tag",
+    "pickerTitle": "Edit tags",
     "searchPlaceholder": "Search tags…",
     "selectTag": "Add tag {{tag}}",
     "createNew": "Add \"{{tag}}\"",
     "alreadyAdded": "Added",
+    "selected": "Selected",
+    "notificationsHelper": "Tag changes do not send ticket notifications.",
     "noResults": "No tags found.",
     "errors": {
       "load": "Unable to load tags.",
@@ -313,15 +325,37 @@
     "moreTags_one": "{{count}} more tag",
     "moreTags_other": "{{count}} more tags"
   },
+  "checklist": {
+    "title": "Checklist",
+    "progress": "Checklist {{completed}}/{{total}}",
+    "empty": "No checklist items.",
+    "add": "Add item",
+    "adding": "Adding…",
+    "placeholder": "Checklist item",
+    "required": "Required",
+    "requiredChecked": "Required ✓",
+    "selected": "Selected",
+    "markComplete": "Complete {{name}}",
+    "markIncomplete": "Mark {{name}} incomplete",
+    "completedBy": "Completed{{by}}{{at}}",
+    "errors": {
+      "load": "Unable to load checklist.",
+      "permission": "You don't have permission to update this checklist.",
+      "add": "Unable to add checklist item.",
+      "update": "Unable to update checklist item."
+    }
+  },
   "statusPicker": {
     "title": "Select status",
     "setStatus": "Set status {{name}}",
     "openLabel": "Open",
-    "closedLabel": "Closed"
+    "closedLabel": "Closed",
+    "apply": "Change status"
   },
   "priorityPicker": {
     "title": "Select priority",
-    "setPriority": "Set priority {{name}}"
+    "setPriority": "Set priority {{name}}",
+    "apply": "Change priority"
   },
   "create": {
     "title": "New Ticket",
@@ -375,6 +409,9 @@
     "assignTo": "Assign to {{name}}",
     "unassign": "Unassign",
     "currentlyAssigned": "Currently assigned to {{name}}",
+    "selected": "Selected: {{name}}",
+    "unassignSelected": "The ticket will be unassigned",
+    "apply": "Assign",
     "unableToLoad": "Unable to load agents.",
     "noResults": "No agents found."
   },
@@ -384,6 +421,9 @@
     "selectContact": "Select {{name}}",
     "remove": "Remove contact",
     "currentContact": "Current contact: {{name}}",
+    "selected": "Selected: {{name}}",
+    "removeSelected": "The contact will be removed",
+    "apply": "Change contact",
     "unableToLoad": "Unable to load contacts.",
     "noResults": "No contacts found."
   },
@@ -395,7 +435,30 @@
     "today": "Today",
     "tomorrow": "Tomorrow",
     "plus7Days": "+7 days",
-    "closeAccessibility": "Close due date editor"
+    "closeAccessibility": "Close due date editor",
+    "apply": "Save due date"
+  },
+  "notifications": {
+    "suppression": {
+      "contactLabel": "Don't notify the customer",
+      "contactHelper": "Skips customer email and portal notifications",
+      "internalLabel": "Also don't notify agents and watchers",
+      "internalHelper": "Skips their email and in-app notifications too",
+      "successCustomer": "Ticket updated without notifying the customer.",
+      "successAll": "Ticket updated with no notifications."
+    }
+  },
+  "confirm": {
+    "closeTitle": "Close this ticket?",
+    "closeMessage": "This changes the ticket to a closed status.",
+    "closeAction": "Close ticket",
+    "unassignTitle": "Unassign this ticket?",
+    "unassignMessage": "The ticket will no longer have a primary assignee.",
+    "reassignTitle": "Replace the current assignee?",
+    "reassignMessage": "This ticket is already assigned. The selected agent will replace the current assignee.",
+    "reassignAction": "Replace assignee",
+    "removeContactTitle": "Remove this contact?",
+    "removeContactMessage": "The ticket will no longer be linked to its current contact."
   },
   "timeEntries": {
     "title": "Logged Time",
