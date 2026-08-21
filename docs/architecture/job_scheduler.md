@@ -238,6 +238,22 @@ A recurring Temporal schedule bakes one `jobId` into its workflow action args at
 
 Without this self-healing, every subsequent schedule fire would fail at bookkeeping before the handler ran, generating orphan `pending` rows (~13k rows/day in a busy installation) while appearing COMPLETED in Temporal.
 
+### Cancellation during config changes
+
+When a recurring schedule is replaced or cancelled by a reconciler — for example, when a config change causes the system to tear down an old schedule before registering a new one — the runner marks the tracker row as **`completed`**, not `failed`. The row's metadata records why it was closed:
+
+```json
+{
+  "recurring": true,
+  "cancelReason": "Schedule cancelled",
+  "cancelledAt": "2026-08-21T10:00:00.000Z"
+}
+```
+
+This applies to both the PG Boss and Temporal runners. Before the August 2026 fix, these config-change cancellations wrote `failed` status, which permanently inflated the all-time failure count and kept the header attention dot amber during routine schedule replacements. Developers querying the jobs table should expect `completed` status for cancelled recurring schedules.
+
+> **Querying historical data:** Recurring schedule cancellations that occurred before August 2026 will appear as `failed` in the jobs table. New cancellations will appear as `completed` with `metadata.cancelReason = 'Schedule cancelled'`.
+
 ### Schedule teardown on tenant deletion
 
 When a tenant is deleted via `tenantDeletionWorkflow`, the workflow executes a `deleteTenantSchedules` activity as **step 10a, before** `deleteTenantData` drops the `jobs` table. The activity:
@@ -275,6 +291,15 @@ The job monitoring dashboard is available at `/msp/jobs` and displays:
 - Job history with filtering
 - Job details and error inspection
 - Runner type indicator (PG Boss vs Temporal)
+
+#### Header attention dot
+
+The application header shows an amber dot when there are recent job failures. As of August 2026, the dot is driven by **`failedLast24h`** — the count of jobs with `status = 'failed'` whose `updated_at` falls within the trailing 24 hours — not by the all-time `failed` count. This means:
+
+- The dot clears automatically once 24 hours have passed since the last failure; it no longer latches indefinitely on historical failures.
+- `JobMetrics.failed` still reflects the all-time failed count (useful for audits and reports) but no longer controls the header indicator.
+
+The practical effect is that routine schedule replacements (which previously wrote `failed` and kept the dot amber forever) no longer trigger the indicator at all, since they are now written as `completed` — see [Cancellation during config changes](#cancellation-during-config-changes) above.
 
 ### Programmatic Access
 
