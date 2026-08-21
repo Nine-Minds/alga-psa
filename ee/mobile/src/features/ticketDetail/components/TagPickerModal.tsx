@@ -110,8 +110,16 @@ export function TagPickerModal({
     !isSelected(trimmedSearch) &&
     !suggestions.some((s) => s.tag_text.toLowerCase() === trimmedSearch.toLowerCase()),
   );
+  const knownTagTextsLower = new Set([
+    ...appliedTagTexts.map((text) => text.toLowerCase()),
+    ...suggestions.map((suggestion) => suggestion.tag_text.toLowerCase()),
+  ]);
   const visibleTags = Array.from(
     new Map<string, TagSuggestion>([
+      // Selected-but-unknown texts (new tags staged via the create row) must
+      // stay visible as selected rows; later entries win so known tags keep
+      // their server-provided colors.
+      ...selectedTagTexts.map((tag_text): [string, TagSuggestion] => [tag_text.toLowerCase(), { tag_text, background_color: null, text_color: null }]),
       ...appliedTagTexts.map((tag_text): [string, TagSuggestion] => [tag_text.toLowerCase(), { tag_text, background_color: null, text_color: null }]),
       ...suggestions.map((suggestion): [string, TagSuggestion] => [suggestion.tag_text.toLowerCase(), suggestion]),
     ]).values(),
@@ -182,10 +190,26 @@ export function TagPickerModal({
                 marginBottom: spacing.sm,
               })}
             >
-              <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600", flex: 1 }}>
-                {t("tags.createNew", { tag: trimmedSearch, defaultValue: "Add \"{{tag}}\"" })}
+              <View
+                style={{
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  // Dashed preview: this tag doesn't exist yet.
+                  borderStyle: "dashed",
+                  borderColor: colors.primary,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 4,
+                }}
+              >
+                <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                  {trimmedSearch}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }} />
+              <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600" }}>
+                {t("tags.addTag", { defaultValue: "Add tag" })}
               </Text>
-              {busy ? <ActivityIndicator size="small" /> : null}
+              {busy ? <ActivityIndicator size="small" style={{ marginLeft: spacing.sm }} /> : null}
             </Pressable>
           ) : null}
 
@@ -210,6 +234,7 @@ export function TagPickerModal({
 
             {visibleTags.map((suggestion) => {
               const selected = isSelected(suggestion.tag_text);
+              const isNew = !knownTagTextsLower.has(suggestion.tag_text.toLowerCase());
               const chip = getTagChipColors(suggestion, mode);
               const disabled = busy;
               return (
@@ -239,7 +264,10 @@ export function TagPickerModal({
                     style={{
                       borderRadius: 999,
                       borderWidth: 1,
-                      borderColor: chip.borderColor,
+                      // Dashed border marks a tag that doesn't exist yet and
+                      // will be created on Apply.
+                      borderStyle: isNew ? "dashed" : "solid",
+                      borderColor: isNew ? colors.primary : chip.borderColor,
                       backgroundColor: chip.backgroundColor,
                       paddingHorizontal: spacing.md,
                       paddingVertical: 4,
@@ -250,7 +278,21 @@ export function TagPickerModal({
                     </Text>
                   </View>
                   <View style={{ flex: 1 }} />
-                  {selected ? (
+                  {isNew ? (
+                    <View
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.primary,
+                        borderRadius: 999,
+                        paddingHorizontal: spacing.sm,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "700" }}>
+                        {t("tags.newLabel", { defaultValue: "New" })}
+                      </Text>
+                    </View>
+                  ) : selected ? (
                     <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
                       {t("tags.selected", { defaultValue: "Selected" })}
                     </Text>

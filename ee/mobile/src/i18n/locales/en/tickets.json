@@ -311,6 +311,7 @@
     "createNew": "Add \"{{tag}}\"",
     "alreadyAdded": "Added",
     "selected": "Selected",
+    "newLabel": "New",
     "notificationsHelper": "Tag changes do not send ticket notifications.",
     "noResults": "No tags found.",
     "errors": {

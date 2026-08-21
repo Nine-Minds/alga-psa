@@ -39,6 +39,24 @@ describe("ticket checklist api", () => {
     });
   });
 
+  it("sends an explicit is_required=false for optional items", async () => {
+    const client = mockClient();
+    await createTicketChecklistItem(client, {
+      apiKey: "key-1",
+      ticketId: "ticket-1",
+      itemName: "Tidy cables",
+      isRequired: false,
+    });
+    expect(client.request).toHaveBeenCalledWith({
+      method: "POST",
+      path: "/api/v1/tickets/ticket-1/checklist",
+      headers: { "x-api-key": "key-1" },
+      // The server defaults an omitted is_required to true, so the client
+      // must always send the flag explicitly.
+      body: { item_name: "Tidy cables", is_required: false },
+    });
+  });
+
   it("updates only completion on the ticket-bound item route", async () => {
     const client = mockClient();
     await setTicketChecklistItemCompleted(client, {

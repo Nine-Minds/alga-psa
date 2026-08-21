@@ -46,7 +46,9 @@ export function createTicketChecklistItem(
     headers: { "x-api-key": params.apiKey, ...params.auditHeaders },
     body: {
       item_name: params.itemName,
-      ...(params.isRequired ? { is_required: true } : {}),
+      // Always explicit: the server-side action defaults an omitted
+      // is_required to true, which would make the "optional" toggle a no-op.
+      is_required: params.isRequired === true,
     },
   });
 }

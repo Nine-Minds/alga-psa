@@ -174,6 +174,27 @@ describe("TagPickerModal", () => {
     expect(createRow(renderer, "urgent")).toBeUndefined();
   });
 
+  it("keeps a staged new tag visible as a selected row", async () => {
+    const renderer = renderModal();
+    await flush();
+
+    typeSearch(renderer, "fresh");
+    await flush();
+
+    const row = createRow(renderer, "fresh");
+    expect(row).toBeDefined();
+    act(() => row!.props.onPress());
+
+    // The create row collapses once staged, but the tag must not vanish —
+    // it stays in the list, marked "New" to distinguish it from tags that
+    // already exist on the ticket.
+    expect(createRow(renderer, "fresh")).toBeUndefined();
+    const texts = getTextContent(renderer);
+    expect(texts).toContain("fresh");
+    expect(texts).toContain("tags.newLabel");
+    expect(texts).not.toContain("tags.selected");
+  });
+
   it("stages the trimmed search text and applies it explicitly", async () => {
     const onApply = vi.fn();
     const renderer = renderModal({ onApply });
