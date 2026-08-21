@@ -11,8 +11,49 @@ on:
           - testflight
           - playInternal
 
+permissions:
+  contents: read
+
 jobs:
+  preflight:
+    name: Mobile release preflight
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ee/mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ee/mobile
+        run: npm ci --include=dev
+
+      - name: Lint
+        working-directory: ee/mobile
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: ee/mobile
+        run: npm run typecheck
+
+      - name: Unit tests
+        working-directory: ee/mobile
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+        run: npm run test
+
+      - name: Verify Expo config resolves
+        working-directory: ee/mobile
+        run: npm run verify:expo-config
+
   distribute:
+    name: Build and submit ${{ inputs.target }}
+    needs: preflight
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,6 +75,14 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Prepare Google Play service account
+        if: inputs.target == 'playInternal'
+        working-directory: ee/mobile
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          node -e 'const fs = require("fs"); const value = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON; if (!value) throw new Error("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not configured"); const key = JSON.parse(value); if (key.type !== "service_account" || !key.client_email || !key.private_key) throw new Error("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not a service account key"); fs.writeFileSync("google-service-account.json", value, { mode: 0o600 });'
 
       - name: EAS build (wait)
         working-directory: ee/mobile
@@ -72,3 +121,9 @@ jobs:
               exit 1
               ;;
           esac
+
+      - name: Remove Google Play service account
+        if: always() && inputs.target == 'playInternal'
+        working-directory: ee/mobile
+        run: |
+          node -e 'require("fs").rmSync("google-service-account.json", { force: true })'
