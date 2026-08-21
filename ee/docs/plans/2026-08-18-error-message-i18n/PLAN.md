@@ -502,6 +502,17 @@ already landed there — in an evolved form that supersedes them. The resolution
   which translated by matching English prose, is deleted.
 - **One new key.** Main added a `Tax rate not found or already deleted.` branch to `taxRateActions`; it is
   keyed as `msp/billing-settings:errors.taxRate.notFoundOrAlreadyDeleted` and translated in all seven locales.
+- **The rebase brings its own backlog.** Replaying onto main a second time (2026-08-20) landed six new action
+  files whose 39 error returns were bare English again: the billing-profile family
+  (`clientBillingProfileActions`, `portalBillingProfileAccessActions`, `billingProfileReportActions`,
+  `billingProfileArActions`, `unresolvedChargeActions`), the portal segment views, and two board-settings
+  denials. All are keyed now — 15 `msp/clients:errors.billingProfile.*`, 7 under `msp/billing:errors.*`, one
+  new `client-portal:errors.access.billingSegment`, and the board pair reusing the existing
+  `features/tickets:errors.settings.updateDenied`. Re-run the repo-wide unkeyed-call-site grep after every
+  rebase; a feature branch merged in the meantime will not have known about the key channel.
+- **A private error constructor silently drops the key.** `client-billing-segments.ts` declared its own
+  one-argument `permissionError`, so passing a key was a type error rather than a no-op — the loud failure
+  mode, luckily. It now uses the shared `@alga-psa/ui/lib/errorHandling` helpers and the shared payload types.
 
 ## Category 7 — the `{ success: false, error }` channel (~1,132 literals across 254 files)
 
@@ -597,18 +608,25 @@ node tools/i18n/find-untranslated-ui.cjs --json    # re-run the error-shaped fil
 node tools/i18n/find-untranslated-ui.cjs --severity=high   # against 155
 ```
 
-Manual QA: switch locale to `xx` and walk the migrated flow — every string should read `11111`. Deliberately
-trigger the error paths; that is the only way the pseudo-locale catches an error message. The dev app signs in
-with a seeded user whose `hashed_password` column is PBKDF2 `salt:hash` over `NEXTAUTH_SECRET + salt`
-(`shared/utils/encryption.ts`), so a local QA password is one `UPDATE users` away.
+Manual QA: switch locale to `xx` and walk the migrated flow — every translated string reads as accented text
+inside `⟦…⟧` (yy uses `〖…〗` and pads ~40% for truncation testing). Anything still in plain English with no
+markers is unwired. Deliberately trigger the error paths; that is the only way the pseudo-locale catches an
+error message. The dev app signs in with a seeded user whose `hashed_password` column is PBKDF2 `salt:hash`
+over `NEXTAUTH_SECRET + salt` (`shared/utils/encryption.ts`), so a local QA password is one `UPDATE users`
+away.
 
-Two things a browser walk in `xx` will report that are not defects. Every string reading `11111` is the
-pseudo-locale working — `scripts/generate-pseudo-locales.cjs` maps xx to that literal fill and yy to `55555`.
-And React "two children with the same key" warnings appear in `xx` only, because every option label in a list
-collapses to the same fill; they do not reproduce in a real locale. A cold route in the dev server can also
-take a minute to compile on first hit and look hung — `/msp/security-settings` settles in about two seconds
-once Turbopack has built it. Prefer German for a walk that has to distinguish translated from untranslated:
-untranslated English stands out, where in `xx` it just looks like a string the fill missed.
+The pseudo-locales used to collapse every one of the 30,759 strings to a single fill (`11111` / `55555`).
+That made the QA pass useless — every label read the same — and it broke the app: components that key a list
+on a translated label got duplicate React keys, which corrupted the sidebar, the tab bars and the tables, and
+left stale nodes behind on the way back to English. `scripts/generate-pseudo-locales.cjs` now accents each
+value character by character through `tools/i18n/lib/pseudo-locale.mjs`, preserving `{{interpolation}}` and
+`<Trans>` tags, so distinct English stays distinct. Tests assert `pseudoPattern(locale)` from that same module
+rather than a literal fill.
+
+A cold route in the dev server can take a minute to compile on first hit and look hung —
+`/msp/security-settings` settles in about two seconds once Turbopack has built it. Prefer German for a walk
+that has to distinguish a *wrong* translation from a missing one; `xx` is the better tool for finding strings
+no key covers at all.
 
 Two checks worth running before calling a package done, because neither the gate nor the type-checker covers
 them:
