@@ -118,7 +118,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       sidebarBg: '#0f172a',
       sidebarText: '#f5f5f5',
       sidebarHover: '#1e293b',
-      headerBg: '#161c30',
+      headerBg: '#0f172a',
     },
   },
   ocean: {
@@ -190,7 +190,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       sidebarBg: '#082f49',
       sidebarText: '#ecfeff',
       sidebarHover: '#0c4a6e',
-      headerBg: '#0c2533',
+      headerBg: '#082f49',
     },
   },
   forest: {
@@ -298,7 +298,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       sidebarBg: '#1a120c',
       sidebarText: '#f5ece2',
       sidebarHover: '#33241a',
-      headerBg: '#2a1d13',
+      headerBg: '#1a120c',
     },
   },
   vice: {
@@ -334,7 +334,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
       sidebarBg: '#170538',
       sidebarText: '#fdeff9',
       sidebarHover: '#2a0d55',
-      headerBg: '#241050',
+      headerBg: '#170538',
     },
   },
   'high-contrast': {

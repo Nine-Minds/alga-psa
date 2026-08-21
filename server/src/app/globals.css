@@ -406,11 +406,23 @@ html.dark {
     --background: 12, 10, 24;
     --color-background: 12 10 24;    /* #0c0a18 — site --background */
     --color-card: 30 24 54;          /* #1e1836 — site --accent, the shell's content surface */
-    /* Shell ground: the muted surface one step below the card. */
-    --color-app-ground: var(--color-border-100);
-    /* Loading placeholders, one step above the card so they read without glaring. */
-    --color-skeleton: var(--color-border-300);
-    --color-skeleton-strong: var(--color-border-400);
+    /* Shell ground: the surface the cards sit on. border-50, not border-100 —
+       in dark the card is only ~3 luma off border-100 (2.9 on ocean, 3.3 on
+       sunset, and slate is inverted at -11.8), so cards had no fill separation
+       at all and survived on their border alone. border-50 puts the step at
+       ~11.5 on the default pair, matching what light already gets from
+       border-100. Light keeps border-100: moving it there would halve the light
+       step instead (alga 10.6 -> 5.3). */
+    --color-app-ground: var(--color-border-50);
+    /* Loading placeholders, one step above the card so they read without glaring.
+       border-400, not -300: this pair's border ramp is compressed, so -300 sat
+       only 16.4 luma off the card here against 23.7 in light and 26-55 on every
+       other dark pair — the weakest skeleton in the set. -400 is 24.9, matching
+       light. The strong tier is a literal because the ramp jumps 24.9 -> 80.9
+       between -400 and -500; this value is interpolated onto that ramp at 39.7,
+       keeping the two tiers distinguishable without glaring. */
+    --color-skeleton: var(--color-border-400);
+    --color-skeleton-strong: 72 62 104;
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -451,12 +463,19 @@ html.dark {
     --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
+    /* Border ramp, retuned 2026-08-21. Measured against --color-card, the dark
+       steps were far subtler than their light counterparts (border-200 was
+       Δ8.4 against light's Δ23.7), so every card, control and table edge went
+       mushy in dark while looking crisp in light. Raised to a Δ18 floor here;
+       pairs that already cleared it (slate, ocean, sky, sunset, vice) keep
+       their own values — a retune must lift a weak edge, never flatten a
+       strong one. High contrast is exempt: its borders are pure black/white. */
     --color-border-base: 58 47 89;
     --color-border-50: 19 13 36;     /* #130d24 — site deep well, wells inside cards */
     --color-border-100: 27 21 48;    /* #1b1530 — the site's muted surface, the shell ground one step under the card */
-    --color-border-200: 39 32 65;    /* #272041 border base */
-    --color-border-300: 47 39 82;    /* #2f2752 border mid */
-    --color-border-400: 58 47 89;    /* #3a2f59 border strong */
+    --color-border-200: 49 41 82;    /* #272041 border base */
+    --color-border-300: 59 49 104;    /* #2f2752 border mid */
+    --color-border-400: 75 61 115;    /* #3a2f59 border strong */
     --color-border-500: 111 104 144;  /* #6f6890 */
     --color-border-600: 154 146 184;  /* #9a92b8 */
     --color-border-700: 201 195 224;  /* #c9c3e0 */
@@ -988,7 +1007,7 @@ html.dark[data-theme-pair="slate"] {
     --color-sidebar-icon: 148 163 184;
 
     /* Header Colors  */
-    --color-header-bg: 22 28 48;
+    --color-header-bg: 15 23 42;
     --color-header-text: 245 245 245;
     --color-header-border: 51 65 85;
 
@@ -1433,7 +1452,7 @@ html.dark[data-theme-pair="sky"] {
     --color-sidebar-icon: 145 171 182;
 
     /* Header Colors */
-    --color-header-bg: 12 37 51;
+    --color-header-bg: 8 47 73;
     --color-header-text: 232 251 255;
     --color-header-border: 23 66 82;
 
@@ -1572,7 +1591,7 @@ html.dark[data-theme-pair="forest"] {
     --color-border-base: 51 81 60;
     --color-border-50: 12 21 15;
     --color-border-100: 15 26 19;
-    --color-border-200: 30 50 38;
+    --color-border-200: 31 51 39;
     --color-border-300: 40 64 47;
     --color-border-400: 51 81 60;
     --color-border-500: 107 130 114;
@@ -2024,6 +2043,8 @@ html.light[data-theme-pair="high-contrast"] {
 }
 
 html.dark[data-theme-pair="high-contrast"] {
+    /* Card is #000 here; border-50 is too, so the ground stays one step up. */
+    --color-app-ground: var(--color-border-100);
     --background: 0, 0, 0;
     --color-background: 0 0 0;
     --color-card: 0 0 0;
@@ -2286,8 +2307,8 @@ html.dark[data-theme-pair="cappuccino"] {
     --color-border-base: 93 69 47;
     --color-border-50: 26 18 12;
     --color-border-100: 31 21 14;
-    --color-border-200: 58 42 29;
-    --color-border-300: 74 54 38;
+    --color-border-200: 64 46 32;
+    --color-border-300: 77 56 39;
     --color-border-400: 93 69 47;
     --color-border-500: 163 144 126;
     --color-border-600: 200 182 164;
@@ -2369,7 +2390,7 @@ html.dark[data-theme-pair="cappuccino"] {
     --color-sidebar-icon: 163 144 126;
 
     /* Header Colors */
-    --color-header-bg: 42 29 19;
+    --color-header-bg: 26 18 12;
     --color-header-text: 245 236 226;
     --color-header-border: 58 42 29;
 
@@ -2591,7 +2612,7 @@ html.dark[data-theme-pair="vice"] {
     --color-sidebar-icon: 180 140 203;
 
     /* Header Colors */
-    --color-header-bg: 36 16 80;
+    --color-header-bg: 23 5 56;
     --color-header-text: 253 239 249;
     --color-header-border: 52 23 107;
 
