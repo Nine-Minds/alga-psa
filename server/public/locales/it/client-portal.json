@@ -704,9 +704,14 @@
   },
   "notifications": {
     "title": "Notifiche",
+    "bellUnreadAria": "Notifiche ({{unread}} non lette)",
+    "unreadDot": "Notifiche non lette",
+    "reconnecting": "Riconnessione...",
     "markAsRead": "Segna come letta",
     "markAllAsRead": "Segna tutto come letto",
     "noNotifications": "Nessuna nuova notifica",
+    "unreadCount_one": "{{count}} notifica non letta",
+    "unreadCount_other": "{{count}} notifiche non lette",
     "settings": "Impostazioni notifiche",
     "viewAll": "Visualizza tutte le notifiche",
     "tabs": {

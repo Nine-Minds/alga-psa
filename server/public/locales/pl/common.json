@@ -213,6 +213,10 @@
       "signingOut": "Wylogowywanie...",
       "action": "Wyloguj się"
     },
+    "passwordReset": {
+      "title": "Wymagana zmiana hasła",
+      "description": "Nadal używasz hasła tymczasowego. Zmień hasło, aby zabezpieczyć swoje konto."
+    },
     "twoFactor": {
       "codeLabel": "Kod 2FA",
       "verify": "Zweryfikuj",

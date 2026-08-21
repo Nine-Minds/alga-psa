@@ -753,9 +753,14 @@
   },
   "notifications": {
     "title": "55555",
+    "bellUnreadAria": "55555 {{unread}} 55555",
+    "unreadDot": "55555",
+    "reconnecting": "55555",
     "markAsRead": "55555",
     "markAllAsRead": "55555",
     "noNotifications": "55555",
+    "unreadCount_one": "55555 {{count}} 55555",
+    "unreadCount_other": "55555 {{count}} 55555",
     "settings": "55555",
     "viewAll": "55555",
     "tabs": {

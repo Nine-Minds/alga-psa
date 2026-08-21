@@ -704,9 +704,14 @@
   },
   "notifications": {
     "title": "Notificaties",
+    "bellUnreadAria": "Notificaties ({{unread}} ongelezen)",
+    "unreadDot": "Ongelezen notificaties",
+    "reconnecting": "Opnieuw verbinden...",
     "markAsRead": "Markeren als gelezen",
     "markAllAsRead": "Alles als gelezen markeren",
     "noNotifications": "Geen nieuwe notificaties",
+    "unreadCount_one": "{{count}} ongelezen notificatie",
+    "unreadCount_other": "{{count}} ongelezen notificaties",
     "settings": "Notificatie-instellingen",
     "viewAll": "Alle notificaties bekijken",
     "tabs": {

@@ -241,6 +241,10 @@
       "signingOut": "11111",
       "action": "11111"
     },
+    "passwordReset": {
+      "title": "11111",
+      "description": "11111"
+    },
     "twoFactor": {
       "codeLabel": "11111",
       "verify": "11111",

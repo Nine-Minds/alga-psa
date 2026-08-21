@@ -710,6 +710,10 @@
       "signingOut": "Abmeldung läuft...",
       "action": "Abmelden"
     },
+    "passwordReset": {
+      "title": "Passwortänderung erforderlich",
+      "description": "Sie verwenden weiterhin ein temporäres Passwort. Bitte ändern Sie Ihr Passwort, um Ihr Konto zu schützen."
+    },
     "twoFactor": {
       "codeLabel": "2FA-Code",
       "verify": "Bestätigen",

@@ -706,9 +706,16 @@
   },
   "notifications": {
     "title": "Powiadomienia",
+    "bellUnreadAria": "Powiadomienia ({{unread}} nieprzeczytanych)",
+    "unreadDot": "Nieprzeczytane powiadomienia",
+    "reconnecting": "Ponowne łączenie...",
     "markAsRead": "Oznacz jako przeczytane",
     "markAllAsRead": "Oznacz wszystkie jako przeczytane",
     "noNotifications": "Brak nowych powiadomień",
+    "unreadCount_one": "{{count}} nieprzeczytane powiadomienie",
+    "unreadCount_few": "{{count}} nieprzeczytane powiadomienia",
+    "unreadCount_many": "{{count}} nieprzeczytanych powiadomień",
+    "unreadCount_other": "{{count}} nieprzeczytanych powiadomień",
     "settings": "Ustawienia powiadomień",
     "viewAll": "Zobacz wszystkie powiadomienia",
     "tabs": {

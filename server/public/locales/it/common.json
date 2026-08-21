@@ -199,6 +199,10 @@
       "signingOut": "Disconnessione in corso...",
       "action": "Esci"
     },
+    "passwordReset": {
+      "title": "Modifica della password richiesta",
+      "description": "Stai ancora utilizzando una password temporanea. Modifica la tua password per proteggere il tuo account."
+    },
     "twoFactor": {
       "codeLabel": "Codice 2FA",
       "verify": "Verifica",

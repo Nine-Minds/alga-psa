@@ -2,9 +2,11 @@
 
 Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19, and again
 2026-08-20 after a browser walk found the category the first inventory missed.
-Categories 1, 2, 3, 4 and 6 are done; category 5 is a 139-file ratchet; **category 7 — the
+Categories 1, 2, 3, 4 and 6 are done; category 5 is a 137-file ratchet; **category 7 — the
 `{ success: false, error }` channel — is newly opened, mechanism landed, one path migrated.**
 Rebased onto main 2026-08-20; see "Rebase reconciliation" below for what main changed underfoot.
+The verification list below grew a third entry on 2026-08-20 — see "Namespace arrays hid a
+pack of English defaults", which the gate, `tsc` and both ad hoc greps all missed.
 
 ## Context
 
@@ -147,7 +149,8 @@ Landed on `i18n/error_messages`:
   `ConflictResolutionDialog`, `StatusDialog`, `ColorPicker`, `RmmAlertAutomationSettings`, the auth-owned
   `Alert`, `SignOutDialog`, `TwoFA`, `PolicyManagement` and `RoleManagement`, and — after the rebase —
   `TimePeriodList`, `TimePeriodForm`, `TimeEntrySettings` and `EditableServiceTypeSelect`), plus 3 stale
-  baseline entries dropped. Ratchet is at **139**. `IconPicker` remains last. The three shared files wired in the earlier pass
+  baseline entries dropped, and — 2026-08-20 — `PasswordResetWarning` and `NotificationBell`. Ratchet is at
+  **137**. `IconPicker` remains last. The three shared files wired in the earlier pass
   take their keys from `common`, because none belongs to one route's namespace — check
   `ROUTE_NAMESPACES` before reaching for a feature namespace, since `/msp/projects` does not load
   `msp/settings` and `StatusDialog` renders from both. Each hid a concatenation: `Conflict:` + a clause,
@@ -159,17 +162,17 @@ Landed on `i18n/error_messages`:
   `react-i18next` in a package that does not have it. Leave letterform samples like `"Aa"` alone: a key whose
   value is identical in every locale fails `audit.cjs`.
 
-Ratchet at time of writing: high-severity files **139** (from 155). Error-shaped literals **2,933 across 507
+Ratchet at time of writing: high-severity files **137** (from 155). Error-shaped literals **2,933 across 507
 files** (from 3,365 across 533). Note the literal number moves slowly by design —
 `actionError('English', 'key')` still contains the English, so a migrated call site keeps counting until the
 fallback is dropped. Judge category 1 by packages migrated, not by this number.
 
 `find-untranslated-ui.cjs --json` emits valid JSON again (the two-line JSX prop that used to break the
 `detail` string is gone), so the ratchet can be read machine-readably:
-`node -e` over `high[]` for the 139, and over `high[].findings[] ∪ partial[].findings[]` filtered on
+`node -e` over `high[]` for the 137, and over `high[].findings[] ∪ partial[].findings[]` filtered on
 error-shaped prose for the 2,933.
 
-Two checks worth keeping, because neither the gate nor `tsc` covers them:
+Three checks worth keeping, because neither the gate nor `tsc` covers them:
 
 - **Every `<namespace>:errors.<key>` named in source resolves in all eight real locales.** A typo falls back
   to English and nothing complains. Collect the refs with a regex over `packages server ee/server`, then walk
@@ -181,6 +184,20 @@ Two checks worth keeping, because neither the gate nor `tsc` covers them:
   `Permission denied: inventory:read required` beside `Permission denied: inventory read required`; both now
   point at `errors.permissions.inventoryRead`, so the raw permission code stops leaking and the two screens
   read the same sentence in every locale.
+- **Namespace arrays hid a pack of English defaults** (found 2026-08-20). `server/src/test/unit/app/
+  translationKeyResolution.test.ts` is the only check that catches a key missing from *English* — parity
+  passes, because a key absent everywhere leaves the packs in perfect agreement, and the string silently
+  renders its inline `defaultValue` in all ten locales. Its namespace regex only read
+  `useTranslation('ns')`, so the ~100 files using `useTranslation(['a', 'b'])` were skipped outright — and
+  a file holding *both* forms was checked against the wrong pack, which is how `RegisterForm`'s twenty-two
+  `client-portal` keys were reported unresolved against `common`. Reading every namespace out of the array
+  fixes the false positive and reaches the skipped files: twenty keys turned up living only as English
+  defaults (`billing.cap.hardHint`, `billing.terms.lockedSummary`, `billing.entry.increaseTotal(+Hint)`,
+  `billing.schedule.{unapprove,amountLocked}`, `clientPortal.{showBilling,showBillingDescription,
+  summary.billing}`, `projectDetail.spacing.*`, `comments.{reply,addFailed}`,
+  `templates.taskForm.{edit,remove}ChecklistItem`), plus `billing.schedule.unapproved` — a toast key passed
+  positionally to a helper, so it is invisible even to the sharpened regex. All are in the packs now.
+  Run this test whenever a file gains a namespace array; `npm run test:i18n` will not tell you.
 
 Walked in a browser against a running app (2026-08-19), driving the real sign-in form and the real
 language picker rather than a cookie:
@@ -545,7 +562,7 @@ Two traps specific to this channel:
 4. ~~Category 1 step 3 — migrate package by package.~~ Done, every package. Category 4 largely resolved
    itself, as predicted: the `actionError`-origin toasts translate at the boundary with no edit.
 5. ~~Category 2 — attach keys to user-visible Zod issues and map them structurally.~~ Done.
-6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 139 to go.
+6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 137 to go.
 7. Category 7 — the `{ success: false, error }` channel. Mechanism landed and the password path migrated;
    the remaining ~1,132 literals are per-package work, ee and integrations first by volume, but ordered by
    user exposure the same way category 1 was. Check `handleError`'s fallback precedence before keying a
@@ -565,6 +582,13 @@ node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.c
 Full gate: `npm run test:i18n`. Per-locale quality: `node tools/i18n/audit.cjs --locale de` (glossaries in
 `tools/i18n/<locale>/glossary.json` carry forbidden-term rules — de/es/fr/it/nl/pl/pt all need real
 translations, not English copies).
+
+Neither of those sees a key that is missing from English too. That one lives in server's unit suite and has
+to be run separately:
+
+```bash
+npx vitest run src/test/unit/app/translationKeyResolution.test.ts   # from server/
+```
 
 Progress on this plan specifically:
 

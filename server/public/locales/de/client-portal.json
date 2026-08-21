@@ -704,9 +704,14 @@
   },
   "notifications": {
     "title": "Benachrichtigungen",
+    "bellUnreadAria": "Benachrichtigungen ({{unread}} ungelesen)",
+    "unreadDot": "Ungelesene Benachrichtigungen",
+    "reconnecting": "Verbindung wird wiederhergestellt...",
     "markAsRead": "Als gelesen markieren",
     "markAllAsRead": "Alle als gelesen markieren",
     "noNotifications": "Keine neuen Benachrichtigungen",
+    "unreadCount_one": "{{count}} ungelesene Benachrichtigung",
+    "unreadCount_other": "{{count}} ungelesene Benachrichtigungen",
     "settings": "Benachrichtigungseinstellungen",
     "viewAll": "Alle Benachrichtigungen anzeigen",
     "tabs": {

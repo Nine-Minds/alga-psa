@@ -710,6 +710,10 @@
       "signingOut": "Déconnexion en cours...",
       "action": "Se déconnecter"
     },
+    "passwordReset": {
+      "title": "Changement de mot de passe requis",
+      "description": "Vous utilisez encore un mot de passe temporaire. Veuillez modifier votre mot de passe pour sécuriser votre compte."
+    },
     "twoFactor": {
       "codeLabel": "Code 2FA",
       "verify": "Vérifier",

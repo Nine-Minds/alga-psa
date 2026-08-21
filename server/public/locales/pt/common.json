@@ -241,6 +241,10 @@
       "signingOut": "Saindo...",
       "action": "Sair"
     },
+    "passwordReset": {
+      "title": "Alteração de senha obrigatória",
+      "description": "Você ainda está usando uma senha temporária. Altere sua senha para proteger sua conta."
+    },
     "twoFactor": {
       "codeLabel": "Código 2FA",
       "verify": "Verificar",

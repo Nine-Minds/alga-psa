@@ -753,9 +753,14 @@
   },
   "notifications": {
     "title": "Notifications",
+    "bellUnreadAria": "Notifications ({{unread}} unread)",
+    "unreadDot": "Unread notifications",
+    "reconnecting": "Reconnecting...",
     "markAsRead": "Mark as read",
     "markAllAsRead": "Mark all as read",
     "noNotifications": "No new notifications",
+    "unreadCount_one": "{{count}} unread notification",
+    "unreadCount_other": "{{count}} unread notifications",
     "settings": "Notification Settings",
     "viewAll": "View all notifications",
     "tabs": {

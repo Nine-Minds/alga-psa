@@ -241,6 +241,10 @@
       "signingOut": "Signing out...",
       "action": "Sign out"
     },
+    "passwordReset": {
+      "title": "Password Change Required",
+      "description": "You are still using a temporary password. Please change your password to secure your account."
+    },
     "twoFactor": {
       "codeLabel": "2FA Code",
       "verify": "Verify",

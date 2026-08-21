@@ -139,6 +139,10 @@
       "signingOut": "Cerrando sesión...",
       "action": "Cerrar sesión"
     },
+    "passwordReset": {
+      "title": "Se requiere cambiar la contraseña",
+      "description": "Todavía está utilizando una contraseña temporal. Cambie su contraseña para proteger su cuenta."
+    },
     "twoFactor": {
       "codeLabel": "Código 2FA",
       "verify": "Verificar",

@@ -710,6 +710,10 @@
       "signingOut": "Bezig met afmelden...",
       "action": "Afmelden"
     },
+    "passwordReset": {
+      "title": "Wachtwoord wijzigen vereist",
+      "description": "U gebruikt nog steeds een tijdelijk wachtwoord. Wijzig uw wachtwoord om uw account te beveiligen."
+    },
     "twoFactor": {
       "codeLabel": "2FA-code",
       "verify": "Verifiëren",
