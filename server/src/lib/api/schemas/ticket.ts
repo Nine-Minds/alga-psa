@@ -21,9 +21,12 @@ const ticketNotificationSuppressionSchema = {
 };
 
 function validateTicketNotificationSuppression(
+  // `unknown` props keep this callback contravariance-compatible with every
+  // schema it refines — createUpdateSchema() output types its fields as
+  // unknown, which a `boolean`-typed parameter rejects.
   value: {
-    suppressContactNotifications?: boolean;
-    suppressInternalNotifications?: boolean;
+    suppressContactNotifications?: unknown;
+    suppressInternalNotifications?: unknown;
   },
   ctx: z.RefinementCtx,
 ): void {

@@ -1,3 +1,4 @@
+import type { ZodTypeAny } from 'zod';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 
 export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
@@ -376,7 +377,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : GenericBody };
     if (def.path.startsWith('/api/v1/tickets') && (def.method === 'post' || def.method === 'put')) {
-      let schema = def.path === '/api/v1/tickets' ? CreateTicketBody : GenericBody;
+      let schema: ZodTypeAny = def.path === '/api/v1/tickets' ? CreateTicketBody : GenericBody;
       if (def.method === 'put' && def.path === '/api/v1/tickets/{id}') schema = TicketUpdateBody;
       if (def.method === 'put' && def.path === '/api/v1/tickets/{id}/status') schema = TicketStatusUpdateBody;
       if (def.method === 'put' && def.path === '/api/v1/tickets/{id}/assignment') schema = TicketAssignmentUpdateBody;
