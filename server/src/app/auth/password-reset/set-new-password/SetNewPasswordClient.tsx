@@ -116,7 +116,7 @@ const SetNewPasswordClient: React.FC<SetNewPasswordClientProps> = ({ branding, p
 
     // Shared policy gate: catches rules not shown in the checklist (common-word
     // blocklist, long-sequence rejection) and surfaces the specific reason.
-    const policyError = validatePasswordPolicy(formData.password);
+    const policyError = validatePasswordPolicy(formData.password, t);
     if (policyError) {
       setIsAlertOpen(true);
       setAlertInfo({
