@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
-import { Pencil, Trash, Lock, CheckCircle, Cog, CornerUpLeft, MessageCircle } from 'lucide-react';
+import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { IComment } from '@alga-psa/types';
@@ -22,6 +22,8 @@ import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
+import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
+import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
 
@@ -115,6 +117,30 @@ function parseCommentNoteContent(
   });
 }
 
+async function writeCommentToClipboard(html: string, text: string): Promise<void> {
+  const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+
+  if (html && typeof clipboard?.write === 'function' && typeof ClipboardItem === 'function') {
+    try {
+      await clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        }),
+      ]);
+      return;
+    } catch {
+      // Browsers that refuse the rich flavor still take plain text — fall through.
+    }
+  }
+
+  if (typeof clipboard?.writeText !== 'function') {
+    throw new Error('Clipboard unavailable');
+  }
+
+  await clipboard.writeText(text);
+}
+
 const CommentItem: React.FC<CommentItemProps> = ({
   id,
   conversation,
@@ -144,6 +170,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
   // toLocaleString() follows the browser; comment timestamps belong to the app locale.
   const { formatDate } = useFormatters();
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const copyResetTimeoutRef = useRef<number | null>(null);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
@@ -209,6 +237,43 @@ const CommentItem: React.FC<CommentItemProps> = ({
     if (conversation.is_system_generated) return false;
     return currentUserId === conversation.user_id;
   }, [conversation.user_id, currentUserId, isDeleted]);
+
+  const plainTextForCopy = useMemo(
+    () => extractTicketRichTextPlainText(conversation.note),
+    [conversation.note]
+  );
+  const canCopy = !isDeleted && plainTextForCopy.trim().length > 0;
+
+  useEffect(() => () => {
+    if (copyResetTimeoutRef.current !== null) {
+      window.clearTimeout(copyResetTimeoutRef.current);
+    }
+  }, []);
+
+  const handleCopyComment = useCallback(async () => {
+    try {
+      // Serialized on demand: only the copy click needs the HTML flavor.
+      await writeCommentToClipboard(extractTicketRichTextHtml(conversation.note), plainTextForCopy);
+      setCopyState('copied');
+    } catch {
+      setCopyState('error');
+    }
+
+    if (copyResetTimeoutRef.current !== null) {
+      window.clearTimeout(copyResetTimeoutRef.current);
+    }
+    copyResetTimeoutRef.current = window.setTimeout(() => {
+      copyResetTimeoutRef.current = null;
+      setCopyState('idle');
+    }, 2000);
+  }, [conversation.note, plainTextForCopy]);
+
+  const copyCommentLabel =
+    copyState === 'copied'
+      ? t('conversation.commentCopied', 'Copied')
+      : copyState === 'error'
+        ? t('conversation.commentCopyFailed', 'Copy failed')
+        : t('conversation.copyCommentAriaLabel', 'Copy comment text');
 
   const handleSave = () => {
     const updates: Partial<IComment> = {
@@ -498,8 +563,25 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </div>
               )}
             </div>
-            {((onReply && !isDeleted) || canEdit) && (
+            {(canCopy || (onReply && !isDeleted) || canEdit) && (
               <div className="c-actions space-x-2">
+                {canCopy && (
+                  <Tooltip content={copyCommentLabel}>
+                    <Button
+                      id={`copy-comment-${conversation.comment_id}-button`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void handleCopyComment()}
+                      aria-label={copyCommentLabel}
+                    >
+                      {copyState === 'copied' ? (
+                        <Check className="w-4 h-4 text-emerald-500" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </Tooltip>
+                )}
                 {onReply && !isDeleted && (
                   <Button
                     id={`reply-comment-${conversation.comment_id}-button`}
