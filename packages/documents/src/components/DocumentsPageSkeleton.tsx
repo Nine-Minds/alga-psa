@@ -8,7 +8,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 export function DocumentSkeletonCard({ id }: { id: string }): React.JSX.Element {
   return (
     <ReflectionContainer id={id} label="Document Skeleton Card">
-      <div className="bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col">
+      <div className="bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] card-elevated p-4 h-full flex flex-col">
         <div className="flex-1">
           {/* Document header with icon and title */}
           <div className="flex items-start justify-between mb-3">
@@ -94,7 +94,7 @@ export default function DocumentsPageSkeleton(): React.JSX.Element {
       <div className="flex gap-6">
         {/* Skeleton for filters sidebar */}
         <div className="w-80">
-          <div className="bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4">
+          <div className="bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] card-elevated p-4">
             <div className="space-y-4">
               {/* Search input skeleton */}
               <div>
@@ -150,7 +150,7 @@ export default function DocumentsPageSkeleton(): React.JSX.Element {
         
         {/* Skeleton for documents content */}
         <div className="flex-1">
-          <div className="bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4">
+          <div className="bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] card-elevated p-4">
             <DocumentsGridSkeleton />
           </div>
         </div>

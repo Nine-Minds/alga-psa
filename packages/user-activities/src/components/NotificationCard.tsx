@@ -123,7 +123,7 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
     <div
       className={restyled
         ? restyledClassName
-        : `p-4 border-l-4 ${getBorderColor(notification.status)} ${!notification.isRead ? 'bg-primary-50' : 'bg-white'} rounded-md shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
+        : `p-4 border-l-4 ${getBorderColor(notification.status)} ${!notification.isRead ? 'bg-primary-50' : 'bg-[rgb(var(--color-card))]'} rounded-md card-elevated card-elevated-hover transition-shadow cursor-pointer`}
       style={restyled ? restyledStyle : undefined}
       onClick={handleClick}
       id={`notification-card-${notification.id}`}
