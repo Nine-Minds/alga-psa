@@ -36,6 +36,10 @@ describe('T045/T046 click-to-call', () => {
     expect(document.getElementById('contact-phone-2-teams')?.getAttribute('href')).toContain(
       'teams.microsoft.com/l/call',
     );
+    // Translated with a defaultValue, so it still reads in English with no bundle loaded.
+    expect(document.getElementById('contact-phone-2-teams')?.getAttribute('title')).toBe(
+      'Call in Microsoft Teams',
+    );
     cleanup();
   });
 });
