@@ -9,9 +9,33 @@ import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { TicketModel } from '@shared/models/ticketModel';
 import { runWithTenant } from '@alga-psa/db';
 import { publishScheduledCommentHandler } from '@/lib/jobs/handlers/publishScheduledCommentHandler';
+import { addTicketCommentWithCache } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { createComment } from '@alga-psa/tickets/actions/comment-actions/commentActions';
 
-const eventMocks = vi.hoisted(() => ({ publishEvent: vi.fn().mockResolvedValue(undefined) }));
+const eventMocks = vi.hoisted(() => ({
+  publishEvent: vi.fn().mockResolvedValue(undefined),
+  publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+}));
+const optimizedPathMocks = vi.hoisted(() => ({
+  user: null as any,
+  tenant: null as string | null,
+  scheduleJobAt: vi.fn(),
+  getJobRunner: vi.fn(),
+  maybeReopenBundleMasterFromChildReply: vi.fn(),
+  hasPermission: vi.fn(),
+}));
 vi.mock('@alga-psa/event-bus/publishers', () => eventMocks);
+vi.mock('@alga-psa/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/auth')>()),
+  withAuth: (action: any) => (...args: any[]) => action(optimizedPathMocks.user, { tenant: optimizedPathMocks.tenant }, ...args),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: optimizedPathMocks.hasPermission }));
+vi.mock('@alga-psa/jobs/runner', () => ({
+  getJobRunner: optimizedPathMocks.getJobRunner,
+}));
+vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
+  maybeReopenBundleMasterFromChildReply: optimizedPathMocks.maybeReopenBundleMasterFromChildReply,
+}));
 
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: vi.fn().mockResolvedValue(null),
@@ -730,6 +754,92 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
     expect((comments as any[]).map((comment) => comment.note)).toContain('Release me once');
     const activities = await db('ticket_audit_logs').where({ tenant: fixture.tenantId, entity_id: commentId, event_type: 'TICKET_COMMENT_PUBLISHED' });
     expect(activities).toHaveLength(1);
+  });
+
+  it('persists an optimized MSP schedule and defers all public-comment side effects until publication', async () => {
+    const publishAt = new Date(Date.now() + 3_600_000);
+    const scheduledJobId = uuidv4();
+    const before = await db('tickets')
+      .where({ tenant: fixture.tenantId, ticket_id: fixture.ticketVisibleId })
+      .first('response_state', 'status_id');
+
+    optimizedPathMocks.user = {
+      user_id: fixture.internalUserId,
+      user_type: 'internal',
+      first_name: 'Internal',
+      last_name: 'User',
+    };
+    optimizedPathMocks.tenant = fixture.tenantId;
+    optimizedPathMocks.scheduleJobAt.mockResolvedValue({ jobId: scheduledJobId });
+    optimizedPathMocks.getJobRunner.mockResolvedValue({ scheduleJobAt: optimizedPathMocks.scheduleJobAt });
+    optimizedPathMocks.hasPermission.mockResolvedValue(true);
+    optimizedPathMocks.maybeReopenBundleMasterFromChildReply.mockClear();
+    eventMocks.publishEvent.mockClear();
+    eventMocks.publishWorkflowEvent.mockClear();
+
+    const result = await addTicketCommentWithCache(
+      fixture.ticketVisibleId,
+      JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Publish later', styles: {} }] }]),
+      false,
+      true,
+      true,
+      undefined,
+      { publishAt: publishAt.toISOString(), timeZone: 'America/New_York' },
+    );
+
+    expect(result).toHaveProperty('comment_id');
+    const comment = await db('comments')
+      .where({ tenant: fixture.tenantId, comment_id: (result as any).comment_id })
+      .first();
+    expect(comment).toMatchObject({
+      publish_state: 'scheduled',
+      scheduled_publish_tz: 'America/New_York',
+      schedule_job_id: scheduledJobId,
+      is_internal: false,
+      is_resolution: true,
+    });
+    expect(new Date(comment.scheduled_publish_at).toISOString()).toBe(publishAt.toISOString());
+    expect(comment.metadata?.closes_ticket).toBeUndefined();
+    expect(optimizedPathMocks.scheduleJobAt).toHaveBeenCalledWith(
+      'publish-scheduled-comment',
+      { tenantId: fixture.tenantId, ticketId: fixture.ticketVisibleId, commentId: comment.comment_id },
+      publishAt,
+      expect.objectContaining({ singletonKey: `publish-comment:${comment.comment_id}` }),
+    );
+    expect(eventMocks.publishEvent).not.toHaveBeenCalledWith(expect.objectContaining({ eventType: 'TICKET_COMMENT_ADDED' }));
+    expect(eventMocks.publishWorkflowEvent).not.toHaveBeenCalled();
+    expect(optimizedPathMocks.maybeReopenBundleMasterFromChildReply).not.toHaveBeenCalled();
+
+    const after = await db('tickets')
+      .where({ tenant: fixture.tenantId, ticket_id: fixture.ticketVisibleId })
+      .first('response_state', 'status_id');
+    expect(after).toEqual(before);
+    expect(await db('ticket_bundle_mirrors').where({ tenant: fixture.tenantId, source_comment_id: comment.comment_id })).toEqual([]);
+  });
+
+  it('does not reopen a bundle master when the non-optimized createComment path schedules a public comment', async () => {
+    const scheduledJobId = uuidv4();
+    optimizedPathMocks.user = { user_id: fixture.internalUserId, user_type: 'internal' };
+    optimizedPathMocks.tenant = fixture.tenantId;
+    optimizedPathMocks.scheduleJobAt.mockResolvedValue({ jobId: scheduledJobId });
+    optimizedPathMocks.getJobRunner.mockResolvedValue({ scheduleJobAt: optimizedPathMocks.scheduleJobAt });
+    optimizedPathMocks.maybeReopenBundleMasterFromChildReply.mockClear();
+
+    const commentId = await createComment({
+      ticket_id: fixture.ticketVisibleId,
+      user_id: fixture.internalUserId,
+      author_type: 'internal',
+      note: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Also publish later', styles: {} }] }]),
+      is_internal: false,
+      is_resolution: false,
+      scheduled_publish_at: new Date(Date.now() + 3_600_000).toISOString(),
+      scheduled_publish_tz: 'UTC',
+    } as any);
+
+    expect(typeof commentId).toBe('string');
+    expect(optimizedPathMocks.maybeReopenBundleMasterFromChildReply).not.toHaveBeenCalled();
+    expect(await db('comments').where({ tenant: fixture.tenantId, comment_id: commentId }).first('publish_state'))
+      .toMatchObject({ publish_state: 'scheduled' });
   });
 });
 

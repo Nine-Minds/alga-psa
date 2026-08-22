@@ -436,7 +436,10 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         }, `schedule comment publication ${commentId}`);
       }
 
-      if (!comment.is_internal && commentTenant) {
+      // A scheduled public comment is not a client reply until publication.
+      // Reopening a bundle master here would make its deferred visibility
+      // observable through ticket state before the scheduled instant.
+      if (!isScheduled && !comment.is_internal && commentTenant) {
         await maybeReopenBundleMasterFromChildReply(trx, commentTenant, comment.ticket_id!, comment.user_id ?? null);
       }
 
