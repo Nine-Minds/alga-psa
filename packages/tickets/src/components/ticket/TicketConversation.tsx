@@ -41,8 +41,8 @@ import CommentItem from './CommentItem';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import styles from './TicketDetails.module.css';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
-import { getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -168,11 +168,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   const [isScheduleToggle, setIsScheduleToggle] = useState(false);
-  const [scheduledPublishLocal, setScheduledPublishLocal] = useState('');
+  const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
   const scheduledInstant = useMemo(() => {
-    if (!isScheduleToggle || !scheduledPublishLocal) return null;
-    try { return zonedWallTimeToUtc(scheduledPublishLocal, getUserTimeZone()); } catch { return null; }
-  }, [isScheduleToggle, scheduledPublishLocal]);
+    if (!isScheduleToggle || !scheduledPublishAt) return null;
+    try { return zonedWallTimeToUtc(dateToWallTimeString(scheduledPublishAt), getUserTimeZone()); } catch { return null; }
+  }, [isScheduleToggle, scheduledPublishAt]);
   const scheduleIsValid = !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
@@ -294,7 +294,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
           setNotificationSuppression(defaultNotificationSuppression());
           setIsScheduleToggle(false);
-          setScheduledPublishLocal('');
+          setScheduledPublishAt(undefined);
         }
       }
       
@@ -777,17 +777,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         </div>
         {!hideInternalTab && !isInternalToggle && isScheduleToggle && (
           <div className="mb-3 ml-2 flex flex-wrap items-center gap-2">
-            <Label htmlFor={`${compId}-scheduled-publish-at`}>
-              {t('conversation.publishAt', 'Publish at')} ({getUserTimeZone()})
-            </Label>
-            <Input
+            <DateTimePicker
               id={`${compId}-scheduled-publish-at`}
-              type="datetime-local"
-              value={scheduledPublishLocal}
-              onChange={(event) => setScheduledPublishLocal(event.target.value)}
-              required
+              label={`${t('conversation.publishAt', 'Publish at')} (${getUserTimeZone()})`}
+              value={scheduledPublishAt}
+              onChange={setScheduledPublishAt}
+              minDate={new Date()}
+              clearable
             />
-            {scheduledPublishLocal && !scheduleIsValid && (
+            {scheduledPublishAt && !scheduleIsValid && (
               <span className="text-sm text-[rgb(var(--color-accent-500))]">
                 {t('conversation.invalidScheduleTime', 'Choose an unambiguous future time in this time zone.')}
               </span>

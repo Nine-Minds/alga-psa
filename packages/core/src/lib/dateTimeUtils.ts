@@ -36,6 +36,18 @@ export function zonedWallTimeToUtc(wallTime: string, timeZone: string): Date {
   }
 }
 
+/**
+ * Serialize a Date's local wall-clock fields to an HTML datetime-local string
+ * (`YYYY-MM-DDTHH:mm`). The design-system DateTimePicker emits a browser-local
+ * Date; pairing this with zonedWallTimeToUtc lets callers reinterpret the picked
+ * wall time in an explicit IANA zone with the same DST-reject guarantee a raw
+ * datetime-local string carried.
+ */
+export function dateToWallTimeString(date: Date): string {
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function formatDateTime(
   date: Date,
   timeZone: string,

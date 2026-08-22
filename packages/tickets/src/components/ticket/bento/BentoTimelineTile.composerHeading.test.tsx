@@ -17,6 +17,27 @@ vi.mock('next/dynamic', () => ({
 vi.mock('@alga-psa/core', () => ({
   getUserTimeZone: () => 'America/New_York',
   zonedWallTimeToUtc: () => new Date('2026-08-23T13:30:00.000Z'),
+  dateToWallTimeString: () => '2026-08-23T09:30',
+}));
+
+// The design-system DateTimePicker (calendar + time-rail panel) has its own
+// suite; here we stub it to a labeled input so this test stays focused on the
+// composer's lane isolation and schedule-param plumbing, and can drive a Date.
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
+  DateTimePicker: ({ id, label, value, onChange }: {
+    id?: string;
+    label?: string;
+    value?: Date;
+    onChange: (date: Date | undefined) => void;
+  }) => (
+    <input
+      id={id}
+      data-testid="datetimepicker"
+      aria-label={label}
+      value={value ? value.toISOString() : ''}
+      onChange={(event) => onChange(event.target.value ? new Date(event.target.value) : undefined)}
+    />
+  ),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({

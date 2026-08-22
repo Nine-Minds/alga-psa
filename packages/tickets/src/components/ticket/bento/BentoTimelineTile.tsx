@@ -6,7 +6,7 @@ import type { PartialBlock } from '@blocknote/core';
 import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, Lock, MessageSquare } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
@@ -41,7 +41,7 @@ import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTi
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
-import { getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
+import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
   loading: () => <RichTextEditorSkeleton height="120px" />,
@@ -356,15 +356,15 @@ export function BentoTimelineTile({
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
   const [composerLane, setComposerLane] = useState<'client' | 'internal' | 'resolution'>('client');
   const [isScheduleToggle, setIsScheduleToggle] = useState(false);
-  const [scheduledPublishLocal, setScheduledPublishLocal] = useState('');
+  const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
   const scheduledInstant = useMemo(() => {
-    if (!isScheduleToggle || !scheduledPublishLocal) return null;
+    if (!isScheduleToggle || !scheduledPublishAt) return null;
     try {
-      return zonedWallTimeToUtc(scheduledPublishLocal, getUserTimeZone());
+      return zonedWallTimeToUtc(dateToWallTimeString(scheduledPublishAt), getUserTimeZone());
     } catch {
       return null;
     }
-  }, [isScheduleToggle, scheduledPublishLocal]);
+  }, [isScheduleToggle, scheduledPublishAt]);
   const isClientComposer = composerLane === 'client';
   const scheduleIsValid = !isClientComposer || !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [hasDraft, setHasDraft] = useState(false);
@@ -634,7 +634,7 @@ export function BentoTimelineTile({
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
       setNotificationSuppression(defaultNotificationSuppression());
       setIsScheduleToggle(false);
-      setScheduledPublishLocal('');
+      setScheduledPublishAt(undefined);
       composeUploadSession.resetDraftTracking();
     }
     return success;
@@ -645,7 +645,7 @@ export function BentoTimelineTile({
     setHasDraft(false);
     setShowComposer(false);
     setIsScheduleToggle(false);
-    setScheduledPublishLocal('');
+    setScheduledPublishAt(undefined);
   }, [onNewCommentContentChange]);
 
   useEffect(() => {
@@ -818,17 +818,15 @@ export function BentoTimelineTile({
           </div>
           {isScheduleToggle ? (
             <>
-              <Label htmlFor={`${id}-composer-scheduled-publish-at`}>
-                {t('conversation.publishAt', 'Publish at')} ({getUserTimeZone()})
-              </Label>
-              <Input
+              <DateTimePicker
                 id={`${id}-composer-scheduled-publish-at`}
-                type="datetime-local"
-                value={scheduledPublishLocal}
-                onChange={(event) => setScheduledPublishLocal(event.target.value)}
-                required
+                label={`${t('conversation.publishAt', 'Publish at')} (${getUserTimeZone()})`}
+                value={scheduledPublishAt}
+                onChange={setScheduledPublishAt}
+                minDate={new Date()}
+                clearable
               />
-              {scheduledPublishLocal && !scheduleIsValid ? (
+              {scheduledPublishAt && !scheduleIsValid ? (
                 <span className="text-sm text-[rgb(var(--color-accent-500))]">
                   {t('conversation.invalidScheduleTime', 'Choose an unambiguous future time in this time zone.')}
                 </span>

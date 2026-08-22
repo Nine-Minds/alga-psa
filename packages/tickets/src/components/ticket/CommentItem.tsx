@@ -25,9 +25,9 @@ import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
 import { cancelScheduledComment, rescheduleScheduledComment } from '../../actions/comment-actions/commentActions';
-import { getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
+import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 
 interface CommentItemProps {
   id?: string;
@@ -153,7 +153,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const [isScheduleMutating, setIsScheduleMutating] = useState(false);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
-  const [rescheduleWallTime, setRescheduleWallTime] = useState('');
+  const [reschedulePublishAt, setReschedulePublishAt] = useState<Date | undefined>(undefined);
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() =>
     parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'initial')
@@ -236,7 +236,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
     const timeZone = conversation.scheduled_publish_tz || getUserTimeZone();
     let date: Date;
     try {
-      date = zonedWallTimeToUtc(rescheduleWallTime, timeZone);
+      if (!reschedulePublishAt) throw new Error('Choose a publication time');
+      date = zonedWallTimeToUtc(dateToWallTimeString(reschedulePublishAt), timeZone);
       if (date.getTime() <= Date.now()) throw new Error('Choose a future publication time');
     } catch (error) {
       setRescheduleError(error instanceof Error ? error.message : 'Choose a valid publication time');
@@ -552,7 +553,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   <>
                     {conversation.publish_state === 'scheduled' && (
                       <>
-                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setRescheduleWallTime(''); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
+                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setReschedulePublishAt(undefined); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
                           {t('conversation.reschedule', 'Reschedule')}
                         </Button>
                         <Button id={`cancel-scheduled-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => void handleCancelSchedule()} aria-label={t('conversation.cancelScheduledComment', 'Cancel scheduled comment')}>
@@ -634,8 +635,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
       >
         <DialogContent>
           <div className="space-y-2">
-            <Label htmlFor={`reschedule-comment-${commentId}-at`}>{t('conversation.publishAt', 'Publish at')} ({conversation.scheduled_publish_tz || getUserTimeZone()})</Label>
-            <Input id={`reschedule-comment-${commentId}-at`} type="datetime-local" value={rescheduleWallTime} onChange={(event) => { setRescheduleWallTime(event.target.value); setRescheduleError(null); }} />
+            <DateTimePicker
+              id={`reschedule-comment-${commentId}-at`}
+              label={`${t('conversation.publishAt', 'Publish at')} (${conversation.scheduled_publish_tz || getUserTimeZone()})`}
+              value={reschedulePublishAt}
+              onChange={(date) => { setReschedulePublishAt(date); setRescheduleError(null); }}
+              minDate={new Date()}
+              clearable
+            />
             {rescheduleError && <p className="text-sm text-[rgb(var(--color-accent-500))]">{rescheduleError}</p>}
           </div>
         </DialogContent>

@@ -34,6 +34,26 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   searchUsersForMentions: vi.fn(),
 }));
 
+// The reschedule dialog uses the design-system DateTimePicker (own suite); stub
+// it to a labeled input so this test can assert the field renders without
+// mounting the calendar/time-rail panel.
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
+  DateTimePicker: ({ id, label, value, onChange }: {
+    id?: string;
+    label?: string;
+    value?: Date;
+    onChange: (date: Date | undefined) => void;
+  }) => (
+    <input
+      id={id}
+      data-testid="datetimepicker"
+      aria-label={label}
+      value={value ? value.toISOString() : ''}
+      onChange={(event) => onChange(event.target.value ? new Date(event.target.value) : undefined)}
+    />
+  ),
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   // Components under test format dates through useFormatters; the real hook
   // reads the locale off the provider this test does not mount.
@@ -115,7 +135,9 @@ describe('CommentItem metadata debug control', () => {
     expect(screen.getByRole('button', { name: 'Cancel scheduled comment' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Reschedule comment' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Publish at/)).toHaveAttribute('type', 'datetime-local');
+    // The reschedule field is the design-system DateTimePicker, not a raw
+    // native datetime-local input.
+    expect(screen.getByLabelText(/Publish at/)).toHaveAttribute('data-testid', 'datetimepicker');
   });
 
   it('T053: wires Reply in the hover/focus action row and keeps c-actions reveal CSS', async () => {
