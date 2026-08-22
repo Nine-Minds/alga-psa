@@ -3447,7 +3447,10 @@
         "title": "55555",
         "description": "55555",
         "empty": "55555",
-        "assignTo": "55555"
+        "assignTo": "55555",
+        "searchPlaceholder": "55555",
+        "noTargets": "55555",
+        "chooseTarget": "55555"
       },
       "paywall": {
         "title": "55555",

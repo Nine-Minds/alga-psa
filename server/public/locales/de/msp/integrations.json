@@ -3447,7 +3447,10 @@
         "title": "Anrufe ohne Zuordnung",
         "description": "Nummern, die wir nicht zuordnen konnten, und Nummern, die mehrere Kontakte teilen. Das Klären eines Anrufs legt ihn in der richtigen Chronik ab.",
         "empty": "Jeder erfasste Anruf ist zugeordnet.",
-        "assignTo": "Zuordnen zu"
+        "assignTo": "Zuordnen zu",
+        "searchPlaceholder": "Kontakte und Kunden suchen…",
+        "noTargets": "Keine passenden Kontakte oder Kunden.",
+        "chooseTarget": "Einem Kontakt oder Kunden zuordnen…"
       },
       "paywall": {
         "title": "Telefonie-Add-on",

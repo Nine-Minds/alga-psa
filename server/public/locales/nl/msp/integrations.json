@@ -3447,7 +3447,10 @@
         "title": "Gesprekken zonder toewijzing",
         "description": "Nummers die we niet konden herkennen en nummers die meerdere contacten delen. Een gesprek oplossen zet het op de juiste tijdlijn.",
         "empty": "Elk vastgelegd gesprek is toegewezen.",
-        "assignTo": "Toewijzen aan"
+        "assignTo": "Toewijzen aan",
+        "searchPlaceholder": "Zoek contacten en klanten…",
+        "noTargets": "Geen overeenkomende contacten of klanten.",
+        "chooseTarget": "Toewijzen aan een contact of klant…"
       },
       "paywall": {
         "title": "Telefonie-add-on",

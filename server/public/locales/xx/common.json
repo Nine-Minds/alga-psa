@@ -1369,5 +1369,8 @@
   "notifications": {
     "needsAttention": "11111 {{count}} 11111",
     "lowPriority": "11111 {{count}} 11111"
+  },
+  "callLink": {
+    "teamsCall": "11111"
   }
 }

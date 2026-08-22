@@ -3447,7 +3447,10 @@
         "title": "Chamadas sem atribuição",
         "description": "Números que não conseguimos identificar e números compartilhados por mais de um contato. Resolver uma chamada a arquiva na linha do tempo certa.",
         "empty": "Todas as chamadas capturadas estão atribuídas.",
-        "assignTo": "Atribuir a"
+        "assignTo": "Atribuir a",
+        "searchPlaceholder": "Pesquisar contatos e clientes…",
+        "noTargets": "Nenhum contato ou cliente correspondente.",
+        "chooseTarget": "Atribuir a um contato ou cliente…"
       },
       "paywall": {
         "title": "Complemento de Telefonia",

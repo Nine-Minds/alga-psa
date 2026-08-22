@@ -43,6 +43,13 @@ export interface TelephonyLinkableTicket {
   statusName: string | null;
 }
 
+export interface TelephonyResolutionTarget {
+  contactId: string | null;
+  clientId: string | null;
+  label: string;
+  sublabel: string | null;
+}
+
 export interface TelephonyOverview {
   success: boolean;
   error?: string;
@@ -262,6 +269,79 @@ export const resolveTelephonyCall = withAuth(async (
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
+});
+
+/**
+ * Attribution targets for a call the ladder could not place. Unmatched calls
+ * carry no candidates by definition (that is what unmatched means), so the
+ * queue needs a searchable picker or those calls are a dead end — and while
+ * contact numbers are unnormalized that is the common case, not the rare one.
+ */
+export const listTelephonyResolutionTargets = withAuth(async (
+  user,
+  { tenant },
+  input: { search?: string } = {},
+): Promise<{ success: boolean; error?: string; targets: TelephonyResolutionTarget[] }> => {
+  const availability = resolveTelephonyAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return { success: false, error: availability.message, targets: [] };
+  }
+
+  const { knex } = await createTenantKnex(tenant);
+  const [canReadContacts, canReadClients] = await Promise.all([
+    hasPermission(user as any, 'contact', 'read', knex),
+    hasPermission(user as any, 'client', 'read', knex),
+  ]);
+
+  if (!canReadContacts && !canReadClients) {
+    return { success: false, error: 'Permission denied: Cannot read contacts or clients', targets: [] };
+  }
+
+  const search = (input.search ?? '').trim();
+  const like = `%${search.replace(/[%_]/g, (match) => `\\${match}`)}%`;
+  const db = tenantDb(knex, tenant);
+  const targets: TelephonyResolutionTarget[] = [];
+
+  if (canReadContacts) {
+    const contactQuery = db.table('contacts as c');
+    db.tenantJoin(contactQuery, 'clients as cl', 'c.client_id', 'cl.client_id', { type: 'left' });
+    if (search) {
+      contactQuery.where('c.full_name', 'ilike', like);
+    }
+    const contacts = await contactQuery
+      .where('c.is_inactive', false)
+      .select('c.contact_name_id', 'c.full_name', 'c.client_id', 'cl.client_name')
+      .orderBy('c.full_name', 'asc')
+      .limit(20);
+
+    targets.push(...contacts.map((row: any) => ({
+      contactId: row.contact_name_id,
+      clientId: row.client_id ?? null,
+      label: row.full_name ?? '',
+      sublabel: row.client_name ?? null,
+    })));
+  }
+
+  if (canReadClients) {
+    const clientQuery = db.table('clients');
+    if (search) {
+      clientQuery.where('client_name', 'ilike', like);
+    }
+    const clients = await clientQuery
+      .where('is_inactive', false)
+      .select('client_id', 'client_name')
+      .orderBy('client_name', 'asc')
+      .limit(20);
+
+    targets.push(...clients.map((row: any) => ({
+      contactId: null,
+      clientId: row.client_id,
+      label: row.client_name ?? '',
+      sublabel: null,
+    })));
+  }
+
+  return { success: true, targets };
 });
 
 /**

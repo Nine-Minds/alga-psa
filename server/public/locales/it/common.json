@@ -1369,5 +1369,8 @@
   "notifications": {
     "needsAttention": "Richiede attenzione ({{count}})",
     "lowPriority": "Priorità bassa ({{count}})"
+  },
+  "callLink": {
+    "teamsCall": "Chiama in Microsoft Teams"
   }
 }

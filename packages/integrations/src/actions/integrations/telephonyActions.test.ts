@@ -20,6 +20,14 @@ const hoisted = vi.hoisted(() => {
     entered_at: string;
   };
   type Status = { tenant: string; status_id: string; name: string; is_closed: boolean };
+  type Contact = {
+    tenant: string;
+    contact_name_id: string;
+    full_name: string;
+    client_id: string | null;
+    is_inactive: boolean;
+  };
+  type Client = { tenant: string; client_id: string; client_name: string; is_inactive: boolean };
 
   const state = {
     mockUser: { user_id: 'user-1', user_type: 'internal' } as any,
@@ -28,6 +36,8 @@ const hoisted = vi.hoisted(() => {
     interactions: [] as Interaction[],
     tickets: [] as Ticket[],
     statuses: [] as Status[],
+    contacts: [] as Contact[],
+    clients: [] as Client[],
   };
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -37,6 +47,8 @@ const hoisted = vi.hoisted(() => {
     if (table.startsWith('interactions')) return state.interactions as any;
     if (table.startsWith('tickets')) return state.tickets as any;
     if (table.startsWith('statuses')) return state.statuses as any;
+    if (table.startsWith('contacts')) return state.contacts as any;
+    if (table.startsWith('clients')) return state.clients as any;
     return [];
   };
 
@@ -51,10 +63,16 @@ const hoisted = vi.hoisted(() => {
       );
 
     const query: any = {
-      where(conditions: any, value?: unknown) {
+      where(conditions: any, operator?: unknown, operand?: unknown) {
         if (typeof conditions === 'string') {
           const column = conditions.split('.').pop() as string;
-          columnFilters.push((row) => row[column] === value);
+          if (operand !== undefined) {
+            // Three-argument form; the resolution-target search uses ilike.
+            const pattern = String(operand).replace(/^%|%$/g, '').toLowerCase();
+            columnFilters.push((row) => String(row[column] ?? '').toLowerCase().includes(pattern));
+          } else {
+            columnFilters.push((row) => row[column] === operator);
+          }
         } else if (typeof conditions === 'function') {
           // andWhere-style callback: the open-status filter. Statuses are joined
           // in, so approximate it against the resolved status row.
@@ -67,8 +85,8 @@ const hoisted = vi.hoisted(() => {
         }
         return query;
       },
-      andWhere(conditions: any, value?: unknown) {
-        return query.where(conditions, value);
+      andWhere(conditions: any, operator?: unknown, operand?: unknown) {
+        return query.where(conditions, operator, operand);
       },
       orderBy() { return query; },
       limit() { return query; },
@@ -103,11 +121,18 @@ const hoisted = vi.hoisted(() => {
     state,
     knexMock,
     hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
+    createTicketMock: vi.fn(async (payload: any) => ({
+      ticket_id: 'ticket-created-1',
+      ticket_number: '2001',
+      ...payload,
+    })),
+    ticketDefaultsMock: vi.fn(async () => ({ boardId: 'board-1', statusId: 'status-open' })),
+    priorityMock: vi.fn(async () => 'priority-normal'),
   };
 });
 
-const { calls, interactions, tickets, statuses } = hoisted.state;
-const { hasPermissionMock } = hoisted;
+const { calls, interactions, tickets, statuses, contacts, clients } = hoisted.state;
+const { createTicketMock, hasPermissionMock, priorityMock, ticketDefaultsMock } = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
@@ -129,14 +154,27 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/shared/models/ticketModel', () => ({ TicketModel: {} }));
+vi.mock('@alga-psa/shared/models/ticketModel', () => ({
+  TicketModel: { createTicketWithRetry: hoisted.createTicketMock },
+}));
+
+vi.mock('@alga-psa/ee-microsoft-teams/lib', () => ({
+  getTeamsPhoneProviderState: async () => ({ provider: 'teams-phone', status: 'active' }),
+  getTeamsTicketCreationDefaults: hoisted.ticketDefaultsMock,
+  resolveDefaultPriorityIdForBoard: hoisted.priorityMock,
+}));
 
 vi.mock('../../lib/telephonyAvailability', () => ({
   getTelephonyAvailability: async () => ({ enabled: true }),
   resolveTelephonyAvailability: () => ({ enabled: true }),
 }));
 
-import { linkTelephonyCallToTicket, listTelephonyLinkableTickets } from './telephonyActions';
+import {
+  createTicketFromTelephonyCall,
+  linkTelephonyCallToTicket,
+  listTelephonyLinkableTickets,
+  listTelephonyResolutionTargets,
+} from './telephonyActions';
 
 describe('telephony link-to-ticket', () => {
   beforeEach(() => {
@@ -144,8 +182,15 @@ describe('telephony link-to-ticket', () => {
     interactions.length = 0;
     tickets.length = 0;
     statuses.length = 0;
+    contacts.length = 0;
+    clients.length = 0;
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
+    createTicketMock.mockClear();
+    ticketDefaultsMock.mockClear();
+    ticketDefaultsMock.mockResolvedValue({ boardId: 'board-1', statusId: 'status-open' });
+    priorityMock.mockClear();
+    priorityMock.mockResolvedValue('priority-normal');
 
     statuses.push(
       { tenant: 'tenant-1', status_id: 'status-open', name: 'Open', is_closed: false },
@@ -231,5 +276,166 @@ describe('telephony link-to-ticket', () => {
 
     expect(result.success).toBe(false);
     expect(result.tickets).toEqual([]);
+  });
+
+  describe('create-ticket-from-call', () => {
+    function addCallForTicket(overrides: Record<string, unknown> = {}) {
+      const record = {
+        tenant: 'tenant-1',
+        call_record_id: 'call-1',
+        provider: 'teams-phone',
+        direction: 'inbound',
+        caller_number_raw: '+1 (555) 123-4567',
+        caller_number_e164: '+15551234567',
+        callee_number_raw: '+15559990000',
+        callee_number_e164: '+15559990000',
+        duration_seconds: 210,
+        matched_client_id: 'client-1',
+        matched_contact_id: 'contact-1',
+        interaction_id: 'interaction-1',
+        ticket_id: null,
+        ...overrides,
+      } as any;
+      calls.push(record);
+      if (record.interaction_id) {
+        interactions.push({ tenant: 'tenant-1', interaction_id: record.interaction_id, ticket_id: null });
+      }
+      return record;
+    }
+
+    it('T042: creates the ticket with the call attribution and the board defaults', async () => {
+      addCallForTicket();
+
+      const result = await createTicketFromTelephonyCall({ callRecordId: 'call-1' });
+
+      expect(result).toMatchObject({ success: true, ticketId: 'ticket-created-1', ticketNumber: '2001' });
+      expect(createTicketMock.mock.calls[0][0]).toMatchObject({
+        title: 'Inbound call from +1 (555) 123-4567',
+        client_id: 'client-1',
+        contact_id: 'contact-1',
+        board_id: 'board-1',
+        status_id: 'status-open',
+        priority_id: 'priority-normal',
+        entered_by: 'user-1',
+        source: 'telephony',
+      });
+      // The call and its interaction both point at the new ticket.
+      expect(calls[0].ticket_id).toBe('ticket-created-1');
+      expect(interactions[0].ticket_id).toBe('ticket-created-1');
+    });
+
+    it('T042: an explicit title wins over the generated one', async () => {
+      addCallForTicket();
+
+      await createTicketFromTelephonyCall({ callRecordId: 'call-1', title: '  Phone system down  ' });
+
+      expect(createTicketMock.mock.calls[0][0]).toMatchObject({ title: 'Phone system down' });
+    });
+
+    it('T044: creating is refused without the ticket create permission', async () => {
+      addCallForTicket();
+      hasPermissionMock.mockResolvedValue(false);
+
+      const result = await createTicketFromTelephonyCall({ callRecordId: 'call-1' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Cannot create ticket/);
+      expect(createTicketMock).not.toHaveBeenCalled();
+      expect(calls[0].ticket_id).toBeNull();
+    });
+
+    it('T042: a call with no client attribution cannot become a ticket', async () => {
+      addCallForTicket({ matched_client_id: null });
+
+      const result = await createTicketFromTelephonyCall({ callRecordId: 'call-1' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Resolve this call/);
+      expect(createTicketMock).not.toHaveBeenCalled();
+    });
+
+    it('T042: missing board or status defaults are reported, not guessed', async () => {
+      addCallForTicket();
+      ticketDefaultsMock.mockResolvedValue({ boardId: null, statusId: null });
+
+      const result = await createTicketFromTelephonyCall({ callRecordId: 'call-1' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/default board/);
+      expect(createTicketMock).not.toHaveBeenCalled();
+    });
+
+    it('T042: a board with no default priority stops before creating a ticket', async () => {
+      addCallForTicket();
+      priorityMock.mockResolvedValue(null);
+
+      const result = await createTicketFromTelephonyCall({ callRecordId: 'call-1' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/default priority/);
+      expect(createTicketMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resolution targets', () => {
+    beforeEach(() => {
+      contacts.push(
+        { tenant: 'tenant-1', contact_name_id: 'contact-1', full_name: 'Glinda', client_id: 'client-1', is_inactive: false, client_name: 'Emerald City' } as any,
+        { tenant: 'tenant-1', contact_name_id: 'contact-2', full_name: 'Toto', client_id: 'client-2', is_inactive: false, client_name: 'Kansas Farms' } as any,
+        { tenant: 'tenant-1', contact_name_id: 'contact-3', full_name: 'Retired Witch', client_id: 'client-2', is_inactive: true, client_name: 'Kansas Farms' } as any,
+        { tenant: 'tenant-2', contact_name_id: 'contact-9', full_name: 'Glinda', client_id: 'client-9', is_inactive: false, client_name: 'Other Tenant' } as any,
+      );
+      clients.push(
+        { tenant: 'tenant-1', client_id: 'client-1', client_name: 'Emerald City', is_inactive: false },
+        { tenant: 'tenant-1', client_id: 'client-2', client_name: 'Kansas Farms', is_inactive: false },
+        { tenant: 'tenant-1', client_id: 'client-3', client_name: 'Closed Co', is_inactive: true },
+      );
+    });
+
+    it('T010: offers active contacts and clients so an unmatched call can be attributed', async () => {
+      const result = await listTelephonyResolutionTargets({});
+
+      expect(result.success).toBe(true);
+      expect(result.targets).toEqual([
+        { contactId: 'contact-1', clientId: 'client-1', label: 'Glinda', sublabel: 'Emerald City' },
+        { contactId: 'contact-2', clientId: 'client-2', label: 'Toto', sublabel: 'Kansas Farms' },
+        { contactId: null, clientId: 'client-1', label: 'Emerald City', sublabel: null },
+        { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
+      ]);
+    });
+
+    it('T010: the search narrows both contacts and clients', async () => {
+      const result = await listTelephonyResolutionTargets({ search: 'kansas' });
+
+      expect(result.targets).toEqual([
+        { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
+      ]);
+    });
+
+    it('T010: targets never cross the tenant boundary', async () => {
+      const result = await listTelephonyResolutionTargets({ search: 'Glinda' });
+
+      expect(result.targets).toEqual([
+        { contactId: 'contact-1', clientId: 'client-1', label: 'Glinda', sublabel: 'Emerald City' },
+      ]);
+    });
+
+    it('T010: a user who may read neither contacts nor clients is denied', async () => {
+      hasPermissionMock.mockResolvedValue(false);
+
+      const result = await listTelephonyResolutionTargets({});
+
+      expect(result.success).toBe(false);
+      expect(result.targets).toEqual([]);
+    });
+
+    it('T010: a user who may read only clients gets clients alone', async () => {
+      hasPermissionMock.mockImplementation(async (_user: unknown, resource: string) => resource === 'client');
+
+      const result = await listTelephonyResolutionTargets({});
+
+      expect(result.targets.every((target) => target.contactId === null)).toBe(true);
+      expect(result.targets).toHaveLength(2);
+    });
   });
 });

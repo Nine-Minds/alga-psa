@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Phone, PhoneMissed, PhoneIncoming, PhoneOutgoing } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -13,6 +14,7 @@ import {
   getTelephonyOverview,
   linkTelephonyCallToTicket,
   listTelephonyLinkableTickets,
+  listTelephonyResolutionTargets,
   resolveTelephonyCall,
   setTelephonyAutoTicketPolicy,
   setTelephonyProviderEnabled,
@@ -21,6 +23,7 @@ import type {
   TelephonyCallSummary,
   TelephonyLinkableTicket,
   TelephonyOverview,
+  TelephonyResolutionTarget,
 } from '../../../../actions/integrations/telephonyActions';
 import { TelephonyPaywallCard } from './TelephonyPaywallCard';
 
@@ -48,6 +51,10 @@ export function TelephonyIntegrationSettings() {
   // Call currently showing the ticket picker, and the options loaded for it.
   const [linkingCallId, setLinkingCallId] = useState<string | null>(null);
   const [linkableTickets, setLinkableTickets] = useState<TelephonyLinkableTicket[]>([]);
+  // Call currently showing the attribution picker, its search text and results.
+  const [resolvingCallId, setResolvingCallId] = useState<string | null>(null);
+  const [targetSearch, setTargetSearch] = useState('');
+  const [targets, setTargets] = useState<TelephonyResolutionTarget[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -150,6 +157,31 @@ export function TelephonyIntegrationSettings() {
     }
   };
 
+  const loadTargets = useCallback(async (search: string) => {
+    const result = await listTelephonyResolutionTargets({ search });
+    if (!result.success) {
+      setError(result.error ?? null);
+      setTargets([]);
+      return;
+    }
+    setTargets(result.targets);
+  }, []);
+
+  const openResolutionPicker = async (call: TelephonyCallSummary) => {
+    setError(null);
+    setResolvingCallId(call.callRecordId);
+    setTargetSearch('');
+    setTargets([]);
+    await loadTargets('');
+  };
+
+  // Searching hits the database, so wait for the typist to pause.
+  useEffect(() => {
+    if (!resolvingCallId) return;
+    const handle = setTimeout(() => void loadTargets(targetSearch), 250);
+    return () => clearTimeout(handle);
+  }, [resolvingCallId, targetSearch, loadTargets]);
+
   const resolveCall = async (call: TelephonyCallSummary, contactId: string | null, clientId: string | null) => {
     setBusy(true);
     setError(null);
@@ -157,6 +189,9 @@ export function TelephonyIntegrationSettings() {
       const result = await resolveTelephonyCall({ callRecordId: call.callRecordId, contactId, clientId });
       if (!result.success) {
         setError(result.error ?? null);
+      } else {
+        setResolvingCallId(null);
+        setTargets([]);
       }
       await load();
     } finally {
@@ -378,6 +413,56 @@ export function TelephonyIntegrationSettings() {
                         </Button>
                       ))}
                     </div>
+                  )}
+                  {/* Unmatched calls have no candidates at all, so search is the
+                      only way to attribute them. */}
+                  {resolvingCallId === call.callRecordId ? (
+                    <div className="space-y-2">
+                      <Input
+                        id={`telephony-resolve-search-${call.callRecordId}`}
+                        value={targetSearch}
+                        disabled={!canManage || busy}
+                        placeholder={t('integrations.telephony.unmatched.searchPlaceholder', {
+                          defaultValue: 'Search contacts and clients…',
+                        })}
+                        onChange={(event) => setTargetSearch(event.target.value)}
+                      />
+                      {targets.length === 0 ? (
+                        <p className="text-xs text-muted-foreground" id={`telephony-resolve-no-targets-${call.callRecordId}`}>
+                          {t('integrations.telephony.unmatched.noTargets', {
+                            defaultValue: 'No matching contacts or clients.',
+                          })}
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {targets.map((target, index) => (
+                            <Button
+                              key={`${call.callRecordId}-target-${target.contactId ?? target.clientId ?? index}`}
+                              size="sm"
+                              variant="outline"
+                              disabled={!canManage || busy}
+                              onClick={() => void resolveCall(call, target.contactId, target.clientId)}
+                              id={`telephony-resolve-target-${call.callRecordId}-${index}`}
+                            >
+                              {t('integrations.telephony.unmatched.assignTo', { defaultValue: 'Assign to' })}{' '}
+                              {target.sublabel ? `${target.label} · ${target.sublabel}` : target.label}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={!canManage || busy}
+                      onClick={() => void openResolutionPicker(call)}
+                      id={`telephony-resolve-open-picker-${call.callRecordId}`}
+                    >
+                      {t('integrations.telephony.unmatched.chooseTarget', {
+                        defaultValue: 'Assign to a contact or client…',
+                      })}
+                    </Button>
                   )}
                 </li>
               ))}

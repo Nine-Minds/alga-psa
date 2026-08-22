@@ -3447,7 +3447,10 @@
         "title": "Chiamate da attribuire",
         "description": "Numeri che non siamo riusciti a riconoscere e numeri condivisi da più contatti. Risolvere una chiamata la archivia nella cronologia giusta.",
         "empty": "Tutte le chiamate acquisite sono attribuite.",
-        "assignTo": "Assegna a"
+        "assignTo": "Assegna a",
+        "searchPlaceholder": "Cerca contatti e clienti…",
+        "noTargets": "Nessun contatto o cliente corrispondente.",
+        "chooseTarget": "Assegna a un contatto o cliente…"
       },
       "paywall": {
         "title": "Componente aggiuntivo Telefonia",

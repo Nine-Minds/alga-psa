@@ -3447,7 +3447,10 @@
         "title": "Rozmowy wymagające przypisania",
         "description": "Numery, których nie udało się dopasować, oraz numery używane przez kilka kontaktów. Rozstrzygnięcie rozmowy umieszcza ją na właściwej osi czasu.",
         "empty": "Każda zarejestrowana rozmowa jest przypisana.",
-        "assignTo": "Przypisz do"
+        "assignTo": "Przypisz do",
+        "searchPlaceholder": "Szukaj kontaktów i klientów…",
+        "noTargets": "Brak pasujących kontaktów lub klientów.",
+        "chooseTarget": "Przypisz do kontaktu lub klienta…"
       },
       "paywall": {
         "title": "Dodatek Telefonia",

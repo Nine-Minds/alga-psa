@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext } from 'react';
 import { Phone } from 'lucide-react';
+import { useTranslation } from '../lib/i18n/client';
 
 /**
  * Click-to-call affordances.
@@ -62,6 +63,7 @@ export function CallLink({
   className?: string;
   children?: React.ReactNode;
 }) {
+  const { t } = useTranslation('common');
   const { teamsCallEnabled } = useCallLinkContext();
   const telHref = buildTelHref(phoneNumber);
   const teamsHref = teamsCallEnabled ? buildTeamsCallDeepLink(phoneNumber) : null;
@@ -81,7 +83,7 @@ export function CallLink({
           href={teamsHref}
           target="_blank"
           rel="noreferrer"
-          title="Call in Microsoft Teams"
+          title={t('callLink.teamsCall', { defaultValue: 'Call in Microsoft Teams' })}
           className="text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-primary-600))]"
         >
           <Phone className="h-3.5 w-3.5" />

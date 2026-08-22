@@ -3447,7 +3447,10 @@
         "title": "Llamadas pendientes de atribución",
         "description": "Números que no pudimos identificar y números compartidos por más de un contacto. Resolver una llamada la archiva en la cronología correcta.",
         "empty": "Todas las llamadas capturadas están atribuidas.",
-        "assignTo": "Asignar a"
+        "assignTo": "Asignar a",
+        "searchPlaceholder": "Buscar contactos y clientes…",
+        "noTargets": "No hay contactos ni clientes coincidentes.",
+        "chooseTarget": "Asignar a un contacto o cliente…"
       },
       "paywall": {
         "title": "Complemento de telefonía",

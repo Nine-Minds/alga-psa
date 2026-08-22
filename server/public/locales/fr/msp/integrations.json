@@ -3447,7 +3447,10 @@
         "title": "Appels à attribuer",
         "description": "Numéros que nous n'avons pas pu rapprocher et numéros partagés par plusieurs contacts. Résoudre un appel le classe sur la bonne chronologie.",
         "empty": "Tous les appels capturés sont attribués.",
-        "assignTo": "Attribuer à"
+        "assignTo": "Attribuer à",
+        "searchPlaceholder": "Rechercher des contacts et des clients…",
+        "noTargets": "Aucun contact ni client correspondant.",
+        "chooseTarget": "Attribuer à un contact ou à un client…"
       },
       "paywall": {
         "title": "Module de téléphonie",

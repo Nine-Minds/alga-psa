@@ -3447,7 +3447,10 @@
         "title": "Calls needing attribution",
         "description": "Numbers we could not match, and numbers shared by more than one contact. Resolving a call files it on the right timeline.",
         "empty": "Every captured call is attributed.",
-        "assignTo": "Assign to"
+        "assignTo": "Assign to",
+        "searchPlaceholder": "Search contacts and clients…",
+        "noTargets": "No matching contacts or clients.",
+        "chooseTarget": "Assign to a contact or client…"
       },
       "paywall": {
         "title": "Telephony add-on",
