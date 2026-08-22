@@ -45,6 +45,10 @@ describe('kbImportBlocks markdown fidelity', () => {
       'table',
       'horizontalRule',
       'paragraph',
+      'image',
+      'paragraph',
+      'image',
+      'paragraph',
     ]);
   });
 
@@ -101,6 +105,28 @@ describe('kbImportBlocks markdown fidelity', () => {
     ]);
     expect(table.rows[1].cells[2]).toEqual([{ type: 'text', text: 'yes', styles: { bold: true } }]);
   });
+
+  it('keeps markdown images as image blocks instead of collapsing them to alt text', () => {
+    expect(blocks[17]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/spooler.png', caption: 'Spooler service dialog' },
+    });
+    expect(blocks[19]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/queue.png', caption: 'the queue' },
+    });
+  });
+
+  it('splits the paragraph around an inline image', () => {
+    expect(plainText(blocks[18])).toBe('Compare');
+    expect(plainText(blocks[20])).toBe('with the driver log.');
+  });
+
+  it('emits a bare image block for an image-only paragraph', () => {
+    expect(markdownToBlocks('![Alt text](https://example.com/a.png)')).toEqual([
+      { type: 'image', props: { url: 'https://example.com/a.png', caption: 'Alt text' } },
+    ]);
+  });
 });
 
 describe('kbImportBlocks html fidelity', () => {
@@ -126,6 +152,10 @@ describe('kbImportBlocks html fidelity', () => {
       'codeBlock',
       'table',
       'horizontalRule',
+      'paragraph',
+      'image',
+      'paragraph',
+      'image',
       'paragraph',
     ]);
     expect(JSON.stringify(blocks)).not.toContain('console.log');
@@ -172,6 +202,27 @@ describe('kbImportBlocks html fidelity', () => {
       'yes',
     ]);
     expect(table.rows[1].cells[2][0].styles).toEqual({ bold: true });
+  });
+
+  it('keeps <img> tags as image blocks instead of dropping them', () => {
+    expect(blocks[15]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/spooler.png', caption: 'Spooler service dialog' },
+    });
+    expect(blocks[17]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/queue.png', caption: 'the queue' },
+    });
+    expect(plainText(blocks[16])).toBe('Compare');
+    expect(plainText(blocks[18])).toBe('with the driver log.');
+  });
+
+  it('falls back to alt text for images inside table cells', () => {
+    const table = htmlToBlocks(
+      '<table><tr><td>Icon <img src="https://example.com/i.png" alt="green tick" /></td></tr></table>',
+    );
+    const rows = (table[0].content as TableContent).rows;
+    expect(rows[0].cells[0].map((s) => s.text).join('')).toBe('Icon green tick');
   });
 
   it('preserves semantic containers around nested paragraphs', () => {

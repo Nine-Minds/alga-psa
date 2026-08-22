@@ -93,11 +93,19 @@ function normalizeSoftBreaks(text: string): string {
   return text.replace(/[ \t]*\n[ \t]*/g, ' ');
 }
 
+/** Lifts an inline image out of the run being accumulated. */
+type ImageHoist = (image: Tokens.Image) => void;
+
+function imageBlock(url: string, caption: string): BlockNoteBlock {
+  return { type: 'image', props: { url, caption } };
+}
+
 function inlineFromTokens(
   tokens: Token[] | undefined,
   styles: InlineStyles,
   segments: InlineSegment[],
   deadline: Deadline,
+  hoistImage?: ImageHoist,
 ): void {
   if (!tokens) return;
 
@@ -109,32 +117,38 @@ function inlineFromTokens(
       case 'escape': {
         const nested = (token as Tokens.Text).tokens;
         if (nested?.length) {
-          inlineFromTokens(nested, styles, segments, deadline);
+          inlineFromTokens(nested, styles, segments, deadline, hoistImage);
         } else {
           pushSegment(segments, normalizeSoftBreaks((token as Tokens.Text).text), styles);
         }
         break;
       }
       case 'strong':
-        inlineFromTokens((token as Tokens.Strong).tokens, withStyle(styles, 'bold', true), segments, deadline);
+        inlineFromTokens((token as Tokens.Strong).tokens, withStyle(styles, 'bold', true), segments, deadline, hoistImage);
         break;
       case 'em':
-        inlineFromTokens((token as Tokens.Em).tokens, withStyle(styles, 'italic', true), segments, deadline);
+        inlineFromTokens((token as Tokens.Em).tokens, withStyle(styles, 'italic', true), segments, deadline, hoistImage);
         break;
       case 'del':
-        inlineFromTokens((token as Tokens.Del).tokens, withStyle(styles, 'strike', true), segments, deadline);
+        inlineFromTokens((token as Tokens.Del).tokens, withStyle(styles, 'strike', true), segments, deadline, hoistImage);
         break;
       case 'codespan':
         pushSegment(segments, (token as Tokens.Codespan).text, withStyle(styles, 'code', true));
         break;
       case 'link': {
         const link = token as Tokens.Link;
-        inlineFromTokens(link.tokens, withStyle(styles, 'link', { href: link.href }), segments, deadline);
+        inlineFromTokens(link.tokens, withStyle(styles, 'link', { href: link.href }), segments, deadline, hoistImage);
         break;
       }
-      case 'image':
-        pushSegment(segments, (token as Tokens.Image).text, styles);
+      case 'image': {
+        const image = token as Tokens.Image;
+        if (hoistImage) {
+          hoistImage(image);
+        } else {
+          pushSegment(segments, image.text, styles);
+        }
         break;
+      }
       case 'br':
         pushSegment(segments, ' ', styles);
         break;
@@ -144,12 +158,48 @@ function inlineFromTokens(
       default: {
         const generic = token as { tokens?: Token[]; text?: string };
         if (generic.tokens?.length) {
-          inlineFromTokens(generic.tokens, styles, segments, deadline);
+          inlineFromTokens(generic.tokens, styles, segments, deadline, hoistImage);
         } else if (typeof generic.text === 'string') {
           pushSegment(segments, normalizeSoftBreaks(generic.text), styles);
         }
       }
     }
+  }
+}
+
+/**
+ * Emits a markdown paragraph, splitting it around any inline images: BlockNote
+ * images are block-level, and collapsing them into alt text lost the picture.
+ */
+function appendParagraph(
+  tokens: Token[] | undefined,
+  fallbackText: string,
+  blocks: BlockNoteBlock[],
+  deadline: Deadline,
+): void {
+  const segments: InlineSegment[] = [];
+  let hoistedImage = false;
+
+  inlineFromTokens(tokens, {}, segments, deadline, (image) => {
+    const leading = trimSegments(segments.splice(0, segments.length));
+    if (leading.length > 0) {
+      blocks.push({ type: 'paragraph', content: leading });
+    }
+    blocks.push(imageBlock(image.href, image.text));
+    hoistedImage = true;
+  });
+
+  if (!hoistedImage) {
+    blocks.push({
+      type: 'paragraph',
+      content: segments.length > 0 ? segments : [{ type: 'text', text: fallbackText }],
+    });
+    return;
+  }
+
+  const trailing = trimSegments(segments);
+  if (trailing.length > 0) {
+    blocks.push({ type: 'paragraph', content: trailing });
   }
 }
 
@@ -280,8 +330,7 @@ function appendTokens(tokens: Token[], blocks: BlockNoteBlock[], deadline: Deadl
       case 'paragraph':
       case 'text': {
         const block = token as Tokens.Paragraph;
-        const content = inlineContent(block.tokens, deadline, block.text ?? '');
-        blocks.push({ type: 'paragraph', content });
+        appendParagraph(block.tokens, block.text ?? '', blocks, deadline);
         break;
       }
       default: {
@@ -427,6 +476,20 @@ class HtmlBlockWalker {
         this.flushBlock();
         this.blocks.push({ type: 'horizontalRule' });
         return;
+      case 'img': {
+        const src = attribs.src ?? '';
+        const alt = attribs.alt ?? '';
+        // Inside a table cell an image block cannot be interleaved with rows,
+        // so keep the alt text there and hoist a real block everywhere else.
+        if (this.cell) {
+          this.pushText(alt);
+          return;
+        }
+        if (!src) return;
+        this.flushBlock();
+        this.blocks.push(imageBlock(src, alt));
+        return;
+      }
       case 'pre':
         this.flushBlock();
         this.preDepth = 1;

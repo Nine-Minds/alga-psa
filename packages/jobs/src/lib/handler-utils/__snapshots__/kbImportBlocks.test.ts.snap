@@ -317,6 +317,38 @@ exports[`kbImportBlocks html fidelity > produces the golden BlockNote document 1
     ],
     "type": "paragraph",
   },
+  {
+    "props": {
+      "caption": "Spooler service dialog",
+      "url": "https://example.com/img/spooler.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "Compare",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "props": {
+      "caption": "the queue",
+      "url": "https://example.com/img/queue.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "with the driver log.",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
 ]
 `;
 
@@ -628,6 +660,38 @@ exports[`kbImportBlocks markdown fidelity > produces the golden BlockNote docume
       },
       {
         "text": " the vendor for RMA numbers.",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "props": {
+      "caption": "Spooler service dialog",
+      "url": "https://example.com/img/spooler.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "Compare",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "props": {
+      "caption": "the queue",
+      "url": "https://example.com/img/queue.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "with the driver log.",
         "type": "text",
       },
     ],

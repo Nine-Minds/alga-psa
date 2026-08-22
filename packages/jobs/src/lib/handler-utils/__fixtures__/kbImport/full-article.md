@@ -35,3 +35,7 @@ plain fenced block
 ---
 
 Contact ~~the helpdesk~~ the vendor for RMA numbers.
+
+![Spooler service dialog](https://example.com/img/spooler.png)
+
+Compare ![the queue](https://example.com/img/queue.png) with the driver log.
