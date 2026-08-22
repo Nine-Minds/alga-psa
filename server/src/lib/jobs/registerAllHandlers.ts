@@ -139,6 +139,11 @@ import {
   inboundEmailRecoveryHandler,
   InboundEmailRecoveryJobData,
 } from './handlers/inboundEmailRecoveryHandler';
+import {
+  PUBLISH_SCHEDULED_COMMENT_JOB,
+  publishScheduledCommentHandler,
+  PublishScheduledCommentJobData,
+} from './handlers/publishScheduledCommentHandler';
 
 /**
  * Options for registering handlers
@@ -183,6 +188,12 @@ export async function registerAllJobHandlers(
   const resolvedStorageService = storageService ?? new StorageService();
 
   const registerOpts = { force };
+
+  JobHandlerRegistry.register<PublishScheduledCommentJobData & BaseJobData>({
+    name: PUBLISH_SCHEDULED_COMMENT_JOB,
+    handler: async (_jobId, data) => publishScheduledCommentHandler(data),
+    retry: { maxAttempts: 3 },
+  }, registerOpts);
 
   // ============================================================================
   // BILLING & INVOICE HANDLERS
