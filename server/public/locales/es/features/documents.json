@@ -330,7 +330,9 @@
       "orderedList": "Lista numerada",
       "quote": "Cita en bloque",
       "link": "Enlace",
-      "linkPrompt": "URL"
+      "image": "Insertar imagen",
+      "linkPrompt": "URL",
+      "imagePrompt": "URL de la imagen"
     }
   },
   "form": {

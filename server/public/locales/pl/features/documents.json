@@ -344,7 +344,9 @@
       "orderedList": "Lista numerowana",
       "quote": "Blok przytoczenia",
       "link": "Odnośnik",
-      "linkPrompt": "URL"
+      "image": "Wstaw obraz",
+      "linkPrompt": "URL",
+      "imagePrompt": "Adres URL obrazu"
     }
   },
   "form": {

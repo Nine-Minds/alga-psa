@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import {
@@ -9,6 +9,7 @@ import {
   Underline as UnderlineIcon,
   Strikethrough,
   Code,
+  Image as ImageIcon,
   Link as LinkIcon,
   Heading1,
   Heading2,
@@ -20,6 +21,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface EditorToolbarProps {
   editor: Editor;
+  /** Uploads a picked file and resolves to the URL the image node should point at. */
+  onUploadImage?: (file: File) => Promise<string>;
 }
 
 function ToolbarButton({
@@ -52,8 +55,36 @@ function ToolbarButton({
   );
 }
 
-export function EditorToolbar({ editor }: EditorToolbarProps) {
+export function EditorToolbar({ editor, onUploadImage }: EditorToolbarProps) {
   const { t } = useTranslation('features/documents');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const insertImage = useCallback(() => {
+    if (onUploadImage) {
+      fileInputRef.current?.click();
+      return;
+    }
+
+    const url = window.prompt(t('editor.toolbar.imagePrompt', { defaultValue: 'Image URL' }));
+    if (!url) return;
+    editor.chain().focus().setImage({ src: url }).run();
+  }, [editor, onUploadImage, t]);
+
+  const handleFileSelected = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file || !onUploadImage) return;
+
+      try {
+        const url = await onUploadImage(file);
+        editor.chain().focus().setImage({ src: url, alt: file.name }).run();
+      } catch (error) {
+        console.error('[EditorToolbar] Image upload failed:', error);
+      }
+    },
+    [editor, onUploadImage]
+  );
 
   const setLink = useCallback(() => {
     const previousUrl = editor.getAttributes('link').href;
@@ -163,6 +194,23 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         isActive={editor.isActive('link')}
         icon={<LinkIcon className="w-4 h-4" />}
         title={t('editor.toolbar.link', { defaultValue: 'Link' })}
+      />
+
+      {/* Image button */}
+      <ToolbarButton
+        id="editor-toolbar-image"
+        onClick={insertImage}
+        isActive={editor.isActive('image')}
+        icon={<ImageIcon className="w-4 h-4" />}
+        title={t('editor.toolbar.image', { defaultValue: 'Insert image' })}
+      />
+      <input
+        id="editor-toolbar-image-input"
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileSelected}
       />
     </BubbleMenu>
   );

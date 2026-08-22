@@ -330,7 +330,9 @@
       "orderedList": "Nummerierte Liste",
       "quote": "Blockzitat",
       "link": "Verknüpfung",
-      "linkPrompt": "URL"
+      "image": "Bild einfügen",
+      "linkPrompt": "URL",
+      "imagePrompt": "Bild-URL"
     }
   },
   "form": {

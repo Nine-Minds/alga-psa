@@ -2714,6 +2714,8 @@ export const uploadDocument = withAuth(async (
     projectTaskId?: string;
     contractId?: string;
     folder_path?: string | null;
+    /** Forces client visibility — used for images embedded in client-facing content. */
+    isClientVisible?: boolean;
   }
 ): Promise<
   | { success: true; document: IDocument }
@@ -2825,7 +2827,7 @@ export const uploadDocument = withAuth(async (
       // Create document record
       // Documents uploaded by client users are automatically client-visible.
       // For internal users, inherit visibility from the target folder.
-      let isClientVisible = user.user_type === 'client';
+      let isClientVisible = options.isClientVisible === true || user.user_type === 'client';
       if (!isClientVisible && resolvedFolderPath) {
         try {
           const folderVisibilityQuery = tenantScopedTable(knex, 'document_folders', tenant)

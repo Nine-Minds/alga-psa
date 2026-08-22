@@ -330,7 +330,9 @@
       "orderedList": "Ordered List",
       "quote": "Quote",
       "link": "Link",
-      "linkPrompt": "URL"
+      "image": "Insert image",
+      "linkPrompt": "URL",
+      "imagePrompt": "Image URL"
     }
   },
   "form": {

@@ -7,6 +7,7 @@ import { CollaborativeEditor } from './CollaborativeEditor';
 import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
 import { blockNoteJsonToProsemirrorJson } from '../lib/blockContentFormat';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import { EditorImage } from '../lib/editorImageExtension';
 import { Emoticon } from '@alga-psa/ui/editor';
 
 const mockProvider = {
@@ -185,6 +186,80 @@ describe('CollaborativeEditor initialization', () => {
       block_data: JSON.stringify(converted),
       user_id: 'user-1',
     });
+  });
+
+  it('keeps images when first opening a BlockNote document', async () => {
+    const blocknote = [
+      {
+        type: 'paragraph',
+        props: {},
+        content: [{ type: 'text', text: 'Before the screenshot', styles: {} }],
+      },
+      {
+        type: 'image',
+        props: {
+          url: '/api/documents/view/file-1',
+          caption: 'Spooler dialog',
+          previewWidth: 480,
+        },
+      },
+    ];
+
+    const converted = blockNoteJsonToProsemirrorJson(blocknote);
+
+    (getBlockContent as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue({
+      block_data: blocknote,
+    });
+
+    render(
+      <CollaborativeEditor
+        documentId="doc-image"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    await waitFor(() => {
+      expect(prosemirrorJSONToYXmlFragment).toHaveBeenCalled();
+    });
+
+    const seeded = (prosemirrorJSONToYXmlFragment as unknown as { mock: { calls: any[][] } }).mock
+      .calls[0][1];
+    expect(seeded.content).toContainEqual({
+      type: 'image',
+      attrs: {
+        src: '/api/documents/view/file-1',
+        alt: 'Spooler dialog',
+        title: 'Spooler dialog',
+        width: 480,
+      },
+    });
+
+    // The first open rewrites block_data to the converted document — it must
+    // not be the moment the picture is destroyed.
+    expect(updateBlockContent).toHaveBeenCalledWith('doc-image', {
+      block_data: JSON.stringify(converted),
+      user_id: 'user-1',
+    });
+    const persisted = (updateBlockContent as unknown as { mock: { calls: any[][] } }).mock
+      .calls[0][1].block_data;
+    expect(persisted).toContain('"type":"image"');
+    expect(persisted).toContain('/api/documents/view/file-1');
+  });
+
+  it('registers an image node so pasted and imported pictures survive', () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-image-ext"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    const extensions = editorOptionsRef.current?.extensions ?? [];
+    expect(extensions).toContain(EditorImage);
   });
 
   it('reopens content saved as ProseMirror JSON string', async () => {

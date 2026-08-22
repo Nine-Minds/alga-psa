@@ -330,7 +330,9 @@
       "orderedList": "Genummerde lijst",
       "quote": "Blokcitaat",
       "link": "Koppeling",
-      "linkPrompt": "URL"
+      "image": "Afbeelding invoegen",
+      "linkPrompt": "URL",
+      "imagePrompt": "Afbeeldings-URL"
     }
   },
   "form": {

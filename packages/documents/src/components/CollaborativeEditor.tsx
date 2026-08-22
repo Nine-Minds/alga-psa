@@ -34,6 +34,13 @@ import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import { EditorImage } from '../lib/editorImageExtension';
+import {
+  extractImageFiles,
+  insertUploadedImages,
+  isEditorImageFile,
+  uploadEditorImage,
+} from '../lib/editorImageUpload';
 import {
   blockNoteJsonToProsemirrorJson,
   detectBlockContentFormat,
@@ -170,6 +177,11 @@ export function CollaborativeEditor({
     setMentionState(state);
   }, []);
 
+  const uploadImage = useCallback(
+    async (file: File) => (await uploadEditorImage(file, { userId })).url,
+    [userId]
+  );
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -187,6 +199,7 @@ export function CollaborativeEditor({
         },
       }),
       Underline,
+      EditorImage,
       Emoticon,
       MentionNode,
       AiResponseBlock,
@@ -231,6 +244,12 @@ export function CollaborativeEditor({
       },
       handleDOMEvents: {
         paste: (_view, event) => {
+          const imageFiles = extractImageFiles(event.clipboardData?.items);
+          if (imageFiles.length > 0) {
+            event.preventDefault();
+            void insertUploadedImages(editor, imageFiles, { userId });
+            return true;
+          }
           const plainText = event.clipboardData?.getData('text/plain');
           const htmlText = event.clipboardData?.getData('text/html');
           return handleMarkdownPaste(plainText, htmlText, (html) => {
@@ -238,6 +257,13 @@ export function CollaborativeEditor({
               parseOptions: { preserveWhitespace: false },
             });
           });
+        },
+        drop: (_view, event) => {
+          const imageFiles = Array.from(event.dataTransfer?.files ?? []).filter(isEditorImageFile);
+          if (imageFiles.length === 0) return false;
+          event.preventDefault();
+          void insertUploadedImages(editor, imageFiles, { userId });
+          return true;
         },
       },
     },
@@ -442,7 +468,7 @@ export function CollaborativeEditor({
           data-placeholder={placeholder || t('editor.placeholder', { defaultValue: 'Start writing...' })}
           style={{ position: 'relative' }}
         >
-          <EditorToolbar editor={editor} />
+          <EditorToolbar editor={editor} onUploadImage={uploadImage} />
           <EditorContent editor={editor} />
           <EmojiSuggestionPopup editor={editor} suggestionState={emojiState} />
           {searchMentions && (

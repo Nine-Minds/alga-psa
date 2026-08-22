@@ -31,6 +31,7 @@ describe('EditorToolbar', () => {
       extendMarkRange: vi.fn(() => chain),
       unsetLink: vi.fn(() => chain),
       setLink: vi.fn(() => chain),
+      setImage: vi.fn(() => chain),
       run: vi.fn(),
     };
 
@@ -99,6 +100,55 @@ describe('EditorToolbar', () => {
     expect(chain.extendMarkRange).toHaveBeenCalledWith('link');
     expect(chain.setLink).toHaveBeenCalledWith({ href: 'https://example.com' });
     expect(chain.run).toHaveBeenCalled();
+
+    promptSpy.mockRestore();
+  });
+
+  it('inserts an image from a URL prompt when no upload handler is wired', () => {
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('https://example.com/a.png');
+
+    const { getByTitle } = render(<EditorToolbar editor={editor as any} />);
+    fireEvent.click(getByTitle('Insert image'));
+
+    expect(chain.setImage).toHaveBeenCalledWith({ src: 'https://example.com/a.png' });
+    expect(chain.run).toHaveBeenCalled();
+
+    promptSpy.mockRestore();
+  });
+
+  it('does not insert an image when the URL prompt is cancelled', () => {
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(null);
+
+    const { getByTitle } = render(<EditorToolbar editor={editor as any} />);
+    fireEvent.click(getByTitle('Insert image'));
+
+    expect(chain.setImage).not.toHaveBeenCalled();
+
+    promptSpy.mockRestore();
+  });
+
+  it('uploads a picked file and inserts the returned URL', async () => {
+    const onUploadImage = vi.fn(async () => '/api/documents/view/file-1');
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('https://should-not-be-used');
+
+    const { container, getByTitle } = render(
+      <EditorToolbar editor={editor as any} onUploadImage={onUploadImage} />
+    );
+
+    fireEvent.click(getByTitle('Insert image'));
+    expect(promptSpy).not.toHaveBeenCalled();
+
+    const input = container.querySelector('#editor-toolbar-image-input') as HTMLInputElement;
+    const file = new File(['x'], 'screenshot.png', { type: 'image/png' });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await vi.waitFor(() => {
+      expect(chain.setImage).toHaveBeenCalledWith({
+        src: '/api/documents/view/file-1',
+        alt: 'screenshot.png',
+      });
+    });
+    expect(onUploadImage).toHaveBeenCalledWith(file);
 
     promptSpy.mockRestore();
   });

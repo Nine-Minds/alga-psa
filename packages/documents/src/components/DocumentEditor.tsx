@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -9,6 +9,13 @@ import { TableKit } from '@tiptap/extension-table';
 import { Emoticon } from '@alga-psa/ui/editor';
 import { marked } from 'marked';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import { EditorImage } from '../lib/editorImageExtension';
+import {
+  extractImageFiles,
+  insertUploadedImages,
+  isEditorImageFile,
+  uploadEditorImage,
+} from '../lib/editorImageUpload';
 import {
   detectBlockContentFormat,
   blockNoteJsonToProsemirrorJson,
@@ -67,6 +74,11 @@ export function DocumentEditor({
   // Register unsaved changes for navigation protection
   useRegisterUnsavedChanges(`document-editor-${documentId}`, hasUnsavedChanges);
 
+  const uploadImage = useCallback(
+    async (file: File) => (await uploadEditorImage(file, { userId })).url,
+    [userId]
+  );
+
   // Initialize the editor
   const editor = useEditor({
     immediatelyRender: false,
@@ -83,6 +95,7 @@ export function DocumentEditor({
         },
       }),
       Underline,
+      EditorImage,
       Emoticon,
     ],
     content: '<p></p>',
@@ -91,6 +104,13 @@ export function DocumentEditor({
         class: 'prose prose-sm sm:prose-base max-w-none dark:prose-invert focus:outline-none',
       },
       handlePaste: (view, event, slice) => {
+        const imageFiles = extractImageFiles(event.clipboardData?.items);
+        if (imageFiles.length > 0) {
+          event.preventDefault();
+          void insertUploadedImages(editor, imageFiles, { userId });
+          return true;
+        }
+
         const plainText = event.clipboardData?.getData('text/plain');
         const htmlText = event.clipboardData?.getData('text/html');
 
@@ -113,6 +133,13 @@ export function DocumentEditor({
         }
 
         return false;
+      },
+      handleDrop: (view, event) => {
+        const imageFiles = Array.from(event.dataTransfer?.files ?? []).filter(isEditorImageFile);
+        if (imageFiles.length === 0) return false;
+        event.preventDefault();
+        void insertUploadedImages(editor, imageFiles, { userId });
+        return true;
       },
     },
     onCreate: () => {
@@ -271,7 +298,7 @@ export function DocumentEditor({
             className={styles.editorContainer}
             data-placeholder={placeholder || t('editor.placeholder', { defaultValue: 'Start writing...' })}
           >
-            <EditorToolbar editor={editor} />
+            <EditorToolbar editor={editor} onUploadImage={uploadImage} />
             <EditorContent editor={editor} />
           </div>
         ) : (
