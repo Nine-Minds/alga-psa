@@ -80,6 +80,8 @@ const KNOWN_LOCALE_HARDCODED: Record<string, string> = {
     'REPORTED GAP: sample catalog tile hardcodes USD pricing',
   'client-portal.json::account.services.catalog.managedIt.price':
     'REPORTED GAP: sample catalog tile hardcodes USD pricing',
+  'common.json::clients.validation.annualRevenue.invalid':
+    'deliberate: locale twin of the clientFormValidation.ts hint — an illustrative input example (each locale shows its own symbol), not a rendered amount',
 };
 
 const SOURCE_ROOTS = ['src', '../ee/server/src', '../packages'];
