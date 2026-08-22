@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { ControlRegistry } from '@alga-psa/emulator-host';
 import type { MsGraphCore } from './core';
 import {
+  deliverCallRecordNotifications,
   deliverInboundBotActivity,
   deliverMeetingArtifactNotifications,
   deliverNotifications,
@@ -182,6 +183,29 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
   });
 
   reg.seeder({
+    name: 'call-record',
+    description:
+      'Add a Teams Phone call detail record and push Graph change notifications to live communications/callRecords subscriptions (answered:false seeds a missed call)',
+    params: z.object({
+      id: z.string().optional(),
+      direction: z.enum(['inbound', 'outbound']).optional(),
+      callerNumber: z.string().optional(),
+      calleeNumber: z.string().optional(),
+      organizerUserId: z.string().optional(),
+      startedAt: z.string().optional(),
+      durationSeconds: z.number().int().nonnegative().optional(),
+      answered: z.boolean().optional(),
+      modality: z.enum(['audio', 'video']).optional(),
+    }),
+    run: async (input) => {
+      const record = core.addCallRecord(input);
+      const deliveries = await deliverCallRecordNotifications(core, record, core.env);
+      core.recordCallDeliveries(record.id, deliveries);
+      return { callRecord: record, deliveries };
+    },
+  });
+
+  reg.seeder({
     name: 'bot-activity',
     description:
       "Sign and POST an inbound Bot Framework activity at the app's bot endpoint, returning the app's synchronous reply (tokenAgeSeconds backdates the signed token to test expiry)",
@@ -232,25 +256,59 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       botTargetUrl: z.string().optional(),
       botServiceUrl: z.string().optional(),
       botAppId: z.string().optional(),
+      defaultActor: z
+        .object({
+          fromAadObjectId: z.string().nullable().optional(),
+          fromId: z.string().nullable().optional(),
+          fromName: z.string().nullable().optional(),
+          conversationId: z.string().nullable().optional(),
+          conversationType: z.enum(['personal', 'groupChat', 'channel']).nullable().optional(),
+          tenantId: z.string().nullable().optional(),
+        })
+        .optional(),
     }),
-    run: ({ accessTokenTtlSeconds, rotateRefreshTokens, botTargetUrl, botServiceUrl, botAppId }) => {
+    run: ({ accessTokenTtlSeconds, rotateRefreshTokens, botTargetUrl, botServiceUrl, botAppId, defaultActor }) => {
       if (accessTokenTtlSeconds !== undefined) core.accessTokenTtlSeconds = accessTokenTtlSeconds;
       if (rotateRefreshTokens !== undefined) core.rotateRefreshTokens = rotateRefreshTokens;
       if (botTargetUrl !== undefined) core.botConfig.targetUrl = botTargetUrl;
       if (botServiceUrl !== undefined) core.botConfig.serviceUrl = botServiceUrl;
       if (botAppId !== undefined) core.botConfig.appId = botAppId;
+      if (defaultActor !== undefined) {
+        for (const [key, value] of Object.entries(defaultActor)) {
+          (core.defaultActor as Record<string, unknown>)[key] = value ?? undefined;
+        }
+      }
       return {
         accessTokenTtlSeconds: core.accessTokenTtlSeconds,
         rotateRefreshTokens: core.rotateRefreshTokens,
         bot: { ...core.botConfig },
+        defaultActor: { ...core.defaultActor },
       };
     },
+  });
+
+  reg.action({
+    name: 'save-seed-preset',
+    description: 'Store a named seed payload so the console can replay it without retyping',
+    params: z.object({
+      name: z.string().min(1),
+      seeder: z.string().min(1),
+      payload: z.record(z.unknown()),
+    }),
+    run: ({ name, seeder, payload }) => core.saveSeedPreset(name, seeder, payload),
+  });
+
+  reg.action({
+    name: 'delete-seed-preset',
+    description: 'Remove a stored seed preset',
+    params: z.object({ name: z.string().min(1) }),
+    run: ({ name }) => ({ deleted: core.deleteSeedPreset(name) }),
   });
 
   reg.fault({
     name: 'operation-fault',
     description:
-      'Fail a specific operation ("token", "<METHOD> <graph path>" like "GET /me", or "<METHOD> <connector path>" like "POST /v3/conversations") with a fixed response, optionally only N times',
+      'Fail a specific operation ("token", "<METHOD> <graph path>" like "GET /me", or "<METHOD> <connector path>" like "POST /v3/conversations") with a fixed response, optionally only N times. A trailing "*" matches by prefix, so variable reply paths such as "POST /v3/conversations/x/activities/*" are targetable.',
     params: z.object({
       operation: z.string(),
       status: z.number().int().min(400).max(599).default(500),
@@ -338,6 +396,16 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
   });
 
   reg.stateView({
+    name: 'call-records',
+    description: 'Teams Phone call detail records with their notification delivery results',
+    get: () =>
+      [...core.callRecords.values()].map((record) => ({
+        ...record,
+        deliveries: core.callRecordDeliveries.get(record.id) ?? [],
+      })),
+  });
+
+  reg.stateView({
     name: 'calendar-events',
     description: 'Calendar events created through Graph /users/{id}/events',
     get: () => [...core.calendarEvents.values()],
@@ -356,6 +424,13 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       accessTokenTtlSeconds: core.accessTokenTtlSeconds,
       rotateRefreshTokens: core.rotateRefreshTokens,
       bot: { ...core.botConfig },
+      defaultActor: { ...core.defaultActor },
     }),
+  });
+
+  reg.stateView({
+    name: 'seed-presets',
+    description: 'Named seed payloads saved from the console',
+    get: () => core.listSeedPresets(),
   });
 }

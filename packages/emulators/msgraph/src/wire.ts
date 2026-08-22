@@ -274,6 +274,19 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     });
   }
 
+  // Teams Phone CDR fetch. $expand=sessions is what the adapter asks for; the
+  // unexpanded shape omits sessions the way real Graph does.
+  graph.get('/communications/callRecords/:callRecordId', (req, res) => {
+    const record = core.getCallRecord(String(req.params.callRecordId));
+    const expand = String(req.query.$expand ?? '');
+    if (expand.split(',').map((value) => value.trim()).includes('sessions')) {
+      res.json(record);
+      return;
+    }
+    const { sessions: _sessions, ...withoutSessions } = record;
+    res.json(withoutSessions);
+  });
+
   graph.post('/applications', (req, res) => {
     res.status(201).json(core.createApplication(req.body ?? {}));
   });

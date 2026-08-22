@@ -62,6 +62,12 @@
   .tabs button.active { color: var(--text); border-color: var(--accent); }
   .muted { color: var(--dim); font-size: 12px; }
   .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.adaptive-card { border:1px solid #2a3350; border-radius:8px; padding:10px; margin-top:8px; background:#131a2b }
+.ac-text { margin:2px 0 } .ac-text.bold { font-weight:700 }
+.ac-facts { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; margin:6px 0 }
+.ac-fact { display:contents } .ac-fact-title { color:#8fa0c4 }
+.ac-container { border-left:2px solid #2a3350; padding-left:8px; margin:4px 0 }
+.ac-input { color:#8fa0c4; font-style:italic; margin:2px 0 }
 </style>
 </head>
 <body>
@@ -243,7 +249,8 @@ function renderEmulator(emu) {
       el('button', { class: view.name === active ? 'active' : '',
         onclick: () => { activeView[emu.id] = view.name; renderEmulator(emu); } }, view.name)));
     const pre = el('pre', { class: 'out', id: 'stateview' }, 'loading…');
-    sections.push(el('section', { class: 'card' }, el('h3', {}, 'State'), tabs, copyable(pre)));
+    const cards = el('div', { id: 'cardpreview' });
+    sections.push(el('section', { class: 'card' }, el('h3', {}, 'State'), tabs, copyable(pre), cards));
     refreshState(emu.id, active);
   }
 
@@ -317,9 +324,78 @@ async function refreshState(emuId, view) {
   try {
     const result = await api('GET', '/control/' + emuId + '/state/' + view);
     pre.textContent = JSON.stringify(result, null, 2);
+    renderCardPreviews(result);
   } catch (err) {
     pre.textContent = err.message;
   }
+}
+
+/**
+ * Adaptive Card preview.
+ *
+ * Deliberately a tiny local renderer rather than the official SDK from a CDN:
+ * the console is served under a strict CSP with no external origins, and
+ * reading a card as raw JSON was one of the sharper edges of the Teams work.
+ * It covers the subset the bot actually sends — TextBlock, FactSet,
+ * Input.Text/ChoiceSet, ActionSet — and falls back to JSON for anything else.
+ */
+function renderAdaptiveCard(card) {
+  const body = el('div', { class: 'adaptive-card' });
+  const walk = (items, into) => {
+    for (const item of items || []) {
+      if (item.type === 'TextBlock') {
+        into.append(el('div', { class: item.weight === 'Bolder' ? 'ac-text bold' : 'ac-text' }, String(item.text ?? '')));
+      } else if (item.type === 'FactSet') {
+        const facts = el('div', { class: 'ac-facts' });
+        for (const fact of item.facts || []) {
+          facts.append(el('div', { class: 'ac-fact' },
+            el('span', { class: 'ac-fact-title' }, String(fact.title ?? '')),
+            el('span', {}, String(fact.value ?? ''))));
+        }
+        into.append(facts);
+      } else if (item.type === 'Container' || item.type === 'ColumnSet') {
+        const box = el('div', { class: 'ac-container' });
+        walk(item.items || (item.columns || []).flatMap((column) => column.items || []), box);
+        into.append(box);
+      } else if (String(item.type || '').startsWith('Input.')) {
+        into.append(el('div', { class: 'ac-input' }, (item.label || item.placeholder || item.id || item.type) + ' [' + item.type + ']'));
+      } else if (item.type === 'ActionSet') {
+        const row = el('div', { class: 'row' });
+        for (const action of item.actions || []) row.append(el('span', { class: 'badge' }, String(action.title ?? action.type)));
+        into.append(row);
+      } else {
+        into.append(el('pre', { class: 'out' }, JSON.stringify(item, null, 2)));
+      }
+    }
+  };
+  walk(card.body, body);
+  if (card.actions?.length) {
+    const row = el('div', { class: 'row' });
+    for (const action of card.actions) row.append(el('span', { class: 'badge' }, String(action.title ?? action.type)));
+    body.append(row);
+  }
+  return body;
+}
+
+function renderCardPreviews(result) {
+  const host = document.getElementById('cardpreview');
+  if (!host) return;
+  const cards = [];
+  const collect = (node) => {
+    if (Array.isArray(node)) { node.forEach(collect); return; }
+    if (!node || typeof node !== 'object') return;
+    if (node.contentType === 'application/vnd.microsoft.card.adaptive' && node.content) {
+      cards.push(node.content);
+      return;
+    }
+    Object.values(node).forEach(collect);
+  };
+  collect(result);
+  if (cards.length === 0) { host.replaceChildren(); return; }
+  host.replaceChildren(
+    el('h3', {}, 'Adaptive Cards (' + cards.length + ')'),
+    ...cards.map(renderAdaptiveCard),
+  );
 }
 
 function select(id) {

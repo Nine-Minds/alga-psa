@@ -131,6 +131,38 @@ export interface GraphMeetingArtifact {
   contentType: string;
 }
 
+/** One Graph callRecords session endpoint (PSTN leg carries identity.phone). */
+export interface GraphCallRecordEndpoint {
+  identity: {
+    phone?: { id: string } | null;
+    user?: { id: string; displayName: string | null } | null;
+  };
+}
+
+export interface GraphCallRecordSession {
+  id: string;
+  caller: GraphCallRecordEndpoint;
+  callee: GraphCallRecordEndpoint;
+  startDateTime: string;
+  endDateTime: string;
+  modalities: string[];
+  failureInfo: { reason: string; stage: string } | null;
+}
+
+/** A Teams Phone call detail record served by /communications/callRecords. */
+export interface GraphCallRecord {
+  id: string;
+  version: number;
+  type: string;
+  modalities: string[];
+  startDateTime: string;
+  endDateTime: string;
+  lastModifiedDateTime: string;
+  organizer: { user: { id: string; displayName: string | null } } | null;
+  participants: unknown[];
+  sessions: GraphCallRecordSession[];
+}
+
 /** A conversation created through the Bot Framework connector (proactive send). */
 export interface BotConversation {
   id: string;
@@ -193,6 +225,28 @@ export interface InboundBotActivityInput {
    * so buildInboundActivity ignores it.
    */
   tokenAgeSeconds?: number;
+}
+
+/**
+ * Identity applied to bot-activity seeds that omit it. Repeating the same
+ * fromAadObjectId/conversationId on every seed was the single most common piece
+ * of boilerplate during the Teams work.
+ */
+export interface DefaultActor {
+  fromAadObjectId?: string;
+  fromId?: string;
+  fromName?: string;
+  conversationId?: string;
+  conversationType?: 'personal' | 'groupChat' | 'channel';
+  tenantId?: string;
+}
+
+/** A named seed payload the console can save and replay. */
+export interface SeedPreset {
+  name: string;
+  seeder: string;
+  payload: Record<string, unknown>;
+  savedAt: string;
 }
 
 export interface OperationFault {
@@ -309,6 +363,12 @@ export class MsGraphCore implements EmulatorCore {
   readonly onlineMeetings = new Map<string, GraphOnlineMeeting>();
   /** Keyed by meeting id; holds both recordings and transcripts. */
   readonly meetingArtifacts = new Map<string, GraphMeetingArtifact[]>();
+  /** Teams Phone call detail records, keyed by call record id. */
+  readonly callRecords = new Map<string, GraphCallRecord>();
+  /** Notification delivery results per call record, for the state view. */
+  readonly callRecordDeliveries = new Map<string, unknown[]>();
+  readonly seedPresets = new Map<string, SeedPreset>();
+  defaultActor: DefaultActor = {};
   readonly botConversations = new Map<string, BotConversation>();
   readonly capturedBotActivities: CapturedBotActivity[] = [];
   readonly activityNotifications: ActivityNotificationRecord[] = [];
@@ -337,6 +397,10 @@ export class MsGraphCore implements EmulatorCore {
     this.calendarEvents.clear();
     this.onlineMeetings.clear();
     this.meetingArtifacts.clear();
+    this.callRecords.clear();
+    this.callRecordDeliveries.clear();
+    this.seedPresets.clear();
+    this.defaultActor = {};
     this.botConversations.clear();
     this.capturedBotActivities.length = 0;
     this.activityNotifications.length = 0;
@@ -605,13 +669,30 @@ export class MsGraphCore implements EmulatorCore {
     this.faults.clear();
   }
 
-  /** Consume one occurrence of an operation-scoped fault, if armed. */
+  /**
+   * Consume one occurrence of an operation-scoped fault, if armed.
+   *
+   * Exact match first, then trailing-wildcard patterns
+   * ("POST /v3/conversations/x/activities/*"): reply paths embed a
+   * server-generated activity id, so there is no literal to arm against.
+   */
   consumeFault(operation: string): OperationFault | null {
-    const fault = this.faults.get(operation);
+    let key: string | undefined = this.faults.has(operation) ? operation : undefined;
+    if (!key) {
+      for (const candidate of this.faults.keys()) {
+        if (candidate.endsWith('*') && operation.startsWith(candidate.slice(0, -1))) {
+          key = candidate;
+          break;
+        }
+      }
+    }
+    if (!key) return null;
+
+    const fault = this.faults.get(key);
     if (!fault) return null;
     if (fault.remaining !== undefined) {
       fault.remaining -= 1;
-      if (fault.remaining <= 0) this.faults.delete(operation);
+      if (fault.remaining <= 0) this.faults.delete(key);
     }
     return fault;
   }
@@ -899,6 +980,78 @@ export class MsGraphCore implements EmulatorCore {
     return artifact;
   }
 
+  // --- Teams Phone call records ---
+
+  /**
+   * Build a callRecord the shape real Graph returns: the PSTN leg lives on a
+   * session endpoint's `identity.phone.id`, which is what the adapter reads to
+   * decide direction and extract the counterparty number. An unanswered call
+   * carries `failureInfo` and a zero-length session, exactly as Graph reports
+   * a missed call.
+   */
+  addCallRecord(input: {
+    id?: string;
+    direction?: 'inbound' | 'outbound';
+    callerNumber?: string;
+    calleeNumber?: string;
+    organizerUserId?: string;
+    startedAt?: string;
+    durationSeconds?: number;
+    answered?: boolean;
+    modality?: 'audio' | 'video';
+  } = {}): GraphCallRecord {
+    const id = input.id ?? this.newId('callRecord');
+    const direction = input.direction ?? 'inbound';
+    const answered = input.answered ?? true;
+    const durationSeconds = answered ? input.durationSeconds ?? 120 : 0;
+    const start = input.startedAt ?? this.env.clock.now().toISOString();
+    const end = new Date(new Date(start).getTime() + durationSeconds * 1000).toISOString();
+    const organizerUserId = input.organizerUserId ?? 'emulated-organizer';
+    const modality = input.modality ?? 'audio';
+
+    const phoneEndpoint = (number: string): GraphCallRecordEndpoint => ({ identity: { phone: { id: number } } });
+    const userEndpoint = (): GraphCallRecordEndpoint => ({
+      identity: { user: { id: organizerUserId, displayName: 'Emulated Agent' } },
+    });
+
+    const callerNumber = input.callerNumber ?? '+15551234567';
+    const calleeNumber = input.calleeNumber ?? '+15559990000';
+
+    const session: GraphCallRecordSession = {
+      id: `${id}-session-1`,
+      caller: direction === 'inbound' ? phoneEndpoint(callerNumber) : userEndpoint(),
+      callee: direction === 'inbound' ? userEndpoint() : phoneEndpoint(calleeNumber),
+      startDateTime: start,
+      endDateTime: end,
+      modalities: [modality],
+      failureInfo: answered ? null : { reason: 'The call was not answered.', stage: 'callSetup' },
+    };
+
+    const record: GraphCallRecord = {
+      id,
+      version: 1,
+      type: 'peerToPeer',
+      modalities: [modality],
+      startDateTime: start,
+      endDateTime: end,
+      lastModifiedDateTime: this.env.clock.now().toISOString(),
+      organizer: { user: { id: organizerUserId, displayName: 'Emulated Agent' } },
+      participants: [],
+      sessions: [session],
+    };
+
+    this.callRecords.set(id, record);
+    return record;
+  }
+
+  getCallRecord(callRecordId: string): GraphCallRecord {
+    const record = this.callRecords.get(callRecordId);
+    if (!record) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return record;
+  }
+
   // --- Bot Framework connector ---
 
   createConversation(input: { isGroup?: boolean; tenantId?: string; members?: unknown[] }): BotConversation {
@@ -958,6 +1111,95 @@ export class MsGraphCore implements EmulatorCore {
    * Assemble the Bot Framework Activity that inbound injection delivers to the
    * app's bot endpoint. Pure: the notifier signs it and performs the POST.
    */
+  /**
+   * `--state-file` support. Only durable seeded state is serialized: OAuth
+   * codes, access tokens and armed faults are per-run and deliberately dropped,
+   * and the Bot Framework signing key is NOT part of the snapshot (the app
+   * caches the discovered JWKS, so restoring must not rotate it).
+   */
+  snapshot(): unknown {
+    return {
+      messages: [...this.messages.values()],
+      subscriptions: [...this.subscriptions.values()],
+      organizations: [...this.organizations.values()],
+      directoryUsers: [...this.directoryUsers.values()],
+      applications: [...this.applications.values()],
+      servicePrincipals: [...this.servicePrincipals.values()],
+      teams: [...this.teams.values()],
+      chats: [...this.chats.values()],
+      chatMessages: [...this.chatMessages.entries()],
+      calendarEvents: [...this.calendarEvents.values()],
+      onlineMeetings: [...this.onlineMeetings.values()],
+      meetingArtifacts: [...this.meetingArtifacts.entries()],
+      callRecords: [...this.callRecords.values()],
+      seedPresets: [...this.seedPresets.values()],
+      defaultActor: this.defaultActor,
+      accessTokenTtlSeconds: this.accessTokenTtlSeconds,
+      rotateRefreshTokens: this.rotateRefreshTokens,
+      botConfig: this.botConfig,
+      idCounter: this.idCounter,
+    };
+  }
+
+  restore(state: unknown): void {
+    const snapshot = (state ?? {}) as Record<string, any>;
+    const load = <V>(target: Map<string, V>, rows: unknown, key: (row: any) => string) => {
+      target.clear();
+      for (const row of Array.isArray(rows) ? rows : []) {
+        target.set(key(row), row as V);
+      }
+    };
+    const loadEntries = <V>(target: Map<string, V>, entries: unknown) => {
+      target.clear();
+      for (const entry of Array.isArray(entries) ? entries : []) {
+        if (Array.isArray(entry) && typeof entry[0] === 'string') {
+          target.set(entry[0], entry[1] as V);
+        }
+      }
+    };
+
+    load(this.messages, snapshot.messages, (row) => row.id);
+    load(this.subscriptions, snapshot.subscriptions, (row) => row.id);
+    load(this.organizations, snapshot.organizations, (row) => row.id);
+    load(this.directoryUsers, snapshot.directoryUsers, (row) => row.id);
+    load(this.applications, snapshot.applications, (row) => row.id);
+    load(this.servicePrincipals, snapshot.servicePrincipals, (row) => row.id);
+    load(this.teams, snapshot.teams, (row) => row.id);
+    load(this.chats, snapshot.chats, (row) => row.id);
+    loadEntries(this.chatMessages, snapshot.chatMessages);
+    load(this.calendarEvents, snapshot.calendarEvents, (row) => row.id);
+    load(this.onlineMeetings, snapshot.onlineMeetings, (row) => row.id);
+    loadEntries(this.meetingArtifacts, snapshot.meetingArtifacts);
+    load(this.callRecords, snapshot.callRecords, (row) => row.id);
+    load(this.seedPresets, snapshot.seedPresets, (row) => row.name);
+
+    this.defaultActor = snapshot.defaultActor ?? {};
+    if (typeof snapshot.accessTokenTtlSeconds === 'number') this.accessTokenTtlSeconds = snapshot.accessTokenTtlSeconds;
+    if (typeof snapshot.rotateRefreshTokens === 'boolean') this.rotateRefreshTokens = snapshot.rotateRefreshTokens;
+    if (snapshot.botConfig) this.botConfig = { ...this.botConfig, ...snapshot.botConfig };
+    // Keep minting ids past the restored high-water mark so a restored run
+    // cannot collide with what the previous run already handed to the app.
+    if (typeof snapshot.idCounter === 'number') this.idCounter = snapshot.idCounter;
+  }
+
+  recordCallDeliveries(callRecordId: string, deliveries: unknown[]): void {
+    this.callRecordDeliveries.set(callRecordId, deliveries);
+  }
+
+  saveSeedPreset(name: string, seeder: string, payload: Record<string, unknown>): SeedPreset {
+    const preset: SeedPreset = { name, seeder, payload, savedAt: this.env.clock.now().toISOString() };
+    this.seedPresets.set(name, preset);
+    return preset;
+  }
+
+  deleteSeedPreset(name: string): boolean {
+    return this.seedPresets.delete(name);
+  }
+
+  listSeedPresets(): SeedPreset[] {
+    return [...this.seedPresets.values()];
+  }
+
   buildInboundActivity(input: InboundBotActivityInput): {
     activity: Record<string, unknown>;
     targetUrl: string;
@@ -967,10 +1209,11 @@ export class MsGraphCore implements EmulatorCore {
     tenantId: string;
   } {
     const serviceUrl = input.serviceUrl ?? this.botConfig.serviceUrl;
-    const tenantId = input.tenantId ?? this.botConfig.tenantId;
+    // Explicit values always win over the configured default actor.
+    const tenantId = input.tenantId ?? this.defaultActor.tenantId ?? this.botConfig.tenantId;
     const audience = input.appId ?? this.botConfig.appId;
-    const aadObjectId = input.fromAadObjectId ?? this.newId('aad-object');
-    const conversationType = input.conversationType ?? 'personal';
+    const aadObjectId = input.fromAadObjectId ?? this.defaultActor.fromAadObjectId ?? this.newId('aad-object');
+    const conversationType = input.conversationType ?? this.defaultActor.conversationType ?? 'personal';
     const activity: Record<string, unknown> = {
       type: input.type ?? 'message',
       id: this.newId('inbound-activity'),
@@ -978,13 +1221,13 @@ export class MsGraphCore implements EmulatorCore {
       channelId: 'msteams',
       serviceUrl,
       from: {
-        id: input.fromId ?? `29:${aadObjectId}`,
+        id: input.fromId ?? this.defaultActor.fromId ?? `29:${aadObjectId}`,
         aadObjectId,
-        name: input.fromName ?? 'Emulated Teams User',
+        name: input.fromName ?? this.defaultActor.fromName ?? 'Emulated Teams User',
       },
       recipient: { id: `28:${audience}`, name: 'AlgaPSA' },
       conversation: {
-        id: input.conversationId ?? this.newId('conversation'),
+        id: input.conversationId ?? this.defaultActor.conversationId ?? this.newId('conversation'),
         conversationType,
         tenantId,
         isGroup: conversationType !== 'personal',

@@ -247,6 +247,70 @@ meetings created through the app get both automatically; a hand-planted row
 needs them set. On success the meeting advances to `recording_ready`, with
 recordings stored as files and transcripts as documents.
 
+### Teams Phone call records
+
+The same msgraph emulator serves the telephony surface: a
+`communications/callRecords` subscription, a `call-record` seeder that pushes a
+Graph-style change notification, and
+`GET /v1.0/communications/callRecords/{id}?$expand=sessions` returning the CDR
+the adapter maps. The PSTN leg lives on the session endpoints
+(`identity.phone.id`), which is what decides direction; `answered: false` seeds
+a missed call (zero-length session with `failureInfo`).
+
+Point the webhook at the app the same way the recordings one is pointed —
+plain http is accepted only while the emulator gate is on:
+
+```
+TELEPHONY_CALLS_WEBHOOK_URL=http://host.docker.internal:3000/api/telephony/webhooks/teams-calls
+```
+
+The whole loop, end to end:
+
+```bash
+# The renewal job creates the callRecords subscription against the emulator.
+# Locally on pg-boss, enqueue it:
+#   INSERT INTO pgboss.job (name, data) VALUES
+#     ('renew-telephony-call-subscriptions', '{"tenantId":"<tenant>"}');
+# (`telephony_providers` must have an active teams-phone row, and the tenant
+#  needs the `telephony` add-on — the ingest path is deny-by-default.)
+
+algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15551234567","durationSeconds":180}'
+algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15557654321","answered":false}'
+
+algasim state msgraph call-records    # seeded CDRs + notification delivery
+```
+
+A seeded call whose number matches a contact lands as a `Call` interaction on
+that contact's timeline within one processing cycle. An unmatched or ambiguous
+number stays in the ledger and shows up under Settings → Integrations →
+Communication → Telephony, waiting to be resolved.
+
+### Living with the emulator
+
+Six ergonomics fixes that came out of using it in anger:
+
+- **State survives restarts.** `--state-file <path>` (or `ALGASIM_STATE_FILE`)
+  snapshots seeded state after every mutating control call and on shutdown, and
+  restores it on boot. Compose sets it by default onto a named volume, so
+  `docker compose restart algasim` no longer costs you the seed. The Bot
+  Framework signing key is deliberately *not* part of the snapshot — the app
+  caches the discovered JWKS, so restoring must not rotate it.
+- **A default actor.** `algasim action msgraph configure -p '{"defaultActor":
+  {"fromAadObjectId":"...","conversationId":"..."}}'` fills in the identity
+  every `bot-activity` seed used to repeat. Explicit values still win.
+- **Seed presets.** `save-seed-preset` / `delete-seed-preset` store a named
+  payload (visible in the `seed-presets` state view) so the console can replay a
+  fiddly seed without retyping it.
+- **Adaptive Card preview.** The console renders card attachments found in any
+  state view with a small vendored renderer — no CDN, so it works under the
+  console's CSP.
+- **Prefix faults.** `operation-fault` accepts a trailing `*`, e.g.
+  `"POST /v3/conversations/x/activities/*"`, so reply paths with a
+  server-generated activity id are targetable at all.
+- **Scenario recording.** Start with `--record-scenario` (or
+  `ALGASIM_RECORD_SCENARIO=true`) and `algasim recording` prints everything you
+  did as a scenario document you can save and replay.
+
 ## Drive them
 
 Every emulator exposes two surfaces: the **vendor surface** above, and a
@@ -291,8 +355,9 @@ Three tiers, so most failure modes cost nothing to support:
 - **Protocol** — token expiry and revocation actions on `msgraph` and `qbo`.
 - **Domain** — emulator-specific, e.g. `msgraph` `operation-fault` (fail
   `"GET /me"` or `"POST /v3/conversations/{id}/activities"` N times, for
-  Graph throttling and bot-connector failures), QBO stale SyncTokens
-  produced by out-of-band `receive-payment`/`apply-credit` actions.
+  Graph throttling and bot-connector failures; a trailing `*` matches by
+  prefix), QBO stale SyncTokens produced by out-of-band
+  `receive-payment`/`apply-credit` actions.
 
 ### Scenarios
 

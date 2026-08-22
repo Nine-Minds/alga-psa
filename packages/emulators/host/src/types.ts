@@ -18,6 +18,12 @@ export interface HostEnv {
 export interface EmulatorCore {
   /** Drop all state and return to the just-started condition. */
   reset(): void;
+  /**
+   * Optional `--state-file` support: return a JSON-serializable projection of
+   * durable seeded state. Cores that omit these simply do not persist.
+   */
+  snapshot?(): unknown;
+  restore?(state: unknown): void;
 }
 
 /**

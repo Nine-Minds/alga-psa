@@ -5,6 +5,12 @@ import { buildControlApp } from './controlApi';
 import { ControlError, EmulatorControls } from './registry';
 import { registerTransportFaults, TransportFaultState, transportFaultMiddleware } from './transportFaults';
 import type { Scenario } from './scenario';
+import {
+  DebouncedSnapshotWriter,
+  readSnapshot,
+  type HostSnapshot,
+  type SnapshotCapableCore,
+} from './statePersistence';
 import type { EmulatorCore, EmulatorPackage, EmulatorServer, HostEnv } from './types';
 
 export interface EmulatorInstance {
@@ -26,7 +32,18 @@ export interface HostOptions {
   seed?: number;
   /** Named scenarios runnable via the control API and console. */
   scenarios?: Scenario[];
+  /** Snapshot seeded state here so a container restart does not wipe it. */
+  stateFile?: string;
+  /** Capture control calls into a replayable scenario document. */
+  recordScenario?: boolean;
   log?: HostEnv['log'];
+}
+
+export interface RecordedStep {
+  emulator: string;
+  kind: 'seed' | 'action' | 'arm' | 'disarm';
+  name: string;
+  params?: unknown;
 }
 
 function defaultLog(message: string, extra?: Record<string, unknown>): void {
@@ -62,6 +79,9 @@ export class EmulatorHost {
   private customServers: EmulatorServer[] = [];
   /** Actual bound control port (known after start()). */
   controlPort = 0;
+  /** Control calls captured since the host started, when recording is on. */
+  readonly recordedSteps: RecordedStep[] = [];
+  private snapshotWriter: DebouncedSnapshotWriter | null = null;
 
   constructor(private readonly options: HostOptions) {
     if (options.emulators.length === 0) {
@@ -96,6 +116,62 @@ export class EmulatorHost {
       }
       this.scenarios.set(scenario.name, scenario);
     }
+    if (options.stateFile) {
+      this.restoreFromStateFile(options.stateFile);
+      this.snapshotWriter = new DebouncedSnapshotWriter(options.stateFile, () => this.buildSnapshot());
+    }
+  }
+
+  private restoreFromStateFile(path: string): void {
+    const snapshot = readSnapshot(path);
+    if (!snapshot) return;
+
+    this.clock.advance(snapshot.clockOffsetMs);
+    for (const [id, state] of Object.entries(snapshot.emulators)) {
+      const instance = this.instances.get(id);
+      const core = instance?.core as SnapshotCapableCore | undefined;
+      if (!core?.restore) continue;
+      try {
+        core.restore(state);
+      } catch (error) {
+        this.env.log('state restore failed', {
+          emulator: id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    this.env.log('restored emulator state', { stateFile: path, savedAt: snapshot.savedAt });
+  }
+
+  private buildSnapshot(): HostSnapshot {
+    const emulators: Record<string, unknown> = {};
+    for (const [id, instance] of this.instances) {
+      const core = instance.core as SnapshotCapableCore;
+      if (typeof core.snapshot === 'function') {
+        emulators[id] = core.snapshot();
+      }
+    }
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      clockOffsetMs: this.clock.offset,
+      emulators,
+    };
+  }
+
+  /** Called by the control API after any state-mutating request. */
+  persistState(): void {
+    this.snapshotWriter?.schedule();
+  }
+
+  recordStep(step: RecordedStep): void {
+    if (this.options.recordScenario) {
+      this.recordedSteps.push(step);
+    }
+  }
+
+  get recordingEnabled(): boolean {
+    return Boolean(this.options.recordScenario);
   }
 
   scenario(name: string): Scenario {
@@ -158,6 +234,8 @@ export class EmulatorHost {
   }
 
   async stop(): Promise<void> {
+    // Last chance to persist: a debounced write may still be pending.
+    this.snapshotWriter?.flush();
     await Promise.all([
       ...this.servers.map(
         (server) =>
