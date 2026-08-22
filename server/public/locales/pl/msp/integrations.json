@@ -2678,9 +2678,17 @@
             "description": "Dostarczaj osobiste powiadomienia do kanału aktywności Teams.",
             "label": "Powiadomienia o aktywności"
           },
+          "channelBot": {
+            "description": "Zezwalaj botowi na odpowiadanie, gdy zostanie wspomniany przez @ w kanałach zespołu. Odpowiedzi bota (w tym szczegóły zgłoszenia) są widoczne dla wszystkich członków kanału.",
+            "label": "Bot w kanale"
+          },
           "groupChatBot": {
             "description": "Zezwalaj botowi na odpowiadanie w czatach grupowych Teams. Odpowiedzi bota (w tym szczegóły zgłoszenia) są widoczne dla wszystkich członków czatu.",
             "label": "Bot w czacie grupowym"
+          },
+          "guestTicketSubmission": {
+            "description": "Zezwalaj kontaktom klientów piszącym do bota na przesyłanie zgłoszeń bez logowania. Nadawcy są dopasowywani do kontaktów na podstawie zweryfikowanej tożsamości Microsoft; niedopasowani nadawcy są odrzucani.",
+            "label": "Przesyłanie zgłoszeń przez gości"
           },
           "messageExtension": {
             "description": "Włącz wyszukiwanie i akcje PSA oparte na wiadomościach.",

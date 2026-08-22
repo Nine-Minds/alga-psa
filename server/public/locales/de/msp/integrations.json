@@ -2678,9 +2678,17 @@
             "description": "Persönliche Teams-Aktivitäts-Benachrichtigungen zustellen.",
             "label": "Aktivitätsbenachrichtigungen"
           },
+          "channelBot": {
+            "description": "Dem Bot erlauben, zu antworten, wenn er in Teamkanälen mit @ erwähnt wird. Bot-Antworten (einschließlich Ticketdetails) sind für alle Kanalmitglieder sichtbar.",
+            "label": "Kanal-Bot"
+          },
           "groupChatBot": {
             "description": "Dem Bot erlauben, in Teams-Gruppenchats zu antworten. Bot-Antworten (einschließlich Ticketdetails) sind für alle Mitglieder des Chats sichtbar.",
             "label": "Gruppenchat-Bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Kundenkontakten, die dem Bot schreiben, das Erstellen von Tickets ohne Anmeldung ermöglichen. Absender werden anhand ihrer verifizierten Microsoft-Identität Kontakten zugeordnet; nicht zugeordnete Absender werden abgelehnt.",
+            "label": "Ticketerstellung durch Gäste"
           },
           "messageExtension": {
             "description": "Nachschlagefunktionen und nachrichtengesteuerte PSA-Aktionen aktivieren.",

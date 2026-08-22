@@ -2678,9 +2678,17 @@
             "description": "Lever persoonlijke meldingen aan de Teams-activiteitenfeed.",
             "label": "Activiteitenmeldingen"
           },
+          "channelBot": {
+            "description": "Sta de bot toe om te reageren wanneer deze met @ wordt genoemd in teamkanalen. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van het kanaal.",
+            "label": "Kanaal-bot"
+          },
           "groupChatBot": {
             "description": "Sta de bot toe om te reageren in Teams-groepschats. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van de chat.",
             "label": "Groepschat-bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Laat klantcontacten die de bot een bericht sturen tickets indienen zonder aan te melden. Afzenders worden op basis van hun geverifieerde Microsoft-identiteit aan contacten gekoppeld; afzenders zonder overeenkomst worden geweigerd.",
+            "label": "Ticketindiening door gasten"
           },
           "messageExtension": {
             "description": "Schakel opzoek- en berichtgestuurde PSA-acties in.",

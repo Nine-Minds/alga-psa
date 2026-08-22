@@ -2701,7 +2701,15 @@
             "description": "11111",
             "label": "11111"
           },
+          "channelBot": {
+            "description": "11111",
+            "label": "11111"
+          },
           "groupChatBot": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "guestTicketSubmission": {
             "description": "11111",
             "label": "11111"
           },

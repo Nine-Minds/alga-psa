@@ -2701,9 +2701,17 @@
             "description": "Deliver personal Teams activity-feed notifications.",
             "label": "Activity notifications"
           },
+          "channelBot": {
+            "description": "Allow the bot to respond when @mentioned in team channels. Bot replies (including ticket details) are visible to every channel member.",
+            "label": "Channel bot"
+          },
           "groupChatBot": {
             "description": "Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.",
             "label": "Group chat bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Let client contacts who message the bot submit tickets without signing in. Senders are matched to contacts by their verified Microsoft identity; unmatched senders are declined.",
+            "label": "Guest ticket submission"
           },
           "messageExtension": {
             "description": "Enable lookup and message-driven PSA actions.",

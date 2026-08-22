@@ -2678,9 +2678,17 @@
             "description": "Enviar notificaciones personales al feed de actividad de Teams.",
             "label": "Notificaciones de actividad"
           },
+          "channelBot": {
+            "description": "Permitir que el bot responda cuando se le menciona con @ en canales de equipo. Las respuestas del bot (incluidos los detalles del ticket) son visibles para todos los miembros del canal.",
+            "label": "Bot de canal"
+          },
           "groupChatBot": {
             "description": "Permitir que el bot responda en chats de grupo de Teams. Las respuestas del bot (incluidos los detalles del ticket) son visibles para todos los miembros del chat.",
             "label": "Bot en chat de grupo"
+          },
+          "guestTicketSubmission": {
+            "description": "Permitir que los contactos de clientes que escriben al bot envíen tickets sin iniciar sesión. Los remitentes se asocian a contactos mediante su identidad de Microsoft verificada; los remitentes sin coincidencia se rechazan.",
+            "label": "Envío de tickets por invitados"
           },
           "messageExtension": {
             "description": "Habilitar búsquedas y acciones PSA basadas en mensajes.",
