@@ -189,8 +189,30 @@ export class JobRunnerFactory implements IJobRunnerFactory {
   private determineRunnerType(
     config?: Partial<JobRunnerConfig>
   ): 'pgboss' | 'temporal' {
-    // Explicit config takes precedence
+    // Temporal is a build/runtime concern, not a tenant-entitlement concern:
+    // Essentials is an EE tier and therefore runs the same Temporal worker as
+    // every other EE deployment. Never let a caller route an EE process to
+    // pg-boss, because that leaves durable work on a queue with no EE worker.
+    const enterprise = isEnterpriseEdition();
+
+    // Each runtime has one durable scheduling authority. Ignore incompatible
+    // legacy configuration rather than returning a runner type that startup
+    // later has to silently substitute.
     if (config?.type) {
+      if (config.type === 'pgboss' && enterprise) {
+        logger.warn(
+          'JobRunnerConfig.type=pgboss ignored in Enterprise Edition; Temporal is the durable ' +
+            'scheduling authority for Enterprise and Essentials deployments.',
+        );
+        return 'temporal';
+      }
+      if (config.type === 'temporal' && !enterprise) {
+        logger.warn(
+          'JobRunnerConfig.type=temporal ignored in Community Edition; pg-boss is the durable ' +
+            'scheduling authority for Community deployments.',
+        );
+        return 'pgboss';
+      }
       return config.type;
     }
 
@@ -201,7 +223,6 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     // orchestration var silently surfaces here as `pgboss`. In EE that is never
     // what we want: Temporal is the durable scheduling authority, so we refuse
     // an explicit/implicit `pgboss` request rather than honoring a stray dotenv.
-    const enterprise = isEnterpriseEdition();
     const envType = process.env.JOB_RUNNER_TYPE?.toLowerCase();
     if (envType === 'temporal' || envType === 'pgboss') {
       if (envType === 'pgboss' && enterprise) {
@@ -211,6 +232,13 @@ export class JobRunnerFactory implements IJobRunnerFactory {
             'an explicit operator setting.',
         );
         return 'temporal';
+      }
+      if (envType === 'temporal' && !enterprise) {
+        logger.warn(
+          'JOB_RUNNER_TYPE=temporal ignored in Community Edition; pg-boss is the durable ' +
+            'scheduling authority for Community deployments.',
+        );
+        return 'pgboss';
       }
       return envType;
     }

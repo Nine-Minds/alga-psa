@@ -315,6 +315,23 @@ describe('renewal queue scheduling wiring', () => {
     expect(jobRunnerFactorySource).toContain('jobRunnerTypeEnv: process.env.JOB_RUNNER_TYPE ?? null,');
   });
 
+  it('refuses an explicit pg-boss factory configuration under Enterprise or Essentials', () => {
+    // Essentials is an EE tier, so it must share the EE Temporal runtime rather
+    // than creating schedules with a pg-boss runner no EE worker consumes.
+    expect(jobRunnerFactorySource).toContain("if (config.type === 'pgboss' && enterprise) {");
+    expect(jobRunnerFactorySource).toContain('JobRunnerConfig.type=pgboss ignored in Enterprise Edition');
+    expect(jobRunnerFactorySource).toContain('Enterprise and Essentials deployments');
+    expect(jobRunnerFactorySource).toContain("return 'temporal';");
+  });
+
+  it('keeps Community scheduling on pg-boss even when legacy configuration requests Temporal', () => {
+    expect(jobRunnerFactorySource).toContain("if (config.type === 'temporal' && !enterprise) {");
+    expect(jobRunnerFactorySource).toContain('JobRunnerConfig.type=temporal ignored in Community Edition');
+    expect(jobRunnerFactorySource).toContain("if (envType === 'temporal' && !enterprise) {");
+    expect(jobRunnerFactorySource).toContain('JOB_RUNNER_TYPE=temporal ignored in Community Edition');
+    expect(jobRunnerFactorySource).toContain("return 'pgboss';");
+  });
+
   it('does NOT silently fall back to pg-boss when temporal bootstrap fails (EE must fail loudly)', () => {
     expect(jobRunnerFactorySource).toContain("if (runnerType === 'temporal' && enterprise) {");
     expect(jobRunnerFactorySource).toContain('return await this.createTemporalRunner(config);');
