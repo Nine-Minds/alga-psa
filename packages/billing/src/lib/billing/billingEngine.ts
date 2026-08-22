@@ -1771,7 +1771,7 @@ export class BillingEngine {
       ] = await Promise.all([
         options.projectTarget
           ? Promise.resolve([] as IFixedPriceCharge[])
-          : this.calculateFixedPriceCharges(
+          : this.loadFixedPriceObligation(
               clientId,
               billingPeriod,
               clientContractLine,
@@ -1786,7 +1786,7 @@ export class BillingEngine {
         targetProjectConfig?.billing_model === "fixed_price"
           ? Promise.resolve([] as ITimeBasedCharge[])
           : projectBillingContext || options.projectTarget
-            ? this.calculateTimeBasedCharges(
+            ? this.loadTimeBasedObligation(
                 clientId,
                 billingPeriod,
                 clientContractLine,
@@ -1799,7 +1799,7 @@ export class BillingEngine {
                 options.projectTarget,
                 familyObligationSinks[1],
               )
-            : this.calculateTimeBasedCharges(
+            : this.loadTimeBasedObligation(
                 clientId,
                 billingPeriod,
                 clientContractLine,
@@ -1814,7 +1814,7 @@ export class BillingEngine {
               ),
         options.projectTarget
           ? Promise.resolve([] as IUsageBasedCharge[])
-          : this.calculateUsageBasedCharges(
+          : this.loadUsageBasedObligation(
               clientId,
               billingPeriod,
               clientContractLine,
@@ -1827,7 +1827,7 @@ export class BillingEngine {
             ),
         options.projectTarget
           ? Promise.resolve([] as IBucketCharge[])
-          : this.calculateBucketPlanCharges(
+          : this.loadBucketObligation(
               clientId,
               billingPeriod,
               clientContractLine,
@@ -1835,7 +1835,7 @@ export class BillingEngine {
             ),
         options.projectTarget
           ? Promise.resolve([] as IProductCharge[])
-          : this.calculateProductCharges(
+          : this.loadProductObligation(
               clientId,
               billingPeriod,
               clientContractLine,
@@ -1848,7 +1848,7 @@ export class BillingEngine {
             ),
         options.projectTarget
           ? Promise.resolve([] as ILicenseCharge[])
-          : this.calculateLicenseCharges(
+          : this.loadLicenseObligation(
               clientId,
               billingPeriod,
               clientContractLine,
@@ -3961,6 +3961,127 @@ export class BillingEngine {
     sink.obligations.push(normalized.obligation);
     sink.taxContexts[normalized.obligation.taxContextKey] =
       normalized.taxContext;
+  }
+
+  /**
+   * Production normalization adapters. These methods may load tenant-scoped
+   * rows and resolve effective configuration, but they never price a charge.
+   * Family pricing is dispatched only by calculateContractBilling after all
+   * normalized obligations have crossed the shared domain boundary.
+   */
+  private async loadFixedPriceObligation(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    cycle: string | undefined,
+    timing: ResolvedRecurringChargeTiming | undefined,
+    timingSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    preloaded: PreloadedFixedChargeInputs | undefined,
+    sink: ContractObligationSink,
+  ): Promise<IFixedPriceCharge[]> {
+    return this.calculateFixedPriceCharges(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      preloaded,
+      sink,
+    );
+  }
+
+  private async loadTimeBasedObligation(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    cycle: string | undefined,
+    timing: ResolvedRecurringChargeTiming | undefined,
+    timingSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    projectContext: ProjectBillingContext | null | undefined,
+    projectTarget: CalculateBillingOptions["projectTarget"] | undefined,
+    sink: ContractObligationSink,
+  ): Promise<ITimeBasedCharge[]> {
+    return this.calculateTimeBasedCharges(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      projectContext,
+      projectTarget,
+      sink,
+    );
+  }
+
+  private async loadUsageBasedObligation(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    cycle: string | undefined,
+    timing: ResolvedRecurringChargeTiming | undefined,
+    timingSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    sink: ContractObligationSink,
+  ): Promise<IUsageBasedCharge[]> {
+    return this.calculateUsageBasedCharges(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      sink,
+    );
+  }
+
+  private async loadBucketObligation(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    sink: ContractObligationSink,
+  ): Promise<IBucketCharge[]> {
+    return this.calculateBucketPlanCharges(clientId, billingPeriod, line, sink);
+  }
+
+  private async loadProductObligation(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    cycle: string | undefined,
+    timing: ResolvedRecurringChargeTiming | undefined,
+    timingSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    sink: ContractObligationSink,
+  ): Promise<IProductCharge[]> {
+    return this.calculateProductCharges(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      sink,
+    );
+  }
+
+  private async loadLicenseObligation(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    cycle: string | undefined,
+    timing: ResolvedRecurringChargeTiming | undefined,
+    timingSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    sink: ContractObligationSink,
+  ): Promise<ILicenseCharge[]> {
+    return this.calculateLicenseCharges(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      sink,
+    );
   }
 
   private async calculateFixedPriceCharges(

@@ -350,6 +350,23 @@ describe("production compute extraction golden", () => {
       expect(engine).not.toContain(`${computeName}(`);
     }
     expect(engine).toContain("calculateContractBilling({");
+    const productionOrchestration = engine.slice(
+      engine.indexOf("private async calculateBillingForPreparedPeriod("),
+      engine.indexOf("private async getProjectMaterialCurrencyWarnings("),
+    );
+    const beforeSharedCalculation = productionOrchestration.slice(
+      0,
+      productionOrchestration.indexOf("calculateContractBilling({"),
+    );
+    expect(beforeSharedCalculation).toMatch(/loadFixedPriceObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadTimeBasedObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadUsageBasedObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadBucketObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadProductObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadLicenseObligation\(/);
+    expect(beforeSharedCalculation).not.toMatch(
+      /this\.calculate(?:FixedPrice|TimeBased|UsageBased|BucketPlan|Product|License|RecurringQuantity)Charges\(/,
+    );
     expect(engine).not.toContain("calculateContractCharge(");
     expect(simulator).toContain("calculateContractBilling({");
     expect(simulator).not.toMatch(

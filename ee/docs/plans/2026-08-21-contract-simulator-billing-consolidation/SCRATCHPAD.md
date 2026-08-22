@@ -82,3 +82,10 @@
 - Representative dispatcher parity now covers hourly rounding/minimums, tiered usage, bucket overage/rollover state, product, license, tax, discounts, and adjustments.
 - Production maps guarded canonical live totals through `applyCanonicalLiveBillingResult`; simulator integration fingerprints billing source/linkage, recurring periods, bucket state, invoices, numbering, audit, event, and outbox tables before and after simulation.
 - The DB-backed simulator suite still cannot collect because `@alga-psa/reporting` does not export `actions/report-actions/getRemainingBucketUnits`; billing tests, simulator unit tests, and both package typechecks remain green.
+
+## Failed-draft mitigation (2026-08-22)
+
+- `calculateBillingForPreparedPeriod` now invokes loader-only `load*Obligation` adapters for fixed, hourly, usage, bucket, product, and license families. It accumulates normalized unpriced obligations, then calls `calculateContractBilling` once; no production `calculate*Charges` call occurs before the shared facade.
+- The architecture test slices the production orchestration before the shared call, requires every loader family, and rejects legacy per-family calculation calls in that region.
+- Removed the unrelated `UsageTracking.tsx` reporting-import change from the aggregate task diff by restoring the baseline subpath imports.
+- Verification: billing domain/architecture 12 tests passed; full billing suite 1056 passed/37 skipped; billing typecheck and build passed; DB simulator/live-invoice parity passed 8 tests on `DB_PORT=55432`; EE simulator-period unit suite passed 19 tests; EE server typecheck passed with `NODE_OPTIONS=--max-old-space-size=12288`.
