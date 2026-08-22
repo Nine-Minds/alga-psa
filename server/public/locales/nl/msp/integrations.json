@@ -3421,6 +3421,7 @@
         }
       },
       "subscriptionExpires": "Abonnement wordt vernieuwd vóór",
+      "lastNotification": "Laatste oproepmelding",
       "autoTicket": "Automatisch een ticket aanmaken voor herkende gesprekken",
       "unknownNumber": "Onbekend nummer",
       "actions": {

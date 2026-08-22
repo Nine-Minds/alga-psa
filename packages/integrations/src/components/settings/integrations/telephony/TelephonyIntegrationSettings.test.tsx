@@ -117,6 +117,28 @@ describe('TelephonyIntegrationSettings', () => {
     expect(screen.getByRole('button', { name: 'Enable' }).hasAttribute('disabled')).toBe(true);
   });
 
+  it('T007: the card reports when Graph last delivered a call notification', async () => {
+    mocks.getOverview.mockResolvedValue(overview({
+      providers: [{
+        provider: 'teams-phone',
+        status: 'active',
+        autoCreateTickets: false,
+        subscriptionId: 'sub-1',
+        subscriptionExpiresAt: null,
+        lastError: null,
+        lastNotificationAt: '2026-08-22T15:04:00.000Z',
+        prerequisiteMet: true,
+      }],
+    }));
+
+    const { container } = render(<TelephonyIntegrationSettings />);
+
+    await screen.findByText('Teams Phone');
+    // A silent subscription and a quiet phone look identical without this.
+    expect(container.querySelector('#telephony-provider-last-notification-teams-phone')?.textContent)
+      .toContain('Last call notification');
+  });
+
   it('T008: a tenant without the add-on gets the paywall and no provider controls', async () => {
     mocks.getOverview.mockResolvedValue({
       success: true,

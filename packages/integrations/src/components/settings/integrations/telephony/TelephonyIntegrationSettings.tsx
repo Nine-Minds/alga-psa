@@ -245,6 +245,12 @@ export function TelephonyIntegrationSettings() {
                   {new Date(provider.subscriptionExpiresAt).toLocaleString()}
                 </p>
               )}
+              {provider.lastNotificationAt && (
+                <p id={`telephony-provider-last-notification-${provider.provider}`}>
+                  {t('integrations.telephony.lastNotification', { defaultValue: 'Last call notification' })}{' '}
+                  {new Date(provider.lastNotificationAt).toLocaleString()}
+                </p>
+              )}
               {provider.lastError && (
                 <p className="text-[rgb(var(--color-accent-600))]" id={`telephony-provider-error-${provider.provider}`}>
                   {provider.lastError}

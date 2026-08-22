@@ -3421,6 +3421,7 @@
         }
       },
       "subscriptionExpires": "Subscription renews before",
+      "lastNotification": "Last call notification",
       "autoTicket": "Create a ticket automatically for matched calls",
       "unknownNumber": "Unknown number",
       "actions": {

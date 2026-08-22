@@ -2,25 +2,32 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const scheduleJobMock = vi.hoisted(() => vi.fn());
+const providerUpdateMock = vi.hoisted(() => vi.fn());
 const providerRowMock = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
 
 vi.mock('@/lib/jobs/JobRunnerFactory', () => ({
   getJobRunner: async () => ({ scheduleJob: scheduleJobMock }),
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async (_tenant: string) => ({
-    knex: (_table: string) => ({
-      where: () => ({
-        where: () => ({ first: async () => providerRowMock.value }),
-        first: async () => providerRowMock.value,
-      }),
+vi.mock('@alga-psa/db', () => {
+  const builder = (): any => ({
+    where: () => builder(),
+    first: async () => providerRowMock.value,
+    update: async (values: Record<string, unknown>) => {
+      providerUpdateMock(values);
+      return 1;
+    },
+  });
+  const knex: any = (_table: string) => builder();
+  knex.fn = { now: () => 'now()' };
+
+  return {
+    createTenantKnex: async (_tenant: string) => ({ knex }),
+    tenantDb: (conn: any, tenant: string) => ({
+      table: (t: string) => conn(t).where({ tenant }),
     }),
-  }),
-  tenantDb: (conn: any, tenant: string) => ({
-    table: (t: string) => conn(t).where({ tenant }),
-  }),
-}));
+  };
+});
 
 const VALID_SECRET = 'a'.repeat(64);
 
@@ -38,6 +45,7 @@ describe('T034 telephony call webhook route', () => {
   beforeEach(() => {
     vi.resetModules();
     scheduleJobMock.mockReset();
+    providerUpdateMock.mockReset();
     providerRowMock.value = {
       webhook_secret: VALID_SECRET,
       subscription_id: 'call-sub-1',
@@ -86,6 +94,28 @@ describe('T034 telephony call webhook route', () => {
       tenantId: 'tenant-1',
       notification: expect.objectContaining({ subscriptionId: 'call-sub-1' }),
     });
+    // "Last heard from Graph" is how a dead subscription is told from a quiet one.
+    expect(providerUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ last_notification_at: 'now()' }),
+    );
+  });
+
+  it('stamps the provider once for a batch and not at all for a forged batch', async () => {
+    const route = await import('@/app/api/telephony/webhooks/teams-calls/route');
+    const clientState = `telephony-call-records:tenant-1:teams-phone:${VALID_SECRET}`;
+
+    await route.POST(webhookRequest([
+      { subscriptionId: 'call-sub-1', clientState, resourceData: { id: 'cdr-1' } },
+      { subscriptionId: 'call-sub-1', clientState, resourceData: { id: 'cdr-2' } },
+    ]));
+    expect(scheduleJobMock).toHaveBeenCalledTimes(2);
+    expect(providerUpdateMock).toHaveBeenCalledTimes(1);
+
+    providerUpdateMock.mockReset();
+    await route.POST(webhookRequest([
+      { subscriptionId: 'forged-sub', clientState, resourceData: { id: 'cdr-3' } },
+    ]));
+    expect(providerUpdateMock).not.toHaveBeenCalled();
   });
 
   it('rejects a notification whose clientState secret does not match', async () => {

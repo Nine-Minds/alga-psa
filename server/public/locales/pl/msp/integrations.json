@@ -3421,6 +3421,7 @@
         }
       },
       "subscriptionExpires": "Subskrypcja odnowi się przed",
+      "lastNotification": "Ostatnie powiadomienie o połączeniu",
       "autoTicket": "Automatycznie twórz zgłoszenie dla dopasowanych rozmów",
       "unknownNumber": "Nieznany numer",
       "actions": {

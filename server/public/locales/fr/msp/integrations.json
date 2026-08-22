@@ -3421,6 +3421,7 @@
         }
       },
       "subscriptionExpires": "L'abonnement se renouvelle avant le",
+      "lastNotification": "Dernière notification d’appel",
       "autoTicket": "Créer automatiquement un ticket pour les appels rapprochés",
       "unknownNumber": "Numéro inconnu",
       "actions": {

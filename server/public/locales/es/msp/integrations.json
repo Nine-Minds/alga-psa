@@ -3421,6 +3421,7 @@
         }
       },
       "subscriptionExpires": "La suscripción se renueva antes de",
+      "lastNotification": "Última notificación de llamada",
       "autoTicket": "Crear un ticket automáticamente para las llamadas identificadas",
       "unknownNumber": "Número desconocido",
       "actions": {

@@ -3421,6 +3421,7 @@
         }
       },
       "subscriptionExpires": "Abonnement wird erneuert vor",
+      "lastNotification": "Letzte Anrufbenachrichtigung",
       "autoTicket": "Für zugeordnete Anrufe automatisch ein Ticket erstellen",
       "unknownNumber": "Unbekannte Nummer",
       "actions": {
