@@ -367,6 +367,38 @@ describe("production compute extraction golden", () => {
     expect(beforeSharedCalculation).not.toMatch(
       /this\.calculate(?:FixedPrice|TimeBased|UsageBased|BucketPlan|Product|License|RecurringQuantity)Charges\(/,
     );
+    const methodBody = (name: string) => {
+      const start = engine.indexOf(`private async ${name}(`);
+      expect(start, `${name} must exist`).toBeGreaterThan(-1);
+      const next = engine.indexOf("\n  private ", start + 1);
+      return engine.slice(start, next === -1 ? engine.length : next);
+    };
+    for (const loader of [
+      "loadFixedPriceObligation",
+      "loadTimeBasedObligation",
+      "loadUsageBasedObligation",
+      "loadBucketObligation",
+      "loadProductObligation",
+      "loadLicenseObligation",
+      "loadRecurringQuantityObligation",
+    ]) {
+      expect(methodBody(loader)).not.toMatch(
+        /this\.calculate|calculateContractBilling\(|calculateLoadedContractObligations\(/,
+      );
+    }
+    for (const compatibilityMethod of [
+      "calculateFixedPriceCharges",
+      "calculateTimeBasedCharges",
+      "calculateUsageBasedCharges",
+      "calculateBucketPlanCharges",
+      "calculateProductCharges",
+      "calculateLicenseCharges",
+    ]) {
+      expect(methodBody(compatibilityMethod)).toMatch(/this\.load/);
+      expect(methodBody(compatibilityMethod)).toMatch(
+        /calculateLoadedContractObligations\(/,
+      );
+    }
     expect(engine).not.toContain("calculateContractCharge(");
     expect(simulator).toContain("calculateContractBilling({");
     expect(simulator).not.toMatch(

@@ -89,3 +89,10 @@
 - The architecture test slices the production orchestration before the shared call, requires every loader family, and rejects legacy per-family calculation calls in that region.
 - Removed the unrelated `UsageTracking.tsx` reporting-import change from the aggregate task diff by restoring the baseline subpath imports.
 - Verification: billing domain/architecture 12 tests passed; full billing suite 1056 passed/37 skipped; billing typecheck and build passed; DB simulator/live-invoice parity passed 8 tests on `DB_PORT=55432`; EE simulator-period unit suite passed 19 tests; EE server typecheck passed with `NODE_OPTIONS=--max-old-space-size=12288`.
+
+## Failed-draft mitigation correction (2026-08-22)
+
+- Removed the loader naming veneer: each `load*Obligation` method now owns its tenant-scoped queries, effective fact resolution, and normalized obligation construction and contains no call to a legacy calculator or shared calculator.
+- Compatibility `calculate*Charges` methods now explicitly perform loader → shared `calculateContractBilling` adaptation. Live orchestration calls the loaders directly and no longer creates, totals, concatenates, or logs empty typed family charge arrays.
+- The architecture guard inspects every loader body (including recurring quantity) for transitive calculator delegation and verifies compatibility calculators contain both a loader call and shared-calculation handoff.
+- Correction verification repeated successfully: focused 12 tests, full billing 1056 passed/37 skipped, billing typecheck/build, DB parity/no-write 8 tests on port 55432, EE period 19 tests, and EE typecheck with a 12 GB heap.
