@@ -111,6 +111,7 @@ const apiKeySkipPaths = [
   '/api/teams/bot/',
   '/api/teams/message-extension/',
   '/api/teams/webhooks/',  // Microsoft Graph change notifications; authenticated via clientState secret in the route
+  '/api/telephony/webhooks/',  // Microsoft Graph callRecords notifications; authenticated via clientState secret in the route
   '/api/teams/package/download',
   '/api/online-meetings/recordings/',
   '/api/client-portal/domain-session',

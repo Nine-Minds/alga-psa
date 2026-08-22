@@ -53,6 +53,12 @@ import {
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
 import {
+  renewTelephonyCallSubscriptions,
+  processTelephonyCallNotification,
+  TelephonyCallSubscriptionRenewalJobData,
+  TelephonyCallNotificationJobData,
+} from '@alga-psa/jobs/handlers/telephonyCallNotificationHandler';
+import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
   TEAMS_MEETING_CLEANUP_JOB,
@@ -295,6 +301,20 @@ export const initializeScheduler = async (storageService?: StorageService) => {
         'process-teams-meeting-artifact-notification',
         async (job: Job<TeamsMeetingArtifactNotificationJobData>) => {
           await processTeamsMeetingArtifactNotification(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallSubscriptionRenewalJobData>(
+        'renew-telephony-call-subscriptions',
+        async (job: Job<TelephonyCallSubscriptionRenewalJobData>) => {
+          await renewTelephonyCallSubscriptions(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallNotificationJobData>(
+        'process-telephony-call-notification',
+        async (job: Job<TelephonyCallNotificationJobData>) => {
+          await processTelephonyCallNotification(job.data);
         }
       );
 

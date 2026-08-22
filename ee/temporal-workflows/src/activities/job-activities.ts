@@ -140,6 +140,14 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     'process-teams-meeting-artifact-notification',
     forwardJobToServer('process-teams-meeting-artifact-notification'),
   );
+  // Teams Phone call journaling, enqueued by the app's
+  // /api/telephony/webhooks/teams-calls route when Graph notifies about a new
+  // call record. The handler reaches the EE Teams lib and the telephony core
+  // (both src-consumed), so it executes server-side via the event bus.
+  registerJobHandlerForActivities(
+    'process-telephony-call-notification',
+    forwardJobToServer('process-telephony-call-notification'),
+  );
   // Invoice bundling/delivery, enqueued from billing UI actions via the shared
   // enqueueImmediateJob seam. The handlers live server-side (StorageService,
   // PDF generation), so the worker forwards them like the jobs above.
