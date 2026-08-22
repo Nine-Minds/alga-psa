@@ -550,7 +550,7 @@ describe('Unified invoice credit reversal (void / unfinalize / hard-delete)', ()
       .update({ metadata: JSON.stringify({}) });
 
     const result = await unfinalizeInvoice(invoiceId);
-    expect(result).toEqual({ actionError: expect.any(String) });
+    expect(result).toMatchObject({ actionError: expect.any(String) });
 
     // Validation precedes mutation: lifecycle and balances unchanged.
     const invoice = await invoiceRow(invoiceId);

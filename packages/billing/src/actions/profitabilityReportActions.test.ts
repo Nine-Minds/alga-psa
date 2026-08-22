@@ -181,7 +181,10 @@ describe('profitability report actions', () => {
       { startDate: '2026-01-01', endDate: '2026-01-31' },
     ];
 
-    const expected = { permissionError: 'Permission denied: billing read required' };
+    const expected = {
+      permissionError: 'Permission denied: billing read required',
+      messageKey: 'msp/billing:errors.permissions.billingRead',
+    };
     await expect((getProfitabilitySummary as any)(...args)).resolves.toEqual(expected);
     await expect((getClientProfitability as any)(...args)).resolves.toEqual(expected);
     await expect((getAgreementProfitability as any)(...args)).resolves.toEqual(expected);
