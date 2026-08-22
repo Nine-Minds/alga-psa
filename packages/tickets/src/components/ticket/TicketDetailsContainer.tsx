@@ -245,7 +245,8 @@ export default function TicketDetailsContainer({
     content: string,
     isInternal: boolean,
     isResolution: boolean,
-    closesTicket: boolean = false
+    closesTicket: boolean = false,
+    schedule?: { publishAt: string; timeZone: string } | null,
   ) => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
@@ -259,7 +260,9 @@ export default function TicketDetailsContainer({
         content,
         isInternal,
         isResolution,
-        closesTicket
+        closesTicket,
+        undefined,
+        schedule,
       );
       if (isReturnedActionError(newComment)) {
         throw newComment;
