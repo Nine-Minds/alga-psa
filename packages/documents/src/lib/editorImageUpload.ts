@@ -36,8 +36,15 @@ export const extractImageFiles = (
  * to reference it by.
  *
  * Inline images are always stored client-visible: publishing an article flips
- * the article document's visibility, never that of the images embedded in it,
- * so without this a published article's pictures 403 in the client portal.
+ * the article document's visibility, never that of the images embedded in it.
+ *
+ * This clears the client-visibility gate in authorizeAndRedactDocuments, but it
+ * is not on its own enough for a client-portal reader. That helper also runs the
+ * built-in relationship rules (`own` / `same_client`), and an inline image has
+ * no client association at all, so /api/documents/view still answers 403 for
+ * client users. A KB article is readable by every client, which the relationship
+ * kernel has no template for; giving embedded media a client-facing scope needs
+ * its own decision and is not made here.
  */
 export async function uploadEditorImage(
   file: File,
