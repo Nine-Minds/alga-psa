@@ -53,6 +53,8 @@ export async function uploadEditorImage(
     throw new Error('Image is larger than the 10 MB upload limit');
   }
 
+  // Imported lazily on purpose: documentActions pulls puppeteer/pdf-lib/knex in,
+  // which would land in the client bundle and in every test that renders an editor.
   const uploadAction =
     uploadDocumentAction ?? ((await import('../actions/documentActions')).uploadDocument as UploadDocumentAction);
 
@@ -75,24 +77,37 @@ export async function uploadEditorImage(
   return { url, documentId: uploaded.document_id };
 }
 
-interface ImageInsertTarget {
-  chain: () => {
-    focus: () => {
-      setImage: (attrs: { src: string; alt?: string }) => { run: () => void };
-    };
-  };
+interface ImageInsertChain {
+  setTextSelection: (position: number) => ImageInsertChain;
+  setImage: (attrs: { src: string; alt?: string }) => { run: () => void };
 }
 
-/** Uploads each file and drops an image node into the editor for it. */
+interface ImageInsertTarget {
+  chain: () => { focus: () => ImageInsertChain };
+}
+
+/**
+ * Uploads each file and drops an image node into the editor for it.
+ *
+ * `at` places the first image at a specific document position — a drop should
+ * land where the file was dropped rather than replacing whatever text happened
+ * to be selected. Later images follow the caret so a multi-file drop stays in
+ * order.
+ */
 export async function insertUploadedImages(
   editor: ImageInsertTarget | null | undefined,
   files: File[],
-  options: EditorImageUploadOptions & { onError?: (error: unknown) => void }
+  options: EditorImageUploadOptions & { onError?: (error: unknown) => void; at?: number }
 ): Promise<void> {
+  let insertAt = options.at;
   for (const file of files) {
     try {
       const { url } = await uploadEditorImage(file, options);
-      editor?.chain().focus().setImage({ src: url, alt: file.name }).run();
+      const chain = editor?.chain().focus();
+      if (!chain) continue;
+      const positioned = typeof insertAt === 'number' ? chain.setTextSelection(insertAt) : chain;
+      positioned.setImage({ src: url, alt: file.name }).run();
+      insertAt = undefined;
     } catch (error) {
       if (options.onError) {
         options.onError(error);

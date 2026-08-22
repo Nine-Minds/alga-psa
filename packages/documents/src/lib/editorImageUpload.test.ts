@@ -111,8 +111,10 @@ describe('insertUploadedImages', () => {
   const buildEditor = () => {
     const run = vi.fn();
     const setImage = vi.fn(() => ({ run }));
-    const focus = vi.fn(() => ({ setImage }));
-    return { editor: { chain: () => ({ focus }) }, setImage, run };
+    const setTextSelection = vi.fn(() => chain);
+    const chain: any = { setImage, setTextSelection };
+    const focus = vi.fn(() => chain);
+    return { editor: { chain: () => ({ focus }) }, setImage, setTextSelection, run };
   };
 
   it('inserts an image node per uploaded file', async () => {
@@ -149,5 +151,52 @@ describe('insertUploadedImages', () => {
     expect(onError).toHaveBeenCalledTimes(1);
     expect(setImage).toHaveBeenCalledTimes(1);
     expect(setImage).toHaveBeenCalledWith({ src: '/api/documents/view/file-1', alt: 'good.png' });
+  });
+
+  it('inserts a dropped image at the drop position instead of the selection', async () => {
+    const { editor, setTextSelection, run } = buildEditor();
+
+    await insertUploadedImages(editor, [imageFile('dropped.png')], {
+      userId: 'user-1',
+      at: 42,
+      uploadDocumentAction: async () => ({
+        success: true,
+        document: { document_id: 'doc-1', file_id: 'file-1' },
+      }),
+    });
+
+    expect(setTextSelection).toHaveBeenCalledWith(42);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a multi-file drop in order after the first position', async () => {
+    const { editor, setTextSelection } = buildEditor();
+
+    await insertUploadedImages(editor, [imageFile('one.png'), imageFile('two.png')], {
+      userId: 'user-1',
+      at: 7,
+      uploadDocumentAction: async () => ({
+        success: true,
+        document: { document_id: 'doc-1', file_id: 'file-1' },
+      }),
+    });
+
+    expect(setTextSelection).toHaveBeenCalledTimes(1);
+    expect(setTextSelection).toHaveBeenCalledWith(7);
+  });
+
+  it('leaves the caret alone when no drop position is given', async () => {
+    const { editor, setTextSelection, run } = buildEditor();
+
+    await insertUploadedImages(editor, [imageFile('pasted.png')], {
+      userId: 'user-1',
+      uploadDocumentAction: async () => ({
+        success: true,
+        document: { document_id: 'doc-1', file_id: 'file-1' },
+      }),
+    });
+
+    expect(setTextSelection).not.toHaveBeenCalled();
+    expect(run).toHaveBeenCalledTimes(1);
   });
 });

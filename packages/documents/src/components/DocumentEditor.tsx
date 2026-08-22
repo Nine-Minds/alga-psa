@@ -138,7 +138,8 @@ export function DocumentEditor({
         const imageFiles = Array.from(event.dataTransfer?.files ?? []).filter(isEditorImageFile);
         if (imageFiles.length === 0) return false;
         event.preventDefault();
-        void insertUploadedImages(editor, imageFiles, { userId });
+        const at = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
+        void insertUploadedImages(editor, imageFiles, { userId, at });
         return true;
       },
     },
