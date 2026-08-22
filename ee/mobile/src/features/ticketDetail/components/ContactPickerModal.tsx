@@ -1,19 +1,24 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
 import { listContacts, type ContactListItem } from "../../../api/referenceData";
 import type { ApiClient } from "../../../api/client";
+import {
+  activeTicketNotificationSuppression,
+  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
+  TicketUpdateFooter,
+} from "./TicketUpdateFooter";
 
 export function ContactPickerModal({
   visible,
   updating,
   updateError,
+  currentContactId,
   currentContactName,
   clientId,
-  onSelect,
-  onRemove,
+  onApply,
   onClose,
   client,
   apiKey,
@@ -22,10 +27,10 @@ export function ContactPickerModal({
   visible: boolean;
   updating: boolean;
   updateError: string | null;
+  currentContactId: string | null | undefined;
   currentContactName: string | null | undefined;
   clientId: string | null | undefined;
-  onSelect: (contactNameId: string, displayName: string) => void;
-  onRemove: () => void;
+  onApply: (contactNameId: string | null, notificationSuppression: ReturnType<typeof activeTicketNotificationSuppression>) => void;
   onClose: () => void;
   client: ApiClient | null;
   apiKey: string;
@@ -38,6 +43,8 @@ export function ContactPickerModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedContact, setSelectedContact] = useState<{ id: string | null; name: string | null } | null>(null);
+  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -82,6 +89,8 @@ export function ContactPickerModal({
   useEffect(() => {
     if (visible) {
       setSearch("");
+      setSelectedContact(null);
+      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
       void fetchContacts("");
     } else {
       abortRef.current?.abort();
@@ -141,14 +150,14 @@ export function ContactPickerModal({
             accessibilityRole="button"
             accessibilityLabel={t("contactPicker.remove")}
             disabled={busy}
-            onPress={onRemove}
+            onPress={() => setSelectedContact({ id: null, name: null })}
             style={({ pressed }) => ({
               paddingVertical: spacing.sm,
               paddingHorizontal: spacing.lg,
               marginHorizontal: spacing.lg,
               borderRadius: 12,
               borderWidth: 1,
-              borderColor: colors.border,
+              borderColor: selectedContact?.id === null ? colors.primary : colors.border,
               backgroundColor: colors.card,
               opacity: busy ? 0.65 : pressed ? 0.95 : 1,
               marginBottom: spacing.sm,
@@ -195,7 +204,7 @@ export function ContactPickerModal({
                   accessibilityRole="button"
                   accessibilityLabel={t("contactPicker.selectContact", { name: contact.full_name })}
                   disabled={busy}
-                  onPress={() => onSelect(contact.contact_name_id, contact.full_name)}
+                  onPress={() => setSelectedContact({ id: contact.contact_name_id, name: contact.full_name })}
                   style={({ pressed }) => ({
                     flexDirection: "row",
                     alignItems: "center",
@@ -203,7 +212,7 @@ export function ContactPickerModal({
                     paddingHorizontal: spacing.md,
                     borderRadius: 12,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: selectedContact?.id === contact.contact_name_id ? colors.primary : colors.border,
                     backgroundColor: colors.card,
                     opacity: busy ? 0.65 : pressed ? 0.95 : 1,
                     marginBottom: spacing.sm,
@@ -222,6 +231,39 @@ export function ContactPickerModal({
             })}
           </ScrollView>
         )}
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          {selectedContact ? (
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+              {selectedContact.id
+                ? t("contactPicker.selected", "Selected: {{name}}", { name: selectedContact.name })
+                : t("contactPicker.removeSelected", "The contact will be removed")}
+            </Text>
+          ) : null}
+          <TicketUpdateFooter
+            suppression={suppression}
+            onSuppressionChange={setSuppression}
+            onCancel={onClose}
+            onApply={() => {
+              if (!selectedContact) return;
+              const commit = () => onApply(selectedContact.id, activeTicketNotificationSuppression(suppression));
+              if (selectedContact.id === null) {
+                Alert.alert(
+                  t("confirm.removeContactTitle", "Remove this contact?"),
+                  t("confirm.removeContactMessage", "The ticket will no longer be linked to its current contact."),
+                  [
+                    { text: t("common:cancel"), style: "cancel" },
+                    { text: t("contactPicker.remove"), style: "destructive", onPress: commit },
+                  ],
+                );
+              } else {
+                commit();
+              }
+            }}
+            applyLabel={selectedContact?.id === null ? t("contactPicker.remove") : t("contactPicker.apply", "Change contact")}
+            applyDisabled={!selectedContact || selectedContact.id === currentContactId}
+            busy={busy}
+          />
+        </View>
       </View>
       </KeyboardAvoidingView>
     </Modal>

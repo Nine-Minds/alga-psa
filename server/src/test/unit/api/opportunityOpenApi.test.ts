@@ -15,6 +15,8 @@ describe('opportunities v1 OpenAPI registration', () => {
       'GET /api/v1/opportunities/work-queue',
       'GET /api/v1/opportunities/{id}',
       'GET /api/v1/opportunities/{id}/timeline',
+      'GET /api/v1/opportunities/{id}/steps',
+      'POST /api/v1/opportunities/{id}/steps/{stepId}/complete',
       'PUT /api/v1/opportunities/{id}',
       'DELETE /api/v1/opportunities/{id}',
       'POST /api/v1/opportunities/{id}/win',
@@ -54,6 +56,8 @@ describe('opportunities v1 OpenAPI registration', () => {
     expect(document.paths?.['/api/v1/opportunities']?.get).toBeDefined();
     expect(document.paths?.['/api/v1/opportunities/work-queue']?.get).toBeDefined();
     expect(document.paths?.['/api/v1/opportunities/{id}/timeline']?.get).toBeDefined();
+    expect(document.paths?.['/api/v1/opportunities/{id}/steps']?.get).toBeDefined();
+    expect(document.paths?.['/api/v1/opportunities/{id}/steps/{stepId}/complete']?.post).toBeDefined();
     expect(document.paths?.['/api/v1/opportunities/{id}/complete-action']?.post).toBeDefined();
     expect(document.paths?.['/api/v1/opportunities/suggestions/{id}/accept']?.post).toBeDefined();
 

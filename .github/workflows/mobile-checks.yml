@@ -115,4 +115,4 @@ jobs:
 
       - name: Verify Expo config resolves
         working-directory: ee/mobile
-        run: npx expo config --type public --json > /tmp/expo-config.json
+        run: npm run verify:expo-config

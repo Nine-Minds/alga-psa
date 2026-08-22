@@ -49,6 +49,7 @@ export function CommentsSection({
   ticketId,
   onCommentUpdated,
   onSubmitReply,
+  initiallyCollapsed = false,
 }: {
   comments: TicketComment[];
   visibleCount: number;
@@ -60,6 +61,7 @@ export function CommentsSection({
   ticketId: string;
   onCommentUpdated?: () => void;
   onSubmitReply?: ReplySubmit;
+  initiallyCollapsed?: boolean;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
@@ -141,7 +143,7 @@ export function CommentsSection({
   const toggleRef = useRef<Record<string, () => void>>({});
 
   // Collapse state (global collapse-all; independent of per-thread collapse)
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(initiallyCollapsed);
 
   // Comment editing state
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -416,19 +418,17 @@ export function CommentsSection({
               </Text>
             </Pressable>
           ) : null}
-          {comments.length > 0 ? (
-            <Pressable
-              onPress={() => setCollapsed((v) => !v)}
-              accessibilityRole="button"
-              accessibilityLabel={collapsed ? t("comments.expand") : t("comments.collapse")}
-              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.85 : 1 })}
-            >
-              <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
-                {collapsed ? t("comments.expand") : t("comments.collapse")}
-              </Text>
-              <Feather name={collapsed ? "chevron-down" : "chevron-up"} size={14} color={colors.primary} />
-            </Pressable>
-          ) : null}
+          <Pressable
+            onPress={() => setCollapsed((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={collapsed ? t("comments.expand") : t("comments.collapse")}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.85 : 1 })}
+          >
+            <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+              {collapsed ? t("comments.expand") : t("comments.collapse")}
+            </Text>
+            <Feather name={collapsed ? "chevron-down" : "chevron-up"} size={14} color={colors.primary} />
+          </Pressable>
         </View>
       </View>
 

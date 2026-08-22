@@ -1,4 +1,4 @@
-import React, { type RefObject } from "react";
+import React, { useEffect, useState, type RefObject } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,12 @@ import {
 } from "../../ticketRichText/helpers";
 import { ActionChip } from "./ActionChip";
 import { MAX_COMMENT_LENGTH } from "../types";
-import type { TicketStatus } from "../../../api/tickets";
+import type { TicketNotificationSuppressionOptions, TicketStatus } from "../../../api/tickets";
+import {
+  activeTicketNotificationSuppression,
+  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
+  TicketNotificationSuppressionControl,
+} from "./TicketUpdateFooter";
 
 export function CommentComposer({
   draftContent,
@@ -48,7 +53,7 @@ export function CommentComposer({
   closedStatuses?: TicketStatus[];
   closeStatusId?: string | null;
   onChangeCloseStatusId?: (id: string | null) => void;
-  onSend: () => void;
+  onSend: (notificationSuppression?: TicketNotificationSuppressionOptions) => void;
   sending: boolean;
   offline: boolean;
   error: string | null;
@@ -62,6 +67,13 @@ export function CommentComposer({
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
+  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+
+  useEffect(() => {
+    if (!isResolution || !closeStatusId) {
+      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+    }
+  }, [isResolution, closeStatusId]);
   return (
     <View
       style={{
@@ -151,6 +163,18 @@ export function CommentComposer({
               </View>
             </View>
           ) : null}
+          {isResolution && closeStatusId ? (
+            <View style={{ marginTop: spacing.md }}>
+              <TicketNotificationSuppressionControl
+                value={suppression}
+                onChange={setSuppression}
+                disabled={sending}
+              />
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+                {t("comments.closeNotificationHelper", "These settings apply to closing the ticket. The resolution comment follows its internal/customer visibility.")}
+              </Text>
+            </View>
+          ) : null}
           {error ? (
             <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
               {error}
@@ -163,7 +187,7 @@ export function CommentComposer({
           ) : null}
           <View style={{ marginTop: spacing.sm }}>
             <PrimaryButton
-              onPress={onSend}
+              onPress={() => onSend(activeTicketNotificationSuppression(suppression))}
               disabled={sending || offline || draftPlainText.trim().length === 0 || draftPlainText.length > MAX_COMMENT_LENGTH}
               accessibilityLabel={t("comments.sendComment")}
             >

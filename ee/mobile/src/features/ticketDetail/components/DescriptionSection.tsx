@@ -1,6 +1,5 @@
-import React, { useState, type RefObject } from "react";
+import React, { useEffect, useState, type RefObject } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TicketDetail } from "../../../api/tickets";
 import { useTheme } from "../../../ui/ThemeContext";
@@ -16,6 +15,13 @@ import {
   serializeRichEditorJson,
 } from "../../ticketRichText/helpers";
 import { extractDescription } from "../utils";
+import type { TicketNotificationSuppressionOptions } from "../../../api/tickets";
+import {
+  activeTicketNotificationSuppression,
+  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
+  TicketUpdateFooter,
+} from "./TicketUpdateFooter";
+import { SectionCollapseToggle } from "./SectionCollapseToggle";
 
 export function DescriptionSection({
   ticket,
@@ -35,6 +41,7 @@ export function DescriptionSection({
   onMentionSearch,
   mentionBaseUrl,
   mentionAuthToken,
+  initiallyCollapsed = false,
 }: {
   ticket: TicketDetail;
   isEditing: boolean;
@@ -48,11 +55,12 @@ export function DescriptionSection({
   imageAuth?: { baseUrl: string; apiKey: string };
   onStartEditing: () => void;
   onCancelEditing: () => void;
-  onSave: () => void;
+  onSave: (notificationSuppression?: TicketNotificationSuppressionOptions) => Promise<boolean | void> | boolean | void;
   onDraftChange: (content: string, plainText: string) => void;
   onMentionSearch?: (query: string, signal: AbortSignal) => Promise<MentionSuggestionItem[]>;
   mentionBaseUrl?: string | null;
   mentionAuthToken?: string;
+  initiallyCollapsed?: boolean;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
@@ -61,7 +69,16 @@ export function DescriptionSection({
   const DESCRIPTION_COLLAPSED_HEIGHT = 96;
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const [collapsed, setCollapsed] = useState(initiallyCollapsed);
   const needsExpansion = contentHeight !== null && contentHeight > DESCRIPTION_COLLAPSED_HEIGHT;
+
+  useEffect(() => {
+    if (isEditing) {
+      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+      setCollapsed(false);
+    }
+  }, [isEditing]);
 
   return (
     <View
@@ -78,34 +95,19 @@ export function DescriptionSection({
         <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.textSecondary }}>
           {t("description.label")}
         </Text>
-        {isEditing ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
-            <Pressable
-              onPress={onCancelEditing}
-              disabled={saving}
-              accessibilityRole="button"
-              accessibilityLabel={t("common:cancel")}
-              style={{ padding: spacing.xs, opacity: saving ? 0.4 : 1 }}
-            >
-              <Feather name="x" size={20} color={colors.textSecondary} />
-            </Pressable>
-            <Pressable
-              onPress={onSave}
-              disabled={saving}
-              accessibilityRole="button"
-              accessibilityLabel={t("common:save")}
-              style={{ padding: spacing.xs, opacity: saving ? 0.4 : 1 }}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <Feather name="check" size={20} color={colors.primary} />
-              )}
-            </Pressable>
-          </View>
-        ) : null}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+          {saving ? <ActivityIndicator size="small" color={colors.primary} /> : null}
+          {!isEditing ? (
+            <SectionCollapseToggle
+              collapsed={collapsed}
+              onToggle={() => setCollapsed((value) => !value)}
+              summary={description ? undefined : t("description.empty", "Empty")}
+              sectionLabel={t("description.label")}
+            />
+          ) : null}
+        </View>
       </View>
-      <View style={{ marginTop: spacing.sm }}>
+      {collapsed && !isEditing ? null : <View style={{ marginTop: spacing.sm }}>
         {isEditing ? (
           <>
             <TicketRichTextEditor
@@ -130,6 +132,22 @@ export function DescriptionSection({
                 {error}
               </Text>
             ) : null}
+            <TicketUpdateFooter
+              suppression={suppression}
+              onSuppressionChange={setSuppression}
+              onCancel={() => {
+                onCancelEditing();
+                setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+              }}
+              onApply={() => {
+                void Promise.resolve(onSave(activeTicketNotificationSuppression(suppression))).then((saved) => {
+                  if (saved !== false) setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+                });
+              }}
+              applyLabel={t("description.save", "Save description")}
+              cancelLabel={t("description.cancel", "Cancel description editing")}
+              busy={saving}
+            />
           </>
         ) : description && !isMalformedRichEditorContent(description) ? (
           <>
@@ -166,7 +184,7 @@ export function DescriptionSection({
             </Text>
           </Pressable>
         )}
-      </View>
+      </View>}
     </View>
   );
 }

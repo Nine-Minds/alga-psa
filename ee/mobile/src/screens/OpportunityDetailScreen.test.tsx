@@ -6,9 +6,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // the vitest transform uses the classic runtime, so expose React globally.
 Object.assign(globalThis, { React });
 
-const { getOpportunityMock, getTimelineMock, listContactsMock, recordPendingCallMock, showToastMock, translate, authValue } = vi.hoisted(() => ({
+const { getOpportunityMock, getTimelineMock, listStepsMock, listContactsMock, recordPendingCallMock, showToastMock, translate, authValue } = vi.hoisted(() => ({
   getOpportunityMock: vi.fn(),
   getTimelineMock: vi.fn(),
+  listStepsMock: vi.fn(),
   listContactsMock: vi.fn(),
   recordPendingCallMock: vi.fn(),
   showToastMock: vi.fn(),
@@ -62,7 +63,9 @@ vi.mock("../api", () => ({
 vi.mock("../api/opportunities", () => ({
   getOpportunity: (...args: unknown[]) => getOpportunityMock(...args),
   getOpportunityTimeline: (...args: unknown[]) => getTimelineMock(...args),
+  listOpportunitySteps: (...args: unknown[]) => listStepsMock(...args),
   completeNextAction: vi.fn(),
+  completeOpportunityStep: vi.fn(),
   winOpportunity: vi.fn(),
   loseOpportunity: vi.fn(),
 }));
@@ -79,7 +82,8 @@ import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { OpportunityDetailScreen } from "./OpportunityDetailScreen";
 
 const route = { params: { opportunityId: "opp-1", title: "Acme renewal" } } as never;
-const navigation = { navigate: vi.fn(), setParams: vi.fn() } as never;
+const navigationMock = { navigate: vi.fn(), setParams: vi.fn() };
+const navigation = navigationMock as never;
 
 async function flush() {
   await act(async () => {
@@ -186,6 +190,7 @@ describe("OpportunityDetailScreen", () => {
     vi.clearAllMocks();
     getOpportunityMock.mockResolvedValue(DEAL);
     getTimelineMock.mockResolvedValue(TIMELINE);
+    listStepsMock.mockResolvedValue({ ok: true, status: 200, data: { data: [] } });
   });
 
   it("renders the next-action card with a single primary button and the timeline", async () => {
@@ -202,6 +207,46 @@ describe("OpportunityDetailScreen", () => {
     expect(hasText(renderer, "Intro call")).toBe(true);
     expect(hasText(renderer, "Sent proposal")).toBe(true);
     expect(hasText(renderer, "Call")).toBe(true);
+  });
+
+  it("renders the current and planned successors from the server step plan", async () => {
+    listStepsMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: {
+        data: [
+          {
+            step_id: "step-1",
+            opportunity_id: "opp-1",
+            title: "Call the CTO",
+            status: "current",
+            sort_order: 0,
+            has_time: true,
+            duration_minutes: 30,
+            checkpoint: "assessment",
+            ticket_id: "ticket-1",
+            ticket_number: "T-100",
+          },
+          {
+            step_id: "step-2",
+            opportunity_id: "opp-1",
+            title: "Send assessment proposal",
+            status: "planned",
+            sort_order: 1,
+            has_time: false,
+            duration_minutes: 30,
+          },
+        ],
+      },
+    });
+    const renderer = await renderScreen();
+
+    expect(findByTestId(renderer, "opportunity-step-step-1")).toBeDefined();
+    expect(findByTestId(renderer, "opportunity-step-step-2")).toBeDefined();
+    expect(hasText(renderer, "Send assessment proposal")).toBe(true);
+
+    findByTestId(renderer, "opportunity-step-ticket-step-1").props.onPress();
+    expect(navigationMock.navigate).toHaveBeenCalledWith("TicketDetail", { ticketId: "ticket-1" });
   });
 
   it("renders only the non-null values in the header", async () => {

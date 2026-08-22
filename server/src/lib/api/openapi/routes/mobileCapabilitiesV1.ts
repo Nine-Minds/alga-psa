@@ -8,6 +8,7 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
         features: zOpenApi.object({
           inventory: zOpenApi.boolean(),
           opportunities: zOpenApi.boolean(),
+          opportunitiesCreate: zOpenApi.boolean(),
         }),
       }),
     }),
@@ -38,7 +39,7 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
     extensions: {
       'x-tenant-scoped': true,
       'x-auth-mechanism': 'x-api-key validated in ApiBaseController.authenticate()',
-      'x-rbac-resource': 'inventory/read and opportunities/read',
+      'x-rbac-resource': 'inventory/read and opportunities/read/create',
     },
     edition: 'both',
   });
