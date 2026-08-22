@@ -54,7 +54,7 @@ import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPubli
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
-import { prepareTicketResourceReassignment } from '../lib/reassignTicketResources';
+import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { withAuth } from '@alga-psa/auth';
 import {

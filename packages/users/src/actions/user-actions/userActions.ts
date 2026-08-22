@@ -18,6 +18,7 @@ import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryAction
 import logger from '@alga-psa/core/logger';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { prepareTicketResourceReassignment } from "@alga-psa/db/reassignTicketResources";
 import {
   sanitizeUserForResponse,
   USER_RESPONSE_FIELD_NAMES,
@@ -59,6 +60,29 @@ export type UpdateUserResult =
   | { success: true; user: SafeApiUser | null }
   | { success: false; code: UpdateUserErrorCode; error: string };
 
+export type OpenWorkDisposition =
+  | { action: "reassign"; assigneeId: string }
+  | { action: "unassign" }
+  | { action: "archive" };
+
+export interface UserDeactivationDisposition {
+  tickets: OpenWorkDisposition;
+  projectTasks: OpenWorkDisposition;
+}
+
+export interface UserOpenWorkCounts {
+  openTickets: number;
+  openProjectTasks: number;
+}
+
+export type DeactivateUserWithDispositionResult =
+  | { success: true; user: SafeApiUser | null }
+  | {
+      success: false;
+      code: "PERMISSION_DENIED" | "DEACTIVATION_FAILED";
+      error: string;
+    };
+
 export type RegisterClientUserErrorCode =
   | 'CONTACT_NOT_FOUND'
   | 'CONTACT_INACTIVE'
@@ -85,6 +109,218 @@ function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: userId };
+}
+
+function openProjectTaskStatusMappings(
+  trx: Knex.Transaction,
+  tenant: string,
+): Knex.QueryBuilder {
+  const db = tenantDb(trx, tenant);
+  const mappings = db.table("project_status_mappings as psm");
+  db.tenantJoin(mappings, "statuses as s", "psm.status_id", "s.status_id", {
+    type: "left",
+  });
+  db.tenantJoin(
+    mappings,
+    "standard_statuses as ss",
+    "psm.standard_status_id",
+    "ss.standard_status_id",
+    { type: "left" },
+  );
+  return mappings.whereRaw(
+    "COALESCE(s.is_closed, ss.is_closed, false) = false",
+  );
+}
+
+async function getOpenWorkCounts(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string,
+): Promise<UserOpenWorkCounts> {
+  const db = tenantDb(trx, tenant);
+  const [ticketCount, taskCount] = await Promise.all([
+    db
+      .table("tickets as t")
+      .where("t.assigned_to", userId)
+      .whereExists(
+        db
+          .table("statuses as s")
+          .select("*")
+          .whereRaw("s.status_id = t.status_id")
+          .andWhere("s.is_closed", false),
+      )
+      .count<{ count: string }[]>("* as count")
+      .first(),
+    db
+      .table("project_tasks as pt")
+      .where("pt.assigned_to", userId)
+      .whereExists(
+        openProjectTaskStatusMappings(trx, tenant)
+          .select("*")
+          .whereRaw(
+            "psm.project_status_mapping_id = pt.project_status_mapping_id",
+          ),
+      )
+      .count<{ count: string }[]>("* as count")
+      .first(),
+  ]);
+
+  return {
+    openTickets: Number(ticketCount?.count ?? 0),
+    openProjectTasks: Number(taskCount?.count ?? 0),
+  };
+}
+
+/**
+ * Mirrors prepareTicketResourceReassignment for project tasks. task_resources
+ * has the same compound FK shape, so resources must be removed before the
+ * primary assigned_to value changes and recreated under the replacement.
+ */
+async function prepareTaskResourceReassignment(
+  trx: Knex.Transaction,
+  tenant: string,
+  taskId: string,
+  currentAssignedTo: string | null,
+  newAssignedTo: string | null,
+): Promise<() => Promise<void>> {
+  const resources = tenantDb(trx, tenant).table("task_resources");
+  if (newAssignedTo) {
+    await resources
+      .where({ task_id: taskId, additional_user_id: newAssignedTo })
+      .delete();
+  }
+
+  if (!currentAssignedTo) {
+    return async () => {};
+  }
+
+  const existingResources = await resources
+    .where({ task_id: taskId, assigned_to: currentAssignedTo })
+    .select("*");
+  if (existingResources.length === 0) {
+    return async () => {};
+  }
+
+  const resourcesToRecreate = existingResources
+    .filter(
+      (resource: Record<string, unknown>) =>
+        resource.additional_user_id !== newAssignedTo,
+    )
+    .map(
+      ({
+        assignment_id: _assignmentId,
+        ...resource
+      }: Record<string, unknown>) => resource,
+    );
+
+  await resources
+    .where({ task_id: taskId, assigned_to: currentAssignedTo })
+    .delete();
+
+  return async () => {
+    if (!newAssignedTo || resourcesToRecreate.length === 0) {
+      return;
+    }
+    await tenantDb(trx, tenant)
+      .table("task_resources")
+      .insert(
+        resourcesToRecreate.map((resource: Record<string, unknown>) => ({
+          ...resource,
+          assigned_to: newAssignedTo,
+        })),
+      );
+  };
+}
+
+async function requireActiveInternalAssignee(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string,
+  deactivatedUserId: string,
+): Promise<void> {
+  if (userId === deactivatedUserId) {
+    throw new Error(
+      "A user cannot be reassigned work that is being deactivated",
+    );
+  }
+
+  const assignee = await tenantDb(trx, tenant)
+    .table("users")
+    .where({ user_id: userId, user_type: "internal", is_inactive: false })
+    .first("user_id");
+  if (!assignee) {
+    throw new Error("The reassignment user must be an active internal user");
+  }
+}
+
+async function getClosedTicketStatusId(
+  trx: Knex.Transaction,
+  tenant: string,
+  boardId: string | null,
+): Promise<string> {
+  const status = await tenantDb(trx, tenant)
+    .table("statuses")
+    .where({ board_id: boardId, status_type: "ticket", is_closed: true })
+    .orderBy("is_default", "desc")
+    .orderBy("order_number", "asc")
+    .first("status_id");
+  if (!status?.status_id) {
+    throw new Error(
+      "Cannot archive ticket: its board has no closed ticket status",
+    );
+  }
+  return status.status_id;
+}
+
+async function getClosedProjectTaskStatusMappingId(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectId: string,
+  phaseId: string | null,
+): Promise<string> {
+  // A phase with its own mappings must stay within that mapping set. Falling
+  // back to a project-default status would make the task disappear from its
+  // phase board even though the foreign key itself permits the value.
+  const phaseHasOwnMappings = phaseId
+    ? Boolean(
+        await tenantDb(trx, tenant)
+          .table("project_status_mappings")
+          .where({ project_id: projectId, phase_id: phaseId })
+          .first("project_status_mapping_id"),
+      )
+    : false;
+  const scopes = phaseId && phaseHasOwnMappings ? [phaseId] : [null];
+  for (const scopedPhaseId of scopes) {
+    const db = tenantDb(trx, tenant);
+    const mappings = db
+      .table("project_status_mappings as psm")
+      .where("psm.project_id", projectId)
+      .orderBy("psm.display_order", "asc");
+    db.tenantJoin(mappings, "statuses as s", "psm.status_id", "s.status_id", {
+      type: "left",
+    });
+    db.tenantJoin(
+      mappings,
+      "standard_statuses as ss",
+      "psm.standard_status_id",
+      "ss.standard_status_id",
+      { type: "left" },
+    );
+    if (scopedPhaseId) {
+      mappings.where("psm.phase_id", scopedPhaseId);
+    } else {
+      mappings.whereNull("psm.phase_id");
+    }
+    const status = await mappings
+      .whereRaw("COALESCE(s.is_closed, ss.is_closed, false) = true")
+      .first("psm.project_status_mapping_id");
+    if (status?.project_status_mapping_id) {
+      return status.project_status_mapping_id;
+    }
+  }
+  throw new Error(
+    "Cannot archive project task: its project has no closed task status",
+  );
 }
 
 async function getSafeUserWithRoles(
@@ -905,6 +1141,312 @@ export const updateUser = withAuth(async (
     throw error;
   }
 });
+
+export const getOpenWorkCountsForUserDeactivation = withAuth(
+  async (
+    currentUser,
+    { tenant },
+    userId: string,
+  ): Promise<UserOpenWorkCounts> => {
+    const { knex } = await createTenantKnex();
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!(await hasPermission(currentUser, "user", "update", trx))) {
+        throwPermissionError("prepare user deactivation");
+      }
+      await assertPortalUserManagementScope(currentUser, tenant, trx, userId);
+
+      const target = await tenantDb(trx, tenant)
+        .table("users")
+        .where({ user_id: userId })
+        .first("user_id");
+      if (!target) {
+        throw new Error("User not found");
+      }
+      return getOpenWorkCounts(trx, tenant, userId);
+    });
+  },
+);
+
+/**
+ * Reassignment is restricted to active internal users. Taking the user being
+ * deactivated as an argument also lets client-portal callers prove that they
+ * are managing a user in their own company before seeing the choices.
+ */
+export const getActiveInternalUsersForDeactivation = withAuth(
+  async (
+    currentUser,
+    { tenant },
+    userId: string,
+  ): Promise<
+    Array<Pick<IUser, "user_id" | "first_name" | "last_name" | "email">>
+  > => {
+    const { knex } = await createTenantKnex();
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!(await hasPermission(currentUser, "user", "update", trx))) {
+        throwPermissionError("prepare user deactivation");
+      }
+      await assertPortalUserManagementScope(currentUser, tenant, trx, userId);
+
+      return tenantDb(trx, tenant)
+        .table("users")
+        .where({ user_type: "internal", is_inactive: false })
+        .whereNot("user_id", userId)
+        .select("user_id", "first_name", "last_name", "email")
+        .orderBy("first_name", "asc")
+        .orderBy("last_name", "asc");
+    });
+  },
+);
+
+/**
+ * Deactivates a user and disposes of all work that is still open at commit
+ * time. Resource rows are re-keyed before each primary assignment mutation,
+ * which is required by the NO ACTION compound FKs on ticket_resources and
+ * task_resources.
+ */
+export const deactivateUserWithDisposition = withAuth(
+  async (
+    currentUser,
+    { tenant },
+    userId: string,
+    disposition: UserDeactivationDisposition,
+  ): Promise<DeactivateUserWithDispositionResult> => {
+    try {
+      const { knex } = await createTenantKnex();
+      const result = await withTransaction(
+        knex,
+        async (trx: Knex.Transaction) => {
+          if (!(await hasPermission(currentUser, "user", "update", trx))) {
+            throwPermissionError("deactivate user");
+          }
+          await assertPortalUserManagementScope(
+            currentUser,
+            tenant,
+            trx,
+            userId,
+          );
+
+          const target = await tenantDb(trx, tenant)
+            .table("users")
+            .where({ user_id: userId })
+            .first("user_id");
+          if (!target) {
+            throw new Error("User not found");
+          }
+
+          for (const bucket of [
+            disposition.tickets,
+            disposition.projectTasks,
+          ]) {
+            if (
+              !bucket ||
+              !["reassign", "unassign", "archive"].includes(bucket.action)
+            ) {
+              throw new Error(
+                "A disposition is required for tickets and project tasks",
+              );
+            }
+            if (bucket.action === "reassign") {
+              await requireActiveInternalAssignee(
+                trx,
+                tenant,
+                bucket.assigneeId,
+                userId,
+              );
+            }
+          }
+
+          const db = tenantDb(trx, tenant);
+          const openTickets = await db
+            .table("tickets as t")
+            .where("t.assigned_to", userId)
+            .whereExists(
+              db
+                .table("statuses as s")
+                .select("*")
+                .whereRaw("s.status_id = t.status_id")
+                .andWhere("s.is_closed", false),
+            )
+            .select("t.ticket_id", "t.board_id");
+          const openTasks = await db
+            .table("project_tasks as pt")
+            .where("pt.assigned_to", userId)
+            .whereExists(
+              openProjectTaskStatusMappings(trx, tenant)
+                .select("*")
+                .whereRaw(
+                  "psm.project_status_mapping_id = pt.project_status_mapping_id",
+                ),
+            )
+            .select("pt.task_id", "pt.phase_id");
+
+          // Resolve all archive destinations before any work is touched. A missing
+          // closed status therefore aborts the whole transaction without leaving a
+          // partially-disposed user.
+          const ticketArchiveStatuses = new Map<string | null, string>();
+          if (disposition.tickets.action === "archive") {
+            for (const ticket of openTickets) {
+              if (!ticketArchiveStatuses.has(ticket.board_id)) {
+                ticketArchiveStatuses.set(
+                  ticket.board_id,
+                  await getClosedTicketStatusId(trx, tenant, ticket.board_id),
+                );
+              }
+            }
+          }
+
+          const taskArchiveStatuses = new Map<string, string>();
+          if (disposition.projectTasks.action === "archive") {
+            for (const task of openTasks) {
+              const phase = await db
+                .table("project_phases")
+                .where({ phase_id: task.phase_id })
+                .first("project_id");
+              if (!phase?.project_id) {
+                throw new Error(
+                  "Cannot archive project task: its project phase no longer exists",
+                );
+              }
+              taskArchiveStatuses.set(
+                task.task_id,
+                await getClosedProjectTaskStatusMappingId(
+                  trx,
+                  tenant,
+                  phase.project_id,
+                  task.phase_id,
+                ),
+              );
+            }
+          }
+
+          for (const ticket of openTickets) {
+            const nextAssignee =
+              disposition.tickets.action === "reassign"
+                ? disposition.tickets.assigneeId
+                : null;
+            const finalizeResources = await prepareTicketResourceReassignment(
+              trx,
+              tenant,
+              ticket.ticket_id,
+              userId,
+              nextAssignee,
+            );
+            const update: Record<string, unknown> = {
+              assigned_to: nextAssignee,
+            };
+            if (disposition.tickets.action === "archive") {
+              update.status_id = ticketArchiveStatuses.get(ticket.board_id);
+              update.is_closed = true;
+              update.closed_at = new Date();
+              update.closed_by = currentUser.user_id;
+            }
+            await db
+              .table("tickets")
+              .where({ ticket_id: ticket.ticket_id })
+              .update(update);
+            await finalizeResources();
+          }
+
+          for (const task of openTasks) {
+            const nextAssignee =
+              disposition.projectTasks.action === "reassign"
+                ? disposition.projectTasks.assigneeId
+                : null;
+            const finalizeResources = await prepareTaskResourceReassignment(
+              trx,
+              tenant,
+              task.task_id,
+              userId,
+              nextAssignee,
+            );
+            const update: Record<string, unknown> = {
+              assigned_to: nextAssignee,
+            };
+            if (disposition.projectTasks.action === "archive") {
+              update.project_status_mapping_id = taskArchiveStatuses.get(
+                task.task_id,
+              );
+            }
+            await db
+              .table("project_tasks")
+              .where({ task_id: task.task_id })
+              .update(update);
+            await finalizeResources();
+          }
+
+          await db
+            .table("boards")
+            .where({ default_assigned_to: userId })
+            .update({ default_assigned_to: null });
+          await db
+            .table("users")
+            .where({ user_id: userId })
+            .update({ is_inactive: true });
+
+          logger.info("User activity:", {
+            user_id: userId,
+            activity_type: "user_deactivated",
+            metadata: {
+              changed_by: currentUser.user_id,
+              disposition,
+              open_ticket_count: openTickets.length,
+              open_project_task_count: openTasks.length,
+            },
+          });
+
+          return {
+            success: true as const,
+            user: await getSafeUserWithRoles(trx, userId, tenant),
+          };
+        },
+      );
+
+      revalidatePath("/settings");
+      const occurredAt = new Date().toISOString();
+      try {
+        await publishWorkflowEvent({
+          eventType: "USER_UPDATED",
+          payload: {
+            userId,
+            changedFields: ["is_inactive"],
+            actorUserId: currentUser.user_id,
+            updatedAt: occurredAt,
+          },
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: maybeUserActor(currentUser),
+          },
+          idempotencyKey: `user_deactivated:${userId}:${occurredAt}`,
+        });
+      } catch (eventError) {
+        // The database transaction has committed. Preserve its successful result
+        // and make a failed asynchronous notification observable for retry.
+        logger.error(
+          `Failed to publish user deactivated event for ${userId}:`,
+          eventError,
+        );
+      }
+      return result;
+    } catch (error) {
+      logger.error(
+        `Failed to deactivate user with disposition for ${userId}:`,
+        error,
+      );
+      const message = getErrorMessage(error);
+      if (message.startsWith("Permission denied:")) {
+        return { success: false, code: "PERMISSION_DENIED", error: message };
+      }
+      return {
+        success: false,
+        code: "DEACTIVATION_FAILED",
+        error:
+          message ||
+          "Unable to deactivate the user and dispose of their open work.",
+      };
+    }
+  },
+);
 
 export const updateUserRoles = withAuth(async (
   currentUser,

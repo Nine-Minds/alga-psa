@@ -1380,7 +1380,10 @@
     "start": "Start",
     "insertStepHere": "Insert step here",
     "emptyDisabled": "No steps yet.",
-    "emptySelectPrompt": "Select a step from the panel to get started."
+    "emptySelectPrompt": "Select a step from the panel to get started.",
+    "patchSummary": {
+      "unchanged": "other fields unchanged"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Expression editor",
@@ -1496,6 +1499,37 @@
     "softEnumUseCustom": "Use \"{{value}}\"",
     "expression": {
       "placeholder": "e.g. payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Fields to change",
+      "targetFraming": "This step updates {{target}}.",
+      "summaryChanges": "Changes {{list}}",
+      "summaryChangesMore": "Changes {{list}} +{{count}} more",
+      "unchangedNote": "All other fields keep their current values.",
+      "emptyGuidance": "Add at least one field to change.",
+      "editChanges": "Edit changes…",
+      "dialogTitle": "Edit changes",
+      "dialogDescription": "Updating {{target}}. Only the fields listed on the right will change; everything else keeps its current value.",
+      "footerSummary": "{{count}} field(s) will change · everything else keeps its current value",
+      "done": "Done",
+      "added": "Added ✓",
+      "noChangesYet": "No changes yet. Pick a field on the left to start.",
+      "setFieldTo": "Set {{field}} to",
+      "removeChange": "Stop changing this field (it keeps its current value)",
+      "advancedTitle": "Advanced",
+      "group": {
+        "details": "Details",
+        "assignment": "Assignment",
+        "datesTags": "Dates & tags",
+        "advanced": "Advanced"
+      },
+      "target": {
+        "genericRecord": "record",
+        "unset": "the {{record}} selected above",
+        "fromReference": "the {{record}} from “{{source}}”",
+        "fromExpression": "the {{record}} chosen by an expression",
+        "fixed": "a specific {{record}}"
+      }
     }
   },
   "schemaReference": {

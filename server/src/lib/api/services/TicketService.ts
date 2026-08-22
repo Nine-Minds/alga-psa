@@ -15,7 +15,7 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
-import { prepareTicketResourceReassignment } from '@alga-psa/tickets/lib/reassignTicketResources';
+import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import {
   TicketResourceError,
   addTicketResourceCore,
