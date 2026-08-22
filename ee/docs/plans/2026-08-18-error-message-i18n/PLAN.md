@@ -580,6 +580,32 @@ Forty more commits of main. Conflicts landed in thirteen files and each class ha
   is translated in all seven locales. This is the third rebase in a row to land new unkeyed call sites —
   the grep is not optional.
 
+### Fourth reconciliation, 2026-08-22 (merge, not rebase)
+
+`origin/i18n/error_messages` — pushed before the first rebase — had diverged two commits ahead of this
+branch, so the push was rejected. Resolved by merging both `origin/main` (19 commits) and the remote branch
+tip, in that order, so the remote tip stays an ancestor and the eventual push fast-forwards. Force-pushing
+would have discarded the second of those two commits for good.
+
+- **`origin/main` was nearly disjoint.** Nineteen commits, almost all under `ee/mobile`, overlapping this
+  branch in exactly three files: `package-lock.json` and the two generated `msp/credentials` pseudo packs.
+  The lockfile keeps this branch's workspace-version sync (main's copy still says `@alga-psa/core` 1.4.5
+  where its own `package.json` says 1.4.7); the pseudo packs were regenerated rather than merged.
+- **`ee808b432b` was the commit the rebases dropped.** It keyed 81 client/contact validation messages behind
+  an injected `ValidationTranslator`. Fifty-two of those messages no longer exist on this branch: the
+  structural rules moved into the shared Zod schema behind one `*.structural` key per field, and the
+  plausibility rules became advise-layer warnings with new prose. Those are superseded, not discarded.
+  The other 47 — postal code, city, address, state/province, industry, role, notes, company size, annual
+  revenue — were still returning bare English here, and are now keyed as `FieldValidation` with the branch's
+  own structure, translations carried across all eight real locales plus regenerated pseudo.
+- **`validateClientForm` was translating nothing.** It collected `FieldValidation.error`, which is the
+  English default, so the submit path rendered English for fields whose blur path was already translated.
+  It now takes the same `Translator` the blur path uses.
+- **`docs/DELETION_RULES.md` merged clean** and is kept verbatim from `ee808b432b`.
+- **Carried translations are not carried blindly.** `pt` is declared `pt-BR` by its glossary, and the carried
+  block was European Portuguese (`Introduza`, `canadiano`, `p. ex.`) using `setor` for a field the glossary
+  requires be `ramo de atividade`. Rewritten. The German ZIP-Code strings had the wrong article gender.
+
 ## Category 7 — the `{ success: false, error }` channel (~1,132 literals across 254 files)
 
 **Found 2026-08-20 by a browser walk, not by the inventory.** On a German `/msp/profile`, submitting two
