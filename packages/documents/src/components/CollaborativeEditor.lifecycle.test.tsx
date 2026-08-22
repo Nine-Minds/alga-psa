@@ -51,6 +51,11 @@ describe('CollaborativeEditor provider lifecycle', () => {
   beforeEach(() => {
     mockDestroy.mockClear();
     mockYdocDestroy.mockClear();
+    // `on` records the listeners each render registers; without clearing it a
+    // previous test's handler is found first and the assertions read a stale
+    // closure.
+    mockProvider.on.mockClear();
+    mockProvider.off.mockClear();
   });
 
   it('keeps the provider alive when the parent re-renders with new callback identities', () => {
