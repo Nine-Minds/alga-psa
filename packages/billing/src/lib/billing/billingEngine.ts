@@ -1970,7 +1970,7 @@ export class BillingEngine {
     // Exactly one document calculation owns contract-family dispatch, pricing,
     // tax, discounts, adjustments, canonical keys and totals. Non-contract
     // charges remain an explicit scope carve-out but participate in totals.
-    const canonical = calculateContractBilling({
+    const canonical = this.calculateContractBillingDocument({
       schemaVersion: 1,
       execution: {
         mode: "live",
@@ -2022,6 +2022,17 @@ export class BillingEngine {
           warnings: projectMaterialWarnings,
         }
       : canonicalFinalCharges;
+  }
+
+  /**
+   * The sole live-engine seam around the pure shared document calculation.
+   * It deliberately adds no pricing behavior; keeping it as an instance seam
+   * lets orchestration tests isolate loading/persistence from financial rules.
+   */
+  private calculateContractBillingDocument(
+    input: Parameters<typeof calculateContractBilling>[0],
+  ) {
+    return calculateContractBilling(input);
   }
 
   private async getProjectMaterialCurrencyWarnings(

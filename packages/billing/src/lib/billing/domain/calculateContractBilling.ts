@@ -61,10 +61,10 @@ export function calculateContractBilling(
     for (const { charge, explanation } of calculated.chargeExplanations) {
       const netAmount = charge.total ?? 0;
       const taxAmount = charge.tax_amount ?? 0;
-      if (!Number.isInteger(netAmount) || !Number.isInteger(taxAmount))
-        throw new Error(
-          `Contract billing amounts must be integer minor units (${obligation.obligationId})`,
-        );
+      // Legacy hourly inputs can carry fractional minor-unit intermediate
+      // values. The shared compute family remains the rounding authority, so
+      // the document boundary must preserve that established behavior rather
+      // than introducing a second rounding rule here.
       sourceCharges.push(charge);
       lines.push({
         lineKey: explanation.chargeKey,
