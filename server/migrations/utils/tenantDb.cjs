@@ -442,6 +442,8 @@ const TENANT_TABLE_METADATA = {
   teams_integrations: { scope: 'tenant' },
   teams_notification_deliveries: { scope: 'tenant' },
   team_permissions: { scope: 'tenant' },
+  telephony_call_records: { scope: 'tenant' },
+  telephony_providers: { scope: 'tenant' },
   tenants: { scope: 'tenant' },
   tenant_addons: { scope: 'tenant' },
   tenant_external_entity_mappings: { scope: 'tenant' },

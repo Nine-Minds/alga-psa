@@ -272,6 +272,8 @@ const nextConfig = {
       '@alga-psa/users/hooks': '../packages/users/src/hooks/index.ts',
       '@alga-psa/teams': '../packages/teams/src',
       '@alga-psa/teams/': '../packages/teams/src/',
+      '@alga-psa/telephony': '../packages/telephony/src',
+      '@alga-psa/telephony/': '../packages/telephony/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
@@ -610,6 +612,8 @@ const nextConfig = {
       '@alga-psa/assets/': `${prebuiltDirAbs('assets')}/`,
       '@alga-psa/tags': prebuiltDirAbs('tags'),
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
+      '@alga-psa/telephony': prebuiltDirAbs('telephony'),
+      '@alga-psa/telephony/': `${prebuiltDirAbs('telephony')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       // @alga-psa/jobs + /search: source-transpiled. jobs' export names do NOT
