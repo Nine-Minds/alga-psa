@@ -19,17 +19,11 @@ import type {
   ContractSimulationResult,
   IBillingCharge,
   IBillingPeriod,
-  IBucketCharge,
   IClientContractLine,
-  IFixedPriceCharge,
-  ILicenseCharge,
-  IProductCharge,
   IRecurringActivityWindow,
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
   ISO8601String,
-  ITimeBasedCharge,
-  IUsageBasedCharge,
   ScenarioBucketConfig,
   ScenarioLine,
   ScenarioLineService,
@@ -86,6 +80,7 @@ import {
   calculateContractBilling,
   calculateContractCharge,
   calculateContractDiscountsAndAdjustments,
+  findContractChargeExplanation,
 } from "@alga-psa/billing";
 
 interface PeriodAccumulator {
@@ -503,10 +498,6 @@ async function simulateRecurringQuantityCharges(
     },
     taxContext: taxPorts,
   });
-  const explanationByKey = new Map(
-    explanations.map((explanation) => [explanation.chargeKey, explanation]),
-  );
-
   for (const charge of charges) {
     pushChargeLine({
       accumulator,
@@ -526,16 +517,14 @@ async function simulateRecurringQuantityCharges(
         servicePeriodEnd: charge.servicePeriodEnd,
       },
       currencyCode,
-      explanation:
-        explanationByKey.get(quantityChargeExplanationKey(charge)) ?? null,
+      explanation: findContractChargeExplanation(
+        chargeType,
+        charge,
+        explanations,
+        clientContractLine.client_contract_line_id,
+      ),
     });
   }
-}
-
-function quantityChargeExplanationKey(
-  charge: IProductCharge | ILicenseCharge,
-): string {
-  return `${charge.config_id ?? charge.client_contract_line_id}:${charge.serviceId}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -621,10 +610,6 @@ async function simulateBucketCharges(
       },
       taxContext: taxPorts,
     });
-    const explanationByKey = new Map(
-      explanations.map((explanation) => [explanation.chargeKey, explanation]),
-    );
-
     for (const charge of charges) {
       pushChargeLine({
         accumulator,
@@ -648,8 +633,12 @@ async function simulateBucketCharges(
           servicePeriodEnd: charge.servicePeriodEnd,
         },
         currencyCode,
-        explanation:
-          explanationByKey.get(bucketChargeExplanationKey(charge)) ?? null,
+        explanation: findContractChargeExplanation(
+          "bucket",
+          charge,
+          explanations,
+          clientContractLine.client_contract_line_id,
+        ),
       });
     }
   }
@@ -664,10 +653,6 @@ function usageUnitForBucket(line: ScenarioLine, serviceId: string): string {
   return usageConfig?.configuration_type === "Usage"
     ? usageConfig.unit_of_measure
     : "units";
-}
-
-function bucketChargeExplanationKey(charge: IBucketCharge): string {
-  return `${charge.config_id}:${charge.serviceId}:${charge.servicePeriodStart}:${charge.servicePeriodEnd}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -738,10 +723,6 @@ async function simulateUsageCharges(
     },
     taxContext: taxPorts,
   });
-  const explanationByKey = new Map(
-    explanations.map((explanation) => [explanation.chargeKey, explanation]),
-  );
-
   for (const charge of charges) {
     const service = usageServices.find(
       (candidate) => candidate.service_id === charge.serviceId,
@@ -768,19 +749,14 @@ async function simulateUsageCharges(
         servicePeriodEnd: charge.servicePeriodEnd,
       },
       currencyCode,
-      explanation:
-        explanationByKey.get(
-          usageChargeExplanationKey(charge, clientContractLine),
-        ) ?? null,
+      explanation: findContractChargeExplanation(
+        "usage",
+        charge,
+        explanations,
+        clientContractLine.client_contract_line_id,
+      ),
     });
   }
-}
-
-function usageChargeExplanationKey(
-  charge: IUsageBasedCharge,
-  clientContractLine: IClientContractLine,
-): string {
-  return `${charge.config_id ?? clientContractLine.client_contract_line_id}:${charge.serviceId}:${charge.usageId}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1020,13 +996,13 @@ async function simulateFixedCharges(
   // double-billing against persisted charges, and a simulation persists
   // nothing.
 
-  const explanationByKey = new Map(
-    explanations.map((explanation) => [explanation.chargeKey, explanation]),
-  );
-
   for (const charge of charges) {
-    const explanation =
-      explanationByKey.get(fixedChargeExplanationKey(charge)) ?? null;
+    const explanation = findContractChargeExplanation(
+      "fixed",
+      charge,
+      explanations,
+      clientContractLine.client_contract_line_id,
+    );
     pushChargeLine({
       accumulator,
       lineKey: line.key,
@@ -1048,11 +1024,6 @@ async function simulateFixedCharges(
       explanation,
     });
   }
-}
-
-/** Replicates computeFixedCharges' internal chargeKey derivation. */
-function fixedChargeExplanationKey(charge: IFixedPriceCharge): string {
-  return `${charge.config_id ?? charge.client_contract_line_id ?? "line"}:${charge.serviceId ?? "service"}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1140,15 +1111,13 @@ async function simulateHourlyCharges(
     taxContext: taxPorts,
   });
 
-  const explanationByKey = new Map(
-    explanations.map((explanation) => [explanation.chargeKey, explanation]),
-  );
-
   for (const charge of charges) {
-    const explanation =
-      explanationByKey.get(
-        timeChargeExplanationKey(charge, clientContractLine),
-      ) ?? null;
+    const explanation = findContractChargeExplanation(
+      "hourly",
+      charge,
+      explanations,
+      clientContractLine.client_contract_line_id,
+    );
     pushChargeLine({
       accumulator,
       lineKey: line.key,
@@ -1170,14 +1139,6 @@ async function simulateHourlyCharges(
       explanation,
     });
   }
-}
-
-/** Replicates computeTimeBasedCharges' internal chargeKey derivation. */
-function timeChargeExplanationKey(
-  charge: ITimeBasedCharge,
-  clientContractLine: IClientContractLine,
-): string {
-  return `${charge.config_id ?? clientContractLine.client_contract_line_id}:${charge.serviceId}:${charge.entryId}`;
 }
 
 function applyScenarioDiscountsAndAdjustments(

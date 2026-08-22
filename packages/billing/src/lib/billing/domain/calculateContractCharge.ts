@@ -1,4 +1,13 @@
-import type { IBillingCharge, ChargeExplanation } from "@alga-psa/types";
+import type {
+  IBillingCharge,
+  ChargeExplanation,
+  IBucketCharge,
+  IFixedPriceCharge,
+  ILicenseCharge,
+  IProductCharge,
+  ITimeBasedCharge,
+  IUsageBasedCharge,
+} from "@alga-psa/types";
 import {
   computeBucketCharges,
   computeDiscountsAndAdjustments,
@@ -144,6 +153,50 @@ export function calculateContractDiscountsAndAdjustments(
   inputs: DiscountsAndAdjustmentsComputeInputs,
 ): DiscountsAndAdjustmentsComputeResult {
   return computeDiscountsAndAdjustments(inputs);
+}
+
+/**
+ * Returns the explanation emitted for a calculated charge. Charge-key
+ * semantics are part of the calculation contract, not a simulator concern.
+ */
+export function findContractChargeExplanation(
+  kind: ResolvedContractChargeObligation["kind"],
+  charge: IBillingCharge,
+  explanations: ChargeExplanation[],
+  fallbackContractLineId?: string,
+): ChargeExplanation | null {
+  const contractLineId =
+    charge.client_contract_line_id ?? fallbackContractLineId ?? "line";
+  let chargeKey: string;
+  switch (kind) {
+    case "fixed": {
+      const fixed = charge as IFixedPriceCharge;
+      chargeKey = `${fixed.config_id ?? contractLineId}:${fixed.serviceId ?? "service"}`;
+      break;
+    }
+    case "hourly": {
+      const hourly = charge as ITimeBasedCharge;
+      chargeKey = `${hourly.config_id ?? contractLineId}:${hourly.serviceId}:${hourly.entryId}`;
+      break;
+    }
+    case "usage": {
+      const usage = charge as IUsageBasedCharge;
+      chargeKey = `${usage.config_id ?? contractLineId}:${usage.serviceId}:${usage.usageId}`;
+      break;
+    }
+    case "bucket": {
+      const bucket = charge as IBucketCharge;
+      chargeKey = `${bucket.config_id}:${bucket.serviceId}:${bucket.servicePeriodStart}:${bucket.servicePeriodEnd}`;
+      break;
+    }
+    case "product":
+    case "license": {
+      const recurring = charge as IProductCharge | ILicenseCharge;
+      chargeKey = `${recurring.config_id ?? contractLineId}:${recurring.serviceId}`;
+      break;
+    }
+  }
+  return explanations.find((explanation) => explanation.chargeKey === chargeKey) ?? null;
 }
 
 export interface CalculatedContractChargeBatch {
