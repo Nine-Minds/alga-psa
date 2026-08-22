@@ -484,7 +484,12 @@ export async function saveTeamsIntegrationSettingsImpl(
       ? next.defaultMeetingOrganizerObjectId
       : null;
 
-    if (input.defaultMeetingOrganizerUpn !== undefined && defaultMeetingOrganizerUpn) {
+    // Only a changed UPN warrants a live Graph lookup; see the shared copy in
+    // packages/integrations for why re-resolving on every save broke unrelated
+    // toggles. Kept aligned so the two copies cannot drift apart again.
+    const organizerUpnChanged = defaultMeetingOrganizerUpn !== next.defaultMeetingOrganizerUpn;
+
+    if (organizerUpnChanged && defaultMeetingOrganizerUpn) {
       if (!profileValidation.profile) {
         return { success: false, error: 'A Microsoft profile must be selected before saving a Teams meeting organizer' };
       }

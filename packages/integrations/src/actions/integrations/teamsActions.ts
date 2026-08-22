@@ -112,6 +112,9 @@ function teamsActionErrorMessage(error: unknown, fallback: string): string {
     return 'Forbidden';
   }
 
+  // The caller only ever sees the generic fallback, so without this the real
+  // cause (a Graph HTTP status, a constraint violation) is lost entirely.
+  console.error(`[TeamsActions] ${fallback}`, error);
   return fallback;
 }
 
@@ -524,7 +527,15 @@ async function saveTeamsIntegrationSettingsImpl(
       ? next.defaultMeetingOrganizerObjectId
       : null;
 
-    if (input.defaultMeetingOrganizerUpn !== undefined && defaultMeetingOrganizerUpn) {
+    // Resolve the organizer against Graph only when the admin actually changed
+    // the UPN. The settings form posts every field on every save, so re-resolving
+    // an unchanged organizer made an unrelated toggle (a capability checkbox, a
+    // notification route) depend on a live Microsoft round-trip: an expired
+    // secret, revoked consent, or a Graph blip failed the whole save and the
+    // admin could not persist anything. An unchanged UPN keeps its stored object id.
+    const organizerUpnChanged = defaultMeetingOrganizerUpn !== next.defaultMeetingOrganizerUpn;
+
+    if (organizerUpnChanged && defaultMeetingOrganizerUpn) {
       if (!profileValidation.profile) {
         return { success: false, error: 'A Microsoft profile must be selected before saving a Teams meeting organizer' };
       }
