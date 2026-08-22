@@ -186,9 +186,12 @@ See [Client Portal Projects](client_portal_projects.md) for detailed configurati
 - Database connection settings
 
 **Branding Configuration:**
-- Tenant-specific branding (logos, colors)
+- Tenant-specific branding: a primary logo (`logoUrl`) for light surfaces, plus an **optional** dark-surface variant (`logoDarkUrl`) that renders on the portal side panel and dark-themed auth pages. When no dark variant is supplied, the primary logo renders on every surface unchanged. Configured through the tenant branding settings and served to the portal shell, sidebar, and sign-in flow through `TenantBranding` / `tenantBrandingActions`.
+- Custom brand colors, applied through generated CSS variables (`generateBrandingStyles`) so the tenant's palette follows every branded surface consistently. See [UI theming](../../ui/theming.md) for the underlying token conventions and skeleton/loading behavior.
 - Custom domain support
 - Localization settings
+
+Enterprise-edition tenants can additionally opt into extending their branding (logo + brand colors) onto the MSP shell via `packages/tenancy/src/lib/tenantTheme.ts`. This is off by default, so tenants that have only ever configured client-portal branding keep the stock Alga chrome on the MSP side.
 
 ### Security Configuration
 
