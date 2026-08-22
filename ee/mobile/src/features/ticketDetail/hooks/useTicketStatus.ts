@@ -1,19 +1,20 @@
 import { useRef, useState } from "react";
 import { Alert } from "react-native";
-import { getTicketStatuses, updateTicketStatus, type TicketStatus } from "../../../api/tickets";
+import { getTicketStatuses, updateTicketStatus, type TicketNotificationSuppressionOptions, type TicketStatus } from "../../../api/tickets";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { invalidateTicketsListCache } from "../../../cache/ticketsCache";
 import { getCachedTicketStatuses, setCachedTicketStatuses } from "../../../cache/referenceDataCache";
 import type { TicketDetailDeps } from "../types";
-import { getApiErrorMessage } from "../utils";
+import { getApiErrorMessage, ticketUpdateSuccessMessage } from "../utils";
 
 export function useTicketStatus(
   deps: TicketDetailDeps & {
     fetchTicket: () => Promise<void>;
     boardId?: string | null;
+    onChecklistBlocked?: () => void;
   },
 ) {
-  const { client, session, ticketId, showToast, t, fetchTicket, boardId } = deps;
+  const { client, session, ticketId, showToast, t, fetchTicket, boardId, onChecklistBlocked } = deps;
 
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
   const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
@@ -61,7 +62,7 @@ export function useTicketStatus(
     }
   };
 
-  const submitStatus = async (statusId: string) => {
+  const submitStatus = async (statusId: string, notificationSuppression?: TicketNotificationSuppressionOptions) => {
     if (!client || !session) return;
     if (statusUpdateInFlightRef.current || statusUpdating) return;
     statusUpdateInFlightRef.current = true;
@@ -74,6 +75,7 @@ export function useTicketStatus(
         apiKey: session.accessToken,
         ticketId,
         status_id: statusId,
+        notificationSuppression,
         auditHeaders,
       });
       if (!res.ok) {
@@ -107,6 +109,10 @@ export function useTicketStatus(
           const msg = getApiErrorMessage(res.error.body);
           setPendingStatusId(null);
           setStatusUpdateError(msg ?? t("detail.errors.statusValidation"));
+          if (msg && /checklist/i.test(msg)) {
+            setStatusPickerOpen(false);
+            onChecklistBlocked?.();
+          }
           showToast({ message: t("detail.errors.statusGeneric"), tone: "error" });
           return;
         }
@@ -119,7 +125,10 @@ export function useTicketStatus(
       await fetchTicket();
       setPendingStatusId(null);
       setStatusPickerOpen(false);
-      showToast({ message: t("detail.changeStatus"), tone: "success" });
+      showToast({
+        message: ticketUpdateSuccessMessage(t, notificationSuppression, t("detail.changeStatus")),
+        tone: "success",
+      });
     } finally {
       setStatusUpdating(false);
       statusUpdateInFlightRef.current = false;

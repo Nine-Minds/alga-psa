@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, Text, TextInput } from "react-native";
+import { Alert, Pressable, Text, TextInput } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -58,10 +58,10 @@ function renderModal(overrides?: Partial<Parameters<typeof ContactPickerModal>[0
     visible: true,
     updating: false,
     updateError: null,
+    currentContactId: null as string | null,
     currentContactName: null as string | null,
     clientId: "client-1",
-    onSelect: vi.fn(),
-    onRemove: vi.fn(),
+    onApply: vi.fn(),
     onClose: vi.fn(),
     client: fakeClient,
     apiKey: "api-key",
@@ -102,6 +102,7 @@ describe("ContactPickerModal", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("fetches and renders contacts when visible", async () => {
@@ -141,9 +142,9 @@ describe("ContactPickerModal", () => {
     expect(texts).toContain("contactPicker.noResults");
   });
 
-  it("calls onSelect when a contact is pressed", async () => {
-    const onSelect = vi.fn();
-    const renderer = renderModal({ onSelect });
+  it("stages a contact until Apply is pressed", async () => {
+    const onApply = vi.fn();
+    const renderer = renderModal({ onApply });
     await flush();
 
     const contactButtons = renderer.root.findAllByType(Pressable).filter(
@@ -152,12 +153,20 @@ describe("ContactPickerModal", () => {
     expect(contactButtons.length).toBeGreaterThan(0);
 
     act(() => contactButtons[0].props.onPress());
-    expect(onSelect).toHaveBeenCalledWith("c-1", "Alice Smith");
+    expect(onApply).not.toHaveBeenCalled();
+
+    const applyButton = renderer.root.findAllByType(Pressable).find((button) =>
+      button.findAllByType(Text).some((text) => text.props.children === "contactPicker.apply"),
+    );
+    expect(applyButton).toBeDefined();
+    act(() => applyButton!.props.onPress());
+    expect(onApply).toHaveBeenCalledWith("c-1", undefined);
   });
 
   it("shows remove button when currentContactName is set", async () => {
-    const onRemove = vi.fn();
-    const renderer = renderModal({ currentContactName: "Alice Smith", onRemove });
+    const alertSpy = vi.spyOn(Alert, "alert").mockImplementation(() => undefined);
+    const onApply = vi.fn();
+    const renderer = renderModal({ currentContactId: "c-1", currentContactName: "Alice Smith", onApply });
     await flush();
 
     const texts = getTextContent(renderer);
@@ -170,7 +179,18 @@ describe("ContactPickerModal", () => {
     expect(removeButton).toBeDefined();
 
     act(() => removeButton!.props.onPress());
-    expect(onRemove).toHaveBeenCalled();
+    expect(onApply).not.toHaveBeenCalled();
+
+    const applyButton = renderer.root.findAllByType(Pressable).filter((button) =>
+      button.findAllByType(Text).some((text) => text.props.children === "contactPicker.remove"),
+    ).at(-1);
+    expect(applyButton).toBeDefined();
+    act(() => applyButton!.props.onPress());
+    expect(alertSpy).toHaveBeenCalled();
+    const buttons = alertSpy.mock.calls.at(-1)?.[2];
+    const confirm = buttons?.find((button) => button.style === "destructive");
+    act(() => confirm?.onPress?.());
+    expect(onApply).toHaveBeenCalledWith(null, undefined);
   });
 
   it("does not show remove button when no current contact", async () => {

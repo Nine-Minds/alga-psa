@@ -13,6 +13,7 @@ import { Card } from "../../../ui/components/Card";
 import { SectionHeader } from "../../../ui/components/SectionHeader";
 import { useTheme } from "../../../ui/ThemeContext";
 import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
+import { SectionCollapseToggle } from "./SectionCollapseToggle";
 
 function formatMinutes(minutes: number, tShort: (key: string, fallback: string) => string): string {
   if (!minutes || minutes <= 0) {
@@ -55,6 +56,7 @@ export function TimeEntriesSection({
   refreshKey = 0,
   meUserId,
   onAddPress,
+  initiallyCollapsed = false,
 }: {
   client: ApiClient | null;
   apiKey: string | null;
@@ -62,6 +64,7 @@ export function TimeEntriesSection({
   refreshKey?: number;
   meUserId?: string | null;
   onAddPress?: () => void;
+  initiallyCollapsed?: boolean;
 }) {
   const { t } = useTranslation("tickets");
   const tShort = useCallback(
@@ -75,6 +78,7 @@ export function TimeEntriesSection({
   const [error, setError] = useState<string | null>(null);
   const [showMine, setShowMine] = useState(true);
   const [showOthers, setShowOthers] = useState(false);
+  const [collapsed, setCollapsed] = useState(initiallyCollapsed);
 
   const load = useCallback(async () => {
     if (!client || !apiKey) {
@@ -126,7 +130,7 @@ export function TimeEntriesSection({
               }
               tone="neutral"
             />
-            {onAddPress ? (
+            {onAddPress && !collapsed ? (
               <Pressable
                 onPress={onAddPress}
                 accessibilityRole="button"
@@ -145,10 +149,16 @@ export function TimeEntriesSection({
                 <Feather name="plus" size={16} color={colors.textInverse} />
               </Pressable>
             ) : null}
+            <SectionCollapseToggle
+              collapsed={collapsed}
+              onToggle={() => setCollapsed((value) => !value)}
+              sectionLabel={t("timeEntries.title")}
+            />
           </View>
         )}
       />
 
+      {collapsed ? null : <>
       {loading ? (
         <View style={{ marginTop: spacing.md, alignItems: "center" }}>
           <ActivityIndicator size="small" color={colors.primary} />
@@ -231,6 +241,7 @@ export function TimeEntriesSection({
           ) : null}
         </View>
       )}
+      </>}
     </Card>
   );
 }

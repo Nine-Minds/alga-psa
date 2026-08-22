@@ -44,6 +44,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
         setFeatures({
           inventory: result.data.data?.features?.inventory === true,
           opportunities: result.data.data?.features?.opportunities === true,
+          opportunitiesCreate: result.data.data?.features?.opportunitiesCreate === true,
         });
       } else {
         // Older servers have no endpoint (404) — every feature stays off.

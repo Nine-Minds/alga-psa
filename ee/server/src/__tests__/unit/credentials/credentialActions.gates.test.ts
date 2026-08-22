@@ -1,6 +1,6 @@
 /**
  * Tier gate + fail-closed reveal audit contracts for the credentials vault:
- *  - server actions reject below Pro via assertTierAccess(TIER_FEATURES.CREDENTIALS)
+ *  - save actions return a safe result below Pro via assertTierAccess(TIER_FEATURES.CREDENTIALS)
  *  - reveal is fail-closed: if the audit insert fails, the action throws and no
  *    value is returned (no audit row ⇒ no value).
  */
@@ -18,11 +18,16 @@ const {
   huduListMock,
   huduResolveByIdsMock,
   huduResolveOwnerClientIdMock,
+  huduCreateMock,
+  huduUpdateMock,
   getHuduIntegrationMock,
   getHuduCompanyMappingRowsMock,
   loadAssociationsForEntityMock,
   pruneAssociationRefsMock,
   resolveEntityClientIdMock,
+  nativeCreateMock,
+  nativeUpdateMock,
+  loggerErrorMock,
 } = vi.hoisted(() => {
   class TierAccessErrorMock extends Error {
     readonly statusCode = 403;
@@ -39,16 +44,21 @@ const {
     huduListMock: vi.fn(async () => []),
     huduResolveByIdsMock: vi.fn(async () => []),
     huduResolveOwnerClientIdMock: vi.fn(async () => null),
+    huduCreateMock: vi.fn(),
+    huduUpdateMock: vi.fn(),
     getHuduIntegrationMock: vi.fn(async () => null),
     getHuduCompanyMappingRowsMock: vi.fn(async () => []),
     loadAssociationsForEntityMock: vi.fn(async () => []),
     pruneAssociationRefsMock: vi.fn(async () => undefined),
     resolveEntityClientIdMock: vi.fn(async () => null),
+    nativeCreateMock: vi.fn(),
+    nativeUpdateMock: vi.fn(),
+    loggerErrorMock: vi.fn(),
   };
 });
 
 vi.mock('@alga-psa/core/logger', () => ({
-  default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+  default: { error: loggerErrorMock, warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
 vi.mock('next/cache', () => ({
@@ -92,6 +102,8 @@ vi.mock('@ee/lib/credentials/nativeSource', () => ({
     list: nativeListMock,
     listByIds: nativeListByIdsMock,
     resolveOwnerClientId: nativeResolveOwnerClientIdMock,
+    create: nativeCreateMock,
+    update: nativeUpdateMock,
   },
 }));
 
@@ -100,6 +112,8 @@ vi.mock('@ee/lib/credentials/huduSource', () => ({
     list: huduListMock,
     resolveByIds: huduResolveByIdsMock,
     resolveOwnerClientId: huduResolveOwnerClientIdMock,
+    create: huduCreateMock,
+    update: huduUpdateMock,
   },
   isHuduCredentialId: (id: string) => id.startsWith('hudu:'),
 }));
@@ -138,9 +152,14 @@ beforeEach(() => {
   nativeResolveOwnerClientIdMock.mockReset();
   huduResolveByIdsMock.mockReset();
   huduResolveOwnerClientIdMock.mockReset();
+  huduCreateMock.mockReset();
+  huduUpdateMock.mockReset();
   loadAssociationsForEntityMock.mockReset();
   pruneAssociationRefsMock.mockReset();
   resolveEntityClientIdMock.mockReset();
+  nativeCreateMock.mockReset();
+  nativeUpdateMock.mockReset();
+  loggerErrorMock.mockReset();
   getHuduIntegrationMock.mockReset();
   getHuduCompanyMappingRowsMock.mockReset();
   nativeListMock.mockResolvedValue([]);
@@ -149,6 +168,8 @@ beforeEach(() => {
   nativeResolveOwnerClientIdMock.mockResolvedValue(null);
   huduResolveByIdsMock.mockResolvedValue([]);
   huduResolveOwnerClientIdMock.mockResolvedValue(null);
+  huduCreateMock.mockResolvedValue({ id: 'hudu:1:1' });
+  huduUpdateMock.mockResolvedValue({ id: 'hudu:1:1' });
   loadAssociationsForEntityMock.mockResolvedValue([]);
   pruneAssociationRefsMock.mockResolvedValue(undefined);
   resolveEntityClientIdMock.mockResolvedValue(null);
@@ -179,6 +200,62 @@ describe('credentials actions — tier gate', () => {
     const { listCredentials } = await importActions();
 
     await expect(listCredentials({})).rejects.toThrow(/Forbidden/);
+  });
+});
+
+describe('credential save safe-error boundary', () => {
+  const secretInput = { destination: 'alga' as const, clientId: 'client-1', name: 'secret-name', password: 'do-not-log', otpSecret: 'GEZDGNBVGY3TQOJQ', username: 'admin', url: '', description: '' };
+
+  it('returns successful create and update results without emitting a failure log', async () => {
+    nativeCreateMock.mockResolvedValue({ id: 'credential-1' });
+    nativeUpdateMock.mockResolvedValue({ id: 'credential-1' });
+    const { createCredential, updateCredential } = await importActions();
+
+    await expect(createCredential(secretInput)).resolves.toEqual({ ok: true, credential: { id: 'credential-1' } });
+    await expect(updateCredential('credential-1', { name: 'updated' })).resolves.toEqual({ ok: true, credential: { id: 'credential-1' } });
+    expect(loggerErrorMock).not.toHaveBeenCalled();
+  });
+
+  it('converts authorization and tier failures before the handler into PERMISSION_DENIED and redacted logs', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+    const { createCredential } = await importActions();
+    await expect(createCredential(secretInput)).resolves.toEqual({ ok: false, code: 'PERMISSION_DENIED' });
+    expect(loggerErrorMock).toHaveBeenCalledWith('[CredentialActions] credential save failed', expect.objectContaining({ operation: 'create', code: 'PERMISSION_DENIED', tenant: 'tenant-1', userId: 'user-1', clientId: 'client-1' }));
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('do-not-log');
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('GEZDGNBVGY3TQOJQ');
+  });
+
+  it('converts tier denial before create into PERMISSION_DENIED with the same redacted log shape', async () => {
+    assertTierAccessMock.mockRejectedValue(new TierAccessErrorMock());
+    const { createCredential } = await importActions();
+    await expect(createCredential(secretInput)).resolves.toEqual({ ok: false, code: 'PERMISSION_DENIED' });
+    expect(loggerErrorMock).toHaveBeenCalledWith('[CredentialActions] credential save failed', expect.objectContaining({ operation: 'create', code: 'PERMISSION_DENIED', tenant: 'tenant-1', userId: 'user-1' }));
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('do-not-log');
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('GEZDGNBVGY3TQOJQ');
+  });
+
+  it('logs create and update source failures with safe context only', async () => {
+    nativeCreateMock.mockRejectedValue(Object.assign(new Error('client mismatch'), { code: 'CREDENTIAL_CLIENT_MISMATCH' }));
+    nativeUpdateMock.mockRejectedValue(new Error('unexpected query payload password=do-not-log'));
+    const { createCredential, updateCredential } = await importActions();
+    await expect(createCredential(secretInput)).resolves.toEqual({ ok: false, code: 'CLIENT_MISMATCH' });
+    await expect(updateCredential('credential-1', { clientId: 'client-1', password: 'do-not-log' })).resolves.toEqual({ ok: false, code: 'UNKNOWN' });
+    expect(loggerErrorMock).toHaveBeenCalledWith('[CredentialActions] credential save failed', expect.objectContaining({ operation: 'update', credentialId: 'credential-1', code: 'UNKNOWN' }));
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('do-not-log');
+  });
+
+  it('maps validation, configuration, and Hudu upstream failures without serializing raw errors', async () => {
+    nativeCreateMock
+      .mockRejectedValueOnce(new Error('Invalid base32 TOTP secret character: "SENSITIVE".'))
+      .mockRejectedValueOnce(new Error('Credential vault encryption key is not configured.'));
+    huduCreateMock.mockRejectedValue(new Error('upstream response body contains token=do-not-log'));
+    const { createCredential } = await importActions();
+
+    await expect(createCredential(secretInput)).resolves.toEqual({ ok: false, code: 'VALIDATION' });
+    await expect(createCredential(secretInput)).resolves.toEqual({ ok: false, code: 'CONFIGURATION' });
+    await expect(createCredential({ ...secretInput, destination: 'hudu' })).resolves.toEqual({ ok: false, code: 'HUDU_API' });
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('SENSITIVE');
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('do-not-log');
   });
 });
 
