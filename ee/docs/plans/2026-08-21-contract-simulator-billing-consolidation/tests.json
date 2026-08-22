@@ -6,33 +6,33 @@
     "featureIds": ["F001", "F004", "F007", "F008", "F014", "F015"]
   },
   {
-  "id": "T002",
+    "id": "T002",
     "description": "Pure parity matrix: hourly inputs cover custom/user-type rates, minimum billable time, rounding, overtime, effective schedules, and partial service periods in both modes.",
-  "implemented": false,
+    "implemented": false,
     "featureIds": ["F003", "F009", "F014", "F015"]
   },
   {
-  "id": "T003",
+    "id": "T003",
     "description": "Pure parity matrix: usage inputs cover flat and tiered pricing, minimums, exact tier boundaries, units, effective schedules, tax, and rounding in both modes.",
-  "implemented": false,
+    "implemented": false,
     "featureIds": ["F003", "F010", "F014", "F015"]
   },
   {
-  "id": "T004",
+    "id": "T004",
     "description": "Pure multi-period parity: bucket allowance, consumption, rollover, expiration/non-compounding, and overage yield equal results and explicit next state in both modes.",
-  "implemented": false,
+    "implemented": false,
     "featureIds": ["F011", "F014", "F022"]
   },
   {
-  "id": "T005",
+    "id": "T005",
     "description": "Pure parity matrix: recurring product and license quantities cover advance/arrears timing, mixed cadence, proration, effective prices, tax, and boundary dates.",
-  "implemented": false,
+    "implemented": false,
     "featureIds": ["F012", "F014", "F015"]
   },
   {
-  "id": "T006",
+    "id": "T006",
     "description": "Pure document test: percentage/fixed discounts and positive/negative/one-time adjustments are applied once in canonical order with exact minor-unit totals.",
-  "implemented": true,
+    "implemented": true,
     "featureIds": ["F013", "F014"]
   },
   {
@@ -61,13 +61,13 @@
   {
     "id": "T009",
     "description": "DB-backed happy path loads a seeded contract through production and scenario adapters and produces equal canonical calculated documents.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017", "F018", "F019", "F022"]
   },
   {
-  "id": "T010",
+    "id": "T010",
     "description": "DB-backed successful and failing simulations leave cycles, recurring periods, time/usage links, bucket state, invoices, details, numbering, audits, and outbox/event rows unchanged.",
-  "implemented": true,
+    "implemented": true,
     "featureIds": ["F017", "F022", "F024", "F027"]
   },
   {
@@ -101,9 +101,9 @@
     "featureIds": ["F001", "F024"]
   },
   {
-  "id": "T016",
+    "id": "T016",
     "description": "Simulator response test verifies displayed lines and period subtotal/tax/total directly map shared results, including explanations and stable keys.",
-  "implemented": true,
+    "implemented": true,
     "featureIds": ["F004", "F005", "F015", "F023"]
   },
   {

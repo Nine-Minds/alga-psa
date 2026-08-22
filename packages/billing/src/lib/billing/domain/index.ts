@@ -1,3 +1,3 @@
 export * from "./contracts";
 export * from "./calculateContractBilling";
-export * from "./calculateContractCharge";
+export { calculateContractBucketPeriodState } from "./calculateContractCharge";

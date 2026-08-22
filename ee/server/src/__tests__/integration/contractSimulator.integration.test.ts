@@ -1,4 +1,12 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import type { Knex } from "knex";
 import type { ContractScenario } from "@alga-psa/types";
@@ -10,6 +18,7 @@ import {
   setupClientTaxConfiguration,
 } from "@main-test-utils/billingTestHelpers";
 import { createClient, createTenant } from "@main-test-utils/testDataFactory";
+import { createTicket as createBillingTestTicket } from "@main-test-utils/billingProfileTestHelpers";
 import {
   loadRecentAverageAssumptions,
   loadReplayAssumptions,
@@ -26,19 +35,25 @@ process.env.DB_PORT =
 let authenticatedTenant = "";
 let authenticatedUser = "";
 vi.mock("@alga-psa/auth", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@alga-psa/auth")>();
+  const original = (await importOriginal()) as typeof import("@alga-psa/auth");
   return {
     ...original,
-    withAuth: (handler: (...args: never[]) => unknown) =>
-      (...args: never[]) => handler(
-        { user_id: authenticatedUser, user_type: "internal", tenant: authenticatedTenant },
-        { tenant: authenticatedTenant },
-        ...args,
-      ),
+    withAuth:
+      (handler: (...args: unknown[]) => unknown) =>
+      (...args: unknown[]) =>
+        handler(
+          {
+            user_id: authenticatedUser,
+            user_type: "internal",
+            tenant: authenticatedTenant,
+          },
+          { tenant: authenticatedTenant },
+          ...args,
+        ),
   };
 });
 vi.mock("@alga-psa/auth/rbac", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@alga-psa/auth/rbac")>()),
+  ...((await importOriginal()) as typeof import("@alga-psa/auth/rbac")),
   hasPermission: vi.fn().mockResolvedValue(true),
 }));
 
@@ -330,14 +345,15 @@ describe("Contract simulator – migrated-schema integration", () => {
     await seedHistoricalActivity(context, fixture);
 
     const scenario = structuredClone(fixture.scenario);
-    await context.db("contract_lines")
+    await context
+      .db("contract_lines")
       .where({ tenant: context.tenantId, contract_id: fixture.contractId })
       .update({ cadence_owner: "contract" });
     for (const line of scenario.lines) line.cadence_owner = "contract";
     scenario.horizon = { start_date: windowStart, period_count: 2 };
     scenario.assumptions[
       assumptionKey(fixture.lines.hourly, fixture.services.hourly)
-    ] = { flat: 0 };
+    ] = { flat: 1 };
     scenario.assumptions[
       assumptionKey(fixture.lines.usage, fixture.services.usage)
     ] = { flat: 3 };
@@ -346,7 +362,15 @@ describe("Contract simulator – migrated-schema integration", () => {
     const beforeSimulation = await fingerprintTenantTables(
       context.db,
       context.tenantId,
-      ["invoices", "invoice_charges", "invoice_charge_details", "next_number", "audit_logs", "events", "workflow_events"],
+      [
+        "invoices",
+        "invoice_charges",
+        "invoice_charge_details",
+        "next_number",
+        "audit_logs",
+        "events",
+        "workflow_events",
+      ],
     );
     const simulated = await simulateContractScenario(
       context.db,
@@ -356,7 +380,15 @@ describe("Contract simulator – migrated-schema integration", () => {
     const afterSimulation = await fingerprintTenantTables(
       context.db,
       context.tenantId,
-      ["invoices", "invoice_charges", "invoice_charge_details", "next_number", "audit_logs", "events", "workflow_events"],
+      [
+        "invoices",
+        "invoice_charges",
+        "invoice_charge_details",
+        "next_number",
+        "audit_logs",
+        "events",
+        "workflow_events",
+      ],
     );
     expect(afterSimulation).toEqual(beforeSimulation);
     const invoice = await generateInvoiceForNormalizedSelectionInputs({
@@ -379,13 +411,13 @@ describe("Contract simulator – migrated-schema integration", () => {
     });
     expect(invoice).not.toBeNull();
 
-    const persisted = await context.db("invoice_charges")
+    const persisted = await context
+      .db("invoice_charges")
       .where({ tenant: context.tenantId, invoice_id: invoice?.invoice_id })
       .whereNot({ is_discount: true })
       .orderBy(["service_id", "description"]);
-    const simulatedLines = simulated.periods.find(
-      (period) => period.lines.length > 0,
-    )?.lines ?? [];
+    const simulatedLines =
+      simulated.periods.find((period) => period.lines.length > 0)?.lines ?? [];
     const semanticLine = (line: {
       service_id?: string | null;
       description?: string | null;
@@ -404,7 +436,8 @@ describe("Contract simulator – migrated-schema integration", () => {
     const liveDetail = persisted.map(semanticLine).sort(compareSemanticLines);
     const simulationDetail = simulatedLines
       .map((line) => ({
-        serviceId: line.charge_type === "fixed" ? null : line.service_id ?? null,
+        serviceId:
+          line.charge_type === "fixed" ? null : (line.service_id ?? null),
         description: line.service_name.replace(/^(Product|License): /, ""),
         quantity: Number(line.quantity ?? 0),
         unitRate: Number(line.unit_price ?? 0),
@@ -908,6 +941,17 @@ async function seedHistoricalActivity(
   context: TestContext,
   fixture: SimulatorFixture,
 ): Promise<void> {
+  const ticketId = await createBillingTestTicket(
+    {
+      db: context.db,
+      tenantId: context.tenantId,
+    },
+    {
+      clientId: context.clientId,
+      title: "Simulator parity activity",
+      ticketNumber: `SIM-${uuidv4().slice(0, 8)}`,
+    },
+  );
   const timeEntry = (
     date: string,
     minutes: number,
@@ -916,6 +960,8 @@ async function seedHistoricalActivity(
     entry_id: uuidv4(),
     client_id: context.clientId,
     contract_line_id: fixture.lines.hourly,
+    work_item_id: ticketId,
+    work_item_type: "ticket",
     user_id: context.userId,
     service_id: fixture.services.hourly,
     entry_date: date,
@@ -926,6 +972,7 @@ async function seedHistoricalActivity(
     ).toISOString(),
     billable_duration: minutes,
     is_billable: true,
+    invoiced: false,
     approval_status: "APPROVED",
     work_timezone: "UTC",
   });
@@ -1054,14 +1101,16 @@ async function persistScenarioServicePeriods(
   scenario: ContractScenario,
 ): Promise<void> {
   for (const line of scenario.lines) {
-    const product = line.services.find((service) => service.item_kind === "product");
+    const product = line.services.find(
+      (service) => service.item_kind === "product",
+    );
     const chargeFamily = product
-      ? product.is_license ? "license" : "product"
+      ? product.is_license
+        ? "license"
+        : "product"
       : line.contract_line_type.toLowerCase();
-    await insertSupportedRows(
-      context.db,
-      "recurring_service_periods",
-      [{
+    await insertSupportedRows(context.db, "recurring_service_periods", [
+      {
         tenant: context.tenantId,
         record_id: uuidv4(),
         schedule_key: `parity:${line.key}`,
@@ -1083,7 +1132,7 @@ async function persistScenarioServicePeriods(
         source_run_key: "contract-simulator-parity",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      }],
-    );
+      },
+    ]);
   }
 }

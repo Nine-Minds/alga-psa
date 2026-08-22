@@ -66,6 +66,10 @@
 
 ## Takeover completion (2026-08-22)
 
+- Final mitigation replaces `UnpricedContractBillingObligation.charge` with a discriminated, storage-independent fact union. Production normalizes its transaction-scoped loaded rows before document calculation; simulation maps scenario services and hypothetical activity directly without fabricating `IClientContractLine` or compute-input records.
+- Tax snapshots are document-level keyed inputs rather than fields embedded in each obligation. Legacy family compute contracts and dispatch remain private implementation details and are no longer exported from billing/domain barrels.
+- The persisted-invoice parity test now uses a real ticket-backed approved hourly entry and a nonzero hourly assumption; fixed, hourly, usage, product, and license line detail matches and simulation fingerprints remain unchanged. Production intentionally excludes time entries without a ticket/project work item.
+
 - Round 3 correction adds an integration route into `generateInvoiceForNormalizedSelectionInputs`, the real production generation/persistence implementation behind the authenticated actions. The parity fixture materializes recurring service periods, runs the simulator before live generation, fingerprints externally visible tables across simulation, then compares canonical simulator detail with persisted `invoice_charges` semantics.
 
 - Mitigation round 2 replaces the pre-priced document assembler with a required unpriced obligation union. Both normal production generation and every simulator period now collect resolved obligations and call `calculateContractBilling` once; family dispatch, discounts/adjustments, canonical lines, tax, and totals are owned there.

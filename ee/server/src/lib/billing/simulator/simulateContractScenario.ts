@@ -38,15 +38,19 @@ export async function simulateContractScenario(
         },
       },
       obligations: period.obligations,
+      taxContexts: period.taxContexts,
       discountsAndAdjustments: {
         billingPeriod: {
           tenant: input.tenant,
           startDate: period.window.startDate,
           endDate: period.window.endDateExclusive,
         },
-        discountCandidates: (input.scenario.discounts ?? []).flatMap((discount) =>
-          (discount.contract_line_keys.length ? discount.contract_line_keys : [null]).map(
-            (contractLineId) => ({
+        discountCandidates: (input.scenario.discounts ?? []).flatMap(
+          (discount) =>
+            (discount.contract_line_keys.length
+              ? discount.contract_line_keys
+              : [null]
+            ).map((contractLineId) => ({
               discount_id: discount.discount_id,
               discount_name: discount.discount_name,
               discount_type: discount.discount_type,
@@ -55,12 +59,12 @@ export async function simulateContractScenario(
               end_date: discount.end_date,
               contract_line_id: contractLineId,
               tenant: input.tenant,
-            }),
-          ),
+            })),
         ),
         adjustments: (input.scenario.adjustments ?? []).filter(
           (adjustment) =>
-            adjustment.period_index == null || adjustment.period_index === period.window.index,
+            adjustment.period_index == null ||
+            adjustment.period_index === period.window.index,
         ),
       },
     });

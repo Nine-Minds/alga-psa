@@ -5,11 +5,14 @@ import {
   assertLiveContractBillingResult,
   applyCanonicalLiveBillingResult,
   calculateContractBilling,
+  type ContractBillingCalculationInput,
+} from "../src/lib/billing/domain";
+import {
   calculateContractCharge,
   calculateContractDiscountsAndAdjustments,
-  type ContractBillingCalculationInput,
+  normalizeResolvedContractCharge,
   type ResolvedContractChargeObligation,
-} from "../src/lib/billing/domain";
+} from "../src/lib/billing/domain/calculateContractCharge";
 import type { ChargeComputeTaxContext } from "../src/lib/billing/compute";
 
 const input = (mode: "simulate" | "live"): ContractBillingCalculationInput => ({
@@ -25,14 +28,8 @@ const input = (mode: "simulate" | "live"): ContractBillingCalculationInput => ({
     currencyCode: "USD",
     invoiceWindow: { start: "2026-08-01", endExclusive: "2026-09-01" },
   },
-  obligations: [
-    {
-      obligationId: "fixed",
-      tenantId: "tenant-a",
-      chargeFamily: "fixed",
-      charge: fixedObligation(mode),
-    },
-  ],
+  obligations: [normalizedFixed("fixed", mode)],
+  taxContexts: { fixed: TAX_CONTEXT },
   discountsAndAdjustments: {
     billingPeriod: {
       tenant: "tenant-a",
@@ -60,15 +57,8 @@ describe("calculateContractBilling", () => {
           currencyCode: "USD",
           invoiceWindow: { start: "2026-08-01", endExclusive: "2026-09-01" },
         },
-        obligations: [
-          {
-            obligationId: "fixed-1",
-            tenantId: "tenant-a",
-            contractLineId: "ccl-1",
-            chargeFamily: "fixed",
-            charge: fixedObligation(mode),
-          },
-        ],
+        obligations: [normalizedFixed("fixed-1", mode)],
+        taxContexts: { "fixed-1": TAX_CONTEXT },
       });
     const simulated = calculate("simulate");
     const live = calculate("live");
@@ -167,6 +157,15 @@ const TAX_CONTEXT: ChargeComputeTaxContext = {
     taxAmount: Math.round(amount * 0.1),
   }),
 };
+
+function normalizedFixed(id: string, mode: "simulate" | "live") {
+  return normalizeResolvedContractCharge({
+    obligationId: id,
+    tenantId: "tenant-a",
+    contractLineId: "ccl-1",
+    charge: fixedObligation(mode),
+  }).obligation;
+}
 
 const CONTRACT_LINE: IClientContractLine = {
   client_contract_line_id: "ccl-1",

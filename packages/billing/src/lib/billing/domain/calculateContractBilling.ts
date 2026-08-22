@@ -1,6 +1,6 @@
 import type { ChargeExplanation, IBillingResult } from "@alga-psa/types";
 import {
-  calculateContractCharge,
+  calculateNormalizedContractCharge,
   calculateContractDiscountsAndAdjustments,
 } from "./calculateContractCharge";
 import type {
@@ -38,26 +38,26 @@ export function calculateContractBilling(
   for (const obligation of input.obligations) {
     if (obligation.tenantId !== input.execution.tenantId)
       throw new Error(`Cross-tenant obligation ${obligation.obligationId}`);
-    if (obligation.charge.executionMode !== input.execution.mode)
-      throw new Error(
-        `Mismatched execution mode for ${obligation.obligationId}`,
-      );
-    if (obligation.charge.kind !== obligation.chargeFamily)
+    if (obligation.facts.kind !== obligation.chargeFamily)
       throw new Error(
         `Mismatched charge family for ${obligation.obligationId}`,
       );
-    const resolvedLine = obligation.charge.inputs.clientContractLine;
-    if (resolvedLine.tenant && resolvedLine.tenant !== input.execution.tenantId)
+    const resolvedLine = obligation.facts.line;
+    if (resolvedLine.tenantId !== input.execution.tenantId)
       throw new Error(
         `Cross-tenant contract line for ${obligation.obligationId}`,
       );
-    const resolvedCurrency =
-      "contractCurrency" in obligation.charge.inputs
-        ? obligation.charge.inputs.contractCurrency
-        : resolvedLine.currency_code;
+    const resolvedCurrency = resolvedLine.currencyCode;
     if (resolvedCurrency && resolvedCurrency !== input.document.currencyCode)
       throw new Error(`Mixed currency obligation ${obligation.obligationId}`);
-    const calculated = calculateContractCharge(obligation.charge);
+    const taxContext = input.taxContexts[obligation.taxContextKey];
+    if (!taxContext)
+      throw new Error(`Missing tax context for ${obligation.obligationId}`);
+    const calculated = calculateNormalizedContractCharge(
+      obligation.facts,
+      input.execution.mode,
+      taxContext,
+    );
     for (const { charge, explanation } of calculated.chargeExplanations) {
       const netAmount = charge.total ?? 0;
       const taxAmount = charge.tax_amount ?? 0;
