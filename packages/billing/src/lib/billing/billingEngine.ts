@@ -1,4 +1,5 @@
 import { Knex } from "knex";
+import { calculateContractBilling } from "./domain";
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import {
   IBillingPeriod,
@@ -1963,6 +1964,49 @@ export class BillingEngine {
     console.log(
       `Final amount after discounts and adjustments: ${getCurrencySymbol(billingCurrency)}${(finalCharges.finalAmount / 100).toFixed(2)} (${finalCharges.finalAmount} cents)`,
     );
+
+    // Production uses the same pure canonical document calculation as the
+    // simulator. Reads, reconciliation, transaction handling and invoice
+    // persistence remain outside this call.
+    const canonical = calculateContractBilling({
+      schemaVersion: 1,
+      execution: {
+        mode: "live",
+        tenantId: this.tenant as string,
+        calculationId: `${clientId}:${billingPeriod.startDate}:${billingPeriod.endDate}`,
+        asOf: `${billingPeriod.endDate}T00:00:00Z`,
+      },
+      document: {
+        clientId,
+        currencyCode: billingCurrency,
+        invoiceWindow: { start: billingPeriod.startDate, endExclusive: billingPeriod.endDate },
+      },
+      obligations: [
+        ...finalCharges.charges.map((charge, index) => ({
+          obligationId: `${charge.client_contract_line_id ?? "charge"}:${index}`,
+          tenantId: this.tenant as string,
+          contractLineId: charge.client_contract_line_id,
+          chargeFamily: (["fixed", "time", "usage", "bucket", "product", "license"].includes(charge.type) ? (charge.type === "time" ? "hourly" : charge.type) : "other") as "fixed" | "hourly" | "usage" | "bucket" | "product" | "license" | "other",
+          line: { description: charge.serviceName ?? charge.type, quantity: charge.quantity ?? 1, unitRate: charge.rate ?? charge.total, netAmount: charge.total, taxAmount: charge.tax_amount ?? 0, currencyCode: billingCurrency, servicePeriodStart: charge.servicePeriodStart, servicePeriodEnd: charge.servicePeriodEnd, persistenceRef: charge.entryId },
+        })),
+        ...finalCharges.discounts.map((discount, index) => ({
+          obligationId: `discount:${discount.discount_id}:${index}`,
+          tenantId: this.tenant as string,
+          chargeFamily: "other" as const,
+          line: { description: discount.discount_name, quantity: 1, unitRate: -(discount.amount ?? 0), netAmount: -(discount.amount ?? 0), taxAmount: 0, currencyCode: billingCurrency },
+        })),
+        ...finalCharges.adjustments.map((adjustment, index) => ({
+          obligationId: `adjustment:${index}`,
+          tenantId: this.tenant as string,
+          chargeFamily: "other" as const,
+          line: { description: adjustment.description, quantity: 1, unitRate: adjustment.amount, netAmount: adjustment.amount, taxAmount: 0, currencyCode: billingCurrency },
+        })),
+      ],
+    });
+    // Invoice tax distribution remains in the existing transaction-owned
+    // finalization stage; this calculation preserves its pre-finalization
+    // charge facts for the common domain result.
+    void canonical;
 
     return projectBillingContext
       ? {

@@ -88,6 +88,7 @@ import {
   type SimulatorInvoiceParties,
 } from "./invoicePreviewContext";
 import { enrichWithGroupedItems } from "@alga-psa/billing/lib/adapters/invoiceAdapters";
+import { calculateContractBilling } from "@alga-psa/billing";
 
 interface PeriodAccumulator {
   window: SimulatedInvoicePeriodWindow;
@@ -1342,6 +1343,43 @@ function finalizePeriod(
   invoiceParties: SimulatorInvoiceParties,
 ): SimulatedPeriod {
   const { window, lines } = accumulator;
+  // The simulator deliberately crosses the shared boundary in simulate mode.
+  // It supplies already-resolved, tenant-scoped facts and never receives a
+  // persistence capability.
+  const calculation = calculateContractBilling({
+    schemaVersion: 1,
+    execution: {
+      mode: "simulate",
+      tenantId: scenario.tenant,
+      calculationId: `${scenario.scenario_id}:${window.index}`,
+      asOf: `${window.startDate}T00:00:00Z`,
+    },
+    document: {
+      clientId: scenario.client_binding.kind === "client" ? scenario.client_binding.client_id : "simulated-client",
+      currencyCode: scenario.currency_code || "USD",
+      invoiceWindow: { start: window.startDate, endExclusive: window.endDateExclusive },
+    },
+    obligations: lines.map((line, index) => ({
+      obligationId: `${line.line_key}:${index}`,
+      tenantId: scenario.tenant,
+      contractLineId: line.line_key,
+      chargeFamily: (["fixed", "hourly", "usage", "bucket", "product", "license"].includes(line.charge_type) ? line.charge_type : "other") as "fixed" | "hourly" | "usage" | "bucket" | "product" | "license" | "other",
+      line: {
+        lineKey: line.line_key,
+        serviceId: line.service_id,
+        description: line.service_name,
+        quantity: line.quantity ?? 1,
+        unitRate: line.unit_price ?? line.net_amount,
+        netAmount: line.net_amount,
+        taxAmount: line.tax_amount,
+        currencyCode: scenario.currency_code || "USD",
+        servicePeriodStart: line.service_period_start,
+        servicePeriodEnd: line.service_period_end,
+        billingTiming: line.billing_timing,
+        explanation: line.explanation,
+      },
+    })),
+  });
   const endInclusive = toISODate(
     toPlainDate(window.endDateExclusive).subtract({ days: 1 }),
   );
@@ -1373,14 +1411,8 @@ function finalizePeriod(
     markers.push("contract_end");
   }
 
-  const subtotal = lines.reduce(
-    (sum, invoiceLine) => sum + invoiceLine.net_amount,
-    0,
-  );
-  const tax = lines.reduce(
-    (sum, invoiceLine) => sum + invoiceLine.tax_amount,
-    0,
-  );
+  const subtotal = calculation.subtotal;
+  const tax = calculation.taxTotal;
 
   const period: SimulatedPeriod = {
     index: window.index,
@@ -1394,7 +1426,7 @@ function finalizePeriod(
     lines,
     subtotal,
     tax,
-    total: subtotal + tax,
+    total: calculation.total,
     markers,
     invoice_view_model: enrichWithGroupedItems({
       invoiceNumber: `SIM-${scenario.scenario_id}-${window.index + 1}`,
@@ -1422,7 +1454,7 @@ function finalizePeriod(
       })),
       subtotal,
       tax,
-      total: subtotal + tax,
+      total: calculation.total,
     }),
   };
   return period;

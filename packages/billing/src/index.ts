@@ -7,6 +7,8 @@
 
 // Models
 export { Invoice, Contract, Quote, QuoteItem, QuoteActivity, QuoteDocumentTemplate } from './models';
+export { calculateContractBilling } from './lib/billing/domain';
+export type { BillingExecutionMode, ContractBillingCalculationInput, ContractBillingCalculationResult, CalculatedBillingLine, LiveContractBillingCalculationResult } from './lib/billing/domain';
 
 // Components
 export { BillingDashboard, CreditsPage, TemplateRenderer, PurchaseOrderSummaryBanner, AutomaticInvoices, BillingCycles } from './components';
