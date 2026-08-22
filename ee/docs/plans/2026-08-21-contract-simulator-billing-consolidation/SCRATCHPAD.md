@@ -66,6 +66,8 @@
 
 ## Takeover completion (2026-08-22)
 
+- Round 3 correction adds an integration route into `generateInvoiceForNormalizedSelectionInputs`, the real production generation/persistence implementation behind the authenticated actions. The parity fixture materializes recurring service periods, runs the simulator before live generation, fingerprints externally visible tables across simulation, then compares canonical simulator detail with persisted `invoice_charges` semantics.
+
 - Mitigation round 2 replaces the pre-priced document assembler with a required unpriced obligation union. Both normal production generation and every simulator period now collect resolved obligations and call `calculateContractBilling` once; family dispatch, discounts/adjustments, canonical lines, tax, and totals are owned there.
 - Production family loaders retain their tenant-scoped reads and timing/idempotency checks but emit obligations into deterministic family-order sinks. Project/material/manual charges are an explicit non-contract supplemental-charge carve-out and still participate in document discounts and totals.
 - The simulator no longer contains `calculateContractCharge`, `pushChargeLine`, or discount reconstruction. It maps canonical money into presentation-only labels and markers.

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import type { Knex } from "knex";
 import type { ContractScenario } from "@alga-psa/types";
@@ -17,9 +17,30 @@ import {
   snapshotContractToScenario,
 } from "@ee/lib/billing/simulator";
 import { assumptionKey } from "@ee/lib/billing/simulator/syntheticActivity";
+import { generateInvoiceForNormalizedSelectionInputs } from "@alga-psa/billing/actions/invoiceGeneration";
+import { buildContractCadenceDueSelectionInput } from "@alga-psa/shared/billingClients/recurringRunExecutionIdentity";
 
 process.env.DB_PORT =
   process.env.DB_PORT === "6432" ? "5432" : process.env.DB_PORT;
+
+let authenticatedTenant = "";
+let authenticatedUser = "";
+vi.mock("@alga-psa/auth", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@alga-psa/auth")>();
+  return {
+    ...original,
+    withAuth: (handler: (...args: never[]) => unknown) =>
+      (...args: never[]) => handler(
+        { user_id: authenticatedUser, user_type: "internal", tenant: authenticatedTenant },
+        { tenant: authenticatedTenant },
+        ...args,
+      ),
+  };
+});
+vi.mock("@alga-psa/auth/rbac", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@alga-psa/auth/rbac")>()),
+  hasPermission: vi.fn().mockResolvedValue(true),
+}));
 
 interface SimulatorFixture {
   contractId: string;
@@ -46,6 +67,15 @@ interface SimulatorFixture {
   };
 }
 
+function compareSemanticLines(
+  left: { serviceId: string | null; description: string },
+  right: { serviceId: string | null; description: string },
+): number {
+  return `${left.serviceId ?? ""}:${left.description}`.localeCompare(
+    `${right.serviceId ?? ""}:${right.description}`,
+  );
+}
+
 describe("Contract simulator – migrated-schema integration", () => {
   const helpers = TestContext.createHelpers();
   let context: TestContext;
@@ -61,6 +91,8 @@ describe("Contract simulator – migrated-schema integration", () => {
 
   beforeEach(async () => {
     context = await helpers.beforeEach();
+    authenticatedTenant = context.tenantId;
+    authenticatedUser = context.userId;
     fixture = await seedSimulatorFixture(context);
   }, 60_000);
 
@@ -291,6 +323,97 @@ describe("Contract simulator – migrated-schema integration", () => {
     );
     expect(after).toEqual(before);
   });
+
+  it("matches simulator detail to an invoice persisted by production generation", async () => {
+    const windowStart = "2025-02-15T00:00:00Z";
+    const windowEnd = "2025-03-15T00:00:00Z";
+    await seedHistoricalActivity(context, fixture);
+
+    const scenario = structuredClone(fixture.scenario);
+    await context.db("contract_lines")
+      .where({ tenant: context.tenantId, contract_id: fixture.contractId })
+      .update({ cadence_owner: "contract" });
+    for (const line of scenario.lines) line.cadence_owner = "contract";
+    scenario.horizon = { start_date: windowStart, period_count: 2 };
+    scenario.assumptions[
+      assumptionKey(fixture.lines.hourly, fixture.services.hourly)
+    ] = { flat: 0 };
+    scenario.assumptions[
+      assumptionKey(fixture.lines.usage, fixture.services.usage)
+    ] = { flat: 3 };
+    await persistScenarioServicePeriods(context, scenario);
+
+    const beforeSimulation = await fingerprintTenantTables(
+      context.db,
+      context.tenantId,
+      ["invoices", "invoice_charges", "invoice_charge_details", "next_number", "audit_logs", "events", "workflow_events"],
+    );
+    const simulated = await simulateContractScenario(
+      context.db,
+      context.tenantId,
+      scenario,
+    );
+    const afterSimulation = await fingerprintTenantTables(
+      context.db,
+      context.tenantId,
+      ["invoices", "invoice_charges", "invoice_charge_details", "next_number", "audit_logs", "events", "workflow_events"],
+    );
+    expect(afterSimulation).toEqual(beforeSimulation);
+    const invoice = await generateInvoiceForNormalizedSelectionInputs({
+      user: {
+        user_id: context.userId,
+        user_type: "internal",
+        tenant: context.tenantId,
+      } as never,
+      tenant: context.tenantId,
+      knex: context.db,
+      normalizedSelectorInputs: scenario.lines.map((line) =>
+        buildContractCadenceDueSelectionInput({
+          clientId: context.clientId,
+          contractId: fixture.contractId,
+          contractLineId: line.origin_contract_line_id ?? line.key,
+          windowStart,
+          windowEnd,
+        }),
+      ),
+    });
+    expect(invoice).not.toBeNull();
+
+    const persisted = await context.db("invoice_charges")
+      .where({ tenant: context.tenantId, invoice_id: invoice?.invoice_id })
+      .whereNot({ is_discount: true })
+      .orderBy(["service_id", "description"]);
+    const simulatedLines = simulated.periods.find(
+      (period) => period.lines.length > 0,
+    )?.lines ?? [];
+    const semanticLine = (line: {
+      service_id?: string | null;
+      description?: string | null;
+      quantity?: number | string | null;
+      unit_price?: number | string | null;
+      net_amount?: number | string | null;
+      tax_amount?: number | string | null;
+    }) => ({
+      serviceId: line.service_id ?? null,
+      description: (line.description ?? "").replace(/^(Product|License): /, ""),
+      quantity: Number(line.quantity ?? 0),
+      unitRate: Number(line.unit_price ?? 0),
+      netAmount: Number(line.net_amount ?? 0),
+      taxAmount: Number(line.tax_amount ?? 0),
+    });
+    const liveDetail = persisted.map(semanticLine).sort(compareSemanticLines);
+    const simulationDetail = simulatedLines
+      .map((line) => ({
+        serviceId: line.charge_type === "fixed" ? null : line.service_id ?? null,
+        description: line.service_name.replace(/^(Product|License): /, ""),
+        quantity: Number(line.quantity ?? 0),
+        unitRate: Number(line.unit_price ?? 0),
+        netAmount: line.net_amount,
+        taxAmount: line.tax_amount,
+      }))
+      .sort(compareSemanticLines);
+    expect(liveDetail).toEqual(simulationDetail);
+  }, 120_000);
 
   it("rejects cross-tenant contract, client, service, and replay references", async () => {
     const otherTenant = await createTenant(
@@ -924,4 +1047,43 @@ async function fingerprintTenantTables(
     );
   }
   return result;
+}
+
+async function persistScenarioServicePeriods(
+  context: TestContext,
+  scenario: ContractScenario,
+): Promise<void> {
+  for (const line of scenario.lines) {
+    const product = line.services.find((service) => service.item_kind === "product");
+    const chargeFamily = product
+      ? product.is_license ? "license" : "product"
+      : line.contract_line_type.toLowerCase();
+    await insertSupportedRows(
+      context.db,
+      "recurring_service_periods",
+      [{
+        tenant: context.tenantId,
+        record_id: uuidv4(),
+        schedule_key: `parity:${line.key}`,
+        period_key: `2025-01-15:2025-02-15`,
+        revision: 1,
+        obligation_id: line.origin_contract_line_id ?? line.key,
+        obligation_type: "client_contract_line",
+        charge_family: chargeFamily,
+        cadence_owner: "contract",
+        due_position: "arrears",
+        lifecycle_state: "generated",
+        service_period_start: "2025-01-15",
+        service_period_end: "2025-02-15",
+        invoice_window_start: "2025-02-15",
+        invoice_window_end: "2025-03-15",
+        provenance_kind: "generated",
+        source_rule_version: "parity-v1",
+        reason_code: "initial_materialization",
+        source_run_key: "contract-simulator-parity",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }],
+    );
+  }
 }
