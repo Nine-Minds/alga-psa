@@ -72,6 +72,9 @@ class Deadline {
   }
 }
 
+/** Numeric refs decode without their semicolon, named ones only with it. */
+const ENCODED_SCHEME_RE = /&(#\d+;?|#x[0-9a-f]+;?|[a-z][a-z0-9]*;)/i;
+
 /**
  * Blocks scheme-based script URLs at conversion time, mirroring
  * shared/lib/utils/markdownToBlocks.ts. Stored blocks are read by consumers
@@ -80,10 +83,18 @@ class Deadline {
  */
 function sanitizeUrl(url: string | undefined): string {
   if (!url) return '';
-  // Entities are already decoded by the time we see an href, so only leading
-  // whitespace and control characters can hide the scheme.
+  // Whitespace and control characters are the cheapest way to hide a scheme
+  // from a literal prefix match; browsers ignore them.
   const probe = url.replace(/[\u0000-\u0020]/g, '').toLowerCase();
-  return /^(javascript:|data:|vbscript:)/.test(probe) ? '' : url;
+  if (/^(javascript:|data:|vbscript:)/.test(probe)) return '';
+  // htmlparser2 decodes attributes for us, but marked hands back the href
+  // exactly as written. A consumer that serializes blocks back into HTML hands
+  // those entities to a browser, which decodes them, so `&#106;avascript:` and
+  // `javascript&colon;` become live script URLs. No real scheme carries an
+  // entity, so drop any href encoded ahead of the first scheme/path delimiter.
+  // '#' is not a delimiter here: it opens a numeric reference as often as a
+  // fragment, and a fragment-only href has no scheme to encode anyway.
+  return ENCODED_SCHEME_RE.test(probe.split(/[:/?]/, 1)[0]) ? '' : url;
 }
 
 function pushSegment(segments: InlineSegment[], text: string, styles: InlineStyles): void {

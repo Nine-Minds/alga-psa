@@ -247,6 +247,31 @@ describe('kbImportBlocks link sanitization', () => {
     expect(JSON.stringify(blocks).toLowerCase()).not.toContain('script:');
   });
 
+  // marked, unlike htmlparser2, hands back the href exactly as written. An
+  // entity therefore survives into document_block_content and is decoded by
+  // whichever consumer serializes the block back into HTML.
+  it.each([
+    '&#106;avascript:alert(1)',
+    '&#106avascript:alert(1)',
+    '&#x6a;avascript:alert(1)',
+    'javascript&colon;alert(1)',
+    'java&Tab;script:alert(1)',
+    'java&NewLine;script:alert(1)',
+  ])('drops the entity-encoded scheme %s from a markdown link', (href) => {
+    const blocks = markdownToBlocks(`[click me](${href})`);
+    expect(hrefOf(blocks)).toBe('');
+    expect(plainText(blocks[0])).toBe('click me');
+  });
+
+  it('keeps entities that are not hiding a scheme', () => {
+    expect(hrefOf(markdownToBlocks('[q](https://example.com/a?b=1&amp;c=2)'))).toBe(
+      'https://example.com/a?b=1&amp;c=2',
+    );
+    expect(hrefOf(markdownToBlocks('[rel](page?a=1&amp;b=2)'))).toBe('page?a=1&amp;b=2');
+    expect(hrefOf(markdownToBlocks('[amp](docs/AT&T)'))).toBe('docs/AT&T');
+    expect(hrefOf(markdownToBlocks('[frag](#section)'))).toBe('#section');
+  });
+
   it('emits an empty href for an anchor without one', () => {
     expect(hrefOf(htmlToBlocks('<p><a>no href</a></p>'))).toBe('');
   });
