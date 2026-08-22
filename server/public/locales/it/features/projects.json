@@ -761,7 +761,8 @@
       "phasePlaceholder": "Seleziona una fase",
       "statusLabel": "Stato",
       "statusPlaceholder": "Seleziona uno stato",
-      "linkTicketLabel": "Collega il ticket all’attività creata"
+      "linkTicketLabel": "Collega il ticket all’attività creata",
+      "createdSuccess": "L’attività è stata creata correttamente"
     },
     "linkTicketToTask": {
       "title": "Collega ticket ad attività",
