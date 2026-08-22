@@ -3,7 +3,7 @@ import {
   calculateContractBilling,
   calculateContractCharge,
   calculateContractDiscountsAndAdjustments,
-  assertLiveContractBillingResult,
+  applyCanonicalLiveBillingResult,
 } from "./domain";
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import {
@@ -2086,20 +2086,10 @@ export class BillingEngine {
         })),
       ],
     });
-    assertLiveContractBillingResult(canonical);
-    const canonicalFinalCharges: IBillingResult = {
-      ...finalCharges,
-      totalAmount: canonical.lines
-        .filter(
-          (line) =>
-            !line.obligationId.startsWith("discount:") &&
-            !line.obligationId.startsWith("adjustment:"),
-        )
-        .reduce((sum, line) => sum + line.netAmount, 0),
-      // IBillingResult.finalAmount is the pre-finalization net amount; invoice
-      // tax is distributed transactionally after details are persisted.
-      finalAmount: canonical.subtotal,
-    };
+    const canonicalFinalCharges = applyCanonicalLiveBillingResult(
+      finalCharges,
+      canonical,
+    );
 
     return projectBillingContext
       ? {
@@ -6030,7 +6020,7 @@ export class BillingEngine {
       billingResult.charges,
     );
 
-    return calculateContractDiscountsAndAdjustments({
+    return calculateContractDiscountsAndAdjustments("live", {
       billingResult,
       billingPeriod,
       // fetchDiscounts already performed canonical service-period filtering.

@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { IClientContractLine } from "@alga-psa/types";
 import {
   assertLiveContractBillingResult,
+  applyCanonicalLiveBillingResult,
   calculateContractBilling,
   calculateContractCharge,
+  calculateContractDiscountsAndAdjustments,
   type ContractBillingCalculationInput,
   type ResolvedContractChargeObligation,
 } from "../src/lib/billing/domain";
@@ -67,6 +69,7 @@ const input = (mode: "simulate" | "live"): ContractBillingCalculationInput => ({
       obligationId: "adjustment",
       tenantId: "tenant-a",
       chargeFamily: "other",
+      lineKind: "adjustment",
       line: {
         description: "Adjustment",
         quantity: 1,
@@ -146,6 +149,29 @@ describe("calculateContractBilling", () => {
     );
     const live = calculateContractBilling(input("live"));
     expect(() => assertLiveContractBillingResult(live)).not.toThrow();
+  });
+
+  it("hands canonical live totals to production without rebuilding source rows", () => {
+    const source = {
+      tenant: "tenant-a",
+      charges: [{ type: "fixed", serviceName: "Fixed", total: 10001 }],
+      totalAmount: 1,
+      discounts: [],
+      adjustments: [],
+      finalAmount: 1,
+      currency_code: "USD",
+    } as never;
+    const live = calculateContractBilling(input("live"));
+    const handedOff = applyCanonicalLiveBillingResult(source, live);
+    expect(handedOff.charges).toBe(source.charges);
+    expect(handedOff.totalAmount).toBe(12_249);
+    expect(handedOff.finalAmount).toBe(live.subtotal);
+    expect(() =>
+      applyCanonicalLiveBillingResult(
+        source,
+        calculateContractBilling(input("simulate")),
+      ),
+    ).toThrow("cannot enter live persistence");
   });
 });
 
@@ -283,5 +309,222 @@ describe("shared contract charge-family dispatcher", () => {
       charge: result.charges[0],
       explanation: result.explanations[0],
     });
+  });
+
+  it("returns identical hourly, usage, bucket, product, and license results in both modes", () => {
+    const period = { startDate: "2026-08-01", endDate: "2026-09-01" };
+    const timing = {
+      duePosition: "arrears" as const,
+      servicePeriodStart: "2026-08-01",
+      servicePeriodEnd: "2026-08-31",
+      servicePeriodStartExclusive: "2026-08-01",
+      servicePeriodEndExclusive: "2026-09-01",
+      coverageRatio: 0.5,
+    };
+    const client = { client_id: "client-a", is_tax_exempt: false };
+    const obligations: ResolvedContractChargeObligation[] = [
+      {
+        kind: "hourly",
+        executionMode: "simulate",
+        taxContext: TAX_CONTEXT,
+        inputs: {
+          billingPeriod: period,
+          clientContractLine: {
+            ...CONTRACT_LINE,
+            contract_line_type: "Hourly",
+          },
+          timing,
+          client,
+          plan: {},
+          serviceConfigMap: new Map([
+            [
+              "svc-hourly",
+              {
+                config: {
+                  config_id: "cfg-hourly",
+                  hourly_rate: 5_000,
+                  minimum_billable_time: 15,
+                  round_up_to_nearest: 15,
+                },
+                userTypeRates: new Map<string, number>(),
+              },
+            ],
+          ]),
+          timeEntries: [
+            {
+              entry_id: "entry-1",
+              user_id: "user-1",
+              user_type: "technician",
+              start_time: new Date("2026-08-05T10:00:00Z"),
+              end_time: new Date("2026-08-05T11:07:00Z"),
+              service_id: "svc-hourly",
+              service_name: "Engineering",
+              tax_rate_id: "tax-1",
+              custom_rate: null,
+              currency_rate: 5_000,
+              billable_duration: 67,
+            },
+          ],
+          contractCurrency: "USD",
+        },
+      },
+      {
+        kind: "usage",
+        executionMode: "simulate",
+        taxContext: TAX_CONTEXT,
+        inputs: {
+          billingPeriod: period,
+          clientContractLine: { ...CONTRACT_LINE, contract_line_type: "Usage" },
+          timing,
+          client,
+          serviceConfigMap: new Map([
+            [
+              "svc-usage",
+              {
+                config: {
+                  config_id: "cfg-usage",
+                  custom_rate: 200,
+                  minimum_usage: 2,
+                  enable_tiered_pricing: true,
+                },
+                rateTiers: [
+                  { min_quantity: 0, max_quantity: 10, rate: 200 },
+                  { min_quantity: 10, max_quantity: null, rate: 150 },
+                ],
+              },
+            ],
+          ]),
+          usageRecords: [
+            {
+              usage_id: "usage-1",
+              service_id: "svc-usage",
+              service_name: "Backup",
+              quantity: 12,
+              tax_rate_id: "tax-1",
+              currency_rate: 200,
+            },
+          ],
+          contractCurrency: "USD",
+        },
+      },
+      {
+        kind: "bucket",
+        executionMode: "simulate",
+        taxContext: TAX_CONTEXT,
+        inputs: {
+          billingPeriod: period,
+          clientContractLine: {
+            ...CONTRACT_LINE,
+            contract_line_type: "Hourly",
+          },
+          client,
+          config: {
+            config_id: "cfg-bucket",
+            service_id: "svc-bucket",
+            service_name: "Support bucket",
+            tax_rate_id: "tax-1",
+            total_minutes: 60,
+            overage_rate: 1_000,
+            allow_rollover: true,
+          },
+          usageRecords: [
+            {
+              period_start: "2026-08-01",
+              period_end: "2026-08-31",
+              minutes_used: 180,
+            },
+          ],
+          contractCurrency: "USD",
+        },
+      },
+      ...(["product", "license"] as const).map((kind) => ({
+        kind,
+        executionMode: "simulate" as const,
+        taxContext: TAX_CONTEXT,
+        inputs: {
+          clientContractLine: CONTRACT_LINE,
+          client,
+          timing,
+          chargeType: kind,
+          services: [
+            {
+              service_id: `svc-${kind}`,
+              service_name: kind,
+              default_rate: 1_000,
+              tax_rate_id: "tax-1",
+              config_id: `cfg-${kind}`,
+              service_quantity: 3,
+              service_line_custom_rate: null,
+              configuration_quantity: 3,
+              configuration_custom_rate: null,
+              price_rate: 1_000,
+            },
+          ],
+          contractCurrency: "USD",
+        },
+      })),
+    ];
+
+    for (const simulatedObligation of obligations) {
+      const simulated = calculateContractCharge(simulatedObligation as never);
+      const live = calculateContractCharge({
+        ...simulatedObligation,
+        executionMode: "live",
+      } as never);
+      expect({ ...simulated, executionMode: undefined }).toEqual({
+        ...live,
+        executionMode: undefined,
+      });
+      expect(simulated.charges.length).toBeGreaterThan(0);
+      expect(simulated.chargeExplanations).toHaveLength(
+        simulated.charges.length,
+      );
+    }
+  });
+
+  it("returns identical discount and adjustment results in both modes", () => {
+    const adjustmentInput = {
+      billingResult: {
+        tenant: "tenant-a",
+        charges: calculateContractCharge(
+          fixedObligation("simulate") as Extract<
+            ResolvedContractChargeObligation,
+            { kind: "fixed" }
+          >,
+        ).charges,
+        totalAmount: 5_001,
+        discounts: [],
+        adjustments: [],
+        finalAmount: 5_001,
+        currency_code: "USD",
+      },
+      billingPeriod: { startDate: "2026-08-01", endDate: "2026-09-01" },
+      discountCandidates: [
+        {
+          discount_id: "discount-1",
+          discount_name: "Ten percent",
+          discount_type: "percentage" as const,
+          value: 0.1,
+          start_date: "2026-01-01",
+        },
+      ],
+      adjustments: [{ description: "Credit", amount: -250 }],
+    };
+    const simulated = calculateContractDiscountsAndAdjustments(
+      "simulate",
+      adjustmentInput,
+    );
+    const live = calculateContractDiscountsAndAdjustments(
+      "live",
+      adjustmentInput,
+    );
+    expect({ ...simulated, executionMode: undefined }).toEqual({
+      ...live,
+      executionMode: undefined,
+    });
+    expect(simulated.billingResult.discounts).toHaveLength(1);
+    expect(simulated.billingResult.adjustments).toEqual([
+      { description: "Credit", amount: -250 },
+    ]);
   });
 });

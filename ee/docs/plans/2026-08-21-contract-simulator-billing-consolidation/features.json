@@ -84,9 +84,9 @@
     "prdRefs": ["Requirements > Shared calculation engine"]
   },
   {
-    "id": "F015",
+  "id": "F015",
     "description": "Generate stable charge keys and structured explanations inside the shared engine so callers do not reconstruct internal identities.",
-    "implemented": false,
+  "implemented": true,
     "prdRefs": ["Requirements > Shared calculation engine"]
   },
   {
@@ -132,9 +132,9 @@
     "prdRefs": ["Requirements > Simulator simplification"]
   },
   {
-    "id": "F023",
+  "id": "F023",
     "description": "Map shared calculated results to the existing simulator timeline and invoice view model without recalculating monetary fields.",
-    "implemented": false,
+  "implemented": true,
     "prdRefs": ["Requirements > Simulator simplification"]
   },
   {
@@ -146,9 +146,9 @@
     ]
   },
   {
-    "id": "F025",
+  "id": "F025",
     "description": "Delete simulator-owned charge dispatch, synthetic dispatch glue, replicated explanation keys, discount reconstruction, and total calculation.",
-    "implemented": false,
+  "implemented": true,
     "prdRefs": ["Requirements > Simulator simplification"]
   },
   {

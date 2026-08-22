@@ -200,9 +200,7 @@ describe("Contract simulator – migrated-schema integration", () => {
       address: expect.not.stringContaining("N/A"),
     });
     expect(chargedPeriod?.invoice_view_model).toHaveProperty("tenantClient");
-    expect(chargedPeriod?.invoice_view_model).toHaveProperty(
-      "recurringItems",
-    );
+    expect(chargedPeriod?.invoice_view_model).toHaveProperty("recurringItems");
   });
 
   it("reports unsupported cadence, empty lines, and missing product prices instead of silently omitting them", async () => {
@@ -217,7 +215,8 @@ describe("Contract simulator – migrated-schema integration", () => {
     const productLine = scenario.lines.find(
       (line) => line.key === fixture.lines.product,
     );
-    if (!emptyLine || !productLine) throw new Error("Fixture lines are missing");
+    if (!emptyLine || !productLine)
+      throw new Error("Fixture lines are missing");
     emptyLine.billing_frequency = "fortnightly";
     emptyLine.services = [];
     for (const service of productLine.services) {
@@ -263,13 +262,19 @@ describe("Contract simulator – migrated-schema integration", () => {
       "invoices",
       "invoice_charges",
       "invoice_charge_details",
+      "recurring_service_periods",
+      "time_entries",
+      "usage_tracking",
+      "bucket_usage",
       "tax_rates",
       "tax_regions",
       "client_tax_settings",
       "client_tax_rates",
       "next_number",
+      "audit_logs",
       "events",
       "workflow_events",
+      "inbound_email_outbox",
     ];
     const before = await fingerprintTenantTables(
       context.db,
@@ -438,9 +443,9 @@ describe("Contract simulator – migrated-schema integration", () => {
       unitPrice: 5_000,
       total: 10_000,
     });
-    expect(replay.actual_invoices?.[0].invoice_view_model.customer.address).not.toBe(
-      "N/A",
-    );
+    expect(
+      replay.actual_invoices?.[0].invoice_view_model.customer.address,
+    ).not.toBe("N/A");
     expect(replay.actual_invoices?.[0].invoice_view_model).toHaveProperty(
       "recurringItems",
     );

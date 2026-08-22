@@ -63,3 +63,10 @@
 - Is prepaid hour-block billing reachable from a contract scenario and required in the first obligation union?
 - Does invoice-level tax redistribution after persistence intentionally differ from charge-level calculation in any supported tax configuration?
 - Which reconciliation mutations must stay before calculation to preserve lock ordering, and which can follow a successful result?
+## Takeover completion (2026-08-22)
+
+- Shared dispatch now carries charge-to-explanation associations directly and fails closed if a compute family returns unequal charge/explanation counts.
+- Discounts and adjustments require the same explicit `simulate`/`live` mode as charge families.
+- Representative dispatcher parity now covers hourly rounding/minimums, tiered usage, bucket overage/rollover state, product, license, tax, discounts, and adjustments.
+- Production maps guarded canonical live totals through `applyCanonicalLiveBillingResult`; simulator integration fingerprints billing source/linkage, recurring periods, bucket state, invoices, numbering, audit, event, and outbox tables before and after simulation.
+- The DB-backed simulator suite still cannot collect because `@alga-psa/reporting` does not export `actions/report-actions/getRemainingBucketUnits`; billing tests, simulator unit tests, and both package typechecks remain green.

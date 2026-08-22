@@ -93,7 +93,7 @@ function explanationForCharge(
   charge: IBillingCharge,
   associations: Array<{
     charge: IBillingCharge;
-    explanation: ChargeExplanation | null;
+    explanation: ChargeExplanation;
   }>,
 ): ChargeExplanation | null {
   return (
@@ -1177,7 +1177,7 @@ function applyScenarioDiscountsAndAdjustments(
       servicePeriodEnd: line.service_period_end,
     }));
   const totalAmount = charges.reduce((sum, charge) => sum + charge.total, 0);
-  const computed = calculateContractDiscountsAndAdjustments({
+  const computed = calculateContractDiscountsAndAdjustments("simulate", {
     billingResult: {
       tenant,
       charges,

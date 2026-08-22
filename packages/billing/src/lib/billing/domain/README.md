@@ -4,4 +4,6 @@
 
 `calculateContractBilling` validates and assembles the canonical document, including detailed lines, discounts, adjustments, tax, and totals. `assertLiveContractBillingResult` is the mandatory runtime guard at a persistence boundary. Simulation never receives a commit adapter; production retains its existing transaction, reconciliation, invoice finalization, audit, idempotency, and event stages around the pure result.
 
+Charge results carry their explanation associations directly, so adapters never reconstruct charge keys. Discounts and adjustments also require an explicit execution mode. Production passes the guarded live document through `applyCanonicalLiveBillingResult`; that handoff preserves persistence identities and rich source rows while taking document totals only from the canonical calculation.
+
 Future pricing, proration, tax, adjustment, schedule, charge-key, explanation, and rounding rules belong in this domain layer or one of the compute modules it exclusively dispatches. Do not add direct charge-family calls, financial formulas, or a parallel total pipeline to `BillingEngine` or simulator presentation code. Storage and scenario shapes are normalized before this boundary; persistence maps the canonical live result without recalculating money.

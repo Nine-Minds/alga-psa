@@ -4,6 +4,7 @@ import type {
   ContractBillingCalculationResult,
   LiveContractBillingCalculationResult,
 } from "./contracts";
+import type { IBillingResult } from "@alga-psa/types";
 
 /** Pure canonical assembly for every contract-billing caller. Never add I/O here. */
 export function calculateContractBilling(
@@ -96,4 +97,27 @@ export function assertLiveContractBillingResult(
   if (result.mode !== "live") {
     throw new Error("Simulation billing results cannot enter live persistence");
   }
+}
+
+/**
+ * Production handoff: persistence keeps its rich source rows, while all
+ * document-level monetary totals come from the guarded canonical result.
+ */
+export function applyCanonicalLiveBillingResult(
+  source: IBillingResult,
+  result: ContractBillingCalculationResult,
+): IBillingResult {
+  assertLiveContractBillingResult(result);
+  const nonChargeLineKeys = new Set([
+    ...result.discounts.map((discount) => discount.lineKey),
+    ...result.adjustments.map((adjustment) => adjustment.lineKey),
+  ]);
+  return {
+    ...source,
+    totalAmount: result.lines
+      .filter((line) => !nonChargeLineKeys.has(line.lineKey))
+      .reduce((sum, line) => sum + line.netAmount, 0),
+    // Invoice tax is distributed transactionally after details are persisted.
+    finalAmount: result.subtotal,
+  };
 }

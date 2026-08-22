@@ -60,7 +60,7 @@ export type ContractChargeCalculationResult = {
   /** A calculation-owned association; consumers must not reconstruct charge keys. */
   chargeExplanations: Array<{
     charge: IBillingCharge;
-    explanation: ChargeExplanation | null;
+    explanation: ChargeExplanation;
   }>;
 } & (
   | ({ kind: "fixed" } & FixedChargeComputeResult)
@@ -102,39 +102,56 @@ export function calculateContractCharge(
 function calculateContractChargeImpl(
   obligation: ResolvedContractChargeObligation,
 ): ContractChargeCalculationResult {
-  const associate = <T extends { charges: IBillingCharge[]; explanations: ChargeExplanation[] }>(
+  const associate = <
+    T extends { charges: IBillingCharge[]; explanations: ChargeExplanation[] },
+  >(
     result: T,
-  ) => ({
-    ...result,
-    chargeExplanations: result.charges.map((charge, index) => ({
-      charge,
-      explanation: result.explanations[index] ?? null,
-    })),
-  });
+  ) => {
+    if (result.charges.length !== result.explanations.length) {
+      throw new Error(
+        `Contract charge calculation returned ${result.charges.length} charges but ${result.explanations.length} explanations`,
+      );
+    }
+    return {
+      ...result,
+      chargeExplanations: result.charges.map((charge, index) => ({
+        charge,
+        explanation: result.explanations[index],
+      })),
+    };
+  };
   switch (obligation.kind) {
     case "fixed":
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...associate(computeFixedCharges(obligation.inputs, obligation.taxContext)),
+        ...associate(
+          computeFixedCharges(obligation.inputs, obligation.taxContext),
+        ),
       };
     case "hourly":
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...associate(computeTimeBasedCharges(obligation.inputs, obligation.taxContext)),
+        ...associate(
+          computeTimeBasedCharges(obligation.inputs, obligation.taxContext),
+        ),
       };
     case "usage":
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...associate(computeUsageBasedCharges(obligation.inputs, obligation.taxContext)),
+        ...associate(
+          computeUsageBasedCharges(obligation.inputs, obligation.taxContext),
+        ),
       };
     case "bucket":
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...associate(computeBucketCharges(obligation.inputs, obligation.taxContext)),
+        ...associate(
+          computeBucketCharges(obligation.inputs, obligation.taxContext),
+        ),
       };
     case "product":
     case "license":
@@ -146,18 +163,23 @@ function calculateContractChargeImpl(
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...associate(computeRecurringQuantityCharges(
-          obligation.inputs,
-          obligation.taxContext,
-        )),
+        ...associate(
+          computeRecurringQuantityCharges(
+            obligation.inputs,
+            obligation.taxContext,
+          ),
+        ),
       };
   }
 }
 
 export function calculateContractDiscountsAndAdjustments(
+  executionMode: "simulate" | "live",
   inputs: DiscountsAndAdjustmentsComputeInputs,
-): DiscountsAndAdjustmentsComputeResult {
-  return computeDiscountsAndAdjustments(inputs);
+): DiscountsAndAdjustmentsComputeResult & {
+  executionMode: "simulate" | "live";
+} {
+  return { executionMode, ...computeDiscountsAndAdjustments(inputs) };
 }
 
 /**
