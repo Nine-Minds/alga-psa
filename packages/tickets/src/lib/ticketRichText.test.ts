@@ -3,6 +3,7 @@ import {
   convertProseMirrorToTicketRichTextBlocks,
   createEmptyTicketMobileRichTextDocument,
   createTicketRichTextParagraph,
+  extractTicketRichTextPlainText,
   parseTicketMobileRichTextDocument,
   parseTicketRichTextContent,
   serializeTicketMobileRichTextDocument,
@@ -255,5 +256,120 @@ describe('ticketRichText', () => {
     expect(
       serializeTicketMobileRichTextDocument(parseTicketMobileRichTextDocument(serialized))
     ).toBe(JSON.stringify(blocks));
+  });
+
+  it('extracts plain text from a single paragraph comment', () => {
+    expect(
+      extractTicketRichTextPlainText(
+        serializeTicketRichTextContent(createTicketRichTextParagraph('Hello world'))
+      )
+    ).toBe('Hello world');
+  });
+
+  it('keeps interior blank lines between blocks and strips the trailing empty paragraph', () => {
+    const blocks = [
+      { type: 'paragraph', content: [{ type: 'text', text: 'First', styles: {} }] },
+      { type: 'paragraph', content: [] },
+      { type: 'heading', props: { level: 2 }, content: [{ type: 'text', text: 'Second', styles: {} }] },
+      { type: 'paragraph', content: [{ type: 'text', text: '', styles: {} }] },
+    ];
+
+    expect(extractTicketRichTextPlainText(JSON.stringify(blocks))).toBe('First\n\nSecond');
+  });
+
+  it('flattens nested list children onto their own lines', () => {
+    const blocks = [
+      {
+        type: 'bulletListItem',
+        content: [{ type: 'text', text: 'Parent', styles: {} }],
+        children: [
+          {
+            type: 'bulletListItem',
+            content: [{ type: 'text', text: 'Child', styles: {} }],
+            children: [
+              { type: 'bulletListItem', content: [{ type: 'text', text: 'Grandchild', styles: {} }] },
+            ],
+          },
+        ],
+      },
+    ];
+
+    expect(extractTicketRichTextPlainText(JSON.stringify(blocks))).toBe('Parent\nChild\nGrandchild');
+  });
+
+  it('preserves link text without the underlying URL markup', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'See ', styles: {} },
+          {
+            type: 'link',
+            href: 'https://example.com/tickets/1',
+            content: [{ type: 'text', text: 'the ticket', styles: {} }],
+          },
+        ],
+      },
+    ];
+
+    expect(extractTicketRichTextPlainText(JSON.stringify(blocks))).toBe('See the ticket');
+  });
+
+  it('renders mentions the way the reader sees them', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'mention', props: { userId: 'u1', username: 'glinda', displayName: 'Glinda' } },
+          { type: 'text', text: ' and ', styles: {} },
+          { type: 'mention', props: { userId: 'u2', username: '', displayName: 'Toto' } },
+        ],
+      },
+    ];
+
+    expect(extractTicketRichTextPlainText(JSON.stringify(blocks))).toBe('@glinda and @[Toto]');
+  });
+
+  it('returns an empty string for image-only comments', () => {
+    const blocks = [
+      { type: 'image', props: { url: '/api/documents/view/file-123', name: 'pasted-image.png' } },
+    ];
+
+    expect(extractTicketRichTextPlainText(JSON.stringify(blocks))).toBe('');
+  });
+
+  it('returns legacy plain-text notes verbatim', () => {
+    expect(extractTicketRichTextPlainText('Legacy description')).toBe('Legacy description');
+    expect(extractTicketRichTextPlainText('{"type":"paragraph"}')).toBe('{"type":"paragraph"}');
+  });
+
+  it('extracts text from ProseMirror documents written by the mobile editor', () => {
+    const document = {
+      type: 'doc' as const,
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'Mobile rich text' }] },
+        {
+          type: 'bullet_list',
+          content: [
+            {
+              type: 'list_item',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Bullet item' }] }],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(extractTicketRichTextPlainText(JSON.stringify(document))).toBe(
+      'Mobile rich text\nBullet item'
+    );
+  });
+
+  it('returns an empty string for missing or blank content', () => {
+    expect(extractTicketRichTextPlainText(null)).toBe('');
+    expect(extractTicketRichTextPlainText(undefined)).toBe('');
+    expect(extractTicketRichTextPlainText('')).toBe('');
+    expect(extractTicketRichTextPlainText('   ')).toBe('');
+    expect(extractTicketRichTextPlainText([])).toBe('');
   });
 });
