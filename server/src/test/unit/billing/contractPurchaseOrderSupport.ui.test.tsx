@@ -674,6 +674,14 @@ describe('Contract PO UI flows', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Close Preview/i }));
+
+    // The dialog close schedules a state update. Wait for that update before
+    // starting the next preview so this test models a real reopen rather than
+    // batching the close and reopen clicks into an order-dependent no-op.
+    await waitFor(() => {
+      expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
+    });
+
     fireEvent.click(screen.getByRole('button', { name: /Preview Selected/i }));
 
     await waitFor(() => {
