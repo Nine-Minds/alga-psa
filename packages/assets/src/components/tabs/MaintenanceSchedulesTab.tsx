@@ -3,8 +3,8 @@ import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { Button } from '@alga-psa/ui/components/Button';
-import { CalendarPlus, Pencil, Trash2 } from 'lucide-react';
-import { getAssetMaintenanceReport, getAssetMaintenanceSchedules, deleteMaintenanceSchedule } from '../../actions/assetActions';
+import { CalendarPlus, CheckCircle2, Pause, Pencil, Trash2 } from 'lucide-react';
+import { completeOccurrence, getAssetMaintenanceReport, getAssetMaintenanceSchedules, deleteMaintenanceSchedule, listMaintenanceOccurrences, setSchedulePaused } from '../../actions/assetActions';
 import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
 import { formatDateOnly } from '@alga-psa/core';
 import { cn } from '@alga-psa/ui';
@@ -49,6 +49,18 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
       }));
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleComplete = async (schedule: AssetMaintenanceSchedule) => {
+    try {
+      const result = unwrapAssetActionResult(await listMaintenanceOccurrences({ asset_id: assetId, status: ['open'], limit: 100 }));
+      const occurrence = result.occurrences.find((item) => item.schedule_id === schedule.schedule_id);
+      if (!occurrence) throw new Error('No open maintenance occurrence found for this schedule');
+      await unwrapAssetActionResult(await completeOccurrence({ occurrence_id: occurrence.occurrence_id, asset_id: assetId }));
+      mutate(); mutateSchedules();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to complete maintenance');
     }
   };
 
@@ -159,6 +171,8 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            {schedule.is_active && <Button id={`complete-maintenance-schedule-${schedule.schedule_id}`} variant="ghost" size="xs" onClick={() => handleComplete(schedule)} className="h-8 w-8 p-0" title="Complete maintenance"><CheckCircle2 size={16} /></Button>}
+                            <Button id={`pause-maintenance-schedule-${schedule.schedule_id}`} variant="ghost" size="xs" onClick={async () => { await unwrapAssetActionResult(await setSchedulePaused(schedule.schedule_id, schedule.is_active)); mutate(); mutateSchedules(); }} className="h-8 w-8 p-0" title={schedule.is_active ? 'Pause maintenance plan' : 'Reactivate maintenance plan'}><Pause size={16} /></Button>
                             <Button
                               id={`edit-maintenance-schedule-${schedule.schedule_id}`}
                               variant="ghost"

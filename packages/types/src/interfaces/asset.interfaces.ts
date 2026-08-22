@@ -319,6 +319,60 @@ export interface AssetMaintenanceSchedule {
   created_by: string;
   created_at: string;
   updated_at: string;
+  archived_at?: string;
+}
+
+export type AssetMaintenanceOccurrenceStatus = 'open' | 'completed' | 'skipped' | 'cancelled';
+
+export interface AssetMaintenanceOccurrence {
+  tenant: string;
+  occurrence_id: string;
+  schedule_id: string;
+  asset_id: string;
+  due_date: string;
+  status: AssetMaintenanceOccurrenceStatus;
+  ticket_id?: string;
+  history_id?: string;
+  skip_reason?: string;
+  closed_at?: string;
+  closed_by?: string;
+  created_at: string;
+  updated_at: string;
+  schedule_name?: string;
+  maintenance_type?: MaintenanceType;
+  frequency?: MaintenanceFrequency;
+  frequency_interval?: number;
+  asset_name?: string;
+  asset_type?: string;
+  client_id?: string;
+  client_name?: string;
+  ticket_title?: string;
+}
+
+export interface MaintenanceOccurrenceFilters {
+  status?: AssetMaintenanceOccurrenceStatus[];
+  client_id?: string;
+  asset_id?: string;
+  asset_type?: string;
+  maintenance_type?: MaintenanceType;
+  due_from?: string;
+  due_to?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface MaintenanceOccurrenceListResult {
+  occurrences: AssetMaintenanceOccurrence[];
+  total: number;
+}
+
+export interface MaintenanceAggregates {
+  overdue: number;
+  due_today: number;
+  upcoming_7d: number;
+  open_maintenance_tickets: number;
+  compliance_90d: number;
 }
 
 export interface AssetMaintenanceHistory {

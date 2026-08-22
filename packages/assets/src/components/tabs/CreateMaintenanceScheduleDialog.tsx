@@ -70,6 +70,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
 
   const maintenanceTypeOptions = [
     { value: 'preventive', label: t('maintenanceSchedulesTab.types.preventive', { defaultValue: 'Preventive' }) },
+    { value: 'corrective', label: t('maintenanceSchedulesTab.types.corrective', { defaultValue: 'Corrective' }) },
     { value: 'inspection', label: t('maintenanceSchedulesTab.types.inspection', { defaultValue: 'Inspection' }) },
     { value: 'calibration', label: t('maintenanceSchedulesTab.types.calibration', { defaultValue: 'Calibration' }) },
     { value: 'replacement', label: t('maintenanceSchedulesTab.types.replacement', { defaultValue: 'Replacement' }) }
