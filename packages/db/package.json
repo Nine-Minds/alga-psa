@@ -45,6 +45,10 @@
     "./workDate": {
       "import": "./dist/lib/workDate.js",
       "types": "./src/lib/workDate.ts"
+    },
+    "./reassignTicketResources": {
+      "import": "./dist/lib/reassignTicketResources.js",
+      "types": "./src/lib/reassignTicketResources.ts"
     }
   },
   "scripts": {

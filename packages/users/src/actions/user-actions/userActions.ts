@@ -18,7 +18,7 @@ import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryAction
 import logger from '@alga-psa/core/logger';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { prepareTicketResourceReassignment } from "@alga-psa/tickets/lib/reassignTicketResources";
+import { prepareTicketResourceReassignment } from "@alga-psa/db/reassignTicketResources";
 import {
   sanitizeUserForResponse,
   USER_RESPONSE_FIELD_NAMES,
