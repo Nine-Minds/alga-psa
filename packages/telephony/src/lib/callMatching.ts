@@ -141,15 +141,43 @@ export interface PhoneNormalizationAuditRow {
 export async function auditContactPhoneNormalization(params: {
   knex: any;
   tenantId: string;
+  /** Flagged rows to return. */
   limit?: number;
+  /** Ceiling on rows examined, so the audit cannot walk a huge tenant. */
+  scanLimit?: number;
   defaultCallingCode?: string;
 }): Promise<PhoneNormalizationAuditRow[]> {
-  const rows: PhoneNormalizationAuditRow[] = await tenantDb(params.knex, params.tenantId)
-    .table('contact_phone_numbers as cpn')
-    .select('cpn.contact_name_id', 'cpn.phone_number', 'cpn.normalized_phone_number')
-    .limit(params.limit ?? 500);
+  const limit = params.limit ?? 500;
+  const scanLimit = params.scanLimit ?? 10000;
+  const pageSize = 1000;
+  const db = tenantDb(params.knex, params.tenantId);
+  const flagged: PhoneNormalizationAuditRow[] = [];
 
-  return rows.filter((row) =>
-    normalizeToE164(row.phone_number, { defaultCallingCode: params.defaultCallingCode }) === null,
-  );
+  // Normalization is a JS predicate, so `limit` has to bound the flagged rows,
+  // not the scan — limiting the query instead returns an arbitrary slice and
+  // silently reports "nothing to fix".
+  for (let scanned = 0; scanned < scanLimit && flagged.length < limit; scanned += pageSize) {
+    const query = db.table('contact_phone_numbers as cpn');
+    db.tenantJoin(query, 'contacts as c', 'cpn.contact_name_id', 'c.contact_name_id', { type: 'left' });
+    const rows: PhoneNormalizationAuditRow[] = await query
+      .select('cpn.contact_name_id', 'cpn.phone_number', 'cpn.normalized_phone_number', 'c.full_name')
+      .orderBy('cpn.contact_name_id', 'asc')
+      .limit(Math.min(pageSize, scanLimit - scanned))
+      .offset(scanned);
+
+    for (const row of rows) {
+      if (normalizeToE164(row.phone_number, { defaultCallingCode: params.defaultCallingCode }) === null) {
+        flagged.push(row);
+        if (flagged.length >= limit) {
+          break;
+        }
+      }
+    }
+
+    if (rows.length < pageSize) {
+      break;
+    }
+  }
+
+  return flagged;
 }

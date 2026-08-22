@@ -28,6 +28,9 @@ const fixtures = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => {
   const build = (rows: any[], tenant: string) => {
     let working = rows.filter((row) => row.tenant === tenant);
+    let take: number | null = null;
+    let skip = 0;
+    const page = () => working.slice(skip, take === null ? undefined : skip + take);
     const builder: any = {
       whereIn(column: string, values: any[]) {
         // The client-location branch compares a raw SQL digits expression.
@@ -57,14 +60,22 @@ vi.mock('@alga-psa/db', () => {
       select() {
         return builder;
       },
-      limit() {
+      orderBy() {
+        return builder;
+      },
+      limit(count: number) {
+        take = count;
+        return builder;
+      },
+      offset(count: number) {
+        skip = count;
         return builder;
       },
       first() {
-        return Promise.resolve(working[0]);
+        return Promise.resolve(page()[0]);
       },
       then(resolve: (rows: any[]) => unknown, reject?: (error: unknown) => unknown) {
-        return Promise.resolve(working).then(resolve, reject);
+        return Promise.resolve(page()).then(resolve, reject);
       },
     };
     return builder;
@@ -182,6 +193,10 @@ describe('matchCallParty', () => {
 });
 
 describe('auditContactPhoneNormalization', () => {
+  beforeEach(() => {
+    fixtures.contactPhones.length = 0;
+  });
+
   it('T022: flags rows whose number cannot be normalized', async () => {
     fixtures.contactPhones.push(
       {
@@ -204,5 +219,31 @@ describe('auditContactPhoneNormalization', () => {
 
     const rows = await auditContactPhoneNormalization({ knex, tenantId: 't1' });
     expect(rows.map((row) => row.contact_name_id)).toEqual(['contact-3']);
+  });
+
+  it('T022: limit bounds the flagged rows, not the slice that gets examined', async () => {
+    // Good numbers first: a limit applied to the query instead of the result
+    // would report nothing to fix.
+    for (let index = 0; index < 5; index += 1) {
+      fixtures.contactPhones.push({
+        tenant: 't1',
+        contact_name_id: `ok-${index}`,
+        full_name: 'Munchkin',
+        client_id: 'client-1',
+        normalized_phone_number: `555000000${index}`,
+        phone_number: `+1555000000${index}`,
+      });
+    }
+    fixtures.contactPhones.push({
+      tenant: 't1',
+      contact_name_id: 'bad-1',
+      full_name: 'Scarecrow',
+      client_id: 'client-1',
+      normalized_phone_number: '',
+      phone_number: 'ask the wizard',
+    });
+
+    const rows = await auditContactPhoneNormalization({ knex, tenantId: 't1', limit: 2 });
+    expect(rows.map((row) => row.contact_name_id)).toEqual(['bad-1']);
   });
 });
