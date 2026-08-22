@@ -76,3 +76,40 @@
 - Plan validation: `python3 ~/.claude/skills/software-planner/scripts/validate_plan.py ee/docs/plans/2026-08-22-telephony-integration`
 - Emulator: `docker compose -f packages/emulators/compose.yml up -d`; alias
   `algasim='node packages/emulators/host/dist/cli.js'`.
+
+## Live loop verification (2026-08-22, card stack on :3109)
+Ran the plan's verification against a card-local msgraph emulator (control
+9509 / vendor 4019) with `TEAMS_EMULATOR_MODE=true` and the tenant's existing
+`alga-teams-graph-client` credentials seeded into it. Results:
+
+- **Subscription create** — enabling Teams Phone from Settings → Integrations →
+  Communication → Telephony created a real `communications/callRecords`
+  subscription (`subscription-2-…`) and stored its id, expiry and clientState
+  secret; the Graph validation handshake echoed the validationToken (200) and
+  the first notification was accepted (202).
+- **Matched inbound** — `+15552468135` → contact *Alice in Wonderland* /
+  *Wonderland*, interaction "Inbound call from +1 (555) 246-8135", duration 3
+  (minutes), start/end stamped from the CDR.
+- **Duplicate notification** — the same notification delivered twice left one
+  call record and one interaction.
+- **Missed** — an unanswered CDR mapped to `direction='missed'` and titled
+  "Missed call from …".
+- **Ambiguous** — a number shared by two contacts stored both candidates with
+  no attribution and no interaction.
+- **Unmatched → resolve** — an unknown number stored zero candidates; the new
+  search picker in the queue found *Dorothy Gale · Emerald City*, resolved the
+  call (`match_status='resolved'`) and minted the interaction on that timeline.
+- **Ticket from call** — created TIC001037 on the matched client/contact with
+  the board/status/priority defaults, and stamped `interactions.ticket_id`.
+
+Landmine worth recording: **EE ignores `JOB_RUNNER_TYPE=pgboss`** — the webhook
+always starts `genericJobWorkflow` on Temporal. This card's stack has no worker
+polling namespace `default`, so those workflows just time out after 1h (several
+from earlier rounds are visible in the Temporal UI). For the run above the
+worker's hand-off was reproduced exactly as `forwardJobToServer` does it, by
+publishing `MAINTENANCE_JOB_REQUESTED` onto the event stream the server-side
+`maintenanceJobSubscriber` consumes. Everything downstream of Temporal is
+therefore covered; Temporal's own delivery is not.
+
+Verification data was removed afterwards (call records, interactions, the
+ticket) and `telephony_providers` was returned to `not_configured`.
