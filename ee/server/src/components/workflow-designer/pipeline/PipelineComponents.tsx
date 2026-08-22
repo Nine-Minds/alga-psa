@@ -34,6 +34,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { Step, IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@alga-psa/workflows/runtime';
 import { formatTimeWaitDuration } from '../timeWaitDuration';
+import {
+  formatWorkflowPatchChangeSummary,
+  summarizeWorkflowPatchChanges,
+} from '../mapping/UpdatePatchSection';
 
 /**
  * Step type color configuration
@@ -282,19 +286,37 @@ export const EmptyPipeline: React.FC<{
 export const StepCardSummary: React.FC<{
   step: Step;
 }> = ({ step }) => {
+  const { t } = useTranslation('msp/workflows');
   if (step.type === 'action.call') {
-    const config = (step as NodeStep).config as { actionId?: string; saveAs?: string } | undefined;
+    const config = (step as NodeStep).config as {
+      actionId?: string;
+      saveAs?: string;
+      inputMapping?: Record<string, unknown>;
+    } | undefined;
+    // Update-action patch steps read as a change summary on the card.
+    const patchChangeLabels = summarizeWorkflowPatchChanges(
+      config?.inputMapping?.patch as Parameters<typeof summarizeWorkflowPatchChanges>[0]
+    );
     return (
-      <div className="flex items-center gap-2 flex-wrap">
-        {config?.actionId && (
-          <span className="text-xs text-gray-600 font-mono bg-gray-100 px-1.5 py-0.5 rounded">
-            {config.actionId}
-          </span>
-        )}
-        {config?.saveAs && (
-          <Badge variant="outline" className="text-xs">
-            → {config.saveAs}
-          </Badge>
+      <div className="space-y-0.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          {config?.actionId && (
+            <span className="text-xs text-gray-600 font-mono bg-gray-100 px-1.5 py-0.5 rounded">
+              {config.actionId}
+            </span>
+          )}
+          {config?.saveAs && (
+            <Badge variant="outline" className="text-xs">
+              → {config.saveAs}
+            </Badge>
+          )}
+        </div>
+        {patchChangeLabels.length > 0 && (
+          <div className="text-xs text-gray-500">
+            {formatWorkflowPatchChangeSummary(t, patchChangeLabels)}
+            {' · '}
+            {t('pipeline.patchSummary.unchanged', { defaultValue: 'other fields unchanged' })}
+          </div>
         )}
       </div>
     );

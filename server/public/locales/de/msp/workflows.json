@@ -1502,7 +1502,10 @@
     "start": "Start",
     "insertStepHere": "Schritt hier einfügen",
     "emptyDisabled": "Noch keine Schritte.",
-    "emptySelectPrompt": "Wählen Sie einen Schritt aus der Palette, um zu beginnen."
+    "emptySelectPrompt": "Wählen Sie einen Schritt aus der Palette, um zu beginnen.",
+    "patchSummary": {
+      "unchanged": "übrige Felder unverändert"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Ausdruckseditor",
@@ -1618,6 +1621,37 @@
     "softEnumUseCustom": "„{{value}}“ verwenden",
     "expression": {
       "placeholder": "z. B. payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Zu ändernde Felder",
+      "targetFraming": "Dieser Schritt aktualisiert {{target}}.",
+      "summaryChanges": "Ändert {{list}}",
+      "summaryChangesMore": "Ändert {{list}} +{{count}} weitere",
+      "unchangedNote": "Alle anderen Felder behalten ihre aktuellen Werte.",
+      "emptyGuidance": "Fügen Sie mindestens ein zu änderndes Feld hinzu.",
+      "editChanges": "Änderungen bearbeiten…",
+      "dialogTitle": "Änderungen bearbeiten",
+      "dialogDescription": "Aktualisiert {{target}}. Nur die rechts aufgeführten Felder werden geändert; alles andere behält seinen aktuellen Wert.",
+      "footerSummary": "{{count}} Feld(er) werden geändert · alles andere behält seinen aktuellen Wert",
+      "done": "Fertig",
+      "added": "Hinzugefügt ✓",
+      "noChangesYet": "Noch keine Änderungen. Wählen Sie links ein Feld aus, um zu beginnen.",
+      "setFieldTo": "{{field}} setzen auf",
+      "removeChange": "Dieses Feld nicht mehr ändern (es behält seinen aktuellen Wert)",
+      "advancedTitle": "Erweitert",
+      "group": {
+        "details": "Details",
+        "assignment": "Zuweisung",
+        "datesTags": "Termine & Tags",
+        "advanced": "Erweitert"
+      },
+      "target": {
+        "genericRecord": "Datensatz",
+        "unset": "der oben ausgewählte {{record}}",
+        "fromReference": "der {{record}} aus „{{source}}“",
+        "fromExpression": "der per Ausdruck ermittelte {{record}}",
+        "fixed": "ein bestimmter {{record}}"
+      }
     }
   },
   "schemaReference": {

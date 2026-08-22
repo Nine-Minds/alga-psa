@@ -1380,7 +1380,10 @@
     "start": "55555",
     "insertStepHere": "55555",
     "emptyDisabled": "55555",
-    "emptySelectPrompt": "55555"
+    "emptySelectPrompt": "55555",
+    "patchSummary": {
+      "unchanged": "55555"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "55555",
@@ -1496,6 +1499,37 @@
     "softEnumUseCustom": "55555 {{value}} 55555",
     "expression": {
       "placeholder": "55555"
+    },
+    "updatePatch": {
+      "summaryTitle": "55555",
+      "targetFraming": "55555 {{target}} 55555",
+      "summaryChanges": "55555 {{list}} 55555",
+      "summaryChangesMore": "55555 {{list}} 55555 {{count}} 55555",
+      "unchangedNote": "55555",
+      "emptyGuidance": "55555",
+      "editChanges": "55555",
+      "dialogTitle": "55555",
+      "dialogDescription": "55555 {{target}} 55555",
+      "footerSummary": "55555 {{count}} 55555",
+      "done": "55555",
+      "added": "55555",
+      "noChangesYet": "55555",
+      "setFieldTo": "55555 {{field}} 55555",
+      "removeChange": "55555",
+      "advancedTitle": "55555",
+      "group": {
+        "details": "55555",
+        "assignment": "55555",
+        "datesTags": "55555",
+        "advanced": "55555"
+      },
+      "target": {
+        "genericRecord": "55555",
+        "unset": "55555 {{record}} 55555",
+        "fromReference": "55555 {{record}} 55555 {{source}} 55555",
+        "fromExpression": "55555 {{record}} 55555",
+        "fixed": "55555 {{record}} 55555"
+      }
     }
   },
   "schemaReference": {
