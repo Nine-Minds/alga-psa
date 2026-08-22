@@ -120,14 +120,19 @@ const hoisted = vi.hoisted(() => {
   return {
     state,
     knexMock,
-    hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
+    hasPermissionMock: vi.fn(async (_user: unknown, _resource: string, ..._rest: unknown[]) => true),
     createTicketMock: vi.fn(async (payload: any) => ({
       ticket_id: 'ticket-created-1',
       ticket_number: '2001',
       ...payload,
     })),
-    ticketDefaultsMock: vi.fn(async () => ({ boardId: 'board-1', statusId: 'status-open' })),
-    priorityMock: vi.fn(async () => 'priority-normal'),
+    ticketDefaultsMock: vi.fn(
+      async (): Promise<{ boardId: string | null; statusId: string | null }> => ({
+        boardId: 'board-1',
+        statusId: 'status-open',
+      }),
+    ),
+    priorityMock: vi.fn(async (): Promise<string | null> => 'priority-normal'),
     activateMock: vi.fn(async () => undefined),
     deactivateMock: vi.fn(async () => undefined),
     autoTicketPolicyMock: vi.fn(async () => undefined),

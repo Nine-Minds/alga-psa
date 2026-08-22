@@ -78,8 +78,19 @@ import {
 const TENANT = 'tenant-1';
 const HOUR = 60 * 60 * 1000;
 
-function seedProvider(overrides: Record<string, unknown> = {}) {
-  const row = {
+interface TelephonyProviderRow {
+  tenant: string;
+  provider_id: string;
+  provider: string;
+  status: string;
+  subscription_id: string | null;
+  subscription_expires_at: string | null;
+  webhook_secret: string | null;
+  last_error: string | null;
+}
+
+function seedProvider(overrides: Partial<TelephonyProviderRow> = {}): TelephonyProviderRow {
+  const row: TelephonyProviderRow = {
     tenant: TENANT,
     provider_id: 'provider-1',
     provider: 'teams-phone',

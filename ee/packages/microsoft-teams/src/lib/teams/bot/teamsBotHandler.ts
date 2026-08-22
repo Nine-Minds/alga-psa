@@ -1656,14 +1656,33 @@ function extractBotCardActionValue(activity: TeamsBotActivity): Record<string, u
     : null;
 }
 
-function extractGuestCardActionValue(activity: TeamsBotActivity): Record<string, unknown> | null {
+interface GuestCardActionValue {
+  actionId: string | null;
+  title: string | null;
+  description: string | null;
+  idempotencyKey: string | null;
+}
+
+function readStringField(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  return typeof value === 'string' ? value : null;
+}
+
+function extractGuestCardActionValue(activity: TeamsBotActivity): GuestCardActionValue | null {
   const value = activity.value;
   if (!value || typeof value !== 'object') {
     return null;
   }
-  return (value as Record<string, unknown>).command === 'guest_card_action'
-    ? (value as Record<string, unknown>)
-    : null;
+  const record = value as Record<string, unknown>;
+  if (record.command !== 'guest_card_action') {
+    return null;
+  }
+  return {
+    actionId: readStringField(record, 'actionId'),
+    title: readStringField(record, 'title'),
+    description: readStringField(record, 'description'),
+    idempotencyKey: readStringField(record, 'idempotencyKey'),
+  };
 }
 
 /**
