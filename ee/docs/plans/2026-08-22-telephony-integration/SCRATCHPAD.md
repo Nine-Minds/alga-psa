@@ -15,6 +15,15 @@
 - v1 is explicitly post-call journaling, not live CTI (Graph callRecords arrive
   after call end, sometimes minutes).
 
+## Ground truth corrections (verified against server_mc9, 2026-08-22)
+- `contact_phone_numbers.normalized_phone_number` is a GENERATED digits-only
+  column (`regexp_replace(phone_number,'[^0-9]+','','g')`) — NOT E.164. The
+  matcher therefore compares digit candidates (with and without country code).
+- There is **no `clients.phone`**. The client-level number lives on
+  `client_locations.phone`, so ladder step 2 reads that (digits derived in SQL).
+- `interactions.user_id` is NOT NULL, so an ingested call is owned by the oldest
+  active internal user until a manual resolve stamps the real actor.
+
 ## Ground truth (verified in DB 2026-08-22)
 - `system_interaction_types` includes `Call` (also Email, General, Marketing:*).
 - `contacts` has NO phone column; phones live in **`contact_phone_numbers`**
@@ -55,8 +64,10 @@
   their own audit table or a constraint extension (decide in call-ingestion).
 
 ## Open questions (also in PRD Risks)
-- Graph surface for Teams Phone 1:1 call recordings/transcripts (phase-2 spike
-  F065 gates the group).
+- ~~Graph surface for Teams Phone 1:1 call recordings/transcripts~~ ANSWERED —
+  see SPIKE-F065-call-artifacts.md: `/users/{id}/adhocCalls/{callId}/{recordings,transcripts}`.
+  Needs a second Entra consent (`CallRecordings.Read.All`) + an application
+  access policy, so F066–F068 stay deferred behind operator actions.
 - callRecords subscription quota behavior on large tenants.
 - Default region for E.164 normalization of national-format numbers (tenant
   setting? derive from client_locations country?).
