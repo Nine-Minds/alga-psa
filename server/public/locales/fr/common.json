@@ -397,7 +397,72 @@
         "sequentialDigits": "Ce numéro suit le clavier de façon consécutive.",
         "fictionalRange": "Il se situe dans la plage 555-0100 réservée à la fiction."
       },
-      "dismissWarning": "Ignorer"
+      "dismissWarning": "Ignorer",
+      "address": {
+        "emoji": "L'adresse ne peut pas contenir d'émojis",
+        "empty": "L'adresse ne peut pas être vide",
+        "invalidCharacters": "L'adresse contient des caractères non valides",
+        "noLetters": "L'adresse doit contenir des lettres",
+        "tooLong": "L'adresse ne peut pas dépasser 100 caractères"
+      },
+      "city": {
+        "emoji": "Le nom de la ville ne peut pas contenir d'émojis",
+        "empty": "Le nom de la ville ne peut pas être vide",
+        "invalidCharacters": "Le nom de la ville contient des caractères non valides",
+        "noLetters": "Le nom de la ville doit contenir des lettres",
+        "tooLong": "Le nom de la ville ne peut pas dépasser 100 caractères"
+      },
+      "stateProvince": {
+        "emoji": "L'état/la province ne peut pas contenir d'émojis",
+        "empty": "L'état/la province ne peut pas être vide",
+        "invalidCharacters": "L'état/la province contient des caractères non valides",
+        "noLetters": "L'état/la province doit contenir des lettres",
+        "tooLong": "L'état/la province ne peut pas dépasser 100 caractères"
+      },
+      "postalCode": {
+        "au": "Veuillez saisir un code postal australien valide (par ex. 2000)",
+        "br": "Veuillez saisir un code postal brésilien valide (par ex. 01234-567)",
+        "ca": "Veuillez saisir un code postal canadien valide (par ex. K1A 0A6)",
+        "ch": "Veuillez saisir un code postal suisse valide (par ex. 8001)",
+        "de": "Veuillez saisir un code postal allemand valide (par ex. 10115)",
+        "emoji": "Le code postal ne peut pas contenir d'émojis",
+        "es": "Veuillez saisir un code postal espagnol valide (par ex. 28001)",
+        "fr": "Veuillez saisir un code postal français valide (par ex. 75001)",
+        "gb": "Veuillez saisir un code postal britannique valide (par ex. SW1A 1AA)",
+        "generic": "Veuillez saisir un code postal valide",
+        "in": "Veuillez saisir un code postal indien valide (par ex. 110001)",
+        "it": "Veuillez saisir un code postal italien valide (par ex. 00118)",
+        "jp": "Veuillez saisir un code postal japonais valide (par ex. 123-4567)",
+        "nl": "Veuillez saisir un code postal néerlandais valide (par ex. 1234AB)",
+        "onlySpaces": "Le code postal ne peut pas contenir uniquement des espaces",
+        "us": "Veuillez saisir un code ZIP valide (par ex. 12345 ou 12345-6789)",
+        "usShort": "Veuillez saisir un code ZIP valide"
+      },
+      "industry": {
+        "invalidCharacters": "Le secteur contient des caractères non valides",
+        "noLetters": "Le secteur doit contenir des lettres",
+        "tooLong": "Le secteur ne peut pas dépasser 100 caractères",
+        "tooShort": "Le secteur doit comporter au moins 2 caractères",
+        "tooShortText": "Le secteur doit contenir au moins 2 caractères de texte"
+      },
+      "role": {
+        "noAlphanumeric": "Le rôle doit contenir des lettres ou des chiffres",
+        "onlySpaces": "Le rôle ne peut pas contenir uniquement des espaces",
+        "tooLong": "Le rôle ne peut pas dépasser 100 caractères"
+      },
+      "notes": {
+        "tooLong": "Les notes ne peuvent pas dépasser 2000 caractères"
+      },
+      "companySize": {
+        "emoji": "La taille de l'entreprise ne peut pas contenir d'émojis",
+        "invalid": "Veuillez saisir une taille d'entreprise valide (par ex. \"50\", \"10-50\", \"cinq cents\", \"2,5 M\", \"petite\", \"grand groupe\")",
+        "tooLong": "La taille de l'entreprise ne peut pas dépasser 50 caractères"
+      },
+      "annualRevenue": {
+        "emoji": "Le chiffre d'affaires annuel ne peut pas contenir d'émojis",
+        "invalid": "Veuillez saisir un chiffre d'affaires annuel valide (par ex. \"1 000 000 €\", \"cinq millions\", \"2,5 M\", \"10 M-50 M\", \"non communiqué\")",
+        "tooLong": "Le chiffre d'affaires annuel ne peut pas dépasser 50 caractères"
+      }
     }
   },
   "commentThread": {

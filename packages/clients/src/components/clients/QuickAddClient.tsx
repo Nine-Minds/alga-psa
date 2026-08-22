@@ -39,12 +39,12 @@ import {
   validateEmailAddressField,
   validatePhoneNumberField,
   validateContactNameField,
-  validatePostalCode, 
-  validateCityName, 
-  validateAddress, 
-  validateStateProvince,
-  validateIndustry,
-  validateNotes,
+  validatePostalCodeField,
+  validateCityNameField,
+  validateAddressField,
+  validateStateProvinceField,
+  validateIndustryField,
+  validateNotesField,
   translateFieldValidation,
   type FieldValidation
 } from '@alga-psa/validation';
@@ -310,7 +310,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         error = applyField(validateWebsiteUrlField(value));
         break;
       case 'industry':
-        error = validateIndustry(value);
+        error = applyField(validateIndustryField(value));
         break;
       case 'location_email':
         error = applyField(validateEmailAddressField(value));
@@ -334,16 +334,16 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         }
         break;
       case 'postal_code':
-        error = validatePostalCode(value, additionalData?.countryCode);
+        error = applyField(validatePostalCodeField(value, additionalData?.countryCode));
         break;
       case 'city':
-        error = validateCityName(value);
+        error = applyField(validateCityNameField(value));
         break;
       case 'state_province':
-        error = validateStateProvince(value);
+        error = applyField(validateStateProvinceField(value));
         break;
       case 'address_line1':
-        error = validateAddress(value);
+        error = applyField(validateAddressField(value));
         break;
       case 'contact_name':
         error = applyField(validateContactNameField(value));
@@ -352,7 +352,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         error = applyField(validateEmailAddressField(value));
         break;
       case 'notes':
-        error = validateNotes(value);
+        error = applyField(validateNotesField(value));
         break;
     }
     
@@ -386,7 +386,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       contactEmail: contactData.email ?? '',
       contactPhone: getPrimaryContactPhone(contactData.phone_numbers),
       notes: formData.notes
-    });
+    }, tValidation);
 
     // Cross-field validation: if any contact field is filled, require name and email
     if (hasAnyContactData(contactData)) {

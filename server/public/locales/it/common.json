@@ -486,7 +486,72 @@
         "sequentialDigits": "Questo numero percorre la tastiera in sequenza.",
         "fictionalRange": "Rientra nell’intervallo 555-0100 riservato alla finzione."
       },
-      "dismissWarning": "Ignora"
+      "dismissWarning": "Ignora",
+      "address": {
+        "emoji": "L'indirizzo non può contenere emoji",
+        "empty": "L'indirizzo non può essere vuoto",
+        "invalidCharacters": "L'indirizzo contiene caratteri non validi",
+        "noLetters": "L'indirizzo deve contenere lettere",
+        "tooLong": "L'indirizzo non può superare i 100 caratteri"
+      },
+      "city": {
+        "emoji": "Il nome della città non può contenere emoji",
+        "empty": "Il nome della città non può essere vuoto",
+        "invalidCharacters": "Il nome della città contiene caratteri non validi",
+        "noLetters": "Il nome della città deve contenere lettere",
+        "tooLong": "Il nome della città non può superare i 100 caratteri"
+      },
+      "stateProvince": {
+        "emoji": "Stato/provincia non può contenere emoji",
+        "empty": "Stato/provincia non può essere vuoto",
+        "invalidCharacters": "Stato/provincia contiene caratteri non validi",
+        "noLetters": "Stato/provincia deve contenere lettere",
+        "tooLong": "Stato/provincia non può superare i 100 caratteri"
+      },
+      "postalCode": {
+        "au": "Inserisci un codice postale australiano valido (ad es. 2000)",
+        "br": "Inserisci un codice postale brasiliano valido (ad es. 01234-567)",
+        "ca": "Inserisci un codice postale canadese valido (ad es. K1A 0A6)",
+        "ch": "Inserisci un codice postale svizzero valido (ad es. 8001)",
+        "de": "Inserisci un codice postale tedesco valido (ad es. 10115)",
+        "emoji": "Il codice postale non può contenere emoji",
+        "es": "Inserisci un codice postale spagnolo valido (ad es. 28001)",
+        "fr": "Inserisci un codice postale francese valido (ad es. 75001)",
+        "gb": "Inserisci un codice postale britannico valido (ad es. SW1A 1AA)",
+        "generic": "Inserisci un codice postale valido",
+        "in": "Inserisci un codice postale indiano valido (ad es. 110001)",
+        "it": "Inserisci un codice postale italiano valido (ad es. 00118)",
+        "jp": "Inserisci un codice postale giapponese valido (ad es. 123-4567)",
+        "nl": "Inserisci un codice postale olandese valido (ad es. 1234AB)",
+        "onlySpaces": "Il codice postale non può contenere solo spazi",
+        "us": "Inserisci un codice ZIP valido (ad es. 12345 o 12345-6789)",
+        "usShort": "Inserisci un codice ZIP valido"
+      },
+      "industry": {
+        "invalidCharacters": "Il settore contiene caratteri non validi",
+        "noLetters": "Il settore deve contenere lettere",
+        "tooLong": "Il settore non può superare i 100 caratteri",
+        "tooShort": "Il settore deve contenere almeno 2 caratteri",
+        "tooShortText": "Il settore deve contenere almeno 2 caratteri di testo"
+      },
+      "role": {
+        "noAlphanumeric": "Il ruolo deve contenere lettere o numeri",
+        "onlySpaces": "Il ruolo non può contenere solo spazi",
+        "tooLong": "Il ruolo non può superare i 100 caratteri"
+      },
+      "notes": {
+        "tooLong": "Le note non possono superare i 2000 caratteri"
+      },
+      "companySize": {
+        "emoji": "Le dimensioni dell'azienda non possono contenere emoji",
+        "invalid": "Inserisci dimensioni aziendali valide (ad es. \"50\", \"10-50\", \"cinquecento\", \"2,5 Mln\", \"piccola\", \"grande impresa\")",
+        "tooLong": "Le dimensioni dell'azienda non possono superare i 50 caratteri"
+      },
+      "annualRevenue": {
+        "emoji": "Il fatturato annuo non può contenere emoji",
+        "invalid": "Inserisci un fatturato annuo valido (ad es. \"1.000.000 €\", \"cinque milioni\", \"2,5 Mln\", \"10-50 Mln\", \"non divulgato\")",
+        "tooLong": "Il fatturato annuo non può superare i 50 caratteri"
+      }
     }
   },
   "commentThread": {

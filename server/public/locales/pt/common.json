@@ -528,7 +528,72 @@
         "sequentialDigits": "Este número percorre o teclado em sequência.",
         "fictionalRange": "Está na faixa 555-0100 reservada para ficção."
       },
-      "dismissWarning": "Dispensar"
+      "dismissWarning": "Dispensar",
+      "address": {
+        "emoji": "O endereço não pode conter emojis",
+        "empty": "O endereço não pode estar vazio",
+        "invalidCharacters": "O endereço contém caracteres inválidos",
+        "noLetters": "O endereço deve conter letras",
+        "tooLong": "O endereço não pode ter mais de 100 caracteres"
+      },
+      "city": {
+        "emoji": "O nome da cidade não pode conter emojis",
+        "empty": "O nome da cidade não pode estar vazio",
+        "invalidCharacters": "O nome da cidade contém caracteres inválidos",
+        "noLetters": "O nome da cidade deve conter letras",
+        "tooLong": "O nome da cidade não pode ter mais de 100 caracteres"
+      },
+      "stateProvince": {
+        "emoji": "O estado/província não pode conter emojis",
+        "empty": "O estado/província não pode estar vazio",
+        "invalidCharacters": "O estado/província contém caracteres inválidos",
+        "noLetters": "O estado/província deve conter letras",
+        "tooLong": "O estado/província não pode ter mais de 100 caracteres"
+      },
+      "postalCode": {
+        "au": "Informe um código postal australiano válido (por exemplo, 2000)",
+        "br": "Informe um CEP brasileiro válido (por exemplo, 01234-567)",
+        "ca": "Informe um código postal canadense válido (por exemplo, K1A 0A6)",
+        "ch": "Informe um código postal suíço válido (por exemplo, 8001)",
+        "de": "Informe um código postal alemão válido (por exemplo, 10115)",
+        "emoji": "O código postal não pode conter emojis",
+        "es": "Informe um código postal espanhol válido (por exemplo, 28001)",
+        "fr": "Informe um código postal francês válido (por exemplo, 75001)",
+        "gb": "Informe um código postal britânico válido (por exemplo, SW1A 1AA)",
+        "generic": "Informe um código postal válido",
+        "in": "Informe um código postal indiano válido (por exemplo, 110001)",
+        "it": "Informe um código postal italiano válido (por exemplo, 00118)",
+        "jp": "Informe um código postal japonês válido (por exemplo, 123-4567)",
+        "nl": "Informe um código postal holandês válido (por exemplo, 1234AB)",
+        "onlySpaces": "O código postal não pode conter apenas espaços",
+        "us": "Informe um código ZIP válido (por exemplo, 12345 ou 12345-6789)",
+        "usShort": "Informe um código ZIP válido"
+      },
+      "industry": {
+        "invalidCharacters": "O ramo de atividade contém caracteres inválidos",
+        "noLetters": "O ramo de atividade deve conter letras",
+        "tooLong": "O ramo de atividade não pode ter mais de 100 caracteres",
+        "tooShort": "O ramo de atividade deve ter pelo menos 2 caracteres",
+        "tooShortText": "O ramo de atividade deve conter pelo menos 2 caracteres de texto"
+      },
+      "role": {
+        "noAlphanumeric": "A função deve conter letras ou números",
+        "onlySpaces": "A função não pode conter apenas espaços",
+        "tooLong": "A função não pode ter mais de 100 caracteres"
+      },
+      "notes": {
+        "tooLong": "As notas não podem ter mais de 2000 caracteres"
+      },
+      "companySize": {
+        "emoji": "O tamanho da empresa não pode conter emojis",
+        "invalid": "Informe um tamanho de empresa válido (por exemplo, \"50\", \"10-50\", \"quinhentos\", \"2,5 mi\", \"pequena\", \"grande empresa\")",
+        "tooLong": "O tamanho da empresa não pode ter mais de 50 caracteres"
+      },
+      "annualRevenue": {
+        "emoji": "A receita anual não pode conter emojis",
+        "invalid": "Informe uma receita anual válida (por exemplo, \"R$ 1.000.000\", \"cinco milhões\", \"2,5 mi\", \"10 mi-50 mi\", \"não divulgado\")",
+        "tooLong": "A receita anual não pode ter mais de 50 caracteres"
+      }
     }
   },
   "commentThread": {

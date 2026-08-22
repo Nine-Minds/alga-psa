@@ -397,7 +397,72 @@
         "sequentialDigits": "Diese Nummer läuft gerade auf- oder absteigend durch.",
         "fictionalRange": "Das liegt im Bereich 555-0100, der für Fiktion reserviert ist."
       },
-      "dismissWarning": "Ausblenden"
+      "dismissWarning": "Ausblenden",
+      "address": {
+        "emoji": "Adresse darf keine Emojis enthalten",
+        "empty": "Adresse darf nicht leer sein",
+        "invalidCharacters": "Adresse enthält ungültige Zeichen",
+        "noLetters": "Adresse muss Buchstaben enthalten",
+        "tooLong": "Adresse darf höchstens 100 Zeichen lang sein"
+      },
+      "city": {
+        "emoji": "Ortsname darf keine Emojis enthalten",
+        "empty": "Ortsname darf nicht leer sein",
+        "invalidCharacters": "Ortsname enthält ungültige Zeichen",
+        "noLetters": "Ortsname muss Buchstaben enthalten",
+        "tooLong": "Ortsname darf höchstens 100 Zeichen lang sein"
+      },
+      "stateProvince": {
+        "emoji": "Bundesland/Provinz darf keine Emojis enthalten",
+        "empty": "Bundesland/Provinz darf nicht leer sein",
+        "invalidCharacters": "Bundesland/Provinz enthält ungültige Zeichen",
+        "noLetters": "Bundesland/Provinz muss Buchstaben enthalten",
+        "tooLong": "Bundesland/Provinz darf höchstens 100 Zeichen lang sein"
+      },
+      "postalCode": {
+        "au": "Bitte geben Sie eine gültige australische Postleitzahl ein (z. B. 2000)",
+        "br": "Bitte geben Sie eine gültige brasilianische Postleitzahl ein (z. B. 01234-567)",
+        "ca": "Bitte geben Sie eine gültige kanadische Postleitzahl ein (z. B. K1A 0A6)",
+        "ch": "Bitte geben Sie eine gültige Schweizer Postleitzahl ein (z. B. 8001)",
+        "de": "Bitte geben Sie eine gültige deutsche Postleitzahl ein (z. B. 10115)",
+        "emoji": "Postleitzahl darf keine Emojis enthalten",
+        "es": "Bitte geben Sie eine gültige spanische Postleitzahl ein (z. B. 28001)",
+        "fr": "Bitte geben Sie eine gültige französische Postleitzahl ein (z. B. 75001)",
+        "gb": "Bitte geben Sie eine gültige britische Postleitzahl ein (z. B. SW1A 1AA)",
+        "generic": "Bitte geben Sie eine gültige Postleitzahl ein",
+        "in": "Bitte geben Sie eine gültige indische Postleitzahl ein (z. B. 110001)",
+        "it": "Bitte geben Sie eine gültige italienische Postleitzahl ein (z. B. 00118)",
+        "jp": "Bitte geben Sie eine gültige japanische Postleitzahl ein (z. B. 123-4567)",
+        "nl": "Bitte geben Sie eine gültige niederländische Postleitzahl ein (z. B. 1234AB)",
+        "onlySpaces": "Postleitzahl darf nicht nur aus Leerzeichen bestehen",
+        "us": "Bitte geben Sie einen gültigen ZIP-Code ein (z. B. 12345 oder 12345-6789)",
+        "usShort": "Bitte geben Sie einen gültigen ZIP-Code ein"
+      },
+      "industry": {
+        "invalidCharacters": "Branche enthält ungültige Zeichen",
+        "noLetters": "Branche muss Buchstaben enthalten",
+        "tooLong": "Branche darf höchstens 100 Zeichen lang sein",
+        "tooShort": "Branche muss mindestens 2 Zeichen lang sein",
+        "tooShortText": "Branche muss mindestens 2 Textzeichen enthalten"
+      },
+      "role": {
+        "noAlphanumeric": "Rolle muss Buchstaben oder Ziffern enthalten",
+        "onlySpaces": "Rolle darf nicht nur aus Leerzeichen bestehen",
+        "tooLong": "Rolle darf höchstens 100 Zeichen lang sein"
+      },
+      "notes": {
+        "tooLong": "Notizen dürfen höchstens 2000 Zeichen lang sein"
+      },
+      "companySize": {
+        "emoji": "Unternehmensgröße darf keine Emojis enthalten",
+        "invalid": "Bitte geben Sie eine gültige Unternehmensgröße ein (z. B. \"50\", \"10-50\", \"fünfhundert\", \"2,5 Mio.\", \"klein\", \"Konzern\")",
+        "tooLong": "Unternehmensgröße darf höchstens 50 Zeichen lang sein"
+      },
+      "annualRevenue": {
+        "emoji": "Jahresumsatz darf keine Emojis enthalten",
+        "invalid": "Bitte geben Sie einen gültigen Jahresumsatz ein (z. B. \"1.000.000 €\", \"fünf Millionen\", \"2,5 Mio.\", \"10-50 Mio.\", \"keine Angabe\")",
+        "tooLong": "Jahresumsatz darf höchstens 50 Zeichen lang sein"
+      }
     }
   },
   "commentThread": {

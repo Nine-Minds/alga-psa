@@ -397,7 +397,72 @@
         "sequentialDigits": "Dit nummer loopt recht op of af over het toetsenblok.",
         "fictionalRange": "Dit valt in het bereik 555-0100 dat voor fictie is gereserveerd."
       },
-      "dismissWarning": "Sluiten"
+      "dismissWarning": "Sluiten",
+      "address": {
+        "emoji": "Adres mag geen emoji's bevatten",
+        "empty": "Adres mag niet leeg zijn",
+        "invalidCharacters": "Adres bevat ongeldige tekens",
+        "noLetters": "Adres moet letters bevatten",
+        "tooLong": "Adres mag maximaal 100 tekens bevatten"
+      },
+      "city": {
+        "emoji": "Plaatsnaam mag geen emoji's bevatten",
+        "empty": "Plaatsnaam mag niet leeg zijn",
+        "invalidCharacters": "Plaatsnaam bevat ongeldige tekens",
+        "noLetters": "Plaatsnaam moet letters bevatten",
+        "tooLong": "Plaatsnaam mag maximaal 100 tekens bevatten"
+      },
+      "stateProvince": {
+        "emoji": "Staat/provincie mag geen emoji's bevatten",
+        "empty": "Staat/provincie mag niet leeg zijn",
+        "invalidCharacters": "Staat/provincie bevat ongeldige tekens",
+        "noLetters": "Staat/provincie moet letters bevatten",
+        "tooLong": "Staat/provincie mag maximaal 100 tekens bevatten"
+      },
+      "postalCode": {
+        "au": "Voer een geldige Australische postcode in (bijv. 2000)",
+        "br": "Voer een geldige Braziliaanse postcode in (bijv. 01234-567)",
+        "ca": "Voer een geldige Canadese postcode in (bijv. K1A 0A6)",
+        "ch": "Voer een geldige Zwitserse postcode in (bijv. 8001)",
+        "de": "Voer een geldige Duitse postcode in (bijv. 10115)",
+        "emoji": "Postcode mag geen emoji's bevatten",
+        "es": "Voer een geldige Spaanse postcode in (bijv. 28001)",
+        "fr": "Voer een geldige Franse postcode in (bijv. 75001)",
+        "gb": "Voer een geldige Britse postcode in (bijv. SW1A 1AA)",
+        "generic": "Voer een geldige postcode in",
+        "in": "Voer een geldige Indiase postcode in (bijv. 110001)",
+        "it": "Voer een geldige Italiaanse postcode in (bijv. 00118)",
+        "jp": "Voer een geldige Japanse postcode in (bijv. 123-4567)",
+        "nl": "Voer een geldige Nederlandse postcode in (bijv. 1234AB)",
+        "onlySpaces": "Postcode mag niet alleen spaties bevatten",
+        "us": "Voer een geldige ZIP-code in (bijv. 12345 of 12345-6789)",
+        "usShort": "Voer een geldige ZIP-code in"
+      },
+      "industry": {
+        "invalidCharacters": "Branche bevat ongeldige tekens",
+        "noLetters": "Branche moet letters bevatten",
+        "tooLong": "Branche mag maximaal 100 tekens bevatten",
+        "tooShort": "Branche moet minimaal 2 tekens bevatten",
+        "tooShortText": "Branche moet minimaal 2 teksttekens bevatten"
+      },
+      "role": {
+        "noAlphanumeric": "Functie moet letters of cijfers bevatten",
+        "onlySpaces": "Functie mag niet alleen spaties bevatten",
+        "tooLong": "Functie mag maximaal 100 tekens bevatten"
+      },
+      "notes": {
+        "tooLong": "Notities mogen maximaal 2000 tekens bevatten"
+      },
+      "companySize": {
+        "emoji": "Bedrijfsgrootte mag geen emoji's bevatten",
+        "invalid": "Voer een geldige bedrijfsgrootte in (bijv. \"50\", \"10-50\", \"vijfhonderd\", \"2,5 mln\", \"klein\", \"grootbedrijf\")",
+        "tooLong": "Bedrijfsgrootte mag maximaal 50 tekens bevatten"
+      },
+      "annualRevenue": {
+        "emoji": "Jaaromzet mag geen emoji's bevatten",
+        "invalid": "Voer een geldige jaaromzet in (bijv. \"€ 1.000.000\", \"vijf miljoen\", \"2,5 mln\", \"10 mln-50 mln\", \"niet bekendgemaakt\")",
+        "tooLong": "Jaaromzet mag maximaal 50 tekens bevatten"
+      }
     }
   },
   "commentThread": {

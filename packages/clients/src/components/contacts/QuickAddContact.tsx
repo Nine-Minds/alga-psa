@@ -20,7 +20,7 @@ import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActi
 import {
   validateContactNameField,
   validateEmailAddressField,
-  validateNotes,
+  validateNotesField,
   translateFieldValidation,
   type FieldValidation
 } from '@alga-psa/validation';
@@ -245,7 +245,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           if (/^\s+$/.test(value)) {
             nextError = t('quickAddContact.validation.notesSpaces', { defaultValue: 'Notes cannot contain only spaces' });
           } else {
-            nextError = validateNotes(trimmedValue);
+            nextError = applyField(validateNotesField(trimmedValue));
           }
         }
         break;

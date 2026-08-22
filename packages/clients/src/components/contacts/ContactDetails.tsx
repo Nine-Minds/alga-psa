@@ -26,7 +26,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { updateContact, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { translateFieldValidation, validateContactNameField, validateRole, type FieldValidation } from '@alga-psa/validation';
+import { translateFieldValidation, validateContactNameField, validateRoleField, type FieldValidation } from '@alga-psa/validation';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
@@ -742,7 +742,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               value={editedContact.role || ''}
               onEdit={(value) => handleFieldChange('role', value)}
               automationId="role-field"
-              validate={validateRole}
+              validateField={validateRoleField}
             />
             <div className="space-y-2">
               <Text as="label" size="2" className="text-gray-700 font-medium">{t('contactDetails.fields.inboundTicketDestinationOverride', { defaultValue: 'Inbound ticket destination override' })}</Text>
