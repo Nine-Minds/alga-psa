@@ -27,6 +27,8 @@
     "./extension-utils": "./dist/extension-utils/index.js",
     "./models/clientModel.js": "./dist/models/clientModel.js",
     "./models/contactModel.js": "./dist/models/contactModel.js",
+    "./models/kbArticleModel": "./dist/models/kbArticleModel.js",
+    "./models/kbArticleModel.js": "./dist/models/kbArticleModel.js",
     "./models/scheduleEntry": "./dist/models/scheduleEntry.js",
     "./models/scheduleEntry.js": "./dist/models/scheduleEntry.js",
     "./models/tagModel.js": "./dist/models/tagModel.js",

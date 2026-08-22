@@ -149,6 +149,7 @@ await scheduler.scheduleRecurringJob('daily-report', '0 0 * * *', {});
 | `expiring-credits-notification` | Send expiration notifications | default |
 | `credit-reconciliation` | Reconcile credit balances | default |
 | `asset_import` | Process asset import batches | 10 min |
+| `kb-article-import` | Parse staged KB files into articles | 10 min |
 | `reconcile-bucket-usage` | Reconcile usage records | default |
 | `cleanup-temporary-workflow-forms` | Clean up temporary forms | default |
 | `renew-microsoft-calendar-webhooks` | Renew MS calendar subscriptions | default |

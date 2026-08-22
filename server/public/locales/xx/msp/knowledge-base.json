@@ -288,14 +288,19 @@
     },
     "actions": {
       "import": "11111 {{count}} 11111",
-      "importing": "11111"
+      "importing": "11111",
+      "importingProgress": "11111 {{imported}} 11111 {{total}} 11111"
     },
     "feedback": {
       "unsupportedFileType": "11111 {{fileName}} 11111",
       "permissionDenied": "11111",
       "importSuccess": "11111 {{imported}} 11111 {{total}} 11111",
       "allFailed": "11111",
-      "importError": "11111"
+      "importError": "11111",
+      "fileTooLarge": "11111 {{fileName}} 11111 {{limit}} 11111",
+      "tooManyFiles": "11111 {{limit}} 11111",
+      "batchTooLarge": "11111 {{limit}} 11111",
+      "importTimedOut": "11111"
     },
     "results": {
       "summary": "11111 {{imported}} 11111 {{total}} 11111",

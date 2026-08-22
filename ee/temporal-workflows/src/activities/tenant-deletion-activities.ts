@@ -353,6 +353,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 3: Mid-level entities ===
   // Document-related leaf tables (must come before documents)
   'document_share_access_log', 'document_share_links',
+  // KB import staging rows: a leaf (article_id / job_id are soft refs, no FK), so
+  // it only has to precede tenants. Kept next to kb_articles for readability.
+  'kb_import_files',
   'kb_article_relations', 'kb_article_reviewers', 'kb_article_templates', 'kb_articles',
   'document_default_folders',
   // Document folder templates: items and init rows reference document_folder_templates

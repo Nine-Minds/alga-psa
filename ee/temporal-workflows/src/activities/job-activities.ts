@@ -14,6 +14,10 @@ import type { JobStatus } from '../types/job.js';
 import { registerJobRunnerAccessor } from '@alga-psa/jobs/runner';
 import { TemporalJobRunner } from '@alga-psa/jobs/runners/TemporalJobRunner';
 import { extensionScheduledInvocationHandler } from '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler';
+import {
+  KB_ARTICLE_IMPORT_JOB,
+  kbArticleImportHandler,
+} from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 // rmm/huntress poll + accounting-sync-cycle handlers import src-consumed vertical
@@ -99,6 +103,21 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     throw error;
   }
 
+  // KB article import: the handler's graph is Node-ESM clean (@alga-psa/db,
+  // @alga-psa/shared, marked/htmlparser2), so it runs here rather than being
+  // forwarded — forwarding would put the parse back on a web pod, which is the
+  // whole reason the import moved to a job.
+  try {
+    registerJobHandlerForActivities(KB_ARTICLE_IMPORT_JOB, async (jobId, data) => {
+      return kbArticleImportHandler(jobId, data as any);
+    });
+  } catch (error) {
+    logger.error('Failed to register KB article import handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+
   // RMM/Huntress polling: in EE these recurring jobs arrive as Temporal Schedules
   // that start genericJobWorkflow, which executes whatever is registered here. The
   // handlers import the src-consumed @alga-psa/integrations vertical, which the
@@ -131,6 +150,12 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // recurring sweep-teams-online-meetings maintenance job re-attempts any
   // cancel_pending rows if a forwarded run is lost.
   registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));
+  // Invoice bundling/delivery, enqueued from billing UI actions through the
+  // shared enqueueImmediateJob seam (Temporal on EE). The handlers need
+  // StorageService and PDF generation, so the worker forwards them to the
+  // server like the jobs above.
+  registerJobHandlerForActivities('invoice_zip', forwardJobToServer('invoice_zip'));
+  registerJobHandlerForActivities('invoice_email', forwardJobToServer('invoice_email'));
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
