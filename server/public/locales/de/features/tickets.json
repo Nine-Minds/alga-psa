@@ -354,7 +354,17 @@
     "deleteComment": "Kommentar löschen",
     "deleteCommentImages": "Kommentar + Bilder löschen",
     "deleteCommentOnly": "Nur Kommentar löschen",
-    "clientCommentTooltip": "Für Kunden sichtbarer Kommentar"
+    "clientCommentTooltip": "Für Kunden sichtbarer Kommentar",
+    "cancelScheduledComment": "Geplanten Kommentar abbrechen",
+    "cancelScheduledCommentConfirm": "Diesen geplanten Kommentar abbrechen?",
+    "invalidScheduleTime": "Wählen Sie einen eindeutigen zukünftigen Zeitpunkt in dieser Zeitzone.",
+    "publishAt": "Veröffentlichen am",
+    "publishes": "Veröffentlicht",
+    "reschedule": "Neu planen",
+    "rescheduleComment": "Kommentar neu planen",
+    "resolvedPublishInstant": "Aufgelöster Zeitpunkt",
+    "schedule": "Planen",
+    "scheduled": "Geplant"
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",

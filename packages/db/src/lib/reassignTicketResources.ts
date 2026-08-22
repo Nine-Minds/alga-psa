@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from './tenantDb';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,

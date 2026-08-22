@@ -41,7 +41,9 @@ describe('default-contract observability wiring', () => {
     // re-deriving it from the eligible-line count. Same two markers, but
     // sourced from the signal that also gets persisted, so the log and the
     // stored reason cannot drift apart (F137).
-    expect(source).toContain('decision: attributionDecision.reason === "no_match" ? "no_match" : "ambiguous"');
+    expect(source).toMatch(
+      /decision:\s+attributionDecision\.reason === "no_match" \? "no_match" : "ambiguous"/,
+    );
     expect(source).toContain('"unmatched_resolved_deterministically"');
     expect(source).toContain('"unresolved_ambiguous_count"');
   });

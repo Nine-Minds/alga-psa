@@ -1,6 +1,6 @@
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
-import { logger, registerFeatureFlagChecker, registerJobEnqueuer } from '@alga-psa/core';
+import { logger, registerFeatureFlagChecker, registerJobEnqueuer, registerScheduledJobEnqueuer, registerScheduledJobCanceler } from '@alga-psa/core';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
@@ -166,6 +166,20 @@ export async function initializeApp() {
           : undefined;
       const result = await runner.scheduleJob(jobName, data as never, userId ? { userId } : undefined);
       return { jobId: result.jobId, scheduledJobId: result.externalId ?? null };
+    });
+    // Same seam for future-dated jobs (e.g. scheduled client-visible comment
+    // publication): the tickets package schedules/cancels without importing
+    // @alga-psa/jobs. Backed by the runner registered in initializeJobRunner.
+    registerScheduledJobEnqueuer(async (jobName, data, runAt, options) => {
+      const { getJobRunner } = await import('@alga-psa/jobs/runner');
+      const runner = await getJobRunner();
+      const scheduled = await runner.scheduleJobAt(jobName, data as any, runAt, options);
+      return { jobId: scheduled.jobId as string, scheduledJobId: scheduled.externalId ?? null };
+    });
+    registerScheduledJobCanceler(async (jobId, tenantId) => {
+      const { getJobRunner } = await import('@alga-psa/jobs/runner');
+      const runner = await getJobRunner();
+      return runner.cancelJob(jobId, tenantId);
     });
     // Converge the accounting-sync schedule the moment a tenant connects or
     // disconnects QuickBooks, so connected-only scheduling doesn't wait for the
@@ -455,6 +469,12 @@ async function initializeJobScheduler(storageService: StorageService) {
   try {
     const jobRunner = await initializeJobRunner();
     logger.info(`Job runner initialized: ${jobRunner.getRunnerType()}`);
+    try {
+      const { reconcileScheduledCommentPublications } = await import('./jobs/handlers/publishScheduledCommentHandler');
+      await reconcileScheduledCommentPublications();
+    } catch (error) {
+      logger.error('Failed to reconcile scheduled comment publications:', error);
+    }
 
     if (isEnterprise) {
       try {

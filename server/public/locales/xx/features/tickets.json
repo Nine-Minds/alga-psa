@@ -362,7 +362,17 @@
     "commentEditor": "11111",
     "deleteComment": "11111",
     "deleteCommentImages": "11111",
-    "deleteCommentOnly": "11111"
+    "deleteCommentOnly": "11111",
+    "cancelScheduledComment": "11111",
+    "cancelScheduledCommentConfirm": "11111",
+    "invalidScheduleTime": "11111",
+    "publishAt": "11111",
+    "publishes": "11111",
+    "reschedule": "11111",
+    "rescheduleComment": "11111",
+    "resolvedPublishInstant": "11111",
+    "schedule": "11111",
+    "scheduled": "11111"
   },
   "responseState": {
     "awaitingYourResponse": "11111",

@@ -35,6 +35,7 @@ export default defineConfig({
       { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: path.resolve(__dirname, '../event-schemas/src/$1') },
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/reassignTicketResources$/, replacement: path.resolve(__dirname, '../db/src/lib/reassignTicketResources.ts') },
       { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../formatting/src/$1') },

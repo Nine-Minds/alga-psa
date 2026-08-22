@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
-import ts from 'typescript';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import ts from "typescript";
+import { CURRENCY_OPTIONS } from "@alga-psa/core";
 
 // Hardcoded-currency guard: user-visible money must go through the currency
 // formatters (useCurrencyFormat / formatCurrency / CurrencyInput), which respect
@@ -26,92 +26,100 @@ import { CURRENCY_OPTIONS } from '@alga-psa/core';
 // Every entry in the known list is either a deliberate USD surface (documented
 // why) or a REPORTED GAP to burn down. Counts are exact: fixing a site without
 // lowering the count fails the honesty test, adding one fails the growth test.
-const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> = {
-  'ee/server/src/components/settings/account/AccountManagement.tsx': {
-    count: 15,
-    why: 'deliberate: Nine Minds subscription billing is USD (Stripe)',
-  },
-  'ee/server/src/components/workflow-designer/ActionSchemaReference.tsx': {
-    count: 1,
-    why: 'deliberate: renders expression-language ${path} syntax, not currency',
-  },
-  'ee/server/src/components/workflow-designer/expression-editor/functionDefinitions.ts': {
-    count: 1,
-    why: 'deliberate: builds $functionName tokens for the expression language, not currency',
-  },
-  'ee/server/src/components/workflow-designer/expression-editor/insertionText.ts': {
-    count: 1,
-    why: 'deliberate: "$0" is the snippet cursor placeholder, not currency',
-  },
-  'ee/server/src/lib/scim/credentials.ts': {
-    count: 2,
-    why: 'deliberate: "$" delimits the algorithm/salt/digest fields of the scrypt hash encoding, not currency',
-  },
-  'ee/server/src/services/chatWorkflowRegexTransformGuidance.ts': {
-    count: 1,
-    why: 'deliberate: documents regex replacement tokens ($1, $$), not currency',
-  },
-  'packages/client-portal/src/components/account/ServicesSection.tsx': {
-    count: 3,
-    why: 'REPORTED GAP: sample catalog tiles hardcode USD prices (locale twins in client-portal.json) — product call pending',
-  },
-  'packages/email/src/sendCancellationFeedbackEmail.ts': {
-    count: 2,
-    why: 'deliberate: Nine Minds subscription pricing is USD (Stripe)',
-  },
-  'packages/notifications/src/lib/templateVariables/seed.ts': {
-    count: 10,
-    why: 'deliberate: sample preview values documenting template-variable output',
-  },
-  'packages/validation/src/lib/clientFormValidation.ts': {
-    count: 1,
-    why: 'deliberate: "$1,000,000" is an illustrative example in a validation hint',
-  },
-  'server/src/app/static/master_terms/page.tsx': {
-    count: 1,
-    why: 'deliberate: legal terms — contractual amounts are USD',
-  },
-};
+const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
+  {
+    "ee/server/src/components/settings/account/AccountManagement.tsx": {
+      count: 15,
+      why: "deliberate: Nine Minds subscription billing is USD (Stripe)",
+    },
+    "ee/server/src/components/workflow-designer/ActionSchemaReference.tsx": {
+      count: 1,
+      why: "deliberate: renders expression-language ${path} syntax, not currency",
+    },
+    "ee/server/src/components/workflow-designer/expression-editor/functionDefinitions.ts":
+      {
+        count: 1,
+        why: "deliberate: builds $functionName tokens for the expression language, not currency",
+      },
+    "ee/server/src/components/workflow-designer/expression-editor/insertionText.ts":
+      {
+        count: 1,
+        why: 'deliberate: "$0" is the snippet cursor placeholder, not currency',
+      },
+    "ee/server/src/lib/scim/credentials.ts": {
+      count: 2,
+      why: 'deliberate: "$" delimits the algorithm/salt/digest fields of the scrypt hash encoding, not currency',
+    },
+    "ee/server/src/services/chatWorkflowRegexTransformGuidance.ts": {
+      count: 1,
+      why: "deliberate: documents regex replacement tokens ($1, $$), not currency",
+    },
+    "packages/client-portal/src/components/account/ServicesSection.tsx": {
+      count: 3,
+      why: "REPORTED GAP: sample catalog tiles hardcode USD prices (locale twins in client-portal.json) — product call pending",
+    },
+    "packages/email/src/sendCancellationFeedbackEmail.ts": {
+      count: 2,
+      why: "deliberate: Nine Minds subscription pricing is USD (Stripe)",
+    },
+    "packages/notifications/src/lib/templateVariables/seed.ts": {
+      count: 10,
+      why: "deliberate: sample preview values documenting template-variable output",
+    },
+    "packages/validation/src/lib/clientFormValidation.ts": {
+      count: 1,
+      why: 'deliberate: "$1,000,000" is an illustrative example in a validation hint',
+    },
+    "server/src/app/static/master_terms/page.tsx": {
+      count: 1,
+      why: "deliberate: legal terms — contractual amounts are USD",
+    },
+  };
 
 const KNOWN_LOCALE_HARDCODED: Record<string, string> = {
-  'client-portal.json::account.services.catalog.cloudBackup.price':
-    'REPORTED GAP: sample catalog tile hardcodes USD pricing',
-  'client-portal.json::account.services.catalog.cybersecurity.price':
-    'REPORTED GAP: sample catalog tile hardcodes USD pricing',
-  'client-portal.json::account.services.catalog.managedIt.price':
-    'REPORTED GAP: sample catalog tile hardcodes USD pricing',
+  "client-portal.json::account.services.catalog.cloudBackup.price":
+    "REPORTED GAP: sample catalog tile hardcodes USD pricing",
+  "client-portal.json::account.services.catalog.cybersecurity.price":
+    "REPORTED GAP: sample catalog tile hardcodes USD pricing",
+  "client-portal.json::account.services.catalog.managedIt.price":
+    "REPORTED GAP: sample catalog tile hardcodes USD pricing",
 };
 
-const SOURCE_ROOTS = ['src', '../ee/server/src', '../packages'];
+const SOURCE_ROOTS = ["src", "../ee/server/src", "../packages"];
 
 const SKIP_DIRS = new Set([
-  'node_modules',
-  '.next',
-  '.turbo',
-  'dist',
-  'build',
-  'coverage',
-  '__tests__',
-  '__mocks__',
-  'test',
-  'tests',
-  'migrations',
-  'seeds',
+  "node_modules",
+  ".next",
+  ".turbo",
+  "dist",
+  "build",
+  "coverage",
+  "__tests__",
+  "__mocks__",
+  "test",
+  "tests",
+  "migrations",
+  "seeds",
 ]);
 
 // Config files carry regex-replacement "$1" aliases and can't render user text.
-const SKIP_FILES = [/\.(test|spec)\.(t|j)sx?$/, /\.stories\.(t|j)sx?$/, /\.d\.ts$/, /\.config\.(t|j)s$/];
+const SKIP_FILES = [
+  /\.(test|spec)\.(t|j)sx?$/,
+  /\.stories\.(t|j)sx?$/,
+  /\.d\.ts$/,
+  /\.config\.(t|j)s$/,
+];
 
 const SOURCE_FILE = /\.(t|j)sx?$/;
 
 // The guarded symbol set is derived from the product's own currency list, so
 // adding a currency to CURRENCY_OPTIONS automatically extends this guard
 // (including multi-character symbols like "C$" and "Fr.").
-const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const SYMBOL_ALT = [...new Set(CURRENCY_OPTIONS.map((option) => option.symbol))]
   .sort((a, b) => b.length - a.length)
   .map(escapeRegex)
-  .join('|');
+  .join("|");
 
 // A literal currency amount: a symbol followed by a digit (one optional
 // space). Bare symbols ('¥' in a currency map) are fine; symbol+digit is a
@@ -121,14 +129,16 @@ const AMOUNT = new RegExp(`(?:${SYMBOL_ALT}) ?\\d`);
 // Cheap prefilter so only files that could possibly violate get AST-parsed.
 // symbol+digit catches strings/JSX amounts; "$" before "{" catches both the
 // `$${x}` template shape and the JSX `<span>${x}</span>` shape.
-const CANDIDATE = new RegExp(`(?:${SYMBOL_ALT}) ?\\d|\\$\\$?\\{|(?:${SYMBOL_ALT})\\s*<|['"](?:${SYMBOL_ALT})['"]`);
+const CANDIDATE = new RegExp(
+  `(?:${SYMBOL_ALT}) ?\\d|\\$\\$?\\{|(?:${SYMBOL_ALT})\\s*<|['"](?:${SYMBOL_ALT})['"]`,
+);
 // Exactly one bare currency symbol (an input adornment or symbol fallback).
 const BARE_SYMBOL = new RegExp(`^(?:${SYMBOL_ALT})$`);
 // A template chunk or JSX text ending in a symbol, flowing into an interpolation.
 const SYMBOL_END = new RegExp(`(?:${SYMBOL_ALT})$`);
 const SYMBOL_END_LOOSE = new RegExp(`(?:${SYMBOL_ALT})\\s*$`);
 
-const REPO_ROOT = path.resolve(process.cwd(), '..');
+const REPO_ROOT = path.resolve(process.cwd(), "..");
 
 // LEVERAGE: pattern source-tree-walker — same recursive walker as routeEntryPointCoverage
 function collectSourceFiles(absDir: string, out: string[]): void {
@@ -143,7 +153,10 @@ function collectSourceFiles(absDir: string, out: string[]): void {
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
       collectSourceFiles(abs, out);
-    } else if (SOURCE_FILE.test(entry.name) && !SKIP_FILES.some((skip) => skip.test(entry.name))) {
+    } else if (
+      SOURCE_FILE.test(entry.name) &&
+      !SKIP_FILES.some((skip) => skip.test(entry.name))
+    ) {
       out.push(abs);
     }
   }
@@ -173,7 +186,12 @@ function isReplaceArg(node: ts.Node): boolean {
 function isJsxValueContext(node: ts.Node): boolean {
   for (let p = node.parent; p; p = p.parent) {
     if (ts.isJsxExpression(p) || ts.isJsxAttribute(p)) return true;
-    if (ts.isBinaryExpression(p) || ts.isConditionalExpression(p) || ts.isParenthesizedExpression(p)) continue;
+    if (
+      ts.isBinaryExpression(p) ||
+      ts.isConditionalExpression(p) ||
+      ts.isParenthesizedExpression(p)
+    )
+      continue;
     return false;
   }
   return false;
@@ -187,21 +205,33 @@ function isRegExpArg(node: ts.Node): boolean {
     (ts.isNewExpression(parent) || ts.isCallExpression(parent)) &&
     !!parent.arguments?.includes(node as ts.Expression) &&
     ts.isIdentifier(parent.expression) &&
-    parent.expression.text === 'RegExp'
+    parent.expression.text === "RegExp"
   );
 }
 
 function scanFile(absFile: string, out: Violation[]): void {
-  const text = fs.readFileSync(absFile, 'utf8');
+  const text = fs.readFileSync(absFile, "utf8");
   if (!CANDIDATE.test(text)) return;
 
   const scriptKind = /x$/.test(absFile) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sourceFile = ts.createSourceFile(absFile, text, ts.ScriptTarget.Latest, true, scriptKind);
+  const sourceFile = ts.createSourceFile(
+    absFile,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind,
+  );
   const file = path.relative(REPO_ROOT, absFile);
 
   const record = (node: ts.Node, snippet: string) => {
-    const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
-    out.push({ file, line: line + 1, snippet: snippet.replace(/\s+/g, ' ').trim().slice(0, 60) });
+    const { line } = sourceFile.getLineAndCharacterOfPosition(
+      node.getStart(sourceFile),
+    );
+    out.push({
+      file,
+      line: line + 1,
+      snippet: snippet.replace(/\s+/g, " ").trim().slice(0, 60),
+    });
   };
 
   const visit = (node: ts.Node): void => {
@@ -212,7 +242,10 @@ function scanFile(absFile: string, out: Violation[]): void {
         record(node, `bare '${node.text}' in JSX`);
       }
     } else if (ts.isTemplateExpression(node) && !isRegExpArg(node)) {
-      const chunks = [node.head, ...node.templateSpans.map((span) => span.literal)];
+      const chunks = [
+        node.head,
+        ...node.templateSpans.map((span) => span.literal),
+      ];
       for (const chunk of chunks) {
         if (AMOUNT.test(chunk.text)) {
           record(chunk, chunk.text);
@@ -224,7 +257,8 @@ function scanFile(absFile: string, out: Violation[]): void {
       }
     } else if (ts.isJsxText(node)) {
       if (AMOUNT.test(node.text)) record(node, node.text);
-      else if (BARE_SYMBOL.test(node.text.trim())) record(node, `bare '${node.text.trim()}' adornment`);
+      else if (BARE_SYMBOL.test(node.text.trim()))
+        record(node, `bare '${node.text.trim()}' adornment`);
     } else if (ts.isJsxElement(node) || ts.isJsxFragment(node)) {
       const children = node.children;
       for (let i = 0; i < children.length - 1; i++) {
@@ -265,18 +299,18 @@ function collectViolations(): Map<string, Violation[]> {
 }
 
 function describeFile(file: string, list: Violation[]): string {
-  const lines = list.map((v) => `    L${v.line}: ${v.snippet}`).join('\n');
+  const lines = list.map((v) => `    L${v.line}: ${v.snippet}`).join("\n");
   return `  '${file}': { count: ${list.length}, why: '…' },\n${lines}`;
 }
 
-describe('hardcoded currency (source)', () => {
+describe("hardcoded currency (source)", () => {
   const byFile = collectViolations();
 
   it('no user-visible hardcoded "$" outside the known list', () => {
     // The symbol set derives from the product currency list; if that import
     // ever breaks, every regex here degrades silently.
-    expect(SYMBOL_ALT).toContain('Fr');
-    expect(SYMBOL_ALT).toContain('€');
+    expect(SYMBOL_ALT).toContain("Fr");
+    expect(SYMBOL_ALT).toContain("€");
 
     const offenders = [...byFile.entries()]
       .filter(([file, list]) => {
@@ -289,11 +323,11 @@ describe('hardcoded currency (source)', () => {
       offenders.map(([file]) => file),
       `hardcoded dollar signs in user-visible text — render money through the tenant-aware currency formatters (useCurrencyFormat / formatCurrency) instead. If a surface is deliberately USD, document it in KNOWN_HARDCODED_CURRENCY:\n${offenders
         .map(([file, list]) => describeFile(file, list))
-        .join('\n')}`,
+        .join("\n")}`,
     ).toEqual([]);
   });
 
-  it('known entries stay honest: counts match what is on disk', () => {
+  it("known entries stay honest: counts match what is on disk", () => {
     for (const [file, { count }] of Object.entries(KNOWN_HARDCODED_CURRENCY)) {
       const actual = byFile.get(file)?.length ?? 0;
       expect(
@@ -322,50 +356,55 @@ describe('hardcoded currency (source)', () => {
 const CURRENCY_CODES = new Set(CURRENCY_OPTIONS.map((option) => option.value));
 const LOCALE_LITERAL = /^[a-z]{2,3}(-[A-Z][a-zA-Z]{1,3})*$/;
 
-const KNOWN_HARDCODED_CURRENCY_ARGS: Record<string, { count: number; why: string }> = {
-  'ee/server/src/components/licensing/ReduceLicensesModal.tsx': {
+const KNOWN_HARDCODED_CURRENCY_ARGS: Record<
+  string,
+  { count: number; why: string }
+> = {
+  "ee/server/src/components/licensing/ReduceLicensesModal.tsx": {
     count: 1,
-    why: 'deliberate: Nine Minds subscription billing is USD (Stripe)',
+    why: "deliberate: Nine Minds subscription billing is USD (Stripe)",
   },
-  'ee/server/src/lib/platformReports/platformReportService.ts': {
+  "ee/server/src/lib/platformReports/platformReportService.ts": {
     count: 1,
-    why: 'deliberate: master-tenant internal platform reports render en-US',
+    why: "deliberate: master-tenant internal platform reports render en-US",
   },
-  'packages/billing/src/actions/invoiceGeneration.ts': {
+  "packages/billing/src/actions/invoiceGeneration.ts": {
     count: 1,
-    why: 'deliberate: server log line (PO overage console.warn), not user-visible',
+    why: "deliberate: server log line (PO overage console.warn), not user-visible",
   },
   // Contract-simulator compute engine (landed 2026-07-31): formatCents in
   // each compute module renders calculation-trace/step strings. Correct
   // currency comes from the contract; locale threading through the engine is
   // deferred to the simulator workstream.
-  'ee/server/src/lib/billing/simulator/simulateContractScenario.ts': {
+  "ee/server/src/lib/billing/simulator/loadSimulationCalculationInput.ts": {
     count: 1,
-    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+    why: "simulator invoice-view formatting has no viewer locale; stable fallback until locale threading lands",
   },
-  'packages/billing/src/lib/billing/compute/computeBucketCharges.ts': {
+  "packages/billing/src/lib/billing/compute/computeBucketCharges.ts": {
     count: 1,
-    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+    why: "simulator compute trace strings; tenant-locale threading deferred to simulator work",
   },
-  'packages/billing/src/lib/billing/compute/computeDiscountsAndAdjustments.ts': {
+  "packages/billing/src/lib/billing/compute/computeDiscountsAndAdjustments.ts":
+    {
+      count: 1,
+      why: "simulator compute trace strings; tenant-locale threading deferred to simulator work",
+    },
+  "packages/billing/src/lib/billing/compute/computeFixedCharges.ts": {
     count: 1,
-    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+    why: "simulator compute trace strings; tenant-locale threading deferred to simulator work",
   },
-  'packages/billing/src/lib/billing/compute/computeFixedCharges.ts': {
+  "packages/billing/src/lib/billing/compute/computeRecurringQuantityCharges.ts":
+    {
+      count: 1,
+      why: "simulator compute trace strings; tenant-locale threading deferred to simulator work",
+    },
+  "packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts": {
     count: 1,
-    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+    why: "simulator compute trace strings; tenant-locale threading deferred to simulator work",
   },
-  'packages/billing/src/lib/billing/compute/computeRecurringQuantityCharges.ts': {
+  "packages/billing/src/lib/billing/compute/computeUsageBasedCharges.ts": {
     count: 1,
-    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
-  },
-  'packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts': {
-    count: 1,
-    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
-  },
-  'packages/billing/src/lib/billing/compute/computeUsageBasedCharges.ts': {
-    count: 1,
-    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+    why: "simulator compute trace strings; tenant-locale threading deferred to simulator work",
   },
 };
 
@@ -380,24 +419,27 @@ function calleeName(expr: ts.Expression): string | null {
 function isIntlNumberFormat(expr: ts.Expression): boolean {
   return (
     ts.isPropertyAccessExpression(expr) &&
-    expr.name.text === 'NumberFormat' &&
+    expr.name.text === "NumberFormat" &&
     ts.isIdentifier(expr.expression) &&
-    expr.expression.text === 'Intl'
+    expr.expression.text === "Intl"
   );
 }
 
 // An options object formats MONEY when it says so: style: 'currency' or a
 // `currency:` property. Plain toLocaleString date options never match.
-function moneyOptions(args: readonly ts.Expression[] | undefined): ts.ObjectLiteralExpression | null {
+function moneyOptions(
+  args: readonly ts.Expression[] | undefined,
+): ts.ObjectLiteralExpression | null {
   for (const arg of args ?? []) {
     if (!ts.isObjectLiteralExpression(arg)) continue;
     for (const prop of arg.properties) {
-      if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
-      if (prop.name.text === 'currency') return arg;
+      if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name))
+        continue;
+      if (prop.name.text === "currency") return arg;
       if (
-        prop.name.text === 'style' &&
+        prop.name.text === "style" &&
         ts.isStringLiteral(prop.initializer) &&
-        prop.initializer.text === 'currency'
+        prop.initializer.text === "currency"
       ) {
         return arg;
       }
@@ -407,15 +449,23 @@ function moneyOptions(args: readonly ts.Expression[] | undefined): ts.ObjectLite
 }
 
 function scanFileArgs(absFile: string, out: Violation[]): void {
-  const text = fs.readFileSync(absFile, 'utf8');
+  const text = fs.readFileSync(absFile, "utf8");
   if (!ARG_CANDIDATE.test(text)) return;
 
   const scriptKind = /x$/.test(absFile) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sourceFile = ts.createSourceFile(absFile, text, ts.ScriptTarget.Latest, true, scriptKind);
+  const sourceFile = ts.createSourceFile(
+    absFile,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind,
+  );
   const file = path.relative(REPO_ROOT, absFile);
 
   const record = (node: ts.Node, snippet: string) => {
-    const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+    const { line } = sourceFile.getLineAndCharacterOfPosition(
+      node.getStart(sourceFile),
+    );
     out.push({ file, line: line + 1, snippet });
   };
 
@@ -430,11 +480,14 @@ function scanFileArgs(absFile: string, out: Violation[]): void {
       if (
         ts.isPropertyAssignment(prop) &&
         ts.isIdentifier(prop.name) &&
-        prop.name.text === 'currency' &&
+        prop.name.text === "currency" &&
         ts.isStringLiteral(prop.initializer) &&
         CURRENCY_CODES.has(prop.initializer.text)
       ) {
-        record(prop.initializer, `hardcoded currency '${prop.initializer.text}'`);
+        record(
+          prop.initializer,
+          `hardcoded currency '${prop.initializer.text}'`,
+        );
       }
     }
   };
@@ -451,10 +504,16 @@ function scanFileArgs(absFile: string, out: Violation[]): void {
             record(arg, `hardcoded locale '${arg.text}' in ${name}(…)`);
           }
         }
-      } else if (isIntlNumberFormat(node.expression) || name === 'toLocaleString') {
+      } else if (
+        isIntlNumberFormat(node.expression) ||
+        name === "toLocaleString"
+      ) {
         flagMoneyCall(node);
       }
-    } else if (ts.isNewExpression(node) && isIntlNumberFormat(node.expression)) {
+    } else if (
+      ts.isNewExpression(node) &&
+      isIntlNumberFormat(node.expression)
+    ) {
       flagMoneyCall(node);
     }
     ts.forEachChild(node, visit);
@@ -480,10 +539,10 @@ function collectArgViolations(): Map<string, Violation[]> {
   return byFile;
 }
 
-describe('hardcoded currency codes and locales (formatter arguments)', () => {
+describe("hardcoded currency codes and locales (formatter arguments)", () => {
   const byFile = collectArgViolations();
 
-  it('no hardcoded currency code or locale in money formatting outside the known list', () => {
+  it("no hardcoded currency code or locale in money formatting outside the known list", () => {
     const offenders = [...byFile.entries()]
       .filter(([file, list]) => {
         const known = KNOWN_HARDCODED_CURRENCY_ARGS[file];
@@ -495,12 +554,14 @@ describe('hardcoded currency codes and locales (formatter arguments)', () => {
       offenders.map(([file]) => file),
       `money formatted with hardcoded currency codes or locales — take both from the tenant (useCurrencyFormat().money / the caller's locale) instead. If a surface is deliberately fixed, document it in KNOWN_HARDCODED_CURRENCY_ARGS:\n${offenders
         .map(([file, list]) => describeFile(file, list))
-        .join('\n')}`,
+        .join("\n")}`,
     ).toEqual([]);
   });
 
-  it('known argument entries stay honest: counts match what is on disk', () => {
-    for (const [file, { count }] of Object.entries(KNOWN_HARDCODED_CURRENCY_ARGS)) {
+  it("known argument entries stay honest: counts match what is on disk", () => {
+    for (const [file, { count }] of Object.entries(
+      KNOWN_HARDCODED_CURRENCY_ARGS,
+    )) {
       const actual = byFile.get(file)?.length ?? 0;
       expect(
         actual,
@@ -512,7 +573,7 @@ describe('hardcoded currency codes and locales (formatter arguments)', () => {
   });
 });
 
-const LOCALES_ROOT = path.resolve(process.cwd(), 'public/locales');
+const LOCALES_ROOT = path.resolve(process.cwd(), "public/locales");
 
 // Locale keys are namespace-relative (no locale segment), so one entry covers
 // en and every translation of the same string.
@@ -525,8 +586,13 @@ function collectLocaleViolations(): Map<string, Set<string>> {
     return hits;
   }
 
-  const walkJson = (value: unknown, jsonPath: string, nsPath: string, locale: string) => {
-    if (typeof value === 'string') {
+  const walkJson = (
+    value: unknown,
+    jsonPath: string,
+    nsPath: string,
+    locale: string,
+  ) => {
+    if (typeof value === "string") {
       if (AMOUNT.test(value)) {
         const key = `${nsPath}::${jsonPath}`;
         const set = hits.get(key) ?? new Set<string>();
@@ -535,7 +601,7 @@ function collectLocaleViolations(): Map<string, Set<string>> {
       }
       return;
     }
-    if (value && typeof value === 'object') {
+    if (value && typeof value === "object") {
       for (const [k, v] of Object.entries(value)) {
         walkJson(v, jsonPath ? `${jsonPath}.${k}` : k, nsPath, locale);
       }
@@ -550,31 +616,38 @@ function collectLocaleViolations(): Map<string, Set<string>> {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const abs = path.join(dir, entry.name);
         if (entry.isDirectory()) collectJson(abs);
-        else if (entry.name.endsWith('.json')) files.push(abs);
+        else if (entry.name.endsWith(".json")) files.push(abs);
       }
     };
     collectJson(localeDir);
     for (const file of files) {
       const nsPath = path.relative(localeDir, file);
-      walkJson(JSON.parse(fs.readFileSync(file, 'utf8')), '', nsPath, locale.name);
+      walkJson(
+        JSON.parse(fs.readFileSync(file, "utf8")),
+        "",
+        nsPath,
+        locale.name,
+      );
     }
   }
   return hits;
 }
 
-describe('hardcoded currency (locale files)', () => {
+describe("hardcoded currency (locale files)", () => {
   const hits = collectLocaleViolations();
 
   it('no translation string hardcodes "$" outside the known list', () => {
-    const offenders = [...hits.keys()].filter((key) => !(key in KNOWN_LOCALE_HARDCODED)).sort();
+    const offenders = [...hits.keys()]
+      .filter((key) => !(key in KNOWN_LOCALE_HARDCODED))
+      .sort();
 
     expect(
       offenders,
-      `locale strings containing hardcoded dollar amounts — interpolate a formatted value ({{amount}}) instead, or document the key in KNOWN_LOCALE_HARDCODED: ${offenders.join(', ')}`,
+      `locale strings containing hardcoded dollar amounts — interpolate a formatted value ({{amount}}) instead, or document the key in KNOWN_LOCALE_HARDCODED: ${offenders.join(", ")}`,
     ).toEqual([]);
   });
 
-  it('known locale entries stay honest', () => {
+  it("known locale entries stay honest", () => {
     for (const key of Object.keys(KNOWN_LOCALE_HARDCODED)) {
       expect(
         hits.has(key),

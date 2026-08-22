@@ -53,4 +53,15 @@ export interface IComment extends TenantEntity {
   markdown_content?: string;
   metadata?: CommentMetadata | null;
   response_source?: CommentResponseSource;
+  /** Client-visible comments may be withheld until their scheduled UTC instant. */
+  publish_state?: 'published' | 'scheduled' | 'canceled';
+  scheduled_publish_at?: string | null;
+  scheduled_publish_tz?: string | null;
+  published_at?: string | null;
+  schedule_job_id?: string | null;
+  scheduled_publish_event_id?: string | null;
+  scheduled_publish_dispatched_at?: string | null;
+  scheduled_response_event_id?: string | null;
+  scheduled_previous_response_state?: string | null;
+  scheduled_response_dispatched_at?: string | null;
 }
