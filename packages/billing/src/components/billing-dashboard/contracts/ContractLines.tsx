@@ -1504,7 +1504,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                             </p>
                                           </div>
                                           {serviceConfig.configuration.configuration_type !== 'Hourly' && (
-                                            <Badge className="bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] border-[rgb(var(--color-primary-200))]">
+                                            <Badge className="chip-primary border-[rgb(var(--color-primary-200))]">
                                               {t('contractLines.services.quantityShort', {
                                                 defaultValue: 'Qty: {{quantity}}',
                                                 quantity: isEditing

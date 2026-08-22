@@ -382,7 +382,7 @@ export default function ClientTaskListView({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-base font-semibold text-gray-900">{phase.phase_name}</span>
                             {showTasks && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
+                              <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded text-xs font-medium">
                                 {totalTasks} {totalTasks === 1 ? t('task', 'task') : t('tasks.title', 'tasks').toLowerCase()}
                               </span>
                             )}

@@ -27,7 +27,7 @@ export const highlightSearchMatch = (
     testRegex.test(part) ? (
       <mark
         key={index}
-        className="bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))] rounded px-0.5"
+        className="chip-primary rounded px-0.5"
       >
         {part}
       </mark>

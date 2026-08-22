@@ -202,7 +202,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
     <div
       id={searchAnchorId}
       data-automation-id={commentId}
-      className={`group/comment rounded-lg p-2 mb-2 shadow-sm border bg-white dark:bg-[rgb(var(--color-card))] ${
+      className={`group/comment rounded-lg p-2 mb-2 card-elevated border bg-[rgb(var(--color-card))] ${
         isSearchHighlighted
           ? 'search-highlight border-yellow-400 bg-yellow-50'
           : 'border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))]'

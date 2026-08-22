@@ -20,15 +20,15 @@ const StatusBadge: React.FC<{ status: string; label: string }> = ({ status, labe
   const statusConfig = {
     completed: {
       icon: CheckCircle2,
-      className: 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] border border-[rgb(var(--color-primary-200))]'
+      className: 'chip-primary border border-[rgb(var(--color-primary-200))]'
     },
     failed: {
       icon: XCircle,
-      className: 'bg-[rgb(var(--color-accent-50))] text-[rgb(var(--color-accent-600))] border border-[rgb(var(--color-accent-200))]'
+      className: 'chip-accent border border-[rgb(var(--color-accent-200))]'
     },
     processing: {
       icon: Activity,
-      className: 'bg-[rgb(var(--color-secondary-50))] text-[rgb(var(--color-secondary-600))] border border-[rgb(var(--color-secondary-200))]'
+      className: 'chip-secondary border border-[rgb(var(--color-secondary-200))]'
     },
     pending: {
       icon: Clock,

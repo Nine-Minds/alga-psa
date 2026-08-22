@@ -124,7 +124,7 @@ function TaskCard({
   );
 
   return (
-    <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] p-3 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-[rgb(var(--color-card))] rounded-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] p-3 transition-shadow card-elevated card-elevated-hover">
       {/* Task Name with Priority */}
       {visibleFields.includes('task_name') && task.task_name && (
         <div className="flex items-start gap-2 mb-2">

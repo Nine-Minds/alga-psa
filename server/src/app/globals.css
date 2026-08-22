@@ -132,6 +132,22 @@ html .radix-themes {
 /* The ground the app shell paints behind the cards. Both modes use the pair's
    muted neutral step: cards still lift off it, while the pt-2/px-3 gutter around
    the content reads as part of the shell instead of a near-black gap. */
+/* Shared card elevation. Use instead of Tailwind's shadow-* on any surface that
+   should read as lifted off the page — this scale is theme-aware, shadow-* is not. */
+.card-elevated {
+    box-shadow: var(--shadow-card);
+}
+
+.card-elevated-hover:hover {
+    box-shadow: var(--shadow-card-hover);
+}
+
+/* High contrast states elevation with its hard border; a shadow there is noise. */
+html[data-theme-pair="high-contrast"] .card-elevated,
+html[data-theme-pair="high-contrast"] .card-elevated-hover:hover {
+    box-shadow: none;
+}
+
 .app-shell-ground {
     background-color: rgb(var(--color-app-ground));
 }
@@ -148,6 +164,35 @@ html .radix-themes {
 .skeleton-fill-strong {
     background-color: rgb(var(--color-skeleton-strong));
 }
+
+/* Tinted chips — badges, pills, status tags.
+   The fill carries the semantics, the lettering does not repeat it. Brand-on-brand
+   ink bottomed out at 1.5:1 (high-contrast dark, where the family ramps compress to
+   grey) and at 3.7:1 on `dark:bg-primary-900`, which is a *light* rung once the ramp
+   inverts. Alpha over the family composites against whatever surface is behind it,
+   and text-900 flips with the mode — so one rule holds in all 18 pair/mode combos
+   with no `dark:` variant. */
+.chip-primary,
+.chip-secondary,
+.chip-accent,
+.chip-neutral,
+.chip-danger {
+    color: rgb(var(--color-text-900));
+}
+
+.chip-primary   { background-color: rgb(var(--color-primary-500) / 0.14); box-shadow: inset 0 0 0 1px rgb(var(--color-primary-500) / 0.32); }
+.chip-secondary { background-color: rgb(var(--color-secondary-500) / 0.14); box-shadow: inset 0 0 0 1px rgb(var(--color-secondary-500) / 0.32); }
+.chip-accent    { background-color: rgb(var(--color-accent-500) / 0.14); box-shadow: inset 0 0 0 1px rgb(var(--color-accent-500) / 0.32); }
+.chip-neutral   { background-color: rgb(var(--color-text-500) / 0.14); box-shadow: inset 0 0 0 1px rgb(var(--color-text-500) / 0.32); }
+.chip-danger    { background-color: rgb(var(--color-destructive) / 0.14); box-shadow: inset 0 0 0 1px rgb(var(--color-destructive) / 0.32); }
+
+/* High contrast flattens primary/secondary to grey, so a 14% tint reads as nothing.
+   Shape moves to a solid rule and the fill goes up just enough to stay a surface. */
+html[data-theme-pair="high-contrast"] .chip-primary   { background-color: rgb(var(--color-primary-500) / 0.22); box-shadow: inset 0 0 0 1px rgb(var(--color-primary-500)); }
+html[data-theme-pair="high-contrast"] .chip-secondary { background-color: rgb(var(--color-secondary-500) / 0.22); box-shadow: inset 0 0 0 1px rgb(var(--color-secondary-500)); }
+html[data-theme-pair="high-contrast"] .chip-accent    { background-color: rgb(var(--color-accent-500) / 0.22); box-shadow: inset 0 0 0 1px rgb(var(--color-accent-500)); }
+html[data-theme-pair="high-contrast"] .chip-neutral   { background-color: rgb(var(--color-text-500) / 0.22); box-shadow: inset 0 0 0 1px rgb(var(--color-text-500)); }
+html[data-theme-pair="high-contrast"] .chip-danger    { background-color: rgb(var(--color-destructive) / 0.22); box-shadow: inset 0 0 0 1px rgb(var(--color-destructive)); }
 
 .dark .bg-white {
     background-color: rgb(var(--color-card)) !important;
@@ -406,6 +451,15 @@ html.dark {
     --background: 12, 10, 24;
     --color-background: 12 10 24;    /* #0c0a18 — site --background */
     --color-card: 30 24 54;          /* #1e1836 — site --accent, the shell's content surface */
+    /* Dark needs far more alpha for the same apparent lift: the ground is already
+       near-black, so a 5% shadow has nothing left to darken. */
+    --shadow-card: 0 1px 3px rgb(0 0 0 / 0.5), 0 4px 12px -2px rgb(0 0 0 / 0.4);
+    /* Same cap, inverted ramp: lighter at the top, settling to the panel below. */
+    --keycap-face: linear-gradient(180deg, rgb(var(--color-border-300)), rgb(var(--color-border-100)));
+    --keycap-flat: rgb(var(--color-border-200));
+    --keycap-edge: rgb(var(--color-border-400));
+    --keycap-gloss: rgb(255 255 255 / 0.07);
+    --shadow-card-hover: 0 2px 6px rgb(0 0 0 / 0.55), 0 10px 24px -6px rgb(0 0 0 / 0.5);
     /* Shell ground: the surface the cards sit on. border-50, not border-100 —
        in dark the card is only ~3 luma off border-100 (2.9 on ocean, 3.3 on
        sunset, and slate is inverted at -11.8), so cards had no fill separation
@@ -456,11 +510,11 @@ html.dark {
 
     /* STATUS COLORS */
     --color-status-success: 16 185 129; /* #10b981 */
-    --color-status-success-foreground: 255 255 255;
+    --color-status-success-foreground: 15 23 42;
     --color-status-warning: 245 158 11; /* #f59e0b */
-    --color-status-warning-foreground: 255 255 255;
+    --color-status-warning-foreground: 15 23 42;
     --color-status-error: 239 68 68;    /* #ef4444 */
-    --color-status-error-foreground: 255 255 255;
+    --color-status-error-foreground: 15 23 42;
 
     /* BORDER COLOR */
     /* Border ramp, retuned 2026-08-21. Measured against --color-card, the dark
@@ -592,6 +646,20 @@ html.light {
     --color-card: 255 255 255;
     /* Shell ground: the neutral step the shell has always worn under white cards. */
     --color-app-ground: var(--color-border-100);
+    /* Card elevation. Tailwind's shadow-sm is 5% black — fine over white, and
+       effectively invisible over a dark ground, which is why dark cards read as
+       flat stickers. Defined per mode so both carry the same apparent lift. */
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05), 0 2px 8px -2px rgb(0 0 0 / 0.08);
+    /* Keycaps on the shortcuts cheatsheet. A physical cap is lit from above, so
+       the face runs light-to-dark — which means it cannot be one expression for
+       both modes: the ramp inverts. Hardcoding #fff here ran white -> near-black
+       in dark while the label colour correctly inverted to light, leaving glaring
+       caps with invisible letters. */
+    --keycap-face: linear-gradient(180deg, #ffffff, rgb(var(--color-border-100)));
+    --keycap-flat: #ffffff;
+    --keycap-edge: rgb(var(--color-border-300));
+    --keycap-gloss: rgb(255 255 255 / 0.5);
+    --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.06), 0 6px 16px -4px rgb(0 0 0 / 0.12);
     /* Loading placeholders, one step below the border so they read as a fill. */
     --color-skeleton: var(--color-border-200);
     --color-skeleton-strong: var(--color-border-300);
@@ -654,7 +722,7 @@ html.light {
     --color-text-200: 226 232 240;
     --color-text-300: 203 213 225;
     --color-text-400: 148 163 184;
-    --color-text-500: 100 116 139;
+    --color-text-500: 97 112 134;
     --color-text-600: 71 85 105;
     --color-text-700: 51 65 85;
     --color-text-800: 30 41 59;
@@ -795,7 +863,7 @@ html.light[data-theme-pair="slate"] {
     --color-text-200: 226 228 232;
     --color-text-300: 213 216 222;
     --color-text-400: 185 190 199;
-    --color-text-500: 107 114 128;
+    --color-text-500: 102 109 122;
     --color-text-600: 75 85 99;
     --color-text-700: 55 65 81;
     --color-text-800: 31 41 55;
@@ -900,11 +968,11 @@ html.dark[data-theme-pair="slate"] {
 
     /* STATUS COLORS — muted for dark backgrounds */
     --color-status-success: 74 190 120; /* muted green */
-    --color-status-success-foreground: 255 255 255;
+    --color-status-success-foreground: 15 23 42;
     --color-status-warning: 235 180 50; /* bright amber */
-    --color-status-warning-foreground: 255 255 255;
+    --color-status-warning-foreground: 15 23 42;
     --color-status-error: 210 100 100; /* muted red */
-    --color-status-error-foreground: 255 255 255;
+    --color-status-error-foreground: 15 23 42;
 
     /* BORDER COLOR */
     --color-border-base: 100 116 139;
@@ -1030,7 +1098,7 @@ html.light[data-theme-pair="ocean"] {
     --color-status-warning: 217 119 6;
     --color-status-warning-foreground: 16 24 40;
     --color-status-error: 220 38 38;
-    --color-status-error-foreground: 16 24 40;
+    --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
     --color-border-base: 152 162 179;
@@ -1052,7 +1120,7 @@ html.light[data-theme-pair="ocean"] {
     --color-text-200: 208 213 221;
     --color-text-300: 180 188 200;
     --color-text-400: 152 162 179;
-    --color-text-500: 102 112 133;
+    --color-text-500: 92 101 120;
     --color-text-600: 52 64 84;
     --color-text-700: 40 51 69;
     --color-text-800: 28 37 55;
@@ -1137,11 +1205,11 @@ html.dark[data-theme-pair="ocean"] {
 
     /* STATUS COLORS */
     --color-status-success: 16 185 129;
-    --color-status-success-foreground: 255 255 255;
+    --color-status-success-foreground: 15 23 42;
     --color-status-warning: 245 158 11;
-    --color-status-warning-foreground: 255 255 255;
+    --color-status-warning-foreground: 15 23 42;
     --color-status-error: 239 68 68;
-    --color-status-error-foreground: 255 255 255;
+    --color-status-error-foreground: 15 23 42;
 
     /* BORDER COLOR */
     --color-border-base: 51 68 95;
@@ -1248,11 +1316,11 @@ html.light[data-theme-pair="sky"] {
 
     /* STATUS COLORS */
     --color-status-success: 22 163 74;
-    --color-status-success-foreground: 8 47 73;
+    --color-status-success-foreground: 15 23 42;
     --color-status-warning: 217 119 6;
-    --color-status-warning-foreground: 8 47 73;
+    --color-status-warning-foreground: 15 23 42;
     --color-status-error: 220 38 38;
-    --color-status-error-foreground: 8 47 73;
+    --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
     --color-border-base: 125 195 232;
@@ -1274,7 +1342,7 @@ html.light[data-theme-pair="sky"] {
     --color-text-200: 199 232 248;
     --color-text-300: 162 214 240;
     --color-text-400: 125 195 232;
-    --color-text-500: 84 117 138;
+    --color-text-500: 79 109 129;
     --color-text-600: 54 95 120;
     --color-text-700: 39 79 104;
     --color-text-800: 23 63 89;
@@ -1359,11 +1427,11 @@ html.dark[data-theme-pair="sky"] {
 
     /* STATUS COLORS */
     --color-status-success: 16 185 129;
-    --color-status-success-foreground: 255 255 255;
+    --color-status-success-foreground: 15 23 42;
     --color-status-warning: 245 158 11;
-    --color-status-warning-foreground: 255 255 255;
+    --color-status-warning-foreground: 15 23 42;
     --color-status-error: 239 68 68;
-    --color-status-error-foreground: 255 255 255;
+    --color-status-error-foreground: 15 23 42;
 
     /* BORDER COLOR */
     --color-border-base: 37 103 124;
@@ -1474,7 +1542,7 @@ html.light[data-theme-pair="forest"] {
     --color-status-warning: 245 158 11;
     --color-status-warning-foreground: 19 28 22;
     --color-status-error: 220 38 38;
-    --color-status-error-foreground: 19 28 22;
+    --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
     --color-border-base: 183 203 188;
@@ -1496,7 +1564,7 @@ html.light[data-theme-pair="forest"] {
     --color-text-200: 213 226 216;
     --color-text-300: 196 213 200;
     --color-text-400: 183 203 188;
-    --color-text-500: 107 127 112;
+    --color-text-500: 93 110 97;
     --color-text-600: 77 97 82;
     --color-text-700: 53 71 58;
     --color-text-800: 35 48 38;
@@ -1581,11 +1649,11 @@ html.dark[data-theme-pair="forest"] {
 
     /* STATUS COLORS */
     --color-status-success: 20 184 166;
-    --color-status-success-foreground: 255 255 255;
+    --color-status-success-foreground: 15 23 42;
     --color-status-warning: 245 158 11;
-    --color-status-warning-foreground: 255 255 255;
+    --color-status-warning-foreground: 15 23 42;
     --color-status-error: 239 68 68;
-    --color-status-error-foreground: 255 255 255;
+    --color-status-error-foreground: 15 23 42;
 
     /* BORDER COLOR */
     --color-border-base: 51 81 60;
@@ -1607,7 +1675,7 @@ html.dark[data-theme-pair="forest"] {
     --color-text-200: 30 50 38;
     --color-text-300: 40 64 47;
     --color-text-400: 51 81 60;
-    --color-text-500: 107 130 114;
+    --color-text-500: 114 138 121;
     --color-text-600: 147 171 155;
     --color-text-700: 194 216 201;
     --color-text-800: 213 232 218;
@@ -1696,7 +1764,7 @@ html.light[data-theme-pair="sunset"] {
     --color-status-warning: 245 158 11;
     --color-status-warning-foreground: 28 25 23;
     --color-status-error: 220 38 38;
-    --color-status-error-foreground: 28 25 23;
+    --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
     --color-border-base: 205 187 156;
@@ -1718,8 +1786,8 @@ html.light[data-theme-pair="sunset"] {
     --color-text-200: 232 220 200;
     --color-text-300: 219 203 178;
     --color-text-400: 205 187 156;
-    --color-text-500: 139 125 109;
-    --color-text-600: 120 113 108;
+    --color-text-500: 116 104 91;
+    --color-text-600: 101 93 84;
     --color-text-700: 87 83 78;
     --color-text-800: 68 64 60;
     --color-text-900: 28 25 23;
@@ -1803,11 +1871,11 @@ html.dark[data-theme-pair="sunset"] {
 
     /* STATUS COLORS */
     --color-status-success: 16 185 129;
-    --color-status-success-foreground: 255 255 255;
+    --color-status-success-foreground: 15 23 42;
     --color-status-warning: 245 158 11;
-    --color-status-warning-foreground: 255 255 255;
+    --color-status-warning-foreground: 15 23 42;
     --color-status-error: 239 68 68;
-    --color-status-error-foreground: 255 255 255;
+    --color-status-error-foreground: 15 23 42;
 
     /* BORDER COLOR */
     --color-border-base: 110 72 38;
@@ -1829,7 +1897,7 @@ html.dark[data-theme-pair="sunset"] {
     --color-text-200: 74 47 23;
     --color-text-300: 92 59 30;
     --color-text-400: 110 72 38;
-    --color-text-500: 125 106 92;
+    --color-text-500: 147 125 108;
     --color-text-600: 168 147 131;
     --color-text-700: 221 204 188;
     --color-text-800: 235 224 213;
@@ -2190,7 +2258,7 @@ html.light[data-theme-pair="cappuccino"] {
     --color-status-warning: 217 130 27;
     --color-status-warning-foreground: 33 26 20;
     --color-status-error: 220 38 38;
-    --color-status-error-foreground: 33 26 20;
+    --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
     --color-border-base: 195 169 136;
@@ -2212,7 +2280,7 @@ html.light[data-theme-pair="cappuccino"] {
     --color-text-200: 231 217 201;
     --color-text-300: 217 198 177;
     --color-text-400: 195 169 136;
-    --color-text-500: 125 106 91;
+    --color-text-500: 121 103 88;
     --color-text-600: 94 79 67;
     --color-text-700: 69 57 47;
     --color-text-800: 48 39 31;
@@ -2297,11 +2365,11 @@ html.dark[data-theme-pair="cappuccino"] {
 
     /* STATUS COLORS */
     --color-status-success: 16 185 129;
-    --color-status-success-foreground: 255 255 255;
+    --color-status-success-foreground: 15 23 42;
     --color-status-warning: 245 158 11;
-    --color-status-warning-foreground: 255 255 255;
+    --color-status-warning-foreground: 15 23 42;
     --color-status-error: 239 68 68;
-    --color-status-error-foreground: 255 255 255;
+    --color-status-error-foreground: 15 23 42;
 
     /* BORDER COLOR */
     --color-border-base: 93 69 47;
@@ -2412,7 +2480,7 @@ html.light[data-theme-pair="vice"] {
     --color-status-warning: 234 88 12;
     --color-status-warning-foreground: 33 23 34;
     --color-status-error: 220 38 38;
-    --color-status-error-foreground: 33 23 34;
+    --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
     --color-border-base: 209 148 191;
