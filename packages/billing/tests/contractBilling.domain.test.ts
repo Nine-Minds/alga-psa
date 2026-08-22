@@ -5,7 +5,6 @@ import {
   assertLiveContractBillingResult,
   calculateContractBilling,
   calculateContractCharge,
-  findContractChargeExplanation,
   type ContractBillingCalculationInput,
   type ResolvedContractChargeObligation,
 } from "../src/lib/billing/domain";
@@ -272,24 +271,17 @@ describe("shared contract charge-family dispatcher", () => {
     expect(simulator).not.toContain("timeChargeExplanationKey");
   });
 
-  it("owns explanation association for every supported charge family", () => {
-    const cases = [
-      ["fixed", { config_id: "fixed", serviceId: "svc" }, "fixed:svc"],
-      ["hourly", { config_id: "hourly", serviceId: "svc", entryId: "entry" }, "hourly:svc:entry"],
-      ["usage", { config_id: "usage", serviceId: "svc", usageId: "usage" }, "usage:svc:usage"],
-      ["bucket", { config_id: "bucket", serviceId: "svc", servicePeriodStart: "2026-08-01", servicePeriodEnd: "2026-08-31" }, "bucket:svc:2026-08-01:2026-08-31"],
-      ["product", { config_id: "product", serviceId: "svc" }, "product:svc"],
-      ["license", { config_id: "license", serviceId: "svc" }, "license:svc"],
-    ] as const;
-    for (const [kind, charge, chargeKey] of cases) {
-      const explanation = { chargeKey, steps: [], markers: [] };
-      expect(
-        findContractChargeExplanation(
-          kind,
-          { type: kind === "hourly" ? "time" : kind, serviceName: "Service", rate: 0, total: 0, tax_amount: 0, tax_rate: 0, rolled_over_minutes: 0, ...charge } as never,
-          [explanation],
-        ),
-      ).toBe(explanation);
-    }
+  it("carries calculation-owned charge/explanation associations", () => {
+    const result = calculateContractCharge(
+      fixedObligation("simulate") as Extract<
+        ResolvedContractChargeObligation,
+        { kind: "fixed" }
+      >,
+    );
+    expect(result.chargeExplanations).toHaveLength(result.charges.length);
+    expect(result.chargeExplanations[0]).toEqual({
+      charge: result.charges[0],
+      explanation: result.explanations[0],
+    });
   });
 });

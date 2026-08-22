@@ -80,7 +80,6 @@ import {
   calculateContractBilling,
   calculateContractCharge,
   calculateContractDiscountsAndAdjustments,
-  findContractChargeExplanation,
 } from "@alga-psa/billing";
 
 interface PeriodAccumulator {
@@ -88,6 +87,19 @@ interface PeriodAccumulator {
   lines: SimulatedInvoiceLine[];
   prorated: boolean;
   lineCycles: Set<string>;
+}
+
+function explanationForCharge(
+  charge: IBillingCharge,
+  associations: Array<{
+    charge: IBillingCharge;
+    explanation: ChargeExplanation | null;
+  }>,
+): ChargeExplanation | null {
+  return (
+    associations.find((association) => association.charge === charge)
+      ?.explanation ?? null
+  );
 }
 
 export async function simulateContractScenario(
@@ -470,7 +482,7 @@ async function simulateRecurringQuantityCharges(
   const priceableServices = quantityServices.filter(hasRecurringQuantityPrice);
   if (priceableServices.length === 0) return;
 
-  const { charges, explanations } = calculateContractCharge({
+  const { charges, chargeExplanations } = calculateContractCharge({
     kind: chargeType,
     executionMode: "simulate",
     inputs: {
@@ -517,12 +529,7 @@ async function simulateRecurringQuantityCharges(
         servicePeriodEnd: charge.servicePeriodEnd,
       },
       currencyCode,
-      explanation: findContractChargeExplanation(
-        chargeType,
-        charge,
-        explanations,
-        clientContractLine.client_contract_line_id,
-      ),
+      explanation: explanationForCharge(charge, chargeExplanations),
     });
   }
 }
@@ -577,7 +584,7 @@ async function simulateBucketCharges(
     });
     bucketStateByService.set(stateKey, state);
 
-    const { charges, explanations } = calculateContractCharge({
+    const { charges, chargeExplanations } = calculateContractCharge({
       kind: "bucket",
       executionMode: "simulate",
       inputs: {
@@ -633,12 +640,7 @@ async function simulateBucketCharges(
           servicePeriodEnd: charge.servicePeriodEnd,
         },
         currencyCode,
-        explanation: findContractChargeExplanation(
-          "bucket",
-          charge,
-          explanations,
-          clientContractLine.client_contract_line_id,
-        ),
+        explanation: explanationForCharge(charge, chargeExplanations),
       });
     }
   }
@@ -709,7 +711,7 @@ async function simulateUsageCharges(
   }
 
   if (usageRecords.length === 0) return;
-  const { charges, explanations } = calculateContractCharge({
+  const { charges, chargeExplanations } = calculateContractCharge({
     kind: "usage",
     executionMode: "simulate",
     inputs: {
@@ -749,12 +751,7 @@ async function simulateUsageCharges(
         servicePeriodEnd: charge.servicePeriodEnd,
       },
       currencyCode,
-      explanation: findContractChargeExplanation(
-        "usage",
-        charge,
-        explanations,
-        clientContractLine.client_contract_line_id,
-      ),
+      explanation: explanationForCharge(charge, chargeExplanations),
     });
   }
 }
@@ -969,7 +966,7 @@ async function simulateFixedCharges(
     timing,
   );
 
-  const { charges, explanations } = calculateContractCharge({
+  const { charges, chargeExplanations } = calculateContractCharge({
     kind: "fixed",
     executionMode: "simulate",
     inputs: {
@@ -997,12 +994,7 @@ async function simulateFixedCharges(
   // nothing.
 
   for (const charge of charges) {
-    const explanation = findContractChargeExplanation(
-      "fixed",
-      charge,
-      explanations,
-      clientContractLine.client_contract_line_id,
-    );
+    const explanation = explanationForCharge(charge, chargeExplanations);
     pushChargeLine({
       accumulator,
       lineKey: line.key,
@@ -1089,7 +1081,7 @@ async function simulateHourlyCharges(
     return;
   }
 
-  const { charges, explanations } = calculateContractCharge({
+  const { charges, chargeExplanations } = calculateContractCharge({
     kind: "hourly",
     executionMode: "simulate",
     inputs: {
@@ -1112,12 +1104,7 @@ async function simulateHourlyCharges(
   });
 
   for (const charge of charges) {
-    const explanation = findContractChargeExplanation(
-      "hourly",
-      charge,
-      explanations,
-      clientContractLine.client_contract_line_id,
-    );
+    const explanation = explanationForCharge(charge, chargeExplanations);
     pushChargeLine({
       accumulator,
       lineKey: line.key,

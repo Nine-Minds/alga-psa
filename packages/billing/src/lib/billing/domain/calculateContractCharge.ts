@@ -1,13 +1,4 @@
-import type {
-  IBillingCharge,
-  ChargeExplanation,
-  IBucketCharge,
-  IFixedPriceCharge,
-  ILicenseCharge,
-  IProductCharge,
-  ITimeBasedCharge,
-  IUsageBasedCharge,
-} from "@alga-psa/types";
+import type { IBillingCharge, ChargeExplanation } from "@alga-psa/types";
 import {
   computeBucketCharges,
   computeDiscountsAndAdjustments,
@@ -66,6 +57,11 @@ export type ResolvedContractChargeObligation = {
 
 export type ContractChargeCalculationResult = {
   executionMode: "simulate" | "live";
+  /** A calculation-owned association; consumers must not reconstruct charge keys. */
+  chargeExplanations: Array<{
+    charge: IBillingCharge;
+    explanation: ChargeExplanation | null;
+  }>;
 } & (
   | ({ kind: "fixed" } & FixedChargeComputeResult)
   | ({ kind: "hourly" } & TimeBasedChargeComputeResult)
@@ -106,30 +102,39 @@ export function calculateContractCharge(
 function calculateContractChargeImpl(
   obligation: ResolvedContractChargeObligation,
 ): ContractChargeCalculationResult {
+  const associate = <T extends { charges: IBillingCharge[]; explanations: ChargeExplanation[] }>(
+    result: T,
+  ) => ({
+    ...result,
+    chargeExplanations: result.charges.map((charge, index) => ({
+      charge,
+      explanation: result.explanations[index] ?? null,
+    })),
+  });
   switch (obligation.kind) {
     case "fixed":
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...computeFixedCharges(obligation.inputs, obligation.taxContext),
+        ...associate(computeFixedCharges(obligation.inputs, obligation.taxContext)),
       };
     case "hourly":
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...computeTimeBasedCharges(obligation.inputs, obligation.taxContext),
+        ...associate(computeTimeBasedCharges(obligation.inputs, obligation.taxContext)),
       };
     case "usage":
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...computeUsageBasedCharges(obligation.inputs, obligation.taxContext),
+        ...associate(computeUsageBasedCharges(obligation.inputs, obligation.taxContext)),
       };
     case "bucket":
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...computeBucketCharges(obligation.inputs, obligation.taxContext),
+        ...associate(computeBucketCharges(obligation.inputs, obligation.taxContext)),
       };
     case "product":
     case "license":
@@ -141,10 +146,10 @@ function calculateContractChargeImpl(
       return {
         kind: obligation.kind,
         executionMode: obligation.executionMode,
-        ...computeRecurringQuantityCharges(
+        ...associate(computeRecurringQuantityCharges(
           obligation.inputs,
           obligation.taxContext,
-        ),
+        )),
       };
   }
 }
@@ -159,46 +164,6 @@ export function calculateContractDiscountsAndAdjustments(
  * Returns the explanation emitted for a calculated charge. Charge-key
  * semantics are part of the calculation contract, not a simulator concern.
  */
-export function findContractChargeExplanation(
-  kind: ResolvedContractChargeObligation["kind"],
-  charge: IBillingCharge,
-  explanations: ChargeExplanation[],
-  fallbackContractLineId?: string,
-): ChargeExplanation | null {
-  const contractLineId =
-    charge.client_contract_line_id ?? fallbackContractLineId ?? "line";
-  let chargeKey: string;
-  switch (kind) {
-    case "fixed": {
-      const fixed = charge as IFixedPriceCharge;
-      chargeKey = `${fixed.config_id ?? contractLineId}:${fixed.serviceId ?? "service"}`;
-      break;
-    }
-    case "hourly": {
-      const hourly = charge as ITimeBasedCharge;
-      chargeKey = `${hourly.config_id ?? contractLineId}:${hourly.serviceId}:${hourly.entryId}`;
-      break;
-    }
-    case "usage": {
-      const usage = charge as IUsageBasedCharge;
-      chargeKey = `${usage.config_id ?? contractLineId}:${usage.serviceId}:${usage.usageId}`;
-      break;
-    }
-    case "bucket": {
-      const bucket = charge as IBucketCharge;
-      chargeKey = `${bucket.config_id}:${bucket.serviceId}:${bucket.servicePeriodStart}:${bucket.servicePeriodEnd}`;
-      break;
-    }
-    case "product":
-    case "license": {
-      const recurring = charge as IProductCharge | ILicenseCharge;
-      chargeKey = `${recurring.config_id ?? contractLineId}:${recurring.serviceId}`;
-      break;
-    }
-  }
-  return explanations.find((explanation) => explanation.chargeKey === chargeKey) ?? null;
-}
-
 export interface CalculatedContractChargeBatch {
   charges: IBillingCharge[];
   explanations: ChargeExplanation[];
