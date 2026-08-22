@@ -3438,7 +3438,10 @@
         "description": "Capturadas após o fim de cada chamada: o Microsoft Graph publica os registros depois da chamada, portanto isto é histórico e não um fluxo ao vivo.",
         "empty": "Nenhuma chamada capturada ainda.",
         "createTicket": "Criar chamado",
-        "openTicket": "Abrir chamado"
+        "openTicket": "Abrir chamado",
+        "linkTicket": "Vincular a chamado",
+        "selectTicket": "Selecionar um chamado…",
+        "noLinkableTickets": "Nenhum chamado aberto"
       },
       "unmatched": {
         "title": "Chamadas sem atribuição",

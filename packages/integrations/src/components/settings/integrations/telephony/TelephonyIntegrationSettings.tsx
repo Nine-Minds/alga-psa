@@ -5,17 +5,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Phone, PhoneMissed, PhoneIncoming, PhoneOutgoing } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   createTicketFromTelephonyCall,
   getTelephonyOverview,
+  linkTelephonyCallToTicket,
+  listTelephonyLinkableTickets,
   resolveTelephonyCall,
   setTelephonyAutoTicketPolicy,
   setTelephonyProviderEnabled,
 } from '../../../../actions/integrations/telephonyActions';
 import type {
   TelephonyCallSummary,
+  TelephonyLinkableTicket,
   TelephonyOverview,
 } from '../../../../actions/integrations/telephonyActions';
 import { TelephonyPaywallCard } from './TelephonyPaywallCard';
@@ -41,6 +45,9 @@ export function TelephonyIntegrationSettings() {
   const [overview, setOverview] = useState<TelephonyOverview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Call currently showing the ticket picker, and the options loaded for it.
+  const [linkingCallId, setLinkingCallId] = useState<string | null>(null);
+  const [linkableTickets, setLinkableTickets] = useState<TelephonyLinkableTicket[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -104,6 +111,39 @@ export function TelephonyIntegrationSettings() {
       if (!result.success) {
         setError(result.error ?? null);
       }
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openTicketPicker = async (call: TelephonyCallSummary) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await listTelephonyLinkableTickets({ callRecordId: call.callRecordId });
+      if (!result.success) {
+        setError(result.error ?? null);
+        return;
+      }
+      setLinkableTickets(result.tickets);
+      setLinkingCallId(call.callRecordId);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const linkToTicket = async (call: TelephonyCallSummary, ticketId: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await linkTelephonyCallToTicket({ callRecordId: call.callRecordId, ticketId });
+      if (!result.success) {
+        setError(result.error ?? null);
+        return;
+      }
+      setLinkingCallId(null);
+      setLinkableTickets([]);
       await load();
     } finally {
       setBusy(false);
@@ -246,15 +286,44 @@ export function TelephonyIntegrationSettings() {
                       {t('integrations.telephony.recentCalls.openTicket', { defaultValue: 'Open ticket' })}
                     </a>
                   ) : call.matchedClientId ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => void createTicket(call)}
-                      id={`telephony-call-create-ticket-${call.callRecordId}`}
-                    >
-                      {t('integrations.telephony.recentCalls.createTicket', { defaultValue: 'Create ticket' })}
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => void createTicket(call)}
+                        id={`telephony-call-create-ticket-${call.callRecordId}`}
+                      >
+                        {t('integrations.telephony.recentCalls.createTicket', { defaultValue: 'Create ticket' })}
+                      </Button>
+                      {linkingCallId === call.callRecordId ? (
+                        <CustomSelect
+                          id={`telephony-call-ticket-picker-${call.callRecordId}`}
+                          value={null}
+                          disabled={busy}
+                          options={linkableTickets.map((ticket) => ({
+                            value: ticket.ticketId,
+                            label: `#${ticket.ticketNumber ?? ''} ${ticket.title}`.trim(),
+                          }))}
+                          placeholder={
+                            linkableTickets.length === 0
+                              ? t('integrations.telephony.recentCalls.noLinkableTickets', { defaultValue: 'No open tickets' })
+                              : t('integrations.telephony.recentCalls.selectTicket', { defaultValue: 'Select a ticket…' })
+                          }
+                          onValueChange={(ticketId) => void linkToTicket(call, ticketId)}
+                        />
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => void openTicketPicker(call)}
+                          id={`telephony-call-link-ticket-${call.callRecordId}`}
+                        >
+                          {t('integrations.telephony.recentCalls.linkTicket', { defaultValue: 'Link to ticket' })}
+                        </Button>
+                      )}
+                    </>
                   ) : null}
                 </li>
               ))}

@@ -39,7 +39,7 @@
   {"id":"T038","commitGroup":"teams-cdr","implemented":true,"featureIds":["F040"],"description":"Teams CDR fixture maps to canonical: PSTN caller extracted, direction inbound, duration computed"},
   {"id":"T039","commitGroup":"teams-cdr","implemented":false,"featureIds":["F041"],"description":"End-to-end (emulator): seed call-record → webhook → job → call record + interaction rows exist"},
   {"id":"T040","commitGroup":"teams-cdr","implemented":true,"featureIds":["F042"],"description":"Unanswered CDR fixture maps to direction='missed'"},
-  {"id":"T041","commitGroup":"ticket-linkage","implemented":false,"featureIds":["F043"],"description":"Link-to-ticket sets interactions.ticket_id and appears on the ticket activity"},
+  {"id":"T041","commitGroup":"ticket-linkage","implemented":true,"featureIds":["F043"],"description":"Link-to-ticket sets interactions.ticket_id and appears on the ticket activity"},
   {"id":"T042","commitGroup":"ticket-linkage","implemented":true,"featureIds":["F044"],"description":"Create-ticket-from-call: attribution, defaults (board/status/priority) applied; ticket visible with call linked"},
   {"id":"T043","commitGroup":"ticket-linkage","implemented":false,"featureIds":["F046"],"description":"Auto-ticket policy on: matched inbound call yields ticket; policy off: no ticket"},
   {"id":"T044","commitGroup":"ticket-linkage","implemented":false,"featureIds":["F047"],"description":"User without ticket create permission gets denied on create-from-call (and link honors update permission)"},

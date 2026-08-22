@@ -57,6 +57,7 @@ export {
   createTicketFromTelephonyCall,
   getTelephonyOverview,
   linkTelephonyCallToTicket,
+  listTelephonyLinkableTickets,
   resolveTelephonyCall,
   setTelephonyAutoTicketPolicy,
   setTelephonyProviderEnabled,

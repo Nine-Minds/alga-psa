@@ -3438,7 +3438,10 @@
         "description": "Capturés après la fin de chaque appel : Microsoft Graph publie les enregistrements après coup, il s'agit donc d'un historique et non d'un flux en direct.",
         "empty": "Aucun appel capturé pour l'instant.",
         "createTicket": "Créer un ticket",
-        "openTicket": "Ouvrir le ticket"
+        "openTicket": "Ouvrir le ticket",
+        "linkTicket": "Associer à un ticket",
+        "selectTicket": "Sélectionner un ticket…",
+        "noLinkableTickets": "Aucun ticket ouvert"
       },
       "unmatched": {
         "title": "Appels à attribuer",

@@ -3438,7 +3438,10 @@
         "description": "Se capturan al terminar cada llamada: Microsoft Graph publica los registros después de la llamada, por lo que esto es un historial y no un flujo en vivo.",
         "empty": "Todavía no se ha capturado ninguna llamada.",
         "createTicket": "Crear ticket",
-        "openTicket": "Abrir ticket"
+        "openTicket": "Abrir ticket",
+        "linkTicket": "Vincular a ticket",
+        "selectTicket": "Seleccionar un ticket…",
+        "noLinkableTickets": "No hay tickets abiertos"
       },
       "unmatched": {
         "title": "Llamadas pendientes de atribución",

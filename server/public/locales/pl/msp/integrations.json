@@ -3438,7 +3438,10 @@
         "description": "Rejestrowane po zakończeniu rozmowy — Microsoft Graph publikuje rekordy połączeń dopiero potem, więc to historia, a nie podgląd na żywo.",
         "empty": "Nie zarejestrowano jeszcze żadnej rozmowy.",
         "createTicket": "Utwórz zgłoszenie",
-        "openTicket": "Otwórz zgłoszenie"
+        "openTicket": "Otwórz zgłoszenie",
+        "linkTicket": "Powiąż ze zgłoszeniem",
+        "selectTicket": "Wybierz zgłoszenie…",
+        "noLinkableTickets": "Brak otwartych zgłoszeń"
       },
       "unmatched": {
         "title": "Rozmowy wymagające przypisania",

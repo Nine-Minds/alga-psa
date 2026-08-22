@@ -3438,7 +3438,10 @@
         "description": "Vastgelegd na afloop van elk gesprek: Microsoft Graph publiceert gespreksrecords pas daarna, dus dit is geschiedenis en geen live overzicht.",
         "empty": "Nog geen gesprekken vastgelegd.",
         "createTicket": "Ticket aanmaken",
-        "openTicket": "Ticket openen"
+        "openTicket": "Ticket openen",
+        "linkTicket": "Aan ticket koppelen",
+        "selectTicket": "Selecteer een ticket…",
+        "noLinkableTickets": "Geen open tickets"
       },
       "unmatched": {
         "title": "Gesprekken zonder toewijzing",

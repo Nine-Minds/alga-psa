@@ -3438,7 +3438,10 @@
         "description": "Wird nach Gesprächsende erfasst — Microsoft Graph veröffentlicht Anrufdatensätze erst danach, dies ist also ein Verlauf und kein Live-Feed.",
         "empty": "Noch keine Anrufe erfasst.",
         "createTicket": "Ticket erstellen",
-        "openTicket": "Ticket öffnen"
+        "openTicket": "Ticket öffnen",
+        "linkTicket": "Mit Ticket verknüpfen",
+        "selectTicket": "Ticket auswählen…",
+        "noLinkableTickets": "Keine offenen Tickets"
       },
       "unmatched": {
         "title": "Anrufe ohne Zuordnung",

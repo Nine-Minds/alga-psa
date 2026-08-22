@@ -3438,7 +3438,10 @@
         "description": "Captured after each call ends — Microsoft Graph publishes call records post-call, so this is history rather than a live feed.",
         "empty": "No calls captured yet.",
         "createTicket": "Create ticket",
-        "openTicket": "Open ticket"
+        "openTicket": "Open ticket",
+        "linkTicket": "Link to ticket",
+        "selectTicket": "Select a ticket…",
+        "noLinkableTickets": "No open tickets"
       },
       "unmatched": {
         "title": "Calls needing attribution",

@@ -3438,7 +3438,10 @@
         "description": "Acquisite al termine di ogni chiamata: Microsoft Graph pubblica i record dopo la chiamata, quindi questa è una cronologia e non un flusso in tempo reale.",
         "empty": "Nessuna chiamata acquisita finora.",
         "createTicket": "Crea ticket",
-        "openTicket": "Apri ticket"
+        "openTicket": "Apri ticket",
+        "linkTicket": "Collega a ticket",
+        "selectTicket": "Seleziona un ticket…",
+        "noLinkableTickets": "Nessun ticket aperto"
       },
       "unmatched": {
         "title": "Chiamate da attribuire",

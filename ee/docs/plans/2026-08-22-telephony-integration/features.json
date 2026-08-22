@@ -41,7 +41,7 @@
   {"id":"F040","commitGroup":"teams-cdr","implemented":true,"prdRefs":["Canonical call model"],"description":"Teams CDR → CanonicalCallRecord mapping: direction from organizer/participants, PSTN numbers extracted, duration from start/end"},
   {"id":"F041","commitGroup":"teams-cdr","implemented":true,"prdRefs":["Flow 1"],"description":"Notification handler resolves tenant from clientState, fetches CDR, calls ingestCanonicalCall"},
   {"id":"F042","commitGroup":"teams-cdr","implemented":true,"prdRefs":["Risks#1"],"description":"Missed/unanswered calls mapped with direction='missed' when CDR indicates no answer"},
-  {"id":"F043","commitGroup":"ticket-linkage","implemented":false,"prdRefs":["Flow 2"],"description":"'Link to ticket' action on call interactions: ticket picker sets interactions.ticket_id"},
+  {"id":"F043","commitGroup":"ticket-linkage","implemented":true,"prdRefs":["Flow 2"],"description":"'Link to ticket' action on call interactions: ticket picker sets interactions.ticket_id"},
   {"id":"F044","commitGroup":"ticket-linkage","implemented":true,"prdRefs":["Flow 2"],"description":"'Create ticket from call' action: prefilled title/description, matched client/contact attribution, board/status/priority via defaults resolver"},
   {"id":"F045","commitGroup":"ticket-linkage","implemented":true,"prdRefs":["Flow 2"],"description":"Created/linked ticket back-stamps telephony_call_records.interaction_id chain and shows call on ticket activity"},
   {"id":"F046","commitGroup":"ticket-linkage","implemented":true,"prdRefs":["Flow 2"],"description":"Per-tenant auto-ticket policy toggle (off by default) creating tickets for matched inbound calls"},

@@ -36,6 +36,13 @@ export interface TelephonyCallSummary {
   candidates: Array<{ contactId?: string | null; clientId?: string | null; contactName?: string | null }>;
 }
 
+export interface TelephonyLinkableTicket {
+  ticketId: string;
+  ticketNumber: string | null;
+  title: string;
+  statusName: string | null;
+}
+
 export interface TelephonyOverview {
   success: boolean;
   error?: string;
@@ -255,6 +262,59 @@ export const resolveTelephonyCall = withAuth(async (
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
+});
+
+/**
+ * Tickets a captured call can be filed against. Scoped to the call's matched
+ * client so the picker cannot cross client boundaries, and to open tickets so
+ * it does not grow unbounded on long-lived tenants.
+ */
+export const listTelephonyLinkableTickets = withAuth(async (
+  user,
+  { tenant },
+  input: { callRecordId: string },
+): Promise<{ success: boolean; error?: string; tickets: TelephonyLinkableTicket[] }> => {
+  const availability = resolveTelephonyAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return { success: false, error: availability.message, tickets: [] };
+  }
+
+  const { knex } = await createTenantKnex(tenant);
+  if (!(await hasPermission(user as any, 'ticket', 'read', knex))) {
+    return { success: false, error: 'Permission denied: Cannot read tickets', tickets: [] };
+  }
+
+  const db = tenantDb(knex, tenant);
+  const record = await db.table('telephony_call_records')
+    .where({ call_record_id: input.callRecordId })
+    .first('matched_client_id');
+
+  if (!record) {
+    return { success: false, error: 'Call not found.', tickets: [] };
+  }
+  if (!record.matched_client_id) {
+    return { success: false, error: 'Resolve this call to a contact or client before linking it to a ticket.', tickets: [] };
+  }
+
+  const query = db.table('tickets as t');
+  db.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+
+  const rows = await query
+    .where('t.client_id', record.matched_client_id)
+    .andWhere((builder: any) => builder.where('s.is_closed', false).orWhereNull('s.is_closed'))
+    .select('t.ticket_id', 't.ticket_number', 't.title', 's.name as status_name')
+    .orderBy('t.entered_at', 'desc')
+    .limit(50);
+
+  return {
+    success: true,
+    tickets: rows.map((row: any) => ({
+      ticketId: row.ticket_id,
+      ticketNumber: row.ticket_number ?? null,
+      title: row.title ?? '',
+      statusName: row.status_name ?? null,
+    })),
+  };
 });
 
 export const linkTelephonyCallToTicket = withAuth(async (
