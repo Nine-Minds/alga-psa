@@ -354,7 +354,7 @@ export default function TicketDetailsContainer({
 
   return (
     <UnsavedChangesProvider>
-      <div className="bg-gray-100 dark:bg-gray-900 min-h-screen p-4">
+      <div className="bg-[rgb(var(--color-app-ground))] min-h-screen p-4">
         <Suspense fallback={<TicketDetailsSkeleton />}>
           {shouldEnableTicketLiveUpdates && liveCurrentUser ? (
             <TicketLiveProvider

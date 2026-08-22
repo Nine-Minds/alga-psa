@@ -3352,8 +3352,8 @@ const handleClose = () => {
 
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
-            <div className="bg-gray-100 dark:bg-gray-900">
-                <div className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-900 py-2 flex gap-3">
+            <div className="bg-[rgb(var(--color-app-ground))]">
+                <div className="sticky top-0 z-10 bg-[rgb(var(--color-app-ground))] py-2 flex gap-3">
                     {!isInDrawer && (
                         <div className="flex-shrink-0 self-start">
                             <BackNav href="/msp/tickets"><span className="text-right">← {t('navigation.backTo', 'Back to')}<br />{t('navigation.tickets', 'Tickets')} </span></BackNav>
