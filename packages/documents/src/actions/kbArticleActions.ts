@@ -1087,6 +1087,9 @@ export interface IArticleImportStatus extends IImportResult {
 /** Job name is inlined: a vertical package must not import @alga-psa/jobs. */
 const KB_ARTICLE_IMPORT_JOB = 'kb-article-import';
 
+/** How long an unconsumed staging row may keep its file content. */
+const KB_IMPORT_STAGING_TTL_MS = 24 * 60 * 60 * 1000;
+
 function importFileExtension(filename: string): string {
   const match = /\.[^.]+$/.exec(filename.trim().toLowerCase());
   return match ? match[0] : '';
@@ -1142,6 +1145,16 @@ export const startArticleImport = withAuth(
         );
       }
     }
+
+    // Rows the handler never consumed — a crash between the insert and the
+    // enqueue below — would otherwise keep their file content forever. Swept
+    // opportunistically here; the job itself finishes in minutes, so anything
+    // still pending after a day is abandoned.
+    await tenantScopedTable(knex, 'kb_import_files', tenant)
+      .where('status', 'pending')
+      .where('created_at', '<', new Date(Date.now() - KB_IMPORT_STAGING_TTL_MS))
+      .del()
+      .catch(() => {});
 
     // Rows are written before the job is enqueued so the handler can never win
     // the race and find nothing to import. The batch id is replaced by the job

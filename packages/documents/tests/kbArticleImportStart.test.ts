@@ -6,36 +6,48 @@ interface FakeRow extends Record<string, any> {}
 
 const tables: Record<string, FakeRow[]> = { kb_import_files: [], jobs: [] };
 
-const matches = (row: FakeRow, filter: Record<string, any>): boolean =>
-  Object.entries(filter).every(([key, value]) => row[key] === value);
+type FakePredicate = (row: FakeRow) => boolean;
+
+const matches = (row: FakeRow, predicates: FakePredicate[]): boolean =>
+  predicates.every((predicate) => predicate(row));
 
 const makeQuery = (table: string) => {
-  let filter: Record<string, any> = {};
+  const predicates: FakePredicate[] = [];
   const query: any = {
-    where(criteria: Record<string, any>) {
-      filter = { ...filter, ...criteria };
+    where(criteria: Record<string, any> | string, operatorOrValue?: any, maybeValue?: any) {
+      if (typeof criteria === 'string') {
+        const [operator, value] =
+          maybeValue === undefined ? ['=', operatorOrValue] : [operatorOrValue, maybeValue];
+        predicates.push((row) =>
+          operator === '<' ? row[criteria] < value : row[criteria] === value,
+        );
+      } else {
+        for (const [key, value] of Object.entries(criteria)) {
+          predicates.push((row) => row[key] === value);
+        }
+      }
       return query;
     },
     select() {
       return query;
     },
     orderBy() {
-      return Promise.resolve(tables[table].filter((row) => matches(row, filter)));
+      return Promise.resolve(tables[table].filter((row) => matches(row, predicates)));
     },
     async first() {
-      return tables[table].find((row) => matches(row, filter));
+      return tables[table].find((row) => matches(row, predicates));
     },
     async insert(rows: FakeRow | FakeRow[]) {
       tables[table].push(...(Array.isArray(rows) ? rows : [rows]));
       return rows;
     },
     async update(values: Record<string, any>) {
-      const rows = tables[table].filter((row) => matches(row, filter));
+      const rows = tables[table].filter((row) => matches(row, predicates));
       rows.forEach((row) => Object.assign(row, values));
       return rows.length;
     },
     del() {
-      const remaining = tables[table].filter((row) => !matches(row, filter));
+      const remaining = tables[table].filter((row) => !matches(row, predicates));
       const removed = tables[table].length - remaining.length;
       tables[table] = remaining;
       return Object.assign(Promise.resolve(removed), { catch: () => Promise.resolve(removed) });
@@ -187,6 +199,23 @@ describe('startArticleImport', () => {
       'Job enqueuer has not been registered',
     );
     expect(tables.kb_import_files).toHaveLength(0);
+  });
+
+  it('sweeps abandoned staging rows so file content is never kept forever', async () => {
+    const dayAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
+    tables.kb_import_files = [
+      { tenant: 'tenant-1', job_id: 'old-job', filename: 'orphan.md', content: 'x'.repeat(64), status: 'pending', created_at: dayAgo },
+      { tenant: 'tenant-1', job_id: 'old-job', filename: 'done.md', content: null, status: 'imported', created_at: dayAgo },
+      { tenant: 'tenant-1', job_id: 'recent-job', filename: 'fresh.md', content: 'y', status: 'pending', created_at: new Date() },
+    ];
+
+    await startArticleImport({ files: [file()] });
+
+    expect(tables.kb_import_files.map((row) => row.filename).sort()).toEqual([
+      'done.md',
+      'fresh.md',
+      'printer-guide.md',
+    ]);
   });
 
   it('refuses callers without document create permission', async () => {
