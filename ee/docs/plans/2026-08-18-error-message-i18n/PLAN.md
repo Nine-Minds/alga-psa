@@ -592,12 +592,24 @@ would have discarded the second of those two commits for good.
   The lockfile keeps this branch's workspace-version sync (main's copy still says `@alga-psa/core` 1.4.5
   where its own `package.json` says 1.4.7); the pseudo packs were regenerated rather than merged.
 - **`ee808b432b` was the commit the rebases dropped.** It keyed 81 client/contact validation messages behind
-  an injected `ValidationTranslator`. Fifty-two of those messages no longer exist on this branch: the
-  structural rules moved into the shared Zod schema behind one `*.structural` key per field, and the
-  plausibility rules became advise-layer warnings with new prose. Those are superseded, not discarded.
-  The other 47 — postal code, city, address, state/province, industry, role, notes, company size, annual
-  revenue — were still returning bare English here, and are now keyed as `FieldValidation` with the branch's
-  own structure, translations carried across all eight real locales plus regenerated pseudo.
+  an injected `ValidationTranslator`. Of those 81, **54 now exist under the same key** — 7 were already here
+  (`clientName.required`, `clientName.abbreviationOnly`, `clientName.looksLikeUrl`,
+  `clientName.repeatedCharacters`, `clientName.tooShort`, `contactName.placeholder`, `email.required`) and
+  the other 47 are carried by this reconciliation: postal code (17), city (5), address (5), state/province
+  (5), industry (5), role (3), company size (3), annual revenue (3), notes (1). They were the last
+  validators still returning bare English, and are now keyed `FieldValidation` in this branch's structure,
+  translated across all eight real locales with regenerated pseudo.
+- **The remaining 27 are superseded, not discarded.** `fd55ab3337` split structural rules from plausibility,
+  so `clientName.{invalidCharacters,noAlphanumeric,notMeaningful,tooLong,tooShortMeaningful}` collapse into
+  `clientName.structural` (the Zod message) plus the `emojiOnly` / `noLettersOrNumbers` warnings;
+  `contactName.{invalidCharacters,noLetters,notMeaningful,tooLong}` into `contactName.structural`;
+  `email.{emoji,invalid,invalidDomain,onlySpaces}` into `email.structural`;
+  `phone.{emoji,incomplete,invalid,invalidCharacters,tooLong}` into `phone.structural`; and
+  `websiteUrl.{invalid,invalidWithExample,missingTld,tooLong}` into `url.structural`. Four changed from
+  blocking to advisory on purpose — `email.disposable` → `email.disposableDomain`, `email.testDomain` →
+  `email.reservedDomain` / `email.internalDomain`, `websiteUrl.ipAddress` → `url.ipAddress`,
+  `websiteUrl.notPublic` → `url.internalHost` — because guessing at whether input is *sincere* should warn,
+  not refuse a save.
 - **`validateClientForm` was translating nothing.** It collected `FieldValidation.error`, which is the
   English default, so the submit path rendered English for fields whose blur path was already translated.
   It now takes the same `Translator` the blur path uses.
