@@ -51,6 +51,7 @@ export class KbImportParseTimeoutError extends Error {
 
 const HTML_CHUNK_SIZE = 64 * 1024;
 const MARKDOWN_CHUNK_SIZE = 64 * 1024;
+const INLINE_CHUNK_SIZE = 32 * 1024;
 
 class Deadline {
   private readonly expiresAt: number | null;
@@ -345,7 +346,44 @@ class DeadlineTokenizer extends Tokenizer {
   }
 }
 
-/** Bounds the deferred inline pass, which marked runs once per queued run. */
+/**
+ * Splits one oversized inline run at the latest whitespace inside each window,
+ * falling back to a hard cut when a chunk holds no break at all.
+ */
+function splitInlineChunks(src: string): string[] {
+  const chunks: string[] = [];
+  let offset = 0;
+
+  while (offset < src.length) {
+    let end = offset + INLINE_CHUNK_SIZE;
+    if (end < src.length) {
+      const breakAt = Math.max(
+        src.lastIndexOf('\n', end - 1),
+        src.lastIndexOf(' ', end - 1),
+      );
+      if (breakAt > offset + INLINE_CHUNK_SIZE / 2) end = breakAt + 1;
+    } else {
+      end = src.length;
+    }
+    chunks.push(src.slice(offset, end));
+    offset = end;
+  }
+
+  return chunks;
+}
+
+/**
+ * Bounds the deferred inline pass, which marked runs once per queued run.
+ *
+ * marked masks code spans, reflinks and punctuation up front by rebuilding the
+ * source string once per match — quadratic work that finishes before any
+ * tokenizer hook (and therefore any deadline check) is reached. Inline runs
+ * larger than one chunk are tokenized chunk by chunk instead, the markdown
+ * twin of feeding htmlparser2 in chunks: masking stays bounded per chunk and
+ * the deadline gets a say between them. Consecutive text tokens merge back
+ * together, so only an inline construct straddling a split — inside a single
+ * block already larger than INLINE_CHUNK_SIZE — degrades to literal text.
+ */
 class DeadlineLexer extends Lexer {
   private readonly deadline: Deadline;
 
@@ -356,7 +394,15 @@ class DeadlineLexer extends Lexer {
 
   inlineTokens(src: string, tokens: Token[] = []): Token[] {
     this.deadline.check(true);
-    return super.inlineTokens(src, tokens);
+    if (src.length <= INLINE_CHUNK_SIZE) {
+      return super.inlineTokens(src, tokens);
+    }
+
+    for (const chunk of splitInlineChunks(src)) {
+      this.deadline.check(true);
+      super.inlineTokens(chunk, tokens);
+    }
+    return tokens;
   }
 }
 

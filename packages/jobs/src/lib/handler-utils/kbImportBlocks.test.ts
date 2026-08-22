@@ -243,6 +243,31 @@ describe('kbImportBlocks pathological input stays linear', () => {
     expect(timed(() => markdownToBlocks('[a](b '.repeat(20_000)))).toBeLessThan(PARSE_BUDGET_MS);
   });
 
+  // marked masks code spans / links / punctuation by rebuilding the source once
+  // per match before any tokenizer hook runs. Packed into one block that used to
+  // be quadratic: 977KB of code spans took ~31s, and no deadline could fire.
+  it('parses a single ~1MB block dense with inline constructs', () => {
+    expect(timed(() => markdownToBlocks('`a` '.repeat(250_000)))).toBeLessThan(PARSE_BUDGET_MS);
+    expect(timed(() => markdownToBlocks('<i>x</i> '.repeat(120_000)))).toBeLessThan(PARSE_BUDGET_MS);
+    expect(timed(() => markdownToBlocks('[a](b) '.repeat(150_000)))).toBeLessThan(PARSE_BUDGET_MS);
+  });
+
+  it('scales linearly as one inline-dense block grows', () => {
+    // Code spans with no whitespace to split on: the densest shape we know of,
+    // and the one that grew ~12x per doubling while the inline pass was quadratic.
+    const half = timed(() => markdownToBlocks('`a`'.repeat(42_500)));
+    const full = timed(() => markdownToBlocks('`a`'.repeat(85_000)));
+    expect(full).toBeLessThan(Math.max(half, 20) * 3);
+  });
+
+  it('costs the same whether inline constructs sit in one block or many', () => {
+    const oneBlock = timed(() => markdownToBlocks('`a` '.repeat(125_000)));
+    const manyBlocks = timed(() =>
+      markdownToBlocks(Array.from({ length: 1_250 }, () => '`a` '.repeat(100)).join('\n\n')),
+    );
+    expect(oneBlock).toBeLessThan(Math.max(manyBlocks, 20) * 10);
+  });
+
   it('parses deeply unbalanced HTML tags', () => {
     expect(timed(() => htmlToBlocks('<div>'.repeat(50_000)))).toBeLessThan(PARSE_BUDGET_MS);
     expect(timed(() => htmlToBlocks('<b>a'.repeat(50_000)))).toBeLessThan(PARSE_BUDGET_MS);
@@ -257,6 +282,24 @@ describe('kbImportBlocks pathological input stays linear', () => {
     const markdown = 'word '.repeat(600_000);
     expect(markdown.length).toBeGreaterThan(3_000_000 - 1);
     expect(() => markdownToBlocks(markdown, { maxDurationMs: 1 })).toThrow(KbImportParseTimeoutError);
+  });
+
+  // The deadline has to fire *during* the inline pass, not only once it drains:
+  // these shapes overran a 1s budget by 20-30x before the inline run was chunked.
+  it('enforces the deadline inside a single inline-dense markdown block', () => {
+    for (const markdown of [
+      '`a` '.repeat(250_000),
+      '<i>x</i> '.repeat(120_000),
+      '[a](b) '.repeat(150_000),
+      '`a`'.repeat(340_000),
+    ]) {
+      expect(markdown.length).toBeGreaterThan(900_000);
+      const startedAt = Date.now();
+      expect(() => markdownToBlocks(markdown, { maxDurationMs: 50 })).toThrow(
+        KbImportParseTimeoutError,
+      );
+      expect(Date.now() - startedAt).toBeLessThan(PARSE_BUDGET_MS);
+    }
   });
 
   it('normalizes CRLF identically across chunk boundaries', () => {
