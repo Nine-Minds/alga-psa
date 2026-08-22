@@ -1646,7 +1646,7 @@
         "advanced": "Avanzate"
       },
       "target": {
-        "genericRecord": "record",
+        "genericRecord": "elemento",
         "unset": "il {{record}} selezionato sopra",
         "fromReference": "il {{record}} da \"{{source}}\"",
         "fromExpression": "il {{record}} scelto da un'espressione",

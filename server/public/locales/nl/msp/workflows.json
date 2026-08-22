@@ -1646,7 +1646,7 @@
         "advanced": "Geavanceerd"
       },
       "target": {
-        "genericRecord": "record",
+        "genericRecord": "item",
         "unset": "het hierboven geselecteerde {{record}}",
         "fromReference": "het {{record}} uit \"{{source}}\"",
         "fromExpression": "het {{record}} gekozen door een expressie",
