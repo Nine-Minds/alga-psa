@@ -51,8 +51,10 @@
 
 ## Draft implementation notes
 
+- (2026-08-21) Review correction: the first draft only assembled pre-priced lines. It does not meet the required shared dispatch/load/commit boundary; F004, F005, F014 and T001 remain open until canonical results carry all required financial metadata and the shared engine owns charge-family computation.
+
 - (2026-08-21) Added `packages/billing/src/lib/billing/domain/` as the typed, pure canonical line/result boundary. It validates tenant/window/currency/minor-unit invariants and exposes explicit `simulate`/`live` modes.
-- (2026-08-21) Simulator calls the shared engine once per invoice window in `simulate` mode; production calls it after its existing transaction-scoped pricing/discount load in `live` mode and fails fast if canonical totals differ.
+- (2026-08-21) Simulator calls the shared assembler once per invoice window in `simulate` mode; production calls it after its existing transaction-scoped pricing/discount load in `live` mode. This is known insufficient and must be replaced by the planned shared calculation boundary.
 - (2026-08-21) Focused validation: billing typecheck and pure domain tests passed; EE simulator period tests passed; EE typecheck needs `NODE_OPTIONS=--max-old-space-size=8192` in this environment.
 
 - Is prepaid hour-block billing reachable from a contract scenario and required in the first obligation union?
