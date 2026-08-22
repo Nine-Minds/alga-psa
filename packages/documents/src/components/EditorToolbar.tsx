@@ -42,8 +42,8 @@ function ToolbarButton({
       onClick={onClick}
       className={`p-1.5 rounded transition-colors ${
         isActive
-          ? 'bg-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-900))]'
-          : 'text-[rgb(var(--color-text-500))] hover:bg-[rgb(var(--color-border-100))]'
+          ? 'bg-[rgb(var(--color-text-500)/0.18)] text-[rgb(var(--color-text-900))]'
+          : 'text-[rgb(var(--color-text-500))] hover:bg-[rgb(var(--color-text-500)/0.08)]'
       }`}
       title={title}
     >
