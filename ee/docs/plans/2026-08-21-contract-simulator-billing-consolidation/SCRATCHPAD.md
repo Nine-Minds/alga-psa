@@ -51,6 +51,9 @@
 
 ## Draft implementation notes
 
+- (2026-08-22) Takeover extraction routes fixed, hourly, usage, bucket, product/license, and discount/adjustment dispatch for both callers through `domain/calculateContractCharge.ts`; an architecture test rejects direct caller dispatch. Charge loaders remain in their existing caller modules for this first incremental slice.
+- (2026-08-22) Production now guards live mode and consumes canonical net totals instead of discarding the document result. Simulation uses explicit simulate mode and has no persistence adapter. Billing typecheck/build and focused domain/simulator tests pass; EE typecheck passes with a 12 GB heap (8 GB exhausted during full-program analysis).
+
 - (2026-08-21) Review correction: the first draft only assembled pre-priced lines. It does not meet the required shared dispatch/load/commit boundary; F004, F005, F014 and T001 remain open until canonical results carry all required financial metadata and the shared engine owns charge-family computation.
 
 - (2026-08-21) Added `packages/billing/src/lib/billing/domain/` as the typed, pure canonical line/result boundary. It validates tenant/window/currency/minor-unit invariants and exposes explicit `simulate`/`live` modes.

@@ -47,13 +47,7 @@ import {
   intersectActivityWindow,
 } from "@alga-psa/shared/billingClients/recurringTiming";
 import {
-  computeFixedCharges,
-  computeTimeBasedCharges,
-  computeUsageBasedCharges,
-  computeBucketCharges,
   computeBucketPeriodState,
-  computeRecurringQuantityCharges,
-  computeDiscountsAndAdjustments,
   type BucketPeriodState,
   type ChargeComputeClient,
   type ChargeComputeTaxPorts,
@@ -88,7 +82,11 @@ import {
   type SimulatorInvoiceParties,
 } from "./invoicePreviewContext";
 import { enrichWithGroupedItems } from "@alga-psa/billing/lib/adapters/invoiceAdapters";
-import { calculateContractBilling } from "@alga-psa/billing";
+import {
+  calculateContractBilling,
+  calculateContractCharge,
+  calculateContractDiscountsAndAdjustments,
+} from "@alga-psa/billing";
 
 interface PeriodAccumulator {
   window: SimulatedInvoicePeriodWindow;
@@ -376,7 +374,13 @@ export async function simulateContractScenario(
     applyScenarioDiscountsAndAdjustments(accumulator, scenario, tenant);
   }
   const periods: SimulatedPeriod[] = periodAccumulators.map((accumulator) =>
-    finalizePeriod(accumulator, scenario, contractEndDate, invoiceParties),
+    finalizePeriod(
+      accumulator,
+      scenario,
+      tenant,
+      contractEndDate,
+      invoiceParties,
+    ),
   );
 
   return {
@@ -471,8 +475,10 @@ async function simulateRecurringQuantityCharges(
   const priceableServices = quantityServices.filter(hasRecurringQuantityPrice);
   if (priceableServices.length === 0) return;
 
-  const { charges, explanations } = await computeRecurringQuantityCharges(
-    {
+  const { charges, explanations } = calculateContractCharge({
+    kind: chargeType,
+    executionMode: "simulate",
+    inputs: {
       clientContractLine,
       client,
       timing,
@@ -495,8 +501,8 @@ async function simulateRecurringQuantityCharges(
       })),
       contractCurrency: currencyCode,
     },
-    taxPorts,
-  );
+    taxContext: taxPorts,
+  });
   const explanationByKey = new Map(
     explanations.map((explanation) => [explanation.chargeKey, explanation]),
   );
@@ -582,8 +588,10 @@ async function simulateBucketCharges(
     });
     bucketStateByService.set(stateKey, state);
 
-    const { charges, explanations } = await computeBucketCharges(
-      {
+    const { charges, explanations } = calculateContractCharge({
+      kind: "bucket",
+      executionMode: "simulate",
+      inputs: {
         billingPeriod,
         clientContractLine,
         client,
@@ -611,8 +619,8 @@ async function simulateBucketCharges(
         ],
         contractCurrency: currencyCode,
       },
-      taxPorts,
-    );
+      taxContext: taxPorts,
+    });
     const explanationByKey = new Map(
       explanations.map((explanation) => [explanation.chargeKey, explanation]),
     );
@@ -716,8 +724,10 @@ async function simulateUsageCharges(
   }
 
   if (usageRecords.length === 0) return;
-  const { charges, explanations } = await computeUsageBasedCharges(
-    {
+  const { charges, explanations } = calculateContractCharge({
+    kind: "usage",
+    executionMode: "simulate",
+    inputs: {
       billingPeriod,
       clientContractLine,
       timing,
@@ -726,8 +736,8 @@ async function simulateUsageCharges(
       usageRecords,
       contractCurrency: currencyCode,
     },
-    taxPorts,
-  );
+    taxContext: taxPorts,
+  });
   const explanationByKey = new Map(
     explanations.map((explanation) => [explanation.chargeKey, explanation]),
   );
@@ -983,8 +993,10 @@ async function simulateFixedCharges(
     timing,
   );
 
-  const { charges, explanations } = await computeFixedCharges(
-    {
+  const { charges, explanations } = calculateContractCharge({
+    kind: "fixed",
+    executionMode: "simulate",
+    inputs: {
       clientId: client.client_id,
       billingPeriod,
       clientContractLine,
@@ -1002,8 +1014,8 @@ async function simulateFixedCharges(
       // catalog fallback row to load for a hypothetical line.
       fallbackService: null,
     },
-    taxPorts,
-  );
+    taxContext: taxPorts,
+  });
   // advanceGuard is intentionally ignored: it exists to suppress
   // double-billing against persisted charges, and a simulation persists
   // nothing.
@@ -1106,8 +1118,10 @@ async function simulateHourlyCharges(
     return;
   }
 
-  const { charges, explanations } = await computeTimeBasedCharges(
-    {
+  const { charges, explanations } = calculateContractCharge({
+    kind: "hourly",
+    executionMode: "simulate",
+    inputs: {
       billingPeriod,
       clientContractLine,
       timing,
@@ -1123,8 +1137,8 @@ async function simulateHourlyCharges(
       resolvePhaseRateOverride: null,
       getProjectChargeConfig: null,
     },
-    taxPorts,
-  );
+    taxContext: taxPorts,
+  });
 
   const explanationByKey = new Map(
     explanations.map((explanation) => [explanation.chargeKey, explanation]),
@@ -1215,7 +1229,7 @@ function applyScenarioDiscountsAndAdjustments(
       servicePeriodEnd: line.service_period_end,
     }));
   const totalAmount = charges.reduce((sum, charge) => sum + charge.total, 0);
-  const computed = computeDiscountsAndAdjustments({
+  const computed = calculateContractDiscountsAndAdjustments({
     billingResult: {
       tenant,
       charges,
@@ -1339,6 +1353,7 @@ function pushChargeLine(input: {
 function finalizePeriod(
   accumulator: PeriodAccumulator,
   scenario: ContractScenario,
+  tenant: string,
   contractEndDate: ISO8601String | null,
   invoiceParties: SimulatorInvoiceParties,
 ): SimulatedPeriod {
@@ -1350,20 +1365,48 @@ function finalizePeriod(
     schemaVersion: 1,
     execution: {
       mode: "simulate",
-      tenantId: scenario.tenant,
+      tenantId: tenant,
       calculationId: `${scenario.scenario_id}:${window.index}`,
       asOf: `${window.startDate}T00:00:00Z`,
     },
     document: {
-      clientId: scenario.client_binding.kind === "client" ? scenario.client_binding.client_id : "simulated-client",
+      clientId:
+        scenario.client_binding.kind === "client"
+          ? scenario.client_binding.client_id
+          : "simulated-client",
       currencyCode: scenario.currency_code || "USD",
-      invoiceWindow: { start: window.startDate, endExclusive: window.endDateExclusive },
+      invoiceWindow: {
+        start: window.startDate,
+        endExclusive: window.endDateExclusive,
+      },
     },
     obligations: lines.map((line, index) => ({
       obligationId: `${line.line_key}:${index}`,
-      tenantId: scenario.tenant,
+      tenantId: tenant,
       contractLineId: line.line_key,
-      chargeFamily: (["fixed", "hourly", "usage", "bucket", "product", "license"].includes(line.charge_type) ? line.charge_type : "other") as "fixed" | "hourly" | "usage" | "bucket" | "product" | "license" | "other",
+      chargeFamily: ([
+        "fixed",
+        "hourly",
+        "usage",
+        "bucket",
+        "product",
+        "license",
+      ].includes(line.charge_type)
+        ? line.charge_type
+        : "other") as
+        | "fixed"
+        | "hourly"
+        | "usage"
+        | "bucket"
+        | "product"
+        | "license"
+        | "other",
+      lineKind:
+        line.charge_type === "discount"
+          ? ("discount" as const)
+          : line.charge_type === "adjustment" || line.charge_type === "one_time"
+            ? ("adjustment" as const)
+            : ("charge" as const),
       line: {
         lineKey: line.line_key,
         serviceId: line.service_id,
@@ -1377,9 +1420,27 @@ function finalizePeriod(
         servicePeriodEnd: line.service_period_end,
         billingTiming: line.billing_timing,
         explanation: line.explanation,
+        markers: line.explanation?.markers,
       },
     })),
   });
+  // Presentation retains simulator-only labels, while every monetary and
+  // correlation field comes back from the canonical document result.
+  const presentationLines = calculation.lines.map((canonicalLine, index) => ({
+    ...lines[index],
+    line_key: canonicalLine.lineKey,
+    service_id: canonicalLine.serviceId ?? null,
+    service_name: canonicalLine.description,
+    quantity: canonicalLine.quantity,
+    unit_price: canonicalLine.unitRate,
+    net_amount: canonicalLine.netAmount,
+    tax_amount: canonicalLine.taxAmount,
+    total: canonicalLine.grossAmount,
+    service_period_start: canonicalLine.servicePeriodStart,
+    service_period_end: canonicalLine.servicePeriodEnd,
+    billing_timing: canonicalLine.billingTiming,
+    explanation: canonicalLine.explanation as ChargeExplanation | null,
+  }));
   const endInclusive = toISODate(
     toPlainDate(window.endDateExclusive).subtract({ days: 1 }),
   );
@@ -1391,10 +1452,10 @@ function finalizePeriod(
   if (accumulator.lineCycles.size > 1) {
     markers.push("cadence_coincidence");
   }
-  if (lines.some((line) => line.charge_type === "bucket")) {
+  if (presentationLines.some((line) => line.charge_type === "bucket")) {
     markers.push("bucket_overage");
   }
-  if (lines.some((line) => line.charge_type === "one_time")) {
+  if (presentationLines.some((line) => line.charge_type === "one_time")) {
     markers.push("one_time");
   }
   if (
@@ -1423,7 +1484,7 @@ function finalizePeriod(
       endInclusive,
       scenario.invoice_schedule.billing_cycle,
     ),
-    lines,
+    lines: presentationLines,
     subtotal,
     tax,
     total: calculation.total,
@@ -1436,7 +1497,7 @@ function finalizePeriod(
       poNumber: null,
       tenantClient: invoiceParties.tenantClient,
       customer: invoiceParties.customer,
-      items: lines.map((line, index) => ({
+      items: presentationLines.map((line, index) => ({
         id: `sim-${scenario.scenario_id}-${window.index}-${index}`,
         description: line.service_name,
         quantity: line.quantity ?? 1,

@@ -6,12 +6,39 @@
  */
 
 // Models
-export { Invoice, Contract, Quote, QuoteItem, QuoteActivity, QuoteDocumentTemplate } from './models';
-export { calculateContractBilling } from './lib/billing/domain';
-export type { BillingExecutionMode, ContractBillingCalculationInput, ContractBillingCalculationResult, CalculatedBillingLine, LiveContractBillingCalculationResult } from './lib/billing/domain';
+export {
+  Invoice,
+  Contract,
+  Quote,
+  QuoteItem,
+  QuoteActivity,
+  QuoteDocumentTemplate,
+} from "./models";
+export {
+  assertLiveContractBillingResult,
+  calculateContractBilling,
+  calculateContractCharge,
+  calculateContractChargeBatch,
+  calculateContractDiscountsAndAdjustments,
+} from "./lib/billing/domain";
+export type {
+  BillingExecutionMode,
+  ContractBillingCalculationInput,
+  ContractBillingCalculationResult,
+  CalculatedBillingLine,
+  LiveContractBillingCalculationResult,
+  ResolvedContractChargeObligation,
+} from "./lib/billing/domain";
 
 // Components
-export { BillingDashboard, CreditsPage, TemplateRenderer, PurchaseOrderSummaryBanner, AutomaticInvoices, BillingCycles } from './components';
+export {
+  BillingDashboard,
+  CreditsPage,
+  TemplateRenderer,
+  PurchaseOrderSummaryBanner,
+  AutomaticInvoices,
+  BillingCycles,
+} from "./components";
 
 // Re-export invoice types from @alga-psa/types
 export type {
@@ -29,7 +56,7 @@ export type {
   DiscountType,
   InvoiceTemplateSource,
   ICreditAllocation,
-} from '@alga-psa/types';
+} from "@alga-psa/types";
 
 export type {
   IQuote,
@@ -41,7 +68,7 @@ export type {
   QuoteDocumentTemplateSource,
   QuoteViewModel,
   QuoteStatus,
-} from '@alga-psa/types';
+} from "@alga-psa/types";
 
 // Re-export contract types from @alga-psa/types
 export type {
@@ -53,7 +80,7 @@ export type {
   IContractAssignmentSummary,
   IContractPricingSchedule,
   ContractStatus,
-} from '@alga-psa/types';
+} from "@alga-psa/types";
 export type {
   CadenceOwner,
   DuePosition,
@@ -88,7 +115,7 @@ export type {
   RegeneratedRecurringServicePeriodReasonCode,
   RepairRecurringServicePeriodReasonCode,
   UserEditedRecurringServicePeriodReasonCode,
-} from '@alga-psa/types';
+} from "@alga-psa/types";
 
 // Re-export invoice constants
 export {
@@ -100,24 +127,24 @@ export {
   DEFAULT_ACCOUNTING_EXPORT_STATUSES,
   getTaxImportState,
   QUOTE_STATUS_METADATA,
-} from '@alga-psa/types';
+} from "@alga-psa/types";
 export {
   resolvePdfPrintOptionsFromAst,
   resolvePrintResolutionInputFromAst,
   resolveTemplatePrintSettingsFromAst,
-} from './lib/invoice-template-ast/printSettings';
+} from "./lib/invoice-template-ast/printSettings";
 
 // Legacy accounting integration helpers (used by server adapters/workflows)
-export { AccountingMappingResolver } from './services/accountingMappingResolver';
-export type { MappingResolution } from './services/accountingMappingResolver';
-export { KnexInvoiceMappingRepository } from './repositories/invoiceMappingRepository';
+export { AccountingMappingResolver } from "./services/accountingMappingResolver";
+export type { MappingResolution } from "./services/accountingMappingResolver";
+export { KnexInvoiceMappingRepository } from "./repositories/invoiceMappingRepository";
 export {
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
   buildNormalizedCompanyPayload,
   QuickBooksOnlineCompanyAdapter,
   XeroCompanyAdapter,
-} from './services/companySync';
+} from "./services/companySync";
 export {
   DEFAULT_CADENCE_OWNER,
   assertHalfOpenDateRange,
@@ -129,7 +156,7 @@ export {
   resolveCadenceOwner,
   selectDueServicePeriodsForInvoiceWindow,
   selectCadenceBoundaryGenerator,
-} from '@alga-psa/shared/billingClients/recurringTiming';
+} from "@alga-psa/shared/billingClients/recurringTiming";
 export {
   generateAnnualContractCadenceServicePeriods,
   contractCadenceMonthlyBoundaryGenerator,
@@ -137,111 +164,83 @@ export {
   generateQuarterlyContractCadenceServicePeriods,
   resolveContractCadenceAnchorDate,
   generateSemiAnnualContractCadenceServicePeriods,
-} from '@alga-psa/shared/billingClients/contractCadenceServicePeriods';
+} from "@alga-psa/shared/billingClients/contractCadenceServicePeriods";
 export {
   assessRecurringServicePeriodGenerationCoverage,
   DEFAULT_RECURRING_SERVICE_PERIOD_GENERATION_HORIZON_DAYS,
   DEFAULT_RECURRING_SERVICE_PERIOD_REPLENISHMENT_THRESHOLD_DAYS,
   findRecurringServicePeriodContinuityIssues,
   resolveRecurringServicePeriodGenerationHorizon,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodGenerationHorizon';
-export {
-  materializeClientCadenceServicePeriods,
-} from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodGenerationHorizon";
+export { materializeClientCadenceServicePeriods } from "@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods";
 export type {
   IClientCadenceMaterializedServicePeriodPlan,
   MaterializeClientCadenceServicePeriodsInput,
-} from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
-export {
-  materializeContractCadenceServicePeriods,
-} from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
+} from "@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods";
+export { materializeContractCadenceServicePeriods } from "@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods";
 export type {
   IContractCadenceMaterializedServicePeriodPlan,
   MaterializeContractCadenceServicePeriodsInput,
-} from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
-export {
-  backfillRecurringServicePeriods,
-} from '@alga-psa/shared/billingClients/backfillRecurringServicePeriods';
-export {
-  editRecurringServicePeriodBoundaries,
-} from '@alga-psa/shared/billingClients/editRecurringServicePeriodBoundaries';
-export {
-  skipOrDeferRecurringServicePeriod,
-} from '@alga-psa/shared/billingClients/skipOrDeferRecurringServicePeriod';
+} from "@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods";
+export { backfillRecurringServicePeriods } from "@alga-psa/shared/billingClients/backfillRecurringServicePeriods";
+export { editRecurringServicePeriodBoundaries } from "@alga-psa/shared/billingClients/editRecurringServicePeriodBoundaries";
+export { skipOrDeferRecurringServicePeriod } from "@alga-psa/shared/billingClients/skipOrDeferRecurringServicePeriod";
 export {
   assertRecurringServicePeriodV1EditOperationSupported,
   isRecurringServicePeriodV1EditOperationSupported,
   RECURRING_SERVICE_PERIOD_SUPPORTED_EDIT_OPERATIONS,
   RECURRING_SERVICE_PERIOD_UNSUPPORTED_V1_EDIT_OPERATIONS,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodEditCapabilities';
-export {
-  validateRecurringServicePeriodEditContinuity,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodEditValidation';
-export {
-  applyRecurringServicePeriodEditRequest,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodEditRequests';
-export {
-  getRecurringServicePeriodDisplayState,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodDisplayState';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodEditCapabilities";
+export { validateRecurringServicePeriodEditContinuity } from "@alga-psa/shared/billingClients/recurringServicePeriodEditValidation";
+export { applyRecurringServicePeriodEditRequest } from "@alga-psa/shared/billingClients/recurringServicePeriodEditRequests";
+export { getRecurringServicePeriodDisplayState } from "@alga-psa/shared/billingClients/recurringServicePeriodDisplayState";
 export {
   getRecurringServicePeriodGovernanceRequirement,
   listRecurringServicePeriodGovernanceRequirements,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodGovernance';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodGovernance";
 export {
   getRecurringServicePeriodAuthorityBoundary,
   listRecurringServicePeriodAuthorityBoundaries,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodAuthorityBoundary';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodAuthorityBoundary";
 export {
   buildRecurringServicePeriodListingQuery,
   listRecurringServicePeriodRecords,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodListing';
-export {
-  buildRecurringServicePeriodOperationalView,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodOperationalView';
-export {
-  regenerateRecurringServicePeriods,
-} from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
-export {
-  resolveRecurringServicePeriodRegenerationDecision,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodRegenerationTriggers';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodListing";
+export { buildRecurringServicePeriodOperationalView } from "@alga-psa/shared/billingClients/recurringServicePeriodOperationalView";
+export { regenerateRecurringServicePeriods } from "@alga-psa/shared/billingClients/regenerateRecurringServicePeriods";
+export { resolveRecurringServicePeriodRegenerationDecision } from "@alga-psa/shared/billingClients/recurringServicePeriodRegenerationTriggers";
 export {
   applyRecurringServicePeriodInvoiceLinkage,
   hasRecurringServicePeriodInvoiceLinkage,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodInvoiceLinkage';
-export {
-  compareDerivedRecurringTimingToPersistedSchedule,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodParity';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodInvoiceLinkage";
+export { compareDerivedRecurringTimingToPersistedSchedule } from "@alga-psa/shared/billingClients/recurringServicePeriodParity";
 export {
   buildRecurringServicePeriodPeriodKey,
   buildRecurringServicePeriodScheduleKey,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodKeys";
 export {
   buildRecurringServicePeriodDueSelectionQuery,
   isRecurringServicePeriodRecordDue,
   selectDueRecurringServicePeriodRecords,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodDueSelection';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodDueSelection";
 export type {
   BackfillRecurringServicePeriodsInput,
   IRecurringServicePeriodBackfillPlan,
-} from '@alga-psa/shared/billingClients/backfillRecurringServicePeriods';
+} from "@alga-psa/shared/billingClients/backfillRecurringServicePeriods";
 export type {
   EditRecurringServicePeriodBoundariesInput,
   IRecurringServicePeriodBoundaryEditResult,
-} from '@alga-psa/shared/billingClients/editRecurringServicePeriodBoundaries';
+} from "@alga-psa/shared/billingClients/editRecurringServicePeriodBoundaries";
 export type {
   IRecurringServicePeriodDispositionEditResult,
   SkipOrDeferRecurringServicePeriodInput,
-} from '@alga-psa/shared/billingClients/skipOrDeferRecurringServicePeriod';
+} from "@alga-psa/shared/billingClients/skipOrDeferRecurringServicePeriod";
 export type {
   SupportedRecurringServicePeriodEditOperation,
   UnsupportedRecurringServicePeriodV1EditOperation,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodEditCapabilities';
-export type {
-  ApplyRecurringServicePeriodEditRequestInput,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodEditRequests';
-export type {
-  IRecurringServicePeriodEditContinuityValidation,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodEditValidation';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodEditCapabilities";
+export type { ApplyRecurringServicePeriodEditRequestInput } from "@alga-psa/shared/billingClients/recurringServicePeriodEditRequests";
+export type { IRecurringServicePeriodEditContinuityValidation } from "@alga-psa/shared/billingClients/recurringServicePeriodEditValidation";
 export type {
   IRecurringServicePeriodDisplayState,
   IRecurringServicePeriodGovernanceRequirement,
@@ -259,7 +258,7 @@ export type {
   RecurringServicePeriodRegenerationScope,
   RecurringServicePeriodRegenerationTriggerKind,
   RecurringServicePeriodRegenerationTriggerSource,
-} from '@alga-psa/types';
+} from "@alga-psa/types";
 export type {
   IRecurringServicePeriodEditFailure,
   IRecurringServicePeriodEditRequest,
@@ -272,37 +271,37 @@ export type {
   RecurringServicePeriodEditValidationField,
   RecurringServicePeriodEditValidationIssueCode,
   RecurringServicePeriodListingState,
-} from '@alga-psa/types';
+} from "@alga-psa/types";
 export type {
   IRecurringServicePeriodRegenerationConflict,
   IRecurringServicePeriodRegenerationPlan,
   RecurringServicePeriodRegenerationConflictKind,
   RegenerateRecurringServicePeriodsInput,
-} from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
+} from "@alga-psa/shared/billingClients/regenerateRecurringServicePeriods";
 export {
   evaluateRecurringServicePeriodMutationPermission,
   RECURRING_SERVICE_PERIOD_MUTATION_OPERATIONS,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodMutations';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodMutations";
 export type {
   IRecurringServicePeriodMutationDecision,
   RecurringServicePeriodMutationOperation,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodMutations';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodMutations";
 export {
   isRecurringServicePeriodProvenanceDivergent,
   isRecurringServicePeriodProvenanceReasonCode,
   validateRecurringServicePeriodProvenance,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodProvenance';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodProvenance";
 export {
   canTransitionRecurringServicePeriodState,
   isRecurringServicePeriodStateTerminal,
   RECURRING_SERVICE_PERIOD_LIFECYCLE_TRANSITIONS,
   RECURRING_SERVICE_PERIOD_TERMINAL_STATES,
-} from '@alga-psa/shared/billingClients/recurringServicePeriodLifecycle';
+} from "@alga-psa/shared/billingClients/recurringServicePeriodLifecycle";
 export type {
   AccountingAdapterType,
   ExternalCompanyRecord,
   NormalizedCompanyPayload,
-} from './services/companySync';
+} from "./services/companySync";
 
 // Note: This module contains:
 // - Invoice CRUD operations (migrated)

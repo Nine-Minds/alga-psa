@@ -312,6 +312,10 @@ describe("production compute extraction golden", () => {
       );
     }
 
+    const domainDispatcher = readFileSync(
+      new URL("../domain/calculateContractCharge.ts", import.meta.url),
+      "utf8",
+    );
     const engine = readFileSync(
       new URL("../billingEngine.ts", import.meta.url),
       "utf8",
@@ -324,8 +328,10 @@ describe("production compute extraction golden", () => {
       "computeRecurringQuantityCharges",
       "computeDiscountsAndAdjustments",
     ]) {
-      expect(engine).toContain(`${computeName}(`);
+      expect(domainDispatcher).toContain(`${computeName}(`);
+      expect(engine).not.toContain(`${computeName}(`);
     }
+    expect(engine).toContain("calculateContractCharge({");
     expect(engine).toContain("loadChargeComputeTaxContext");
     expect(engine).toContain("loadPersistedRecurringTimingSelections");
     expect(engine).toContain("hasExistingServicePeriodCharge");
