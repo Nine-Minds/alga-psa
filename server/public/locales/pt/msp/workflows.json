@@ -1380,7 +1380,10 @@
     "start": "Começar",
     "insertStepHere": "Insira a etapa aqui",
     "emptyDisabled": "Nenhuma etapa ainda.",
-    "emptySelectPrompt": "Selecione uma etapa no painel para começar."
+    "emptySelectPrompt": "Selecione uma etapa no painel para começar.",
+    "patchSummary": {
+      "unchanged": "outros campos inalterados"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Editor de expressão",
@@ -1496,6 +1499,37 @@
     "softEnumUseCustom": "Usar \"{{value}}\"",
     "expression": {
       "placeholder": "por exemplo carga útil.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Campos a alterar",
+      "targetFraming": "Esta etapa atualiza {{target}}.",
+      "summaryChanges": "Altera {{list}}",
+      "summaryChangesMore": "Altera {{list}} +{{count}} mais",
+      "unchangedNote": "Todos os outros campos mantêm seus valores atuais.",
+      "emptyGuidance": "Adicione pelo menos um campo para alterar.",
+      "editChanges": "Editar alterações…",
+      "dialogTitle": "Editar alterações",
+      "dialogDescription": "Atualizando {{target}}. Apenas os campos listados à direita serão alterados; todo o resto mantém o valor atual.",
+      "footerSummary": "{{count}} campo(s) serão alterados · todo o resto mantém o valor atual",
+      "done": "Concluído",
+      "added": "Adicionado ✓",
+      "noChangesYet": "Nenhuma alteração ainda. Escolha um campo à esquerda para começar.",
+      "setFieldTo": "Definir {{field}} como",
+      "removeChange": "Parar de alterar este campo (ele mantém o valor atual)",
+      "advancedTitle": "Avançado",
+      "group": {
+        "details": "Detalhes",
+        "assignment": "Atribuição",
+        "datesTags": "Datas e tags",
+        "advanced": "Avançado"
+      },
+      "target": {
+        "genericRecord": "registro",
+        "unset": "o {{record}} selecionado acima",
+        "fromReference": "o {{record}} de \"{{source}}\"",
+        "fromExpression": "o {{record}} escolhido por uma expressão",
+        "fixed": "um {{record}} específico"
+      }
     }
   },
   "schemaReference": {
