@@ -59,6 +59,16 @@ export function EditorToolbar({ editor, onUploadImage }: EditorToolbarProps) {
   const { t } = useTranslation('features/documents');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // The toolbar is a bubble menu, so there is always a text selection when the
+  // image button is reachable. setImage replaces the selection, which would eat
+  // whatever the user had highlighted — collapse to the end and insert after it.
+  const insertImageAfterSelection = useCallback(
+    (attrs: { src: string; alt?: string }) => {
+      editor.chain().focus().setTextSelection(editor.state.selection.to).setImage(attrs).run();
+    },
+    [editor]
+  );
+
   const insertImage = useCallback(() => {
     if (onUploadImage) {
       fileInputRef.current?.click();
@@ -67,8 +77,8 @@ export function EditorToolbar({ editor, onUploadImage }: EditorToolbarProps) {
 
     const url = window.prompt(t('editor.toolbar.imagePrompt', { defaultValue: 'Image URL' }));
     if (!url) return;
-    editor.chain().focus().setImage({ src: url }).run();
-  }, [editor, onUploadImage, t]);
+    insertImageAfterSelection({ src: url });
+  }, [insertImageAfterSelection, onUploadImage, t]);
 
   const handleFileSelected = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,12 +88,12 @@ export function EditorToolbar({ editor, onUploadImage }: EditorToolbarProps) {
 
       try {
         const url = await onUploadImage(file);
-        editor.chain().focus().setImage({ src: url, alt: file.name }).run();
+        insertImageAfterSelection({ src: url, alt: file.name });
       } catch (error) {
         console.error('[EditorToolbar] Image upload failed:', error);
       }
     },
-    [editor, onUploadImage]
+    [insertImageAfterSelection, onUploadImage]
   );
 
   const setLink = useCallback(() => {

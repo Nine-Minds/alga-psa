@@ -32,6 +32,7 @@ describe('EditorToolbar', () => {
       unsetLink: vi.fn(() => chain),
       setLink: vi.fn(() => chain),
       setImage: vi.fn(() => chain),
+      setTextSelection: vi.fn(() => chain),
       run: vi.fn(),
     };
 
@@ -41,6 +42,7 @@ describe('EditorToolbar', () => {
       getAttributes: vi.fn(() => ({ href: '' })),
       registerPlugin: vi.fn(),
       unregisterPlugin: vi.fn(),
+      state: { selection: { from: 4, to: 12 } },
     };
   });
 
@@ -112,6 +114,22 @@ describe('EditorToolbar', () => {
 
     expect(chain.setImage).toHaveBeenCalledWith({ src: 'https://example.com/a.png' });
     expect(chain.run).toHaveBeenCalled();
+
+    promptSpy.mockRestore();
+  });
+
+  it('inserts after the selection instead of replacing the highlighted text', () => {
+    // The toolbar only appears on a selection, so a bare setImage would delete
+    // whatever the user highlighted to reach the button.
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('https://example.com/a.png');
+
+    const { getByTitle } = render(<EditorToolbar editor={editor as any} />);
+    fireEvent.click(getByTitle('Insert image'));
+
+    expect(chain.setTextSelection).toHaveBeenCalledWith(12);
+    expect(chain.setTextSelection.mock.invocationCallOrder[0]).toBeLessThan(
+      chain.setImage.mock.invocationCallOrder[0]
+    );
 
     promptSpy.mockRestore();
   });
