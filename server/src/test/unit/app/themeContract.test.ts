@@ -1,14 +1,20 @@
 /**
- * One suite for the whole theme contract, in three layers:
+ * One suite for the whole theme contract, in six layers:
  *
- *   1. token blocks    — every pair declares the values it must, and the
- *                        shade-inversion / separation invariants hold.
+ *   1. token blocks     — every pair declares the values it must, and the
+ *                         shade-inversion / separation invariants hold.
  *   2. token references — every --color-* a component names actually exists.
  *   3. surface rules    — the handful of CSS rules whose failure mode is
- *                        silent and mode-asymmetric (menus, editor paper).
+ *                         silent and mode-asymmetric (menus, pickers, paper).
+ *   4. status contrast  — every status fill is legible against its own ink.
+ *   5. colour literals  — no themed file grows a new hardcoded hex or rgb().
+ *   6. element contrast — what components actually paint: every className that
+ *                         names a --color-* as both ink and fill, measured
+ *                         across all nine pairs in both modes.
  *
- * They live together because they fail together: all three exist to catch
- * styling that looks correct in light mode and breaks in dark.
+ * They live together because they fail together: all six exist to catch styling
+ * that looks correct in light mode and breaks in dark. Layers 4 and 6 are the
+ * pair: 4 checks tokens against each other, 6 checks the combinations shipped.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'fs';
@@ -660,5 +666,140 @@ describe('hardcoded colour literals', () => {
       if (now < allowed) stale.push(`${file} — now ${now}, baseline still says ${allowed}`);
     });
     expect(stale, `baseline is stale, lower it:\n${stale.join('\n')}`).toEqual([]);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Layer 6 — element contrast.
+ *
+ * The status-fill layer above checks tokens against each other. This one checks
+ * what components actually paint: every className that names a --color-* both as
+ * ink and as fill, measured across all nine pairs in both modes.
+ *
+ * It exists because the failures it catches are invisible to a token-level check.
+ * A chip reading `text-primary-700 on bg-primary-100` is fine in light and 3.3:1
+ * in slate dark, because the primary ramp inverts underneath it. A tooltip filled
+ * with border-200 is fine everywhere except high contrast, which repurposes that
+ * rung as a near-white hairline. Both shipped; both measured 1.1:1 at the worst.
+ *
+ * Variant-aware: a bare class applies in light, `dark:` wins in dark, and the
+ * interaction variants are skipped — a hover fill is not what the element rests
+ * on. Alpha is composited the way the screen does it: the fill onto the card,
+ * then the ink onto that.
+ * ------------------------------------------------------------------------- */
+
+/** Resolve a token to an RGB triple, following var(--x) chains. */
+function resolveTriple(tokens: Record<string, string>, name: string, depth = 0): number[] | null {
+  const raw = tokens[name];
+  if (raw === undefined || depth > 6) return null;
+  const alias = /^var\((--[a-z0-9-]+)\)$/.exec(raw.trim());
+  if (alias) return resolveTriple(tokens, alias[1], depth + 1);
+  const parsed = triple(raw);
+  return parsed && parsed.length === 3 ? parsed : null;
+}
+
+/** Flatten a translucent layer onto what sits behind it. */
+const over = (fg: number[], bg: number[], a: number) =>
+  fg.map((c, i) => Math.round(a * c + (1 - a) * bg[i]));
+
+/**
+ * Empty, and it should stay that way. The audit measures every element site that
+ * pairs a real foreground token with a real background token; all of them clear
+ * WCAG AA in all 18 theme-modes. It was 44 sites, worst 1.05:1, fixed 2026-08-22
+ * by collapsing badges onto the .chip-* utilities, moving hairline rungs out of
+ * fills, and retuning --color-text-500.
+ *
+ * Do not add an entry here to silence a failure. Use a .chip-* class, a surface
+ * rung, or a neutral alpha tint — the three shapes that survive ramp inversion.
+ */
+const ELEMENT_CONTRAST_BASELINE = new Set<string>([]);
+
+describe('element colour contrast', () => {
+  const CLASS = new RegExp(
+    String.raw`(?:(dark|hover|focus|group-hover|disabled|aria-selected|data-\[[^\]]+\]):)?` +
+    String.raw`(bg|text)-\[rgb\(var\((--color-[a-z0-9-]+)\)(?:\s*/\s*([0-9.]+))?\)\]`,
+    'g',
+  );
+  /** Interaction states are not what the element rests on. */
+  const TRANSIENT = new Set(['hover', 'focus', 'group-hover', 'disabled', 'aria-selected']);
+
+  type Use = { variant: string; kind: string; token: string; alpha: string };
+
+  const { failures, siteCount } = (() => {
+    const out = execFileSync('grep',
+      ['-rn', '-E', String.raw`text-\[rgb\(var\(--color-`, 'packages', 'server/src', 'ee/server/src',
+       '--include=*.tsx'],
+      { cwd: REPO, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+
+    const found = new Map<string, { worst: number; where: string }>();
+    let sites = 0;
+
+    for (const line of out.split('\n')) {
+      if (!line || line.includes('/dist/') || line.includes('.test.')) continue;
+      const head = /^([^:]+):(\d+):(.*)$/.exec(line);
+      if (!head) continue;
+      const [, file, lineNo, code] = head;
+
+      const uses: Use[] = [...code.matchAll(CLASS)].map((m) => ({
+        variant: m[1] ?? '', kind: m[2], token: m[3], alpha: m[4] ?? '',
+      }));
+      if (uses.length === 0) continue;
+
+      for (const mode of ['light', 'dark'] as const) {
+        const pick = (kind: string): Use | null => {
+          const usable = uses.filter((u) => u.kind === kind && !TRANSIENT.has(u.variant.split('[')[0]));
+          const dark = usable.filter((u) => u.variant === 'dark');
+          const bare = usable.filter((u) => u.variant === '');
+          const chosen = mode === 'dark' ? (dark[0] ?? bare[0]) : bare[0];
+          return chosen ?? null;
+        };
+        const fgUse = pick('text');
+        const bgUse = pick('bg');
+        if (!fgUse || !bgUse) continue;
+        if (mode === 'light') sites += 1;
+
+        for (const pair of ALL_PAIRS) {
+          const tokens = themeTokens(mode, pair);
+          const card = resolveTriple(tokens, '--color-card') ?? [255, 255, 255];
+          let fg = resolveTriple(tokens, fgUse.token);
+          let bg = resolveTriple(tokens, bgUse.token);
+          if (!fg || !bg) continue;
+          if (bgUse.alpha) bg = over(bg, card, Number(bgUse.alpha));
+          if (fgUse.alpha) fg = over(fg, bg, Number(fgUse.alpha));
+
+          const ratio = contrast(fg, bg);
+          if (ratio >= 4.5) continue;
+          const key = `${file}|${fgUse.token}|${bgUse.token}`;
+          const prev = found.get(key);
+          if (!prev || ratio < prev.worst) {
+            found.set(key, {
+              worst: ratio,
+              where: `${file}:${lineNo} — ${fgUse.token} on ${bgUse.token} = ${ratio.toFixed(2)}:1 (${pair}/${mode})`,
+            });
+          }
+        }
+      }
+    }
+    return { failures: found, siteCount: sites };
+  })();
+
+  it('measures a meaningful number of element sites', () => {
+    // A regex or path change that silently stops matching would make every other
+    // assertion here pass vacuously.
+    expect(siteCount).toBeGreaterThan(80);
+  });
+
+  it('puts no element token pair below WCAG AA in any theme-mode', () => {
+    const offenders: string[] = [];
+    failures.forEach(({ where }, key) => {
+      if (!ELEMENT_CONTRAST_BASELINE.has(key)) offenders.push(where);
+    });
+    offenders.sort();
+    expect(offenders, `element pairs below WCAG AA:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('keeps the element baseline honest — a fixed pair must be struck from the list', () => {
+    const stale = [...ELEMENT_CONTRAST_BASELINE].filter((key) => !failures.has(key));
+    expect(stale, `now passing — remove from ELEMENT_CONTRAST_BASELINE:\n${stale.join('\n')}`).toEqual([]);
   });
 });
