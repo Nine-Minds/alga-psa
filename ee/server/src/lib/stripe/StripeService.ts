@@ -1946,6 +1946,12 @@ export class StripeService {
         monthly: this.config.teamsAddOnPriceId,
         annual: this.config.teamsAddOnAnnualPriceId,
       },
+      // Telephony has no Stripe product yet (packaging posture is still open);
+      // null price ids make getAddOnPriceId return null so nothing is billed.
+      [ADD_ONS.TELEPHONY]: {
+        monthly: null,
+        annual: null,
+      },
       [ADD_ONS.ENTERPRISE]: {
         monthly: this.config.enterpriseAddOnPriceId,
         annual: this.config.enterpriseAddOnAnnualPriceId,

@@ -26,6 +26,7 @@
 export enum ADD_ONS {
   AI_ASSISTANT = 'ai_assistant',
   TEAMS = 'teams',
+  TELEPHONY = 'telephony',
   ENTERPRISE = 'enterprise',
 }
 
@@ -40,6 +41,7 @@ export type AddOnKey = `${ADD_ONS}`;
 export const ADD_ON_LABELS: Record<ADD_ONS, string> = {
   [ADD_ONS.AI_ASSISTANT]: 'AI Assistant',
   [ADD_ONS.TEAMS]: 'Teams',
+  [ADD_ONS.TELEPHONY]: 'Telephony',
   [ADD_ONS.ENTERPRISE]: 'Enterprise',
 } as const;
 
@@ -51,6 +53,8 @@ export const ADD_ON_DESCRIPTIONS: Record<ADD_ONS, string> = {
     'Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team.',
   [ADD_ONS.TEAMS]:
     'Activate the Microsoft Teams integration, including the Teams tab, bot, message extension, quick actions, activity notifications, Teams meetings with calendar invites, and automatic recording and transcript capture.',
+  [ADD_ONS.TELEPHONY]:
+    'Journal phone calls in the PSA: caller recognition against contacts and clients, call history on the timeline, and tickets created or linked straight from a call.',
   [ADD_ONS.ENTERPRISE]:
     'Activate Microsoft Entra Sync for tenant discovery, client mapping, contact synchronization, field sync, and reconciliation workflows.',
 } as const;

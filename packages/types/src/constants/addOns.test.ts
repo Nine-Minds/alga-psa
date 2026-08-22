@@ -5,7 +5,13 @@ describe('addOns', () => {
   it('exports supported add-on keys', () => {
     expect(ADD_ONS.AI_ASSISTANT).toBe('ai_assistant');
     expect(ADD_ONS.TEAMS).toBe('teams');
+    expect(ADD_ONS.TELEPHONY).toBe('telephony');
     expect(ADD_ONS.ENTERPRISE).toBe('enterprise');
+  });
+
+  it('T001: the telephony add-on carries a label and a description', () => {
+    expect(ADD_ON_LABELS[ADD_ONS.TELEPHONY]).toBe('Telephony');
+    expect(ADD_ON_DESCRIPTIONS[ADD_ONS.TELEPHONY]).toContain('call');
   });
 
   it('defines labels and descriptions for every add-on', () => {
