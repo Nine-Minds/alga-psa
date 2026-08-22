@@ -30,59 +30,63 @@ const input = (mode: "simulate" | "live"): ContractBillingCalculationInput => ({
       obligationId: "fixed",
       tenantId: "tenant-a",
       chargeFamily: "fixed",
-      line: {
-        description: "Fixed",
-        quantity: 1,
-        unitRate: 10001,
-        netAmount: 10001,
-        taxAmount: 750,
-        currencyCode: "USD",
-      },
-    },
-    {
-      obligationId: "hourly",
-      tenantId: "tenant-a",
-      chargeFamily: "hourly",
-      line: {
-        description: "Hourly",
-        quantity: 1.25,
-        unitRate: 999,
-        netAmount: 1249,
-        taxAmount: 94,
-        currencyCode: "USD",
-      },
-    },
-    {
-      obligationId: "usage",
-      tenantId: "tenant-a",
-      chargeFamily: "usage",
-      line: {
-        description: "Usage",
-        quantity: 3,
-        unitRate: 333,
-        netAmount: 999,
-        taxAmount: 75,
-        currencyCode: "USD",
-      },
-    },
-    {
-      obligationId: "adjustment",
-      tenantId: "tenant-a",
-      chargeFamily: "other",
-      lineKind: "adjustment",
-      line: {
-        description: "Adjustment",
-        quantity: 1,
-        unitRate: -100,
-        netAmount: -100,
-        taxAmount: 0,
-        currencyCode: "USD",
-      },
+      charge: fixedObligation(mode),
     },
   ],
+  discountsAndAdjustments: {
+    billingPeriod: {
+      tenant: "tenant-a",
+      startDate: "2026-08-01",
+      endDate: "2026-09-01",
+    },
+    discountCandidates: [],
+    adjustments: [{ description: "Adjustment", amount: -100 }],
+  },
 });
 
 describe("calculateContractBilling", () => {
+  it("owns dispatch, proration, tax, rounding, and explanations for unpriced obligations", () => {
+    const calculate = (mode: "simulate" | "live") =>
+      calculateContractBilling({
+        schemaVersion: 1,
+        execution: {
+          mode,
+          tenantId: "tenant-a",
+          calculationId: "unpriced-fixed",
+          asOf: "2026-08-01T00:00:00Z",
+        },
+        document: {
+          clientId: "client-a",
+          currencyCode: "USD",
+          invoiceWindow: { start: "2026-08-01", endExclusive: "2026-09-01" },
+        },
+        obligations: [
+          {
+            obligationId: "fixed-1",
+            tenantId: "tenant-a",
+            contractLineId: "ccl-1",
+            chargeFamily: "fixed",
+            charge: fixedObligation(mode),
+          },
+        ],
+      });
+    const simulated = calculate("simulate");
+    const live = calculate("live");
+    expect({ ...simulated, mode: undefined }).toEqual({
+      ...live,
+      mode: undefined,
+    });
+    expect(simulated.lines[0]).toMatchObject({
+      netAmount: 5_001,
+      taxAmount: 500,
+      grossAmount: 5_501,
+      markers: ["proration"],
+    });
+    expect(simulated.lines[0].lineKey).toBe(
+      simulated.lines[0].explanation?.chargeKey,
+    );
+  });
+
   it("returns identical financial results for simulation and live execution", () => {
     const simulated = calculateContractBilling(input("simulate"));
     const live = calculateContractBilling(input("live"));
@@ -91,13 +95,13 @@ describe("calculateContractBilling", () => {
       mode: undefined,
     });
     expect(simulated).toMatchObject({
-      subtotal: 12149,
-      taxTotal: 919,
-      total: 13068,
+      subtotal: 4901,
+      taxTotal: 500,
+      total: 5401,
     });
   });
 
-  it("is pure and rejects tenant, currency, window, and fractional-money violations", () => {
+  it("is pure and rejects tenant and window violations", () => {
     expect(() =>
       calculateContractBilling({
         ...input("simulate"),
@@ -115,31 +119,6 @@ describe("calculateContractBilling", () => {
         },
       }),
     ).toThrow("half-open");
-    expect(() =>
-      calculateContractBilling({
-        ...input("simulate"),
-        obligations: [
-          {
-            ...input("simulate").obligations[0],
-            line: {
-              ...input("simulate").obligations[0].line,
-              currencyCode: "CAD",
-            },
-          },
-        ],
-      }),
-    ).toThrow("Mixed currency");
-    expect(() =>
-      calculateContractBilling({
-        ...input("simulate"),
-        obligations: [
-          {
-            ...input("simulate").obligations[0],
-            line: { ...input("simulate").obligations[0].line, netAmount: 1.5 },
-          },
-        ],
-      }),
-    ).toThrow("integer minor units");
   });
 
   it("rejects a simulated document at the persistence boundary", () => {
@@ -163,8 +142,8 @@ describe("calculateContractBilling", () => {
     } as never;
     const live = calculateContractBilling(input("live"));
     const handedOff = applyCanonicalLiveBillingResult(source, live);
-    expect(handedOff.charges).toBe(source.charges);
-    expect(handedOff.totalAmount).toBe(12_249);
+    expect(handedOff.charges).toEqual(live.sourceCharges);
+    expect(handedOff.totalAmount).toBe(5_001);
     expect(handedOff.finalAmount).toBe(live.subtotal);
     expect(() =>
       applyCanonicalLiveBillingResult(

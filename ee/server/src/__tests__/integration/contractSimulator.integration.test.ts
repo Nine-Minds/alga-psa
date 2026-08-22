@@ -233,9 +233,9 @@ describe("Contract simulator – migrated-schema integration", () => {
     );
     expect(result.diagnostics.map((diagnostic) => diagnostic.message)).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("not supported by the simulator"),
-        expect.stringContaining("has no services"),
-        expect.stringContaining("Missing USD pricing for product"),
+        expect.stringContaining("projection cannot model"),
+        expect.stringContaining("Has no services"),
+        expect.stringContaining("has no USD product price"),
       ]),
     );
   });
@@ -691,12 +691,16 @@ async function createPricedService(
     unit_of_measure: unitOfMeasure,
     tax_rate_id: taxRateId,
   });
-  await context.db("service_prices").insert({
-    tenant: context.tenantId,
-    service_id: serviceId,
-    currency_code: "USD",
-    rate,
-  });
+  await context
+    .db("service_prices")
+    .insert({
+      tenant: context.tenantId,
+      service_id: serviceId,
+      currency_code: "USD",
+      rate,
+    })
+    .onConflict(["tenant", "service_id", "currency_code"])
+    .merge({ rate });
   return serviceId;
 }
 
@@ -756,6 +760,24 @@ async function addBucketOverlay(
     billing_period: "monthly",
     overage_rate: overageRate,
     allow_rollover: true,
+  });
+  await context.db("contract_line_buckets").insert({
+    tenant: context.tenantId,
+    bucket_id: configId,
+    contract_line_id: contractLineId,
+    bucket_name: "Included support",
+    total_minutes: totalMinutes,
+    overage_rate: overageRate,
+    allow_rollover: true,
+    billing_period: "monthly",
+    covers_all_services: false,
+  });
+  await context.db("contract_line_bucket_services").insert({
+    tenant: context.tenantId,
+    bucket_id: configId,
+    contract_line_id: contractLineId,
+    service_id: serviceId,
+    burn_multiplier: 1,
   });
 }
 

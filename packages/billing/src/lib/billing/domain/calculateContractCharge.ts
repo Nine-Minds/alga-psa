@@ -95,6 +95,9 @@ export function calculateContractCharge(
 ): Extract<ContractChargeCalculationResult, { kind: "product" | "license" }>;
 export function calculateContractCharge(
   obligation: ResolvedContractChargeObligation,
+): ContractChargeCalculationResult;
+export function calculateContractCharge(
+  obligation: ResolvedContractChargeObligation,
 ): ContractChargeCalculationResult {
   return calculateContractChargeImpl(obligation);
 }

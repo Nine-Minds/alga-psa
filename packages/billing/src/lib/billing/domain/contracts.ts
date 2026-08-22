@@ -1,38 +1,50 @@
+import type {
+  ChargeExplanation,
+  IAdjustment,
+  IBillingCharge,
+  IBillingPeriod,
+} from "@alga-psa/types";
+import type { DiscountComputeCandidate } from "../compute";
+import type { ResolvedContractChargeObligation } from "./calculateContractCharge";
+
 /**
  * The contract-billing boundary deliberately contains only resolved facts.  DB
  * rows, scenario records, clocks, and persistence ports belong in adapters.
  */
 export type BillingExecutionMode = "simulate" | "live";
 
-export interface ResolvedContractBillingObligation {
+/**
+ * A resolved fact set for one charge family.  Unlike the legacy `line`
+ * obligation this deliberately contains no calculated amount: dispatch,
+ * proration, tax and rounding are owned by the document calculator.
+ */
+export interface UnpricedContractBillingObligation {
   obligationId: string;
   tenantId: string;
   contractLineId?: string;
-  chargeFamily:
-    | "fixed"
-    | "hourly"
-    | "usage"
-    | "bucket"
-    | "product"
-    | "license"
-    | "other";
-  lineKind?: "charge" | "discount" | "adjustment";
-  /** Amounts have already been priced by the charge-family implementation. */
-  line: Omit<
-    CalculatedBillingLine,
-    | "lineKey"
-    | "grossAmount"
-    | "obligationId"
-    | "contractLineId"
-    | "chargeFamily"
-  > & { lineKey?: string };
+  chargeFamily: ResolvedContractChargeObligation["kind"];
+  charge: ResolvedContractChargeObligation;
+  /** Resolved correlation and display facts; never monetary results. */
+  metadata?: {
+    serviceId?: string | null;
+    description?: string;
+    billingProfileId?: string | null;
+    recurringServicePeriodId?: string | null;
+    sourceId?: string | null;
+    persistenceRef?: string;
+    quantityLabel?: string;
+    lineCycle?: string;
+  };
 }
 
 export interface CalculatedBillingLine {
   lineKey: string;
   obligationId: string;
   contractLineId?: string;
-  chargeFamily: ResolvedContractBillingObligation["chargeFamily"];
+  chargeFamily:
+    | ResolvedContractChargeObligation["kind"]
+    | "discount"
+    | "adjustment";
   serviceId?: string | null;
   description: string;
   quantity: number;
@@ -46,7 +58,7 @@ export interface CalculatedBillingLine {
   servicePeriodStart?: string;
   servicePeriodEnd?: string;
   billingTiming?: "advance" | "arrears";
-  explanation?: unknown;
+  explanation?: ChargeExplanation | null;
   markers?: string[];
   billingProfileId?: string | null;
   recurringServicePeriodId?: string | null;
@@ -59,6 +71,9 @@ export interface CalculatedDiscount {
   obligationId: string;
   description: string;
   amount: number;
+  discountType: "percentage" | "fixed";
+  value: number;
+  tenant: string;
 }
 
 export interface CalculatedAdjustment {
@@ -81,7 +96,15 @@ export interface ContractBillingCalculationInput {
     currencyCode: string;
     invoiceWindow: { start: string; endExclusive: string };
   };
-  obligations: ResolvedContractBillingObligation[];
+  /** Fully resolved facts only. Monetary results are forbidden at this boundary. */
+  obligations: UnpricedContractBillingObligation[];
+  /** Explicit non-contract carve-out (materials/projects/manual activity). */
+  supplementalCharges?: IBillingCharge[];
+  discountsAndAdjustments?: {
+    billingPeriod: IBillingPeriod;
+    discountCandidates: DiscountComputeCandidate[];
+    adjustments: IAdjustment[];
+  };
 }
 
 export interface ContractBillingCalculationResult {
@@ -97,6 +120,8 @@ export interface ContractBillingCalculationResult {
   taxTotal: number;
   total: number;
   diagnostics: { code: string; message: string }[];
+  /** Rich compute results used only by the guarded production commit adapter. */
+  sourceCharges: IBillingCharge[];
 }
 
 export type LiveContractBillingCalculationResult =

@@ -8,13 +8,13 @@
   {
     "id": "F002",
     "description": "Define a versioned normalized calculation input containing tenant, execution, client, document window, obligations, activity, tax, discounts, and adjustments.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Shared domain contracts"]
   },
   {
     "id": "F003",
     "description": "Represent resolved contract obligations as a discriminated union with effective pricing, timing, proration, profile, source, and persistence identity.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Shared domain contracts"]
   },
   {
@@ -84,27 +84,27 @@
     "prdRefs": ["Requirements > Shared calculation engine"]
   },
   {
-  "id": "F015",
+    "id": "F015",
     "description": "Generate stable charge keys and structured explanations inside the shared engine so callers do not reconstruct internal identities.",
-  "implemented": true,
+    "implemented": true,
     "prdRefs": ["Requirements > Shared calculation engine"]
   },
   {
     "id": "F016",
     "description": "Load production contract billing data with tenant-scoped queries into normalized input without changing effective-date or due-period selection behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Input loaders and adapters"]
   },
   {
     "id": "F017",
     "description": "Load simulator scenarios, hypothetical service periods, and synthetic activity into the same normalized input without implementing financial formulas.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Input loaders and adapters"]
   },
   {
     "id": "F018",
     "description": "Resolve tax and billing-profile context before pure calculation while preserving production provisioning and simulator read-only behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Input loaders and adapters"]
   },
   {
@@ -132,9 +132,9 @@
     "prdRefs": ["Requirements > Simulator simplification"]
   },
   {
-  "id": "F023",
+    "id": "F023",
     "description": "Map shared calculated results to the existing simulator timeline and invoice view model without recalculating monetary fields.",
-  "implemented": true,
+    "implemented": true,
     "prdRefs": ["Requirements > Simulator simplification"]
   },
   {
@@ -146,9 +146,9 @@
     ]
   },
   {
-  "id": "F025",
+    "id": "F025",
     "description": "Delete simulator-owned charge dispatch, synthetic dispatch glue, replicated explanation keys, discount reconstruction, and total calculation.",
-  "implemented": true,
+    "implemented": true,
     "prdRefs": ["Requirements > Simulator simplification"]
   },
   {

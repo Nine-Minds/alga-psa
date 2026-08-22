@@ -17,7 +17,6 @@ import type {
   ChargeExplanation,
   ContractScenario,
   ContractSimulationResult,
-  IBillingCharge,
   IBillingPeriod,
   IClientContractLine,
   IRecurringActivityWindow,
@@ -78,28 +77,12 @@ import {
 import { enrichWithGroupedItems } from "@alga-psa/billing/lib/adapters/invoiceAdapters";
 import {
   calculateContractBilling,
-  calculateContractCharge,
-  calculateContractDiscountsAndAdjustments,
-} from "@alga-psa/billing";
+  type UnpricedContractBillingObligation,
+} from "@alga-psa/billing/lib/billing/domain";
 
 interface PeriodAccumulator {
   window: SimulatedInvoicePeriodWindow;
-  lines: SimulatedInvoiceLine[];
-  prorated: boolean;
-  lineCycles: Set<string>;
-}
-
-function explanationForCharge(
-  charge: IBillingCharge,
-  associations: Array<{
-    charge: IBillingCharge;
-    explanation: ChargeExplanation;
-  }>,
-): ChargeExplanation | null {
-  return (
-    associations.find((association) => association.charge === charge)
-      ?.explanation ?? null
-  );
+  obligations: UnpricedContractBillingObligation[];
 }
 
 export async function simulateContractScenario(
@@ -176,9 +159,7 @@ export async function simulateContractScenario(
   const periodAccumulators: PeriodAccumulator[] = invoicePeriods.map(
     (window) => ({
       window,
-      lines: [],
-      prorated: false,
-      lineCycles: new Set<string>(),
+      obligations: [],
     }),
   );
   const bucketStateByService = new Map<string, BucketPeriodState>();
@@ -377,9 +358,6 @@ export async function simulateContractScenario(
     }
   }
 
-  for (const accumulator of periodAccumulators) {
-    applyScenarioDiscountsAndAdjustments(accumulator, scenario, tenant);
-  }
   const periods: SimulatedPeriod[] = periodAccumulators.map((accumulator) =>
     finalizePeriod(
       accumulator,
@@ -482,56 +460,41 @@ async function simulateRecurringQuantityCharges(
   const priceableServices = quantityServices.filter(hasRecurringQuantityPrice);
   if (priceableServices.length === 0) return;
 
-  const { charges, chargeExplanations } = calculateContractCharge({
-    kind: chargeType,
-    executionMode: "simulate",
-    inputs: {
-      clientContractLine,
-      client,
-      timing,
-      chargeType,
-      services: priceableServices.map((service) => ({
-        service_id: service.service_id,
-        service_name: service.service_name,
-        default_rate: service.legacy_default_rate,
-        tax_rate_id: service.tax_rate_id,
-        config_id:
-          service.configuration_id ??
-          syntheticConfigId(line.key, service.service_id),
-        service_quantity: service.service_quantity,
-        service_line_custom_rate: service.service_custom_rate,
-        configuration_quantity:
-          service.configuration_quantity ?? service.quantity,
-        configuration_custom_rate:
-          service.configuration_custom_rate ?? service.custom_rate,
-        price_rate: service.default_rate,
-      })),
-      contractCurrency: currencyCode,
-    },
-    taxContext: taxPorts,
-  });
-  for (const charge of charges) {
-    pushChargeLine({
-      accumulator,
-      lineKey: line.key,
-      lineCycle,
-      billingTiming: line.billing_timing,
-      charge: {
-        serviceId: charge.serviceId,
-        serviceName: charge.serviceName,
-        chargeType: charge.type,
-        quantityLabel: `${formatHours(charge.quantity)} units`,
-        quantity: charge.quantity,
-        rate: charge.rate,
-        net: charge.total,
-        tax: charge.tax_amount ?? 0,
-        servicePeriodStart: charge.servicePeriodStart,
-        servicePeriodEnd: charge.servicePeriodEnd,
+  accumulator.obligations.push({
+    obligationId: `${chargeType}:${line.key}:${timing.servicePeriodStart}`,
+    tenantId: clientContractLine.tenant,
+    contractLineId: line.key,
+    chargeFamily: chargeType,
+    charge: {
+      kind: chargeType,
+      executionMode: "simulate",
+      inputs: {
+        clientContractLine,
+        client,
+        timing,
+        chargeType,
+        services: priceableServices.map((service) => ({
+          service_id: service.service_id,
+          service_name: service.service_name,
+          default_rate: service.legacy_default_rate,
+          tax_rate_id: service.tax_rate_id,
+          config_id:
+            service.configuration_id ??
+            syntheticConfigId(line.key, service.service_id),
+          service_quantity: service.service_quantity,
+          service_line_custom_rate: service.service_custom_rate,
+          configuration_quantity:
+            service.configuration_quantity ?? service.quantity,
+          configuration_custom_rate:
+            service.configuration_custom_rate ?? service.custom_rate,
+          price_rate: service.default_rate,
+        })),
+        contractCurrency: currencyCode,
       },
-      currencyCode,
-      explanation: explanationForCharge(charge, chargeExplanations),
-    });
-  }
+      taxContext: taxPorts,
+    },
+    metadata: { lineCycle, quantityLabel: "units" },
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -584,65 +547,52 @@ async function simulateBucketCharges(
     });
     bucketStateByService.set(stateKey, state);
 
-    const { charges, chargeExplanations } = calculateContractCharge({
-      kind: "bucket",
-      executionMode: "simulate",
-      inputs: {
-        billingPeriod,
-        clientContractLine,
-        client,
-        config: {
-          config_id: syntheticConfigId(line.key, service.service_id),
-          service_id: service.service_id,
-          service_name: service.service_name,
-          tax_rate_id: service.tax_rate_id,
-          unit_of_measure: isUsageBucket
-            ? usageUnitForBucket(line, service.service_id)
-            : "hours",
-          billing_method: isUsageBucket ? "usage" : "hourly",
-          total_minutes: config.total_minutes,
-          overage_rate: config.overage_rate,
-          allow_rollover: config.allow_rollover,
-        },
-        usageRecords: [
-          {
-            period_start: timing.servicePeriodStart,
-            period_end: timing.servicePeriodEnd,
-            minutes_used: consumedQuantity,
-            overage_minutes: state.overageQuantity,
-            rolled_over_minutes: state.rolledOverQuantity,
+    accumulator.obligations.push({
+      obligationId: `bucket:${line.key}:${service.service_id}:${timing.servicePeriodStart}`,
+      tenantId: clientContractLine.tenant,
+      contractLineId: line.key,
+      chargeFamily: "bucket",
+      charge: {
+        kind: "bucket",
+        executionMode: "simulate",
+        inputs: {
+          billingPeriod,
+          clientContractLine,
+          client,
+          config: {
+            config_id: syntheticConfigId(line.key, service.service_id),
+            service_id: service.service_id,
+            service_name: service.service_name,
+            tax_rate_id: service.tax_rate_id,
+            unit_of_measure: isUsageBucket
+              ? usageUnitForBucket(line, service.service_id)
+              : "hours",
+            billing_method: isUsageBucket ? "usage" : "hourly",
+            total_minutes: config.total_minutes,
+            overage_rate: config.overage_rate,
+            allow_rollover: config.allow_rollover,
           },
-        ],
-        contractCurrency: currencyCode,
-      },
-      taxContext: taxPorts,
-    });
-    for (const charge of charges) {
-      pushChargeLine({
-        accumulator,
-        lineKey: line.key,
-        lineCycle,
-        billingTiming: line.billing_timing,
-        charge: {
-          serviceId: charge.serviceId ?? null,
-          serviceName: charge.serviceName,
-          chargeType: charge.type,
-          quantityLabel: isUsageBucket
-            ? `${formatHours(charge.overageUnits ?? 0)} ${charge.unitOfMeasure ?? "units"} overage`
-            : `${formatHours(charge.overageHours ?? 0)} hrs overage`,
-          quantity: isUsageBucket
-            ? (charge.overageUnits ?? 0)
-            : (charge.overageHours ?? 0),
-          rate: charge.rate ?? 0,
-          net: charge.total ?? 0,
-          tax: charge.tax_amount ?? 0,
-          servicePeriodStart: charge.servicePeriodStart,
-          servicePeriodEnd: charge.servicePeriodEnd,
+          usageRecords: [
+            {
+              period_start: timing.servicePeriodStart,
+              period_end: timing.servicePeriodEnd,
+              minutes_used: consumedQuantity,
+              overage_minutes: state.overageQuantity,
+              rolled_over_minutes: state.rolledOverQuantity,
+            },
+          ],
+          contractCurrency: currencyCode,
         },
-        currencyCode,
-        explanation: explanationForCharge(charge, chargeExplanations),
-      });
-    }
+        taxContext: taxPorts,
+      },
+      metadata: {
+        lineCycle,
+        serviceId: service.service_id,
+        quantityLabel: isUsageBucket
+          ? `${config.overage_rate} ${usageUnitForBucket(line, service.service_id)} overage`
+          : "hrs overage",
+      },
+    });
   }
 }
 
@@ -711,49 +661,27 @@ async function simulateUsageCharges(
   }
 
   if (usageRecords.length === 0) return;
-  const { charges, chargeExplanations } = calculateContractCharge({
-    kind: "usage",
-    executionMode: "simulate",
-    inputs: {
-      billingPeriod,
-      clientContractLine,
-      timing,
-      client,
-      serviceConfigMap: buildUsageServiceConfigMap(line),
-      usageRecords,
-      contractCurrency: currencyCode,
-    },
-    taxContext: taxPorts,
-  });
-  for (const charge of charges) {
-    const service = usageServices.find(
-      (candidate) => candidate.service_id === charge.serviceId,
-    );
-    pushChargeLine({
-      accumulator,
-      lineKey: line.key,
-      lineCycle,
-      billingTiming: line.billing_timing,
-      charge: {
-        serviceId: charge.serviceId ?? null,
-        serviceName: charge.serviceName,
-        chargeType: charge.type,
-        quantityLabel: `${formatHours(charge.quantity ?? 0)} ${
-          service?.configuration.configuration_type === "Usage"
-            ? service.configuration.unit_of_measure
-            : "units"
-        }`,
-        quantity: charge.quantity ?? 0,
-        rate: charge.rate ?? 0,
-        net: charge.total ?? 0,
-        tax: charge.tax_amount ?? 0,
-        servicePeriodStart: charge.servicePeriodStart,
-        servicePeriodEnd: charge.servicePeriodEnd,
+  accumulator.obligations.push({
+    obligationId: `usage:${line.key}:${timing.servicePeriodStart}`,
+    tenantId: clientContractLine.tenant,
+    contractLineId: line.key,
+    chargeFamily: "usage",
+    charge: {
+      kind: "usage",
+      executionMode: "simulate",
+      inputs: {
+        billingPeriod,
+        clientContractLine,
+        timing,
+        client,
+        serviceConfigMap: buildUsageServiceConfigMap(line),
+        usageRecords,
+        contractCurrency: currencyCode,
       },
-      currencyCode,
-      explanation: explanationForCharge(charge, chargeExplanations),
-    });
-  }
+      taxContext: taxPorts,
+    },
+    metadata: { lineCycle, quantityLabel: "units" },
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -966,56 +894,36 @@ async function simulateFixedCharges(
     timing,
   );
 
-  const { charges, chargeExplanations } = calculateContractCharge({
-    kind: "fixed",
-    executionMode: "simulate",
-    inputs: {
-      clientId: client.client_id,
-      billingPeriod,
-      clientContractLine,
-      timing,
-      client,
-      contractLineDetails: {
-        contract_line_type: line.contract_line_type,
-        custom_rate: line.custom_rate,
-        enable_proration: line.enable_proration,
+  accumulator.obligations.push({
+    obligationId: `fixed:${line.key}:${timing.servicePeriodStart}`,
+    tenantId: clientContractLine.tenant,
+    contractLineId: line.key,
+    chargeFamily: "fixed",
+    charge: {
+      kind: "fixed",
+      executionMode: "simulate",
+      inputs: {
+        clientId: client.client_id,
+        billingPeriod,
+        clientContractLine,
+        timing,
+        client,
+        contractLineDetails: {
+          contract_line_type: line.contract_line_type,
+          custom_rate: line.custom_rate,
+          enable_proration: line.enable_proration,
+        },
+        effectiveCustomRate,
+        customRateSource,
+        planServices,
+        // The scenario carries the full service list; there is no separate
+        // catalog fallback row to load for a hypothetical line.
+        fallbackService: null,
       },
-      effectiveCustomRate,
-      customRateSource,
-      planServices,
-      // The scenario carries the full service list; there is no separate
-      // catalog fallback row to load for a hypothetical line.
-      fallbackService: null,
+      taxContext: taxPorts,
     },
-    taxContext: taxPorts,
+    metadata: { lineCycle, quantityLabel: cadenceQuantityLabel(lineCycle) },
   });
-  // advanceGuard is intentionally ignored: it exists to suppress
-  // double-billing against persisted charges, and a simulation persists
-  // nothing.
-
-  for (const charge of charges) {
-    const explanation = explanationForCharge(charge, chargeExplanations);
-    pushChargeLine({
-      accumulator,
-      lineKey: line.key,
-      lineCycle,
-      billingTiming: line.billing_timing,
-      charge: {
-        serviceId: charge.serviceId ?? null,
-        serviceName: charge.serviceName,
-        chargeType: charge.type,
-        quantityLabel: cadenceQuantityLabel(lineCycle),
-        quantity: charge.quantity ?? 1,
-        rate: charge.rate ?? 0,
-        net: charge.total ?? 0,
-        tax: charge.tax_amount ?? 0,
-        servicePeriodStart: charge.servicePeriodStart,
-        servicePeriodEnd: charge.servicePeriodEnd,
-      },
-      currencyCode,
-      explanation,
-    });
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1081,222 +989,39 @@ async function simulateHourlyCharges(
     return;
   }
 
-  const { charges, chargeExplanations } = calculateContractCharge({
-    kind: "hourly",
-    executionMode: "simulate",
-    inputs: {
-      billingPeriod,
-      clientContractLine,
-      timing,
-      client,
-      plan: {
-        enable_overtime: line.enable_overtime,
-        overtime_threshold: line.overtime_threshold ?? undefined,
-        overtime_rate: line.overtime_rate ?? undefined,
+  accumulator.obligations.push({
+    obligationId: `hourly:${line.key}:${timing.servicePeriodStart}`,
+    tenantId: clientContractLine.tenant,
+    contractLineId: line.key,
+    chargeFamily: "hourly",
+    charge: {
+      kind: "hourly",
+      executionMode: "simulate",
+      inputs: {
+        billingPeriod,
+        clientContractLine,
+        timing,
+        client,
+        plan: {
+          enable_overtime: line.enable_overtime,
+          overtime_threshold: line.overtime_threshold ?? undefined,
+          overtime_rate: line.overtime_rate ?? undefined,
+        },
+        serviceConfigMap: buildHourlyServiceConfigMap(line),
+        timeEntries,
+        contractCurrency: currencyCode,
+        resolvePhaseRateOverride: null,
+        getProjectChargeConfig: null,
       },
-      serviceConfigMap: buildHourlyServiceConfigMap(line),
-      timeEntries,
-      contractCurrency: currencyCode,
-      resolvePhaseRateOverride: null,
-      getProjectChargeConfig: null,
+      taxContext: taxPorts,
     },
-    taxContext: taxPorts,
+    metadata: { lineCycle, quantityLabel: "hrs" },
   });
-
-  for (const charge of charges) {
-    const explanation = explanationForCharge(charge, chargeExplanations);
-    pushChargeLine({
-      accumulator,
-      lineKey: line.key,
-      lineCycle,
-      billingTiming: line.billing_timing,
-      charge: {
-        serviceId: charge.serviceId ?? null,
-        serviceName: charge.serviceName,
-        chargeType: charge.type,
-        quantityLabel: `${formatHours(charge.duration ?? 0)} hrs`,
-        quantity: charge.duration ?? 0,
-        rate: charge.rate ?? 0,
-        net: charge.total ?? 0,
-        tax: charge.tax_amount ?? 0,
-        servicePeriodStart: charge.servicePeriodStart,
-        servicePeriodEnd: charge.servicePeriodEnd,
-      },
-      currencyCode,
-      explanation,
-    });
-  }
-}
-
-function applyScenarioDiscountsAndAdjustments(
-  accumulator: PeriodAccumulator,
-  scenario: ContractScenario,
-  tenant: string,
-): void {
-  const discountCandidates = (scenario.discounts ?? []).flatMap((discount) => {
-    const lineKeys =
-      discount.contract_line_keys.length > 0
-        ? discount.contract_line_keys
-        : [null];
-    return lineKeys.map((lineKey) => ({
-      discount_id: discount.discount_id,
-      discount_name: discount.discount_name,
-      discount_type: discount.discount_type,
-      value: discount.value,
-      start_date: discount.start_date,
-      end_date: discount.end_date,
-      contract_line_id: lineKey,
-      tenant,
-    }));
-  });
-  const adjustments = (scenario.adjustments ?? []).filter(
-    (adjustment) =>
-      adjustment.period_index == null ||
-      adjustment.period_index === accumulator.window.index,
-  );
-  if (discountCandidates.length === 0 && adjustments.length === 0) {
-    return;
-  }
-
-  const charges: IBillingCharge[] = accumulator.lines
-    .filter(
-      (line) =>
-        line.charge_type !== "discount" && line.charge_type !== "adjustment",
-    )
-    .map((line) => ({
-      type: "fixed",
-      client_contract_line_id: line.line_key,
-      serviceId: line.service_id ?? undefined,
-      serviceName: line.service_name,
-      quantity: 1,
-      rate: line.net_amount,
-      total: line.net_amount,
-      tax_amount: line.tax_amount,
-      tax_rate: 0,
-      servicePeriodStart: line.service_period_start,
-      servicePeriodEnd: line.service_period_end,
-    }));
-  const totalAmount = charges.reduce((sum, charge) => sum + charge.total, 0);
-  const computed = calculateContractDiscountsAndAdjustments("simulate", {
-    billingResult: {
-      tenant,
-      charges,
-      totalAmount,
-      discounts: [],
-      adjustments: [],
-      finalAmount: totalAmount,
-      currency_code: scenario.currency_code,
-    },
-    billingPeriod: {
-      tenant,
-      startDate: accumulator.window.startDate,
-      endDate: accumulator.window.endDateExclusive,
-    },
-    discountCandidates,
-    adjustments,
-  });
-  const explanationByKey = new Map(
-    computed.explanations.map((explanation) => [
-      explanation.chargeKey,
-      explanation,
-    ]),
-  );
-
-  for (const discount of computed.billingResult.discounts) {
-    const amount = discount.amount ?? 0;
-    accumulator.lines.push({
-      line_key: `discount:${discount.discount_id}`,
-      service_id: null,
-      service_name: discount.discount_name,
-      charge_type: "discount",
-      quantity_label:
-        discount.discount_type === "percentage"
-          ? `${discount.value * 100}%`
-          : "fixed",
-      rate_label: `−${formatCents(amount, scenario.currency_code)}`,
-      net_amount: -amount,
-      tax_amount: 0,
-      total: -amount,
-      explanation:
-        explanationByKey.get(`discount:${discount.discount_id}`) ?? null,
-    });
-  }
-  for (const [
-    index,
-    adjustment,
-  ] of computed.billingResult.adjustments.entries()) {
-    const scenarioAdjustment = adjustments[index];
-    accumulator.lines.push({
-      line_key: `adjustment:${index}`,
-      service_id: null,
-      service_name: adjustment.description,
-      charge_type: scenarioAdjustment?.one_time ? "one_time" : "adjustment",
-      quantity_label: "adjustment",
-      rate_label: formatCents(adjustment.amount, scenario.currency_code),
-      net_amount: adjustment.amount,
-      tax_amount: 0,
-      total: adjustment.amount,
-      explanation: explanationByKey.get(`adjustment:${index}`) ?? null,
-    });
-  }
 }
 
 /* ------------------------------------------------------------------ */
 /* Result assembly                                                    */
 /* ------------------------------------------------------------------ */
-
-function pushChargeLine(input: {
-  accumulator: PeriodAccumulator;
-  lineKey: string;
-  lineCycle: string;
-  billingTiming: "arrears" | "advance";
-  charge: {
-    serviceId: string | null;
-    serviceName: string;
-    chargeType: string;
-    quantityLabel: string;
-    quantity?: number;
-    rate: number;
-    net: number;
-    tax: number;
-    servicePeriodStart?: ISO8601String;
-    servicePeriodEnd?: ISO8601String;
-  };
-  currencyCode: string;
-  explanation: ChargeExplanation | null;
-}): void {
-  const {
-    accumulator,
-    lineKey,
-    lineCycle,
-    billingTiming,
-    charge,
-    currencyCode,
-    explanation,
-  } = input;
-
-  accumulator.lines.push({
-    line_key: lineKey,
-    service_id: charge.serviceId,
-    service_name: charge.serviceName,
-    charge_type: charge.chargeType,
-    quantity_label: charge.quantityLabel,
-    rate_label: formatCents(charge.rate, currencyCode),
-    quantity: charge.quantity ?? 1,
-    unit_price: charge.rate,
-    net_amount: charge.net,
-    tax_amount: charge.tax,
-    total: charge.net + charge.tax,
-    explanation,
-    billing_timing: billingTiming,
-    service_period_start: charge.servicePeriodStart,
-    service_period_end: charge.servicePeriodEnd,
-  });
-  accumulator.lineCycles.add(lineCycle);
-  if (explanation?.markers.includes("proration")) {
-    accumulator.prorated = true;
-  }
-}
 
 function finalizePeriod(
   accumulator: PeriodAccumulator,
@@ -1305,7 +1030,7 @@ function finalizePeriod(
   contractEndDate: ISO8601String | null,
   invoiceParties: SimulatorInvoiceParties,
 ): SimulatedPeriod {
-  const { window, lines } = accumulator;
+  const { window, obligations } = accumulator;
   // The simulator deliberately crosses the shared boundary in simulate mode.
   // It supplies already-resolved, tenant-scoped facts and never receives a
   // persistence capability.
@@ -1328,76 +1053,99 @@ function finalizePeriod(
         endExclusive: window.endDateExclusive,
       },
     },
-    obligations: lines.map((line, index) => ({
-      obligationId: `${line.line_key}:${index}`,
-      tenantId: tenant,
-      contractLineId: line.line_key,
-      chargeFamily: ([
-        "fixed",
-        "hourly",
-        "usage",
-        "bucket",
-        "product",
-        "license",
-      ].includes(line.charge_type)
-        ? line.charge_type
-        : "other") as
-        | "fixed"
-        | "hourly"
-        | "usage"
-        | "bucket"
-        | "product"
-        | "license"
-        | "other",
-      lineKind:
-        line.charge_type === "discount"
-          ? ("discount" as const)
-          : line.charge_type === "adjustment" || line.charge_type === "one_time"
-            ? ("adjustment" as const)
-            : ("charge" as const),
-      line: {
-        lineKey: line.line_key,
-        serviceId: line.service_id,
-        description: line.service_name,
-        quantity: line.quantity ?? 1,
-        unitRate: line.unit_price ?? line.net_amount,
-        netAmount: line.net_amount,
-        taxAmount: line.tax_amount,
-        currencyCode: scenario.currency_code || "USD",
-        servicePeriodStart: line.service_period_start,
-        servicePeriodEnd: line.service_period_end,
-        billingTiming: line.billing_timing,
-        explanation: line.explanation,
-        markers: line.explanation?.markers,
+    obligations,
+    discountsAndAdjustments: {
+      billingPeriod: {
+        tenant,
+        startDate: window.startDate,
+        endDate: window.endDateExclusive,
       },
-    })),
+      discountCandidates: (scenario.discounts ?? []).flatMap((discount) =>
+        (discount.contract_line_keys.length
+          ? discount.contract_line_keys
+          : [null]
+        ).map((contractLineId) => ({
+          discount_id: discount.discount_id,
+          discount_name: discount.discount_name,
+          discount_type: discount.discount_type,
+          value: discount.value,
+          start_date: discount.start_date,
+          end_date: discount.end_date,
+          contract_line_id: contractLineId,
+          tenant,
+        })),
+      ),
+      adjustments: (scenario.adjustments ?? []).filter(
+        (adjustment) =>
+          adjustment.period_index == null ||
+          adjustment.period_index === window.index,
+      ),
+    },
   });
-  // Presentation retains simulator-only labels, while every monetary and
-  // correlation field comes back from the canonical document result.
-  const presentationLines = calculation.lines.map((canonicalLine, index) => ({
-    ...lines[index],
-    line_key: canonicalLine.lineKey,
-    service_id: canonicalLine.serviceId ?? null,
-    service_name: canonicalLine.description,
-    quantity: canonicalLine.quantity,
-    unit_price: canonicalLine.unitRate,
-    net_amount: canonicalLine.netAmount,
-    tax_amount: canonicalLine.taxAmount,
-    total: canonicalLine.grossAmount,
-    service_period_start: canonicalLine.servicePeriodStart,
-    service_period_end: canonicalLine.servicePeriodEnd,
-    billing_timing: canonicalLine.billingTiming,
-    explanation: canonicalLine.explanation as ChargeExplanation | null,
-  }));
+  const obligationById = new Map(
+    obligations.map((obligation) => [obligation.obligationId, obligation]),
+  );
+  const presentationLines: SimulatedInvoiceLine[] = calculation.lines.map(
+    (canonicalLine) => {
+      const obligation = obligationById.get(canonicalLine.obligationId);
+      const unit = obligation?.metadata?.quantityLabel;
+      const quantityLabel =
+        canonicalLine.chargeFamily === "discount"
+          ? "discount"
+          : canonicalLine.chargeFamily === "adjustment"
+            ? "adjustment"
+            : unit?.includes("month")
+              ? unit
+              : `${formatHours(canonicalLine.quantity)} ${unit ?? "units"}`;
+      const adjustmentIndex =
+        canonicalLine.chargeFamily === "adjustment"
+          ? Number(canonicalLine.lineKey.split(":")[1])
+          : -1;
+      const chargeType =
+        canonicalLine.chargeFamily === "hourly"
+          ? "time"
+          : canonicalLine.chargeFamily === "adjustment" &&
+              (scenario.adjustments ?? []).filter(
+                (adjustment) =>
+                  adjustment.period_index == null ||
+                  adjustment.period_index === window.index,
+              )[adjustmentIndex]?.one_time
+            ? "one_time"
+            : canonicalLine.chargeFamily;
+      return {
+        line_key: canonicalLine.lineKey,
+        service_id: canonicalLine.serviceId ?? null,
+        service_name: canonicalLine.description,
+        charge_type: chargeType,
+        quantity_label: quantityLabel,
+        rate_label: formatCents(canonicalLine.unitRate, scenario.currency_code),
+        quantity: canonicalLine.quantity,
+        unit_price: canonicalLine.unitRate,
+        net_amount: canonicalLine.netAmount,
+        tax_amount: canonicalLine.taxAmount,
+        total: canonicalLine.grossAmount,
+        service_period_start: canonicalLine.servicePeriodStart,
+        service_period_end: canonicalLine.servicePeriodEnd,
+        billing_timing: canonicalLine.billingTiming,
+        explanation: canonicalLine.explanation as ChargeExplanation | null,
+      };
+    },
+  );
   const endInclusive = toISODate(
     toPlainDate(window.endDateExclusive).subtract({ days: 1 }),
   );
 
   const markers: SimulatedPeriodMarker[] = [];
-  if (accumulator.prorated) {
+  if (calculation.lines.some((line) => line.markers?.includes("proration"))) {
     markers.push("prorated");
   }
-  if (accumulator.lineCycles.size > 1) {
+  if (
+    new Set(
+      obligations
+        .map((obligation) => obligation.metadata?.lineCycle)
+        .filter(Boolean),
+    ).size > 1
+  ) {
     markers.push("cadence_coincidence");
   }
   if (presentationLines.some((line) => line.charge_type === "bucket")) {

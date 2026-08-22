@@ -63,7 +63,13 @@
 - Is prepaid hour-block billing reachable from a contract scenario and required in the first obligation union?
 - Does invoice-level tax redistribution after persistence intentionally differ from charge-level calculation in any supported tax configuration?
 - Which reconciliation mutations must stay before calculation to preserve lock ordering, and which can follow a successful result?
+
 ## Takeover completion (2026-08-22)
+
+- Mitigation round 2 replaces the pre-priced document assembler with a required unpriced obligation union. Both normal production generation and every simulator period now collect resolved obligations and call `calculateContractBilling` once; family dispatch, discounts/adjustments, canonical lines, tax, and totals are owned there.
+- Production family loaders retain their tenant-scoped reads and timing/idempotency checks but emit obligations into deterministic family-order sinks. Project/material/manual charges are an explicit non-contract supplemental-charge carve-out and still participate in document discounts and totals.
+- The simulator no longer contains `calculateContractCharge`, `pushChargeLine`, or discount reconstruction. It maps canonical money into presentation-only labels and markers.
+- The simulator integration suite now collects when the simulator imports the billing domain subpath. Its fixture was updated for current service-price upserts and line-owned bucket pools; the suite runs against the worktree DB on port 55432.
 
 - Shared dispatch now carries charge-to-explanation associations directly and fails closed if a compute family returns unequal charge/explanation counts.
 - Discounts and adjustments require the same explicit `simulate`/`live` mode as charge families.

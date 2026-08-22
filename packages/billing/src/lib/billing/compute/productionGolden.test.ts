@@ -320,6 +320,13 @@ describe("production compute extraction golden", () => {
       new URL("../billingEngine.ts", import.meta.url),
       "utf8",
     );
+    const simulator = readFileSync(
+      new URL(
+        "../../../../../../ee/server/src/lib/billing/simulator/simulateContractScenario.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    );
     for (const computeName of [
       "computeFixedCharges",
       "computeTimeBasedCharges",
@@ -331,7 +338,12 @@ describe("production compute extraction golden", () => {
       expect(domainDispatcher).toContain(`${computeName}(`);
       expect(engine).not.toContain(`${computeName}(`);
     }
-    expect(engine).toContain("calculateContractCharge({");
+    expect(engine).toContain("calculateContractBilling({");
+    expect(engine).not.toContain("calculateContractCharge(");
+    expect(simulator).toContain("calculateContractBilling({");
+    expect(simulator).not.toMatch(
+      /calculateContractCharge\(|pushChargeLine|applyScenarioDiscountsAndAdjustments/,
+    );
     expect(engine).toContain("loadChargeComputeTaxContext");
     expect(engine).toContain("loadPersistedRecurringTimingSelections");
     expect(engine).toContain("hasExistingServicePeriodCharge");
