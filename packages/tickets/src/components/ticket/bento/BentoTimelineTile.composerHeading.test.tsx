@@ -233,4 +233,36 @@ describe('BentoTimelineTile composer heading', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Internal' }));
     expect(document.getElementById('ticket-timeline-composer-schedule-toggle')).toBeNull();
   });
+
+  it.each([
+    { lane: 'Internal', isInternal: true, isResolution: false },
+    { lane: 'Resolution', isInternal: false, isResolution: true },
+  ])('allows an ordinary $lane comment after leaving an invalid client schedule', async ({ lane, isInternal, isResolution }) => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    renderTimeline({ onAddNewComment });
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Schedule' }));
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: lane }));
+
+    const send = screen.getByRole('button', { name: 'Send' });
+    expect(send).toBeEnabled();
+    fireEvent.click(send);
+
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenCalledWith(isInternal, isResolution, null, undefined, null);
+    });
+  });
+
+  it('clears a scheduled draft when cancelled before reopening the composer', () => {
+    renderTimeline();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Schedule' }));
+    expect(screen.getByLabelText('Publish at (America/New_York)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
+
+    expect(screen.getByRole('switch', { name: 'Schedule' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.queryByLabelText('Publish at (America/New_York)')).not.toBeInTheDocument();
+  });
 });

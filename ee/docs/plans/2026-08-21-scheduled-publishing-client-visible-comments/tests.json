@@ -79,7 +79,7 @@
   },
   {
     "id": "T014",
-    "description": "Component behavior: the default bento timeline client composer resolves a datetime-local value in the user time zone and forwards it as the fifth schedule argument; internal lane exposes no scheduling controls",
+    "description": "Component behavior: the default bento timeline client composer resolves a datetime-local value in the user time zone and forwards it as the fifth schedule argument; leaving an invalid schedule for internal/resolution forwards null and remains submittable; cancel/reopen clears scheduling state",
     "implemented": true,
     "featureIds": ["F047"]
   }

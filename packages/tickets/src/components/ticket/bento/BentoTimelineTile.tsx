@@ -365,7 +365,8 @@ export function BentoTimelineTile({
       return null;
     }
   }, [isScheduleToggle, scheduledPublishLocal]);
-  const scheduleIsValid = !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
+  const isClientComposer = composerLane === 'client';
+  const scheduleIsValid = !isClientComposer || !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [hasDraft, setHasDraft] = useState(false);
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
@@ -643,6 +644,8 @@ export function BentoTimelineTile({
     onNewCommentContentChange(DEFAULT_BLOCK);
     setHasDraft(false);
     setShowComposer(false);
+    setIsScheduleToggle(false);
+    setScheduledPublishLocal('');
   }, [onNewCommentContentChange]);
 
   useEffect(() => {
@@ -796,12 +799,12 @@ export function BentoTimelineTile({
         >
           {isSubmitting
             ? t('bento.timeline.sending', 'Sending…')
-            : isScheduleToggle
+            : isClientComposer && isScheduleToggle
               ? t('conversation.schedule', 'Schedule')
               : t('bento.timeline.send', 'Send')}
         </Button>
       </div>
-      {composerLane === 'client' ? (
+      {isClientComposer ? (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[rgb(var(--color-border-100))] pt-3">
           <div className="flex items-center gap-2">
             <Switch
