@@ -128,11 +128,22 @@ const hoisted = vi.hoisted(() => {
     })),
     ticketDefaultsMock: vi.fn(async () => ({ boardId: 'board-1', statusId: 'status-open' })),
     priorityMock: vi.fn(async () => 'priority-normal'),
+    activateMock: vi.fn(async () => undefined),
+    deactivateMock: vi.fn(async () => undefined),
+    autoTicketPolicyMock: vi.fn(async () => undefined),
   };
 });
 
 const { calls, interactions, tickets, statuses, contacts, clients } = hoisted.state;
-const { createTicketMock, hasPermissionMock, priorityMock, ticketDefaultsMock } = hoisted;
+const {
+  activateMock,
+  autoTicketPolicyMock,
+  createTicketMock,
+  deactivateMock,
+  hasPermissionMock,
+  priorityMock,
+  ticketDefaultsMock,
+} = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
@@ -162,6 +173,9 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib', () => ({
   getTeamsPhoneProviderState: async () => ({ provider: 'teams-phone', status: 'active' }),
   getTeamsTicketCreationDefaults: hoisted.ticketDefaultsMock,
   resolveDefaultPriorityIdForBoard: hoisted.priorityMock,
+  activateTeamsPhoneProvider: hoisted.activateMock,
+  deactivateTeamsPhoneProvider: hoisted.deactivateMock,
+  setTeamsPhoneAutoTicketPolicy: hoisted.autoTicketPolicyMock,
 }));
 
 vi.mock('../../lib/telephonyAvailability', () => ({
@@ -174,6 +188,8 @@ import {
   linkTelephonyCallToTicket,
   listTelephonyLinkableTickets,
   listTelephonyResolutionTargets,
+  setTelephonyAutoTicketPolicy,
+  setTelephonyProviderEnabled,
 } from './telephonyActions';
 
 describe('telephony link-to-ticket', () => {
@@ -187,6 +203,9 @@ describe('telephony link-to-ticket', () => {
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
     createTicketMock.mockClear();
+    activateMock.mockClear();
+    deactivateMock.mockClear();
+    autoTicketPolicyMock.mockClear();
     ticketDefaultsMock.mockClear();
     ticketDefaultsMock.mockResolvedValue({ boardId: 'board-1', statusId: 'status-open' });
     priorityMock.mockClear();
@@ -374,6 +393,49 @@ describe('telephony link-to-ticket', () => {
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/default priority/);
       expect(createTicketMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('provider activation', () => {
+    it('T030: enabling the provider activates it, disabling deactivates it', async () => {
+      await expect(setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: true }))
+        .resolves.toEqual({ success: true });
+      expect(activateMock).toHaveBeenCalledWith('tenant-1');
+
+      await expect(setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: false }))
+        .resolves.toEqual({ success: true });
+      expect(deactivateMock).toHaveBeenCalledWith('tenant-1');
+    });
+
+    it('T030: activation requires the system settings update permission', async () => {
+      hasPermissionMock.mockResolvedValue(false);
+
+      const result = await setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: true });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Permission denied/);
+      expect(activateMock).not.toHaveBeenCalled();
+    });
+
+    it('T030: a Graph failure while activating is reported, not thrown', async () => {
+      activateMock.mockRejectedValueOnce(new Error('Graph said no'));
+
+      const result = await setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: true });
+
+      expect(result).toEqual({ success: false, error: 'Graph said no' });
+    });
+
+    it('T030: the auto-ticket policy toggle is permission gated too', async () => {
+      await expect(setTelephonyAutoTicketPolicy({ provider: 'teams-phone', autoCreateTickets: true }))
+        .resolves.toEqual({ success: true });
+      expect(autoTicketPolicyMock).toHaveBeenCalledWith('tenant-1', true);
+
+      hasPermissionMock.mockResolvedValue(false);
+      autoTicketPolicyMock.mockClear();
+
+      const denied = await setTelephonyAutoTicketPolicy({ provider: 'teams-phone', autoCreateTickets: true });
+      expect(denied.success).toBe(false);
+      expect(autoTicketPolicyMock).not.toHaveBeenCalled();
     });
   });
 
