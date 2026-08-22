@@ -359,7 +359,17 @@
     "commentEditor": "55555",
     "deleteComment": "55555",
     "deleteCommentImages": "55555",
-    "deleteCommentOnly": "55555"
+    "deleteCommentOnly": "55555",
+    "cancelScheduledComment": "55555",
+    "cancelScheduledCommentConfirm": "55555",
+    "invalidScheduleTime": "55555",
+    "publishAt": "55555",
+    "publishes": "55555",
+    "reschedule": "55555",
+    "rescheduleComment": "55555",
+    "resolvedPublishInstant": "55555",
+    "schedule": "55555",
+    "scheduled": "55555"
   },
   "responseState": {
     "awaitingYourResponse": "55555",

@@ -85,7 +85,7 @@ import {
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
-import { getJobRunner } from '@alga-psa/jobs/runner';
+import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 type ScheduledCommentPublication = { publishAt: string; timeZone: string };
@@ -3457,7 +3457,7 @@ export const addTicketCommentWithCache = withAuth(async (
       // its comment row is durable. Startup reconciliation repairs an arming
       // failure after the transaction has committed.
       registerAfterCommit(trx, async () => {
-        const job = await (await getJobRunner()).scheduleJobAt(
+        const job = await scheduleBackgroundJobAt(
           SCHEDULED_COMMENT_JOB,
           { tenantId: tenant, ticketId, commentId: newComment.comment_id },
           scheduledPublishAt,

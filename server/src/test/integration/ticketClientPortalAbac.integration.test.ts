@@ -8,6 +8,7 @@ import { TicketService } from '@/lib/api/services/TicketService';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { TicketModel } from '@shared/models/ticketModel';
 import { runWithTenant } from '@alga-psa/db';
+import { registerScheduledJobEnqueuer, registerScheduledJobCanceler } from '@alga-psa/core';
 import { publishScheduledCommentHandler } from '@/lib/jobs/handlers/publishScheduledCommentHandler';
 import { addTicketCommentWithCache } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { createComment } from '@alga-psa/tickets/actions/comment-actions/commentActions';
@@ -20,7 +21,7 @@ const optimizedPathMocks = vi.hoisted(() => ({
   user: null as any,
   tenant: null as string | null,
   scheduleJobAt: vi.fn(),
-  getJobRunner: vi.fn(),
+  cancelScheduledJob: vi.fn().mockResolvedValue(true),
   maybeReopenBundleMasterFromChildReply: vi.fn(),
   hasPermission: vi.fn(),
 }));
@@ -30,12 +31,15 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
   withAuth: (action: any) => (...args: any[]) => action(optimizedPathMocks.user, { tenant: optimizedPathMocks.tenant }, ...args),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: optimizedPathMocks.hasPermission }));
-vi.mock('@alga-psa/jobs/runner', () => ({
-  getJobRunner: optimizedPathMocks.getJobRunner,
-}));
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: optimizedPathMocks.maybeReopenBundleMasterFromChildReply,
 }));
+
+// Wire the core job-enqueue DI seam to the test doubles. Production registers a
+// runner-backed implementation at startup; here the tickets package schedules
+// through the same seam without importing @alga-psa/jobs.
+registerScheduledJobEnqueuer(optimizedPathMocks.scheduleJobAt as any);
+registerScheduledJobCanceler(optimizedPathMocks.cancelScheduledJob as any);
 
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: vi.fn().mockResolvedValue(null),
@@ -771,7 +775,6 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
     };
     optimizedPathMocks.tenant = fixture.tenantId;
     optimizedPathMocks.scheduleJobAt.mockResolvedValue({ jobId: scheduledJobId });
-    optimizedPathMocks.getJobRunner.mockResolvedValue({ scheduleJobAt: optimizedPathMocks.scheduleJobAt });
     optimizedPathMocks.hasPermission.mockResolvedValue(true);
     optimizedPathMocks.maybeReopenBundleMasterFromChildReply.mockClear();
     eventMocks.publishEvent.mockClear();
@@ -822,7 +825,6 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
     optimizedPathMocks.user = { user_id: fixture.internalUserId, user_type: 'internal' };
     optimizedPathMocks.tenant = fixture.tenantId;
     optimizedPathMocks.scheduleJobAt.mockResolvedValue({ jobId: scheduledJobId });
-    optimizedPathMocks.getJobRunner.mockResolvedValue({ scheduleJobAt: optimizedPathMocks.scheduleJobAt });
     optimizedPathMocks.maybeReopenBundleMasterFromChildReply.mockClear();
 
     const commentId = await createComment({

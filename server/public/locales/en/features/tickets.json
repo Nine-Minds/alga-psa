@@ -359,7 +359,17 @@
     "commentEditor": "Comment Editor",
     "deleteComment": "Delete Comment",
     "deleteCommentImages": "Delete Comment + Images",
-    "deleteCommentOnly": "Delete Comment Only"
+    "deleteCommentOnly": "Delete Comment Only",
+    "cancelScheduledComment": "Cancel scheduled comment",
+    "cancelScheduledCommentConfirm": "Cancel this scheduled comment?",
+    "invalidScheduleTime": "Choose an unambiguous future time in this time zone.",
+    "publishAt": "Publish at",
+    "publishes": "Publishes",
+    "reschedule": "Reschedule",
+    "rescheduleComment": "Reschedule comment",
+    "resolvedPublishInstant": "Resolved instant",
+    "schedule": "Schedule",
+    "scheduled": "Scheduled"
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",

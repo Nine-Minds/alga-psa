@@ -393,7 +393,17 @@
     "deleteComment": "Usuń komentarz",
     "deleteCommentImages": "Usuń komentarz i obrazy",
     "deleteCommentOnly": "Usuń tylko komentarz",
-    "clientCommentTooltip": "Komentarz widoczny dla klienta"
+    "clientCommentTooltip": "Komentarz widoczny dla klienta",
+    "cancelScheduledComment": "Anuluj zaplanowany komentarz",
+    "cancelScheduledCommentConfirm": "Anulować ten zaplanowany komentarz?",
+    "invalidScheduleTime": "Wybierz jednoznaczny przyszły czas w tej strefie czasowej.",
+    "publishAt": "Opublikuj o",
+    "publishes": "Publikuje",
+    "reschedule": "Zmień termin",
+    "rescheduleComment": "Zmień termin komentarza",
+    "resolvedPublishInstant": "Ustalony moment",
+    "schedule": "Zaplanuj",
+    "scheduled": "Zaplanowano"
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",

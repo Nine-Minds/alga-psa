@@ -23,7 +23,7 @@ import {
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
 import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
-import { getJobRunner } from '@alga-psa/jobs/runner';
+import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 
@@ -424,7 +424,7 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
       if (isScheduled && commentTenant && comment.ticket_id && comment.scheduled_publish_at) {
         const publishAt = new Date(comment.scheduled_publish_at);
         registerAfterCommit(trx, async () => {
-          const scheduled = await (await getJobRunner()).scheduleJobAt(
+          const scheduled = await scheduleBackgroundJobAt(
             SCHEDULED_COMMENT_JOB,
             { tenantId: commentTenant, ticketId: comment.ticket_id!, commentId }, publishAt,
             { singletonKey: `publish-comment:${commentId}`, metadata: { scheduledPublishTz: comment.scheduled_publish_tz } },
@@ -818,9 +818,8 @@ export const rescheduleScheduledComment = withAuth(async (user, { tenant }, id: 
     const existing = await Comment.get(trx, tenant, id);
     if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be rescheduled');
     if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only reschedule your own comments');
-    const runner = await getJobRunner();
-    if (existing.schedule_job_id) await runner.cancelJob(existing.schedule_job_id, tenant);
-    const scheduled = await runner.scheduleJobAt(
+    if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
+    const scheduled = await scheduleBackgroundJobAt(
       SCHEDULED_COMMENT_JOB, { tenantId: tenant, ticketId: existing.ticket_id!, commentId: id }, at,
       { singletonKey: `publish-comment:${id}`, metadata: { scheduledPublishTz } },
     );
@@ -846,7 +845,7 @@ export const cancelScheduledComment = withAuth(async (user, { tenant }, id: stri
     await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
       publish_state: 'canceled', deleted_at: trx.fn.now(), schedule_job_id: null, updated_at: trx.fn.now(),
     });
-    if (existing.schedule_job_id) await (await getJobRunner()).cancelJob(existing.schedule_job_id, tenant);
+    if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
     await writeTicketActivity(trx, {
       tenant, ticketId: existing.ticket_id!, eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED', entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
       entityId: id, actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user?.user_id ?? existing.user_id ?? null },
