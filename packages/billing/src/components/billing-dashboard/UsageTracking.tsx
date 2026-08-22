@@ -31,8 +31,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { getRemainingBucketUnits } from '@alga-psa/reporting/actions/report-actions/getRemainingBucketUnits';
-import type { RemainingBucketUnitsResult } from '@alga-psa/reporting/actions/report-actions/getRemainingBucketUnits';
+import {
+  getRemainingBucketUnits,
+  type RemainingBucketUnitsResult,
+} from '@alga-psa/reporting/actions';
 import BucketUsageChart from '@alga-psa/ui/components/charts/BucketUsageChart';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
