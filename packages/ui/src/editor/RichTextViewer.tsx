@@ -342,7 +342,7 @@ function pmInlineToMarkdown(nodes: any[] | undefined): string {
  * Convert a ProseMirror JSON document to markdown text.
  * Preserves headings, lists, code blocks, blockquotes, inline formatting, etc.
  */
-function prosemirrorToMarkdown(doc: any): string {
+export function prosemirrorToMarkdown(doc: any): string {
   if (!doc || !Array.isArray(doc.content)) return '';
 
   const renderNode = (node: any): string => {
@@ -399,6 +399,13 @@ function prosemirrorToMarkdown(doc: any): string {
       case 'horizontalRule':
       case 'horizontal_rule':
         return '---';
+
+      case 'image': {
+        const src = node.attrs?.src || node.props?.url || '';
+        if (!src) return '';
+        const alt = node.attrs?.alt || node.attrs?.title || node.props?.caption || '';
+        return `![${alt}](${src})`;
+      }
 
       default:
         if (node.content) {
