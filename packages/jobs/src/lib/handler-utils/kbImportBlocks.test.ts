@@ -209,6 +209,58 @@ describe('kbImportBlocks entry points', () => {
   });
 });
 
+// Stored blocks are read by consumers that do not all sanitize at render, so
+// script-bearing hrefs must be dropped at conversion time -- the same guard
+// shared/lib/utils/markdownToBlocks.ts applies.
+describe('kbImportBlocks link sanitization', () => {
+  const hrefOf = (blocks: BlockNoteBlock[]): unknown =>
+    (inline(blocks[0]).find((segment) => segment.styles?.link)?.styles?.link as
+      | Record<string, string>
+      | undefined)?.href;
+
+  it.each([
+    'javascript:alert(document.cookie)',
+    'JaVaScRiPt:alert(1)',
+    '<javascript:alert(1)>',
+    'data:text/html;base64,PHNjcmlwdD4=',
+    'vbscript:msgbox(1)',
+  ])('drops the %s scheme from a markdown link', (href) => {
+    const blocks = markdownToBlocks(`[click me](${href})`);
+    expect(hrefOf(blocks)).toBe('');
+    expect(JSON.stringify(blocks).toLowerCase()).not.toContain('script:');
+    expect(plainText(blocks[0])).toBe('click me');
+  });
+
+  it.each([
+    'javascript:alert(1)',
+    'JAVASCRIPT:alert(1)',
+    // Entities are decoded before the walker sees the attribute, so an obfuscated
+    // scheme has to be caught after decoding -- including embedded control chars,
+    // which browsers strip before resolving the URL.
+    '&#106;avascript:alert(1)',
+    'java&#9;script:alert(1)',
+    ' javascript:alert(1)',
+    'data:text/html;base64,PHNjcmlwdD4=',
+  ])('drops the %s scheme from an html anchor', (href) => {
+    const blocks = htmlToBlocks(`<p><a href="${href}">click me</a></p>`);
+    expect(hrefOf(blocks)).toBe('');
+    expect(JSON.stringify(blocks).toLowerCase()).not.toContain('script:');
+  });
+
+  it('emits an empty href for an anchor without one', () => {
+    expect(hrefOf(htmlToBlocks('<p><a>no href</a></p>'))).toBe('');
+  });
+
+  it('keeps ordinary links intact', () => {
+    expect(hrefOf(markdownToBlocks('[docs](https://example.com/a?b=1#c)'))).toBe(
+      'https://example.com/a?b=1#c',
+    );
+    expect(hrefOf(markdownToBlocks('[mail](mailto:help@example.com)'))).toBe('mailto:help@example.com');
+    expect(hrefOf(markdownToBlocks('[rel](../other/page.md)'))).toBe('../other/page.md');
+    expect(hrefOf(htmlToBlocks('<p><a href="/kb/123">internal</a></p>'))).toBe('/kb/123');
+  });
+});
+
 // Guards against reintroducing the quadratic/backtracking parser: every case
 // below used to be minutes of blocked event loop (or an OOM) on a web pod.
 // Multi-MB inputs on a CI runner shared with dozens of other projects overrun

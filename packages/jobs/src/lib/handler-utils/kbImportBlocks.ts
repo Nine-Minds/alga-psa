@@ -72,6 +72,20 @@ class Deadline {
   }
 }
 
+/**
+ * Blocks scheme-based script URLs at conversion time, mirroring
+ * shared/lib/utils/markdownToBlocks.ts. Stored blocks are read by consumers
+ * that do not all sanitize at render, so an imported
+ * `[click me](javascript:...)` must never reach document_block_content.
+ */
+function sanitizeUrl(url: string | undefined): string {
+  if (!url) return '';
+  // Entities are already decoded by the time we see an href, so only leading
+  // whitespace and control characters can hide the scheme.
+  const probe = url.replace(/[\u0000-\u0020]/g, '').toLowerCase();
+  return /^(javascript:|data:|vbscript:)/.test(probe) ? '' : url;
+}
+
 function pushSegment(segments: InlineSegment[], text: string, styles: InlineStyles): void {
   if (!text) return;
   const segment: InlineSegment = { type: 'text', text };
@@ -130,7 +144,12 @@ function inlineFromTokens(
         break;
       case 'link': {
         const link = token as Tokens.Link;
-        inlineFromTokens(link.tokens, withStyle(styles, 'link', { href: link.href }), segments, deadline);
+        inlineFromTokens(
+          link.tokens,
+          withStyle(styles, 'link', { href: sanitizeUrl(link.href) }),
+          segments,
+          deadline,
+        );
         break;
       }
       case 'image':
@@ -527,7 +546,7 @@ class HtmlBlockWalker {
         this.pushStyle('code', true);
         return;
       case 'a':
-        this.pushStyle('link', { href: attribs.href ?? '' });
+        this.pushStyle('link', { href: sanitizeUrl(attribs.href) });
         return;
       default:
         break;
