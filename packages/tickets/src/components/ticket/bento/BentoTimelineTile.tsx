@@ -6,7 +6,9 @@ import type { PartialBlock } from '@blocknote/core';
 import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, Lock, MessageSquare } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -39,6 +41,7 @@ import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTi
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
+import { getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
   loading: () => <RichTextEditorSkeleton height="120px" />,
@@ -83,7 +86,8 @@ interface BentoTimelineTileProps {
     isInternal: boolean,
     isResolution: boolean,
     closeStatusId?: string | null,
-    options?: TicketNotificationSuppressionValue
+    options?: TicketNotificationSuppressionValue,
+    schedule?: { publishAt: string; timeZone: string } | null,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   /** Threaded reply pipeline (same handler the conversation view gets). */
@@ -351,6 +355,17 @@ export function BentoTimelineTile({
   const [filter, setFilter] = useState<LaneFilter>('everything');
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
   const [composerLane, setComposerLane] = useState<'client' | 'internal' | 'resolution'>('client');
+  const [isScheduleToggle, setIsScheduleToggle] = useState(false);
+  const [scheduledPublishLocal, setScheduledPublishLocal] = useState('');
+  const scheduledInstant = useMemo(() => {
+    if (!isScheduleToggle || !scheduledPublishLocal) return null;
+    try {
+      return zonedWallTimeToUtc(scheduledPublishLocal, getUserTimeZone());
+    } catch {
+      return null;
+    }
+  }, [isScheduleToggle, scheduledPublishLocal]);
+  const scheduleIsValid = !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [hasDraft, setHasDraft] = useState(false);
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
@@ -607,17 +622,22 @@ export function BentoTimelineTile({
       closeStatusId,
       closeStatusId && notificationSuppression.suppressContactNotifications
         ? notificationSuppression
-        : undefined
+        : undefined,
+      isScheduleToggle && composerLane === 'client' && scheduledInstant
+        ? { publishAt: scheduledInstant.toISOString(), timeZone: getUserTimeZone() }
+        : null,
     );
     if (success) {
       setHasDraft(false);
       setShowComposer(false);
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
       setNotificationSuppression(defaultNotificationSuppression());
+      setIsScheduleToggle(false);
+      setScheduledPublishLocal('');
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, composeUploadSession]);
+  }, [onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession]);
 
   const handleCancelCompose = useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
@@ -647,7 +667,7 @@ export function BentoTimelineTile({
   });
   useDialogSubmitShortcut(() => { void handleSend(); }, {
     active: hasDraft,
-    enabled: !isSubmitting && hasDraft,
+    enabled: !isSubmitting && hasDraft && scheduleIsValid,
   });
 
   // A single comment card plus, when it's the active reply target, an inline
@@ -772,11 +792,53 @@ export function BentoTimelineTile({
           id={`${id}-composer-send`}
           size="sm"
           onClick={handleSend}
-          disabled={isSubmitting || !hasDraft}
+          disabled={isSubmitting || !hasDraft || !scheduleIsValid}
         >
-          {isSubmitting ? t('bento.timeline.sending', 'Sending…') : t('bento.timeline.send', 'Send')}
+          {isSubmitting
+            ? t('bento.timeline.sending', 'Sending…')
+            : isScheduleToggle
+              ? t('conversation.schedule', 'Schedule')
+              : t('bento.timeline.send', 'Send')}
         </Button>
       </div>
+      {composerLane === 'client' ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[rgb(var(--color-border-100))] pt-3">
+          <div className="flex items-center gap-2">
+            <Switch
+              id={`${id}-composer-schedule-toggle`}
+              checked={isScheduleToggle}
+              onCheckedChange={setIsScheduleToggle}
+            />
+            <Label htmlFor={`${id}-composer-schedule-toggle`}>
+              {t('conversation.schedule', 'Schedule')}
+            </Label>
+          </div>
+          {isScheduleToggle ? (
+            <>
+              <Label htmlFor={`${id}-composer-scheduled-publish-at`}>
+                {t('conversation.publishAt', 'Publish at')} ({getUserTimeZone()})
+              </Label>
+              <Input
+                id={`${id}-composer-scheduled-publish-at`}
+                type="datetime-local"
+                value={scheduledPublishLocal}
+                onChange={(event) => setScheduledPublishLocal(event.target.value)}
+                required
+              />
+              {scheduledPublishLocal && !scheduleIsValid ? (
+                <span className="text-sm text-[rgb(var(--color-accent-500))]">
+                  {t('conversation.invalidScheduleTime', 'Choose an unambiguous future time in this time zone.')}
+                </span>
+              ) : null}
+              {scheduleIsValid && scheduledInstant ? (
+                <span className="text-sm text-[rgb(var(--color-text-600))]">
+                  {t('conversation.resolvedPublishInstant', 'Resolved instant')}: {scheduledInstant.toISOString()}
+                </span>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
       {composerLane === 'resolution' ? (
         <div
           id={`${id}-composer-resolution-options`}

@@ -76,5 +76,11 @@
     "description": "Regression: an immediate (unscheduled) client-visible comment and an internal-only comment behave exactly as before (immediate visibility/notification; internal stays hidden)",
     "implemented": false,
     "featureIds": ["F006", "F032", "F039"]
+  },
+  {
+    "id": "T014",
+    "description": "Component behavior: the default bento timeline client composer resolves a datetime-local value in the user time zone and forwards it as the fifth schedule argument; internal lane exposes no scheduling controls",
+    "implemented": true,
+    "featureIds": ["F047"]
   }
 ]

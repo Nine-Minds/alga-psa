@@ -274,5 +274,11 @@
     "description": "Scheduling controls never render in the client-portal view (hideInternalTab=true) nor when 'Mark as Internal' is on",
     "implemented": true,
     "prdRefs": ["UX / UI Notes", "Non-goals"]
+  },
+  {
+    "id": "F047",
+    "description": "Default bento timeline composer provides the client-visible scheduling toggle, timezone-safe datetime picker and resolved instant preview, and forwards the schedule payload",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Functional Requirements"]
   }
 ]

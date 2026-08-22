@@ -9,7 +9,14 @@ import { BentoTimelineTile } from './BentoTimelineTile';
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
 
 vi.mock('next/dynamic', () => ({
-  default: () => () => <div data-testid="composer-editor" />,
+  default: () => ({ onContentChange }: { onContentChange: (content: unknown[]) => void }) => (
+    <button data-testid="composer-editor" type="button" onClick={() => onContentChange([])} />
+  ),
+}));
+
+vi.mock('@alga-psa/core', () => ({
+  getUserTimeZone: () => 'America/New_York',
+  zonedWallTimeToUtc: () => new Date('2026-08-23T13:30:00.000Z'),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -59,7 +66,19 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Label', () => ({
-  Label: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  Label: ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => (
+    <label htmlFor={htmlFor}>{children}</label>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/Input', () => ({
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+}));
+
+vi.mock('@alga-psa/ui/components/Switch', () => ({
+  Switch: ({ id, checked, onCheckedChange }: { id: string; checked: boolean; onCheckedChange: (checked: boolean) => void }) => (
+    <button id={id} type="button" role="switch" aria-checked={checked} onClick={() => onCheckedChange(!checked)} />
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
@@ -181,5 +200,37 @@ describe('BentoTimelineTile composer heading', () => {
 
     fireEvent.click(document.getElementById('ticket-timeline-composer-lane-resolution')!);
     expect(screen.queryByText('Write a reply')).not.toBeInTheDocument();
+  });
+
+  it('schedules a client-visible comment with the resolved instant and user time zone', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    renderTimeline({ onAddNewComment });
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Schedule' }));
+    const publishAt = screen.getByLabelText('Publish at (America/New_York)');
+    fireEvent.change(publishAt, { target: { value: '2026-08-23T09:30' } });
+    expect(screen.getByText(/Resolved instant: 2026-08-23T13:30:00.000Z/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenCalledWith(
+        false,
+        false,
+        null,
+        undefined,
+        { publishAt: '2026-08-23T13:30:00.000Z', timeZone: 'America/New_York' },
+      );
+      expect(document.getElementById('ticket-timeline-composer')).toBeNull();
+    });
+  });
+
+  it('does not expose scheduling controls in the internal lane', () => {
+    renderTimeline();
+
+    expect(document.getElementById('ticket-timeline-composer-schedule-toggle')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Internal' }));
+    expect(document.getElementById('ticket-timeline-composer-schedule-toggle')).toBeNull();
   });
 });

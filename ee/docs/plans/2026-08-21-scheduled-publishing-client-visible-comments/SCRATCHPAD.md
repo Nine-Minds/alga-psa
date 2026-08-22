@@ -3,6 +3,7 @@
 - (2026-08-22) Publication persists stable IDs and independent dispatch markers for the comment-added and response-state events. The state transition, response-state mutation, and publication audit commit atomically; retries and boot reconciliation re-drive undispatched events.
 - (2026-08-22) `zonedWallTimeToUtc` uses Temporal with `disambiguation: 'reject'`, so datetime-local values use the displayed IANA zone and DST gaps/repeated times are rejected.
 - (2026-08-22) Behavioral coverage is in `ticketClientPortalAbac.integration.test.ts` (real migrated DB visibility and crash/retry) and `CommentItem.metadataDebug.test.tsx` (scheduled badge/actions/dialog).
+- (2026-08-22) The default bento timeline compose path now mirrors TicketConversation's scheduling semantics without extracting a shared control; a shared extraction would broaden the established composer surface for this focused mitigation. `BentoTimelineTile.composerHeading.test.tsx` covers the fifth callback payload and internal-lane exclusion.
 
 - Plan slug: `scheduled-publishing-client-visible-comments`
 - Created: `2026-08-21`
