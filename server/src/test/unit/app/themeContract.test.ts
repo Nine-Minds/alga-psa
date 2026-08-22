@@ -39,6 +39,13 @@ function tokensOf(selector: string): Record<string, string> {
   return tokens;
 }
 
+/** Full declaration block for a selector, comments and all. */
+function blockOf(selector: string): string {
+  const start = css.indexOf(`${selector} {`);
+  expect(start, `missing block: ${selector}`).toBeGreaterThan(-1);
+  return css.slice(start, css.indexOf('\n}', start));
+}
+
 /** A rule's declaration body, for selectors that carry no tokens. */
 function block(selector: string): string {
   const start = css.indexOf(`${selector} {`);
@@ -245,6 +252,24 @@ describe('theme pair token blocks', () => {
         const delta = Math.abs(luma(tokens['--color-sidebar-bg']) - luma(tokens['--color-header-bg']));
         expect(delta, `${id}: header sits ${delta.toFixed(1)} luma off the sidebar`).toBeLessThan(3);
       });
+  });
+
+  // Elevation is theme-aware for the same reason borders are: Tailwind's
+  // shadow-* scale is tuned for white grounds, and 5% black over a near-black
+  // page is nothing at all. Both modes must declare the token, and dark must
+  // carry more alpha than light or cards read as flat stickers again.
+  it('defines a card elevation token in both modes, heavier in dark', () => {
+    expect(css).toContain('.card-elevated {\n    box-shadow: var(--shadow-card);');
+
+    const alphaOf = (block: string) => {
+      const m = /--shadow-card:\s*([^;]+);/.exec(block);
+      expect(m, 'no --shadow-card declared').not.toBeNull();
+      return Math.max(...[...m![1].matchAll(/rgb\(0 0 0 \/ ([0-9.]+)\)/g)].map((x) => Number(x[1])));
+    };
+    const light = alphaOf(blockOf('html.light'));
+    const dark = alphaOf(blockOf('html.dark'));
+
+    expect(dark, `dark shadow alpha ${dark} must exceed light's ${light}`).toBeGreaterThan(light);
   });
 
   it('keeps every light page background off the card color', () => {
@@ -468,5 +493,172 @@ describe('picker surface contract', () => {
       .map(({ line, index }) => `${file}:${index + 1}  ${line.trim().slice(0, 100)}`);
 
     expect(offenders, `receding/hardcoded surface(s):\n${offenders.join('\n')}`).toEqual([]);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * Layer 4: colour contrast and hardcoded literals.
+ *
+ * These two catch the failures the token checks above cannot see, because the
+ * offending value never names a token at all. The keyboard cheatsheet shipped
+ * `linear-gradient(180deg, #fff, …)` next to a label colour that DID invert —
+ * white caps with invisible letters in dark, and nothing anywhere for a
+ * className scan to find, since it was all inline styles.
+ * ------------------------------------------------------------------------- */
+
+const srgb = (c: number) => {
+  const x = c / 255;
+  return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+};
+const relLuminance = ([r, g, b]: number[]) =>
+  0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b);
+function contrast(a: number[], b: number[]): number {
+  const [hi, lo] = [relLuminance(a), relLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+const triple = (v: string | undefined) =>
+  v ? v.trim().split(/[\s,]+/).map(Number).filter((n) => !Number.isNaN(n)).slice(0, 3) : null;
+
+function themeTokens(mode: 'light' | 'dark', pair: string): Record<string, string> {
+  const base = tokensOf(`html.${mode}`);
+  return pair === 'alga' ? base : { ...base, ...tokensOf(`html.${mode}[data-theme-pair="${pair}"]`) };
+}
+
+const ALL_PAIRS = ['alga', ...THEME_PAIRS.map((p) => p.id).filter((id) => id !== 'alga' && id !== 'custom')];
+
+/**
+ * Status fills are the SAME colour in both modes (#f59e0b amber, #ef4444 red),
+ * so their foreground must not flip with the mode. Dark used to set white ink on
+ * those fills — 2.1:1 on amber — because "dark mode means light text" was applied
+ * to a surface that never got darker. Fixed 2026-08-22; this pins it.
+ *
+ * Light had its own eight failures, since fixed: the #dc2626 error fill sits in
+ * the awkward middle where near-black gives 3.70:1 and only white clears AA.
+ */
+const CONTRAST_BACKLOG = new Set<string>([
+  // Empty, and it should stay that way. Every status fill/foreground pair clears
+  // WCAG AA in both modes across all nine pairs (worst 4.63:1). Two shapes of fix
+  // got it there: dark stopped flipping its ink to white on fills that never
+  // changed, and the mid-tone #dc2626 error fill takes WHITE ink rather than
+  // near-black — it is dark enough that only the light ink clears 4.5:1.
+  // Do not add an entry here to silence a failure; fix the fill or the ink.
+]);
+
+describe('colour contrast', () => {
+  it('keeps every status fill legible against its own foreground', () => {
+    const failures: string[] = [];
+    (['light', 'dark'] as const).forEach((mode) => {
+      ALL_PAIRS.forEach((pair) => {
+        const t = themeTokens(mode, pair);
+        (['warning', 'success', 'error'] as const).forEach((kind) => {
+          const bg = triple(t[`--color-status-${kind}`]);
+          const fg = triple(t[`--color-status-${kind}-foreground`]);
+          if (!bg || !fg) return;
+          const key = `${mode}/${pair}/${kind}`;
+          const ratio = contrast(fg, bg);
+          if (ratio < 4.5 && !CONTRAST_BACKLOG.has(key)) {
+            failures.push(`${key} = ${ratio.toFixed(2)}:1`);
+          }
+        });
+      });
+    });
+    expect(failures, `status pairs below WCAG AA:\n${failures.join('\n')}`).toEqual([]);
+  });
+
+  it('keeps the backlog honest — a fixed pair must be struck from the list', () => {
+    const stillFailing = new Set<string>();
+    (['light', 'dark'] as const).forEach((mode) => {
+      ALL_PAIRS.forEach((pair) => {
+        const t = themeTokens(mode, pair);
+        (['warning', 'success', 'error'] as const).forEach((kind) => {
+          const bg = triple(t[`--color-status-${kind}`]);
+          const fg = triple(t[`--color-status-${kind}-foreground`]);
+          if (bg && fg && contrast(fg, bg) < 4.5) stillFailing.add(`${mode}/${pair}/${kind}`);
+        });
+      });
+    });
+    const stale = [...CONTRAST_BACKLOG].filter((k) => !stillFailing.has(k));
+    expect(stale, `now passing — remove from CONTRAST_BACKLOG:\n${stale.join('\n')}`).toEqual([]);
+  });
+});
+
+/**
+ * Hardcoded colour literals inside files that otherwise theme from tokens.
+ *
+ * This is the check that would have caught the keyboard cheatsheet. A literal
+ * cannot invert, so whichever mode it was picked for, the other one breaks —
+ * and because these live in inline styles rather than classNames, no
+ * Tailwind-class sweep can see them. Verified against the pre-fix file: it
+ * flags all three defects (the `#fff` keycap gradient, the `#fff` chord chip,
+ * and the literal green category).
+ *
+ * The map is a ceiling per file, not a blessing: counts may fall, never rise.
+ * A new file with literals fails outright.
+ */
+const LITERAL_BASELINE = new Map<string, number>([
+  ['ee/server/src/components/workflow-graph/WorkflowGraph.tsx', 1],
+  ['packages/client-portal/src/components/projects/ClientKanbanBoard.tsx', 1],
+  ['packages/client-portal/src/components/projects/ClientTaskListView.tsx', 1],
+  ['packages/client-portal/src/components/tickets/TicketList.tsx', 1],
+  ['packages/clients/src/components/clients/command-center/PulseCards.tsx', 2],
+  ['packages/msp-composition/src/reports/Reports.tsx', 3],
+  ['packages/notifications/src/components/NotificationDetailView.tsx', 1],
+  ['packages/notifications/src/components/NotificationItem.tsx', 1],
+  ['packages/projects/src/components/ProjectDetail.tsx', 2],
+  ['packages/projects/src/components/TaskCard.tsx', 2],
+  ['packages/projects/src/components/TaskListView.tsx', 4],
+  ['packages/projects/src/components/project-templates/TemplateEditor.tsx', 1],
+  ['packages/projects/src/components/settings/projects/TenantProjectTaskStatusSettings.tsx', 11],
+  ['packages/reporting/src/components/deferred-revenue/DeferredRevenueReport.tsx', 1],
+  ['packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheetTable.tsx', 1],
+  ['packages/surveys/src/components/dashboard/SatisfactionDistribution.tsx', 1],
+  ['packages/tickets/src/lib/ticket-columns.tsx', 1],
+  ['packages/ui/src/components/ColorPicker.tsx', 32],
+  ['packages/ui/src/editor/EmojiSuggestion.tsx', 1],
+  ['packages/ui/src/editor/MentionSuggestion.tsx', 1],
+  ['packages/user-activities/src/components/filters/ActivitiesTableFilters.tsx', 1],
+  ['server/src/components/keyboard-shortcuts/KeyboardShortcutsPanel.tsx', 6],
+  ['server/src/components/settings/general/ClientPortalSettings.tsx', 6]
+]);
+
+describe('hardcoded colour literals', () => {
+  const LITERAL = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|\brgba?\(\s*\d{1,3}[\s,]+\d{1,3}[\s,]+\d{1,3}/;
+  const STYLEISH = /\b(background|backgroundColor|color|borderColor|boxShadow|fill|stroke|bg|fg|dot)\s*:/;
+  const TOKEN = /var\(--(?:color|badge|keycap|shadow)-/;
+
+  const counts = (() => {
+    const out = execFileSync('grep',
+      ['-rln', '-E', 'rgba?\\(\\s*[0-9]|#[0-9a-fA-F]{3,6}', 'packages', 'server/src', 'ee/server/src',
+       '--include=*.tsx'],
+      { cwd: REPO, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    const tally = new Map<string, number>();
+    out.split('\n').filter(Boolean).forEach((file) => {
+      if (file.includes('/dist/') || file.includes('.test.')) return;
+      const src = fs.readFileSync(path.join(REPO, file), 'utf8');
+      if ((src.match(TOKEN) ?? []).length === 0) return;
+      if ((src.match(new RegExp(TOKEN.source, 'g')) ?? []).length < 3) return;
+      const n = src.split('\n').filter((l) => LITERAL.test(l) && STYLEISH.test(l)).length;
+      if (n > 0) tally.set(file, n);
+    });
+    return tally;
+  })();
+
+  it('adds no new colour literal to a themed file', () => {
+    const offenders: string[] = [];
+    counts.forEach((n, file) => {
+      const allowed = LITERAL_BASELINE.get(file);
+      if (allowed === undefined) offenders.push(`${file} — ${n} literal(s), file not in baseline`);
+      else if (n > allowed) offenders.push(`${file} — ${n} literal(s), baseline allows ${allowed}`);
+    });
+    expect(offenders, `hardcoded colour literals:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('keeps the literal baseline honest — a cleaned file must be struck or lowered', () => {
+    const stale: string[] = [];
+    LITERAL_BASELINE.forEach((allowed, file) => {
+      const now = counts.get(file) ?? 0;
+      if (now < allowed) stale.push(`${file} — now ${now}, baseline still says ${allowed}`);
+    });
+    expect(stale, `baseline is stale, lower it:\n${stale.join('\n')}`).toEqual([]);
   });
 });
