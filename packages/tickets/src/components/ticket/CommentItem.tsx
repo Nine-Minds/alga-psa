@@ -24,6 +24,10 @@ import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
+import { cancelScheduledComment, rescheduleScheduledComment } from '../../actions/comment-actions/commentActions';
+import { getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
 
 interface CommentItemProps {
   id?: string;
@@ -147,6 +151,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
+  const [isScheduleMutating, setIsScheduleMutating] = useState(false);
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+  const [rescheduleWallTime, setRescheduleWallTime] = useState('');
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() =>
     parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'initial')
   );
@@ -223,6 +231,24 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const handleContentChange = (blocks: PartialBlock[]) => {
     setEditedContent(blocks);
     onContentChange(blocks);
+  };
+  const handleReschedule = async () => {
+    const timeZone = conversation.scheduled_publish_tz || getUserTimeZone();
+    let date: Date;
+    try {
+      date = zonedWallTimeToUtc(rescheduleWallTime, timeZone);
+      if (date.getTime() <= Date.now()) throw new Error('Choose a future publication time');
+    } catch (error) {
+      setRescheduleError(error instanceof Error ? error.message : 'Choose a valid publication time');
+      return;
+    }
+    setIsScheduleMutating(true);
+    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); window.location.reload(); } finally { setIsScheduleMutating(false); }
+  };
+  const handleCancelSchedule = async () => {
+    if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
+    setIsScheduleMutating(true);
+    try { await cancelScheduledComment(commentId); window.location.reload(); } finally { setIsScheduleMutating(false); }
   };
 
   const editorContent = useMemo(() => {
@@ -409,6 +435,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     </span>
                   </Tooltip>
                 )}
+                {conversation.publish_state === 'scheduled' && conversation.scheduled_publish_at && (
+                  <span
+                    {...withDataAutomationId({ id: `${commentId}-scheduled-badge` })}
+                    className="rounded border border-[rgb(var(--badge-warning-border))] bg-[rgb(var(--badge-warning-bg))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--badge-warning-text))]"
+                    title={`Publishes ${conversation.scheduled_publish_tz || 'UTC'}`}
+                  >
+                    {t('conversation.scheduled', 'Scheduled')} · {t('conversation.publishes', 'Publishes')}{' '}
+                    {formatDate(new Date(conversation.scheduled_publish_at), { dateStyle: 'medium', timeStyle: 'short' })}{' '}
+                    {conversation.scheduled_publish_tz || 'UTC'}
+                  </span>
+                )}
                 {conversation.is_resolution && (
                   <Tooltip content={t('conversation.resolutionCommentTooltip')}>
                     <span {...withDataAutomationId({ id: `${commentId}-resolution-badge` })}>
@@ -513,6 +550,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 )}
                 {canEdit && (
                   <>
+                    {conversation.publish_state === 'scheduled' && (
+                      <>
+                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setRescheduleWallTime(''); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
+                          {t('conversation.reschedule', 'Reschedule')}
+                        </Button>
+                        <Button id={`cancel-scheduled-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => void handleCancelSchedule()} aria-label={t('conversation.cancelScheduledComment', 'Cancel scheduled comment')}>
+                          {t('conversation.cancel', 'Cancel')}
+                        </Button>
+                      </>
+                    )}
                     <Button
                       id={`edit-comment-${conversation.comment_id}-button`}
                       variant="ghost"
@@ -577,6 +624,22 @@ const CommentItem: React.FC<CommentItemProps> = ({
           )}
         </div>
       </div>
+      <Dialog
+        id={`reschedule-comment-${commentId}`}
+        isOpen={isRescheduleOpen}
+        onClose={() => setIsRescheduleOpen(false)}
+        title={t('conversation.rescheduleComment', 'Reschedule comment')}
+        className="max-w-md"
+        footer={<div className="flex justify-end gap-2"><Button id={`reschedule-comment-${commentId}-close`} variant="ghost" onClick={() => setIsRescheduleOpen(false)}>{t('common.cancel', 'Cancel')}</Button><Button id={`reschedule-comment-${commentId}-save`} disabled={isScheduleMutating} onClick={() => void handleReschedule()}>{t('conversation.reschedule', 'Reschedule')}</Button></div>}
+      >
+        <DialogContent>
+          <div className="space-y-2">
+            <Label htmlFor={`reschedule-comment-${commentId}-at`}>{t('conversation.publishAt', 'Publish at')} ({conversation.scheduled_publish_tz || getUserTimeZone()})</Label>
+            <Input id={`reschedule-comment-${commentId}-at`} type="datetime-local" value={rescheduleWallTime} onChange={(event) => { setRescheduleWallTime(event.target.value); setRescheduleError(null); }} />
+            {rescheduleError && <p className="text-sm text-[rgb(var(--color-accent-500))]">{rescheduleError}</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

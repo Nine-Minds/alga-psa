@@ -1919,6 +1919,9 @@ export class TicketService extends BaseService<ITicket> {
       scopedDb.tenantJoin(commentsQuery, 'comment_threads as ct', 'tc.thread_id', 'ct.thread_id', { type: 'left' });
       commentsQuery
         .where('tc.is_internal', false)
+        // This filter deliberately precedes offset/limit below. A scheduled
+        // public comment must be indistinguishable from no comment to clients.
+        .where('tc.publish_state', 'published')
         .where(function (this: Knex.QueryBuilder) {
           this.whereNull('ct.is_internal')
             .orWhere('ct.is_internal', false);

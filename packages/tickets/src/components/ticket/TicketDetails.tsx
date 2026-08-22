@@ -1913,7 +1913,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         isInternal: boolean,
         isResolution: boolean,
         closeStatusId: string | null = null,
-        options?: TicketNotificationSuppressionValue
+        options?: TicketNotificationSuppressionValue,
+        schedule?: { publishAt: string; timeZone: string } | null,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -2060,6 +2061,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         is_resolution: isResolution,
                         user_id: userId,
                         author_type: 'internal', // Will be overridden based on user type in the action
+                        ...(schedule ? {
+                            scheduled_publish_at: schedule.publishAt,
+                            scheduled_publish_tz: schedule.timeZone,
+                        } : {}),
                         // See email-subscriber suppression note above.
                         ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
                     });

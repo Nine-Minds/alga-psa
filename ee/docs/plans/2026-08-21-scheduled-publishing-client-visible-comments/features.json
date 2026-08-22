@@ -1,0 +1,278 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration: add publish_state text NOT NULL DEFAULT 'published' with CHECK IN ('published','scheduled','canceled') to comments",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "Migration: add scheduled_publish_at timestamptz NULL to comments (UTC publish instant)",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F003",
+    "description": "Migration: add scheduled_publish_tz varchar(64) NULL to comments (IANA zone captured at schedule time)",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F004",
+    "description": "Migration: add published_at timestamptz NULL to comments (actual publish instant, set on transition)",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Migration: add schedule_job_id uuid NULL to comments (jobs.job_id of the arming job, for cancel/reschedule)",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Migration: backfill existing comments to publish_state='published' so current behavior is unchanged",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration"]
+  },
+  {
+    "id": "F007",
+    "description": "Migration: add partial index (tenant, scheduled_publish_at) WHERE publish_state='scheduled' for the reconciler/overdue sweep",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Non-functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Migration is Citus/tenant-partition safe (comments remains distributed on tenant; additive columns only)",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F009",
+    "description": "Extend IComment interface (packages/types) with publish_state, scheduled_publish_at, scheduled_publish_tz, published_at, schedule_job_id",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F010",
+    "description": "Comment model insert/update (packages/tickets/src/models/comment.ts) reads/writes the new scheduling fields",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F011",
+    "description": "createComment action accepts optional scheduledPublishAt + scheduledPublishTz for client-visible comments",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Write path & actions"]
+  },
+  {
+    "id": "F012",
+    "description": "Server-side validation: scheduling allowed only when author is internal MSP user (reject otherwise)",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Functional Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "Server-side validation: scheduling allowed only for client-visible (is_internal=false), non-system-generated comments",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Functional Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Server-side validation: scheduledPublishAt must be strictly in the future (reject past/now)",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Scheduled create persists comment with publish_state='scheduled', scheduled_publish_at (UTC), scheduled_publish_tz",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F016",
+    "description": "Scheduled create SUPPRESSES the client-facing TICKET_COMMENT_ADDED emission (no notification at schedule time)",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Acceptance Criteria"]
+  },
+  {
+    "id": "F017",
+    "description": "Scheduled create does NOT advance ticket response_state to a client-facing state",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "Scheduled create writes a 'comment scheduled' ticket_activity row (audit)",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F019",
+    "description": "Arm publish via IJobRunner.scheduleJobAt('publish-scheduled-comment', {tenantId,ticketId,commentId}, runAt, {singletonKey:'publish-comment:<id>'})",
+    "implemented": true,
+    "prdRefs": ["Scheduler & publish handler"]
+  },
+  {
+    "id": "F020",
+    "description": "Persist returned job id into comments.schedule_job_id for later cancel/reschedule",
+    "implemented": true,
+    "prdRefs": ["Scheduler & publish handler", "Data / API / Integrations"]
+  },
+  {
+    "id": "F021",
+    "description": "Register 'publish-scheduled-comment' handler in registerAllHandlers.ts and wire into the job runner startup",
+    "implemented": true,
+    "prdRefs": ["Scheduler & publish handler"]
+  },
+  {
+    "id": "F022",
+    "description": "Publish handler performs atomic conditional transition UPDATE ... SET publish_state='published', published_at=now() WHERE publish_state='scheduled' RETURNING",
+    "implemented": true,
+    "prdRefs": ["Scheduler & publish handler", "Functional Requirements"]
+  },
+  {
+    "id": "F023",
+    "description": "Publish handler is a no-op (no event) when the conditional update matches 0 rows (already published/canceled) — exactly-once guard",
+    "implemented": true,
+    "prdRefs": ["Scheduler & publish handler", "Acceptance Criteria"]
+  },
+  {
+    "id": "F024",
+    "description": "On the winning transition, publish handler emits TICKET_COMMENT_ADDED using the existing payload builder",
+    "implemented": true,
+    "prdRefs": ["Scheduler & publish handler", "Functional Requirements"]
+  },
+  {
+    "id": "F025",
+    "description": "On publish, advance ticket response_state as for a normal internal-authored public comment",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F026",
+    "description": "Publish handler is tenant-scoped (runWithTenant/tenantDb; job data carries tenantId)",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F027",
+    "description": "Boot reconciler reconcileScheduledCommentPublications() registered in initializeApp.ts",
+    "implemented": true,
+    "prdRefs": ["Scheduler & publish handler", "Functional Requirements"]
+  },
+  {
+    "id": "F028",
+    "description": "Reconciler publishes overdue schedules (scheduled_publish_at <= now) immediately via the publish handler",
+    "implemented": true,
+    "prdRefs": ["Scheduler & publish handler", "Acceptance Criteria"]
+  },
+  {
+    "id": "F029",
+    "description": "Reconciler re-arms future schedules missing a live job, deduped by singletonKey",
+    "implemented": true,
+    "prdRefs": ["Scheduler & publish handler"]
+  },
+  {
+    "id": "F030",
+    "description": "Client-portal read path (client-tickets.ts conversations query) adds predicate publish_state='published'",
+    "implemented": true,
+    "prdRefs": ["Visibility enforcement", "Functional Requirements"]
+  },
+  {
+    "id": "F031",
+    "description": "REST API TicketService.getTicketComments client-visibility branch adds publish_state='published' predicate BEFORE pagination",
+    "implemented": true,
+    "prdRefs": ["Visibility enforcement", "Functional Requirements"]
+  },
+  {
+    "id": "F032",
+    "description": "MSP read path (Comment.getAllbyTicketId) returns scheduled+published comments with scheduling fields (no client filter)",
+    "implemented": true,
+    "prdRefs": ["Visibility enforcement", "UX / UI Notes"]
+  },
+  {
+    "id": "F033",
+    "description": "rescheduleScheduledComment(commentId,newAt,tz) action: permission-gated like updateComment; future-time validated",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F034",
+    "description": "Reschedule cancels the prior job (runner.cancelJob) and arms a new one; updates scheduled_publish_at/tz/schedule_job_id",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Scheduler & publish handler"]
+  },
+  {
+    "id": "F035",
+    "description": "cancelScheduledComment(commentId) action: permission-gated like deleteComment; sets publish_state='canceled' and soft-withdraws (deleted_at)",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F036",
+    "description": "Cancel calls runner.cancelJob; handler guard (WHERE publish_state='scheduled') prevents publishing even if job cancel is missed",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Scheduler & publish handler"]
+  },
+  {
+    "id": "F037",
+    "description": "Editing a scheduled comment's content is allowed (author/internal per existing rules) without changing schedule or exposing early",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F038",
+    "description": "reschedule/cancel/publish each write a ticket_activity audit row; author (user_id) preserved throughout",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F039",
+    "description": "Client-portal addClientTicketComment ignores/rejects any scheduling input and always posts immediately",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Non-goals"]
+  },
+  {
+    "id": "F040",
+    "description": "Composer (TicketConversation.tsx): Schedule toggle + datetime picker shown only for MSP view (!hideInternalTab) on client-visible comments",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F041",
+    "description": "Composer picker defaults to user time zone (getUserTimeZone) and previews the resolved absolute publish time",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Non-functional Requirements"]
+  },
+  {
+    "id": "F042",
+    "description": "Composer Send affordance reflects scheduling (e.g. 'Schedule') and passes scheduledPublishAt/tz to createComment",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F043",
+    "description": "CommentItem.tsx renders a distinct Scheduled badge with 'Publishes <timestamp> <tz>' for scheduled comments, separate from the Internal badge",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F044",
+    "description": "CommentItem.tsx exposes Edit/Reschedule/Cancel actions on scheduled comments, gated by permissions",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Security / Permissions"]
+  },
+  {
+    "id": "F045",
+    "description": "Tab placement: scheduled client-visible comments appear in MSP Client and All tabs, never the Internal tab (ticketConversationThreadTabs.ts)",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F046",
+    "description": "Scheduling controls never render in the client-portal view (hideInternalTab=true) nor when 'Mark as Internal' is on",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Non-goals"]
+  }
+]

@@ -8,6 +8,10 @@ import { TicketService } from '@/lib/api/services/TicketService';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { TicketModel } from '@shared/models/ticketModel';
 import { runWithTenant } from '@alga-psa/db';
+import { publishScheduledCommentHandler } from '@/lib/jobs/handlers/publishScheduledCommentHandler';
+
+const eventMocks = vi.hoisted(() => ({ publishEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('@alga-psa/event-bus/publishers', () => eventMocks);
 
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: vi.fn().mockResolvedValue(null),
@@ -611,6 +615,21 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
         thread_id: publicThreadId,
         ticket_id: fixture.ticketVisibleId,
         author_type: 'internal',
+        note: 'Scheduled comment must not leak',
+        is_internal: false,
+        is_resolution: false,
+        created_at: now,
+        user_id: fixture.internalUserId,
+        publish_state: 'scheduled',
+        scheduled_publish_at: new Date(Date.now() + 60_000),
+        scheduled_publish_tz: 'UTC',
+      },
+      {
+        tenant: fixture.tenantId,
+        comment_id: uuidv4(),
+        thread_id: publicThreadId,
+        ticket_id: fixture.ticketVisibleId,
+        author_type: 'internal',
         note: 'Public comment',
         is_internal: false,
         is_resolution: false,
@@ -661,10 +680,56 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
     const ctx = clientContext(fixture, clientA());
 
     const comments = await service.getTicketComments(fixture.ticketVisibleId, ctx, {});
-    expect((comments as any[]).map((c) => c.note)).toEqual(['Public comment']);
+    expect((comments as any[]).map((c) => c.note)).toContain('Public comment');
+    expect((comments as any[]).map((c) => c.note)).not.toContain('Scheduled comment must not leak');
 
     const documents = await service.getTicketDocuments(fixture.ticketVisibleId, ctx);
     expect((documents as any[]).map((d) => d.document_name)).toEqual(['public.pdf']);
+  });
+
+  it('publishes an overdue comment once and re-drives a crash between transition and dispatch', async () => {
+    const commentId = uuidv4();
+    const threadId = uuidv4();
+    await db('comment_threads').insert({
+      tenant: fixture.tenantId, thread_id: threadId, ticket_id: fixture.ticketVisibleId,
+      root_comment_id: commentId, is_internal: false, created_at: new Date(),
+    });
+    await db('comments').insert({
+      tenant: fixture.tenantId, comment_id: commentId, thread_id: threadId,
+      ticket_id: fixture.ticketVisibleId, user_id: fixture.internalUserId,
+      author_type: 'internal', note: 'Release me once', is_internal: false,
+      is_resolution: false, publish_state: 'scheduled',
+      scheduled_publish_at: new Date(Date.now() - 1_000), scheduled_publish_tz: 'UTC',
+    });
+
+    eventMocks.publishEvent.mockClear();
+    let failCommentDispatch = true;
+    eventMocks.publishEvent.mockImplementation(async (event: any) => {
+      if (event.eventType === 'TICKET_COMMENT_ADDED' && failCommentDispatch) {
+        failCommentDispatch = false;
+        throw new Error('simulated dispatch crash');
+      }
+    });
+    await expect(publishScheduledCommentHandler({ tenantId: fixture.tenantId, ticketId: fixture.ticketVisibleId, commentId }))
+      .rejects.toThrow('simulated dispatch crash');
+    let row = await db('comments').where({ tenant: fixture.tenantId, comment_id: commentId }).first();
+    expect(row.publish_state).toBe('published');
+    expect(row.scheduled_publish_dispatched_at).toBeNull();
+
+    eventMocks.publishEvent.mockResolvedValue(undefined);
+    await publishScheduledCommentHandler({ tenantId: fixture.tenantId, ticketId: fixture.ticketVisibleId, commentId });
+    await publishScheduledCommentHandler({ tenantId: fixture.tenantId, ticketId: fixture.ticketVisibleId, commentId });
+    row = await db('comments').where({ tenant: fixture.tenantId, comment_id: commentId }).first();
+    expect(row.scheduled_publish_dispatched_at).not.toBeNull();
+    expect(eventMocks.publishEvent.mock.calls.filter(([event]) => event.eventType === 'TICKET_COMMENT_ADDED')).toHaveLength(2);
+    expect(eventMocks.publishEvent.mock.calls.filter(([event]) => event.eventType === 'TICKET_COMMENT_ADDED').map(([, options]) => options.eventId))
+      .toEqual([row.scheduled_publish_event_id, row.scheduled_publish_event_id]);
+
+    const service = createService();
+    const comments = await service.getTicketComments(fixture.ticketVisibleId, clientContext(fixture, clientA()), {});
+    expect((comments as any[]).map((comment) => comment.note)).toContain('Release me once');
+    const activities = await db('ticket_audit_logs').where({ tenant: fixture.tenantId, entity_id: commentId, event_type: 'TICKET_COMMENT_PUBLISHED' });
+    expect(activities).toHaveLength(1);
   });
 });
 

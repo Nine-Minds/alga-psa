@@ -1,0 +1,80 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: a scheduled comment (publish_state='scheduled') is EXCLUDED from the client-portal read path (client-tickets.ts conversations query) against migrated schema",
+    "implemented": false,
+    "featureIds": ["F001", "F015", "F030"]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: a scheduled comment is EXCLUDED from the REST API TicketService.getTicketComments client-visibility branch, including across pagination boundaries (short page cannot leak)",
+    "implemented": true,
+    "featureIds": ["F031", "F015"]
+  },
+  {
+    "id": "T003",
+    "description": "Integration: scheduling a client-visible comment dispatches NO client notification and does NOT advance response_state at schedule time (event suppressed)",
+    "implemented": false,
+    "featureIds": ["F016", "F017", "F018"]
+  },
+  {
+    "id": "T004",
+    "description": "Integration: at/after scheduled_publish_at the publish handler transitions to published, the comment becomes visible on both client-facing read paths, and response_state advances",
+    "implemented": false,
+    "featureIds": ["F022", "F024", "F025", "F030", "F031"]
+  },
+  {
+    "id": "T005",
+    "description": "Integration (idempotency): running the publish handler twice for the same comment (retry) emits TICKET_COMMENT_ADDED exactly once (second run matches 0 rows, no event)",
+    "implemented": true,
+    "featureIds": ["F022", "F023", "F024"]
+  },
+  {
+    "id": "T006",
+    "description": "Integration (restart/overdue): boot reconciler publishes an overdue scheduled comment exactly once and re-arms a future one without duplicating the notification",
+    "implemented": false,
+    "featureIds": ["F027", "F028", "F029", "F023"]
+  },
+  {
+    "id": "T007",
+    "description": "Integration (permissions guard): scheduling is rejected for a client author, for an internal-only comment, and for a past timestamp",
+    "implemented": false,
+    "featureIds": ["F012", "F013", "F014"]
+  },
+  {
+    "id": "T008",
+    "description": "Integration (cancel): cancel sets publish_state='canceled', soft-withdraws, prevents publication (handler guard) so the client never sees it and no notification fires; audit + author preserved",
+    "implemented": false,
+    "featureIds": ["F035", "F036", "F038"]
+  },
+  {
+    "id": "T009",
+    "description": "Integration (reschedule): reschedule cancels the prior job, arms a new one, updates scheduled_publish_at, and publishes only at the new time",
+    "implemented": false,
+    "featureIds": ["F033", "F034"]
+  },
+  {
+    "id": "T010",
+    "description": "Integration (edit while scheduled): editing a scheduled comment's content keeps it invisible to clients and does not change the schedule or trigger a notification",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T011",
+    "description": "Integration (tenant/timezone safety): publish job carries tenantId and stays tenant-scoped; scheduled_publish_at stored as UTC while scheduled_publish_tz preserves the originating IANA zone",
+    "implemented": true,
+    "featureIds": ["F026", "F002", "F003", "F015"]
+  },
+  {
+    "id": "T012",
+    "description": "E2E (MSP UI): agent schedules a client-visible comment; it appears in Client/All tabs with a Scheduled badge + publish timestamp/zone and Edit/Reschedule/Cancel actions; client portal shows nothing until publish",
+    "implemented": false,
+    "featureIds": ["F040", "F041", "F042", "F043", "F044", "F045", "F046"]
+  },
+  {
+    "id": "T013",
+    "description": "Regression: an immediate (unscheduled) client-visible comment and an internal-only comment behave exactly as before (immediate visibility/notification; internal stays hidden)",
+    "implemented": false,
+    "featureIds": ["F006", "F032", "F039"]
+  }
+]

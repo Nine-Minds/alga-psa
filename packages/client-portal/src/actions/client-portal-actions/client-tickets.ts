@@ -407,6 +407,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .where({
           'comments.ticket_id': ticketId,
           'comments.is_internal': false,
+          // Scheduled comments are an MSP-only draft state.  Keep this in the
+          // query (rather than the UI) so portal callers cannot infer them.
+          'comments.publish_state': 'published',
         })
         .where(function (this: Knex.QueryBuilder) {
           this.whereNull('ct.is_internal')

@@ -88,6 +88,36 @@ const userMap = {
 };
 
 describe('CommentItem metadata debug control', () => {
+  it('shows scheduled state and opens an accessible reschedule dialog for the author', async () => {
+    const user = userEvent.setup();
+    render(
+      <CommentItem
+        conversation={buildComment({
+          publish_state: 'scheduled',
+          scheduled_publish_at: '2026-08-23T13:30:00.000Z',
+          scheduled_publish_tz: 'America/New_York',
+        })}
+        currentUserId="user-1"
+        isEditing={false}
+        currentComment={null}
+        ticketId="t1"
+        userMap={userMap}
+        contactMap={{}}
+        onContentChange={() => {}}
+        onSave={() => {}}
+        onClose={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    );
+
+    expect(screen.getByText(/Scheduled.*Publishes/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel scheduled comment' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reschedule comment' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Publish at/)).toHaveAttribute('type', 'datetime-local');
+  });
+
   it('T053: wires Reply in the hover/focus action row and keeps c-actions reveal CSS', async () => {
     const user = userEvent.setup();
     const onReply = vi.fn();

@@ -452,6 +452,12 @@ async function initializeJobScheduler(storageService: StorageService) {
   try {
     const jobRunner = await initializeJobRunner();
     logger.info(`Job runner initialized: ${jobRunner.getRunnerType()}`);
+    try {
+      const { reconcileScheduledCommentPublications } = await import('./jobs/handlers/publishScheduledCommentHandler');
+      await reconcileScheduledCommentPublications();
+    } catch (error) {
+      logger.error('Failed to reconcile scheduled comment publications:', error);
+    }
 
     if (isEnterprise) {
       try {
