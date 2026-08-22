@@ -169,6 +169,16 @@ export function CollaborativeEditor({
   const hasInitializedContent = useRef(false);
   const initialContentRef = useRef(initialContent);
 
+  // Parents commonly pass these as inline arrows, so their identity changes on
+  // every parent render. Held in refs so the provider effect below can leave
+  // them out of its dependency list.
+  const onConnectionStatusChangeRef = useRef(onConnectionStatusChange);
+  const onSyncStateChangeRef = useRef(onSyncStateChange);
+  const onUsersChangeRef = useRef(onUsersChange);
+  onConnectionStatusChangeRef.current = onConnectionStatusChange;
+  onSyncStateChangeRef.current = onSyncStateChange;
+  onUsersChangeRef.current = onUsersChange;
+
   const handleEmojiStateChange = useCallback((state: EmojiSuggestionState) => {
     setEmojiState(state);
   }, []);
@@ -293,12 +303,12 @@ export function CollaborativeEditor({
 
     const handleStatus = ({ status }: { status: ConnectionStatus }) => {
       setConnectionStatus(status);
-      onConnectionStatusChange?.(status);
+      onConnectionStatusChangeRef.current?.(status);
     };
 
     const handleSynced = ({ state }: { state: boolean }) => {
       setIsSynced(state);
-      onSyncStateChange?.(state);
+      onSyncStateChangeRef.current?.(state);
     };
 
     const handleUnsyncedChanges = (count: number) => {
@@ -314,7 +324,7 @@ export function CollaborativeEditor({
         t('editor.presence.unknownUser', { defaultValue: 'User' })
       );
       setConnectedUsers(users);
-      onUsersChange?.(users);
+      onUsersChangeRef.current?.(users);
     };
 
     provider.on('status', handleStatus);
@@ -335,8 +345,11 @@ export function CollaborativeEditor({
       provider.destroy();
       ydoc.destroy();
     };
-    // `t` is deliberately not a dependency: re-running this would tear down the Yjs provider on a language change.
-  }, [provider, ydoc, userId, userName, userColor, onConnectionStatusChange, onSyncStateChange, onUsersChange]);
+    // `t` and the callback props are deliberately not dependencies: re-running
+    // this destroys the Yjs provider, which silently detaches the editor from
+    // Hocuspocus (local edits stop reaching the server) and leaves the room
+    // empty for the next snapshot save.
+  }, [provider, ydoc, userId, userName, userColor]);
 
   useEffect(() => {
     if (!editor || !editorReady) return;
