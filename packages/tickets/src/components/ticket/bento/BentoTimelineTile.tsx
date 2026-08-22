@@ -262,14 +262,14 @@ function laneVisual(node: TimelineNode): { pin: string; icon: React.ReactNode; a
       };
     }
     return {
-      pin: 'bg-[rgb(var(--color-secondary-50))] dark:bg-[rgb(var(--color-secondary-400)/0.15)] ring-[rgb(var(--color-secondary-200))] dark:ring-[rgb(var(--color-secondary-400)/0.4)] text-[rgb(var(--color-secondary-600))] dark:text-[rgb(var(--color-secondary-300))]',
+      pin: 'chip-secondary ring-[rgb(var(--color-secondary-200))] dark:ring-[rgb(var(--color-secondary-400)/0.4)]',
       icon: <MessageSquare className={iconCls} />,
       accent,
     };
   }
   if (node.lane === 'time') {
     return {
-      pin: 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.15)] ring-[rgb(var(--color-primary-200))] dark:ring-[rgb(var(--color-primary-400)/0.4)] text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]',
+      pin: 'chip-primary ring-[rgb(var(--color-primary-200))] dark:ring-[rgb(var(--color-primary-400)/0.4)]',
       icon: <Clock className={iconCls} />,
       accent: '',
     };
@@ -282,7 +282,7 @@ function laneVisual(node: TimelineNode): { pin: string; icon: React.ReactNode; a
     };
   }
   return {
-    pin: 'bg-[rgb(var(--color-border-100))] ring-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-400))]',
+    pin: 'bg-[rgb(var(--color-border-100))] ring-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-500))]',
     icon: <Activity className={iconCls} />,
     accent: '',
   };
@@ -903,7 +903,7 @@ export function BentoTimelineTile({
               <li key={node.key}>
                 {showBreak ? (
                   <div className="relative flex items-center gap-2 pl-9 pt-3 pb-1 first:pt-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] bg-[rgb(var(--color-border-100))] rounded-full px-2.5 py-0.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-500))] bg-[rgb(var(--color-border-100))] rounded-full px-2.5 py-0.5">
                       {day}
                     </span>
                     <div className="flex-1 h-px bg-[rgb(var(--color-border-100))]" />
@@ -974,7 +974,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
             {timeEntry.user_display_name || t('bento.timeline.someone', 'Someone')}
           </span>{' '}
           {t('bento.timeline.logged', 'logged')}{' '}
-          <span className="inline-block rounded bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.2)] px-1.5 text-xs font-semibold text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">
+          <span className="chip-primary inline-block rounded px-1.5 text-xs font-semibold">
             {formatMinutes(timeEntry.billable_duration)}
           </span>
           {timeEntry.notes ? <> — {timeEntry.notes}</> : null}

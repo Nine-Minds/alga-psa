@@ -437,7 +437,7 @@ function FormFieldEditorCard({
             variant="ghost"
             size="icon"
             tooltipText={t('editor.form.remove')}
-            className="text-[rgb(var(--color-accent-600))] hover:text-[rgb(var(--color-accent-700))] hover:bg-[rgb(var(--color-accent-50))]"
+            className="chip-accent hover: hover:"
             onClick={async () => {
               await removeServiceRequestFormFieldAction(definitionId, key);
               await reloadDefinitionEditorState(definitionId);
@@ -773,7 +773,7 @@ export default function ServiceRequestDefinitionEditorPage() {
       ]);
 
       replaceDrawer(
-        <div className="bg-gray-100">
+        <div className="bg-[rgb(var(--color-app-ground))]">
           <MspTicketDetailsContainerClient
             ticketData={ticketData as any}
             surveySummary={surveySummary ?? null}
@@ -1996,7 +1996,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                   {t('editor.preview.title')}
                 </h2>
               </div>
-              <span className="rounded-full bg-[rgb(var(--color-primary-100))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-primary-700))]">
+              <span className="chip-primary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
                 {t('editor.preview.badge')}
               </span>
             </div>
