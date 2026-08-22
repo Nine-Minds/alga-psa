@@ -11,6 +11,9 @@ type FakePredicate = (row: FakeRow) => boolean;
 const matches = (row: FakeRow, predicates: FakePredicate[]): boolean =>
   predicates.every((predicate) => predicate(row));
 
+/** Simulates the staging re-key losing its connection after the job started. */
+let failNextUpdate = false;
+
 const makeQuery = (table: string) => {
   const predicates: FakePredicate[] = [];
   const query: any = {
@@ -42,6 +45,10 @@ const makeQuery = (table: string) => {
       return rows;
     },
     async update(values: Record<string, any>) {
+      if (failNextUpdate) {
+        failNextUpdate = false;
+        throw new Error('connection terminated unexpectedly');
+      }
       const rows = tables[table].filter((row) => matches(row, predicates));
       rows.forEach((row) => Object.assign(row, values));
       return rows.length;
@@ -183,14 +190,14 @@ describe('startArticleImport', () => {
       (_, i) => file({ filename: `doc-${i}.md`, content: 'x'.repeat(KB_IMPORT_MAX_FILE_BYTES) }),
     );
     await expect(startArticleImport({ files: fatBatch })).rejects.toThrow(
-      'This batch is larger than 20MB. Import fewer files at once.',
+      `This batch is larger than ${KB_IMPORT_MAX_TOTAL_BYTES / (1024 * 1024)}MB. Import fewer files at once.`,
     );
 
     expect(tables.kb_import_files).toHaveLength(0);
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it('removes the staged rows when the job cannot be enqueued', async () => {
+  it('leaves the staged rows for the sweep when the job cannot be enqueued', async () => {
     enqueueMock.mockImplementationOnce(async () => {
       throw new Error('Job enqueuer has not been registered');
     });
@@ -198,21 +205,47 @@ describe('startArticleImport', () => {
     await expect(startArticleImport({ files: [file()] })).rejects.toThrow(
       'Job enqueuer has not been registered',
     );
-    expect(tables.kb_import_files).toHaveLength(0);
+    // Deleting here would be unsafe: on EE the enqueue can throw after the
+    // workflow has started, and the handler would lose the content mid-import.
+    expect(tables.kb_import_files).toHaveLength(1);
+    expect(tables.kb_import_files[0]).toMatchObject({ status: 'pending' });
   });
 
-  it('sweeps abandoned staging rows so file content is never kept forever', async () => {
+  it('never reports failure once the job is enqueued, even if the re-key fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    failNextUpdate = true;
+
+    try {
+      const result = (await startArticleImport({ files: [file()] })) as any;
+
+      // Throwing here would tell the user the import failed while the job runs
+      // on regardless, and the retry would import the batch a second time.
+      expect(result.total).toBe(1);
+      // The rows still carry the batch id, so that is what polling must use.
+      expect(result.jobId).not.toBe('job-1');
+      expect(result.jobId).toBe(tables.kb_import_files[0].job_id);
+      expect(tables.kb_import_files).toHaveLength(1);
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      failNextUpdate = false;
+      warn.mockRestore();
+    }
+  });
+
+  it('sweeps staging rows past the TTL whatever their status', async () => {
     const dayAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
     tables.kb_import_files = [
       { tenant: 'tenant-1', job_id: 'old-job', filename: 'orphan.md', content: 'x'.repeat(64), status: 'pending', created_at: dayAgo },
+      // Settled rows outlive the article otherwise: one per imported file, kept
+      // for the life of the tenant, still answering status polls for dead jobs.
       { tenant: 'tenant-1', job_id: 'old-job', filename: 'done.md', content: null, status: 'imported', created_at: dayAgo },
+      { tenant: 'tenant-1', job_id: 'old-job', filename: 'broken.md', content: null, status: 'failed', created_at: dayAgo },
       { tenant: 'tenant-1', job_id: 'recent-job', filename: 'fresh.md', content: 'y', status: 'pending', created_at: new Date() },
     ];
 
     await startArticleImport({ files: [file()] });
 
     expect(tables.kb_import_files.map((row) => row.filename).sort()).toEqual([
-      'done.md',
       'fresh.md',
       'printer-guide.md',
     ]);

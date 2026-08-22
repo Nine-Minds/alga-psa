@@ -1146,12 +1146,13 @@ export const startArticleImport = withAuth(
       }
     }
 
-    // Rows the handler never consumed — a crash between the insert and the
-    // enqueue below — would otherwise keep their file content forever. Swept
-    // opportunistically here; the job itself finishes in minutes, so anything
-    // still pending after a day is abandoned.
+    // Swept opportunistically, whatever the row's status. Pending rows the
+    // handler never consumed — a crash between the insert and the enqueue below
+    // — would otherwise keep their file content forever, and settled rows would
+    // pile up one per imported file for the life of the tenant. The job itself
+    // finishes in minutes and nothing polls a batch after that, so a day is far
+    // past the point where any row is still of interest.
     await tenantScopedTable(knex, 'kb_import_files', tenant)
-      .where('status', 'pending')
       .where('created_at', '<', new Date(Date.now() - KB_IMPORT_STAGING_TTL_MS))
       .del()
       .catch(() => {});
@@ -1179,28 +1180,38 @@ export const startArticleImport = withAuth(
 
     const fileIds = rows.map((row) => row.import_file_id);
 
-    let jobId: string;
+    // A failure here leaves the staged rows behind on purpose. On EE the enqueue
+    // can throw after the workflow has already started, and deleting the rows
+    // would pull the file content out from under a handler mid-import; the sweep
+    // above collects them a day later instead.
+    const { jobId } = await enqueueImmediateJob(KB_ARTICLE_IMPORT_JOB, {
+      tenantId: tenant,
+      userId: user.user_id,
+      fileIds,
+      metadata: { user_id: user.user_id, tenantId: tenant, fileCount: fileIds.length },
+    });
+
+    // The rows were written under a batch id because the job record id does not
+    // exist until the job is enqueued. Re-key them so the status action can also
+    // see the job row — but never fail the import over it. The job is already
+    // running, and reporting failure would earn a retry that imports the whole
+    // batch a second time. Polling falls back to the batch id, which the rows
+    // still carry, and which the status action reads the same way.
+    let pollId = jobId;
     try {
-      const enqueued = await enqueueImmediateJob(KB_ARTICLE_IMPORT_JOB, {
-        tenantId: tenant,
-        userId: user.user_id,
-        fileIds,
-        metadata: { user_id: user.user_id, tenantId: tenant, fileCount: fileIds.length },
-      });
-      jobId = enqueued.jobId;
-    } catch (error) {
       await tenantScopedTable(knex, 'kb_import_files', tenant)
         .where({ job_id: importBatchId })
-        .del()
-        .catch(() => {});
-      throw error;
+        .update({ job_id: jobId, updated_at: new Date() });
+    } catch (error) {
+      pollId = importBatchId;
+      console.warn('[kbArticleImport] Could not re-key staged rows to the job id', {
+        jobId,
+        importBatchId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
-    await tenantScopedTable(knex, 'kb_import_files', tenant)
-      .where({ job_id: importBatchId })
-      .update({ job_id: jobId, updated_at: new Date() });
-
-    return { jobId, total: rows.length };
+    return { jobId: pollId, total: rows.length };
   }
 );
 
