@@ -184,7 +184,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: TicketNotificationSuppressionValue
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -1962,13 +1962,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     JSON.stringify(newCommentContent),
                     isInternal,
                     isResolution,
-                    willCloseTicket
+                    willCloseTicket,
+                    schedule,
                 );
 
                 // Optimistically update the response state in UI to match server behavior:
                 // - Internal note: no change
                 // - Client-visible comment from internal user (MSP portal): awaiting client
-                if (!isInternal && responseStateTrackingEnabled) {
+                if (!isInternal && !schedule && responseStateTrackingEnabled) {
                     setTicket((prev: any) => ({
                         ...prev,
                         response_state: 'awaiting_client'
@@ -1990,7 +1991,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 }
 
                 // If this was a resolution note and a closed status was selected, close the ticket.
-                if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
+                if (!schedule && isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
                     if (options?.suppressContactNotifications) {
                         // Mirror handleSelectChange's pre-close check so unmet
                         // close rules open the override dialog (carrying the

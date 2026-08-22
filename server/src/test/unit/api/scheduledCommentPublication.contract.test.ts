@@ -18,4 +18,16 @@ describe('scheduled client-visible ticket comments', () => {
     expect(handler).toContain("publish_state: 'published'");
     expect(handler).toContain("eventType: 'TICKET_COMMENT_ADDED'");
   });
+
+  it('forwards scheduling through the optimized MSP ticket composition path', () => {
+    const details = read('../packages/tickets/src/components/ticket/TicketDetails.tsx');
+    const container = read('../packages/tickets/src/components/ticket/TicketDetailsContainer.tsx');
+    const optimized = read('../packages/tickets/src/actions/optimizedTicketActions.ts');
+
+    expect(details).toContain('schedule,');
+    expect(container).toContain('undefined,\n        schedule,');
+    expect(optimized).toContain("publish_state: 'scheduled'");
+    expect(optimized).toContain("SCHEDULED_COMMENT_JOB");
+    expect(optimized).toContain('if (!isScheduled)');
+  });
 });
