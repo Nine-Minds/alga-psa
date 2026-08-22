@@ -618,6 +618,27 @@ would have discarded the second of those two commits for good.
   block was European Portuguese (`Introduza`, `canadiano`, `p. ex.`) using `setor` for a field the glossary
   requires be `ramo de atividade`. Rewritten. The German ZIP-Code strings had the wrong article gender.
 
+### Fifth reconciliation, 2026-08-22 (main moved again, five commits)
+
+`origin/main` advanced by the ticket-comment copy button (#3226) while the fourth reconciliation was in
+flight. Merged again — not rebased — for the same reason as before: `origin/i18n/error_messages` must stay
+an ancestor so the eventual push fast-forwards. The five commits are disjoint from this work
+(`CommentItem.tsx`, `ticketRichText*`, one hoisted billing test); the only conflicts were the two generated
+`xx`/`yy` `features/tickets.json` packs, resolved the only correct way — take either side, then re-run
+`scripts/generate-pseudo-locales.cjs`, which reproduces main's three new comment keys in pseudo.
+
+**Translating a hint can trip the hardcoded-currency guard.** Making
+`clients.validation.annualRevenue.invalid` translatable copied its illustrative `"$1,000,000"` into
+`common.json`, and each translator localized the example to their own symbol (`€`, `zł`, `R$`). The locale
+arm of `hardcodedCurrency.contract.test.ts` scans every locale pack for symbol-followed-by-digit, so the key
+was flagged — even though its English source in `clientFormValidation.ts` has carried a documented
+`KNOWN_HARDCODED_CURRENCY` exemption on main since the guard was written. The locale twin is recorded in
+`KNOWN_LOCALE_HARDCODED` with the same rationale (input guidance, not rendered money), which is exactly the
+pairing that file already uses for the client-portal catalog tiles. **Lesson for the remaining categories:**
+a message that quotes an amount, a date format, or a unit acquires eight new copies the moment it becomes a
+key, and repo-wide locale-pack scanners see all eight. Run the full server `product/` contract suite, not
+just `npm run test:i18n`, after any batch that keys example-bearing prose.
+
 ## Category 7 — the `{ success: false, error }` channel (~1,132 literals across 254 files)
 
 **Found 2026-08-20 by a browser walk, not by the inventory.** On a German `/msp/profile`, submitting two
