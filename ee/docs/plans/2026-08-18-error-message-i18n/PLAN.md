@@ -639,6 +639,20 @@ a message that quotes an amount, a date format, or a unit acquires eight new cop
 key, and repo-wide locale-pack scanners see all eight. Run the full server `product/` contract suite, not
 just `npm run test:i18n`, after any batch that keys example-bearing prose.
 
+### Sixth reconciliation, 2026-08-22 (nothing to reconcile)
+
+`origin/main` had not moved past the fifth merge: `git rev-list --left-right --count origin/main...HEAD` reads
+`0 80`, and `origin/i18n/error_messages` is an ancestor (`0 330`), so the push still fast-forwards and the two
+commits an earlier rebase had dropped (`7ad096cfb4`, `ee808b432b`) are both confirmed present. No merge was
+needed; the round went to the last five stale payload assertions instead — see the `toEqual` note under
+"Notes for the implementer".
+
+Re-walked the category-7 password path in the browser against the card app, driving the real Language
+Preference picker: with the wrong current password on `/msp/profile?tab=security`, German answers
+*"Das aktuelle Passwort ist falsch"*, `xx` answers `⟦Ƈŭřřḗƞŧ ƥȧşşẇȯřḓ īş īƞƈȯřřḗƈŧ⟧` — the pseudo run is the
+half that proves the boundary resolved a *key* rather than a German string that happened to be sitting in the
+component — and English is unchanged. The mismatch and common-word branches answer in German too.
+
 ## Category 7 — the `{ success: false, error }` channel (~1,132 literals across 254 files)
 
 **Found 2026-08-20 by a browser walk, not by the inventory.** On a German `/msp/profile`, submitting two
@@ -791,6 +805,14 @@ all the interesting decisions are.
   `…/billing/profitabilityReporting.integration.test.ts` are PR-gated DB tests that assert billing and
   integrations payloads. Tests using `expect(result.permissionError).toBe(…)` need no change, and the
   namespace-shape tests (`Object.keys(en)`) do — a new `errors` group is a new top-level key.
+  Two shapes escape a grep for the English sentence, and both bit this branch after the fact: a *hoisted*
+  expectation (`const expected = { permissionError: '…' }` reused across four assertions) and
+  `toEqual({ actionError: expect.any(String) })`, which never names the message at all yet still fails on the
+  extra field. Sweep for the assertion, not the prose —
+  `grep -rn "toEqual({.*\(action\|permission\)Error" --include="*.test.ts*"` over `packages server/src ee` —
+  and remember the DB-backed `server/src/test/infrastructure/**` suites are in a separate CI job, so a green
+  local unit run says nothing about them. Where the test only wants "it failed", `toMatchObject` says that
+  and stops going stale.
 - Adding a key to a package can pull `@alga-psa/ui/lib/i18n/serverOnly` into its Vitest graph for the first
   time, which is how the tickets suite found that its config mapped every `@alga-psa/db/*` subpath to
   `db/src/$1` while the package's exports put `tenant`, `connection` and `workDate` under `db/src/lib`. Check
