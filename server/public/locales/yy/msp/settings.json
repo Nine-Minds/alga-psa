@@ -2323,6 +2323,10 @@
       "stripe": {
         "name": "55555",
         "description": "55555"
+      },
+      "telephony": {
+        "name": "55555",
+        "description": "55555"
       }
     }
   },

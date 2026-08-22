@@ -3406,6 +3406,60 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Actif",
+        "error": "Erreur",
+        "disabled": "Désactivé",
+        "notConfigured": "Non configuré"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Journalise les appels Teams Phone comme interactions une fois l'appel terminé. Historique d'appels, pas de remontée d'écran en direct.",
+          "prerequisite": "Configurez d'abord l'intégration Microsoft Teams : Teams Phone réutilise son profil Microsoft."
+        }
+      },
+      "subscriptionExpires": "L'abonnement se renouvelle avant le",
+      "autoTicket": "Créer automatiquement un ticket pour les appels rapprochés",
+      "unknownNumber": "Numéro inconnu",
+      "actions": {
+        "enable": "Activer",
+        "disable": "Désactiver"
+      },
+      "matchStatus": {
+        "matched": "Rapproché",
+        "ambiguous": "Ambigu",
+        "unmatched": "Non rapproché",
+        "resolved": "Résolu"
+      },
+      "recentCalls": {
+        "title": "Appels récents",
+        "description": "Capturés après la fin de chaque appel : Microsoft Graph publie les enregistrements après coup, il s'agit donc d'un historique et non d'un flux en direct.",
+        "empty": "Aucun appel capturé pour l'instant.",
+        "createTicket": "Créer un ticket",
+        "openTicket": "Ouvrir le ticket"
+      },
+      "unmatched": {
+        "title": "Appels à attribuer",
+        "description": "Numéros que nous n'avons pas pu rapprocher et numéros partagés par plusieurs contacts. Résoudre un appel le classe sur la bonne chronologie.",
+        "empty": "Tous les appels capturés sont attribués.",
+        "assignTo": "Attribuer à"
+      },
+      "paywall": {
+        "title": "Module de téléphonie",
+        "description": "Les intégrations de téléphonie nécessitent le module de téléphonie pour ce locataire.",
+        "ceOnly": "Les intégrations de téléphonie ne sont disponibles qu'en Enterprise Edition.",
+        "includedTitle": "Ce qui est inclus",
+        "cta": "Gérer les modules",
+        "feature": {
+          "recognition": "Identification de l'appelant parmi les contacts et les clients à chaque appel capturé.",
+          "history": "Historique des appels sur la chronologie du contact et du client, comme interactions à part entière.",
+          "tickets": "Créez un ticket depuis un appel, ou reliez l'appel au ticket sur lequel vous travaillez déjà.",
+          "queue": "Une file pour les numéros non rapprochés et ambigus, afin qu'aucun appel ne soit attribué au jugé.",
+          "providers": "Teams Phone aujourd'hui ; le même noyau d'appels accueillera les futurs fournisseurs."
+        }
+      }
     }
   }
 }

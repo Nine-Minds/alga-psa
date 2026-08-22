@@ -3406,6 +3406,60 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Actief",
+        "error": "Fout",
+        "disabled": "Uitgeschakeld",
+        "notConfigured": "Niet ingesteld"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Legt Teams Phone-gesprekken na afloop vast als interacties. Gespreksgeschiedenis, geen live schermmelding.",
+          "prerequisite": "Stel eerst de Microsoft Teams-integratie in — Teams Phone hergebruikt het Microsoft-profiel daarvan."
+        }
+      },
+      "subscriptionExpires": "Abonnement wordt vernieuwd vóór",
+      "autoTicket": "Automatisch een ticket aanmaken voor herkende gesprekken",
+      "unknownNumber": "Onbekend nummer",
+      "actions": {
+        "enable": "Inschakelen",
+        "disable": "Uitschakelen"
+      },
+      "matchStatus": {
+        "matched": "Herkend",
+        "ambiguous": "Meerduidig",
+        "unmatched": "Niet herkend",
+        "resolved": "Opgelost"
+      },
+      "recentCalls": {
+        "title": "Recente gesprekken",
+        "description": "Vastgelegd na afloop van elk gesprek: Microsoft Graph publiceert gespreksrecords pas daarna, dus dit is geschiedenis en geen live overzicht.",
+        "empty": "Nog geen gesprekken vastgelegd.",
+        "createTicket": "Ticket aanmaken",
+        "openTicket": "Ticket openen"
+      },
+      "unmatched": {
+        "title": "Gesprekken zonder toewijzing",
+        "description": "Nummers die we niet konden herkennen en nummers die meerdere contacten delen. Een gesprek oplossen zet het op de juiste tijdlijn.",
+        "empty": "Elk vastgelegd gesprek is toegewezen.",
+        "assignTo": "Toewijzen aan"
+      },
+      "paywall": {
+        "title": "Telefonie-add-on",
+        "description": "Telefonie-integraties vereisen de telefonie-add-on voor deze tenant.",
+        "ceOnly": "Telefonie-integraties zijn alleen beschikbaar in Enterprise Edition.",
+        "includedTitle": "Wat is inbegrepen",
+        "cta": "Add-ons beheren",
+        "feature": {
+          "recognition": "Bellerherkenning tegen contacten en klanten bij elk vastgelegd gesprek.",
+          "history": "Gespreksgeschiedenis op de tijdlijn van contact en klant als volwaardige interacties.",
+          "tickets": "Maak een ticket vanuit een gesprek of koppel het gesprek aan een ticket waaraan u al werkt.",
+          "queue": "Een wachtrij voor niet-herkende en meerduidige nummers, zodat geen gesprek op gevoel wordt toegewezen.",
+          "providers": "Vandaag Teams Phone; dezelfde gesprekskern draagt toekomstige aanbieders."
+        }
+      }
     }
   }
 }

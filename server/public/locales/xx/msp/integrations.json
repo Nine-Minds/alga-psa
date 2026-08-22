@@ -3406,6 +3406,60 @@
         "secretKeyFormat": "11111",
         "publishableKeyFormat": "11111"
       }
+    },
+    "telephony": {
+      "status": {
+        "active": "11111",
+        "error": "11111",
+        "disabled": "11111",
+        "notConfigured": "11111"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "11111",
+          "prerequisite": "11111"
+        }
+      },
+      "subscriptionExpires": "11111",
+      "autoTicket": "11111",
+      "unknownNumber": "11111",
+      "actions": {
+        "enable": "11111",
+        "disable": "11111"
+      },
+      "matchStatus": {
+        "matched": "11111",
+        "ambiguous": "11111",
+        "unmatched": "11111",
+        "resolved": "11111"
+      },
+      "recentCalls": {
+        "title": "11111",
+        "description": "11111",
+        "empty": "11111",
+        "createTicket": "11111",
+        "openTicket": "11111"
+      },
+      "unmatched": {
+        "title": "11111",
+        "description": "11111",
+        "empty": "11111",
+        "assignTo": "11111"
+      },
+      "paywall": {
+        "title": "11111",
+        "description": "11111",
+        "ceOnly": "11111",
+        "includedTitle": "11111",
+        "cta": "11111",
+        "feature": {
+          "recognition": "11111",
+          "history": "11111",
+          "tickets": "11111",
+          "queue": "11111",
+          "providers": "11111"
+        }
+      }
     }
   }
 }

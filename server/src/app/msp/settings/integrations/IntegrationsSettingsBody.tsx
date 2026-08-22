@@ -13,6 +13,7 @@ export default function IntegrationsSettingsBody(): React.JSX.Element {
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
   const canUseTeams = hasAddOn(ADD_ONS.TEAMS);
+  const canUseTelephony = hasAddOn(ADD_ONS.TELEPHONY);
 
   return (
     <>
@@ -21,6 +22,7 @@ export default function IntegrationsSettingsBody(): React.JSX.Element {
         canUseEntraSync={canUseEntraSync}
         canUseCipp={canUseCipp}
         canUseTeams={canUseTeams}
+        canUseTelephony={canUseTelephony}
         qboSyncHealthSlot={<QboSyncHealthPanel />}
         qboOnboardingSlot={<QboOnboardingWizardEntry />}
       />

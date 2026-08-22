@@ -2323,6 +2323,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Accept credit card payments for invoices via Stripe"
+      },
+      "telephony": {
+        "name": "Telephony",
+        "description": "Journal calls as interactions, recognise callers, and turn a call into a ticket"
       }
     }
   },

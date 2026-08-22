@@ -2323,6 +2323,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Accepteer creditcardbetalingen voor facturen via Stripe"
+      },
+      "telephony": {
+        "name": "Telefonie",
+        "description": "Leg gesprekken vast als interacties, herken de beller en maak van een gesprek een ticket"
       }
     }
   },

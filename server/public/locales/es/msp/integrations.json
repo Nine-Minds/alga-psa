@@ -3406,6 +3406,60 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Activo",
+        "error": "Error",
+        "disabled": "Desactivado",
+        "notConfigured": "Sin configurar"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Registra las llamadas de Teams Phone como interacciones al terminar cada llamada. Historial de llamadas, no aviso en pantalla en vivo.",
+          "prerequisite": "Configure primero la integración de Microsoft Teams: Teams Phone reutiliza su perfil de Microsoft."
+        }
+      },
+      "subscriptionExpires": "La suscripción se renueva antes de",
+      "autoTicket": "Crear un ticket automáticamente para las llamadas identificadas",
+      "unknownNumber": "Número desconocido",
+      "actions": {
+        "enable": "Activar",
+        "disable": "Desactivar"
+      },
+      "matchStatus": {
+        "matched": "Identificada",
+        "ambiguous": "Ambigua",
+        "unmatched": "Sin identificar",
+        "resolved": "Resuelta"
+      },
+      "recentCalls": {
+        "title": "Llamadas recientes",
+        "description": "Se capturan al terminar cada llamada: Microsoft Graph publica los registros después de la llamada, por lo que esto es un historial y no un flujo en vivo.",
+        "empty": "Todavía no se ha capturado ninguna llamada.",
+        "createTicket": "Crear ticket",
+        "openTicket": "Abrir ticket"
+      },
+      "unmatched": {
+        "title": "Llamadas pendientes de atribución",
+        "description": "Números que no pudimos identificar y números compartidos por más de un contacto. Resolver una llamada la archiva en la cronología correcta.",
+        "empty": "Todas las llamadas capturadas están atribuidas.",
+        "assignTo": "Asignar a"
+      },
+      "paywall": {
+        "title": "Complemento de telefonía",
+        "description": "Las integraciones de telefonía requieren el complemento de telefonía para este inquilino.",
+        "ceOnly": "Las integraciones de telefonía solo están disponibles en Enterprise Edition.",
+        "includedTitle": "Qué incluye",
+        "cta": "Gestionar complementos",
+        "feature": {
+          "recognition": "Reconocimiento de quien llama frente a contactos y clientes en cada llamada capturada.",
+          "history": "Historial de llamadas en la cronología del contacto y del cliente como interacciones de pleno derecho.",
+          "tickets": "Cree un ticket desde una llamada o vincule la llamada a un ticket en curso.",
+          "queue": "Una cola para números sin identificar y ambiguos, para que ninguna llamada se atribuya por conjetura.",
+          "providers": "Hoy Teams Phone; el mismo núcleo de llamadas sostendrá a los futuros proveedores."
+        }
+      }
     }
   }
 }

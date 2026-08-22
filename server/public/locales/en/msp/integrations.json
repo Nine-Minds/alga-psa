@@ -3406,6 +3406,60 @@
         "secretKeyFormat": "Secret key should start with sk_",
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
+    },
+    "telephony": {
+      "status": {
+        "active": "Active",
+        "error": "Error",
+        "disabled": "Disabled",
+        "notConfigured": "Not configured"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Journal Teams Phone calls as interactions once each call ends. Call history, not live screen pop.",
+          "prerequisite": "Configure the Microsoft Teams integration first — Teams Phone reuses its Microsoft profile."
+        }
+      },
+      "subscriptionExpires": "Subscription renews before",
+      "autoTicket": "Create a ticket automatically for matched calls",
+      "unknownNumber": "Unknown number",
+      "actions": {
+        "enable": "Enable",
+        "disable": "Disable"
+      },
+      "matchStatus": {
+        "matched": "Matched",
+        "ambiguous": "Ambiguous",
+        "unmatched": "Unmatched",
+        "resolved": "Resolved"
+      },
+      "recentCalls": {
+        "title": "Recent calls",
+        "description": "Captured after each call ends — Microsoft Graph publishes call records post-call, so this is history rather than a live feed.",
+        "empty": "No calls captured yet.",
+        "createTicket": "Create ticket",
+        "openTicket": "Open ticket"
+      },
+      "unmatched": {
+        "title": "Calls needing attribution",
+        "description": "Numbers we could not match, and numbers shared by more than one contact. Resolving a call files it on the right timeline.",
+        "empty": "Every captured call is attributed.",
+        "assignTo": "Assign to"
+      },
+      "paywall": {
+        "title": "Telephony add-on",
+        "description": "Telephony integrations require the Telephony add-on for this tenant.",
+        "ceOnly": "Telephony integrations are only available in Enterprise Edition.",
+        "includedTitle": "What's included",
+        "cta": "Manage add-ons",
+        "feature": {
+          "recognition": "Caller recognition against contacts and clients on every captured call.",
+          "history": "Call history on the contact and client timeline as first-class interactions.",
+          "tickets": "Create a ticket from a call, or link the call to a ticket you are already working.",
+          "queue": "A queue for unmatched and ambiguous numbers so no call is attributed by guesswork.",
+          "providers": "Teams Phone today; the same call core is what future providers plug into."
+        }
+      }
     }
   }
 }

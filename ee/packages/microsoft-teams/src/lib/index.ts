@@ -14,6 +14,8 @@ export * from './meetings/artifactSubscriptions';
 export * from './meetings/meetingConfig';
 export * from './meetings/updateTeamsMeeting';
 export * from './meetings/verifyMeetingOrganizer';
+export { getTeamsTicketCreationDefaults } from './teams/teamsPsaData';
+export type { TeamsTicketCreationDefaults } from './teams/teamsPsaData';
 export * from './telephony/callRecords';
 export * from './telephony/callSubscriptions';
 export * from './telephony/teamsPhoneProvider';

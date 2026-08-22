@@ -2323,6 +2323,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Acepte pagos con tarjeta de crédito para facturas a través de Stripe"
+      },
+      "telephony": {
+        "name": "Telefonía",
+        "description": "Registra las llamadas como interacciones, reconoce a quien llama y convierte una llamada en un ticket"
       }
     }
   },

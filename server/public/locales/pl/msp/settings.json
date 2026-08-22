@@ -2337,6 +2337,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Przyjmuj płatności kartą kredytową za faktury przez Stripe"
+      },
+      "telephony": {
+        "name": "Telefonia",
+        "description": "Zapisuj rozmowy jako interakcje, rozpoznawaj dzwoniących i zamieniaj rozmowę w zgłoszenie"
       }
     }
   },

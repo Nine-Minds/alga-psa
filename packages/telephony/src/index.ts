@@ -22,5 +22,7 @@ export {
 } from './lib/callInteractions';
 export { createCallInteraction, ingestCanonicalCall } from './services/ingestCanonicalCall';
 export type { IngestCanonicalCallInput, IngestCanonicalCallOutcome } from './services/ingestCanonicalCall';
+export { autoCreateTicketForCall } from './services/autoTicketFromCall';
+export type { AutoTicketFromCallInput, AutoTicketFromCallOutcome, TicketCreationDefaults } from './services/autoTicketFromCall';
 export { resolveCallMatch } from './services/resolveCallMatch';
 export type { ResolveCallMatchInput, ResolveCallMatchOutcome } from './services/resolveCallMatch';
