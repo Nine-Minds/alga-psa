@@ -36,12 +36,12 @@ async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
 
 async function getXeroCatalogAccessError(user: IUserWithRoles): Promise<XeroCatalogActionError | null> {
   if (!isEnterpriseEdition()) {
-    return actionError('Xero integration is only available in Enterprise Edition.');
+    return actionError('Xero integration is only available in Enterprise Edition.', 'msp/integrations:errors.xero.enterpriseOnly');
   }
 
   const allowed = await hasPermission(user, 'billing_settings', 'read');
   if (!allowed) {
-    return permissionError('Forbidden: You do not have permission to view Xero integration settings.');
+    return permissionError('Forbidden: You do not have permission to view Xero integration settings.', 'msp/integrations:errors.xero.viewPermission');
   }
 
   return null;
@@ -180,25 +180,69 @@ function isXeroReconnectError(error: unknown): boolean {
   );
 }
 
-function xeroCatalogFetchError(catalogName: string, error: unknown): XeroCatalogActionError {
+type XeroCatalog = 'accounts' | 'items' | 'taxRates' | 'trackingCategories';
+
+const XERO_CATALOG_LABELS: Record<XeroCatalog, string> = {
+  accounts: 'Xero accounts',
+  items: 'Xero items',
+  taxRates: 'Xero tax rates',
+  trackingCategories: 'Xero tracking categories',
+};
+
+// A frame plus an English catalogue name does not translate, so every catalogue
+// names its own whole sentence.
+const XERO_CATALOG_KEYS: Record<
+  XeroCatalog,
+  { notConnected: string; reconnect: string; loadFailed: string; verifyFailed: string }
+> = {
+  accounts: {
+    notConnected: 'msp/integrations:errors.xero.accounts.notConnected',
+    reconnect: 'msp/integrations:errors.xero.accounts.reconnect',
+    loadFailed: 'msp/integrations:errors.xero.accounts.loadFailed',
+    verifyFailed: 'msp/integrations:errors.xero.accounts.verifyFailed',
+  },
+  items: {
+    notConnected: 'msp/integrations:errors.xero.items.notConnected',
+    reconnect: 'msp/integrations:errors.xero.items.reconnect',
+    loadFailed: 'msp/integrations:errors.xero.items.loadFailed',
+    verifyFailed: 'msp/integrations:errors.xero.items.verifyFailed',
+  },
+  taxRates: {
+    notConnected: 'msp/integrations:errors.xero.taxRates.notConnected',
+    reconnect: 'msp/integrations:errors.xero.taxRates.reconnect',
+    loadFailed: 'msp/integrations:errors.xero.taxRates.loadFailed',
+    verifyFailed: 'msp/integrations:errors.xero.taxRates.verifyFailed',
+  },
+  trackingCategories: {
+    notConnected: 'msp/integrations:errors.xero.trackingCategories.notConnected',
+    reconnect: 'msp/integrations:errors.xero.trackingCategories.reconnect',
+    loadFailed: 'msp/integrations:errors.xero.trackingCategories.loadFailed',
+    verifyFailed: 'msp/integrations:errors.xero.trackingCategories.verifyFailed',
+  },
+};
+
+function xeroCatalogFetchError(catalog: XeroCatalog, error: unknown): XeroCatalogActionError {
+  const catalogName = XERO_CATALOG_LABELS[catalog];
   if (isXeroReconnectError(error)) {
-    return actionError(`Reconnect Xero before loading ${catalogName}.`);
+    return actionError(`Reconnect Xero before loading ${catalogName}.`, XERO_CATALOG_KEYS[catalog].reconnect);
   }
 
   return actionError(
-    `Could not load ${catalogName}. Try again, or reconnect Xero if the problem persists.`
+    `Could not load ${catalogName}. Try again, or reconnect Xero if the problem persists.`,
+    XERO_CATALOG_KEYS[catalog].loadFailed,
   );
 }
 
 async function getXeroCatalogConnectionError(
   tenantId: string,
   connectionId: string | null | undefined,
-  catalogName: string
+  catalog: XeroCatalog
 ): Promise<XeroCatalogActionError | null> {
+  const catalogName = XERO_CATALOG_LABELS[catalog];
   try {
     const summaries = await getXeroConnectionSummaries(tenantId);
     if (summaries.length === 0) {
-      return actionError(`Connect Xero before loading ${catalogName}.`);
+      return actionError(`Connect Xero before loading ${catalogName}.`, XERO_CATALOG_KEYS[catalog].notConnected);
     }
 
     const selectedConnection = connectionId
@@ -206,11 +250,14 @@ async function getXeroCatalogConnectionError(
       : summaries[0];
 
     if (!selectedConnection) {
-      return actionError('The selected Xero organisation is no longer connected. Reconnect Xero and try again.');
+      return actionError(
+        'The selected Xero organisation is no longer connected. Reconnect Xero and try again.',
+        'msp/integrations:errors.xero.organisationDisconnected',
+      );
     }
 
     if (selectedConnection.status === 'expired') {
-      return actionError(`Reconnect Xero before loading ${catalogName}.`);
+      return actionError(`Reconnect Xero before loading ${catalogName}.`, XERO_CATALOG_KEYS[catalog].reconnect);
     }
 
     return null;
@@ -221,7 +268,10 @@ async function getXeroCatalogConnectionError(
       catalogName,
       error
     });
-    return actionError(`Could not verify the Xero connection before loading ${catalogName}. Try again.`);
+    return actionError(
+      `Could not verify the Xero connection before loading ${catalogName}. Try again.`,
+      XERO_CATALOG_KEYS[catalog].verifyFailed,
+    );
   }
 }
 
@@ -387,7 +437,7 @@ export const getXeroAccounts = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'Xero accounts');
+  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'accounts');
   if (connectionError) return connectionError;
 
   try {
@@ -401,7 +451,7 @@ export const getXeroAccounts = withAuth(async (
     }));
   } catch (error) {
     logger.warn('[xeroActions] Failed to load Xero accounts', { tenantId: tenant, connectionId, error });
-    return xeroCatalogFetchError('Xero accounts', error);
+    return xeroCatalogFetchError('accounts', error);
   }
 });
 
@@ -413,7 +463,7 @@ export const getXeroItems = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'Xero items');
+  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'items');
   if (connectionError) return connectionError;
 
   try {
@@ -427,7 +477,7 @@ export const getXeroItems = withAuth(async (
     }));
   } catch (error) {
     logger.warn('[xeroActions] Failed to load Xero items', { tenantId: tenant, connectionId, error });
-    return xeroCatalogFetchError('Xero items', error);
+    return xeroCatalogFetchError('items', error);
   }
 });
 
@@ -439,7 +489,7 @@ export const getXeroTaxRates = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'Xero tax rates');
+  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'taxRates');
   if (connectionError) return connectionError;
 
   try {
@@ -455,7 +505,7 @@ export const getXeroTaxRates = withAuth(async (
     }));
   } catch (error) {
     logger.warn('[xeroActions] Failed to load Xero tax rates', { tenantId: tenant, connectionId, error });
-    return xeroCatalogFetchError('Xero tax rates', error);
+    return xeroCatalogFetchError('taxRates', error);
   }
 });
 
@@ -467,7 +517,7 @@ export const getXeroTrackingCategories = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'Xero tracking categories');
+  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'trackingCategories');
   if (connectionError) return connectionError;
 
   try {
@@ -485,6 +535,6 @@ export const getXeroTrackingCategories = withAuth(async (
     }));
   } catch (error) {
     logger.warn('[xeroActions] Failed to load Xero tracking categories', { tenantId: tenant, connectionId, error });
-    return xeroCatalogFetchError('Xero tracking categories', error);
+    return xeroCatalogFetchError('trackingCategories', error);
   }
 });

@@ -65,13 +65,14 @@ const BOOTSTRAP_LOADING_TEXT: Record<
     translations: 'Carregando traduções...',
     languagePreferences: 'Carregando preferências de idioma...',
   },
+  // Mirrors scripts/generate-pseudo-locales.cjs; these two never reach a pack.
   xx: {
-    translations: '11111',
-    languagePreferences: '11111',
+    translations: '⟦Ŀȯȧḓīƞɠ ŧřȧƞşŀȧŧīȯƞş...⟧',
+    languagePreferences: '⟦Ŀȯȧḓīƞɠ ŀȧƞɠŭȧɠḗ ƥřḗƒḗřḗƞƈḗş...⟧',
   },
   yy: {
-    translations: '55555',
-    languagePreferences: '55555',
+    translations: '〖Ŀȯȧḓīƞɠ ŧřȧƞşŀȧŧīȯƞş... ··········〗',
+    languagePreferences: '〖Ŀȯȧḓīƞɠ ŀȧƞɠŭȧɠḗ ƥřḗƒḗřḗƞƈḗş... ·············〗',
   },
 };
 

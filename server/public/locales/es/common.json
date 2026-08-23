@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "Color hexadecimal no válido (p. ej., #FF0000)",
+    "invalidHexText": "Color hexadecimal no válido (p. ej., #FFFFFF)",
+    "customizeTagColors": "Personalizar colores de etiquetas",
+    "chooseColor": "Elegir color",
+    "quickSelect": "Selección rápida",
+    "presetAriaLabel": "Seleccionar color predefinido {{number}}",
+    "backgroundColor": "Color de fondo",
+    "textColor": "Color del texto",
+    "preview": "Vista previa",
+    "sampleTag": "Etiqueta de ejemplo",
+    "resetToDefault": "Restablecer valores predeterminados"
+  },
   "clientNameCell": {
     "noClient": "Sin cliente"
   },
@@ -120,6 +133,23 @@
     "notes": "Notas"
   },
   "auth": {
+    "signOut": {
+      "title": "Cerrar sesión",
+      "confirmation": "¿Está seguro de que desea cerrar sesión?",
+      "signingOut": "Cerrando sesión...",
+      "action": "Cerrar sesión"
+    },
+    "passwordReset": {
+      "title": "Se requiere cambiar la contraseña",
+      "description": "Todavía está utilizando una contraseña temporal. Cambie su contraseña para proteger su cuenta."
+    },
+    "twoFactor": {
+      "codeLabel": "Código 2FA",
+      "verify": "Verificar",
+      "title": "Muy fácil",
+      "instructions": "Ingrese el código de 6 dígitos de su aplicación de autenticación.",
+      "digitsLeft": "{{count}} dígitos restantes"
+    },
     "messages": {
       "handoffMissingToken": "El token de transferencia de sesión falta o no es válido. Inicie sesión nuevamente.",
       "handoffFinalizeFailed": "No pudimos finalizar su inicio de sesión. Intente iniciar sesión de nuevo.",
@@ -143,6 +173,19 @@
       "existingContactsOnly": "El registro ahora solo está disponible para contactos existentes. Comuníquese con su administrador para que primero lo agregue como contacto.",
       "registerFromSignIn": "Si ya es un contacto existente, puede registrarse directamente desde la página de inicio de sesión con la dirección de correo electrónico de su contacto.",
       "returnToSignIn": "Volver al inicio de sesión"
+    },
+    "validation": {
+      "password": {
+        "required": "La contraseña es obligatoria",
+        "tooShort": "La contraseña debe tener al menos 8 caracteres",
+        "tooLong": "La contraseña no puede tener más de 128 caracteres",
+        "missingUppercase": "La contraseña debe contener al menos una letra mayúscula",
+        "missingLowercase": "La contraseña debe contener al menos una letra minúscula",
+        "missingNumber": "La contraseña debe contener al menos un número",
+        "missingSpecialCharacter": "La contraseña debe contener al menos un carácter especial",
+        "tooCommon": "La contraseña es demasiado común. Elija una contraseña más segura",
+        "sequentialCharacters": "La contraseña no puede contener caracteres secuenciales"
+      }
     }
   },
   "share": {
@@ -176,6 +219,15 @@
     }
   },
   "errors": {
+    "validation": {
+      "required": "{{field}} es obligatorio.",
+      "invalidType": "{{field}} tiene un tipo incorrecto.",
+      "invalidFormat": "{{field}} tiene un formato no válido.",
+      "tooSmall": "{{field}} está por debajo del valor o la longitud mínimos permitidos.",
+      "tooLarge": "{{field}} supera el valor o la longitud máximos permitidos.",
+      "unsupportedValue": "{{field}} tiene un valor no admitido.",
+      "invalidValue": "{{field}} tiene un valor no válido."
+    },
     "auth": {
       "notAuthenticated": "No autenticado",
       "accessDenied": "Acceso denegado",
@@ -187,6 +239,14 @@
       "contactNotFound": "Usuario no asociado a un contacto",
       "clientNotFound": "El contacto no está asociado a una empresa"
     },
+    "password": {
+      "currentIncorrect": "La contraseña actual es incorrecta",
+      "changeFailed": "No se pudo cambiar la contraseña",
+      "differentTenant": "No autorizado: no se puede modificar un usuario de otro inquilino",
+      "internalStaffRequired": "No autorizado: se requieren privilegios de personal interno",
+      "adminRequired": "No autorizado: se requieren privilegios de administrador",
+      "changeUserFailed": "No se pudo cambiar la contraseña del usuario"
+    },
     "permissions": {
       "tickets": {
         "read": "Permisos insuficientes para ver los tickets",
@@ -196,8 +256,26 @@
         "updateStatus": "Permisos insuficientes para actualizar el estado del ticket",
         "addComments": "Permisos insuficientes para agregar comentarios",
         "updateComments": "Permisos insuficientes para actualizar comentarios",
-        "deleteComments": "Permisos insuficientes para eliminar comentarios"
+        "deleteComments": "Permisos insuficientes para eliminar comentarios",
+        "viewDocuments": "Permisos insuficientes para ver los documentos del ticket"
       }
+    },
+    "tags": {
+      "notFound": "No se encontró la etiqueta. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de etiqueta seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "textTooLongShort": "El texto de la etiqueta es demasiado largo.",
+      "referenceMissing": "La etiqueta o el registro etiquetado seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "alreadyApplied": "Esa etiqueta ya está aplicada a este elemento.",
+      "duplicate": "Ya existe una etiqueta con esos datos.",
+      "notAllowed": "Uno de los valores de la etiqueta no está permitido. Revise la etiqueta e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la etiqueta.",
+      "missingFieldNamed": "Falta un campo obligatorio de la etiqueta: {{field}}.",
+      "textRequired": "El texto de la etiqueta es obligatorio",
+      "textEmpty": "El texto de la etiqueta no puede estar vacío",
+      "textTooLong": "El texto de la etiqueta es demasiado largo (máximo 50 caracteres)",
+      "textInvalidCharacters": "El texto de la etiqueta contiene caracteres no válidos",
+      "backgroundColorInvalid": "Formato de color de fondo no válido. Debe ser un código de color hexadecimal válido (p. ej., #FF0000)",
+      "textColorInvalid": "Formato de color de texto no válido. Debe ser un código de color hexadecimal válido (p. ej., #FFFFFF)"
     }
   },
   "time": {
@@ -408,7 +486,72 @@
         "sequentialDigits": "Este número recorre el teclado de forma consecutiva.",
         "fictionalRange": "Está en el rango 555-0100 reservado para la ficción."
       },
-      "dismissWarning": "Descartar"
+      "dismissWarning": "Descartar",
+      "address": {
+        "emoji": "La dirección no puede contener emojis",
+        "empty": "La dirección no puede estar vacía",
+        "invalidCharacters": "La dirección contiene caracteres no válidos",
+        "noLetters": "La dirección debe contener letras",
+        "tooLong": "La dirección no puede superar los 100 caracteres"
+      },
+      "city": {
+        "emoji": "El nombre de la ciudad no puede contener emojis",
+        "empty": "El nombre de la ciudad no puede estar vacío",
+        "invalidCharacters": "El nombre de la ciudad contiene caracteres no válidos",
+        "noLetters": "El nombre de la ciudad debe contener letras",
+        "tooLong": "El nombre de la ciudad no puede superar los 100 caracteres"
+      },
+      "stateProvince": {
+        "emoji": "El estado/provincia no puede contener emojis",
+        "empty": "El estado/provincia no puede estar vacío",
+        "invalidCharacters": "El estado/provincia contiene caracteres no válidos",
+        "noLetters": "El estado/provincia debe contener letras",
+        "tooLong": "El estado/provincia no puede superar los 100 caracteres"
+      },
+      "postalCode": {
+        "au": "Introduzca un código postal australiano válido (p. ej., 2000)",
+        "br": "Introduzca un código postal brasileño válido (p. ej., 01234-567)",
+        "ca": "Introduzca un código postal canadiense válido (p. ej., K1A 0A6)",
+        "ch": "Introduzca un código postal suizo válido (p. ej., 8001)",
+        "de": "Introduzca un código postal alemán válido (p. ej., 10115)",
+        "emoji": "El código postal no puede contener emojis",
+        "es": "Introduzca un código postal español válido (p. ej., 28001)",
+        "fr": "Introduzca un código postal francés válido (p. ej., 75001)",
+        "gb": "Introduzca un código postal británico válido (p. ej., SW1A 1AA)",
+        "generic": "Introduzca un código postal válido",
+        "in": "Introduzca un código postal indio válido (p. ej., 110001)",
+        "it": "Introduzca un código postal italiano válido (p. ej., 00118)",
+        "jp": "Introduzca un código postal japonés válido (p. ej., 123-4567)",
+        "nl": "Introduzca un código postal neerlandés válido (p. ej., 1234AB)",
+        "onlySpaces": "El código postal no puede contener solo espacios",
+        "us": "Introduzca un código ZIP válido (p. ej., 12345 o 12345-6789)",
+        "usShort": "Introduzca un código ZIP válido"
+      },
+      "industry": {
+        "invalidCharacters": "El sector contiene caracteres no válidos",
+        "noLetters": "El sector debe contener letras",
+        "tooLong": "El sector no puede superar los 100 caracteres",
+        "tooShort": "El sector debe tener al menos 2 caracteres",
+        "tooShortText": "El sector debe contener al menos 2 caracteres de texto"
+      },
+      "role": {
+        "noAlphanumeric": "El cargo debe contener letras o números",
+        "onlySpaces": "El cargo no puede contener solo espacios",
+        "tooLong": "El cargo no puede superar los 100 caracteres"
+      },
+      "notes": {
+        "tooLong": "Las notas no pueden superar los 2000 caracteres"
+      },
+      "companySize": {
+        "emoji": "El tamaño de la empresa no puede contener emojis",
+        "invalid": "Introduzca un tamaño de empresa válido (p. ej., \"50\", \"10-50\", \"quinientos\", \"2,5 M\", \"pequeña\", \"gran empresa\")",
+        "tooLong": "El tamaño de la empresa no puede superar los 50 caracteres"
+      },
+      "annualRevenue": {
+        "emoji": "Los ingresos anuales no pueden contener emojis",
+        "invalid": "Introduzca ingresos anuales válidos (p. ej., \"1.000.000 €\", \"cinco millones\", \"2,5 M\", \"10 M-50 M\", \"no divulgado\")",
+        "tooLong": "Los ingresos anuales no pueden superar los 50 caracteres"
+      }
     }
   },
   "commentThread": {
@@ -1161,6 +1304,17 @@
     "unnamedUser": "Usuario sin nombre",
     "unnamedTeam": "Equipo sin nombre"
   },
+  "serviceTypeSelect": {
+    "placeholder": "Seleccione un tipo de servicio...",
+    "newNamePlaceholder": "Nombre del nuevo tipo de servicio...",
+    "addNew": "Agregar nuevo tipo de servicio",
+    "deleteTitle": "Eliminar tipo de servicio",
+    "deleteConfirm": "¿Seguro que desea eliminar este tipo de servicio? Esta acción no se puede deshacer.",
+    "errors": {
+      "delete": "No se puede eliminar este tipo de servicio. Es posible que lo usen servicios existentes.",
+      "create": "No se pudo crear el tipo de servicio. Inténtelo de nuevo."
+    }
+  },
   "tagFilter": {
     "placeholder": "Filtrar por etiquetas...",
     "filter": "Filtrar",
@@ -1369,5 +1523,75 @@
   "notifications": {
     "needsAttention": "Requiere atención ({{count}})",
     "lowPriority": "Prioridad baja ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Resolver conflictos de importación",
+    "description": "Algunos elementos ya existen. Elija cómo tratar cada conflicto.",
+    "apply": "Aplicar resoluciones",
+    "reason": {
+      "name": "Conflicto: este nombre ya existe",
+      "order": "Conflicto: el orden {{order}} ya está ocupado",
+      "item": "Conflicto: este elemento ya existe"
+    },
+    "skip": "Omitir este elemento",
+    "rename": "Importar con un nombre diferente",
+    "newNamePlaceholder": "Introduzca el nuevo nombre",
+    "reorder": "Importar con un orden diferente",
+    "newOrderPlaceholder": "Introduzca el nuevo orden"
+  },
+  "tags": {
+    "editTitle": "Editar etiqueta",
+    "noPermission": "No tiene permiso para editar etiquetas. Contacte con su administrador para obtener acceso.",
+    "preview": "Vista previa de la etiqueta",
+    "textLabel": "Texto de la etiqueta",
+    "textPlaceholder": "Introduzca el texto de la etiqueta",
+    "quickColors": "Selección rápida de colores",
+    "presetSwatch": "Fondo: {{background}}, texto: {{text}}",
+    "backgroundColorLabel": "Color de fondo",
+    "textColorLabel": "Color del texto",
+    "pickBackgroundColor": "Elegir color de fondo",
+    "pickTextColor": "Elegir color del texto",
+    "resetColors": "Restablecer colores",
+    "deleteAll": "Eliminar todas",
+    "deleting": "Eliminando...",
+    "deleteAllTitle": "Eliminar todas las etiquetas",
+    "deleteAllMessage": "¿Seguro que desea eliminar todas las etiquetas con el texto «{{tag}}»? Esto quitará esta etiqueta de todos los {{entityType}}. Esta acción no se puede deshacer.",
+    "deletedAll": "Se eliminaron todas las etiquetas «{{tag}}»",
+    "deleteFailed": "No se pudieron eliminar las etiquetas",
+    "saveFailed": "No se pudieron guardar los cambios de la etiqueta",
+    "textRequired": "El texto de la etiqueta no puede estar vacío",
+    "updated": "Etiqueta actualizada correctamente",
+    "entityTypes": {
+      "client": "clientes",
+      "contact": "contactos",
+      "ticket": "tickets",
+      "project": "proyectos",
+      "project_task": "tareas de proyecto",
+      "workflow_form": "formularios de flujo de trabajo",
+      "document": "documentos",
+      "knowledge_base_article": "artículos de la base de conocimientos",
+      "opportunity": "oportunidades"
+    }
+  },
+  "statusDialog": {
+    "nameRequired": "El nombre del estado es obligatorio",
+    "orderTaken": "El número de orden {{order}} ya está ocupado por «{{name}}». Elija un número de orden diferente.",
+    "updated": "Estado actualizado correctamente",
+    "created": "Estado creado correctamente",
+    "orderInUse": "Este número de orden ya está en uso. Elija un número de orden diferente.",
+    "updateFailed": "No se pudo actualizar el estado",
+    "createFailed": "No se pudo crear el estado",
+    "submitUpdate": "Actualizar estado",
+    "submitAdd": "Agregar estado",
+    "editTitle": "Editar estado",
+    "addTitle": "Agregar nuevo estado",
+    "nameLabel": "Nombre del estado",
+    "namePlaceholder": "p. ej., En curso",
+    "orderLabel": "Número de orden (1-100, los números más bajos aparecen primero)",
+    "orderHelp": "Controla el orden en que los estados aparecen en los menús desplegables de toda la plataforma.",
+    "usedOrders": "Números de orden usados: {{orders}}",
+    "noUsedOrders": "Aún no se ha usado ningún número de orden",
+    "markClosed": "Marcar como estado cerrado",
+    "setDefault": "Establecer como estado predeterminado para los tickets nuevos"
   }
 }

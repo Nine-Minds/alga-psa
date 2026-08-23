@@ -26,6 +26,7 @@ interface InviteeInfo {
 }
 
 function TeamSetupContent() {
+  // Password messages carry their own `common:` namespace, so this page's translator resolves them.
   const { t } = useTranslation('msp/onboarding');
 
   const router = useRouter();
@@ -111,7 +112,7 @@ function TeamSetupContent() {
     e.preventDefault();
 
     if (!isPasswordValid()) {
-      const policyError = validatePasswordPolicy(formData.password);
+      const policyError = validatePasswordPolicy(formData.password, t);
       toast.error(policyError ?? t('teamSetup.errors.requirementsNotMet', { defaultValue: 'Please ensure all password requirements are met' }));
       return;
     }
@@ -139,7 +140,8 @@ function TeamSetupContent() {
           router.push('/auth/msp/signin');
         }
       } else {
-        toast.error(result.error || t('teamSetup.errors.createFailed', { defaultValue: 'Failed to create account' }));
+        const serverMessage = result.messageKey ? t(result.messageKey) : result.error;
+        toast.error(serverMessage || t('teamSetup.errors.createFailed', { defaultValue: 'Failed to create account' }));
       }
     } catch (err) {
       console.error('Team setup completion error:', err);

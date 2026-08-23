@@ -17,6 +17,7 @@ import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
+import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { prepareTicketResourceReassignment } from "@alga-psa/db/reassignTicketResources";
 import {
@@ -32,6 +33,16 @@ interface ActionResult {
   message?: string;
   error?: string;
 }
+
+/**
+ * A password-change outcome. `messageKey` is the localization seam: `withAuth`
+ * rewrites `error` into the caller's locale before the payload reaches the
+ * client, so the three password forms keep rendering `result.error` unchanged.
+ */
+export type PasswordChangeResult = {
+  success: boolean;
+  error?: string;
+} & ActionResultMessageKey;
 
 export type AddUserErrorCode =
   | 'ROLE_REQUIRED'
@@ -1728,12 +1739,16 @@ export const changeOwnPassword = withAuth(async (
   _ctx,
   currentPassword: string,
   newPassword: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<PasswordChangeResult> => {
   try {
     // Verify current password
     const isValidPassword = await User.verifyPassword(currentUser.user_id, currentPassword);
     if (!isValidPassword) {
-      return { success: false, error: 'Current password is incorrect' };
+      return {
+        success: false,
+        error: 'Current password is incorrect',
+        messageKey: 'common:errors.password.currentIncorrect',
+      };
     }
 
     // Hash the new password and update
@@ -1752,7 +1767,11 @@ export const changeOwnPassword = withAuth(async (
     return { success: true };
   } catch (error) {
     logger.error('Error changing password:', error);
-    return { success: false, error: 'Failed to change password' };
+    return {
+      success: false,
+      error: 'Failed to change password',
+      messageKey: 'common:errors.password.changeFailed',
+    };
   }
 });
 
@@ -1762,18 +1781,26 @@ export const adminChangeUserPassword = withAuth(async (
   _ctx,
   userId: string,
   newPassword: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<PasswordChangeResult> => {
   try {
     const {knex} = await createTenantKnex();
     // Get the user to verify they're in the same tenant
     const targetUser = await User.get(knex, userId);
     if (!targetUser) {
-      return { success: false, error: 'User not found' };
+      return {
+        success: false,
+        error: 'User not found',
+        messageKey: 'common:errors.auth.userNotFound',
+      };
     }
 
     // Verify users are in the same tenant
     if (targetUser.tenant !== currentUser.tenant) {
-      return { success: false, error: 'Unauthorized: Cannot modify user from different tenant' };
+      return {
+        success: false,
+        error: 'Unauthorized: Cannot modify user from different tenant',
+        messageKey: 'common:errors.password.differentTenant',
+      };
     }
 
     // This flow is for MSP staff only. The 'Admin' role-name check below is
@@ -1782,14 +1809,22 @@ export const adminChangeUserPassword = withAuth(async (
     // use the portal's own flow (resetClientUserPassword), which enforces
     // same-company scoping.
     if (currentUser.user_type !== 'internal') {
-      return { success: false, error: 'Unauthorized: Internal staff privileges required' };
+      return {
+        success: false,
+        error: 'Unauthorized: Internal staff privileges required',
+        messageKey: 'common:errors.password.internalStaffRequired',
+      };
     }
 
     const currentUserRoles = await getUserRoles(currentUser.user_id);
     const isAdmin = currentUserRoles.some(role => role.role_name.toLowerCase() === 'admin');
 
     if (!isAdmin) {
-      return { success: false, error: 'Unauthorized: Admin privileges required' };
+      return {
+        success: false,
+        error: 'Unauthorized: Admin privileges required',
+        messageKey: 'common:errors.password.adminRequired',
+      };
     }
 
     // Hash the new password and update
@@ -1799,7 +1834,11 @@ export const adminChangeUserPassword = withAuth(async (
     return { success: true };
   } catch (error) {
     logger.error('Error changing user password:', error);
-    return { success: false, error: 'Failed to change user password' };
+    return {
+      success: false,
+      error: 'Failed to change user password',
+      messageKey: 'common:errors.password.changeUserFailed',
+    };
   }
 });
 

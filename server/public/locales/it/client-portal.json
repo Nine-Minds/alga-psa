@@ -301,6 +301,25 @@
         "contactSupport": "Contatta il team di supporto della tua organizzazione",
         "tryAnother": "Prova con un’altra email"
       }
+    },
+    "register": {
+      "emailLabel": "Indirizzo email",
+      "checkingEmail": "Verifica dell’email in corso...",
+      "existingContactsOnly": "La registrazione è disponibile solo per i contatti esistenti. Contattare l’amministratore.",
+      "contactVerified": "Contatto verificato. Creare la password.",
+      "passwordPlaceholder": "Crea una password",
+      "passwordMustContain": "La password deve contenere:",
+      "completeRequiredFields": "Compilare i campi obbligatori:",
+      "creatingAccount": "Creazione account in corso...",
+      "createAccount": "Crea account",
+      "failed": "Registrazione non riuscita",
+      "unexpectedError": "Si è verificato un errore imprevisto durante la registrazione.",
+      "missing": {
+        "email": "Email",
+        "validEmail": "Indirizzo email valido",
+        "verifiedContact": "Email di contatto verificata",
+        "validPassword": "Password valida"
+      }
     }
   },
   "account": {
@@ -685,9 +704,14 @@
   },
   "notifications": {
     "title": "Notifiche",
+    "bellUnreadAria": "Notifiche ({{unread}} non lette)",
+    "unreadDot": "Notifiche non lette",
+    "reconnecting": "Riconnessione...",
     "markAsRead": "Segna come letta",
     "markAllAsRead": "Segna tutto come letto",
     "noNotifications": "Nessuna nuova notifica",
+    "unreadCount_one": "{{count}} notifica non letta",
+    "unreadCount_other": "{{count}} notifiche non lette",
     "settings": "Impostazioni notifiche",
     "viewAll": "Visualizza tutte le notifiche",
     "tabs": {
@@ -916,5 +940,57 @@
     },
     "notAvailable": "N/D",
     "detailsTitle": "Dettagli asset"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Il suo utente del portale non è collegato ad alcun contatto. Contatti l’assistenza se il problema persiste.",
+      "userNotLinkedToClient": "Il suo utente del portale non è collegato ad alcun account cliente. Contatti l’assistenza se il problema persiste.",
+      "contactNotLinkedToClient": "Il suo contatto non è collegato ad alcun account cliente. Contatti l’assistenza se il problema persiste.",
+      "clientNotFound": "Account cliente non trovato. Potrebbe essere stato eliminato o potrebbe non avervi più accesso.",
+      "serviceNotFound": "Servizio non trovato o non più attivo. Aggiornare la pagina e riprovare.",
+      "serviceUpgradeUnavailable": "L’upgrade dei servizi non è temporaneamente disponibile. Contatti l’assistenza per cambiare piano."
+    },
+    "records": {
+      "invalid": "Uno dei record selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "missing": "Uno dei record selezionati non esiste più. Aggiornare la pagina e riprovare."
+    },
+    "access": {
+      "unauthorized": "Non autorizzato",
+      "projectBillingData": "Accesso non autorizzato ai dati di fatturazione del progetto",
+      "quoteData": "Accesso non autorizzato ai dati del preventivo",
+      "invoiceData": "Accesso non autorizzato ai dati della fattura",
+      "billingData": "Accesso non autorizzato ai dati di fatturazione",
+      "settingsUpdate": "Non ha l’autorizzazione per modificare queste impostazioni.",
+      "billingSegment": "Accesso non autorizzato a questo segmento di fatturazione"
+    },
+    "billing": {
+      "quoteNotFound": "Preventivo non trovato o accesso negato",
+      "quoteStale": "Il preventivo non è più disponibile. Aggiornarlo e riprovare.",
+      "quoteStaleAccept": "Il preventivo non è più disponibile. Aggiornarlo prima di accettarlo.",
+      "quoteStaleReject": "Il preventivo non è più disponibile. Aggiornarlo prima di rifiutarlo.",
+      "invoiceNotFound": "Fattura non trovata o accesso negato",
+      "jobNotFound": "Processo non trovato",
+      "quoteInvalidState": "Il preventivo non è in uno stato valido per questa azione",
+      "rejectionCommentRequired": "È richiesto un commento di rifiuto",
+      "emailSendFailed": "Impossibile avviare l’invio dell’email"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket non trovato o accesso negato",
+      "invalidData": "Dati del ticket non validi"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Verificare i dati del gruppo di visibilità e riprovare.",
+      "boardsUnavailable": "Una o più bacheche selezionate non sono più disponibili. Aggiornare la pagina e riprovare.",
+      "contactNotFound": "Contatto non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "otherClient": "Non ha l’autorizzazione per gestire i gruppi di visibilità di un altro cliente.",
+      "selectClientOrContact": "Selezionare un cliente o un contatto prima di gestire i gruppi di visibilità.",
+      "groupNotFound": "Gruppo di visibilità non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "groupNotValidForContact": "Il gruppo di visibilità selezionato non è valido per questo contatto. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del gruppo di visibilità.",
+      "missingFieldNamed": "Manca un campo obbligatorio del gruppo di visibilità: {{field}}.",
+      "recordInvalid": "Uno dei record del gruppo di visibilità selezionati non è più valido. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un gruppo di visibilità con questi dati per questo cliente.",
+      "invalidData": "Dati del gruppo di visibilità non validi. Verificare i dati del gruppo e le bacheche selezionate."
+    }
   }
 }

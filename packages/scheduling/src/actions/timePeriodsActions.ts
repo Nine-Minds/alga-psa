@@ -155,7 +155,7 @@ export const createTimePeriod = withAuth(async (
       end_date: toPlainDate(input.end_date)
     };
   } catch {
-    return actionError('Enter valid start and end dates.');
+    return actionError('Enter valid start and end dates.', 'msp/time-entry:errors.timePeriod.datesRequired');
   }
 
   const { knex: db } = await createTenantKnex();
@@ -574,7 +574,7 @@ export const updateTimePeriod = withAuth(async (
     if (input.start_date) updates.start_date = toPlainDate(input.start_date);
     if (input.end_date) updates.end_date = toPlainDate(input.end_date);
   } catch {
-    return actionError('Enter valid start and end dates.');
+    return actionError('Enter valid start and end dates.', 'msp/time-entry:errors.timePeriod.datesRequired');
   }
 
   const { knex: db } = await createTenantKnex();

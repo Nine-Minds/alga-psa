@@ -84,6 +84,7 @@ import { translateFieldValidation, validateContactName, validateEmailAddress, va
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { parseContactActionError } from '@alga-psa/clients/lib/contactActionErrorCodes';
 import OrgChart from './org-chart/OrgChart';
 import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
 import { useTier } from '@/context/TierContext';
@@ -528,14 +529,13 @@ const fetchContacts = async (): Promise<void> => {
               }
             } catch (contactError: any) {
               // Handle contact creation errors
-              let errorMsg: string;
-              if (contactError.message?.includes('EMAIL_EXISTS:')) {
-                errorMsg = contactError.message.replace('EMAIL_EXISTS:', '').trim();
-              } else if (contactError.message?.includes('VALIDATION_ERROR:')) {
-                errorMsg = contactError.message.replace('VALIDATION_ERROR:', '').trim();
-              } else {
-                errorMsg = 'Failed to create contact: ' + (contactError.message || 'Unknown error');
-              }
+              const { code, detail } = parseContactActionError(contactError?.message ?? '');
+              const errorMsg = code === 'EMAIL_EXISTS' || code === 'VALIDATION_ERROR'
+                ? detail
+                : t('users.messages.error.createContact', {
+                    defaultValue: 'Failed to create contact: {{reason}}',
+                    reason: contactError?.message || t('users.messages.error.unknown', { defaultValue: 'Unknown error' }),
+                  });
               handleError(contactError, errorMsg);
               setError(errorMsg);
               return; // Stop execution to prevent further processing
@@ -544,7 +544,7 @@ const fetchContacts = async (): Promise<void> => {
           await fetchUsers();
         } else {
           // Use unified password validation
-          const passwordError = validatePassword(newUser.password);
+          const passwordError = validatePassword(newUser.password, tValidation);
           if (passwordError) {
             toast.error(passwordError);
             return;
@@ -587,7 +587,7 @@ const fetchContacts = async (): Promise<void> => {
         await fetchPendingInvitations();
       } else {
         // Create MSP user immediately with the admin-provided password
-        const passwordError = validatePassword(newUser.password);
+        const passwordError = validatePassword(newUser.password, tValidation);
         if (passwordError) {
           toast.error(passwordError);
           return;

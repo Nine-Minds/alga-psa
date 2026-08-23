@@ -14,10 +14,12 @@ describe('timeSheetActionErrorFrom', () => {
 
     expect(timeSheetActionErrorFrom(new Error('Time sheet not found'))).toEqual({
       actionError: 'Time sheet not found. It may have been deleted. Please refresh and try again.',
+      messageKey: 'msp/time-entry:errors.timeSheet.notFoundRefresh',
     });
 
     expect(timeSheetActionErrorFrom(new Error('Time sheet is not in an approved state'))).toEqual({
       actionError: 'Only approved time sheets can be reopened.',
+      messageKey: 'msp/time-entry:errors.timeSheet.onlyApprovedReopenable',
     });
   });
 
@@ -73,6 +75,7 @@ describe('timeSheetActionErrorFrom', () => {
         timeSheetActionErrorFrom(new Error('Bucket usage update failed for time entry entry-1')),
       ).toEqual({
         actionError: 'Unable to update bucket usage for this time entry. Please refresh and try again.',
+      messageKey: 'msp/time-entry:errors.timeEntry.bucketUpdateFailed',
       });
     });
   });

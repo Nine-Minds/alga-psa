@@ -1151,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Kan instellingen niet laden",
-    "failedToSaveSettings": "Kan instellingen niet opslaan"
+    "failedToSaveSettings": "Kan instellingen niet opslaan",
+    "permissions": {
+      "readSettings": "Toestemming geweigerd: facturatie-instellingen kunnen niet worden gelezen",
+      "updateSettings": "Toestemming geweigerd: facturatie-instellingen kunnen niet worden bijgewerkt",
+      "readClientSettings": "Toestemming geweigerd: facturatie-instellingen van de klant kunnen niet worden gelezen",
+      "updateClientSettings": "Toestemming geweigerd: facturatie-instellingen van de klant kunnen niet worden bijgewerkt",
+      "settingsRead": "Toestemming geweigerd: leesrechten voor facturatie-instellingen vereist",
+      "settingsUpdate": "Toestemming geweigerd: bijwerkrechten voor facturatie-instellingen vereist",
+      "readTaxRates": "Toestemming geweigerd: belastingtarieven kunnen niet worden gelezen",
+      "createTaxRates": "Toestemming geweigerd: belastingtarieven kunnen niet worden aangemaakt",
+      "updateTaxRates": "Toestemming geweigerd: belastingtarieven kunnen niet worden bijgewerkt",
+      "updateTaxRegions": "Toestemming geweigerd: belastingregio’s kunnen niet worden bijgewerkt"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Toestemming geweigerd: belastingtarieven voor facturatie zijn niet beschikbaar voor deze tenant.",
+      "overlap": "De periode van het belastingtarief overlapt met een bestaand tarief voor deze regio.",
+      "regionRequired": "Regio is verplicht.",
+      "idRequired": "Voor updates is de ID van het belastingtarief verplicht.",
+      "notFound": "Belastingtarief niet gevonden.",
+      "notFoundOrAlreadyDeleted": "Belastingtarief niet gevonden of al verwijderd.",
+      "invalid": "Het geselecteerde belastingtarief of de regio is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "regionInvalid": "De geselecteerde belastingregio is niet meer geldig. Vernieuw de pagina en kies een andere regio.",
+      "duplicate": "Er bestaat al een belastingtarief voor deze regio en periode.",
+      "missingField": "Er ontbreekt een verplicht veld van het belastingtarief.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het belastingtarief: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Configureer minstens één actief belastingtarief voordat u standaardbelastinginstellingen aanmaakt.",
+      "componentNotFound": "Belastingcomponent niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "bracketNotFound": "Belastingschijf niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "holidayNotFound": "Belastingvrijstelling niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "recordInvalid": "Een van de geselecteerde belastingrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde belastingrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een belastingrecord met deze gegevens.",
+      "notAllowed": "Een van de belastingwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht belastingveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht belastingveld: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Er bestaat al een belastingregio met de code ‘{{code}}’.",
+      "notFoundCode": "Belastingregio met de code ‘{{code}}’ niet gevonden."
+    }
   },
   "toast": {
     "saved": "Succesvol opgeslagen"

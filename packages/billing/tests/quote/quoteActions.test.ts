@@ -289,7 +289,10 @@ describe('quoteActions', () => {
     const { createQuote } = await import('../../src/actions/quoteActions');
     const result = await createQuote(baseQuoteInput as any);
 
-    expect(result).toEqual({ permissionError: 'Permission denied: Cannot create quotes' });
+    expect(result).toEqual({
+      permissionError: 'Permission denied: Cannot create quotes',
+      messageKey: 'msp/quotes:errors.permissions.create',
+    });
     expect(Quote.create).not.toHaveBeenCalled();
   });
 
@@ -649,7 +652,10 @@ describe('quoteActions', () => {
     const { approveQuote } = await import('../../src/actions/quoteActions');
     const result = await approveQuote(QUOTE_ID, 'Denied');
 
-    expect(result).toEqual({ permissionError: 'Permission denied: Cannot approve quotes' });
+    expect(result).toEqual({
+      permissionError: 'Permission denied: Cannot approve quotes',
+      messageKey: 'msp/quotes:errors.permissions.approve',
+    });
     expect(Quote.update).not.toHaveBeenCalled();
     expect(QuoteActivity.create).not.toHaveBeenCalled();
   });
@@ -1298,6 +1304,7 @@ describe('quoteActions', () => {
 
     await expect(regenerateQuotePdf(QUOTE_ID)).resolves.toEqual({
       actionError: 'Quote not found. It may have been updated or deleted. Please refresh and try again.',
+      messageKey: 'msp/quotes:errors.quote.notFoundRefresh',
     });
   });
 
@@ -1309,7 +1316,10 @@ describe('quoteActions', () => {
     const { regenerateQuotePdf } = await import('../../src/actions/quoteActions');
     const result = await regenerateQuotePdf(QUOTE_ID);
 
-    expect(result).toEqual({ permissionError: 'Permission denied: Cannot update quotes' });
+    expect(result).toEqual({
+      permissionError: 'Permission denied: Cannot update quotes',
+      messageKey: 'msp/quotes:errors.permissions.update',
+    });
     expect(generateAndStoreMock).not.toHaveBeenCalled();
   });
 });

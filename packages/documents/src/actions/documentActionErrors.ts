@@ -1,5 +1,7 @@
+import { localizeActionError } from '@alga-psa/auth/localizeActionError';
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -7,8 +9,10 @@ import {
 
 export type DocumentActionError = ActionMessageError | ActionPermissionError;
 
-export function documentActionErrorMessage(error: unknown): string {
-  const candidate = error as { permissionError?: unknown; actionError?: unknown };
+// Callers report failure as a bare string, so withAuth's boundary never sees the
+// payload's messageKey. Localize before flattening.
+export async function documentActionErrorMessage(error: unknown): Promise<string> {
+  const candidate = (await localizeActionError(error)) as { permissionError?: unknown; actionError?: unknown };
   return typeof candidate.permissionError === 'string' ? candidate.permissionError : String(candidate.actionError ?? 'Action failed');
 }
 
@@ -26,30 +30,30 @@ export function documentActionErrorFrom(error: unknown): DocumentActionError | n
   if (error instanceof Error) {
     const message = error.message;
 
-    if (message.includes('Permission denied') || message === 'user is not logged in') {
+    if (isAuthorizationThrow(error)) {
       return permissionError(message);
     }
 
     if (message.startsWith('Document not found')) {
-      return actionError('Document not found. It may have been deleted or moved. Please refresh and try again.');
+      return actionError('Document not found. It may have been deleted or moved. Please refresh and try again.', 'documents:errors.document.notFound');
     }
     if (message.startsWith('File not found')) {
-      return actionError('The document file is no longer available. Please refresh and try again.');
+      return actionError('The document file is no longer available. Please refresh and try again.', 'documents:errors.document.fileUnavailable');
     }
     if (message.startsWith('Folder not found')) {
-      return actionError('Folder not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Folder not found. It may have been deleted. Please refresh and try again.', 'documents:errors.folder.notFound');
     }
     if (message === 'No file provided') {
-      return actionError('Choose a file before uploading.');
+      return actionError('Choose a file before uploading.', 'documents:errors.upload.fileRequired');
     }
     if (message === 'File type not allowed') {
-      return actionError('This file type is not allowed.');
+      return actionError('This file type is not allowed.', 'documents:errors.upload.typeNotAllowed');
     }
     if (message.startsWith('File size exceeds limit of ')) {
       return actionError(message);
     }
     if (message === 'User session is required to upload documents') {
-      return permissionError('Your session is required to upload documents. Please sign in again.');
+      return permissionError('Your session is required to upload documents. Please sign in again.', 'documents:errors.upload.sessionRequired');
     }
     if (
       message === 'Folder path must start with /' ||
@@ -60,37 +64,43 @@ export function documentActionErrorFrom(error: unknown): DocumentActionError | n
       return actionError(message);
     }
     if (message === 'Cannot delete folder: contains documents') {
-      return actionError('Move or delete the documents in this folder before deleting it.');
+      return actionError('Move or delete the documents in this folder before deleting it.', 'documents:errors.folder.emptyDocumentsFirst');
     }
     if (message === 'Cannot delete folder: contains subfolders') {
-      return actionError('Delete the subfolders in this folder before deleting it.');
+      return actionError('Delete the subfolders in this folder before deleting it.', 'documents:errors.folder.emptySubfoldersFirst');
     }
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string; table?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected document values is invalid. Please refresh and try again.');
+    return actionError('One of the selected document values is invalid. Please refresh and try again.', 'documents:errors.document.invalidValue');
   }
   if (dbError?.code === '22007' || dbError?.code === '22008') {
-    return actionError('One of the selected document dates is invalid. Please review the form and try again.');
+    return actionError('One of the selected document dates is invalid. Please review the form and try again.', 'documents:errors.document.invalidDate');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required document field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required document field: ${dbError.column}.`,
+          'documents:errors.document.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required document field.', 'documents:errors.document.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected document, folder, or related record no longer exists. Please refresh and try again.');
+    return actionError('The selected document, folder, or related record no longer exists. Please refresh and try again.', 'documents:errors.document.referenceMissing');
   }
   if (dbError?.code === '23505') {
     if (dbError.constraint?.includes('document_associations')) {
-      return actionError('This document is already associated with that record.');
+      return actionError('This document is already associated with that record.', 'documents:errors.document.duplicateAssociation');
     }
     if (dbError.table === 'document_folders' || dbError.constraint?.includes('document_folders')) {
-      return actionError('A folder with that path already exists.');
+      return actionError('A folder with that path already exists.', 'documents:errors.folder.duplicatePath');
     }
-    return actionError('This document change conflicts with an existing record. Please refresh and try again.');
+    return actionError('This document change conflicts with an existing record. Please refresh and try again.', 'documents:errors.document.conflict');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the document values is not allowed. Please review the form and try again.');
+    return actionError('One of the document values is not allowed. Please review the form and try again.', 'documents:errors.document.notAllowed');
   }
 
   return null;

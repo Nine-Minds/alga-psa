@@ -350,6 +350,25 @@
         "contactSupport": "Contact your organization's support team",
         "tryAnother": "Try Another Email"
       }
+    },
+    "register": {
+      "emailLabel": "Email address",
+      "checkingEmail": "Checking email...",
+      "existingContactsOnly": "Registration is only available for existing contacts. Please contact your administrator.",
+      "contactVerified": "Contact verified. Please create your password.",
+      "passwordPlaceholder": "Create a password",
+      "passwordMustContain": "Password must contain:",
+      "completeRequiredFields": "Please fill in the required fields:",
+      "creatingAccount": "Creating account...",
+      "createAccount": "Create account",
+      "failed": "Registration failed",
+      "unexpectedError": "An unexpected error occurred during registration.",
+      "missing": {
+        "email": "Email",
+        "validEmail": "Valid email address",
+        "verifiedContact": "Verified contact email",
+        "validPassword": "Valid password"
+      }
     }
   },
   "account": {
@@ -734,9 +753,14 @@
   },
   "notifications": {
     "title": "Notifications",
+    "bellUnreadAria": "Notifications ({{unread}} unread)",
+    "unreadDot": "Unread notifications",
+    "reconnecting": "Reconnecting...",
     "markAsRead": "Mark as read",
     "markAllAsRead": "Mark all as read",
     "noNotifications": "No new notifications",
+    "unreadCount_one": "{{count}} unread notification",
+    "unreadCount_other": "{{count}} unread notifications",
     "settings": "Notification Settings",
     "viewAll": "View all notifications",
     "tabs": {
@@ -916,5 +940,57 @@
     },
     "notAvailable": "N/A",
     "detailsTitle": "Asset Details"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Your portal user is not linked to a contact. Contact support if this continues.",
+      "userNotLinkedToClient": "Your portal user is not linked to a client account. Contact support if this continues.",
+      "contactNotLinkedToClient": "Your contact is not linked to a client account. Contact support if this continues.",
+      "clientNotFound": "Client account not found. It may have been deleted or you may no longer have access.",
+      "serviceNotFound": "Service not found or no longer active. Please refresh and try again.",
+      "serviceUpgradeUnavailable": "Service upgrade functionality is temporarily unavailable. Please contact support to change your plan."
+    },
+    "records": {
+      "invalid": "One of the selected records is invalid. Please refresh and try again.",
+      "missing": "One of the selected records no longer exists. Please refresh and try again."
+    },
+    "access": {
+      "unauthorized": "Unauthorized",
+      "projectBillingData": "Unauthorized to access project billing data",
+      "quoteData": "Unauthorized to access quote data",
+      "invoiceData": "Unauthorized to access invoice data",
+      "billingData": "Unauthorized to access billing data",
+      "settingsUpdate": "You do not have permission to update these settings.",
+      "billingSegment": "Unauthorized to access that billing segment"
+    },
+    "billing": {
+      "quoteNotFound": "Quote not found or access denied",
+      "quoteStale": "Quote is no longer available. Refresh the quote and try again.",
+      "quoteStaleAccept": "Quote is no longer available. Refresh the quote before accepting it.",
+      "quoteStaleReject": "Quote is no longer available. Refresh the quote before rejecting it.",
+      "invoiceNotFound": "Invoice not found or access denied",
+      "jobNotFound": "Job not found",
+      "quoteInvalidState": "Quote is not in a valid state for this action",
+      "rejectionCommentRequired": "A rejection comment is required",
+      "emailSendFailed": "Failed to start email sending"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket not found or access denied",
+      "invalidData": "Invalid ticket data"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Please check the visibility group details and try again.",
+      "boardsUnavailable": "One or more selected boards are no longer available. Please refresh and try again.",
+      "contactNotFound": "Contact not found. It may have been deleted. Please refresh and try again.",
+      "otherClient": "You do not have permission to manage visibility groups for another client.",
+      "selectClientOrContact": "Select a client or contact before managing visibility groups.",
+      "groupNotFound": "Visibility group not found. It may have been deleted. Please refresh and try again.",
+      "groupNotValidForContact": "The selected visibility group is not valid for this contact. Please refresh and try again.",
+      "missingField": "Missing required visibility group field.",
+      "missingFieldNamed": "Missing required visibility group field: {{field}}.",
+      "recordInvalid": "One of the selected visibility group records is no longer valid. Please refresh and try again.",
+      "duplicate": "A visibility group with these details already exists for this client.",
+      "invalidData": "Invalid visibility group data provided. Please check the group details and selected boards."
+    }
   }
 }

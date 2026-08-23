@@ -71,7 +71,7 @@ interface SendQuoteInput {
 
 const requireBillingCreatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'create')) {
-    return permissionError('Permission denied: Cannot create quotes');
+    return permissionError('Permission denied: Cannot create quotes', 'msp/quotes:errors.permissions.create');
   }
 
   return null;
@@ -79,7 +79,7 @@ const requireBillingCreatePermission = async (user: unknown): Promise<ActionPerm
 
 const requireBillingUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    return permissionError('Permission denied: Cannot update quotes');
+    return permissionError('Permission denied: Cannot update quotes', 'msp/quotes:errors.permissions.update');
   }
 
   return null;
@@ -87,7 +87,7 @@ const requireBillingUpdatePermission = async (user: unknown): Promise<ActionPerm
 
 const requireBillingReadPermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot read quotes');
+    return permissionError('Permission denied: Cannot read quotes', 'msp/quotes:errors.permissions.read');
   }
 
   return null;
@@ -95,7 +95,7 @@ const requireBillingReadPermission = async (user: unknown): Promise<ActionPermis
 
 const requireBillingDeletePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'delete')) {
-    return permissionError('Permission denied: Cannot delete quotes');
+    return permissionError('Permission denied: Cannot delete quotes', 'msp/quotes:errors.permissions.delete');
   }
 
   return null;
@@ -103,7 +103,7 @@ const requireBillingDeletePermission = async (user: unknown): Promise<ActionPerm
 
 const requireSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'settings', 'update')) {
-    return permissionError('Permission denied: Cannot update quote approval settings');
+    return permissionError('Permission denied: Cannot update quote approval settings', 'msp/quotes:errors.permissions.updateApprovalSettings');
   }
 
   return null;
@@ -111,7 +111,7 @@ const requireSettingsUpdatePermission = async (user: unknown): Promise<ActionPer
 
 const requireQuoteApprovePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'quotes', 'approve')) {
-    return permissionError('Permission denied: Cannot approve quotes');
+    return permissionError('Permission denied: Cannot approve quotes', 'msp/quotes:errors.permissions.approve');
   }
 
   return null;
@@ -125,16 +125,16 @@ function quoteActionErrorFrom(error: unknown): QuoteActionError | null {
       return permissionError(error.message);
     }
     if (error.name === 'ZodError') {
-      return actionError('Quote form contains invalid values. Please review and try again.');
+      return actionError('Quote form contains invalid values. Please review and try again.', 'msp/quotes:errors.quote.formInvalid');
     }
     if (error.message.startsWith('Quote item ') && error.message.includes(' not found in tenant ')) {
-      return actionError('Quote item not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Quote item not found. It may have been updated or deleted. Please refresh and try again.', 'msp/quotes:errors.quote.itemNotFoundRefresh');
     }
     if (error.message.startsWith('Quote template ') && error.message.includes(' not found in tenant ')) {
-      return actionError('Quote template not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Quote template not found. It may have been updated or deleted. Please refresh and try again.', 'msp/quotes:errors.quote.templateNotFoundRefresh');
     }
     if (error.message.startsWith('Quote ') && error.message.includes(' not found in tenant ')) {
-      return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.', 'msp/quotes:errors.quote.notFoundRefresh');
     }
 
     const expectedMessages = new Set([
@@ -162,19 +162,25 @@ function quoteActionErrorFrom(error: unknown): QuoteActionError | null {
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected quote values is invalid. Please refresh and try again.');
+    return actionError('One of the selected quote values is invalid. Please refresh and try again.', 'msp/quotes:errors.quote.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required quote field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required quote field: ${dbError.column}.`,
+          'msp/quotes:errors.quote.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required quote field.', 'msp/quotes:errors.quote.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected quote, client, contact, or service no longer exists. Please refresh and try again.');
+    return actionError('The selected quote, client, contact, or service no longer exists. Please refresh and try again.', 'msp/quotes:errors.quote.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('This quote change conflicts with an existing record. Please refresh and try again.');
+    return actionError('This quote change conflicts with an existing record. Please refresh and try again.', 'msp/quotes:errors.quote.conflict');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the quote values is not allowed. Please review the form and try again.');
+    return actionError('One of the quote values is not allowed. Please review the form and try again.', 'msp/quotes:errors.quote.notAllowed');
   }
 
   return null;
@@ -1326,7 +1332,7 @@ export const listQuoteVersions = withAuth(async (
   const { knex } = await createTenantKnex();
   const readableQuote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
   if (!readableQuote) {
-    return permissionError('Permission denied: Cannot read quote');
+    return permissionError('Permission denied: Cannot read quote', 'msp/quotes:errors.permissions.readOne');
   }
   return await Quote.listVersions(knex, tenant, quoteId);
 });
@@ -1355,7 +1361,7 @@ export const updateQuoteApprovalSettings = withAuth(async (
   }
 
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    return permissionError('Permission denied: Cannot update quote approval settings');
+    return permissionError('Permission denied: Cannot update quote approval settings', 'msp/quotes:errors.permissions.updateApprovalSettings');
   }
 
   const { knex } = await createTenantKnex();
@@ -1800,7 +1806,7 @@ function quoteConversionActionErrorFrom(error: unknown): QuoteConversionActionEr
   }
 
   if (error.message.startsWith('Quote ') && error.message.includes(' not found in tenant ')) {
-    return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.');
+    return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.', 'msp/quotes:errors.quote.notFoundRefresh');
   }
 
   if (
@@ -1835,7 +1841,7 @@ export const convertQuoteToContract = withAuth(async (
   quoteId: string,
 ): Promise<{ quote: IQuote; contract: IContract } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    return permissionError('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal', 'msp/billing:errors.permissions.clientPortalUnavailable');
   }
 
   return withQuoteConversionActionErrors(async () => {
@@ -1876,7 +1882,7 @@ export const convertQuoteToSalesOrder = withAuth(async (
   quoteId: string,
 ): Promise<{ quote: IQuote; so_id: string; so_number: string } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    return permissionError('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal', 'msp/billing:errors.permissions.clientPortalUnavailable');
   }
 
   return withQuoteConversionActionErrors(async () => {
@@ -1916,7 +1922,7 @@ export const convertQuoteToInvoice = withAuth(async (
   quoteId: string,
 ): Promise<{ quote: IQuote; invoice: IInvoice } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    return permissionError('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal', 'msp/billing:errors.permissions.clientPortalUnavailable');
   }
 
   return withQuoteConversionActionErrors(async () => {
@@ -1951,7 +1957,7 @@ export const convertQuoteToBoth = withAuth(async (
   quoteId: string,
 ): Promise<{ quote: IQuote; contract: IContract; invoice: IInvoice } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    return permissionError('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal', 'msp/billing:errors.permissions.clientPortalUnavailable');
   }
 
   return withQuoteConversionActionErrors(async () => {

@@ -34,7 +34,7 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
 
     if (error instanceof Error) {
         if (error.message.includes('not found')) {
-            return actionError('The selected contract line is no longer available. Please refresh and try again.');
+            return actionError('The selected contract line is no longer available. Please refresh and try again.', 'msp/contract-lines:errors.line.unavailable');
         }
         if (error.message === 'System-managed default contracts are attribution-only; contract-line authoring is disabled.') {
             return actionError(error.message);
@@ -49,19 +49,25 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
 
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02') {
-        return actionError('One of the selected contract line values is invalid. Please refresh and try again.');
+        return actionError('One of the selected contract line values is invalid. Please refresh and try again.', 'msp/contract-lines:errors.line.invalidValue');
     }
     if (dbError?.code === '23502') {
-        return actionError(`Missing required contract line field${dbError.column ? `: ${dbError.column}` : ''}.`);
+        return dbError.column
+          ? actionError(
+              `Missing required contract line field: ${dbError.column}.`,
+              'msp/contract-lines:errors.line.missingFieldNamed',
+              { field: dbError.column },
+            )
+          : actionError('Missing required contract line field.', 'msp/contract-lines:errors.line.missingField');
     }
     if (dbError?.code === '23503') {
-        return actionError('The selected contract or contract line no longer exists. Please refresh and try again.');
+        return actionError('The selected contract or contract line no longer exists. Please refresh and try again.', 'msp/contract-lines:errors.line.referenceMissing');
     }
     if (dbError?.code === '23505') {
-        return actionError('This contract line change conflicts with an existing record. Please refresh and try again.');
+        return actionError('This contract line change conflicts with an existing record. Please refresh and try again.', 'msp/contract-lines:errors.line.conflict');
     }
     if (dbError?.code === '23514') {
-        return actionError('One of the contract line values is not allowed. Please review the form and try again.');
+        return actionError('One of the contract line values is not allowed. Please review the form and try again.', 'msp/contract-lines:errors.line.notAllowed');
     }
 
     return null;

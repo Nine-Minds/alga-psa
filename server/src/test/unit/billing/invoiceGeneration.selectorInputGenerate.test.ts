@@ -453,6 +453,7 @@ const { generateInvoice, generateInvoiceForSelectionInput } = await import(
 );
 const {
   DUPLICATE_RECURRING_INVOICE_CODE,
+  DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
 } = await import('../../../../../packages/billing/src/actions/invoiceGeneration.constants');
 
 describe('selector-input recurring generation', () => {
@@ -642,6 +643,7 @@ describe('selector-input recurring generation', () => {
 
     await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
       actionError: 'Invoice already exists for this recurring execution window',
+      messageKey: DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
     });
   });
 

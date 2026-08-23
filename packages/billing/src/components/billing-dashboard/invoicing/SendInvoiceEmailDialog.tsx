@@ -35,7 +35,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [recipients, setRecipients] = useState<InvoiceEmailRecipientInfo[]>([]);
-  const [errors, setErrors] = useState<Array<{ invoiceId: string; error: string }>>([]);
+  const [errors, setErrors] = useState<Array<{ invoiceId: string; error: string; messageKey?: string }>>([]);
   const [customMessage, setCustomMessage] = useState('');
 
   const getRecipientSourceLabel = (source: InvoiceEmailRecipientInfo['recipientSource']) => {
@@ -315,7 +315,11 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
                 >
                   <div className="flex items-center gap-2 text-sm text-destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <span>{error.error}</span>
+                    <span>
+                      {error.messageKey
+                        ? t(error.messageKey, { defaultValue: error.error })
+                        : error.error}
+                    </span>
                   </div>
                 </div>
               ))}

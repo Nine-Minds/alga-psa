@@ -685,5 +685,34 @@
     "notAvailable": "N/D",
     "title": "Détails de l'interaction",
     "unknownUser": "Inconnu"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Entrée de planning introuvable.",
+      "invalid": "L’entrée de planning sélectionnée n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "assigneesMissing": "Un ou plusieurs utilisateurs affectés sont introuvables."
+    },
+    "activities": {
+      "otherUserForbidden": "Autorisation refusée : impossible de consulter les activités de planning d’un autre utilisateur"
+    },
+    "workItem": {
+      "adHocTimesRequired": "L’heure de début et l’heure de fin sont obligatoires pour les entrées ad hoc.",
+      "typeUnsupported": "Ce type d’élément de travail n’est pas pris en charge pour la planification.",
+      "entryOrUserUnavailable": "L’entrée de planning ou l’utilisateur sélectionné n’est plus disponible. Veuillez actualiser la page et réessayer.",
+      "invalid": "L’élément de travail sélectionné n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "L’élément de travail, l’entrée de planning ou la personne affectée sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "duplicateEntry": "Cette entrée de planning existe déjà. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire du planning est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du planning est manquant : {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "L’identifiant de la réunion est obligatoire",
+      "refreshPermission": "Autorisation refusée : impossible d’actualiser les enregistrements de réunion.",
+      "refreshFailed": "Échec de l’actualisation des enregistrements de réunion. Veuillez réessayer.",
+      "graphForbidden": "Microsoft Graph a refusé l’accès à l’enregistrement Teams. Vérifiez les autorisations d’enregistrement et réessayez.",
+      "graphNotFound": "L’enregistrement Teams n’est plus disponible via Microsoft Graph.",
+      "graphThrottled": "Microsoft Graph limite le débit des téléchargements d’enregistrements. Veuillez réessayer dans un instant.",
+      "graphHttpStatus": "Microsoft Graph a renvoyé HTTP {{status}} lors du téléchargement de l’enregistrement Teams."
+    }
   }
 }

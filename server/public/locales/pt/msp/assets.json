@@ -1490,5 +1490,35 @@
       "inactive": "inativo",
       "maintenance": "manutenção"
     }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "Permissão negada: não é possível ler os ativos",
+      "readAssetTypes": "Permissão negada: não é possível ler os tipos de ativo",
+      "manageAssetTypes": "Permissão negada: não é possível gerenciar os tipos de ativo",
+      "readDocuments": "Permissão negada: não é possível ler os documentos do ativo",
+      "associateDocuments": "Permissão negada: não é possível associar documentos aos ativos",
+      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos",
+      "updateDocumentNotes": "Permissão negada: não é possível atualizar as notas dos documentos do ativo"
+    },
+    "asset": {
+      "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "clientNotFound": "Cliente não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "maintenanceNotFound": "Agenda de manutenção não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "maintenanceMismatch": "Este registro de manutenção não corresponde ao ativo selecionado. Atualize a página e tente novamente.",
+      "locationUnavailable": "O local selecionado não está disponível para este cliente.",
+      "selfRelation": "Um ativo não pode ser relacionado a si mesmo.",
+      "selectAtLeastOne": "Selecione pelo menos um ativo.",
+      "typeUnavailable": "O tipo de ativo não está disponível. Escolha um tipo de ativo válido.",
+      "typeUnavailableNamed": "O tipo de ativo \"{{assetType}}\" não está disponível. Escolha um tipo de ativo válido.",
+      "documentAssociationNotFound": "Associação do documento não encontrada. Ela pode já ter sido removida. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores de ativo selecionados é inválido. Atualize a página e tente novamente.",
+      "invalidDate": "Uma das datas de ativo selecionadas é inválida. Revise o formulário e tente novamente.",
+      "referenceMissing": "O ativo, documento ou registro relacionado selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração do ativo conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores do ativo não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do ativo.",
+      "missingFieldNamed": "Falta um campo obrigatório do ativo: {{field}}."
+    }
   }
 }

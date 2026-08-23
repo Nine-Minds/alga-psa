@@ -25,11 +25,45 @@ function rowsAs<Row>(rows: unknown): Row[] {
 }
 
 function ticketFieldOptionsPermissionError(): TicketFieldOptionsActionError {
-  return permissionError('Permission denied: Cannot read ticket field options');
+  return permissionError('Permission denied: Cannot read ticket field options', 'msp/email-providers:errors.ticketFieldOptions.permissionDenied');
 }
 
-function ticketFieldOptionsLoadError(label: string): TicketFieldOptionsActionError {
-  return actionError(`Failed to load ${label}. Please try again.`);
+type TicketFieldOptionSet =
+  | 'ticketFieldOptions'
+  | 'boards'
+  | 'statuses'
+  | 'priorities'
+  | 'categories'
+  | 'clients'
+  | 'users';
+
+const TICKET_FIELD_OPTION_LABELS: Record<TicketFieldOptionSet, string> = {
+  ticketFieldOptions: 'ticket field options',
+  boards: 'boards',
+  statuses: 'statuses',
+  priorities: 'priorities',
+  categories: 'categories',
+  clients: 'clients',
+  users: 'users',
+};
+
+// "Failed to load" plus an English noun does not translate, so each option set
+// names its own whole sentence.
+const TICKET_FIELD_OPTION_KEYS: Record<TicketFieldOptionSet, string> = {
+  ticketFieldOptions: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.ticketFieldOptions',
+  boards: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.boards',
+  statuses: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.statuses',
+  priorities: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.priorities',
+  categories: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.categories',
+  clients: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.clients',
+  users: 'msp/email-providers:errors.ticketFieldOptions.loadFailed.users',
+};
+
+function ticketFieldOptionsLoadError(optionSet: TicketFieldOptionSet): TicketFieldOptionsActionError {
+  return actionError(
+    `Failed to load ${TICKET_FIELD_OPTION_LABELS[optionSet]}. Please try again.`,
+    TICKET_FIELD_OPTION_KEYS[optionSet],
+  );
 }
 
 export const getTicketFieldOptions = withAuth(async (
@@ -146,7 +180,7 @@ export const getTicketFieldOptions = withAuth(async (
     };
   } catch (error) {
     console.error('Failed to load ticket field options:', error);
-    return ticketFieldOptionsLoadError('ticket field options');
+    return ticketFieldOptionsLoadError('ticketFieldOptions');
   }
 });
 

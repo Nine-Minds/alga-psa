@@ -267,7 +267,9 @@
         "licenseLimitReached": "Você atingiu o limite de licença de usuário MSP.",
         "soloPlanLimit": "O plano Solo é limitado a 1 usuário. Atualize para o Pro para adicionar mais usuários.",
         "revokeInvitation": "Falha ao revogar o convite",
-        "invitationNotFound": "Convite não encontrado ou já utilizado"
+        "invitationNotFound": "Convite não encontrado ou já utilizado",
+        "createContact": "Não foi possível criar o contato: {{reason}}",
+        "unknown": "Erro desconhecido"
       }
     },
     "invitations": {
@@ -1689,7 +1691,138 @@
   },
   "timeEntry": {
     "title": "Configurações de entrada de tempo",
-    "description": "Gerencie suas configurações de entrada de tempo e períodos de tempo"
+    "description": "Gerencie suas configurações de entrada de tempo e períodos de tempo",
+    "timePeriods": {
+      "title": "Configurações de período",
+      "description": "Configure os períodos de faturamento",
+      "loading": "Carregando as configurações de período...",
+      "addNew": "Adicionar nova configuração de período",
+      "help": {
+        "title": "Entendendo as configurações de período",
+        "intro": "Você pode definir várias configurações ativas para criar ciclos de faturamento complexos. O dia final é o último dia incluído no período.",
+        "exampleIntro": "Por exemplo, para configurar períodos quinzenais (do dia 1 ao 15 e do 16 ao fim do mês):",
+        "firstSettingLabel": "Configuração 1:",
+        "firstSetting": "Dia inicial: 1, dia final: 15 → o período cobre do dia 1 ao 15",
+        "secondSettingLabel": "Configuração 2:",
+        "secondSetting": "Dia inicial: 16, dia final: fim do mês → o período cobre do dia 16 até o último dia",
+        "outro": "O sistema usa estas configurações para sugerir e gerar períodos. Garanta que elas cubram todo o ciclo sem lacunas."
+      },
+      "form": {
+        "requiredFields": "Preencha os campos obrigatórios:",
+        "frequency": "Frequência *",
+        "frequencyPlaceholder": "Informe a frequência",
+        "frequencyUnit": "Unidade de frequência *",
+        "frequencyUnitPlaceholder": "Selecione a unidade de frequência",
+        "startDay": "Dia inicial *",
+        "selectDay": "Selecione o dia",
+        "startDayPlaceholder": "Informe o dia inicial",
+        "endDay": "Dia final *",
+        "endDayPlaceholder": "Informe o dia final",
+        "endOfUnit": "Fim: {{unit}}",
+        "endOfMonth": "Fim do mês",
+        "startMonth": "Mês inicial",
+        "endMonth": "Mês final",
+        "startDayOfMonth": "Dia inicial do mês *",
+        "endDayOfMonth": "Dia final do mês *",
+        "add": "Adicionar configuração de período"
+      },
+      "validation": {
+        "frequencyMin": "A frequência deve ser de pelo menos 1",
+        "startDayRequired": "O dia inicial é obrigatório",
+        "endDayRequired": "O dia final é obrigatório",
+        "startDayOfMonthRequired": "O dia inicial do mês é obrigatório",
+        "endDayOfMonthRequired": "O dia final do mês é obrigatório"
+      },
+      "errors": {
+        "fetch": "Não foi possível carregar as configurações de período",
+        "overlap": "Esta configuração de período se sobrepõe a uma configuração ativa existente.",
+        "add": "Não foi possível adicionar a configuração de período. Verifique os valores e tente novamente.",
+        "update": "Não foi possível atualizar a configuração de período",
+        "delete": "Não foi possível excluir a configuração de período"
+      },
+      "summary": {
+        "frequency": "Frequência: a cada {{count}} × {{unit}}",
+        "startDay": "Dia inicial: {{value}}",
+        "endDay": "Dia final: {{value}}",
+        "start": "Início: {{value}}",
+        "end": "Fim: {{value}}",
+        "effectiveFrom": "Vigente desde: {{value}}",
+        "effectiveTo": "Vigente até: {{value}}",
+        "noEnd": "Sem fim",
+        "notSet": "Não definido"
+      },
+      "units": {
+        "day": "Dia",
+        "week": "Semana",
+        "month": "Mês",
+        "year": "Ano"
+      },
+      "months": {
+        "1": "janeiro",
+        "2": "fevereiro",
+        "3": "março",
+        "4": "abril",
+        "5": "maio",
+        "6": "junho",
+        "7": "julho",
+        "8": "agosto",
+        "9": "setembro",
+        "10": "outubro",
+        "11": "novembro",
+        "12": "dezembro"
+      },
+      "weekDays": {
+        "1": "segunda-feira",
+        "2": "terça-feira",
+        "3": "quarta-feira",
+        "4": "quinta-feira",
+        "5": "sexta-feira",
+        "6": "sábado",
+        "7": "domingo"
+      }
+    },
+    "periods": {
+      "title": "Períodos",
+      "description": "Visualize e gerencie os períodos de lançamento de horas usados no controle de tempo",
+      "loading": "Carregando períodos...",
+      "create": "Criar novo período",
+      "openMenu": "Abrir menu",
+      "columns": {
+        "startDate": "Data de início",
+        "endDate": "Data de término",
+        "actions": "Ações"
+      },
+      "form": {
+        "createTitle": "Criar novo período",
+        "editTitle": "Editar período",
+        "suggestion": "Com base nas suas configurações, o próximo período é sugerido.",
+        "frequency": "Frequência: a cada {{value}} × {{unit}}",
+        "overrideDates": "Substituir as datas sugeridas",
+        "startDate": "Data de início",
+        "startDatePlaceholder": "Selecione a data de início",
+        "noEndDate": "Sem data de término",
+        "endDate": "Data de término",
+        "endDatePlaceholder": "Selecione a data de término",
+        "deletePeriod": "Excluir período",
+        "confirmDeleteTitle": "Confirmar exclusão",
+        "confirmDeleteBody": "Tem certeza de que deseja excluir este período? Esta ação não pode ser desfeita.",
+        "checkSettingsLink": "Verifique suas configurações de período."
+      },
+      "errors": {
+        "load": "Não foi possível carregar os períodos.",
+        "suggest": "Não foi possível sugerir um novo período",
+        "noApplicableSettings": "Nenhuma configuração de período aplicável foi encontrada.",
+        "noSettings": "Nenhuma configuração de período disponível. Não é possível criar um novo período.",
+        "settingsRequired": "Não é possível gerenciar o período sem configurações.",
+        "startDateRequired": "É necessário informar uma data de início.",
+        "startBeforeEnd": "A data de início deve ser anterior à data de término.",
+        "overlap": "O período se sobrepõe a um período existente.",
+        "overlapRetry": "Este período se sobrepõe a outro existente. Escolha datas diferentes.",
+        "create": "Não foi possível criar o período.",
+        "delete": "Não foi possível excluir o período",
+        "unexpected": "Ocorreu um erro inesperado."
+      }
+    }
   },
   "billing": {
     "title": "Configurações de faturamento",
@@ -1922,6 +2055,50 @@
     "loading": {
       "extensions": "Carregando extensões...",
       "installer": "Carregando instalador..."
+    }
+  },
+  "policyManagement": {
+    "title": "Gerenciamento de políticas",
+    "upgradeDescription": "O gerenciamento de políticas é um recurso Pro. Faça upgrade para acessar controles avançados de políticas."
+  },
+  "roleManagement": {
+    "title": "Gerenciar funções",
+    "description": "Crie e gerencie funções para acesso MSP e ao portal do cliente",
+    "columns": {
+      "roleNameRequired": "Nome da função *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Nome da função",
+      "roleNamePlaceholder": "Digite o nome da função",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Digite a descrição da função"
+    },
+    "portal": {
+      "none": "Nenhum",
+      "access": "Acesso ao portal",
+      "msp": "Portal MSP",
+      "client": "Portal do cliente",
+      "mspShort": "MSP",
+      "clientShort": "Cliente",
+      "required": "Uma função deve ter acesso a pelo menos um portal"
+    },
+    "actions": {
+      "addRole": "Adicionar função",
+      "createRole": "Criar função"
+    },
+    "createDialog": {
+      "title": "Criar nova função"
+    },
+    "deleteDialog": {
+      "entityFallback": "esta função"
+    },
+    "adminDeleteDisabled": "As funções de administrador não podem ser excluídas porque são funções do sistema",
+    "errors": {
+      "createFailed": "Falha ao criar a função",
+      "updateFailed": "Falha ao atualizar a função",
+      "validateDeletionFailed": "Falha ao validar a exclusão. Tente novamente.",
+      "deleteFailed": "Falha ao excluir a função"
     }
   },
   "security": {
@@ -2875,6 +3052,170 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Permissão negada: não é possível criar a equipe.",
+        "update": "Permissão negada: não é possível atualizar a equipe.",
+        "modify": "Permissão negada: não é possível modificar a equipe.",
+        "modifyMembers": "Permissão negada: não é possível modificar os membros da equipe.",
+        "view": "Permissão negada: não é possível visualizar a equipe.",
+        "viewAll": "Permissão negada: não é possível visualizar as equipes.",
+        "assignManager": "Permissão negada: não é possível atribuir o gestor da equipe."
+      },
+      "notFoundRefresh": "Equipe não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "leadRequired": "Uma equipe precisa ter um líder. Selecione um líder e tente novamente.",
+      "inactiveUser": "Usuários inativos não podem ser adicionados a uma equipe.",
+      "cannotRemoveLead": "Não é possível remover o líder da equipe. Atribua um novo líder primeiro.",
+      "invalidValue": "Um dos valores de equipe selecionados é inválido. Atualize a página e tente novamente.",
+      "duplicateMember": "Este usuário já é membro da equipe.",
+      "referenceMissing": "O líder ou membro da equipe selecionado não é mais válido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da equipe.",
+      "missingFieldNamed": "Falta um campo obrigatório da equipe: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Permissão negada: você não tem permissão para visualizar as políticas de SLA",
+        "create": "Permissão negada: você não tem permissão para criar políticas de SLA",
+        "update": "Permissão negada: você não tem permissão para atualizar as políticas de SLA",
+        "delete": "Permissão negada: você não tem permissão para excluir políticas de SLA"
+      },
+      "policyNotFound": "Política de SLA não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "targetNotFound": "Meta da política de SLA não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "priorityNotFound": "Prioridade selecionada não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "clientNotFound": "Cliente selecionado não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "boardNotFound": "Quadro selecionado não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "ticketNotFound": "Ticket não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "duplicateTarget": "Já existe uma meta para esta prioridade nesta política.",
+      "pauseRequiresBoardStatus": "A configuração de pausa do SLA exige um status de ticket pertencente ao quadro.",
+      "invalidValue": "Um dos valores de SLA selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O registro de SLA ou o valor relacionado selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração do SLA conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores de SLA não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do SLA.",
+      "missingFieldNamed": "Falta um campo obrigatório do SLA: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Quadro não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "userNotFound": "Usuário responsável pelo escalonamento selecionado não encontrado. Atualize a página e escolha outro usuário.",
+      "configNotFound": "Configuração do responsável pelo escalonamento não encontrada. Ela pode já ter sido excluída.",
+      "recordInvalid": "Um dos registros do responsável pelo escalonamento selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O quadro ou o usuário selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já há um responsável pelo escalonamento configurado para este quadro e nível.",
+      "missingField": "Falta um campo obrigatório do responsável pelo escalonamento.",
+      "missingFieldNamed": "Falta um campo obrigatório do responsável pelo escalonamento: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores de status selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O registro relacionado selecionado para este status não existe mais. Atualize a página e tente novamente.",
+      "orderInUse": "Este número de ordem já está em uso. Escolha um número de ordem diferente.",
+      "duplicateName": "Já existe um status com este nome.",
+      "notAllowed": "Um dos valores de status não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do status.",
+      "missingFieldNamed": "Falta um campo obrigatório do status: {{field}}.",
+      "nameRequired": "O nome do status é obrigatório",
+      "nameEmpty": "O nome do status não pode ficar vazio",
+      "idRequired": "O ID do status é obrigatório",
+      "manageFromBoard": "Os status de ticket devem ser gerenciados nas configurações do quadro"
+    },
+    "priority": {
+      "notFound": "Prioridade não encontrada.",
+      "boardMissing": "O quadro selecionado não existe mais.",
+      "duplicate": "Já existe uma prioridade com estes dados.",
+      "referenceInvalid": "A referência de prioridade selecionada não é mais válida. Atualize a página e tente novamente.",
+      "invalidData": "Dados de prioridade inválidos. Verifique os detalhes da prioridade.",
+      "missingField": "Falta um campo obrigatório da prioridade.",
+      "missingFieldNamed": "Falta um campo obrigatório da prioridade: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Um dos usuários selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos usuários selecionados não existe mais. Atualize a página e tente novamente.",
+      "readClientInfoPermission": "Permissão negada: não é possível ler as informações de cliente do usuário"
+    },
+    "roles": {
+      "userNotFound": "Usuário não encontrado. Atualize a lista de usuários e tente novamente.",
+      "roleNotFound": "Função não encontrada. Atualize a lista de funções e tente novamente.",
+      "portalRoleOnMspUser": "Não é possível atribuir uma função do portal do cliente a um usuário MSP.",
+      "mspRoleOnPortalUser": "Não é possível atribuir uma função MSP a um usuário do portal do cliente.",
+      "invalidValue": "Um dos valores de usuário ou função selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O usuário ou a função selecionada não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Esse usuário já tem a função selecionada.",
+      "changePermission": "Permissão negada: você não tem permissão para alterar as funções dos usuários.",
+      "missingField": "Falta um campo obrigatório da função do usuário.",
+      "missingFieldNamed": "Falta um campo obrigatório da função do usuário: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "O contexto do tenant está ausente. Atualize a página e tente novamente.",
+      "notFound": "Segredo não encontrado. Ele pode já ter sido excluído. Atualize a página e tente novamente.",
+      "invalidName": "Nome de tenant ou de segredo inválido.",
+      "readOnly": "O armazenamento de segredos é somente leitura neste ambiente.",
+      "recordInvalid": "Um dos registros de segredo selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de segredo selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um segredo com este nome.",
+      "missingField": "Falta um campo obrigatório do segredo.",
+      "missingFieldNamed": "Falta um campo obrigatório do segredo: {{field}}.",
+      "permissions": {
+        "create": "Permissão negada: não é possível criar segredos",
+        "update": "Permissão negada: não é possível atualizar segredos",
+        "delete": "Permissão negada: não é possível excluir segredos"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "O id do tenant é obrigatório.",
+      "invalidValue": "Um dos valores de configuração do tenant selecionados é inválido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório das configurações do tenant.",
+      "missingFieldNamed": "Falta um campo obrigatório das configurações do tenant: {{field}}.",
+      "invalidTimezone": "Fuso horário inválido: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Permissão negada: apenas administradores podem limpar os dados de onboarding.",
+        "update": "Permissão negada: não é possível atualizar as configurações",
+        "enableAiAssistant": "Permissão negada: não é possível ativar o Assistente de IA para este tenant"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Modelo do sistema não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "templateNotFound": "Modelo de notificação não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "categoryNotFound": "Categoria de notificação não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "subtypeNotFound": "Subtipo de notificação não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "notificationNotFound": "Notificação não encontrada. Ela pode já ter sido atualizada ou excluída.",
+      "recordInvalid": "Um dos registros de notificação selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de notificação selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma configuração de notificação com estes dados.",
+      "missingField": "Falta um campo obrigatório da notificação.",
+      "missingFieldNamed": "Falta um campo obrigatório da notificação: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Função ou permissão não encontrada. Atualize a lista de permissões e tente novamente.",
+      "ticketNotFound": "Ticket não encontrado. Atualize o ticket e tente novamente.",
+      "policyNotFound": "Política não encontrada. Atualize a lista de políticas e tente novamente.",
+      "invalidValue": "Um dos valores de função, permissão ou política selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de segurança selecionados não existe mais. Atualize a página e tente novamente.",
+      "permissionAlreadyAssigned": "Essa permissão já está atribuída a esta função.",
+      "duplicate": "Já existe um registro de segurança com estes dados.",
+      "missingField": "Falta um campo obrigatório de segurança.",
+      "missingFieldNamed": "Falta um campo obrigatório de segurança: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Permissão negada: administradores do portal do cliente só podem gerenciar funções do portal do cliente.",
+        "portalUsersOnly": "Permissão negada: administradores do portal do cliente só podem gerenciar usuários do portal do cliente.",
+        "portalAdminRequired": "Permissão negada: é necessário acesso de administrador do portal do cliente.",
+        "otherClientUsers": "Permissão negada: não é possível gerenciar usuários de outro cliente."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Usuários do portal do cliente não podem gerenciar domínios personalizados.",
+      "noPermission": "Você não tem permissão para gerenciar as configurações do portal do cliente.",
+      "required": "O domínio é obrigatório.",
+      "length": "O domínio deve ter entre 3 e 253 caracteres.",
+      "charset": "O domínio pode conter apenas letras, números, hifens e pontos.",
+      "needsDot": "O domínio deve incluir pelo menos um ponto.",
+      "notCanonicalHost": "Escolha um domínio diferente do host canônico.",
+      "noLeadingTrailingDot": "O domínio não pode começar nem terminar com um ponto.",
+      "notApplianceHost": "Escolha um domínio diferente do host principal deste appliance. O domínio personalizado do portal deve ser outro nome de host que seu proxy reverso encaminhe para cá.",
+      "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
+      "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
     }
   }
 }

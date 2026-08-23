@@ -85,16 +85,16 @@ function scheduleActionErrorFrom(error: unknown): ScheduleActionError | null {
   }
 
   if (message === 'Schedule entry not found' || /^Schedule entry .+ not found/.test(message)) {
-    return actionError('Schedule entry not found.');
+    return actionError('Schedule entry not found.', 'msp/schedule:errors.entry.notFound');
   }
 
   if (/^Users .+ not found/.test(message)) {
-    return actionError('One or more assigned users could not be found.');
+    return actionError('One or more assigned users could not be found.', 'msp/schedule:errors.entry.assigneesMissing');
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected schedule entry is invalid. Please refresh and try again.');
+    return actionError('The selected schedule entry is invalid. Please refresh and try again.', 'msp/schedule:errors.entry.invalid');
   }
 
   return null;

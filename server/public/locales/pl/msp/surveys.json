@@ -461,5 +461,39 @@
       "topIssues": "Brak negatywnych odpowiedzi w tym okresie.",
       "recentResponses": "Brak odpowiedzi w tym okresie."
     }
+  },
+  "errors": {
+    "template": {
+      "notFound": "Nie znaleziono szablonu ankiety. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie."
+    },
+    "trigger": {
+      "notFound": "Nie znaleziono wyzwalacza ankiety. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "templateRequired": "Wybierz istniejący szablon ankiety przed zapisaniem wyzwalacza."
+    },
+    "survey": {
+      "invalidValue": "Jedna z wybranych wartości ankiety jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany szablon ankiety lub powiązany rekord już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Rekord ankiety o takich danych już istnieje.",
+      "notAllowed": "Jedna z wartości ankiety jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola ankiety.",
+      "missingFieldNamed": "Brakuje wymaganego pola ankiety: {{field}}.",
+      "invalidData": "Dane ankiety są nieprawidłowe. Sprawdź formularz i spróbuj ponownie."
+    },
+    "options": {
+      "boardsFailed": "Nie można wczytać tablic.",
+      "statusesFailed": "Nie można wczytać statusów.",
+      "prioritiesFailed": "Nie można wczytać priorytetów.",
+      "triggerOptionsFailed": "Nie można wczytać opcji wyzwalacza ankiety. Spróbuj ponownie."
+    },
+    "response": {
+      "linkInvalidOrUsed": "Ten link do opinii nie jest już ważny lub został już użyty.",
+      "ratingRequired": "Przed wysłaniem wybierz ocenę spośród pokazanych opcji.",
+      "linkInvalidOrExpired": "Ten link do opinii jest nieprawidłowy lub wygasł.",
+      "ticketInactive": "Ten link do opinii nie jest już powiązany z aktywnym zgłoszeniem. Skontaktuj się ze swoim technikiem.",
+      "alreadyCompleted": "Ta ankieta została już wypełniona.",
+      "missingField": "Brakuje wymaganego pola opinii.",
+      "missingFieldNamed": "Brakuje wymaganego pola opinii: {{field}}.",
+      "invalidData": "Dane odpowiedzi w ankiecie są nieprawidłowe. Sprawdź swoją opinię i spróbuj ponownie."
+    }
   }
 }

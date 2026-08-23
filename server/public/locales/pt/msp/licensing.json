@@ -355,5 +355,9 @@
       "startTrial": "Falha ao iniciar a avaliação.",
       "refreshLicense": "Falha ao atualizar a licença."
     }
+  },
+  "errors": {
+    "notSignedIn": "Não autorizado. Faça login para gerenciar o licenciamento.",
+    "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas"
   }
 }

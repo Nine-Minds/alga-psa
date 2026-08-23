@@ -570,5 +570,137 @@
       "uncovered": "Durch keinen Vertrag abgedeckt",
       "ambiguous": "Mehr als eine Vertragsposition passt"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Für diesen wiederkehrenden Abrechnungszeitraum existiert bereits eine Rechnung.",
+    "permissions": {
+      "billingRead": "Berechtigung verweigert: Leseberechtigung für die Abrechnung erforderlich",
+      "billingUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für die Abrechnung erforderlich",
+      "billingCreate": "Berechtigung verweigert: Erstellungsberechtigung für die Abrechnung erforderlich",
+      "billingDelete": "Berechtigung verweigert: Löschberechtigung für die Abrechnung erforderlich",
+      "clientRead": "Berechtigung verweigert: Leseberechtigung für Kunden erforderlich",
+      "otherClientLocations": "Berechtigung verweigert: Auf Standorte eines anderen Kunden kann nicht zugegriffen werden",
+      "clientPortalUnavailable": "Berechtigung verweigert: Vorgang im Kundenportal nicht verfügbar",
+      "resolveCurrency": "Berechtigung verweigert: Abrechnungswährung des Kunden kann nicht ermittelt werden",
+      "clientBillingAccess": "Berechtigung verweigert: Sie haben keinen Zugriff auf die Abrechnung dieses Kunden."
+    },
+    "context": {
+      "tenantNotFound": "Mandant nicht gefunden",
+      "tenantContextNotFound": "Mandantenkontext nicht gefunden",
+      "noTenantContext": "Kein Mandantenkontext. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "clientContextNotFound": "Kundenkontext nicht gefunden",
+      "notAuthenticated": "Nicht autorisiert: Kein angemeldeter Benutzer gefunden",
+      "notLoggedIn": "Benutzer ist nicht angemeldet"
+    },
+    "client": {
+      "notFound": "Kunde nicht gefunden",
+      "notFoundRefresh": "Kunde nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "idRequired": "Kunden-ID ist erforderlich."
+    },
+    "clientContract": {
+      "notFound": "Vertragszuordnung des Kunden nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Werte des Kundenvertrags ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte Kunde, Vertrag oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Diese Vertragszuordnung des Kunden existiert bereits.",
+      "missingField": "Erforderliches Feld des Kundenvertrags fehlt.",
+      "missingFieldNamed": "Erforderliches Feld des Kundenvertrags fehlt: {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "Der nächste Abrechnungszeitraum kann derzeit nicht erstellt werden"
+    },
+    "currency": {
+      "multipleActive": "Der Kunde hat aktive Verträge in mehreren Währungen ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "Einer der ausgewählten Werte des Stundenkontingent-Overlays ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "recordInvalid": "Einer der ausgewählten Datensätze des Stundenkontingent-Overlays ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Für diesen Dienst existiert bereits ein Stundenkontingent-Overlay.",
+      "notAllowed": "Einer der Werte des Stundenkontingent-Overlays ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld des Stundenkontingent-Overlays fehlt.",
+      "missingFieldNamed": "Erforderliches Feld des Stundenkontingent-Overlays fehlt: {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "Ein Stundenkontingent-Pool oder Mitglied mit dieser Konfiguration existiert bereits. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "recordInvalid": "Einer der ausgewählten Datensätze des Stundenkontingent-Pools ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der Werte des Stundenkontingent-Pools ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut."
+    },
+    "material": {
+      "invalidValue": "Einer der ausgewählten Materialwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "recordInvalid": "Einer der ausgewählten Materialdatensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Dieser Materialdatensatz existiert bereits.",
+      "notAllowed": "Einer der Materialwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Materialfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Materialfeld fehlt: {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "Verbrauchsdatensatz nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "bucketUpdateFailed": "Der Verbrauch des Stundenkontingents kann für diesen Verbrauchsdatensatz nicht aktualisiert werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Der ausgewählte Verbrauchsdatensatz, Kunde, Dienst oder die Vertragslinie ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte Kunde, Dienst oder die Vertragslinie ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Es existiert bereits ein widersprüchlicher Verbrauchsdatensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "alreadyDeleted": "Verbrauchsdatensatz nicht gefunden. Er wurde möglicherweise bereits gelöscht.",
+      "missingField": "Erforderliches Verbrauchsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Verbrauchsfeld fehlt: {{field}}."
+    },
+    "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "Das Auslösedatum muss ein gültiges Kalenderdatum sein.",
+        "thresholdsAscending": "Benachrichtigungsschwellenwerte müssen streng aufsteigend sortiert sein.",
+        "amountOrPercentage": "Genau einer der Werte Betrag oder Prozentsatz ist erforderlich.",
+        "increaseTotalAmountOnly": "Die Erhöhung des Gesamtbetrags ist nur für betragsbasierte Einträge zulässig.",
+        "amountAndPercentageTogether": "Betrag und Prozentsatz müssen gemeinsam aktualisiert werden, wobei genau einer auf null gesetzt sein muss."
+      },
+      "invalidValue": "Einer der ausgewählten Werte der Projektabrechnung ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Das ausgewählte Projekt, die Rechnung, Phase, der Dienst oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Es existiert bereits ein widersprüchlicher Datensatz der Projektabrechnung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ruleViolation": "Die Werte der Projektabrechnung verstoßen gegen eine Datenregel. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "requestFailed": "Die Projektabrechnung konnte die Anfrage nicht abschließen. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Projektabrechnung fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Projektabrechnung fehlt: {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "Start- und Enddatum sind erforderlich."
+    },
+    "recurringRun": {
+      "selectPeriods": "Wählen Sie mindestens einen wiederkehrenden Abrechnungszeitraum zum Generieren aus.",
+      "invoicePermission": "Berechtigung verweigert: Berechtigung zum Erstellen oder Generieren von Rechnungen erforderlich"
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "Zum Prüfen wiederkehrender Serviceperioden ist ein Zeitplanschlüssel erforderlich.",
+      "scheduleKeyRequiredRepair": "Zum Reparieren wiederkehrender Serviceperioden ist ein Zeitplanschlüssel erforderlich."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Benutzer des Kundenportals dürfen Buchhaltungsexporte nicht verwalten",
+      "permissions": {
+        "create": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht erstellt werden",
+        "read": "Berechtigung verweigert: Auf Buchhaltungsexport-Stapel kann nicht zugegriffen werden",
+        "update": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht geändert werden",
+        "execute": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht ausgeführt werden"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "Lieferantenrechnung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "documentTemplate": {
+      "unknownType": "Unbekannter Dokumenttyp: {{documentType}}",
+      "permissions": {
+        "read": "Berechtigung verweigert: Dokumentvorlagen können nicht gelesen werden",
+        "modify": "Berechtigung verweigert: Dokumentvorlagen können nicht geändert werden",
+        "setDefault": "Berechtigung verweigert: Standard-Dokumentvorlage kann nicht festgelegt werden",
+        "clearOverride": "Berechtigung verweigert: Überschreibung der Dokumentvorlage kann nicht aufgehoben werden",
+        "delete": "Berechtigung verweigert: Dokumentvorlagen können nicht gelöscht werden",
+        "preview": "Berechtigung verweigert: Dokumentvorlagen können nicht in der Vorschau angezeigt werden"
+      }
+    },
+    "billingProfile": {
+      "periodOrder": "Wählen Sie einen Zeitraum, dessen Beginn nicht nach dem Ende liegt.",
+      "comparisonPeriodOrder": "Wählen Sie einen Vergleichszeitraum, dessen Beginn nicht nach dem Ende liegt.",
+      "notThisClient": "Dieses Abrechnungsprofil gehört nicht zu diesem Kunden."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Dieser Posten existiert nicht mehr.",
+      "alreadyInvoiced": "Dieser Posten wurde bereits in Rechnung gestellt.",
+      "contractLineNotFound": "Diese Vertragslinie existiert nicht mehr."
+    }
   }
 }

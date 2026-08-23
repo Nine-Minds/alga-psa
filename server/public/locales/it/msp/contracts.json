@@ -2372,5 +2372,60 @@
   "wizardBucketPools": {
     "heading": "Pacchetti ore per questa riga",
     "empty": "Nessun pacchetto ore su questa riga. Aggiungere un pacchetto per includere ore prepagate."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Autorizzazione negata: impossibile modificare le linee contrattuali",
+      "deleteContracts": "Autorizzazione negata: impossibile eliminare i contratti di fatturazione"
+    },
+    "contract": {
+      "hasInvoices": "Questo contratto ha fatture associate e non può essere eliminato.",
+      "invalidValue": "Uno dei valori del contratto selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il contratto, il cliente o il record correlato selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica del contratto è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori del contratto non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio del contratto.",
+      "missingFieldNamed": "Manca un campo obbligatorio del contratto: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Autorizzazione negata: impossibile creare modelli di fatturazione",
+        "createContracts": "Autorizzazione negata: impossibile creare contratti di fatturazione",
+        "listTemplates": "Autorizzazione negata: impossibile elencare i modelli di contratto",
+        "viewSnapshot": "Autorizzazione negata: impossibile visualizzare lo snapshot del modello di contratto",
+        "resumeContracts": "Autorizzazione negata: impossibile riprendere i contratti di fatturazione"
+      },
+      "templateNotFound": "Modello non trovato",
+      "contractNotFound": "Contratto non trovato",
+      "notDraft": "Il contratto non è una bozza",
+      "missingClient": "Al contratto in bozza manca l’assegnazione del cliente",
+      "invalidStartDate": "Il contratto in bozza ha una data di inizio non valida",
+      "recordInvalid": "Uno dei record selezionati della procedura guidata del contratto non è più valido. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un record corrispondente della procedura guidata del contratto."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "La data di fine deve essere successiva alla data di decorrenza",
+      "overlaps": "Questa pianificazione si sovrappone a una pianificazione dei prezzi esistente",
+      "wouldOverlap": "Questa pianificazione si sovrapporrebbe a una pianificazione dei prezzi esistente",
+      "notFound": "Pianificazione dei prezzi non trovata"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Autorizzazione negata: impossibile leggere la coda dei rinnovi",
+        "update": "Autorizzazione negata: impossibile aggiornare la coda dei rinnovi",
+        "ownerOtherTenant": "Autorizzazione negata: impossibile assegnare i rinnovi a un utente di un altro tenant.",
+        "contractOtherTenant": "Autorizzazione negata: impossibile completare il rinnovo con un contratto di un altro tenant."
+      },
+      "clientContractIdRequired": "L’id del contratto del cliente è obbligatorio.",
+      "workItemNotFound": "Elemento di lavoro del rinnovo non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "snoozeDateRequired": "Scegliere una data di posticipo prima di salvare.",
+      "snoozeDateInvalid": "Scegliere una data di posticipo valida.",
+      "snoozeDateFuture": "Scegliere una data di posticipo futura.",
+      "ownerInvalid": "Scegliere un responsabile del rinnovo valido.",
+      "ownerUnavailable": "Il responsabile del rinnovo selezionato non è più disponibile. Aggiornare la pagina e riprovare.",
+      "activatedContractIdRequired": "L’id del contratto di rinnovo attivato è obbligatorio.",
+      "contractNotActive": "Il contratto di rinnovo attivato non è più attivo. Aggiornare la pagina e riprovare.",
+      "manualRetryDueOnly": "Il nuovo tentativo manuale è disponibile solo per i cicli di rinnovo in scadenza."
+    }
   }
 }

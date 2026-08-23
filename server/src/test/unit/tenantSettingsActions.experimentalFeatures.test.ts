@@ -293,6 +293,7 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
 
     await expect(updateExperimentalFeatures({ aiAssistant: true })).resolves.toEqual({
       permissionError: 'Permission denied: Cannot update settings',
+      messageKey: 'msp/settings:errors.tenantSettings.permissions.update',
     });
     consoleErrorSpy.mockRestore();
 
@@ -311,6 +312,7 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
 
     await expect(updateExperimentalFeatures({ aiAssistant: true })).resolves.toEqual({
       permissionError: 'Permission denied: Cannot enable AI Assistant for this tenant',
+      messageKey: 'msp/settings:errors.tenantSettings.permissions.enableAiAssistant',
     });
     consoleErrorSpy.mockRestore();
 

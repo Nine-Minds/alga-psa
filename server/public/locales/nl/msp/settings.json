@@ -267,7 +267,9 @@
         "licenseLimitReached": "U heeft uw MSP-gebruikerslicentielimiet bereikt.",
         "soloPlanLimit": "Het Solo-abonnement is beperkt tot 1 gebruiker. Upgrade naar Pro om meer gebruikers toe te voegen.",
         "revokeInvitation": "Uitnodiging intrekken mislukt",
-        "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt"
+        "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt",
+        "createContact": "Contactpersoon kon niet worden aangemaakt: {{reason}}",
+        "unknown": "Onbekende fout"
       }
     },
     "invitations": {
@@ -1689,7 +1691,138 @@
   },
   "timeEntry": {
     "title": "Tijdregistratie-instellingen",
-    "description": "Beheer uw tijdregistratie-instellingen en tijdperiodes"
+    "description": "Beheer uw tijdregistratie-instellingen en tijdperiodes",
+    "timePeriods": {
+      "title": "Instellingen voor factuurperioden",
+      "description": "Configureer de factuurperioden",
+      "loading": "Instellingen voor factuurperioden laden...",
+      "addNew": "Nieuwe periode-instelling toevoegen",
+      "help": {
+        "title": "Uitleg over periode-instellingen",
+        "intro": "U kunt meerdere actieve instellingen definiëren om complexe facturatiecycli te maken. De einddag is de laatste dag die tot de periode behoort.",
+        "exampleIntro": "Bijvoorbeeld, voor halfmaandelijkse perioden (1–15 en 16–einde maand):",
+        "firstSettingLabel": "Instelling 1:",
+        "firstSetting": "Startdag: 1, einddag: 15 → de periode loopt van de 1e tot en met de 15e",
+        "secondSettingLabel": "Instelling 2:",
+        "secondSetting": "Startdag: 16, einddag: einde maand → de periode loopt van de 16e tot en met de laatste dag",
+        "outro": "Het systeem gebruikt deze instellingen om perioden voor te stellen en aan te maken. Zorg dat ze de volledige cyclus zonder gaten dekken."
+      },
+      "form": {
+        "requiredFields": "Vul de verplichte velden in:",
+        "frequency": "Frequentie *",
+        "frequencyPlaceholder": "Voer de frequentie in",
+        "frequencyUnit": "Frequentie-eenheid *",
+        "frequencyUnitPlaceholder": "Selecteer de frequentie-eenheid",
+        "startDay": "Startdag *",
+        "selectDay": "Selecteer de dag",
+        "startDayPlaceholder": "Voer de startdag in",
+        "endDay": "Einddag *",
+        "endDayPlaceholder": "Voer de einddag in",
+        "endOfUnit": "Einde: {{unit}}",
+        "endOfMonth": "Einde maand",
+        "startMonth": "Startmaand",
+        "endMonth": "Eindmaand",
+        "startDayOfMonth": "Startdag van de maand *",
+        "endDayOfMonth": "Einddag van de maand *",
+        "add": "Periode-instelling toevoegen"
+      },
+      "validation": {
+        "frequencyMin": "De frequentie moet minimaal 1 zijn",
+        "startDayRequired": "Startdag is verplicht",
+        "endDayRequired": "Einddag is verplicht",
+        "startDayOfMonthRequired": "Startdag van de maand is verplicht",
+        "endDayOfMonthRequired": "Einddag van de maand is verplicht"
+      },
+      "errors": {
+        "fetch": "De instellingen voor factuurperioden konden niet worden geladen",
+        "overlap": "Deze periode-instelling overlapt met een bestaande actieve instelling.",
+        "add": "De periode-instelling kon niet worden toegevoegd. Controleer de waarden en probeer het opnieuw.",
+        "update": "De periode-instelling kon niet worden bijgewerkt",
+        "delete": "De periode-instelling kon niet worden verwijderd"
+      },
+      "summary": {
+        "frequency": "Frequentie: elke {{count}} × {{unit}}",
+        "startDay": "Startdag: {{value}}",
+        "endDay": "Einddag: {{value}}",
+        "start": "Begin: {{value}}",
+        "end": "Einde: {{value}}",
+        "effectiveFrom": "Geldig vanaf: {{value}}",
+        "effectiveTo": "Geldig tot: {{value}}",
+        "noEnd": "Geen einddatum",
+        "notSet": "Niet ingesteld"
+      },
+      "units": {
+        "day": "Dag",
+        "week": "Week",
+        "month": "Maand",
+        "year": "Jaar"
+      },
+      "months": {
+        "1": "januari",
+        "2": "februari",
+        "3": "maart",
+        "4": "april",
+        "5": "mei",
+        "6": "juni",
+        "7": "juli",
+        "8": "augustus",
+        "9": "september",
+        "10": "oktober",
+        "11": "november",
+        "12": "december"
+      },
+      "weekDays": {
+        "1": "maandag",
+        "2": "dinsdag",
+        "3": "woensdag",
+        "4": "donderdag",
+        "5": "vrijdag",
+        "6": "zaterdag",
+        "7": "zondag"
+      }
+    },
+    "periods": {
+      "title": "Perioden",
+      "description": "Perioden voor tijdregistratie bekijken en beheren",
+      "loading": "Perioden laden...",
+      "create": "Nieuwe periode maken",
+      "openMenu": "Menu openen",
+      "columns": {
+        "startDate": "Startdatum",
+        "endDate": "Einddatum",
+        "actions": "Acties"
+      },
+      "form": {
+        "createTitle": "Nieuwe periode maken",
+        "editTitle": "Periode bewerken",
+        "suggestion": "Op basis van uw instellingen wordt de volgende periode voorgesteld.",
+        "frequency": "Frequentie: elke {{value}} × {{unit}}",
+        "overrideDates": "Voorgestelde datums overschrijven",
+        "startDate": "Startdatum",
+        "startDatePlaceholder": "Startdatum selecteren",
+        "noEndDate": "Geen einddatum",
+        "endDate": "Einddatum",
+        "endDatePlaceholder": "Einddatum selecteren",
+        "deletePeriod": "Periode verwijderen",
+        "confirmDeleteTitle": "Verwijderen bevestigen",
+        "confirmDeleteBody": "Weet u zeker dat u deze periode wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "checkSettingsLink": "Controleer uw periode-instellingen."
+      },
+      "errors": {
+        "load": "De perioden konden niet worden geladen.",
+        "suggest": "Er kon geen nieuwe periode worden voorgesteld",
+        "noApplicableSettings": "Geen toepasbare periode-instellingen gevonden.",
+        "noSettings": "Geen periode-instellingen beschikbaar. Er kan geen nieuwe periode worden gemaakt.",
+        "settingsRequired": "Zonder instellingen kan geen periode worden beheerd.",
+        "startDateRequired": "Er moet een startdatum worden opgegeven.",
+        "startBeforeEnd": "De startdatum moet vóór de einddatum liggen.",
+        "overlap": "De periode overlapt met een bestaande periode.",
+        "overlapRetry": "Deze periode overlapt met een bestaande. Kies andere datums.",
+        "create": "De periode kon niet worden gemaakt.",
+        "delete": "De periode kon niet worden verwijderd",
+        "unexpected": "Er is een onverwachte fout opgetreden."
+      }
+    }
   },
   "billing": {
     "title": "Facturatie-instellingen",
@@ -1922,6 +2055,50 @@
     "loading": {
       "extensions": "Extensies laden...",
       "installer": "Installatieprogramma laden..."
+    }
+  },
+  "policyManagement": {
+    "title": "Beleidsbeheer",
+    "upgradeDescription": "Beleidsbeheer is een Pro-functie. Voer een upgrade uit voor toegang tot geavanceerde beleidsinstellingen."
+  },
+  "roleManagement": {
+    "title": "Rollen beheren",
+    "description": "Maak en beheer rollen voor toegang tot MSP en het klantenportaal",
+    "columns": {
+      "roleNameRequired": "Rolnaam *",
+      "portal": "Portaal"
+    },
+    "fields": {
+      "roleName": "Rolnaam",
+      "roleNamePlaceholder": "Voer de rolnaam in",
+      "description": "Beschrijving",
+      "descriptionPlaceholder": "Voer de rolbeschrijving in"
+    },
+    "portal": {
+      "none": "Geen",
+      "access": "Portaaltoegang",
+      "msp": "MSP-portaal",
+      "client": "Klantenportaal",
+      "mspShort": "MSP",
+      "clientShort": "Klant",
+      "required": "Een rol moet toegang hebben tot ten minste één portaal"
+    },
+    "actions": {
+      "addRole": "Rol toevoegen",
+      "createRole": "Rol maken"
+    },
+    "createDialog": {
+      "title": "Nieuwe rol maken"
+    },
+    "deleteDialog": {
+      "entityFallback": "deze rol"
+    },
+    "adminDeleteDisabled": "Beheerdersrollen kunnen niet worden verwijderd omdat het systeemrollen zijn",
+    "errors": {
+      "createFailed": "Kan de rol niet maken",
+      "updateFailed": "Kan de rol niet bijwerken",
+      "validateDeletionFailed": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
+      "deleteFailed": "Kan de rol niet verwijderen"
     }
   },
   "security": {
@@ -2875,6 +3052,170 @@
         "confirm": "Verbinding verbreken",
         "cancel": "Annuleren"
       }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Toestemming geweigerd: het team kan niet worden aangemaakt.",
+        "update": "Toestemming geweigerd: het team kan niet worden bijgewerkt.",
+        "modify": "Toestemming geweigerd: het team kan niet worden gewijzigd.",
+        "modifyMembers": "Toestemming geweigerd: teamleden kunnen niet worden gewijzigd.",
+        "view": "Toestemming geweigerd: het team kan niet worden bekeken.",
+        "viewAll": "Toestemming geweigerd: teams kunnen niet worden bekeken.",
+        "assignManager": "Toestemming geweigerd: de teammanager kan niet worden toegewezen."
+      },
+      "notFoundRefresh": "Team niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "leadRequired": "Een team moet een teamleider hebben. Selecteer een teamleider en probeer het opnieuw.",
+      "inactiveUser": "Inactieve gebruikers kunnen niet aan een team worden toegevoegd.",
+      "cannotRemoveLead": "De teamleider kan niet worden verwijderd. Wijs eerst een nieuwe teamleider toe.",
+      "invalidValue": "Een van de geselecteerde teamwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicateMember": "Deze gebruiker is al lid van het team.",
+      "referenceMissing": "De geselecteerde teamleider of het teamlid is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht teamveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht teamveld: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Toestemming geweigerd: u hebt geen rechten om SLA-beleidsregels te bekijken",
+        "create": "Toestemming geweigerd: u hebt geen rechten om SLA-beleidsregels aan te maken",
+        "update": "Toestemming geweigerd: u hebt geen rechten om SLA-beleidsregels bij te werken",
+        "delete": "Toestemming geweigerd: u hebt geen rechten om SLA-beleidsregels te verwijderen"
+      },
+      "policyNotFound": "SLA-beleidsregel niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "targetNotFound": "SLA-beleidsdoel niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "priorityNotFound": "Geselecteerde prioriteit niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "clientNotFound": "Geselecteerde klant niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "boardNotFound": "Geselecteerd bord niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "ticketNotFound": "Ticket niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicateTarget": "Er bestaat al een doel voor deze prioriteit in deze beleidsregel.",
+      "pauseRequiresBoardStatus": "De SLA-pauzeconfiguratie vereist een ticketstatus die bij het bord hoort.",
+      "invalidValue": "Een van de geselecteerde SLA-waarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde SLA-record of de gerelateerde waarde bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze SLA-wijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de SLA-waarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht SLA-veld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht SLA-veld: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Bord niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "userNotFound": "De geselecteerde escalatiemanager is niet gevonden. Vernieuw de pagina en kies een andere gebruiker.",
+      "configNotFound": "Configuratie van de escalatiemanager niet gevonden. Mogelijk is deze al verwijderd.",
+      "recordInvalid": "Een van de geselecteerde records van de escalatiemanager is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde bord of de gebruiker bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er is al een escalatiemanager geconfigureerd voor dit bord en niveau.",
+      "missingField": "Er ontbreekt een verplicht veld van de escalatiemanager.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de escalatiemanager: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde gerelateerde record voor deze status bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "orderInUse": "Dit volgnummer is al in gebruik. Kies een ander volgnummer.",
+      "duplicateName": "Er bestaat al een status met deze naam.",
+      "notAllowed": "Een van de statuswaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht statusveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht statusveld: {{field}}.",
+      "nameRequired": "Statusnaam is verplicht",
+      "nameEmpty": "De statusnaam mag niet leeg zijn",
+      "idRequired": "Status-ID is verplicht",
+      "manageFromBoard": "Ticketstatussen moeten worden beheerd via de bordinstellingen"
+    },
+    "priority": {
+      "notFound": "Prioriteit niet gevonden.",
+      "boardMissing": "Het geselecteerde bord bestaat niet meer.",
+      "duplicate": "Er bestaat al een prioriteit met deze gegevens.",
+      "referenceInvalid": "De geselecteerde prioriteitsverwijzing is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidData": "Ongeldige prioriteitsgegevens opgegeven. Controleer de prioriteitsgegevens.",
+      "missingField": "Er ontbreekt een verplicht prioriteitsveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht prioriteitsveld: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Een van de geselecteerde gebruikers is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde gebruikers bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "readClientInfoPermission": "Toestemming geweigerd: klantgegevens van de gebruiker kunnen niet worden gelezen"
+    },
+    "roles": {
+      "userNotFound": "Gebruiker niet gevonden. Vernieuw de gebruikerslijst en probeer het opnieuw.",
+      "roleNotFound": "Rol niet gevonden. Vernieuw de rollenlijst en probeer het opnieuw.",
+      "portalRoleOnMspUser": "Een klantenportaalrol kan niet aan een MSP-gebruiker worden toegewezen.",
+      "mspRoleOnPortalUser": "Een MSP-rol kan niet aan een gebruiker van het klantenportaal worden toegewezen.",
+      "invalidValue": "Een van de geselecteerde gebruikers- of rolwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde gebruiker of rol bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Die gebruiker heeft de geselecteerde rol al.",
+      "changePermission": "Toestemming geweigerd: u hebt geen rechten om gebruikersrollen te wijzigen.",
+      "missingField": "Er ontbreekt een verplicht veld van de gebruikersrol.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "De tenantcontext ontbreekt. Vernieuw de pagina en probeer het opnieuw.",
+      "notFound": "Secret niet gevonden. Mogelijk is het al verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidName": "Ongeldige tenant- of secretnaam.",
+      "readOnly": "De secretopslag is alleen-lezen in deze omgeving.",
+      "recordInvalid": "Een van de geselecteerde secretrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde secretrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een secret met deze naam.",
+      "missingField": "Er ontbreekt een verplicht secretveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht secretveld: {{field}}.",
+      "permissions": {
+        "create": "Toestemming geweigerd: secrets kunnen niet worden aangemaakt",
+        "update": "Toestemming geweigerd: secrets kunnen niet worden bijgewerkt",
+        "delete": "Toestemming geweigerd: secrets kunnen niet worden verwijderd"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Tenant-ID is verplicht.",
+      "invalidValue": "Een van de geselecteerde tenantinstellingswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de tenantinstellingen.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de tenantinstellingen: {{field}}.",
+      "invalidTimezone": "Ongeldige tijdzone: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Toestemming geweigerd: alleen beheerders kunnen onboardinggegevens wissen.",
+        "update": "Toestemming geweigerd: de instellingen kunnen niet worden bijgewerkt",
+        "enableAiAssistant": "Toestemming geweigerd: de AI-assistent kan niet worden ingeschakeld voor deze tenant"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Systeemsjabloon niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "templateNotFound": "Meldingssjabloon niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "categoryNotFound": "Meldingscategorie niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "subtypeNotFound": "Meldingssubtype niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "notificationNotFound": "Melding niet gevonden. Mogelijk is deze al bijgewerkt of verwijderd.",
+      "recordInvalid": "Een van de geselecteerde meldingsrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde meldingsrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een meldingsinstelling met deze gegevens.",
+      "missingField": "Er ontbreekt een verplicht meldingsveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht meldingsveld: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Rol of recht niet gevonden. Vernieuw de rechtenlijst en probeer het opnieuw.",
+      "ticketNotFound": "Ticket niet gevonden. Vernieuw het ticket en probeer het opnieuw.",
+      "policyNotFound": "Beleidsregel niet gevonden. Vernieuw de beleidslijst en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde rol-, recht- of beleidswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde beveiligingsrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "permissionAlreadyAssigned": "Dat recht is al toegewezen aan deze rol.",
+      "duplicate": "Er bestaat al een beveiligingsrecord met deze gegevens.",
+      "missingField": "Er ontbreekt een verplicht beveiligingsveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht beveiligingsveld: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Toestemming geweigerd: beheerders van het klantenportaal mogen alleen klantenportaalrollen beheren.",
+        "portalUsersOnly": "Toestemming geweigerd: beheerders van het klantenportaal mogen alleen klantenportaalgebruikers beheren.",
+        "portalAdminRequired": "Toestemming geweigerd: beheerderstoegang tot het klantenportaal is vereist.",
+        "otherClientUsers": "Toestemming geweigerd: gebruikers van een andere klant kunnen niet worden beheerd."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Gebruikers van het klantportaal kunnen geen aangepaste domeinen beheren.",
+      "noPermission": "U hebt geen rechten om de instellingen van het klantportaal te beheren.",
+      "required": "Het domein is verplicht.",
+      "length": "Het domein moet tussen 3 en 253 tekens lang zijn.",
+      "charset": "Het domein mag alleen letters, cijfers, koppeltekens en punten bevatten.",
+      "needsDot": "Het domein moet minstens één punt bevatten.",
+      "notCanonicalHost": "Kies een ander domein dan de canonieke host.",
+      "noLeadingTrailingDot": "Het domein mag niet met een punt beginnen of eindigen.",
+      "notApplianceHost": "Kies een ander domein dan de primaire host van dit apparaat. Het aangepaste portaaldomein moet een andere hostnaam zijn die uw reverse proxy hierheen doorstuurt.",
+      "nothingToRetry": "Er is geen mislukte registratie van een aangepast domein om opnieuw te proberen.",
+      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie."
     }
   }
 }

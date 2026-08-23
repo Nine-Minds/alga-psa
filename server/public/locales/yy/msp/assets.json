@@ -1,1494 +1,1524 @@
 {
   "common": {
     "actions": {
-      "add": "55555",
-      "back": "55555",
-      "cancel": "55555",
-      "close": "55555",
-      "copy": "55555",
-      "create": "55555",
-      "delete": "55555",
-      "download": "55555",
-      "edit": "55555",
-      "refresh": "55555",
-      "remove": "55555",
-      "retry": "55555",
-      "save": "55555",
-      "saving": "55555",
-      "search": "55555",
-      "select": "55555",
-      "update": "55555",
-      "view": "55555"
+      "add": "〖Ȧḓḓ ··〗",
+      "back": "〖Ɓȧƈķ ··〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "close": "〖Ƈŀȯşḗ ··〗",
+      "copy": "〖Ƈȯƥẏ ··〗",
+      "create": "〖Ƈřḗȧŧḗ ···〗",
+      "delete": "〖Ḓḗŀḗŧḗ ···〗",
+      "download": "〖Ḓȯẇƞŀȯȧḓ ····〗",
+      "edit": "〖Ḗḓīŧ ··〗",
+      "refresh": "〖Řḗƒřḗşħ ···〗",
+      "remove": "〖Řḗḿȯṽḗ ···〗",
+      "retry": "〖Řḗŧřẏ ··〗",
+      "save": "〖Şȧṽḗ ··〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗",
+      "search": "〖Şḗȧřƈħ ···〗",
+      "select": "〖Şḗŀḗƈŧ ···〗",
+      "update": "〖Ŭƥḓȧŧḗ ···〗",
+      "view": "〖Ṽīḗẇ ··〗"
     },
     "states": {
-      "active": "55555",
-      "inactive": "55555",
-      "loading": "55555",
-      "na": "55555",
-      "none": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+      "loading": "〖Ŀȯȧḓīƞɠ... ····〗",
+      "na": "〖Ƞ/Ȧ ··〗",
+      "none": "〖Ƞȯƞḗ ··〗"
     },
-    "no": "55555",
-    "yes": "55555"
+    "no": "〖Ƞȯ ·〗",
+    "yes": "〖Ẏḗş ··〗"
   },
   "enums": {
     "rmmAgentStatus": {
-      "online": "55555",
-      "offline": "55555",
-      "overdue": "55555",
-      "unknown": "55555"
+      "online": "〖Ȯƞŀīƞḗ ···〗",
+      "offline": "〖Ȯƒƒŀīƞḗ ···〗",
+      "overdue": "〖Ȯṽḗřḓŭḗ ···〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗"
     }
   },
   "assetAlertsSection": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Ȧşşḗŧ Ȧŀḗřŧş Şḗƈŧīȯƞ ········〗",
+    "description": "〖Ḗƞŧḗřƥřīşḗ ȧŀḗřŧ şḗƈŧīȯƞ ẇřȧƥƥḗř ƒȯř ȧşşḗŧ-şƥḗƈīƒīƈ ŘḾḾ ȧŀḗřŧş ȧƞḓ řḗḿḗḓīȧŧīȯƞ ȧƈŧīȯƞş ···································〗"
   },
   "assetCommandPalette": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ƈȯḿḿȧƞḓ Ƥȧŀḗŧŧḗ ······〗",
+    "description": "〖Ƈȯḿḿȧƞḓ ƥȧŀḗŧŧḗ ƒȯř şḗȧřƈħīƞɠ ȧşşḗŧş ȧƞḓ ŀȧŭƞƈħīƞɠ ȧşşḗŧ ȧƈŧīȯƞş ··························〗",
     "register": {
-      "label": "55555",
-      "title": "55555"
+      "label": "〖Ȧşşḗŧ Ƈȯḿḿȧƞḓ Ƥȧŀḗŧŧḗ ·········〗",
+      "title": "〖Ȧşşḗŧ Ƈȯḿḿȧƞḓ Ƥȧŀḗŧŧḗ ·········〗"
     },
     "actions": {
       "createAsset": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ƈřḗȧŧḗ ȧşşḗŧ ·····〗",
+        "description": "〖Ȯƥḗƞ ʠŭīƈķ ȧḓḓ ŧȯ řḗɠīşŧḗř ȧ ƞḗẇ ȧşşḗŧ ················〗"
       },
       "refreshData": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Řḗƒřḗşħ ḓȧŧȧ ·····〗",
+        "description": "〖Řḗ-ƒḗŧƈħ ȧşşḗŧş ƒřȯḿ ŧħḗ şḗřṽḗř ·············〗"
       },
       "reset": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Řḗşḗŧ ··〗",
+        "description": "〖Řḗḿȯṽḗ ȧŀŀ ȧƈŧīṽḗ ƒīŀŧḗřş ȧƞḓ şḗȧřƈħ ŧḗřḿş ·················〗"
       }
     },
-    "searchPlaceholder": "55555",
-    "empty": "55555",
+    "searchPlaceholder": "〖Şḗȧřƈħ ȧşşḗŧş, ƈŀīḗƞŧş, ŧīƈķḗŧş… ·············〗",
+    "empty": "〖Ƞȯ ḿȧŧƈħḗş ẏḗŧ. Ŧřẏ ȧ ḓīƒƒḗřḗƞŧ ķḗẏẇȯřḓ. ················〗",
     "groups": {
-      "quickActions": "55555",
-      "assets": "55555",
-      "hints": "55555"
+      "quickActions": "〖Ɋŭīƈķ ȧƈŧīȯƞş ······〗",
+      "assets": "〖Ȧşşḗŧş ···〗",
+      "hints": "〖Ħīƞŧş ··〗"
     },
     "hint": {
-      "body": "55555",
-      "badge": "55555"
+      "body": "〖Ķḗḗƥ ŧẏƥīƞɠ ŧȯ şḗȧřƈħ ȧƈřȯşş ŧħḗ ƒŭŀŀ ȧşşḗŧ ŀīşŧ. Ŧīƈķḗŧş ȧƞḓ ƈŀīḗƞŧ ŀȯȯķŭƥ ẇīŀŀ ȧřřīṽḗ īƞ ȧ ŀȧŧḗř ḓřȯƥ. ··········································〗",
+      "badge": "〖Ƈȯḿīƞɠ şȯȯƞ ·····〗"
     },
     "values": {
-      "unassigned": "55555"
+      "unassigned": "〖Ŭƞȧşşīɠƞḗḓ ····〗"
     }
   },
   "assetDashboard": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Ȧşşḗŧ Ḓȧşħƀȯȧřḓ ······〗",
+    "description": "〖Ŧȯƥ-ŀḗṽḗŀ ȧşşḗŧ ḓȧşħƀȯȧřḓ ẇřȧƥƥḗř ŧħȧŧ řḗƞḓḗřş ŧħḗ ƈŀīḗƞŧ ȧşşḗŧ ḗẋƥḗřīḗƞƈḗ ······························〗"
   },
   "assetDashboardClient": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ȧşşḗŧ Ḓȧşħƀȯȧřḓ Ƈŀīḗƞŧ ·········〗",
+    "description": "〖Ḿȧīƞ ȧşşḗŧ ŀīşŧ ƥȧɠḗ ẇīŧħ ƒīŀŧḗřş, ŧȧƀŀḗ ȧƞḓ ɠřīḓ ṽīḗẇş, ƀŭŀķ ȧƈŧīȯƞş, ȧƞḓ ḓřȧẇḗř ƒŀȯẇş ···································〗",
     "reflection": {
-      "label": "55555"
+      "label": "〖Ȧşşḗŧ Ḓȧşħƀȯȧřḓ ······〗"
     },
     "errors": {
-      "loadDrawerFailed": "55555"
+      "loadDrawerFailed": "〖Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ȧşşḗŧ ḓḗŧȧīŀş řīɠħŧ ƞȯẇ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ·······················〗"
     },
     "details": {
-      "noIp": "55555",
-      "network": "55555",
-      "local": "55555",
-      "noDetails": "55555",
-      "unassigned": "55555"
+      "noIp": "〖Ƞȯ ĪƤ ··〗",
+      "network": "〖Ƞḗŧẇȯřķ ···〗",
+      "local": "〖Ŀȯƈȧŀ ··〗",
+      "noDetails": "〖Ƞȯ ḓḗŧȧīŀş ȧṽȧīŀȧƀŀḗ ········〗",
+      "unassigned": "〖Ŭƞȧşşīɠƞḗḓ ····〗"
     },
     "selection": {
-      "selectAllVisibleAssets": "55555",
-      "selectAsset": "55555 {{name}} 55555",
-      "selectedAssets_one": "55555 {{count}} 55555",
-      "selectedAssets_other": "55555 {{count}} 55555",
-      "clearSelection": "55555",
-      "bulkActionsComingSoon": "55555"
+      "selectAllVisibleAssets": "〖Şḗŀḗƈŧ ȧŀŀ ṽīşīƀŀḗ ȧşşḗŧş ··········〗",
+      "selectAsset": "〖Şḗŀḗƈŧ ȧşşḗŧ {{name}} ·········〗",
+      "selectedAssets_one": "〖{{count}} ȧşşḗŧ şḗŀḗƈŧḗḓ ··········〗",
+      "selectedAssets_other": "〖{{count}} ȧşşḗŧş şḗŀḗƈŧḗḓ ··········〗",
+      "clearSelection": "〖Ƈŀḗȧř şḗŀḗƈŧīȯƞ ······〗",
+      "bulkActionsComingSoon": "〖Ɓŭŀķ ȧƈŧīȯƞş ƈȯḿīƞɠ şȯȯƞ ··········〗"
     },
     "actions": {
-      "openActionsForAsset": "55555 {{name}} 55555",
-      "viewDetails": "55555",
-      "editAsset": "55555",
-      "createTicket": "55555",
-      "refreshData": "55555"
+      "openActionsForAsset": "〖Ȯƥḗƞ ȧƈŧīȯƞş ƒȯř ȧşşḗŧ {{name}} ·············〗",
+      "viewDetails": "〖Ṽīḗẇ ḓḗŧȧīŀş ·····〗",
+      "editAsset": "〖Ḗḓīŧ ȧşşḗŧ ····〗",
+      "createTicket": "〖Ƈřḗȧŧḗ ŧīƈķḗŧ ······〗",
+      "refreshData": "〖Řḗƒřḗşħ ḓȧŧȧ ·····〗"
     },
     "table": {
-      "name": "55555",
-      "tag": "55555",
-      "type": "55555",
-      "details": "55555",
-      "status": "55555",
-      "agent": "55555",
-      "client": "55555",
-      "location": "55555",
-      "actions": "55555",
-      "patching": "55555",
-      "coverage": "55555"
+      "name": "〖Ƞȧḿḗ ··〗",
+      "tag": "〖Ŧȧɠ ··〗",
+      "type": "〖Ŧẏƥḗ ··〗",
+      "details": "〖Ḓḗŧȧīŀş ···〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "agent": "〖Ȧɠḗƞŧ ··〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "location": "〖Ŀȯƈȧŧīȯƞ ····〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗",
+      "patching": "〖Ƥȧŧƈħīƞɠ ····〗",
+      "coverage": "〖Ƈȯṽḗřȧɠḗ ····〗"
     },
     "metrics": {
       "totalAssets": {
-        "title": "55555",
-        "helper": "55555"
+        "title": "〖Ŧȯŧȧŀ Ȧşşḗŧş ·····〗",
+        "helper": "〖Ȧƈřȯşş ȧŀŀ ƈŀīḗƞŧş ········〗"
       },
       "filteredView": {
-        "title": "55555",
-        "helper": "55555"
+        "title": "〖Ƒīŀŧḗřḗḓ ṽīḗẇ ······〗",
+        "helper": "〖Ḿȧŧƈħīƞɠ ȧƈŧīṽḗ ƒīŀŧḗřş ··········〗"
       },
       "automationReady": {
-        "title": "55555",
-        "helper": "55555",
-        "upcoming": "55555 {{count}} 55555",
-        "overdue": "55555 {{count}} 55555"
+        "title": "〖Ȧŭŧȯḿȧŧīȯƞ řḗȧḓẏ ·······〗",
+        "helper": "〖Ȧƈŧīṽḗ ḿȧīƞŧḗƞȧƞƈḗ şƈħḗḓŭŀḗş ············〗",
+        "upcoming": "〖Ŭƥƈȯḿīƞɠ: {{count}} ········〗",
+        "overdue": "〖Ȯṽḗřḓŭḗ: {{count}} ········〗"
       },
       "activeSchedules": {
-        "title": "55555",
-        "helper": "55555"
+        "title": "〖Ȧƈŧīṽḗ Şƈħḗḓŭŀḗş ·······〗",
+        "helper": "〖Ŀīƒḗƈẏƈŀḗ ȧŭŧȯḿȧŧīȯƞ ········〗"
       },
       "overdueMaintenance": {
-        "title": "55555",
-        "helper": "55555"
+        "title": "〖Ḿȧīƞŧḗƞȧƞƈḗ Ȯṽḗřḓŭḗ ········〗",
+        "helper": "〖Ƞḗḗḓş ȧŧŧḗƞŧīȯƞ ······〗"
       },
       "upcomingMaintenance": {
-        "title": "55555",
-        "helper": "55555"
+        "title": "〖Ŭƥƈȯḿīƞɠ Ḿȧīƞŧḗƞȧƞƈḗ ········〗",
+        "helper": "〖Ƞḗẋŧ 30 ḓȧẏş ·····〗"
       }
     },
     "filters": {
-      "searchPlaceholder": "55555",
-      "reset": "55555",
-      "status": "55555",
-      "type": "55555",
-      "agent": "55555",
-      "columns": "55555",
+      "searchPlaceholder": "〖Şḗȧřƈħ ƀẏ ƞȧḿḗ, ŧȧɠ, ȯř şḗřīȧŀ ƞŭḿƀḗř ···············〗",
+      "reset": "〖Řḗşḗŧ ··〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "type": "〖Ŧẏƥḗ ··〗",
+      "agent": "〖Ȧɠḗƞŧ ··〗",
+      "columns": "〖Ƈȯŀŭḿƞş ···〗",
       "client": {
-        "loading": "55555",
-        "placeholder": "55555",
-        "clear": "55555"
+        "loading": "〖Ŀȯȧḓīƞɠ ƈŀīḗƞŧş… ·······〗",
+        "placeholder": "〖Ƈŀīḗƞŧ ···〗",
+        "clear": "〖Ƈŀḗȧř ƈŀīḗƞŧ ƒīŀŧḗř ········〗"
       },
       "rmmManaged": {
-        "managed": "55555",
-        "unmanaged": "55555"
+        "managed": "〖ŘḾḾ Ḿȧƞȧɠḗḓ ·····〗",
+        "unmanaged": "〖Ƞȯŧ Ḿȧƞȧɠḗḓ ·····〗"
       }
     },
     "activeFilters": {
-      "status": "55555 {{value}} 55555",
-      "type": "55555 {{value}} 55555",
-      "client": "55555 {{value}} 55555",
-      "agent": "55555 {{value}} 55555"
+      "status": "〖Şŧȧŧŭş: {{value}} ·······〗",
+      "type": "〖Ŧẏƥḗ: {{value}} ······〗",
+      "client": "〖Ƈŀīḗƞŧ: {{value}} ·······〗",
+      "agent": "〖Ȧɠḗƞŧ: {{value}} ·······〗"
     },
     "statuses": {
-      "active": "55555",
-      "inactive": "55555",
-      "maintenance": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗"
     },
     "types": {
-      "workstation": "55555",
-      "server": "55555",
-      "network_device": "55555",
-      "mobile_device": "55555",
-      "printer": "55555"
+      "workstation": "〖Ẇȯřķşŧȧŧīȯƞ ·····〗",
+      "server": "〖Şḗřṽḗř ···〗",
+      "network_device": "〖Ƞḗŧẇȯřķ Ḓḗṽīƈḗ ······〗",
+      "mobile_device": "〖Ḿȯƀīŀḗ Ḓḗṽīƈḗ ······〗",
+      "printer": "〖Ƥřīƞŧḗř ···〗"
     },
     "columns": {
-      "select": "55555",
-      "name": "55555",
-      "asset_tag": "55555",
-      "asset_type": "55555",
-      "details": "55555",
-      "status": "55555",
-      "agent_status": "55555",
-      "client_name": "55555",
-      "location": "55555",
-      "actions": "55555"
+      "select": "〖şḗŀḗƈŧ ···〗",
+      "name": "〖ƞȧḿḗ ··〗",
+      "asset_tag": "〖ȧşşḗŧ ŧȧɠ ····〗",
+      "asset_type": "〖ȧşşḗŧ ŧẏƥḗ ····〗",
+      "details": "〖ḓḗŧȧīŀş ···〗",
+      "status": "〖şŧȧŧŭş ···〗",
+      "agent_status": "〖ȧɠḗƞŧ şŧȧŧŭş ·····〗",
+      "client_name": "〖ƈŀīḗƞŧ ƞȧḿḗ ·····〗",
+      "location": "〖ŀȯƈȧŧīȯƞ ····〗",
+      "actions": "〖ȧƈŧīȯƞş ···〗"
     },
     "print": {
-      "title": "55555",
-      "selectedTitle": "55555",
-      "subtitle": "55555 {{count}} 55555",
-      "noAssets": "55555",
-      "emptyValue": "55555",
+      "title": "〖Ȧşşḗŧş ···〗",
+      "selectedTitle": "〖Şḗŀḗƈŧḗḓ Ȧşşḗŧş ······〗",
+      "subtitle": "〖{{count}} ȧşşḗŧş ·······〗",
+      "noAssets": "〖Ƞȯ ȧşşḗŧş ŧȯ ƥřīƞŧ ········〗",
+      "emptyValue": "〖- ·〗",
       "columns": {
-        "name": "55555",
-        "tag": "55555",
-        "type": "55555",
-        "status": "55555",
-        "client": "55555",
-        "location": "55555"
+        "name": "〖Ƞȧḿḗ ··〗",
+        "tag": "〖Ŧȧɠ ··〗",
+        "type": "〖Ŧẏƥḗ ··〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "client": "〖Ƈŀīḗƞŧ ···〗",
+        "location": "〖Ŀȯƈȧŧīȯƞ ····〗"
       },
       "optionsDialog": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Ƥřīƞŧ ȯƥŧīȯƞş ······〗",
+        "description": "〖Ƈħȯȯşḗ ẇħīƈħ ƈȯŀŭḿƞş ŧȯ īƞƈŀŭḓḗ ẇħḗƞ ƥřīƞŧīƞɠ ȧşşḗŧş. ······················〗"
       }
     },
     "bulk": {
       "actionBar": {
-        "clear": "55555",
-        "delete": "55555",
-        "selectedCount": "55555 {{count}} 55555",
-        "setLocation": "55555",
-        "setStatus": "55555"
+        "clear": "〖Ƈŀḗȧř ··〗",
+        "delete": "〖Ḓḗŀḗŧḗ ···〗",
+        "selectedCount": "〖{{count}} şḗŀḗƈŧḗḓ ········〗",
+        "setLocation": "〖Şḗŧ ŀȯƈȧŧīȯƞ ·····〗",
+        "setStatus": "〖Şḗŧ şŧȧŧŭş ····〗"
       },
       "actions": {
-        "apply": "55555",
-        "applying": "55555",
-        "deleteAssets": "55555",
-        "deleting": "55555",
-        "updateLocation": "55555",
-        "updateStatus": "55555"
+        "apply": "〖Ȧƥƥŀẏ ··〗",
+        "applying": "〖Ȧƥƥŀẏīƞɠ... ·····〗",
+        "deleteAssets": "〖Ḓḗŀḗŧḗ ···〗",
+        "deleting": "〖Ḓḗŀḗŧīƞɠ... ·····〗",
+        "updateLocation": "〖Ŀȯƈȧŧīȯƞ ŭƥḓȧŧḗ ······〗",
+        "updateStatus": "〖Şŧȧŧŭş ŭƥḓȧŧḗ ······〗"
       },
       "deleteDialog": {
-        "description": "55555 {{count}} 55555",
-        "title": "55555"
+        "description": "〖Ḓḗŀḗŧḗ {{count}} şḗŀḗƈŧḗḓ ȧşşḗŧ(ş). Ȧşşḗŧş ẇīŧħ ḓḗƥḗƞḓḗƞƈīḗş ḿȧẏ ƀḗ şķīƥƥḗḓ. ·······························〗",
+        "title": "〖Ḓḗŀḗŧḗ şḗŀḗƈŧḗḓ ȧşşḗŧş ·········〗"
       },
       "errors": {
-        "deleteFailed": "55555",
-        "updateLocationFailed": "55555",
-        "updateStatusFailed": "55555"
+        "deleteFailed": "〖Ŭƞȧƀŀḗ ŧȯ ḓḗŀḗŧḗ şḗŀḗƈŧḗḓ ȧşşḗŧş. ··············〗",
+        "updateLocationFailed": "〖Ŭƞȧƀŀḗ ŧȯ ŭƥḓȧŧḗ şḗŀḗƈŧḗḓ ȧşşḗŧ ŀȯƈȧŧīȯƞş. ·················〗",
+        "updateStatusFailed": "〖Ŭƞȧƀŀḗ ŧȯ ŭƥḓȧŧḗ şḗŀḗƈŧḗḓ ȧşşḗŧş. ··············〗"
       },
       "locationDialog": {
-        "clearLocation": "55555",
-        "customLocation": "55555",
-        "customPlaceholder": "55555",
-        "description": "55555 {{count}} 55555",
-        "loadingLocations": "55555",
-        "savedDisabled": "55555",
-        "savedLocation": "55555",
-        "selectLocation": "55555",
-        "title": "55555"
+        "clearLocation": "〖Ƈŀḗȧř ŀȯƈȧŧīȯƞ ······〗",
+        "customLocation": "〖Ƈŭşŧȯḿ ŀȯƈȧŧīȯƞ ······〗",
+        "customPlaceholder": "〖Ḗƞŧḗř ȧ ƈŭşŧȯḿ ŀȯƈȧŧīȯƞ ȯř ȧřḗȧ ·············〗",
+        "description": "〖Ŭƥḓȧŧḗ {{count}} şḗŀḗƈŧḗḓ ȧşşḗŧ(ş). ··············〗",
+        "loadingLocations": "〖Ŀȯȧḓīƞɠ ŀȯƈȧŧīȯƞş... ········〗",
+        "savedDisabled": "〖Şȧṽḗḓ ƈŀīḗƞŧ ŀȯƈȧŧīȯƞş ȧřḗ ȧṽȧīŀȧƀŀḗ ȯƞŀẏ ẇħḗƞ ȧŀŀ şḗŀḗƈŧḗḓ ȧşşḗŧş ȧřḗ ṽīşīƀŀḗ ȧƞḓ ƀḗŀȯƞɠ ŧȯ ȯƞḗ ƈŀīḗƞŧ. ··········································〗",
+        "savedLocation": "〖Şȧṽḗḓ ƈŀīḗƞŧ ŀȯƈȧŧīȯƞ ·········〗",
+        "selectLocation": "〖Şḗŀḗƈŧ ŀȯƈȧŧīȯƞ ······〗",
+        "title": "〖Şḗŧ ȧşşḗŧ ŀȯƈȧŧīȯƞ ········〗"
       },
-      "partialFailure": "55555 {{action}} 55555 {{succeeded}} 55555 {{failed}} 55555",
+      "partialFailure": "〖{{action}} ƈȯḿƥŀḗŧḗḓ ƒȯř {{succeeded}} ȧşşḗŧ(ş); {{failed}} ƒȧīŀḗḓ. ···························〗",
       "statusDialog": {
-        "description": "55555 {{count}} 55555",
-        "title": "55555"
+        "description": "〖Ŭƥḓȧŧḗ {{count}} şḗŀḗƈŧḗḓ ȧşşḗŧ(ş). ··············〗",
+        "title": "〖Şḗŧ ȧşşḗŧ şŧȧŧŭş ·······〗"
       },
-      "success": "55555 {{action}} 55555 {{count}} 55555"
+      "success": "〖{{action}} ƈȯḿƥŀḗŧḗḓ ƒȯř {{count}} ȧşşḗŧ(ş). ··················〗"
     }
   },
   "assetDashboardGrid": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Ȧşşḗŧ Ḓȧşħƀȯȧřḓ Ɠřīḓ ········〗",
+    "description": "〖Ƈȯḿƥȯşīŧḗ ɠřīḓ ŀȧẏȯŭŧ ƒȯř ȧşşḗŧ ḓḗŧȧīŀ ƈȧřḓş, ŘḾḾ ƥȧƞḗŀş, ȧƞḓ řḗŀȧŧḗḓ şŧȧŧŭş ẇīḓɠḗŧş ··································〗"
   },
   "assetDetailDrawer": {
-    "title": "55555",
-    "description": "55555",
-    "label": "55555",
+    "title": "〖Ȧşşḗŧ Ḓḗŧȧīŀ Ḓřȧẇḗř ········〗",
+    "description": "〖Ḓřȧẇḗř-ƀȧşḗḓ ȧşşḗŧ ʠŭīƈķ ṽīḗẇ ẇīŧħ ȧƈŧīȯƞş, şŭḿḿȧřẏ ḓȧŧȧ, ȧƞḓ ƞȧṽīɠȧŧīȯƞ īƞŧȯ ŧħḗ ƒŭŀŀ řḗƈȯřḓ ······································〗",
+    "label": "〖Ȧşşḗŧ Ḓḗŧȧīŀ Ḓřȧẇḗř ········〗",
     "header": {
-      "title": "55555",
-      "subtitle": "55555"
+      "title": "〖Ȧşşḗŧ ḓḗŧȧīŀş ······〗",
+      "subtitle": "〖Şŧȧẏ īƞ ƈȯƞŧḗẋŧ ẇħīŀḗ řḗṽīḗẇīƞɠ ŀīƒḗƈẏƈŀḗ ȧƞḓ ƈȯƞƒīɠŭřȧŧīȯƞ ························〗"
     },
     "tabs": {
-      "overview": "55555",
-      "maintenance": "55555",
-      "tickets": "55555",
-      "configuration": "55555",
-      "documents": "55555"
+      "overview": "〖Ȯṽḗřṽīḗẇ ····〗",
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗",
+      "tickets": "〖Ŧīƈķḗŧş ···〗",
+      "configuration": "〖Ƈȯƞƒīɠŭřȧŧīȯƞ ······〗",
+      "documents": "〖Ḓȯƈŭḿḗƞŧş ····〗"
     },
     "helper": {
-      "awaitingSelection": "55555",
-      "selectedAsset": "55555 {{name}} 55555 {{tab}} 55555"
+      "awaitingSelection": "〖Ȧẇȧīŧīƞɠ ȧşşḗŧ şḗŀḗƈŧīȯƞ ··········〗",
+      "selectedAsset": "〖{{name}} • {{tab}} ········〗"
     },
     "statuses": {
-      "active": "55555",
-      "inactive": "55555",
-      "maintenance": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗"
     },
     "empty": {
-      "selectAsset": "55555",
-      "nothingToDisplay": "55555"
+      "selectAsset": "〖Şḗŀḗƈŧ ȧƞ ȧşşḗŧ ŧȯ ṽīḗẇ ḓḗŧȧīŀş ·············〗",
+      "nothingToDisplay": "〖Ƞȯŧħīƞɠ ŧȯ ḓīşƥŀȧẏ ········〗"
     },
     "actions": {
-      "openAssetRecord": "55555",
-      "delete": "55555"
+      "openAssetRecord": "〖Ȯƥḗƞ ȧşşḗŧ řḗƈȯřḓ ·······〗",
+      "delete": "〖Ḓḗŀḗŧḗ ···〗"
     },
     "overview": {
-      "assetTag": "55555 {{tag}} 55555 {{type}} 55555",
-      "client": "55555 {{name}} 55555",
-      "activeSchedules": "55555",
-      "upcomingMaintenance": "55555",
-      "nextOn": "55555 {{date}} 55555",
-      "completedMaintenance": "55555",
-      "compliance": "55555 {{percent}} 55555",
-      "lastMaintenance": "55555",
-      "noHistory": "55555",
-      "maintenanceDataPending": "55555",
-      "assetSummary": "55555",
-      "recentLifecycleEvents": "55555"
+      "assetTag": "〖Ȧşşḗŧ ŧȧɠ {{tag}} • {{type}} ············〗",
+      "client": "〖Ƈŀīḗƞŧ: {{name}} ·······〗",
+      "activeSchedules": "〖Ȧƈŧīṽḗ Şƈħḗḓŭŀḗş ·······〗",
+      "upcomingMaintenance": "〖Ŭƥƈȯḿīƞɠ Ḿȧīƞŧḗƞȧƞƈḗ ········〗",
+      "nextOn": "〖Ƞḗẋŧ ȯƞ {{date}} ·······〗",
+      "completedMaintenance": "〖Ƈȯḿƥŀḗŧḗḓ Ḿȧīƞŧḗƞȧƞƈḗ ·········〗",
+      "compliance": "〖Ƈȯḿƥŀīȧƞƈḗ {{percent}}% ··········〗",
+      "lastMaintenance": "〖Ŀȧşŧ Ḿȧīƞŧḗƞȧƞƈḗ ·······〗",
+      "noHistory": "〖Ƞȯ ħīşŧȯřẏ ····〗",
+      "maintenanceDataPending": "〖Ḿȧīƞŧḗƞȧƞƈḗ ḓȧŧȧ ẇīŀŀ ȧƥƥḗȧř ȯƞƈḗ şƈħḗḓŭŀḗş ȧřḗ ƈȯƞƒīɠŭřḗḓ. ························〗",
+      "assetSummary": "〖Ȧşşḗŧ şŭḿḿȧřẏ ······〗",
+      "recentLifecycleEvents": "〖Řḗƈḗƞŧ ŀīƒḗƈẏƈŀḗ ḗṽḗƞŧş ··········〗"
     },
     "maintenance": {
-      "noSchedules": "55555",
-      "totalSchedules": "55555",
-      "active": "55555",
-      "complianceRate": "55555",
-      "history": "55555",
-      "loggedBy": "55555 {{name}} 55555",
-      "system": "55555",
-      "noLogs": "55555"
+      "noSchedules": "〖Ƞȯ ḿȧīƞŧḗƞȧƞƈḗ şƈħḗḓŭŀḗş ƒȯŭƞḓ ƒȯř ŧħīş ȧşşḗŧ ẏḗŧ. ····················〗",
+      "totalSchedules": "〖Ŧȯŧȧŀ Şƈħḗḓŭŀḗş ······〗",
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "complianceRate": "〖Ƈȯḿƥŀīȧƞƈḗ Řȧŧḗ ······〗",
+      "history": "〖Ḿȧīƞŧḗƞȧƞƈḗ ħīşŧȯřẏ ········〗",
+      "loggedBy": "〖Ŀȯɠɠḗḓ ƀẏ {{name}} ········〗",
+      "system": "〖şẏşŧḗḿ ···〗",
+      "noLogs": "〖Ḿȧīƞŧḗƞȧƞƈḗ ŀȯɠş ẇīŀŀ ȧƥƥḗȧř ħḗřḗ ȧƒŧḗř ŧħḗ ƒīřşŧ şḗřṽīƈḗ ḗƞŧřẏ. ··························〗"
     },
     "tickets": {
-      "empty": "55555",
-      "linked": "55555 {{date}} 55555",
-      "client": "55555 {{name}} 55555",
-      "assignee": "55555 {{name}} 55555",
-      "openTicket": "55555"
+      "empty": "〖Ƞȯ ŧīƈķḗŧş ŀīƞķḗḓ ŧȯ ŧħīş ȧşşḗŧ ẏḗŧ. Ŭşḗ ŧħḗ ʠŭīƈķ ȧƈŧīȯƞ ŧȯ ƈřḗȧŧḗ ȯƞḗ. ·····························〗",
+      "linked": "〖Ŀīƞķḗḓ {{date}} ······〗",
+      "client": "〖Ƈŀīḗƞŧ: {{name}} ·······〗",
+      "assignee": "〖Ȧşşīɠƞḗḗ: {{name}} ········〗",
+      "openTicket": "〖Ȯƥḗƞ ŧīƈķḗŧ ·····〗"
     },
     "configuration": {
-      "coreAttributes": "55555",
-      "serialNumber": "55555",
-      "location": "55555",
-      "purchaseDate": "55555",
-      "warrantyEnd": "55555",
-      "notProvided": "55555"
+      "coreAttributes": "〖Ƈȯřḗ ȧŧŧřīƀŭŧḗş ······〗",
+      "serialNumber": "〖Şḗřīȧŀ ƞŭḿƀḗř ······〗",
+      "location": "〖Ŀȯƈȧŧīȯƞ ····〗",
+      "purchaseDate": "〖Ƥŭřƈħȧşḗ ḓȧŧḗ ······〗",
+      "warrantyEnd": "〖Ẇȧřřȧƞŧẏ ḗƞḓ ·····〗",
+      "notProvided": "〖Ƞȯŧ ƥřȯṽīḓḗḓ ·····〗"
     },
     "info": {
-      "client": "55555",
-      "unassigned": "55555",
-      "assetTag": "55555",
-      "status": "55555",
-      "created": "55555",
-      "updated": "55555",
-      "tenant": "55555"
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "unassigned": "〖Ŭƞȧşşīɠƞḗḓ ····〗",
+      "assetTag": "〖Ȧşşḗŧ ŧȧɠ ····〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "created": "〖Ƈřḗȧŧḗḓ ···〗",
+      "updated": "〖Ŭƥḓȧŧḗḓ ···〗",
+      "tenant": "〖Ŧḗƞȧƞŧ ···〗"
     },
     "typeDetails": {
-      "workstation": "55555",
-      "networkDevice": "55555",
-      "server": "55555",
-      "mobileDevice": "55555",
-      "printer": "55555",
-      "operatingSystem": "55555",
-      "cpu": "55555",
-      "ram": "55555",
-      "storage": "55555",
-      "gpu": "55555",
-      "notProvided": "55555",
-      "never": "55555",
-      "deviceType": "55555",
-      "managementIp": "55555",
-      "portCount": "55555",
-      "firmwareVersion": "55555",
-      "poeSupport": "55555",
-      "powerDraw": "55555",
-      "virtualized": "55555",
-      "primaryIp": "55555",
-      "hypervisor": "55555",
-      "os": "55555",
-      "model": "55555",
-      "imei": "55555",
-      "phoneNumber": "55555",
-      "carrier": "55555",
-      "lastLogin": "55555",
-      "lastCheckIn": "55555",
-      "notReported": "55555",
-      "networkPrinter": "55555",
-      "ipAddress": "55555",
-      "supportsColor": "55555",
-      "supportsDuplex": "55555",
-      "monthlyDutyCycle": "55555",
-      "monthlyDutyCycleValue": "55555 {{count}} 55555"
+      "workstation": "〖Ẇȯřķşŧȧŧīȯƞ ḓḗŧȧīŀş ········〗",
+      "networkDevice": "〖Ƞḗŧẇȯřķ ḓḗṽīƈḗ ḓḗŧȧīŀş ·········〗",
+      "server": "〖Şḗřṽḗř ḓḗŧȧīŀş ······〗",
+      "mobileDevice": "〖Ḿȯƀīŀḗ ḓḗṽīƈḗ ḓḗŧȧīŀş ·········〗",
+      "printer": "〖Ƥřīƞŧḗř ḓḗŧȧīŀş ······〗",
+      "operatingSystem": "〖Ȯƥḗřȧŧīƞɠ şẏşŧḗḿ ·······〗",
+      "cpu": "〖ƇƤŬ ··〗",
+      "ram": "〖ŘȦḾ ··〗",
+      "storage": "〖Şŧȯřȧɠḗ ···〗",
+      "gpu": "〖ƓƤŬ ··〗",
+      "notProvided": "〖Ƞȯŧ ƥřȯṽīḓḗḓ ·····〗",
+      "never": "〖Ƞḗṽḗř ··〗",
+      "deviceType": "〖Ḓḗṽīƈḗ ŧẏƥḗ ·····〗",
+      "managementIp": "〖Ḿȧƞȧɠḗḿḗƞŧ ĪƤ ······〗",
+      "portCount": "〖Ƥȯřŧ ƈȯŭƞŧ ····〗",
+      "firmwareVersion": "〖Ƒīřḿẇȧřḗ ṽḗřşīȯƞ ·······〗",
+      "poeSupport": "〖ƤȯḖ şŭƥƥȯřŧ ·····〗",
+      "powerDraw": "〖Ƥȯẇḗř ḓřȧẇ ····〗",
+      "virtualized": "〖Ṽīřŧŭȧŀīẑḗḓ ·····〗",
+      "primaryIp": "〖Ƥřīḿȧřẏ ĪƤ ····〗",
+      "hypervisor": "〖Ħẏƥḗřṽīşȯř ····〗",
+      "os": "〖ȮŞ ·〗",
+      "model": "〖Ḿȯḓḗŀ ··〗",
+      "imei": "〖ĪḾḖĪ ··〗",
+      "phoneNumber": "〖Ƥħȯƞḗ ƞŭḿƀḗř ·····〗",
+      "carrier": "〖Ƈȧřřīḗř ···〗",
+      "lastLogin": "〖Ŀȧşŧ ŀȯɠīƞ ····〗",
+      "lastCheckIn": "〖Ŀȧşŧ ƈħḗƈķ-īƞ ······〗",
+      "notReported": "〖Ƞȯŧ řḗƥȯřŧḗḓ ·····〗",
+      "networkPrinter": "〖Ƞḗŧẇȯřķ ƥřīƞŧḗř ······〗",
+      "ipAddress": "〖ĪƤ ȧḓḓřḗşş ····〗",
+      "supportsColor": "〖Şŭƥƥȯřŧş ƈȯŀȯř ······〗",
+      "supportsDuplex": "〖Şŭƥƥȯřŧş ḓŭƥŀḗẋ ······〗",
+      "monthlyDutyCycle": "〖Ḿȯƞŧħŀẏ ḓŭŧẏ ƈẏƈŀḗ ········〗",
+      "monthlyDutyCycleValue": "〖{{count}} ƥȧɠḗş ······〗"
     },
     "relative": {
-      "momentsAgo": "55555",
-      "minutesAgo_one": "55555 {{count}} 55555",
-      "minutesAgo_other": "55555 {{count}} 55555",
-      "hoursAgo_one": "55555 {{count}} 55555",
-      "hoursAgo_other": "55555 {{count}} 55555",
-      "daysAgo_one": "55555 {{count}} 55555",
-      "daysAgo_other": "55555 {{count}} 55555"
+      "momentsAgo": "〖ḿȯḿḗƞŧş ȧɠȯ ·····〗",
+      "minutesAgo_one": "〖{{count}} ḿīƞŭŧḗ ȧɠȯ ········〗",
+      "minutesAgo_other": "〖{{count}} ḿīƞŭŧḗş ȧɠȯ ·········〗",
+      "hoursAgo_one": "〖{{count}} ħȯŭř ȧɠȯ ········〗",
+      "hoursAgo_other": "〖{{count}} ħȯŭřş ȧɠȯ ········〗",
+      "daysAgo_one": "〖{{count}} ḓȧẏ ȧɠȯ ·······〗",
+      "daysAgo_other": "〖{{count}} ḓȧẏş ȧɠȯ ········〗"
     }
   },
   "assetDetailHeader": {
-    "title": "55555",
-    "description": "55555",
-    "backToAssets": "55555",
-    "assetTag": "55555 {{tag}} 55555",
+    "title": "〖Ȧşşḗŧ Ḓḗŧȧīŀ Ħḗȧḓḗř ········〗",
+    "description": "〖Ħḗȧḓḗř ƈħřȯḿḗ ƒȯř ŧħḗ ȧşşḗŧ ḓḗŧȧīŀ ḗẋƥḗřīḗƞƈḗ īƞƈŀŭḓīƞɠ īḓḗƞŧīŧẏ, ƀȧḓɠḗş, ȧƞḓ řḗƒřḗşħ ȧƈŧīȯƞş ······································〗",
+    "backToAssets": "〖Ɓȧƈķ ŧȯ Ȧşşḗŧş ······〗",
+    "assetTag": "〖Ȧşşḗŧ Ŧȧɠ: {{tag}} ········〗",
     "actions": {
-      "createTicket": "55555",
-      "menu": "55555",
-      "refreshing": "55555",
-      "refreshData": "55555",
-      "rebootDevice": "55555",
-      "editAsset": "55555",
-      "deleteAsset": "55555"
+      "createTicket": "〖Ƈřḗȧŧḗ Ŧīƈķḗŧ ······〗",
+      "menu": "〖Ȧƈŧīȯƞş ···〗",
+      "refreshing": "〖Řḗƒřḗşħīƞɠ... ······〗",
+      "refreshData": "〖Řḗƒřḗşħ Ḓȧŧȧ ·····〗",
+      "rebootDevice": "〖Řḗƀȯȯŧ Ḓḗṽīƈḗ ······〗",
+      "editAsset": "〖Ḗḓīŧ Ȧşşḗŧ ····〗",
+      "deleteAsset": "〖Ḓḗŀḗŧḗ Ȧşşḗŧ ·····〗"
     },
     "values": {
-      "unknownClient": "55555"
+      "unknownClient": "〖Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ ······〗"
     }
   },
   "assetDetailTabs": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ȧşşḗŧ Ḓḗŧȧīŀ Ŧȧƀş ·······〗",
+    "description": "〖Ŧȧƀƀḗḓ ȧşşḗŧ ḓḗŧȧīŀ ƞȧṽīɠȧŧīȯƞ ƒȯř ȯṽḗřṽīḗẇ, ḿȧīƞŧḗƞȧƞƈḗ, ḓȯƈŭḿḗƞŧş, ħīşŧȯřẏ, ȧƞḓ řḗŀȧŧḗḓ řḗƈȯřḓş ·······································〗",
     "tabs": {
-      "serviceHistory": "55555",
-      "software": "55555",
-      "maintenance": "55555",
-      "relatedAssets": "55555",
-      "documentsPasswords": "55555",
-      "timeline": "55555"
+      "serviceHistory": "〖Şḗřṽīƈḗ Ħīşŧȯřẏ ······〗",
+      "software": "〖Şȯƒŧẇȧřḗ ····〗",
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗",
+      "relatedAssets": "〖Řḗŀȧŧḗḓ Ȧşşḗŧş ······〗",
+      "documentsPasswords": "〖Ḓȯƈŭḿḗƞŧş & Ƥȧşşẇȯřḓş ·········〗",
+      "timeline": "〖Ŧīḿḗŀīƞḗ ····〗"
     }
   },
   "assetDetailView": {
-    "title": "55555",
-    "description": "55555",
-    "loading": "55555",
+    "title": "〖Ȧşşḗŧ Ḓḗŧȧīŀ Ṽīḗẇ ·······〗",
+    "description": "〖Ȧşşḗŧ ḓḗŧȧīŀ ƈȯḿƥȯşīŧīȯƞ ẇīŧħ ŀȯȧḓīƞɠ, ḗřřȯř, ḿḗŧřīƈş, ɠřīḓ ƥȧƞḗŀş, ȧƞḓ ḓḗŧȧīŀ ŧȧƀş ··································〗",
+    "loading": "〖Ŀȯȧḓīƞɠ ȧşşḗŧ ḓḗŧȧīŀş... ··········〗",
     "errors": {
-      "title": "55555",
-      "notFound": "55555"
+      "title": "〖Ḗřřȯř ··〗",
+      "notFound": "〖Ȧşşḗŧ ƞȯŧ ƒȯŭƞḓ ȯř ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ṽīḗẇ īŧ. ·······················〗"
     },
     "fields": {
-      "assetTag": "55555",
-      "serialNumber": "55555",
-      "assetType": "55555",
-      "client": "55555",
-      "status": "55555",
-      "location": "55555"
+      "assetTag": "〖Ȧşşḗŧ Ŧȧɠ ····〗",
+      "serialNumber": "〖Şḗřīȧŀ Ƞŭḿƀḗř ······〗",
+      "assetType": "〖Ŧẏƥḗ ··〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "location": "〖Ŀȯƈȧŧīȯƞ ····〗"
     }
   },
   "assetDetails": {
-    "title": "55555",
-    "description": "55555",
-    "assetTag": "55555 {{tag}} 55555",
+    "title": "〖Ȧşşḗŧ Ḓḗŧȧīŀş ······〗",
+    "description": "〖Ƒŭŀŀ ȧşşḗŧ ḓḗŧȧīŀş ƥȧɠḗ ẇīŧħ şŭḿḿȧřẏ ƈȧřḓş, ȧşşȯƈīȧŧīȯƞş, ḓȯƈŭḿḗƞŧş, ȧƞḓ ȯƥḗřȧŧīȯƞȧŀ ȧƈŧīȯƞş ·····································〗",
+    "assetTag": "〖Ȧşşḗŧ Ŧȧɠ: {{tag}} ········〗",
     "loading": {
-      "details": "55555"
+      "details": "〖Ŀȯȧḓīƞɠ ḓḗŧȧīŀş... ········〗"
     },
     "fields": {
-      "status": "55555",
-      "serialNumber": "55555",
-      "location": "55555",
-      "client": "55555",
-      "purchaseDate": "55555",
-      "warrantyEnd": "55555",
-      "cpu": "55555",
-      "ram": "55555",
-      "storage": "55555",
-      "gpu": "55555",
-      "lastLogin": "55555",
-      "managementIp": "55555",
-      "portCount": "55555",
-      "powerDraw": "55555",
-      "firmwareVersion": "55555",
-      "poeSupport": "55555",
-      "type": "55555",
-      "hypervisor": "55555",
-      "primaryIp": "55555",
-      "operatingSystem": "55555",
-      "imei": "55555",
-      "phoneNumber": "55555",
-      "carrier": "55555",
-      "supervisionStatus": "55555",
-      "ipAddress": "55555",
-      "networkPrinter": "55555",
-      "colorSupport": "55555",
-      "duplexSupport": "55555",
-      "monthlyDutyCycle": "55555"
+      "status": "〖Şŧȧŧŭş ···〗",
+      "serialNumber": "〖Şḗřīȧŀ Ƞŭḿƀḗř ······〗",
+      "location": "〖Ŀȯƈȧŧīȯƞ ····〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "purchaseDate": "〖Ƥŭřƈħȧşḗ Ḓȧŧḗ ······〗",
+      "warrantyEnd": "〖Ẇȧřřȧƞŧẏ Ḗƞḓ ·····〗",
+      "cpu": "〖ƇƤŬ ··〗",
+      "ram": "〖ŘȦḾ ··〗",
+      "storage": "〖Şŧȯřȧɠḗ ···〗",
+      "gpu": "〖ƓƤŬ ··〗",
+      "lastLogin": "〖Ŀȧşŧ Ŀȯɠīƞ ····〗",
+      "managementIp": "〖Ḿȧƞȧɠḗḿḗƞŧ ĪƤ ······〗",
+      "portCount": "〖Ƥȯřŧ Ƈȯŭƞŧ ····〗",
+      "powerDraw": "〖Ƥȯẇḗř Ḓřȧẇ ····〗",
+      "firmwareVersion": "〖Ƒīřḿẇȧřḗ Ṽḗřşīȯƞ ·······〗",
+      "poeSupport": "〖ƤȯḖ Şŭƥƥȯřŧ ·····〗",
+      "type": "〖Ŧẏƥḗ ··〗",
+      "hypervisor": "〖Ħẏƥḗřṽīşȯř ····〗",
+      "primaryIp": "〖Ƥřīḿȧřẏ ĪƤ ····〗",
+      "operatingSystem": "〖Ȯƥḗřȧŧīƞɠ Şẏşŧḗḿ ·······〗",
+      "imei": "〖ĪḾḖĪ ··〗",
+      "phoneNumber": "〖Ƥħȯƞḗ Ƞŭḿƀḗř ·····〗",
+      "carrier": "〖Ƈȧřřīḗř ···〗",
+      "supervisionStatus": "〖Şŭƥḗřṽīşīȯƞ Şŧȧŧŭş ········〗",
+      "ipAddress": "〖ĪƤ Ȧḓḓřḗşş ····〗",
+      "networkPrinter": "〖Ƞḗŧẇȯřķ Ƥřīƞŧḗř ······〗",
+      "colorSupport": "〖Ƈȯŀȯř Şŭƥƥȯřŧ ······〗",
+      "duplexSupport": "〖Ḓŭƥŀḗẋ Şŭƥƥȯřŧ ······〗",
+      "monthlyDutyCycle": "〖Ḿȯƞŧħŀẏ Ḓŭŧẏ Ƈẏƈŀḗ ········〗"
     },
     "sections": {
-      "basicInformation": "55555",
-      "workstation": "55555",
-      "networkDevice": "55555",
-      "server": "55555",
-      "mobileDevice": "55555",
-      "printer": "55555",
-      "relatedAssets": "55555"
+      "basicInformation": "〖Ɓȧşīƈ Īƞƒȯřḿȧŧīȯƞ ·······〗",
+      "workstation": "〖Ẇȯřķşŧȧŧīȯƞ Ḓḗŧȧīŀş ········〗",
+      "networkDevice": "〖Ƞḗŧẇȯřķ Ḓḗṽīƈḗ Ḓḗŧȧīŀş ·········〗",
+      "server": "〖Şḗřṽḗř Ḓḗŧȧīŀş ······〗",
+      "mobileDevice": "〖Ḿȯƀīŀḗ Ḓḗṽīƈḗ Ḓḗŧȧīŀş ·········〗",
+      "printer": "〖Ƥřīƞŧḗř Ḓḗŧȧīŀş ······〗",
+      "relatedAssets": "〖Řḗŀȧŧḗḓ Ȧşşḗŧş ······〗"
     },
     "maintenance": {
-      "activeSchedules": "55555",
-      "overdue": "55555",
-      "upcoming": "55555"
+      "activeSchedules": "〖Ȧƈŧīṽḗ Şƈħḗḓŭŀḗş ·······〗",
+      "overdue": "〖Ȯṽḗřḓŭḗ ···〗",
+      "upcoming": "〖Ŭƥƈȯḿīƞɠ ····〗"
     },
     "tabs": {
-      "details": "55555",
-      "relatedAssets": "55555",
-      "documents": "55555"
+      "details": "〖Ḓḗŧȧīŀş ···〗",
+      "relatedAssets": "〖Řḗŀȧŧḗḓ Ȧşşḗŧş ······〗",
+      "documents": "〖Ḓȯƈŭḿḗƞŧş ····〗"
     },
     "relationships": {
-      "parentOf": "55555",
-      "childOf": "55555"
+      "parentOf": "〖Ƥȧřḗƞŧ ȯƒ ····〗",
+      "childOf": "〖Ƈħīŀḓ ȯƒ ····〗"
     },
     "empty": {
-      "notSpecified": "55555",
-      "unassigned": "55555",
-      "never": "55555",
-      "noAdditionalDetails": "55555",
-      "noRelatedAssets": "55555"
+      "notSpecified": "〖Ƞȯŧ şƥḗƈīƒīḗḓ ······〗",
+      "unassigned": "〖Ŭƞȧşşīɠƞḗḓ ····〗",
+      "never": "〖Ƞḗṽḗř ··〗",
+      "noAdditionalDetails": "〖Ƞȯ ȧḓḓīŧīȯƞȧŀ ḓḗŧȧīŀş ȧṽȧīŀȧƀŀḗ ·············〗",
+      "noRelatedAssets": "〖Ƞȯ řḗŀȧŧḗḓ ȧşşḗŧş ƒȯŭƞḓ ··········〗"
     },
     "values": {
-      "virtual": "55555",
-      "physical": "55555",
-      "supervised": "55555",
-      "unsupervised": "55555",
-      "pagesUnit": "55555"
+      "virtual": "〖Ṽīřŧŭȧŀ ···〗",
+      "physical": "〖Ƥħẏşīƈȧŀ ····〗",
+      "supervised": "〖Şŭƥḗřṽīşḗḓ ····〗",
+      "unsupervised": "〖Ŭƞşŭƥḗřṽīşḗḓ ·····〗",
+      "pagesUnit": "〖ƥȧɠḗş ··〗"
     },
     "statuses": {
-      "active": "55555",
-      "inactive": "55555",
-      "maintenance": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗"
     },
     "deviceTypes": {
-      "switch": "55555",
-      "router": "55555",
-      "firewall": "55555",
-      "access_point": "55555",
-      "load_balancer": "55555"
+      "switch": "〖Şẇīŧƈħ ···〗",
+      "router": "〖Řȯŭŧḗř ···〗",
+      "firewall": "〖Ƒīřḗẇȧŀŀ ····〗",
+      "access_point": "〖Ȧƈƈḗşş Ƥȯīƞŧ ·····〗",
+      "load_balancer": "〖Ŀȯȧḓ Ɓȧŀȧƞƈḗř ······〗"
     },
     "relationshipTypes": {
-      "affected": "55555",
-      "related": "55555"
+      "affected": "〖Ȧƒƒḗƈŧḗḓ ····〗",
+      "related": "〖Řḗŀȧŧḗḓ ···〗"
     }
   },
   "assetDocuments": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Ȧşşḗŧ Ḓȯƈŭḿḗƞŧş ······〗",
+    "description": "〖Ȧşşḗŧ ḓȯƈŭḿḗƞŧ ŀīşŧīƞɠ ȧƞḓ ȧŧŧȧƈħḿḗƞŧ şŭřƒȧƈḗ ƒȯř ƒīŀḗş ȧşşȯƈīȧŧḗḓ ẇīŧħ ȧƞ ȧşşḗŧ ································〗"
   },
   "assetForm": {
-    "title": "55555",
-    "description": "55555",
-    "heading": "55555",
+    "title": "〖Ȧşşḗŧ Ƒȯřḿ ····〗",
+    "description": "〖Ƥřīḿȧřẏ ȧşşḗŧ ƈřḗȧŧḗ ȧƞḓ ḗḓīŧ ƒȯřḿ ẇīŧħ īḓḗƞŧīŧẏ, ŀīƒḗƈẏƈŀḗ, ƈȯƞŧřȧƈŧ, ȧƞḓ ḿḗŧȧḓȧŧȧ ƒīḗŀḓş ····································〗",
+    "heading": "〖Ḗḓīŧ Ȧşşḗŧ ····〗",
     "loading": {
-      "assetDetails": "55555"
+      "assetDetails": "〖Ŀȯȧḓīƞɠ ȧşşḗŧ ḓḗŧȧīŀş... ··········〗"
     },
     "errors": {
-      "assetNotFound": "55555",
-      "loadFailed": "55555",
-      "clientsLoadFailed": "55555",
-      "locationsLoadFailed": "55555",
-      "updateFailed": "55555",
-      "validation": "55555"
+      "assetNotFound": "〖Ȧşşḗŧ ƞȯŧ ƒȯŭƞḓ ······〗",
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧşşḗŧ ḓḗŧȧīŀş ············〗",
+      "clientsLoadFailed": "〖Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ƈŀīḗƞŧş ·········〗",
+      "locationsLoadFailed": "〖Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ŀȯƈȧŧīȯƞş ƒȯř ŧħīş ƈŀīḗƞŧ ················〗",
+      "updateFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ȧşşḗŧ ·········〗",
+      "validation": "〖Ƥŀḗȧşḗ ƒīẋ ŧħḗ ħīɠħŀīɠħŧḗḓ ƒīḗŀḓş ƀḗƒȯřḗ şȧṽīƞɠ. ····················〗"
     },
     "actions": {
-      "viewClient": "55555",
-      "manageClientLocations": "55555",
-      "saveChanges": "55555"
+      "viewClient": "〖Ṽīḗẇ ƈŀīḗƞŧ ·····〗",
+      "manageClientLocations": "〖Ḿȧƞȧɠḗ ƈŀīḗƞŧ ŀȯƈȧŧīȯƞş ··········〗",
+      "saveChanges": "〖Şȧṽḗ Ƈħȧƞɠḗş ·····〗"
     },
     "alerts": {
-      "noLocationsSaved": "55555"
+      "noLocationsSaved": "〖Ŧħīş ƈŀīḗƞŧ ḓȯḗşƞ’ŧ ħȧṽḗ ȧƞẏ şȧṽḗḓ ŀȯƈȧŧīȯƞş ẏḗŧ. Ŭşḗ ƈŭşŧȯḿ ḗƞŧřẏ ȯř ƈřḗȧŧḗ ȯƞḗ ƒřȯḿ ŧħḗ ƈŀīḗƞŧ řḗƈȯřḓ. ··········································〗"
     },
     "sections": {
-      "basicInformation": "55555",
-      "clientAndLocation": "55555",
-      "assetBasics": "55555"
+      "basicInformation": "〖Ɓȧşīƈ Īƞƒȯřḿȧŧīȯƞ ·······〗",
+      "clientAndLocation": "〖Ƈŀīḗƞŧ & Ŀȯƈȧŧīȯƞ ·······〗",
+      "assetBasics": "〖Ȧşşḗŧ Ɓȧşīƈş ·····〗"
     },
     "fields": {
-      "customLocationOption": "55555",
-      "osType": "55555",
-      "osVersion": "55555",
-      "cpuModel": "55555",
-      "cpuCores": "55555",
-      "ramGb": "55555",
-      "storageType": "55555",
-      "storageCapacityGb": "55555",
-      "gpuModel": "55555",
-      "deviceType": "55555",
-      "managementIp": "55555",
-      "portCount": "55555",
-      "firmwareVersion": "55555",
-      "powerDrawWatts": "55555",
-      "supportsPoe": "55555",
-      "primaryIp": "55555",
-      "raidConfig": "55555",
-      "virtualMachine": "55555",
-      "hypervisor": "55555",
-      "model": "55555",
-      "imei": "55555",
-      "phoneNumber": "55555",
-      "carrier": "55555",
-      "supervisedDevice": "55555",
-      "ipAddress": "55555",
-      "monthlyDutyCycle": "55555",
-      "networkPrinter": "55555",
-      "colorSupport": "55555",
-      "duplexSupport": "55555",
-      "client": "55555",
-      "primaryLocation": "55555",
-      "name": "55555",
-      "assetTag": "55555",
-      "serialNumber": "55555",
-      "status": "55555",
-      "purchaseDate": "55555",
-      "warrantyEndDate": "55555",
-      "assetType": "55555"
+      "customLocationOption": "〖Ƈŭşŧȯḿ ŀȯƈȧŧīȯƞ ······〗",
+      "osType": "〖ȮŞ Ŧẏƥḗ ···〗",
+      "osVersion": "〖ȮŞ Ṽḗřşīȯƞ ····〗",
+      "cpuModel": "〖ƇƤŬ Ḿȯḓḗŀ ····〗",
+      "cpuCores": "〖ƇƤŬ Ƈȯřḗş ····〗",
+      "ramGb": "〖ŘȦḾ (ƓƁ) ····〗",
+      "storageType": "〖Şŧȯřȧɠḗ Ŧẏƥḗ ·····〗",
+      "storageCapacityGb": "〖Şŧȯřȧɠḗ Ƈȧƥȧƈīŧẏ (ƓƁ) ·········〗",
+      "gpuModel": "〖ƓƤŬ Ḿȯḓḗŀ ····〗",
+      "deviceType": "〖Ḓḗṽīƈḗ Ŧẏƥḗ ·····〗",
+      "managementIp": "〖Ḿȧƞȧɠḗḿḗƞŧ ĪƤ ······〗",
+      "portCount": "〖Ƥȯřŧ Ƈȯŭƞŧ ····〗",
+      "firmwareVersion": "〖Ƒīřḿẇȧřḗ Ṽḗřşīȯƞ ·······〗",
+      "powerDrawWatts": "〖Ƥȯẇḗř Ḓřȧẇ (Ẇȧŧŧş) ········〗",
+      "supportsPoe": "〖Şŭƥƥȯřŧş ƤȯḖ ·····〗",
+      "primaryIp": "〖Ƥřīḿȧřẏ ĪƤ ····〗",
+      "raidConfig": "〖ŘȦĪḒ Ƈȯƞƒīɠ ·····〗",
+      "virtualMachine": "〖Ṽīřŧŭȧŀ Ḿȧƈħīƞḗ ······〗",
+      "hypervisor": "〖Ħẏƥḗřṽīşȯř ····〗",
+      "model": "〖Ḿȯḓḗŀ ··〗",
+      "imei": "〖ĪḾḖĪ ··〗",
+      "phoneNumber": "〖Ƥħȯƞḗ Ƞŭḿƀḗř ·····〗",
+      "carrier": "〖Ƈȧřřīḗř ···〗",
+      "supervisedDevice": "〖Şŭƥḗřṽīşḗḓ Ḓḗṽīƈḗ ·······〗",
+      "ipAddress": "〖ĪƤ Ȧḓḓřḗşş ····〗",
+      "monthlyDutyCycle": "〖Ḿȯƞŧħŀẏ Ḓŭŧẏ Ƈẏƈŀḗ ········〗",
+      "networkPrinter": "〖Ƞḗŧẇȯřķ Ƥřīƞŧḗř ······〗",
+      "colorSupport": "〖Ƈȯŀȯř Şŭƥƥȯřŧ ······〗",
+      "duplexSupport": "〖Ḓŭƥŀḗẋ Şŭƥƥȯřŧ ······〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "primaryLocation": "〖Ƥřīḿȧřẏ Ŀȯƈȧŧīȯƞ ·······〗",
+      "name": "〖Ƞȧḿḗ ··〗",
+      "assetTag": "〖Ȧşşḗŧ Ŧȧɠ ····〗",
+      "serialNumber": "〖Şḗřīȧŀ Ƞŭḿƀḗř ······〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "purchaseDate": "〖Ƥŭřƈħȧşḗ Ḓȧŧḗ ······〗",
+      "warrantyEndDate": "〖Ẇȧřřȧƞŧẏ Ḗƞḓ Ḓȧŧḗ ·······〗",
+      "assetType": "〖Ŧẏƥḗ ··〗"
     },
     "placeholders": {
-      "loadingClients": "55555",
-      "selectClient": "55555",
-      "loadingLocations": "55555",
-      "selectLocation": "55555",
-      "selectClientFirst": "55555",
-      "customLocation": "55555",
-      "selectPurchaseDate": "55555",
-      "selectWarrantyEndDate": "55555"
+      "loadingClients": "〖Ŀȯȧḓīƞɠ ƈŀīḗƞŧş… ·······〗",
+      "selectClient": "〖Şḗŀḗƈŧ ƈŀīḗƞŧ ······〗",
+      "loadingLocations": "〖Ŀȯȧḓīƞɠ ŀȯƈȧŧīȯƞş… ········〗",
+      "selectLocation": "〖Şḗŀḗƈŧ ȧ ŀȯƈȧŧīȯƞ ·······〗",
+      "selectClientFirst": "〖Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ƒīřşŧ ·········〗",
+      "customLocation": "〖Ḗƞŧḗř ȧ ƈŭşŧȯḿ ŀȯƈȧŧīȯƞ ȯř ȧřḗȧ ·············〗",
+      "selectPurchaseDate": "〖Şḗŀḗƈŧ ƥŭřƈħȧşḗ ḓȧŧḗ ········〗",
+      "selectWarrantyEndDate": "〖Şḗŀḗƈŧ ẇȧřřȧƞŧẏ ḗƞḓ ḓȧŧḗ ··········〗"
     },
     "statusOptions": {
-      "active": "55555",
-      "inactive": "55555",
-      "maintenance": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗"
     },
     "networkDeviceTypes": {
-      "switch": "55555",
-      "router": "55555",
-      "firewall": "55555",
-      "access_point": "55555",
-      "load_balancer": "55555"
+      "switch": "〖Şẇīŧƈħ ···〗",
+      "router": "〖Řȯŭŧḗř ···〗",
+      "firewall": "〖Ƒīřḗẇȧŀŀ ····〗",
+      "access_point": "〖Ȧƈƈḗşş Ƥȯīƞŧ ·····〗",
+      "load_balancer": "〖Ŀȯȧḓ Ɓȧŀȧƞƈḗř ······〗"
     },
     "storageTypes": {
-      "ssd": "55555",
-      "hdd": "55555",
-      "nvme": "55555"
+      "ssd": "〖ŞŞḒ ··〗",
+      "hdd": "〖ĦḒḒ ··〗",
+      "nvme": "〖ȠṼḾḗ ··〗"
     },
     "osTypes": {
-      "windows": "55555",
-      "macos": "55555",
-      "linux": "55555"
+      "windows": "〖Ẇīƞḓȯẇş ···〗",
+      "macos": "〖ḿȧƈȮŞ ··〗",
+      "linux": "〖Ŀīƞŭẋ ··〗"
     },
     "mobileOsTypes": {
-      "ios": "55555",
-      "android": "55555"
+      "ios": "〖īȮŞ ··〗",
+      "android": "〖Ȧƞḓřȯīḓ ···〗"
     },
     "typeDetails": {
-      "workstation": "55555",
-      "networkDevice": "55555",
-      "server": "55555",
-      "mobileDevice": "55555",
-      "printer": "55555",
-      "custom": "55555 {{typeName}} 55555"
+      "workstation": "〖Ẇȯřķşŧȧŧīȯƞ Ḓḗŧȧīŀş ········〗",
+      "networkDevice": "〖Ƞḗŧẇȯřķ Ḓḗṽīƈḗ Ḓḗŧȧīŀş ·········〗",
+      "server": "〖Şḗřṽḗř Ḓḗŧȧīŀş ······〗",
+      "mobileDevice": "〖Ḿȯƀīŀḗ Ḓḗṽīƈḗ Ḓḗŧȧīŀş ·········〗",
+      "printer": "〖Ƥřīƞŧḗř Ḓḗŧȧīŀş ······〗",
+      "custom": "〖{{typeName}} Ḓḗŧȧīŀş ········〗"
     }
   },
   "assetFormClient": {
-    "title": "55555",
-    "description": "55555",
-    "loadingTitle": "55555"
+    "title": "〖Ȧşşḗŧ Ƒȯřḿ Ƈŀīḗƞŧ ·······〗",
+    "description": "〖Ƈŀīḗƞŧ-ȯƞŀẏ ḓẏƞȧḿīƈ ẇřȧƥƥḗř ƒȯř ŧħḗ ȧşşḗŧ ƒȯřḿ ȧƞḓ ḗḓīŧ şķḗŀḗŧȯƞ ḗẋƥḗřīḗƞƈḗ ······························〗",
+    "loadingTitle": "〖Ḗḓīŧ Ȧşşḗŧ ····〗"
   },
   "assetMetricsBanner": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ȧşşḗŧ Ḿḗŧřīƈş Ɓȧƞƞḗř ········〗",
+    "description": "〖Ḿḗŧřīƈ ƈȧřḓş ȧƞḓ řȯŀŀŭƥş ƒȯř ŧīƈķḗŧş, ḿȧīƞŧḗƞȧƞƈḗ, ŭƥŧīḿḗ, ȧƞḓ ȧşşḗŧ ħḗȧŀŧħ īƞḓīƈȧŧȯřş ···································〗",
     "labels": {
-      "healthStatus": "55555",
-      "openTickets": "55555",
-      "securityStatus": "55555",
-      "warranty": "55555"
+      "healthStatus": "〖Ħḗȧŀŧħ Şŧȧŧŭş ······〗",
+      "openTickets": "〖Ȯƥḗƞ Ŧīƈķḗŧş ·····〗",
+      "securityStatus": "〖Şḗƈŭřīŧẏ Şŧȧŧŭş ······〗",
+      "warranty": "〖Ẇȧřřȧƞŧẏ ····〗"
     },
     "healthStatuses": {
-      "healthy": "55555",
-      "warning": "55555",
-      "critical": "55555",
-      "unknown": "55555"
+      "healthy": "〖Ħḗȧŀŧħẏ ···〗",
+      "warning": "〖Ẇȧřƞīƞɠ ···〗",
+      "critical": "〖Ƈřīŧīƈȧŀ ····〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗"
     },
     "securityStatuses": {
-      "secure": "55555",
-      "missingPatches": "55555 {{count}} 55555",
-      "critical": "55555",
-      "unknown": "55555"
+      "secure": "〖Şḗƈŭřḗ ···〗",
+      "missingPatches": "〖{{count}} Ḿīşşīƞɠ Ƥȧŧƈħḗş ··········〗",
+      "critical": "〖Ƈřīŧīƈȧŀ ····〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗"
     },
     "openTickets": {
-      "active": "55555 {{count}} 55555"
+      "active": "〖[{{count}} Ȧƈŧīṽḗ] ········〗"
     },
     "warrantyStatuses": {
-      "expiresIn": "55555 {{count}} 55555",
-      "expired": "55555",
-      "unknown": "55555"
+      "expiresIn": "〖Ḗẋƥīřḗş īƞ {{count}} Ḓȧẏş ··········〗",
+      "expired": "〖Ḗẋƥīřḗḓ ···〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗"
     }
   },
   "assetPatchStatusSection": {
-    "title": "55555",
-    "description": "55555",
-    "heading": "55555",
+    "title": "〖Ȧşşḗŧ Ƥȧŧƈħ Şŧȧŧŭş Şḗƈŧīȯƞ ···········〗",
+    "description": "〖Ḗƞŧḗřƥřīşḗ ƥȧŧƈħ ȧƞḓ ȧƞŧīṽīřŭş şŧȧŧŭş ẇřȧƥƥḗř şħȯẇƞ īƞ ŧħḗ ȧşşḗŧ ḓḗŧȧīŀ ḗẋƥḗřīḗƞƈḗ ·································〗",
+    "heading": "〖Ƥȧŧƈħ Şŧȧŧŭş ·····〗",
     "compliance": {
-      "unknown": "55555",
-      "actionRequired": "55555",
-      "updatesAvailable": "55555",
-      "minorUpdates": "55555",
-      "upToDate": "55555"
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗",
+      "actionRequired": "〖Ȧƈŧīȯƞ Řḗʠŭīřḗḓ ······〗",
+      "updatesAvailable": "〖Ŭƥḓȧŧḗş Ȧṽȧīŀȧƀŀḗ ·······〗",
+      "minorUpdates": "〖Ḿīƞȯř Ŭƥḓȧŧḗş ······〗",
+      "upToDate": "〖Ŭƥ ŧȯ Ḓȧŧḗ ····〗"
     },
     "relativeTime": {
-      "never": "55555",
-      "justNow": "55555",
-      "minutesAgo": "55555 {{count}} 55555",
-      "hoursAgo": "55555 {{count}} 55555",
-      "daysAgo": "55555 {{count}} 55555"
+      "never": "〖Ƞḗṽḗř ··〗",
+      "justNow": "〖Ĵŭşŧ ƞȯẇ ····〗",
+      "minutesAgo": "〖{{count}}ḿ ȧɠȯ ······〗",
+      "hoursAgo": "〖{{count}}ħ ȧɠȯ ······〗",
+      "daysAgo": "〖{{count}}ḓ ȧɠȯ ······〗"
     },
     "labels": {
-      "osPatches": "55555",
-      "software": "55555",
-      "failed": "55555",
-      "lastScan": "55555",
-      "pending": "55555",
-      "patches": "55555"
+      "osPatches": "〖ȮŞ Ƥȧŧƈħḗş ····〗",
+      "software": "〖Şȯƒŧẇȧřḗ ····〗",
+      "failed": "〖Ƒȧīŀḗḓ ···〗",
+      "lastScan": "〖Ŀȧşŧ Şƈȧƞ ····〗",
+      "pending": "〖ƥḗƞḓīƞɠ ···〗",
+      "patches": "〖ƥȧŧƈħḗş ···〗"
     }
   },
   "assetSoftwareInventory": {
-    "title": "55555",
-    "description": "55555",
-    "heading": "55555",
-    "searchPlaceholder": "55555",
-    "appsCount": "55555 {{count}} 55555",
-    "unknownName": "55555",
-    "noMatch": "55555",
-    "version": "55555 {{version}} 55555",
-    "by": "55555 {{publisher}} 55555",
-    "showingOfApplications": "55555 {{shown}} 55555 {{total}} 55555",
-    "more": "55555 {{count}} 55555"
+    "title": "〖Ȧşşḗŧ Şȯƒŧẇȧřḗ Īƞṽḗƞŧȯřẏ ··········〗",
+    "description": "〖Ḗƞŧḗřƥřīşḗ şȯƒŧẇȧřḗ īƞṽḗƞŧȯřẏ ẇřȧƥƥḗř ƒȯř īƞşŧȧŀŀḗḓ şȯƒŧẇȧřḗ ȧƞḓ ṽḗřşīȯƞ ḓȧŧȧ ·······························〗",
+    "heading": "〖Şȯƒŧẇȧřḗ Īƞṽḗƞŧȯřẏ ········〗",
+    "searchPlaceholder": "〖Şḗȧřƈħ şȯƒŧẇȧřḗ... ········〗",
+    "appsCount": "〖{{count}} ȧƥƥş ······〗",
+    "unknownName": "〖Ŭƞķƞȯẇƞ ···〗",
+    "noMatch": "〖Ƞȯ şȯƒŧẇȧřḗ ḿȧŧƈħḗş ẏȯŭř şḗȧřƈħ ·············〗",
+    "version": "〖ṽ{{version}} ·····〗",
+    "by": "〖ƀẏ {{publisher}} ·······〗",
+    "showingOfApplications": "〖Şħȯẇīƞɠ {{shown}} ȯƒ {{total}} ȧƥƥŀīƈȧŧīȯƞş ··················〗",
+    "more": "〖+{{count}} ḿȯřḗ ······〗"
   },
   "remoteAccess": {
-    "remoteDesktop": "55555",
-    "remoteShell": "55555",
-    "remoteAccess": "55555",
-    "deviceOverdue": "55555",
-    "deviceOffline": "55555",
+    "remoteDesktop": "〖Řḗḿȯŧḗ Ḓḗşķŧȯƥ ······〗",
+    "remoteShell": "〖Řḗḿȯŧḗ Şħḗŀŀ ·····〗",
+    "remoteAccess": "〖Řḗḿȯŧḗ Ȧƈƈḗşş ······〗",
+    "deviceOverdue": "〖Ḓḗṽīƈḗ īş ȯṽḗřḓŭḗ ·······〗",
+    "deviceOffline": "〖Ḓḗṽīƈḗ īş ȯƒƒŀīƞḗ ·······〗",
     "errors": {
-      "urlFetchFailed": "55555",
-      "initiateFailed": "55555"
+      "urlFetchFailed": "〖Ƒȧīŀḗḓ ŧȯ ɠḗŧ řḗḿȯŧḗ ȧƈƈḗşş ŬŘĿ ·············〗",
+      "initiateFailed": "〖Ƒȧīŀḗḓ ŧȯ īƞīŧīȧŧḗ řḗḿȯŧḗ ȧƈƈḗşş ·············〗"
     },
     "indicator": {
-      "online": "55555",
-      "offline": "55555",
-      "available": "55555",
-      "deviceOffline": "55555"
+      "online": "〖Ȯƞŀīƞḗ ···〗",
+      "offline": "〖Ȯƒƒŀīƞḗ ···〗",
+      "available": "〖Řḗḿȯŧḗ ȧƈƈḗşş ȧṽȧīŀȧƀŀḗ ··········〗",
+      "deviceOffline": "〖Ḓḗṽīƈḗ ȯƒƒŀīƞḗ ······〗"
     }
   },
   "assetListErrors": {
-    "genericError": "55555",
-    "assetNotFound": "55555"
+    "genericError": "〖Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ·················〗",
+    "assetNotFound": "〖Ȧşşḗŧ ƞȯŧ ƒȯŭƞḓ ······〗"
   },
   "assetEdit": {
-    "pageTitle": "55555"
+    "pageTitle": "〖Ḗḓīŧ Ȧşşḗŧ ····〗"
   },
   "associatedAssets": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ȧşşḗŧş ···〗",
+    "description": "〖Ƥȧřḗƞŧ ȧƞḓ ƈħīŀḓ ȧşşḗŧ řḗŀȧŧīȯƞşħīƥ ḿȧƞȧɠḗḿḗƞŧ ẇīŧħ ŀīƞķḗḓ ȧşşḗŧ ȧƈŧīȯƞş ·····························〗",
     "loading": {
-      "assets": "55555"
+      "assets": "〖Ŀȯȧḓīƞɠ ȧşşḗŧş... ·······〗"
     },
     "actions": {
-      "addAsset": "55555",
-      "showLess": "55555",
-      "moreAssets_one": "55555 {{count}} 55555",
-      "moreAssets_other": "55555 {{count}} 55555"
+      "addAsset": "〖Ȧḓḓ Ȧşşḗŧ ····〗",
+      "showLess": "〖Şħȯẇ ŀḗşş ····〗",
+      "moreAssets_one": "〖{{count}} ḿȯřḗ ȧşşḗŧ ········〗",
+      "moreAssets_other": "〖{{count}} ḿȯřḗ ȧşşḗŧş ·········〗"
     },
     "errors": {
-      "loadAvailableAssets": "55555",
-      "loadDrawerFailed": "55555",
-      "loadAssociatedAssets": "55555",
-      "selectAtLeastOneAsset": "55555",
-      "associateFailed": "55555",
-      "associationFailed": "55555",
-      "removeFailed": "55555"
+      "loadAvailableAssets": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧṽȧīŀȧƀŀḗ ȧşşḗŧş ·············〗",
+      "loadDrawerFailed": "〖Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ȧşşḗŧ ḓḗŧȧīŀş řīɠħŧ ƞȯẇ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ·······················〗",
+      "loadAssociatedAssets": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧşşȯƈīȧŧḗḓ ȧşşḗŧş ·············〗",
+      "selectAtLeastOneAsset": "〖Ƥŀḗȧşḗ şḗŀḗƈŧ ȧŧ ŀḗȧşŧ ȯƞḗ ȧşşḗŧ ·············〗",
+      "associateFailed": "〖Ƒȧīŀḗḓ ŧȯ ȧşşȯƈīȧŧḗ ȧşşḗŧş - ŧħḗẏ ḿȧẏ ȧŀřḗȧḓẏ ƀḗ ȧşşȯƈīȧŧḗḓ ························〗",
+      "associationFailed": "〖Ƒȧīŀḗḓ ŧȯ ȧşşȯƈīȧŧḗ ȧşşḗŧş ···········〗",
+      "removeFailed": "〖Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ ȧşşḗŧ ȧşşȯƈīȧŧīȯƞ ··············〗"
     },
     "success": {
-      "associated_one": "55555 {{count}} 55555",
-      "associated_other": "55555 {{count}} 55555",
-      "associatedPartial_one": "55555 {{count}} 55555 {{failed}} 55555",
-      "associatedPartial_other": "55555 {{count}} 55555 {{failed}} 55555",
-      "removed": "55555"
+      "associated_one": "〖{{count}} ȧşşḗŧ ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ················〗",
+      "associated_other": "〖{{count}} ȧşşḗŧş ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ················〗",
+      "associatedPartial_one": "〖{{count}} ȧşşḗŧ ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ, {{failed}} ƒȧīŀḗḓ (ḿȧẏ ȧŀřḗȧḓẏ ƀḗ ȧşşȯƈīȧŧḗḓ) ···································〗",
+      "associatedPartial_other": "〖{{count}} ȧşşḗŧş ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ, {{failed}} ƒȧīŀḗḓ (ḿȧẏ ȧŀřḗȧḓẏ ƀḗ ȧşşȯƈīȧŧḗḓ) ···································〗",
+      "removed": "〖Ȧşşḗŧ ȧşşȯƈīȧŧīȯƞ řḗḿȯṽḗḓ ··········〗"
     },
     "empty": {
-      "noneAssociated": "55555",
-      "unknownAsset": "55555"
+      "noneAssociated": "〖Ƞȯ ȧşşḗŧş ȧşşȯƈīȧŧḗḓ ẇīŧħ ŧħīş ŧīƈķḗŧ. ················〗",
+      "unknownAsset": "〖Ŭƞķƞȯẇƞ Ȧşşḗŧ ······〗"
     },
     "dialog": {
-      "title": "55555",
-      "loadingAssets": "55555",
-      "selectedAssetsLabel": "55555",
+      "title": "〖Ȧḓḓ Ȧşşḗŧ ····〗",
+      "loadingAssets": "〖Ŀȯȧḓīƞɠ ȧşşḗŧş... ·······〗",
+      "selectedAssetsLabel": "〖Şḗŀḗƈŧḗḓ: ····〗",
       "search": {
-        "label": "55555",
-        "placeholder": "55555"
+        "label": "〖Şḗȧřƈħ Ȧşşḗŧş ······〗",
+        "placeholder": "〖Şḗȧřƈħ ƀẏ ƞȧḿḗ, ŧȧɠ, ȯř şḗřīȧŀ... ··············〗"
       },
       "empty": {
-        "search": "55555",
-        "available": "55555"
+        "search": "〖Ƞȯ ȧşşḗŧş ƒȯŭƞḓ ḿȧŧƈħīƞɠ ẏȯŭř şḗȧřƈħ ···············〗",
+        "available": "〖Ƞȯ ȧşşḗŧş ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ƈŀīḗƞŧ ··············〗"
       },
       "relationship": {
-        "placeholder": "55555"
+        "placeholder": "〖Ŧẏƥḗ... ···〗"
       },
       "actions": {
-        "addAssets_one": "55555",
-        "addAssets_other": "55555"
+        "addAssets_one": "〖Ȧḓḓ Ȧşşḗŧ ····〗",
+        "addAssets_other": "〖Ȧḓḓ Ȧşşḗŧş ····〗"
       }
     },
     "table": {
-      "name": "55555",
-      "assetTag": "55555",
-      "type": "55555",
-      "status": "55555"
+      "name": "〖Ƞȧḿḗ ··〗",
+      "assetTag": "〖Ȧşşḗŧ Ŧȧɠ ····〗",
+      "type": "〖Ŧẏƥḗ ··〗",
+      "status": "〖Şŧȧŧŭş ···〗"
     },
     "assetStatuses": {
-      "active": "55555",
-      "inactive": "55555",
-      "maintenance": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗"
     },
     "assetTypes": {
-      "workstation": "55555",
-      "server": "55555",
-      "network_device": "55555",
-      "mobile_device": "55555",
-      "printer": "55555"
+      "workstation": "〖Ẇȯřķşŧȧŧīȯƞ ·····〗",
+      "server": "〖Şḗřṽḗř ···〗",
+      "network_device": "〖Ƞḗŧẇȯřķ Ḓḗṽīƈḗ ······〗",
+      "mobile_device": "〖Ḿȯƀīŀḗ Ḓḗṽīƈḗ ······〗",
+      "printer": "〖Ƥřīƞŧḗř ···〗"
     },
     "relationshipTypes": {
-      "affected": "55555",
-      "related": "55555"
+      "affected": "〖Ȧƒƒḗƈŧḗḓ ····〗",
+      "related": "〖Řḗŀȧŧḗḓ ···〗"
     }
   },
   "createTicketFromAssetButton": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ƈřḗȧŧḗ Ŧīƈķḗŧ ƒřȯḿ Ȧşşḗŧ ··········〗",
+    "description": "〖Ŧīƈķḗŧ ƈřḗȧŧīȯƞ ƒŀȯẇ ŀȧŭƞƈħḗḓ ƒřȯḿ ȧƞ ȧşşḗŧ ẇīŧħ ƀȯȧřḓ, şŧȧŧŭş, ȧƞḓ ƈȧŧḗɠȯřẏ şḗŀḗƈŧīȯƞ ···································〗",
     "register": {
-      "label": "55555",
-      "title": "55555"
+      "label": "〖Ƈřḗȧŧḗ Ŧīƈķḗŧ ƒřȯḿ Ȧşşḗŧ ··········〗",
+      "title": "〖Ƈřḗȧŧḗ Ŧīƈķḗŧ ƒřȯḿ Ȧşşḗŧ ··········〗"
     },
-    "defaultTitle": "55555 {{name}} 55555",
+    "defaultTitle": "〖Īşşŭḗ ẇīŧħ {{name}} ········〗",
     "actions": {
-      "open": "55555",
-      "create": "55555",
-      "creating": "55555"
+      "open": "〖Ƈřḗȧŧḗ Ŧīƈķḗŧ ······〗",
+      "create": "〖Ƈřḗȧŧḗ Ŧīƈķḗŧ ······〗",
+      "creating": "〖Ƈřḗȧŧīƞɠ... ·····〗"
     },
     "fields": {
-      "title": "55555",
-      "description": "55555",
-      "board": "55555",
-      "status": "55555",
-      "priority": "55555"
+      "title": "〖Ŧīŧŀḗ ··〗",
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "board": "〖Ɓȯȧřḓ ··〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "priority": "〖Ƥřīȯřīŧẏ ····〗"
     },
     "placeholders": {
-      "title": "55555",
-      "description": "55555",
-      "loadingBoards": "55555",
-      "selectBoard": "55555",
-      "selectBoardFirst": "55555",
-      "loadingStatuses": "55555",
-      "selectStatus": "55555",
-      "loadingPriorities": "55555",
-      "selectPriority": "55555"
+      "title": "〖Ḗƞŧḗř ŧīƈķḗŧ ŧīŧŀḗ ········〗",
+      "description": "〖Ḓḗşƈřīƀḗ ŧħḗ īşşŭḗ... ·········〗",
+      "loadingBoards": "〖Ŀȯȧḓīƞɠ ƀȯȧřḓş... ·······〗",
+      "selectBoard": "〖Şḗŀḗƈŧ ƀȯȧřḓ... ······〗",
+      "selectBoardFirst": "〖Şḗŀḗƈŧ ƀȯȧřḓ ƒīřşŧ... ·········〗",
+      "loadingStatuses": "〖Ŀȯȧḓīƞɠ şŧȧŧŭşḗş... ········〗",
+      "selectStatus": "〖Şḗŀḗƈŧ şŧȧŧŭş... ·······〗",
+      "loadingPriorities": "〖Ŀȯȧḓīƞɠ ƥřīȯřīŧīḗş... ·········〗",
+      "selectPriority": "〖Şḗŀḗƈŧ ƥřīȯřīŧẏ... ········〗"
     },
     "errors": {
-      "loadPriorities": "55555",
-      "loadBoards": "55555",
-      "loadStatuses": "55555",
-      "requiredFields": "55555",
-      "createFailed": "55555"
+      "loadPriorities": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřīȯřīŧīḗş ··········〗",
+      "loadBoards": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƀȯȧřḓş ·········〗",
+      "loadStatuses": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şŧȧŧŭşḗş ··········〗",
+      "requiredFields": "〖Ƥŀḗȧşḗ ƒīŀŀ īƞ ŧīŧŀḗ, ƀȯȧřḓ, şŧȧŧŭş, ȧƞḓ ƥřīȯřīŧẏ ····················〗",
+      "createFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ŧīƈķḗŧ ··········〗"
     },
     "success": {
-      "created": "55555"
+      "created": "〖Ŧīƈķḗŧ ƈřḗȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ···········〗"
     }
   },
   "deleteAssetButton": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ḓḗŀḗŧḗ Ȧşşḗŧ Ɓŭŧŧȯƞ ········〗",
+    "description": "〖Ḓḗŀḗŧḗ ƈȯƞƒīřḿȧŧīȯƞ ƒŀȯẇ ƒȯř řḗḿȯṽīƞɠ ȧƞ ȧşşḗŧ řḗƈȯřḓ ······················〗",
     "actions": {
-      "removing": "55555"
+      "removing": "〖Řḗḿȯṽīƞɠ… ····〗"
     },
-    "entityNameFallback": "55555",
+    "entityNameFallback": "〖ŧħīş ȧşşḗŧ ····〗",
     "errors": {
-      "validationFailed": "55555",
-      "deleteFailed": "55555"
+      "validationFailed": "〖Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗",
+      "deleteFailed": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ȧşşḗŧ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ·················〗"
     }
   },
   "quickAddAsset": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ɋŭīƈķ Ȧḓḓ Ȧşşḗŧ ······〗",
+    "description": "〖Ɋŭīƈķ-ƈřḗȧŧḗ ȧşşḗŧ ƒŀȯẇ ẇīŧħ ḗşşḗƞŧīȧŀ ƒīḗŀḓş ƒȯř ȧḓḓīƞɠ ȧ ƞḗẇ ȧşşḗŧ řḗƈȯřḓ ······························〗",
     "actions": {
-      "addAsset": "55555",
-      "creating": "55555",
-      "createAsset": "55555"
+      "addAsset": "〖Ȧḓḓ Ȧşşḗŧ ····〗",
+      "creating": "〖Ƈřḗȧŧīƞɠ... ·····〗",
+      "createAsset": "〖Ƈřḗȧŧḗ Ȧşşḗŧ ·····〗"
     },
     "errors": {
-      "fetchClientsFailed": "55555",
-      "createFailed": "55555"
+      "fetchClientsFailed": "〖Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ƈŀīḗƞŧş ··········〗",
+      "createFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ȧşşḗŧ ·········〗"
     },
     "validation": {
-      "client": "55555",
-      "assetName": "55555",
-      "assetTag": "55555",
-      "assetType": "55555",
-      "requiredFields": "55555"
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "assetName": "〖Ȧşşḗŧ Ƞȧḿḗ ····〗",
+      "assetTag": "〖Ȧşşḗŧ Ŧȧɠ ····〗",
+      "assetType": "〖Ȧşşḗŧ Ŧẏƥḗ ····〗",
+      "requiredFields": "〖Ƥŀḗȧşḗ ƒīŀŀ īƞ ŧħḗ řḗʠŭīřḗḓ ƒīḗŀḓş: ··············〗"
     },
     "fields": {
-      "osType": "55555",
-      "osVersion": "55555",
-      "deviceType": "55555",
-      "managementIp": "55555",
-      "model": "55555",
-      "clientRequired": "55555",
-      "assetNameRequired": "55555",
-      "assetTagRequired": "55555",
-      "typeRequired": "55555",
-      "status": "55555",
-      "serialNumber": "55555",
-      "customLocationOption": "55555",
-      "location": "55555"
+      "osType": "〖ȮŞ Ŧẏƥḗ ···〗",
+      "osVersion": "〖ȮŞ Ṽḗřşīȯƞ ····〗",
+      "deviceType": "〖Ḓḗṽīƈḗ Ŧẏƥḗ ·····〗",
+      "managementIp": "〖Ḿȧƞȧɠḗḿḗƞŧ ĪƤ ······〗",
+      "model": "〖Ḿȯḓḗŀ ··〗",
+      "clientRequired": "〖Ƈŀīḗƞŧ * ····〗",
+      "assetNameRequired": "〖Ȧşşḗŧ Ƞȧḿḗ * ·····〗",
+      "assetTagRequired": "〖Ȧşşḗŧ Ŧȧɠ * ·····〗",
+      "typeRequired": "〖Ŧẏƥḗ * ···〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "serialNumber": "〖Şḗřīȧŀ Ƞŭḿƀḗř ······〗",
+      "customLocationOption": "〖Ƈŭşŧȯḿ ŀȯƈȧŧīȯƞ ······〗",
+      "location": "〖Ŀȯƈȧŧīȯƞ ····〗"
     },
     "placeholders": {
-      "workstationOsType": "55555",
-      "workstationOsVersion": "55555",
-      "selectDeviceType": "55555",
-      "managementIp": "55555",
-      "serverOsType": "55555",
-      "serverOsVersion": "55555",
-      "selectOsType": "55555",
-      "mobileModel": "55555",
-      "printerModel": "55555",
-      "assetName": "55555",
-      "assetTag": "55555",
-      "selectType": "55555",
-      "selectStatus": "55555",
-      "serialNumber": "55555",
-      "customLocation": "55555",
-      "loadingLocations": "55555",
-      "selectClientFirst": "55555",
-      "selectLocation": "55555"
+      "workstationOsType": "〖ḗ.ɠ., Ẇīƞḓȯẇş, ḿȧƈȮŞ, Ŀīƞŭẋ ···········〗",
+      "workstationOsVersion": "〖ḗ.ɠ., 11, Ḿȯƞŧḗřḗẏ, Ŭƀŭƞŧŭ 22.04 ·············〗",
+      "selectDeviceType": "〖Şḗŀḗƈŧ ḓḗṽīƈḗ ŧẏƥḗ ········〗",
+      "managementIp": "〖ḗ.ɠ., 192.168.1.1 ·······〗",
+      "serverOsType": "〖ḗ.ɠ., Ẇīƞḓȯẇş Şḗřṽḗř, Ŭƀŭƞŧŭ Şḗřṽḗř ··············〗",
+      "serverOsVersion": "〖ḗ.ɠ., 2022, 22.04 ĿŦŞ ·········〗",
+      "selectOsType": "〖Şḗŀḗƈŧ ȮŞ ŧẏƥḗ ······〗",
+      "mobileModel": "〖ḗ.ɠ., īƤħȯƞḗ 14 Ƥřȯ, Ɠȧŀȧẋẏ Ş23 ·············〗",
+      "printerModel": "〖ḗ.ɠ., ĦƤ ĿȧşḗřĴḗŧ Ƥřȯ Ḿ404ƞ ···········〗",
+      "assetName": "〖Ḗƞŧḗř ȧşşḗŧ ƞȧḿḗ ·······〗",
+      "assetTag": "〖Ḗƞŧḗř ȧşşḗŧ ŧȧɠ ······〗",
+      "selectType": "〖Şḗŀḗƈŧ ŧẏƥḗ ·····〗",
+      "selectStatus": "〖Şḗŀḗƈŧ şŧȧŧŭş ······〗",
+      "serialNumber": "〖Ḗƞŧḗř şḗřīȧŀ ƞŭḿƀḗř ········〗",
+      "customLocation": "〖Ḗƞŧḗř ȧ ƈŭşŧȯḿ ŀȯƈȧŧīȯƞ ȯř ȧřḗȧ ·············〗",
+      "loadingLocations": "〖Ŀȯȧḓīƞɠ ŀȯƈȧŧīȯƞş... ········〗",
+      "selectClientFirst": "〖Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ƒīřşŧ ·········〗",
+      "selectLocation": "〖Şḗŀḗƈŧ ŀȯƈȧŧīȯƞ ······〗"
     },
     "sections": {
-      "typeSpecificDetails": "55555"
+      "typeSpecificDetails": "〖Ŧẏƥḗ-şƥḗƈīƒīƈ Ḓḗŧȧīŀş ·········〗"
     },
     "statusOptions": {
-      "active": "55555",
-      "inactive": "55555",
-      "maintenance": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗"
     },
     "assetTypes": {
-      "workstation": "55555",
-      "network_device": "55555",
-      "server": "55555",
-      "mobile_device": "55555",
-      "printer": "55555",
-      "unknown": "55555"
+      "workstation": "〖Ẇȯřķşŧȧŧīȯƞ ·····〗",
+      "network_device": "〖Ƞḗŧẇȯřķ Ḓḗṽīƈḗ ······〗",
+      "server": "〖Şḗřṽḗř ···〗",
+      "mobile_device": "〖Ḿȯƀīŀḗ Ḓḗṽīƈḗ ······〗",
+      "printer": "〖Ƥřīƞŧḗř ···〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗"
     },
     "networkDeviceTypes": {
-      "switch": "55555",
-      "router": "55555",
-      "firewall": "55555",
-      "accessPoint": "55555",
-      "loadBalancer": "55555"
+      "switch": "〖Şẇīŧƈħ ···〗",
+      "router": "〖Řȯŭŧḗř ···〗",
+      "firewall": "〖Ƒīřḗẇȧŀŀ ····〗",
+      "accessPoint": "〖Ȧƈƈḗşş Ƥȯīƞŧ ·····〗",
+      "loadBalancer": "〖Ŀȯȧḓ Ɓȧŀȧƞƈḗř ······〗"
     },
     "mobileOsTypes": {
-      "ios": "55555",
-      "android": "55555"
+      "ios": "〖īȮŞ ··〗",
+      "android": "〖Ȧƞḓřȯīḓ ···〗"
     }
   },
   "remoteAccessButton": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Řḗḿȯŧḗ Ȧƈƈḗşş Ɓŭŧŧȯƞ ········〗",
+    "description": "〖Řḗḿȯŧḗ ȧƈƈḗşş ŀȧŭƞƈħḗř ƒȯř ȧşşḗŧş ẇīŧħ şŭƥƥȯřŧḗḓ ƈȯƞƞḗƈŧīȯƞ īƞŧḗɠřȧŧīȯƞş ·····························〗"
   },
   "rmmStatusIndicator": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖ŘḾḾ Şŧȧŧŭş Īƞḓīƈȧŧȯř ········〗",
+    "description": "〖Ƈȯƞƞḗƈŧḗḓ/ḓīşƈȯƞƞḗƈŧḗḓ ŘḾḾ şŧȧŧŭş ƈħīƥ ȧƞḓ şŭƥƥȯřŧīƞɠ şŧȧŧḗ ŀȧƀḗŀş ···························〗",
     "titles": {
-      "unknown": "55555",
-      "status": "55555 {{status}} 55555 {{suffix}} 55555",
-      "lastSeen": "55555 {{value}} 55555"
+      "unknown": "〖Ȧɠḗƞŧ şŧȧŧŭş ŭƞķƞȯẇƞ ········〗",
+      "status": "〖{{status}}{{suffix}} ········〗",
+      "lastSeen": "〖 - Ŀȧşŧ şḗḗƞ: {{value}} ··········〗"
     },
     "relative": {
-      "justNow": "55555",
-      "minutesAgo": "55555 {{count}} 55555",
-      "hoursAgo": "55555 {{count}} 55555",
-      "daysAgo": "55555 {{count}} 55555"
+      "justNow": "〖Ĵŭşŧ ƞȯẇ ····〗",
+      "minutesAgo": "〖{{count}}ḿ ȧɠȯ ······〗",
+      "hoursAgo": "〖{{count}}ħ ȧɠȯ ······〗",
+      "daysAgo": "〖{{count}}ḓ ȧɠȯ ······〗"
     }
   },
   "assetInfoPanel": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ȧşşḗŧ Īƞƒȯ & Ŀīƒḗƈẏƈŀḗ ·········〗",
+    "description": "〖Ɠḗƞḗřȧŀ ȧşşḗŧ īƞƒȯřḿȧŧīȯƞ ƥȧƞḗŀ ƒȯř īḓḗƞŧīƒīƈȧŧīȯƞ, ȯẇƞḗř, ȧƞḓ ŀīƒḗƈẏƈŀḗ ḓḗŧȧīŀş ································〗",
     "actions": {
-      "copy": "55555",
-      "copied": "55555"
+      "copy": "〖Ƈȯƥẏ ··〗",
+      "copied": "〖Ƈȯƥīḗḓ ···〗"
     },
     "fields": {
-      "client": "55555",
-      "location": "55555",
-      "model": "55555",
-      "serialNumber": "55555",
-      "purchaseDate": "55555",
-      "warrantyEnd": "55555"
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "location": "〖Ŀȯƈȧŧīȯƞ ····〗",
+      "model": "〖Ḿȯḓḗŀ ··〗",
+      "serialNumber": "〖Şḗřīȧŀ Ƞŭḿƀḗř ······〗",
+      "purchaseDate": "〖Ƥŭřƈħȧşḗ Ḓȧŧḗ ······〗",
+      "warrantyEnd": "〖Ẇȧřřȧƞŧẏ Ḗƞḓ ·····〗"
     },
     "values": {
-      "unknownClient": "55555",
-      "unassigned": "55555",
-      "unknownModel": "55555"
+      "unknownClient": "〖Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ ······〗",
+      "unassigned": "〖Ŭƞȧşşīɠƞḗḓ ····〗",
+      "unknownModel": "〖Ŭƞķƞȯẇƞ Ḿȯḓḗŀ ······〗"
     }
   },
   "assetNotesPanel": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ƞȯŧḗş ··〗",
+    "description": "〖Řīƈħ-ŧḗẋŧ ƞȯŧḗş ƥȧƞḗŀ ƒȯř ȧşşḗŧ-şƥḗƈīƒīƈ ƞȯŧḗş ȧƞḓ ʠŭīƈķ ȯƥḗřȧŧīȯƞȧŀ ƈȯƞŧḗẋŧ ·······························〗",
     "errors": {
-      "loadTitle": "55555",
-      "unknown": "55555",
-      "loadDescription": "55555"
+      "loadTitle": "〖Ƞȯŧḗş ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ········〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ḗřřȯř ······〗",
+      "loadDescription": "〖Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ ƞȯŧḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ················〗"
     },
-    "lastUpdated": "55555 {{value}} 55555"
+    "lastUpdated": "〖Ŀȧşŧ ŭƥḓȧŧḗḓ: {{value}} ··········〗"
   },
   "hardwareSpecsPanel": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ħȧřḓẇȧřḗ Şƥḗƈīƒīƈȧŧīȯƞş ··········〗",
+    "description": "〖Ħȧřḓẇȧřḗ şƥḗƈīƒīƈȧŧīȯƞ ƥȧƞḗŀ ƈȯṽḗřīƞɠ ƇƤŬ, ḿḗḿȯřẏ, şŧȯřȧɠḗ, ȧƞḓ ḓḗṽīƈḗ ḿḗŧȧḓȧŧȧ ································〗",
     "fields": {
-      "cpu": "55555",
-      "ram": "55555",
-      "storage": "55555",
-      "utilization": "55555"
+      "cpu": "〖ƇƤŬ ··〗",
+      "ram": "〖ŘȦḾ ··〗",
+      "storage": "〖Şŧȯřȧɠḗ ···〗",
+      "utilization": "〖Ŭŧīŀīẑȧŧīȯƞ ·····〗"
     },
     "values": {
-      "unknownCpu": "55555",
-      "unknown": "55555",
-      "unifiedMemory": "55555 {{size}} 55555",
-      "memoryUsed": "55555 {{size}} 55555",
-      "freeStorage": "55555 {{size}} 55555"
+      "unknownCpu": "〖Ŭƞķƞȯẇƞ ƇƤŬ ·····〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗",
+      "unifiedMemory": "〖{{size}}ƓƁ Ŭƞīƒīḗḓ Ḿḗḿȯřẏ ··········〗",
+      "memoryUsed": "〖 ({{size}}ƓƁ Ŭşḗḓ) ········〗",
+      "freeStorage": "〖{{size}} ƓƁ Ƒřḗḗ ·······〗"
     },
-    "empty": "55555",
-    "emptyStorage": "55555"
+    "empty": "〖Ƞȯ ħȧřḓẇȧřḗ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ ···········〗",
+    "emptyStorage": "〖Ƞȯ şŧȯřȧɠḗ ḓřīṽḗş ḓḗŧḗƈŧḗḓ ···········〗"
   },
   "huduDocumentationCard": {
-    "title": "55555",
-    "syncedAt": "55555 {{value}} 55555"
+    "title": "〖Ħŭḓŭ Ḓȯƈŭḿḗƞŧȧŧīȯƞ ········〗",
+    "syncedAt": "〖Ŀȧşŧ şẏƞƈḗḓ ƒřȯḿ Ħŭḓŭ: {{value}} ·············〗"
   },
   "rmmVitalsPanel": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖ŘḾḾ Ṽīŧȧŀş & Ƈȯƞƞḗƈŧīṽīŧẏ ··········〗",
+    "description": "〖ŘḾḾ ṽīŧȧŀş ƥȧƞḗŀ ƒȯř ħḗȧřŧƀḗȧŧ, ḿȯƞīŧȯřīƞɠ, ȧƞḓ ḗƞḓƥȯīƞŧ ħḗȧŀŧħ ḓḗŧȧīŀş ·····························〗",
     "actions": {
-      "refresh": "55555"
+      "refresh": "〖Řḗƒřḗşħ ···〗"
     },
     "fields": {
-      "agentStatus": "55555",
-      "currentUser": "55555",
-      "lastCheckIn": "55555 {{value}} 55555",
-      "uptime": "55555",
-      "lastSync": "55555",
-      "network": "55555",
-      "networkValue": "55555 {{lan}} 55555 {{wan}} 55555",
-      "taniumCriticality": "55555"
+      "agentStatus": "〖Ȧɠḗƞŧ Şŧȧŧŭş ·····〗",
+      "currentUser": "〖Ƈŭřřḗƞŧ Ŭşḗř ·····〗",
+      "lastCheckIn": "〖(Ŀȧşŧ ƈħḗƈķ-īƞ: {{value}}) ···········〗",
+      "uptime": "〖Ŭƥŧīḿḗ ···〗",
+      "lastSync": "〖Ŀȧşŧ ŘḾḾ Şẏƞƈ ······〗",
+      "network": "〖Ƞḗŧẇȯřķ ···〗",
+      "networkValue": "〖ĿȦȠ ĪƤ: {{lan}} | ẆȦȠ ĪƤ: {{wan}} ··············〗",
+      "taniumCriticality": "〖Ŧȧƞīŭḿ Ƈřīŧīƈȧŀīŧẏ ········〗"
     },
     "values": {
-      "never": "55555"
+      "never": "〖Ƞḗṽḗř ··〗"
     },
     "empty": {
-      "title": "55555",
-      "notConnected": "55555"
+      "title": "〖ŘḾḾ Ṽīŧȧŀş ····〗",
+      "notConnected": "〖Ƞȯŧ ƈȯƞƞḗƈŧḗḓ ŧȯ ŘḾḾ ········〗"
     },
-    "uptime": "55555 {{days}} 55555 {{hours}} 55555 {{minutes}} 55555"
+    "uptime": "〖{{days}} ḓȧẏş, {{hours}} ħȯŭřş, {{minutes}} ḿīƞŭŧḗş ·····················〗"
   },
   "securityPatchingPanel": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Şḗƈŭřīŧẏ & Ƥȧŧƈħīƞɠ ········〗",
+    "description": "〖Şḗƈŭřīŧẏ ȧƞḓ ƥȧŧƈħīƞɠ ƥȯşŧŭřḗ ƥȧƞḗŀ ƒȯř ṽŭŀƞḗřȧƀīŀīŧẏ ȧƞḓ ŭƥḓȧŧḗ şŧȧŧŭş īƞḓīƈȧŧȯřş ·································〗",
     "fields": {
-      "osVersion": "55555",
-      "antivirus": "55555",
-      "patchStatus": "55555",
-      "firewall": "55555"
+      "osVersion": "〖ȮŞ Ṽḗřşīȯƞ ····〗",
+      "antivirus": "〖Ȧƞŧīṽīřŭş ····〗",
+      "patchStatus": "〖Ƥȧŧƈħ Şŧȧŧŭş ·····〗",
+      "firewall": "〖Ƒīřḗẇȧŀŀ ····〗"
     },
     "values": {
-      "unknown": "55555"
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗"
     },
     "antivirus": {
-      "running": "55555",
-      "inactive": "55555",
-      "lastScan": "55555"
+      "running": "〖✔ Īƞşŧȧŀŀḗḓ & Řŭƞƞīƞɠ ·········〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+      "lastScan": "〖| Ŀȧşŧ Şƈȧƞ: Ŧȯḓȧẏ, 3:00 ȦḾ ···········〗"
     },
     "patchStatus": {
-      "critical": "55555",
-      "atRisk": "55555",
-      "missingPatches": "55555 {{count}} 55555",
-      "upToDate": "55555"
+      "critical": "〖Ƈřīŧīƈȧŀ ····〗",
+      "atRisk": "〖Ȧŧ Řīşķ ···〗",
+      "missingPatches": "〖- {{count}} Ƈřīŧīƈȧŀ ȮŞ Ƥȧŧƈħḗş ḿīşşīƞɠ. ················〗",
+      "upToDate": "〖✔ Ŭƥ ŧȯ Ḓȧŧḗ ·····〗"
     },
     "firewall": {
-      "on": "55555"
+      "on": "〖✔ Ȯƞ ··〗"
     }
   },
   "copyableField": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ƈȯƥẏȧƀŀḗ Ƒīḗŀḓ ······〗",
+    "description": "〖Şħȧřḗḓ ƈȯƥẏ-ŧȯ-ƈŀīƥƀȯȧřḓ ƒīḗŀḓ ŭşḗḓ ȧƈřȯşş ȧşşḗŧ ƒȯřḿş ȧƞḓ ḓḗŧȧīŀ ƥȧƞḗŀş ·····························〗",
     "actions": {
-      "copy": "55555",
-      "copied": "55555"
+      "copy": "〖Ƈȯƥẏ ··〗",
+      "copied": "〖Ƈȯƥīḗḓ ···〗"
     }
   },
   "statusBadge": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Şŧȧŧŭş Ɓȧḓɠḗ ·····〗",
+    "description": "〖Şħȧřḗḓ ƀȧḓɠḗ řḗƞḓḗřḗř ƒȯř ȧşşḗŧ ŀīƒḗƈẏƈŀḗ ȧƞḓ ḿȯƞīŧȯřīƞɠ şŧȧŧŭşḗş ··························〗",
     "statuses": {
-      "online": "55555",
-      "offline": "55555",
-      "overdue": "55555",
-      "healthy": "55555",
-      "warning": "55555",
-      "critical": "55555",
-      "unknown": "55555",
-      "secure": "55555",
-      "at_risk": "55555",
-      "active": "55555",
-      "expiring_soon": "55555",
-      "expired": "55555"
+      "online": "〖Ȯƞŀīƞḗ ···〗",
+      "offline": "〖Ȯƒƒŀīƞḗ ···〗",
+      "overdue": "〖Ȯṽḗřḓŭḗ ···〗",
+      "healthy": "〖Ħḗȧŀŧħẏ ···〗",
+      "warning": "〖Ẇȧřƞīƞɠ ···〗",
+      "critical": "〖Ƈřīŧīƈȧŀ ····〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗",
+      "secure": "〖Şḗƈŭřḗ ···〗",
+      "at_risk": "〖Ȧŧ Řīşķ ···〗",
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "expiring_soon": "〖Ḗẋƥīřīƞɠ Şȯȯƞ ······〗",
+      "expired": "〖Ḗẋƥīřḗḓ ···〗"
     }
   },
   "utilizationBar": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Ŭŧīŀīẑȧŧīȯƞ Ɓȧř ······〗",
+    "description": "〖Şħȧřḗḓ ƥřȯɠřḗşş ƀȧř ƈȯḿƥȯƞḗƞŧ ƒȯř ŭŧīŀīẑȧŧīȯƞ ȧƞḓ ƥḗřƈḗƞŧȧɠḗ-ƀȧşḗḓ ȧşşḗŧ ḿḗŧřīƈş ································〗"
   },
   "createMaintenanceScheduleDialog": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ƈřḗȧŧḗ Ḿȧīƞŧḗƞȧƞƈḗ Şƈħḗḓŭŀḗ ···········〗",
+    "description": "〖Ḓīȧŀȯɠ ƒȯř ḓḗƒīƞīƞɠ ḿȧīƞŧḗƞȧƞƈḗ şƈħḗḓŭŀḗş ȧƞḓ řḗƈŭřřḗƞƈḗ řŭŀḗş ƒȯř ȧƞ ȧşşḗŧ ······························〗",
     "titles": {
-      "create": "55555",
-      "edit": "55555"
+      "create": "〖Şƈħḗḓŭŀḗ Ḿȧīƞŧḗƞȧƞƈḗ ········〗",
+      "edit": "〖Ḗḓīŧ Ḿȧīƞŧḗƞȧƞƈḗ Şƈħḗḓŭŀḗ ··········〗"
     },
     "actions": {
-      "create": "55555",
-      "creating": "55555",
-      "update": "55555",
-      "updating": "55555"
+      "create": "〖Ƈřḗȧŧḗ Şƈħḗḓŭŀḗ ······〗",
+      "creating": "〖Ƈřḗȧŧīƞɠ... ·····〗",
+      "update": "〖Ŭƥḓȧŧḗ Şƈħḗḓŭŀḗ ······〗",
+      "updating": "〖Ŭƥḓȧŧīƞɠ... ·····〗"
     },
     "fields": {
-      "scheduleName": "55555",
-      "description": "55555",
-      "maintenanceType": "55555",
-      "frequency": "55555",
-      "interval": "55555",
-      "nextMaintenanceDate": "55555",
-      "active": "55555"
+      "scheduleName": "〖Şƈħḗḓŭŀḗ Ƞȧḿḗ * ······〗",
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "maintenanceType": "〖Ḿȧīƞŧḗƞȧƞƈḗ Ŧẏƥḗ * ········〗",
+      "frequency": "〖Ƒřḗʠŭḗƞƈẏ * ·····〗",
+      "interval": "〖Īƞŧḗřṽȧŀ * ····〗",
+      "nextMaintenanceDate": "〖Ƞḗẋŧ Ḿȧīƞŧḗƞȧƞƈḗ Ḓȧŧḗ * ··········〗",
+      "active": "〖Ȧƈŧīṽḗ ···〗"
     },
     "placeholders": {
-      "scheduleName": "55555",
-      "description": "55555",
-      "maintenanceType": "55555",
-      "frequency": "55555",
-      "interval": "55555",
-      "nextMaintenanceDate": "55555"
+      "scheduleName": "〖ḗ.ɠ., Ḿȯƞŧħŀẏ Şḗřṽḗř Ḿȧīƞŧḗƞȧƞƈḗ ·············〗",
+      "description": "〖Ȯƥŧīȯƞȧŀ ḓḗşƈřīƥŧīȯƞ... ··········〗",
+      "maintenanceType": "〖Şḗŀḗƈŧ ḿȧīƞŧḗƞȧƞƈḗ ŧẏƥḗ ··········〗",
+      "frequency": "〖Şḗŀḗƈŧ ƒřḗʠŭḗƞƈẏ ·······〗",
+      "interval": "〖1 ·〗",
+      "nextMaintenanceDate": "〖Şḗŀḗƈŧ ḓȧŧḗ ·····〗"
     },
     "frequencyOptions": {
-      "daily": "55555",
-      "weekly": "55555",
-      "monthly": "55555",
-      "quarterly": "55555",
-      "yearly": "55555"
+      "daily": "〖Ḓȧīŀẏ ··〗",
+      "weekly": "〖Ẇḗḗķŀẏ ···〗",
+      "monthly": "〖Ḿȯƞŧħŀẏ ···〗",
+      "quarterly": "〖Ɋŭȧřŧḗřŀẏ ····〗",
+      "yearly": "〖Ẏḗȧřŀẏ ···〗"
     },
     "errors": {
-      "scheduleNameRequired": "55555",
-      "maintenanceTypeRequired": "55555",
-      "frequencyRequired": "55555",
-      "nextMaintenanceRequired": "55555",
-      "frequencyIntervalMin": "55555",
-      "saveFailed": "55555"
+      "scheduleNameRequired": "〖Şƈħḗḓŭŀḗ ƞȧḿḗ īş řḗʠŭīřḗḓ ··········〗",
+      "maintenanceTypeRequired": "〖Ḿȧīƞŧḗƞȧƞƈḗ ŧẏƥḗ īş řḗʠŭīřḗḓ ············〗",
+      "frequencyRequired": "〖Ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ ·········〗",
+      "nextMaintenanceRequired": "〖Ƞḗẋŧ ḿȧīƞŧḗƞȧƞƈḗ ḓȧŧḗ īş řḗʠŭīřḗḓ ··············〗",
+      "frequencyIntervalMin": "〖Ƒřḗʠŭḗƞƈẏ īƞŧḗřṽȧŀ ḿŭşŧ ƀḗ ȧŧ ŀḗȧşŧ 1 ···············〗",
+      "saveFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ḿȧīƞŧḗƞȧƞƈḗ şƈħḗḓŭŀḗ ···············〗"
     }
   },
   "documentsPasswordsTab": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ḓȯƈŭḿḗƞŧş & Ƥȧşşẇȯřḓş ·········〗",
+    "description": "〖Ƈȯḿƀīƞḗḓ ŧȧƀ ƒȯř ȧşşḗŧ ḓȯƈŭḿḗƞŧş, ƈřḗḓḗƞŧīȧŀş, ȧƞḓ řḗŀȧŧḗḓ şḗƈŭřḗ řḗƈȯřḓş ······························〗",
     "passwords": {
-      "title": "55555",
-      "comingSoon": "55555"
+      "title": "〖Ƥȧşşẇȯřḓş & Şḗƈřḗŧş ········〗",
+      "comingSoon": "〖Şḗƈŭřḗ ƥȧşşẇȯřḓ ḿȧƞȧɠḗḿḗƞŧ ƈȯḿīƞɠ şȯȯƞ. ················〗"
     }
   },
   "maintenanceSchedulesTab": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ḿȧīƞŧḗƞȧƞƈḗ Şƈħḗḓŭŀḗş ·········〗",
+    "description": "〖Ḿȧīƞŧḗƞȧƞƈḗ şƈħḗḓŭŀḗ ḿȧƞȧɠḗḿḗƞŧ ŧȧƀ ƒȯř ƥŀȧƞƞḗḓ şḗřṽīƈḗ ȧƞḓ řḗƈŭřřīƞɠ ẇȯřķ ······························〗",
     "summary": {
-      "complianceRate": "55555",
-      "nextMaintenance": "55555",
-      "noneScheduled": "55555"
+      "complianceRate": "〖Ƈȯḿƥŀīȧƞƈḗ Řȧŧḗ ······〗",
+      "nextMaintenance": "〖Ƞḗẋŧ Ḿȧīƞŧḗƞȧƞƈḗ ·······〗",
+      "noneScheduled": "〖Ƞȯƞḗ Şƈħḗḓŭŀḗḓ ······〗"
     },
     "actions": {
-      "scheduleMaintenance": "55555"
+      "scheduleMaintenance": "〖Şƈħḗḓŭŀḗ Ḿȧīƞŧḗƞȧƞƈḗ ········〗"
     },
     "errors": {
-      "deleteFailed": "55555"
+      "deleteFailed": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ḿȧīƞŧḗƞȧƞƈḗ şƈħḗḓŭŀḗ ···············〗"
     },
     "table": {
-      "scheduleName": "55555",
-      "type": "55555",
-      "frequency": "55555",
-      "nextMaintenance": "55555",
-      "lastMaintenance": "55555",
-      "status": "55555",
-      "actions": "55555"
+      "scheduleName": "〖Şƈħḗḓŭŀḗ Ƞȧḿḗ ······〗",
+      "type": "〖Ŧẏƥḗ ··〗",
+      "frequency": "〖Ƒřḗʠŭḗƞƈẏ ····〗",
+      "nextMaintenance": "〖Ƞḗẋŧ Ḿȧīƞŧḗƞȧƞƈḗ ·······〗",
+      "lastMaintenance": "〖Ŀȧşŧ Ḿȧīƞŧḗƞȧƞƈḗ ·······〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗"
     },
     "frequency": {
-      "every_one": "55555 {{frequency}} 55555",
-      "every_other": "55555 {{count}} 55555 {{frequency}} 55555",
+      "every_one": "〖Ḗṽḗřẏ {{frequency}} ········〗",
+      "every_other": "〖Ḗṽḗřẏ {{count}} {{frequency}} ············〗",
       "units": {
-        "daily_one": "55555",
-        "daily_other": "55555",
-        "weekly_one": "55555",
-        "weekly_other": "55555",
-        "monthly_one": "55555",
-        "monthly_other": "55555",
-        "quarterly_one": "55555",
-        "quarterly_other": "55555",
-        "yearly_one": "55555",
-        "yearly_other": "55555"
+        "daily_one": "〖ḓȧẏ ··〗",
+        "daily_other": "〖ḓȧẏş ··〗",
+        "weekly_one": "〖ẇḗḗķ ··〗",
+        "weekly_other": "〖ẇḗḗķş ··〗",
+        "monthly_one": "〖ḿȯƞŧħ ··〗",
+        "monthly_other": "〖ḿȯƞŧħş ···〗",
+        "quarterly_one": "〖ʠŭȧřŧḗř ···〗",
+        "quarterly_other": "〖ʠŭȧřŧḗřş ····〗",
+        "yearly_one": "〖ẏḗȧř ··〗",
+        "yearly_other": "〖ẏḗȧřş ··〗"
       }
     },
     "status": {
-      "active": "55555",
-      "inactive": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗"
     },
     "types": {
-      "preventive": "55555",
-      "inspection": "55555",
-      "calibration": "55555",
-      "replacement": "55555"
+      "preventive": "〖Ƥřḗṽḗƞŧīṽḗ ····〗",
+      "inspection": "〖Īƞşƥḗƈŧīȯƞ ····〗",
+      "calibration": "〖Ƈȧŀīƀřȧŧīȯƞ ·····〗",
+      "replacement": "〖Řḗƥŀȧƈḗḿḗƞŧ ·····〗"
     },
     "empty": {
-      "schedules": "55555"
+      "schedules": "〖Ƞȯ ḿȧīƞŧḗƞȧƞƈḗ şƈħḗḓŭŀḗş ƒȯŭƞḓ. Ƈŀīƈķ \"Şƈħḗḓŭŀḗ Ḿȧīƞŧḗƞȧƞƈḗ\" ŧȯ ƈřḗȧŧḗ ȯƞḗ. ······························〗"
     },
     "history": {
-      "title": "55555",
-      "performedAt": "55555",
-      "performedBy": "55555",
-      "notes": "55555",
-      "empty": "55555"
+      "title": "〖Ḿȧīƞŧḗƞȧƞƈḗ Ħīşŧȯřẏ ········〗",
+      "performedAt": "〖Ƥḗřƒȯřḿḗḓ Ȧŧ ·····〗",
+      "performedBy": "〖Ƥḗřƒȯřḿḗḓ Ɓẏ ·····〗",
+      "notes": "〖Ƞȯŧḗş ··〗",
+      "empty": "〖Ƞȯ ḿȧīƞŧḗƞȧƞƈḗ ħīşŧȯřẏ řḗƈȯřḓḗḓ. ·············〗"
     },
     "dialog": {
       "delete": {
-        "title": "55555",
-        "message": "55555 {{name}} 55555"
+        "title": "〖Ḓḗŀḗŧḗ Ḿȧīƞŧḗƞȧƞƈḗ Şƈħḗḓŭŀḗ ···········〗",
+        "message": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ \"{{name}}\"? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ······························〗"
       }
     }
   },
   "relatedAssetsTab": {
-    "title": "55555 {{count}} 55555",
-    "description": "55555",
-    "loading": "55555",
+    "title": "〖Řḗŀȧŧḗḓ Ȧşşḗŧş ({{count}}) ···········〗",
+    "description": "〖Ŧȧƀ ƒȯř ƀřȯẇşīƞɠ ȧƞḓ ḿȧƞȧɠīƞɠ řḗŀȧŧḗḓ ȧşşḗŧ řḗŀȧŧīȯƞşħīƥş ·······················〗",
+    "loading": "〖Ŀȯȧḓīƞɠ řḗŀȧŧḗḓ ȧşşḗŧş... ··········〗",
     "actions": {
-      "linkAsset": "55555",
-      "unlink": "55555",
-      "linkEmptyState": "55555"
+      "linkAsset": "〖Ŀīƞķ Ȧşşḗŧ ····〗",
+      "unlink": "〖Ŭƞŀīƞķ ···〗",
+      "linkEmptyState": "〖Ŀīƞķ ȧƞ ȧşşḗŧ ······〗"
     },
     "success": {
-      "linked": "55555",
-      "unlinked": "55555"
+      "linked": "〖Ȧşşḗŧ ŀīƞķḗḓ ·····〗",
+      "unlinked": "〖Ȧşşḗŧ ŭƞŀīƞķḗḓ ······〗"
     },
     "errors": {
-      "selectAsset": "55555",
-      "linkFailed": "55555",
-      "unlinkFailed": "55555"
+      "selectAsset": "〖Şḗŀḗƈŧ ȧƞ ȧşşḗŧ ŧȯ ŀīƞķ ··········〗",
+      "linkFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀīƞķ ȧşşḗŧ ········〗",
+      "unlinkFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƞŀīƞķ ȧşşḗŧ ·········〗"
     },
     "table": {
-      "assetName": "55555",
-      "relationship": "55555",
-      "linkedDate": "55555",
-      "actions": "55555"
+      "assetName": "〖Ȧşşḗŧ Ƞȧḿḗ ····〗",
+      "relationship": "〖Řḗŀȧŧīȯƞşħīƥ ·····〗",
+      "linkedDate": "〖Ŀīƞķḗḓ Ḓȧŧḗ ·····〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗"
     },
     "empty": {
-      "linked": "55555"
+      "linked": "〖Ƞȯ řḗŀȧŧḗḓ ȧşşḗŧş ŀīƞķḗḓ. ··········〗"
     },
     "dialog": {
-      "title": "55555",
-      "loadingAssets": "55555",
-      "empty": "55555",
+      "title": "〖Ŀīƞķ Ȧşşḗŧ ····〗",
+      "loadingAssets": "〖Ŀȯȧḓīƞɠ ȧşşḗŧş... ·······〗",
+      "empty": "〖Ƞȯ ȧṽȧīŀȧƀŀḗ ȧşşḗŧş ƒȯŭƞḓ. ···········〗",
       "search": {
-        "label": "55555",
-        "placeholder": "55555"
+        "label": "〖Şḗȧřƈħ ȧşşḗŧş ······〗",
+        "placeholder": "〖Şḗȧřƈħ ƀẏ ƞȧḿḗ, ŧȧɠ, şḗřīȧŀ... ············〗"
       },
       "relationshipType": {
-        "label": "55555",
-        "placeholder": "55555"
+        "label": "〖Řḗŀȧŧīȯƞşħīƥ ŧẏƥḗ ·······〗",
+        "placeholder": "〖řḗŀȧŧḗḓ ···〗"
       },
       "table": {
-        "asset": "55555",
-        "select": "55555"
+        "asset": "〖Ȧşşḗŧ ··〗",
+        "select": "〖Şḗŀḗƈŧ ···〗"
       },
       "actions": {
-        "selected": "55555",
-        "linking": "55555",
-        "confirm": "55555"
+        "selected": "〖Şḗŀḗƈŧḗḓ ····〗",
+        "linking": "〖Ŀīƞķīƞɠ... ····〗",
+        "confirm": "〖Ŀīƞķ ȧşşḗŧ ····〗"
       }
     },
     "relationshipTypes": {
-      "related": "55555",
-      "affected": "55555"
+      "related": "〖Řḗŀȧŧḗḓ ···〗",
+      "affected": "〖Ȧƒƒḗƈŧḗḓ ····〗"
     }
   },
   "serviceHistoryTab": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Şḗřṽīƈḗ Ħīşŧȯřẏ ······〗",
+    "description": "〖Şḗřṽīƈḗ ħīşŧȯřẏ ŧȧƀ şŭḿḿȧřīẑīƞɠ ḿȧīƞŧḗƞȧƞƈḗ ȧƞḓ ŧīƈķḗŧ ȧƈŧīṽīŧẏ ƒȯř ŧħḗ ȧşşḗŧ ·······························〗",
     "actions": {
-      "createTicket": "55555"
+      "createTicket": "〖Ƈřḗȧŧḗ Ŧīƈķḗŧ ······〗"
     },
     "table": {
-      "ticketId": "55555",
-      "subject": "55555",
-      "status": "55555",
-      "priority": "55555",
-      "dateLinked": "55555"
+      "ticketId": "〖Ŧīƈķḗŧ ĪḒ ····〗",
+      "subject": "〖Şŭƀĵḗƈŧ ···〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "priority": "〖Ƥřīȯřīŧẏ ····〗",
+      "dateLinked": "〖Ḓȧŧḗ Ŀīƞķḗḓ ·····〗"
     },
-    "empty": "55555",
-    "clientFallback": "55555"
+    "empty": "〖Ƞȯ ŧīƈķḗŧş ŀīƞķḗḓ ŧȯ ŧħīş ȧşşḗŧ. ·············〗",
+    "clientFallback": "〖Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ ······〗"
   },
   "softwareInventoryTab": {
-    "title": "55555",
-    "description": "55555",
-    "searchPlaceholder": "55555",
+    "title": "〖Şȯƒŧẇȧřḗ Īƞṽḗƞŧȯřẏ ········〗",
+    "description": "〖Şȯƒŧẇȧřḗ īƞṽḗƞŧȯřẏ ŧȧƀ ƒȯř īƞşŧȧŀŀḗḓ şȯƒŧẇȧřḗ, ṽḗřşīȯƞş, ȧƞḓ ḓīşƈȯṽḗřẏ ḿḗŧȧḓȧŧȧ ································〗",
+    "searchPlaceholder": "〖Şḗȧřƈħ şȯƒŧẇȧřḗ... ········〗",
     "category": {
-      "placeholder": "55555",
+      "placeholder": "〖Ƈȧŧḗɠȯřẏ ····〗",
       "options": {
-        "all": "55555",
-        "browser": "55555",
-        "security": "55555",
-        "productivity": "55555",
-        "development": "55555"
+        "all": "〖Ȧŀŀ ··〗",
+        "browser": "〖Ɓřȯẇşḗř ···〗",
+        "security": "〖Şḗƈŭřīŧẏ ····〗",
+        "productivity": "〖Ƥřȯḓŭƈŧīṽīŧẏ ·····〗",
+        "development": "〖Ḓḗṽḗŀȯƥḿḗƞŧ ·····〗"
       }
     },
     "table": {
-      "name": "55555",
-      "version": "55555",
-      "publisher": "55555",
-      "installDate": "55555"
+      "name": "〖Ƞȧḿḗ ··〗",
+      "version": "〖Ṽḗřşīȯƞ ···〗",
+      "publisher": "〖Ƥŭƀŀīşħḗř ····〗",
+      "installDate": "〖Īƞşŧȧŀŀ Ḓȧŧḗ ·····〗"
     },
-    "empty": "55555",
-    "totalItems": "55555 {{count}} 55555",
+    "empty": "〖Ƞȯ şȯƒŧẇȧřḗ ƒȯŭƞḓ ḿȧŧƈħīƞɠ ẏȯŭř şḗȧřƈħ. ················〗",
+    "totalItems": "〖Ŧȯŧȧŀ Īŧḗḿş: {{count}} ·········〗",
     "values": {
-      "unknown": "55555"
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗"
     }
   },
   "alerts": {
     "messages": {
-      "alertAcknowledged": "55555",
-      "acknowledgeFailed": "55555",
-      "ticketCreated": "55555",
-      "ticketCreateFailed": "55555"
+      "alertAcknowledged": "〖Ȧŀḗřŧ ȧƈķƞȯẇŀḗḓɠḗḓ ········〗",
+      "acknowledgeFailed": "〖Ƒȧīŀḗḓ ŧȯ ȧƈķƞȯẇŀḗḓɠḗ ȧŀḗřŧ ···········〗",
+      "ticketCreated": "〖Ŧīƈķḗŧ ƈřḗȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ···········〗",
+      "ticketCreateFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ŧīƈķḗŧ ··········〗"
     },
-    "activeAlerts": "55555",
-    "acknowledge": "55555",
-    "createTicket": "55555"
+    "activeAlerts": "〖Ȧƈŧīṽḗ Ȧŀḗřŧş ······〗",
+    "acknowledge": "〖Ȧƈķƞȯẇŀḗḓɠḗ ·····〗",
+    "createTicket": "〖Ƈřḗȧŧḗ Ŧīƈķḗŧ ······〗"
   },
   "actions": {
-    "print": "55555",
-    "printOptions": "55555",
-    "printSelected": "55555 {{count}} 55555"
+    "print": "〖Ƥřīƞŧ ··〗",
+    "printOptions": "〖Ƥřīƞŧ ȯƥŧīȯƞş ······〗",
+    "printSelected": "〖Ƥřīƞŧ şḗŀḗƈŧḗḓ ({{count}}) ···········〗"
   },
   "crossFeature": {
-    "loadTicketFailed": "55555",
-    "openTicketFailed": "55555"
+    "loadTicketFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ·········〗",
+    "openTicketFailed": "〖Ƒȧīŀḗḓ ŧȯ ȯƥḗƞ ŧīƈķḗŧ ·········〗"
   },
   "assetTypeBreakdown": {
-    "title": "55555"
+    "title": "〖Ȧşşḗŧş ƀẏ ŧẏƥḗ ······〗"
   },
   "customTypeDetailsPanel": {
-    "title": "55555 {{name}} 55555",
+    "title": "〖{{name}} Ḓḗŧȧīŀş ·······〗",
     "values": {
-      "yes": "55555",
-      "no": "55555"
+      "yes": "〖Ẏḗş ··〗",
+      "no": "〖Ƞȯ ·〗"
     }
   },
   "assetBento": {
-    "health": "55555",
-    "security": "55555",
-    "openTickets": "55555",
-    "warranty": "55555",
-    "identity": "55555",
-    "tag": "55555",
-    "serial": "55555",
-    "status": "55555",
-    "location": "55555",
-    "purchased": "55555",
-    "warrantyEnds": "55555",
-    "hardware": "55555",
-    "os": "55555",
-    "cpu": "55555",
-    "cores": "55555",
-    "ram": "55555",
-    "ip": "55555",
-    "noHardware": "55555",
-    "notes": "55555",
-    "liveVitals": "55555",
-    "checkedIn": "55555",
-    "neverCheckedIn": "55555",
-    "memory": "55555",
-    "disk": "55555",
-    "uptime": "55555",
-    "signedIn": "55555",
-    "securityTitle": "55555",
-    "antivirus": "55555",
-    "pendingPatches": "55555",
-    "failedPatches": "55555",
-    "lastScan": "55555",
-    "agentVersion": "55555",
-    "noRelated": "55555",
-    "manage": "55555",
-    "reportedFacts": "55555",
-    "more": "55555",
-    "views": "55555",
-    "editAsset": "55555",
-    "viewAll": "55555",
-    "open": "55555",
-    "close": "55555",
-    "packagesReported": "55555 {{count}} 55555",
-    "noSoftware": "55555",
-    "noService": "55555",
-    "activeSchedules": "55555",
-    "compliance": "55555",
-    "lastDone": "55555",
-    "noMaintenance": "55555",
-    "docsHint": "55555"
+    "health": "〖Ħḗȧŀŧħ ···〗",
+    "security": "〖Şḗƈŭřīŧẏ ····〗",
+    "openTickets": "〖Ȯƥḗƞ ŧīƈķḗŧş ·····〗",
+    "warranty": "〖Ẇȧřřȧƞŧẏ ····〗",
+    "identity": "〖Īḓḗƞŧīŧẏ ····〗",
+    "tag": "〖Ŧȧɠ ··〗",
+    "serial": "〖Şḗřīȧŀ ···〗",
+    "status": "〖Şŧȧŧŭş ···〗",
+    "location": "〖Ŀȯƈȧŧīȯƞ ····〗",
+    "purchased": "〖Ƥŭřƈħȧşḗḓ ····〗",
+    "warrantyEnds": "〖Ẇȧřřȧƞŧẏ ḗƞḓş ······〗",
+    "hardware": "〖Ħȧřḓẇȧřḗ ····〗",
+    "os": "〖ȮŞ ·〗",
+    "cpu": "〖ƇƤŬ ··〗",
+    "cores": "〖Ƈȯřḗş ··〗",
+    "ram": "〖ŘȦḾ ··〗",
+    "ip": "〖ĪƤ ·〗",
+    "noHardware": "〖Ƞȯ ħȧřḓẇȧřḗ ḓḗŧȧīŀş řḗƈȯřḓḗḓ. ············〗",
+    "notes": "〖Ƞȯŧḗş ··〗",
+    "liveVitals": "〖Ŀīṽḗ ṽīŧȧŀş ·····〗",
+    "checkedIn": "〖Ƈħḗƈķḗḓ īƞ ····〗",
+    "neverCheckedIn": "〖Ƞḗṽḗř ƈħḗƈķḗḓ īƞ ·······〗",
+    "memory": "〖Ḿḗḿȯřẏ ···〗",
+    "disk": "〖Ḓīşķ ··〗",
+    "uptime": "〖Ŭƥŧīḿḗ ···〗",
+    "signedIn": "〖Şīɠƞḗḓ īƞ ····〗",
+    "securityTitle": "〖Şḗƈŭřīŧẏ ····〗",
+    "antivirus": "〖Ȧƞŧīṽīřŭş ····〗",
+    "pendingPatches": "〖Ƥḗƞḓīƞɠ ƥȧŧƈħḗş ······〗",
+    "failedPatches": "〖Ƒȧīŀḗḓ ƥȧŧƈħḗş ······〗",
+    "lastScan": "〖Ŀȧşŧ şƈȧƞ ····〗",
+    "agentVersion": "〖Ȧɠḗƞŧ ··〗",
+    "noRelated": "〖Ƞȯŧ ŀīƞķḗḓ ŧȯ ȧƞẏ ȯŧħḗř ȧşşḗŧ. ············〗",
+    "manage": "〖Ḿȧƞȧɠḗ ···〗",
+    "reportedFacts": "〖Řḗƥȯřŧḗḓ ƒȧƈŧş ······〗",
+    "more": "〖Ḗṽḗřẏŧħīƞɠ ḗŀşḗ ······〗",
+    "views": "〖Ȧşşḗŧ ṽīḗẇş ·····〗",
+    "editAsset": "〖Ḗḓīŧ ȧşşḗŧ ····〗",
+    "viewAll": "〖Ṽīḗẇ ȧŀŀ ····〗",
+    "open": "〖Ȯƥḗƞ ··〗",
+    "close": "〖Ƈŀȯşḗ ··〗",
+    "packagesReported": "〖{{count}} ƥȧƈķȧɠḗş řḗƥȯřŧḗḓ ···········〗",
+    "noSoftware": "〖Ƞȯ şȯƒŧẇȧřḗ īƞṽḗƞŧȯřẏ řḗƥȯřŧḗḓ. ·············〗",
+    "noService": "〖Ƞȯ ŧīƈķḗŧş řḗƒḗřḗƞƈḗ ŧħīş ȧşşḗŧ. ·············〗",
+    "activeSchedules": "〖Ȧƈŧīṽḗ şƈħḗḓŭŀḗş ·······〗",
+    "compliance": "〖Ƈȯḿƥŀīȧƞƈḗ ····〗",
+    "lastDone": "〖Ŀȧşŧ ḓȯƞḗ ····〗",
+    "noMaintenance": "〖Ƞȯŧħīƞɠ şƈħḗḓŭŀḗḓ. ········〗",
+    "docsHint": "〖Ȧŧŧȧƈħḿḗƞŧş ȧƞḓ ƈřḗḓḗƞŧīȧŀş ƒȯř ŧħīş ȧşşḗŧ. ··················〗"
   },
   "assetTimeline": {
-    "title": "55555",
-    "empty": "55555",
-    "emptyLane": "55555 {{lane}} 55555",
-    "moreEvents": "55555 {{shown}} 55555 {{total}} 55555",
+    "title": "〖Ŧīḿḗŀīƞḗ ····〗",
+    "empty": "〖Ƞȯŧħīƞɠ řḗƈȯřḓḗḓ ƒȯř ŧħīş ȧşşḗŧ ẏḗŧ. ···············〗",
+    "emptyLane": "〖Ƞȯ {{lane}} ḗṽḗƞŧş řḗƈȯřḓḗḓ. ············〗",
+    "moreEvents": "〖Şħȯẇīƞɠ {{shown}} ȯƒ {{total}} ḗṽḗƞŧş. ················〗",
     "lanes": {
-      "all": "55555",
-      "service": "55555",
-      "changes": "55555",
-      "maintenance": "55555",
-      "system": "55555"
+      "all": "〖Ȧŀŀ ··〗",
+      "service": "〖Şḗřṽīƈḗ ···〗",
+      "changes": "〖Ƈħȧƞɠḗş ···〗",
+      "maintenance": "〖Ḿȧīƞŧḗƞȧƞƈḗ ·····〗",
+      "system": "〖Şẏşŧḗḿ ···〗"
     },
     "events": {
-      "maintenancePerformed": "55555",
-      "lastReboot": "55555",
-      "patchScan": "55555",
-      "patchScanDetail": "55555 {{pending}} 55555 {{failed}} 55555",
-      "purchased": "55555"
+      "maintenancePerformed": "〖Ḿȧīƞŧḗƞȧƞƈḗ ƥḗřƒȯřḿḗḓ ·········〗",
+      "lastReboot": "〖Ŀȧşŧ řḗƀȯȯŧ ·····〗",
+      "patchScan": "〖Ƥȧŧƈħ şƈȧƞ ····〗",
+      "patchScanDetail": "〖{{pending}} ƥḗƞḓīƞɠ, {{failed}} ƒȧīŀḗḓ ················〗",
+      "purchased": "〖Ƥŭřƈħȧşḗḓ ····〗"
     },
     "changeTypes": {
-      "created": "55555",
-      "updated": "55555",
-      "status_change": "55555",
-      "location_change": "55555",
-      "rmm_linked": "55555",
-      "hardware_upgrade": "55555",
-      "warranty_updated": "55555"
+      "created": "〖Ƈřḗȧŧḗḓ ···〗",
+      "updated": "〖Ŭƥḓȧŧḗḓ ···〗",
+      "status_change": "〖Şŧȧŧŭş ƈħȧƞɠḗḓ ······〗",
+      "location_change": "〖Ŀȯƈȧŧīȯƞ ƈħȧƞɠḗḓ ·······〗",
+      "rmm_linked": "〖ŘḾḾ ŀīƞķḗḓ ····〗",
+      "hardware_upgrade": "〖Ħȧřḓẇȧřḗ ŭƥɠřȧḓḗḓ ·······〗",
+      "warranty_updated": "〖Ẇȧřřȧƞŧẏ ŭƥḓȧŧḗḓ ·······〗"
     }
   },
   "assetSignals": {
     "warranty": {
-      "daysLeft": "55555 {{count}} 55555",
-      "expiresToday": "55555",
-      "expiredAgo": "55555 {{count}} 55555"
+      "daysLeft": "〖{{count}}ḓ ŀḗƒŧ ······〗",
+      "expiresToday": "〖ḗẋƥīřḗş ŧȯḓȧẏ ······〗",
+      "expiredAgo": "〖ḗẋƥīřḗḓ {{count}}ḓ ȧɠȯ ·········〗"
     },
     "duration": {
-      "dayHour": "55555 {{days}} 55555 {{hours}} 55555",
-      "hourMinute": "55555 {{hours}} 55555 {{minutes}} 55555",
-      "minute": "55555 {{minutes}} 55555"
+      "dayHour": "〖{{days}}ḓ {{hours}}ħ ········〗",
+      "hourMinute": "〖{{hours}}ħ {{minutes}}ḿ ··········〗",
+      "minute": "〖{{minutes}}ḿ ·····〗"
     },
     "age": {
-      "justNow": "55555",
-      "minutesAgo": "55555 {{count}} 55555",
-      "hoursAgo": "55555 {{count}} 55555",
-      "daysAgo": "55555 {{count}} 55555"
+      "justNow": "〖ĵŭşŧ ƞȯẇ ····〗",
+      "minutesAgo": "〖{{count}}ḿ ȧɠȯ ······〗",
+      "hoursAgo": "〖{{count}}ħ ȧɠȯ ······〗",
+      "daysAgo": "〖{{count}}ḓ ȧɠȯ ······〗"
     },
     "patching": {
-      "failed": "55555 {{count}} 55555",
-      "pending": "55555 {{count}} 55555",
-      "upToDate": "55555"
+      "failed": "〖{{count}} ƒȧīŀḗḓ ·······〗",
+      "pending": "〖{{count}} ƥḗƞḓīƞɠ ·······〗",
+      "upToDate": "〖ŭƥ ŧȯ ḓȧŧḗ ····〗"
     }
   },
   "assetCells": {
     "agent": {
-      "unmanaged": "55555",
-      "noAgent": "55555",
-      "seen": "55555 {{age}} 55555",
-      "neverSeen": "55555"
+      "unmanaged": "〖ŭƞḿȧƞȧɠḗḓ ····〗",
+      "noAgent": "〖ƞȯ ŘḾḾ ȧɠḗƞŧ ·····〗",
+      "seen": "〖şḗḗƞ {{age}} ·····〗",
+      "neverSeen": "〖ƞḗṽḗř şḗḗƞ ····〗"
     },
     "agentStatus": {
-      "online": "55555",
-      "offline": "55555",
-      "overdue": "55555",
-      "unknown": "55555"
+      "online": "〖ȯƞŀīƞḗ ···〗",
+      "offline": "〖ȯƒƒŀīƞḗ ···〗",
+      "overdue": "〖ȯṽḗřḓŭḗ ···〗",
+      "unknown": "〖ŭƞķƞȯẇƞ ···〗"
     },
     "patching": {
-      "scanned": "55555 {{age}} 55555",
-      "neverScanned": "55555"
+      "scanned": "〖şƈȧƞƞḗḓ {{age}} ······〗",
+      "neverScanned": "〖ƞḗṽḗř şƈȧƞƞḗḓ ······〗"
     },
     "coverage": {
-      "noWarrantyDate": "55555"
+      "noWarrantyDate": "〖ƞȯ ẇȧřřȧƞŧẏ ḓȧŧḗ ·······〗"
     },
     "status": {
-      "active": "55555",
-      "inactive": "55555",
-      "maintenance": "55555"
+      "active": "〖ȧƈŧīṽḗ ···〗",
+      "inactive": "〖īƞȧƈŧīṽḗ ····〗",
+      "maintenance": "〖ḿȧīƞŧḗƞȧƞƈḗ ·····〗"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗȧḓ ȧşşḗŧş ···············〗",
+      "readAssetTypes": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗȧḓ ȧşşḗŧ ŧẏƥḗş ·················〗",
+      "manageAssetTypes": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḿȧƞȧɠḗ ȧşşḗŧ ŧẏƥḗş ··················〗",
+      "readDocuments": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗȧḓ ȧşşḗŧ ḓȯƈŭḿḗƞŧş ···················〗",
+      "associateDocuments": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ȧşşȯƈīȧŧḗ ḓȯƈŭḿḗƞŧş ẇīŧħ ȧşşḗŧş ·······················〗",
+      "removeDocuments": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗḿȯṽḗ ḓȯƈŭḿḗƞŧş ƒřȯḿ ȧşşḗŧş ······················〗",
+      "updateDocumentNotes": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ŭƥḓȧŧḗ ȧşşḗŧ ḓȯƈŭḿḗƞŧ ƞȯŧḗş ······················〗"
+    },
+    "asset": {
+      "notFoundRefresh": "〖Ȧşşḗŧ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·····························〗",
+      "clientNotFound": "〖Ƈŀīḗƞŧ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ······························〗",
+      "maintenanceNotFound": "〖Ḿȧīƞŧḗƞȧƞƈḗ şƈħḗḓŭŀḗ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ···································〗",
+      "maintenanceMismatch": "〖Ŧħīş ḿȧīƞŧḗƞȧƞƈḗ řḗƈȯřḓ ḓȯḗş ƞȯŧ ḿȧŧƈħ ŧħḗ şḗŀḗƈŧḗḓ ȧşşḗŧ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ····································〗",
+      "locationUnavailable": "〖Şḗŀḗƈŧḗḓ ŀȯƈȧŧīȯƞ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ƈŀīḗƞŧ. ·····················〗",
+      "selfRelation": "〖Ȧƞ ȧşşḗŧ ƈȧƞƞȯŧ ƀḗ řḗŀȧŧḗḓ ŧȯ īŧşḗŀƒ. ···············〗",
+      "selectAtLeastOne": "〖Şḗŀḗƈŧ ȧŧ ŀḗȧşŧ ȯƞḗ ȧşşḗŧ. ···········〗",
+      "typeUnavailable": "〖Ȧşşḗŧ ŧẏƥḗ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ. Ƈħȯȯşḗ ȧ ṽȧŀīḓ ȧşşḗŧ ŧẏƥḗ. ······················〗",
+      "typeUnavailableNamed": "〖Ȧşşḗŧ ŧẏƥḗ \"{{assetType}}\" īş ƞȯŧ ȧṽȧīŀȧƀŀḗ. Ƈħȯȯşḗ ȧ ṽȧŀīḓ ȧşşḗŧ ŧẏƥḗ. ·····························〗",
+      "documentAssociationNotFound": "〖Ḓȯƈŭḿḗƞŧ ȧşşȯƈīȧŧīȯƞ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ȧŀřḗȧḓẏ ƀḗḗƞ řḗḿȯṽḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ······································〗",
+      "invalidValue": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ȧşşḗŧ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ······························〗",
+      "invalidDate": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ȧşşḗŧ ḓȧŧḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·································〗",
+      "referenceMissing": "〖Ŧħḗ şḗŀḗƈŧḗḓ ȧşşḗŧ, ḓȯƈŭḿḗƞŧ, ȯř řḗŀȧŧḗḓ řḗƈȯřḓ ƞȯ ŀȯƞɠḗř ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ······································〗",
+      "conflict": "〖Ŧħīş ȧşşḗŧ ƈħȧƞɠḗ ƈȯƞƒŀīƈŧş ẇīŧħ ȧƞ ḗẋīşŧīƞɠ řḗƈȯřḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·································〗",
+      "notAllowed": "〖Ȯƞḗ ȯƒ ŧħḗ ȧşşḗŧ ṽȧŀŭḗş īş ƞȯŧ ȧŀŀȯẇḗḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·······························〗",
+      "missingField": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ȧşşḗŧ ƒīḗŀḓ. ············〗",
+      "missingFieldNamed": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ȧşşḗŧ ƒīḗŀḓ: {{field}}. ················〗"
     }
   }
 }

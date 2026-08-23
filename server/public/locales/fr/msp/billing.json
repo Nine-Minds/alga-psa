@@ -570,5 +570,137 @@
       "uncovered": "Couvert par aucun contrat",
       "ambiguous": "Plusieurs lignes de contrat correspondent"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Une facture existe déjà pour cette période de facturation récurrente.",
+    "permissions": {
+      "billingRead": "Autorisation refusée : autorisation de lecture sur la facturation requise",
+      "billingUpdate": "Autorisation refusée : autorisation de mise à jour sur la facturation requise",
+      "billingCreate": "Autorisation refusée : autorisation de création sur la facturation requise",
+      "billingDelete": "Autorisation refusée : autorisation de suppression sur la facturation requise",
+      "clientRead": "Autorisation refusée : autorisation de lecture sur les clients requise",
+      "otherClientLocations": "Autorisation refusée : impossible d’accéder aux emplacements d’un autre client",
+      "clientPortalUnavailable": "Autorisation refusée : opération non disponible dans le portail client",
+      "resolveCurrency": "Autorisation refusée : impossible de déterminer la devise de facturation du client",
+      "clientBillingAccess": "Autorisation refusée : vous n’avez pas accès à la facturation de ce client."
+    },
+    "context": {
+      "tenantNotFound": "Locataire introuvable",
+      "tenantContextNotFound": "Contexte du locataire introuvable",
+      "noTenantContext": "Aucun contexte de locataire. Veuillez actualiser la page et réessayer.",
+      "clientContextNotFound": "Contexte client introuvable",
+      "notAuthenticated": "Non autorisé : aucun utilisateur authentifié trouvé",
+      "notLoggedIn": "l’utilisateur n’est pas connecté"
+    },
+    "client": {
+      "notFound": "Client introuvable",
+      "notFoundRefresh": "Client introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "idRequired": "L’identifiant du client est obligatoire."
+    },
+    "clientContract": {
+      "notFound": "Affectation de contrat du client introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer.",
+      "invalidValue": "L’une des valeurs sélectionnées du contrat client n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "Le client, le contrat ou l’enregistrement de facturation sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Cette affectation de contrat du client existe déjà.",
+      "missingField": "Un champ obligatoire du contrat client est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du contrat client est manquant : {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "Impossible de créer le prochain cycle de facturation pour le moment"
+    },
+    "currency": {
+      "multipleActive": "Le client a des contrats actifs dans plusieurs devises ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "L’une des valeurs sélectionnées de la surcouche de forfait d’heures n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "recordInvalid": "L’un des enregistrements sélectionnés de la surcouche de forfait d’heures n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Une surcouche de forfait d’heures existe déjà pour ce service.",
+      "notAllowed": "L’une des valeurs de la surcouche de forfait d’heures n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire de la surcouche de forfait d’heures est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la surcouche de forfait d’heures est manquant : {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "Un pool de forfait d’heures ou un membre existe déjà avec cette configuration. Veuillez actualiser la page et réessayer.",
+      "recordInvalid": "L’un des enregistrements sélectionnés du pool de forfait d’heures n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "notAllowed": "L’une des valeurs du pool de forfait d’heures n’est pas autorisée. Veuillez vérifier le formulaire et réessayer."
+    },
+    "material": {
+      "invalidValue": "L’une des valeurs de matériel sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "recordInvalid": "L’un des enregistrements de matériel sélectionnés n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Cet enregistrement de matériel existe déjà.",
+      "notAllowed": "L’une des valeurs de matériel n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire du matériel est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du matériel est manquant : {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "Enregistrement de consommation introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "bucketUpdateFailed": "Impossible de mettre à jour la consommation du forfait d’heures pour cet enregistrement. Veuillez actualiser la page et réessayer.",
+      "invalidValue": "L’enregistrement de consommation, le client, le service ou la ligne de contrat sélectionné n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "Le client, le service ou la ligne de contrat sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Un enregistrement de consommation en conflit existe déjà. Veuillez actualiser la page et réessayer.",
+      "alreadyDeleted": "Enregistrement de consommation introuvable. Il a peut-être déjà été supprimé.",
+      "missingField": "Un champ obligatoire de la consommation est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la consommation est manquant : {{field}}."
+    },
+    "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "La date de déclenchement doit être une date calendaire valide.",
+        "thresholdsAscending": "Les seuils de notification doivent être classés dans un ordre strictement croissant.",
+        "amountOrPercentage": "Un seul des deux champs, montant ou pourcentage, est obligatoire.",
+        "increaseTotalAmountOnly": "L’augmentation du total n’est valable que pour les entrées basées sur un montant.",
+        "amountAndPercentageTogether": "Le montant et le pourcentage doivent être mis à jour ensemble, l’un des deux seulement étant défini sur null."
+      },
+      "invalidValue": "L’une des valeurs sélectionnées de la facturation du projet n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "Le projet, la facture, la phase, le service ou l’enregistrement de facturation sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Un enregistrement de facturation du projet en conflit existe déjà. Veuillez actualiser la page et réessayer.",
+      "ruleViolation": "Les valeurs de facturation du projet enfreignent une règle de données. Veuillez vérifier le formulaire et réessayer.",
+      "requestFailed": "La facturation du projet n’a pas pu traiter la demande. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire de la facturation du projet est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la facturation du projet est manquant : {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "La date de début et la date de fin sont obligatoires."
+    },
+    "recurringRun": {
+      "selectPeriods": "Sélectionnez au moins une période de facturation récurrente à générer.",
+      "invoicePermission": "Autorisation refusée : autorisation de création ou de génération de factures requise"
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "Une clé de planning est requise pour inspecter les périodes de service récurrentes.",
+      "scheduleKeyRequiredRepair": "Une clé de planning est requise pour réparer les périodes de service récurrentes."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Les utilisateurs du portail client ne sont pas autorisés à gérer les exports comptables",
+      "permissions": {
+        "create": "Autorisation refusée : impossible de créer des lots d’export comptable",
+        "read": "Autorisation refusée : impossible d’accéder aux lots d’export comptable",
+        "update": "Autorisation refusée : impossible de modifier les lots d’export comptable",
+        "execute": "Autorisation refusée : impossible d’exécuter les lots d’export comptable"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "Facture fournisseur introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer."
+    },
+    "documentTemplate": {
+      "unknownType": "Type de document inconnu : {{documentType}}",
+      "permissions": {
+        "read": "Autorisation refusée : impossible de lire les modèles de document",
+        "modify": "Autorisation refusée : impossible de modifier les modèles de document",
+        "setDefault": "Autorisation refusée : impossible de définir le modèle de document par défaut",
+        "clearOverride": "Autorisation refusée : impossible de supprimer la substitution du modèle de document",
+        "delete": "Autorisation refusée : impossible de supprimer les modèles de document",
+        "preview": "Autorisation refusée : impossible de prévisualiser les modèles de document"
+      }
+    },
+    "billingProfile": {
+      "periodOrder": "Choisissez une période dont le début est antérieur ou égal à la fin.",
+      "comparisonPeriodOrder": "Choisissez une période de comparaison dont le début est antérieur ou égal à la fin.",
+      "notThisClient": "Ce profil de facturation n’appartient pas à ce client."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Cet élément n’existe plus.",
+      "alreadyInvoiced": "Cet élément a déjà été facturé.",
+      "contractLineNotFound": "Cette ligne de contrat n’existe plus."
+    }
   }
 }

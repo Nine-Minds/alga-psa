@@ -1593,7 +1593,7 @@ export const getClientTaxRate = withAuth(async (
     date: ISO8601String
 ): Promise<number | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const { knex } = await createTenantKnex();
@@ -1622,7 +1622,7 @@ export const getAvailableBillingPeriods = withAuth(async (
     options: FetchBillingPeriodsOptions = {}
 ): Promise<PaginatedBillingPeriodsResult | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const {
@@ -1760,7 +1760,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
     options: FetchRecurringDueWorkOptions = {},
 ): Promise<PaginatedRecurringDueWorkResult | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const {
@@ -1949,7 +1949,7 @@ export const getDueDate = withAuth(async (
     invoiceDate: ISO8601String
 ): Promise<ISO8601String | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const { knex } = await createTenantKnex();
@@ -1986,7 +1986,7 @@ export const getNextBillingDate = withAuth(async (
     currentEndDate: ISO8601String
 ): Promise<ISO8601String | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const { knex } = await createTenantKnex();

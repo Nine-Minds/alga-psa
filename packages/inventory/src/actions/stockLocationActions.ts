@@ -62,26 +62,26 @@ function stockLocationActionErrorFrom(error: unknown): StockLocationActionError 
 
     switch (error.message) {
       case 'Location name is required':
-        return actionError('Location name is required.');
+        return actionError('Location name is required.', 'features/inventory:errors.stockLocations.nameRequired');
       case 'Location not found':
-        return actionError('Location not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Location not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.stockLocations.notFound');
       case 'Cannot deactivate a location that still holds stock':
-        return actionError('Move all stock out of this location before deactivating it.');
+        return actionError('Move all stock out of this location before deactivating it.', 'features/inventory:errors.stockLocations.moveStockBeforeDeactivate');
       case 'Cannot deactivate a location that still holds units':
-        return actionError('Move or retire all units from this location before deactivating it.');
+        return actionError('Move or retire all units from this location before deactivating it.', 'features/inventory:errors.stockLocations.moveUnitsBeforeDeactivate');
       default:
         if (error.message.startsWith('Invalid location_type:')) {
-          return actionError('Choose a valid location type.');
+          return actionError('Choose a valid location type.', 'features/inventory:errors.stockLocations.invalidType');
         }
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected location records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected location records is no longer valid. Please refresh and try again.', 'features/inventory:errors.stockLocations.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A location with these details already exists.');
+    return actionError('A location with these details already exists.', 'features/inventory:errors.stockLocations.duplicate');
   }
 
   return null;

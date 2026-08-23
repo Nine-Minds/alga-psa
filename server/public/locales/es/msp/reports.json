@@ -505,5 +505,13 @@
       "client": "Cliente",
       "currency": "Moneda"
     }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Uno de los registros de informe seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de informe seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del informe.",
+      "missingFieldNamed": "Falta un campo obligatorio del informe: {{field}}."
+    }
   }
 }

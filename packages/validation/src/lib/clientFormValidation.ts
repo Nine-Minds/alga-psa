@@ -13,7 +13,9 @@
 import {
   buildFieldValidation,
   message,
+  translateFieldValidation,
   type FieldValidation,
+  type Translator,
   type ValidationMessage,
 } from './fieldValidation';
 import { normalizePhone } from './phone';
@@ -363,300 +365,323 @@ export function validatePhoneNumber(phone: string): string | null {
 }
 
 // Postal code validation - professional SaaS/CRM grade with comprehensive country formats
-export function validatePostalCode(postalCode: string, countryCode: string = 'US'): string | null {
-  if (!postalCode || !postalCode.trim()) {
-    return null; // Postal code is optional
+export function validatePostalCodeField(postalCode: string, countryCode: string = 'US'): FieldValidation {
+  const value = (postalCode ?? '').trim();
+  if (!value) {
+    return buildFieldValidation('', null); // Postal code is optional
   }
-  
-  // Check for spaces-only input
-  if (postalCode && postalCode.trim() === '') {
-    return 'Postal code cannot contain only spaces';
+
+  // Unreachable given the early return above, kept so the guard stays where the
+  // original had it rather than disappearing into a translation change.
+  if (postalCode.trim() === '') {
+    return buildFieldValidation(value, message(`${K}.postalCode.onlySpaces`, 'Postal code cannot contain only spaces'));
   }
-  
-  const trimmedCode = postalCode.trim().toUpperCase();
-  
+
+  const trimmedCode = value.toUpperCase();
+
   // No emojis
   if (EMOJI_REGEX.test(trimmedCode)) {
-    return 'Postal code cannot contain emojis';
+    return buildFieldValidation(value, message(`${K}.postalCode.emoji`, 'Postal code cannot contain emojis'));
   }
-  
+
   // Professional-grade country-specific validation (like enterprise CRMs)
   switch (countryCode.toUpperCase()) {
     case 'US':
       // US ZIP codes: 12345 or 12345-6789
       if (!/^\d{5}(-\d{4})?$/.test(trimmedCode)) {
-        return 'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)';
+        return buildFieldValidation(value, message(`${K}.postalCode.us`, 'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)'));
       }
       // Block obvious fake ZIP codes
       if (trimmedCode === '00000' || trimmedCode === '99999' || trimmedCode.startsWith('00000')) {
-        return 'Please enter a valid ZIP code';
+        return buildFieldValidation(value, message(`${K}.postalCode.usShort`, 'Please enter a valid ZIP code'));
       }
       break;
-      
+
     case 'CA':
       // Canadian postal codes: A1B 2C3 or A1B2C3
       if (!/^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/.test(trimmedCode)) {
-        return 'Please enter a valid Canadian postal code (e.g., K1A 0A6)';
+        return buildFieldValidation(value, message(`${K}.postalCode.ca`, 'Please enter a valid Canadian postal code (e.g., K1A 0A6)'));
       }
       break;
-      
+
     case 'GB':
     case 'UK':
       // UK postal codes: comprehensive patterns
       if (!/^(GIR\s?0AA|[A-PR-UWYZ]([0-9]{1,2}|([A-HK-Y][0-9]|[A-HK-Y][0-9][0-9])|[0-9][A-HJKMNP-Y]|[A-HK-Y][0-9][A-HJKMNP-Y])\s?[0-9][ABD-HJLNP-UW-Z]{2})$/i.test(trimmedCode)) {
-        return 'Please enter a valid UK postal code (e.g., SW1A 1AA)';
+        return buildFieldValidation(value, message(`${K}.postalCode.gb`, 'Please enter a valid UK postal code (e.g., SW1A 1AA)'));
       }
       break;
-      
+
     case 'DE':
       // Germany: 5 digits
       if (!/^\d{5}$/.test(trimmedCode)) {
-        return 'Please enter a valid German postal code (e.g., 10115)';
+        return buildFieldValidation(value, message(`${K}.postalCode.de`, 'Please enter a valid German postal code (e.g., 10115)'));
       }
       break;
-      
+
     case 'FR':
       // France: 5 digits
       if (!/^\d{5}$/.test(trimmedCode)) {
-        return 'Please enter a valid French postal code (e.g., 75001)';
+        return buildFieldValidation(value, message(`${K}.postalCode.fr`, 'Please enter a valid French postal code (e.g., 75001)'));
       }
       break;
-      
+
     case 'JP':
       // Japan: 123-4567 format
       if (!/^\d{3}-\d{4}$/.test(trimmedCode)) {
-        return 'Please enter a valid Japanese postal code (e.g., 123-4567)';
+        return buildFieldValidation(value, message(`${K}.postalCode.jp`, 'Please enter a valid Japanese postal code (e.g., 123-4567)'));
       }
       break;
-      
+
     case 'AU':
       // Australia: 4 digits
       if (!/^\d{4}$/.test(trimmedCode)) {
-        return 'Please enter a valid Australian postal code (e.g., 2000)';
+        return buildFieldValidation(value, message(`${K}.postalCode.au`, 'Please enter a valid Australian postal code (e.g., 2000)'));
       }
       break;
-      
+
     case 'NL':
       // Netherlands: 1234AB format
       if (!/^\d{4}\s?[A-Z]{2}$/.test(trimmedCode)) {
-        return 'Please enter a valid Dutch postal code (e.g., 1234AB)';
+        return buildFieldValidation(value, message(`${K}.postalCode.nl`, 'Please enter a valid Dutch postal code (e.g., 1234AB)'));
       }
       break;
-      
+
     case 'CH':
       // Switzerland: 4 digits
       if (!/^\d{4}$/.test(trimmedCode)) {
-        return 'Please enter a valid Swiss postal code (e.g., 8001)';
+        return buildFieldValidation(value, message(`${K}.postalCode.ch`, 'Please enter a valid Swiss postal code (e.g., 8001)'));
       }
       break;
-      
+
     case 'IT':
       // Italy: 5 digits
       if (!/^\d{5}$/.test(trimmedCode)) {
-        return 'Please enter a valid Italian postal code (e.g., 00118)';
+        return buildFieldValidation(value, message(`${K}.postalCode.it`, 'Please enter a valid Italian postal code (e.g., 00118)'));
       }
       break;
-      
+
     case 'ES':
       // Spain: 5 digits
       if (!/^\d{5}$/.test(trimmedCode)) {
-        return 'Please enter a valid Spanish postal code (e.g., 28001)';
+        return buildFieldValidation(value, message(`${K}.postalCode.es`, 'Please enter a valid Spanish postal code (e.g., 28001)'));
       }
       break;
-      
+
     case 'BR':
       // Brazil: 12345-678 format
       if (!/^\d{5}-\d{3}$/.test(trimmedCode)) {
-        return 'Please enter a valid Brazilian postal code (e.g., 01234-567)';
+        return buildFieldValidation(value, message(`${K}.postalCode.br`, 'Please enter a valid Brazilian postal code (e.g., 01234-567)'));
       }
       break;
-      
+
     case 'IN':
       // India: 6 digits
       if (!/^\d{6}$/.test(trimmedCode)) {
-        return 'Please enter a valid Indian postal code (e.g., 110001)';
+        return buildFieldValidation(value, message(`${K}.postalCode.in`, 'Please enter a valid Indian postal code (e.g., 110001)'));
       }
       break;
-      
+
     default:
       // Generic validation for other countries
       if (!/^[A-Z0-9\s\-]{3,12}$/i.test(trimmedCode)) {
-        return 'Please enter a valid postal code';
+        return buildFieldValidation(value, message(`${K}.postalCode.generic`, 'Please enter a valid postal code'));
       }
   }
-  
-  return null;
+
+  return buildFieldValidation(value, null);
+}
+
+export function validatePostalCode(postalCode: string, countryCode: string = 'US'): string | null {
+  return validatePostalCodeField(postalCode, countryCode).error;
 }
 
 // City validation - enterprise international support
-export function validateCityName(city: string): string | null {
-  if (!city || !city.trim()) {
-    return null; // City is optional
+export function validateCityNameField(city: string): FieldValidation {
+  const trimmedCity = (city ?? '').trim();
+  if (!trimmedCity) {
+    return buildFieldValidation('', null); // City is optional
   }
-  
-  const trimmedCity = city.trim();
-  
+
   // Enterprise rule: Max length 100 characters
   if (trimmedCity.length > 100) {
-    return 'City name must be 100 characters or less';
+    return buildFieldValidation(trimmedCity, message(`${K}.city.tooLong`, 'City name must be 100 characters or less'));
   }
-  
+
   // No emojis
   if (EMOJI_REGEX.test(trimmedCity)) {
-    return 'City name cannot contain emojis';
+    return buildFieldValidation(trimmedCity, message(`${K}.city.emoji`, 'City name cannot contain emojis'));
   }
-  
+
   // Minimum 1 character (to support Ö, Å, Y, etc.)
   if (trimmedCity.length < 1) {
-    return 'City name cannot be empty';
+    return buildFieldValidation(trimmedCity, message(`${K}.city.empty`, 'City name cannot be empty'));
   }
-  
+
   // Must contain at least one letter or Unicode character
   if (!/[\p{L}]/u.test(trimmedCity)) {
-    return 'City name must contain letters';
+    return buildFieldValidation(trimmedCity, message(`${K}.city.noLetters`, 'City name must contain letters'));
   }
-  
+
   // Allow Unicode letters, spaces, hyphens, apostrophes, periods
   if (!/^[\p{L}\s\-'\.]+$/u.test(trimmedCity)) {
-    return 'City name contains invalid characters';
+    return buildFieldValidation(trimmedCity, message(`${K}.city.invalidCharacters`, 'City name contains invalid characters'));
   }
-  
-  return null;
+
+  return buildFieldValidation(trimmedCity, null);
+}
+
+export function validateCityName(city: string): string | null {
+  return validateCityNameField(city).error;
 }
 
 // Address validation - enterprise international support
-export function validateAddress(address: string): string | null {
-  if (!address || !address.trim()) {
-    return null; // Address is optional
+export function validateAddressField(address: string): FieldValidation {
+  const trimmedAddress = (address ?? '').trim();
+  if (!trimmedAddress) {
+    return buildFieldValidation('', null); // Address is optional
   }
-  
-  const trimmedAddress = address.trim();
-  
-  // Enterprise rule: Max length 100 characters  
+
+  // Enterprise rule: Max length 100 characters
   if (trimmedAddress.length > 100) {
-    return 'Address must be 100 characters or less';
+    return buildFieldValidation(trimmedAddress, message(`${K}.address.tooLong`, 'Address must be 100 characters or less'));
   }
-  
+
   // No emojis
   if (EMOJI_REGEX.test(trimmedAddress)) {
-    return 'Address cannot contain emojis';
+    return buildFieldValidation(trimmedAddress, message(`${K}.address.emoji`, 'Address cannot contain emojis'));
   }
-  
+
   // Minimum 1 meaningful character (international support)
   if (trimmedAddress.length < 1) {
-    return 'Address cannot be empty';
+    return buildFieldValidation(trimmedAddress, message(`${K}.address.empty`, 'Address cannot be empty'));
   }
-  
+
   // Must contain at least one letter or Unicode character (international support)
   if (!/[\p{L}]/u.test(trimmedAddress)) {
-    return 'Address must contain letters';
+    return buildFieldValidation(trimmedAddress, message(`${K}.address.noLetters`, 'Address must contain letters'));
   }
-  
+
   // Allow Unicode letters, numbers, spaces, and international address punctuation
   // No requirement for both letters and numbers (international addresses vary)
   if (!/^[\p{L}\p{N}\s\-,\.#\/'"()]+$/u.test(trimmedAddress)) {
-    return 'Address contains invalid characters';
+    return buildFieldValidation(trimmedAddress, message(`${K}.address.invalidCharacters`, 'Address contains invalid characters'));
   }
-  
-  return null;
+
+  return buildFieldValidation(trimmedAddress, null);
+}
+
+export function validateAddress(address: string): string | null {
+  return validateAddressField(address).error;
 }
 
 // State/Province validation - enterprise international support
-export function validateStateProvince(state: string): string | null {
-  if (!state || !state.trim()) {
-    return null; // State is optional
+export function validateStateProvinceField(state: string): FieldValidation {
+  const trimmedState = (state ?? '').trim();
+  if (!trimmedState) {
+    return buildFieldValidation('', null); // State is optional
   }
-  
-  const trimmedState = state.trim();
-  
+
   // Enterprise rule: Max length 100 characters
   if (trimmedState.length > 100) {
-    return 'State/Province must be 100 characters or less';
+    return buildFieldValidation(trimmedState, message(`${K}.stateProvince.tooLong`, 'State/Province must be 100 characters or less'));
   }
-  
+
   // No emojis
   if (EMOJI_REGEX.test(trimmedState)) {
-    return 'State/Province cannot contain emojis';
+    return buildFieldValidation(trimmedState, message(`${K}.stateProvince.emoji`, 'State/Province cannot contain emojis'));
   }
-  
+
   // Minimum 1 character (international support)
   if (trimmedState.length < 1) {
-    return 'State/Province cannot be empty';
+    return buildFieldValidation(trimmedState, message(`${K}.stateProvince.empty`, 'State/Province cannot be empty'));
   }
-  
+
   // Must contain at least one letter or Unicode character
   if (!/[\p{L}]/u.test(trimmedState)) {
-    return 'State/Province must contain letters';
+    return buildFieldValidation(trimmedState, message(`${K}.stateProvince.noLetters`, 'State/Province must contain letters'));
   }
-  
+
   // Allow Unicode letters, spaces, hyphens, periods
   if (!/^[\p{L}\s\-\.]+$/u.test(trimmedState)) {
-    return 'State/Province contains invalid characters';
+    return buildFieldValidation(trimmedState, message(`${K}.stateProvince.invalidCharacters`, 'State/Province contains invalid characters'));
   }
-  
-  return null;
+
+  return buildFieldValidation(trimmedState, null);
+}
+
+export function validateStateProvince(state: string): string | null {
+  return validateStateProvinceField(state).error;
 }
 
 // Industry validation - enterprise international support
-export function validateIndustry(industry: string): string | null {
-  if (!industry || !industry.trim()) {
-    return null; // Industry is optional
+export function validateIndustryField(industry: string): FieldValidation {
+  const trimmedIndustry = (industry ?? '').trim();
+  if (!trimmedIndustry) {
+    return buildFieldValidation('', null); // Industry is optional
   }
-  
-  const trimmedIndustry = industry.trim();
-  
+
   // Enterprise rule: Max length 100 characters
   if (trimmedIndustry.length > 100) {
-    return 'Industry must be 100 characters or less';
+    return buildFieldValidation(trimmedIndustry, message(`${K}.industry.tooLong`, 'Industry must be 100 characters or less'));
   }
-  
+
   // Allow emojis if accompanied by text (like company names)
   const textWithoutEmojis = trimmedIndustry.replace(EMOJI_REGEX, '').trim();
   if (EMOJI_REGEX.test(trimmedIndustry) && textWithoutEmojis.length < 2) {
-    return 'Industry must contain at least 2 text characters';
+    return buildFieldValidation(trimmedIndustry, message(`${K}.industry.tooShortText`, 'Industry must contain at least 2 text characters'));
   }
-  
+
   if (trimmedIndustry.length < 2) {
-    return 'Industry must be at least 2 characters long';
+    return buildFieldValidation(trimmedIndustry, message(`${K}.industry.tooShort`, 'Industry must be at least 2 characters long'));
   }
-  
+
   // Must contain at least one letter or Unicode character
   if (!/[\p{L}]/u.test(trimmedIndustry)) {
-    return 'Industry must contain letters';
+    return buildFieldValidation(trimmedIndustry, message(`${K}.industry.noLetters`, 'Industry must contain letters'));
   }
-  
+
   // Allow Unicode letters, spaces, hyphens, ampersands, slashes, commas
   if (!/^[\p{L}\s\-&\/,]+$/u.test(trimmedIndustry)) {
-    return 'Industry contains invalid characters';
+    return buildFieldValidation(trimmedIndustry, message(`${K}.industry.invalidCharacters`, 'Industry contains invalid characters'));
   }
-  
-  return null;
+
+  return buildFieldValidation(trimmedIndustry, null);
+}
+
+export function validateIndustry(industry: string): string | null {
+  return validateIndustryField(industry).error;
 }
 
 // Role validation - enterprise-level rules (matches QuickAddContact validation)
-export function validateRole(role: string): string | null {
-  if (!role || !role.trim()) {
-    return null; // Role is optional
+export function validateRoleField(role: string): FieldValidation {
+  const trimmedRole = (role ?? '').trim();
+  if (!trimmedRole) {
+    return buildFieldValidation('', null); // Role is optional
   }
 
-  const trimmedRole = role.trim();
-
-  // Check for spaces-only input
+  // Check for spaces-only input. Unreachable given the early return above, kept so
+  // the guard stays where the original had it rather than disappearing into a
+  // translation change.
   if (/^\s+$/.test(role)) {
-    return 'Role cannot contain only spaces';
+    return buildFieldValidation(trimmedRole, message(`${K}.role.onlySpaces`, 'Role cannot contain only spaces'));
   }
 
   // Enterprise rule: Max length 100 characters
   if (trimmedRole.length > 100) {
-    return 'Role must be 100 characters or less';
+    return buildFieldValidation(trimmedRole, message(`${K}.role.tooLong`, 'Role must be 100 characters or less'));
   }
 
   // Must contain at least one letter or number (Unicode supported)
   if (!/[\p{L}\p{N}]/u.test(trimmedRole)) {
-    return 'Role must contain letters or numbers';
+    return buildFieldValidation(trimmedRole, message(`${K}.role.noAlphanumeric`, 'Role must contain letters or numbers'));
   }
 
-  return null;
+  return buildFieldValidation(trimmedRole, null);
+}
+
+export function validateRole(role: string): string | null {
+  return validateRoleField(role).error;
 }
 
 export function validateContactName(name: string): string | null {
@@ -664,39 +689,41 @@ export function validateContactName(name: string): string | null {
 }
 
 // Notes validation - enterprise-level rules
-export function validateNotes(notes: string): string | null {
-  if (!notes || !notes.trim()) {
-    return null; // Notes are optional
+export function validateNotesField(notes: string): FieldValidation {
+  const trimmedNotes = (notes ?? '').trim();
+  if (!trimmedNotes) {
+    return buildFieldValidation('', null); // Notes are optional
   }
-  
-  const trimmedNotes = notes.trim();
-  
+
   // Enterprise rule: Max length 2000 characters
   if (trimmedNotes.length > 2000) {
-    return 'Notes must be 2000 characters or less';
+    return buildFieldValidation(trimmedNotes, message(`${K}.notes.tooLong`, 'Notes must be 2000 characters or less'));
   }
-  
+
   // Allow emojis in notes - no restrictions on content
-  return null;
+  return buildFieldValidation(trimmedNotes, null);
+}
+
+export function validateNotes(notes: string): string | null {
+  return validateNotesField(notes).error;
 }
 
 
 // Company size validation - professional SaaS/CRM grade (Microsoft/Salesforce standard)
-export function validateCompanySize(companySize: string): string | null {
-  if (!companySize || !companySize.trim()) {
-    return null; // Company size is optional
+export function validateCompanySizeField(companySize: string): FieldValidation {
+  const trimmedSize = (companySize ?? '').trim();
+  if (!trimmedSize) {
+    return buildFieldValidation('', null); // Company size is optional
   }
-
-  const trimmedSize = companySize.trim();
 
   // Enterprise rule: Max length 50 characters
   if (trimmedSize.length > 50) {
-    return 'Company size must be 50 characters or less';
+    return buildFieldValidation(trimmedSize, message(`${K}.companySize.tooLong`, 'Company size must be 50 characters or less'));
   }
 
   // No emojis
   if (EMOJI_REGEX.test(trimmedSize)) {
-    return 'Company size cannot contain emojis';
+    return buildFieldValidation(trimmedSize, message(`${K}.companySize.emoji`, 'Company size cannot contain emojis'));
   }
 
   // Professional SaaS approach: Accept both numeric and plain English
@@ -727,28 +754,37 @@ export function validateCompanySize(companySize: string): string | null {
   const isValid = validRanges.some(pattern => pattern.test(lowerSize));
 
   if (!isValid) {
-    return 'Please enter a valid company size (e.g., "50", "10-50", "five hundred", "2.5M", "small", "enterprise")';
+    return buildFieldValidation(
+      trimmedSize,
+      message(
+        `${K}.companySize.invalid`,
+        'Please enter a valid company size (e.g., "50", "10-50", "five hundred", "2.5M", "small", "enterprise")'
+      )
+    );
   }
 
-  return null;
+  return buildFieldValidation(trimmedSize, null);
+}
+
+export function validateCompanySize(companySize: string): string | null {
+  return validateCompanySizeField(companySize).error;
 }
 
 // Annual revenue validation - professional SaaS/CRM grade (Microsoft/Salesforce standard)
-export function validateAnnualRevenue(revenue: string): string | null {
-  if (!revenue || !revenue.trim()) {
-    return null; // Annual revenue is optional
+export function validateAnnualRevenueField(revenue: string): FieldValidation {
+  const trimmedRevenue = (revenue ?? '').trim();
+  if (!trimmedRevenue) {
+    return buildFieldValidation('', null); // Annual revenue is optional
   }
-
-  const trimmedRevenue = revenue.trim();
 
   // Enterprise rule: Max length 50 characters
   if (trimmedRevenue.length > 50) {
-    return 'Annual revenue must be 50 characters or less';
+    return buildFieldValidation(trimmedRevenue, message(`${K}.annualRevenue.tooLong`, 'Annual revenue must be 50 characters or less'));
   }
 
   // No emojis
   if (EMOJI_REGEX.test(trimmedRevenue)) {
-    return 'Annual revenue cannot contain emojis';
+    return buildFieldValidation(trimmedRevenue, message(`${K}.annualRevenue.emoji`, 'Annual revenue cannot contain emojis'));
   }
 
   // Professional SaaS approach: Accept both numeric and plain English with currency symbols.
@@ -789,10 +825,20 @@ export function validateAnnualRevenue(revenue: string): string | null {
     plainEnglishFormat.test(spacedRevenue);
 
   if (!isValid) {
-    return 'Please enter valid annual revenue (e.g., "$1,000,000", "five million", "2.5M", "10M-50M", "not disclosed")';
+    return buildFieldValidation(
+      trimmedRevenue,
+      message(
+        `${K}.annualRevenue.invalid`,
+        'Please enter valid annual revenue (e.g., "$1,000,000", "five million", "2.5M", "10M-50M", "not disclosed")'
+      )
+    );
   }
 
-  return null;
+  return buildFieldValidation(trimmedRevenue, null);
+}
+
+export function validateAnnualRevenue(revenue: string): string | null {
+  return validateAnnualRevenueField(revenue).error;
 }
 
 // Comprehensive form validation function
@@ -813,11 +859,14 @@ export function validateClientForm(formData: {
   notes?: string;
   companySize?: string;
   annualRevenue?: string;
-}): ValidationResult {
+}, t?: Translator): ValidationResult {
   const errors: Record<string, string> = {};
   const warnings: Record<string, string[]> = {};
 
-  const collect = (field: string, result: FieldValidation) => {
+  // Submit-time messages are the same messages the blur path shows, so they go
+  // through the same translator. Without one they fall back to English.
+  const collect = (field: string, raw: FieldValidation) => {
+    const result = translateFieldValidation(raw, t);
     if (result.error) {
       errors[field] = result.error;
     }
@@ -835,10 +884,7 @@ export function validateClientForm(formData: {
   }
 
   if (formData.industry) {
-    const industryError = validateIndustry(formData.industry);
-    if (industryError) {
-      errors.industry = industryError;
-    }
+    collect('industry', validateIndustryField(formData.industry));
   }
   
   if (formData.email) {
@@ -850,31 +896,19 @@ export function validateClientForm(formData: {
   }
 
   if (formData.address) {
-    const addressError = validateAddress(formData.address);
-    if (addressError) {
-      errors.address_line1 = addressError;
-    }
+    collect('address_line1', validateAddressField(formData.address));
   }
   
   if (formData.city) {
-    const cityError = validateCityName(formData.city);
-    if (cityError) {
-      errors.city = cityError;
-    }
+    collect('city', validateCityNameField(formData.city));
   }
   
   if (formData.stateProvince) {
-    const stateError = validateStateProvince(formData.stateProvince);
-    if (stateError) {
-      errors.state_province = stateError;
-    }
+    collect('state_province', validateStateProvinceField(formData.stateProvince));
   }
   
   if (formData.postalCode) {
-    const postalError = validatePostalCode(formData.postalCode, formData.countryCode);
-    if (postalError) {
-      errors.postal_code = postalError;
-    }
+    collect('postal_code', validatePostalCodeField(formData.postalCode, formData.countryCode));
   }
   
   if (formData.contactName) {
@@ -890,24 +924,15 @@ export function validateClientForm(formData: {
   }
 
   if (formData.notes) {
-    const notesError = validateNotes(formData.notes);
-    if (notesError) {
-      errors.notes = notesError;
-    }
+    collect('notes', validateNotesField(formData.notes));
   }
 
   if (formData.companySize) {
-    const companySizeError = validateCompanySize(formData.companySize);
-    if (companySizeError) {
-      errors.company_size = companySizeError;
-    }
+    collect('company_size', validateCompanySizeField(formData.companySize));
   }
 
   if (formData.annualRevenue) {
-    const annualRevenueError = validateAnnualRevenue(formData.annualRevenue);
-    if (annualRevenueError) {
-      errors.annual_revenue = annualRevenueError;
-    }
+    collect('annual_revenue', validateAnnualRevenueField(formData.annualRevenue));
   }
 
   return {

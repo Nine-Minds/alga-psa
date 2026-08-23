@@ -445,5 +445,65 @@
       "summary": "{{rate}} per {{unit}}",
       "help": "Het basistarief kan worden overschreven met onderstaande op hoeveelheden gebaseerde niveaus."
     }
+  },
+  "errors": {
+    "permissions": {
+      "createServices": "Toestemming geweigerd: services/producten kunnen niet worden aangemaakt",
+      "updateServices": "Toestemming geweigerd: services/producten kunnen niet worden bijgewerkt",
+      "deleteServices": "Toestemming geweigerd: services kunnen niet worden verwijderd",
+      "deleteServicesProducts": "Toestemming geweigerd: services/producten kunnen niet worden verwijderd",
+      "createServiceTypes": "Toestemming geweigerd: servicetypen kunnen niet worden aangemaakt",
+      "updateServiceTypes": "Toestemming geweigerd: servicetypen kunnen niet worden bijgewerkt",
+      "deleteServiceTypes": "Toestemming geweigerd: servicetypen kunnen niet worden verwijderd",
+      "updatePricing": "Toestemming geweigerd: serviceprijzen kunnen niet worden bijgewerkt"
+    },
+    "category": {
+      "duplicateName": "Er bestaat al een servicecategorie met deze naam",
+      "notFound": "Servicecategorie niet gevonden",
+      "invalid": "De geselecteerde servicecategorie is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "inUse": "De categorie kan niet worden verwijderd omdat deze nog in gebruik is.",
+      "inUseByServices": "De categorie kan niet worden verwijderd: er zijn services die deze categorie gebruiken",
+      "inUseByTickets": "Een categorie die door tickets wordt gebruikt, kan niet worden verwijderd",
+      "nameRequired": "Categorienaam is verplicht",
+      "nameEmpty": "De categorienaam mag niet leeg zijn",
+      "idRequired": "Categorie-ID is verplicht",
+      "missingField": "Er ontbreekt een verplicht veld van de servicecategorie.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de servicecategorie: {{field}}."
+    },
+    "service": {
+      "selectType": "Selecteer een servicetype voordat u opslaat.",
+      "typeNotFound": "Het geselecteerde servicetype is niet gevonden. Vernieuw de pagina en kies een ander servicetype.",
+      "selectBillingMethod": "Selecteer een facturatiemethode voordat u opslaat.",
+      "notFoundRefresh": "Service niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde servicewaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde service, categorie, het belastingtarief of servicetype is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een service of product met deze waarden.",
+      "missingField": "Er ontbreekt een verplicht serviceveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht serviceveld: {{field}}."
+    },
+    "product": {
+      "notFound": "Product niet gevonden",
+      "alreadyDeleted": "Product niet gevonden. Mogelijk is het al verwijderd.",
+      "barcodeExists": "Er bestaat al een product met deze barcode. Gebruik een andere barcode of bewerk het bestaande product.",
+      "barcodeExistsNamed": "Er bestaat al een product met barcode ‘{{barcode}}’. Gebruik een andere barcode of bewerk het bestaande product.",
+      "skuExists": "Er bestaat al een product met deze SKU. Gebruik een andere SKU of bewerk het bestaande product.",
+      "skuExistsNamed": "Er bestaat al een product met SKU ‘{{sku}}’. Gebruik een andere SKU of bewerk het bestaande product.",
+      "cannotDelete": "Het product kan niet worden verwijderd: {{reasons}}"
+    },
+    "serviceType": {
+      "duplicateName": "Er bestaat al een servicetype met deze naam.",
+      "notFoundRefresh": "Servicetype niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "notFound": "Servicetype niet gevonden.",
+      "inUse": "Het servicetype kan niet worden verwijderd omdat het momenteel door een of meer services wordt gebruikt.",
+      "inUseByCount": "Het servicetype kan niet worden verwijderd omdat het momenteel door {{serviceCount}} service(s) wordt gebruikt."
+    },
+    "rateTier": {
+      "overlap": "Staffelbereiken mogen elkaar niet overlappen.",
+      "notFound": "Tariefstaffel niet gevonden. Vernieuw de service en probeer het opnieuw.",
+      "invalid": "De geselecteerde tariefstaffel is ongeldig. Vernieuw de service en probeer het opnieuw.",
+      "serviceInvalid": "De geselecteerde service voor deze tariefstaffel is niet meer geldig. Vernieuw de service en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de tariefstaffel.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de tariefstaffel: {{field}}."
+    }
   }
 }

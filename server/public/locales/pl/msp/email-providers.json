@@ -1092,5 +1092,71 @@
       "title": "Przetestuj tę regułę",
       "to": "Do"
     }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Nie udało się pobrać domen",
+      "invalidFormat": "Nieprawidłowy format domeny",
+      "duplicate": "Domena już istnieje",
+      "addFailed": "Nie udało się dodać domeny. Spróbuj ponownie.",
+      "notFound": "Nie znaleziono domeny",
+      "verifyFailed": "Nie udało się zweryfikować domeny. Spróbuj ponownie.",
+      "stillReferenced": "Domena jest nadal używana i nie można jej usunąć.",
+      "deleteFailed": "Nie udało się usunąć domeny. Spróbuj ponownie."
+    },
+    "provider": {
+      "saveFailed": "Nie udało się zapisać dostawcy poczty e-mail. Sprawdź ustawienia i spróbuj ponownie.",
+      "updateFailed": "Nie udało się zaktualizować dostawcy poczty e-mail. Sprawdź ustawienia i spróbuj ponownie.",
+      "notFound": "Nie znaleziono dostawcy poczty e-mail",
+      "deleteFailed": "Nie udało się usunąć dostawcy poczty e-mail"
+    },
+    "settings": {
+      "fetchFailed": "Nie udało się pobrać ustawień poczty e-mail",
+      "mailboxRequired": "Wybierz skrzynkę pocztową Microsoft 365 do poczty wychodzącej",
+      "mailboxInactive": "Wybrana skrzynka pocztowa Microsoft 365 nie jest aktywna lub już nie istnieje",
+      "mailboxReconnect": "Połącz ponownie wybraną skrzynkę pocztową Microsoft 365, zanim użyjesz jej do poczty wychodzącej",
+      "ticketIdentityMustMatchMailbox": "Tożsamość e-mail zgłoszeń musi korzystać z wybranej skrzynki pocztowej Microsoft 365 ({{mailbox}}). Zaktualizuj adres e-mail zgłoszeń przed zapisaniem.",
+      "providerFromAddressInvalid": "Adres nadawcy dla {{provider}} musi być prawidłowym adresem e-mail",
+      "ticketingFromInvalid": "Adres nadawcy zgłoszeń musi być prawidłowym adresem e-mail",
+      "outboundDomainInvalid": "Domena wysyłki wychodzącej musi być prawidłową domeną (np. example.com)",
+      "outboundDomainRequired": "Skonfiguruj domenę wychodzącą przed wyborem adresu nadawcy zgłoszeń",
+      "ticketingFromDomainMismatch": "Adres nadawcy zgłoszeń musi korzystać ze skonfigurowanej domeny wychodzącej",
+      "refreshFailed": "Nie udało się pobrać zaktualizowanych ustawień",
+      "updateFailed": "Nie udało się zaktualizować ustawień poczty e-mail",
+      "mailboxesLoadFailed": "Nie udało się wczytać skrzynek pocztowych Microsoft 365"
+    },
+    "inboundRules": {
+      "notFound": "Nie znaleziono reguły poczty przychodzącej",
+      "invalidOrdering": "Nieprawidłowe dane kolejności reguł",
+      "aliasRequired": "Alias jest wymagany",
+      "aliasTooLong": "Alias jest za długi",
+      "clientRequired": "Klient jest wymagany",
+      "invalidSampleEmail": "Nieprawidłowy przykładowy e-mail",
+      "permissionDenied": "Nie masz uprawnień do zarządzania regułami poczty przychodzącej.",
+      "ticketDefaultsUnavailable": "Wskazany zestaw domyślnych ustawień zgłoszeń nie istnieje lub jest nieaktywny.",
+      "orderingMismatch": "Kolejność nie odpowiada bieżącemu zestawowi reguł.",
+      "clientNotFound": "Nie znaleziono klienta.",
+      "aliasAlreadyAssigned": "Alias „{{alias}}” jest już przypisany do klienta.",
+      "invalidRegex": "Nieprawidłowe wyrażenie regularne.",
+      "fallbackDestinationRequired": "Miejsce docelowe rezerwowe jest wymagane, gdy zachowanie bez dopasowania korzysta z takiego miejsca docelowego."
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Konfiguracja o tej krótkiej nazwie już istnieje",
+      "createFailed": "Nie udało się utworzyć ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie.",
+      "notFound": "Nie znaleziono konfiguracji ustawień domyślnych",
+      "updateFailed": "Nie udało się zaktualizować ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Odmowa uprawnień: nie można odczytać opcji pól zgłoszenia",
+      "loadFailed": {
+        "ticketFieldOptions": "Nie udało się wczytać opcji pól zgłoszenia. Spróbuj ponownie.",
+        "boards": "Nie udało się wczytać tablic. Spróbuj ponownie.",
+        "statuses": "Nie udało się wczytać statusów. Spróbuj ponownie.",
+        "priorities": "Nie udało się wczytać priorytetów. Spróbuj ponownie.",
+        "categories": "Nie udało się wczytać kategorii. Spróbuj ponownie.",
+        "clients": "Nie udało się wczytać klientów. Spróbuj ponownie.",
+        "users": "Nie udało się wczytać użytkowników. Spróbuj ponownie."
+      }
+    }
   }
 }

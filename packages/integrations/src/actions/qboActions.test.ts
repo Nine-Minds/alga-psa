@@ -395,7 +395,8 @@ describe('QBO integration actions', () => {
     const result = await getQboAccounts();
 
     expect(result).toEqual({
-      actionError: 'Connect QuickBooks before loading QuickBooks accounts.'
+      actionError: 'Connect QuickBooks before loading QuickBooks accounts.',
+      messageKey: 'msp/integrations:errors.qbo.accounts.notConnected'
     });
     expect(qboClientCreateMock).not.toHaveBeenCalled();
   });
@@ -414,7 +415,8 @@ describe('QBO integration actions', () => {
     const result = await getQboAccounts();
 
     expect(result).toEqual({
-      actionError: 'Reconnect QuickBooks before loading QuickBooks accounts.'
+      actionError: 'Reconnect QuickBooks before loading QuickBooks accounts.',
+      messageKey: 'msp/integrations:errors.qbo.accounts.reconnect'
     });
   });
 

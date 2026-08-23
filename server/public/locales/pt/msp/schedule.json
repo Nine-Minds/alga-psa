@@ -685,5 +685,34 @@
     "notAvailable": "N / D",
     "title": "Detalhes da interação",
     "unknownUser": "Desconhecido"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Item da agenda não encontrado.",
+      "invalid": "O item da agenda selecionado é inválido. Atualize a página e tente novamente.",
+      "assigneesMissing": "Não foi possível encontrar um ou mais usuários atribuídos."
+    },
+    "activities": {
+      "otherUserForbidden": "Permissão negada: não é possível ver as atividades de agenda de outro usuário"
+    },
+    "workItem": {
+      "adHocTimesRequired": "A hora de início e a hora de término são obrigatórias para itens avulsos.",
+      "typeUnsupported": "Esse tipo de item de trabalho não é compatível com a agenda.",
+      "entryOrUserUnavailable": "O item da agenda ou o usuário selecionado não está mais disponível. Atualize a página e tente novamente.",
+      "invalid": "O item de trabalho selecionado é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O item de trabalho, item da agenda ou responsável selecionado não é mais válido. Atualize a página e tente novamente.",
+      "duplicateEntry": "Esse item da agenda já existe. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da agenda.",
+      "missingFieldNamed": "Falta um campo obrigatório da agenda: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "O ID da reunião é obrigatório",
+      "refreshPermission": "Permissão negada: não é possível atualizar as gravações de reuniões.",
+      "refreshFailed": "Falha ao atualizar as gravações de reuniões. Tente novamente.",
+      "graphForbidden": "O Microsoft Graph negou acesso à gravação do Teams. Verifique as permissões de gravação e tente novamente.",
+      "graphNotFound": "A gravação do Teams não está mais disponível no Microsoft Graph.",
+      "graphThrottled": "O Microsoft Graph está limitando a taxa de downloads de gravações. Tente novamente em instantes.",
+      "graphHttpStatus": "O Microsoft Graph retornou HTTP {{status}} ao baixar a gravação do Teams."
+    }
   }
 }

@@ -29,10 +29,10 @@ function userClientInfoActionErrorFrom(error: unknown): UserClientInfoActionErro
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected users is invalid. Please refresh and try again.');
+    return actionError('One of the selected users is invalid. Please refresh and try again.', 'msp/settings:errors.users.invalidValue');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected users no longer exists. Please refresh and try again.');
+    return actionError('One of the selected users no longer exists. Please refresh and try again.', 'msp/settings:errors.users.referenceMissing');
   }
 
   return null;
@@ -52,7 +52,7 @@ export const getUsersClientInfo = withAuth(async (
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'user', 'read', trx)) {
-        return permissionError('Permission denied: Cannot read user client info');
+        return permissionError('Permission denied: Cannot read user client info', 'msp/settings:errors.users.readClientInfoPermission');
       }
 
       const scopedDb = tenantDb(trx, tenant);

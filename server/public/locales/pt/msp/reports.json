@@ -505,5 +505,13 @@
       "client": "Cliente",
       "currency": "Moeda"
     }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Um dos registros de relatório selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de relatório selecionados não existe mais. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório do relatório.",
+      "missingFieldNamed": "Falta um campo obrigatório do relatório: {{field}}."
+    }
   }
 }

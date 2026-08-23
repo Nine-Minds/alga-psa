@@ -72,5 +72,45 @@
       "preTaxTotals": "Totals shown are pre-tax. Applicable tax is calculated on your invoice.",
       "thankYouForOrder": "Thank you for your order."
     }
+  },
+  "errors": {
+    "permissions": {
+      "denied": "Permission denied",
+      "create": "Permission denied: Cannot create documents",
+      "read": "Permission denied: Cannot read documents",
+      "update": "Permission denied: Cannot update documents",
+      "delete": "Permission denied: Cannot delete documents",
+      "associate": "Permission denied: Cannot associate documents",
+      "modifyClientDocuments": "Permission denied: Cannot modify client documents",
+      "accessContractDocuments": "Permission denied: Cannot access contract documents",
+      "modifyContractDocuments": "Permission denied: Cannot modify contract documents",
+      "removeAssociations": "Permission denied: Cannot remove document associations",
+      "updateAssociations": "Permission denied: Cannot update document associations",
+      "readAssociations": "Permission denied: Cannot read document associations",
+      "readTypes": "Permission denied: Cannot read document types"
+    },
+    "document": {
+      "notFound": "Document not found. It may have been deleted or moved. Please refresh and try again.",
+      "fileUnavailable": "The document file is no longer available. Please refresh and try again.",
+      "invalidValue": "One of the selected document values is invalid. Please refresh and try again.",
+      "invalidDate": "One of the selected document dates is invalid. Please review the form and try again.",
+      "referenceMissing": "The selected document, folder, or related record no longer exists. Please refresh and try again.",
+      "duplicateAssociation": "This document is already associated with that record.",
+      "conflict": "This document change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the document values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required document field.",
+      "missingFieldNamed": "Missing required document field: {{field}}."
+    },
+    "folder": {
+      "notFound": "Folder not found. It may have been deleted. Please refresh and try again.",
+      "emptyDocumentsFirst": "Move or delete the documents in this folder before deleting it.",
+      "emptySubfoldersFirst": "Delete the subfolders in this folder before deleting it.",
+      "duplicatePath": "A folder with that path already exists."
+    },
+    "upload": {
+      "fileRequired": "Choose a file before uploading.",
+      "typeNotAllowed": "This file type is not allowed.",
+      "sessionRequired": "Your session is required to upload documents. Please sign in again."
+    }
   }
 }

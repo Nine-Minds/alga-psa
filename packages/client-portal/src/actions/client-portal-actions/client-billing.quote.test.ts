@@ -407,6 +407,7 @@ describe('client quote billing actions', () => {
 
     await expect(rejectClientQuote('quote-1', '   ')).resolves.toEqual({
       actionError: 'A rejection comment is required',
+      messageKey: 'client-portal:errors.billing.rejectionCommentRequired',
     });
 
     const rejectedQuote = await rejectClientQuote('quote-1', '  Budget is not approved yet.  ');
@@ -465,9 +466,11 @@ describe('client quote billing actions', () => {
 
     await expect(acceptClientQuote('quote-1', ['item-optional'])).resolves.toEqual({
       actionError: 'Quote is not in a valid state for this action',
+      messageKey: 'client-portal:errors.billing.quoteInvalidState',
     });
     await expect(rejectClientQuote('quote-1', 'Too late')).resolves.toEqual({
       actionError: 'Quote is not in a valid state for this action',
+      messageKey: 'client-portal:errors.billing.quoteInvalidState',
     });
     expect(updateQuoteMock).not.toHaveBeenCalled();
   });
@@ -542,7 +545,7 @@ describe('client quote billing actions', () => {
 
     const result = await downloadClientQuotePdf('quote-other-client');
 
-    expect(result).toEqual({ actionError: 'Quote not found or access denied' });
+    expect(result).toEqual({ actionError: 'Quote not found or access denied', messageKey: 'client-portal:errors.billing.quoteNotFound' });
   });
 
   it('T139: downloadClientQuotePdf rejects access to draft quotes', async () => {
@@ -550,7 +553,7 @@ describe('client quote billing actions', () => {
 
     const result = await downloadClientQuotePdf('quote-draft');
 
-    expect(result).toEqual({ actionError: 'Quote not found or access denied' });
+    expect(result).toEqual({ actionError: 'Quote not found or access denied', messageKey: 'client-portal:errors.billing.quoteNotFound' });
   });
 
   it('T140: downloadClientQuotePdf rejects unauthenticated users', async () => {
@@ -560,6 +563,6 @@ describe('client quote billing actions', () => {
 
     const result = await downloadClientQuotePdf('quote-1');
 
-    expect(result).toEqual({ permissionError: 'Unauthorized' });
+    expect(result).toEqual({ permissionError: 'Unauthorized', messageKey: 'client-portal:errors.access.unauthorized' });
   });
 });

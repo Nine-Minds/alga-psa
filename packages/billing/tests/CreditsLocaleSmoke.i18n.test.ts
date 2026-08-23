@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -119,11 +120,10 @@ describe('Credits locale smoke and parity contract', () => {
     ];
 
     for (const key of pseudoKeys) {
-      expect(getLeaf(xx, key)).toBe('11111');
+      expect(getLeaf(xx, key)).toMatch(pseudoPattern('xx'));
     }
 
-    expect(getLeaf(xx, 'expiration.creditsAppliedToInvoice')).toBe(
-      '11111 {{amount}} 11111',
-    );
+    expect(getLeaf(xx, 'expiration.creditsAppliedToInvoice')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(xx, 'expiration.creditsAppliedToInvoice')).toContain('{{amount}}');
   });
 });

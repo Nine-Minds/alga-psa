@@ -82,10 +82,10 @@ function clientLocationActionErrorFrom(error: unknown): ClientLocationActionErro
       return permissionError(error.message);
     }
     if (error.message === 'Active location not found' || error.message === 'Location not found') {
-      return actionError('Location not found or is no longer active.');
+      return actionError('Location not found or is no longer active.', 'msp/clients:errors.location.notFound');
     }
     if (error.message === 'Cannot unset default: no other active location available') {
-      return actionError('Add another active location or choose a different default before unsetting this location as the default.');
+      return actionError('Add another active location or choose a different default before unsetting this location as the default.', 'msp/clients:errors.location.defaultRequired');
     }
     if (error.message === 'A default location must be active') {
       return actionError(error.message);
@@ -97,16 +97,22 @@ function clientLocationActionErrorFrom(error: unknown): ClientLocationActionErro
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '23502') {
-    return actionError(`Missing required location field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required location field: ${dbError.column}.`,
+          'msp/clients:errors.location.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required location field.', 'msp/clients:errors.location.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected client, country, tax region, or related location data is no longer valid. Please refresh and try again.');
+    return actionError('The selected client, country, tax region, or related location data is no longer valid. Please refresh and try again.', 'msp/clients:errors.location.referenceInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A conflicting location record already exists. Please refresh locations and try again.');
+    return actionError('A conflicting location record already exists. Please refresh locations and try again.', 'msp/clients:errors.location.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('Invalid location data provided. Please check the address and contact fields.');
+    return actionError('Invalid location data provided. Please check the address and contact fields.', 'msp/clients:errors.location.invalidData');
   }
 
   return null;

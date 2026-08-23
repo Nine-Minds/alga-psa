@@ -51,7 +51,7 @@ export const getClientBillingScheduleSummaries = withAuth(async (
   clientIds: string[]
 ): Promise<Record<string, ClientBillingScheduleConfig> | BillingScheduleActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   if (clientIds.length === 0) {
     return {};
@@ -108,7 +108,7 @@ export const updateClientBillingSchedule = withAuth(async (
   input: UpdateClientBillingScheduleInput
 ): Promise<{ success: true } | BillingScheduleActionError> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   const { knex } = await createTenantKnex();
 
@@ -118,7 +118,7 @@ export const updateClientBillingSchedule = withAuth(async (
     });
   } catch (error) {
     if (error instanceof Error && /client.*not found/i.test(error.message)) {
-      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.client.notFoundRefresh');
     }
     throw error;
   }
@@ -144,7 +144,7 @@ export const previewClientCadenceChange = withAuth(async (
   input: PreviewClientCadenceChangeInput
 ): Promise<ClientCadenceChangePreview | BillingScheduleActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
 

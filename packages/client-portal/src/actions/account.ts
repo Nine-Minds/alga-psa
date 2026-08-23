@@ -17,23 +17,23 @@ import { getPermittedBillingProfileIds } from './client-portal-actions/clientBil
 export type ClientPortalAccountActionError = ActionMessageError;
 
 function noContactForUserError(): ClientPortalAccountActionError {
-  return actionError('Your portal user is not linked to a contact. Contact support if this continues.');
+  return actionError('Your portal user is not linked to a contact. Contact support if this continues.', 'client-portal:errors.account.userNotLinkedToContact');
 }
 
 function noClientForUserError(): ClientPortalAccountActionError {
-  return actionError('Your portal user is not linked to a client account. Contact support if this continues.');
+  return actionError('Your portal user is not linked to a client account. Contact support if this continues.', 'client-portal:errors.account.userNotLinkedToClient');
 }
 
 function noClientForContactError(): ClientPortalAccountActionError {
-  return actionError('Your contact is not linked to a client account. Contact support if this continues.');
+  return actionError('Your contact is not linked to a client account. Contact support if this continues.', 'client-portal:errors.account.contactNotLinkedToClient');
 }
 
 function clientNotFoundError(): ClientPortalAccountActionError {
-  return actionError('Client account not found. It may have been deleted or you may no longer have access.');
+  return actionError('Client account not found. It may have been deleted or you may no longer have access.', 'client-portal:errors.account.clientNotFound');
 }
 
 function serviceNotFoundError(): ClientPortalAccountActionError {
-  return actionError('Service not found or no longer active. Please refresh and try again.');
+  return actionError('Service not found or no longer active. Please refresh and try again.', 'client-portal:errors.account.serviceNotFound');
 }
 
 /**
@@ -845,7 +845,7 @@ export const getServiceUpgrades = withAuth(async (user, { tenant }, serviceId: s
  * TODO: Refactor to work with the new contract architecture.
  */
 export async function upgradeService(_serviceId: string, _planId: string): Promise<{ success: boolean } | ClientPortalAccountActionError> {
-  return actionError('Service upgrade functionality is temporarily unavailable. Please contact support to change your plan.');
+  return actionError('Service upgrade functionality is temporarily unavailable. Please contact support to change your plan.', 'client-portal:errors.account.serviceUpgradeUnavailable');
 }
 
 export async function downgradeService(serviceId: string, planId: string): Promise<{ success: boolean } | ClientPortalAccountActionError> {

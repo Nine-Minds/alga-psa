@@ -1361,7 +1361,93 @@
     "updateWatchList": "Unable to update watch list. Please try again.",
     "fetchCategoryImports": "Failed to fetch available categories for import",
     "validateDeletionFailed": "Failed to validate deletion. Please try again.",
-    "deleteTicketUnexpected": "An unexpected error occurred while deleting the ticket."
+    "deleteTicketUnexpected": "An unexpected error occurred while deleting the ticket.",
+    "action": {
+      "ticketNotFound": "Ticket not found. It may have been deleted or moved. Please refresh and try again.",
+      "ticketResourceNotFound": "Ticket resource not found. Please refresh and try again.",
+      "agentAlreadyAssigned": "This user is already assigned as an additional agent.",
+      "teamNotFound": "Team not found. It may have been deleted. Please refresh and try again.",
+      "teamLeadNotFound": "The selected team does not have a team lead. Choose another team or assign a lead first.",
+      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again."
+    },
+    "bundle": {
+      "masterAlreadyBundleMaster": "Ticket {{tickets}} is already a bundle master and cannot be added as children. Unbundle them first, or use one of them as the master.",
+      "masterAlreadyBundleMasters": "Tickets {{tickets}} are already bundle masters and cannot be added as children. Unbundle them first, or use one of them as the master.",
+      "selectChild": "Select at least one child ticket different from the master.",
+      "masterNotFound": "Master ticket not found.",
+      "childNotFound": "Child ticket not found: {{ticket}}",
+      "childAsMaster": "Cannot select a child ticket as the master.",
+      "alreadyBundled": "Ticket is already bundled: {{ticket}}",
+      "masterAsChild": "Master ticket cannot also be a child ticket.",
+      "noChildren": "No child tickets provided.",
+      "childrenOnBundledChild": "Cannot add children to a bundled child ticket."
+    },
+    "ticket": {
+      "validationDetails": "Please fix the ticket details: {{details}}",
+      "invalidValue": "One of the selected ticket values is invalid. Please refresh and try again.",
+      "missingField": "Missing required ticket field.",
+      "missingFieldNamed": "Missing required ticket field: {{field}}.",
+      "referenceMissing": "One of the selected ticket records no longer exists. Please refresh and try again.",
+      "conflict": "This ticket change conflicts with an existing record. Please refresh and try again.",
+      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again."
+    },
+    "board": {
+      "invalidReference": "The selected board, status, or rule is invalid. Please refresh and try again.",
+      "missingField": "Missing required board field.",
+      "missingFieldNamed": "Missing required board field: {{field}}.",
+      "referenceInvalid": "The selected board, status, priority, assignee, team, or SLA policy is no longer valid. Please refresh and try again.",
+      "duplicateName": "A board with this name already exists.",
+      "duplicate": "A board or status with the same settings already exists.",
+      "invalidValue": "One of the board or status values is invalid. Please refresh and try again."
+    },
+    "material": {
+      "invalidValue": "One of the selected material values is invalid. Please refresh and try again.",
+      "missingField": "Missing required material field.",
+      "missingFieldNamed": "Missing required material field: {{field}}.",
+      "referenceInvalid": "The selected ticket, client, product, or stock unit is no longer valid. Please refresh and try again.",
+      "conflict": "This material conflicts with an existing ticket material or stock assignment. Please refresh and try again.",
+      "valueNotAllowed": "One of the material values is not allowed. Please review the form and try again."
+    },
+    "settings": {
+      "updateDenied": "Permission denied: Cannot update ticket settings"
+    },
+    "list": {
+      "filtersInvalid": "Ticket list filters are no longer valid. Refresh the page and try again."
+    },
+    "layoutPreference": {
+      "contextMissing": "Your session is missing required ticket preference context. Please refresh and try again.",
+      "userNotFound": "Current user not found. Please refresh and sign in again.",
+      "invalidLayout": "Invalid ticket detail layout. Please refresh and try again.",
+      "invalidTimelineOrder": "Invalid ticket timeline order. Please refresh and try again.",
+      "invalidValue": "One of the ticket layout preference values is invalid. Please refresh and try again.",
+      "missingField": "Missing required ticket preference field.",
+      "missingFieldNamed": "Missing required ticket preference field: {{field}}.",
+      "userMissing": "The current user for these ticket preferences no longer exists. Please refresh and sign in again.",
+      "concurrentUpdate": "Ticket layout preferences were updated concurrently. Please refresh and try again."
+    },
+    "category": {
+      "invalidReference": "The selected category or board is invalid. Please refresh and try again.",
+      "missingField": "Missing required category field.",
+      "missingFieldNamed": "Missing required category field: {{field}}.",
+      "referenceInvalid": "The selected board or parent category is no longer valid. Please refresh and try again.",
+      "duplicate": "A category with these settings already exists.",
+      "invalidValue": "One of the category values is invalid. Please refresh and try again."
+    },
+    "import": {
+      "invalidValue": "One of the imported ticket values is invalid. Please refresh reference data and try again.",
+      "conflict": "A ticket import record conflicts with an existing record. Review duplicate clients, contacts, statuses, priorities, categories, or tags.",
+      "referenceMissing": "A referenced client, contact, board, status, priority, category, team, or user was not found. Refresh reference data and try again.",
+      "missingValue": "Missing required import value.",
+      "missingValueNamed": "Missing required import value: {{field}}.",
+      "invalidForField": "One of the imported values is invalid for this field."
+    },
+    "checklist": {
+      "invalidReference": "The selected checklist item, template, or rule is invalid. Please refresh and try again.",
+      "missingField": "Missing required checklist field.",
+      "missingFieldNamed": "Missing required checklist field: {{field}}.",
+      "referenceInvalid": "The selected ticket, checklist template, or rule filter is no longer valid. Please refresh and try again.",
+      "invalidValue": "One of the checklist values is invalid. Please refresh and try again."
+    }
   },
   "ticketSection": {
     "title": "Appointment Request",

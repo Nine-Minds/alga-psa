@@ -72,5 +72,45 @@
       "preTaxTotals": "Los totales mostrados no incluyen impuestos. El impuesto correspondiente se calcula en su factura.",
       "thankYouForOrder": "Gracias por su pedido."
     }
+  },
+  "errors": {
+    "permissions": {
+      "denied": "Permiso denegado",
+      "create": "Permiso denegado: no se pueden crear documentos",
+      "read": "Permiso denegado: no se pueden leer documentos",
+      "update": "Permiso denegado: no se pueden actualizar documentos",
+      "delete": "Permiso denegado: no se pueden eliminar documentos",
+      "associate": "Permiso denegado: no se pueden asociar documentos",
+      "modifyClientDocuments": "Permiso denegado: no se pueden modificar los documentos del cliente",
+      "accessContractDocuments": "Permiso denegado: no se puede acceder a los documentos del contrato",
+      "modifyContractDocuments": "Permiso denegado: no se pueden modificar los documentos del contrato",
+      "removeAssociations": "Permiso denegado: no se pueden quitar las asociaciones de documentos",
+      "updateAssociations": "Permiso denegado: no se pueden actualizar las asociaciones de documentos",
+      "readAssociations": "Permiso denegado: no se pueden leer las asociaciones de documentos",
+      "readTypes": "Permiso denegado: no se pueden leer los tipos de documento"
+    },
+    "document": {
+      "notFound": "No se encontró el documento. Es posible que se haya eliminado o movido. Actualice la página e inténtelo de nuevo.",
+      "fileUnavailable": "El archivo del documento ya no está disponible. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de documento seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "invalidDate": "Una de las fechas del documento seleccionadas no es válida. Revise el formulario e inténtelo de nuevo.",
+      "referenceMissing": "El documento, la carpeta o el registro relacionado seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicateAssociation": "Este documento ya está asociado a ese registro.",
+      "conflict": "Este cambio del documento entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores del documento no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del documento.",
+      "missingFieldNamed": "Falta un campo obligatorio del documento: {{field}}."
+    },
+    "folder": {
+      "notFound": "No se encontró la carpeta. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "emptyDocumentsFirst": "Mueva o elimine los documentos de esta carpeta antes de eliminarla.",
+      "emptySubfoldersFirst": "Elimine las subcarpetas de esta carpeta antes de eliminarla.",
+      "duplicatePath": "Ya existe una carpeta con esa ruta."
+    },
+    "upload": {
+      "fileRequired": "Elija un archivo antes de subirlo.",
+      "typeNotAllowed": "Este tipo de archivo no está permitido.",
+      "sessionRequired": "Se requiere su sesión para subir documentos. Inicie sesión de nuevo."
+    }
   }
 }

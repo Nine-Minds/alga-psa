@@ -43,21 +43,21 @@ export const getPrepaidBalanceAlertSettings = withAuth(async (
   clientId: string | null
 ): Promise<ReadResult> => {
   if (!tenant) {
-    return actionError('Tenant context not found');
+    return actionError('Tenant context not found', 'msp/billing:errors.context.tenantContextNotFound');
   }
   if (!(await featureEnabled(tenant))) {
     return actionError(FLAG_DISABLED_MESSAGE);
   }
   if (!(await hasPermission(user, 'billing_settings', 'read'))) {
-    return permissionError('Permission denied: billing_settings read required');
+    return permissionError('Permission denied: billing_settings read required', 'msp/billing-settings:errors.permissions.settingsRead');
   }
 
   const { knex } = await createTenantKnex();
   if (!clientId) {
-    return actionError('Client context not found');
+    return actionError('Client context not found', 'msp/billing:errors.context.clientContextNotFound');
   }
   const result = await getPrepaidBalanceAlertSettingsDb(knex, tenant, clientId);
-  return result ?? actionError('Client not found');
+  return result ?? actionError('Client not found', 'msp/billing:errors.client.notFound');
 });
 
 /**
@@ -72,18 +72,18 @@ export const updatePrepaidBalanceAlertSettings = withAuth(async (
   input: PrepaidBalanceAlertSettingsInput
 ): Promise<UpdateResult> => {
   if (!tenant) {
-    return actionError('Tenant context not found');
+    return actionError('Tenant context not found', 'msp/billing:errors.context.tenantContextNotFound');
   }
   if (!(await featureEnabled(tenant))) {
     return actionError(FLAG_DISABLED_MESSAGE);
   }
   if (!(await hasPermission(user, 'billing_settings', 'update'))) {
-    return permissionError('Permission denied: billing_settings update required');
+    return permissionError('Permission denied: billing_settings update required', 'msp/billing-settings:errors.permissions.settingsUpdate');
   }
 
   const parsed = prepaidBalanceAlertSettingsInputSchema.safeParse(input);
   if (!parsed.success) {
-    return actionError('Invalid prepaid balance alert settings');
+    return actionError('Invalid prepaid balance alert settings', 'msp/credits:errors.prepaidAlerts.settingsInvalid');
   }
 
   try {
@@ -94,6 +94,6 @@ export const updatePrepaidBalanceAlertSettings = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error updating prepaid balance alert settings:', error);
-    return actionError('Failed to update prepaid balance alert settings');
+    return actionError('Failed to update prepaid balance alert settings', 'msp/credits:errors.prepaidAlerts.updateFailed');
   }
 });

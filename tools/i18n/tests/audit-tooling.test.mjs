@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -138,4 +140,17 @@ test('baseline comparison fails only counts that regress', () => {
   assert.deepEqual(comparison.deltas.forbidden, { baseline: 1, current: 1, delta: 0 });
   assert.deepEqual(comparison.deltas.unreviewed, { baseline: 10, current: 8, delta: -2 });
   assert.deepEqual(comparison.deltas.structural, { baseline: 1, current: 1, delta: 0 });
+});
+
+test('untranslated UI JSON output drains before exit', () => {
+  const script = fileURLToPath(new URL('../find-untranslated-ui.cjs', import.meta.url));
+  const result = spawnSync(process.execPath, [script, '--json'], {
+    encoding: 'utf8',
+    maxBuffer: 20 * 1024 * 1024,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(Array.isArray(report.high), true);
+  assert.equal(Array.isArray(report.partial), true);
 });

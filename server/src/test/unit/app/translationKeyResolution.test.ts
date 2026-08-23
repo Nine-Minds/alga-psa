@@ -26,9 +26,13 @@ const SCAN_ROOTS = [
 
 const SKIP_DIRS = new Set(['node_modules', '.next', 'dist', '__tests__']);
 
-// The namespace a file translates against, from either the client hook or the
-// server helper. A file with none is not doing i18n and is skipped.
-const NAMESPACE_RE = /(?:useTranslation|getServerTranslation)\(\s*(?:undefined\s*,\s*)?'([^']+)'/g;
+// The namespaces a file translates against, from either the client hook or the
+// server helper. Both accept a single namespace or an array of them — an
+// unprefixed key resolves against the first entry and falls back through the
+// rest — so the array form has to be read as a whole. A file with no namespace
+// is not doing i18n and is skipped.
+const NAMESPACE_RE = /(?:useTranslation|getServerTranslation)\(\s*(?:undefined\s*,\s*)?(\[[^\]]*\]|'[^']+')/g;
+const QUOTED_RE = /'([^']+)'/g;
 
 // Direct calls: t('some.key').
 const DIRECT_KEY_RE = /\bt\(\s*'([^']+)'/g;
@@ -92,7 +96,9 @@ function findUnresolvedKeys(root: string): { checked: number; unresolved: Unreso
   for (const file of collectSourceFiles(path.join(repoRoot, root))) {
     const source = fs.readFileSync(file, 'utf8');
 
-    const namespaces = [...source.matchAll(NAMESPACE_RE)].map((match) => match[1]);
+    const namespaces = [...source.matchAll(NAMESPACE_RE)].flatMap((match) =>
+      [...match[1].matchAll(QUOTED_RE)].map((quoted) => quoted[1]),
+    );
     const packs = namespaces.map(loadPack).filter((pack): pack is Record<string, unknown> => !!pack);
     if (packs.length === 0) continue;
 

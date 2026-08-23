@@ -463,5 +463,42 @@
   "bundleNotice": {
     "withNumber": "Questo ticket è in bundle sotto {{number}}. Il tempo del bundle viene solitamente registrato sul ticket principale.",
     "withoutNumber": "Questo ticket fa parte di un bundle. Il tempo del bundle viene solitamente registrato sul ticket principale."
+  },
+  "errors": {
+    "timeSheet": {
+      "notFoundRefresh": "Foglio ore non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "onlySubmittedApprovable": "Solo i fogli ore inviati possono essere approvati.",
+      "idRequired": "L’ID del foglio ore è obbligatorio.",
+      "ticketIdRequired": "L’ID del ticket è obbligatorio.",
+      "workItemRemoveFailed": "Impossibile rimuovere questo elemento di lavoro. Aggiornare la pagina e riprovare.",
+      "onlyDraftRemovable": "Solo i fogli ore in bozza possono essere rimossi.",
+      "removeEntriesFirst": "Rimuovere gli inserimenti ore prima di rimuovere questo foglio ore.",
+      "onlyApprovedReopenable": "Solo i fogli ore approvati possono essere riaperti.",
+      "invoicedCannotReopen": "Questo foglio ore contiene tempo fatturato e non può essere riaperto."
+    },
+    "timeEntry": {
+      "notFoundRefresh": "Inserimento ore non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "serviceRequired": "Selezionare un servizio prima di salvare questo inserimento ore.",
+      "alreadyInvoiced": "Questo inserimento ore è già stato fatturato e non può essere modificato.",
+      "workItemTypeUnsupported": "Il tipo di elemento di lavoro selezionato non è supportato per gli inserimenti ore.",
+      "bucketUpdateFailed": "Impossibile aggiornare il consumo del pacchetto ore per questo inserimento ore. Aggiornare la pagina e riprovare.",
+      "wrongTimeSheet": "Questo inserimento ore non appartiene al foglio ore selezionato.",
+      "outsidePeriod": "L’inserimento ore deve rientrare nel periodo del foglio ore selezionato.",
+      "invalidReference": "L’inserimento ore, il foglio ore o l’elemento di lavoro selezionato non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il foglio ore, l’inserimento ore, l’elemento di lavoro o l’utente selezionato non è più valido. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un inserimento ore in conflitto. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del foglio ore o dell’inserimento ore.",
+      "missingFieldNamed": "Manca un campo obbligatorio del foglio ore o dell’inserimento ore: {{field}}."
+    },
+    "timePeriod": {
+      "datesRequired": "Inserire date di inizio e di fine valide."
+    },
+    "timePeriodSettings": {
+      "invalidValue": "Uno dei valori dell’impostazione del periodo non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "L’impostazione del periodo selezionata non è più valida. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un’impostazione del periodo in conflitto.",
+      "missingField": "Manca un campo obbligatorio dell’impostazione del periodo.",
+      "missingFieldNamed": "Manca un campo obbligatorio dell’impostazione del periodo: {{field}}."
+    }
   }
 }

@@ -445,5 +445,65 @@
       "summary": "{{rate}} per {{unit}}",
       "help": "The base rate can be overridden with quantity-based tiers below."
     }
+  },
+  "errors": {
+    "permissions": {
+      "createServices": "Permission denied: Cannot create services/products",
+      "updateServices": "Permission denied: Cannot update services/products",
+      "deleteServices": "Permission denied: Cannot delete services",
+      "deleteServicesProducts": "Permission denied: Cannot delete services/products",
+      "createServiceTypes": "Permission denied: Cannot create service types",
+      "updateServiceTypes": "Permission denied: Cannot update service types",
+      "deleteServiceTypes": "Permission denied: Cannot delete service types",
+      "updatePricing": "Permission denied: Cannot update service pricing"
+    },
+    "category": {
+      "duplicateName": "A service category with this name already exists",
+      "notFound": "Service category not found",
+      "invalid": "The selected service category is invalid. Please refresh and try again.",
+      "inUse": "Cannot delete category because it is still in use.",
+      "inUseByServices": "Cannot delete category: services are using this category",
+      "inUseByTickets": "Cannot delete category that is in use by tickets",
+      "nameRequired": "Category name is required",
+      "nameEmpty": "Category name cannot be empty",
+      "idRequired": "Category ID is required",
+      "missingField": "Missing required service category field.",
+      "missingFieldNamed": "Missing required service category field: {{field}}."
+    },
+    "service": {
+      "selectType": "Select a service type before saving.",
+      "typeNotFound": "The selected service type was not found. Please refresh and choose another service type.",
+      "selectBillingMethod": "Select a billing method before saving.",
+      "notFoundRefresh": "Service not found. It may have been deleted. Please refresh and try again.",
+      "invalidValue": "One of the selected service values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected service, category, tax rate, or service type is no longer available. Please refresh and try again.",
+      "duplicate": "A service or product with these values already exists.",
+      "missingField": "Missing required service field.",
+      "missingFieldNamed": "Missing required service field: {{field}}."
+    },
+    "product": {
+      "notFound": "Product not found",
+      "alreadyDeleted": "Product not found. It may have already been deleted.",
+      "barcodeExists": "A product with this barcode already exists. Use a different barcode or edit the existing product.",
+      "barcodeExistsNamed": "A product with barcode \"{{barcode}}\" already exists. Use a different barcode or edit the existing product.",
+      "skuExists": "A product with this SKU already exists. Use a different SKU or edit the existing product.",
+      "skuExistsNamed": "A product with SKU \"{{sku}}\" already exists. Use a different SKU or edit the existing product.",
+      "cannotDelete": "Cannot delete product: {{reasons}}"
+    },
+    "serviceType": {
+      "duplicateName": "A service type with this name already exists.",
+      "notFoundRefresh": "Service type not found. It may have been deleted. Please refresh and try again.",
+      "notFound": "Service type not found.",
+      "inUse": "Cannot delete service type because it is currently in use by one or more services.",
+      "inUseByCount": "Cannot delete service type because it is currently in use by {{serviceCount}} service(s)."
+    },
+    "rateTier": {
+      "overlap": "Tier ranges cannot overlap.",
+      "notFound": "Rate tier not found. Refresh the service and try again.",
+      "invalid": "The selected rate tier is invalid. Refresh the service and try again.",
+      "serviceInvalid": "The selected service for this rate tier is no longer valid. Refresh the service and try again.",
+      "missingField": "Missing required rate tier field.",
+      "missingFieldNamed": "Missing required rate tier field: {{field}}."
+    }
   }
 }
