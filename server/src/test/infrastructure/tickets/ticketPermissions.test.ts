@@ -28,7 +28,10 @@ import { tenantDb } from '@alga-psa/db';
 
 describe('Ticket Permissions Infrastructure', () => {
   const context = new TestContext({
-    cleanupTables: ['tickets', 'categories', 'boards', 'contacts', 'clients', 'users', 'roles', 'permissions'],
+    // No cleanupTables: each test runs in a transaction that is rolled back, and
+    // TRUNCATE ... CASCADE on clients/users took the seeded statuses and
+    // priorities with it — every fixture lookup then failed for the rest of the
+    // file.
     runSeeds: true
   });
   let testTicket: ITicket;
@@ -64,10 +67,10 @@ describe('Ticket Permissions Infrastructure', () => {
     // beforeEach failed with "not queryable".
     await context.reset();
 
-    // Set up common test environment
-    const { tenantId, clientId } = await createTestEnvironment(context.db, {
-      clientName: 'Test Client'
-    });
+    // Use the seeded tenant: createTestEnvironment mints a fresh one, which has
+    // none of the seeded statuses or priorities these fixtures look up.
+    const tenantId = context.tenantId;
+    const clientId = context.clientId;
 
     // Create users with different roles
     const regularUserId = await createUser(context.db, tenantId, {
@@ -178,8 +181,7 @@ describe('Ticket Permissions Infrastructure', () => {
       updated_at: null,
       closed_at: null,
       attributes: null,
-      priority_id: priorityId,
-      estimated_hours: undefined
+      priority_id: priorityId
     };
 
     await tenantTable(tenantId, 'tickets').insert(testTicket);

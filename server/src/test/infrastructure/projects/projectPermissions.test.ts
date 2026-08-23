@@ -33,7 +33,10 @@ vi.mock('@alga-psa/auth', async () => {
 
 describe('Project Permissions Infrastructure', () => {
   const context = new TestContext({
-    cleanupTables: ['projects', 'clients', 'users', 'roles', 'permissions'],
+    // No cleanupTables: each test runs in a transaction that is rolled back, and
+    // TRUNCATE ... CASCADE on clients/users took the seeded statuses and
+    // priorities with it — every fixture lookup then failed for the rest of the
+    // file.
     runSeeds: true
   });
   let testProject: IProject;
@@ -64,10 +67,10 @@ describe('Project Permissions Infrastructure', () => {
     // beforeEach failed with "not queryable".
     await context.reset();
 
-    // Set up common test environment
-    const { tenantId, clientId } = await createTestEnvironment(context.db, {
-      clientName: 'Test Client'
-    });
+    // Use the seeded tenant: createTestEnvironment mints a fresh one, which has
+    // none of the seeded statuses or priorities these fixtures look up.
+    const tenantId = context.tenantId;
+    const clientId = context.clientId;
 
     // Create users with different roles
     const regularUserId = await createUser(context.db, tenantId, {
@@ -133,6 +136,8 @@ describe('Project Permissions Infrastructure', () => {
       created_at: new Date(),
       updated_at: new Date(),
       wbs_code: 'TEST-001',
+      // projects.project_number is NOT NULL and unique per tenant.
+      project_number: `PRJ-${uuidv4().slice(0, 8)}`,
       is_inactive: false,
       status: initiatingSpellStatus.status_id
     };

@@ -94,7 +94,8 @@ vi.mock('@alga-psa/projects/models/project', () => {
                 is_visible: true
             })),
             addProjectStatusMapping: vi.fn(),
-            getStandardStatusesByType: vi.fn(() => [
+            // Awaited with .catch() by the action, so the mock must be a promise.
+            getStandardStatusesByType: vi.fn(() => Promise.resolve([
                 {
                     standard_status_id: uuidv4(),
                     name: 'To Do',
@@ -116,10 +117,10 @@ vi.mock('@alga-psa/projects/models/project', () => {
                     display_order: 3,
                     is_closed: true
                 }
-            ]),
+            ])),
             getCustomStatus: vi.fn(),
             getStandardStatus: vi.fn(),
-            getStatusesByType: vi.fn(() => [
+            getStatusesByType: vi.fn(() => Promise.resolve([
                 {
                     status_id: uuidv4(),
                     name: 'Active',
@@ -134,7 +135,7 @@ vi.mock('@alga-psa/projects/models/project', () => {
                     is_closed: true,
                     order_number: 2
                 }
-            ]),
+            ])),
             generateNextWbsCode: vi.fn((_knex: any, _tenant: string, parentWbsCode: string) => {
                 const parts = parentWbsCode.split('.');
                 const lastPart = parseInt(parts[parts.length - 1]);
@@ -248,17 +249,28 @@ describe('Project Management', () => {
         // Per-test isolation without rebuilding the schema: drop the rows this
         // suite creates. The full drop/migrate/seed cycle used to run here,
         // costing ~90s per test on top of taking the connection with it.
-        await cleanupTables(db, ['projects', 'project_phases', 'project_tasks'], { ignoreErrors: true });
+        await cleanupTables(
+            db,
+            ['projects', 'project_phases', 'project_tasks', 'task_checklist_items', 'project_ticket_links'],
+            { ignoreErrors: true }
+        );
 
         // Mocks must speak for the seeded tenant — the default mock tenant id
         // has no rows in this database.
         setupCommonMocks({
             tenantId,
-            user: createMockUser('admin', { tenant: tenantId })
+            // createMockUser leaves roles empty, and the default RBAC mock reads
+            // them, so the admin fixture was denied everything.
+            user: createMockUser('internal', {
+                tenant: tenantId,
+                roles: [{ role_id: 'mock-admin-role', role_name: 'Admin', description: 'Admin', tenant: tenantId }]
+            })
         });
 
         // Create test client
-        clientId = await createClient(db, tenantId, 'Test Client');
+        // clients_tenant_client_name_unique: the database is no longer rebuilt
+        // between tests, so each one needs its own name.
+        clientId = await createClient(db, tenantId, `Test Client ${uuidv4().slice(0, 8)}`);
 
         // Get initial status ID
         const status = await db('statuses')
