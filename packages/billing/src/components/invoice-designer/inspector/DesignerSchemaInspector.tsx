@@ -4,10 +4,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import {
-  buildInvoiceExpressionPathOptions,
-  type SharedExpressionPathOption,
-} from '@alga-psa/workflows/expression-authoring';
+import { type SharedExpressionPathOption } from '@alga-psa/workflows/expression-authoring';
 import { getComponentSchema } from '../schema/componentSchema';
 import type { DesignerNode } from '../state/designerStore';
 import { useInvoiceDesignerStore } from '../state/designerStore';
@@ -18,13 +15,14 @@ import type {
 } from '../schema/inspectorSchema';
 import { TableEditorWidget } from './widgets/TableEditorWidget';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import {
-  getTemplateFieldDefinition,
-  humanizeBindingToken,
-  resolveTemplateFieldLabel,
-  type InvoiceFieldCategory,
-} from '../fields/fieldCatalog';
+import { type InvoiceFieldCategory } from '../fields/fieldCatalog';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
+import {
+  buildDocumentExpressionPathOptions,
+  describeBindingOption,
+  isDocumentFieldPath,
+  resolveDocumentFieldLabel,
+} from '../fields/documentBindingCatalog';
 import {
   normalizeCssColor,
   normalizeCssLength,
@@ -95,50 +93,13 @@ type BindingOption = {
   searchText: string;
 };
 
-const categoryLabelByRoot: Record<string, InvoiceFieldCategory> = {
-  invoice: 'Invoice',
-  customer: 'Customer',
-  quote: 'Quote',
-  quoteTotals: 'Quote Totals',
-  client: 'Client',
-  contact: 'Contact',
-  tenant: 'Tenant',
-  item: 'Line Item',
-};
-
-const toTitleCase = (value: string) =>
-  value
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
 const toBindingOption = (option: SharedExpressionPathOption): BindingOption | null => {
-  const knownField = getTemplateFieldDefinition(option.path);
-  if (knownField) {
-    return {
-      path: knownField.path,
-      label: knownField.label,
-      category: knownField.category,
-      description: knownField.description,
-      searchText: `${knownField.label} ${knownField.path} ${knownField.description} ${knownField.category}`.toLowerCase(),
-    };
-  }
-  const category = categoryLabelByRoot[option.root];
-  if (!category) return null;
-  const pathSegments = option.path.split('.');
-  if (pathSegments.length < 2 || !option.isLeaf) return null;
-  const fieldName = pathSegments[pathSegments.length - 1]?.replace(/\[\]/g, '') ?? option.path;
-  const categoryPrefix = category === 'Line Item' ? 'Item' : category;
-  const label = category === 'Invoice' ? toTitleCase(fieldName) : `${categoryPrefix} ${toTitleCase(fieldName)}`;
-  const description = option.description ?? option.path;
+  const described = describeBindingOption(option);
+  if (!described) return null;
   return {
     path: option.path,
-    label,
-    category,
-    description,
-    searchText: `${label} ${option.path} ${description} ${category}`.toLowerCase(),
+    ...described,
+    searchText: `${described.label} ${option.path} ${described.description} ${described.category}`.toLowerCase(),
   };
 };
 
@@ -162,10 +123,10 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const normalizedBinding = value.trim();
-  const selectedDefinition = getTemplateFieldDefinition(normalizedBinding);
+
   const currentNode = useInvoiceDesignerStore((state) => state.nodesById[nodeId] as DesignerNode | undefined);
   const [query, setQuery] = useState('');
-  const [customMode, setCustomMode] = useState(() => normalizedBinding.length > 0 && !selectedDefinition);
+  const [customMode, setCustomMode] = useState(() => normalizedBinding.length > 0 && !isDocumentFieldPath(normalizedBinding));
   const currentPlaceholder = useMemo(() => {
     if (!currentNode || !isPlainObject(currentNode.props)) {
       return '';
@@ -173,16 +134,16 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
     const metadata = isPlainObject(currentNode.props.metadata) ? currentNode.props.metadata : null;
     return typeof metadata?.placeholder === 'string' ? metadata.placeholder.trim() : '';
   }, [currentNode]);
-  const autoPlaceholderLabel = useMemo(() => resolveTemplateFieldLabel(normalizedBinding), [normalizedBinding]);
+  const autoPlaceholderLabel = useMemo(() => resolveDocumentFieldLabel(normalizedBinding), [normalizedBinding]);
 
   React.useEffect(() => {
-    setCustomMode(normalizedBinding.length > 0 && !getTemplateFieldDefinition(normalizedBinding));
+    setCustomMode(normalizedBinding.length > 0 && !isDocumentFieldPath(normalizedBinding));
     setQuery('');
   }, [nodeId, normalizedBinding]);
 
   const options = useMemo(() => {
     const seen = new Set<string>();
-    return buildInvoiceExpressionPathOptions({
+    return buildDocumentExpressionPathOptions({
       mode: 'template',
       includeRootPaths: false,
       documentKind,
@@ -224,8 +185,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
     [filteredOptions]
   );
 
-  const currentLabel =
-    selectedDefinition?.label ?? (normalizedBinding ? humanizeBindingToken(normalizedBinding) : 'No field selected');
+  const currentLabel = normalizedBinding ? resolveDocumentFieldLabel(normalizedBinding) : 'No field selected';
 
   if (customMode) {
     return (
