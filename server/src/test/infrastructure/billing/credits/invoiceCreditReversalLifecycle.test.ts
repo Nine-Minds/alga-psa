@@ -247,7 +247,6 @@ async function setupCreditedClientInvoice(options: {
     billing_cycle: 'monthly',
     region_code: 'US-NY',
     is_tax_exempt: false,
-    credit_balance: 0,
   });
 
   await setupDefaultTax(clientId);

@@ -91,7 +91,6 @@ async function newTestClient(name: string): Promise<string> {
   return createClient(db, tenant, name, {
     billing_cycle: 'monthly',
     is_tax_exempt: false,
-    credit_balance: 0,
   });
 }
 

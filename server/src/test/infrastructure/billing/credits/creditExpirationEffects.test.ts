@@ -145,14 +145,12 @@ describe('Credit Expiration Effects Tests', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     const client2_id = await createClient(context.db, context.tenantId, 'Client 2 Expiration Test', {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     await setupClientTaxConfiguration(context, {
@@ -312,7 +310,6 @@ describe('Credit Expiration Effects Tests', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     await setupClientTaxConfiguration(context, {
@@ -467,7 +464,6 @@ describe('Credit Expiration Effects Tests', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     await setupClientTaxConfiguration(context, {
@@ -586,7 +582,6 @@ describe('Credit Expiration Effects Tests', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     await setupClientTaxConfiguration(context, {
@@ -668,15 +663,7 @@ describe('Credit Expiration Effects Tests', () => {
     
     expect(updatedCreditTracking.is_expired).toBe(true);
     expect(Number(updatedCreditTracking.remaining_amount)).toBe(0);
-    
-    // Verify the client record has been updated with the reduced credit balance
-    const updatedClient = await context.db('clients')
-      .where({
-        client_id: client_id,
-        tenant: context.tenantId
-      })
-      .first();
-    
-    expect(Number(updatedClient.credit_balance)).toBe(0);
+    // The balance itself is the getClientCredit assertion above: it is derived
+    // from these tracking rows, not cached on the client.
   }, 120000);
 });

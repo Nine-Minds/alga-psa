@@ -203,13 +203,11 @@ describe('credit service-type restriction mode migration', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
     const inheritClient = await createClient(context.db, context.tenantId, 'Inherit Migration Client', {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     const laborTypeId = uuidv4();
@@ -256,7 +254,6 @@ describe('credit service-type restriction mode migration', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     await tenantTable(context, 'client_billing_settings').insert({
@@ -326,7 +323,6 @@ describe('credit service-type restriction mode migration', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     // mode 'restricted' with null ids is rejected.

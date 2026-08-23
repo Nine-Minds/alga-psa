@@ -15,6 +15,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import { ClientContractLine } from '@alga-psa/billing/models';
+import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
@@ -193,12 +194,9 @@ async function applyCreditsManually(
 
   const totalApplied = appliedCredits.reduce((sum, entry) => sum + entry.amount, 0);
 
-  const clientRow = await tenantTable(context, 'clients')
-    .where({ client_id: clientId, tenant: context.tenantId })
-    .first();
-
-  const currentBalance = Number(clientRow?.credit_balance ?? 0);
-  const newBalance = currentBalance - totalApplied;
+  // Balance is derived from the credit_tracking remainders the loop above just
+  // drew down, so reading it here already nets out what was applied.
+  const newBalance = await getAvailableCredit(context.db, context.tenantId, clientId);
 
   const creditApplicationTransactionId = uuidv4();
 
@@ -235,13 +233,6 @@ async function applyCreditsManually(
     created_at: nowIso,
     tenant: context.tenantId
   });
-
-  await tenantTable(context, 'clients')
-    .where({ client_id: clientId, tenant: context.tenantId })
-    .update({
-      credit_balance: newBalance,
-      updated_at: nowIso
-    });
 
   await tenantTable(context, 'invoices')
     .where({ invoice_id: invoiceId })
@@ -349,7 +340,6 @@ describe('Credit Expiration Prioritization Tests', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     await setupClientTaxConfiguration(context, {
@@ -1066,14 +1056,9 @@ describe('Credit Expiration Prioritization Tests', () => {
       related_transaction_id: expiringCreditTx.transaction_id
     });
     
-    // Update client credit balance
-    await tenantTable(context, 'clients')
-      .where({ client_id: client_id, tenant: context.tenantId })
-      .update({
-        credit_balance: activeCreditAmount, // Only the active credit remains
-        updated_at: new Date().toISOString()
-      });
-    
+    // No cached balance to update: zeroing the expired tracking row above is
+    // what leaves only the active credit spendable.
+
     // Step 7: Verify credit balance after expiration
     const creditAfterExpiration = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterExpiration).toBe(activeCreditAmount);
