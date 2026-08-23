@@ -37,6 +37,18 @@ import {
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
 
+// These actions are also driven from background jobs and from the billing
+// bootstrap, where there is no Next.js request context and revalidatePath
+// throws "Invariant: static generation store missing". Cache invalidation is
+// best-effort, so it must never fail the period write that just committed.
+function safeRevalidate(path: string): void {
+  try {
+    revalidatePath(path);
+  } catch (error) {
+    logger.warn(`[timePeriodsActions] Failed to revalidate path "${path}":`, error instanceof Error ? error.message : error);
+  }
+}
+
 // Input type for server actions - accepts string dates (Next.js can't serialize Temporal.PlainDate)
 interface TimePeriodInput {
   start_date: string;
@@ -174,12 +186,7 @@ export const createTimePeriod = withAuth(async (
       const timePeriod = await TimePeriod.create(trx, tenant, timePeriodData);
       const validatedPeriod = validateData(timePeriodSchema, timePeriod);
 
-      // revalidatePath only works in request context, not from background jobs
-      try {
-        revalidatePath('/msp/time-entry');
-      } catch {
-        // Ignore revalidation errors when called outside request context (e.g., from jobs)
-      }
+      safeRevalidate('/msp/time-entry');
 
       return toTimePeriodView(validatedPeriod);
     } catch (error) {
@@ -499,7 +506,7 @@ export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: str
 
     try {
       await TimePeriod.delete(knex, tenant, periodId);
-      revalidatePath('/msp/time-entry');
+      safeRevalidate('/msp/time-entry');
     } catch (error: any) {
       if (error.message.includes('belongs to different tenant')) {
         throw new Error('Access denied: Cannot delete time period');
@@ -588,7 +595,7 @@ export const deleteTimePeriods = withAuth(async (
   }
 
   if (deletedIds.length > 0) {
-    revalidatePath('/msp/time-entry');
+    safeRevalidate('/msp/time-entry');
   }
 
   return { deletedIds, failed };
@@ -638,7 +645,7 @@ export const updateTimePeriod = withAuth(async (
         const updatedPeriod = await TimePeriod.update(trx, tenant, periodId, updates);
         const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
 
-        revalidatePath('/msp/time-entry');
+        safeRevalidate('/msp/time-entry');
         return toTimePeriodView(validatedPeriod);
       } catch (error: any) {
         if (error.message.includes('belongs to different tenant')) {
@@ -697,7 +704,7 @@ export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, sta
       }));
       const validatedPeriods = validateArray(timePeriodSchema, savedPeriods);
 
-      revalidatePath('/msp/time-entry');
+      safeRevalidate('/msp/time-entry');
       return validatedPeriods.map((period): ITimePeriodView => toTimePeriodView(period));
     } catch (error) {
       const expected = timePeriodActionErrorFrom(error);
