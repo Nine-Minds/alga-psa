@@ -288,14 +288,19 @@
     },
     "actions": {
       "import": "Importeer {{count}} bestand(en)",
-      "importing": "Importeren..."
+      "importing": "Importeren...",
+      "importingProgress": "{{imported}} van {{total}} geïmporteerd..."
     },
     "feedback": {
       "unsupportedFileType": "{{fileName}}: niet-ondersteund bestandstype. Gebruik .md of .html",
       "permissionDenied": "Toestemming geweigerd",
       "importSuccess": "{{imported}} van {{total}} artikel(en) geïmporteerd",
       "allFailed": "Alle import mislukt",
-      "importError": "Importeren is mislukt"
+      "importError": "Importeren is mislukt",
+      "fileTooLarge": "{{fileName}} is groter dan {{limit}} MB",
+      "tooManyFiles": "U kunt maximaal {{limit}} bestanden tegelijk importeren",
+      "batchTooLarge": "Deze batch is groter dan {{limit}} MB. Importeer minder bestanden tegelijk.",
+      "importTimedOut": "Het importeren duurt langer dan verwacht. Kijk over enkele ogenblikken opnieuw."
     },
     "results": {
       "summary": "{{imported}} van {{total}} artikel(en) geïmporteerd",

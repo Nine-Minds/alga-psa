@@ -288,14 +288,19 @@
     },
     "actions": {
       "import": "{{count}} Datei(en) importieren",
-      "importing": "Importieren..."
+      "importing": "Importieren...",
+      "importingProgress": "{{imported}} von {{total}} importiert..."
     },
     "feedback": {
       "unsupportedFileType": "{{fileName}}: nicht unterstützter Dateityp. Verwenden Sie .md oder .html",
       "permissionDenied": "Zugriff verweigert",
       "importSuccess": "Importierte {{imported}} von {{total}} Artikel(n)",
       "allFailed": "Alle Importe sind fehlgeschlagen",
-      "importError": "Der Import ist fehlgeschlagen"
+      "importError": "Der Import ist fehlgeschlagen",
+      "fileTooLarge": "{{fileName}} ist größer als {{limit}} MB",
+      "tooManyFiles": "Sie können höchstens {{limit}} Dateien gleichzeitig importieren",
+      "batchTooLarge": "Dieser Stapel ist größer als {{limit}} MB. Importieren Sie weniger Dateien auf einmal.",
+      "importTimedOut": "Der Import dauert länger als erwartet. Schauen Sie in Kürze noch einmal vorbei."
     },
     "results": {
       "summary": "{{imported}} von {{total}} Artikel importiert",
