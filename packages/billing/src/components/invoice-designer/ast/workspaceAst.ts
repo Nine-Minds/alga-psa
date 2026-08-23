@@ -30,6 +30,12 @@ import type {
   DesignerWorkspaceSnapshot,
 } from '../state/designerStore';
 import { createEmptyDesignerTransformWorkspace, DOCUMENT_NODE_ID } from '../state/designerStore';
+import {
+  getDocumentTokenPaths,
+  resolveDocumentDisplayPath,
+  resolveDocumentRenderPath,
+} from '../fields/documentBindingCatalog';
+import { resolveDocumentKindFromBindingCatalog, type DesignerDocumentKind } from '../utils/documentKind';
 import { getDefinition } from '../constants/componentCatalog';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 import { resolveMediaFrameSize } from '../utils/mediaSizing';
@@ -119,7 +125,8 @@ const exportI18nText = (text: string, ref: unknown): TemplateI18nText | undefine
 
 const resolveExpressionPreviewText = (
   expression: TemplateValueExpression,
-  astInput: TemplateAst
+  astInput: TemplateAst,
+  documentKind: DesignerDocumentKind
 ): string => {
   if (expression.type === 'literal') {
     return String(expression.value ?? '');
@@ -129,11 +136,11 @@ const resolveExpressionPreviewText = (
       astInput.bindings?.values?.[expression.bindingId]?.path ??
       astInput.bindings?.collections?.[expression.bindingId]?.path ??
       expression.bindingId;
-    return `{{${denormalizeBindingPath(bindingPath)}}}`;
+    return `{{${denormalizeBindingPath(bindingPath, documentKind)}}}`;
   }
   if (expression.type === 'path') {
     const parsed = decodeTemplatePathExpression(expression.path);
-    const denormalizedPath = denormalizeBindingPath(parsed.path);
+    const denormalizedPath = denormalizeBindingPath(parsed.path, documentKind);
     if (parsed.filter) {
       return `{{${denormalizedPath} | ${parsed.filter}}}`;
     }
@@ -149,84 +156,34 @@ const resolveExpressionPreviewText = (
 const sanitizeId = (value: string): string =>
   value.replace(/[^a-zA-Z0-9_.-]+/g, '_').replace(/^_+|_+$/g, '');
 
-const normalizeInvoiceBindingPath = (bindingKey: string): string => {
+/**
+ * Designer binding key (the picker's display path, e.g. `quote.quoteNumber`) -> the path the
+ * document's render model actually exposes (`quote_number`). Generated per document kind from the
+ * binding catalogs, so the menu and the data cannot drift apart.
+ */
+const normalizeInvoiceBindingPath = (
+  bindingKey: string,
+  documentKind: DesignerDocumentKind
+): string => {
   const normalized = bindingKey.trim();
-  const aliases: Record<string, string> = {
-    'invoice.number': 'invoiceNumber',
-    'invoice.issueDate': 'issueDate',
-    'invoice.dueDate': 'dueDate',
-    'invoice.subtotal': 'subtotal',
-    'invoice.tax': 'tax',
-    'invoice.total': 'total',
-    'invoice.discount': 'discount',
-    'invoice.currencyCode': 'currencyCode',
-    'invoice.poNumber': 'poNumber',
-    'invoice.recurringServicePeriodStart': 'recurringServicePeriodStart',
-    'invoice.recurringServicePeriodEnd': 'recurringServicePeriodEnd',
-    'invoice.recurringServicePeriodLabel': 'recurringServicePeriodLabel',
-    'quote.quoteNumber': 'quoteNumber',
-    'quote.quoteDate': 'quoteDate',
-    'quote.validUntil': 'validUntil',
-    'quote.status': 'status',
-    'quote.title': 'title',
-    'quote.scope': 'scope',
-    'quote.poNumber': 'poNumber',
-    'quote.subtotal': 'subtotal',
-    'quote.discountTotal': 'discountTotal',
-    'quote.tax': 'tax',
-    'quote.total': 'total',
-    'quote.termsAndConditions': 'termsAndConditions',
-    'quote.clientNotes': 'clientNotes',
-    'quote.version': 'version',
-    'quote.acceptedByName': 'acceptedByName',
-    'quote.acceptedAt': 'acceptedAt',
-    'quoteTotals.recurringSubtotal': 'recurringSubtotal',
-    'quoteTotals.recurringTax': 'recurringTax',
-    'quoteTotals.recurringTotal': 'recurringTotal',
-    'quoteTotals.onetimeSubtotal': 'onetimeSubtotal',
-    'quoteTotals.onetimeTax': 'onetimeTax',
-    'quoteTotals.onetimeTotal': 'onetimeTotal',
-    'quoteTotals.serviceSubtotal': 'serviceSubtotal',
-    'quoteTotals.serviceTax': 'serviceTax',
-    'quoteTotals.serviceTotal': 'serviceTotal',
-    'quoteTotals.productSubtotal': 'productSubtotal',
-    'quoteTotals.productTax': 'productTax',
-    'quoteTotals.productTotal': 'productTotal',
-    'client.name': 'client.name',
-    'client.address': 'client.address',
-    'contact.name': 'contact.name',
-    'customer.name': 'customer.name',
-    'customer.address': 'customer.address',
-    'tenant.name': 'tenantClient.name',
-    'tenant.address': 'tenantClient.address',
-  };
 
   if (normalized.startsWith('item.')) {
     return normalized.slice('item.'.length);
   }
-  return aliases[normalized] ?? normalized;
+  return resolveDocumentRenderPath(documentKind, normalized) ?? normalized;
 };
 
 const supportsFieldDisplayFormat = (bindingPath: string): boolean => bindingPath.trim().endsWith('.address');
 
 const TEMPLATE_TOKEN_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/g;
-const SIMPLE_BINDING_ALIASES = new Set([
-  'invoiceNumber',
-  'issueDate',
-  'dueDate',
-  'subtotal',
-  'tax',
-  'total',
-  'discount',
-  'currencyCode',
-  'poNumber',
-]);
 
-const isLikelyBindingTokenPath = (token: string): boolean => {
+const isLikelyBindingTokenPath = (token: string, documentKind: DesignerDocumentKind): boolean => {
   if (token.includes('.')) {
     return true;
   }
-  return SIMPLE_BINDING_ALIASES.has(token);
+  // Single-segment tokens are only bindings when the document type's catalog names them,
+  // e.g. `{{quote_number}}` on a quote — anything else stays literal text.
+  return getDocumentTokenPaths(documentKind).has(token);
 };
 
 const sanitizeTemplateArgName = (input: string, fallbackIndex: number): string => {
@@ -239,7 +196,10 @@ const sanitizeTemplateArgName = (input: string, fallbackIndex: number): string =
   return /^[a-zA-Z_]/.test(candidate) ? candidate : `value_${candidate}`;
 };
 
-const parseTemplateInterpolationExpression = (text: string): TemplateValueExpression | null => {
+const parseTemplateInterpolationExpression = (
+  text: string,
+  documentKind: DesignerDocumentKind
+): TemplateValueExpression | null => {
   if (!text.includes('{{')) {
     return null;
   }
@@ -252,10 +212,10 @@ const parseTemplateInterpolationExpression = (text: string): TemplateValueExpres
   const parsedMatches = matches.map((match, index) => {
     const rawToken = asTrimmedString(match[1]);
     const parsedToken = parseTemplateToken(rawToken);
-    if (!parsedToken || !isLikelyBindingTokenPath(parsedToken.path)) {
+    if (!parsedToken || !isLikelyBindingTokenPath(parsedToken.path, documentKind)) {
       return null;
     }
-    const normalizedPath = normalizeInvoiceBindingPath(parsedToken.path);
+    const normalizedPath = normalizeInvoiceBindingPath(parsedToken.path, documentKind);
     if (!normalizedPath) {
       return null;
     }
@@ -349,7 +309,7 @@ const hasInlineLayoutKeys = (inline: Record<string, unknown> | undefined): boole
   );
 };
 
-const resolveFieldBindingPath = (node: WorkspaceNode): string => {
+const resolveFieldBindingPath = (node: WorkspaceNode, documentKind: DesignerDocumentKind): string => {
   const metadata = getWorkspaceNodeMetadata(node);
   const fromMetadata =
     asTrimmedString(metadata.bindingKey) ||
@@ -357,7 +317,7 @@ const resolveFieldBindingPath = (node: WorkspaceNode): string => {
     asTrimmedString(metadata.path);
 
   if (fromMetadata.length > 0) {
-    return normalizeInvoiceBindingPath(fromMetadata);
+    return normalizeInvoiceBindingPath(fromMetadata, documentKind);
   }
 
   switch (node.type as DesignerComponentType) {
@@ -374,14 +334,14 @@ const resolveFieldBindingPath = (node: WorkspaceNode): string => {
   }
 };
 
-const resolveCollectionPath = (node: WorkspaceNode): string => {
+const resolveCollectionPath = (node: WorkspaceNode, documentKind: DesignerDocumentKind): string => {
   const metadata = getWorkspaceNodeMetadata(node);
   const rawPath =
     asTrimmedString(metadata.collectionBindingKey) ||
     asTrimmedString(metadata.collectionPath) ||
     asTrimmedString(metadata.bindingKey) ||
     asTrimmedString(metadata.path);
-  const normalized = normalizeInvoiceBindingPath(rawPath);
+  const normalized = normalizeInvoiceBindingPath(rawPath, documentKind);
   return normalized.length > 0 && normalized !== 'invoiceNumber' ? normalized : 'items';
 };
 
@@ -399,10 +359,13 @@ const resolveNodeTextContent = (node: WorkspaceNode): string => {
   );
 };
 
-const resolveTextNodeContentExpression = (node: WorkspaceNode): TemplateValueExpression => {
+const resolveTextNodeContentExpression = (
+  node: WorkspaceNode,
+  documentKind: DesignerDocumentKind
+): TemplateValueExpression => {
   const metadata = getWorkspaceNodeMetadata(node);
   const currentText = resolveNodeTextContent(node);
-  const parsedExpression = parseTemplateInterpolationExpression(currentText);
+  const parsedExpression = parseTemplateInterpolationExpression(currentText, documentKind);
   const preservedExpression = isTemplateValueExpression(metadata.astContentExpression)
     ? metadata.astContentExpression
     : null;
@@ -860,7 +823,7 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   return Object.keys(style).length > 0 ? style : undefined;
 };
 
-const mapTableColumns = (node: WorkspaceNode): TemplateTableColumn[] => {
+const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind): TemplateTableColumn[] => {
   const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
 
@@ -872,7 +835,8 @@ const mapTableColumns = (node: WorkspaceNode): TemplateTableColumn[] => {
       const id = asTrimmedString(column.id) || `col-${index + 1}`;
       const header = asTrimmedString(column.header);
       const key = normalizeInvoiceBindingPath(
-        asTrimmedString(column.key) || asTrimmedString(column.path) || asTrimmedString(column.bindingKey)
+        asTrimmedString(column.key) || asTrimmedString(column.path) || asTrimmedString(column.bindingKey),
+        documentKind
       );
       const preservedExpression = isTemplateValueExpression(column.valueExpression)
         ? column.valueExpression
@@ -958,9 +922,13 @@ const getWorkspaceRootPrintSettings = (
 const resolveCollectionSourceBindingId = (
   collectionPath: string,
   registerCollectionBinding: (path: string) => string,
+  documentKind: DesignerDocumentKind,
   transformOutputBindingId?: string
 ): string => {
-  const normalizedTransformOutputBindingId = normalizeInvoiceBindingPath(transformOutputBindingId ?? '');
+  const normalizedTransformOutputBindingId = normalizeInvoiceBindingPath(
+    transformOutputBindingId ?? '',
+    documentKind
+  );
   return collectionPath === normalizedTransformOutputBindingId && normalizedTransformOutputBindingId.length > 0
     ? normalizedTransformOutputBindingId
     : registerCollectionBinding(collectionPath);
@@ -971,6 +939,7 @@ const mapDesignerNodeToAstNode = (
   nodesById: Map<string, WorkspaceNode>,
   registerValueBinding: (path: string) => string,
   registerCollectionBinding: (path: string) => string,
+  documentKind: DesignerDocumentKind,
   transformOutputBindingId?: string
 ): TemplateNode | null => {
   const children = node.children
@@ -982,6 +951,7 @@ const mapDesignerNodeToAstNode = (
         nodesById,
         registerValueBinding,
         registerCollectionBinding,
+        documentKind,
         transformOutputBindingId
       )
     )
@@ -998,6 +968,7 @@ const mapDesignerNodeToAstNode = (
           nodesById,
           registerValueBinding,
           registerCollectionBinding,
+          documentKind,
           transformOutputBindingId
         );
         if (!mappedChild) continue;
@@ -1087,7 +1058,7 @@ const mapDesignerNodeToAstNode = (
       return {
         ...createBaseNode(node),
         type: 'text',
-        content: resolveTextNodeContentExpression(node),
+        content: resolveTextNodeContentExpression(node, documentKind),
       };
     }
     case 'field':
@@ -1096,7 +1067,7 @@ const mapDesignerNodeToAstNode = (
     case 'discount':
     case 'custom-total': {
       const metadata = getWorkspaceNodeMetadata(node);
-      const bindingPath = resolveFieldBindingPath(node);
+      const bindingPath = resolveFieldBindingPath(node, documentKind);
       const bindingId = registerValueBinding(bindingPath);
       const explicitLabel = asTrimmedString(metadata.label);
       const format = parseTemplateValueFormat(metadata.format);
@@ -1158,8 +1129,9 @@ const mapDesignerNodeToAstNode = (
       const sourceBindingId = preservedSourceBindingId.length > 0
         ? preservedSourceBindingId
         : resolveCollectionSourceBindingId(
-            resolveCollectionPath(node),
+            resolveCollectionPath(node, documentKind),
             registerCollectionBinding,
+            documentKind,
             transformOutputBindingId
           );
       const headerBg = asTrimmedString(metadata.headerBackgroundColor);
@@ -1180,7 +1152,7 @@ const mapDesignerNodeToAstNode = (
           sourceBinding: { bindingId: sourceBindingId },
           itemBinding: 'item',
         },
-        columns: mapTableColumns(node),
+        columns: mapTableColumns(node, documentKind),
         headerStyle,
         emptyStateText:
           typeof metadata.emptyStateText === 'string'
@@ -1191,7 +1163,7 @@ const mapDesignerNodeToAstNode = (
     case 'totals':
       {
         const metadata = getWorkspaceNodeMetadata(node);
-        const sourceBindingPath = resolveCollectionPath(node);
+        const sourceBindingPath = resolveCollectionPath(node, documentKind);
         const rowsSource = Array.isArray(metadata.totalsRows) ? metadata.totalsRows : [];
         const rows: TemplateTotalsRow[] =
           rowsSource
@@ -1205,7 +1177,7 @@ const mapDesignerNodeToAstNode = (
               const preservedValue = isTemplateValueExpression(row.valueExpression)
                 ? row.valueExpression
                 : null;
-              const valuePath = normalizeInvoiceBindingPath(asTrimmedString(row.valuePath));
+              const valuePath = normalizeInvoiceBindingPath(asTrimmedString(row.valuePath), documentKind);
               const format = parseTemplateValueFormat(row.format ?? row.type);
               const mappedRow: TemplateTotalsRow = {
                 id: sanitizeId(id),
@@ -1237,6 +1209,7 @@ const mapDesignerNodeToAstNode = (
             bindingId: resolveCollectionSourceBindingId(
               sourceBindingPath,
               registerCollectionBinding,
+              documentKind,
               transformOutputBindingId
             ),
           },
@@ -1354,6 +1327,10 @@ export const exportWorkspaceToTemplateAst = (
     documentHeightPx: rootSize.height,
     pagePaddingPx: parsePxLength(pageLayout?.padding),
   });
+  const documentKind = resolveDocumentKindFromBindingCatalog(
+    rootMetadata.__astBindingCatalog,
+    rootMetadata.__astTemplateMetadata
+  );
   const importedBindings = isRecord(rootMetadata.__astBindingCatalog)
     ? (rootMetadata.__astBindingCatalog as UnknownRecord)
     : null;
@@ -1423,7 +1400,7 @@ export const exportWorkspaceToTemplateAst = (
   };
 
   const registerValueBinding = (path: string): string => {
-    const normalizedPath = normalizeInvoiceBindingPath(path);
+    const normalizedPath = normalizeInvoiceBindingPath(path, documentKind);
     const existingBindingId = valueBindingPathToId.get(normalizedPath);
     if (existingBindingId) {
       return existingBindingId;
@@ -1442,7 +1419,7 @@ export const exportWorkspaceToTemplateAst = (
   };
 
   const registerCollectionBinding = (path: string): string => {
-    const normalizedPath = normalizeInvoiceBindingPath(path);
+    const normalizedPath = normalizeInvoiceBindingPath(path, documentKind);
     const existingBindingId = collectionBindingPathToId.get(normalizedPath);
     if (existingBindingId) {
       return existingBindingId;
@@ -1478,6 +1455,7 @@ export const exportWorkspaceToTemplateAst = (
         nodesById,
         registerValueBinding,
         registerCollectionBinding,
+        documentKind,
         workspaceTransforms.outputBindingId
       )
     : null;
@@ -1521,58 +1499,17 @@ export const exportWorkspaceToTemplateAstJson = (
   workspace: DesignerWorkspaceSnapshot
 ): string => JSON.stringify(exportWorkspaceToTemplateAst(workspace), null, 2);
 
-const denormalizeBindingPath = (path: string): string => {
-  const aliases: Record<string, string> = {
-    invoiceNumber: 'invoice.number',
-    issueDate: 'invoice.issueDate',
-    dueDate: 'invoice.dueDate',
-    subtotal: 'invoice.subtotal',
-    tax: 'invoice.tax',
-    total: 'invoice.total',
-    discount: 'invoice.discount',
-    currencyCode: 'invoice.currencyCode',
-    poNumber: 'invoice.poNumber',
-    recurringServicePeriodStart: 'invoice.recurringServicePeriodStart',
-    recurringServicePeriodEnd: 'invoice.recurringServicePeriodEnd',
-    recurringServicePeriodLabel: 'invoice.recurringServicePeriodLabel',
-    quoteNumber: 'quote.quoteNumber',
-    quoteDate: 'quote.quoteDate',
-    validUntil: 'quote.validUntil',
-    status: 'quote.status',
-    title: 'quote.title',
-    scope: 'quote.scope',
-    discountTotal: 'quote.discountTotal',
-    termsAndConditions: 'quote.termsAndConditions',
-    clientNotes: 'quote.clientNotes',
-    version: 'quote.version',
-    acceptedByName: 'quote.acceptedByName',
-    acceptedAt: 'quote.acceptedAt',
-    recurringSubtotal: 'quoteTotals.recurringSubtotal',
-    recurringTax: 'quoteTotals.recurringTax',
-    recurringTotal: 'quoteTotals.recurringTotal',
-    onetimeSubtotal: 'quoteTotals.onetimeSubtotal',
-    onetimeTax: 'quoteTotals.onetimeTax',
-    onetimeTotal: 'quoteTotals.onetimeTotal',
-    serviceSubtotal: 'quoteTotals.serviceSubtotal',
-    serviceTax: 'quoteTotals.serviceTax',
-    serviceTotal: 'quoteTotals.serviceTotal',
-    productSubtotal: 'quoteTotals.productSubtotal',
-    productTax: 'quoteTotals.productTax',
-    productTotal: 'quoteTotals.productTotal',
-    'client.name': 'client.name',
-    'client.address': 'client.address',
-    'contact.name': 'contact.name',
-    'customer.name': 'customer.name',
-    'customer.address': 'customer.address',
-    'tenantClient.name': 'tenant.name',
-    'tenantClient.address': 'tenant.address',
-  };
-  return aliases[path] ?? path;
-};
+/**
+ * Render-model path -> designer binding key. The inverse of `normalizeInvoiceBindingPath`, so an
+ * imported template exports again with byte-identical binding paths.
+ */
+const denormalizeBindingPath = (path: string, documentKind: DesignerDocumentKind): string =>
+  resolveDocumentDisplayPath(documentKind, path) ?? path;
 
 const resolveImportedCollectionBindingPath = (
   astInput: TemplateAst,
   bindingId: string,
+  documentKind: DesignerDocumentKind,
   fallbackPath = 'items'
 ): string => {
   const trimmedBindingId = asTrimmedString(bindingId);
@@ -1586,9 +1523,13 @@ const resolveImportedCollectionBindingPath = (
   }
 
   const transformOutputBindingId = normalizeInvoiceBindingPath(
-    asTrimmedString(astInput.transforms?.outputBindingId)
+    asTrimmedString(astInput.transforms?.outputBindingId),
+    documentKind
   );
-  if (transformOutputBindingId.length > 0 && normalizeInvoiceBindingPath(trimmedBindingId) === transformOutputBindingId) {
+  if (
+    transformOutputBindingId.length > 0 &&
+    normalizeInvoiceBindingPath(trimmedBindingId, documentKind) === transformOutputBindingId
+  ) {
     return transformOutputBindingId;
   }
 
@@ -1611,6 +1552,7 @@ const parseSizeFromStyle = (node: TemplateNode): { width?: number; height?: numb
 export const importTemplateAstToWorkspace = (
   ast: TemplateAst
 ): DesignerWorkspaceSnapshot => {
+  const documentKind = resolveDocumentKindFromBindingCatalog(ast.bindings, ast.metadata);
   const astDocument = ast.layout.type === 'document' ? ast.layout : null;
   const documentInline = astDocument && isRecord(astDocument.style?.inline)
     ? (astDocument.style?.inline as Record<string, unknown>)
@@ -1880,7 +1822,7 @@ export const importTemplateAstToWorkspace = (
 
         if (inputNode.type === 'text') {
           metadata.astContentExpression = inputNode.content;
-          const resolvedText = resolveExpressionPreviewText(inputNode.content, astInput);
+          const resolvedText = resolveExpressionPreviewText(inputNode.content, astInput, documentKind);
           metadata.text = resolvedText;
           metadata.__astContentPreviewText = resolvedText;
         } else if (inputNode.type === 'field') {
@@ -1888,7 +1830,7 @@ export const importTemplateAstToWorkspace = (
             astInput.bindings?.values?.[inputNode.binding.bindingId]?.path ??
             astInput.bindings?.collections?.[inputNode.binding.bindingId]?.path ??
             inputNode.binding.bindingId;
-          metadata.bindingKey = denormalizeBindingPath(bindingPath);
+          metadata.bindingKey = denormalizeBindingPath(bindingPath, documentKind);
           metadata.__astFieldHadFormat = Object.prototype.hasOwnProperty.call(inputNode, 'format');
           metadata.__astFieldHadEmptyValue = Object.prototype.hasOwnProperty.call(inputNode, 'emptyValue');
           metadata.__astFieldHadPlaceholder = Object.prototype.hasOwnProperty.call(inputNode, 'placeholder');
@@ -1930,13 +1872,13 @@ export const importTemplateAstToWorkspace = (
           // without being replaced by a synthesized `collection.*` id.
           const isResolvableGlobalBinding =
             Boolean(astInput.bindings?.collections?.[rawBindingId]) ||
-            normalizeInvoiceBindingPath(asTrimmedString(astInput.transforms?.outputBindingId)) ===
-              normalizeInvoiceBindingPath(rawBindingId);
+            normalizeInvoiceBindingPath(asTrimmedString(astInput.transforms?.outputBindingId), documentKind) ===
+              normalizeInvoiceBindingPath(rawBindingId, documentKind);
           if (!isResolvableGlobalBinding) {
             metadata.__astTableSourceBindingId = rawBindingId;
           }
-          const collectionPath = resolveImportedCollectionBindingPath(astInput, rawBindingId);
-          metadata.collectionBindingKey = denormalizeBindingPath(collectionPath);
+          const collectionPath = resolveImportedCollectionBindingPath(astInput, rawBindingId, documentKind);
+          metadata.collectionBindingKey = denormalizeBindingPath(collectionPath, documentKind);
           metadata.columns = inputNode.columns.map((column) => {
             const importedHeader = importI18nText(column.header);
             const mappedColumn: Record<string, unknown> = {
@@ -1973,9 +1915,10 @@ export const importTemplateAstToWorkspace = (
           const sourcePath = resolveImportedCollectionBindingPath(
             astInput,
             inputNode.sourceBinding.bindingId,
+            documentKind,
             inputNode.sourceBinding.bindingId
           );
-          metadata.collectionBindingKey = denormalizeBindingPath(sourcePath);
+          metadata.collectionBindingKey = denormalizeBindingPath(sourcePath, documentKind);
           metadata.totalsRows = inputNode.rows.map((row) => {
             const importedRowLabel = importI18nText(row.label);
             return {

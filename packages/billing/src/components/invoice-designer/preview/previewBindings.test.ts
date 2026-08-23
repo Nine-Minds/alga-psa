@@ -85,7 +85,9 @@ describe('previewBindings', () => {
     expect(labelValue.text).toBe('Jan 1, 2026 - Feb 1, 2026');
   });
 
-  it('derives invoice.discount from subtotal + tax - total', () => {
+  // The persisted subtotal is already net of discount lines, so the old derived value was
+  // structurally always zero. Real discount exposure is tracked separately (alga0002295).
+  it('no longer exposes a derived invoice.discount value', () => {
     const value = resolveFieldPreviewValue({
       invoice: {
         ...previewInvoice,
@@ -97,7 +99,7 @@ describe('previewBindings', () => {
       format: 'currency',
     });
 
-    expect(value.text).toBe('$2.00');
+    expect(value.text).toBeNull();
   });
 
   it('returns null recurring service period header bindings when canonical summary is missing', () => {
