@@ -11,5 +11,77 @@
         "wbsCode": "Código EAP"
       }
     }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "Permissão negada: não é possível criar o projeto",
+      "readProject": "Permissão negada: não é possível ler o projeto",
+      "updateProject": "Permissão negada: não é possível atualizar o projeto",
+      "deleteProject": "Permissão negada: não é possível excluir o projeto",
+      "materialRead": "Permissão negada: é necessária permissão de leitura de projetos",
+      "materialUpdate": "Permissão negada: é necessária permissão de atualização de projetos"
+    },
+    "project": {
+      "notFound": "Projeto não encontrado",
+      "validationFailed": "A validação do projeto falhou. Revise os detalhes do projeto e tente novamente.",
+      "invalidValue": "Um dos valores de projeto selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de projeto selecionados não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração do projeto conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores do projeto não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do projeto.",
+      "missingFieldNamed": "Falta um campo obrigatório do projeto: {{field}}.",
+      "statusesNotConfigured": "Não há status de projeto configurados. Adicione pelo menos um status de projeto antes de criar projetos.",
+      "taskStatusesNotConfigured": "Não há status de tarefa de projeto configurados. Adicione pelo menos um status de tarefa antes de criar projetos.",
+      "detailsUnavailableAfterCreate": "Não foi possível criar o projeto porque seus detalhes não puderam ser carregados. Tente novamente."
+    },
+    "task": {
+      "validationFailed": "Corrija os detalhes da tarefa: {{details}}",
+      "invalidValue": "Um dos valores de tarefa selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de projeto ou tarefa selecionados não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração da tarefa conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores da tarefa não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório da tarefa.",
+      "missingFieldNamed": "Falta um campo obrigatório da tarefa: {{field}}."
+    },
+    "comment": {
+      "internalOnly": "Somente usuários internos podem comentar em tarefas.",
+      "taskNotFound": "Tarefa não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "parentNotFound": "O comentário ao qual você está respondendo não foi encontrado. Atualize a página e tente novamente.",
+      "sameThreadRequired": "As respostas devem permanecer no mesmo tópico da tarefa. Atualize a página e tente novamente.",
+      "parentDeleted": "Você não pode responder a um comentário excluído.",
+      "notFound": "Comentário não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "referenceMissing": "A tarefa ou o comentário selecionado não existe mais. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório do comentário.",
+      "missingFieldNamed": "Falta um campo obrigatório do comentário: {{field}}."
+    },
+    "export": {
+      "invalidValue": "Um dos projetos, fases ou tarefas selecionados é inválido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da exportação do projeto.",
+      "missingFieldNamed": "Falta um campo obrigatório da exportação do projeto: {{field}}."
+    },
+    "status": {
+      "invalidValue": "Um dos valores de status selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos status de projeto selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um status de tarefa de projeto com estas configurações.",
+      "notAllowed": "Um dos valores de status não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do status.",
+      "missingFieldNamed": "Falta um campo obrigatório do status: {{field}}."
+    },
+    "template": {
+      "validationFailed": "A validação do modelo falhou. Revise os detalhes do modelo e tente novamente.",
+      "invalidUuid": "A solicitação de modelo contém um UUID inválido",
+      "missingStatuses": "Este modelo faz referência a status que não existem mais. Repare suas colunas de status e tente novamente."
+    },
+    "ordering": {
+      "invalidValue": "Um dos valores de projeto, fase, tarefa ou status selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de ordenação do projeto selecionados não existe mais. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da ordenação do projeto.",
+      "missingFieldNamed": "Falta um campo obrigatório da ordenação do projeto: {{field}}."
+    },
+    "material": {
+      "referenceMissing": "O projeto, cliente, produto ou unidade de estoque selecionado não é mais válido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório do material.",
+      "missingFieldNamed": "Falta um campo obrigatório do material: {{field}}."
+    }
   }
 }

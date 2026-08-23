@@ -56,6 +56,14 @@
       "types": "./src/lib/i18n/config.ts",
       "import": "./dist/lib/i18n/config.mjs"
     },
+    "./lib/i18n/serverOnly": {
+      "types": "./src/lib/i18n/serverOnly.ts",
+      "import": "./dist/lib/i18n/serverOnly.mjs"
+    },
+    "./lib/i18n/interpolateFallback": {
+      "types": "./src/lib/i18n/interpolateFallback.ts",
+      "import": "./dist/lib/i18n/interpolateFallback.mjs"
+    },
     "./lib/i18n/client": {
       "types": "./src/lib/i18n/client.tsx",
       "import": "./dist/lib/i18n/client.mjs"

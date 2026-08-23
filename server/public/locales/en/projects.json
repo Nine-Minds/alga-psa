@@ -11,5 +11,77 @@
         "wbsCode": "WBS Code"
       }
     }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "Permission denied: Cannot create project",
+      "readProject": "Permission denied: Cannot read project",
+      "updateProject": "Permission denied: Cannot update project",
+      "deleteProject": "Permission denied: Cannot delete project",
+      "materialRead": "Permission denied: project read required",
+      "materialUpdate": "Permission denied: project update required"
+    },
+    "project": {
+      "notFound": "Project not found",
+      "validationFailed": "Project validation failed. Please review the project details and try again.",
+      "invalidValue": "One of the selected project values is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected project records no longer exists. Please refresh and try again.",
+      "conflict": "This project change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the project values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required project field.",
+      "missingFieldNamed": "Missing required project field: {{field}}.",
+      "statusesNotConfigured": "Project statuses are not configured. Add at least one project status before creating projects.",
+      "taskStatusesNotConfigured": "Project task statuses are not configured. Add at least one task status before creating projects.",
+      "detailsUnavailableAfterCreate": "Project could not be created because its details could not be loaded. Please try again."
+    },
+    "task": {
+      "validationFailed": "Please fix the task details: {{details}}",
+      "invalidValue": "One of the selected task values is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected project or task records no longer exists. Please refresh and try again.",
+      "conflict": "This task change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the task values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required task field.",
+      "missingFieldNamed": "Missing required task field: {{field}}."
+    },
+    "comment": {
+      "internalOnly": "Only internal users can comment on tasks.",
+      "taskNotFound": "Task not found. It may have been deleted. Please refresh and try again.",
+      "parentNotFound": "The comment you are replying to was not found. Please refresh and try again.",
+      "sameThreadRequired": "Replies must stay on the same task thread. Please refresh and try again.",
+      "parentDeleted": "You cannot reply to a deleted comment.",
+      "notFound": "Comment not found. It may have been deleted. Please refresh and try again.",
+      "referenceMissing": "The selected task or comment no longer exists. Please refresh and try again.",
+      "missingField": "Missing required comment field.",
+      "missingFieldNamed": "Missing required comment field: {{field}}."
+    },
+    "export": {
+      "invalidValue": "One of the selected projects, phases, or tasks is invalid. Please refresh and try again.",
+      "missingField": "Missing required project export field.",
+      "missingFieldNamed": "Missing required project export field: {{field}}."
+    },
+    "status": {
+      "invalidValue": "One of the selected status values is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected project statuses no longer exists. Please refresh and try again.",
+      "duplicate": "A project task status with these settings already exists.",
+      "notAllowed": "One of the status values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required status field.",
+      "missingFieldNamed": "Missing required status field: {{field}}."
+    },
+    "template": {
+      "validationFailed": "Template validation failed. Please review the template details and try again.",
+      "invalidUuid": "Template request contains an invalid UUID",
+      "missingStatuses": "This template references statuses that no longer exist. Please repair its status columns and try again."
+    },
+    "ordering": {
+      "invalidValue": "One of the selected project, phase, task, or status values is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected project ordering records no longer exists. Please refresh and try again.",
+      "missingField": "Missing required project ordering field.",
+      "missingFieldNamed": "Missing required project ordering field: {{field}}."
+    },
+    "material": {
+      "referenceMissing": "The selected project, client, product, or stock unit is no longer valid. Please refresh and try again.",
+      "missingField": "Missing required material field.",
+      "missingFieldNamed": "Missing required material field: {{field}}."
+    }
   }
 }

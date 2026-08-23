@@ -393,7 +393,7 @@ describe('invoice credit reversal — real concurrency', () => {
 
     // Real action, real transaction, real rollback.
     const result = await unfinalizeInvoice(invoiceId);
-    expect(result).toEqual({ actionError: expect.any(String) });
+    expect(result).toMatchObject({ actionError: expect.any(String) });
 
     const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant }).first();
     expect(invoice.status).toBe('sent');

@@ -328,7 +328,7 @@ export const createContractTemplateFromWizard = withAuth(async (
     const canCreateBilling = await hasPermission(user, 'billing', 'create');
     const canUpdateBilling = await hasPermission(user, 'billing', 'update');
     if (!canCreateBilling || !canUpdateBilling) {
-      return permissionError('Permission denied: Cannot create billing templates');
+      return permissionError('Permission denied: Cannot create billing templates', 'msp/contracts:errors.wizard.permissions.createTemplates');
     }
   }
 
@@ -820,7 +820,7 @@ export const createClientContractFromWizard = withAuth(async (
     const canCreateBilling = await hasPermission(user, 'billing', 'create');
     const canUpdateBilling = await hasPermission(user, 'billing', 'update');
     if (!canCreateBilling || !canUpdateBilling) {
-      return permissionError('Permission denied: Cannot create billing contracts');
+      return permissionError('Permission denied: Cannot create billing contracts', 'msp/contracts:errors.wizard.permissions.createContracts');
     }
   }
 
@@ -1639,7 +1639,7 @@ export const listContractTemplatesForWizard = withAuth(async (
   { tenant }
 ): Promise<TemplateOption[] | ContractWizardActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot list contract templates');
+    return permissionError('Permission denied: Cannot list contract templates', 'msp/contracts:errors.wizard.permissions.listTemplates');
   }
   const { knex } = await createTenantKnex();
 
@@ -1668,7 +1668,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   templateId: string
 ): Promise<ClientTemplateSnapshot | ContractWizardActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot view contract template snapshot');
+    return permissionError('Permission denied: Cannot view contract template snapshot', 'msp/contracts:errors.wizard.permissions.viewSnapshot');
   }
   const { knex } = await createTenantKnex();
 
@@ -1677,7 +1677,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
     .first();
 
   if (!template) {
-    return actionError('Template not found');
+    return actionError('Template not found', 'msp/contracts:errors.wizard.templateNotFound');
   }
 
   const detailedLines = await fetchDetailedContractLines(knex, tenant, templateId);
@@ -1926,7 +1926,7 @@ export const getDraftContractForResume = withAuth(async (
     const canCreateBilling = await hasPermission(user, 'billing', 'create');
     const canUpdateBilling = await hasPermission(user, 'billing', 'update');
     if (!canCreateBilling || !canUpdateBilling) {
-      return permissionError('Permission denied: Cannot resume billing contracts');
+      return permissionError('Permission denied: Cannot resume billing contracts', 'msp/contracts:errors.wizard.permissions.resumeContracts');
     }
   }
 
@@ -1938,11 +1938,11 @@ export const getDraftContractForResume = withAuth(async (
     .first();
 
   if (!contract) {
-    return actionError('Contract not found');
+    return actionError('Contract not found', 'msp/contracts:errors.wizard.contractNotFound');
   }
 
   if (contract.status !== 'draft') {
-    return actionError('Contract is not a draft');
+    return actionError('Contract is not a draft', 'msp/contracts:errors.wizard.notDraft');
   }
 
   const clientContract = await tenantDb(knex, tenant).table('client_contracts')
@@ -1950,7 +1950,7 @@ export const getDraftContractForResume = withAuth(async (
     .first();
 
   if (!clientContract) {
-    return actionError('Draft contract is missing client assignment');
+    return actionError('Draft contract is missing client assignment', 'msp/contracts:errors.wizard.missingClient');
   }
 
   const detailedLines = await fetchDetailedContractLines(knex, tenant, contractId);
@@ -2124,7 +2124,7 @@ export const getDraftContractForResume = withAuth(async (
 
   const startDate = normalizeDateOnly(clientContract.start_date);
   if (!startDate) {
-    return actionError('Draft contract has an invalid start date');
+    return actionError('Draft contract has an invalid start date', 'msp/contracts:errors.wizard.invalidStartDate');
   }
 
   const renewalMode =

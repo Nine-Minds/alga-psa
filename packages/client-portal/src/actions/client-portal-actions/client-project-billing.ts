@@ -67,14 +67,14 @@ export const getClientProjectBillingSummary = withAuth(async (
   { tenant }: AuthContext,
   projectId: string,
 ): Promise<ClientProjectBillingSummary | null | ClientBillingActionError> => {
-  if (user.user_type !== 'client' || !user.contact_id) return permissionError('Unauthorized');
+  if (user.user_type !== 'client' || !user.contact_id) return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
 
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
   const clientId = await getClientIdFromPortalUser(knex, user, tenant);
-  if (!clientId) return permissionError('Unauthorized');
+  if (!clientId) return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
   if (!await hasClientBillingReadPermission(knex, user, tenant)) {
-    return permissionError('Unauthorized to access project billing data');
+    return permissionError('Unauthorized to access project billing data', 'client-portal:errors.access.projectBillingData');
   }
 
   // Client ownership is part of the project lookup so another client's UUID

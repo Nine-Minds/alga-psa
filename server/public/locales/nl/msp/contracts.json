@@ -2372,5 +2372,60 @@
   "wizardBucketPools": {
     "heading": "Urenbundels voor deze regel",
     "empty": "Nog geen urenbundels op deze regel. Voeg een bundel toe om vooruitbetaalde uren op te nemen."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Toestemming geweigerd: contractregels kunnen niet worden gewijzigd",
+      "deleteContracts": "Toestemming geweigerd: facturatiecontracten kunnen niet worden verwijderd"
+    },
+    "contract": {
+      "hasInvoices": "Dit contract heeft gekoppelde facturen en kan niet worden verwijderd.",
+      "invalidValue": "Een van de geselecteerde contractwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde contract, de klant of het gerelateerde record bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze contractwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de contractwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht contractveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht contractveld: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Toestemming geweigerd: facturatiesjablonen kunnen niet worden aangemaakt",
+        "createContracts": "Toestemming geweigerd: facturatiecontracten kunnen niet worden aangemaakt",
+        "listTemplates": "Toestemming geweigerd: contractsjablonen kunnen niet worden weergegeven",
+        "viewSnapshot": "Toestemming geweigerd: de momentopname van het contractsjabloon kan niet worden bekeken",
+        "resumeContracts": "Toestemming geweigerd: facturatiecontracten kunnen niet worden hervat"
+      },
+      "templateNotFound": "Sjabloon niet gevonden",
+      "contractNotFound": "Contract niet gevonden",
+      "notDraft": "Het contract is geen concept",
+      "missingClient": "Bij het conceptcontract ontbreekt de klanttoewijzing",
+      "invalidStartDate": "Het conceptcontract heeft een ongeldige startdatum",
+      "recordInvalid": "Een van de geselecteerde records van de contractwizard is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een overeenkomend record van de contractwizard."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "De einddatum moet na de ingangsdatum liggen",
+      "overlaps": "Deze planning overlapt met een bestaande prijsplanning",
+      "wouldOverlap": "Deze planning zou overlappen met een bestaande prijsplanning",
+      "notFound": "Prijsplanning niet gevonden"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Toestemming geweigerd: de verlengingswachtrij kan niet worden gelezen",
+        "update": "Toestemming geweigerd: de verlengingswachtrij kan niet worden bijgewerkt",
+        "ownerOtherTenant": "Toestemming geweigerd: verlengingen kunnen niet worden toegewezen aan een gebruiker van een andere tenant.",
+        "contractOtherTenant": "Toestemming geweigerd: de verlenging kan niet worden voltooid met een contract van een andere tenant."
+      },
+      "clientContractIdRequired": "Contract-ID van de klant is verplicht.",
+      "workItemNotFound": "Verlengingswerkitem niet gevonden. Mogelijk is het bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "snoozeDateRequired": "Kies een uitsteldatum voordat u opslaat.",
+      "snoozeDateInvalid": "Kies een geldige uitsteldatum.",
+      "snoozeDateFuture": "Kies een uitsteldatum in de toekomst.",
+      "ownerInvalid": "Kies een geldige eigenaar voor de verlenging.",
+      "ownerUnavailable": "De geselecteerde eigenaar van de verlenging is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw.",
+      "activatedContractIdRequired": "Contract-ID van de geactiveerde verlenging is verplicht.",
+      "contractNotActive": "Het geactiveerde verlengingscontract is niet meer actief. Vernieuw de pagina en probeer het opnieuw.",
+      "manualRetryDueOnly": "Handmatig opnieuw proberen is alleen mogelijk voor vervallen verlengingscycli."
+    }
   }
 }

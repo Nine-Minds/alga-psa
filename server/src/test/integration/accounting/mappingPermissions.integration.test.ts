@@ -177,16 +177,19 @@ describe('Accounting mapping permissions', () => {
       })
     ).resolves.toEqual({
       permissionError: 'Permission denied: You do not have permission to manage accounting mappings.',
+      messageKey: 'msp/integrations:errors.mappings.managePermission',
     });
 
     await expect(
       updateExternalEntityMapping(mappingId, { external_entity_id: 'SUP-UPDATED' })
     ).resolves.toEqual({
       permissionError: 'Permission denied: You do not have permission to manage accounting mappings.',
+      messageKey: 'msp/integrations:errors.mappings.managePermission',
     });
 
     await expect(deleteExternalEntityMapping(mappingId)).resolves.toEqual({
       permissionError: 'Permission denied: You do not have permission to manage accounting mappings.',
+      messageKey: 'msp/integrations:errors.mappings.managePermission',
     });
 
     const afterAttempts = await getExternalEntityMappings({

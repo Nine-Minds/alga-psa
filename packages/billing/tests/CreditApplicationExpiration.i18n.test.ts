@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -48,9 +49,9 @@ describe('Credit application and expiration i18n contract', () => {
     expect(source).toContain("t('application.noCreditsAvailable', { defaultValue: 'No credits available for this client' })");
     expect(source).toContain("t('application.creditOrderNote', {");
 
-    expect(getLeaf(pseudo, 'application.noCreditsAvailable')).toBe('11111');
-    expect(getLeaf(pseudo, 'application.failedToLoadCredits')).toBe('11111');
-    expect(getLeaf(pseudo, 'application.failedToApply')).toBe('11111');
+    expect(getLeaf(pseudo, 'application.noCreditsAvailable')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'application.failedToLoadCredits')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'application.failedToApply')).toMatch(pseudoPattern('xx'));
   });
 
   it('T023: CreditExpirationInfo wires card labels and help text through msp/credits', () => {

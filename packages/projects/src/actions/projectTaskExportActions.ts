@@ -137,13 +137,19 @@ function projectTaskExportErrorFrom(error: unknown): ProjectTaskExportActionErro
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected projects, phases, or tasks is invalid. Please refresh and try again.');
+    return actionError('One of the selected projects, phases, or tasks is invalid. Please refresh and try again.', 'projects:errors.export.invalidValue');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected project records no longer exists. Please refresh and try again.');
+    return actionError('One of the selected project records no longer exists. Please refresh and try again.', 'projects:errors.project.referenceMissing');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required project export field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required project export field: ${dbError.column}.`,
+          'projects:errors.export.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required project export field.', 'projects:errors.export.missingField');
   }
 
   return null;

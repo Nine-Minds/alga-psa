@@ -130,7 +130,7 @@ export const createArticle = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'create'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     const article = await createKbArticle(knex, { tenant, userId: user.user_id }, input);
@@ -156,7 +156,7 @@ export const updateArticle = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'update'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!articleId) {
@@ -259,7 +259,7 @@ export const publishArticle = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'update'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!articleId) {
@@ -327,7 +327,7 @@ export const archiveArticle = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'update'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!articleId) {
@@ -393,7 +393,7 @@ export const deleteArticle = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'delete'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!articleId) {
@@ -457,7 +457,7 @@ export const submitForReview = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'update'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!articleId) {
@@ -530,7 +530,7 @@ export const completeReview = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'update'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!articleId) {
@@ -578,7 +578,7 @@ export const getKnowledgeBaseCategories = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!tenant || !(await hasPermission(user, 'document', 'read'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     const db = tenantDb(knex, tenant);
@@ -618,7 +618,7 @@ export const getArticles = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'read'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     let query = tenantScopedTable(knex, 'kb_articles as ka', tenant)
@@ -764,7 +764,7 @@ export const getArticlesWithTags = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'read'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     // Auto-create kb_articles for orphaned /Knowledge Base documents
@@ -903,7 +903,7 @@ export const getArticle = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'read'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!articleId) {
@@ -947,7 +947,7 @@ export const getStaleArticles = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'read'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     const articlesQuery = tenantScopedTable(knex, 'kb_articles as ka', tenant)
@@ -1032,7 +1032,7 @@ export const getArticleTemplates = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'read'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     let query = tenantScopedTable(knex, 'kb_article_templates', tenant)
@@ -1110,7 +1110,7 @@ export const startArticleImport = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'create'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     const files = input.files ?? [];
@@ -1278,7 +1278,7 @@ export const createArticleFromTicket = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'create'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!ticketId) {

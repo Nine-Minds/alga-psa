@@ -2372,5 +2372,60 @@
   "wizardBucketPools": {
     "heading": "Banco de horas para esta linha",
     "empty": "Ainda não há bancos de horas nesta linha. Adicione um banco para incluir horas pré-pagas."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Permissão negada: não é possível modificar as linhas de contrato",
+      "deleteContracts": "Permissão negada: não é possível excluir contratos de faturamento"
+    },
+    "contract": {
+      "hasInvoices": "Este contrato possui faturas associadas e não pode ser excluído.",
+      "invalidValue": "Um dos valores de contrato selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O contrato, cliente ou registro relacionado selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração do contrato conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores do contrato não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do contrato.",
+      "missingFieldNamed": "Falta um campo obrigatório do contrato: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Permissão negada: não é possível criar modelos de faturamento",
+        "createContracts": "Permissão negada: não é possível criar contratos de faturamento",
+        "listTemplates": "Permissão negada: não é possível listar os modelos de contrato",
+        "viewSnapshot": "Permissão negada: não é possível visualizar o instantâneo do modelo de contrato",
+        "resumeContracts": "Permissão negada: não é possível retomar contratos de faturamento"
+      },
+      "templateNotFound": "Modelo não encontrado",
+      "contractNotFound": "Contrato não encontrado",
+      "notDraft": "O contrato não é um rascunho",
+      "missingClient": "Falta a atribuição de cliente no contrato em rascunho",
+      "invalidStartDate": "O contrato em rascunho tem uma data de início inválida",
+      "recordInvalid": "Um dos registros selecionados do assistente de contrato não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro correspondente do assistente de contrato."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "A data de término deve ser posterior à data de vigência",
+      "overlaps": "Esta agenda se sobrepõe a uma agenda de preços existente",
+      "wouldOverlap": "Esta agenda se sobreporia a uma agenda de preços existente",
+      "notFound": "Agenda de preços não encontrada"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Permissão negada: não é possível ler a fila de renovações",
+        "update": "Permissão negada: não é possível atualizar a fila de renovações",
+        "ownerOtherTenant": "Permissão negada: não é possível atribuir renovações a um usuário de outro tenant.",
+        "contractOtherTenant": "Permissão negada: não é possível concluir a renovação com um contrato de outro tenant."
+      },
+      "clientContractIdRequired": "O id do contrato do cliente é obrigatório.",
+      "workItemNotFound": "Item de trabalho de renovação não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "snoozeDateRequired": "Escolha uma data de adiamento antes de salvar.",
+      "snoozeDateInvalid": "Escolha uma data de adiamento válida.",
+      "snoozeDateFuture": "Escolha uma data de adiamento futura.",
+      "ownerInvalid": "Escolha um responsável de renovação válido.",
+      "ownerUnavailable": "O responsável de renovação selecionado não está mais disponível. Atualize a página e tente novamente.",
+      "activatedContractIdRequired": "O id do contrato de renovação ativado é obrigatório.",
+      "contractNotActive": "O contrato de renovação ativado não está mais ativo. Atualize a página e tente novamente.",
+      "manualRetryDueOnly": "A nova tentativa manual só está disponível para ciclos de renovação vencidos."
+    }
   }
 }

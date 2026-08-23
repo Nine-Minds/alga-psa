@@ -34,31 +34,31 @@ function dropShipActionErrorFrom(error: unknown): InventoryActionError | null {
 
     switch (error.message) {
       case 'vendor_id is required':
-        return actionError('Select a vendor before creating the drop-ship purchase order.');
+        return actionError('Select a vendor before creating the drop-ship purchase order.', 'features/inventory:errors.dropShip.vendorRequired');
       case 'Sales order line not found':
-        return actionError('Sales order line not found. It may have been deleted. Please refresh and try again.');
+        return actionError('Sales order line not found. It may have been deleted. Please refresh and try again.', 'features/inventory:errors.dropShip.salesOrderLineNotFound');
       case 'Sales order line is not a drop-ship line':
-        return actionError('This sales order line is not configured for drop-ship fulfillment.');
+        return actionError('This sales order line is not configured for drop-ship fulfillment.', 'features/inventory:errors.dropShip.lineNotDropShip');
       case 'Sales order not found':
-        return actionError('Sales order not found. It may have been deleted. Please refresh and try again.');
+        return actionError('Sales order not found. It may have been deleted. Please refresh and try again.', 'features/inventory:errors.dropShip.salesOrderNotFound');
       case 'Vendor not found':
-        return actionError('Vendor not found. It may have been deleted. Please choose another vendor.');
+        return actionError('Vendor not found. It may have been deleted. Please choose another vendor.', 'features/inventory:errors.shared.vendorNotFoundChooseAnother');
       case 'A po_line_id or so_line_id is required':
-        return actionError('Select a drop-ship line before confirming the vendor shipment.');
+        return actionError('Select a drop-ship line before confirming the vendor shipment.', 'features/inventory:errors.dropShip.lineRequired');
       case 'Drop-ship purchase order line not found':
-        return actionError('Create the drop-ship purchase order before confirming the vendor shipment.');
+        return actionError('Create the drop-ship purchase order before confirming the vendor shipment.', 'features/inventory:errors.dropShip.purchaseOrderRequired');
       case 'Purchase order line is not linked to a sales order line':
-        return actionError('This purchase order line is not linked to a sales order line.');
+        return actionError('This purchase order line is not linked to a sales order line.', 'features/inventory:errors.dropShip.poLineNotLinked');
       case 'Purchase order not found':
-        return actionError('Purchase order not found. It may have been deleted. Please refresh and try again.');
+        return actionError('Purchase order not found. It may have been deleted. Please refresh and try again.', 'features/inventory:errors.dropShip.purchaseOrderNotFound');
       case 'Purchase order is not a drop-ship order':
-        return actionError('This purchase order is not configured for drop-ship fulfillment.');
+        return actionError('This purchase order is not configured for drop-ship fulfillment.', 'features/inventory:errors.dropShip.purchaseOrderNotDropShip');
       case 'Serialized drop-ship requires at least one serial':
-        return actionError('Enter at least one serial number for this serialized drop-ship shipment.');
+        return actionError('Enter at least one serial number for this serialized drop-ship shipment.', 'features/inventory:errors.dropShip.serialsRequired');
       case 'Each serial requires a serial_number':
-        return actionError('Each serialized unit needs a serial number.');
+        return actionError('Each serialized unit needs a serial number.', 'features/inventory:errors.shared.serialNumberRequired');
       case 'Sales order line is already fully fulfilled':
-        return actionError('This sales order line is already fully fulfilled.');
+        return actionError('This sales order line is already fully fulfilled.', 'features/inventory:errors.shared.salesOrderLineAlreadyFulfilled');
       default:
         if (
           error.message.startsWith('Shipment of ') ||
@@ -74,10 +74,10 @@ function dropShipActionErrorFrom(error: unknown): InventoryActionError | null {
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected drop-ship records no longer exists. Please refresh and try again.');
+    return actionError('One of the selected drop-ship records no longer exists. Please refresh and try again.', 'features/inventory:errors.dropShip.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This drop-ship shipment conflicts with an existing record. Please refresh and try again.');
+    return actionError('This drop-ship shipment conflicts with an existing record. Please refresh and try again.', 'features/inventory:errors.dropShip.conflict');
   }
 
   return null;

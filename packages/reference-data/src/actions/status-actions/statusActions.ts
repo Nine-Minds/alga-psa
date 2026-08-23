@@ -109,11 +109,11 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: st
 
 export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<IStatus, 'status_id' | 'tenant'>): Promise<IStatus | StatusActionError> => {
   if (!statusData.name || statusData.name.trim() === '') {
-    return actionError('Status name is required');
+    return actionError('Status name is required', 'msp/settings:errors.status.nameRequired');
   }
 
   if (statusData.status_type === ('ticket' as ItemType)) {
-    return actionError('Ticket statuses must be managed from board settings');
+    return actionError('Ticket statuses must be managed from board settings', 'msp/settings:errors.status.manageFromBoard');
   }
 
   const {knex: db} = await createTenantKnex();
@@ -202,11 +202,11 @@ export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<I
 
 export const updateStatus = withAuth(async (_user, { tenant }, statusId: string, statusData: Partial<IStatus>): Promise<IStatus | StatusActionError> => {
   if (!statusId) {
-    return actionError('Status ID is required');
+    return actionError('Status ID is required', 'msp/settings:errors.status.idRequired');
   }
 
   if (statusData.name && statusData.name.trim() === '') {
-    return actionError('Status name cannot be empty');
+    return actionError('Status name cannot be empty', 'msp/settings:errors.status.nameEmpty');
   }
 
   const {knex: db} = await createTenantKnex();

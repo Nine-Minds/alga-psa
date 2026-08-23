@@ -155,16 +155,16 @@ export function WorkItemList({
             workItemType={item.type}
           />
           <div className="flex items-center gap-2 mt-1">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-900))]">
+            <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
               {t('common.types.ticket', { defaultValue: 'Ticket' })}
             </span>
             {item.is_billable && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-800))]">
+              <span className="chip-accent inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
                 {t('common.types.billable', { defaultValue: 'Billable' })}
               </span>
             )}
             {isBundledTicket && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
+              <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
                 {item.master_ticket_number
                   ? t('workItemList.bundledUnder', { defaultValue: 'Bundled → {{number}}', number: item.master_ticket_number })
                   : t('workItemList.bundled', { defaultValue: 'Bundled' })}
@@ -191,11 +191,11 @@ export function WorkItemList({
             workItemType={item.type}
           />
           <div className="flex items-center gap-2 mt-1">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))]">
+            <span className="chip-secondary inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
               {t('common.types.projectTask', { defaultValue: 'Project Task' })}
             </span>
             {item.is_billable && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-800))]">
+              <span className="chip-accent inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
                 {t('common.types.billable', { defaultValue: 'Billable' })}
               </span>
             )}
@@ -227,11 +227,11 @@ export function WorkItemList({
             workItemType={item.type}
           />
           <div className="flex items-center gap-2 mt-1">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-border-200))] text-[rgb(var(--color-border-900))]">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-text-500)/0.14)] text-[rgb(var(--color-text-800))]">
               {t('common.types.adHocEntry', { defaultValue: 'Ad-hoc Entry' })}
             </span>
             {item.is_billable && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-800))]">
+              <span className="chip-accent inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
                 {t('common.types.billable', { defaultValue: 'Billable' })}
               </span>
             )}
@@ -270,7 +270,7 @@ export function WorkItemList({
               {t('common.types.interaction', { defaultValue: 'Interaction' })}
             </span>
             {item.is_billable && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-800))]">
+              <span className="chip-accent inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
                 {t('common.types.billable', { defaultValue: 'Billable' })}
               </span>
             )}

@@ -58,7 +58,7 @@ export const getRecentClientInvoices = withAuth(async (
       portalClientId = contact?.client_id ?? null;
     }
     if (!portalClientId || portalClientId !== clientId) {
-      return permissionError('Permission denied: cannot access invoices for another client');
+      return permissionError('Permission denied: cannot access invoices for another client', 'msp/invoicing:errors.permissions.otherClientInvoices');
     }
   }
 

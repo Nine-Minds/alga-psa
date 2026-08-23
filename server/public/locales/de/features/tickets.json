@@ -1353,7 +1353,93 @@
     "updateWatchList": "Die Beobachtungsliste konnte nicht aktualisiert werden. Bitte versuche es erneut.",
     "fetchCategoryImports": "Verfügbare Kategorien für den Import konnten nicht abgerufen werden",
     "validateDeletionFailed": "Die Löschung konnte nicht validiert werden. Bitte versuchen Sie es erneut.",
-    "deleteTicketUnexpected": "Beim Löschen des Tickets ist ein unerwarteter Fehler aufgetreten."
+    "deleteTicketUnexpected": "Beim Löschen des Tickets ist ein unerwarteter Fehler aufgetreten.",
+    "action": {
+      "ticketNotFound": "Ticket nicht gefunden. Es wurde möglicherweise gelöscht oder verschoben. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ticketResourceNotFound": "Ticket-Ressource nicht gefunden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "agentAlreadyAssigned": "Dieser Benutzer ist bereits als zusätzlicher Bearbeiter zugewiesen.",
+      "teamNotFound": "Team nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "teamLeadNotFound": "Das ausgewählte Team hat keine Teamleitung. Wählen Sie ein anderes Team oder legen Sie zuerst eine Teamleitung fest.",
+      "commentNotFound": "Kommentar nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "bundle": {
+      "masterAlreadyBundleMaster": "Ticket {{tickets}} ist bereits ein Bündel-Haupt-Ticket und kann nicht als untergeordnetes Ticket hinzugefügt werden. Lösen Sie das Bündel zuerst auf oder verwenden Sie es als Haupt-Ticket.",
+      "masterAlreadyBundleMasters": "Tickets {{tickets}} sind bereits Bündel-Haupt-Tickets und können nicht als untergeordnete Tickets hinzugefügt werden. Lösen Sie die Bündel zuerst auf oder verwenden Sie eines davon als Haupt-Ticket.",
+      "selectChild": "Wählen Sie mindestens ein untergeordnetes Ticket, das sich vom Haupt-Ticket unterscheidet.",
+      "masterNotFound": "Haupt-Ticket nicht gefunden.",
+      "childNotFound": "Untergeordnetes Ticket nicht gefunden: {{ticket}}",
+      "childAsMaster": "Ein untergeordnetes Ticket kann nicht als Haupt-Ticket ausgewählt werden.",
+      "alreadyBundled": "Ticket ist bereits gebündelt: {{ticket}}",
+      "masterAsChild": "Das Haupt-Ticket kann nicht zugleich ein untergeordnetes Ticket sein.",
+      "noChildren": "Keine untergeordneten Tickets angegeben.",
+      "childrenOnBundledChild": "Einem gebündelten untergeordneten Ticket können keine untergeordneten Tickets hinzugefügt werden."
+    },
+    "ticket": {
+      "validationDetails": "Bitte korrigieren Sie die Ticketangaben: {{details}}",
+      "invalidValue": "Einer der ausgewählten Ticketwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Ticketfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Ticketfeld fehlt: {{field}}.",
+      "referenceMissing": "Einer der ausgewählten Ticketdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese Ticketänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "valueNotAllowed": "Einer der Ticketwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut."
+    },
+    "board": {
+      "invalidReference": "Das ausgewählte Board, der Status oder die Regel ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Board-Feld fehlt.",
+      "missingFieldNamed": "Erforderliches Board-Feld fehlt: {{field}}.",
+      "referenceInvalid": "Das ausgewählte Board, der Status, die Priorität, der Bearbeiter, das Team oder die SLA-Richtlinie ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicateName": "Ein Board mit diesem Namen existiert bereits.",
+      "duplicate": "Ein Board oder Status mit denselben Einstellungen existiert bereits.",
+      "invalidValue": "Einer der Board- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "material": {
+      "invalidValue": "Einer der ausgewählten Materialwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Materialfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Materialfeld fehlt: {{field}}.",
+      "referenceInvalid": "Das ausgewählte Ticket, der Kunde, das Produkt oder die Lagereinheit ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Dieses Material steht im Konflikt mit einem vorhandenen Ticketmaterial oder einer Lagerzuweisung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "valueNotAllowed": "Einer der Materialwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut."
+    },
+    "settings": {
+      "updateDenied": "Berechtigung verweigert: Ticketeinstellungen können nicht aktualisiert werden"
+    },
+    "list": {
+      "filtersInvalid": "Die Ticketlistenfilter sind nicht mehr gültig. Aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "layoutPreference": {
+      "contextMissing": "Ihrer Sitzung fehlt der erforderliche Kontext für Ticketeinstellungen. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "userNotFound": "Aktueller Benutzer nicht gefunden. Bitte aktualisieren Sie die Seite und melden Sie sich erneut an.",
+      "invalidLayout": "Ungültiges Layout der Ticketdetails. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidTimelineOrder": "Ungültige Reihenfolge der Ticketchronik. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der Werte für die Ticket-Layouteinstellungen ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld für Ticketeinstellungen fehlt.",
+      "missingFieldNamed": "Erforderliches Feld für Ticketeinstellungen fehlt: {{field}}.",
+      "userMissing": "Der aktuelle Benutzer für diese Ticketeinstellungen existiert nicht mehr. Bitte aktualisieren Sie die Seite und melden Sie sich erneut an.",
+      "concurrentUpdate": "Die Ticket-Layouteinstellungen wurden gleichzeitig geändert. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "category": {
+      "invalidReference": "Die ausgewählte Kategorie oder das Board ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Kategoriefeld fehlt.",
+      "missingFieldNamed": "Erforderliches Kategoriefeld fehlt: {{field}}.",
+      "referenceInvalid": "Das ausgewählte Board oder die übergeordnete Kategorie ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Kategorie mit diesen Einstellungen existiert bereits.",
+      "invalidValue": "Einer der Kategoriewerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "import": {
+      "invalidValue": "Einer der importierten Ticketwerte ist ungültig. Bitte aktualisieren Sie die Referenzdaten und versuchen Sie es erneut.",
+      "conflict": "Ein Ticket-Importdatensatz steht im Konflikt mit einem vorhandenen Datensatz. Prüfen Sie doppelte Kunden, Kontakte, Status, Prioritäten, Kategorien oder Tags.",
+      "referenceMissing": "Ein referenzierter Kunde, Kontakt, ein Board, Status, eine Priorität, Kategorie, ein Team oder Benutzer wurde nicht gefunden. Aktualisieren Sie die Referenzdaten und versuchen Sie es erneut.",
+      "missingValue": "Erforderlicher Importwert fehlt.",
+      "missingValueNamed": "Erforderlicher Importwert fehlt: {{field}}.",
+      "invalidForField": "Einer der importierten Werte ist für dieses Feld ungültig."
+    },
+    "checklist": {
+      "invalidReference": "Das ausgewählte Checklistenelement, die Vorlage oder die Regel ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Checklistenfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Checklistenfeld fehlt: {{field}}.",
+      "referenceInvalid": "Das ausgewählte Ticket, die Checklistenvorlage oder der Regelfilter ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der Checklistenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    }
   },
   "ticketSection": {
     "title": "Terminanfrage",

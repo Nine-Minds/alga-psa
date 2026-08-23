@@ -1,2590 +1,2590 @@
 {
   "page": {
-    "title": "55555"
+    "title": "〖Ẇȯřķƒŀȯẇş ····〗"
   },
   "nav": {
-    "designer": "55555",
-    "runs": "55555",
-    "control": "55555",
-    "tasks": "55555"
+    "designer": "〖Ḓḗşīɠƞḗř ····〗",
+    "runs": "〖Řŭƞş ··〗",
+    "control": "〖Ẇȯřķƒŀȯẇ ƈȯƞŧřȯŀ ·······〗",
+    "tasks": "〖Ŧȧşķş ··〗"
   },
   "sections": {
-    "definitions": "55555",
-    "runStudio": "55555"
+    "definitions": "〖Ẇȯřķƒŀȯẇ ḓḗƒīƞīŧīȯƞş ········〗",
+    "runStudio": "〖Řŭƞ şŧŭḓīȯ ····〗"
   },
   "empty": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Ƞȯ ẇȯřķƒŀȯẇş ƒȯŭƞḓ ········〗",
+    "description": "〖Ẇȯřķƒŀȯẇş ẇīŀŀ ȧƥƥḗȧř ħḗřḗ ȯƞƈḗ ŧħḗẏ ȧřḗ ƈřḗȧŧḗḓ. ····················〗"
   },
   "filters": {
-    "allStatuses": "55555",
-    "allLevels": "55555",
-    "allTypes": "55555"
+    "allStatuses": "〖Ȧŀŀ şŧȧŧŭşḗş ·····〗",
+    "allLevels": "〖Ȧŀŀ ŀḗṽḗŀş ····〗",
+    "allTypes": "〖Ȧŀŀ ŧẏƥḗş ····〗"
   },
   "actions": {
-    "create": "55555",
-    "open": "55555",
-    "close": "55555",
-    "print": "55555",
-    "printOptions": "55555",
-    "printSelected": "55555 {{count}} 55555"
+    "create": "〖Ƈřḗȧŧḗ ẇȯřķƒŀȯẇ ······〗",
+    "open": "〖Ȯƥḗƞ ··〗",
+    "close": "〖Ƈŀȯşḗ ··〗",
+    "print": "〖Ƥřīƞŧ ··〗",
+    "printOptions": "〖Ƥřīƞŧ ȯƥŧīȯƞş ······〗",
+    "printSelected": "〖Ƥřīƞŧ şḗŀḗƈŧḗḓ ({{count}}) ···········〗"
   },
   "runList": {
-    "shareTooltip": "55555",
+    "shareTooltip": "〖Ƥřīƞŧ ȧƞḓ ḗẋƥȯřŧ ·······〗",
     "quickRanges": {
-      "last24h": "55555",
-      "last7d": "55555"
+      "last24h": "〖Ŀȧşŧ 24ħ ····〗",
+      "last7d": "〖Ŀȧşŧ 7ḓ ···〗"
     },
     "summary": {
-      "total": "55555",
-      "activeWorkflows": "55555",
-      "runCount": "55555 {{count}} 55555"
+      "total": "〖Ŧȯŧȧŀ ··〗",
+      "activeWorkflows": "〖Ȧƈŧīṽḗ ẇȯřķƒŀȯẇş ·······〗",
+      "runCount": "〖{{count}} řŭƞş ······〗"
     },
     "filters": {
-      "all": "55555",
-      "allWorkflows": "55555",
-      "searchLabel": "55555",
-      "searchPlaceholder": "55555",
-      "statusLabel": "55555",
-      "workflowLabel": "55555",
-      "versionLabel": "55555",
-      "versionPlaceholder": "55555",
-      "fromLabel": "55555",
-      "toLabel": "55555",
-      "sortLabel": "55555"
+      "all": "〖Ȧŀŀ ··〗",
+      "allWorkflows": "〖Ȧŀŀ ẇȯřķƒŀȯẇş ······〗",
+      "searchLabel": "〖Řŭƞ ĪḒ ȯř ƈȯřřḗŀȧŧīȯƞ ķḗẏ ··········〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ ƀẏ řŭƞ īḓ ȯř ƈȯřřḗŀȧŧīȯƞ ķḗẏ ··············〗",
+      "statusLabel": "〖Şŧȧŧŭş ···〗",
+      "workflowLabel": "〖Ẇȯřķƒŀȯẇ ····〗",
+      "versionLabel": "〖Ẇȯřķƒŀȯẇ ṽḗřşīȯƞ ·······〗",
+      "versionPlaceholder": "〖Ȧƞẏ ṽḗřşīȯƞ ·····〗",
+      "fromLabel": "〖Ƒřȯḿ ··〗",
+      "toLabel": "〖Ŧȯ ·〗",
+      "sortLabel": "〖Şȯřŧ ··〗"
     },
     "actions": {
-      "applyFilters": "55555",
-      "reset": "55555",
-      "viewLatestRun": "55555",
-      "runNow": "55555",
-      "exportCsv": "55555",
-      "refresh": "55555",
-      "cancelSelected": "55555 {{count}} 55555",
-      "clearSelection": "55555",
-      "details": "55555",
-      "loadMore": "55555",
-      "preview": "55555"
+      "applyFilters": "〖Ȧƥƥŀẏ ƒīŀŧḗřş ······〗",
+      "reset": "〖Řḗşḗŧ ··〗",
+      "viewLatestRun": "〖Ṽīḗẇ ŀȧŧḗşŧ řŭƞ ······〗",
+      "runNow": "〖Řŭƞ ƞȯẇ ···〗",
+      "exportCsv": "〖Ḗẋƥȯřŧ ƇŞṼ ····〗",
+      "refresh": "〖Řḗƒřḗşħ ···〗",
+      "cancelSelected": "〖Ƈȧƞƈḗŀ şḗŀḗƈŧḗḓ ({{count}}) ···········〗",
+      "clearSelection": "〖Ƈŀḗȧř şḗŀḗƈŧīȯƞ ······〗",
+      "details": "〖Ḓḗŧȧīŀş ···〗",
+      "loadMore": "〖Ŀȯȧḓ ḿȯřḗ ····〗",
+      "preview": "〖Ƥřḗṽīḗẇ ···〗"
     },
     "table": {
-      "runId": "55555",
-      "workflow": "55555",
-      "version": "55555",
-      "tenant": "55555",
-      "triggerPayload": "55555",
-      "status": "55555",
-      "started": "55555",
-      "updated": "55555",
-      "duration": "55555",
-      "emptyValue": "55555",
+      "runId": "〖Řŭƞ ĪḒ ···〗",
+      "workflow": "〖Ẇȯřķƒŀȯẇ ····〗",
+      "version": "〖Ṽḗřşīȯƞ ···〗",
+      "tenant": "〖Ŧḗƞȧƞŧ ···〗",
+      "triggerPayload": "〖Ŧřīɠɠḗř ƥȧẏŀȯȧḓ ······〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "started": "〖Şŧȧřŧḗḓ ···〗",
+      "updated": "〖Ŭƥḓȧŧḗḓ ···〗",
+      "duration": "〖Ḓŭřȧŧīȯƞ ····〗",
+      "emptyValue": "〖— ·〗",
       "trigger": {
-        "manual": "55555",
-        "mapped": "55555",
-        "identity": "55555"
+        "manual": "〖Ḿȧƞŭȧŀ ···〗",
+        "mapped": "〖Ḿȧƥƥḗḓ ···〗",
+        "identity": "〖Īḓḗƞŧīŧẏ ····〗"
       }
     },
     "states": {
-      "loading": "55555",
-      "empty": "55555"
+      "loading": "〖Ŀȯȧḓīƞɠ ẇȯřķƒŀȯẇ řŭƞş... ··········〗",
+      "empty": "〖Ƞȯ ẇȯřķƒŀȯẇ řŭƞş ḿȧŧƈħ ŧħḗ ƈŭřřḗƞŧ ƒīŀŧḗřş. ··················〗"
     },
     "bulk": {
-      "cancelTitle": "55555",
-      "cancelMessage": "55555 {{count}} 55555",
-      "reasonLabel": "55555",
-      "cancelReasonPlaceholder": "55555",
-      "cancelConfirm": "55555"
+      "cancelTitle": "〖Ƈȧƞƈḗŀ Şḗŀḗƈŧḗḓ Řŭƞş ········〗",
+      "cancelMessage": "〖Ƈȧƞƈḗŀ {{count}} şḗŀḗƈŧḗḓ řŭƞ(ş)? Ŧħīş ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ·······················〗",
+      "reasonLabel": "〖Řḗȧşȯƞ ···〗",
+      "cancelReasonPlaceholder": "〖Ƥřȯṽīḓḗ ȧ řḗȧşȯƞ ƒȯř ƈȧƞƈḗŀīƞɠ ············〗",
+      "cancelConfirm": "〖Ƈȧƞƈḗŀ řŭƞş ·····〗"
     },
     "toasts": {
-      "loadRunsFailed": "55555",
-      "selectWorkflowForLatestRun": "55555",
-      "noRunsFoundForWorkflow": "55555",
-      "loadLatestRunFailed": "55555",
-      "selectWorkflowToRun": "55555",
-      "exportReady": "55555",
-      "exportFailed": "55555",
-      "selectRunsForBulkAction": "55555",
-      "bulkReasonTooShort": "55555",
-      "noEligibleRuns": "55555",
-      "bulkCancelFailedCount": "55555 {{count}} 55555",
-      "bulkCancelSuccessCount": "55555 {{count}} 55555",
-      "bulkSkippedIneligibleCount": "55555 {{count}} 55555",
-      "bulkActionFailed": "55555"
+      "loadRunsFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ẇȯřķƒŀȯẇ řŭƞş ············〗",
+      "selectWorkflowForLatestRun": "〖Şḗŀḗƈŧ ȧ ẇȯřķƒŀȯẇ ŧȯ ṽīḗẇ īŧş ŀȧŧḗşŧ řŭƞ. ·················〗",
+      "noRunsFoundForWorkflow": "〖Ƞȯ řŭƞş ƒȯŭƞḓ ƒȯř ŧħȧŧ ẇȯřķƒŀȯẇ. ·············〗",
+      "loadLatestRunFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŀȧŧḗşŧ řŭƞ ··········〗",
+      "selectWorkflowToRun": "〖Şḗŀḗƈŧ ȧ ẇȯřķƒŀȯẇ ŧȯ řŭƞ. ··········〗",
+      "exportReady": "〖Řŭƞ ḗẋƥȯřŧ řḗȧḓẏ ·······〗",
+      "exportFailed": "〖Ƒȧīŀḗḓ ŧȯ ḗẋƥȯřŧ řŭƞş ·········〗",
+      "selectRunsForBulkAction": "〖Şḗŀḗƈŧ řŭƞş ŧȯ ƥḗřƒȯřḿ ŧħīş ȧƈŧīȯƞ. ··············〗",
+      "bulkReasonTooShort": "〖Řḗȧşȯƞ ḿŭşŧ ƀḗ ȧŧ ŀḗȧşŧ 3 ƈħȧřȧƈŧḗřş. ···············〗",
+      "noEligibleRuns": "〖Ƞȯ şḗŀḗƈŧḗḓ řŭƞş ȧřḗ ḗŀīɠīƀŀḗ ƒȯř ŧħȧŧ ȧƈŧīȯƞ. ···················〗",
+      "bulkCancelFailedCount": "〖Ƒȧīŀḗḓ ŧȯ ƈȧƞƈḗŀ {{count}} řŭƞ(ş). ··············〗",
+      "bulkCancelSuccessCount": "〖Ƈȧƞƈḗŀḗḓ {{count}} řŭƞ(ş). ···········〗",
+      "bulkSkippedIneligibleCount": "〖Şķīƥƥḗḓ {{count}} īƞḗŀīɠīƀŀḗ řŭƞ(ş). ···············〗",
+      "bulkActionFailed": "〖Ɓŭŀķ ȧƈŧīȯƞ ƒȧīŀḗḓ ········〗"
     },
     "print": {
-      "title": "55555",
-      "selectedTitle": "55555",
-      "subtitle": "55555 {{count}} 55555",
-      "noRuns": "55555",
+      "title": "〖Ẇȯřķƒŀȯẇ Řŭƞş ······〗",
+      "selectedTitle": "〖Şḗŀḗƈŧḗḓ Ẇȯřķƒŀȯẇ Řŭƞş ·········〗",
+      "subtitle": "〖{{count}} řŭƞş ······〗",
+      "noRuns": "〖Ƞȯ ẇȯřķƒŀȯẇ řŭƞş ŧȯ ƥřīƞŧ ··········〗",
       "columns": {
-        "run": "55555",
-        "workflow": "55555",
-        "version": "55555",
-        "status": "55555",
-        "started": "55555",
-        "updated": "55555",
-        "duration": "55555"
+        "run": "〖Řŭƞ ··〗",
+        "workflow": "〖Ẇȯřķƒŀȯẇ ····〗",
+        "version": "〖Ṽḗřşīȯƞ ···〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "started": "〖Şŧȧřŧḗḓ ···〗",
+        "updated": "〖Ŭƥḓȧŧḗḓ ···〗",
+        "duration": "〖Ḓŭřȧŧīȯƞ ····〗"
       },
       "optionsDialog": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Ƥřīƞŧ ȯƥŧīȯƞş ······〗",
+        "description": "〖Ƈħȯȯşḗ ẇħīƈħ ƈȯŀŭḿƞş ŧȯ īƞƈŀŭḓḗ ẇħḗƞ ƥřīƞŧīƞɠ ẇȯřķƒŀȯẇ řŭƞş. ························〗"
       }
     },
     "preview": {
-      "close": "55555",
-      "next": "55555",
-      "openFullPage": "55555",
-      "position": "55555 {{current}} 55555 {{total}} 55555",
-      "previous": "55555",
-      "selectedRun": "55555",
-      "title": "55555"
+      "close": "〖Ƈŀȯşḗ ··〗",
+      "next": "〖Ƞḗẋŧ ··〗",
+      "openFullPage": "〖Ȯƥḗƞ ƒŭŀŀ ƥȧɠḗ ······〗",
+      "position": "〖{{current}} ȯƒ {{total}} ŀȯȧḓḗḓ řŭƞş ···············〗",
+      "previous": "〖Ƥřḗṽīȯŭş ····〗",
+      "selectedRun": "〖Şḗŀḗƈŧḗḓ řŭƞ ·····〗",
+      "title": "〖Řŭƞ ƥřḗṽīḗẇ ·····〗"
     }
   },
   "runDetails": {
     "common": {
-      "emptyValue": "55555"
+      "emptyValue": "〖— ·〗"
     },
     "header": {
-      "runIdLabel": "55555",
-      "workflowIdLabel": "55555",
-      "triggerLabel": "55555"
+      "runIdLabel": "〖Řŭƞ ĪḒ ···〗",
+      "workflowIdLabel": "〖Ẇȯřķƒŀȯẇ ĪḒ: ·····〗",
+      "triggerLabel": "〖Ŧřīɠɠḗř: ····〗"
     },
     "actions": {
-      "cancel": "55555",
-      "export": "55555",
-      "replay": "55555",
-      "close": "55555",
-      "view": "55555",
-      "apply": "55555",
-      "reset": "55555",
-      "exportCsv": "55555",
-      "loadMore": "55555",
-      "exportAuditCsv": "55555"
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "export": "〖Ḗẋƥȯřŧ ···〗",
+      "replay": "〖Řḗƥŀȧẏ ···〗",
+      "close": "〖Ƈŀȯşḗ ··〗",
+      "view": "〖Ṽīḗẇ ··〗",
+      "apply": "〖Ȧƥƥŀẏ ··〗",
+      "reset": "〖Řḗşḗŧ ··〗",
+      "exportCsv": "〖Ḗẋƥȯřŧ ƇŞṼ ····〗",
+      "loadMore": "〖Ŀȯȧḓ ḿȯřḗ ····〗",
+      "exportAuditCsv": "〖Ḗẋƥȯřŧ Ȧŭḓīŧ ƇŞṼ ·······〗"
     },
     "summary": {
-      "statusLabel": "55555",
-      "startedLabel": "55555",
-      "updatedLabel": "55555",
-      "completedLabel": "55555",
-      "triggerLabel": "55555",
-      "scheduleStateLabel": "55555",
-      "scheduledForLabel": "55555",
-      "cronLabel": "55555",
-      "nodePathLabel": "55555",
-      "eventTypeLabel": "55555",
-      "triggerPayloadSchemaLabel": "55555",
-      "mapped": "55555",
-      "identity": "55555",
-      "runErrorFallback": "55555",
-      "errorCategoryFallback": "55555",
-      "technicalDetailLabel": "55555"
+      "statusLabel": "〖Şŧȧŧŭş ···〗",
+      "startedLabel": "〖Şŧȧřŧḗḓ ···〗",
+      "updatedLabel": "〖Ŭƥḓȧŧḗḓ ···〗",
+      "completedLabel": "〖Ƈȯḿƥŀḗŧḗḓ ····〗",
+      "triggerLabel": "〖Ŧřīɠɠḗř ···〗",
+      "scheduleStateLabel": "〖Şƈħḗḓŭŀḗ şŧȧŧḗ ······〗",
+      "scheduledForLabel": "〖Şƈħḗḓŭŀḗḓ ƒȯř ······〗",
+      "cronLabel": "〖Ƈřȯƞ ··〗",
+      "nodePathLabel": "〖Ƞȯḓḗ ƥȧŧħ: ····〗",
+      "eventTypeLabel": "〖Ḗṽḗƞŧ ŧẏƥḗ: ·····〗",
+      "triggerPayloadSchemaLabel": "〖Ŧřīɠɠḗř ƥȧẏŀȯȧḓ şƈħḗḿȧ: ··········〗",
+      "mapped": "〖Ḿȧƥƥḗḓ ···〗",
+      "identity": "〖Īḓḗƞŧīŧẏ ····〗",
+      "runErrorFallback": "〖Řŭƞ ḗřřȯř ····〗",
+      "errorCategoryFallback": "〖Ḗřřȯř ··〗",
+      "technicalDetailLabel": "〖Ŧḗƈħƞīƈȧŀ ḓḗŧȧīŀ: ·······〗"
     },
     "stepTimeline": {
-      "title": "55555",
-      "description": "55555",
-      "loading": "55555",
-      "stepStatusLabel": "55555",
-      "nodeTypeLabel": "55555",
-      "collapseNestedLabel": "55555",
+      "title": "〖Şŧḗƥ Ŧīḿḗŀīƞḗ ······〗",
+      "description": "〖Ȧŧŧḗḿƥŧş, ḓŭřȧŧīȯƞş, ȧƞḓ ḗřřȯřş ƥḗř şŧḗƥ. ·················〗",
+      "loading": "〖Ŀȯȧḓīƞɠ... ····〗",
+      "stepStatusLabel": "〖Şŧḗƥ şŧȧŧŭş ·····〗",
+      "nodeTypeLabel": "〖Ƞȯḓḗ ŧẏƥḗ ····〗",
+      "collapseNestedLabel": "〖Ƈȯŀŀȧƥşḗ ƞḗşŧḗḓ ƀŀȯƈķş ·········〗",
       "columns": {
-        "stepPath": "55555",
-        "type": "55555",
-        "status": "55555",
-        "attempt": "55555",
-        "duration": "55555",
-        "nextRetry": "55555",
-        "started": "55555",
-        "error": "55555",
-        "action": "55555"
+        "stepPath": "〖Şŧḗƥ Ƥȧŧħ ····〗",
+        "type": "〖Ŧẏƥḗ ··〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "attempt": "〖Ȧŧŧḗḿƥŧ ···〗",
+        "duration": "〖Ḓŭřȧŧīȯƞ ····〗",
+        "nextRetry": "〖Ƞḗẋŧ Řḗŧřẏ ····〗",
+        "started": "〖Şŧȧřŧḗḓ ···〗",
+        "error": "〖Ḗřřȯř ··〗",
+        "action": "〖Ȧƈŧīȯƞ ···〗"
       },
-      "empty": "55555"
+      "empty": "〖Ƞȯ şŧḗƥ ħīşŧȯřẏ ẏḗŧ. ········〗"
     },
     "stepDetails": {
-      "title": "55555",
-      "statusLabel": "55555",
-      "attemptLabel": "55555",
-      "startedLabel": "55555",
-      "completedLabel": "55555",
-      "durationLabel": "55555",
-      "nodeTypeLabel": "55555",
-      "definitionStepIdLabel": "55555",
-      "nextRetryLabel": "55555",
-      "errorTitle": "55555",
-      "stepErrorFallback": "55555",
-      "errorCategoryFallback": "55555",
-      "technicalDetailLabel": "55555"
+      "title": "〖Şŧḗƥ Ḓḗŧȧīŀş ·····〗",
+      "statusLabel": "〖Şŧȧŧŭş ···〗",
+      "attemptLabel": "〖Ȧŧŧḗḿƥŧ ···〗",
+      "startedLabel": "〖Şŧȧřŧḗḓ ···〗",
+      "completedLabel": "〖Ƈȯḿƥŀḗŧḗḓ ····〗",
+      "durationLabel": "〖Ḓŭřȧŧīȯƞ ····〗",
+      "nodeTypeLabel": "〖Ƞȯḓḗ Ŧẏƥḗ ····〗",
+      "definitionStepIdLabel": "〖Ḓḗƒīƞīŧīȯƞ Şŧḗƥ ĪḒ ········〗",
+      "nextRetryLabel": "〖Ƞḗẋŧ Řḗŧřẏ ····〗",
+      "errorTitle": "〖Ḗřřȯř ··〗",
+      "stepErrorFallback": "〖Şŧḗƥ ḗřřȯř ····〗",
+      "errorCategoryFallback": "〖Ḗřřȯř ··〗",
+      "technicalDetailLabel": "〖Ŧḗƈħƞīƈȧŀ ḓḗŧȧīŀ: ·······〗"
     },
     "waitHistory": {
-      "title": "55555",
-      "eventLine": "55555 {{event}} 55555 {{key}} 55555 {{count}} 55555",
-      "timeLine": "55555 {{mode}} 55555 {{scheduledResume}} 55555",
-      "timeoutLine": "55555 {{timeout}} 55555 {{resolved}} 55555"
+      "title": "〖Ẇȧīŧ Ħīşŧȯřẏ ·····〗",
+      "eventLine": "〖Ḗṽḗƞŧ: {{event}} · Ķḗẏ: {{key}} · Ƒīŀŧḗřş: {{count}} ·····················〗",
+      "timeLine": "〖Ḿȯḓḗ: {{mode}} · Şƈħḗḓŭŀḗḓ řḗşŭḿḗ: {{scheduledResume}} ······················〗",
+      "timeoutLine": "〖Ŧīḿḗȯŭŧ: {{timeout}} · Řḗşȯŀṽḗḓ: {{resolved}} ··················〗"
     },
     "envelope": {
-      "title": "55555",
-      "description": "55555",
-      "redactedNotice": "55555 {{marker}} 55555",
-      "noSnapshot": "55555",
+      "title": "〖Ḗƞṽḗŀȯƥḗ Ḓȧŧȧ ······〗",
+      "description": "〖Ƥȧẏŀȯȧḓ, ṽȧřş, ḿḗŧȧ, ȧƞḓ ḗřřȯř ƒřȯḿ ŧħḗ ŀȧŧḗşŧ şƞȧƥşħȯŧ. ·······················〗",
+      "redactedNotice": "〖Řḗḓȧƈŧḗḓ ṽȧŀŭḗş şħȯẇƞ ȧş {{marker}}. ···············〗",
+      "noSnapshot": "〖Ƞȯ şƞȧƥşħȯŧ ȧṽȧīŀȧƀŀḗ. ·········〗",
       "tabs": {
-        "payload": "55555",
-        "vars": "55555",
-        "meta": "55555",
-        "error": "55555",
-        "raw": "55555"
+        "payload": "〖Ƥȧẏŀȯȧḓ ···〗",
+        "vars": "〖Ṽȧřş ··〗",
+        "meta": "〖Ḿḗŧȧ ··〗",
+        "error": "〖Ḗřřȯř ··〗",
+        "raw": "〖Řȧẇ ··〗"
       }
     },
     "invocations": {
-      "title": "55555",
-      "redactedNotice": "55555 {{marker}} 55555",
-      "empty": "55555",
-      "attemptLine": "55555 {{count}} 55555",
-      "durationLine": "55555 {{duration}} 55555",
-      "sizeLine": "55555 {{inputSize}} 55555 {{inputSuffix}} 55555 {{outputSize}} 55555 {{outputSuffix}} 55555",
-      "truncatedSuffix": "55555",
-      "inputLabel": "55555",
-      "outputLabel": "55555"
+      "title": "〖Ȧƈŧīȯƞ Īƞṽȯƈȧŧīȯƞş ········〗",
+      "redactedNotice": "〖Řḗḓȧƈŧḗḓ ṽȧŀŭḗş şħȯẇƞ ȧş {{marker}}. ···············〗",
+      "empty": "〖Ƞȯ ȧƈŧīȯƞ ƈȧŀŀş řḗƈȯřḓḗḓ ƒȯř ŧħīş şŧḗƥ. ················〗",
+      "attemptLine": "〖Ȧŧŧḗḿƥŧ {{count}} ·······〗",
+      "durationLine": "〖Ḓŭřȧŧīȯƞ: {{duration}} ·········〗",
+      "sizeLine": "〖Īƞƥŭŧ şīẑḗ: {{inputSize}}{{inputSuffix}} · Ȯŭŧƥŭŧ şīẑḗ: {{outputSize}}{{outputSuffix}} ···································〗",
+      "truncatedSuffix": "〖 (ŧřŭƞƈȧŧḗḓ) ·····〗",
+      "inputLabel": "〖Īƞƥŭŧ ··〗",
+      "outputLabel": "〖Ȯŭŧƥŭŧ ···〗"
     },
     "logs": {
-      "title": "55555",
-      "description": "55555",
-      "searchLabel": "55555",
-      "searchPlaceholder": "55555",
-      "levelLabel": "55555",
-      "empty": "55555",
+      "title": "〖Řŭƞ Ŀȯɠş ····〗",
+      "description": "〖Ȯƥḗřȧŧīȯƞȧŀ ŀȯɠ ḗṽḗƞŧş ƒȯř ŧħīş řŭƞ. ···············〗",
+      "searchLabel": "〖Şḗȧřƈħ ···〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ ŀȯɠ ḿḗşşȧɠḗ ········〗",
+      "levelLabel": "〖Ŀḗṽḗŀ ··〗",
+      "empty": "〖Ƞȯ ŀȯɠ ḗƞŧřīḗş ƒȯŭƞḓ. ·········〗",
       "columns": {
-        "timestamp": "55555",
-        "level": "55555",
-        "message": "55555",
-        "step": "55555",
-        "event": "55555",
-        "correlation": "55555"
+        "timestamp": "〖Ŧīḿḗşŧȧḿƥ ····〗",
+        "level": "〖Ŀḗṽḗŀ ··〗",
+        "message": "〖Ḿḗşşȧɠḗ ···〗",
+        "step": "〖Şŧḗƥ ··〗",
+        "event": "〖Ḗṽḗƞŧ ··〗",
+        "correlation": "〖Ƈȯřřḗŀȧŧīȯƞ ·····〗"
       },
-      "loading": "55555"
+      "loading": "〖Ŀȯȧḓīƞɠ ŀȯɠş... ······〗"
     },
     "audit": {
-      "title": "55555",
-      "description": "55555",
-      "empty": "55555",
-      "systemUser": "55555",
+      "title": "〖Ȧŭḓīŧ Ŧřȧīŀ ·····〗",
+      "description": "〖Ȧḓḿīƞīşŧřȧŧīṽḗ ȧƈŧīȯƞş ƒȯř ŧħīş řŭƞ. ···············〗",
+      "empty": "〖Ƞȯ ȧŭḓīŧ ḗƞŧřīḗş ẏḗŧ. ·········〗",
+      "systemUser": "〖şẏşŧḗḿ ···〗",
       "columns": {
-        "timestamp": "55555",
-        "operation": "55555",
-        "user": "55555",
-        "details": "55555"
+        "timestamp": "〖Ŧīḿḗşŧȧḿƥ ····〗",
+        "operation": "〖Ȯƥḗřȧŧīȯƞ ····〗",
+        "user": "〖Ŭşḗř ··〗",
+        "details": "〖Ḓḗŧȧīŀş ···〗"
       },
-      "loading": "55555",
-      "unknownUser": "55555"
+      "loading": "〖Ŀȯȧḓīƞɠ ȧŭḓīŧ ŧřȧīŀ... ·········〗",
+      "unknownUser": "〖Ŭƞķƞȯẇƞ ŭşḗř ·····〗"
     },
     "dialogs": {
-      "reasonLabel": "55555",
-      "cancelTitle": "55555",
-      "cancelMessage": "55555",
-      "cancelReasonPlaceholder": "55555",
-      "cancelConfirm": "55555",
-      "replayTitle": "55555",
-      "replayMessage": "55555",
-      "replayReasonPlaceholder": "55555",
-      "payloadLabel": "55555",
-      "replayConfirm": "55555"
+      "reasonLabel": "〖Řḗȧşȯƞ ···〗",
+      "cancelTitle": "〖Ƈȧƞƈḗŀ Ẇȯřķƒŀȯẇ Řŭƞ ········〗",
+      "cancelMessage": "〖Ƈȧƞƈḗŀ ŧħīş ẇȯřķƒŀȯẇ řŭƞ? Ŧħīş ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ····················〗",
+      "cancelReasonPlaceholder": "〖Ƥřȯṽīḓḗ ȧ řḗȧşȯƞ ƒȯř ƈȧƞƈḗŀīƞɠ ············〗",
+      "cancelConfirm": "〖Ƈȧƞƈḗŀ řŭƞ ····〗",
+      "replayTitle": "〖Řḗƥŀȧẏ Ẇȯřķƒŀȯẇ Řŭƞ ········〗",
+      "replayMessage": "〖Řḗƥŀȧẏ ŧħīş řŭƞ ẇīŧħ ȧ ƞḗẇ ƥȧẏŀȯȧḓ. ··············〗",
+      "replayReasonPlaceholder": "〖Ƥřȯṽīḓḗ ȧ řḗȧşȯƞ ƒȯř řḗƥŀȧẏīƞɠ ············〗",
+      "payloadLabel": "〖Ƥȧẏŀȯȧḓ (ĴŞȮȠ) ······〗",
+      "replayConfirm": "〖Řḗƥŀȧẏ řŭƞ ····〗"
     },
     "toasts": {
-      "loadRunDetailsFailed": "55555",
-      "loadLogsFailed": "55555",
-      "loadAuditLogsFailed": "55555",
-      "logExportReady": "55555",
-      "exportLogsFailed": "55555",
-      "reasonTooShort": "55555",
-      "runCanceled": "55555",
-      "cancelRunFailed": "55555",
-      "runExportReady": "55555",
-      "exportRunFailed": "55555",
-      "replayPayloadInvalid": "55555",
-      "runReplayStarted": "55555",
-      "replayRunFailed": "55555",
-      "auditExportReady": "55555",
-      "exportAuditLogsFailed": "55555"
+      "loadRunDetailsFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řŭƞ ḓḗŧȧīŀş ···········〗",
+      "loadLogsFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŀȯɠş ········〗",
+      "loadAuditLogsFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧŭḓīŧ ŀȯɠş ··········〗",
+      "logExportReady": "〖Ŀȯɠ ḗẋƥȯřŧ řḗȧḓẏ ·······〗",
+      "exportLogsFailed": "〖Ƒȧīŀḗḓ ŧȯ ḗẋƥȯřŧ ŀȯɠş ·········〗",
+      "reasonTooShort": "〖Řḗȧşȯƞ ḿŭşŧ ƀḗ ȧŧ ŀḗȧşŧ 3 ƈħȧřȧƈŧḗřş. ···············〗",
+      "runCanceled": "〖Řŭƞ ƈȧƞƈḗŀḗḓ ·····〗",
+      "cancelRunFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈȧƞƈḗŀ řŭƞ ········〗",
+      "runExportReady": "〖Řŭƞ ḗẋƥȯřŧ řḗȧḓẏ ·······〗",
+      "exportRunFailed": "〖Ƒȧīŀḗḓ ŧȯ ḗẋƥȯřŧ řŭƞ ········〗",
+      "replayPayloadInvalid": "〖Řḗƥŀȧẏ ƥȧẏŀȯȧḓ ḿŭşŧ ƀḗ ṽȧŀīḓ ĴŞȮȠ. ··············〗",
+      "runReplayStarted": "〖Řŭƞ řḗƥŀȧẏ şŧȧřŧḗḓ ········〗",
+      "replayRunFailed": "〖Ƒȧīŀḗḓ ŧȯ řḗƥŀȧẏ řŭƞ ········〗",
+      "auditExportReady": "〖Ȧŭḓīŧ ḗẋƥȯřŧ řḗȧḓẏ ········〗",
+      "exportAuditLogsFailed": "〖Ƒȧīŀḗḓ ŧȯ ḗẋƥȯřŧ ȧŭḓīŧ ŀȯɠş ···········〗"
     },
     "queuedWarning": {
-      "title": "55555",
-      "description": "55555"
+      "title": "〖Ɋŭḗŭḗḓ — ẇȧīŧīƞɠ ƒȯř ȧ ẇȯřķƒŀȯẇ ẇȯřķḗř ················〗",
+      "description": "〖Ŧħīş řŭƞ şŧȧřŧḗḓ ȯṽḗř ȧ ḿīƞŭŧḗ ȧɠȯ ƀŭŧ ƞȯ şŧḗƥş ħȧṽḗ ḗẋḗƈŭŧḗḓ ẏḗŧ. Ƈħḗƈķ ŧħȧŧ ŧħḗ ẇȯřķƒŀȯẇ ẇȯřķḗř şḗřṽīƈḗ īş řŭƞƞīƞɠ ȧƞḓ ƈȯƞƞḗƈŧḗḓ ŧȯ Ŧḗḿƥȯřȧŀ. ··························································〗"
     }
   },
   "runDialog": {
-    "title": "55555",
-    "description": "55555",
-    "descriptionEvent": "55555 {{name}} 55555",
-    "draftWarning": "55555 {{version}} 55555",
-    "concurrencyLimit": "55555 {{count}} 55555",
+    "title": "〖Řŭƞ Ẇȯřķƒŀȯẇ ·····〗",
+    "description": "〖Ƥřȯṽīḓḗ ȧ şẏƞŧħḗŧīƈ ƥȧẏŀȯȧḓ ŧȯ ƥřḗṽīḗẇ (ȧƞḓ řŭƞ) ȧ ẇȯřķƒŀȯẇ. ························〗",
+    "descriptionEvent": "〖Ḗṽḗƞŧ: {{name}}. ·······〗",
+    "draftWarning": "〖Ḓřȧƒŧ ṽḗřşīȯƞ ḓīƒƒḗřş ƒřȯḿ ƥŭƀŀīşħḗḓ (ṽ{{version}}). ·····················〗",
+    "concurrencyLimit": "〖Ƈȯƞƈŭřřḗƞƈẏ ŀīḿīŧ: {{count}} řŭƞ(ş) ȧŧ ȧ ŧīḿḗ. ···················〗",
     "common": {
-      "emptyValue": "55555"
+      "emptyValue": "〖— ·〗"
     },
     "actions": {
-      "addField": "55555",
-      "addItem": "55555",
-      "cloneLatestRun": "55555",
-      "close": "55555",
-      "copyPayload": "55555",
-      "formBuilder": "55555",
-      "hide": "55555",
-      "jsonEditor": "55555",
-      "openEventCatalog": "55555",
-      "publishDraft": "55555",
-      "publishLatest": "55555",
-      "remove": "55555",
-      "reset": "55555",
-      "resetToDefaults": "55555",
-      "savePreset": "55555",
-      "show": "55555",
-      "startRun": "55555",
-      "starting": "55555"
+      "addField": "〖Ȧḓḓ ƒīḗŀḓ ····〗",
+      "addItem": "〖Ȧḓḓ īŧḗḿ ····〗",
+      "cloneLatestRun": "〖Ƈŀȯƞḗ ŀȧŧḗşŧ řŭƞ ·······〗",
+      "close": "〖Ƈŀȯşḗ ··〗",
+      "copyPayload": "〖Ƈȯƥẏ ƥȧẏŀȯȧḓ ·····〗",
+      "formBuilder": "〖Ƒȯřḿ Ɓŭīŀḓḗř ·····〗",
+      "hide": "〖Ħīḓḗ ··〗",
+      "jsonEditor": "〖ĴŞȮȠ Ḗḓīŧȯř ·····〗",
+      "openEventCatalog": "〖Ȯƥḗƞ ḗṽḗƞŧ ƈȧŧȧŀȯɠ ········〗",
+      "publishDraft": "〖Ƥŭƀŀīşħ ḓřȧƒŧ ······〗",
+      "publishLatest": "〖Ƥŭƀŀīşħ ŀȧŧḗşŧ ······〗",
+      "remove": "〖Řḗḿȯṽḗ ···〗",
+      "reset": "〖Řḗşḗŧ ··〗",
+      "resetToDefaults": "〖Řḗşḗŧ ŧȯ ḓḗƒȧŭŀŧş ·······〗",
+      "savePreset": "〖Şȧṽḗ ƥřḗşḗŧ ·····〗",
+      "show": "〖Şħȯẇ ··〗",
+      "startRun": "〖Şŧȧřŧ Řŭƞ ····〗",
+      "starting": "〖Şŧȧřŧīƞɠ... ·····〗"
     },
     "eventCatalog": {
-      "title": "55555",
-      "description": "55555",
-      "searchLabel": "55555",
-      "searchPlaceholder": "55555",
-      "eventTypeLabel": "55555",
-      "loadingEvents": "55555",
-      "selectEventType": "55555",
-      "systemBadge": "55555",
-      "tenantBadge": "55555",
-      "systemEvent": "55555",
-      "tenantEvent": "55555",
-      "uncategorized": "55555"
+      "title": "〖Ḗṽḗƞŧ ƈȧŧȧŀȯɠ ······〗",
+      "description": "〖Ƥīƈķ ȧƞ ḗṽḗƞŧ ŧẏƥḗ ŧȯ şḗḗḓ ƥȧẏŀȯȧḓ şƈħḗḿȧş. ··················〗",
+      "searchLabel": "〖Şḗȧřƈħ ḗṽḗƞŧş ······〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ ƀẏ ƞȧḿḗ, ŧẏƥḗ, ȯř ƈȧŧḗɠȯřẏ ··············〗",
+      "eventTypeLabel": "〖Ḗṽḗƞŧ ŧẏƥḗ ····〗",
+      "loadingEvents": "〖Ŀȯȧḓīƞɠ ḗṽḗƞŧş... ·······〗",
+      "selectEventType": "〖Şḗŀḗƈŧ ḗṽḗƞŧ ŧẏƥḗ ·······〗",
+      "systemBadge": "〖Şẏşŧḗḿ ···〗",
+      "tenantBadge": "〖Ŧḗƞȧƞŧ ···〗",
+      "systemEvent": "〖Şẏşŧḗḿ ḗṽḗƞŧ ·····〗",
+      "tenantEvent": "〖Ŧḗƞȧƞŧ ḗṽḗƞŧ ·····〗",
+      "uncategorized": "〖Ŭƞƈȧŧḗɠȯřīẑḗḓ ······〗"
     },
     "fields": {
-      "workflowLabel": "55555",
-      "publishedVersionLabel": "55555",
-      "triggerLabel": "55555",
-      "manualTrigger": "55555",
-      "workflowStatusLabel": "55555",
-      "statusActive": "55555",
-      "statusPaused": "55555"
+      "workflowLabel": "〖Ẇȯřķƒŀȯẇ ····〗",
+      "publishedVersionLabel": "〖Ƥŭƀŀīşħḗḓ ṽḗřşīȯƞ ·······〗",
+      "triggerLabel": "〖Ŧřīɠɠḗř ···〗",
+      "manualTrigger": "〖Ḿȧƞŭȧŀ ···〗",
+      "workflowStatusLabel": "〖Ẇȯřķƒŀȯẇ şŧȧŧŭş ······〗",
+      "statusActive": "〖ȧƈŧīṽḗ ···〗",
+      "statusPaused": "〖ƥȧŭşḗḓ ···〗"
     },
     "form": {
-      "booleanTrue": "55555",
-      "booleanFalse": "55555",
-      "mapEntriesTitle": "55555",
-      "mapEntriesPrompt": "55555",
-      "mapEntriesDescription": "55555",
-      "mapEntriesEmpty": "55555",
-      "noSchema": "55555"
+      "booleanTrue": "〖Ŧřŭḗ ··〗",
+      "booleanFalse": "〖Ƒȧŀşḗ ··〗",
+      "mapEntriesTitle": "〖Ḿȧƥ ḗƞŧřīḗş ·····〗",
+      "mapEntriesPrompt": "〖Ḗƞŧḗř ƒīḗŀḓ ķḗẏ/ƥȧŧħ ········〗",
+      "mapEntriesDescription": "〖Ƒȯř ḿȧƥ-şŧẏŀḗ ȯƀĵḗƈŧş, ȧḓḓ ķḗẏş ȧƞḓ şḗŧ ḗȧƈħ ṽȧŀŭḗ. ·····················〗",
+      "mapEntriesEmpty": "〖Ƞȯ ḿȧƥ ḗƞŧřīḗş ȧḓḓḗḓ. ·········〗",
+      "noSchema": "〖Ƞȯ şƈħḗḿȧ ȧṽȧīŀȧƀŀḗ ŧȯ řḗƞḓḗř ȧ ƒȯřḿ. ···············〗"
     },
     "noPublishedVersion": {
-      "title": "55555",
-      "description": "55555"
+      "title": "〖Ƞȯ ƥŭƀŀīşħḗḓ ṽḗřşīȯƞ ········〗",
+      "description": "〖Ẏȯŭ ƈȧƞ ƥřḗṽīḗẇ ŧħḗ ƥȧẏŀȯȧḓ ƀŭīŀḓḗř, ƀŭŧ ẏȯŭ ḿŭşŧ ƥŭƀŀīşħ ŧħḗ ẇȯřķƒŀȯẇ ƀḗƒȯřḗ şŧȧřŧīƞɠ ȧ řŭƞ. ······································〗"
     },
     "payload": {
-      "largePayloadWarning": "55555",
-      "payloadJsonLabel": "55555",
-      "payloadLabel": "55555",
-      "payloadSize": "55555 {{size}} 55555"
+      "largePayloadWarning": "〖Ƥȧẏŀȯȧḓ şīẑḗ ḗẋƈḗḗḓş 256ĶƁ; řŭƞş ḿȧẏ ƀḗ şŀȯẇḗř. ···················〗",
+      "payloadJsonLabel": "〖Ƥȧẏŀȯȧḓ (ĴŞȮȠ) ······〗",
+      "payloadLabel": "〖ƥȧẏŀȯȧḓ ···〗",
+      "payloadSize": "〖Ƥȧẏŀȯȧḓ şīẑḗ: {{size}} ĶƁ ··········〗"
     },
     "presets": {
-      "presetNameLabel": "55555",
-      "presetNamePlaceholder": "55555",
-      "savedPresets": "55555"
+      "presetNameLabel": "〖Ƥřḗşḗŧ ƞȧḿḗ ·····〗",
+      "presetNamePlaceholder": "〖ḗ.ɠ. Řḗɠřḗşşīȯƞ ƥȧẏŀȯȧḓ ··········〗",
+      "savedPresets": "〖Şȧṽḗḓ ƥřḗşḗŧş ······〗"
     },
     "schema": {
-      "sourceLabel": "55555",
-      "workflowSchema": "55555",
-      "eventSchema": "55555",
-      "schemaRef": "55555",
-      "schemaRefLabel": "55555",
-      "selectSchema": "55555",
-      "noSchemasFound": "55555",
-      "unknownSchemaRef": "55555",
-      "useEventSchema": "55555",
-      "viewSchemaDiff": "55555",
-      "hideSchemaDiff": "55555",
-      "onlyInEvent": "55555",
-      "requiredOnlyInEvent": "55555",
-      "onlyInWorkflow": "55555",
-      "requiredOnlyInWorkflow": "55555",
-      "typeMismatches": "55555",
-      "typeMismatchLine": "55555 {{field}} 55555 {{eventType}} 55555 {{payloadType}} 55555",
-      "selectedEventWarningPrefix": "55555 {{selectedEventType}} 55555 {{triggerEventName}} 55555",
-      "matchOptional": "55555",
-      "matchIdentity": "55555",
-      "diffWillApply": "55555 {{eventSchemaRef}} 55555 {{payloadSchemaRef}} 55555",
-      "diffRequiredMissing": "55555 {{eventSchemaRef}} 55555 {{payloadSchemaRef}} 55555",
-      "triggerEventDiffers": "55555",
-      "eventUnavailable": "55555",
+      "sourceLabel": "〖Şƈħḗḿȧ şȯŭřƈḗ ······〗",
+      "workflowSchema": "〖Ẇȯřķƒŀȯẇ şƈħḗḿȧ ······〗",
+      "eventSchema": "〖Ḗṽḗƞŧ şƈħḗḿȧ ·····〗",
+      "schemaRef": "〖Şƈħḗḿȧ řḗƒ ····〗",
+      "schemaRefLabel": "〖Şƈħḗḿȧ řḗƒ ····〗",
+      "selectSchema": "〖Şḗŀḗƈŧ şƈħḗḿȧ… ······〗",
+      "noSchemasFound": "〖Ƞȯ şƈħḗḿȧş ƒȯŭƞḓ ·······〗",
+      "unknownSchemaRef": "〖Ŭƞķƞȯẇƞ şƈħḗḿȧ řḗƒ. ········〗",
+      "useEventSchema": "〖Ŭşḗ ḗṽḗƞŧ şƈħḗḿȧ ·······〗",
+      "viewSchemaDiff": "〖Ṽīḗẇ şƈħḗḿȧ ḓīƒƒ ·······〗",
+      "hideSchemaDiff": "〖Ħīḓḗ şƈħḗḿȧ ḓīƒƒ ·······〗",
+      "onlyInEvent": "〖Ȯƞŀẏ īƞ ḗṽḗƞŧ şƈħḗḿȧ ········〗",
+      "requiredOnlyInEvent": "〖Řḗʠŭīřḗḓ ȯƞŀẏ īƞ ḗṽḗƞŧ ·········〗",
+      "onlyInWorkflow": "〖Ȯƞŀẏ īƞ ẇȯřķƒŀȯẇ şƈħḗḿȧ ··········〗",
+      "requiredOnlyInWorkflow": "〖Řḗʠŭīřḗḓ ȯƞŀẏ īƞ ẇȯřķƒŀȯẇ ··········〗",
+      "typeMismatches": "〖Ŧẏƥḗ ḿīşḿȧŧƈħḗş ······〗",
+      "typeMismatchLine": "〖{{field}}: ḗṽḗƞŧ {{eventType}} ṽş ẇȯřķƒŀȯẇ {{payloadType}} ························〗",
+      "selectedEventWarningPrefix": "〖Şḗŀḗƈŧḗḓ ḗṽḗƞŧ ({{selectedEventType}}) ḿȧẏ ƞȯŧ ḿȧŧƈħ ŧħīş ẇȯřķƒŀȯẇ'ş ŧřīɠɠḗř ({{triggerEventName}}).  ·········································〗",
+      "matchOptional": "〖Şƈħḗḿȧ řḗƒş ḿȧŧƈħ; ŧřīɠɠḗř ḿȧƥƥīƞɠ ẇīŀŀ ƀḗ ȧƥƥŀīḗḓ (ȯƥŧīȯƞȧŀ). ·························〗",
+      "matchIdentity": "〖Şƈħḗḿȧ řḗƒş ḿȧŧƈħ; īḓḗƞŧīŧẏ ḿȧƥƥīƞɠ ẇīŀŀ ƀḗ ŭşḗḓ (ƞȯ ḿȧƥƥīƞɠ řḗʠŭīřḗḓ). ·····························〗",
+      "diffWillApply": "〖Şƈħḗḿȧ řḗƒş ḓīƒƒḗř ({{eventSchemaRef}} → {{payloadSchemaRef}}); ŧřīɠɠḗř ḿȧƥƥīƞɠ ẇīŀŀ ƀḗ ȧƥƥŀīḗḓ. ·······································〗",
+      "diffRequiredMissing": "〖Şƈħḗḿȧ řḗƒş ḓīƒƒḗř ({{eventSchemaRef}} → {{payloadSchemaRef}}); ŧřīɠɠḗř ḿȧƥƥīƞɠ īş řḗʠŭīřḗḓ ƀŭŧ ƞȯŧ ƈȯƞƒīɠŭřḗḓ. ·············································〗",
+      "triggerEventDiffers": "〖Ŧřīɠɠḗř ḗṽḗƞŧ şƈħḗḿȧ ḓīƒƒḗřş ƒřȯḿ ẇȯřķƒŀȯẇ ƥȧẏŀȯȧḓ şƈħḗḿȧ. Şẇīŧƈħ ŧȯ \"Ḗṽḗƞŧ şƈħḗḿȧ\" īƒ ẏȯŭ ẇȧƞŧ ŧȯ ḗƞŧḗř ȧ ŧřīɠɠḗř ḗṽḗƞŧ ƥȧẏŀȯȧḓ. ····················································〗",
+      "eventUnavailable": "〖Ḗṽḗƞŧ şƈħḗḿȧ ƞȯŧ ȧṽȧīŀȧƀŀḗ; ŭşīƞɠ ẇȯřķƒŀȯẇ şƈħḗḿȧ īƞşŧḗȧḓ. ························〗",
       "mapping": {
-        "identityOptional": "55555",
-        "requiredMissing": "55555",
-        "willApply": "55555",
-        "willApplyOptional": "55555"
+        "identityOptional": "〖Īḓḗƞŧīŧẏ ḿȧƥƥīƞɠ (ƞȯ ḿȧƥƥīƞɠ řḗʠŭīřḗḓ) ················〗",
+        "requiredMissing": "〖Ŧřīɠɠḗř ḿȧƥƥīƞɠ īş řḗʠŭīřḗḓ ƀŭŧ ƞȯŧ ƈȯƞƒīɠŭřḗḓ ···················〗",
+        "willApply": "〖Ŧřīɠɠḗř ḿȧƥƥīƞɠ ẇīŀŀ ƀḗ ȧƥƥŀīḗḓ ·············〗",
+        "willApplyOptional": "〖Ŧřīɠɠḗř ḿȧƥƥīƞɠ ẇīŀŀ ƀḗ ȧƥƥŀīḗḓ (ȯƥŧīȯƞȧŀ) ·················〗"
       }
     },
-    "systemWorkflowWarning": "55555",
-    "systemWorkflowConfirm": "55555",
+    "systemWorkflowWarning": "〖Ŧħīş īş ȧ şẏşŧḗḿ ẇȯřķƒŀȯẇ. Řŭƞƞīƞɠ īŧ ḿȧẏ ȧƒƒḗƈŧ ƈȯřḗ ȧŭŧȯḿȧŧīȯƞ. ··························〗",
+    "systemWorkflowConfirm": "〖Ī ŭƞḓḗřşŧȧƞḓ ȧƞḓ ẇȧƞŧ ŧȯ řŭƞ īŧ. ·············〗",
     "templates": {
-      "exampleLabel": "55555 {{count}} 55555",
-      "eventTemplates": "55555",
-      "sampleTemplates": "55555",
-      "emailTemplate": "55555",
-      "webhookTemplate": "55555"
+      "exampleLabel": "〖Ḗẋȧḿƥŀḗ {{count}} ·······〗",
+      "eventTemplates": "〖Ḗṽḗƞŧ ŧḗḿƥŀȧŧḗş ······〗",
+      "sampleTemplates": "〖Şȧḿƥŀḗ ŧḗḿƥŀȧŧḗş ·······〗",
+      "emailTemplate": "〖Īƞƀȯŭƞḓ Ḗḿȧīŀ ······〗",
+      "webhookTemplate": "〖Ẇḗƀħȯȯķ Ḗṽḗƞŧ ······〗"
     },
     "toasts": {
-      "confirmSystemRun": "55555",
-      "eventMissingSchemaRef": "55555",
-      "loadLatestRunFailed": "55555",
-      "mapEntryExists": "55555",
-      "noPriorPayload": "55555",
-      "payloadCopied": "55555",
-      "presetSaved": "55555",
-      "providePresetName": "55555",
-      "startRunFailed": "55555",
-      "triggerMappingMissing": "55555"
+      "confirmSystemRun": "〖Ƈȯƞƒīřḿ ẏȯŭ ẇȧƞŧ ŧȯ řŭƞ ŧħīş şẏşŧḗḿ ẇȯřķƒŀȯẇ. ··················〗",
+      "eventMissingSchemaRef": "〖Şḗŀḗƈŧḗḓ ḗṽḗƞŧ ḓȯḗş ƞȯŧ ħȧṽḗ ȧ ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒ; ƈȧƞƞȯŧ řŭƞ ẇīŧħ ŧřīɠɠḗř ḿȧƥƥīƞɠ. ··································〗",
+      "loadLatestRunFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŀȧŧḗşŧ řŭƞ ··········〗",
+      "mapEntryExists": "〖Ŧħȧŧ ķḗẏ ȧŀřḗȧḓẏ ḗẋīşŧş. ··········〗",
+      "noPriorPayload": "〖Ƞȯ ƥřīȯř řŭƞ ƥȧẏŀȯȧḓ ƒȯŭƞḓ. ···········〗",
+      "payloadCopied": "〖Ƥȧẏŀȯȧḓ ƈȯƥīḗḓ ŧȯ ƈŀīƥƀȯȧřḓ. ············〗",
+      "presetSaved": "〖Ƥřḗşḗŧ şȧṽḗḓ. ······〗",
+      "providePresetName": "〖Ƥřȯṽīḓḗ ȧ ƥřḗşḗŧ ƞȧḿḗ. ·········〗",
+      "startRunFailed": "〖Ƒȧīŀḗḓ ŧȯ şŧȧřŧ řŭƞ ········〗",
+      "triggerMappingMissing": "〖Ŧřīɠɠḗř ḿȧƥƥīƞɠ īş řḗʠŭīřḗḓ ƒȯř ŧħīş ḗṽḗƞŧ şƈħḗḿȧ ƀŭŧ īş ƞȯŧ ƈȯƞƒīɠŭřḗḓ ȯƞ ŧħḗ ẇȯřķƒŀȯẇ. ····································〗"
     },
     "validation": {
-      "invalidJson": "55555",
-      "summaryTitle": "55555",
-      "summaryDescription": "55555",
-      "moreErrors": "55555 {{count}} 55555"
+      "invalidJson": "〖Īƞṽȧŀīḓ ĴŞȮȠ ·····〗",
+      "summaryTitle": "〖Ƥȧẏŀȯȧḓ şŧīŀŀ ƞḗḗḓş řḗʠŭīřḗḓ ḗṽḗƞŧ ƒīḗŀḓş ƀḗƒȯřḗ ŧħīş řŭƞ ƈȧƞ şŧȧřŧ ···························〗",
+      "summaryDescription": "〖Ƒīŀŀ ŧħḗ ḿīşşīƞɠ ƒīḗŀḓş ƀḗŀȯẇ, şẇīŧƈħ ŧȯ Ƒȯřḿ Ɓŭīŀḓḗř, ȯř ŭşḗ ȧ şȧḿƥŀḗ ƥȧẏŀȯȧḓ ƀŭŧŧȯƞ. ···································〗",
+      "moreErrors": "〖+{{count}} ḿȯřḗ… ·······〗"
     },
-    "sampleEmailBody": "55555",
+    "sampleEmailBody": "〖Şȧḿƥŀḗ ḗḿȧīŀ ƀȯḓẏ ·······〗",
     "sections": {
-      "schemaAndEvents": "55555",
-      "payloadTools": "55555"
+      "schemaAndEvents": "〖Şƈħḗḿȧ & Ḗṽḗƞŧş ······〗",
+      "payloadTools": "〖Ƥȧẏŀȯȧḓ Ŧȯȯŀş ······〗"
     }
   },
   "eventList": {
     "common": {
-      "emptyValue": "55555"
+      "emptyValue": "〖— ·〗"
     },
     "summary": {
-      "total": "55555",
-      "matched": "55555",
-      "unmatched": "55555",
-      "errors": "55555"
+      "total": "〖Ŧȯŧȧŀ ··〗",
+      "matched": "〖Ḿȧŧƈħḗḓ ···〗",
+      "unmatched": "〖Ŭƞḿȧŧƈħḗḓ ····〗",
+      "errors": "〖Ḗřřȯřş ···〗"
     },
     "filters": {
-      "eventNameLabel": "55555",
-      "eventNamePlaceholder": "55555",
-      "correlationKeyLabel": "55555",
-      "correlationKeyPlaceholder": "55555",
-      "statusLabel": "55555",
-      "fromLabel": "55555",
-      "toLabel": "55555",
-      "datePlaceholder": "55555"
+      "eventNameLabel": "〖Ḗṽḗƞŧ ƞȧḿḗ ····〗",
+      "eventNamePlaceholder": "〖ẇȯřķƒŀȯẇ.ḗṽḗƞŧ ······〗",
+      "correlationKeyLabel": "〖Ƈȯřřḗŀȧŧīȯƞ ķḗẏ ······〗",
+      "correlationKeyPlaceholder": "〖ƈȯřř-123 ····〗",
+      "statusLabel": "〖Şŧȧŧŭş ···〗",
+      "fromLabel": "〖Ƒřȯḿ ··〗",
+      "toLabel": "〖Ŧȯ ·〗",
+      "datePlaceholder": "〖Ȧƞẏ ḓȧŧḗ ····〗"
     },
     "actions": {
-      "applyFilters": "55555",
-      "reset": "55555",
-      "exportCsv": "55555",
-      "exportJson": "55555",
-      "close": "55555",
-      "viewRunDetails": "55555"
+      "applyFilters": "〖Ȧƥƥŀẏ ƒīŀŧḗřş ······〗",
+      "reset": "〖Řḗşḗŧ ··〗",
+      "exportCsv": "〖Ḗẋƥȯřŧ ƇŞṼ ····〗",
+      "exportJson": "〖Ḗẋƥȯřŧ ĴŞȮȠ ·····〗",
+      "close": "〖Ƈŀȯşḗ ··〗",
+      "viewRunDetails": "〖Ṽīḗẇ řŭƞ ḓḗŧȧīŀş ·······〗"
     },
     "table": {
-      "schemaConflict": "55555",
+      "schemaConflict": "〖ƈȧŧȧŀȯɠ ≠ şŭƀḿīşşīȯƞ ········〗",
       "columns": {
-        "event": "55555",
-        "correlation": "55555",
-        "schema": "55555",
-        "status": "55555",
-        "matchedRun": "55555",
-        "payload": "55555",
-        "created": "55555"
+        "event": "〖Ḗṽḗƞŧ ··〗",
+        "correlation": "〖Ƈȯřřḗŀȧŧīȯƞ ·····〗",
+        "schema": "〖Şƈħḗḿȧ ···〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "matchedRun": "〖Ḿȧŧƈħḗḓ Řŭƞ ·····〗",
+        "payload": "〖Ƥȧẏŀȯȧḓ ···〗",
+        "created": "〖Ƈřḗȧŧḗḓ ···〗"
       }
     },
     "states": {
-      "loading": "55555",
-      "empty": "55555"
+      "loading": "〖Ŀȯȧḓīƞɠ ḗṽḗƞŧş... ·······〗",
+      "empty": "〖Ƞȯ ẇȯřķƒŀȯẇ ḗṽḗƞŧş ƒȯŭƞḓ. ··········〗"
     },
     "detail": {
-      "title": "55555",
-      "loading": "55555",
-      "eventIdLabel": "55555",
-      "statusLabel": "55555",
-      "eventNameLabel": "55555",
-      "correlationKeyLabel": "55555",
-      "payloadSchemaRefLabel": "55555",
-      "schemaConflict": "55555 {{catalog}} 55555 {{submission}} 55555",
-      "createdLabel": "55555",
-      "processedLabel": "55555",
-      "errorLine": "55555 {{message}} 55555",
-      "waitLabel": "55555",
-      "waitIdLine": "55555 {{waitId}} 55555",
-      "waitStatusLine": "55555 {{status}} 55555",
-      "waitTimeoutLine": "55555 {{value}} 55555",
-      "waitResolvedLine": "55555 {{value}} 55555",
-      "waitStepLine": "55555 {{value}} 55555",
-      "matchedRunLabel": "55555",
-      "runStatusLine": "55555 {{status}} 55555",
-      "payloadLabel": "55555"
+      "title": "〖Ḗṽḗƞŧ Ḓḗŧȧīŀ ·····〗",
+      "loading": "〖Ŀȯȧḓīƞɠ ḗṽḗƞŧ ḓḗŧȧīŀ... ··········〗",
+      "eventIdLabel": "〖Ḗṽḗƞŧ ĪḒ ····〗",
+      "statusLabel": "〖Şŧȧŧŭş ···〗",
+      "eventNameLabel": "〖Ḗṽḗƞŧ ƞȧḿḗ ····〗",
+      "correlationKeyLabel": "〖Ƈȯřřḗŀȧŧīȯƞ ķḗẏ ······〗",
+      "payloadSchemaRefLabel": "〖Ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒ ········〗",
+      "schemaConflict": "〖Şƈħḗḿȧ řḗƒ ƈȯƞƒŀīƈŧ: ƈȧŧȧŀȯɠ {{catalog}} ṽş şŭƀḿīşşīȯƞ {{submission}} ····························〗",
+      "createdLabel": "〖Ƈřḗȧŧḗḓ ···〗",
+      "processedLabel": "〖Ƥřȯƈḗşşḗḓ ····〗",
+      "errorLine": "〖Ḗřřȯř: {{message}} ········〗",
+      "waitLabel": "〖Ẇȧīŧ ··〗",
+      "waitIdLine": "〖Ẇȧīŧ ĪḒ: {{waitId}} ········〗",
+      "waitStatusLine": "〖Şŧȧŧŭş: {{status}} ········〗",
+      "waitTimeoutLine": "〖Ŧīḿḗȯŭŧ: {{value}} ········〗",
+      "waitResolvedLine": "〖Řḗşȯŀṽḗḓ: {{value}} ········〗",
+      "waitStepLine": "〖Şŧḗƥ: {{value}} ······〗",
+      "matchedRunLabel": "〖Ḿȧŧƈħḗḓ řŭƞ ·····〗",
+      "runStatusLine": "〖Şŧȧŧŭş: {{status}} ········〗",
+      "payloadLabel": "〖Ƥȧẏŀȯȧḓ ···〗"
     },
     "toasts": {
-      "loadEventsFailed": "55555",
-      "loadEventDetailFailed": "55555",
-      "exportReady": "55555",
-      "exportFailed": "55555"
+      "loadEventsFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ẇȯřķƒŀȯẇ ḗṽḗƞŧş ············〗",
+      "loadEventDetailFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḗṽḗƞŧ ḓḗŧȧīŀ ···········〗",
+      "exportReady": "〖Ḗṽḗƞŧ ḗẋƥȯřŧ řḗȧḓẏ ········〗",
+      "exportFailed": "〖Ƒȧīŀḗḓ ŧȯ ḗẋƥȯřŧ ḗṽḗƞŧş ··········〗"
     }
   },
   "deadLetter": {
     "common": {
-      "emptyValue": "55555"
+      "emptyValue": "〖— ·〗"
     },
     "filters": {
-      "minimumRetriesLabel": "55555",
-      "minimumRetriesPlaceholder": "55555"
+      "minimumRetriesLabel": "〖Ḿīƞīḿŭḿ řḗŧřīḗş ······〗",
+      "minimumRetriesPlaceholder": "〖3 ·〗"
     },
     "actions": {
-      "refresh": "55555",
-      "loadMore": "55555"
+      "refresh": "〖Řḗƒřḗşħ ···〗",
+      "loadMore": "〖Ŀȯȧḓ ḿȯřḗ ····〗"
     },
     "table": {
       "columns": {
-        "runId": "55555",
-        "workflow": "55555",
-        "version": "55555",
-        "status": "55555",
-        "retries": "55555",
-        "failedSteps": "55555",
-        "updated": "55555"
+        "runId": "〖Řŭƞ ĪḒ ···〗",
+        "workflow": "〖Ẇȯřķƒŀȯẇ ····〗",
+        "version": "〖Ṽḗřşīȯƞ ···〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "retries": "〖Řḗŧřīḗş ···〗",
+        "failedSteps": "〖Ƒȧīŀḗḓ Şŧḗƥş ·····〗",
+        "updated": "〖Ŭƥḓȧŧḗḓ ···〗"
       }
     },
     "states": {
-      "empty": "55555",
-      "loading": "55555"
+      "empty": "〖Ƞȯ ḓḗȧḓ-ŀḗŧŧḗř řŭƞş ƒȯŭƞḓ. ···········〗",
+      "loading": "〖Ŀȯȧḓīƞɠ ḓḗȧḓ-ŀḗŧŧḗř řŭƞş... ···········〗"
     },
     "toasts": {
-      "loadFailed": "55555"
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓḗȧḓ-ŀḗŧŧḗř řŭƞş ·············〗"
     }
   },
   "audit": {
     "common": {
-      "emptyValue": "55555"
+      "emptyValue": "〖— ·〗"
     },
     "header": {
-      "title": "55555"
+      "title": "〖Ẇȯřķƒŀȯẇ Ȧŭḓīŧ ······〗"
     },
     "actions": {
-      "exportCsv": "55555",
-      "loadMore": "55555",
-      "refresh": "55555"
+      "exportCsv": "〖Ḗẋƥȯřŧ ƇŞṼ ····〗",
+      "loadMore": "〖Ŀȯȧḓ ḿȯřḗ ····〗",
+      "refresh": "〖Řḗƒřḗşħ ···〗"
     },
     "table": {
       "columns": {
-        "timestamp": "55555",
-        "operation": "55555",
-        "user": "55555",
-        "details": "55555"
+        "timestamp": "〖Ŧīḿḗşŧȧḿƥ ····〗",
+        "operation": "〖Ȯƥḗřȧŧīȯƞ ····〗",
+        "user": "〖Ŭşḗř ··〗",
+        "details": "〖Ḓḗŧȧīŀş ···〗"
       }
     },
     "states": {
-      "selectWorkflow": "55555",
-      "empty": "55555",
-      "loading": "55555"
+      "selectWorkflow": "〖Şḗŀḗƈŧ ȧ ẇȯřķƒŀȯẇ ŧȯ ṽīḗẇ ȧŭḓīŧ ħīşŧȯřẏ. ················〗",
+      "empty": "〖Ƞȯ ȧŭḓīŧ ḗƞŧřīḗş ẏḗŧ. ·········〗",
+      "loading": "〖Ŀȯȧḓīƞɠ ȧŭḓīŧ ḗƞŧřīḗş... ··········〗"
     },
     "values": {
-      "system": "55555"
+      "system": "〖şẏşŧḗḿ ···〗"
     },
     "toasts": {
-      "loadFailed": "55555",
-      "exportReady": "55555",
-      "exportFailed": "55555"
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧŭḓīŧ ŀȯɠş ··········〗",
+      "exportReady": "〖Ȧŭḓīŧ ḗẋƥȯřŧ řḗȧḓẏ ········〗",
+      "exportFailed": "〖Ƒȧīŀḗḓ ŧȯ ḗẋƥȯřŧ ȧŭḓīŧ ŀȯɠş ···········〗"
     }
   },
   "designer": {
     "page": {
-      "controlPanelTitle": "55555",
-      "controlPanelDescription": "55555",
-      "designerTitle": "55555",
-      "designerDescription": "55555",
-      "editorTitle": "55555",
-      "editorDescription": "55555"
+      "controlPanelTitle": "〖Ẇȯřķƒŀȯẇ Ƈȯƞŧřȯŀ Ƥȧƞḗŀ ·········〗",
+      "controlPanelDescription": "〖Ḿȧƞȧɠḗ şƈħḗḓŭŀḗş, řŭƞş, ḗṽḗƞŧş, ȧƞḓ ŧħḗ ḗṽḗƞŧ ƈȧŧȧŀȯɠ. ······················〗",
+      "designerTitle": "〖Ẇȯřķƒŀȯẇ Ḓḗşīɠƞḗř ·······〗",
+      "designerDescription": "〖Ɓŭīŀḓ ȧƞḓ ḿȧīƞŧȧīƞ ẇȯřķƒŀȯẇ ȧŭŧȯḿȧŧīȯƞş. ················〗",
+      "editorTitle": "〖Ẇȯřķƒŀȯẇ Ḗḓīŧȯř ······〗",
+      "editorDescription": "〖Ƈħȯȯşḗ ȧ ẇȯřķƒŀȯẇ ŧȯ ḗḓīŧ ȯř ƈřḗȧŧḗ ȧ ƞḗẇ ẇȯřķƒŀȯẇ. ·····················〗"
     },
     "controlPanel": {
       "tabs": {
-        "schedules": "55555",
-        "runs": "55555",
-        "events": "55555",
-        "eventCatalog": "55555",
-        "deadLetter": "55555"
+        "schedules": "〖Şƈħḗḓŭŀḗş ····〗",
+        "runs": "〖Řŭƞş ··〗",
+        "events": "〖Ḗṽḗƞŧş ···〗",
+        "eventCatalog": "〖Ḗṽḗƞŧ Ƈȧŧȧŀȯɠ ······〗",
+        "deadLetter": "〖Ḓḗȧḓ Ŀḗŧŧḗř ·····〗"
       },
       "quota": {
-        "consumedLabel": "55555",
-        "consumedUnit": "55555",
-        "loading": "55555",
-        "planLimit": "55555 {{limit}} 55555",
-        "remainingLabel": "55555",
-        "remainingUnit": "55555",
-        "resetsOn": "55555 {{date}} 55555",
-        "title": "55555",
-        "unavailable": "55555",
-        "unlimitedPlan": "55555",
-        "unlimitedRemaining": "55555"
+        "consumedLabel": "〖Ƈȯƞşŭḿḗḓ ····〗",
+        "consumedUnit": "〖ƈȯƞşŭḿḗḓ ····〗",
+        "loading": "〖Ŀȯȧḓīƞɠ... ····〗",
+        "planLimit": "〖{{limit}} ŀīḿīŧ ······〗",
+        "remainingLabel": "〖Řḗḿȧīƞīƞɠ ····〗",
+        "remainingUnit": "〖řḗḿȧīƞīƞɠ ····〗",
+        "resetsOn": "〖Řḗşḗŧş {{date}} ······〗",
+        "title": "〖Ẇȯřķƒŀȯẇ ȧƈŧīȯƞş ·······〗",
+        "unavailable": "〖Ŭƞȧṽȧīŀȧƀŀḗ ·····〗",
+        "unlimitedPlan": "〖Ŭƞŀīḿīŧḗḓ ƥŀȧƞ ······〗",
+        "unlimitedRemaining": "〖Ŭƞŀīḿīŧḗḓ ····〗"
       }
     },
     "toolbar": {
-      "backToList": "55555",
-      "newWorkflow": "55555",
-      "saveDraft": "55555",
-      "saving": "55555",
-      "publish": "55555",
-      "publishing": "55555",
-      "run": "55555",
-      "previewOnly": "55555",
+      "backToList": "〖Ɓȧƈķ ŧȯ ẇȯřķƒŀȯẇş ·······〗",
+      "newWorkflow": "〖Ƞḗẇ Ẇȯřķƒŀȯẇ ·····〗",
+      "saveDraft": "〖Şȧṽḗ Ḓřȧƒŧ ····〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗",
+      "publish": "〖Ƥŭƀŀīşħ ···〗",
+      "publishing": "〖Ƥŭƀŀīşħīƞɠ... ······〗",
+      "run": "〖Řŭƞ ··〗",
+      "previewOnly": "〖Ƥřḗṽīḗẇ ȯƞŀẏ ŭƞŧīŀ ȧ ṽḗřşīȯƞ īş ƥŭƀŀīşħḗḓ. ·················〗",
       "validation": {
-        "lastValidated": "55555 {{timestamp}} 55555",
-        "unknown": "55555"
+        "lastValidated": "〖Ŀȧşŧ ṽȧŀīḓȧŧḗḓ: {{timestamp}} ············〗",
+        "unknown": "〖Ṽȧŀīḓȧŧīȯƞ şŧȧŧŭş ŭƞķƞȯẇƞ ··········〗"
       }
     },
     "form": {
-      "nameLabel": "55555",
-      "versionLabel": "55555",
-      "descriptionLabel": "55555",
-      "latestPublishedVersion": "55555 {{version}} 55555",
-      "triggerTypeLabel": "55555",
-      "triggerTypePlaceholder": "55555",
-      "triggerTypeHelp": "55555",
-      "manualTriggerNote": "55555",
-      "eventCategoryLabel": "55555",
-      "eventLabel": "55555",
-      "selectEventCategory": "55555",
-      "selectEvent": "55555",
-      "selectCategoryFirst": "55555",
-      "inputDataLabel": "55555",
-      "inputDataEvent": "55555",
-      "inputDataTimePrefix": "55555",
-      "inputDataManualPrefix": "55555",
-      "inputDataManualSuffix": "55555",
-      "triggerMappingRequired": "55555",
-      "schemaLocked": "55555",
-      "schemaAutoSelected": "55555",
-      "schemaSuffixClock": "55555",
-      "schemaSuffixPinned": "55555",
-      "chooseTriggerHint": "55555",
-      "schemaLoadErrorPrefix": "55555",
-      "schemaLoadErrorSuffix": "55555",
-      "draftDifferent": "55555",
-      "publishedUsesPrefix": "55555",
-      "draftResolvesTo": "55555",
-      "lockToPublished": "55555",
-      "advancedSchemaSettings": "55555",
-      "inferredSchemaPrefix": "55555",
-      "noSchemaInferred": "55555",
-      "unknownSchemaRef": "55555",
-      "workflowStepsHeading": "55555",
-      "workflowStepsListHint": "55555",
-      "workflowStepsGraphHint": "55555",
-      "workflowStepsViewAria": "55555",
-      "warningsCount": "55555 {{count}} 55555"
+      "nameLabel": "〖Ẇȯřķƒŀȯẇ ƞȧḿḗ ······〗",
+      "versionLabel": "〖Ṽḗřşīȯƞ ···〗",
+      "descriptionLabel": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "latestPublishedVersion": "〖Ŀȧŧḗşŧ ƥŭƀŀīşħḗḓ ṽḗřşīȯƞ: {{version}} ···············〗",
+      "triggerTypeLabel": "〖Ŧřīɠɠḗř ŧẏƥḗ ·····〗",
+      "triggerTypePlaceholder": "〖Şḗŀḗƈŧ ŧřīɠɠḗř ŧẏƥḗ ········〗",
+      "triggerTypeHelp": "〖Ƈħȯȯşḗ ẇħḗŧħḗř ŧħīş ẇȯřķƒŀȯẇ şŧȧřŧş ḿȧƞŭȧŀŀẏ ȯř ƒřȯḿ ȧƞ ḗṽḗƞŧ. Řḗŭşȧƀŀḗ şƈħḗḓŭŀḗş ȧřḗ ḿȧƞȧɠḗḓ īƞ ŧħḗ Ẇȯřķƒŀȯẇ Ƈȯƞŧřȯŀ Ƥȧƞḗŀ. ··················································〗",
+      "manualTriggerNote": "〖Ŧħīş ẇȯřķƒŀȯẇ ħȧş ƞȯ ŧřīɠɠḗř. Īŧ ƈȧƞ şŧīŀŀ ƀḗ řŭƞ ḿȧƞŭȧŀŀẏ ȧƞḓ şƈħḗḓŭŀḗḓ ƒřȯḿ ŧħḗ Ẇȯřķƒŀȯẇ Ƈȯƞŧřȯŀ Ƥȧƞḗŀ ȯƞƈḗ īŧ ħȧş ȧ ƥīƞƞḗḓ ƥȧẏŀȯȧḓ şƈħḗḿȧ ȧƞḓ ȧ ƥŭƀŀīşħḗḓ ṽḗřşīȯƞ. ··································································〗",
+      "eventCategoryLabel": "〖Ḗṽḗƞŧ ƈȧŧḗɠȯřẏ ······〗",
+      "eventLabel": "〖Ḗṽḗƞŧ ··〗",
+      "selectEventCategory": "〖Şḗŀḗƈŧ ḗṽḗƞŧ ƈȧŧḗɠȯřẏ ·········〗",
+      "selectEvent": "〖Şḗŀḗƈŧ ḗṽḗƞŧ ·····〗",
+      "selectCategoryFirst": "〖Şḗŀḗƈŧ ƈȧŧḗɠȯřẏ ƒīřşŧ ·········〗",
+      "inputDataLabel": "〖Ẇȯřķƒŀȯẇ īƞƥŭŧ ḓȧŧȧ ········〗",
+      "inputDataEvent": "〖Ẏȯŭř şŧḗƥş řḗȧḓ ḓȧŧȧ ƒřȯḿ ŧħḗ şḗŀḗƈŧḗḓ ŧřīɠɠḗř. ···················〗",
+      "inputDataTimePrefix": "〖Ŧħīş ẇȯřķƒŀȯẇ řḗƈḗīṽḗş ȧ ƒīẋḗḓ şẏƞŧħḗŧīƈ ƈŀȯƈķ ƥȧẏŀȯȧḓ. Ŧħḗ ƈȯƞŧřȧƈŧ īş ƥīƞƞḗḓ ŧȯ ·································〗",
+      "inputDataManualPrefix": "〖Ƞȯ ŧřīɠɠḗř ŭşḗş ······〗",
+      "inputDataManualSuffix": "〖ƀẏ ḓḗƒȧŭŀŧ. Ƈħȧƞɠḗ īŧ īƞ Ȧḓṽȧƞƈḗḓ şƈħḗḿȧ şḗŧŧīƞɠş īƒ ŧħīş ẇȯřķƒŀȯẇ ƞḗḗḓş ȧ ḓīƒƒḗřḗƞŧ ḿȧƞŭȧŀ ƈȯƞŧřȧƈŧ. ·········································〗",
+      "triggerMappingRequired": "〖Ŧřīɠɠḗř ḿȧƥƥīƞɠ īş řḗʠŭīřḗḓ. Ȯƥḗƞ Ȧḓṽȧƞƈḗḓ şƈħḗḿȧ şḗŧŧīƞɠş ŧȯ ƈȯƞƒīɠŭřḗ īŧ. ······························〗",
+      "schemaLocked": "〖Şƈħḗḿȧ ṽḗřşīȯƞ ŀȯƈķḗḓ ·········〗",
+      "schemaAutoSelected": "〖Ȧŭŧȯ-şḗŀḗƈŧḗḓ ƒřȯḿ ŧřīɠɠḗř ···········〗",
+      "schemaSuffixClock": "〖 ŧȯ ŧħḗ ƒīẋḗḓ ƈŀȯƈķ ƥȧẏŀȯȧḓ ƈȯƞŧřȧƈŧ. ···············〗",
+      "schemaSuffixPinned": "〖 ŧȯ ķḗḗƥ ŧħīş ẇȯřķƒŀȯẇ şŧȧƀŀḗ īƒ ŧřīɠɠḗř şƈħḗḿȧş ƈħȧƞɠḗ. ·······················〗",
+      "chooseTriggerHint": "〖Ƈħȯȯşḗ ȧ ŧřīɠɠḗř ŧȯ ḓḗƒīƞḗ ȧṽȧīŀȧƀŀḗ ƒīḗŀḓş. ··················〗",
+      "schemaLoadErrorPrefix": "〖Ẇḗ ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ şƈħḗḿȧ īƞƒȯřḿȧŧīȯƞ ƒȯř ················〗",
+      "schemaLoadErrorSuffix": "〖Ƈħḗƈķ ŧħḗ ḗṽḗƞŧ ƈȧŧȧŀȯɠ ḗƞŧřẏ. ············〗",
+      "draftDifferent": "〖Ḓřȧƒŧ ƈȯƞŧřȧƈŧ ḓīƒƒḗřş ƒřȯḿ ƥŭƀŀīşħḗḓ ···············〗",
+      "publishedUsesPrefix": "〖Ŧħḗ ƥŭƀŀīşħḗḓ ṽḗřşīȯƞ ŭşḗş ···········〗",
+      "draftResolvesTo": "〖Ŧħīş ḓřȧƒŧ ƈŭřřḗƞŧŀẏ řḗşȯŀṽḗş ŧȯ ·············〗",
+      "lockToPublished": "〖Ŀȯƈķ ŧȯ ƥŭƀŀīşħḗḓ ƈȯƞŧřȧƈŧ ···········〗",
+      "advancedSchemaSettings": "〖Ȧḓṽȧƞƈḗḓ şƈħḗḿȧ şḗŧŧīƞɠş ··········〗",
+      "inferredSchemaPrefix": "〖Ƈŭřřḗƞŧ īƞƒḗřřḗḓ şƈħḗḿȧ: ··········〗",
+      "noSchemaInferred": "〖Ƞȯ şƈħḗḿȧ īƞƒḗřřḗḓ ẏḗŧ. ··········〗",
+      "unknownSchemaRef": "〖Ŭƞķƞȯẇƞ şƈħḗḿȧ řḗƒ. Ȯƥḗƞ Ȧḓṽȧƞƈḗḓ şƈħḗḿȧ şḗŧŧīƞɠş ȧƞḓ ƈħȯȯşḗ ȧ ṽȧŀīḓ şƈħḗḿȧ ṽḗřşīȯƞ. ··································〗",
+      "workflowStepsHeading": "〖Ẇȯřķƒŀȯẇ Şŧḗƥş ······〗",
+      "workflowStepsListHint": "〖Ḓřȧɠ şŧḗƥş ŧȯ řḗȯřḓḗř ȯř ḿȯṽḗ ƀḗŧẇḗḗƞ ƥīƥḗş. ··················〗",
+      "workflowStepsGraphHint": "〖Ƥȧƞ/ẑȯȯḿ ŧħḗ ɠřȧƥħ. Ɓřȧƞƈħḗş řḗƞḓḗř ȧş şḗƥȧřȧŧḗ ŀȧƞḗş. ······················〗",
+      "workflowStepsViewAria": "〖Ẇȯřķƒŀȯẇ şŧḗƥş ṽīḗẇ ········〗",
+      "warningsCount": "〖{{count}} ẇȧřƞīƞɠş ········〗"
     },
     "stepPanel": {
-      "readOnly": "55555",
-      "selectPrompt": "55555",
-      "readOnlyNotice": "55555",
-      "contractMode": "55555",
-      "catalogSchema": "55555"
+      "readOnly": "〖Řḗȧḓ-ȯƞŀẏ ȧƈƈḗşş: şŧḗƥ ḗḓīŧīƞɠ īş ḓīşȧƀŀḗḓ. ··················〗",
+      "selectPrompt": "〖Şḗŀḗƈŧ ȧ şŧḗƥ ŧȯ ḗḓīŧ īŧş ƈȯƞƒīɠŭřȧŧīȯƞ. ················〗",
+      "readOnlyNotice": "〖Řḗȧḓ-ȯƞŀẏ ȧƈƈḗşş: şŧḗƥ ḗḓīŧīƞɠ īş ḓīşȧƀŀḗḓ. ··················〗",
+      "contractMode": "〖Ƈȯƞŧřȧƈŧ ḿȯḓḗ: ······〗",
+      "catalogSchema": "〖Ƈȧŧȧŀȯɠ şƈħḗḿȧ: ······〗"
     },
     "stepConfig": {
-      "eventLabel": "55555",
-      "selectEvent": "55555",
-      "correlationKey": "55555",
-      "payloadFilters": "55555",
-      "addFilter": "55555",
-      "noFiltersConfigured": "55555",
-      "loadingEventSchema": "55555",
-      "timeoutMs": "55555",
-      "assignOnResume": "55555",
-      "fieldLabel": "55555",
-      "fieldPathLabel": "55555",
-      "dataContextToggle": "55555",
-      "condition": "55555",
-      "itemsExpression": "55555",
-      "itemVariable": "55555",
-      "concurrency": "55555",
-      "onItemError": "55555",
-      "captureErrorAs": "55555",
-      "workflowId": "55555",
-      "workflowVersion": "55555",
-      "inputMapping": "55555",
-      "outputMapping": "55555",
-      "value": "55555",
-      "mode": "55555",
-      "days": "55555",
-      "hours": "55555",
-      "minutes": "55555",
-      "seconds": "55555",
-      "untilInput": "55555",
-      "specificDateTime": "55555",
-      "untilExpression": "55555",
-      "returnNotice": "55555"
+      "eventLabel": "〖Ḗṽḗƞŧ ··〗",
+      "selectEvent": "〖Şḗŀḗƈŧ ḗṽḗƞŧ ·····〗",
+      "correlationKey": "〖Ƈȯřřḗŀȧŧīȯƞ Ķḗẏ Ḗẋƥřḗşşīȯƞ ···········〗",
+      "payloadFilters": "〖Ƥȧẏŀȯȧḓ Ƒīŀŧḗřş ······〗",
+      "addFilter": "〖Ȧḓḓ ƒīŀŧḗř ····〗",
+      "noFiltersConfigured": "〖Ƞȯ ƒīŀŧḗřş ƈȯƞƒīɠŭřḗḓ. ·········〗",
+      "loadingEventSchema": "〖Ŀȯȧḓīƞɠ ḗṽḗƞŧ şƈħḗḿȧ ƒīḗŀḓş... ············〗",
+      "timeoutMs": "〖Ŧīḿḗȯŭŧ (ḿş) ·····〗",
+      "assignOnResume": "〖Ȧşşīɠƞ ȯƞ řḗşŭḿḗ ·······〗",
+      "fieldLabel": "〖Ƒīḗŀḓ ··〗",
+      "fieldPathLabel": "〖Ƒīḗŀḓ ƥȧŧħ ····〗",
+      "dataContextToggle": "〖Ẇħȧŧ ḓȧŧȧ ƈȧƞ Ī ȧƈƈḗşş ħḗřḗ? ············〗",
+      "condition": "〖Ƈȯƞḓīŧīȯƞ ····〗",
+      "itemsExpression": "〖Īŧḗḿş ḗẋƥřḗşşīȯƞ ·······〗",
+      "itemVariable": "〖Īŧḗḿ ṽȧřīȧƀŀḗ ······〗",
+      "concurrency": "〖Ƈȯƞƈŭřřḗƞƈẏ ·····〗",
+      "onItemError": "〖Ȯƞ īŧḗḿ ḗřřȯř ······〗",
+      "captureErrorAs": "〖Ƈȧƥŧŭřḗ ḗřřȯř ȧş ·······〗",
+      "workflowId": "〖Ẇȯřķƒŀȯẇ ĪḒ ·····〗",
+      "workflowVersion": "〖Ẇȯřķƒŀȯẇ ṽḗřşīȯƞ ·······〗",
+      "inputMapping": "〖Īƞƥŭŧ ḿȧƥƥīƞɠ ······〗",
+      "outputMapping": "〖Ȯŭŧƥŭŧ ḿȧƥƥīƞɠ ······〗",
+      "value": "〖Ṽȧŀŭḗ ··〗",
+      "mode": "〖Ḿȯḓḗ ··〗",
+      "days": "〖Ḓȧẏş ··〗",
+      "hours": "〖Ħȯŭřş ··〗",
+      "minutes": "〖Ḿīƞŭŧḗş ···〗",
+      "seconds": "〖Şḗƈȯƞḓş ···〗",
+      "untilInput": "〖Ŭƞŧīŀ īƞƥŭŧ ·····〗",
+      "specificDateTime": "〖Şƥḗƈīƒīƈ ḓȧŧḗ & ŧīḿḗ ········〗",
+      "untilExpression": "〖Ŭƞŧīŀ ḗẋƥřḗşşīȯƞ ·······〗",
+      "returnNotice": "〖Řḗŧŭřƞ şŧȯƥş ẇȯřķƒŀȯẇ ḗẋḗƈŭŧīȯƞ. ·············〗"
     },
     "mappingExpr": {
-      "add": "55555",
-      "remove": "55555",
-      "empty": "55555",
-      "expressionLabel": "55555"
+      "add": "〖Ȧḓḓ ··〗",
+      "remove": "〖Řḗḿȯṽḗ ···〗",
+      "empty": "〖Ƞȯ ḿȧƥƥīƞɠş ẏḗŧ. ·······〗",
+      "expressionLabel": "〖Ḗẋƥřḗşşīȯƞ ····〗"
     },
     "schemaForm": {
-      "sectionTitle": "55555",
-      "stepSettings": "55555",
-      "missingRequired": "55555 {{fields}} 55555"
+      "sectionTitle": "〖Ƞȯḓḗ Ƈȯƞƒīɠŭřȧŧīȯƞ ········〗",
+      "stepSettings": "〖Şŧḗƥ şḗŧŧīƞɠş ······〗",
+      "missingRequired": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ: {{fields}} ············〗"
     },
     "fieldMetadata": {
       "actionId": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ȧƈŧīȯƞ ···〗",
+        "description": "〖Ŧħḗ ȧƈŧīȯƞ ŧȯ īƞṽȯķḗ ········〗"
       },
       "version": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ṽḗřşīȯƞ ···〗",
+        "description": "〖Ȧƈŧīȯƞ ṽḗřşīȯƞ ƞŭḿƀḗř ·········〗"
       },
       "inputMapping": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Īƞƥŭŧ Ḿȧƥƥīƞɠ ······〗",
+        "description": "〖Ḿȧƥ ḓȧŧȧ ŧȯ ȧƈŧīȯƞ īƞƥŭŧş ··········〗"
       },
       "saveAs": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Şȧṽḗ Řḗşŭŀŧ Ȧş ······〗",
+        "description": "〖Ṽȧřīȧƀŀḗ ƞȧḿḗ ȯř ȧşşīɠƞḿḗƞŧ ƥȧŧħ (ḗ.ɠ., řḗşŭŀŧ, ṽȧřş.řḗşŭŀŧ, ƥȧẏŀȯȧḓ.řḗşŭŀŧ) ·······························〗"
       },
       "idempotencyKey": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Īḓḗḿƥȯŧḗƞƈẏ Ķḗẏ ······〗",
+        "description": "〖Ḗẋƥřḗşşīȯƞ ŧħȧŧ ƥřȯḓŭƈḗş ȧ ŭƞīʠŭḗ ķḗẏ ŧȯ ƥřḗṽḗƞŧ ḓŭƥŀīƈȧŧḗ ḗẋḗƈŭŧīȯƞş. Īƒ ŧħḗ şȧḿḗ ķḗẏ īş şḗḗƞ ŧẇīƈḗ, ŧħḗ ƈȧƈħḗḓ řḗşŭŀŧ īş řḗŧŭřƞḗḓ. ·····················································〗"
       },
       "onError": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ḗřřȯř Ħȧƞḓŀīƞɠ ······〗",
+        "description": "〖Ħȯẇ ŧȯ ħȧƞḓŀḗ ḗřřȯřş ········〗"
       },
       "eventName": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ḗṽḗƞŧ Ƞȧḿḗ ····〗",
+        "description": "〖Ƞȧḿḗ ȯƒ ŧħḗ ḗṽḗƞŧ ŧȯ ẇȧīŧ ƒȯř ············〗"
       },
       "correlationKey": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ƈȯřřḗŀȧŧīȯƞ Ķḗẏ ······〗",
+        "description": "〖Ḗẋƥřḗşşīȯƞ ŧȯ ḿȧŧƈħ īƞƈȯḿīƞɠ ḗṽḗƞŧş ··············〗"
       },
       "filters": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ƥȧẏŀȯȧḓ Ƒīŀŧḗřş ······〗",
+        "description": "〖Ȯƥŧīȯƞȧŀ ḗṽḗƞŧ ƥȧẏŀȯȧḓ ƒīŀŧḗřş (ȦȠḒ şḗḿȧƞŧīƈş) ···················〗"
       },
       "timeoutMs": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŧīḿḗȯŭŧ (ḿş) ·····〗",
+        "description": "〖Ḿȧẋīḿŭḿ ŧīḿḗ ŧȯ ẇȧīŧ īƞ ḿīŀŀīşḗƈȯƞḓş ···············〗"
       },
       "mode": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ẇȧīŧ Ḿȯḓḗ ····〗",
+        "description": "〖Ḓŭřȧŧīȯƞ ȯř ŭƞŧīŀ ŧīḿḗ ·········〗"
       },
       "durationMs": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ḓŭřȧŧīȯƞ ····〗",
+        "description": "〖Řḗŀȧŧīṽḗ ḓŭřȧŧīȯƞ şŧȯřḗḓ īƞ ḿīŀŀīşḗƈȯƞḓş ················〗"
       },
       "until": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŭƞŧīŀ ··〗",
+        "description": "〖Ḗẋƥřḗşşīȯƞ řḗşȯŀṽīƞɠ ŧȯ ȧƞ ȧƀşȯŀŭŧḗ ḓȧŧḗ/ŧīḿḗ ··················〗"
       },
       "state": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Şŧȧŧḗ Ƞȧḿḗ ····〗",
+        "description": "〖Ŧħḗ şŧȧŧḗ ŧȯ ŧřȧƞşīŧīȯƞ ŧȯ ···········〗"
       },
       "assign": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ȧşşīɠƞḿḗƞŧş ·····〗",
+        "description": "〖Ṽȧřīȧƀŀḗş ŧȯ ȧşşīɠƞ ········〗"
       },
       "taskType": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŧȧşķ Ŧẏƥḗ ····〗",
+        "description": "〖Ŧẏƥḗ ȯƒ ħŭḿȧƞ ŧȧşķ ········〗"
       },
       "title": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŧīŧŀḗ ··〗",
+        "description": "〖Ŧȧşķ ŧīŧŀḗ şħȯẇƞ ŧȯ ȧşşīɠƞḗḗ ············〗"
       },
       "contextData": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ƈȯƞŧḗẋŧ Ḓȧŧȧ ·····〗",
+        "description": "〖Ȧḓḓīŧīȯƞȧŀ ḓȧŧȧ ŧȯ īƞƈŀŭḓḗ ẇīŧħ ŧħḗ ŧȧşķ ················〗"
       }
     },
     "actions": {
       "ai.infer": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Īƞƒḗř Şŧřŭƈŧŭřḗḓ Ȯŭŧƥŭŧ ··········〗",
+        "description": "〖Ɠḗƞḗřȧŧḗ şŧřŭƈŧŭřḗḓ ẇȯřķƒŀȯẇ ḓȧŧȧ ƒřȯḿ ȧ ƥřȯḿƥŧ ŭşīƞɠ ŧħḗ ƈȯƞƒīɠŭřḗḓ ȦĪ ƥřȯṽīḓḗř. ·································〗"
       },
       "store.get": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ɠḗŧ Şŧȯřḗḓ Ṽȧŀŭḗ ·······〗",
+        "description": "〖Řḗȧḓ ȧ ƥḗřşīşŧḗḓ ẇȯřķƒŀȯẇ ķḗẏ/ṽȧŀŭḗ ḗƞŧřẏ. ·················〗"
       },
       "store.set": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Şḗŧ Şŧȯřḗḓ Ṽȧŀŭḗ ·······〗",
+        "description": "〖Ƥḗřşīşŧ ȧ ẇȯřķƒŀȯẇ ķḗẏ/ṽȧŀŭḗ ḗƞŧřẏ. ··············〗"
       },
       "store.delete": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ḓḗŀḗŧḗ Şŧȯřḗḓ Ṽȧŀŭḗ ········〗",
+        "description": "〖Ḓḗŀḗŧḗ ȧ ƥḗřşīşŧḗḓ ẇȯřķƒŀȯẇ ķḗẏ/ṽȧŀŭḗ ḗƞŧřẏ. ··················〗"
       },
       "store.increment": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Īƞƈřḗḿḗƞŧ Şŧȯřḗḓ Ƞŭḿƀḗř ··········〗",
+        "description": "〖Ȧŧȯḿīƈȧŀŀẏ īƞƈřḗḿḗƞŧ ȧ ƥḗřşīşŧḗḓ ẇȯřķƒŀȯẇ ƞŭḿƀḗř. ····················〗"
       },
       "store.list": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŀīşŧ Şŧȯřḗḓ Ṽȧŀŭḗş ········〗",
+        "description": "〖Ŀīşŧ ƥḗřşīşŧḗḓ ẇȯřķƒŀȯẇ ķḗẏ/ṽȧŀŭḗ ḗƞŧřīḗş īƞ ȧ ƞȧḿḗşƥȧƈḗ. ·······················〗"
       },
       "store.list_namespaces": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŀīşŧ Şŧȯřḗ Ƞȧḿḗşƥȧƈḗş ·········〗",
+        "description": "〖Ŀīşŧ ẇȯřķƒŀȯẇ ḓȧŧȧ-şŧȯřḗ ƞȧḿḗşƥȧƈḗş ŭşḗḓ ƀẏ ŧħīş ŧḗƞȧƞŧ. ·······················〗"
       },
       "links.upsert": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŭƥşḗřŧ Ḗƞŧīŧẏ Ŀīƞķ ········〗",
+        "description": "〖Ƈřḗȧŧḗ ȯř ŭƥḓȧŧḗ ȧ ƥḗřşīşŧḗḓ ŀīƞķ ƀḗŧẇḗḗƞ ŧẇȯ ẇȯřķƒŀȯẇ ḗƞŧīŧīḗş. ··························〗"
       },
       "links.lookup": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŀȯȯķŭƥ Ḗƞŧīŧẏ Ŀīƞķş ········〗",
+        "description": "〖Ƒīƞḓ ƥḗřşīşŧḗḓ ḗƞŧīŧẏ ŀīƞķş ƀẏ şȯŭřƈḗ ḗƞŧīŧẏ ȧƞḓ ḓīřḗƈŧīȯƞ. ························〗"
       },
       "links.delete": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ḓḗŀḗŧḗ Ḗƞŧīŧẏ Ŀīƞķş ········〗",
+        "description": "〖Ḓḗŀḗŧḗ ƥḗřşīşŧḗḓ ḗƞŧīŧẏ ŀīƞķş ƀẏ şīḓḗ ȧƞḓ ȯƥŧīȯƞȧŀ řḗŀȧŧīȯƞ. ························〗"
       },
       "links.list": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŀīşŧ Ḗƞŧīŧẏ Ŀīƞķş ·······〗",
+        "description": "〖Ŀīşŧ ƥḗřşīşŧḗḓ ḗƞŧīŧẏ ŀīƞķş īƞ ȧ ƞȧḿḗşƥȧƈḗ. ··················〗"
       },
       "links.list_namespaces": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Ŀīşŧ Ŀīƞķ Ƞȧḿḗşƥȧƈḗş ········〗",
+        "description": "〖Ŀīşŧ ẇȯřķƒŀȯẇ ḗƞŧīŧẏ-ŀīƞķ ƞȧḿḗşƥȧƈḗş ŭşḗḓ ƀẏ ŧħīş ŧḗƞȧƞŧ. ·······················〗"
       }
     },
     "validation": {
       "badge": {
-        "invalid": "55555",
-        "warnings": "55555",
-        "valid": "55555",
-        "unknown": "55555"
+        "invalid": "〖Īƞṽȧŀīḓ ···〗",
+        "warnings": "〖Ẇȧřƞīƞɠş ····〗",
+        "valid": "〖Ṽȧŀīḓ ··〗",
+        "unknown": "〖Ŭƞķƞȯẇƞ ···〗"
       },
-      "errors": "55555"
+      "errors": "〖Ṽȧŀīḓȧŧīȯƞ ḗřřȯřş ·······〗"
     },
     "discardDialog": {
-      "title": "55555",
-      "message": "55555",
-      "confirm": "55555",
-      "cancel": "55555"
+      "title": "〖Ḓīşƈȧřḓ ŭƞşȧṽḗḓ ƈħȧƞɠḗş? ··········〗",
+      "message": "〖Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş īƞ ŧħīş ẇȯřķƒŀȯẇ. Ḓīşƈȧřḓ ŧħḗḿ ȧƞḓ ƈȯƞŧīƞŭḗ? ····························〗",
+      "confirm": "〖Ḓīşƈȧřḓ ƈħȧƞɠḗş ······〗",
+      "cancel": "〖Ķḗḗƥ ḗḓīŧīƞɠ ·····〗"
     },
     "eventSchemaDialog": {
-      "title": "55555",
-      "messageWithEvent": "55555 {{eventName}} 55555 {{schemaRef}} 55555",
-      "messageFallback": "55555",
-      "confirm": "55555",
-      "cancel": "55555"
+      "title": "〖Şẇīŧƈħ ẇȯřķƒŀȯẇ īƞƥŭŧ şƈħḗḿȧ? ············〗",
+      "messageWithEvent": "〖Ŧħḗ şḗŀḗƈŧḗḓ ḗṽḗƞŧ {{eventName}} ŭşḗş {{schemaRef}}. Ḓȯ ẏȯŭ ẇȧƞŧ ŧȯ şẇīŧƈħ ŧħīş ẇȯřķƒŀȯẇ ŧȯ ŧħȧŧ ḗṽḗƞŧ şƈħḗḿȧ? ············································〗",
+      "messageFallback": "〖Ḓȯ ẏȯŭ ẇȧƞŧ ŧȯ şẇīŧƈħ ŧħīş ẇȯřķƒŀȯẇ ŧȯ ŧħḗ şḗŀḗƈŧḗḓ ḗṽḗƞŧ şƈħḗḿȧ? ··························〗",
+      "confirm": "〖Ŭşḗ ḗṽḗƞŧ şƈħḗḿȧ ·······〗",
+      "cancel": "〖Ķḗḗƥ ƈŭřřḗƞŧ şƈħḗḿȧ ········〗"
     },
     "blockSection": {
-      "then": "55555",
-      "else": "55555",
-      "try": "55555",
-      "catch": "55555",
-      "body": "55555"
+      "then": "〖ŦĦḖȠ ··〗",
+      "else": "〖ḖĿŞḖ ··〗",
+      "try": "〖ŦŘẎ ··〗",
+      "catch": "〖ƇȦŦƇĦ ··〗",
+      "body": "〖ƁȮḒẎ ··〗"
     },
     "palette": {
-      "showPalette": "55555",
-      "hidePalette": "55555",
-      "searchPlaceholder": "55555",
-      "dragHint": "55555",
-      "chooseAction": "55555",
-      "returnsSummary": "55555 {{list}} 55555 {{suffix}} 55555",
+      "showPalette": "〖Şħȯẇ ƥȧŀḗŧŧḗ ·····〗",
+      "hidePalette": "〖Ħīḓḗ ƥȧŀḗŧŧḗ ·····〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ ···〗",
+      "dragHint": "〖Ḓřȯƥ ȯƞ ƥīƥḗŀīƞḗ ŧȯ ȧḓḓ ··········〗",
+      "chooseAction": "〖Ƈħȯȯşḗ ȧƞ ȧƈŧīȯƞ ȧƒŧḗř ȧḓḓīƞɠ ŧħīş şŧḗƥ ················〗",
+      "returnsSummary": "〖Řḗŧŭřƞş: {{list}}{{suffix}} ···········〗",
       "categories": {
-        "Control": "55555",
-        "Core": "55555",
-        "Transform": "55555",
-        "AI": "55555",
-        "Apps": "55555",
-        "Action": "55555",
-        "Email": "55555",
-        "Nodes": "55555"
+        "Control": "〖Ƈȯƞŧřȯŀ ···〗",
+        "Core": "〖Ƈȯřḗ ··〗",
+        "Transform": "〖Ŧřȧƞşƒȯřḿ ····〗",
+        "AI": "〖ȦĪ ·〗",
+        "Apps": "〖Ȧƥƥş ··〗",
+        "Action": "〖Ȧƈŧīȯƞ ···〗",
+        "Email": "〖Ḗḿȧīŀ ··〗",
+        "Nodes": "〖Ƞȯḓḗş ··〗"
       },
       "controlBlocks": {
         "control.if": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Īƒ ·〗",
+          "description": "〖Ƈȯƞḓīŧīȯƞȧŀ ƀřȧƞƈħīƞɠ ·········〗"
         },
         "control.forEach": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ƒȯř Ḗȧƈħ ····〗",
+          "description": "〖Īŧḗřȧŧḗ ȯṽḗř īŧḗḿş ········〗"
         },
         "control.tryCatch": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ŧřẏ/Ƈȧŧƈħ ····〗",
+          "description": "〖Ħȧƞḓŀḗ ḗřřȯřş ······〗"
         },
         "control.callWorkflow": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ƈȧŀŀ Ẇȯřķƒŀȯẇ ······〗",
+          "description": "〖Īƞṽȯķḗ ȧƞȯŧħḗř ẇȯřķƒŀȯẇ ··········〗"
         },
         "control.return": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Řḗŧŭřƞ ···〗",
+          "description": "〖Şŧȯƥ ḗẋḗƈŭŧīȯƞ ······〗"
         }
       },
       "nodes": {
         "state.set": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Şḗŧ Şŧȧŧḗ ····〗",
+          "description": "〖Ŭƥḓȧŧḗ ŧħḗ ẇȯřķƒŀȯẇ şŧȧŧḗ ··········〗"
         },
         "event.wait": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ẇȧīŧ ƒȯř Ḗṽḗƞŧ ······〗",
+          "description": "〖Ẇȧīŧ ƒȯř ȧƞ ḗẋŧḗřƞȧŀ ḗṽḗƞŧ ···········〗"
         },
         "time.wait": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ẇȧīŧ ƒȯř Ŧīḿḗ ······〗",
+          "description": "〖Ẇȧīŧ ƒȯř ȧ ḓŭřȧŧīȯƞ ȯř ŭƞŧīŀ ȧ ḓȧŧḗ/ŧīḿḗ ················〗"
         },
         "transform.assign": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ȧşşīɠƞ ···〗",
+          "description": "〖Ȧşşīɠƞ ṽȧŀŭḗş īƞŧȯ ƥȧẏŀȯȧḓ ȯř ṽȧřş ··············〗"
         },
         "action.call": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ƈȧŀŀ Ȧƈŧīȯƞ ·····〗",
+          "description": "〖Īƞṽȯķḗ ȧ řḗɠīşŧḗřḗḓ ȧƈŧīȯƞ ···········〗"
         },
         "email.parseBody": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ƥȧřşḗ Ḗḿȧīŀ Ɓȯḓẏ ·······〗",
+          "description": "〖Ƥȧřşḗ ȧƞḓ şȧƞīŧīẑḗ ḗḿȧīŀ řḗƥŀẏ ƀȯḓẏ ··············〗"
         },
         "email.renderCommentBlocks": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Řḗƞḓḗř Ƈȯḿḿḗƞŧ Ɓŀȯƈķş ·········〗",
+          "description": "〖Řḗƞḓḗř ƈȯḿḿḗƞŧ ƀŀȯƈķş ƒřȯḿ ḗḿȧīŀ ƈȯƞŧḗƞŧ ················〗"
         },
         "human.task": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ħŭḿȧƞ Ŧȧşķ ····〗",
+          "description": "〖Ƥȧŭşḗ ƒȯř ħŭḿȧƞ ŧȧşķ ƈȯḿƥŀḗŧīȯƞ ·············〗"
         }
       },
       "groups": {
         "ticket": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ŧīƈķḗŧ ···〗",
+          "description": "〖Ŧīƈķḗŧ ȧƈŧīȯƞş ······〗"
         },
         "contact": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ƈȯƞŧȧƈŧ ···〗",
+          "description": "〖Ƈȯƞŧȧƈŧ ȧƈŧīȯƞş ······〗"
         },
         "client": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ƈŀīḗƞŧ ···〗",
+          "description": "〖Ƈŀīḗƞŧ ȧƈŧīȯƞş ······〗"
         },
         "communication": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ƈȯḿḿŭƞīƈȧŧīȯƞ ······〗",
+          "description": "〖Ƈȯḿḿŭƞīƈȧŧīȯƞ ȧƈŧīȯƞş ·········〗"
         },
         "scheduling": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Şƈħḗḓŭŀīƞɠ ····〗",
+          "description": "〖Şƈħḗḓŭŀīƞɠ ȧƈŧīȯƞş ········〗"
         },
         "project": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ƥřȯĵḗƈŧ ···〗",
+          "description": "〖Ƥřȯĵḗƈŧ ȧƈŧīȯƞş ······〗"
         },
         "time": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ŧīḿḗ ··〗",
+          "description": "〖Ŧīḿḗ ȧƈŧīȯƞş ·····〗"
         },
         "crm": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖ƇŘḾ ··〗",
+          "description": "〖ƇŘḾ ȧƈŧīȯƞş ·····〗"
         },
         "transform": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ŧřȧƞşƒȯřḿ ····〗",
+          "description": "〖Ŧřȧƞşƒȯřḿ ȧƈŧīȯƞş ·······〗"
         },
         "ai": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖ȦĪ ·〗",
+          "description": "〖ȦĪ ȧƈŧīȯƞş ····〗"
         },
         "data-store": {
-          "label": "55555",
-          "description": "55555"
+          "label": "〖Ḓȧŧȧ Şŧȯřḗ ····〗",
+          "description": "〖Řḗȧḓ ȧƞḓ ẇřīŧḗ ḓŭřȧƀŀḗ ẇȯřķƒŀȯẇ şŧȧŧḗ ȧƈřȯşş řŭƞş. ····················〗"
         }
       }
     },
     "stepCard": {
-      "selectAriaLabel": "55555 {{label}} 55555",
+      "selectAriaLabel": "〖Şḗŀḗƈŧ {{label}} şŧḗƥ ·········〗",
       "badges": {
-        "if": "55555",
-        "loop": "55555",
-        "try": "55555",
-        "block": "55555",
-        "disconnected": "55555"
+        "if": "〖Īƒ ·〗",
+        "loop": "〖Ŀȯȯƥ ··〗",
+        "try": "〖Ŧřẏ ··〗",
+        "block": "〖Ɓŀȯƈķ ··〗",
+        "disconnected": "〖Ḓīşƈȯƞƞḗƈŧḗḓ ·····〗"
       },
       "mapping": {
-        "unmappedTitle": "55555 {{count}} 55555",
-        "unmappedBadge": "55555 {{count}} 55555",
-        "allMappedTitle": "55555 {{count}} 55555",
-        "allMappedAria": "55555"
+        "unmappedTitle": "〖{{count}} řḗʠŭīřḗḓ ƒīḗŀḓş ȧřḗ ŭƞḿȧƥƥḗḓ ················〗",
+        "unmappedBadge": "〖{{count}} řḗʠŭīřḗḓ ŭƞḿȧƥƥḗḓ ···········〗",
+        "allMappedTitle": "〖Ȧŀŀ {{count}} řḗʠŭīřḗḓ ƒīḗŀḓş ȧřḗ ḿȧƥƥḗḓ ················〗",
+        "allMappedAria": "〖Ȧŀŀ řḗʠŭīřḗḓ ƒīḗŀḓş ḿȧƥƥḗḓ ···········〗"
       },
-      "errorCount": "55555 {{count}} 55555 {{noun}} 55555",
-      "errorSingular": "55555",
-      "errorPlural": "55555",
+      "errorCount": "〖{{count}} {{noun}} ········〗",
+      "errorSingular": "〖ḗřřȯř ··〗",
+      "errorPlural": "〖ḗřřȯřş ···〗",
       "actions": {
-        "duplicate": "55555",
-        "duplicateAriaLabel": "55555 {{label}} 55555",
-        "delete": "55555"
+        "duplicate": "〖Ḓŭƥŀīƈȧŧḗ şŧḗƥ ······〗",
+        "duplicateAriaLabel": "〖Ḓŭƥŀīƈȧŧḗ {{label}} şŧḗƥ ··········〗",
+        "delete": "〖Ḓḗŀḗŧḗ şŧḗƥ ·····〗"
       },
-      "forEachSummary": "55555 {{itemVar}} 55555 {{concurrency}} 55555",
-      "disconnectedTitle": "55555 {{group}} 55555"
+      "forEachSummary": "〖Īŧḗḿ: {{itemVar}} | Ƈȯƞƈŭřřḗƞƈẏ: {{concurrency}} ····················〗",
+      "disconnectedTitle": "〖{{group}} īş ƞȯŧ ƈȯƞƞḗƈŧḗḓ; ŧħīş şŧḗƥ ẇīŀŀ ƒȧīŀ ȧŧ řŭƞ ŧīḿḗ ŭƞŧīŀ īŧ īş řḗƈȯƞƞḗƈŧḗḓ. ··································〗"
     },
     "toasts": {
-      "loadRegistriesFailed": "55555",
-      "loadPermissionsFailed": "55555",
-      "loadWorkflowsFailed": "55555",
-      "loadEventCatalogFailed": "55555",
-      "settingsUpdated": "55555",
-      "settingsUpdateFailed": "55555",
-      "created": "55555",
-      "saved": "55555",
-      "saveFailed": "55555",
-      "saveBeforePublish": "55555",
-      "published": "55555",
-      "publishFailed": "55555",
-      "publishValidationErrors": "55555",
-      "systemEventMissingSchema": "55555"
+      "loadRegistriesFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ẇȯřķƒŀȯẇ řḗɠīşŧřīḗş ··············〗",
+      "loadPermissionsFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥḗřḿīşşīȯƞş ···········〗",
+      "loadWorkflowsFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ẇȯřķƒŀȯẇş ··········〗",
+      "loadEventCatalogFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḗṽḗƞŧ ƈȧŧȧŀȯɠ ············〗",
+      "settingsUpdated": "〖Ẇȯřķƒŀȯẇ şḗŧŧīƞɠş ŭƥḓȧŧḗḓ ··········〗",
+      "settingsUpdateFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ẇȯřķƒŀȯẇ şḗŧŧīƞɠş ··············〗",
+      "created": "〖Ẇȯřķƒŀȯẇ ƈřḗȧŧḗḓ ·······〗",
+      "saved": "〖Ẇȯřķƒŀȯẇ şȧṽḗḓ ······〗",
+      "saveFailed": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ẇȯřķƒŀȯẇ ··········〗",
+      "saveBeforePublish": "〖Şȧṽḗ ŧħḗ ẇȯřķƒŀȯẇ ƀḗƒȯřḗ ƥŭƀŀīşħīƞɠ ··············〗",
+      "published": "〖Ẇȯřķƒŀȯẇ ƥŭƀŀīşħḗḓ ········〗",
+      "publishFailed": "〖Ƒȧīŀḗḓ ŧȯ ƥŭƀŀīşħ ẇȯřķƒŀȯẇ ···········〗",
+      "publishValidationErrors": "〖Ƥŭƀŀīşħ ƒȧīŀḗḓ - ƒīẋ ṽȧŀīḓȧŧīȯƞ ḗřřȯřş ················〗",
+      "systemEventMissingSchema": "〖Ŧħīş şẏşŧḗḿ ḗṽḗƞŧ īş ḿīşşīƞɠ ȧ ṽȧŀīḓ şƈħḗḿȧ ȧƞḓ ƈȧƞƞȯŧ ƀḗ şḗŀḗƈŧḗḓ ŭƞŧīŀ ƒīẋḗḓ. ································〗"
     },
     "propsPanel": {
-      "resizeAria": "55555",
-      "settingsTitle": "55555",
-      "settingsSubtitle": "55555",
-      "visibleToUsers": "55555",
-      "paused": "55555",
-      "concurrencyLimit": "55555",
-      "unlimited": "55555",
-      "autoPauseFailureRate": "55555",
-      "failureRateThreshold": "55555",
-      "minRunsBeforeAutoPause": "55555"
+      "resizeAria": "〖Řḗşīẑḗ ƥřȯƥḗřŧīḗş ƥȧƞḗŀ ··········〗",
+      "settingsTitle": "〖Ẇȯřķƒŀȯẇ Şḗŧŧīƞɠş ·······〗",
+      "settingsSubtitle": "〖Ṽīşīƀīŀīŧẏ, ƥȧŭşīƞɠ, ȧƞḓ şȧƒḗŧẏ ƈȯƞŧřȯŀş. ·················〗",
+      "visibleToUsers": "〖Ṽīşīƀŀḗ ŧȯ ŭşḗřş ·······〗",
+      "paused": "〖Ƥȧŭşḗḓ (şŧȯƥ ƞḗẇ řŭƞş) ·········〗",
+      "concurrencyLimit": "〖Ƈȯƞƈŭřřḗƞƈẏ ŀīḿīŧ ·······〗",
+      "unlimited": "〖Ŭƞŀīḿīŧḗḓ ····〗",
+      "autoPauseFailureRate": "〖Ȧŭŧȯ-ƥȧŭşḗ ȯƞ ƒȧīŀŭřḗ řȧŧḗ ···········〗",
+      "failureRateThreshold": "〖Ƒȧīŀŭřḗ řȧŧḗ ŧħřḗşħȯŀḓ ·········〗",
+      "minRunsBeforeAutoPause": "〖Ḿīƞ řŭƞş ƀḗƒȯřḗ ȧŭŧȯ-ƥȧŭşḗ ···········〗"
     },
     "trigger": {
-      "summary": "55555",
-      "actionNeeded": "55555",
-      "noMappingNeeded": "55555",
-      "sourceSchemaOverride": "55555",
-      "useCatalogSchemaDefault": "55555",
-      "useCatalogSchemaPlaceholder": "55555",
-      "noSchemasFound": "55555",
-      "mappingTitle": "55555",
-      "mappingNotRequired": "55555",
-      "mappingErrors": "55555",
-      "mappingWarnings": "55555"
+      "summary": "〖Ŧřīɠɠḗř şŭḿḿȧřẏ ······〗",
+      "actionNeeded": "〖Ȧƈŧīȯƞ ƞḗḗḓḗḓ ······〗",
+      "noMappingNeeded": "〖Ƞȯ ḿȧƥƥīƞɠ ƞḗḗḓḗḓ ·······〗",
+      "sourceSchemaOverride": "〖Ŧřīɠɠḗř şȯŭřƈḗ şƈħḗḿȧ ȯṽḗřřīḓḗ ············〗",
+      "useCatalogSchemaDefault": "〖Ŭşḗ ƈȧŧȧŀȯɠ şƈħḗḿȧ (ḓḗƒȧŭŀŧ) ············〗",
+      "useCatalogSchemaPlaceholder": "〖Ŭşḗ ƈȧŧȧŀȯɠ şƈħḗḿȧ… ········〗",
+      "noSchemasFound": "〖Ƞȯ şƈħḗḿȧş ƒȯŭƞḓ ·······〗",
+      "mappingTitle": "〖Ŧřīɠɠḗř ḿȧƥƥīƞɠ ······〗",
+      "mappingNotRequired": "〖Ḿȧƥƥīƞɠ: Ƞȯŧ řḗʠŭīřḗḓ. ·········〗",
+      "mappingErrors": "〖Ḿȧƥƥīƞɠ ḗřřȯřş ······〗",
+      "mappingWarnings": "〖Ḿȧƥƥīƞɠ ẇȧřƞīƞɠş ·······〗"
     },
     "schemaSettings": {
-      "lockVersion": "55555",
-      "lockVersionHelp": "55555",
-      "lockedVersion": "55555",
-      "manualRef": "55555",
-      "fixedForTimeTriggers": "55555",
-      "availableFieldsPreview": "55555",
-      "payloadContract": "55555",
-      "ref": "55555",
-      "loadFailed": "55555",
-      "notLoaded": "55555",
-      "loadPreviewFailed": "55555",
-      "selectVersionPlaceholder": "55555",
-      "payloadRefAdvanced": "55555"
+      "lockVersion": "〖Ŀȯƈķ şƈħḗḿȧ ṽḗřşīȯƞ ········〗",
+      "lockVersionHelp": "〖Ŀȯƈķ şƈħḗḿȧ ṽḗřşīȯƞ ŧȯ ƥřḗṽḗƞŧ ƒŭŧŭřḗ ŧřīɠɠḗř ƈħȧƞɠḗş ƒřȯḿ ȧƒƒḗƈŧīƞɠ ŧħīş ẇȯřķƒŀȯẇ. ··································〗",
+      "lockedVersion": "〖Ŀȯƈķḗḓ şƈħḗḿȧ ṽḗřşīȯƞ ·········〗",
+      "manualRef": "〖Ḿȧƞŭȧŀ şƈħḗḿȧ řḗƒ ·······〗",
+      "fixedForTimeTriggers": "〖Ƒīẋḗḓ ƒȯř ŧīḿḗ ŧřīɠɠḗřş ··········〗",
+      "availableFieldsPreview": "〖Ȧṽȧīŀȧƀŀḗ ƒīḗŀḓş ƥřḗṽīḗẇ ··········〗",
+      "payloadContract": "〖Ẇȯřķƒŀȯẇ ƥȧẏŀȯȧḓ ƈȯƞŧřȧƈŧ şƈħḗḿȧ ·············〗",
+      "ref": "〖Şƈħḗḿȧ řḗƒ: ·····〗",
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şƈħḗḿȧ. ·········〗",
+      "notLoaded": "〖Şƈħḗḿȧ ƞȯŧ ŀȯȧḓḗḓ ẏḗŧ. ·········〗",
+      "loadPreviewFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şƈħḗḿȧ ƥřḗṽīḗẇ. ············〗",
+      "selectVersionPlaceholder": "〖Şḗŀḗƈŧ şƈħḗḿȧ ṽḗřşīȯƞ… ·········〗",
+      "payloadRefAdvanced": "〖Ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒ (ȧḓṽȧƞƈḗḓ) ············〗"
     },
     "expression": {
-      "insertField": "55555",
-      "enterPlaceholder": "55555"
+      "insertField": "〖Īƞşḗřŧ ƒīḗŀḓ ·····〗",
+      "enterPlaceholder": "〖Ḗƞŧḗř ḗẋƥřḗşşīȯƞ... ········〗"
     },
     "dataContext": {
-      "availableDataAtStep": "55555",
-      "payload": "55555",
-      "noPayloadFields": "55555",
-      "payloadSchemaRefHint": "55555",
-      "stepOutputs": "55555",
-      "outputSchemaUnavailable": "55555",
-      "noFields": "55555",
-      "copyAllPaths": "55555",
-      "copyAllFieldPaths": "55555"
+      "availableDataAtStep": "〖Ȧṽȧīŀȧƀŀḗ Ḓȧŧȧ ȧŧ Ŧħīş Şŧḗƥ ···········〗",
+      "payload": "〖Ƥȧẏŀȯȧḓ ···〗",
+      "noPayloadFields": "〖Ƞȯ ƥȧẏŀȯȧḓ ƒīḗŀḓş ·······〗",
+      "payloadSchemaRefHint": "〖Şḗŧ 'Ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒ' ŧȯ ḓḗƒīƞḗ ƥȧẏŀȯȧḓ şŧřŭƈŧŭřḗ ·····················〗",
+      "stepOutputs": "〖Şŧḗƥ Ȯŭŧƥŭŧş (ṽȧřş) ········〗",
+      "outputSchemaUnavailable": "〖Ȯŭŧƥŭŧ şƈħḗḿȧ ƞȯŧ ȧṽȧīŀȧƀŀḗ ···········〗",
+      "noFields": "〖Ƞȯ ƒīḗŀḓş ····〗",
+      "copyAllPaths": "〖Ƈȯƥẏ ȧŀŀ ƥȧŧħş ······〗",
+      "copyAllFieldPaths": "〖Ƈȯƥẏ ȧŀŀ ƒīḗŀḓ ƥȧŧħş ········〗"
     },
-    "logoAlt": "55555",
+    "logoAlt": "〖Ẇȯřķƒŀȯẇ Ḗḓīŧȯř Ŀȯɠȯ ········〗",
     "nodes": {
-      "action": "55555",
-      "process": "55555",
-      "clientId": "55555",
-      "clientSecret": "55555",
-      "tenantId": "55555",
-      "userEmail": "55555"
+      "action": "〖Ȧƈŧīȯƞ: ···〗",
+      "process": "〖Ƥřȯƈḗşş: ····〗",
+      "clientId": "〖Ƈŀīḗƞŧ ĪḒ: ····〗",
+      "clientSecret": "〖Ƈŀīḗƞŧ Şḗƈřḗŧ: ······〗",
+      "tenantId": "〖Ŧḗƞȧƞŧ ĪḒ: ····〗",
+      "userEmail": "〖Ŭşḗř Ḗḿȧīŀ: ·····〗"
     }
   },
   "actionInputFieldInfo": {
-    "required": "55555",
-    "requiredTitle": "55555",
-    "requiredMissingTitle": "55555",
-    "format": "55555 {{value}} 55555",
-    "eachItem": "55555 {{value}} 55555",
-    "length": "55555 {{min}} 55555 {{max}} 55555",
-    "range": "55555 {{min}} 55555 {{max}} 55555",
-    "any": "55555",
-    "defaultPrefix": "55555",
-    "examplePrefix": "55555"
+    "required": "〖Řḗʠŭīřḗḓ ····〗",
+    "requiredTitle": "〖Řḗʠŭīřḗḓ ····〗",
+    "requiredMissingTitle": "〖Řḗʠŭīřḗḓ ƒīḗŀḓ īş ḿīşşīƞɠ ȧ ṽȧŀŭḗ ··············〗",
+    "format": "〖Ƒȯřḿȧŧ: {{value}} ·······〗",
+    "eachItem": "〖Ḗȧƈħ īŧḗḿ: {{value}} ········〗",
+    "length": "〖Ŀḗƞɠŧħ: {{min}} - {{max}} ··········〗",
+    "range": "〖Řȧƞɠḗ: {{min}} - {{max}} ··········〗",
+    "any": "〖ȧƞẏ ··〗",
+    "defaultPrefix": "〖Ḓḗƒȧŭŀŧ: ····〗",
+    "examplePrefix": "〖Ḗẋȧḿƥŀḗ: ····〗"
   },
   "actionInputSection": {
-    "heading": "55555"
+    "heading": "〖Ȧƈŧīȯƞ īƞƥŭŧş ······〗"
   },
   "actionInputFixedPicker": {
-    "loadingOptions": "55555",
-    "ticketSearchPlaceholder": "55555",
-    "ticketSelect": "55555",
-    "ticketTypeAbove": "55555",
+    "loadingOptions": "〖Ŀȯȧḓīƞɠ ȯƥŧīȯƞş... ········〗",
+    "ticketSearchPlaceholder": "〖Şḗȧřƈħ ŧīƈķḗŧş ƀẏ ƞŭḿƀḗř ȯř ŧīŧŀḗ ··············〗",
+    "ticketSelect": "〖Şḗŀḗƈŧ ŧīƈķḗŧ ······〗",
+    "ticketTypeAbove": "〖Ŧẏƥḗ ȧƀȯṽḗ ŧȯ şḗȧřƈħ ŧīƈķḗŧş ············〗",
     "placeholders": {
-      "board": "55555",
-      "client": "55555",
-      "contact": "55555",
-      "user": "55555",
-      "userOrTeam": "55555"
+      "board": "〖Şḗŀḗƈŧ Ɓȯȧřḓ ·····〗",
+      "client": "〖Şḗŀḗƈŧ Ƈŀīḗƞŧ ······〗",
+      "contact": "〖Şḗŀḗƈŧ Ƈȯƞŧȧƈŧ ······〗",
+      "user": "〖Şḗŀḗƈŧ Ŭşḗř ·····〗",
+      "userOrTeam": "〖Şḗŀḗƈŧ Ŭşḗř ȯř Ŧḗȧḿ ········〗"
     },
     "errors": {
-      "loadTicket": "55555",
-      "searchTickets": "55555",
-      "loadOptions": "55555"
+      "loadTicket": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ·········〗",
+      "searchTickets": "〖Ƒȧīŀḗḓ ŧȯ şḗȧřƈħ ŧīƈķḗŧş ··········〗",
+      "loadOptions": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȯƥŧīȯƞş ·········〗"
     },
     "dependencyHints": {
       "contact": {
-        "client_id": "55555"
+        "client_id": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ƈŀīḗƞŧ ƒīřşŧ ŧȯ ŀȯȧḓ ƈȯƞŧȧƈŧ ȯƥŧīȯƞş. ·····················〗"
       },
       "client-location": {
-        "client_id": "55555"
+        "client_id": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ƈŀīḗƞŧ ƒīřşŧ ŧȯ ŀȯȧḓ ŀȯƈȧŧīȯƞ ȯƥŧīȯƞş. ······················〗"
       },
       "ticket-category": {
-        "board_id": "55555"
+        "board_id": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ɓȯȧřḓ ƒīřşŧ ŧȯ ŀȯȧḓ ƈȧŧḗɠȯřẏ ȯƥŧīȯƞş. ·····················〗"
       },
       "ticket-status": {
-        "board_id": "55555",
-        "ticket_id": "55555"
+        "board_id": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ɓȯȧřḓ ƒīřşŧ ŧȯ ŀȯȧḓ şŧȧŧŭş ȯƥŧīȯƞş. ····················〗",
+        "ticket_id": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ŧīƈķḗŧ ƒīřşŧ ŧȯ ŀȯȧḓ şŧȧŧŭş ȯƥŧīȯƞş. ·····················〗"
       },
       "ticket-subcategory": {
-        "board_id": "55555",
-        "category_id": "55555"
+        "board_id": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ɓȯȧřḓ ƒīřşŧ ŧȯ ŀȯȧḓ şŭƀƈȧŧḗɠȯřẏ ȯƥŧīȯƞş. ······················〗",
+        "category_id": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ƈȧŧḗɠȯřẏ ƒīřşŧ ŧȯ ŀȯȧḓ şŭƀƈȧŧḗɠȯřẏ ȯƥŧīȯƞş. ························〗"
       }
     }
   },
   "serverErrors": {
-    "forbidden": "55555",
-    "unauthorized": "55555",
-    "notFound": "55555",
-    "workflowNotFound": "55555",
-    "workflowVersionNotFound": "55555",
-    "workflowVersionExists": "55555 {{version}} 55555",
-    "workflowValidationFailed": "55555",
-    "noPublishedVersions": "55555",
-    "workflowPaused": "55555",
-    "concurrencyLimitReached": "55555",
-    "rateLimitExceeded": "55555",
-    "payloadNotSerializable": "55555",
-    "payloadTooLarge": "55555",
-    "payloadValidationFailed": "55555",
-    "missingPayloadSchemaRef": "55555",
-    "missingSourcePayloadSchemaRef": "55555",
-    "triggerMappingRequired": "55555",
-    "runNotFailed": "55555",
-    "failedStepNotFound": "55555",
-    "noEventWaitFound": "55555",
-    "cancelTemporalRunFailed": "55555",
-    "noDefinitionToPublish": "55555",
-    "deleteActiveRunsBlocked": "55555",
-    "scheduleOneTimeRunAtRequired": "55555",
-    "scheduleOneTimeInvalidTimestamp": "55555",
-    "scheduleOneTimeMustBeFuture": "55555",
-    "scheduleOneTimeDayOfWeek": "55555",
-    "scheduleOneTimeBusinessHours": "55555",
-    "scheduleRecurringCronRequired": "55555",
-    "scheduleRecurringCronFields": "55555",
-    "scheduleRecurringTimezone": "55555",
-    "cronTooLong": "55555",
-    "cronUnsupportedCharacters": "55555",
-    "cronDayConflict": "55555",
-    "cronTooFrequent": "55555",
-    "schedulePublishedRequired": "55555",
-    "schedulePinnedSchemaRequired": "55555",
-    "scheduleSchemaNotRegistered": "55555",
-    "schedulePayloadInvalid": "55555",
-    "processEventFailed": "55555"
+    "forbidden": "〖Ẏȯŭ ḓȯƞ’ŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ƥḗřƒȯřḿ ŧħīş ȧƈŧīȯƞ. ····················〗",
+    "unauthorized": "〖Ẏȯŭ ḿŭşŧ ƀḗ şīɠƞḗḓ īƞ ŧȯ ƥḗřƒȯřḿ ŧħīş ȧƈŧīȯƞ. ··················〗",
+    "notFound": "〖Ƞȯŧ ƒȯŭƞḓ. ····〗",
+    "workflowNotFound": "〖Ẇȯřķƒŀȯẇ ƞȯŧ ƒȯŭƞḓ. ········〗",
+    "workflowVersionNotFound": "〖Ẇȯřķƒŀȯẇ ṽḗřşīȯƞ ƞȯŧ ƒȯŭƞḓ. ···········〗",
+    "workflowVersionExists": "〖Ẇȯřķƒŀȯẇ ṽḗřşīȯƞ {{version}} ȧŀřḗȧḓẏ ḗẋīşŧş. Řḗƒřḗşħ ȧƞḓ řḗŧřẏ. ··························〗",
+    "workflowValidationFailed": "〖Ẇȯřķƒŀȯẇ ṽȧŀīḓȧŧīȯƞ ƒȧīŀḗḓ. ···········〗",
+    "noPublishedVersions": "〖Ŧħīş ẇȯřķƒŀȯẇ ħȧş ƞȯ ƥŭƀŀīşħḗḓ ṽḗřşīȯƞş ẏḗŧ. ··················〗",
+    "workflowPaused": "〖Ŧħīş ẇȯřķƒŀȯẇ īş ƥȧŭşḗḓ. ··········〗",
+    "concurrencyLimitReached": "〖Ŧħḗ ẇȯřķƒŀȯẇ ƈȯƞƈŭřřḗƞƈẏ ŀīḿīŧ ħȧş ƀḗḗƞ řḗȧƈħḗḓ. ····················〗",
+    "rateLimitExceeded": "〖Ŧħḗ ẇȯřķƒŀȯẇ řŭƞ řȧŧḗ ŀīḿīŧ ħȧş ƀḗḗƞ ḗẋƈḗḗḓḗḓ. ···················〗",
+    "payloadNotSerializable": "〖Ŧħḗ ƥȧẏŀȯȧḓ ḿŭşŧ ƀḗ ĴŞȮȠ-şḗřīȧŀīẑȧƀŀḗ. ················〗",
+    "payloadTooLarge": "〖Ŧħḗ ƥȧẏŀȯȧḓ ḗẋƈḗḗḓş ŧħḗ ḿȧẋīḿŭḿ ȧŀŀȯẇḗḓ şīẑḗ. ··················〗",
+    "payloadValidationFailed": "〖Ŧħḗ ƥȧẏŀȯȧḓ ƒȧīŀḗḓ ṽȧŀīḓȧŧīȯƞ. ············〗",
+    "missingPayloadSchemaRef": "〖Ŧħīş ẇȯřķƒŀȯẇ ħȧş ƞȯ ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒḗřḗƞƈḗ. ···················〗",
+    "missingSourcePayloadSchemaRef": "〖Ŧħḗ ḗṽḗƞŧ ƥȧẏŀȯȧḓ īş ḿīşşīƞɠ ȧ şȯŭřƈḗ ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒḗřḗƞƈḗ. ··························〗",
+    "triggerMappingRequired": "〖Ȧ ŧřīɠɠḗř ḿȧƥƥīƞɠ īş řḗʠŭīřḗḓ ƒȯř ŧħīş řŭƞ. ··················〗",
+    "runNotFailed": "〖Ŧħḗ řŭƞ īş ƞȯŧ īƞ ȧ ƒȧīŀḗḓ şŧȧŧḗ. ··············〗",
+    "failedStepNotFound": "〖Ŧħḗ ƒȧīŀḗḓ şŧḗƥ ƈȯŭŀḓ ƞȯŧ ƀḗ ƒȯŭƞḓ. ··············〗",
+    "noEventWaitFound": "〖Ƞȯ ḗṽḗƞŧ ẇȧīŧ ẇȧş ƒȯŭƞḓ ƒȯř ŧħīş řŭƞ. ···············〗",
+    "cancelTemporalRunFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈȧƞƈḗŀ ŧħḗ ẇȯřķƒŀȯẇ řŭƞ ȯƞ ŧħḗ ḗẋḗƈŭŧīȯƞ ḗƞɠīƞḗ. ························〗",
+    "noDefinitionToPublish": "〖Ŧħḗřḗ īş ƞȯ ẇȯřķƒŀȯẇ ḓḗƒīƞīŧīȯƞ ŧȯ ƥŭƀŀīşħ. ··················〗",
+    "deleteActiveRunsBlocked": "〖Ŧħīş ẇȯřķƒŀȯẇ ħȧş ȧƈŧīṽḗ řŭƞş. Ƈȧƞƈḗŀ ȧŀŀ řŭƞş ƀḗƒȯřḗ ḓḗŀḗŧīƞɠ īŧ. ···························〗",
+    "scheduleOneTimeRunAtRequired": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗş řḗʠŭīřḗ ȧ řŭƞ-ȧŧ ŧīḿḗşŧȧḿƥ. ···················〗",
+    "scheduleOneTimeInvalidTimestamp": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗş řḗʠŭīřḗ ȧ ṽȧŀīḓ ĪŞȮ 8601 ŧīḿḗşŧȧḿƥ. ······················〗",
+    "scheduleOneTimeMustBeFuture": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗş ḿŭşŧ ƀḗ şƈħḗḓŭŀḗḓ īƞ ŧħḗ ƒŭŧŭřḗ. ·····················〗",
+    "scheduleOneTimeDayOfWeek": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗş ȯƞŀẏ şŭƥƥȯřŧ “Ȧƞẏ ḓȧẏ”. ·················〗",
+    "scheduleOneTimeBusinessHours": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗş ƈȧƞƞȯŧ ȯṽḗřřīḓḗ ƀŭşīƞḗşş-ħȯŭřş şḗŧŧīƞɠş. ························〗",
+    "scheduleRecurringCronRequired": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗş řḗʠŭīřḗ ȧ ƈřȯƞ ḗẋƥřḗşşīȯƞ. ···················〗",
+    "scheduleRecurringCronFields": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗş řḗʠŭīřḗ ȧ 5-ƒīḗŀḓ ƈřȯƞ ḗẋƥřḗşşīȯƞ. ······················〗",
+    "scheduleRecurringTimezone": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗş řḗʠŭīřḗ ȧ ṽȧŀīḓ ĪȦȠȦ ŧīḿḗẑȯƞḗ. ····················〗",
+    "cronTooLong": "〖Ŧħḗ ƈřȯƞ ḗẋƥřḗşşīȯƞ īş ŧȯȯ ŀȯƞɠ. ·············〗",
+    "cronUnsupportedCharacters": "〖Ŧħḗ ƈřȯƞ ḗẋƥřḗşşīȯƞ ƈȯƞŧȧīƞş ŭƞşŭƥƥȯřŧḗḓ ƈħȧřȧƈŧḗřş. ·····················〗",
+    "cronDayConflict": "〖Ȧ ƈřȯƞ ḗẋƥřḗşşīȯƞ ƈȧƞƞȯŧ şḗŧ ƀȯŧħ ḓȧẏ-ȯƒ-ḿȯƞŧħ ȧƞḓ ḓȧẏ-ȯƒ-ẇḗḗķ. ··························〗",
+    "cronTooFrequent": "〖Ŧħīş ƈřȯƞ şƈħḗḓŭŀḗ řŭƞş ŧȯȯ ƒřḗʠŭḗƞŧŀẏ (ḿīƞīḿŭḿ īƞŧḗřṽȧŀ īş 5 ḿīƞŭŧḗş). ·····························〗",
+    "schedulePublishedRequired": "〖Şƈħḗḓŭŀḗş ƈȧƞ ȯƞŀẏ ƀḗ ƈřḗȧŧḗḓ ƒȯř ẇȯřķƒŀȯẇş ẇīŧħ ȧ ƥŭƀŀīşħḗḓ ṽḗřşīȯƞ. ····························〗",
+    "schedulePinnedSchemaRequired": "〖Şƈħḗḓŭŀḗş ȧřḗ ȯƞŀẏ şŭƥƥȯřŧḗḓ ƒȯř ẇȯřķƒŀȯẇş ẇīŧħ ȧ ƥīƞƞḗḓ ƥȧẏŀȯȧḓ şƈħḗḿȧ. ·····························〗",
+    "scheduleSchemaNotRegistered": "〖Ŧħḗ ŀȧŧḗşŧ ƥŭƀŀīşħḗḓ ẇȯřķƒŀȯẇ ṽḗřşīȯƞ ḓȯḗş ƞȯŧ ħȧṽḗ ȧ řḗɠīşŧḗřḗḓ ƥīƞƞḗḓ ƥȧẏŀȯȧḓ şƈħḗḿȧ. ···································〗",
+    "schedulePayloadInvalid": "〖Ŧħḗ şƈħḗḓŭŀḗ ƥȧẏŀȯȧḓ ƒȧīŀḗḓ ṽȧŀīḓȧŧīȯƞ ȧɠȧīƞşŧ ŧħḗ ẇȯřķƒŀȯẇ ƥȧẏŀȯȧḓ şƈħḗḿȧ. ······························〗",
+    "processEventFailed": "〖Ƒȧīŀḗḓ ŧȯ ƥřȯƈḗşş ŧħḗ ẇȯřķƒŀȯẇ ḗṽḗƞŧ. ···············〗"
   },
   "taskInbox": {
-    "title": "55555",
-    "backToList": "55555",
+    "title": "〖Ŧȧşķ Īƞƀȯẋ ····〗",
+    "backToList": "〖← Ɓȧƈķ ŧȯ Ŧȧşķ Ŀīşŧ ········〗",
     "tabs": {
-      "pending": "55555",
-      "claimed": "55555",
-      "completed": "55555",
-      "all": "55555"
+      "pending": "〖Ƥḗƞḓīƞɠ ···〗",
+      "claimed": "〖Ƈŀȧīḿḗḓ ···〗",
+      "completed": "〖Ƈȯḿƥŀḗŧḗḓ ····〗",
+      "all": "〖Ȧŀŀ Ŧȧşķş ····〗"
     }
   },
   "taskList": {
     "pagination": {
-      "previous": "55555",
-      "next": "55555",
-      "pageLabel": "55555 {{current}} 55555 {{total}} 55555"
+      "previous": "〖Ƥřḗṽīȯŭş ····〗",
+      "next": "〖Ƞḗẋŧ ··〗",
+      "pageLabel": "〖Ƥȧɠḗ {{current}} ȯƒ {{total}} ············〗"
     },
     "errors": {
-      "loadFailed": "55555",
-      "claimFailed": "55555 {{error}} 55555",
-      "unclaimFailed": "55555 {{error}} 55555",
-      "unknown": "55555"
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧşķş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ················〗",
+      "claimFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈŀȧīḿ ŧȧşķ: {{error}} ·············〗",
+      "unclaimFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƞƈŀȧīḿ ŧȧşķ: {{error}} ··············〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ḗřřȯř ······〗"
     },
     "actions": {
-      "claim": "55555",
-      "unclaim": "55555"
+      "claim": "〖Ƈŀȧīḿ ··〗",
+      "unclaim": "〖Ŭƞƈŀȧīḿ ···〗"
     },
-    "noDueDate": "55555",
-    "overdueSuffix": "55555",
-    "empty": "55555",
-    "duePrefix": "55555"
+    "noDueDate": "〖Ƞȯ ḓŭḗ ḓȧŧḗ ·····〗",
+    "overdueSuffix": "〖(Ȯṽḗřḓŭḗ) ····〗",
+    "empty": "〖Ƞȯ ŧȧşķş ƒȯŭƞḓ ······〗",
+    "duePrefix": "〖Ḓŭḗ: ··〗"
   },
   "taskDetails": {
-    "notAvailable": "55555",
-    "notFound": "55555",
-    "retry": "55555",
-    "youPronoun": "55555",
-    "noForm": "55555",
-    "contextData": "55555",
-    "responseData": "55555",
+    "notAvailable": "〖Ƞ/Ȧ ··〗",
+    "notFound": "〖Ŧȧşķ ƞȯŧ ƒȯŭƞḓ ······〗",
+    "retry": "〖Řḗŧřẏ ··〗",
+    "youPronoun": "〖Ẏȯŭ ··〗",
+    "noForm": "〖Ƞȯ ƒȯřḿ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ŧȧşķ. ·············〗",
+    "contextData": "〖Ƈȯƞŧḗẋŧ Ḓȧŧȧ ·····〗",
+    "responseData": "〖Řḗşƥȯƞşḗ Ḓȧŧȧ ······〗",
     "fields": {
-      "status": "55555",
-      "priority": "55555",
-      "created": "55555",
-      "dueDate": "55555",
-      "claimedBy": "55555",
-      "completedBy": "55555"
+      "status": "〖Şŧȧŧŭş ···〗",
+      "priority": "〖Ƥřīȯřīŧẏ ····〗",
+      "created": "〖Ƈřḗȧŧḗḓ ···〗",
+      "dueDate": "〖Ḓŭḗ Ḓȧŧḗ ····〗",
+      "claimedBy": "〖Ƈŀȧīḿḗḓ Ɓẏ ····〗",
+      "completedBy": "〖Ƈȯḿƥŀḗŧḗḓ Ɓẏ ·····〗"
     },
     "tabs": {
-      "details": "55555",
-      "form": "55555",
-      "history": "55555"
+      "details": "〖Ḓḗŧȧīŀş ···〗",
+      "form": "〖Ƒȯřḿ ··〗",
+      "history": "〖Ħīşŧȯřẏ ···〗"
     },
     "actions": {
-      "claim": "55555",
-      "unclaim": "55555"
+      "claim": "〖Ƈŀȧīḿ Ŧȧşķ ····〗",
+      "unclaim": "〖Ŭƞƈŀȧīḿ Ŧȧşķ ·····〗"
     },
     "errors": {
-      "loadFailed": "55555",
-      "claimFailed": "55555 {{error}} 55555",
-      "unclaimFailed": "55555 {{error}} 55555",
-      "unknown": "55555"
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧşķ ḓḗŧȧīŀş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗",
+      "claimFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈŀȧīḿ ŧȧşķ: {{error}} ·············〗",
+      "unclaimFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƞƈŀȧīḿ ŧȧşķ: {{error}} ··············〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ḗřřȯř ······〗"
     }
   },
   "taskHistory": {
-    "empty": "55555",
-    "byPrefix": "55555",
-    "system": "55555",
-    "detailsLabel": "55555",
+    "empty": "〖Ƞȯ ħīşŧȯřẏ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ŧȧşķ. ··············〗",
+    "byPrefix": "〖Ɓẏ: ··〗",
+    "system": "〖Şẏşŧḗḿ ···〗",
+    "detailsLabel": "〖Ḓḗŧȧīŀş ···〗",
     "actions": {
-      "created": "55555",
-      "claimed": "55555",
-      "unclaimed": "55555",
-      "completed": "55555",
-      "canceled": "55555",
-      "expired": "55555"
+      "created": "〖Ƈřḗȧŧḗḓ ···〗",
+      "claimed": "〖Ƈŀȧīḿḗḓ ···〗",
+      "unclaimed": "〖Ŭƞƈŀȧīḿḗḓ ····〗",
+      "completed": "〖Ƈȯḿƥŀḗŧḗḓ ····〗",
+      "canceled": "〖Ƈȧƞƈḗŀḗḓ ····〗",
+      "expired": "〖Ḗẋƥīřḗḓ ···〗"
     },
     "errors": {
-      "loadFailed": "55555"
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧşķ ħīşŧȯřẏ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗"
     }
   },
   "taskForm": {
     "actions": {
-      "complete": "55555",
-      "cancel": "55555"
+      "complete": "〖Ƈȯḿƥŀḗŧḗ Ŧȧşķ ······〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗"
     }
   },
   "dynamicForm": {
     "actions": {
-      "submit": "55555",
-      "cancel": "55555"
+      "submit": "〖Şŭƀḿīŧ ···〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗"
     },
     "errors": {
-      "generic": "55555"
+      "generic": "〖Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ·······〗"
     }
   },
   "embeddedTaskInbox": {
-    "title": "55555",
-    "viewAll": "55555",
-    "backToTasks": "55555"
+    "title": "〖Ḿẏ Ŧȧşķş ····〗",
+    "viewAll": "〖Ṽīḗẇ Ȧŀŀ ····〗",
+    "backToTasks": "〖← Ɓȧƈķ ŧȯ Ŧȧşķş ······〗"
   },
   "actionButton": {
-    "processing": "55555",
-    "confirm": "55555",
-    "cancel": "55555",
-    "confirmTitle": "55555"
+    "processing": "〖Ƥřȯƈḗşşīƞɠ... ······〗",
+    "confirm": "〖Ƈȯƞƒīřḿ ···〗",
+    "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+    "confirmTitle": "〖Ƈȯƞƒīřḿ Ȧƈŧīȯƞ ······〗"
   },
   "stepNameField": {
-    "label": "55555"
+    "label": "〖Şŧḗƥ ƞȧḿḗ ····〗"
   },
   "stepSaveOutput": {
-    "toggleLabel": "55555",
-    "placeholder": "55555",
-    "copyPathTitle": "55555",
-    "accessibleAs": "55555"
+    "toggleLabel": "〖Şȧṽḗ ȯŭŧƥŭŧ ·····〗",
+    "placeholder": "〖ḗ.ɠ., ŧīƈķḗŧḒḗƒȧŭŀŧş ········〗",
+    "copyPathTitle": "〖Ƈȯƥẏ ƒŭŀŀ ƥȧŧħ ······〗",
+    "accessibleAs": "〖Ȧƈƈḗşşīƀŀḗ ȧş: ······〗"
   },
   "aiSchemaSection": {
-    "heading": "55555",
-    "headingDescription": "55555",
-    "modeSimple": "55555",
-    "modeAdvanced": "55555",
-    "addField": "55555",
-    "addNested": "55555",
-    "remove": "55555",
-    "nameLabel": "55555",
-    "answerType": "55555",
-    "arrayItems": "55555",
-    "required": "55555",
-    "descriptionLabel": "55555",
-    "objectItemFields": "55555",
-    "nestedFields": "55555",
-    "jsonSchemaLabel": "55555",
-    "advancedHelperText": "55555",
-    "validationHeading": "55555",
-    "advancedFallback": "55555",
-    "simpleModeUnsupported": "55555",
+    "heading": "〖ȦĪ řḗşƥȯƞşḗ ƒȯřḿȧŧ ········〗",
+    "headingDescription": "〖Ƈħȯȯşḗ ẇħȧŧ ŧħḗ ȦĪ řḗşƥȯƞşḗ şħȯŭŀḓ īƞƈŀŭḓḗ ƒȯř ŀȧŧḗř şŧḗƥş. ························〗",
+    "modeSimple": "〖Şīḿƥŀḗ ···〗",
+    "modeAdvanced": "〖Ȧḓṽȧƞƈḗḓ ····〗",
+    "addField": "〖Ȧḓḓ ƒīḗŀḓ ····〗",
+    "addNested": "〖Ȧḓḓ ƞḗşŧḗḓ ƒīḗŀḓ ·······〗",
+    "remove": "〖Řḗḿȯṽḗ ···〗",
+    "nameLabel": "〖Ƞȧḿḗ ··〗",
+    "answerType": "〖Ȧƞşẇḗř ŧẏƥḗ ·····〗",
+    "arrayItems": "〖Ȧřřȧẏ īŧḗḿş ·····〗",
+    "required": "〖Řḗʠŭīřḗḓ ····〗",
+    "descriptionLabel": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+    "objectItemFields": "〖Ȯƀĵḗƈŧ īŧḗḿ ƒīḗŀḓş ········〗",
+    "nestedFields": "〖Ƞḗşŧḗḓ ƒīḗŀḓş ······〗",
+    "jsonSchemaLabel": "〖ĴŞȮȠ Şƈħḗḿȧ ·····〗",
+    "advancedHelperText": "〖Ȧḓṽȧƞƈḗḓ ḿȯḓḗ şŭƥƥȯřŧş ȯƀĵḗƈŧ-řȯȯŧḗḓ şƈħḗḿȧş ƥŀŭş ƞḗşŧḗḓ ȯƀĵḗƈŧş, ȧřřȧẏş, ḓḗşƈřīƥŧīȯƞş, ƈȯƞşŧřȧīƞŧş, ȧƞḓ ȧḓḓīŧīȯƞȧŀƤřȯƥḗřŧīḗş. ···················································〗",
+    "validationHeading": "〖Şƈħḗḿȧ ṽȧŀīḓȧŧīȯƞ ·······〗",
+    "advancedFallback": "〖Ŧħīş şȧṽḗḓ şƈħḗḿȧ ŭşḗş ȧḓṽȧƞƈḗḓ ĴŞȮȠ Şƈħḗḿȧ ƒḗȧŧŭřḗş, şȯ īŧ īş şħȯẇƞ īƞ Ȧḓṽȧƞƈḗḓ ḿȯḓḗ. ···································〗",
+    "simpleModeUnsupported": "〖Ŧħīş şƈħḗḿȧ ƈȧƞƞȯŧ ƀḗ řḗƥřḗşḗƞŧḗḓ īƞ şīḿƥŀḗ ḿȯḓḗ. ····················〗",
     "errors": {
-      "jsonRequired": "55555"
+      "jsonRequired": "〖ȦĪ ȯŭŧƥŭŧ şƈħḗḿȧ ĴŞȮȠ īş řḗʠŭīřḗḓ. ··············〗"
     }
   },
   "composeText": {
-    "heading": "55555",
-    "headingDescription": "55555",
-    "addOutput": "55555",
-    "untitled": "55555",
-    "outputFallback": "55555 {{index}} 55555",
-    "moveUpAria": "55555 {{label}} 55555",
-    "moveDownAria": "55555 {{label}} 55555",
-    "deleteAria": "55555 {{label}} 55555",
-    "outputLabel": "55555",
-    "stableKeyLabel": "55555",
-    "keyHintSafe": "55555",
-    "keyHintInvalid": "55555",
-    "regenerate": "55555",
-    "validationHeading": "55555",
-    "downstreamPathLabel": "55555",
-    "pathFallback": "55555",
-    "copied": "55555",
-    "copyPath": "55555",
-    "contentHeading": "55555",
-    "contentDescription": "55555",
-    "insertReference": "55555",
-    "insertReferenceHeading": "55555",
+    "heading": "〖Ƈȯḿƥȯşḗ ŧḗẋŧ ȯŭŧƥŭŧş ········〗",
+    "headingDescription": "〖Ƈřḗȧŧḗ ȯƞḗ ȯř ḿȯřḗ ḿȧřķḓȯẇƞ ȯŭŧƥŭŧş ẇīŧħ şŧȧƀŀḗ ḓȯẇƞşŧřḗȧḿ řḗƒḗřḗƞƈḗ ķḗẏş. ······························〗",
+    "addOutput": "〖Ȧḓḓ ȯŭŧƥŭŧ ····〗",
+    "untitled": "〖Ŭƞŧīŧŀḗḓ ȯŭŧƥŭŧ ······〗",
+    "outputFallback": "〖ȯŭŧƥŭŧ {{index}} ·······〗",
+    "moveUpAria": "〖Ḿȯṽḗ {{label}} ŭƥ ·······〗",
+    "moveDownAria": "〖Ḿȯṽḗ {{label}} ḓȯẇƞ ········〗",
+    "deleteAria": "〖Ḓḗŀḗŧḗ {{label}} ·······〗",
+    "outputLabel": "〖Ȯŭŧƥŭŧ ŀȧƀḗŀ ·····〗",
+    "stableKeyLabel": "〖Şŧȧƀŀḗ ķḗẏ ····〗",
+    "keyHintSafe": "〖Ḓȯẇƞşŧřḗȧḿ-şȧƒḗ ķḗẏ ········〗",
+    "keyHintInvalid": "〖Ŭşḗ ŀȯẇḗřƈȧşḗ ŀḗŧŧḗřş, ƞŭḿƀḗřş, ȧƞḓ ŭƞḓḗřşƈȯřḗş ȯƞŀẏ. ······················〗",
+    "regenerate": "〖Řḗɠḗƞḗřȧŧḗ ····〗",
+    "validationHeading": "〖Ṽȧŀīḓȧŧīȯƞ ····〗",
+    "downstreamPathLabel": "〖Ḓȯẇƞşŧřḗȧḿ řḗƒḗřḗƞƈḗ ƥȧŧħ ··········〗",
+    "pathFallback": "〖Şȧṽḗ ȯŭŧƥŭŧ ŧȯ şḗḗ ȧ řḗƒḗřḗƞƈḗ ƥȧŧħ. ···············〗",
+    "copied": "〖Ƈȯƥīḗḓ ···〗",
+    "copyPath": "〖Ƈȯƥẏ ƥȧŧħ ····〗",
+    "contentHeading": "〖Ƈȯḿƥȯşḗ ƈȯƞŧḗƞŧ ······〗",
+    "contentDescription": "〖Ŭşḗ ḿȧřķḓȯẇƞ-şȧƒḗ ƒȯřḿȧŧŧīƞɠ ȧƞḓ īƞŀīƞḗ ẇȯřķƒŀȯẇ řḗƒḗřḗƞƈḗ ƈħīƥş. ··························〗",
+    "insertReference": "〖Īƞşḗřŧ řḗƒḗřḗƞƈḗ ·······〗",
+    "insertReferenceHeading": "〖Īƞşḗřŧ ẇȯřķƒŀȯẇ řḗƒḗřḗƞƈḗ ··········〗",
     "errors": {
-      "noCodeBlock": "55555"
+      "noCodeBlock": "〖Řḗƒḗřḗƞƈḗş ƈȧƞƞȯŧ ƀḗ īƞşḗřŧḗḓ īƞşīḓḗ ƈȯḓḗ ƀŀȯƈķş. Ḿȯṽḗ ŧħḗ ƈŭřşȯř ŧȯ ȧƞȯŧħḗř ƀŀȯƈķ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·······································〗"
     },
-    "placeholder": "55555",
-    "referenceHint": "55555"
+    "placeholder": "〖Ƈȯḿƥȯşḗ ḿȧřķḓȯẇƞ ŧḗẋŧ… ·········〗",
+    "referenceHint": "〖Řḗƒḗřḗƞƈḗş řḗƞḓḗř ȧş īƞŀīƞḗ ƈħīƥş ȧƞḓ ƥḗřşīşŧ ȧş ẇȯřķƒŀȯẇ-şȧƒḗ řḗƒḗřḗƞƈḗ ƞȯḓḗş. ································〗"
   },
   "referenceSelector": {
     "placeholders": {
-      "scope": "55555",
-      "step": "55555",
-      "field": "55555"
+      "scope": "〖Şḗŀḗƈŧ şȯŭřƈḗ şƈȯƥḗ... ·········〗",
+      "step": "〖Şḗŀḗƈŧ şŧḗƥ... ······〗",
+      "field": "〖Şḗŀḗƈŧ ƒīḗŀḓ... ······〗"
     }
   },
   "pipeline": {
-    "stepCount_one": "55555 {{count}} 55555",
-    "stepCount_other": "55555 {{count}} 55555",
-    "start": "55555",
-    "insertStepHere": "55555",
-    "emptyDisabled": "55555",
-    "emptySelectPrompt": "55555",
+    "stepCount_one": "〖({{count}} şŧḗƥ) ·······〗",
+    "stepCount_other": "〖({{count}} şŧḗƥş) ·······〗",
+    "start": "〖Şŧȧřŧ ··〗",
+    "insertStepHere": "〖Īƞşḗřŧ şŧḗƥ ħḗřḗ ·······〗",
+    "emptyDisabled": "〖Ƞȯ şŧḗƥş ẏḗŧ. ······〗",
+    "emptySelectPrompt": "〖Şḗŀḗƈŧ ȧ şŧḗƥ ƒřȯḿ ŧħḗ ƥȧƞḗŀ ŧȯ ɠḗŧ şŧȧřŧḗḓ. ··················〗",
     "patchSummary": {
-      "unchanged": "55555"
+      "unchanged": "〖ȯŧħḗř ƒīḗŀḓş ŭƞƈħȧƞɠḗḓ ·········〗"
     }
   },
   "expressionEditor": {
-    "ariaLabel": "55555",
-    "autocompleteAria": "55555",
-    "textAreaPlaceholder": "55555",
+    "ariaLabel": "〖Ḗẋƥřḗşşīȯƞ ḗḓīŧȯř ·······〗",
+    "autocompleteAria": "〖Ḗẋƥřḗşşīȯƞ ȧŭŧȯƈȯḿƥŀḗŧḗ şŭɠɠḗşŧīȯƞş ··············〗",
+    "textAreaPlaceholder": "〖Ḗƞŧḗř ĴŞȮȠȧŧȧ ḗẋƥřḗşşīȯƞ... ···········〗",
     "field": {
-      "placeholder": "55555",
-      "insertFieldPlaceholder": "55555"
+      "placeholder": "〖Ḗƞŧḗř ḗẋƥřḗşşīȯƞ... ········〗",
+      "insertFieldPlaceholder": "〖Īƞşḗřŧ ƒīḗŀḓ ·····〗"
     },
-    "clear": "55555",
-    "clearAriaLabel": "55555"
+    "clear": "〖Ƈŀḗȧř ··〗",
+    "clearAriaLabel": "〖Ƈŀḗȧř ḗẋƥřḗşşīȯƞ ·······〗"
   },
   "sourceDataTree": {
-    "searchPlaceholder": "55555",
+    "searchPlaceholder": "〖Şḗȧřƈħ ƒīḗŀḓş... ·······〗",
     "sections": {
-      "payload": "55555",
-      "vars": "55555",
-      "loopContext": "55555",
-      "workflowMeta": "55555",
-      "errorContext": "55555"
+      "payload": "〖Ƥȧẏŀȯȧḓ ···〗",
+      "vars": "〖Şŧḗƥ Ȯŭŧƥŭŧş (ṽȧřş) ········〗",
+      "loopContext": "〖Ŀȯȯƥ Ƈȯƞŧḗẋŧ ·····〗",
+      "workflowMeta": "〖Ẇȯřķƒŀȯẇ Ḿḗŧȧ ······〗",
+      "errorContext": "〖Ḗřřȯř Ƈȯƞŧḗẋŧ ······〗"
     },
     "vars": {
-      "emptyPrefix": "55555",
-      "saveOutput": "55555",
-      "emptyConjunction": "55555",
-      "assignStep": "55555",
-      "emptySuffix": "55555"
+      "emptyPrefix": "〖Ƞȯ ṽȧřş ẏḗŧ. Ŭşḗ ·······〗",
+      "saveOutput": "〖Şȧṽḗ ȯŭŧƥŭŧ ·····〗",
+      "emptyConjunction": "〖ȯř ȧƞ ··〗",
+      "assignStep": "〖Ȧşşīɠƞ ···〗",
+      "emptySuffix": "〖şŧḗƥ ŧȯ ƥȯƥŭŀȧŧḗ ·······〗"
     },
     "loop": {
-      "currentItem": "55555",
-      "loopIndex": "55555"
+      "currentItem": "〖ƈŭřřḗƞŧ īŧḗḿ ·····〗",
+      "loopIndex": "〖ŀȯȯƥ īƞḓḗẋ ····〗"
     }
   },
   "validationBadge": {
     "status": {
-      "valid": "55555",
-      "warning": "55555",
-      "error": "55555",
-      "incomplete": "55555"
+      "valid": "〖Ṽȧŀīḓ ··〗",
+      "warning": "〖Ẇȧřƞīƞɠş ····〗",
+      "error": "〖Ḗřřȯřş ···〗",
+      "incomplete": "〖Īƞƈȯḿƥŀḗŧḗ ····〗"
     },
     "tooltip": {
-      "valid": "55555",
-      "incomplete": "55555",
-      "mappingCount": "55555 {{mapped}} 55555 {{required}} 55555"
+      "valid": "〖Ȧŀŀ řḗʠŭīřḗḓ īƞƥŭŧş ȧřḗ ḿȧƥƥḗḓ ············〗",
+      "incomplete": "〖Ƈȯƞƒīɠŭřḗ īƞƥŭŧ ḿȧƥƥīƞɠş ··········〗",
+      "mappingCount": "〖{{mapped}} ȯƒ {{required}} řḗʠŭīřḗḓ ƒīḗŀḓş ḿȧƥƥḗḓ ····················〗"
     },
-    "openEditor": "55555",
-    "errorsHeading": "55555 {{count}} 55555",
-    "warningsHeading": "55555 {{count}} 55555",
-    "moreErrors": "55555 {{count}} 55555",
-    "moreWarnings": "55555 {{count}} 55555"
+    "openEditor": "〖Ȯƥḗƞ Ḿȧƥƥīƞɠ Ḗḓīŧȯř ········〗",
+    "errorsHeading": "〖Ḗřřȯřş ({{count}}) ········〗",
+    "warningsHeading": "〖Ẇȧřƞīƞɠş ({{count}}) ········〗",
+    "moreErrors": "〖+{{count}} ḿȯřḗ ḗřřȯřş ·········〗",
+    "moreWarnings": "〖+{{count}} ḿȯřḗ ẇȧřƞīƞɠş ··········〗"
   },
   "inputMappingEditor": {
-    "empty": "55555",
-    "browseSources": "55555",
-    "objectFields": "55555",
-    "itemTitle": "55555 {{index}} 55555",
-    "reset": "55555",
-    "addItem": "55555",
-    "fill": "55555",
-    "clearValues": "55555",
+    "empty": "〖Ŧħīş ȧƈŧīȯƞ ħȧş ƞȯ īƞƥŭŧ ƒīḗŀḓş. ·············〗",
+    "browseSources": "〖Ɓřȯẇşḗ şȯŭřƈḗş ······〗",
+    "objectFields": "〖Ȯƀĵḗƈŧ ƒīḗŀḓş ······〗",
+    "itemTitle": "〖Īŧḗḿ {{index}} ······〗",
+    "reset": "〖Řḗşḗŧ ··〗",
+    "addItem": "〖Ȧḓḓ īŧḗḿ ····〗",
+    "fill": "〖Ƒīŀŀ ··〗",
+    "clearValues": "〖Ƈŀḗȧř ṽȧŀŭḗş ·····〗",
     "askAi": {
-      "ariaLabel": "55555",
-      "title": "55555",
-      "shortcutHint": "55555"
+      "ariaLabel": "〖Ȧşķ ȦĪ ƒȯř ŧřȧƞşƒȯřḿ ħḗŀƥ ··········〗",
+      "title": "〖Ȧşķ ȦĪ ···〗",
+      "shortcutHint": "〖Ȯƥḗƞ Ɋŭīƈķ Ȧşķ ƒȯř ŧřȧƞşƒȯřḿ ɠŭīḓȧƞƈḗ ···············〗"
     },
-    "applySuggestions": "55555 {{count}} 55555",
-    "applySuggestionTitle": "55555 {{sourcePath}} 55555",
-    "fuzzySuffix": "55555",
-    "removeMapping": "55555",
-    "invalidJson": "55555",
-    "stringPlaceholder": "55555",
+    "applySuggestions": "〖Ȧƥƥŀẏ şŭɠɠḗşŧīȯƞş ({{count}}) ············〗",
+    "applySuggestionTitle": "〖Ȧƥƥŀẏ şŭɠɠḗşŧīȯƞ: {{sourcePath}} ·············〗",
+    "fuzzySuffix": "〖(ƒŭẑẑẏ) ···〗",
+    "removeMapping": "〖Řḗḿȯṽḗ ḿȧƥƥīƞɠ (Ḓḗŀḗŧḗ/Ɓȧƈķşƥȧƈḗ) ··············〗",
+    "invalidJson": "〖Īƞṽȧŀīḓ ĴŞȮȠ ·····〗",
+    "stringPlaceholder": "〖Ḗƞŧḗř ṽȧŀŭḗ... ······〗",
     "aria": {
-      "listbox": "55555",
-      "fieldList": "55555"
+      "listbox": "〖Ȧƈŧīȯƞ īƞƥŭŧ ƒīḗŀḓş ········〗",
+      "fieldList": "〖Ȧƈŧīȯƞ īƞƥŭŧ ƒīḗŀḓş ŀīşŧ ··········〗"
     },
     "summary": {
-      "filledCount": "55555 {{filled}} 55555 {{total}} 55555",
-      "missingCount": "55555 {{count}} 55555",
-      "missingTitle": "55555"
+      "filledCount": "〖{{filled}} ȯƒ {{total}} ƒīḗŀḓş ƒīŀŀḗḓ ···············〗",
+      "missingCount": "〖{{count}} řḗʠŭīřḗḓ ḿīşşīƞɠ ···········〗",
+      "missingTitle": "〖Řḗʠŭīřḗḓ ƒīḗŀḓş ȧřḗ ḿīşşīƞɠ ṽȧŀŭḗş ··············〗"
     },
     "mode": {
-      "structured": "55555",
-      "rawJson": "55555"
+      "structured": "〖Şŧřŭƈŧŭřḗḓ ····〗",
+      "rawJson": "〖Řȧẇ ĴŞȮȠ ····〗"
     },
     "nullable": {
-      "useValue": "55555",
-      "setNull": "55555"
+      "useValue": "〖Ŭşḗ ṽȧŀŭḗ ····〗",
+      "setNull": "〖Şḗŧ ƞŭŀŀ ····〗"
     },
     "primitiveList": {
-      "placeholder": "55555",
-      "helperText": "55555"
+      "placeholder": "〖Ḗƞŧḗř ȯƞḗ ṽȧŀŭḗ ƥḗř ŀīƞḗ, ȯř ƈȯḿḿȧ-şḗƥȧřȧŧḗḓ ··················〗",
+      "helperText": "〖Ŭşḗ ƞḗẇŀīƞḗ, ƈȯḿḿȧ, ȯř şḗḿīƈȯŀȯƞ şḗƥȧřȧŧȯřş. ··················〗"
     },
     "structuredGroup": {
-      "collapseAria": "55555 {{title}} 55555",
-      "expandAria": "55555 {{title}} 55555"
+      "collapseAria": "〖Ƈȯŀŀȧƥşḗ {{title}} ········〗",
+      "expandAria": "〖Ḗẋƥȧƞḓ {{title}} ·······〗"
     },
     "legacy": {
-      "title": "55555",
-      "description": "55555",
-      "useReference": "55555",
-      "useFixedValue": "55555"
+      "title": "〖Ŀḗɠȧƈẏ ḿȧƥƥīƞɠ ƞȯ ŀȯƞɠḗř şŭƥƥȯřŧḗḓ ħḗřḗ ················〗",
+      "description": "〖Ŧħīş ƒīḗŀḓ ŭşḗş ȧ şȧṽḗḓ ḗẋƥřḗşşīȯƞ ȯř şḗƈřḗŧ. Řḗƥŀȧƈḗ īŧ ẇīŧħ ȧ şŧřŭƈŧŭřḗḓ řḗƒḗřḗƞƈḗ ȯř ȧ ƒīẋḗḓ ṽȧŀŭḗ. ·········································〗",
+      "useReference": "〖Ŭşḗ řḗƒḗřḗƞƈḗ ······〗",
+      "useFixedValue": "〖Ŭşḗ ƒīẋḗḓ ṽȧŀŭḗ ······〗"
     },
     "fixedValueDialog": {
-      "title": "55555 {{fieldName}} 55555",
-      "description": "55555",
-      "openEditor": "55555",
-      "apply": "55555",
-      "cancel": "55555"
+      "title": "〖Ḗḓīŧ {{fieldName}} ········〗",
+      "description": "〖Ŭşḗ ŧħḗ ŀȧřɠḗř ḗḓīŧȯř ƒȯř ŀȯƞɠḗř ƒīẋḗḓ-ṽȧŀŭḗ ƈȯƞŧḗƞŧ. ······················〗",
+      "openEditor": "〖Ȯƥḗƞ ḗḓīŧȯř ·····〗",
+      "apply": "〖Ȧƥƥŀẏ ··〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗"
     },
-    "softEnumPlaceholder": "55555",
-    "softEnumSearchPlaceholder": "55555",
-    "softEnumNoResults": "55555",
-    "softEnumUseCustom": "55555 {{value}} 55555",
+    "softEnumPlaceholder": "〖Şḗŀḗƈŧ ȯř ḗƞŧḗř ṽȧŀŭḗ ·········〗",
+    "softEnumSearchPlaceholder": "〖Şḗȧřƈħ ȯř ḗƞŧḗř ȧ ƈŭşŧȯḿ ṽȧŀŭḗ ············〗",
+    "softEnumNoResults": "〖Ƞȯ şŭɠɠḗşŧīȯƞş ······〗",
+    "softEnumUseCustom": "〖Ŭşḗ \"{{value}}\" ······〗",
     "expression": {
-      "placeholder": "55555"
+      "placeholder": "〖ḗ.ɠ. ƥȧẏŀȯȧḓ.ƀȯḓẏ.ŧȧşķ_ƞȧḿḗ ···········〗"
     },
     "updatePatch": {
-      "summaryTitle": "55555",
-      "targetFraming": "55555 {{target}} 55555",
-      "summaryChanges": "55555 {{list}} 55555",
-      "summaryChangesMore": "55555 {{list}} 55555 {{count}} 55555",
-      "unchangedNote": "55555",
-      "emptyGuidance": "55555",
-      "editChanges": "55555",
-      "dialogTitle": "55555",
-      "dialogDescription": "55555 {{target}} 55555",
-      "footerSummary": "55555 {{count}} 55555",
-      "done": "55555",
-      "added": "55555",
-      "noChangesYet": "55555",
-      "setFieldTo": "55555 {{field}} 55555",
-      "removeChange": "55555",
-      "advancedTitle": "55555",
+      "summaryTitle": "〖Ƒīḗŀḓş ŧȯ ƈħȧƞɠḗ ·······〗",
+      "targetFraming": "〖Ŧħīş şŧḗƥ ŭƥḓȧŧḗş {{target}}. ············〗",
+      "summaryChanges": "〖Ƈħȧƞɠḗş {{list}} ·······〗",
+      "summaryChangesMore": "〖Ƈħȧƞɠḗş {{list}} +{{count}} ḿȯřḗ ·············〗",
+      "unchangedNote": "〖Ȧŀŀ ȯŧħḗř ƒīḗŀḓş ķḗḗƥ ŧħḗīř ƈŭřřḗƞŧ ṽȧŀŭḗş. ··················〗",
+      "emptyGuidance": "〖Ȧḓḓ ȧŧ ŀḗȧşŧ ȯƞḗ ƒīḗŀḓ ŧȯ ƈħȧƞɠḗ. ··············〗",
+      "editChanges": "〖Ḗḓīŧ ƈħȧƞɠḗş… ······〗",
+      "dialogTitle": "〖Ḗḓīŧ ƈħȧƞɠḗş ·····〗",
+      "dialogDescription": "〖Ŭƥḓȧŧīƞɠ {{target}}. Ȯƞŀẏ ŧħḗ ƒīḗŀḓş ŀīşŧḗḓ ȯƞ ŧħḗ řīɠħŧ ẇīŀŀ ƈħȧƞɠḗ; ḗṽḗřẏŧħīƞɠ ḗŀşḗ ķḗḗƥş īŧş ƈŭřřḗƞŧ ṽȧŀŭḗ. ············································〗",
+      "footerSummary": "〖{{count}} ƒīḗŀḓ(ş) ẇīŀŀ ƈħȧƞɠḗ · ḗṽḗřẏŧħīƞɠ ḗŀşḗ ķḗḗƥş īŧş ƈŭřřḗƞŧ ṽȧŀŭḗ ·····························〗",
+      "done": "〖Ḓȯƞḗ ··〗",
+      "added": "〖Ȧḓḓḗḓ ✓ ···〗",
+      "noChangesYet": "〖Ƞȯ ƈħȧƞɠḗş ẏḗŧ. Ƥīƈķ ȧ ƒīḗŀḓ ȯƞ ŧħḗ ŀḗƒŧ ŧȯ şŧȧřŧ. ····················〗",
+      "setFieldTo": "〖Şḗŧ {{field}} ŧȯ ·······〗",
+      "removeChange": "〖Şŧȯƥ ƈħȧƞɠīƞɠ ŧħīş ƒīḗŀḓ (īŧ ķḗḗƥş īŧş ƈŭřřḗƞŧ ṽȧŀŭḗ) ······················〗",
+      "advancedTitle": "〖Ȧḓṽȧƞƈḗḓ ····〗",
       "group": {
-        "details": "55555",
-        "assignment": "55555",
-        "datesTags": "55555",
-        "advanced": "55555"
+        "details": "〖Ḓḗŧȧīŀş ···〗",
+        "assignment": "〖Ȧşşīɠƞḿḗƞŧ ····〗",
+        "datesTags": "〖Ḓȧŧḗş & ŧȧɠş ·····〗",
+        "advanced": "〖Ȧḓṽȧƞƈḗḓ ····〗"
       },
       "target": {
-        "genericRecord": "55555",
-        "unset": "55555 {{record}} 55555",
-        "fromReference": "55555 {{record}} 55555 {{source}} 55555",
-        "fromExpression": "55555 {{record}} 55555",
-        "fixed": "55555 {{record}} 55555"
+        "genericRecord": "〖řḗƈȯřḓ ···〗",
+        "unset": "〖ŧħḗ {{record}} şḗŀḗƈŧḗḓ ȧƀȯṽḗ ············〗",
+        "fromReference": "〖ŧħḗ {{record}} ƒřȯḿ “{{source}}” ·············〗",
+        "fromExpression": "〖ŧħḗ {{record}} ƈħȯşḗƞ ƀẏ ȧƞ ḗẋƥřḗşşīȯƞ ················〗",
+        "fixed": "〖ȧ şƥḗƈīƒīƈ {{record}} ·········〗"
       }
     }
   },
   "schemaReference": {
-    "selectAction": "55555",
-    "viewDetails": "55555",
-    "hideDetails": "55555",
-    "inputSchemaTitle": "55555",
-    "outputSchemaTitle": "55555",
-    "noInputParameters": "55555",
-    "noOutputFields": "55555",
-    "noFields": "55555",
-    "outputAvailablePrefix": "55555",
-    "showRawJson": "55555",
-    "hideRawJson": "55555",
-    "exportSchema": "55555",
-    "exportSchemaTitle": "55555",
-    "rawInputComment": "55555",
-    "rawOutputComment": "55555",
-    "copyPathTitle": "55555 {{path}} 55555",
-    "copyAllPaths": "55555",
-    "copyAllPathsTitle": "55555",
-    "copied": "55555",
-    "pathsCopied": "55555 {{count}} 55555",
-    "nullableSuffix": "55555",
+    "selectAction": "〖Şḗŀḗƈŧ ȧƞ ȧƈŧīȯƞ ŧȯ şḗḗ īŧş īƞƥŭŧ/ȯŭŧƥŭŧ şƈħḗḿȧ ···················〗",
+    "viewDetails": "〖Ṽīḗẇ şƈħḗḿȧ ḓḗŧȧīŀş ········〗",
+    "hideDetails": "〖Ħīḓḗ şƈħḗḿȧ ḓḗŧȧīŀş ········〗",
+    "inputSchemaTitle": "〖Īƞƥŭŧ Şƈħḗḿȧ ·····〗",
+    "outputSchemaTitle": "〖Ȯŭŧƥŭŧ Şƈħḗḿȧ ······〗",
+    "noInputParameters": "〖Ƞȯ īƞƥŭŧ ƥȧřȧḿḗŧḗřş ········〗",
+    "noOutputFields": "〖Ƞȯ ȯŭŧƥŭŧ ƒīḗŀḓş ·······〗",
+    "noFields": "〖Ƞȯ ƒīḗŀḓş ····〗",
+    "outputAvailablePrefix": "〖Ȯŭŧƥŭŧ ȧṽȧīŀȧƀŀḗ ȧŧ ········〗",
+    "showRawJson": "〖Şħȯẇ řȧẇ ĴŞȮȠ Şƈħḗḿȧ ········〗",
+    "hideRawJson": "〖Ħīḓḗ řȧẇ ĴŞȮȠ Şƈħḗḿȧ ········〗",
+    "exportSchema": "〖Ḗẋƥȯřŧ şƈħḗḿȧ ······〗",
+    "exportSchemaTitle": "〖Ḓȯẇƞŀȯȧḓ şƈħḗḿȧ ȧş ĴŞȮȠ ƒīŀḗ ············〗",
+    "rawInputComment": "〖// Īƞƥŭŧ Şƈħḗḿȧ ······〗",
+    "rawOutputComment": "〖// Ȯŭŧƥŭŧ Şƈħḗḿȧ ·······〗",
+    "copyPathTitle": "〖Ƈȯƥẏ {{path}} ······〗",
+    "copyAllPaths": "〖Ƈȯƥẏ ȧŀŀ ƥȧŧħş ······〗",
+    "copyAllPathsTitle": "〖Ƈȯƥẏ ȧŀŀ ƒīḗŀḓ ƥȧŧħş ········〗",
+    "copied": "〖Ƈȯƥīḗḓ! ···〗",
+    "pathsCopied": "〖{{count}} ƥȧŧħş ƈȯƥīḗḓ ·········〗",
+    "nullableSuffix": "〖| ƞŭŀŀ ···〗",
     "constraints": {
-      "values": "55555 {{list}} 55555 {{suffix}} 55555",
-      "min": "55555 {{value}} 55555",
-      "max": "55555 {{value}} 55555",
-      "minLength": "55555 {{value}} 55555",
-      "maxLength": "55555 {{value}} 55555",
-      "pattern": "55555 {{value}} 55555",
-      "format": "55555 {{value}} 55555",
-      "examples": "55555 {{list}} 55555",
-      "default": "55555 {{value}} 55555"
+      "values": "〖Ṽȧŀŭḗş: {{list}}{{suffix}} ···········〗",
+      "min": "〖Ḿīƞ: {{value}} ······〗",
+      "max": "〖Ḿȧẋ: {{value}} ······〗",
+      "minLength": "〖Ḿīƞ ŀḗƞɠŧħ: {{value}} ·········〗",
+      "maxLength": "〖Ḿȧẋ ŀḗƞɠŧħ: {{value}} ·········〗",
+      "pattern": "〖Ƥȧŧŧḗřƞ: {{value}} ········〗",
+      "format": "〖Ƒȯřḿȧŧ: {{value}} ·······〗",
+      "examples": "〖Ḗẋȧḿƥŀḗş: {{list}} ········〗",
+      "default": "〖Ḓḗƒȧŭŀŧ: {{value}} ········〗"
     }
   },
   "groupedAction": {
-    "groupHeading": "55555",
-    "actionLabel": "55555",
-    "actionPlaceholder": "55555 {{group}} 55555",
+    "groupHeading": "〖Ɠřȯŭƥ ··〗",
+    "actionLabel": "〖Ȧƈŧīȯƞ ···〗",
+    "actionPlaceholder": "〖Şḗŀḗƈŧ ȧ {{group}} ȧƈŧīȯƞ ··········〗",
     "required": {
-      "title": "55555",
-      "message": "55555 {{group}} 55555"
+      "title": "〖Ȧƈŧīȯƞ řḗʠŭīřḗḓ ······〗",
+      "message": "〖Şḗŀḗƈŧ ȧ {{group}} ȧƈŧīȯƞ ƀḗƒȯřḗ ƈȯƞƒīɠŭřīƞɠ īƞƥŭŧş ȯř ƥŭƀŀīşħīƞɠ ŧħīş ẇȯřķƒŀȯẇ. ································〗"
     },
     "tileKind": {
-      "core-object": "55555",
-      "transform": "55555",
-      "app": "55555",
-      "ai": "55555"
+      "core-object": "〖Ƈȯřḗ ··〗",
+      "transform": "〖Ŧřȧƞşƒȯřḿ ····〗",
+      "app": "〖Ȧƥƥ ··〗",
+      "ai": "〖ȦĪ ·〗"
     },
     "disconnected": {
-      "title": "55555 {{group}} 55555",
-      "message": "55555"
+      "title": "〖{{group}} īş ƞȯŧ ƈȯƞƞḗƈŧḗḓ ···········〗",
+      "message": "〖Şŧḗƥş ŭşīƞɠ īŧş ȧƈŧīȯƞş ẇīŀŀ ƒȧīŀ ȧŧ řŭƞ ŧīḿḗ ŭƞŧīŀ ŧħḗ īƞŧḗɠřȧŧīȯƞ īş řḗƈȯƞƞḗƈŧḗḓ ŭƞḓḗř Şḗŧŧīƞɠş > Īƞŧḗɠřȧŧīȯƞş. ··············································〗"
     }
   },
   "trigger": {
-    "manual": "55555",
-    "event": "55555",
-    "eventWithType": "55555 {{eventType}} 55555",
-    "oneTimeSchedule": "55555",
-    "recurringSchedule": "55555"
+    "manual": "〖Ḿȧƞŭȧŀ ···〗",
+    "event": "〖Ḗṽḗƞŧ ··〗",
+    "eventWithType": "〖Ḗṽḗƞŧ: {{eventType}} ········〗",
+    "oneTimeSchedule": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗ ·······〗",
+    "recurringSchedule": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗"
   },
   "scheduleStatus": {
-    "unknown": "55555",
-    "scheduled": "55555",
-    "paused": "55555",
-    "disabled": "55555",
-    "completed": "55555",
-    "failed": "55555"
+    "unknown": "〖Ŭƞķƞȯẇƞ ···〗",
+    "scheduled": "〖Şƈħḗḓŭŀḗḓ ····〗",
+    "paused": "〖Ƥȧŭşḗḓ ···〗",
+    "disabled": "〖Ḓīşȧƀŀḗḓ ····〗",
+    "completed": "〖Ƈȯḿƥŀḗŧḗḓ ····〗",
+    "failed": "〖Ƒȧīŀḗḓ ···〗"
   },
   "graph": {
     "start": {
-      "label": "55555"
+      "label": "〖Şŧȧřŧ ··〗"
     },
     "states": {
-      "buildingGraph": "55555"
+      "buildingGraph": "〖Ɓŭīŀḓīƞɠ ɠřȧƥħ… ······〗"
     },
     "errors": {
-      "buildFailed": "55555",
-      "renderErrorTitle": "55555",
-      "switchToList": "55555"
+      "buildFailed": "〖Ƒȧīŀḗḓ ŧȯ ƀŭīŀḓ ẇȯřķƒŀȯẇ ɠřȧƥħ. ·············〗",
+      "renderErrorTitle": "〖Ɠřȧƥħ řḗƞḓḗř ḗřřȯř ········〗",
+      "switchToList": "〖Şẇīŧƈħ ŧȯ Ŀīşŧ ṽīḗẇ ŧȯ ƈȯƞŧīƞŭḗ ḗḓīŧīƞɠ. ················〗"
     },
     "empty": {
-      "readonly": "55555",
-      "dropFirst": "55555",
-      "dragPrompt": "55555"
+      "readonly": "〖Şḗŀḗƈŧ ȧ şŧḗƥ ƒřȯḿ ŧħḗ ƥȧƞḗŀ ŧȯ ɠḗŧ şŧȧřŧḗḓ. ··················〗",
+      "dropFirst": "〖Ḓřȯƥ ŧȯ ȧḓḓ ȧş ŧħḗ ƒīřşŧ şŧḗƥ ············〗",
+      "dragPrompt": "〖Ḓřȧɠ ȧ şŧḗƥ ƒřȯḿ ŧħḗ ƥȧƞḗŀ, ȯř şḗŀḗƈŧ ȯƞḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ. ·······················〗"
     },
     "mapping": {
-      "unmappedTitle": "55555 {{count}} 55555",
-      "unmappedBadge": "55555 {{count}} 55555",
-      "allMapped": "55555"
+      "unmappedTitle": "〖{{count}} řḗʠŭīřḗḓ ƒīḗŀḓş ŭƞḿȧƥƥḗḓ ··············〗",
+      "unmappedBadge": "〖{{count}} řḗʠ ŭƞḿȧƥƥḗḓ ·········〗",
+      "allMapped": "〖Ȧŀŀ řḗʠŭīřḗḓ ƒīḗŀḓş ḿȧƥƥḗḓ ···········〗"
     },
     "insert": {
-      "title": "55555"
+      "title": "〖Ḓřȯƥ ȧ şŧḗƥ ħḗřḗ ŧȯ īƞşḗřŧ ···········〗"
     },
     "actions": {
-      "deleteStep": "55555"
+      "deleteStep": "〖Ḓḗŀḗŧḗ şŧḗƥ ·····〗"
     }
   },
   "runStudio": {
     "header": {
-      "kicker": "55555",
-      "fallbackTitle": "55555",
-      "version": "55555 {{version}} 55555",
-      "updated": "55555 {{time}} 55555",
-      "backToWorkflows": "55555"
+      "kicker": "〖Řŭƞ Şŧŭḓīȯ ····〗",
+      "fallbackTitle": "〖Ẇȯřķƒŀȯẇ Řŭƞ ·····〗",
+      "version": "〖Ṽḗřşīȯƞ {{version}} ········〗",
+      "updated": "〖Ŭƥḓȧŧḗḓ {{time}} ·······〗",
+      "backToWorkflows": "〖← Ɓȧƈķ ŧȯ Ẇȯřķƒŀȯẇş ········〗"
     },
     "actions": {
-      "replay": "55555",
-      "cancel": "55555",
-      "refresh": "55555"
+      "replay": "〖Řḗƥŀȧẏ ···〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "refresh": "〖Řḗƒřḗşħ ···〗"
     },
     "status": {
-      "running": "55555",
-      "succeeded": "55555",
-      "retrying": "55555",
-      "failed": "55555",
-      "pending": "55555",
-      "canceled": "55555",
-      "loading": "55555"
+      "running": "〖Řŭƞƞīƞɠ ···〗",
+      "succeeded": "〖Şŭƈƈḗḗḓḗḓ ····〗",
+      "retrying": "〖Řḗŧřẏīƞɠ ····〗",
+      "failed": "〖Ƒȧīŀḗḓ ···〗",
+      "pending": "〖Ƥḗƞḓīƞɠ ···〗",
+      "canceled": "〖Ƈȧƞƈḗŀḗḓ ····〗",
+      "loading": "〖Ŀȯȧḓīƞɠ ···〗"
     },
     "failure": {
-      "title": "55555",
-      "lastSuccessfulStep": "55555 {{label}} 55555"
+      "title": "〖Řŭƞ ƒȧīŀḗḓ ····〗",
+      "lastSuccessfulStep": "〖Ŀȧşŧ şŭƈƈḗşşƒŭŀ şŧḗƥ: {{label}} ·············〗"
     },
     "pipeline": {
-      "title": "55555",
-      "emptyBranch": "55555",
+      "title": "〖Ḗẋḗƈŭŧīȯƞ Ƥīƥḗŀīƞḗ ········〗",
+      "emptyBranch": "〖Ƞȯ şŧḗƥş īƞ ŧħīş ƀřȧƞƈħ. ··········〗",
       "view": {
-        "graph": "55555",
-        "list": "55555"
+        "graph": "〖Ɠřȧƥħ ··〗",
+        "list": "〖Ŀīşŧ ··〗"
       },
       "states": {
-        "loadingDefinition": "55555",
-        "loadingDefinitionPlain": "55555",
-        "noSteps": "55555"
+        "loadingDefinition": "〖Ŀȯȧḓīƞɠ ẇȯřķƒŀȯẇ ḓḗƒīƞīŧīȯƞ… ············〗",
+        "loadingDefinitionPlain": "〖Ŀȯȧḓīƞɠ ẇȯřķƒŀȯẇ ḓḗƒīƞīŧīȯƞ... ············〗",
+        "noSteps": "〖Ƞȯ şŧḗƥş ŧȯ ḓīşƥŀȧẏ. ········〗"
       },
-      "selectPrompt": "55555",
-      "selectedStep": "55555 {{label}} 55555"
+      "selectPrompt": "〖Şḗŀḗƈŧ ȧ şŧḗƥ ŧȯ ħīɠħŀīɠħŧ īŧ. ············〗",
+      "selectedStep": "〖Şḗŀḗƈŧḗḓ: {{label}} ········〗"
     },
     "details": {
-      "title": "55555",
+      "title": "〖Řŭƞ Ḓḗŧȧīŀş ·····〗",
       "fields": {
-        "runId": "55555",
-        "started": "55555",
-        "duration": "55555",
-        "tenant": "55555",
-        "trigger": "55555",
-        "eventType": "55555",
-        "scheduleState": "55555",
-        "scheduledFor": "55555",
-        "cron": "55555",
-        "waitingFor": "55555",
-        "counts": "55555"
+        "runId": "〖Řŭƞ Īḓ ···〗",
+        "started": "〖Şŧȧřŧḗḓ ···〗",
+        "duration": "〖Ḓŭřȧŧīȯƞ ····〗",
+        "tenant": "〖Ŧḗƞȧƞŧ ···〗",
+        "trigger": "〖Ŧřīɠɠḗř ···〗",
+        "eventType": "〖Ḗṽḗƞŧ Ŧẏƥḗ ····〗",
+        "scheduleState": "〖Şƈħḗḓŭŀḗ Şŧȧŧḗ ······〗",
+        "scheduledFor": "〖Şƈħḗḓŭŀḗḓ Ƒȯř ······〗",
+        "cron": "〖Ƈřȯƞ ··〗",
+        "waitingFor": "〖Ẇȧīŧīƞɠ Ƒȯř ·····〗",
+        "counts": "〖Ƈȯŭƞŧş ···〗"
       },
       "values": {
-        "resumeEvent": "55555",
-        "counts": "55555 {{steps}} 55555 {{logs}} 55555 {{waits}} 55555"
+        "resumeEvent": "〖Řḗşŭḿḗ ḗṽḗƞŧ ·····〗",
+        "counts": "〖{{steps}} şŧḗƥş · {{logs}} ŀȯɠş · {{waits}} ẇȧīŧş ····················〗"
       }
     },
     "errors": {
-      "title": "55555",
-      "runErrorPayload": "55555",
-      "resumeEventPayload": "55555"
+      "title": "〖Řŭƞ Ḗřřȯřş ····〗",
+      "runErrorPayload": "〖Řŭƞ Ḗřřȯř Ƥȧẏŀȯȧḓ ·······〗",
+      "resumeEventPayload": "〖Řḗşŭḿḗ Ḗṽḗƞŧ Ƥȧẏŀȯȧḓ ········〗"
     },
     "stepDetails": {
-      "title": "55555",
-      "empty": "55555",
+      "title": "〖Şŧḗƥ Ḓḗŧȧīŀş ·····〗",
+      "empty": "〖Şḗŀḗƈŧ ȧ şŧḗƥ īƞ ŧħḗ ƥīƥḗŀīƞḗ ŧȯ īƞşƥḗƈŧ īƞƥŭŧş, ȯŭŧƥŭŧş, ȧƞḓ şƞȧƥşħȯŧş. ·····························〗",
       "fields": {
-        "step": "55555"
+        "step": "〖Şŧḗƥ ··〗"
       },
       "panels": {
-        "configuration": "55555",
-        "inputResolved": "55555",
-        "output": "55555",
-        "envelopeSnapshot": "55555"
+        "configuration": "〖Şŧḗƥ Ƈȯƞƒīɠŭřȧŧīȯƞ ········〗",
+        "inputResolved": "〖Īƞƥŭŧ (Řḗşȯŀṽḗḓ) ·······〗",
+        "output": "〖Ȯŭŧƥŭŧ ···〗",
+        "envelopeSnapshot": "〖Ḗƞṽḗŀȯƥḗ Şƞȧƥşħȯŧ ·······〗"
       }
     },
     "timeline": {
-      "title": "55555",
-      "searchLabel": "55555",
-      "searchPlaceholder": "55555",
-      "empty": "55555",
-      "waitTitle": "55555 {{waitType}} 55555",
-      "attempt": "55555 {{attempt}} 55555 {{status}} 55555",
-      "inProgress": "55555",
-      "statusLine": "55555 {{status}} 55555",
-      "eventSegment": "55555 {{eventName}} 55555",
-      "keySegment": "55555 {{key}} 55555",
-      "createdLine": "55555 {{createdAt}} 55555",
-      "resolvedSegment": "55555 {{resolvedAt}} 55555",
+      "title": "〖Ḗẋḗƈŭŧīȯƞ Ŧīḿḗŀīƞḗ ········〗",
+      "searchLabel": "〖Şḗȧřƈħ ŧīḿḗŀīƞḗ ······〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ şŧḗƥ ƥȧŧħ, ẇȧīŧ ŧẏƥḗ, şŧȧŧŭş ··············〗",
+      "empty": "〖Ƞȯ ŧīḿḗŀīƞḗ ḗƞŧřīḗş ẏḗŧ. ··········〗",
+      "waitTitle": "〖Ẇȧīŧ · {{waitType}} ········〗",
+      "attempt": "〖Ȧŧŧḗḿƥŧ {{attempt}} · {{status}} ·············〗",
+      "inProgress": "〖Īƞ ƥřȯɠřḗşş ·····〗",
+      "statusLine": "〖Şŧȧŧŭş: {{status}} ········〗",
+      "eventSegment": "〖 · Ḗṽḗƞŧ: {{eventName}} ··········〗",
+      "keySegment": "〖 · Ķḗẏ: {{key}} ······〗",
+      "createdLine": "〖Ƈřḗȧŧḗḓ: {{createdAt}} ·········〗",
+      "resolvedSegment": "〖 · Řḗşȯŀṽḗḓ: {{resolvedAt}} ···········〗",
       "actions": {
-        "jump": "55555"
+        "jump": "〖Ĵŭḿƥ ··〗"
       }
     },
     "logs": {
-      "title": "55555",
-      "searchLabel": "55555",
-      "searchPlaceholder": "55555",
-      "empty": "55555",
+      "title": "〖Řŭƞ Ŀȯɠş ····〗",
+      "searchLabel": "〖Şḗȧřƈħ ŀȯɠş ·····〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ ḿḗşşȧɠḗ ȯř şŧḗƥ ƥȧŧħ ···········〗",
+      "empty": "〖Ƞȯ ŀȯɠş ẏḗŧ. ·····〗",
       "actions": {
-        "clear": "55555"
+        "clear": "〖Ƈŀḗȧř ··〗"
       }
     },
     "dialog": {
       "title": {
-        "cancel": "55555",
-        "replay": "55555"
+        "cancel": "〖Ƈȧƞƈḗŀ Řŭƞ ····〗",
+        "replay": "〖Řḗƥŀȧẏ Řŭƞ ····〗"
       },
       "heading": {
-        "cancel": "55555",
-        "replay": "55555"
+        "cancel": "〖Ƈȧƞƈḗŀ Ẇȯřķƒŀȯẇ Řŭƞ ········〗",
+        "replay": "〖Řḗƥŀȧẏ Ẇȯřķƒŀȯẇ Řŭƞ ········〗"
       },
       "description": {
-        "cancel": "55555",
-        "replay": "55555"
+        "cancel": "〖Ƈȧƞƈḗŀīƞɠ ẇīŀŀ şŧȯƥ ȧƞẏ īƞ-ƥřȯɠřḗşş ȯř ẇȧīŧīƞɠ şŧḗƥş ƒȯř ŧħīş řŭƞ. ···························〗",
+        "replay": "〖Řḗƥŀȧẏīƞɠ ẇīŀŀ şŧȧřŧ ȧ ƞḗẇ řŭƞ ŭşīƞɠ ŧħḗ ƥȧẏŀȯȧḓ ƀḗŀȯẇ. ······················〗"
       },
       "fields": {
-        "reason": "55555",
-        "reasonPlaceholder": "55555",
-        "payloadJson": "55555"
+        "reason": "〖Řḗȧşȯƞ ···〗",
+        "reasonPlaceholder": "〖ḗ.ɠ. Ƈȧƞƈḗŀīƞɠ ŧȯ ȧḓĵŭşŧ īƞƥŭŧş ·············〗",
+        "payloadJson": "〖Ƥȧẏŀȯȧḓ (ĴŞȮȠ) ······〗"
       },
       "actions": {
-        "close": "55555",
-        "confirmCancel": "55555",
-        "startReplay": "55555",
-        "working": "55555"
+        "close": "〖Ƈŀȯşḗ ··〗",
+        "confirmCancel": "〖Ƈȯƞƒīřḿ Ƈȧƞƈḗŀ ······〗",
+        "startReplay": "〖Şŧȧřŧ Řḗƥŀȧẏ ·····〗",
+        "working": "〖Ẇȯřķīƞɠ... ····〗"
       },
       "errors": {
-        "invalidJson": "55555"
+        "invalidJson": "〖Īƞṽȧŀīḓ ĴŞȮȠ ·····〗"
       }
     },
     "stepLabels": {
-      "action": "55555 {{actionId}} 55555",
-      "ifCondition": "55555",
-      "forEach": "55555",
-      "tryCatch": "55555",
-      "waitForEvent": "55555",
-      "waitForTime": "55555",
-      "humanTask": "55555",
-      "setState": "55555",
-      "assign": "55555"
+      "action": "〖Ȧƈŧīȯƞ: {{actionId}} ········〗",
+      "ifCondition": "〖Īƒ Ƈȯƞḓīŧīȯƞ ·····〗",
+      "forEach": "〖Ƒȯř Ḗȧƈħ ····〗",
+      "tryCatch": "〖Ŧřẏ/Ƈȧŧƈħ ····〗",
+      "waitForEvent": "〖Ẇȧīŧ ƒȯř Ḗṽḗƞŧ ······〗",
+      "waitForTime": "〖Ẇȧīŧ ƒȯř Ŧīḿḗ ······〗",
+      "humanTask": "〖Ħŭḿȧƞ Ŧȧşķ ····〗",
+      "setState": "〖Şḗŧ Şŧȧŧḗ ····〗",
+      "assign": "〖Ȧşşīɠƞ ···〗"
     },
     "stepCard": {
-      "lastStatus": "55555 {{status}} 55555 {{timestamp}} 55555",
-      "attempt": "55555 {{attempt}} 55555",
-      "forEachSummary": "55555 {{itemVar}} 55555 {{concurrency}} 55555",
+      "lastStatus": "〖Ŀȧşŧ şŧȧŧŭş: {{status}} ({{timestamp}}) ················〗",
+      "attempt": "〖Ȧŧŧḗḿƥŧ {{attempt}} ········〗",
+      "forEachSummary": "〖Īŧḗḿ: {{itemVar}} | Ƈȯƞƈŭřřḗƞƈẏ: {{concurrency}} ····················〗",
       "badges": {
-        "if": "55555",
-        "loop": "55555",
-        "try": "55555",
-        "block": "55555"
+        "if": "〖Īƒ ·〗",
+        "loop": "〖Ŀȯȯƥ ··〗",
+        "try": "〖Ŧřẏ ··〗",
+        "block": "〖Ɓŀȯƈķ ··〗"
       },
       "sections": {
-        "then": "55555",
-        "else": "55555",
-        "try": "55555",
-        "catch": "55555",
-        "body": "55555"
+        "then": "〖ŦĦḖȠ ··〗",
+        "else": "〖ḖĿŞḖ ··〗",
+        "try": "〖ŦŘẎ ··〗",
+        "catch": "〖ƇȦŦƇĦ ··〗",
+        "body": "〖ƁȮḒẎ ··〗"
       }
     },
     "jsonPanel": {
-      "serializeFailed": "55555"
+      "serializeFailed": "〖Ŭƞȧƀŀḗ ŧȯ şḗřīȧŀīẑḗ ṽȧŀŭḗ. ···········〗"
     },
     "toasts": {
-      "reasonRequired": "55555",
-      "canceled": "55555",
-      "replayStarted": "55555",
-      "actionFailed": "55555",
-      "loadFailed": "55555"
+      "reasonRequired": "〖Řḗȧşȯƞ īş řḗʠŭīřḗḓ (ḿīƞ 3 ƈħȧřȧƈŧḗřş). ················〗",
+      "canceled": "〖Řŭƞ ƈȧƞƈḗŀḗḓ. ······〗",
+      "replayStarted": "〖Řŭƞ řḗƥŀȧẏ şŧȧřŧḗḓ. ········〗",
+      "actionFailed": "〖Ƒȧīŀḗḓ ŧȯ ƥḗřƒȯřḿ ȧƈŧīȯƞ. ··········〗",
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řŭƞ şŧŭḓīȯ ··········〗"
     },
-    "lastRefreshed": "55555 {{time}} 55555",
+    "lastRefreshed": "〖Ŀȧşŧ řḗƒřḗşħḗḓ {{time}} ··········〗",
     "navigation": {
-      "backToRuns": "55555"
+      "backToRuns": "〖← Ɓȧƈķ ŧȯ ẇȯřķƒŀȯẇ řŭƞş ··········〗"
     },
-    "title": "55555"
+    "title": "〖Ẇȯřķƒŀȯẇ Řŭƞ Şŧŭḓīȯ ········〗"
   },
   "schedules": {
     "common": {
-      "emptyValue": "55555",
-      "entityName": "55555"
+      "emptyValue": "〖— ·〗",
+      "entityName": "〖şƈħḗḓŭŀḗ ····〗"
     },
     "heading": {
-      "reflectionLabel": "55555",
-      "title": "55555",
-      "description": "55555"
+      "reflectionLabel": "〖Ẇȯřķƒŀȯẇ Şƈħḗḓŭŀḗş ········〗",
+      "title": "〖Şƈħḗḓŭŀḗş ····〗",
+      "description": "〖Ḿȧƞȧɠḗ řḗŭşȧƀŀḗ ẇȯřķƒŀȯẇ şƈħḗḓŭŀḗş ȧƞḓ ŧħḗīř şȧṽḗḓ ƥȧẏŀȯȧḓş. ························〗"
     },
     "actions": {
-      "new": "55555",
-      "edit": "55555",
-      "pause": "55555",
-      "resume": "55555",
-      "delete": "55555",
-      "cancel": "55555",
-      "saving": "55555",
-      "saveChanges": "55555",
-      "create": "55555",
-      "rowMenu": "55555 {{name}} 55555"
+      "new": "〖Ƞḗẇ Şƈħḗḓŭŀḗ ·····〗",
+      "edit": "〖Ḗḓīŧ ··〗",
+      "pause": "〖Ƥȧŭşḗ ··〗",
+      "resume": "〖Řḗşŭḿḗ ···〗",
+      "delete": "〖Ḓḗŀḗŧḗ ···〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "saving": "〖Şȧṽīƞɠ… ···〗",
+      "saveChanges": "〖Şȧṽḗ Ƈħȧƞɠḗş ·····〗",
+      "create": "〖Ƈřḗȧŧḗ Şƈħḗḓŭŀḗ ······〗",
+      "rowMenu": "〖Şƈħḗḓŭŀḗ ȧƈŧīȯƞş ƒȯř {{name}} ············〗"
     },
     "filters": {
-      "allWorkflows": "55555",
-      "allStatuses": "55555",
-      "allTriggers": "55555",
-      "searchPlaceholder": "55555"
+      "allWorkflows": "〖Ȧŀŀ ẇȯřķƒŀȯẇş ······〗",
+      "allStatuses": "〖Ȧŀŀ şŧȧŧŭşḗş ·····〗",
+      "allTriggers": "〖Ȧŀŀ ŧřīɠɠḗřş ·····〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ şƈħḗḓŭŀḗş... ········〗"
     },
     "status": {
-      "enabled": "55555",
-      "paused": "55555",
-      "failed": "55555",
-      "completed": "55555",
-      "disabled": "55555"
+      "enabled": "〖Ḗƞȧƀŀḗḓ ···〗",
+      "paused": "〖Ƥȧŭşḗḓ ···〗",
+      "failed": "〖Ƒȧīŀḗḓ ···〗",
+      "completed": "〖Ƈȯḿƥŀḗŧḗḓ ····〗",
+      "disabled": "〖Ḓīşȧƀŀḗḓ ····〗"
     },
     "triggerType": {
-      "schedule": "55555",
-      "recurring": "55555"
+      "schedule": "〖Ȯƞḗ-ŧīḿḗ ····〗",
+      "recurring": "〖Řḗƈŭřřīƞɠ ····〗"
     },
     "dayType": {
-      "any": "55555",
-      "business": "55555",
-      "nonBusiness": "55555"
+      "any": "〖Ȧƞẏ ḓȧẏ ···〗",
+      "business": "〖Ɓŭşīƞḗşş ḓȧẏş ······〗",
+      "nonBusiness": "〖Ƞȯƞ-ƀŭşīƞḗşş ḓȧẏş ·······〗"
     },
     "table": {
-      "workflowVersion": "55555 {{version}} 55555",
+      "workflowVersion": "〖Ẇȯřķƒŀȯẇ ṽ{{version}} ·········〗",
       "columns": {
-        "schedule": "55555",
-        "workflow": "55555",
-        "triggerType": "55555",
-        "nextFire": "55555",
-        "lastFire": "55555",
-        "status": "55555",
-        "lastError": "55555",
-        "actions": "55555"
+        "schedule": "〖Şƈħḗḓŭŀḗ ····〗",
+        "workflow": "〖Ẇȯřķƒŀȯẇ ····〗",
+        "triggerType": "〖Ŧřīɠɠḗř Ŧẏƥḗ ·····〗",
+        "nextFire": "〖Ƞḗẋŧ Ƒīřḗ / Řŭƞ Ȧŧ ········〗",
+        "lastFire": "〖Ŀȧşŧ Ƒīřḗ ····〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "lastError": "〖Ŀȧşŧ Ḗřřȯř ····〗",
+        "actions": "〖Ȧƈŧīȯƞş ···〗"
       }
     },
     "states": {
-      "loadingReflection": "55555",
-      "loading": "55555",
-      "never": "55555",
-      "calendarMisconfigured": "55555",
-      "noEligibleUpcomingRun": "55555",
-      "unknownWorkflow": "55555",
-      "empty": "55555",
-      "emptyDescription": "55555"
+      "loadingReflection": "〖Ẇȯřķƒŀȯẇ Şƈħḗḓŭŀḗş Ŀȯȧḓīƞɠ ···········〗",
+      "loading": "〖Ŀȯȧḓīƞɠ şƈħḗḓŭŀḗş… ········〗",
+      "never": "〖Ƞḗṽḗř ··〗",
+      "calendarMisconfigured": "〖Ƈȧŀḗƞḓȧř ḿīşƈȯƞƒīɠŭřḗḓ ·········〗",
+      "noEligibleUpcomingRun": "〖Ƞȯ ḗŀīɠīƀŀḗ ŭƥƈȯḿīƞɠ řŭƞ ··········〗",
+      "unknownWorkflow": "〖Ŭƞķƞȯẇƞ ẇȯřķƒŀȯẇ ·······〗",
+      "empty": "〖Ƞȯ şƈħḗḓŭŀḗş ƒȯŭƞḓ ········〗",
+      "emptyDescription": "〖Ƈřḗȧŧḗ ȧ ȯƞḗ-ŧīḿḗ ȯř řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ŧȯ řŭƞ ȧ ƥŭƀŀīşħḗḓ ẇȯřķƒŀȯẇ ẇīŧħ şȧṽḗḓ īƞƥŭŧ ḓȧŧȧ. ····································〗"
     },
     "errors": {
-      "loadFailed": "55555",
-      "updateFailed": "55555",
-      "deleteFailed": "55555"
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şƈħḗḓŭŀḗş. ··········〗",
+      "updateFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ şƈħḗḓŭŀḗ. ···········〗",
+      "deleteFailed": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ şƈħḗḓŭŀḗ. ···········〗"
     },
     "timezone": {
-      "browseAll": "55555",
-      "custom": "55555",
-      "browseHelp": "55555",
-      "customLabel": "55555",
-      "customPlaceholder": "55555"
+      "browseAll": "〖Ɓřȯẇşḗ ȧŀŀ ŧīḿḗ ẑȯƞḗş... ··········〗",
+      "custom": "〖Ƈŭşŧȯḿ... ····〗",
+      "browseHelp": "〖Ƈħȯȯşḗ ƒřȯḿ ŧħḗ ƒŭŀŀ şŭƥƥȯřŧḗḓ ĪȦȠȦ ŧīḿḗẑȯƞḗ ŀīşŧ. ····················〗",
+      "customLabel": "〖Ƈŭşŧȯḿ ŧīḿḗẑȯƞḗ ······〗",
+      "customPlaceholder": "〖Ḗŧƈ/ƓḾŦ+5 ····〗"
     },
     "dialog": {
       "title": {
-        "edit": "55555",
-        "create": "55555"
+        "edit": "〖Ḗḓīŧ Şƈħḗḓŭŀḗ ······〗",
+        "create": "〖Ƈřḗȧŧḗ Şƈħḗḓŭŀḗ ······〗"
       },
-      "description": "55555",
+      "description": "〖Ƈȯƞƒīɠŭřḗ ŧīḿīƞɠ ȧƞḓ şŧȧŧīƈ ƥȧẏŀȯȧḓ ḓȧŧȧ ƒȯř ȧ ẇȯřķƒŀȯẇ şƈħḗḓŭŀḗ. ··························〗",
       "states": {
-        "loading": "55555"
+        "loading": "〖Ŀȯȧḓīƞɠ şƈħḗḓŭŀḗ ḓḗŧȧīŀş… ··········〗"
       },
       "fields": {
-        "workflow": "55555",
-        "workflowPlaceholder": "55555",
-        "name": "55555",
-        "namePlaceholder": "55555",
-        "triggerType": "55555",
-        "enabled": "55555",
-        "enabledHelp": "55555",
-        "disabledHelp": "55555",
-        "runAt": "55555",
-        "runOn": "55555",
-        "businessDaysOnly": "55555",
-        "nonBusinessDaysOnly": "55555",
-        "calendarSource": "55555",
-        "businessHoursSchedule": "55555",
-        "businessHoursSchedulePlaceholder": "55555",
-        "frequency": "55555",
-        "time": "55555",
-        "dayOfMonth": "55555",
-        "weekdays": "55555",
-        "cron": "55555",
-        "timezone": "55555"
+        "workflow": "〖Ẇȯřķƒŀȯẇ ····〗",
+        "workflowPlaceholder": "〖Ƈħȯȯşḗ ȧ ẇȯřķƒŀȯẇ ·······〗",
+        "name": "〖Şƈħḗḓŭŀḗ ƞȧḿḗ ······〗",
+        "namePlaceholder": "〖Ḿȯƞŧħ-ḗƞḓ ȦƤ şẏƞƈ ·······〗",
+        "triggerType": "〖Ŧřīɠɠḗř ŧẏƥḗ ·····〗",
+        "enabled": "〖Ḗƞȧƀŀḗḓ ···〗",
+        "enabledHelp": "〖Şƈħḗḓŭŀḗ ẇīŀŀ řŭƞ ẇħḗƞ ṽȧŀīḓ. ············〗",
+        "disabledHelp": "〖Şƈħḗḓŭŀḗ ẇīŀŀ şŧȧẏ ƥȧŭşḗḓ ŭƞŧīŀ řḗşŭḿḗḓ. ················〗",
+        "runAt": "〖Řŭƞ ȧŧ ···〗",
+        "runOn": "〖Řŭƞ ȯƞ ···〗",
+        "businessDaysOnly": "〖Ɓŭşīƞḗşş ḓȧẏş ȯƞŀẏ ········〗",
+        "nonBusinessDaysOnly": "〖Ƞȯƞ-ƀŭşīƞḗşş ḓȧẏş ȯƞŀẏ ·········〗",
+        "calendarSource": "〖Ƈȧŀḗƞḓȧř şȯŭřƈḗ ······〗",
+        "businessHoursSchedule": "〖Ɓŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗ ··········〗",
+        "businessHoursSchedulePlaceholder": "〖Ƈħȯȯşḗ ȧ ƀŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗ ·············〗",
+        "frequency": "〖Ƒřḗʠŭḗƞƈẏ ····〗",
+        "time": "〖Ŧīḿḗ ··〗",
+        "dayOfMonth": "〖Ḓȧẏ ȯƒ ḿȯƞŧħ ·····〗",
+        "weekdays": "〖Ẇḗḗķḓȧẏş ····〗",
+        "cron": "〖Ƈřȯƞ ··〗",
+        "timezone": "〖Ŧīḿḗẑȯƞḗ ····〗"
       },
       "workflow": {
         "badges": {
-          "unpublished": "55555",
-          "inferredSchema": "55555"
+          "unpublished": "〖Ŭƞƥŭƀŀīşħḗḓ ·····〗",
+          "inferredSchema": "〖Īƞƒḗřřḗḓ şƈħḗḿȧ ······〗"
         }
       },
       "eligibility": {
-        "chooseWorkflow": "55555",
-        "unpublished": "55555",
-        "pinnedOnly": "55555",
-        "noPinnedSchema": "55555",
-        "unavailableSchemaRef": "55555 {{schemaRef}} 55555"
+        "chooseWorkflow": "〖Ƈħȯȯşḗ ȧ ẇȯřķƒŀȯẇ ƀḗƒȯřḗ şȧṽīƞɠ. ·············〗",
+        "unpublished": "〖Şƈħḗḓŭŀḗş ƈȧƞ ȯƞŀẏ ƀḗ ƈřḗȧŧḗḓ ƒȯř ẇȯřķƒŀȯẇş ẇīŧħ ȧ ƥŭƀŀīşħḗḓ ṽḗřşīȯƞ. ····························〗",
+        "pinnedOnly": "〖Şƈħḗḓŭŀḗş ȧřḗ ȯƞŀẏ şŭƥƥȯřŧḗḓ ƒȯř ẇȯřķƒŀȯẇş ẇīŧħ ȧ ƥīƞƞḗḓ ƥȧẏŀȯȧḓ şƈħḗḿȧ. ·····························〗",
+        "noPinnedSchema": "〖Ŧħḗ şḗŀḗƈŧḗḓ ẇȯřķƒŀȯẇ ḓȯḗş ƞȯŧ ḗẋƥȯşḗ ȧ ƥīƞƞḗḓ ƥȧẏŀȯȧḓ şƈħḗḿȧ. ·························〗",
+        "unavailableSchemaRef": "〖Ŧħḗ şḗŀḗƈŧḗḓ ẇȯřķƒŀȯẇ ŭşḗş ȧƞ ŭƞȧṽȧīŀȧƀŀḗ ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒ: {{schemaRef}}. ·······························〗"
       },
       "calendarSource": {
-        "tenantDefault": "55555",
-        "tenantDefaultMissing": "55555",
-        "tenantDefaultHint": "55555",
-        "specific": "55555",
-        "specificHint": "55555",
-        "tenantDefaultMissingDescription": "55555",
-        "holidaysNote": "55555"
+        "tenantDefault": "〖Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ƀŭşīƞḗşş ħȯŭřş ············〗",
+        "tenantDefaultMissing": "〖Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ƀŭşīƞḗşş ħȯŭřş (ƞȯŧ ƈȯƞƒīɠŭřḗḓ) ···················〗",
+        "tenantDefaultHint": "〖Şḗŧ ȧ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ƀŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗ ƒīřşŧ, ȯř ƈħȯȯşḗ ȧ şƥḗƈīƒīƈ şƈħḗḓŭŀḗ. ·································〗",
+        "specific": "〖Şƥḗƈīƒīƈ ƀŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗ ·············〗",
+        "specificHint": "〖Ƈřḗȧŧḗ ȧ ƀŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗ ƒīřşŧ. ················〗",
+        "tenantDefaultMissingDescription": "〖Ƞȯ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ƀŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗ īş ƈȯƞƒīɠŭřḗḓ ẏḗŧ. Ƈħȯȯşḗ ȧ şƥḗƈīƒīƈ ƀŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗ ȯř şḗŧ ȧ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ƒīřşŧ. ······················································〗",
+        "holidaysNote": "〖Ħȯŀīḓȧẏş ȧřḗ ȧŀẇȧẏş ŧřḗȧŧḗḓ ȧş ƞȯƞ-ƀŭşīƞḗşş ḓȧẏş. ····················〗"
       },
       "businessHours": {
-        "defaultSuffix": "55555",
-        "noneConfigured": "55555",
-        "usingTenantDefault": "55555",
-        "noTenantDefault": "55555"
+        "defaultSuffix": "〖 (Ḓḗƒȧŭŀŧ) ····〗",
+        "noneConfigured": "〖Ƞȯ ƀŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗş ȧřḗ ƈȯƞƒīɠŭřḗḓ ẏḗŧ. ···················〗",
+        "usingTenantDefault": "〖Ŭşḗş ŧħḗ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ƀŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗ. ····················〗",
+        "noTenantDefault": "〖Ƞȯ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ƀŭşīƞḗşş-ħȯŭřş şƈħḗḓŭŀḗ īş ƈȯƞƒīɠŭřḗḓ ẏḗŧ. ························〗"
       },
       "recurring": {
-        "title": "55555",
-        "description": "55555",
-        "builderMode": "55555",
-        "advancedMode": "55555",
-        "dailyHelper": "55555",
-        "weeklyHelper": "55555",
-        "customCronWarning": "55555",
-        "cronPreview": "55555 {{cron}} 55555"
+        "title": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗",
+        "description": "〖Ƈħȯȯşḗ ȧ ƈȯḿḿȯƞ řḗƈŭřřḗƞƈḗ ƥȧŧŧḗřƞ. Ȧḓṽȧƞƈḗḓ ƈřȯƞ īş ȧṽȧīŀȧƀŀḗ ƒȯř ƈŭşŧȯḿ şƈħḗḓŭŀḗş. ··································〗",
+        "builderMode": "〖Şƈħḗḓŭŀḗ Ɓŭīŀḓḗř ·······〗",
+        "advancedMode": "〖Ȧḓṽȧƞƈḗḓ Ƈřȯƞ ······〗",
+        "dailyHelper": "〖Řŭƞş ḗṽḗřẏ ḓȧẏ ȧŧ ŧħḗ şḗŀḗƈŧḗḓ ŧīḿḗ. ···············〗",
+        "weeklyHelper": "〖Ƈħȯȯşḗ ȯƞḗ ȯř ḿȯřḗ ẇḗḗķḓȧẏş ƀḗŀȯẇ. ··············〗",
+        "customCronWarning": "〖Ŧħīş şƈħḗḓŭŀḗ ŭşḗş ȧ ƈŭşŧȯḿ ƈřȯƞ ḗẋƥřḗşşīȯƞ. Ķḗḗƥ ḗḓīŧīƞɠ īŧ ħḗřḗ, ȯř şẇīŧƈħ ƀȧƈķ ŧȯ ŧħḗ ƀŭīŀḓḗř ŧȯ řḗƥŀȧƈḗ īŧ ẇīŧħ ȧ ƈȯḿḿȯƞ ƥȧŧŧḗřƞ. ······················································〗",
+        "cronPreview": "〖Ƈřȯƞ: {{cron}} ······〗"
       },
       "payload": {
-        "title": "55555",
-        "description": "55555",
-        "rootLabel": "55555",
-        "rootKey": "55555",
+        "title": "〖Ƥȧẏŀȯȧḓ ···〗",
+        "description": "〖Ȧŭŧħȯř şŧȧŧīƈ īƞƥŭŧ ŧħȧŧ ẇīŀŀ ƀḗ ƥȧşşḗḓ īƞŧȯ ḗȧƈħ şƈħḗḓŭŀḗḓ řŭƞ. ··························〗",
+        "rootLabel": "〖Ƥȧẏŀȯȧḓ ···〗",
+        "rootKey": "〖ƥȧẏŀȯȧḓ ···〗",
         "mode": {
-          "form": "55555",
-          "json": "55555"
+          "form": "〖Ƒȯřḿ Ḿȯḓḗ ····〗",
+          "json": "〖ĴŞȮȠ Ḿȯḓḗ ····〗"
         },
         "actions": {
-          "addItem": "55555",
-          "removeItem": "55555"
+          "addItem": "〖Ȧḓḓ īŧḗḿ ····〗",
+          "removeItem": "〖Řḗḿȯṽḗ ···〗"
         },
         "states": {
-          "noItems": "55555"
+          "noItems": "〖Ƞȯ īŧḗḿş ẏḗŧ. ······〗"
         },
         "boolean": {
-          "true": "55555",
-          "false": "55555"
+          "true": "〖Ŧřŭḗ ··〗",
+          "false": "〖Ƒȧŀşḗ ··〗"
         },
         "noSchema": {
-          "title": "55555",
-          "description": "55555"
+          "title": "〖Ƞȯ ƥȧẏŀȯȧḓ şƈħḗḿȧ īş ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ẇȯřķƒŀȯẇ ẏḗŧ. ······················〗",
+          "description": "〖Ƒȯřḿ ƒīḗŀḓş ẇīŀŀ ȧƥƥḗȧř ħḗřḗ ȯƞƈḗ ŧħīş ẇȯřķƒŀȯẇ ƥŭƀŀīşħḗş ȧ ƥīƞƞḗḓ ƥȧẏŀȯȧḓ şƈħḗḿȧ. ·································〗"
         }
       },
       "validation": {
-        "title": "55555",
-        "more": "55555 {{count}} 55555",
-        "invalidValue": "55555",
-        "valueMustBeAllowed": "55555",
-        "expectedObject": "55555",
-        "requiredFieldMissing": "55555",
-        "unknownProperty": "55555",
-        "expectedArray": "55555",
-        "expectedString": "55555",
-        "expectedNumber": "55555",
-        "expectedBoolean": "55555",
-        "payloadMustBeObject": "55555",
-        "invalidJson": "55555"
+        "title": "〖Ƥȧẏŀȯȧḓ ṽȧŀīḓȧŧīȯƞ ḗřřȯřş ··········〗",
+        "more": "〖+{{count}} ḿȯřḗ… ·······〗",
+        "invalidValue": "〖Īƞṽȧŀīḓ ṽȧŀŭḗ ······〗",
+        "valueMustBeAllowed": "〖Ṽȧŀŭḗ ḿŭşŧ ƀḗ ȯƞḗ ȯƒ ŧħḗ ȧŀŀȯẇḗḓ ȯƥŧīȯƞş. ·················〗",
+        "expectedObject": "〖Ḗẋƥḗƈŧḗḓ ȯƀĵḗƈŧ. ·······〗",
+        "requiredFieldMissing": "〖Řḗʠŭīřḗḓ ƒīḗŀḓ ḿīşşīƞɠ. ··········〗",
+        "unknownProperty": "〖Ŭƞķƞȯẇƞ ƥřȯƥḗřŧẏ. ·······〗",
+        "expectedArray": "〖Ḗẋƥḗƈŧḗḓ ȧřřȧẏ. ······〗",
+        "expectedString": "〖Ḗẋƥḗƈŧḗḓ şŧřīƞɠ. ·······〗",
+        "expectedNumber": "〖Ḗẋƥḗƈŧḗḓ ƞŭḿƀḗř. ·······〗",
+        "expectedBoolean": "〖Ḗẋƥḗƈŧḗḓ ƀȯȯŀḗȧƞ. ·······〗",
+        "payloadMustBeObject": "〖Şƈħḗḓŭŀḗ ƥȧẏŀȯȧḓ ḿŭşŧ ƀḗ ȧ ĴŞȮȠ ȯƀĵḗƈŧ. ················〗",
+        "invalidJson": "〖Īƞṽȧŀīḓ ĴŞȮȠ ·····〗"
       },
       "errors": {
-        "loadScheduleFailed": "55555",
-        "saveFailed": "55555"
+        "loadScheduleFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şƈħḗḓŭŀḗ. ··········〗",
+        "saveFailed": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ şƈħḗḓŭŀḗ. ··········〗"
       }
     },
     "recurrence": {
-      "andWord": "55555",
+      "andWord": "〖ȧƞḓ ··〗",
       "frequency": {
-        "daily": "55555",
-        "weekly": "55555",
-        "monthly": "55555"
+        "daily": "〖Ḓȧīŀẏ ··〗",
+        "weekly": "〖Ẇḗḗķŀẏ ···〗",
+        "monthly": "〖Ḿȯƞŧħŀẏ ···〗"
       },
       "validation": {
-        "validTime": "55555",
-        "weekdayRequired": "55555",
-        "dayOfMonthRange": "55555"
+        "validTime": "〖Ƈħȯȯşḗ ȧ ṽȧŀīḓ ŧīḿḗ. ········〗",
+        "weekdayRequired": "〖Ƈħȯȯşḗ ȧŧ ŀḗȧşŧ ȯƞḗ ẇḗḗķḓȧẏ. ············〗",
+        "dayOfMonthRange": "〖Ƈħȯȯşḗ ȧ ḓȧẏ ȯƒ ḿȯƞŧħ ƀḗŧẇḗḗƞ 1 ȧƞḓ 31. ················〗"
       },
       "summary": {
-        "daily": "55555 {{timeLabel}} 55555 {{timezoneLabel}} 55555",
-        "weekly": "55555 {{weekdayLabels}} 55555 {{timeLabel}} 55555 {{timezoneLabel}} 55555",
-        "monthly": "55555 {{dayOfMonth}} 55555 {{timeLabel}} 55555 {{timezoneLabel}} 55555"
+        "daily": "〖Řŭƞş ḗṽḗřẏ ḓȧẏ ȧŧ {{timeLabel}} {{timezoneLabel}} ····················〗",
+        "weekly": "〖Řŭƞş ḗṽḗřẏ {{weekdayLabels}} ȧŧ {{timeLabel}} {{timezoneLabel}} ··························〗",
+        "monthly": "〖Řŭƞş ȯƞ ḓȧẏ {{dayOfMonth}} ȯƒ ḗȧƈħ ḿȯƞŧħ ȧŧ {{timeLabel}} {{timezoneLabel}} ······························〗"
       },
       "weekdays": {
         "0": {
-          "short": "55555",
-          "long": "55555"
+          "short": "〖Şŭƞ ··〗",
+          "long": "〖Şŭƞḓȧẏ ···〗"
         },
         "1": {
-          "short": "55555",
-          "long": "55555"
+          "short": "〖Ḿȯƞ ··〗",
+          "long": "〖Ḿȯƞḓȧẏ ···〗"
         },
         "2": {
-          "short": "55555",
-          "long": "55555"
+          "short": "〖Ŧŭḗ ··〗",
+          "long": "〖Ŧŭḗşḓȧẏ ···〗"
         },
         "3": {
-          "short": "55555",
-          "long": "55555"
+          "short": "〖Ẇḗḓ ··〗",
+          "long": "〖Ẇḗḓƞḗşḓȧẏ ····〗"
         },
         "4": {
-          "short": "55555",
-          "long": "55555"
+          "short": "〖Ŧħŭ ··〗",
+          "long": "〖Ŧħŭřşḓȧẏ ····〗"
         },
         "5": {
-          "short": "55555",
-          "long": "55555"
+          "short": "〖Ƒřī ··〗",
+          "long": "〖Ƒřīḓȧẏ ···〗"
         },
         "6": {
-          "short": "55555",
-          "long": "55555"
+          "short": "〖Şȧŧ ··〗",
+          "long": "〖Şȧŧŭřḓȧẏ ····〗"
         }
       }
     }
   },
   "enums": {
     "workflowRunStatus": {
-      "RUNNING": "55555",
-      "WAITING": "55555",
-      "SUCCEEDED": "55555",
-      "FAILED": "55555",
-      "CANCELED": "55555"
+      "RUNNING": "〖Řŭƞƞīƞɠ ···〗",
+      "WAITING": "〖Ẇȧīŧīƞɠ ···〗",
+      "SUCCEEDED": "〖Şŭƈƈḗḗḓḗḓ ····〗",
+      "FAILED": "〖Ƒȧīŀḗḓ ···〗",
+      "CANCELED": "〖Ƈȧƞƈḗŀḗḓ ····〗"
     },
     "workflowRunSort": {
-      "started_at:desc": "55555",
-      "started_at:asc": "55555",
-      "updated_at:desc": "55555",
-      "updated_at:asc": "55555"
+      "started_at:desc": "〖Ƞḗẇḗşŧ ƒīřşŧ ·····〗",
+      "started_at:asc": "〖Ȯŀḓḗşŧ ƒīřşŧ ·····〗",
+      "updated_at:desc": "〖Řḗƈḗƞŧŀẏ ŭƥḓȧŧḗḓ ·······〗",
+      "updated_at:asc": "〖Ŀḗȧşŧ řḗƈḗƞŧŀẏ ŭƥḓȧŧḗḓ ·········〗"
     },
     "workflowEventStatus": {
-      "matched": "55555",
-      "unmatched": "55555",
-      "error": "55555"
+      "matched": "〖Ḿȧŧƈħḗḓ ···〗",
+      "unmatched": "〖Ŭƞḿȧŧƈħḗḓ ····〗",
+      "error": "〖Ḗřřȯř ··〗"
     },
     "workflowStepStatus": {
-      "STARTED": "55555",
-      "SUCCEEDED": "55555",
-      "FAILED": "55555",
-      "RETRY_SCHEDULED": "55555",
-      "CANCELED": "55555"
+      "STARTED": "〖Şŧȧřŧḗḓ ···〗",
+      "SUCCEEDED": "〖Şŭƈƈḗḗḓḗḓ ····〗",
+      "FAILED": "〖Ƒȧīŀḗḓ ···〗",
+      "RETRY_SCHEDULED": "〖Řḗŧřẏ şƈħḗḓŭŀḗḓ ······〗",
+      "CANCELED": "〖Ƈȧƞƈḗŀḗḓ ····〗"
     },
     "workflowLogLevel": {
-      "DEBUG": "55555",
-      "INFO": "55555",
-      "WARN": "55555",
-      "ERROR": "55555"
+      "DEBUG": "〖Ḓḗƀŭɠ ··〗",
+      "INFO": "〖Īƞƒȯ ··〗",
+      "WARN": "〖Ẇȧřƞ ··〗",
+      "ERROR": "〖Ḗřřȯř ··〗"
     },
     "workflowAiSchemaType": {
-      "string": "55555",
-      "number": "55555",
-      "integer": "55555",
-      "boolean": "55555",
-      "object": "55555",
-      "array": "55555"
+      "string": "〖Şŧřīƞɠ ···〗",
+      "number": "〖Ƞŭḿƀḗř ···〗",
+      "integer": "〖Īƞŧḗɠḗř ···〗",
+      "boolean": "〖Ɓȯȯŀḗȧƞ ···〗",
+      "object": "〖Ȯƀĵḗƈŧ ···〗",
+      "array": "〖Ȧřřȧẏ ··〗"
     },
     "workflowInputSourceMode": {
-      "reference": "55555",
-      "fixed": "55555"
+      "reference": "〖Řḗƒḗřḗƞƈḗ ····〗",
+      "fixed": "〖Ƒīẋḗḓ ṽȧŀŭḗ ·····〗"
     },
     "workflowReferenceSection": {
-      "payload": "55555",
-      "vars": "55555",
-      "meta": "55555",
-      "error": "55555",
-      "forEach": "55555"
+      "payload": "〖Ƥȧẏŀȯȧḓ ···〗",
+      "vars": "〖Şŧḗƥ řḗşŭŀŧş ·····〗",
+      "meta": "〖Ẇȯřķƒŀȯẇ ḓḗŧȧīŀş ·······〗",
+      "error": "〖Ḗřřȯř ··〗",
+      "forEach": "〖Ŀȯȯƥ ƈȯƞŧḗẋŧ ·····〗"
     },
     "workflowTriggerMode": {
-      "manual": "55555",
-      "event": "55555"
+      "manual": "〖Ƞȯ ŧřīɠɠḗř ····〗",
+      "event": "〖Ḗṽḗƞŧ ··〗"
     },
     "workflowCanvasView": {
-      "list": "55555",
-      "graph": "55555"
+      "list": "〖Ŀīşŧ ··〗",
+      "graph": "〖Ɠřȧƥħ ··〗"
     },
     "workflowOnError": {
-      "continue": "55555",
-      "fail": "55555"
+      "continue": "〖Ƈȯƞŧīƞŭḗ ····〗",
+      "fail": "〖Ƒȧīŀ ··〗"
     },
     "workflowWaitMode": {
-      "duration": "55555",
-      "until": "55555"
+      "duration": "〖Ḓŭřȧŧīȯƞ ····〗",
+      "until": "〖Ŭƞŧīŀ ··〗"
     },
     "workflowWaitTiming": {
-      "fixed": "55555",
-      "expression": "55555"
+      "fixed": "〖Şƥḗƈīƒīƈ ḓȧŧḗ & ŧīḿḗ ········〗",
+      "expression": "〖Ȧḓṽȧƞƈḗḓ ḗẋƥřḗşşīȯƞ ········〗"
     },
     "workflowEntityType": {
-      "project_task": "55555",
-      "ticket": "55555",
-      "contact": "55555",
-      "client": "55555",
-      "project": "55555",
-      "appointment": "55555",
-      "quote": "55555"
+      "project_task": "〖Ƥřȯĵḗƈŧ ŧȧşķ ·····〗",
+      "ticket": "〖Ŧīƈķḗŧ ···〗",
+      "contact": "〖Ƈȯƞŧȧƈŧ ···〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "project": "〖Ƥřȯĵḗƈŧ ···〗",
+      "appointment": "〖Ȧƥƥȯīƞŧḿḗƞŧ ·····〗",
+      "quote": "〖Ɋŭȯŧḗ ··〗"
     },
     "workflowLinkRelation": {
-      "related": "55555",
-      "mirrors": "55555",
-      "maps_to": "55555",
-      "blocks": "55555",
-      "duplicate_of": "55555",
-      "synced_with": "55555"
+      "related": "〖Řḗŀȧŧḗḓ ···〗",
+      "mirrors": "〖Ḿīřřȯřş ···〗",
+      "maps_to": "〖Ḿȧƥş ŧȯ ···〗",
+      "blocks": "〖Ɓŀȯƈķş ···〗",
+      "duplicate_of": "〖Ḓŭƥŀīƈȧŧḗ ȯƒ ·····〗",
+      "synced_with": "〖Şẏƞƈḗḓ ẇīŧħ ·····〗"
     }
   },
   "automation": {
     "createWorkflow": {
-      "dialogTitle": "55555",
+      "dialogTitle": "〖Ƈřḗȧŧḗ Ƞḗẇ Ẇȯřķƒŀȯẇ ········〗",
       "fields": {
-        "name": "55555",
-        "namePlaceholder": "55555",
-        "triggerType": "55555"
+        "name": "〖Ẇȯřķƒŀȯẇ Ƞȧḿḗ ······〗",
+        "namePlaceholder": "〖ḗ.ɠ., Şḗƞḓ Ẇḗŀƈȯḿḗ Ḗḿȧīŀ ··········〗",
+        "triggerType": "〖Ŧřīɠɠḗř Ŧẏƥḗ ·····〗"
       },
       "validation": {
-        "nameRequired": "55555",
-        "nameTooShort": "55555"
+        "nameRequired": "〖Ẇȯřķƒŀȯẇ ƞȧḿḗ īş řḗʠŭīřḗḓ ··········〗",
+        "nameTooShort": "〖Ƞȧḿḗ ḿŭşŧ ƀḗ ȧŧ ŀḗȧşŧ 3 ƈħȧřȧƈŧḗřş ··············〗"
       },
       "actions": {
-        "cancel": "55555",
-        "create": "55555"
+        "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+        "create": "〖Ƈřḗȧŧḗ Ẇȯřķƒŀȯẇ ······〗"
       },
       "triggers": {
         "event": {
-          "title": "55555",
-          "description": "55555"
+          "title": "〖Ḗṽḗƞŧ-ƀȧşḗḓ ·····〗",
+          "description": "〖Ŧřīɠɠḗřḗḓ ȧŭŧȯḿȧŧīƈȧŀŀẏ ẇħḗƞ şƥḗƈīƒīƈ ḗṽḗƞŧş ȯƈƈŭř (ḗ.ɠ., ŧīƈķḗŧ ƈřḗȧŧḗḓ, īƞṽȯīƈḗ ƥȧīḓ). ····································〗"
         },
         "scheduled": {
-          "title": "55555",
-          "description": "55555"
+          "title": "〖Şƈħḗḓŭŀḗḓ ····〗",
+          "description": "〖Řŭƞş ȯƞ ȧ řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ŭşīƞɠ ƈřȯƞ ḗẋƥřḗşşīȯƞş (ḗ.ɠ., ḓȧīŀẏ, ẇḗḗķŀẏ). ······························〗"
         },
         "manual": {
-          "title": "55555",
-          "description": "55555"
+          "title": "〖Ḿȧƞŭȧŀ ···〗",
+          "description": "〖Şŧȧřŧḗḓ ȯƞ-ḓḗḿȧƞḓ ƀẏ ŭşḗřş ȯř ṽīȧ ȦƤĪ ƈȧŀŀş. Ƞȯ ȧŭŧȯḿȧŧīƈ ŧřīɠɠḗřş. ···························〗"
         }
       }
     },
     "workflowList": {
-      "header": "55555",
+      "header": "〖Ẇȯřķƒŀȯẇş ····〗",
       "stats": {
-        "total": "55555 {{count}} 55555",
-        "active": "55555 {{count}} 55555",
-        "draft": "55555 {{count}} 55555",
-        "paused": "55555 {{count}} 55555"
+        "total": "〖{{count}} ŧȯŧȧŀ ······〗",
+        "active": "〖{{count}} ȧƈŧīṽḗ ·······〗",
+        "draft": "〖{{count}} ḓřȧƒŧ ······〗",
+        "paused": "〖{{count}} ƥȧŭşḗḓ ·······〗"
       },
       "actions": {
-        "eventCatalog": "55555",
-        "newWorkflow": "55555",
-        "createFirst": "55555",
-        "retry": "55555",
-        "resetFilters": "55555"
+        "eventCatalog": "〖Ḗṽḗƞŧ Ƈȧŧȧŀȯɠ ······〗",
+        "newWorkflow": "〖Ƞḗẇ Ẇȯřķƒŀȯẇ ·····〗",
+        "createFirst": "〖Ƈřḗȧŧḗ Ẏȯŭř Ƒīřşŧ Ẇȯřķƒŀȯẇ ···········〗",
+        "retry": "〖Řḗŧřẏ ··〗",
+        "resetFilters": "〖Řḗşḗŧ ··〗"
       },
-      "searchPlaceholder": "55555",
+      "searchPlaceholder": "〖Şḗȧřƈħ ẇȯřķƒŀȯẇş... ········〗",
       "statusFilter": {
-        "all": "55555",
-        "active": "55555",
-        "draft": "55555",
-        "paused": "55555",
-        "archived": "55555"
+        "all": "〖Ȧŀŀ şŧȧŧŭşḗş ·····〗",
+        "active": "〖Ȧƈŧīṽḗ ···〗",
+        "draft": "〖Ḓřȧƒŧ ··〗",
+        "paused": "〖Ƥȧŭşḗḓ ···〗",
+        "archived": "〖Ȧřƈħīṽḗḓ ····〗"
       },
       "triggerFilter": {
-        "all": "55555",
-        "event": "55555",
-        "schedule": "55555",
-        "recurring": "55555",
-        "manual": "55555"
+        "all": "〖Ȧŀŀ ŧřīɠɠḗřş ·····〗",
+        "event": "〖Ḗṽḗƞŧ-ƀȧşḗḓ ·····〗",
+        "schedule": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗ ·······〗",
+        "recurring": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗",
+        "manual": "〖Ḿȧƞŭȧŀ ···〗"
       },
       "triggerLabels": {
-        "manual": "55555",
-        "schedule": "55555",
-        "recurring": "55555",
-        "event": "55555"
+        "manual": "〖Ḿȧƞŭȧŀ ···〗",
+        "schedule": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗ ·······〗",
+        "recurring": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗",
+        "event": "〖Ḗṽḗƞŧ ··〗"
       },
       "bulk": {
-        "selectedSingular": "55555 {{count}} 55555",
-        "selectedPlural": "55555 {{count}} 55555",
-        "pause": "55555",
-        "resume": "55555",
-        "delete": "55555",
-        "clearSelection": "55555",
-        "deleteDialogTitle": "55555",
-        "deleteConfirmSingular": "55555 {{count}} 55555",
-        "deleteConfirmPlural": "55555 {{count}} 55555",
-        "deleteClose": "55555",
-        "deleteCancel": "55555",
-        "selectedSummarySingular": "55555 {{count}} 55555",
-        "selectedSummaryPlural": "55555 {{count}} 55555",
-        "willBeDeleted": "55555 {{count}} 55555",
-        "willBeSkipped": "55555 {{count}} 55555",
-        "skippedHeading": "55555",
-        "systemWorkflowReason": "55555"
+        "selectedSingular": "〖{{count}} ẇȯřķƒŀȯẇ şḗŀḗƈŧḗḓ ···········〗",
+        "selectedPlural": "〖{{count}} ẇȯřķƒŀȯẇş şḗŀḗƈŧḗḓ ············〗",
+        "pause": "〖Ƥȧŭşḗ ··〗",
+        "resume": "〖Řḗşŭḿḗ ···〗",
+        "delete": "〖Ḓḗŀḗŧḗ ···〗",
+        "clearSelection": "〖Ƈŀḗȧř şḗŀḗƈŧīȯƞ ······〗",
+        "deleteDialogTitle": "〖Ḓḗŀḗŧḗ şḗŀḗƈŧḗḓ ẇȯřķƒŀȯẇş ··········〗",
+        "deleteConfirmSingular": "〖Ḓḗŀḗŧḗ {{count}} ẇȯřķƒŀȯẇ ··········〗",
+        "deleteConfirmPlural": "〖Ḓḗŀḗŧḗ {{count}} ẇȯřķƒŀȯẇş ···········〗",
+        "deleteClose": "〖Ƈŀȯşḗ ··〗",
+        "deleteCancel": "〖Ƈȧƞƈḗŀ ···〗",
+        "selectedSummarySingular": "〖Ẏȯŭ şḗŀḗƈŧḗḓ <1>{{count}}</1> ẇȯřķƒŀȯẇ. ················〗",
+        "selectedSummaryPlural": "〖Ẏȯŭ şḗŀḗƈŧḗḓ <1>{{count}}</1> ẇȯřķƒŀȯẇş. ················〗",
+        "willBeDeleted": "〖<1>{{count}}</1> ẇīŀŀ ƀḗ ḓḗŀḗŧḗḓ. ··············〗",
+        "willBeSkipped": "〖<1>{{count}}</1> ẇīŀŀ ƀḗ şķīƥƥḗḓ. ··············〗",
+        "skippedHeading": "〖Şķīƥƥḗḓ ẇȯřķƒŀȯẇş ·······〗",
+        "systemWorkflowReason": "〖Şẏşŧḗḿ ẇȯřķƒŀȯẇ ······〗"
       },
       "columns": {
-        "name": "55555",
-        "status": "55555",
-        "version": "55555",
-        "trigger": "55555",
-        "lastModified": "55555",
-        "actions": "55555"
+        "name": "〖Ƞȧḿḗ ··〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "version": "〖Ṽḗřşīȯƞ ···〗",
+        "trigger": "〖Ŧřīɠɠḗř ···〗",
+        "lastModified": "〖Ŀȧşŧ Ḿȯḓīƒīḗḓ ······〗",
+        "actions": "〖Ȧƈŧīȯƞş ···〗"
       },
       "statusLabels": {
-        "active": "55555",
-        "draft": "55555",
-        "archived": "55555",
-        "paused": "55555"
+        "active": "〖Ȧƈŧīṽḗ ···〗",
+        "draft": "〖Ḓřȧƒŧ ··〗",
+        "archived": "〖Ȧřƈħīṽḗḓ ····〗",
+        "paused": "〖Ƥȧŭşḗḓ ···〗"
       },
       "tableValues": {
-        "system": "55555",
-        "draftVersion": "55555 {{version}} 55555"
+        "system": "〖Şẏşŧḗḿ ···〗",
+        "draftVersion": "〖Ḓřȧƒŧ: ṽ{{version}} ········〗"
       },
       "rowMenu": {
-        "ariaLabel": "55555",
-        "resume": "55555",
-        "pause": "55555",
-        "duplicate": "55555",
-        "viewRuns": "55555",
-        "delete": "55555"
+        "ariaLabel": "〖Ẇȯřķƒŀȯẇ ȧƈŧīȯƞş ·······〗",
+        "resume": "〖Řḗşŭḿḗ ···〗",
+        "pause": "〖Ƥȧŭşḗ ··〗",
+        "duplicate": "〖Ḓŭƥŀīƈȧŧḗ ····〗",
+        "viewRuns": "〖Ṽīḗẇ Řŭƞş ····〗",
+        "delete": "〖Ḓḗŀḗŧḗ ···〗"
       },
       "states": {
-        "errorTitle": "55555",
-        "errorFallback": "55555",
-        "validationFailed": "55555",
-        "emptyTitle": "55555",
-        "emptyDescription": "55555",
-        "noResultsTitle": "55555",
-        "noResultsDescription": "55555"
+        "errorTitle": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ẇȯřķƒŀȯẇş ··········〗",
+        "errorFallback": "〖Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ẇȯřķƒŀȯẇş ··········〗",
+        "validationFailed": "〖Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗",
+        "emptyTitle": "〖Ƞȯ ẇȯřķƒŀȯẇş ẏḗŧ ·······〗",
+        "emptyDescription": "〖Ƈřḗȧŧḗ ẏȯŭř ƒīřşŧ ẇȯřķƒŀȯẇ ŧȯ ȧŭŧȯḿȧŧḗ ŧȧşķş, řḗşƥȯƞḓ ŧȯ ḗṽḗƞŧş, ȧƞḓ şŧřḗȧḿŀīƞḗ ẏȯŭř ƥřȯƈḗşşḗş. ······································〗",
+        "noResultsTitle": "〖Ƞȯ ẇȯřķƒŀȯẇş ƒȯŭƞḓ ········〗",
+        "noResultsDescription": "〖Ŧřẏ ȧḓĵŭşŧīƞɠ ẏȯŭř şḗȧřƈħ ȯř ƒīŀŧḗřş ŧȯ ƒīƞḓ ẇħȧŧ ẏȯŭ'řḗ ŀȯȯķīƞɠ ƒȯř. ····························〗"
       },
       "deleteDialog": {
-        "fallbackEntityName": "55555"
+        "fallbackEntityName": "〖ŧħīş ẇȯřķƒŀȯẇ ······〗"
       }
     },
     "eventsCatalog": {
       "header": {
-        "title": "55555",
-        "subtitle": "55555",
-        "defineCustomEvent": "55555",
-        "managePermissionTitle": "55555"
+        "title": "〖Ẇȯřķƒŀȯẇ Ḗṽḗƞŧ Ƈȧŧȧŀȯɠ ·········〗",
+        "subtitle": "〖Ḗẋƥŀȯřḗ, ḿȧƞȧɠḗ, ȧƞḓ ḓḗşīɠƞ ẇȯřķƒŀȯẇş ƒȯř şẏşŧḗḿ ḗṽḗƞŧş ȧƞḓ ŧřīɠɠḗřş. ····························〗",
+        "defineCustomEvent": "〖Ḓḗƒīƞḗ Ƈŭşŧȯḿ Ḗṽḗƞŧ ········〗",
+        "managePermissionTitle": "〖Řḗʠŭīřḗş ẇȯřķƒŀȯẇ:ḿȧƞȧɠḗ ƥḗřḿīşşīȯƞ ··············〗"
       },
       "filters": {
-        "searchPlaceholder": "55555",
-        "allCategories": "55555",
-        "status": "55555",
+        "searchPlaceholder": "〖Şḗȧřƈħ ḗṽḗƞŧş (ḗ.ɠ., ŧīƈķḗŧ.ƈřḗȧŧḗ, ḗḿȧīŀ.řḗƈḗīṽḗ)... ······················〗",
+        "allCategories": "〖Ȧŀŀ Ƈȧŧḗɠȯřīḗş ······〗",
+        "status": "〖Şŧȧŧŭş ···〗",
         "statusOptions": {
-          "all": "55555",
-          "active": "55555",
-          "beta": "55555",
-          "draft": "55555",
-          "deprecated": "55555"
+          "all": "〖Ȧŀŀ şŧȧŧŭşḗş ·····〗",
+          "active": "〖Ȧƈŧīṽḗ ···〗",
+          "beta": "〖Ɓḗŧȧ ··〗",
+          "draft": "〖Ḓřȧƒŧ ··〗",
+          "deprecated": "〖Ḓḗƥřḗƈȧŧḗḓ ····〗"
         },
-        "source": "55555",
+        "source": "〖Şȯŭřƈḗ ···〗",
         "sourceOptions": {
-          "all": "55555",
-          "system": "55555",
-          "tenant": "55555"
+          "all": "〖Ȧŀŀ şȯŭřƈḗş ·····〗",
+          "system": "〖Şẏşŧḗḿ ···〗",
+          "tenant": "〖Ŧḗƞȧƞŧ ···〗"
         },
-        "sort": "55555",
+        "sort": "〖Şȯřŧ ··〗",
         "sortOptions": {
-          "categoryName": "55555",
-          "mostActive": "55555"
+          "categoryName": "〖Ƈȧŧḗɠȯřẏ · Ƞȧḿḗ ······〗",
+          "mostActive": "〖Ḿȯşŧ ȧƈŧīṽḗ (7ḓ) ·······〗"
         },
-        "apply": "55555",
-        "clear": "55555",
-        "viewGrid": "55555",
-        "viewList": "55555"
+        "apply": "〖Ȧƥƥŀẏ ··〗",
+        "clear": "〖Ƈŀḗȧř ··〗",
+        "viewGrid": "〖Ɠřīḓ ṽīḗẇ ····〗",
+        "viewList": "〖Ŀīşŧ ṽīḗẇ ····〗"
       },
       "card": {
-        "workflowsCount": "55555 {{count}} 55555",
+        "workflowsCount": "〖{{count}} ẇȯřķƒŀȯẇş ········〗",
         "actions": {
-          "simulate": "55555",
-          "metrics": "55555",
-          "attachTitle": "55555"
+          "simulate": "〖Şīḿŭŀȧŧḗ ····〗",
+          "metrics": "〖Ḿḗŧřīƈş ···〗",
+          "attachTitle": "〖Ȧŧŧȧƈħ (ƞḗẇ ẇȯřķƒŀȯẇ) ·········〗"
         },
         "metrics": {
-          "executions": "55555",
-          "successRate": "55555",
-          "avgLatency": "55555"
+          "executions": "〖Ḗẋḗƈŭŧīȯƞş ····〗",
+          "successRate": "〖Şŭƈƈḗşş řȧŧḗ ·····〗",
+          "avgLatency": "〖Ȧṽɠ ŀȧŧḗƞƈẏ ·····〗"
         }
       },
       "states": {
-        "noEventsTitle": "55555",
-        "noEventsDescription": "55555",
-        "noEventsInRange": "55555",
-        "noDataAvailable": "55555",
-        "loading": "55555"
+        "noEventsTitle": "〖Ƞȯ ḗṽḗƞŧş ƒȯŭƞḓ ······〗",
+        "noEventsDescription": "〖Ŧřẏ ȧḓĵŭşŧīƞɠ ẏȯŭř ƒīŀŧḗřş. ···········〗",
+        "noEventsInRange": "〖Ƞȯ ḗṽḗƞŧş īƞ ŧħīş řȧƞɠḗ. ··········〗",
+        "noDataAvailable": "〖Ƞȯ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ. ········〗",
+        "loading": "〖Ŀȯȧḓīƞɠ… ····〗"
       },
       "pagination": {
-        "showing": "55555 {{start}} 55555 {{end}} 55555 {{total}} 55555",
-        "prev": "55555",
-        "next": "55555",
-        "page": "55555 {{page}} 55555 {{total}} 55555"
+        "showing": "〖Şħȯẇīƞɠ {{start}} ŧȯ {{end}} ȯƒ {{total}} řḗşŭŀŧş ····················〗",
+        "prev": "〖Ƥřḗṽ ··〗",
+        "next": "〖Ƞḗẋŧ ··〗",
+        "page": "〖Ƥȧɠḗ {{page}} / {{total}} ··········〗"
       },
       "badges": {
-        "system": "55555",
-        "tenant": "55555",
-        "noSchema": "55555",
-        "unknownSchema": "55555",
-        "schema": "55555"
+        "system": "〖Şẏşŧḗḿ ···〗",
+        "tenant": "〖Ŧḗƞȧƞŧ ···〗",
+        "noSchema": "〖Ƞȯ şƈħḗḿȧ ····〗",
+        "unknownSchema": "〖Ŭƞķƞȯẇƞ şƈħḗḿȧ ······〗",
+        "schema": "〖Şƈħḗḿȧ ···〗"
       },
       "details": {
-        "title": "55555",
-        "close": "55555",
-        "simulate": "55555",
-        "metrics": "55555",
-        "attach": "55555",
+        "title": "〖Ḗṽḗƞŧ ḓḗŧȧīŀş ······〗",
+        "close": "〖Ƈŀȯşḗ ··〗",
+        "simulate": "〖Şīḿŭŀȧŧḗ ····〗",
+        "metrics": "〖Ḿḗŧřīƈş ···〗",
+        "attach": "〖Ȧŧŧȧƈħ ···〗",
         "schema": {
-          "heading": "55555",
-          "viewFull": "55555",
-          "managedNotice": "55555",
-          "missingNotice": "55555",
-          "topLevelFields": "55555",
-          "required": "55555",
-          "moreFieldsHint": "55555"
+          "heading": "〖Şƈħḗḿȧ ···〗",
+          "viewFull": "〖Ṽīḗẇ ƒŭŀŀ şƈħḗḿȧ ·······〗",
+          "managedNotice": "〖Şƈħḗḿȧ īş ḿȧƞȧɠḗḓ ƀẏ ŧħḗ şƈħḗḿȧ řḗɠīşŧřẏ. ·················〗",
+          "missingNotice": "〖Ƞȯ şƈħḗḿȧŘḗƒ şḗŧ; ḗṽḗƞŧ ḿȧẏ ƞȯŧ ƀḗ ŭşȧƀŀḗ ȧş ȧ ẇȯřķƒŀȯẇ ŧřīɠɠḗř. ··························〗",
+          "topLevelFields": "〖Ŧȯƥ-ŀḗṽḗŀ ƒīḗŀḓş ·······〗",
+          "required": "〖řḗʠŭīřḗḓ ····〗",
+          "moreFieldsHint": "〖Şħȯẇīƞɠ ƒīřşŧ 12 ƒīḗŀḓş. Ŭşḗ \"Ṽīḗẇ ƒŭŀŀ şƈħḗḿȧ\" ƒȯř ḿȯřḗ. ·······················〗"
         },
         "attached": {
-          "heading": "55555",
-          "loading": "55555",
-          "empty": "55555",
-          "publishedBadge": "55555",
-          "systemBadge": "55555",
-          "pausedBadge": "55555",
-          "hiddenBadge": "55555",
-          "open": "55555",
-          "detach": "55555",
-          "publishTooltip": "55555",
-          "adminTooltip": "55555"
+          "heading": "〖Ȧŧŧȧƈħḗḓ ẇȯřķƒŀȯẇş ········〗",
+          "loading": "〖Ŀȯȧḓīƞɠ… ····〗",
+          "empty": "〖Ƞȯ ẇȯřķƒŀȯẇş ȧŧŧȧƈħḗḓ. ·········〗",
+          "publishedBadge": "〖Ƥŭƀŀīşħḗḓ ····〗",
+          "systemBadge": "〖Şẏşŧḗḿ ···〗",
+          "pausedBadge": "〖Ƥȧŭşḗḓ ···〗",
+          "hiddenBadge": "〖Ħīḓḓḗƞ ···〗",
+          "open": "〖Ȯƥḗƞ ··〗",
+          "detach": "〖Ḓḗŧȧƈħ ···〗",
+          "publishTooltip": "〖Řḗʠŭīřḗş ẇȯřķƒŀȯẇ:ƥŭƀŀīşħ ƥḗřḿīşşīȯƞ ···············〗",
+          "adminTooltip": "〖Řḗʠŭīřḗş ẇȯřķƒŀȯẇ:ȧḓḿīƞ ƒȯř şẏşŧḗḿ ẇȯřķƒŀȯẇş ··················〗"
         }
       },
       "schemaModal": {
-        "close": "55555",
-        "headerTitle": "55555",
-        "loading": "55555",
-        "unavailable": "55555",
-        "copy": "55555",
-        "copySuccess": "55555",
-        "copyFailed": "55555"
+        "close": "〖Ƈŀȯşḗ ··〗",
+        "headerTitle": "〖Ƥȧẏŀȯȧḓ şƈħḗḿȧ ······〗",
+        "loading": "〖Ŀȯȧḓīƞɠ… ····〗",
+        "unavailable": "〖Şƈħḗḿȧ ƞȯŧ ȧṽȧīŀȧƀŀḗ. ·········〗",
+        "copy": "〖Ƈȯƥẏ ··〗",
+        "copySuccess": "〖Ƈȯƥīḗḓ ···〗",
+        "copyFailed": "〖Ƈȯƥẏ ƒȧīŀḗḓ ·····〗"
       },
       "metricsDialog": {
-        "close": "55555",
-        "headerTitle": "55555 {{eventType}} 55555",
-        "from": "55555",
-        "to": "55555",
-        "refresh": "55555",
-        "openWorkflowEditor": "55555",
-        "loading": "55555",
+        "close": "〖Ƈŀȯşḗ ··〗",
+        "headerTitle": "〖Ḿḗŧřīƈş · {{eventType}} ··········〗",
+        "from": "〖Ƒřȯḿ ··〗",
+        "to": "〖Ŧȯ ·〗",
+        "refresh": "〖Řḗƒřḗşħ ···〗",
+        "openWorkflowEditor": "〖Ȯƥḗƞ ẇȯřķƒŀȯẇ ḗḓīŧȯř ········〗",
+        "loading": "〖Ŀȯȧḓīƞɠ… ····〗",
         "totals": {
-          "totalEvents": "55555",
-          "matched": "55555",
-          "unmatched": "55555",
-          "errors": "55555",
-          "runsStarted": "55555",
-          "runSuccessRate": "55555",
-          "avgRunDuration": "55555"
+          "totalEvents": "〖Ŧȯŧȧŀ ḗṽḗƞŧş ·····〗",
+          "matched": "〖Ḿȧŧƈħḗḓ ···〗",
+          "unmatched": "〖Ŭƞḿȧŧƈħḗḓ ····〗",
+          "errors": "〖Ḗřřȯřş ···〗",
+          "runsStarted": "〖Řŭƞş şŧȧřŧḗḓ ·····〗",
+          "runSuccessRate": "〖Řŭƞ şŭƈƈḗşş řȧŧḗ ·······〗",
+          "avgRunDuration": "〖Ȧṽɠ řŭƞ ḓŭřȧŧīȯƞ ·······〗"
         },
-        "executionsOverTime": "55555",
-        "recentEvents": "55555",
-        "viewInEvents": "55555",
-        "openRun": "55555",
-        "loadFailed": "55555",
-        "rangeShowing": "55555 {{start}} 55555 {{end}} 55555 {{total}} 55555",
-        "prev": "55555",
-        "next": "55555"
+        "executionsOverTime": "〖Ḗẋḗƈŭŧīȯƞş ȯṽḗř ŧīḿḗ ········〗",
+        "recentEvents": "〖Řḗƈḗƞŧ ḗṽḗƞŧş ······〗",
+        "viewInEvents": "〖Ṽīḗẇ īƞ ḗṽḗƞŧş ······〗",
+        "openRun": "〖Řŭƞ ··〗",
+        "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḿḗŧřīƈş ·········〗",
+        "rangeShowing": "〖Şħȯẇīƞɠ {{start}}–{{end}} ȯƒ {{total}} ················〗",
+        "prev": "〖Ƥřḗṽ ··〗",
+        "next": "〖Ƞḗẋŧ ··〗"
       },
       "simulateDialog": {
-        "headerTitle": "55555 {{eventType}} 55555",
-        "submit": "55555",
-        "submitting": "55555",
-        "close": "55555",
+        "headerTitle": "〖Şīḿŭŀȧŧḗ · {{eventType}} ··········〗",
+        "submit": "〖Şīḿŭŀȧŧḗ ····〗",
+        "submitting": "〖Şŭƀḿīŧŧīƞɠ… ·····〗",
+        "close": "〖Ƈŀȯşḗ ··〗",
         "fields": {
-          "correlationKey": "55555",
-          "correlationKeyPlaceholder": "55555",
-          "schemaRef": "55555",
-          "schemaRefPlaceholderEmpty": "55555",
-          "payloadJson": "55555",
-          "payload": "55555"
+          "correlationKey": "〖Ƈȯřřḗŀȧŧīȯƞ ķḗẏ (ȯƥŧīȯƞȧŀ) ···········〗",
+          "correlationKeyPlaceholder": "〖Ŭşḗḓ ŧȯ řḗşȯŀṽḗ ḗṽḗƞŧ ẇȧīŧş ···········〗",
+          "schemaRef": "〖Ḗṽḗƞŧ ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒ (ȧḓṽȧƞƈḗḓ) ··············〗",
+          "schemaRefPlaceholderEmpty": "〖Ƞȯ şƈħḗḿȧŘḗƒ ƒȯř ŧħīş ḗṽḗƞŧ ···········〗",
+          "payloadJson": "〖Ƥȧẏŀȯȧḓ (ĴŞȮȠ) ······〗",
+          "payload": "〖Ƥȧẏŀȯȧḓ ···〗"
         },
         "modes": {
-          "form": "55555",
-          "json": "55555",
-          "noSchema": "55555"
+          "form": "〖Ƒȯřḿ ··〗",
+          "json": "〖ĴŞȮȠ ··〗",
+          "noSchema": "〖Ƞȯ şƈħḗḿȧ ȧṽȧīŀȧƀŀḗ; ƒȯřḿ ḿȯḓḗ ḓīşȧƀŀḗḓ. ················〗"
         },
         "errors": {
-          "schemaValidationTitle": "55555",
-          "moreErrors": "55555 {{count}} 55555",
-          "fixBeforeSubmit": "55555",
-          "simulationTitle": "55555",
-          "submitFallback": "55555",
-          "submitToast": "55555",
-          "invalidJson": "55555",
-          "valueMustBeAllowed": "55555",
-          "expectedObject": "55555",
-          "expectedArray": "55555",
-          "expectedString": "55555",
-          "expectedNumber": "55555",
-          "expectedBoolean": "55555",
-          "requiredField": "55555"
+          "schemaValidationTitle": "〖Şƈħḗḿȧ ṽȧŀīḓȧŧīȯƞ ḗřřȯřş ··········〗",
+          "moreErrors": "〖+{{count}} ḿȯřḗ ······〗",
+          "fixBeforeSubmit": "〖Ƒīẋ şƈħḗḿȧ ṽȧŀīḓȧŧīȯƞ ḗřřȯřş ƀḗƒȯřḗ şŭƀḿīŧŧīƞɠ. ···················〗",
+          "simulationTitle": "〖Şīḿŭŀȧŧīȯƞ ḗřřȯř ·······〗",
+          "submitFallback": "〖Ƒȧīŀḗḓ ŧȯ şīḿŭŀȧŧḗ ········〗",
+          "submitToast": "〖Ƒȧīŀḗḓ ŧȯ şīḿŭŀȧŧḗ ········〗",
+          "invalidJson": "〖Īƞṽȧŀīḓ ĴŞȮȠ. ······〗",
+          "valueMustBeAllowed": "〖Ṽȧŀŭḗ ḿŭşŧ ƀḗ ȯƞḗ ȯƒ ŧħḗ ȧŀŀȯẇḗḓ ȯƥŧīȯƞş. ·················〗",
+          "expectedObject": "〖Ḗẋƥḗƈŧḗḓ ȯƀĵḗƈŧ. ·······〗",
+          "expectedArray": "〖Ḗẋƥḗƈŧḗḓ ȧřřȧẏ. ······〗",
+          "expectedString": "〖Ḗẋƥḗƈŧḗḓ şŧřīƞɠ. ·······〗",
+          "expectedNumber": "〖Ḗẋƥḗƈŧḗḓ ƞŭḿƀḗř. ·······〗",
+          "expectedBoolean": "〖Ḗẋƥḗƈŧḗḓ ƀȯȯŀḗȧƞ. ·······〗",
+          "requiredField": "〖Řḗʠŭīřḗḓ ƒīḗŀḓ ḿīşşīƞɠ. ··········〗"
         },
         "result": {
-          "title": "55555",
-          "status": "55555",
-          "eventId": "55555",
-          "startedRuns": "55555",
-          "open": "55555",
-          "resumedRun": "55555",
-          "openResumedRun": "55555"
+          "title": "〖Řḗşŭŀŧ ···〗",
+          "status": "〖Şŧȧŧŭş ···〗",
+          "eventId": "〖Ḗṽḗƞŧ ĪḒ ····〗",
+          "startedRuns": "〖Şŧȧřŧḗḓ řŭƞş ·····〗",
+          "open": "〖Ȯƥḗƞ ··〗",
+          "resumedRun": "〖Řḗşŭḿḗḓ řŭƞ ·····〗",
+          "openResumedRun": "〖Ȯƥḗƞ řḗşŭḿḗḓ řŭƞ ·······〗"
         },
         "toasts": {
-          "success": "55555"
+          "success": "〖Ḗṽḗƞŧ şīḿŭŀȧŧḗḓ ······〗"
         },
         "form": {
-          "remove": "55555",
-          "addItem": "55555",
-          "rootLabel": "55555",
-          "payloadJsonLabel": "55555",
-          "true": "55555",
-          "false": "55555"
+          "remove": "〖Řḗḿȯṽḗ ···〗",
+          "addItem": "〖Ȧḓḓ īŧḗḿ ····〗",
+          "rootLabel": "〖Ƥȧẏŀȯȧḓ ···〗",
+          "payloadJsonLabel": "〖Ƥȧẏŀȯȧḓ (ĴŞȮȠ) ······〗",
+          "true": "〖Ŧřŭḗ ··〗",
+          "false": "〖Ƒȧŀşḗ ··〗"
         }
       },
       "defineEventDialog": {
-        "title": "55555",
-        "cancel": "55555",
-        "submit": "55555",
-        "submitting": "55555",
+        "title": "〖Ḓḗƒīƞḗ ƈŭşŧȯḿ ḗṽḗƞŧ ········〗",
+        "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+        "submit": "〖Ƈřḗȧŧḗ ḗṽḗƞŧ ·····〗",
+        "submitting": "〖Ƈřḗȧŧīƞɠ… ····〗",
         "fields": {
-          "eventType": "55555",
-          "eventTypePlaceholder": "55555",
-          "name": "55555",
-          "namePlaceholder": "55555",
-          "category": "55555",
-          "categoryPlaceholder": "55555",
-          "description": "55555",
-          "descriptionPlaceholder": "55555",
-          "useSchemaRef": "55555",
-          "useInline": "55555",
-          "selectSchemaRef": "55555",
-          "selectPlaceholder": "55555",
-          "payloadSchemaJson": "55555"
+          "eventType": "〖Ḗṽḗƞŧ ŧẏƥḗ ····〗",
+          "eventTypePlaceholder": "〖ḗ.ɠ. ŧīƈķḗŧ.ƈřḗȧŧḗḓ ········〗",
+          "name": "〖Ƞȧḿḗ ··〗",
+          "namePlaceholder": "〖Ħŭḿȧƞ-ƒřīḗƞḓŀẏ ƞȧḿḗ ········〗",
+          "category": "〖Ƈȧŧḗɠȯřẏ ····〗",
+          "categoryPlaceholder": "〖ḗ.ɠ. Ŧīƈķḗŧş ·····〗",
+          "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+          "descriptionPlaceholder": "〖Ȯƥŧīȯƞȧŀ ḓḗşƈřīƥŧīȯƞ ········〗",
+          "useSchemaRef": "〖Ŭşḗ şƈħḗḿȧ řḗƒ ······〗",
+          "useInline": "〖Īƞŀīƞḗ şƈħḗḿȧ (ȧḓṽȧƞƈḗḓ) ··········〗",
+          "selectSchemaRef": "〖Şḗŀḗƈŧ ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒ ··········〗",
+          "selectPlaceholder": "〖Şḗŀḗƈŧ… ···〗",
+          "payloadSchemaJson": "〖Ƥȧẏŀȯȧḓ şƈħḗḿȧ (ĴŞȮȠ) ·········〗"
         },
-        "footer": "55555",
+        "footer": "〖Ƈŭşŧȯḿ ḗṽḗƞŧş ȧřḗ ŧḗƞȧƞŧ-şƈȯƥḗḓ ȧƞḓ ƈȧƞ ƀḗ ŭşḗḓ ȧş ẇȯřķƒŀȯẇ ŧřīɠɠḗřş. ····························〗",
         "validation": {
-          "typeAndNameRequired": "55555",
-          "schemaRefRequired": "55555",
-          "invalidJson": "55555"
+          "typeAndNameRequired": "〖Ḗṽḗƞŧ ŧẏƥḗ ȧƞḓ ƞȧḿḗ ȧřḗ řḗʠŭīřḗḓ. ··············〗",
+          "schemaRefRequired": "〖Şḗŀḗƈŧ ȧ ƥȧẏŀȯȧḓ şƈħḗḿȧ řḗƒ (ȯř ŭşḗ īƞŀīƞḗ şƈħḗḿȧ). ·····················〗",
+          "invalidJson": "〖Ƥȧẏŀȯȧḓ şƈħḗḿȧ ḿŭşŧ ƀḗ ṽȧŀīḓ ĴŞȮȠ. ··············〗"
         },
         "toasts": {
-          "createSuccess": "55555",
-          "createFailed": "55555"
+          "createSuccess": "〖Ƈŭşŧȯḿ ḗṽḗƞŧ ƈřḗȧŧḗḓ ········〗",
+          "createFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ḗṽḗƞŧ ·········〗"
         }
       },
       "toasts": {
-        "loadEventsFailed": "55555",
-        "workflowCreated": "55555",
-        "createWorkflowFailed": "55555",
-        "detachConfirm": "55555",
-        "detachValidationFailed": "55555",
-        "detached": "55555",
-        "detachFailed": "55555"
+        "loadEventsFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḗṽḗƞŧş ·········〗",
+        "workflowCreated": "〖Ẇȯřķƒŀȯẇ ƈřḗȧŧḗḓ ·······〗",
+        "createWorkflowFailed": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ẇȯřķƒŀȯẇ ··········〗",
+        "detachConfirm": "〖Ḓḗŧȧƈħ ŧħīş ẇȯřķƒŀȯẇ ƒřȯḿ ŧħḗ ḗṽḗƞŧ? Ŧħīş ƥŭƀŀīşħḗş ȧ ƞḗẇ ṽḗřşīȯƞ ẇīŧħ ŧħḗ ŧřīɠɠḗř řḗḿȯṽḗḓ. ·····································〗",
+        "detachValidationFailed": "〖Ḓḗŧȧƈħ ƒȧīŀḗḓ (ṽȧŀīḓȧŧīȯƞ ḗřřȯřş) ··············〗",
+        "detached": "〖Ḓḗŧȧƈħḗḓ ····〗",
+        "detachFailed": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŧȧƈħ ·······〗"
       }
     },
     "actionInput": {
       "fallbacks": {
-        "loadingOptions": "55555",
-        "selectName": "55555 {{name}} 55555",
-        "ticketSearchPlaceholder": "55555",
-        "ticketSelect": "55555",
-        "ticketTypeAbove": "55555",
-        "selectBoard": "55555",
-        "selectClient": "55555",
-        "selectContact": "55555",
-        "selectUser": "55555",
-        "selectUserOrTeam": "55555"
+        "loadingOptions": "〖Ŀȯȧḓīƞɠ ȯƥŧīȯƞş... ········〗",
+        "selectName": "〖Şḗŀḗƈŧ {{name}} ······〗",
+        "ticketSearchPlaceholder": "〖Şḗȧřƈħ ŧīƈķḗŧş ƀẏ ƞŭḿƀḗř ȯř ŧīŧŀḗ ··············〗",
+        "ticketSelect": "〖Şḗŀḗƈŧ ŧīƈķḗŧ ······〗",
+        "ticketTypeAbove": "〖Ŧẏƥḗ ȧƀȯṽḗ ŧȯ şḗȧřƈħ ŧīƈķḗŧş ············〗",
+        "selectBoard": "〖Şḗŀḗƈŧ Ɓȯȧřḓ ·····〗",
+        "selectClient": "〖Şḗŀḗƈŧ Ƈŀīḗƞŧ ······〗",
+        "selectContact": "〖Şḗŀḗƈŧ Ƈȯƞŧȧƈŧ ······〗",
+        "selectUser": "〖Şḗŀḗƈŧ Ŭşḗř ·····〗",
+        "selectUserOrTeam": "〖Şḗŀḗƈŧ Ŭşḗř ȯř Ŧḗȧḿ ········〗"
       },
       "errors": {
-        "loadTicket": "55555",
-        "searchTickets": "55555",
-        "loadOptions": "55555"
+        "loadTicket": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ·········〗",
+        "searchTickets": "〖Ƒȧīŀḗḓ ŧȯ şḗȧřƈħ ŧīƈķḗŧş ··········〗",
+        "loadOptions": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȯƥŧīȯƞş ·········〗"
       },
       "dependencyHints": {
-        "contactClient": "55555",
-        "locationClient": "55555",
-        "categoryBoard": "55555",
-        "statusBoard": "55555",
-        "statusTicket": "55555",
-        "subcategoryBoard": "55555",
-        "subcategoryCategory": "55555"
+        "contactClient": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ƈŀīḗƞŧ ƒīřşŧ ŧȯ ŀȯȧḓ ƈȯƞŧȧƈŧ ȯƥŧīȯƞş. ·····················〗",
+        "locationClient": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ƈŀīḗƞŧ ƒīřşŧ ŧȯ ŀȯȧḓ ŀȯƈȧŧīȯƞ ȯƥŧīȯƞş. ······················〗",
+        "categoryBoard": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ɓȯȧřḓ ƒīřşŧ ŧȯ ŀȯȧḓ ƈȧŧḗɠȯřẏ ȯƥŧīȯƞş. ·····················〗",
+        "statusBoard": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ɓȯȧřḓ ƒīřşŧ ŧȯ ŀȯȧḓ şŧȧŧŭş ȯƥŧīȯƞş. ····················〗",
+        "statusTicket": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ŧīƈķḗŧ ƒīřşŧ ŧȯ ŀȯȧḓ şŧȧŧŭş ȯƥŧīȯƞş. ·····················〗",
+        "subcategoryBoard": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ɓȯȧřḓ ƒīřşŧ ŧȯ ŀȯȧḓ şŭƀƈȧŧḗɠȯřẏ ȯƥŧīȯƞş. ······················〗",
+        "subcategoryCategory": "〖Ƈħȯȯşḗ ȧ ƒīẋḗḓ Ƈȧŧḗɠȯřẏ ƒīřşŧ ŧȯ ŀȯȧḓ şŭƀƈȧŧḗɠȯřẏ ȯƥŧīȯƞş. ························〗"
       }
     }
   },
   "automationGate": {
-    "loading": "55555"
+    "loading": "〖Ŀȯȧḓīƞɠ ẇȯřķƒŀȯẇ ȧŭŧȯḿȧŧīȯƞ... ············〗"
   },
   "flow": {
     "designer": {
-      "title": "55555"
+      "title": "〖Ẇȯřķƒŀȯẇ Ḓḗşīɠƞḗř ·······〗"
     },
     "sidebar": {
-      "dragHint": "55555"
+      "dragHint": "〖Ḓřȧɠ ŧħḗşḗ ƞȯḓḗş ŧȯ ŧħḗ ƈȧƞṽȧş: ·············〗"
     },
     "picker": {
-      "searchPlaceholder": "55555"
+      "searchPlaceholder": "〖Şḗȧřƈħ... ····〗"
     },
     "fields": {
-      "selectInputField": "55555",
-      "customFieldReference": "55555",
-      "selectOrEnterReference": "55555"
+      "selectInputField": "〖Şḗŀḗƈŧ Īƞƥŭŧ Ƒīḗŀḓ ········〗",
+      "customFieldReference": "〖Ƈŭşŧȯḿ Ƒīḗŀḓ Řḗƒḗřḗƞƈḗ ·········〗",
+      "selectOrEnterReference": "〖Şḗŀḗƈŧ ȯř ḗƞŧḗř ȧ ƒīḗŀḓ řḗƒḗřḗƞƈḗ ··············〗"
     },
     "delete": {
-      "confirmTitle": "55555",
-      "confirmMessage": "55555"
+      "confirmTitle": "〖Ƈȯƞƒīřḿ Ḓḗŀḗŧīȯƞ ·······〗",
+      "confirmMessage": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħīş ẇȯřķƒŀȯẇ? ···················〗"
     },
     "topBar": {
-      "workflowName": "55555",
-      "workflowDescription": "55555"
+      "workflowName": "〖Ẇȯřķƒŀȯẇ Ƞȧḿḗ ······〗",
+      "workflowDescription": "〖Ẇȯřķƒŀȯẇ Ḓḗşƈřīƥŧīȯƞ ········〗"
     },
     "nodes": {
       "classifier": {
-        "newClassification": "55555"
+        "newClassification": "〖Ƞḗẇ ƈŀȧşşīƒīƈȧŧīȯƞ ········〗"
       },
       "selector": {
-        "defaultInput": "55555"
+        "defaultInput": "〖Ḓḗƒȧŭŀŧ Īƞƥŭŧ ······〗"
       },
       "decision": {
-        "type": "55555",
-        "conditionValue": "55555",
-        "defaultOutput": "55555",
-        "defaultOutputProp": "55555"
+        "type": "〖Ŧẏƥḗ ··〗",
+        "conditionValue": "〖Ƈȯƞḓīŧīȯƞ ṽȧŀŭḗ ······〗",
+        "defaultOutput": "〖Ḓḗƒȧŭŀŧ Ȯŭŧƥŭŧ ······〗",
+        "defaultOutputProp": "〖Ḓḗƒȧŭŀŧ ȯŭŧƥŭŧ ······〗"
       },
       "ticketCreator": {
-        "ticketTitle": "55555",
-        "ticketDescription": "55555",
-        "selectBoard": "55555",
-        "selectPriority": "55555"
+        "ticketTitle": "〖Ŧīƈķḗŧ Ŧīŧŀḗ: ······〗",
+        "ticketDescription": "〖Ŧīƈķḗŧ Ḓḗşƈřīƥŧīȯƞ: ········〗",
+        "selectBoard": "〖Şḗŀḗƈŧ ȯř ḗƞŧḗř ȧ ƀȯȧřḓ ··········〗",
+        "selectPriority": "〖Şḗŀḗƈŧ ȯř ḗƞŧḗř ȧ ƥřīȯřīŧẏ ···········〗"
       }
     }
   },
   "toggle": {
-    "disableTitle": "55555",
-    "enableTitle": "55555",
-    "confirmDisable": "55555",
-    "confirmEnable": "55555"
+    "disableTitle": "〖Ḓīşȧƀŀḗ Ẇȯřķƒŀȯẇ ·······〗",
+    "enableTitle": "〖Ḗƞȧƀŀḗ Ẇȯřķƒŀȯẇ ······〗",
+    "confirmDisable": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓīşȧƀŀḗ ŧħīş ẇȯřķƒŀȯẇ? ···················〗",
+    "confirmEnable": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḗƞȧƀŀḗ ŧħīş ẇȯřķƒŀȯẇ? ···················〗"
   },
   "mappingEditor": {
     "error": {
-      "title": "55555",
-      "retry": "55555",
-      "retryWithCount": "55555 {{retryCount}} 55555 {{maxRetries}} 55555",
-      "attemptOfMax": "55555 {{retryCount}} 55555 {{maxRetries}} 55555",
-      "maxRetriesReached": "55555",
-      "contactSupport": "55555"
+      "title": "〖Ƒȧīŀḗḓ ŧȯ Ŀȯȧḓ Şƈħḗḿȧ ·········〗",
+      "retry": "〖Řḗŧřẏ ··〗",
+      "retryWithCount": "〖Řḗŧřẏ ({{retryCount}}/{{maxRetries}}) ···············〗",
+      "attemptOfMax": "〖Ȧŧŧḗḿƥŧ {{retryCount}} ȯƒ {{maxRetries}} ················〗",
+      "maxRetriesReached": "〖Ḿȧẋīḿŭḿ řḗŧřẏ ȧŧŧḗḿƥŧş řḗȧƈħḗḓ. ·············〗",
+      "contactSupport": "〖Ƈȯƞŧȧƈŧ Şŭƥƥȯřŧ → ·······〗"
     }
   },
   "actionInputTypeHint": {
-    "coercible": "55555 {{sourceType}} 55555 {{targetType}} 55555",
-    "incompatible": "55555 {{sourceType}} 55555 {{targetType}} 55555"
+    "coercible": "〖Ŧẏƥḗ \"{{sourceType}}\" ẇīŀŀ ƀḗ ƈȯƞṽḗřŧḗḓ ŧȯ \"{{targetType}}\" ························〗",
+    "incompatible": "〖Ŧẏƥḗ \"{{sourceType}}\" īş īƞƈȯḿƥȧŧīƀŀḗ ẇīŧħ ḗẋƥḗƈŧḗḓ \"{{targetType}}\" ····························〗"
   }
 }

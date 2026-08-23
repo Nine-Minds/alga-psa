@@ -41,6 +41,11 @@ export default defineConfig({
       { find: /^@alga-psa\/projects\/(.*)$/, replacement: `${path.resolve(__dirname, 'src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
+      // @alga-psa/db's exports put tenant, connection and workDate under src/lib;
+      // the generic workspace rule below would resolve them to src/<name>.
+      { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../db/src/models/index.ts') },
+      { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: `${path.resolve(__dirname, '../db/src/models')}/$1` },
+      { find: /^@alga-psa\/db\/(.*)$/, replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1` },
       {
         find: /^@alga-psa\/auth\/sso\/entry$/,
         replacement: path.resolve(__dirname, '../auth/src/components/SsoProviderButtons.tsx'),

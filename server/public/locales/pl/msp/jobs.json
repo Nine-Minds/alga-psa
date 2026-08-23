@@ -142,5 +142,10 @@
   "page": {
     "heading": "Monitorowanie zadań",
     "recentJobs": "Ostatnie zadania"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Nie znaleziono zadania w tle. Mogło wygasnąć lub zostać usunięte."
+    }
   }
 }

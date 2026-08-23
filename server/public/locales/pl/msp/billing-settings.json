@@ -1153,7 +1153,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Nie udało się załadować ustawień",
-    "failedToSaveSettings": "Nie udało się zapisać ustawień"
+    "failedToSaveSettings": "Nie udało się zapisać ustawień",
+    "permissions": {
+      "readSettings": "Odmowa uprawnień: nie można odczytać ustawień rozliczeń",
+      "updateSettings": "Odmowa uprawnień: nie można zaktualizować ustawień rozliczeń",
+      "readClientSettings": "Odmowa uprawnień: nie można odczytać ustawień rozliczeń klienta",
+      "updateClientSettings": "Odmowa uprawnień: nie można zaktualizować ustawień rozliczeń klienta",
+      "settingsRead": "Odmowa uprawnień: wymagane uprawnienie odczytu ustawień rozliczeń",
+      "settingsUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji ustawień rozliczeń",
+      "readTaxRates": "Odmowa uprawnień: nie można odczytywać stawek podatku",
+      "createTaxRates": "Odmowa uprawnień: nie można tworzyć stawek podatku",
+      "updateTaxRates": "Odmowa uprawnień: nie można aktualizować stawek podatku",
+      "updateTaxRegions": "Odmowa uprawnień: nie można aktualizować regionów podatkowych"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Odmowa uprawnień: stawki podatku w rozliczeniach nie są dostępne dla tej organizacji.",
+      "overlap": "Zakres dat stawki podatku nakłada się na istniejącą stawkę dla tego regionu.",
+      "regionRequired": "Region jest wymagany.",
+      "idRequired": "Do aktualizacji wymagany jest identyfikator stawki podatku.",
+      "notFound": "Nie znaleziono stawki podatku.",
+      "notFoundOrAlreadyDeleted": "Nie znaleziono stawki podatku lub została już usunięta.",
+      "invalid": "Wybrana stawka podatku lub region jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "regionInvalid": "Wybrany region podatkowy nie jest już prawidłowy. Odśwież stronę i wybierz inny region.",
+      "duplicate": "Dla tego regionu i zakresu dat istnieje już stawka podatku.",
+      "missingField": "Brakuje wymaganego pola stawki podatku.",
+      "missingFieldNamed": "Brakuje wymaganego pola stawki podatku: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Skonfiguruj co najmniej jedną aktywną stawkę podatku przed utworzeniem domyślnych ustawień podatkowych.",
+      "componentNotFound": "Nie znaleziono składnika podatku. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "bracketNotFound": "Nie znaleziono progu podatkowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "holidayNotFound": "Nie znaleziono wakacji podatkowych. Mogły zostać zaktualizowane lub usunięte. Odśwież stronę i spróbuj ponownie.",
+      "recordInvalid": "Jeden z wybranych rekordów podatkowych jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów podatkowych już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Rekord podatkowy o takich danych już istnieje.",
+      "notAllowed": "Jedna z wartości podatku jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola podatku.",
+      "missingFieldNamed": "Brakuje wymaganego pola podatku: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Region podatkowy o kodzie „{{code}}” już istnieje.",
+      "notFoundCode": "Nie znaleziono regionu podatkowego o kodzie „{{code}}”."
+    }
   },
   "toast": {
     "saved": "Zapisano pomyślnie"

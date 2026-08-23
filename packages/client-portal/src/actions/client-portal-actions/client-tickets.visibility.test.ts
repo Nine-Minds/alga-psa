@@ -416,6 +416,7 @@ describe('client portal ticket visibility enforcement', () => {
 
     await expect(getClientTicketDetails('ticket-hidden')).resolves.toEqual({
       actionError: 'Ticket not found or access denied',
+      messageKey: 'client-portal:errors.tickets.notFoundOrDenied',
     });
   });
 
@@ -555,6 +556,7 @@ describe('client portal ticket visibility enforcement', () => {
 
     await expect(getClientTicketDocuments('ticket-hidden')).resolves.toEqual({
       actionError: 'Ticket not found or access denied',
+      messageKey: 'client-portal:errors.tickets.notFoundOrDenied',
     });
   });
 

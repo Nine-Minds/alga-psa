@@ -22,8 +22,10 @@ const buttonVariants = cva(
         secondary: 'bg-[rgb(var(--color-secondary-500))] text-white hover:bg-[rgb(var(--color-secondary-600))] dark:bg-[rgb(var(--color-secondary-300))] dark:hover:bg-[rgb(var(--color-secondary-400))]',
         ghost: 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-200))] hover:text-[rgb(var(--color-primary-700))] dark:hover:bg-[rgb(var(--color-primary-400)/0.30)] dark:hover:text-[rgb(var(--color-primary-800))]',
         link: 'underline-offset-4 hover:underline text-[rgb(var(--color-primary-500))]',
-        soft: 'bg-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-700))] hover:bg-[rgb(var(--color-primary-300))] dark:bg-[rgb(var(--color-primary-400)/0.30)] dark:text-[rgb(var(--color-primary-800))] dark:hover:bg-[rgb(var(--color-primary-400)/0.40)]',
-        dashed: 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-600))] border-2 border-dashed border-[rgb(var(--color-primary-300))] hover:bg-[rgb(var(--color-primary-200))] hover:border-[rgb(var(--color-primary-400))] dark:bg-[rgb(var(--color-primary-400)/0.22)] dark:border-[rgb(var(--color-primary-400)/0.40)] dark:hover:bg-[rgb(var(--color-primary-400)/0.30)]',
+        // Tinted fill, neutral ink — the chip rule. Brand-on-brand bottomed out at
+        // 3.58:1, and an alpha tint needs no dark: variant to stay a mid-tone.
+        soft: 'bg-[rgb(var(--color-primary-500)/0.18)] text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-primary-500)/0.26)]',
+        dashed: 'bg-[rgb(var(--color-primary-500)/0.12)] text-[rgb(var(--color-text-900))] border-2 border-dashed border-[rgb(var(--color-primary-500)/0.45)] hover:bg-[rgb(var(--color-primary-500)/0.20)] hover:border-[rgb(var(--color-primary-500)/0.65)]',
         icon: 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-900))]',
       },
       size: {

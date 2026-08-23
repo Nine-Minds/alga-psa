@@ -1,14 +1,20 @@
 /**
- * One suite for the whole theme contract, in three layers:
+ * One suite for the whole theme contract, in six layers:
  *
- *   1. token blocks    — every pair declares the values it must, and the
- *                        shade-inversion / separation invariants hold.
+ *   1. token blocks     — every pair declares the values it must, and the
+ *                         shade-inversion / separation invariants hold.
  *   2. token references — every --color-* a component names actually exists.
  *   3. surface rules    — the handful of CSS rules whose failure mode is
- *                        silent and mode-asymmetric (menus, editor paper).
+ *                         silent and mode-asymmetric (menus, pickers, paper).
+ *   4. status contrast  — every status fill is legible against its own ink.
+ *   5. colour literals  — no themed file grows a new hardcoded hex or rgb().
+ *   6. element contrast — what components actually paint: every className that
+ *                         names a --color-* as both ink and fill, measured
+ *                         across all nine pairs in both modes.
  *
- * They live together because they fail together: all three exist to catch
- * styling that looks correct in light mode and breaks in dark.
+ * They live together because they fail together: all six exist to catch styling
+ * that looks correct in light mode and breaks in dark. Layers 4 and 6 are the
+ * pair: 4 checks tokens against each other, 6 checks the combinations shipped.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'fs';
@@ -37,6 +43,13 @@ function tokensOf(selector: string): Record<string, string> {
     if (match) tokens[match[1]] = match[2].trim();
   }
   return tokens;
+}
+
+/** Full declaration block for a selector, comments and all. */
+function blockOf(selector: string): string {
+  const start = css.indexOf(`${selector} {`);
+  expect(start, `missing block: ${selector}`).toBeGreaterThan(-1);
+  return css.slice(start, css.indexOf('\n}', start));
 }
 
 /** A rule's declaration body, for selectors that carry no tokens. */
@@ -245,6 +258,24 @@ describe('theme pair token blocks', () => {
         const delta = Math.abs(luma(tokens['--color-sidebar-bg']) - luma(tokens['--color-header-bg']));
         expect(delta, `${id}: header sits ${delta.toFixed(1)} luma off the sidebar`).toBeLessThan(3);
       });
+  });
+
+  // Elevation is theme-aware for the same reason borders are: Tailwind's
+  // shadow-* scale is tuned for white grounds, and 5% black over a near-black
+  // page is nothing at all. Both modes must declare the token, and dark must
+  // carry more alpha than light or cards read as flat stickers again.
+  it('defines a card elevation token in both modes, heavier in dark', () => {
+    expect(css).toContain('.card-elevated {\n    box-shadow: var(--shadow-card);');
+
+    const alphaOf = (block: string) => {
+      const m = /--shadow-card:\s*([^;]+);/.exec(block);
+      expect(m, 'no --shadow-card declared').not.toBeNull();
+      return Math.max(...[...m![1].matchAll(/rgb\(0 0 0 \/ ([0-9.]+)\)/g)].map((x) => Number(x[1])));
+    };
+    const light = alphaOf(blockOf('html.light'));
+    const dark = alphaOf(blockOf('html.dark'));
+
+    expect(dark, `dark shadow alpha ${dark} must exceed light's ${light}`).toBeGreaterThan(light);
   });
 
   it('keeps every light page background off the card color', () => {
@@ -468,5 +499,307 @@ describe('picker surface contract', () => {
       .map(({ line, index }) => `${file}:${index + 1}  ${line.trim().slice(0, 100)}`);
 
     expect(offenders, `receding/hardcoded surface(s):\n${offenders.join('\n')}`).toEqual([]);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * Layer 4: colour contrast and hardcoded literals.
+ *
+ * These two catch the failures the token checks above cannot see, because the
+ * offending value never names a token at all. The keyboard cheatsheet shipped
+ * `linear-gradient(180deg, #fff, …)` next to a label colour that DID invert —
+ * white caps with invisible letters in dark, and nothing anywhere for a
+ * className scan to find, since it was all inline styles.
+ * ------------------------------------------------------------------------- */
+
+const srgb = (c: number) => {
+  const x = c / 255;
+  return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+};
+const relLuminance = ([r, g, b]: number[]) =>
+  0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b);
+function contrast(a: number[], b: number[]): number {
+  const [hi, lo] = [relLuminance(a), relLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+const triple = (v: string | undefined) =>
+  v ? v.trim().split(/[\s,]+/).map(Number).filter((n) => !Number.isNaN(n)).slice(0, 3) : null;
+
+function themeTokens(mode: 'light' | 'dark', pair: string): Record<string, string> {
+  const base = tokensOf(`html.${mode}`);
+  return pair === 'alga' ? base : { ...base, ...tokensOf(`html.${mode}[data-theme-pair="${pair}"]`) };
+}
+
+const ALL_PAIRS = ['alga', ...THEME_PAIRS.map((p) => p.id).filter((id) => id !== 'alga' && id !== 'custom')];
+
+/**
+ * Status fills are the SAME colour in both modes (#f59e0b amber, #ef4444 red),
+ * so their foreground must not flip with the mode. Dark used to set white ink on
+ * those fills — 2.1:1 on amber — because "dark mode means light text" was applied
+ * to a surface that never got darker. Fixed 2026-08-22; this pins it.
+ *
+ * Light had its own eight failures, since fixed: the #dc2626 error fill sits in
+ * the awkward middle where near-black gives 3.70:1 and only white clears AA.
+ */
+const CONTRAST_BACKLOG = new Set<string>([
+  // Empty, and it should stay that way. Every status fill/foreground pair clears
+  // WCAG AA in both modes across all nine pairs (worst 4.63:1). Two shapes of fix
+  // got it there: dark stopped flipping its ink to white on fills that never
+  // changed, and the mid-tone #dc2626 error fill takes WHITE ink rather than
+  // near-black — it is dark enough that only the light ink clears 4.5:1.
+  // Do not add an entry here to silence a failure; fix the fill or the ink.
+]);
+
+describe('colour contrast', () => {
+  it('keeps every status fill legible against its own foreground', () => {
+    const failures: string[] = [];
+    (['light', 'dark'] as const).forEach((mode) => {
+      ALL_PAIRS.forEach((pair) => {
+        const t = themeTokens(mode, pair);
+        (['warning', 'success', 'error'] as const).forEach((kind) => {
+          const bg = triple(t[`--color-status-${kind}`]);
+          const fg = triple(t[`--color-status-${kind}-foreground`]);
+          if (!bg || !fg) return;
+          const key = `${mode}/${pair}/${kind}`;
+          const ratio = contrast(fg, bg);
+          if (ratio < 4.5 && !CONTRAST_BACKLOG.has(key)) {
+            failures.push(`${key} = ${ratio.toFixed(2)}:1`);
+          }
+        });
+      });
+    });
+    expect(failures, `status pairs below WCAG AA:\n${failures.join('\n')}`).toEqual([]);
+  });
+
+  it('keeps the backlog honest — a fixed pair must be struck from the list', () => {
+    const stillFailing = new Set<string>();
+    (['light', 'dark'] as const).forEach((mode) => {
+      ALL_PAIRS.forEach((pair) => {
+        const t = themeTokens(mode, pair);
+        (['warning', 'success', 'error'] as const).forEach((kind) => {
+          const bg = triple(t[`--color-status-${kind}`]);
+          const fg = triple(t[`--color-status-${kind}-foreground`]);
+          if (bg && fg && contrast(fg, bg) < 4.5) stillFailing.add(`${mode}/${pair}/${kind}`);
+        });
+      });
+    });
+    const stale = [...CONTRAST_BACKLOG].filter((k) => !stillFailing.has(k));
+    expect(stale, `now passing — remove from CONTRAST_BACKLOG:\n${stale.join('\n')}`).toEqual([]);
+  });
+});
+
+/**
+ * Hardcoded colour literals inside files that otherwise theme from tokens.
+ *
+ * This is the check that would have caught the keyboard cheatsheet. A literal
+ * cannot invert, so whichever mode it was picked for, the other one breaks —
+ * and because these live in inline styles rather than classNames, no
+ * Tailwind-class sweep can see them. Verified against the pre-fix file: it
+ * flags all three defects (the `#fff` keycap gradient, the `#fff` chord chip,
+ * and the literal green category).
+ *
+ * The map is a ceiling per file, not a blessing: counts may fall, never rise.
+ * A new file with literals fails outright.
+ */
+const LITERAL_BASELINE = new Map<string, number>([
+  ['ee/server/src/components/workflow-graph/WorkflowGraph.tsx', 1],
+  ['packages/client-portal/src/components/projects/ClientKanbanBoard.tsx', 1],
+  ['packages/client-portal/src/components/projects/ClientTaskListView.tsx', 1],
+  ['packages/client-portal/src/components/tickets/TicketList.tsx', 1],
+  ['packages/clients/src/components/clients/command-center/PulseCards.tsx', 2],
+  ['packages/msp-composition/src/reports/Reports.tsx', 3],
+  ['packages/notifications/src/components/NotificationDetailView.tsx', 1],
+  ['packages/notifications/src/components/NotificationItem.tsx', 1],
+  ['packages/projects/src/components/ProjectDetail.tsx', 2],
+  ['packages/projects/src/components/TaskCard.tsx', 2],
+  ['packages/projects/src/components/TaskListView.tsx', 4],
+  ['packages/projects/src/components/project-templates/TemplateEditor.tsx', 1],
+  ['packages/projects/src/components/settings/projects/TenantProjectTaskStatusSettings.tsx', 11],
+  ['packages/reporting/src/components/deferred-revenue/DeferredRevenueReport.tsx', 1],
+  ['packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheetTable.tsx', 1],
+  ['packages/surveys/src/components/dashboard/SatisfactionDistribution.tsx', 1],
+  ['packages/tickets/src/lib/ticket-columns.tsx', 1],
+  ['packages/ui/src/components/ColorPicker.tsx', 32],
+  ['packages/ui/src/editor/EmojiSuggestion.tsx', 1],
+  ['packages/ui/src/editor/MentionSuggestion.tsx', 1],
+  ['packages/user-activities/src/components/filters/ActivitiesTableFilters.tsx', 1],
+  ['server/src/components/keyboard-shortcuts/KeyboardShortcutsPanel.tsx', 6],
+  ['server/src/components/settings/general/ClientPortalSettings.tsx', 6]
+]);
+
+describe('hardcoded colour literals', () => {
+  const LITERAL = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|\brgba?\(\s*\d{1,3}[\s,]+\d{1,3}[\s,]+\d{1,3}/;
+  const STYLEISH = /\b(background|backgroundColor|color|borderColor|boxShadow|fill|stroke|bg|fg|dot)\s*:/;
+  const TOKEN = /var\(--(?:color|badge|keycap|shadow)-/;
+
+  const counts = (() => {
+    const out = execFileSync('grep',
+      ['-rln', '-E', 'rgba?\\(\\s*[0-9]|#[0-9a-fA-F]{3,6}', 'packages', 'server/src', 'ee/server/src',
+       '--include=*.tsx'],
+      { cwd: REPO, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    const tally = new Map<string, number>();
+    out.split('\n').filter(Boolean).forEach((file) => {
+      if (file.includes('/dist/') || file.includes('.test.')) return;
+      const src = fs.readFileSync(path.join(REPO, file), 'utf8');
+      if ((src.match(TOKEN) ?? []).length === 0) return;
+      if ((src.match(new RegExp(TOKEN.source, 'g')) ?? []).length < 3) return;
+      const n = src.split('\n').filter((l) => LITERAL.test(l) && STYLEISH.test(l)).length;
+      if (n > 0) tally.set(file, n);
+    });
+    return tally;
+  })();
+
+  it('adds no new colour literal to a themed file', () => {
+    const offenders: string[] = [];
+    counts.forEach((n, file) => {
+      const allowed = LITERAL_BASELINE.get(file);
+      if (allowed === undefined) offenders.push(`${file} — ${n} literal(s), file not in baseline`);
+      else if (n > allowed) offenders.push(`${file} — ${n} literal(s), baseline allows ${allowed}`);
+    });
+    expect(offenders, `hardcoded colour literals:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('keeps the literal baseline honest — a cleaned file must be struck or lowered', () => {
+    const stale: string[] = [];
+    LITERAL_BASELINE.forEach((allowed, file) => {
+      const now = counts.get(file) ?? 0;
+      if (now < allowed) stale.push(`${file} — now ${now}, baseline still says ${allowed}`);
+    });
+    expect(stale, `baseline is stale, lower it:\n${stale.join('\n')}`).toEqual([]);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Layer 6 — element contrast.
+ *
+ * The status-fill layer above checks tokens against each other. This one checks
+ * what components actually paint: every className that names a --color-* both as
+ * ink and as fill, measured across all nine pairs in both modes.
+ *
+ * It exists because the failures it catches are invisible to a token-level check.
+ * A chip reading `text-primary-700 on bg-primary-100` is fine in light and 3.3:1
+ * in slate dark, because the primary ramp inverts underneath it. A tooltip filled
+ * with border-200 is fine everywhere except high contrast, which repurposes that
+ * rung as a near-white hairline. Both shipped; both measured 1.1:1 at the worst.
+ *
+ * Variant-aware: a bare class applies in light, `dark:` wins in dark, and the
+ * interaction variants are skipped — a hover fill is not what the element rests
+ * on. Alpha is composited the way the screen does it: the fill onto the card,
+ * then the ink onto that.
+ * ------------------------------------------------------------------------- */
+
+/** Resolve a token to an RGB triple, following var(--x) chains. */
+function resolveTriple(tokens: Record<string, string>, name: string, depth = 0): number[] | null {
+  const raw = tokens[name];
+  if (raw === undefined || depth > 6) return null;
+  const alias = /^var\((--[a-z0-9-]+)\)$/.exec(raw.trim());
+  if (alias) return resolveTriple(tokens, alias[1], depth + 1);
+  const parsed = triple(raw);
+  return parsed && parsed.length === 3 ? parsed : null;
+}
+
+/** Flatten a translucent layer onto what sits behind it. */
+const over = (fg: number[], bg: number[], a: number) =>
+  fg.map((c, i) => Math.round(a * c + (1 - a) * bg[i]));
+
+/**
+ * Empty, and it should stay that way. The audit measures every element site that
+ * pairs a real foreground token with a real background token; all of them clear
+ * WCAG AA in all 18 theme-modes. It was 44 sites, worst 1.05:1, fixed 2026-08-22
+ * by collapsing badges onto the .chip-* utilities, moving hairline rungs out of
+ * fills, and retuning --color-text-500.
+ *
+ * Do not add an entry here to silence a failure. Use a .chip-* class, a surface
+ * rung, or a neutral alpha tint — the three shapes that survive ramp inversion.
+ */
+const ELEMENT_CONTRAST_BASELINE = new Set<string>([]);
+
+describe('element colour contrast', () => {
+  const CLASS = new RegExp(
+    String.raw`(?:(dark|hover|focus|group-hover|disabled|aria-selected|data-\[[^\]]+\]):)?` +
+    String.raw`(bg|text)-\[rgb\(var\((--color-[a-z0-9-]+)\)(?:\s*/\s*([0-9.]+))?\)\]`,
+    'g',
+  );
+  /** Interaction states are not what the element rests on. */
+  const TRANSIENT = new Set(['hover', 'focus', 'group-hover', 'disabled', 'aria-selected']);
+
+  type Use = { variant: string; kind: string; token: string; alpha: string };
+
+  const { failures, siteCount } = (() => {
+    const out = execFileSync('grep',
+      ['-rn', '-E', String.raw`text-\[rgb\(var\(--color-`, 'packages', 'server/src', 'ee/server/src',
+       '--include=*.tsx'],
+      { cwd: REPO, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+
+    const found = new Map<string, { worst: number; where: string }>();
+    let sites = 0;
+
+    for (const line of out.split('\n')) {
+      if (!line || line.includes('/dist/') || line.includes('.test.')) continue;
+      const head = /^([^:]+):(\d+):(.*)$/.exec(line);
+      if (!head) continue;
+      const [, file, lineNo, code] = head;
+
+      const uses: Use[] = [...code.matchAll(CLASS)].map((m) => ({
+        variant: m[1] ?? '', kind: m[2], token: m[3], alpha: m[4] ?? '',
+      }));
+      if (uses.length === 0) continue;
+
+      for (const mode of ['light', 'dark'] as const) {
+        const pick = (kind: string): Use | null => {
+          const usable = uses.filter((u) => u.kind === kind && !TRANSIENT.has(u.variant.split('[')[0]));
+          const dark = usable.filter((u) => u.variant === 'dark');
+          const bare = usable.filter((u) => u.variant === '');
+          const chosen = mode === 'dark' ? (dark[0] ?? bare[0]) : bare[0];
+          return chosen ?? null;
+        };
+        const fgUse = pick('text');
+        const bgUse = pick('bg');
+        if (!fgUse || !bgUse) continue;
+        if (mode === 'light') sites += 1;
+
+        for (const pair of ALL_PAIRS) {
+          const tokens = themeTokens(mode, pair);
+          const card = resolveTriple(tokens, '--color-card') ?? [255, 255, 255];
+          let fg = resolveTriple(tokens, fgUse.token);
+          let bg = resolveTriple(tokens, bgUse.token);
+          if (!fg || !bg) continue;
+          if (bgUse.alpha) bg = over(bg, card, Number(bgUse.alpha));
+          if (fgUse.alpha) fg = over(fg, bg, Number(fgUse.alpha));
+
+          const ratio = contrast(fg, bg);
+          if (ratio >= 4.5) continue;
+          const key = `${file}|${fgUse.token}|${bgUse.token}`;
+          const prev = found.get(key);
+          if (!prev || ratio < prev.worst) {
+            found.set(key, {
+              worst: ratio,
+              where: `${file}:${lineNo} — ${fgUse.token} on ${bgUse.token} = ${ratio.toFixed(2)}:1 (${pair}/${mode})`,
+            });
+          }
+        }
+      }
+    }
+    return { failures: found, siteCount: sites };
+  })();
+
+  it('measures a meaningful number of element sites', () => {
+    // A regex or path change that silently stops matching would make every other
+    // assertion here pass vacuously.
+    expect(siteCount).toBeGreaterThan(80);
+  });
+
+  it('puts no element token pair below WCAG AA in any theme-mode', () => {
+    const offenders: string[] = [];
+    failures.forEach(({ where }, key) => {
+      if (!ELEMENT_CONTRAST_BASELINE.has(key)) offenders.push(where);
+    });
+    offenders.sort();
+    expect(offenders, `element pairs below WCAG AA:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('keeps the element baseline honest — a fixed pair must be struck from the list', () => {
+    const stale = [...ELEMENT_CONTRAST_BASELINE].filter((key) => !failures.has(key));
+    expect(stale, `now passing — remove from ELEMENT_CONTRAST_BASELINE:\n${stale.join('\n')}`).toEqual([]);
   });
 });

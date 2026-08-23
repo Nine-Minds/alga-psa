@@ -98,9 +98,9 @@ export default function OpportunityStepTemplatesSettings() {
         const rows = plan[stage];
         return (
           <section key={stage} id={`opportunity-step-templates-${stage}`}>
-            <h3 className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
+            <h4 className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
               {t(OPPORTUNITY_STAGE_LABELS[stage].key, OPPORTUNITY_STAGE_LABELS[stage].fallback)}
-            </h3>
+            </h4>
             <p className="mb-2 text-xs text-[rgb(var(--color-text-500))]">
               {t('opportunities.settings.stepTemplatesStageHelp', 'Steps offered when an opportunity plans this stage.')}
             </p>

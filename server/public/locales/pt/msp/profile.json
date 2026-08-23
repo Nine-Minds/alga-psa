@@ -760,5 +760,48 @@
       "lastUsed": "{{date}} usado pela última vez",
       "notUsedYet": "Ainda não usado"
     }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Permissão negada: você não tem permissão para visualizar todas as sessões."
+    },
+    "permissions": {
+      "adminRequired": "Permissão negada: é necessário acesso de administrador"
+    },
+    "apiKeys": {
+      "internalOnly": "Permissão negada: o gerenciamento de chaves de API é restrito a usuários internos",
+      "configInternalOnly": "Permissão negada: a configuração de chaves de API é restrita a usuários internos",
+      "invalidExpiration": "Escolha uma data de expiração válida para esta chave de API.",
+      "notFound": "Chave de API não encontrada.",
+      "rateLimitsPositive": "Os limites de taxa da API devem ser números inteiros positivos."
+    },
+    "webhooks": {
+      "invalidInput": "Verifique as configurações do webhook e tente novamente.",
+      "notFound": "Webhook não encontrado.",
+      "signingSecretMissing": "O segredo de assinatura do webhook está ausente. Faça a rotação do segredo de assinatura e tente novamente.",
+      "deliveryNotFound": "Entrega não encontrada.",
+      "testNotRetryable": "Entregas de teste não podem ser repetidas.",
+      "payloadInvalid": "Esta entrega não pode ser repetida porque o payload armazenado é inválido.",
+      "validation": { "unknownEntity": "Entidade de webhook desconhecida \"{{entity}}\".", "unknownField": "Campo desconhecido \"{{field}}\" para a entidade de webhook \"{{entity}}\"." }
+    },
+    "inboundWebhooks": {
+      "permissions": {
+        "create": "Permissão negada: é necessária permissão de criação de webhooks de entrada",
+        "read": "Permissão negada: é necessária permissão de leitura de webhooks de entrada",
+        "update": "Permissão negada: é necessária permissão de atualização de webhooks de entrada",
+        "delete": "Permissão negada: é necessária permissão de exclusão de webhooks de entrada",
+        "replay": "Permissão negada: é necessária permissão de reenvio de webhooks de entrada"
+      },
+      "invalidInput": "Verifique as configurações do webhook de entrada e tente novamente.",
+      "workflowRequiresEe": "Os manipuladores de fluxo de trabalho de webhooks de entrada exigem a edição Enterprise.",
+      "notFound": "Webhook de entrada não encontrado.",
+      "duplicateSlug": "O identificador \"{{slug}}\" de webhook de entrada já existe.",
+      "noSecretToRotate": "Webhooks de entrada com lista de IPs permitidos não têm um segredo para rotacionar.",
+      "unsupportedAuthType": "Tipo de autenticação de webhook de entrada não suportado: {{authType}}.",
+      "deliveryNotFound": "Entrega de entrada não encontrada.",
+      "replayMissingConfig": "Não é possível reenviar uma entrega de entrada sem uma configuração de webhook.",
+      "notFoundOrInactive": "Webhook de entrada não encontrado ou inativo.",
+      "validation": { "slugReserved": "Este identificador é reservado para uma integração incluída.", "authTypeMismatch": "O tipo de configuração de autenticação deve corresponder ao tipo de autenticação selecionado.", "handlerTypeMismatch": "O tipo de configuração do manipulador deve corresponder ao tipo de manipulador selecionado." }
+    }
   }
 }

@@ -222,7 +222,7 @@ const mapAssignmentStatusToRevenueStatus = (
  */
 export const getContractRevenueReport = withAuth(async (user, { tenant }): Promise<ContractRevenue[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -326,7 +326,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
  */
 export const getContractExpirationReport = withAuth(async (user, { tenant }): Promise<ContractExpiration[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -454,7 +454,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
  */
 export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<BucketUsage[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -550,7 +550,7 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
  */
 export const getContractReportSummary = withAuth(async (user, { tenant }): Promise<ContractReportSummary | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   try {
     const { knex } = await createTenantKnex();

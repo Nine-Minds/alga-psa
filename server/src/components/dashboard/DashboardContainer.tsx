@@ -123,7 +123,7 @@ const FeatureCard = ({ icon: Icon, title, description, analyticsName }: FeatureC
 
   return (
     <div
-      className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white hover:shadow-lg transition-shadow p-4"
+      className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated card-elevated-hover transition-shadow p-4"
       onMouseEnter={handleHover}
     >
       <div className="flex items-start space-x-4">

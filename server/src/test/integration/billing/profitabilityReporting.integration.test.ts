@@ -610,15 +610,19 @@ describe('Profitability Reporting Integration', () => {
     try {
       await expect(getProfitabilitySummary(RANGE)).resolves.toEqual({
         permissionError: 'Permission denied: billing read required',
+        messageKey: 'msp/billing:errors.permissions.billingRead',
       });
       await expect(getClientProfitability(RANGE)).resolves.toEqual({
         permissionError: 'Permission denied: billing read required',
+        messageKey: 'msp/billing:errors.permissions.billingRead',
       });
       await expect(getAgreementProfitability(RANGE)).resolves.toEqual({
         permissionError: 'Permission denied: billing read required',
+        messageKey: 'msp/billing:errors.permissions.billingRead',
       });
       await expect(getTicketProfitability(RANGE)).resolves.toEqual({
         permissionError: 'Permission denied: billing read required',
+        messageKey: 'msp/billing:errors.permissions.billingRead',
       });
     } finally {
       holder.permissionGranted = true;

@@ -189,6 +189,7 @@ describe('client portal visibility group actions', () => {
 
     expect(group).toEqual({
       permissionError: 'Permission denied: Cannot manage visibility groups for another client',
+      messageKey: 'client-portal:errors.visibilityGroups.otherClient',
     });
   });
 
@@ -431,6 +432,7 @@ describe('client portal visibility group actions', () => {
 
     expect(result).toEqual({
       actionError: 'One or more selected boards are no longer available. Please refresh and try again.',
+      messageKey: 'client-portal:errors.visibilityGroups.boardsUnavailable',
     });
   });
 
@@ -476,6 +478,7 @@ describe('client portal visibility group actions', () => {
 
     expect(result).toEqual({
       actionError: 'One or more selected boards are no longer available. Please refresh and try again.',
+      messageKey: 'client-portal:errors.visibilityGroups.boardsUnavailable',
     });
   });
 

@@ -685,5 +685,34 @@
     "notAvailable": "N/A",
     "title": "Interaction Details",
     "unknownUser": "Unknown"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Schedule entry not found.",
+      "invalid": "The selected schedule entry is invalid. Please refresh and try again.",
+      "assigneesMissing": "One or more assigned users could not be found."
+    },
+    "activities": {
+      "otherUserForbidden": "Permission denied: cannot view another user's schedule activities"
+    },
+    "workItem": {
+      "adHocTimesRequired": "Start time and end time are required for ad-hoc entries.",
+      "typeUnsupported": "That work item type is not supported for scheduling.",
+      "entryOrUserUnavailable": "The selected schedule entry or user is no longer available. Please refresh and try again.",
+      "invalid": "The selected work item is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected work item, schedule entry, or assignee is no longer valid. Please refresh and try again.",
+      "duplicateEntry": "That schedule entry already exists. Please refresh and try again.",
+      "missingField": "Missing required schedule field.",
+      "missingFieldNamed": "Missing required schedule field: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "Meeting ID is required",
+      "refreshPermission": "Permission denied: Cannot refresh meeting recordings.",
+      "refreshFailed": "Failed to refresh meeting recordings. Please try again.",
+      "graphForbidden": "Microsoft Graph denied access to the Teams recording. Check recording permissions and try again.",
+      "graphNotFound": "The Teams recording is no longer available from Microsoft Graph.",
+      "graphThrottled": "Microsoft Graph is rate limiting recording downloads. Please try again shortly.",
+      "graphHttpStatus": "Microsoft Graph returned HTTP {{status}} while downloading the Teams recording."
+    }
   }
 }

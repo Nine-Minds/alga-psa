@@ -18,7 +18,7 @@ import {
   fetchOrCreateTimeSheetParamsSchema,
   FetchOrCreateTimeSheetParams
 } from './timeEntrySchemas'; // Import schemas from the new module
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
 import {
   timeSheetActionErrorFrom,
@@ -37,10 +37,16 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
   return tenantDb(conn, tenant).table<Row>(table);
 }
 
-function timeSheetRemovalErrorMessage(error: unknown): string {
+// This reports failure as a bare string, so withAuth's boundary never sees the
+// payload's messageKey. Localize before flattening, or the key is carried all
+// this way and then discarded.
+async function timeSheetRemovalErrorMessage(error: unknown): Promise<string> {
   const mappedError = timeSheetActionErrorFrom(error);
   if (mappedError) {
-    const candidate = mappedError as unknown as { permissionError?: unknown; actionError?: unknown };
+    const candidate = (await localizeActionError(mappedError)) as unknown as {
+      permissionError?: unknown;
+      actionError?: unknown;
+    };
     return typeof candidate.permissionError === 'string'
       ? candidate.permissionError
       : String(candidate.actionError ?? 'Failed to remove time sheet');
@@ -472,7 +478,7 @@ export const deleteTimeSheets = withAuth(async (
     } catch (error) {
       failed.push({
         timeSheetId,
-        message: timeSheetRemovalErrorMessage(error)
+        message: await timeSheetRemovalErrorMessage(error)
       });
     }
   }

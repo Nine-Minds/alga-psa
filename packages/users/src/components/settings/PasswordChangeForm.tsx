@@ -100,7 +100,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
 
     // Shared policy gate: catches rules not shown in the checklist (common-word
     // blocklist, long-sequence rejection) and surfaces the specific reason.
-    const policyError = validatePasswordPolicy(newPassword);
+    const policyError = validatePasswordPolicy(newPassword, t);
     if (policyError) {
       setPasswordError(policyError);
       return;

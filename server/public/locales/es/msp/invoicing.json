@@ -2001,5 +2001,59 @@
       "packingSlip": "Nota de entrega",
       "pickList": "Lista de preparación de pedidos"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Permiso denegado: se requiere permiso de actualización de facturas",
+      "invoiceDelete": "Permiso denegado: se requiere permiso de eliminación de facturas",
+      "invoiceAccess": "Permiso denegado: acceso a la factura denegado",
+      "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente"
+    },
+    "invoice": {
+      "notFound": "Factura no encontrada",
+      "notFoundRefresh": "Factura no encontrada. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "notFoundNumbered": "No se encontró la factura {{invoiceId}}.",
+      "clientNotFoundForInvoice": "No se encontró el cliente de la factura {{invoiceNumber}}.",
+      "numberRequired": "El número de factura es obligatorio",
+      "dateRequired": "La fecha de la factura es obligatoria",
+      "dateInvalid": "La fecha de la factura no es válida",
+      "dueDateInvalid": "La fecha de vencimiento no es válida",
+      "onlyDraftEditable": "Solo se pueden editar las facturas en borrador",
+      "numberExists": "El número de factura ya existe. Elija un número diferente.",
+      "notFinalized": "La factura no está finalizada",
+      "unfinalizeFailed": "No se pudo revertir la finalización de la factura debido a un error de datos inesperado. Actualice la página e inténtelo de nuevo.",
+      "paidOrCancelled": "No se puede modificar una factura pagada o cancelada",
+      "syncedVoidInstead": "Esta factura está sincronizada con un sistema contable: anúlela en lugar de eliminarla.",
+      "invalidValue": "Uno de los valores de factura seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "La factura, cliente, contrato o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe una factura en conflicto. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la factura.",
+      "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "No se encontró el ciclo de facturación. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidDates": "El ciclo de facturación tiene fechas no válidas. Revise el ciclo e inténtelo de nuevo."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Seleccione al menos una factura para generar los PDF.",
+      "selectInvoicesEmail": "Seleccione al menos una factura para enviar por correo electrónico.",
+      "selectInvoices": "Seleccione al menos una factura.",
+      "emailNotConfigured": "El correo electrónico no está configurado. Configure los ajustes de correo electrónico en Configuración antes de enviar facturas.",
+      "schedulePdfFailed": "No se pudo iniciar la generación de los PDF de las facturas. Inténtelo de nuevo.",
+      "scheduleEmailFailed": "No se pudo iniciar el envío de las facturas por correo electrónico. Inténtelo de nuevo.",
+      "recipientFailed": "No se pudo cargar la información del destinatario de esta factura.",
+      "sendFailed": "No se pudo enviar la factura por correo electrónico. Inténtelo de nuevo."
+    },
+    "template": {
+      "selectStandard": "Seleccione una plantilla de factura estándar antes de guardar.",
+      "selectBeforePreview": "Seleccione una plantilla de factura antes de previsualizar.",
+      "notFoundRefresh": "No se encontró la plantilla de factura. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "missingDesign": "A la plantilla de factura le falta su contenido de diseño. Elija otra plantilla.",
+      "invalidValue": "Uno de los valores seleccionados de la plantilla de factura no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "La plantilla de factura o el cliente seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe una plantilla de factura con esa configuración.",
+      "missingField": "Falta un campo obligatorio de la plantilla de factura.",
+      "missingFieldNamed": "Falta un campo obligatorio de la plantilla de factura: {{field}}."
+    }
   }
 }

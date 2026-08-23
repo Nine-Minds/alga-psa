@@ -37,7 +37,7 @@ export function ContactMarketingSection({ contactId }: { contactId: string }): R
 
   if (!loaded) {
     return (
-      <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 text-sm text-[rgb(var(--color-text-400))]">
+      <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 text-sm text-[rgb(var(--color-text-500))]">
         {t('marketing.contact.loading', 'Loading marketing activity…')}
       </div>
     );

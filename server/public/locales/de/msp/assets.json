@@ -1490,5 +1490,35 @@
       "inactive": "inaktiv",
       "maintenance": "Wartung"
     }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "Berechtigung verweigert: Assets können nicht gelesen werden",
+      "readAssetTypes": "Berechtigung verweigert: Assettypen können nicht gelesen werden",
+      "manageAssetTypes": "Berechtigung verweigert: Assettypen können nicht verwaltet werden",
+      "readDocuments": "Berechtigung verweigert: Assetdokumente können nicht gelesen werden",
+      "associateDocuments": "Berechtigung verweigert: Dokumente können Assets nicht zugeordnet werden",
+      "removeDocuments": "Berechtigung verweigert: Dokumente können nicht von Assets entfernt werden",
+      "updateDocumentNotes": "Berechtigung verweigert: Notizen zu Assetdokumenten können nicht aktualisiert werden"
+    },
+    "asset": {
+      "notFoundRefresh": "Asset nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "clientNotFound": "Kunde nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "maintenanceNotFound": "Wartungsplan nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "maintenanceMismatch": "Dieser Wartungsdatensatz passt nicht zum ausgewählten Asset. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "locationUnavailable": "Der ausgewählte Standort ist für diesen Kunden nicht verfügbar.",
+      "selfRelation": "Ein Asset kann nicht mit sich selbst verknüpft werden.",
+      "selectAtLeastOne": "Wählen Sie mindestens ein Asset aus.",
+      "typeUnavailable": "Der Assettyp ist nicht verfügbar. Wählen Sie einen gültigen Assettyp.",
+      "typeUnavailableNamed": "Der Assettyp „{{assetType}}“ ist nicht verfügbar. Wählen Sie einen gültigen Assettyp.",
+      "documentAssociationNotFound": "Dokumentzuordnung nicht gefunden. Sie wurde möglicherweise bereits entfernt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Assetwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidDate": "Eines der ausgewählten Assetdaten ist ungültig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "referenceMissing": "Das ausgewählte Asset, Dokument oder ein zugehöriger Datensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese Assetänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der Assetwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Assetfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Assetfeld fehlt: {{field}}."
+    }
   }
 }

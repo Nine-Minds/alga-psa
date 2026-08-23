@@ -88,6 +88,7 @@ describe('client portal feature settings actions', () => {
       appointmentsEnabled: false,
     })).resolves.toEqual({
       permissionError: 'Permission denied: settings:update required',
+      messageKey: 'client-portal:errors.access.settingsUpdate',
     });
     expect(mergeMock).not.toHaveBeenCalled();
   });

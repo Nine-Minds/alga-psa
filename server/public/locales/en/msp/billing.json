@@ -570,5 +570,137 @@
       "uncovered": "Not covered by any contract",
       "ambiguous": "More than one contract line matches"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "An invoice already exists for this recurring billing period.",
+    "permissions": {
+      "billingRead": "Permission denied: billing read required",
+      "billingUpdate": "Permission denied: billing update required",
+      "billingCreate": "Permission denied: billing create required",
+      "billingDelete": "Permission denied: billing delete required",
+      "clientRead": "Permission denied: client read required",
+      "otherClientLocations": "Permission denied: cannot access locations for another client",
+      "clientPortalUnavailable": "Permission denied: operation not available in client portal",
+      "resolveCurrency": "Permission denied: Cannot resolve client billing currency",
+      "clientBillingAccess": "Permission denied: you do not have access to this client’s billing."
+    },
+    "context": {
+      "tenantNotFound": "Tenant not found",
+      "tenantContextNotFound": "Tenant context not found",
+      "noTenantContext": "No tenant context. Please refresh and try again.",
+      "clientContextNotFound": "Client context not found",
+      "notAuthenticated": "Unauthorized: No authenticated user found",
+      "notLoggedIn": "user is not logged in"
+    },
+    "client": {
+      "notFound": "Client not found",
+      "notFoundRefresh": "Client not found. It may have been updated or deleted. Please refresh and try again.",
+      "idRequired": "Client ID is required."
+    },
+    "clientContract": {
+      "notFound": "Client contract assignment not found. It may have been updated or deleted. Please refresh and try again.",
+      "invalidValue": "One of the selected client contract values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected client, contract, or billing record no longer exists. Please refresh and try again.",
+      "duplicate": "This client contract assignment already exists.",
+      "missingField": "Missing required client contract field.",
+      "missingFieldNamed": "Missing required client contract field: {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "Cannot create next billing cycle at this time"
+    },
+    "currency": {
+      "multipleActive": "Client has active contracts in multiple currencies ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "One of the selected bucket overlay values is invalid. Please refresh and try again.",
+      "recordInvalid": "One of the selected bucket overlay records is no longer valid. Please refresh and try again.",
+      "duplicate": "A bucket overlay for this service already exists.",
+      "notAllowed": "One of the bucket overlay values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required bucket overlay field.",
+      "missingFieldNamed": "Missing required bucket overlay field: {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "A bucket pool or member already exists with this configuration. Please refresh and try again.",
+      "recordInvalid": "One of the selected bucket pool records is no longer valid. Please refresh and try again.",
+      "notAllowed": "One of the bucket pool values is not allowed. Please review the form and try again."
+    },
+    "material": {
+      "invalidValue": "One of the selected material values is invalid. Please refresh and try again.",
+      "recordInvalid": "One of the selected material records is no longer valid. Please refresh and try again.",
+      "duplicate": "This material record already exists.",
+      "notAllowed": "One of the material values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required material field.",
+      "missingFieldNamed": "Missing required material field: {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "Usage record not found. It may have been deleted. Please refresh and try again.",
+      "bucketUpdateFailed": "Unable to update bucket usage for this usage record. Please refresh and try again.",
+      "invalidValue": "The selected usage record, client, service, or contract line is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected client, service, or contract line is no longer valid. Please refresh and try again.",
+      "duplicate": "A conflicting usage record already exists. Please refresh and try again.",
+      "alreadyDeleted": "Usage record not found. It may have already been deleted.",
+      "missingField": "Missing required usage field.",
+      "missingFieldNamed": "Missing required usage field: {{field}}."
+    },
+    "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "trigger_date must be a valid calendar date.",
+        "thresholdsAscending": "Notification thresholds must be in strictly ascending order.",
+        "amountOrPercentage": "Exactly one of amount or percentage is required.",
+        "increaseTotalAmountOnly": "Increasing the total is only valid for amount-based entries.",
+        "amountAndPercentageTogether": "Amount and percentage must be updated together, with exactly one set to null."
+      },
+      "invalidValue": "One of the selected project billing values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected project, invoice, phase, service, or billing record no longer exists. Please refresh and try again.",
+      "duplicate": "A conflicting project billing record already exists. Please refresh and try again.",
+      "ruleViolation": "The project billing values violate a data rule. Review the form and try again.",
+      "requestFailed": "Project billing could not complete the request. Please refresh and try again.",
+      "missingField": "Missing required project billing field.",
+      "missingFieldNamed": "Missing required project billing field: {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "Start date and end date are required."
+    },
+    "recurringRun": {
+      "selectPeriods": "Select at least one recurring billing period to generate.",
+      "invoicePermission": "Permission denied: invoice create or generate required"
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "A schedule key is required to inspect recurring service periods.",
+      "scheduleKeyRequiredRepair": "A schedule key is required to repair recurring service periods."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Client portal users are not permitted to manage accounting exports",
+      "permissions": {
+        "create": "Permission denied: Cannot create accounting export batches",
+        "read": "Permission denied: Cannot access accounting export batches",
+        "update": "Permission denied: Cannot modify accounting export batches",
+        "execute": "Permission denied: Cannot execute accounting export batches"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "Vendor bill not found. It may have been updated or deleted. Please refresh and try again."
+    },
+    "documentTemplate": {
+      "unknownType": "Unknown document type: {{documentType}}",
+      "permissions": {
+        "read": "Permission denied: cannot read document templates",
+        "modify": "Permission denied: cannot modify document templates",
+        "setDefault": "Permission denied: cannot set default document template",
+        "clearOverride": "Permission denied: cannot clear document template override",
+        "delete": "Permission denied: cannot delete document templates",
+        "preview": "Permission denied: cannot preview document templates"
+      }
+    },
+    "billingProfile": {
+      "periodOrder": "Choose a period whose start is on or before its end.",
+      "comparisonPeriodOrder": "Choose a comparison period whose start is on or before its end.",
+      "notThisClient": "That billing profile does not belong to this client."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "That item no longer exists.",
+      "alreadyInvoiced": "That item has already been invoiced.",
+      "contractLineNotFound": "That contract line no longer exists."
+    }
   }
 }

@@ -194,5 +194,24 @@
       "loadClientsFailed": "Impossibile caricare i clienti. Riprova.",
       "submitFailed": "Impossibile aggiungere il credito. Riprova."
     }
+  },
+  "errors": {
+    "credit": {
+      "notFoundRefresh": "Credito non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "originalTransactionMissing": "Non è stato possibile trovare la transazione di credito originale. Aggiornare la pagina e riprovare.",
+      "sourceNotFound": "Credito di origine non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "targetClientNotFound": "Cliente di destinazione non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "insufficientTransferAmount": "L’importo residuo non è sufficiente per il trasferimento.",
+      "invalidValue": "Uno dei valori del credito selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il credito, il cliente, la fattura o la transazione selezionata non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già una transazione di credito in conflitto. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori del credito non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio del credito.",
+      "missingFieldNamed": "Manca un campo obbligatorio del credito: {{field}}."
+    },
+    "prepaidAlerts": {
+      "settingsInvalid": "Impostazioni di avviso del saldo prepagato non valide",
+      "updateFailed": "Impossibile aggiornare le impostazioni di avviso del saldo prepagato"
+    }
   }
 }

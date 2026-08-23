@@ -57,7 +57,7 @@ export const getGhostUsageAiStatus = withAuth(async (
   { tenant },
 ): Promise<GhostUsageAiStatus | GhostUsageActionError> => {
   if (!(await hasPermission(user, 'inventory', 'read'))) {
-    return permissionError('Permission denied: inventory:read required');
+    return permissionError('Permission denied: inventory:read required', 'features/inventory:errors.permissions.inventoryRead');
   }
   const { knex } = await createTenantKnex();
   return computeAiStatus(knex, tenant);
@@ -69,13 +69,13 @@ export const setGhostUsageAiEnabled = withAuth(async (
   enabled: boolean,
 ): Promise<GhostUsageAiStatus | GhostUsageActionError> => {
   if (!(await hasPermission(user, 'settings', 'update'))) {
-    return permissionError('Permission denied: settings:update required');
+    return permissionError('Permission denied: settings:update required', 'features/inventory:errors.permissions.settingsUpdate');
   }
   const { knex } = await createTenantKnex();
   const status = await computeAiStatus(knex, tenant);
   // Enabling requires the feature to actually exist here; disabling is always allowed.
   if (enabled && !status.available) {
-    return actionError('AI triage requires Enterprise Edition and the AI Assistant add-on.');
+    return actionError('AI triage requires Enterprise Edition and the AI Assistant add-on.', 'features/inventory:errors.ghostUsage.aiRequiresEe');
   }
   await setGhostUsageAiEnabledSetting(knex, tenant, enabled);
   return { ...status, enabled, can_run: status.available && enabled };
@@ -88,7 +88,7 @@ export const runGhostUsageClassification = withAuth(async (
   opts: { limit?: number } = {},
 ): Promise<GhostRunResult | GhostUsageActionError> => {
   if (!(await hasPermission(user, 'inventory', 'update'))) {
-    return permissionError('Permission denied: inventory:update required');
+    return permissionError('Permission denied: inventory:update required', 'features/inventory:errors.permissions.inventoryUpdate');
   }
 
   const zero = { classified: 0, unclear: 0, failed: 0, remaining_unclassified: 0 };

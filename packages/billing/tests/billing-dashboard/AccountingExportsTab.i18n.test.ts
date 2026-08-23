@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -76,8 +77,8 @@ describe('AccountingExportsTab i18n wiring contract', () => {
     expect(source).toContain('error.message');
     expect(source).toContain('selectedBatch.notes');
 
-    expect(getLeaf(pseudo, 'accountingExports.detailDialog.fields.notes')).toBe('11111');
-    expect(getLeaf(pseudo, 'accountingExports.detailDialog.errorDetails')).toBe('11111');
+    expect(getLeaf(pseudo, 'accountingExports.detailDialog.fields.notes')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'accountingExports.detailDialog.errorDetails')).toMatch(pseudoPattern('xx'));
   });
 
   it('T020A: maps backend status codes through accountingExports.status.* keys instead of rendering raw codes', () => {
@@ -101,7 +102,7 @@ describe('AccountingExportsTab i18n wiring contract', () => {
     ];
 
     for (const key of statusKeys) {
-      expect(getLeaf(pseudo, key)).toBe('11111');
+      expect(getLeaf(pseudo, key)).toMatch(pseudoPattern('xx'));
     }
   });
 });

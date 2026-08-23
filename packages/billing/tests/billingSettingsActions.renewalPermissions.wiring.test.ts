@@ -11,7 +11,7 @@ describe('billingSettingsActions renewal permission wiring', () => {
     expect(source).toContain("import { hasPermission } from '@alga-psa/auth/rbac';");
     expect(source).toContain("const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {");
     expect(source).toContain("if (!await hasPermission(user as any, 'billing_settings', 'update')) {");
-    expect(source).toContain("return permissionError('Permission denied: Cannot update billing settings');");
+    expect(source).toContain("return permissionError('Permission denied: Cannot update billing settings', 'msp/billing-settings:errors.permissions.updateSettings');");
     expect(source).toContain("export const updateDefaultBillingSettings = withAuth(async (");
     expect(source).toContain('requireBillingSettingsUpdatePermission(user);');
   });

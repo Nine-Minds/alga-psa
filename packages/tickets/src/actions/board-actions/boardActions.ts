@@ -1058,7 +1058,7 @@ export const saveBoardDefaultView = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
-    return permissionError('Permission denied: Cannot update ticket settings');
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
   }
 
   try {
@@ -1102,7 +1102,7 @@ export const clearBoardDefaultView = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
-    return permissionError('Permission denied: Cannot update ticket settings');
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
   }
 
   try {

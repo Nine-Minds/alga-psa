@@ -445,5 +445,65 @@
       "summary": "{{rate}} na {{unit}}",
       "help": "Stawkę podstawową można zastąpić poniższymi progami opartymi na ilości."
     }
+  },
+  "errors": {
+    "permissions": {
+      "createServices": "Odmowa uprawnień: nie można tworzyć usług/produktów",
+      "updateServices": "Odmowa uprawnień: nie można aktualizować usług/produktów",
+      "deleteServices": "Odmowa uprawnień: nie można usuwać usług",
+      "deleteServicesProducts": "Odmowa uprawnień: nie można usuwać usług/produktów",
+      "createServiceTypes": "Odmowa uprawnień: nie można tworzyć typów usług",
+      "updateServiceTypes": "Odmowa uprawnień: nie można aktualizować typów usług",
+      "deleteServiceTypes": "Odmowa uprawnień: nie można usuwać typów usług",
+      "updatePricing": "Odmowa uprawnień: nie można aktualizować cen usług"
+    },
+    "category": {
+      "duplicateName": "Kategoria usług o tej nazwie już istnieje",
+      "notFound": "Nie znaleziono kategorii usług",
+      "invalid": "Wybrana kategoria usług jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "inUse": "Nie można usunąć kategorii, ponieważ jest nadal używana.",
+      "inUseByServices": "Nie można usunąć kategorii: korzystają z niej usługi",
+      "inUseByTickets": "Nie można usunąć kategorii używanej przez zgłoszenia",
+      "nameRequired": "Nazwa kategorii jest wymagana",
+      "nameEmpty": "Nazwa kategorii nie może być pusta",
+      "idRequired": "Identyfikator kategorii jest wymagany",
+      "missingField": "Brakuje wymaganego pola kategorii usług.",
+      "missingFieldNamed": "Brakuje wymaganego pola kategorii usług: {{field}}."
+    },
+    "service": {
+      "selectType": "Przed zapisaniem wybierz typ usługi.",
+      "typeNotFound": "Nie znaleziono wybranego typu usługi. Odśwież stronę i wybierz inny typ usługi.",
+      "selectBillingMethod": "Przed zapisaniem wybierz metodę rozliczeń.",
+      "notFoundRefresh": "Nie znaleziono usługi. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości usługi jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana usługa, kategoria, stawka podatku lub typ usługi nie jest już dostępny. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Usługa lub produkt o tych wartościach już istnieje.",
+      "missingField": "Brakuje wymaganego pola usługi.",
+      "missingFieldNamed": "Brakuje wymaganego pola usługi: {{field}}."
+    },
+    "product": {
+      "notFound": "Nie znaleziono produktu",
+      "alreadyDeleted": "Nie znaleziono produktu. Mógł już zostać usunięty.",
+      "barcodeExists": "Produkt o tym kodzie kreskowym już istnieje. Użyj innego kodu kreskowego lub edytuj istniejący produkt.",
+      "barcodeExistsNamed": "Produkt o kodzie kreskowym „{{barcode}}” już istnieje. Użyj innego kodu kreskowego lub edytuj istniejący produkt.",
+      "skuExists": "Produkt o tym SKU już istnieje. Użyj innego SKU lub edytuj istniejący produkt.",
+      "skuExistsNamed": "Produkt o SKU „{{sku}}” już istnieje. Użyj innego SKU lub edytuj istniejący produkt.",
+      "cannotDelete": "Nie można usunąć produktu: {{reasons}}"
+    },
+    "serviceType": {
+      "duplicateName": "Typ usługi o tej nazwie już istnieje.",
+      "notFoundRefresh": "Nie znaleziono typu usługi. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "notFound": "Nie znaleziono typu usługi.",
+      "inUse": "Nie można usunąć typu usługi, ponieważ jest obecnie używany przez co najmniej jedną usługę.",
+      "inUseByCount": "Nie można usunąć typu usługi, ponieważ jest obecnie używany przez {{serviceCount}} usług(i)."
+    },
+    "rateTier": {
+      "overlap": "Zakresy progów nie mogą się nakładać.",
+      "notFound": "Nie znaleziono progu stawki. Odśwież usługę i spróbuj ponownie.",
+      "invalid": "Wybrany próg stawki jest nieprawidłowy. Odśwież usługę i spróbuj ponownie.",
+      "serviceInvalid": "Wybrana usługa dla tego progu stawki nie jest już prawidłowa. Odśwież usługę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola progu stawki.",
+      "missingFieldNamed": "Brakuje wymaganego pola progu stawki: {{field}}."
+    }
   }
 }

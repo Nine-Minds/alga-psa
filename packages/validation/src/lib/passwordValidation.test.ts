@@ -36,6 +36,30 @@ describe('validatePassword', () => {
     expect(validatePassword('Password1!')).toBe('Password is too common. Please choose a stronger password');
     expect(validatePassword('Monkey99$')).toBe('Password is too common. Please choose a stronger password');
   });
+
+  it('routes every message through the translator', () => {
+    const seen: string[] = [];
+    const t = (key: string) => {
+      seen.push(key);
+      return `[${key}]`;
+    };
+
+    expect(validatePassword('', t)).toBe('[common:auth.validation.password.required]');
+    expect(validatePassword('Ab1!', t)).toBe('[common:auth.validation.password.tooShort]');
+    expect(validatePassword(`Aa1!${'x'.repeat(130)}`, t)).toBe('[common:auth.validation.password.tooLong]');
+    expect(validatePassword('lowercase1!', t)).toBe('[common:auth.validation.password.missingUppercase]');
+    expect(validatePassword('UPPERCASE1!', t)).toBe('[common:auth.validation.password.missingLowercase]');
+    expect(validatePassword('NoNumber!', t)).toBe('[common:auth.validation.password.missingNumber]');
+    expect(validatePassword('NoSpecial1', t)).toBe('[common:auth.validation.password.missingSpecialCharacter]');
+    expect(validatePassword('Welcome1!', t)).toBe('[common:auth.validation.password.tooCommon]');
+    expect(validatePassword('Abcdef1!', t)).toBe('[common:auth.validation.password.sequentialCharacters]');
+
+    expect(new Set(seen).size).toBe(9);
+  });
+
+  it('falls back to English when the translator returns nothing usable', () => {
+    expect(validatePassword('', (_key, options) => String(options?.defaultValue ?? ''))).toBe('Password is required');
+  });
 });
 
 describe('getPasswordRequirements', () => {

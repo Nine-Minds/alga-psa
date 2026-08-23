@@ -1151,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Falha ao carregar as configurações",
-    "failedToSaveSettings": "Falha ao salvar as configurações"
+    "failedToSaveSettings": "Falha ao salvar as configurações",
+    "permissions": {
+      "readSettings": "Permissão negada: não é possível ler as configurações de faturamento",
+      "updateSettings": "Permissão negada: não é possível atualizar as configurações de faturamento",
+      "readClientSettings": "Permissão negada: não é possível ler as configurações de faturamento do cliente",
+      "updateClientSettings": "Permissão negada: não é possível atualizar as configurações de faturamento do cliente",
+      "settingsRead": "Permissão negada: é necessária permissão de leitura das configurações de faturamento",
+      "settingsUpdate": "Permissão negada: é necessária permissão de atualização das configurações de faturamento",
+      "readTaxRates": "Permissão negada: não é possível ler as alíquotas de imposto",
+      "createTaxRates": "Permissão negada: não é possível criar alíquotas de imposto",
+      "updateTaxRates": "Permissão negada: não é possível atualizar as alíquotas de imposto",
+      "updateTaxRegions": "Permissão negada: não é possível atualizar as regiões fiscais"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Permissão negada: as alíquotas de imposto de faturamento não estão disponíveis para este tenant.",
+      "overlap": "O intervalo de datas da alíquota de imposto se sobrepõe a uma alíquota existente para esta região.",
+      "regionRequired": "A região é obrigatória.",
+      "idRequired": "O ID da alíquota de imposto é obrigatório para atualizações.",
+      "notFound": "Alíquota de imposto não encontrada.",
+      "notFoundOrAlreadyDeleted": "Alíquota de imposto não encontrada ou já excluída.",
+      "invalid": "A alíquota de imposto ou a região selecionada é inválida. Atualize a página e tente novamente.",
+      "regionInvalid": "A região fiscal selecionada não é mais válida. Atualize a página e escolha outra região.",
+      "duplicate": "Já existe uma alíquota de imposto para esta região e intervalo de datas.",
+      "missingField": "Falta um campo obrigatório da alíquota de imposto.",
+      "missingFieldNamed": "Falta um campo obrigatório da alíquota de imposto: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Configure pelo menos uma alíquota de imposto ativa antes de criar as configurações fiscais padrão.",
+      "componentNotFound": "Componente de imposto não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "bracketNotFound": "Faixa de imposto não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "holidayNotFound": "Isenção fiscal não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "recordInvalid": "Um dos registros fiscais selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros fiscais selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro fiscal com esses dados.",
+      "notAllowed": "Um dos valores de imposto não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório de imposto.",
+      "missingFieldNamed": "Falta um campo obrigatório de imposto: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Já existe uma região fiscal com o código \"{{code}}\".",
+      "notFoundCode": "Região fiscal com o código \"{{code}}\" não encontrada."
+    }
   },
   "toast": {
     "saved": "Salvo com sucesso"

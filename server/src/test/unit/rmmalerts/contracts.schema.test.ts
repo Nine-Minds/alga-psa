@@ -26,6 +26,11 @@ describe('rule conditions schema', () => {
   it('rejects an invalid regex in messagePattern', () => {
     const parsed = rmmAlertRuleConditionsSchema.safeParse({ messagePattern: '([invalid' });
     expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0]).toEqual(expect.objectContaining({
+      params: {
+        messageKey: 'msp/integrations:errors.rmm.validation.messagePatternInvalid',
+      },
+    }));
   });
 
   it('rejects unknown severities and unknown keys', () => {
@@ -80,6 +85,13 @@ describe('maintenance window recurrence schema', () => {
     expect(rmmMaintenanceWindowRecurrenceSchema.safeParse({ ...base, startTime: '25:00' }).success).toBe(false);
     expect(rmmMaintenanceWindowRecurrenceSchema.safeParse({ ...base, endTime: '10:00' }).success).toBe(false);
     expect(rmmMaintenanceWindowRecurrenceSchema.safeParse({ ...base, days: [7] }).success).toBe(false);
-    expect(rmmMaintenanceWindowRecurrenceSchema.safeParse({ ...base, timezone: 'Not/AZone' }).success).toBe(false);
+    const unknownTimezone = rmmMaintenanceWindowRecurrenceSchema.safeParse({ ...base, timezone: 'Not/AZone' });
+    expect(unknownTimezone.success).toBe(false);
+    expect(unknownTimezone.error?.issues[0]).toEqual(expect.objectContaining({
+      params: {
+        messageKey: 'msp/integrations:errors.rmm.validation.unknownTimezone',
+        messageParams: { timezone: 'Not/AZone' },
+      },
+    }));
   });
 });

@@ -11,5 +11,77 @@
         "wbsCode": "Codice WBS"
       }
     }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "Autorizzazione negata: impossibile creare il progetto",
+      "readProject": "Autorizzazione negata: impossibile leggere il progetto",
+      "updateProject": "Autorizzazione negata: impossibile aggiornare il progetto",
+      "deleteProject": "Autorizzazione negata: impossibile eliminare il progetto",
+      "materialRead": "Autorizzazione negata: è richiesta l’autorizzazione di lettura per i progetti",
+      "materialUpdate": "Autorizzazione negata: è richiesta l’autorizzazione di aggiornamento per i progetti"
+    },
+    "project": {
+      "notFound": "Progetto non trovato",
+      "validationFailed": "La convalida del progetto non è riuscita. Controllare i dettagli del progetto e riprovare.",
+      "invalidValue": "Uno dei valori del progetto selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno dei record del progetto selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica del progetto è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori del progetto non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio del progetto.",
+      "missingFieldNamed": "Manca un campo obbligatorio del progetto: {{field}}.",
+      "statusesNotConfigured": "Non è configurato alcuno stato del progetto. Aggiungere almeno uno stato del progetto prima di creare progetti.",
+      "taskStatusesNotConfigured": "Non è configurato alcuno stato delle attività di progetto. Aggiungere almeno uno stato dell’attività prima di creare progetti.",
+      "detailsUnavailableAfterCreate": "Non è stato possibile creare il progetto perché i suoi dettagli non sono stati caricati. Riprovare."
+    },
+    "task": {
+      "validationFailed": "Correggere i dettagli dell’attività: {{details}}",
+      "invalidValue": "Uno dei valori dell’attività selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno dei record di progetto o attività selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica dell’attività è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori dell’attività non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio dell’attività.",
+      "missingFieldNamed": "Manca un campo obbligatorio dell’attività: {{field}}."
+    },
+    "comment": {
+      "internalOnly": "Solo gli utenti interni possono commentare le attività.",
+      "taskNotFound": "Attività non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "parentNotFound": "Il commento a cui si sta rispondendo non è stato trovato. Aggiornare la pagina e riprovare.",
+      "sameThreadRequired": "Le risposte devono rimanere nello stesso thread dell’attività. Aggiornare la pagina e riprovare.",
+      "parentDeleted": "Non è possibile rispondere a un commento eliminato.",
+      "notFound": "Commento non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "L’attività o il commento selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del commento.",
+      "missingFieldNamed": "Manca un campo obbligatorio del commento: {{field}}."
+    },
+    "export": {
+      "invalidValue": "Uno dei progetti, delle fasi o delle attività selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio dell’esportazione del progetto.",
+      "missingFieldNamed": "Manca un campo obbligatorio dell’esportazione del progetto: {{field}}."
+    },
+    "status": {
+      "invalidValue": "Uno dei valori di stato selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno degli stati del progetto selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già uno stato dell’attività di progetto con queste impostazioni.",
+      "notAllowed": "Uno dei valori di stato non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio dello stato.",
+      "missingFieldNamed": "Manca un campo obbligatorio dello stato: {{field}}."
+    },
+    "template": {
+      "validationFailed": "La convalida del modello non è riuscita. Controllare i dettagli del modello e riprovare.",
+      "invalidUuid": "La richiesta del modello contiene un UUID non valido",
+      "missingStatuses": "Questo modello fa riferimento a stati che non esistono più. Riparare le sue colonne di stato e riprovare."
+    },
+    "ordering": {
+      "invalidValue": "Uno dei valori di progetto, fase, attività o stato selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno dei record di ordinamento del progetto selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio dell’ordinamento del progetto.",
+      "missingFieldNamed": "Manca un campo obbligatorio dell’ordinamento del progetto: {{field}}."
+    },
+    "material": {
+      "referenceMissing": "Il progetto, il cliente, il prodotto o l’unità di magazzino selezionato non è più valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del materiale.",
+      "missingFieldNamed": "Manca un campo obbligatorio del materiale: {{field}}."
+    }
   }
 }

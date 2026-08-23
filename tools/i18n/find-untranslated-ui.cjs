@@ -819,8 +819,8 @@ if (asJson) {
     high: high.map((r) => ({ file: r.rel, literals: r.findings.length, findings: r.findings })),
     partial: partial.map((r) => ({ file: r.rel, jsx: r.jsx, useT: r.useT, tCalls: r.tCalls, literals: r.findings.length, findings: r.findings })),
   }, null, 2));
-  process.exit(failOnHigh && high.length > 0 ? 1 : 0);
-}
+  process.exitCode = failOnHigh && high.length > 0 ? 1 : 0;
+} else {
 
 // CI mode. Only the high-severity list is gated: a file that renders JSX with
 // no i18n wiring at all is unambiguous, while the `partial` list carries the
@@ -944,3 +944,4 @@ console.log('- Run with `--file=<partial-path>` (or any path on disk) to see eve
 console.log('- `--fail-on-high` exits nonzero when any file renders JSX with no i18n wiring — the CI gate.');
 console.log('- `--severity=high` shows only the no-i18n section; `--severity=partial` only the second table; `--json` emits the same data machine-readably.');
 console.log('- False positives are possible. Enum-ish values (`{ status: \'Open\' }`), mock/demo data and API constants are the usual ones — the position and prose filters cut most, not all.');
+}

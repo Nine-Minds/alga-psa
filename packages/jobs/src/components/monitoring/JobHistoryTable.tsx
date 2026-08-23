@@ -48,8 +48,8 @@ export default function JobHistoryTable({ initialData = [] }: JobHistoryTablePro
       dataIndex: 'status',
       render: (status: string) => (
         <span className={`font-medium px-2 py-1 rounded ${
-          status === 'completed' ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]' :
-          status === 'failed' ? 'bg-[rgb(var(--color-accent-50))] text-[rgb(var(--color-accent-600))]' :
+          status === 'completed' ? 'chip-primary' :
+          status === 'failed' ? 'chip-accent' :
           'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]'
         }`}>
           {getStatusLabel(status)}

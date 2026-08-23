@@ -41,31 +41,37 @@ function invoiceTemplateActionErrorFrom(error: unknown): InvoiceTemplateActionEr
             return permissionError(error.message);
         }
         if (error.message === 'standard template selection requires a standard template code') {
-            return actionError('Select a standard invoice template before saving.');
+            return actionError('Select a standard invoice template before saving.', 'msp/invoicing:errors.template.selectStandard');
         }
         if (error.message === 'Template id is required when no templateAst override is provided.') {
-            return actionError('Select an invoice template before previewing.');
+            return actionError('Select an invoice template before previewing.', 'msp/invoicing:errors.template.selectBeforePreview');
         }
         if (/^Template .+ not found for tenant .+$/.test(error.message) || error.message === 'TEMPLATE_NOT_FOUND') {
-            return actionError('Invoice template not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Invoice template not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.template.notFoundRefresh');
         }
         if (/^Template .+ does not have a canonical templateAst payload\.$/.test(error.message)) {
-            return actionError('Invoice template is missing its design payload. Please choose another template.');
+            return actionError('Invoice template is missing its design payload. Please choose another template.', 'msp/invoicing:errors.template.missingDesign');
         }
     }
 
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02') {
-        return actionError('One of the selected invoice template values is invalid. Please refresh and try again.');
+        return actionError('One of the selected invoice template values is invalid. Please refresh and try again.', 'msp/invoicing:errors.template.invalidValue');
     }
     if (dbError?.code === '23502') {
-        return actionError(`Missing required invoice template field${dbError.column ? `: ${dbError.column}` : ''}.`);
+        return dbError.column
+          ? actionError(
+              `Missing required invoice template field: ${dbError.column}.`,
+              'msp/invoicing:errors.template.missingFieldNamed',
+              { field: dbError.column },
+            )
+          : actionError('Missing required invoice template field.', 'msp/invoicing:errors.template.missingField');
     }
     if (dbError?.code === '23503') {
-        return actionError('The selected invoice template or client no longer exists. Please refresh and try again.');
+        return actionError('The selected invoice template or client no longer exists. Please refresh and try again.', 'msp/invoicing:errors.template.referenceMissing');
     }
     if (dbError?.code === '23505') {
-        return actionError('An invoice template with those settings already exists.');
+        return actionError('An invoice template with those settings already exists.', 'msp/invoicing:errors.template.duplicate');
     }
 
     return null;
@@ -125,7 +131,7 @@ export const getInvoiceTemplates = withAuth(async (
     { tenant }
 ): Promise<IInvoiceTemplate[] | InvoiceTemplateActionError> => {
     if (!await hasPermission(user, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const { knex } = await createTenantKnex();
@@ -148,10 +154,10 @@ export const setDefaultTemplate = withAuth(async (
     payload: SetDefaultTemplatePayload
 ): Promise<void | InvoiceTemplateActionError> => {
     if (!await hasPermission(user, 'billing', 'update')) {
-        return permissionError('Permission denied: billing update required');
+        return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
     }
     if (payload.templateSource === 'standard' && !payload.standardTemplateCode) {
-        return actionError('Select a standard invoice template before saving.');
+        return actionError('Select a standard invoice template before saving.', 'msp/invoicing:errors.template.selectStandard');
     }
 
     const { knex } = await createTenantKnex();
@@ -224,7 +230,7 @@ export const setClientTemplate = withAuth(async (
     templateId: string | null
 ): Promise<void | InvoiceTemplateActionError> => {
     if (!await hasPermission(user, 'billing', 'update')) {
-        return permissionError('Permission denied: billing update required');
+        return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
     }
 
     const { knex } = await createTenantKnex();
@@ -237,7 +243,7 @@ export const setClientTemplate = withAuth(async (
           .update({ invoice_template_id: templateId });
     });
     if (updated === 0) {
-        return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.client.notFoundRefresh');
     }
     } catch (error) {
         const expected = invoiceTemplateActionErrorFrom(error);

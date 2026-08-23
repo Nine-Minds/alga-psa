@@ -1490,5 +1490,35 @@
       "inactive": "inactivo",
       "maintenance": "mantenimiento"
     }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "Permiso denegado: no se pueden leer los activos",
+      "readAssetTypes": "Permiso denegado: no se pueden leer los tipos de activo",
+      "manageAssetTypes": "Permiso denegado: no se pueden gestionar los tipos de activo",
+      "readDocuments": "Permiso denegado: no se pueden leer los documentos del activo",
+      "associateDocuments": "Permiso denegado: no se pueden asociar documentos a los activos",
+      "removeDocuments": "Permiso denegado: no se pueden quitar documentos de los activos",
+      "updateDocumentNotes": "Permiso denegado: no se pueden actualizar las notas de los documentos del activo"
+    },
+    "asset": {
+      "notFoundRefresh": "No se encontró el activo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "clientNotFound": "No se encontró el cliente. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "maintenanceNotFound": "No se encontró el plan de mantenimiento. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "maintenanceMismatch": "Este registro de mantenimiento no corresponde al activo seleccionado. Actualice la página e inténtelo de nuevo.",
+      "locationUnavailable": "La ubicación seleccionada no está disponible para este cliente.",
+      "selfRelation": "Un activo no se puede relacionar consigo mismo.",
+      "selectAtLeastOne": "Seleccione al menos un activo.",
+      "typeUnavailable": "El tipo de activo no está disponible. Elija un tipo de activo válido.",
+      "typeUnavailableNamed": "El tipo de activo «{{assetType}}» no está disponible. Elija un tipo de activo válido.",
+      "documentAssociationNotFound": "No se encontró la asociación del documento. Es posible que ya se haya quitado. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de activo seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "invalidDate": "Una de las fechas del activo seleccionadas no es válida. Revise el formulario e inténtelo de nuevo.",
+      "referenceMissing": "El activo, documento o registro relacionado seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio del activo entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores del activo no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del activo.",
+      "missingFieldNamed": "Falta un campo obligatorio del activo: {{field}}."
+    }
   }
 }

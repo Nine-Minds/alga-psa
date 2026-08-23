@@ -706,5 +706,28 @@
       "saveFailed": "Impossibile aggiornare il contatto",
       "saveFailedDescription": "Impossibile aggiornare il contatto. Riprova."
     }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Contatto non trovato",
+      "otherClient": "Autorizzazione negata: impossibile gestire i contatti di un altro cliente",
+      "notAssociatedWithClient": "Il contatto non è associato a un cliente",
+      "emailExists": "Un contatto con questo indirizzo e-mail esiste già nel sistema",
+      "fieldRequired": "{{field}} è obbligatorio",
+      "clientInvalid": "Il cliente selezionato non è più valido",
+      "duplicate": "Esiste già un contatto con questi dati.",
+      "destinationInvalid": "Il cliente o la destinazione dei ticket in entrata selezionati non sono più validi",
+      "invalidDataRefresh": "Dati del contatto non validi. Aggiornare la pagina e riprovare.",
+      "invalidDataFields": "Dati del contatto non validi. Controllare tutti i campi e riprovare.",
+      "bulkEmailExists": "Uno o più contatti hanno già questo indirizzo e-mail",
+      "invalidReference": "Riferimento non valido nei dati di aggiornamento",
+      "visibilityMissingField": "Manca un campo obbligatorio del gruppo di visibilità.",
+      "visibilityMissingFieldNamed": "Manca un campo obbligatorio del gruppo di visibilità: {{field}}.",
+      "visibilityReferenceInvalid": "Il contatto, il gruppo di visibilità o la bacheca selezionati non sono più validi. Aggiornare la pagina e riprovare.",
+      "visibilityDuplicate": "Esiste già un gruppo di visibilità con questi dati per questo cliente.",
+      "visibilityInvalidData": "Dati del gruppo di visibilità non validi. Controllare i dati del gruppo e le bacheche selezionate.",
+      "groupNameRequired": "Il nome del gruppo è obbligatorio",
+      "readPermission": "Autorizzazione negata: impossibile leggere i contatti"
+    }
   }
 }

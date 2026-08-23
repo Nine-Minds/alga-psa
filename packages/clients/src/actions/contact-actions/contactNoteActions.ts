@@ -43,7 +43,7 @@ function contactNoteActionErrorFrom(error: unknown): ContactNoteActionError | nu
     return permissionError(error.message);
   }
   if (error.message === 'Contact not found') {
-    return actionError('Contact not found');
+    return actionError('Contact not found', 'msp/contacts:errors.contact.notFound');
   }
   return null;
 }

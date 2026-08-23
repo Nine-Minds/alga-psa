@@ -16,7 +16,7 @@ export class TimePeriodSuggester {
   static suggestNewTimePeriod(
     settings: TimePeriodSettings[],
     existingPeriods: ITimePeriod[] = []
-  ): { success: boolean; data?: ITimePeriodView; error?: string } {
+  ): { success: boolean; data?: ITimePeriodView; error?: string; errorKey?: string } {
     let currentDate = Temporal.Now.plainDateISO();
 
     if (existingPeriods.length > 0) {
@@ -67,7 +67,8 @@ export class TimePeriodSuggester {
     if (applicableSettings.length === 0) {
       return {
         success: false,
-        error: 'No applicable time period settings found. Please check your time period settings.',
+        error: 'No applicable time period settings found.',
+        errorKey: 'timeEntry.periods.errors.noApplicableSettings',
       };
     }
 

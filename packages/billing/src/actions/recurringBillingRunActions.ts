@@ -2,12 +2,21 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageErrorShape,
+  type ActionPermissionErrorShape,
+} from '@alga-psa/ui/lib/errorHandling';
+import { localizeActionError } from '@alga-psa/auth';
 import { getCurrentUserAsync, hasPermissionAsync } from '../lib/authHelpers';
 import {
   generateInvoiceForSelectionInput,
   generateInvoiceForSelectionInputs,
 } from './invoiceGeneration';
-import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
+import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY } from './invoiceGeneration.constants';
 import {
   buildRecurringRunSelectionIdentity,
   listRecurringRunExecutionWindowKinds,
@@ -31,27 +40,15 @@ import {
   type RecurringBillingRunWindowIdentity,
 } from '@alga-psa/workflow-streams';
 
+// These actions do their own auth check rather than going through withAuth, so their
+// payloads must still be built by the shared helpers: that is what carries the
+// messageKey the localization boundary reads. Local clones would drop it silently.
 export type RecurringBillingRunActionError =
-  | { readonly actionError: string }
-  | { readonly permissionError: string };
-
-function actionError(message: string): RecurringBillingRunActionError {
-  return { actionError: message };
-}
-
-function permissionError(message: string): RecurringBillingRunActionError {
-  return { permissionError: message };
-}
+  | ActionMessageErrorShape
+  | ActionPermissionErrorShape;
 
 function isRecurringBillingRunActionError(value: unknown): value is RecurringBillingRunActionError {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      (
-        typeof (value as { actionError?: unknown }).actionError === 'string' ||
-        typeof (value as { permissionError?: unknown }).permissionError === 'string'
-      ),
-  );
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 function getRecurringBillingRunActionErrorMessage(error: RecurringBillingRunActionError): string {
@@ -107,11 +104,11 @@ export async function selectClientCadenceRecurringRunTargets(
 } | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    return permissionError('Unauthorized: No authenticated user found');
+    return localizeActionError(permissionError('Unauthorized: No authenticated user found', 'msp/billing:errors.context.notAuthenticated'));
   }
 
   if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return localizeActionError(permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead'));
   }
 
   const recurringDueWork = await getAvailableRecurringDueWork(options);
@@ -141,9 +138,8 @@ function isDuplicateRecurringInvoiceError(error: unknown): boolean {
 }
 
 function isDuplicateRecurringInvoiceActionError(error: RecurringBillingRunActionError): boolean {
-  return getRecurringBillingRunActionErrorMessage(error).startsWith(
-    'Invoice already exists for this recurring execution window',
-  );
+  // Keyed, not matched: the boundary rewrites the sentence into the caller's locale.
+  return error.messageKey === DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY;
 }
 
 /**
@@ -189,16 +185,16 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
 }): Promise<RecurringBillingRunResult | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    return permissionError('Unauthorized: No authenticated user found');
+    return localizeActionError(permissionError('Unauthorized: No authenticated user found', 'msp/billing:errors.context.notAuthenticated'));
   }
 
   if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
-    return permissionError('Permission denied: invoice create or generate required');
+    return localizeActionError(permissionError('Permission denied: invoice create or generate required', 'msp/billing:errors.recurringRun.invoicePermission'));
   }
 
   const targets = normalizeRecurringBillingRunTargets(params);
   if (targets.length === 0) {
-    return actionError('Select at least one recurring billing period to generate.');
+    return localizeActionError(actionError('Select at least one recurring billing period to generate.', 'msp/billing:errors.recurringRun.selectPeriods'));
   }
 
   const tenantId = currentUser.tenant;
@@ -356,16 +352,16 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
 }): Promise<RecurringBillingRunResult | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    return permissionError('Unauthorized: No authenticated user found');
+    return localizeActionError(permissionError('Unauthorized: No authenticated user found', 'msp/billing:errors.context.notAuthenticated'));
   }
 
   if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
-    return permissionError('Permission denied: invoice create or generate required');
+    return localizeActionError(permissionError('Permission denied: invoice create or generate required', 'msp/billing:errors.recurringRun.invoicePermission'));
   }
 
   const groupedTargets = normalizeRecurringBillingRunGroupedTargets(params);
   if (groupedTargets.length === 0) {
-    return actionError('Select at least one recurring billing period to generate.');
+    return localizeActionError(actionError('Select at least one recurring billing period to generate.', 'msp/billing:errors.recurringRun.selectPeriods'));
   }
 
   const flattenedExecutionWindows = groupedTargets.flatMap((group) =>

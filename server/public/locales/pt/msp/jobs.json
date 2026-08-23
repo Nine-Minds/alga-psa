@@ -140,5 +140,10 @@
   "page": {
     "heading": "Monitoramento de Trabalho",
     "recentJobs": "Empregos recentes"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Trabalho não encontrado. Ele pode ter expirado ou sido excluído."
+    }
   }
 }

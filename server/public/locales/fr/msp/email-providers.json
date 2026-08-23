@@ -1092,5 +1092,71 @@
       "title": "Tester cette règle",
       "to": "À"
     }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Échec de la récupération des domaines",
+      "invalidFormat": "Format de domaine non valide",
+      "duplicate": "Le domaine existe déjà",
+      "addFailed": "Échec de l’ajout du domaine. Veuillez réessayer.",
+      "notFound": "Domaine introuvable",
+      "verifyFailed": "Échec de la vérification du domaine. Veuillez réessayer.",
+      "stillReferenced": "Le domaine est encore référencé et ne peut pas être supprimé.",
+      "deleteFailed": "Échec de la suppression du domaine. Veuillez réessayer."
+    },
+    "provider": {
+      "saveFailed": "Échec de l’enregistrement du fournisseur d’e-mail. Veuillez vérifier les paramètres et réessayer.",
+      "updateFailed": "Échec de la mise à jour du fournisseur d’e-mail. Veuillez vérifier les paramètres et réessayer.",
+      "notFound": "Fournisseur d’e-mail introuvable",
+      "deleteFailed": "Échec de la suppression du fournisseur d’e-mail"
+    },
+    "settings": {
+      "fetchFailed": "Échec de la récupération des paramètres d’e-mail",
+      "mailboxRequired": "Choisissez une boîte aux lettres Microsoft 365 pour les e-mails sortants",
+      "mailboxInactive": "La boîte aux lettres Microsoft 365 sélectionnée n’est pas active ou n’existe plus",
+      "mailboxReconnect": "Reconnectez la boîte aux lettres Microsoft 365 sélectionnée avant de l’utiliser pour les e-mails sortants",
+      "ticketIdentityMustMatchMailbox": "L’identité e-mail des tickets doit utiliser la boîte aux lettres Microsoft 365 sélectionnée ({{mailbox}}). Mettez à jour l’adresse des e-mails de tickets avant d’enregistrer.",
+      "providerFromAddressInvalid": "L’adresse d’expéditeur {{provider}} doit être une adresse e-mail valide",
+      "ticketingFromInvalid": "L’adresse d’expéditeur des tickets doit être une adresse e-mail valide",
+      "outboundDomainInvalid": "Le domaine d’envoi sortant doit être un domaine valide (par ex. example.com)",
+      "outboundDomainRequired": "Configurez un domaine d’envoi avant de choisir une adresse d’expéditeur des tickets",
+      "ticketingFromDomainMismatch": "L’adresse d’expéditeur des tickets doit utiliser le domaine d’envoi configuré",
+      "refreshFailed": "Échec de la récupération des paramètres mis à jour",
+      "updateFailed": "Échec de la mise à jour des paramètres d’e-mail",
+      "mailboxesLoadFailed": "Échec du chargement des boîtes aux lettres Microsoft 365"
+    },
+    "inboundRules": {
+      "notFound": "Règle d’e-mail entrant introuvable",
+      "invalidOrdering": "Données d’ordre des règles non valides",
+      "aliasRequired": "L’alias est obligatoire",
+      "aliasTooLong": "L’alias est trop long",
+      "clientRequired": "Le client est obligatoire",
+      "invalidSampleEmail": "E-mail d’exemple non valide",
+      "permissionDenied": "Vous n’avez pas l’autorisation de gérer les règles d’e-mail entrant.",
+      "ticketDefaultsUnavailable": "Le jeu de paramètres de ticket référencé n’existe pas ou est inactif.",
+      "orderingMismatch": "L’ordre ne correspond pas au jeu de règles actuel.",
+      "clientNotFound": "Client introuvable.",
+      "aliasAlreadyAssigned": "L’alias « {{alias}} » est déjà attribué à un client.",
+      "invalidRegex": "Expression régulière non valide.",
+      "fallbackDestinationRequired": "Une destination de secours est obligatoire lorsque le comportement sans correspondance utilise une destination de secours."
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Une configuration portant ce nom court existe déjà",
+      "createFailed": "Échec de la création des valeurs par défaut des tickets entrants. Veuillez réessayer.",
+      "notFound": "Configuration des valeurs par défaut introuvable",
+      "updateFailed": "Échec de la mise à jour des valeurs par défaut des tickets entrants. Veuillez réessayer."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Autorisation refusée : impossible de lire les options de champ de ticket",
+      "loadFailed": {
+        "ticketFieldOptions": "Échec du chargement des options de champ de ticket. Veuillez réessayer.",
+        "boards": "Échec du chargement des tableaux. Veuillez réessayer.",
+        "statuses": "Échec du chargement des statuts. Veuillez réessayer.",
+        "priorities": "Échec du chargement des priorités. Veuillez réessayer.",
+        "categories": "Échec du chargement des catégories. Veuillez réessayer.",
+        "clients": "Échec du chargement des clients. Veuillez réessayer.",
+        "users": "Échec du chargement des utilisateurs. Veuillez réessayer."
+      }
+    }
   }
 }

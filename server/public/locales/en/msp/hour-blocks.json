@@ -137,5 +137,22 @@
     "remaining": "{{hours}} hrs unused will be lost.",
     "submit": "Expire block",
     "title": "Expire hour block"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "Hour block not found. It may have been updated or deleted. Please refresh and try again.",
+      "serviceNotFound": "Service not found. It may have been updated or deleted. Please refresh and try again.",
+      "hoursPositive": "Block hours must be greater than zero.",
+      "ratePositive": "Hourly rate must be zero or greater.",
+      "reasonRequired": "A reason is required for this operation.",
+      "adjustExpiredOrVoided": "Cannot adjust an expired or voided hour block.",
+      "usedCannotVoid": "This hour block has been used and cannot be voided. Expire it instead.",
+      "onlyPendingOrActiveVoid": "Only pending or active hour blocks can be voided.",
+      "expireVoided": "Cannot expire a voided hour block.",
+      "updateExpirationVoided": "Cannot update the expiration of a voided hour block.",
+      "invalidValue": "One of the selected hour block values is invalid. Please refresh and try again.",
+      "missingField": "A required hour block field is missing. Please review the form and try again.",
+      "referenceMissing": "The selected client, service, or invoice no longer exists. Please refresh and try again."
+    }
   }
 }

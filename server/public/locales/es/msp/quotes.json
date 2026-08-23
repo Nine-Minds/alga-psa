@@ -798,5 +798,32 @@
     "labels": {
       "custom": "Costumbre"
     }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Permiso denegado: no se pueden crear cotizaciones",
+      "update": "Permiso denegado: no se pueden actualizar cotizaciones",
+      "read": "Permiso denegado: no se pueden leer cotizaciones",
+      "delete": "Permiso denegado: no se pueden eliminar cotizaciones",
+      "readOne": "Permiso denegado: no se puede leer la cotización",
+      "approve": "Permiso denegado: no se pueden aprobar cotizaciones",
+      "updateApprovalSettings": "Permiso denegado: no se puede actualizar la configuración de aprobación de cotizaciones",
+      "readDocumentTemplates": "Permiso denegado: no se pueden leer las plantillas de documento de cotización",
+      "modifyDocumentTemplates": "Permiso denegado: no se pueden modificar las plantillas de documento de cotización",
+      "setDefaultDocumentTemplate": "Permiso denegado: no se puede establecer la plantilla de documento de cotización predeterminada",
+      "deleteDocumentTemplates": "Permiso denegado: no se pueden eliminar las plantillas de documento de cotización"
+    },
+    "quote": {
+      "formInvalid": "El formulario de cotización contiene valores no válidos. Revíselo e inténtelo de nuevo.",
+      "notFoundRefresh": "No se encontró la cotización. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "itemNotFoundRefresh": "No se encontró la línea de la cotización. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "templateNotFoundRefresh": "No se encontró la plantilla de cotización. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de cotización seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "La cotización, cliente, contacto o servicio seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio de la cotización entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores de la cotización no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la cotización.",
+      "missingFieldNamed": "Falta un campo obligatorio de la cotización: {{field}}."
+    }
   }
 }

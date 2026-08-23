@@ -29,15 +29,15 @@ function reorderActionErrorFrom(error: unknown): ReorderActionError | null {
 
     switch (error.message) {
       case 'Load list source and destination are required':
-        return actionError('Choose both a load destination and a source shelf.');
+        return actionError('Choose both a load destination and a source shelf.', 'features/inventory:errors.reorder.destinationAndSourceRequired');
       case 'Load list source and destination must differ':
-        return actionError('Choose different source and destination locations.');
+        return actionError('Choose different source and destination locations.', 'features/inventory:errors.shared.sameSourceAndDestination');
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected load-list records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected load-list records is no longer valid. Please refresh and try again.', 'features/inventory:errors.reorder.recordInvalid');
   }
 
   return null;

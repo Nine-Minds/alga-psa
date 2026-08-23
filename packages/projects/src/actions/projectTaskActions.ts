@@ -29,7 +29,7 @@ import {
   findTagsByEntityIds,
 } from '@alga-psa/tags/actions/tagActions';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
-import { withAuth } from '@alga-psa/auth';
+import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -65,6 +65,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import {
   actionError,
+  actionErrorFromValidationIssue,
   isActionMessageError,
   isActionPermissionError,
   permissionError,
@@ -99,20 +100,6 @@ const EXPECTED_PROJECT_TASK_ERROR_PREFIXES = [
     'Team not found',
 ];
 
-function formatProjectTaskValidationIssues(error: unknown): string | null {
-    const issues = (error as { issues?: Array<{ path?: Array<string | number>; message?: string }> })?.issues;
-    if (!Array.isArray(issues) || issues.length === 0) {
-        return null;
-    }
-
-    return issues
-        .map((issue) => {
-            const field = issue.path?.join('.');
-            return field ? `${field}: ${issue.message || 'Invalid value'}` : issue.message || 'Invalid value';
-        })
-        .join('; ');
-}
-
 function projectTaskActionErrorFrom(error: unknown): ProjectTaskActionError | null {
     if (isActionMessageError(error) || isActionPermissionError(error)) {
         return error as ProjectTaskActionError;
@@ -127,26 +114,32 @@ function projectTaskActionErrorFrom(error: unknown): ProjectTaskActionError | nu
         }
     }
 
-    const validationMessage = formatProjectTaskValidationIssues(error);
-    if (validationMessage) {
-        return actionError(`Please fix the task details: ${validationMessage}`);
+    const firstIssue = (error as { issues?: unknown[] })?.issues?.[0];
+    if (firstIssue && typeof firstIssue === 'object') {
+        return actionErrorFromValidationIssue(firstIssue);
     }
 
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02') {
-        return actionError('One of the selected task values is invalid. Please refresh and try again.');
+        return actionError('One of the selected task values is invalid. Please refresh and try again.', 'projects:errors.task.invalidValue');
     }
     if (dbError?.code === '23502') {
-        return actionError(`Missing required task field${dbError.column ? `: ${dbError.column}` : ''}.`);
+        return dbError.column
+          ? actionError(
+              `Missing required task field: ${dbError.column}.`,
+              'projects:errors.task.missingFieldNamed',
+              { field: dbError.column },
+            )
+          : actionError('Missing required task field.', 'projects:errors.task.missingField');
     }
     if (dbError?.code === '23503') {
-        return actionError('One of the selected project or task records no longer exists. Please refresh and try again.');
+        return actionError('One of the selected project or task records no longer exists. Please refresh and try again.', 'projects:errors.task.referenceMissing');
     }
     if (dbError?.code === '23505') {
-        return actionError('This task change conflicts with an existing record. Please refresh and try again.');
+        return actionError('This task change conflicts with an existing record. Please refresh and try again.', 'projects:errors.task.conflict');
     }
     if (dbError?.code === '23514') {
-        return actionError('One of the task values is not allowed. Please review the form and try again.');
+        return actionError('One of the task values is not allowed. Please review the form and try again.', 'projects:errors.task.notAllowed');
     }
 
     return null;
@@ -2691,7 +2684,12 @@ export const cleanupOrderKeysForStatus = withAuth(async (
         console.error('Error cleaning up order keys:', error);
         const expected = projectTaskActionErrorFrom(error);
         if (expected) {
-            const candidate = expected as unknown as { permissionError?: unknown; actionError?: unknown };
+            // Reported as a bare string, so withAuth's boundary never sees the
+            // payload's messageKey. Localize before flattening.
+            const candidate = (await localizeActionError(expected)) as unknown as {
+                permissionError?: unknown;
+                actionError?: unknown;
+            };
             return {
                 success: false,
                 message: typeof candidate.permissionError === 'string'

@@ -1572,7 +1572,8 @@
           "invalidState": "Esta solicitud de configuración de Microsoft no es válida o venció. Inicie de nuevo desde la configuración de Proveedores.",
           "microsoftError": "Microsoft no pudo completar la solicitud de configuración. Inténtelo de nuevo o use la configuración manual.",
           "missingCode": "Microsoft no devolvió un código de autorización. Inicie de nuevo la configuración.",
-          "sessionMismatch": "Su sesión de AlgaPSA no coincide con el administrador que inició esta configuración. Inicie sesión e inténtelo de nuevo."
+          "sessionMismatch": "Su sesión de AlgaPSA no coincide con el administrador que inició esta configuración. Inicie sesión e inténtelo de nuevo.",
+          "optionsLoadFailed": "No se pudieron cargar las opciones de configuración del correo electrónico de Microsoft."
         },
         "fields": {
           "clientId": "ID de cliente",
@@ -1998,6 +1999,158 @@
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Automatización de alertas",
+        "description": "Configure cómo se procesan y se suprimen las alertas de RMM entrantes y cómo se convierten en tickets.",
+        "loading": "Cargando la configuración de automatización de alertas…",
+        "actions": {
+          "addRule": "Agregar regla",
+          "addWindow": "Agregar ventana",
+          "cancel": "Cancelar",
+          "confirm": "Confirmar",
+          "deleteRule": "Eliminar regla",
+          "deleteWindow": "Eliminar ventana",
+          "editRule": "Editar regla",
+          "editWindow": "Editar ventana",
+          "moveDown": "Mover hacia abajo",
+          "moveUp": "Mover hacia arriba",
+          "savePolling": "Guardar configuración de sondeo",
+          "saveRule": "Guardar regla",
+          "saveWindow": "Guardar ventana",
+          "saving": "Guardando…"
+        },
+        "days": {
+          "sun": "Dom",
+          "mon": "Lun",
+          "tue": "Mar",
+          "wed": "Mié",
+          "thu": "Jue",
+          "fri": "Vie",
+          "sat": "Sáb"
+        },
+        "dialogs": {
+          "addRule": "Agregar regla de alerta",
+          "addWindow": "Agregar ventana de mantenimiento",
+          "editRule": "Editar regla: {{name}}",
+          "editWindow": "Editar ventana: {{name}}"
+        },
+        "errors": {
+          "loadRules": "No se pudieron cargar las reglas de alerta",
+          "loadSettings": "No se pudo cargar la configuración de automatización de alertas",
+          "unknown": "Error desconocido"
+        },
+        "fields": {
+          "active": "Activa",
+          "commaSeparated": "Separados por comas",
+          "description": "Descripción",
+          "nameRequired": "Nombre *",
+          "optionalDescription": "Descripción opcional",
+          "ruleName": "Nombre de la regla",
+          "windowName": "Nombre de la ventana"
+        },
+        "polling": {
+          "title": "Sondeo de alertas",
+          "description": "Alga obtiene periódicamente las alertas activas del RMM para detectar las que no haya recibido un webhook. Configure el intervalo de sondeo a continuación.",
+          "enabled": "Sondeo activado",
+          "interval": "Intervalo (minutos, 5–60)",
+          "intervalError": "El intervalo debe estar entre 5 y 60 minutos.",
+          "lastPolled": "Último sondeo: {{time}}"
+        },
+        "rules": {
+          "title": "Reglas de alerta",
+          "description": "Las reglas se evalúan de arriba abajo. Se aplica la primera regla coincidente. Una regla sin condiciones se aplica a todas las alertas.",
+          "empty": "No hay reglas configuradas. Las alertas se procesarán sin automatización.",
+          "actions": "Acciones",
+          "activityTypes": "Tipos de actividad",
+          "activityTypesPlaceholder": "p. ej., disco, CPU (separados por comas)",
+          "alertClasses": "Clases de alerta",
+          "assignToUser": "Asignar a un usuario",
+          "autoResolve": "Resolver automáticamente el ticket cuando se despeje la alerta",
+          "board": "Tablero",
+          "catchAllHelp": "No se establecieron condiciones; esta regla se aplicará a todas las alertas entrantes.",
+          "createTicket": "Crear ticket",
+          "defaultBoard": "Tablero predeterminado",
+          "defaultClosedStatus": "Estado cerrado predeterminado",
+          "descriptionTemplate": "Plantilla de descripción del ticket",
+          "descriptionTemplatePlaceholder": "p. ej., alerta en {{device}}: {{message}}",
+          "keywords": "Palabras clave",
+          "mapFromSeverity": "Asignar según la gravedad",
+          "matchConditions": "Condiciones de coincidencia",
+          "messagePattern": "Patrón de mensaje (expresión regular)",
+          "messagePatternPlaceholder": "p. ej., (?i)disk.*full",
+          "notifyUsers": "Notificar a usuarios",
+          "organizationsFilter": "Organizaciones (filtro)",
+          "placeholders": "Marcadores de posición",
+          "priorityOverride": "Anular prioridad",
+          "resetOnClose": "Restablecer la alerta cuando se cierre el ticket",
+          "resolveStatus": "Estado de resolución",
+          "severities": "Niveles de gravedad",
+          "sourceTypes": "Tipos de origen",
+          "titleTemplate": "Plantilla de título del ticket",
+          "titleTemplatePlaceholder": "p. ej., [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Sin asignar"
+        },
+        "schedule": {
+          "crossesMidnight": "La hora de finalización es anterior a la de inicio; la ventana cruza la medianoche.",
+          "days": "Días",
+          "endTime": "Hora de finalización",
+          "endsAt": "Finaliza el",
+          "none": "Sin programación",
+          "oneOff": "Una vez",
+          "startTime": "Hora de inicio",
+          "startsAt": "Comienza el",
+          "timezone": "Zona horaria",
+          "type": "Tipo de programación",
+          "weekly": "Semanal: {{days}}, {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Recurrente semanal"
+        },
+        "scope": {
+          "title": "Alcance",
+          "allClients": "Todos los clientes",
+          "allRmm": "Todos los RMM",
+          "allRmmHelp": "La ventana suprime las alertas de todas las integraciones RMM.",
+          "clientOptional": "Cliente (opcional; déjelo en blanco para todos)",
+          "loadingClients": "Cargando clientes…",
+          "onlyThisIntegration": "Solo esta integración",
+          "otherIntegration": "Otra integración",
+          "thisIntegration": "Esta integración",
+          "thisIntegrationHelp": "La ventana solo suprime las alertas de esta integración."
+        },
+        "severities": {
+          "critical": "Crítica",
+          "major": "Alta",
+          "moderate": "Moderada",
+          "minor": "Baja",
+          "none": "Ninguna"
+        },
+        "summary": {
+          "autoResolve": "Resolución automática",
+          "createsTicket": "Crea un ticket"
+        },
+        "toasts": {
+          "deleteFailed": "No se pudo eliminar",
+          "invalidInterval": "Intervalo no válido",
+          "namedItemSaved": "Se guardó «{{name}}».",
+          "pollingSaved": "Configuración de sondeo guardada",
+          "reorderFailed": "No se pudo reordenar",
+          "ruleCreated": "Regla creada",
+          "ruleDeleted": "Regla eliminada",
+          "ruleUpdated": "Regla actualizada",
+          "saveFailed": "No se pudo guardar",
+          "updateFailed": "No se pudo actualizar",
+          "windowCreated": "Ventana creada",
+          "windowDeleted": "Ventana eliminada",
+          "windowUpdated": "Ventana actualizada"
+        },
+        "validation": {
+          "invalidRegex": "Expresión regular no válida"
+        },
+        "windows": {
+          "title": "Ventanas de mantenimiento",
+          "description": "Las alertas que llegan durante una ventana activa se suprimen y no crean tickets.",
+          "empty": "No hay ventanas de mantenimiento configuradas."
+        }
+      },
       "ninjaOne": {
         "loading": "Cargando configuración de la integración NinjaOne...",
         "card": {
@@ -3406,6 +3559,119 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    }
+  },
+  "errors": {
+    "rmm": {
+      "invalidInput": "Revise la configuración de automatización de alertas de RMM e inténtelo de nuevo.",
+      "permissions": {
+        "read": "Permisos insuficientes para ver la configuración de automatización de alertas de RMM.",
+        "update": "Permisos insuficientes para administrar la configuración de automatización de alertas de RMM."
+      },
+      "integrationNotFound": "No se encontró la integración de RMM.",
+      "nothingToUpdate": "No hay cambios que guardar.",
+      "ruleNotFound": "No se encontró la regla de alerta.",
+      "windowNotFound": "No se encontró la ventana de mantenimiento.",
+      "pollIntervalRange": "El intervalo de sondeo debe estar entre 5 y 60 minutos.",
+      "validation": {
+        "scheduleRequired": "Una ventana necesita una hora de inicio y de finalización o una repetición semanal.",
+        "startBeforeEnd": "La hora de inicio debe ser anterior a la hora de finalización.",
+        "timesMustDiffer": "Las horas de inicio y finalización deben ser diferentes. Use varios días para una ventana que abarque un día completo.",
+        "unknownTimezone": "Zona horaria desconocida: {{timezone}}.",
+        "messagePatternInvalid": "El patrón del mensaje no es una expresión regular válida."
+      }
+    },
+    "mappings": {
+      "viewPermission": "Permiso denegado: no tiene permiso para ver las asignaciones contables.",
+      "managePermission": "Permiso denegado: no tiene permiso para gestionar las asignaciones contables.",
+      "loadFailed": "No se pueden cargar los datos de asignación. Inténtelo de nuevo.",
+      "duplicate": "Ya existe una asignación para esta entidad. Edite la asignación existente en su lugar.",
+      "saveFailed": "No se puede guardar la asignación. Inténtelo de nuevo.",
+      "idRequiredForUpdate": "Se requiere el ID de la asignación para actualizar.",
+      "noUpdateData": "No se proporcionaron datos de actualización.",
+      "updateFailed": "No se puede actualizar la asignación. Inténtelo de nuevo.",
+      "idRequiredForDelete": "Se requiere el ID de la asignación para eliminarla.",
+      "notFound": "No se encontró la asignación. Actualice las asignaciones e inténtelo de nuevo.",
+      "deleteFailed": "No se puede eliminar la asignación. Inténtelo de nuevo."
+    },
+    "qbo": {
+      "enterpriseOnly": "La integración con QuickBooks Online solo está disponible en Enterprise Edition.",
+      "viewPermission": "Prohibido: no tiene permiso para ver los ajustes de la integración con QuickBooks.",
+      "accounts": {
+        "notConnected": "Conecte QuickBooks antes de cargar las cuentas de QuickBooks.",
+        "reconnect": "Vuelva a conectar QuickBooks antes de cargar las cuentas de QuickBooks.",
+        "loadFailed": "No se pudieron cargar las cuentas de QuickBooks. Inténtelo de nuevo o vuelva a conectar QuickBooks si el problema persiste."
+      },
+      "classes": {
+        "notConnected": "Conecte QuickBooks antes de cargar las clases de QuickBooks.",
+        "reconnect": "Vuelva a conectar QuickBooks antes de cargar las clases de QuickBooks.",
+        "loadFailed": "No se pudieron cargar las clases de QuickBooks. Inténtelo de nuevo o vuelva a conectar QuickBooks si el problema persiste."
+      },
+      "departments": {
+        "notConnected": "Conecte QuickBooks antes de cargar los departamentos de QuickBooks.",
+        "reconnect": "Vuelva a conectar QuickBooks antes de cargar los departamentos de QuickBooks.",
+        "loadFailed": "No se pudieron cargar los departamentos de QuickBooks. Inténtelo de nuevo o vuelva a conectar QuickBooks si el problema persiste."
+      },
+      "items": {
+        "notConnected": "Conecte QuickBooks antes de cargar los artículos de QuickBooks.",
+        "reconnect": "Vuelva a conectar QuickBooks antes de cargar los artículos de QuickBooks.",
+        "loadFailed": "No se pudieron cargar los artículos de QuickBooks. Inténtelo de nuevo o vuelva a conectar QuickBooks si el problema persiste."
+      },
+      "taxCodes": {
+        "notConnected": "Conecte QuickBooks antes de cargar los códigos de impuesto de QuickBooks.",
+        "reconnect": "Vuelva a conectar QuickBooks antes de cargar los códigos de impuesto de QuickBooks.",
+        "loadFailed": "No se pudieron cargar los códigos de impuesto de QuickBooks. Inténtelo de nuevo o vuelva a conectar QuickBooks si el problema persiste."
+      },
+      "customers": {
+        "notConnected": "Conecte QuickBooks antes de cargar los clientes de QuickBooks.",
+        "reconnect": "Vuelva a conectar QuickBooks antes de cargar los clientes de QuickBooks.",
+        "loadFailed": "No se pudieron cargar los clientes de QuickBooks. Inténtelo de nuevo o vuelva a conectar QuickBooks si el problema persiste."
+      },
+      "paymentTerms": {
+        "notConnected": "Conecte QuickBooks antes de cargar las condiciones de pago de QuickBooks.",
+        "reconnect": "Vuelva a conectar QuickBooks antes de cargar las condiciones de pago de QuickBooks.",
+        "loadFailed": "No se pudieron cargar las condiciones de pago de QuickBooks. Inténtelo de nuevo o vuelva a conectar QuickBooks si el problema persiste."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "La integración con Xero solo está disponible en Enterprise Edition.",
+      "viewPermission": "Prohibido: no tiene permiso para ver los ajustes de la integración con Xero.",
+      "organisationDisconnected": "La organización de Xero seleccionada ya no está conectada. Vuelva a conectar Xero e inténtelo de nuevo.",
+      "accounts": {
+        "notConnected": "Conecte Xero antes de cargar las cuentas de Xero.",
+        "reconnect": "Vuelva a conectar Xero antes de cargar las cuentas de Xero.",
+        "loadFailed": "No se pudieron cargar las cuentas de Xero. Inténtelo de nuevo o vuelva a conectar Xero si el problema persiste.",
+        "verifyFailed": "No se pudo verificar la conexión con Xero antes de cargar las cuentas de Xero. Inténtelo de nuevo."
+      },
+      "items": {
+        "notConnected": "Conecte Xero antes de cargar los artículos de Xero.",
+        "reconnect": "Vuelva a conectar Xero antes de cargar los artículos de Xero.",
+        "loadFailed": "No se pudieron cargar los artículos de Xero. Inténtelo de nuevo o vuelva a conectar Xero si el problema persiste.",
+        "verifyFailed": "No se pudo verificar la conexión con Xero antes de cargar los artículos de Xero. Inténtelo de nuevo."
+      },
+      "taxRates": {
+        "notConnected": "Conecte Xero antes de cargar las tasas de impuesto de Xero.",
+        "reconnect": "Vuelva a conectar Xero antes de cargar las tasas de impuesto de Xero.",
+        "loadFailed": "No se pudieron cargar las tasas de impuesto de Xero. Inténtelo de nuevo o vuelva a conectar Xero si el problema persiste.",
+        "verifyFailed": "No se pudo verificar la conexión con Xero antes de cargar las tasas de impuesto de Xero. Inténtelo de nuevo."
+      },
+      "trackingCategories": {
+        "notConnected": "Conecte Xero antes de cargar las categorías de seguimiento de Xero.",
+        "reconnect": "Vuelva a conectar Xero antes de cargar las categorías de seguimiento de Xero.",
+        "loadFailed": "No se pudieron cargar las categorías de seguimiento de Xero. Inténtelo de nuevo o vuelva a conectar Xero si el problema persiste.",
+        "verifyFailed": "No se pudo verificar la conexión con Xero antes de cargar las categorías de seguimiento de Xero. Inténtelo de nuevo."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "El usuario no tiene permiso para gestionar los ajustes de integración",
+      "manageBillingPermission": "El usuario no tiene permiso para gestionar la facturación",
+      "viewBillingPermission": "El usuario no tiene permiso para ver los ajustes de facturación",
+      "contentRequired": "El contenido CSV es obligatorio"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Ya existe en el sistema un contacto con esta dirección de correo electrónico sin asignación de cliente",
+      "emailOnAnotherClient": "Este correo electrónico ya está asociado a otro cliente",
+      "emailOnAnotherClientNamed": "Este correo electrónico ya está asociado a {{clientName}}"
     }
   }
 }

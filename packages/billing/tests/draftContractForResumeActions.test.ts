@@ -838,6 +838,7 @@ describe('getDraftContractForResume action', () => {
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
     await expect(getDraftContractForResume('contract-1')).resolves.toEqual({
       actionError: 'Contract is not a draft',
+      messageKey: 'msp/contracts:errors.wizard.notDraft',
     });
   });
 

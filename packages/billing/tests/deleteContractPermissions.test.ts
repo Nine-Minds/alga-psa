@@ -36,6 +36,7 @@ describe('deleteContract action', () => {
       // The action now reports permission failures as a structured result
       // instead of throwing.
       await expect(deleteContract('contract-1')).resolves.toEqual({
+        messageKey: 'msp/contracts:errors.permissions.deleteContracts',
         permissionError: 'Permission denied: Cannot delete billing contracts',
       });
     } finally {

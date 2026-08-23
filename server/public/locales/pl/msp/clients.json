@@ -1750,5 +1750,117 @@
     "saveContractOverride": "Zapisz zastąpienie umowy",
     "contractSaveSuccess": "Zapisano zasadę doładowania umowy",
     "contractSaveError": "Nie udało się zapisać zasady doładowania umowy"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Nie znaleziono klienta",
+      "signInRequired": "Musisz być zalogowany, aby zarządzać klientami.",
+      "duplicateName": "Klient o nazwie „{{name}}” już istnieje. Wybierz inną nazwę.",
+      "duplicate": "Klient o takich danych już istnieje. Sprawdź nazwę klienta.",
+      "referencedDataMissing": "Nie znaleziono powiązanych danych. Sprawdź opiekuna klienta, kontakt rozliczeniowy i powiązane ustawienia klienta.",
+      "invalidValue": "Jedna z wybranych wartości klienta jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "invalidData": "Podano nieprawidłowe dane klienta. Sprawdź wszystkie pola i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola klienta.",
+      "missingFieldNamed": "Brakuje wymaganego pola klienta: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Odmowa uprawnień: nie można odczytywać klientów",
+      "updateClients": "Odmowa uprawnień: nie można aktualizować klientów"
+    },
+    "timeline": {
+      "invalidCursor": "Nieprawidłowy kursor osi czasu klienta"
+    },
+    "location": {
+      "notFound": "Nie znaleziono lokalizacji lub nie jest już aktywna.",
+      "defaultRequired": "Dodaj inną aktywną lokalizację lub wybierz inną domyślną, zanim usuniesz tę lokalizację jako domyślną.",
+      "missingField": "Brakuje wymaganego pola lokalizacji.",
+      "missingFieldNamed": "Brakuje wymaganego pola lokalizacji: {{field}}.",
+      "referenceInvalid": "Wybrany klient, kraj, region podatkowy lub powiązane dane lokalizacji nie są już prawidłowe. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Sprzeczny rekord lokalizacji już istnieje. Odśwież lokalizacje i spróbuj ponownie.",
+      "invalidData": "Podano nieprawidłowe dane lokalizacji. Sprawdź pola adresu i kontaktu."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Nie udało się dodać przychodzącej domeny e-mail. Spróbuj ponownie.",
+      "notFound": "Nie znaleziono przychodzącej domeny e-mail."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Brakuje wymaganego pola miejsca docelowego przychodzących zgłoszeń.",
+      "missingFieldNamed": "Brakuje wymaganego pola miejsca docelowego przychodzących zgłoszeń: {{field}}.",
+      "referenceInvalid": "Wybrane miejsce docelowe przychodzących zgłoszeń nie jest już prawidłowe. Odśwież stronę i spróbuj ponownie."
+    },
+    "interaction": {
+      "notFound": "Nie znaleziono interakcji",
+      "signInRequired": "Musisz być zalogowany, aby zarządzać interakcjami.",
+      "identifierInvalid": "Jeden z identyfikatorów interakcji jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola interakcji.",
+      "missingFieldNamed": "Brakuje wymaganego pola interakcji: {{field}}.",
+      "referenceMissing": "Wybrana interakcja, klient, kontakt, użytkownik, status lub typ już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Interakcja o takich danych już istnieje."
+    },
+    "interactionType": {
+      "notFound": "Nie znaleziono typu interakcji lub nie masz do niego dostępu.",
+      "missingField": "Brakuje wymaganego pola typu interakcji.",
+      "missingFieldNamed": "Brakuje wymaganego pola typu interakcji: {{field}}.",
+      "referenceInvalid": "Powiązane dane typu interakcji nie są już prawidłowe. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Typ interakcji o takich danych już istnieje.",
+      "invalidData": "Podano nieprawidłowe dane typu interakcji. Sprawdź nazwę, ikonę i kolejność wyświetlania."
+    },
+    "taxRate": {
+      "signInRequired": "Musisz być zalogowany, aby aktualizować stawki podatku klienta.",
+      "invalidReference": "Wybrany klient lub stawka podatku jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola stawki podatku klienta.",
+      "missingFieldNamed": "Brakuje wymaganego pola stawki podatku klienta: {{field}}.",
+      "referenceMissing": "Wybrany klient lub stawka podatku już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Ta stawka podatku jest już powiązana z klientem.",
+      "associationNotFound": "Nie znaleziono powiązania stawki podatku klienta.",
+      "rateNotFound": "Nie znaleziono stawki podatku o identyfikatorze {{id}}."
+    },
+    "alias": {
+      "required": "Alias jest wymagany",
+      "tooLong": "Alias jest za długi",
+      "addFailed": "Nie udało się dodać aliasu klienta. Spróbuj ponownie.",
+      "notFound": "Nie znaleziono aliasu."
+    },
+    "contractLine": {
+      "signInRequired": "Musisz być zalogowany, aby zarządzać pozycjami umowy klienta.",
+      "refreshAssignment": "Odśwież przypisanie umowy i spróbuj ponownie.",
+      "sharedByAssignments": "Ta pozycja umowy jest współdzielona przez kilka aktywnych przypisań. Edytuj konkretne przypisanie umowy, zanim zmienisz jego pozycje.",
+      "duplicate": "Pozycja umowy o takich danych już istnieje dla tego klienta.",
+      "invalidReference": "Wybrany klient lub pozycja umowy jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola pozycji umowy.",
+      "missingFieldNamed": "Brakuje wymaganego pola pozycji umowy: {{field}}.",
+      "referenceInvalid": "Wybrane odwołanie pozycji umowy nie jest już prawidłowe. Odśwież stronę i spróbuj ponownie.",
+      "storageUnavailable": "Magazyn pozycji umowy klienta jest niedostępny. Spróbuj ponownie później.",
+      "invalidData": "Dane pozycji umowy klienta są nieprawidłowe. Odśwież stronę i spróbuj ponownie.",
+      "addFailed": "Nie udało się dodać pozycji umowy klienta."
+    },
+    "billingSettings": {
+      "updateDenied": "Odmowa uprawnień: nie można aktualizować ustawień rozliczeń",
+      "readRequired": "Odmowa uprawnień: wymagane uprawnienie odczytu billing_settings",
+      "updateRequired": "Odmowa uprawnień: wymagane uprawnienie aktualizacji billing_settings",
+      "tenantContextMissing": "Nie znaleziono kontekstu organizacji",
+      "clientContextMissing": "Nie znaleziono kontekstu klienta",
+      "prepaidAlertsDisabled": "Alerty o saldzie przedpłaconym nie są włączone dla tego obszaru roboczego",
+      "invalidPrepaidAlertSettings": "Nieprawidłowe ustawienia alertów o saldzie przedpłaconym",
+      "prepaidAlertUpdateFailed": "Nie udało się zaktualizować ustawień alertów o saldzie przedpłaconym",
+      "contractReplenishmentUpdateFailed": "Nie udało się zaktualizować zasady doładowania umowy"
+    },
+    "billingProfile": {
+      "signInRequired": "Musisz być zalogowany, aby zarządzać profilami rozliczeniowymi.",
+      "duplicateDefault": "Ten klient ma już domyślny profil rozliczeniowy.",
+      "stillReferenced": "Profil rozliczeniowy jest nadal używany i nie można go usunąć.",
+      "defaultRequired": "Klient musi zawsze mieć dokładnie jeden domyślny profil rozliczeniowy.",
+      "nameRequired": "Profil rozliczeniowy wymaga nazwy.",
+      "notThisClient": "Ten profil rozliczeniowy nie należy do tego klienta.",
+      "archivedCannotBeDefault": "Zarchiwizowanego profilu rozliczeniowego nie można ustawić jako domyślny.",
+      "notFound": "Ten profil rozliczeniowy już nie istnieje.",
+      "defaultCannotArchive": "Domyślnego profilu rozliczeniowego nie można zarchiwizować. Najpierw ustaw inny profil jako domyślny.",
+      "defaultCannotDelete": "Domyślnego profilu rozliczeniowego nie można usunąć. Najpierw ustaw inny profil jako domyślny.",
+      "inUse": "Ten profil rozliczeniowy jest używany przez: {{references}}. Zarchiwizuj go zamiast usuwać — usunięcie wymazałoby sposób przypisania tych obciążeń.",
+      "recordNotFound": "Ten rekord lub profil rozliczeniowy już nie istnieje.",
+      "otherClient": "Ten profil rozliczeniowy należy do innego klienta.",
+      "archived": "Ten profil rozliczeniowy jest zarchiwizowany.",
+      "selectionNotThisClient": "Jeden z wybranych profili rozliczeniowych nie należy do tego klienta."
+    }
   }
 }
