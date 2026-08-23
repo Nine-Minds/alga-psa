@@ -27,7 +27,7 @@ import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 // createTimePeriodSettings always writes the semi-monthly columns (defaulting
 // them), and every read path validates them as numbers. Fixtures that insert a
 // bare row leave NULLs behind and fail that validation, so fill them here.
-const withSettingsDefaults = <T extends Record<string, unknown>>(setting: T) => ({
+const withSettingsDefaults = <T extends object>(setting: T) => ({
   start_month: 1,
   start_day_of_month: 1,
   end_month: 12,

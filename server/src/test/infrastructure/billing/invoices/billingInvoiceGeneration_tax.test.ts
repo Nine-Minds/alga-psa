@@ -478,7 +478,7 @@ describe('Billing Invoice Tax Calculations', () => {
 
       // persistInvoiceCharges marks each usage charge's source row invoiced and
       // throws when there is none behind a fabricated usageId.
-      await seedBillingChargeSources(context, billingResult.charges, { clientId: clientId });
+      await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>, { clientId: clientId });
 
       const createdInvoice = await createInvoiceFromBillingResult(
         billingResult,
@@ -892,7 +892,7 @@ describe('Billing Invoice Tax Calculations', () => {
 
     // persistInvoiceCharges marks each usage charge's source row invoiced and
     // throws when there is none behind a fabricated usageId.
-    await seedBillingChargeSources(context, billingResult.charges, { clientId: client_id });
+    await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>, { clientId: client_id });
 
     const createdInvoice = await createInvoiceFromBillingResult(
       billingResult,
@@ -1306,7 +1306,7 @@ describe('Billing Invoice Tax Calculations', () => {
 
     // persistInvoiceCharges marks each usage charge's source row invoiced and
     // throws when there is none behind a fabricated usageId.
-    await seedBillingChargeSources(context, billingResult.charges, { clientId: context.clientId });
+    await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>, { clientId: context.clientId });
 
     const createdInvoice = await createInvoiceFromBillingResult(
       billingResult,
