@@ -347,6 +347,14 @@ export interface AssetMaintenanceOccurrence {
   client_id?: string;
   client_name?: string;
   ticket_title?: string;
+  performed_at?: string;
+  performed_by?: string;
+  performed_by_first_name?: string;
+  performed_by_last_name?: string;
+  completion_notes?: string;
+  maintenance_data?: Record<string, unknown>;
+  closed_by_first_name?: string;
+  closed_by_last_name?: string;
 }
 
 export interface MaintenanceOccurrenceFilters {

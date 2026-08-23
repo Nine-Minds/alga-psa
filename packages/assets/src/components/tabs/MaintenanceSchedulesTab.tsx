@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { CalendarPlus, CheckCircle2, Pause, Pencil, Trash2 } from 'lucide-react';
 import { completeOccurrence, getAssetMaintenanceReport, getAssetMaintenanceSchedules, deleteMaintenanceSchedule, listMaintenanceOccurrences, setSchedulePaused } from '../../actions/assetActions';
 import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
-import { formatDateOnly } from '@alga-psa/core';
+import { formatCalendarDate, formatDateOnly } from '@alga-psa/core';
 import { cn } from '@alga-psa/ui';
 import { CreateMaintenanceScheduleDialog } from './CreateMaintenanceScheduleDialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -92,7 +92,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                 </span>
                 <span className="text-xl font-medium text-gray-900">
                   {report?.next_maintenance 
-                    ? formatDateOnly(new Date(report.next_maintenance))
+                    ? formatCalendarDate(report.next_maintenance)
                     : t('maintenanceSchedulesTab.summary.noneScheduled', { defaultValue: 'None Scheduled' })}
                 </span>
               </div>
@@ -154,7 +154,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                         </TableCell>
                         <TableCell className="text-gray-900">
                           {schedule.next_maintenance 
-                            ? formatDateOnly(new Date(schedule.next_maintenance))
+                            ? formatCalendarDate(schedule.next_maintenance)
                             : '-'}
                         </TableCell>
                         <TableCell className="text-gray-500">

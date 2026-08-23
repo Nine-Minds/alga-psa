@@ -262,7 +262,7 @@ describe('AssetService REST repairs (integration)', () => {
     expect(await table(fx.tenantId, 'asset_maintenance_history').where({ schedule_id: fx.scheduleId })).toHaveLength(0);
   }, HOOK_TIMEOUT);
 
-  it('links a created ticket once when the occurrence action is retried', async () => {
+  it('links a Quick Add ticket atomically when its asset association already exists and the callback retries', async () => {
     const fx = await seedFixture();
     const ticketId = randomUUID();
     await table(fx.tenantId, 'tickets').insert({
@@ -275,12 +275,29 @@ describe('AssetService REST repairs (integration)', () => {
     actionAuth.tenant = fx.tenantId;
     actionAuth.userId = fx.userId;
 
-    const first = await createOccurrenceTicket(fx.occurrenceId, ticketId);
-    const second = await createOccurrenceTicket(fx.occurrenceId, ticketId);
+    // Quick Add creates this asset association before it invokes the occurrence
+    // callback. This used to make the callback's second insert fail, leaving an
+    // orphan ticket and an unlinked occurrence.
+    await table(fx.tenantId, 'asset_associations').insert({
+      tenant: fx.tenantId,
+      asset_id: fx.assetId,
+      entity_id: ticketId,
+      entity_type: 'ticket',
+      relationship_type: 'affected',
+      created_by: fx.userId,
+      created_at: db.fn.now(),
+    });
+
+    const [first, second] = await Promise.all([
+      createOccurrenceTicket(fx.occurrenceId, ticketId),
+      createOccurrenceTicket(fx.occurrenceId, ticketId),
+    ]);
 
     expect(first).toMatchObject({ occurrence_id: fx.occurrenceId, ticket_id: ticketId });
     expect(second).toMatchObject({ occurrence_id: fx.occurrenceId, ticket_id: ticketId });
+    expect(await table(fx.tenantId, 'tickets').where({ ticket_id: ticketId })).toHaveLength(1);
     expect(await table(fx.tenantId, 'asset_associations').where({ asset_id: fx.assetId, entity_id: ticketId })).toHaveLength(1);
+    expect(await table(fx.tenantId, 'asset_maintenance_occurrences').where({ occurrence_id: fx.occurrenceId, ticket_id: ticketId })).toHaveLength(1);
   }, HOOK_TIMEOUT);
 
   it('resolves a scanned serial to its asset via inventory lookup', async () => {

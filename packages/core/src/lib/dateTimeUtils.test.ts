@@ -64,4 +64,9 @@ describe('calendar-date display helpers', () => {
     // New path: anchored at local noon, same calendar day in every zone.
     expect(formatCalendarDate('2026-08-31', 'M/d/yyyy')).toBe('8/31/2026');
   });
+
+  it('keeps a UTC maintenance due date on its persisted calendar day in America/New_York', () => {
+    process.env.TZ = 'America/New_York';
+    expect(formatCalendarDate('2026-09-22T00:00:00.000Z', 'MMM d, yyyy')).toBe('Sep 22, 2026');
+  });
 });

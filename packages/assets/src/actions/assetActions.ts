@@ -2274,10 +2274,12 @@ function asOccurrence(row: any): AssetMaintenanceOccurrence {
         created_at: asIso(row.created_at),
         updated_at: asIso(row.updated_at),
         closed_at: row.closed_at ? asIso(row.closed_at) : undefined,
+        performed_at: row.performed_at ? asIso(row.performed_at) : undefined,
         ticket_id: row.ticket_id || undefined,
         history_id: row.history_id || undefined,
         skip_reason: row.skip_reason || undefined,
         closed_by: row.closed_by || undefined,
+        maintenance_data: row.maintenance_data || undefined,
     } as AssetMaintenanceOccurrence;
 }
 
@@ -2320,11 +2322,34 @@ export const listMaintenanceOccurrences = withAuth(async (
             const limit = Math.min(10000, Math.max(1, filters.limit || 50));
             const db = tenantDb(trx, tenant);
             const query = tenantScopedTable(trx, 'asset_maintenance_occurrences as o', tenant)
-                .select('o.*', 's.schedule_name', 's.maintenance_type', 's.frequency', 's.frequency_interval', 'a.name as asset_name', 'a.asset_type', 'a.client_id', 'c.client_name')
+                .select(
+                    'o.*',
+                    's.schedule_name',
+                    's.maintenance_type',
+                    's.frequency',
+                    's.frequency_interval',
+                    'a.name as asset_name',
+                    'a.asset_type',
+                    'a.client_id',
+                    'c.client_name',
+                    't.title as ticket_title',
+                    'h.performed_at',
+                    'h.performed_by',
+                    'h.description as completion_notes',
+                    'h.maintenance_data',
+                    'performed_by_user.first_name as performed_by_first_name',
+                    'performed_by_user.last_name as performed_by_last_name',
+                    'closed_by_user.first_name as closed_by_first_name',
+                    'closed_by_user.last_name as closed_by_last_name',
+                )
                 .whereNull('s.archived_at');
             db.tenantJoin(query, 'asset_maintenance_schedules as s', 'o.schedule_id', 's.schedule_id');
             db.tenantJoin(query, 'assets as a', 'o.asset_id', 'a.asset_id');
             db.tenantJoin(query, 'clients as c', 'a.client_id', 'c.client_id', { type: 'left' });
+            db.tenantJoin(query, 'tickets as t', 'o.ticket_id', 't.ticket_id', { type: 'left' });
+            db.tenantJoin(query, 'asset_maintenance_history as h', 'o.history_id', 'h.history_id', { type: 'left' });
+            db.tenantJoin(query, 'users as performed_by_user', 'h.performed_by', 'performed_by_user.user_id', { type: 'left' });
+            db.tenantJoin(query, 'users as closed_by_user', 'o.closed_by', 'closed_by_user.user_id', { type: 'left' });
             if (filters.status?.length) query.whereIn('o.status', filters.status);
             if (filters.client_id) query.where('a.client_id', filters.client_id);
             if (filters.asset_id) query.where('o.asset_id', filters.asset_id);
@@ -2377,7 +2402,13 @@ export const createOccurrenceTicket = withAuth(async (user, { tenant }, occurren
             if (current.ticket_id) return current;
             const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id }).first();
             if (!ticket) throw new Error('Maintenance ticket not found');
-            await tenantScopedTable(trx, 'asset_associations', tenant).insert({ tenant, asset_id: current.asset_id, entity_id: ticket_id, entity_type: 'ticket', relationship_type: 'affected', created_by: user.user_id, created_at: trx.fn.now() });
+            // Quick Add has already created this association by the time its callback
+            // reaches us. Keep the association and occurrence stamp in this transaction,
+            // but treat that pre-existing link as the expected retry path.
+            await tenantScopedTable(trx, 'asset_associations', tenant)
+                .insert({ tenant, asset_id: current.asset_id, entity_id: ticket_id, entity_type: 'ticket', relationship_type: 'affected', created_by: user.user_id, created_at: trx.fn.now() })
+                .onConflict(['tenant', 'asset_id', 'entity_id', 'entity_type'])
+                .ignore();
             const [updated] = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).update({ ticket_id, updated_at: trx.fn.now() }).returning('*');
             return updated;
         });
