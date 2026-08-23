@@ -69,8 +69,19 @@ tripped over at least one:
 
 | File | Failing | Shape |
 |---|---|---|
-| `invoices/clientBillingCycleAnchors` | 4/7 | anchor changes no longer regenerate/supersede recurring service periods the way the test expects — behavioural, needs a product decision rather than a fixture edit |
+| `invoices/clientBillingCycleAnchors` | 3/7 (was 4) | changing a client's anchor deactivates future billing cycles and does not supersede/regenerate the client-cadence periods the T083/T086 cases expect. Behavioural: either the product regressed or the requirement moved, and neither is a fixture edit. The fourth failure was a mocking fault and is fixed — see below. |
 | `invoices/usageBucketAndFinalization` | 1/3 | see defect 6 below |
+
+### A mock that does not reach across package boundaries
+
+`testMocks.ts` declares `vi.mock('@alga-psa/auth/rbac', …)` at module scope, and
+suites rely on importing it to get permission mocking for free. That works for
+some files and not others: in `clientBillingCycleAnchors` the same
+`hasPermission` returned `true` when the *test* called it and denied when
+`billingCycleActions` called it — two module instances, one mocked and one not.
+The fix is to declare `vi.mock('@alga-psa/auth/rbac', …)` in the test file
+itself, which is what the unit suites already do. Treat the shared declaration
+as a convenience, never as a guarantee.
 
 ## Cluster A — connection cascade (~35 failures, most of the timeouts)
 
