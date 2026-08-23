@@ -12,7 +12,6 @@
       "downloadCsv": "Baixar CSV",
       "edit": "Editar",
       "import": "Importar",
-      "reactivate": "Reativar",
       "remove": "Remover",
       "retry": "Tentar novamente",
       "save": "Salvar",
@@ -181,7 +180,18 @@
     "shareTooltip": "Imprimir, importar e exportar",
     "defaultClientDeleteError": "Não é possível excluir o cliente padrão. Defina primeiro outro cliente como padrão nas Configurações Gerais.",
     "clientNotFound": "Cliente não encontrado.",
-    "deletePermissionDenied": "Permissão negada: não é possível excluir clientes."
+    "deletePermissionDenied": "Permissão negada: não é possível excluir clientes.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "markInactive": "Marcar como inativo",
+        "reactivate": "Reativar",
+        "delete": "Excluir",
+        "print": "Imprimir selecionados",
+        "more": "Mais",
+        "clear": "Limpar seleção"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Oportunidades",

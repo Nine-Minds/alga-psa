@@ -12,7 +12,6 @@
       "downloadCsv": "Download CSV",
       "edit": "Edit",
       "import": "Import",
-      "reactivate": "Reactivate",
       "remove": "Remove",
       "retry": "Retry",
       "save": "Save",
@@ -181,7 +180,18 @@
     "shareTooltip": "Print, import and export",
     "defaultClientDeleteError": "Cannot delete the default client. Please set another client as default in General Settings first.",
     "clientNotFound": "Client not found.",
-    "deletePermissionDenied": "Permission denied: Cannot delete clients."
+    "deletePermissionDenied": "Permission denied: Cannot delete clients.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "markInactive": "Mark Inactive",
+        "reactivate": "Reactivate",
+        "delete": "Delete",
+        "print": "Print selected",
+        "more": "More",
+        "clear": "Clear"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Opportunities",
