@@ -40,6 +40,8 @@ let db: Knex;
 let AssetService: typeof import('../../lib/api/services/AssetService').AssetService;
 let InventoryService: typeof import('../../lib/api/services/InventoryService').InventoryService;
 let createOccurrenceTicket: typeof import('@alga-psa/assets/actions/assetActions').createOccurrenceTicket;
+let completeOccurrence: typeof import('@alga-psa/assets/actions/assetActions').completeOccurrence;
+let getMaintenanceAggregates: typeof import('@alga-psa/assets/actions/assetActions').getMaintenanceAggregates;
 let getAssetMaintenanceReport: typeof import('@alga-psa/assets/actions/assetActions').getAssetMaintenanceReport;
 const cleanupTenants = new Set<string>();
 
@@ -166,6 +168,7 @@ async function cleanupTenant(tenant: string): Promise<void> {
     'asset_maintenance_schedules',
     'asset_relationships',
     'tickets',
+    'statuses',
     'assets',
     'clients',
     'users',
@@ -173,6 +176,19 @@ async function cleanupTenant(tenant: string): Promise<void> {
     await del(name);
   }
   await unscoped('tenants').where({ tenant }).del().catch(() => undefined);
+}
+
+async function seedTicketStatus(tenant: string, isClosed: boolean): Promise<string> {
+  const statusId = randomUUID();
+  await table(tenant, 'statuses').insert({
+    tenant,
+    status_id: statusId,
+    name: isClosed ? 'Closed' : 'Open',
+    is_closed: isClosed,
+    status_type: 'ticket',
+    order_number: isClosed ? 100 : 1,
+  });
+  return statusId;
 }
 
 describe('AssetService REST repairs (integration)', () => {
@@ -193,7 +209,7 @@ describe('AssetService REST repairs (integration)', () => {
     }
     ({ AssetService } = await import('../../lib/api/services/AssetService'));
     ({ InventoryService } = await import('../../lib/api/services/InventoryService'));
-    ({ createOccurrenceTicket, getAssetMaintenanceReport } = await import('@alga-psa/assets/actions/assetActions'));
+    ({ createOccurrenceTicket, completeOccurrence, getMaintenanceAggregates, getAssetMaintenanceReport } = await import('@alga-psa/assets/actions/assetActions'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -307,6 +323,60 @@ describe('AssetService REST repairs (integration)', () => {
     expect(await table(fx.tenantId, 'tickets').where({ ticket_id: ticketId })).toHaveLength(1);
     expect(await table(fx.tenantId, 'asset_associations').where({ asset_id: fx.assetId, entity_id: ticketId })).toHaveLength(1);
     expect(await table(fx.tenantId, 'asset_maintenance_occurrences').where({ occurrence_id: fx.occurrenceId, ticket_id: ticketId })).toHaveLength(1);
+  }, HOOK_TIMEOUT);
+
+  it('counts a distinct open maintenance ticket after its occurrence is completed, excluding other tenants and closed tickets', async () => {
+    const fx = await seedFixture();
+    const openStatusId = await seedTicketStatus(fx.tenantId, false);
+    const ticketId = randomUUID();
+    await table(fx.tenantId, 'tickets').insert({
+      tenant: fx.tenantId,
+      ticket_id: ticketId,
+      ticket_number: `MAINT-${ticketId.slice(0, 8)}`,
+      client_id: fx.clientId,
+      status_id: openStatusId,
+      title: 'Open maintenance ticket',
+    });
+    await table(fx.tenantId, 'asset_maintenance_occurrences').where({ occurrence_id: fx.occurrenceId }).update({ ticket_id: ticketId });
+    // A historical occurrence can point to the same still-open ticket; the KPI
+    // counts tickets, not occurrence links.
+    await table(fx.tenantId, 'asset_maintenance_occurrences').insert({
+      tenant: fx.tenantId,
+      occurrence_id: randomUUID(),
+      schedule_id: fx.scheduleId,
+      asset_id: fx.assetId,
+      due_date: db.raw("NOW() - INTERVAL '1 day'"),
+      status: 'completed',
+      ticket_id: ticketId,
+      closed_at: db.fn.now(),
+      closed_by: fx.userId,
+    });
+
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    expect((await getMaintenanceAggregates()).open_maintenance_tickets).toBe(1);
+
+    await completeOccurrence({ occurrence_id: fx.occurrenceId, asset_id: fx.assetId });
+    expect((await getMaintenanceAggregates()).open_maintenance_tickets).toBe(1);
+
+    // An open ticket belonging to another tenant must not contribute to this KPI.
+    const other = await seedFixture();
+    const otherStatusId = await seedTicketStatus(other.tenantId, false);
+    const otherTicketId = randomUUID();
+    await table(other.tenantId, 'tickets').insert({
+      tenant: other.tenantId,
+      ticket_id: otherTicketId,
+      ticket_number: `MAINT-${otherTicketId.slice(0, 8)}`,
+      client_id: other.clientId,
+      status_id: otherStatusId,
+      title: 'Other tenant maintenance ticket',
+    });
+    await table(other.tenantId, 'asset_maintenance_occurrences').where({ occurrence_id: other.occurrenceId }).update({ ticket_id: otherTicketId });
+    expect((await getMaintenanceAggregates()).open_maintenance_tickets).toBe(1);
+
+    const closedStatusId = await seedTicketStatus(fx.tenantId, true);
+    await table(fx.tenantId, 'tickets').where({ ticket_id: ticketId }).update({ status_id: closedStatusId });
+    expect((await getMaintenanceAggregates()).open_maintenance_tickets).toBe(0);
   }, HOOK_TIMEOUT);
 
   it('resolves a scanned serial to its asset via inventory lookup', async () => {

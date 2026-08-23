@@ -2384,13 +2384,32 @@ export const getMaintenanceAggregates = withAuth(async (user, { tenant }): Promi
     const due_today = all.filter((o) => new Date(o.due_date) >= todayStart && new Date(o.due_date) < tomorrow).length;
     const upcoming_7d = all.filter((o) => new Date(o.due_date) >= tomorrow && new Date(o.due_date) < sevenDays).length;
     const { knex } = await createTenantKnex();
-    const compliance_90d = await withTransaction(knex, async (trx) => {
+    const { compliance_90d, open_maintenance_tickets } = await withTransaction(knex, async (trx) => {
         const since = new Date(now); since.setUTCDate(since.getUTCDate() - 90);
         const rows = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).whereIn('status', ['completed', 'skipped']).where('due_date', '>=', since).select('due_date', 'closed_at', 'status');
         const completed = rows.filter((row: any) => row.status === 'completed');
-        return completed.length === 0 ? 0 : (completed.filter((row: any) => row.closed_at && new Date(row.closed_at) <= new Date(row.due_date)).length / completed.length) * 100;
+        const compliance_90d = completed.length === 0 ? 0 : (completed.filter((row: any) => row.closed_at && new Date(row.closed_at) <= new Date(row.due_date)).length / completed.length) * 100;
+
+        // Tickets outlive their occurrence's open state. Query every linked occurrence,
+        // constrain the ticket/status joins structurally by tenant, then apply the same
+        // per-asset authorization decision used by the maintenance queue before counting.
+        const db = tenantDb(trx, tenant);
+        const ticketQuery = tenantScopedTable(trx, 'asset_maintenance_occurrences as o', tenant)
+            .select('o.ticket_id', 'o.asset_id', 'a.client_id')
+            .whereNotNull('o.ticket_id');
+        db.tenantJoin(ticketQuery, 'tickets as t', 'o.ticket_id', 't.ticket_id');
+        db.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id');
+        db.tenantJoin(ticketQuery, 'assets as a', 'o.asset_id', 'a.asset_id');
+        const openTicketOccurrences = await ticketQuery.where('s.is_closed', false);
+        const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+        const decisions = await Promise.all(openTicketOccurrences.map((row: any) => authorizeAssetReadDecision(trx, tenant, context, { asset_id: row.asset_id, client_id: row.client_id })));
+        const open_maintenance_tickets = new Set(openTicketOccurrences
+            .filter((_: any, index: number) => decisions[index]?.allowed)
+            .map((row: any) => row.ticket_id)).size;
+
+        return { compliance_90d, open_maintenance_tickets };
     });
-    return { overdue, due_today, upcoming_7d, open_maintenance_tickets: all.filter((o) => Boolean(o.ticket_id)).length, compliance_90d };
+    return { overdue, due_today, upcoming_7d, open_maintenance_tickets, compliance_90d };
 });
 
 /** Stamp the ticket created through the composition-layer QuickAddTicket. The row lock makes retries idempotent. */
