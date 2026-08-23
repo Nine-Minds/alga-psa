@@ -1215,6 +1215,7 @@
     },
     "types": {
       "preventive": "Preventive",
+      "corrective": "Corrective",
       "inspection": "Inspection",
       "calibration": "Calibration",
       "replacement": "Replacement"
@@ -1234,6 +1235,17 @@
         "title": "Delete Maintenance Schedule",
         "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Maintenance Command Center",
+    "description": "Next due advances from the actual completion date.",
+    "assetsLink": "Assets"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "A performed date is required.",
+      "completeFailed": "Failed to complete maintenance."
     }
   },
   "relatedAssetsTab": {

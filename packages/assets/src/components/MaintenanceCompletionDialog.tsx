@@ -7,6 +7,7 @@ import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import {
   formatCalendarDate,
   getCurrentDateInUserTimeZone,
@@ -66,6 +67,7 @@ export function MaintenanceCompletionDialog({
   onComplete: (values: MaintenanceCompletionValues) => Promise<void>;
   idPrefix: string;
 }) {
+  const { t } = useTranslation("msp/assets");
   const items = useMemo(
     () => checklistItems(occurrence?.schedule_config),
     [occurrence?.schedule_config],
@@ -108,7 +110,7 @@ export function MaintenanceCompletionDialog({
 
   const submit = async () => {
     if (!performedDate) {
-      setError("A performed date is required.");
+      setError(t("maintenanceCompletionDialog.errors.performedDateRequired", { defaultValue: "A performed date is required." }));
       return;
     }
     setIsSubmitting(true);
@@ -128,7 +130,7 @@ export function MaintenanceCompletionDialog({
       setError(
         cause instanceof Error
           ? cause.message
-          : "Failed to complete maintenance.",
+          : t("maintenanceCompletionDialog.errors.completeFailed", { defaultValue: "Failed to complete maintenance." }),
       );
     } finally {
       setIsSubmitting(false);
