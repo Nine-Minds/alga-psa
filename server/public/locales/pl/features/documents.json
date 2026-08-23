@@ -347,6 +347,12 @@
       "image": "Wstaw obraz",
       "linkPrompt": "URL",
       "imagePrompt": "Adres URL obrazu"
+    },
+    "imageUpload": {
+      "failed": "Przesyłanie obrazu nie powiodło się",
+      "tooLarge": "Obraz przekracza limit przesyłania 10 MB",
+      "notAnImage": "Do edytora można wstawiać tylko pliki obrazów",
+      "noSession": "Zaloguj się ponownie, aby przesyłać obrazy"
     }
   },
   "form": {

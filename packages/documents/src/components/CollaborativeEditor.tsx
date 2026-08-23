@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -36,6 +37,7 @@ import styles from './CollaborativeEditor.module.css';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
 import { EditorImage } from '../lib/editorImageExtension';
 import {
+  editorImageUploadMessage,
   extractImageFiles,
   insertUploadedImages,
   isEditorImageFile,
@@ -187,6 +189,15 @@ export function CollaborativeEditor({
     setMentionState(state);
   }, []);
 
+  // useEditor captures its options once, so the toast handler reads t from a
+  // ref rather than closing over the first render's copy.
+  const tRef = useRef(t);
+  tRef.current = t;
+
+  const handleImageUploadError = useCallback((error: unknown) => {
+    toast.error(editorImageUploadMessage(error, tRef.current));
+  }, []);
+
   const uploadImage = useCallback(
     async (file: File) => (await uploadEditorImage(file, { userId })).url,
     [userId]
@@ -257,7 +268,10 @@ export function CollaborativeEditor({
           const imageFiles = extractImageFiles(event.clipboardData?.items);
           if (imageFiles.length > 0) {
             event.preventDefault();
-            void insertUploadedImages(editor, imageFiles, { userId });
+            void insertUploadedImages(editor, imageFiles, {
+              userId,
+              onError: handleImageUploadError,
+            });
             return true;
           }
           const plainText = event.clipboardData?.getData('text/plain');
@@ -273,7 +287,11 @@ export function CollaborativeEditor({
           if (imageFiles.length === 0) return false;
           event.preventDefault();
           const at = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
-          void insertUploadedImages(editor, imageFiles, { userId, at });
+          void insertUploadedImages(editor, imageFiles, {
+            userId,
+            at,
+            onError: handleImageUploadError,
+          });
           return true;
         },
       },
@@ -482,7 +500,7 @@ export function CollaborativeEditor({
           data-placeholder={placeholder || t('editor.placeholder', { defaultValue: 'Start writing...' })}
           style={{ position: 'relative' }}
         >
-          <EditorToolbar editor={editor} onUploadImage={uploadImage} />
+          <EditorToolbar editor={editor} onUploadImage={uploadImage} onUploadError={handleImageUploadError} />
           <EditorContent editor={editor} />
           <EmojiSuggestionPopup editor={editor} suggestionState={emojiState} />
           {searchMentions && (

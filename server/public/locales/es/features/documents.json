@@ -333,6 +333,12 @@
       "image": "Insertar imagen",
       "linkPrompt": "URL",
       "imagePrompt": "URL de la imagen"
+    },
+    "imageUpload": {
+      "failed": "Error al subir la imagen",
+      "tooLarge": "La imagen supera el límite de carga de 10 MB",
+      "notAnImage": "Solo se pueden insertar archivos de imagen en el editor",
+      "noSession": "Vuelva a iniciar sesión para subir imágenes"
     }
   },
   "form": {

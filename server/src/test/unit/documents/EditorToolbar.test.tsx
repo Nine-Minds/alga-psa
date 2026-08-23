@@ -170,4 +170,31 @@ describe('EditorToolbar', () => {
 
     promptSpy.mockRestore();
   });
+
+  it('reports a rejected upload instead of swallowing it', async () => {
+    const failure = new Error('Image is larger than the 10 MB upload limit');
+    const onUploadImage = vi.fn(async () => {
+      throw failure;
+    });
+    const onUploadError = vi.fn();
+
+    const { container, getByTitle } = render(
+      <EditorToolbar
+        editor={editor as any}
+        onUploadImage={onUploadImage}
+        onUploadError={onUploadError}
+      />
+    );
+
+    fireEvent.click(getByTitle('Insert image'));
+    const input = container.querySelector('#editor-toolbar-image-input') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(['x'], 'huge.png', { type: 'image/png' })] },
+    });
+
+    await vi.waitFor(() => {
+      expect(onUploadError).toHaveBeenCalledWith(failure);
+    });
+    expect(chain.setImage).not.toHaveBeenCalled();
+  });
 });

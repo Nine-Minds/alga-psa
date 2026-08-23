@@ -333,6 +333,12 @@
       "image": "Insérer une image",
       "linkPrompt": "URL",
       "imagePrompt": "URL de l’image"
+    },
+    "imageUpload": {
+      "failed": "Échec du téléversement de l'image",
+      "tooLarge": "L'image dépasse la limite de téléversement de 10 Mo",
+      "notAnImage": "Seuls les fichiers image peuvent être insérés dans l'éditeur",
+      "noSession": "Reconnectez-vous pour téléverser des images"
     }
   },
   "form": {

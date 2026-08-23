@@ -15,6 +15,36 @@ export interface EditorImageUploadOptions {
   uploadDocumentAction?: UploadDocumentAction;
 }
 
+/** Rejection reasons the editor has to say something specific about. */
+export type EditorImageUploadErrorCode = 'tooLarge' | 'notAnImage' | 'noSession' | 'failed';
+
+export class EditorImageUploadError extends Error {
+  constructor(
+    readonly code: EditorImageUploadErrorCode,
+    message: string
+  ) {
+    super(message);
+    this.name = 'EditorImageUploadError';
+  }
+}
+
+/**
+ * Turns an upload rejection into something worth showing the author. Pasting a
+ * screenshot that is quietly discarded while the editor still says "All changes
+ * saved" is worse than an error, so every path here produces a message.
+ */
+export function editorImageUploadMessage(
+  error: unknown,
+  translate: (key: string, options: { defaultValue: string }) => string
+): string {
+  if (error instanceof EditorImageUploadError && error.code !== 'failed') {
+    return translate(`editor.imageUpload.${error.code}`, { defaultValue: error.message });
+  }
+  // Storage and permission failures already carry a server-authored message.
+  if (error instanceof Error && error.message) return error.message;
+  return translate('editor.imageUpload.failed', { defaultValue: 'Image upload failed' });
+}
+
 export const isEditorImageFile = (file: { type?: string | null } | null | undefined): boolean =>
   Boolean(file?.type?.toLowerCase().startsWith('image/'));
 
@@ -51,13 +81,13 @@ export async function uploadEditorImage(
   { userId, uploadDocumentAction }: EditorImageUploadOptions
 ): Promise<EditorImageUploadResult> {
   if (!userId) {
-    throw new Error('User session is required to upload images');
+    throw new EditorImageUploadError('noSession', 'User session is required to upload images');
   }
   if (!isEditorImageFile(file)) {
-    throw new Error('Only image files can be inserted into the editor');
+    throw new EditorImageUploadError('notAnImage', 'Only image files can be inserted into the editor');
   }
   if (file.size > MAX_EDITOR_IMAGE_BYTES) {
-    throw new Error('Image is larger than the 10 MB upload limit');
+    throw new EditorImageUploadError('tooLarge', 'Image is larger than the 10 MB upload limit');
   }
 
   // Imported lazily on purpose: documentActions pulls puppeteer/pdf-lib/knex in,
@@ -73,7 +103,7 @@ export async function uploadEditorImage(
   if (!result || result.success !== true) {
     const reason =
       (result && (result.permissionError || result.error)) || 'Image upload failed';
-    throw new Error(String(reason));
+    throw new EditorImageUploadError('failed', String(reason));
   }
 
   const uploaded = result.document;

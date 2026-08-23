@@ -23,6 +23,8 @@ interface EditorToolbarProps {
   editor: Editor;
   /** Uploads a picked file and resolves to the URL the image node should point at. */
   onUploadImage?: (file: File) => Promise<string>;
+  /** Surfaces an upload rejection to the author; without it a failed pick is silent. */
+  onUploadError?: (error: unknown) => void;
 }
 
 function ToolbarButton({
@@ -55,7 +57,7 @@ function ToolbarButton({
   );
 }
 
-export function EditorToolbar({ editor, onUploadImage }: EditorToolbarProps) {
+export function EditorToolbar({ editor, onUploadImage, onUploadError }: EditorToolbarProps) {
   const { t } = useTranslation('features/documents');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -90,10 +92,14 @@ export function EditorToolbar({ editor, onUploadImage }: EditorToolbarProps) {
         const url = await onUploadImage(file);
         insertImageAfterSelection({ src: url, alt: file.name });
       } catch (error) {
-        console.error('[EditorToolbar] Image upload failed:', error);
+        if (onUploadError) {
+          onUploadError(error);
+        } else {
+          console.error('[EditorToolbar] Image upload failed:', error);
+        }
       }
     },
-    [insertImageAfterSelection, onUploadImage]
+    [insertImageAfterSelection, onUploadError, onUploadImage]
   );
 
   const setLink = useCallback(() => {

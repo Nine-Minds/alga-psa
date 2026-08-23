@@ -2,7 +2,9 @@
  * @vitest-environment jsdom
  */
 import {
+  EditorImageUploadError,
   MAX_EDITOR_IMAGE_BYTES,
+  editorImageUploadMessage,
   extractImageFiles,
   insertUploadedImages,
   isEditorImageFile,
@@ -83,6 +85,26 @@ describe('uploadEditorImage', () => {
         uploadDocumentAction: async () => ({ success: false, error: 'Storage is full' }),
       })
     ).rejects.toThrow('Storage is full');
+  });
+});
+
+describe('editorImageUploadMessage', () => {
+  const translate = (key: string, options: { defaultValue: string }) => `t:${key}|${options.defaultValue}`;
+
+  it('gives every rejection reason its own message', () => {
+    expect(editorImageUploadMessage(new EditorImageUploadError('tooLarge', 'Image is larger than the 10 MB upload limit'), translate))
+      .toBe('t:editor.imageUpload.tooLarge|Image is larger than the 10 MB upload limit');
+    expect(editorImageUploadMessage(new EditorImageUploadError('notAnImage', 'nope'), translate))
+      .toBe('t:editor.imageUpload.notAnImage|nope');
+    expect(editorImageUploadMessage(new EditorImageUploadError('noSession', 'no session'), translate))
+      .toBe('t:editor.imageUpload.noSession|no session');
+  });
+
+  it('keeps the server-authored reason for a failed upload', () => {
+    expect(editorImageUploadMessage(new EditorImageUploadError('failed', 'Storage is full'), translate))
+      .toBe('Storage is full');
+    expect(editorImageUploadMessage('boom', translate))
+      .toBe('t:editor.imageUpload.failed|Image upload failed');
   });
 });
 
