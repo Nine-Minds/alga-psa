@@ -60,8 +60,6 @@
       "runNow": "Esegui ora",
       "exportCsv": "Esporta CSV",
       "refresh": "Aggiorna",
-      "cancelSelected": "Annulla selezionati ({{count}})",
-      "clearSelection": "Cancella selezione",
       "details": "Dettagli",
       "loadMore": "Carica altri",
       "preview": "Anteprima"
@@ -92,7 +90,12 @@
       "cancelMessage": "Annullare {{count}} esecuzione/i selezionata/e? L’operazione non è reversibile.",
       "reasonLabel": "Motivo",
       "cancelReasonPlaceholder": "Fornisca un motivo per l’annullamento",
-      "cancelConfirm": "Annulla esecuzioni"
+      "cancelConfirm": "Annulla esecuzioni",
+      "actionBar": {
+        "selectedCount": "{{count}} selezionati",
+        "cancel": "Annulla esecuzioni",
+        "clear": "Annulla selezione"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Impossibile caricare le esecuzioni del workflow",

@@ -2,8 +2,9 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Download, ExternalLink, Printer, RefreshCw, Settings2 } from 'lucide-react';
+import { Ban, ChevronLeft, ChevronRight, Download, ExternalLink, Printer, RefreshCw, Settings2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
   PrintOptionsDialog,
@@ -890,31 +891,31 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
               <RefreshCw className="h-4 w-4 mr-2" />
               {t('runList.actions.refresh', { defaultValue: 'Refresh' })}
             </Button>
-            {showSelection && selectedRunIds.size > 0 && (
-              <>
-                <Button
-                  id="workflow-runs-bulk-cancel"
-                  variant="outline"
-                  onClick={() => setBulkAction('cancel')}
-                  disabled={isLoading}
-                >
-                  {t('runList.actions.cancelSelected', {
-                    defaultValue: 'Cancel selected ({{count}})',
-                    count: selectedRunIds.size,
-                  })}
-                </Button>
-                <Button
-                  id="workflow-runs-clear-selection"
-                  variant="ghost"
-                  onClick={() => setSelectedRunIds(new Set())}
-                  disabled={isLoading}
-                >
-                  {t('runList.actions.clearSelection', { defaultValue: 'Clear selection' })}
-                </Button>
-              </>
-            )}
           </div>
         </Card>
+
+        {showSelection && (
+          <BulkActionBar
+            idPrefix="workflow-runs-bulk-action-bar"
+            count={selectedRunIds.size}
+            selectedLabel={t('runList.bulk.actionBar.selectedCount', {
+              defaultValue: '{{count}} selected',
+              count: selectedRunIds.size,
+            })}
+            actions={[
+              {
+                id: 'cancel',
+                label: t('runList.bulk.actionBar.cancel', { defaultValue: 'Cancel runs' }),
+                icon: <Ban className="h-4 w-4" />,
+                onClick: () => setBulkAction('cancel'),
+                disabled: isLoading,
+                destructive: true,
+              },
+            ]}
+            onClear={() => setSelectedRunIds(new Set())}
+            clearLabel={t('runList.bulk.actionBar.clear', { defaultValue: 'Clear' })}
+          />
+        )}
 
         <Card className="p-0 overflow-hidden">
           <Table>
