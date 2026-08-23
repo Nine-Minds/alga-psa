@@ -324,7 +324,7 @@ class MetricAccumulator {
 
 function requireTenant(tenant: string | null | undefined): string | ProfitabilityActionError {
   if (!tenant) {
-    return actionError('No tenant context. Please refresh and try again.');
+    return actionError('No tenant context. Please refresh and try again.', 'msp/billing:errors.context.noTenantContext');
   }
   return tenant;
 }
@@ -333,7 +333,7 @@ function normalizeDateInput(input: ProfitabilityDateInput): { startDate: string;
   const startDate = input.startDate ?? input.start;
   const endDate = input.endDate ?? input.end;
   if (!startDate || !endDate) {
-    return actionError('Start date and end date are required.');
+    return actionError('Start date and end date are required.', 'msp/billing:errors.profitability.dateRangeRequired');
   }
   return { startDate, endDate };
 }
@@ -1362,7 +1362,7 @@ function applyAllFactsToAccumulator(acc: MetricAccumulator, facts: FactBundle) {
 
 async function getFactBundleForAction(user: Parameters<typeof hasPermission>[0], tenant: string | null | undefined, input: ProfitabilityDateInput) {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const tenantId = requireTenant(tenant);
   if (isProfitabilityActionError(tenantId)) return tenantId;

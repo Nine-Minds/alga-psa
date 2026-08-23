@@ -798,5 +798,32 @@
     "labels": {
       "custom": "Zwyczaj"
     }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Odmowa uprawnień: nie można tworzyć ofert",
+      "update": "Odmowa uprawnień: nie można aktualizować ofert",
+      "read": "Odmowa uprawnień: nie można odczytywać ofert",
+      "delete": "Odmowa uprawnień: nie można usuwać ofert",
+      "readOne": "Odmowa uprawnień: nie można odczytać oferty",
+      "approve": "Odmowa uprawnień: nie można zatwierdzać ofert",
+      "updateApprovalSettings": "Odmowa uprawnień: nie można aktualizować ustawień zatwierdzania ofert",
+      "readDocumentTemplates": "Odmowa uprawnień: nie można odczytywać szablonów dokumentów oferty",
+      "modifyDocumentTemplates": "Odmowa uprawnień: nie można modyfikować szablonów dokumentów oferty",
+      "setDefaultDocumentTemplate": "Odmowa uprawnień: nie można ustawić domyślnego szablonu dokumentu oferty",
+      "deleteDocumentTemplates": "Odmowa uprawnień: nie można usuwać szablonów dokumentów oferty"
+    },
+    "quote": {
+      "formInvalid": "Formularz oferty zawiera nieprawidłowe wartości. Sprawdź go i spróbuj ponownie.",
+      "notFoundRefresh": "Nie znaleziono oferty. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "itemNotFoundRefresh": "Nie znaleziono pozycji oferty. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "templateNotFoundRefresh": "Nie znaleziono szablonu oferty. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości oferty jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana oferta, klient, kontakt lub usługa już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana oferty jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości oferty jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola oferty.",
+      "missingFieldNamed": "Brakuje wymaganego pola oferty: {{field}}."
+    }
   }
 }

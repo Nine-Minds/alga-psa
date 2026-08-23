@@ -157,9 +157,9 @@ export class TemporalJobRunner implements IJobRunner {
 
     try {
       // Start the generic job workflow. jobServiceId mirrors PgBossJobRunner:
-      // handlers that track step progress (e.g. invoice_zip) read it from job
-      // data, and the runner's job record lives in the same `jobs` table the
-      // JobService progress APIs operate on.
+      // handlers that report progress (invoice_zip, kb-article-import) read it
+      // from job data, and the runner's job record lives in the same `jobs`
+      // table the JobService progress APIs operate on.
       const handle = await this.client.workflow.start('genericJobWorkflow', {
         args: [
           {

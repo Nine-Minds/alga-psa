@@ -301,6 +301,25 @@
         "contactSupport": "Wenden Sie sich an das Support-Team Ihrer Organisation",
         "tryAnother": "Andere E-Mail-Adresse versuchen"
       }
+    },
+    "register": {
+      "emailLabel": "E-Mail-Adresse",
+      "checkingEmail": "E-Mail wird geprüft...",
+      "existingContactsOnly": "Die Registrierung ist nur für bestehende Kontakte möglich. Bitte wenden Sie sich an Ihren Administrator.",
+      "contactVerified": "Kontakt bestätigt. Bitte legen Sie Ihr Passwort fest.",
+      "passwordPlaceholder": "Passwort erstellen",
+      "passwordMustContain": "Das Passwort muss enthalten:",
+      "completeRequiredFields": "Bitte füllen Sie die erforderlichen Felder aus:",
+      "creatingAccount": "Konto wird erstellt...",
+      "createAccount": "Konto erstellen",
+      "failed": "Registrierung fehlgeschlagen",
+      "unexpectedError": "Bei der Registrierung ist ein unerwarteter Fehler aufgetreten.",
+      "missing": {
+        "email": "E-Mail",
+        "validEmail": "Gültige E-Mail-Adresse",
+        "verifiedContact": "Bestätigte Kontakt-E-Mail-Adresse",
+        "validPassword": "Gültiges Passwort"
+      }
     }
   },
   "account": {
@@ -685,9 +704,14 @@
   },
   "notifications": {
     "title": "Benachrichtigungen",
+    "bellUnreadAria": "Benachrichtigungen ({{unread}} ungelesen)",
+    "unreadDot": "Ungelesene Benachrichtigungen",
+    "reconnecting": "Verbindung wird wiederhergestellt...",
     "markAsRead": "Als gelesen markieren",
     "markAllAsRead": "Alle als gelesen markieren",
     "noNotifications": "Keine neuen Benachrichtigungen",
+    "unreadCount_one": "{{count}} ungelesene Benachrichtigung",
+    "unreadCount_other": "{{count}} ungelesene Benachrichtigungen",
     "settings": "Benachrichtigungseinstellungen",
     "viewAll": "Alle Benachrichtigungen anzeigen",
     "tabs": {
@@ -916,5 +940,57 @@
     },
     "notAvailable": "N/V",
     "detailsTitle": "Asset-Details"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Ihr Portal-Benutzer ist mit keinem Kontakt verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
+      "userNotLinkedToClient": "Ihr Portal-Benutzer ist mit keinem Kundenkonto verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
+      "contactNotLinkedToClient": "Ihr Kontakt ist mit keinem Kundenkonto verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
+      "clientNotFound": "Kundenkonto nicht gefunden. Es wurde möglicherweise gelöscht oder Sie haben keinen Zugriff mehr darauf.",
+      "serviceNotFound": "Service nicht gefunden oder nicht mehr aktiv. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "serviceUpgradeUnavailable": "Das Höherstufen von Services ist vorübergehend nicht verfügbar. Wenden Sie sich an den Support, um Ihren Tarif zu ändern."
+    },
+    "records": {
+      "invalid": "Einer der ausgewählten Datensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missing": "Einer der ausgewählten Datensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "access": {
+      "unauthorized": "Nicht autorisiert",
+      "projectBillingData": "Kein Zugriff auf Projektabrechnungsdaten",
+      "quoteData": "Kein Zugriff auf Angebotsdaten",
+      "invoiceData": "Kein Zugriff auf Rechnungsdaten",
+      "billingData": "Kein Zugriff auf Abrechnungsdaten",
+      "settingsUpdate": "Sie haben keine Berechtigung, diese Einstellungen zu ändern.",
+      "billingSegment": "Kein Zugriff auf dieses Abrechnungssegment"
+    },
+    "billing": {
+      "quoteNotFound": "Angebot nicht gefunden oder Zugriff verweigert",
+      "quoteStale": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot und versuchen Sie es erneut.",
+      "quoteStaleAccept": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot, bevor Sie es annehmen.",
+      "quoteStaleReject": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot, bevor Sie es ablehnen.",
+      "invoiceNotFound": "Rechnung nicht gefunden oder Zugriff verweigert",
+      "jobNotFound": "Auftrag nicht gefunden",
+      "quoteInvalidState": "Das Angebot befindet sich nicht in einem gültigen Status für diese Aktion",
+      "rejectionCommentRequired": "Ein Ablehnungskommentar ist erforderlich",
+      "emailSendFailed": "Der E-Mail-Versand konnte nicht gestartet werden"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket nicht gefunden oder Zugriff verweigert",
+      "invalidData": "Ungültige Ticketdaten"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Bitte überprüfen Sie die Angaben zur Sichtbarkeitsgruppe und versuchen Sie es erneut.",
+      "boardsUnavailable": "Eines oder mehrere ausgewählte Boards sind nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "contactNotFound": "Kontakt nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "otherClient": "Sie haben keine Berechtigung, Sichtbarkeitsgruppen eines anderen Kunden zu verwalten.",
+      "selectClientOrContact": "Wählen Sie einen Kunden oder Kontakt aus, bevor Sie Sichtbarkeitsgruppen verwalten.",
+      "groupNotFound": "Sichtbarkeitsgruppe nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "groupNotValidForContact": "Die ausgewählte Sichtbarkeitsgruppe ist für diesen Kontakt nicht gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Sichtbarkeitsgruppe fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Sichtbarkeitsgruppe fehlt: {{field}}.",
+      "recordInvalid": "Einer der ausgewählten Sichtbarkeitsgruppen-Datensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Sichtbarkeitsgruppe mit diesen Angaben existiert für diesen Kunden bereits.",
+      "invalidData": "Ungültige Daten für die Sichtbarkeitsgruppe. Bitte überprüfen Sie die Angaben und die ausgewählten Boards."
+    }
   }
 }

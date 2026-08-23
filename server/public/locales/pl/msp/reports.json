@@ -505,5 +505,13 @@
       "client": "Klient",
       "currency": "Waluta"
     }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Jeden z wybranych rekordów raportu jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów raportu już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola raportu.",
+      "missingFieldNamed": "Brakuje wymaganego pola raportu: {{field}}."
+    }
   }
 }

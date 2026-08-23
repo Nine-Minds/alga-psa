@@ -1572,7 +1572,8 @@
           "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
           "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
           "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
-          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw."
+          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw.",
+          "optionsLoadFailed": "Kan de configuratieopties voor Microsoft-e-mail niet laden."
         },
         "fields": {
           "clientId": "Client ID",
@@ -1998,6 +1999,158 @@
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Waarschuwingsautomatisering",
+        "description": "Configureer hoe binnenkomende RMM-waarschuwingen worden verwerkt, onderdrukt en omgezet in tickets.",
+        "loading": "Instellingen voor waarschuwingsautomatisering laden…",
+        "actions": {
+          "addRule": "Regel toevoegen",
+          "addWindow": "Venster toevoegen",
+          "cancel": "Annuleren",
+          "confirm": "Bevestigen",
+          "deleteRule": "Regel verwijderen",
+          "deleteWindow": "Venster verwijderen",
+          "editRule": "Regel bewerken",
+          "editWindow": "Venster bewerken",
+          "moveDown": "Omlaag verplaatsen",
+          "moveUp": "Omhoog verplaatsen",
+          "savePolling": "Pollinginstellingen opslaan",
+          "saveRule": "Regel opslaan",
+          "saveWindow": "Venster opslaan",
+          "saving": "Opslaan…"
+        },
+        "days": {
+          "sun": "Zo",
+          "mon": "Ma",
+          "tue": "Di",
+          "wed": "Wo",
+          "thu": "Do",
+          "fri": "Vr",
+          "sat": "Za"
+        },
+        "dialogs": {
+          "addRule": "Waarschuwingsregel toevoegen",
+          "addWindow": "Onderhoudsvenster toevoegen",
+          "editRule": "Regel bewerken: {{name}}",
+          "editWindow": "Venster bewerken: {{name}}"
+        },
+        "errors": {
+          "loadRules": "Waarschuwingsregels konden niet worden geladen",
+          "loadSettings": "Instellingen voor waarschuwingsautomatisering konden niet worden geladen",
+          "unknown": "Onbekende fout"
+        },
+        "fields": {
+          "active": "Actief",
+          "commaSeparated": "Door komma's gescheiden",
+          "description": "Beschrijving",
+          "nameRequired": "Naam *",
+          "optionalDescription": "Optionele beschrijving",
+          "ruleName": "Regelnaam",
+          "windowName": "Vensternaam"
+        },
+        "polling": {
+          "title": "Waarschuwingspolling",
+          "description": "Alga haalt periodiek actieve waarschuwingen op uit het RMM om waarschuwingen te vinden die een webhook heeft gemist. Configureer hieronder het pollinginterval.",
+          "enabled": "Polling ingeschakeld",
+          "interval": "Interval (minuten, 5–60)",
+          "intervalError": "Het interval moet tussen 5 en 60 minuten liggen.",
+          "lastPolled": "Laatst gepolld: {{time}}"
+        },
+        "rules": {
+          "title": "Waarschuwingsregels",
+          "description": "Regels worden van boven naar beneden beoordeeld. De eerste overeenkomende regel wordt toegepast. Een regel zonder voorwaarden geldt voor alle waarschuwingen.",
+          "empty": "Geen regels geconfigureerd. Waarschuwingen worden zonder automatisering verwerkt.",
+          "actions": "Acties",
+          "activityTypes": "Activiteitstypen",
+          "activityTypesPlaceholder": "bijv. schijf, CPU (door komma's gescheiden)",
+          "alertClasses": "Waarschuwingsklassen",
+          "assignToUser": "Aan gebruiker toewijzen",
+          "autoResolve": "Ticket automatisch oplossen wanneer de waarschuwing verdwijnt",
+          "board": "Bord",
+          "catchAllHelp": "Geen voorwaarden ingesteld — deze regel geldt voor alle binnenkomende waarschuwingen.",
+          "createTicket": "Ticket aanmaken",
+          "defaultBoard": "Standaardboard",
+          "defaultClosedStatus": "Standaardstatus voor gesloten tickets",
+          "descriptionTemplate": "Sjabloon voor ticketbeschrijving",
+          "descriptionTemplatePlaceholder": "bijv. waarschuwing op {{device}}: {{message}}",
+          "keywords": "Trefwoorden",
+          "mapFromSeverity": "Afleiden van ernstniveau",
+          "matchConditions": "Overeenkomstvoorwaarden",
+          "messagePattern": "Berichtpatroon (reguliere expressie)",
+          "messagePatternPlaceholder": "bijv. (?i)disk.*full",
+          "notifyUsers": "Gebruikers waarschuwen",
+          "organizationsFilter": "Organisaties (filter)",
+          "placeholders": "Plaatshouders",
+          "priorityOverride": "Prioriteit overschrijven",
+          "resetOnClose": "Waarschuwing resetten wanneer het ticket wordt gesloten",
+          "resolveStatus": "Oplossingsstatus",
+          "severities": "Ernstniveaus",
+          "sourceTypes": "Brontypen",
+          "titleTemplate": "Sjabloon voor tickettitel",
+          "titleTemplatePlaceholder": "bijv. [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Niet toegewezen"
+        },
+        "schedule": {
+          "crossesMidnight": "De eindtijd ligt vóór de starttijd — het venster loopt door na middernacht.",
+          "days": "Dagen",
+          "endTime": "Eindtijd",
+          "endsAt": "Eindigt op",
+          "none": "Geen planning",
+          "oneOff": "Eenmalig",
+          "startTime": "Starttijd",
+          "startsAt": "Begint op",
+          "timezone": "Tijdzone",
+          "type": "Planningstype",
+          "weekly": "Wekelijks {{days}} {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Wekelijks terugkerend"
+        },
+        "scope": {
+          "title": "Bereik",
+          "allClients": "Alle klanten",
+          "allRmm": "Alle RMM-systemen",
+          "allRmmHelp": "Het venster onderdrukt waarschuwingen van alle RMM-integraties.",
+          "clientOptional": "Klant (optioneel — leeg laten voor alle klanten)",
+          "loadingClients": "Klanten laden…",
+          "onlyThisIntegration": "Alleen deze integratie",
+          "otherIntegration": "Andere integratie",
+          "thisIntegration": "Deze integratie",
+          "thisIntegrationHelp": "Het venster onderdrukt alleen waarschuwingen van deze integratie."
+        },
+        "severities": {
+          "critical": "Kritiek",
+          "major": "Ernstig",
+          "moderate": "Gemiddeld",
+          "minor": "Laag",
+          "none": "Geen"
+        },
+        "summary": {
+          "autoResolve": "Automatisch oplossen",
+          "createsTicket": "Maakt een ticket aan"
+        },
+        "toasts": {
+          "deleteFailed": "Verwijderen mislukt",
+          "invalidInterval": "Ongeldig interval",
+          "namedItemSaved": "‘{{name}}’ is opgeslagen.",
+          "pollingSaved": "Pollinginstellingen opgeslagen",
+          "reorderFailed": "Opnieuw ordenen mislukt",
+          "ruleCreated": "Regel aangemaakt",
+          "ruleDeleted": "Regel verwijderd",
+          "ruleUpdated": "Regel bijgewerkt",
+          "saveFailed": "Opslaan mislukt",
+          "updateFailed": "Bijwerken mislukt",
+          "windowCreated": "Venster aangemaakt",
+          "windowDeleted": "Venster verwijderd",
+          "windowUpdated": "Venster bijgewerkt"
+        },
+        "validation": {
+          "invalidRegex": "Ongeldige reguliere expressie"
+        },
+        "windows": {
+          "title": "Onderhoudsvensters",
+          "description": "Waarschuwingen die tijdens een actief venster binnenkomen, worden onderdrukt en maken geen tickets aan.",
+          "empty": "Geen onderhoudsvensters geconfigureerd."
+        }
+      },
       "ninjaOne": {
         "loading": "NinjaOne-integratie-instellingen laden...",
         "card": {
@@ -3475,6 +3628,119 @@
           "providers": "Vandaag Teams Phone; dezelfde gesprekskern draagt toekomstige aanbieders."
         }
       }
+    }
+  },
+  "errors": {
+    "rmm": {
+      "invalidInput": "Controleer de instellingen voor automatisering van RMM-waarschuwingen en probeer het opnieuw.",
+      "permissions": {
+        "read": "Onvoldoende rechten om de instellingen voor automatisering van RMM-waarschuwingen te bekijken.",
+        "update": "Onvoldoende rechten om de instellingen voor automatisering van RMM-waarschuwingen te beheren."
+      },
+      "integrationNotFound": "RMM-integratie niet gevonden.",
+      "nothingToUpdate": "Er zijn geen wijzigingen om op te slaan.",
+      "ruleNotFound": "Waarschuwingsregel niet gevonden.",
+      "windowNotFound": "Onderhoudsvenster niet gevonden.",
+      "pollIntervalRange": "Het pollinginterval moet tussen 5 en 60 minuten liggen.",
+      "validation": {
+        "scheduleRequired": "Een venster heeft een begin- en eindtijd of een wekelijkse herhaling nodig.",
+        "startBeforeEnd": "De begintijd moet vóór de eindtijd liggen.",
+        "timesMustDiffer": "De begin- en eindtijd moeten verschillen. Gebruik meerdere dagen voor een venster dat een volledige dag beslaat.",
+        "unknownTimezone": "Onbekende tijdzone: {{timezone}}.",
+        "messagePatternInvalid": "Het berichtpatroon is geen geldige reguliere expressie."
+      }
+    },
+    "mappings": {
+      "viewPermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te bekijken.",
+      "managePermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te beheren.",
+      "loadFailed": "Kan de koppelingsgegevens niet laden. Probeer het opnieuw.",
+      "duplicate": "Er bestaat al een koppeling voor deze entiteit. Bewerk in plaats daarvan de bestaande koppeling.",
+      "saveFailed": "Kan de koppeling niet opslaan. Probeer het opnieuw.",
+      "idRequiredForUpdate": "Voor het bijwerken is de koppelings-ID verplicht.",
+      "noUpdateData": "Er zijn geen bij te werken gegevens opgegeven.",
+      "updateFailed": "Kan de koppeling niet bijwerken. Probeer het opnieuw.",
+      "idRequiredForDelete": "Voor het verwijderen is de koppelings-ID verplicht.",
+      "notFound": "Koppeling niet gevonden. Vernieuw de koppelingen en probeer het opnieuw.",
+      "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw."
+    },
+    "qbo": {
+      "enterpriseOnly": "De QuickBooks Online-integratie is alleen beschikbaar in de Enterprise Edition.",
+      "viewPermission": "Verboden: u hebt geen rechten om de instellingen van de QuickBooks-integratie te bekijken.",
+      "accounts": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-grootboekrekeningen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-grootboekrekeningen laadt.",
+        "loadFailed": "Kan QuickBooks-grootboekrekeningen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "classes": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-klassen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-klassen laadt.",
+        "loadFailed": "Kan QuickBooks-klassen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "departments": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-afdelingen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-afdelingen laadt.",
+        "loadFailed": "Kan QuickBooks-afdelingen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "items": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-artikelen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-artikelen laadt.",
+        "loadFailed": "Kan QuickBooks-artikelen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "taxCodes": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-belastingcodes laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-belastingcodes laadt.",
+        "loadFailed": "Kan QuickBooks-belastingcodes niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "customers": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-klanten laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-klanten laadt.",
+        "loadFailed": "Kan QuickBooks-klanten niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "paymentTerms": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-betalingsvoorwaarden laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-betalingsvoorwaarden laadt.",
+        "loadFailed": "Kan QuickBooks-betalingsvoorwaarden niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "De Xero-integratie is alleen beschikbaar in de Enterprise Edition.",
+      "viewPermission": "Verboden: u hebt geen rechten om de instellingen van de Xero-integratie te bekijken.",
+      "organisationDisconnected": "De geselecteerde Xero-organisatie is niet meer verbonden. Verbind Xero opnieuw en probeer het nogmaals.",
+      "accounts": {
+        "notConnected": "Verbind Xero voordat u Xero-grootboekrekeningen laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-grootboekrekeningen laadt.",
+        "loadFailed": "Kan Xero-grootboekrekeningen niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-grootboekrekeningen worden geladen. Probeer het opnieuw."
+      },
+      "items": {
+        "notConnected": "Verbind Xero voordat u Xero-artikelen laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-artikelen laadt.",
+        "loadFailed": "Kan Xero-artikelen niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-artikelen worden geladen. Probeer het opnieuw."
+      },
+      "taxRates": {
+        "notConnected": "Verbind Xero voordat u Xero-belastingtarieven laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-belastingtarieven laadt.",
+        "loadFailed": "Kan Xero-belastingtarieven niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-belastingtarieven worden geladen. Probeer het opnieuw."
+      },
+      "trackingCategories": {
+        "notConnected": "Verbind Xero voordat u Xero-trackingcategorieën laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-trackingcategorieën laadt.",
+        "loadFailed": "Kan Xero-trackingcategorieën niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-trackingcategorieën worden geladen. Probeer het opnieuw."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "De gebruiker heeft geen rechten om integratie-instellingen te beheren",
+      "manageBillingPermission": "De gebruiker heeft geen rechten om facturatie te beheren",
+      "viewBillingPermission": "De gebruiker heeft geen rechten om facturatie-instellingen te bekijken",
+      "contentRequired": "CSV-inhoud is verplicht"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Er bestaat al een contact met dit e-mailadres in het systeem zonder klanttoewijzing",
+      "emailOnAnotherClient": "Dit e-mailadres is al gekoppeld aan een andere klant",
+      "emailOnAnotherClientNamed": "Dit e-mailadres is al gekoppeld aan {{clientName}}"
     }
   }
 }

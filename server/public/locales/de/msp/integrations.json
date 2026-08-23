@@ -1572,7 +1572,8 @@
           "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
           "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
           "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
-          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut."
+          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut.",
+          "optionsLoadFailed": "Die Optionen für die Einrichtung von Microsoft-E-Mail konnten nicht geladen werden."
         },
         "fields": {
           "clientId": "Client ID",
@@ -1998,6 +1999,158 @@
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Alarmautomatisierung",
+        "description": "Konfigurieren Sie, wie eingehende RMM-Alarme verarbeitet, unterdrückt und in Tickets umgewandelt werden.",
+        "loading": "Einstellungen für die Alarmautomatisierung werden geladen…",
+        "actions": {
+          "addRule": "Regel hinzufügen",
+          "addWindow": "Fenster hinzufügen",
+          "cancel": "Abbrechen",
+          "confirm": "Bestätigen",
+          "deleteRule": "Regel löschen",
+          "deleteWindow": "Fenster löschen",
+          "editRule": "Regel bearbeiten",
+          "editWindow": "Fenster bearbeiten",
+          "moveDown": "Nach unten verschieben",
+          "moveUp": "Nach oben verschieben",
+          "savePolling": "Abfrageeinstellungen speichern",
+          "saveRule": "Regel speichern",
+          "saveWindow": "Fenster speichern",
+          "saving": "Wird gespeichert…"
+        },
+        "days": {
+          "sun": "So",
+          "mon": "Mo",
+          "tue": "Di",
+          "wed": "Mi",
+          "thu": "Do",
+          "fri": "Fr",
+          "sat": "Sa"
+        },
+        "dialogs": {
+          "addRule": "Alarmregel hinzufügen",
+          "addWindow": "Wartungsfenster hinzufügen",
+          "editRule": "Regel bearbeiten: {{name}}",
+          "editWindow": "Fenster bearbeiten: {{name}}"
+        },
+        "errors": {
+          "loadRules": "Alarmregeln konnten nicht geladen werden",
+          "loadSettings": "Einstellungen für die Alarmautomatisierung konnten nicht geladen werden",
+          "unknown": "Unbekannter Fehler"
+        },
+        "fields": {
+          "active": "Aktiv",
+          "commaSeparated": "Durch Kommas getrennt",
+          "description": "Beschreibung",
+          "nameRequired": "Name *",
+          "optionalDescription": "Optionale Beschreibung",
+          "ruleName": "Regelname",
+          "windowName": "Fenstername"
+        },
+        "polling": {
+          "title": "Alarmabfrage",
+          "description": "Alga ruft regelmäßig aktive Alarme vom RMM ab, um Ereignisse zu erfassen, die ein Webhook verpasst hat. Konfigurieren Sie unten das Abfrageintervall.",
+          "enabled": "Abfrage aktiviert",
+          "interval": "Intervall (Minuten, 5–60)",
+          "intervalError": "Das Intervall muss zwischen 5 und 60 Minuten liegen.",
+          "lastPolled": "Zuletzt abgefragt: {{time}}"
+        },
+        "rules": {
+          "title": "Alarmregeln",
+          "description": "Regeln werden von oben nach unten ausgewertet. Die erste passende Regel wird angewendet. Eine Regel ohne Bedingungen gilt für alle Alarme.",
+          "empty": "Keine Regeln konfiguriert. Alarme werden ohne Automatisierung verarbeitet.",
+          "actions": "Aktionen",
+          "activityTypes": "Aktivitätstypen",
+          "activityTypesPlaceholder": "z. B. Festplatte, CPU (durch Kommas getrennt)",
+          "alertClasses": "Alarmklassen",
+          "assignToUser": "Benutzer zuweisen",
+          "autoResolve": "Ticket automatisch lösen, wenn der Alarm behoben ist",
+          "board": "Board",
+          "catchAllHelp": "Keine Bedingungen festgelegt — diese Regel gilt für alle eingehenden Alarme.",
+          "createTicket": "Ticket erstellen",
+          "defaultBoard": "Standard-Board",
+          "defaultClosedStatus": "Standardstatus für geschlossene Tickets",
+          "descriptionTemplate": "Vorlage für die Ticketbeschreibung",
+          "descriptionTemplatePlaceholder": "z. B. Alarm auf {{device}}: {{message}}",
+          "keywords": "Schlüsselwörter",
+          "mapFromSeverity": "Aus Schweregrad ableiten",
+          "matchConditions": "Abgleichbedingungen",
+          "messagePattern": "Nachrichtenmuster (regulärer Ausdruck)",
+          "messagePatternPlaceholder": "z. B. (?i)disk.*full",
+          "notifyUsers": "Benutzer benachrichtigen",
+          "organizationsFilter": "Organisationen (Filter)",
+          "placeholders": "Platzhalter",
+          "priorityOverride": "Priorität überschreiben",
+          "resetOnClose": "Alarm zurücksetzen, wenn das Ticket geschlossen wird",
+          "resolveStatus": "Lösungsstatus",
+          "severities": "Schweregrade",
+          "sourceTypes": "Quelltypen",
+          "titleTemplate": "Vorlage für den Tickettitel",
+          "titleTemplatePlaceholder": "z. B. [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Nicht zugewiesen"
+        },
+        "schedule": {
+          "crossesMidnight": "Die Endzeit liegt vor der Startzeit — das Fenster reicht über Mitternacht.",
+          "days": "Tage",
+          "endTime": "Endzeit",
+          "endsAt": "Endet am",
+          "none": "Kein Zeitplan",
+          "oneOff": "Einmalig",
+          "startTime": "Startzeit",
+          "startsAt": "Beginnt am",
+          "timezone": "Zeitzone",
+          "type": "Zeitplantyp",
+          "weekly": "Wöchentlich {{days}} {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Wöchentlich wiederkehrend"
+        },
+        "scope": {
+          "title": "Geltungsbereich",
+          "allClients": "Alle Kunden",
+          "allRmm": "Alle RMM-Systeme",
+          "allRmmHelp": "Das Fenster unterdrückt Alarme aus allen RMM-Integrationen.",
+          "clientOptional": "Kunde (optional — leer lassen für alle Kunden)",
+          "loadingClients": "Kunden werden geladen…",
+          "onlyThisIntegration": "Nur diese Integration",
+          "otherIntegration": "Andere Integration",
+          "thisIntegration": "Diese Integration",
+          "thisIntegrationHelp": "Das Fenster unterdrückt nur Alarme aus dieser Integration."
+        },
+        "severities": {
+          "critical": "Kritisch",
+          "major": "Schwerwiegend",
+          "moderate": "Mittel",
+          "minor": "Gering",
+          "none": "Keiner"
+        },
+        "summary": {
+          "autoResolve": "Automatisch lösen",
+          "createsTicket": "Erstellt ein Ticket"
+        },
+        "toasts": {
+          "deleteFailed": "Löschen fehlgeschlagen",
+          "invalidInterval": "Ungültiges Intervall",
+          "namedItemSaved": "„{{name}}“ wurde gespeichert.",
+          "pollingSaved": "Abfrageeinstellungen gespeichert",
+          "reorderFailed": "Neusortierung fehlgeschlagen",
+          "ruleCreated": "Regel erstellt",
+          "ruleDeleted": "Regel gelöscht",
+          "ruleUpdated": "Regel aktualisiert",
+          "saveFailed": "Speichern fehlgeschlagen",
+          "updateFailed": "Aktualisierung fehlgeschlagen",
+          "windowCreated": "Fenster erstellt",
+          "windowDeleted": "Fenster gelöscht",
+          "windowUpdated": "Fenster aktualisiert"
+        },
+        "validation": {
+          "invalidRegex": "Ungültiger regulärer Ausdruck"
+        },
+        "windows": {
+          "title": "Wartungsfenster",
+          "description": "Alarme, die während eines aktiven Fensters eingehen, werden unterdrückt und erstellen keine Tickets.",
+          "empty": "Keine Wartungsfenster konfiguriert."
+        }
+      },
       "ninjaOne": {
         "loading": "NinjaOne-Integrationseinstellungen werden geladen...",
         "card": {
@@ -3475,6 +3628,119 @@
           "providers": "Heute Teams Phone; derselbe Anrufkern trägt künftige Anbieter."
         }
       }
+    }
+  },
+  "errors": {
+    "rmm": {
+      "invalidInput": "Überprüfen Sie die Einstellungen der RMM-Warnungsautomatisierung und versuchen Sie es erneut.",
+      "permissions": {
+        "read": "Unzureichende Berechtigungen zum Anzeigen der Einstellungen für die RMM-Warnungsautomatisierung.",
+        "update": "Unzureichende Berechtigungen zum Verwalten der Einstellungen für die RMM-Warnungsautomatisierung."
+      },
+      "integrationNotFound": "RMM-Integration nicht gefunden.",
+      "nothingToUpdate": "Es sind keine Änderungen zu speichern.",
+      "ruleNotFound": "Warnungsregel nicht gefunden.",
+      "windowNotFound": "Wartungsfenster nicht gefunden.",
+      "pollIntervalRange": "Das Abfrageintervall muss zwischen 5 und 60 Minuten liegen.",
+      "validation": {
+        "scheduleRequired": "Ein Zeitfenster benötigt entweder eine Start- und Endzeit oder eine wöchentliche Wiederholung.",
+        "startBeforeEnd": "Die Startzeit muss vor der Endzeit liegen.",
+        "timesMustDiffer": "Start- und Endzeit müssen unterschiedlich sein. Verwenden Sie mehrere Tage für ein Zeitfenster, das einen ganzen Tag umfasst.",
+        "unknownTimezone": "Unbekannte Zeitzone: {{timezone}}.",
+        "messagePatternInvalid": "Das Nachrichtenmuster ist kein gültiger regulärer Ausdruck."
+      }
+    },
+    "mappings": {
+      "viewPermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen anzuzeigen.",
+      "managePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen zu verwalten.",
+      "loadFailed": "Zuordnungsdaten können nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "duplicate": "Für dieses Objekt existiert bereits eine Zuordnung. Bearbeiten Sie stattdessen die vorhandene Zuordnung.",
+      "saveFailed": "Die Zuordnung kann nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "idRequiredForUpdate": "Für die Aktualisierung ist die Zuordnungs-ID erforderlich.",
+      "noUpdateData": "Es wurden keine Aktualisierungsdaten übermittelt.",
+      "updateFailed": "Die Zuordnung kann nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "idRequiredForDelete": "Für das Löschen ist die Zuordnungs-ID erforderlich.",
+      "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie die Zuordnungen und versuchen Sie es erneut.",
+      "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    },
+    "qbo": {
+      "enterpriseOnly": "Die QuickBooks-Online-Integration ist nur in der Enterprise Edition verfügbar.",
+      "viewPermission": "Verboten: Sie haben keine Berechtigung, die Einstellungen der QuickBooks-Integration anzuzeigen.",
+      "accounts": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Konten laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Konten laden.",
+        "loadFailed": "QuickBooks-Konten konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "classes": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Klassen laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Klassen laden.",
+        "loadFailed": "QuickBooks-Klassen konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "departments": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Abteilungen laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Abteilungen laden.",
+        "loadFailed": "QuickBooks-Abteilungen konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "items": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Artikel laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Artikel laden.",
+        "loadFailed": "QuickBooks-Artikel konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "taxCodes": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Steuercodes laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Steuercodes laden.",
+        "loadFailed": "QuickBooks-Steuercodes konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "customers": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Kunden laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Kunden laden.",
+        "loadFailed": "QuickBooks-Kunden konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "paymentTerms": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Zahlungsbedingungen laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Zahlungsbedingungen laden.",
+        "loadFailed": "QuickBooks-Zahlungsbedingungen konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "Die Xero-Integration ist nur in der Enterprise Edition verfügbar.",
+      "viewPermission": "Verboten: Sie haben keine Berechtigung, die Einstellungen der Xero-Integration anzuzeigen.",
+      "organisationDisconnected": "Die ausgewählte Xero-Organisation ist nicht mehr verbunden. Verbinden Sie Xero neu und versuchen Sie es erneut.",
+      "accounts": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Konten laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Konten laden.",
+        "loadFailed": "Xero-Konten konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Konten geladen wurden. Versuchen Sie es erneut."
+      },
+      "items": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Artikel laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Artikel laden.",
+        "loadFailed": "Xero-Artikel konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Artikel geladen wurden. Versuchen Sie es erneut."
+      },
+      "taxRates": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Steuersätze laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Steuersätze laden.",
+        "loadFailed": "Xero-Steuersätze konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Steuersätze geladen wurden. Versuchen Sie es erneut."
+      },
+      "trackingCategories": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Nachverfolgungskategorien laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Nachverfolgungskategorien laden.",
+        "loadFailed": "Xero-Nachverfolgungskategorien konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Nachverfolgungskategorien geladen wurden. Versuchen Sie es erneut."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "Der Benutzer hat keine Berechtigung, Integrationseinstellungen zu verwalten",
+      "manageBillingPermission": "Der Benutzer hat keine Berechtigung, die Abrechnung zu verwalten",
+      "viewBillingPermission": "Der Benutzer hat keine Berechtigung, Abrechnungseinstellungen anzuzeigen",
+      "contentRequired": "CSV-Inhalt ist erforderlich"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits im System ohne Kundenzuordnung",
+      "emailOnAnotherClient": "Diese E-Mail-Adresse ist bereits einem anderen Kunden zugeordnet",
+      "emailOnAnotherClientNamed": "Diese E-Mail-Adresse ist bereits {{clientName}} zugeordnet"
     }
   }
 }

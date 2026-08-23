@@ -2001,5 +2001,59 @@
       "packingSlip": "Pakbon",
       "pickList": "Picklijst"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Toestemming geweigerd: bijwerkrechten voor facturen vereist",
+      "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
+      "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
+      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk"
+    },
+    "invoice": {
+      "notFound": "Factuur niet gevonden",
+      "notFoundRefresh": "Factuur niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "notFoundNumbered": "Factuur {{invoiceId}} is niet gevonden.",
+      "clientNotFoundForInvoice": "Geen klant gevonden voor factuur {{invoiceNumber}}.",
+      "numberRequired": "Factuurnummer is verplicht",
+      "dateRequired": "Factuurdatum is verplicht",
+      "dateInvalid": "Factuurdatum is ongeldig",
+      "dueDateInvalid": "Vervaldatum is ongeldig",
+      "onlyDraftEditable": "Alleen conceptfacturen kunnen worden bewerkt",
+      "numberExists": "Het factuurnummer bestaat al. Kies een ander nummer.",
+      "notFinalized": "De factuur is niet definitief gemaakt",
+      "unfinalizeFailed": "De factuur kon niet ongedaan definitief worden gemaakt door een onverwachte gegevensfout. Vernieuw de pagina en probeer het opnieuw.",
+      "paidOrCancelled": "Een betaalde of geannuleerde factuur kan niet worden gewijzigd",
+      "syncedVoidInstead": "Deze factuur is gesynchroniseerd met een boekhoudsysteem — storneer deze in plaats van te verwijderen.",
+      "invalidValue": "Een van de geselecteerde factuurwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde factuur, klant, het contract of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht factuurveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidDates": "De factuurcyclus bevat ongeldige datums. Controleer de cyclus en probeer het opnieuw."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Selecteer minstens één factuur om pdf’s te genereren.",
+      "selectInvoicesEmail": "Selecteer minstens één factuur om te e-mailen.",
+      "selectInvoices": "Selecteer minstens één factuur.",
+      "emailNotConfigured": "E-mail is niet geconfigureerd. Configureer de e-mailinstellingen bij Instellingen voordat u facturen verstuurt.",
+      "schedulePdfFailed": "Het genereren van factuur-pdf’s kon niet worden gestart. Probeer het opnieuw.",
+      "scheduleEmailFailed": "Het e-mailen van facturen kon niet worden gestart. Probeer het opnieuw.",
+      "recipientFailed": "De ontvangergegevens voor deze factuur konden niet worden geladen.",
+      "sendFailed": "De factuur kon niet per e-mail worden verzonden. Probeer het opnieuw."
+    },
+    "template": {
+      "selectStandard": "Selecteer een standaardfactuursjabloon voordat u opslaat.",
+      "selectBeforePreview": "Selecteer een factuursjabloon voordat u een voorbeeld bekijkt.",
+      "notFoundRefresh": "Factuursjabloon niet gevonden. Mogelijk is het bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "missingDesign": "Het factuursjabloon mist de ontwerpinhoud. Kies een ander sjabloon.",
+      "invalidValue": "Een van de geselecteerde waarden van het factuursjabloon is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde factuursjabloon of de klant bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een factuursjabloon met deze instellingen.",
+      "missingField": "Er ontbreekt een verplicht veld van het factuursjabloon.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het factuursjabloon: {{field}}."
+    }
   }
 }

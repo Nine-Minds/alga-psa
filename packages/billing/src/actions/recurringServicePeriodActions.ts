@@ -983,7 +983,7 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
 
   const normalizedScheduleKey = scheduleKey.trim();
   if (!normalizedScheduleKey) {
-    return permissionError('A schedule key is required to inspect recurring service periods.');
+    return permissionError('A schedule key is required to inspect recurring service periods.', 'msp/billing:errors.recurringServicePeriod.scheduleKeyRequiredInspect');
   }
 
   const { knex } = await createTenantKnex();
@@ -1101,7 +1101,7 @@ export const repairMissingRecurringServicePeriods = withAuth(async (
 
   const normalizedScheduleKey = scheduleKey.trim();
   if (!normalizedScheduleKey) {
-    return permissionError('A schedule key is required to repair recurring service periods.');
+    return permissionError('A schedule key is required to repair recurring service periods.', 'msp/billing:errors.recurringServicePeriod.scheduleKeyRequiredRepair');
   }
 
   const parsedScheduleKey = parseRecurringServicePeriodScheduleKey(normalizedScheduleKey);

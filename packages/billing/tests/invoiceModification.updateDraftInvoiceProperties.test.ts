@@ -185,6 +185,7 @@ describe('updateDraftInvoiceProperties', () => {
       })
     ).resolves.toEqual({
       actionError: 'Invoice number already exists. Choose a different number.',
+      messageKey: 'msp/invoicing:errors.invoice.numberExists',
     });
 
     expect(state.updates).toHaveLength(0);
@@ -206,6 +207,7 @@ describe('updateDraftInvoiceProperties', () => {
       })
     ).resolves.toEqual({
       actionError: 'Only draft invoices can be edited',
+      messageKey: 'msp/invoicing:errors.invoice.onlyDraftEditable',
     });
 
     expect(state.updates).toHaveLength(0);

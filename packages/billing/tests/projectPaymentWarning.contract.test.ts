@@ -47,6 +47,6 @@ describe('explicit project payment prerequisite warning contract', () => {
 
   it('requires client billing permission before returning portal project billing details', () => {
     expect(portalAction).toContain('hasClientBillingReadPermission');
-    expect(portalAction).toContain("permissionError('Unauthorized to access project billing data')");
+    expect(portalAction).toContain("permissionError('Unauthorized to access project billing data', 'client-portal:errors.access.projectBillingData')");
   });
 });

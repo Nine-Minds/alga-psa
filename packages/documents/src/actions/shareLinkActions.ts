@@ -144,7 +144,7 @@ export const createShareLink = withAuth(
 
     // Check document:share permission (or document:update as fallback)
     if (!(await hasPermission(user, 'document', 'update'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!input.documentId) {
@@ -218,7 +218,7 @@ export const getShareLinksForDocument = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'read'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!documentId) {
@@ -251,7 +251,7 @@ export const revokeShareLink = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'update'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!shareId) {

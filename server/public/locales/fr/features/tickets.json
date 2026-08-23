@@ -1353,7 +1353,93 @@
     "updateWatchList": "Impossible de mettre à jour la liste de surveillance. Veuillez réessayer.",
     "fetchCategoryImports": "Échec de la récupération des catégories disponibles pour l'importation",
     "validateDeletionFailed": "Échec de la validation de la suppression. Veuillez réessayer.",
-    "deleteTicketUnexpected": "Une erreur inattendue s'est produite lors de la suppression du ticket."
+    "deleteTicketUnexpected": "Une erreur inattendue s'est produite lors de la suppression du ticket.",
+    "action": {
+      "ticketNotFound": "Ticket introuvable. Il a peut-être été supprimé ou déplacé. Veuillez actualiser la page et réessayer.",
+      "ticketResourceNotFound": "Ressource du ticket introuvable. Veuillez actualiser la page et réessayer.",
+      "agentAlreadyAssigned": "Cet utilisateur est déjà affecté comme intervenant supplémentaire.",
+      "teamNotFound": "Équipe introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "teamLeadNotFound": "L’équipe sélectionnée n’a pas de responsable. Choisissez une autre équipe ou désignez d’abord un responsable.",
+      "commentNotFound": "Commentaire introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer."
+    },
+    "bundle": {
+      "masterAlreadyBundleMaster": "Le ticket {{tickets}} est déjà un ticket principal de regroupement et ne peut pas être ajouté comme ticket enfant. Dissociez-le d’abord ou utilisez-le comme ticket principal.",
+      "masterAlreadyBundleMasters": "Les tickets {{tickets}} sont déjà des tickets principaux de regroupement et ne peuvent pas être ajoutés comme tickets enfants. Dissociez-les d’abord ou utilisez l’un d’eux comme ticket principal.",
+      "selectChild": "Sélectionnez au moins un ticket enfant différent du ticket principal.",
+      "masterNotFound": "Ticket principal introuvable.",
+      "childNotFound": "Ticket enfant introuvable : {{ticket}}",
+      "childAsMaster": "Impossible de sélectionner un ticket enfant comme ticket principal.",
+      "alreadyBundled": "Le ticket est déjà regroupé : {{ticket}}",
+      "masterAsChild": "Le ticket principal ne peut pas être aussi un ticket enfant.",
+      "noChildren": "Aucun ticket enfant fourni.",
+      "childrenOnBundledChild": "Impossible d’ajouter des tickets enfants à un ticket enfant déjà regroupé."
+    },
+    "ticket": {
+      "validationDetails": "Veuillez corriger les informations du ticket : {{details}}",
+      "invalidValue": "L’une des valeurs de ticket sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire du ticket est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du ticket est manquant : {{field}}.",
+      "referenceMissing": "L’un des enregistrements de ticket sélectionnés n’existe plus. Veuillez actualiser la page et réessayer.",
+      "conflict": "Cette modification du ticket entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "valueNotAllowed": "L’une des valeurs du ticket n’est pas autorisée. Veuillez vérifier le formulaire et réessayer."
+    },
+    "board": {
+      "invalidReference": "Le tableau, le statut ou la règle sélectionné n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire du tableau est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du tableau est manquant : {{field}}.",
+      "referenceInvalid": "Le tableau, le statut, la priorité, le responsable, l’équipe ou la politique SLA sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "duplicateName": "Un tableau portant ce nom existe déjà.",
+      "duplicate": "Un tableau ou un statut avec les mêmes paramètres existe déjà.",
+      "invalidValue": "L’une des valeurs de tableau ou de statut n’est pas valide. Veuillez actualiser la page et réessayer."
+    },
+    "material": {
+      "invalidValue": "L’une des valeurs de matériel sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire du matériel est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du matériel est manquant : {{field}}.",
+      "referenceInvalid": "Le ticket, le client, le produit ou l’unité de stock sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "conflict": "Ce matériel entre en conflit avec un matériel de ticket ou une affectation de stock existants. Veuillez actualiser la page et réessayer.",
+      "valueNotAllowed": "L’une des valeurs du matériel n’est pas autorisée. Veuillez vérifier le formulaire et réessayer."
+    },
+    "settings": {
+      "updateDenied": "Autorisation refusée : impossible de mettre à jour les paramètres des tickets"
+    },
+    "list": {
+      "filtersInvalid": "Les filtres de la liste des tickets ne sont plus valides. Actualisez la page et réessayez."
+    },
+    "layoutPreference": {
+      "contextMissing": "Il manque à votre session le contexte requis pour les préférences de tickets. Veuillez actualiser la page et réessayer.",
+      "userNotFound": "Utilisateur actuel introuvable. Veuillez actualiser la page et vous reconnecter.",
+      "invalidLayout": "Disposition du détail de ticket non valide. Veuillez actualiser la page et réessayer.",
+      "invalidTimelineOrder": "Ordre de la chronologie du ticket non valide. Veuillez actualiser la page et réessayer.",
+      "invalidValue": "L’une des valeurs de préférence de disposition des tickets n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire des préférences de tickets est manquant.",
+      "missingFieldNamed": "Un champ obligatoire des préférences de tickets est manquant : {{field}}.",
+      "userMissing": "L’utilisateur actuel de ces préférences de tickets n’existe plus. Veuillez actualiser la page et vous reconnecter.",
+      "concurrentUpdate": "Les préférences de disposition des tickets ont été modifiées simultanément. Veuillez actualiser la page et réessayer."
+    },
+    "category": {
+      "invalidReference": "La catégorie ou le tableau sélectionné n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire de la catégorie est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la catégorie est manquant : {{field}}.",
+      "referenceInvalid": "Le tableau ou la catégorie parente sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Une catégorie avec ces paramètres existe déjà.",
+      "invalidValue": "L’une des valeurs de la catégorie n’est pas valide. Veuillez actualiser la page et réessayer."
+    },
+    "import": {
+      "invalidValue": "L’une des valeurs de ticket importées n’est pas valide. Veuillez actualiser les données de référence et réessayer.",
+      "conflict": "Un enregistrement d’import de tickets entre en conflit avec un enregistrement existant. Vérifiez les clients, contacts, statuts, priorités, catégories ou étiquettes en double.",
+      "referenceMissing": "Un client, contact, tableau, statut, priorité, catégorie, équipe ou utilisateur référencé est introuvable. Actualisez les données de référence et réessayez.",
+      "missingValue": "Une valeur d’import obligatoire est manquante.",
+      "missingValueNamed": "Une valeur d’import obligatoire est manquante : {{field}}.",
+      "invalidForField": "L’une des valeurs importées n’est pas valide pour ce champ."
+    },
+    "checklist": {
+      "invalidReference": "L’élément de liste de contrôle, le modèle ou la règle sélectionné n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire de la liste de contrôle est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la liste de contrôle est manquant : {{field}}.",
+      "referenceInvalid": "Le ticket, le modèle de liste de contrôle ou le filtre de règle sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "invalidValue": "L’une des valeurs de la liste de contrôle n’est pas valide. Veuillez actualiser la page et réessayer."
+    }
   },
   "ticketSection": {
     "title": "Demande de rendez-vous",

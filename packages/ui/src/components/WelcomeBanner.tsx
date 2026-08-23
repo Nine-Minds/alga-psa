@@ -69,7 +69,7 @@ export function WelcomeBanner({ title, description, firstName, variant = 'plain'
   return (
     <div
       id={id}
-      className="overflow-hidden rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-6 py-5 shadow-sm"
+      className="overflow-hidden rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-6 py-5 card-elevated"
     >
       <div className="flex items-start gap-4">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--color-primary-50))] ring-1 ring-[rgb(var(--color-border-200))]">

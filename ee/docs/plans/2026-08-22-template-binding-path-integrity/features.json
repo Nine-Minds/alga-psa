@@ -1,0 +1,170 @@
+[
+  {
+    "id": "F001",
+    "description": "Sales-order binding catalog exposes a stable exported map (id -> {path, fallback}) suitable for driving picker generation, matching the shape quote and invoice catalogs already have.",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F002",
+    "description": "A shared buildPickerOptionsFromBindings(catalog, documentKind) helper turns a binding catalog into SharedExpressionPathOption[], deriving the option path from the binding id and the resolved data path from binding.path.",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F003",
+    "description": "buildInvoiceExpressionContextRoots for documentKind 'quote' is generated from QUOTE_TEMPLATE_VALUE_BINDINGS / QUOTE_TEMPLATE_COLLECTION_BINDINGS instead of createQuoteRootSchema and createQuoteTotalsSchema.",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F004",
+    "description": "buildInvoiceExpressionContextRoots for documentKind 'sales-order' is generated from the sales-order binding catalog instead of createSalesOrderRootSchema.",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F005",
+    "description": "buildInvoiceExpressionContextRoots for documentKind 'invoice' is generated from buildSharedBindings instead of createInvoiceRootSchema, with no change to the resulting option set except the removal of invoice.discount.",
+    "implemented": false,
+    "prdRefs": ["FR1", "FR5"]
+  },
+  {
+    "id": "F006",
+    "description": "The hand-declared quote/quoteTotals/salesOrder schema literals are deleted from invoiceContextAdapter.ts once generation replaces them.",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F007",
+    "description": "Line-item (item.*) picker options are generated from each type's line-item shape rather than hand-declared, preserving the currently-correct sales-order snake_case item fields.",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F008",
+    "description": "Picker options carry the resolved data path alongside the display path, so the exporter no longer has to re-derive it from an alias table.",
+    "implemented": false,
+    "prdRefs": ["FR1", "FR3"]
+  },
+  {
+    "id": "F009",
+    "description": "normalizeInvoiceBindingPath becomes document-kind aware, or is removed entirely in favour of the resolved path carried on the option; invoice behaviour is unchanged.",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F010",
+    "description": "denormalizeBindingPath inverts the corrected mapping per document kind, so importTemplateAstToWorkspace produces a bindingKey that re-normalizes to the same path.",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F011",
+    "description": "registerValueBinding reuses an existing binding when the resolved path matches, so picking a field that already has a built-in binding never mints a duplicate value.* binding.",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F012",
+    "description": "Quote picker fields quoteNumber, quoteDate, validUntil, scope, poNumber, discountTotal, total, termsAndConditions, clientNotes, acceptedByName and acceptedAt bind to their snake_case render paths.",
+    "implemented": false,
+    "prdRefs": ["FR1", "FR2"]
+  },
+  {
+    "id": "F013",
+    "description": "All twelve quoteTotals.* picker fields bind to their snake_case render paths.",
+    "implemented": false,
+    "prdRefs": ["FR1", "FR2"]
+  },
+  {
+    "id": "F014",
+    "description": "Quote tenant.name and tenant.address bind to tenant.name / tenant.address rather than tenantClient.*, matching QuoteViewModel.",
+    "implemented": false,
+    "prdRefs": ["FR1", "FR2"]
+  },
+  {
+    "id": "F015",
+    "description": "All ten salesOrder.* picker fields bind to their real render paths (so_number, order_date, expected_ship_date, client_po_number, currency_code, status, notes, subtotal, tax, total).",
+    "implemented": false,
+    "prdRefs": ["FR1", "FR2"]
+  },
+  {
+    "id": "F016",
+    "description": "Packing slip and pick list, which reuse the sales-order catalog, get the corrected picker options with no per-type work.",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F017",
+    "description": "Text-block tokens resolve through the corrected mapping: {{quote.quoteNumber}} exports a path expression naming the real render path.",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F018",
+    "description": "isLikelyBindingTokenPath recognises single-segment tokens for every document type, replacing the invoice-only SIMPLE_BINDING_ALIASES set.",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F019",
+    "description": "TransformsWorkspace outputBindingId normalization is updated in step with the alias change so transform pipelines keep resolving.",
+    "implemented": false,
+    "prdRefs": ["FR3", "Risks"]
+  },
+  {
+    "id": "F020",
+    "description": "invoice.discount is removed from FIELD_DEFINITIONS in fieldCatalog.ts.",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F021",
+    "description": "The computed 'invoice.discount' entry is removed from flattenInvoiceBindingMap in previewBindings.ts so the canvas no longer shows an always-zero value.",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F022",
+    "description": "Curated labels and descriptions from fieldCatalog.ts are preserved for generated options, so the Fields panel does not regress to raw humanized ids.",
+    "implemented": false,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F023",
+    "description": "Quote picker labels no longer read 'Quote Quote Number' — category prefix and field label do not double up.",
+    "implemented": false,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F024",
+    "description": "A guard test enumerates every picker option for every document type, binds it to a field node, exports the workspace, evaluates against that type's sample model, and asserts a resolved value.",
+    "implemented": false,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F025",
+    "description": "The guard test fails loudly with the offending path and document type named, so a future drift is diagnosable from CI output alone.",
+    "implemented": false,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F026",
+    "description": "Adding a binding to a type's catalog surfaces it in the picker with no other edit, demonstrated by a test that adds a temporary binding and asserts the option appears.",
+    "implemented": false,
+    "prdRefs": ["FR1", "Acceptance Criteria"]
+  },
+  {
+    "id": "F027",
+    "description": "ComponentPalette.quoteFields.integration.test.tsx is extended past the onInsertTemplateVariable assertion so it also verifies the inserted token resolves.",
+    "implemented": false,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F028",
+    "description": "Optional: a one-off sweep removes the two orphaned value.quoteDate / value.validUntil bindings from the NVTS templates in tenant 30d77d59.",
+    "implemented": false,
+    "prdRefs": ["Production state", "Open Questions"]
+  }
+]

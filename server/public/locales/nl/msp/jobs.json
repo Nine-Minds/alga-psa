@@ -140,5 +140,10 @@
   "page": {
     "heading": "Jobbewaking",
     "recentJobs": "Recente achtergrondtaken"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Achtergrondtaak niet gevonden. Mogelijk is deze verlopen of verwijderd."
+    }
   }
 }

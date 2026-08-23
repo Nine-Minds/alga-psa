@@ -47,7 +47,7 @@ export function StickyComposerDock({
           id={`${id}-trigger`}
           type="button"
           onClick={onExpand}
-          className="pointer-events-auto flex w-full cursor-text items-center gap-2 rounded-lg border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-2.5 text-left text-sm text-[rgb(var(--color-text-400))] shadow-lg transition-colors hover:border-[rgb(var(--color-primary-400))] hover:text-[rgb(var(--color-text-500))] focus:outline-none focus:border-[rgb(var(--color-primary-500))] focus:ring-2 focus:ring-[rgb(var(--color-primary-200))]"
+          className="pointer-events-auto flex w-full cursor-text items-center gap-2 rounded-lg border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-2.5 text-left text-sm text-[rgb(var(--color-text-500))] shadow-lg transition-colors hover:border-[rgb(var(--color-primary-400))] hover:text-[rgb(var(--color-text-500))] focus:outline-none focus:border-[rgb(var(--color-primary-500))] focus:ring-2 focus:ring-[rgb(var(--color-primary-200))]"
         >
           <MessageSquarePlus className="h-4 w-4 flex-shrink-0" />
           {placeholder}

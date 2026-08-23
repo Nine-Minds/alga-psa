@@ -2001,5 +2001,59 @@
       "packingSlip": "Bon de livraison",
       "pickList": "Liste de prélèvement"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Autorisation refusée : autorisation de mise à jour des factures requise",
+      "invoiceDelete": "Autorisation refusée : autorisation de suppression des factures requise",
+      "invoiceAccess": "Autorisation refusée : accès à la facture refusé",
+      "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client"
+    },
+    "invoice": {
+      "notFound": "Facture introuvable",
+      "notFoundRefresh": "Facture introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer.",
+      "notFoundNumbered": "La facture {{invoiceId}} est introuvable.",
+      "clientNotFoundForInvoice": "Aucun client trouvé pour la facture {{invoiceNumber}}.",
+      "numberRequired": "Le numéro de facture est obligatoire",
+      "dateRequired": "La date de facture est obligatoire",
+      "dateInvalid": "La date de facture n’est pas valide",
+      "dueDateInvalid": "La date d’échéance n’est pas valide",
+      "onlyDraftEditable": "Seules les factures brouillon peuvent être modifiées",
+      "numberExists": "Ce numéro de facture existe déjà. Choisissez un autre numéro.",
+      "notFinalized": "La facture n’est pas finalisée",
+      "unfinalizeFailed": "Impossible d’annuler la finalisation de la facture en raison d’une erreur de données inattendue. Veuillez actualiser la page et réessayer.",
+      "paidOrCancelled": "Impossible de modifier une facture payée ou annulée",
+      "syncedVoidInstead": "Cette facture est synchronisée avec un système comptable : annulez-la au lieu de la supprimer.",
+      "invalidValue": "L’une des valeurs de facture sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "La facture, le client, le contrat ou l’enregistrement de facturation sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Une facture en conflit existe déjà. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire de la facture est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la facture est manquant : {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Cycle de facturation introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "invalidDates": "Le cycle de facturation comporte des dates non valides. Veuillez vérifier le cycle et réessayer."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Sélectionnez au moins une facture pour générer les PDF.",
+      "selectInvoicesEmail": "Sélectionnez au moins une facture à envoyer par e-mail.",
+      "selectInvoices": "Sélectionnez au moins une facture.",
+      "emailNotConfigured": "L’e-mail n’est pas configuré. Veuillez configurer les paramètres d’e-mail dans les paramètres avant d’envoyer des factures.",
+      "schedulePdfFailed": "Impossible de lancer la génération des PDF des factures. Veuillez réessayer.",
+      "scheduleEmailFailed": "Impossible de lancer l’envoi des factures par e-mail. Veuillez réessayer.",
+      "recipientFailed": "Impossible de charger les informations du destinataire de cette facture.",
+      "sendFailed": "Impossible d’envoyer la facture par e-mail. Veuillez réessayer."
+    },
+    "template": {
+      "selectStandard": "Sélectionnez un modèle de facture standard avant d’enregistrer.",
+      "selectBeforePreview": "Sélectionnez un modèle de facture avant l’aperçu.",
+      "notFoundRefresh": "Modèle de facture introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "missingDesign": "Le modèle de facture ne contient pas ses données de mise en page. Veuillez choisir un autre modèle.",
+      "invalidValue": "L’une des valeurs sélectionnées du modèle de facture n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "Le modèle de facture ou le client sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Un modèle de facture avec ces paramètres existe déjà.",
+      "missingField": "Un champ obligatoire du modèle de facture est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du modèle de facture est manquant : {{field}}."
+    }
   }
 }

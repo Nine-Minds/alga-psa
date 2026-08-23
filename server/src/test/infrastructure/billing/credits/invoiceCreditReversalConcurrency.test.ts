@@ -91,7 +91,6 @@ async function newTestClient(name: string): Promise<string> {
   return createClient(db, tenant, name, {
     billing_cycle: 'monthly',
     is_tax_exempt: false,
-    credit_balance: 0,
   });
 }
 
@@ -393,7 +392,7 @@ describe('invoice credit reversal — real concurrency', () => {
 
     // Real action, real transaction, real rollback.
     const result = await unfinalizeInvoice(invoiceId);
-    expect(result).toEqual({ actionError: expect.any(String) });
+    expect(result).toMatchObject({ actionError: expect.any(String) });
 
     const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant }).first();
     expect(invoice.status).toBe('sent');

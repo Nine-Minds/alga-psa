@@ -5,7 +5,11 @@
 
 import { randomUUID } from 'crypto';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
-import { convertMarkdownToBlocks, type BlockNoteBlock } from '@shared/lib/utils/markdownToBlocks';
+import {
+  KbImportParseTimeoutError,
+  markdownToBlocks,
+  type BlockNoteBlock,
+} from '@alga-psa/jobs/handler-utils/kbImportBlocks';
 import { ListOptions } from '../controllers/types';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import type { CreateKbArticleData, UpdateKbArticleData, UpdateKbArticleContentData } from '../schemas/kbArticle';
@@ -50,7 +54,8 @@ function blocksToText(blocks: BlockNoteBlock[]): string {
   const lines: string[] = [];
 
   for (const block of blocks) {
-    const text = (block.content || [])
+    // Table blocks carry a tableContent object rather than an inline array.
+    const text = (Array.isArray(block.content) ? block.content : [])
       .filter((c: any) => c.type === 'text')
       .map((c: any) => c.text)
       .join('');
@@ -90,6 +95,28 @@ function parseApiBlockNoteContent(content: string): BlockNoteBlock[] {
     throw new ValidationError('Invalid BlockNote content', [
       { path: ['content'], message: 'content must be valid JSON when format is blocknote' },
     ]);
+  }
+}
+
+/**
+ * REST callers submit article bodies of arbitrary size on the request path, so
+ * the conversion is bounded: without a cap a pathological document pins the
+ * event loop for minutes and the pod fails its probes. Shares the KB import's
+ * parser so the same markdown yields the same blocks whether it arrives through
+ * the API or the import dialog.
+ */
+const API_MARKDOWN_PARSE_BUDGET_MS = 5_000;
+
+function convertApiMarkdown(content: string): BlockNoteBlock[] {
+  try {
+    return markdownToBlocks(content, { maxDurationMs: API_MARKDOWN_PARSE_BUDGET_MS });
+  } catch (error) {
+    if (error instanceof KbImportParseTimeoutError) {
+      throw new ValidationError('Content is too large or complex to convert', [
+        { path: ['content'], message: 'content could not be converted within the time limit' },
+      ]);
+    }
+    throw error;
   }
 }
 
@@ -249,7 +276,7 @@ export class KbArticleService extends BaseService<any> {
       if (data.content_format === 'blocknote') {
         blocks = parseApiBlockNoteContent(data.content);
       } else {
-        blocks = convertMarkdownToBlocks(data.content);
+        blocks = convertApiMarkdown(data.content);
       }
 
       if (blocks.length > 0) {
@@ -481,7 +508,7 @@ export class KbArticleService extends BaseService<any> {
     if (data.format === 'blocknote') {
       blocks = parseApiBlockNoteContent(data.content);
     } else {
-      blocks = convertMarkdownToBlocks(data.content);
+      blocks = convertApiMarkdown(data.content);
     }
 
     const now = new Date();

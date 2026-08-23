@@ -277,10 +277,10 @@ export const assignContractLineToUnresolvedItem = withAuth(async (
         .where({ [spec.idColumn]: input.recordId })
         .first('service_id', 'invoiced');
       if (!record) {
-        return actionError('That item no longer exists.');
+        return actionError('That item no longer exists.', 'msp/billing:errors.unresolvedCharge.itemNotFound');
       }
       if (record.invoiced) {
-        return actionError('That item has already been invoiced.');
+        return actionError('That item has already been invoiced.', 'msp/billing:errors.unresolvedCharge.alreadyInvoiced');
       }
 
       const line = await db
@@ -288,7 +288,7 @@ export const assignContractLineToUnresolvedItem = withAuth(async (
         .where({ contract_line_id: input.contractLineId })
         .first('contract_line_id');
       if (!line) {
-        return actionError('That contract line no longer exists.');
+        return actionError('That contract line no longer exists.', 'msp/billing:errors.unresolvedCharge.contractLineNotFound');
       }
 
       await db

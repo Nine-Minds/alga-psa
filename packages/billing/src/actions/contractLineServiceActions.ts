@@ -78,25 +78,31 @@ function contractLineServiceActionErrorFrom(error: unknown): ContractLineService
       return actionError(error.message);
     }
     if (error.message.includes('not found')) {
-      return actionError('The selected contract line service is no longer available. Please refresh and try again.');
+      return actionError('The selected contract line service is no longer available. Please refresh and try again.', 'msp/contract-lines:errors.service.unavailable');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected service values is invalid. Please refresh and try again.');
+    return actionError('One of the selected service values is invalid. Please refresh and try again.', 'msp/service-catalog:errors.service.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required service field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required service field: ${dbError.column}.`,
+          'msp/service-catalog:errors.service.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required service field.', 'msp/service-catalog:errors.service.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected contract line or service no longer exists. Please refresh and try again.');
+    return actionError('The selected contract line or service no longer exists. Please refresh and try again.', 'msp/contract-lines:errors.service.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('This service is already associated with the selected contract line.');
+    return actionError('This service is already associated with the selected contract line.', 'msp/contract-lines:errors.service.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the service values is not allowed. Please review the form and try again.');
+    return actionError('One of the service values is not allowed. Please review the form and try again.', 'msp/contract-lines:errors.service.notAllowed');
   }
 
   return null;
@@ -140,7 +146,7 @@ export const getContractLineServices = withAuth(async (
 ): Promise<IContractLineService[] | ContractLineServiceActionError> => {
   try {
     if (!await hasPermission(user, 'billing', 'read')) {
-      return permissionError('Permission denied: billing read required');
+      return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     const { knex: db } = await createTenantKnex();
     if (!tenant) {
@@ -186,7 +192,7 @@ export const getContractLineServicesWithNames = withAuth(async (
 ): Promise<Array<IContractLineService & { service_name?: string }> | ContractLineServiceActionError> => {
   try {
     if (!await hasPermission(user, 'billing', 'read')) {
-      return permissionError('Permission denied: billing read required');
+      return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -226,7 +232,7 @@ export const getContractLineService = withAuth(async (
 ): Promise<IContractLineService | ContractLineServiceActionError | null> => {
   try {
     if (!await hasPermission(user, 'billing', 'read')) {
-      return permissionError('Permission denied: billing read required');
+      return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     const { knex: db } = await createTenantKnex();
     if (!tenant) {
@@ -617,7 +623,7 @@ export const addServiceToContractLine = withAuth(async (
 ): Promise<string | ContractLineServiceActionError> => {
   try {
     if (!await hasPermission(user, 'billing', 'create')) {
-      return permissionError('Permission denied: billing create required');
+      return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
     }
     const { knex: db } = await createTenantKnex();
     if (!tenant) {
@@ -662,7 +668,7 @@ export const updateContractLineService = withAuth(async (
 ): Promise<boolean | ContractLineServiceActionError> => {
   try {
     if (!await hasPermission(user, 'billing', 'update')) {
-      return permissionError('Permission denied: billing update required');
+      return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
     }
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -737,7 +743,7 @@ export const removeServiceFromContractLine = withAuth(async (
 ): Promise<boolean | ContractLineServiceActionError> => {
   try {
     if (!await hasPermission(user, 'billing', 'delete')) {
-      return permissionError('Permission denied: billing delete required');
+      return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
     }
     const { knex: db } = await createTenantKnex();
     if (!tenant) {
@@ -770,10 +776,10 @@ export const applyContractLineServiceMembershipChanges = withAuth(async (
 ): Promise<boolean | ContractLineServiceActionError> => {
   try {
     if (changes.additions.length > 0 && !await hasPermission(user, 'billing', 'create')) {
-      return permissionError('Permission denied: billing create required');
+      return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
     }
     if (changes.removals.length > 0 && !await hasPermission(user, 'billing', 'delete')) {
-      return permissionError('Permission denied: billing delete required');
+      return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
     }
     if (!tenant) {
       throw new Error('tenant context not found');
@@ -781,13 +787,13 @@ export const applyContractLineServiceMembershipChanges = withAuth(async (
 
     const additionIds = changes.additions.map((addition) => addition.serviceId);
     if (new Set(additionIds).size !== additionIds.length) {
-      return actionError('A service can only be added once in a contract line edit.');
+      return actionError('A service can only be added once in a contract line edit.', 'msp/contract-lines:errors.service.addedOnce');
     }
     if (new Set(changes.removals).size !== changes.removals.length) {
-      return actionError('A service can only be removed once in a contract line edit.');
+      return actionError('A service can only be removed once in a contract line edit.', 'msp/contract-lines:errors.service.removedOnce');
     }
     if (changes.removals.some((serviceId) => additionIds.includes(serviceId))) {
-      return actionError('The same service cannot be added and removed in one contract line edit.');
+      return actionError('The same service cannot be added and removed in one contract line edit.', 'msp/contract-lines:errors.service.addedAndRemoved');
     }
 
     const { knex: db } = await createTenantKnex();
@@ -830,7 +836,7 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
 ): Promise<ContractLineServiceWithConfiguration[] | ContractLineServiceActionError> => {
   try {
     if (!await hasPermission(user, 'billing', 'read')) {
-      return permissionError('Permission denied: billing read required');
+      return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     const { knex: db } = await createTenantKnex();
     if (!tenant) {
@@ -990,7 +996,7 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
 ): Promise<TemplateLineServiceWithConfiguration[] | ContractLineServiceActionError> => {
   try {
     if (!await hasPermission(user, 'billing', 'read')) {
-      return permissionError('Permission denied: billing read required');
+      return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {

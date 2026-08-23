@@ -301,6 +301,25 @@
         "contactSupport": "Skontaktuj się z zespołem wsparcia swojej organizacji",
         "tryAnother": "Spróbuj innego adresu e-mail"
       }
+    },
+    "register": {
+      "emailLabel": "Adres e-mail",
+      "checkingEmail": "Sprawdzanie adresu e-mail...",
+      "existingContactsOnly": "Rejestracja jest dostępna wyłącznie dla istniejących kontaktów. Skontaktuj się z administratorem.",
+      "contactVerified": "Kontakt zweryfikowany. Utwórz hasło.",
+      "passwordPlaceholder": "Utwórz hasło",
+      "passwordMustContain": "Hasło musi zawierać:",
+      "completeRequiredFields": "Uzupełnij wymagane pola:",
+      "creatingAccount": "Tworzenie konta...",
+      "createAccount": "Utwórz konto",
+      "failed": "Rejestracja nie powiodła się",
+      "unexpectedError": "Podczas rejestracji wystąpił nieoczekiwany błąd.",
+      "missing": {
+        "email": "E-mail",
+        "validEmail": "Prawidłowy adres e-mail",
+        "verifiedContact": "Zweryfikowany adres e-mail kontaktu",
+        "validPassword": "Prawidłowe hasło"
+      }
     }
   },
   "account": {
@@ -687,9 +706,16 @@
   },
   "notifications": {
     "title": "Powiadomienia",
+    "bellUnreadAria": "Powiadomienia ({{unread}} nieprzeczytanych)",
+    "unreadDot": "Nieprzeczytane powiadomienia",
+    "reconnecting": "Ponowne łączenie...",
     "markAsRead": "Oznacz jako przeczytane",
     "markAllAsRead": "Oznacz wszystkie jako przeczytane",
     "noNotifications": "Brak nowych powiadomień",
+    "unreadCount_one": "{{count}} nieprzeczytane powiadomienie",
+    "unreadCount_few": "{{count}} nieprzeczytane powiadomienia",
+    "unreadCount_many": "{{count}} nieprzeczytanych powiadomień",
+    "unreadCount_other": "{{count}} nieprzeczytanych powiadomień",
     "settings": "Ustawienia powiadomień",
     "viewAll": "Zobacz wszystkie powiadomienia",
     "tabs": {
@@ -918,5 +944,57 @@
     },
     "notAvailable": "Brak",
     "detailsTitle": "Szczegóły zasobu"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Twój użytkownik portalu nie jest powiązany z żadnym kontaktem. Skontaktuj się z pomocą techniczną, jeśli problem się powtarza.",
+      "userNotLinkedToClient": "Twój użytkownik portalu nie jest powiązany z żadnym kontem klienta. Skontaktuj się z pomocą techniczną, jeśli problem się powtarza.",
+      "contactNotLinkedToClient": "Twój kontakt nie jest powiązany z żadnym kontem klienta. Skontaktuj się z pomocą techniczną, jeśli problem się powtarza.",
+      "clientNotFound": "Nie znaleziono konta klienta. Mogło zostać usunięte lub nie masz już do niego dostępu.",
+      "serviceNotFound": "Nie znaleziono usługi lub nie jest już aktywna. Odśwież stronę i spróbuj ponownie.",
+      "serviceUpgradeUnavailable": "Podnoszenie wersji usług jest tymczasowo niedostępne. Skontaktuj się z pomocą techniczną, aby zmienić plan."
+    },
+    "records": {
+      "invalid": "Jeden z wybranych rekordów jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "missing": "Jeden z wybranych rekordów już nie istnieje. Odśwież stronę i spróbuj ponownie."
+    },
+    "access": {
+      "unauthorized": "Brak autoryzacji",
+      "projectBillingData": "Brak uprawnień dostępu do danych rozliczeniowych projektu",
+      "quoteData": "Brak uprawnień dostępu do danych oferty",
+      "invoiceData": "Brak uprawnień dostępu do danych faktury",
+      "billingData": "Brak uprawnień dostępu do danych rozliczeniowych",
+      "settingsUpdate": "Nie masz uprawnień do zmiany tych ustawień.",
+      "billingSegment": "Brak uprawnień dostępu do tego segmentu rozliczeniowego"
+    },
+    "billing": {
+      "quoteNotFound": "Nie znaleziono oferty lub odmowa dostępu",
+      "quoteStale": "Oferta nie jest już dostępna. Odśwież ofertę i spróbuj ponownie.",
+      "quoteStaleAccept": "Oferta nie jest już dostępna. Odśwież ofertę przed jej zaakceptowaniem.",
+      "quoteStaleReject": "Oferta nie jest już dostępna. Odśwież ofertę przed jej odrzuceniem.",
+      "invoiceNotFound": "Nie znaleziono faktury lub odmowa dostępu",
+      "jobNotFound": "Nie znaleziono zadania",
+      "quoteInvalidState": "Oferta nie jest w stanie umożliwiającym wykonanie tej operacji",
+      "rejectionCommentRequired": "Komentarz do odrzucenia jest wymagany",
+      "emailSendFailed": "Nie udało się rozpocząć wysyłania wiadomości e-mail"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Nie znaleziono zgłoszenia lub odmowa dostępu",
+      "invalidData": "Nieprawidłowe dane zgłoszenia"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Sprawdź dane grupy widoczności i spróbuj ponownie.",
+      "boardsUnavailable": "Co najmniej jedna z wybranych tablic nie jest już dostępna. Odśwież stronę i spróbuj ponownie.",
+      "contactNotFound": "Nie znaleziono kontaktu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "otherClient": "Nie masz uprawnień do zarządzania grupami widoczności innego klienta.",
+      "selectClientOrContact": "Wybierz klienta lub kontakt przed zarządzaniem grupami widoczności.",
+      "groupNotFound": "Nie znaleziono grupy widoczności. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "groupNotValidForContact": "Wybrana grupa widoczności nie jest prawidłowa dla tego kontaktu. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola grupy widoczności.",
+      "missingFieldNamed": "Brakuje wymaganego pola grupy widoczności: {{field}}.",
+      "recordInvalid": "Jeden z wybranych rekordów grupy widoczności nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
+      "invalidData": "Nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice."
+    }
   }
 }

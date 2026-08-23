@@ -82,25 +82,31 @@ function usageActionErrorFrom(error: unknown): UsageActionError | null {
       return permissionError(message);
     }
     if (message.includes('Usage record') && message.includes('not found')) {
-      return actionError('Usage record not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Usage record not found. It may have been deleted. Please refresh and try again.', 'msp/billing:errors.usage.notFoundRefresh');
     }
     if (message.includes('Failed to update bucket usage') || message.includes('Bucket usage update failed')) {
-      return actionError('Unable to update bucket usage for this usage record. Please refresh and try again.');
+      return actionError('Unable to update bucket usage for this usage record. Please refresh and try again.', 'msp/billing:errors.usage.bucketUpdateFailed');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected usage record, client, service, or contract line is invalid. Please refresh and try again.');
+    return actionError('The selected usage record, client, service, or contract line is invalid. Please refresh and try again.', 'msp/billing:errors.usage.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required usage field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required usage field: ${dbError.column}.`,
+          'msp/billing:errors.usage.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required usage field.', 'msp/billing:errors.usage.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected client, service, or contract line is no longer valid. Please refresh and try again.');
+    return actionError('The selected client, service, or contract line is no longer valid. Please refresh and try again.', 'msp/billing:errors.usage.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A conflicting usage record already exists. Please refresh and try again.');
+    return actionError('A conflicting usage record already exists. Please refresh and try again.', 'msp/billing:errors.usage.duplicate');
   }
 
   return null;
@@ -108,7 +114,7 @@ function usageActionErrorFrom(error: unknown): UsageActionError | null {
 
 export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreateUsageRecord): Promise<IUsageRecord | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -205,7 +211,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
 
 export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdateUsageRecord): Promise<IUsageRecord | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -352,7 +358,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
 
 export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: string): Promise<void | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    return permissionError('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -365,7 +371,7 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
     if (!recordToDelete) {
       console.warn(`Usage record ${usageId} not found for deletion.`);
-      return actionError('Usage record not found. It may have already been deleted.');
+      return actionError('Usage record not found. It may have already been deleted.', 'msp/billing:errors.usage.alreadyDeleted');
     }
 
     // --- Bucket Usage Update Logic (Before Delete) ---
@@ -424,7 +430,7 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
 export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsageFilter): Promise<IUsageRecord[] | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   try {
     const { knex } = await createTenantKnex();

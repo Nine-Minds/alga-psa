@@ -685,5 +685,34 @@
     "notAvailable": "N/D",
     "title": "Szczegóły interakcji",
     "unknownUser": "Nieznany"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Nie znaleziono wpisu harmonogramu.",
+      "invalid": "Wybrany wpis harmonogramu jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "assigneesMissing": "Nie można odnaleźć co najmniej jednego przypisanego użytkownika."
+    },
+    "activities": {
+      "otherUserForbidden": "Odmowa uprawnień: nie można wyświetlać aktywności harmonogramu innego użytkownika"
+    },
+    "workItem": {
+      "adHocTimesRequired": "Dla wpisów doraźnych wymagane są godzina rozpoczęcia i zakończenia.",
+      "typeUnsupported": "Ten typ elementu pracy nie jest obsługiwany w harmonogramie.",
+      "entryOrUserUnavailable": "Wybrany wpis harmonogramu lub użytkownik nie jest już dostępny. Odśwież stronę i spróbuj ponownie.",
+      "invalid": "Wybrany element pracy jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany element pracy, wpis harmonogramu lub osoba przypisana nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicateEntry": "Ten wpis harmonogramu już istnieje. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola harmonogramu.",
+      "missingFieldNamed": "Brakuje wymaganego pola harmonogramu: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "Identyfikator spotkania jest wymagany",
+      "refreshPermission": "Odmowa uprawnień: nie można odświeżyć nagrań spotkań.",
+      "refreshFailed": "Nie udało się odświeżyć nagrań spotkań. Spróbuj ponownie.",
+      "graphForbidden": "Microsoft Graph odmówił dostępu do nagrania Teams. Sprawdź uprawnienia do nagrań i spróbuj ponownie.",
+      "graphNotFound": "Nagranie Teams nie jest już dostępne w Microsoft Graph.",
+      "graphThrottled": "Microsoft Graph ogranicza tempo pobierania nagrań. Spróbuj ponownie za chwilę.",
+      "graphHttpStatus": "Microsoft Graph zwrócił HTTP {{status}} podczas pobierania nagrania Teams."
+    }
   }
 }

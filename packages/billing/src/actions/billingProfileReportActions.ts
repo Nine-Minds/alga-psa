@@ -171,7 +171,7 @@ export const getSpendByBillingProfile = withAuth(async (
 
     const range = normalizeRange(input.periodStart, input.periodEnd);
     if (!range) {
-      return actionError('Choose a period whose start is on or before its end.');
+      return actionError('Choose a period whose start is on or before its end.', 'msp/billing:errors.billingProfile.periodOrder');
     }
 
     const { knex } = await createTenantKnex();
@@ -195,7 +195,7 @@ export const getSpendByBillingProfile = withAuth(async (
         input.comparisonPeriodEnd,
       );
       if (!comparisonRange) {
-        return actionError('Choose a comparison period whose start is on or before its end.');
+        return actionError('Choose a comparison period whose start is on or before its end.', 'msp/billing:errors.billingProfile.comparisonPeriodOrder');
       }
       result.comparison = {
         periodStart: comparisonRange.start,
@@ -234,7 +234,7 @@ export const getChargesForBillingProfile = withAuth(async (
 
     const range = normalizeRange(input.periodStart, input.periodEnd);
     if (!range) {
-      return actionError('Choose a period whose start is on or before its end.');
+      return actionError('Choose a period whose start is on or before its end.', 'msp/billing:errors.billingProfile.periodOrder');
     }
 
     const { knex } = await createTenantKnex();

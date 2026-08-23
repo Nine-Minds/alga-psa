@@ -195,6 +195,9 @@ describe('Multi-Currency Billing', () => {
     await tenantTable(context, 'contracts').insert({
       contract_id: contractId,
       contract_name: 'EUR Contract',
+      // Recurring service periods resolve through
+      // contract_lines -> contracts -> clients on owner_client_id.
+      owner_client_id: context.clientId,
       billing_frequency: 'monthly',
       currency_code: 'EUR',
       status: 'active',
@@ -213,6 +216,8 @@ describe('Multi-Currency Billing', () => {
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
       is_custom: false,
+      // contract_lines.is_template defaults to true; these are live lines.
+      is_template: false,
       tenant: context.tenantId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -225,12 +230,12 @@ describe('Multi-Currency Billing', () => {
       client_contract_id: uuidv4(),
       client_id: context.clientId,
       contract_id: contractId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      // Lines bill in arrears, so the assignment has to start a cycle before
+      // the cycle under test or its invoice window has no period.
+      start_date: createTestDateISO({ year: 2022, month: 12, day: 1 }),
       is_active: true,
       status: 'pending'
     });
-
-    await materializeRecurringServicePeriods(context, contractLineId);
 
     // 6. Add service configuration to the contract line (Fixed)
     const configId = uuidv4();
@@ -243,6 +248,26 @@ describe('Multi-Currency Billing', () => {
       quantity: 1,
       tenant: context.tenantId
     });
+
+    // A Fixed line bills off its fixed config and its contract_line_services
+    // row; without them the run produces no charges and returns null.
+    await tenantTable(context, 'contract_line_service_fixed_config').insert({
+      config_id: configId,
+      tenant: context.tenantId,
+      base_rate: 10000
+    });
+    await tenantTable(context, 'contract_line_services').insert({
+      tenant: context.tenantId,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      quantity: 1,
+      custom_rate: 10000
+    });
+
+    // Materialize last: the sync reads the line's service configuration, so a
+    // line with none yet produces no periods and generateInvoice then refuses
+    // the window.
+    await materializeRecurringServicePeriods(context, contractLineId);
 
     // 7. Create billing cycle
     const billingCycleId = await context.createEntity('client_billing_cycles', {
@@ -274,6 +299,9 @@ describe('Multi-Currency Billing', () => {
     await tenantTable(context, 'contracts').insert({
       contract_id: contractAId,
       contract_name: 'USD Contract',
+      // Recurring service periods resolve through
+      // contract_lines -> contracts -> clients on owner_client_id.
+      owner_client_id: context.clientId,
       billing_frequency: 'monthly',
       currency_code: 'USD',
       status: 'active',
@@ -288,6 +316,9 @@ describe('Multi-Currency Billing', () => {
     await tenantTable(context, 'contracts').insert({
       contract_id: contractBId,
       contract_name: 'EUR Contract',
+      // Recurring service periods resolve through
+      // contract_lines -> contracts -> clients on owner_client_id.
+      owner_client_id: context.clientId,
       billing_frequency: 'monthly',
       currency_code: 'EUR',
       status: 'active',
@@ -306,6 +337,8 @@ describe('Multi-Currency Billing', () => {
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
       is_custom: false,
+      // contract_lines.is_template defaults to true; these are live lines.
+      is_template: false,
       tenant: context.tenantId
     });
 
@@ -317,6 +350,8 @@ describe('Multi-Currency Billing', () => {
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
       is_custom: false,
+      // contract_lines.is_template defaults to true; these are live lines.
+      is_template: false,
       tenant: context.tenantId
     });
 
@@ -328,7 +363,7 @@ describe('Multi-Currency Billing', () => {
         client_contract_id: uuidv4(),
         client_id: context.clientId,
         contract_id: contractAId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        start_date: createTestDateISO({ year: 2022, month: 12, day: 1 }),
         is_active: true,
         status: 'pending'
       },
@@ -337,14 +372,11 @@ describe('Multi-Currency Billing', () => {
         client_contract_id: uuidv4(),
         client_id: context.clientId,
         contract_id: contractBId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        start_date: createTestDateISO({ year: 2022, month: 12, day: 1 }),
         is_active: true,
         status: 'pending'
       }
     ]);
-
-    await materializeRecurringServicePeriods(context, lineAId);
-    await materializeRecurringServicePeriods(context, lineBId);
 
     // 5. Add dummy service configs so they are billed
     const serviceId = await createTestService(context, { service_name: 'Generic Service' });
@@ -367,6 +399,10 @@ describe('Multi-Currency Billing', () => {
       }
     ]);
 
+    // Materialize last: the sync reads each line's service configuration.
+    await materializeRecurringServicePeriods(context, lineAId);
+    await materializeRecurringServicePeriods(context, lineBId);
+
     // 6. Create billing cycle
     const billingCycleId = await context.createEntity('client_billing_cycles', {
       client_id: context.clientId,
@@ -377,9 +413,10 @@ describe('Multi-Currency Billing', () => {
     }, 'billing_cycle_id');
 
     // Act & Assert
-    await expect(generateInvoice(billingCycleId))
-      .rejects
-      .toThrow(/Mixed currency billing is not supported/);
+    // generateInvoice reports expected failures by returning an action error
+    // (withInvoiceGenerationActionErrors) rather than throwing.
+    const mixedResult = await generateInvoice(billingCycleId) as unknown as { actionError?: string };
+    expect(mixedResult?.actionError).toMatch(/Mixed currency billing is not supported/);
   });
 
   // contracts.currency_code is NOT NULL DEFAULT 'USD', so the legacy
@@ -397,6 +434,9 @@ describe('Multi-Currency Billing', () => {
     await tenantTable(context, 'contracts').insert({
       contract_id: contractId,
       contract_name: 'Legacy Contract',
+      // Recurring service periods resolve through
+      // contract_lines -> contracts -> clients on owner_client_id.
+      owner_client_id: context.clientId,
       billing_frequency: 'monthly',
       status: 'active',
       tenant: context.tenantId,
@@ -414,6 +454,8 @@ describe('Multi-Currency Billing', () => {
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
       is_custom: false,
+      // contract_lines.is_template defaults to true; these are live lines.
+      is_template: false,
       tenant: context.tenantId
     });
 
@@ -422,22 +464,38 @@ describe('Multi-Currency Billing', () => {
       client_contract_id: uuidv4(),
       client_id: context.clientId,
       contract_id: contractId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      // Lines bill in arrears, so the assignment has to start a cycle before
+      // the cycle under test or its invoice window has no period.
+      start_date: createTestDateISO({ year: 2022, month: 12, day: 1 }),
       is_active: true,
       status: 'pending'
     });
 
-    await materializeRecurringServicePeriods(context, lineId);
-
     const serviceId = await createTestService(context, { service_name: 'GBP Service' });
+    const legacyConfigId = uuidv4();
     await tenantTable(context, 'contract_line_service_configuration').insert({
-      config_id: uuidv4(),
+      config_id: legacyConfigId,
       contract_line_id: lineId,
       service_id: serviceId,
       configuration_type: 'Fixed',
       custom_rate: 5000, // 50.00 GBP
       tenant: context.tenantId
     });
+    await tenantTable(context, 'contract_line_service_fixed_config').insert({
+      config_id: legacyConfigId,
+      tenant: context.tenantId,
+      base_rate: 5000
+    });
+    await tenantTable(context, 'contract_line_services').insert({
+      tenant: context.tenantId,
+      contract_line_id: lineId,
+      service_id: serviceId,
+      quantity: 1,
+      custom_rate: 5000
+    });
+
+    // Materialize last: the sync reads the line's service configuration.
+    await materializeRecurringServicePeriods(context, lineId);
 
     // 4. Create billing cycle
     const billingCycleId = await context.createEntity('client_billing_cycles', {

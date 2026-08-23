@@ -445,5 +445,65 @@
       "summary": "{{rate}} pro {{unit}}",
       "help": "Der Basispreis kann durch die unten aufgeführten mengenbasierten Tarife außer Kraft gesetzt werden."
     }
+  },
+  "errors": {
+    "permissions": {
+      "createServices": "Berechtigung verweigert: Dienste/Produkte können nicht erstellt werden",
+      "updateServices": "Berechtigung verweigert: Dienste/Produkte können nicht aktualisiert werden",
+      "deleteServices": "Berechtigung verweigert: Dienste können nicht gelöscht werden",
+      "deleteServicesProducts": "Berechtigung verweigert: Dienste/Produkte können nicht gelöscht werden",
+      "createServiceTypes": "Berechtigung verweigert: Diensttypen können nicht erstellt werden",
+      "updateServiceTypes": "Berechtigung verweigert: Diensttypen können nicht aktualisiert werden",
+      "deleteServiceTypes": "Berechtigung verweigert: Diensttypen können nicht gelöscht werden",
+      "updatePricing": "Berechtigung verweigert: Dienstpreise können nicht aktualisiert werden"
+    },
+    "category": {
+      "duplicateName": "Eine Dienstkategorie mit diesem Namen existiert bereits",
+      "notFound": "Dienstkategorie nicht gefunden",
+      "invalid": "Die ausgewählte Dienstkategorie ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "inUse": "Die Kategorie kann nicht gelöscht werden, da sie noch verwendet wird.",
+      "inUseByServices": "Die Kategorie kann nicht gelöscht werden: Dienste verwenden diese Kategorie",
+      "inUseByTickets": "Eine von Tickets verwendete Kategorie kann nicht gelöscht werden",
+      "nameRequired": "Der Kategoriename ist erforderlich",
+      "nameEmpty": "Der Kategoriename darf nicht leer sein",
+      "idRequired": "Die Kategorie-ID ist erforderlich",
+      "missingField": "Erforderliches Feld der Dienstkategorie fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Dienstkategorie fehlt: {{field}}."
+    },
+    "service": {
+      "selectType": "Wählen Sie vor dem Speichern einen Diensttyp aus.",
+      "typeNotFound": "Der ausgewählte Diensttyp wurde nicht gefunden. Bitte aktualisieren Sie die Seite und wählen Sie einen anderen Diensttyp.",
+      "selectBillingMethod": "Wählen Sie vor dem Speichern eine Abrechnungsmethode aus.",
+      "notFoundRefresh": "Dienst nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Dienstwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte Dienst, die Kategorie, der Steuersatz oder Diensttyp ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein Dienst oder Produkt mit diesen Werten existiert bereits.",
+      "missingField": "Erforderliches Dienstfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Dienstfeld fehlt: {{field}}."
+    },
+    "product": {
+      "notFound": "Produkt nicht gefunden",
+      "alreadyDeleted": "Produkt nicht gefunden. Es wurde möglicherweise bereits gelöscht.",
+      "barcodeExists": "Ein Produkt mit diesem Barcode existiert bereits. Verwenden Sie einen anderen Barcode oder bearbeiten Sie das vorhandene Produkt.",
+      "barcodeExistsNamed": "Ein Produkt mit dem Barcode „{{barcode}}“ existiert bereits. Verwenden Sie einen anderen Barcode oder bearbeiten Sie das vorhandene Produkt.",
+      "skuExists": "Ein Produkt mit dieser SKU existiert bereits. Verwenden Sie eine andere SKU oder bearbeiten Sie das vorhandene Produkt.",
+      "skuExistsNamed": "Ein Produkt mit der SKU „{{sku}}“ existiert bereits. Verwenden Sie eine andere SKU oder bearbeiten Sie das vorhandene Produkt.",
+      "cannotDelete": "Das Produkt kann nicht gelöscht werden: {{reasons}}"
+    },
+    "serviceType": {
+      "duplicateName": "Ein Diensttyp mit diesem Namen existiert bereits.",
+      "notFoundRefresh": "Diensttyp nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notFound": "Diensttyp nicht gefunden.",
+      "inUse": "Der Diensttyp kann nicht gelöscht werden, da er derzeit von einem oder mehreren Diensten verwendet wird.",
+      "inUseByCount": "Der Diensttyp kann nicht gelöscht werden, da er derzeit von {{serviceCount}} Dienst(en) verwendet wird."
+    },
+    "rateTier": {
+      "overlap": "Staffelbereiche dürfen sich nicht überschneiden.",
+      "notFound": "Satzstaffel nicht gefunden. Aktualisieren Sie den Dienst und versuchen Sie es erneut.",
+      "invalid": "Die ausgewählte Satzstaffel ist ungültig. Aktualisieren Sie den Dienst und versuchen Sie es erneut.",
+      "serviceInvalid": "Der für diese Satzstaffel ausgewählte Dienst ist nicht mehr gültig. Aktualisieren Sie den Dienst und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Satzstaffel fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Satzstaffel fehlt: {{field}}."
+    }
   }
 }

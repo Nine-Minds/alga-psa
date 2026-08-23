@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTheme } from 'next-themes';
+import { THEME_PAIRS } from '@alga-psa/tenancy/lib/themePairs';
 
 // Buttons
 import { Button } from '@alga-psa/ui/components/Button';
@@ -37,6 +38,19 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
 // DropdownMenu
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from '@alga-psa/ui/components/DropdownMenu';
+// TextEditor — the real rich-text editor, so the .editor-paper well below is the
+// one users actually type into rather than a div wearing its class.
+import { TextEditor } from '@alga-psa/ui/editor';
+// DataTable — the real table, so row/status colours are inspected in situ.
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type { ColumnDefinition } from '@alga-psa/types';
+// Real skeleton components — rendered rather than mimed, so this page cannot
+// drift from what the app actually shows while loading.
+import ChartSkeleton from '@alga-psa/ui/components/skeletons/ChartSkeleton';
+import TaskFormSkeleton from '@alga-psa/ui/components/skeletons/TaskFormSkeleton';
+import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
+// BentoTile — the ticket grid surface (110 render sites)
+import { BentoTile } from '@alga-psa/ui/components/bento';
 // EmptyState
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 // Alert
@@ -65,6 +79,141 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </section>
   );
 }
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Contrast review
+//
+// Every foreground/background token pair still measuring under WCAG AA 4.5:1
+// somewhere in the app, rendered live. The ratio is computed from the BROWSER's
+// resolved colours, not from a table baked in here — so switch mode or pair
+// above and every number below re-measures against what is actually painted.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ContrastOccurrence { el: string; file: string; line: number }
+interface ContrastPair {
+  fg: string;
+  bg: string;
+  fgA?: number;
+  bgA?: number;
+  /** chip = brand text on a same-family tint · muted = text on a subtle surface */
+  group: 'chip' | 'muted' | 'other';
+  staticWorst: number;
+  worstTheme: string;
+  occ: ContrastOccurrence[];
+}
+
+const CONTRAST_REVIEW: ContrastPair[] = [
+  // Empty: the audit reports 0 of 114 token fg/bg sites below AA in any of the
+  // 18 theme-modes. Add an entry only to stage a newly-found pair for review.
+];
+
+function parseRgb(v: string): [number, number, number] | null {
+  const m = v.match(/rgba?\(([^)]+)\)/);
+  if (!m) return null;
+  const p = m[1].split(/[\s,\/]+/).map(Number).filter((n) => !Number.isNaN(n));
+  return p.length >= 3 ? [p[0], p[1], p[2]] : null;
+}
+function chan(c: number) {
+  const x = c / 255;
+  return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+}
+function lum(c: [number, number, number]) {
+  return 0.2126 * chan(c[0]) + 0.7152 * chan(c[1]) + 0.0722 * chan(c[2]);
+}
+function ratioOf(a: [number, number, number], b: [number, number, number]) {
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+/** Flatten a translucent fill onto what sits behind it, the way the screen does. */
+function composite(c: [number, number, number], on: [number, number, number], a: number): [number, number, number] {
+  return [0, 1, 2].map((i) => Math.round(a * c[i] + (1 - a) * on[i])) as [number, number, number];
+}
+
+function ContrastRow({ pair, themeKey }: { pair: ContrastPair; themeKey: string }) {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const [live, setLive] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const cs = getComputedStyle(el);
+    const root = getComputedStyle(document.documentElement);
+    const read = (token: string) => parseRgb(`rgb(${root.getPropertyValue(token).trim()})`);
+    const card = read('--color-card') ?? [255, 255, 255];
+    let fg = read(pair.fg);
+    let bg = read(pair.bg);
+    if (!fg || !bg) { setLive(null); return; }
+    if (pair.bgA) bg = composite(bg, card, pair.bgA);
+    if (pair.fgA) fg = composite(fg, bg, pair.fgA);
+    setLive(ratioOf(fg, bg));
+    void cs;
+  }, [pair, themeKey]);
+
+  const bgCss = pair.bgA
+    ? `rgb(var(${pair.bg}) / ${pair.bgA})`
+    : `rgb(var(${pair.bg}))`;
+  const fgCss = pair.fgA
+    ? `rgb(var(${pair.fg}) / ${pair.fgA})`
+    : `rgb(var(${pair.fg}))`;
+  const band = live === null ? 'unknown' : live < 3 ? 'severe' : live < 4.5 ? 'muted' : 'passes';
+  const bandColor =
+    band === 'severe' ? 'rgb(var(--color-status-error))'
+    : band === 'muted' ? 'rgb(var(--color-status-warning))'
+    : 'rgb(var(--color-status-success))';
+
+  return (
+    <div className="flex items-center gap-3 py-1.5 border-b border-[rgb(var(--color-border-200))] last:border-b-0">
+      <div ref={ref} className="rounded px-3 py-2 text-sm min-w-[220px]"
+           style={{ background: bgCss, color: fgCss }}>
+        The quick brown fox — 14px
+      </div>
+      <div className="w-16 text-right text-sm font-mono" style={{ color: bandColor }}>
+        {live === null ? '—' : `${live.toFixed(2)}:1`}
+      </div>
+      <div className="w-20 text-[10px] uppercase tracking-wide text-[rgb(var(--color-text-400))]">
+        {pair.group}
+      </div>
+      <div className="flex-1 min-w-0 text-xs text-[rgb(var(--color-text-500))]">
+        <div className="truncate">
+          <code>{pair.fg.replace('--color-', '')}{pair.fgA ? `/${pair.fgA}` : ''}</code>
+          {' on '}
+          <code>{pair.bg.replace('--color-', '')}{pair.bgA ? `/${pair.bgA}` : ''}</code>
+          <span className="opacity-70"> · worst {pair.staticWorst}:1 in {pair.worstTheme}</span>
+        </div>
+        <div className="opacity-80 mt-0.5 flex flex-wrap gap-x-3">
+          {pair.occ.map((o) => (
+            <span key={`${o.file}:${o.line}`} className="whitespace-nowrap">
+              <code>{o.el}</code> in {o.file}:{o.line}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface DemoRow { id: string; title: string; client: string; status: string; state?: string }
+
+// Shaped like a real ticket list so the table is exercised the way the app uses it.
+const demoRows: DemoRow[] = [
+  { id: 'TICKET001074', title: 'Workstation freezing during shift changeover', client: 'Cascade Manufacturing', status: 'Scheduled' },
+  { id: 'TICKET001073', title: 'Windows update fails repeatedly', client: 'Cascade Manufacturing', status: 'Scheduled', state: 'selected' },
+  { id: 'TICKET001072', title: 'Replace failing SSD — SMART warnings', client: 'Northstar Dental', status: 'In Progress' },
+  { id: 'TICKET001071', title: 'Repro Create+View bug', client: 'Queen of Hearts Ltd', status: 'Awaiting Client' },
+];
+
+const demoColumns: ColumnDefinition<DemoRow>[] = [
+  { title: 'Ticket', dataIndex: 'id', width: '20%' },
+  { title: 'Title', dataIndex: 'title' },
+  { title: 'Client', dataIndex: 'client', width: '22%' },
+  {
+    title: 'Status',
+    dataIndex: 'status',
+    width: '16%',
+    render: (value: string) => <Badge variant="default">{value}</Badge>,
+  },
+];
 
 const sidebarItems = [
   { name: 'Dashboard' },
@@ -149,6 +298,21 @@ function SubSection({ label, children }: { label: string; children: React.ReactN
 export default function ComponentShowcasePage() {
   const { theme, setTheme, resolvedTheme } = useTheme();
 
+  // Theme-pair switcher. The pair is normally server-rendered onto <html> from
+  // tenant settings; here we drive the same attribute directly so every surface
+  // below can be checked against all nine pairs without changing tenant config.
+  const [pair, setPair] = useState<string>('alga');
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.getAttribute('data-theme-pair');
+    if (pair === 'alga') root.removeAttribute('data-theme-pair');
+    else root.setAttribute('data-theme-pair', pair);
+    return () => {
+      if (previous) root.setAttribute('data-theme-pair', previous);
+      else root.removeAttribute('data-theme-pair');
+    };
+  }, [pair]);
+
   // State for interactive components
   const [switchChecked, setSwitchChecked] = useState(false);
   const [switch2Checked, setSwitch2Checked] = useState(true);
@@ -199,6 +363,24 @@ export default function ComponentShowcasePage() {
               <Monitor className="h-4 w-4 mr-1" /> System
             </Button>
           </div>
+        </div>
+        <div className="max-w-7xl mx-auto mt-2 flex items-center gap-2 flex-wrap">
+          <span className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))] mr-1">Pair</span>
+          {['alga', ...THEME_PAIRS.map((p) => p.id).filter((id) => id !== 'alga' && id !== 'custom')].map((id) => (
+            <button
+              key={id}
+              id={`theme-pair-${id}`}
+              type="button"
+              onClick={() => setPair(id)}
+              className={`rounded px-2 py-1 text-xs font-medium border transition-colors ${
+                pair === id
+                  ? 'chip-primary border-[rgb(var(--color-primary-500))]'
+                  : 'bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-700))] border-[rgb(var(--color-border-200))] hover:border-[rgb(var(--color-primary-400))]'
+              }`}
+            >
+              {id}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -296,6 +478,28 @@ export default function ComponentShowcasePage() {
               </div>
             </div>
           </SubSection>
+
+          <SubSection label="Secondary text — the retuned rung">
+
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            Rather than rewrite the ~470 places that read <code>text-500</code>, the rung itself moved in
+            the eight pairs that failed AA against their own tinted surfaces (slate, sky, ocean, forest,
+            sunset, cappuccino). Worst is now <strong>4.56:1</strong>, was 3.38:1. Ramp order is preserved
+            in every pair.
+          </p>
+          <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated p-4 flex flex-wrap gap-3">
+            {(['card', 'background', 'border-50', 'border-100'] as const).map((bg) => (
+              <div key={bg} className="rounded p-3 space-y-1" style={{ background: `rgb(var(--color-${bg}))` }}>
+                <div className="text-[10px] uppercase tracking-wide text-[rgb(var(--color-text-500))]">{bg}</div>
+                {(['text-500', 'text-600', 'text-700'] as const).map((fg) => (
+                  <div key={fg} className="text-sm" style={{ color: `rgb(var(--color-${fg}))` }}>
+                    {fg} — secondary copy
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          </SubSection>
         </Section>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -342,6 +546,7 @@ export default function ComponentShowcasePage() {
               <Button id="btn-disabled-ghost" variant="ghost" disabled>Disabled Ghost</Button>
             </div>
           </SubSection>
+
         </Section>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -368,6 +573,45 @@ export default function ComponentShowcasePage() {
               <Badge variant="primary" size="md">Medium</Badge>
               <Badge variant="primary" size="lg">Large</Badge>
             </div>
+          </SubSection>
+
+          <SubSection label="Chips — the shipped rule">
+
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            51 hand-rolled badge/pill/tag styles collapsed into five classes. The fill carries the
+            semantics; the lettering is <code>text-900</code>, which flips with the mode — so there is
+            one rule per family and no <code>dark:</code> variant anywhere. Worst measured pair across
+            all 18 theme-modes and four surfaces is <strong>9.53:1</strong>; it used to be 1.05:1.
+          </p>
+          <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated p-4">
+            <div className="flex flex-wrap gap-2">
+              {(['chip-primary', 'chip-secondary', 'chip-accent', 'chip-neutral', 'chip-danger'] as const).map((c) => (
+                <span key={c} className={`${c} inline-flex items-center rounded px-2 py-1 text-xs font-semibold`}>
+                  {c}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-[rgb(var(--color-text-500))]">
+              Outline is an inset ring, not a border, so a chip never changes box size — it drops into a
+              ternary branch whose sibling has none. High contrast raises the tint to 22% and makes the
+              ring solid, because it flattens primary and secondary to grey where a 14% tint reads as nothing.
+            </p>
+          </div>
+          <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-app-ground))] p-4 space-y-2">
+            <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))]">the same chips on app-ground, card and border-50</div>
+            <div className="flex flex-wrap gap-3">
+              {(['card', 'border-50', 'border-100'] as const).map((bg) => (
+                <div key={bg} className="rounded p-3 space-y-2" style={{ background: `rgb(var(--color-${bg}))` }}>
+                  <div className="text-[10px] uppercase tracking-wide text-[rgb(var(--color-text-500))]">{bg}</div>
+                  <div className="flex gap-1.5">
+                    {(['chip-primary', 'chip-accent', 'chip-danger'] as const).map((c) => (
+                      <span key={c} className={`${c} inline-flex items-center rounded px-2 py-0.5 text-[11px] font-semibold`}>chip</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           </SubSection>
         </Section>
 
@@ -1050,23 +1294,228 @@ export default function ComponentShowcasePage() {
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* TABLE STATUS ROW COLORS */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
-        <Section title="Table Status Colors">
-          <div className="space-y-1 max-w-lg">
-            <div className="px-4 py-3 rounded-md" style={{ backgroundColor: 'rgb(var(--color-table-row-alt))' }}>
-              <span className="text-sm">Alternate Row</span>
+        <Section title="DataTable">
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            The real <code>DataTable</code>, not swatches — so its card surface, header rule, row
+            dividers, hover and selected states are inspected exactly as they ship. Row tints come
+            from <code>--color-table-*</code>; the container carries <code>.card-elevated</code>.
+          </p>
+          <DataTable
+            id="uikit-datatable"
+            data={demoRows}
+            columns={demoColumns}
+            pagination={false}
+            rowClassName={(r) => (r.state === 'selected' ? 'bg-[rgb(var(--color-table-selected))]' : '')}
+          />
+        </Section>
+
+        {/* Everything below exists so the theming work can be inspected in one
+            place: the surfaces and token families that were silently wrong in
+            one mode — literals that cannot invert, ramp steps sitting too close,
+            and shadows tuned for a white page. */}
+
+        <Section title="Card Elevation">
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            <code>.card-elevated</code> replaces Tailwind&apos;s <code>shadow-*</code> on card surfaces.
+            Dark carries roughly 8&times; the alpha of light for the same apparent lift — a 5% shadow
+            over a near-black page has nothing left to darken.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Baseline only — a bare surface with NO elevation, to compare against.
+                Deliberately hand-rolled: there is no component for "unstyled card". */}
+            <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+              <div className="font-medium text-[rgb(var(--color-text-900))]">No elevation</div>
+              <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">baseline, border only</div>
             </div>
-            <div className="px-4 py-3 rounded-md" style={{ backgroundColor: 'rgb(var(--color-table-hover))' }}>
-              <span className="text-sm">Hover Row</span>
+            {/* The real component — Card carries .card-elevated itself, so this is
+                what ships, not a copy of its class string. */}
+            <Card className="p-4">
+              <div className="font-medium text-[rgb(var(--color-text-900))]">&lt;Card&gt;</div>
+              <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">real component, resting lift</div>
+            </Card>
+            <Card className="p-4 card-elevated-hover transition-shadow">
+              <div className="font-medium text-[rgb(var(--color-text-900))]">&lt;Card&gt; + hover</div>
+              <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">hover me</div>
+            </Card>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <BentoTile id="uikit-bento" title="BentoTile" subtitle="the ticket Grid surface">
+              <p className="text-sm text-[rgb(var(--color-text-600))]">
+                Shared by 110 render sites. Border and elevation both come from tokens.
+              </p>
+            </BentoTile>
+            <ContentCard id="uikit-contentcard" title="ContentCard">
+              <p className="text-sm text-[rgb(var(--color-text-600))]">The entity-view surface.</p>
+            </ContentCard>
+          </div>
+        </Section>
+
+        <Section title="Surface Ladder">
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            Page ground &rarr; card &rarr; border steps. Every rung must stay distinguishable from its
+            neighbours in both modes; the dark ramp used to sit about a third as far apart as light.
+          </p>
+          <div className="rounded-lg p-4 bg-[rgb(var(--color-app-ground))] space-y-3">
+            <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))]">app-ground (this panel)</div>
+            <div className="rounded-md p-3 bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))]">
+              <div className="text-sm text-[rgb(var(--color-text-900))]">card + border-200</div>
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {['border-50', 'border-100', 'border-200', 'border-300'].map((t) => (
+                  <div key={t} className="rounded p-2 text-[11px] text-[rgb(var(--color-text-700))]"
+                       style={{ background: `rgb(var(--color-${t}))` }}>
+                    {t}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="px-4 py-3 rounded-md" style={{ backgroundColor: 'rgb(var(--color-table-selected))' }}>
-              <span className="text-sm">Selected Row</span>
+          </div>
+
+          <p className="text-sm text-[rgb(var(--color-text-500))]">
+            The ramp is monotonic in every pair <em>except</em> high contrast, which repurposes
+            200/300 as maximum-contrast hairlines &mdash; near-black on white, near-white on black.
+            Switch the pair above to see rungs 200/300 invert while 400 drops back to a mid grey.
+            That is intentional for <code>border-*</code>; it means those two rungs are never a fill.
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'].map((n) => (
+              <div key={n} className="w-[68px]">
+                <div className="h-10 rounded-t border border-[rgb(var(--color-border-400))] border-b-0"
+                     style={{ background: `rgb(var(--color-border-${n}))` }} />
+                <div className="rounded-b border border-[rgb(var(--color-border-400))] px-1 py-0.5 text-center text-[10px] text-[rgb(var(--color-text-600))]">
+                  {n}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
+              <div className="text-xs font-semibold text-[rgb(var(--color-text-900))]">Hairline &mdash; correct</div>
+              <div className="mt-2 rounded border border-[rgb(var(--color-border-200))] p-2 text-xs text-[rgb(var(--color-text-700))]">
+                border-[--color-border-200]
+              </div>
             </div>
-            <div className="px-4 py-3 rounded-md" style={{ backgroundColor: 'rgb(var(--color-table-status-approved))' }}>
-              <span className="text-sm">Approved Status</span>
+            <div className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
+              <div className="text-xs font-semibold text-[rgb(var(--color-text-900))]">Fill &mdash; use the surface end</div>
+              <div className="mt-2 flex gap-2">
+                <div className="flex-1 rounded p-2 text-xs text-[rgb(var(--color-text-700))] bg-[rgb(var(--color-border-100))]">border-100</div>
+                <div className="flex-1 rounded p-2 text-xs text-[rgb(var(--color-text-800))] bg-[rgb(var(--color-text-500)/0.14)]">text-500 / 0.14</div>
+              </div>
             </div>
-            <div className="px-4 py-3 rounded-md" style={{ backgroundColor: 'rgb(var(--color-table-status-warning))' }}>
-              <span className="text-sm">Warning Status</span>
+          </div>
+        </Section>
+
+        <Section title="Editor Paper">
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            <code>.editor-paper</code> — a shallow well pressed into the card. The tint comes from the
+            running pair&apos;s own primary/secondary, so every theme tints itself.
+          </p>
+          <Card className="p-4">
+            <div className="text-xs text-[rgb(var(--color-text-500))] mb-1">Write a reply</div>
+            {/* The real editor. Its own wrapper carries .editor-paper, so what you
+                see here is exactly what a ticket comment box renders. */}
+            <TextEditor id="uikit-text-editor" placeholder="Start typing…" />
+          </Card>
+        </Section>
+
+        <Section title="Keycaps">
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            The shortcuts cheatsheet. A cap is lit from above, so its face runs light-to-dark — a ramp
+            that inverts between modes, which is why it is four tokens rather than one value.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {['Q', 'W', 'E', 'R', 'T'].map((k) => (
+              <div key={k} className="w-14 h-11 rounded-md grid place-items-center text-xs font-medium"
+                   style={{ background: 'var(--keycap-face)', color: 'rgb(var(--color-text-700))',
+                            border: '1px solid var(--keycap-edge)',
+                            boxShadow: '0 1px 0 var(--keycap-edge), inset 0 1px 0 var(--keycap-gloss)' }}>
+                {k}
+              </div>
+            ))}
+            {['?', 'g g', '@'].map((k) => (
+              <div key={k} className="h-6 px-2 rounded grid place-items-center text-[11px] font-semibold font-mono"
+                   style={{ background: 'var(--keycap-flat)', color: 'rgb(var(--color-text-800))',
+                            border: '1px solid var(--keycap-edge)' }}>
+                {k}
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Status Colors & Contrast">
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            Each fill paired with its own foreground token. The fill is identical in both modes, so the
+            ink must NOT flip with the mode — every pair here clears WCAG AA (worst 4.63:1).
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {['success', 'warning', 'error'].map((k) => (
+              <div key={k} className="rounded-lg p-4 font-medium"
+                   style={{ background: `rgb(var(--color-status-${k}))`,
+                            color: `rgb(var(--color-status-${k}-foreground))` }}>
+                status-{k}
+                <div className="text-xs font-normal opacity-90 mt-1">fill + its foreground</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {['info', 'success', 'warning'].map((k) => (
+              <div key={k} className="rounded-lg p-4 text-sm font-medium border"
+                   style={{ background: `rgb(var(--badge-${k}-bg))`,
+                            color: `rgb(var(--badge-${k}-text))`,
+                            borderColor: `rgb(var(--badge-${k}-border))` }}>
+                badge-{k}
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Skeleton Family">
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            <code>.skeleton-fill</code> and <code>.skeleton-fill-strong</code>. Hand-rolled
+            {' '}<code>bg-gray-200</code> placeholders landed 8.4 luma off the card in dark against the
+            token&apos;s 24.9 — technically present, effectively invisible.
+          </p>
+          <Skeleton className="h-10 w-full" />
+          <p className="text-xs text-[rgb(var(--color-text-500))]">
+            The composed skeletons the app actually renders while loading — imported, not mimed,
+            so this page cannot drift from them.
+          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))] mb-2">ChartSkeleton</div>
+              <ChartSkeleton />
             </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))] mb-2">SettingsTabSkeleton</div>
+              <SettingsTabSkeleton />
+            </div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))] mb-2">TaskFormSkeleton</div>
+            <TaskFormSkeleton />
+          </div>
+        </Section>
+
+        <Section title="Contrast Review — clear">
+          <p className="text-sm text-[rgb(var(--color-text-500))] -mt-2">
+            Nothing left to call. The audit measures 114 element sites that pair a real foreground
+            token with a real background token; <strong>0</strong> fall under WCAG AA in any of the 18
+            theme-modes. It was 44 sites, worst 1.05:1. Anything found later lands in this table, still
+            measured live from the browser so switching mode or pair above re-measures every row.
+          </p>
+          <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs uppercase tracking-wide text-[rgb(var(--color-text-500))]">
+                {CONTRAST_REVIEW.length} pairs · {pair} · {resolvedTheme}
+              </div>
+              <div className="text-xs text-[rgb(var(--color-text-500))]">measured in-browser</div>
+            </div>
+            {CONTRAST_REVIEW.map((cp) => (
+              <ContrastRow
+                key={`${cp.fg}|${cp.bg}|${cp.fgA ?? ''}|${cp.bgA ?? ''}`}
+                pair={cp}
+                themeKey={`${pair}:${resolvedTheme}`}
+              />
+            ))}
           </div>
         </Section>
 

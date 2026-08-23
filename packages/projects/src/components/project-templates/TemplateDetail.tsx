@@ -127,7 +127,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                 {t('common:actions.back', 'Back')}
               </Button>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1 bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-900))] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))] rounded-full text-sm font-medium">
+                <div className="chip-primary flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium">
                   <FileText className="h-4 w-4" />
                   {t('templates.editor.templateBadge', 'Template')}
                 </div>
@@ -202,14 +202,12 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                     </div>
                   ) : (
                     phases.map((phase) => (
-                      <button
+                      <Button
                         key={phase.template_phase_id}
+                        id={`template-phase-${phase.template_phase_id}`}
+                        variant={selectedPhase?.template_phase_id === phase.template_phase_id ? 'soft' : 'ghost'}
                         onClick={() => setSelectedPhase(phase)}
-                        className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                          selectedPhase?.template_phase_id === phase.template_phase_id
-                            ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-900))] text-[rgb(var(--color-primary-900))] dark:text-[rgb(var(--color-primary-200))] font-medium'
-                            : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))] text-gray-700 dark:text-gray-300'
-                        }`}
+                        className="w-full h-auto flex-col items-start justify-start rounded-lg px-3 py-2 text-left"
                       >
                         <div className="text-sm font-medium">{phase.phase_name}</div>
                         {phase.duration_days && (
@@ -219,7 +217,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                             })}
                           </div>
                         )}
-                      </button>
+                      </Button>
                     ))
                   )}
                 </div>
@@ -335,7 +333,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
 function TaskCard({ task }: { task: IProjectTemplateTask }) {
   const { t } = useTranslation(['features/projects']);
   return (
-    <div className="bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 card-elevated card-elevated-hover transition-shadow">
       <div className="font-medium text-sm mb-1">{task.task_name}</div>
       {task.description && (
         <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">{extractTaskDescriptionText(task.description_rich_text ?? task.description)}</div>

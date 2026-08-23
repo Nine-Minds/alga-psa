@@ -196,5 +196,24 @@
       "loadClientsFailed": "Nie udało się załadować klientów. Spróbuj ponownie.",
       "submitFailed": "Nie udało się dodać kredytu. Spróbuj ponownie."
     }
+  },
+  "errors": {
+    "credit": {
+      "notFoundRefresh": "Nie znaleziono kredytu. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "originalTransactionMissing": "Nie można odnaleźć pierwotnej transakcji kredytowej. Odśwież stronę i spróbuj ponownie.",
+      "sourceNotFound": "Nie znaleziono kredytu źródłowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "targetClientNotFound": "Nie znaleziono klienta docelowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "insufficientTransferAmount": "Pozostała kwota jest niewystarczająca do przeniesienia.",
+      "invalidValue": "Jedna z wybranych wartości kredytu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany kredyt, klient, faktura lub transakcja już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Istnieje już sprzeczna transakcja kredytowa. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości kredytu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola kredytu.",
+      "missingFieldNamed": "Brakuje wymaganego pola kredytu: {{field}}."
+    },
+    "prepaidAlerts": {
+      "settingsInvalid": "Nieprawidłowe ustawienia alertów salda przedpłaconego",
+      "updateFailed": "Nie udało się zaktualizować ustawień alertów salda przedpłaconego"
+    }
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -34,12 +35,14 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
   onResolve,
   onCancel
 }) => {
+  const { t } = useTranslation('common');
+
   const handleActionChange = (index: number, action: 'skip' | 'rename' | 'reorder') => {
     const conflict = conflicts[index];
     if (!conflict) return;
     
     const itemId = conflict.referenceItem?.standard_status_id || conflict.referenceItem?.name || `conflict_${index}`;
-    const itemName = conflict.referenceItem?.name || 'Unknown';
+    const itemName = conflict.referenceItem?.name || t('common.unknown', 'Unknown');
     const existingOrder = conflict.existingItem?.order_number || conflict.existingItem?.display_order || 0;
 
     const resolution: any = { action };
@@ -82,14 +85,14 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
         variant="outline"
         onClick={onCancel}
       >
-        Cancel
+        {t('actions.cancel', 'Cancel')}
       </Button>
       <Button
         id="apply-resolutions-button"
         onClick={onResolve}
         className="bg-primary-500 text-white hover:bg-primary-600"
       >
-        Apply Resolutions
+        {t('importConflicts.apply', 'Apply Resolutions')}
       </Button>
     </div>
   );
@@ -98,7 +101,7 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange(false)}
-      title="Resolve Import Conflicts"
+      title={t('importConflicts.title', 'Resolve Import Conflicts')}
       className="max-w-3xl"
       id="conflict-resolution-dialog"
       footer={footer}
@@ -109,7 +112,7 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-yellow-500" />
               <p className="text-sm text-gray-500">
-                Some items already exist. Choose how to handle each conflict.
+                {t('importConflicts.description', 'Some items already exist. Choose how to handle each conflict.')}
               </p>
             </div>
           </div>
@@ -118,7 +121,7 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
             <div className="space-y-6">
               {conflicts.map((conflict, index) => {
                 const itemId = conflict.referenceItem?.standard_status_id || conflict.referenceItem?.name || `conflict_${index}`;
-                const itemName = conflict.referenceItem?.name || 'Unknown';
+                const itemName = conflict.referenceItem?.name || t('common.unknown', 'Unknown');
                 const existingOrder = conflict.existingItem?.order_number || conflict.existingItem?.display_order || 0;
                 const resolution = resolutions[itemId] || { action: 'skip' };
                 
@@ -129,9 +132,11 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
                         {itemName}
                       </h3>
                       <p className="text-xs text-gray-500 mt-1">
-                        Conflict: {conflict.conflictType === 'name' ? 'Name already exists' : 
-                                  conflict.conflictType === 'order' ? `Order ${existingOrder} already taken` :
-                                  'Item already exists'}
+                        {conflict.conflictType === 'name'
+                          ? t('importConflicts.reason.name', 'Conflict: this name already exists')
+                          : conflict.conflictType === 'order'
+                            ? t('importConflicts.reason.order', 'Conflict: order {{order}} is already taken', { order: existingOrder })
+                            : t('importConflicts.reason.item', 'Conflict: this item already exists')}
                       </p>
                     </div>
                     
@@ -145,7 +150,7 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
                           onChange={() => handleActionChange(index, 'skip')}
                           className="w-4 h-4"
                         />
-                        <span className="font-normal">Skip this item</span>
+                        <span className="font-normal">{t('importConflicts.skip', 'Skip this item')}</span>
                       </label>
                       
                       {conflict.conflictType === 'name' && (
@@ -159,14 +164,14 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
                               onChange={() => handleActionChange(index, 'rename')}
                               className="w-4 h-4"
                             />
-                            <span className="font-normal">Import with a different name</span>
+                            <span className="font-normal">{t('importConflicts.rename', 'Import with a different name')}</span>
                           </label>
                           {resolution.action === 'rename' && (
                             <div className="ml-6">
                               <Input
                                 value={resolution.newName || `${itemName}_imported`}
                                 onChange={(e) => handleNameChange(index, e.target.value)}
-                                placeholder="Enter new name"
+                                placeholder={t('importConflicts.newNamePlaceholder', 'Enter new name')}
                                 className="max-w-xs"
                               />
                             </div>
@@ -185,7 +190,7 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
                               onChange={() => handleActionChange(index, 'reorder')}
                               className="w-4 h-4"
                             />
-                            <span className="font-normal">Import with a different order</span>
+                            <span className="font-normal">{t('importConflicts.reorder', 'Import with a different order')}</span>
                           </label>
                           {resolution.action === 'reorder' && (
                             <div className="ml-6">
@@ -193,7 +198,7 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
                                 type="number"
                                 value={resolution.newOrder || existingOrder + 1}
                                 onChange={(e) => handleOrderChange(index, parseInt(e.target.value) || 0)}
-                                placeholder="Enter new order"
+                                placeholder={t('importConflicts.newOrderPlaceholder', 'Enter new order')}
                                 className="max-w-xs"
                               />
                             </div>

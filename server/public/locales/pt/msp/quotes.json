@@ -798,5 +798,32 @@
     "labels": {
       "custom": "Personalizado"
     }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Permissão negada: não é possível criar cotações",
+      "update": "Permissão negada: não é possível atualizar cotações",
+      "read": "Permissão negada: não é possível ler cotações",
+      "delete": "Permissão negada: não é possível excluir cotações",
+      "readOne": "Permissão negada: não é possível ler a cotação",
+      "approve": "Permissão negada: não é possível aprovar cotações",
+      "updateApprovalSettings": "Permissão negada: não é possível atualizar as configurações de aprovação de cotações",
+      "readDocumentTemplates": "Permissão negada: não é possível ler os modelos de documento de cotação",
+      "modifyDocumentTemplates": "Permissão negada: não é possível modificar os modelos de documento de cotação",
+      "setDefaultDocumentTemplate": "Permissão negada: não é possível definir o modelo de documento de cotação padrão",
+      "deleteDocumentTemplates": "Permissão negada: não é possível excluir os modelos de documento de cotação"
+    },
+    "quote": {
+      "formInvalid": "O formulário de cotação contém valores inválidos. Revise-o e tente novamente.",
+      "notFoundRefresh": "Cotação não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "itemNotFoundRefresh": "Item da cotação não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "templateNotFoundRefresh": "Modelo de cotação não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores de cotação selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "A cotação, cliente, contato ou serviço selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração da cotação conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores da cotação não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório da cotação.",
+      "missingFieldNamed": "Falta um campo obrigatório da cotação: {{field}}."
+    }
   }
 }

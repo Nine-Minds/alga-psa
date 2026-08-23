@@ -162,6 +162,7 @@ jobs:
           chmod 600 secrets/*
 
       - name: Run Tier-1 integration subset
+        id: tier1
         if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
         working-directory: ./server
         run: npm run test:integration:tier1 -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
@@ -169,37 +170,10 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=8192'
 
       - name: Run full integration suite
+        id: full
         if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
         working-directory: ./server
         run: npm run test:integration:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
-        env:
-          NODE_OPTIONS: '--max-old-space-size=8192'
-
-      # src/test/infrastructure is the original DB-backed billing-engine suite
-      # (invoice generation, tax, credits). It shares this job's Postgres rather
-      # than running a parallel workflow. Non-blocking until it has a green
-      # baseline; flip continue-on-error off once stable.
-      # `always()` lets the infra suite build its baseline even when the
-      # integration step above fails — without it a red nightly leaves the
-      # infra suite with no data at all.
-      # timeout-minutes bounds a hang: continue-on-error ignores a failure but NOT
-      # a hung process, so without this a stuck infra run would consume the whole
-      # job timeout and cancel the (passing) integration step above.
-      - name: Run Tier-1 infrastructure subset (non-blocking)
-        if: always() && github.event_name != 'schedule' && github.event.inputs.suite != 'full'
-        continue-on-error: true
-        timeout-minutes: 15
-        working-directory: ./server
-        run: npm run test:infrastructure:tier1
-        env:
-          NODE_OPTIONS: '--max-old-space-size=8192'
-
-      - name: Run full infrastructure suite (non-blocking)
-        if: always() && (github.event_name == 'schedule' || github.event.inputs.suite == 'full')
-        continue-on-error: true
-        timeout-minutes: 60
-        working-directory: ./server
-        run: npm run test:infrastructure:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-infrastructure.json
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
 
@@ -207,8 +181,11 @@ jobs:
       # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
       # Tier-1 rows are recorded on push to main only — PR runs would be noisy
       # and fork PRs don't get secrets anyway.
+      # Recording is gated on the suite step's *outcome* rather than always():
+      # a run the job timeout cancelled reports whatever fraction of the suite
+      # had finished, which lands in the sheet as a vacuous green.
       - name: Record Tier-1 metrics to Google Sheet
-        if: always() && github.event_name == 'push'
+        if: always() && github.event_name == 'push' && (steps.tier1.outcome == 'success' || steps.tier1.outcome == 'failure')
         continue-on-error: true
         run: node scripts/record-test-metrics.mjs
         env:
@@ -218,7 +195,7 @@ jobs:
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 
       - name: Record full-suite metrics to Google Sheet
-        if: always() && (github.event_name == 'schedule' || github.event.inputs.suite == 'full')
+        if: always() && (steps.full.outcome == 'success' || steps.full.outcome == 'failure')
         continue-on-error: true
         run: node scripts/record-test-metrics.mjs
         env:
@@ -227,8 +204,127 @@ jobs:
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 
+  # src/test/infrastructure is the original DB-backed billing-engine suite
+  # (invoice generation, tax, credits). It ran as two extra steps inside the
+  # integration job until the pair outgrew the 90-minute budget and the job
+  # timeout cancelled the integration suite mid-run (2026-08-21). Its own job
+  # gives each suite independent duration headroom and keeps infra's pool
+  # problems out of the integration run.
+  # Non-blocking until it has a green baseline; drop continue-on-error once
+  # stable — that is the whole point of collecting the baseline.
+  infrastructure-tests:
+    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full') && 'Full infrastructure suite' || 'Tier-1 infrastructure subset' }}
+    needs: check-changes
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: test_password
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: test_password
+      APP_ENV: test
+      NODE_ENV: test
+      REQUIRE_DB: '1'
+      VITEST_SEED: '20260610'
+      REAL_REDIS: '1'
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache Nx computation cache
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-cache-${{ runner.os }}-${{ hashFiles('package-lock.json', 'nx.json', 'tsconfig.base.json', '**/project.json') }}
+          restore-keys: |
+            nx-cache-${{ runner.os }}-
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      - name: Create secrets files
+        run: |
+          mkdir -p secrets
+          echo -n "test_password" > secrets/postgres_password
+          echo -n "test_password" > secrets/db_password_server
+          chmod 600 secrets/*
+
+      # timeout-minutes bounds a hang below the job budget so the recording
+      # step still gets to run.
+      - name: Run Tier-1 infrastructure subset
+        id: tier1
+        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
+        timeout-minutes: 15
+        working-directory: ./server
+        run: npm run test:infrastructure:tier1
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Run full infrastructure suite
+        id: full
+        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
+        timeout-minutes: 35
+        working-directory: ./server
+        run: npm run test:infrastructure:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-infrastructure.json
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
       - name: Record infrastructure metrics to Google Sheet
-        if: always() && (github.event_name == 'schedule' || github.event.inputs.suite == 'full')
+        if: always() && (steps.full.outcome == 'success' || steps.full.outcome == 'failure')
         continue-on-error: true
         run: node scripts/record-test-metrics.mjs
         env:

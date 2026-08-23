@@ -54,7 +54,7 @@ import {
     createAssetRelationshipSchema
 } from '../lib/schemas/asset.schema';
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
@@ -165,10 +165,15 @@ function normalizeBulkAssetIds(assetIds: string[]): string[] {
     return ids;
 }
 
-function assetActionErrorMessage(error: unknown, fallback: string): string {
+// Reports failure as a bare string, so withAuth's boundary never sees the
+// payload's messageKey. Localize before flattening.
+async function assetActionErrorMessage(error: unknown, fallback: string): Promise<string> {
     const expected = expectedAssetActionError(error);
     if (expected) {
-        const candidate = expected as unknown as { permissionError?: unknown; actionError?: unknown };
+        const candidate = (await localizeActionError(expected)) as unknown as {
+            permissionError?: unknown;
+            actionError?: unknown;
+        };
         return typeof candidate.permissionError === 'string'
             ? candidate.permissionError
             : String(candidate.actionError ?? fallback);
@@ -191,6 +196,19 @@ function assetActionErrorMessage(error: unknown, fallback: string): string {
 
 function expectedAssetActionError(error: unknown): AssetActionError | null {
     return assetActionErrorFrom(error);
+}
+
+function serializedAssetValidationError(error: z.ZodError): Error {
+    return new Error(JSON.stringify({
+        kind: 'validation',
+        issues: error.issues.map((issue) => ({
+            path: issue.path,
+            message: issue.message,
+            code: issue.code,
+            ...('received' in issue ? { received: issue.received } : {}),
+            ...('params' in issue ? { params: issue.params } : {}),
+        })),
+    }));
 }
 
 function buildBulkAssetActionResponse(results: BulkAssetActionResult[]): BulkAssetActionResponse {
@@ -859,6 +877,9 @@ export async function createAssetRecord(
             validateData(createAssetSchema, data);
         } catch (error) {
             console.error('Input validation error:', error);
+            if (error instanceof z.ZodError) {
+                throw serializedAssetValidationError(error);
+            }
             throw new Error('Invalid asset input data. Review required fields and try again.');
         }
 
@@ -993,12 +1014,8 @@ export async function createAssetRecord(
         } catch (error) {
             console.error('Output validation error:', error);
             // Extract Zod validation details if available
-            if (error && typeof error === 'object' && 'issues' in error) {
-                const zodError = error as { issues: Array<{ path: (string | number)[]; message: string }> };
-                const details = zodError.issues
-                    .map(issue => `${issue.path.join('.')}: ${issue.message}`)
-                    .join('; ');
-                throw new Error(`Asset validation failed: ${details}`);
+            if (error instanceof z.ZodError) {
+                throw serializedAssetValidationError(error);
             }
             throw new Error('Server error: Invalid output data format');
         }
@@ -1291,14 +1308,7 @@ export async function updateAssetRecord(
         if (error instanceof z.ZodError) {
             // Serialize field-level issues so the client can render them inline + in a toast
             // without losing the user's in-progress form data.
-            throw new Error(JSON.stringify({
-                kind: 'validation',
-                issues: error.issues.map((issue) => ({
-                    path: issue.path,
-                    message: issue.message,
-                    code: issue.code,
-                })),
-            }));
+            throw serializedAssetValidationError(error);
         }
         if (isTypedAssetWriteError(error)) {
             // invalid_asset_type / attribute-schema issues already carry a
@@ -1471,7 +1481,7 @@ export async function deleteAssetRecord(
             success: false,
             canDelete: false,
             code: 'VALIDATION_FAILED',
-            message: assetActionErrorMessage(expected, 'Failed to delete asset'),
+            message: await assetActionErrorMessage(expected, 'Failed to delete asset'),
             dependencies: [],
             alternatives: []
         };
@@ -1530,7 +1540,7 @@ export const bulkUpdateAssets = withAuth(async (
                     return {
                         asset_id,
                         success: false,
-                        error: assetActionErrorMessage(expected, 'Failed to update asset'),
+                        error: await assetActionErrorMessage(expected, 'Failed to update asset'),
                     };
                 }
                 return { asset_id, success: true, asset };
@@ -1538,7 +1548,7 @@ export const bulkUpdateAssets = withAuth(async (
                 return {
                     asset_id,
                     success: false,
-                    error: assetActionErrorMessage(error, 'Failed to update asset'),
+                    error: await assetActionErrorMessage(error, 'Failed to update asset'),
                 };
             }
         }
@@ -1580,7 +1590,7 @@ export const bulkDeleteAssets = withAuth(async (
                     return {
                         asset_id,
                         success: false,
-                        error: assetActionErrorMessage(expected, 'Failed to delete asset'),
+                        error: await assetActionErrorMessage(expected, 'Failed to delete asset'),
                     };
                 }
                 const success = result.success === true;
@@ -1593,7 +1603,7 @@ export const bulkDeleteAssets = withAuth(async (
                 return {
                     asset_id,
                     success: false,
-                    error: assetActionErrorMessage(error, 'Failed to delete asset'),
+                    error: await assetActionErrorMessage(error, 'Failed to delete asset'),
                 };
             }
         }

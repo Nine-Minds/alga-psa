@@ -461,5 +461,39 @@
       "topIssues": "Geen negatieve reacties in deze periode.",
       "recentResponses": "Geen reacties in deze periode."
     }
+  },
+  "errors": {
+    "template": {
+      "notFound": "Enquêtesjabloon niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "trigger": {
+      "notFound": "Enquêtetrigger niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "templateRequired": "Kies een bestaand enquêtesjabloon voordat u de trigger opslaat."
+    },
+    "survey": {
+      "invalidValue": "Een van de geselecteerde enquêtewaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde enquêtesjabloon of gerelateerde record bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een enquêterecord met deze gegevens.",
+      "notAllowed": "Een van de enquêtewaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht enquêteveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht enquêteveld: {{field}}.",
+      "invalidData": "De enquêtegegevens zijn ongeldig. Controleer het formulier en probeer het opnieuw."
+    },
+    "options": {
+      "boardsFailed": "Kan de borden niet laden.",
+      "statusesFailed": "Kan de statussen niet laden.",
+      "prioritiesFailed": "Kan de prioriteiten niet laden.",
+      "triggerOptionsFailed": "Kan de opties voor enquêtetriggers niet laden. Probeer het opnieuw."
+    },
+    "response": {
+      "linkInvalidOrUsed": "Deze feedbacklink is niet meer geldig of is al gebruikt.",
+      "ratingRequired": "Kies een beoordeling uit de getoonde opties voordat u verzendt.",
+      "linkInvalidOrExpired": "Deze feedbacklink is ongeldig of verlopen.",
+      "ticketInactive": "Deze feedbacklink is niet meer gekoppeld aan een actief ticket. Neem contact op met uw technicus.",
+      "alreadyCompleted": "Deze enquête is al ingevuld.",
+      "missingField": "Er ontbreekt een verplicht feedbackveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht feedbackveld: {{field}}.",
+      "invalidData": "De antwoordgegevens van de enquête zijn ongeldig. Controleer uw feedback en probeer het opnieuw."
+    }
   }
 }

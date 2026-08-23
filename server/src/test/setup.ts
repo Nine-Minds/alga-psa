@@ -420,6 +420,9 @@ vi.mock('@alga-psa/auth', async () => {
     withAuth,
     withAuthCheck,
     withOptionalAuth,
+    // Tests run outside a request scope, so the real helper would fall back to
+    // English anyway; the identity keeps action-error payloads byte-identical.
+    localizeActionError: vi.fn(async (result: any) => result),
     runWithApiKeyUser,
     getApiKeyUserOverride,
     getSessionCookieName: vi.fn(() => 'authjs.session-token'),

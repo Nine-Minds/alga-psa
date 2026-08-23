@@ -267,7 +267,9 @@
         "licenseLimitReached": "Sie haben Ihr MSP-Benutzerlizenzlimit erreicht.",
         "soloPlanLimit": "Der Solo-Tarif ist auf 1 Benutzer begrenzt. Führen Sie ein Upgrade auf Pro durch, um weitere Benutzer hinzuzufügen.",
         "revokeInvitation": "Einladung konnte nicht widerrufen werden",
-        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet"
+        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet",
+        "createContact": "Kontakt konnte nicht erstellt werden: {{reason}}",
+        "unknown": "Unbekannter Fehler"
       }
     },
     "invitations": {
@@ -1689,7 +1691,138 @@
   },
   "timeEntry": {
     "title": "Zeiterfassungseinstellungen",
-    "description": "Verwalten Sie Ihre Zeiterfassungseinstellungen und Zeiträume"
+    "description": "Verwalten Sie Ihre Zeiterfassungseinstellungen und Zeiträume",
+    "timePeriods": {
+      "title": "Abrechnungszeitraum-Einstellungen",
+      "description": "Abrechnungszeiträume konfigurieren",
+      "loading": "Abrechnungszeitraum-Einstellungen werden geladen...",
+      "addNew": "Neue Abrechnungszeitraum-Einstellung hinzufügen",
+      "help": {
+        "title": "Abrechnungszeitraum-Einstellungen verstehen",
+        "intro": "Sie können mehrere aktive Einstellungen definieren, um komplexe Abrechnungszyklen abzubilden. Der Endtag ist der letzte Tag, der zum Zeitraum gehört.",
+        "exampleIntro": "Beispiel für halbmonatliche Zeiträume (1.–15. und 16.–Monatsende):",
+        "firstSettingLabel": "Einstellung 1:",
+        "firstSetting": "Starttag: 1, Endtag: 15 → Zeitraum umfasst den 1. bis 15.",
+        "secondSettingLabel": "Einstellung 2:",
+        "secondSetting": "Starttag: 16, Endtag: Monatsende → Zeitraum umfasst den 16. bis zum letzten Tag",
+        "outro": "Das System nutzt diese Einstellungen, um Zeiträume vorzuschlagen und zu erzeugen. Achten Sie darauf, dass die Einstellungen den gesamten Zyklus lückenlos abdecken."
+      },
+      "form": {
+        "requiredFields": "Bitte füllen Sie die erforderlichen Felder aus:",
+        "frequency": "Häufigkeit *",
+        "frequencyPlaceholder": "Häufigkeit eingeben",
+        "frequencyUnit": "Häufigkeitseinheit *",
+        "frequencyUnitPlaceholder": "Häufigkeitseinheit wählen",
+        "startDay": "Starttag *",
+        "selectDay": "Tag wählen",
+        "startDayPlaceholder": "Starttag eingeben",
+        "endDay": "Endtag *",
+        "endDayPlaceholder": "Endtag eingeben",
+        "endOfUnit": "Ende: {{unit}}",
+        "endOfMonth": "Monatsende",
+        "startMonth": "Startmonat",
+        "endMonth": "Endmonat",
+        "startDayOfMonth": "Starttag im Monat *",
+        "endDayOfMonth": "Endtag im Monat *",
+        "add": "Abrechnungszeitraum-Einstellung hinzufügen"
+      },
+      "validation": {
+        "frequencyMin": "Die Häufigkeit muss mindestens 1 betragen",
+        "startDayRequired": "Starttag ist erforderlich",
+        "endDayRequired": "Endtag ist erforderlich",
+        "startDayOfMonthRequired": "Starttag im Monat ist erforderlich",
+        "endDayOfMonthRequired": "Endtag im Monat ist erforderlich"
+      },
+      "errors": {
+        "fetch": "Die Abrechnungszeitraum-Einstellungen konnten nicht geladen werden",
+        "overlap": "Diese Abrechnungszeitraum-Einstellung überschneidet sich mit einer bestehenden aktiven Einstellung.",
+        "add": "Die Abrechnungszeitraum-Einstellung konnte nicht hinzugefügt werden. Bitte prüfen Sie die Werte und versuchen Sie es erneut.",
+        "update": "Die Abrechnungszeitraum-Einstellung konnte nicht aktualisiert werden",
+        "delete": "Die Abrechnungszeitraum-Einstellung konnte nicht gelöscht werden"
+      },
+      "summary": {
+        "frequency": "Häufigkeit: alle {{count}} × {{unit}}",
+        "startDay": "Starttag: {{value}}",
+        "endDay": "Endtag: {{value}}",
+        "start": "Beginn: {{value}}",
+        "end": "Ende: {{value}}",
+        "effectiveFrom": "Gültig ab: {{value}}",
+        "effectiveTo": "Gültig bis: {{value}}",
+        "noEnd": "Kein Enddatum",
+        "notSet": "Nicht festgelegt"
+      },
+      "units": {
+        "day": "Tag",
+        "week": "Woche",
+        "month": "Monat",
+        "year": "Jahr"
+      },
+      "months": {
+        "1": "Januar",
+        "2": "Februar",
+        "3": "März",
+        "4": "April",
+        "5": "Mai",
+        "6": "Juni",
+        "7": "Juli",
+        "8": "August",
+        "9": "September",
+        "10": "Oktober",
+        "11": "November",
+        "12": "Dezember"
+      },
+      "weekDays": {
+        "1": "Montag",
+        "2": "Dienstag",
+        "3": "Mittwoch",
+        "4": "Donnerstag",
+        "5": "Freitag",
+        "6": "Samstag",
+        "7": "Sonntag"
+      }
+    },
+    "periods": {
+      "title": "Zeiträume",
+      "description": "Zeiträume für die Zeiterfassung anzeigen und verwalten",
+      "loading": "Zeiträume werden geladen ...",
+      "create": "Neuen Zeitraum erstellen",
+      "openMenu": "Menü öffnen",
+      "columns": {
+        "startDate": "Startdatum",
+        "endDate": "Enddatum",
+        "actions": "Aktionen"
+      },
+      "form": {
+        "createTitle": "Neuen Zeitraum erstellen",
+        "editTitle": "Zeitraum bearbeiten",
+        "suggestion": "Basierend auf Ihren Einstellungen wird der nächste Zeitraum vorgeschlagen.",
+        "frequency": "Häufigkeit: alle {{value}} × {{unit}}",
+        "overrideDates": "Vorgeschlagene Daten überschreiben",
+        "startDate": "Startdatum",
+        "startDatePlaceholder": "Startdatum auswählen",
+        "noEndDate": "Kein Enddatum",
+        "endDate": "Enddatum",
+        "endDatePlaceholder": "Enddatum auswählen",
+        "deletePeriod": "Zeitraum löschen",
+        "confirmDeleteTitle": "Löschen bestätigen",
+        "confirmDeleteBody": "Möchten Sie diesen Zeitraum wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "checkSettingsLink": "Bitte prüfen Sie Ihre Abrechnungszeitraum-Einstellungen."
+      },
+      "errors": {
+        "load": "Die Zeiträume konnten nicht geladen werden.",
+        "suggest": "Es konnte kein neuer Zeitraum vorgeschlagen werden",
+        "noApplicableSettings": "Keine passenden Abrechnungszeitraum-Einstellungen gefunden.",
+        "noSettings": "Keine Abrechnungszeitraum-Einstellungen vorhanden. Es kann kein neuer Zeitraum erstellt werden.",
+        "settingsRequired": "Ohne Einstellungen kann kein Zeitraum verwaltet werden.",
+        "startDateRequired": "Es muss ein Startdatum angegeben werden.",
+        "startBeforeEnd": "Das Startdatum muss vor dem Enddatum liegen.",
+        "overlap": "Der Zeitraum überschneidet sich mit einem bestehenden Zeitraum.",
+        "overlapRetry": "Dieser Zeitraum überschneidet sich mit einem bestehenden. Bitte wählen Sie andere Daten.",
+        "create": "Der Zeitraum konnte nicht erstellt werden.",
+        "delete": "Der Zeitraum konnte nicht gelöscht werden",
+        "unexpected": "Ein unerwarteter Fehler ist aufgetreten."
+      }
+    }
   },
   "billing": {
     "title": "Abrechnungseinstellungen",
@@ -1922,6 +2055,50 @@
     "loading": {
       "extensions": "Erweiterungen werden geladen...",
       "installer": "Installationsprogramm wird geladen..."
+    }
+  },
+  "policyManagement": {
+    "title": "Richtlinienverwaltung",
+    "upgradeDescription": "Die Richtlinienverwaltung ist eine Pro-Funktion. Führen Sie ein Upgrade durch, um auf erweiterte Richtliniensteuerungen zuzugreifen."
+  },
+  "roleManagement": {
+    "title": "Rollen verwalten",
+    "description": "Erstellen und verwalten Sie Rollen für den Zugriff auf das MSP- und das Kundenportal",
+    "columns": {
+      "roleNameRequired": "Rollenname *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Rollenname",
+      "roleNamePlaceholder": "Rollennamen eingeben",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Rollenbeschreibung eingeben"
+    },
+    "portal": {
+      "none": "Keine",
+      "access": "Portalzugriff",
+      "msp": "MSP-Portal",
+      "client": "Kundenportal",
+      "mspShort": "MSP",
+      "clientShort": "Kunde",
+      "required": "Eine Rolle muss Zugriff auf mindestens ein Portal haben"
+    },
+    "actions": {
+      "addRole": "Rolle hinzufügen",
+      "createRole": "Rolle erstellen"
+    },
+    "createDialog": {
+      "title": "Neue Rolle erstellen"
+    },
+    "deleteDialog": {
+      "entityFallback": "diese Rolle"
+    },
+    "adminDeleteDisabled": "Administratorrollen können nicht gelöscht werden, da sie Systemrollen sind",
+    "errors": {
+      "createFailed": "Rolle konnte nicht erstellt werden",
+      "updateFailed": "Rolle konnte nicht aktualisiert werden",
+      "validateDeletionFailed": "Das Löschen konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
+      "deleteFailed": "Rolle konnte nicht gelöscht werden"
     }
   },
   "security": {
@@ -2879,6 +3056,170 @@
         "confirm": "Trennen",
         "cancel": "Abbrechen"
       }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Berechtigung verweigert: Team kann nicht erstellt werden.",
+        "update": "Berechtigung verweigert: Team kann nicht aktualisiert werden.",
+        "modify": "Berechtigung verweigert: Team kann nicht geändert werden.",
+        "modifyMembers": "Berechtigung verweigert: Teammitglieder können nicht geändert werden.",
+        "view": "Berechtigung verweigert: Team kann nicht angezeigt werden.",
+        "viewAll": "Berechtigung verweigert: Teams können nicht angezeigt werden.",
+        "assignManager": "Berechtigung verweigert: Teamleitung kann nicht zugewiesen werden."
+      },
+      "notFoundRefresh": "Team nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "leadRequired": "Ein Team muss eine Teamleitung haben. Wählen Sie eine Teamleitung und versuchen Sie es erneut.",
+      "inactiveUser": "Inaktive Benutzer können keinem Team hinzugefügt werden.",
+      "cannotRemoveLead": "Die Teamleitung kann nicht entfernt werden. Weisen Sie zuerst eine neue Teamleitung zu.",
+      "invalidValue": "Einer der ausgewählten Teamwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicateMember": "Dieser Benutzer ist bereits Mitglied des Teams.",
+      "referenceMissing": "Die ausgewählte Teamleitung oder das Mitglied ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Teamfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Teamfeld fehlt: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien anzuzeigen",
+        "create": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien zu erstellen",
+        "update": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien zu aktualisieren",
+        "delete": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien zu löschen"
+      },
+      "policyNotFound": "SLA-Richtlinie nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "targetNotFound": "SLA-Richtlinienziel nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "priorityNotFound": "Ausgewählte Priorität nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "clientNotFound": "Ausgewählter Kunde nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "boardNotFound": "Ausgewähltes Board nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ticketNotFound": "Ticket nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicateTarget": "Für diese Priorität existiert in dieser Richtlinie bereits ein Ziel.",
+      "pauseRequiresBoardStatus": "Die SLA-Pausenkonfiguration erfordert einen Ticketstatus, der zu einem Board gehört.",
+      "invalidValue": "Einer der ausgewählten SLA-Werte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte SLA-Datensatz oder ein zugehöriger Wert existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese SLA-Änderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der SLA-Werte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches SLA-Feld fehlt.",
+      "missingFieldNamed": "Erforderliches SLA-Feld fehlt: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Board nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "userNotFound": "Der ausgewählte Benutzer für die Eskalationsleitung wurde nicht gefunden. Bitte aktualisieren Sie die Seite und wählen Sie einen anderen Benutzer.",
+      "configNotFound": "Konfiguration der Eskalationsleitung nicht gefunden. Sie wurde möglicherweise bereits gelöscht.",
+      "recordInvalid": "Einer der ausgewählten Datensätze der Eskalationsleitung ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Das ausgewählte Board oder der Benutzer existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Für dieses Board und diese Stufe ist bereits eine Eskalationsleitung konfiguriert.",
+      "missingField": "Erforderliches Feld der Eskalationsleitung fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Eskalationsleitung fehlt: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte zugehörige Datensatz für diesen Status existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "orderInUse": "Diese Reihenfolgennummer wird bereits verwendet. Bitte wählen Sie eine andere Nummer.",
+      "duplicateName": "Ein Status mit diesem Namen existiert bereits.",
+      "notAllowed": "Einer der Statuswerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Statusfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Statusfeld fehlt: {{field}}.",
+      "nameRequired": "Der Statusname ist erforderlich",
+      "nameEmpty": "Der Statusname darf nicht leer sein",
+      "idRequired": "Die Status-ID ist erforderlich",
+      "manageFromBoard": "Ticketstatus müssen in den Board-Einstellungen verwaltet werden"
+    },
+    "priority": {
+      "notFound": "Priorität nicht gefunden.",
+      "boardMissing": "Das ausgewählte Board existiert nicht mehr.",
+      "duplicate": "Eine Priorität mit diesen Angaben existiert bereits.",
+      "referenceInvalid": "Der ausgewählte Prioritätsverweis ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidData": "Ungültige Prioritätsdaten übermittelt. Bitte prüfen Sie die Prioritätsdetails.",
+      "missingField": "Erforderliches Prioritätsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Prioritätsfeld fehlt: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Einer der ausgewählten Benutzer ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Benutzer existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "readClientInfoPermission": "Berechtigung verweigert: Kundeninformationen des Benutzers können nicht gelesen werden"
+    },
+    "roles": {
+      "userNotFound": "Benutzer nicht gefunden. Aktualisieren Sie die Benutzerliste und versuchen Sie es erneut.",
+      "roleNotFound": "Rolle nicht gefunden. Aktualisieren Sie die Rollenliste und versuchen Sie es erneut.",
+      "portalRoleOnMspUser": "Einem MSP-Benutzer kann keine Kundenportal-Rolle zugewiesen werden.",
+      "mspRoleOnPortalUser": "Einem Kundenportal-Benutzer kann keine MSP-Rolle zugewiesen werden.",
+      "invalidValue": "Einer der ausgewählten Benutzer- oder Rollenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte Benutzer oder die Rolle existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Dieser Benutzer hat die ausgewählte Rolle bereits.",
+      "changePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
+      "missingField": "Erforderliches Feld der Benutzerrolle fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Der Mandantenkontext fehlt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notFound": "Secret nicht gefunden. Es wurde möglicherweise bereits gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidName": "Ungültiger Mandanten- oder Secret-Name.",
+      "readOnly": "Der Secret-Speicher ist in dieser Umgebung schreibgeschützt.",
+      "recordInvalid": "Einer der ausgewählten Secret-Datensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Secret-Datensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein Secret mit diesem Namen existiert bereits.",
+      "missingField": "Erforderliches Secret-Feld fehlt.",
+      "missingFieldNamed": "Erforderliches Secret-Feld fehlt: {{field}}.",
+      "permissions": {
+        "create": "Berechtigung verweigert: Secrets können nicht erstellt werden",
+        "update": "Berechtigung verweigert: Secrets können nicht aktualisiert werden",
+        "delete": "Berechtigung verweigert: Secrets können nicht gelöscht werden"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Die Mandanten-ID ist erforderlich.",
+      "invalidValue": "Einer der ausgewählten Werte der Mandanteneinstellungen ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Mandanteneinstellungen fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Mandanteneinstellungen fehlt: {{field}}.",
+      "invalidTimezone": "Ungültige Zeitzone: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Berechtigung verweigert: Nur Administratoren können Onboarding-Daten löschen.",
+        "update": "Berechtigung verweigert: Einstellungen können nicht aktualisiert werden",
+        "enableAiAssistant": "Berechtigung verweigert: Der KI-Assistent kann für diesen Mandanten nicht aktiviert werden"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Systemvorlage nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "templateNotFound": "Benachrichtigungsvorlage nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "categoryNotFound": "Benachrichtigungskategorie nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "subtypeNotFound": "Benachrichtigungsuntertyp nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notificationNotFound": "Benachrichtigung nicht gefunden. Sie wurde möglicherweise bereits aktualisiert oder gelöscht.",
+      "recordInvalid": "Einer der ausgewählten Benachrichtigungsdatensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Benachrichtigungsdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Benachrichtigungseinstellung mit diesen Angaben existiert bereits.",
+      "missingField": "Erforderliches Benachrichtigungsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Benachrichtigungsfeld fehlt: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Rolle oder Berechtigung nicht gefunden. Aktualisieren Sie die Berechtigungsliste und versuchen Sie es erneut.",
+      "ticketNotFound": "Ticket nicht gefunden. Aktualisieren Sie das Ticket und versuchen Sie es erneut.",
+      "policyNotFound": "Richtlinie nicht gefunden. Aktualisieren Sie die Richtlinienliste und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Rollen-, Berechtigungs- oder Richtlinienwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Sicherheitsdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "permissionAlreadyAssigned": "Diese Berechtigung ist dieser Rolle bereits zugewiesen.",
+      "duplicate": "Ein Sicherheitsdatensatz mit diesen Angaben existiert bereits.",
+      "missingField": "Erforderliches Sicherheitsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Sicherheitsfeld fehlt: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Berechtigung verweigert: Kundenportal-Administratoren dürfen nur Kundenportal-Rollen verwalten.",
+        "portalUsersOnly": "Berechtigung verweigert: Kundenportal-Administratoren dürfen nur Kundenportal-Benutzer verwalten.",
+        "portalAdminRequired": "Berechtigung verweigert: Administratorzugriff für das Kundenportal ist erforderlich.",
+        "otherClientUsers": "Berechtigung verweigert: Benutzer eines anderen Kunden können nicht verwaltet werden."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Benutzer des Kundenportals können keine eigenen Domains verwalten.",
+      "noPermission": "Sie haben keine Berechtigung, die Einstellungen des Kundenportals zu verwalten.",
+      "required": "Die Domain ist erforderlich.",
+      "length": "Die Domain muss zwischen 3 und 253 Zeichen lang sein.",
+      "charset": "Die Domain darf nur Buchstaben, Ziffern, Bindestriche und Punkte enthalten.",
+      "needsDot": "Die Domain muss mindestens einen Punkt enthalten.",
+      "notCanonicalHost": "Bitte wählen Sie eine andere Domain als den kanonischen Host.",
+      "noLeadingTrailingDot": "Die Domain darf nicht mit einem Punkt beginnen oder enden.",
+      "notApplianceHost": "Wählen Sie eine andere Domain als den primären Host dieser Appliance. Die eigene Portal-Domain muss ein anderer Hostname sein, den Ihr Reverse-Proxy hierher weiterleitet.",
+      "nothingToRetry": "Es gibt keine fehlgeschlagene Registrierung einer eigenen Domain, die wiederholt werden könnte.",
+      "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich."
     }
   }
 }

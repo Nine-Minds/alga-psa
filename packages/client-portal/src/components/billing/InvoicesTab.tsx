@@ -359,7 +359,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
             </Button>
           </div>
 
-          <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+          <div className="border rounded-lg bg-[rgb(var(--color-card))] card-elevated overflow-hidden">
             {/* Invoice Preview using same renderer as MSP portal */}
             <ClientInvoicePreview
               invoiceId={selectedInvoice.invoice_id}

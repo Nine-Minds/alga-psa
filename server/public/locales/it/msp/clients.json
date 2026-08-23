@@ -1698,5 +1698,117 @@
     "saveContractOverride": "Salva sostituzione del contratto",
     "contractSaveSuccess": "Criterio di ricarica del contratto salvato",
     "contractSaveError": "Impossibile salvare il criterio di ricarica del contratto"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Cliente non trovato",
+      "signInRequired": "È necessario aver effettuato l’accesso per gestire i clienti.",
+      "duplicateName": "Esiste già un cliente con il nome «{{name}}». Scegliere un nome diverso.",
+      "duplicate": "Esiste già un cliente con questi dati. Controllare il nome del cliente.",
+      "referencedDataMissing": "Dati di riferimento non trovati. Controllare il responsabile cliente, il contatto di fatturazione e le impostazioni cliente correlate.",
+      "invalidValue": "Uno dei valori cliente selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "invalidData": "Dati cliente non validi. Controllare tutti i campi e riprovare.",
+      "missingField": "Manca un campo obbligatorio del cliente.",
+      "missingFieldNamed": "Manca un campo obbligatorio del cliente: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Autorizzazione negata: impossibile leggere i clienti",
+      "updateClients": "Autorizzazione negata: impossibile aggiornare i clienti"
+    },
+    "timeline": {
+      "invalidCursor": "Cursore della cronologia cliente non valido"
+    },
+    "location": {
+      "notFound": "Sede non trovata o non più attiva.",
+      "defaultRequired": "Aggiungere un’altra sede attiva o scegliere una sede predefinita diversa prima di rimuovere questa sede come predefinita.",
+      "missingField": "Manca un campo obbligatorio della sede.",
+      "missingFieldNamed": "Manca un campo obbligatorio della sede: {{field}}.",
+      "referenceInvalid": "Il cliente, il paese, la regione fiscale o i dati della sede correlati selezionati non sono più validi. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un record di sede in conflitto. Aggiornare le sedi e riprovare.",
+      "invalidData": "Dati della sede non validi. Controllare i campi di indirizzo e contatto."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Impossibile aggiungere il dominio e-mail in entrata. Riprovare.",
+      "notFound": "Dominio e-mail in entrata non trovato."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Manca un campo obbligatorio della destinazione dei ticket in entrata.",
+      "missingFieldNamed": "Manca un campo obbligatorio della destinazione dei ticket in entrata: {{field}}.",
+      "referenceInvalid": "La destinazione dei ticket in entrata selezionata non è più valida. Aggiornare la pagina e riprovare."
+    },
+    "interaction": {
+      "notFound": "Interazione non trovata",
+      "signInRequired": "È necessario aver effettuato l’accesso per gestire le interazioni.",
+      "identifierInvalid": "Uno degli identificatori di interazione non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio dell’interazione.",
+      "missingFieldNamed": "Manca un campo obbligatorio dell’interazione: {{field}}.",
+      "referenceMissing": "L’interazione, il cliente, il contatto, l’utente, lo stato o il tipo selezionati non esistono più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un’interazione con questi dati."
+    },
+    "interactionType": {
+      "notFound": "Tipo di interazione non trovato o non si dispone dell’accesso.",
+      "missingField": "Manca un campo obbligatorio del tipo di interazione.",
+      "missingFieldNamed": "Manca un campo obbligatorio del tipo di interazione: {{field}}.",
+      "referenceInvalid": "I dati di riferimento del tipo di interazione non sono più validi. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un tipo di interazione con questi dati.",
+      "invalidData": "Dati del tipo di interazione non validi. Controllare nome, icona e ordine di visualizzazione."
+    },
+    "taxRate": {
+      "signInRequired": "È necessario aver effettuato l’accesso per aggiornare le aliquote d’imposta del cliente.",
+      "invalidReference": "Il cliente o l’aliquota d’imposta selezionati non sono validi. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio dell’aliquota d’imposta del cliente.",
+      "missingFieldNamed": "Manca un campo obbligatorio dell’aliquota d’imposta del cliente: {{field}}.",
+      "referenceMissing": "Il cliente o l’aliquota d’imposta selezionati non esistono più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Questa aliquota d’imposta è già associata al cliente.",
+      "associationNotFound": "Associazione dell’aliquota d’imposta del cliente non trovata.",
+      "rateNotFound": "Aliquota d’imposta con ID {{id}} non trovata."
+    },
+    "alias": {
+      "required": "L’alias è obbligatorio",
+      "tooLong": "L’alias è troppo lungo",
+      "addFailed": "Impossibile aggiungere l’alias del cliente. Riprovare.",
+      "notFound": "Alias non trovato."
+    },
+    "contractLine": {
+      "signInRequired": "È necessario aver effettuato l’accesso per gestire le righe di contratto del cliente.",
+      "refreshAssignment": "Aggiornare l’assegnazione del contratto e riprovare.",
+      "sharedByAssignments": "Questa riga di contratto è condivisa da più assegnazioni attive. Modificare la specifica assegnazione del contratto prima di cambiarne le righe.",
+      "duplicate": "Esiste già una riga di contratto con questi dati per questo cliente.",
+      "invalidReference": "Il cliente o la riga di contratto selezionati non sono validi. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della riga di contratto.",
+      "missingFieldNamed": "Manca un campo obbligatorio della riga di contratto: {{field}}.",
+      "referenceInvalid": "Il riferimento della riga di contratto selezionata non è più valido. Aggiornare la pagina e riprovare.",
+      "storageUnavailable": "L’archivio delle righe di contratto del cliente non è disponibile. Riprovare più tardi.",
+      "invalidData": "I dati della riga di contratto del cliente non sono validi. Aggiornare la pagina e riprovare.",
+      "addFailed": "Impossibile aggiungere la riga di contratto del cliente."
+    },
+    "billingSettings": {
+      "updateDenied": "Autorizzazione negata: impossibile aggiornare le impostazioni di fatturazione",
+      "readRequired": "Autorizzazione negata: è richiesto il permesso di lettura di billing_settings",
+      "updateRequired": "Autorizzazione negata: è richiesto il permesso di modifica di billing_settings",
+      "tenantContextMissing": "Contesto del tenant non trovato",
+      "clientContextMissing": "Contesto del cliente non trovato",
+      "prepaidAlertsDisabled": "Gli avvisi sul saldo prepagato non sono abilitati per questo spazio di lavoro",
+      "invalidPrepaidAlertSettings": "Impostazioni degli avvisi sul saldo prepagato non valide",
+      "prepaidAlertUpdateFailed": "Impossibile aggiornare le impostazioni degli avvisi sul saldo prepagato",
+      "contractReplenishmentUpdateFailed": "Impossibile aggiornare il criterio di ricarica del contratto"
+    },
+    "billingProfile": {
+      "signInRequired": "È necessario aver effettuato l’accesso per gestire i profili di fatturazione.",
+      "duplicateDefault": "Questo cliente ha già un profilo di fatturazione predefinito.",
+      "stillReferenced": "Il profilo di fatturazione è ancora referenziato e non può essere rimosso.",
+      "defaultRequired": "Un cliente deve sempre avere esattamente un profilo di fatturazione predefinito.",
+      "nameRequired": "Un profilo di fatturazione richiede un nome.",
+      "notThisClient": "Questo profilo di fatturazione non appartiene a questo cliente.",
+      "archivedCannotBeDefault": "Un profilo di fatturazione archiviato non può essere impostato come predefinito.",
+      "notFound": "Questo profilo di fatturazione non esiste più.",
+      "defaultCannotArchive": "Il profilo di fatturazione predefinito non può essere archiviato. Impostare prima un altro profilo come predefinito.",
+      "defaultCannotDelete": "Il profilo di fatturazione predefinito non può essere eliminato. Impostare prima un altro profilo come predefinito.",
+      "inUse": "Questo profilo di fatturazione è utilizzato da {{references}}. Archiviarlo invece di eliminarlo: l’eliminazione cancellerebbe il modo in cui tali addebiti sono stati attribuiti.",
+      "recordNotFound": "Questo record o profilo di fatturazione non esiste più.",
+      "otherClient": "Questo profilo di fatturazione appartiene a un altro cliente.",
+      "archived": "Questo profilo di fatturazione è archiviato.",
+      "selectionNotThisClient": "Uno dei profili di fatturazione selezionati non appartiene a questo cliente."
+    }
   }
 }

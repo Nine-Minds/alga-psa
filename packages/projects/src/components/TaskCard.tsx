@@ -300,7 +300,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         console.log('Using cached project tree data when selecting task for editing');
         onTaskSelected(task);
       }}
-      className={`${styles.taskCard} relative bg-white ${zoomScales.cardPadding} rounded-lg shadow-sm cursor-pointer hover:shadow-md border flex flex-col ${zoomScales.cardGap} ${
+      className={`${styles.taskCard} relative bg-[rgb(var(--color-card))] ${zoomScales.cardPadding} rounded-lg card-elevated card-elevated-hover cursor-pointer border flex flex-col ${zoomScales.cardGap} ${
         selected ? 'border-primary-500 ring-2 ring-primary-500' : 'border-gray-200'
       } ${
         isDragging ? styles.dragging : ''
@@ -537,19 +537,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </Tooltip>
           )}
           {taskTickets !== null && displayTickets.length > 0 && (
-            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-600))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
               <Ticket className="w-3 h-3" />
               <span>{displayTickets.length}</span>
             </div>
           )}
           {documentCount > 0 && (
-            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-600))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
               <Paperclip className="w-3 h-3" />
               <span>{documentCount}</span>
             </div>
           )}
           {commentCount > 0 && (
-            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-600))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
               <MessageSquare className="w-3 h-3" />
               <span>{commentCount}</span>
             </div>

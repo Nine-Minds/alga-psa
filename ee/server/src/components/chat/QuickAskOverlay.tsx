@@ -298,7 +298,7 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
             )}
           </div>
         ) : (
-          <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm overflow-hidden min-h-[520px]">
+          <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated overflow-hidden min-h-[520px]">
             <div className="px-4 py-3 border-b border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] text-xs text-[rgb(var(--color-text-600))] flex items-center justify-between">
               <span>{t('quickAsk.followUpNotice')}</span>
               {!activeChatId ? (

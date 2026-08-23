@@ -78,10 +78,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/auth": "*",
     "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",

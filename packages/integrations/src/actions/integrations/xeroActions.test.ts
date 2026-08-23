@@ -321,7 +321,8 @@ describe('Xero integration actions', () => {
     const result = await getXeroAccounts();
 
     expect(result).toEqual({
-      actionError: 'Connect Xero before loading Xero accounts.'
+      actionError: 'Connect Xero before loading Xero accounts.',
+      messageKey: 'msp/integrations:errors.xero.accounts.notConnected'
     });
     expect(xeroCreateMock).not.toHaveBeenCalled();
   });
@@ -339,7 +340,8 @@ describe('Xero integration actions', () => {
     const result = await getXeroItems();
 
     expect(result).toEqual({
-      actionError: 'Reconnect Xero before loading Xero items.'
+      actionError: 'Reconnect Xero before loading Xero items.',
+      messageKey: 'msp/integrations:errors.xero.items.reconnect'
     });
     expect(xeroCreateMock).not.toHaveBeenCalled();
   });
@@ -362,7 +364,8 @@ describe('Xero integration actions', () => {
     const result = await getXeroTaxRates();
 
     expect(result).toEqual({
-      actionError: 'Reconnect Xero before loading Xero tax rates.'
+      actionError: 'Reconnect Xero before loading Xero tax rates.',
+      messageKey: 'msp/integrations:errors.xero.taxRates.reconnect'
     });
   });
 

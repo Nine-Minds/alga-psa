@@ -170,7 +170,10 @@ export const updateTaskSchema = projectTaskSchema.partial().omit({
   tenant: true,
   actual_hours: true,
 }).extend({
-  assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  // .extend replaces the key outright, so these have to restate .optional()
+  // themselves — without it the surrounding .partial() is undone and every
+  // partial task update is rejected with "assigned_to: Invalid input".
+  assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional(),
   service_id: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()
 });
 

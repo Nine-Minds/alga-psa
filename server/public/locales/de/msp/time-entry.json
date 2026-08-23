@@ -463,5 +463,42 @@
   "bundleNotice": {
     "withNumber": "Dieses Ticket ist unter {{number}} gebündelt. Die Zeit für Bündel wird üblicherweise auf dem Master-Ticket erfasst.",
     "withoutNumber": "Dieses Ticket ist Teil eines Bündels. Die Zeit für Bündel wird üblicherweise auf dem Master-Ticket erfasst."
+  },
+  "errors": {
+    "timeSheet": {
+      "notFoundRefresh": "Stundenzettel nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "onlySubmittedApprovable": "Nur eingereichte Stundenzettel können genehmigt werden.",
+      "idRequired": "Die Stundenzettel-ID ist erforderlich.",
+      "ticketIdRequired": "Die Ticket-ID ist erforderlich.",
+      "workItemRemoveFailed": "Dieses Arbeitselement kann nicht entfernt werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "onlyDraftRemovable": "Nur Stundenzettel im Entwurf können entfernt werden.",
+      "removeEntriesFirst": "Entfernen Sie die Zeiteinträge, bevor Sie diesen Stundenzettel entfernen.",
+      "onlyApprovedReopenable": "Nur genehmigte Stundenzettel können wieder geöffnet werden.",
+      "invoicedCannotReopen": "Dieser Stundenzettel enthält abgerechnete Zeit und kann nicht wieder geöffnet werden."
+    },
+    "timeEntry": {
+      "notFoundRefresh": "Zeiteintrag nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "serviceRequired": "Wählen Sie einen Dienst aus, bevor Sie diesen Zeiteintrag speichern.",
+      "alreadyInvoiced": "Dieser Zeiteintrag wurde bereits abgerechnet und kann nicht geändert werden.",
+      "workItemTypeUnsupported": "Der ausgewählte Arbeitselementtyp wird für Zeiteinträge nicht unterstützt.",
+      "bucketUpdateFailed": "Der Verbrauch des Stundenkontingents kann für diesen Zeiteintrag nicht aktualisiert werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "wrongTimeSheet": "Dieser Zeiteintrag gehört nicht zum ausgewählten Stundenzettel.",
+      "outsidePeriod": "Der Zeiteintrag muss innerhalb des ausgewählten Stundenzettelzeitraums liegen.",
+      "invalidReference": "Der ausgewählte Zeiteintrag, Stundenzettel oder das Arbeitselement ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte Stundenzettel, Zeiteintrag, das Arbeitselement oder der Benutzer ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Es existiert bereits ein widersprüchlicher Zeiteintrag. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld des Stundenzettels oder Zeiteintrags fehlt.",
+      "missingFieldNamed": "Erforderliches Feld des Stundenzettels oder Zeiteintrags fehlt: {{field}}."
+    },
+    "timePeriod": {
+      "datesRequired": "Geben Sie gültige Start- und Enddaten ein."
+    },
+    "timePeriodSettings": {
+      "invalidValue": "Einer der Werte der Zeitraumeinstellung ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Zeitraumeinstellung ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Es existiert bereits eine widersprüchliche Zeitraumeinstellung.",
+      "missingField": "Erforderliches Feld der Zeitraumeinstellung fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Zeitraumeinstellung fehlt: {{field}}."
+    }
   }
 }

@@ -267,7 +267,9 @@
         "licenseLimitReached": "You've reached your MSP user license limit.",
         "soloPlanLimit": "Solo plan is limited to 1 user. Upgrade to Pro to add more users.",
         "revokeInvitation": "Failed to revoke invitation",
-        "invitationNotFound": "Invitation not found or already used"
+        "invitationNotFound": "Invitation not found or already used",
+        "createContact": "Failed to create contact: {{reason}}",
+        "unknown": "Unknown error"
       }
     },
     "invitations": {
@@ -1689,7 +1691,138 @@
   },
   "timeEntry": {
     "title": "Time Entry Settings",
-    "description": "Manage your time entry settings and time periods"
+    "description": "Manage your time entry settings and time periods",
+    "timePeriods": {
+      "title": "Time Period Settings",
+      "description": "Configure billing time period settings",
+      "loading": "Loading time period settings...",
+      "addNew": "Add New Time Period Setting",
+      "help": {
+        "title": "Understanding Time Period Settings",
+        "intro": "You can define multiple active settings to create complex billing cycles. End Day is the last day included in the period.",
+        "exampleIntro": "For example, to set up semi-monthly periods (1st–15th and 16th–End of Month):",
+        "firstSettingLabel": "Setting 1:",
+        "firstSetting": "Start Day: 1, End Day: 15 → Period covers 1st through 15th",
+        "secondSettingLabel": "Setting 2:",
+        "secondSetting": "Start Day: 16, End Day: End of month → Period covers 16th through last day",
+        "outro": "The system uses these settings to suggest and generate time periods. Ensure your settings cover the entire cycle without gaps."
+      },
+      "form": {
+        "requiredFields": "Please fill in the required fields:",
+        "frequency": "Frequency *",
+        "frequencyPlaceholder": "Enter frequency",
+        "frequencyUnit": "Frequency Unit *",
+        "frequencyUnitPlaceholder": "Select frequency unit",
+        "startDay": "Start Day *",
+        "selectDay": "Select day",
+        "startDayPlaceholder": "Enter start day",
+        "endDay": "End Day *",
+        "endDayPlaceholder": "Enter end day",
+        "endOfUnit": "End of {{unit}}",
+        "endOfMonth": "End of month",
+        "startMonth": "Start Month",
+        "endMonth": "End Month",
+        "startDayOfMonth": "Start Day of Month *",
+        "endDayOfMonth": "End Day of Month *",
+        "add": "Add Time Period Setting"
+      },
+      "validation": {
+        "frequencyMin": "Frequency must be at least 1",
+        "startDayRequired": "Start day is required",
+        "endDayRequired": "End day is required",
+        "startDayOfMonthRequired": "Start day of month is required",
+        "endDayOfMonthRequired": "End day of month is required"
+      },
+      "errors": {
+        "fetch": "Failed to fetch time period settings",
+        "overlap": "This time period setting overlaps with an existing active setting.",
+        "add": "Failed to add time period setting. Please check the values and try again.",
+        "update": "Failed to update time period setting",
+        "delete": "Failed to delete time period setting"
+      },
+      "summary": {
+        "frequency": "Frequency: every {{count}} × {{unit}}",
+        "startDay": "Start Day: {{value}}",
+        "endDay": "End Day: {{value}}",
+        "start": "Start: {{value}}",
+        "end": "End: {{value}}",
+        "effectiveFrom": "Effective From: {{value}}",
+        "effectiveTo": "Effective To: {{value}}",
+        "noEnd": "No end",
+        "notSet": "Not set"
+      },
+      "units": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "year": "Year"
+      },
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "weekDays": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
+      }
+    },
+    "periods": {
+      "title": "Time Periods",
+      "description": "View and manage time entry periods for time tracking",
+      "loading": "Loading time periods...",
+      "create": "Create New Time Period",
+      "openMenu": "Open menu",
+      "columns": {
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "actions": "Actions"
+      },
+      "form": {
+        "createTitle": "Create New Time Period",
+        "editTitle": "Edit Time Period",
+        "suggestion": "Based on your settings, the next time period is suggested.",
+        "frequency": "Frequency: every {{value}} × {{unit}}",
+        "overrideDates": "Override suggested dates",
+        "startDate": "Start Date",
+        "startDatePlaceholder": "Select start date",
+        "noEndDate": "No End Date",
+        "endDate": "End Date",
+        "endDatePlaceholder": "Select end date",
+        "deletePeriod": "Delete Period",
+        "confirmDeleteTitle": "Confirm Delete",
+        "confirmDeleteBody": "Are you sure you want to delete this time period? This action cannot be undone.",
+        "checkSettingsLink": "Please check your time period settings."
+      },
+      "errors": {
+        "load": "Failed to load time periods.",
+        "suggest": "Failed to suggest a new time period",
+        "noApplicableSettings": "No applicable time period settings found.",
+        "noSettings": "No time period settings available. Unable to create a new time period.",
+        "settingsRequired": "Cannot manage time period without settings.",
+        "startDateRequired": "Start date must be provided.",
+        "startBeforeEnd": "Start date must be before end date.",
+        "overlap": "The time period overlaps with an existing period.",
+        "overlapRetry": "This time period overlaps with an existing one. Please choose different dates.",
+        "create": "Failed to create time period.",
+        "delete": "Failed to delete time period",
+        "unexpected": "An unexpected error occurred."
+      }
+    }
   },
   "billing": {
     "title": "Billing Settings",
@@ -1922,6 +2055,50 @@
     "loading": {
       "extensions": "Loading extensions...",
       "installer": "Loading installer..."
+    }
+  },
+  "policyManagement": {
+    "title": "Policy Management",
+    "upgradeDescription": "Policy management is a Pro feature. Please upgrade to access advanced policy controls."
+  },
+  "roleManagement": {
+    "title": "Manage Roles",
+    "description": "Create and manage roles for MSP and Client Portal access",
+    "columns": {
+      "roleNameRequired": "Role Name *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Role Name",
+      "roleNamePlaceholder": "Enter role name",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter role description"
+    },
+    "portal": {
+      "none": "None",
+      "access": "Portal Access",
+      "msp": "MSP Portal",
+      "client": "Client Portal",
+      "mspShort": "MSP",
+      "clientShort": "Client",
+      "required": "A role must have access to at least one portal"
+    },
+    "actions": {
+      "addRole": "Add Role",
+      "createRole": "Create Role"
+    },
+    "createDialog": {
+      "title": "Create New Role"
+    },
+    "deleteDialog": {
+      "entityFallback": "this role"
+    },
+    "adminDeleteDisabled": "Admin roles cannot be deleted because they are system roles",
+    "errors": {
+      "createFailed": "Failed to create role",
+      "updateFailed": "Failed to update role",
+      "validateDeletionFailed": "Failed to validate deletion. Please try again.",
+      "deleteFailed": "Failed to delete role"
     }
   },
   "security": {
@@ -2879,6 +3056,170 @@
         "confirm": "Disconnect",
         "cancel": "Cancel"
       }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Permission denied: cannot create team.",
+        "update": "Permission denied: cannot update team.",
+        "modify": "Permission denied: cannot modify team.",
+        "modifyMembers": "Permission denied: cannot modify team members.",
+        "view": "Permission denied: cannot view team.",
+        "viewAll": "Permission denied: cannot view teams.",
+        "assignManager": "Permission denied: cannot assign team manager."
+      },
+      "notFoundRefresh": "Team not found. It may have been deleted. Please refresh and try again.",
+      "leadRequired": "A team must have a team lead. Select a team lead and try again.",
+      "inactiveUser": "Inactive users cannot be added to a team.",
+      "cannotRemoveLead": "Cannot remove the team lead. Please assign a new team lead first.",
+      "invalidValue": "One of the selected team values is invalid. Please refresh and try again.",
+      "duplicateMember": "This user is already a member of the team.",
+      "referenceMissing": "The selected team lead or member is no longer valid. Please refresh and try again.",
+      "missingField": "Missing required team field.",
+      "missingFieldNamed": "Missing required team field: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Permission denied: You don't have permission to view SLA policies",
+        "create": "Permission denied: You don't have permission to create SLA policies",
+        "update": "Permission denied: You don't have permission to update SLA policies",
+        "delete": "Permission denied: You don't have permission to delete SLA policies"
+      },
+      "policyNotFound": "SLA policy not found. It may have been deleted. Please refresh and try again.",
+      "targetNotFound": "SLA policy target not found. It may have been deleted. Please refresh and try again.",
+      "priorityNotFound": "Selected priority not found. It may have been deleted. Please refresh and try again.",
+      "clientNotFound": "Selected client not found. It may have been deleted. Please refresh and try again.",
+      "boardNotFound": "Selected board not found. It may have been deleted. Please refresh and try again.",
+      "ticketNotFound": "Ticket not found. It may have been deleted. Please refresh and try again.",
+      "duplicateTarget": "A target for this priority already exists in this policy.",
+      "pauseRequiresBoardStatus": "SLA pause configuration requires a board-owned ticket status.",
+      "invalidValue": "One of the selected SLA values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected SLA record or related value no longer exists. Please refresh and try again.",
+      "conflict": "This SLA change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the SLA values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required SLA field.",
+      "missingFieldNamed": "Missing required SLA field: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Board not found. It may have been deleted. Please refresh and try again.",
+      "userNotFound": "Selected escalation manager user not found. Please refresh and choose another user.",
+      "configNotFound": "Escalation manager configuration not found. It may have already been deleted.",
+      "recordInvalid": "One of the selected escalation manager records is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected board or user no longer exists. Please refresh and try again.",
+      "duplicate": "An escalation manager is already configured for this board and level.",
+      "missingField": "Missing required escalation manager field.",
+      "missingFieldNamed": "Missing required escalation manager field: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status not found. It may have been deleted. Please refresh and try again.",
+      "invalidValue": "One of the selected status values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected related record for this status no longer exists. Please refresh and try again.",
+      "orderInUse": "This order number is already in use. Please choose a different order number.",
+      "duplicateName": "A status with this name already exists.",
+      "notAllowed": "One of the status values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required status field.",
+      "missingFieldNamed": "Missing required status field: {{field}}.",
+      "nameRequired": "Status name is required",
+      "nameEmpty": "Status name cannot be empty",
+      "idRequired": "Status ID is required",
+      "manageFromBoard": "Ticket statuses must be managed from board settings"
+    },
+    "priority": {
+      "notFound": "Priority not found.",
+      "boardMissing": "The selected board no longer exists.",
+      "duplicate": "A priority with these details already exists.",
+      "referenceInvalid": "The selected priority reference is no longer valid. Please refresh and try again.",
+      "invalidData": "Invalid priority data provided. Please check the priority details.",
+      "missingField": "Missing required priority field.",
+      "missingFieldNamed": "Missing required priority field: {{field}}."
+    },
+    "users": {
+      "invalidValue": "One of the selected users is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected users no longer exists. Please refresh and try again.",
+      "readClientInfoPermission": "Permission denied: Cannot read user client info"
+    },
+    "roles": {
+      "userNotFound": "User not found. Refresh the user list and try again.",
+      "roleNotFound": "Role not found. Refresh the role list and try again.",
+      "portalRoleOnMspUser": "Cannot assign a client portal role to an MSP user.",
+      "mspRoleOnPortalUser": "Cannot assign an MSP role to a client portal user.",
+      "invalidValue": "One of the selected user or role values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected user or role no longer exists. Please refresh and try again.",
+      "duplicate": "That user already has the selected role.",
+      "changePermission": "Permission denied: You do not have permission to change user roles.",
+      "missingField": "Missing required user role field.",
+      "missingFieldNamed": "Missing required user role field: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Tenant context is missing. Please refresh and try again.",
+      "notFound": "Secret not found. It may have already been deleted. Please refresh and try again.",
+      "invalidName": "Invalid tenant or secret name.",
+      "readOnly": "Secret storage is read-only in this environment.",
+      "recordInvalid": "One of the selected secret records is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected secret records no longer exists. Please refresh and try again.",
+      "duplicate": "A secret with this name already exists.",
+      "missingField": "Missing required secret field.",
+      "missingFieldNamed": "Missing required secret field: {{field}}.",
+      "permissions": {
+        "create": "Permission denied: Cannot create secrets",
+        "update": "Permission denied: Cannot update secrets",
+        "delete": "Permission denied: Cannot delete secrets"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Tenant id is required.",
+      "invalidValue": "One of the selected tenant setting values is invalid. Please refresh and try again.",
+      "missingField": "Missing required tenant settings field.",
+      "missingFieldNamed": "Missing required tenant settings field: {{field}}.",
+      "invalidTimezone": "Invalid timezone: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Permission denied: Only admin users can clear onboarding data.",
+        "update": "Permission denied: Cannot update settings",
+        "enableAiAssistant": "Permission denied: Cannot enable AI Assistant for this tenant"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "System template not found. It may have been deleted. Please refresh and try again.",
+      "templateNotFound": "Notification template not found. It may have been deleted. Please refresh and try again.",
+      "categoryNotFound": "Notification category not found. It may have been deleted. Please refresh and try again.",
+      "subtypeNotFound": "Notification subtype not found. It may have been deleted. Please refresh and try again.",
+      "notificationNotFound": "Notification not found. It may have already been updated or deleted.",
+      "recordInvalid": "One of the selected notification records is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected notification records no longer exists. Please refresh and try again.",
+      "duplicate": "A notification setting with these details already exists.",
+      "missingField": "Missing required notification field.",
+      "missingFieldNamed": "Missing required notification field: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Role or permission not found. Refresh the permissions list and try again.",
+      "ticketNotFound": "Ticket not found. Refresh the ticket and try again.",
+      "policyNotFound": "Policy not found. Refresh the policy list and try again.",
+      "invalidValue": "One of the selected role, permission, or policy values is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected security records no longer exists. Please refresh and try again.",
+      "permissionAlreadyAssigned": "That permission is already assigned to this role.",
+      "duplicate": "A security record with these details already exists.",
+      "missingField": "Missing required security field.",
+      "missingFieldNamed": "Missing required security field: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Permission denied: Client portal admins may only manage client portal roles.",
+        "portalUsersOnly": "Permission denied: Client portal admins may only manage client portal users.",
+        "portalAdminRequired": "Permission denied: Client portal admin access is required.",
+        "otherClientUsers": "Permission denied: Cannot manage users for another client."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Client portal users cannot manage custom domains.",
+      "noPermission": "You do not have permission to manage client portal settings.",
+      "required": "Domain is required.",
+      "length": "Domain must be between 3 and 253 characters.",
+      "charset": "Domain may only include letters, numbers, hyphens, and dots.",
+      "needsDot": "Domain must include at least one dot.",
+      "notCanonicalHost": "Please choose a domain other than the canonical host.",
+      "noLeadingTrailingDot": "Domain cannot start or end with a dot.",
+      "notApplianceHost": "Choose a domain other than this appliance's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
+      "nothingToRetry": "No failed custom domain registration to retry.",
+      "retryOnlyAfterFailure": "Retry is only available after a failed registration."
     }
   }
 }

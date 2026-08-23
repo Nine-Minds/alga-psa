@@ -248,7 +248,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               <FileIcon className="w-5 h-5 text-gray-500" />
             </div>
           )}
-          <span className="absolute -bottom-1 -right-1 text-[9px] font-bold bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] px-1 rounded">
+          <span className="chip-primary absolute -bottom-1 -right-1 text-[9px] font-bold px-1 rounded">
             {fileExt}
           </span>
         </div>
@@ -279,7 +279,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                 e.stopPropagation();
                 handleDocumentClick(doc);
               }}
-              className="p-2 text-gray-400 hover:text-[rgb(var(--color-primary-600))] hover:bg-[rgb(var(--color-primary-50))] rounded-lg transition-colors"
+              className="chip-primary p-2 text-gray-400 hover: hover: rounded-lg transition-colors"
               title={t('view', 'View')}
             >
               <Eye className="w-4 h-4" />
@@ -290,7 +290,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
           <button
             type="button"
             onClick={(e) => handleDownload(doc, e)}
-            className="p-2 text-gray-400 hover:text-[rgb(var(--color-primary-600))] hover:bg-[rgb(var(--color-primary-50))] rounded-lg transition-colors"
+            className="chip-primary p-2 text-gray-400 hover: hover: rounded-lg transition-colors"
             title={t('download', 'Download')}
           >
             <Download className="w-4 h-4" />
@@ -399,7 +399,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] p-1 rounded hover:bg-[rgb(var(--color-primary-50))] transition-colors"
+              className="chip-primary hover: p-1 rounded hover: transition-colors"
               title={uploading ? tCommon('common.uploading', 'Uploading...') : t('upload', 'Upload')}
             >
               {uploading ? (
@@ -448,7 +448,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                           <FileIcon className="w-4 h-4 text-gray-500" />
                         </div>
                       )}
-                      <span className="absolute -bottom-0.5 -right-0.5 text-[7px] font-bold bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] px-0.5 rounded">
+                      <span className="chip-primary absolute -bottom-0.5 -right-0.5 text-[7px] font-bold px-0.5 rounded">
                         {fileExt}
                       </span>
                     </div>
@@ -467,7 +467,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                     <button
                       type="button"
                       onClick={(e) => handleDownload(doc, e)}
-                      className="p-1 text-gray-400 hover:text-[rgb(var(--color-primary-600))] hover:bg-[rgb(var(--color-primary-50))] rounded transition-colors flex-shrink-0"
+                      className="chip-primary p-1 text-gray-400 hover: hover: rounded transition-colors flex-shrink-0"
                       title={t('download', 'Download')}
                     >
                       <Download className="w-3.5 h-3.5" />

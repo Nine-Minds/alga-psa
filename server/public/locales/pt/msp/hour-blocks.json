@@ -137,5 +137,22 @@
     "remaining": "{{hours}} h não utilizadas serão perdidas.",
     "submit": "Expirar bloco",
     "title": "Expirar bloco de horas"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "Bloco de horas não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "serviceNotFound": "Serviço não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "hoursPositive": "As horas do bloco devem ser maiores que zero.",
+      "ratePositive": "A tarifa por hora deve ser zero ou maior.",
+      "reasonRequired": "É necessário informar um motivo para esta operação.",
+      "adjustExpiredOrVoided": "Não é possível ajustar um bloco de horas vencido ou anulado.",
+      "usedCannotVoid": "Este bloco de horas já foi utilizado e não pode ser anulado. Em vez disso, faça-o expirar.",
+      "onlyPendingOrActiveVoid": "Somente blocos de horas pendentes ou ativos podem ser anulados.",
+      "expireVoided": "Não é possível expirar um bloco de horas anulado.",
+      "updateExpirationVoided": "Não é possível atualizar o vencimento de um bloco de horas anulado.",
+      "invalidValue": "Um dos valores selecionados do bloco de horas é inválido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório do bloco de horas. Revise o formulário e tente novamente.",
+      "referenceMissing": "O cliente, serviço ou fatura selecionado não existe mais. Atualize a página e tente novamente."
+    }
   }
 }

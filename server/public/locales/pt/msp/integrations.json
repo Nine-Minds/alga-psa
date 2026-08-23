@@ -1572,7 +1572,8 @@
           "invalidState": "Esta solicitação de configuração da Microsoft é inválida ou expirou. Inicie novamente nas configurações de Provedores.",
           "microsoftError": "A Microsoft não conseguiu concluir a solicitação de configuração. Tente novamente ou use a configuração manual.",
           "missingCode": "A Microsoft não retornou um código de autorização. Inicie a configuração novamente.",
-          "sessionMismatch": "Sua sessão do AlgaPSA não corresponde ao administrador que iniciou esta configuração. Faça login e tente novamente."
+          "sessionMismatch": "Sua sessão do AlgaPSA não corresponde ao administrador que iniciou esta configuração. Faça login e tente novamente.",
+          "optionsLoadFailed": "Não foi possível carregar as opções de configuração do email da Microsoft."
         },
         "fields": {
           "clientId": "ID do cliente",
@@ -1998,6 +1999,158 @@
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Automação de alertas",
+        "description": "Configure como os alertas de RMM recebidos são processados, suprimidos e transformados em tickets.",
+        "loading": "Carregando configurações de automação de alertas…",
+        "actions": {
+          "addRule": "Adicionar regra",
+          "addWindow": "Adicionar janela",
+          "cancel": "Cancelar",
+          "confirm": "Confirmar",
+          "deleteRule": "Excluir regra",
+          "deleteWindow": "Excluir janela",
+          "editRule": "Editar regra",
+          "editWindow": "Editar janela",
+          "moveDown": "Mover para baixo",
+          "moveUp": "Mover para cima",
+          "savePolling": "Salvar configurações de consulta",
+          "saveRule": "Salvar regra",
+          "saveWindow": "Salvar janela",
+          "saving": "Salvando…"
+        },
+        "days": {
+          "sun": "Dom",
+          "mon": "Seg",
+          "tue": "Ter",
+          "wed": "Qua",
+          "thu": "Qui",
+          "fri": "Sex",
+          "sat": "Sáb"
+        },
+        "dialogs": {
+          "addRule": "Adicionar regra de alerta",
+          "addWindow": "Adicionar janela de manutenção",
+          "editRule": "Editar regra: {{name}}",
+          "editWindow": "Editar janela: {{name}}"
+        },
+        "errors": {
+          "loadRules": "Não foi possível carregar as regras de alerta",
+          "loadSettings": "Não foi possível carregar as configurações de automação de alertas",
+          "unknown": "Erro desconhecido"
+        },
+        "fields": {
+          "active": "Ativa",
+          "commaSeparated": "Separados por vírgulas",
+          "description": "Descrição",
+          "nameRequired": "Nome *",
+          "optionalDescription": "Descrição opcional",
+          "ruleName": "Nome da regra",
+          "windowName": "Nome da janela"
+        },
+        "polling": {
+          "title": "Consulta de alertas",
+          "description": "A Alga busca periodicamente os alertas ativos no RMM para detectar aqueles que um webhook não recebeu. Configure abaixo o intervalo de consulta.",
+          "enabled": "Consulta ativada",
+          "interval": "Intervalo (minutos, 5–60)",
+          "intervalError": "O intervalo deve ser de 5 a 60 minutos.",
+          "lastPolled": "Última consulta: {{time}}"
+        },
+        "rules": {
+          "title": "Regras de alerta",
+          "description": "As regras são avaliadas de cima para baixo. A primeira regra correspondente é aplicada. Uma regra sem condições se aplica a todos os alertas.",
+          "empty": "Nenhuma regra configurada. Os alertas serão processados sem automação.",
+          "actions": "Ações",
+          "activityTypes": "Tipos de atividade",
+          "activityTypesPlaceholder": "por exemplo, disco, CPU (separados por vírgulas)",
+          "alertClasses": "Classes de alerta",
+          "assignToUser": "Atribuir a um usuário",
+          "autoResolve": "Resolver o ticket automaticamente quando o alerta desaparecer",
+          "board": "Quadro",
+          "catchAllHelp": "Nenhuma condição definida — esta regra se aplicará a todos os alertas recebidos.",
+          "createTicket": "Criar ticket",
+          "defaultBoard": "Quadro padrão",
+          "defaultClosedStatus": "Status fechado padrão",
+          "descriptionTemplate": "Modelo de descrição do ticket",
+          "descriptionTemplatePlaceholder": "por exemplo, alerta em {{device}}: {{message}}",
+          "keywords": "Palavras-chave",
+          "mapFromSeverity": "Mapear pela gravidade",
+          "matchConditions": "Condições de correspondência",
+          "messagePattern": "Padrão da mensagem (expressão regular)",
+          "messagePatternPlaceholder": "por exemplo, (?i)disk.*full",
+          "notifyUsers": "Notificar usuários",
+          "organizationsFilter": "Organizações (filtro)",
+          "placeholders": "Espaços reservados",
+          "priorityOverride": "Substituição da prioridade",
+          "resetOnClose": "Redefinir o alerta quando o ticket for fechado",
+          "resolveStatus": "Status de resolução",
+          "severities": "Níveis de gravidade",
+          "sourceTypes": "Tipos de origem",
+          "titleTemplate": "Modelo de título do ticket",
+          "titleTemplatePlaceholder": "por exemplo, [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Não atribuído"
+        },
+        "schedule": {
+          "crossesMidnight": "O horário de término é anterior ao de início — a janela atravessa a meia-noite.",
+          "days": "Dias",
+          "endTime": "Horário de término",
+          "endsAt": "Termina em",
+          "none": "Sem agendamento",
+          "oneOff": "Uma vez",
+          "startTime": "Horário de início",
+          "startsAt": "Começa em",
+          "timezone": "Fuso horário",
+          "type": "Tipo de agendamento",
+          "weekly": "Semanal: {{days}}, {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Recorrência semanal"
+        },
+        "scope": {
+          "title": "Escopo",
+          "allClients": "Todos os clientes",
+          "allRmm": "Todos os RMM",
+          "allRmmHelp": "A janela suprime os alertas de todas as integrações RMM.",
+          "clientOptional": "Cliente (opcional — deixe em branco para todos)",
+          "loadingClients": "Carregando clientes…",
+          "onlyThisIntegration": "Somente esta integração",
+          "otherIntegration": "Outra integração",
+          "thisIntegration": "Esta integração",
+          "thisIntegrationHelp": "A janela suprime apenas os alertas desta integração."
+        },
+        "severities": {
+          "critical": "Crítica",
+          "major": "Alta",
+          "moderate": "Moderada",
+          "minor": "Baixa",
+          "none": "Nenhuma"
+        },
+        "summary": {
+          "autoResolve": "Resolução automática",
+          "createsTicket": "Cria um ticket"
+        },
+        "toasts": {
+          "deleteFailed": "Falha ao excluir",
+          "invalidInterval": "Intervalo inválido",
+          "namedItemSaved": "“{{name}}” foi salvo.",
+          "pollingSaved": "Configurações de consulta salvas",
+          "reorderFailed": "Falha ao reordenar",
+          "ruleCreated": "Regra criada",
+          "ruleDeleted": "Regra excluída",
+          "ruleUpdated": "Regra atualizada",
+          "saveFailed": "Falha ao salvar",
+          "updateFailed": "Falha ao atualizar",
+          "windowCreated": "Janela criada",
+          "windowDeleted": "Janela excluída",
+          "windowUpdated": "Janela atualizada"
+        },
+        "validation": {
+          "invalidRegex": "Expressão regular inválida"
+        },
+        "windows": {
+          "title": "Janelas de manutenção",
+          "description": "Os alertas recebidos durante uma janela ativa são suprimidos e não criam tickets.",
+          "empty": "Nenhuma janela de manutenção configurada."
+        }
+      },
       "ninjaOne": {
         "loading": "Carregando as configurações de integração do NinjaOne...",
         "card": {
@@ -3475,6 +3628,119 @@
           "providers": "Hoje o Teams Phone; o mesmo núcleo de chamadas sustentará os próximos provedores."
         }
       }
+    }
+  },
+  "errors": {
+    "rmm": {
+      "invalidInput": "Verifique as configurações de automação de alertas RMM e tente novamente.",
+      "permissions": {
+        "read": "Permissões insuficientes para visualizar as configurações de automação de alertas RMM.",
+        "update": "Permissões insuficientes para gerenciar as configurações de automação de alertas RMM."
+      },
+      "integrationNotFound": "Integração RMM não encontrada.",
+      "nothingToUpdate": "Não há alterações para salvar.",
+      "ruleNotFound": "Regra de alerta não encontrada.",
+      "windowNotFound": "Janela de manutenção não encontrada.",
+      "pollIntervalRange": "O intervalo de consulta deve estar entre 5 e 60 minutos.",
+      "validation": {
+        "scheduleRequired": "Uma janela precisa de um horário de início e término ou de uma recorrência semanal.",
+        "startBeforeEnd": "O horário de início deve ser anterior ao horário de término.",
+        "timesMustDiffer": "Os horários de início e término devem ser diferentes. Use vários dias para uma janela que abranja um dia inteiro.",
+        "unknownTimezone": "Fuso horário desconhecido: {{timezone}}.",
+        "messagePatternInvalid": "O padrão da mensagem não é uma expressão regular válida."
+      }
+    },
+    "mappings": {
+      "viewPermission": "Permissão negada: você não tem permissão para visualizar os mapeamentos contábeis.",
+      "managePermission": "Permissão negada: você não tem permissão para gerenciar os mapeamentos contábeis.",
+      "loadFailed": "Não é possível carregar os dados de mapeamento. Tente novamente.",
+      "duplicate": "Já existe um mapeamento para esta entidade. Edite o mapeamento existente.",
+      "saveFailed": "Não é possível salvar o mapeamento. Tente novamente.",
+      "idRequiredForUpdate": "O ID do mapeamento é obrigatório para a atualização.",
+      "noUpdateData": "Nenhum dado de atualização informado.",
+      "updateFailed": "Não é possível atualizar o mapeamento. Tente novamente.",
+      "idRequiredForDelete": "O ID do mapeamento é obrigatório para a exclusão.",
+      "notFound": "Mapeamento não encontrado. Atualize os mapeamentos e tente novamente.",
+      "deleteFailed": "Não é possível excluir o mapeamento. Tente novamente."
+    },
+    "qbo": {
+      "enterpriseOnly": "A integração com o QuickBooks Online está disponível apenas na Enterprise Edition.",
+      "viewPermission": "Proibido: você não tem permissão para visualizar as configurações da integração com o QuickBooks.",
+      "accounts": {
+        "notConnected": "Conecte o QuickBooks antes de carregar as contas do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar as contas do QuickBooks.",
+        "loadFailed": "Não foi possível carregar as contas do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "classes": {
+        "notConnected": "Conecte o QuickBooks antes de carregar as classes do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar as classes do QuickBooks.",
+        "loadFailed": "Não foi possível carregar as classes do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "departments": {
+        "notConnected": "Conecte o QuickBooks antes de carregar os departamentos do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar os departamentos do QuickBooks.",
+        "loadFailed": "Não foi possível carregar os departamentos do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "items": {
+        "notConnected": "Conecte o QuickBooks antes de carregar os itens do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar os itens do QuickBooks.",
+        "loadFailed": "Não foi possível carregar os itens do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "taxCodes": {
+        "notConnected": "Conecte o QuickBooks antes de carregar os códigos de imposto do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar os códigos de imposto do QuickBooks.",
+        "loadFailed": "Não foi possível carregar os códigos de imposto do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "customers": {
+        "notConnected": "Conecte o QuickBooks antes de carregar os clientes do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar os clientes do QuickBooks.",
+        "loadFailed": "Não foi possível carregar os clientes do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "paymentTerms": {
+        "notConnected": "Conecte o QuickBooks antes de carregar as condições de pagamento do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar as condições de pagamento do QuickBooks.",
+        "loadFailed": "Não foi possível carregar as condições de pagamento do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "A integração com o Xero está disponível apenas na Enterprise Edition.",
+      "viewPermission": "Proibido: você não tem permissão para visualizar as configurações da integração com o Xero.",
+      "organisationDisconnected": "A organização do Xero selecionada não está mais conectada. Reconecte o Xero e tente novamente.",
+      "accounts": {
+        "notConnected": "Conecte o Xero antes de carregar as contas do Xero.",
+        "reconnect": "Reconecte o Xero antes de carregar as contas do Xero.",
+        "loadFailed": "Não foi possível carregar as contas do Xero. Tente novamente ou reconecte o Xero se o problema persistir.",
+        "verifyFailed": "Não foi possível verificar a conexão com o Xero antes de carregar as contas do Xero. Tente novamente."
+      },
+      "items": {
+        "notConnected": "Conecte o Xero antes de carregar os itens do Xero.",
+        "reconnect": "Reconecte o Xero antes de carregar os itens do Xero.",
+        "loadFailed": "Não foi possível carregar os itens do Xero. Tente novamente ou reconecte o Xero se o problema persistir.",
+        "verifyFailed": "Não foi possível verificar a conexão com o Xero antes de carregar os itens do Xero. Tente novamente."
+      },
+      "taxRates": {
+        "notConnected": "Conecte o Xero antes de carregar as alíquotas de imposto do Xero.",
+        "reconnect": "Reconecte o Xero antes de carregar as alíquotas de imposto do Xero.",
+        "loadFailed": "Não foi possível carregar as alíquotas de imposto do Xero. Tente novamente ou reconecte o Xero se o problema persistir.",
+        "verifyFailed": "Não foi possível verificar a conexão com o Xero antes de carregar as alíquotas de imposto do Xero. Tente novamente."
+      },
+      "trackingCategories": {
+        "notConnected": "Conecte o Xero antes de carregar as categorias de rastreamento do Xero.",
+        "reconnect": "Reconecte o Xero antes de carregar as categorias de rastreamento do Xero.",
+        "loadFailed": "Não foi possível carregar as categorias de rastreamento do Xero. Tente novamente ou reconecte o Xero se o problema persistir.",
+        "verifyFailed": "Não foi possível verificar a conexão com o Xero antes de carregar as categorias de rastreamento do Xero. Tente novamente."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "O usuário não tem permissão para gerenciar as configurações de integração",
+      "manageBillingPermission": "O usuário não tem permissão para gerenciar o faturamento",
+      "viewBillingPermission": "O usuário não tem permissão para visualizar as configurações de faturamento",
+      "contentRequired": "O conteúdo CSV é obrigatório"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Já existe no sistema um contato com este endereço de email sem atribuição de cliente",
+      "emailOnAnotherClient": "Este email já está associado a outro cliente",
+      "emailOnAnotherClientNamed": "Este email já está associado a {{clientName}}"
     }
   }
 }

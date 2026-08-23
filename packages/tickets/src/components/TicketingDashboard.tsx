@@ -2199,7 +2199,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   <Filter className="h-4 w-4" />
                   {t('filters.button', 'Filters')}
                   {activeFilterCount > 0 && (
-                    <span className="ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] px-1.5 text-[11px] font-semibold text-[rgb(var(--color-primary-700))]">
+                    <span className="chip-primary ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold">
                       {activeFilterCount}
                     </span>
                   )}
@@ -2251,14 +2251,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   {activeFilterChips.map((chip) => (
                     <span
                       key={chip.key}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] py-1 pl-2.5 pr-1.5 text-xs font-medium text-[rgb(var(--color-primary-700))]"
+                      className="chip-primary inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] py-1 pl-2.5 pr-1.5 text-xs font-medium"
                     >
                       <span className="max-w-[220px] truncate">{chip.label}</span>
                       <button
                         type="button"
                         onClick={chip.onRemove}
                         aria-label={`Remove ${chip.label}`}
-                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-100))] hover:text-[rgb(var(--color-primary-700))]"
+                        className="chip-primary inline-flex h-4 w-4 items-center justify-center rounded-full hover: hover:"
                       >
                         <XCircle className="h-3.5 w-3.5" />
                       </button>

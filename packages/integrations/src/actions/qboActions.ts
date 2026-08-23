@@ -116,8 +116,70 @@ function qboConnectionStatusError(
   };
 }
 
-function qboCatalogNotConnected(catalogName: string): QboCatalogActionError {
-  return actionError(`Connect QuickBooks before loading ${catalogName}.`);
+type QboCatalog =
+  | 'accounts'
+  | 'classes'
+  | 'departments'
+  | 'items'
+  | 'taxCodes'
+  | 'customers'
+  | 'paymentTerms';
+
+const QBO_CATALOG_LABELS: Record<QboCatalog, string> = {
+  accounts: 'QuickBooks accounts',
+  classes: 'QuickBooks classes',
+  departments: 'QuickBooks departments',
+  items: 'QuickBooks items',
+  taxCodes: 'QuickBooks tax codes',
+  customers: 'QuickBooks customers',
+  paymentTerms: 'QuickBooks payment terms',
+};
+
+// A frame plus an English catalogue name does not translate, so every catalogue
+// names its own whole sentence.
+const QBO_CATALOG_KEYS: Record<QboCatalog, { notConnected: string; reconnect: string; loadFailed: string }> = {
+  accounts: {
+    notConnected: 'msp/integrations:errors.qbo.accounts.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.accounts.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.accounts.loadFailed',
+  },
+  classes: {
+    notConnected: 'msp/integrations:errors.qbo.classes.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.classes.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.classes.loadFailed',
+  },
+  departments: {
+    notConnected: 'msp/integrations:errors.qbo.departments.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.departments.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.departments.loadFailed',
+  },
+  items: {
+    notConnected: 'msp/integrations:errors.qbo.items.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.items.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.items.loadFailed',
+  },
+  taxCodes: {
+    notConnected: 'msp/integrations:errors.qbo.taxCodes.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.taxCodes.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.taxCodes.loadFailed',
+  },
+  customers: {
+    notConnected: 'msp/integrations:errors.qbo.customers.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.customers.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.customers.loadFailed',
+  },
+  paymentTerms: {
+    notConnected: 'msp/integrations:errors.qbo.paymentTerms.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.paymentTerms.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.paymentTerms.loadFailed',
+  },
+};
+
+function qboCatalogNotConnected(catalog: QboCatalog): QboCatalogActionError {
+  return actionError(
+    `Connect QuickBooks before loading ${QBO_CATALOG_LABELS[catalog]}.`,
+    QBO_CATALOG_KEYS[catalog].notConnected,
+  );
 }
 
 function isQboReconnectError(error: unknown): boolean {
@@ -167,13 +229,18 @@ function qboConnectionStatusMessage(error: unknown): string {
   return 'Could not check QuickBooks connection status. Try again, or reconnect QuickBooks if the problem persists.';
 }
 
-function qboCatalogFetchError(catalogName: string, errors: unknown[]): QboCatalogActionError {
+function qboCatalogFetchError(catalog: QboCatalog, errors: unknown[]): QboCatalogActionError {
+  const catalogName = QBO_CATALOG_LABELS[catalog];
   if (errors.some(isQboReconnectError)) {
-    return actionError(`Reconnect QuickBooks before loading ${catalogName}.`);
+    return actionError(
+      `Reconnect QuickBooks before loading ${catalogName}.`,
+      QBO_CATALOG_KEYS[catalog].reconnect,
+    );
   }
 
   return actionError(
-    `Could not load ${catalogName}. Try again, or reconnect QuickBooks if the problem persists.`
+    `Could not load ${catalogName}. Try again, or reconnect QuickBooks if the problem persists.`,
+    QBO_CATALOG_KEYS[catalog].loadFailed,
   );
 }
 
@@ -389,12 +456,12 @@ async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
 
 async function getQboCatalogAccessError(user: IUserWithRoles): Promise<QboCatalogActionError | null> {
   if (!isEnterpriseEdition()) {
-    return actionError('QuickBooks Online integration is only available in Enterprise Edition.');
+    return actionError('QuickBooks Online integration is only available in Enterprise Edition.', 'msp/integrations:errors.qbo.enterpriseOnly');
   }
 
   const allowed = await hasPermission(user, 'billing_settings', 'read');
   if (!allowed) {
-    return permissionError('Forbidden: You do not have permission to view QuickBooks integration settings.');
+    return permissionError('Forbidden: You do not have permission to view QuickBooks integration settings.', 'msp/integrations:errors.qbo.viewPermission');
   }
 
   return null;
@@ -652,7 +719,7 @@ export const getQboAccounts = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO accounts: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks accounts');
+    return qboCatalogNotConnected('accounts');
   }
 
   const errors: unknown[] = [];
@@ -674,7 +741,7 @@ export const getQboAccounts = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO accounts for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks accounts', errors);
+  return qboCatalogFetchError('accounts', errors);
 });
 
 /**
@@ -701,7 +768,7 @@ export const getQboClasses = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO classes: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks classes');
+    return qboCatalogNotConnected('classes');
   }
 
   const errors: unknown[] = [];
@@ -723,7 +790,7 @@ export const getQboClasses = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO classes for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks classes', errors);
+  return qboCatalogFetchError('classes', errors);
 });
 
 /**
@@ -750,7 +817,7 @@ export const getQboDepartments = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO departments: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks departments');
+    return qboCatalogNotConnected('departments');
   }
 
   const errors: unknown[] = [];
@@ -770,7 +837,7 @@ export const getQboDepartments = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO departments for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks departments', errors);
+  return qboCatalogFetchError('departments', errors);
 });
 
 /**
@@ -798,7 +865,7 @@ export const getQboItems = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO items: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks items');
+    return qboCatalogNotConnected('items');
   }
 
   const errors: unknown[] = [];
@@ -818,7 +885,7 @@ export const getQboItems = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO items for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks items', errors);
+  return qboCatalogFetchError('items', errors);
 });
 
 /**
@@ -1086,7 +1153,7 @@ export const getQboTaxCodes = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO tax codes: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks tax codes');
+    return qboCatalogNotConnected('taxCodes');
   }
 
   const errors: unknown[] = [];
@@ -1132,7 +1199,7 @@ export const getQboTaxCodes = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO tax codes for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks tax codes', errors);
+  return qboCatalogFetchError('taxCodes', errors);
 });
 
 /**
@@ -1227,7 +1294,7 @@ export const getQboCustomers = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO customers: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks customers');
+    return qboCatalogNotConnected('customers');
   }
 
   const errors: unknown[] = [];
@@ -1252,7 +1319,7 @@ export const getQboCustomers = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO customers for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks customers', errors);
+  return qboCatalogFetchError('customers', errors);
 });
 
 export const getQboTerms = withAuth(async (
@@ -1275,7 +1342,7 @@ export const getQboTerms = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO terms: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks payment terms');
+    return qboCatalogNotConnected('paymentTerms');
   }
 
   const errors: unknown[] = [];
@@ -1295,5 +1362,5 @@ export const getQboTerms = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO terms for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks payment terms', errors);
+  return qboCatalogFetchError('paymentTerms', errors);
 });

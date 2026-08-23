@@ -86,13 +86,13 @@ function bucketPoolActionErrorFrom(error: unknown): BucketPoolActionError | null
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '23505') {
-    return actionError('A bucket pool or member already exists with this configuration. Please refresh and try again.');
+    return actionError('A bucket pool or member already exists with this configuration. Please refresh and try again.', 'msp/billing:errors.bucketPool.duplicate');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected bucket pool records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected bucket pool records is no longer valid. Please refresh and try again.', 'msp/billing:errors.bucketPool.recordInvalid');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the bucket pool values is not allowed. Please review the form and try again.');
+    return actionError('One of the bucket pool values is not allowed. Please review the form and try again.', 'msp/billing:errors.bucketPool.notAllowed');
   }
   return null;
 }

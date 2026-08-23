@@ -76,28 +76,28 @@ function creditActionErrorFrom(error: unknown): CreditActionError | null {
             return permissionError(error.message);
         }
         if (error.message === 'Client ID is required') {
-            return actionError('Client ID is required.');
+            return actionError('Client ID is required.', 'msp/billing:errors.client.idRequired');
         }
         if (error.message === 'Client not found') {
-            return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.client.notFoundRefresh');
         }
         if (/^Invoice .+ not found$/.test(error.message)) {
-            return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.invoice.notFoundRefresh');
         }
         if (/^Credit with ID .+ not found$/.test(error.message)) {
-            return actionError('Credit not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Credit not found. It may have been updated or deleted. Please refresh and try again.', 'msp/credits:errors.credit.notFoundRefresh');
         }
         if (/^Original transaction for credit .+ not found$/.test(error.message)) {
-            return actionError('The original credit transaction could not be found. Please refresh and try again.');
+            return actionError('The original credit transaction could not be found. Please refresh and try again.', 'msp/credits:errors.credit.originalTransactionMissing');
         }
         if (/^Source credit with ID .+ not found$/.test(error.message)) {
-            return actionError('Source credit not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Source credit not found. It may have been updated or deleted. Please refresh and try again.', 'msp/credits:errors.credit.sourceNotFound');
         }
         if (/^Target client with ID .+ not found$/.test(error.message)) {
-            return actionError('Target client not found. It may have been updated or deleted. Please refresh and try again.');
+            return actionError('Target client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/credits:errors.credit.targetClientNotFound');
         }
         if (/^Insufficient remaining amount .+ for transfer of .+$/.test(error.message)) {
-            return actionError('Insufficient remaining amount for transfer.');
+            return actionError('Insufficient remaining amount for transfer.', 'msp/credits:errors.credit.insufficientTransferAmount');
         }
         if (error.message.startsWith('No ') && error.message.includes(' credits available. Credits exist in other currencies')) {
             return actionError(error.message);
@@ -119,19 +119,25 @@ function creditActionErrorFrom(error: unknown): CreditActionError | null {
 
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02') {
-        return actionError('One of the selected credit values is invalid. Please refresh and try again.');
+        return actionError('One of the selected credit values is invalid. Please refresh and try again.', 'msp/credits:errors.credit.invalidValue');
     }
     if (dbError?.code === '23502') {
-        return actionError(`Missing required credit field${dbError.column ? `: ${dbError.column}` : ''}.`);
+        return dbError.column
+          ? actionError(
+              `Missing required credit field: ${dbError.column}.`,
+              'msp/credits:errors.credit.missingFieldNamed',
+              { field: dbError.column },
+            )
+          : actionError('Missing required credit field.', 'msp/credits:errors.credit.missingField');
     }
     if (dbError?.code === '23503') {
-        return actionError('The selected credit, client, invoice, or transaction no longer exists. Please refresh and try again.');
+        return actionError('The selected credit, client, invoice, or transaction no longer exists. Please refresh and try again.', 'msp/credits:errors.credit.referenceMissing');
     }
     if (dbError?.code === '23505') {
-        return actionError('A conflicting credit transaction already exists. Please refresh and try again.');
+        return actionError('A conflicting credit transaction already exists. Please refresh and try again.', 'msp/credits:errors.credit.duplicate');
     }
     if (dbError?.code === '23514') {
-        return actionError('One of the credit values is not allowed. Please review the form and try again.');
+        return actionError('One of the credit values is not allowed. Please review the form and try again.', 'msp/credits:errors.credit.notAllowed');
     }
 
     return null;

@@ -269,7 +269,9 @@
         "licenseLimitReached": "Osiągnięto limit licencji użytkowników MSP.",
         "soloPlanLimit": "Plan Solo jest ograniczony do 1 użytkownika. Przejdź na Pro, aby dodać więcej użytkowników.",
         "revokeInvitation": "Nie udało się odwołać zaproszenia",
-        "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już użyte"
+        "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już użyte",
+        "createContact": "Nie udało się utworzyć kontaktu: {{reason}}",
+        "unknown": "Nieznany błąd"
       }
     },
     "invitations": {
@@ -1695,7 +1697,138 @@
   },
   "timeEntry": {
     "title": "Ustawienia wpisów czasu",
-    "description": "Zarządzanie ustawieniami wpisów czasu i okresami rozliczeniowymi"
+    "description": "Zarządzanie ustawieniami wpisów czasu i okresami rozliczeniowymi",
+    "timePeriods": {
+      "title": "Ustawienia okresów rozliczeniowych",
+      "description": "Skonfiguruj okresy rozliczeniowe",
+      "loading": "Ładowanie ustawień okresów rozliczeniowych...",
+      "addNew": "Dodaj nowe ustawienie okresu",
+      "help": {
+        "title": "Jak działają ustawienia okresów",
+        "intro": "Możesz zdefiniować wiele aktywnych ustawień, aby tworzyć złożone cykle rozliczeniowe. Dzień końcowy to ostatni dzień wchodzący w skład okresu.",
+        "exampleIntro": "Na przykład, aby ustawić okresy półmiesięczne (1–15 i 16–koniec miesiąca):",
+        "firstSettingLabel": "Ustawienie 1:",
+        "firstSetting": "Dzień początkowy: 1, dzień końcowy: 15 → okres obejmuje dni od 1 do 15",
+        "secondSettingLabel": "Ustawienie 2:",
+        "secondSetting": "Dzień początkowy: 16, dzień końcowy: koniec miesiąca → okres obejmuje dni od 16 do ostatniego",
+        "outro": "System wykorzystuje te ustawienia do proponowania i generowania okresów. Upewnij się, że pokrywają cały cykl bez przerw."
+      },
+      "form": {
+        "requiredFields": "Uzupełnij wymagane pola:",
+        "frequency": "Częstotliwość *",
+        "frequencyPlaceholder": "Podaj częstotliwość",
+        "frequencyUnit": "Jednostka częstotliwości *",
+        "frequencyUnitPlaceholder": "Wybierz jednostkę częstotliwości",
+        "startDay": "Dzień początkowy *",
+        "selectDay": "Wybierz dzień",
+        "startDayPlaceholder": "Podaj dzień początkowy",
+        "endDay": "Dzień końcowy *",
+        "endDayPlaceholder": "Podaj dzień końcowy",
+        "endOfUnit": "Koniec: {{unit}}",
+        "endOfMonth": "Koniec miesiąca",
+        "startMonth": "Miesiąc początkowy",
+        "endMonth": "Miesiąc końcowy",
+        "startDayOfMonth": "Dzień początkowy miesiąca *",
+        "endDayOfMonth": "Dzień końcowy miesiąca *",
+        "add": "Dodaj ustawienie okresu"
+      },
+      "validation": {
+        "frequencyMin": "Częstotliwość musi wynosić co najmniej 1",
+        "startDayRequired": "Dzień początkowy jest wymagany",
+        "endDayRequired": "Dzień końcowy jest wymagany",
+        "startDayOfMonthRequired": "Dzień początkowy miesiąca jest wymagany",
+        "endDayOfMonthRequired": "Dzień końcowy miesiąca jest wymagany"
+      },
+      "errors": {
+        "fetch": "Nie udało się pobrać ustawień okresów rozliczeniowych",
+        "overlap": "To ustawienie okresu nakłada się na istniejące aktywne ustawienie.",
+        "add": "Nie udało się dodać ustawienia okresu. Sprawdź wartości i spróbuj ponownie.",
+        "update": "Nie udało się zaktualizować ustawienia okresu",
+        "delete": "Nie udało się usunąć ustawienia okresu"
+      },
+      "summary": {
+        "frequency": "Częstotliwość: co {{count}} × {{unit}}",
+        "startDay": "Dzień początkowy: {{value}}",
+        "endDay": "Dzień końcowy: {{value}}",
+        "start": "Początek: {{value}}",
+        "end": "Koniec: {{value}}",
+        "effectiveFrom": "Obowiązuje od: {{value}}",
+        "effectiveTo": "Obowiązuje do: {{value}}",
+        "noEnd": "Bez końca",
+        "notSet": "Nie ustawiono"
+      },
+      "units": {
+        "day": "Dzień",
+        "week": "Tydzień",
+        "month": "Miesiąc",
+        "year": "Rok"
+      },
+      "months": {
+        "1": "styczeń",
+        "2": "luty",
+        "3": "marzec",
+        "4": "kwiecień",
+        "5": "maj",
+        "6": "czerwiec",
+        "7": "lipiec",
+        "8": "sierpień",
+        "9": "wrzesień",
+        "10": "październik",
+        "11": "listopad",
+        "12": "grudzień"
+      },
+      "weekDays": {
+        "1": "poniedziałek",
+        "2": "wtorek",
+        "3": "środa",
+        "4": "czwartek",
+        "5": "piątek",
+        "6": "sobota",
+        "7": "niedziela"
+      }
+    },
+    "periods": {
+      "title": "Okresy",
+      "description": "Przeglądaj okresy wpisów czasu używane do rejestrowania czasu i zarządzaj nimi",
+      "loading": "Wczytywanie okresów...",
+      "create": "Utwórz nowy okres",
+      "openMenu": "Otwórz menu",
+      "columns": {
+        "startDate": "Data początkowa",
+        "endDate": "Data końcowa",
+        "actions": "Akcje"
+      },
+      "form": {
+        "createTitle": "Utwórz nowy okres",
+        "editTitle": "Edytuj okres",
+        "suggestion": "Na podstawie ustawień proponowany jest kolejny okres.",
+        "frequency": "Częstotliwość: co {{value}} × {{unit}}",
+        "overrideDates": "Zastąp proponowane daty",
+        "startDate": "Data początkowa",
+        "startDatePlaceholder": "Wybierz datę początkową",
+        "noEndDate": "Bez daty końcowej",
+        "endDate": "Data końcowa",
+        "endDatePlaceholder": "Wybierz datę końcową",
+        "deletePeriod": "Usuń okres",
+        "confirmDeleteTitle": "Potwierdź usunięcie",
+        "confirmDeleteBody": "Czy na pewno chcesz usunąć ten okres? Tej operacji nie można cofnąć.",
+        "checkSettingsLink": "Sprawdź ustawienia okresów rozliczeniowych."
+      },
+      "errors": {
+        "load": "Nie udało się wczytać okresów.",
+        "suggest": "Nie udało się zaproponować nowego okresu",
+        "noApplicableSettings": "Nie znaleziono odpowiednich ustawień okresów rozliczeniowych.",
+        "noSettings": "Brak dostępnych ustawień okresów rozliczeniowych. Nie można utworzyć nowego okresu.",
+        "settingsRequired": "Bez ustawień nie można zarządzać okresem.",
+        "startDateRequired": "Należy podać datę początkową.",
+        "startBeforeEnd": "Data początkowa musi być wcześniejsza niż data końcowa.",
+        "overlap": "Okres nakłada się na istniejący okres.",
+        "overlapRetry": "Ten okres nakłada się na istniejący. Wybierz inne daty.",
+        "create": "Nie udało się utworzyć okresu.",
+        "delete": "Nie udało się usunąć okresu",
+        "unexpected": "Wystąpił nieoczekiwany błąd."
+      }
+    }
   },
   "billing": {
     "title": "Ustawienia rozliczeń",
@@ -1928,6 +2061,50 @@
     "loading": {
       "extensions": "Ładowanie rozszerzeń...",
       "installer": "Ładowanie instalatora..."
+    }
+  },
+  "policyManagement": {
+    "title": "Zarządzanie zasadami",
+    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad."
+  },
+  "roleManagement": {
+    "title": "Zarządzanie rolami",
+    "description": "Twórz role i zarządzaj nimi na potrzeby dostępu MSP i portalu klienta",
+    "columns": {
+      "roleNameRequired": "Nazwa roli *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Nazwa roli",
+      "roleNamePlaceholder": "Wprowadź nazwę roli",
+      "description": "Opis",
+      "descriptionPlaceholder": "Wprowadź opis roli"
+    },
+    "portal": {
+      "none": "Brak",
+      "access": "Dostęp do portalu",
+      "msp": "Portal MSP",
+      "client": "Portal klienta",
+      "mspShort": "MSP",
+      "clientShort": "Klient",
+      "required": "Rola musi mieć dostęp do co najmniej jednego portalu"
+    },
+    "actions": {
+      "addRole": "Dodaj rolę",
+      "createRole": "Utwórz rolę"
+    },
+    "createDialog": {
+      "title": "Utwórz nową rolę"
+    },
+    "deleteDialog": {
+      "entityFallback": "ta rola"
+    },
+    "adminDeleteDisabled": "Ról administratora nie można usuwać, ponieważ są rolami systemowymi",
+    "errors": {
+      "createFailed": "Nie udało się utworzyć roli",
+      "updateFailed": "Nie udało się zaktualizować roli",
+      "validateDeletionFailed": "Nie udało się sprawdzić możliwości usunięcia. Spróbuj ponownie.",
+      "deleteFailed": "Nie udało się usunąć roli"
     }
   },
   "security": {
@@ -2907,6 +3084,170 @@
         "confirm": "Odłącz",
         "cancel": "Anuluj"
       }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Odmowa uprawnień: nie można utworzyć zespołu.",
+        "update": "Odmowa uprawnień: nie można zaktualizować zespołu.",
+        "modify": "Odmowa uprawnień: nie można modyfikować zespołu.",
+        "modifyMembers": "Odmowa uprawnień: nie można modyfikować członków zespołu.",
+        "view": "Odmowa uprawnień: nie można wyświetlić zespołu.",
+        "viewAll": "Odmowa uprawnień: nie można wyświetlić zespołów.",
+        "assignManager": "Odmowa uprawnień: nie można przypisać kierownika zespołu."
+      },
+      "notFoundRefresh": "Nie znaleziono zespołu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "leadRequired": "Zespół musi mieć lidera. Wybierz lidera zespołu i spróbuj ponownie.",
+      "inactiveUser": "Nieaktywnych użytkowników nie można dodać do zespołu.",
+      "cannotRemoveLead": "Nie można usunąć lidera zespołu. Najpierw przypisz nowego lidera.",
+      "invalidValue": "Jedna z wybranych wartości zespołu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "duplicateMember": "Ten użytkownik jest już członkiem zespołu.",
+      "referenceMissing": "Wybrany lider lub członek zespołu nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola zespołu.",
+      "missingFieldNamed": "Brakuje wymaganego pola zespołu: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Odmowa uprawnień: brak uprawnień do wyświetlania zasad SLA",
+        "create": "Odmowa uprawnień: brak uprawnień do tworzenia zasad SLA",
+        "update": "Odmowa uprawnień: brak uprawnień do aktualizowania zasad SLA",
+        "delete": "Odmowa uprawnień: brak uprawnień do usuwania zasad SLA"
+      },
+      "policyNotFound": "Nie znaleziono zasady SLA. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "targetNotFound": "Nie znaleziono celu zasady SLA. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "priorityNotFound": "Nie znaleziono wybranego priorytetu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "clientNotFound": "Nie znaleziono wybranego klienta. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "boardNotFound": "Nie znaleziono wybranej tablicy. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "ticketNotFound": "Nie znaleziono zgłoszenia. Mogło zostać usunięte. Odśwież stronę i spróbuj ponownie.",
+      "duplicateTarget": "W tej zasadzie istnieje już cel dla tego priorytetu.",
+      "pauseRequiresBoardStatus": "Konfiguracja wstrzymania SLA wymaga statusu zgłoszenia należącego do tablicy.",
+      "invalidValue": "Jedna z wybranych wartości SLA jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany rekord SLA lub powiązana wartość już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana SLA jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości SLA jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola SLA.",
+      "missingFieldNamed": "Brakuje wymaganego pola SLA: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Nie znaleziono tablicy. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "userNotFound": "Nie znaleziono wybranego użytkownika odpowiedzialnego za eskalację. Odśwież stronę i wybierz innego użytkownika.",
+      "configNotFound": "Nie znaleziono konfiguracji osoby odpowiedzialnej za eskalację. Mogła już zostać usunięta.",
+      "recordInvalid": "Jeden z wybranych rekordów osoby odpowiedzialnej za eskalację jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana tablica lub użytkownik już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Dla tej tablicy i poziomu skonfigurowano już osobę odpowiedzialną za eskalację.",
+      "missingField": "Brakuje wymaganego pola osoby odpowiedzialnej za eskalację.",
+      "missingFieldNamed": "Brakuje wymaganego pola osoby odpowiedzialnej za eskalację: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Nie znaleziono statusu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany powiązany rekord dla tego statusu już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "orderInUse": "Ten numer kolejności jest już używany. Wybierz inny numer kolejności.",
+      "duplicateName": "Status o tej nazwie już istnieje.",
+      "notAllowed": "Jedna z wartości statusu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola statusu.",
+      "missingFieldNamed": "Brakuje wymaganego pola statusu: {{field}}.",
+      "nameRequired": "Nazwa statusu jest wymagana",
+      "nameEmpty": "Nazwa statusu nie może być pusta",
+      "idRequired": "Identyfikator statusu jest wymagany",
+      "manageFromBoard": "Statusami zgłoszeń zarządza się w ustawieniach tablicy"
+    },
+    "priority": {
+      "notFound": "Nie znaleziono priorytetu.",
+      "boardMissing": "Wybrana tablica już nie istnieje.",
+      "duplicate": "Priorytet o takich danych już istnieje.",
+      "referenceInvalid": "Wybrane odwołanie do priorytetu nie jest już prawidłowe. Odśwież stronę i spróbuj ponownie.",
+      "invalidData": "Podano nieprawidłowe dane priorytetu. Sprawdź szczegóły priorytetu.",
+      "missingField": "Brakuje wymaganego pola priorytetu.",
+      "missingFieldNamed": "Brakuje wymaganego pola priorytetu: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Jeden z wybranych użytkowników jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych użytkowników już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "readClientInfoPermission": "Odmowa uprawnień: nie można odczytać informacji o kliencie użytkownika"
+    },
+    "roles": {
+      "userNotFound": "Nie znaleziono użytkownika. Odśwież listę użytkowników i spróbuj ponownie.",
+      "roleNotFound": "Nie znaleziono roli. Odśwież listę ról i spróbuj ponownie.",
+      "portalRoleOnMspUser": "Nie można przypisać roli portalu klienta użytkownikowi MSP.",
+      "mspRoleOnPortalUser": "Nie można przypisać roli MSP użytkownikowi portalu klienta.",
+      "invalidValue": "Jedna z wybranych wartości użytkownika lub roli jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany użytkownik lub rola już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Ten użytkownik ma już wybraną rolę.",
+      "changePermission": "Odmowa uprawnień: brak uprawnień do zmiany ról użytkowników.",
+      "missingField": "Brakuje wymaganego pola roli użytkownika.",
+      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
+      "notFound": "Nie znaleziono sekretu. Mógł już zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "invalidName": "Nieprawidłowa nazwa organizacji lub sekretu.",
+      "readOnly": "Magazyn sekretów jest w tym środowisku tylko do odczytu.",
+      "recordInvalid": "Jeden z wybranych rekordów sekretów jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów sekretów już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Sekret o tej nazwie już istnieje.",
+      "missingField": "Brakuje wymaganego pola sekretu.",
+      "missingFieldNamed": "Brakuje wymaganego pola sekretu: {{field}}.",
+      "permissions": {
+        "create": "Odmowa uprawnień: nie można tworzyć sekretów",
+        "update": "Odmowa uprawnień: nie można aktualizować sekretów",
+        "delete": "Odmowa uprawnień: nie można usuwać sekretów"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Identyfikator organizacji jest wymagany.",
+      "invalidValue": "Jedna z wybranych wartości ustawień organizacji jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola ustawień organizacji.",
+      "missingFieldNamed": "Brakuje wymaganego pola ustawień organizacji: {{field}}.",
+      "invalidTimezone": "Nieprawidłowa strefa czasowa: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Odmowa uprawnień: tylko administratorzy mogą usuwać dane onboardingu.",
+        "update": "Odmowa uprawnień: nie można zaktualizować ustawień",
+        "enableAiAssistant": "Odmowa uprawnień: nie można włączyć asystenta AI dla tej organizacji"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Nie znaleziono szablonu systemowego. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "templateNotFound": "Nie znaleziono szablonu powiadomienia. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "categoryNotFound": "Nie znaleziono kategorii powiadomień. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "subtypeNotFound": "Nie znaleziono podtypu powiadomienia. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "notificationNotFound": "Nie znaleziono powiadomienia. Mogło już zostać zaktualizowane lub usunięte.",
+      "recordInvalid": "Jeden z wybranych rekordów powiadomień jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów powiadomień już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Ustawienie powiadomienia o takich danych już istnieje.",
+      "missingField": "Brakuje wymaganego pola powiadomienia.",
+      "missingFieldNamed": "Brakuje wymaganego pola powiadomienia: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Nie znaleziono roli lub uprawnienia. Odśwież listę uprawnień i spróbuj ponownie.",
+      "ticketNotFound": "Nie znaleziono zgłoszenia. Odśwież zgłoszenie i spróbuj ponownie.",
+      "policyNotFound": "Nie znaleziono zasady. Odśwież listę zasad i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości roli, uprawnienia lub zasady jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów zabezpieczeń już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "permissionAlreadyAssigned": "To uprawnienie jest już przypisane do tej roli.",
+      "duplicate": "Rekord zabezpieczeń o takich danych już istnieje.",
+      "missingField": "Brakuje wymaganego pola zabezpieczeń.",
+      "missingFieldNamed": "Brakuje wymaganego pola zabezpieczeń: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Odmowa uprawnień: administratorzy portalu klienta mogą zarządzać wyłącznie rolami portalu klienta.",
+        "portalUsersOnly": "Odmowa uprawnień: administratorzy portalu klienta mogą zarządzać wyłącznie użytkownikami portalu klienta.",
+        "portalAdminRequired": "Odmowa uprawnień: wymagany jest dostęp administratora portalu klienta.",
+        "otherClientUsers": "Odmowa uprawnień: nie można zarządzać użytkownikami innego klienta."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Użytkownicy portalu klienta nie mogą zarządzać domenami niestandardowymi.",
+      "noPermission": "Nie masz uprawnień do zarządzania ustawieniami portalu klienta.",
+      "required": "Domena jest wymagana.",
+      "length": "Domena musi mieć od 3 do 253 znaków.",
+      "charset": "Domena może zawierać wyłącznie litery, cyfry, myślniki i kropki.",
+      "needsDot": "Domena musi zawierać co najmniej jedną kropkę.",
+      "notCanonicalHost": "Wybierz domenę inną niż host kanoniczny.",
+      "noLeadingTrailingDot": "Domena nie może zaczynać się ani kończyć kropką.",
+      "notApplianceHost": "Wybierz domenę inną niż główny host tego urządzenia. Niestandardowa domena portalu musi być inną nazwą hosta, którą serwer proxy przekierowuje tutaj.",
+      "nothingToRetry": "Brak nieudanej rejestracji domeny niestandardowej do ponowienia.",
+      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji."
     }
   }
 }

@@ -1,360 +1,360 @@
 {
   "templatesSettings": {
-    "folderCount_one": "11111 {{count}} 11111",
-    "folderCount_other": "11111 {{count}} 11111"
+    "folderCount_one": "⟦{{count}} ƒȯŀḓḗř⟧",
+    "folderCount_other": "⟦{{count}} ƒȯŀḓḗřş⟧"
   },
-  "title": "11111",
-  "noDocuments": "11111",
-  "upload": "11111",
-  "download": "11111",
-  "remove": "11111",
-  "preview": "11111",
-  "linkDocuments": "11111",
-  "editDocument": "11111",
-  "viewDocument": "11111",
-  "downloadToPlay": "11111",
-  "delete": "11111",
-  "previewUnavailable": "11111",
-  "newDocument": "11111",
-  "uploadFile": "11111",
-  "deleteTitle": "11111",
-  "deleteMessage": "11111 {{name}} 11111",
-  "deleteVideoTitle": "11111",
-  "deleteVideoMessage": "11111 {{name}} 11111",
-  "removeTitle": "11111",
-  "removeMessage": "11111 {{name}} 11111",
-  "removeVideoTitle": "11111",
-  "removeVideoMessage": "11111 {{name}} 11111",
-  "downloadFile": "11111",
-  "videoUnsupported": "11111 {{mimeType}} 11111",
-  "videoTagUnsupported": "11111",
-  "unnamed": "11111",
-  "videoDownloadInfo": "11111",
-  "previewUnavailableNoId": "11111",
-  "previewLoadFailed": "11111",
-  "videoCodecWarning": "11111",
+  "title": "⟦Ḓȯƈŭḿḗƞŧş⟧",
+  "noDocuments": "⟦Ƞȯ ḓȯƈŭḿḗƞŧş ȧŧŧȧƈħḗḓ⟧",
+  "upload": "⟦Ŭƥŀȯȧḓ Ḓȯƈŭḿḗƞŧ⟧",
+  "download": "⟦Ḓȯẇƞŀȯȧḓ⟧",
+  "remove": "⟦Řḗḿȯṽḗ⟧",
+  "preview": "⟦Ƥřḗṽīḗẇ⟧",
+  "linkDocuments": "⟦Ŀīƞķ ḗẋīşŧīƞɠ⟧",
+  "editDocument": "⟦Ḗḓīŧ Ḓȯƈŭḿḗƞŧ⟧",
+  "viewDocument": "⟦Ṽīḗẇ Ḓȯƈŭḿḗƞŧ⟧",
+  "downloadToPlay": "⟦Ḓȯẇƞŀȯȧḓ ŧȯ Ƥŀȧẏ⟧",
+  "delete": "⟦Ḓḗŀḗŧḗ⟧",
+  "previewUnavailable": "⟦Ƥřḗṽīḗẇ ŭƞȧṽȧīŀȧƀŀḗ⟧",
+  "newDocument": "⟦Ȧḓḓ ḓȯƈŭḿḗƞŧ⟧",
+  "uploadFile": "⟦Ŭƥŀȯȧḓ ƒīŀḗ⟧",
+  "deleteTitle": "⟦Ḓḗŀḗŧḗ Ḓȯƈŭḿḗƞŧ⟧",
+  "deleteMessage": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ \"{{name}}\"? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧",
+  "deleteVideoTitle": "⟦Ḓḗŀḗŧḗ Ṽīḓḗȯ⟧",
+  "deleteVideoMessage": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħḗ ṽīḓḗȯ \"{{name}}\"? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧",
+  "removeTitle": "⟦Řḗḿȯṽḗ Ḓȯƈŭḿḗƞŧ⟧",
+  "removeMessage": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ řḗḿȯṽḗ \"{{name}}\" ƒřȯḿ ŧħīş īŧḗḿ? Ŧħḗ ḓȯƈŭḿḗƞŧ ẇīŀŀ şŧīŀŀ ƀḗ ȧṽȧīŀȧƀŀḗ īƞ ŧħḗ ḓȯƈŭḿḗƞŧ ŀīƀřȧřẏ.⟧",
+  "removeVideoTitle": "⟦Řḗḿȯṽḗ Ṽīḓḗȯ⟧",
+  "removeVideoMessage": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ řḗḿȯṽḗ ŧħḗ ṽīḓḗȯ \"{{name}}\" ƒřȯḿ ŧħīş īŧḗḿ? Ŧħḗ ƒīŀḗ ẇīŀŀ řḗḿȧīƞ ȧṽȧīŀȧƀŀḗ īƞ ŧħḗ ḓȯƈŭḿḗƞŧ ŀīƀřȧřẏ.⟧",
+  "downloadFile": "⟦Ḓȯẇƞŀȯȧḓ Ƒīŀḗ⟧",
+  "videoUnsupported": "⟦Ṽīḓḗȯ ƒȯřḿȧŧ ({{mimeType}}) ƞȯŧ şŭƥƥȯřŧḗḓ ƒȯř ƀřȯẇşḗř ƥŀȧẏƀȧƈķ⟧",
+  "videoTagUnsupported": "⟦Ẏȯŭř ƀřȯẇşḗř ḓȯḗş ƞȯŧ şŭƥƥȯřŧ ŧħḗ ṽīḓḗȯ ŧȧɠ.⟧",
+  "unnamed": "⟦Ŭƞŧīŧŀḗḓ⟧",
+  "videoDownloadInfo": "⟦Ŧħḗ ṽīḓḗȯ ẇīŀŀ ƀḗ ḓȯẇƞŀȯȧḓḗḓ ȧƞḓ ƈȧƞ ƀḗ ƥŀȧẏḗḓ ẇīŧħ ẏȯŭř şẏşŧḗḿ'ş ḓḗƒȧŭŀŧ ṽīḓḗȯ ƥŀȧẏḗř⟧",
+  "previewUnavailableNoId": "⟦Ƥřḗṽīḗẇ ƞȯŧ ȧṽȧīŀȧƀŀḗ (ƞȯ īḓḗƞŧīƒīḗř)⟧",
+  "previewLoadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřḗṽīḗẇ⟧",
+  "videoCodecWarning": "⟦Ƈħřȯḿḗ ḿȧẏ ƞȯŧ şŭƥƥȯřŧ ŧħīş ṽīḓḗȯ ƈȯḓḗƈ. Ŧřẏ ḓȯẇƞŀȯȧḓīƞɠ ȯř ŭşḗ Şȧƒȧřī/Ḗḓɠḗ.⟧",
   "messages": {
-    "fetchFailed": "11111",
-    "folderCreated": "11111 {{name}} 11111",
-    "folderCreateFailed": "11111",
-    "moveDocumentsSuccess_one": "11111 {{count}} 11111 {{destination}} 11111",
-    "moveDocumentsSuccess_other": "11111 {{count}} 11111 {{destination}} 11111",
-    "moveDocumentsFailed": "11111",
-    "deleteSuccess": "11111 {{name}} 11111",
-    "deleteFailed": "11111",
-    "removeAssociationFailed": "11111",
-    "moveDocumentSuccess": "11111 {{name}} 11111",
-    "moveDocumentFailed": "11111",
-    "createFailed": "11111",
-    "saveFailed": "11111",
-    "loadContentFailed": "11111",
-    "downloadFailed": "11111",
-    "bulkDeleteFailed": "11111",
-    "bulkDeleteSuccess_one": "11111 {{count}} 11111",
-    "bulkDeleteSuccess_other": "11111 {{count}} 11111",
-    "passwordRequired": "11111",
-    "shareLinkCreateFailed": "11111",
-    "shareLinkCreated": "11111",
-    "linkCopied": "11111",
-    "shareLinkRevokeFailed": "11111",
-    "shareLinkRevoked": "11111",
-    "shareLinksLoadFailed": "11111",
-    "folderPathRequired": "11111",
-    "folderAlreadyExists": "11111",
-    "defaultsSaveFailed": "11111",
-    "defaultsRemoved": "11111 {{entity}} 11111",
-    "defaultsSaved": "11111 {{entity}} 11111",
-    "suggestedDefaultsAllLoaded": "11111",
-    "suggestedDefaultsLoaded_one": "11111 {{count}} 11111",
-    "suggestedDefaultsLoaded_other": "11111 {{count}} 11111",
-    "suggestedDefaultsLoadFailed": "11111",
-    "entityTypesAllConfigured": "11111",
-    "defaultFoldersLoadFailed": "11111",
-    "parseContentFailed": "11111"
+    "fetchFailed": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ḓȯƈŭḿḗƞŧş.⟧",
+    "folderCreated": "⟦Ƒȯŀḓḗř \"{{name}}\" ƈřḗȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "folderCreateFailed": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ƒȯŀḓḗř⟧",
+    "moveDocumentsSuccess_one": "⟦{{count}} ḓȯƈŭḿḗƞŧ ḿȯṽḗḓ ŧȯ {{destination}}⟧",
+    "moveDocumentsSuccess_other": "⟦{{count}} ḓȯƈŭḿḗƞŧş ḿȯṽḗḓ ŧȯ {{destination}}⟧",
+    "moveDocumentsFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḿȯṽḗ ḓȯƈŭḿḗƞŧş⟧",
+    "deleteSuccess": "⟦Ḓȯƈŭḿḗƞŧ \"{{name}}\" ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "deleteFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ḓȯƈŭḿḗƞŧ⟧",
+    "removeAssociationFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ ḓȯƈŭḿḗƞŧ ȧşşȯƈīȧŧīȯƞ⟧",
+    "moveDocumentSuccess": "⟦Ḓȯƈŭḿḗƞŧ \"{{name}}\" ḿȯṽḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "moveDocumentFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḿȯṽḗ ḓȯƈŭḿḗƞŧ⟧",
+    "createFailed": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ḓȯƈŭḿḗƞŧ⟧",
+    "saveFailed": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ḓȯƈŭḿḗƞŧ⟧",
+    "loadContentFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓȯƈŭḿḗƞŧ ƈȯƞŧḗƞŧ⟧",
+    "downloadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḓȯẇƞŀȯȧḓ ḓȯƈŭḿḗƞŧ⟧",
+    "bulkDeleteFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ şȯḿḗ ḓȯƈŭḿḗƞŧş⟧",
+    "bulkDeleteSuccess_one": "⟦{{count}} ḓȯƈŭḿḗƞŧ ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "bulkDeleteSuccess_other": "⟦{{count}} ḓȯƈŭḿḗƞŧş ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "passwordRequired": "⟦Ƥȧşşẇȯřḓ īş řḗʠŭīřḗḓ⟧",
+    "shareLinkCreateFailed": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ şħȧřḗ ŀīƞķ⟧",
+    "shareLinkCreated": "⟦Şħȧřḗ ŀīƞķ ƈřḗȧŧḗḓ⟧",
+    "linkCopied": "⟦Ŀīƞķ ƈȯƥīḗḓ ŧȯ ƈŀīƥƀȯȧřḓ⟧",
+    "shareLinkRevokeFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗṽȯķḗ şħȧřḗ ŀīƞķ⟧",
+    "shareLinkRevoked": "⟦Şħȧřḗ ŀīƞķ řḗṽȯķḗḓ⟧",
+    "shareLinksLoadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şħȧřḗ ŀīƞķş⟧",
+    "folderPathRequired": "⟦Ƒȯŀḓḗř ƥȧŧħ īş řḗʠŭīřḗḓ⟧",
+    "folderAlreadyExists": "⟦Ƒȯŀḓḗř ȧŀřḗȧḓẏ ḗẋīşŧş⟧",
+    "defaultsSaveFailed": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ⟧",
+    "defaultsRemoved": "⟦Ḓḗƒȧŭŀŧ ƒȯŀḓḗřş ƒȯř {{entity}} řḗḿȯṽḗḓ⟧",
+    "defaultsSaved": "⟦Ḓḗƒȧŭŀŧ ƒȯŀḓḗřş ƒȯř {{entity}} şȧṽḗḓ⟧",
+    "suggestedDefaultsAllLoaded": "⟦Ȧŀŀ şŭɠɠḗşŧḗḓ ḓḗƒȧŭŀŧş ȧřḗ ȧŀřḗȧḓẏ ŀȯȧḓḗḓ⟧",
+    "suggestedDefaultsLoaded_one": "⟦Ŀȯȧḓḗḓ ḓḗƒȧŭŀŧş ƒȯř {{count}} ḗƞŧīŧẏ ŧẏƥḗ⟧",
+    "suggestedDefaultsLoaded_other": "⟦Ŀȯȧḓḗḓ ḓḗƒȧŭŀŧş ƒȯř {{count}} ḗƞŧīŧẏ ŧẏƥḗş⟧",
+    "suggestedDefaultsLoadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şŭɠɠḗşŧḗḓ ḓḗƒȧŭŀŧş⟧",
+    "entityTypesAllConfigured": "⟦Ȧŀŀ ḗƞŧīŧẏ ŧẏƥḗş ȧŀřḗȧḓẏ ħȧṽḗ ḓḗƒȧŭŀŧ ƒȯŀḓḗřş ƈȯƞƒīɠŭřḗḓ⟧",
+    "defaultFoldersLoadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓḗƒȧŭŀŧ ƒȯŀḓḗřş⟧",
+    "parseContentFailed": "⟦Ƒȧīŀḗḓ ŧȯ ƥȧřşḗ ḓȯƈŭḿḗƞŧ ƈȯƞŧḗƞŧ⟧"
   },
   "validation": {
-    "nameRequired": "11111",
-    "typeRequired": "11111",
-    "userIdRequired": "11111",
-    "orderNumberRequired": "11111",
-    "contentRequired": "11111"
+    "nameRequired": "⟦Ḓȯƈŭḿḗƞŧ ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",
+    "typeRequired": "⟦Ḓȯƈŭḿḗƞŧ ŧẏƥḗ īş řḗʠŭīřḗḓ⟧",
+    "userIdRequired": "⟦Ŭşḗř ĪḒ īş řḗʠŭīřḗḓ⟧",
+    "orderNumberRequired": "⟦Ȯřḓḗř ƞŭḿƀḗř īş řḗʠŭīřḗḓ⟧",
+    "contentRequired": "⟦Ƈȯƞŧḗƞŧ īş řḗʠŭīřḗḓ⟧"
   },
   "bulkActions": {
-    "selected_one": "11111 {{count}} 11111",
-    "selected_other": "11111 {{count}} 11111",
-    "moveToFolder": "11111",
-    "deleteSelected": "11111",
-    "clearSelection": "11111"
+    "selected_one": "⟦{{count}} ḓȯƈŭḿḗƞŧ şḗŀḗƈŧḗḓ⟧",
+    "selected_other": "⟦{{count}} ḓȯƈŭḿḗƞŧş şḗŀḗƈŧḗḓ⟧",
+    "moveToFolder": "⟦Ḿȯṽḗ ŧȯ Ƒȯŀḓḗř⟧",
+    "deleteSelected": "⟦Ḓḗŀḗŧḗ Şḗŀḗƈŧḗḓ⟧",
+    "clearSelection": "⟦Ƈŀḗȧř Şḗŀḗƈŧīȯƞ⟧"
   },
   "prompts": {
-    "confirmBulkDelete_one": "11111 {{count}} 11111",
-    "confirmBulkDelete_other": "11111 {{count}} 11111"
+    "confirmBulkDelete_one": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ {{count}} ḓȯƈŭḿḗƞŧ?⟧",
+    "confirmBulkDelete_other": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ {{count}} ḓȯƈŭḿḗƞŧş?⟧"
   },
   "pagination": {
-    "perPage": "11111 {{count}} 11111"
+    "perPage": "⟦{{count}} ƥḗř ƥȧɠḗ⟧"
   },
   "folderSelector": {
-    "defaultTitle": "11111",
-    "defaultDescription": "11111",
-    "newDocumentTitle": "11111",
-    "newDocumentDescription": "11111",
-    "moveTitle": "11111",
-    "moveDescriptionWithName": "11111 {{name}} 11111",
-    "moveDescription": "11111",
-    "bulkMoveTitle": "11111",
-    "bulkMoveDescription_one": "11111 {{count}} 11111",
-    "bulkMoveDescription_other": "11111 {{count}} 11111",
+    "defaultTitle": "⟦Şḗŀḗƈŧ Ḓḗşŧīƞȧŧīȯƞ Ƒȯŀḓḗř⟧",
+    "defaultDescription": "⟦Ƈħȯȯşḗ ẇħḗřḗ ŧȯ şȧṽḗ ŧħīş ḓȯƈŭḿḗƞŧ⟧",
+    "newDocumentTitle": "⟦Şḗŀḗƈŧ Ƒȯŀḓḗř ƒȯř Ƞḗẇ Ḓȯƈŭḿḗƞŧ⟧",
+    "newDocumentDescription": "⟦Ƈħȯȯşḗ ẇħḗřḗ ŧȯ şȧṽḗ ŧħīş ƞḗẇ ḓȯƈŭḿḗƞŧ⟧",
+    "moveTitle": "⟦Ḿȯṽḗ Ḓȯƈŭḿḗƞŧ⟧",
+    "moveDescriptionWithName": "⟦Şḗŀḗƈŧ ḓḗşŧīƞȧŧīȯƞ ƒȯŀḓḗř ƒȯř \"{{name}}\"⟧",
+    "moveDescription": "⟦Şḗŀḗƈŧ ḓḗşŧīƞȧŧīȯƞ ƒȯŀḓḗř⟧",
+    "bulkMoveTitle": "⟦Ḿȯṽḗ Şḗŀḗƈŧḗḓ Ḓȯƈŭḿḗƞŧş⟧",
+    "bulkMoveDescription_one": "⟦Şḗŀḗƈŧ ḓḗşŧīƞȧŧīȯƞ ƒȯŀḓḗř ƒȯř {{count}} ḓȯƈŭḿḗƞŧ⟧",
+    "bulkMoveDescription_other": "⟦Şḗŀḗƈŧ ḓḗşŧīƞȧŧīȯƞ ƒȯŀḓḗř ƒȯř {{count}} ḓȯƈŭḿḗƞŧş⟧",
     "errors": {
-      "nameRequired": "11111",
-      "invalidCharacters": "11111",
-      "createFailed": "11111"
+      "nameRequired": "⟦Ƥŀḗȧşḗ ḗƞŧḗř ȧ ƒȯŀḓḗř ƞȧḿḗ⟧",
+      "invalidCharacters": "⟦Ƒȯŀḓḗř ƞȧḿḗ ƈȧƞƞȯŧ ƈȯƞŧȧīƞ \"/\"⟧",
+      "createFailed": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ƒȯŀḓḗř⟧"
     },
-    "creating": "11111",
-    "createButton": "11111",
-    "newFolderButton": "11111",
-    "parentLabel": "11111 {{folder}} 11111",
-    "rootLabel": "11111",
-    "namePlaceholder": "11111",
-    "loading": "11111",
-    "rootOption": "11111",
-    "empty": "11111"
+    "creating": "⟦Ƈřḗȧŧīƞɠ...⟧",
+    "createButton": "⟦Ƈřḗȧŧḗ Ƒȯŀḓḗř⟧",
+    "newFolderButton": "⟦Ƞḗẇ Ƒȯŀḓḗř⟧",
+    "parentLabel": "⟦Ƥȧřḗƞŧ ƒȯŀḓḗř: {{folder}}⟧",
+    "rootLabel": "⟦/ (Řȯȯŧ)⟧",
+    "namePlaceholder": "⟦Ḗƞŧḗř ƒȯŀḓḗř ƞȧḿḗ⟧",
+    "loading": "⟦Ŀȯȧḓīƞɠ ƒȯŀḓḗřş...⟧",
+    "rootOption": "⟦Řȯȯŧ (Ƞȯ ƒȯŀḓḗř)⟧",
+    "empty": "⟦Ƞȯ ƒȯŀḓḗřş ȧṽȧīŀȧƀŀḗ. Ḓȯƈŭḿḗƞŧş ẇīŀŀ ƀḗ şȧṽḗḓ ŧȯ řȯȯŧ.⟧"
   },
   "filters": {
-    "searchLabel": "11111",
-    "searchPlaceholder": "11111",
-    "typeLabel": "11111",
-    "entityTypeLabel": "11111",
-    "uploadedByLabel": "11111",
-    "uploadedByPlaceholder": "11111",
-    "updatedStartLabel": "11111",
-    "updatedEndLabel": "11111",
-    "startDatePlaceholder": "11111",
-    "endDatePlaceholder": "11111",
-    "sortByLabel": "11111",
-    "clear": "11111",
+    "searchLabel": "⟦Şḗȧřƈħ Ḓȯƈŭḿḗƞŧş⟧",
+    "searchPlaceholder": "⟦Şḗȧřƈħ ƀẏ ḓȯƈŭḿḗƞŧ ƞȧḿḗ...⟧",
+    "typeLabel": "⟦Ḓȯƈŭḿḗƞŧ Ŧẏƥḗ⟧",
+    "entityTypeLabel": "⟦Ȧşşȯƈīȧŧḗḓ Ḗƞŧīŧẏ Ŧẏƥḗ⟧",
+    "uploadedByLabel": "⟦Ŭƥŀȯȧḓḗḓ Ɓẏ⟧",
+    "uploadedByPlaceholder": "⟦Ȧŀŀ Ŭşḗřş⟧",
+    "updatedStartLabel": "⟦Ŭƥḓȧŧḗḓ Ḓȧŧḗ Şŧȧřŧ⟧",
+    "updatedEndLabel": "⟦Ŭƥḓȧŧḗḓ Ḓȧŧḗ Ḗƞḓ⟧",
+    "startDatePlaceholder": "⟦Şḗŀḗƈŧ şŧȧřŧ ḓȧŧḗ⟧",
+    "endDatePlaceholder": "⟦Şḗŀḗƈŧ ḗƞḓ ḓȧŧḗ⟧",
+    "sortByLabel": "⟦Şȯřŧ Ɓẏ⟧",
+    "clear": "⟦Ƈŀḗȧř Ƒīŀŧḗřş⟧",
     "typeOptions": {
-      "all": "11111",
-      "pdf": "11111",
-      "image": "11111",
-      "text": "11111",
-      "video": "11111",
-      "other": "11111"
+      "all": "⟦Ȧŀŀ Ḓȯƈŭḿḗƞŧ Ŧẏƥḗş⟧",
+      "pdf": "⟦ƤḒƑ⟧",
+      "image": "⟦Īḿȧɠḗş⟧",
+      "text": "⟦Ḓȯƈŭḿḗƞŧş⟧",
+      "video": "⟦Ṽīḓḗȯ⟧",
+      "other": "⟦Ȯŧħḗř⟧"
     },
     "sortOptions": {
-      "updated_at": "11111",
-      "document_name": "11111",
-      "file_size": "11111",
-      "created_by_full_name": "11111"
+      "updated_at": "⟦Ḓȧŧḗ⟧",
+      "document_name": "⟦Ḓȯƈŭḿḗƞŧ ƞȧḿḗ⟧",
+      "file_size": "⟦Ƒīŀḗ şīẑḗ⟧",
+      "created_by_full_name": "⟦Ƈřḗȧŧḗḓ Ɓẏ⟧"
     },
     "sortOrder": {
       "default": {
-        "asc": "11111",
-        "desc": "11111"
+        "asc": "⟦Şħȯẇ ȧşƈḗƞḓīƞɠ ȯřḓḗř⟧",
+        "desc": "⟦Şħȯẇ ḓḗşƈḗƞḓīƞɠ ȯřḓḗř⟧"
       },
       "document_name": {
-        "asc": "11111",
-        "desc": "11111"
+        "asc": "⟦Şħȯẇ Ȧ-Ẑ⟧",
+        "desc": "⟦Şħȯẇ Ẑ-Ȧ⟧"
       },
       "updated_at": {
-        "asc": "11111",
-        "desc": "11111"
+        "asc": "⟦Şħȯẇ Ȯŀḓḗşŧ Ƒīřşŧ⟧",
+        "desc": "⟦Şħȯẇ Ƞḗẇḗşŧ Ƒīřşŧ⟧"
       },
       "file_size": {
-        "asc": "11111",
-        "desc": "11111"
+        "asc": "⟦Şħȯẇ Şḿȧŀŀḗşŧ Ƒīřşŧ⟧",
+        "desc": "⟦Şħȯẇ Ŀȧřɠḗşŧ Ƒīřşŧ⟧"
       },
       "created_by_full_name": {
-        "asc": "11111",
-        "desc": "11111"
+        "asc": "⟦Şħȯẇ Ȧ-Ẑ⟧",
+        "desc": "⟦Şħȯẇ Ẑ-Ȧ⟧"
       }
     }
   },
   "selector": {
-    "title": "11111",
-    "reflectionLabel": "11111",
-    "searchPlaceholder": "11111",
-    "foldersLabel": "11111",
-    "folderHint": "11111 {{folder}} 11111",
-    "saving": "11111",
-    "selectDocument": "11111",
-    "associateSelected": "11111",
+    "title": "⟦Şḗŀḗƈŧ Ḓȯƈŭḿḗƞŧş⟧",
+    "reflectionLabel": "⟦Ḓȯƈŭḿḗƞŧ Şḗŀḗƈŧȯř⟧",
+    "searchPlaceholder": "⟦Şḗȧřƈħ ḓȯƈŭḿḗƞŧş...⟧",
+    "foldersLabel": "⟦Ƒȯŀḓḗřş⟧",
+    "folderHint": "⟦īƞ ƒȯŀḓḗř \"{{folder}}\"⟧",
+    "saving": "⟦Şȧṽīƞɠ...⟧",
+    "selectDocument": "⟦Şḗŀḗƈŧ Ḓȯƈŭḿḗƞŧ⟧",
+    "associateSelected": "⟦Ȧşşȯƈīȧŧḗ Şḗŀḗƈŧḗḓ⟧",
     "errors": {
-      "configuration": "11111",
-      "invalidData": "11111",
-      "load": "11111",
-      "save": "11111"
+      "configuration": "⟦Ƈȯƞƒīɠŭřȧŧīȯƞ ḗřřȯř: Ḿīşşīƞɠ ḗƞŧīŧẏ īƞƒȯřḿȧŧīȯƞ⟧",
+      "invalidData": "⟦Īƞṽȧŀīḓ ḓȯƈŭḿḗƞŧ ḓȧŧȧ řḗƈḗīṽḗḓ⟧",
+      "load": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓȯƈŭḿḗƞŧş⟧",
+      "save": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ḓȯƈŭḿḗƞŧ şḗŀḗƈŧīȯƞ⟧"
     },
-    "configErrorTitle": "11111",
-    "configErrorMessage": "11111"
+    "configErrorTitle": "⟦Ƈȯƞƒīɠŭřȧŧīȯƞ Ḗřřȯř⟧",
+    "configErrorMessage": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ƈȯƞƒīɠŭřȧŧīȯƞ. Ƥŀḗȧşḗ ƈȯƞŧȧƈŧ şŭƥƥȯřŧ.⟧"
   },
   "uploadSection": {
-    "reflectionLabel": "11111",
-    "dragDrop": "11111",
-    "browse": "11111",
-    "uploading": "11111",
-    "error": "11111",
-    "fileError": "11111"
+    "reflectionLabel": "⟦Ḓȯƈŭḿḗƞŧ Ŭƥŀȯȧḓ⟧",
+    "dragDrop": "⟦Ḓřȧɠ ȧƞḓ ḓřȯƥ ẏȯŭř ƒīŀḗ ħḗřḗ, ȯř⟧",
+    "browse": "⟦Ɓřȯẇşḗ Ƒīŀḗş⟧",
+    "uploading": "⟦Ŭƥŀȯȧḓīƞɠ...⟧",
+    "error": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥŀȯȧḓ ḓȯƈŭḿḗƞŧ⟧",
+    "fileError": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥŀȯȧḓ ƒīŀḗ⟧"
   },
   "folders": {
-    "root": "11111",
-    "loadFailed": "11111",
-    "deleteConfirm": "11111 {{name}} 11111",
-    "deleteSuccess": "11111 {{name}} 11111",
-    "deleteFailed": "11111",
-    "deleteAction": "11111",
-    "loading": "11111",
-    "title": "11111",
-    "collapse": "11111",
-    "allDocuments": "11111"
+    "root": "⟦Řȯȯŧ⟧",
+    "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƒȯŀḓḗř ŧřḗḗ⟧",
+    "deleteConfirm": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħḗ ƒȯŀḓḗř \"{{name}}\"? Ŧħīş ẇīŀŀ ȯƞŀẏ ẇȯřķ īƒ ŧħḗ ƒȯŀḓḗř īş ḗḿƥŧẏ.⟧",
+    "deleteSuccess": "⟦Ƒȯŀḓḗř \"{{name}}\" ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "deleteFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƒȯŀḓḗř⟧",
+    "deleteAction": "⟦Ḓḗŀḗŧḗ ƒȯŀḓḗř⟧",
+    "loading": "⟦Ŀȯȧḓīƞɠ ƒȯŀḓḗřş...⟧",
+    "title": "⟦Ƒȯŀḓḗřş⟧",
+    "collapse": "⟦Ƈȯŀŀȧƥşḗ ƒȯŀḓḗřş⟧",
+    "allDocuments": "⟦Ȧŀŀ Ḓȯƈŭḿḗƞŧş⟧"
   },
   "folderManager": {
-    "title": "11111",
-    "nameLabel": "11111",
-    "namePlaceholder": "11111",
-    "willCreateIn": "11111 {{folder}} 11111"
+    "title": "⟦Ƈřḗȧŧḗ Ƞḗẇ Ƒȯŀḓḗř⟧",
+    "nameLabel": "⟦Ƒȯŀḓḗř Ƞȧḿḗ⟧",
+    "namePlaceholder": "⟦Ḗƞŧḗř ƒȯŀḓḗř ƞȧḿḗ⟧",
+    "willCreateIn": "⟦Ẇīŀŀ ƀḗ ƈřḗȧŧḗḓ īƞ: {{folder}}⟧"
   },
   "portal": {
-    "subtitle": "11111",
-    "searchPlaceholder": "11111",
-    "showing": "11111 {{count}} 11111",
-    "loadError": "11111"
+    "subtitle": "⟦Ṽīḗẇ ȧƞḓ ḓȯẇƞŀȯȧḓ ẏȯŭř şħȧřḗḓ ḓȯƈŭḿḗƞŧş⟧",
+    "searchPlaceholder": "⟦Şḗȧřƈħ ḓȯƈŭḿḗƞŧş...⟧",
+    "showing": "⟦{{count}} ḓȯƈŭḿḗƞŧş⟧",
+    "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓȯƈŭḿḗƞŧş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
   },
   "kb": {
-    "title": "11111",
-    "subtitle": "11111",
-    "categories": "11111",
-    "allArticles": "11111",
-    "searchPlaceholder": "11111",
-    "articleCount": "11111 {{count}} 11111",
-    "noArticles": "11111",
-    "loadError": "11111",
-    "noContent": "11111",
-    "articleNotFound": "11111",
-    "backToArticles": "11111",
-    "views": "11111",
-    "wasHelpful": "11111",
-    "yes": "11111",
-    "no": "11111",
-    "feedbackThanks": "11111",
-    "feedbackError": "11111",
-    "filterByTags": "11111"
+    "title": "⟦Ķƞȯẇŀḗḓɠḗ Ɓȧşḗ⟧",
+    "subtitle": "⟦Ƒīƞḓ ȧƞşẇḗřş ŧȯ ƈȯḿḿȯƞ ʠŭḗşŧīȯƞş ȧƞḓ ħȯẇ-ŧȯ ɠŭīḓḗş⟧",
+    "categories": "⟦Ƈȧŧḗɠȯřīḗş⟧",
+    "allArticles": "⟦Ȧŀŀ Ȧřŧīƈŀḗş⟧",
+    "searchPlaceholder": "⟦Şḗȧřƈħ ȧřŧīƈŀḗş...⟧",
+    "articleCount": "⟦{{count}} ȧřŧīƈŀḗş⟧",
+    "noArticles": "⟦Ƞȯ ȧřŧīƈŀḗş ƒȯŭƞḓ⟧",
+    "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧřŧīƈŀḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+    "noContent": "⟦Ƞȯ ƈȯƞŧḗƞŧ ȧṽȧīŀȧƀŀḗ⟧",
+    "articleNotFound": "⟦Ȧřŧīƈŀḗ ƞȯŧ ƒȯŭƞḓ⟧",
+    "backToArticles": "⟦Ɓȧƈķ ŧȯ Ȧřŧīƈŀḗş⟧",
+    "views": "⟦ṽīḗẇş⟧",
+    "wasHelpful": "⟦Ẇȧş ŧħīş ȧřŧīƈŀḗ ħḗŀƥƒŭŀ?⟧",
+    "yes": "⟦Ẏḗş⟧",
+    "no": "⟦Ƞȯ⟧",
+    "feedbackThanks": "⟦Ŧħȧƞķ ẏȯŭ ƒȯř ẏȯŭř ƒḗḗḓƀȧƈķ!⟧",
+    "feedbackError": "⟦Ƒȧīŀḗḓ ŧȯ şŭƀḿīŧ ƒḗḗḓƀȧƈķ⟧",
+    "filterByTags": "⟦Ƒīŀŧḗř ƀẏ ŧȧɠş...⟧"
   },
   "visibility": {
-    "cascadeTitle": "11111",
-    "cascadeMakeVisible": "11111 {{count}} 11111 {{name}} 11111",
-    "cascadeMakeHidden": "11111 {{count}} 11111 {{name}} 11111",
-    "cascadeYes": "11111",
-    "cascadeNo": "11111",
-    "visibleToClients": "11111",
-    "hiddenFromClients": "11111"
+    "cascadeTitle": "⟦Ŭƥḓȧŧḗ ḓȯƈŭḿḗƞŧ ṽīşīƀīŀīŧẏ⟧",
+    "cascadeMakeVisible": "⟦Ẇȯŭŀḓ ẏȯŭ ȧŀşȯ ŀīķḗ ŧȯ ḿȧķḗ ȧŀŀ {{count}} ḓȯƈŭḿḗƞŧ(ş) īƞ \"{{name}}\" ṽīşīƀŀḗ ŧȯ ŧħḗ ƈŀīḗƞŧ ƥȯřŧȧŀ?⟧",
+    "cascadeMakeHidden": "⟦Ẇȯŭŀḓ ẏȯŭ ȧŀşȯ ŀīķḗ ŧȯ ħīḓḗ ȧŀŀ {{count}} ḓȯƈŭḿḗƞŧ(ş) īƞ \"{{name}}\" ƒřȯḿ ŧħḗ ƈŀīḗƞŧ ƥȯřŧȧŀ?⟧",
+    "cascadeYes": "⟦Ẏḗş, ŭƥḓȧŧḗ ḓȯƈŭḿḗƞŧş⟧",
+    "cascadeNo": "⟦Ƞȯ, ƒȯŀḓḗř ȯƞŀẏ⟧",
+    "visibleToClients": "⟦Ṽīşīƀŀḗ ŧȯ ƈŀīḗƞŧş⟧",
+    "hiddenFromClients": "⟦Ħīḓḓḗƞ ƒřȯḿ ƈŀīḗƞŧş⟧"
   },
   "empty": {
-    "default": "11111"
+    "default": "⟦Ƞȯ ḓȯƈŭḿḗƞŧş ƒȯŭƞḓ⟧"
   },
   "shared": {
     "statusLabels": {
-      "draft": "11111",
-      "review": "11111",
-      "published": "11111",
-      "archived": "11111"
+      "draft": "⟦Ḓřȧƒŧ⟧",
+      "review": "⟦Īƞ Řḗṽīḗẇ⟧",
+      "published": "⟦Ƥŭƀŀīşħḗḓ⟧",
+      "archived": "⟦Ȧřƈħīṽḗḓ⟧"
     },
     "audienceLabels": {
-      "internal": "11111",
-      "client": "11111",
-      "public": "11111"
+      "internal": "⟦Īƞŧḗřƞȧŀ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "public": "⟦Ƥŭƀŀīƈ⟧"
     },
     "typeLabels": {
-      "how_to": "11111",
-      "faq": "11111",
-      "troubleshooting": "11111",
-      "reference": "11111"
+      "how_to": "⟦Ħȯẇ-Ŧȯ⟧",
+      "faq": "⟦ƑȦɊ⟧",
+      "troubleshooting": "⟦Ŧřȯŭƀŀḗşħȯȯŧīƞɠ⟧",
+      "reference": "⟦Řḗƒḗřḗƞƈḗ⟧"
     }
   },
   "documents": {
     "messages": {
       "error": {
-        "noPermission": "11111",
-        "invalidData": "11111",
-        "fetchFailed": "11111"
+        "noPermission": "⟦Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ṽīḗẇ ḓȯƈŭḿḗƞŧş⟧",
+        "invalidData": "⟦Īƞṽȧŀīḓ ḓȯƈŭḿḗƞŧ ḓȧŧȧ řḗƈḗīṽḗḓ⟧",
+        "fetchFailed": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ḓȯƈŭḿḗƞŧş⟧"
       }
     }
   },
-  "uploadError": "11111",
-  "downloadError": "11111",
-  "uploadHint": "11111",
-  "file": "11111",
-  "files": "11111",
-  "view": "11111",
+  "uploadError": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥŀȯȧḓ ḓȯƈŭḿḗƞŧ⟧",
+  "downloadError": "⟦Ƒȧīŀḗḓ ŧȯ ḓȯẇƞŀȯȧḓ ḓȯƈŭḿḗƞŧ⟧",
+  "uploadHint": "⟦Ŭƥŀȯȧḓ ƒīŀḗş ŧȯ şħȧřḗ ẇīŧħ ŧħīş ŧȧşķ⟧",
+  "file": "⟦ƒīŀḗ⟧",
+  "files": "⟦ƒīŀḗş⟧",
+  "view": "⟦Ṽīḗẇ⟧",
   "common:pagination": {
-    "next": "11111",
-    "pageOf": "11111 {{current}} 11111 {{total}} 11111",
-    "previous": "11111"
+    "next": "⟦Ƞḗẋŧ⟧",
+    "pageOf": "⟦Ƥȧɠḗ {{current}} ȯƒ {{total}}⟧",
+    "previous": "⟦Ƥřḗṽīȯŭş⟧"
   },
-  "ticketDocuments": "11111",
+  "ticketDocuments": "⟦Ŧīƈķḗŧ Ḓȯƈŭḿḗƞŧş⟧",
   "actions": {
-    "save": "11111",
-    "saving": "11111",
-    "cancel": "11111"
+    "save": "⟦Şȧṽḗ⟧",
+    "saving": "⟦Şȧṽīƞɠ...⟧",
+    "cancel": "⟦Ƈȧƞƈḗŀ⟧"
   },
   "card": {
-    "noDate": "11111",
-    "reflectionLabel": "11111"
+    "noDate": "⟦Ƞȯ ḓȧŧḗ⟧",
+    "reflectionLabel": "⟦Ḓȯƈŭḿḗƞŧ Ƈȧřḓ⟧"
   },
   "editor": {
-    "loading": "11111",
-    "initializing": "11111",
-    "placeholder": "11111",
-    "errorPrefix": "11111 {{message}} 11111",
+    "loading": "⟦Ŀȯȧḓīƞɠ...⟧",
+    "initializing": "⟦Īƞīŧīȧŀīẑīƞɠ ḗḓīŧȯř...⟧",
+    "placeholder": "⟦Şŧȧřŧ ẇřīŧīƞɠ...⟧",
+    "errorPrefix": "⟦Ḗřřȯř: {{message}}⟧",
     "status": {
-      "offline": "11111",
-      "allChangesSaved": "11111",
-      "syncing": "11111 {{status}} 11111"
+      "offline": "⟦Ȯƒƒŀīƞḗ — ƈħȧƞɠḗş ẇīŀŀ şẏƞƈ ẇħḗƞ řḗƈȯƞƞḗƈŧḗḓ⟧",
+      "allChangesSaved": "⟦Ȧŀŀ ƈħȧƞɠḗş şȧṽḗḓ⟧",
+      "syncing": "⟦{{status}} (şẏƞƈīƞɠ)⟧"
     },
     "connection": {
-      "connected": "11111",
-      "connecting": "11111",
-      "disconnected": "11111"
+      "connected": "⟦Ƈȯƞƞḗƈŧḗḓ⟧",
+      "connecting": "⟦Ƈȯƞƞḗƈŧīƞɠ⟧",
+      "disconnected": "⟦Ḓīşƈȯƞƞḗƈŧḗḓ⟧"
     },
     "presence": {
-      "unknownUser": "11111"
+      "unknownUser": "⟦Ŭşḗř⟧"
     },
     "toolbar": {
-      "bold": "11111",
-      "italic": "11111",
-      "underline": "11111",
-      "strikethrough": "11111",
-      "code": "11111",
-      "heading1": "11111",
-      "heading2": "11111",
-      "bulletList": "11111",
-      "orderedList": "11111",
-      "quote": "11111",
-      "link": "11111",
-      "linkPrompt": "11111"
+      "bold": "⟦Ɓȯŀḓ (Ƈŧřŀ+Ɓ)⟧",
+      "italic": "⟦Īŧȧŀīƈ (Ƈŧřŀ+Ī)⟧",
+      "underline": "⟦Ŭƞḓḗřŀīƞḗ (Ƈŧřŀ+Ŭ)⟧",
+      "strikethrough": "⟦Şŧřīķḗŧħřȯŭɠħ⟧",
+      "code": "⟦Ƈȯḓḗ⟧",
+      "heading1": "⟦Ħḗȧḓīƞɠ 1⟧",
+      "heading2": "⟦Ħḗȧḓīƞɠ 2⟧",
+      "bulletList": "⟦Ɓŭŀŀḗŧ Ŀīşŧ⟧",
+      "orderedList": "⟦Ȯřḓḗřḗḓ Ŀīşŧ⟧",
+      "quote": "⟦Ɋŭȯŧḗ⟧",
+      "link": "⟦Ŀīƞķ⟧",
+      "linkPrompt": "⟦ŬŘĿ⟧"
     }
   },
   "form": {
-    "errorsHeading": "11111",
-    "submit": "11111",
+    "errorsHeading": "⟦Ƥŀḗȧşḗ ƒīẋ ŧħḗ ƒȯŀŀȯẇīƞɠ ḗřřȯřş:⟧",
+    "submit": "⟦Ƈřḗȧŧḗ Ḓȯƈŭḿḗƞŧ⟧",
     "fields": {
-      "documentName": "11111",
-      "documentType": "11111",
-      "userId": "11111",
-      "contactNameId": "11111",
-      "clientId": "11111",
-      "ticketId": "11111",
-      "orderNumber": "11111",
-      "content": "11111"
+      "documentName": "⟦Ḓȯƈŭḿḗƞŧ Ƞȧḿḗ *⟧",
+      "documentType": "⟦Ḓȯƈŭḿḗƞŧ Ŧẏƥḗ *⟧",
+      "userId": "⟦Ŭşḗř ĪḒ *⟧",
+      "contactNameId": "⟦Ƈȯƞŧȧƈŧ Ƞȧḿḗ ĪḒ⟧",
+      "clientId": "⟦Ƈŀīḗƞŧ ĪḒ⟧",
+      "ticketId": "⟦Ŧīƈķḗŧ ĪḒ⟧",
+      "orderNumber": "⟦Ȯřḓḗř Ƞŭḿƀḗř *⟧",
+      "content": "⟦Ƈȯƞŧḗƞŧ *⟧"
     }
   },
   "previewPane": {
-    "loading": "11111",
-    "pdfDocument": "11111",
-    "videoFile": "11111",
-    "notAvailable": "11111",
-    "altPdf": "11111 {{name}} 11111",
-    "altVideoThumbnail": "11111 {{name}} 11111",
-    "pageCount_one": "11111 {{count}} 11111",
-    "pageCount_other": "11111 {{count}} 11111"
+    "loading": "⟦Ŀȯȧḓīƞɠ ƥřḗṽīḗẇ...⟧",
+    "pdfDocument": "⟦ƤḒƑ Ḓȯƈŭḿḗƞŧ⟧",
+    "videoFile": "⟦Ṽīḓḗȯ Ƒīŀḗ⟧",
+    "notAvailable": "⟦Ƥřḗṽīḗẇ ƞȯŧ ȧṽȧīŀȧƀŀḗ⟧",
+    "altPdf": "⟦Ƥřḗṽīḗẇ ȯƒ {{name}}⟧",
+    "altVideoThumbnail": "⟦Ŧħŭḿƀƞȧīŀ ȯƒ {{name}}⟧",
+    "pageCount_one": "⟦{{count}} ƥȧɠḗ⟧",
+    "pageCount_other": "⟦{{count}} ƥȧɠḗş⟧"
   }
 }

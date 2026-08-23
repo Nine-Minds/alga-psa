@@ -31,7 +31,7 @@ function interactionActionErrorFrom(error: unknown): InteractionActionError | nu
       return permissionError(error.message);
     }
     if (/unauthorized|not authenticated|must sign in/i.test(error.message)) {
-      return permissionError('You must be signed in to manage interactions.');
+      return permissionError('You must be signed in to manage interactions.', 'msp/clients:errors.interaction.signInRequired');
     }
     if (
       error.message === 'User ID is missing' ||
@@ -47,16 +47,22 @@ function interactionActionErrorFrom(error: unknown): InteractionActionError | nu
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the interaction identifiers is invalid. Please refresh and try again.');
+    return actionError('One of the interaction identifiers is invalid. Please refresh and try again.', 'msp/clients:errors.interaction.identifierInvalid');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required interaction field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required interaction field: ${dbError.column}.`,
+          'msp/clients:errors.interaction.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required interaction field.', 'msp/clients:errors.interaction.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected interaction, client, contact, user, status, or type no longer exists. Please refresh and try again.');
+    return actionError('The selected interaction, client, contact, user, status, or type no longer exists. Please refresh and try again.', 'msp/clients:errors.interaction.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('An interaction with these details already exists.');
+    return actionError('An interaction with these details already exists.', 'msp/clients:errors.interaction.duplicate');
   }
   return null;
 }
