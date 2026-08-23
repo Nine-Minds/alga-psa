@@ -253,6 +253,7 @@ export async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueue
       access_token: (row as any).mc_access_token,
       refresh_token: (row as any).mc_refresh_token,
       token_expires_at: (row as any).mc_token_expires_at,
+      folder_filters: (row as any).mc_folder_filters,
       // The persisted profile pin is authoritative for which app issued the
       // refresh token. Propagate it so buildMicrosoftEmailProviderConfig
       // resolves ONLY through the pinned profile and fails closed when the
@@ -433,6 +434,8 @@ export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQu
     throw error;
   }
 
+  await assertMicrosoftMessageInMonitoredFolders(adapter, job.pointer.messageId, config.provider_config?.folder_filters);
+
   const parsed: any = await withTimeout(
     simpleParser(rawMimeBuffer),
     parseTimeoutMs,
@@ -447,6 +450,18 @@ export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQu
     parsed,
     fallbackMessageId: job.pointer.messageId,
   });
+}
+
+export async function assertMicrosoftMessageInMonitoredFolders(
+  adapter: Pick<MicrosoftGraphAdapter, 'getMessageParentFolderId' | 'resolveFolderIds'>,
+  messageId: string,
+  folderFilters: unknown,
+): Promise<void> {
+  const parentFolderId = await adapter.getMessageParentFolderId(messageId);
+  const monitoredFolderIds = await adapter.resolveFolderIds(folderFilters);
+  if (!parentFolderId || !monitoredFolderIds.has(parentFolderId)) {
+    throw new SourceMessageUnavailableError('microsoft_message_outside_monitored_folder');
+  }
 }
 
 export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {

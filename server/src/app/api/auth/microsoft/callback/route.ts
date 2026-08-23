@@ -27,6 +27,7 @@ import {
   MICROSOFT_EMAIL_OAUTH_SCOPES,
 } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
+import { randomBytes } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -583,6 +584,17 @@ export async function GET(request: NextRequest) {
                 const folderToMonitor = Array.isArray(msConfig.folder_filters)
                   ? (msConfig.folder_filters[0] || 'Inbox')
                   : (() => { try { const parsed = JSON.parse(msConfig.folder_filters || '[]'); return parsed[0] || 'Inbox'; } catch { return 'Inbox'; } })();
+                const webhookVerificationToken = msConfig.webhook_verification_token
+                  || randomBytes(32).toString('hex');
+                // Persist before Graph sees clientState. A subscription without
+                // a durable, unpredictable token is not safe to create.
+                const callbackDb = tenantDb((await createTenantKnex()).knex, provider.tenant);
+                const tokenUpdated = await callbackDb.table('microsoft_email_provider_config')
+                  .where({ email_provider_id: provider.id })
+                  .update({ webhook_verification_token: webhookVerificationToken });
+                if (!tokenUpdated) {
+                  throw new Error(`Microsoft provider config ${provider.id} was not found while creating webhook token`);
+                }
 
                 const providerConfig: any = {
                   id: provider.id,
@@ -595,8 +607,7 @@ export async function GET(request: NextRequest) {
                   webhook_notification_url: webhookUrl,
                   // Persisted and looked up via microsoft vendor config
                   webhook_subscription_id: msConfig.webhook_subscription_id || null,
-                  // Use tenant as verification token when none exists yet
-                  webhook_verification_token: msConfig.webhook_verification_token || stateContext.tenant,
+                  webhook_verification_token: webhookVerificationToken,
                   webhook_expires_at: msConfig.webhook_expires_at || null,
                   connection_status: provider.status || 'connected',
                   last_connection_test: provider.last_sync_at || null,
