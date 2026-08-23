@@ -2626,7 +2626,12 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   });
 });
 
-async function generateInvoiceForNormalizedSelectionInputs(params: {
+/**
+ * Transactional production implementation. Exported so DB-backed integration
+ * tests can exercise the real persistence boundary without going through the
+ * session-bound server-action wrapper.
+ */
+export async function generateInvoiceForNormalizedSelectionInputs(params: {
   user: Session;
   tenant: string;
   knex: Knex;
@@ -2752,7 +2757,9 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
       return null;
     }
 
-    const createdInvoice = await createInvoiceFromBillingResult(
+    const createdInvoice = await createInvoiceFromBillingResultImpl(
+      user,
+      { tenant },
       billingResult,
       client_id,
       cycleStart,
@@ -2778,7 +2785,9 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
     }
   }
 
-  const createdInvoice = await createInvoiceFromBillingResult(
+  const createdInvoice = await createInvoiceFromBillingResultImpl(
+    user,
+    { tenant },
     billingResult,
     client_id,
     cycleStart,
@@ -2945,7 +2954,7 @@ export const downloadInvoicePDF = withAuth(async (
   });
 });
 
-export const createInvoiceFromBillingResult = withAuth(async (
+export async function createInvoiceFromBillingResultImpl(
   user,
   { tenant },
   billingResult: IBillingResult,
@@ -2955,7 +2964,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
   billing_cycle_id: string | null,
   userId: string,
   options: { projectId?: string } = {},
-): Promise<IInvoice> => {
+): Promise<IInvoice> {
   // Verify that the userId matches the current user
   if (user.user_id !== userId) {
     throw new Error('Permission denied: User ID mismatch');
@@ -3407,4 +3416,8 @@ export const createInvoiceFromBillingResult = withAuth(async (
   }, userId);
 
   return newInvoice;
-});
+}
+
+export const createInvoiceFromBillingResult = withAuth(
+  createInvoiceFromBillingResultImpl,
+);

@@ -245,7 +245,7 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
           return (
             <div
               key={phase.phase_id}
-              className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden"
+              className="bg-[rgb(var(--color-card))] rounded-lg border border-gray-200 card-elevated overflow-hidden"
             >
               {/* Phase Header */}
               <div

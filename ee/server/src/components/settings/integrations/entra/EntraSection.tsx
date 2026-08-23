@@ -25,7 +25,7 @@ const TONE_SHELL: Record<EntraSectionTone, string> = {
 };
 
 const TONE_CHIP: Record<EntraSectionTone, string> = {
-  default: 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]',
+  default: 'chip-primary',
   blocking: 'bg-alert-destructive-bg text-destructive',
   warning: 'bg-alert-warning-bg text-warning',
   success: 'bg-alert-success-bg text-success',

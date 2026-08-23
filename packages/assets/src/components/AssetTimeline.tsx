@@ -254,7 +254,7 @@ export function AssetTimeline({
                 aria-pressed={lane === key}
                 className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
                   lane === key
-                    ? 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))]'
+                    ? 'chip-primary'
                     : 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))] hover:bg-[rgb(var(--color-border-200))]'
                 }`}
               >

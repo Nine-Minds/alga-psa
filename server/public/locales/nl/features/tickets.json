@@ -354,7 +354,17 @@
     "deleteComment": "Reactie verwijderen",
     "deleteCommentImages": "Reactie + afbeeldingen verwijderen",
     "deleteCommentOnly": "Alleen reactie verwijderen",
-    "clientCommentTooltip": "Opmerking voor de klant"
+    "clientCommentTooltip": "Opmerking voor de klant",
+    "cancelScheduledComment": "Geplande reactie annuleren",
+    "cancelScheduledCommentConfirm": "Deze geplande reactie annuleren?",
+    "invalidScheduleTime": "Kies een ondubbelzinnig toekomstig tijdstip in deze tijdzone.",
+    "publishAt": "Publiceren op",
+    "publishes": "Publiceert",
+    "reschedule": "Opnieuw plannen",
+    "rescheduleComment": "Reactie opnieuw plannen",
+    "resolvedPublishInstant": "Omgezet tijdstip",
+    "schedule": "Plannen",
+    "scheduled": "Gepland"
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",

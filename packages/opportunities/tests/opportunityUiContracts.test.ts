@@ -13,8 +13,9 @@ describe('opportunity UI improvement wiring', () => {
     expect(workQueue).toContain("useState<'cards' | 'table'>('cards')");
     expect(workQueue).toContain('window.localStorage.getItem(preferenceKey)');
     expect(workQueue).toContain('window.localStorage.setItem(preferenceKey, next)');
-    expect(workQueue).toContain('id="opportunities-queue-view-cards"');
-    expect(workQueue).toContain('id="opportunities-queue-view-table"');
+    expect(workQueue).toContain('<ViewSwitcher');
+    expect(workQueue).toContain("id: 'opportunities-queue-view-cards'");
+    expect(workQueue).toContain("id: 'opportunities-queue-view-table'");
     expect(workQueue).toContain('<QueueActionsTable');
   });
 

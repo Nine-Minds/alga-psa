@@ -1224,7 +1224,7 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
+                      <div className="chip-primary flex h-9 w-9 items-center justify-center rounded-md">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div>

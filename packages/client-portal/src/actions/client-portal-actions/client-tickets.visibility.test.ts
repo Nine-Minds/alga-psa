@@ -501,10 +501,13 @@ describe('client portal ticket visibility enforcement', () => {
 
     // The serialized conversation list filters out internal comments at the
     // query (not just in the client component) and joins comment_threads so
-    // internal threads are excluded too.
+    // internal threads are excluded too. Scheduled (unpublished) comments are an
+    // MSP-only draft state, so the query also restricts to published comments and
+    // portal callers cannot infer a pending one.
     expect(conversationsBuilder.where).toHaveBeenCalledWith({
       'comments.ticket_id': 'ticket-1',
       'comments.is_internal': false,
+      'comments.publish_state': 'published',
     });
     expect(conversationsBuilder.leftJoin).toHaveBeenCalled();
 

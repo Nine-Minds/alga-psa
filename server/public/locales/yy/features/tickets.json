@@ -362,7 +362,17 @@
     "commentEditor": "〖Ƈȯḿḿḗƞŧ Ḗḓīŧȯř ······〗",
     "deleteComment": "〖Ḓḗŀḗŧḗ Ƈȯḿḿḗƞŧ ······〗",
     "deleteCommentImages": "〖Ḓḗŀḗŧḗ Ƈȯḿḿḗƞŧ + Īḿȧɠḗş ··········〗",
-    "deleteCommentOnly": "〖Ḓḗŀḗŧḗ Ƈȯḿḿḗƞŧ Ȯƞŀẏ ········〗"
+    "deleteCommentOnly": "〖Ḓḗŀḗŧḗ Ƈȯḿḿḗƞŧ Ȯƞŀẏ ········〗",
+    "cancelScheduledComment": "〖Ƈȧƞƈḗŀ şƈħḗḓŭŀḗḓ ƈȯḿḿḗƞŧ ··········〗",
+    "cancelScheduledCommentConfirm": "〖Ƈȧƞƈḗŀ ŧħīş şƈħḗḓŭŀḗḓ ƈȯḿḿḗƞŧ? ············〗",
+    "invalidScheduleTime": "〖Ƈħȯȯşḗ ȧƞ ŭƞȧḿƀīɠŭȯŭş ƒŭŧŭřḗ ŧīḿḗ īƞ ŧħīş ŧīḿḗ ẑȯƞḗ. ·····················〗",
+    "publishAt": "〖Ƥŭƀŀīşħ ȧŧ ····〗",
+    "publishes": "〖Ƥŭƀŀīşħḗş ····〗",
+    "reschedule": "〖Řḗşƈħḗḓŭŀḗ ····〗",
+    "rescheduleComment": "〖Řḗşƈħḗḓŭŀḗ ƈȯḿḿḗƞŧ ········〗",
+    "resolvedPublishInstant": "〖Řḗşȯŀṽḗḓ īƞşŧȧƞŧ ·······〗",
+    "schedule": "〖Şƈħḗḓŭŀḗ ····〗",
+    "scheduled": "〖Şƈħḗḓŭŀḗḓ ····〗"
   },
   "responseState": {
     "awaitingYourResponse": "〖Ȧẇȧīŧīƞɠ Ẏȯŭř Řḗşƥȯƞşḗ ·········〗",

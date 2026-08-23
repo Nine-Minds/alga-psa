@@ -788,7 +788,8 @@
       "phasePlaceholder": "Wybierz fazę",
       "statusLabel": "Status",
       "statusPlaceholder": "Wybierz stan",
-      "linkTicketLabel": "Połącz zgłoszenie z utworzonym zadaniem"
+      "linkTicketLabel": "Połącz zgłoszenie z utworzonym zadaniem",
+      "createdSuccess": "Zadanie zostało utworzone pomyślnie"
     },
     "linkTicketToTask": {
       "title": "Połącz zgłoszenie z zadaniem",

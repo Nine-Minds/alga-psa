@@ -671,7 +671,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   return (
     <div
-      className="datatable-container overflow-hidden rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm"
+      className="datatable-container overflow-hidden rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated"
       data-automation-id={id}
       ref={tableContainerRef}
     >

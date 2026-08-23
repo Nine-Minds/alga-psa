@@ -768,7 +768,8 @@
       "phasePlaceholder": "Select a phase",
       "statusLabel": "Status",
       "statusPlaceholder": "Select a status",
-      "linkTicketLabel": "Link ticket to the created task"
+      "linkTicketLabel": "Link ticket to the created task",
+      "createdSuccess": "Task created successfully"
     },
     "linkTicketToTask": {
       "title": "Link Ticket to Task",

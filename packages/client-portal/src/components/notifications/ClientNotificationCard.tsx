@@ -92,7 +92,7 @@ export function ClientNotificationCard({
   return (
     <button
       type="button"
-      className={`w-full rounded-md border-l-4 p-4 text-left shadow-sm transition-shadow hover:shadow-md ${getBorderColor(activity.status)} ${activity.isRead ? 'bg-white' : 'bg-primary-50'}${priorityCardClass}`}
+      className={`w-full rounded-md border-l-4 p-4 text-left transition-shadow card-elevated card-elevated-hover ${getBorderColor(activity.status)} ${activity.isRead ? 'bg-[rgb(var(--color-card))]' : 'bg-primary-50'}${priorityCardClass}`}
       onClick={handleClick}
       id={`notification-card-${activity.id}`}
     >

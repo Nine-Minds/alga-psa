@@ -428,7 +428,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   </Tooltip>
                 )}
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-500)/0.2)] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))]">
+                <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded text-xs font-medium">
                   {t('phases.taskCount', { count: taskCount ?? 0 })}
                 </span>
               </div>

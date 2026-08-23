@@ -768,7 +768,8 @@
       "phasePlaceholder": "Phase auswählen",
       "statusLabel": "Status",
       "statusPlaceholder": "Status auswählen",
-      "linkTicketLabel": "Ticket mit der erstellten Aufgabe verknüpfen"
+      "linkTicketLabel": "Ticket mit der erstellten Aufgabe verknüpfen",
+      "createdSuccess": "Aufgabe wurde erfolgreich erstellt"
     },
     "linkTicketToTask": {
       "title": "Ticket mit Aufgabe verknüpfen",

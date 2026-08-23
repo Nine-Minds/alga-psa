@@ -209,7 +209,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       ) : null;
     
     const detailsContent = (
-      <div id="ticket-details-container" className="bg-gray-100">
+      <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
         <Suspense fallback={<TicketDetailsSkeleton />}>
           <MspTicketDetailsContainerClient
             ticketData={ticketData as any}

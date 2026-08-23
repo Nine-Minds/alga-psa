@@ -365,7 +365,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       const commentUserIdsSubquery = scopedDb.table('comments as c')
         .select('c.user_id')
         .where('c.ticket_id', ticketId)
-        .where('c.is_internal', false);
+        .where('c.is_internal', false)
+        // Do not enumerate authors of scheduled/canceled comments before
+        // publication — mirror the conversations query's publish_state gate.
+        .where('c.publish_state', 'published');
       const assignedUserIdSubquery = scopedDb.table('tickets as assigned_ticket')
         .select('assigned_ticket.assigned_to')
         .where('assigned_ticket.ticket_id', ticketId);
@@ -429,6 +432,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .where({
           'comments.ticket_id': ticketId,
           'comments.is_internal': false,
+          // Scheduled comments are an MSP-only draft state.  Keep this in the
+          // query (rather than the UI) so portal callers cannot infer them.
+          'comments.publish_state': 'published',
         })
         .where(function (this: Knex.QueryBuilder) {
           this.whereNull('ct.is_internal')

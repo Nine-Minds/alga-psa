@@ -768,7 +768,8 @@
       "phasePlaceholder": "Selecteer een fase",
       "statusLabel": "Status",
       "statusPlaceholder": "Selecteer een status",
-      "linkTicketLabel": "Koppel ticket aan de gemaakte taak"
+      "linkTicketLabel": "Koppel ticket aan de gemaakte taak",
+      "createdSuccess": "Taak is succesvol aangemaakt"
     },
     "linkTicketToTask": {
       "title": "Ticket aan taak koppelen",

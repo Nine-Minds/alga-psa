@@ -41,7 +41,7 @@ export function QueueActionRow({ item, onComplete, onOpen, onSnooze, onMarkLost,
   return (
     <div
       id={idBase}
-      className="flex h-full gap-3.5 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 transition-all hover:-translate-y-0.5 hover:border-[rgb(var(--color-primary-300))] hover:shadow-sm"
+      className="flex h-full gap-3.5 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 card-elevated card-elevated-hover transition-all hover:-translate-y-0.5 hover:border-[rgb(var(--color-primary-300))]"
     >
       <Button
         id={`${idBase}-complete-control`}

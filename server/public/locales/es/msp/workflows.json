@@ -1502,7 +1502,10 @@
     "start": "Inicio",
     "insertStepHere": "Insertar paso aquí",
     "emptyDisabled": "Aún no hay pasos.",
-    "emptySelectPrompt": "Seleccione un paso del panel para comenzar."
+    "emptySelectPrompt": "Seleccione un paso del panel para comenzar.",
+    "patchSummary": {
+      "unchanged": "los demás campos sin cambios"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Editor de expresiones",
@@ -1618,6 +1621,37 @@
     "softEnumUseCustom": "Usar «{{value}}»",
     "expression": {
       "placeholder": "p. ej. payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Campos a cambiar",
+      "targetFraming": "Este paso actualiza {{target}}.",
+      "summaryChanges": "Cambia {{list}}",
+      "summaryChangesMore": "Cambia {{list}} +{{count}} más",
+      "unchangedNote": "Todos los demás campos conservan sus valores actuales.",
+      "emptyGuidance": "Agregue al menos un campo para cambiar.",
+      "editChanges": "Editar cambios…",
+      "dialogTitle": "Editar cambios",
+      "dialogDescription": "Actualizando {{target}}. Solo cambiarán los campos listados a la derecha; todo lo demás conserva su valor actual.",
+      "footerSummary": "{{count}} campo(s) cambiarán · todo lo demás conserva su valor actual",
+      "done": "Listo",
+      "added": "Agregado ✓",
+      "noChangesYet": "Aún no hay cambios. Elija un campo a la izquierda para comenzar.",
+      "setFieldTo": "Establecer {{field}} en",
+      "removeChange": "Dejar de cambiar este campo (conserva su valor actual)",
+      "advancedTitle": "Avanzado",
+      "group": {
+        "details": "Detalles",
+        "assignment": "Asignación",
+        "datesTags": "Fechas y etiquetas",
+        "advanced": "Avanzado"
+      },
+      "target": {
+        "genericRecord": "registro",
+        "unset": "el {{record}} seleccionado arriba",
+        "fromReference": "el {{record}} de «{{source}}»",
+        "fromExpression": "el {{record}} elegido por una expresión",
+        "fixed": "un {{record}} específico"
+      }
     }
   },
   "schemaReference": {

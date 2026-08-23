@@ -768,7 +768,8 @@
       "phasePlaceholder": "Selecione uma fase",
       "statusLabel": "Status",
       "statusPlaceholder": "Selecione um status",
-      "linkTicketLabel": "Vincular ticket à tarefa criada"
+      "linkTicketLabel": "Vincular ticket à tarefa criada",
+      "createdSuccess": "A tarefa foi criada com sucesso"
     },
     "linkTicketToTask": {
       "title": "Vincular ticket à tarefa",

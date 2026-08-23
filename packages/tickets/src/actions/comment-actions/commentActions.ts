@@ -4,7 +4,7 @@
 
 import Comment from '../../models/comment';
 import { IComment } from '@alga-psa/types';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -23,6 +23,30 @@ import {
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
 import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
+import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
+
+const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
+
+function normalizeScheduledPublication(comment: Omit<IComment, 'tenant'>): void {
+  if (!comment.scheduled_publish_at) return;
+  const publishAt = new Date(comment.scheduled_publish_at);
+  if (Number.isNaN(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
+    throw new Error('Scheduled publication time must be a valid future instant');
+  }
+  if (comment.is_internal || comment.author_type !== 'internal' || comment.is_system_generated) {
+    throw new Error('Only internal MSP users may schedule client-visible comments');
+  }
+  if (!comment.scheduled_publish_tz || comment.scheduled_publish_tz.length > 64) {
+    throw new Error('A valid IANA time zone is required for scheduled comments');
+  }
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: comment.scheduled_publish_tz });
+  } catch {
+    throw new Error('A valid IANA time zone is required for scheduled comments');
+  }
+  comment.scheduled_publish_at = publishAt.toISOString();
+  comment.publish_state = 'scheduled';
+}
 
 function formatLiveUpdateDisplayName(user: any): string {
   return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Unknown User';
@@ -232,6 +256,10 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
     if (comment.is_internal && comment.author_type !== 'internal') {
       throw new Error('Only MSP users can create internal comments');
     }
+    if (comment.scheduled_publish_at && user?.user_type !== 'internal') {
+      throw new Error('Only internal MSP users may schedule client-visible comments');
+    }
+    normalizeScheduledPublication(comment);
 
     // Convert BlockNote JSON to Markdown if note exists
     if (comment.note) {
@@ -288,7 +316,8 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
       }
 
       // Update ticket response state based on comment (F005-F008)
-      if (comment.ticket_id && commentTenant) {
+      const isScheduled = comment.publish_state === 'scheduled';
+      if (!isScheduled && comment.ticket_id && commentTenant) {
         const { previousState, newState } = await updateTicketResponseState(
           trx,
           commentTenant,
@@ -301,7 +330,7 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
       }
 
       // Get user details for event
-      if (comment.user_id && commentTenant) {
+      if (comment.user_id && commentTenant && !isScheduled) {
         const user = await tenantScopedTable(trx, 'users', commentTenant)
           .select('first_name', 'last_name', 'user_type', 'contact_id')
           .where({ user_id: comment.user_id })
@@ -389,7 +418,28 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         }
       }
 
-      if (!comment.is_internal && commentTenant) {
+      // Never arm a worker while the row is uncommitted: a near-term worker
+      // could otherwise run, see nothing, and be lost forever. The boot
+      // reconciler repairs a post-commit scheduling failure.
+      if (isScheduled && commentTenant && comment.ticket_id && comment.scheduled_publish_at) {
+        const publishAt = new Date(comment.scheduled_publish_at);
+        registerAfterCommit(trx, async () => {
+          const scheduled = await scheduleBackgroundJobAt(
+            SCHEDULED_COMMENT_JOB,
+            { tenantId: commentTenant, ticketId: comment.ticket_id!, commentId }, publishAt,
+            { singletonKey: `publish-comment:${commentId}`, metadata: { scheduledPublishTz: comment.scheduled_publish_tz } },
+          );
+          const { knex } = await createTenantKnex();
+          await tenantScopedTable(knex, 'comments', commentTenant)
+            .where({ comment_id: commentId, publish_state: 'scheduled' })
+            .update({ schedule_job_id: scheduled.jobId });
+        }, `schedule comment publication ${commentId}`);
+      }
+
+      // A scheduled public comment is not a client reply until publication.
+      // Reopening a bundle master here would make its deferred visibility
+      // observable through ticket state before the scheduled instant.
+      if (!isScheduled && !comment.is_internal && commentTenant) {
         await maybeReopenBundleMasterFromChildReply(trx, commentTenant, comment.ticket_id!, comment.user_id ?? null);
       }
 
@@ -403,7 +453,7 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
             ? (comment.metadata as { responseSource?: string }).responseSource
             : undefined) ?? comment.response_source ?? undefined;
 
-        let activityEventType: string = TICKET_ACTIVITY_EVENT.COMMENT_ADDED;
+        let activityEventType: string = isScheduled ? 'TICKET_COMMENT_SCHEDULED' : TICKET_ACTIVITY_EVENT.COMMENT_ADDED;
         let activitySource: string = TICKET_ACTIVITY_SOURCE.UI;
         let actorType: string = TICKET_ACTIVITY_ACTOR.USER;
 
@@ -445,6 +495,8 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
             is_resolution: !!comment.is_resolution,
             author_type: comment.author_type,
             response_source: responseSource ?? null,
+            scheduled_publish_at: comment.scheduled_publish_at ?? null,
+            scheduled_publish_tz: comment.scheduled_publish_tz ?? null,
           },
         });
       }
@@ -751,4 +803,53 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
     console.error(`Failed to delete comment with id ${id}:`, error);
     throw error;
   }
+});
+
+/** Change a withheld public comment without creating a new client-visible row. */
+export const rescheduleScheduledComment = withAuth(async (user, { tenant }, id: string, scheduledPublishAt: string, scheduledPublishTz: string) => {
+  if (!tenant) throw new Error('Tenant is required to reschedule a comment');
+  const at = new Date(scheduledPublishAt);
+  if (Number.isNaN(at.getTime()) || at.getTime() <= Date.now() || !scheduledPublishTz || scheduledPublishTz.length > 64) {
+    throw new Error('Scheduled publication time must be a valid future instant with an IANA time zone');
+  }
+  try { Intl.DateTimeFormat(undefined, { timeZone: scheduledPublishTz }); } catch { throw new Error('A valid IANA time zone is required'); }
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const existing = await Comment.get(trx, tenant, id);
+    if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be rescheduled');
+    if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only reschedule your own comments');
+    if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
+    const scheduled = await scheduleBackgroundJobAt(
+      SCHEDULED_COMMENT_JOB, { tenantId: tenant, ticketId: existing.ticket_id!, commentId: id }, at,
+      { singletonKey: `publish-comment:${id}`, metadata: { scheduledPublishTz } },
+    );
+    await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
+      scheduled_publish_at: at.toISOString(), scheduled_publish_tz: scheduledPublishTz, schedule_job_id: scheduled.jobId, updated_at: trx.fn.now(),
+    });
+    await writeTicketActivity(trx, {
+      tenant, ticketId: existing.ticket_id!, eventType: 'TICKET_COMMENT_RESCHEDULED', entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+      entityId: id, actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user?.user_id ?? existing.user_id ?? null },
+      source: TICKET_ACTIVITY_SOURCE.UI, details: { scheduled_publish_at: at.toISOString(), scheduled_publish_tz: scheduledPublishTz },
+    });
+  });
+});
+
+/** Cancellation is a retained audit state: delayed jobs race safely against this CAS. */
+export const cancelScheduledComment = withAuth(async (user, { tenant }, id: string) => {
+  if (!tenant) throw new Error('Tenant is required to cancel a comment');
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const existing = await Comment.get(trx, tenant, id);
+    if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be canceled');
+    if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only cancel your own comments');
+    await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
+      publish_state: 'canceled', deleted_at: trx.fn.now(), schedule_job_id: null, updated_at: trx.fn.now(),
+    });
+    if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
+    await writeTicketActivity(trx, {
+      tenant, ticketId: existing.ticket_id!, eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED', entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+      entityId: id, actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user?.user_id ?? existing.user_id ?? null },
+      source: TICKET_ACTIVITY_SOURCE.UI, details: { canceled: true },
+    });
+  });
 });

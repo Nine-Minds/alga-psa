@@ -61,7 +61,7 @@ export function ReactionDisplay({
           <button
             type="button"
             id={`${id}-add-reaction-button`}
-            className="inline-flex items-center gap-1 h-7 px-2 rounded-full text-xs font-medium text-[rgb(var(--color-text-400))] opacity-70 hover:opacity-100 hover:bg-[rgb(var(--color-border-100))] hover:text-[rgb(var(--color-text-600))] transition"
+            className="inline-flex items-center gap-1 h-7 px-2 rounded-full text-xs font-medium text-[rgb(var(--color-text-500))] opacity-70 hover:opacity-100 hover:bg-[rgb(var(--color-border-100))] hover:text-[rgb(var(--color-text-600))] transition"
           >
             <SmilePlus size={16} />
             <span>{t('reactions.add', 'React')}</span>
@@ -85,8 +85,8 @@ export function ReactionDisplay({
             className={cn(
               'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border transition-colors cursor-pointer',
               reaction.currentUserReacted
-                ? 'bg-[rgb(var(--color-primary-50))] border-[rgb(var(--color-primary-400))] text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.15)] dark:border-[rgb(var(--color-primary-400)/0.3)] dark:text-[rgb(var(--color-primary-300))]'
-                : 'bg-[rgb(var(--color-border-50))] border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:border-[rgb(var(--color-border-300))] dark:bg-[rgb(var(--color-border-200)/0.1)] dark:border-[rgb(var(--color-border-200)/0.2)] dark:text-[rgb(var(--color-text-400))] dark:hover:border-[rgb(var(--color-border-200)/0.3)]'
+                ? 'chip-primary border-[rgb(var(--color-primary-400))] dark:border-[rgb(var(--color-primary-400)/0.3)]'
+                : 'chip-neutral border-transparent hover:border-[rgb(var(--color-border-300))]'
             )}
             aria-label={`${t('reactions.ariaSummary', { defaultValue: '{{emoji}} {{count}} reactions', emoji: reaction.emoji, count: reaction.count })}${reaction.currentUserReacted ? t('reactions.ariaYouReacted', ', you reacted') : ''}`}
           >
@@ -102,7 +102,7 @@ export function ReactionDisplay({
         <button
           type="button"
           id={`${id}-add-reaction-button`}
-          className="inline-flex items-center justify-center w-7 h-7 rounded-full text-[rgb(var(--color-text-400))] hover:bg-[rgb(var(--color-border-100))] hover:text-[rgb(var(--color-text-600))] transition-colors"
+          className="inline-flex items-center justify-center w-7 h-7 rounded-full text-[rgb(var(--color-text-500))] hover:bg-[rgb(var(--color-border-100))] hover:text-[rgb(var(--color-text-600))] transition-colors"
           aria-label="Add reaction"
         >
           <SmilePlus size={16} />

@@ -1502,7 +1502,10 @@
     "start": "Inizio",
     "insertStepHere": "Inserisci passaggio qui",
     "emptyDisabled": "Nessun passaggio.",
-    "emptySelectPrompt": "Seleziona un passaggio dal pannello per iniziare."
+    "emptySelectPrompt": "Seleziona un passaggio dal pannello per iniziare.",
+    "patchSummary": {
+      "unchanged": "altri campi invariati"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Editor di espressioni",
@@ -1618,6 +1621,37 @@
     "softEnumUseCustom": "Usa \"{{value}}\"",
     "expression": {
       "placeholder": "es. payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Campi da modificare",
+      "targetFraming": "Questo passaggio aggiorna {{target}}.",
+      "summaryChanges": "Modifica {{list}}",
+      "summaryChangesMore": "Modifica {{list}} +{{count}} altri",
+      "unchangedNote": "Tutti gli altri campi mantengono i valori attuali.",
+      "emptyGuidance": "Aggiungi almeno un campo da modificare.",
+      "editChanges": "Modifica cambiamenti…",
+      "dialogTitle": "Modifica cambiamenti",
+      "dialogDescription": "Aggiornamento di {{target}}. Verranno modificati solo i campi elencati a destra; tutto il resto mantiene il valore attuale.",
+      "footerSummary": "{{count}} campo/i verranno modificati · tutto il resto mantiene il valore attuale",
+      "done": "Fatto",
+      "added": "Aggiunto ✓",
+      "noChangesYet": "Nessun cambiamento. Scegli un campo a sinistra per iniziare.",
+      "setFieldTo": "Imposta {{field}} su",
+      "removeChange": "Non modificare più questo campo (mantiene il valore attuale)",
+      "advancedTitle": "Avanzate",
+      "group": {
+        "details": "Dettagli",
+        "assignment": "Assegnazione",
+        "datesTags": "Date e tag",
+        "advanced": "Avanzate"
+      },
+      "target": {
+        "genericRecord": "elemento",
+        "unset": "il {{record}} selezionato sopra",
+        "fromReference": "il {{record}} da \"{{source}}\"",
+        "fromExpression": "il {{record}} scelto da un'espressione",
+        "fixed": "un {{record}} specifico"
+      }
     }
   },
   "schemaReference": {
