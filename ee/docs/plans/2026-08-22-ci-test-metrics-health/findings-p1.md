@@ -14,9 +14,14 @@ Verified locally, file by file:
 | `invoices/invoiceNumberGeneration_part2` | 0/9 | **9/9** |
 | `invoices/billingInvoiceGeneration_tax` | 0/9 | **9/9** |
 | `time-periods/timePeriodsActions` | 0/1 | **1/1** |
-| `time-periods/timePeriods` | 0/8 | 5/8 (rest: open defects below) |
-| `projects/projectPermissions` + `tickets/ticketPermissions` | 0/12 | 5/12 |
-| `projects/projectManagement` | 0/11 | 0/11, but ~16 min of rebuild time gone |
+| `time-periods/timePeriods` | 0/8 | **8/8** |
+| `projects/projectPermissions` | 0/7 | **7/7** |
+| `tickets/ticketPermissions` | 0/5 | **5/5** |
+| `projects/projectManagement` | 0/11 | **11/11** |
+| `credits/creditExpirationEffects` | 0/4 | **4/4** |
+| `credits/creditExpirationIntegration` | 1/2 | **2/2** |
+| `credits/creditExpirationPriority` | 2/3 | **3/3** |
+| `credits/creditServiceTypeRestrictionModeMigration` | 5/7 | **7/7** |
 
 The time-periods pair also dropped from 180s for one file to 35s for both.
 
@@ -92,12 +97,20 @@ staleness:
 - **Roleless admin.** `createMockUser` leaves `roles: []` and the default RBAC
   mock reads them, so the "admin" fixture was denied every action.
 
-Still open: `projectManagement` mocks `ProjectModel` / `ProjectTaskModel` to
-return fabricated rows, and the actions now insert and reload from the
-database — "Created project could not be reloaded after insert". That file
-wants its model mocks dropped so it exercises the real DB path, which is what
-its place in `src/test/infrastructure` implies. Its 11 failures are unchanged
-in count, but it no longer rebuilds the schema once per test.
+`projectManagement`'s model mocks are gone (round 2). It mocked `ProjectModel`
+/ `ProjectTaskModel` to return fabricated rows while the actions insert and
+reload from the database — "Created project could not be reloaded after
+insert". It now runs the real DB path, which is what its place in
+`src/test/infrastructure` implies, and asserts on persisted rows instead of
+`toHaveBeenCalledWith`. Three further fixture facts came out of that:
+
+- The acting user must be a **real row**. The authorization kernel narrows on
+  `team_members.user_id`, and the default mock id `'mock-user-id'` is not a
+  uuid; that query errored *inside the action's transaction*, so the next
+  statement failed with the unhelpful "current transaction is aborted".
+- `addProjectPhase` validates against the full phase schema, so `wbs_code` must
+  be present even though the action immediately replaces it.
+- `project_tasks.estimated_hours` is `numeric`, which pg returns as a string.
 
 ## Cluster D — FK cleanup order (~3 failures)
 
@@ -106,6 +119,73 @@ default billing profile (`testContext.ts` provisions it the way production
 does), so deleting `clients` first trips
 `client_billing_profiles_client_id_fkey`. The two permissions suites list
 `client_billing_profiles` after `clients` now.
+
+Round 2 removed those hand-written cleanup hooks from the two permissions
+suites outright. `permissions` cannot be deleted while `role_permissions`
+references it, and that error **aborts the surrounding transaction**, so every
+later statement in the hook failed with "current transaction is aborted". The
+per-test rollback already discards the fixture rows.
+
+## Cluster F — who the action thinks it is (round 2)
+
+Three separate seams decide the acting identity, and the suites were wired to
+the wrong one in each case.
+
+- **`withAuth` establishes tenant context; the mock did not.** The real wrapper
+  runs the action inside `runWithTenant`, and code below the action reads the
+  tenant straight off that AsyncLocalStorage store (`requireTenantId` in tag
+  cleanup, `getTenantContext` in scheduling). `createAuthModuleMock`'s
+  `withAuth` called the action bare, so deleting a project died on "tenant
+  context not found". `TestContext` had the mirror problem: its `runWithTenant`
+  spy was `(_tenant, fn) => fn()`, an empty store, so a suite that *explicitly*
+  wrapped a call in `runWithTenant` still got "Tenant context is required".
+  Both now delegate to the real implementation, pinned to the suite tenant.
+- **Two specifiers for one `hasPermission`.** `testMocks` mocks
+  `@alga-psa/auth/rbac`, `server/src/lib/auth/rbac` and `@/lib/auth/rbac`, all
+  routed through `permissionCheckRef`. `projectPermissions` instead patched
+  `@alga-psa/auth`'s export, which `projectActions` does not import — the rbac
+  mock stayed on its default ("no roles ⇒ allow everything", because DB user
+  rows carry no `roles` array), and the *regular* user was allowed to update,
+  create and delete. Reprogram the predicate through `setupCommonMocks` /
+  `mockRBAC`, never a single specifier.
+- **Trailing user arguments are ignored.** `getTickets`, `updateTicket` and
+  `addTicket` are `withAuth`-wrapped and take their user from the session;
+  `ticketPermissions` still passed `adminUser` / `regularUser` as a trailing
+  argument, which landed in `options` (or nowhere). Every call ran as the
+  session stub, so the admin was denied and the "denied" assertions passed for
+  the wrong reason.
+
+Also fixture drift, found once the identity was right: a ticket's status must
+belong to its board (`TicketModel.validateStatusBelongsToBoard`), so a
+boardless status can never create a ticket.
+
+## Cluster G — derived credit balance and job connections (round 2)
+
+- **Available credit excludes credits whose date has passed.**
+  `getAvailableCredit` filters `is_expired = false` **and**
+  `expiration_date > now()`. The expiration suites asserted a pre-job balance
+  that still counted a credit issued with a past expiration date — true of the
+  old cached `clients.credit_balance`, false of the derived one. The
+  "not processed yet" state lives in `credit_tracking`, and the assertions read
+  it there now.
+- **Invoice totals are immutable after finalization.**
+  `applyCreditToInvoiceInternal` never writes `total_amount`; balance due is
+  `total_amount - credit_applied` (`creditApplication.test.ts` already encodes
+  this). Three suites still expected a rewritten total, and their manual
+  fallback helpers wrote one, so the two paths disagreed. Both now leave totals
+  gross.
+- **Job handlers open their own connection.** `expiredCreditsHandler` calls
+  `getConnection(tenantId)` rather than `createTenantKnex()`, so `TestContext`'s
+  spy does not reach it. That second connection cannot see rows written inside
+  the suite transaction and blocks on their locks — a 120-second timeout, not a
+  failure. Mock `getConnection` to hand back `context.db`, as
+  `billing/quotes/expireQuotesHandler.test.ts` already does.
+- **Constraints that a later migration dropped.** Two
+  `creditServiceTypeRestrictionModeMigration` tests asserted CHECK arms that
+  `20260817130000` deliberately removed (the tenant-side NOT NULL could not be
+  installed on the hosted Citus cluster). They now pin the arrangement that
+  replaced them: no database constraint, and the mode/ids pairing normalized on
+  the write path by `updateClientBillingSettings`.
 
 ## Product defects exposed (tickets, not test edits)
 
@@ -137,11 +217,48 @@ four fields, in `packages/scheduling/src/schemas/timeSheet.schemas.ts` **and**
 the stale copy at `server/src/lib/schemas/timeSheet.schemas.ts`. The fixtures
 in this branch fill the columns instead, matching what the app writes.
 
-### 3. `revalidatePath` invariant in `generateAndSaveTimePeriods` — OPEN
+### 3. `revalidatePath` invariant in `timePeriodsActions` — FIXED HERE
 
-Two time-period tests fail with `Invariant: static generation store missing in
-revalidatePath /msp/time-entry`: the action calls `revalidatePath` outside a
-request context and `next/cache` is only mocked for callers that route through
-`setupCommonMocks`. `createNextTimePeriod` already guards its own call with a
-comment that revalidation "only works in request context"; the same guard
-belongs on the generate path.
+Time-period tests failed with `Invariant: static generation store missing in
+revalidatePath /msp/time-entry`. `createTimePeriod` carried a hand-rolled
+try/catch; the other four call sites did not, and two of them sit inside a
+`catch` that inspects `error.message` for "belongs to different tenant", so a
+failed revalidation surfaced as a bogus tenant error. These actions also run
+from background jobs and the billing bootstrap, where there is never a request
+context, so this was a live defect and not only a test artefact. All five now
+go through one module-local `safeRevalidate`, matching the helper
+`packages/billing/src/actions/serviceActions.ts` and
+`packages/inventory/src/actions/kitActions.ts` already use.
+
+### 4. Daily time periods were a day short — FIXED HERE
+
+Time periods are half-open intervals `[start, end)` —
+`TimePeriod.findOverlapping` says so in as many words, and `generateTimePeriods`
+plus the `week` / `year` arms of `TimePeriodSuggester.suggestNewTimePeriod` all
+add the whole frequency. The `day` arm added `frequency - 1`, so the
+create-next-period path produced 6-day periods from a 7-day setting while the
+bulk generator produced 7-day ones for the same settings row. Fixed in
+`packages/scheduling/src/lib/timePeriodSuggester.ts`.
+
+Two neighbours left alone deliberately:
+
+- `TimePeriodSuggester.calculateEndDate` (used by `TimePeriodForm` to prefill
+  the end date) uses an inclusive convention throughout — `months - 1 day`,
+  `years - 1 day`. Whether the form should agree with the generator is a UI
+  question, not a test-repair one.
+- `server/src/lib/timePeriodSuggester.ts` is a stale copy no product code
+  imports — but `server/src/test/unit/timePeriodSuggester.test.ts` imports *it*
+  rather than the package, so that unit test covers dead code. It also has no
+  `day`-unit case, which is why the bug above survived. Worth folding into the
+  package copy.
+
+### 5. `updateTaskSchema` undid its own `.partial()` — FIXED HERE
+
+`updateTaskSchema` is `projectTaskSchema.partial().omit({…}).extend({…})`, and
+`.extend` replaces a key outright rather than merging into it. `service_id`
+restated `.optional()`; `assigned_to` did not. Every partial task update that
+omitted `assigned_to` — which is what a partial update means — was rejected
+with `Please fix the task details: assigned_to: Invalid input`. Fixed in
+`packages/projects/src/schemas/project.schemas.ts`; the stale copy at
+`server/src/lib/schemas/project.schemas.ts` has the same shape and the same
+bug, and is a candidate for the same deletion as the suggester copy above.
