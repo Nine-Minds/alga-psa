@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "Approval reversed by manager",
       "error": "Failed to reverse approval: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "clear": "Clear"
+      }
     }
   },
   "workItemDrawer": {
