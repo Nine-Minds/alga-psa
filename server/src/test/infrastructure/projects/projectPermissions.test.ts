@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import {
   setupCommonMocks,
   mockNextHeaders,
@@ -16,10 +16,6 @@ import {
   createUser,
   createTestEnvironment
 } from '../../../../test-utils/testDataFactory';
-import {
-  createCleanupHook,
-  cleanupTables
-} from '../../../../test-utils/dbReset';
 import {
   expectPermissionDenied,
   expectError
@@ -104,16 +100,20 @@ describe('Project Permissions Infrastructure', () => {
     tenantScope(tenantId).tenantJoin(adminUserQuery, 'roles', 'user_roles.role_id', 'roles.role_id', { type: 'left' });
     adminUser = await adminUserQuery.first();
 
-    // Set up mocks
+    // Set up mocks. projectActions imports hasPermission from
+    // '@alga-psa/auth/rbac', a different specifier than the '@alga-psa/auth'
+    // mocked above — patching only the latter left the rbac mock on its
+    // default ("no roles => allow everything"), so the regular user was
+    // granted update/create/delete. Routing the check through
+    // setupCommonMocks drives both specifiers off the same predicate.
     setupCommonMocks({
       tenantId,
-      user: createMockUser('admin')
-    });
-
-    vi.mocked(auth.hasPermission).mockImplementation(async (user: any, resource: string, action: string): Promise<boolean> => {
-      if (user?.username === 'janeadmin') return true;
-      if (user?.username === 'johndoe' && resource === 'project' && action === 'read') return true;
-      return false;
+      user: createMockUser('admin'),
+      permissionCheck: (user: any, resource?: string, action?: string): boolean => {
+        if (user?.username === 'janeadmin') return true;
+        if (user?.username === 'johndoe' && resource === 'project' && action === 'read') return true;
+        return false;
+      }
     });
 
     // Create test project
@@ -145,16 +145,11 @@ describe('Project Permissions Infrastructure', () => {
     await tenantTable(tenantId, 'projects').insert(testProject);
   });
 
-  // Use cleanup hook for test isolation
-  afterEach(async () => {
-    // Deletion runs in reverse array order, so client_billing_profiles must sit
-    // after 'clients': every client is provisioned a default profile, and
-    // deleting the client first trips that foreign key.
-    await createCleanupHook(
-      context.db,
-      ['projects', 'clients', 'client_billing_profiles', 'users', 'roles', 'permissions']
-    )();
-  });
+  // No cleanup hook: beforeEach rolls the per-test transaction back, which
+  // already discards every fixture row. Deleting them by hand instead hit
+  // role_permissions' foreign key on `permissions`, and that error aborts the
+  // surrounding transaction — every later statement in the hook then failed
+  // with "current transaction is aborted".
 
   it('should allow regular user to view projects', async () => {
     vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
