@@ -119,6 +119,13 @@ async function seedFixture(): Promise<Fixture> {
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
+  await table(tenantId, 'asset_maintenance_occurrences').insert({
+    tenant: tenantId,
+    schedule_id: scheduleId,
+    asset_id: assetId,
+    due_date: db.raw("NOW() + INTERVAL '5 days'"),
+    status: 'open',
+  });
 
   return { tenantId, userId, clientId, assetId, relatedAssetId, scheduleId };
 }
@@ -126,6 +133,7 @@ async function seedFixture(): Promise<Fixture> {
 async function cleanupTenant(tenant: string): Promise<void> {
   const del = async (name: string) => table(tenant, name).del().catch(() => undefined);
   for (const name of [
+    'asset_maintenance_occurrences',
     'asset_maintenance_history',
     'asset_maintenance_schedules',
     'asset_relationships',
@@ -205,6 +213,21 @@ describe('AssetService REST repairs (integration)', () => {
     const after = await table(fx.tenantId, 'asset_maintenance_schedules').where({ schedule_id: fx.scheduleId }).first();
     expect(new Date(after.next_maintenance).getTime()).toBeGreaterThan(new Date(before.next_maintenance).getTime());
     expect(new Date(after.last_maintenance).getTime()).toBeGreaterThan(0);
+    const completed = await table(fx.tenantId, 'asset_maintenance_occurrences').where({ schedule_id: fx.scheduleId, status: 'completed' });
+    const next = await table(fx.tenantId, 'asset_maintenance_occurrences').where({ schedule_id: fx.scheduleId, status: 'open' });
+    expect(completed).toHaveLength(1);
+    expect(next).toHaveLength(1);
+    await expect(service.recordMaintenance(fx.assetId, { schedule_id: fx.scheduleId, maintenance_type: 'preventive' } as any, ctx)).rejects.toThrow('already been closed');
+  }, HOOK_TIMEOUT);
+
+  it('rejects a schedule used with another asset and leaves paused schedules inert', async () => {
+    const fx = await seedFixture();
+    const ctx = { tenant: fx.tenantId, userId: fx.userId, db } as any;
+    const service = new AssetService();
+    await expect(service.recordMaintenance(fx.relatedAssetId, { schedule_id: fx.scheduleId, maintenance_type: 'preventive' } as any, ctx)).rejects.toThrow();
+    await table(fx.tenantId, 'asset_maintenance_schedules').where({ schedule_id: fx.scheduleId }).update({ is_active: false });
+    await expect(service.recordMaintenance(fx.assetId, { schedule_id: fx.scheduleId, maintenance_type: 'preventive' } as any, ctx)).rejects.toThrow('inactive');
+    expect(await table(fx.tenantId, 'asset_maintenance_history').where({ schedule_id: fx.scheduleId })).toHaveLength(0);
   }, HOOK_TIMEOUT);
 
   it('resolves a scanned serial to its asset via inventory lookup', async () => {
