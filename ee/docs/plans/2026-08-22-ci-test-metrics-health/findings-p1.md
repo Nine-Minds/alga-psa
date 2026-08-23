@@ -36,8 +36,14 @@ Verified locally, file by file:
 
 The time-periods pair also dropped from 180s for one file to 35s for both.
 
-A whole-suite baseline taken partway through this round: **13 files / 49 tests
-failing out of 354**. Everything above is now green file-by-file.
+Whole-suite runs, start and end of this round:
+
+| | Files | Tests | Duration |
+|---|---|---|---|
+| Baseline (taken partway through) | 13 failed / 54 | 49 failed / 354 | 1317s |
+| After | **2 failed / 54** | **4 failed / 354** | 1047s |
+
+The four that remain are the two open product questions below, not fixtures.
 
 ### The four fixture faults behind almost all of it
 
