@@ -49,6 +49,11 @@ describe('kbImportBlocks markdown fidelity', () => {
       'paragraph',
       'image',
       'paragraph',
+      'heading',
+      'numberedListItem',
+      'image',
+      'image',
+      'numberedListItem',
     ]);
   });
 
@@ -126,6 +131,72 @@ describe('kbImportBlocks markdown fidelity', () => {
     expect(markdownToBlocks('![Alt text](https://example.com/a.png)')).toEqual([
       { type: 'image', props: { url: 'https://example.com/a.png', caption: 'Alt text' } },
     ]);
+  });
+
+  // Screenshot how-tos put the picture inside the numbered step, which used to
+  // collapse to alt text while the same article imported as .html kept it.
+  it('hoists an image out of a list item and keeps the step text', () => {
+    expect(blocks[22]).toEqual({
+      type: 'numberedListItem',
+      content: [{ type: 'text', text: 'Open the print queue' }],
+    });
+    expect(blocks[23]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/step-queue.png', caption: 'queue screenshot' },
+    });
+  });
+
+  it('emits a bare image block for an image-only list item', () => {
+    expect(blocks[24]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/step-driver.png', caption: 'driver dialog' },
+    });
+    expect(blocks[25]).toEqual({
+      type: 'numberedListItem',
+      content: [{ type: 'text', text: 'Restart the service' }],
+    });
+  });
+});
+
+describe('kbImportBlocks markdown image hoisting', () => {
+  it('splits a list item around a mid-sentence image', () => {
+    expect(markdownToBlocks('- before ![shot](https://example.com/a.png) after')).toEqual([
+      { type: 'bulletListItem', content: [{ type: 'text', text: 'before' }] },
+      { type: 'image', props: { url: 'https://example.com/a.png', caption: 'shot' } },
+      { type: 'bulletListItem', content: [{ type: 'text', text: 'after' }] },
+    ]);
+  });
+
+  it('hoists images out of nested list items too', () => {
+    const blocks = markdownToBlocks('- Step one\n  - ![nested](https://example.com/n.png)');
+    expect(types(blocks)).toEqual(['bulletListItem', 'image']);
+    expect(blocks[1].props).toEqual({ url: 'https://example.com/n.png', caption: 'nested' });
+  });
+
+  it('hoists images out of headings and blockquotes', () => {
+    expect(types(markdownToBlocks('## Fix ![shot](https://example.com/a.png)'))).toEqual([
+      'heading',
+      'image',
+    ]);
+    expect(types(markdownToBlocks('> See ![shot](https://example.com/a.png) here'))).toEqual([
+      'blockquote',
+      'image',
+      'blockquote',
+    ]);
+  });
+
+  it('keeps an unsafe list-item image as alt text inside the item', () => {
+    const blocks = markdownToBlocks('- step ![diagram](javascript:alert(1)) done');
+    expect(types(blocks)).toEqual(['bulletListItem']);
+    expect(plainText(blocks[0])).toBe('step diagram done');
+  });
+
+  it('matches the html walker for the same list item', () => {
+    const html = htmlToBlocks('<ul><li>before <img src="https://example.com/a.png" alt="shot" /> after</li></ul>');
+    expect(types(html)).toEqual(['bulletListItem', 'image', 'bulletListItem']);
+    expect(types(markdownToBlocks('- before ![shot](https://example.com/a.png) after'))).toEqual(
+      types(html),
+    );
   });
 });
 
@@ -426,6 +497,36 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
     expect(timed(() => markdownToBlocks('`a` '.repeat(250_000)))).toBeLessThan(PARSE_BUDGET_MS);
     expect(timed(() => markdownToBlocks('<i>x</i> '.repeat(120_000)))).toBeLessThan(PARSE_BUDGET_MS);
     expect(timed(() => markdownToBlocks('[a](b) '.repeat(150_000)))).toBeLessThan(PARSE_BUDGET_MS);
+  });
+
+  // Image hoisting flushes the accumulated run and pushes a block per picture,
+  // from the paragraph, list-item and heading paths alike. A screenshot dump is
+  // the realistic shape of that: measure it rather than assume it stayed linear.
+  it('parses a ~1MB image-dense document', () => {
+    const paragraphs = '![shot](https://example.com/a.png) '.repeat(30_000);
+    expect(paragraphs.length).toBeGreaterThan(1_000_000);
+    expect(timed(() => markdownToBlocks(paragraphs))).toBeLessThan(PARSE_BUDGET_MS);
+
+    const listItems = '- step ![shot](https://example.com/a.png) more\n'.repeat(25_000);
+    expect(listItems.length).toBeGreaterThan(1_000_000);
+    expect(timed(() => markdownToBlocks(listItems))).toBeLessThan(PARSE_BUDGET_MS);
+
+    const imgs = '<p><img src="https://example.com/a.png" alt="shot" /></p>'.repeat(20_000);
+    expect(imgs.length).toBeGreaterThan(1_000_000);
+    expect(timed(() => htmlToBlocks(imgs))).toBeLessThan(PARSE_BUDGET_MS);
+  });
+
+  it('enforces the deadline on an image-dense document', () => {
+    for (const markdown of [
+      '![shot](https://example.com/a.png) '.repeat(30_000),
+      '- step ![shot](https://example.com/a.png) more\n'.repeat(25_000),
+    ]) {
+      const startedAt = Date.now();
+      expect(() => markdownToBlocks(markdown, { maxDurationMs: 1 })).toThrow(
+        KbImportParseTimeoutError,
+      );
+      expect(Date.now() - startedAt).toBeLessThan(PARSE_BUDGET_MS);
+    }
   });
 
   it('scales linearly as one inline-dense block grows', () => {

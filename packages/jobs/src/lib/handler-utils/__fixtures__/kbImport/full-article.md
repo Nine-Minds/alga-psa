@@ -39,3 +39,9 @@ Contact ~~the helpdesk~~ the vendor for RMA numbers.
 ![Spooler service dialog](https://example.com/img/spooler.png)
 
 Compare ![the queue](https://example.com/img/queue.png) with the driver log.
+
+### Screenshots in steps
+
+1. Open the print queue ![queue screenshot](https://example.com/img/step-queue.png)
+2. ![driver dialog](https://example.com/img/step-driver.png)
+3. Restart the service

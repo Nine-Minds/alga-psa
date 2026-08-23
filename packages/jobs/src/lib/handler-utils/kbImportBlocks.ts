@@ -204,15 +204,19 @@ function inlineFromTokens(
   }
 }
 
+type BlockFactory = (content: InlineSegment[]) => BlockNoteBlock;
+
 /**
- * Emits a markdown paragraph, splitting it around any inline images: BlockNote
- * images are block-level, and collapsing them into alt text lost the picture.
+ * Emits one markdown block from an inline run, splitting it around any inline
+ * images: BlockNote images are block-level, and collapsing them into alt text
+ * lost the picture. Paragraphs and headings share this path.
  */
-function appendParagraph(
+function appendInlineTokens(
   tokens: Token[] | undefined,
   fallbackText: string,
   blocks: BlockNoteBlock[],
   deadline: Deadline,
+  makeBlock: BlockFactory,
 ): void {
   const segments: InlineSegment[] = [];
   let hoistedImage = false;
@@ -222,7 +226,7 @@ function appendParagraph(
     if (!block) return false;
     const leading = trimSegments(segments.splice(0, segments.length));
     if (leading.length > 0) {
-      blocks.push({ type: 'paragraph', content: leading });
+      blocks.push(makeBlock(leading));
     }
     blocks.push(block);
     hoistedImage = true;
@@ -230,16 +234,66 @@ function appendParagraph(
   });
 
   if (!hoistedImage) {
-    blocks.push({
-      type: 'paragraph',
-      content: segments.length > 0 ? segments : [{ type: 'text', text: fallbackText }],
-    });
+    blocks.push(makeBlock(segments.length > 0 ? segments : [{ type: 'text', text: fallbackText }]));
     return;
   }
 
   const trailing = trimSegments(segments);
   if (trailing.length > 0) {
-    blocks.push({ type: 'paragraph', content: trailing });
+    blocks.push(makeBlock(trailing));
+  }
+}
+
+/**
+ * Emits one block from several nested block tokens joined into a single inline
+ * run — a list item's or blockquote's children — hoisting inline images out as
+ * sibling blocks. Mirrors the HTML walker's `img` case, which flushes the run
+ * accumulated so far and pushes a real image block, so the same article keeps
+ * its screenshots whether it arrives as .md or as .html.
+ */
+function appendInlineRun(
+  children: Token[],
+  blocks: BlockNoteBlock[],
+  deadline: Deadline,
+  makeBlock: BlockFactory,
+): void {
+  const segments: InlineSegment[] = [];
+  let hoistedImage = false;
+
+  for (const child of children) {
+    deadline.check();
+    const part: InlineSegment[] = [];
+
+    const absorb = () => {
+      if (part.length === 0) return;
+      if (segments.length > 0) pushSegment(segments, ' ', {});
+      segments.push(...part.splice(0, part.length));
+    };
+
+    const nested = (child as { tokens?: Token[] }).tokens;
+    if (nested?.length) {
+      inlineFromTokens(nested, {}, part, deadline, (image) => {
+        const block = imageBlock(image.href, image.text);
+        if (!block) return false;
+        absorb();
+        const leading = trimSegments(segments.splice(0, segments.length));
+        if (leading.length > 0) blocks.push(makeBlock(leading));
+        blocks.push(block);
+        hoistedImage = true;
+        return true;
+      });
+    } else if (typeof (child as { text?: string }).text === 'string') {
+      pushSegment(part, normalizeSoftBreaks((child as { text: string }).text), {});
+    }
+
+    absorb();
+  }
+
+  const trailing = hoistedImage ? trimSegments(segments) : segments;
+  if (trailing.length > 0) {
+    blocks.push(makeBlock(trailing));
+  } else if (!hoistedImage) {
+    blocks.push(makeBlock([{ type: 'text', text: '' }]));
   }
 }
 
@@ -249,54 +303,23 @@ function inlineContent(tokens: Token[] | undefined, deadline: Deadline, fallback
   return segments.length > 0 ? segments : [{ type: 'text', text: fallbackText }];
 }
 
-/** Flattens a blockquote's nested block tokens into one inline run, joined by spaces. */
-function inlineFromBlockTokens(tokens: Token[] | undefined, deadline: Deadline): InlineSegment[] {
-  const segments: InlineSegment[] = [];
-  for (const token of tokens ?? []) {
-    deadline.check();
-    const nested = (token as { tokens?: Token[] }).tokens;
-    const part: InlineSegment[] = [];
-    if (nested?.length) {
-      inlineFromTokens(nested, {}, part, deadline);
-    } else if (typeof (token as { text?: string }).text === 'string') {
-      pushSegment(part, normalizeSoftBreaks((token as { text: string }).text), {});
-    }
-    if (part.length === 0) continue;
-    if (segments.length > 0) pushSegment(segments, ' ', {});
-    segments.push(...part);
-  }
-  return segments.length > 0 ? segments : [{ type: 'text', text: '' }];
-}
-
 function appendListTokens(list: Tokens.List, blocks: BlockNoteBlock[], deadline: Deadline): void {
   const itemType = list.ordered ? 'numberedListItem' : 'bulletListItem';
 
   for (const item of list.items) {
     deadline.check();
-    const segments: InlineSegment[] = [];
     const nestedLists: Tokens.List[] = [];
+    const inlineChildren: Token[] = [];
 
     for (const child of item.tokens ?? []) {
       if (child.type === 'list') {
         nestedLists.push(child as Tokens.List);
         continue;
       }
-      const part: InlineSegment[] = [];
-      const nested = (child as { tokens?: Token[] }).tokens;
-      if (nested?.length) {
-        inlineFromTokens(nested, {}, part, deadline);
-      } else if (typeof (child as { text?: string }).text === 'string') {
-        pushSegment(part, normalizeSoftBreaks((child as { text: string }).text), {});
-      }
-      if (part.length === 0) continue;
-      if (segments.length > 0) pushSegment(segments, ' ', {});
-      segments.push(...part);
+      inlineChildren.push(child);
     }
 
-    blocks.push({
-      type: itemType,
-      content: segments.length > 0 ? segments : [{ type: 'text', text: '' }],
-    });
+    appendInlineRun(inlineChildren, blocks, deadline, (content) => ({ type: itemType, content }));
 
     // Nested lists are flattened into sibling item blocks, matching the shape
     // the KB editor already stores for imported articles.
@@ -319,11 +342,11 @@ function appendTokens(tokens: Token[], blocks: BlockNoteBlock[], deadline: Deadl
         break;
       case 'heading': {
         const heading = token as Tokens.Heading;
-        blocks.push({
+        appendInlineTokens(heading.tokens, heading.text, blocks, deadline, (content) => ({
           type: 'heading',
           props: { level: heading.depth },
-          content: inlineContent(heading.tokens, deadline, heading.text),
-        });
+          content,
+        }));
         break;
       }
       case 'code': {
@@ -338,10 +361,10 @@ function appendTokens(tokens: Token[], blocks: BlockNoteBlock[], deadline: Deadl
       }
       case 'blockquote': {
         const quote = token as Tokens.Blockquote;
-        blocks.push({
+        appendInlineRun(quote.tokens ?? [], blocks, deadline, (content) => ({
           type: 'blockquote',
-          content: inlineFromBlockTokens(quote.tokens, deadline),
-        });
+          content,
+        }));
         break;
       }
       case 'list':
@@ -370,7 +393,10 @@ function appendTokens(tokens: Token[], blocks: BlockNoteBlock[], deadline: Deadl
       case 'paragraph':
       case 'text': {
         const block = token as Tokens.Paragraph;
-        appendParagraph(block.tokens, block.text ?? '', blocks, deadline);
+        appendInlineTokens(block.tokens, block.text ?? '', blocks, deadline, (content) => ({
+          type: 'paragraph',
+          content,
+        }));
         break;
       }
       default: {

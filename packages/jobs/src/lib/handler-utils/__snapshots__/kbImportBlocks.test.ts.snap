@@ -697,5 +697,49 @@ exports[`kbImportBlocks markdown fidelity > produces the golden BlockNote docume
     ],
     "type": "paragraph",
   },
+  {
+    "content": [
+      {
+        "text": "Screenshots in steps",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "level": 3,
+    },
+    "type": "heading",
+  },
+  {
+    "content": [
+      {
+        "text": "Open the print queue",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
+  {
+    "props": {
+      "caption": "queue screenshot",
+      "url": "https://example.com/img/step-queue.png",
+    },
+    "type": "image",
+  },
+  {
+    "props": {
+      "caption": "driver dialog",
+      "url": "https://example.com/img/step-driver.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "Restart the service",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
 ]
 `;
