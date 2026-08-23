@@ -19,7 +19,8 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  seedBillingChargeSources
 } from '../../../../../test-utils/billingTestHelpers';
 import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
 import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';
@@ -129,17 +130,6 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
 }));
 
-let numberingSequence = 0;
-
-vi.mock('server/src/lib/services/numberingService', () => ({
-  NumberingService: class {
-    async getNextNumber(): Promise<string> {
-      numberingSequence += 1;
-      return `TIC${numberingSequence.toString().padStart(6, '0')}`;
-    }
-  }
-}));
-
 const originalCalculateBilling = BillingEngine.prototype.calculateBilling;
 vi.spyOn(BillingEngine.prototype, 'calculateBilling').mockImplementation(async function (...args) {
   const result = await originalCalculateBilling.apply(this, args as any);
@@ -172,7 +162,10 @@ function parseInvoiceTotals(invoice: Record<string, unknown>) {
     tax,
     creditApplied,
     totalAmount,
-    totalBeforeCredit: subtotal + tax
+    totalBeforeCredit: subtotal + tax,
+    // Invoice totals are immutable after finalization; balance due is derived
+    // (total - credit) rather than written back to total_amount.
+    amountDue: totalAmount - creditApplied
   };
 }
 
@@ -227,6 +220,10 @@ async function generateInvoiceForCycle(
     totalAmount: amountCents,
     finalAmount: amountCents
   };
+
+  // persistInvoiceCharges marks each usage charge's source usage_tracking row
+  // invoiced and throws when there is none behind a fabricated usageId.
+  await seedBillingChargeSources(context, [charge as unknown as Record<string, unknown>]);
 
   const createdInvoice = await createInvoiceFromBillingResult(
     billingResult,
@@ -341,7 +338,6 @@ describe('Prepayment Invoice System', () => {
   }, 120000);
 
   beforeEach(async () => {
-    numberingSequence = 0;
     context = await resetContext();
     context.db.on('query-error', (error, obj) => {
       console.error('[Test][MultiCredits] query-error', error?.message, obj?.sql);
@@ -374,8 +370,12 @@ describe('Prepayment Invoice System', () => {
         const prepaymentAmount = 100000;
       const result = await createPrepaymentInvoice(context.clientId, prepaymentAmount);
   
+        // Invoice numbers come from SharedNumberingService now; the local
+        // 'server/src/lib/services/numberingService' mock this file used to
+        // carry stopped intercepting anything when the actions moved to the
+        // shared service, so assert the seeded format rather than a fixture's.
         expect(result).toMatchObject({
-          invoice_number: expect.stringMatching(/^TIC\d{6}$/),
+          invoice_number: expect.stringMatching(/^[A-Z]+-\d{6}$/),
           subtotal: prepaymentAmount,
           total_amount: prepaymentAmount.toString(),
           status: 'draft'
@@ -641,6 +641,8 @@ describe('Prepayment Invoice System', () => {
       finalAmount: 1000
     };
 
+    await seedBillingChargeSources(context, [charge as unknown as Record<string, unknown>]);
+
     const createdInvoice = await createInvoiceFromBillingResult(
       billingResult,
       context.clientId,
@@ -661,7 +663,7 @@ describe('Prepayment Invoice System', () => {
       const totals = parseInvoiceTotals(updatedInvoice ?? {});
 
       // Verify credit application after finalization
-      expect(totals.totalAmount).toBeLessThan(totals.totalBeforeCredit);
+      expect(totals.amountDue).toBeLessThan(totals.totalBeforeCredit);
       expect(totals.creditApplied).toBeGreaterThan(0);
 
       // Verify credit balance update
@@ -692,28 +694,32 @@ describe('Prepayment Invoice System', () => {
       const cycleStart = cycleRecord.period_start_date ?? cycleRecord.effective_date;
       const cycleEnd = cycleRecord.period_end_date ?? cycleRecord.effective_date;
 
+      const canonicalCharges: IBillingCharge[] = [
+        {
+          tenant: context.tenantId,
+          type: 'usage',
+          serviceId,
+          serviceName: 'Test Service',
+          quantity: 1,
+          rate: 1000,
+          total: 1000,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: 'US-NY',
+          is_taxable: true,
+          usageId: uuidv4(),
+          servicePeriodStart: cycleStart,
+          servicePeriodEnd: cycleEnd,
+          billingTiming: 'arrears',
+        } as IBillingCharge,
+      ];
+
+      await seedBillingChargeSources(context, canonicalCharges as unknown as Array<Record<string, unknown>>);
+
       const createdInvoice = await createInvoiceFromBillingResult(
         {
           tenant: context.tenantId,
-          charges: [
-            {
-              tenant: context.tenantId,
-              type: 'usage',
-              serviceId,
-              serviceName: 'Test Service',
-              quantity: 1,
-              rate: 1000,
-              total: 1000,
-              tax_amount: 0,
-              tax_rate: 0,
-              tax_region: 'US-NY',
-              is_taxable: true,
-              usageId: uuidv4(),
-              servicePeriodStart: cycleStart,
-              servicePeriodEnd: cycleEnd,
-              billingTiming: 'arrears',
-            },
-          ],
+          charges: canonicalCharges,
           discounts: [],
           adjustments: [],
           totalAmount: 1000,
@@ -745,15 +751,14 @@ describe('Prepayment Invoice System', () => {
       const rereadInvoice = await Invoice.getById(context.db, context.tenantId, createdInvoice.invoice_id);
 
       expect(Number(rereadInvoice?.credit_applied ?? 0)).toBeGreaterThan(0);
-      expect(rereadInvoice?.invoice_charges).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            service_period_start: cycleStart,
-            service_period_end: cycleEnd,
-            billing_timing: 'arrears',
-          }),
-        ])
-      );
+      // The view model serializes the periods, so compare instants rather than
+      // a string against the Date the cycle fixture holds.
+      const asInstant = (value: unknown) => new Date(String(value)).toISOString();
+      const rereadCharge = (rereadInvoice?.invoice_charges ?? [])[0] as Record<string, unknown>;
+      expect(rereadCharge).toBeTruthy();
+      expect(asInstant(rereadCharge.service_period_start)).toBe(asInstant(cycleStart));
+      expect(asInstant(rereadCharge.service_period_end)).toBe(asInstant(cycleEnd));
+      expect(rereadCharge.billing_timing).toBe('arrears');
     });
   });
 });
@@ -801,7 +806,6 @@ describe('Multiple Credit Applications', () => {
   }, 120000);
 
   beforeEach(async () => {
-    numberingSequence = 0;
     context = await resetContext();
     setupCommonMocks({
       tenantId: context.tenantId,
@@ -904,7 +908,7 @@ describe('Multiple Credit Applications', () => {
     const totals = parseInvoiceTotals(updatedInvoice ?? {});
 
     // Verify credit application
-    expect(totals.totalAmount).toBeLessThan(totals.totalBeforeCredit);
+    expect(totals.amountDue).toBeLessThan(totals.totalBeforeCredit);
     expect(totals.creditApplied).toBeGreaterThan(0);
 
     // Verify credit balance update
@@ -960,9 +964,9 @@ describe('Multiple Credit Applications', () => {
     const totals2 = parseInvoiceTotals(updatedInvoice2 ?? {});
 
     // Verify credit application on both invoices
-    expect(totals1.totalAmount).toBeLessThan(totals1.totalBeforeCredit);
+    expect(totals1.amountDue).toBeLessThan(totals1.totalBeforeCredit);
     expect(totals1.creditApplied).toBeGreaterThan(0);
-    expect(totals2.totalAmount).toBeLessThan(totals2.totalBeforeCredit);
+    expect(totals2.amountDue).toBeLessThan(totals2.totalBeforeCredit);
     expect(totals2.creditApplied).toBeGreaterThan(0);
 
     // Verify total credit applied
@@ -1001,7 +1005,7 @@ describe('Multiple Credit Applications', () => {
     const totals = parseInvoiceTotals(updatedInvoice ?? {});
 
     // Verify credit application
-    expect(totals.totalAmount).toBe(0);
+    expect(totals.amountDue).toBe(0);
     const creditApplied = totals.creditApplied;
     expect(creditApplied).toBeLessThanOrEqual(totalPrepayment);
 
@@ -1045,10 +1049,10 @@ describe('Multiple Credit Applications', () => {
     const totals = parseInvoiceTotals(updatedInvoice ?? {});
 
     // Verify credit application
-    expect(totals.totalAmount).toBeLessThan(totals.totalBeforeCredit);
+    expect(totals.amountDue).toBeLessThan(totals.totalBeforeCredit);
     const creditApplied = Math.min(prepaymentAmount, totals.totalBeforeCredit);
     expect(totals.creditApplied).toBe(creditApplied);
-    expect(totals.totalAmount).toBe(totals.totalBeforeCredit - creditApplied);
+    expect(totals.amountDue).toBe(totals.totalBeforeCredit - creditApplied);
 
     // Verify final credit balance
     const finalCredit = await ClientContractLine.getClientCredit(context.clientId);
