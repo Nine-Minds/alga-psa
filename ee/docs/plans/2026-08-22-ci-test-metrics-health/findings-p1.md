@@ -22,8 +22,55 @@ Verified locally, file by file:
 | `credits/creditExpirationIntegration` | 1/2 | **2/2** |
 | `credits/creditExpirationPriority` | 2/3 | **3/3** |
 | `credits/creditServiceTypeRestrictionModeMigration` | 5/7 | **7/7** |
+| `credits/creditExpirationCore` | 0/4 | **4/4** |
+| `invoices/billingInvoiceGeneration_subtotal` | 1/5 | **5/5** |
+| `invoices/negativeInvoiceCredit` | 0/6 | **6/6** |
+| `invoices/contractInvoiceManualCredit` | 0/2 | **2/2** |
+| `invoices/prepaymentInvoice` | 4/11 | **11/11** |
+| `quotes/quoteInfrastructure` | 76/83 | **83/83** |
+| `pricingSchedules/pricingScheduleRateOverrides` | 0/5 | **5/5** |
+| `invoices/multiCurrency` | 0/3 | **3/3** |
+| `invoices/billingInvoiceGeneration_consistency` | 0/1 | **1/1** |
+| `invoices/billingInvoiceGeneration_edgeCases` | 0/2 | **2/2** |
+| `invoices/fixedPriceAndTimeBasedPlans` | 0/3 | **3/3** |
 
 The time-periods pair also dropped from 180s for one file to 35s for both.
+
+A whole-suite baseline taken partway through this round: **13 files / 49 tests
+failing out of 354**. Everything above is now green file-by-file.
+
+### The four fixture faults behind almost all of it
+
+Worth knowing before touching any billing fixture, because every suite above
+tripped over at least one:
+
+1. **Contracts need `owner_client_id`.** Invoice generation resolves a
+   window's recurring service periods through
+   `recurring_service_periods -> contract_lines -> contracts -> clients` on
+   that column. An ownerless contract yields no periods and the run comes back
+   as `Recurring service periods were not materialized`, which the tests then
+   report as "expected undefined to be …".
+2. **Arrears shifts the window by a cycle.** A billing cycle's period is the
+   *invoice* window; an arrears line bills the service period before it. Both
+   `contract_lines.billing_timing` and `createFixedPlanAssignment` default to
+   arrears, so assignments have to start a cycle earlier than the cycle under
+   test — and the window has to be a whole period, since it is matched on the
+   exact `invoice_window_start`/`invoice_window_end` pair.
+3. **Materialize last, and only when asked.** `createFixedPlanAssignment`
+   materializes only with `materializeServicePeriods: true`, and the sync reads
+   the line's service configuration, so it has to run after the extra services
+   are attached and after the line is on its final contract.
+4. **Hand-built lines are incomplete.** `contract_lines.is_template` defaults
+   to `true`, and a Fixed line also needs its
+   `contract_line_service_fixed_config` and `contract_line_services` rows or it
+   produces no charges and `generateInvoice` returns null.
+
+### Still failing after this round
+
+| File | Failing | Shape |
+|---|---|---|
+| `invoices/clientBillingCycleAnchors` | 4/7 | anchor changes no longer regenerate/supersede recurring service periods the way the test expects — behavioural, needs a product decision rather than a fixture edit |
+| `invoices/usageBucketAndFinalization` | 1/3 | see defect 6 below |
 
 ## Cluster A — connection cascade (~35 failures, most of the timeouts)
 
@@ -262,3 +309,18 @@ with `Please fix the task details: assigned_to: Invalid input`. Fixed in
 `packages/projects/src/schemas/project.schemas.ts`; the stale copy at
 `server/src/lib/schemas/project.schemas.ts` has the same shape and the same
 bug, and is a candidate for the same deletion as the suggester copy above.
+
+### 6. Bucket overage is billed per minute at the hourly rate — OPEN
+
+`usageBucketAndFinalization`'s overage case records 45 hours against a 40-hour
+bucket (`minutesUsed: 45 * 60`, `overageMinutes: 5 * 60`) on a service whose
+`unit_of_measure` is `hour` and whose rate is 7500 (`$75.00/hour`). The
+expected charge is 5 × 7500 = 37500; the engine produces **2250000**, which is
+300 × 7500 — the overage *minutes* multiplied by the hourly rate.
+
+Either `computeBucketCharges` must convert to the service's unit of measure
+before applying the rate, or `bucket_usage.overage_minutes` is misnamed and
+the fixtures should store hours. That is a product decision, so the test is
+left failing rather than adjusted to whichever answer makes it pass. The same
+case also reports `tax: 0` where 3750 is expected, so overage charges appear
+not to be taxed at all — likely the same charge-construction path.
