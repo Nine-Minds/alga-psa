@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 
 import { tenantDb } from '@alga-psa/db';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn().mockResolvedValue(undefined),
@@ -13,10 +13,33 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 const HOOK_TIMEOUT = 180_000;
 const columns: Record<string, Record<string, unknown>> = {};
+const actionAuth = vi.hoisted(() => ({ tenant: '', userId: '' }));
+
+vi.mock('@alga-psa/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/auth')>();
+  return {
+    ...actual,
+    hasPermission: vi.fn().mockResolvedValue(true),
+    withAuth: (action: any) => async (...args: unknown[]) => action(
+      { user_id: actionAuth.userId },
+      { tenant: actionAuth.tenant },
+      ...args,
+    ),
+  };
+});
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: async () => ({ knex: db, tenant: actionAuth.tenant }),
+    withTransaction: async (knex: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) => knex.transaction(callback),
+  };
+});
 
 let db: Knex;
 let AssetService: typeof import('../../lib/api/services/AssetService').AssetService;
 let InventoryService: typeof import('../../lib/api/services/InventoryService').InventoryService;
+let createOccurrenceTicket: typeof import('@alga-psa/assets/actions/assetActions').createOccurrenceTicket;
 const cleanupTenants = new Set<string>();
 
 function hasColumn(table: string, column: string): boolean {
@@ -36,6 +59,7 @@ type Fixture = {
   assetId: string;
   relatedAssetId: string;
   scheduleId: string;
+  occurrenceId: string;
 };
 
 async function seedFixture(): Promise<Fixture> {
@@ -119,24 +143,28 @@ async function seedFixture(): Promise<Fixture> {
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
+  const occurrenceId = randomUUID();
   await table(tenantId, 'asset_maintenance_occurrences').insert({
     tenant: tenantId,
+    occurrence_id: occurrenceId,
     schedule_id: scheduleId,
     asset_id: assetId,
     due_date: db.raw("NOW() + INTERVAL '5 days'"),
     status: 'open',
   });
 
-  return { tenantId, userId, clientId, assetId, relatedAssetId, scheduleId };
+  return { tenantId, userId, clientId, assetId, relatedAssetId, scheduleId, occurrenceId };
 }
 
 async function cleanupTenant(tenant: string): Promise<void> {
   const del = async (name: string) => table(tenant, name).del().catch(() => undefined);
   for (const name of [
+    'asset_associations',
     'asset_maintenance_occurrences',
     'asset_maintenance_history',
     'asset_maintenance_schedules',
     'asset_relationships',
+    'tickets',
     'assets',
     'clients',
     'users',
@@ -148,6 +176,9 @@ async function cleanupTenant(tenant: string): Promise<void> {
 
 describe('AssetService REST repairs (integration)', () => {
   beforeAll(async () => {
+    // Use the worktree's isolated test Postgres (and its secret-backed
+    // credentials) rather than whatever local server .env happened to load.
+    wireLocalTestDbEnv();
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'test_database';
     process.env.DB_HOST = process.env.DB_HOST || 'localhost';
@@ -161,6 +192,7 @@ describe('AssetService REST repairs (integration)', () => {
     }
     ({ AssetService } = await import('../../lib/api/services/AssetService'));
     ({ InventoryService } = await import('../../lib/api/services/InventoryService'));
+    ({ createOccurrenceTicket } = await import('@alga-psa/assets/actions/assetActions'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -191,7 +223,7 @@ describe('AssetService REST repairs (integration)', () => {
     expect(detail.maintenance_schedules[0].schedule_id).toBe(fx.scheduleId);
   }, HOOK_TIMEOUT);
 
-  it('records maintenance into history and advances the schedule', async () => {
+  it('records maintenance into history, advances the schedule, and rejects a repeat for the same occurrence', async () => {
     const fx = await seedFixture();
     const ctx = { tenant: fx.tenantId, userId: fx.userId, db } as any;
     const service = new AssetService();
@@ -200,7 +232,7 @@ describe('AssetService REST repairs (integration)', () => {
 
     const recorded = await service.recordMaintenance(
       fx.assetId,
-      { schedule_id: fx.scheduleId, maintenance_type: 'preventive', description: 'Blew out dust' } as any,
+      { schedule_id: fx.scheduleId, occurrence_id: fx.occurrenceId, maintenance_type: 'preventive', description: 'Blew out dust' } as any,
       ctx,
     );
     expect(recorded.schedule_id).toBe(fx.scheduleId);
@@ -217,7 +249,7 @@ describe('AssetService REST repairs (integration)', () => {
     const next = await table(fx.tenantId, 'asset_maintenance_occurrences').where({ schedule_id: fx.scheduleId, status: 'open' });
     expect(completed).toHaveLength(1);
     expect(next).toHaveLength(1);
-    await expect(service.recordMaintenance(fx.assetId, { schedule_id: fx.scheduleId, maintenance_type: 'preventive' } as any, ctx)).rejects.toThrow('already been closed');
+    await expect(service.recordMaintenance(fx.assetId, { schedule_id: fx.scheduleId, occurrence_id: fx.occurrenceId, maintenance_type: 'preventive' } as any, ctx)).rejects.toThrow('already been closed');
   }, HOOK_TIMEOUT);
 
   it('rejects a schedule used with another asset and leaves paused schedules inert', async () => {
@@ -228,6 +260,27 @@ describe('AssetService REST repairs (integration)', () => {
     await table(fx.tenantId, 'asset_maintenance_schedules').where({ schedule_id: fx.scheduleId }).update({ is_active: false });
     await expect(service.recordMaintenance(fx.assetId, { schedule_id: fx.scheduleId, maintenance_type: 'preventive' } as any, ctx)).rejects.toThrow('inactive');
     expect(await table(fx.tenantId, 'asset_maintenance_history').where({ schedule_id: fx.scheduleId })).toHaveLength(0);
+  }, HOOK_TIMEOUT);
+
+  it('links a created ticket once when the occurrence action is retried', async () => {
+    const fx = await seedFixture();
+    const ticketId = randomUUID();
+    await table(fx.tenantId, 'tickets').insert({
+      tenant: fx.tenantId,
+      ticket_id: ticketId,
+      ticket_number: `MAINT-${ticketId.slice(0, 8)}`,
+      client_id: fx.clientId,
+      title: 'Maintenance smoke ticket',
+    });
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+
+    const first = await createOccurrenceTicket(fx.occurrenceId, ticketId);
+    const second = await createOccurrenceTicket(fx.occurrenceId, ticketId);
+
+    expect(first).toMatchObject({ occurrence_id: fx.occurrenceId, ticket_id: ticketId });
+    expect(second).toMatchObject({ occurrence_id: fx.occurrenceId, ticket_id: ticketId });
+    expect(await table(fx.tenantId, 'asset_associations').where({ asset_id: fx.assetId, entity_id: ticketId })).toHaveLength(1);
   }, HOOK_TIMEOUT);
 
   it('resolves a scanned serial to its asset via inventory lookup', async () => {

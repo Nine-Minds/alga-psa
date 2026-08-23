@@ -891,9 +891,10 @@ export class AssetService extends BaseService<any> {
     if (data.notes !== undefined) extras.notes = data.notes;
     if (data.parts_used !== undefined) extras.parts_used = data.parts_used;
 
-    // The mobile/REST contract remains unchanged, but it now closes the same
-    // occurrence used by the desktop workspace. The row lock makes a retry or
-    // double tap fail before a second history row can be written.
+    // Supplying occurrence_id gives REST clients the same double-tap semantics
+    // as the desktop completion action: retries address the original row and
+    // fail once it has closed. Older clients still select the current open
+    // occurrence by schedule for backwards compatibility.
     return knex.transaction(async (trx) => {
       const schedule = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
         .where({ schedule_id: data.schedule_id, asset_id: assetId, is_active: true })
@@ -901,11 +902,17 @@ export class AssetService extends BaseService<any> {
         .first();
       if (!schedule || schedule.archived_at) throw new ConflictError('Maintenance schedule is inactive');
       if (schedule.frequency === 'custom') throw new ValidationError('Custom maintenance frequency cannot be completed until its recurrence is configured');
-      const occurrence = await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
-        .where({ schedule_id: data.schedule_id, asset_id: assetId, status: 'open' })
-        .forUpdate()
-        .first();
-      if (!occurrence) throw new ConflictError('Maintenance occurrence has already been closed');
+      const occurrenceQuery = scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+        .where({ schedule_id: data.schedule_id, asset_id: assetId });
+      if (data.occurrence_id) {
+        occurrenceQuery.where({ occurrence_id: data.occurrence_id });
+      } else {
+        occurrenceQuery.where({ status: 'open' });
+      }
+      const occurrence = await occurrenceQuery.forUpdate().first();
+      if (!occurrence || occurrence.status !== 'open') {
+        throw new ConflictError('Maintenance occurrence has already been closed');
+      }
       const row = {
         tenant: context.tenant, asset_id: assetId, schedule_id: data.schedule_id,
         maintenance_type: data.maintenance_type,
