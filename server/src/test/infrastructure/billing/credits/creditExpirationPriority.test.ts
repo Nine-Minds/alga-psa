@@ -234,11 +234,13 @@ async function applyCreditsManually(
     tenant: context.tenantId
   });
 
+  // Invoice totals are immutable after finalization: applied credit lives in
+  // credit_applied and the balance due is derived, so total_amount stays gross
+  // here exactly as the real finalize path leaves it.
   await tenantTable(context, 'invoices')
     .where({ invoice_id: invoiceId })
     .update({
       credit_applied: totalApplied,
-      total_amount: totalBeforeCredit - totalApplied,
       updated_at: nowIso
     });
 
@@ -562,8 +564,9 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(updatedInvoice.subtotal)).toBe(subtotal);
     expect(Number(updatedInvoice.tax)).toBe(tax);
     expect(Number(updatedInvoice.credit_applied)).toBe(expectedAppliedCredit);
-    expect(Number(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
-    
+    expect(Number(updatedInvoice.total_amount)).toBe(totalBeforeCredit);
+    expect(Number(updatedInvoice.total_amount) - Number(updatedInvoice.credit_applied)).toBe(expectedRemainingTotal);
+
     // Step 11: Verify credit application transaction
     const creditApplicationTx = await tenantTable(context, 'transactions')
       .where({
@@ -776,7 +779,8 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Verify invoice values
     console.log(`First invoice - Subtotal: ${subtotal1}, Tax: ${tax1}, Total: ${totalBeforeCredit1}`);
     expect(Number(updatedInvoice1.credit_applied)).toBe(expectedAppliedCredit1);
-    expect(Number(updatedInvoice1.total_amount)).toBe(expectedRemainingTotal1);
+    expect(Number(updatedInvoice1.total_amount)).toBe(totalBeforeCredit1);
+    expect(Number(updatedInvoice1.total_amount) - Number(updatedInvoice1.credit_applied)).toBe(expectedRemainingTotal1);
     
     // Step 9: Verify credit application transaction for first invoice
     const creditApplicationTx1 = await tenantTable(context, 'transactions')
@@ -846,8 +850,9 @@ describe('Credit Expiration Prioritization Tests', () => {
     const expectedRemainingTotal2 = totalBeforeCredit2 - actualAppliedCredit2;
 
     // Verify second invoice values
-    // The remaining amount should be the difference between the total and the applied credit
-    expect(Number(updatedInvoice2.total_amount)).toBe(expectedRemainingTotal2);
+    // The remaining amount is derived: gross total minus applied credit.
+    expect(Number(updatedInvoice2.total_amount)).toBe(totalBeforeCredit2);
+    expect(Number(updatedInvoice2.total_amount) - actualAppliedCredit2).toBe(expectedRemainingTotal2);
     
     // Step 15: Verify credit application transaction for second invoice
     const creditApplicationTx2 = await tenantTable(context, 'transactions')
@@ -1090,8 +1095,9 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(updatedInvoice.subtotal)).toBe(subtotal);
     expect(Number(updatedInvoice.tax)).toBe(tax);
     expect(Number(updatedInvoice.credit_applied)).toBe(expectedAppliedCredit);
-    expect(Number(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
-    
+    expect(Number(updatedInvoice.total_amount)).toBe(totalBeforeCredit);
+    expect(Number(updatedInvoice.total_amount) - Number(updatedInvoice.credit_applied)).toBe(expectedRemainingTotal);
+
     // Step 11: Verify credit application transaction
     const creditApplicationTx = await tenantTable(context, 'transactions')
       .where({

@@ -610,11 +610,13 @@ describe('Credit Expiration Integration Tests', () => {
           updated_at: nowIso
         });
 
+      // Invoice totals are immutable after finalization: credit is recorded in
+      // credit_applied and the balance due is derived, so total_amount stays
+      // gross here exactly as the real finalize path leaves it.
       await context.db('invoices')
         .where({ invoice_id: positiveInvoiceId })
         .update({
           credit_applied: activeCreditAmount,
-          total_amount: totalBeforeCredit - expectedAppliedCredit,
           updated_at: nowIso
         });
 
@@ -633,7 +635,8 @@ describe('Credit Expiration Integration Tests', () => {
     expect(updatedInvoice.subtotal).toBe(subtotal);
     expect(updatedInvoice.tax).toBe(tax);
     expect(updatedInvoice.credit_applied).toBe(expectedAppliedCredit);
-    expect(parseInt(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
+    expect(parseInt(updatedInvoice.total_amount)).toBe(totalBeforeCredit);
+    expect(parseInt(updatedInvoice.total_amount) - Number(updatedInvoice.credit_applied)).toBe(expectedRemainingTotal);
 
     // Step 11: Verify credit application transaction
     const creditApplicationTx = await context.db('transactions')

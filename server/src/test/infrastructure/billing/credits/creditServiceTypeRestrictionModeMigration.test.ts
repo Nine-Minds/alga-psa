@@ -5,6 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient } from '../../../../../test-utils/testDataFactory';
+import { updateClientBillingSettings } from '@shared/billingClients/billingSettings';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
@@ -275,96 +276,95 @@ describe('credit service-type restriction mode migration', () => {
     expect(row.credit_eligible_service_type_ids).toBeNull();
   });
 
-  it('rejects tenant inserts violating each CHECK arm', async () => {
+  // 20260816120000 shipped a CHECK on each table pairing the mode with the ids.
+  // 20260817130000 drops both: the tenant-side NOT NULL that came with them
+  // could not be installed on the hosted Citus cluster, and neither constraint
+  // was load-bearing. The pairing now lives on the write path
+  // (updateClientBillingSettings) and NULL reads back as 'all'. These two tests
+  // pin that arrangement so the constraints cannot quietly come back.
+  async function checkConstraintNames(table: string): Promise<string[]> {
+    const result = await context.db.raw(
+      `SELECT conname
+         FROM pg_constraint
+        WHERE conrelid = ?::regclass
+          AND contype = 'c'
+          AND conname LIKE '%credit_service_type_restriction_mode%'`,
+      [table]
+    );
+    return result.rows.map((row: { conname: string }) => row.conname);
+  }
+
+  it('leaves the tenant mode/ids pairing unconstrained in the database', async () => {
+    expect(await checkConstraintNames('default_billing_settings')).toEqual([]);
+
     await deleteTenantRow();
 
-    // mode 'restricted' with null ids is rejected.
-    await expect(
-      tenantTable(context, 'default_billing_settings').insert({
-        tenant: context.tenantId,
-        zero_dollar_invoice_handling: 'normal',
-        suppress_zero_dollar_invoices: false,
-        credit_service_type_restriction_mode: 'restricted',
-        credit_eligible_service_type_ids: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-    ).rejects.toThrow();
+    // Rows the dropped CHECK used to reject now insert.
+    await tenantTable(context, 'default_billing_settings').insert({
+      tenant: context.tenantId,
+      zero_dollar_invoice_handling: 'normal',
+      suppress_zero_dollar_invoices: false,
+      credit_service_type_restriction_mode: 'restricted',
+      credit_eligible_service_type_ids: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
 
-    // mode 'all' with non-empty ids is rejected.
-    await expect(
-      tenantTable(context, 'default_billing_settings').insert({
-        tenant: context.tenantId,
-        zero_dollar_invoice_handling: 'normal',
-        suppress_zero_dollar_invoices: false,
-        credit_service_type_restriction_mode: 'all',
-        credit_eligible_service_type_ids: JSON.stringify([uuidv4()]),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-    ).rejects.toThrow();
-
-    // mode 'restricted' with an empty array is rejected.
-    await expect(
-      tenantTable(context, 'default_billing_settings').insert({
-        tenant: context.tenantId,
-        zero_dollar_invoice_handling: 'normal',
-        suppress_zero_dollar_invoices: false,
-        credit_service_type_restriction_mode: 'restricted',
-        credit_eligible_service_type_ids: JSON.stringify([]),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-    ).rejects.toThrow();
+    const row = await tenantTable(context, 'default_billing_settings')
+      .where({ tenant: context.tenantId })
+      .first();
+    expect(row.credit_service_type_restriction_mode).toBe('restricted');
+    expect(row.credit_eligible_service_type_ids).toBeNull();
   });
 
-  it('rejects client inserts violating each CHECK arm', async () => {
+  it('normalizes the client mode/ids pairing on the write path', async () => {
+    expect(await checkConstraintNames('client_billing_settings')).toEqual([]);
+
     const clientId = await createClient(context.db, context.tenantId, 'Constraint Client', {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
     });
 
-    // mode 'restricted' with null ids is rejected.
-    await expect(
-      tenantTable(context, 'client_billing_settings').insert({
-        tenant: context.tenantId,
-        client_id: clientId,
-        zero_dollar_invoice_handling: 'normal',
-        suppress_zero_dollar_invoices: false,
-        credit_service_type_restriction_mode: 'restricted',
-        credit_eligible_service_type_ids: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-    ).rejects.toThrow();
+    const readSettings = async () =>
+      tenantTable(context, 'client_billing_settings')
+        .where({ client_id: clientId, tenant: context.tenantId })
+        .first();
 
-    // mode 'all' with non-empty ids is rejected.
-    await expect(
-      tenantTable(context, 'client_billing_settings').insert({
-        tenant: context.tenantId,
-        client_id: clientId,
-        zero_dollar_invoice_handling: 'normal',
-        suppress_zero_dollar_invoices: false,
-        credit_service_type_restriction_mode: 'all',
-        credit_eligible_service_type_ids: JSON.stringify([uuidv4()]),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-    ).rejects.toThrow();
+    // 'restricted' keeps the ids it is given.
+    const restrictedId = uuidv4();
+    await updateClientBillingSettings(context.db, context.tenantId, clientId, {
+      creditServiceTypeRestrictionMode: 'restricted',
+      creditEligibleServiceTypeIds: [restrictedId],
+    });
+    let row = await readSettings();
+    expect(row.credit_service_type_restriction_mode).toBe('restricted');
+    expect(row.credit_eligible_service_type_ids).toEqual([restrictedId]);
 
-    // NULL mode with non-empty ids is rejected (a restricted list must declare its mode).
-    await expect(
-      tenantTable(context, 'client_billing_settings').insert({
-        tenant: context.tenantId,
-        client_id: clientId,
-        zero_dollar_invoice_handling: 'normal',
-        suppress_zero_dollar_invoices: false,
-        credit_service_type_restriction_mode: null,
-        credit_eligible_service_type_ids: JSON.stringify([uuidv4()]),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-    ).rejects.toThrow();
+    // 'all' clears them rather than storing a contradictory pair.
+    await updateClientBillingSettings(context.db, context.tenantId, clientId, {
+      creditServiceTypeRestrictionMode: 'all',
+      creditEligibleServiceTypeIds: [uuidv4()],
+    });
+    row = await readSettings();
+    expect(row.credit_service_type_restriction_mode).toBe('all');
+    expect(row.credit_eligible_service_type_ids).toBeNull();
+
+    // An ids-only write derives the mode instead of leaving it NULL.
+    const derivedId = uuidv4();
+    await updateClientBillingSettings(context.db, context.tenantId, clientId, {
+      creditEligibleServiceTypeIds: [derivedId],
+    });
+    row = await readSettings();
+    expect(row.credit_service_type_restriction_mode).toBe('restricted');
+    expect(row.credit_eligible_service_type_ids).toEqual([derivedId]);
+
+    // An empty list means "inherit": NULL mode and NULL ids.
+    await updateClientBillingSettings(context.db, context.tenantId, clientId, {
+      creditEligibleServiceTypeIds: [],
+    });
+    row = await readSettings();
+    expect(row.credit_service_type_restriction_mode).toBeNull();
+    expect(row.credit_eligible_service_type_ids).toBeNull();
   });
 });
