@@ -335,6 +335,43 @@ describe('kbImportBlocks link sanitization', () => {
     expect(hrefOf(markdownToBlocks('[rel](../other/page.md)'))).toBe('../other/page.md');
     expect(hrefOf(htmlToBlocks('<p><a href="/kb/123">internal</a></p>'))).toBe('/kb/123');
   });
+
+  // An image source is stored and re-serialized by the same consumers as an
+  // href, so it gets the same guard. It must degrade to the alt text, though --
+  // silently dropping it would restore the loss this parser exists to fix.
+  it.each([
+    'javascript:alert(1)',
+    'data:text/html;base64,PHNjcmlwdD4=',
+    'vbscript:msgbox(1)',
+    '&#106;avascript:alert(1)',
+  ])('degrades a markdown image with the %s source to alt text', (src) => {
+    const blocks = markdownToBlocks(`![diagram](${src})`);
+    expect(blocks.map((block) => block.type)).toEqual(['paragraph']);
+    expect(plainText(blocks[0])).toBe('diagram');
+    expect(JSON.stringify(blocks).toLowerCase()).not.toContain('script:');
+  });
+
+  it('degrades an html img with an unsafe source to alt text', () => {
+    const blocks = htmlToBlocks('<p><img src="javascript:alert(1)" alt="diagram" /></p>');
+    expect(blocks.map((block) => block.type)).toEqual(['paragraph']);
+    expect(plainText(blocks[0])).toBe('diagram');
+    expect(JSON.stringify(blocks).toLowerCase()).not.toContain('script:');
+  });
+
+  it('keeps the surrounding run intact when an unsafe image is degraded', () => {
+    const blocks = markdownToBlocks('Before ![diagram](javascript:alert(1)) after.');
+    expect(blocks.map((block) => block.type)).toEqual(['paragraph']);
+    expect(plainText(blocks[0])).toBe('Before diagram after.');
+  });
+
+  it('keeps ordinary image sources intact', () => {
+    expect(markdownToBlocks('![a](https://example.com/a.png)')[0].props?.url).toBe(
+      'https://example.com/a.png',
+    );
+    expect(htmlToBlocks('<p><img src="/api/documents/view/abc" alt="a" /></p>')[0].props?.url).toBe(
+      '/api/documents/view/abc',
+    );
+  });
 });
 
 // Guards against reintroducing the quadratic/backtracking parser: every case
