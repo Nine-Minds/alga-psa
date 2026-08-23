@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { formatCalendarDate, toCalendarDisplayDate } from './dateTimeUtils';
+import { formatCalendarDate, toCalendarDateString, toCalendarDisplayDate, toISOTimestamp, toPlainDate } from './dateTimeUtils';
 import { formatDate } from './formatters';
 
 const originalTz = process.env.TZ;
@@ -68,5 +68,18 @@ describe('calendar-date display helpers', () => {
   it('keeps a UTC maintenance due date on its persisted calendar day in America/New_York', () => {
     process.env.TZ = 'America/New_York';
     expect(formatCalendarDate('2026-09-22T00:00:00.000Z', 'MMM d, yyyy')).toBe('Sep 22, 2026');
+  });
+
+  it('round-trips a maintenance completion audit date in America/New_York', () => {
+    process.env.TZ = 'America/New_York';
+    const performedDate = toCalendarDateString('2026-08-23');
+    expect(performedDate).toBe('2026-08-23');
+
+    // Completion stores the selected calendar day at canonical UTC midnight;
+    // both the workspace audit and asset history render it as a calendar date.
+    const storedPerformedAt = toISOTimestamp(toPlainDate(performedDate!));
+    expect(storedPerformedAt).toBe('2026-08-23T00:00:00.000Z');
+    expect(formatCalendarDate(storedPerformedAt, 'MMM d, yyyy')).toBe('Aug 23, 2026');
+    expect(formatCalendarDate(storedPerformedAt)).toBe('2026-08-23');
   });
 });

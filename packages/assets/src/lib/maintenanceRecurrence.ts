@@ -1,3 +1,5 @@
+import { dateValueToDate, toPlainDate } from '@alga-psa/core';
+
 /**
  * Computes the next maintenance date from the actual event date. Month-based
  * intervals clamp to the end of the target month (for example Jan 31 → Feb 28).
@@ -5,17 +7,29 @@
 export function advanceMaintenanceDate(performedAt: string | Date, frequency: string, interval: number): Date {
   if (!Number.isInteger(interval) || interval < 1) throw new Error('Maintenance frequency interval must be at least one');
   if (frequency === 'custom') throw new Error('Custom maintenance frequency cannot be completed until its recurrence is configured');
-  const date = new Date(performedAt);
-  if (Number.isNaN(date.getTime())) throw new Error('Invalid maintenance completion date');
-  const result = new Date(date.getTime());
-  if (frequency === 'daily') result.setUTCDate(result.getUTCDate() + interval);
-  else if (frequency === 'weekly') result.setUTCDate(result.getUTCDate() + interval * 7);
-  else if (frequency === 'monthly' || frequency === 'quarterly' || frequency === 'yearly') {
-    const months = frequency === 'monthly' ? interval : frequency === 'quarterly' ? interval * 3 : interval * 12;
-    const originalDay = result.getUTCDate();
-    result.setUTCDate(1); result.setUTCMonth(result.getUTCMonth() + months);
-    const lastDay = new Date(Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)).getUTCDate();
-    result.setUTCDate(Math.min(originalDay, lastDay));
-  } else throw new Error(`Unsupported maintenance frequency: ${frequency}`);
+  // Legacy API callers can still send an instant; preserve its time-of-day
+  // after doing the recurrence arithmetic on the calendar date. Plain dates
+  // intentionally have no time component and return canonical UTC midnight.
+  const sourceInstant = performedAt instanceof Date
+    ? performedAt
+    : performedAt.includes('T') || performedAt.includes('Z')
+      ? dateValueToDate(performedAt)
+      : null;
+  let date;
+  try {
+    date = toPlainDate(performedAt);
+  } catch {
+    throw new Error('Invalid maintenance completion date');
+  }
+  if (frequency === 'daily') date = date.add({ days: interval });
+  else if (frequency === 'weekly') date = date.add({ days: interval * 7 });
+  else if (frequency === 'monthly') date = date.add({ months: interval });
+  else if (frequency === 'quarterly') date = date.add({ months: interval * 3 });
+  else if (frequency === 'yearly') date = date.add({ years: interval });
+  else throw new Error(`Unsupported maintenance frequency: ${frequency}`);
+  const result = dateValueToDate(date);
+  if (sourceInstant && !Number.isNaN(sourceInstant.getTime())) {
+    result.setUTCHours(sourceInstant.getUTCHours(), sourceInstant.getUTCMinutes(), sourceInstant.getUTCSeconds(), sourceInstant.getUTCMilliseconds());
+  }
   return result;
 }

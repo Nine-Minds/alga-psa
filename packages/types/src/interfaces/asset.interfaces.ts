@@ -342,6 +342,7 @@ export interface AssetMaintenanceOccurrence {
   maintenance_type?: MaintenanceType;
   frequency?: MaintenanceFrequency;
   frequency_interval?: number;
+  schedule_config?: Record<string, unknown>;
   asset_name?: string;
   asset_type?: string;
   client_id?: string;

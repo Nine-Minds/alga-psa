@@ -61,6 +61,7 @@ import {
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
 import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
+import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
@@ -2328,6 +2329,7 @@ export const listMaintenanceOccurrences = withAuth(async (
                     's.maintenance_type',
                     's.frequency',
                     's.frequency_interval',
+                    's.schedule_config',
                     'a.name as asset_name',
                     'a.asset_type',
                     'a.client_id',
@@ -2426,7 +2428,12 @@ export const completeOccurrence = withAuth(async (user, { tenant }, input: { occ
             if (occurrence.status !== 'open') throw new Error('Maintenance occurrence has already been closed');
             const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: occurrence.schedule_id, asset_id: occurrence.asset_id, is_active: true }).forUpdate().first();
             if (!schedule || schedule.archived_at) throw new Error('Maintenance schedule is inactive');
-            const performedAt = input.performed_at || new Date().toISOString();
+            // A maintenance completion is a calendar-date event. Canonical UTC
+            // midnight storage keeps existing timestamp columns and reports
+            // compatible while calendar-date renderers preserve the selected day.
+            const performedDate = toCalendarDateString(input.performed_at || new Date());
+            if (!performedDate) throw new Error('A performed date is required');
+            const performedAt = toISOTimestamp(toPlainDate(performedDate));
             const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
             const [history] = await tenantScopedTable(trx, 'asset_maintenance_history', tenant).insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, maintenance_type: schedule.maintenance_type, description: input.notes || `${schedule.maintenance_type} maintenance completed`, maintenance_data: input.maintenance_data || {}, performed_at: performedAt, performed_by: user.user_id }).returning('*');
             await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id: occurrence.occurrence_id, status: 'open' }).update({ status: 'completed', history_id: history.history_id, closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });

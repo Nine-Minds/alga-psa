@@ -64,6 +64,7 @@ import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '.
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { toCalendarDisplayDate } from '@alga-psa/core';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -75,6 +76,12 @@ function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; on
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
+
+function toPrefilledDueDate(value: Date | string | null | undefined): Date | undefined {
+  if (!value) return undefined;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? undefined : value;
+  return toCalendarDisplayDate(value) ?? undefined;
+}
 
 // Helper function to format location display
 const formatLocationDisplay = (location: IClientLocation, unnamedFallback = 'Unnamed Location'): string => {
@@ -270,9 +277,7 @@ export function QuickAddTicket({
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [dueDate, setDueDate] = useState<Date | undefined>(() => {
-    if (!prefilledDueDate) return undefined;
-    const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
-    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+    return toPrefilledDueDate(prefilledDueDate);
   });
   // ITIL-specific state
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
@@ -381,8 +386,7 @@ export function QuickAddTicket({
           setAssignedTo(prefilledAssignedTo);
         }
         if (prefilledDueDate) {
-          const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
-          setDueDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
+          setDueDate(toPrefilledDueDate(prefilledDueDate));
         }
       } catch (error) {
         console.error('Error fetching form data:', error);
@@ -726,8 +730,7 @@ export function QuickAddTicket({
     setPendingTags([]);
     setIsQuickAddContactOpen(false);
     if (prefilledDueDate) {
-      const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
-      setDueDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
+      setDueDate(toPrefilledDueDate(prefilledDueDate));
     } else {
       setDueDate(undefined);
     }
