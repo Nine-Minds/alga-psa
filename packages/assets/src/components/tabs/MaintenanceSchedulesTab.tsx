@@ -242,7 +242,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                       <TableCell className="text-gray-900">
                         {formatCalendarDate(record.performed_at)}
                       </TableCell>
-                      <TableCell className="text-gray-900">{record.performed_by}</TableCell>
+                      <TableCell className="text-gray-900">{record.performed_by_name || record.performed_by}</TableCell>
                       <TableCell className="text-gray-500">{record.notes || '-'}</TableCell>
                     </TableRow>
                   ))

@@ -2750,9 +2750,15 @@ async function fetchAssetMaintenanceReport(
         )
         .first() as unknown as { total_schedules: string; active_schedules: string; last_maintenance: string | null; next_maintenance: string | null } | undefined;
 
-    const history = await tenantScopedTable(db, 'asset_maintenance_history', tenant)
-        .where({ asset_id })
-        .orderBy('performed_at', 'desc');
+    const historyQuery = tenantScopedTable(db, 'asset_maintenance_history as h', tenant)
+        .where({ 'h.asset_id': asset_id })
+        .select(
+            'h.*',
+            db.raw("NULLIF(CONCAT_WS(' ', performed_by_user.first_name, performed_by_user.last_name), '') as performed_by_name")
+        )
+        .orderBy('h.performed_at', 'desc');
+    tenantDb(db, tenant).tenantJoin(historyQuery, 'users as performed_by_user', 'h.performed_by', 'performed_by_user.user_id', { type: 'left' });
+    const history = await historyQuery;
 
     const completed = await tenantScopedTable(db, 'asset_maintenance_history', tenant)
         .where({ asset_id })
@@ -2790,6 +2796,7 @@ async function fetchAssetMaintenanceReport(
         compliance_rate,
         maintenance_history: history.map((record: any): AssetMaintenanceHistory => ({
             ...record,
+            notes: record.description ?? record.notes,
             performed_at: typeof record.performed_at === 'string'
                 ? record.performed_at
                 : new Date(record.performed_at).toISOString(),

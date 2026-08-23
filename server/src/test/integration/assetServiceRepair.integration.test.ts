@@ -40,6 +40,7 @@ let db: Knex;
 let AssetService: typeof import('../../lib/api/services/AssetService').AssetService;
 let InventoryService: typeof import('../../lib/api/services/InventoryService').InventoryService;
 let createOccurrenceTicket: typeof import('@alga-psa/assets/actions/assetActions').createOccurrenceTicket;
+let getAssetMaintenanceReport: typeof import('@alga-psa/assets/actions/assetActions').getAssetMaintenanceReport;
 const cleanupTenants = new Set<string>();
 
 function hasColumn(table: string, column: string): boolean {
@@ -192,7 +193,7 @@ describe('AssetService REST repairs (integration)', () => {
     }
     ({ AssetService } = await import('../../lib/api/services/AssetService'));
     ({ InventoryService } = await import('../../lib/api/services/InventoryService'));
-    ({ createOccurrenceTicket } = await import('@alga-psa/assets/actions/assetActions'));
+    ({ createOccurrenceTicket, getAssetMaintenanceReport } = await import('@alga-psa/assets/actions/assetActions'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -241,6 +242,14 @@ describe('AssetService REST repairs (integration)', () => {
     expect(history).toHaveLength(1);
     expect(history[0].description).toBe('Blew out dust');
     expect(history[0].performed_by).toBe(fx.userId);
+
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    const report = await getAssetMaintenanceReport(fx.assetId);
+    expect(report.maintenance_history[0]).toMatchObject({
+      performed_by_name: 'Asset Tester',
+      notes: 'Blew out dust',
+    });
 
     const after = await table(fx.tenantId, 'asset_maintenance_schedules').where({ schedule_id: fx.scheduleId }).first();
     expect(new Date(after.next_maintenance).getTime()).toBeGreaterThan(new Date(before.next_maintenance).getTime());

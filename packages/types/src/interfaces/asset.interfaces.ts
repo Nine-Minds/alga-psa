@@ -391,6 +391,7 @@ export interface AssetMaintenanceHistory {
   schedule_id: string;
   performed_at: string;
   performed_by: string;
+  performed_by_name?: string;
   notes?: string;
   maintenance_data: Record<string, unknown>;
   created_at: string;
