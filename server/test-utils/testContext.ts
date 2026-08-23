@@ -99,7 +99,15 @@ export class TestContext {
       }
 
       if (typeof dbModule.runWithTenant === 'function') {
-        vi.spyOn(dbModule, 'runWithTenant').mockImplementation(async (_tenant, fn) => fn());
+        // Delegate to the real implementation, pinned to this context's tenant.
+        // A bare pass-through leaves the AsyncLocalStorage store empty, so
+        // plain (non-withAuth) helpers that read getTenantContext() — e.g.
+        // createNextTimePeriod — throw "Tenant context is required" even when
+        // the caller wrapped them in runWithTenant.
+        const realRunWithTenant = dbModule.runWithTenant;
+        vi.spyOn(dbModule, 'runWithTenant').mockImplementation(
+          async (tenant, fn) => realRunWithTenant(this.tenantId ?? tenant, fn)
+        );
       }
 
       // Package actions import createTenantKnex from '@alga-psa/db', not
@@ -119,7 +127,10 @@ export class TestContext {
           vi.spyOn(pkgDbModule, 'getCurrentTenantId').mockImplementation(async () => this.tenantId ?? null);
         }
         if (typeof pkgDbModule.runWithTenant === 'function') {
-          vi.spyOn(pkgDbModule, 'runWithTenant').mockImplementation(async (_tenant: unknown, fn: () => unknown) => fn());
+          const realRunWithTenant = pkgDbModule.runWithTenant;
+          vi.spyOn(pkgDbModule, 'runWithTenant').mockImplementation(
+            async (tenant: string, fn: () => unknown) => realRunWithTenant(this.tenantId ?? tenant, fn)
+          );
         }
       } catch {
         // Unmockable namespace (file doesn't mock @alga-psa/db) — fall back to
