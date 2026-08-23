@@ -29,4 +29,21 @@ describe('verifySenderAuthentication', () => {
     expect(allowsContactSenderAttribution(result)).toBe(true);
     expect(allowsInternalSenderAttribution(result)).toBe(false);
   });
+
+  it('uses the topmost MTA result, not an attacker-injected trailing result', () => {
+    const result = verifySenderAuthentication([
+      'our-mta.example; dmarc=fail header.from=example.com',
+      'attacker.example; dmarc=pass header.from=example.com',
+    ], 'tech@example.com');
+    expect(result?.dmarc).toBe('fail');
+    expect(allowsInternalSenderAttribution(result)).toBe(false);
+  });
+
+  it('does not align a public-suffix parent domain', () => {
+    const result = verifySenderAuthentication(
+      'mx.example; dkim=pass header.d=com',
+      'tech@example.com'
+    );
+    expect(result?.aligned.dkim).toBe(false);
+  });
 });

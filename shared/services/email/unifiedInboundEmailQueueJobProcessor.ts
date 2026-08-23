@@ -345,7 +345,13 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const parsedHeaders = params.parsed.headers;
   if (parsedHeaders?.forEach) {
     parsedHeaders.forEach((value: unknown, key: string) => {
-      if (typeof value === 'string') resolvedHeaders[key.toLowerCase()] = value;
+      if (typeof value === 'string') {
+        resolvedHeaders[key.toLowerCase()] = value;
+      } else if (Array.isArray(value)) {
+        // Header order is wire order: the first Authentication-Results block is
+        // our receiving MTA's topmost result. Preserve each block for the gate.
+        resolvedHeaders[key.toLowerCase()] = value.filter((item): item is string => typeof item === 'string').join('\n');
+      }
     });
   }
   if (listRewrite) {

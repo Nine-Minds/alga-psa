@@ -12,23 +12,24 @@ const RESULT = /\b(spf|dkim|dmarc)\s*=\s*(pass|fail|neutral|none|temperror|perme
 function domainAligned(candidate: string | undefined, fromDomain: string | null): boolean {
   if (!candidate || !fromDomain) return false;
   const domain = candidate.trim().replace(/[>;,)]+$/, '').toLowerCase();
-  return domain === fromDomain || domain.endsWith(`.${fromDomain}`) || fromDomain.endsWith(`.${domain}`);
+  return domain === fromDomain || domain.endsWith(`.${fromDomain}`);
 }
 
 /**
  * Parses the Authentication-Results header added by the receiving MTA. Missing or
  * malformed headers deliberately return null: sender attribution must fail closed.
  * A single header is one authserv block; when callers supply multiple values, the
- * last value is the topmost (our-MTA) result per RFC 8601 handling policy.
+ * first value is the topmost (our-MTA) result per RFC 8601 handling policy.
  */
 export function verifySenderAuthentication(
   authenticationResults: string | string[] | null | undefined,
   fromEmail: string | null | undefined
 ): SenderAuthResults | null {
-  const blocks = Array.isArray(authenticationResults)
+  const blocks = (Array.isArray(authenticationResults)
     ? authenticationResults.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-    : typeof authenticationResults === 'string' && authenticationResults.trim() ? [authenticationResults] : [];
-  const block = blocks.at(-1);
+    : typeof authenticationResults === 'string' && authenticationResults.trim() ? authenticationResults.split(/\r?\n/) : [])
+    .filter((value): value is string => value.trim().length > 0);
+  const block = blocks[0];
   const fromDomain = extractEmailDomain(fromEmail ?? '')?.toLowerCase() ?? null;
   if (!block || !fromDomain) return null;
 
