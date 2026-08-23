@@ -1,5 +1,12 @@
 export const MAX_EDITOR_IMAGE_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Where an inline editor image is filed. One tenant-level folder rather than
+ * root: eight pasted screenshots used to become eight top-level documents all
+ * called image.png, indistinguishable from real library uploads.
+ */
+export const INLINE_IMAGE_FOLDER_PATH = '/Knowledge Base/Attachments';
+
 export interface EditorImageUploadResult {
   url: string;
   documentId: string;
@@ -7,12 +14,23 @@ export interface EditorImageUploadResult {
 
 type UploadDocumentAction = (
   formData: FormData,
-  options: { userId: string; isClientVisible?: boolean }
+  options: {
+    userId: string;
+    isClientVisible?: boolean;
+    folder_path?: string | null;
+    parentDocumentId?: string;
+  }
 ) => Promise<any>;
 
 export interface EditorImageUploadOptions {
   userId: string;
   uploadDocumentAction?: UploadDocumentAction;
+  /** The document being edited. Associates the image so it is reachable from it. */
+  parentDocumentId?: string;
+  /** Article slug (or other stable label) used to name the stored file. */
+  namePrefix?: string;
+  /** Position within a multi-file paste, so the names of a batch stay ordered. */
+  sequence?: number;
 }
 
 /** Rejection reasons the editor has to say something specific about. */
@@ -61,9 +79,51 @@ export const extractImageFiles = (
   return files;
 };
 
+const pad = (value: number, width = 2): string => String(value).padStart(width, '0');
+
+const IMAGE_EXTENSION_OVERRIDES: Record<string, string> = { jpeg: 'jpg', 'svg+xml': 'svg' };
+
+const imageExtension = (mimeType: string | null | undefined): string => {
+  const subtype = String(mimeType ?? '').toLowerCase().split('/')[1]?.split(';')[0]?.trim();
+  if (!subtype) return 'png';
+  return IMAGE_EXTENSION_OVERRIDES[subtype] ?? (subtype.replace(/[^a-z0-9]/g, '') || 'png');
+};
+
+const slugify = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+
+/**
+ * Names a stored inline image after the article it was pasted into, following
+ * the ticket-comment convention in packages/tickets clipboardImageUtils. Chrome
+ * calls every clipboard bitmap "image.png", so without this a library listing
+ * is a wall of identical rows.
+ */
+export function createInlineImageFilename(params: {
+  namePrefix?: string;
+  timestamp: Date;
+  sequence: number;
+  mimeType?: string | null;
+}): string {
+  const { namePrefix, timestamp, sequence, mimeType } = params;
+  const prefix = slugify(namePrefix ?? '') || 'inline-image';
+  const stamp =
+    `${timestamp.getUTCFullYear()}${pad(timestamp.getUTCMonth() + 1)}${pad(timestamp.getUTCDate())}` +
+    `-${pad(timestamp.getUTCHours())}${pad(timestamp.getUTCMinutes())}${pad(timestamp.getUTCSeconds())}`;
+
+  return `${prefix}-${stamp}-${pad(sequence, 3)}.${imageExtension(mimeType)}`;
+}
+
 /**
  * Uploads an inline editor image into the documents store and returns the URL
  * to reference it by.
+ *
+ * Filed under INLINE_IMAGE_FOLDER_PATH and associated with the document being
+ * edited, so the picture is reachable from the article it lives in instead of
+ * sitting unattached in the library root.
  *
  * Inline images are always stored client-visible: publishing an article flips
  * the article document's visibility, never that of the images embedded in it.
@@ -78,7 +138,7 @@ export const extractImageFiles = (
  */
 export async function uploadEditorImage(
   file: File,
-  { userId, uploadDocumentAction }: EditorImageUploadOptions
+  { userId, uploadDocumentAction, parentDocumentId, namePrefix, sequence = 1 }: EditorImageUploadOptions
 ): Promise<EditorImageUploadResult> {
   if (!userId) {
     throw new EditorImageUploadError('noSession', 'User session is required to upload images');
@@ -95,10 +155,22 @@ export async function uploadEditorImage(
   const uploadAction =
     uploadDocumentAction ?? ((await import('../actions/documentActions')).uploadDocument as UploadDocumentAction);
 
-  const formData = new FormData();
-  formData.append('file', file);
+  const storedName = createInlineImageFilename({
+    namePrefix,
+    timestamp: new Date(),
+    sequence,
+    mimeType: file.type,
+  });
 
-  const result = await uploadAction(formData, { userId, isClientVisible: true });
+  const formData = new FormData();
+  formData.append('file', file, storedName);
+
+  const result = await uploadAction(formData, {
+    userId,
+    isClientVisible: true,
+    folder_path: INLINE_IMAGE_FOLDER_PATH,
+    ...(parentDocumentId ? { parentDocumentId } : {}),
+  });
 
   if (!result || result.success !== true) {
     const reason =
@@ -137,9 +209,10 @@ export async function insertUploadedImages(
   options: EditorImageUploadOptions & { onError?: (error: unknown) => void; at?: number }
 ): Promise<void> {
   let insertAt = options.at;
+  let sequence = options.sequence ?? 1;
   for (const file of files) {
     try {
-      const { url } = await uploadEditorImage(file, options);
+      const { url } = await uploadEditorImage(file, { ...options, sequence: sequence++ });
       const chain = editor?.chain().focus();
       if (!chain) continue;
       const positioned = typeof insertAt === 'number' ? chain.setTextSelection(insertAt) : chain;

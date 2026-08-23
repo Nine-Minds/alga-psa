@@ -3,7 +3,9 @@
  */
 import {
   EditorImageUploadError,
+  INLINE_IMAGE_FOLDER_PATH,
   MAX_EDITOR_IMAGE_BYTES,
+  createInlineImageFilename,
   editorImageUploadMessage,
   extractImageFiles,
   insertUploadedImages,
@@ -31,7 +33,53 @@ describe('uploadEditorImage', () => {
     expect(uploadDocumentAction).toHaveBeenCalledWith(expect.any(FormData), {
       userId: 'user-1',
       isClientVisible: true,
+      folder_path: INLINE_IMAGE_FOLDER_PATH,
     });
+  });
+
+  it('files the upload and links it to the document being edited', async () => {
+    const uploadDocumentAction = vi.fn(async () => ({
+      success: true,
+      document: { document_id: 'doc-1', file_id: 'file-1' },
+    }));
+
+    await uploadEditorImage(imageFile(), {
+      userId: 'user-1',
+      parentDocumentId: 'article-doc-1',
+      namePrefix: 'printer-troubleshooting',
+      uploadDocumentAction,
+    });
+
+    // Root-level uploads with no association are undiscoverable from the
+    // article and indistinguishable from real library documents.
+    expect(uploadDocumentAction).toHaveBeenCalledWith(expect.any(FormData), {
+      userId: 'user-1',
+      isClientVisible: true,
+      folder_path: '/Knowledge Base/Attachments',
+      parentDocumentId: 'article-doc-1',
+    });
+
+    const stored = uploadDocumentAction.mock.calls[0][0].get('file') as File;
+    expect(stored.name).toMatch(/^printer-troubleshooting-\d{8}-\d{6}-001\.png$/);
+  });
+
+  it('numbers a multi-file paste so a batch keeps its order', async () => {
+    const uploadDocumentAction = vi.fn(async () => ({
+      success: true,
+      document: { document_id: 'doc-1', file_id: 'file-1' },
+    }));
+
+    await insertUploadedImages(null, [imageFile('a.png'), imageFile('b.png')], {
+      userId: 'user-1',
+      namePrefix: 'vpn-setup',
+      uploadDocumentAction,
+    });
+
+    const names = uploadDocumentAction.mock.calls.map(
+      (call) => (call[0].get('file') as File).name
+    );
+    expect(names[0]).toMatch(/-001\.png$/);
+    expect(names[1]).toMatch(/-002\.png$/);
   });
 
   it('falls back to the download URL when the upload has no file id', async () => {
@@ -85,6 +133,30 @@ describe('uploadEditorImage', () => {
         uploadDocumentAction: async () => ({ success: false, error: 'Storage is full' }),
       })
     ).rejects.toThrow('Storage is full');
+  });
+});
+
+describe('createInlineImageFilename', () => {
+  const timestamp = new Date(Date.UTC(2026, 7, 23, 9, 5, 4));
+
+  it('names the file after the article, the moment and its place in the batch', () => {
+    expect(
+      createInlineImageFilename({
+        namePrefix: 'Printer Troubleshooting',
+        timestamp,
+        sequence: 2,
+        mimeType: 'image/jpeg',
+      })
+    ).toBe('printer-troubleshooting-20260823-090504-002.jpg');
+  });
+
+  it('falls back to a generic prefix and extension', () => {
+    expect(createInlineImageFilename({ timestamp, sequence: 1 })).toBe(
+      'inline-image-20260823-090504-001.png'
+    );
+    expect(
+      createInlineImageFilename({ namePrefix: '///', timestamp, sequence: 1, mimeType: 'image/svg+xml' })
+    ).toBe('inline-image-20260823-090504-001.svg');
   });
 });
 

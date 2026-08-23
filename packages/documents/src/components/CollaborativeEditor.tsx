@@ -82,6 +82,8 @@ interface CollaborativeEditorProps {
   initialContent?: unknown;
   /** Whether the AI assistant experimental feature is enabled. */
   aiAssistantEnabled?: boolean;
+  /** Names inline image uploads after the article they were pasted into. */
+  imageNamePrefix?: string;
 }
 
 const USER_COLORS = [
@@ -146,6 +148,7 @@ export function CollaborativeEditor({
   onUsersChange,
   initialContent,
   aiAssistantEnabled = false,
+  imageNamePrefix,
 }: CollaborativeEditorProps) {
   const { t } = useTranslation('features/documents');
   const roomName = useMemo(() => `document:${tenantId}:${documentId}`, [tenantId, documentId]);
@@ -198,9 +201,16 @@ export function CollaborativeEditor({
     toast.error(editorImageUploadMessage(error, tRef.current));
   }, []);
 
+  const imageUploadOptions = useMemo(
+    () => ({ userId, parentDocumentId: documentId, namePrefix: imageNamePrefix }),
+    [userId, documentId, imageNamePrefix]
+  );
+  const imageUploadOptionsRef = useRef(imageUploadOptions);
+  imageUploadOptionsRef.current = imageUploadOptions;
+
   const uploadImage = useCallback(
-    async (file: File) => (await uploadEditorImage(file, { userId })).url,
-    [userId]
+    async (file: File) => (await uploadEditorImage(file, imageUploadOptionsRef.current)).url,
+    []
   );
 
   const editor = useEditor({
@@ -269,7 +279,7 @@ export function CollaborativeEditor({
           if (imageFiles.length > 0) {
             event.preventDefault();
             void insertUploadedImages(editor, imageFiles, {
-              userId,
+              ...imageUploadOptionsRef.current,
               onError: handleImageUploadError,
             });
             return true;
@@ -288,7 +298,7 @@ export function CollaborativeEditor({
           event.preventDefault();
           const at = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
           void insertUploadedImages(editor, imageFiles, {
-            userId,
+            ...imageUploadOptionsRef.current,
             at,
             onError: handleImageUploadError,
           });

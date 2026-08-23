@@ -50,6 +50,8 @@ interface DocumentEditorProps {
   hideSaveButton?: boolean;
   /** Pre-loaded block_data. When provided (even as null), skips the getBlockContent fetch. */
   initialContent?: unknown;
+  /** Names inline image uploads after the article they were pasted into. */
+  imageNamePrefix?: string;
 }
 
 const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
@@ -64,6 +66,7 @@ export function DocumentEditor({
   onUnsavedChangesChange,
   hideSaveButton = false,
   initialContent,
+  imageNamePrefix,
 }: DocumentEditorProps) {
   const { t } = useTranslation('features/documents');
   const [isLoading, setIsLoading] = useState(true);
@@ -85,9 +88,12 @@ export function DocumentEditor({
     toast.error(editorImageUploadMessage(error, tRef.current));
   }, []);
 
+  const imageUploadOptionsRef = useRef({ userId, parentDocumentId: documentId, namePrefix: imageNamePrefix });
+  imageUploadOptionsRef.current = { userId, parentDocumentId: documentId, namePrefix: imageNamePrefix };
+
   const uploadImage = useCallback(
-    async (file: File) => (await uploadEditorImage(file, { userId })).url,
-    [userId]
+    async (file: File) => (await uploadEditorImage(file, imageUploadOptionsRef.current)).url,
+    []
   );
 
   // Initialize the editor
@@ -119,7 +125,7 @@ export function DocumentEditor({
         if (imageFiles.length > 0) {
           event.preventDefault();
           void insertUploadedImages(editor, imageFiles, {
-            userId,
+            ...imageUploadOptionsRef.current,
             onError: handleImageUploadError,
           });
           return true;
@@ -154,7 +160,7 @@ export function DocumentEditor({
         event.preventDefault();
         const at = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
         void insertUploadedImages(editor, imageFiles, {
-          userId,
+          ...imageUploadOptionsRef.current,
           at,
           onError: handleImageUploadError,
         });

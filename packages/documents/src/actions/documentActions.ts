@@ -11,6 +11,8 @@ import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { CacheFactory } from '../cache/CacheFactory';
+import { INLINE_IMAGE_FOLDER_PATH } from '../lib/editorImageUpload';
+import { ensureInlineImageFolder } from '../lib/inlineImageFiling';
 
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import {
@@ -1035,6 +1037,10 @@ export const deleteDocument = withAuth(async (
       }));
 
       await DocumentAssociation.deleteByDocument(trx, document.document_id);
+      // Inline images point back at the document they were pasted into, so
+      // deleting an article has to take those links with it or they outlive
+      // the row they reference.
+      await DocumentAssociation.deleteByEntity(trx, document.document_id, 'document');
       // Delete associated content rows while the document still exists so that
       // downstream auth checks in deleteDocumentContent/deleteBlockContent can
       // resolve the parent document.  These rows would be orphaned if deleted
@@ -2714,6 +2720,8 @@ export const uploadDocument = withAuth(async (
     projectTaskId?: string;
     contractId?: string;
     folder_path?: string | null;
+    /** The document this upload is embedded in — inline editor images point at their article. */
+    parentDocumentId?: string;
     /** Forces client visibility — used for images embedded in client-facing content. */
     isClientVisible?: boolean;
   }
@@ -2773,6 +2781,18 @@ export const uploadDocument = withAuth(async (
       // Auto-file into entity folder if folder_path not set and entity context exists
       // Best-effort: never fails the upload, wraps in try/catch
       let resolvedFolderPath: string | undefined = options.folder_path || undefined;
+
+      // Inline editor images name a tenant-level folder that no wizard creates.
+      // Provision it on first use so a customer never has to make it by hand,
+      // and so a missing folder cannot quietly dump the image into the root.
+      if (resolvedFolderPath === INLINE_IMAGE_FOLDER_PATH) {
+        try {
+          await ensureInlineImageFolder(knex, tenant, authenticatedUserId);
+        } catch (folderError) {
+          console.error('[uploadDocument] Failed to provision the inline image folder:', folderError);
+        }
+      }
+
       if (!resolvedFolderPath) {
         try {
           const primaryEntity = options.ticketId ? { id: options.ticketId, type: 'ticket' }
@@ -2921,6 +2941,15 @@ export const uploadDocument = withAuth(async (
         document_id: documentWithId.document_id,
         entity_id: options.projectTaskId,
         entity_type: 'project_task',
+        tenant
+      });
+    }
+
+    if (options.parentDocumentId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.parentDocumentId,
+        entity_type: 'document',
         tenant
       });
     }
