@@ -83,7 +83,7 @@ describe('checkInboundReopenRateLimit', () => {
     expect(redis.expireCalls).toBe(1);
   });
 
-  it('fails open when Redis errors (never blocks a legitimate reopen)', async () => {
+  it('fails closed when Redis errors (degrades to comment-only)', async () => {
     const getter = async (): Promise<InboundReopenRedisClient> => ({
       async incr() {
         throw new Error('redis down');
@@ -96,7 +96,7 @@ describe('checkInboundReopenRateLimit', () => {
       },
     });
     const result = await checkInboundReopenRateLimit({ tenantId: 't1', ticketId: 'k1', redisClientGetter: getter });
-    expect(result.allowed).toBe(true);
+    expect(result.allowed).toBe(false);
     expect(result.count).toBe(-1);
   });
 

@@ -19,6 +19,7 @@ import {
 } from './processInboundEmailArtifacts';
 import {
   buildInboundWatchListRecipients,
+  getActiveWatchListEmails,
   mergeTicketWatchListRecipients,
   setTicketWatchListOnAttributes,
   type TicketWatchListRecipientInput,
@@ -101,10 +102,11 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
       | 'rule_skip'
       | 'new_ticket_created'
       | 'deduped'
+      | 'quarantined'
       | null;
   };
   outcome?: {
-    kind: 'skipped' | 'deduped' | 'replied' | 'created';
+    kind: 'skipped' | 'deduped' | 'replied' | 'created' | 'quarantined';
     matchedBy?: 'reply_token' | 'thread_headers';
     ticketId?: string;
     ticketNumber?: string;
@@ -138,6 +140,12 @@ type ProcessInboundEmailInAppBaseResult =
       ticketId: string;
       ticketNumber?: string;
       commentId: string;
+    }
+  | {
+      outcome: 'quarantined';
+      reason: 'unauthorized_thread_header_sender';
+      ticketId: string;
+      matchedBy: 'thread_headers';
     };
 
 export type ProcessInboundEmailInAppResult = ProcessInboundEmailInAppBaseResult & {
@@ -175,6 +183,8 @@ type InboundReplyReopenPolicyContext = {
   inboundReplyReopenCutoffHours: number;
   inboundReplyReopenStatusId: string | null;
   inboundReplyAiAckSuppressionEnabled: boolean;
+  clientId: string | null;
+  attributes: unknown;
 };
 
 type InboundReplyDecisionMetadata = {
@@ -383,6 +393,8 @@ async function loadInboundReplyPolicyContext(params: {
         'status_id',
         'is_closed',
         'closed_at',
+        'client_id',
+        'attributes',
       )
       .where('ticket_id', params.ticketId)
       .first();
@@ -428,6 +440,8 @@ async function loadInboundReplyPolicyContext(params: {
       inboundReplyReopenCutoffHours: normalizePositiveInteger(board?.inbound_reply_reopen_cutoff_hours, 168),
       inboundReplyReopenStatusId: board?.inbound_reply_reopen_status_id ?? null,
       inboundReplyAiAckSuppressionEnabled: Boolean(board?.inbound_reply_ai_ack_suppression_enabled),
+      clientId: ticket.client_id ?? null,
+      attributes: ticket.attributes,
     };
   });
 }
@@ -1267,6 +1281,50 @@ export async function processInboundEmailInApp(
       });
     }
 
+    if (params.matchedBy === 'thread_headers') {
+      const senderIsTicketClientContact = Boolean(
+        matchedSenderContact
+        && !matchedSenderIsInternalUser
+        && policyContext?.clientId
+        && matchedSenderContact.client_id === policyContext.clientId
+      );
+      const senderIsActiveWatcher = Boolean(
+        senderEmail && policyContext && getActiveWatchListEmails(policyContext.attributes).includes(senderEmail)
+      );
+
+      if (!senderIsTicketClientContact && !matchedSenderIsInternalUser && !senderIsActiveWatcher) {
+        // Keep this a structured security log rather than creating a ticket by default.
+        // Operations can route this event through their log/audit pipeline without giving
+        // an untrusted sender another ticket-creation side effect.
+        console.warn('security_event: inbound_thread_header_sender_quarantined', {
+          tenantId,
+          providerId,
+          ticketId: params.ticketId,
+          senderEmail: senderEmail ?? null,
+          matchedMessageId: emailData.inReplyTo ?? emailData.references?.at(-1) ?? null,
+          emailId: emailData.id,
+          matchedContactId: matchedSenderContactId ?? null,
+          ticketClientId: policyContext?.clientId ?? null,
+          authorization: {
+            senderIsTicketClientContact,
+            senderIsInternalUser: Boolean(matchedSenderIsInternalUser),
+            senderIsActiveWatcher,
+          },
+          securityBoardTicketHookEnabled:
+            process.env.INBOUND_THREAD_HEADER_QUARANTINE_CREATE_SECURITY_TICKET === 'true',
+        });
+        if (diagnostics) {
+          diagnostics.threading.failureReason = 'quarantined';
+        }
+        return withDiagnostics({
+          outcome: 'quarantined',
+          reason: 'unauthorized_thread_header_sender',
+          ticketId: params.ticketId,
+          matchedBy: 'thread_headers',
+        }, diagnostics);
+      }
+    }
+
     const aiSuppressionDefault: InboundReplyDecisionMetadata['aiSuppression'] = {
       enabled: false,
       attempted: false,
@@ -1412,10 +1470,18 @@ export async function processInboundEmailInApp(
       }
     }
 
-    const watchListRecipients = mergeTicketWatchListRecipients(
-      inboundWatchListRecipients,
-      buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null)
-    );
+    const watchListRecipients = params.matchedBy === 'thread_headers'
+      ? buildInboundWatchListRecipients({
+          to: emailData.to,
+          cc: emailData.cc,
+          senderEmail: emailData.from?.email,
+          providerMailboxEmail,
+          requireMatchedContact: true,
+        })
+      : mergeTicketWatchListRecipients(
+          inboundWatchListRecipients,
+          buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null)
+        );
     const commentId = await createCommentFromEmail(
       {
         ticket_id: params.ticketId,
@@ -1469,7 +1535,12 @@ export async function processInboundEmailInApp(
         ticketId: params.ticketId,
         emailData,
         scopeLabel: 'reply',
-        clientVisibleAttachments: !matchedSenderIsInternalUser,
+        clientVisibleAttachments: Boolean(
+          !matchedSenderIsInternalUser
+          && matchedSenderContact?.client_id
+          && policyContext?.clientId
+          && matchedSenderContact.client_id === policyContext.clientId
+        ),
       });
       await maybeRewriteCommentWithEmbeddedAttachmentUrls({
         tenantId,
@@ -1930,7 +2001,11 @@ export async function processInboundEmailInApp(
       ticketId: ticketResult.ticket_id,
       emailData,
       scopeLabel: 'new-ticket',
-      clientVisibleAttachments: !matchedSenderIsInternalUser,
+      clientVisibleAttachments: Boolean(
+        !matchedSenderIsInternalUser
+        && matchedSenderContact?.client_id
+        && matchedSenderContact.client_id === targetClientId
+      ),
     });
     await maybeRewriteCommentWithEmbeddedAttachmentUrls({
       tenantId,
