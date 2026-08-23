@@ -51,6 +51,7 @@ export class KbImportParseTimeoutError extends Error {
 
 const HTML_CHUNK_SIZE = 64 * 1024;
 const MARKDOWN_CHUNK_SIZE = 64 * 1024;
+const INLINE_CHUNK_SIZE = 32 * 1024;
 
 class Deadline {
   private readonly expiresAt: number | null;
@@ -69,6 +70,31 @@ class Deadline {
       throw new KbImportParseTimeoutError(this.maxDurationMs);
     }
   }
+}
+
+/** Numeric refs decode without their semicolon, named ones only with it. */
+const ENCODED_SCHEME_RE = /&(#\d+;?|#x[0-9a-f]+;?|[a-z][a-z0-9]*;)/i;
+
+/**
+ * Blocks scheme-based script URLs at conversion time, mirroring
+ * shared/lib/utils/markdownToBlocks.ts. Stored blocks are read by consumers
+ * that do not all sanitize at render, so an imported
+ * `[click me](javascript:...)` must never reach document_block_content.
+ */
+function sanitizeUrl(url: string | undefined): string {
+  if (!url) return '';
+  // Whitespace and control characters are the cheapest way to hide a scheme
+  // from a literal prefix match; browsers ignore them.
+  const probe = url.replace(/[\u0000-\u0020]/g, '').toLowerCase();
+  if (/^(javascript:|data:|vbscript:)/.test(probe)) return '';
+  // htmlparser2 decodes attributes for us, but marked hands back the href
+  // exactly as written. A consumer that serializes blocks back into HTML hands
+  // those entities to a browser, which decodes them, so `&#106;avascript:` and
+  // `javascript&colon;` become live script URLs. No real scheme carries an
+  // entity, so drop any href encoded ahead of the first scheme/path delimiter.
+  // '#' is not a delimiter here: it opens a numeric reference as often as a
+  // fragment, and a fragment-only href has no scheme to encode anyway.
+  return ENCODED_SCHEME_RE.test(probe.split(/[:/?]/, 1)[0]) ? '' : url;
 }
 
 function pushSegment(segments: InlineSegment[], text: string, styles: InlineStyles): void {
@@ -93,11 +119,18 @@ function normalizeSoftBreaks(text: string): string {
   return text.replace(/[ \t]*\n[ \t]*/g, ' ');
 }
 
-/** Lifts an inline image out of the run being accumulated. */
-type ImageHoist = (image: Tokens.Image) => void;
+/** Lifts an inline image out of the run being accumulated. Returns false when it could not. */
+type ImageHoist = (image: Tokens.Image) => boolean;
 
-function imageBlock(url: string, caption: string): BlockNoteBlock {
-  return { type: 'image', props: { url, caption } };
+/**
+ * An image source gets the same scheme guard as a link href. Returns null when
+ * the source is unusable so callers can fall back to the alt text — dropping
+ * the alt too would restore the very data loss this parser exists to fix.
+ */
+function imageBlock(url: string | undefined, caption: string): BlockNoteBlock | null {
+  const safeUrl = sanitizeUrl(url);
+  if (!safeUrl) return null;
+  return { type: 'image', props: { url: safeUrl, caption } };
 }
 
 function inlineFromTokens(
@@ -137,14 +170,18 @@ function inlineFromTokens(
         break;
       case 'link': {
         const link = token as Tokens.Link;
-        inlineFromTokens(link.tokens, withStyle(styles, 'link', { href: link.href }), segments, deadline, hoistImage);
+        inlineFromTokens(
+          link.tokens,
+          withStyle(styles, 'link', { href: sanitizeUrl(link.href) }),
+          segments,
+          deadline,
+          hoistImage,
+        );
         break;
       }
       case 'image': {
         const image = token as Tokens.Image;
-        if (hoistImage) {
-          hoistImage(image);
-        } else {
+        if (!hoistImage || !hoistImage(image)) {
           pushSegment(segments, image.text, styles);
         }
         break;
@@ -181,12 +218,15 @@ function appendParagraph(
   let hoistedImage = false;
 
   inlineFromTokens(tokens, {}, segments, deadline, (image) => {
+    const block = imageBlock(image.href, image.text);
+    if (!block) return false;
     const leading = trimSegments(segments.splice(0, segments.length));
     if (leading.length > 0) {
       blocks.push({ type: 'paragraph', content: leading });
     }
-    blocks.push(imageBlock(image.href, image.text));
+    blocks.push(block);
     hoistedImage = true;
+    return true;
   });
 
   if (!hoistedImage) {
@@ -394,7 +434,44 @@ class DeadlineTokenizer extends Tokenizer {
   }
 }
 
-/** Bounds the deferred inline pass, which marked runs once per queued run. */
+/**
+ * Splits one oversized inline run at the latest whitespace inside each window,
+ * falling back to a hard cut when a chunk holds no break at all.
+ */
+function splitInlineChunks(src: string): string[] {
+  const chunks: string[] = [];
+  let offset = 0;
+
+  while (offset < src.length) {
+    let end = offset + INLINE_CHUNK_SIZE;
+    if (end < src.length) {
+      const breakAt = Math.max(
+        src.lastIndexOf('\n', end - 1),
+        src.lastIndexOf(' ', end - 1),
+      );
+      if (breakAt > offset + INLINE_CHUNK_SIZE / 2) end = breakAt + 1;
+    } else {
+      end = src.length;
+    }
+    chunks.push(src.slice(offset, end));
+    offset = end;
+  }
+
+  return chunks;
+}
+
+/**
+ * Bounds the deferred inline pass, which marked runs once per queued run.
+ *
+ * marked masks code spans, reflinks and punctuation up front by rebuilding the
+ * source string once per match — quadratic work that finishes before any
+ * tokenizer hook (and therefore any deadline check) is reached. Inline runs
+ * larger than one chunk are tokenized chunk by chunk instead, the markdown
+ * twin of feeding htmlparser2 in chunks: masking stays bounded per chunk and
+ * the deadline gets a say between them. Consecutive text tokens merge back
+ * together, so only an inline construct straddling a split — inside a single
+ * block already larger than INLINE_CHUNK_SIZE — degrades to literal text.
+ */
 class DeadlineLexer extends Lexer {
   private readonly deadline: Deadline;
 
@@ -405,7 +482,15 @@ class DeadlineLexer extends Lexer {
 
   inlineTokens(src: string, tokens: Token[] = []): Token[] {
     this.deadline.check(true);
-    return super.inlineTokens(src, tokens);
+    if (src.length <= INLINE_CHUNK_SIZE) {
+      return super.inlineTokens(src, tokens);
+    }
+
+    for (const chunk of splitInlineChunks(src)) {
+      this.deadline.check(true);
+      super.inlineTokens(chunk, tokens);
+    }
+    return tokens;
   }
 }
 
@@ -477,17 +562,16 @@ class HtmlBlockWalker {
         this.blocks.push({ type: 'horizontalRule' });
         return;
       case 'img': {
-        const src = attribs.src ?? '';
         const alt = attribs.alt ?? '';
         // Inside a table cell an image block cannot be interleaved with rows,
         // so keep the alt text there and hoist a real block everywhere else.
-        if (this.cell) {
+        const block = this.cell ? null : imageBlock(attribs.src, alt);
+        if (!block) {
           this.pushText(alt);
           return;
         }
-        if (!src) return;
         this.flushBlock();
-        this.blocks.push(imageBlock(src, alt));
+        this.blocks.push(block);
         return;
       }
       case 'pre':
@@ -544,7 +628,7 @@ class HtmlBlockWalker {
         this.pushStyle('code', true);
         return;
       case 'a':
-        this.pushStyle('link', { href: attribs.href ?? '' });
+        this.pushStyle('link', { href: sanitizeUrl(attribs.href) });
         return;
       default:
         break;

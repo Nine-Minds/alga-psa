@@ -905,16 +905,16 @@ export const updateDraftInvoiceProperties = withAuth(async (
   input: DraftInvoicePropertiesUpdateInput
 ): Promise<DraftInvoicePropertiesUpdateActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
-    return permissionError('Permission denied: invoice update required');
+    return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
   }
   const trimmedInvoiceNumber = input.invoiceNumber?.trim();
 
   if (!trimmedInvoiceNumber) {
-    return actionError('Invoice number is required');
+    return actionError('Invoice number is required', 'msp/invoicing:errors.invoice.numberRequired');
   }
 
   if (!input.invoiceDate) {
-    return actionError('Invoice date is required');
+    return actionError('Invoice date is required', 'msp/invoicing:errors.invoice.dateRequired');
   }
 
   let normalizedInvoiceDate: string;
@@ -923,14 +923,14 @@ export const updateDraftInvoiceProperties = withAuth(async (
   try {
     normalizedInvoiceDate = toISODate(Temporal.PlainDate.from(input.invoiceDate));
   } catch {
-    return actionError('Invoice date is invalid');
+    return actionError('Invoice date is invalid', 'msp/invoicing:errors.invoice.dateInvalid');
   }
 
   if (input.dueDate) {
     try {
       normalizedDueDate = toISODate(Temporal.PlainDate.from(input.dueDate));
     } catch {
-      return actionError('Due date is invalid');
+      return actionError('Due date is invalid', 'msp/invoicing:errors.invoice.dueDateInvalid');
     }
   }
 
@@ -947,12 +947,12 @@ export const updateDraftInvoiceProperties = withAuth(async (
       .first();
 
     if (!invoice) {
-      expectedError = actionError('Invoice not found');
+      expectedError = actionError('Invoice not found', 'msp/invoicing:errors.invoice.notFound');
       return;
     }
 
     if (invoice.finalized_at || invoice.status !== 'draft') {
-      expectedError = actionError('Only draft invoices can be edited');
+      expectedError = actionError('Only draft invoices can be edited', 'msp/invoicing:errors.invoice.onlyDraftEditable');
       return;
     }
 
@@ -965,7 +965,7 @@ export const updateDraftInvoiceProperties = withAuth(async (
       .first('invoice_id');
 
     if (duplicateInvoice) {
-      expectedError = actionError('Invoice number already exists. Choose a different number.');
+      expectedError = actionError('Invoice number already exists. Choose a different number.', 'msp/invoicing:errors.invoice.numberExists');
       return;
     }
 
@@ -990,7 +990,7 @@ export const updateDraftInvoiceProperties = withAuth(async (
         'constraint' in error &&
         error.constraint === 'unique_invoice_number_per_tenant'
       ) {
-        expectedError = actionError('Invoice number already exists. Choose a different number.');
+        expectedError = actionError('Invoice number already exists. Choose a different number.', 'msp/invoicing:errors.invoice.numberExists');
         return;
       }
 
@@ -1016,7 +1016,7 @@ export const finalizeInvoice = withAuth(async (
   invoiceId: string
 ): Promise<InvoiceMutationActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
-    return permissionError('Permission denied: invoice update required');
+    return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
   }
   const { knex } = await createTenantKnex();
 
@@ -1586,7 +1586,7 @@ export const unfinalizeInvoice = withAuth(async (
   invoiceId: string
 ): Promise<InvoiceMutationActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
-    return permissionError('Permission denied: invoice update required');
+    return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
   }
   const { knex } = await createTenantKnex();
 
@@ -1615,7 +1615,7 @@ export const unfinalizeInvoice = withAuth(async (
       .first();
 
     if (!invoice) {
-      expectedError = actionError('Invoice not found');
+      expectedError = actionError('Invoice not found', 'msp/invoicing:errors.invoice.notFound');
       return;
     }
 
@@ -1623,7 +1623,7 @@ export const unfinalizeInvoice = withAuth(async (
     const isFinalized = Boolean(invoice.finalized_at) || (normalizedStatus && normalizedStatus !== 'draft');
 
     if (!isFinalized) {
-      expectedError = actionError('Invoice is not finalized');
+      expectedError = actionError('Invoice is not finalized', 'msp/invoicing:errors.invoice.notFinalized');
       return;
     }
 
@@ -1685,7 +1685,7 @@ export const unfinalizeInvoice = withAuth(async (
       tenant,
       error: error instanceof Error ? error.message : String(error),
     });
-    return actionError('Invoice could not be unfinalized because an unexpected data error occurred. Please refresh and try again.');
+    return actionError('Invoice could not be unfinalized because an unexpected data error occurred. Please refresh and try again.', 'msp/invoicing:errors.invoice.unfinalizeFailed');
   }
 
   if (expectedError) {
@@ -1735,12 +1735,12 @@ export const updateInvoiceManualItems = withAuth(async (
     });
 
     if (!invoice) {
-      return actionError('Invoice not found');
+      return actionError('Invoice not found', 'msp/invoicing:errors.invoice.notFound');
     }
     context.clientId = invoice.client_id;
 
     if (['paid', 'cancelled'].includes(invoice.status)) {
-      return actionError('Cannot modify a paid or cancelled invoice');
+      return actionError('Cannot modify a paid or cancelled invoice', 'msp/invoicing:errors.invoice.paidOrCancelled');
     }
 
     const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -2017,12 +2017,12 @@ export const addManualItemsToInvoice = withAuth(async (
   items: IInvoiceCharge[]
 ): Promise<InvoiceManualItemsUpdateActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
-    return permissionError('Permission denied: invoice update required');
+    return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
   }
   const session = await getSession();
 
   if (!session?.user?.id) {
-    return permissionError('Unauthorized: No authenticated user found');
+    return permissionError('Unauthorized: No authenticated user found', 'msp/billing:errors.context.notAuthenticated');
   }
 
   const { knex } = await createTenantKnex();
@@ -2038,11 +2038,11 @@ export const addManualItemsToInvoice = withAuth(async (
   });
 
   if (!invoice) {
-    return actionError('Invoice not found');
+    return actionError('Invoice not found', 'msp/invoicing:errors.invoice.notFound');
   }
 
   if (['paid', 'cancelled'].includes(invoice.status)) {
-    return actionError('Cannot modify a paid or cancelled invoice');
+    return actionError('Cannot modify a paid or cancelled invoice', 'msp/invoicing:errors.invoice.paidOrCancelled');
   }
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -2055,7 +2055,7 @@ export const addManualItemsToInvoice = withAuth(async (
   });
 
   if (!client) {
-    return actionError('Client not found');
+    return actionError('Client not found', 'msp/billing:errors.client.notFound');
   }
 
   try {
@@ -2144,7 +2144,7 @@ export const hardDeleteInvoice = withAuth(async (
   invoiceId: string
 ): Promise<InvoiceMutationActionResult> => {
   if (!await hasPermission(user, 'invoice', 'delete')) {
-    return permissionError('Permission denied: invoice delete required');
+    return permissionError('Permission denied: invoice delete required', 'msp/invoicing:errors.permissions.invoiceDelete');
   }
   const { knex } = await createTenantKnex();
 
@@ -2159,7 +2159,7 @@ export const hardDeleteInvoice = withAuth(async (
       })
       .first('id');
     if (existingMapping) {
-      return actionError('This invoice is synced to an accounting system — void it instead of deleting.');
+      return actionError('This invoice is synced to an accounting system — void it instead of deleting.', 'msp/invoicing:errors.invoice.syncedVoidInstead');
     }
 
   let voidedCreditNotes: Array<{

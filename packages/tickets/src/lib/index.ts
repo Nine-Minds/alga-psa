@@ -38,11 +38,13 @@ export {
   convertProseMirrorToTicketRichTextBlocks,
   createEmptyTicketMobileRichTextDocument,
   createTicketRichTextParagraph,
+  extractTicketRichTextPlainText,
   parseTicketMobileRichTextDocument,
   parseTicketRichTextContent,
   serializeTicketMobileRichTextDocument,
   serializeTicketRichTextContent,
 } from './ticketRichText';
+export { extractTicketRichTextHtml } from './ticketRichTextHtml';
 export {
   parseTicketMobileEditorNativeToWebMessage,
   parseTicketMobileEditorWebToNativeMessage,

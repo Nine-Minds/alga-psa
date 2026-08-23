@@ -1698,5 +1698,117 @@
     "saveContractOverride": "Vertragsüberschreibung speichern",
     "contractSaveSuccess": "Vertragsauffüllungsrichtlinie gespeichert",
     "contractSaveError": "Vertragsauffüllungsrichtlinie konnte nicht gespeichert werden"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Kunde nicht gefunden",
+      "signInRequired": "Sie müssen angemeldet sein, um Kunden zu verwalten.",
+      "duplicateName": "Ein Kunde mit dem Namen „{{name}}“ existiert bereits. Bitte wählen Sie einen anderen Namen.",
+      "duplicate": "Ein Kunde mit diesen Angaben existiert bereits. Bitte prüfen Sie den Kundennamen.",
+      "referencedDataMissing": "Referenzierte Daten nicht gefunden. Bitte prüfen Sie Kundenbetreuer, Rechnungskontakt und zugehörige Kundeneinstellungen.",
+      "invalidValue": "Einer der ausgewählten Kundenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidData": "Ungültige Kundendaten übermittelt. Bitte prüfen Sie alle Felder und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Kundenfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Kundenfeld fehlt: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Berechtigung verweigert: Kunden können nicht gelesen werden",
+      "updateClients": "Berechtigung verweigert: Kunden können nicht aktualisiert werden"
+    },
+    "timeline": {
+      "invalidCursor": "Ungültiger Cursor für die Kundenchronik"
+    },
+    "location": {
+      "notFound": "Standort nicht gefunden oder nicht mehr aktiv.",
+      "defaultRequired": "Fügen Sie einen weiteren aktiven Standort hinzu oder wählen Sie einen anderen Standardstandort, bevor Sie diesen Standort als Standard entfernen.",
+      "missingField": "Erforderliches Standortfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Standortfeld fehlt: {{field}}.",
+      "referenceInvalid": "Der ausgewählte Kunde, das Land, die Steuerregion oder zugehörige Standortdaten sind nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein widersprüchlicher Standortdatensatz existiert bereits. Bitte aktualisieren Sie die Standorte und versuchen Sie es erneut.",
+      "invalidData": "Ungültige Standortdaten übermittelt. Bitte prüfen Sie die Adress- und Kontaktfelder."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Die eingehende E-Mail-Domain konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
+      "notFound": "Eingehende E-Mail-Domain nicht gefunden."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Erforderliches Feld für das eingehende Ticketziel fehlt.",
+      "missingFieldNamed": "Erforderliches Feld für das eingehende Ticketziel fehlt: {{field}}.",
+      "referenceInvalid": "Das ausgewählte eingehende Ticketziel ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "interaction": {
+      "notFound": "Interaktion nicht gefunden",
+      "signInRequired": "Sie müssen angemeldet sein, um Interaktionen zu verwalten.",
+      "identifierInvalid": "Einer der Interaktionsbezeichner ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Interaktionsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Interaktionsfeld fehlt: {{field}}.",
+      "referenceMissing": "Die ausgewählte Interaktion, der Kunde, Kontakt, Benutzer, Status oder Typ existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Interaktion mit diesen Angaben existiert bereits."
+    },
+    "interactionType": {
+      "notFound": "Interaktionstyp nicht gefunden oder Sie haben keinen Zugriff darauf.",
+      "missingField": "Erforderliches Feld für den Interaktionstyp fehlt.",
+      "missingFieldNamed": "Erforderliches Feld für den Interaktionstyp fehlt: {{field}}.",
+      "referenceInvalid": "Referenzierte Daten des Interaktionstyps sind nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein Interaktionstyp mit diesen Angaben existiert bereits.",
+      "invalidData": "Ungültige Daten für den Interaktionstyp übermittelt. Bitte prüfen Sie Name, Symbol und Anzeigereihenfolge."
+    },
+    "taxRate": {
+      "signInRequired": "Sie müssen angemeldet sein, um Steuersätze von Kunden zu aktualisieren.",
+      "invalidReference": "Der ausgewählte Kunde oder Steuersatz ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld für den Kundensteuersatz fehlt.",
+      "missingFieldNamed": "Erforderliches Feld für den Kundensteuersatz fehlt: {{field}}.",
+      "referenceMissing": "Der ausgewählte Kunde oder Steuersatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Dieser Steuersatz ist dem Kunden bereits zugeordnet.",
+      "associationNotFound": "Zuordnung des Kundensteuersatzes nicht gefunden.",
+      "rateNotFound": "Steuersatz mit der ID {{id}} nicht gefunden."
+    },
+    "alias": {
+      "required": "Alias ist erforderlich",
+      "tooLong": "Alias ist zu lang",
+      "addFailed": "Der Kundenalias konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
+      "notFound": "Alias nicht gefunden."
+    },
+    "contractLine": {
+      "signInRequired": "Sie müssen angemeldet sein, um Vertragspositionen von Kunden zu verwalten.",
+      "refreshAssignment": "Bitte aktualisieren Sie die Vertragszuweisung und versuchen Sie es erneut.",
+      "sharedByAssignments": "Diese Vertragsposition wird von mehreren aktiven Zuweisungen gemeinsam genutzt. Bearbeiten Sie die jeweilige Vertragszuweisung, bevor Sie deren Positionen ändern.",
+      "duplicate": "Eine Vertragsposition mit diesen Angaben existiert für diesen Kunden bereits.",
+      "invalidReference": "Der ausgewählte Kunde oder die Vertragsposition ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Vertragsposition fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Vertragsposition fehlt: {{field}}.",
+      "referenceInvalid": "Die ausgewählte Referenz der Vertragsposition ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "storageUnavailable": "Der Speicher für Kundenvertragspositionen ist nicht verfügbar. Bitte versuchen Sie es später erneut.",
+      "invalidData": "Die Daten der Kundenvertragsposition sind ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "addFailed": "Die Kundenvertragsposition konnte nicht hinzugefügt werden."
+    },
+    "billingSettings": {
+      "updateDenied": "Berechtigung verweigert: Abrechnungseinstellungen können nicht aktualisiert werden",
+      "readRequired": "Berechtigung verweigert: Leserecht für billing_settings erforderlich",
+      "updateRequired": "Berechtigung verweigert: Änderungsrecht für billing_settings erforderlich",
+      "tenantContextMissing": "Mandantenkontext nicht gefunden",
+      "clientContextMissing": "Kundenkontext nicht gefunden",
+      "prepaidAlertsDisabled": "Warnungen zum Guthabenstand sind für diesen Arbeitsbereich nicht aktiviert",
+      "invalidPrepaidAlertSettings": "Ungültige Einstellungen für Guthabenwarnungen",
+      "prepaidAlertUpdateFailed": "Die Einstellungen für Guthabenwarnungen konnten nicht aktualisiert werden",
+      "contractReplenishmentUpdateFailed": "Vertragsauffüllungsrichtlinie konnte nicht aktualisiert werden"
+    },
+    "billingProfile": {
+      "signInRequired": "Sie müssen angemeldet sein, um Abrechnungsprofile zu verwalten.",
+      "duplicateDefault": "Dieser Kunde hat bereits ein Standard-Abrechnungsprofil.",
+      "stillReferenced": "Das Abrechnungsprofil wird noch verwendet und kann nicht entfernt werden.",
+      "defaultRequired": "Ein Kunde muss immer genau ein Standard-Abrechnungsprofil haben.",
+      "nameRequired": "Ein Abrechnungsprofil benötigt einen Namen.",
+      "notThisClient": "Dieses Abrechnungsprofil gehört nicht zu diesem Kunden.",
+      "archivedCannotBeDefault": "Ein archiviertes Abrechnungsprofil kann nicht als Standard festgelegt werden.",
+      "notFound": "Dieses Abrechnungsprofil existiert nicht mehr.",
+      "defaultCannotArchive": "Das Standard-Abrechnungsprofil kann nicht archiviert werden. Legen Sie zuerst ein anderes Profil als Standard fest.",
+      "defaultCannotDelete": "Das Standard-Abrechnungsprofil kann nicht gelöscht werden. Legen Sie zuerst ein anderes Profil als Standard fest.",
+      "inUse": "Dieses Abrechnungsprofil wird von {{references}} verwendet. Archivieren Sie es stattdessen – beim Löschen ginge verloren, wie diese Posten zugeordnet wurden.",
+      "recordNotFound": "Dieser Datensatz oder dieses Abrechnungsprofil existiert nicht mehr.",
+      "otherClient": "Dieses Abrechnungsprofil gehört zu einem anderen Kunden.",
+      "archived": "Dieses Abrechnungsprofil ist archiviert.",
+      "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden."
+    }
   }
 }

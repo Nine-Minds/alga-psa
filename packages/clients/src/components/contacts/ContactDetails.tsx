@@ -26,7 +26,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { updateContact, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { translateFieldValidation, validateContactNameField, validateRole, type FieldValidation } from '@alga-psa/validation';
+import { translateFieldValidation, validateContactNameField, validateRoleField, type FieldValidation } from '@alga-psa/validation';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
@@ -539,7 +539,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         return;
       }
 
-      const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers, { existingRows: contact.phone_numbers });
+      const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers, { existingRows: contact.phone_numbers, t });
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
         toast({
@@ -723,7 +723,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-4 card-elevated">
             <ContactEmailAddressesEditor
               id="contact-details-email"
               primaryEmailInputId="email-field"
@@ -742,7 +742,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               value={editedContact.role || ''}
               onEdit={(value) => handleFieldChange('role', value)}
               automationId="role-field"
-              validate={validateRole}
+              validateField={validateRoleField}
             />
             <div className="space-y-2">
               <Text as="label" size="2" className="text-gray-700 font-medium">{t('contactDetails.fields.inboundTicketDestinationOverride', { defaultValue: 'Inbound ticket destination override' })}</Text>

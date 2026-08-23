@@ -463,5 +463,42 @@
   "bundleNotice": {
     "withNumber": "Este ticket está agrupado em {{number}}. O tempo do pacote geralmente é registrado no ticket mestre.",
     "withoutNumber": "Este ticket faz parte de um pacote. O tempo do pacote geralmente é registrado no ticket mestre."
+  },
+  "errors": {
+    "timeSheet": {
+      "notFoundRefresh": "Planilha de horas não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "onlySubmittedApprovable": "Somente planilhas de horas enviadas podem ser aprovadas.",
+      "idRequired": "O ID da planilha de horas é obrigatório.",
+      "ticketIdRequired": "O ID do ticket é obrigatório.",
+      "workItemRemoveFailed": "Não é possível remover esse item de trabalho. Atualize a página e tente novamente.",
+      "onlyDraftRemovable": "Somente planilhas de horas em rascunho podem ser removidas.",
+      "removeEntriesFirst": "Remova os lançamentos de horas antes de remover esta planilha de horas.",
+      "onlyApprovedReopenable": "Somente planilhas de horas aprovadas podem ser reabertas.",
+      "invoicedCannotReopen": "Esta planilha de horas contém horas faturadas e não pode ser reaberta."
+    },
+    "timeEntry": {
+      "notFoundRefresh": "Lançamento de horas não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "serviceRequired": "Selecione um serviço antes de salvar este lançamento de horas.",
+      "alreadyInvoiced": "Este lançamento de horas já foi faturado e não pode ser alterado.",
+      "workItemTypeUnsupported": "O tipo de item de trabalho selecionado não é compatível com lançamentos de horas.",
+      "bucketUpdateFailed": "Não é possível atualizar o consumo do banco de horas para este lançamento de horas. Atualize a página e tente novamente.",
+      "wrongTimeSheet": "Este lançamento de horas não pertence à planilha de horas selecionada.",
+      "outsidePeriod": "O lançamento de horas deve estar dentro do período da planilha de horas selecionada.",
+      "invalidReference": "O lançamento de horas, a planilha de horas ou o item de trabalho selecionado é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "A planilha de horas, o lançamento de horas, o item de trabalho ou o usuário selecionado não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um lançamento de horas conflitante. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da planilha de horas ou do lançamento de horas.",
+      "missingFieldNamed": "Falta um campo obrigatório da planilha de horas ou do lançamento de horas: {{field}}."
+    },
+    "timePeriod": {
+      "datesRequired": "Informe datas de início e de término válidas."
+    },
+    "timePeriodSettings": {
+      "invalidValue": "Um dos valores da configuração de período é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "A configuração de período selecionada não é mais válida. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma configuração de período conflitante.",
+      "missingField": "Falta um campo obrigatório da configuração de período.",
+      "missingFieldNamed": "Falta um campo obrigatório da configuração de período: {{field}}."
+    }
   }
 }

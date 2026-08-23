@@ -140,5 +140,10 @@
   "page": {
     "heading": "Supervision des tâches",
     "recentJobs": "Jobs récents"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Tâche en arrière-plan introuvable. Elle a peut-être expiré ou été supprimée."
+    }
   }
 }

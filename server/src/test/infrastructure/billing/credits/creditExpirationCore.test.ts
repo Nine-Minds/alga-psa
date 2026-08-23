@@ -34,12 +34,20 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
+// expiredCreditsHandler is a background job: it calls getConnection() for its
+// own pool instead of going through createTenantKnex. That second connection
+// cannot see the rows this suite writes inside its transaction, and it blocks
+// on their locks until the test times out. Hand it the suite transaction —
+// knex turns the handler's inner transaction into a savepoint on it.
+const handlerConnection = vi.hoisted(() => ({ db: null as any }));
+
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
   return {
     ...actual,
     withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any)),
+    getConnection: vi.fn(async () => handlerConnection.db)
   };
 });
 
@@ -141,6 +149,7 @@ describe('Credit Expiration Core Tests', () => {
       userType: 'internal'
     });
 
+    handlerConnection.db = context.db;
     const mockContext = setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
@@ -154,6 +163,7 @@ describe('Credit Expiration Core Tests', () => {
 
   beforeEach(async () => {
     context = await resetContext();
+    handlerConnection.db = context.db;
     const mockContext = setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
@@ -330,10 +340,12 @@ describe('Credit Expiration Core Tests', () => {
     await finalizeInvoice(prepaymentInvoice.invoice_id);
     console.log('Test: Prepayment invoice finalized');
     
-    // Step 3: Verify initial credit balance and credit tracking entry
+    // Step 3: Verify initial credit balance and credit tracking entry.
+    // Available credit is derived from non-expired credit_tracking rows, so a
+    // credit issued with a past expiration date is already unspendable — the
+    // work the job has yet to do shows up in the tracking row, not here.
     const initialCredit = await ClientContractLine.getClientCredit(client_id);
-    expect(initialCredit).toBe(prepaymentAmount);
-    console.log('Test: Initial credit balance verified:', initialCredit);
+    expect(initialCredit).toBe(0);
     
     // Get the credit transaction
     const creditTransaction = await context.db('transactions')
@@ -465,9 +477,11 @@ describe('Credit Expiration Core Tests', () => {
     await finalizeInvoice(prepaymentInvoice1.invoice_id);
     await finalizeInvoice(prepaymentInvoice2.invoice_id);
     
-    // Step 4: Verify initial credit balance
+    // Step 4: Verify initial credit balance. Only the future-dated credit is
+    // spendable; the past-dated one stopped counting when its date passed,
+    // before the expiration job flagged it.
     const initialCredit = await ClientContractLine.getClientCredit(client_id);
-    expect(initialCredit).toBe(12000); // $120.00 total credit
+    expect(initialCredit).toBe(7000); // only the non-expired $70.00 credit
     
     // Get the credit transactions
     const creditTransaction1 = await context.db('transactions')

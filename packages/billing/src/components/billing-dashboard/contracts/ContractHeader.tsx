@@ -117,7 +117,7 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, live
   const hasSummary = Boolean(summary);
 
   return (
-    <div className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-card p-4 shadow-sm">
+    <div className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-card p-4 card-elevated">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-bold text-foreground">{contract.contract_name}</h1>

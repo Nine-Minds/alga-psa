@@ -31,18 +31,18 @@ function vendorProductActionErrorFrom(error: unknown): VendorProductActionError 
 
     switch (error.message) {
       case 'vendor_id and service_id are required':
-        return actionError('Choose both a vendor and a product before saving the offer.');
+        return actionError('Choose both a vendor and a product before saving the offer.', 'features/inventory:errors.vendorProducts.vendorAndProductRequired');
       case 'unit_cost must be a non-negative integer (cents)':
-        return actionError('Vendor cost must be a non-negative amount.');
+        return actionError('Vendor cost must be a non-negative amount.', 'features/inventory:errors.vendorProducts.costNonNegative');
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('The selected vendor or product is no longer valid. Please refresh and try again.');
+    return actionError('The selected vendor or product is no longer valid. Please refresh and try again.', 'features/inventory:errors.vendorProducts.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This vendor offer already exists. Refresh and edit the existing offer.');
+    return actionError('This vendor offer already exists. Refresh and edit the existing offer.', 'features/inventory:errors.vendorProducts.duplicate');
   }
 
   return null;

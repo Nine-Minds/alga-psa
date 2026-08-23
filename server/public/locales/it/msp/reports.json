@@ -505,5 +505,13 @@
       "client": "Cliente",
       "currency": "Valuta"
     }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Uno dei record del report selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno dei record del report selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del report.",
+      "missingFieldNamed": "Manca un campo obbligatorio del report: {{field}}."
+    }
   }
 }

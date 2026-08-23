@@ -101,25 +101,25 @@ function salesOrderActionErrorFrom(error: unknown): SalesOrderActionError | null
 
     switch (error.message) {
       case 'Sales order not found':
-        return actionError('Sales order not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Sales order not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.shared.salesOrderNotFound');
       case 'Sales order line not found':
-        return actionError('Sales order line not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Sales order line not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.shared.salesOrderLineNotFound');
       case 'client_id is required':
-        return actionError('Select a client before creating the sales order.');
+        return actionError('Select a client before creating the sales order.', 'features/inventory:errors.salesOrders.clientRequired');
       case 'currency_code is required':
-        return actionError('Select a currency before creating the sales order.');
+        return actionError('Select a currency before creating the sales order.', 'features/inventory:errors.salesOrders.currencyRequired');
       case 'quantity_ordered must be greater than 0':
-        return actionError('Each line quantity must be greater than 0.');
+        return actionError('Each line quantity must be greater than 0.', 'features/inventory:errors.shared.lineQuantityPositive');
       case 'Cannot reopen a sales order with fulfilled lines':
-        return actionError('This sales order has fulfilled lines and cannot be reopened.');
+        return actionError('This sales order has fulfilled lines and cannot be reopened.', 'features/inventory:errors.salesOrders.fulfilledCannotReopen');
       case 'Cannot reopen a sales order with invoiced lines':
-        return actionError('This sales order has invoiced lines and cannot be reopened.');
+        return actionError('This sales order has invoiced lines and cannot be reopened.', 'features/inventory:errors.salesOrders.invoicedCannotReopen');
       case 'Cannot cancel a sales order with fulfilled lines':
-        return actionError('This sales order has fulfilled lines and cannot be cancelled.');
+        return actionError('This sales order has fulfilled lines and cannot be cancelled.', 'features/inventory:errors.salesOrders.fulfilledCannotCancel');
       case 'Cannot cancel a sales order with invoiced lines':
-        return actionError('This sales order has invoiced lines and cannot be cancelled.');
+        return actionError('This sales order has invoiced lines and cannot be cancelled.', 'features/inventory:errors.salesOrders.invoicedCannotCancel');
       case 'Only draft sales orders can be deleted':
-        return actionError('Only draft sales orders can be deleted. Cancel confirmed orders instead.');
+        return actionError('Only draft sales orders can be deleted. Cancel confirmed orders instead.', 'features/inventory:errors.salesOrders.onlyDraftDeletable');
       default:
         if (
           error.message.startsWith('Invalid invoice_mode:') ||
@@ -143,22 +143,22 @@ function salesOrderActionErrorFrom(error: unknown): SalesOrderActionError | null
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected sales order values is invalid. Please refresh and try again.');
+    return actionError('One of the selected sales order values is invalid. Please refresh and try again.', 'features/inventory:errors.salesOrders.invalidValue');
   }
   if (dbError?.code === '22007' || dbError?.code === '22008') {
-    return actionError('Choose a valid sales order date.');
+    return actionError('Choose a valid sales order date.', 'features/inventory:errors.salesOrders.invalidDate');
   }
   if (dbError?.code === '23502') {
-    return actionError('Missing required sales order data. Please review the form and try again.');
+    return actionError('Missing required sales order data. Please review the form and try again.', 'features/inventory:errors.salesOrders.missingData');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected sales order records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected sales order records is no longer valid. Please refresh and try again.', 'features/inventory:errors.salesOrders.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This sales order update conflicts with an existing record. Please refresh and try again.');
+    return actionError('This sales order update conflicts with an existing record. Please refresh and try again.', 'features/inventory:errors.salesOrders.conflict');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the sales order values is not allowed. Please review the form and try again.');
+    return actionError('One of the sales order values is not allowed. Please review the form and try again.', 'features/inventory:errors.salesOrders.valueNotAllowed');
   }
 
   return null;

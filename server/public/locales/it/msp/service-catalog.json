@@ -445,5 +445,65 @@
       "summary": "{{rate}} per {{unit}}",
       "help": "La tariffa base può essere sostituita con i livelli basati sulla quantità riportati di seguito."
     }
+  },
+  "errors": {
+    "permissions": {
+      "createServices": "Autorizzazione negata: impossibile creare servizi/prodotti",
+      "updateServices": "Autorizzazione negata: impossibile aggiornare servizi/prodotti",
+      "deleteServices": "Autorizzazione negata: impossibile eliminare i servizi",
+      "deleteServicesProducts": "Autorizzazione negata: impossibile eliminare servizi/prodotti",
+      "createServiceTypes": "Autorizzazione negata: impossibile creare tipi di servizio",
+      "updateServiceTypes": "Autorizzazione negata: impossibile aggiornare i tipi di servizio",
+      "deleteServiceTypes": "Autorizzazione negata: impossibile eliminare i tipi di servizio",
+      "updatePricing": "Autorizzazione negata: impossibile aggiornare i prezzi dei servizi"
+    },
+    "category": {
+      "duplicateName": "Esiste già una categoria di servizio con questo nome",
+      "notFound": "Categoria di servizio non trovata",
+      "invalid": "La categoria di servizio selezionata non è valida. Aggiornare la pagina e riprovare.",
+      "inUse": "Non è possibile eliminare la categoria perché è ancora in uso.",
+      "inUseByServices": "Non è possibile eliminare la categoria: alcuni servizi la utilizzano",
+      "inUseByTickets": "Non è possibile eliminare una categoria utilizzata dai ticket",
+      "nameRequired": "Il nome della categoria è obbligatorio",
+      "nameEmpty": "Il nome della categoria non può essere vuoto",
+      "idRequired": "L’ID della categoria è obbligatorio",
+      "missingField": "Manca un campo obbligatorio della categoria di servizio.",
+      "missingFieldNamed": "Manca un campo obbligatorio della categoria di servizio: {{field}}."
+    },
+    "service": {
+      "selectType": "Selezionare un tipo di servizio prima di salvare.",
+      "typeNotFound": "Il tipo di servizio selezionato non è stato trovato. Aggiornare la pagina e scegliere un altro tipo di servizio.",
+      "selectBillingMethod": "Selezionare un metodo di fatturazione prima di salvare.",
+      "notFoundRefresh": "Servizio non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori del servizio selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il servizio, la categoria, l’aliquota d’imposta o il tipo di servizio selezionato non è più disponibile. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un servizio o un prodotto con questi valori.",
+      "missingField": "Manca un campo obbligatorio del servizio.",
+      "missingFieldNamed": "Manca un campo obbligatorio del servizio: {{field}}."
+    },
+    "product": {
+      "notFound": "Prodotto non trovato",
+      "alreadyDeleted": "Prodotto non trovato. Potrebbe essere già stato eliminato.",
+      "barcodeExists": "Esiste già un prodotto con questo codice a barre. Utilizzare un altro codice a barre o modificare il prodotto esistente.",
+      "barcodeExistsNamed": "Esiste già un prodotto con il codice a barre «{{barcode}}». Utilizzare un altro codice a barre o modificare il prodotto esistente.",
+      "skuExists": "Esiste già un prodotto con questo SKU. Utilizzare un altro SKU o modificare il prodotto esistente.",
+      "skuExistsNamed": "Esiste già un prodotto con lo SKU «{{sku}}». Utilizzare un altro SKU o modificare il prodotto esistente.",
+      "cannotDelete": "Non è possibile eliminare il prodotto: {{reasons}}"
+    },
+    "serviceType": {
+      "duplicateName": "Esiste già un tipo di servizio con questo nome.",
+      "notFoundRefresh": "Tipo di servizio non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "notFound": "Tipo di servizio non trovato.",
+      "inUse": "Non è possibile eliminare il tipo di servizio perché è attualmente utilizzato da uno o più servizi.",
+      "inUseByCount": "Non è possibile eliminare il tipo di servizio perché è attualmente utilizzato da {{serviceCount}} servizio/i."
+    },
+    "rateTier": {
+      "overlap": "Gli intervalli delle fasce non possono sovrapporsi.",
+      "notFound": "Fascia tariffaria non trovata. Aggiornare il servizio e riprovare.",
+      "invalid": "La fascia tariffaria selezionata non è valida. Aggiornare il servizio e riprovare.",
+      "serviceInvalid": "Il servizio selezionato per questa fascia tariffaria non è più valido. Aggiornare il servizio e riprovare.",
+      "missingField": "Manca un campo obbligatorio della fascia tariffaria.",
+      "missingFieldNamed": "Manca un campo obbligatorio della fascia tariffaria: {{field}}."
+    }
   }
 }

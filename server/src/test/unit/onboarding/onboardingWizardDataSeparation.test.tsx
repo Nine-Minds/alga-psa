@@ -23,6 +23,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 
 vi.mock('@alga-psa/validation', () => ({
   validateEmailAddress: () => null,
+  toValidationTranslator: (t: (key: string, defaultValue: string) => unknown) =>
+    (key: string, defaultValue: string) => {
+      const translated = t(key, defaultValue);
+      return typeof translated === 'string' && translated ? translated : defaultValue;
+    },
 }));
 
 afterEach(cleanup);

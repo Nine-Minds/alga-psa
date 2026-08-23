@@ -193,7 +193,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       setDomains(data);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || t('managed.messages.loadDomainsFailed'));
+      toast.error(t('managed.messages.loadDomainsFailed'));
     } finally {
       setLoadingDomains(false);
     }
@@ -234,7 +234,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       initializeTicketingFromSelection(settings, providers);
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to load outbound settings', err);
-      toast.error(err.message || t('managed.messages.loadOutboundSettingsFailed'));
+      toast.error(t('managed.messages.loadOutboundSettingsFailed'));
     } finally {
       setLoadingOutbound(false);
     }
@@ -380,7 +380,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       toast.success(t('managed.messages.senderIdentitiesUpdated'));
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to update ticketing from address', err);
-      toast.error(err.message || t('managed.messages.ticketingFromSaveFailed'));
+      toast.error(t('managed.messages.ticketingFromSaveFailed'));
     } finally {
       setSavingTicketingFrom(false);
     }
@@ -408,7 +408,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       toast.success(t('managed.messages.ticketingFromCleared'));
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to clear ticketing from address', err);
-      toast.error(err.message || t('managed.messages.ticketingFromClearFailed'));
+      toast.error(t('managed.messages.ticketingFromClearFailed'));
     } finally {
       setSavingTicketingFrom(false);
     }
@@ -460,7 +460,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       toast.success(t('managed.outbound.microsoft.saved', 'Outbound sending mailbox updated.'));
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to select Microsoft mailbox', err);
-      toast.error(err.message || t('managed.messages.switchProviderFailed'));
+      toast.error(t('managed.messages.switchProviderFailed'));
     }
   };
 
@@ -512,7 +512,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       setEmailSettings(updated);
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to switch provider', err);
-      toast.error(err.message || t('managed.messages.switchProviderFailed'));
+      toast.error(t('managed.messages.switchProviderFailed'));
       // Revert UI selection
       setOutboundProvider(emailSettings.emailProvider === 'smtp' ? 'smtp' : 'resend');
     }
@@ -600,7 +600,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       }
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to save SMTP settings', err);
-      toast.error(err.message || t('managed.messages.smtpSaveFailed'));
+      toast.error(t('managed.messages.smtpSaveFailed'));
     } finally {
       setSavingSmtp(false);
     }
@@ -646,7 +646,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       await loadDomains();
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || t('managed.messages.domainRequestFailed'));
+      toast.error(t('managed.messages.domainRequestFailed'));
     } finally {
       setBusyDomain(null);
     }
@@ -665,7 +665,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       await loadDomains();
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || t('managed.messages.refreshStatusFailed'));
+      toast.error(t('managed.messages.refreshStatusFailed'));
     } finally {
       setBusyDomain(null);
     }
@@ -714,7 +714,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       await loadDomains();
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || t('managed.messages.removeDomainFailed'));
+      toast.error(t('managed.messages.removeDomainFailed'));
     } finally {
       setBusyDomain(null);
     }

@@ -505,5 +505,13 @@
       "client": "Klant",
       "currency": "Valuta"
     }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Een van de geselecteerde rapportrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde rapportrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht rapportveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht rapportveld: {{field}}."
+    }
   }
 }

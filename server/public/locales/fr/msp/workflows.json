@@ -1502,7 +1502,10 @@
     "start": "Début",
     "insertStepHere": "Insérer une étape ici",
     "emptyDisabled": "Aucune étape pour l’instant.",
-    "emptySelectPrompt": "Sélectionnez une étape dans le panneau pour commencer."
+    "emptySelectPrompt": "Sélectionnez une étape dans le panneau pour commencer.",
+    "patchSummary": {
+      "unchanged": "autres champs inchangés"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Éditeur d’expression",
@@ -1618,6 +1621,37 @@
     "softEnumUseCustom": "Utiliser « {{value}} »",
     "expression": {
       "placeholder": "ex. : payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Champs à modifier",
+      "targetFraming": "Cette étape met à jour {{target}}.",
+      "summaryChanges": "Modifie {{list}}",
+      "summaryChangesMore": "Modifie {{list}} +{{count}} autres",
+      "unchangedNote": "Tous les autres champs conservent leurs valeurs actuelles.",
+      "emptyGuidance": "Ajoutez au moins un champ à modifier.",
+      "editChanges": "Modifier les changements…",
+      "dialogTitle": "Modifier les changements",
+      "dialogDescription": "Mise à jour de {{target}}. Seuls les champs listés à droite seront modifiés ; tout le reste conserve sa valeur actuelle.",
+      "footerSummary": "{{count}} champ(s) seront modifiés · tout le reste conserve sa valeur actuelle",
+      "done": "Terminé",
+      "added": "Ajouté ✓",
+      "noChangesYet": "Aucun changement pour l'instant. Choisissez un champ à gauche pour commencer.",
+      "setFieldTo": "Définir {{field}} sur",
+      "removeChange": "Ne plus modifier ce champ (il conserve sa valeur actuelle)",
+      "advancedTitle": "Avancé",
+      "group": {
+        "details": "Détails",
+        "assignment": "Attribution",
+        "datesTags": "Dates et étiquettes",
+        "advanced": "Avancé"
+      },
+      "target": {
+        "genericRecord": "enregistrement",
+        "unset": "le {{record}} sélectionné ci-dessus",
+        "fromReference": "le {{record}} provenant de « {{source}} »",
+        "fromExpression": "le {{record}} choisi par une expression",
+        "fixed": "un {{record}} spécifique"
+      }
     }
   },
   "schemaReference": {

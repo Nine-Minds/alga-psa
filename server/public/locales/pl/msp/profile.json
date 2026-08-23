@@ -762,5 +762,48 @@
       "lastUsed": "Ostatnio użyto {{date}}",
       "notUsedYet": "Jeszcze nieużywane"
     }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Odmowa uprawnień: brak uprawnień do wyświetlania wszystkich sesji."
+    },
+    "permissions": {
+      "adminRequired": "Odmowa uprawnień: wymagany dostęp administratora"
+    },
+    "apiKeys": {
+      "internalOnly": "Odmowa uprawnień: zarządzanie kluczami API jest zastrzeżone dla użytkowników wewnętrznych",
+      "configInternalOnly": "Odmowa uprawnień: konfiguracja kluczy API jest zastrzeżona dla użytkowników wewnętrznych",
+      "invalidExpiration": "Wybierz prawidłową datę wygaśnięcia tego klucza API.",
+      "notFound": "Nie znaleziono klucza API.",
+      "rateLimitsPositive": "Limity szybkości API muszą być dodatnimi liczbami całkowitymi."
+    },
+    "webhooks": {
+      "invalidInput": "Sprawdź ustawienia webhooka i spróbuj ponownie.",
+      "notFound": "Nie znaleziono webhooka.",
+      "signingSecretMissing": "Brak sekretu podpisu webhooka. Wymień sekret podpisu i spróbuj ponownie.",
+      "deliveryNotFound": "Nie znaleziono dostarczenia.",
+      "testNotRetryable": "Dostarczeń testowych nie można ponowić.",
+      "validation": { "unknownEntity": "Nieznany typ encji webhooka „{{entity}}”.", "unknownField": "Nieznane pole „{{field}}” dla encji webhooka „{{entity}}”." },
+      "payloadInvalid": "Tego dostarczenia nie można ponowić, ponieważ zapisany ładunek jest nieprawidłowy."
+    },
+    "inboundWebhooks": {
+      "permissions": {
+        "create": "Odmowa uprawnień: wymagane uprawnienie tworzenia przychodzących webhooków",
+        "read": "Odmowa uprawnień: wymagane uprawnienie odczytu przychodzących webhooków",
+        "update": "Odmowa uprawnień: wymagane uprawnienie aktualizacji przychodzących webhooków",
+        "delete": "Odmowa uprawnień: wymagane uprawnienie usuwania przychodzących webhooków",
+        "replay": "Odmowa uprawnień: wymagane uprawnienie ponownego odtworzenia przychodzących webhooków"
+      },
+      "invalidInput": "Sprawdź ustawienia przychodzącego webhooka i spróbuj ponownie.",
+      "workflowRequiresEe": "Procedury obsługi workflow dla przychodzących webhooków wymagają edycji Enterprise.",
+      "notFound": "Nie znaleziono przychodzącego webhooka.",
+      "duplicateSlug": "Identyfikator „{{slug}}” przychodzącego webhooka już istnieje.",
+      "noSecretToRotate": "Przychodzące webhooki z listą dozwolonych adresów IP nie mają sekretu do wymiany.",
+      "unsupportedAuthType": "Nieobsługiwany typ uwierzytelniania przychodzącego webhooka: {{authType}}.",
+      "deliveryNotFound": "Nie znaleziono przychodzącego dostarczenia.",
+      "replayMissingConfig": "Nie można ponownie odtworzyć przychodzącego dostarczenia bez konfiguracji webhooka.",
+      "validation": { "slugReserved": "Ten identyfikator jest zarezerwowany dla wbudowanej integracji.", "authTypeMismatch": "Typ konfiguracji uwierzytelniania musi odpowiadać wybranemu typowi uwierzytelniania.", "handlerTypeMismatch": "Typ konfiguracji procedury obsługi musi odpowiadać wybranemu typowi procedury obsługi." },
+      "notFoundOrInactive": "Nie znaleziono przychodzącego webhooka lub jest nieaktywny."
+    }
   }
 }

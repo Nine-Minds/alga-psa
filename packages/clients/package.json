@@ -34,6 +34,10 @@
       "types": "./src/lib/onlineMeetingArtifactCapture.ts",
       "import": "./src/lib/onlineMeetingArtifactCapture.ts"
     },
+    "./lib/contactActionErrorCodes": {
+      "import": "./src/lib/contactActionErrorCodes.ts",
+      "types": "./src/lib/contactActionErrorCodes.ts"
+    },
     "./context/ClientCrossFeatureContext": {
       "types": "./src/context/ClientCrossFeatureContext.tsx",
       "import": "./dist/context/ClientCrossFeatureContext.js",
@@ -55,6 +59,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/auth": "*",
     "@alga-psa/block-content": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",

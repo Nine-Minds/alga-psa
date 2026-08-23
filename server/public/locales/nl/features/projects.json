@@ -189,6 +189,13 @@
     "wholeWord": "Hele woord",
     "wholeWordShort": "Woord",
     "clearSearch": "Duidelijke zoekopdracht",
+    "spacing": {
+      "compact": "Compact",
+      "spacious": "Ruim",
+      "decrease": "Afstand lijst verkleinen",
+      "increase": "Afstand lijst vergroten",
+      "reset": "Afstand lijst herstellen"
+    },
     "taskList": "Takenlijst",
     "kanbanBoard": "Kanban-bord",
     "kanbanBoardWithPhase": "Kanbanbord: {{phaseName}}",
@@ -761,7 +768,8 @@
       "phasePlaceholder": "Selecteer een fase",
       "statusLabel": "Status",
       "statusPlaceholder": "Selecteer een status",
-      "linkTicketLabel": "Koppel ticket aan de gemaakte taak"
+      "linkTicketLabel": "Koppel ticket aan de gemaakte taak",
+      "createdSuccess": "Taak is succesvol aangemaakt"
     },
     "linkTicketToTask": {
       "title": "Ticket aan taak koppelen",
@@ -1167,6 +1175,8 @@
       "doneEditing": "Klaar met bewerken",
       "editChecklist": "Controlelijst bewerken",
       "addChecklistItem": "Item toevoegen",
+      "editChecklistItem": "Controlelijstitem bewerken",
+      "removeChecklistItem": "Controlelijstitem verwijderen",
       "checklistItemPlaceholder": "Controlelijstitem",
       "emptyChecklistItem": "Leeg artikel",
       "reorderChecklistItem": "Sleep om opnieuw te ordenen",
@@ -1428,6 +1438,8 @@
     "newestFirst": "Nieuwste eerst",
     "oldestFirst": "Oudste eerst",
     "addComment": "Opmerking toevoegen",
+    "reply": "Beantwoorden",
+    "addFailed": "Kan opmerking niet toevoegen",
     "submitting": "Verzenden...",
     "loading": "Laden...",
     "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!"
@@ -1440,6 +1452,8 @@
     "showPhasesDescription": "Klanten zien fasekaarten met namen, beschrijvingen en datumbereiken. Ze kunnen fasen selecteren om bijbehorende taken te bekijken.",
     "showCompletion": "Voltooiing % tonen",
     "showCompletionDescription": "Toon een voortgangsbalk en percentage dat aangeeft hoeveel taken in elke fase zijn voltooid.",
+    "showBilling": "Facturatie tonen",
+    "showBillingDescription": "Klanten zien een alleen-lezen factureringsoverzicht met het betalingsschema, de bedragen en het tot heden gefactureerde bedrag. Geldt alleen voor projecten met facturatie ingeschakeld.",
     "showTasks": "Taken tonen",
     "showTasksDescription": "Klanten kunnen individuele taken binnen elke fase bekijken. Taken worden weergegeven in een Kanban-bord of lijstweergave gegroepeerd op status.",
     "visibleTaskFields": "Zichtbare taakvelden",
@@ -1448,6 +1462,7 @@
     "summary": {
       "projectInfo": "Projectnaam, beschrijving, data en totale voortgang",
       "budgetHours": "Budget-uren: bestede vs. gebudgetteerde totalen en % gebruikt",
+      "billing": "Factureringsoverzicht: betalingsschema, bedragen en gefactureerd tot heden",
       "phaseInfo": "Fasenamen, beschrijvingen en datumbereiken",
       "phaseCompletion": "Voltooiingspercentage voor elke fase",
       "taskDetails": "Taakdetails: {{fields}}",
@@ -1607,6 +1622,8 @@
     },
     "terms": {
       "fixed": "Vaste prijs {{total}} · {{mode}} facturering",
+      "lockedSummary_one": "{{count}} item met een totaal van {{amount}} is vergrendeld en verandert niet.",
+      "lockedSummary_other": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet.",
       "edit": "Voorwaarden bewerken",
       "saved": "Factureringsvoorwaarden bijgewerkt",
       "dialogTitle": "Factureringsvoorwaarden bewerken"
@@ -1640,6 +1657,7 @@
       "milestone": "Mijlpaal",
       "trigger": "Activering",
       "amount": "Bedrag",
+      "amountLocked": "Bedrag vastgezet bij goedkeuring",
       "status": "Status",
       "invoice": "Factuur",
       "empty": "Nog geen mijlpalen of aanbetalingen.",
@@ -1653,6 +1671,7 @@
       "phaseTrigger": "Voltooiing van fase",
       "phaseOverdue": "De einddatum van de fase is verstreken — markeer de fase als voltooid om deze post gereed te maken",
       "approve": "Goedkeuren",
+      "unapprove": "Goedkeuring intrekken",
       "approveInvoice": "Goedkeuren en factureren",
       "hold": "Aanhouden",
       "markReady": "Markeren als gereed",
@@ -1662,6 +1681,7 @@
       "allocatedOver": "{{amount}} te veel toegewezen",
       "held": "Item aangehouden",
       "approved": "Item goedgekeurd",
+      "unapproved": "Goedkeuring ingetrokken",
       "invoiced": "Factuur gegenereerd",
       "markedReady": "Gemarkeerd als gereed",
       "canceled": "Item geannuleerd",
@@ -1696,6 +1716,8 @@
       "valuePercentage": "Percentage van totaal",
       "amount": "Bedrag ({{currency}})",
       "percentage": "Percentage",
+      "increaseTotal": "Projecttotaal met dit bedrag verhogen",
+      "increaseTotalHint": "Voor meerwerk of wijzigingen in de scope. Het projecttotaal stijgt en bestaande procentuele verdelingen worden opnieuw berekend op basis van het nieuwe totaal.",
       "trigger": "Activering",
       "triggerPhase": "Voltooiing van fase",
       "triggerDate": "Op een datum",
@@ -1723,6 +1745,7 @@
       "behavior": "Bij bereiken",
       "notify": "Alleen melden",
       "hard": "Harde limiet (afboeken)",
+      "hardHint": "Arbeid en materialen boven de limiet worden automatisch afgeboekt.",
       "thresholds": "Melden bij (%)",
       "thresholdsHint": "Door komma's gescheiden percentages van de limiet.",
       "noCap": "Geen limiet",

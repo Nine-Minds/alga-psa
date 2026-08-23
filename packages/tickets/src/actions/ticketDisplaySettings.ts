@@ -88,7 +88,7 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
 
   // Check if user has permission to update ticket settings
   if (!await hasPermission(user, 'ticket_settings', 'update', knex)) {
-    return permissionError('Permission denied: Cannot update ticket settings');
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
   }
 
   // Read existing values for both the dedicated column and the legacy nested settings path.

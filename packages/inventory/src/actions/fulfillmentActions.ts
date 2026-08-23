@@ -45,23 +45,23 @@ function fulfillmentActionErrorFrom(error: unknown): FulfillmentActionError | nu
 
     switch (error.message) {
       case 'Sales order line not found':
-        return actionError('Sales order line not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Sales order line not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.shared.salesOrderLineNotFound');
       case 'Sales order not found':
-        return actionError('Sales order not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Sales order not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.shared.salesOrderNotFound');
       case 'Drop-ship lines are fulfilled through the drop-ship receipt flow, not from stock':
-        return actionError('Use the drop-ship receipt flow to fulfill this line.');
+        return actionError('Use the drop-ship receipt flow to fulfill this line.', 'features/inventory:errors.fulfillment.useDropShipFlow');
       case 'Inventory is not enabled for this product':
-        return actionError('Inventory tracking is not enabled for this product.');
+        return actionError('Inventory tracking is not enabled for this product.', 'features/inventory:errors.fulfillment.trackingDisabled');
       case 'Sales order line is already fully fulfilled':
-        return actionError('This sales order line is already fully fulfilled.');
+        return actionError('This sales order line is already fully fulfilled.', 'features/inventory:errors.shared.salesOrderLineAlreadyFulfilled');
       case 'No serialized units available to fulfill this line':
-        return actionError('No serialized units are available to fulfill this line.');
+        return actionError('No serialized units are available to fulfill this line.', 'features/inventory:errors.fulfillment.noSerializedUnits');
       case 'quantity is required to fulfill a non-serialized line':
-        return actionError('Enter a quantity to fulfill this non-serialized line.');
+        return actionError('Enter a quantity to fulfill this non-serialized line.', 'features/inventory:errors.fulfillment.quantityRequired');
       case 'A source location is required to fulfill a non-serialized line':
-        return actionError('Choose a source location before fulfilling this line.');
+        return actionError('Choose a source location before fulfilling this line.', 'features/inventory:errors.fulfillment.sourceLocationRequired');
       case 'Fulfillment would exceed the ordered quantity; nothing was fulfilled':
-        return actionError('Fulfillment would exceed the ordered quantity. Refresh the order and try again.');
+        return actionError('Fulfillment would exceed the ordered quantity. Refresh the order and try again.', 'features/inventory:errors.fulfillment.exceedsOrdered');
       default:
         if (
           error.message.startsWith('Cannot fulfill a ') ||
@@ -75,10 +75,10 @@ function fulfillmentActionErrorFrom(error: unknown): FulfillmentActionError | nu
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected fulfillment records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected fulfillment records is no longer valid. Please refresh and try again.', 'features/inventory:errors.fulfillment.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This fulfillment conflicts with an existing record. Please refresh and try again.');
+    return actionError('This fulfillment conflicts with an existing record. Please refresh and try again.', 'features/inventory:errors.fulfillment.conflict');
   }
 
   return null;

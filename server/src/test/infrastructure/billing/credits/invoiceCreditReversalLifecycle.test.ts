@@ -247,7 +247,6 @@ async function setupCreditedClientInvoice(options: {
     billing_cycle: 'monthly',
     region_code: 'US-NY',
     is_tax_exempt: false,
-    credit_balance: 0,
   });
 
   await setupDefaultTax(clientId);
@@ -550,7 +549,7 @@ describe('Unified invoice credit reversal (void / unfinalize / hard-delete)', ()
       .update({ metadata: JSON.stringify({}) });
 
     const result = await unfinalizeInvoice(invoiceId);
-    expect(result).toEqual({ actionError: expect.any(String) });
+    expect(result).toMatchObject({ actionError: expect.any(String) });
 
     // Validation precedes mutation: lifecycle and balances unchanged.
     const invoice = await invoiceRow(invoiceId);

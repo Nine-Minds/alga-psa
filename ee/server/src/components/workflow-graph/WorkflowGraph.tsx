@@ -202,7 +202,7 @@ const InsertNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
           data-pipe-path={pipePath}
           className={[
             'flex items-center justify-center',
-            'rounded-md border shadow-sm bg-white dark:bg-[rgb(var(--color-card))]',
+            'rounded-md border card-elevated bg-white dark:bg-[rgb(var(--color-card))]',
             snapshot.isDraggingOver
               ? 'border-[rgb(var(--color-primary-400))] ring-2 ring-[rgb(var(--color-primary-200))]'
               : 'border-dashed border-[rgb(var(--color-border-200))]'

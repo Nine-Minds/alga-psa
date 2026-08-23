@@ -301,6 +301,25 @@
         "contactSupport": "Comuníquese con el equipo de soporte de su organización",
         "tryAnother": "Probar con otro correo electrónico"
       }
+    },
+    "register": {
+      "emailLabel": "Dirección de correo electrónico",
+      "checkingEmail": "Comprobando el correo electrónico...",
+      "existingContactsOnly": "El registro solo está disponible para contactos existentes. Póngase en contacto con su administrador.",
+      "contactVerified": "Contacto verificado. Cree su contraseña.",
+      "passwordPlaceholder": "Cree una contraseña",
+      "passwordMustContain": "La contraseña debe contener:",
+      "completeRequiredFields": "Complete los campos obligatorios:",
+      "creatingAccount": "Creando cuenta...",
+      "createAccount": "Crear cuenta",
+      "failed": "Error en el registro",
+      "unexpectedError": "Se produjo un error inesperado durante el registro.",
+      "missing": {
+        "email": "Correo electrónico",
+        "validEmail": "Dirección de correo electrónico válida",
+        "verifiedContact": "Correo electrónico de contacto verificado",
+        "validPassword": "Contraseña válida"
+      }
     }
   },
   "account": {
@@ -685,9 +704,14 @@
   },
   "notifications": {
     "title": "Notificaciones",
+    "bellUnreadAria": "Notificaciones ({{unread}} sin leer)",
+    "unreadDot": "Notificaciones sin leer",
+    "reconnecting": "Reconectando...",
     "markAsRead": "Marcar como leído",
     "markAllAsRead": "Marcar todo como leído",
     "noNotifications": "No hay notificaciones nuevas",
+    "unreadCount_one": "{{count}} notificación sin leer",
+    "unreadCount_other": "{{count}} notificaciones sin leer",
     "settings": "Configuración de notificaciones",
     "viewAll": "Ver todas las notificaciones",
     "tabs": {
@@ -916,5 +940,57 @@
     },
     "notAvailable": "N/D",
     "detailsTitle": "Detalles del activo"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Su usuario del portal no está vinculado a ningún contacto. Póngase en contacto con el soporte si esto continúa.",
+      "userNotLinkedToClient": "Su usuario del portal no está vinculado a ninguna cuenta de cliente. Póngase en contacto con el soporte si esto continúa.",
+      "contactNotLinkedToClient": "Su contacto no está vinculado a ninguna cuenta de cliente. Póngase en contacto con el soporte si esto continúa.",
+      "clientNotFound": "Cuenta de cliente no encontrada. Es posible que se haya eliminado o que ya no tenga acceso.",
+      "serviceNotFound": "Servicio no encontrado o ya no está activo. Actualice la página e inténtelo de nuevo.",
+      "serviceUpgradeUnavailable": "La mejora de servicios no está disponible temporalmente. Póngase en contacto con el soporte para cambiar su plan."
+    },
+    "records": {
+      "invalid": "Uno de los registros seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "missing": "Uno de los registros seleccionados ya no existe. Actualice la página e inténtelo de nuevo."
+    },
+    "access": {
+      "unauthorized": "No autorizado",
+      "projectBillingData": "Sin autorización para acceder a los datos de facturación del proyecto",
+      "quoteData": "Sin autorización para acceder a los datos de la cotización",
+      "invoiceData": "Sin autorización para acceder a los datos de la factura",
+      "billingData": "Sin autorización para acceder a los datos de facturación",
+      "settingsUpdate": "No tiene permiso para actualizar esta configuración.",
+      "billingSegment": "Sin autorización para acceder a ese segmento de facturación"
+    },
+    "billing": {
+      "quoteNotFound": "Cotización no encontrada o acceso denegado",
+      "quoteStale": "La cotización ya no está disponible. Actualícela e inténtelo de nuevo.",
+      "quoteStaleAccept": "La cotización ya no está disponible. Actualícela antes de aceptarla.",
+      "quoteStaleReject": "La cotización ya no está disponible. Actualícela antes de rechazarla.",
+      "invoiceNotFound": "Factura no encontrada o acceso denegado",
+      "jobNotFound": "Trabajo no encontrado",
+      "quoteInvalidState": "La cotización no está en un estado válido para esta acción",
+      "rejectionCommentRequired": "Se requiere un comentario de rechazo",
+      "emailSendFailed": "No se pudo iniciar el envío del correo electrónico"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket no encontrado o acceso denegado",
+      "invalidData": "Datos del ticket no válidos"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Revise los datos del grupo de visibilidad e inténtelo de nuevo.",
+      "boardsUnavailable": "Uno o varios tableros seleccionados ya no están disponibles. Actualice la página e inténtelo de nuevo.",
+      "contactNotFound": "Contacto no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "otherClient": "No tiene permiso para gestionar los grupos de visibilidad de otro cliente.",
+      "selectClientOrContact": "Seleccione un cliente o contacto antes de gestionar los grupos de visibilidad.",
+      "groupNotFound": "Grupo de visibilidad no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "groupNotValidForContact": "El grupo de visibilidad seleccionado no es válido para este contacto. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del grupo de visibilidad.",
+      "missingFieldNamed": "Falta un campo obligatorio del grupo de visibilidad: {{field}}.",
+      "recordInvalid": "Uno de los registros del grupo de visibilidad seleccionados ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un grupo de visibilidad con estos datos para este cliente.",
+      "invalidData": "Datos del grupo de visibilidad no válidos. Revise los datos del grupo y los tableros seleccionados."
+    }
   }
 }

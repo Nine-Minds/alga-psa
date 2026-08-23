@@ -2001,5 +2001,59 @@
       "packingSlip": "Packing Slip",
       "pickList": "Pick List"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Permission denied: invoice update required",
+      "invoiceDelete": "Permission denied: invoice delete required",
+      "invoiceAccess": "Permission denied: invoice access denied",
+      "otherClientInvoices": "Permission denied: cannot access invoices for another client"
+    },
+    "invoice": {
+      "notFound": "Invoice not found",
+      "notFoundRefresh": "Invoice not found. It may have been updated or deleted. Please refresh and try again.",
+      "notFoundNumbered": "Invoice {{invoiceId}} was not found.",
+      "clientNotFoundForInvoice": "Client not found for invoice {{invoiceNumber}}.",
+      "numberRequired": "Invoice number is required",
+      "dateRequired": "Invoice date is required",
+      "dateInvalid": "Invoice date is invalid",
+      "dueDateInvalid": "Due date is invalid",
+      "onlyDraftEditable": "Only draft invoices can be edited",
+      "numberExists": "Invoice number already exists. Choose a different number.",
+      "notFinalized": "Invoice is not finalized",
+      "unfinalizeFailed": "Invoice could not be unfinalized because an unexpected data error occurred. Please refresh and try again.",
+      "paidOrCancelled": "Cannot modify a paid or cancelled invoice",
+      "syncedVoidInstead": "This invoice is synced to an accounting system — void it instead of deleting.",
+      "invalidValue": "One of the selected invoice values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.",
+      "duplicate": "A conflicting invoice already exists. Please refresh and try again.",
+      "missingField": "Missing required invoice field.",
+      "missingFieldNamed": "Missing required invoice field: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Billing cycle not found. It may have been updated or deleted. Please refresh and try again.",
+      "invalidDates": "Billing cycle has invalid dates. Please review the cycle and try again."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Select at least one invoice to generate PDFs.",
+      "selectInvoicesEmail": "Select at least one invoice to email.",
+      "selectInvoices": "Select at least one invoice.",
+      "emailNotConfigured": "Email is not configured. Please configure email settings in Settings before sending invoices.",
+      "schedulePdfFailed": "Failed to start invoice PDF generation. Please try again.",
+      "scheduleEmailFailed": "Failed to start invoice email sending. Please try again.",
+      "recipientFailed": "Failed to load recipient information for this invoice.",
+      "sendFailed": "Failed to send invoice email. Please try again."
+    },
+    "template": {
+      "selectStandard": "Select a standard invoice template before saving.",
+      "selectBeforePreview": "Select an invoice template before previewing.",
+      "notFoundRefresh": "Invoice template not found. It may have been updated or deleted. Please refresh and try again.",
+      "missingDesign": "Invoice template is missing its design payload. Please choose another template.",
+      "invalidValue": "One of the selected invoice template values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected invoice template or client no longer exists. Please refresh and try again.",
+      "duplicate": "An invoice template with those settings already exists.",
+      "missingField": "Missing required invoice template field.",
+      "missingFieldNamed": "Missing required invoice template field: {{field}}."
+    }
   }
 }

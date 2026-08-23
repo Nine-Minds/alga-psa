@@ -40,9 +40,12 @@ interface PendingFile {
 
 const ACCEPTED_EXTENSIONS = KB_IMPORT_ALLOWED_EXTENSIONS;
 const POLL_INTERVAL_MS = 2000;
-// The job itself times out after 10 minutes; stop polling shortly after so a
-// lost job shows an error instead of an endless spinner.
-const POLL_TIMEOUT_MS = 15 * 60 * 1000;
+// Has to outlast the job's worst legitimate case, not just one attempt: an
+// attempt runs up to 10 minutes and is retried once, so a worker lost at minute
+// nine still finishes a little past twenty. Giving up earlier tells the user the
+// import failed while it is still running, and the re-import duplicates the
+// whole batch under -2 slugs.
+const POLL_TIMEOUT_MS = 25 * 60 * 1000;
 const MB = 1024 * 1024;
 
 export default function KBImportDialog({ isOpen, onClose, onImportComplete }: KBImportDialogProps) {

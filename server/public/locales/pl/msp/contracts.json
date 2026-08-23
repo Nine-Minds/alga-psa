@@ -2376,5 +2376,60 @@
   "wizardBucketPools": {
     "heading": "Pakiety godzin dla tej linii",
     "empty": "Brak pakietów godzin w tej linii. Dodaj pakiet, aby uwzględnić godziny z góry opłacone."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Odmowa uprawnień: nie można modyfikować linii umowy",
+      "deleteContracts": "Odmowa uprawnień: nie można usuwać umów rozliczeniowych"
+    },
+    "contract": {
+      "hasInvoices": "Ta umowa ma powiązane faktury i nie można jej usunąć.",
+      "invalidValue": "Jedna z wybranych wartości umowy jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana umowa, klient lub powiązany rekord już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana umowy jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości umowy jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola umowy.",
+      "missingFieldNamed": "Brakuje wymaganego pola umowy: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Odmowa uprawnień: nie można tworzyć szablonów rozliczeń",
+        "createContracts": "Odmowa uprawnień: nie można tworzyć umów rozliczeniowych",
+        "listTemplates": "Odmowa uprawnień: nie można wyświetlić listy szablonów umów",
+        "viewSnapshot": "Odmowa uprawnień: nie można wyświetlić migawki szablonu umowy",
+        "resumeContracts": "Odmowa uprawnień: nie można wznowić umów rozliczeniowych"
+      },
+      "templateNotFound": "Nie znaleziono szablonu",
+      "contractNotFound": "Nie znaleziono umowy",
+      "notDraft": "Umowa nie jest wersją roboczą",
+      "missingClient": "W roboczej wersji umowy brakuje przypisania klienta",
+      "invalidStartDate": "Robocza wersja umowy ma nieprawidłową datę rozpoczęcia",
+      "recordInvalid": "Jeden z wybranych rekordów kreatora umowy nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Pasujący rekord kreatora umowy już istnieje."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "Data zakończenia musi być późniejsza niż data wejścia w życie",
+      "overlaps": "Ten harmonogram nakłada się na istniejący harmonogram cen",
+      "wouldOverlap": "Ten harmonogram nakładałby się na istniejący harmonogram cen",
+      "notFound": "Nie znaleziono harmonogramu cen"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Odmowa uprawnień: nie można odczytać kolejki odnowień",
+        "update": "Odmowa uprawnień: nie można zaktualizować kolejki odnowień",
+        "ownerOtherTenant": "Odmowa uprawnień: nie można przypisać odnowień użytkownikowi z innej organizacji.",
+        "contractOtherTenant": "Odmowa uprawnień: nie można zakończyć odnowienia umową z innej organizacji."
+      },
+      "clientContractIdRequired": "Identyfikator umowy klienta jest wymagany.",
+      "workItemNotFound": "Nie znaleziono elementu pracy odnowienia. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "snoozeDateRequired": "Przed zapisaniem wybierz datę odłożenia.",
+      "snoozeDateInvalid": "Wybierz prawidłową datę odłożenia.",
+      "snoozeDateFuture": "Wybierz przyszłą datę odłożenia.",
+      "ownerInvalid": "Wybierz prawidłowego właściciela odnowienia.",
+      "ownerUnavailable": "Wybrany właściciel odnowienia nie jest już dostępny. Odśwież stronę i spróbuj ponownie.",
+      "activatedContractIdRequired": "Identyfikator aktywowanej umowy odnowienia jest wymagany.",
+      "contractNotActive": "Aktywowana umowa odnowienia nie jest już aktywna. Odśwież stronę i spróbuj ponownie.",
+      "manualRetryDueOnly": "Ręczne ponowienie jest dostępne tylko dla wymagalnych cykli odnowienia."
+    }
   }
 }

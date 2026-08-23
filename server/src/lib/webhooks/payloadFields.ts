@@ -137,6 +137,10 @@ export const payloadFieldsByEntitySchema = z
           code: z.ZodIssueCode.custom,
           path: [entity],
           message: `Unknown webhook entity "${entity}"`,
+          params: {
+            messageKey: 'msp/profile:errors.webhooks.validation.unknownEntity',
+            messageParams: { entity },
+          },
         });
         continue;
       }
@@ -148,6 +152,10 @@ export const payloadFieldsByEntitySchema = z
             code: z.ZodIssueCode.custom,
             path: [entity],
             message: `Unknown field "${field}" for entity "${entity}"`,
+            params: {
+              messageKey: 'msp/profile:errors.webhooks.validation.unknownField',
+              messageParams: { field, entity },
+            },
           });
         }
       }

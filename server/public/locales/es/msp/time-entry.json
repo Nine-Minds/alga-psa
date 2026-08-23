@@ -463,5 +463,42 @@
   "bundleNotice": {
     "withNumber": "Este ticket está agrupado bajo {{number}}. El tiempo del grupo se suele registrar en el ticket maestro.",
     "withoutNumber": "Este ticket forma parte de un grupo. El tiempo del grupo se suele registrar en el ticket maestro."
+  },
+  "errors": {
+    "timeSheet": {
+      "notFoundRefresh": "No se encontró la hoja de horas. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "onlySubmittedApprovable": "Solo se pueden aprobar las hojas de horas enviadas.",
+      "idRequired": "Se requiere el ID de la hoja de horas.",
+      "ticketIdRequired": "Se requiere el ID del ticket.",
+      "workItemRemoveFailed": "No se puede quitar ese elemento de trabajo. Actualice la página e inténtelo de nuevo.",
+      "onlyDraftRemovable": "Solo se pueden quitar las hojas de horas en borrador.",
+      "removeEntriesFirst": "Quite las entradas de tiempo antes de quitar esta hoja de horas.",
+      "onlyApprovedReopenable": "Solo se pueden reabrir las hojas de horas aprobadas.",
+      "invoicedCannotReopen": "Esta hoja de horas contiene tiempo facturado y no se puede reabrir."
+    },
+    "timeEntry": {
+      "notFoundRefresh": "No se encontró la entrada de tiempo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "serviceRequired": "Seleccione un servicio antes de guardar esta entrada de tiempo.",
+      "alreadyInvoiced": "Esta entrada de tiempo ya se ha facturado y no se puede modificar.",
+      "workItemTypeUnsupported": "El tipo de elemento de trabajo seleccionado no se admite en las entradas de tiempo.",
+      "bucketUpdateFailed": "No se puede actualizar el consumo de la bolsa de horas para esta entrada de tiempo. Actualice la página e inténtelo de nuevo.",
+      "wrongTimeSheet": "Esta entrada de tiempo no pertenece a la hoja de horas seleccionada.",
+      "outsidePeriod": "La entrada de tiempo debe estar dentro del período de la hoja de horas seleccionada.",
+      "invalidReference": "La entrada de tiempo, la hoja de horas o el elemento de trabajo seleccionado no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "La hoja de horas, la entrada de tiempo, el elemento de trabajo o el usuario seleccionado ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe una entrada de tiempo en conflicto. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la hoja de horas o de la entrada de tiempo.",
+      "missingFieldNamed": "Falta un campo obligatorio de la hoja de horas o de la entrada de tiempo: {{field}}."
+    },
+    "timePeriod": {
+      "datesRequired": "Introduzca fechas de inicio y de fin válidas."
+    },
+    "timePeriodSettings": {
+      "invalidValue": "Uno de los valores de la configuración del período no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "La configuración del período seleccionada ya no es válida. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe una configuración de período en conflicto.",
+      "missingField": "Falta un campo obligatorio de la configuración del período.",
+      "missingFieldNamed": "Falta un campo obligatorio de la configuración del período: {{field}}."
+    }
   }
 }

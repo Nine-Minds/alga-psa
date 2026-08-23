@@ -51,7 +51,7 @@ type PreviewDocumentTemplateResult = { html: string } | DocumentTemplateActionEr
 
 function resolveDocumentType(documentType: string): DocumentType | ActionMessageError {
   if (!isDocumentType(documentType)) {
-    return actionError(`Unknown document type: ${documentType}`);
+    return actionError(`Unknown document type: ${documentType}`, 'msp/billing:errors.documentTemplate.unknownType', { documentType });
   }
   return documentType;
 }
@@ -59,7 +59,7 @@ function resolveDocumentType(documentType: string): DocumentType | ActionMessage
 export const getDocumentTemplates = withAuth(
   async (user, { tenant }, documentType: string): Promise<DocumentTemplateListItem[] | DocumentTemplateActionError> => {
     if (!(await hasPermission(user as any, 'billing', 'read'))) {
-      return permissionError('Permission denied: cannot read document templates');
+      return permissionError('Permission denied: cannot read document templates', 'msp/billing:errors.documentTemplate.permissions.read');
     }
     const type = resolveDocumentType(documentType);
     if (typeof type !== 'string') {
@@ -78,7 +78,7 @@ export const saveDocumentTemplate = withAuth(
     input: { template_id?: string; name: string; templateAst: TemplateAst; version?: number; isClone?: boolean },
   ): Promise<SaveDocumentTemplateResult> => {
     if (!(await hasPermission(user as any, 'billing', 'update'))) {
-      return permissionError('Permission denied: cannot modify document templates');
+      return permissionError('Permission denied: cannot modify document templates', 'msp/billing:errors.documentTemplate.permissions.modify');
     }
     const type = resolveDocumentType(documentType);
     if (typeof type !== 'string') {
@@ -112,7 +112,7 @@ export const setDefaultDocumentTemplate = withAuth(
     opts?: { clientId?: string | null },
   ): Promise<SuccessResult> => {
     if (!(await hasPermission(user as any, 'billing', 'update'))) {
-      return permissionError('Permission denied: cannot set default document template');
+      return permissionError('Permission denied: cannot set default document template', 'msp/billing:errors.documentTemplate.permissions.setDefault');
     }
     const type = resolveDocumentType(documentType);
     if (typeof type !== 'string') {
@@ -145,7 +145,7 @@ export const setDefaultDocumentTemplate = withAuth(
 export const clearClientDocumentTemplate = withAuth(
   async (user, { tenant }, documentType: string, clientId: string): Promise<SuccessResult> => {
     if (!(await hasPermission(user as any, 'billing', 'update'))) {
-      return permissionError('Permission denied: cannot clear document template override');
+      return permissionError('Permission denied: cannot clear document template override', 'msp/billing:errors.documentTemplate.permissions.clearOverride');
     }
     const type = resolveDocumentType(documentType);
     if (typeof type !== 'string') {
@@ -162,7 +162,7 @@ export const clearClientDocumentTemplate = withAuth(
 export const deleteDocumentTemplate = withAuth(
   async (user, { tenant }, documentType: string, templateId: string): Promise<DeleteDocumentTemplateResult> => {
     if (!(await hasPermission(user as any, 'billing', 'delete'))) {
-      return permissionError('Permission denied: cannot delete document templates');
+      return permissionError('Permission denied: cannot delete document templates', 'msp/billing:errors.documentTemplate.permissions.delete');
     }
     const type = resolveDocumentType(documentType);
     if (typeof type !== 'string') {
@@ -195,7 +195,7 @@ export const runAuthoritativeTemplatePreview = withAuth(
     locale?: string,
   ): Promise<PreviewDocumentTemplateResult> => {
     if (!(await hasPermission(user as any, 'billing', 'read'))) {
-      return permissionError('Permission denied: cannot preview document templates');
+      return permissionError('Permission denied: cannot preview document templates', 'msp/billing:errors.documentTemplate.permissions.preview');
     }
     const type = resolveDocumentType(documentType);
     if (typeof type !== 'string') {

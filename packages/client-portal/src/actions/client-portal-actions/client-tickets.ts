@@ -15,8 +15,8 @@ import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, actionErrorFromValidationIssue, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionMessageParams, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { enforceTicketCloseRules } from '@alga-psa/tickets/lib/validateTicketClosure';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -52,32 +52,51 @@ export type ClientTicketActionResult<T> = T | ClientTicketActionError;
 class ExpectedClientTicketActionError extends Error {
   constructor(
     message: string,
-    readonly kind: 'action' | 'permission' = 'action'
+    readonly kind: 'action' | 'permission' = 'action',
+    /** Carried through to the returned payload so the boundary can localize it. */
+    readonly messageKey?: string,
+    readonly messageParams?: ActionMessageParams,
   ) {
     super(message);
     this.name = 'ExpectedClientTicketActionError';
   }
 }
 
-function expectedClientTicketActionError(message: string): ExpectedClientTicketActionError {
-  return new ExpectedClientTicketActionError(message, 'action');
+function expectedClientTicketActionError(
+  message: string,
+  messageKey?: string,
+  messageParams?: ActionMessageParams,
+): ExpectedClientTicketActionError {
+  return new ExpectedClientTicketActionError(message, 'action', messageKey, messageParams);
 }
 
-function zodErrorMessage(error: z.ZodError): string {
+function zodErrorMessage(error: z.ZodError): {
+  message: string;
+  messageKey?: string;
+  messageParams?: ActionMessageParams;
+} {
   const firstIssue = error.issues[0];
   if (!firstIssue) {
-    return 'Invalid ticket data';
+    return { message: 'Invalid ticket data', messageKey: 'client-portal:errors.tickets.invalidData' };
   }
 
-  const path = firstIssue.path.join('.');
-  return path ? `${path}: ${firstIssue.message}` : firstIssue.message;
+  const localized = actionErrorFromValidationIssue(firstIssue) as unknown as {
+    actionError: string;
+    messageKey?: string;
+    messageParams?: ActionMessageParams;
+  };
+  return {
+    message: localized.actionError,
+    messageKey: localized.messageKey,
+    messageParams: localized.messageParams,
+  };
 }
 
 function toClientTicketActionError(error: unknown): ClientTicketActionError | null {
   if (error instanceof ExpectedClientTicketActionError) {
     return error.kind === 'permission'
-      ? permissionError(error.message)
-      : actionError(error.message);
+      ? permissionError(error.message, error.messageKey, error.messageParams)
+      : actionError(error.message, error.messageKey, error.messageParams);
   }
 
   return null;
@@ -95,11 +114,11 @@ function expectedOrThrow(error: unknown, logMessage: string): ClientTicketAction
 
 function clientPortalUserIdOrError(user: { user_id?: string | null; user_type?: string | null }): string | ClientTicketActionError {
   if (!user.user_id) {
-    return permissionError('User ID not found in session');
+    return permissionError('User ID not found in session', 'common:errors.auth.userIdNotFound');
   }
 
   if (user.user_type !== 'client') {
-    return permissionError('Access denied: Client portal actions are restricted to client users');
+    return permissionError('Access denied: Client portal actions are restricted to client users', 'common:errors.auth.clientPortalOnly');
   }
 
   return user.user_id;
@@ -144,7 +163,10 @@ async function resolveVisibleTicket(
     .first();
 
   if (!ticket) {
-    throw expectedClientTicketActionError('Ticket not found or access denied');
+    throw expectedClientTicketActionError(
+      'Ticket not found or access denied',
+      'client-portal:errors.tickets.notFoundOrDenied',
+    );
   }
 
   return ticket;
@@ -170,7 +192,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
-      return permissionError('Insufficient permissions to view tickets');
+      return permissionError('Insufficient permissions to view tickets', 'common:errors.permissions.tickets.read');
     }
 
     const parsedStatusFilter = parseTicketStatusFilterValue(status);
@@ -290,7 +312,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
-      return permissionError('Insufficient permissions to view ticket details');
+      return permissionError('Insufficient permissions to view ticket details', 'common:errors.permissions.tickets.readDetails');
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -343,7 +365,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       const commentUserIdsSubquery = scopedDb.table('comments as c')
         .select('c.user_id')
         .where('c.ticket_id', ticketId)
-        .where('c.is_internal', false);
+        .where('c.is_internal', false)
+        // Do not enumerate authors of scheduled/canceled comments before
+        // publication — mirror the conversations query's publish_state gate.
+        .where('c.publish_state', 'published');
       const assignedUserIdSubquery = scopedDb.table('tickets as assigned_ticket')
         .select('assigned_ticket.assigned_to')
         .where('assigned_ticket.ticket_id', ticketId);
@@ -407,6 +432,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .where({
           'comments.ticket_id': ticketId,
           'comments.is_internal': false,
+          // Scheduled comments are an MSP-only draft state.  Keep this in the
+          // query (rather than the UI) so portal callers cannot infer them.
+          'comments.publish_state': 'published',
         })
         .where(function (this: Knex.QueryBuilder) {
           this.whereNull('ct.is_internal')
@@ -435,7 +463,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     }) as any;
 
     if (!result.ticket) {
-      return actionError('Ticket not found or access denied');
+      return actionError('Ticket not found or access denied', 'client-portal:errors.tickets.notFoundOrDenied');
     }
 
     // Create user map, including avatar URLs
@@ -562,7 +590,7 @@ export const addClientTicketComment = withAuth(async (
     } as IUser;
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
-      return permissionError('Insufficient permissions to add comments');
+      return permissionError('Insufficient permissions to add comments', 'common:errors.permissions.tickets.addComments');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -700,7 +728,7 @@ export const updateClientTicketComment = withAuth(async (
     } as IUser;
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
-      return permissionError('Insufficient permissions to update comments');
+      return permissionError('Insufficient permissions to update comments', 'common:errors.permissions.tickets.updateComments');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -796,7 +824,7 @@ export const updateTicketStatus = withAuth(async (
     } as IUser;
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
-      return permissionError('Insufficient permissions to update ticket status');
+      return permissionError('Insufficient permissions to update ticket status', 'common:errors.permissions.tickets.updateStatus');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -991,7 +1019,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
     } as IUser;
     const canDelete = await hasPermission(userForPermission, 'ticket', 'delete', db);
     if (!canDelete) {
-      return permissionError('Insufficient permissions to delete comments');
+      return permissionError('Insufficient permissions to delete comments', 'common:errors.permissions.tickets.deleteComments');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1059,7 +1087,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
-      return permissionError('Insufficient permissions to view ticket documents');
+      return permissionError('Insufficient permissions to view ticket documents', 'common:errors.permissions.tickets.viewDocuments');
     }
 
     const documents = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1078,7 +1106,10 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
         .first();
 
       if (!ticket) {
-        throw expectedClientTicketActionError('Ticket not found or access denied');
+        throw expectedClientTicketActionError(
+      'Ticket not found or access denied',
+      'client-portal:errors.tickets.notFoundOrDenied',
+    );
       }
 
       // Get client-visible documents for the ticket
@@ -1120,7 +1151,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
     } as IUser;
     const canCreate = await hasPermission(userForPermission, 'ticket', 'create', db);
     if (!canCreate) {
-      return permissionError('Insufficient permissions to create tickets');
+      return permissionError('Insufficient permissions to create tickets', 'common:errors.permissions.tickets.create');
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1142,7 +1173,12 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
           });
         } catch (error) {
           if (error instanceof z.ZodError) {
-            throw expectedClientTicketActionError(zodErrorMessage(error));
+            const zodFailure = zodErrorMessage(error);
+            throw expectedClientTicketActionError(
+              zodFailure.message,
+              zodFailure.messageKey,
+              zodFailure.messageParams,
+            );
           }
           throw error;
         }

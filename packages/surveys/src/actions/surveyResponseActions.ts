@@ -17,8 +17,10 @@ import {
 } from '@alga-psa/workflow-streams';
 import {
   actionError,
+  actionErrorFromValidationIssue,
   type ActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { localizeActionError } from '@alga-psa/auth';
 
 const SURVEY_INVITATIONS_TABLE = 'survey_invitations';
 const SURVEY_RESPONSES_TABLE = 'survey_responses';
@@ -107,7 +109,12 @@ function surveyResponseActionErrorFrom(error: unknown): SurveyResponseActionErro
 
   if (error instanceof z.ZodError) {
     const firstIssue = error.issues[0];
-    return actionError(firstIssue?.message || 'Survey response data is invalid. Please review your feedback and try again.');
+    return firstIssue?.message
+      ? actionErrorFromValidationIssue(firstIssue)
+      : actionError(
+          'Survey response data is invalid. Please review your feedback and try again.',
+          'msp/surveys:errors.response.invalidData',
+        );
   }
 
   if (error instanceof Error) {
@@ -120,25 +127,31 @@ function surveyResponseActionErrorFrom(error: unknown): SurveyResponseActionErro
       message === 'Survey has already been completed' ||
       message === 'Survey invitation not found for token'
     ) {
-      return actionError('This feedback link is no longer valid or has already been used.');
+      return actionError('This feedback link is no longer valid or has already been used.', 'msp/surveys:errors.response.linkInvalidOrUsed');
     }
     if (message === 'Rating is outside the allowed range for this survey') {
-      return actionError('Select a rating from the choices shown before submitting.');
+      return actionError('Select a rating from the choices shown before submitting.', 'msp/surveys:errors.response.ratingRequired');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('This feedback link is invalid or expired.');
+    return actionError('This feedback link is invalid or expired.', 'msp/surveys:errors.response.linkInvalidOrExpired');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required feedback field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required feedback field: ${dbError.column}.`,
+          'msp/surveys:errors.response.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required feedback field.', 'msp/surveys:errors.response.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('This feedback link is no longer connected to an active ticket. Please contact your technician.');
+    return actionError('This feedback link is no longer connected to an active ticket. Please contact your technician.', 'msp/surveys:errors.response.ticketInactive');
   }
   if (dbError?.code === '23505') {
-    return actionError('This survey has already been completed.');
+    return actionError('This survey has already been completed.', 'msp/surveys:errors.response.alreadyCompleted');
   }
 
   return null;
@@ -175,7 +188,9 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
     return await submitSurveyResponseInternal(input);
   } catch (error) {
     const expected = surveyResponseActionErrorFrom(error);
-    if (expected) return expected;
+    // Anonymous token flow: no session, so this never passes through withAuth.
+    // Localize at its own return instead, off the visitor's cookie / Accept-Language.
+    if (expected) return await localizeActionError(expected);
     throw error;
   }
 }

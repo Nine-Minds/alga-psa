@@ -124,7 +124,7 @@ export function OpportunityMeetingMode() {
         <span>{t('opportunities.meeting.keys', '← back · → reviewed')}</span>
       </div>
 
-      <div className="rounded-2xl border border-[rgb(var(--color-border-200))] bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-6 card-elevated">
         <div className="mb-1 flex flex-wrap items-center gap-2.5">
           <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{deal.title}</h2>
           {reviewedIds.has(deal.opportunity_id) ? (

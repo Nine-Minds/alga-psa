@@ -21,6 +21,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-hot-toast';
 
 interface CreateTaskFromTicketDialogProps {
   ticket: {
@@ -166,7 +167,14 @@ export default function CreateTaskFromTicketDialog({
           inDrawer
           phase={selectedPhase}
           onClose={closeDrawer}
-          onTaskAdded={() => null}
+          onTaskAdded={(resultTask) => {
+            closeDrawer();
+            if (resultTask) {
+              toast.success(
+                t('dialogs.createTaskFromTicket.createdSuccess', 'Task created successfully')
+              );
+            }
+          }}
           onTaskUpdated={async () => undefined}
           projectStatuses={statuses}
           defaultStatus={defaultStatus}

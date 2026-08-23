@@ -41,6 +41,8 @@ import CommentItem from './CommentItem';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import styles from './TicketDetails.module.css';
 import { Button } from '@alga-psa/ui/components/Button';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -78,7 +80,8 @@ interface TicketConversationProps {
     isInternal: boolean,
     isResolution: boolean,
     closeStatusId?: string | null,
-    options?: TicketNotificationSuppressionValue
+    options?: TicketNotificationSuppressionValue,
+    schedule?: { publishAt: string; timeZone: string } | null,
   ) => Promise<boolean>;
   onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
   onTabChange: (tab: string) => void;
@@ -164,6 +167,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
+  const [isScheduleToggle, setIsScheduleToggle] = useState(false);
+  const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
+  const scheduledInstant = useMemo(() => {
+    if (!isScheduleToggle || !scheduledPublishAt) return null;
+    try { return zonedWallTimeToUtc(dateToWallTimeString(scheduledPublishAt), getUserTimeZone()); } catch { return null; }
+  }, [isScheduleToggle, scheduledPublishAt]);
+  const scheduleIsValid = !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
     defaultNotificationSuppression
@@ -273,13 +283,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           isInternalToggle,
           isResolutionToggle,
           closeStatusId,
-          suppressionOptions
+          suppressionOptions,
+          isScheduleToggle && !isInternalToggle && scheduledInstant
+            ? { publishAt: scheduledInstant.toISOString(), timeZone: getUserTimeZone() }
+            : null,
         );
         if (success) {
           setIsInternalToggle(false);
           setIsResolutionToggle(false);
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
           setNotificationSuppression(defaultNotificationSuppression());
+          setIsScheduleToggle(false);
+          setScheduledPublishAt(undefined);
         }
       }
       
@@ -707,6 +722,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
               </Label>
             </div>
           )}
+          {!hideInternalTab && !isInternalToggle && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id={`${compId}-schedule-toggle`}
+                checked={isScheduleToggle}
+                onCheckedChange={setIsScheduleToggle}
+              />
+              <Label htmlFor={`${compId}-schedule-toggle`}>
+                {t('conversation.schedule', 'Schedule')}
+              </Label>
+            </div>
+          )}
           <div className="flex items-center space-x-2">
             <Switch
               id={`${compId}-resolution-toggle`}
@@ -748,6 +775,28 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             </div>
           )}
         </div>
+        {!hideInternalTab && !isInternalToggle && isScheduleToggle && (
+          <div className="mb-3 ml-2 flex flex-wrap items-center gap-2">
+            <DateTimePicker
+              id={`${compId}-scheduled-publish-at`}
+              label={`${t('conversation.publishAt', 'Publish at')} (${getUserTimeZone()})`}
+              value={scheduledPublishAt}
+              onChange={setScheduledPublishAt}
+              minDate={new Date()}
+              clearable
+            />
+            {scheduledPublishAt && !scheduleIsValid && (
+              <span className="text-sm text-[rgb(var(--color-accent-500))]">
+                {t('conversation.invalidScheduleTime', 'Choose an unambiguous future time in this time zone.')}
+              </span>
+            )}
+            {scheduleIsValid && scheduledInstant && (
+              <span className="text-sm text-[rgb(var(--color-text-600))]">
+                {t('conversation.resolvedPublishInstant', 'Resolved instant')}: {scheduledInstant.toISOString()}
+              </span>
+            )}
+          </div>
+        )}
         <Suspense fallback={<RichTextEditorSkeleton height="200px" title={t('conversation.commentEditor', 'Comment Editor')} />}>
           <TextEditor
             {...withDataAutomationId({ id: `${compId}-editor` })}
@@ -764,9 +813,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           <Button
             id={`${compId}-add-comment-btn`}
             onClick={handleSubmitComment}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !scheduleIsValid}
           >
-            {isSubmitting ? tCore('common.loading', 'Loading...') : t('conversation.addComment', 'Add Comment')}
+            {isSubmitting ? tCore('common.loading', 'Loading...') : isScheduleToggle ? t('conversation.schedule', 'Schedule') : t('conversation.addComment', 'Add Comment')}
           </Button>
           <Button
             id={`${compId}-cancel-comment-btn`}

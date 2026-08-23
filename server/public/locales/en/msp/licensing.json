@@ -353,5 +353,9 @@
       "startTrial": "Failed to start trial.",
       "refreshLicense": "Failed to refresh the license."
     }
+  },
+  "errors": {
+    "notSignedIn": "Unauthorized. Sign in to manage licensing.",
+    "accountManagementRead": "Permission denied: account_management read required"
   }
 }

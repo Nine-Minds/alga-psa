@@ -4,7 +4,8 @@ import { DEFAULT_INVOICE_PRINT_SETTINGS, TEMPLATE_AST_VERSION } from '@alga-psa/
 const cloneAst = (ast: TemplateAst): TemplateAst =>
   JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
-const buildSharedBindings = (): NonNullable<TemplateAst['bindings']> => ({
+/** The invoice document's binding catalog — also what the designer's field picker generates from. */
+export const buildInvoiceTemplateBindings = (): NonNullable<TemplateAst['bindings']> => ({
   values: {
     invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
     issueDate: { id: 'issueDate', kind: 'value', path: 'issueDate' },
@@ -67,7 +68,7 @@ const buildStandardDefaultAst = (templateName: string): TemplateAst => ({
     templateName,
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
-  bindings: buildSharedBindings(),
+  bindings: buildInvoiceTemplateBindings(),
   layout: {
     id: 'root',
     type: 'document',
@@ -156,7 +157,7 @@ const buildStandardDetailedAst = (): TemplateAst => ({
     templateName: 'Detailed Template',
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
-  bindings: buildSharedBindings(),
+  bindings: buildInvoiceTemplateBindings(),
   layout: {
     id: 'root',
     type: 'document',
@@ -498,7 +499,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
     templateName: 'Grouped Template',
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
-  bindings: buildSharedBindings(),
+  bindings: buildInvoiceTemplateBindings(),
   layout: {
     id: 'root',
     type: 'document',
@@ -672,7 +673,7 @@ const buildStandardByLocationAst = (): TemplateAst => ({
     templateName: 'Standard Invoice By Location',
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
-  bindings: buildSharedBindings(),
+  bindings: buildInvoiceTemplateBindings(),
   layout: {
     id: 'root',
     type: 'document',

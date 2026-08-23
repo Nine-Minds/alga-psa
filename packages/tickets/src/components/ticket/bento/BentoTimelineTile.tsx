@@ -6,7 +6,9 @@ import type { PartialBlock } from '@blocknote/core';
 import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, Lock, MessageSquare } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -39,6 +41,7 @@ import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTi
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
+import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
   loading: () => <RichTextEditorSkeleton height="120px" />,
@@ -83,7 +86,8 @@ interface BentoTimelineTileProps {
     isInternal: boolean,
     isResolution: boolean,
     closeStatusId?: string | null,
-    options?: TicketNotificationSuppressionValue
+    options?: TicketNotificationSuppressionValue,
+    schedule?: { publishAt: string; timeZone: string } | null,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   /** Threaded reply pipeline (same handler the conversation view gets). */
@@ -262,14 +266,14 @@ function laneVisual(node: TimelineNode): { pin: string; icon: React.ReactNode; a
       };
     }
     return {
-      pin: 'bg-[rgb(var(--color-secondary-50))] dark:bg-[rgb(var(--color-secondary-400)/0.15)] ring-[rgb(var(--color-secondary-200))] dark:ring-[rgb(var(--color-secondary-400)/0.4)] text-[rgb(var(--color-secondary-600))] dark:text-[rgb(var(--color-secondary-300))]',
+      pin: 'chip-secondary ring-[rgb(var(--color-secondary-200))] dark:ring-[rgb(var(--color-secondary-400)/0.4)]',
       icon: <MessageSquare className={iconCls} />,
       accent,
     };
   }
   if (node.lane === 'time') {
     return {
-      pin: 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.15)] ring-[rgb(var(--color-primary-200))] dark:ring-[rgb(var(--color-primary-400)/0.4)] text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]',
+      pin: 'chip-primary ring-[rgb(var(--color-primary-200))] dark:ring-[rgb(var(--color-primary-400)/0.4)]',
       icon: <Clock className={iconCls} />,
       accent: '',
     };
@@ -282,7 +286,7 @@ function laneVisual(node: TimelineNode): { pin: string; icon: React.ReactNode; a
     };
   }
   return {
-    pin: 'bg-[rgb(var(--color-border-100))] ring-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-400))]',
+    pin: 'bg-[rgb(var(--color-border-100))] ring-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-500))]',
     icon: <Activity className={iconCls} />,
     accent: '',
   };
@@ -351,6 +355,18 @@ export function BentoTimelineTile({
   const [filter, setFilter] = useState<LaneFilter>('everything');
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
   const [composerLane, setComposerLane] = useState<'client' | 'internal' | 'resolution'>('client');
+  const [isScheduleToggle, setIsScheduleToggle] = useState(false);
+  const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
+  const scheduledInstant = useMemo(() => {
+    if (!isScheduleToggle || !scheduledPublishAt) return null;
+    try {
+      return zonedWallTimeToUtc(dateToWallTimeString(scheduledPublishAt), getUserTimeZone());
+    } catch {
+      return null;
+    }
+  }, [isScheduleToggle, scheduledPublishAt]);
+  const isClientComposer = composerLane === 'client';
+  const scheduleIsValid = !isClientComposer || !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [hasDraft, setHasDraft] = useState(false);
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
@@ -607,22 +623,29 @@ export function BentoTimelineTile({
       closeStatusId,
       closeStatusId && notificationSuppression.suppressContactNotifications
         ? notificationSuppression
-        : undefined
+        : undefined,
+      isScheduleToggle && composerLane === 'client' && scheduledInstant
+        ? { publishAt: scheduledInstant.toISOString(), timeZone: getUserTimeZone() }
+        : null,
     );
     if (success) {
       setHasDraft(false);
       setShowComposer(false);
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
       setNotificationSuppression(defaultNotificationSuppression());
+      setIsScheduleToggle(false);
+      setScheduledPublishAt(undefined);
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, composeUploadSession]);
+  }, [onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession]);
 
   const handleCancelCompose = useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
     setHasDraft(false);
     setShowComposer(false);
+    setIsScheduleToggle(false);
+    setScheduledPublishAt(undefined);
   }, [onNewCommentContentChange]);
 
   useEffect(() => {
@@ -647,7 +670,7 @@ export function BentoTimelineTile({
   });
   useDialogSubmitShortcut(() => { void handleSend(); }, {
     active: hasDraft,
-    enabled: !isSubmitting && hasDraft,
+    enabled: !isSubmitting && hasDraft && scheduleIsValid,
   });
 
   // A single comment card plus, when it's the active reply target, an inline
@@ -772,11 +795,51 @@ export function BentoTimelineTile({
           id={`${id}-composer-send`}
           size="sm"
           onClick={handleSend}
-          disabled={isSubmitting || !hasDraft}
+          disabled={isSubmitting || !hasDraft || !scheduleIsValid}
         >
-          {isSubmitting ? t('bento.timeline.sending', 'Sending…') : t('bento.timeline.send', 'Send')}
+          {isSubmitting
+            ? t('bento.timeline.sending', 'Sending…')
+            : isClientComposer && isScheduleToggle
+              ? t('conversation.schedule', 'Schedule')
+              : t('bento.timeline.send', 'Send')}
         </Button>
       </div>
+      {isClientComposer ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[rgb(var(--color-border-100))] pt-3">
+          <div className="flex items-center gap-2">
+            <Switch
+              id={`${id}-composer-schedule-toggle`}
+              checked={isScheduleToggle}
+              onCheckedChange={setIsScheduleToggle}
+            />
+            <Label htmlFor={`${id}-composer-schedule-toggle`}>
+              {t('conversation.schedule', 'Schedule')}
+            </Label>
+          </div>
+          {isScheduleToggle ? (
+            <>
+              <DateTimePicker
+                id={`${id}-composer-scheduled-publish-at`}
+                label={`${t('conversation.publishAt', 'Publish at')} (${getUserTimeZone()})`}
+                value={scheduledPublishAt}
+                onChange={setScheduledPublishAt}
+                minDate={new Date()}
+                clearable
+              />
+              {scheduledPublishAt && !scheduleIsValid ? (
+                <span className="text-sm text-[rgb(var(--color-accent-500))]">
+                  {t('conversation.invalidScheduleTime', 'Choose an unambiguous future time in this time zone.')}
+                </span>
+              ) : null}
+              {scheduleIsValid && scheduledInstant ? (
+                <span className="text-sm text-[rgb(var(--color-text-600))]">
+                  {t('conversation.resolvedPublishInstant', 'Resolved instant')}: {scheduledInstant.toISOString()}
+                </span>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
       {composerLane === 'resolution' ? (
         <div
           id={`${id}-composer-resolution-options`}
@@ -903,7 +966,7 @@ export function BentoTimelineTile({
               <li key={node.key}>
                 {showBreak ? (
                   <div className="relative flex items-center gap-2 pl-9 pt-3 pb-1 first:pt-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] bg-[rgb(var(--color-border-100))] rounded-full px-2.5 py-0.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-500))] bg-[rgb(var(--color-border-100))] rounded-full px-2.5 py-0.5">
                       {day}
                     </span>
                     <div className="flex-1 h-px bg-[rgb(var(--color-border-100))]" />
@@ -974,7 +1037,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
             {timeEntry.user_display_name || t('bento.timeline.someone', 'Someone')}
           </span>{' '}
           {t('bento.timeline.logged', 'logged')}{' '}
-          <span className="inline-block rounded bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.2)] px-1.5 text-xs font-semibold text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">
+          <span className="chip-primary inline-block rounded px-1.5 text-xs font-semibold">
             {formatMinutes(timeEntry.billable_duration)}
           </span>
           {timeEntry.notes ? <> — {timeEntry.notes}</> : null}

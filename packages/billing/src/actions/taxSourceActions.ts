@@ -40,7 +40,7 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
   clientId: string
 ): Promise<ClientTaxSourceInfo | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
 
@@ -174,7 +174,7 @@ export const validateInvoiceFinalization = withAuth(async (
   invoiceId: string
 ): Promise<InvoiceFinalizationValidation | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
   return validateInvoiceFinalizationInternal(knex, tenant, invoiceId);
@@ -191,7 +191,7 @@ export const updateInvoiceTaxSource = withAuth(async (
   newTaxSource: TaxSource
 ): Promise<{ success: boolean; error?: string } | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   const { knex } = await createTenantKnex();
 

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "F001",
+    "description": "Client Quick Add / Create Client form allows submitting with a blank email (no required indicator, submit not blocked).",
+    "implemented": false,
+    "prdRefs": ["FR1", "UX / UI Notes"]
+  },
+  {
+    "id": "F002",
+    "description": "Client Details edit form allows saving with a blank email and clearing a previously set email.",
+    "implemented": false,
+    "prdRefs": ["FR2", "UX / UI Notes"]
+  },
+  {
+    "id": "F003",
+    "description": "Client UI email input still shows inline format validation when a non-empty, invalid email is entered.",
+    "implemented": false,
+    "prdRefs": ["FR3", "UX / UI Notes"]
+  },
+  {
+    "id": "F004",
+    "description": "Server create-client action accepts payload with missing/blank email and persists NULL.",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F005",
+    "description": "Server update-client action accepts blank email and clears a previously stored email to NULL.",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F006",
+    "description": "Server actions still reject a supplied-but-malformed client email with a validation error.",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F007",
+    "description": "REST create/update client schemas accept missing email and validate format when supplied.",
+    "implemented": false,
+    "prdRefs": ["FR1", "FR3", "FR5"]
+  },
+  {
+    "id": "F008",
+    "description": "ClientSchema read/representation (server/src/lib/schemas/client.schema.ts) tolerates null/absent email so reading an email-less client does not throw.",
+    "implemented": false,
+    "prdRefs": ["FR4", "OQ1"]
+  },
+  {
+    "id": "F009",
+    "description": "OpenAPI spec (ce/ee) documents client email as optional and stays consistent with schemas; generated SDK/types build clean.",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F010",
+    "description": "Blank/whitespace/null client email are all normalized to 'not supplied' (NULL), not stored as empty string, consistently across actions and REST.",
+    "implemented": false,
+    "prdRefs": ["FR2", "FR3"]
+  }
+]

@@ -355,5 +355,9 @@
       "startTrial": "No se pudo iniciar la prueba.",
       "refreshLicense": "No se pudo actualizar la licencia."
     }
+  },
+  "errors": {
+    "notSignedIn": "No autorizado. Inicie sesión para gestionar las licencias.",
+    "accountManagementRead": "Permiso denegado: se requiere permiso de lectura de la gestión de cuentas"
   }
 }

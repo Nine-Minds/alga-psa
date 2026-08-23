@@ -184,7 +184,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: TicketNotificationSuppressionValue
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -1913,7 +1913,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         isInternal: boolean,
         isResolution: boolean,
         closeStatusId: string | null = null,
-        options?: TicketNotificationSuppressionValue
+        options?: TicketNotificationSuppressionValue,
+        schedule?: { publishAt: string; timeZone: string } | null,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -1961,13 +1962,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     JSON.stringify(newCommentContent),
                     isInternal,
                     isResolution,
-                    willCloseTicket
+                    willCloseTicket,
+                    schedule,
                 );
 
                 // Optimistically update the response state in UI to match server behavior:
                 // - Internal note: no change
                 // - Client-visible comment from internal user (MSP portal): awaiting client
-                if (!isInternal && responseStateTrackingEnabled) {
+                if (!isInternal && !schedule && responseStateTrackingEnabled) {
                     setTicket((prev: any) => ({
                         ...prev,
                         response_state: 'awaiting_client'
@@ -1989,7 +1991,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 }
 
                 // If this was a resolution note and a closed status was selected, close the ticket.
-                if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
+                if (!schedule && isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
                     if (options?.suppressContactNotifications) {
                         // Mirror handleSelectChange's pre-close check so unmet
                         // close rules open the override dialog (carrying the
@@ -2060,6 +2062,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         is_resolution: isResolution,
                         user_id: userId,
                         author_type: 'internal', // Will be overridden based on user type in the action
+                        ...(schedule ? {
+                            scheduled_publish_at: schedule.publishAt,
+                            scheduled_publish_tz: schedule.timeZone,
+                        } : {}),
                         // See email-subscriber suppression note above.
                         ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
                     });
@@ -3352,8 +3358,8 @@ const handleClose = () => {
 
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
-            <div className="bg-gray-100 dark:bg-gray-900">
-                <div className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-900 py-2 flex gap-3">
+            <div className="bg-[rgb(var(--color-app-ground))]">
+                <div className="sticky top-0 z-10 bg-[rgb(var(--color-app-ground))] py-2 flex gap-3">
                     {!isInDrawer && (
                         <div className="flex-shrink-0 self-start">
                             <BackNav href="/msp/tickets"><span className="text-right">← {t('navigation.backTo', 'Back to')}<br />{t('navigation.tickets', 'Tickets')} </span></BackNav>

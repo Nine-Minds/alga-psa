@@ -14,6 +14,13 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';
 
 
+// billingCycleActions imports hasPermission from '@alga-psa/auth/rbac'. The
+// shared mock testMocks declares for that specifier does not reach this file's
+// module graph, so the real check ran and denied a roleless fixture user.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true)),
+}));
+
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();

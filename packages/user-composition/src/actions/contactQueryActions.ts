@@ -24,7 +24,7 @@ export const getContactsForPicker = withAuth(async (
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'contact', 'read')) {
-    return permissionError('Permission denied: Cannot read contacts');
+    return permissionError('Permission denied: Cannot read contacts', 'msp/contacts:errors.contact.readPermission');
   }
 
   const { knex: db } = await createTenantKnex();

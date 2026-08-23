@@ -18,6 +18,7 @@ import {
 } from '@alga-psa/workflow-streams';
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { isTagActionError, type TagActionError } from './tagActionErrors';
@@ -42,7 +43,7 @@ function tagActionErrorFrom(error: unknown): TagActionError | null {
 
   if (error instanceof Error) {
     const message = error.message;
-    if (message.includes('Permission denied') || message === 'user is not logged in' || /unauthorized|not authenticated|must sign in/i.test(message)) {
+    if (isAuthorizationThrow(error) || /unauthorized|not authenticated|must sign in/i.test(message)) {
       return permissionError(message);
     }
     if (
@@ -57,31 +58,37 @@ function tagActionErrorFrom(error: unknown): TagActionError | null {
       return actionError(message);
     }
     if (message.startsWith('Tag with id ') || message.startsWith('Tag mapping with id ')) {
-      return actionError('Tag not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Tag not found. It may have been deleted. Please refresh and try again.', 'common:errors.tags.notFound');
     }
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected tag values is invalid. Please refresh and try again.');
+    return actionError('One of the selected tag values is invalid. Please refresh and try again.', 'common:errors.tags.invalidValue');
   }
   if (dbError?.code === '22001') {
-    return actionError('Tag text is too long.');
+    return actionError('Tag text is too long.', 'common:errors.tags.textTooLongShort');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required tag field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required tag field: ${dbError.column}.`,
+          'common:errors.tags.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required tag field.', 'common:errors.tags.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected tag or tagged record no longer exists. Please refresh and try again.');
+    return actionError('The selected tag or tagged record no longer exists. Please refresh and try again.', 'common:errors.tags.referenceMissing');
   }
   if (dbError?.code === '23505') {
     if (dbError.constraint?.includes('tag_mappings')) {
-      return actionError('That tag is already applied to this item.');
+      return actionError('That tag is already applied to this item.', 'common:errors.tags.alreadyApplied');
     }
-    return actionError('A tag with those details already exists.');
+    return actionError('A tag with those details already exists.', 'common:errors.tags.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the tag values is not allowed. Please review the tag and try again.');
+    return actionError('One of the tag values is not allowed. Please review the tag and try again.', 'common:errors.tags.notAllowed');
   }
 
   return null;
@@ -324,19 +331,19 @@ export const createTag = withAuth(async (
 ): Promise<ITag | TagActionError> => {
   // Validate tag text
   if (!tag.tag_text || !tag.tag_text.trim()) {
-    return actionError('Tag text is required');
+    return actionError('Tag text is required', 'common:errors.tags.textRequired');
   }
 
   const tagText = tag.tag_text.trim();
 
   // Validate length
   if (tagText.length > 50) {
-    return actionError('Tag text too long (max 50 characters)');
+    return actionError('Tag text too long (max 50 characters)', 'common:errors.tags.textTooLong');
   }
 
   // Validate characters - allow letters, numbers, spaces, and common punctuation
   if (!/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\][{};':",./<>?]+$/.test(tagText)) {
-    return actionError('Tag text contains invalid characters');
+    return actionError('Tag text contains invalid characters', 'common:errors.tags.textInvalidCharacters');
   }
 
   const userId = currentUser.user_id;
@@ -1203,10 +1210,10 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
   // Validate hex color codes if provided
   const hexColorRegex = /^#[0-9A-F]{6}$/i;
   if (backgroundColor && !hexColorRegex.test(backgroundColor)) {
-    return actionError('Invalid background color format. Must be a valid hex color code (e.g., #FF0000)');
+    return actionError('Invalid background color format. Must be a valid hex color code (e.g., #FF0000)', 'common:errors.tags.backgroundColorInvalid');
   }
   if (textColor && !hexColorRegex.test(textColor)) {
-    return actionError('Invalid text color format. Must be a valid hex color code (e.g., #FFFFFF)');
+    return actionError('Invalid text color format. Must be a valid hex color code (e.g., #FFFFFF)', 'common:errors.tags.textColorInvalid');
   }
 
   try {
@@ -1286,7 +1293,7 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
 
   // Validate tag text
   if (!newTagText || !newTagText.trim()) {
-    return actionError('Tag text cannot be empty');
+    return actionError('Tag text cannot be empty', 'common:errors.tags.textEmpty');
   }
 
   const trimmedNewText = newTagText.trim();
@@ -1456,7 +1463,7 @@ export const deleteAllTagsByText = withAuth(async (currentUser: IUserWithRoles, 
 
   // Validate tag text
   if (!tagText || !tagText.trim()) {
-    return actionError('Tag text cannot be empty');
+    return actionError('Tag text cannot be empty', 'common:errors.tags.textEmpty');
   }
 
   const trimmedText = tagText.trim();

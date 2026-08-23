@@ -1,509 +1,517 @@
 {
   "page": {
-    "title": "11111"
+    "title": "⟦Řḗƥȯřŧş⟧"
   },
   "actions": {
-    "refresh": "11111"
+    "refresh": "⟦Řḗƒřḗşħ⟧"
   },
   "placeholders": {
-    "selectContract": "11111"
+    "selectContract": "⟦Şḗŀḗƈŧ ƈȯƞŧřȧƈŧ...⟧"
   },
   "units": {
-    "hoursShort": "11111",
-    "days": "11111",
-    "percent": "11111",
-    "dash": "11111"
+    "hoursShort": "⟦ħřş⟧",
+    "days": "⟦ḓȧẏş⟧",
+    "percent": "⟦%⟧",
+    "dash": "⟦—⟧"
   },
   "reportsPage": {
     "cards": {
       "timeUtilization": {
-        "title": "11111",
-        "placeholder": "11111"
+        "title": "⟦Ŧīḿḗ Ŭŧīŀīẑȧŧīȯƞ⟧",
+        "placeholder": "⟦[Ŧīḿḗ Ŭŧīŀīẑȧŧīȯƞ Ƈħȧřŧ Ƥŀȧƈḗħȯŀḓḗř]⟧"
       },
       "projectProgress": {
-        "title": "11111",
-        "placeholder": "11111"
+        "title": "⟦Ƥřȯĵḗƈŧ Ƥřȯɠřḗşş⟧",
+        "placeholder": "⟦[Ƥřȯĵḗƈŧ Ƥřȯɠřḗşş Ƈħȧřŧ Ƥŀȧƈḗħȯŀḓḗř]⟧"
       },
       "revenueByClient": {
-        "title": "11111",
-        "placeholder": "11111"
+        "title": "⟦Řḗṽḗƞŭḗ ƀẏ Ƈŀīḗƞŧ⟧",
+        "placeholder": "⟦[Řḗṽḗƞŭḗ ƀẏ Ƈŀīḗƞŧ Ƈħȧřŧ Ƥŀȧƈḗħȯŀḓḗř]⟧"
       },
       "teamPerformance": {
-        "title": "11111",
-        "placeholder": "11111"
+        "title": "⟦Ŧḗȧḿ Ƥḗřƒȯřḿȧƞƈḗ⟧",
+        "placeholder": "⟦[Ŧḗȧḿ Ƥḗřƒȯřḿȧƞƈḗ Ƈħȧřŧ Ƥŀȧƈḗħȯŀḓḗř]⟧"
       }
     },
-    "description": "11111",
+    "description": "⟦Ƈȧƞƞḗḓ ȯƥḗřȧŧīȯƞȧŀ řḗƥȯřŧş ƒȯř ŧħḗ ƈŭřřḗƞŧ ẇȯřķşƥȧƈḗ. Ḿȯřḗ ƈŭşŧȯḿīẑȧŧīȯƞ ẇīŀŀ ŀȧẏḗř ȯƞŧȯ ŧħīş ƈȧŧȧŀȯɠ ŀȧŧḗř.⟧",
     "categories": {
-      "helpdesk": "11111",
-      "operations": "11111",
-      "billing": "11111",
-      "inventory": "11111"
+      "helpdesk": "⟦Ħḗŀƥ ḓḗşķ⟧",
+      "operations": "⟦Ȯƥḗřȧŧīȯƞş⟧",
+      "billing": "⟦Ɓīŀŀīƞɠ⟧",
+      "inventory": "⟦Īƞṽḗƞŧȯřẏ⟧"
     },
     "badges": {
-      "planned": "11111"
+      "planned": "⟦Ƥŀȧƞƞḗḓ⟧"
     },
     "actions": {
-      "viewReport": "11111",
-      "openInBilling": "11111",
-      "openReport": "11111",
-      "requiresTier": "11111 {{tier}} 11111",
-      "comingSoon": "11111"
+      "viewReport": "⟦Ṽīḗẇ řḗƥȯřŧ⟧",
+      "openInBilling": "⟦Ȯƥḗƞ īƞ ƀīŀŀīƞɠ⟧",
+      "openReport": "⟦Ȯƥḗƞ řḗƥȯřŧ⟧",
+      "requiresTier": "⟦Řḗʠŭīřḗş {{tier}}⟧",
+      "comingSoon": "⟦Ƈȯḿīƞɠ şȯȯƞ⟧"
     },
     "errors": {
-      "loadReport": "11111"
+      "loadReport": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗƥȯřŧ.⟧"
     },
     "empty": {
-      "noData": "11111",
-      "noOpenTicketsInRange": "11111",
-      "noDate": "11111",
-      "notAvailable": "11111",
-      "noEmailChannels": "11111",
-      "noCapacity": "11111"
+      "noData": "⟦Ƞȯ ḓȧŧȧ ƒȯř ŧħīş řḗƥȯřŧ.⟧",
+      "noOpenTicketsInRange": "⟦Ƞȯ ȯƥḗƞ ŧīƈķḗŧş īƞ ŧħīş řȧƞɠḗ.⟧",
+      "noDate": "⟦Ƞȯ ḓȧŧḗ⟧",
+      "notAvailable": "⟦ƞ/ȧ⟧",
+      "noEmailChannels": "⟦Ƞȯ ḗḿȧīŀ ƈħȧƞƞḗŀş ȧřḗ ƈȯƞƒīɠŭřḗḓ.⟧",
+      "noCapacity": "⟦ƞ/ȧ — ƞȯ ƈȧƥȧƈīŧẏ şḗŧ⟧"
     },
-    "fallbackTitle": "11111",
+    "fallbackTitle": "⟦Řḗƥȯřŧ⟧",
     "dateRange": {
-      "lastDays": "11111 {{count}} 11111"
+      "lastDays": "⟦Ŀȧşŧ {{count}} ḓȧẏş⟧"
     },
     "units": {
-      "daysWithCount": "11111 {{count}} 11111"
+      "daysWithCount": "⟦{{count}} ḓȧẏş⟧"
     },
     "metrics": {
-      "created": "11111",
-      "closed": "11111",
-      "openNow": "11111",
-      "awaitingCustomer": "11111",
-      "awaitingInternal": "11111",
-      "under2Days": "11111",
-      "days2To7": "11111",
-      "days8To30": "11111",
-      "over30Days": "11111",
-      "activeChannels": "11111",
-      "healthyChannels": "11111",
-      "problemChannels": "11111",
-      "emailsProcessed": "11111",
-      "ticketsFromEmail": "11111",
-      "failedEmails": "11111",
-      "avgProcessingTime": "11111",
-      "avgTicketCreationTime": "11111",
-      "totalHours": "11111",
-      "billableHours": "11111",
-      "nonBillableHours": "11111",
-      "billablePercent": "11111",
-      "timeEntries": "11111",
-      "activeContracts": "11111",
-      "monthlyRecurring": "11111",
-      "renewalsDue": "11111",
-      "bucketUsedHours": "11111",
-      "bucketOverageHours": "11111",
-      "openAssigned": "11111",
-      "activeAssignees": "11111",
-      "avgResolutionTime": "11111",
-      "workedHours": "11111",
-      "capacityHours": "11111",
-      "utilization": "11111",
-      "usersWithoutCapacity": "11111",
-      "activeUsers": "11111"
+      "created": "⟦Ƈřḗȧŧḗḓ⟧",
+      "closed": "⟦Ƈŀȯşḗḓ⟧",
+      "openNow": "⟦Ȯƥḗƞ ƞȯẇ⟧",
+      "awaitingCustomer": "⟦Ȧẇȧīŧīƞɠ ƈŭşŧȯḿḗř⟧",
+      "awaitingInternal": "⟦Ȧẇȧīŧīƞɠ īƞŧḗřƞȧŀ⟧",
+      "under2Days": "⟦Ŭƞḓḗř 2 ḓȧẏş⟧",
+      "days2To7": "⟦2 ŧȯ 7 ḓȧẏş⟧",
+      "days8To30": "⟦8 ŧȯ 30 ḓȧẏş⟧",
+      "over30Days": "⟦Ȯṽḗř 30 ḓȧẏş⟧",
+      "activeChannels": "⟦Ȧƈŧīṽḗ ƈħȧƞƞḗŀş⟧",
+      "healthyChannels": "⟦Ħḗȧŀŧħẏ ƈħȧƞƞḗŀş⟧",
+      "problemChannels": "⟦Ƥřȯƀŀḗḿ ƈħȧƞƞḗŀş⟧",
+      "emailsProcessed": "⟦Ḗḿȧīŀş ƥřȯƈḗşşḗḓ⟧",
+      "ticketsFromEmail": "⟦Ŧīƈķḗŧş ƒřȯḿ ḗḿȧīŀ⟧",
+      "failedEmails": "⟦Ƒȧīŀḗḓ ḗḿȧīŀş⟧",
+      "avgProcessingTime": "⟦Ȧṽɠ. ƥřȯƈḗşşīƞɠ ŧīḿḗ⟧",
+      "avgTicketCreationTime": "⟦Ȧṽɠ. ḗḿȧīŀ-ŧȯ-ŧīƈķḗŧ ŧīḿḗ⟧",
+      "totalHours": "⟦Ŧȯŧȧŀ ħȯŭřş⟧",
+      "billableHours": "⟦Ɓīŀŀȧƀŀḗ ħȯŭřş⟧",
+      "nonBillableHours": "⟦Ƞȯƞ-ƀīŀŀȧƀŀḗ ħȯŭřş⟧",
+      "billablePercent": "⟦Ɓīŀŀȧƀŀḗ %⟧",
+      "timeEntries": "⟦Ŧīḿḗ ḗƞŧřīḗş⟧",
+      "activeContracts": "⟦Ȧƈŧīṽḗ ƈȯƞŧřȧƈŧş⟧",
+      "monthlyRecurring": "⟦Ḿȯƞŧħŀẏ řḗƈŭřřīƞɠ⟧",
+      "renewalsDue": "⟦Řḗƞḗẇȧŀş ḓŭḗ⟧",
+      "bucketUsedHours": "⟦Ɓŭƈķḗŧ ħȯŭřş ŭşḗḓ⟧",
+      "bucketOverageHours": "⟦Ɓŭƈķḗŧ ȯṽḗřȧɠḗ⟧",
+      "openAssigned": "⟦Ȯƥḗƞ ȧşşīɠƞḗḓ⟧",
+      "activeAssignees": "⟦Ȧƈŧīṽḗ ȧşşīɠƞḗḗş⟧",
+      "avgResolutionTime": "⟦Ȧṽɠ. řḗşȯŀŭŧīȯƞ ŧīḿḗ⟧",
+      "workedHours": "⟦Ẇȯřķḗḓ ħȯŭřş⟧",
+      "capacityHours": "⟦Ƈȧƥȧƈīŧẏ ħȯŭřş⟧",
+      "utilization": "⟦Ŭŧīŀīẑȧŧīȯƞ⟧",
+      "usersWithoutCapacity": "⟦Ḿīşşīƞɠ ƈȧƥȧƈīŧẏ⟧",
+      "activeUsers": "⟦Ȧƈŧīṽḗ ŭşḗřş⟧"
     },
     "sections": {
-      "openByStatus": "11111",
-      "openByPriority": "11111",
-      "openByAssignee": "11111",
-      "ageDistribution": "11111",
-      "responseOwnership": "11111",
-      "oldestOpenTickets": "11111",
-      "emailProcessingStatus": "11111",
-      "emailChannels": "11111",
-      "timeByUser": "11111",
-      "billableHoursByService": "11111",
-      "entriesByWorkType": "11111",
-      "contractRevenue": "11111",
-      "upcomingRenewals": "11111",
-      "bucketUsage": "11111",
-      "performanceByAssignee": "11111",
-      "closedByAssignee": "11111",
-      "utilizationByUser": "11111"
+      "openByStatus": "⟦Ȯƥḗƞ ƀẏ şŧȧŧŭş⟧",
+      "openByPriority": "⟦Ȯƥḗƞ ƀẏ ƥřīȯřīŧẏ⟧",
+      "openByAssignee": "⟦Ȯƥḗƞ ƀẏ ȧşşīɠƞḗḗ⟧",
+      "ageDistribution": "⟦Ȧɠḗ ḓīşŧřīƀŭŧīȯƞ⟧",
+      "responseOwnership": "⟦Řḗşƥȯƞşḗ ȯẇƞḗřşħīƥ⟧",
+      "oldestOpenTickets": "⟦Ȯŀḓḗşŧ ȯƥḗƞ ŧīƈķḗŧş⟧",
+      "emailProcessingStatus": "⟦Ƥřȯƈḗşşīƞɠ şŧȧŧŭş⟧",
+      "emailChannels": "⟦Ḗḿȧīŀ ƈħȧƞƞḗŀş⟧",
+      "timeByUser": "⟦Ŧīḿḗ ƀẏ ŭşḗř⟧",
+      "billableHoursByService": "⟦Ɓīŀŀȧƀŀḗ ħȯŭřş ƀẏ şḗřṽīƈḗ⟧",
+      "entriesByWorkType": "⟦Ḗƞŧřīḗş ƀẏ ẇȯřķ ŧẏƥḗ⟧",
+      "contractRevenue": "⟦Ƈȯƞŧřȧƈŧ řḗṽḗƞŭḗ⟧",
+      "upcomingRenewals": "⟦Ŭƥƈȯḿīƞɠ řḗƞḗẇȧŀş⟧",
+      "bucketUsage": "⟦Ɓŭƈķḗŧ ŭşȧɠḗ⟧",
+      "performanceByAssignee": "⟦Ƥḗřƒȯřḿȧƞƈḗ ƀẏ ȧşşīɠƞḗḗ⟧",
+      "closedByAssignee": "⟦Ƈŀȯşḗḓ ƀẏ ȧşşīɠƞḗḗ⟧",
+      "utilizationByUser": "⟦Ŭŧīŀīẑȧŧīȯƞ ƀẏ ŭşḗř⟧"
     },
     "reportCatalog": {
       "ticketWorkload": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ŧīƈķḗŧ Ẇȯřķŀȯȧḓ⟧",
+        "description": "⟦Ƈřḗȧŧḗḓ, ƈŀȯşḗḓ, ȧƞḓ ƈŭřřḗƞŧŀẏ ȯƥḗƞ ŧīƈķḗŧş ɠřȯŭƥḗḓ ƀẏ şŧȧŧŭş, ƥřīȯřīŧẏ, ȧƞḓ ȧşşīɠƞḗḗ.⟧"
       },
       "ticketAging": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ŧīƈķḗŧ Ȧɠīƞɠ⟧",
+        "description": "⟦Ȯƥḗƞ-ŧīƈķḗŧ ȧɠḗ ƀŭƈķḗŧş, řḗşƥȯƞşḗ ȯẇƞḗřşħīƥ, ȧƞḓ ȯŀḓḗşŧ ȧƈŧīṽḗ ŧīƈķḗŧş.⟧"
       },
       "emailChannelHealth": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ḗḿȧīŀ Ƈħȧƞƞḗŀ Ħḗȧŀŧħ⟧",
+        "description": "⟦Ḗḿȧīŀ īƞŧȧķḗ ṽȯŀŭḿḗ, ŧīƈķḗŧ ƈřḗȧŧīȯƞ şƥḗḗḓ, ȧƞḓ ḿȧīŀƀȯẋ ƈȯƞƞḗƈŧīȯƞ ħḗȧŀŧħ.⟧"
       },
       "timeUtilization": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ŧīḿḗ Ŭŧīŀīẑȧŧīȯƞ⟧",
+        "description": "⟦Ŧřȧƈķḗḓ ẇȯřķ ƀẏ ƥḗřşȯƞ ȧƞḓ şḗřṽīƈḗ ȧřḗȧ ƒȯř ƤŞȦ ȯƥḗřȧŧīȯƞş.⟧"
       },
       "teamPerformance": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ŧḗȧḿ Ƥḗřƒȯřḿȧƞƈḗ⟧",
+        "description": "⟦Ŧḗȧḿ-ŀḗṽḗŀ ŧħřȯŭɠħƥŭŧ ȧƞḓ řḗşƥȯƞşḗ ȯẇƞḗřşħīƥ ƒȯř ḿŭŀŧī-ŭşḗř ẇȯřķşƥȧƈḗş.⟧"
       },
       "employeeUtilization": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ḗḿƥŀȯẏḗḗ Ŭŧīŀīẑȧŧīȯƞ⟧",
+        "description": "⟦Ħȯŭřş ẇȯřķḗḓ ȧɠȧīƞşŧ ḗȧƈħ ŧḗȧḿ ḿḗḿƀḗř’ş ẇḗḗķŀẏ ƈȧƥȧƈīŧẏ.⟧"
       },
       "contractReports": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ƈȯƞŧřȧƈŧ Řḗƥȯřŧş⟧",
+        "description": "⟦Ƈȯƞŧřȧƈŧ řḗṽḗƞŭḗ, řḗƞḗẇȧŀş, ƀŭƈķḗŧ ŭŧīŀīẑȧŧīȯƞ, ȧƞḓ ƥřȯƒīŧȧƀīŀīŧẏ.⟧"
       },
       "deferredRevenue": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ḓḗƒḗřřḗḓ Řḗṽḗƞŭḗ⟧",
+        "description": "⟦Ƥřḗƥȧīḓ ŀīȧƀīŀīŧẏ ȧƈřȯşş ƈŀīḗƞŧş: ƈřḗḓīŧ ƀȧŀȧƞƈḗş ȧƞḓ ŭƞƀŭřƞḗḓ ƀŭƈķḗŧ ħȯŭřş ƀẏ ḿȯƞŧħ.⟧"
       },
       "inventoryMargin": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ḿȧřɠīƞ Řḗƥȯřŧ⟧",
+        "description": "⟦Ƥḗř-ƥřȯḓŭƈŧ řḗṽḗƞŭḗ, ƈȯşŧ ȯƒ ɠȯȯḓş şȯŀḓ, ȧƞḓ ḿȧřɠīƞ ƒřȯḿ ƒŭŀƒīŀŀḗḓ şȧŀḗş ȯřḓḗřş.⟧"
       },
       "inventoryWriteOffs": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ẇřīŧḗ-ȯƒƒş⟧",
+        "description": "⟦Īƞṽḗƞŧȯřẏ şħřīƞķ ȧƞḓ ȧḓĵŭşŧḿḗƞŧş ẇřīŧŧḗƞ ȯƒƒ, ƀẏ řḗȧşȯƞ ȧƞḓ ƥḗřīȯḓ.⟧"
       },
       "inventoryGhostUsage": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ɠħȯşŧ Ŭşȧɠḗ⟧",
+        "description": "⟦Ƈŀȯşḗḓ ħȧřḓẇȧřḗ ŧīƈķḗŧş ẇīŧħ ƞȯ řḗƈȯřḓḗḓ ƥȧřŧş — ƈȯşŧ ŧħḗ şħȯƥ ḿȧẏ ħȧṽḗ ḗȧŧḗƞ.⟧"
       }
     },
     "table": {
-      "channel": "11111",
-      "status": "11111",
-      "processed": "11111",
-      "tickets": "11111",
-      "avgEmailToTicket": "11111",
-      "assignee": "11111",
-      "created": "11111",
-      "closed": "11111",
-      "open": "11111",
-      "avgResolution": "11111",
-      "user": "11111",
-      "totalHours": "11111",
-      "billableHours": "11111",
-      "entries": "11111",
-      "ticket": "11111",
-      "entered": "11111",
-      "age": "11111",
-      "workedHours": "11111",
-      "capacityHours": "11111",
-      "utilization": "11111",
-      "capacityEstimated": "11111"
+      "channel": "⟦Ƈħȧƞƞḗŀ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "processed": "⟦Ƥřȯƈḗşşḗḓ⟧",
+      "tickets": "⟦Ŧīƈķḗŧş⟧",
+      "avgEmailToTicket": "⟦Ȧṽɠ. ḗḿȧīŀ ŧȯ ŧīƈķḗŧ⟧",
+      "assignee": "⟦Ȧşşīɠƞḗḗ⟧",
+      "created": "⟦Ƈřḗȧŧḗḓ⟧",
+      "closed": "⟦Ƈŀȯşḗḓ⟧",
+      "open": "⟦Ȯƥḗƞ⟧",
+      "avgResolution": "⟦Ȧṽɠ. řḗşȯŀŭŧīȯƞ⟧",
+      "user": "⟦Ŭşḗř⟧",
+      "totalHours": "⟦Ŧȯŧȧŀ ħȯŭřş⟧",
+      "billableHours": "⟦Ɓīŀŀȧƀŀḗ ħȯŭřş⟧",
+      "entries": "⟦Ḗƞŧřīḗş⟧",
+      "ticket": "⟦Ŧīƈķḗŧ⟧",
+      "entered": "⟦Ḗƞŧḗřḗḓ⟧",
+      "age": "⟦Ȧɠḗ⟧",
+      "workedHours": "⟦Ẇȯřķḗḓ ħȯŭřş⟧",
+      "capacityHours": "⟦Ƈȧƥȧƈīŧẏ ħȯŭřş⟧",
+      "utilization": "⟦Ŭŧīŀīẑȧŧīȯƞ⟧",
+      "capacityEstimated": "⟦Ḗşŧīḿȧŧḗḓ ƒřȯḿ ẇḗḗķŀẏ ƈȧƥȧƈīŧẏ; ƞȯ ẇȯřķīƞɠ ħȯŭřş şḗŧ.⟧"
     },
     "statusValues": {
-      "connected": "11111",
-      "disconnected": "11111",
-      "error": "11111",
-      "configuring": "11111",
-      "unknown": "11111",
-      "success": "11111",
-      "failed": "11111",
-      "partial": "11111",
-      "processing": "11111"
+      "connected": "⟦Ƈȯƞƞḗƈŧḗḓ⟧",
+      "disconnected": "⟦Ḓīşƈȯƞƞḗƈŧḗḓ⟧",
+      "error": "⟦Ḗřřȯř⟧",
+      "configuring": "⟦Ƈȯƞƒīɠŭřīƞɠ⟧",
+      "unknown": "⟦Ŭƞķƞȯẇƞ⟧",
+      "success": "⟦Şŭƈƈḗşş⟧",
+      "failed": "⟦Ƒȧīŀḗḓ⟧",
+      "partial": "⟦Ƥȧřŧīȧŀ⟧",
+      "processing": "⟦Ƥřȯƈḗşşīƞɠ⟧"
     }
   },
   "contractReports": {
-    "title": "11111",
-    "description": "11111",
+    "title": "⟦Ƈȯƞŧřȧƈŧ Řḗƥȯřŧş⟧",
+    "description": "⟦Ȧƞȧŀẏẑḗ ƈȯƞŧřȧƈŧ ƥḗřƒȯřḿȧƞƈḗ, řḗṽḗƞŭḗ, ȧƞḓ ŭŧīŀīẑȧŧīȯƞ ḿḗŧřīƈş⟧",
     "errors": {
-      "loadingTitle": "11111",
-      "loadData": "11111"
+      "loadingTitle": "⟦Ḗřřȯř Ŀȯȧḓīƞɠ Řḗƥȯřŧş⟧",
+      "loadData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗƥȯřŧ ḓȧŧȧ⟧"
     },
     "summary": {
       "totalMRR": {
-        "title": "11111",
-        "subtitle": "11111"
+        "title": "⟦Ŧȯŧȧŀ ḾŘŘ⟧",
+        "subtitle": "⟦Ḿȯƞŧħŀẏ Řḗƈŭřřīƞɠ Řḗṽḗƞŭḗ⟧"
       },
       "ytdRevenue": {
-        "title": "11111",
-        "subtitle": "11111"
+        "title": "⟦ẎŦḒ Řḗṽḗƞŭḗ⟧",
+        "subtitle": "⟦Ẏḗȧř ŧȯ Ḓȧŧḗ ƀẏ ƀīŀŀḗḓ şḗřṽīƈḗ ƥḗřīȯḓ⟧"
       },
       "activeContracts": {
-        "title": "11111",
-        "subtitle": "11111"
+        "title": "⟦Ȧƈŧīṽḗ Ƈȯƞŧřȧƈŧş⟧",
+        "subtitle": "⟦Ȧƈŧīṽḗ ȧşşīɠƞḿḗƞŧş⟧"
       },
       "renewalDecisions": {
-        "title": "11111",
-        "subtitle": "11111"
+        "title": "⟦Řḗƞḗẇȧŀ Ḓḗƈīşīȯƞş Ḓŭḗ⟧",
+        "subtitle": "⟦Ḓḗƈīşīȯƞ ḓŭḗ ḓȧŧḗş īƞ ŧħḗ ƞḗẋŧ 90 ḓȧẏş⟧"
       }
     },
     "tabs": {
-      "revenue": "11111",
-      "expiration": "11111",
-      "bucketUsage": "11111",
-      "profitability": "11111"
+      "revenue": "⟦Ƈȯƞŧřȧƈŧ Řḗṽḗƞŭḗ⟧",
+      "expiration": "⟦Ḗẋƥīřȧŧīȯƞ⟧",
+      "bucketUsage": "⟦Ɓŭƈķḗŧ Ħȯŭřş⟧",
+      "profitability": "⟦Ƥřȯƒīŧȧƀīŀīŧẏ⟧"
     },
     "sections": {
       "revenue": {
-        "title": "11111",
-        "description": "11111",
-        "empty": "11111"
+        "title": "⟦Ƈȯƞŧřȧƈŧ Řḗṽḗƞŭḗ Řḗƥȯřŧ⟧",
+        "description": "⟦Ȯṽḗřṽīḗẇ ȯƒ ḿȯƞŧħŀẏ řḗƈŭřřīƞɠ řḗṽḗƞŭḗ ȧƞḓ ẏḗȧř-ŧȯ-ḓȧŧḗ ƀīŀŀḗḓ şḗřṽīƈḗ ƥḗřīȯḓş ƀẏ ƈȯƞŧřȧƈŧ.⟧",
+        "empty": "⟦Ƞȯ ƈȯƞŧřȧƈŧ řḗṽḗƞŭḗ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ⟧"
       },
       "expiration": {
-        "title": "11111",
-        "description": "11111",
-        "empty": "11111"
+        "title": "⟦Ƈȯƞŧřȧƈŧ Ḗẋƥīřȧŧīȯƞ ȧƞḓ Řḗƞḗẇȧŀ Ḓḗƈīşīȯƞş⟧",
+        "description": "⟦Ŧřȧƈķ ŭƥƈȯḿīƞɠ ƈȯƞŧřȧƈŧ ḗẋƥīřȧŧīȯƞş ȧƞḓ řḗƞḗẇȧŀ ḓḗƈīşīȯƞ ḓŭḗ ḓȧŧḗş.⟧",
+        "empty": "⟦Ƞȯ ŭƥƈȯḿīƞɠ ƈȯƞŧřȧƈŧ ḗẋƥīřȧŧīȯƞş ȯř řḗƞḗẇȧŀ ḓḗƈīşīȯƞş īƞ ŧħḗ ƞḗȧř ŧḗřḿ⟧"
       },
       "bucketUsage": {
-        "title": "11111",
-        "description": "11111",
-        "empty": "11111"
+        "title": "⟦Ɓŭƈķḗŧ Ħȯŭřş Ŭŧīŀīẑȧŧīȯƞ⟧",
+        "description": "⟦Ḿȯƞīŧȯř ƀŭƈķḗŧ ħȯŭřş ŭşȧɠḗ ȧƞḓ īḓḗƞŧīƒẏ ȯṽḗřȧɠḗ şīŧŭȧŧīȯƞş⟧",
+        "empty": "⟦Ƞȯ ƀŭƈķḗŧ-ƀȧşḗḓ ƈȯƞŧřȧƈŧş ƒȯŭƞḓ⟧"
       },
       "profitability": {
-        "title": "11111",
-        "description": "11111",
-        "empty": "11111"
+        "title": "⟦Ƥřȯƒīŧȧƀīŀīŧẏ Řḗƥȯřŧ⟧",
+        "description": "⟦Ƈŀīḗƞŧ, ȧɠřḗḗḿḗƞŧ, ȧƞḓ ŧīƈķḗŧ ḿȧřɠīƞ ŭşīƞɠ ƈȯƞƒīɠŭřḗḓ īƞŧḗřƞȧŀ ŀȧƀȯř ƈȯşŧ řȧŧḗş.⟧",
+        "empty": "⟦Ƞȯ ƥřȯƒīŧȧƀīŀīŧẏ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ⟧"
       }
     },
     "table": {
-      "contract": "11111",
-      "client": "11111",
-      "monthlyRecurring": "11111",
-      "totalBilledYtd": "11111",
-      "status": "11111",
-      "endDate": "11111",
-      "daysUntilExpiration": "11111",
-      "monthlyValue": "11111",
-      "autoRenew": "11111",
-      "totalHours": "11111",
-      "usedHours": "11111",
-      "remaining": "11111",
-      "utilization": "11111",
-      "overage": "11111",
-      "revenueYtd": "11111",
-      "costYtd": "11111",
-      "profit": "11111",
-      "margin": "11111"
+      "contract": "⟦Ƈȯƞŧřȧƈŧ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "monthlyRecurring": "⟦Ḿȯƞŧħŀẏ Řḗƈŭřřīƞɠ⟧",
+      "totalBilledYtd": "⟦Ŧȯŧȧŀ Ɓīŀŀḗḓ (ẎŦḒ)⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+      "daysUntilExpiration": "⟦Ḓȧẏş Ŭƞŧīŀ Ḗẋƥīřȧŧīȯƞ⟧",
+      "monthlyValue": "⟦Ḿȯƞŧħŀẏ Ṽȧŀŭḗ⟧",
+      "autoRenew": "⟦Ȧŭŧȯ-Řḗƞḗẇ⟧",
+      "totalHours": "⟦Ŧȯŧȧŀ Ħȯŭřş⟧",
+      "usedHours": "⟦Ŭşḗḓ Ħȯŭřş⟧",
+      "remaining": "⟦Řḗḿȧīƞīƞɠ⟧",
+      "utilization": "⟦Ŭŧīŀīẑȧŧīȯƞ⟧",
+      "overage": "⟦Ȯṽḗřȧɠḗ⟧",
+      "revenueYtd": "⟦Řḗṽḗƞŭḗ (ẎŦḒ)⟧",
+      "costYtd": "⟦Ƈȯşŧ (ẎŦḒ)⟧",
+      "profit": "⟦Ƥřȯƒīŧ⟧",
+      "margin": "⟦Ḿȧřɠīƞ⟧"
     },
     "statusValues": {
-      "active": "11111",
-      "upcoming": "11111",
-      "yes": "11111",
-      "no": "11111"
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "upcoming": "⟦Ŭƥƈȯḿīƞɠ⟧",
+      "yes": "⟦Ẏḗş⟧",
+      "no": "⟦Ƞȯ⟧"
     },
     "profitability": {
       "formats": {
-        "percent": "11111 {{value}} 11111",
-        "hours": "11111 {{value}} 11111",
-        "hourlyRate": "11111 {{value}} 11111",
-        "ticketWithNumber": "11111 {{number}} 11111 {{title}} 11111",
-        "billableHours": "11111 {{value}} 11111",
-        "listSeparator": "11111",
-        "attributionUncosted": "11111 {{attribution}} 11111",
-        "unassignedLine": "11111 {{line}} 11111"
+        "percent": "⟦{{value}}%⟧",
+        "hours": "⟦{{value}} ħřş⟧",
+        "hourlyRate": "⟦{{value}}/ħř⟧",
+        "ticketWithNumber": "⟦#{{number}} {{title}}⟧",
+        "billableHours": "⟦{{value}} ƀīŀŀȧƀŀḗ ħřş⟧",
+        "listSeparator": "⟦, ⟧",
+        "attributionUncosted": "⟦{{attribution}} (ŭƞƈȯşŧḗḓ)⟧",
+        "unassignedLine": "⟦{{line}} (ŭƞȧşşīɠƞḗḓ)⟧"
       },
       "errors": {
-        "load": "11111",
-        "title": "11111"
+        "load": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřȯƒīŧȧƀīŀīŧẏ ḓȧŧȧ⟧",
+        "title": "⟦Ḗřřȯř Ŀȯȧḓīƞɠ Ƥřȯƒīŧȧƀīŀīŧẏ⟧"
       },
       "table": {
-        "revenue": "11111",
-        "laborCost": "11111",
-        "materialCost": "11111",
-        "margin": "11111",
-        "marginPct": "11111",
-        "hours": "11111",
-        "ehr": "11111",
-        "client": "11111",
-        "agreement": "11111",
-        "ticket": "11111",
-        "attribution": "11111",
-        "contractLine": "11111",
-        "cost": "11111"
+        "revenue": "⟦Řḗṽḗƞŭḗ⟧",
+        "laborCost": "⟦Ŀȧƀȯř Ƈȯşŧ⟧",
+        "materialCost": "⟦Ḿȧŧḗřīȧŀ Ƈȯşŧ⟧",
+        "margin": "⟦Ḿȧřɠīƞ⟧",
+        "marginPct": "⟦Ḿȧřɠīƞ %⟧",
+        "hours": "⟦Ħȯŭřş⟧",
+        "ehr": "⟦ḖĦŘ⟧",
+        "client": "⟦Ƈŀīḗƞŧ⟧",
+        "agreement": "⟦Ȧɠřḗḗḿḗƞŧ⟧",
+        "ticket": "⟦Ŧīƈķḗŧ⟧",
+        "attribution": "⟦Ȧŧŧřīƀŭŧīȯƞ⟧",
+        "contractLine": "⟦Ŀīƞḗ⟧",
+        "cost": "⟦Ƈȯşŧ⟧"
       },
       "actions": {
-        "toggleLines": "11111",
-        "apply": "11111",
-        "configureCostRates": "11111",
-        "clearClient": "11111",
-        "clearAgreement": "11111"
+        "toggleLines": "⟦Ŧȯɠɠŀḗ ŀīƞḗş⟧",
+        "apply": "⟦Ȧƥƥŀẏ⟧",
+        "configureCostRates": "⟦Ƈȯƞƒīɠŭřḗ Ƈȯşŧ Řȧŧḗş⟧",
+        "clearClient": "⟦Ȧŀŀ Ƈŀīḗƞŧş⟧",
+        "clearAgreement": "⟦Ȧŀŀ Ȧɠřḗḗḿḗƞŧş⟧"
       },
       "rowTypes": {
-        "adHoc": "11111",
-        "unattributed": "11111",
-        "unassigned": "11111"
+        "adHoc": "⟦Ȧḓ-ħȯƈ⟧",
+        "unattributed": "⟦Ŭƞȧŧŧřīƀŭŧḗḓ⟧",
+        "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧"
       },
       "attribution": {
-        "exact": "11111",
-        "allocated": "11111",
-        "none": "11111"
+        "exact": "⟦Ḗẋȧƈŧ⟧",
+        "allocated": "⟦Ȧŀŀȯƈȧŧḗḓ⟧",
+        "none": "⟦Ƞȯƞḗ⟧"
       },
       "status": {
-        "uncosted": "11111"
+        "uncosted": "⟦Ŭƞƈȯşŧḗḓ⟧"
       },
       "filters": {
-        "startDate": "11111",
-        "endDate": "11111"
+        "startDate": "⟦Şŧȧřŧ Ḓȧŧḗ⟧",
+        "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧"
       },
-      "timingTooltip": "11111",
+      "timingTooltip": "⟦Řḗṽḗƞŭḗ īş ƒīŀŧḗřḗḓ ƀẏ īƞṽȯīƈḗ ḓȧŧḗ. Ŀȧƀȯř ƈȯşŧ īş ƒīŀŧḗřḗḓ ƀẏ ẇȯřķ ḓȧŧḗ. Ɓīŀŀḗḓ ḿȧŧḗřīȧŀ ƈȯşŧ ƒȯŀŀȯẇş īƞṽȯīƈḗ ḓȧŧḗ; ŭƞƀīŀŀḗḓ ḿȧŧḗřīȧŀ ƈȯşŧ ƒȯŀŀȯẇş ƈřḗȧŧḗḓ ḓȧŧḗ.⟧",
       "empty": {
-        "costRates": "11111",
-        "clients": "11111",
-        "lines": "11111",
-        "tickets": "11111",
-        "agreements": "11111"
+        "costRates": "⟦Ƈȯşŧ řȧŧḗş ȧřḗ ƞȯŧ ƈȯƞƒīɠŭřḗḓ. Ŀȧƀȯř ħȯŭřş ȧřḗ şħȯẇƞ ȧş ŭƞƈȯşŧḗḓ ŭƞŧīŀ ȧ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ȯř ŭşḗř řȧŧḗ ḗẋīşŧş.⟧",
+        "clients": "⟦Ƞȯ ƈŀīḗƞŧ ƥřȯƒīŧȧƀīŀīŧẏ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş řȧƞɠḗ.⟧",
+        "lines": "⟦Ƞȯ ŀīƞḗ-ŀḗṽḗŀ ḓḗŧȧīŀ ƒȯř ŧħīş řȯẇ.⟧",
+        "tickets": "⟦Ƞȯ ŧīƈķḗŧ ƥřȯƒīŧȧƀīŀīŧẏ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş şḗŀḗƈŧīȯƞ.⟧",
+        "agreements": "⟦Ƞȯ ȧɠřḗḗḿḗƞŧ ƥřȯƒīŧȧƀīŀīŧẏ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş şḗŀḗƈŧīȯƞ.⟧"
       },
       "print": {
-        "dateRange": "11111 {{start}} 11111 {{end}} 11111",
-        "client": "11111",
-        "allClients": "11111",
-        "agreement": "11111",
-        "allAgreements": "11111",
-        "currency": "11111"
+        "dateRange": "⟦{{start}} ŧȯ {{end}}⟧",
+        "client": "⟦Ƈŀīḗƞŧ⟧",
+        "allClients": "⟦Ȧŀŀ ƈŀīḗƞŧş⟧",
+        "agreement": "⟦Ȧɠřḗḗḿḗƞŧ⟧",
+        "allAgreements": "⟦Ȧŀŀ ȧɠřḗḗḿḗƞŧş⟧",
+        "currency": "⟦Ƈŭřřḗƞƈẏ⟧"
       },
       "warnings": {
-        "title": "11111",
-        "uncostedMinutes": "11111 {{hours}} 11111",
-        "unattributedMinutes": "11111 {{hours}} 11111",
-        "unapprovedMinutes": "11111 {{hours}} 11111",
-        "zeroDuration": "11111 {{count}} 11111",
-        "uncostedMaterials": "11111 {{count}} 11111",
-        "unconvertedRevenue": "11111 {{count}} 11111",
-        "materialCurrencyMismatch": "11111 {{count}} 11111"
+        "title": "⟦Řḗƥȯřŧ ẇȧřƞīƞɠş⟧",
+        "uncostedMinutes": "⟦{{hours}} ŭƞƈȯşŧḗḓ ħȯŭřş⟧",
+        "unattributedMinutes": "⟦{{hours}} ŭƞȧŧŧřīƀŭŧḗḓ ħȯŭřş⟧",
+        "unapprovedMinutes": "⟦{{hours}} ŭƞȧƥƥřȯṽḗḓ ħȯŭřş īƞƈŀŭḓḗḓ⟧",
+        "zeroDuration": "⟦{{count}} ẑḗřȯ-ḓŭřȧŧīȯƞ ḗƞŧřīḗş⟧",
+        "uncostedMaterials": "⟦{{count}} ŭƞƈȯşŧḗḓ ḿȧŧḗřīȧŀş⟧",
+        "unconvertedRevenue": "⟦{{count}} ŭƞƈȯƞṽḗřŧḗḓ řḗṽḗƞŭḗ řȯẇş⟧",
+        "materialCurrencyMismatch": "⟦{{count}} ḿȧŧḗřīȧŀ ƈŭřřḗƞƈẏ ḿīşḿȧŧƈħḗş⟧"
       },
       "summary": {
-        "revenue": "11111",
-        "laborCost": "11111",
-        "materialCost": "11111",
-        "margin": "11111",
-        "marginPct": "11111",
-        "ehr": "11111"
+        "revenue": "⟦Řḗṽḗƞŭḗ⟧",
+        "laborCost": "⟦Ŀȧƀȯř Ƈȯşŧ⟧",
+        "materialCost": "⟦Ḿȧŧḗřīȧŀ Ƈȯşŧ⟧",
+        "margin": "⟦Ḿȧřɠīƞ⟧",
+        "marginPct": "⟦Ḿȧřɠīƞ %⟧",
+        "ehr": "⟦Ḗƒƒḗƈŧīṽḗ Ħȯŭřŀẏ Řȧŧḗ⟧"
       },
       "sections": {
-        "clients": "11111",
-        "clientsDescription": "11111",
-        "agreements": "11111 {{client}} 11111",
-        "agreementsDescription": "11111",
-        "linesForAgreement": "11111 {{agreement}} 11111",
-        "tickets": "11111",
-        "ticketsForAgreement": "11111 {{agreement}} 11111",
-        "ticketsDescription": "11111"
+        "clients": "⟦Ƈŀīḗƞŧş⟧",
+        "clientsDescription": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ŧȯ ḓřīŀŀ īƞŧȯ ȧɠřḗḗḿḗƞŧş ȧƞḓ ŧīƈķḗŧş.⟧",
+        "agreements": "⟦Ȧɠřḗḗḿḗƞŧş ƒȯř {{client}}⟧",
+        "agreementsDescription": "⟦Ȧḓ-ħȯƈ ȧƞḓ ŭƞȧŧŧřīƀŭŧḗḓ řȯẇş ȧřḗ īƞƈŀŭḓḗḓ şȯ ŧȯŧȧŀş řḗƈȯƞƈīŀḗ.⟧",
+        "linesForAgreement": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗş ƒȯř {{agreement}}⟧",
+        "tickets": "⟦Ŧīƈķḗŧş⟧",
+        "ticketsForAgreement": "⟦Ŧīƈķḗŧ ƈȯşŧ ȧƞḓ řḗṽḗƞŭḗ ƒȯř {{agreement}}.⟧",
+        "ticketsDescription": "⟦Ŧīƈķḗŧ-ŀḗṽḗŀ ŀȧƀȯř, ḿȧŧḗřīȧŀ ƈȯşŧ, ȧŧŧřīƀŭŧḗḓ řḗṽḗƞŭḗ, ȧƞḓ ḿȧřɠīƞ.⟧"
       },
       "fallbacks": {
-        "untitledTicket": "11111"
+        "untitledTicket": "⟦Ŭƞŧīŧŀḗḓ ŧīƈķḗŧ⟧"
       }
     }
   },
   "contractPerformance": {
-    "title": "11111",
+    "title": "⟦Ƈȯƞŧřȧƈŧ Ƥḗřƒȯřḿȧƞƈḗ Ḿḗŧřīƈş⟧",
     "errors": {
-      "loadData": "11111"
+      "loadData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ḓȧŧȧ⟧"
     },
     "metrics": {
-      "totalClients": "11111",
-      "activeClients": "11111",
-      "totalPlans": "11111",
-      "averagePlansPerClient": "11111",
-      "totalRevenue": "11111",
-      "averageRevenuePerClient": "11111"
+      "totalClients": "⟦Ŧȯŧȧŀ Ƈŀīḗƞŧş⟧",
+      "activeClients": "⟦Ȧƈŧīṽḗ Ƈŀīḗƞŧş⟧",
+      "totalPlans": "⟦Ŧȯŧȧŀ Ƥŀȧƞş⟧",
+      "averagePlansPerClient": "⟦Ȧṽɠ. Ƥŀȧƞş Ƥḗř Ƈŀīḗƞŧ⟧",
+      "totalRevenue": "⟦Ŧȯŧȧŀ Řḗṽḗƞŭḗ⟧",
+      "averageRevenuePerClient": "⟦Ȧṽɠ. Řḗṽḗƞŭḗ Ƥḗř Ƈŀīḗƞŧ⟧"
     },
     "empty": {
-      "selectContract": "11111",
-      "noContracts": "11111"
+      "selectContract": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧřȧƈŧ ŧȯ ṽīḗẇ ƥḗřƒȯřḿȧƞƈḗ ḿḗŧřīƈş⟧",
+      "noContracts": "⟦Ƞȯ ƈȯƞŧřȧƈŧş ȧṽȧīŀȧƀŀḗ⟧"
     },
     "comparison": {
-      "title": "11111",
+      "title": "⟦Ƈȯƞŧřȧƈŧ Ƈȯḿƥȧřīşȯƞ⟧",
       "table": {
-        "contract": "11111",
-        "clients": "11111",
-        "plans": "11111",
-        "revenue": "11111"
+        "contract": "⟦Ƈȯƞŧřȧƈŧ⟧",
+        "clients": "⟦Ƈŀīḗƞŧş⟧",
+        "plans": "⟦Ƥŀȧƞş⟧",
+        "revenue": "⟦Řḗṽḗƞŭḗ⟧"
       }
     }
   },
   "contractUsage": {
-    "title": "11111",
+    "title": "⟦Ƈȯƞŧřȧƈŧ Ŭşȧɠḗ Řḗƥȯřŧ⟧",
     "errors": {
-      "loadInitialData": "11111",
-      "loadUsageData": "11111"
+      "loadInitialData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ īƞīŧīȧŀ ḓȧŧȧ⟧",
+      "loadUsageData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ŭşȧɠḗ ḓȧŧȧ⟧"
     },
     "empty": {
-      "noClientsUsingContract": "11111",
-      "selectContract": "11111"
+      "noClientsUsingContract": "⟦Ƞȯ ƈŀīḗƞŧş ȧřḗ ŭşīƞɠ ŧħīş ƈȯƞŧřȧƈŧ⟧",
+      "selectContract": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧřȧƈŧ ŧȯ ṽīḗẇ ŭşȧɠḗ ḓȧŧȧ⟧"
     },
     "table": {
-      "client": "11111",
-      "startDate": "11111",
-      "endDate": "11111",
-      "contractLines": "11111",
-      "totalBilled": "11111",
-      "status": "11111"
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "startDate": "⟦Şŧȧřŧ Ḓȧŧḗ⟧",
+      "endDate": "⟦Ḗƞḓ Ḓȧŧḗ⟧",
+      "contractLines": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧",
+      "totalBilled": "⟦Ŧȯŧȧŀ Ɓīŀŀḗḓ⟧",
+      "status": "⟦Şŧȧŧŭş⟧"
     },
     "statusValues": {
-      "active": "11111",
-      "inactive": "11111",
-      "ongoing": "11111",
-      "unknownClient": "11111"
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ⟧",
+      "ongoing": "⟦Ȯƞɠȯīƞɠ⟧",
+      "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧"
     },
     "summary": {
-      "title": "11111",
-      "totalClients": "11111",
-      "activeAssignments": "11111",
-      "totalBilled": "11111"
+      "title": "⟦Şŭḿḿȧřẏ⟧",
+      "totalClients": "⟦Ŧȯŧȧŀ Ƈŀīḗƞŧş⟧",
+      "activeAssignments": "⟦Ȧƈŧīṽḗ Ȧşşīɠƞḿḗƞŧş⟧",
+      "totalBilled": "⟦Ŧȯŧȧŀ Ɓīŀŀḗḓ⟧"
     }
   },
   "deferredRevenue": {
-    "title": "11111",
-    "description": "11111",
-    "printSubtitle": "11111 {{month}} 11111",
-    "printTable": "11111",
-    "empty": "11111",
+    "title": "⟦Ḓḗƒḗřřḗḓ řḗṽḗƞŭḗ / ƥřḗƥȧīḓ ŀīȧƀīŀīŧẏ⟧",
+    "description": "⟦Ƥḗř-ƈŀīḗƞŧ, ƥḗř-ḿȯƞŧħ řȯŀŀƒȯřẇȧřḓ ȯƒ ƈŀīḗƞŧ ƈřḗḓīŧ ƀȧŀȧƞƈḗş ȧƞḓ ŭƞƀŭřƞḗḓ ƥřḗƥȧīḓ ƀŭƈķḗŧ ħȯŭřş.⟧",
+    "printSubtitle": "⟦Ḿȯƞŧħ {{month}}⟧",
+    "printTable": "⟦Ƥḗř-ƈŀīḗƞŧ řȯŀŀƒȯřẇȧřḓ⟧",
+    "empty": "⟦Ƞȯ ƥřḗƥȧīḓ ŀīȧƀīŀīŧẏ ƒȯř ŧħīş ḿȯƞŧħ.⟧",
     "actions": {
-      "csv": "11111"
+      "csv": "⟦Ḓȯẇƞŀȯȧḓ ƇŞṼ⟧"
     },
     "errors": {
-      "load": "11111"
+      "load": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧħḗ ḓḗƒḗřřḗḓ řḗṽḗƞŭḗ řḗƥȯřŧ.⟧"
     },
     "summary": {
-      "totalLiability": "11111",
-      "credits": "11111",
-      "hours": "11111",
-      "delta": "11111"
+      "totalLiability": "⟦Ŧȯŧȧŀ ƥřḗƥȧīḓ ŀīȧƀīŀīŧẏ⟧",
+      "credits": "⟦Ƈřḗḓīŧş⟧",
+      "hours": "⟦Ƥřḗƥȧīḓ ħȯŭřş⟧",
+      "delta": "⟦Ƈħȧƞɠḗ ṽş ƥřīȯř ḿȯƞŧħ⟧"
     },
     "table": {
-      "client": "11111",
-      "credits": "11111",
-      "hours": "11111",
-      "total": "11111",
-      "opening": "11111",
-      "issued": "11111",
-      "applied": "11111",
-      "expired": "11111",
-      "adjustments": "11111",
-      "closing": "11111",
-      "currencyHeading": "11111",
-      "noClients": "11111",
-      "tenantTotal": "11111"
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "credits": "⟦Ƈřḗḓīŧş⟧",
+      "hours": "⟦Ƥřḗƥȧīḓ ħȯŭřş⟧",
+      "total": "⟦Ŧȯŧȧŀ ƈŀȯşīƞɠ⟧",
+      "opening": "⟦Ȯƥḗƞīƞɠ⟧",
+      "issued": "⟦Īşşŭḗḓ⟧",
+      "applied": "⟦Ȧƥƥŀīḗḓ⟧",
+      "expired": "⟦Ḗẋƥīřḗḓ⟧",
+      "adjustments": "⟦Ȧḓĵ.⟧",
+      "closing": "⟦Ƈŀȯşīƞɠ⟧",
+      "currencyHeading": "⟦Ƈŭřřḗƞƈẏ⟧",
+      "noClients": "⟦Ƞȯ ƈŀīḗƞŧş ẇīŧħ ƥřḗƥȧīḓ ƀȧŀȧƞƈḗş ŧħīş ḿȯƞŧħ.⟧",
+      "tenantTotal": "⟦Ŧḗƞȧƞŧ ŧȯŧȧŀ⟧"
     },
     "detail": {
-      "credits": "11111",
-      "noCredits": "11111",
-      "date": "11111",
-      "description": "11111",
-      "remaining": "11111",
-      "expires": "11111",
-      "qbo": "11111",
-      "reachable": "11111",
-      "notReachable": "11111",
-      "notReachableTitle": "11111",
-      "buckets": "11111",
-      "noBuckets": "11111",
-      "line": "11111",
-      "period": "11111",
-      "included": "11111",
-      "used": "11111",
-      "value": "11111",
-      "feeSource": "11111",
-      "rollover": "11111",
-      "notBilled": "11111",
-      "billed": "11111"
+      "credits": "⟦Ƈřḗḓīŧ ƀȧŀȧƞƈḗş⟧",
+      "noCredits": "⟦Ƞȯ ƈřḗḓīŧ ḗƞŧřīḗş.⟧",
+      "date": "⟦Īşşŭḗḓ⟧",
+      "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
+      "remaining": "⟦Řḗḿȧīƞīƞɠ⟧",
+      "expires": "⟦Ḗẋƥīřḗş⟧",
+      "qbo": "⟦ɊƁȮ⟧",
+      "reachable": "⟦Şẏƞƈḗḓ⟧",
+      "notReachable": "⟦Ƞȯŧ īƞ ɊƁȮ⟧",
+      "notReachableTitle": "⟦Ƥřḗƥȧẏḿḗƞŧ / ƥřȯĵḗƈŧ-ḓḗƥȯşīŧ ƈřḗḓīŧş ƞḗṽḗř ḗẋƥȯřŧ ŧȯ ɊŭīƈķƁȯȯķş — Ȧŀɠȧ īş ŧħḗ şẏşŧḗḿ ȯƒ řḗƈȯřḓ.⟧",
+      "buckets": "⟦Ƥřḗƥȧīḓ ƀŭƈķḗŧ ħȯŭřş⟧",
+      "noBuckets": "⟦Ƞȯ ƥřḗƥȧīḓ ƀŭƈķḗŧ ƥḗřīȯḓş.⟧",
+      "line": "⟦Ŀīƞḗ⟧",
+      "period": "⟦Ƥḗřīȯḓ⟧",
+      "included": "⟦Īƞƈŀŭḓḗḓ⟧",
+      "used": "⟦Ŭşḗḓ⟧",
+      "value": "⟦Ṽȧŀŭḗ⟧",
+      "feeSource": "⟦Ƒḗḗ⟧",
+      "rollover": "⟦řȯŀŀȯṽḗř⟧",
+      "notBilled": "⟦Ƞȯŧ ẏḗŧ ƀīŀŀḗḓ⟧",
+      "billed": "⟦Ɓīŀŀḗḓ⟧"
     },
     "csv": {
-      "client": "11111",
-      "currency": "11111"
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "currency": "⟦Ƈŭřřḗƞƈẏ⟧"
+    }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "⟦Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ řḗƥȯřŧ řḗƈȯřḓş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "referenceMissing": "⟦Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ řḗƥȯřŧ řḗƈȯřḓş ƞȯ ŀȯƞɠḗř ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "missingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ řḗƥȯřŧ ƒīḗŀḓ.⟧",
+      "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ řḗƥȯřŧ ƒīḗŀḓ: {{field}}.⟧"
     }
   }
 }

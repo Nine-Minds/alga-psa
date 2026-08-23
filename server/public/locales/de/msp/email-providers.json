@@ -1092,5 +1092,71 @@
       "title": "Diese Regel testen",
       "to": "An"
     }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Domains konnten nicht abgerufen werden",
+      "invalidFormat": "Ungültiges Domainformat",
+      "duplicate": "Die Domain existiert bereits",
+      "addFailed": "Die Domain konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
+      "notFound": "Domain nicht gefunden",
+      "verifyFailed": "Die Domain konnte nicht verifiziert werden. Bitte versuchen Sie es erneut.",
+      "stillReferenced": "Die Domain wird noch referenziert und kann nicht gelöscht werden.",
+      "deleteFailed": "Die Domain konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    },
+    "provider": {
+      "saveFailed": "Der E-Mail-Anbieter konnte nicht gespeichert werden. Bitte prüfen Sie die Einstellungen und versuchen Sie es erneut.",
+      "updateFailed": "Der E-Mail-Anbieter konnte nicht aktualisiert werden. Bitte prüfen Sie die Einstellungen und versuchen Sie es erneut.",
+      "notFound": "E-Mail-Anbieter nicht gefunden",
+      "deleteFailed": "Der E-Mail-Anbieter konnte nicht gelöscht werden"
+    },
+    "settings": {
+      "fetchFailed": "Die E-Mail-Einstellungen konnten nicht abgerufen werden",
+      "mailboxRequired": "Wählen Sie ein Microsoft-365-Postfach für ausgehende E-Mails",
+      "mailboxInactive": "Das ausgewählte Microsoft-365-Postfach ist nicht aktiv oder existiert nicht mehr",
+      "mailboxReconnect": "Verbinden Sie das ausgewählte Microsoft-365-Postfach neu, bevor Sie es für ausgehende E-Mails verwenden",
+      "ticketIdentityMustMatchMailbox": "Die Ticket-E-Mail-Identität muss das ausgewählte Microsoft-365-Postfach ({{mailbox}}) verwenden. Aktualisieren Sie die Adresse für Ticket-E-Mails vor dem Speichern.",
+      "providerFromAddressInvalid": "Die Absenderadresse für {{provider}} muss eine gültige E-Mail-Adresse sein",
+      "ticketingFromInvalid": "Die Absenderadresse für Tickets muss eine gültige E-Mail-Adresse sein",
+      "outboundDomainInvalid": "Die Versanddomain für ausgehende E-Mails muss eine gültige Domain sein (z. B. example.com)",
+      "outboundDomainRequired": "Konfigurieren Sie eine Versanddomain, bevor Sie eine Absenderadresse für Tickets wählen",
+      "ticketingFromDomainMismatch": "Die Absenderadresse für Tickets muss die konfigurierte Versanddomain verwenden",
+      "refreshFailed": "Die aktualisierten Einstellungen konnten nicht abgerufen werden",
+      "updateFailed": "Die E-Mail-Einstellungen konnten nicht aktualisiert werden",
+      "mailboxesLoadFailed": "Die Microsoft-365-Postfächer konnten nicht geladen werden"
+    },
+    "inboundRules": {
+      "notFound": "Regel für eingehende E-Mails nicht gefunden",
+      "invalidOrdering": "Ungültige Daten für die Regelreihenfolge",
+      "aliasRequired": "Der Alias ist erforderlich",
+      "aliasTooLong": "Der Alias ist zu lang",
+      "clientRequired": "Der Kunde ist erforderlich",
+      "invalidSampleEmail": "Ungültige Beispiel-E-Mail",
+      "permissionDenied": "Sie sind nicht berechtigt, Regeln für eingehende E-Mails zu verwalten.",
+      "ticketDefaultsUnavailable": "Die referenzierten Ticket-Standardeinstellungen sind nicht vorhanden oder inaktiv.",
+      "orderingMismatch": "Die Reihenfolge stimmt nicht mit dem aktuellen Regelsatz überein.",
+      "clientNotFound": "Kunde nicht gefunden.",
+      "aliasAlreadyAssigned": "Der Alias „{{alias}}“ ist bereits einem Kunden zugewiesen.",
+      "invalidRegex": "Ungültiger regulärer Ausdruck.",
+      "fallbackDestinationRequired": "Ein Ausweichziel ist erforderlich, wenn bei fehlender Übereinstimmung ein Ausweichziel verwendet wird."
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Eine Konfiguration mit diesem Kurznamen existiert bereits",
+      "createFailed": "Die Standardwerte für eingehende Tickets konnten nicht erstellt werden. Bitte versuchen Sie es erneut.",
+      "notFound": "Standardkonfiguration nicht gefunden",
+      "updateFailed": "Die Standardwerte für eingehende Tickets konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Berechtigung verweigert: Ticketfeldoptionen können nicht gelesen werden",
+      "loadFailed": {
+        "ticketFieldOptions": "Die Ticketfeldoptionen konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "boards": "Die Boards konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "statuses": "Die Status konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "priorities": "Die Prioritäten konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "categories": "Die Kategorien konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "clients": "Die Kunden konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "users": "Die Benutzer konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+      }
+    }
   }
 }

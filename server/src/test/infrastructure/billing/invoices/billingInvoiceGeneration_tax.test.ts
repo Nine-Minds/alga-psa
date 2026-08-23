@@ -9,6 +9,8 @@ import {
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
   ensureClientPlanBundlesTable as ensureClientContractsTable,
+  ensureClientBillingEmail,
+  seedBillingChargeSources,
   unwrapManualInvoice
 } from '../../../../../test-utils/billingTestHelpers';
 import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
@@ -208,6 +210,10 @@ describe('Billing Invoice Tax Calculations', () => {
         is_inactive: false
       }, 'client_id');
 
+      // Invoice generation refuses a client with no billing recipient; fixtures
+      // that insert the row directly have to seed one.
+      await ensureClientBillingEmail(context, client_id);
+
       // Ensure tax region exists
       await tenantTable(context, 'tax_regions').insert({
         tenant: context.tenantId,
@@ -319,6 +325,10 @@ describe('Billing Invoice Tax Calculations', () => {
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString()
       }, 'client_id');
+
+      // Invoice generation refuses a client with no billing recipient; fixtures
+      // that insert the row directly have to seed one.
+      await ensureClientBillingEmail(context, clientId);
 
       await tenantTable(context, 'tax_regions').insert([
         {
@@ -466,6 +476,10 @@ describe('Billing Invoice Tax Calculations', () => {
         finalAmount: 1500
       };
 
+      // persistInvoiceCharges marks each usage charge's source row invoiced and
+      // throws when there is none behind a fabricated usageId.
+      await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>, { clientId: clientId });
+
       const createdInvoice = await createInvoiceFromBillingResult(
         billingResult,
         clientId,
@@ -508,6 +522,10 @@ describe('Billing Invoice Tax Calculations', () => {
         url: '',
         is_inactive: false
       }, 'client_id');
+
+      // Invoice generation refuses a client with no billing recipient; fixtures
+      // that insert the row directly have to seed one.
+      await ensureClientBillingEmail(context, client_id);
 
       // Ensure tax region exists
       await tenantTable(context, 'tax_regions').insert({
@@ -648,6 +666,10 @@ describe('Billing Invoice Tax Calculations', () => {
         is_inactive: false
       }, 'client_id');
 
+      // Invoice generation refuses a client with no billing recipient; fixtures
+      // that insert the row directly have to seed one.
+      await ensureClientBillingEmail(context, client_id);
+
       // Ensure tax region exists
       await tenantTable(context, 'tax_regions').insert({
         tenant: context.tenantId,
@@ -771,6 +793,10 @@ describe('Billing Invoice Tax Calculations', () => {
       is_inactive: false
     }, 'client_id');
 
+    // Invoice generation refuses a client with no billing recipient; fixtures
+    // that insert the row directly have to seed one.
+    await ensureClientBillingEmail(context, client_id);
+
     // Ensure tax region exists
     await tenantTable(context, 'tax_regions').insert({
       tenant: context.tenantId,
@@ -864,6 +890,10 @@ describe('Billing Invoice Tax Calculations', () => {
       finalAmount: 10000
     };
 
+    // persistInvoiceCharges marks each usage charge's source row invoiced and
+    // throws when there is none behind a fabricated usageId.
+    await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>, { clientId: client_id });
+
     const createdInvoice = await createInvoiceFromBillingResult(
       billingResult,
       client_id,
@@ -904,6 +934,10 @@ describe('Billing Invoice Tax Calculations', () => {
       url: '',
       is_inactive: false
     }, 'client_id');
+
+    // Invoice generation refuses a client with no billing recipient; fixtures
+    // that insert the row directly have to seed one.
+    await ensureClientBillingEmail(context, client_id);
 
     // Ensure tax region exists
     await tenantTable(context, 'tax_regions').insert({
@@ -994,6 +1028,10 @@ describe('Billing Invoice Tax Calculations', () => {
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString()
     }, 'client_id');
+
+    // Invoice generation refuses a client with no billing recipient; fixtures
+    // that insert the row directly have to seed one.
+    await ensureClientBillingEmail(context, client_id);
 
     // Ensure tax regions exist
     await tenantTable(context, 'tax_regions').insert([
@@ -1266,6 +1304,10 @@ describe('Billing Invoice Tax Calculations', () => {
       finalAmount: 30000
     };
 
+    // persistInvoiceCharges marks each usage charge's source row invoiced and
+    // throws when there is none behind a fabricated usageId.
+    await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>, { clientId: context.clientId });
+
     const createdInvoice = await createInvoiceFromBillingResult(
       billingResult,
       context.clientId,
@@ -1318,6 +1360,10 @@ describe('Billing Invoice Tax Calculations', () => {
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString()
     }, 'client_id');
+
+    // Invoice generation refuses a client with no billing recipient; fixtures
+    // that insert the row directly have to seed one.
+    await ensureClientBillingEmail(context, clientId);
 
     // Ensure tax region exists with active tax rate
     await tenantTable(context, 'tax_regions').insert({

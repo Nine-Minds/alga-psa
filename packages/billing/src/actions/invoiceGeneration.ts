@@ -76,7 +76,7 @@ import {
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
   POST_DROP_RECURRING_OBLIGATION_TYPES,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
+import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY } from './invoiceGeneration.constants';
 import {
   detectRecurringApprovalBlockers,
   formatApprovalBlockedReason,
@@ -671,13 +671,13 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
     }
 
     if (error.message === 'Billing cycle not found') {
-      return actionError('Billing cycle not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Billing cycle not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.billingCycle.notFoundRefresh');
     }
     if (error.message === 'Invoice not found') {
-      return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.invoice.notFoundRefresh');
     }
     if (error.message === 'Invalid billing cycle dates') {
-      return actionError('Billing cycle has invalid dates. Please review the cycle and try again.');
+      return actionError('Billing cycle has invalid dates. Please review the cycle and try again.', 'msp/invoicing:errors.billingCycle.invalidDates');
     }
     if (
       error.message === 'No recurring execution windows selected' ||
@@ -690,26 +690,36 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
       error.message.startsWith('Purchase Order is required') ||
       error.message.startsWith('Client ') ||
       error.message.startsWith('Service "') ||
-      error.message.startsWith('Invoice already exists for this recurring execution window') ||
       error.message.startsWith('Recurring service periods were not materialized') ||
       error.message.includes('Mixed currency billing is not supported')
     ) {
       return actionError(error.message);
     }
+
+    if (error.message.startsWith('Invoice already exists for this recurring execution window')) {
+      // Keyed so the recurring run can recognize it after the boundary translates it.
+      return actionError(error.message, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY);
+    }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected invoice values is invalid. Please refresh and try again.');
+    return actionError('One of the selected invoice values is invalid. Please refresh and try again.', 'msp/invoicing:errors.invoice.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required invoice field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required invoice field: ${dbError.column}.`,
+          'msp/invoicing:errors.invoice.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required invoice field.', 'msp/invoicing:errors.invoice.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.');
+    return actionError('The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.', 'msp/invoicing:errors.invoice.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A conflicting invoice already exists. Please refresh and try again.');
+    return actionError('A conflicting invoice already exists. Please refresh and try again.', 'msp/invoicing:errors.invoice.duplicate');
   }
 
   return null;
@@ -2616,7 +2626,12 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   });
 });
 
-async function generateInvoiceForNormalizedSelectionInputs(params: {
+/**
+ * Transactional production implementation. Exported so DB-backed integration
+ * tests can exercise the real persistence boundary without going through the
+ * session-bound server-action wrapper.
+ */
+export async function generateInvoiceForNormalizedSelectionInputs(params: {
   user: Session;
   tenant: string;
   knex: Knex;
@@ -2742,7 +2757,9 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
       return null;
     }
 
-    const createdInvoice = await createInvoiceFromBillingResult(
+    const createdInvoice = await createInvoiceFromBillingResultImpl(
+      user,
+      { tenant },
       billingResult,
       client_id,
       cycleStart,
@@ -2768,7 +2785,9 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
     }
   }
 
-  const createdInvoice = await createInvoiceFromBillingResult(
+  const createdInvoice = await createInvoiceFromBillingResultImpl(
+    user,
+    { tenant },
     billingResult,
     client_id,
     cycleStart,
@@ -2935,7 +2954,7 @@ export const downloadInvoicePDF = withAuth(async (
   });
 });
 
-export const createInvoiceFromBillingResult = withAuth(async (
+export async function createInvoiceFromBillingResultImpl(
   user,
   { tenant },
   billingResult: IBillingResult,
@@ -2945,7 +2964,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
   billing_cycle_id: string | null,
   userId: string,
   options: { projectId?: string } = {},
-): Promise<IInvoice> => {
+): Promise<IInvoice> {
   // Verify that the userId matches the current user
   if (user.user_id !== userId) {
     throw new Error('Permission denied: User ID mismatch');
@@ -3397,4 +3416,8 @@ export const createInvoiceFromBillingResult = withAuth(async (
   }, userId);
 
   return newInvoice;
-});
+}
+
+export const createInvoiceFromBillingResult = withAuth(
+  createInvoiceFromBillingResultImpl,
+);

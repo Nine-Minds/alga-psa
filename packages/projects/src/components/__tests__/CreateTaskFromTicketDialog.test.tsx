@@ -5,12 +5,14 @@ import '@testing-library/jest-dom/vitest';
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { toast } from 'react-hot-toast';
 import CreateTaskFromTicketDialog from '../CreateTaskFromTicketDialog';
 import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';
 
 const getProjectsMock = vi.fn();
 const getProjectDetailsMock = vi.fn();
 const openDrawerMock = vi.fn();
+const closeDrawerMock = vi.fn();
 
 vi.mock('../../actions/projectActions', () => ({
   getProjects: (...args: unknown[]) => getProjectsMock(...args),
@@ -18,7 +20,11 @@ vi.mock('../../actions/projectActions', () => ({
 }));
 
 vi.mock('@alga-psa/ui', () => ({
-  useDrawer: () => ({ openDrawer: openDrawerMock, closeDrawer: vi.fn() })
+  useDrawer: () => ({ openDrawer: openDrawerMock, closeDrawer: closeDrawerMock })
+}));
+
+vi.mock('react-hot-toast', () => ({
+  toast: { success: vi.fn() }
 }));
 
 vi.mock('../TaskQuickAdd', () => ({
@@ -253,6 +259,30 @@ describe('CreateTaskFromTicketDialog', () => {
 
     expect(openDrawerMock).toHaveBeenCalled();
     expect(getDrawerTaskQuickAddProps().prefillData.task_name).toBe('Printer issue');
+  });
+
+  it('closes the drawer and shows a success toast only when a task is created', async () => {
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+
+    await waitFor(() => expect(screen.getByTestId('create-task-project').querySelectorAll('option').length).toBeGreaterThan(1));
+    fireEvent.change(screen.getByTestId('create-task-project'), { target: { value: 'project-1' } });
+    await waitFor(() => expect(screen.getByTestId('create-task-phase').querySelectorAll('option').length).toBeGreaterThan(1));
+
+    fireEvent.change(screen.getByTestId('create-task-phase'), { target: { value: 'phase-1' } });
+    fireEvent.change(screen.getByTestId('create-task-status'), { target: { value: 'status-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    const { onTaskAdded } = getDrawerTaskQuickAddProps();
+    onTaskAdded({ task_id: 'task-1' } as any);
+
+    expect(closeDrawerMock).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith('Task created successfully');
+
+    onTaskAdded(null);
+
+    expect(closeDrawerMock).toHaveBeenCalledTimes(2);
+    expect(toast.success).toHaveBeenCalledTimes(1);
   });
 
   it('includes pendingTicketLink when auto-link is on', async () => {

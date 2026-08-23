@@ -203,6 +203,8 @@ describe('resolveClientBillingCurrency — fallback chain', () => {
       )
     ).resolves.toEqual({
       actionError: 'Client has active contracts in multiple currencies (GBP, EUR).',
+      messageKey: 'msp/billing:errors.currency.multipleActive',
+      messageParams: { currencies: 'GBP, EUR' },
     });
   });
 });

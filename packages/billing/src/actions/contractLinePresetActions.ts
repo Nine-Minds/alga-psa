@@ -55,19 +55,25 @@ function contractLinePresetActionErrorFrom(error: unknown): ContractLinePresetAc
 
     const dbError = error as { code?: string; column?: string; constraint?: string };
     if (dbError?.code === '22P02') {
-        return actionError('One of the selected contract line preset values is invalid. Please refresh and try again.');
+        return actionError('One of the selected contract line preset values is invalid. Please refresh and try again.', 'msp/contract-lines:errors.preset.invalidValue');
     }
     if (dbError?.code === '23502') {
-        return actionError(`Missing required contract line preset field${dbError.column ? `: ${dbError.column}` : ''}.`);
+        return dbError.column
+          ? actionError(
+              `Missing required contract line preset field: ${dbError.column}.`,
+              'msp/contract-lines:errors.preset.missingFieldNamed',
+              { field: dbError.column },
+            )
+          : actionError('Missing required contract line preset field.', 'msp/contract-lines:errors.preset.missingField');
     }
     if (dbError?.code === '23503') {
-        return actionError('The selected contract line preset, contract, or service no longer exists. Please refresh and try again.');
+        return actionError('The selected contract line preset, contract, or service no longer exists. Please refresh and try again.', 'msp/contract-lines:errors.preset.referenceMissing');
     }
     if (dbError?.code === '23505') {
-        return actionError('This contract line preset change conflicts with an existing record. Please refresh and try again.');
+        return actionError('This contract line preset change conflicts with an existing record. Please refresh and try again.', 'msp/contract-lines:errors.preset.conflict');
     }
     if (dbError?.code === '23514') {
-        return actionError('One of the contract line preset values is not allowed. Please review the form and try again.');
+        return actionError('One of the contract line preset values is not allowed. Please review the form and try again.', 'msp/contract-lines:errors.preset.notAllowed');
     }
 
     return null;
@@ -203,7 +209,11 @@ export const updateContractLinePreset = withAuth(async (
         }
         if (error instanceof Error) {
             if (error.message.includes('not found')) {
-                return actionError(`Contract Line Preset with ID ${presetId} not found during update.`);
+                return actionError(
+                    `Contract Line Preset with ID ${presetId} not found during update.`,
+                    'msp/contract-lines:errors.preset.notFoundDuringUpdate',
+                    { presetId },
+                );
             }
             throw error;
         }

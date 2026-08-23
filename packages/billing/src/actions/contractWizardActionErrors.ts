@@ -29,10 +29,10 @@ export function contractWizardActionErrorFrom(error: unknown): ContractWizardAct
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected contract wizard records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected contract wizard records is no longer valid. Please refresh and try again.', 'msp/contracts:errors.wizard.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A matching contract wizard record already exists.');
+    return actionError('A matching contract wizard record already exists.', 'msp/contracts:errors.wizard.duplicate');
   }
 
   return null;

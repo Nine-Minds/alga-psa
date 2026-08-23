@@ -1504,7 +1504,10 @@
     "start": "Początek",
     "insertStepHere": "Wstaw tutaj krok",
     "emptyDisabled": "Brak kroków.",
-    "emptySelectPrompt": "Wybierz krok z panelu, aby rozpocząć."
+    "emptySelectPrompt": "Wybierz krok z panelu, aby rozpocząć.",
+    "patchSummary": {
+      "unchanged": "pozostałe pola bez zmian"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Edytor wyrażeń",
@@ -1620,6 +1623,37 @@
     "softEnumUseCustom": "Użyj „{{value}}”",
     "expression": {
       "placeholder": "np. payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Pola do zmiany",
+      "targetFraming": "Ten krok aktualizuje {{target}}.",
+      "summaryChanges": "Zmienia {{list}}",
+      "summaryChangesMore": "Zmienia {{list}} +{{count}} więcej",
+      "unchangedNote": "Wszystkie pozostałe pola zachowują swoje bieżące wartości.",
+      "emptyGuidance": "Dodaj co najmniej jedno pole do zmiany.",
+      "editChanges": "Edytuj zmiany…",
+      "dialogTitle": "Edytuj zmiany",
+      "dialogDescription": "Aktualizacja {{target}}. Zmienione zostaną tylko pola wymienione po prawej stronie; wszystko inne zachowa bieżącą wartość.",
+      "footerSummary": "{{count}} pól zostanie zmienionych · wszystko inne zachowa bieżącą wartość",
+      "done": "Gotowe",
+      "added": "Dodano ✓",
+      "noChangesYet": "Brak zmian. Wybierz pole po lewej stronie, aby rozpocząć.",
+      "setFieldTo": "Ustaw {{field}} na",
+      "removeChange": "Przestań zmieniać to pole (zachowa bieżącą wartość)",
+      "advancedTitle": "Zaawansowane",
+      "group": {
+        "details": "Szczegóły",
+        "assignment": "Przypisanie",
+        "datesTags": "Daty i tagi",
+        "advanced": "Zaawansowane"
+      },
+      "target": {
+        "genericRecord": "rekord",
+        "unset": "{{record}} wybrany powyżej",
+        "fromReference": "{{record}} z „{{source}}”",
+        "fromExpression": "{{record}} wybrany przez wyrażenie",
+        "fixed": "konkretny {{record}}"
+      }
     }
   },
   "schemaReference": {

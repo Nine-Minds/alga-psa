@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "Cor hexadecimal inválida (por exemplo, #FF0000)",
+    "invalidHexText": "Cor hexadecimal inválida (por exemplo, #FFFFFF)",
+    "customizeTagColors": "Personalizar cores da tag",
+    "chooseColor": "Escolher cor",
+    "quickSelect": "Seleção rápida",
+    "presetAriaLabel": "Selecionar cor predefinida {{number}}",
+    "backgroundColor": "Cor de fundo",
+    "textColor": "Cor do texto",
+    "preview": "Prévia",
+    "sampleTag": "Tag de exemplo",
+    "resetToDefault": "Restaurar padrão"
+  },
   "clientNameCell": {
     "noClient": "Nenhum cliente"
   },
@@ -114,6 +127,17 @@
     "unnamedUser": "Usuário sem nome",
     "unnamedTeam": "Equipe sem nome"
   },
+  "serviceTypeSelect": {
+    "placeholder": "Selecione um tipo de serviço...",
+    "newNamePlaceholder": "Nome do novo tipo de serviço...",
+    "addNew": "Adicionar novo tipo de serviço",
+    "deleteTitle": "Excluir tipo de serviço",
+    "deleteConfirm": "Tem certeza de que deseja excluir este tipo de serviço? Esta ação não pode ser desfeita.",
+    "errors": {
+      "delete": "Não é possível excluir este tipo de serviço. Ele pode estar em uso por serviços existentes.",
+      "create": "Não foi possível criar o tipo de serviço. Tente novamente."
+    }
+  },
   "tagFilter": {
     "placeholder": "Filtrar por tags...",
     "filter": "Filtro",
@@ -148,6 +172,15 @@
     "passwordMismatch": "As senhas não coincidem"
   },
   "errors": {
+    "validation": {
+      "required": "{{field}} é obrigatório.",
+      "invalidType": "{{field}} tem o tipo incorreto.",
+      "invalidFormat": "{{field}} tem um formato inválido.",
+      "tooSmall": "{{field}} está abaixo do valor ou comprimento mínimo permitido.",
+      "tooLarge": "{{field}} excede o valor ou comprimento máximo permitido.",
+      "unsupportedValue": "{{field}} tem um valor não suportado.",
+      "invalidValue": "{{field}} tem um valor inválido."
+    },
     "auth": {
       "notAuthenticated": "Não autenticado",
       "accessDenied": "Acesso negado",
@@ -159,6 +192,14 @@
       "contactNotFound": "Usuário não associado a um contato",
       "clientNotFound": "Contato não associado a um cliente"
     },
+    "password": {
+      "currentIncorrect": "A senha atual está incorreta",
+      "changeFailed": "Não foi possível alterar a senha",
+      "differentTenant": "Não autorizado: não é possível modificar um usuário de outro inquilino",
+      "internalStaffRequired": "Não autorizado: são necessários privilégios de equipe interna",
+      "adminRequired": "Não autorizado: são necessários privilégios de administrador",
+      "changeUserFailed": "Não foi possível alterar a senha do usuário"
+    },
     "permissions": {
       "tickets": {
         "read": "Permissões insuficientes para visualizar tickets",
@@ -168,14 +209,49 @@
         "updateStatus": "Permissões insuficientes para atualizar o status do ticket",
         "addComments": "Permissões insuficientes para adicionar comentários",
         "updateComments": "Permissões insuficientes para atualizar comentários",
-        "deleteComments": "Permissões insuficientes para excluir comentários"
+        "deleteComments": "Permissões insuficientes para excluir comentários",
+        "viewDocuments": "Permissões insuficientes para ver os documentos do ticket"
       }
+    },
+    "tags": {
+      "notFound": "Tag não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores de tag selecionados é inválido. Atualize a página e tente novamente.",
+      "textTooLongShort": "O texto da tag é muito longo.",
+      "referenceMissing": "A tag ou o registro marcado selecionado não existe mais. Atualize a página e tente novamente.",
+      "alreadyApplied": "Essa tag já está aplicada a este item.",
+      "duplicate": "Já existe uma tag com esses dados.",
+      "notAllowed": "Um dos valores da tag não é permitido. Revise a tag e tente novamente.",
+      "missingField": "Falta um campo obrigatório da tag.",
+      "missingFieldNamed": "Falta um campo obrigatório da tag: {{field}}.",
+      "textRequired": "O texto da tag é obrigatório",
+      "textEmpty": "O texto da tag não pode ficar vazio",
+      "textTooLong": "Texto da tag muito longo (máximo de 50 caracteres)",
+      "textInvalidCharacters": "O texto da tag contém caracteres inválidos",
+      "backgroundColorInvalid": "Formato de cor de fundo inválido. Deve ser um código de cor hexadecimal válido (ex.: #FF0000)",
+      "textColorInvalid": "Formato de cor de texto inválido. Deve ser um código de cor hexadecimal válido (ex.: #FFFFFF)"
     }
   },
   "fields": {
     "notes": "Notas"
   },
   "auth": {
+    "signOut": {
+      "title": "Sair",
+      "confirmation": "Tem certeza de que deseja sair?",
+      "signingOut": "Saindo...",
+      "action": "Sair"
+    },
+    "passwordReset": {
+      "title": "Alteração de senha obrigatória",
+      "description": "Você ainda está usando uma senha temporária. Altere sua senha para proteger sua conta."
+    },
+    "twoFactor": {
+      "codeLabel": "Código 2FA",
+      "verify": "Verificar",
+      "title": "Muito fácil",
+      "instructions": "Digite o código de 6 dígitos do seu aplicativo autenticador.",
+      "digitsLeft": "{{count}} dígitos restantes"
+    },
     "messages": {
       "handoffMissingToken": "O token de transferência de login está ausente ou é inválido. Faça login novamente.",
       "handoffFinalizeFailed": "Não foi possível finalizar seu login. Tente fazer login novamente.",
@@ -199,6 +275,19 @@
       "existingContactsOnly": "O cadastro agora está disponível apenas para contatos existentes. Fale com seu administrador para ser adicionado como contato primeiro.",
       "registerFromSignIn": "Se você já for um contato existente, pode se cadastrar diretamente na página de login usando o endereço de email do seu contato.",
       "returnToSignIn": "Voltar ao login"
+    },
+    "validation": {
+      "password": {
+        "required": "A senha é obrigatória",
+        "tooShort": "A senha deve ter pelo menos 8 caracteres",
+        "tooLong": "A senha deve ter no máximo 128 caracteres",
+        "missingUppercase": "A senha deve conter pelo menos uma letra maiúscula",
+        "missingLowercase": "A senha deve conter pelo menos uma letra minúscula",
+        "missingNumber": "A senha deve conter pelo menos um número",
+        "missingSpecialCharacter": "A senha deve conter pelo menos um caractere especial",
+        "tooCommon": "A senha é muito comum. Escolha uma senha mais forte",
+        "sequentialCharacters": "A senha não pode conter caracteres em sequência"
+      }
     }
   },
   "share": {
@@ -439,7 +528,72 @@
         "sequentialDigits": "Este número percorre o teclado em sequência.",
         "fictionalRange": "Está na faixa 555-0100 reservada para ficção."
       },
-      "dismissWarning": "Dispensar"
+      "dismissWarning": "Dispensar",
+      "address": {
+        "emoji": "O endereço não pode conter emojis",
+        "empty": "O endereço não pode estar vazio",
+        "invalidCharacters": "O endereço contém caracteres inválidos",
+        "noLetters": "O endereço deve conter letras",
+        "tooLong": "O endereço não pode ter mais de 100 caracteres"
+      },
+      "city": {
+        "emoji": "O nome da cidade não pode conter emojis",
+        "empty": "O nome da cidade não pode estar vazio",
+        "invalidCharacters": "O nome da cidade contém caracteres inválidos",
+        "noLetters": "O nome da cidade deve conter letras",
+        "tooLong": "O nome da cidade não pode ter mais de 100 caracteres"
+      },
+      "stateProvince": {
+        "emoji": "O estado/província não pode conter emojis",
+        "empty": "O estado/província não pode estar vazio",
+        "invalidCharacters": "O estado/província contém caracteres inválidos",
+        "noLetters": "O estado/província deve conter letras",
+        "tooLong": "O estado/província não pode ter mais de 100 caracteres"
+      },
+      "postalCode": {
+        "au": "Informe um código postal australiano válido (por exemplo, 2000)",
+        "br": "Informe um CEP brasileiro válido (por exemplo, 01234-567)",
+        "ca": "Informe um código postal canadense válido (por exemplo, K1A 0A6)",
+        "ch": "Informe um código postal suíço válido (por exemplo, 8001)",
+        "de": "Informe um código postal alemão válido (por exemplo, 10115)",
+        "emoji": "O código postal não pode conter emojis",
+        "es": "Informe um código postal espanhol válido (por exemplo, 28001)",
+        "fr": "Informe um código postal francês válido (por exemplo, 75001)",
+        "gb": "Informe um código postal britânico válido (por exemplo, SW1A 1AA)",
+        "generic": "Informe um código postal válido",
+        "in": "Informe um código postal indiano válido (por exemplo, 110001)",
+        "it": "Informe um código postal italiano válido (por exemplo, 00118)",
+        "jp": "Informe um código postal japonês válido (por exemplo, 123-4567)",
+        "nl": "Informe um código postal holandês válido (por exemplo, 1234AB)",
+        "onlySpaces": "O código postal não pode conter apenas espaços",
+        "us": "Informe um código ZIP válido (por exemplo, 12345 ou 12345-6789)",
+        "usShort": "Informe um código ZIP válido"
+      },
+      "industry": {
+        "invalidCharacters": "O ramo de atividade contém caracteres inválidos",
+        "noLetters": "O ramo de atividade deve conter letras",
+        "tooLong": "O ramo de atividade não pode ter mais de 100 caracteres",
+        "tooShort": "O ramo de atividade deve ter pelo menos 2 caracteres",
+        "tooShortText": "O ramo de atividade deve conter pelo menos 2 caracteres de texto"
+      },
+      "role": {
+        "noAlphanumeric": "A função deve conter letras ou números",
+        "onlySpaces": "A função não pode conter apenas espaços",
+        "tooLong": "A função não pode ter mais de 100 caracteres"
+      },
+      "notes": {
+        "tooLong": "As notas não podem ter mais de 2000 caracteres"
+      },
+      "companySize": {
+        "emoji": "O tamanho da empresa não pode conter emojis",
+        "invalid": "Informe um tamanho de empresa válido (por exemplo, \"50\", \"10-50\", \"quinhentos\", \"2,5 mi\", \"pequena\", \"grande empresa\")",
+        "tooLong": "O tamanho da empresa não pode ter mais de 50 caracteres"
+      },
+      "annualRevenue": {
+        "emoji": "A receita anual não pode conter emojis",
+        "invalid": "Informe uma receita anual válida (por exemplo, \"R$ 1.000.000\", \"cinco milhões\", \"2,5 mi\", \"10 mi-50 mi\", \"não divulgado\")",
+        "tooLong": "A receita anual não pode ter mais de 50 caracteres"
+      }
     }
   },
   "commentThread": {
@@ -1369,5 +1523,75 @@
   "notifications": {
     "needsAttention": "Requer atenção ({{count}})",
     "lowPriority": "Prioridade baixa ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Resolver conflitos de importação",
+    "description": "Alguns itens já existem. Escolha como tratar cada conflito.",
+    "apply": "Aplicar resoluções",
+    "reason": {
+      "name": "Conflito: este nome já existe",
+      "order": "Conflito: a ordem {{order}} já está ocupada",
+      "item": "Conflito: este item já existe"
+    },
+    "skip": "Ignorar este item",
+    "rename": "Importar com um nome diferente",
+    "newNamePlaceholder": "Informe o novo nome",
+    "reorder": "Importar com uma ordem diferente",
+    "newOrderPlaceholder": "Informe a nova ordem"
+  },
+  "tags": {
+    "editTitle": "Editar tag",
+    "noPermission": "Você não tem permissão para editar tags. Entre em contato com seu administrador para obter acesso.",
+    "preview": "Prévia da tag",
+    "textLabel": "Texto da tag",
+    "textPlaceholder": "Informe o texto da tag",
+    "quickColors": "Seleção rápida de cores",
+    "presetSwatch": "Fundo: {{background}}, texto: {{text}}",
+    "backgroundColorLabel": "Cor de fundo",
+    "textColorLabel": "Cor do texto",
+    "pickBackgroundColor": "Escolher cor de fundo",
+    "pickTextColor": "Escolher cor do texto",
+    "resetColors": "Redefinir cores",
+    "deleteAll": "Excluir todas",
+    "deleting": "Excluindo...",
+    "deleteAllTitle": "Excluir todas as tags",
+    "deleteAllMessage": "Tem certeza de que deseja excluir todas as tags com o texto \"{{tag}}\"? Isso removerá esta tag de todos os {{entityType}}. Esta ação não pode ser desfeita.",
+    "deletedAll": "Todas as tags \"{{tag}}\" foram excluídas",
+    "deleteFailed": "Não foi possível excluir as tags",
+    "saveFailed": "Não foi possível salvar as alterações da tag",
+    "textRequired": "O texto da tag não pode ficar vazio",
+    "updated": "Tag atualizada com sucesso",
+    "entityTypes": {
+      "client": "clientes",
+      "contact": "contatos",
+      "ticket": "tickets",
+      "project": "projetos",
+      "project_task": "tarefas de projeto",
+      "workflow_form": "formulários de workflow",
+      "document": "documentos",
+      "knowledge_base_article": "artigos da base de conhecimento",
+      "opportunity": "oportunidades"
+    }
+  },
+  "statusDialog": {
+    "nameRequired": "O nome do status é obrigatório",
+    "orderTaken": "O número de ordem {{order}} já está ocupado por \"{{name}}\". Escolha outro número de ordem.",
+    "updated": "Status atualizado com sucesso",
+    "created": "Status criado com sucesso",
+    "orderInUse": "Este número de ordem já está em uso. Escolha outro número de ordem.",
+    "updateFailed": "Não foi possível atualizar o status",
+    "createFailed": "Não foi possível criar o status",
+    "submitUpdate": "Atualizar status",
+    "submitAdd": "Adicionar status",
+    "editTitle": "Editar status",
+    "addTitle": "Adicionar novo status",
+    "nameLabel": "Nome do status",
+    "namePlaceholder": "por exemplo, Em andamento",
+    "orderLabel": "Número de ordem (1-100, números menores aparecem primeiro)",
+    "orderHelp": "Define a ordem em que os status aparecem nos menus suspensos em toda a plataforma.",
+    "usedOrders": "Números de ordem em uso: {{orders}}",
+    "noUsedOrders": "Nenhum número de ordem em uso ainda",
+    "markClosed": "Marcar como status fechado",
+    "setDefault": "Definir como status padrão para novos tickets"
   }
 }

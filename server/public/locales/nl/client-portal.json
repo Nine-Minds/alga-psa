@@ -301,6 +301,25 @@
         "contactSupport": "Neem contact op met het supportteam van uw organisatie",
         "tryAnother": "Ander e-mailadres proberen"
       }
+    },
+    "register": {
+      "emailLabel": "E-mailadres",
+      "checkingEmail": "E-mailadres controleren...",
+      "existingContactsOnly": "Registratie is alleen mogelijk voor bestaande contactpersonen. Neem contact op met uw beheerder.",
+      "contactVerified": "Contactpersoon geverifieerd. Maak uw wachtwoord aan.",
+      "passwordPlaceholder": "Maak een wachtwoord aan",
+      "passwordMustContain": "Wachtwoord moet bevatten:",
+      "completeRequiredFields": "Vul de verplichte velden in:",
+      "creatingAccount": "Bezig met account aanmaken...",
+      "createAccount": "Account aanmaken",
+      "failed": "Registratie mislukt",
+      "unexpectedError": "Er is een onverwachte fout opgetreden tijdens de registratie.",
+      "missing": {
+        "email": "E-mail",
+        "validEmail": "Geldig e-mailadres",
+        "verifiedContact": "Geverifieerd e-mailadres van de contactpersoon",
+        "validPassword": "Geldig wachtwoord"
+      }
     }
   },
   "account": {
@@ -685,9 +704,14 @@
   },
   "notifications": {
     "title": "Notificaties",
+    "bellUnreadAria": "Notificaties ({{unread}} ongelezen)",
+    "unreadDot": "Ongelezen notificaties",
+    "reconnecting": "Opnieuw verbinden...",
     "markAsRead": "Markeren als gelezen",
     "markAllAsRead": "Alles als gelezen markeren",
     "noNotifications": "Geen nieuwe notificaties",
+    "unreadCount_one": "{{count}} ongelezen notificatie",
+    "unreadCount_other": "{{count}} ongelezen notificaties",
     "settings": "Notificatie-instellingen",
     "viewAll": "Alle notificaties bekijken",
     "tabs": {
@@ -916,5 +940,57 @@
     },
     "notAvailable": "N.v.t.",
     "detailsTitle": "Asset-details"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Uw portaalgebruiker is niet gekoppeld aan een contactpersoon. Neem contact op met de support als dit blijft gebeuren.",
+      "userNotLinkedToClient": "Uw portaalgebruiker is niet gekoppeld aan een klantaccount. Neem contact op met de support als dit blijft gebeuren.",
+      "contactNotLinkedToClient": "Uw contactpersoon is niet gekoppeld aan een klantaccount. Neem contact op met de support als dit blijft gebeuren.",
+      "clientNotFound": "Klantaccount niet gevonden. Het is mogelijk verwijderd of u hebt er geen toegang meer toe.",
+      "serviceNotFound": "Service niet gevonden of niet langer actief. Vernieuw de pagina en probeer het opnieuw.",
+      "serviceUpgradeUnavailable": "Het upgraden van services is tijdelijk niet beschikbaar. Neem contact op met de support om uw abonnement te wijzigen."
+    },
+    "records": {
+      "invalid": "Een van de geselecteerde records is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missing": "Een van de geselecteerde records bestaat niet meer. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "access": {
+      "unauthorized": "Niet geautoriseerd",
+      "projectBillingData": "Geen toegang tot projectfacturatiegegevens",
+      "quoteData": "Geen toegang tot offertegegevens",
+      "invoiceData": "Geen toegang tot factuurgegevens",
+      "billingData": "Geen toegang tot facturatiegegevens",
+      "settingsUpdate": "U hebt geen rechten om deze instellingen te wijzigen.",
+      "billingSegment": "Geen toegang tot dat facturatiesegment"
+    },
+    "billing": {
+      "quoteNotFound": "Offerte niet gevonden of toegang geweigerd",
+      "quoteStale": "De offerte is niet langer beschikbaar. Vernieuw de offerte en probeer het opnieuw.",
+      "quoteStaleAccept": "De offerte is niet langer beschikbaar. Vernieuw de offerte voordat u deze accepteert.",
+      "quoteStaleReject": "De offerte is niet langer beschikbaar. Vernieuw de offerte voordat u deze afwijst.",
+      "invoiceNotFound": "Factuur niet gevonden of toegang geweigerd",
+      "jobNotFound": "Achtergrondtaak niet gevonden",
+      "quoteInvalidState": "De offerte heeft niet de juiste status voor deze actie",
+      "rejectionCommentRequired": "Een toelichting bij de afwijzing is verplicht",
+      "emailSendFailed": "Het verzenden van de e-mail kon niet worden gestart"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket niet gevonden of toegang geweigerd",
+      "invalidData": "Ongeldige ticketgegevens"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Controleer de gegevens van de zichtbaarheidsgroep en probeer het opnieuw.",
+      "boardsUnavailable": "Een of meer geselecteerde borden zijn niet langer beschikbaar. Vernieuw de pagina en probeer het opnieuw.",
+      "contactNotFound": "Contactpersoon niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "otherClient": "U hebt geen rechten om zichtbaarheidsgroepen van een andere klant te beheren.",
+      "selectClientOrContact": "Selecteer een klant of contactpersoon voordat u zichtbaarheidsgroepen beheert.",
+      "groupNotFound": "Zichtbaarheidsgroep niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "groupNotValidForContact": "De geselecteerde zichtbaarheidsgroep is niet geldig voor deze contactpersoon. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de zichtbaarheidsgroep.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de zichtbaarheidsgroep: {{field}}.",
+      "recordInvalid": "Een van de geselecteerde zichtbaarheidsgroeprecords is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een zichtbaarheidsgroep met deze gegevens voor deze klant.",
+      "invalidData": "Ongeldige gegevens voor de zichtbaarheidsgroep. Controleer de groepsgegevens en de geselecteerde borden."
+    }
   }
 }

@@ -8,6 +8,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { ITag } from '@alga-psa/types';
 import { generateEntityColor } from '../../lib/colorUtils';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '../../lib/i18n/client';
 import tinycolor from 'tinycolor2';
 import { Trash2 } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -66,6 +67,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { t } = useTranslation('common');
 
   const handleDeleteAll = async () => {
     if (!onDeleteAll || isDeleting) return;
@@ -75,9 +77,9 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
       await onDeleteAll(tag.tag_text, tag.tagged_type);
       setIsOpen(false);
       setShowDeleteConfirm(false);
-      toast.success(`All "${tag.tag_text}" tags deleted successfully`);
+      toast.success(t('tags.deletedAll', 'All "{{tag}}" tags deleted successfully', { tag: tag.tag_text }));
     } catch (error) {
-      handleError(error, 'Failed to delete tags');
+      handleError(error, t('tags.deleteFailed', 'Failed to delete tags'));
       // Don't close the dialog on error
       setShowDeleteConfirm(false);
     } finally {
@@ -118,7 +120,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
     
     const trimmedText = tagText.trim();
     if (!trimmedText) {
-      toast.error('Tag text cannot be empty');
+      toast.error(t('tags.textRequired', 'Tag text cannot be empty'));
       return;
     }
 
@@ -145,9 +147,9 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
     try {
       await onSave(tag.tag_id, updates);
       setIsOpen(false);
-      toast.success('Tag updated successfully');
+      toast.success(t('tags.updated', 'Tag updated successfully'));
     } catch (error) {
-      handleError(error, 'Failed to save tag changes');
+      handleError(error, t('tags.saveFailed', 'Failed to save tag changes'));
       // Don't close the dialog on error
     } finally {
       setIsSaving(false);
@@ -178,14 +180,14 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
         onClose={() => setIsOpen(false)}
         className="max-w-sm"
         draggable={true}
-        title="Edit Tag"
+        title={t('tags.editTitle', 'Edit Tag')}
       >
         <div className="space-y-4">
           {/* Show warning if no permissions */}
           {!allowColorEdit && !allowTextEdit && (
             <Alert variant="warning">
               <AlertDescription>
-                You don't have permission to edit tags. Contact your administrator for access.
+                {t('tags.noPermission', "You don't have permission to edit tags. Contact your administrator for access.")}
               </AlertDescription>
             </Alert>
           )}
@@ -199,7 +201,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                 color: textColor,
               }}
             >
-              {tagText || 'Tag Preview'}
+              {tagText || t('tags.preview', 'Tag Preview')}
             </span>
           </div>
 
@@ -207,13 +209,13 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
           {allowTextEdit && (
             <div>
               <Label className="text-xs text-gray-700 mb-1 block">
-                Tag Text
+                {t('tags.textLabel', 'Tag Text')}
               </Label>
               <Input
                 type="text"
                 value={tagText}
                 onChange={(e) => setTagText(e.target.value)}
-                placeholder="Enter tag text"
+                placeholder={t('tags.textPlaceholder', 'Enter tag text')}
                 className="w-full"
               />
             </div>
@@ -224,7 +226,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
             <>
               {/* Preset colors */}
               <div>
-                <Label className="text-xs text-gray-700 mb-2 block">Quick Select Colors</Label>
+                <Label className="text-xs text-gray-700 mb-2 block">{t('tags.quickColors', 'Quick Select Colors')}</Label>
                 <div className="grid grid-cols-6 gap-2">
                   {PRESET_COLORS.map((preset, index): React.JSX.Element => {
                     const isSelected = backgroundColor === preset.background && textColor === preset.text;
@@ -241,7 +243,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                           e.stopPropagation();
                           handlePresetClick(preset);
                         }}
-                        title={`Background: ${preset.background}, Text: ${preset.text}`}
+                        title={t('tags.presetSwatch', 'Background: {{background}}, Text: {{text}}', { background: preset.background, text: preset.text })}
                       >
                         <span
                           className="text-xs font-medium"
@@ -258,7 +260,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
               {/* Custom color inputs */}
               <div className="space-y-3">
                 <div>
-                  <Label className="text-xs text-gray-700">Background Color</Label>
+                  <Label className="text-xs text-gray-700">{t('tags.backgroundColorLabel', 'Background Color')}</Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       value={backgroundColor}
@@ -271,13 +273,13 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                       value={backgroundColor}
                       onChange={(e) => setBackgroundColor(e.target.value)}
                       className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
-                      title="Pick background color"
+                      title={t('tags.pickBackgroundColor', 'Pick background color')}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-xs text-gray-700">Text Color</Label>
+                  <Label className="text-xs text-gray-700">{t('tags.textColorLabel', 'Text Color')}</Label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       value={textColor}
@@ -290,7 +292,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                       value={textColor}
                       onChange={(e) => setTextColor(e.target.value)}
                       className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
-                      title="Pick text color"
+                      title={t('tags.pickTextColor', 'Pick text color')}
                     />
                   </div>
                 </div>
@@ -311,7 +313,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                     onClick={handleReset}
                     className="flex-1"
                   >
-                    Reset colors
+                    {t('tags.resetColors', 'Reset colors')}
                   </Button>
                 )}
                 {onDeleteAll && allowDeleteAll && (
@@ -323,7 +325,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                     className="flex-1 text-destructive hover:text-destructive hover:bg-[rgb(var(--color-destructive)/0.1)]"
                   >
                     <Trash2 size={14} className="mr-1" />
-                    Delete All
+                    {t('tags.deleteAll', 'Delete All')}
                   </Button>
                 )}
               </div>
@@ -338,7 +340,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                 onClick={() => setIsOpen(false)}
                 className="flex-1"
               >
-                {(allowColorEdit || allowTextEdit) ? 'Cancel' : 'Close'}
+                {(allowColorEdit || allowTextEdit) ? t('actions.cancel', 'Cancel') : t('actions.close', 'Close')}
               </Button>
               {(allowColorEdit || allowTextEdit) && (
                 <Button
@@ -348,7 +350,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                   disabled={isSaving}
                   className="flex-1"
                 >
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving ? t('actions.saving', 'Saving...') : t('actions.save', 'Save')}
                 </Button>
               )}
             </div>
@@ -361,10 +363,14 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDeleteAll}
-        title="Delete All Tags"
-        message={`Are you sure you want to delete all tags with the text "${tag.tag_text}"? This will remove this tag from all ${tag.tagged_type}s. This action cannot be undone.`}
-        confirmLabel={isDeleting ? 'Deleting...' : 'Delete All'}
-        cancelLabel="Cancel"
+        title={t('tags.deleteAllTitle', 'Delete All Tags')}
+        message={t(
+          'tags.deleteAllMessage',
+          'Are you sure you want to delete all tags with the text "{{tag}}"? This will remove this tag from all {{entityType}}. This action cannot be undone.',
+          { tag: tag.tag_text, entityType: t(`tags.entityTypes.${tag.tagged_type}`, `${tag.tagged_type}s`) },
+        )}
+        confirmLabel={isDeleting ? t('tags.deleting', 'Deleting...') : t('tags.deleteAll', 'Delete All')}
+        cancelLabel={t('actions.cancel', 'Cancel')}
         isConfirming={isDeleting}
       />
     </>

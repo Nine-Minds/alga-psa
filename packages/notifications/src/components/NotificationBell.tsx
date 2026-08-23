@@ -6,6 +6,7 @@ import { Bell } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { NotificationDropdown } from './NotificationDropdown';
 import { useSession } from 'next-auth/react';
 import { useInternalNotifications } from '../hooks/useInternalNotifications';
@@ -16,6 +17,7 @@ interface NotificationBellProps {
 
 function NotificationBellInner({ tenant, userId, className = '' }: { tenant: string; userId: string; className?: string }) {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation('client-portal');
 
   // Configurable notification priorities (task 29.8.46) — every user-visible
   // change is gated behind this flag. Flag off reproduces today's markup exactly.
@@ -54,7 +56,11 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
           variant="ghost"
           size="icon"
           className={`relative h-9 w-9 ${className}`}
-          aria-label={`Notifications${ariaUnread > 0 ? ` (${ariaUnread} unread)` : ''}`}
+          aria-label={
+            ariaUnread > 0
+              ? t('notifications.bellUnreadAria', 'Notifications ({{unread}} unread)', { unread: ariaUnread })
+              : t('notifications.title', 'Notifications')
+          }
         >
           <Bell className="w-5 h-5" />
           {priorityEnabled ? (
@@ -65,7 +71,7 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
                 </span>
               )}
               {showNeutralDot && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[rgb(var(--color-text-400))] rounded-full border border-[rgb(var(--color-card))]" title="Unread notifications" />
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[rgb(var(--color-text-400))] rounded-full border border-[rgb(var(--color-card))]" title={t('notifications.unreadDot', 'Unread notifications')} />
               )}
             </>
           ) : (
@@ -76,7 +82,7 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
             )
           )}
           {!isConnected && (
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-yellow-500 rounded-full border border-[rgb(var(--color-card))]" title="Reconnecting..." />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-yellow-500 rounded-full border border-[rgb(var(--color-card))]" title={t('notifications.reconnecting', 'Reconnecting...')} />
           )}
         </Button>
       </DropdownMenu.Trigger>

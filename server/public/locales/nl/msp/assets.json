@@ -1490,5 +1490,35 @@
       "inactive": "inactief",
       "maintenance": "onderhoud"
     }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "Toestemming geweigerd: assets kunnen niet worden gelezen",
+      "readAssetTypes": "Toestemming geweigerd: assettypen kunnen niet worden gelezen",
+      "manageAssetTypes": "Toestemming geweigerd: assettypen kunnen niet worden beheerd",
+      "readDocuments": "Toestemming geweigerd: assetdocumenten kunnen niet worden gelezen",
+      "associateDocuments": "Toestemming geweigerd: documenten kunnen niet aan assets worden gekoppeld",
+      "removeDocuments": "Toestemming geweigerd: documenten kunnen niet van assets worden verwijderd",
+      "updateDocumentNotes": "Toestemming geweigerd: notities bij assetdocumenten kunnen niet worden bijgewerkt"
+    },
+    "asset": {
+      "notFoundRefresh": "Asset niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "clientNotFound": "Klant niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "maintenanceNotFound": "Onderhoudsplanning niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "maintenanceMismatch": "Dit onderhoudsrecord hoort niet bij het geselecteerde asset. Vernieuw de pagina en probeer het opnieuw.",
+      "locationUnavailable": "De geselecteerde locatie is niet beschikbaar voor deze klant.",
+      "selfRelation": "Een asset kan niet aan zichzelf worden gekoppeld.",
+      "selectAtLeastOne": "Selecteer minstens één asset.",
+      "typeUnavailable": "Het assettype is niet beschikbaar. Kies een geldig assettype.",
+      "typeUnavailableNamed": "Het assettype ‘{{assetType}}’ is niet beschikbaar. Kies een geldig assettype.",
+      "documentAssociationNotFound": "Documentkoppeling niet gevonden. Mogelijk is deze al verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde assetwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidDate": "Een van de geselecteerde assetdatums is ongeldig. Controleer het formulier en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde asset, document of gerelateerde record bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze assetwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de assetwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht assetveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht assetveld: {{field}}."
+    }
   }
 }

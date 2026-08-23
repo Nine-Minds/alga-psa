@@ -213,7 +213,7 @@ export function ContractBasicsStep({
           <p className="text-xs text-red-600">{templateError}</p>
         )}
         {selectedTemplate && (
-          <div className="text-xs text-[rgb(var(--color-text-500))] border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] rounded-md p-3 mt-2 space-y-1">
+          <div className="text-xs text-[rgb(var(--color-text-700))] border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] rounded-md p-3 mt-2 space-y-1">
             <p>
               <span className="font-semibold text-[rgb(var(--color-primary-700))]">
                 {t('wizardBasics.template.preview.templateLabel', { defaultValue: 'Template:' })}

@@ -176,6 +176,29 @@ const installRecurringRolloutGuardHarness = (
   vi.spyOn(engine as any, "calculateBucketPlanCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateProductCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateLicenseCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "loadFixedPriceObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadTimeBasedObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadUsageBasedObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadBucketObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadProductObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadLicenseObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "calculateContractBillingDocument").mockImplementation(
+    (input: any) => ({
+      schemaVersion: 1,
+      calculationId: input.execution.calculationId,
+      mode: "live",
+      currencyCode: input.document.currencyCode,
+      invoiceWindow: input.document.invoiceWindow,
+      lines: [],
+      discounts: [],
+      adjustments: [],
+      subtotal: 0,
+      taxTotal: 0,
+      total: 0,
+      diagnostics: [],
+      sourceCharges: [],
+    }),
+  );
 
   (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
     if (tableName === "clients") {
@@ -222,6 +245,29 @@ const installPersistedRecurringExecutionHarness = (
   vi.spyOn(engine as any, "calculateBucketPlanCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateProductCharges").mockResolvedValue([]);
   vi.spyOn(engine as any, "calculateLicenseCharges").mockResolvedValue([]);
+  vi.spyOn(engine as any, "loadFixedPriceObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadTimeBasedObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadUsageBasedObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadBucketObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadProductObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "loadLicenseObligation").mockResolvedValue(undefined);
+  vi.spyOn(engine as any, "calculateContractBillingDocument").mockImplementation(
+    (input: any) => ({
+      schemaVersion: 1,
+      calculationId: input.execution.calculationId,
+      mode: "live",
+      currencyCode: input.document.currencyCode,
+      invoiceWindow: input.document.invoiceWindow,
+      lines: [],
+      discounts: [],
+      adjustments: [],
+      subtotal: 0,
+      taxTotal: 0,
+      total: 0,
+      diagnostics: [],
+      sourceCharges: [],
+    }),
+  );
 
   (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
     if (tableName === "clients") {

@@ -312,8 +312,30 @@ describe("production compute extraction golden", () => {
       );
     }
 
+    const domainDispatcher = readFileSync(
+      new URL("../domain/calculateContractCharge.ts", import.meta.url),
+      "utf8",
+    );
     const engine = readFileSync(
       new URL("../billingEngine.ts", import.meta.url),
+      "utf8",
+    );
+    const simulator = readFileSync(
+      new URL(
+        "../../../../../../ee/server/src/lib/billing/simulator/simulateContractScenario.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const simulatorLoader = readFileSync(
+      new URL(
+        "../../../../../../ee/server/src/lib/billing/simulator/loadSimulationCalculationInput.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const domainBarrel = readFileSync(
+      new URL("../domain/index.ts", import.meta.url),
       "utf8",
     );
     for (const computeName of [
@@ -324,8 +346,70 @@ describe("production compute extraction golden", () => {
       "computeRecurringQuantityCharges",
       "computeDiscountsAndAdjustments",
     ]) {
-      expect(engine).toContain(`${computeName}(`);
+      expect(domainDispatcher).toContain(`${computeName}(`);
+      expect(engine).not.toContain(`${computeName}(`);
     }
+    expect(engine).toContain("calculateContractBilling({");
+    const productionOrchestration = engine.slice(
+      engine.indexOf("private async calculateBillingForPreparedPeriod("),
+      engine.indexOf("private async getProjectMaterialCurrencyWarnings("),
+    );
+    const beforeSharedCalculation = productionOrchestration.slice(
+      0,
+      productionOrchestration.indexOf("calculateContractBilling({"),
+    );
+    expect(beforeSharedCalculation).toMatch(/loadFixedPriceObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadTimeBasedObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadUsageBasedObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadBucketObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadProductObligation\(/);
+    expect(beforeSharedCalculation).toMatch(/loadLicenseObligation\(/);
+    expect(beforeSharedCalculation).not.toMatch(
+      /this\.calculate(?:FixedPrice|TimeBased|UsageBased|BucketPlan|Product|License|RecurringQuantity)Charges\(/,
+    );
+    const methodBody = (name: string) => {
+      const start = engine.indexOf(`private async ${name}(`);
+      expect(start, `${name} must exist`).toBeGreaterThan(-1);
+      const next = engine.indexOf("\n  private ", start + 1);
+      return engine.slice(start, next === -1 ? engine.length : next);
+    };
+    for (const loader of [
+      "loadFixedPriceObligation",
+      "loadTimeBasedObligation",
+      "loadUsageBasedObligation",
+      "loadBucketObligation",
+      "loadProductObligation",
+      "loadLicenseObligation",
+      "loadRecurringQuantityObligation",
+    ]) {
+      expect(methodBody(loader)).not.toMatch(
+        /this\.calculate|calculateContractBilling\(|calculateLoadedContractObligations\(/,
+      );
+    }
+    for (const compatibilityMethod of [
+      "calculateFixedPriceCharges",
+      "calculateTimeBasedCharges",
+      "calculateUsageBasedCharges",
+      "calculateBucketPlanCharges",
+      "calculateProductCharges",
+      "calculateLicenseCharges",
+    ]) {
+      expect(methodBody(compatibilityMethod)).toMatch(/this\.load/);
+      expect(methodBody(compatibilityMethod)).toMatch(
+        /calculateLoadedContractObligations\(/,
+      );
+    }
+    expect(engine).not.toContain("calculateContractCharge(");
+    expect(simulator).toContain("calculateContractBilling({");
+    expect(simulator).not.toMatch(
+      /calculateContractCharge\(|pushChargeLine|applyScenarioDiscountsAndAdjustments/,
+    );
+    expect(simulatorLoader).not.toMatch(
+      /IClientContractLine|ResolvedContractChargeObligation|charge:\s*\{\s*kind:/,
+    );
+    expect(domainBarrel).not.toContain(
+      'export * from "./calculateContractCharge"',
+    );
     expect(engine).toContain("loadChargeComputeTaxContext");
     expect(engine).toContain("loadPersistedRecurringTimingSelections");
     expect(engine).toContain("hasExistingServicePeriodCharge");

@@ -41,7 +41,7 @@ function clientPulseActionErrorFrom(error: unknown): ClientPulseActionError | nu
     return permissionError(error.message);
   }
   if (error.message === 'Client not found') {
-    return actionError('Client not found');
+    return actionError('Client not found', 'msp/clients:errors.client.notFound');
   }
   return null;
 }
@@ -412,7 +412,17 @@ async function fetchService(
     .leftJoin('users as assigned_user', function joinAssignedUser() {
       this.on('t.assigned_to', '=', 'assigned_user.user_id').andOn('t.tenant', '=', 'assigned_user.tenant');
     })
-    .where({ 't.tenant': tenant, 't.client_id': clientId, 't.is_closed': false })
+    // Open-ness comes from the ticket's STATUS, not the denormalized
+    // tickets.is_closed column. That column is stale on ~24% of production
+    // tickets (545/2261 as of 2026-08, every one saying "open" while its status
+    // says closed), which had this panel reporting roughly double the open count
+    // the tickets board shows for the same client. Same predicate as
+    // getBoardListStats, so the two screens cannot disagree.
+    .leftJoin('statuses as s', function joinStatuses() {
+      this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
+    })
+    .where({ 't.tenant': tenant, 't.client_id': clientId })
+    .whereRaw('s.is_closed IS NOT TRUE')
     .select(
       't.ticket_id',
       't.ticket_number',
@@ -553,7 +563,12 @@ async function fetchService(
     .join('tickets as t', function joinTickets() {
       this.on('lc.ticket_id', '=', 't.ticket_id').andOn('lc.tenant', '=', 't.tenant');
     })
-    .where({ 't.tenant': tenant, 't.client_id': clientId, 't.is_closed': false })
+    // Status-backed, matching fetchService above and getBoardListStats.
+    .leftJoin('statuses as s', function joinWaitingStatuses() {
+      this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
+    })
+    .where({ 't.tenant': tenant, 't.client_id': clientId })
+    .whereRaw('s.is_closed IS NOT TRUE')
     .andWhere('lc.rn', 1)
     .andWhere('lc.author_type', 'client')
     .select('t.ticket_id', 't.ticket_number', 'lc.created_at')

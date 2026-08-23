@@ -801,5 +801,49 @@
     },
     "label": "Contract Line Type",
     "placeholder": "Select contract line type"
+  },
+  "errors": {
+    "line": {
+      "unavailable": "The selected contract line is no longer available. Please refresh and try again.",
+      "invalidValue": "One of the selected contract line values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected contract or contract line no longer exists. Please refresh and try again.",
+      "conflict": "This contract line change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the contract line values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required contract line field.",
+      "missingFieldNamed": "Missing required contract line field: {{field}}."
+    },
+    "templateLine": {
+      "unavailable": "The selected template line is no longer available. Please refresh and try again."
+    },
+    "mapping": {
+      "duplicate": "This contract line is already associated with the selected contract."
+    },
+    "preset": {
+      "invalidValue": "One of the selected contract line preset values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected contract line preset, contract, or service no longer exists. Please refresh and try again.",
+      "conflict": "This contract line preset change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the contract line preset values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required contract line preset field.",
+      "missingFieldNamed": "Missing required contract line preset field: {{field}}.",
+      "notFoundDuringUpdate": "Contract Line Preset with ID {{presetId}} not found during update."
+    },
+    "service": {
+      "unavailable": "The selected contract line service is no longer available. Please refresh and try again.",
+      "referenceMissing": "The selected contract line or service no longer exists. Please refresh and try again.",
+      "duplicate": "This service is already associated with the selected contract line.",
+      "notAllowed": "One of the service values is not allowed. Please review the form and try again.",
+      "addedOnce": "A service can only be added once in a contract line edit.",
+      "removedOnce": "A service can only be removed once in a contract line edit.",
+      "addedAndRemoved": "The same service cannot be added and removed in one contract line edit."
+    },
+    "configuration": {
+      "unavailable": "The selected service configuration is no longer available. Please refresh and try again.",
+      "invalidValue": "One of the selected service configuration values is invalid. Please refresh and try again.",
+      "duplicate": "This service configuration already exists for the selected contract line.",
+      "notAllowed": "One of the service configuration values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required service configuration field.",
+      "missingFieldNamed": "Missing required service configuration field: {{field}}.",
+      "bucketOverlayFieldsMissing": "Missing required bucket overlay fields."
+    }
   }
 }

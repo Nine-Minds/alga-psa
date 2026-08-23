@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 const read = (rel: string) => readFileSync(resolve(__dirname, rel), 'utf8');
 const enLocale = (ns: string) =>
@@ -58,7 +59,7 @@ describe('msp-composition client/contact tab i18n wiring', () => {
     expect(contacts.contactTabs.tickets.title).toBe('Contact Tickets');
     expect(contacts.contactTabs.tickets.empty).toBe('No tickets found for this contact');
 
-    expect(clientsXx.clientTabs.tickets.title).toContain('11111');
-    expect(clientsXx.clientTabs.assets.loading).toContain('11111');
+    expect(clientsXx.clientTabs.tickets.title).toMatch(pseudoPattern('xx'));
+    expect(clientsXx.clientTabs.assets.loading).toMatch(pseudoPattern('xx'));
   });
 });

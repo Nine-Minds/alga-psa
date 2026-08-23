@@ -1,4 +1,13 @@
 import { Knex } from "knex";
+import {
+  calculateContractBilling,
+  applyCanonicalLiveBillingResult,
+  type UnpricedContractBillingObligation,
+} from "./domain";
+import {
+  type ResolvedContractChargeObligation,
+  normalizeResolvedContractCharge,
+} from "./domain/calculateContractCharge";
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import {
   IBillingPeriod,
@@ -85,13 +94,7 @@ import contractLine from "../../models/contractLine";
 import service from "../../models/service";
 import { TaxService } from "../../services/taxService";
 import {
-  computeFixedCharges,
   resolveFixedPlanLevelBaseRate,
-  computeTimeBasedCharges,
-  computeUsageBasedCharges,
-  computeBucketCharges,
-  computeRecurringQuantityCharges,
-  computeDiscountsAndAdjustments,
   filterApplicableDiscounts,
   buildChargeComputeTaxContext,
   type ChargeComputeClient,
@@ -104,6 +107,11 @@ import {
   resolveChargeProfile,
   type ChargeProfileAssignments,
 } from "./billingProfileResolution";
+
+interface ContractObligationSink {
+  obligations: UnpricedContractBillingObligation[];
+  taxContexts: Record<string, ChargeComputeTaxContext>;
+}
 import { getClientDefaultBillingProfileId } from "./billingProfileLookup";
 import { listSeparatelyBillingProfiles } from "@alga-psa/shared/billingClients/billingProfileSettings";
 import {
@@ -251,11 +259,19 @@ const RECURRING_TIMING_ROLLOUT_GUARD_PREFIX =
  * it into an actionable message rather than a generic failure.
  */
 export class UnresolvedCatalogPricingError extends Error {
-  readonly items: Array<{ kind: "time_entry" | "usage_record"; id: string; label: string }>;
+  readonly items: Array<{
+    kind: "time_entry" | "usage_record";
+    id: string;
+    label: string;
+  }>;
 
   constructor(
     message: string,
-    items: Array<{ kind: "time_entry" | "usage_record"; id: string; label: string }>,
+    items: Array<{
+      kind: "time_entry" | "usage_record";
+      id: string;
+      label: string;
+    }>,
   ) {
     super(message);
     this.name = "UnresolvedCatalogPricingError";
@@ -284,7 +300,10 @@ type FixedChargeLineStaticInputs = {
  * Callers pricing several invoice windows in one request share one session so
  * each line is loaded — and rejected as unpriceable — at most once.
  */
-export type FixedChargePreviewSession = Map<string, FixedChargeLineStaticInputs>;
+export type FixedChargePreviewSession = Map<
+  string,
+  FixedChargeLineStaticInputs
+>;
 
 export const createFixedChargePreviewSession = (): FixedChargePreviewSession =>
   new Map();
@@ -362,7 +381,10 @@ export class BillingEngine {
   >();
   private readonly contractProfileAssignmentCache = new Map<
     string,
-    { contractLineBillingProfileId: string | null; contractBillingProfileId: string | null }
+    {
+      contractLineBillingProfileId: string | null;
+      contractBillingProfileId: string | null;
+    }
   >();
 
   constructor() {
@@ -771,10 +793,12 @@ export class BillingEngine {
       .whereIn("project_id", distinctIds)
       .select("project_id", "billing_profile_id");
     return new Map(
-      rows.map((row: { project_id: string; billing_profile_id: string | null }) => [
-        row.project_id,
-        row.billing_profile_id ?? null,
-      ]),
+      rows.map(
+        (row: { project_id: string; billing_profile_id: string | null }) => [
+          row.project_id,
+          row.billing_profile_id ?? null,
+        ],
+      ),
     );
   }
 
@@ -962,7 +986,11 @@ export class BillingEngine {
     const missingProfileIds = [...profileIds].filter(
       (id) => !settingsRows.some((row: any) => row.billing_profile_id === id),
     );
-    if (missingProfileIds.length > 0 && !input.client.is_tax_exempt && hasTaxableService) {
+    if (
+      missingProfileIds.length > 0 &&
+      !input.client.is_tax_exempt &&
+      hasTaxableService
+    ) {
       const taxService = new TaxService();
       for (const billingProfileId of missingProfileIds) {
         await taxService.createDefaultTaxSettings(
@@ -990,7 +1018,8 @@ export class BillingEngine {
           // NULL means inherit from the client; only an explicit false/true on
           // the profile overrides it.
           isTaxExempt: row.is_tax_exempt ?? null,
-          reverseCharge: reverseChargeByProfile.get(row.billing_profile_id) ?? null,
+          reverseCharge:
+            reverseChargeByProfile.get(row.billing_profile_id) ?? null,
         },
       ]),
     );
@@ -1176,9 +1205,14 @@ export class BillingEngine {
       if (!project) {
         throw new Error(`Project ${projectId} not found`);
       }
-      const context = await this.loadProjectBillingContext(project.client_id, projectId);
+      const context = await this.loadProjectBillingContext(
+        project.client_id,
+        projectId,
+      );
       const billingPeriod: IBillingPeriod = {
-        startDate: toISODate(toPlainDate(project.start_date ?? project.created_at)),
+        startDate: toISODate(
+          toPlainDate(project.start_date ?? project.created_at),
+        ),
         endDate: toISODate(Temporal.Now.plainDateISO().add({ days: 1 })),
       };
       const charges = await this.calculateMaterialCharges(
@@ -1194,14 +1228,19 @@ export class BillingEngine {
           selectedMaterialIds: materialIds,
         },
       );
-      const totalAmount = charges.reduce((sum, charge) => sum + charge.total, 0);
+      const totalAmount = charges.reduce(
+        (sum, charge) => sum + charge.total,
+        0,
+      );
       return {
         tenant: this.tenant,
         charges,
         totalAmount,
         discounts: [],
         adjustments: [],
-        finalAmount: totalAmount + charges.reduce((sum, charge) => sum + (charge.tax_amount || 0), 0),
+        finalAmount:
+          totalAmount +
+          charges.reduce((sum, charge) => sum + (charge.tax_amount || 0), 0),
         currency_code: currencyCode,
       };
     });
@@ -1215,7 +1254,8 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const query = db.table("projects as project")
+    const query = db
+      .table("projects as project")
       .where("project.project_id", projectId);
     db.tenantJoin(
       query,
@@ -1225,13 +1265,13 @@ export class BillingEngine {
       { type: "left" },
     );
 
-    return await query.first(
+    return (await query.first(
       "project.project_id",
       "project.client_id",
       "project.start_date",
       "project.created_at",
       "project_status.is_closed",
-    ) as ProjectBillingTarget | undefined;
+    )) as ProjectBillingTarget | undefined;
   }
 
   async selectDueRecurringServicePeriodsForBillingWindow(
@@ -1573,7 +1613,11 @@ export class BillingEngine {
     // mixed-currency invoice through.
     const separatelyBillingIds = new Set(
       (
-        await listSeparatelyBillingProfiles(this.knex, this.tenant as string, clientId)
+        await listSeparatelyBillingProfiles(
+          this.knex,
+          this.tenant as string,
+          clientId,
+        )
       ).map((profile) => profile.billing_profile_id),
     );
     const SHARED_INVOICE_BUCKET = "__shared_invoice__";
@@ -1707,21 +1751,20 @@ export class BillingEngine {
       );
     }
 
+    const contractObligations: UnpricedContractBillingObligation[] = [];
+    const contractTaxContexts: Record<string, ChargeComputeTaxContext> = {};
     for (const clientContractLine of clientContractLines) {
       console.log(
         `Processing contract line: ${clientContractLine.contract_line_name}`,
       );
-      const [
-        fixedPriceCharges,
-        timeBasedCharges,
-        usageBasedCharges,
-        bucketPlanCharges,
-        productCharges,
-        licenseCharges,
-      ] = await Promise.all([
+      const familyObligationSinks = Array.from(
+        { length: 6 },
+        () => ({ obligations: [], taxContexts: {} }) as ContractObligationSink,
+      );
+      await Promise.all([
         options.projectTarget
-          ? Promise.resolve([] as IFixedPriceCharge[])
-          : this.calculateFixedPriceCharges(
+          ? Promise.resolve()
+          : this.loadFixedPriceObligation(
               clientId,
               billingPeriod,
               clientContractLine,
@@ -1730,11 +1773,13 @@ export class BillingEngine {
                 clientContractLine.client_contract_line_id
               ],
               options.recurringTimingSelectionSource,
+              undefined,
+              familyObligationSinks[0],
             ),
         targetProjectConfig?.billing_model === "fixed_price"
-          ? Promise.resolve([] as ITimeBasedCharge[])
+          ? Promise.resolve()
           : projectBillingContext || options.projectTarget
-            ? this.calculateTimeBasedCharges(
+            ? this.loadTimeBasedObligation(
                 clientId,
                 billingPeriod,
                 clientContractLine,
@@ -1745,8 +1790,9 @@ export class BillingEngine {
                 options.recurringTimingSelectionSource,
                 projectBillingContext,
                 options.projectTarget,
+                familyObligationSinks[1],
               )
-            : this.calculateTimeBasedCharges(
+            : this.loadTimeBasedObligation(
                 clientId,
                 billingPeriod,
                 clientContractLine,
@@ -1755,10 +1801,13 @@ export class BillingEngine {
                   clientContractLine.client_contract_line_id
                 ],
                 options.recurringTimingSelectionSource,
+                undefined,
+                undefined,
+                familyObligationSinks[1],
               ),
         options.projectTarget
-          ? Promise.resolve([] as IUsageBasedCharge[])
-          : this.calculateUsageBasedCharges(
+          ? Promise.resolve()
+          : this.loadUsageBasedObligation(
               clientId,
               billingPeriod,
               clientContractLine,
@@ -1767,29 +1816,19 @@ export class BillingEngine {
                 clientContractLine.client_contract_line_id
               ],
               options.recurringTimingSelectionSource,
+              familyObligationSinks[2],
             ),
         options.projectTarget
-          ? Promise.resolve([] as IBucketCharge[])
-          : this.calculateBucketPlanCharges(
+          ? Promise.resolve()
+          : this.loadBucketObligation(
               clientId,
               billingPeriod,
               clientContractLine,
+              familyObligationSinks[3],
             ),
         options.projectTarget
-          ? Promise.resolve([] as IProductCharge[])
-          : this.calculateProductCharges(
-              clientId,
-              billingPeriod,
-              clientContractLine,
-              cycle,
-              recurringTimingSelections[
-                clientContractLine.client_contract_line_id
-              ],
-              options.recurringTimingSelectionSource,
-            ),
-        options.projectTarget
-          ? Promise.resolve([] as ILicenseCharge[])
-          : this.calculateLicenseCharges(
+          ? Promise.resolve()
+          : this.loadProductObligation(
               clientId,
               billingPeriod,
               clientContractLine,
@@ -1798,67 +1837,26 @@ export class BillingEngine {
                 clientContractLine.client_contract_line_id
               ],
               options.recurringTimingSelectionSource,
+              familyObligationSinks[4],
+            ),
+        options.projectTarget
+          ? Promise.resolve()
+          : this.loadLicenseObligation(
+              clientId,
+              billingPeriod,
+              clientContractLine,
+              cycle,
+              recurringTimingSelections[
+                clientContractLine.client_contract_line_id
+              ],
+              options.recurringTimingSelectionSource,
+              familyObligationSinks[5],
             ),
       ]);
-
-      console.log(`Fixed price charges: ${fixedPriceCharges.length}`);
-      console.log(`Time-based charges: ${timeBasedCharges.length}`);
-      console.log(`Usage-based charges: ${usageBasedCharges.length}`);
-      console.log(`Bucket plan charges: ${bucketPlanCharges.length}`);
-      console.log(`Product charges: ${productCharges.length}`);
-      console.log(`License charges: ${licenseCharges.length}`);
-
-      const totalFixedCharges = fixedPriceCharges.reduce(
-        (sum: number, charge: IFixedPriceCharge) => sum + charge.total,
-        0,
-      );
-      console.log(
-        `Total fixed charges: ${getCurrencySymbol(billingCurrency)}${(totalFixedCharges / 100).toFixed(2)} (${totalFixedCharges} cents)`,
-      );
-
-      totalCharges = totalCharges.concat(
-        fixedPriceCharges,
-        timeBasedCharges,
-        usageBasedCharges,
-        bucketPlanCharges,
-        productCharges,
-        licenseCharges,
-      );
-
-      console.log("Total charges breakdown:");
-      const currencySymbol = getCurrencySymbol(billingCurrency);
-      fixedPriceCharges.forEach((charge: IBillingCharge) => {
-        console.log(
-          `fixed - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-        );
-      });
-      timeBasedCharges.forEach((charge: ITimeBasedCharge) => {
-        console.log(
-          `hourly - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-        );
-      });
-      usageBasedCharges.forEach((charge: IUsageBasedCharge) => {
-        console.log(
-          `usage - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-        );
-      });
-      bucketPlanCharges.forEach((charge: IBucketCharge) => {
-        console.log(
-          `bucket - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-        );
-      });
-      productCharges.forEach((charge: IProductCharge) => {
-        console.log(
-          `product - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-        );
-      });
-      licenseCharges.forEach((charge: ILicenseCharge) => {
-        console.log(
-          `license - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`,
-        );
-      });
-
-      console.log("Total charges:", totalCharges);
+      for (const sink of familyObligationSinks) {
+        contractObligations.push(...sink.obligations);
+        Object.assign(contractTaxContexts, sink.taxContexts);
+      }
     }
 
     if (clientContractLines.length > 0 && materialCharges.length > 0) {
@@ -1940,37 +1938,101 @@ export class BillingEngine {
       : { charges: totalCharges, thresholdCrossings: [] };
     totalCharges = capResult.charges;
 
-    const totalAmount = totalCharges.reduce(
-      (sum: number, charge: IBillingCharge) => sum + charge.total,
-      0,
-    );
-
-    const finalCharges = await this.applyDiscountsAndAdjustments(
-      {
-        charges: totalCharges,
-        totalAmount,
-        discounts: [],
-        adjustments: [],
-        finalAmount: totalAmount,
-        currency_code: billingCurrency,
+    // Resolve discount rows without pricing the obligations. Service-period
+    // facts are enough for the existing effective-window query.
+    const obligationWindows: IBillingCharge[] = contractObligations.flatMap(
+      (obligation) => {
+        const timing = obligation.facts.timing;
+        if (!timing) return [];
+        return [
+          {
+            type: "fixed" as const,
+            client_contract_line_id: obligation.contractLineId,
+            serviceName:
+              obligation.metadata?.description ?? obligation.chargeFamily,
+            quantity: 0,
+            rate: 0,
+            total: 0,
+            tax_amount: 0,
+            tax_rate: 0,
+            servicePeriodStart: timing.servicePeriodStart,
+            servicePeriodEnd: timing.servicePeriodEnd,
+          },
+        ];
       },
+    );
+    const discountCandidates = await this.fetchDiscounts(
       clientId,
       billingPeriod,
+      [...totalCharges, ...obligationWindows],
     );
 
-    console.log(`Discounts applied: ${finalCharges.discounts.length}`);
-    console.log(`Adjustments applied: ${finalCharges.adjustments.length}`);
-    console.log(
-      `Final amount after discounts and adjustments: ${getCurrencySymbol(billingCurrency)}${(finalCharges.finalAmount / 100).toFixed(2)} (${finalCharges.finalAmount} cents)`,
+    // Exactly one document calculation owns contract-family dispatch, pricing,
+    // tax, discounts, adjustments, canonical keys and totals. Non-contract
+    // charges remain an explicit scope carve-out but participate in totals.
+    const canonical = this.calculateContractBillingDocument({
+      schemaVersion: 1,
+      execution: {
+        mode: "live",
+        tenantId: this.tenant as string,
+        calculationId: `${clientId}:${billingPeriod.startDate}:${billingPeriod.endDate}`,
+        asOf: `${billingPeriod.endDate}T00:00:00Z`,
+      },
+      document: {
+        clientId,
+        currencyCode: billingCurrency,
+        invoiceWindow: {
+          start: billingPeriod.startDate,
+          endExclusive: billingPeriod.endDate,
+        },
+      },
+      obligations: contractObligations,
+      taxContexts: contractTaxContexts,
+      supplementalCharges: totalCharges,
+      discountsAndAdjustments: {
+        billingPeriod,
+        discountCandidates: discountCandidates.map((discount) => ({
+          ...discount,
+          start_date: billingPeriod.startDate,
+          end_date: null,
+        })),
+        adjustments: [],
+      },
+    });
+    const canonicalFinalCharges = applyCanonicalLiveBillingResult(
+      {
+        tenant: this.tenant as string,
+        charges: canonical.sourceCharges,
+        totalAmount: canonical.sourceCharges.reduce(
+          (sum, charge) => sum + charge.total,
+          0,
+        ),
+        discounts: [],
+        adjustments: [],
+        finalAmount: canonical.subtotal,
+        currency_code: billingCurrency,
+      },
+      canonical,
     );
 
     return projectBillingContext
       ? {
-          ...finalCharges,
+          ...canonicalFinalCharges,
           projectCapThresholdCrossings: capResult.thresholdCrossings,
           warnings: projectMaterialWarnings,
         }
-      : finalCharges;
+      : canonicalFinalCharges;
+  }
+
+  /**
+   * The sole live-engine seam around the pure shared document calculation.
+   * It deliberately adds no pricing behavior; keeping it as an instance seam
+   * lets orchestration tests isolate loading/persistence from financial rules.
+   */
+  private calculateContractBillingDocument(
+    input: Parameters<typeof calculateContractBilling>[0],
+  ) {
+    return calculateContractBilling(input);
   }
 
   private async getProjectMaterialCurrencyWarnings(
@@ -2410,11 +2472,18 @@ export class BillingEngine {
     // Why each record stayed unresolved, keyed by entry/usage id. The engine
     // has always computed this and written it only to logs; carrying it onto
     // the charge is what lets the biller see whether catalog pricing is honest.
-    const unresolvedReasonByRecordId = new Map<string, ContractLineSelectionReason>();
+    const unresolvedReasonByRecordId = new Map<
+      string,
+      ContractLineSelectionReason
+    >();
     // Items a contract *does* cover but whose line could not be chosen, and for
     // which no one has accepted catalog pricing. Collected rather than thrown
     // on first sight so the biller gets the whole list at once (F139).
-    const blockedFromCatalogPricing: Array<{ kind: "time_entry" | "usage_record"; id: string; label: string }> = [];
+    const blockedFromCatalogPricing: Array<{
+      kind: "time_entry" | "usage_record";
+      id: string;
+      label: string;
+    }> = [];
     const clientDefaultBillingProfileId =
       await this.getClientDefaultBillingProfileId(clientId);
 
@@ -2517,8 +2586,8 @@ export class BillingEngine {
       ),
       this.knex.raw(
         "COALESCE((SELECT SUM(a.minutes) FROM hour_block_time_allocations a " +
-        "WHERE a.tenant = time_entries.tenant AND a.time_entry_id = time_entries.entry_id), 0) " +
-        "as block_allocated_minutes"
+          "WHERE a.tenant = time_entries.tenant AND a.time_entry_id = time_entries.entry_id), 0) " +
+          "as block_allocated_minutes",
       ),
     );
 
@@ -2573,7 +2642,10 @@ export class BillingEngine {
         // which line" (catalog rate is wrong). Carried rather than only
         // logged, so billing can use the same reason without mutating the read
         // path (F137).
-        unresolvedReasonByRecordId.set(entry.entry_id, attributionDecision.reason);
+        unresolvedReasonByRecordId.set(
+          entry.entry_id,
+          attributionDecision.reason,
+        );
         if (
           requireCatalogPricingDecision &&
           attributionDecision.reason !== "no_match" &&
@@ -2591,7 +2663,10 @@ export class BillingEngine {
           tenant: this.tenant,
           clientId,
           recordId: entry.entry_id,
-          decision: attributionDecision.reason === "no_match" ? "no_match" : "ambiguous",
+          decision:
+            attributionDecision.reason === "no_match"
+              ? "no_match"
+              : "ambiguous",
           reason: attributionDecision.reason,
           selectedContractLineId: null,
           eligibleLineCount: eligibleLines.length,
@@ -2755,12 +2830,13 @@ export class BillingEngine {
         continue;
       }
       const workDate = toISODate(toPlainDate(record.usage_date));
-      const eligibleLines =
-        await this.getEligibleContractLinesForServiceAtDate({
+      const eligibleLines = await this.getEligibleContractLinesForServiceAtDate(
+        {
           clientId,
           serviceId: record.service_id,
           workDate,
-        });
+        },
+      );
       // usage_tracking carries no work item, so there is no profile to narrow
       // with here — the reason surfacing below is the part that applies
       // symmetrically to usage (F141).
@@ -2787,7 +2863,10 @@ export class BillingEngine {
         });
         continue;
       }
-      unresolvedReasonByRecordId.set(record.usage_id, attributionDecision.reason);
+      unresolvedReasonByRecordId.set(
+        record.usage_id,
+        attributionDecision.reason,
+      );
       if (
         requireCatalogPricingDecision &&
         attributionDecision.reason !== "no_match" &&
@@ -2881,10 +2960,10 @@ export class BillingEngine {
       const names = blockedFromCatalogPricing
         .map((item) => item.label)
         .filter((label, index, all) => all.indexOf(label) === index)
-        .join(', ');
+        .join(", ");
       throw new UnresolvedCatalogPricingError(
-        `A contract covers ${blockedFromCatalogPricing.length === 1 ? 'this item' : 'these items'} (${names}) but more than one contract line matched, ` +
-          'so they cannot be billed at catalog rate. Assign a contract line to each, or explicitly choose catalog pricing for it.',
+        `A contract covers ${blockedFromCatalogPricing.length === 1 ? "this item" : "these items"} (${names}) but more than one contract line matched, ` +
+          "so they cannot be billed at catalog rate. Assign a contract line to each, or explicitly choose catalog pricing for it.",
         blockedFromCatalogPricing,
       );
     }
@@ -2911,10 +2990,21 @@ export class BillingEngine {
     const db = tenantDb(this.knex, this.tenant);
     const query = db.table("hour_block_time_allocations as hba");
     db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
-    db.tenantJoin(query, "time_entries as te", "hba.time_entry_id", "te.entry_id");
-    db.tenantJoin(query, "service_catalog as sc", "hb.service_id", "sc.service_id", {
-      type: "left",
-    });
+    db.tenantJoin(
+      query,
+      "time_entries as te",
+      "hba.time_entry_id",
+      "te.entry_id",
+    );
+    db.tenantJoin(
+      query,
+      "service_catalog as sc",
+      "hb.service_id",
+      "sc.service_id",
+      {
+        type: "left",
+      },
+    );
 
     const rows = await query
       .where({
@@ -2935,9 +3025,8 @@ export class BillingEngine {
         "te.billable_duration",
       );
 
-    const { aggregateHourBlockBurnRows, computeHourBlockCharges } = await import(
-      "./compute/computeHourBlockCharges"
-    );
+    const { aggregateHourBlockBurnRows, computeHourBlockCharges } =
+      await import("./compute/computeHourBlockCharges");
     const blocks = aggregateHourBlockBurnRows(rows);
 
     return computeHourBlockCharges({ billingPeriod, blocks }).charges;
@@ -3341,8 +3430,8 @@ export class BillingEngine {
       );
       priceableLines = dueFixedLines.filter(
         (line) =>
-          staticInputsByLineId.get(line.client_contract_line_id)?.unpriceable ===
-          false,
+          staticInputsByLineId.get(line.client_contract_line_id)
+            ?.unpriceable === false,
       );
     } catch (error) {
       warnPreviewFailure("static-input batch load", error);
@@ -3364,7 +3453,9 @@ export class BillingEngine {
       if (!client) {
         warnPreviewFailure(
           "client load",
-          new Error(`Client ${clientId} was not found in tenant ${this.tenant}`),
+          new Error(
+            `Client ${clientId} was not found in tenant ${this.tenant}`,
+          ),
         );
         return result;
       }
@@ -3379,7 +3470,9 @@ export class BillingEngine {
         locationId: null,
         locationIds: priceableLines.map((line) => line.location_id),
         services: priceableLines.flatMap((line) => {
-          const inputs = staticInputsByLineId.get(line.client_contract_line_id)!;
+          const inputs = staticInputsByLineId.get(
+            line.client_contract_line_id,
+          )!;
           return inputs.fallbackService
             ? [...inputs.planServices, inputs.fallbackService]
             : inputs.planServices;
@@ -3405,8 +3498,9 @@ export class BillingEngine {
             ...staticInputsByLineId.get(line.client_contract_line_id)!,
             client,
             pricingSchedules:
-              pricingSchedulesByContractId.get(String(line.contract_id ?? "")) ??
-              [],
+              pricingSchedulesByContractId.get(
+                String(line.contract_id ?? ""),
+              ) ?? [],
             taxContext,
           },
         );
@@ -3606,7 +3700,8 @@ export class BillingEngine {
         planServices,
         fallbackService:
           planServices.length === 0
-            ? (fallbackServiceByLineId.get(line.client_contract_line_id) ?? null)
+            ? (fallbackServiceByLineId.get(line.client_contract_line_id) ??
+              null)
             : null,
         unpriceable: isFixedLineUnpriceable(
           line,
@@ -3766,16 +3861,245 @@ export class BillingEngine {
     return schedulesByContractId;
   }
 
+  private calculateResolvedContractObligation(
+    charge: ResolvedContractChargeObligation,
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    currencyCode: string,
+  ): { charges: IBillingCharge[] } {
+    if (!this.tenant) throw new Error("tenant context not found");
+    const result = calculateContractBilling({
+      schemaVersion: 1,
+      execution: {
+        mode: "live",
+        tenantId: this.tenant,
+        calculationId: `preview:${clientId}:${billingPeriod.startDate}:${charge.kind}`,
+        asOf: `${billingPeriod.endDate}T00:00:00Z`,
+      },
+      document: {
+        clientId,
+        currencyCode,
+        invoiceWindow: {
+          start: billingPeriod.startDate,
+          endExclusive: billingPeriod.endDate,
+        },
+      },
+      obligations: [
+        normalizeResolvedContractCharge({
+          obligationId: `preview:${charge.kind}`,
+          tenantId: this.tenant,
+          charge,
+        }).obligation,
+      ],
+      taxContexts: {
+        [`preview:${charge.kind}`]: charge.taxContext,
+      },
+    });
+    return { charges: result.sourceCharges };
+  }
+
+  private addContractObligation(
+    sink: ContractObligationSink,
+    input: Parameters<typeof normalizeResolvedContractCharge>[0],
+  ): void {
+    const normalized = normalizeResolvedContractCharge(input);
+    sink.obligations.push(normalized.obligation);
+    sink.taxContexts[normalized.obligation.taxContextKey] =
+      normalized.taxContext;
+  }
+
+  private calculateLoadedContractObligations(
+    sink: ContractObligationSink,
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    currencyCode: string,
+  ): IBillingCharge[] {
+    if (!this.tenant) throw new Error("tenant context not found");
+    return calculateContractBilling({
+      schemaVersion: 1,
+      execution: {
+        mode: "live",
+        tenantId: this.tenant,
+        calculationId: `compatibility:${clientId}:${billingPeriod.startDate}`,
+        asOf: `${billingPeriod.endDate}T00:00:00Z`,
+      },
+      document: {
+        clientId,
+        currencyCode,
+        invoiceWindow: {
+          start: billingPeriod.startDate,
+          endExclusive: billingPeriod.endDate,
+        },
+      },
+      obligations: sink.obligations,
+      taxContexts: sink.taxContexts,
+    }).sourceCharges;
+  }
+
+  /** Compatibility preview/test adapter: load facts, then use shared pricing. */
   private async calculateFixedPriceCharges(
     clientId: string,
     billingPeriod: IBillingPeriod,
-    clientContractLine: IClientContractLine,
-    billingCycle?: string,
-    recurringTimingSelection?: ResolvedRecurringChargeTiming,
-    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
-    /** Batched load-phase rows; when absent every row is queried per line. */
+    line: IClientContractLine,
+    cycle?: string,
+    timing?: ResolvedRecurringChargeTiming,
+    timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
     preloaded?: PreloadedFixedChargeInputs,
   ): Promise<IFixedPriceCharge[]> {
+    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
+    await this.loadFixedPriceObligation(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      preloaded,
+      sink,
+    );
+    return this.calculateLoadedContractObligations(
+      sink,
+      clientId,
+      billingPeriod,
+      line.currency_code || "USD",
+    ) as IFixedPriceCharge[];
+  }
+
+  private async calculateTimeBasedCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    cycle?: string,
+    timing?: ResolvedRecurringChargeTiming,
+    timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
+    projectContext?: ProjectBillingContext | null,
+    projectTarget?: CalculateBillingOptions["projectTarget"],
+  ): Promise<ITimeBasedCharge[]> {
+    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
+    await this.loadTimeBasedObligation(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      projectContext,
+      projectTarget,
+      sink,
+    );
+    return this.calculateLoadedContractObligations(
+      sink,
+      clientId,
+      billingPeriod,
+      line.currency_code || "USD",
+    ) as ITimeBasedCharge[];
+  }
+
+  private async calculateUsageBasedCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    cycle?: string,
+    timing?: ResolvedRecurringChargeTiming,
+    timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
+  ): Promise<IUsageBasedCharge[]> {
+    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
+    await this.loadUsageBasedObligation(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      sink,
+    );
+    return this.calculateLoadedContractObligations(
+      sink,
+      clientId,
+      billingPeriod,
+      line.currency_code || "USD",
+    ) as IUsageBasedCharge[];
+  }
+
+  private async calculateProductCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    cycle?: string,
+    timing?: ResolvedRecurringChargeTiming,
+    timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
+  ): Promise<IProductCharge[]> {
+    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
+    await this.loadProductObligation(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      sink,
+    );
+    return this.calculateLoadedContractObligations(
+      sink,
+      clientId,
+      billingPeriod,
+      line.currency_code || "USD",
+    ) as IProductCharge[];
+  }
+
+  private async calculateLicenseCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+    cycle?: string,
+    timing?: ResolvedRecurringChargeTiming,
+    timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
+  ): Promise<ILicenseCharge[]> {
+    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
+    await this.loadLicenseObligation(
+      clientId,
+      billingPeriod,
+      line,
+      cycle,
+      timing,
+      timingSource,
+      sink,
+    );
+    return this.calculateLoadedContractObligations(
+      sink,
+      clientId,
+      billingPeriod,
+      line.currency_code || "USD",
+    ) as ILicenseCharge[];
+  }
+
+  private async calculateBucketPlanCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    line: IClientContractLine,
+  ): Promise<IBucketCharge[]> {
+    const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
+    await this.loadBucketObligation(clientId, billingPeriod, line, sink);
+    return this.calculateLoadedContractObligations(
+      sink,
+      clientId,
+      billingPeriod,
+      line.currency_code || "USD",
+    ) as IBucketCharge[];
+  }
+
+  /** Load and normalize one fixed family without performing charge math. */
+  private async loadFixedPriceObligation(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    clientContractLine: IClientContractLine,
+    billingCycle: string | undefined,
+    recurringTimingSelection: ResolvedRecurringChargeTiming | undefined,
+    recurringTimingSelectionSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    /** Batched load-phase rows; when absent every row is queried per line. */
+    preloaded: PreloadedFixedChargeInputs | undefined,
+    obligationSink: ContractObligationSink,
+  ): Promise<void> {
     // Note: Fixed plan rates are stored as dollars (decimal) in the database,
     // but need to be converted to cents (integer) for consistency with other monetary values in the system.
     // Custom contract-level rates are assumed to be in cents already.
@@ -3802,7 +4126,7 @@ export class BillingEngine {
       recurringTimingSelectionSource,
     );
     if (!timingResolution) {
-      return [];
+      return;
     }
 
     const {
@@ -3894,10 +4218,13 @@ export class BillingEngine {
           .first();
 
     const { planServices, fallbackService } =
-      preloaded ?? (await this.queryFixedChargeLineServices(clientContractLine));
+      preloaded ??
+      (await this.queryFixedChargeLineServices(clientContractLine));
 
-    const { charges, advanceGuard } = await computeFixedCharges(
-      {
+    const obligation = {
+      kind: "fixed",
+      executionMode: "live",
+      inputs: {
         clientId,
         billingPeriod,
         clientContractLine,
@@ -3913,7 +4240,8 @@ export class BillingEngine {
           clientContractLine,
         ),
       },
-      preloaded?.taxContext ??
+      taxContext:
+        preloaded?.taxContext ??
         (await this.loadChargeComputeTaxContext({
           client,
           locationId: clientContractLine.location_id,
@@ -3925,24 +4253,23 @@ export class BillingEngine {
             clientContractLine.contract_billing_profile_id,
           ],
         })),
-    );
-
-    if (advanceGuard) {
+    } as const;
+    if (clientContractLine.billing_timing === "advance") {
       const existingAdvance = await this.hasExistingServicePeriodCharge(
         clientContractLine.client_contract_line_id,
-        advanceGuard.servicePeriodStart,
-        advanceGuard.servicePeriodEnd,
+        servicePeriodStart,
+        servicePeriodEnd,
         "advance",
       );
-      if (existingAdvance) {
-        console.log(
-          `[BillingEngine] Skipping advance billing for contract line ${clientContractLine.contract_line_id}: charge already persisted for service period`,
-        );
-        return [];
-      }
+      if (existingAdvance) return;
     }
-
-    return charges;
+    this.addContractObligation(obligationSink, {
+      obligationId: `fixed:${clientContractLine.client_contract_line_id}:${servicePeriodStart}`,
+      tenantId: this.tenant,
+      contractLineId: clientContractLine.client_contract_line_id,
+      charge: obligation,
+    });
+    return;
   }
 
   private resolveFixedRecurringChargeTiming(
@@ -4444,16 +4771,17 @@ export class BillingEngine {
     }
   }
 
-  private async calculateTimeBasedCharges(
+  private async loadTimeBasedObligation(
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
-    billingCycle?: string,
-    recurringTimingSelection?: ResolvedRecurringChargeTiming,
-    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
-    projectBillingContext?: ProjectBillingContext | null,
-    projectTarget?: CalculateBillingOptions["projectTarget"],
-  ): Promise<ITimeBasedCharge[]> {
+    billingCycle: string | undefined,
+    recurringTimingSelection: ResolvedRecurringChargeTiming | undefined,
+    recurringTimingSelectionSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    projectBillingContext: ProjectBillingContext | null | undefined,
+    projectTarget: CalculateBillingOptions["projectTarget"] | undefined,
+    obligationSink: ContractObligationSink,
+  ): Promise<void> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
@@ -4526,7 +4854,7 @@ export class BillingEngine {
           recurringTimingSelectionSource,
         );
     if (!timingResolution) {
-      return [];
+      return;
     }
 
     const servicePeriodStartExclusive =
@@ -4588,7 +4916,7 @@ export class BillingEngine {
       );
     }
     if (configuredServiceIds.length === 0) {
-      return [];
+      return;
     }
     const uniquelyAssignableServiceIds =
       await this.getUniquelyAssignableServiceIdsForLine({
@@ -4746,8 +5074,10 @@ export class BillingEngine {
 
     const timeEntries = await query;
 
-    const { charges } = await computeTimeBasedCharges(
-      {
+    const obligation = {
+      kind: "hourly",
+      executionMode: "live",
+      inputs: {
         billingPeriod,
         clientContractLine,
         timing: timingResolution,
@@ -4764,16 +5094,19 @@ export class BillingEngine {
           clientId,
           clientContractLine,
         ),
-        resolvePhaseRateOverride: (phaseId, serviceId) =>
+        resolvePhaseRateOverride: (
+          phaseId: string | null | undefined,
+          serviceId: string,
+        ) =>
           this.resolveProjectPhaseRateOverride(
             projectBillingContext ?? null,
             phaseId,
             serviceId,
           ),
-        getProjectChargeConfig: (projectId) =>
+        getProjectChargeConfig: (projectId: string) =>
           projectBillingContext?.configsByProjectId.get(projectId),
       },
-      await this.loadChargeComputeTaxContext({
+      taxContext: await this.loadChargeComputeTaxContext({
         client,
         locationId: clientContractLine.location_id,
         services: timeEntries.map(
@@ -4791,19 +5124,25 @@ export class BillingEngine {
           ),
         ],
       }),
-    );
-
-    return charges;
+    } as const;
+    this.addContractObligation(obligationSink, {
+      obligationId: `hourly:${clientContractLine.client_contract_line_id}:${timingResolution.servicePeriodStart}`,
+      tenantId: this.tenant,
+      contractLineId: clientContractLine.client_contract_line_id,
+      charge: obligation,
+    });
+    return;
   }
 
-  private async calculateUsageBasedCharges(
+  private async loadUsageBasedObligation(
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
-    billingCycle?: string,
-    recurringTimingSelection?: ResolvedRecurringChargeTiming,
-    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
-  ): Promise<IUsageBasedCharge[]> {
+    billingCycle: string | undefined,
+    recurringTimingSelection: ResolvedRecurringChargeTiming | undefined,
+    recurringTimingSelectionSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    obligationSink: ContractObligationSink,
+  ): Promise<void> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
@@ -4848,7 +5187,7 @@ export class BillingEngine {
       recurringTimingSelectionSource,
     );
     if (!timingResolution) {
-      return [];
+      return;
     }
 
     const servicePeriodStartExclusive =
@@ -4910,7 +5249,7 @@ export class BillingEngine {
       );
     }
     if (configuredServiceIds.length === 0) {
-      return [];
+      return;
     }
     const uniquelyAssignableServiceIds =
       await this.getUniquelyAssignableServiceIdsForLine({
@@ -4981,8 +5320,10 @@ export class BillingEngine {
 
     const usageRecords = await usageRecordQuery;
 
-    const { charges } = await computeUsageBasedCharges(
-      {
+    const obligation = {
+      kind: "usage",
+      executionMode: "live",
+      inputs: {
         billingPeriod,
         clientContractLine,
         timing: timingResolution,
@@ -4998,7 +5339,7 @@ export class BillingEngine {
           clientContractLine,
         ),
       },
-      await this.loadChargeComputeTaxContext({
+      taxContext: await this.loadChargeComputeTaxContext({
         client,
         locationId: clientContractLine.location_id,
         services: usageRecords,
@@ -5007,9 +5348,14 @@ export class BillingEngine {
           clientContractLine.contract_billing_profile_id,
         ],
       }),
-    );
-
-    return charges;
+    } as const;
+    this.addContractObligation(obligationSink, {
+      obligationId: `usage:${clientContractLine.client_contract_line_id}:${servicePeriodStart}`,
+      tenantId: this.tenant,
+      contractLineId: clientContractLine.client_contract_line_id,
+      charge: obligation,
+    });
+    return;
   }
 
   private async getUniquelyAssignableServiceIdsForLine(input: {
@@ -5098,15 +5444,16 @@ export class BillingEngine {
       );
   }
 
-  private async calculateRecurringQuantityCharges(
+  private async loadRecurringQuantityObligation(
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
     billingCycle: string | undefined,
     chargeType: "product" | "license",
-    recurringTimingSelection?: ResolvedRecurringChargeTiming,
-    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
-  ): Promise<Array<IProductCharge | ILicenseCharge>> {
+    recurringTimingSelection: ResolvedRecurringChargeTiming | undefined,
+    recurringTimingSelectionSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    obligationSink: ContractObligationSink,
+  ): Promise<void> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
@@ -5129,7 +5476,7 @@ export class BillingEngine {
       recurringTimingSelectionSource,
     );
     if (!timingResolution) {
-      return [];
+      return;
     }
 
     const db = tenantDb(this.knex, this.tenant);
@@ -5210,11 +5557,13 @@ export class BillingEngine {
     );
 
     if (planServices.length === 0) {
-      return [];
+      return;
     }
 
-    const { charges } = await computeRecurringQuantityCharges(
-      {
+    const obligation = {
+      kind: chargeType,
+      executionMode: "live",
+      inputs: {
         clientContractLine,
         client,
         timing: timingResolution,
@@ -5226,7 +5575,7 @@ export class BillingEngine {
           clientContractLine,
         ),
       },
-      await this.loadChargeComputeTaxContext({
+      taxContext: await this.loadChargeComputeTaxContext({
         client,
         locationId: clientContractLine.location_id,
         services: planServices,
@@ -5235,20 +5584,26 @@ export class BillingEngine {
           clientContractLine.contract_billing_profile_id,
         ],
       }),
-    );
-
-    return charges;
+    } as const;
+    this.addContractObligation(obligationSink, {
+      obligationId: `${chargeType}:${clientContractLine.client_contract_line_id}:${timingResolution.servicePeriodStart}`,
+      tenantId: this.tenant,
+      contractLineId: clientContractLine.client_contract_line_id,
+      charge: obligation,
+    });
+    return;
   }
 
-  private async calculateProductCharges(
+  private async loadProductObligation(
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
-    billingCycle?: string,
-    recurringTimingSelection?: ResolvedRecurringChargeTiming,
-    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
-  ): Promise<IProductCharge[]> {
-    return (await this.calculateRecurringQuantityCharges(
+    billingCycle: string | undefined,
+    recurringTimingSelection: ResolvedRecurringChargeTiming | undefined,
+    recurringTimingSelectionSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    obligationSink: ContractObligationSink,
+  ): Promise<void> {
+    await this.loadRecurringQuantityObligation(
       clientId,
       billingPeriod,
       clientContractLine,
@@ -5256,18 +5611,20 @@ export class BillingEngine {
       "product",
       recurringTimingSelection,
       recurringTimingSelectionSource,
-    )) as IProductCharge[];
+      obligationSink,
+    );
   }
 
-  private async calculateLicenseCharges(
+  private async loadLicenseObligation(
     clientId: string,
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
-    billingCycle?: string,
-    recurringTimingSelection?: ResolvedRecurringChargeTiming,
-    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
-  ): Promise<ILicenseCharge[]> {
-    return (await this.calculateRecurringQuantityCharges(
+    billingCycle: string | undefined,
+    recurringTimingSelection: ResolvedRecurringChargeTiming | undefined,
+    recurringTimingSelectionSource: CalculateBillingOptions["recurringTimingSelectionSource"],
+    obligationSink: ContractObligationSink,
+  ): Promise<void> {
+    await this.loadRecurringQuantityObligation(
       clientId,
       billingPeriod,
       clientContractLine,
@@ -5275,7 +5632,8 @@ export class BillingEngine {
       "license",
       recurringTimingSelection,
       recurringTimingSelectionSource,
-    )) as ILicenseCharge[];
+      obligationSink,
+    );
   }
 
   private async calculateMaterialCharges(
@@ -5353,8 +5711,8 @@ export class BillingEngine {
           });
           if (eligible && row.currency_code !== currencyCode) {
             throw new Error(
-              `Project product ${row.source_id} is routed to this project invoice in ${row.currency_code}, `
-              + `but the project bills in ${currencyCode}. Change it to Separate product invoice.`,
+              `Project product ${row.source_id} is routed to this project invoice in ${row.currency_code}, ` +
+                `but the project bills in ${currencyCode}. Change it to Separate product invoice.`,
             );
           }
           return eligible;
@@ -5475,11 +5833,12 @@ export class BillingEngine {
     return Promise.all(chargesPromises);
   }
 
-  private async calculateBucketPlanCharges(
+  private async loadBucketObligation(
     clientId: string,
     billingPeriod: IBillingPeriod,
     contractLine: IClientContractLine,
-  ): Promise<IBucketCharge[]> {
+    obligationSink: ContractObligationSink,
+  ): Promise<void> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
@@ -5507,18 +5866,16 @@ export class BillingEngine {
         "clb.tenant": client.tenant,
         "clb.contract_line_id": contractLine.client_contract_line_id,
       })
-      .select(
-        "clb.*",
-      );
+      .select("clb.*");
 
     if (!pools || pools.length === 0) {
-      return [];
+      return;
     }
 
     // Load persisted allowance state here; deterministic aggregation, rollover
     // application, overage pricing, and explanations live in shared compute.
     // One charge per bucket per period, as today one-per-config.
-    const bucketCharges = await Promise.all(
+    await Promise.all(
       pools.map(async (pool): Promise<IBucketCharge[]> => {
         const usageRecords = await db
           .table("bucket_usage")
@@ -5537,7 +5894,10 @@ export class BillingEngine {
         // (or the bucket's id as a last resort).
         const members = await db
           .table("contract_line_bucket_services as clbs")
-          .where({ "clbs.tenant": client.tenant, "clbs.bucket_id": pool.bucket_id })
+          .where({
+            "clbs.tenant": client.tenant,
+            "clbs.bucket_id": pool.bucket_id,
+          })
           .select(
             "clbs.service_id",
             "sc.service_name",
@@ -5546,8 +5906,11 @@ export class BillingEngine {
             "sc.billing_method",
           )
           .join("service_catalog as sc", function (this: any) {
-            this.on("sc.service_id", "=", "clbs.service_id")
-              .andOn("sc.tenant", "=", "clbs.tenant");
+            this.on("sc.service_id", "=", "clbs.service_id").andOn(
+              "sc.tenant",
+              "=",
+              "clbs.tenant",
+            );
           })
           .orderBy("clbs.service_id", "asc");
         const memberMetadataByService = new Map(
@@ -5556,7 +5919,8 @@ export class BillingEngine {
             {
               service_name: member.service_name as string,
               tax_rate_id: (member.tax_rate_id as string | null) ?? null,
-              unit_of_measure: (member.unit_of_measure as string | null) ?? null,
+              unit_of_measure:
+                (member.unit_of_measure as string | null) ?? null,
               billing_method: (member.billing_method as string | null) ?? null,
             },
           ]),
@@ -5579,7 +5943,9 @@ export class BillingEngine {
           .orderBy("service_id", "asc");
         const isWeighted =
           Number(pool.after_hours_multiplier) !== 0 ||
-          memberMultipliers.some((member) => Number(member.burn_multiplier) !== 1);
+          memberMultipliers.some(
+            (member) => Number(member.burn_multiplier) !== 1,
+          );
 
         // A zero-member pool (dormant catch-all or emptied member-scoped pool)
         // still covers the line but has no member to key the charge on. The
@@ -5587,9 +5953,12 @@ export class BillingEngine {
         // service FK fields stay null so bucket_id NEVER masquerades as a
         // service_catalog id on invoice rows.
         const chargeServiceId = firstMemberServiceId;
-        const chargeTaxRateId = members.length > 0 ? firstMemberTaxRateId : null;
-        const chargeUnitOfMeasure = members.length > 0 ? firstMemberUnitOfMeasure : null;
-        const chargeBillingMethod = members.length > 0 ? firstMemberBillingMethod : null;
+        const chargeTaxRateId =
+          members.length > 0 ? firstMemberTaxRateId : null;
+        const chargeUnitOfMeasure =
+          members.length > 0 ? firstMemberUnitOfMeasure : null;
+        const chargeBillingMethod =
+          members.length > 0 ? firstMemberBillingMethod : null;
 
         // Per-period weighted contributions: the SAME draw set and weighted math
         // the reconciliation uses. Overage is attributed to the services that
@@ -5626,9 +5995,13 @@ export class BillingEngine {
         const contributorServiceIds = Array.from(contributionsByPeriod.values())
           .flat()
           .map((contribution) => contribution.serviceId);
-        const catalogServiceIds = Array.from(new Set(
-          contributorServiceIds.filter((id) => !memberMetadataByService.has(id)),
-        ));
+        const catalogServiceIds = Array.from(
+          new Set(
+            contributorServiceIds.filter(
+              (id) => !memberMetadataByService.has(id),
+            ),
+          ),
+        );
         const catalogMetadataByService = new Map<
           string,
           {
@@ -5660,31 +6033,35 @@ export class BillingEngine {
           }
         }
         const metadataFor = (serviceId: string) =>
-          memberMetadataByService.get(serviceId) ?? catalogMetadataByService.get(serviceId);
+          memberMetadataByService.get(serviceId) ??
+          catalogMetadataByService.get(serviceId);
 
-        const serviceContributions = Array.from(contributionsByPeriod.entries()).map(
-          ([key, contributions]) => {
-            const [periodStart, periodEnd] = key.split(":");
-            return {
-              periodStart,
-              periodEnd,
-              services: contributions.map((contribution) => {
-                const metadata = metadataFor(contribution.serviceId);
-                return {
-                  service_id: contribution.serviceId,
-                  service_name: pool.bucket_name ?? metadata?.service_name ?? undefined,
-                  tax_rate_id: metadata?.tax_rate_id ?? null,
-                  unit_of_measure: metadata?.unit_of_measure ?? null,
-                  billing_method: metadata?.billing_method ?? null,
-                  weightedMinutes: contribution.weightedMinutes,
-                };
-              }),
-            };
-          },
-        );
+        const serviceContributions = Array.from(
+          contributionsByPeriod.entries(),
+        ).map(([key, contributions]) => {
+          const [periodStart, periodEnd] = key.split(":");
+          return {
+            periodStart,
+            periodEnd,
+            services: contributions.map((contribution) => {
+              const metadata = metadataFor(contribution.serviceId);
+              return {
+                service_id: contribution.serviceId,
+                service_name:
+                  pool.bucket_name ?? metadata?.service_name ?? undefined,
+                tax_rate_id: metadata?.tax_rate_id ?? null,
+                unit_of_measure: metadata?.unit_of_measure ?? null,
+                billing_method: metadata?.billing_method ?? null,
+                weightedMinutes: contribution.weightedMinutes,
+              };
+            }),
+          };
+        });
 
-        const result = await computeBucketCharges(
-          {
+        const obligation = {
+          kind: "bucket",
+          executionMode: "live",
+          inputs: {
             billingPeriod,
             clientContractLine: contractLine,
             client,
@@ -5708,7 +6085,7 @@ export class BillingEngine {
             ),
             serviceContributions,
           },
-          await this.loadChargeComputeTaxContext({
+          taxContext: await this.loadChargeComputeTaxContext({
             client,
             locationId: contractLine.location_id,
             services: [
@@ -5722,12 +6099,16 @@ export class BillingEngine {
               contractLine.contract_billing_profile_id,
             ],
           }),
-        );
-        return result.charges;
+        } as const;
+        this.addContractObligation(obligationSink, {
+          obligationId: `bucket:${contractLine.client_contract_line_id}:${pool.bucket_id}`,
+          tenantId: this.tenant as string,
+          contractLineId: contractLine.client_contract_line_id,
+          charge: obligation,
+        });
+        return [];
       }),
     );
-
-    return bucketCharges.flat();
   }
 
   private async hasExistingServicePeriodCharge(
@@ -5817,36 +6198,6 @@ export class BillingEngine {
       return 0;
     }
     return startPlain.until(endPlain, { largestUnit: "days" }).days;
-  }
-
-  private async applyDiscountsAndAdjustments(
-    billingResult: IBillingResult,
-    clientId: string,
-    billingPeriod: IBillingPeriod,
-  ): Promise<IBillingResult> {
-    // Fetch applicable discounts within the billing period
-    const discounts = await this.fetchDiscounts(
-      clientId,
-      billingPeriod,
-      billingResult.charges,
-    );
-
-    return computeDiscountsAndAdjustments({
-      billingResult,
-      billingPeriod,
-      // fetchDiscounts already performed canonical service-period filtering.
-      // Give shared compute an always-overlapping window so it owns amount and
-      // ordering arithmetic without repeating database resolution.
-      discountCandidates: discounts.map((discount) => ({
-        ...discount,
-        start_date: billingPeriod.startDate,
-        end_date: null,
-      })),
-      // Production has never applied the legacy client adjustments table in
-      // invoice generation; preserve that behavior while shared compute can
-      // evaluate explicit simulator adjustments.
-      adjustments: [],
-    }).billingResult;
   }
 
   private async fetchDiscounts(

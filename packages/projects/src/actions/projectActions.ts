@@ -142,7 +142,7 @@ function projectActionErrorFrom(error: unknown): ProjectActionError | null {
 
     const issues = (error as { issues?: unknown })?.issues;
     if (Array.isArray(issues) && issues.length > 0) {
-        return actionError('Project validation failed. Please review the project details and try again.');
+        return actionError('Project validation failed. Please review the project details and try again.', 'projects:errors.project.validationFailed');
     }
 
     if (error instanceof Error) {
@@ -153,25 +153,31 @@ function projectActionErrorFrom(error: unknown): ProjectActionError | null {
             return actionError(error.message);
         }
         if (error.message.startsWith('Project ') && error.message.includes(' not found in tenant ')) {
-            return actionError('Project not found');
+            return actionError('Project not found', 'projects:errors.project.notFound');
         }
     }
 
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02') {
-        return actionError('One of the selected project values is invalid. Please refresh and try again.');
+        return actionError('One of the selected project values is invalid. Please refresh and try again.', 'projects:errors.project.invalidValue');
     }
     if (dbError?.code === '23502') {
-        return actionError(`Missing required project field${dbError.column ? `: ${dbError.column}` : ''}.`);
+        return dbError.column
+          ? actionError(
+              `Missing required project field: ${dbError.column}.`,
+              'projects:errors.project.missingFieldNamed',
+              { field: dbError.column },
+            )
+          : actionError('Missing required project field.', 'projects:errors.project.missingField');
     }
     if (dbError?.code === '23503') {
-        return actionError('One of the selected project records no longer exists. Please refresh and try again.');
+        return actionError('One of the selected project records no longer exists. Please refresh and try again.', 'projects:errors.project.referenceMissing');
     }
     if (dbError?.code === '23505') {
-        return actionError('This project change conflicts with an existing record. Please refresh and try again.');
+        return actionError('This project change conflicts with an existing record. Please refresh and try again.', 'projects:errors.project.conflict');
     }
     if (dbError?.code === '23514') {
-        return actionError('One of the project values is not allowed. Please review the form and try again.');
+        return actionError('One of the project values is not allowed. Please review the form and try again.', 'projects:errors.project.notAllowed');
     }
 
     return null;
@@ -256,11 +262,23 @@ function tenantJoinSubquerySql(
   };
 }
 
+// A frame plus the raw resource and action does not translate, so the pairs the
+// code actually uses each name their own whole sentence.
+const PERMISSION_MESSAGE_KEYS: Record<string, string> = {
+    'project:create': 'projects:errors.permissions.createProject',
+    'project:read': 'projects:errors.permissions.readProject',
+    'project:update': 'projects:errors.permissions.updateProject',
+    'project:delete': 'projects:errors.permissions.deleteProject',
+};
+
 async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<ActionPermissionError | null> {
     try {
         const hasPermissionResult = await hasPermission(user, resource, action, knexConnection);
         if (!hasPermissionResult) {
-            return permissionError(`Permission denied: Cannot ${action} ${resource}`);
+            return permissionError(
+                `Permission denied: Cannot ${action} ${resource}`,
+                PERMISSION_MESSAGE_KEYS[`${resource}:${action}`],
+            );
         }
         return null;
     } catch (error) {
@@ -1411,7 +1429,7 @@ export const createProject = withAuth(async (
         const projectStatuses = await getProjectStatusesInternal(tenant, user);
 
         if (projectStatuses.length === 0) {
-            return actionError('Project statuses are not configured. Add at least one project status before creating projects.');
+            return actionError('Project statuses are not configured. Add at least one project status before creating projects.', 'projects:errors.project.statusesNotConfigured');
         }
 
         const { knex } = await createTenantKnex();
@@ -1436,7 +1454,7 @@ export const createProject = withAuth(async (
         console.log(`[createProject] selectedTaskStatusIds:`, selectedTaskStatusIds);
 
         if (taskStatusesToUse.length === 0) {
-            return actionError('Project task statuses are not configured. Add at least one task status before creating projects.');
+            return actionError('Project task statuses are not configured. Add at least one task status before creating projects.', 'projects:errors.project.taskStatusesNotConfigured');
         }
 
         const validatedData = validateData(createProjectSchema, projectData);
@@ -1562,7 +1580,7 @@ export const createProject = withAuth(async (
     } catch (error) {
         console.error('Error creating project:', error);
         if (error instanceof Error && error.message === 'Failed to fetch created project details') {
-            return actionError('Project could not be created because its details could not be loaded. Please try again.');
+            return actionError('Project could not be created because its details could not be loaded. Please try again.', 'projects:errors.project.detailsUnavailableAfterCreate');
         }
         const expected = projectActionErrorFrom(error);
         if (expected) {

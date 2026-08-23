@@ -467,5 +467,42 @@
   "bundleNotice": {
     "withNumber": "To zgłoszenie jest częścią pakietu {{number}}. Czas pakietu jest zwykle rejestrowany na zgłoszeniu głównym.",
     "withoutNumber": "To zgłoszenie jest częścią pakietu. Czas pakietu jest zwykle rejestrowany na zgłoszeniu głównym."
+  },
+  "errors": {
+    "timeSheet": {
+      "notFoundRefresh": "Nie znaleziono arkusza czasu pracy. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "onlySubmittedApprovable": "Zatwierdzić można tylko przesłane arkusze czasu pracy.",
+      "idRequired": "Identyfikator arkusza czasu pracy jest wymagany.",
+      "ticketIdRequired": "Identyfikator zgłoszenia jest wymagany.",
+      "workItemRemoveFailed": "Nie można usunąć tego elementu pracy. Odśwież stronę i spróbuj ponownie.",
+      "onlyDraftRemovable": "Usunąć można tylko robocze arkusze czasu pracy.",
+      "removeEntriesFirst": "Usuń wpisy czasu przed usunięciem tego arkusza czasu pracy.",
+      "onlyApprovedReopenable": "Ponownie otworzyć można tylko zatwierdzone arkusze czasu pracy.",
+      "invoicedCannotReopen": "Ten arkusz czasu pracy zawiera rozliczony czas i nie można go ponownie otworzyć."
+    },
+    "timeEntry": {
+      "notFoundRefresh": "Nie znaleziono wpisu czasu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "serviceRequired": "Wybierz usługę przed zapisaniem tego wpisu czasu.",
+      "alreadyInvoiced": "Ten wpis czasu został już rozliczony i nie można go zmienić.",
+      "workItemTypeUnsupported": "Wybrany typ elementu pracy nie jest obsługiwany we wpisach czasu.",
+      "bucketUpdateFailed": "Nie można zaktualizować zużycia pakietu godzin dla tego wpisu czasu. Odśwież stronę i spróbuj ponownie.",
+      "wrongTimeSheet": "Ten wpis czasu nie należy do wybranego arkusza czasu pracy.",
+      "outsidePeriod": "Wpis czasu musi mieścić się w okresie wybranego arkusza czasu pracy.",
+      "invalidReference": "Wybrany wpis czasu, arkusz czasu pracy lub element pracy jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany arkusz czasu pracy, wpis czasu, element pracy lub użytkownik nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Istnieje już sprzeczny wpis czasu. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola arkusza czasu pracy lub wpisu czasu.",
+      "missingFieldNamed": "Brakuje wymaganego pola arkusza czasu pracy lub wpisu czasu: {{field}}."
+    },
+    "timePeriod": {
+      "datesRequired": "Wprowadź prawidłowe daty rozpoczęcia i zakończenia."
+    },
+    "timePeriodSettings": {
+      "invalidValue": "Jedna z wartości ustawienia okresu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrane ustawienie okresu nie jest już prawidłowe. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Istnieje już sprzeczne ustawienie okresu.",
+      "missingField": "Brakuje wymaganego pola ustawienia okresu.",
+      "missingFieldNamed": "Brakuje wymaganego pola ustawienia okresu: {{field}}."
+    }
   }
 }

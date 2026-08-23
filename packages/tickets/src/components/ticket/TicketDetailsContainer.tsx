@@ -245,7 +245,8 @@ export default function TicketDetailsContainer({
     content: string,
     isInternal: boolean,
     isResolution: boolean,
-    closesTicket: boolean = false
+    closesTicket: boolean = false,
+    schedule?: { publishAt: string; timeZone: string } | null,
   ) => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
@@ -259,7 +260,9 @@ export default function TicketDetailsContainer({
         content,
         isInternal,
         isResolution,
-        closesTicket
+        closesTicket,
+        undefined,
+        schedule,
       );
       if (isReturnedActionError(newComment)) {
         throw newComment;
@@ -354,7 +357,7 @@ export default function TicketDetailsContainer({
 
   return (
     <UnsavedChangesProvider>
-      <div className="bg-gray-100 dark:bg-gray-900 min-h-screen p-4">
+      <div className="bg-[rgb(var(--color-app-ground))] min-h-screen p-4">
         <Suspense fallback={<TicketDetailsSkeleton />}>
           {shouldEnableTicketLiveUpdates && liveCurrentUser ? (
             <TicketLiveProvider

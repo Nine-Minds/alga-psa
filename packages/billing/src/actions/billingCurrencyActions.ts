@@ -27,7 +27,7 @@ export const getTenantDefaultCurrencyCode = withAuth(async (user, { tenant }): P
 
 export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, clientId: string, asOfDate?: string): Promise<string | BillingCurrencyActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot resolve client billing currency');
+    return permissionError('Permission denied: Cannot resolve client billing currency', 'msp/billing:errors.permissions.resolveCurrency');
   }
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
@@ -54,7 +54,11 @@ export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, cl
 
   const unique = Array.from(new Set(currencies.map((r: any) => r.currency_code).filter(Boolean)));
   if (unique.length > 1) {
-    return actionError(`Client has active contracts in multiple currencies (${unique.join(', ')}).`);
+    return actionError(
+      `Client has active contracts in multiple currencies (${unique.join(', ')}).`,
+      'msp/billing:errors.currency.multipleActive',
+      { currencies: unique.join(', ') },
+    );
   }
 
   if (unique[0]) return unique[0];
