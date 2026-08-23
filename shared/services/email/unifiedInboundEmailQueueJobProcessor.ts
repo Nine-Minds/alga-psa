@@ -339,6 +339,15 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
   const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
   const resolvedHeaders: Record<string, string> = {};
+  // Preserve Authentication-Results from raw MIME for the sender-auth gate.
+  // mailparser normalizes header names in its Map, while Gmail already supplies
+  // a record via GmailAdapter.
+  const parsedHeaders = params.parsed.headers;
+  if (parsedHeaders?.forEach) {
+    parsedHeaders.forEach((value: unknown, key: string) => {
+      if (typeof value === 'string') resolvedHeaders[key.toLowerCase()] = value;
+    });
+  }
   if (listRewrite) {
     resolvedHeaders['x-list-address'] = listRewrite.listAddress;
     resolvedHeaders['x-resolved-original-sender'] = listRewrite.sender.email;
