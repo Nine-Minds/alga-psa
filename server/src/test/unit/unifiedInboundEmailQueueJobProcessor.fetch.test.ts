@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UnifiedInboundEmailQueueJob } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
+import { createHash } from 'node:crypto';
 
 const getAdminConnectionMock = vi.fn();
 const processInboundEmailInAppMock = vi.fn();
@@ -362,6 +363,8 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     const processedEmail = processInboundEmailInAppMock.mock.calls[0][0].emailData;
     expect(processedEmail).toMatchObject({
       id: '<ms-msg-1@example.com>',
+      providerIdentity: 'provider:microsoft:ms-msg-1',
+      sourceSha256: createHash('sha256').update(rawMimeBuffer).digest('hex'),
       subject: 'Microsoft Subject',
       rawMimeBase64: rawMimeBuffer.toString('base64'),
     });
@@ -384,6 +387,31 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       }),
       { collectDiagnostics: true }
     );
+  });
+
+  it('binds the V1 processing record to provider identity and raw MIME bytes, not the RFC Message-ID', async () => {
+    const { db, emailProcessedInsertMock } = createDbMock({
+      microsoftRow: { id: 'provider-ms-1', tenant: 'tenant-1', mailbox: 'support@example.com', is_active: true },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+    microsoftDownloadMessageSourceMock.mockResolvedValue(Buffer.from('different content with the same header'));
+    simpleParserMock.mockResolvedValue({
+      messageId: '<forgeable@example.com>', date: new Date(),
+      from: { value: [{ address: 'sender@example.com' }] }, to: { value: [] }, cc: { value: [] },
+      subject: 'Subject', text: 'Body', attachments: [],
+    });
+
+    const { processUnifiedInboundEmailQueueJob } = await import('../../services/email/unifiedInboundEmailQueueJobProcessor');
+    await processUnifiedInboundEmailQueueJob({
+      jobId: 'job-provider-bound', schemaVersion: 1, tenantId: 'tenant-1', providerId: 'provider-ms-1', provider: 'microsoft',
+      pointer: { subscriptionId: 'sub-1', messageId: 'provider-assigned-id' }, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob);
+
+    expect(emailProcessedInsertMock).toHaveBeenCalledWith(expect.objectContaining({
+      message_id: 'provider:microsoft:provider-assigned-id',
+      provider_message_id: 'provider:microsoft:provider-assigned-id',
+      source_sha256: createHash('sha256').update('different content with the same header').digest('hex'),
+    }));
   });
 
   it('persists parser and threading diagnostics in email_processed_messages metadata', async () => {
@@ -781,7 +809,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     });
     expect(emailProcessedInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        message_id: 'microsoft:<ms-idempotent-1@example.com>',
+        message_id: 'provider:microsoft:ms-idempotent-1',
         provider_id: 'provider-ms-1',
         tenant: 'tenant-1',
         processing_status: 'processing',
@@ -899,7 +927,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     });
     expect(emailProcessedInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        message_id: 'microsoft:<ms-threaded-dup-1@example.com>',
+        message_id: 'provider:microsoft:ms-threaded-dup-1',
         processing_status: 'processing',
       })
     );

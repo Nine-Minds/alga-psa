@@ -166,6 +166,23 @@ describe('processInboundEmailInApp', () => {
     processInboundEmailArtifactsBestEffortMock.mockResolvedValue(undefined);
   });
 
+  it('stores the MIME digest with ticket and first-comment metadata so same Message-ID content cannot cross-attribute', async () => {
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({ id: '<shared@example.com>', sourceSha256: 'digest-content-a' }),
+    });
+
+    expect(result.outcome).toBe('created');
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      email_metadata: expect.objectContaining({ messageId: 'shared@example.com', sourceSha256: 'digest-content-a' }),
+    }), 'tenant-1');
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      metadata: expect.objectContaining({ email: expect.objectContaining({ messageId: 'shared@example.com', sourceSha256: 'digest-content-a' }) }),
+    }), 'tenant-1');
+  });
+
   it('new inbound email with matched contact+user forwards both author_id and contact_id', async () => {
     findContactByEmailMock.mockResolvedValue({
       contact_id: 'contact-123',

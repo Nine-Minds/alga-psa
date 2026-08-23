@@ -470,10 +470,11 @@ export interface InboundInboxInsert {
   provider_id: string;
   provider_type: InboundProviderType;
   normalized_message_id: string;
+  source_sha256: string | null;
   provider_message_id: string | null;
   rfc_message_id: string | null;
   source_object_key: string;
-  source_sha256: string;
+  source_sha256: string | null;
   source_size_bytes: number;
   source_staged_at: Date | string;
   envelope: Record<string, unknown>;
@@ -841,6 +842,7 @@ export async function insertEffect(db: DurableDb, input: InboundEffectInsert): P
     tenant: input.tenant,
     provider_id: input.provider_id,
     normalized_message_id: input.normalized_message_id,
+    source_sha256: input.source_sha256,
     effect_type: input.effect_type,
     inbox_id: input.inbox_id,
     entity_id: input.entity_id,
@@ -854,6 +856,7 @@ export interface InboundEffectRow {
   tenant: string;
   provider_id: string;
   normalized_message_id: string;
+  source_sha256: string;
   effect_type: 'ticket' | 'comment';
   inbox_id: string;
   entity_id: string;
