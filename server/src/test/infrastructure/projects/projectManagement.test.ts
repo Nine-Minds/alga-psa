@@ -13,7 +13,7 @@ import {
 } from '../../../../test-utils/testMocks';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTestEnvironment, createClient } from '../../../../test-utils/testDataFactory';
-import { resetDatabase, cleanupTables, createCleanupHook } from '../../../../test-utils/dbReset';
+import { cleanupTables, createCleanupHook } from '../../../../test-utils/dbReset';
 import {
     createProject,
     addProjectPhase,
@@ -228,9 +228,16 @@ describe('Project Management', () => {
     let initialStatusId: string;
 
     beforeAll(async () => {
-        // Initialize database with tenant context
+        // createTestDbConnection already drops, recreates, migrates and seeds
+        // the suite database. The resetDatabase() that used to follow it
+        // destroys the handle it is given, so every query in this file failed
+        // with "Unable to acquire a connection".
         db = await createTestDbConnection();
-        await resetDatabase(db);
+        const seededTenant = await db('tenants').first('tenant');
+        if (!seededTenant?.tenant) {
+            throw new Error('Seeded tenant missing from test database');
+        }
+        tenantId = seededTenant.tenant;
     });
 
     afterAll(async () => {
@@ -238,13 +245,17 @@ describe('Project Management', () => {
     });
 
     beforeEach(async () => {
-        await resetDatabase(db);
-        
-        // Set up common mocks
-        const { tenantId: mockTenantId } = setupCommonMocks({
-            user: createMockUser('admin')
+        // Per-test isolation without rebuilding the schema: drop the rows this
+        // suite creates. The full drop/migrate/seed cycle used to run here,
+        // costing ~90s per test on top of taking the connection with it.
+        await cleanupTables(db, ['projects', 'project_phases', 'project_tasks'], { ignoreErrors: true });
+
+        // Mocks must speak for the seeded tenant — the default mock tenant id
+        // has no rows in this database.
+        setupCommonMocks({
+            tenantId,
+            user: createMockUser('admin', { tenant: tenantId })
         });
-        tenantId = mockTenantId;
 
         // Create test client
         clientId = await createClient(db, tenantId, 'Test Client');

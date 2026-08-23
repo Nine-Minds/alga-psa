@@ -17,7 +17,6 @@ import {
   createTestEnvironment
 } from '../../../../test-utils/testDataFactory';
 import {
-  resetDatabase,
   createCleanupHook,
   cleanupTables
 } from '../../../../test-utils/dbReset';
@@ -59,8 +58,11 @@ describe('Project Permissions Infrastructure', () => {
   });
 
   beforeEach(async () => {
-    // Reset database state
-    await resetDatabase(context.db);
+    // Roll the per-test transaction back and open a fresh one. resetDatabase()
+    // used to run here: it destroys the handle it is given and drops the
+    // database out from under the context, so every query after the first
+    // beforeEach failed with "not queryable".
+    await context.reset();
 
     // Set up common test environment
     const { tenantId, clientId } = await createTestEnvironment(context.db, {
@@ -140,7 +142,13 @@ describe('Project Permissions Infrastructure', () => {
 
   // Use cleanup hook for test isolation
   afterEach(async () => {
-    await createCleanupHook(context.db, ['projects', 'clients', 'users', 'roles', 'permissions'])();
+    // Deletion runs in reverse array order, so client_billing_profiles must sit
+    // after 'clients': every client is provisioned a default profile, and
+    // deleting the client first trips that foreign key.
+    await createCleanupHook(
+      context.db,
+      ['projects', 'clients', 'client_billing_profiles', 'users', 'roles', 'permissions']
+    )();
   });
 
   it('should allow regular user to view projects', async () => {

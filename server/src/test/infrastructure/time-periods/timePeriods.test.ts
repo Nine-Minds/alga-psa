@@ -13,7 +13,6 @@ import {
   mockRBAC
 } from '../../../../test-utils/testMocks';
 import {
-  resetDatabase,
   createCleanupHook,
   cleanupTables
 } from '../../../../test-utils/dbReset';
@@ -53,8 +52,11 @@ describe('Time Periods Infrastructure', () => {
   });
 
   beforeEach(async () => {
-    // Reset database state
-    await resetDatabase(context.db);
+    // Roll the per-test transaction back and open a fresh one. resetDatabase()
+    // used to run here: it destroys the handle it is given and drops the
+    // database out from under the context, so every query after the first
+    // beforeEach failed with "not queryable".
+    await context.reset();
 
     // Get tenant from context
     tenantId = context.tenantId;
