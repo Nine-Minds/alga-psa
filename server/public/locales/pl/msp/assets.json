@@ -1243,6 +1243,7 @@
     },
     "types": {
       "preventive": "Zapobiegawczy",
+      "corrective": "Korygujący",
       "inspection": "Kontrola",
       "calibration": "Kalibrowanie",
       "replacement": "Wymiana"
@@ -1262,6 +1263,17 @@
         "title": "Usuń harmonogram konserwacji",
         "message": "Czy na pewno chcesz usunąć „{{name}}”? Tej akcji nie można cofnąć."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Centrum zarządzania konserwacją",
+    "description": "Następny termin jest obliczany na podstawie rzeczywistej daty ukończenia.",
+    "assetsLink": "Zasoby"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Wymagana jest data wykonania.",
+      "completeFailed": "Nie udało się ukończyć konserwacji."
     }
   },
   "relatedAssetsTab": {

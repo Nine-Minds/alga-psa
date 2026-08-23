@@ -1215,6 +1215,7 @@
     },
     "types": {
       "preventive": "Vorbeugend",
+      "corrective": "Korrektiv",
       "inspection": "Inspektion",
       "calibration": "Kalibrierung",
       "replacement": "Austausch"
@@ -1234,6 +1235,17 @@
         "title": "Wartungsplan löschen",
         "message": "Sind Sie sicher, dass Sie „{{name}}“ löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Wartungsleitstelle",
+    "description": "Der nächste Fälligkeitstermin richtet sich nach dem tatsächlichen Abschlussdatum.",
+    "assetsLink": "Assets"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Ein Durchführungsdatum ist erforderlich.",
+      "completeFailed": "Die Wartung konnte nicht abgeschlossen werden."
     }
   },
   "relatedAssetsTab": {

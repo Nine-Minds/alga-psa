@@ -1215,6 +1215,7 @@
     },
     "types": {
       "preventive": "Preventivo",
+      "corrective": "Correctivo",
       "inspection": "Inspección",
       "calibration": "Calibración",
       "replacement": "Reemplazo"
@@ -1234,6 +1235,17 @@
         "title": "Eliminar programa de mantenimiento",
         "message": "¿Está seguro de que desea eliminar \"{{name}}\"? Esta acción no se puede deshacer."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Centro de control de mantenimiento",
+    "description": "La próxima fecha de vencimiento se calcula a partir de la fecha de finalización real.",
+    "assetsLink": "Activos"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Se requiere una fecha de realización.",
+      "completeFailed": "No se pudo completar el mantenimiento."
     }
   },
   "relatedAssetsTab": {
