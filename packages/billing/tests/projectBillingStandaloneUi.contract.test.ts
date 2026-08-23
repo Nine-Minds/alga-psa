@@ -19,7 +19,7 @@ describe('standalone project billing UI contract', () => {
     expect(reviewTab).toContain("record.invoice_mode === 'recurring' && (");
     expect(reviewTab).toContain("record.invoice_mode === 'standalone' && (");
     expect(reviewTab).toContain("selectedRows.every((row) => row.invoice_mode === 'recurring')");
-    expect(reviewTab).toContain('{canBulkApproveSelection && (');
+    expect(reviewTab).toContain('...(canBulkApproveSelection');
   });
 
   it('offers invoice generation for every manageable standalone project', () => {

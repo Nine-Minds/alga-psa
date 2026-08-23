@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Rascunhos de faturas",
     "searchPlaceholder": "Pesquisar faturas...",
-    "bulkActions_one": "Ações ({{count}})",
-    "bulkActions_other": "Ações ({{count}})",
     "columns": {
       "invoiceNumber": "Número da fatura",
       "client": "Cliente",
@@ -422,13 +420,17 @@
       "message": "Esta fatura está configurada para utilizar imposto calculado por um sistema de contabilidade externo, mas nenhum imposto foi importado ainda, portanto não pode ser finalizado. Exporte-a para o seu sistema contábil (QuickBooks, Xero) e importe o imposto de volta para finalizar com imposto externo — ou mude esta fatura para imposto interno agora para que Alga calcule o imposto e finalize-o.",
       "confirm": "Mudar para imposto interno e finalizar",
       "cancel": "Cancelar"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "clear": "Limpar seleção"
+      }
     }
   },
   "finalizedTab": {
     "title": "Faturas finalizadas",
     "searchPlaceholder": "Pesquisar faturas...",
-    "bulkActions_one": "Ações ({{count}})",
-    "bulkActions_other": "Ações ({{count}})",
     "columns": {
       "invoiceNumber": "Número da fatura",
       "client": "Cliente",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "Falha ao desfinalizar a fatura. Por favor, tente novamente.",
       "bulkUnfinalizeFailed": "Falha ao desfinalizar faturas. Por favor, tente novamente.",
       "bulkUnfinalizeInvoiceFailed": "Não foi possível reabrir {{invoiceNumber}}: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "clear": "Limpar seleção"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1671,7 +1679,6 @@
   },
   "projectBilling": {
     "subtitle": "Metas prontas e depósitos aguardando aprovação em todos os projetos.",
-    "bulkActions": "Ações ({{count}})",
     "loading": "Carregando fila de faturamento de projetos...",
     "empty": "Nada está aguardando revisão. Metas prontas e depósitos aparecerão aqui.",
     "columns": {
@@ -1727,6 +1734,12 @@
       "message": "Cancelar este lançamento agendado o remove do faturamento. Esta ação não pode ser desfeita.",
       "confirm": "Cancelar lançamento",
       "dismiss": "Manter lançamento"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "clear": "Limpar seleção"
+      }
     }
   },
   "invoiceDesigner": {

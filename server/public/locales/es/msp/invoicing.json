@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Borradores de facturas",
     "searchPlaceholder": "Buscar facturas...",
-    "bulkActions_one": "Acciones ({{count}})",
-    "bulkActions_other": "Acciones ({{count}})",
     "columns": {
       "invoiceNumber": "Número de factura",
       "client": "Cliente",
@@ -422,13 +420,17 @@
       "message": "Esta factura está configurada para usar el impuesto calculado por un sistema contable externo, pero aún no se ha importado ningún impuesto, por lo que no se puede finalizar. Expórtela a su sistema contable (QuickBooks, Xero) e importe el impuesto de vuelta para finalizarla con impuesto externo, o cambie esta factura a impuesto interno ahora para que Alga calcule el impuesto y finalícela.",
       "confirm": "Cambiar a impuesto interno y finalizar",
       "cancel": "Cancelar"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} seleccionados",
+        "clear": "Limpiar selección"
+      }
     }
   },
   "finalizedTab": {
     "title": "Facturas finalizadas",
     "searchPlaceholder": "Buscar facturas...",
-    "bulkActions_one": "Acciones ({{count}})",
-    "bulkActions_other": "Acciones ({{count}})",
     "columns": {
       "invoiceNumber": "Número de factura",
       "client": "Cliente",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "No se pudo anular la finalización de la factura. Por favor inténtelo de nuevo.",
       "bulkUnfinalizeFailed": "No se pudieron anular la finalización de las facturas. Por favor inténtelo de nuevo.",
       "bulkUnfinalizeInvoiceFailed": "No se pudo reabrir {{invoiceNumber}}: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} seleccionados",
+        "clear": "Limpiar selección"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1671,7 +1679,6 @@
   },
   "projectBilling": {
     "subtitle": "Hitos listos y depósitos pendientes de aprobación en todos los proyectos.",
-    "bulkActions": "Acciones ({{count}})",
     "loading": "Cargando la cola de facturación de proyectos...",
     "empty": "No hay nada pendiente de revisión. Los hitos y depósitos listos aparecerán aquí.",
     "columns": {
@@ -1727,6 +1734,12 @@
       "message": "Al cancelar esta entrada del calendario, se elimina de la facturación. Esta acción no se puede deshacer.",
       "confirm": "Cancelar entrada",
       "dismiss": "Conservar entrada"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} seleccionados",
+        "clear": "Limpiar selección"
+      }
     }
   },
   "invoiceDesigner": {

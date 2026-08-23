@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Conceptfacturen",
     "searchPlaceholder": "Facturen zoeken...",
-    "bulkActions_one": "Acties ({{count}})",
-    "bulkActions_other": "Acties ({{count}})",
     "columns": {
       "invoiceNumber": "Factuurnummer",
       "client": "Klant",
@@ -422,13 +420,17 @@
       "message": "Deze factuur is ingesteld om de belasting te gebruiken die door een extern boekhoudsysteem wordt berekend, maar er is nog geen belasting geïmporteerd, dus kan deze niet worden gefinaliseerd. Exporteer deze naar uw boekhoudsysteem (QuickBooks, Xero) en importeer de belasting terug om deze met externe belasting te finaliseren — of schakel deze factuur nu over naar interne belasting zodat Alga de belasting berekent, en finaliseer deze.",
       "confirm": "Overschakelen naar interne belasting en finaliseren",
       "cancel": "Annuleren"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "finalizedTab": {
     "title": "Gefinaliseerde facturen",
     "searchPlaceholder": "Facturen zoeken...",
-    "bulkActions_one": "Acties ({{count}})",
-    "bulkActions_other": "Acties ({{count}})",
     "columns": {
       "invoiceNumber": "Factuurnummer",
       "client": "Klant",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "Kan de finalisatie van de factuur niet ongedaan maken. Probeer het opnieuw.",
       "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw.",
       "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} kon niet worden heropend: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1671,7 +1679,6 @@
   },
   "projectBilling": {
     "subtitle": "Gereedstaande mijlpalen en aanbetalingen uit alle projecten die op goedkeuring wachten.",
-    "bulkActions": "Acties ({{count}})",
     "loading": "Wachtrij voor projectfacturatie laden...",
     "empty": "Er wacht niets op controle. Gereedstaande mijlpalen en aanbetalingen verschijnen hier.",
     "columns": {
@@ -1727,6 +1734,12 @@
       "message": "Door dit planningsitem te annuleren, wordt het uit de facturatie verwijderd. Dit kan niet ongedaan worden gemaakt.",
       "confirm": "Post annuleren",
       "dismiss": "Post behouden"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "invoiceDesigner": {

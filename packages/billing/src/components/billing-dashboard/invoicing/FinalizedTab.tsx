@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -493,39 +494,39 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
             />
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id="finalized-bulk-actions-trigger"
-              variant="outline"
-              disabled={selectedInvoices.size === 0}
-              className="flex items-center gap-2"
-            >
-              {t('finalizedTab.bulkActions', {
-                count: selectedInvoices.size,
-                defaultValue: `Actions (${selectedInvoices.size})`,
-              })}
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleBulkDownload} className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              {t('finalizedTab.actions.downloadPdfs', { defaultValue: 'Download PDFs' })}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleBulkEmail} className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              {t('finalizedTab.actions.sendEmails', { defaultValue: 'Send Emails' })}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleBulkUnfinalize} className="flex items-center gap-2">
-              <RotateCcw className="h-4 w-4" />
-              {t('finalizedTab.actions.unfinalizeSelected', {
-                defaultValue: 'Unfinalize Selected',
-              })}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
+
+      <BulkActionBar
+        idPrefix="finalized-bulk-action-bar"
+        count={selectedInvoices.size}
+        selectedLabel={t('finalizedTab.bulk.actionBar.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedInvoices.size,
+        })}
+        actions={[
+          {
+            id: 'download',
+            label: t('finalizedTab.actions.downloadPdfs', { defaultValue: 'Download PDFs' }),
+            icon: <Download className="h-4 w-4" />,
+            onClick: () => { void handleBulkDownload(); },
+          },
+          {
+            id: 'email',
+            label: t('finalizedTab.actions.sendEmails', { defaultValue: 'Send Emails' }),
+            icon: <Mail className="h-4 w-4" />,
+            onClick: handleBulkEmail,
+          },
+          {
+            id: 'unfinalize',
+            label: t('finalizedTab.actions.unfinalizeSelected', { defaultValue: 'Unfinalize Selected' }),
+            icon: <RotateCcw className="h-4 w-4" />,
+            onClick: () => { void handleBulkUnfinalize(); },
+            destructive: true,
+          },
+        ]}
+        onClear={() => setSelectedInvoices(new Set())}
+        clearLabel={t('finalizedTab.bulk.actionBar.clear', { defaultValue: 'Clear' })}
+      />
 
       {error && (
         <Alert variant="destructive" className="mb-4">

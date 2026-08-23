@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Bozze di fatture",
     "searchPlaceholder": "Cerca fatture...",
-    "bulkActions_one": "Azioni ({{count}})",
-    "bulkActions_other": "Azioni ({{count}})",
     "columns": {
       "invoiceNumber": "Numero della fattura",
       "client": "Cliente",
@@ -422,13 +420,17 @@
       "message": "Questa fattura è impostata per utilizzare l'imposta calcolata da un sistema contabile esterno, ma non è ancora stata importata alcuna imposta, quindi non può essere finalizzata. Esportala nel tuo sistema contabile (QuickBooks, Xero) e reimporta l'imposta per finalizzarla con l'imposta esterna, oppure passa ora questa fattura all'imposta interna in modo che Alga calcoli l'imposta e finalizzala.",
       "confirm": "Passa all'imposta interna e finalizza",
       "cancel": "Annulla"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selezionati",
+        "clear": "Annulla selezione"
+      }
     }
   },
   "finalizedTab": {
     "title": "Fatture finalizzate",
     "searchPlaceholder": "Cerca fatture...",
-    "bulkActions_one": "Azioni ({{count}})",
-    "bulkActions_other": "Azioni ({{count}})",
     "columns": {
       "invoiceNumber": "Numero della fattura",
       "client": "Cliente",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "Impossibile definalizzare la fattura. Per favore riprova.",
       "bulkUnfinalizeFailed": "Impossibile definalizzare le fatture. Per favore riprova.",
       "bulkUnfinalizeInvoiceFailed": "Impossibile riaprire {{invoiceNumber}}: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selezionati",
+        "clear": "Annulla selezione"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1671,7 +1679,6 @@
   },
   "projectBilling": {
     "subtitle": "Traguardi pronti e acconti in attesa di approvazione per tutti i progetti.",
-    "bulkActions": "Azioni ({{count}})",
     "loading": "Caricamento della coda di fatturazione progetti…",
     "empty": "Non c'è nulla da esaminare. I traguardi pronti e gli acconti compariranno qui.",
     "columns": {
@@ -1727,6 +1734,12 @@
       "message": "L'annullamento di questo elemento della pianificazione lo rimuove dalla fatturazione. L'operazione non può essere annullata.",
       "confirm": "Annulla elemento",
       "dismiss": "Mantieni elemento"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selezionati",
+        "clear": "Annulla selezione"
+      }
     }
   },
   "invoiceDesigner": {
