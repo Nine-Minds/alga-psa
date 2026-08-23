@@ -24,6 +24,17 @@ import {
 } from '../../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 
+// createTimePeriodSettings always writes the semi-monthly columns (defaulting
+// them), and every read path validates them as numbers. Fixtures that insert a
+// bare row leave NULLs behind and fail that validation, so fill them here.
+const withSettingsDefaults = <T extends Record<string, unknown>>(setting: T) => ({
+  start_month: 1,
+  start_day_of_month: 1,
+  end_month: 12,
+  end_day_of_month: 0,
+  ...setting,
+});
+
 describe('Time Periods Actions', () => {
   const context = new TestContext({
     cleanupTables: ['time_periods', 'time_period_settings'],
@@ -69,7 +80,7 @@ describe('Time Periods Actions', () => {
       updated_at: createTestDateISO({ year: 2024, month: 1, day: 1 })
     };
 
-    await tenantTable('time_period_settings').insert(settings);
+    await tenantTable('time_period_settings').insert(withSettingsDefaults(settings));
   });
 
   // Use cleanup hook for test isolation
