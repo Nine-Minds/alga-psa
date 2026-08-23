@@ -1227,7 +1227,7 @@ export const getArticleImportStatus = withAuth(
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'create'))) {
-      return permissionError('Permission denied');
+      return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
     if (!jobId) {
