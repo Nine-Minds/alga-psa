@@ -88,18 +88,34 @@
     "dialogs": {
       "archive": {
         "title": "Article d'archive",
-        "message": "Êtes-vous sûr de vouloir archiver \"{{title}}\" ? Cela le supprimera de la visibilité client."
+        "message": "Êtes-vous sûr de vouloir archiver \"{{title}}\" ? Cela le supprimera de la visibilité client.",
+        "titleMultiple": "Archiver {{count}} article(s)",
+        "messageMultiple": "Voulez-vous vraiment archiver {{count}} article(s) ? Ils ne seront plus visibles par les clients."
       },
       "delete": {
         "title": "Supprimer l'article",
-        "message": "Voulez-vous vraiment supprimer définitivement \"{{title}}\" ? Cela supprimera l'article et son contenu, et ne pourra pas être annulé."
+        "message": "Voulez-vous vraiment supprimer définitivement \"{{title}}\" ? Cela supprimera l'article et son contenu, et ne pourra pas être annulé.",
+        "titleMultiple": "Supprimer {{count}} article(s)",
+        "messageMultiple": "Voulez-vous vraiment supprimer définitivement {{count}} article(s) ? Les articles et leur contenu seront supprimés, sans possibilité d’annulation."
       }
     },
     "feedback": {
       "archiveError": "Échec de l'archivage de l'article",
       "archiveSuccess": "Article archivé",
       "deleteError": "Échec de la suppression de l'article",
-      "deleteSuccess": "Article supprimé définitivement"
+      "deleteSuccess": "Article supprimé définitivement",
+      "bulkArchiveSuccess": "{{count}} article(s) archivé(s)",
+      "bulkArchiveError": "Échec de l’archivage de {{count}} article(s)",
+      "bulkDeleteSuccess": "{{count}} article(s) supprimé(s) définitivement",
+      "bulkDeleteError": "Échec de la suppression de {{count}} article(s)"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "archive": "Archiver",
+        "delete": "Supprimer",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "editor": {

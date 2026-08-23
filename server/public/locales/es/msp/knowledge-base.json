@@ -88,18 +88,34 @@
     "dialogs": {
       "archive": {
         "title": "Archivar artículo",
-        "message": "¿Está seguro de que desea archivar \"{{title}}\"? Esto lo eliminará de la visibilidad del cliente."
+        "message": "¿Está seguro de que desea archivar \"{{title}}\"? Esto lo eliminará de la visibilidad del cliente.",
+        "titleMultiple": "Archivar {{count}} artículo(s)",
+        "messageMultiple": "¿Seguro que desea archivar {{count}} artículo(s)? Dejarán de ser visibles para los clientes."
       },
       "delete": {
         "title": "Eliminar artículo",
-        "message": "¿Está seguro de que desea eliminar permanentemente \"{{title}}\"? Esto eliminará el artículo y su contenido, y no se puede deshacer."
+        "message": "¿Está seguro de que desea eliminar permanentemente \"{{title}}\"? Esto eliminará el artículo y su contenido, y no se puede deshacer.",
+        "titleMultiple": "Eliminar {{count}} artículo(s)",
+        "messageMultiple": "¿Seguro que desea eliminar permanentemente {{count}} artículo(s)? Se eliminarán los artículos y su contenido, y no se podrá deshacer."
       }
     },
     "feedback": {
       "archiveError": "No se pudo archivar el artículo",
       "archiveSuccess": "Artículo archivado",
       "deleteError": "No se pudo eliminar el artículo",
-      "deleteSuccess": "Artículo eliminado permanentemente"
+      "deleteSuccess": "Artículo eliminado permanentemente",
+      "bulkArchiveSuccess": "{{count}} artículo(s) archivado(s)",
+      "bulkArchiveError": "No se pudieron archivar {{count}} artículo(s)",
+      "bulkDeleteSuccess": "{{count}} artículo(s) eliminado(s) permanentemente",
+      "bulkDeleteError": "No se pudieron eliminar {{count}} artículo(s)"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} seleccionados",
+        "archive": "Archivar",
+        "delete": "Eliminar",
+        "clear": "Limpiar selección"
+      }
     }
   },
   "editor": {

@@ -88,18 +88,34 @@
     "dialogs": {
       "archive": {
         "title": "Artykuł archiwalny",
-        "message": "Czy na pewno chcesz zarchiwizować „{{title}}”? Spowoduje to usunięcie go z widoczności klienta."
+        "message": "Czy na pewno chcesz zarchiwizować „{{title}}”? Spowoduje to usunięcie go z widoczności klienta.",
+        "titleMultiple": "Zarchiwizuj artykuły: {{count}}",
+        "messageMultiple": "Czy na pewno chcesz zarchiwizować artykuły ({{count}})? Przestaną być widoczne dla klientów."
       },
       "delete": {
         "title": "Usuń artykuł",
-        "message": "Czy na pewno chcesz trwale usunąć \"{{title}}\"? Spowoduje to usunięcie artykułu wraz z jego zawartością i nie można tego cofnąć."
+        "message": "Czy na pewno chcesz trwale usunąć \"{{title}}\"? Spowoduje to usunięcie artykułu wraz z jego zawartością i nie można tego cofnąć.",
+        "titleMultiple": "Usuń artykuły: {{count}}",
+        "messageMultiple": "Czy na pewno chcesz trwale usunąć artykuły ({{count}})? Artykuły i ich treść zostaną usunięte, a operacji nie można cofnąć."
       }
     },
     "feedback": {
       "archiveError": "Nie udało się zarchiwizować artykułu",
       "archiveSuccess": "Artykuł zarchiwizowany",
       "deleteError": "Nie udało się usunąć artykułu",
-      "deleteSuccess": "Artykuł trwale usunięty"
+      "deleteSuccess": "Artykuł trwale usunięty",
+      "bulkArchiveSuccess": "Zarchiwizowano artykuły: {{count}}",
+      "bulkArchiveError": "Nie udało się zarchiwizować artykułów: {{count}}",
+      "bulkDeleteSuccess": "Trwale usunięto artykuły: {{count}}",
+      "bulkDeleteError": "Nie udało się usunąć artykułów: {{count}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "archive": "Archiwizuj",
+        "delete": "Usuń",
+        "clear": "Wyczyść zaznaczenie"
+      }
     }
   },
   "editor": {

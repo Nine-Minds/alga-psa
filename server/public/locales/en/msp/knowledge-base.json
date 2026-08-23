@@ -88,18 +88,34 @@
     "dialogs": {
       "archive": {
         "title": "Archive Article",
-        "message": "Are you sure you want to archive \"{{title}}\"? This will remove it from client visibility."
+        "message": "Are you sure you want to archive \"{{title}}\"? This will remove it from client visibility.",
+        "titleMultiple": "Archive {{count}} article(s)",
+        "messageMultiple": "Are you sure you want to archive {{count}} article(s)? This will remove them from client visibility."
       },
       "delete": {
         "title": "Delete Article",
-        "message": "Are you sure you want to permanently delete \"{{title}}\"? This will remove the article and its content, and cannot be undone."
+        "message": "Are you sure you want to permanently delete \"{{title}}\"? This will remove the article and its content, and cannot be undone.",
+        "titleMultiple": "Delete {{count}} article(s)",
+        "messageMultiple": "Are you sure you want to permanently delete {{count}} article(s)? This will remove the articles and their content, and cannot be undone."
       }
     },
     "feedback": {
       "archiveError": "Failed to archive article",
       "archiveSuccess": "Article archived",
       "deleteError": "Failed to delete article",
-      "deleteSuccess": "Article deleted permanently"
+      "deleteSuccess": "Article deleted permanently",
+      "bulkArchiveSuccess": "{{count}} article(s) archived",
+      "bulkArchiveError": "Failed to archive {{count}} article(s)",
+      "bulkDeleteSuccess": "{{count}} article(s) deleted permanently",
+      "bulkDeleteError": "Failed to delete {{count}} article(s)"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "archive": "Archive",
+        "delete": "Delete",
+        "clear": "Clear"
+      }
     }
   },
   "editor": {

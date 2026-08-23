@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
@@ -116,14 +117,15 @@ export default function KBArticleList({
     setTagsVersion((v) => v + 1);
   }, [initialArticleTags]);
 
-  // Archive confirmation dialog state
+  // Archive confirmation dialog state — holds one article for the row menu, or
+  // the whole selection for the bulk action bar.
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [articleToArchive, setArticleToArchive] = useState<IKBArticleWithDocument | null>(null);
+  const [articlesToArchive, setArticlesToArchive] = useState<IKBArticleWithDocument[]>([]);
   const [isArchiving, setIsArchiving] = useState(false);
 
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [articleToDelete, setArticleToDelete] = useState<IKBArticleWithDocument | null>(null);
+  const [articlesToDelete, setArticlesToDelete] = useState<IKBArticleWithDocument[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const getStatusLabel = useFormatArticleStatus();
@@ -136,56 +138,90 @@ export default function KBArticleList({
   }, []);
 
   const handleArchive = async () => {
-    if (!articleToArchive) return;
+    if (articlesToArchive.length === 0) return;
 
     setIsArchiving(true);
     try {
-      const result = await archiveArticle(articleToArchive.article_id);
-      if (typeof result === 'object' && 'code' in result) {
-        toast.error(t('list.feedback.archiveError', { defaultValue: 'Failed to archive article' }));
-        return;
+      let failed = 0;
+      for (const article of articlesToArchive) {
+        const result = await archiveArticle(article.article_id);
+        if (typeof result === 'object' && 'code' in result) failed += 1;
       }
-      toast.success(t('list.feedback.archiveSuccess', { defaultValue: 'Article archived' }));
+      if (failed > 0) {
+        toast.error(failed === 1
+          ? t('list.feedback.archiveError', { defaultValue: 'Failed to archive article' })
+          : t('list.feedback.bulkArchiveError', {
+              defaultValue: 'Failed to archive {{count}} article(s)',
+              count: failed,
+            }));
+      } else if (articlesToArchive.length === 1) {
+        toast.success(t('list.feedback.archiveSuccess', { defaultValue: 'Article archived' }));
+      } else {
+        toast.success(t('list.feedback.bulkArchiveSuccess', {
+          defaultValue: '{{count}} article(s) archived',
+          count: articlesToArchive.length,
+        }));
+      }
+      setSelectedArticles(new Set());
       onRefresh();
     } catch (error) {
       handleError(error, t('list.feedback.archiveError', { defaultValue: 'Failed to archive article' }));
     } finally {
       setIsArchiving(false);
       setArchiveDialogOpen(false);
-      setArticleToArchive(null);
+      setArticlesToArchive([]);
     }
   };
 
-  const confirmArchive = (article: IKBArticleWithDocument) => {
-    setArticleToArchive(article);
+  const confirmArchive = (articlesToConfirm: IKBArticleWithDocument[]) => {
+    if (articlesToConfirm.length === 0) return;
+    setArticlesToArchive(articlesToConfirm);
     setArchiveDialogOpen(true);
   };
 
-  const confirmDelete = (article: IKBArticleWithDocument) => {
-    setArticleToDelete(article);
+  const confirmDelete = (articlesToConfirm: IKBArticleWithDocument[]) => {
+    if (articlesToConfirm.length === 0) return;
+    setArticlesToDelete(articlesToConfirm);
     setDeleteDialogOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!articleToDelete) return;
+    if (articlesToDelete.length === 0) return;
 
     setIsDeleting(true);
     try {
-      const result = await deleteArticle(articleToDelete.article_id);
-      if (typeof result === 'object' && 'code' in result) {
-        toast.error(t('list.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
-        return;
+      let failed = 0;
+      for (const article of articlesToDelete) {
+        const result = await deleteArticle(article.article_id);
+        if (typeof result === 'object' && 'code' in result) failed += 1;
       }
-      toast.success(t('list.feedback.deleteSuccess', { defaultValue: 'Article deleted permanently' }));
+      if (failed > 0) {
+        toast.error(failed === 1
+          ? t('list.feedback.deleteError', { defaultValue: 'Failed to delete article' })
+          : t('list.feedback.bulkDeleteError', {
+              defaultValue: 'Failed to delete {{count}} article(s)',
+              count: failed,
+            }));
+      } else if (articlesToDelete.length === 1) {
+        toast.success(t('list.feedback.deleteSuccess', { defaultValue: 'Article deleted permanently' }));
+      } else {
+        toast.success(t('list.feedback.bulkDeleteSuccess', {
+          defaultValue: '{{count}} article(s) deleted permanently',
+          count: articlesToDelete.length,
+        }));
+      }
+      setSelectedArticles(new Set());
       onRefresh();
     } catch (error) {
       handleError(error, t('list.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
-      setArticleToDelete(null);
+      setArticlesToDelete([]);
     }
   };
+
+  const selectedArticleList = articles.filter((article) => selectedArticles.has(article.article_id));
 
   const toggleSelectAll = () => {
     if (selectedArticles.size === articles.length) {
@@ -367,7 +403,7 @@ export default function KBArticleList({
                         )}
                         {article.status !== 'archived' && (
                           <DropdownMenuItem
-                            onClick={() => confirmArchive(article)}
+                            onClick={() => confirmArchive([article])}
                             className="text-destructive focus:text-destructive"
                           >
                             <Archive className="w-4 h-4 mr-2" />
@@ -377,7 +413,7 @@ export default function KBArticleList({
                         {(article.status === 'draft' || article.status === 'archived') && (
                           <DropdownMenuItem
                             id={`kb-article-delete-${article.article_id}`}
-                            onClick={() => confirmDelete(article)}
+                            onClick={() => confirmDelete([article])}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
@@ -418,14 +454,24 @@ export default function KBArticleList({
         isOpen={archiveDialogOpen}
         onClose={() => {
           setArchiveDialogOpen(false);
-          setArticleToArchive(null);
+          setArticlesToArchive([]);
         }}
         onConfirm={handleArchive}
-        title={t('list.dialogs.archive.title', { defaultValue: 'Archive Article' })}
-        message={t('list.dialogs.archive.message', {
-          defaultValue: 'Are you sure you want to archive "{{title}}"? This will remove it from client visibility.',
-          title: articleToArchive?.document_name || articleToArchive?.slug || '',
-        })}
+        title={articlesToArchive.length > 1
+          ? t('list.dialogs.archive.titleMultiple', {
+              defaultValue: 'Archive {{count}} article(s)',
+              count: articlesToArchive.length,
+            })
+          : t('list.dialogs.archive.title', { defaultValue: 'Archive Article' })}
+        message={articlesToArchive.length > 1
+          ? t('list.dialogs.archive.messageMultiple', {
+              defaultValue: 'Are you sure you want to archive {{count}} article(s)? This will remove them from client visibility.',
+              count: articlesToArchive.length,
+            })
+          : t('list.dialogs.archive.message', {
+              defaultValue: 'Are you sure you want to archive "{{title}}"? This will remove it from client visibility.',
+              title: articlesToArchive[0]?.document_name || articlesToArchive[0]?.slug || '',
+            })}
         confirmLabel={t('list.actions.archive', { defaultValue: 'Archive' })}
         isConfirming={isArchiving}
       />
@@ -436,17 +482,54 @@ export default function KBArticleList({
         isOpen={deleteDialogOpen}
         onClose={() => {
           setDeleteDialogOpen(false);
-          setArticleToDelete(null);
+          setArticlesToDelete([]);
         }}
         onConfirm={handleDelete}
-        title={t('list.dialogs.delete.title', { defaultValue: 'Delete Article' })}
-        message={t('list.dialogs.delete.message', {
-          defaultValue:
-            'Are you sure you want to permanently delete "{{title}}"? This will remove the article and its content, and cannot be undone.',
-          title: articleToDelete?.document_name || articleToDelete?.slug || '',
-        })}
+        title={articlesToDelete.length > 1
+          ? t('list.dialogs.delete.titleMultiple', {
+              defaultValue: 'Delete {{count}} article(s)',
+              count: articlesToDelete.length,
+            })
+          : t('list.dialogs.delete.title', { defaultValue: 'Delete Article' })}
+        message={articlesToDelete.length > 1
+          ? t('list.dialogs.delete.messageMultiple', {
+              defaultValue:
+                'Are you sure you want to permanently delete {{count}} article(s)? This will remove the articles and their content, and cannot be undone.',
+              count: articlesToDelete.length,
+            })
+          : t('list.dialogs.delete.message', {
+              defaultValue:
+                'Are you sure you want to permanently delete "{{title}}"? This will remove the article and its content, and cannot be undone.',
+              title: articlesToDelete[0]?.document_name || articlesToDelete[0]?.slug || '',
+            })}
         confirmLabel={t('list.actions.delete', { defaultValue: 'Delete permanently' })}
         isConfirming={isDeleting}
+      />
+
+      <BulkActionBar
+        idPrefix="kb-bulk-action-bar"
+        count={selectedArticleList.length}
+        selectedLabel={t('list.bulk.actionBar.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedArticleList.length,
+        })}
+        actions={[
+          {
+            id: 'archive',
+            label: t('list.bulk.actionBar.archive', { defaultValue: 'Archive' }),
+            icon: <Archive className="w-4 h-4" />,
+            onClick: () => confirmArchive(selectedArticleList),
+          },
+          {
+            id: 'delete',
+            label: t('list.bulk.actionBar.delete', { defaultValue: 'Delete' }),
+            icon: <Trash2 className="w-4 h-4" />,
+            onClick: () => confirmDelete(selectedArticleList),
+            destructive: true,
+          },
+        ]}
+        onClear={() => setSelectedArticles(new Set())}
+        clearLabel={t('list.bulk.actionBar.clear', { defaultValue: 'Clear' })}
       />
     </div>
   );
