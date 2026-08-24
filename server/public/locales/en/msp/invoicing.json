@@ -1984,7 +1984,13 @@
       "preview": {
         "sampleNote": "Rendered against representative {{type}} sample data.",
         "frameTitle": "{{type}} preview",
-        "empty": "Open this tab to generate an authoritative preview."
+        "empty": "Open this tab to generate an authoritative preview.",
+        "existingNote": "Rendered against the selected sales order.",
+        "searchDocuments": "Search sales orders...",
+        "searchDocumentsHint": "Search by number or client...",
+        "noDocumentsFound": "No sales orders found.",
+        "selectDocument": "Select Sales Order",
+        "selectDocumentHint": "Select a sales order to preview data-bound output."
       },
       "errors": {
         "nameRequired": "Template name is required.",

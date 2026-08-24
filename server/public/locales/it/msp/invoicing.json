@@ -1984,7 +1984,13 @@
       "preview": {
         "sampleNote": "Generato usando dati di esempio rappresentativi per {{type}}.",
         "frameTitle": "Anteprima di {{type}}",
-        "empty": "Apri questa scheda per generare un’anteprima attendibile."
+        "empty": "Apri questa scheda per generare un’anteprima attendibile.",
+        "existingNote": "Generato sull'ordine di vendita selezionato.",
+        "searchDocuments": "Cerca ordini di vendita…",
+        "searchDocumentsHint": "Cerca per numero o cliente…",
+        "noDocumentsFound": "Nessun ordine di vendita trovato.",
+        "selectDocument": "Seleziona ordine di vendita",
+        "selectDocumentHint": "Seleziona un ordine di vendita per l'anteprima con dati."
       },
       "errors": {
         "nameRequired": "Il nome del modello è obbligatorio.",

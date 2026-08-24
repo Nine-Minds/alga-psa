@@ -1984,7 +1984,13 @@
       "preview": {
         "sampleNote": "Generado con datos de ejemplo representativos de {{type}}.",
         "frameTitle": "Vista previa de {{type}}",
-        "empty": "Abra esta pestaña para generar una vista previa fidedigna."
+        "empty": "Abra esta pestaña para generar una vista previa fidedigna.",
+        "existingNote": "Generado con el pedido de venta seleccionado.",
+        "searchDocuments": "Buscar pedidos de venta…",
+        "searchDocumentsHint": "Buscar por número o cliente…",
+        "noDocumentsFound": "Sin pedidos de venta.",
+        "selectDocument": "Seleccionar pedido de venta",
+        "selectDocumentHint": "Seleccione un pedido de venta para ver la vista previa con datos."
       },
       "errors": {
         "nameRequired": "El nombre de la plantilla es obligatorio.",

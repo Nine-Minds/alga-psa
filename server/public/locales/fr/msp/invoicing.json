@@ -1984,7 +1984,13 @@
       "preview": {
         "sampleNote": "Produite à partir de données d’exemple représentatives du type « {{type}} ».",
         "frameTitle": "Aperçu pour {{type}}",
-        "empty": "Ouvrez cet onglet pour générer un aperçu de référence."
+        "empty": "Ouvrez cet onglet pour générer un aperçu de référence.",
+        "existingNote": "Généré à partir de la commande client sélectionnée.",
+        "searchDocuments": "Rechercher des commandes client…",
+        "searchDocumentsHint": "Rechercher par numéro ou client…",
+        "noDocumentsFound": "Aucune commande client trouvée.",
+        "selectDocument": "Sélectionner une commande client",
+        "selectDocumentHint": "Sélectionnez une commande client pour prévisualiser la sortie liée aux données."
       },
       "errors": {
         "nameRequired": "Le nom du modèle est obligatoire.",

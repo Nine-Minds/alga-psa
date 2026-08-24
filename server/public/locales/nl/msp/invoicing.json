@@ -1984,7 +1984,13 @@
       "preview": {
         "sampleNote": "Gegenereerd met representatieve voorbeeldgegevens voor {{type}}.",
         "frameTitle": "Voorbeeld van {{type}}",
-        "empty": "Open dit tabblad om een definitief voorbeeld te genereren."
+        "empty": "Open dit tabblad om een definitief voorbeeld te genereren.",
+        "existingNote": "Gegenereerd op basis van de gekozen verkooporder.",
+        "searchDocuments": "Verkooporders zoeken…",
+        "searchDocumentsHint": "Zoek op nummer of klant…",
+        "noDocumentsFound": "Geen verkooporders gevonden.",
+        "selectDocument": "Verkooporder kiezen",
+        "selectDocumentHint": "Kies een verkooporder voor een gegevensgebonden voorvertoning."
       },
       "errors": {
         "nameRequired": "De naam van het sjabloon is verplicht.",

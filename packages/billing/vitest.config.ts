@@ -19,7 +19,10 @@ export default defineConfig({
       // CI job — listing them here keeps both invocations covering the seam
       // instead of silently reporting "No test files found".
       'src/actions/documentTemplateActions.tenantBranding.test.ts',
+      'src/actions/documentTemplateActions.existingDocument.test.ts',
+      'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
+      'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
       'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
     ],

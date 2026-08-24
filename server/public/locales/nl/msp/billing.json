@@ -689,8 +689,10 @@
         "setDefault": "Toestemming geweigerd: het standaarddocumentsjabloon kan niet worden ingesteld",
         "clearOverride": "Toestemming geweigerd: de overschrijving van het documentsjabloon kan niet worden gewist",
         "delete": "Toestemming geweigerd: documentsjablonen kunnen niet worden verwijderd",
-        "preview": "Toestemming geweigerd: documentsjablonen kunnen niet worden voorvertoond"
-      }
+        "preview": "Toestemming geweigerd: documentsjablonen kunnen niet worden voorvertoond",
+        "readSalesOrders": "Toegang geweigerd: verkooporders kunnen niet worden gelezen"
+      },
+      "existingNotFound": "Document niet gevonden."
     },
     "billingProfile": {
       "periodOrder": "Kies een periode waarvan de start op of vóór het einde ligt.",

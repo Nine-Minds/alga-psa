@@ -1984,7 +1984,13 @@
       "preview": {
         "sampleNote": "Gerado com dados de exemplo representativos de {{type}}.",
         "frameTitle": "Pré-visualização de {{type}}",
-        "empty": "Abra esta guia para gerar uma pré-visualização confiável."
+        "empty": "Abra esta guia para gerar uma pré-visualização confiável.",
+        "existingNote": "Gerado a partir do pedido de venda selecionado.",
+        "searchDocuments": "Pesquisar pedidos de venda...",
+        "searchDocumentsHint": "Pesquise por número ou cliente...",
+        "noDocumentsFound": "Nenhum pedido de venda encontrado.",
+        "selectDocument": "Selecione o pedido de venda",
+        "selectDocumentHint": "Selecione um pedido de venda para visualizar a saída vinculada a dados."
       },
       "errors": {
         "nameRequired": "O nome do modelo é obrigatório.",

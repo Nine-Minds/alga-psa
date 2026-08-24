@@ -1984,7 +1984,13 @@
       "preview": {
         "sampleNote": "Mit repräsentativen Beispieldaten für {{type}} gerendert.",
         "frameTitle": "Vorschau für {{type}}",
-        "empty": "Öffnen Sie diese Registerkarte, um eine verbindliche Vorschau zu erzeugen."
+        "empty": "Öffnen Sie diese Registerkarte, um eine verbindliche Vorschau zu erzeugen.",
+        "existingNote": "Wird anhand des gewählten Kundenauftrags gerendert.",
+        "searchDocuments": "Kundenaufträge suchen…",
+        "searchDocumentsHint": "Nach Nummer oder Kunde suchen…",
+        "noDocumentsFound": "Keine Kundenaufträge gefunden.",
+        "selectDocument": "Kundenauftrag wählen",
+        "selectDocumentHint": "Wählen Sie einen Kundenauftrag für die datengebundene Vorschau."
       },
       "errors": {
         "nameRequired": "Der Vorlagenname ist erforderlich.",
