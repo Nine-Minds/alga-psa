@@ -2,7 +2,7 @@ import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { NextRequest } from 'next/server';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
 import { describeWithDb } from '../../../test-utils/requireDb';
@@ -520,6 +520,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
   beforeAll(async () => {
     process.env.NEXTAUTH_URL = 'http://localhost:3000';
+    wireLocalTestDbEnv();
     db = await createTestDbConnection();
 
     const tenant = await discoveryTable<{ tenant: string }>(
@@ -2549,6 +2550,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject: 'Contact matched subject',
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -2630,6 +2634,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello from microsoft contact', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -2733,6 +2740,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -2818,6 +2828,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -2979,6 +2992,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${senderEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -3065,6 +3081,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${senderEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -3478,6 +3497,172 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  it('persists an internal sender-auth failure through the audit_logs tenant trigger', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-auth-audit-${uuidv4().slice(0, 6)}@example.com`;
+    const subscriptionId = `sub-auth-audit-${uuidv4()}`;
+    const { defaultsId } = await setupMicrosoftProvider({ providerId, mailbox, subscriptionId });
+    const internalUserId = uuidv4();
+    const internalEmail = `internal-auth-audit-${uuidv4().slice(0, 6)}@example.com`;
+    const messageId = `internal-auth-failure-${uuidv4()}@example.com`;
+    const subject = `Internal sender auth audit ${uuidv4().slice(0, 6)}`;
+
+    cleanup.push(async () => {
+      await tenantTable('email_processed_messages').where({ provider_id: providerId }).delete();
+      await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+    cleanup.push(async () => {
+      await tenantTable('users').where({ user_id: internalUserId }).delete();
+    });
+
+    await tenantTable('users').insert({
+      user_id: internalUserId,
+      tenant: tenantId,
+      username: `internal-auth-audit-${internalUserId.slice(0, 8)}`,
+      email: internalEmail,
+      first_name: 'Internal',
+      last_name: 'Audit',
+      hashed_password: 'not-a-real-hash',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+    });
+
+    // The real raw-MIME path must preserve the absent Authentication-Results
+    // header so sender attribution fails closed before the audit trigger fires.
+    microsoftDownloadMessageSourceMock = vi.fn().mockResolvedValue(
+      buildMicrosoftMime({
+        from: internalEmail,
+        to: mailbox,
+        subject,
+        messageId,
+        text: 'This message has no Authentication-Results header.',
+      })
+    );
+
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    const req = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        value: [{
+          changeType: 'created',
+          clientState: 'ignored',
+          resource: `/users/${uuidv4()}/messages/${messageId}`,
+          resourceData: {
+            '@odata.type': '#microsoft.graph.message',
+            '@odata.id': 'ignored',
+            id: messageId,
+            subject,
+          },
+          subscriptionExpirationDateTime: new Date(Date.now() + 60_000).toISOString(),
+          subscriptionId,
+          tenantId: 'ignored',
+        }],
+      }),
+    });
+    const response = await handleMicrosoftWebhookPost(req);
+    expect(response.status).toBe(200);
+    await processEnqueuedUnifiedJobs();
+
+    const ticket = await tenantTable('tickets').where({ title: subject }).first<any>();
+    expect(ticket).toBeDefined();
+
+    const audit = await tenantTable('audit_logs')
+      .where({
+        operation: 'inbound_email_internal_sender_auth_failed',
+        record_id: providerId,
+      })
+      .first<any>();
+    expect(audit).toMatchObject({
+      tenant: tenantId,
+      operation: 'inbound_email_internal_sender_auth_failed',
+      table_name: 'email_providers',
+      record_id: providerId,
+    });
+    expect(audit.details).toMatchObject({
+      emailId: `<${messageId}>`,
+      senderEmail: internalEmail,
+      authResults: null,
+    });
+
+    cleanup.push(async () => {
+      await tenantTable('audit_logs').where({ audit_id: audit.audit_id }).delete();
+      await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
+    });
+  });
+
+  it('does not mark an authenticated, matched internal sender as unmatched', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-auth-match-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+    const internalUserId = uuidv4();
+    const internalEmail = `internal-auth-match-${uuidv4().slice(0, 6)}@example.com`;
+    const emailId = `internal-auth-match-${uuidv4()}`;
+
+    cleanup.push(async () => {
+      await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+    cleanup.push(async () => {
+      await tenantTable('users').where({ user_id: internalUserId }).delete();
+    });
+
+    await tenantTable('users').insert({
+      user_id: internalUserId,
+      tenant: tenantId,
+      username: `internal-auth-match-${internalUserId.slice(0, 8)}`,
+      email: internalEmail,
+      first_name: 'Internal',
+      last_name: 'Match',
+      hashed_password: 'not-a-real-hash',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: emailId,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: internalEmail, name: 'Internal Match' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: `Internal sender auth match ${uuidv4().slice(0, 6)}`,
+        body: { text: 'This sender is authenticated and matched.', html: undefined },
+        attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dmarc=pass header.from=${internalEmail.split('@')[1]}`,
+        },
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await tenantTable('tickets')
+      .whereRaw("email_metadata->>'messageId' = ?", [emailId])
+      .first<any>();
+    expect(ticket).toBeDefined();
+    const comment = await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).first<any>();
+    expect(comment).toMatchObject({ author_type: 'internal', user_id: internalUserId });
+    expect(comment.metadata).toMatchObject({ unmatchedSender: false });
+
+    cleanup.push(async () => {
+      await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
+    });
+  });
+
   it('Contact match: sender email is normalized from display-name format', async () => {
     const providerId = uuidv4();
     const mailbox = `support-contact-normalize-${uuidv4().slice(0, 6)}@example.com`;
@@ -3532,6 +3717,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject: 'Contact normalized sender subject',
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${canonicalEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -3902,6 +4090,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       subject,
       body: { text: 'Hello', html: undefined },
       attachments: [],
+      headers: {
+        'authentication-results': `mx.example.com; dkim=pass header.d=${senderEmail.split('@')[1]}`,
+      },
     } as any;
 
     const first = await processInboundEmailInApp({ tenantId, providerId, emailData });

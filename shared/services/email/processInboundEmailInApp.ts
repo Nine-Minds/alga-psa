@@ -51,6 +51,9 @@ async function logInboundSenderAuthFailure(input: {
   try {
     const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
     await withAdminTransaction(async (trx: any) => {
+      // audit_logs has a legacy trigger that derives tenant from this
+      // transaction-local GUC rather than from the insert payload.
+      await trx.raw("select set_config('app.current_tenant', ?, true)", [input.tenantId]);
       await tenantDb(trx, input.tenantId).table('audit_logs').insert({
         audit_id: randomUUID(),
         operation: 'inbound_email_internal_sender_auth_failed',
@@ -1971,7 +1974,7 @@ export async function processInboundEmailInApp(
           heuristics: parsedEmail?.appliedHeuristics,
           warnings: parsedEmail?.warnings,
         },
-        unmatchedSender: !commentAuthorContactId,
+        unmatchedSender: !matchedSenderContact,
         inboundReopenDecision: rerouteReasonMetadata ?? undefined,
       },
     },

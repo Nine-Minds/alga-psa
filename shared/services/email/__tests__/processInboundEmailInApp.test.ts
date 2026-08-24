@@ -277,7 +277,7 @@ describe('processInboundEmailInApp', () => {
         author_id: 'internal-user-123',
         contact_id: undefined,
         metadata: expect.objectContaining({
-          unmatchedSender: true,
+          unmatchedSender: false,
         }),
       }),
       'tenant-1'
