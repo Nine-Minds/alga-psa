@@ -252,10 +252,17 @@ export const generateTicketCSVTemplate = withAuth(async (_user, _ctx): Promise<s
 // ---------------------------------------------------------------------------
 
 export const getTicketImportReferenceData = withAuth(async (
-  _user,
+  user,
   { tenant },
   defaultBoardId?: string
 ): Promise<ITicketImportReferenceData> => {
+  // This returns the tenant's internal user directory (names and email addresses)
+  // alongside every board, client and contact, so it needs the same read gate as
+  // the tickets it feeds — being authenticated is not enough.
+  if (!await hasPermission(user, 'ticket', 'read')) {
+    throw new Error('Permission denied: Cannot read ticket import reference data');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
