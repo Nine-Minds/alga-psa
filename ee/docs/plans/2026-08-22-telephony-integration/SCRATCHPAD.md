@@ -131,6 +131,9 @@ against the Oz tenant after deleting its stale `telephony` row:
   "Inbound call from +1 (555) 246-8135" interaction on Alice in Wonderland /
   Wonderland; replay was a no-op; with the add-on expired it skipped with
   `addon_inactive` and wrote nothing. Verification rows removed afterwards.
+  (Which database that actually was is uncertain — see the `DB_NAME_SERVER`
+  landmine below; a script run without an explicit database name talks to the
+  operator's `server`, not `server_mc9`.)
 
 Landmine: booting the dev server rewrites the tenant admin's password (it
 prints the new one), and `server/.env.local`, if present, overrides the card's
@@ -161,3 +164,75 @@ Note when running server unit tests: several suites resolve fixtures relative
 to `process.cwd()`, so run them from `server/`, not from the repo root with
 `--root server`. Otherwise `public/locales/...` and doc-contract paths miss and
 you get ~22 phantom failures.
+
+## Browser-check blocker — root cause and fix (2026-08-24)
+A review round reported the card's documented login (`glinda@emeraldcity.oz`)
+failing in a real browser with "Invalid password". It was the environment, not
+the feature. **Two independent causes, both now fixed on the card stack:**
+
+1. `server/.env.local` — the operator's *personal* `:3000` config (`APP_PORT=3000`,
+   `NEXTAUTH_URL=http://localhost:3000`, **`DB_NAME_SERVER=server`**) had been
+   copied into this worktree. Next gives `.env.local` precedence over `.env`, so
+   the card's app on :3109 was reading and writing the operator's `server`
+   database instead of its own clone `server_mc9`. Moved out of the repo to
+   `../alga-psa-mc9-server-env.local.operator-bak`. **Never restore it here.**
+2. `NEXTAUTH_SECRET=dummy` in `server/.env` with `SECRET_READ_CHAIN=env,filesystem`.
+   `hashPassword` is PBKDF2 over `nextauth_secret + salt`, and the clone's user
+   rows were hashed with the *filesystem* secret (`secrets/nextauth_secret`), so
+   with `dummy` winning the chain no password could ever verify. `server/.env`
+   now carries the filesystem secret's real value.
+
+Verified after the fix: the credentials callback 302s to `/`, and a real
+Chromium sign-in lands on `/msp/dashboard`.
+
+**Landmine — the dev server rewrites the admin password on every boot.** It
+prints the new one in a banner (`******** Password is -> [ … ] ********`) in the
+boot log. So the card's documented password stops working the moment anyone
+bounces the server. After a bounce, either read the printed password or restore
+the documented one by writing a PBKDF2 `salt:hash` (10000 iterations, 64 bytes,
+sha512, key = the effective `nextauth_secret`) into `users.hashed_password`.
+
+**Landmine — an ad-hoc `tsx`/node script defaults to the operator's database.**
+`packages/db` resolves `process.env.DB_NAME_SERVER || 'server'`, and `tsx` does
+*not* load `server/.env` the way Next does. A bare
+`npx tsx scripts/whatever.ts` therefore connects to `server` — the operator's
+personal dev database — while looking exactly like it is working. This round a
+verification ingest landed a `telephony_call_records` row in `server`; it was
+found and deleted, and both databases were confirmed clean. Any script touching
+a card database must pass `DB_NAME_SERVER=server_mc9` (plus host/port/creds)
+explicitly, or better, take an explicit `knex` — `ingestCanonicalCall`,
+`matchCallParty` and the gate all accept one.
+
+Corollary: earlier notes in this file claiming a check ran "against the real
+database" via a script should be read with that in mind.
+
+**Running real-database checks outside Next.** The root specifiers
+`@alga-psa/event-schemas` (declares a `require` → `dist/index.cjs` that tsup
+never emits) and `@alga-psa/workflow-streams` (declares `.` → `dist/index.mjs`
+with no build script at all) only resolve inside Next's bundler. So the
+interaction-writing half of ingestion cannot be driven from a plain script.
+What does work, and is enough to prove the ladder: a throwaway vitest file that
+builds its own `knex` against `server_mc9` and calls `matchCallParty` /
+`tenantHasTelephonyEntitlement` directly.
+
+## Gating re-verified in a real browser (2026-08-24)
+Chromium against the card app on :3109, Oz tenant, which has `teams` active and
+**no `telephony` row at all** — so this exercises exactly the operator's
+"telephony lives inside the Teams add-on" call:
+
+- Sub-nav renders `integration-subnav-communication-{email,microsoft-teams,telephony}`
+  and the matching `integration-subsection-*` ids (kebab-case, as planned).
+- Teams add-on **active** → Telephony shows the Teams Phone provider card, the
+  auto-ticket toggle, the recent-calls strip and the "Calls needing attribution"
+  queue. No paywall anywhere, despite no `telephony` entitlement existing.
+- Teams add-on **expired** → *both* Communication sub-sections paywall:
+  "Telephony requires the Teams add-on" / "Purchase the Teams add-on to journal
+  calls…", with `manage-teams-addon-link` and `manage-telephony-addon-link`
+  both present in the DOM at once — which is why the distinct `linkId` matters.
+- The add-on row was returned to active afterwards.
+
+Against `server_mc9` directly: the gate flips true→false→true with the `teams`
+row's `expires_at`, `+1 (555) 246-8135` matches *Alice in Wonderland* /
+*Wonderland* via `contact_phone`, a number shared by two contacts comes back
+`ambiguous` with 2 candidates and no attribution, and an unknown number is
+`unmatched` with no candidates.
