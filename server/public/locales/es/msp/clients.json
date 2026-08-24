@@ -1450,6 +1450,16 @@
         "createFailed": "Error al crear la reunión de Teams",
         "createToggle": "Crear reunión de Teams",
         "endRequired": "Se requiere la hora de finalización para crear una reunión de Teams",
+        "invitesDisabled": "Las invitaciones por correo electrónico están desactivadas en la configuración de la integración de Teams: Microsoft no notificará a los asistentes.",
+        "invitesSummary": "Microsoft enviará invitaciones de calendario por correo electrónico a: {{recipients}}.",
+        "invitesSummaryYou": "usted (creador)",
+        "reason": {
+          "addon_required": "El complemento de Teams no está activo para este inquilino.",
+          "ee_disabled": "La integración con Teams requiere Enterprise Edition.",
+          "no_organizer": "No hay ningún organizador de reunión predeterminado configurado en la configuración de Teams.",
+          "not_configured": "La integración con Teams no se ha configurado."
+        },
+        "scheduleSummary": "Se añadirá una entrada de programación a su calendario de AlgaPSA.",
         "startRequired": "Se requiere la hora de inicio para crear una reunión de Teams",
         "unavailable": "La creación de reuniones de Teams no está disponible para este inquilino."
       },

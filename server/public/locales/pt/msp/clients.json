@@ -1450,6 +1450,16 @@
         "createFailed": "Falha ao criar reunião do Teams",
         "createToggle": "Criar reunião do Teams",
         "endRequired": "O horário de término é necessário para criar uma reunião do Teams",
+        "invitesDisabled": "Os convites por e-mail estão desativados nas configurações da integração do Teams: a Microsoft não notificará os participantes.",
+        "invitesSummary": "A Microsoft enviará convites de calendário por e-mail para: {{recipients}}.",
+        "invitesSummaryYou": "você (criador)",
+        "reason": {
+          "addon_required": "O complemento Teams não está ativo para este locatário.",
+          "ee_disabled": "A integração do Teams requer a Enterprise Edition.",
+          "no_organizer": "Nenhum organizador de reunião padrão está configurado nas configurações do Teams.",
+          "not_configured": "A integração do Teams não foi configurada."
+        },
+        "scheduleSummary": "Uma entrada de agendamento será adicionada ao seu calendário do AlgaPSA.",
         "startRequired": "A hora de início é necessária para criar uma reunião do Teams",
         "unavailable": "A criação de reuniões do Teams não está disponível para este locatário."
       },
