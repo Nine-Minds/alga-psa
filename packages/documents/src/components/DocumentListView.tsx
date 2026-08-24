@@ -104,9 +104,7 @@ export default function DocumentListView({
                     rangeSelect.handleSelect(doc.document_id, {
                       shiftKey: event.shiftKey,
                       selected: !isChecked,
-                      preventDefault: () => event.preventDefault(),
                     });
-                    event.preventDefault();
                   }}
                   onChange={() => { /* controlled via onClick for shift-range support */ }}
                 />

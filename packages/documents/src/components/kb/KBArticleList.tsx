@@ -315,9 +315,7 @@ export default function KBArticleList({
                         rangeSelect.handleSelect(article.article_id, {
                           shiftKey: event.shiftKey,
                           selected: !isChecked,
-                          preventDefault: () => event.preventDefault(),
                         });
-                        event.preventDefault();
                       }}
                       onChange={() => { /* controlled via onClick for shift-range support */ }}
                     />

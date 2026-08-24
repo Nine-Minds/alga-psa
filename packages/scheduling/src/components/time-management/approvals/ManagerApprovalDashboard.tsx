@@ -255,9 +255,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
                       rangeSelect.handleSelect(record.id, {
                         shiftKey: event.shiftKey,
                         selected: !isChecked,
-                        preventDefault: () => event.preventDefault(),
                       });
-                      event.preventDefault();
                     }}
                     onChange={() => { /* controlled via onClick for shift-range support */ }}
                     disabled={isDisabled}

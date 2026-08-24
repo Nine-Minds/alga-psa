@@ -361,9 +361,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
               rangeSelect.handleSelect(record.invoice_id, {
                 shiftKey: event.shiftKey,
                 selected: !isChecked,
-                preventDefault: () => event.preventDefault(),
               });
-              event.preventDefault();
             }}
             onChange={() => { /* controlled via onClick for shift-range support */ }}
           />

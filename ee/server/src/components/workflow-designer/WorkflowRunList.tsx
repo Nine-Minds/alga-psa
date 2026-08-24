@@ -957,9 +957,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                           rangeSelect.handleSelect(run.run_id, {
                             shiftKey: event.shiftKey,
                             selected: !isChecked,
-                            preventDefault: () => event.preventDefault(),
                           });
-                          event.preventDefault();
                         }}
                         onChange={() => { /* controlled via onClick for shift-range support */ }}
                       />

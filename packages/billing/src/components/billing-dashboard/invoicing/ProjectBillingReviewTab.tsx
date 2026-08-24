@@ -325,9 +325,7 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
               rangeSelect.handleSelect(record.entry.schedule_entry_id, {
                 shiftKey: event.shiftKey,
                 selected: !isChecked,
-                preventDefault: () => event.preventDefault(),
               });
-              event.preventDefault();
             }}
             onChange={() => { /* controlled via onClick for shift-range support */ }}
           />
