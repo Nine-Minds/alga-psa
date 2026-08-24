@@ -8,6 +8,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import type { IScheduleEntry } from '@alga-psa/types';
 import { resolveTeamsMeetingService, type TeamsMeetingAttendee } from '../lib/teamsMeetingService';
+import { ensureCreatorAttendee } from '../lib/teamsMeetingContent';
 
 export interface ScheduleTeamsMeetingInput {
   subject: string;
@@ -102,7 +103,6 @@ function teamsSchedulingActionErrorMessage(error: unknown): string {
 
   return 'Failed to schedule Teams meeting.';
 }
-
 export const scheduleTeamsMeeting = withAuth(async (
   user,
   { tenant },
@@ -144,7 +144,7 @@ export const scheduleTeamsMeeting = withAuth(async (
       subject,
       startDateTime: start.toISOString(),
       endDateTime: end.toISOString(),
-      attendees: input.attendees ?? [],
+      attendees: ensureCreatorAttendee(input.attendees ?? [], user),
       appointmentRequestId: null,
     });
 

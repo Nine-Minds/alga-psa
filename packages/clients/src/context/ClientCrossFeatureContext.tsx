@@ -100,6 +100,7 @@ export interface TeamsMeetingCapability {
   reason?: string;
   recordingsAvailable?: boolean;
   recordingReason?: string;
+  sendMeetingInvites?: boolean;
 }
 
 export interface ScheduleTeamsMeetingFromClientInput {
@@ -109,6 +110,8 @@ export interface ScheduleTeamsMeetingFromClientInput {
   client_id?: string | null;
   contact_name_id?: string | null;
   attendees?: Array<{ emailAddress: string; name?: string }>;
+  /** Also place the meeting on the creator's AlgaPSA calendar. */
+  createScheduleEntry?: boolean;
 }
 
 export interface ScheduleTeamsMeetingFromClientResult {
