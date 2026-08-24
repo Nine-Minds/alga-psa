@@ -83,12 +83,12 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
          <div className="flex flex-col sm:flex-row gap-4">
             <Card className="p-6 flex-1">
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">
+                <span className="text-xs text-[rgb(var(--color-text-400))] uppercase font-bold tracking-wider">
                   {t('maintenanceSchedulesTab.summary.complianceRate', { defaultValue: 'Compliance Rate' })}
                 </span>
                 <span className={cn(
                   "text-2xl font-bold",
-                  report?.compliance_rate && report.compliance_rate >= 90 ? 'text-emerald-600' : 'text-amber-600'
+                  report?.compliance_rate && report.compliance_rate >= 90 ? 'text-[rgb(var(--badge-success-text))]' : 'text-[rgb(var(--badge-warning-text))]'
                 )}>
                   {report?.compliance_rate?.toFixed(1) || 100}%
                 </span>
@@ -96,10 +96,10 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
             </Card>
             <Card className="p-6 flex-1">
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">
+                <span className="text-xs text-[rgb(var(--color-text-400))] uppercase font-bold tracking-wider">
                   {t('maintenanceSchedulesTab.summary.nextMaintenance', { defaultValue: 'Next Maintenance' })}
                 </span>
-                <span className="text-xl font-medium text-gray-900">
+                <span className="text-xl font-medium text-[rgb(var(--color-text-900))]">
                   {report?.next_maintenance 
                     ? formatCalendarDate(report.next_maintenance)
                     : t('maintenanceSchedulesTab.summary.noneScheduled', { defaultValue: 'None Scheduled' })}
@@ -143,15 +143,15 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                   {schedules && schedules.length > 0 ? (
                     schedules.map((schedule) => (
                       <TableRow key={schedule.schedule_id}>
-                        <TableCell className="font-medium text-gray-900">
+                        <TableCell className="font-medium text-[rgb(var(--color-text-900))]">
                           {schedule.schedule_name}
                         </TableCell>
-                        <TableCell className="text-gray-500 capitalize">
+                        <TableCell className="text-[rgb(var(--color-text-500))] capitalize">
                           {t(`maintenanceSchedulesTab.types.${schedule.maintenance_type}`, {
                             defaultValue: schedule.maintenance_type
                           })}
                         </TableCell>
-                        <TableCell className="text-gray-500">
+                        <TableCell className="text-[rgb(var(--color-text-500))]">
                           {t('maintenanceSchedulesTab.frequency.every', {
                             defaultValue: 'Every {{count}} {{frequency}}',
                             count: schedule.frequency_interval,
@@ -161,12 +161,12 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                             })
                           })}
                         </TableCell>
-                        <TableCell className="text-gray-900">
+                        <TableCell className="text-[rgb(var(--color-text-900))]">
                           {schedule.next_maintenance 
                             ? formatCalendarDate(schedule.next_maintenance)
                             : '-'}
                         </TableCell>
-                        <TableCell className="text-gray-500">
+                        <TableCell className="text-[rgb(var(--color-text-500))]">
                           {schedule.last_maintenance 
                             ? formatCalendarDate(schedule.last_maintenance)
                             : '-'}
@@ -206,7 +206,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-gray-400">
+                      <TableCell colSpan={7} className="h-24 text-center text-[rgb(var(--color-text-400))]">
                         {t('maintenanceSchedulesTab.empty.schedules', {
                           defaultValue: 'No maintenance schedules found. Click "Schedule Maintenance" to create one.'
                         })}
@@ -239,16 +239,16 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                 {report?.maintenance_history && report.maintenance_history.length > 0 ? (
                   report.maintenance_history.map((record) => (
                     <TableRow key={record.history_id}>
-                      <TableCell className="text-gray-900">
+                      <TableCell className="text-[rgb(var(--color-text-900))]">
                         {formatCalendarDate(record.performed_at)}
                       </TableCell>
-                      <TableCell className="text-gray-900">{record.performed_by_name || record.performed_by}</TableCell>
-                      <TableCell className="text-gray-500">{record.notes || '-'}</TableCell>
+                      <TableCell className="text-[rgb(var(--color-text-900))]">{record.performed_by_name || record.performed_by}</TableCell>
+                      <TableCell className="text-[rgb(var(--color-text-500))]">{record.notes || '-'}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-gray-400">
+                    <TableCell colSpan={3} className="h-24 text-center text-[rgb(var(--color-text-400))]">
                       {t('maintenanceSchedulesTab.history.empty', {
                         defaultValue: 'No maintenance history recorded.'
                       })}

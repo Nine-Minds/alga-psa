@@ -320,7 +320,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
                 className="mt-1"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 {frequency && t('maintenanceSchedulesTab.frequency.every', {
                   count: parseInt(frequencyInterval, 10) || 0,
                   frequency: t(`maintenanceSchedulesTab.frequency.units.${frequency}`, {
