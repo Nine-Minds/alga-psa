@@ -1239,7 +1239,7 @@
   },
   "maintenanceCommandCenter": {
     "title": "Maintenance Command Center",
-    "description": "Asset maintenance schedules and work across all clients.",
+    "description": "Plan, dispatch, and verify preventive work on client assets.",
     "assetsLink": "Assets"
   },
   "maintenanceCompletionDialog": {
