@@ -1692,10 +1692,12 @@ function extractGuestCardActionValue(activity: TeamsBotActivity): GuestCardActio
  * card. See teamsGuestIntake for the identity confidence ladder.
  */
 async function maybeHandleGuestConversation(params: {
-  tenantContext: { tenantId: string; enabledCapabilities: string[] };
+  tenantContext: { tenantId: string; enabledCapabilities: string[]; entraMatchedClientId?: string };
   activity: TeamsBotActivity;
   conversationType: string;
   microsoftAccountId: string | null;
+  /** Verified JWT tid only — recorded with cross-tenant guest submissions. */
+  verifiedMicrosoftTenantId: string | null;
   metadata: TeamsBotResponseActivity['metadata'];
 }): Promise<TeamsBotResponseActivity | null> {
   const { tenantContext, activity, conversationType, microsoftAccountId } = params;
@@ -1715,6 +1717,7 @@ async function maybeHandleGuestConversation(params: {
   const sender = await resolveTeamsGuestSender({
     tenantId: tenantContext.tenantId,
     microsoftAccountId,
+    entraMatchedClientId: tenantContext.entraMatchedClientId ?? null,
   });
   if (!sender) {
     return null;
@@ -1723,7 +1726,7 @@ async function maybeHandleGuestConversation(params: {
   const metadata: TeamsBotResponseActivity['metadata'] = {
     ...params.metadata,
     commandId: 'guest_ticket_intake',
-    guestContactId: sender.contactId,
+    ...(sender.contactId ? { guestContactId: sender.contactId } : {}),
   };
   const clientLabel = sender.clientName ?? 'your organization';
 
@@ -1737,6 +1740,7 @@ async function maybeHandleGuestConversation(params: {
       tenantId: tenantContext.tenantId,
       sender,
       microsoftAccountId,
+      microsoftTenantId: params.verifiedMicrosoftTenantId,
       title: normalizeOptionalString(guestAction.title) ?? '',
       description: normalizeOptionalString(guestAction.description) ?? '',
       idempotencyKey:
@@ -2160,6 +2164,9 @@ export async function handleTeamsBotActivity(
     microsoftTenantId:
       options.verifiedIdentity?.microsoftTenantId || getTeamsTenantId(activity) || undefined,
     requiredCapability: 'personal_bot',
+    // Client-tenant fallback discovery (clients.entra_tenant_id) trusts only
+    // the verified JWT tid — never the body-derived channelData value.
+    verifiedSenderMicrosoftTenantId: options.verifiedIdentity?.microsoftTenantId || undefined,
   });
 
   const baseMetadata: TeamsBotResponseActivity['metadata'] = {
@@ -2235,6 +2242,7 @@ export async function handleTeamsBotActivity(
       activity,
       conversationType,
       microsoftAccountId: getMicrosoftAccountId(activity),
+      verifiedMicrosoftTenantId: options.verifiedIdentity?.microsoftTenantId || null,
       metadata: baseMetadata,
     });
     if (guestResponse) {
@@ -2261,6 +2269,7 @@ export async function handleTeamsBotActivity(
       activity,
       conversationType,
       microsoftAccountId: getMicrosoftAccountId(activity),
+      verifiedMicrosoftTenantId: options.verifiedIdentity?.microsoftTenantId || null,
       metadata: baseMetadata,
     });
     if (guestResponse) {

@@ -24,19 +24,26 @@ import {
  *     their contact/client attribution is authoritative.
  *  2. Graph directory lookup of the sender's oid in the MSP tenant → mail →
  *     active contact with that email. The Bot Framework JWT already proved
- *     the oid; Graph proves the mailbox it belongs to.
+ *     the oid; Graph proves the mailbox it belongs to. (Impossible for
+ *     senders in a client's own Microsoft tenant — the MSP app token has no
+ *     access to a foreign directory, so the lookup simply misses.)
+ *  3. Client-level attribution: tenant resolution already matched the
+ *     sender's VERIFIED tid to exactly one active client
+ *     (clients.entra_tenant_id). Every employee of that Microsoft tenant is
+ *     attributed to the client with no contact — contactId stays null.
  *
  * Unmatched senders are declined politely — no data disclosure, no
  * catch-all creation (that policy tier is a deliberate follow-up).
  */
 
 export interface TeamsGuestSender {
-  contactId: string;
+  /** Null for client-level (rung 3) attribution — no individual contact is known. */
+  contactId: string | null;
   contactName: string | null;
   contactEmail: string | null;
   clientId: string;
   clientName: string | null;
-  matchedBy: 'linked_client_user' | 'graph_email_contact';
+  matchedBy: 'linked_client_user' | 'graph_email_contact' | 'client_entra_tenant';
 }
 
 interface ContactRow {
@@ -139,9 +146,36 @@ async function lookupSenderMailViaGraph(
   }
 }
 
+async function resolveEntraMatchedClientSender(
+  tenantId: string,
+  entraMatchedClientId: string,
+): Promise<TeamsGuestSender | null> {
+  const db = await getAdminConnection();
+  const client = await tenantDb(db, tenantId).table('clients')
+    .where({ client_id: entraMatchedClientId, is_inactive: false })
+    .first(['client_id', 'client_name']);
+  if (!client) {
+    return null;
+  }
+
+  return {
+    contactId: null,
+    contactName: null,
+    contactEmail: null,
+    clientId: entraMatchedClientId,
+    clientName: normalizeString(client.client_name) || null,
+    matchedBy: 'client_entra_tenant',
+  };
+}
+
 export async function resolveTeamsGuestSender(params: {
   tenantId: string;
   microsoftAccountId: string | null;
+  /**
+   * The client matched during tenant resolution via the sender's VERIFIED
+   * tid → clients.entra_tenant_id. Enables the client-level fallback rung.
+   */
+  entraMatchedClientId?: string | null;
 }): Promise<TeamsGuestSender | null> {
   const microsoftAccountId = normalizeString(params.microsoftAccountId);
   if (!microsoftAccountId) {
@@ -154,24 +188,29 @@ export async function resolveTeamsGuestSender(params: {
   }
 
   const mail = await lookupSenderMailViaGraph(params.tenantId, microsoftAccountId);
-  if (!mail) {
-    return null;
+  if (mail) {
+    const db = await getAdminConnection();
+    const contact = await contactByEmail(db, params.tenantId, mail);
+    if (contact?.client_id) {
+      return {
+        contactId: contact.contact_name_id,
+        contactName: normalizeString(contact.full_name) || null,
+        contactEmail: normalizeString(contact.email) || mail,
+        clientId: contact.client_id,
+        clientName: await clientName(db, params.tenantId, contact.client_id),
+        matchedBy: 'graph_email_contact',
+      };
+    }
   }
 
-  const db = await getAdminConnection();
-  const contact = await contactByEmail(db, params.tenantId, mail);
-  if (!contact?.client_id) {
-    return null;
+  // Rung 3 — strictly a fallback: only reached when the higher-confidence
+  // rungs failed, and only when tenant resolution tid-matched a client.
+  const entraMatchedClientId = normalizeString(params.entraMatchedClientId);
+  if (entraMatchedClientId) {
+    return resolveEntraMatchedClientSender(params.tenantId, entraMatchedClientId);
   }
 
-  return {
-    contactId: contact.contact_name_id,
-    contactName: normalizeString(contact.full_name) || null,
-    contactEmail: normalizeString(contact.email) || mail,
-    clientId: contact.client_id,
-    clientName: await clientName(db, params.tenantId, contact.client_id),
-    matchedBy: 'graph_email_contact',
-  };
+  return null;
 }
 
 export type GuestTicketCreationResult =
@@ -189,11 +228,14 @@ export async function createTeamsGuestTicket(params: {
   tenantId: string;
   sender: TeamsGuestSender;
   microsoftAccountId: string;
+  /** Verified sender tid, recorded with client-level (cross-tenant) intake. */
+  microsoftTenantId?: string | null;
   title: string;
   description: string;
   idempotencyKey: string;
 }): Promise<GuestTicketCreationResult> {
   const { tenantId, sender, microsoftAccountId, idempotencyKey } = params;
+  const microsoftTenantId = normalizeString(params.microsoftTenantId) || null;
   const title = normalizeString(params.title).slice(0, 200);
   const description = normalizeString(params.description);
   if (!title) {
@@ -235,7 +277,9 @@ export async function createTeamsGuestTicket(params: {
           title,
           description: description || title,
           client_id: sender.clientId,
-          contact_id: sender.contactId,
+          // Client-level (rung 3) senders have no contact; the model maps an
+          // absent contact_id to a null contact_name_id.
+          ...(sender.contactId ? { contact_id: sender.contactId } : {}),
           source: 'teams_guest',
           board_id: defaults.boardId!,
           status_id: defaults.statusId!,
@@ -244,6 +288,7 @@ export async function createTeamsGuestTicket(params: {
             teams_guest_intake: {
               matched_by: sender.matchedBy,
               microsoft_account_id: microsoftAccountId,
+              ...(microsoftTenantId ? { microsoft_tenant_id: microsoftTenantId } : {}),
             },
           },
         },
