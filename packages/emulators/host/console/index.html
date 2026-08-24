@@ -148,6 +148,37 @@ function isSimpleProp(prop) {
   return prop && ['string', 'number', 'integer', 'boolean'].includes(prop.type);
 }
 
+/** Read a params form exactly as typed. Throws on malformed JSON fields. */
+function collectParams(form) {
+  let params = {};
+  for (const input of form.querySelectorAll('input,select,textarea')) {
+    const value = input.value.trim();
+    if (!value) continue;
+    if (input.name === '__raw') return JSON.parse(value);
+    if (input.dataset.json) params[input.name] = JSON.parse(value);
+    else if (input.dataset.type === 'number' || input.dataset.type === 'integer') params[input.name] = Number(value);
+    else if (input.dataset.type === 'boolean') params[input.name] = value === 'true';
+    else params[input.name] = value;
+  }
+  return params;
+}
+
+/** Inverse of collectParams: put a saved payload back into the form. */
+function fillParams(form, params) {
+  const leftovers = { ...(params || {}) };
+  for (const input of form.querySelectorAll('input,select,textarea')) {
+    if (!input.name || input.name === '__raw') continue;
+    const value = leftovers[input.name];
+    delete leftovers[input.name];
+    if (value === undefined || value === null) { input.value = ''; continue; }
+    input.value = input.dataset.json ? JSON.stringify(value) : String(value);
+  }
+  // Anything the schema does not expose as a field goes to the raw box, so a
+  // preset saved against a richer payload still round-trips.
+  const raw = form.querySelector('[name="__raw"]');
+  if (raw && Object.keys(leftovers).length) raw.value = JSON.stringify(params);
+}
+
 function buildForm(schema, submitLabel, onSubmit, danger, rerenderOnSuccess) {
   const form = el('form', { class: 'params' });
   const props = schema && schema.type === 'object' ? (schema.properties || {}) : null;
@@ -190,15 +221,7 @@ function buildForm(schema, submitLabel, onSubmit, danger, rerenderOnSuccess) {
     event.preventDefault();
     let params = {};
     try {
-      for (const input of form.querySelectorAll('input,select,textarea')) {
-        const value = input.value.trim();
-        if (!value) continue;
-        if (input.name === '__raw') { params = JSON.parse(value); break; }
-        if (input.dataset.json) params[input.name] = JSON.parse(value);
-        else if (input.dataset.type === 'number' || input.dataset.type === 'integer') params[input.name] = Number(value);
-        else if (input.dataset.type === 'boolean') params[input.name] = value === 'true';
-        else params[input.name] = value;
-      }
+      params = collectParams(form);
     } catch (err) {
       outWrap.style.display = ''; out.className = 'out error'; out.textContent = 'Bad JSON: ' + err.message;
       return;
@@ -215,7 +238,75 @@ function buildForm(schema, submitLabel, onSubmit, danger, rerenderOnSuccess) {
   });
   const wrap = el('div', {});
   wrap.append(form, outWrap);
+  wrap.paramsForm = form;
   return wrap;
+}
+
+/**
+ * Seed-preset round trip (F060). Replaying a seed used to mean copying JSON out
+ * of the state view by hand; here the form itself is the preset. Rendered only
+ * for emulators that expose save-seed-preset, so the console stays
+ * vendor-neutral.
+ */
+function seedPresetControls(emu, seeder, formWrap) {
+  if (!emu.actions.some((action) => action.name === 'save-seed-preset')) return null;
+  const form = formWrap.paramsForm;
+  const picker = el('select', { name: '__preset', title: 'Saved payloads for this seeder' });
+  const nameInput = el('input', { name: '__presetname', placeholder: seeder.name, style: 'width:150px' });
+  const status = el('span', { class: 'muted' });
+  let presets = [];
+
+  const say = (text, bad) => { status.textContent = text; status.style.color = bad ? 'var(--bad)' : ''; };
+
+  const refresh = async () => {
+    try {
+      const all = await api('GET', '/control/' + emu.id + '/state/seed-presets');
+      presets = (all || []).filter((preset) => preset.seeder === seeder.name);
+    } catch { presets = []; }
+    picker.replaceChildren(el('option', { value: '' }, presets.length ? 'preset…' : 'no presets'));
+    for (const preset of presets) picker.append(el('option', { value: preset.name }, preset.name));
+  };
+
+  const selected = () => presets.find((preset) => preset.name === picker.value);
+
+  const load = () => {
+    const preset = selected();
+    if (!preset) { say('Pick a preset first.', true); return null; }
+    fillParams(form, preset.payload);
+    nameInput.value = preset.name;
+    say('loaded "' + preset.name + '"');
+    return preset;
+  };
+
+  const row = el('div', { class: 'row', style: 'margin-top:6px' },
+    picker,
+    el('button', { class: 'go subtle', type: 'button', onclick: load }, 'load'),
+    el('button', { class: 'go subtle', type: 'button', onclick: () => { if (load()) form.requestSubmit(); } }, 'load & seed'),
+    nameInput,
+    el('button', { class: 'go subtle', type: 'button', onclick: async () => {
+      let payload;
+      try { payload = collectParams(form); } catch (err) { say('Bad JSON: ' + err.message, true); return; }
+      const name = (nameInput.value.trim() || seeder.name);
+      try {
+        await api('POST', '/control/' + emu.id + '/actions/save-seed-preset', { name, seeder: seeder.name, payload });
+        await refresh();
+        picker.value = name;
+        say('saved "' + name + '"');
+      } catch (err) { say(err.message, true); }
+    } }, 'save form'),
+    el('button', { class: 'go subtle', type: 'button', onclick: async () => {
+      const preset = selected();
+      if (!preset) { say('Pick a preset first.', true); return; }
+      try {
+        await api('POST', '/control/' + emu.id + '/actions/delete-seed-preset', { name: preset.name });
+        await refresh();
+        say('deleted "' + preset.name + '"');
+      } catch (err) { say(err.message, true); }
+    } }, 'delete'),
+    status);
+
+  refresh();
+  return row;
 }
 
 // ---- rendering -------------------------------------------------------------
@@ -256,8 +347,14 @@ function renderEmulator(emu) {
 
   if (emu.seeders.length) {
     sections.push(el('section', { class: 'card' }, el('h3', {}, 'Seed'),
-      ...emu.seeders.map((def) => controlBlock(emu, 'seed', def,
-        buildForm(def.paramsSchema, 'seed', (params) => api('POST', '/control/' + emu.id + '/seed/' + def.name, params))))));
+      ...emu.seeders.map((def) => {
+        const formWrap = buildForm(def.paramsSchema, 'seed',
+          (params) => api('POST', '/control/' + emu.id + '/seed/' + def.name, params));
+        const presets = seedPresetControls(emu, def, formWrap);
+        // Above the output pane, so the preset row sits with the fields it edits.
+        if (presets) formWrap.insertBefore(presets, formWrap.lastChild);
+        return controlBlock(emu, 'seed', def, formWrap);
+      })));
   }
 
   if (emu.actions.length) {

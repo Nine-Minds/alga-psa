@@ -318,9 +318,12 @@ Six ergonomics fixes that came out of using it in anger:
 - **A default actor.** `algasim action msgraph configure -p '{"defaultActor":
   {"fromAadObjectId":"...","conversationId":"..."}}'` fills in the identity
   every `bot-activity` seed used to repeat. Explicit values still win.
-- **Seed presets.** `save-seed-preset` / `delete-seed-preset` store a named
-  payload (visible in the `seed-presets` state view) so the console can replay a
-  fiddly seed without retyping it.
+- **Seed presets.** Every seeder in the console carries a preset row: fill the
+  form, name it, hit **save form**, and **load** puts it straight back into the
+  fields later (**load & seed** does both in one click). They are stored by
+  `save-seed-preset` / `delete-seed-preset` and visible in the `seed-presets`
+  state view, so the CLI and scenarios can reach the same payloads — no more
+  copying a fiddly seed out of a state view by hand.
 - **Adaptive Card preview.** The console renders card attachments found in any
   state view with a small vendored renderer — no CDN, so it works under the
   console's CSP.
