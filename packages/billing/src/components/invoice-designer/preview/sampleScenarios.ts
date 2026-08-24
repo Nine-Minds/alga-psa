@@ -18,6 +18,8 @@ const createBaseInvoice = (): WasmInvoiceViewModel => ({
     name: 'Hawthorne Clinic',
     address: '1150 Oak Street, Portland, OR 97205',
   },
+  // Fallback issuer only: overlayInvoiceSampleTenant replaces this with the tenant's real
+  // "Your Company" branding whenever it resolves.
   tenantClient: {
     name: 'Northwind MSP',
     address: '400 SW Main St, Portland, OR 97204',

@@ -30,6 +30,8 @@ export function buildSampleSalesOrderViewModel(): SalesOrderViewModel {
       ['svc-cable', { service_name: 'Cat6 Patch 1ft', sku: 'CAT6-1FT' }],
     ]),
     customer: { name: 'Acme Corp', address: '123 Main St, Denver, CO 80202', email: null, phone: null, logo_url: null },
+    // Fallback issuer only: runAuthoritativeTemplatePreview overlays the tenant's real
+    // "Your Company" branding on this sample whenever it resolves.
     tenantParty: { name: 'Northwind MSP', address: '400 SW Main St, Portland, OR 97204', email: null, phone: null, logo_url: null },
   });
 }
