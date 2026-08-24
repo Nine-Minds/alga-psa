@@ -1,6 +1,5 @@
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
-import { StorageService } from '@alga-psa/storage/StorageService';
 import type {
   CallArtifactCaptureSettings,
   CaptureCallArtifactsDependencies,
@@ -96,6 +95,10 @@ export async function buildTelephonyCallArtifactDeps(): Promise<CaptureCallArtif
       if (!content) {
         return null;
       }
+      // Imported here rather than at module scope: this module is pulled in by
+      // the call notification handler, which must stay loadable without the
+      // storage stack.
+      const { StorageService } = await import('@alga-psa/storage/StorageService');
       const file = await StorageService.uploadFile(
         tenantId,
         content.buffer,
