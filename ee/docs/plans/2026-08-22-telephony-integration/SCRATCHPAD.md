@@ -136,3 +136,28 @@ Landmine: booting the dev server rewrites the tenant admin's password (it
 prints the new one), and `server/.env.local`, if present, overrides the card's
 `.env` — including `DB_NAME_SERVER`, which would point the card at another
 database entirely.
+
+## Quick Add meeting round — repair notes (2026-08-24)
+The Quick Add online-meeting changes that landed alongside the gating move were
+red. What they needed, for the next round's benefit:
+
+- `ensureCreatorAttendee` cannot live in `onlineMeetingSchedulingActions.ts`: a
+  `'use server'` module may only export async functions, and importing it from
+  a test drags `@alga-psa/auth` → next-auth → `next/server`, which vitest
+  cannot resolve. It belongs in `lib/teamsMeetingContent.ts` next to
+  `buildTeamsMeetingAttendees`, and its test with it.
+- The clients-package `MeetingAttendee.emailAddress` is a **plain string**; the
+  Graph-shaped `{ address, name }` object only exists on the scheduling side of
+  the seam. Reading `.address` in the invite summary emptied the list silently.
+- The cross-feature seam type `ScheduleTeamsMeetingFromClientInput` has to
+  declare every field the caller passes (`createScheduleEntry`), and
+  `TeamsMeetingCapabilityResult` has to declare `sendMeetingInvites` — the
+  EE implementation's object flows through `resolveTeamsMeetingService`
+  untouched, so an undeclared field reaches the UI but typechecks as absent.
+- Adding a field to a capability result breaks `toEqual` assertions in
+  `server/src/test/unit/teamsMeetingHelpers.test.ts`; that suite is the gate.
+
+Note when running server unit tests: several suites resolve fixtures relative
+to `process.cwd()`, so run them from `server/`, not from the repo root with
+`--root server`. Otherwise `public/locales/...` and doc-contract paths miss and
+you get ~22 phantom failures.
