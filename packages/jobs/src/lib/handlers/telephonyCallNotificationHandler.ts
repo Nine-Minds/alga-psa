@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { runWithTenant } from '@alga-psa/db';
+import { captureTelephonyCallArtifacts } from './telephonyCallArtifactHandler';
 
 export interface TelephonyCallSubscriptionRenewalJobData extends Record<string, unknown> {
   tenantId: string;
@@ -114,7 +115,27 @@ export async function processTelephonyCallNotification(
       outcome: outcome.status,
     });
 
-    if (outcome.status !== 'ingested' || !outcome.created || outcome.matchStatus !== 'matched') {
+    if (outcome.status !== 'ingested') {
+      return;
+    }
+
+    // Ad hoc calls have no artifact change notification, so this CDR
+    // notification is also the start of the recording/transcript poll. Usually
+    // too early (Teams publishes minutes later) — the sweep keeps trying.
+    try {
+      await captureTelephonyCallArtifacts({
+        tenantId: data.tenantId,
+        callRecordId: outcome.callRecordId,
+      });
+    } catch (error) {
+      logger.info('[Telephony] Call artifacts are not available yet', {
+        tenantId: data.tenantId,
+        callRecordId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    if (!outcome.created || outcome.matchStatus !== 'matched') {
       return;
     }
 

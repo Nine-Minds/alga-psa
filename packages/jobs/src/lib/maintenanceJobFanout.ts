@@ -23,6 +23,10 @@ import { verifyGoogleCalendarProvisioning } from './handlers/calendarWebhookMain
 import { renewGoogleGmailWatchSubscriptions } from './handlers/googleGmailWatchRenewalHandler';
 import { renewTeamsMeetingArtifactSubscriptions } from './handlers/teamsMeetingArtifactWebhookHandler';
 import { renewTelephonyCallSubscriptions } from './handlers/telephonyCallNotificationHandler';
+import {
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+  telephonyCallArtifactSweepHandler,
+} from './handlers/telephonyCallArtifactHandler';
 import { teamsMeetingSweepHandler, TEAMS_MEETING_SWEEP_JOB } from './handlers/teamsMeetingSweepHandler';
 import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeScanHandler';
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
@@ -55,6 +59,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'renew-google-gmail-watch': { scope: 'tenant', run: (tenantId) => renewGoogleGmailWatchSubscriptions({ tenantId }) },
   'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }) },
   'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }) },
+  [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }) },
   [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }) },
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },

@@ -78,6 +78,11 @@ import {
   TelephonyCallNotificationJobData,
 } from '@alga-psa/jobs/handlers/telephonyCallNotificationHandler';
 import {
+  telephonyCallArtifactSweepHandler,
+  TelephonyCallArtifactSweepJobData,
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/telephonyCallArtifactHandler';
+import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
   TEAMS_MEETING_CLEANUP_JOB,
@@ -636,6 +641,17 @@ export async function registerAllJobHandlers(
       registerOpts
     );
 
+    JobHandlerRegistry.register<TelephonyCallArtifactSweepJobData & BaseJobData>(
+      {
+        name: TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+        handler: async (_jobId, data) => {
+          await telephonyCallArtifactSweepHandler(data);
+        },
+        retry: { maxAttempts: 2 },
+      },
+      registerOpts
+    );
+
     JobHandlerRegistry.register<TeamsMeetingCleanupJobData & BaseJobData>(
       {
         name: TEAMS_MEETING_CLEANUP_JOB,
@@ -875,7 +891,7 @@ export function getAvailableJobHandlers(): string[] {
       process.env.EDITION === 'enterprise'
       || process.env.EDITION === 'ee'
       || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
-        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification', 'renew-telephony-call-subscriptions', 'process-telephony-call-notification']
+        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification', 'renew-telephony-call-subscriptions', 'process-telephony-call-notification', TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]
         : []
     ),
     // SLA

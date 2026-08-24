@@ -59,6 +59,11 @@ import {
   TelephonyCallNotificationJobData,
 } from '@alga-psa/jobs/handlers/telephonyCallNotificationHandler';
 import {
+  telephonyCallArtifactSweepHandler,
+  TelephonyCallArtifactSweepJobData,
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/telephonyCallArtifactHandler';
+import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
   TEAMS_MEETING_CLEANUP_JOB,
@@ -315,6 +320,13 @@ export const initializeScheduler = async (storageService?: StorageService) => {
         'process-telephony-call-notification',
         async (job: Job<TelephonyCallNotificationJobData>) => {
           await processTelephonyCallNotification(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallArtifactSweepJobData>(
+        TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+        async (job: Job<TelephonyCallArtifactSweepJobData>) => {
+          await telephonyCallArtifactSweepHandler(job.data);
         }
       );
 

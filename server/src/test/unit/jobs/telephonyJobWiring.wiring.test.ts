@@ -58,6 +58,22 @@ describe('Telephony job wiring', () => {
     );
   });
 
+  it('T078: the artifact sweep is registered and scheduled, since ad hoc calls have no artifact webhook', () => {
+    expect(maintenanceFanoutSource).toContain(
+      "[TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }) },",
+    );
+    expect(registerHandlersSource).toContain('name: TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,');
+    expect(registerHandlersSource).toContain('await telephonyCallArtifactSweepHandler(data);');
+    expect(setupSchedulesSource).toContain(
+      "{ jobName: 'sweep-telephony-call-artifacts', cron: '*/10 * * * *' },",
+    );
+  });
+
+  it('T078: the notification handler starts the artifact poll inside the tenant scope', () => {
+    const body = handlerSource.slice(handlerSource.indexOf('export async function processTelephonyCallNotification'));
+    expect(body.indexOf('runWithTenant')).toBeLessThan(body.indexOf('captureTelephonyCallArtifacts({'));
+  });
+
   it('T035: the Graph webhook path is allowlisted while the rest of /api stays guarded', () => {
     expect(middlewareSource).toContain("'/api/telephony/webhooks/'");
     // The allowlist is a prefix list; a sibling telephony API path must not be
