@@ -192,20 +192,17 @@ function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
 }
 
 describe('BentoTimelineTile composer heading', () => {
-  let dateNowSpy: ReturnType<typeof vi.spyOn> | undefined;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    // The scheduled instant is mocked to 2026-08-23T13:30:00Z; pin the clock so
-    // "future time" validation is deterministic regardless of the wall clock
-    // when this suite runs (otherwise it becomes a time-bomb after that moment).
-    dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-08-23T00:00:00.000Z').getTime());
+    // The composer rejects instants that are not in the future, so pin the
+    // clock behind the mocked 2026-08-23T13:30Z schedule; on a real clock this
+    // suite starts failing the moment that instant becomes the past.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-08-23T12:00:00.000Z'));
   });
 
   afterEach(() => {
-    // Restore only the clock spy; a blanket vi.restoreAllMocks() would also wipe
-    // the describe-level mock implementations these tests rely on.
-    dateNowSpy?.mockRestore();
+    vi.useRealTimers();
   });
 
   it('shows the contact heading only in the client lane', () => {

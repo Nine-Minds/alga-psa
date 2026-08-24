@@ -330,7 +330,15 @@
       "orderedList": "Genummerde lijst",
       "quote": "Blokcitaat",
       "link": "Koppeling",
-      "linkPrompt": "URL"
+      "image": "Afbeelding invoegen",
+      "linkPrompt": "URL",
+      "imagePrompt": "Afbeeldings-URL"
+    },
+    "imageUpload": {
+      "failed": "Uploaden van afbeelding mislukt",
+      "tooLarge": "De afbeelding is groter dan de uploadlimiet van 10 MB",
+      "notAnImage": "Alleen afbeeldingsbestanden kunnen in de editor worden ingevoegd",
+      "noSession": "Meld u opnieuw aan om afbeeldingen te uploaden"
     }
   },
   "form": {

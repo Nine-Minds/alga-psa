@@ -45,6 +45,15 @@ describe('kbImportBlocks markdown fidelity', () => {
       'table',
       'horizontalRule',
       'paragraph',
+      'image',
+      'paragraph',
+      'image',
+      'paragraph',
+      'heading',
+      'numberedListItem',
+      'image',
+      'image',
+      'numberedListItem',
     ]);
   });
 
@@ -101,6 +110,94 @@ describe('kbImportBlocks markdown fidelity', () => {
     ]);
     expect(table.rows[1].cells[2]).toEqual([{ type: 'text', text: 'yes', styles: { bold: true } }]);
   });
+
+  it('keeps markdown images as image blocks instead of collapsing them to alt text', () => {
+    expect(blocks[17]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/spooler.png', caption: 'Spooler service dialog' },
+    });
+    expect(blocks[19]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/queue.png', caption: 'the queue' },
+    });
+  });
+
+  it('splits the paragraph around an inline image', () => {
+    expect(plainText(blocks[18])).toBe('Compare');
+    expect(plainText(blocks[20])).toBe('with the driver log.');
+  });
+
+  it('emits a bare image block for an image-only paragraph', () => {
+    expect(markdownToBlocks('![Alt text](https://example.com/a.png)')).toEqual([
+      { type: 'image', props: { url: 'https://example.com/a.png', caption: 'Alt text' } },
+    ]);
+  });
+
+  // Screenshot how-tos put the picture inside the numbered step, which used to
+  // collapse to alt text while the same article imported as .html kept it.
+  it('hoists an image out of a list item and keeps the step text', () => {
+    expect(blocks[22]).toEqual({
+      type: 'numberedListItem',
+      content: [{ type: 'text', text: 'Open the print queue' }],
+    });
+    expect(blocks[23]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/step-queue.png', caption: 'queue screenshot' },
+    });
+  });
+
+  it('emits a bare image block for an image-only list item', () => {
+    expect(blocks[24]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/step-driver.png', caption: 'driver dialog' },
+    });
+    expect(blocks[25]).toEqual({
+      type: 'numberedListItem',
+      content: [{ type: 'text', text: 'Restart the service' }],
+    });
+  });
+});
+
+describe('kbImportBlocks markdown image hoisting', () => {
+  it('splits a list item around a mid-sentence image', () => {
+    expect(markdownToBlocks('- before ![shot](https://example.com/a.png) after')).toEqual([
+      { type: 'bulletListItem', content: [{ type: 'text', text: 'before' }] },
+      { type: 'image', props: { url: 'https://example.com/a.png', caption: 'shot' } },
+      { type: 'bulletListItem', content: [{ type: 'text', text: 'after' }] },
+    ]);
+  });
+
+  it('hoists images out of nested list items too', () => {
+    const blocks = markdownToBlocks('- Step one\n  - ![nested](https://example.com/n.png)');
+    expect(types(blocks)).toEqual(['bulletListItem', 'image']);
+    expect(blocks[1].props).toEqual({ url: 'https://example.com/n.png', caption: 'nested' });
+  });
+
+  it('hoists images out of headings and blockquotes', () => {
+    expect(types(markdownToBlocks('## Fix ![shot](https://example.com/a.png)'))).toEqual([
+      'heading',
+      'image',
+    ]);
+    expect(types(markdownToBlocks('> See ![shot](https://example.com/a.png) here'))).toEqual([
+      'blockquote',
+      'image',
+      'blockquote',
+    ]);
+  });
+
+  it('keeps an unsafe list-item image as alt text inside the item', () => {
+    const blocks = markdownToBlocks('- step ![diagram](javascript:alert(1)) done');
+    expect(types(blocks)).toEqual(['bulletListItem']);
+    expect(plainText(blocks[0])).toBe('step diagram done');
+  });
+
+  it('matches the html walker for the same list item', () => {
+    const html = htmlToBlocks('<ul><li>before <img src="https://example.com/a.png" alt="shot" /> after</li></ul>');
+    expect(types(html)).toEqual(['bulletListItem', 'image', 'bulletListItem']);
+    expect(types(markdownToBlocks('- before ![shot](https://example.com/a.png) after'))).toEqual(
+      types(html),
+    );
+  });
 });
 
 describe('kbImportBlocks html fidelity', () => {
@@ -126,6 +223,10 @@ describe('kbImportBlocks html fidelity', () => {
       'codeBlock',
       'table',
       'horizontalRule',
+      'paragraph',
+      'image',
+      'paragraph',
+      'image',
       'paragraph',
     ]);
     expect(JSON.stringify(blocks)).not.toContain('console.log');
@@ -172,6 +273,27 @@ describe('kbImportBlocks html fidelity', () => {
       'yes',
     ]);
     expect(table.rows[1].cells[2][0].styles).toEqual({ bold: true });
+  });
+
+  it('keeps <img> tags as image blocks instead of dropping them', () => {
+    expect(blocks[15]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/spooler.png', caption: 'Spooler service dialog' },
+    });
+    expect(blocks[17]).toEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/queue.png', caption: 'the queue' },
+    });
+    expect(plainText(blocks[16])).toBe('Compare');
+    expect(plainText(blocks[18])).toBe('with the driver log.');
+  });
+
+  it('falls back to alt text for images inside table cells', () => {
+    const table = htmlToBlocks(
+      '<table><tr><td>Icon <img src="https://example.com/i.png" alt="green tick" /></td></tr></table>',
+    );
+    const rows = (table[0].content as TableContent).rows;
+    expect(rows[0].cells[0].map((s) => s.text).join('')).toBe('Icon green tick');
   });
 
   it('preserves semantic containers around nested paragraphs', () => {
@@ -284,6 +406,43 @@ describe('kbImportBlocks link sanitization', () => {
     expect(hrefOf(markdownToBlocks('[rel](../other/page.md)'))).toBe('../other/page.md');
     expect(hrefOf(htmlToBlocks('<p><a href="/kb/123">internal</a></p>'))).toBe('/kb/123');
   });
+
+  // An image source is stored and re-serialized by the same consumers as an
+  // href, so it gets the same guard. It must degrade to the alt text, though --
+  // silently dropping it would restore the loss this parser exists to fix.
+  it.each([
+    'javascript:alert(1)',
+    'data:text/html;base64,PHNjcmlwdD4=',
+    'vbscript:msgbox(1)',
+    '&#106;avascript:alert(1)',
+  ])('degrades a markdown image with the %s source to alt text', (src) => {
+    const blocks = markdownToBlocks(`![diagram](${src})`);
+    expect(blocks.map((block) => block.type)).toEqual(['paragraph']);
+    expect(plainText(blocks[0])).toBe('diagram');
+    expect(JSON.stringify(blocks).toLowerCase()).not.toContain('script:');
+  });
+
+  it('degrades an html img with an unsafe source to alt text', () => {
+    const blocks = htmlToBlocks('<p><img src="javascript:alert(1)" alt="diagram" /></p>');
+    expect(blocks.map((block) => block.type)).toEqual(['paragraph']);
+    expect(plainText(blocks[0])).toBe('diagram');
+    expect(JSON.stringify(blocks).toLowerCase()).not.toContain('script:');
+  });
+
+  it('keeps the surrounding run intact when an unsafe image is degraded', () => {
+    const blocks = markdownToBlocks('Before ![diagram](javascript:alert(1)) after.');
+    expect(blocks.map((block) => block.type)).toEqual(['paragraph']);
+    expect(plainText(blocks[0])).toBe('Before diagram after.');
+  });
+
+  it('keeps ordinary image sources intact', () => {
+    expect(markdownToBlocks('![a](https://example.com/a.png)')[0].props?.url).toBe(
+      'https://example.com/a.png',
+    );
+    expect(htmlToBlocks('<p><img src="/api/documents/view/abc" alt="a" /></p>')[0].props?.url).toBe(
+      '/api/documents/view/abc',
+    );
+  });
 });
 
 // Guards against reintroducing the quadratic/backtracking parser: every case
@@ -338,6 +497,36 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
     expect(timed(() => markdownToBlocks('`a` '.repeat(250_000)))).toBeLessThan(PARSE_BUDGET_MS);
     expect(timed(() => markdownToBlocks('<i>x</i> '.repeat(120_000)))).toBeLessThan(PARSE_BUDGET_MS);
     expect(timed(() => markdownToBlocks('[a](b) '.repeat(150_000)))).toBeLessThan(PARSE_BUDGET_MS);
+  });
+
+  // Image hoisting flushes the accumulated run and pushes a block per picture,
+  // from the paragraph, list-item and heading paths alike. A screenshot dump is
+  // the realistic shape of that: measure it rather than assume it stayed linear.
+  it('parses a ~1MB image-dense document', () => {
+    const paragraphs = '![shot](https://example.com/a.png) '.repeat(30_000);
+    expect(paragraphs.length).toBeGreaterThan(1_000_000);
+    expect(timed(() => markdownToBlocks(paragraphs))).toBeLessThan(PARSE_BUDGET_MS);
+
+    const listItems = '- step ![shot](https://example.com/a.png) more\n'.repeat(25_000);
+    expect(listItems.length).toBeGreaterThan(1_000_000);
+    expect(timed(() => markdownToBlocks(listItems))).toBeLessThan(PARSE_BUDGET_MS);
+
+    const imgs = '<p><img src="https://example.com/a.png" alt="shot" /></p>'.repeat(20_000);
+    expect(imgs.length).toBeGreaterThan(1_000_000);
+    expect(timed(() => htmlToBlocks(imgs))).toBeLessThan(PARSE_BUDGET_MS);
+  });
+
+  it('enforces the deadline on an image-dense document', () => {
+    for (const markdown of [
+      '![shot](https://example.com/a.png) '.repeat(30_000),
+      '- step ![shot](https://example.com/a.png) more\n'.repeat(25_000),
+    ]) {
+      const startedAt = Date.now();
+      expect(() => markdownToBlocks(markdown, { maxDurationMs: 1 })).toThrow(
+        KbImportParseTimeoutError,
+      );
+      expect(Date.now() - startedAt).toBeLessThan(PARSE_BUDGET_MS);
+    }
   });
 
   it('scales linearly as one inline-dense block grows', () => {

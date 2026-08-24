@@ -50,7 +50,7 @@ function generateSlug(title: string): string {
 /**
  * Extract readable text from BlockNote JSON blocks.
  */
-function blocksToText(blocks: BlockNoteBlock[]): string {
+export function blocksToText(blocks: BlockNoteBlock[]): string {
   const lines: string[] = [];
 
   for (const block of blocks) {
@@ -75,6 +75,11 @@ function blocksToText(blocks: BlockNoteBlock[]): string {
         lines.push(text);
         lines.push('```');
         break;
+      case 'image': {
+        const url = block.props?.url || block.props?.src;
+        if (url) lines.push(`![${block.props?.caption || ''}](${url})`);
+        break;
+      }
       default:
         if (text) lines.push(text);
         break;
