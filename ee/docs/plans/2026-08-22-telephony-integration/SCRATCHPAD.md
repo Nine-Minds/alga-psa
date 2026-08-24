@@ -236,3 +236,52 @@ row's `expires_at`, `+1 (555) 246-8135` matches *Alice in Wonderland* /
 *Wonderland* via `contact_phone`, a number shared by two contacts comes back
 `ambiguous` with 2 candidates and no attribution, and an unknown number is
 `unmatched` with no candidates.
+
+## call-transcripts shipped (2026-08-24)
+The last deferred group is built, which closes features.json (F001–F072 all
+implemented). Shape, and why:
+
+- `telephony_call_artifacts` + three fetch-state columns on the ledger. Calls
+  cannot reuse `online_meetings`/`online_meeting_artifacts`: that pipeline is
+  meeting-shaped end to end (it loads a meeting row, resolves an organizer from
+  it, and terminates on meeting end time), so a call would have needed a fake
+  meeting. The artifact *shape* is copied; the machinery is not.
+- `fetchTeamsCallArtifacts` hits `/users/{id}/adhocCalls/{callId}/…` per the
+  F065 spike. 403/404 → `[]` (recording is off for most tenants; that is not an
+  error), any other status throws so a transient failure never ages a real
+  recording into `none`.
+- Poll, not webhook: Graph has no artifact notification for ad hoc calls. The
+  CDR notification takes the first attempt inline and
+  `sweep-telephony-call-artifacts` (10m fan-out, 2m→1h backoff, 6h window)
+  takes the rest.
+- Capture settings deliberately reuse `teams_integrations.download_recordings`
+  / `expose_recordings_in_portal` rather than adding a second place to say the
+  same thing.
+
+**Verified live** against the card stack, not just unit fakes: migration applied
+to `server_mc9`; algasim (rebuilt image) served a seeded transcript+recording
+from the adhocCalls routes to the *real* EE fetcher with a real app-only token;
+the transcript landed as `Call transcript - Inbound call from …` with client +
+contact associations and text matching the seed; the recording downloaded (50
+bytes, video/mp4); the ledger settled to `ready`; a replay was a no-op and a
+forced re-poll created no second document. All rows created were removed.
+
+**Landmine — algasim did not persist OAuth client registrations.** Seeds
+survived a container restart but `core.clients` did not, so a restarted
+emulator answered every app-only token with `invalid_client` while its state
+view looked healthy. Fixed (clients are now in the snapshot) and pinned by the
+persistence test asking the restored host for a token.
+
+**Landmine — the EE barrel cannot be imported from a plain script.**
+`@alga-psa/ee-microsoft-teams/lib` transitively pulls Teams UI (a
+`react-day-picker` CSS import), which only a bundler can load. Live checks must
+import the specific EE module by path; the barrel-based dynamic import is
+covered by the jobs typecheck and unit tests instead.
+
+**Still an operator action:** ad hoc call artifacts need their own admin
+consent (`CallRecordings.Read.All` / `CallTranscripts.Read.All`) plus a Teams
+application access policy for the organizer. Deliberately *not* added to
+`REQUIRED_GRAPH_APPLICATION_PERMISSIONS`: that list drives a pass/fail setup
+probe, and failing every tenant's Teams validation over an opt-in capability
+they have not bought consent for would be worse than a 403 the fetcher already
+reads as "nothing recorded".

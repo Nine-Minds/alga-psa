@@ -50,12 +50,20 @@ already write is the join key: `telephony_call_records.provider_call_id` →
 
 ## Consequence for this plan
 
-The `call-transcripts` group stays **deferred**, deliberately, and is no longer
-blocked on an unknown: it is blocked on two operator actions (a second Entra
-consent and an application access policy) plus a poll-with-backoff fetcher.
-The capture and summarize halves are already built for meetings
-(`fetchAndPersistMeetingArtifacts`, `annotateLinkedTicketFromTranscript`); the
-work is a call-shaped fetcher in front of them, not new machinery.
+**Built (2026-08-24).** The `call-transcripts` group shipped on this answer:
+`fetchTeamsCallArtifacts` reads the ad hoc call's recordings/transcripts,
+`captureCallArtifacts` persists them (transcript → document, recording → file)
+against `telephony_call_artifacts`, and `annotateLinkedTicketFromTranscript`
+took a call-aware input rather than growing a second summarizer. Because there
+is no artifact notification, the CDR notification starts the poll and the
+`sweep-telephony-call-artifacts` maintenance job continues it on the bounded
+backoff this spike prescribed.
+
+What remains is not code: the second Entra consent
+(`CallRecordings.Read.All` / `CallTranscripts.Read.All`) and a Teams
+application access policy for the organizer. Until an operator grants them,
+Graph answers 403 — which the fetcher deliberately reads as "nothing
+recorded", the same as the many tenants that never turn recording on.
 
 ## Sources
 
