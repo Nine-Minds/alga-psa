@@ -1240,7 +1240,12 @@
         "emptyState": "Seleziona dati di esempio o di fattura esistente per generare un'anteprima autorevole.",
         "loadingPreview": "Elaborazione e rendering anteprima…",
         "templateError": "Impossibile generare il modello di anteprima dall'area di lavoro corrente.",
-        "renderError": "Rendering anteprima fallito."
+        "renderError": "Rendering anteprima fallito.",
+        "searchQuotes": "Cerca preventivi…",
+        "noQuotesFound": "Nessun preventivo trovato.",
+        "selectQuote": "Seleziona preventivo",
+        "loadingQuoteDetails": "Caricamento dettagli preventivo…",
+        "loadingDocumentDetails": "Caricamento dettagli documento…"
       },
       "tabs": {
         "design": "Progettazione",

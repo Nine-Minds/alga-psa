@@ -1240,7 +1240,12 @@
         "emptyState": "Select sample or existing invoice data to generate an authoritative preview.",
         "loadingPreview": "Shaping and rendering preview...",
         "templateError": "Preview template could not be generated from the current workspace.",
-        "renderError": "Preview rendering failed."
+        "renderError": "Preview rendering failed.",
+        "searchQuotes": "Search quotes...",
+        "noQuotesFound": "No quotes found.",
+        "selectQuote": "Select quote",
+        "loadingQuoteDetails": "Loading quote details...",
+        "loadingDocumentDetails": "Loading document details..."
       },
       "tabs": {
         "design": "Design",

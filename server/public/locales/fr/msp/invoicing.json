@@ -1240,7 +1240,12 @@
         "emptyState": "Sélectionnez un exemple ou des données de facture existantes pour générer un aperçu autoritaire.",
         "loadingPreview": "Génération et rendu de l'aperçu…",
         "templateError": "Impossible de générer le modèle d'aperçu à partir de l'espace actuel.",
-        "renderError": "Échec du rendu de l'aperçu."
+        "renderError": "Échec du rendu de l'aperçu.",
+        "searchQuotes": "Rechercher des devis…",
+        "noQuotesFound": "Aucun devis trouvé.",
+        "selectQuote": "Sélectionner un devis",
+        "loadingQuoteDetails": "Chargement des détails du devis…",
+        "loadingDocumentDetails": "Chargement des détails du document…"
       },
       "tabs": {
         "design": "Conception",

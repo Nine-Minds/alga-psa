@@ -1294,7 +1294,12 @@
         "emptyState": "Wybierz dane przykładowe lub istniejące, aby wygenerować wiarygodny podgląd.",
         "loadingPreview": "Kształtowanie i renderowanie podglądu…",
         "templateError": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego.",
-        "renderError": "Renderowanie podglądu nie powiodło się."
+        "renderError": "Renderowanie podglądu nie powiodło się.",
+        "searchQuotes": "Szukaj wycen…",
+        "noQuotesFound": "Brak wycen.",
+        "selectQuote": "Wybierz wycenę",
+        "loadingQuoteDetails": "Ładowanie szczegółów wyceny…",
+        "loadingDocumentDetails": "Ładowanie szczegółów dokumentu…"
       },
       "tabs": {
         "design": "Projektowanie",

@@ -1240,7 +1240,12 @@
         "emptyState": "Seleccione datos de muestra o existentes para generar la vista previa autoritativa.",
         "loadingPreview": "Formando y renderizando vista previa…",
         "templateError": "No se pudo generar la plantilla de vista previa del espacio actual.",
-        "renderError": "Fallo al renderizar la vista previa."
+        "renderError": "Fallo al renderizar la vista previa.",
+        "searchQuotes": "Buscar cotizaciones…",
+        "noQuotesFound": "Sin cotizaciones.",
+        "selectQuote": "Seleccionar cotización",
+        "loadingQuoteDetails": "Cargando detalles de la cotización…",
+        "loadingDocumentDetails": "Cargando detalles del documento…"
       },
       "tabs": {
         "design": "Diseño",

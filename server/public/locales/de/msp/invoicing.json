@@ -1240,7 +1240,12 @@
         "emptyState": "Wählen Sie Beispiel- oder vorhandene Rechnungsdaten, um eine verbindliche Vorschau zu erzeugen.",
         "loadingPreview": "Vorschau wird geformt und gerendert…",
         "templateError": "Vorschau-Vorlage konnte aus dem aktuellen Arbeitsbereich nicht erzeugt werden.",
-        "renderError": "Vorschau-Rendering fehlgeschlagen."
+        "renderError": "Vorschau-Rendering fehlgeschlagen.",
+        "searchQuotes": "Angebote suchen…",
+        "noQuotesFound": "Keine Angebote gefunden.",
+        "selectQuote": "Angebot wählen",
+        "loadingQuoteDetails": "Angebotsdetails werden geladen…",
+        "loadingDocumentDetails": "Dokumentdetails werden geladen…"
       },
       "tabs": {
         "design": "Entwurf",

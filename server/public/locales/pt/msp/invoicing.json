@@ -1240,7 +1240,12 @@
         "emptyState": "Selecione dados de fatura existentes ou de amostra para gerar uma visualização oficial.",
         "loadingPreview": "Visualização de modelagem e renderização...",
         "templateError": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual.",
-        "renderError": "Falha na renderização de visualização."
+        "renderError": "Falha na renderização de visualização.",
+        "searchQuotes": "Pesquisar cotações...",
+        "noQuotesFound": "Nenhuma cotação encontrada.",
+        "selectQuote": "Selecione a cotação",
+        "loadingQuoteDetails": "Carregando detalhes da cotação...",
+        "loadingDocumentDetails": "Carregando detalhes do documento..."
       },
       "tabs": {
         "design": "Projeto",
