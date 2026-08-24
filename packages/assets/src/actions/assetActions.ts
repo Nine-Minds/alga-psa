@@ -2330,6 +2330,7 @@ export const listMaintenanceOccurrences = withAuth(async (
                     's.frequency',
                     's.frequency_interval',
                     's.schedule_config',
+                    's.last_maintenance',
                     'a.name as asset_name',
                     'a.asset_type',
                     'a.client_id',
