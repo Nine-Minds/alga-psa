@@ -88,6 +88,11 @@ const hoisted = vi.hoisted(() => {
       andWhere(conditions: any, operator?: unknown, operand?: unknown) {
         return query.where(conditions, operator, operand);
       },
+      whereNull(column: string) {
+        const key = column.split('.').pop() as string;
+        columnFilters.push((row) => row[key] === null || row[key] === undefined);
+        return query;
+      },
       orderBy() { return query; },
       limit() { return query; },
       async first(..._columns: unknown[]) {
@@ -444,7 +449,7 @@ describe('telephony link-to-ticket', () => {
       expect(result.unresolvedCalls).toEqual([]);
     });
 
-    it('T044: the call log is refused without the system settings update permission', async () => {
+    it('T044: the call log is refused without settings or interaction permissions', async () => {
       addCall();
       hasPermissionMock.mockResolvedValue(false);
 
@@ -453,6 +458,32 @@ describe('telephony link-to-ticket', () => {
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/Permission denied/);
       expect(result.recentCalls).toEqual([]);
+    });
+
+    it('T044: interaction read alone grants the call log, without config rights', async () => {
+      // A dispatcher holds interaction permissions, never system_settings; the
+      // operational Calls surface depends on this read path.
+      addCall();
+      hasPermissionMock.mockImplementation(
+        async (_user: unknown, resource: string) => resource === 'interaction',
+      );
+
+      const result = await getTelephonyOverview();
+
+      expect(result).toMatchObject({ success: true, available: true, canManage: false, canResolve: true });
+      expect(result.recentCalls).toHaveLength(1);
+    });
+
+    it('T044: interaction read without create sees the queue but may not resolve', async () => {
+      addCall();
+      hasPermissionMock.mockImplementation(
+        async (_user: unknown, resource: string, ...rest: unknown[]) =>
+          resource === 'interaction' && rest[0] === 'read',
+      );
+
+      const result = await getTelephonyOverview();
+
+      expect(result).toMatchObject({ success: true, canManage: false, canResolve: false });
     });
 
     it('T044: an unentitled tenant sees the paywall, not the call log', async () => {
@@ -471,7 +502,7 @@ describe('telephony link-to-ticket', () => {
   });
 
   describe('manual resolve', () => {
-    it('T044: resolving a call requires the system settings update permission', async () => {
+    it('T044: resolving a call requires settings or interaction create permission', async () => {
       hasPermissionMock.mockResolvedValue(false);
 
       const result = await resolveTelephonyCall({ callRecordId: 'call-1', contactId: 'contact-1' });
@@ -479,6 +510,27 @@ describe('telephony link-to-ticket', () => {
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/Permission denied/);
       expect(resolveCallMatchMock).not.toHaveBeenCalled();
+    });
+
+    it('T044: a client-portal user may not resolve calls', async () => {
+      hoisted.state.mockUser = { user_id: 'portal-1', user_type: 'client' };
+
+      const result = await resolveTelephonyCall({ callRecordId: 'call-1', contactId: 'contact-1' });
+
+      expect(result).toEqual({ success: false, error: 'Forbidden' });
+      expect(resolveCallMatchMock).not.toHaveBeenCalled();
+    });
+
+    it('T010: interaction create alone lets a dispatcher resolve a call', async () => {
+      hasPermissionMock.mockImplementation(
+        async (_user: unknown, resource: string, ...rest: unknown[]) =>
+          resource === 'interaction' && rest[0] === 'create',
+      );
+
+      const result = await resolveTelephonyCall({ callRecordId: 'call-1', contactId: 'contact-1' });
+
+      expect(result).toEqual({ success: true, interactionId: 'interaction-new' });
+      expect(resolveCallMatchMock).toHaveBeenCalled();
     });
 
     it('T044: resolving is refused without the Teams add-on', async () => {

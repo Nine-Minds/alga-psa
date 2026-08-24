@@ -14,6 +14,7 @@ import type { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { ContactsLayout } from '@alga-psa/clients';
+import TelephonyCallsPanel from '@alga-psa/integrations/components/telephony/TelephonyCallsPanel';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
@@ -34,6 +35,10 @@ export default async function ContactsPage() {
       uniqueContacts={uniqueContacts}
       users={users}
       clients={clients}
+      // Operational telephony surface for techs/dispatchers. The panel gates
+      // itself on getTelephonyOverview (telephony availability + interaction
+      // permissions — never system_settings) and renders nothing otherwise.
+      callsPanel={<TelephonyCallsPanel variant="operational" />}
     />
   );
 }

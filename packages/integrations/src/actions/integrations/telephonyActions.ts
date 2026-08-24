@@ -55,7 +55,10 @@ export interface TelephonyOverview {
   error?: string;
   available: boolean;
   reason?: string;
+  /** Config rights over the providers (settings surface only). */
   canManage: boolean;
+  /** May attribute calls — resolving mints an interaction, so this follows interaction create rights. */
+  canResolve: boolean;
   providers: TelephonyProviderCard[];
   recentCalls: TelephonyCallSummary[];
   unresolvedCalls: TelephonyCallSummary[];
@@ -70,10 +73,9 @@ function isClientPortalUser(user: any): boolean {
 }
 
 /**
- * Every telephony surface reads or writes the tenant-wide call log, which
- * carries counterparty numbers and client attribution. Gate it exactly like the
- * Teams settings surface it lives under: never the client portal, and only an
- * admin who may change integration settings.
+ * Provider configuration (enable/disable, auto-ticket policy) stays a settings
+ * surface: never the client portal, and only an admin who may change
+ * integration settings.
  */
 async function requireTelephonyAdmin(user: unknown): Promise<string | null> {
   if (isClientPortalUser(user)) {
@@ -81,6 +83,27 @@ async function requireTelephonyAdmin(user: unknown): Promise<string | null> {
   }
   if (!(await canManageTelephony(user))) {
     return 'Permission denied: telephony settings require system settings update permission.';
+  }
+  return null;
+}
+
+/**
+ * The call log and the attribution queue are operational surfaces for the
+ * techs and dispatchers who work them, not settings. Matched calls become Call
+ * interactions, so the interaction resource is what scopes them: read to see
+ * the log, create to resolve (resolving mints an interaction). The client
+ * portal never passes — the log carries counterparty numbers and tenant-wide
+ * client attribution — and a settings admin passes implicitly.
+ */
+async function requireTelephonyOperator(user: unknown, action: 'read' | 'create'): Promise<string | null> {
+  if (isClientPortalUser(user)) {
+    return 'Forbidden';
+  }
+  if (await canManageTelephony(user)) {
+    return null;
+  }
+  if (!(await hasPermission(user as any, 'interaction', action))) {
+    return `Permission denied: Cannot ${action} interactions`;
   }
   return null;
 }
@@ -172,21 +195,28 @@ async function loadEeTelephony(): Promise<EeTelephonyModule> {
 }
 
 export const getTelephonyOverview = withAuth(async (user, { tenant }): Promise<TelephonyOverview> => {
-  const denied = await requireTelephonyAdmin(user);
-  if (denied) {
-    return {
-      success: false,
-      error: denied,
-      available: false,
-      canManage: false,
-      providers: [],
-      recentCalls: [],
-      unresolvedCalls: [],
-    };
-  }
+  const refusal = (error: string): TelephonyOverview => ({
+    success: false,
+    error,
+    available: false,
+    canManage: false,
+    canResolve: false,
+    providers: [],
+    recentCalls: [],
+    unresolvedCalls: [],
+  });
 
-  // Past the gate the caller is, by definition, an admin who may manage this.
-  const canManage = true;
+  // Operational readers (techs working the attribution queue) hold interaction
+  // permissions, not settings ones; canManage only signals config rights.
+  if (isClientPortalUser(user)) {
+    return refusal('Forbidden');
+  }
+  const canManage = await canManageTelephony(user);
+  if (!canManage && !(await hasPermission(user as any, 'interaction', 'read'))) {
+    return refusal('Permission denied: Cannot read interactions');
+  }
+  const canResolve = canManage || (await hasPermission(user as any, 'interaction', 'create'));
+
   const availability = await getTelephonyAvailability({ tenantId: tenant });
 
   if (availability.enabled === false) {
@@ -196,6 +226,7 @@ export const getTelephonyOverview = withAuth(async (user, { tenant }): Promise<T
       reason: availability.reason,
       error: availability.message,
       canManage,
+      canResolve,
       providers: [],
       recentCalls: [],
       unresolvedCalls: [],
@@ -214,6 +245,7 @@ export const getTelephonyOverview = withAuth(async (user, { tenant }): Promise<T
     success: true,
     available: true,
     canManage,
+    canResolve,
     providers: [
       {
         provider: teamsPhone.provider,
@@ -289,8 +321,13 @@ export const resolveTelephonyCall = withAuth(async (
   input: { callRecordId: string; contactId?: string | null; clientId?: string | null },
 ): Promise<{ success: boolean; error?: string; interactionId?: string | null }> => {
   // Resolving stamps contact/client attribution onto a call and mints an
-  // interaction, so it is a manage action, not a read one.
-  const denied = await requireManageableTenant(user, tenant);
+  // interaction — dispatcher work, gated on interaction create rights rather
+  // than the settings gate the provider toggles keep.
+  const availability = await getTelephonyAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return { success: false, error: availability.message };
+  }
+  const denied = await requireTelephonyOperator(user, 'create');
   if (denied) {
     return { success: false, error: denied };
   }

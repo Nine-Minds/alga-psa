@@ -60,6 +60,7 @@ function overview(overrides: Partial<TelephonyOverview> = {}): TelephonyOverview
     success: true,
     available: true,
     canManage: true,
+    canResolve: true,
     providers: [
       {
         provider: 'teams-phone',
@@ -146,6 +147,7 @@ describe('TelephonyIntegrationSettings', () => {
       reason: 'addon_required',
       error: 'Microsoft Teams add-on required',
       canManage: true,
+      canResolve: true,
       providers: [],
       recentCalls: [],
       unresolvedCalls: [],
@@ -164,6 +166,7 @@ describe('TelephonyIntegrationSettings', () => {
       error: 'Forbidden',
       available: false,
       canManage: false,
+      canResolve: false,
       providers: [],
       recentCalls: [],
       unresolvedCalls: [],
@@ -308,6 +311,8 @@ describe('TelephonyIntegrationSettings', () => {
     const { container } = render(<TelephonyIntegrationSettings />);
 
     await screen.findByText('Teams Phone');
+    // The calls panel loads its own overview, so its rows land a beat later.
+    await waitFor(() => expect(container.querySelector('#telephony-unmatched-row-call-1')).toBeTruthy());
     const ids = [...container.querySelectorAll('[id]')].map((node) => node.id);
     expect(ids).toEqual(expect.arrayContaining([
       'telephony-integrations-setup',
