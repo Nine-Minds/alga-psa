@@ -6,6 +6,24 @@
 
 exports.config = { transaction: true };
 
+async function truncateDistributedLocalHeap(knex, tableName) {
+  const citusInstalled = await knex.raw(
+    "SELECT to_regclass('pg_catalog.pg_dist_partition') IS NOT NULL AS has_citus"
+  );
+  if (!citusInstalled.rows[0].has_citus) return;
+
+  const distributed = await knex.raw(
+    `SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'public.${tableName}'::regclass`
+  );
+  if (distributed.rows.length > 0) {
+    // Citus leaves coordinator-local heap rows behind after distribution.
+    // They are invisible to normal queries but participate in index builds.
+    await knex.raw(
+      `SELECT truncate_local_data_after_distributing_table('public.${tableName}')`
+    );
+  }
+}
+
 exports.up = async function up(knex) {
   if (await knex.schema.hasTable('email_processed_messages')) {
     if (!(await knex.schema.hasColumn('email_processed_messages', 'provider_message_id'))) {
@@ -33,22 +51,7 @@ exports.up = async function up(knex) {
     if (!(await knex.schema.hasColumn('inbound_email_effects', 'source_sha256'))) {
       await knex.schema.alterTable('inbound_email_effects', (table) => table.text('source_sha256').nullable());
     }
-    // Citus retains invisible coordinator-local heap data after distribution.
-    // DDL below creates unique indexes/constraints, so clear only that stale
-    // local data before the build; distributed shard rows remain untouched.
-    const citusInstalled = await knex.raw(
-      "SELECT to_regclass('pg_catalog.pg_dist_partition') IS NOT NULL AS has_citus"
-    );
-    if (citusInstalled.rows[0].has_citus) {
-      const distributed = await knex.raw(
-        "SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'public.inbound_email_effects'::regclass"
-      );
-      if (distributed.rows.length > 0) {
-        await knex.raw(
-          "SELECT truncate_local_data_after_distributing_table('public.inbound_email_effects')"
-        );
-      }
-    }
+    await truncateDistributedLocalHeap(knex, 'inbound_email_effects');
 
     // The original PK made the forgeable RFC Message-ID first-wins even when
     // the digest-aware partial index permitted a second MIME.  Preserve a
@@ -67,6 +70,48 @@ exports.up = async function up(knex) {
     `);
     await knex.raw('CREATE UNIQUE INDEX IF NOT EXISTS inbound_email_effects_provider_source_unique ON inbound_email_effects (tenant, provider_id, normalized_message_id, source_sha256, effect_type) WHERE source_sha256 IS NOT NULL');
   }
+
+  if (await knex.schema.hasTable('inbound_email_inbox')) {
+    if (!(await knex.schema.hasColumn('inbound_email_inbox', 'source_sha256'))) {
+      await knex.schema.alterTable('inbound_email_inbox', (table) => table.text('source_sha256').nullable());
+    }
+    await truncateDistributedLocalHeap(knex, 'inbound_email_inbox');
+
+    // A pre-digest durable table may contain duplicate rows only if its old
+    // unique guard was removed manually. Remove dependent audit rows first so
+    // the inbox cleanup remains valid in databases with completed work.
+    for (const dependentTable of ['inbound_email_effects', 'inbound_email_artifacts', 'inbound_email_outbox']) {
+      if (await knex.schema.hasTable(dependentTable)) {
+        await knex.raw(`
+          DELETE FROM ${dependentTable} dependent
+          USING inbound_email_inbox winner, inbound_email_inbox duplicate
+          WHERE dependent.tenant = duplicate.tenant
+            AND dependent.inbox_id = duplicate.inbox_id
+            AND winner.tenant = duplicate.tenant
+            AND winner.provider_id = duplicate.provider_id
+            AND winner.normalized_message_id = duplicate.normalized_message_id
+            AND winner.source_sha256 IS NOT DISTINCT FROM duplicate.source_sha256
+            AND winner.inbox_id < duplicate.inbox_id
+        `);
+      }
+    }
+    await knex.raw(`
+      DELETE FROM inbound_email_inbox duplicate
+      USING inbound_email_inbox winner
+      WHERE winner.tenant = duplicate.tenant
+        AND winner.provider_id = duplicate.provider_id
+        AND winner.normalized_message_id = duplicate.normalized_message_id
+        AND winner.source_sha256 IS NOT DISTINCT FROM duplicate.source_sha256
+        AND winner.inbox_id < duplicate.inbox_id
+    `);
+
+    // Add the digest-aware and legacy guards before dropping the old RFC-only
+    // constraint. Tenant is first for Citus distributed-table uniqueness.
+    await knex.raw('CREATE UNIQUE INDEX IF NOT EXISTS inbound_email_inbox_provider_source_unique ON inbound_email_inbox (tenant, provider_id, normalized_message_id, source_sha256) WHERE source_sha256 IS NOT NULL');
+    await knex.raw('CREATE UNIQUE INDEX IF NOT EXISTS inbound_email_inbox_legacy_identity_unique ON inbound_email_inbox (tenant, provider_id, normalized_message_id) WHERE source_sha256 IS NULL');
+    await knex.raw('ALTER TABLE inbound_email_inbox DROP CONSTRAINT IF EXISTS inbound_email_inbox_identity_unique');
+    await knex.raw('DROP INDEX IF EXISTS inbound_email_inbox_identity_unique');
+  }
 };
 
 exports.down = async function down(knex) {
@@ -74,4 +119,6 @@ exports.down = async function down(knex) {
   await knex.raw('DROP INDEX IF EXISTS inbound_email_effects_provider_source_unique');
   await knex.raw('DROP INDEX IF EXISTS email_processed_messages_legacy_message_unique');
   await knex.raw('DROP INDEX IF EXISTS inbound_email_effects_legacy_identity_unique');
+  await knex.raw('DROP INDEX IF EXISTS inbound_email_inbox_provider_source_unique');
+  await knex.raw('DROP INDEX IF EXISTS inbound_email_inbox_legacy_identity_unique');
 };

@@ -497,7 +497,7 @@ export async function upsertInbox(db: DurableDb, input: InboundInboxInsert): Pro
   const scoped = tenantDb(db, input.tenant);
   const now = db.fn.now();
   const terminal = input.status !== undefined;
-  const inserted = await scoped.table('inbound_email_inbox')
+  const insert = scoped.table('inbound_email_inbox')
     .insert({
       tenant: input.tenant,
       ingress_id: input.ingress_id,
@@ -525,15 +525,27 @@ export async function upsertInbox(db: DurableDb, input: InboundInboxInsert): Pro
       created_at: now,
       updated_at: now,
     })
-    .onConflict(['tenant', 'provider_id', 'normalized_message_id'])
+    // The inbox has complementary partial unique indexes: digest-backed
+    // deliveries dedupe by exact MIME, while legacy rows without a digest keep
+    // their historical RFC identity behavior. PostgreSQL requires the matching
+    // partial-index predicate in the conflict target.
+    .onConflict(input.source_sha256 === null
+      ? db.raw('(tenant, provider_id, normalized_message_id) WHERE source_sha256 IS NULL')
+      : db.raw('(tenant, provider_id, normalized_message_id, source_sha256) WHERE source_sha256 IS NOT NULL'))
     .ignore()
     .returning('*');
+  const inserted = await insert;
   if (Array.isArray(inserted) && inserted.length > 0) {
     return inserted[0];
   }
-  const existing = await scoped.table('inbound_email_inbox')
-    .where({ tenant: input.tenant, provider_id: input.provider_id, normalized_message_id: input.normalized_message_id })
-    .first();
+  const existingQuery = scoped.table('inbound_email_inbox')
+    .where({ tenant: input.tenant, provider_id: input.provider_id, normalized_message_id: input.normalized_message_id });
+  if (input.source_sha256 === null) {
+    existingQuery.whereNull('source_sha256');
+  } else {
+    existingQuery.where('source_sha256', input.source_sha256);
+  }
+  const existing = await existingQuery.first();
   return existing as InboundEmailInboxRecord;
 }
 
@@ -548,14 +560,20 @@ export async function getInboxByIdentity(db: DurableDb, params: {
   tenant: string;
   provider_id: string;
   normalized_message_id: string;
+  source_sha256: string | null;
 }): Promise<InboundEmailInboxRecord | null> {
-  const row = await tenantDb(db, params.tenant).table('inbound_email_inbox')
+  const query = tenantDb(db, params.tenant).table('inbound_email_inbox')
     .where({
       tenant: params.tenant,
       provider_id: params.provider_id,
       normalized_message_id: params.normalized_message_id,
-    })
-    .first();
+    });
+  if (params.source_sha256 === null) {
+    query.whereNull('source_sha256');
+  } else {
+    query.where('source_sha256', params.source_sha256);
+  }
+  const row = await query.first();
   return (row as InboundEmailInboxRecord) ?? null;
 }
 

@@ -1601,7 +1601,7 @@ export async function processInboundEmailInApp(
             // that it belongs to a pre-existing conversation.  Passing it as
             // a parent candidate lets a separately delivered MIME with a
             // forgeable duplicate Message-ID attach to another ticket.
-            originalMessageId: emailData.inReplyTo ?? null,
+            originalMessageId: emailData.inReplyTo ?? undefined,
           },
           tenantId
         );

@@ -524,6 +524,7 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
       tenant,
       provider_id: legacy.provider_id,
       normalized_message_id: identity.normalized,
+      source_sha256: null,
     });
     if (existing) {
       result.skipped += 1;
