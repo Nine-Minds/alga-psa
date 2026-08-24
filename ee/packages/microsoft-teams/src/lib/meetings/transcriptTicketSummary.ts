@@ -13,7 +13,13 @@ const SUMMARY_TIMEOUT_MS = 20_000;
 
 export interface AnnotateTicketFromTranscriptInput {
   tenantId: string;
-  meetingId: string;
+  /** Meeting transcripts; omitted for a Teams Phone call transcript. */
+  meetingId?: string | null;
+  /** Call transcripts (F067): the telephony ledger row the transcript came from. */
+  callRecordId?: string | null;
+  source?: 'meeting' | 'call';
+  /** Skips resolution when the caller already knows the ticket. */
+  ticketId?: string | null;
   interactionId?: string | null;
   appointmentRequestId?: string | null;
   subject?: string | null;
@@ -25,7 +31,9 @@ export type AnnotateTicketFromTranscriptResult =
   | { status: 'commented'; ticketId: string }
   | { status: 'skipped'; reason: string };
 
-type SummarizeFn = (input: { subject: string | null; dialogue: string }) => Promise<string | null>;
+type SummarizeFn = (
+  input: { subject: string | null; dialogue: string; source?: 'meeting' | 'call' },
+) => Promise<string | null>;
 
 /**
  * Reduce WEBVTT to speaker dialogue: drop the header, cue ids, and timestamp
@@ -46,6 +54,10 @@ export function vttToDialogue(vtt: string): string {
 }
 
 async function resolveLinkedTicketId(input: AnnotateTicketFromTranscriptInput): Promise<string | null> {
+  if (input.ticketId) {
+    return String(input.ticketId);
+  }
+
   const { knex } = await createTenantKnex(input.tenantId);
   const db = tenantDb(knex, input.tenantId);
 
@@ -70,7 +82,10 @@ async function resolveLinkedTicketId(input: AnnotateTicketFromTranscriptInput): 
   return null;
 }
 
-async function claudeSummarize(input: { subject: string | null; dialogue: string }): Promise<string | null> {
+async function claudeSummarize(
+  input: { subject: string | null; dialogue: string; source?: 'meeting' | 'call' },
+): Promise<string | null> {
+  const kind = input.source === 'call' ? 'call' : 'meeting';
   const apiKey = await resolveAnthropicApiKey();
   if (!apiKey) {
     return null;
@@ -91,13 +106,13 @@ async function claudeSummarize(input: { subject: string | null; dialogue: string
         max_tokens: 700,
         output_config: { effort: 'low' },
         system:
-          'You summarize support-meeting transcripts for the ticket record. Write a compact summary a ' +
+          `You summarize support-${kind} transcripts for the ticket record. Write a compact summary a ` +
           'technician can act on: 2-4 sentences of context, then bullet lists "Decisions" and "Action items" ' +
           '(omit an empty list). Plain text only. Never invent facts absent from the transcript.',
         messages: [
           {
             role: 'user',
-            content: `Meeting subject: ${input.subject || '(none)'}\n\nTranscript:\n${input.dialogue}`,
+            content: `${kind === 'call' ? 'Call' : 'Meeting subject'}: ${input.subject || '(none)'}\n\nTranscript:\n${input.dialogue}`,
           },
         ],
       }),
@@ -125,9 +140,10 @@ async function claudeSummarize(input: { subject: string | null; dialogue: string
 }
 
 /**
- * When a captured Teams transcript belongs to a meeting linked to a ticket
- * (via its interaction or appointment request), post an AI summary of the
- * transcript as an internal system comment on that ticket.
+ * When a captured Teams transcript belongs to something linked to a ticket —
+ * a meeting (via its interaction or appointment request) or a Teams Phone call
+ * (via the ledger's ticket/interaction) — post an AI summary of the transcript
+ * as an internal system comment on that ticket.
  *
  * Best-effort by contract: every failure path returns a skip — artifact
  * capture must never fail because summarization did. Gated on the AI
@@ -137,10 +153,15 @@ export async function annotateLinkedTicketFromTranscript(
   input: AnnotateTicketFromTranscriptInput,
   summarize: SummarizeFn = claudeSummarize,
 ): Promise<AnnotateTicketFromTranscriptResult> {
+  const source: 'meeting' | 'call' = input.source ?? (input.callRecordId ? 'call' : 'meeting');
+  const logContext = {
+    tenant: input.tenantId,
+    meeting_id: input.meetingId ?? null,
+    call_record_id: input.callRecordId ?? null,
+  };
   const skip = (reason: string): AnnotateTicketFromTranscriptResult => {
     logger.info('[TranscriptTicketSummary] Skipping transcript summary', {
-      tenant: input.tenantId,
-      meeting_id: input.meetingId,
+      ...logContext,
       reason,
     });
     return { status: 'skipped', reason };
@@ -162,12 +183,12 @@ export async function annotateLinkedTicketFromTranscript(
       return skip('empty_transcript');
     }
 
-    const summary = await summarize({ subject: input.subject ?? null, dialogue });
+    const summary = await summarize({ subject: input.subject ?? null, dialogue, source });
     if (!summary) {
       return skip('summarizer_unavailable');
     }
 
-    const header = `Meeting transcript summary${input.subject ? ` — ${input.subject}` : ''}`;
+    const header = `${source === 'call' ? 'Call' : 'Meeting'} transcript summary${input.subject ? ` — ${input.subject}` : ''}`;
     await withAdminTransaction(async (trx) => {
       await TicketModel.createComment(
         {
@@ -176,8 +197,9 @@ export async function annotateLinkedTicketFromTranscript(
           is_internal: true,
           author_type: 'system',
           metadata: {
-            source: 'teams_meeting_transcript',
-            meeting_id: input.meetingId,
+            source: source === 'call' ? 'teams_call_transcript' : 'teams_meeting_transcript',
+            meeting_id: input.meetingId ?? null,
+            call_record_id: input.callRecordId ?? null,
             provider_artifact_id: input.providerArtifactId ?? null,
           },
         },
@@ -187,15 +209,13 @@ export async function annotateLinkedTicketFromTranscript(
     });
 
     logger.info('[TranscriptTicketSummary] Posted transcript summary to ticket', {
-      tenant: input.tenantId,
-      meeting_id: input.meetingId,
+      ...logContext,
       ticket_id: ticketId,
     });
     return { status: 'commented', ticketId };
   } catch (error) {
     logger.warn('[TranscriptTicketSummary] Skipping transcript summary', {
-      tenant: input.tenantId,
-      meeting_id: input.meetingId,
+      ...logContext,
       error: error instanceof Error ? error.message : String(error),
     });
     return { status: 'skipped', reason: 'error' };
