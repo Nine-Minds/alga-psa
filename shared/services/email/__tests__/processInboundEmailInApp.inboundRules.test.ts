@@ -29,6 +29,9 @@ function buildEmailData(overrides: Partial<EmailMessageDetails> = {}): EmailMess
     subject: 'Critical Alert (Acme Corp) - EDR detection',
     body: { text: 'Incident details follow.', html: undefined },
     attachments: [],
+    headers: {
+      'authentication-results': 'mx.huntress.com; spf=pass smtp.mailfrom=huntress.com',
+    },
     ...overrides,
   };
 }

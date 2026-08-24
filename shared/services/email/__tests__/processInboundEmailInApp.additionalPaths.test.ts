@@ -54,6 +54,9 @@ function buildEmailData(
     subject: 'Inbound subject',
     body: { text: 'Hello from client', html: undefined },
     attachments: [],
+    headers: {
+      'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com',
+    },
     ...overrides,
   };
 }
@@ -278,6 +281,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       emailData: buildEmailData({
         id: 'email-reply-internal-1',
         from: { email: 'ROBERT@NINEMINDS.COM', name: 'Robert Isaacs' },
+        headers: { 'authentication-results': 'mx.nineminds.com; dmarc=pass header.from=nineminds.com' },
       }),
     });
 
@@ -352,6 +356,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       providerId: 'provider-1',
       emailData: buildEmailData({
         from: { email: 'billing@example.com', name: 'Billing Sender' },
+        headers: { 'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com' },
       }),
     });
 
@@ -397,6 +402,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       providerId: 'provider-1',
       emailData: buildEmailData({
         from: { email: 'billing@example.com', name: 'Billing Contact' },
+        headers: { 'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com' },
       }),
     });
 
