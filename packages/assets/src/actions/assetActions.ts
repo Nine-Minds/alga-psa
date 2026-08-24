@@ -2333,9 +2333,15 @@ export const listMaintenanceOccurrences = withAuth(async (
                     's.last_maintenance',
                     'a.name as asset_name',
                     'a.asset_type',
+                    'a.asset_tag',
+                    'a.location as asset_location',
                     'a.client_id',
                     'c.client_name',
                     't.title as ticket_title',
+                    't.ticket_number',
+                    't.is_closed as ticket_closed',
+                    'ticket_assignee.first_name as ticket_assignee_first_name',
+                    'ticket_assignee.last_name as ticket_assignee_last_name',
                     'h.performed_at',
                     'h.performed_by',
                     'h.description as completion_notes',
@@ -2353,6 +2359,7 @@ export const listMaintenanceOccurrences = withAuth(async (
             db.tenantJoin(query, 'asset_maintenance_history as h', 'o.history_id', 'h.history_id', { type: 'left' });
             db.tenantJoin(query, 'users as performed_by_user', 'h.performed_by', 'performed_by_user.user_id', { type: 'left' });
             db.tenantJoin(query, 'users as closed_by_user', 'o.closed_by', 'closed_by_user.user_id', { type: 'left' });
+            db.tenantJoin(query, 'users as ticket_assignee', 't.assigned_to', 'ticket_assignee.user_id', { type: 'left' });
             if (filters.status?.length) query.whereIn('o.status', filters.status);
             if (filters.client_id) query.where('a.client_id', filters.client_id);
             if (filters.asset_id) query.where('o.asset_id', filters.asset_id);

@@ -346,9 +346,15 @@ export interface AssetMaintenanceOccurrence {
   last_maintenance?: string;
   asset_name?: string;
   asset_type?: string;
+  asset_tag?: string;
+  asset_location?: string;
   client_id?: string;
   client_name?: string;
   ticket_title?: string;
+  ticket_number?: string;
+  ticket_closed?: boolean;
+  ticket_assignee_first_name?: string;
+  ticket_assignee_last_name?: string;
   performed_at?: string;
   performed_by?: string;
   performed_by_first_name?: string;
