@@ -388,8 +388,6 @@
   "draftsTab": {
     "title": "Projekty faktur",
     "searchPlaceholder": "Wyszukaj faktury...",
-    "bulkActions_one": "Działania ({{count}})",
-    "bulkActions_other": "Działania ({{count}})",
     "columns": {
       "invoiceNumber": "Numer faktury",
       "client": "Klient",
@@ -449,14 +447,16 @@
       "confirm": "Przełącz na podatek wewnętrzny i sfinalizuj",
       "cancel": "Anuluj"
     },
-    "bulkActions_few": "Działania ({{count}})",
-    "bulkActions_many": "Działania ({{count}})"
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "clear": "Wyczyść zaznaczenie"
+      }
+    }
   },
   "finalizedTab": {
     "title": "Sfinalizowane faktury",
     "searchPlaceholder": "Wyszukaj faktury...",
-    "bulkActions_one": "Działania ({{count}})",
-    "bulkActions_other": "Działania ({{count}})",
     "columns": {
       "invoiceNumber": "Numer faktury",
       "client": "Klient",
@@ -491,8 +491,12 @@
       "bulkUnfinalizeFailed": "Nie udało się cofnąć finalizacji faktur. Spróbuj ponownie.",
       "bulkUnfinalizeInvoiceFailed": "Nie można ponownie otworzyć {{invoiceNumber}}: {{reason}}"
     },
-    "bulkActions_few": "Działania ({{count}})",
-    "bulkActions_many": "Działania ({{count}})"
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "clear": "Wyczyść zaznaczenie"
+      }
+    }
   },
   "recurringServicePeriods": {
     "title": "Powtarzające się okresy świadczenia usług",
@@ -1725,7 +1729,6 @@
   },
   "projectBilling": {
     "subtitle": "Gotowe kamienie milowe i zaliczki oczekujące na zatwierdzenie we wszystkich projektach.",
-    "bulkActions": "Działania ({{count}})",
     "loading": "Wczytywanie kolejki rozliczeń projektów...",
     "empty": "Nic nie oczekuje na sprawdzenie. Gotowe kamienie milowe i zaliczki pojawią się tutaj.",
     "columns": {
@@ -1781,6 +1784,12 @@
       "message": "Anulowanie tego wpisu harmonogramu usuwa go z rozliczeń. Tej operacji nie można cofnąć.",
       "confirm": "Anuluj wpis",
       "dismiss": "Zachowaj wpis"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "clear": "Wyczyść zaznaczenie"
+      }
     }
   },
   "invoiceDesigner": {

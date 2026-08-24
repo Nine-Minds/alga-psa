@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Projets de factures",
     "searchPlaceholder": "Rechercher des factures...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Numéro de facture",
       "client": "Client",
@@ -422,13 +420,17 @@
       "message": "Cette facture est configurée pour utiliser la taxe calculée par un système comptable externe, mais aucune taxe n'a encore été importée, elle ne peut donc pas être finalisée. Exportez-la vers votre système comptable (QuickBooks, Xero) et réimportez la taxe pour la finaliser avec la taxe externe — ou basculez cette facture en taxe interne maintenant pour qu'Alga calcule la taxe, puis finalisez-la.",
       "confirm": "Basculer en taxe interne et finaliser",
       "cancel": "Annuler"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "finalizedTab": {
     "title": "Factures finalisées",
     "searchPlaceholder": "Rechercher des factures...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Numéro de facture",
       "client": "Client",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "Échec de la finalisation de la facture. Veuillez réessayer.",
       "bulkUnfinalizeFailed": "Échec de la finalisation des factures. Veuillez réessayer.",
       "bulkUnfinalizeInvoiceFailed": "Impossible de rouvrir {{invoiceNumber}} : {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1671,7 +1679,6 @@
   },
   "projectBilling": {
     "subtitle": "Jalons et acomptes prêts, en attente d'approbation pour tous les projets.",
-    "bulkActions": "Actions ({{count}})",
     "loading": "Chargement de la file de facturation des projets…",
     "empty": "Aucun élément n'est en attente de vérification. Les jalons et acomptes prêts apparaîtront ici.",
     "columns": {
@@ -1727,6 +1734,12 @@
       "message": "L'annulation de cette entrée de calendrier la retire de la facturation. Cette action est irréversible.",
       "confirm": "Annuler l'entrée",
       "dismiss": "Conserver l'entrée"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "invoiceDesigner": {

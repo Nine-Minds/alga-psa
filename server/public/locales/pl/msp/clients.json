@@ -12,7 +12,6 @@
       "downloadCsv": "Pobierz CSV",
       "edit": "Edytuj",
       "import": "Importuj",
-      "reactivate": "Ponownie aktywuj",
       "remove": "Usuń",
       "retry": "Ponów",
       "save": "Zapisz",
@@ -207,7 +206,18 @@
     "clientNotFound": "Nie znaleziono klienta.",
     "deletePermissionDenied": "Odmowa uprawnień: nie można usuwać klientów.",
     "singleInactiveWithContactsSuccess_few": "{{name}} i {{count}} kontakty zostały pomyślnie dezaktywowane.",
-    "singleInactiveWithContactsSuccess_many": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych."
+    "singleInactiveWithContactsSuccess_many": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "markInactive": "Oznacz jako nieaktywne",
+        "reactivate": "Ponownie aktywuj",
+        "delete": "Usuń",
+        "print": "Drukuj zaznaczone",
+        "more": "Więcej",
+        "clear": "Wyczyść zaznaczenie"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Szanse sprzedażowe",

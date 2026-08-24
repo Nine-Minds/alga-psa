@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Draft Invoices",
     "searchPlaceholder": "Search invoices...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Invoice Number",
       "client": "Client",
@@ -422,13 +420,17 @@
       "message": "This invoice is set to use tax calculated by an external accounting system, but no tax has been imported yet, so it cannot be finalized. Export it to your accounting system (QuickBooks, Xero) and import the tax back to finalize with external tax — or switch this invoice to internal tax now so Alga calculates the tax and finalize it.",
       "confirm": "Switch to internal tax & finalize",
       "cancel": "Cancel"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "clear": "Clear"
+      }
     }
   },
   "finalizedTab": {
     "title": "Finalized Invoices",
     "searchPlaceholder": "Search invoices...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Invoice Number",
       "client": "Client",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "Failed to unfinalize invoice. Please try again.",
       "bulkUnfinalizeFailed": "Failed to unfinalize invoices. Please try again.",
       "bulkUnfinalizeInvoiceFailed": "Could not unfinalize {{invoiceNumber}}: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "clear": "Clear"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1671,7 +1679,6 @@
   },
   "projectBilling": {
     "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
-    "bulkActions": "Actions ({{count}})",
     "loading": "Loading project billing queue...",
     "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
     "columns": {
@@ -1727,6 +1734,12 @@
       "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
       "confirm": "Cancel entry",
       "dismiss": "Keep entry"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "clear": "Clear"
+      }
     }
   },
   "invoiceDesigner": {

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import type { DeletionValidationResult, IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
@@ -1462,23 +1463,6 @@ const Clients: React.FC = () => {
                   <CloudDownload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
                   <span className="flex-1">{t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}</span>
                 </StyledDropdownMenuItem>
-                <StyledDropdownMenuSeparator />
-                <StyledDropdownMenuItem
-                  onSelect={() => selectedClients.length > 0 && void handleBulkMarkInactive()}
-                  disabled={selectedClients.length === 0}
-                  className="gap-2"
-                >
-                  <Power className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
-                  <span className="flex-1">{t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' })}</span>
-                </StyledDropdownMenuItem>
-                <StyledDropdownMenuItem
-                  onSelect={() => selectedClients.length > 0 && void handleBulkReactivate()}
-                  disabled={selectedClients.length === 0}
-                  className="gap-2"
-                >
-                  <RotateCcw className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
-                  <span className="flex-1">{t('common.actions.reactivate', { defaultValue: 'Reactivate' })}</span>
-                </StyledDropdownMenuItem>
               </StyledDropdownMenuContent>
             </DropdownMenu.Root>
           </div>
@@ -1584,7 +1568,7 @@ const Clients: React.FC = () => {
             </Button>
         </div>
 
-      {/* Delete */}
+      {/* Selection */}
       <div className="flex items-center gap-8 mb-2 ms-4">
         <div className="[&>div]:flex [&>div]:items-center">
           <Checkbox
@@ -1603,18 +1587,6 @@ const Clients: React.FC = () => {
               : formatSelectedSummary(selectedClients.length)}
           </span>
         )}
-
-        <Button
-          id="delete-selected-clients"
-          variant="ghost"
-          size="sm"
-          className="flex gap-1 text-[rgb(var(--color-text-500))]"
-          disabled={selectedClients.length === 0}
-          onClick={handleMultiDelete}
-        >
-          {t('common.actions.delete', { defaultValue: 'Delete' })}
-          <TrashIcon className="h-5 w-5" />
-        </Button>
       </div>
 
       <div className="app-print-root app-print-only">
@@ -1856,6 +1828,51 @@ const Clients: React.FC = () => {
         onImportComplete={() => void handleImportComplete()}
       />
       
+      <BulkActionBar
+        idPrefix="clients-bulk-action-bar"
+        count={selectedClients.length}
+        selectedLabel={t('clientsPage.bulk.actionBar.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedClients.length,
+        })}
+        actions={[
+          {
+            id: 'mark-inactive',
+            label: t('clientsPage.bulk.actionBar.markInactive', { defaultValue: 'Mark Inactive' }),
+            icon: <Power className="h-4 w-4" />,
+            onClick: () => void handleBulkMarkInactive(),
+          },
+          {
+            id: 'reactivate',
+            label: t('clientsPage.bulk.actionBar.reactivate', { defaultValue: 'Reactivate' }),
+            icon: <RotateCcw className="h-4 w-4" />,
+            onClick: () => void handleBulkReactivate(),
+          },
+          {
+            id: 'delete',
+            label: t('clientsPage.bulk.actionBar.delete', { defaultValue: 'Delete' }),
+            icon: <TrashIcon className="h-4 w-4" />,
+            onClick: handleMultiDelete,
+            destructive: true,
+          },
+        ]}
+        overflowActions={[
+          {
+            id: 'print',
+            label: t('clientsPage.bulk.actionBar.print', { defaultValue: 'Print selected' }),
+            icon: <Printer className="h-4 w-4" />,
+            onClick: () => { void triggerPrintClients(); },
+            disabled: isPreparingClientPrint,
+          },
+        ]}
+        overflowLabel={t('clientsPage.bulk.actionBar.more', { defaultValue: 'More' })}
+        onClear={() => {
+          setSelectedClients([]);
+          setIsSelectAllMode(false);
+        }}
+        clearLabel={t('clientsPage.bulk.actionBar.clear', { defaultValue: 'Clear' })}
+      />
+
       {/* Quick View Drawer */}
       <Drawer
         id="client-quick-view-drawer"

@@ -12,7 +12,6 @@
       "downloadCsv": "CSV downloaden",
       "edit": "Bewerken",
       "import": "Importeren",
-      "reactivate": "Opnieuw activeren",
       "remove": "Verwijderen",
       "retry": "Opnieuw proberen",
       "save": "Opslaan",
@@ -181,7 +180,18 @@
     "shareTooltip": "Afdrukken, importeren en exporteren",
     "defaultClientDeleteError": "De standaardklant kan niet worden verwijderd. Stel eerst een andere klant als standaard in bij Algemene instellingen.",
     "clientNotFound": "Klant niet gevonden.",
-    "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd."
+    "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "markInactive": "Markeer als inactief",
+        "reactivate": "Opnieuw activeren",
+        "delete": "Verwijderen",
+        "print": "Geselecteerde afdrukken",
+        "more": "Meer",
+        "clear": "Selectie wissen"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Verkoopkansen",

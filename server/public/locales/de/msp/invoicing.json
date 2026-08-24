@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Rechnungsentwürfe",
     "searchPlaceholder": "Rechnungen suchen...",
-    "bulkActions_one": "Aktionen ({{count}})",
-    "bulkActions_other": "Aktionen ({{count}})",
     "columns": {
       "invoiceNumber": "Rechnungsnummer",
       "client": "Kunde",
@@ -422,13 +420,17 @@
       "message": "Diese Rechnung ist so eingestellt, dass die Steuer von einem externen Buchhaltungssystem berechnet wird, aber es wurde noch keine Steuer importiert, sodass sie nicht abgeschlossen werden kann. Exportieren Sie sie in Ihr Buchhaltungssystem (QuickBooks, Xero) und importieren Sie die Steuer zurück, um sie mit externer Steuer abzuschließen – oder wechseln Sie diese Rechnung jetzt zur internen Steuer, damit Alga die Steuer berechnet, und schließen Sie sie ab.",
       "confirm": "Zur internen Steuer wechseln & abschließen",
       "cancel": "Abbrechen"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "clear": "Auswahl aufheben"
+      }
     }
   },
   "finalizedTab": {
     "title": "Abgeschlossene Rechnungen",
     "searchPlaceholder": "Rechnungen suchen...",
-    "bulkActions_one": "Aktionen ({{count}})",
-    "bulkActions_other": "Aktionen ({{count}})",
     "columns": {
       "invoiceNumber": "Rechnungsnummer",
       "client": "Kunde",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "Die Rechnung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
       "bulkUnfinalizeFailed": "Rechnungen konnten nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
       "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} konnte nicht wieder geöffnet werden: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "clear": "Auswahl aufheben"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1671,7 +1679,6 @@
   },
   "projectBilling": {
     "subtitle": "Bereite Meilensteine und Anzahlungen aus allen Projekten, die auf Genehmigung warten.",
-    "bulkActions": "Aktionen ({{count}})",
     "loading": "Warteschlange der Projektabrechnung wird geladen…",
     "empty": "Es wartet nichts auf Prüfung. Bereite Meilensteine und Anzahlungen werden hier angezeigt.",
     "columns": {
@@ -1727,6 +1734,12 @@
       "message": "Durch das Stornieren wird dieser Zeitplaneintrag aus der Abrechnung entfernt. Dies kann nicht rückgängig gemacht werden.",
       "confirm": "Eintrag stornieren",
       "dismiss": "Eintrag behalten"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "clear": "Auswahl aufheben"
+      }
     }
   },
   "invoiceDesigner": {

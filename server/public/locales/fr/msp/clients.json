@@ -12,7 +12,6 @@
       "downloadCsv": "Télécharger CSV",
       "edit": "Modifier",
       "import": "Importer",
-      "reactivate": "Réactiver",
       "remove": "Retirer",
       "retry": "Réessayer",
       "save": "Enregistrer",
@@ -181,7 +180,18 @@
     "shareTooltip": "Imprimer, importer et exporter",
     "defaultClientDeleteError": "Impossible de supprimer le client par défaut. Définissez d’abord un autre client comme client par défaut dans les paramètres généraux.",
     "clientNotFound": "Client introuvable.",
-    "deletePermissionDenied": "Autorisation refusée : impossible de supprimer des clients."
+    "deletePermissionDenied": "Autorisation refusée : impossible de supprimer des clients.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "markInactive": "Marquer comme inactif",
+        "reactivate": "Réactiver",
+        "delete": "Supprimer",
+        "print": "Imprimer la sélection",
+        "more": "Plus",
+        "clear": "Effacer la sélection"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Opportunités",

@@ -88,18 +88,38 @@
     "dialogs": {
       "archive": {
         "title": "Artikel archivieren",
-        "message": "Sind Sie sicher, dass Sie „{{title}}“ archivieren möchten? Dadurch wird er aus der Kundensicht entfernt."
+        "message": "Sind Sie sicher, dass Sie „{{title}}“ archivieren möchten? Dadurch wird er aus der Kundensicht entfernt.",
+        "titleMultiple": "{{count}} Artikel archivieren",
+        "messageMultiple": "Möchten Sie {{count}} Artikel wirklich archivieren? Sie sind dann für Kunden nicht mehr sichtbar."
       },
       "delete": {
         "title": "Artikel löschen",
-        "message": "Möchten Sie \"{{title}}\" wirklich endgültig löschen? Dies entfernt den Artikel und seinen Inhalt und kann nicht rückgängig gemacht werden."
+        "message": "Möchten Sie \"{{title}}\" wirklich endgültig löschen? Dies entfernt den Artikel und seinen Inhalt und kann nicht rückgängig gemacht werden.",
+        "titleMultiple": "{{count}} Artikel löschen",
+        "messageMultiple": "Möchten Sie {{count}} Artikel wirklich dauerhaft löschen? Die Artikel und ihre Inhalte werden entfernt und können nicht wiederhergestellt werden.",
+        "skippedNotice": "{{count}} ausgewählte Artikel sind veröffentlicht oder in Prüfung und werden übersprungen – archivieren Sie sie zuerst."
       }
     },
     "feedback": {
       "archiveError": "Artikel konnte nicht archiviert werden",
       "archiveSuccess": "Artikel archiviert",
       "deleteError": "Artikel konnte nicht gelöscht werden",
-      "deleteSuccess": "Artikel endgültig gelöscht"
+      "deleteSuccess": "Artikel endgültig gelöscht",
+      "bulkArchiveSuccess": "{{count}} Artikel archiviert",
+      "bulkArchiveError": "{{count}} Artikel konnten nicht archiviert werden",
+      "bulkArchivePartial": "{{count}} Artikel archiviert; {{failed}} konnten nicht archiviert werden",
+      "bulkDeleteSuccess": "{{count}} Artikel dauerhaft gelöscht",
+      "bulkDeleteError": "{{count}} Artikel konnten nicht gelöscht werden",
+      "bulkDeletePartial": "{{count}} Artikel gelöscht; {{failed}} konnten nicht gelöscht werden",
+      "deleteNotAllowed": "Veröffentlichte oder in Prüfung befindliche Artikel müssen zuerst archiviert werden, bevor sie gelöscht werden können"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "archive": "Archivieren",
+        "delete": "Löschen",
+        "clear": "Auswahl aufheben"
+      }
     }
   },
   "editor": {

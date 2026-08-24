@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "Genehmigung durch Manager rückgängig gemacht",
       "error": "Rückgängigmachung der Genehmigung fehlgeschlagen: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "clear": "Auswahl aufheben"
+      }
     }
   },
   "workItemDrawer": {
