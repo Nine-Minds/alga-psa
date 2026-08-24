@@ -20,6 +20,13 @@ vi.mock('../../../actions/quoteDocumentTemplates', () => ({
   saveQuoteDocumentTemplate: vi.fn(),
 }));
 
+// The editor's existing-quote source imports the quote server actions; stub them so this suite
+// stays on the sample path (and out of the server-only module graph).
+vi.mock('../../../actions/quoteActions', () => ({
+  listQuotes: vi.fn(async () => ({ data: [], total: 0, page: 1, pageSize: 10, totalPages: 1 })),
+  getQuoteForRendering: vi.fn(async () => null),
+}));
+
 vi.mock('../../../actions/quoteTemplatePreview', () => ({
   runAuthoritativeQuoteTemplatePreview: (...args: unknown[]) =>
     runAuthoritativeQuoteTemplatePreviewMock(...args),

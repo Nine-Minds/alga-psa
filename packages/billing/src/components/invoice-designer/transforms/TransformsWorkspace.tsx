@@ -52,7 +52,8 @@ type PreviewIssue = {
 };
 
 type Props = {
-  previewState: PreviewSessionState;
+  // The workspace only reads the session, so it accepts any designer's detail payload shape.
+  previewState: PreviewSessionState<unknown>;
   previewData: object | null;
   activeSample: { id: string; label: string; description: string } | null;
   onSourceKindChange: (source: PreviewSourceKind) => void;

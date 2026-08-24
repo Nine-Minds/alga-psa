@@ -6,7 +6,13 @@ export type PreviewSourceKind = 'sample' | 'existing';
 export type PreviewPipelinePhase = 'shape' | 'render' | 'verify';
 export type PreviewPipelinePhaseStatus = 'idle' | 'running' | 'success' | 'error';
 
-export type PreviewSessionState = {
+/**
+ * The session is shared by every designer (invoice, quote, generic document types), so the
+ * "existing document" detail payload is generic: invoices carry a WasmInvoiceViewModel, quotes a
+ * QuoteViewModel. The id/list fields keep their invoice-era names — they mean "the selected
+ * existing document" for whichever designer owns the session.
+ */
+export type PreviewSessionState<TDetail = WasmInvoiceViewModel> = {
   sourceKind: PreviewSourceKind;
   /** Language the preview renders in — what a client in that locale receives. */
   selectedLocale: SupportedLocale;
@@ -22,7 +28,7 @@ export type PreviewSessionState = {
   invoiceListError: string | null;
   isInvoiceDetailLoading: boolean;
   invoiceDetailError: string | null;
-  selectedInvoiceData: WasmInvoiceViewModel | null;
+  selectedInvoiceData: TDetail | null;
   shapeStatus: PreviewPipelinePhaseStatus;
   shapeError: string | null;
   renderStatus: PreviewPipelinePhaseStatus;
@@ -31,7 +37,7 @@ export type PreviewSessionState = {
   verifyError: string | null;
 };
 
-type PreviewSessionAction =
+export type PreviewSessionAction<TDetail = WasmInvoiceViewModel> =
   | { type: 'set-source'; source: PreviewSourceKind }
   | { type: 'set-sample'; sampleId: string }
   | { type: 'set-locale'; locale: SupportedLocale }
@@ -51,19 +57,19 @@ type PreviewSessionAction =
   | { type: 'select-existing-invoice'; invoiceId: string }
   | { type: 'clear-existing-invoice' }
   | { type: 'detail-load-start' }
-  | { type: 'detail-load-success'; payload: WasmInvoiceViewModel }
+  | { type: 'detail-load-success'; payload: TDetail }
   | { type: 'detail-load-error'; error: string }
   | { type: 'pipeline-phase-start'; phase: PreviewPipelinePhase }
   | { type: 'pipeline-phase-success'; phase: PreviewPipelinePhase }
   | { type: 'pipeline-phase-error'; phase: PreviewPipelinePhase; error: string }
   | { type: 'pipeline-reset' };
 
-const setPhaseStatus = (
-  state: PreviewSessionState,
+const setPhaseStatus = <TDetail,>(
+  state: PreviewSessionState<TDetail>,
   phase: PreviewPipelinePhase,
   status: PreviewPipelinePhaseStatus,
   error: string | null
-): PreviewSessionState => {
+): PreviewSessionState<TDetail> => {
   if (phase === 'shape') {
     return {
       ...state,
@@ -85,9 +91,9 @@ const setPhaseStatus = (
   };
 };
 
-export const createInitialPreviewSessionState = (
+export const createInitialPreviewSessionState = <TDetail = WasmInvoiceViewModel,>(
   locale: SupportedLocale = LOCALE_CONFIG.defaultLocale as SupportedLocale
-): PreviewSessionState => ({
+): PreviewSessionState<TDetail> => ({
   sourceKind: 'sample',
   selectedLocale: locale,
   selectedSampleId: DEFAULT_PREVIEW_SAMPLE_ID,
@@ -111,10 +117,10 @@ export const createInitialPreviewSessionState = (
   verifyError: null,
 });
 
-export const previewSessionReducer = (
-  state: PreviewSessionState,
-  action: PreviewSessionAction
-): PreviewSessionState => {
+export const previewSessionReducer = <TDetail = WasmInvoiceViewModel,>(
+  state: PreviewSessionState<TDetail>,
+  action: PreviewSessionAction<TDetail>
+): PreviewSessionState<TDetail> => {
   switch (action.type) {
     case 'set-source':
       return {
