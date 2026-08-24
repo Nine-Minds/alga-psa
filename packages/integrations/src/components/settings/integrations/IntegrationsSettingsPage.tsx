@@ -179,7 +179,9 @@ function CategorySubSections({ category }: { category: IntegrationCategory }) {
               onClick={() => setActiveSubSection(subSection.id)}
               className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
+                  // -900 ink, not -700: the -700/-50 pair drops to 3.95:1 once
+                  // the ramp inverts in dark mode (themeContract element audit).
+                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-900))]'
                   : 'text-muted-foreground hover:bg-muted'
               }`}
             >
