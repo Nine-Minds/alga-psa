@@ -3615,8 +3615,8 @@
         "chooseTarget": "Attribuer à un contact ou à un client…"
       },
       "paywall": {
-        "title": "Module de téléphonie",
-        "description": "Les intégrations de téléphonie nécessitent le module de téléphonie pour ce locataire.",
+        "title": "Module complémentaire Microsoft Teams",
+        "description": "Les intégrations de téléphonie nécessitent le module complémentaire Microsoft Teams pour ce locataire.",
         "ceOnly": "Les intégrations de téléphonie ne sont disponibles qu'en Enterprise Edition.",
         "includedTitle": "Ce qui est inclus",
         "cta": "Gérer les modules",

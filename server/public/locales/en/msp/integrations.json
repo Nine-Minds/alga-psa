@@ -3615,8 +3615,8 @@
         "chooseTarget": "Assign to a contact or client…"
       },
       "paywall": {
-        "title": "Telephony add-on",
-        "description": "Telephony integrations require the Telephony add-on for this tenant.",
+        "title": "Microsoft Teams add-on",
+        "description": "Telephony integrations require the Microsoft Teams add-on for this tenant.",
         "ceOnly": "Telephony integrations are only available in Enterprise Edition.",
         "includedTitle": "What's included",
         "cta": "Manage add-ons",

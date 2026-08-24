@@ -3615,8 +3615,8 @@
         "chooseTarget": "Einem Kontakt oder Kunden zuordnen…"
       },
       "paywall": {
-        "title": "Telefonie-Add-on",
-        "description": "Telefonie-Integrationen erfordern das Telefonie-Add-on für diesen Mandanten.",
+        "title": "Microsoft Teams-Add-on",
+        "description": "Telefonie-Integrationen erfordern das Microsoft Teams-Add-on für diesen Mandanten.",
         "ceOnly": "Telefonie-Integrationen sind nur in der Enterprise Edition verfügbar.",
         "includedTitle": "Enthalten",
         "cta": "Add-ons verwalten",

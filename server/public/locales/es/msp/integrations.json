@@ -3615,8 +3615,8 @@
         "chooseTarget": "Asignar a un contacto o cliente…"
       },
       "paywall": {
-        "title": "Complemento de telefonía",
-        "description": "Las integraciones de telefonía requieren el complemento de telefonía para este inquilino.",
+        "title": "Complemento de Microsoft Teams",
+        "description": "Las integraciones de telefonía requieren el complemento de Microsoft Teams para este inquilino.",
         "ceOnly": "Las integraciones de telefonía solo están disponibles en Enterprise Edition.",
         "includedTitle": "Qué incluye",
         "cta": "Gestionar complementos",

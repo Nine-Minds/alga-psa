@@ -3615,8 +3615,8 @@
         "chooseTarget": "Toewijzen aan een contact of klant…"
       },
       "paywall": {
-        "title": "Telefonie-add-on",
-        "description": "Telefonie-integraties vereisen de telefonie-add-on voor deze tenant.",
+        "title": "Microsoft Teams-add-on",
+        "description": "Telefonie-integraties vereisen de Microsoft Teams-add-on voor deze tenant.",
         "ceOnly": "Telefonie-integraties zijn alleen beschikbaar in Enterprise Edition.",
         "includedTitle": "Wat is inbegrepen",
         "cta": "Add-ons beheren",

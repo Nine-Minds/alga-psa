@@ -3615,8 +3615,8 @@
         "chooseTarget": "Assegna a un contatto o cliente…"
       },
       "paywall": {
-        "title": "Componente aggiuntivo Telefonia",
-        "description": "Le integrazioni di telefonia richiedono il componente aggiuntivo Telefonia per questo tenant.",
+        "title": "Componente aggiuntivo Microsoft Teams",
+        "description": "Le integrazioni di telefonia richiedono il componente aggiuntivo Microsoft Teams per questo tenant.",
         "ceOnly": "Le integrazioni di telefonia sono disponibili solo in Enterprise Edition.",
         "includedTitle": "Cosa è incluso",
         "cta": "Gestisci componenti aggiuntivi",

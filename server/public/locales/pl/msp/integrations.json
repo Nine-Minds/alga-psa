@@ -3615,8 +3615,8 @@
         "chooseTarget": "Przypisz do kontaktu lub klienta…"
       },
       "paywall": {
-        "title": "Dodatek Telefonia",
-        "description": "Integracje telefoniczne wymagają dodatku Telefonia dla tej organizacji.",
+        "title": "Dodatek Microsoft Teams",
+        "description": "Integracje telefoniczne wymagają dodatku Microsoft Teams dla tej organizacji.",
         "ceOnly": "Integracje telefoniczne są dostępne wyłącznie w Enterprise Edition.",
         "includedTitle": "Co obejmuje",
         "cta": "Zarządzaj dodatkami",
