@@ -33,6 +33,31 @@ exports.up = async function up(knex) {
     if (!(await knex.schema.hasColumn('inbound_email_effects', 'source_sha256'))) {
       await knex.schema.alterTable('inbound_email_effects', (table) => table.text('source_sha256').nullable());
     }
+    // Citus retains invisible coordinator-local heap data after distribution.
+    // DDL below creates unique indexes/constraints, so clear only that stale
+    // local data before the build; distributed shard rows remain untouched.
+    const citusInstalled = await knex.raw(
+      "SELECT to_regclass('pg_catalog.pg_dist_partition') IS NOT NULL AS has_citus"
+    );
+    if (citusInstalled.rows[0].has_citus) {
+      const distributed = await knex.raw(
+        "SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'public.inbound_email_effects'::regclass"
+      );
+      if (distributed.rows.length > 0) {
+        await knex.raw(
+          "SELECT truncate_local_data_after_distributing_table('public.inbound_email_effects')"
+        );
+      }
+    }
+
+    // The original PK made the forgeable RFC Message-ID first-wins even when
+    // the digest-aware partial index permitted a second MIME.  Preserve a
+    // tenant-first primary key by moving it to the already-unique durable
+    // effect identity, then remove its now-redundant unique constraint.
+    await knex.raw('ALTER TABLE inbound_email_effects DROP CONSTRAINT IF EXISTS inbound_email_effects_pkey');
+    await knex.raw('ALTER TABLE inbound_email_effects ADD CONSTRAINT inbound_email_effects_pkey PRIMARY KEY (tenant, inbox_id, effect_type)');
+    await knex.raw('ALTER TABLE inbound_email_effects DROP CONSTRAINT IF EXISTS inbound_email_effects_inbox_effect_unique');
+
     await knex.raw('CREATE UNIQUE INDEX IF NOT EXISTS inbound_email_effects_legacy_identity_unique ON inbound_email_effects (tenant, provider_id, normalized_message_id, effect_type) WHERE source_sha256 IS NULL');
     await knex.raw(`
       DELETE FROM inbound_email_effects a USING inbound_email_effects b

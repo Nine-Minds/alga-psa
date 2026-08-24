@@ -183,6 +183,45 @@ describe('processInboundEmailInApp', () => {
     }), 'tenant-1');
   });
 
+  it('creates independent tickets for distinct MIME sources that reuse a standalone RFC Message-ID', async () => {
+    // Simulates the pre-fix `thread_headers` match: the lookup would find a
+    // ticket from the first message if this message's own Message-ID were
+    // incorrectly supplied as a parent candidate.
+    findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-first-message' });
+    createTicketFromEmailMock
+      .mockResolvedValueOnce({ ticket_id: 'ticket-1', ticket_number: 'T-1' })
+      .mockResolvedValueOnce({ ticket_id: 'ticket-2', ticket_number: 'T-2' });
+    createCommentFromEmailMock
+      .mockResolvedValueOnce('comment-1')
+      .mockResolvedValueOnce('comment-2');
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+    const first = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: '<forged-shared@example.com>',
+        providerIdentity: 'imap:101',
+        sourceSha256: 'digest-first-mime',
+      }),
+    });
+    const second = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: '<forged-shared@example.com>',
+        providerIdentity: 'imap:102',
+        sourceSha256: 'digest-second-mime',
+      }),
+    });
+
+    expect(first.outcome).toBe('created');
+    expect(second.outcome).toBe('created');
+    expect(createTicketFromEmailMock).toHaveBeenCalledTimes(2);
+    expect(createCommentFromEmailMock).toHaveBeenCalledTimes(2);
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+  });
+
   it('new inbound email with matched contact+user forwards both author_id and contact_id', async () => {
     findContactByEmailMock.mockResolvedValue({
       contact_id: 'contact-123',
@@ -820,6 +859,7 @@ describe('processInboundEmailInApp', () => {
       providerId: 'provider-1',
       emailData: buildEmailData({
         id: 'email-thread-123',
+        inReplyTo: 'parent-message@example.com',
         from: { email: 'client@example.com', name: 'Client User' },
         to: [
           { email: 'support@example.com', name: 'Support' },

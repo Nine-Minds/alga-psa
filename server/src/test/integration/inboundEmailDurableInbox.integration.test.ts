@@ -568,13 +568,24 @@ describeDb('Inbound email durable inbox (integration)', () => {
     const ticketId = first.ticketId;
     const commentId = first.commentId;
 
+    // This is the exact same staged MIME/provider identity being delivered a
+    // second time.  Staging resolves it to the existing durable inbox instead
+    // of admitting another durable unit of work.
+    const replayStage = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    expect(replayStage.inboxId).toBe(inboxId);
+
+    const { mirrorTenantTerminalInbox } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+    await mirrorTenantTerminalInbox(tenantId);
+
     // Redelivery (e.g. Redis reclaim) reads the terminal inbox and returns the
     // same IDs without any new entity/effect/outbox/artifact rows.
-    const second = await processInbox(inboxId, 'redelivery-worker');
+    const second = await processInbox(replayStage.inboxId, 'redelivery-worker');
     expect(second.disposition).toBe('ack');
     expect(second.ticketId).toBe(ticketId);
     expect(second.commentId).toBe(commentId);
+    await mirrorTenantTerminalInbox(tenantId);
 
+    expect(await countRows('email_processed_messages')).toBe(1);
     expect(await countTicketsByMessageId(messageId)).toBe(1);
     expect(await countCommentsByMessageId(messageId)).toBe(1);
     expect(await countRows('inbound_email_effects')).toBe(2);

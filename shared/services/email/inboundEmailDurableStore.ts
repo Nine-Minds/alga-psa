@@ -470,7 +470,6 @@ export interface InboundInboxInsert {
   provider_id: string;
   provider_type: InboundProviderType;
   normalized_message_id: string;
-  source_sha256: string | null;
   provider_message_id: string | null;
   rfc_message_id: string | null;
   source_object_key: string;
@@ -825,6 +824,7 @@ export interface InboundEffectInsert {
   tenant: string;
   provider_id: string;
   normalized_message_id: string;
+  source_sha256: string | null;
   effect_type: 'ticket' | 'comment';
   inbox_id: string;
   entity_id: string;
@@ -833,9 +833,10 @@ export interface InboundEffectInsert {
 }
 
 /**
- * Insert an effect row. The PK `(tenant, provider_id, normalized_message_id,
- * effect_type)` is the second independent guard: a uniqueness conflict is a
- * transaction-level reconciliation signal and MUST NOT be caught here.
+ * Insert an effect row. The source-digest and legacy partial unique indexes
+ * are the identity guards; the inbox-scoped primary key protects each
+ * materialized effect. A uniqueness conflict is a transaction-level
+ * reconciliation signal and MUST NOT be caught here.
  */
 export async function insertEffect(db: DurableDb, input: InboundEffectInsert): Promise<void> {
   await tenantDb(db, input.tenant).table('inbound_email_effects').insert({
@@ -856,7 +857,7 @@ export interface InboundEffectRow {
   tenant: string;
   provider_id: string;
   normalized_message_id: string;
-  source_sha256: string;
+  source_sha256: string | null;
   effect_type: 'ticket' | 'comment';
   inbox_id: string;
   entity_id: string;

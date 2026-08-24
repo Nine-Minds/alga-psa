@@ -1591,13 +1591,17 @@ export async function processInboundEmailInApp(
           diagnostics.threading.matchedBy = 'thread_headers';
           diagnostics.threading.matchedTicketId = threadTarget.ticketId;
         }
-      } else {
+      } else if (emailData.inReplyTo || emailData.references?.length || emailData.threadId) {
         const ticket = await findTicketByEmailThread(
           {
             threadId: emailData.threadId,
             inReplyTo: emailData.inReplyTo,
             references: emailData.references,
-            originalMessageId: emailData.inReplyTo ?? emailData.id,
+            // An inbound message's Message-ID is its identity, not evidence
+            // that it belongs to a pre-existing conversation.  Passing it as
+            // a parent candidate lets a separately delivered MIME with a
+            // forgeable duplicate Message-ID attach to another ticket.
+            originalMessageId: emailData.inReplyTo ?? null,
           },
           tenantId
         );
