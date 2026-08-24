@@ -205,6 +205,33 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
     },
   });
 
+  const callArtifactParams = z.object({
+    callId: z.string(),
+    id: z.string().optional(),
+    content: z.string().optional(),
+    createdDateTime: z.string().optional(),
+  });
+
+  reg.seeder({
+    name: 'call-recording',
+    description:
+      'Attach a recording to a Teams Phone call, ready for the app to poll (ad hoc calls have no artifact change notification)',
+    params: callArtifactParams,
+    run: ({ callId, id, content, createdDateTime }) => ({
+      artifact: core.addCallArtifact('recording', callId, { id, content, createdDateTime }),
+    }),
+  });
+
+  reg.seeder({
+    name: 'call-transcript',
+    description:
+      'Attach a VTT transcript to a Teams Phone call, ready for the app to poll and summarize onto the linked ticket',
+    params: callArtifactParams,
+    run: ({ callId, id, content, createdDateTime }) => ({
+      artifact: core.addCallArtifact('transcript', callId, { id, content, createdDateTime }),
+    }),
+  });
+
   reg.seeder({
     name: 'bot-activity',
     description:
@@ -397,11 +424,16 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
 
   reg.stateView({
     name: 'call-records',
-    description: 'Teams Phone call detail records with their notification delivery results',
+    description:
+      'Teams Phone call detail records with their notification delivery results and captured artifacts',
     get: () =>
       [...core.callRecords.values()].map((record) => ({
         ...record,
         deliveries: core.callRecordDeliveries.get(record.id) ?? [],
+        artifacts: (core.callArtifacts.get(record.id) ?? []).map(({ content, ...artifact }) => ({
+          ...artifact,
+          contentBytes: content.length,
+        })),
       })),
   });
 

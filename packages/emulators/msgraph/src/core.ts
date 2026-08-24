@@ -149,6 +149,20 @@ export interface GraphCallRecordSession {
   failureInfo: { reason: string; stage: string } | null;
 }
 
+/**
+ * A recording/transcript on an ad hoc call — the Teams Phone equivalent of a
+ * meeting artifact, served from /users/{id}/adhocCalls/{callId}.
+ */
+export interface GraphCallArtifact {
+  id: string;
+  callId: string;
+  kind: MeetingArtifactKind;
+  createdDateTime: string;
+  /** VTT text for transcripts; stand-in payload for recordings. */
+  content: string;
+  contentType: string;
+}
+
 /** A Teams Phone call detail record served by /communications/callRecords. */
 export interface GraphCallRecord {
   id: string;
@@ -365,6 +379,8 @@ export class MsGraphCore implements EmulatorCore {
   readonly meetingArtifacts = new Map<string, GraphMeetingArtifact[]>();
   /** Teams Phone call detail records, keyed by call record id. */
   readonly callRecords = new Map<string, GraphCallRecord>();
+  /** Keyed by call id; holds both call recordings and call transcripts. */
+  readonly callArtifacts = new Map<string, GraphCallArtifact[]>();
   /** Notification delivery results per call record, for the state view. */
   readonly callRecordDeliveries = new Map<string, unknown[]>();
   readonly seedPresets = new Map<string, SeedPreset>();
@@ -398,6 +414,7 @@ export class MsGraphCore implements EmulatorCore {
     this.onlineMeetings.clear();
     this.meetingArtifacts.clear();
     this.callRecords.clear();
+    this.callArtifacts.clear();
     this.callRecordDeliveries.clear();
     this.seedPresets.clear();
     this.defaultActor = {};
@@ -1052,6 +1069,48 @@ export class MsGraphCore implements EmulatorCore {
     return record;
   }
 
+  /**
+   * Attach a recording/transcript to a call. Real Graph publishes these on the
+   * ad hoc call minutes after it ends and never notifies about them, so there
+   * are no deliveries here: the app has to poll, and this is what it finds.
+   */
+  addCallArtifact(
+    kind: MeetingArtifactKind,
+    callId: string,
+    input: { id?: string; content?: string; createdDateTime?: string } = {},
+  ): GraphCallArtifact {
+    this.getCallRecord(callId);
+    const artifact: GraphCallArtifact = {
+      id: input.id ?? this.newId(`call-${kind}`),
+      callId,
+      kind,
+      createdDateTime: input.createdDateTime ?? this.env.clock.now().toISOString(),
+      content:
+        input.content ??
+        (kind === 'transcript'
+          ? 'WEBVTT\n\n00:00:00.000 --> 00:00:04.000\n<v Emulated Caller>Hello from the algasim call transcript.'
+          : `algasim-call-recording-bytes:${callId}`),
+      contentType: kind === 'transcript' ? 'text/vtt' : 'video/mp4',
+    };
+    const list = this.callArtifacts.get(callId) ?? [];
+    list.push(artifact);
+    this.callArtifacts.set(callId, list);
+    return artifact;
+  }
+
+  listCallArtifacts(kind: MeetingArtifactKind, callId: string): GraphCallArtifact[] {
+    this.getCallRecord(callId);
+    return (this.callArtifacts.get(callId) ?? []).filter((artifact) => artifact.kind === kind);
+  }
+
+  getCallArtifact(kind: MeetingArtifactKind, callId: string, artifactId: string): GraphCallArtifact {
+    const artifact = this.listCallArtifacts(kind, callId).find((candidate) => candidate.id === artifactId);
+    if (!artifact) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return artifact;
+  }
+
   // --- Bot Framework connector ---
 
   createConversation(input: { isGroup?: boolean; tenantId?: string; members?: unknown[] }): BotConversation {
@@ -1132,6 +1191,7 @@ export class MsGraphCore implements EmulatorCore {
       onlineMeetings: [...this.onlineMeetings.values()],
       meetingArtifacts: [...this.meetingArtifacts.entries()],
       callRecords: [...this.callRecords.values()],
+      callArtifacts: [...this.callArtifacts.entries()],
       seedPresets: [...this.seedPresets.values()],
       defaultActor: this.defaultActor,
       accessTokenTtlSeconds: this.accessTokenTtlSeconds,
@@ -1171,6 +1231,7 @@ export class MsGraphCore implements EmulatorCore {
     load(this.onlineMeetings, snapshot.onlineMeetings, (row) => row.id);
     loadEntries(this.meetingArtifacts, snapshot.meetingArtifacts);
     load(this.callRecords, snapshot.callRecords, (row) => row.id);
+    loadEntries(this.callArtifacts, snapshot.callArtifacts);
     load(this.seedPresets, snapshot.seedPresets, (row) => row.name);
 
     this.defaultActor = snapshot.defaultActor ?? {};

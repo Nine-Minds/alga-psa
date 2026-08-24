@@ -272,7 +272,7 @@ The whole loop, end to end:
 #   INSERT INTO pgboss.job (name, data) VALUES
 #     ('renew-telephony-call-subscriptions', '{"tenantId":"<tenant>"}');
 # (`telephony_providers` must have an active teams-phone row, and the tenant
-#  needs the `telephony` add-on — the ingest path is deny-by-default.)
+#  needs the Microsoft Teams add-on — the ingest path is deny-by-default.)
 
 algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15551234567","durationSeconds":180}'
 algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15557654321","answered":false}'
@@ -284,6 +284,26 @@ A seeded call whose number matches a contact lands as a `Call` interaction on
 that contact's timeline within one processing cycle. An unmatched or ambiguous
 number stays in the ledger and shows up under Settings → Integrations →
 Communication → Telephony, waiting to be resolved.
+
+### Teams Phone call recordings and transcripts
+
+Call artifacts do not live on an online meeting: Graph serves them from the ad
+hoc call (`/v1.0/users/{id}/adhocCalls/{callId}/{recordings,transcripts}`), and
+there is no change notification for them at all. The app therefore polls, and
+the emulator has no deliveries to report — seed an artifact and it simply sits
+there until the poll finds it:
+
+```bash
+algasim seed msgraph call-transcript -p '{"callId":"<callRecordId>"}'
+algasim seed msgraph call-recording  -p '{"callId":"<callRecordId>"}'
+
+algasim state msgraph call-records    # CDRs now carry their artifacts
+```
+
+The transcript is filed as a document on the matched client/contact and, when
+the call is linked to a ticket and the AI Assistant add-on is active, summarized
+onto that ticket. Recording bytes are only stored when the tenant turned on
+recording downloads in the Teams settings.
 
 ### Living with the emulator
 

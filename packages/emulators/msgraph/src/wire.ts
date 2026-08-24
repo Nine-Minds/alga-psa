@@ -274,6 +274,27 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     });
   }
 
+  // Teams Phone call artifacts live on the ad hoc call, not on an online
+  // meeting — a separate Graph surface with its own consent, which is why the
+  // paths differ from the onlineMeetings ones above.
+  for (const kind of ['recording', 'transcript'] as const) {
+    const segment = kind === 'recording' ? 'recordings' : 'transcripts';
+
+    graph.get(`/users/:userId/adhocCalls/:callId/${segment}`, (req, res) => {
+      res.json({
+        value: core.listCallArtifacts(kind, String(req.params.callId)).map((artifact) => ({
+          id: artifact.id,
+          createdDateTime: artifact.createdDateTime,
+        })),
+      });
+    });
+
+    graph.get(`/users/:userId/adhocCalls/:callId/${segment}/:artifactId/content`, (req, res) => {
+      const artifact = core.getCallArtifact(kind, String(req.params.callId), String(req.params.artifactId));
+      res.type(artifact.contentType).send(artifact.content);
+    });
+  }
+
   // Teams Phone CDR fetch. $expand=sessions is what the adapter asks for; the
   // unexpanded shape omits sessions the way real Graph does.
   graph.get('/communications/callRecords/:callRecordId', (req, res) => {

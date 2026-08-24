@@ -198,6 +198,55 @@ describe('msgraph call records', { shuffle: false }, () => {
     expect(view[0].deliveries[0].delivered).toBe(true);
   });
 
+  it('T077: call recordings and transcripts are served from the ad hoc call, not a meeting', async () => {
+    const headers = { authorization: `Bearer ${await appToken()}` };
+    const adhocCall = `${base}/v1.0/users/emulated-organizer/adhocCalls/${callRecordId}`;
+
+    // Nothing recorded yet is the normal case: empty collections, not a 404.
+    expect((await (await fetch(`${adhocCall}/recordings`, { headers })).json()).value).toEqual([]);
+
+    const transcript = await controlPost('/control/msgraph/seed/call-transcript', {
+      callId: callRecordId,
+      content: 'WEBVTT\n\n00:00:00.000 --> 00:00:04.000\n<v Dorothy Gale>The printer is on fire again.',
+    });
+    expect(transcript.ok).toBe(true);
+    const recording = await controlPost('/control/msgraph/seed/call-recording', { callId: callRecordId });
+    expect(recording.ok).toBe(true);
+
+    const transcripts = (await (await fetch(`${adhocCall}/transcripts`, { headers })).json()) as any;
+    expect(transcripts.value).toHaveLength(1);
+    expect(transcripts.value[0].id).toBe(transcript.result.artifact.id);
+
+    const content = await fetch(
+      `${adhocCall}/transcripts/${transcript.result.artifact.id}/content`,
+      { headers },
+    );
+    expect(content.headers.get('content-type')).toContain('text/vtt');
+    expect(await content.text()).toContain('The printer is on fire again.');
+
+    const recordings = (await (await fetch(`${adhocCall}/recordings`, { headers })).json()) as any;
+    expect(recordings.value).toHaveLength(1);
+
+    // Seeding an artifact for a call that does not exist is a 404, and no
+    // notification is ever delivered — Graph has none for ad hoc calls.
+    const before = notifications.length;
+    const orphan = await controlPost('/control/msgraph/seed/call-transcript', { callId: 'no-such-call' });
+    expect(orphan.ok).toBe(false);
+    expect(notifications.length).toBe(before);
+  });
+
+  it('T077: the call-records state view shows captured artifacts by size', async () => {
+    const view = await controlState('call-records');
+    const withArtifacts = view.find((record: any) => record.id === callRecordId);
+    expect(withArtifacts.artifacts.map((artifact: any) => artifact.kind).sort()).toEqual([
+      'recording',
+      'transcript',
+    ]);
+    expect(withArtifacts.artifacts[0].contentBytes).toBeGreaterThan(0);
+    // The state view never carries artifact bodies.
+    expect(withArtifacts.artifacts[0].content).toBeUndefined();
+  });
+
   it('T052: a bot-activity seed falls back to the configured default actor', async () => {
     await controlPost('/control/msgraph/actions/configure', {
       botTargetUrl: botEndpointUrl,
@@ -278,6 +327,8 @@ describe('msgraph call records', { shuffle: false }, () => {
     const restoredControl = `http://127.0.0.1:${started.controlPort}`;
     const view = (await (await fetch(`${restoredControl}/control/msgraph/state/call-records`)).json()).result;
     expect(view.length).toBe(seededCallCount);
+
+    expect(view.find((record: any) => record.id === callRecordId).artifacts).toHaveLength(2);
 
     const config = (await (await fetch(`${restoredControl}/control/msgraph/state/config`)).json()).result;
     expect(config.defaultActor.fromAadObjectId).toBe('aad-default-actor');
