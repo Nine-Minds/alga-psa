@@ -194,13 +194,11 @@ function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
 describe('BentoTimelineTile composer heading', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Schedule validity is `resolvedInstant > Date.now()`, and the mocked
-    // resolver always returns 2026-08-23T13:30:00Z. Freeze the clock before
-    // that instant so the scheduled time is deterministically in the future,
-    // regardless of when the suite actually runs. `shouldAdvanceTime` keeps
-    // async `waitFor` polling working under fake timers.
+    // The composer rejects instants that are not in the future, so pin the
+    // clock behind the mocked 2026-08-23T13:30Z schedule; on a real clock this
+    // suite starts failing the moment that instant becomes the past.
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date('2026-08-23T00:00:00.000Z'));
+    vi.setSystemTime(new Date('2026-08-23T12:00:00.000Z'));
   });
 
   afterEach(() => {
