@@ -20,6 +20,8 @@ import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automa
 import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
+import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
+import { createHash } from 'node:crypto';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -253,6 +255,7 @@ export async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueue
       access_token: (row as any).mc_access_token,
       refresh_token: (row as any).mc_refresh_token,
       token_expires_at: (row as any).mc_token_expires_at,
+      folder_filters: (row as any).mc_folder_filters,
       // The persisted profile pin is authoritative for which app issued the
       // refresh token. Propagate it so buildMicrosoftEmailProviderConfig
       // resolves ONLY through the pinned profile and fails closed when the
@@ -327,6 +330,12 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const to = params.parsed.to?.value || [];
   const cc = params.parsed.cc?.value || [];
   const messageId = asNonEmptyString(params.parsed.messageId) || params.fallbackMessageId;
+  // Deliberately do not feed the RFC Message-ID into this derivation: it is
+  // display/threading data and may be supplied by an attacker.
+  const providerIdentity = normalizeInboundMessageIdentity({
+    providerType: params.provider,
+    providerMessageId: params.fallbackMessageId,
+  })?.normalized;
   const references = extractMessageIds(params.parsed.references);
   const inReplyTo = extractMessageIds(params.parsed.inReplyTo)[0];
   const threadId = references[0] || inReplyTo;
@@ -339,6 +348,27 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
   const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
   const resolvedHeaders: Record<string, string> = {};
+  // Preserve Authentication-Results from raw MIME for the sender-auth gate.
+  // mailparser normalizes header names in its Map, while Gmail already supplies
+  // a record via GmailAdapter.
+  const parsedHeaders = params.parsed.headers;
+  if (parsedHeaders?.forEach) {
+    parsedHeaders.forEach((value: unknown, key: string) => {
+      const headerName = key.toLowerCase();
+      // These names are processor metadata, never wire data. Only the verified
+      // listRewrite branch below may add them to the downstream header bag.
+      if (headerName.startsWith('x-resolved-') || headerName.startsWith('x-list-')) {
+        return;
+      }
+      if (typeof value === 'string') {
+        resolvedHeaders[headerName] = value;
+      } else if (Array.isArray(value)) {
+        // Header order is wire order: the first Authentication-Results block is
+        // our receiving MTA's topmost result. Preserve each block for the gate.
+        resolvedHeaders[headerName] = value.filter((item): item is string => typeof item === 'string').join('\n');
+      }
+    });
+  }
   if (listRewrite) {
     resolvedHeaders['x-list-address'] = listRewrite.listAddress;
     resolvedHeaders['x-resolved-original-sender'] = listRewrite.sender.email;
@@ -354,6 +384,8 @@ function mapParsedMimeToEmailMessageDetails(params: {
 
   return {
     id: messageId,
+    providerIdentity,
+    sourceSha256: createHash('sha256').update(params.rawMimeBuffer).digest('hex'),
     provider: params.provider,
     providerId: params.providerId,
     tenant: params.tenant,
@@ -433,6 +465,8 @@ export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQu
     throw error;
   }
 
+  await assertMicrosoftMessageInMonitoredFolders(adapter, job.pointer.messageId, config.provider_config?.folder_filters);
+
   const parsed: any = await withTimeout(
     simpleParser(rawMimeBuffer),
     parseTimeoutMs,
@@ -447,6 +481,18 @@ export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQu
     parsed,
     fallbackMessageId: job.pointer.messageId,
   });
+}
+
+export async function assertMicrosoftMessageInMonitoredFolders(
+  adapter: Pick<MicrosoftGraphAdapter, 'getMessageParentFolderId' | 'resolveFolderIds'>,
+  messageId: string,
+  folderFilters: unknown,
+): Promise<void> {
+  const parentFolderId = await adapter.getMessageParentFolderId(messageId);
+  const monitoredFolderIds = await adapter.resolveFolderIds(folderFilters);
+  if (!parentFolderId || !monitoredFolderIds.has(parentFolderId)) {
+    throw new SourceMessageUnavailableError('microsoft_message_outside_monitored_folder');
+  }
 }
 
 export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
@@ -730,6 +776,8 @@ async function insertProcessingRecord(params: {
   try {
     await tenantDb(db, params.job.tenantId).table('email_processed_messages').insert({
       message_id: params.externalIdentity,
+      provider_message_id: params.emailData?.providerIdentity || null,
+      source_sha256: params.emailData?.sourceSha256 || null,
       provider_id: params.job.providerId,
       tenant: params.job.tenantId,
       processed_at: new Date(),
@@ -972,10 +1020,12 @@ export async function processUnifiedInboundEmailQueueJob(
   let processedCount = 0;
   let dedupedCount = 0;
   for (const emailData of payloads) {
-    const identityBase = asNonEmptyString(emailData.id) || `${job.jobId}:${processedCount}`;
-    const externalIdentity = normalizeExternalMessageIdentity({
+    // The provider identity + MIME digest are the database idempotency key.
+    // RFC Message-ID is retained solely as a legacy fallback when a provider
+    // does not expose a usable native identity.
+    const externalIdentity = emailData.providerIdentity || normalizeExternalMessageIdentity({
       provider: job.provider,
-      messageId: identityBase,
+      messageId: asNonEmptyString(emailData.id) || `${job.jobId}:${processedCount}`,
     });
     const inserted = await insertProcessingRecord({
       job,

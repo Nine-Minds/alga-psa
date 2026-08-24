@@ -6,6 +6,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { EditorImage } from '../lib/editorImageExtension';
 import {
   blockNoteJsonToProsemirrorJson,
   detectBlockContentFormat,
@@ -46,6 +47,7 @@ export function DocumentViewer({ content }: DocumentViewerProps) {
         },
       }),
       Underline,
+      EditorImage,
     ],
     content: resolvedContent,
     editorProps: {

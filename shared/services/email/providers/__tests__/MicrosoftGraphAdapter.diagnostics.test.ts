@@ -174,7 +174,10 @@ describe('MicrosoftGraphAdapter.runMicrosoft365Diagnostics', () => {
             toRecipients: [],
             ccRecipients: [],
             conversationId: 'conversation-1',
-            internetMessageHeaders: [],
+            internetMessageHeaders: [
+              { name: 'x-resolved-original-sender', value: 'victim@example.com' },
+              { name: 'X-List-Address', value: 'support@lists.example.com' },
+            ],
             attachments: [
               {
                 id: 'attachment-1',
@@ -206,6 +209,8 @@ describe('MicrosoftGraphAdapter.runMicrosoft365Diagnostics', () => {
     );
     expect(message.body.html).toBe('<p>Hello<img src="cid:inline-image-1" /></p>');
     expect(message.body.text).toBe('Hello');
+    expect(message.headers).not.toHaveProperty('x-resolved-original-sender');
+    expect(message.headers).not.toHaveProperty('X-List-Address');
     expect(message.attachments).toEqual([
       expect.objectContaining({
         id: 'attachment-1',

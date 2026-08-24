@@ -194,13 +194,10 @@ function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
 describe('BentoTimelineTile composer heading', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // The schedule composer only renders the resolved instant while it is still
-    // in the future (scheduleIsValid checks scheduledInstant > Date.now()), and
-    // the zonedWallTimeToUtc mock always resolves to 2026-08-23T13:30:00Z. Pin
-    // the clock before that instant so the assertion is deterministic instead of
-    // silently failing forever once real time passes that date. Fake only Date
-    // so setTimeout-based helpers (waitFor) keep working.
-    vi.useFakeTimers({ toFake: ['Date'] });
+    // The composer rejects instants that are not in the future, so pin the
+    // clock behind the mocked 2026-08-23T13:30Z schedule; on a real clock this
+    // suite starts failing the moment that instant becomes the past.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date('2026-08-23T12:00:00.000Z'));
   });
 

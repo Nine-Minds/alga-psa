@@ -119,11 +119,26 @@ function normalizeSoftBreaks(text: string): string {
   return text.replace(/[ \t]*\n[ \t]*/g, ' ');
 }
 
+/** Lifts an inline image out of the run being accumulated. Returns false when it could not. */
+type ImageHoist = (image: Tokens.Image) => boolean;
+
+/**
+ * An image source gets the same scheme guard as a link href. Returns null when
+ * the source is unusable so callers can fall back to the alt text — dropping
+ * the alt too would restore the very data loss this parser exists to fix.
+ */
+function imageBlock(url: string | undefined, caption: string): BlockNoteBlock | null {
+  const safeUrl = sanitizeUrl(url);
+  if (!safeUrl) return null;
+  return { type: 'image', props: { url: safeUrl, caption } };
+}
+
 function inlineFromTokens(
   tokens: Token[] | undefined,
   styles: InlineStyles,
   segments: InlineSegment[],
   deadline: Deadline,
+  hoistImage?: ImageHoist,
 ): void {
   if (!tokens) return;
 
@@ -135,20 +150,20 @@ function inlineFromTokens(
       case 'escape': {
         const nested = (token as Tokens.Text).tokens;
         if (nested?.length) {
-          inlineFromTokens(nested, styles, segments, deadline);
+          inlineFromTokens(nested, styles, segments, deadline, hoistImage);
         } else {
           pushSegment(segments, normalizeSoftBreaks((token as Tokens.Text).text), styles);
         }
         break;
       }
       case 'strong':
-        inlineFromTokens((token as Tokens.Strong).tokens, withStyle(styles, 'bold', true), segments, deadline);
+        inlineFromTokens((token as Tokens.Strong).tokens, withStyle(styles, 'bold', true), segments, deadline, hoistImage);
         break;
       case 'em':
-        inlineFromTokens((token as Tokens.Em).tokens, withStyle(styles, 'italic', true), segments, deadline);
+        inlineFromTokens((token as Tokens.Em).tokens, withStyle(styles, 'italic', true), segments, deadline, hoistImage);
         break;
       case 'del':
-        inlineFromTokens((token as Tokens.Del).tokens, withStyle(styles, 'strike', true), segments, deadline);
+        inlineFromTokens((token as Tokens.Del).tokens, withStyle(styles, 'strike', true), segments, deadline, hoistImage);
         break;
       case 'codespan':
         pushSegment(segments, (token as Tokens.Codespan).text, withStyle(styles, 'code', true));
@@ -160,12 +175,17 @@ function inlineFromTokens(
           withStyle(styles, 'link', { href: sanitizeUrl(link.href) }),
           segments,
           deadline,
+          hoistImage,
         );
         break;
       }
-      case 'image':
-        pushSegment(segments, (token as Tokens.Image).text, styles);
+      case 'image': {
+        const image = token as Tokens.Image;
+        if (!hoistImage || !hoistImage(image)) {
+          pushSegment(segments, image.text, styles);
+        }
         break;
+      }
       case 'br':
         pushSegment(segments, ' ', styles);
         break;
@@ -175,12 +195,105 @@ function inlineFromTokens(
       default: {
         const generic = token as { tokens?: Token[]; text?: string };
         if (generic.tokens?.length) {
-          inlineFromTokens(generic.tokens, styles, segments, deadline);
+          inlineFromTokens(generic.tokens, styles, segments, deadline, hoistImage);
         } else if (typeof generic.text === 'string') {
           pushSegment(segments, normalizeSoftBreaks(generic.text), styles);
         }
       }
     }
+  }
+}
+
+type BlockFactory = (content: InlineSegment[]) => BlockNoteBlock;
+
+/**
+ * Emits one markdown block from an inline run, splitting it around any inline
+ * images: BlockNote images are block-level, and collapsing them into alt text
+ * lost the picture. Paragraphs and headings share this path.
+ */
+function appendInlineTokens(
+  tokens: Token[] | undefined,
+  fallbackText: string,
+  blocks: BlockNoteBlock[],
+  deadline: Deadline,
+  makeBlock: BlockFactory,
+): void {
+  const segments: InlineSegment[] = [];
+  let hoistedImage = false;
+
+  inlineFromTokens(tokens, {}, segments, deadline, (image) => {
+    const block = imageBlock(image.href, image.text);
+    if (!block) return false;
+    const leading = trimSegments(segments.splice(0, segments.length));
+    if (leading.length > 0) {
+      blocks.push(makeBlock(leading));
+    }
+    blocks.push(block);
+    hoistedImage = true;
+    return true;
+  });
+
+  if (!hoistedImage) {
+    blocks.push(makeBlock(segments.length > 0 ? segments : [{ type: 'text', text: fallbackText }]));
+    return;
+  }
+
+  const trailing = trimSegments(segments);
+  if (trailing.length > 0) {
+    blocks.push(makeBlock(trailing));
+  }
+}
+
+/**
+ * Emits one block from several nested block tokens joined into a single inline
+ * run — a list item's or blockquote's children — hoisting inline images out as
+ * sibling blocks. Mirrors the HTML walker's `img` case, which flushes the run
+ * accumulated so far and pushes a real image block, so the same article keeps
+ * its screenshots whether it arrives as .md or as .html.
+ */
+function appendInlineRun(
+  children: Token[],
+  blocks: BlockNoteBlock[],
+  deadline: Deadline,
+  makeBlock: BlockFactory,
+): void {
+  const segments: InlineSegment[] = [];
+  let hoistedImage = false;
+
+  for (const child of children) {
+    deadline.check();
+    const part: InlineSegment[] = [];
+
+    const absorb = () => {
+      if (part.length === 0) return;
+      if (segments.length > 0) pushSegment(segments, ' ', {});
+      segments.push(...part.splice(0, part.length));
+    };
+
+    const nested = (child as { tokens?: Token[] }).tokens;
+    if (nested?.length) {
+      inlineFromTokens(nested, {}, part, deadline, (image) => {
+        const block = imageBlock(image.href, image.text);
+        if (!block) return false;
+        absorb();
+        const leading = trimSegments(segments.splice(0, segments.length));
+        if (leading.length > 0) blocks.push(makeBlock(leading));
+        blocks.push(block);
+        hoistedImage = true;
+        return true;
+      });
+    } else if (typeof (child as { text?: string }).text === 'string') {
+      pushSegment(part, normalizeSoftBreaks((child as { text: string }).text), {});
+    }
+
+    absorb();
+  }
+
+  const trailing = hoistedImage ? trimSegments(segments) : segments;
+  if (trailing.length > 0) {
+    blocks.push(makeBlock(trailing));
+  } else if (!hoistedImage) {
+    blocks.push(makeBlock([{ type: 'text', text: '' }]));
   }
 }
 
@@ -190,54 +303,23 @@ function inlineContent(tokens: Token[] | undefined, deadline: Deadline, fallback
   return segments.length > 0 ? segments : [{ type: 'text', text: fallbackText }];
 }
 
-/** Flattens a blockquote's nested block tokens into one inline run, joined by spaces. */
-function inlineFromBlockTokens(tokens: Token[] | undefined, deadline: Deadline): InlineSegment[] {
-  const segments: InlineSegment[] = [];
-  for (const token of tokens ?? []) {
-    deadline.check();
-    const nested = (token as { tokens?: Token[] }).tokens;
-    const part: InlineSegment[] = [];
-    if (nested?.length) {
-      inlineFromTokens(nested, {}, part, deadline);
-    } else if (typeof (token as { text?: string }).text === 'string') {
-      pushSegment(part, normalizeSoftBreaks((token as { text: string }).text), {});
-    }
-    if (part.length === 0) continue;
-    if (segments.length > 0) pushSegment(segments, ' ', {});
-    segments.push(...part);
-  }
-  return segments.length > 0 ? segments : [{ type: 'text', text: '' }];
-}
-
 function appendListTokens(list: Tokens.List, blocks: BlockNoteBlock[], deadline: Deadline): void {
   const itemType = list.ordered ? 'numberedListItem' : 'bulletListItem';
 
   for (const item of list.items) {
     deadline.check();
-    const segments: InlineSegment[] = [];
     const nestedLists: Tokens.List[] = [];
+    const inlineChildren: Token[] = [];
 
     for (const child of item.tokens ?? []) {
       if (child.type === 'list') {
         nestedLists.push(child as Tokens.List);
         continue;
       }
-      const part: InlineSegment[] = [];
-      const nested = (child as { tokens?: Token[] }).tokens;
-      if (nested?.length) {
-        inlineFromTokens(nested, {}, part, deadline);
-      } else if (typeof (child as { text?: string }).text === 'string') {
-        pushSegment(part, normalizeSoftBreaks((child as { text: string }).text), {});
-      }
-      if (part.length === 0) continue;
-      if (segments.length > 0) pushSegment(segments, ' ', {});
-      segments.push(...part);
+      inlineChildren.push(child);
     }
 
-    blocks.push({
-      type: itemType,
-      content: segments.length > 0 ? segments : [{ type: 'text', text: '' }],
-    });
+    appendInlineRun(inlineChildren, blocks, deadline, (content) => ({ type: itemType, content }));
 
     // Nested lists are flattened into sibling item blocks, matching the shape
     // the KB editor already stores for imported articles.
@@ -260,11 +342,11 @@ function appendTokens(tokens: Token[], blocks: BlockNoteBlock[], deadline: Deadl
         break;
       case 'heading': {
         const heading = token as Tokens.Heading;
-        blocks.push({
+        appendInlineTokens(heading.tokens, heading.text, blocks, deadline, (content) => ({
           type: 'heading',
           props: { level: heading.depth },
-          content: inlineContent(heading.tokens, deadline, heading.text),
-        });
+          content,
+        }));
         break;
       }
       case 'code': {
@@ -279,10 +361,10 @@ function appendTokens(tokens: Token[], blocks: BlockNoteBlock[], deadline: Deadl
       }
       case 'blockquote': {
         const quote = token as Tokens.Blockquote;
-        blocks.push({
+        appendInlineRun(quote.tokens ?? [], blocks, deadline, (content) => ({
           type: 'blockquote',
-          content: inlineFromBlockTokens(quote.tokens, deadline),
-        });
+          content,
+        }));
         break;
       }
       case 'list':
@@ -311,8 +393,10 @@ function appendTokens(tokens: Token[], blocks: BlockNoteBlock[], deadline: Deadl
       case 'paragraph':
       case 'text': {
         const block = token as Tokens.Paragraph;
-        const content = inlineContent(block.tokens, deadline, block.text ?? '');
-        blocks.push({ type: 'paragraph', content });
+        appendInlineTokens(block.tokens, block.text ?? '', blocks, deadline, (content) => ({
+          type: 'paragraph',
+          content,
+        }));
         break;
       }
       default: {
@@ -503,6 +587,19 @@ class HtmlBlockWalker {
         this.flushBlock();
         this.blocks.push({ type: 'horizontalRule' });
         return;
+      case 'img': {
+        const alt = attribs.alt ?? '';
+        // Inside a table cell an image block cannot be interleaved with rows,
+        // so keep the alt text there and hoist a real block everywhere else.
+        const block = this.cell ? null : imageBlock(attribs.src, alt);
+        if (!block) {
+          this.pushText(alt);
+          return;
+        }
+        this.flushBlock();
+        this.blocks.push(block);
+        return;
+      }
       case 'pre':
         this.flushBlock();
         this.preDepth = 1;
