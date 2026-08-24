@@ -1238,8 +1238,8 @@
     }
   },
   "maintenanceCommandCenter": {
-    "title": "Maintenance Command Center",
-    "description": "Plan, dispatch, and verify preventive work on client assets.",
+    "title": "Maintenance",
+    "description": "Command center for preventive work across all client assets.",
     "assetsLink": "Assets"
   },
   "maintenanceCompletionDialog": {
