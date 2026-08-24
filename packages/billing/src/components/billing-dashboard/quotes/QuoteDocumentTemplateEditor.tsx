@@ -14,6 +14,7 @@ import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { TEMPLATE_AST_VERSION, type IQuoteDocumentTemplate } from '@alga-psa/types';
 import { getQuoteDocumentTemplate, saveQuoteDocumentTemplate } from '../../../actions/quoteDocumentTemplates';
 import { runAuthoritativeQuoteTemplatePreview } from '../../../actions/quoteTemplatePreview';
+import { getTenantBrandingForDocumentPreview } from '../../../actions/tenantBrandingPreview';
 import { getStandardQuoteTemplateAstByCode } from '../../../lib/quote-template-ast/standardTemplates';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
@@ -38,6 +39,8 @@ import {
   getQuotePreviewSampleScenarioById,
   QUOTE_PREVIEW_SAMPLE_SCENARIOS,
 } from '../../invoice-designer/preview/quoteSampleScenarios';
+import { overlayQuoteSampleTenant } from '../../invoice-designer/preview/tenantBrandingOverlay';
+import type { TenantParty } from '../../../lib/adapters/tenantPartyAdapter';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { LOCALE_CONFIG, normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { PreviewLocaleSelect } from '../../invoice-designer/preview/PreviewLocaleSelect';
@@ -104,7 +107,26 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
 
   const activeSampleId = previewState.selectedSampleId ?? DEFAULT_QUOTE_PREVIEW_SAMPLE_ID;
   const activeSample = useMemo(() => getQuotePreviewSampleScenarioById(activeSampleId), [activeSampleId]);
-  const previewData = previewState.sourceKind === 'sample' ? activeSample?.data ?? null : null;
+  // Sample scenarios ship a synthetic issuer; show the tenant's real branding so the preview matches
+  // the document a client receives. Null branding keeps the synthetic party.
+  const [tenantBranding, setTenantBranding] = useState<TenantParty | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getTenantBrandingForDocumentPreview()
+      .then((party) => {
+        if (!cancelled) setTenantBranding(party ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const previewData = useMemo(
+    () => (previewState.sourceKind === 'sample' && activeSample
+      ? overlayQuoteSampleTenant(activeSample.data, tenantBranding)
+      : null),
+    [activeSample, previewState.sourceKind, tenantBranding],
+  );
 
   const generatedCodeViewSource = useMemo(() => {
     try {
