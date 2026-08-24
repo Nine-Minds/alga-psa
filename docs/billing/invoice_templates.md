@@ -39,7 +39,9 @@ There is no user-authored code execution — no compilation, no Wasm, no sandbox
 
 | File | Purpose |
 |------|---------|
-| `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts` | Workspace export/import (designer state to/from AST) |
+| `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts` | Workspace export/import (designer state to/from AST); binding-path normalization is driven per document kind by the binding catalog |
+| `packages/billing/src/components/invoice-designer/fields/documentBindingCatalog.ts` | **Single source of truth for the field picker.** Generates picker options, display ↔ render path mappings, and canvas preview data lookup for invoice, quote, and sales-order templates from the same value-binding definitions used to build each template's AST — so the picker, round-trip path normalization, and preview can never drift apart. Replaces the former hand-maintained alias tables. |
+| `packages/billing/src/components/invoice-designer/utils/documentKind.ts` | Resolves the active document kind (invoice / quote / sales-order) from the binding catalog — used by both AST import (raw catalog lookup) and the live designer node tree |
 | `packages/billing/src/components/invoice-designer/DesignerShell.tsx` | Main designer UI shell |
 
 ### AST Capabilities
@@ -48,7 +50,8 @@ There is no user-authored code execution — no compilation, no Wasm, no sandbox
 - Layout tree: `document`, `section`, `stack`, `text`, `field`, `image`, `divider`, `table`, `dynamic-table`, `totals`
 - **Repeatable stack**: the `stack` node accepts an optional `repeat: { sourceBinding, itemBinding, keyPath? }` — the stack (and all its children) renders once per item in the source collection, pushing the current item onto the render scope under `itemBinding`. Nested `path` expressions and inner `dynamic-table` nodes resolve against the per-iteration item. Without `repeat`, the stack renders its children once against the outer scope.
 - Style tokens/classes and inline style declarations
-- Bindings for invoice values and collections (extensible — quote bindings added for the quoting system)
+- Bindings for invoice values and collections (extensible — quote and sales-order bindings supported through the same per-document-kind catalog)
+- **Per-document-kind binding validation**: the designer's field picker only surfaces paths that the active document kind's render model actually exposes. Picker options, AST round-trip path normalization in `workspaceAst.ts`, and canvas preview data lookup all derive from the same `documentBindingCatalog`, so a path that appears in the picker is guaranteed to resolve at render time. The `invoice.discount` field has been removed from the catalog — it was never backed by a real render-model value; any template element bound to it should be re-mapped to a supported field.
 - Declarative transform operations: `filter`, `sort`, `group`, `aggregate`, `computed-field`, `totals-compose`
 - Optional `strategyId` extension points on transform operations
 
@@ -237,6 +240,11 @@ Quote template details: [quoting-system.md](./quoting-system.md#document-templat
 - `packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts`
 - `packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts`
 - `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts`
+
+### Binding Catalog Tests
+
+- `packages/billing/src/components/invoice-designer/fields/documentBindingCatalog.test.ts` — asserts every field-picker option resolves to a path the corresponding render model actually exposes
+- `packages/billing/src/components/invoice-designer/ast/workspaceAst.bindingPaths.test.ts` — covers binding-path normalization and round-tripping across invoice, quote, and sales-order document kinds
 
 ### Quote Template Tests
 
