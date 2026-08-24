@@ -183,6 +183,12 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx',
   'packages/billing/src/components/invoice-designer/inspector/TableEditorWidget.integration.test.tsx',
   'packages/billing/src/components/invoice-designer/inspector/widgets/TableEditorWidget.tsx',
+  // The designer field picker now generates its per-document-kind options from
+  // the binding catalogs, so the invoice line-item options — including the
+  // persisted service-period boundaries — are declared here; it landed after
+  // the pass-0 snapshot.
+  'packages/billing/src/components/invoice-designer/fields/documentBindingCatalog.ts',
+  'packages/billing/src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
   'shared/billingClients/bucketUsageService.ts',
   'packages/billing/tests/accounting/accountingExportInvoiceSelector.preview.test.ts',
   'packages/billing/tests/accounting/accountingExportValidation.rules.test.ts',

@@ -329,7 +329,6 @@ describe('Credit Service-Type Restriction Mode (Option B)', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
     await seedClientRestriction(clientId, null, null);
 
@@ -345,7 +344,6 @@ describe('Credit Service-Type Restriction Mode (Option B)', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
     await seedClientRestriction(clientId, null, null);
 
@@ -363,7 +361,6 @@ describe('Credit Service-Type Restriction Mode (Option B)', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
     await seedClientRestriction(clientId, 'all', null);
 
@@ -382,7 +379,6 @@ describe('Credit Service-Type Restriction Mode (Option B)', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
     // Client picks a *different* list than the tenant.
     await seedClientRestriction(clientId, 'restricted', [hardwareTypeId]);
@@ -398,7 +394,6 @@ describe('Credit Service-Type Restriction Mode (Option B)', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     await setupDefaultTax(clientId);
@@ -467,7 +462,6 @@ describe('Credit Service-Type Restriction Mode (Option B)', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0,
     });
 
     await setupDefaultTax(clientId);

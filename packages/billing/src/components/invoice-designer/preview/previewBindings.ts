@@ -4,6 +4,7 @@ import {
   normalizeFieldFormat as normalizeTemplateFieldFormat,
 } from '../../../lib/invoice-template-ast/fieldFormatting';
 import { resolveInvoiceTemplateBindingAlias } from '../../../lib/invoice-template-ast/bindingAliases';
+import { resolveCandidateRenderPaths } from '../fields/documentBindingCatalog';
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -11,7 +12,6 @@ const isNullish = (value: unknown): value is null | undefined => value === null 
 const supportsAddressDisplayFormat = (bindingKey: string): boolean => asTrimmedString(bindingKey).endsWith('.address');
 
 const flattenInvoiceBindingMap = (invoice: WasmInvoiceViewModel): Record<string, unknown> => ({
-  'invoice.discount': Math.max(0, (invoice.subtotal ?? 0) + (invoice.tax ?? 0) - (invoice.total ?? 0)),
   'invoice.number': invoice.invoiceNumber,
   'invoice.invoiceNumber': invoice.invoiceNumber,
   'invoice.issueDate': invoice.issueDate,
@@ -29,6 +29,17 @@ const flattenInvoiceBindingMap = (invoice: WasmInvoiceViewModel): Record<string,
   'tenant.name': invoice.tenantClient?.name,
   'tenant.address': invoice.tenantClient?.address,
 });
+
+const getModelPathValue = (model: unknown, path: string): unknown => {
+  let cursor: unknown = model;
+  for (const segment of path.split('.').filter(Boolean)) {
+    if (isNullish(cursor) || typeof cursor !== 'object') {
+      return undefined;
+    }
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  return cursor;
+};
 
 export const resolveInvoiceBindingRawValue = (
   invoice: WasmInvoiceViewModel | null,
@@ -56,16 +67,15 @@ export const resolveInvoiceBindingRawValue = (
     }
   }
 
-  // Last-chance resolver for direct dotted paths in the model shape.
-  const pathSegments = aliasedKey.split('.').filter(Boolean);
-  let cursor: unknown = invoice;
-  for (const segment of pathSegments) {
-    if (isNullish(cursor) || typeof cursor !== 'object') {
-      return null;
+  // Last-chance resolver: the key as written, then each document type's render path for it —
+  // the canvas is handed whichever sample model the editor is previewing.
+  for (const candidate of [aliasedKey, ...resolveCandidateRenderPaths(normalizedKey)]) {
+    const resolved = getModelPathValue(invoice, candidate);
+    if (!isNullish(resolved)) {
+      return resolved;
     }
-    cursor = (cursor as Record<string, unknown>)[segment];
   }
-  return cursor;
+  return null;
 };
 
 export const normalizeFieldFormat = normalizeTemplateFieldFormat;

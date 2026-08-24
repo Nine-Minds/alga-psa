@@ -23,7 +23,6 @@ const createInvoiceRootSchema = (): SharedExpressionSchemaNode => ({
     poNumber: { type: 'string', description: 'Purchase order number.' },
     subtotal: { type: 'number', description: 'Subtotal before tax and discounts.' },
     tax: { type: 'number', description: 'Tax amount.' },
-    discount: { type: 'number', description: 'Discount amount.' },
     total: { type: 'number', description: 'Final invoice total.' },
     currencyCode: { type: 'string', description: 'Invoice currency code.' },
   },
@@ -51,171 +50,17 @@ const createItemSchema = (): SharedExpressionSchemaNode => ({
   },
 });
 
-const createQuoteRootSchema = (): SharedExpressionSchemaNode => ({
-  type: 'object',
-  properties: {
-    quoteNumber: { type: 'string', description: 'Primary quote identifier.' },
-    quoteDate: { type: 'string', description: 'Date the quote was issued.' },
-    validUntil: { type: 'string', description: 'Quote expiration date.' },
-    status: { type: 'string', description: 'Current quote status.' },
-    title: { type: 'string', description: 'Quote title.' },
-    scope: { type: 'string', description: 'Scope of work.' },
-    poNumber: { type: 'string', description: 'Purchase order number.' },
-    subtotal: { type: 'number', description: 'Quote subtotal before tax.' },
-    discountTotal: { type: 'number', description: 'Discount amount.' },
-    tax: { type: 'number', description: 'Quote tax amount.' },
-    total: { type: 'number', description: 'Final quote total.' },
-    termsAndConditions: { type: 'string', description: 'Terms and conditions.' },
-    clientNotes: { type: 'string', description: 'Client-facing notes.' },
-    version: { type: 'number', description: 'Quote revision number.' },
-    acceptedByName: { type: 'string', description: 'Name of the accepting contact or user.' },
-    acceptedAt: { type: 'string', description: 'Acceptance timestamp.' },
-  },
-  required: ['quoteNumber', 'title', 'total'],
-});
-
-const createQuoteTotalsSchema = (): SharedExpressionSchemaNode => ({
-  type: 'object',
-  properties: {
-    recurringSubtotal: { type: 'number', description: 'Subtotal for recurring line items.' },
-    recurringTax: { type: 'number', description: 'Tax for recurring line items.' },
-    recurringTotal: { type: 'number', description: 'Total for recurring line items.' },
-    onetimeSubtotal: { type: 'number', description: 'Subtotal for one-time line items.' },
-    onetimeTax: { type: 'number', description: 'Tax for one-time line items.' },
-    onetimeTotal: { type: 'number', description: 'Total for one-time line items.' },
-    serviceSubtotal: { type: 'number', description: 'Subtotal for service line items.' },
-    serviceTax: { type: 'number', description: 'Tax for service line items.' },
-    serviceTotal: { type: 'number', description: 'Total for service line items.' },
-    productSubtotal: { type: 'number', description: 'Subtotal for product line items.' },
-    productTax: { type: 'number', description: 'Tax for product line items.' },
-    productTotal: { type: 'number', description: 'Total for product line items.' },
-  },
-});
-
-const createQuoteItemSchema = (): SharedExpressionSchemaNode => ({
-  type: 'object',
-  properties: {
-    description: { type: 'string', description: 'Quote line item description.' },
-    quantity: { type: 'number', description: 'Quote line item quantity.' },
-    unitPrice: { type: 'number', description: 'Quote line item unit price.' },
-    total: { type: 'number', description: 'Quote line item total.' },
-    billingFrequency: { type: 'string', description: 'Recurring billing frequency.' },
-    recurring: { type: 'boolean', description: 'Whether the line item is recurring.' },
-    serviceKind: { type: 'string', description: 'Whether the line item is a service or product.' },
-  },
-});
-
-const createSalesOrderRootSchema = (): SharedExpressionSchemaNode => ({
-  type: 'object',
-  properties: {
-    orderNumber: { type: 'string', description: 'Primary sales order identifier.' },
-    orderDate: { type: 'string', description: 'Date the order was placed.' },
-    expectedShipDate: { type: 'string', description: 'Expected ship date.' },
-    status: { type: 'string', description: 'Current sales order status.' },
-    poNumber: { type: 'string', description: "Customer's purchase order number." },
-    currencyCode: { type: 'string', description: 'Order currency code.' },
-    notes: { type: 'string', description: 'Order notes.' },
-    subtotal: { type: 'number', description: 'Order subtotal before tax.' },
-    tax: { type: 'number', description: 'Order tax amount.' },
-    total: { type: 'number', description: 'Order total.' },
-  },
-  required: ['orderNumber', 'total'],
-});
-
-const createSalesOrderItemSchema = (): SharedExpressionSchemaNode => ({
-  type: 'object',
-  properties: {
-    description: { type: 'string', description: 'Line description (product name).' },
-    service_name: { type: 'string', description: 'Product / service name.' },
-    service_sku: { type: 'string', description: 'Product SKU.' },
-    quantity_ordered: { type: 'number', description: 'Quantity ordered.' },
-    quantity_fulfilled: { type: 'number', description: 'Quantity fulfilled so far.' },
-    unit_price: { type: 'number', description: 'Unit price.' },
-    amount: { type: 'number', description: 'Line amount (qty × unit price).' },
-  },
-});
-
+/**
+ * The invoice roots below are the default menu. Document types whose fields live in a binding
+ * catalog (quote, sales order, and the packing slip / pick list that reuse it) inject generated
+ * roots through `contextRoots` — those catalogs live in packages/billing, and the dependency only
+ * ever runs billing -> shared.
+ */
 export const buildInvoiceExpressionContextRoots = (params: {
-  documentKind?: 'invoice' | 'quote' | 'sales-order';
+  contextRoots?: SharedExpressionContextRoot[];
 } = {}): SharedExpressionContextRoot[] => {
-  if (params.documentKind === 'sales-order') {
-    return [
-      {
-        key: 'salesOrder',
-        label: 'Sales Order',
-        description: 'Sales order-level fields',
-        schema: createSalesOrderRootSchema(),
-        allowInModes: ['path-only', 'template'],
-      },
-      {
-        key: 'customer',
-        label: 'Customer',
-        description: 'Customer fields',
-        schema: createPartySchema('Customer'),
-        allowInModes: ['path-only', 'template'],
-      },
-      {
-        key: 'tenant',
-        label: 'Tenant',
-        description: 'Tenant fields',
-        schema: createPartySchema('Tenant'),
-        allowInModes: ['path-only', 'template'],
-      },
-      {
-        key: 'item',
-        label: 'Line Item',
-        description: 'Sales order line item fields for repeating/table contexts',
-        schema: createSalesOrderItemSchema(),
-        allowInModes: ['path-only', 'template'],
-      },
-    ];
-  }
-
-  if (params.documentKind === 'quote') {
-    return [
-      {
-        key: 'quote',
-        label: 'Quote',
-        description: 'Quote-level fields',
-        schema: createQuoteRootSchema(),
-        allowInModes: ['path-only', 'template'],
-      },
-      {
-        key: 'quoteTotals',
-        label: 'Quote Totals',
-        description: 'Recurring, one-time, service, and product totals.',
-        schema: createQuoteTotalsSchema(),
-        allowInModes: ['path-only', 'template'],
-      },
-      {
-        key: 'client',
-        label: 'Client',
-        description: 'Client fields',
-        schema: createPartySchema('Client'),
-        allowInModes: ['path-only', 'template'],
-      },
-      {
-        key: 'contact',
-        label: 'Contact',
-        description: 'Contact fields',
-        schema: createPartySchema('Contact'),
-        allowInModes: ['path-only', 'template'],
-      },
-      {
-        key: 'tenant',
-        label: 'Tenant',
-        description: 'Tenant fields',
-        schema: createPartySchema('Tenant'),
-        allowInModes: ['path-only', 'template'],
-      },
-      {
-        key: 'item',
-        label: 'Line Item',
-        description: 'Quote line item fields for repeating/table contexts',
-        schema: createQuoteItemSchema(),
-        allowInModes: ['path-only', 'template'],
-      },
-    ];
+  if (params.contextRoots && params.contextRoots.length > 0) {
+    return params.contextRoots;
   }
 
   return [
@@ -253,9 +98,9 @@ export const buildInvoiceExpressionContextRoots = (params: {
 export const buildInvoiceExpressionPathOptions = (params: {
   mode?: ExpressionMode;
   includeRootPaths?: boolean;
-  documentKind?: 'invoice' | 'quote' | 'sales-order';
+  contextRoots?: SharedExpressionContextRoot[];
 } = {}): SharedExpressionPathOption[] =>
   buildPathOptionsFromContextRoots(
-    buildInvoiceExpressionContextRoots({ documentKind: params.documentKind }),
+    buildInvoiceExpressionContextRoots({ contextRoots: params.contextRoots }),
     params
   );

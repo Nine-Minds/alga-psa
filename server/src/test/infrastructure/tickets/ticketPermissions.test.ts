@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import {
   setupCommonMocks,
   mockNextHeaders,
@@ -9,6 +9,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { ITicket } from '../../interfaces/ticket.interfaces';
 import * as ticketActions from '@alga-psa/tickets/actions/ticketActions';
+import * as auth from '@alga-psa/auth';
 import { TestContext } from '../../../../test-utils/testContext';
 import {
   createTenant,
@@ -17,19 +18,25 @@ import {
   createTestEnvironment
 } from '../../../../test-utils/testDataFactory';
 import {
-  resetDatabase,
-  createCleanupHook,
-  cleanupTables
-} from '../../../../test-utils/dbReset';
-import {
   expectPermissionDenied,
   expectError
 } from '../../../../test-utils/errorUtils';
 import { tenantDb } from '@alga-psa/db';
 
+// Every ticket action is withAuth-wrapped, so the acting user comes from the
+// session rather than from an argument. Without this mock the real withAuth
+// resolves whatever the session stub points at, and both fixtures were denied.
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../test-utils/authModuleMock');
+  return createAuthModuleMock();
+});
+
 describe('Ticket Permissions Infrastructure', () => {
   const context = new TestContext({
-    cleanupTables: ['tickets', 'categories', 'boards', 'contacts', 'clients', 'users', 'roles', 'permissions'],
+    // No cleanupTables: each test runs in a transaction that is rolled back, and
+    // TRUNCATE ... CASCADE on clients/users took the seeded statuses and
+    // priorities with it — every fixture lookup then failed for the rest of the
+    // file.
     runSeeds: true
   });
   let testTicket: ITicket;
@@ -59,13 +66,16 @@ describe('Ticket Permissions Infrastructure', () => {
   });
 
   beforeEach(async () => {
-    // Reset database state
-    await resetDatabase(context.db);
+    // Roll the per-test transaction back and open a fresh one. resetDatabase()
+    // used to run here: it destroys the handle it is given and drops the
+    // database out from under the context, so every query after the first
+    // beforeEach failed with "not queryable".
+    await context.reset();
 
-    // Set up common test environment
-    const { tenantId, clientId } = await createTestEnvironment(context.db, {
-      clientName: 'Test Client'
-    });
+    // Use the seeded tenant: createTestEnvironment mints a fresh one, which has
+    // none of the seeded statuses or priorities these fixtures look up.
+    const tenantId = context.tenantId;
+    const clientId = context.clientId;
 
     // Create users with different roles
     const regularUserId = await createUser(context.db, tenantId, {
@@ -130,7 +140,9 @@ describe('Ticket Permissions Infrastructure', () => {
       created_by: adminUser.user_id,
     });
 
-    // Create status
+    // Create status. board_id is required: creating a ticket validates that
+    // its status belongs to its board (TicketModel.validateStatusBelongsToBoard),
+    // and a boardless status fails that check.
     statusId = uuidv4();
     const uniqueOrderNumber = Math.floor(Date.now() / 1000) % 1000000 + Math.floor(Math.random() * 1000);
     await tenantTable(tenantId, 'statuses').insert({
@@ -139,6 +151,7 @@ describe('Ticket Permissions Infrastructure', () => {
       tenant: tenantId,
       created_by: adminUser.user_id,
       status_type: 'ticket',
+      board_id: boardId,
       order_number: uniqueOrderNumber
     });
 
@@ -176,23 +189,21 @@ describe('Ticket Permissions Infrastructure', () => {
       updated_at: null,
       closed_at: null,
       attributes: null,
-      priority_id: priorityId,
-      estimated_hours: undefined
+      priority_id: priorityId
     };
 
     await tenantTable(tenantId, 'tickets').insert(testTicket);
   });
 
-  // Use cleanup hook for test isolation
-  afterEach(async () => {
-    await createCleanupHook(context.db, [
-      'tickets', 'categories', 'boards', 'contacts',
-      'clients', 'users', 'roles', 'permissions'
-    ])();
-  });
+  // No cleanup hook: beforeEach rolls the per-test transaction back, which
+  // already discards every fixture row. Deleting them by hand instead hit
+  // role_permissions' foreign key on `permissions`, and that error aborts the
+  // surrounding transaction — every later statement in the hook then failed
+  // with "current transaction is aborted".
 
   it('should allow regular user to view tickets', async () => {
-    const tickets = await ticketActions.getTickets(regularUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
+    const tickets = await ticketActions.getTickets();
     expect(tickets.length).toBeGreaterThanOrEqual(1);
     expect(tickets.map((ticket): string => ticket.ticket_id!)).toContain(testTicket.ticket_id);
   });
@@ -202,7 +213,8 @@ describe('Ticket Permissions Infrastructure', () => {
       status_id: statusId,
       updated_by: adminUser.user_id,
     };
-    const result = await ticketActions.updateTicket(testTicket.ticket_id!, updateData, adminUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(adminUser);
+    const result = await ticketActions.updateTicket(testTicket.ticket_id!, updateData);
     expect(result).toBe('success');
 
     const updatedTicket = await tenantTable(testTicket.tenant, 'tickets').where('ticket_id', testTicket.ticket_id).first();
@@ -215,8 +227,9 @@ describe('Ticket Permissions Infrastructure', () => {
       updated_by: regularUser.user_id,
     };
 
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
     await expectPermissionDenied(
-      () => ticketActions.updateTicket(testTicket.ticket_id!, updateData, regularUser)
+      () => ticketActions.updateTicket(testTicket.ticket_id!, updateData)
     );
 
     const unchangedTicket = await tenantTable(testTicket.tenant, 'tickets').where('ticket_id', testTicket.ticket_id).first();
@@ -234,7 +247,8 @@ describe('Ticket Permissions Infrastructure', () => {
     mockFormData.append('category_id', categoryId);
     mockFormData.append('priority_id', priorityId);
 
-    const newTicket = await ticketActions.addTicket(mockFormData, adminUser);
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(adminUser);
+    const newTicket = await ticketActions.addTicket(mockFormData);
     expect(newTicket).toBeDefined();
     expect(newTicket?.title).toBe('New Test Ticket');
 
@@ -257,8 +271,9 @@ describe('Ticket Permissions Infrastructure', () => {
     mockFormData.append('category_id', categoryId);
     mockFormData.append('priority_id', priorityId);
 
+    vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);
     await expectPermissionDenied(
-      () => ticketActions.addTicket(mockFormData, regularUser)
+      () => ticketActions.addTicket(mockFormData)
     );
   });
 });

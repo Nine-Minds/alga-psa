@@ -330,7 +330,15 @@
       "orderedList": "Nummerierte Liste",
       "quote": "Blockzitat",
       "link": "Verknüpfung",
-      "linkPrompt": "URL"
+      "image": "Bild einfügen",
+      "linkPrompt": "URL",
+      "imagePrompt": "Bild-URL"
+    },
+    "imageUpload": {
+      "failed": "Bild-Upload fehlgeschlagen",
+      "tooLarge": "Das Bild überschreitet das Upload-Limit von 10 MB",
+      "notAnImage": "Nur Bilddateien können in den Editor eingefügt werden",
+      "noSession": "Melden Sie sich erneut an, um Bilder hochzuladen"
     }
   },
   "form": {

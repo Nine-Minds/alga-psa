@@ -37,6 +37,18 @@ import {
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
 
+// These actions are also driven from background jobs and from the billing
+// bootstrap, where there is no Next.js request context and revalidatePath
+// throws "Invariant: static generation store missing". Cache invalidation is
+// best-effort, so it must never fail the period write that just committed.
+function safeRevalidate(path: string): void {
+  try {
+    revalidatePath(path);
+  } catch (error) {
+    logger.warn(`[timePeriodsActions] Failed to revalidate path "${path}":`, error instanceof Error ? error.message : error);
+  }
+}
+
 // Input type for server actions - accepts string dates (Next.js can't serialize Temporal.PlainDate)
 interface TimePeriodInput {
   start_date: string;
@@ -174,12 +186,7 @@ export const createTimePeriod = withAuth(async (
       const timePeriod = await TimePeriod.create(trx, tenant, timePeriodData);
       const validatedPeriod = validateData(timePeriodSchema, timePeriod);
 
-      // revalidatePath only works in request context, not from background jobs
-      try {
-        revalidatePath('/msp/time-entry');
-      } catch {
-        // Ignore revalidation errors when called outside request context (e.g., from jobs)
-      }
+      safeRevalidate('/msp/time-entry');
 
       return toTimePeriodView(validatedPeriod);
     } catch (error) {
@@ -357,6 +364,33 @@ function getEndOfPeriod(startDate: string, setting: ITimePeriodSettings): Tempor
   }
 }
 
+// Start of the period that follows the one beginning at currentStart, for
+// settings whose end day is fixed rather than the end of the period.
+function getNextPeriodStart(
+  currentStart: Temporal.PlainDate,
+  setting: ITimePeriodSettings
+): Temporal.PlainDate {
+  const frequency = setting.frequency || 1;
+
+  switch (setting.frequency_unit) {
+    case 'week':
+      return currentStart.add({ days: 7 * frequency });
+
+    case 'month': {
+      const next = currentStart.add({ months: frequency });
+      return setting.start_day
+        ? next.with({ day: Math.min(setting.start_day, next.daysInMonth) })
+        : next;
+    }
+
+    case 'year':
+      return currentStart.add({ years: frequency });
+
+    default:
+      return currentStart.add({ days: frequency });
+  }
+}
+
 // Modify the generateTimePeriods function
 export async function generateTimePeriods(
   settings: ITimePeriodSettings[],
@@ -418,13 +452,18 @@ export async function generateTimePeriods(
       };
       periods.push(newPeriod);
 
-      if (setting.end_day !== END_OF_PERIOD) {
-        // if the end day is not END_OF_PERIOD, we need to adjust the current date to the end of the period
-        currentDate = periodEndDate;
-        continue;
+      // A period that ends on a fixed day of the month (the 15th, say) does not
+      // chain: the next one starts at the next occurrence of start_day. Walking
+      // to periodEndDate instead recomputed the same end date from the same
+      // date forever — an infinite loop that filled the heap.
+      const chainsToItsEnd = setting.end_day === undefined || setting.end_day === END_OF_PERIOD;
+      const nextDate = chainsToItsEnd ? periodEndDate : getNextPeriodStart(currentDate, setting);
+
+      if (Temporal.PlainDate.compare(nextDate, currentDate) <= 0) {
+        break;
       }
 
-      currentDate = periodEndDate;
+      currentDate = nextDate;
     }
   }
 
@@ -467,7 +506,7 @@ export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: str
 
     try {
       await TimePeriod.delete(knex, tenant, periodId);
-      revalidatePath('/msp/time-entry');
+      safeRevalidate('/msp/time-entry');
     } catch (error: any) {
       if (error.message.includes('belongs to different tenant')) {
         throw new Error('Access denied: Cannot delete time period');
@@ -556,7 +595,7 @@ export const deleteTimePeriods = withAuth(async (
   }
 
   if (deletedIds.length > 0) {
-    revalidatePath('/msp/time-entry');
+    safeRevalidate('/msp/time-entry');
   }
 
   return { deletedIds, failed };
@@ -606,7 +645,7 @@ export const updateTimePeriod = withAuth(async (
         const updatedPeriod = await TimePeriod.update(trx, tenant, periodId, updates);
         const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
 
-        revalidatePath('/msp/time-entry');
+        safeRevalidate('/msp/time-entry');
         return toTimePeriodView(validatedPeriod);
       } catch (error: any) {
         if (error.message.includes('belongs to different tenant')) {
@@ -665,7 +704,7 @@ export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, sta
       }));
       const validatedPeriods = validateArray(timePeriodSchema, savedPeriods);
 
-      revalidatePath('/msp/time-entry');
+      safeRevalidate('/msp/time-entry');
       return validatedPeriods.map((period): ITimePeriodView => toTimePeriodView(period));
     } catch (error) {
       const expected = timePeriodActionErrorFrom(error);
