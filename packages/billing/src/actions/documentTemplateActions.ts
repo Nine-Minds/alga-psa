@@ -31,6 +31,8 @@ import {
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
+import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
+import { overlaySalesOrderSampleTenant } from '../components/invoice-designer/preview/tenantBrandingOverlay';
 
 /**
  * Generic, document-type-keyed template management (Approach C). One set of actions serves every
@@ -189,7 +191,7 @@ export const deleteDocumentTemplate = withAuth(
 export const runAuthoritativeTemplatePreview = withAuth(
   async (
     user,
-    { tenant: _tenant },
+    { tenant },
     documentType: string,
     templateAst: TemplateAst,
     locale?: string,
@@ -203,7 +205,11 @@ export const runAuthoritativeTemplatePreview = withAuth(
     }
     const sample = getDocumentTypeRegistryEntry(type).buildSampleViewModel();
     const { knex } = await createTenantKnex();
-    const evaluation = evaluateTemplateAst(templateAst, sample, {
+    // Show the tenant's real "Your Company" branding on the sample, resolved through the same adapter
+    // the live document uses. Null branding keeps the sample's synthetic issuer.
+    const tenantParty = await fetchTenantParty(knex, tenant).catch(() => null);
+    const previewModel = overlaySalesOrderSampleTenant(sample, tenantParty);
+    const evaluation = evaluateTemplateAst(templateAst, previewModel, {
       bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES,
     });
     const html = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
