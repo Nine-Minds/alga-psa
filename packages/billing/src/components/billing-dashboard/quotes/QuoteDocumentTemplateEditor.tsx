@@ -31,6 +31,7 @@ import {
 import {
   createInitialPreviewSessionState,
   previewSessionReducer,
+  type PreviewSessionState,
   type PreviewSourceKind,
 } from '../../invoice-designer/preview/previewSessionState';
 import {
@@ -66,6 +67,11 @@ const useDebouncedValue = <T,>(value: T, delayMs: number) => {
   }, [value, delayMs]);
   return debounced;
 };
+
+const createInitialQuotePreviewSessionState = (): PreviewSessionState<QuoteViewModel> => ({
+  ...createInitialPreviewSessionState<QuoteViewModel>(),
+  selectedSampleId: DEFAULT_QUOTE_PREVIEW_SAMPLE_ID,
+});
 
 const buildPreviewSourceOptions = (
   t: (key: string, options?: Record<string, unknown>) => string,
@@ -104,10 +110,12 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
   const [designerHydratedFor, setDesignerHydratedFor] = useState<string | null>(null);
 
   // Preview state — the session carries the loaded quote when previewing an existing document.
+  // The shared session seeds the invoice designer's default sample id, so a quote designer has to
+  // seed its own scenario for the sample preview to render as soon as the tab opens.
   const [previewState, dispatch] = useReducer(
     previewSessionReducer<QuoteViewModel>,
     undefined,
-    createInitialPreviewSessionState<QuoteViewModel>,
+    createInitialQuotePreviewSessionState,
   );
   const [authoritativePreview, setAuthoritativePreview] = useState<
     Awaited<ReturnType<typeof runAuthoritativeQuoteTemplatePreview>> | null

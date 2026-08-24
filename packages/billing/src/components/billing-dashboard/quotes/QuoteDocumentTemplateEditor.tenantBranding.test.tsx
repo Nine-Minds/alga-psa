@@ -75,12 +75,9 @@ import QuoteDocumentTemplateEditor from './QuoteDocumentTemplateEditor';
 const latestPreviewTenant = () =>
   runAuthoritativeQuoteTemplatePreviewMock.mock.calls.at(-1)?.[0]?.quoteData?.tenant;
 
-// The session reducer seeds the invoice sample id, so a quote scenario has to be picked before the
-// preview pipeline has data to run against.
+// The editor seeds a quote scenario, so opening the tab is enough for the pipeline to have data.
 const openPreviewWithSampleScenario = async () => {
   fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
-  fireEvent.click(screen.getByRole('combobox', { name: 'Select scenario...' }));
-  fireEvent.click(await screen.findByText('Simple Quote'));
 };
 
 describe('QuoteDocumentTemplateEditor tenant branding preview', () => {
@@ -105,6 +102,18 @@ describe('QuoteDocumentTemplateEditor tenant branding preview', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('opens on a quote sample scenario so the branded preview renders immediately', async () => {
+    render(<QuoteDocumentTemplateEditor templateId={null} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
+
+    expect(screen.getByText('Simple Quote')).toBeTruthy();
+    await waitFor(() =>
+      expect(runAuthoritativeQuoteTemplatePreviewMock.mock.calls.at(-1)?.[0]?.quoteData?.quote_number).toBe(
+        'QT-2026-0042'
+      )
+    );
   });
 
   it('renders the tenant real branding on the sample quote preview', async () => {

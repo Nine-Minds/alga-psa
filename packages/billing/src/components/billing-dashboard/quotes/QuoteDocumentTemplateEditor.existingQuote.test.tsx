@@ -165,11 +165,11 @@ describe('QuoteDocumentTemplateEditor existing-quote preview', () => {
   it('swaps the sample scenario picker for a quote picker in Existing mode', async () => {
     openPreviewTab();
 
-    expect(screen.getByRole('combobox', { name: 'Select scenario...' })).toBeTruthy();
+    expect(screen.getByText('Sample Scenario')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
 
-    expect(screen.queryByRole('combobox', { name: 'Select scenario...' })).toBeNull();
+    expect(screen.queryByText('Sample Scenario')).toBeNull();
     // Shown both beside the picker and in the render area until a quote is chosen.
     expect(screen.getAllByText('Select a quote to preview data-bound output.').length).toBeGreaterThan(0);
 
@@ -209,7 +209,12 @@ describe('QuoteDocumentTemplateEditor existing-quote preview', () => {
     fireEvent.click(await screen.findByText('QT-2026-0100 · Acme Co.'));
 
     expect(await screen.findByText('Could not load quote details for preview.')).toBeTruthy();
-    expect(runAuthoritativeQuoteTemplatePreviewMock).not.toHaveBeenCalled();
+    // The sample scenario the editor opens on may have rendered; the unloadable quote must not.
+    expect(
+      runAuthoritativeQuoteTemplatePreviewMock.mock.calls.some(
+        (call) => call[0]?.quoteData?.quote_number === 'QT-2026-0100'
+      )
+    ).toBe(false);
   });
 
   it('guards against stale quote detail responses when the selection changes quickly', async () => {
