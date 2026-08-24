@@ -296,3 +296,66 @@ dists via `nx build-deps`; run it, then bounce onto the right port.)
 Order matters with the boot password rewrite too: the banner password is
 minted *during* boot, so the documented `Bcc2ae7e4ed875!` has to be written
 back **after** the server is up, not before, or the boot overwrites it again.
+
+## Review round: authorization, scoping, and the null-client call
+
+Six findings from review, all fixed in product code, none structural.
+
+**`getTelephonyOverview` had no authorization at all.** `withAuth` only
+authenticates. The action returns recent + unresolved call records — counterparty
+numbers, matched contact and client names, ticket ids — so any authenticated
+tenant user, client-portal included, could read the tenant-wide call log by
+calling it directly. It now takes the same gate as `getTeamsIntegrationStatus`,
+the surface it lives under: client portal refused, `system_settings:update`
+required. `resolveTelephonyCall` was in the same shape and now shares the gate,
+because stamping attribution and minting an interaction is a manage action.
+
+**`linkTelephonyCallToTicket` trusted its `ticketId`.** The picker scopes to the
+call's matched client, but the mutation never re-checked, so a direct call could
+cross-link a call interaction onto another client's ticket. It re-reads the
+ticket's `client_id` inside the transaction now.
+
+**Add-on entitlement was only checked on the read path.** Every mutating and
+listing action used `resolveTelephonyAvailability` (edition + tenant context)
+while only the overview used `getTelephonyAvailability`. Ingestion is
+deny-by-default so no calls flowed, but provider activation and subscription
+creation were reachable without the Teams add-on. All of them consult the
+entitlement-aware helper now.
+
+**A matched contact with no client aborted ingestion and lost the call.**
+`contacts.client_id` is nullable by design, `matchCallParty` happily returns
+`matched` with `clientId: null`, and `createInteractionRecord` throws
+"Interactions must be linked to a client" — inside `withTransaction`, so the
+ledger insert rolled back with it and every retry lost the call again. The
+interaction is skipped instead (`resolveInteractionClientId` is the shared
+resolution both ingest and resolve use), the ledger row survives, and the
+"calls needing attribution" query widened from `match_status IN
+(unmatched, ambiguous)` to *any* call with no interaction and no client, so an
+attributed-but-unfilable call is not a dead end. Manual resolve to such a
+contact now says so rather than recording a resolution that appears nowhere.
+
+Verified against `server_mc9`, not just fakes: a contact with `client_id NULL`
+plus a phone number, ingested twice — `created: true` then `created: false`,
+one ledger row, zero interactions, and the warning in the log. The same script
+on the pre-fix commit threw inside the transaction and persisted nothing.
+
+**The refusal needed a voice.** With the overview refusing, the panel fell
+through to the Teams add-on paywall, i.e. told someone who may not see the call
+log to go buy something. It renders its own message now.
+
+**Contrast.** The sub-nav active tab was `--color-primary-700` on
+`--color-primary-50`: fine in light, 3.95:1 once the ramp inverts. `-900` ink is
+the pair already proven across all eighteen theme-modes (11.8:1 measured live in
+dark). This was the branch's only red server unit test.
+
+**F060 was half-delivered.** Presets existed as control actions only, so replay
+still meant copying JSON by hand — exactly the chore they were meant to remove.
+The console now carries a preset row on every seeder: save the form as typed,
+load it back, load & seed, delete. `collectParams` and its new inverse
+`fillParams` are shared by the submit handler and the row. Verified in a real
+browser against an isolated host on :9577 (never the shared container).
+
+**Landmine — glossary vs. the obvious translation.** "for this tenant" wants
+"organizacja" in Polish; "najemca" is a forbidden term (a party to a lease).
+`npm run test:i18n` catches it, but only after the pseudo-locale regeneration
+step, so run the whole script rather than the audit alone.
