@@ -48,6 +48,16 @@ export function formatContactCsvPrimaryEmailType(
   return contact.primary_email_type?.trim() || contact.primary_email_canonical_type || 'work';
 }
 
+/**
+ * `|` separates entries and the first `:` separates label from address, so a
+ * custom label containing either character makes the exported cell unparseable
+ * — and re-importing it drops the address entirely. Fold both to a space: the
+ * label degrades, the address survives the round trip.
+ */
+function sanitizeContactCsvEmailLabel(label: string): string {
+  return label.replace(/[|:]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 export function formatContactCsvAdditionalEmailAddresses(
   rows: Array<Pick<ContactEmailAddressInput, 'email_address' | 'canonical_type' | 'custom_type'>> | undefined
 ): string {
@@ -57,7 +67,8 @@ export function formatContactCsvAdditionalEmailAddresses(
 
   return rows
     .map((row) => {
-      const label = row.custom_type?.trim() || row.canonical_type || 'other';
+      const rawLabel = row.custom_type?.trim() || row.canonical_type || 'other';
+      const label = sanitizeContactCsvEmailLabel(rawLabel) || 'other';
       return `${label}: ${row.email_address}`;
     })
     .join(' | ');

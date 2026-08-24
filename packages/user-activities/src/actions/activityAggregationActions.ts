@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Argument count issues
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
@@ -32,8 +30,8 @@ import { fetchWorkflowTaskActivities } from '@alga-psa/user-activities/server/wo
 export { fetchWorkflowTaskActivities };
 
 // Configurable notification priorities (task 29.8.46): map the stored priority
-// to the activity tier, with legacy type-fallback. Extracted to a typed module
-// so it is unit-testable outside this @ts-nocheck file.
+// to the activity tier, with legacy type-fallback. Kept in its own typed module
+// so it stays independently unit-testable.
 import { mapStoredNotificationPriority } from './notificationPriority';
 
 // Enhanced in-memory cache implementation with different TTLs and invalidation
@@ -101,18 +99,24 @@ async function filterScheduleEntriesByClient<T extends ScheduleEntryWorkItemLink
   entries: T[],
   clientId: string
 ): Promise<T[]> {
+  // The truthiness check inside filter() does not narrow the mapped element
+  // type, so these collapsed to (string | null | undefined)[] and knex resolved
+  // whereIn() to its composite-column overload. Narrow after mapping instead.
+  const isId = (id: unknown): id is string => typeof id === 'string' && id.length > 0;
   const ticketIds = [
     ...new Set(
       entries
-        .filter((entry) => entry.work_item_type === 'ticket' && entry.work_item_id)
+        .filter((entry) => entry.work_item_type === 'ticket')
         .map((entry) => entry.work_item_id)
+        .filter(isId)
     ),
   ];
   const projectTaskIds = [
     ...new Set(
       entries
-        .filter((entry) => entry.work_item_type === 'project_task' && entry.work_item_id)
+        .filter((entry) => entry.work_item_type === 'project_task')
         .map((entry) => entry.work_item_id)
+        .filter(isId)
     ),
   ];
 
@@ -618,7 +622,7 @@ export async function fetchScheduleActivities(
     let filteredActivities = activities;
     if (filters.priority && filters.priority.length > 0) {
       const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
-      filteredActivities = activities.filter(activity =>
+      filteredActivities = activities.filter((activity: Activity) =>
         normalizedFilterPriorities.includes(activity.priority.toLowerCase())
       );
     }
@@ -639,6 +643,20 @@ export async function fetchScheduleActivities(
 /**
  * Fetch project task activities for a user
  */
+/**
+ * ISO-format a stored timestamp, or return null when it cannot be read.
+ *
+ * `new Date('nonsense').toISOString()` throws, and every fetcher here wraps its
+ * whole body in a catch that returns []. Unguarded, a single unreadable date on
+ * one row empties the entire section of the dashboard instead of dropping one
+ * field. The ticket fetcher already guards this inline; this is the same rule.
+ */
+function toIsoOrNull(value: unknown): string | null {
+  if (!value) return null;
+  const date = new Date(value as string);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 export async function fetchProjectActivities(
   userId: string,
   tenantId: string,
@@ -906,7 +924,7 @@ export async function fetchProjectActivities(
         priority,
         priorityName: task.priority_name || undefined,
         priorityColor: task.priority_color || undefined,
-        dueDate: task.due_date ? new Date(task.due_date).toISOString() : undefined,
+        dueDate: toIsoOrNull(task.due_date) ?? undefined,
         assignedTo: task.assigned_to ? [task.assigned_to] : [],
         sourceId: task.task_id,
         sourceType: ActivityType.PROJECT_TASK,
@@ -923,8 +941,8 @@ export async function fetchProjectActivities(
           { id: 'edit', label: 'Edit' }
         ],
         tenant: task.tenant,
-        createdAt: task.created_at ? new Date(task.created_at).toISOString() : new Date().toISOString(),
-        updatedAt: task.updated_at ? new Date(task.updated_at).toISOString() : new Date().toISOString()
+        createdAt: toIsoOrNull(task.created_at) ?? new Date().toISOString(),
+        updatedAt: toIsoOrNull(task.updated_at) ?? new Date().toISOString()
       };
     });
 
@@ -932,7 +950,7 @@ export async function fetchProjectActivities(
     let filteredActivities = activities;
     if (filters.priority && filters.priority.length > 0) {
       const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
-      filteredActivities = activities.filter(activity =>
+      filteredActivities = activities.filter((activity: Activity) =>
         normalizedFilterPriorities.includes(activity.priority.toLowerCase())
       );
     }
@@ -1144,7 +1162,7 @@ export async function fetchTicketActivities(
     let filteredActivities = activities;
     if (filters.priority && filters.priority.length > 0) {
       const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
-      filteredActivities = activities.filter(activity =>
+      filteredActivities = activities.filter((activity: Activity) =>
         normalizedFilterPriorities.includes(activity.priority.toLowerCase())
       );
     }
@@ -1241,7 +1259,7 @@ export async function fetchTimeEntryActivities(
     let filteredActivities = activities;
     if (filters.priority && filters.priority.length > 0) {
       const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
-      filteredActivities = activities.filter(activity =>
+      filteredActivities = activities.filter((activity: Activity) =>
         normalizedFilterPriorities.includes(activity.priority.toLowerCase())
       );
     }

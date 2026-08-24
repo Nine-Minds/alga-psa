@@ -6,6 +6,7 @@ import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
+import { parseClientCsvBoolean } from '../lib/clientCsvFields';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
@@ -1682,8 +1683,7 @@ export const importClientsFromCSV = withAuth(async (
     return country;
   };
 
-  const parseCsvBoolean = (value: unknown): boolean =>
-    value === true || value === 'true' || value === 'Yes';
+  const parseCsvBoolean = parseClientCsvBoolean;
 
   const hasLocationData = (row: Record<string, any>): boolean =>
     Boolean(row.email || row.phone_number || row.address_line1 || row.city || row.location_name);
