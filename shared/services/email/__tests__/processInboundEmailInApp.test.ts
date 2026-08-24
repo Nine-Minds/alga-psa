@@ -17,6 +17,13 @@ const createCommentFromEmailMock = vi.fn();
 const processEmailAttachmentMock = vi.fn();
 const processInboundEmailArtifactsBestEffortMock = vi.fn();
 
+// Rows returned by the inbound reply-reopen policy lookup (loadInboundReplyPolicyContext).
+// The thread-header hijack guard authorizes a thread-header reply only when the
+// sender is the ticket's own client contact / internal user / active watcher, so
+// tests that exercise the legitimate reply path seed the ticket (with its client)
+// here. Reset per test in beforeEach.
+const reopenPolicyRows: { ticket?: unknown; board?: unknown; status?: unknown } = {};
+
 function buildEmailData(
   overrides: Partial<EmailMessageDetails> = {}
 ): EmailMessageDetails {
@@ -91,16 +98,26 @@ describe('processInboundEmailInApp', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    reopenPolicyRows.ticket = undefined;
+    reopenPolicyRows.board = undefined;
+    reopenPolicyRows.status = undefined;
+
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
+        if (table === 'tickets') {
+          return makeQueryBuilder(reopenPolicyRows.ticket);
+        }
+        if (table === 'boards') {
+          return makeQueryBuilder(reopenPolicyRows.board);
+        }
+        if (table === 'statuses') {
+          return makeQueryBuilder(reopenPolicyRows.status);
+        }
         if (
           table === 'tickets as t' ||
           table === 'comments as c' ||
           table === 'email_sending_logs' ||
-          table === 'comment_threads' ||
-          table === 'tickets' ||
-          table === 'statuses' ||
-          table === 'boards'
+          table === 'comment_threads'
         ) {
           return makeQueryBuilder(undefined);
         }
@@ -392,6 +409,23 @@ describe('processInboundEmailInApp', () => {
       name: 'Client Contact',
       client_name: 'Client Co',
     });
+    // Sender is the ticket's own client contact, so the thread-header hijack
+    // guard authorizes the reply rather than quarantining it.
+    reopenPolicyRows.ticket = {
+      ticket_id: 'ticket-thread-123',
+      board_id: 'board-id',
+      status_id: null,
+      is_closed: false,
+      closed_at: null,
+      client_id: 'client-123',
+      attributes: {},
+    };
+    reopenPolicyRows.board = {
+      inbound_reply_reopen_enabled: false,
+      inbound_reply_reopen_cutoff_hours: 168,
+      inbound_reply_reopen_status_id: null,
+      inbound_reply_ai_ack_suppression_enabled: false,
+    };
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: 'Reply body',
       sanitizedHtml: undefined,
@@ -789,8 +823,32 @@ describe('processInboundEmailInApp', () => {
   });
 
   it('T023: thread-header path calls watch-list upsert for existing ticket', async () => {
-    // Unmatched sender, pinned for order-independence (see T022).
-    findContactByEmailMock.mockResolvedValue(null);
+    // Sender is the ticket's own client contact so the thread-header hijack
+    // guard authorizes the reply; an unauthorized sender would be quarantined
+    // before any watch-list upsert (that is the watcher-injection vector the
+    // guard blocks — covered separately in the threading suite).
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-thread-123',
+      client_id: 'client-123',
+      user_id: undefined,
+      email: 'client@example.com',
+      name: 'Client User',
+    });
+    reopenPolicyRows.ticket = {
+      ticket_id: 'ticket-thread-123',
+      board_id: 'board-id',
+      status_id: null,
+      is_closed: false,
+      closed_at: null,
+      client_id: 'client-123',
+      attributes: {},
+    };
+    reopenPolicyRows.board = {
+      inbound_reply_reopen_enabled: false,
+      inbound_reply_reopen_cutoff_hours: 168,
+      inbound_reply_reopen_status_id: null,
+      inbound_reply_ai_ack_suppression_enabled: false,
+    };
     findTicketByReplyTokenMock.mockResolvedValue(null);
     findTicketByEmailThreadMock.mockResolvedValue({
       ticketId: 'ticket-thread-123',
@@ -811,26 +869,11 @@ describe('processInboundEmailInApp', () => {
       }),
     });
 
-    expect(upsertTicketWatchListRecipientsMock).toHaveBeenCalledWith(
-      {
-        ticketId: 'ticket-thread-123',
-        recipients: [
-          {
-            email: 'watcher@example.com',
-            active: true,
-            name: 'Watcher',
-            source: 'inbound_to',
-          },
-          {
-            email: 'client@example.com',
-            active: true,
-            name: 'Client User',
-            source: 'inbound_from',
-          },
-        ],
-      },
-      'tenant-1'
-    );
+    // Thread-header correlation is not sender-authenticated, so the thread-header
+    // reply path never turns To/Cc addresses into active ticket watchers — even
+    // for an authorized reply. This closes the watcher-injection vector where a
+    // spoofed In-Reply-To could silently add arbitrary watchers.
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
   });
 
   it('T024: when sender is unmatched and To/CC recipients are excluded, sender is still upserted to watch-list', async () => {

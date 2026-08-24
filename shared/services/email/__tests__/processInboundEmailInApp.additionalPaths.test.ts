@@ -297,7 +297,11 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     );
   });
 
-  it('T019: thread-header path without sender contact keeps fallback behavior', async () => {
+  it('T019: thread-header path without an authorized sender contact is quarantined', async () => {
+    // A thread-header match whose sender resolves to no contact (and is neither
+    // an internal user nor an active watcher) is the spoofed-reply hijack vector:
+    // the hijack guard quarantines it instead of appending a comment to the
+    // originating ticket.
     findContactByEmailMock.mockResolvedValue(null);
     findTicketByReplyTokenMock.mockResolvedValue(null);
     findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-thread-1' });
@@ -316,22 +320,15 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     });
 
     expect(result).toMatchObject({
-      outcome: 'replied',
+      outcome: 'quarantined',
+      reason: 'unauthorized_thread_header_sender',
       matchedBy: 'thread_headers',
       ticketId: 'ticket-thread-1',
     });
     expect(findContactByEmailMock).toHaveBeenCalledWith('sender@example.com', 'tenant-1', {
       ticketId: 'ticket-thread-1',
     });
-    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ticket_id: 'ticket-thread-1',
-        author_type: 'contact',
-        author_id: undefined,
-        contact_id: undefined,
-      }),
-      'tenant-1'
-    );
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
   });
 
   it('T036: new-ticket inbound processing preserves the exact sender email separately when the contact matched through an additional email row', async () => {
