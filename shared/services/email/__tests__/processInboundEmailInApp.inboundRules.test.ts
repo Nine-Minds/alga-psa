@@ -384,6 +384,14 @@ describe('processInboundEmailInApp: inbound email rules integration', () => {
   it('rules are not evaluated for replies that thread onto existing tickets', async () => {
     findTicketByReplyTokenMock.mockResolvedValue(null);
     findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-existing' });
+    // Sender is the ticket's own client contact, so the thread-header hijack
+    // guard authorizes the reply rather than quarantining it.
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-existing',
+      client_id: 'client-existing',
+      user_id: undefined,
+      email: 'alerts@huntress.com',
+    });
     // Threaded-reply path needs comment dedup + reopen policy lookups to resolve.
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
@@ -394,6 +402,8 @@ describe('processInboundEmailInApp: inbound email rules integration', () => {
             status_id: 'status-open',
             is_closed: false,
             closed_at: null,
+            client_id: 'client-existing',
+            attributes: {},
           });
         }
         return makeQueryBuilder(undefined);

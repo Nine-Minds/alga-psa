@@ -10,8 +10,8 @@
  *   enough for a backstop, and identical behavior in the server and the email-service
  *   worker (no dependency on a process-specific rate-limiter singleton).
  * - Reuses the inbound-email Redis connection the worker already opens.
- * - Fails OPEN: a Redis hiccup must never block a legitimate reopen. The primary defenses
- *   (RFC 3834 auto-reply detection + outbound Auto-Submitted marking) remain in force.
+ * - Fails CLOSED: a Redis hiccup degrades the message to comment-only. Reopen is a
+ *   state-changing side effect and must not proceed when its backstop is unavailable.
  * - Only consult this when a reopen would otherwise happen, so ordinary comment-only
  *   replies are not counted against the limit.
  */
@@ -32,7 +32,7 @@ const DEFAULT_WINDOW_SECONDS = 3600; // 1 hour
 export interface InboundReopenRateLimitResult {
   /** True when the reopen is within the configured limit and should proceed. */
   allowed: boolean;
-  /** Reopen attempts counted in the current window (including this one); -1 when unknown (fail-open). */
+  /** Reopen attempts counted in the current window (including this one); -1 when unknown (fail-closed). */
   count: number;
   /** Configured maximum reopens per window. */
   limit: number;
@@ -87,12 +87,11 @@ export async function checkInboundReopenRateLimit(params: {
 
     return { allowed: count <= limit, count, limit, windowSeconds };
   } catch (error) {
-    // Fail open: never block a legitimate reopen on a Redis failure.
-    console.warn('[inboundReopenRateLimiter] check failed; allowing reopen (fail-open)', {
+    console.warn('[inboundReopenRateLimiter] check failed; denying reopen (fail-closed)', {
       tenantId: params.tenantId,
       ticketId: params.ticketId,
       error: error instanceof Error ? error.message : String(error),
     });
-    return { allowed: true, count: -1, limit, windowSeconds };
+    return { allowed: false, count: -1, limit, windowSeconds };
   }
 }
