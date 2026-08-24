@@ -21,9 +21,9 @@ export type MaintenanceCompletionValues = {
   maintenanceData: Record<string, unknown>;
 };
 
-type ChecklistItem = { key: string; label: string };
+export type ChecklistItem = { key: string; label: string };
 
-function checklistItems(
+export function checklistItems(
   config: Record<string, unknown> | undefined,
 ): ChecklistItem[] {
   const checklist = config?.checklist;
