@@ -107,6 +107,20 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     );
   });
 
+  it('generates and persists a strong clientState before creating a subscription when absent', async () => {
+    const providerConfig = config();
+    delete (providerConfig as any).webhook_verification_token;
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await adapter.registerWebhookSubscription();
+
+    const createdSubscription = mocks.client.post.mock.calls[0][1];
+    expect(createdSubscription.clientState).toMatch(/^[a-f0-9]{64}$/);
+    expect(mocks.dbUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.client.post.mock.invocationCallOrder[0],
+    );
+  });
+
   it('deletes only same-notification-url subscriptions that are not the DB cursor', async () => {
     mocks.client.get.mockResolvedValue({
       data: {

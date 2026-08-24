@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
 import type {
@@ -600,6 +600,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       if (!webhookUrl) {
         throw new Error('Webhook notification URL not configured');
       }
+      const verificationToken = await this.ensurePersistedWebhookVerificationToken();
 
       const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
       const { resource, resolvedFolder } = await this.buildFolderResourcePath(desiredFolder);
@@ -612,7 +613,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         expirationDateTime: new Date(
           Date.now() + MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS
         ).toISOString(),
-        clientState: this.config.webhook_verification_token || 'email-webhook-verification',
+        clientState: verificationToken,
       };
 
       // Log payload with masked clientState for diagnostics
@@ -649,7 +650,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           .update({
             webhook_subscription_id: response.data.id,
             webhook_expires_at: response.data.expirationDateTime,
-            webhook_verification_token: this.config.webhook_verification_token || null,
+            webhook_verification_token: verificationToken,
             delivery_mode: 'webhook',
             webhook_silent_runs: 0,
             next_subscription_probe_at: null,
@@ -683,6 +684,29 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         { cause: error }
       );
     }
+  }
+
+  private async ensurePersistedWebhookVerificationToken(): Promise<string> {
+    const current = this.config.webhook_verification_token;
+    const token = !current || current === 'email-webhook-verification' || current === this.config.tenant
+      ? randomBytes(32).toString('hex')
+      : current;
+    try {
+      const knex = await getAdminConnection();
+      const updated = await tenantDb(knex, this.config.tenant)
+        .table('microsoft_email_provider_config')
+        .where('email_provider_id', this.config.id)
+        .update({ webhook_verification_token: token, updated_at: new Date().toISOString() });
+      if (!updated) {
+        throw new Error(`Microsoft provider config ${this.config.id} was not found while persisting webhook verification token`);
+      }
+    } catch (error: any) {
+      // Preserve the DB error as the subscription error's direct cause so the
+      // caller can compensate any preceding external side effects accurately.
+      throw error;
+    }
+    this.config.webhook_verification_token = token;
+    return token;
   }
 
   /**
@@ -880,6 +904,54 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     } catch (error) {
       throw this.handleError(error, 'downloadMessageSource');
     }
+  }
+
+  /** Resolve the Graph parent folder for a fetched message. */
+  async getMessageParentFolderId(messageId: string): Promise<string | null> {
+    try {
+      const response = await this.httpClient.get(`${this.getMailboxBasePath()}/messages/${messageId}`, {
+        params: { $select: 'parentFolderId' },
+      });
+      return typeof response.data?.parentFolderId === 'string' && response.data.parentFolderId
+        ? response.data.parentFolderId
+        : null;
+    } catch (error) {
+      throw this.handleError(error, 'getMessageParentFolderId');
+    }
+  }
+
+  /** Resolve configured folder IDs (well-known names, display names, or IDs). */
+  async resolveFolderIds(folderFilters: unknown): Promise<Set<string>> {
+    const rawFilters = Array.isArray(folderFilters)
+      ? folderFilters
+      : typeof folderFilters === 'string'
+        ? (() => { try { return JSON.parse(folderFilters); } catch { return [folderFilters]; } })()
+        : [];
+    const filters = (Array.isArray(rawFilters) ? rawFilters : [])
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .map((value) => value.trim());
+    const requested = filters.length ? filters : ['Inbox'];
+    const mailboxBase = this.getMailboxBasePath();
+    const folders = await this.httpClient.get(`${mailboxBase}/mailFolders`, {
+      params: { $select: 'id,displayName' },
+    });
+    const resolved = new Set<string>();
+    for (const filter of requested) {
+      const normalized = filter.toLowerCase().replace(/\s+/g, '');
+      const wellKnown = normalized === 'inbox' ? 'inbox' : undefined;
+      if (wellKnown) {
+        const response = await this.httpClient.get(`${mailboxBase}/mailFolders/${wellKnown}`, {
+          params: { $select: 'id' },
+        });
+        if (response.data?.id) resolved.add(String(response.data.id));
+        continue;
+      }
+      const match = (folders.data?.value || []).find((folder: any) =>
+        String(folder.id) === filter || String(folder.displayName || '').toLowerCase() === filter.toLowerCase(),
+      );
+      if (match?.id) resolved.add(String(match.id));
+    }
+    return resolved;
   }
 
   /**

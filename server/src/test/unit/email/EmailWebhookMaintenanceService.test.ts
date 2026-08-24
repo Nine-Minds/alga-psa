@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
     initializeWebhook: vi.fn(),
     deleteWebhookSubscription: vi.fn(),
     getConfig: vi.fn(),
+    connect: vi.fn(),
+    registerWebhookSubscription: vi.fn(),
   },
   enqueue: vi.fn(),
   getAdminConnection: vi.fn(),
@@ -56,6 +58,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       last_sync_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
       last_reconciliation_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
       webhook_subscription_id: 'current-subscription',
+      webhook_verification_token: 'a'.repeat(64),
       webhook_expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
       client_id: 'premise-app',
       client_secret: 'premise-secret',
@@ -264,6 +267,22 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     expect(mocks.adapter.renewWebhookSubscription).not.toHaveBeenCalled();
     expect(mocks.adapter.initializeWebhook).not.toHaveBeenCalled();
     expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
+  });
+
+  it('backfills a missing clientState before recreating the Graph subscription', async () => {
+    provider.webhook_verification_token = null;
+
+    await new EmailWebhookMaintenanceService().backfillMicrosoftWebhookVerificationTokens({
+      tenantId: provider.tenant,
+      providerId: provider.id,
+    });
+
+    const knex = await mocks.getAdminConnection();
+    expect(knex().update).toHaveBeenCalledWith(expect.objectContaining({
+      webhook_verification_token: expect.stringMatching(/^[a-f0-9]{64}$/),
+    }));
+    expect(mocks.adapter.connect).toHaveBeenCalledOnce();
+    expect(mocks.adapter.registerWebhookSubscription).toHaveBeenCalledOnce();
   });
 
   it('falls back to healthy polling mode on endpoint validation failure', async () => {

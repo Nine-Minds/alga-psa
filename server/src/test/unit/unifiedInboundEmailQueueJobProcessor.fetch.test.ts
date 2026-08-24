@@ -6,6 +6,8 @@ const processInboundEmailInAppMock = vi.fn();
 const microsoftConnectMock = vi.fn();
 const microsoftDownloadMessageSourceMock = vi.fn();
 const microsoftGetMessageDetailsMock = vi.fn();
+const microsoftGetMessageParentFolderIdMock = vi.fn();
+const microsoftResolveFolderIdsMock = vi.fn();
 const gmailConnectMock = vi.fn();
 const gmailListMessagesSinceMock = vi.fn();
 const gmailGetMessageDetailsMock = vi.fn();
@@ -48,6 +50,12 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
     }
     getMessageDetails(...args: any[]) {
       return microsoftGetMessageDetailsMock(...args);
+    }
+    getMessageParentFolderId(...args: any[]) {
+      return microsoftGetMessageParentFolderIdMock(...args);
+    }
+    resolveFolderIds(...args: any[]) {
+      return microsoftResolveFolderIdsMock(...args);
     }
   },
 }));
@@ -218,6 +226,13 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     microsoftConnectMock.mockReset();
     microsoftDownloadMessageSourceMock.mockReset();
     microsoftGetMessageDetailsMock.mockReset();
+    microsoftGetMessageParentFolderIdMock.mockReset();
+    microsoftResolveFolderIdsMock.mockReset();
+    // Default: fetched message lives inside a monitored folder so the
+    // fetch-time folder-scope guard admits it; folder-scope rejection has
+    // dedicated coverage in microsoftFolderScope.test.ts.
+    microsoftGetMessageParentFolderIdMock.mockResolvedValue('monitored-folder');
+    microsoftResolveFolderIdsMock.mockResolvedValue(new Set(['monitored-folder']));
     gmailConnectMock.mockReset();
     gmailListMessagesSinceMock.mockReset();
     gmailGetMessageDetailsMock.mockReset();
