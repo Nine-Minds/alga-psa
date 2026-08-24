@@ -2340,6 +2340,7 @@ export const listMaintenanceOccurrences = withAuth(async (
                     't.title as ticket_title',
                     't.ticket_number',
                     't.is_closed as ticket_closed',
+                    't.assigned_to as ticket_assigned_to',
                     'ticket_assignee.first_name as ticket_assignee_first_name',
                     'ticket_assignee.last_name as ticket_assignee_last_name',
                     'schedule_creator.first_name as schedule_created_by_first_name',
@@ -2507,6 +2508,32 @@ export const setSchedulePaused = withAuth(async (user, { tenant }, schedule_id: 
             await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id }).update({ is_active: !paused, updated_at: trx.fn.now() });
             if (paused) await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ schedule_id, status: 'open' }).update({ status: 'cancelled', closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
             else await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).insert({ tenant, schedule_id, asset_id: schedule.asset_id, due_date: schedule.next_maintenance, status: 'open' }).onConflict().ignore();
+        });
+        revalidatePath('/msp/assets/maintenance');
+    } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
+});
+
+export const listMaintenanceAssignableUsers = withAuth(async (user, { tenant }): Promise<{ user_id: string; first_name: string; last_name: string }[] | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'asset', 'read', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot read assets'))!;
+    try {
+        return await withTransaction(knex, async (trx) => tenantScopedTable(trx, 'users', tenant)
+            .where({ user_type: 'internal', is_inactive: false })
+            .select('user_id', 'first_name', 'last_name')
+            .orderBy(['first_name', 'last_name']));
+    } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
+});
+
+export const setOccurrenceTicketAssignee = withAuth(async (user, { tenant }, occurrence_id: string, assignee_user_id: string | null): Promise<void | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'asset', 'update', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot update maintenance occurrence'))!;
+    try {
+        await withTransaction(knex, async (trx) => {
+            const occurrence = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).first();
+            if (!occurrence) throw new Error('Maintenance occurrence not found');
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, occurrence.asset_id);
+            if (!occurrence.ticket_id) throw new Error('Occurrence has no linked ticket to assign');
+            await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: occurrence.ticket_id }).update({ assigned_to: assignee_user_id, updated_at: trx.fn.now(), updated_by: user.user_id });
         });
         revalidatePath('/msp/assets/maintenance');
     } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }

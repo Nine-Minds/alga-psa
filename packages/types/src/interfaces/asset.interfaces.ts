@@ -353,6 +353,7 @@ export interface AssetMaintenanceOccurrence {
   ticket_title?: string;
   ticket_number?: string;
   ticket_closed?: boolean;
+  ticket_assigned_to?: string;
   ticket_assignee_first_name?: string;
   ticket_assignee_last_name?: string;
   schedule_created_by_first_name?: string;
