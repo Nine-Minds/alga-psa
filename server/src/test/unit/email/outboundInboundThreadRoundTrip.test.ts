@@ -161,6 +161,12 @@ function buildEmailData(overrides: Partial<EmailMessageDetails> = {}): EmailMess
     subject: 'Re: Round trip',
     body: { text: 'Inbound response', html: undefined },
     attachments: [],
+    // Provider-fetched mail always carries the receiving MTA's
+    // Authentication-Results; contact attribution now needs an aligned pass.
+    headers: {
+      'Authentication-Results':
+        'mx.google.com; dkim=pass header.d=example.com; spf=pass smtp.mailfrom=client@example.com',
+    },
     ...overrides,
   };
 }
