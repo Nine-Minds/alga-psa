@@ -355,6 +355,8 @@ export interface AssetMaintenanceOccurrence {
   ticket_closed?: boolean;
   ticket_assignee_first_name?: string;
   ticket_assignee_last_name?: string;
+  schedule_created_by_first_name?: string;
+  schedule_created_by_last_name?: string;
   performed_at?: string;
   performed_by?: string;
   performed_by_first_name?: string;

@@ -2342,6 +2342,8 @@ export const listMaintenanceOccurrences = withAuth(async (
                     't.is_closed as ticket_closed',
                     'ticket_assignee.first_name as ticket_assignee_first_name',
                     'ticket_assignee.last_name as ticket_assignee_last_name',
+                    'schedule_creator.first_name as schedule_created_by_first_name',
+                    'schedule_creator.last_name as schedule_created_by_last_name',
                     'h.performed_at',
                     'h.performed_by',
                     'h.description as completion_notes',
@@ -2360,6 +2362,7 @@ export const listMaintenanceOccurrences = withAuth(async (
             db.tenantJoin(query, 'users as performed_by_user', 'h.performed_by', 'performed_by_user.user_id', { type: 'left' });
             db.tenantJoin(query, 'users as closed_by_user', 'o.closed_by', 'closed_by_user.user_id', { type: 'left' });
             db.tenantJoin(query, 'users as ticket_assignee', 't.assigned_to', 'ticket_assignee.user_id', { type: 'left' });
+            db.tenantJoin(query, 'users as schedule_creator', 's.created_by', 'schedule_creator.user_id', { type: 'left' });
             if (filters.status?.length) query.whereIn('o.status', filters.status);
             if (filters.client_id) query.where('a.client_id', filters.client_id);
             if (filters.asset_id) query.where('o.asset_id', filters.asset_id);
