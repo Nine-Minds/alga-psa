@@ -1,7 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { TelephonyCallRecordRow } from '../types';
-import { createCallInteraction } from './ingestCanonicalCall';
+import { createCallInteraction, resolveInteractionClientId } from './ingestCanonicalCall';
 
 export interface ResolveCallMatchInput {
   tenantId: string;
@@ -39,17 +39,16 @@ export async function resolveCallMatch(input: ResolveCallMatchInput): Promise<Re
       return { status: 'already_resolved' as const, interactionId: record.interaction_id };
     }
 
-    let clientId = input.clientId ?? null;
     const contactId = input.contactId ?? null;
-    if (contactId && !clientId) {
-      const contact = await db.table('contacts')
-        .where({ contact_name_id: contactId })
-        .first('client_id');
-      clientId = contact?.client_id ?? null;
+    if (!contactId && !input.clientId) {
+      throw new Error('Resolving a call requires a contact or a client');
     }
 
-    if (!contactId && !clientId) {
-      throw new Error('Resolving a call requires a contact or a client');
+    const clientId = await resolveInteractionClientId(trx, input.tenantId, input.clientId ?? null, contactId);
+    if (!clientId) {
+      // An interaction with no client is invisible on every timeline, so say so
+      // rather than record a "resolved" call that never appears anywhere.
+      throw new Error('That contact is not associated with a client. Pick a client for this call instead.');
     }
 
     const interactionId = await createCallInteraction({

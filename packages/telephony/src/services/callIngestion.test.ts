@@ -295,6 +295,32 @@ describe('ingestCanonicalCall', () => {
     expect(table('interactions')).toHaveLength(0);
   });
 
+  it('T025: a contact with no client still persists the call instead of losing it', async () => {
+    grantAddOn();
+    // contacts.client_id is nullable by design, so the ladder can match a
+    // contact and still have nowhere to file the interaction.
+    table('contact_phone_numbers').push({
+      tenant: TENANT,
+      contact_name_id: 'contact-orphan',
+      full_name: 'Unaffiliated Munchkin',
+      client_id: null,
+      normalized_phone_number: '15551234567',
+      phone_number: '+1 (555) 123-4567',
+    });
+    table('contacts').push({ tenant: TENANT, contact_name_id: 'contact-orphan', client_id: null });
+
+    const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'matched', interactionId: null });
+    expect(table('telephony_call_records')).toHaveLength(1);
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      matched_contact_id: 'contact-orphan',
+      matched_client_id: null,
+    });
+    expect(table('telephony_call_records')[0].interaction_id).toBeUndefined();
+    expect(table('interactions')).toHaveLength(0);
+  });
+
   it('T025: an ambiguous call is recorded with its candidates and no attribution', async () => {
     grantAddOn();
     knownContact();
@@ -424,6 +450,21 @@ describe('resolveCallMatch', () => {
     expect(second.status).toBe('already_resolved');
     expect(table('interactions')).toHaveLength(1);
     expect(table('telephony_call_records')[0].matched_client_id).toBe('client-emerald');
+  });
+
+  it('T026: resolving to a contact with no client asks for a client instead', async () => {
+    await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
+    const record = table('telephony_call_records')[0];
+    table('contacts').push({ tenant: TENANT, contact_name_id: 'contact-orphan', client_id: null });
+
+    await expect(resolveCallMatch({
+      tenantId: TENANT,
+      callRecordId: record.call_record_id,
+      contactId: 'contact-orphan',
+    })).rejects.toThrow(/not associated with a client/);
+
+    expect(table('interactions')).toHaveLength(0);
+    expect(table('telephony_call_records')[0].match_status).toBe('unmatched');
   });
 
   it('T026: an unknown call record is reported, not invented', async () => {

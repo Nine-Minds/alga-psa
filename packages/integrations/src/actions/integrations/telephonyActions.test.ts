@@ -136,6 +136,8 @@ const hoisted = vi.hoisted(() => {
     activateMock: vi.fn(async () => undefined),
     deactivateMock: vi.fn(async () => undefined),
     autoTicketPolicyMock: vi.fn(async () => undefined),
+    availabilityMock: vi.fn(async () => ({ enabled: true }) as any),
+    resolveCallMatchMock: vi.fn(async () => ({ status: 'resolved', interactionId: 'interaction-new' }) as any),
   };
 });
 
@@ -143,10 +145,12 @@ const { calls, interactions, tickets, statuses, contacts, clients } = hoisted.st
 const {
   activateMock,
   autoTicketPolicyMock,
+  availabilityMock,
   createTicketMock,
   deactivateMock,
   hasPermissionMock,
   priorityMock,
+  resolveCallMatchMock,
   ticketDefaultsMock,
 } = hoisted;
 
@@ -184,15 +188,24 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib', () => ({
 }));
 
 vi.mock('../../lib/telephonyAvailability', () => ({
-  getTelephonyAvailability: async () => ({ enabled: true }),
+  getTelephonyAvailability: hoisted.availabilityMock,
   resolveTelephonyAvailability: () => ({ enabled: true }),
+}));
+
+// Partial: the title/notes builders are pure and worth exercising for real;
+// only the DB-touching resolve is stubbed.
+vi.mock('@alga-psa/telephony', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  resolveCallMatch: hoisted.resolveCallMatchMock,
 }));
 
 import {
   createTicketFromTelephonyCall,
+  getTelephonyOverview,
   linkTelephonyCallToTicket,
   listTelephonyLinkableTickets,
   listTelephonyResolutionTargets,
+  resolveTelephonyCall,
   setTelephonyAutoTicketPolicy,
   setTelephonyProviderEnabled,
 } from './telephonyActions';
@@ -205,8 +218,13 @@ describe('telephony link-to-ticket', () => {
     statuses.length = 0;
     contacts.length = 0;
     clients.length = 0;
+    hoisted.state.mockUser = { user_id: 'user-1', user_type: 'internal' };
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
+    availabilityMock.mockClear();
+    availabilityMock.mockResolvedValue({ enabled: true } as any);
+    resolveCallMatchMock.mockClear();
+    resolveCallMatchMock.mockResolvedValue({ status: 'resolved', interactionId: 'interaction-new' } as any);
     createTicketMock.mockClear();
     activateMock.mockClear();
     deactivateMock.mockClear();
@@ -279,6 +297,19 @@ describe('telephony link-to-ticket', () => {
     const result = await linkTelephonyCallToTicket({ callRecordId: 'call-1', ticketId: 'ticket-1' });
 
     expect(result.success).toBe(false);
+    expect(interactions[0].ticket_id).toBeNull();
+    expect(calls[0].ticket_id).toBeNull();
+  });
+
+  it('T044: linking refuses a ticket that belongs to another client', async () => {
+    addCall();
+
+    // ticket-3 is client-2's; the picker never offers it, but the action is
+    // callable directly.
+    const result = await linkTelephonyCallToTicket({ callRecordId: 'call-1', ticketId: 'ticket-3' });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/does not belong to the client/);
     expect(interactions[0].ticket_id).toBeNull();
     expect(calls[0].ticket_id).toBeNull();
   });
@@ -401,7 +432,97 @@ describe('telephony link-to-ticket', () => {
     });
   });
 
+  describe('overview authorization', () => {
+    it('T044: the call log is refused to a client-portal user', async () => {
+      addCall();
+      hoisted.state.mockUser = { user_id: 'portal-1', user_type: 'client' };
+
+      const result = await getTelephonyOverview();
+
+      expect(result).toMatchObject({ success: false, error: 'Forbidden', canManage: false });
+      expect(result.recentCalls).toEqual([]);
+      expect(result.unresolvedCalls).toEqual([]);
+    });
+
+    it('T044: the call log is refused without the system settings update permission', async () => {
+      addCall();
+      hasPermissionMock.mockResolvedValue(false);
+
+      const result = await getTelephonyOverview();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Permission denied/);
+      expect(result.recentCalls).toEqual([]);
+    });
+
+    it('T044: an unentitled tenant sees the paywall, not the call log', async () => {
+      addCall();
+      availabilityMock.mockResolvedValue({
+        enabled: false,
+        reason: 'addon_required',
+        message: 'Telephony integrations require the Microsoft Teams add-on.',
+      } as any);
+
+      const result = await getTelephonyOverview();
+
+      expect(result).toMatchObject({ success: true, available: false, reason: 'addon_required' });
+      expect(result.recentCalls).toEqual([]);
+    });
+  });
+
+  describe('manual resolve', () => {
+    it('T044: resolving a call requires the system settings update permission', async () => {
+      hasPermissionMock.mockResolvedValue(false);
+
+      const result = await resolveTelephonyCall({ callRecordId: 'call-1', contactId: 'contact-1' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Permission denied/);
+      expect(resolveCallMatchMock).not.toHaveBeenCalled();
+    });
+
+    it('T044: resolving is refused without the Teams add-on', async () => {
+      availabilityMock.mockResolvedValue({
+        enabled: false,
+        reason: 'addon_required',
+        message: 'Telephony integrations require the Microsoft Teams add-on.',
+      } as any);
+
+      const result = await resolveTelephonyCall({ callRecordId: 'call-1', contactId: 'contact-1' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Microsoft Teams add-on/);
+      expect(resolveCallMatchMock).not.toHaveBeenCalled();
+    });
+
+    it('T010: an authorized resolve stamps the acting user onto the match', async () => {
+      const result = await resolveTelephonyCall({ callRecordId: 'call-1', contactId: 'contact-1' });
+
+      expect(result).toEqual({ success: true, interactionId: 'interaction-new' });
+      expect(resolveCallMatchMock).toHaveBeenCalledWith(expect.objectContaining({
+        tenantId: 'tenant-1',
+        callRecordId: 'call-1',
+        contactId: 'contact-1',
+        actingUserId: 'user-1',
+      }));
+    });
+  });
+
   describe('provider activation', () => {
+    it('T030: activation is refused without the Teams add-on', async () => {
+      availabilityMock.mockResolvedValue({
+        enabled: false,
+        reason: 'addon_required',
+        message: 'Telephony integrations require the Microsoft Teams add-on.',
+      } as any);
+
+      const result = await setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: true });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Microsoft Teams add-on/);
+      expect(activateMock).not.toHaveBeenCalled();
+    });
+
     it('T030: enabling the provider activates it, disabling deactivates it', async () => {
       await expect(setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: true }))
         .resolves.toEqual({ success: true });

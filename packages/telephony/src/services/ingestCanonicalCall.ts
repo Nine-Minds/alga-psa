@@ -179,7 +179,44 @@ export interface CreateCallInteractionInput {
   ticketId?: string | null;
 }
 
+/**
+ * The client an interaction will actually be filed under: the explicit one, or
+ * the matched contact's. `contacts.client_id` is nullable by design, so a
+ * contact match does not guarantee a client.
+ */
+export async function resolveInteractionClientId(
+  trx: any,
+  tenantId: string,
+  clientId: string | null,
+  contactId: string | null,
+): Promise<string | null> {
+  if (clientId) {
+    return clientId;
+  }
+  if (!contactId) {
+    return null;
+  }
+
+  const contact = await tenantDb(trx, tenantId).table('contacts')
+    .where({ contact_name_id: contactId })
+    .first('client_id');
+
+  return contact?.client_id ?? null;
+}
+
 export async function createCallInteraction(input: CreateCallInteractionInput): Promise<string | null> {
+  // `createInteractionRecord` throws when no client can be resolved, and this
+  // runs inside the ingestion transaction — letting it throw rolls the ledger
+  // insert back, so the call is lost entirely and every retry loses it again.
+  const clientId = await resolveInteractionClientId(input.trx, input.tenantId, input.clientId, input.contactId);
+  if (!clientId) {
+    logger.warn('[Telephony] Matched party has no client; leaving the call for manual attribution', {
+      tenantId: input.tenantId,
+      contactId: input.contactId,
+    });
+    return null;
+  }
+
   const typeId = await resolveCallInteractionTypeId(input.trx, input.tenantId);
   if (!typeId) {
     logger.warn('[Telephony] Call interaction type is not configured; skipping interaction', {
@@ -216,7 +253,7 @@ export async function createCallInteraction(input: CreateCallInteractionInput): 
     interactionData: {
       type_id: typeId,
       user_id: userId,
-      client_id: input.clientId ?? undefined,
+      client_id: clientId,
       contact_name_id: input.contactId ?? undefined,
       ticket_id: input.ticketId ?? null,
       title: buildCallInteractionTitle(titleInput),

@@ -4,7 +4,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
-import { getTelephonyAvailability, resolveTelephonyAvailability } from '../../lib/telephonyAvailability';
+import { getTelephonyAvailability } from '../../lib/telephonyAvailability';
 
 export interface TelephonyProviderCard {
   provider: string;
@@ -65,6 +65,26 @@ async function canManageTelephony(user: unknown): Promise<boolean> {
   return hasPermission(user as any, 'system_settings', 'update');
 }
 
+function isClientPortalUser(user: any): boolean {
+  return user?.user_type === 'client';
+}
+
+/**
+ * Every telephony surface reads or writes the tenant-wide call log, which
+ * carries counterparty numbers and client attribution. Gate it exactly like the
+ * Teams settings surface it lives under: never the client portal, and only an
+ * admin who may change integration settings.
+ */
+async function requireTelephonyAdmin(user: unknown): Promise<string | null> {
+  if (isClientPortalUser(user)) {
+    return 'Forbidden';
+  }
+  if (!(await canManageTelephony(user))) {
+    return 'Permission denied: telephony settings require system settings update permission.';
+  }
+  return null;
+}
+
 function toIso(value: unknown): string | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(String(value));
@@ -113,7 +133,12 @@ async function listCalls(tenant: string, options: { unresolvedOnly?: boolean; li
   db.tenantJoin(query, 'clients as cl', 'tcr.matched_client_id', 'cl.client_id', { type: 'left' });
 
   if (options.unresolvedOnly) {
-    query.whereIn('tcr.match_status', ['unmatched', 'ambiguous']);
+    // "Needs a human" is the absence of an interaction, not just an unmatched
+    // status: a contact with no client matches the ladder but cannot be filed
+    // on any timeline, and would otherwise never appear in the queue.
+    query.whereNull('tcr.interaction_id').andWhere((builder: any) => {
+      builder.whereIn('tcr.match_status', ['unmatched', 'ambiguous']).orWhereNull('tcr.matched_client_id');
+    });
   }
 
   return query
@@ -147,8 +172,22 @@ async function loadEeTelephony(): Promise<EeTelephonyModule> {
 }
 
 export const getTelephonyOverview = withAuth(async (user, { tenant }): Promise<TelephonyOverview> => {
+  const denied = await requireTelephonyAdmin(user);
+  if (denied) {
+    return {
+      success: false,
+      error: denied,
+      available: false,
+      canManage: false,
+      providers: [],
+      recentCalls: [],
+      unresolvedCalls: [],
+    };
+  }
+
+  // Past the gate the caller is, by definition, an admin who may manage this.
+  const canManage = true;
   const availability = await getTelephonyAvailability({ tenantId: tenant });
-  const canManage = await canManageTelephony(user);
 
   if (availability.enabled === false) {
     return {
@@ -192,15 +231,18 @@ export const getTelephonyOverview = withAuth(async (user, { tenant }): Promise<T
   };
 });
 
+/**
+ * Entitlement + authorization for every mutating telephony action. The add-on
+ * lookup is what stops provider activation and subscription creation on a
+ * tenant that is not entitled to Teams — the ingestion path is deny-by-default,
+ * but nothing else was re-checking it.
+ */
 async function requireManageableTenant(user: unknown, tenant: string): Promise<string | null> {
-  const availability = resolveTelephonyAvailability({ tenantId: tenant });
+  const availability = await getTelephonyAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
     return availability.message;
   }
-  if (!(await canManageTelephony(user))) {
-    return 'Permission denied: telephony settings require system settings update permission.';
-  }
-  return null;
+  return requireTelephonyAdmin(user);
 }
 
 export const setTelephonyProviderEnabled = withAuth(async (
@@ -246,9 +288,11 @@ export const resolveTelephonyCall = withAuth(async (
   { tenant },
   input: { callRecordId: string; contactId?: string | null; clientId?: string | null },
 ): Promise<{ success: boolean; error?: string; interactionId?: string | null }> => {
-  const availability = resolveTelephonyAvailability({ tenantId: tenant });
-  if (availability.enabled === false) {
-    return { success: false, error: availability.message };
+  // Resolving stamps contact/client attribution onto a call and mints an
+  // interaction, so it is a manage action, not a read one.
+  const denied = await requireManageableTenant(user, tenant);
+  if (denied) {
+    return { success: false, error: denied };
   }
 
   const { resolveCallMatch } = await import('@alga-psa/telephony');
@@ -282,7 +326,7 @@ export const listTelephonyResolutionTargets = withAuth(async (
   { tenant },
   input: { search?: string } = {},
 ): Promise<{ success: boolean; error?: string; targets: TelephonyResolutionTarget[] }> => {
-  const availability = resolveTelephonyAvailability({ tenantId: tenant });
+  const availability = await getTelephonyAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
     return { success: false, error: availability.message, targets: [] };
   }
@@ -354,7 +398,7 @@ export const listTelephonyLinkableTickets = withAuth(async (
   { tenant },
   input: { callRecordId: string },
 ): Promise<{ success: boolean; error?: string; tickets: TelephonyLinkableTicket[] }> => {
-  const availability = resolveTelephonyAvailability({ tenantId: tenant });
+  const availability = await getTelephonyAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
     return { success: false, error: availability.message, tickets: [] };
   }
@@ -402,7 +446,7 @@ export const linkTelephonyCallToTicket = withAuth(async (
   { tenant },
   input: { callRecordId: string; ticketId: string },
 ): Promise<{ success: boolean; error?: string }> => {
-  const availability = resolveTelephonyAvailability({ tenantId: tenant });
+  const availability = await getTelephonyAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }
@@ -425,6 +469,17 @@ export const linkTelephonyCallToTicket = withAuth(async (
       return { success: false, error: 'Resolve this call to a contact or client before linking it to a ticket.' };
     }
 
+    // The picker cannot offer another client's ticket, but this action is
+    // callable directly — re-check the boundary here or a crafted ticketId
+    // cross-links the call onto a ticket the caller's client never owned.
+    const ticket = await db.table('tickets')
+      .where({ ticket_id: input.ticketId })
+      .first('client_id');
+
+    if (!ticket || ticket.client_id !== record.matched_client_id) {
+      return { success: false, error: 'That ticket does not belong to the client this call is attributed to.' };
+    }
+
     await db.table('interactions')
       .where({ interaction_id: record.interaction_id })
       .update({ ticket_id: input.ticketId });
@@ -442,7 +497,7 @@ export const createTicketFromTelephonyCall = withAuth(async (
   { tenant },
   input: { callRecordId: string; title?: string },
 ): Promise<{ success: boolean; error?: string; ticketId?: string; ticketNumber?: string }> => {
-  const availability = resolveTelephonyAvailability({ tenantId: tenant });
+  const availability = await getTelephonyAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }
