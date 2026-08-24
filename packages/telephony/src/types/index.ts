@@ -78,6 +78,43 @@ export interface TelephonyCallRecordRow {
   interaction_id: string | null;
   ticket_id: string | null;
   raw: Record<string, unknown>;
+  artifact_status: CallArtifactStatus;
+  artifact_fetch_attempts: number;
+  last_artifact_fetch_at: string | Date | null;
+  created_at: string | Date;
+  updated_at: string | Date;
+}
+
+export const CALL_ARTIFACT_TYPES = ['recording', 'transcript'] as const;
+export type CallArtifactType = (typeof CALL_ARTIFACT_TYPES)[number];
+
+/**
+ * Capture state of a call's recording/transcript: `pending` until artifacts
+ * show up (Teams publishes them minutes after the call), `ready` once we
+ * persisted at least one, `none` when the window closed with nothing — which
+ * is the normal outcome, since Teams Phone recording is off by default.
+ */
+export const CALL_ARTIFACT_STATUSES = ['pending', 'ready', 'none'] as const;
+export type CallArtifactStatus = (typeof CALL_ARTIFACT_STATUSES)[number];
+
+export interface CallArtifactPayload {
+  artifactType: CallArtifactType;
+  providerArtifactId: string;
+  contentUrl: string | null;
+  createdDateTime: string | null;
+  transcriptContent?: string;
+}
+
+export interface TelephonyCallArtifactRow {
+  tenant: string;
+  artifact_id: string;
+  call_record_id: string;
+  artifact_type: CallArtifactType;
+  provider_artifact_id: string;
+  content_url: string | null;
+  document_id: string | null;
+  file_id: string | null;
+  created_date_time: string | Date | null;
   created_at: string | Date;
   updated_at: string | Date;
 }

@@ -20,6 +20,20 @@ export {
   resolveCallInteractionTypeId,
   resolveTelephonyActorUserId,
 } from './lib/callInteractions';
+export {
+  callArtifactFetchIntervalMs,
+  hasCallArtifactWindowElapsed,
+  isCallArtifactFetchDue,
+} from './lib/callArtifactBackoff';
+export { createCallTranscriptDocument } from './lib/callArtifactDocuments';
+export type { CreateCallTranscriptDocumentInput } from './lib/callArtifactDocuments';
+export { captureCallArtifacts, listCallsAwaitingArtifacts } from './services/captureCallArtifacts';
+export type {
+  CallArtifactCaptureSettings,
+  CaptureCallArtifactsDependencies,
+  CaptureCallArtifactsInput,
+  CaptureCallArtifactsOutcome,
+} from './services/captureCallArtifacts';
 export { createCallInteraction, ingestCanonicalCall } from './services/ingestCanonicalCall';
 export type { IngestCanonicalCallInput, IngestCanonicalCallOutcome } from './services/ingestCanonicalCall';
 export { autoCreateTicketForCall } from './services/autoTicketFromCall';
