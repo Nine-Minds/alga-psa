@@ -1239,7 +1239,7 @@
   },
   "maintenanceCommandCenter": {
     "title": "Maintenance Command Center",
-    "description": "Next due advances from the actual completion date.",
+    "description": "Asset maintenance schedules and work across all clients.",
     "assetsLink": "Assets"
   },
   "maintenanceCompletionDialog": {
