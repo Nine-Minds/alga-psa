@@ -99,4 +99,25 @@ describe('MaintenanceCommandCenter', () => {
     await waitFor(() => expect(screen.getAllByText('Completed workstation cleaning').length).toBeGreaterThan(0));
     await waitFor(() => expect(listMaintenanceOccurrences).toHaveBeenLastCalledWith({ limit: 100 }));
   });
+
+  it('shows the queue empty state instead of an empty calendar grid for a no-match search', async () => {
+    listMaintenanceOccurrences.mockImplementation(async (filters: { search?: string }) => ({
+      occurrences: filters.search ? [] : [completedOccurrence],
+      total: filters.search ? 0 : 1,
+    }));
+
+    const user = userEvent.setup();
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <MaintenanceCommandCenter />
+      </SWRConfig>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /Calendar/ }));
+    await user.type(screen.getByPlaceholderText('Search plans, assets, or clients'), 'NO_MATCH_SMOKE_20260824');
+
+    await waitFor(() => expect(screen.getByText('No maintenance occurrences match these filters. Clear a filter or widen the due-date range.')).toBeTruthy());
+    expect(screen.queryByText('0 due')).toBeNull();
+    expect(screen.queryByText('Sunday')).toBeNull();
+  });
 });
