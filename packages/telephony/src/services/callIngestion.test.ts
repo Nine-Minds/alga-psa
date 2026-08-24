@@ -151,7 +151,8 @@ function table(name: string): any[] {
 }
 
 function grantAddOn(): void {
-  table('tenant_addons').push({ tenant: TENANT, addon_key: 'telephony', expires_at: null });
+  // Telephony is gated by the Microsoft Teams add-on.
+  table('tenant_addons').push({ tenant: TENANT, addon_key: 'teams', expires_at: null });
 }
 
 function seedTenantBasics(): void {
@@ -199,7 +200,7 @@ describe('ingestCanonicalCall', () => {
     seedTenantBasics();
   });
 
-  it('T027: refuses a tenant without the telephony add-on and writes nothing', async () => {
+  it('T027: refuses a tenant without the Teams add-on and writes nothing', async () => {
     knownContact();
 
     const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });

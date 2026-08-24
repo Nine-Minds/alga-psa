@@ -222,7 +222,7 @@ export const API_RULES: readonly ApiRule[] = [
     // Telephony provider webhooks (Microsoft Graph callRecords notifications).
     // Graph authenticates with the per-subscription clientState secret the
     // route verifies, so these are not v1 API surface and never appear in
-    // /api/v1/meta metadata. PSA-only, matching the telephony add-on.
+    // /api/v1/meta metadata. PSA-only, matching the Microsoft Teams add-on.
     group: 'api_telephony_webhooks',
     staticPrefixes: [
       '/api/telephony',

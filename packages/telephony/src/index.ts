@@ -8,9 +8,9 @@ export {
 } from './lib/phoneNumbers';
 export { auditContactPhoneNormalization, matchCallParty } from './lib/callMatching';
 export {
-  assertTelephonyAddOn,
-  TelephonyAddOnInactiveError,
-  tenantHasTelephonyAddOn,
+  assertTelephonyEntitlement,
+  TelephonyEntitlementInactiveError,
+  tenantHasTelephonyEntitlement,
 } from './lib/telephonyAddOnGate';
 export {
   buildCallInteractionNotes,

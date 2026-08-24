@@ -21,15 +21,15 @@ export type {
 } from './telephonyAvailabilityCore';
 
 /**
- * Canonical telephony entitlement check: a non-expired `ADD_ONS.TELEPHONY` row.
- * The expiry predicate is evaluated in SQL so it matches the database clock, the
- * same contract `tenantHasTeamsAddOn` uses.
+ * Canonical telephony entitlement check. Telephony ships inside the Microsoft
+ * Teams add-on, so a non-expired `ADD_ONS.TEAMS` row is what entitles it. The
+ * expiry predicate is evaluated in SQL so it matches the database clock.
  */
-export async function tenantHasTelephonyAddOn(tenantId: string, knexOverride?: any): Promise<boolean> {
+export async function tenantHasTelephonyEntitlement(tenantId: string, knexOverride?: any): Promise<boolean> {
   const { createTenantKnex, tenantDb } = await import('@alga-psa/db');
   const knex = knexOverride ?? (await createTenantKnex(tenantId)).knex;
   const row = await tenantDb(knex, tenantId).table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TELEPHONY })
+    .where({ addon_key: ADD_ONS.TEAMS })
     .andWhere((builder: any) => {
       builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
     })
@@ -47,7 +47,7 @@ export async function getTelephonyAvailability(
   }
 
   const tenantId = (input.tenantId || '').trim();
-  if (tenantId && !(await tenantHasTelephonyAddOn(tenantId))) {
+  if (tenantId && !(await tenantHasTelephonyEntitlement(tenantId))) {
     return disabledTelephonyAvailability('addon_required');
   }
 

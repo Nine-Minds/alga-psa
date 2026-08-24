@@ -233,7 +233,7 @@ describe('IntegrationsSettingsPage communication sub-navigation', () => {
     expect(screen.getByTestId('telephony-integration-settings-shell')).toBeInTheDocument();
   });
 
-  it('T008: without the Telephony add-on the sub-section offers the add-on, not the settings', async () => {
+  it('T008: without the Teams add-on the sub-section offers the add-on, not the settings', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
     await renderPage({ canUseTelephony: false });
@@ -243,7 +243,7 @@ describe('IntegrationsSettingsPage communication sub-navigation', () => {
     expect(screen.queryByTestId('telephony-integration-settings-shell')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Manage add-ons' })).toHaveAttribute(
       'href',
-      '/msp/add-ons?addon=telephony',
+      '/msp/add-ons?addon=teams',
     );
   });
 

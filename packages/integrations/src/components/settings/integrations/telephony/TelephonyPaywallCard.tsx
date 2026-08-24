@@ -9,7 +9,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ADD_ONS } from '@alga-psa/types';
 import { getAddOnDestination } from '../../../../lib/addOnNavigation';
 
-const TELEPHONY_ADDON_DESTINATION = getAddOnDestination(ADD_ONS.TELEPHONY);
+// Telephony ships inside the Microsoft Teams add-on, so the upsell points there.
+const TELEPHONY_ADDON_DESTINATION = getAddOnDestination(ADD_ONS.TEAMS);
 
 const INCLUDED_FEATURES = [
   { key: 'recognition', defaultValue: 'Caller recognition against contacts and clients on every captured call.' },
@@ -38,10 +39,10 @@ export function TelephonyPaywallCard({ reason, message }: { reason?: string; mes
   return (
     <Card id="telephony-paywall-card">
       <CardHeader>
-        <CardTitle>{t('integrations.telephony.paywall.title', { defaultValue: 'Telephony add-on' })}</CardTitle>
+        <CardTitle>{t('integrations.telephony.paywall.title', { defaultValue: 'Microsoft Teams add-on' })}</CardTitle>
         <CardDescription>
           {t('integrations.telephony.paywall.description', {
-            defaultValue: 'Telephony integrations require the Telephony add-on for this tenant.',
+            defaultValue: 'Telephony integrations require the Microsoft Teams add-on for this tenant.',
           })}
         </CardDescription>
       </CardHeader>

@@ -4,7 +4,7 @@ import type { CanonicalCallRecord, CallMatchResult, TelephonyCallRecordRow } fro
 import { canonicalCallRecordSchema } from '../types';
 import { matchCallParty } from '../lib/callMatching';
 import { normalizeToE164 } from '../lib/phoneNumbers';
-import { tenantHasTelephonyAddOn } from '../lib/telephonyAddOnGate';
+import { tenantHasTelephonyEntitlement } from '../lib/telephonyAddOnGate';
 import {
   buildCallInteractionNotes,
   buildCallInteractionTitle,
@@ -57,8 +57,8 @@ export async function ingestCanonicalCall(
   const call = parsed.data;
   const knex = input.knex ?? (await createTenantKnex(input.tenantId)).knex;
 
-  if (!(await tenantHasTelephonyAddOn(knex, input.tenantId))) {
-    logger.info('[Telephony] Skipping call ingestion: telephony add-on inactive', {
+  if (!(await tenantHasTelephonyEntitlement(knex, input.tenantId))) {
+    logger.info('[Telephony] Skipping call ingestion: Microsoft Teams add-on inactive', {
       tenantId: input.tenantId,
       provider: call.provider,
     });

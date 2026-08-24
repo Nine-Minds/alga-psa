@@ -108,11 +108,13 @@ interface IntegrationItem {
   isEE?: boolean;
 }
 
-function AddOnRequiredNotice({ featureName, addOn, addOnName, description }: {
+function AddOnRequiredNotice({ featureName, addOn, addOnName, description, linkId }: {
   featureName: string;
   addOn: AddOnKey;
   addOnName: string;
   description: string;
+  /** Sub-sections stay mounted, so notices sharing an add-on need distinct ids. */
+  linkId?: string;
 }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
@@ -124,7 +126,7 @@ function AddOnRequiredNotice({ featureName, addOn, addOnName, description }: {
       </h2>
       <p className="text-muted-foreground max-w-md mb-6">{description}</p>
       <a
-        id={`manage-${addOnName.toLowerCase()}-addon-link`}
+        id={linkId ?? `manage-${addOnName.toLowerCase()}-addon-link`}
         href={getAddOnDestination(addOn)}
         className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors"
       >
@@ -141,7 +143,7 @@ interface IntegrationsSettingsPageProps {
   canUseCipp?: boolean;
   /** Whether the user can use Teams integration (Teams add-on) */
   canUseTeams?: boolean;
-  /** Whether the user can use telephony integrations (Telephony add-on) */
+  /** Whether the user can use telephony integrations (Microsoft Teams add-on) */
   canUseTelephony?: boolean;
   /** Slot for QBO sync health panel (injected from billing to avoid a circular dep) */
   qboSyncHealthSlot?: React.ReactNode;
@@ -329,9 +331,10 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
             : () => (
                 <AddOnRequiredNotice
                   featureName={t('integrations.items.telephony.name', { defaultValue: 'Telephony' })}
-                  addOn={ADD_ONS.TELEPHONY}
-                  addOnName="Telephony"
-                  description="Purchase the Telephony add-on to journal calls as interactions with caller recognition and ticket creation."
+                  addOn={ADD_ONS.TEAMS}
+                  addOnName="Teams"
+                  description="Purchase the Teams add-on to journal calls as interactions with caller recognition and ticket creation."
+                  linkId="manage-telephony-addon-link"
                 />
               ),
           isEE: true,

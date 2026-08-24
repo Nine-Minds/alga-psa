@@ -45,62 +45,66 @@ vi.mock('@alga-psa/db', () => {
   };
 });
 
-import { assertTelephonyAddOn, tenantHasTelephonyAddOn, TelephonyAddOnInactiveError } from './telephonyAddOnGate';
+import {
+  assertTelephonyEntitlement,
+  tenantHasTelephonyEntitlement,
+  TelephonyEntitlementInactiveError,
+} from './telephonyAddOnGate';
 
 // `knex.fn.now()` stands in for the database clock.
 const knex: any = { fn: { now: () => Date.now() } };
 
-describe('tenantHasTelephonyAddOn', () => {
+describe('tenantHasTelephonyEntitlement', () => {
   beforeEach(() => {
     fixtures.addons.length = 0;
   });
 
   it('T002: a tenant with no add-on row is denied', async () => {
-    await expect(tenantHasTelephonyAddOn(knex, 't1')).resolves.toBe(false);
+    await expect(tenantHasTelephonyEntitlement(knex, 't1')).resolves.toBe(false);
   });
 
   it('T002: an add-on with no expiry is active', async () => {
-    fixtures.addons.push({ tenant: 't1', addon_key: 'telephony', expires_at: null });
+    fixtures.addons.push({ tenant: 't1', addon_key: 'teams', expires_at: null });
 
-    await expect(tenantHasTelephonyAddOn(knex, 't1')).resolves.toBe(true);
+    await expect(tenantHasTelephonyEntitlement(knex, 't1')).resolves.toBe(true);
   });
 
   it('T002: an add-on that has not expired yet is active', async () => {
     fixtures.addons.push({
       tenant: 't1',
-      addon_key: 'telephony',
+      addon_key: 'teams',
       expires_at: new Date(Date.now() + 86_400_000).toISOString(),
     });
 
-    await expect(tenantHasTelephonyAddOn(knex, 't1')).resolves.toBe(true);
+    await expect(tenantHasTelephonyEntitlement(knex, 't1')).resolves.toBe(true);
   });
 
   it('T002: an expired add-on is denied', async () => {
     fixtures.addons.push({
       tenant: 't1',
-      addon_key: 'telephony',
+      addon_key: 'teams',
       expires_at: new Date(Date.now() - 1000).toISOString(),
     });
 
-    await expect(tenantHasTelephonyAddOn(knex, 't1')).resolves.toBe(false);
+    await expect(tenantHasTelephonyEntitlement(knex, 't1')).resolves.toBe(false);
   });
 
   it('T002: another add-on does not entitle telephony', async () => {
-    fixtures.addons.push({ tenant: 't1', addon_key: 'teams', expires_at: null });
+    fixtures.addons.push({ tenant: 't1', addon_key: 'ai_assistant', expires_at: null });
 
-    await expect(tenantHasTelephonyAddOn(knex, 't1')).resolves.toBe(false);
+    await expect(tenantHasTelephonyEntitlement(knex, 't1')).resolves.toBe(false);
   });
 
   it('T002: entitlement never leaks across tenants', async () => {
-    fixtures.addons.push({ tenant: 't2', addon_key: 'telephony', expires_at: null });
+    fixtures.addons.push({ tenant: 't2', addon_key: 'teams', expires_at: null });
 
-    await expect(tenantHasTelephonyAddOn(knex, 't1')).resolves.toBe(false);
+    await expect(tenantHasTelephonyEntitlement(knex, 't1')).resolves.toBe(false);
   });
 
-  it('T002: assertTelephonyAddOn throws a typed error for an unentitled tenant', async () => {
-    await expect(assertTelephonyAddOn(knex, 't1')).rejects.toBeInstanceOf(TelephonyAddOnInactiveError);
+  it('T002: assertTelephonyEntitlement throws a typed error for an unentitled tenant', async () => {
+    await expect(assertTelephonyEntitlement(knex, 't1')).rejects.toBeInstanceOf(TelephonyEntitlementInactiveError);
 
-    fixtures.addons.push({ tenant: 't1', addon_key: 'telephony', expires_at: null });
-    await expect(assertTelephonyAddOn(knex, 't1')).resolves.toBeUndefined();
+    fixtures.addons.push({ tenant: 't1', addon_key: 'teams', expires_at: null });
+    await expect(assertTelephonyEntitlement(knex, 't1')).resolves.toBeUndefined();
   });
 });

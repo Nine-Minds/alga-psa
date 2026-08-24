@@ -28,7 +28,7 @@ export interface GetTelephonyAvailabilityInput extends ResolveTelephonyAvailabil
 export const TELEPHONY_AVAILABILITY_MESSAGES: Record<TelephonyAvailabilityDisabledReason, string> = {
   ce_unavailable: 'Telephony integrations are only available in Enterprise Edition.',
   tenant_not_configured: 'Telephony integrations require tenant context.',
-  addon_required: 'Telephony integrations require the Telephony add-on.',
+  addon_required: 'Telephony integrations require the Microsoft Teams add-on.',
 };
 
 type TelephonyEditionEnv = {

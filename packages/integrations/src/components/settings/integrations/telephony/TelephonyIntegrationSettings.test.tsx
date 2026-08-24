@@ -144,7 +144,7 @@ describe('TelephonyIntegrationSettings', () => {
       success: true,
       available: false,
       reason: 'addon_required',
-      error: 'Telephony add-on required',
+      error: 'Microsoft Teams add-on required',
       canManage: true,
       providers: [],
       recentCalls: [],
@@ -153,7 +153,7 @@ describe('TelephonyIntegrationSettings', () => {
 
     render(<TelephonyIntegrationSettings />);
 
-    expect(await screen.findByText('Telephony add-on')).toBeTruthy();
+    expect(await screen.findByText('Microsoft Teams add-on')).toBeTruthy();
     expect(screen.queryByText('Teams Phone')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Enable' })).toBeNull();
   });

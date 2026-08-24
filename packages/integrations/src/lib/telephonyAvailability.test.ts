@@ -43,7 +43,7 @@ vi.mock('@alga-psa/db', () => ({
 import {
   getTelephonyAvailability,
   resolveTelephonyAvailability,
-  tenantHasTelephonyAddOn,
+  tenantHasTelephonyEntitlement,
 } from './telephonyAvailability';
 
 describe('telephonyAvailability', () => {
@@ -53,8 +53,8 @@ describe('telephonyAvailability', () => {
     hoisted.knexMock.mockClear();
   });
 
-  it('T003: EE tenant with the telephony add-on is enabled', async () => {
-    hoisted.tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'telephony', expires_at: null });
+  it('T003: EE tenant with the Teams add-on is enabled', async () => {
+    hoisted.tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
 
     await expect(
       getTelephonyAvailability({ isEnterpriseEdition: true, tenantId: 'tenant-1' }),
@@ -67,7 +67,7 @@ describe('telephonyAvailability', () => {
     ).resolves.toEqual({
       enabled: false,
       reason: 'addon_required',
-      message: 'Telephony integrations require the Telephony add-on.',
+      message: 'Telephony integrations require the Microsoft Teams add-on.',
     });
   });
 
@@ -91,10 +91,10 @@ describe('telephonyAvailability', () => {
   });
 
   it('T002: the gate is false without a row and true for an unexpired row', async () => {
-    await expect(tenantHasTelephonyAddOn('tenant-1')).resolves.toBe(false);
+    await expect(tenantHasTelephonyEntitlement('tenant-1')).resolves.toBe(false);
 
-    hoisted.tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'telephony', expires_at: null });
-    await expect(tenantHasTelephonyAddOn('tenant-1')).resolves.toBe(true);
+    hoisted.tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
+    await expect(tenantHasTelephonyEntitlement('tenant-1')).resolves.toBe(true);
   });
 
   it('keeps the client-safe resolver free of database imports', () => {
