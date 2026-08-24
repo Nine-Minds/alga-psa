@@ -3614,6 +3614,7 @@
         "noTargets": "Nenhum contato ou cliente correspondente.",
         "chooseTarget": "Atribuir a um contato ou cliente…"
       },
+      "forbidden": "Você não tem permissão para ver as configurações de telefonia deste inquilino.",
       "paywall": {
         "title": "Complemento Microsoft Teams",
         "description": "As integrações de telefonia exigem o complemento Microsoft Teams para este inquilino.",

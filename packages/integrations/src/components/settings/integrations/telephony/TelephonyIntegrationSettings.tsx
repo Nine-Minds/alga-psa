@@ -199,6 +199,23 @@ export function TelephonyIntegrationSettings() {
     }
   };
 
+  // An authorization refusal carries no entitlement reason. Telling someone who
+  // may not see the call log to go buy an add-on would be the wrong answer.
+  if (overview && !overview.success) {
+    return (
+      <Card id="telephony-forbidden-card">
+        <CardHeader>
+          <CardTitle>{t('integrations.telephony.paywall.title', { defaultValue: 'Telephony' })}</CardTitle>
+          <CardDescription id="telephony-forbidden-message">
+            {t('integrations.telephony.forbidden', {
+              defaultValue: 'You do not have permission to view telephony settings for this tenant.',
+            })}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   if (overview && !overview.available) {
     return <TelephonyPaywallCard reason={overview.reason} message={overview.error} />;
   }

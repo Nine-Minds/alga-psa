@@ -3614,6 +3614,7 @@
         "noTargets": "Keine passenden Kontakte oder Kunden.",
         "chooseTarget": "Einem Kontakt oder Kunden zuordnen…"
       },
+      "forbidden": "Sie haben keine Berechtigung, die Telefonie-Einstellungen dieses Mandanten anzuzeigen.",
       "paywall": {
         "title": "Microsoft Teams-Add-on",
         "description": "Telefonie-Integrationen erfordern das Microsoft Teams-Add-on für diesen Mandanten.",

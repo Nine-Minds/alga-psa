@@ -3614,6 +3614,7 @@
         "noTargets": "No matching contacts or clients.",
         "chooseTarget": "Assign to a contact or client…"
       },
+      "forbidden": "You do not have permission to view telephony settings for this tenant.",
       "paywall": {
         "title": "Microsoft Teams add-on",
         "description": "Telephony integrations require the Microsoft Teams add-on for this tenant.",

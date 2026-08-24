@@ -3614,6 +3614,7 @@
         "noTargets": "Geen overeenkomende contacten of klanten.",
         "chooseTarget": "Toewijzen aan een contact of klant…"
       },
+      "forbidden": "U hebt geen toestemming om de telefonie-instellingen van deze tenant te bekijken.",
       "paywall": {
         "title": "Microsoft Teams-add-on",
         "description": "Telefonie-integraties vereisen de Microsoft Teams-add-on voor deze tenant.",

@@ -3614,6 +3614,7 @@
         "noTargets": "Aucun contact ni client correspondant.",
         "chooseTarget": "Attribuer à un contact ou à un client…"
       },
+      "forbidden": "Vous n'avez pas l'autorisation de consulter les paramètres de téléphonie de ce locataire.",
       "paywall": {
         "title": "Module complémentaire Microsoft Teams",
         "description": "Les intégrations de téléphonie nécessitent le module complémentaire Microsoft Teams pour ce locataire.",

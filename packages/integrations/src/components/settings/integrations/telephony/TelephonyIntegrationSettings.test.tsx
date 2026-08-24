@@ -158,6 +158,24 @@ describe('TelephonyIntegrationSettings', () => {
     expect(screen.queryByRole('button', { name: 'Enable' })).toBeNull();
   });
 
+  it('T044: a refused caller is told so, not sent to buy an add-on', async () => {
+    mocks.getOverview.mockResolvedValue({
+      success: false,
+      error: 'Forbidden',
+      available: false,
+      canManage: false,
+      providers: [],
+      recentCalls: [],
+      unresolvedCalls: [],
+    });
+
+    const { container } = render(<TelephonyIntegrationSettings />);
+
+    expect(await screen.findByText(/do not have permission/i)).toBeTruthy();
+    expect(container.querySelector('#telephony-paywall-card')).toBeNull();
+    expect(screen.queryByText('Teams Phone')).toBeNull();
+  });
+
   it('T009: the recent-calls strip lists direction, number, duration and match state', async () => {
     mocks.getOverview.mockResolvedValue(overview());
 
