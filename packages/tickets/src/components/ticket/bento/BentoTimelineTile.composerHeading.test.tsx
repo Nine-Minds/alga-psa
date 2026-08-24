@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoTimelineTile } from './BentoTimelineTile';
 
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
@@ -194,6 +194,17 @@ function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
 describe('BentoTimelineTile composer heading', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Schedule validity is `resolvedInstant > Date.now()`, and the mocked
+    // resolver always returns 2026-08-23T13:30:00Z. Freeze the clock before
+    // that instant so the scheduled time is deterministically in the future,
+    // regardless of when the suite actually runs. `shouldAdvanceTime` keeps
+    // async `waitFor` polling working under fake timers.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-08-23T00:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('shows the contact heading only in the client lane', () => {
