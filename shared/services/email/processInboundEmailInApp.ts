@@ -294,12 +294,18 @@ function withDiagnostics<T extends ProcessInboundEmailInAppBaseResult>(
               ticketId: result.ticketId,
               commentId: result.commentId,
             }
-          : {
-              kind: result.outcome,
-              ticketId: result.ticketId,
-              ticketNumber: result.ticketNumber,
-              commentId: result.commentId,
-            };
+          : result.outcome === 'created'
+            ? {
+                kind: result.outcome,
+                ticketId: result.ticketId,
+                ticketNumber: result.ticketNumber,
+                commentId: result.commentId,
+              }
+            : {
+                kind: result.outcome,
+                ticketId: result.ticketId,
+                matchedBy: result.matchedBy,
+              };
 
   return {
     ...result,
