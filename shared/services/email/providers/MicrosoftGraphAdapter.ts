@@ -828,7 +828,12 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         inReplyTo: message.internetMessageHeaders?.find((h: any) => h.name === 'In-Reply-To')?.value,
         tenant: this.config.tenant,
         headers: message.internetMessageHeaders?.reduce((acc: any, header: any) => {
-          acc[header.name] = header.value;
+          const headerName = String(header?.name || '');
+          const normalizedHeaderName = headerName.toLowerCase();
+          if (normalizedHeaderName.startsWith('x-resolved-') || normalizedHeaderName.startsWith('x-list-')) {
+            return acc;
+          }
+          acc[headerName] = header.value;
           return acc;
         }, {}),
         messageSize: message.bodyPreview?.length,

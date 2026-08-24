@@ -686,7 +686,15 @@ This indicates a problem with the OAuth token saving process.`;
           isInline: att.isInline
         })),
         headers: headers.reduce((acc: any, header: any) => {
-          acc[header.name] = header.value;
+          const headerName = String(header?.name || '');
+          const normalizedHeaderName = headerName.toLowerCase();
+          // These names are trusted processor metadata, not provider headers.
+          // Gmail has no verified list-rewrite branch, so it must never forward
+          // raw values in either reserved namespace.
+          if (normalizedHeaderName.startsWith('x-resolved-') || normalizedHeaderName.startsWith('x-list-')) {
+            return acc;
+          }
+          acc[headerName] = header.value;
           return acc;
         }, {})
       };

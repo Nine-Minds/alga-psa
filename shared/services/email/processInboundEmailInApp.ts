@@ -1,7 +1,7 @@
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
@@ -30,11 +30,46 @@ import {
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId } from './inboundEmailIdentity';
+import {
+  allowsContactSenderAttribution,
+  allowsInternalSenderAttribution,
+  verifySenderAuthentication,
+} from '../../lib/email/senderAuthVerification';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
   providerId: string;
   emailData: EmailMessageDetails;
+}
+
+async function logInboundSenderAuthFailure(input: {
+  tenantId: string;
+  providerId: string;
+  emailId: string;
+  senderEmail: string;
+  authResults: unknown;
+}): Promise<void> {
+  try {
+    const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
+    await withAdminTransaction(async (trx: any) => {
+      // audit_logs has a legacy trigger that derives tenant from this
+      // transaction-local GUC rather than from the insert payload.
+      await trx.raw("select set_config('app.current_tenant', ?, true)", [input.tenantId]);
+      await tenantDb(trx, input.tenantId).table('audit_logs').insert({
+        audit_id: randomUUID(),
+        operation: 'inbound_email_internal_sender_auth_failed',
+        table_name: 'email_providers',
+        record_id: input.providerId,
+        changed_data: {},
+        details: { emailId: input.emailId, senderEmail: input.senderEmail, authResults: input.authResults },
+        timestamp: new Date().toISOString(),
+      });
+    });
+  } catch (error) {
+    // Security logging must not discard the inbound message; the identity gate
+    // remains fail-closed even if the audit store is temporarily unavailable.
+    console.error('Failed to persist inbound sender-auth security event', { ...input, error });
+  }
 }
 
 export interface ProcessInboundEmailInAppOptions {
@@ -983,6 +1018,11 @@ export async function processInboundEmailInApp(
   const emailData = input.emailData;
   const dedupeKey = buildDedupeKey(input);
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
+  const authenticationResultsHeader = Object.entries(emailData.headers ?? {}).find(
+    ([name]) => name.toLowerCase() === 'authentication-results'
+  )?.[1];
+  const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
+  const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
   const durableExecution = options.durableExecution ?? null;
 
   const helperExecutionOptions = (kind: 'ticket' | 'comment'): InboundEmailExecutionOptions | undefined => {
@@ -1068,7 +1108,24 @@ export async function processInboundEmailInApp(
       return null;
     }
 
-    return findContactByEmail(senderEmail, tenantId, context);
+    const matched = await findContactByEmail(senderEmail, tenantId, context);
+    if (!matched) return null;
+
+    if (matched.user_type === 'internal') {
+      if (allowsInternalSenderAttribution(senderAuthResults)) return matched;
+      // A list rewrite may be trusted for contact matching, but never grants an
+      // internal identity: only authentication aligned to the original From can.
+      console.warn('SECURITY_EVENT inbound_email_internal_sender_auth_failed', {
+        tenantId, providerId, emailId: emailData.id, senderEmail,
+        authResults: senderAuthResults,
+      });
+      await logInboundSenderAuthFailure({
+        tenantId, providerId, emailId: emailData.id, senderEmail, authResults: senderAuthResults,
+      });
+      return null;
+    }
+    if (allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite) return matched;
+    return null;
   };
 
   let providerMailboxEmail: string | null = null;
@@ -1172,6 +1229,7 @@ export async function processInboundEmailInApp(
     to: emailData.to,
     subject: emailData.subject,
     receivedAt: emailData.receivedAt,
+    authResults: senderAuthResults,
   });
 
   const buildUnmatchedSenderWatchListRecipients = (matchedContactId?: string | null) => {
@@ -1957,6 +2015,7 @@ export async function processInboundEmailInApp(
         inReplyTo: normalizeStoredMessageId(emailData.inReplyTo),
         references: (emailData.references ?? []).map((reference) => normalizeStoredMessageId(reference)),
         providerId,
+        authResults: senderAuthResults,
         clientMatchSource,
         ...(appliedRule
           ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName }
@@ -1992,7 +2051,7 @@ export async function processInboundEmailInApp(
           heuristics: parsedEmail?.appliedHeuristics,
           warnings: parsedEmail?.warnings,
         },
-        unmatchedSender: !commentAuthorContactId,
+        unmatchedSender: !matchedSenderContact,
         inboundReopenDecision: rerouteReasonMetadata ?? undefined,
       },
     },

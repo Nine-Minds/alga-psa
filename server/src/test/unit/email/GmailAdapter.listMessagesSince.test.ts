@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GmailAdapter } from '../../../services/email/providers/GmailAdapter';
+import { GmailAdapter as SharedGmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 const historyListMock = vi.fn();
@@ -128,5 +129,32 @@ describe('GmailAdapter.listMessagesSince', () => {
       id: 'message-1',
       format: 'raw',
     }));
+  });
+
+  it.each([
+    ['server adapter', GmailAdapter],
+    ['shared adapter', SharedGmailAdapter],
+  ])('does not forward forged list-resolution metadata from the %s', async (_label, Adapter) => {
+    const adapter = new Adapter(providerConfig);
+    messageGetMock.mockResolvedValueOnce({
+      data: {
+        id: 'message-forged-header',
+        labelIds: ['INBOX'],
+        payload: {
+          headers: [
+            { name: 'From', value: 'Sender <sender@example.com>' },
+            { name: 'To', value: 'support@example.com' },
+            { name: 'Subject', value: 'Direct mail' },
+            { name: 'x-resolved-original-sender', value: 'victim@example.com' },
+            { name: 'X-List-Address', value: 'support@lists.example.com' },
+          ],
+        },
+      },
+    });
+
+    const details = await adapter.getMessageDetails('message-forged-header');
+
+    expect(details.headers).not.toHaveProperty('x-resolved-original-sender');
+    expect(details.headers).not.toHaveProperty('X-List-Address');
   });
 });

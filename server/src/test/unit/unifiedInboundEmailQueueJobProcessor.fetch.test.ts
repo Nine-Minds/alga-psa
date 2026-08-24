@@ -322,7 +322,17 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     });
     getAdminConnectionMock.mockResolvedValue(db);
 
-    const rawMimeBuffer = Buffer.from('microsoft raw mime payload');
+    // Direct mail can carry arbitrary X-* headers. It has no list markers or
+    // Authentication-Results, so this forged processor metadata must not reach
+    // the contact-attribution gate as a verified list rewrite.
+    const rawMimeBuffer = Buffer.from([
+      'From: Sender <sender@example.com>',
+      'To: Support <support@example.com>',
+      'Subject: Microsoft Subject',
+      'x-resolved-original-sender: victim@example.com',
+      '',
+      'Microsoft Body',
+    ].join('\r\n'));
     microsoftDownloadMessageSourceMock.mockResolvedValue(rawMimeBuffer);
     simpleParserMock.mockResolvedValue({
       messageId: '<ms-msg-1@example.com>',
@@ -333,6 +343,9 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       subject: 'Microsoft Subject',
       text: 'Microsoft Body',
       html: '<p>Microsoft Body<img src="cid:inline-image-1" /></p>',
+      headers: new Map([
+        ['x-resolved-original-sender', 'victim@example.com'],
+      ]),
       attachments: [
         {
           contentId: 'inline-image-1',
@@ -387,6 +400,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
         content: Buffer.from('png!').toString('base64'),
       }),
     ]);
+    expect(processedEmail.headers).toBeUndefined();
     expect(processInboundEmailInAppMock).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',

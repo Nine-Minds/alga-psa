@@ -38,6 +38,7 @@ function buildEmailData(
     subject: 'Inbound subject',
     body: { text: 'Hello from client', html: undefined },
     attachments: [],
+    headers: { 'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com; dmarc=pass header.from=example.com' },
     ...overrides,
   };
 }
@@ -209,6 +210,7 @@ describe('processInboundEmailInApp', () => {
         subject: 'Inbound subject',
         body: { text: 'Hello from client', html: undefined },
         attachments: [],
+        headers: { 'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com' },
       } as any,
     });
 
@@ -273,6 +275,7 @@ describe('processInboundEmailInApp', () => {
       providerId: 'provider-1',
       emailData: buildEmailData({
         from: { email: 'ROBERT@NINEMINDS.COM', name: 'Robert Isaacs' },
+        headers: { 'authentication-results': 'mx.nineminds.com; dmarc=pass header.from=nineminds.com' },
       }),
     });
 
@@ -291,7 +294,7 @@ describe('processInboundEmailInApp', () => {
         author_id: 'internal-user-123',
         contact_id: undefined,
         metadata: expect.objectContaining({
-          unmatchedSender: true,
+          unmatchedSender: false,
         }),
       }),
       'tenant-1'
