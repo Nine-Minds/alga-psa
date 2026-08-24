@@ -285,3 +285,14 @@ application access policy for the organizer. Deliberately *not* added to
 probe, and failing every tenant's Teams validation over an opt-in capability
 they have not bought consent for would be worse than a 403 the fetcher already
 reads as "nothing recorded".
+
+**Landmine — `npm run dev` in `server/` ignores `APP_PORT` and binds :3000.**
+The script is `nx next:dev server` with no port, so it takes Next's default —
+which on this card is the one port that must never be touched. The card's app
+was started as `npx next dev -p 3109` from `server/`, and that is how it must
+be restarted. (The `npm run dev` path is still the one that rebuilds package
+dists via `nx build-deps`; run it, then bounce onto the right port.)
+
+Order matters with the boot password rewrite too: the banner password is
+minted *during* boot, so the documented `Bcc2ae7e4ed875!` has to be written
+back **after** the server is up, not before, or the boot overwrites it again.
