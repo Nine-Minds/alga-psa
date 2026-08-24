@@ -96,7 +96,8 @@
         "title": "Excluir artigo",
         "message": "Tem certeza de que deseja excluir permanentemente \"{{title}}\"? Esta ação removerá o artigo e seu conteúdo e não poderá ser desfeita.",
         "titleMultiple": "Excluir {{count}} artigo(s)",
-        "messageMultiple": "Tem certeza de que deseja excluir permanentemente {{count}} artigo(s)? Os artigos e seu conteúdo serão removidos e a ação não poderá ser desfeita."
+        "messageMultiple": "Tem certeza de que deseja excluir permanentemente {{count}} artigo(s)? Os artigos e seu conteúdo serão removidos e a ação não poderá ser desfeita.",
+        "skippedNotice": "{{count}} artigo(s) selecionado(s) estão publicados ou em revisão e serão ignorados — arquive-os primeiro."
       }
     },
     "feedback": {
@@ -106,8 +107,11 @@
       "deleteSuccess": "Artigo excluído permanentemente",
       "bulkArchiveSuccess": "{{count}} artigo(s) arquivado(s)",
       "bulkArchiveError": "Falha ao arquivar {{count}} artigo(s)",
+      "bulkArchivePartial": "{{count}} artigo(s) arquivado(s); {{failed}} não puderam ser arquivados",
       "bulkDeleteSuccess": "{{count}} artigo(s) excluído(s) permanentemente",
-      "bulkDeleteError": "Falha ao excluir {{count}} artigo(s)"
+      "bulkDeleteError": "Falha ao excluir {{count}} artigo(s)",
+      "bulkDeletePartial": "{{count}} artigo(s) excluído(s); {{failed}} não puderam ser excluídos",
+      "deleteNotAllowed": "Artigos publicados ou em revisão precisam ser arquivados antes de serem excluídos"
     },
     "bulk": {
       "actionBar": {

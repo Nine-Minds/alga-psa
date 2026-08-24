@@ -96,7 +96,8 @@
         "title": "Usuń artykuł",
         "message": "Czy na pewno chcesz trwale usunąć \"{{title}}\"? Spowoduje to usunięcie artykułu wraz z jego zawartością i nie można tego cofnąć.",
         "titleMultiple": "Usuń artykuły: {{count}}",
-        "messageMultiple": "Czy na pewno chcesz trwale usunąć artykuły ({{count}})? Artykuły i ich treść zostaną usunięte, a operacji nie można cofnąć."
+        "messageMultiple": "Czy na pewno chcesz trwale usunąć artykuły ({{count}})? Artykuły i ich treść zostaną usunięte, a operacji nie można cofnąć.",
+        "skippedNotice": "Wybrane artykuły opublikowane lub w recenzji ({{count}}) zostaną pominięte — najpierw je zarchiwizuj."
       }
     },
     "feedback": {
@@ -106,8 +107,11 @@
       "deleteSuccess": "Artykuł trwale usunięty",
       "bulkArchiveSuccess": "Zarchiwizowano artykuły: {{count}}",
       "bulkArchiveError": "Nie udało się zarchiwizować artykułów: {{count}}",
+      "bulkArchivePartial": "Zarchiwizowano artykuły: {{count}}; nie udało się zarchiwizować: {{failed}}",
       "bulkDeleteSuccess": "Trwale usunięto artykuły: {{count}}",
-      "bulkDeleteError": "Nie udało się usunąć artykułów: {{count}}"
+      "bulkDeleteError": "Nie udało się usunąć artykułów: {{count}}",
+      "bulkDeletePartial": "Usunięto artykuły: {{count}}; nie udało się usunąć: {{failed}}",
+      "deleteNotAllowed": "Artykuły opublikowane lub w recenzji trzeba najpierw zarchiwizować, aby móc je usunąć"
     },
     "bulk": {
       "actionBar": {

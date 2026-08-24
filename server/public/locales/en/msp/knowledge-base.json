@@ -96,7 +96,8 @@
         "title": "Delete Article",
         "message": "Are you sure you want to permanently delete \"{{title}}\"? This will remove the article and its content, and cannot be undone.",
         "titleMultiple": "Delete {{count}} article(s)",
-        "messageMultiple": "Are you sure you want to permanently delete {{count}} article(s)? This will remove the articles and their content, and cannot be undone."
+        "messageMultiple": "Are you sure you want to permanently delete {{count}} article(s)? This will remove the articles and their content, and cannot be undone.",
+        "skippedNotice": "{{count}} selected article(s) are published or in review and will be skipped — archive them first."
       }
     },
     "feedback": {
@@ -106,8 +107,11 @@
       "deleteSuccess": "Article deleted permanently",
       "bulkArchiveSuccess": "{{count}} article(s) archived",
       "bulkArchiveError": "Failed to archive {{count}} article(s)",
+      "bulkArchivePartial": "Archived {{count}} article(s); {{failed}} could not be archived",
       "bulkDeleteSuccess": "{{count}} article(s) deleted permanently",
-      "bulkDeleteError": "Failed to delete {{count}} article(s)"
+      "bulkDeleteError": "Failed to delete {{count}} article(s)",
+      "bulkDeletePartial": "Deleted {{count}} article(s); {{failed}} could not be deleted",
+      "deleteNotAllowed": "Published or in-review articles must be archived before they can be deleted"
     },
     "bulk": {
       "actionBar": {

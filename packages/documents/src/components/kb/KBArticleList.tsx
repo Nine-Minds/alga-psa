@@ -17,7 +17,6 @@ import {
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Pagination from '@alga-psa/ui/components/Pagination';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 import {
@@ -56,6 +55,11 @@ const STATUS_COLORS: Record<ArticleStatus, string> = {
   published: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
   archived: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 };
+
+// Mirrors the server rule in deleteArticle: published and in-review articles
+// have to be archived before they can be removed.
+const isDeletable = (article: IKBArticleWithDocument): boolean =>
+  article.status === 'draft' || article.status === 'archived';
 
 const AUDIENCE_COLORS: Record<ArticleAudience, string> = {
   internal: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
@@ -123,9 +127,11 @@ export default function KBArticleList({
   const [articlesToArchive, setArticlesToArchive] = useState<IKBArticleWithDocument[]>([]);
   const [isArchiving, setIsArchiving] = useState(false);
 
-  // Delete confirmation dialog state
+  // Delete confirmation dialog state — only ever holds deletable articles;
+  // anything the server would refuse is counted in skippedDeleteCount instead.
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [articlesToDelete, setArticlesToDelete] = useState<IKBArticleWithDocument[]>([]);
+  const [skippedDeleteCount, setSkippedDeleteCount] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const getStatusLabel = useFormatArticleStatus();
@@ -141,35 +147,50 @@ export default function KBArticleList({
     if (articlesToArchive.length === 0) return;
 
     setIsArchiving(true);
+    // Each article is archived on its own request, so a rejection partway
+    // through must not hide the ones that already succeeded.
+    const archivedIds = new Set<string>();
+    let failed = 0;
     try {
-      let failed = 0;
       for (const article of articlesToArchive) {
-        const result = await archiveArticle(article.article_id);
-        if (typeof result === 'object' && 'code' in result) failed += 1;
+        try {
+          const result = await archiveArticle(article.article_id);
+          if (typeof result === 'object' && 'code' in result) failed += 1;
+          else archivedIds.add(article.article_id);
+        } catch {
+          failed += 1;
+        }
       }
-      if (failed > 0) {
+
+      if (failed === 0 && articlesToArchive.length === 1) {
+        toast.success(t('list.feedback.archiveSuccess', { defaultValue: 'Article archived' }));
+      } else if (failed === 0) {
+        toast.success(t('list.feedback.bulkArchiveSuccess', {
+          defaultValue: '{{count}} article(s) archived',
+          count: archivedIds.size,
+        }));
+      } else if (archivedIds.size > 0) {
+        toast.error(t('list.feedback.bulkArchivePartial', {
+          defaultValue: 'Archived {{count}} article(s); {{failed}} could not be archived',
+          count: archivedIds.size,
+          failed,
+        }));
+      } else {
         toast.error(failed === 1
           ? t('list.feedback.archiveError', { defaultValue: 'Failed to archive article' })
           : t('list.feedback.bulkArchiveError', {
               defaultValue: 'Failed to archive {{count}} article(s)',
               count: failed,
             }));
-      } else if (articlesToArchive.length === 1) {
-        toast.success(t('list.feedback.archiveSuccess', { defaultValue: 'Article archived' }));
-      } else {
-        toast.success(t('list.feedback.bulkArchiveSuccess', {
-          defaultValue: '{{count}} article(s) archived',
-          count: articlesToArchive.length,
-        }));
       }
-      setSelectedArticles(new Set());
-      onRefresh();
-    } catch (error) {
-      handleError(error, t('list.feedback.archiveError', { defaultValue: 'Failed to archive article' }));
     } finally {
+      // Keep whatever was not archived selected so it can be retried, and
+      // always refresh: the list is stale for every article that did change.
+      setSelectedArticles((previous) => new Set([...previous].filter((id) => !archivedIds.has(id))));
       setIsArchiving(false);
       setArchiveDialogOpen(false);
       setArticlesToArchive([]);
+      onRefresh();
     }
   };
 
@@ -181,7 +202,23 @@ export default function KBArticleList({
 
   const confirmDelete = (articlesToConfirm: IKBArticleWithDocument[]) => {
     if (articlesToConfirm.length === 0) return;
-    setArticlesToDelete(articlesToConfirm);
+
+    // The server only deletes drafts and archived articles and rejects the
+    // rest. Filtering here keeps a published article in the selection from
+    // aborting the loop after earlier drafts are already gone for good.
+    const deletable = articlesToConfirm.filter(isDeletable);
+    const skipped = articlesToConfirm.length - deletable.length;
+
+    if (deletable.length === 0) {
+      toast.error(t('list.feedback.deleteNotAllowed', {
+        defaultValue: 'Published or in-review articles must be archived before they can be deleted',
+        count: skipped,
+      }));
+      return;
+    }
+
+    setArticlesToDelete(deletable);
+    setSkippedDeleteCount(skipped);
     setDeleteDialogOpen(true);
   };
 
@@ -189,35 +226,52 @@ export default function KBArticleList({
     if (articlesToDelete.length === 0) return;
 
     setIsDeleting(true);
+    // Deletions are permanent and issued one request at a time, so every
+    // outcome is tallied individually: a rejection midway must neither stop
+    // the remaining articles nor let the report claim nothing happened.
+    const deletedIds = new Set<string>();
+    let failed = 0;
     try {
-      let failed = 0;
       for (const article of articlesToDelete) {
-        const result = await deleteArticle(article.article_id);
-        if (typeof result === 'object' && 'code' in result) failed += 1;
+        try {
+          const result = await deleteArticle(article.article_id);
+          if (typeof result === 'object' && 'code' in result) failed += 1;
+          else deletedIds.add(article.article_id);
+        } catch {
+          failed += 1;
+        }
       }
-      if (failed > 0) {
+
+      if (failed === 0 && articlesToDelete.length === 1) {
+        toast.success(t('list.feedback.deleteSuccess', { defaultValue: 'Article deleted permanently' }));
+      } else if (failed === 0) {
+        toast.success(t('list.feedback.bulkDeleteSuccess', {
+          defaultValue: '{{count}} article(s) deleted permanently',
+          count: deletedIds.size,
+        }));
+      } else if (deletedIds.size > 0) {
+        toast.error(t('list.feedback.bulkDeletePartial', {
+          defaultValue: 'Deleted {{count}} article(s); {{failed}} could not be deleted',
+          count: deletedIds.size,
+          failed,
+        }));
+      } else {
         toast.error(failed === 1
           ? t('list.feedback.deleteError', { defaultValue: 'Failed to delete article' })
           : t('list.feedback.bulkDeleteError', {
               defaultValue: 'Failed to delete {{count}} article(s)',
               count: failed,
             }));
-      } else if (articlesToDelete.length === 1) {
-        toast.success(t('list.feedback.deleteSuccess', { defaultValue: 'Article deleted permanently' }));
-      } else {
-        toast.success(t('list.feedback.bulkDeleteSuccess', {
-          defaultValue: '{{count}} article(s) deleted permanently',
-          count: articlesToDelete.length,
-        }));
       }
-      setSelectedArticles(new Set());
-      onRefresh();
-    } catch (error) {
-      handleError(error, t('list.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
     } finally {
+      // Only drop what is actually gone: skipped and failed articles stay
+      // selected, and the list refreshes even when part of the batch failed.
+      setSelectedArticles((previous) => new Set([...previous].filter((id) => !deletedIds.has(id))));
       setIsDeleting(false);
       setDeleteDialogOpen(false);
       setArticlesToDelete([]);
+      setSkippedDeleteCount(0);
+      onRefresh();
     }
   };
 
@@ -481,6 +535,7 @@ export default function KBArticleList({
         onClose={() => {
           setDeleteDialogOpen(false);
           setArticlesToDelete([]);
+          setSkippedDeleteCount(0);
         }}
         onConfirm={handleDelete}
         title={articlesToDelete.length > 1
@@ -489,7 +544,7 @@ export default function KBArticleList({
               count: articlesToDelete.length,
             })
           : t('list.dialogs.delete.title', { defaultValue: 'Delete Article' })}
-        message={articlesToDelete.length > 1
+        message={`${articlesToDelete.length > 1
           ? t('list.dialogs.delete.messageMultiple', {
               defaultValue:
                 'Are you sure you want to permanently delete {{count}} article(s)? This will remove the articles and their content, and cannot be undone.',
@@ -499,7 +554,13 @@ export default function KBArticleList({
               defaultValue:
                 'Are you sure you want to permanently delete "{{title}}"? This will remove the article and its content, and cannot be undone.',
               title: articlesToDelete[0]?.document_name || articlesToDelete[0]?.slug || '',
-            })}
+            })}${skippedDeleteCount > 0
+          ? ` ${t('list.dialogs.delete.skippedNotice', {
+              defaultValue:
+                '{{count}} selected article(s) are published or in review and will be skipped — archive them first.',
+              count: skippedDeleteCount,
+            })}`
+          : ''}`}
         confirmLabel={t('list.actions.delete', { defaultValue: 'Delete permanently' })}
         isConfirming={isDeleting}
       />

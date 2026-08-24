@@ -96,7 +96,8 @@
         "title": "Artikel löschen",
         "message": "Möchten Sie \"{{title}}\" wirklich endgültig löschen? Dies entfernt den Artikel und seinen Inhalt und kann nicht rückgängig gemacht werden.",
         "titleMultiple": "{{count}} Artikel löschen",
-        "messageMultiple": "Möchten Sie {{count}} Artikel wirklich dauerhaft löschen? Die Artikel und ihre Inhalte werden entfernt und können nicht wiederhergestellt werden."
+        "messageMultiple": "Möchten Sie {{count}} Artikel wirklich dauerhaft löschen? Die Artikel und ihre Inhalte werden entfernt und können nicht wiederhergestellt werden.",
+        "skippedNotice": "{{count}} ausgewählte Artikel sind veröffentlicht oder in Prüfung und werden übersprungen – archivieren Sie sie zuerst."
       }
     },
     "feedback": {
@@ -106,8 +107,11 @@
       "deleteSuccess": "Artikel endgültig gelöscht",
       "bulkArchiveSuccess": "{{count}} Artikel archiviert",
       "bulkArchiveError": "{{count}} Artikel konnten nicht archiviert werden",
+      "bulkArchivePartial": "{{count}} Artikel archiviert; {{failed}} konnten nicht archiviert werden",
       "bulkDeleteSuccess": "{{count}} Artikel dauerhaft gelöscht",
-      "bulkDeleteError": "{{count}} Artikel konnten nicht gelöscht werden"
+      "bulkDeleteError": "{{count}} Artikel konnten nicht gelöscht werden",
+      "bulkDeletePartial": "{{count}} Artikel gelöscht; {{failed}} konnten nicht gelöscht werden",
+      "deleteNotAllowed": "Veröffentlichte oder in Prüfung befindliche Artikel müssen zuerst archiviert werden, bevor sie gelöscht werden können"
     },
     "bulk": {
       "actionBar": {

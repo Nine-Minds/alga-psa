@@ -96,7 +96,8 @@
         "title": "Elimina articolo",
         "message": "Sei sicuro di voler eliminare definitivamente \"{{title}}\"? Questo rimuoverà l'articolo e il suo contenuto e non può essere annullato.",
         "titleMultiple": "Elimina {{count}} articolo/i",
-        "messageMultiple": "Vuoi davvero eliminare definitivamente {{count}} articolo/i? Gli articoli e i loro contenuti verranno rimossi e l’operazione non è reversibile."
+        "messageMultiple": "Vuoi davvero eliminare definitivamente {{count}} articolo/i? Gli articoli e i loro contenuti verranno rimossi e l’operazione non è reversibile.",
+        "skippedNotice": "{{count}} articolo/i selezionato/i sono pubblicati o in revisione e verranno ignorati: archiviali prima."
       }
     },
     "feedback": {
@@ -106,8 +107,11 @@
       "deleteSuccess": "Articolo eliminato definitivamente",
       "bulkArchiveSuccess": "{{count}} articolo/i archiviato/i",
       "bulkArchiveError": "Impossibile archiviare {{count}} articolo/i",
+      "bulkArchivePartial": "Archiviati {{count}} articolo/i; {{failed}} non archiviati",
       "bulkDeleteSuccess": "{{count}} articolo/i eliminato/i definitivamente",
-      "bulkDeleteError": "Impossibile eliminare {{count}} articolo/i"
+      "bulkDeleteError": "Impossibile eliminare {{count}} articolo/i",
+      "bulkDeletePartial": "Eliminati {{count}} articolo/i; {{failed}} non eliminati",
+      "deleteNotAllowed": "Gli articoli pubblicati o in revisione devono essere archiviati prima di poter essere eliminati"
     },
     "bulk": {
       "actionBar": {
