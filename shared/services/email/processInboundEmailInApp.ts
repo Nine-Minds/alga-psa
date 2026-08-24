@@ -654,6 +654,7 @@ async function findExistingEmailComment(params: {
   tenantId: string;
   ticketId: string;
   messageId: string;
+  sourceSha256?: string;
 }): Promise<string | null> {
   return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
     const forms = rfcMessageIdLookupForms(params.messageId);
@@ -665,8 +666,7 @@ async function findExistingEmailComment(params: {
       .where('c.ticket_id', params.ticketId)
       .andWhere(function (this: any) {
         for (const form of forms) {
-          this.orWhereRaw("c.metadata->'email'->>'messageId' = ?", [form])
-            .orWhereRaw("c.metadata->>'messageId' = ?", [form]);
+          this.orWhereRaw("(c.metadata->'email'->>'messageId' = ? OR c.metadata->>'messageId' = ?) AND (c.metadata->'email'->>'sourceSha256' = ? OR c.metadata->'email'->>'sourceSha256' IS NULL)", [form, form, params.sourceSha256 || null]);
         }
       })
       .first();
@@ -678,6 +678,7 @@ async function findExistingEmailTicket(params: {
   tenantId: string;
   providerId: string;
   messageId: string;
+  sourceSha256?: string;
 }): Promise<{ ticketId: string; ticketNumber?: string } | null> {
   return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
     const forms = rfcMessageIdLookupForms(params.messageId);
@@ -688,7 +689,7 @@ async function findExistingEmailTicket(params: {
       .select('t.ticket_id as ticketId', 't.ticket_number as ticketNumber')
       .andWhere(function (this: any) {
         for (const form of forms) {
-          this.orWhereRaw("t.email_metadata->>'messageId' = ?", [form]);
+          this.orWhereRaw("t.email_metadata->>'messageId' = ? AND (t.email_metadata->>'sourceSha256' = ? OR t.email_metadata->>'sourceSha256' IS NULL)", [form, params.sourceSha256 || null]);
         }
       })
       .andWhere(function (this: any) {
@@ -1050,6 +1051,7 @@ export async function processInboundEmailInApp(
     tenantId,
     providerId,
     messageId: emailData.id,
+    sourceSha256: emailData.sourceSha256,
   });
   if (existingTicket) {
     const diagnostics = options.collectDiagnostics
@@ -1216,6 +1218,7 @@ export async function processInboundEmailInApp(
     primaryContactEmail?: string | null;
   } = {}) => ({
     messageId: normalizeStoredMessageId(emailData.id),
+    sourceSha256: emailData.sourceSha256,
     provider: emailData.provider,
     providerId,
     threadId: emailData.threadId,
@@ -1303,6 +1306,7 @@ export async function processInboundEmailInApp(
       tenantId,
       ticketId: params.ticketId,
       messageId: emailData.id,
+      sourceSha256: emailData.sourceSha256,
     });
     if (existingCommentId) {
       if (diagnostics) {
@@ -1722,13 +1726,17 @@ export async function processInboundEmailInApp(
           diagnostics.threading.matchedBy = 'thread_headers';
           diagnostics.threading.matchedTicketId = threadTarget.ticketId;
         }
-      } else {
+      } else if (emailData.inReplyTo || emailData.references?.length || emailData.threadId) {
         const ticket = await findTicketByEmailThread(
           {
             threadId: emailData.threadId,
             inReplyTo: emailData.inReplyTo,
             references: emailData.references,
-            originalMessageId: emailData.inReplyTo ?? emailData.id,
+            // An inbound message's Message-ID is its identity, not evidence
+            // that it belongs to a pre-existing conversation.  Passing it as
+            // a parent candidate lets a separately delivered MIME with a
+            // forgeable duplicate Message-ID attach to another ticket.
+            originalMessageId: emailData.inReplyTo ?? undefined,
           },
           tenantId
         );
@@ -1967,6 +1975,7 @@ export async function processInboundEmailInApp(
     tenantId,
     providerId,
     messageId: emailData.id,
+    sourceSha256: emailData.sourceSha256,
   });
   if (existingTicketAfterDefaults) {
     if (diagnostics) {
@@ -2010,6 +2019,7 @@ export async function processInboundEmailInApp(
       entered_by: defaults.entered_by,
       email_metadata: {
         messageId: normalizeStoredMessageId(emailData.id),
+        sourceSha256: emailData.sourceSha256,
         threadId: emailData.threadId,
         from: emailData.from,
         inReplyTo: normalizeStoredMessageId(emailData.inReplyTo),

@@ -20,6 +20,8 @@ import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automa
 import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
+import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
+import { createHash } from 'node:crypto';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -328,6 +330,12 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const to = params.parsed.to?.value || [];
   const cc = params.parsed.cc?.value || [];
   const messageId = asNonEmptyString(params.parsed.messageId) || params.fallbackMessageId;
+  // Deliberately do not feed the RFC Message-ID into this derivation: it is
+  // display/threading data and may be supplied by an attacker.
+  const providerIdentity = normalizeInboundMessageIdentity({
+    providerType: params.provider,
+    providerMessageId: params.fallbackMessageId,
+  })?.normalized;
   const references = extractMessageIds(params.parsed.references);
   const inReplyTo = extractMessageIds(params.parsed.inReplyTo)[0];
   const threadId = references[0] || inReplyTo;
@@ -376,6 +384,8 @@ function mapParsedMimeToEmailMessageDetails(params: {
 
   return {
     id: messageId,
+    providerIdentity,
+    sourceSha256: createHash('sha256').update(params.rawMimeBuffer).digest('hex'),
     provider: params.provider,
     providerId: params.providerId,
     tenant: params.tenant,
@@ -766,6 +776,8 @@ async function insertProcessingRecord(params: {
   try {
     await tenantDb(db, params.job.tenantId).table('email_processed_messages').insert({
       message_id: params.externalIdentity,
+      provider_message_id: params.emailData?.providerIdentity || null,
+      source_sha256: params.emailData?.sourceSha256 || null,
       provider_id: params.job.providerId,
       tenant: params.job.tenantId,
       processed_at: new Date(),
@@ -1008,10 +1020,12 @@ export async function processUnifiedInboundEmailQueueJob(
   let processedCount = 0;
   let dedupedCount = 0;
   for (const emailData of payloads) {
-    const identityBase = asNonEmptyString(emailData.id) || `${job.jobId}:${processedCount}`;
-    const externalIdentity = normalizeExternalMessageIdentity({
+    // The provider identity + MIME digest are the database idempotency key.
+    // RFC Message-ID is retained solely as a legacy fallback when a provider
+    // does not expose a usable native identity.
+    const externalIdentity = emailData.providerIdentity || normalizeExternalMessageIdentity({
       provider: job.provider,
-      messageId: identityBase,
+      messageId: asNonEmptyString(emailData.id) || `${job.jobId}:${processedCount}`,
     });
     const inserted = await insertProcessingRecord({
       job,
