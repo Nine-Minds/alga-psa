@@ -28,6 +28,7 @@ vi.mock('../context/AssetCrossFeatureContext', () => ({
 
 vi.mock('./MaintenanceCompletionDialog', () => ({
   MaintenanceCompletionDialog: () => null,
+  checklistItems: () => [],
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -92,10 +93,10 @@ describe('MaintenanceCommandCenter', () => {
 
     const search = await screen.findByPlaceholderText('Search plans, assets, or clients');
     await user.type(search, 'no matching queue occurrence');
-    await waitFor(() => expect(screen.getByText('No maintenance occurrences match these filters.')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('No maintenance occurrences match these filters. Clear a filter or widen the due-date range.')).toBeTruthy());
 
-    await user.click(screen.getByRole('button', { name: 'History' }));
-    await waitFor(() => expect(screen.getByText('Completed workstation cleaning')).toBeTruthy());
+    await user.click(screen.getByRole('button', { name: /History/ }));
+    await waitFor(() => expect(screen.getAllByText('Completed workstation cleaning').length).toBeGreaterThan(0));
     await waitFor(() => expect(listMaintenanceOccurrences).toHaveBeenLastCalledWith({ limit: 100 }));
   });
 });
