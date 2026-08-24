@@ -1175,9 +1175,14 @@ export class MsGraphCore implements EmulatorCore {
    * codes, access tokens and armed faults are per-run and deliberately dropped,
    * and the Bot Framework signing key is NOT part of the snapshot (the app
    * caches the discovered JWKS, so restoring must not rotate it).
+   *
+   * Registered clients ARE durable: they are configuration, not a session, and
+   * without them a restarted emulator answers every app-only token request with
+   * invalid_client while its seeds sit there looking healthy.
    */
   snapshot(): unknown {
     return {
+      clients: [...this.clients.entries()].map(([clientId, client]) => ({ clientId, ...client })),
       messages: [...this.messages.values()],
       subscriptions: [...this.subscriptions.values()],
       organizations: [...this.organizations.values()],
@@ -1218,6 +1223,10 @@ export class MsGraphCore implements EmulatorCore {
       }
     };
 
+    this.clients.clear();
+    for (const row of Array.isArray(snapshot.clients) ? snapshot.clients : []) {
+      this.registerClient(String(row.clientId), String(row.secret), Array.isArray(row.appRoles) ? row.appRoles : []);
+    }
     load(this.messages, snapshot.messages, (row) => row.id);
     load(this.subscriptions, snapshot.subscriptions, (row) => row.id);
     load(this.organizations, snapshot.organizations, (row) => row.id);

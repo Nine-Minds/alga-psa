@@ -333,6 +333,22 @@ describe('msgraph call records', { shuffle: false }, () => {
     const config = (await (await fetch(`${restoredControl}/control/msgraph/state/config`)).json()).result;
     expect(config.defaultActor.fromAadObjectId).toBe('aad-default-actor');
 
+    // Registered clients are configuration, not a session: without them the
+    // restored emulator answers every app-only token request with
+    // invalid_client while its seeds still look perfectly healthy.
+    const restoredBase = `http://127.0.0.1:${started.ports.msgraph}`;
+    const token = await fetch(`${restoredBase}/tenant-1/oauth2/v2.0/token`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: 'telephony-app',
+        client_secret: 'telephony-secret',
+        grant_type: 'client_credentials',
+        scope: 'https://graph.microsoft.com/.default',
+      }),
+    });
+    expect(token.status).toBe(200);
+
     await restored.stop();
 
     // Restart the original host so afterAll's stop() stays valid.
