@@ -8,7 +8,7 @@
 - Vendor-neutral core + adapters; Teams Phone first (rides existing Microsoft
   profile/auth/subscription machinery). Twilio/Ringotel later — they bring
   ring-time webhooks (real screen-pop), which Graph cannot do.
-- New `telephony` add-on key, pro floor (never solo — standing policy).
+- Gated by the existing `teams` add-on; no separate telephony key.
 - New tables `telephony_providers` + `telephony_call_records` (ingestion ledger;
   interactions remain the user-facing record). Greenfield-Citus pattern.
 - Unmatched/ambiguous calls do NOT create interactions until resolved.
@@ -113,3 +113,26 @@ therefore covered; Temporal's own delivery is not.
 
 Verification data was removed afterwards (call records, interactions, the
 ticket) and `telephony_providers` was returned to `not_configured`.
+
+## Gating moved under Microsoft Teams (2026-08-24)
+Operator call: telephony is not sold separately, it ships inside the existing
+`teams` add-on. `ADD_ONS.TELEPHONY` is gone; every telephony gate — the
+settings sub-section, `getTelephonyAvailability`, and the ingestion path —
+now reads a non-expired `teams` row. Re-verified on the card stack (:3109)
+against the Oz tenant after deleting its stale `telephony` row:
+
+- Teams add-on active → Telephony sub-section renders the provider grid,
+  recent calls and the attribution queue; no paywall.
+- Teams add-on expired → both Communication sub-sections show the add-on
+  notice pointing at `/msp/add-ons?addon=teams`. The two notices need distinct
+  link ids (`manage-teams-addon-link` / `manage-telephony-addon-link`) because
+  sub-sections stay mounted while hidden.
+- `ingestCanonicalCall` against the real database: matched call → ledger row +
+  "Inbound call from +1 (555) 246-8135" interaction on Alice in Wonderland /
+  Wonderland; replay was a no-op; with the add-on expired it skipped with
+  `addon_inactive` and wrote nothing. Verification rows removed afterwards.
+
+Landmine: booting the dev server rewrites the tenant admin's password (it
+prints the new one), and `server/.env.local`, if present, overrides the card's
+`.env` — including `DB_NAME_SERVER`, which would point the card at another
+database entirely.

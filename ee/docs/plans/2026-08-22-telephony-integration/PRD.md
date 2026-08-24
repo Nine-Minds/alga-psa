@@ -134,9 +134,9 @@ candidate set; flag `match_status='ambiguous'` for manual resolve.
   active.
 
 ### Gating
-- New add-on key `telephony` (pro floor — never solo). Teams Phone provider
-  additionally requires an active Teams-capable Microsoft profile. UI and
-  webhook/ingest paths all gate on the add-on (deny-by-default like `teams`).
+- Telephony ships inside the existing `teams` add-on — no separate key. Teams
+  Phone additionally requires an active Teams-capable Microsoft profile. UI and
+  webhook/ingest paths all gate on that add-on (deny-by-default).
 
 ### Emulator
 - msgraph emulator: `call-record` seeder (direction, numbers, duration,
@@ -189,8 +189,8 @@ candidate set; flag `match_status='ambiguous'` for manual resolve.
    ships with a normalization audit query + unmatched surface as the safety net.
 4. **Same-number ambiguity** across clients (shared switchboards): resolved
    manually via the unmatched/ambiguous queue in v1.
-5. **Add-on/licensing**: `telephony` as its own pro-floor add-on — confirm
-   pricing posture before GA (plan assumes yes).
+5. **Add-on/licensing**: telephony is packaged inside the `teams` add-on, so it
+   needs no Stripe product of its own.
 6. Graph subscription volume: one subscription per tenant covers all users'
    calls (org-wide resource) — verify quota behavior on large tenants.
 
@@ -208,7 +208,7 @@ candidate set; flag `match_status='ambiguous'` for manual resolve.
 - The Teams wizard probe reports `CallRecords.Read.All`; subscriptions renew via
   the existing maintenance schedule; webhook rejects bad clientState.
 - Settings IA ships with Teams settings functionally unchanged under the new
-  sub-nav; telephony UI fully gated on the add-on.
+  sub-nav; telephony UI fully gated on the Microsoft Teams add-on.
 - Emulator: the full loop (seed call → notification → ingest → interaction) runs
   locally; emulator state survives a container restart via the state file; all
   suite tests green.
