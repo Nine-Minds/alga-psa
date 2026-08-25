@@ -52,10 +52,27 @@ describe('project hours report tenant-scoped query contract', () => {
 
     expect(section).toContain("where('p.is_inactive', false)");
     expect(section).toContain("const estimatedMinutes = 'COALESCE(t.estimated_hours, 0)';");
-    expect(section).toContain("const actualMinutes = 'COALESCE(t.actual_hours, 0)';");
+    expect(section).toContain("const actualMinutes = 'COALESCE(ta.actual_minutes, 0)';");
     expect(section).toContain('budgetedHours = minutesToHours(row.budgeted_minutes)');
     expect(section).toContain('estimatedHours = minutesToHours(row.estimated_minutes)');
     expect(section).toContain('actualHours = minutesToHours(row.actual_minutes)');
+  });
+
+  it('rolls actual hours up from time entries rather than the frozen column', () => {
+    const section = projectHoursSection();
+
+    // Nothing recomputes project_tasks.actual_hours when time is logged, so
+    // reading it would report zero actual hours forever.
+    expect(section).not.toContain('t.actual_hours');
+    expect(section).toContain("scopedDb.table('time_entries as te')");
+    expect(section).toContain("where('te.work_item_type', 'project_task')");
+    // Pre-aggregating per task keeps a task with several entries from
+    // duplicating its estimate across them.
+    expect(section).toContain("groupBy('te.tenant', 'te.work_item_id')");
+    expect(section).toContain('tenantJoinSubquery(query, taskActuals()');
+    for (const query of ['projectQuery', 'phaseQuery', 'overrunQuery']) {
+      expect(section).toContain(`withTaskActuals(${query})`);
+    }
   });
 
   it('summarises across every active project but only details the top rows', () => {

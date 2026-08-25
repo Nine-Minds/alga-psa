@@ -120,13 +120,40 @@ export const getProjectHoursReport = withAuth(
       };
       const closedExpression = 'COALESCE(s.is_closed, ss.is_closed, false)';
       const estimatedMinutes = 'COALESCE(t.estimated_hours, 0)';
-      const actualMinutes = 'COALESCE(t.actual_hours, 0)';
+      const actualMinutes = 'COALESCE(ta.actual_minutes, 0)';
+
+      // `project_tasks.actual_hours` is a frozen snapshot: it is written once at
+      // task creation and by the 20260730 backfill, and nothing recomputes it
+      // when time is logged. Reading it would report 0 actual hours forever, so
+      // the actuals are rolled up live from the time entries instead, using the
+      // same worked-duration expression that backfill defined. Pre-aggregating
+      // per task keeps the task rows from fanning out across their entries.
+      const taskActuals = () =>
+        scopedDb.table('time_entries as te')
+          .where('te.work_item_type', 'project_task')
+          .groupBy('te.tenant', 'te.work_item_id')
+          .select(
+            'te.tenant',
+            'te.work_item_id',
+            knex.raw(
+              'COALESCE(SUM(GREATEST(ROUND(EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 60.0), 0)), 0) as actual_minutes',
+            ),
+          )
+          .as('ta');
+
+      const withTaskActuals = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoinSubquery(query, taskActuals(), 'ta.work_item_id', 't.task_id', {
+          type: 'left',
+          rootTenantColumn: 't.tenant',
+          joinedTenantColumn: 'ta.tenant',
+        });
 
       const projectQuery = scopedDb.table('projects as p');
       scopedDb.tenantJoin(projectQuery, 'clients as c', 'p.client_id', 'c.client_id', { type: 'left' });
       scopedDb.tenantJoin(projectQuery, 'project_phases as ph', 'p.project_id', 'ph.project_id', { type: 'left' });
       scopedDb.tenantJoin(projectQuery, 'project_tasks as t', 'ph.phase_id', 't.phase_id', { type: 'left' });
       withTaskStatus(projectQuery);
+      withTaskActuals(projectQuery);
 
       const projectRows = await projectQuery
         .where('p.is_inactive', false)
@@ -188,10 +215,12 @@ export const getProjectHoursReport = withAuth(
       const phaseQuery = scopedDb.table('project_phases as ph');
       scopedDb.tenantJoin(phaseQuery, 'project_tasks as t', 'ph.phase_id', 't.phase_id', { type: 'left' });
       withTaskStatus(phaseQuery);
+      withTaskActuals(phaseQuery);
 
       const overrunQuery = scopedDb.table('project_tasks as t');
       scopedDb.tenantJoin(overrunQuery, 'project_phases as ph', 't.phase_id', 'ph.phase_id');
       scopedDb.tenantJoin(overrunQuery, 'projects as p', 'ph.project_id', 'p.project_id');
+      withTaskActuals(overrunQuery);
 
       const [phaseRows, overrunRows] = await Promise.all([
         phaseQuery
