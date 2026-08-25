@@ -562,13 +562,20 @@ describe('DesignerVisualWorkspace', () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
 
-    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    // This is the only preview assertion that waits for an *additional* pipeline
+    // call after a user interaction (the Re-run click), so its window is the
+    // tightest in the suite. Under the unit-test gate's parallel CI load the
+    // event loop can be starved past waitFor's 1s default before the forced
+    // recompute registers, so give both waits the same 5s budget the sibling
+    // automaticInvoices load-fragile assertions use.
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled(), { timeout: 5000 });
     const baselineCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
 
     fireEvent.click(screen.getByRole('button', { name: 'Re-run' }));
 
-    await waitFor(() =>
-      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls)
+    await waitFor(
+      () => expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls),
+      { timeout: 5000 }
     );
 
     const latestCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0];
