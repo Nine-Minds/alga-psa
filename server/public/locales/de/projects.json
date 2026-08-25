@@ -82,6 +82,12 @@
       "referenceMissing": "Das ausgewählte Projekt, der Kunde, das Produkt oder die Lagereinheit ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "missingField": "Erforderliches Materialfeld fehlt.",
       "missingFieldNamed": "Erforderliches Materialfeld fehlt: {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "Für den Kundenkontakt dieses Projekts ist keine E-Mail-Adresse hinterlegt.",
+      "emailNotConfigured": "E-Mail ist nicht konfiguriert. Bitte konfigurieren Sie die E-Mail-Einstellungen unter „Einstellungen“, bevor Sie Updates versenden.",
+      "templateMissing": "Die E-Mail-Vorlage für das Projektstatus-Update fehlt.",
+      "sendFailed": "Das Projektstatus-Update konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
     }
   }
 }

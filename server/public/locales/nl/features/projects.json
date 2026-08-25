@@ -1836,5 +1836,34 @@
     "improvement": "Verbetering",
     "epic": "Epic",
     "story": "Story"
+  },
+  "statusUpdate": {
+    "button": "Statusupdate versturen",
+    "title": "Statusupdate versturen",
+    "loading": "Ontvangersgegevens laden...",
+    "sending": "Statusupdate wordt verstuurd...",
+    "sent": "Statusupdate verstuurd naar {{email}}",
+    "send": "Update versturen",
+    "noRecipient": "Er is geen e-mailadres ingesteld voor het klantcontact van dit project.",
+    "whatTheySee": "Uw klant ziet:",
+    "additionalMessage": "Aanvullend bericht",
+    "additionalMessagePlaceholder": "Voeg een persoonlijke notitie toe aan de update...",
+    "preview": "De update wordt verzonden vanaf {{fromEmail}} namens {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Projectcontact",
+      "clientEmail": "E-mail van klant",
+      "none": "Geen e-mail gevonden"
+    },
+    "summary": {
+      "progress": "Totale voortgang: {{percent}}% ({{closed}} van {{total}} taken gereed)",
+      "budgetHours": "Begrote uren: {{spent}} van {{budgeted}} uur gebruikt",
+      "budgetHoursHidden": "Begrote uren zijn verborgen door de klantportaalinstellingen van dit project",
+      "recentlyCompleted": "Onlangs afgerond: {{items}}",
+      "portalLink": "Een link naar het project in het klantportaal"
+    },
+    "errors": {
+      "loadRecipient": "Ontvangersgegevens konden niet worden geladen",
+      "sendFailed": "Statusupdate kon niet worden verstuurd"
+    }
   }
 }

@@ -1864,5 +1864,34 @@
     "improvement": "Ulepszenie",
     "epic": "Epik",
     "story": "Historyjka"
+  },
+  "statusUpdate": {
+    "button": "Wyślij aktualizację statusu",
+    "title": "Wyślij aktualizację statusu",
+    "loading": "Ładowanie informacji o odbiorcy...",
+    "sending": "Wysyłanie aktualizacji statusu...",
+    "sent": "Aktualizacja statusu wysłana do {{email}}",
+    "send": "Wyślij aktualizację",
+    "noRecipient": "Dla kontaktu klienta w tym projekcie nie skonfigurowano adresu e-mail.",
+    "whatTheySee": "Twój klient zobaczy:",
+    "additionalMessage": "Dodatkowa wiadomość",
+    "additionalMessagePlaceholder": "Dodaj osobistą notatkę do aktualizacji...",
+    "preview": "Aktualizacja zostanie wysłana z {{fromEmail}} w imieniu {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Kontakt projektu",
+      "clientEmail": "E-mail klienta",
+      "none": "Nie znaleziono adresu e-mail"
+    },
+    "summary": {
+      "progress": "Ogólny postęp: {{percent}}% ({{closed}} z {{total}} zadań ukończonych)",
+      "budgetHours": "Godziny budżetowe: wykorzystano {{spent}} z {{budgeted}} godzin",
+      "budgetHoursHidden": "Godziny budżetowe są ukryte przez ustawienia portalu klienta tego projektu",
+      "recentlyCompleted": "Ostatnio ukończone: {{items}}",
+      "portalLink": "Link do projektu w portalu klienta"
+    },
+    "errors": {
+      "loadRecipient": "Nie udało się załadować informacji o odbiorcy",
+      "sendFailed": "Nie udało się wysłać aktualizacji statusu"
+    }
   }
 }

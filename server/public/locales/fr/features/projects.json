@@ -1836,5 +1836,34 @@
     "improvement": "Amélioration",
     "epic": "Épopée",
     "story": "Récit"
+  },
+  "statusUpdate": {
+    "button": "Envoyer un point d’avancement",
+    "title": "Envoyer un point d’avancement",
+    "loading": "Chargement des informations du destinataire...",
+    "sending": "Envoi du point d’avancement...",
+    "sent": "Point d’avancement envoyé à {{email}}",
+    "send": "Envoyer le point",
+    "noRecipient": "Aucune adresse e-mail n’est configurée pour le contact client de ce projet.",
+    "whatTheySee": "Votre client verra :",
+    "additionalMessage": "Message complémentaire",
+    "additionalMessagePlaceholder": "Ajoutez une note personnelle à inclure dans le point...",
+    "preview": "Le point sera envoyé depuis {{fromEmail}} au nom de {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Contact du projet",
+      "clientEmail": "E-mail du client",
+      "none": "Aucun e-mail trouvé"
+    },
+    "summary": {
+      "progress": "Avancement global : {{percent}} % ({{closed}} sur {{total}} tâches terminées)",
+      "budgetHours": "Heures budgétées : {{spent}} sur {{budgeted}} heures utilisées",
+      "budgetHoursHidden": "Les heures budgétées sont masquées par les paramètres du portail client de ce projet",
+      "recentlyCompleted": "Terminé récemment : {{items}}",
+      "portalLink": "Un lien vers le projet dans le portail client"
+    },
+    "errors": {
+      "loadRecipient": "Échec du chargement des informations du destinataire",
+      "sendFailed": "Échec de l’envoi du point d’avancement"
+    }
   }
 }

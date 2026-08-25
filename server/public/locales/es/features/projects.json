@@ -1836,5 +1836,34 @@
     "improvement": "Mejora",
     "epic": "Épica",
     "story": "Historia"
+  },
+  "statusUpdate": {
+    "button": "Enviar actualización de estado",
+    "title": "Enviar actualización de estado",
+    "loading": "Cargando información del destinatario...",
+    "sending": "Enviando actualización de estado...",
+    "sent": "Actualización de estado enviada a {{email}}",
+    "send": "Enviar actualización",
+    "noRecipient": "No hay ninguna dirección de correo electrónico configurada para el contacto de cliente de este proyecto.",
+    "whatTheySee": "Su cliente verá:",
+    "additionalMessage": "Mensaje adicional",
+    "additionalMessagePlaceholder": "Agregue una nota personal para incluir en la actualización...",
+    "preview": "La actualización se enviará desde {{fromEmail}} en nombre de {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Contacto del proyecto",
+      "clientEmail": "Correo del cliente",
+      "none": "No se encontró correo"
+    },
+    "summary": {
+      "progress": "Avance general: {{percent}} % ({{closed}} de {{total}} tareas completadas)",
+      "budgetHours": "Horas presupuestadas: {{spent}} de {{budgeted}} horas utilizadas",
+      "budgetHoursHidden": "Las horas presupuestadas están ocultas por la configuración del portal de cliente de este proyecto",
+      "recentlyCompleted": "Completado recientemente: {{items}}",
+      "portalLink": "Un enlace al proyecto en el portal de cliente"
+    },
+    "errors": {
+      "loadRecipient": "No se pudo cargar la información del destinatario",
+      "sendFailed": "No se pudo enviar la actualización de estado"
+    }
   }
 }
