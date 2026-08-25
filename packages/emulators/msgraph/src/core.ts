@@ -1111,6 +1111,32 @@ export class MsGraphCore implements EmulatorCore {
     return artifact;
   }
 
+  /**
+   * The documented enumeration surface: getAllRecordings/getAllTranscripts —
+   * every artifact of the given kind across the organizer's calls, optionally
+   * windowed by createdDateTime. Real Graph exposes NO per-call artifact list.
+   */
+  listAdhocArtifactsForOrganizer(
+    kind: MeetingArtifactKind,
+    organizerUserId: string,
+    window: { startDateTime?: string; endDateTime?: string } = {},
+  ): GraphCallArtifact[] {
+    const start = window.startDateTime ? new Date(window.startDateTime).getTime() : null;
+    const end = window.endDateTime ? new Date(window.endDateTime).getTime() : null;
+    const results: GraphCallArtifact[] = [];
+    for (const record of this.callRecords.values()) {
+      if (record.organizer?.user?.id !== organizerUserId) continue;
+      for (const artifact of this.callArtifacts.get(record.id) ?? []) {
+        if (artifact.kind !== kind) continue;
+        const created = new Date(artifact.createdDateTime).getTime();
+        if (start !== null && !Number.isNaN(created) && created < start) continue;
+        if (end !== null && !Number.isNaN(created) && created > end) continue;
+        results.push(artifact);
+      }
+    }
+    return results;
+  }
+
   // --- Bot Framework connector ---
 
   createConversation(input: { isGroup?: boolean; tenantId?: string; members?: unknown[] }): BotConversation {

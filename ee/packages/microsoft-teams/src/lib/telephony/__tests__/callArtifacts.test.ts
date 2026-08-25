@@ -53,13 +53,16 @@ describe('fetchTeamsCallArtifacts', () => {
     else process.env.MICROSOFT_GRAPH_BASE_URL = previousBaseUrl;
   });
 
-  it('T073: reads recordings and transcripts from the ad hoc call, not the meeting surface', async () => {
+  it('T073: enumerates via the documented getAll functions and keeps only this call, never a per-call list', async () => {
     const fetchMock = vi.fn(async (url: string) => {
-      if (url.endsWith('/recordings')) {
-        return jsonResponse({ value: [{ id: 'rec-1', createdDateTime: '2026-08-24T10:05:00Z' }] });
+      if (url.includes('getAllRecordings(')) {
+        return jsonResponse({ value: [
+          { id: 'rec-1', callId: 'call-1', createdDateTime: '2026-08-24T10:05:00Z' },
+          { id: 'rec-other', callId: 'call-2', createdDateTime: '2026-08-24T09:00:00Z' },
+        ] });
       }
-      if (url.endsWith('/transcripts')) {
-        return jsonResponse({ value: [{ id: 'tr-1', createdDateTime: '2026-08-24T10:06:00Z' }] });
+      if (url.includes('getAllTranscripts(')) {
+        return jsonResponse({ value: [{ id: 'tr-1', callId: 'call-1', createdDateTime: '2026-08-24T10:06:00Z' }] });
       }
       return new Response(VTT, { status: 200, headers: { 'content-type': 'text/vtt' } });
     });
@@ -69,13 +72,19 @@ describe('fetchTeamsCallArtifacts', () => {
       tenantId: 'tenant-1',
       providerCallId: 'call-1',
       organizerUserId: 'agent-object-id',
+      startedAt: '2026-08-24T10:00:00Z',
     });
 
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
-    expect(urls).toContain('http://localhost:4010/v1.0/users/agent-object-id/adhocCalls/call-1/recordings');
-    expect(urls).toContain('http://localhost:4010/v1.0/users/agent-object-id/adhocCalls/call-1/transcripts');
+    // Enumeration = the documented function endpoints, bound + windowed.
+    expect(urls.some((url) => url.includes('/users/agent-object-id/adhocCalls/getAllRecordings(userId=agent-object-id,startDateTime='))).toBe(true);
+    expect(urls.some((url) => url.includes('/users/agent-object-id/adhocCalls/getAllTranscripts(userId=agent-object-id,startDateTime='))).toBe(true);
+    // The fictitious per-call list endpoint is never requested.
+    expect(urls.some((url) => /adhocCalls\/call-1\/(recordings|transcripts)$/.test(url))).toBe(false);
     expect(urls.some((url) => url.includes('onlineMeetings'))).toBe(false);
 
+    // Only this call's artifacts survive the callId filter; content URLs stay
+    // on the documented single-item endpoints.
     expect(artifacts).toEqual([
       {
         artifactType: 'recording',

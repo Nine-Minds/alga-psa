@@ -7,11 +7,17 @@ import { resolveTeamsMeetingGraphConfig } from '../meetings/meetingConfig';
  * Teams Phone call recordings and transcripts (F066).
  *
  * Meeting artifacts hang off `/users/{id}/onlineMeetings/{id}`; a Teams Phone
- * call is not a meeting, so its artifacts live on the *ad hoc call* resource
- * (`/users/{id}/adhocCalls/{callId}`) — a different surface with different
- * consent (`CallRecordings.Read.All` / `CallTranscripts.Read.All` plus a Teams
- * application access policy for the user) and no change notification of its
- * own, which is why the caller polls.
+ * call is not a meeting, so its artifacts live on the *ad hoc call* resource —
+ * a different surface with different consent (`CallRecordings.Read.All` /
+ * `CallTranscripts.Read.All` plus a Teams application access policy for the
+ * user) and no change notification of its own, which is why the caller polls.
+ *
+ * Graph v1.0 exposes NO per-call artifact list: enumeration goes through the
+ * documented `adhocCalls/getAllRecordings` / `getAllTranscripts` functions
+ * (whose items carry `callId`), and content through the single-item
+ * `/users/{id}/adhocCalls/{callId}/{recordings|transcripts}/{artifactId}/content`
+ * endpoints. Anything else is fiction — the class of bug that sank the Entra
+ * direct sync (endpoints that existed only in the emulator).
  *
  * Recording is a per-policy Teams feature that most tenants leave off, so "no
  * artifacts" is the ordinary answer: a 403/404 from Graph means nothing to
@@ -27,7 +33,31 @@ export interface TeamsCallArtifact {
 }
 
 interface GraphArtifactCollection {
-  value?: Array<{ id?: unknown; createdDateTime?: unknown }>;
+  value?: Array<{ id?: unknown; callId?: unknown; createdDateTime?: unknown }>;
+}
+
+/**
+ * Documented enumeration URL: the getAll* function bound to the organizer,
+ * windowed to the call's lifetime (artifacts appear after the call ends, so
+ * the window runs from just before the call started to "now"). Parameters are
+ * unquoted, matching the reference example.
+ */
+export function buildAdhocGetAllUrl(params: {
+  graphBaseUrl: string;
+  organizerUserId: string;
+  kind: 'recordings' | 'transcripts';
+  startedAt?: Date | string | null;
+  now?: Date;
+}): string {
+  const fn = params.kind === 'recordings' ? 'getAllRecordings' : 'getAllTranscripts';
+  const uid = encodeURIComponent(params.organizerUserId);
+  const args: string[] = [`userId=${uid}`];
+  const started = params.startedAt ? new Date(params.startedAt) : null;
+  if (started && !Number.isNaN(started.getTime())) {
+    args.push(`startDateTime=${new Date(started.getTime() - 5 * 60_000).toISOString()}`);
+    args.push(`endDateTime=${(params.now ?? new Date()).toISOString()}`);
+  }
+  return `${params.graphBaseUrl}/users/${uid}/adhocCalls/${fn}(${args.join(',')})`;
 }
 
 function normalizeString(value: unknown): string {
@@ -88,6 +118,8 @@ export async function fetchTeamsCallArtifacts(input: {
   tenantId: string;
   providerCallId: string;
   organizerUserId: string;
+  /** Call start; bounds the getAll window (omitted → unwindowed query). */
+  startedAt?: Date | string | null;
 }): Promise<TeamsCallArtifact[]> {
   const config = await resolveTeamsMeetingGraphConfig(input.tenantId);
   if (!config) {
@@ -106,12 +138,29 @@ export async function fetchTeamsCallArtifacts(input: {
   const userSegment = encodeURIComponent(input.organizerUserId);
   const callSegment = encodeURIComponent(input.providerCallId);
   // The gated base URL is what points at the emulator under TEAMS_EMULATOR_MODE.
-  const baseUrl = `${getMicrosoftGraphBaseUrl()}/users/${userSegment}/adhocCalls/${callSegment}`;
+  const graphBaseUrl = getMicrosoftGraphBaseUrl();
+  const baseUrl = `${graphBaseUrl}/users/${userSegment}/adhocCalls/${callSegment}`;
 
-  const [recordings, transcripts] = await Promise.all([
-    fetchArtifactCollection({ accessToken, url: `${baseUrl}/recordings`, tenantId: input.tenantId, kind: 'recordings' }),
-    fetchArtifactCollection({ accessToken, url: `${baseUrl}/transcripts`, tenantId: input.tenantId, kind: 'transcripts' }),
+  // Enumerate via the documented getAll functions and keep only this call's
+  // artifacts (items carry callId); there is no per-call list endpoint.
+  const [recordingsAll, transcriptsAll] = await Promise.all([
+    fetchArtifactCollection({
+      accessToken,
+      url: buildAdhocGetAllUrl({ graphBaseUrl, organizerUserId: input.organizerUserId, kind: 'recordings', startedAt: input.startedAt }),
+      tenantId: input.tenantId,
+      kind: 'recordings',
+    }),
+    fetchArtifactCollection({
+      accessToken,
+      url: buildAdhocGetAllUrl({ graphBaseUrl, organizerUserId: input.organizerUserId, kind: 'transcripts', startedAt: input.startedAt }),
+      tenantId: input.tenantId,
+      kind: 'transcripts',
+    }),
   ]);
+  const byThisCall = (collection: GraphArtifactCollection | null) =>
+    (collection?.value ?? []).filter((item) => normalizeString(item.callId) === input.providerCallId);
+  const recordings = { value: byThisCall(recordingsAll) };
+  const transcripts = { value: byThisCall(transcriptsAll) };
 
   const recordingArtifacts = (recordings?.value ?? [])
     .map((recording): TeamsCallArtifact | null => {

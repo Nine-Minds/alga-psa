@@ -14,11 +14,27 @@ Yes — through the **ad hoc call** resource, which is a distinct surface from
 online meetings and did not exist when the meetings work was done.
 
 ```
+# Enumeration — the ONLY collection surface (items carry callId):
+GET /users/{userId}/adhocCalls/getAllRecordings(userId=...,startDateTime=...,endDateTime=...)
+GET /users/{userId}/adhocCalls/getAllTranscripts(userId=...,startDateTime=...,endDateTime=...)
+
+# Single item + content, by artifact id:
 GET /users/{userId}/adhocCalls/{callId}/recordings/{recordingId}
 GET /users/{userId}/adhocCalls/{callId}/recordings/{recordingId}/content     → video/mp4
 GET /users/{userId}/adhocCalls/{callId}/transcripts/{transcriptId}
 GET /users/{userId}/adhocCalls/{callId}/transcripts/{transcriptId}/content   → text/vtt
 ```
+
+> **Correction (2026-08-25, doc-verified):** the first version of this spike also
+> claimed per-call list endpoints (`GET .../adhocCalls/{callId}/recordings`).
+> Those do not exist in Graph v1.0 — the resource's only collection methods are
+> the getAll functions above ([adhocCall resource](https://learn.microsoft.com/en-us/graph/api/resources/adhoccall?view=graph-rest-1.0),
+> [getAllRecordings](https://learn.microsoft.com/en-us/graph/api/adhoccall-getallrecordings?view=graph-rest-1.0)) —
+> and the emulator faithfully implementing the fiction validated it, the exact
+> failure mode of the Entra direct-sync bug (main 907702138d). Both the fetcher
+> and the emulator now use only the documented surface. Community reports also
+> show 501/empty responses on these endpoints in some tenants during rollout —
+> treat unavailability as "no artifacts", never as integration failure.
 
 `adhocCall` is Microsoft's term for the spontaneous call class — PSTN, 1:1 and
 group calls — i.e. exactly what Teams Phone produces. The `callId` is the call

@@ -198,12 +198,18 @@ describe('msgraph call records', { shuffle: false }, () => {
     expect(view[0].deliveries[0].delivered).toBe(true);
   });
 
-  it('T077: call recordings and transcripts are served from the ad hoc call, not a meeting', async () => {
+  it('T077: call artifacts are enumerated via getAll functions and fetched by id, per real Graph', async () => {
     const headers = { authorization: `Bearer ${await appToken()}` };
     const adhocCall = `${base}/v1.0/users/emulated-organizer/adhocCalls/${callRecordId}`;
+    const getAll = (fn: string) =>
+      `${base}/v1.0/users/emulated-organizer/adhocCalls/${fn}(userId=emulated-organizer)`;
 
-    // Nothing recorded yet is the normal case: empty collections, not a 404.
-    expect((await (await fetch(`${adhocCall}/recordings`, { headers })).json()).value).toEqual([]);
+    // The per-call list endpoint is FICTION — real Graph has no such route,
+    // and serving it is how endpoint bugs get validated locally.
+    expect((await fetch(`${adhocCall}/recordings`, { headers })).status).toBe(404);
+
+    // Nothing recorded yet is the normal case: empty getAll collections.
+    expect((await (await fetch(getAll('getAllRecordings'), { headers })).json()).value).toEqual([]);
 
     const transcript = await controlPost('/control/msgraph/seed/call-transcript', {
       callId: callRecordId,
@@ -213,10 +219,25 @@ describe('msgraph call records', { shuffle: false }, () => {
     const recording = await controlPost('/control/msgraph/seed/call-recording', { callId: callRecordId });
     expect(recording.ok).toBe(true);
 
-    const transcripts = (await (await fetch(`${adhocCall}/transcripts`, { headers })).json()) as any;
+    // getAllTranscripts items carry callId — the join key the app filters on.
+    const transcripts = (await (await fetch(getAll('getAllTranscripts'), { headers })).json()) as any;
     expect(transcripts.value).toHaveLength(1);
     expect(transcripts.value[0].id).toBe(transcript.result.artifact.id);
+    expect(transcripts.value[0].callId).toBe(callRecordId);
 
+    // Windowing: a window that ends before the artifact excludes it.
+    const early = (await (await fetch(
+      `${base}/v1.0/users/emulated-organizer/adhocCalls/getAllTranscripts(userId=emulated-organizer,startDateTime=2000-01-01T00:00:00Z,endDateTime=2000-01-02T00:00:00Z)`,
+      { headers },
+    )).json()) as any;
+    expect(early.value).toEqual([]);
+
+    // Single-item get and content, by artifact id — the documented fetch path.
+    const single = (await (await fetch(
+      `${adhocCall}/transcripts/${transcript.result.artifact.id}`,
+      { headers },
+    )).json()) as any;
+    expect(single.callId).toBe(callRecordId);
     const content = await fetch(
       `${adhocCall}/transcripts/${transcript.result.artifact.id}/content`,
       { headers },
@@ -224,8 +245,9 @@ describe('msgraph call records', { shuffle: false }, () => {
     expect(content.headers.get('content-type')).toContain('text/vtt');
     expect(await content.text()).toContain('The printer is on fire again.');
 
-    const recordings = (await (await fetch(`${adhocCall}/recordings`, { headers })).json()) as any;
+    const recordings = (await (await fetch(getAll('getAllRecordings'), { headers })).json()) as any;
     expect(recordings.value).toHaveLength(1);
+    expect(recordings.value[0].callId).toBe(callRecordId);
 
     // Seeding an artifact for a call that does not exist is a 404, and no
     // notification is ever delivered — Graph has none for ad hoc calls.

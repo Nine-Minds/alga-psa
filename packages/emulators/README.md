@@ -288,8 +288,13 @@ Communication → Telephony, waiting to be resolved.
 ### Teams Phone call recordings and transcripts
 
 Call artifacts do not live on an online meeting: Graph serves them from the ad
-hoc call (`/v1.0/users/{id}/adhocCalls/{callId}/{recordings,transcripts}`), and
-there is no change notification for them at all. The app therefore polls, and
+hoc call — enumerated ONLY via `getAllRecordings`/`getAllTranscripts` function
+calls (`/v1.0/users/{id}/adhocCalls/getAllRecordings(userId=...,startDateTime=...,endDateTime=...)`,
+items carry `callId`) and fetched by artifact id
+(`.../adhocCalls/{callId}/{recordings,transcripts}/{artifactId}/content`).
+There is no per-call artifact list in real Graph, and the emulator deliberately
+refuses one — serving fictitious routes is how the Entra-sync class of bug got
+validated locally. There is no change notification for call artifacts at all. The app therefore polls, and
 the emulator has no deliveries to report — seed an artifact and it simply sits
 there until the poll finds it:
 

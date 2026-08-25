@@ -31,6 +31,7 @@ export interface CaptureCallArtifactsDependencies {
     tenantId: string;
     providerCallId: string;
     organizerUserId: string;
+    startedAt?: Date | string | null;
   }) => Promise<CallArtifactPayload[]>;
   /** Download and store a recording blob; returns the stored file id. */
   downloadRecording?: (input: {
@@ -126,6 +127,8 @@ export async function captureCallArtifacts(
       tenantId: input.tenantId,
       providerCallId: call.provider_call_id,
       organizerUserId: call.organizer_user_id,
+      // Windows the getAll enumeration to this call's lifetime.
+      startedAt: call.started_at ?? null,
     });
   } catch (error) {
     // Record the attempt before rethrowing so a persistently failing tenant

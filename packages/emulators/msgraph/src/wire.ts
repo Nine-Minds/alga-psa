@@ -177,7 +177,14 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       res.json(core.getDirectoryUser(userId));
       return;
     }
-    res.json(mailboxUser);
+    // Real Graph 404s unknown ids. Only the emulated mailbox identity keeps
+    // resolving un-seeded, for the email module's fixed test principal —
+    // answering every id used to mask lookup-failure handling bugs.
+    if (userId === mailboxUser.id || userId.toLowerCase() === mailboxUser.userPrincipalName.toLowerCase()) {
+      res.json(mailboxUser);
+      return;
+    }
+    throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound', message: `Resource '${userId}' does not exist.` } });
   });
 
   // Teams surface: activity feed notifications plus the channel/chat lookups
@@ -275,18 +282,17 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   }
 
   // Teams Phone call artifacts live on the ad hoc call, not on an online
-  // meeting — a separate Graph surface with its own consent, which is why the
-  // paths differ from the onlineMeetings ones above.
+  // meeting — a separate Graph surface with its own consent. Faithful to real
+  // Graph v1.0: enumeration ONLY via the getAllRecordings/getAllTranscripts
+  // functions (items carry callId); single-item get + /content by artifact id;
+  // deliberately NO per-call list route — that endpoint is fiction, and
+  // serving it is how the Entra-sync class of bug gets validated locally.
   for (const kind of ['recording', 'transcript'] as const) {
     const segment = kind === 'recording' ? 'recordings' : 'transcripts';
 
-    graph.get(`/users/:userId/adhocCalls/:callId/${segment}`, (req, res) => {
-      res.json({
-        value: core.listCallArtifacts(kind, String(req.params.callId)).map((artifact) => ({
-          id: artifact.id,
-          createdDateTime: artifact.createdDateTime,
-        })),
-      });
+    graph.get(`/users/:userId/adhocCalls/:callId/${segment}/:artifactId`, (req, res) => {
+      const artifact = core.getCallArtifact(kind, String(req.params.callId), String(req.params.artifactId));
+      res.json({ id: artifact.id, callId: artifact.callId, createdDateTime: artifact.createdDateTime });
     });
 
     graph.get(`/users/:userId/adhocCalls/:callId/${segment}/:artifactId/content`, (req, res) => {
@@ -294,6 +300,31 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       res.type(artifact.contentType).send(artifact.content);
     });
   }
+
+  // getAllRecordings(userId=...,startDateTime=...,endDateTime=...) — the
+  // OData function-call segment arrives literally (parens and commas are
+  // URL-legal), so it lands in :fn and is parsed here.
+  graph.get('/users/:userId/adhocCalls/:fn', (req, res) => {
+    const fn = String(req.params.fn);
+    const match = fn.match(/^(getAllRecordings|getAllTranscripts)\((.*)\)$/);
+    if (!match) {
+      throw new GraphApiError(400, { error: { code: 'BadRequest', message: `Resource not found for the segment '${fn}'.` } });
+    }
+    const kind = match[1] === 'getAllRecordings' ? ('recording' as const) : ('transcript' as const);
+    const args: Record<string, string> = {};
+    for (const pair of match[2].split(',')) {
+      const eq = pair.indexOf('=');
+      if (eq > 0) args[pair.slice(0, eq).trim()] = decodeURIComponent(pair.slice(eq + 1).trim().replace(/^'|'$/g, ''));
+    }
+    const organizer = args.userId || String(req.params.userId);
+    const value = core
+      .listAdhocArtifactsForOrganizer(kind, organizer, {
+        startDateTime: args.startDateTime,
+        endDateTime: args.endDateTime,
+      })
+      .map((artifact) => ({ id: artifact.id, callId: artifact.callId, createdDateTime: artifact.createdDateTime }));
+    res.json({ '@odata.count': value.length, value });
+  });
 
   // Teams Phone CDR fetch. $expand=sessions is what the adapter asks for; the
   // unexpanded shape omits sessions the way real Graph does.
