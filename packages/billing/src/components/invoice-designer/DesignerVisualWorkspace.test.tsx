@@ -565,7 +565,12 @@ describe('DesignerVisualWorkspace', () => {
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
     const baselineCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
 
-    fireEvent.click(screen.getByRole('button', { name: 'Re-run' }));
+    const rerunButton = await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'Re-run' });
+      expect(button.hasAttribute('disabled')).toBe(false);
+      return button;
+    });
+    fireEvent.click(rerunButton);
 
     await waitFor(() =>
       expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls)
