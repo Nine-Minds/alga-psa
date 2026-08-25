@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
   AMP_ENTITY_TABLES,
@@ -144,6 +144,10 @@ export async function runConversion(options: RunConversionOptions): Promise<CsvC
     ...entityRows,
     package_diagnostics: toDiagnosticRows(diagnostics),
   } as AmpPackageRows;
+
+  // The output path is this conversion's artifact: replace any previous run's
+  // file rather than failing on the leftover SQLite schema inside it.
+  await rm(options.outputPath, { force: true });
 
   const manifest = new AmpPackageBuilder(options.outputPath).write(
     {
