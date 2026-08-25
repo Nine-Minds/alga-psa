@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough, Readable, Transform } from 'node:stream';
@@ -35,9 +35,10 @@ export async function POST(request: Request) {
     const { convertSpreadsheets, inferSpreadsheetMapping } = await import('@alga-psa/migration-connectors/csv'); const mapping = await inferSpreadsheetMapping(inputPath, entityType as never);
     if (Object.keys(mapping).length === 0) throw new Error('AMP_SPREADSHEET_NO_RECOGNIZED_HEADERS');
     const conversion = await convertSpreadsheets({ outputPath, namespace: `csv:${user.tenant}`, sourceSystem: 'csv-upload', files: [{ entityType: entityType as never, path: inputPath, mapping }] }, directory);
+    const { size: packageSize } = await stat(outputPath);
     const digest = createHash('sha256'); const storageInput = new PassThrough();
     const packageStream = createReadStream(outputPath); packageStream.on('data', (chunk) => digest.update(chunk));
-    const upload = StorageService.uploadStream(user.tenant, storageInput, `${name}.amp`, { mime_type: 'application/vnd.sqlite3', uploaded_by_id: user.user_id, metadata: { context: 'amp_migration_package', retention_days: 30, converted_from: name } });
+    const upload = StorageService.uploadStream(user.tenant, storageInput, `${name}.amp`, { mime_type: 'application/vnd.sqlite3', uploaded_by_id: user.user_id, size: packageSize, metadata: { context: 'amp_migration_package', retention_days: 30, converted_from: name } });
     const [stored] = await Promise.all([upload, pipeline(packageStream, storageInput)]); const sha256 = digest.digest('hex');
     const { knex } = await createTenantKnex(user.tenant); const db = tenantDb(knex, user.tenant); const [inserted] = await db.table('migration_jobs').insert({ tenant: user.tenant, owner_user_id: user.user_id, source_file_id: stored.file_id, source_file_name: `${name}.amp`, package_sha256: sha256, state: 'inspecting' }).returning('migration_job_id'); const migrationJobId = inserted.migration_job_id ?? inserted;
     const staged = await new MigrationStager(knex, user.tenant).stage(migrationJobId, outputPath);
