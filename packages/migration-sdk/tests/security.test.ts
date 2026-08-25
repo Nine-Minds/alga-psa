@@ -53,11 +53,10 @@ describe('package database handle', () => {
   it('rejects schema-altering pragmas on the read-only handle', () => {
     const db = openPackageDatabase(packagePath);
     try {
-      // journal_mode=wal requires a write; a read-only handle must refuse it.
-      const result = db.prepare('PRAGMA journal_mode = wal').get() as
-        | { journal_mode?: string }
-        | undefined;
-      expect(result?.journal_mode ?? 'delete').not.toBe('wal');
+      // journal_mode=wal requires a write; the read-only handle refuses it.
+      expect(() => db.prepare('PRAGMA journal_mode = wal').get()).toThrow(
+        /readonly/i
+      );
     } finally {
       db.close();
     }
