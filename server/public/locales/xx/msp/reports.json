@@ -59,11 +59,14 @@
       "noDate": "⟦Ƞȯ ḓȧŧḗ⟧",
       "notAvailable": "⟦ƞ/ȧ⟧",
       "noEmailChannels": "⟦Ƞȯ ḗḿȧīŀ ƈħȧƞƞḗŀş ȧřḗ ƈȯƞƒīɠŭřḗḓ.⟧",
-      "noCapacity": "⟦ƞ/ȧ — ƞȯ ƈȧƥȧƈīŧẏ şḗŧ⟧"
+      "noCapacity": "⟦ƞ/ȧ — ƞȯ ƈȧƥȧƈīŧẏ şḗŧ⟧",
+      "noEstimate": "⟦ƞ/ȧ — ƞȯ ḗşŧīḿȧŧḗ şḗŧ⟧",
+      "noOverruns": "⟦Ƞȯ ŧȧşķ ħȧş ƥȧşşḗḓ īŧş ḗşŧīḿȧŧḗ.⟧"
     },
     "fallbackTitle": "⟦Řḗƥȯřŧ⟧",
     "dateRange": {
-      "lastDays": "⟦Ŀȧşŧ {{count}} ḓȧẏş⟧"
+      "lastDays": "⟦Ŀȧşŧ {{count}} ḓȧẏş⟧",
+      "allActiveProjects": "⟦Ȧŀŀ ȧƈŧīṽḗ ƥřȯĵḗƈŧş, ŀīƒḗ-ŧȯ-ḓȧŧḗ⟧"
     },
     "units": {
       "daysWithCount": "⟦{{count}} ḓȧẏş⟧"
@@ -103,7 +106,13 @@
       "capacityHours": "⟦Ƈȧƥȧƈīŧẏ ħȯŭřş⟧",
       "utilization": "⟦Ŭŧīŀīẑȧŧīȯƞ⟧",
       "usersWithoutCapacity": "⟦Ḿīşşīƞɠ ƈȧƥȧƈīŧẏ⟧",
-      "activeUsers": "⟦Ȧƈŧīṽḗ ŭşḗřş⟧"
+      "activeUsers": "⟦Ȧƈŧīṽḗ ŭşḗřş⟧",
+      "activeProjects": "⟦Ȧƈŧīṽḗ ƥřȯĵḗƈŧş⟧",
+      "budgetedHours": "⟦Ɓŭḓɠḗŧḗḓ ħȯŭřş⟧",
+      "estimatedHours": "⟦Ḗşŧīḿȧŧḗḓ ħȯŭřş⟧",
+      "actualHours": "⟦Ȧƈŧŭȧŀ ħȯŭřş⟧",
+      "projectsOverEstimate": "⟦Ȯṽḗř ḗşŧīḿȧŧḗ⟧",
+      "projectsOverBudget": "⟦Ȯṽḗř ƀŭḓɠḗŧ⟧"
     },
     "sections": {
       "openByStatus": "⟦Ȯƥḗƞ ƀẏ şŧȧŧŭş⟧",
@@ -122,7 +131,10 @@
       "bucketUsage": "⟦Ɓŭƈķḗŧ ŭşȧɠḗ⟧",
       "performanceByAssignee": "⟦Ƥḗřƒȯřḿȧƞƈḗ ƀẏ ȧşşīɠƞḗḗ⟧",
       "closedByAssignee": "⟦Ƈŀȯşḗḓ ƀẏ ȧşşīɠƞḗḗ⟧",
-      "utilizationByUser": "⟦Ŭŧīŀīẑȧŧīȯƞ ƀẏ ŭşḗř⟧"
+      "utilizationByUser": "⟦Ŭŧīŀīẑȧŧīȯƞ ƀẏ ŭşḗř⟧",
+      "hoursByProject": "⟦Ħȯŭřş ƀẏ ƥřȯĵḗƈŧ⟧",
+      "hoursByPhase": "⟦Ħȯŭřş ƀẏ ƥħȧşḗ⟧",
+      "largestTaskOverruns": "⟦Ŀȧřɠḗşŧ ŧȧşķ ȯṽḗřřŭƞş⟧"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -168,6 +180,10 @@
       "inventoryGhostUsage": {
         "title": "⟦Ɠħȯşŧ Ŭşȧɠḗ⟧",
         "description": "⟦Ƈŀȯşḗḓ ħȧřḓẇȧřḗ ŧīƈķḗŧş ẇīŧħ ƞȯ řḗƈȯřḓḗḓ ƥȧřŧş — ƈȯşŧ ŧħḗ şħȯƥ ḿȧẏ ħȧṽḗ ḗȧŧḗƞ.⟧"
+      },
+      "projectHours": {
+        "title": "⟦Ƥřȯĵḗƈŧ Ħȯŭřş ṽş Ḗşŧīḿȧŧḗş⟧",
+        "description": "⟦Ŧřȧƈķḗḓ ħȯŭřş ȧɠȧīƞşŧ ŧȧşķ ḗşŧīḿȧŧḗş ȧƞḓ ƥřȯĵḗƈŧ ƀŭḓɠḗŧş, ẇīŧħ ŧħḗ ƥħȧşḗş řŭƞƞīƞɠ ŀȯƞɠ.⟧"
       }
     },
     "table": {
@@ -191,7 +207,17 @@
       "workedHours": "⟦Ẇȯřķḗḓ ħȯŭřş⟧",
       "capacityHours": "⟦Ƈȧƥȧƈīŧẏ ħȯŭřş⟧",
       "utilization": "⟦Ŭŧīŀīẑȧŧīȯƞ⟧",
-      "capacityEstimated": "⟦Ḗşŧīḿȧŧḗḓ ƒřȯḿ ẇḗḗķŀẏ ƈȧƥȧƈīŧẏ; ƞȯ ẇȯřķīƞɠ ħȯŭřş şḗŧ.⟧"
+      "capacityEstimated": "⟦Ḗşŧīḿȧŧḗḓ ƒřȯḿ ẇḗḗķŀẏ ƈȧƥȧƈīŧẏ; ƞȯ ẇȯřķīƞɠ ħȯŭřş şḗŧ.⟧",
+      "project": "⟦Ƥřȯĵḗƈŧ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "phase": "⟦Ƥħȧşḗ⟧",
+      "task": "⟦Ŧȧşķ⟧",
+      "budgetedHours": "⟦Ɓŭḓɠḗŧḗḓ⟧",
+      "estimatedHours": "⟦Ḗşŧīḿȧŧḗḓ⟧",
+      "actualHours": "⟦Ȧƈŧŭȧŀ⟧",
+      "variance": "⟦Ṽȧřīȧƞƈḗ⟧",
+      "estimateUsed": "⟦Ḗşŧīḿȧŧḗ ŭşḗḓ⟧",
+      "tasksClosedOfTotal": "⟦{{closed}}/{{total}} ŧȧşķş ḓȯƞḗ⟧"
     },
     "statusValues": {
       "connected": "⟦Ƈȯƞƞḗƈŧḗḓ⟧",

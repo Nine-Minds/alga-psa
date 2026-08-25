@@ -82,6 +82,12 @@
       "referenceMissing": "Wybrany projekt, klient, produkt lub jednostka magazynowa nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola materiału.",
       "missingFieldNamed": "Brakuje wymaganego pola materiału: {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "Dla kontaktu klienta w tym projekcie nie skonfigurowano adresu e-mail.",
+      "emailNotConfigured": "E-mail nie jest skonfigurowany. Skonfiguruj ustawienia e-mail w Ustawieniach przed wysłaniem aktualizacji.",
+      "templateMissing": "Brakuje szablonu e-mail aktualizacji statusu projektu.",
+      "sendFailed": "Nie udało się wysłać aktualizacji statusu projektu. Spróbuj ponownie."
     }
   }
 }

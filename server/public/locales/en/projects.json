@@ -82,6 +82,12 @@
       "referenceMissing": "The selected project, client, product, or stock unit is no longer valid. Please refresh and try again.",
       "missingField": "Missing required material field.",
       "missingFieldNamed": "Missing required material field: {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "No email address is configured for this project’s client contact.",
+      "emailNotConfigured": "Email is not configured. Please configure email settings in Settings before sending updates.",
+      "templateMissing": "The project status update email template is missing.",
+      "sendFailed": "Failed to send the project status update. Please try again."
     }
   }
 }

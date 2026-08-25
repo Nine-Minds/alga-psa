@@ -82,6 +82,12 @@
       "referenceMissing": "Het geselecteerde project, de klant, het product of de voorraadeenheid is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht materiaalveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht materiaalveld: {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "Er is geen e-mailadres ingesteld voor het klantcontact van dit project.",
+      "emailNotConfigured": "E-mail is niet geconfigureerd. Configureer de e-mailinstellingen bij Instellingen voordat u updates verstuurt.",
+      "templateMissing": "De e-mailsjabloon voor de projectstatusupdate ontbreekt.",
+      "sendFailed": "De projectstatusupdate kon niet worden verstuurd. Probeer het opnieuw."
     }
   }
 }

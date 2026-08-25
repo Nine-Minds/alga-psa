@@ -98,6 +98,10 @@
       "import": "./src/lib/preCheckDeletion.ts",
       "types": "./src/lib/preCheckDeletion.ts"
     },
+    "./lib/PortalDomainModel": {
+      "import": "./src/lib/PortalDomainModel.ts",
+      "types": "./src/lib/PortalDomainModel.ts"
+    },
     "./hooks/useDeletionValidation": {
       "import": "./src/hooks/useDeletionValidation.ts",
       "types": "./src/hooks/useDeletionValidation.ts"

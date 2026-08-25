@@ -59,11 +59,14 @@
       "noDate": "Kein Datum",
       "notAvailable": "k. A.",
       "noEmailChannels": "Es sind keine E-Mail-Kanaele konfiguriert.",
-      "noCapacity": "nicht verfügbar – keine Kapazität festgelegt"
+      "noCapacity": "nicht verfügbar – keine Kapazität festgelegt",
+      "noEstimate": "nicht verfügbar – keine Schätzung festgelegt",
+      "noOverruns": "Keine Aufgabe hat ihre Schätzung überschritten."
     },
     "fallbackTitle": "Bericht",
     "dateRange": {
-      "lastDays": "Letzte {{count}} Tage"
+      "lastDays": "Letzte {{count}} Tage",
+      "allActiveProjects": "Alle aktiven Projekte, seit Projektbeginn"
     },
     "units": {
       "daysWithCount": "{{count}} Tage"
@@ -103,7 +106,13 @@
       "capacityHours": "Kapazitätsstunden",
       "utilization": "Auslastung",
       "usersWithoutCapacity": "Fehlende Kapazität",
-      "activeUsers": "Aktive Benutzer"
+      "activeUsers": "Aktive Benutzer",
+      "activeProjects": "Aktive Projekte",
+      "budgetedHours": "Budgetierte Stunden",
+      "estimatedHours": "Geschätzte Stunden",
+      "actualHours": "Tatsächliche Stunden",
+      "projectsOverEstimate": "Über Schätzung",
+      "projectsOverBudget": "Über Budget"
     },
     "sections": {
       "openByStatus": "Offen nach Status",
@@ -122,7 +131,10 @@
       "bucketUsage": "Kontingentnutzung",
       "performanceByAssignee": "Leistung nach Bearbeiter",
       "closedByAssignee": "Geschlossen nach Bearbeiter",
-      "utilizationByUser": "Auslastung pro Benutzer"
+      "utilizationByUser": "Auslastung pro Benutzer",
+      "hoursByProject": "Stunden nach Projekt",
+      "hoursByPhase": "Stunden nach Phase",
+      "largestTaskOverruns": "Größte Aufgabenüberschreitungen"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -168,6 +180,10 @@
       "deferredRevenue": {
         "title": "Abgegrenzte Umsatzerlöse",
         "description": "Vorausbezahlte Verbindlichkeiten über alle Kunden: Gutschriftensalden und ungenutzte Stunden aus Stundenkontingenten nach Monat."
+      },
+      "projectHours": {
+        "title": "Projektstunden vs. Schätzungen",
+        "description": "Erfasste Stunden im Verhältnis zu Aufgabenschätzungen und Projektbudgets, samt der Phasen, die überziehen."
       }
     },
     "table": {
@@ -191,7 +207,17 @@
       "workedHours": "Geleistete Stunden",
       "capacityHours": "Kapazitätsstunden",
       "utilization": "Auslastung",
-      "capacityEstimated": "Geschätzt aus der Wochenkapazität; keine Arbeitszeiten festgelegt."
+      "capacityEstimated": "Geschätzt aus der Wochenkapazität; keine Arbeitszeiten festgelegt.",
+      "project": "Projekt",
+      "client": "Kunde",
+      "phase": "Phase",
+      "task": "Aufgabe",
+      "budgetedHours": "Budgetiert",
+      "estimatedHours": "Geschätzt",
+      "actualHours": "Tatsächlich",
+      "variance": "Abweichung",
+      "estimateUsed": "Schätzung verbraucht",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} Aufgaben erledigt"
     },
     "statusValues": {
       "connected": "Verbunden",

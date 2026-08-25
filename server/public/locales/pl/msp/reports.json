@@ -59,11 +59,14 @@
       "noDate": "Brak daty",
       "notAvailable": "brak",
       "noEmailChannels": "Nie skonfigurowano kanalow e-mail.",
-      "noCapacity": "nd. — nie ustawiono wydajności"
+      "noCapacity": "nd. — nie ustawiono wydajności",
+      "noEstimate": "nd. — nie ustawiono szacunku",
+      "noOverruns": "Żadne zadanie nie przekroczyło szacunku."
     },
     "fallbackTitle": "Raport",
     "dateRange": {
-      "lastDays": "Ostatnie {{count}} dni"
+      "lastDays": "Ostatnie {{count}} dni",
+      "allActiveProjects": "Wszystkie aktywne projekty, od początku"
     },
     "units": {
       "daysWithCount": "{{count}} dni"
@@ -103,7 +106,13 @@
       "capacityHours": "Godziny wydajności",
       "utilization": "Wykorzystanie",
       "usersWithoutCapacity": "Brak wydajności",
-      "activeUsers": "Aktywni użytkownicy"
+      "activeUsers": "Aktywni użytkownicy",
+      "activeProjects": "Aktywne projekty",
+      "budgetedHours": "Godziny budżetowe",
+      "estimatedHours": "Godziny szacowane",
+      "actualHours": "Godziny rzeczywiste",
+      "projectsOverEstimate": "Powyżej szacunku",
+      "projectsOverBudget": "Powyżej budżetu"
     },
     "sections": {
       "openByStatus": "Otwarte według statusu",
@@ -122,7 +131,10 @@
       "bucketUsage": "Uzycie pakietu",
       "performanceByAssignee": "Wyniki wedlug przypisanego",
       "closedByAssignee": "Zamkniete wedlug przypisanego",
-      "utilizationByUser": "Wykorzystanie według użytkownika"
+      "utilizationByUser": "Wykorzystanie według użytkownika",
+      "hoursByProject": "Godziny według projektu",
+      "hoursByPhase": "Godziny według fazy",
+      "largestTaskOverruns": "Największe przekroczenia zadań"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -168,6 +180,10 @@
       "deferredRevenue": {
         "title": "Przychód rozliczany w czasie",
         "description": "Zobowiązania z przedpłat u klientów: salda kredytów i niewykorzystane godziny z pakietów według miesiąca."
+      },
+      "projectHours": {
+        "title": "Godziny projektu a szacunki",
+        "description": "Zarejestrowane godziny w stosunku do szacunków zadań i budżetów projektów, wraz z fazami, które się przeciągają."
       }
     },
     "table": {
@@ -191,7 +207,17 @@
       "workedHours": "Przepracowane godziny",
       "capacityHours": "Godziny wydajności",
       "utilization": "Wykorzystanie",
-      "capacityEstimated": "Oszacowano na podstawie tygodniowej dostępności; nie ustawiono godzin pracy."
+      "capacityEstimated": "Oszacowano na podstawie tygodniowej dostępności; nie ustawiono godzin pracy.",
+      "project": "Projekt",
+      "client": "Klient",
+      "phase": "Faza",
+      "task": "Zadanie",
+      "budgetedHours": "Budżet",
+      "estimatedHours": "Szacunek",
+      "actualHours": "Rzeczywiste",
+      "variance": "Odchylenie",
+      "estimateUsed": "Wykorzystany szacunek",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} zadań ukończonych"
     },
     "statusValues": {
       "connected": "Polaczony",

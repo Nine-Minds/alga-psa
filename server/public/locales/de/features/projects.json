@@ -1836,5 +1836,34 @@
     "improvement": "Verbesserung",
     "epic": "Epic",
     "story": "Story"
+  },
+  "statusUpdate": {
+    "button": "Statusupdate senden",
+    "title": "Statusupdate senden",
+    "loading": "Empfängerinformationen werden geladen ...",
+    "sending": "Statusupdate wird gesendet ...",
+    "sent": "Statusupdate an {{email}} gesendet",
+    "send": "Update senden",
+    "noRecipient": "Für den Kundenkontakt dieses Projekts ist keine E-Mail-Adresse hinterlegt.",
+    "whatTheySee": "Ihr Kunde sieht:",
+    "additionalMessage": "Zusätzliche Nachricht",
+    "additionalMessagePlaceholder": "Fügen Sie eine persönliche Notiz zum Update hinzu ...",
+    "preview": "Das Update wird von {{fromEmail}} im Namen von {{companyName}} gesendet.",
+    "recipientSource": {
+      "projectContact": "Projektkontakt",
+      "clientEmail": "Kunden-E-Mail",
+      "none": "Keine E-Mail gefunden"
+    },
+    "summary": {
+      "progress": "Gesamtfortschritt: {{percent}} % ({{closed}} von {{total}} Aufgaben erledigt)",
+      "budgetHours": "Budgetierte Stunden: {{spent}} von {{budgeted}} Stunden verbraucht",
+      "budgetHoursHidden": "Budgetierte Stunden sind durch die Kundenportal-Einstellungen dieses Projekts ausgeblendet",
+      "recentlyCompleted": "Kürzlich abgeschlossen: {{items}}",
+      "portalLink": "Ein Link zum Projekt im Kundenportal"
+    },
+    "errors": {
+      "loadRecipient": "Empfängerinformationen konnten nicht geladen werden",
+      "sendFailed": "Statusupdate konnte nicht gesendet werden"
+    }
   }
 }

@@ -59,11 +59,14 @@
       "noDate": "Geen datum",
       "notAvailable": "n.v.t.",
       "noEmailChannels": "Er zijn geen e-mailkanalen geconfigureerd.",
-      "noCapacity": "n.v.t. — geen capaciteit ingesteld"
+      "noCapacity": "n.v.t. — geen capaciteit ingesteld",
+      "noEstimate": "n.v.t. — geen schatting ingesteld",
+      "noOverruns": "Geen enkele taak heeft de schatting overschreden."
     },
     "fallbackTitle": "Rapport",
     "dateRange": {
-      "lastDays": "Laatste {{count}} dagen"
+      "lastDays": "Laatste {{count}} dagen",
+      "allActiveProjects": "Alle actieve projecten, sinds de start"
     },
     "units": {
       "daysWithCount": "{{count}} dagen"
@@ -103,7 +106,13 @@
       "capacityHours": "Capaciteitsuren",
       "utilization": "Benutting",
       "usersWithoutCapacity": "Ontbrekende capaciteit",
-      "activeUsers": "Actieve gebruikers"
+      "activeUsers": "Actieve gebruikers",
+      "activeProjects": "Actieve projecten",
+      "budgetedHours": "Begrote uren",
+      "estimatedHours": "Geschatte uren",
+      "actualHours": "Werkelijke uren",
+      "projectsOverEstimate": "Boven schatting",
+      "projectsOverBudget": "Boven begroting"
     },
     "sections": {
       "openByStatus": "Open per status",
@@ -122,7 +131,10 @@
       "bucketUsage": "Bundelgebruik",
       "performanceByAssignee": "Prestaties per toegewezene",
       "closedByAssignee": "Gesloten per toegewezene",
-      "utilizationByUser": "Benutting per gebruiker"
+      "utilizationByUser": "Benutting per gebruiker",
+      "hoursByProject": "Uren per project",
+      "hoursByPhase": "Uren per fase",
+      "largestTaskOverruns": "Grootste taakoverschrijdingen"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -168,6 +180,10 @@
       "deferredRevenue": {
         "title": "Uitgestelde omzet",
         "description": "Vooruitbetaalde verplichting over klanten: kredietsaldi en niet-verbruikte urenbundeluren per maand."
+      },
+      "projectHours": {
+        "title": "Projecturen versus schattingen",
+        "description": "Geregistreerde uren ten opzichte van taakschattingen en projectbegrotingen, met de fasen die uitlopen."
       }
     },
     "table": {
@@ -191,7 +207,17 @@
       "workedHours": "Gewerkte uren",
       "capacityHours": "Capaciteitsuren",
       "utilization": "Benutting",
-      "capacityEstimated": "Geschat op basis van de weekcapaciteit; geen werktijden ingesteld."
+      "capacityEstimated": "Geschat op basis van de weekcapaciteit; geen werktijden ingesteld.",
+      "project": "Project",
+      "client": "Klant",
+      "phase": "Fase",
+      "task": "Taak",
+      "budgetedHours": "Begroot",
+      "estimatedHours": "Geschat",
+      "actualHours": "Werkelijk",
+      "variance": "Afwijking",
+      "estimateUsed": "Schatting gebruikt",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} taken gereed"
     },
     "statusValues": {
       "connected": "Verbonden",

@@ -59,11 +59,14 @@
       "noDate": "Nessuna data",
       "notAvailable": "n/d",
       "noEmailChannels": "Nessun canale email configurato.",
-      "noCapacity": "n/d — nessuna capacità impostata"
+      "noCapacity": "n/d — nessuna capacità impostata",
+      "noEstimate": "n/d — nessuna stima impostata",
+      "noOverruns": "Nessuna attività ha superato la propria stima."
     },
     "fallbackTitle": "Report",
     "dateRange": {
-      "lastDays": "Ultimi {{count}} giorni"
+      "lastDays": "Ultimi {{count}} giorni",
+      "allActiveProjects": "Tutti i progetti attivi, dall’inizio"
     },
     "units": {
       "daysWithCount": "{{count}} giorni"
@@ -103,7 +106,13 @@
       "capacityHours": "Ore di capacità",
       "utilization": "Utilizzo",
       "usersWithoutCapacity": "Capacità mancante",
-      "activeUsers": "Utenti attivi"
+      "activeUsers": "Utenti attivi",
+      "activeProjects": "Progetti attivi",
+      "budgetedHours": "Ore a budget",
+      "estimatedHours": "Ore stimate",
+      "actualHours": "Ore effettive",
+      "projectsOverEstimate": "Oltre la stima",
+      "projectsOverBudget": "Oltre il budget"
     },
     "sections": {
       "openByStatus": "Aperti per stato",
@@ -122,7 +131,10 @@
       "bucketUsage": "Uso pacchetto",
       "performanceByAssignee": "Prestazioni per assegnatario",
       "closedByAssignee": "Chiusi per assegnatario",
-      "utilizationByUser": "Utilizzo per utente"
+      "utilizationByUser": "Utilizzo per utente",
+      "hoursByProject": "Ore per progetto",
+      "hoursByPhase": "Ore per fase",
+      "largestTaskOverruns": "Maggiori sforamenti per attività"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -168,6 +180,10 @@
       "deferredRevenue": {
         "title": "Ricavi differiti",
         "description": "Passività anticipata tra i clienti: saldi dei crediti e ore di pacchetto ore non consumate per mese."
+      },
+      "projectHours": {
+        "title": "Ore di progetto rispetto alle stime",
+        "description": "Ore registrate rispetto alle stime delle attività e ai budget di progetto, con le fasi che sforano."
       }
     },
     "table": {
@@ -191,7 +207,17 @@
       "workedHours": "Ore lavorate",
       "capacityHours": "Ore di capacità",
       "utilization": "Utilizzo",
-      "capacityEstimated": "Stimato dalla capacità settimanale; nessun orario di lavoro impostato."
+      "capacityEstimated": "Stimato dalla capacità settimanale; nessun orario di lavoro impostato.",
+      "project": "Progetto",
+      "client": "Cliente",
+      "phase": "Fase",
+      "task": "Attività",
+      "budgetedHours": "A budget",
+      "estimatedHours": "Stimate",
+      "actualHours": "Effettive",
+      "variance": "Scostamento",
+      "estimateUsed": "Stima utilizzata",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} attività completate"
     },
     "statusValues": {
       "connected": "Connesso",

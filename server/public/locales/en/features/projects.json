@@ -1836,5 +1836,34 @@
     "improvement": "Improvement",
     "epic": "Epic",
     "story": "Story"
+  },
+  "statusUpdate": {
+    "button": "Send status update",
+    "title": "Send Status Update",
+    "loading": "Loading recipient information...",
+    "sending": "Sending status update...",
+    "sent": "Status update sent to {{email}}",
+    "send": "Send Update",
+    "noRecipient": "No email address is configured for this project’s client contact.",
+    "whatTheySee": "Your customer will see:",
+    "additionalMessage": "Additional Message",
+    "additionalMessagePlaceholder": "Add a personal note to include in the update...",
+    "preview": "The update will be sent from {{fromEmail}} on behalf of {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Project Contact",
+      "clientEmail": "Client Email",
+      "none": "No Email Found"
+    },
+    "summary": {
+      "progress": "Overall progress: {{percent}}% ({{closed}} of {{total}} tasks done)",
+      "budgetHours": "Budget hours: {{spent}} of {{budgeted}} hours used",
+      "budgetHoursHidden": "Budget hours are hidden by this project’s client portal settings",
+      "recentlyCompleted": "Recently completed: {{items}}",
+      "portalLink": "A link to the project in the client portal"
+    },
+    "errors": {
+      "loadRecipient": "Failed to load recipient information",
+      "sendFailed": "Failed to send the status update"
+    }
   }
 }

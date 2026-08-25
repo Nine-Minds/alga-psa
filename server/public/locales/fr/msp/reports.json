@@ -59,11 +59,14 @@
       "noDate": "Aucune date",
       "notAvailable": "n/d",
       "noEmailChannels": "Aucun canal e-mail n’est configure.",
-      "noCapacity": "n/d — aucune capacité définie"
+      "noCapacity": "n/d — aucune capacité définie",
+      "noEstimate": "n/d — aucune estimation définie",
+      "noOverruns": "Aucune tâche n’a dépassé son estimation."
     },
     "fallbackTitle": "Rapport",
     "dateRange": {
-      "lastDays": "{{count}} derniers jours"
+      "lastDays": "{{count}} derniers jours",
+      "allActiveProjects": "Tous les projets actifs, depuis le début"
     },
     "units": {
       "daysWithCount": "{{count}} jours"
@@ -103,7 +106,13 @@
       "capacityHours": "Heures de capacité",
       "utilization": "Utilisation",
       "usersWithoutCapacity": "Capacité manquante",
-      "activeUsers": "Utilisateurs actifs"
+      "activeUsers": "Utilisateurs actifs",
+      "activeProjects": "Projets actifs",
+      "budgetedHours": "Heures budgétées",
+      "estimatedHours": "Heures estimées",
+      "actualHours": "Heures réelles",
+      "projectsOverEstimate": "Au-delà de l’estimation",
+      "projectsOverBudget": "Hors budget"
     },
     "sections": {
       "openByStatus": "Ouverts par statut",
@@ -122,7 +131,10 @@
       "bucketUsage": "Utilisation du forfait",
       "performanceByAssignee": "Performance par assigne",
       "closedByAssignee": "Fermes par assigne",
-      "utilizationByUser": "Utilisation par utilisateur"
+      "utilizationByUser": "Utilisation par utilisateur",
+      "hoursByProject": "Heures par projet",
+      "hoursByPhase": "Heures par phase",
+      "largestTaskOverruns": "Principaux dépassements de tâches"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -168,6 +180,10 @@
       "deferredRevenue": {
         "title": "Produits différés",
         "description": "Passif prépayé par client : soldes de crédits et heures de forfait d’heures non consommées par mois."
+      },
+      "projectHours": {
+        "title": "Heures de projet vs estimations",
+        "description": "Heures suivies par rapport aux estimations des tâches et aux budgets des projets, avec les phases qui débordent."
       }
     },
     "table": {
@@ -191,7 +207,17 @@
       "workedHours": "Heures travaillées",
       "capacityHours": "Heures de capacité",
       "utilization": "Utilisation",
-      "capacityEstimated": "Estimé à partir de la capacité hebdomadaire ; aucune heure de travail définie."
+      "capacityEstimated": "Estimé à partir de la capacité hebdomadaire ; aucune heure de travail définie.",
+      "project": "Projet",
+      "client": "Client",
+      "phase": "Phase",
+      "task": "Tâche",
+      "budgetedHours": "Budgétées",
+      "estimatedHours": "Estimées",
+      "actualHours": "Réelles",
+      "variance": "Écart",
+      "estimateUsed": "Estimation utilisée",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} tâches terminées"
     },
     "statusValues": {
       "connected": "Connecte",
