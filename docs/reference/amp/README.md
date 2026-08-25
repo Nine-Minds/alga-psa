@@ -15,6 +15,7 @@ never trusted.
 | [source-keys.md](source-keys.md) | Source keys, namespaces, and the idempotency contract |
 | [security.md](security.md) | Security boundaries, limits, and consumer obligations |
 | [cli.md](cli.md) | `alga-migrate` commands and exit codes |
+| [connectors.md](connectors.md) | The connector contract, conformance, built-in connectors, and the Alga export producer |
 
 ## Packages
 
