@@ -8,36 +8,41 @@ file, and can never read or mutate an Alga tenant.
 
 ## The connector contract
 
-Every connector exports a `MigrationConnector`:
+Every connector implements `AmpConnector` from
+`@alga-psa/migration-connectors`:
 
 ```ts
-interface MigrationConnector {
-  declaration: ConnectorDeclaration;
-  convert(source: ConnectorSourceTables): CanonicalRecords;
+interface AmpConnector {
+  descriptor: AmpConnectorDescriptor;
+  produce(input: {
+    inputDir: string;
+    outputPath: string;
+    namespace: string;
+  }): Promise<{ manifest: AmpManifest; rowCounts: Record<string, number> }>;
 }
 ```
 
-`ConnectorSourceTables` is one array of parsed source rows per AMP entity
-table. `convert` returns canonical records keyed by entity table, generating
-deterministic `package_record_id`s from `(namespace, entity, source id)` so
-re-running a conversion produces identical identities — the property AMP's
-create-only idempotency depends on.
-
-The declaration states what an operator can expect before running anything:
+The descriptor is operator-facing and must be honest:
 
 | Field | Meaning |
 | --- | --- |
-| `name`, `version` | Producer identity, written into the package manifest |
+| `name` / `version` | Connector identity, recorded in the manifest |
 | `supportedAmpVersions` | AMP format versions the connector emits |
-| `sourceSystemVersions` | Source exports the mapping was verified against |
-| `entityCoverage` | Entity tables the connector converts |
+| `sourceSystem` / `sourceSystemVersions` | Source exports the mapping was verified against |
+| `entityCoverage` | Entity tables the connector converts, with notes |
 | `knownOmissions` | What the source has that the conversion drops |
-| `licensingPrerequisites` | Access the operator needs on the source side |
+| `prerequisites` | Access or export steps the operator needs on the source side |
 
-Conversion problems are collected as `ConnectorRowError`s (entity, source row
-number, field, message) and raised together as a `ConnectorConversionError` —
-a connector never emits a record it knows is broken and never stops at the
-first bad row.
+Registered connectors are discoverable through `listConnectors()`.
+
+Connectors build on the shared conversion engine (`runConversion`) rather
+than reimplementing parsing: it maps source headers to canonical columns,
+captures unmapped columns into bounded `extension_json`, rewrites
+source-id references to `package_record_id`s, collects skip/truncation
+diagnostics (mirrored into `package_diagnostics`, capped at 500 rows), and
+validates the finished package. A connector never emits a record it knows is
+broken, and never stops at the first bad row — problems become diagnostics
+with source row numbers. `produce` throws if its own output fails validation.
 
 ## Conformance
 
@@ -56,44 +61,52 @@ Every built-in connector has a fixture-driven conformance test in
 `packages/migration-connectors/tests`. New connectors must ship one with
 anonymized fixtures.
 
-## Built-in connectors
+## Built-in producers
 
 ### `alga-csv-adapter` (CSV / XLSX)
 
-Converts one spreadsheet per entity using the canonical source headers from
-[mapping.md](mapping.md) (`id`, `name`, `organization_id`, …). Files may be
-`.csv` (parsed with papaparse) or `.xlsx` (first worksheet, header row first;
-parsed with exceljs — cells are read as text, formulas are never evaluated).
-Cross-entity references use *source* ids: a `locations` row's
-`organization_id` names the `id` of a row in the organizations file.
-
-Driven by a JSON config, from the CLI (`alga-migrate csv <config.json>`) or
-the `convertSpreadsheetsToAmp` API:
+The generic spreadsheet converter, driven by a JSON config from the CLI
+(`alga-migrate csv <config.json>`) or the `convertSpreadsheetsToAmp` API.
+Files may be `.csv` (parsed with papaparse) or `.xlsx` (first worksheet,
+header row first; parsed with exceljs — cells are read as values, formulas
+are never evaluated). File paths resolve relative to the config file.
 
 ```json
 {
   "outputPath": "converted.amp",
+  "namespace": "legacy-psa:2026-08",
   "sourceSystem": "legacy-psa",
-  "entities": {
-    "organizations": { "file": "orgs.csv", "mapping": { "Company Name": "name" } },
-    "contacts": { "file": "contacts.xlsx" }
-  }
+  "files": [
+    {
+      "entityType": "organizations",
+      "path": "orgs.csv",
+      "mapping": { "Company Name": "name", "Account #": "source_record_id" }
+    },
+    {
+      "entityType": "locations",
+      "path": "sites.csv",
+      "mapping": { "Site": "name", "Company Ref": "organization_package_record_id" }
+    }
+  ]
 }
 ```
 
-`mapping` renames a file's headers to the canonical ones, so exports keep
-their vendor headers untouched. The adapter records each record's source row
-number in `extension_json` (`{"source_row": n}`), validates the finished
-package, and returns the validation result with per-entity counts.
+`mapping` maps a file's vendor headers onto canonical columns; unmapped
+columns are preserved in `extension_json`. Mapped reference columns carry
+*source* ids of the target entity and are rewritten to package ids during
+conversion. The adapter records skipped rows and truncations as diagnostics
+with source row numbers, validates the finished package, and returns the
+validation outcome with per-entity counts — an invalid result is returned,
+never silently discarded. See [cli.md](cli.md) for exit codes.
 
 ### `connectwise-psa-csv`
 
-Converts ConnectWise Manage CSV exports of Companies, Contacts, and Service
-Tickets. Vendor headers (`RecID`, `Company`, `First Name`, `Ticket #`,
-`Summary`, …) are normalized to canonical fields before conversion; boards,
-members, agreements, time entries, invoices, and attachments are declared
-omissions — target boards, statuses, and priorities are resolved by the
-operator during AlgaPSA preflight, never guessed by the connector.
+Converts a directory of ConnectWise PSA CSV exports (companies, sites,
+contacts, service tickets, ticket notes, configurations — exact filenames and
+columns in `packages/migration-connectors/src/connectwise/README.md`).
+Statuses, priorities, and boards travel as names and are resolved by the
+operator during AlgaPSA preflight, never guessed by the connector. Time
+entries, agreements, invoices, and attachments are declared omissions.
 
 ## The Alga export producer
 
@@ -105,9 +118,11 @@ and writes the file, keeping the tenant boundary out of open-source code.
 
 ## Writing a new connector
 
-1. Normalize the source export into `ConnectorSourceTables` rows.
-2. Reuse `convertEntityRows` where the canonical field layout fits; write a
-   custom `convert` where the source needs entity-specific reshaping.
-3. Declare coverage and omissions honestly — the declaration is operator-facing.
-4. Add a conformance test with anonymized fixtures covering: expected counts,
-   reference wiring between entities, and at least one collected row error.
+1. Parse the source export and normalize each file into the engine's input
+   shape (headers + rows), reusing `runConversion` for mapping, diagnostics,
+   reference rewriting, and validation.
+2. Write entity-specific value transforms (dates to RFC 3339 UTC, flags to
+   0/1) in the connector, not in the shared engine.
+3. Declare coverage and omissions honestly — the descriptor is operator-facing.
+4. Add a conformance test with anonymized fixtures covering expected counts,
+   reference wiring between entities, and at least one skipped-row diagnostic.
