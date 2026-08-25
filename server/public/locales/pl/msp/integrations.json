@@ -3595,6 +3595,9 @@
         "unmatched": "Niedopasowana",
         "resolved": "Rozstrzygnięta"
       },
+      "callsPanel": {
+        "title": "Rozmowy"
+      },
       "recentCalls": {
         "title": "Ostatnie rozmowy",
         "description": "Rejestrowane po zakończeniu rozmowy — Microsoft Graph publikuje rekordy połączeń dopiero potem, więc to historia, a nie podgląd na żywo.",

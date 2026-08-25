@@ -3595,6 +3595,9 @@
         "unmatched": "Unmatched",
         "resolved": "Resolved"
       },
+      "callsPanel": {
+        "title": "Calls"
+      },
       "recentCalls": {
         "title": "Recent calls",
         "description": "Captured after each call ends — Microsoft Graph publishes call records post-call, so this is history rather than a live feed.",

@@ -3595,6 +3595,9 @@
         "unmatched": "Non rapproché",
         "resolved": "Résolu"
       },
+      "callsPanel": {
+        "title": "Appels"
+      },
       "recentCalls": {
         "title": "Appels récents",
         "description": "Capturés après la fin de chaque appel : Microsoft Graph publie les enregistrements après coup, il s'agit donc d'un historique et non d'un flux en direct.",

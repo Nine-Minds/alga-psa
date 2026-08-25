@@ -3595,6 +3595,9 @@
         "unmatched": "Nicht zugeordnet",
         "resolved": "Geklärt"
       },
+      "callsPanel": {
+        "title": "Anrufe"
+      },
       "recentCalls": {
         "title": "Letzte Anrufe",
         "description": "Wird nach Gesprächsende erfasst — Microsoft Graph veröffentlicht Anrufdatensätze erst danach, dies ist also ein Verlauf und kein Live-Feed.",

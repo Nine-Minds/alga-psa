@@ -3595,6 +3595,9 @@
         "unmatched": "Non riconosciuta",
         "resolved": "Risolta"
       },
+      "callsPanel": {
+        "title": "Chiamate"
+      },
       "recentCalls": {
         "title": "Chiamate recenti",
         "description": "Acquisite al termine di ogni chiamata: Microsoft Graph pubblica i record dopo la chiamata, quindi questa è una cronologia e non un flusso in tempo reale.",

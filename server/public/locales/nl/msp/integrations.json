@@ -3595,6 +3595,9 @@
         "unmatched": "Niet herkend",
         "resolved": "Opgelost"
       },
+      "callsPanel": {
+        "title": "Gesprekken"
+      },
       "recentCalls": {
         "title": "Recente gesprekken",
         "description": "Vastgelegd na afloop van elk gesprek: Microsoft Graph publiceert gespreksrecords pas daarna, dus dit is geschiedenis en geen live overzicht.",

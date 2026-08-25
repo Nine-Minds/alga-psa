@@ -3595,6 +3595,9 @@
         "unmatched": "Sin identificar",
         "resolved": "Resuelta"
       },
+      "callsPanel": {
+        "title": "Llamadas"
+      },
       "recentCalls": {
         "title": "Llamadas recientes",
         "description": "Se capturan al terminar cada llamada: Microsoft Graph publica los registros después de la llamada, por lo que esto es un historial y no un flujo en vivo.",
