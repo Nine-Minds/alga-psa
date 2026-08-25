@@ -1,27 +1,114 @@
 import type { Knex } from 'knex';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 
-export type MigrationApplyResult = { action: 'created' | 'skipped' | 'failed'; targetEntityType?: string; targetEntityId?: string; errors?: unknown[]; warnings?: unknown[] };
+export interface IdentityKey {
+  namespace: string;
+  entityType: string;
+  sourceRecordId: string;
+}
 
-/** The only write boundary for record application: target mutation, outcome and identity are one transaction. */
+export interface OutcomeInput {
+  migrationJobId: string;
+  migrationStagedRecordId: string;
+  attempt: number;
+  action: 'created' | 'skipped' | 'failed';
+  targetEntityType?: string | null;
+  targetEntityId?: string | null;
+  errors?: string[];
+  warnings?: string[];
+}
+
+/**
+ * The idempotency anchor and append-only outcome ledger.
+ *
+ * The retry contract: a target mutation, its outcome row, and its identity
+ * mapping are always written in the SAME transaction. Callers pass that
+ * transaction in; this class never opens one.
+ */
 export class MigrationLedger {
-  constructor(private readonly db: Knex, private readonly tenant: string) {}
+  constructor(private readonly tenant: string) {}
 
-  async applyOnce(input: { jobId: string; stagedRecordId: string; namespace: string; entityType: string; sourceRecordId: string }, mutate: (trx: Knex.Transaction) => Promise<{ targetEntityType: string; targetEntityId: string }>): Promise<MigrationApplyResult> {
-    return withTransaction(this.db, async trx => {
-      const scoped = tenantDb(trx, this.tenant);
-      const mapping = await scoped.table('migration_identity_mappings').where({ namespace: input.namespace, entity_type: input.entityType, source_record_id: input.sourceRecordId }).first();
-      const prior = await scoped.table('migration_record_outcomes').where({ migration_staged_record_id: input.stagedRecordId }).orderBy('attempt', 'desc').first();
-      const attempt = Number(prior?.attempt ?? 0) + 1;
-      if (mapping) {
-        await scoped.table('migration_record_outcomes').insert({ migration_job_id: input.jobId, migration_staged_record_id: input.stagedRecordId, attempt, action: 'skipped', target_entity_type: mapping.target_entity_type, target_entity_id: mapping.target_entity_id, errors: [], warnings: [{ code: 'ALREADY_APPLIED' }] });
-        return { action: 'skipped', targetEntityType: mapping.target_entity_type, targetEntityId: mapping.target_entity_id };
-      }
-      const target = await mutate(trx);
-      await scoped.table('migration_identity_mappings').insert({ namespace: input.namespace, entity_type: input.entityType, source_record_id: input.sourceRecordId, target_entity_type: target.targetEntityType, target_entity_id: target.targetEntityId });
-      await scoped.table('migration_record_outcomes').insert({ migration_job_id: input.jobId, migration_staged_record_id: input.stagedRecordId, attempt, action: 'created', target_entity_type: target.targetEntityType, target_entity_id: target.targetEntityId, errors: [], warnings: [] });
-      await scoped.table('migration_job_entities').where({ migration_job_id: input.jobId, entity_type: input.entityType }).increment('applied_count', 1);
-      return { action: 'created', targetEntityType: target.targetEntityType, targetEntityId: target.targetEntityId };
+  /** The applied target for a source key, or null when never applied. */
+  async findMapping(
+    trx: Knex.Transaction,
+    key: IdentityKey
+  ): Promise<{ targetEntityType: string; targetEntityId: string } | null> {
+    const db = tenantDb(trx, this.tenant);
+    const row = await db
+      .table('migration_identity_mappings')
+      .where({
+        namespace: key.namespace,
+        entity_type: key.entityType,
+        source_record_id: key.sourceRecordId,
+      })
+      .first();
+    return row
+      ? { targetEntityType: row.target_entity_type, targetEntityId: row.target_entity_id }
+      : null;
+  }
+
+  /** Bulk lookup used by the planner's dry run (read-only, no transaction). */
+  async findMappedSourceIds(
+    knex: Knex,
+    namespace: string,
+    entityType: string,
+    sourceRecordIds: string[]
+  ): Promise<Set<string>> {
+    if (sourceRecordIds.length === 0) {
+      return new Set();
+    }
+    const db = tenantDb(knex, this.tenant);
+    const rows = await db
+      .table('migration_identity_mappings')
+      .where({ namespace, entity_type: entityType })
+      .whereIn('source_record_id', sourceRecordIds)
+      .select('source_record_id');
+    return new Set(rows.map((row: { source_record_id: string }) => row.source_record_id));
+  }
+
+  /** Record a creation: identity mapping + outcome, same transaction. */
+  async recordCreation(
+    trx: Knex.Transaction,
+    key: IdentityKey,
+    outcome: OutcomeInput & { migrationJobId: string; targetEntityType: string; targetEntityId: string }
+  ): Promise<void> {
+    const db = tenantDb(trx, this.tenant);
+    await db.table('migration_identity_mappings').insert({
+      tenant: this.tenant,
+      namespace: key.namespace,
+      entity_type: key.entityType,
+      source_record_id: key.sourceRecordId,
+      target_entity_type: outcome.targetEntityType,
+      target_entity_id: outcome.targetEntityId,
+      migration_job_id: outcome.migrationJobId,
     });
+    await this.recordOutcome(trx, outcome);
+  }
+
+  /** Record a skip or failure outcome (no identity mapping). */
+  async recordOutcome(trx: Knex.Transaction, outcome: OutcomeInput): Promise<void> {
+    const db = tenantDb(trx, this.tenant);
+    await db.table('migration_record_outcomes').insert({
+      tenant: this.tenant,
+      migration_job_id: outcome.migrationJobId,
+      migration_staged_record_id: outcome.migrationStagedRecordId,
+      attempt: outcome.attempt,
+      action: outcome.action,
+      target_entity_type: outcome.targetEntityType ?? null,
+      target_entity_id: outcome.targetEntityId ?? null,
+      errors: JSON.stringify(outcome.errors ?? []),
+      warnings: JSON.stringify(outcome.warnings ?? []),
+    });
+  }
+
+  /** Latest attempt number recorded for a job (0 when none). */
+  async latestAttempt(knex: Knex, migrationJobId: string): Promise<number> {
+    const db = tenantDb(knex, this.tenant);
+    const row = await db
+      .table('migration_record_outcomes')
+      .where({ migration_job_id: migrationJobId })
+      .max('attempt as max')
+      .first();
+    return Number(row?.max ?? 0);
   }
 }
