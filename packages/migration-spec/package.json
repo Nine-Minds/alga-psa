@@ -1,0 +1,1 @@
+{"name":"@alga-psa/migration-spec","version":"1.0.0","private":true,"type":"module","exports":{".":{"types":"./src/index.ts","import":"./src/index.ts"}},"scripts":{"typecheck":"tsc --noEmit"},"devDependencies":{"typescript":"^5.7.3"}}

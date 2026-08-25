@@ -1,0 +1,23 @@
+import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { AMP_ALLOWLISTED_TABLES, AMP_ENTITY_TABLES, AMP_FORMAT_VERSION, AMP_LIMITS, type AmpErrorCode, type AmpManifest, type AmpRecord } from '@alga-psa/migration-spec';
+export type AmpDiagnostic = { code: AmpErrorCode; message: string; table?: string; recordId?: string; field?: string };
+export type AmpValidationResult = { valid: boolean; diagnostics: AmpDiagnostic[]; manifest?: AmpManifest };
+type SqliteDb = { prepare(sql: string): { all(...args: unknown[]): unknown[]; get(...args: unknown[]): unknown }; close(): void };
+const sqlite = () => require('node:sqlite') as { DatabaseSync: new (path: string, options: { readOnly: boolean; allowExtension: boolean }) => SqliteDb };
+const validVersion = (version: string) => /^1\.0\.\d+$/.test(version);
+const depth = (value: unknown): number => Array.isArray(value) ? 1 + Math.max(0, ...value.map(depth)) : value && typeof value === 'object' ? 1 + Math.max(0, ...Object.values(value as Record<string, unknown>).map(depth)) : 0;
+export class AmpSqliteReader {
+  private readonly db: SqliteDb;
+  constructor(path: string) { this.db = new (sqlite().DatabaseSync)(path, { readOnly: true, allowExtension: false }); }
+  tables(): string[] { return this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map((x: any) => x.name); }
+  objects(): Array<{name:string;type:string}> { return this.db.prepare("SELECT name,type FROM sqlite_master WHERE type IN ('trigger','view')").all() as any; }
+  rows(table: typeof AMP_ALLOWLISTED_TABLES[number]): AmpRecord[] { return this.db.prepare(`SELECT * FROM ${table} ORDER BY package_record_id`).all() as AmpRecord[]; }
+  manifest(): AmpManifest | undefined { return this.db.prepare('SELECT * FROM amp_manifest LIMIT 2').get() as AmpManifest | undefined; }
+  close(): void { this.db.close(); }
+}
+export function validateAmpPackage(path: string): AmpValidationResult {
+  const diagnostics: AmpDiagnostic[] = []; if (!existsSync(path)) return { valid: false, diagnostics: [{ code: 'AMP_INVALID_MANIFEST', message: 'Package file does not exist.' }] };
+  const reader = new AmpSqliteReader(path); try { const tables = reader.tables(); for (const table of tables) if (!(AMP_ALLOWLISTED_TABLES as readonly string[]).includes(table)) diagnostics.push({ code:'AMP_UNKNOWN_TABLE', message:`Unknown table: ${table}`, table }); for (const object of reader.objects()) diagnostics.push({ code:'AMP_FORBIDDEN_SQLITE_OBJECT', message:`Forbidden SQLite ${object.type}: ${object.name}` }); const manifest = reader.manifest(); if (!manifest || !validVersion(manifest.format_version)) diagnostics.push({ code: manifest ? 'AMP_UNSUPPORTED_VERSION' : 'AMP_INVALID_MANIFEST', message: 'Manifest must contain a supported 1.0 version.' }); let total = 0; for (const table of AMP_ENTITY_TABLES) { if (!tables.includes(table)) continue; const rows = reader.rows(table); total += rows.length; if (rows.length > AMP_LIMITS.rowsPerEntity) diagnostics.push({code:'AMP_LIMIT_EXCEEDED',message:'Entity row limit exceeded.',table}); for (const row of rows) { for (const [field, value] of Object.entries(row)) { if (typeof value === 'string' && Buffer.byteLength(value) > AMP_LIMITS.textBytes) diagnostics.push({code:'AMP_LIMIT_EXCEEDED',message:'Text limit exceeded.',table,recordId:row.package_record_id,field}); } if (!row.package_record_id || !row.source_record_id || !row.external_identifier_namespace) diagnostics.push({code:'AMP_INVALID_VALUE',message:'Required identity values are missing.',table,recordId:row.package_record_id}); if (typeof row.extension_json === 'string') try { const json=JSON.parse(row.extension_json); if(Buffer.byteLength(row.extension_json)>AMP_LIMITS.extensionJsonBytes || depth(json)>AMP_LIMITS.extensionJsonDepth) diagnostics.push({code:'AMP_LIMIT_EXCEEDED',message:'extension_json limit exceeded.',table,recordId:row.package_record_id,field:'extension_json'}); } catch { diagnostics.push({code:'AMP_INVALID_VALUE',message:'extension_json is not JSON.',table,recordId:row.package_record_id,field:'extension_json'}); } } } if(total>AMP_LIMITS.rowsPerPackage) diagnostics.push({code:'AMP_LIMIT_EXCEEDED',message:'Package row limit exceeded.'}); return {valid:!diagnostics.length,diagnostics,manifest}; } finally { reader.close(); } }
+export function canonicalContentSha256(records: Record<string, AmpRecord[]>): string { const canonical=Object.keys(records).sort().flatMap(t => [...records[t]].sort((a,b)=>String(a.package_record_id).localeCompare(String(b.package_record_id))).map(r=>JSON.stringify(r,Object.keys(r).sort()))).join('\n'); return createHash('sha256').update(canonical).digest('hex'); }
+export { AmpPackageBuilder } from './builder.js';

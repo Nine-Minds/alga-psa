@@ -1,0 +1,1 @@
+{"name":"@alga-psa/migration-cli","version":"1.0.0","private":true,"type":"module","bin":{"alga-migrate":"./src/cli.ts"},"scripts":{"typecheck":"tsc --noEmit"},"dependencies":{"@alga-psa/migration-sdk":"*"},"devDependencies":{"typescript":"^5.7.3"}}
