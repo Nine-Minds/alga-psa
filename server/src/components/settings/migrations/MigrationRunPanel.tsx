@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -24,6 +25,7 @@ interface MigrationRunPanelProps {
  * a single overall percentage. The parent polls and re-renders this panel.
  */
 const MigrationRunPanel = ({ details, onStateChanged }: MigrationRunPanelProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [isCancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -54,7 +56,9 @@ const MigrationRunPanel = ({ details, onStateChanged }: MigrationRunPanelProps):
           <Spinner size="sm" />
           <div>
             <h3 className="text-sm font-semibold text-foreground">
-              {details.state === 'queued' ? 'Migration queued' : 'Migration in progress'}
+              {details.state === 'queued'
+                ? t('importExport.migration.run.queued', { defaultValue: 'Migration queued' })
+                : t('importExport.migration.run.applying', { defaultValue: 'Migration in progress' })}
             </h3>
             <p className="text-sm text-muted-foreground">
               Entities are applied in dependency order, one phase at a time. This view refreshes

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -32,6 +33,7 @@ interface MigrationPreflightPanelProps {
  * blocking issues always disable the run button.
  */
 const MigrationPreflightPanel = ({ details, onStateChanged }: MigrationPreflightPanelProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [report, setReport] = useState<PreflightResult | null>(null);
   const [isLoadingReport, setIsLoadingReport] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -141,7 +143,7 @@ const MigrationPreflightPanel = ({ details, onStateChanged }: MigrationPreflight
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Preflight</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('importExport.migration.preflight.title', { defaultValue: 'Preflight' })}</h3>
           <p className="text-sm text-muted-foreground">
             A dry run that validates every staged record against this tenant and your
             configuration. Nothing is created by preflight.

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
@@ -29,6 +30,7 @@ interface MigrationJobsHomeProps {
 }
 
 const MigrationJobsHome = ({ onSelectJob }: MigrationJobsHomeProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [jobs, setJobs] = useState<MigrationJobSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -75,7 +77,7 @@ const MigrationJobsHome = ({ onSelectJob }: MigrationJobsHomeProps): React.JSX.E
             </CardDescription>
           </div>
           <Button id="amp-upload-package-button" onClick={() => setUploadOpen(true)} className="w-full md:w-auto">
-            Upload package
+            {t('importExport.migration.actions.upload', { defaultValue: 'Upload package' })}
           </Button>
         </CardHeader>
         <CardContent>

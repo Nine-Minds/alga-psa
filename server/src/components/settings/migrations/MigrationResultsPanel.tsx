@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -43,6 +44,7 @@ interface MigrationResultsPanelProps {
  * plus a filterable drill-down into individual outcome records.
  */
 const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [summary, setSummary] = useState<MigrationOutcomeSummary[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);

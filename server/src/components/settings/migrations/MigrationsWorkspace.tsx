@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useSearchParams } from 'next/navigation';
 import MigrationJobsHome from './MigrationJobsHome';
 import MigrationJobDetail from './MigrationJobDetail';
@@ -11,6 +12,7 @@ import MigrationJobDetail from './MigrationJobDetail';
  * `migrationJobId` URL param so job links survive refresh and sharing.
  */
 const MigrationsWorkspace = (): React.JSX.Element => {
+  useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const jobIdParam = searchParams?.get('migrationJobId') ?? null;
 

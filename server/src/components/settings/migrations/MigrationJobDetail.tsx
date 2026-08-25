@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -32,6 +33,7 @@ interface MigrationJobDetailProps {
 }
 
 const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [details, setDetails] = useState<MigrationJobDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -118,7 +120,7 @@ const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps)
             <AlertDescription>{loadError ?? 'Migration job not found.'}</AlertDescription>
           </Alert>
           <Button id="amp-job-error-back-button" variant="outline" onClick={onBack}>
-            Back to migrations
+            {t('importExport.migration.actions.back', { defaultValue: 'Back to migrations' })}
           </Button>
         </CardContent>
       </Card>
