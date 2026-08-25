@@ -1,5 +1,3 @@
-import { createRequire } from 'node:module';
-
 /**
  * Narrow seam over Node's built-in `node:sqlite`. Everything else in the SDK
  * and the server goes through this module so the runtime can be swapped
@@ -29,10 +27,16 @@ interface NodeSqliteModule {
   ) => SqliteDatabase;
 }
 
-const require = createRequire(import.meta.url);
-
 function loadNodeSqlite(): NodeSqliteModule {
-  return require('node:sqlite') as NodeSqliteModule;
+  // `process.getBuiltinModule` (Node >= 22.3) resolves the builtin at runtime
+  // without a static `require`/`import` specifier, so bundlers (Turbopack /
+  // webpack) leave it alone instead of rewriting it into a broken external
+  // reference when this seam is bundled into a Next.js server route.
+  const sqlite = process.getBuiltinModule('node:sqlite');
+  if (!sqlite) {
+    throw new Error('node:sqlite is unavailable in this runtime (Node >= 22.3 required)');
+  }
+  return sqlite as unknown as NodeSqliteModule;
 }
 
 /** Open an untrusted package: read-only, extensions disabled. */
