@@ -5,41 +5,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { tenantDb, tenantTableMetadata } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { buildSamplePackage, sampleEntityRows } from '@alga-psa/migration-sdk';
 import type { AmpPackageRows } from '@alga-psa/migration-spec';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { MigrationStager } from '../../lib/migrations/MigrationStager';
 import { MigrationPlanner } from '../../lib/migrations/MigrationPlanner';
 import { MigrationDomainApplier } from '../../lib/migrations/appliers/MigrationDomainApplier';
 import type { MigrationJobConfiguration } from '../../lib/migrations/types';
 
 const HOOK_TIMEOUT = 180_000;
-
-// ---------------------------------------------------------------------------
-// PRODUCT GAP WORKAROUND (do not copy into new tests without reading this):
-// the migration_* tables created by
-// server/migrations/20260825130000_create_amp_migration_tables.cjs are not
-// registered in packages/db/src/lib/tenantTableMetadata.ts, so every
-// tenantDb(...).table('migration_jobs') call inside the AMP server core throws
-// "No tenant table metadata registered for migration_jobs" at runtime. The
-// real fix is seven `{ scope: 'tenant' }` entries in tenantTableMetadata.ts;
-// this test registers them at load time so the pipeline under test can run.
-// ---------------------------------------------------------------------------
-const AMP_MIGRATION_TABLES = [
-  'migration_jobs',
-  'migration_job_entities',
-  'migration_staged_records',
-  'migration_record_outcomes',
-  'migration_identity_mappings',
-  'migration_mapping_profiles',
-  'migration_reports',
-] as const;
-for (const table of AMP_MIGRATION_TABLES) {
-  if (!tenantTableMetadata[table]) {
-    tenantTableMetadata[table] = { scope: 'tenant' };
-  }
-}
 
 const ALL_ENTITY_TYPES = [
   'organizations',
@@ -112,6 +87,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantTable(tenantId, 'client_tax_settings').del();
   await tenantTable(tenantId, 'client_tax_rates').del();
   await tenantTable(tenantId, 'tax_rates').del();
+  await tenantTable(tenantId, 'tax_regions').del();
   await tenantTable(tenantId, 'client_contracts').del();
   await tenantTable(tenantId, 'contracts').del();
   await tenantTable(tenantId, 'client_billing_profiles').del();
@@ -149,6 +125,25 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(userColumns, 'email') ? { email: `owner-${tenantId.slice(0, 8)}@example.com` } : {}),
     ...(hasColumn(userColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
+  });
+
+  // ClientModel.createClient links each new client to the tenant's first
+  // active tax rate; without one it falls into a legacy default-rate insert
+  // that no longer matches the tax_rates schema. Seed a real rate.
+  await tenantTable(tenantId, 'tax_regions').insert({
+    tenant: tenantId,
+    region_code: 'US-TEST',
+    region_name: 'Test Region',
+    is_active: true,
+  });
+  await tenantTable(tenantId, 'tax_rates').insert({
+    tenant: tenantId,
+    tax_rate_id: uuidv4(),
+    tax_percentage: 0,
+    region_code: 'US-TEST',
+    description: 'Test default rate',
+    start_date: '2020-01-01',
+    is_active: true,
   });
 
   await tenantTable(tenantId, 'clients').insert({
@@ -286,6 +281,7 @@ async function migratedClientId(tenantId: string): Promise<string> {
 
 describe('AMP migration pipeline integration', () => {
   beforeAll(async () => {
+    wireLocalTestDbEnv();
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     db = await createTestDbConnection({ runSeeds: false });
     packageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'amp-pipeline-'));

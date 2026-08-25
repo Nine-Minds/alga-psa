@@ -105,8 +105,8 @@ export class MigrationDomainApplier {
 
       const counters = { created: 0, skipped: 0, failed: 0 };
 
-      await withTransaction(this.knex, async (trx) => {
-        for (const staged of batch) {
+      for (const staged of batch) {
+        await withTransaction(this.knex, async (trx) => {
           const payload =
             typeof staged.payload === 'string' ? JSON.parse(staged.payload) : staged.payload;
           const identityKey = {
@@ -126,15 +126,11 @@ export class MigrationDomainApplier {
               targetEntityId: existing.targetEntityId,
             });
             counters.skipped += 1;
-            continue;
+            return;
           }
 
           try {
-            // Per-record savepoint: a failing record rolls back only its own
-            // partial writes, never the batch's committed outcomes.
-            const applied = await trx.transaction(async (savepoint) =>
-              applier.apply(savepoint, context, payload)
-            );
+            const applied = await applier.apply(trx, context, payload);
             await context.ledger.recordCreation(trx, identityKey, {
               migrationJobId,
               migrationStagedRecordId: staged.migration_staged_record_id,
@@ -155,8 +151,9 @@ export class MigrationDomainApplier {
             });
             counters.failed += 1;
           }
-        }
-
+        });
+      }
+      await withTransaction(this.knex, async (trx) => {
         const tx = tenantDb(trx, this.tenant);
         await tx
           .table('migration_job_entities')
