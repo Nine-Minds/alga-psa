@@ -4,11 +4,14 @@ import { join } from 'node:path';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import {
+  AMP_ENTITY_TABLES,
+  AMP_LIMITS,
   type AmpAssetRecord,
   type AmpContactRecord,
   type AmpLocationRecord,
   type AmpManifest,
   type AmpOrganizationRecord,
+  type AmpPackageDiagnosticRecord,
   type AmpPackageRows,
   type AmpTicketCommentRecord,
   type AmpTicketRecord,
@@ -109,6 +112,14 @@ export class AmpExportService {
             : null,
       })),
     };
+
+    // Producer obligation: emitted values must respect the AMP limits. Live
+    // data can exceed them (e.g. a pasted log in a comment); truncate to the
+    // limit and record the truncation as a package diagnostic.
+    const diagnostics = sanitizeTextLimits(rows);
+    if (diagnostics.length > 0) {
+      rows.package_diagnostics = [...(rows.package_diagnostics ?? []), ...diagnostics];
+    }
 
     const directory = await mkdtemp(join(tmpdir(), 'amp-export-'));
     const packagePath = join(directory, 'export.amp');
@@ -333,6 +344,46 @@ export class AmpExportService {
       };
     });
   }
+}
+
+function sanitizeTextLimits(rows: AmpPackageRows): AmpPackageDiagnosticRecord[] {
+  const diagnostics: AmpPackageDiagnosticRecord[] = [];
+  let diagnosticSequence = 0;
+
+  for (const table of AMP_ENTITY_TABLES) {
+    const tableRows = rows[table] as Array<Record<string, unknown>> | undefined;
+    if (!tableRows) {
+      continue;
+    }
+    for (const row of tableRows) {
+      for (const [field, value] of Object.entries(row)) {
+        if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') <= AMP_LIMITS.textBytes) {
+          continue;
+        }
+        row[field] = truncateUtf8(value, AMP_LIMITS.textBytes);
+        diagnosticSequence += 1;
+        diagnostics.push({
+          package_record_id: `truncation-${diagnosticSequence}`,
+          severity: 'warning',
+          code: 'TEXT_TRUNCATED',
+          message: `Field "${field}" exceeded the ${AMP_LIMITS.textBytes}-byte text limit and was truncated.`,
+          entity_type: table,
+          entity_package_record_id: String(row.package_record_id ?? ''),
+        });
+      }
+    }
+  }
+  return diagnostics;
+}
+
+function truncateUtf8(value: string, maxBytes: number): string {
+  const buffer = Buffer.from(value, 'utf8');
+  if (buffer.length <= maxBytes) {
+    return value;
+  }
+  // toString on a sliced buffer never emits a broken code point; it replaces
+  // a trailing partial sequence, which we then trim away.
+  return buffer.subarray(0, maxBytes).toString('utf8').replace(/�+$/, '');
 }
 
 function toRfc3339(value: unknown): string | null {
