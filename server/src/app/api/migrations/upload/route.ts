@@ -47,6 +47,7 @@ export async function POST(request: Request) {
     // the whole ingest runs inside the session user's tenant context.
     return await runWithTenant(user.tenant, async () => {
       await pipeline(Readable.fromWeb(request.body as never), meter, tempOutput);
+      if (bytes !== declaredSize) throw new Error('AMP_UPLOAD_SIZE_MISMATCH');
       // No `metadata` option: external_files has no metadata column; package
       // provenance (source name, sha256) lives on the migration_jobs row.
       const upload = StorageService.uploadStream(user.tenant, storageInput, fileName, {
@@ -54,7 +55,6 @@ export async function POST(request: Request) {
         size: declaredSize,
       });
       const [stored] = await Promise.all([upload, pipeline(createReadStream(packagePath), storageInput)]);
-      if (bytes !== declaredSize) throw new Error('AMP_UPLOAD_SIZE_MISMATCH');
       const sha256 = digest.digest('hex');
       const { knex } = await createTenantKnex(user.tenant); const db = tenantDb(knex, user.tenant);
       const [inserted] = await db.table('migration_jobs').insert({ tenant: user.tenant, owner_user_id: user.user_id,
