@@ -3,16 +3,17 @@ import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { Button } from '@alga-psa/ui/components/Button';
-import { CalendarPlus, Pencil, Trash2 } from 'lucide-react';
-import { getAssetMaintenanceReport, getAssetMaintenanceSchedules, deleteMaintenanceSchedule } from '../../actions/assetActions';
+import { CalendarPlus, CheckCircle2, Pause, Pencil, Trash2 } from 'lucide-react';
+import { completeOccurrence, getAssetMaintenanceReport, getAssetMaintenanceSchedules, deleteMaintenanceSchedule, listMaintenanceOccurrences, setSchedulePaused } from '../../actions/assetActions';
 import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
-import { formatDateOnly } from '@alga-psa/core';
+import { formatCalendarDate } from '@alga-psa/core';
 import { cn } from '@alga-psa/ui';
 import { CreateMaintenanceScheduleDialog } from './CreateMaintenanceScheduleDialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import type { AssetMaintenanceSchedule } from '@alga-psa/types';
+import type { AssetMaintenanceOccurrence, AssetMaintenanceSchedule } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { MaintenanceCompletionDialog, type MaintenanceCompletionValues } from '../MaintenanceCompletionDialog';
 
 interface MaintenanceSchedulesTabProps {
   assetId: string;
@@ -23,6 +24,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
   const [showDialog, setShowDialog] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<AssetMaintenanceSchedule | null>(null);
   const [deletingSchedule, setDeletingSchedule] = useState<AssetMaintenanceSchedule | null>(null);
+  const [completionTarget, setCompletionTarget] = useState<{ schedule: AssetMaintenanceSchedule; occurrence: AssetMaintenanceOccurrence } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { data: report, isLoading, mutate } = useSWR(
     assetId ? ['asset', assetId, 'maintenance'] : null,
@@ -52,6 +54,25 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
     }
   };
 
+  const handleComplete = async (schedule: AssetMaintenanceSchedule) => {
+    try {
+      const result = unwrapAssetActionResult(await listMaintenanceOccurrences({ asset_id: assetId, status: ['open'], limit: 100 }));
+      const occurrence = result.occurrences.find((item) => item.schedule_id === schedule.schedule_id);
+      if (!occurrence) throw new Error('No open maintenance occurrence found for this schedule');
+      setCompletionTarget({ schedule, occurrence });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to complete maintenance');
+    }
+  };
+
+  const completeOccurrenceFromDialog = async ({ performedDate, notes, maintenanceData }: MaintenanceCompletionValues) => {
+    if (!completionTarget) return;
+    await unwrapAssetActionResult(await completeOccurrence({ occurrence_id: completionTarget.occurrence.occurrence_id, asset_id: assetId, performed_at: performedDate, notes, maintenance_data: maintenanceData }));
+    setCompletionTarget(null);
+    mutate();
+    mutateSchedules();
+  };
+
   if (isLoading) {
     return <Card className="h-64 animate-pulse skeleton-fill" />;
   }
@@ -62,12 +83,12 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
          <div className="flex flex-col sm:flex-row gap-4">
             <Card className="p-6 flex-1">
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">
+                <span className="text-xs text-[rgb(var(--color-text-400))] uppercase font-bold tracking-wider">
                   {t('maintenanceSchedulesTab.summary.complianceRate', { defaultValue: 'Compliance Rate' })}
                 </span>
                 <span className={cn(
                   "text-2xl font-bold",
-                  report?.compliance_rate && report.compliance_rate >= 90 ? 'text-emerald-600' : 'text-amber-600'
+                  report?.compliance_rate && report.compliance_rate >= 90 ? 'text-[rgb(var(--badge-success-text))]' : 'text-[rgb(var(--badge-warning-text))]'
                 )}>
                   {report?.compliance_rate?.toFixed(1) || 100}%
                 </span>
@@ -75,12 +96,12 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
             </Card>
             <Card className="p-6 flex-1">
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">
+                <span className="text-xs text-[rgb(var(--color-text-400))] uppercase font-bold tracking-wider">
                   {t('maintenanceSchedulesTab.summary.nextMaintenance', { defaultValue: 'Next Maintenance' })}
                 </span>
-                <span className="text-xl font-medium text-gray-900">
+                <span className="text-xl font-medium text-[rgb(var(--color-text-900))]">
                   {report?.next_maintenance 
-                    ? formatDateOnly(new Date(report.next_maintenance))
+                    ? formatCalendarDate(report.next_maintenance)
                     : t('maintenanceSchedulesTab.summary.noneScheduled', { defaultValue: 'None Scheduled' })}
                 </span>
               </div>
@@ -122,15 +143,15 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                   {schedules && schedules.length > 0 ? (
                     schedules.map((schedule) => (
                       <TableRow key={schedule.schedule_id}>
-                        <TableCell className="font-medium text-gray-900">
+                        <TableCell className="font-medium text-[rgb(var(--color-text-900))]">
                           {schedule.schedule_name}
                         </TableCell>
-                        <TableCell className="text-gray-500 capitalize">
+                        <TableCell className="text-[rgb(var(--color-text-500))] capitalize">
                           {t(`maintenanceSchedulesTab.types.${schedule.maintenance_type}`, {
                             defaultValue: schedule.maintenance_type
                           })}
                         </TableCell>
-                        <TableCell className="text-gray-500">
+                        <TableCell className="text-[rgb(var(--color-text-500))]">
                           {t('maintenanceSchedulesTab.frequency.every', {
                             defaultValue: 'Every {{count}} {{frequency}}',
                             count: schedule.frequency_interval,
@@ -140,14 +161,14 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                             })
                           })}
                         </TableCell>
-                        <TableCell className="text-gray-900">
+                        <TableCell className="text-[rgb(var(--color-text-900))]">
                           {schedule.next_maintenance 
-                            ? formatDateOnly(new Date(schedule.next_maintenance))
+                            ? formatCalendarDate(schedule.next_maintenance)
                             : '-'}
                         </TableCell>
-                        <TableCell className="text-gray-500">
+                        <TableCell className="text-[rgb(var(--color-text-500))]">
                           {schedule.last_maintenance 
-                            ? formatDateOnly(new Date(schedule.last_maintenance))
+                            ? formatCalendarDate(schedule.last_maintenance)
                             : '-'}
                         </TableCell>
                         <TableCell>
@@ -159,6 +180,8 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            {schedule.is_active && <Button id={`complete-maintenance-schedule-${schedule.schedule_id}`} variant="ghost" size="xs" onClick={() => handleComplete(schedule)} className="h-8 w-8 p-0" title="Complete maintenance"><CheckCircle2 size={16} /></Button>}
+                            <Button id={`pause-maintenance-schedule-${schedule.schedule_id}`} variant="ghost" size="xs" onClick={async () => { await unwrapAssetActionResult(await setSchedulePaused(schedule.schedule_id, schedule.is_active)); mutate(); mutateSchedules(); }} className="h-8 w-8 p-0" title={schedule.is_active ? 'Pause maintenance plan' : 'Reactivate maintenance plan'}><Pause size={16} /></Button>
                             <Button
                               id={`edit-maintenance-schedule-${schedule.schedule_id}`}
                               variant="ghost"
@@ -183,7 +206,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-gray-400">
+                      <TableCell colSpan={7} className="h-24 text-center text-[rgb(var(--color-text-400))]">
                         {t('maintenanceSchedulesTab.empty.schedules', {
                           defaultValue: 'No maintenance schedules found. Click "Schedule Maintenance" to create one.'
                         })}
@@ -216,16 +239,16 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                 {report?.maintenance_history && report.maintenance_history.length > 0 ? (
                   report.maintenance_history.map((record) => (
                     <TableRow key={record.history_id}>
-                      <TableCell className="text-gray-900">
-                        {formatDateOnly(new Date(record.performed_at))}
+                      <TableCell className="text-[rgb(var(--color-text-900))]">
+                        {formatCalendarDate(record.performed_at)}
                       </TableCell>
-                      <TableCell className="text-gray-900">{record.performed_by}</TableCell>
-                      <TableCell className="text-gray-500">{record.notes || '-'}</TableCell>
+                      <TableCell className="text-[rgb(var(--color-text-900))]">{record.performed_by_name || record.performed_by}</TableCell>
+                      <TableCell className="text-[rgb(var(--color-text-500))]">{record.notes || '-'}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-gray-400">
+                    <TableCell colSpan={3} className="h-24 text-center text-[rgb(var(--color-text-400))]">
                       {t('maintenanceSchedulesTab.history.empty', {
                         defaultValue: 'No maintenance history recorded.'
                       })}
@@ -239,16 +262,23 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
       </Card>
     </div>
 
-    <CreateMaintenanceScheduleDialog
-      isOpen={showDialog}
-      onClose={() => setShowDialog(false)}
-      assetId={assetId}
-      schedule={undefined}
-      onSuccess={() => {
-        mutate(); // Refresh the maintenance report
-        mutateSchedules(); // Refresh the schedules list
-      }}
-    />
+      <CreateMaintenanceScheduleDialog
+        isOpen={showDialog}
+        onClose={() => setShowDialog(false)}
+        assetId={assetId}
+        schedule={undefined}
+        onSuccess={() => {
+          mutate(); // Refresh the maintenance report
+          mutateSchedules(); // Refresh the schedules list
+        }}
+        />
+        <MaintenanceCompletionDialog
+          occurrence={completionTarget ? { ...completionTarget.occurrence, schedule_config: completionTarget.schedule.schedule_config } : null}
+          isOpen={Boolean(completionTarget)}
+          onClose={() => setCompletionTarget(null)}
+          onComplete={completeOccurrenceFromDialog}
+          idPrefix="asset-maintenance"
+        />
 
     <CreateMaintenanceScheduleDialog
       isOpen={!!editingSchedule}

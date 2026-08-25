@@ -1215,6 +1215,7 @@
     },
     "types": {
       "preventive": "Préventif",
+      "corrective": "Correctif",
       "inspection": "Inspection",
       "calibration": "Étalonnage",
       "replacement": "Remplacement"
@@ -1234,6 +1235,17 @@
         "title": "Supprimer le calendrier de maintenance",
         "message": "Êtes-vous sûr de vouloir supprimer « {{name}} » ? Cette action ne peut pas être annulée."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Centre de contrôle de maintenance",
+    "description": "La prochaine échéance est calculée à partir de la date de réalisation réelle.",
+    "assetsLink": "Actifs"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Une date d’exécution est requise.",
+      "completeFailed": "Impossible de terminer la maintenance."
     }
   },
   "relatedAssetsTab": {

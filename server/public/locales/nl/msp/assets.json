@@ -1215,6 +1215,7 @@
     },
     "types": {
       "preventive": "Preventief",
+      "corrective": "Correctief",
       "inspection": "Inspectie",
       "calibration": "Kalibratie",
       "replacement": "Vervanging"
@@ -1234,6 +1235,17 @@
         "title": "Onderhoudsschema verwijderen",
         "message": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Onderhoudscontrolecentrum",
+    "description": "De volgende vervaldatum wordt berekend vanaf de werkelijke voltooiingsdatum.",
+    "assetsLink": "Assets"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Een uitvoeringsdatum is vereist.",
+      "completeFailed": "Onderhoud kan niet worden voltooid."
     }
   },
   "relatedAssetsTab": {

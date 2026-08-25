@@ -12,6 +12,9 @@ export interface AssetQuickAddTicketRenderProps {
   assetId?: string;
   /** Display name shown in the dialog so the operator sees which asset will be linked. */
   assetName?: string;
+  prefilledTitle?: string;
+  prefilledDescription?: string;
+  prefilledDueDate?: Date | string | null;
 }
 
 export interface AssetTicketDetailsRenderProps {
