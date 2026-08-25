@@ -230,11 +230,11 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
         method: 'POST',
         headers: {
           'content-type': file.type || 'application/vnd.sqlite3',
-          'content-length': String(file.size),
+          'x-amp-file-size': String(file.size),
           'x-amp-file-name': encodeURIComponent(file.name),
           ...(spreadsheet ? { 'x-amp-entity-type': entityType } : {}),
         },
-        body: file.stream(),
+        body: file,
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to upload the package.');

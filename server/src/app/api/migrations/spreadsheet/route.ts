@@ -22,8 +22,10 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user?.tenant || !(await hasPermission(user, 'import_export', 'manage'))) return NextResponse.json({ error: 'IMPORT_EXPORT_PERMISSION_DENIED' }, { status: 403 });
   const encodedName = request.headers.get('x-amp-file-name'); const name = encodedName ? decodeURIComponent(encodedName) : '';
-  const entityType = request.headers.get('x-amp-entity-type') ?? ''; const declaredSize = Number(request.headers.get('content-length') ?? 0);
-  if (!request.body || !name || !ENTITY_TYPES.has(entityType) || !Number.isFinite(declaredSize) || declaredSize <= 0 || declaredSize > AMP_MAX_PACKAGE_BYTES || !/\.(csv|xlsx)$/i.test(name)) return NextResponse.json({ error: 'AMP_SPREADSHEET_INVALID' }, { status: 400 });
+  const entityType = request.headers.get('x-amp-entity-type') ?? '';
+  const declaredSizeHeader = request.headers.get('x-amp-file-size');
+  const declaredSize = declaredSizeHeader === null ? NaN : Number(declaredSizeHeader);
+  if (!request.body || !name || !ENTITY_TYPES.has(entityType) || declaredSizeHeader === null || !/^\d+$/.test(declaredSizeHeader) || !Number.isSafeInteger(declaredSize) || declaredSize <= 0 || declaredSize > AMP_MAX_PACKAGE_BYTES || !/\.(csv|xlsx)$/i.test(name)) return NextResponse.json({ error: 'AMP_SPREADSHEET_INVALID' }, { status: 400 });
   const directory = await mkdtemp(join(tmpdir(), 'amp-spreadsheet-'));
   const inputPath = join(directory, name.toLowerCase().endsWith('.xlsx') ? 'source.xlsx' : 'source.csv');
   const outputPath = join(directory, 'converted.amp');

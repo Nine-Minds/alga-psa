@@ -15,8 +15,8 @@ import { MigrationStager } from '@/lib/migrations/MigrationStager';
 export const runtime = 'nodejs';
 export const AMP_MAX_PACKAGE_BYTES = 250 * 1024 * 1024;
 
-/** The browser sends File.stream() as the raw body, rather than multipart
- * FormData, so Next never buffers the package before it reaches this route. */
+/** The browser sends the File as the raw body, rather than multipart FormData,
+ * so Next never buffers the package before it reaches this route. */
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user?.tenant || !(await hasPermission(user, 'import_export', 'manage'))) {
@@ -24,8 +24,9 @@ export async function POST(request: Request) {
   }
   const encodedName = request.headers.get('x-amp-file-name');
   const fileName = encodedName ? decodeURIComponent(encodedName) : '';
-  const declaredSize = Number(request.headers.get('content-length') ?? 0);
-  if (!fileName || !request.body || !Number.isFinite(declaredSize) || declaredSize <= 0 || declaredSize > AMP_MAX_PACKAGE_BYTES) {
+  const declaredSizeHeader = request.headers.get('x-amp-file-size');
+  const declaredSize = declaredSizeHeader === null ? NaN : Number(declaredSizeHeader);
+  if (!fileName || !request.body || declaredSizeHeader === null || !/^\d+$/.test(declaredSizeHeader) || !Number.isSafeInteger(declaredSize) || declaredSize <= 0 || declaredSize > AMP_MAX_PACKAGE_BYTES) {
     return NextResponse.json({ error: 'AMP_LIMIT_EXCEEDED' }, { status: 400 });
   }
   const lowered = fileName.toLowerCase();
