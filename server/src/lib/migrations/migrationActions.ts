@@ -1,7 +1,7 @@
 'use server';
 
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Buffer } from 'node:buffer';
@@ -320,6 +320,24 @@ export async function cancelMigrationJob(migrationJobId: string): Promise<void> 
   });
 }
 
+/** Full validation diagnostics for a rejected job, kept after upload. */
+export async function getMigrationInspectionDiagnostics(
+  migrationJobId: string
+): Promise<unknown[]> {
+  const { tenant } = await requirePermission('read');
+  const { knex } = await createTenantKnex(tenant);
+  const db = tenantDb(knex, tenant);
+  const row = await db
+    .table('migration_reports')
+    .where({ migration_job_id: migrationJobId, report_type: 'inspection' })
+    .first();
+  if (!row) {
+    return [];
+  }
+  const summary = typeof row.summary === 'string' ? JSON.parse(row.summary) : row.summary;
+  return (summary as { diagnostics?: unknown[] }).diagnostics ?? [];
+}
+
 export async function getMigrationPreflightReport(
   migrationJobId: string
 ): Promise<PreflightResult | null> {
@@ -388,6 +406,99 @@ export async function getMigrationReportCsv(
       created_at: record.createdAt,
     }))
   );
+}
+
+/**
+ * Phase 4: a CSV/XLSX file travels the AMP pipeline. The spreadsheet is
+ * converted to an AMP package with the alga-csv-adapter producer, then flows
+ * through the exact upload → inspect → stage path a native package uses, so
+ * preflight, idempotency, retry, and reporting behave identically.
+ */
+export async function uploadSpreadsheetAsMigrationPackage(
+  formData: FormData
+): Promise<MigrationUploadResult & { conversionDiagnostics: unknown[] }> {
+  const { tenant, userId } = await requirePermission('manage');
+
+  const fileEntry = formData.get('file');
+  const entityType = formData.get('entityType');
+  const mappingRaw = formData.get('mapping');
+  if (!(fileEntry instanceof File)) {
+    throw new Error('No spreadsheet file provided');
+  }
+  if (typeof entityType !== 'string' || entityType.trim().length === 0) {
+    throw new Error('entityType is required');
+  }
+  const mapping =
+    typeof mappingRaw === 'string' && mappingRaw.trim().length > 0
+      ? (JSON.parse(mappingRaw) as Record<string, string>)
+      : {};
+
+  const { convertSpreadsheets } = await import('@alga-psa/migration-connectors/csv');
+
+  const directory = await mkdtemp(join(tmpdir(), 'amp-csv-'));
+  try {
+    const inputPath = join(directory, fileEntry.name);
+    await writeFile(inputPath, Buffer.from(await fileEntry.arrayBuffer()), { mode: 0o600 });
+    const outputPath = join(directory, 'converted.amp');
+
+    const conversion = await convertSpreadsheets(
+      {
+        outputPath,
+        namespace: `csv:${tenant}`,
+        sourceSystem: 'csv-upload',
+        files: [
+          {
+            entityType: entityType as never,
+            path: fileEntry.name,
+            mapping,
+          },
+        ],
+      },
+      directory
+    );
+
+    const packageBuffer = await readFile(outputPath);
+    const sha256 = createHash('sha256').update(packageBuffer).digest('hex');
+
+    await StorageService.validateFileUpload(tenant, 'application/octet-stream', packageBuffer.length);
+    const fileRecord = await StorageService.uploadFile(
+      tenant,
+      packageBuffer,
+      `${fileEntry.name}.amp`,
+      {
+        mime_type: 'application/octet-stream',
+        uploaded_by_id: userId,
+        metadata: { context: 'migration_package', sha256, converted_from: fileEntry.name },
+      }
+    );
+
+    const { knex } = await createTenantKnex(tenant);
+    const db = tenantDb(knex, tenant);
+    const [job] = await db
+      .table('migration_jobs')
+      .insert({
+        tenant,
+        owner_user_id: userId,
+        source_file_id: fileRecord.file_id,
+        source_file_name: `${fileEntry.name}.amp`,
+        package_sha256: sha256,
+        state: 'inspecting',
+      })
+      .returning('migration_job_id');
+    const migrationJobId: string = job.migration_job_id ?? job;
+
+    const stager = new MigrationStager(knex, tenant);
+    const result = await stager.stage(migrationJobId, outputPath);
+    return {
+      migrationJobId,
+      state: result.rejected ? 'rejected' : 'needs_configuration',
+      diagnostics: result.validation.diagnostics,
+      rowCounts: result.validation.rowCounts,
+      conversionDiagnostics: (conversion as { diagnostics?: unknown[] }).diagnostics ?? [],
+    };
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 }
 
 export interface MigrationMappingProfile {

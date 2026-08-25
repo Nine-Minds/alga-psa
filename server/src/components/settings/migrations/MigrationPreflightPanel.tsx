@@ -150,7 +150,7 @@ const MigrationPreflightPanel = ({ details, onStateChanged }: MigrationPreflight
         <Button
           id="amp-run-preflight-button"
           variant="outline"
-          onClick={handleRunPreflight}
+          onClick={() => void handleRunPreflight()}
           disabled={isPreflightRunning || isExecuting}
           className="w-full md:w-auto"
         >
@@ -202,7 +202,7 @@ const MigrationPreflightPanel = ({ details, onStateChanged }: MigrationPreflight
                   id="amp-download-preflight-csv-button"
                   variant="ghost"
                   size="sm"
-                  onClick={handleDownloadCsv}
+                  onClick={() => void handleDownloadCsv()}
                   disabled={isDownloading}
                 >
                   Download CSV
@@ -211,7 +211,7 @@ const MigrationPreflightPanel = ({ details, onStateChanged }: MigrationPreflight
                   id="amp-download-preflight-json-button"
                   variant="ghost"
                   size="sm"
-                  onClick={handleDownloadJson}
+                  onClick={() => void handleDownloadJson()}
                   disabled={isDownloading}
                 >
                   Download JSON
@@ -286,7 +286,7 @@ const MigrationPreflightPanel = ({ details, onStateChanged }: MigrationPreflight
             The migration can run once a preflight of the saved configuration passes.
           </p>
         )}
-        <Button id="amp-run-migration-button" onClick={handleRunMigration} disabled={!canRunMigration}>
+        <Button id="amp-run-migration-button" onClick={() => void handleRunMigration()} disabled={!canRunMigration}>
           {isExecuting ? (
             <span className="flex items-center gap-2">
               <Spinner size="sm" />

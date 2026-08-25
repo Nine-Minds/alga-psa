@@ -300,7 +300,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
       )}
 
       <div className="flex justify-end">
-        <Button id="amp-save-configuration-button" onClick={handleSave} disabled={isSaving}>
+        <Button id="amp-save-configuration-button" onClick={() => void handleSave()} disabled={isSaving}>
           {isSaving ? (
             <span className="flex items-center gap-2">
               <Spinner size="sm" />

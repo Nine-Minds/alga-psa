@@ -42,9 +42,10 @@ const MigrationRunPanel = ({ details, onStateChanged }: MigrationRunPanelProps):
     }
   }, [details.migrationJobId, onStateChanged]);
 
-  const stagedEntities = MIGRATION_PHASE_ORDER.filter(
-    (entityType): entityType is AmpEntityType => Boolean(details.entityCounts[entityType])
-  );
+  const stagedEntities = MIGRATION_PHASE_ORDER.flatMap((entityType: AmpEntityType) => {
+    const progress = details.entityCounts[entityType];
+    return progress ? [{ entityType, progress }] : [];
+  });
 
   return (
     <div className="space-y-6">
@@ -99,8 +100,7 @@ const MigrationRunPanel = ({ details, onStateChanged }: MigrationRunPanelProps):
                 </TableCell>
               </TableRow>
             ) : (
-              stagedEntities.map((entityType) => {
-                const progress = details.entityCounts[entityType]!;
+              stagedEntities.map(({ entityType, progress }) => {
                 return (
                   <TableRow key={entityType}>
                     <TableCell className="tabular-nums">{progress.phase}</TableCell>

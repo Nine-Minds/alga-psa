@@ -159,7 +159,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
         <Button
           id="amp-download-outcome-csv-button"
           variant="outline"
-          onClick={handleDownloadCsv}
+          onClick={() => void handleDownloadCsv()}
           disabled={isDownloading}
           className="w-full md:w-auto"
         >
