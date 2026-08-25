@@ -735,7 +735,9 @@
       "notFound": "Modelo de documento de cotação não encontrado.",
       "previewPipeline": "Falha no pipeline de visualização.",
       "saveFailed": "Falha ao salvar o modelo de cotação",
-      "unknownAstExport": "Erro de exportação AST desconhecido"
+      "unknownAstExport": "Erro de exportação AST desconhecido",
+      "quoteNotFound": "Não foi possível carregar os detalhes da cotação para a visualização.",
+      "quoteDetailLoad": "Falha ao carregar os detalhes da cotação."
     },
     "fields": {
       "layoutDetails": "Detalhes do layout",
@@ -759,7 +761,17 @@
       "sampleScenario": "Cenário de amostra",
       "selectScenario": "Selecione o cenário...",
       "selectScenarioPrompt": "Selecione um cenário de amostra para gerar uma visualização oficial.",
-      "templateGenerationFailed": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual."
+      "templateGenerationFailed": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual.",
+      "source": {
+        "sample": "Amostra",
+        "existing": "Existente"
+      },
+      "searchQuotes": "Pesquisar cotações...",
+      "searchQuotesHint": "Pesquise por número ou cliente...",
+      "noQuotesFound": "Nenhuma cotação encontrada.",
+      "selectQuote": "Selecione a cotação",
+      "selectQuoteHint": "Selecione uma cotação para visualizar a saída vinculada a dados.",
+      "loadingQuoteDetails": "Carregando detalhes da cotação..."
     },
     "pipeline": {
       "render": "Renderizar",

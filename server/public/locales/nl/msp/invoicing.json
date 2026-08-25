@@ -1248,7 +1248,12 @@
         "emptyState": "Kies voorbeeld- of bestaande factuurgegevens om een definitieve voorvertoning te genereren.",
         "loadingPreview": "Voorvertoning wordt opgebouwd en gerenderd…",
         "templateError": "Voorvertoningssjabloon kon niet uit de huidige werkruimte worden gegenereerd.",
-        "renderError": "Renderen van voorvertoning mislukt."
+        "renderError": "Renderen van voorvertoning mislukt.",
+        "searchQuotes": "Offertes zoeken…",
+        "noQuotesFound": "Geen offertes gevonden.",
+        "selectQuote": "Offerte kiezen",
+        "loadingQuoteDetails": "Offertedetails worden geladen…",
+        "loadingDocumentDetails": "Documentdetails worden geladen…"
       },
       "tabs": {
         "design": "Ontwerp",
@@ -1997,7 +2002,13 @@
       "preview": {
         "sampleNote": "Gegenereerd met representatieve voorbeeldgegevens voor {{type}}.",
         "frameTitle": "Voorbeeld van {{type}}",
-        "empty": "Open dit tabblad om een definitief voorbeeld te genereren."
+        "empty": "Open dit tabblad om een definitief voorbeeld te genereren.",
+        "existingNote": "Gegenereerd op basis van de gekozen verkooporder.",
+        "searchDocuments": "Verkooporders zoeken…",
+        "searchDocumentsHint": "Zoek op nummer of klant…",
+        "noDocumentsFound": "Geen verkooporders gevonden.",
+        "selectDocument": "Verkooporder kiezen",
+        "selectDocumentHint": "Kies een verkooporder voor een gegevensgebonden voorvertoning."
       },
       "errors": {
         "nameRequired": "De naam van het sjabloon is verplicht.",

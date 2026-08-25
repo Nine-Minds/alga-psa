@@ -735,7 +735,9 @@
       "notFound": "Modello di documento di preventivo non trovato.",
       "previewPipeline": "La pipeline di anteprima non è riuscita.",
       "saveFailed": "Impossibile salvare il modello di preventivo",
-      "unknownAstExport": "Errore di esportazione AST sconosciuto"
+      "unknownAstExport": "Errore di esportazione AST sconosciuto",
+      "quoteNotFound": "Impossibile caricare i dettagli del preventivo per l'anteprima.",
+      "quoteDetailLoad": "Caricamento dei dettagli del preventivo non riuscito."
     },
     "fields": {
       "layoutDetails": "Dettagli della disposizione",
@@ -759,7 +761,17 @@
       "sampleScenario": "Scenario campione",
       "selectScenario": "Seleziona scenario...",
       "selectScenarioPrompt": "Seleziona uno scenario di esempio per generare un'anteprima autorevole.",
-      "templateGenerationFailed": "Impossibile generare il modello di anteprima dall'area di lavoro corrente."
+      "templateGenerationFailed": "Impossibile generare il modello di anteprima dall'area di lavoro corrente.",
+      "source": {
+        "sample": "Esempio",
+        "existing": "Esistente"
+      },
+      "searchQuotes": "Cerca preventivi…",
+      "searchQuotesHint": "Cerca per numero o cliente…",
+      "noQuotesFound": "Nessun preventivo trovato.",
+      "selectQuote": "Seleziona preventivo",
+      "selectQuoteHint": "Seleziona un preventivo per l'anteprima con dati.",
+      "loadingQuoteDetails": "Caricamento dettagli preventivo…"
     },
     "pipeline": {
       "render": "Rendering",

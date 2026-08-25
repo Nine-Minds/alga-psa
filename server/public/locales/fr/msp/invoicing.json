@@ -1248,7 +1248,12 @@
         "emptyState": "Sélectionnez un exemple ou des données de facture existantes pour générer un aperçu autoritaire.",
         "loadingPreview": "Génération et rendu de l'aperçu…",
         "templateError": "Impossible de générer le modèle d'aperçu à partir de l'espace actuel.",
-        "renderError": "Échec du rendu de l'aperçu."
+        "renderError": "Échec du rendu de l'aperçu.",
+        "searchQuotes": "Rechercher des devis…",
+        "noQuotesFound": "Aucun devis trouvé.",
+        "selectQuote": "Sélectionner un devis",
+        "loadingQuoteDetails": "Chargement des détails du devis…",
+        "loadingDocumentDetails": "Chargement des détails du document…"
       },
       "tabs": {
         "design": "Conception",
@@ -1997,7 +2002,13 @@
       "preview": {
         "sampleNote": "Produite à partir de données d’exemple représentatives du type « {{type}} ».",
         "frameTitle": "Aperçu pour {{type}}",
-        "empty": "Ouvrez cet onglet pour générer un aperçu de référence."
+        "empty": "Ouvrez cet onglet pour générer un aperçu de référence.",
+        "existingNote": "Généré à partir de la commande client sélectionnée.",
+        "searchDocuments": "Rechercher des commandes client…",
+        "searchDocumentsHint": "Rechercher par numéro ou client…",
+        "noDocumentsFound": "Aucune commande client trouvée.",
+        "selectDocument": "Sélectionner une commande client",
+        "selectDocumentHint": "Sélectionnez une commande client pour prévisualiser la sortie liée aux données."
       },
       "errors": {
         "nameRequired": "Le nom du modèle est obligatoire.",

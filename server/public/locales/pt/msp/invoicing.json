@@ -1248,7 +1248,12 @@
         "emptyState": "Selecione dados de fatura existentes ou de amostra para gerar uma visualização oficial.",
         "loadingPreview": "Visualização de modelagem e renderização...",
         "templateError": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual.",
-        "renderError": "Falha na renderização de visualização."
+        "renderError": "Falha na renderização de visualização.",
+        "searchQuotes": "Pesquisar cotações...",
+        "noQuotesFound": "Nenhuma cotação encontrada.",
+        "selectQuote": "Selecione a cotação",
+        "loadingQuoteDetails": "Carregando detalhes da cotação...",
+        "loadingDocumentDetails": "Carregando detalhes do documento..."
       },
       "tabs": {
         "design": "Projeto",
@@ -1997,7 +2002,13 @@
       "preview": {
         "sampleNote": "Gerado com dados de exemplo representativos de {{type}}.",
         "frameTitle": "Pré-visualização de {{type}}",
-        "empty": "Abra esta guia para gerar uma pré-visualização confiável."
+        "empty": "Abra esta guia para gerar uma pré-visualização confiável.",
+        "existingNote": "Gerado a partir do pedido de venda selecionado.",
+        "searchDocuments": "Pesquisar pedidos de venda...",
+        "searchDocumentsHint": "Pesquise por número ou cliente...",
+        "noDocumentsFound": "Nenhum pedido de venda encontrado.",
+        "selectDocument": "Selecione o pedido de venda",
+        "selectDocumentHint": "Selecione um pedido de venda para visualizar a saída vinculada a dados."
       },
       "errors": {
         "nameRequired": "O nome do modelo é obrigatório.",

@@ -689,8 +689,10 @@
         "setDefault": "Permissão negada: não é possível definir o modelo de documento padrão",
         "clearOverride": "Permissão negada: não é possível remover a substituição do modelo de documento",
         "delete": "Permissão negada: não é possível excluir os modelos de documento",
-        "preview": "Permissão negada: não é possível pré-visualizar os modelos de documento"
-      }
+        "preview": "Permissão negada: não é possível pré-visualizar os modelos de documento",
+        "readSalesOrders": "Permissão negada: não é possível ler os pedidos de venda"
+      },
+      "existingNotFound": "Documento não encontrado."
     },
     "billingProfile": {
       "periodOrder": "Escolha um período cujo início seja anterior ou igual ao fim.",

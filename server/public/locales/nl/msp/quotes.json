@@ -735,7 +735,9 @@
       "notFound": "Offertedocumentsjabloon niet gevonden.",
       "previewPipeline": "Preview-pipeline is mislukt.",
       "saveFailed": "Kan offertesjabloon niet opslaan",
-      "unknownAstExport": "Onbekende AST-exportfout"
+      "unknownAstExport": "Onbekende AST-exportfout",
+      "quoteNotFound": "Offertedetails konden niet worden geladen voor de voorvertoning.",
+      "quoteDetailLoad": "Laden van offertedetails is mislukt."
     },
     "fields": {
       "layoutDetails": "Indelingsdetails",
@@ -759,7 +761,17 @@
       "sampleScenario": "Voorbeeldscenario",
       "selectScenario": "Scenario selecteren...",
       "selectScenarioPrompt": "Selecteer een voorbeeldscenario om een ​​gezaghebbende preview te genereren.",
-      "templateGenerationFailed": "Voorbeeldsjabloon kan niet worden gegenereerd vanuit de huidige werkruimte."
+      "templateGenerationFailed": "Voorbeeldsjabloon kan niet worden gegenereerd vanuit de huidige werkruimte.",
+      "source": {
+        "sample": "Voorbeeld",
+        "existing": "Bestaand"
+      },
+      "searchQuotes": "Offertes zoeken…",
+      "searchQuotesHint": "Zoek op nummer of klant…",
+      "noQuotesFound": "Geen offertes gevonden.",
+      "selectQuote": "Offerte kiezen",
+      "selectQuoteHint": "Kies een offerte voor een gegevensgebonden voorvertoning.",
+      "loadingQuoteDetails": "Offertedetails worden geladen…"
     },
     "pipeline": {
       "render": "Renderen",

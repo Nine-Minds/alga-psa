@@ -689,8 +689,10 @@
         "setDefault": "Autorizzazione negata: impossibile impostare il modello di documento predefinito",
         "clearOverride": "Autorizzazione negata: impossibile rimuovere la sostituzione del modello di documento",
         "delete": "Autorizzazione negata: impossibile eliminare i modelli di documento",
-        "preview": "Autorizzazione negata: impossibile visualizzare l’anteprima dei modelli di documento"
-      }
+        "preview": "Autorizzazione negata: impossibile visualizzare l’anteprima dei modelli di documento",
+        "readSalesOrders": "Autorizzazione negata: impossibile leggere gli ordini di vendita"
+      },
+      "existingNotFound": "Documento non trovato."
     },
     "billingProfile": {
       "periodOrder": "Scegliere un periodo il cui inizio non sia successivo alla fine.",

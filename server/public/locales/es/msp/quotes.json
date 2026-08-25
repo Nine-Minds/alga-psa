@@ -735,7 +735,9 @@
       "notFound": "No se encontró la plantilla del documento de cotización.",
       "previewPipeline": "Error en la canalización de vista previa.",
       "saveFailed": "No se pudo guardar la plantilla de cotización",
-      "unknownAstExport": "Error de exportación AST desconocido"
+      "unknownAstExport": "Error de exportación AST desconocido",
+      "quoteNotFound": "No se pudieron cargar los detalles de la cotización para la vista previa.",
+      "quoteDetailLoad": "Error al cargar los detalles de la cotización."
     },
     "fields": {
       "layoutDetails": "Detalles de diseño",
@@ -759,7 +761,17 @@
       "sampleScenario": "Escenario de muestra",
       "selectScenario": "Seleccione escenario...",
       "selectScenarioPrompt": "Seleccione un escenario de muestra para generar una vista previa autorizada.",
-      "templateGenerationFailed": "No se pudo generar la plantilla de vista previa desde el espacio de trabajo actual."
+      "templateGenerationFailed": "No se pudo generar la plantilla de vista previa desde el espacio de trabajo actual.",
+      "source": {
+        "sample": "Muestra",
+        "existing": "Existente"
+      },
+      "searchQuotes": "Buscar cotizaciones…",
+      "searchQuotesHint": "Buscar por número o cliente…",
+      "noQuotesFound": "Sin cotizaciones.",
+      "selectQuote": "Seleccionar cotización",
+      "selectQuoteHint": "Seleccione una cotización para ver la vista previa con datos.",
+      "loadingQuoteDetails": "Cargando detalles de la cotización…"
     },
     "pipeline": {
       "render": "Renderizado",

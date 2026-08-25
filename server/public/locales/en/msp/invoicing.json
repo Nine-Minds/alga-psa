@@ -1248,7 +1248,12 @@
         "emptyState": "Select sample or existing invoice data to generate an authoritative preview.",
         "loadingPreview": "Shaping and rendering preview...",
         "templateError": "Preview template could not be generated from the current workspace.",
-        "renderError": "Preview rendering failed."
+        "renderError": "Preview rendering failed.",
+        "searchQuotes": "Search quotes...",
+        "noQuotesFound": "No quotes found.",
+        "selectQuote": "Select quote",
+        "loadingQuoteDetails": "Loading quote details...",
+        "loadingDocumentDetails": "Loading document details..."
       },
       "tabs": {
         "design": "Design",
@@ -1997,7 +2002,13 @@
       "preview": {
         "sampleNote": "Rendered against representative {{type}} sample data.",
         "frameTitle": "{{type}} preview",
-        "empty": "Open this tab to generate an authoritative preview."
+        "empty": "Open this tab to generate an authoritative preview.",
+        "existingNote": "Rendered against the selected sales order.",
+        "searchDocuments": "Search sales orders...",
+        "searchDocumentsHint": "Search by number or client...",
+        "noDocumentsFound": "No sales orders found.",
+        "selectDocument": "Select Sales Order",
+        "selectDocumentHint": "Select a sales order to preview data-bound output."
       },
       "errors": {
         "nameRequired": "Template name is required.",

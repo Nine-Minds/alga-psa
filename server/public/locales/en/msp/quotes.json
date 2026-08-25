@@ -735,7 +735,9 @@
       "notFound": "Quote document template not found.",
       "previewPipeline": "Preview pipeline failed.",
       "saveFailed": "Failed to save quote template",
-      "unknownAstExport": "Unknown AST export error"
+      "unknownAstExport": "Unknown AST export error",
+      "quoteNotFound": "Could not load quote details for preview.",
+      "quoteDetailLoad": "Failed to load quote details."
     },
     "fields": {
       "layoutDetails": "Layout Details",
@@ -759,7 +761,17 @@
       "sampleScenario": "Sample Scenario",
       "selectScenario": "Select scenario...",
       "selectScenarioPrompt": "Select a sample scenario to generate an authoritative preview.",
-      "templateGenerationFailed": "Preview template could not be generated from the current workspace."
+      "templateGenerationFailed": "Preview template could not be generated from the current workspace.",
+      "source": {
+        "sample": "Sample",
+        "existing": "Existing"
+      },
+      "searchQuotes": "Search quotes...",
+      "searchQuotesHint": "Search by number or client...",
+      "noQuotesFound": "No quotes found.",
+      "selectQuote": "Select Quote",
+      "selectQuoteHint": "Select a quote to preview data-bound output.",
+      "loadingQuoteDetails": "Loading quote details..."
     },
     "pipeline": {
       "render": "Render",

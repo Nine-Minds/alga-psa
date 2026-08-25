@@ -1298,7 +1298,12 @@
         "emptyState": "Wybierz dane przykładowe lub istniejące, aby wygenerować wiarygodny podgląd.",
         "loadingPreview": "Kształtowanie i renderowanie podglądu…",
         "templateError": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego.",
-        "renderError": "Renderowanie podglądu nie powiodło się."
+        "renderError": "Renderowanie podglądu nie powiodło się.",
+        "searchQuotes": "Szukaj wycen…",
+        "noQuotesFound": "Brak wycen.",
+        "selectQuote": "Wybierz wycenę",
+        "loadingQuoteDetails": "Ładowanie szczegółów wyceny…",
+        "loadingDocumentDetails": "Ładowanie szczegółów dokumentu…"
       },
       "tabs": {
         "design": "Projektowanie",
@@ -2047,7 +2052,13 @@
       "preview": {
         "sampleNote": "Wygenerowano przy użyciu reprezentatywnych danych przykładowych dla dokumentu typu „{{type}}”.",
         "frameTitle": "Podgląd dokumentu typu „{{type}}”",
-        "empty": "Otwórz tę kartę, aby wygenerować podgląd referencyjny."
+        "empty": "Otwórz tę kartę, aby wygenerować podgląd referencyjny.",
+        "existingNote": "Wygenerowano na podstawie wybranego zamówienia sprzedaży.",
+        "searchDocuments": "Szukaj zamówień sprzedaży…",
+        "searchDocumentsHint": "Szukaj po numerze lub kliencie…",
+        "noDocumentsFound": "Brak zamówień sprzedaży.",
+        "selectDocument": "Wybierz zamówienie sprzedaży",
+        "selectDocumentHint": "Wybierz zamówienie sprzedaży, aby zobaczyć podgląd z danymi."
       },
       "errors": {
         "nameRequired": "Nazwa szablonu jest wymagana.",

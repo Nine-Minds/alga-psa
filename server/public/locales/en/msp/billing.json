@@ -689,8 +689,10 @@
         "setDefault": "Permission denied: cannot set default document template",
         "clearOverride": "Permission denied: cannot clear document template override",
         "delete": "Permission denied: cannot delete document templates",
-        "preview": "Permission denied: cannot preview document templates"
-      }
+        "preview": "Permission denied: cannot preview document templates",
+        "readSalesOrders": "Permission denied: cannot read sales orders"
+      },
+      "existingNotFound": "Document not found."
     },
     "billingProfile": {
       "periodOrder": "Choose a period whose start is on or before its end.",
