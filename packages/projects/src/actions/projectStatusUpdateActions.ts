@@ -8,7 +8,7 @@ import { getPortalDomain } from '@alga-psa/auth/lib/PortalDomainModel';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isValidEmail } from '@alga-psa/core';
 import logger from '@alga-psa/core/logger';
-import { SystemEmailProviderFactory } from '@alga-psa/email';
+import { SystemEmailProviderFactory, resolveTenantCompanyName } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import {
   actionError,
@@ -168,17 +168,13 @@ function portalConfig(project: ProjectRow): IClientPortalConfig {
   return { ...DEFAULT_CLIENT_PORTAL_CONFIG, ...(project.client_portal_config ?? {}) };
 }
 
-/** The MSP's own client record — the identity the update is sent as. */
+/**
+ * The MSP identity the update is sent as. Uses the shared resolver so a tenant
+ * with no default client row still signs as its own name rather than a
+ * placeholder, matching every other email the platform sends.
+ */
 async function fetchSenderCompanyName(knex: Knex, tenant: string): Promise<string> {
-  const scopedDb = tenantDb(knex, tenant);
-  const query = scopedDb.table('tenant_companies as tc')
-    .select('c.client_name')
-    .where({ 'tc.is_default': true })
-    .whereNull('tc.deleted_at');
-  scopedDb.tenantJoin(query, 'clients as c', 'tc.client_id', 'c.client_id');
-
-  const row = await query.first();
-  return (row as any)?.client_name || 'Your Company';
+  return (await resolveTenantCompanyName(knex, tenant)) || 'Your Company';
 }
 
 function senderEmail(): string {

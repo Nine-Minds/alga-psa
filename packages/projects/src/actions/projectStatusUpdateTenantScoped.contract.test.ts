@@ -11,7 +11,6 @@ describe('project status update tenant-scoped query contract', () => {
     expect(source).toContain("scopedDb.table('project_tasks as t')");
     expect(source).toContain("scopedDb.table('time_entries as te')");
     expect(source).toContain("scopedDb.table('project_phases')");
-    expect(source).toContain("scopedDb.table('tenant_companies as tc')");
     expect(source).toContain('const db = tenantDb(knex, tenant);');
     expect(source).toContain('db.table(table)');
 
@@ -25,6 +24,13 @@ describe('project status update tenant-scoped query contract', () => {
     expect(source).toContain("scopedDb.tenantJoin(query, 'clients as c', 'p.client_id', 'c.client_id', { type: 'left' })");
     expect(source).toContain("scopedDb.tenantJoin(query, 'contacts as ct', 'p.contact_name_id', 'ct.contact_name_id', { type: 'left' })");
     expect(source).toContain("scopedDb.tenantJoin(query, 'client_locations as dcl', 'p.client_id', 'dcl.client_id'");
+  });
+
+  it('signs the update with the shared tenant company resolver', () => {
+    // The shared resolver falls back to the tenant's own name, so a tenant with
+    // no default client row still signs as itself instead of "Your Company".
+    expect(source).toContain('resolveTenantCompanyName');
+    expect(source).not.toContain("scopedDb.table('tenant_companies as tc')");
   });
 
   it('gates read and send on distinct project permissions', () => {
