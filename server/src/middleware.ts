@@ -137,6 +137,9 @@ const apiKeySkipPaths = [
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)
   '/api/chat/',
+  // AMP migration workspace uploads (MSP UI): session-authenticated in-route
+  // via getCurrentUser + import_export permission checks.
+  '/api/migrations/',
   // Remote MCP server authenticates in-route (Alga API key OR IdP-delegated Bearer token)
   '/api/mcp',
   // MCP admin/provisioning APIs authenticate in-route (session admin OR API key)
