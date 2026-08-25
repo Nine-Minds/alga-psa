@@ -10,6 +10,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import type { AmpDiagnostic } from '@alga-psa/migration-sdk';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
@@ -276,10 +277,9 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
           {file && /\.(csv|xlsx)$/i.test(file.name) && (
             <div className="space-y-2">
               <Label htmlFor="amp-spreadsheet-entity">Spreadsheet records represent</Label>
-              <select id="amp-spreadsheet-entity" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={entityType} onChange={(event) => setEntityType(event.target.value as AmpEntityType)} disabled={isUploading}>
-                <option value="assets">Assets (legacy asset import)</option>
-                <option value="organizations">Organizations</option><option value="locations">Locations</option><option value="contacts">Contacts</option><option value="tickets">Tickets</option><option value="ticket_comments">Ticket comments</option>
-              </select>
+              <CustomSelect id="amp-spreadsheet-entity" value={entityType} onValueChange={(value) => setEntityType(value as AmpEntityType)} disabled={isUploading} options={[
+                { value: 'assets', label: 'Assets (legacy asset import)' }, { value: 'organizations', label: 'Organizations' }, { value: 'locations', label: 'Locations' }, { value: 'contacts', label: 'Contacts' }, { value: 'tickets', label: 'Tickets' }, { value: 'ticket_comments', label: 'Ticket comments' },
+              ]} />
               <p className="text-xs text-muted-foreground">Canonical headers are recognized automatically. Legacy asset names such as Asset Name, Asset Type, Serial Number, and MAC Address are preserved through the AMP flow.</p>
             </div>
           )}

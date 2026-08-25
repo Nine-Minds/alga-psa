@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable, PassThrough, Transform } from 'node:stream';
-import { finished } from 'node:stream/promises';
+import { pipeline } from 'node:stream/promises';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -42,14 +42,13 @@ export async function POST(request: Request) {
   const storageInput = new PassThrough();
   const tempOutput = createWriteStream(packagePath, { mode: 0o600 });
   try {
+    await pipeline(Readable.fromWeb(request.body as never), meter, tempOutput);
     const upload = StorageService.uploadStream(user.tenant, storageInput, fileName, {
       mime_type: request.headers.get('content-type') || 'application/vnd.sqlite3', uploaded_by_id: user.user_id,
       size: declaredSize,
       metadata: { context: 'amp_migration_package', retention_days: 30 },
     });
-    const input = Readable.fromWeb(request.body as never);
-    input.pipe(meter); meter.pipe(storageInput); meter.pipe(tempOutput);
-    const [stored] = await Promise.all([upload, finished(tempOutput)]);
+    const [stored] = await Promise.all([upload, pipeline(createReadStream(packagePath), storageInput)]);
     if (bytes !== declaredSize) throw new Error('AMP_UPLOAD_SIZE_MISMATCH');
     const sha256 = digest.digest('hex');
     const { knex } = await createTenantKnex(user.tenant); const db = tenantDb(knex, user.tenant);

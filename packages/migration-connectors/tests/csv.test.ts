@@ -8,6 +8,7 @@ import { AmpSqliteReader, validateAmpPackage } from '@alga-psa/migration-sdk';
 import {
   convertSpreadsheets,
   convertSpreadsheetsToAmp,
+  inferSpreadsheetMapping,
   type CsvConvertConfig,
 } from '../src/csv/index';
 
@@ -64,6 +65,42 @@ afterAll(async () => {
 });
 
 describe('convertSpreadsheets', () => {
+  it('infers canonical headers and legacy asset aliases', async () => {
+    const canonicalPath = join(workDir, 'canonical-assets.csv');
+    await writeFile(canonicalPath, 'name,serial_number,asset_type_name\nrouter,R-1,network_device\n');
+    await expect(inferSpreadsheetMapping(canonicalPath, 'assets')).resolves.toEqual({
+      name: 'name', serial_number: 'serial_number', asset_type_name: 'asset_type_name',
+    });
+    const legacyPath = join(workDir, 'legacy-assets.csv');
+    await writeFile(legacyPath, 'Asset Name,Asset Type,Serial Number,MAC Address\nrouter,network_device,R-1,00:11:22:33:44:55\n');
+    await expect(inferSpreadsheetMapping(legacyPath, 'assets')).resolves.toEqual({
+      'Asset Name': 'name', 'Asset Type': 'asset_type_name', 'Serial Number': 'serial_number',
+    });
+  });
+
+  it('returns no mapping for a spreadsheet without recognized headers', async () => {
+    const path = join(workDir, 'unknown.csv');
+    await writeFile(path, 'Unrelated,Columns\na,b\n');
+    await expect(inferSpreadsheetMapping(path, 'assets')).resolves.toEqual({});
+    await expect(convertSpreadsheets({
+      outputPath: join(workDir, 'unknown.amp'), namespace: 'unknown', sourceSystem: 'unknown',
+      files: [{ entityType: 'assets', path, mapping: await inferSpreadsheetMapping(path, 'assets') }],
+    }, workDir)).rejects.toThrow(/mapping must be a non-empty object/);
+  });
+
+  it('converts a legacy asset CSV through inferred mapping into a valid AMP package', async () => {
+    const inputPath = join(workDir, 'legacy-convert.csv');
+    const outputPath = join(workDir, 'legacy-convert.amp');
+    await writeFile(inputPath, 'Asset Name,Asset Type,Serial Number,MAC Address\nrouter,network_device,R-1,00:11:22:33:44:55\n');
+    const result = await convertSpreadsheets({ outputPath, namespace: 'legacy-assets', sourceSystem: 'legacy-asset-csv', files: [{ entityType: 'assets', path: inputPath, mapping: await inferSpreadsheetMapping(inputPath, 'assets') }] }, workDir);
+    expect(result.valid).toBe(true);
+    const reader = new AmpSqliteReader(outputPath);
+    try {
+      expect(reader.allRows('assets')[0]).toMatchObject({ name: 'router', asset_type_name: 'network_device', serial_number: 'R-1' });
+      expect(JSON.parse(String(reader.allRows('assets')[0].extension_json))).toEqual({ 'MAC Address': '00:11:22:33:44:55' });
+    } finally { reader.close(); }
+  });
+
   it('converts the generic fixtures into a valid package', async () => {
     const outputPath = join(workDir, 'generic.amp');
     const result = await convertSpreadsheets(fixtureConfig(outputPath), fixturesDir);
