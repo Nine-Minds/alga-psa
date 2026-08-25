@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Projets de factures",
     "searchPlaceholder": "Rechercher des factures...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Numéro de facture",
       "client": "Client",
@@ -422,13 +420,17 @@
       "message": "Cette facture est configurée pour utiliser la taxe calculée par un système comptable externe, mais aucune taxe n'a encore été importée, elle ne peut donc pas être finalisée. Exportez-la vers votre système comptable (QuickBooks, Xero) et réimportez la taxe pour la finaliser avec la taxe externe — ou basculez cette facture en taxe interne maintenant pour qu'Alga calcule la taxe, puis finalisez-la.",
       "confirm": "Basculer en taxe interne et finaliser",
       "cancel": "Annuler"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "finalizedTab": {
     "title": "Factures finalisées",
     "searchPlaceholder": "Rechercher des factures...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Numéro de facture",
       "client": "Client",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "Échec de la finalisation de la facture. Veuillez réessayer.",
       "bulkUnfinalizeFailed": "Échec de la finalisation des factures. Veuillez réessayer.",
       "bulkUnfinalizeInvoiceFailed": "Impossible de rouvrir {{invoiceNumber}} : {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1240,7 +1248,12 @@
         "emptyState": "Sélectionnez un exemple ou des données de facture existantes pour générer un aperçu autoritaire.",
         "loadingPreview": "Génération et rendu de l'aperçu…",
         "templateError": "Impossible de générer le modèle d'aperçu à partir de l'espace actuel.",
-        "renderError": "Échec du rendu de l'aperçu."
+        "renderError": "Échec du rendu de l'aperçu.",
+        "searchQuotes": "Rechercher des devis…",
+        "noQuotesFound": "Aucun devis trouvé.",
+        "selectQuote": "Sélectionner un devis",
+        "loadingQuoteDetails": "Chargement des détails du devis…",
+        "loadingDocumentDetails": "Chargement des détails du document…"
       },
       "tabs": {
         "design": "Conception",
@@ -1671,7 +1684,6 @@
   },
   "projectBilling": {
     "subtitle": "Jalons et acomptes prêts, en attente d'approbation pour tous les projets.",
-    "bulkActions": "Actions ({{count}})",
     "loading": "Chargement de la file de facturation des projets…",
     "empty": "Aucun élément n'est en attente de vérification. Les jalons et acomptes prêts apparaîtront ici.",
     "columns": {
@@ -1727,6 +1739,12 @@
       "message": "L'annulation de cette entrée de calendrier la retire de la facturation. Cette action est irréversible.",
       "confirm": "Annuler l'entrée",
       "dismiss": "Conserver l'entrée"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "invoiceDesigner": {
@@ -1984,7 +2002,13 @@
       "preview": {
         "sampleNote": "Produite à partir de données d’exemple représentatives du type « {{type}} ».",
         "frameTitle": "Aperçu pour {{type}}",
-        "empty": "Ouvrez cet onglet pour générer un aperçu de référence."
+        "empty": "Ouvrez cet onglet pour générer un aperçu de référence.",
+        "existingNote": "Généré à partir de la commande client sélectionnée.",
+        "searchDocuments": "Rechercher des commandes client…",
+        "searchDocumentsHint": "Rechercher par numéro ou client…",
+        "noDocumentsFound": "Aucune commande client trouvée.",
+        "selectDocument": "Sélectionner une commande client",
+        "selectDocumentHint": "Sélectionnez une commande client pour prévisualiser la sortie liée aux données."
       },
       "errors": {
         "nameRequired": "Le nom du modèle est obligatoire.",

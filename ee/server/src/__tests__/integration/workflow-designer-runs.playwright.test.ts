@@ -1173,8 +1173,8 @@ test.describe('Workflow Designer UI - runs tab', () => {
       const rowCheckbox = page.locator(`[data-automation-id="workflow-runs-select-${runId}"]`);
       await rowCheckbox.scrollIntoViewIfNeeded();
       await rowCheckbox.click();
-      await expect(page.locator('#workflow-runs-bulk-cancel')).toBeVisible();
-      await expect(page.locator('#workflow-runs-clear-selection')).toBeVisible();
+      await expect(page.locator('#workflow-runs-bulk-action-bar-cancel-button')).toBeVisible();
+      await expect(page.locator('#workflow-runs-bulk-action-bar-clear-button')).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();
@@ -1252,7 +1252,7 @@ test.describe('Workflow Designer UI - runs tab', () => {
       const rowCheckbox = page.locator(`[data-automation-id="workflow-runs-select-${runId}"]`);
       await rowCheckbox.scrollIntoViewIfNeeded();
       await rowCheckbox.click();
-      await page.locator('#workflow-runs-bulk-cancel').click();
+      await page.locator('#workflow-runs-bulk-action-bar-cancel-button').click();
       const reasonField = page.locator('[data-automation-id="workflow-runs-bulk-cancel-reason"]');
       await reasonField.fill('cancel run');
       await page.locator('#workflow-runs-bulk-cancel-confirm-confirm').click();
@@ -1289,13 +1289,13 @@ test.describe('Workflow Designer UI - runs tab', () => {
       const rowCheckbox = page.locator(`[data-automation-id="workflow-runs-select-${runId}"]`);
       await rowCheckbox.scrollIntoViewIfNeeded();
       await rowCheckbox.click();
-      await page.locator('#workflow-runs-bulk-cancel').click();
+      await page.locator('#workflow-runs-bulk-action-bar-cancel-button').click();
       await page.locator('[data-automation-id="workflow-runs-bulk-cancel-reason"]').fill('clear selection');
       await page.locator('#workflow-runs-bulk-cancel-confirm-confirm').click();
       await expect(page.getByText('Canceled 1 run(s).')).toBeVisible();
       await expect(page.locator('[data-automation-id="workflow-runs-select-all"]')).not.toBeChecked();
       await expect(page.locator(`[data-automation-id="workflow-runs-select-${runId}"]`)).not.toBeChecked();
-      await expect(page.locator('#workflow-runs-bulk-cancel')).toBeHidden();
+      await expect(page.locator('#workflow-runs-bulk-action-bar-cancel-button')).toBeHidden();
     } finally {
       await rollbackTenant(db, tenantId).catch(() => undefined);
       await db.destroy();

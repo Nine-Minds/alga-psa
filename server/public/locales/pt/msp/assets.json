@@ -1215,6 +1215,7 @@
     },
     "types": {
       "preventive": "Preventivo",
+      "corrective": "Corretivo",
       "inspection": "Inspeção",
       "calibration": "Calibração",
       "replacement": "Substituição"
@@ -1234,6 +1235,17 @@
         "title": "Excluir cronograma de manutenção",
         "message": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Central de controle de manutenção",
+    "description": "A próxima data de vencimento é calculada a partir da data de conclusão real.",
+    "assetsLink": "Ativos"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "É necessária uma data de execução.",
+      "completeFailed": "Não foi possível concluir a manutenção."
     }
   },
   "relatedAssetsTab": {

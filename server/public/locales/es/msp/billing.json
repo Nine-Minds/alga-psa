@@ -689,8 +689,10 @@
         "setDefault": "Permiso denegado: no se puede establecer la plantilla de documento predeterminada",
         "clearOverride": "Permiso denegado: no se puede borrar la anulación de la plantilla de documento",
         "delete": "Permiso denegado: no se pueden eliminar las plantillas de documento",
-        "preview": "Permiso denegado: no se pueden previsualizar las plantillas de documento"
-      }
+        "preview": "Permiso denegado: no se pueden previsualizar las plantillas de documento",
+        "readSalesOrders": "Permiso denegado: no se pueden leer los pedidos de venta"
+      },
+      "existingNotFound": "Documento no encontrado."
     },
     "billingProfile": {
       "periodOrder": "Elija un período cuyo inicio sea anterior o igual a su fin.",

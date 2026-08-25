@@ -735,7 +735,9 @@
       "notFound": "Modèle de document de devis introuvable.",
       "previewPipeline": "Échec du pipeline de prévisualisation.",
       "saveFailed": "Échec de l'enregistrement du modèle de devis",
-      "unknownAstExport": "Erreur d'exportation AST inconnue"
+      "unknownAstExport": "Erreur d'exportation AST inconnue",
+      "quoteNotFound": "Impossible de charger les détails du devis pour l'aperçu.",
+      "quoteDetailLoad": "Échec du chargement des détails du devis."
     },
     "fields": {
       "layoutDetails": "Détails de mise en page",
@@ -759,7 +761,17 @@
       "sampleScenario": "Exemple de scénario",
       "selectScenario": "Sélectionnez le scénario...",
       "selectScenarioPrompt": "Sélectionnez un exemple de scénario pour générer un aperçu faisant autorité.",
-      "templateGenerationFailed": "Le modèle d'aperçu n'a pas pu être généré à partir de l'espace de travail actuel."
+      "templateGenerationFailed": "Le modèle d'aperçu n'a pas pu être généré à partir de l'espace de travail actuel.",
+      "source": {
+        "sample": "Exemple",
+        "existing": "Existant"
+      },
+      "searchQuotes": "Rechercher des devis…",
+      "searchQuotesHint": "Rechercher par numéro ou client…",
+      "noQuotesFound": "Aucun devis trouvé.",
+      "selectQuote": "Sélectionner un devis",
+      "selectQuoteHint": "Sélectionnez un devis pour prévisualiser la sortie liée aux données.",
+      "loadingQuoteDetails": "Chargement des détails du devis…"
     },
     "pipeline": {
       "render": "Rendu",

@@ -12,7 +12,6 @@
       "downloadCsv": "CSV herunterladen",
       "edit": "Bearbeiten",
       "import": "Importieren",
-      "reactivate": "Reaktivieren",
       "remove": "Entfernen",
       "retry": "Wiederholen",
       "save": "Speichern",
@@ -181,7 +180,18 @@
     "shareTooltip": "Drucken, importieren und exportieren",
     "defaultClientDeleteError": "Der Standardkunde kann nicht gelöscht werden. Legen Sie zuerst in den allgemeinen Einstellungen einen anderen Kunden als Standard fest.",
     "clientNotFound": "Kunde nicht gefunden.",
-    "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden."
+    "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "markInactive": "Als inaktiv markieren",
+        "reactivate": "Reaktivieren",
+        "delete": "Löschen",
+        "print": "Ausgewählte drucken",
+        "more": "Mehr",
+        "clear": "Auswahl aufheben"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Verkaufschancen",

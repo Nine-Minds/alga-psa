@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "Approvazione annullata dal manager",
       "error": "Impossibile annullare l'approvazione: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selezionati",
+        "clear": "Annulla selezione"
+      }
     }
   },
   "workItemDrawer": {

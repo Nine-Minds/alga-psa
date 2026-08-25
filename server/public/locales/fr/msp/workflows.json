@@ -60,8 +60,6 @@
       "runNow": "Exécuter maintenant",
       "exportCsv": "Exporter en CSV",
       "refresh": "Actualiser",
-      "cancelSelected": "Annuler la sélection ({{count}})",
-      "clearSelection": "Effacer la sélection",
       "details": "Détails",
       "loadMore": "Charger plus",
       "preview": "Aperçu"
@@ -92,7 +90,12 @@
       "cancelMessage": "Annuler {{count}} exécution(s) sélectionnée(s) ? Cette action est irréversible.",
       "reasonLabel": "Motif",
       "cancelReasonPlaceholder": "Indiquez un motif pour l’annulation",
-      "cancelConfirm": "Annuler les exécutions"
+      "cancelConfirm": "Annuler les exécutions",
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "cancel": "Annuler les exécutions",
+        "clear": "Effacer la sélection"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Échec du chargement des exécutions",

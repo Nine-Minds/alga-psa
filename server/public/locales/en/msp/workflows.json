@@ -60,8 +60,6 @@
       "runNow": "Run now",
       "exportCsv": "Export CSV",
       "refresh": "Refresh",
-      "cancelSelected": "Cancel selected ({{count}})",
-      "clearSelection": "Clear selection",
       "details": "Details",
       "loadMore": "Load more",
       "preview": "Preview"
@@ -92,7 +90,12 @@
       "cancelMessage": "Cancel {{count}} selected run(s)? This cannot be undone.",
       "reasonLabel": "Reason",
       "cancelReasonPlaceholder": "Provide a reason for canceling",
-      "cancelConfirm": "Cancel runs"
+      "cancelConfirm": "Cancel runs",
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "cancel": "Cancel runs",
+        "clear": "Clear"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Failed to load workflow runs",

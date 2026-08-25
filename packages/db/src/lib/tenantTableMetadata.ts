@@ -271,6 +271,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   asset_history: { scope: 'tenant' },
   asset_maintenance_history: { scope: 'tenant' },
   asset_maintenance_notifications: { scope: 'tenant' },
+  asset_maintenance_occurrences: { scope: 'tenant' },
   asset_maintenance_schedules: { scope: 'tenant' },
   asset_relationships: { scope: 'tenant' },
   asset_service_history: { scope: 'tenant' },

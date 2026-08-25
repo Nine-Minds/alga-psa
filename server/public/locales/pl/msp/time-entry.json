@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "Zatwierdzenie cofnięte przez menedżera",
       "error": "Nie udało się cofnąć zatwierdzenia: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "clear": "Wyczyść zaznaczenie"
+      }
     }
   },
   "workItemDrawer": {

@@ -689,8 +689,10 @@
         "setDefault": "Odmowa uprawnień: nie można ustawić domyślnego szablonu dokumentu",
         "clearOverride": "Odmowa uprawnień: nie można wyczyścić nadpisania szablonu dokumentu",
         "delete": "Odmowa uprawnień: nie można usuwać szablonów dokumentów",
-        "preview": "Odmowa uprawnień: nie można wyświetlać podglądu szablonów dokumentów"
-      }
+        "preview": "Odmowa uprawnień: nie można wyświetlać podglądu szablonów dokumentów",
+        "readSalesOrders": "Brak uprawnień: nie można odczytać zamówień sprzedaży"
+      },
+      "existingNotFound": "Nie znaleziono dokumentu."
     },
     "billingProfile": {
       "periodOrder": "Wybierz okres, którego początek nie jest późniejszy niż koniec.",

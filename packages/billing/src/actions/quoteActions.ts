@@ -9,12 +9,13 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListItem, PaginatedResult, QuoteConversionPreview } from '@alga-psa/types';
+import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListItem, PaginatedResult, QuoteConversionPreview, QuoteViewModel } from '@alga-psa/types';
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
+import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
@@ -745,6 +746,27 @@ export const getQuote = withAuth(async (
   }
 
   return quote;
+});
+
+/**
+ * The quote's document render model — the same view model the PDF/email render uses, so a layout
+ * preview of an existing quote matches what the client receives. Read-authorized per record.
+ */
+export const getQuoteForRendering = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<QuoteViewModel | null | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
+  if (!quote) return null;
+
+  return mapLoadedQuoteToViewModel(knex, tenant, quote);
 });
 
 export const listQuotes = withAuth(async (

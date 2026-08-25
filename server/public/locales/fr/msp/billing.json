@@ -689,8 +689,10 @@
         "setDefault": "Autorisation refusée : impossible de définir le modèle de document par défaut",
         "clearOverride": "Autorisation refusée : impossible de supprimer la substitution du modèle de document",
         "delete": "Autorisation refusée : impossible de supprimer les modèles de document",
-        "preview": "Autorisation refusée : impossible de prévisualiser les modèles de document"
-      }
+        "preview": "Autorisation refusée : impossible de prévisualiser les modèles de document",
+        "readSalesOrders": "Autorisation refusée : impossible de lire les commandes client"
+      },
+      "existingNotFound": "Document introuvable."
     },
     "billingProfile": {
       "periodOrder": "Choisissez une période dont le début est antérieur ou égal à la fin.",

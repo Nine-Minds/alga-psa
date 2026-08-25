@@ -689,8 +689,10 @@
         "setDefault": "Berechtigung verweigert: Standard-Dokumentvorlage kann nicht festgelegt werden",
         "clearOverride": "Berechtigung verweigert: Überschreibung der Dokumentvorlage kann nicht aufgehoben werden",
         "delete": "Berechtigung verweigert: Dokumentvorlagen können nicht gelöscht werden",
-        "preview": "Berechtigung verweigert: Dokumentvorlagen können nicht in der Vorschau angezeigt werden"
-      }
+        "preview": "Berechtigung verweigert: Dokumentvorlagen können nicht in der Vorschau angezeigt werden",
+        "readSalesOrders": "Zugriff verweigert: Kundenaufträge können nicht gelesen werden"
+      },
+      "existingNotFound": "Dokument nicht gefunden."
     },
     "billingProfile": {
       "periodOrder": "Wählen Sie einen Zeitraum, dessen Beginn nicht nach dem Ende liegt.",

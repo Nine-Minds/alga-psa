@@ -60,8 +60,6 @@
       "runNow": "Corra agora",
       "exportCsv": "Exportar CSV",
       "refresh": "Atualizar",
-      "cancelSelected": "Cancelar selecionado ({{count}})",
-      "clearSelection": "Limpar seleção",
       "details": "Detalhes",
       "loadMore": "Carregar mais",
       "preview": "Visualização"
@@ -92,7 +90,12 @@
       "cancelMessage": "Cancelar execução(ões) selecionada(s) de {{count}}? Isto não pode ser desfeito.",
       "reasonLabel": "Razão",
       "cancelReasonPlaceholder": "Forneça um motivo para o cancelamento",
-      "cancelConfirm": "Cancelar execuções"
+      "cancelConfirm": "Cancelar execuções",
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "cancel": "Cancelar execuções",
+        "clear": "Limpar seleção"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Falha ao carregar execuções de fluxo de trabalho",

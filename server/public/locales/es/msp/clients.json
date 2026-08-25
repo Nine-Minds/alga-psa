@@ -12,7 +12,6 @@
       "downloadCsv": "Descargar CSV",
       "edit": "Editar",
       "import": "Importar",
-      "reactivate": "Reactivar",
       "remove": "Quitar",
       "retry": "Reintentar",
       "save": "Guardar",
@@ -181,7 +180,18 @@
     "shareTooltip": "Imprimir, importar y exportar",
     "defaultClientDeleteError": "No se puede eliminar el cliente predeterminado. Primero establezca otro cliente como predeterminado en Configuración general.",
     "clientNotFound": "Cliente no encontrado.",
-    "deletePermissionDenied": "Permiso denegado: no se pueden eliminar clientes."
+    "deletePermissionDenied": "Permiso denegado: no se pueden eliminar clientes.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} seleccionados",
+        "markInactive": "Marcar como inactivo",
+        "reactivate": "Reactivar",
+        "delete": "Eliminar",
+        "print": "Imprimir seleccionados",
+        "more": "Más",
+        "clear": "Limpiar selección"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Oportunidades",

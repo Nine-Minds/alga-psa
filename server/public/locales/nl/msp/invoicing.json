@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Conceptfacturen",
     "searchPlaceholder": "Facturen zoeken...",
-    "bulkActions_one": "Acties ({{count}})",
-    "bulkActions_other": "Acties ({{count}})",
     "columns": {
       "invoiceNumber": "Factuurnummer",
       "client": "Klant",
@@ -422,13 +420,17 @@
       "message": "Deze factuur is ingesteld om de belasting te gebruiken die door een extern boekhoudsysteem wordt berekend, maar er is nog geen belasting geïmporteerd, dus kan deze niet worden gefinaliseerd. Exporteer deze naar uw boekhoudsysteem (QuickBooks, Xero) en importeer de belasting terug om deze met externe belasting te finaliseren — of schakel deze factuur nu over naar interne belasting zodat Alga de belasting berekent, en finaliseer deze.",
       "confirm": "Overschakelen naar interne belasting en finaliseren",
       "cancel": "Annuleren"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "finalizedTab": {
     "title": "Gefinaliseerde facturen",
     "searchPlaceholder": "Facturen zoeken...",
-    "bulkActions_one": "Acties ({{count}})",
-    "bulkActions_other": "Acties ({{count}})",
     "columns": {
       "invoiceNumber": "Factuurnummer",
       "client": "Klant",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "Kan de finalisatie van de factuur niet ongedaan maken. Probeer het opnieuw.",
       "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw.",
       "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} kon niet worden heropend: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1240,7 +1248,12 @@
         "emptyState": "Kies voorbeeld- of bestaande factuurgegevens om een definitieve voorvertoning te genereren.",
         "loadingPreview": "Voorvertoning wordt opgebouwd en gerenderd…",
         "templateError": "Voorvertoningssjabloon kon niet uit de huidige werkruimte worden gegenereerd.",
-        "renderError": "Renderen van voorvertoning mislukt."
+        "renderError": "Renderen van voorvertoning mislukt.",
+        "searchQuotes": "Offertes zoeken…",
+        "noQuotesFound": "Geen offertes gevonden.",
+        "selectQuote": "Offerte kiezen",
+        "loadingQuoteDetails": "Offertedetails worden geladen…",
+        "loadingDocumentDetails": "Documentdetails worden geladen…"
       },
       "tabs": {
         "design": "Ontwerp",
@@ -1671,7 +1684,6 @@
   },
   "projectBilling": {
     "subtitle": "Gereedstaande mijlpalen en aanbetalingen uit alle projecten die op goedkeuring wachten.",
-    "bulkActions": "Acties ({{count}})",
     "loading": "Wachtrij voor projectfacturatie laden...",
     "empty": "Er wacht niets op controle. Gereedstaande mijlpalen en aanbetalingen verschijnen hier.",
     "columns": {
@@ -1727,6 +1739,12 @@
       "message": "Door dit planningsitem te annuleren, wordt het uit de facturatie verwijderd. Dit kan niet ongedaan worden gemaakt.",
       "confirm": "Post annuleren",
       "dismiss": "Post behouden"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "invoiceDesigner": {
@@ -1984,7 +2002,13 @@
       "preview": {
         "sampleNote": "Gegenereerd met representatieve voorbeeldgegevens voor {{type}}.",
         "frameTitle": "Voorbeeld van {{type}}",
-        "empty": "Open dit tabblad om een definitief voorbeeld te genereren."
+        "empty": "Open dit tabblad om een definitief voorbeeld te genereren.",
+        "existingNote": "Gegenereerd op basis van de gekozen verkooporder.",
+        "searchDocuments": "Verkooporders zoeken…",
+        "searchDocumentsHint": "Zoek op nummer of klant…",
+        "noDocumentsFound": "Geen verkooporders gevonden.",
+        "selectDocument": "Verkooporder kiezen",
+        "selectDocumentHint": "Kies een verkooporder voor een gegevensgebonden voorvertoning."
       },
       "errors": {
         "nameRequired": "De naam van het sjabloon is verplicht.",

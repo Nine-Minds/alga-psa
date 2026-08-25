@@ -270,4 +270,50 @@ describe('kb-article-import handler execution', () => {
 
     expect(result).toEqual({ total: 1, processed: 1, imported: 0, failed: 1 });
   });
+
+  // This handler is what the Temporal activity executes, so whatever it hands
+  // createKbArticle is what lands in document_block_content. Images used to be
+  // flattened to alt text on the way through, which is the loss this asserts is
+  // gone -- from the job path, not just from the parser in isolation.
+  it('carries imported images through to the created article', async () => {
+    stageFile({
+      import_file_id: 'file-1',
+      filename: 'printer-guide.md',
+      content: '# Printer Guide\n\n![Spooler dialog](https://example.com/img/spooler.png)\n',
+    });
+    stageFile({
+      import_file_id: 'file-2',
+      filename: 'vpn-setup.html',
+      content: '<h1>VPN</h1><p><img src="/api/documents/view/abc" alt="VPN client" /></p>',
+    });
+
+    const result = await run(['file-1', 'file-2']);
+
+    expect(result).toEqual({ total: 2, processed: 2, imported: 2, failed: 0 });
+    const [, , markdownInput] = createKbArticleMock.mock.calls[0] as any[];
+    expect(markdownInput.content).toContainEqual({
+      type: 'image',
+      props: { url: 'https://example.com/img/spooler.png', caption: 'Spooler dialog' },
+    });
+    const [, , htmlInput] = createKbArticleMock.mock.calls[1] as any[];
+    expect(htmlInput.content).toContainEqual({
+      type: 'image',
+      props: { url: '/api/documents/view/abc', caption: 'VPN client' },
+    });
+  });
+
+  it('imports an article whose unsafe image degraded to alt text', async () => {
+    const row = stageFile({
+      import_file_id: 'file-1',
+      content: '# Printer Guide\n\n![Spooler dialog](javascript:alert(1))\n',
+    });
+
+    const result = await run(['file-1']);
+
+    expect(result).toEqual({ total: 1, processed: 1, imported: 1, failed: 0 });
+    const [, , input] = createKbArticleMock.mock.calls[0] as any[];
+    expect(JSON.stringify(input.content).toLowerCase()).not.toContain('script:');
+    expect(JSON.stringify(input.content)).toContain('Spooler dialog');
+    expect(row.status).toBe('imported');
+  });
 });

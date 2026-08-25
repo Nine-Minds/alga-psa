@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoTimelineTile } from './BentoTimelineTile';
 
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
@@ -194,6 +194,15 @@ function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
 describe('BentoTimelineTile composer heading', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The composer rejects instants that are not in the future, so pin the
+    // clock behind the mocked 2026-08-23T13:30Z schedule; on a real clock this
+    // suite starts failing the moment that instant becomes the past.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-08-23T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('shows the contact heading only in the client lane', () => {

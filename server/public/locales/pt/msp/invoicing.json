@@ -370,8 +370,6 @@
   "draftsTab": {
     "title": "Rascunhos de faturas",
     "searchPlaceholder": "Pesquisar faturas...",
-    "bulkActions_one": "Ações ({{count}})",
-    "bulkActions_other": "Ações ({{count}})",
     "columns": {
       "invoiceNumber": "Número da fatura",
       "client": "Cliente",
@@ -422,13 +420,17 @@
       "message": "Esta fatura está configurada para utilizar imposto calculado por um sistema de contabilidade externo, mas nenhum imposto foi importado ainda, portanto não pode ser finalizado. Exporte-a para o seu sistema contábil (QuickBooks, Xero) e importe o imposto de volta para finalizar com imposto externo — ou mude esta fatura para imposto interno agora para que Alga calcule o imposto e finalize-o.",
       "confirm": "Mudar para imposto interno e finalizar",
       "cancel": "Cancelar"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "clear": "Limpar seleção"
+      }
     }
   },
   "finalizedTab": {
     "title": "Faturas finalizadas",
     "searchPlaceholder": "Pesquisar faturas...",
-    "bulkActions_one": "Ações ({{count}})",
-    "bulkActions_other": "Ações ({{count}})",
     "columns": {
       "invoiceNumber": "Número da fatura",
       "client": "Cliente",
@@ -462,6 +464,12 @@
       "unfinalizeFailed": "Falha ao desfinalizar a fatura. Por favor, tente novamente.",
       "bulkUnfinalizeFailed": "Falha ao desfinalizar faturas. Por favor, tente novamente.",
       "bulkUnfinalizeInvoiceFailed": "Não foi possível reabrir {{invoiceNumber}}: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "clear": "Limpar seleção"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -1240,7 +1248,12 @@
         "emptyState": "Selecione dados de fatura existentes ou de amostra para gerar uma visualização oficial.",
         "loadingPreview": "Visualização de modelagem e renderização...",
         "templateError": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual.",
-        "renderError": "Falha na renderização de visualização."
+        "renderError": "Falha na renderização de visualização.",
+        "searchQuotes": "Pesquisar cotações...",
+        "noQuotesFound": "Nenhuma cotação encontrada.",
+        "selectQuote": "Selecione a cotação",
+        "loadingQuoteDetails": "Carregando detalhes da cotação...",
+        "loadingDocumentDetails": "Carregando detalhes do documento..."
       },
       "tabs": {
         "design": "Projeto",
@@ -1671,7 +1684,6 @@
   },
   "projectBilling": {
     "subtitle": "Metas prontas e depósitos aguardando aprovação em todos os projetos.",
-    "bulkActions": "Ações ({{count}})",
     "loading": "Carregando fila de faturamento de projetos...",
     "empty": "Nada está aguardando revisão. Metas prontas e depósitos aparecerão aqui.",
     "columns": {
@@ -1727,6 +1739,12 @@
       "message": "Cancelar este lançamento agendado o remove do faturamento. Esta ação não pode ser desfeita.",
       "confirm": "Cancelar lançamento",
       "dismiss": "Manter lançamento"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "clear": "Limpar seleção"
+      }
     }
   },
   "invoiceDesigner": {
@@ -1984,7 +2002,13 @@
       "preview": {
         "sampleNote": "Gerado com dados de exemplo representativos de {{type}}.",
         "frameTitle": "Pré-visualização de {{type}}",
-        "empty": "Abra esta guia para gerar uma pré-visualização confiável."
+        "empty": "Abra esta guia para gerar uma pré-visualização confiável.",
+        "existingNote": "Gerado a partir do pedido de venda selecionado.",
+        "searchDocuments": "Pesquisar pedidos de venda...",
+        "searchDocumentsHint": "Pesquise por número ou cliente...",
+        "noDocumentsFound": "Nenhum pedido de venda encontrado.",
+        "selectDocument": "Selecione o pedido de venda",
+        "selectDocumentHint": "Selecione um pedido de venda para visualizar a saída vinculada a dados."
       },
       "errors": {
         "nameRequired": "O nome do modelo é obrigatório.",

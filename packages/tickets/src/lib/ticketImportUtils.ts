@@ -28,6 +28,33 @@ const MONTH_NAMES: Record<string, number> = {
 };
 
 /**
+ * Build a local-midnight Date from calendar parts, or null if those parts don't
+ * name a real date.
+ *
+ * `new Date(2024, 1, 31)` silently rolls over to 2 March, which would import a
+ * typo'd CSV row as a real — and wrong — date. Round-tripping the components
+ * catches every rollover (month length, leap years) without a lookup table.
+ *
+ * Local midnight, not UTC midnight: a date-only value in a CSV means a calendar
+ * day, and anchoring it to the server's day keeps it rendering as that same day
+ * for the operator who imported it.
+ */
+function makeLocalDate(year: number, month: number, day: number): Date | null {
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const date = new Date(year, month - 1, day);
+  if (isNaN(date.getTime())) return null;
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null;
+  }
+  return date;
+}
+
+/** ISO date with no time portion, e.g. `2024-03-15`. */
+const ISO_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
  * Parse a date string to ISO string.
  * Supports many formats common in PSA exports:
  *   YYYY-MM-DD, YYYY-MM-DDTHH:mm:ssZ (ISO),
@@ -41,7 +68,20 @@ function parseImportDate(dateStr: string | undefined): string | null {
   const trimmed = dateStr.trim();
 
   // ISO: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss...
+  const isoDateOnly = trimmed.match(ISO_DATE_ONLY);
+  if (isoDateOnly) {
+    // Date-only: anchor to local midnight so it matches every other date-only
+    // format. `new Date('2024-03-15')` would give UTC midnight instead, which is
+    // a different instant and renders as the previous day west of the server.
+    const date = makeLocalDate(
+      parseInt(isoDateOnly[1], 10),
+      parseInt(isoDateOnly[2], 10),
+      parseInt(isoDateOnly[3], 10),
+    );
+    return date ? date.toISOString() : null;
+  }
   if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    // Has a time and/or offset — respect exactly what the export specified.
     const date = new Date(trimmed);
     return isNaN(date.getTime()) ? null : date.toISOString();
   }
@@ -52,17 +92,15 @@ function parseImportDate(dateStr: string | undefined): string | null {
     const month = parseInt(slashMatch[1], 10);
     const day = parseInt(slashMatch[2], 10);
     const year = parseInt(slashMatch[3], 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const date = new Date(year, month - 1, day);
-      if (!isNaN(date.getTime())) {
-        // Try to parse time portion if present
-        const timePart = slashMatch[4]?.trim();
-        if (timePart) {
-          const withTime = new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${timePart}`);
-          if (!isNaN(withTime.getTime())) return withTime.toISOString();
-        }
-        return date.toISOString();
+    const date = makeLocalDate(year, month, day);
+    if (date) {
+      // Try to parse time portion if present
+      const timePart = slashMatch[4]?.trim();
+      if (timePart) {
+        const withTime = new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${timePart}`);
+        if (!isNaN(withTime.getTime())) return withTime.toISOString();
       }
+      return date.toISOString();
     }
   }
 
@@ -71,8 +109,12 @@ function parseImportDate(dateStr: string | undefined): string | null {
   if (namedMonthFirst) {
     const monthIdx = MONTH_NAMES[namedMonthFirst[1].toLowerCase()];
     if (monthIdx !== undefined) {
-      const date = new Date(parseInt(namedMonthFirst[3], 10), monthIdx, parseInt(namedMonthFirst[2], 10));
-      if (!isNaN(date.getTime())) return date.toISOString();
+      const date = makeLocalDate(
+        parseInt(namedMonthFirst[3], 10),
+        monthIdx + 1,
+        parseInt(namedMonthFirst[2], 10),
+      );
+      if (date) return date.toISOString();
     }
   }
 
@@ -81,8 +123,12 @@ function parseImportDate(dateStr: string | undefined): string | null {
   if (dayFirst) {
     const monthIdx = MONTH_NAMES[dayFirst[2].toLowerCase()];
     if (monthIdx !== undefined) {
-      const date = new Date(parseInt(dayFirst[3], 10), monthIdx, parseInt(dayFirst[1], 10));
-      if (!isNaN(date.getTime())) return date.toISOString();
+      const date = makeLocalDate(
+        parseInt(dayFirst[3], 10),
+        monthIdx + 1,
+        parseInt(dayFirst[1], 10),
+      );
+      if (date) return date.toISOString();
     }
   }
 
@@ -92,10 +138,8 @@ function parseImportDate(dateStr: string | undefined): string | null {
     const day = parseInt(hyphenDMY[1], 10);
     const month = parseInt(hyphenDMY[2], 10);
     const year = parseInt(hyphenDMY[3], 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const date = new Date(year, month - 1, day);
-      if (!isNaN(date.getTime())) return date.toISOString();
-    }
+    const date = makeLocalDate(year, month, day);
+    if (date) return date.toISOString();
   }
 
   // Fallback: generic Date.parse
@@ -225,8 +269,11 @@ function parseDateWithFormat(val: string, format: DateFormatInterpretation): str
       return null;
   }
 
-  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  // Reject impossible dates (31 February, 31 April, 29 February in a common year)
+  // before honouring any time portion — picking a format resolves the ambiguity,
+  // it does not make a typo'd day valid.
+  const date = makeLocalDate(year, month, day);
+  if (!date) return null;
 
   // If there was a time portion, reconstruct a full date-time string to preserve it
   if (timePart) {
@@ -235,8 +282,7 @@ function parseDateWithFormat(val: string, format: DateFormatInterpretation): str
     if (!isNaN(withTime.getTime())) return withTime.toISOString();
   }
 
-  const date = new Date(year, month - 1, day);
-  return isNaN(date.getTime()) ? null : date.toISOString();
+  return date.toISOString();
 }
 
 function buildContactResolutionKey(contactName: string, clientName: string): string {

@@ -28,6 +28,14 @@ function buildEmailData(overrides: Partial<EmailMessageDetails> = {}): EmailMess
     subject: 'Inbound subject',
     body: { text: 'Hello from client', html: undefined },
     attachments: [],
+    // Provider-fetched mail always carries the receiving MTA's
+    // Authentication-Results; contact attribution now needs an aligned pass.
+    // Aligned to the default From domain only, so overrides that forge a
+    // different sender stay unauthenticated.
+    headers: {
+      'Authentication-Results':
+        'mx.google.com; dkim=pass header.d=example.com; spf=pass smtp.mailfrom=client@example.com',
+    },
     ...overrides,
   };
 }
@@ -47,6 +55,7 @@ function makeQueryBuilder(firstResult: unknown) {
       }
       return builder;
     }),
+    orderBy: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue(firstResult),
   };
 
@@ -113,7 +122,13 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       },
       source: 'provider_default',
     });
-    findContactByEmailMock.mockResolvedValue(null);
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'client-contact-1',
+      client_id: 'client-1',
+      email: 'client@example.com',
+      matched_email: 'client@example.com',
+      user_type: 'client',
+    });
     findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
     findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
@@ -132,9 +147,21 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     let commentsQueryCount = 0;
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
-        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+        if (table === 'tickets as t' || table === 'comments as c') {
           return makeQueryBuilder(undefined);
         }
+
+        if (table === 'tickets') {
+          return makeQueryBuilder({
+            ticket_id: 'ticket-reply-456',
+            board_id: 'board-1',
+            client_id: 'client-1',
+            attributes: {},
+          });
+        }
+
+        if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+        if (table === 'boards') return makeQueryBuilder({});
 
         if (table === 'comments') {
           commentsQueryCount += 1;
@@ -203,9 +230,13 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     let commentsQueryCount = 0;
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
-        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+        if (table === 'tickets as t' || table === 'comments as c') {
           return makeQueryBuilder(undefined);
         }
+
+        if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-thread-789', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+        if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+        if (table === 'boards') return makeQueryBuilder({});
 
         if (table === 'email_sending_logs') {
           const builder: any = {
@@ -284,6 +315,43 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     expect(commentsQueryCount).toBe(1);
   });
 
+  it('quarantines a forged In-Reply-To from an unrelated sender before comment, artifacts, or watcher effects', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Forged reply body', sanitizedHtml: undefined, confidence: 0.95,
+      strategy: 'plain', appliedHeuristics: [], warnings: [], tokens: {},
+    });
+    findContactByEmailMock.mockResolvedValue(null);
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t' || table === 'comments as c') return makeQueryBuilder(undefined);
+        if (table === 'email_sending_logs') return makeQueryBuilder({ threadId: 'thread-forged' });
+        if (table === 'comment_threads') return makeQueryBuilder({ ticketId: 'ticket-target', threadId: 'thread-forged' });
+        if (table === 'comments') return makeQueryBuilder({ parentCommentId: 'parent-comment-target' });
+        if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-target', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+        if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+        if (table === 'boards') return makeQueryBuilder({});
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+      return callback(trx);
+    });
+
+    const { processInboundEmailInApp } = await import('@alga-psa/shared/services/email/processInboundEmailInApp');
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1', providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-forged-header-1', from: { email: 'attacker@example.net', name: 'Attacker' },
+        inReplyTo: '<outbound-forged@example.test>', attachments: [{ filename: 'payload.txt' } as any],
+      }),
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'quarantined', reason: 'unauthorized_thread_header_sender', ticketId: 'ticket-target', matchedBy: 'thread_headers',
+    });
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(processInboundEmailArtifactsBestEffortMock).not.toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
+  });
+
   it('T035: References are walked from newest to oldest and first match wins', async () => {
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: 'References reply body',
@@ -298,9 +366,13 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     const rfcLookups: string[] = [];
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
-        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+        if (table === 'tickets as t' || table === 'comments as c') {
           return makeQueryBuilder(undefined);
         }
+
+        if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-ref-123', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+        if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+        if (table === 'boards') return makeQueryBuilder({});
 
         if (table === 'email_sending_logs') {
           let rfcMessageId = '';
@@ -404,9 +476,13 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     let commentThreadQueryCount = 0;
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
-        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+        if (table === 'tickets as t' || table === 'comments as c') {
           return makeQueryBuilder(undefined);
         }
+
+        if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-provider-123', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+        if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+        if (table === 'boards') return makeQueryBuilder({});
 
         if (table === 'comment_threads') {
           commentThreadQueryCount += 1;
@@ -486,9 +562,13 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
 
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
-        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+        if (table === 'tickets as t' || table === 'comments as c') {
           return makeQueryBuilder(undefined);
         }
+
+        if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-legacy-fallback-123', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+        if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+        if (table === 'boards') return makeQueryBuilder({});
 
         if (table === 'email_sending_logs' || table === 'comment_threads') {
           const builder: any = {
