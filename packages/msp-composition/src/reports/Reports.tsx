@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   BarChart3,
@@ -15,6 +15,7 @@ import {
   Mail,
   Package,
   Percent,
+  Target,
   Timer,
   Users,
 } from 'lucide-react';
@@ -29,14 +30,20 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
-import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
-import {
-  getErrorMessage,
-  isActionMessageError,
-  isActionPermissionError,
-} from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import ProjectHoursView from './ProjectHoursReport';
+import {
+  formatHours,
+  isReportActionError,
+  LoadingReport,
+  MetricCard,
+  PrintHeader,
+  PrintReportRoot,
+  PrintSummary,
+  type PrintMetric,
+} from './reportPrimitives';
 import {
   getEmailChannelHealthReport,
   getEmployeeUtilizationReport,
@@ -56,7 +63,7 @@ import {
 
 type ReportCategory = 'helpdesk' | 'operations' | 'billing' | 'inventory';
 type ReportKind = 'embedded' | 'link' | 'planned';
-type EmbeddedReportId = 'ticket-workload' | 'ticket-aging' | 'email-channel-health' | 'time-utilization' | 'team-performance' | 'employee-utilization';
+type EmbeddedReportId = 'ticket-workload' | 'ticket-aging' | 'email-channel-health' | 'time-utilization' | 'team-performance' | 'employee-utilization' | 'project-hours';
 type LinkReportId = 'contract-reports' | 'deferred-revenue' | 'inventory-margin' | 'inventory-write-offs' | 'inventory-ghost-usage';
 
 interface ReportDefinition {
@@ -80,9 +87,6 @@ interface ReportsProps {
   productCode?: ProductCode;
   tier?: TenantTier;
 }
-
-const isReportActionError = (value: unknown) =>
-  isActionMessageError(value) || isActionPermissionError(value);
 
 const REPORTS: ReportDefinition[] = [
   {
@@ -156,6 +160,18 @@ const REPORTS: ReportDefinition[] = [
     minimumTier: 'pro',
     kind: 'embedded',
     icon: Gauge,
+  },
+  {
+    id: 'project-hours',
+    titleKey: 'reportsPage.reportCatalog.projectHours.title',
+    titleDefault: 'Project Hours vs Estimates',
+    descriptionKey: 'reportsPage.reportCatalog.projectHours.description',
+    descriptionDefault: 'Tracked hours against task estimates and project budgets, with the phases running long.',
+    category: 'operations',
+    products: ['psa'],
+    minimumTier: 'pro',
+    kind: 'embedded',
+    icon: Target,
   },
   {
     id: 'contract-reports',
@@ -243,15 +259,6 @@ function canAccessReport(report: ReportDefinition, productCode: ProductCode, tie
   return report.products.includes(productCode) && tierAtLeast(tier, report.minimumTier);
 }
 
-function MetricCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3">
-      <p className="text-xs font-medium text-[rgb(var(--color-text-500))]">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-[rgb(var(--color-text-900))]">{value}</p>
-    </div>
-  );
-}
-
 function formatDurationMinutes(value: number | null, emptyText: string): string {
   if (value === null) return emptyText;
   if (value < 1) return '<1m';
@@ -259,10 +266,6 @@ function formatDurationMinutes(value: number | null, emptyText: string): string 
   const hours = Math.floor(value / 60);
   const minutes = Math.round(value % 60);
   return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-}
-
-function formatHours(value: number): string {
-  return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })}h`;
 }
 
 function BucketList({ title, buckets, emptyText }: { title: string; buckets: ReportBucket[]; emptyText: string }) {
@@ -292,42 +295,6 @@ function BucketList({ title, buckets, emptyText }: { title: string; buckets: Rep
         )}
       </div>
     </div>
-  );
-}
-
-interface PrintMetric {
-  label: string;
-  value: number | string;
-}
-
-function PrintHeader({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <header className="app-print-detail-header">
-      <h1>{title}</h1>
-      <p className="app-print-detail-subtitle">{subtitle}</p>
-    </header>
-  );
-}
-
-function PrintSummary({ metrics }: { metrics: PrintMetric[] }) {
-  if (metrics.length === 0) return null;
-  return (
-    <section className="app-print-table-section" style={{ marginBottom: '10pt' }}>
-      <table className="app-print-table" style={{ tableLayout: 'fixed' }}>
-        <tbody>
-          <tr>
-            {metrics.map((metric) => (
-              <td key={metric.label} style={{ verticalAlign: 'top' }}>
-                <div style={{ fontSize: '8pt', color: '#555', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {metric.label}
-                </div>
-                <div style={{ fontSize: '15pt', fontWeight: 700, marginTop: '2pt' }}>{metric.value}</div>
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
-    </section>
   );
 }
 
@@ -384,24 +351,6 @@ function PrintBarChart({
         </tbody>
       </table>
     </section>
-  );
-}
-
-function PrintReportRoot({ children }: { children: ReactNode }) {
-  return <div className="app-print-root app-print-only">{children}</div>;
-}
-
-function LoadingReport() {
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-4">
-        <Skeleton className="h-20" />
-        <Skeleton className="h-20" />
-        <Skeleton className="h-20" />
-        <Skeleton className="h-20" />
-      </div>
-      <Skeleton className="h-64" />
-    </div>
   );
 }
 
@@ -1302,10 +1251,16 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
                       : t('reportsPage.fallbackTitle', { defaultValue: 'Report' })}
                   </CardTitle>
                   <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-                    {t('reportsPage.dateRange.lastDays', {
-                      defaultValue: 'Last {{count}} days',
-                      count: rangeDays,
-                    })}
+                    {/* Project hours are life-to-date against the estimate, so
+                        the range selector does not narrow them. */}
+                    {selectedReportId === 'project-hours'
+                      ? t('reportsPage.dateRange.allActiveProjects', {
+                          defaultValue: 'All active projects, life-to-date',
+                        })
+                      : t('reportsPage.dateRange.lastDays', {
+                          defaultValue: 'Last {{count}} days',
+                          count: rangeDays,
+                        })}
                   </p>
                 </div>
               </div>
@@ -1327,6 +1282,8 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
               <TeamPerformanceView rangeDays={rangeDays} />
             ) : selectedReportId === 'employee-utilization' ? (
               <EmployeeUtilizationView rangeDays={rangeDays} />
+            ) : selectedReportId === 'project-hours' ? (
+              <ProjectHoursView />
             ) : (
               <TicketWorkloadView rangeDays={rangeDays} />
             )}

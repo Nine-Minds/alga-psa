@@ -59,11 +59,14 @@
       "noDate": "No date",
       "notAvailable": "n/a",
       "noEmailChannels": "No email channels are configured.",
-      "noCapacity": "n/a — no capacity set"
+      "noCapacity": "n/a — no capacity set",
+      "noEstimate": "n/a — no estimate set",
+      "noOverruns": "No task has passed its estimate."
     },
     "fallbackTitle": "Report",
     "dateRange": {
-      "lastDays": "Last {{count}} days"
+      "lastDays": "Last {{count}} days",
+      "allActiveProjects": "All active projects, life-to-date"
     },
     "units": {
       "daysWithCount": "{{count}} days"
@@ -103,7 +106,13 @@
       "capacityHours": "Capacity hours",
       "utilization": "Utilization",
       "usersWithoutCapacity": "Missing capacity",
-      "activeUsers": "Active users"
+      "activeUsers": "Active users",
+      "activeProjects": "Active projects",
+      "budgetedHours": "Budgeted hours",
+      "estimatedHours": "Estimated hours",
+      "actualHours": "Actual hours",
+      "projectsOverEstimate": "Over estimate",
+      "projectsOverBudget": "Over budget"
     },
     "sections": {
       "openByStatus": "Open by status",
@@ -122,7 +131,10 @@
       "bucketUsage": "Bucket usage",
       "performanceByAssignee": "Performance by assignee",
       "closedByAssignee": "Closed by assignee",
-      "utilizationByUser": "Utilization by user"
+      "utilizationByUser": "Utilization by user",
+      "hoursByProject": "Hours by project",
+      "hoursByPhase": "Hours by phase",
+      "largestTaskOverruns": "Largest task overruns"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -168,6 +180,10 @@
       "inventoryGhostUsage": {
         "title": "Ghost Usage",
         "description": "Closed hardware tickets with no recorded parts — cost the shop may have eaten."
+      },
+      "projectHours": {
+        "title": "Project Hours vs Estimates",
+        "description": "Tracked hours against task estimates and project budgets, with the phases running long."
       }
     },
     "table": {
@@ -191,7 +207,17 @@
       "workedHours": "Worked hours",
       "capacityHours": "Capacity hours",
       "utilization": "Utilization",
-      "capacityEstimated": "Estimated from weekly capacity; no working hours set."
+      "capacityEstimated": "Estimated from weekly capacity; no working hours set.",
+      "project": "Project",
+      "client": "Client",
+      "phase": "Phase",
+      "task": "Task",
+      "budgetedHours": "Budgeted",
+      "estimatedHours": "Estimated",
+      "actualHours": "Actual",
+      "variance": "Variance",
+      "estimateUsed": "Estimate used",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} tasks done"
     },
     "statusValues": {
       "connected": "Connected",
