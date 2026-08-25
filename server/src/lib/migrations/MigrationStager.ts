@@ -43,6 +43,18 @@ export class MigrationStager {
           manifest: validation.manifest ? JSON.stringify(validation.manifest) : null,
           updated_at: trx.fn.now(),
         });
+        // Keep the full diagnostics retrievable after the upload response is
+        // gone; a rejected job must stay explainable from its detail view.
+        await db
+          .table('migration_reports')
+          .where({ migration_job_id: migrationJobId, report_type: 'inspection' })
+          .delete();
+        await db.table('migration_reports').insert({
+          tenant: this.tenant,
+          migration_job_id: migrationJobId,
+          report_type: 'inspection',
+          summary: JSON.stringify({ diagnostics: validation.diagnostics }),
+        });
       });
       return { validation, stagedCounts, rejected: true };
     }
