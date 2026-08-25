@@ -59,7 +59,13 @@ export class MigrationPlanner {
     const records = await scoped('migration_staged_records').where({ migration_job_id: jobId }).select('entity_type', 'package_record_id', 'payload');
     const ids = new Map<AmpEntityType, Set<string>>();
     const counts: Partial<Record<AmpEntityType, number>> = {};
-    for (const row of records) { const type = row.entity_type as AmpEntityType; (ids.get(type) ?? ids.set(type, new Set()).get(type)!).add(row.package_record_id); counts[type] = (counts[type] ?? 0) + 1; }
+    for (const row of records) {
+      const type = row.entity_type as AmpEntityType;
+      let typeIds = ids.get(type);
+      if (!typeIds) { typeIds = new Set<string>(); ids.set(type, typeIds); }
+      typeIds.add(row.package_record_id);
+      counts[type] = (counts[type] ?? 0) + 1;
+    }
     const blocking: AmpDiagnostic[] = [];
     for (const row of records) {
       const type = row.entity_type as AmpEntityType; const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
