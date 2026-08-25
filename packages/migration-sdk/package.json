@@ -17,7 +17,6 @@
     "@alga-psa/migration-spec": "*"
   },
   "devDependencies": {
-    "@types/node": "^22.10.5",
     "typescript": "^5.7.3",
     "vitest": "^4.1.9"
   }

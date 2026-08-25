@@ -1,0 +1,81 @@
+import type { Knex } from 'knex';
+import { tenantDb, withTransaction } from '@alga-psa/db';
+import { AMP_ENTITY_TABLES, AMP_ENTITY_REFERENCES, type AmpEntityType } from '@alga-psa/migration-spec';
+import { AmpSqliteReader, validateAmpPackage, type AmpDiagnostic } from '@alga-psa/migration-sdk';
+
+/**
+ * The package is validated before a single staging row is written.  This is
+ * intentionally a server-only boundary: the SDK has no tenant or Postgres
+ * dependency, while this class never creates a domain entity.
+ */
+export class MigrationStager {
+  constructor(private readonly db: Knex, private readonly tenant: string) {}
+
+  async stage(jobId: string, packagePath: string): Promise<{ diagnostics: AmpDiagnostic[]; blocking: boolean }> {
+    const result = validateAmpPackage(packagePath);
+    if (!result.manifest) throw new Error('AMP_INVALID_MANIFEST: package has no usable manifest.');
+    const diagnostics = result.diagnostics;
+    const blocking = !result.valid;
+    const reader = new AmpSqliteReader(packagePath);
+    try {
+      await withTransaction(this.db, async trx => {
+        const scoped = tenantDb(trx, this.tenant);
+        const job = await scoped('migration_jobs').where({ migration_job_id: jobId }).first();
+        if (!job) throw new Error('Migration job was not found in this tenant.');
+        await scoped('migration_staged_records').where({ migration_job_id: jobId }).delete();
+        await scoped('migration_job_entities').where({ migration_job_id: jobId }).delete();
+        for (const entityType of AMP_ENTITY_TABLES) {
+          if (!reader.tableNames().includes(entityType)) continue;
+          const rows = reader.allRows(entityType);
+          if (rows.length) {
+            await scoped('migration_staged_records').insert(rows.map(row => ({
+              migration_job_id: jobId, entity_type: entityType,
+              package_record_id: String(row.package_record_id), source_record_id: String(row.source_record_id),
+              namespace: String(row.external_identifier_namespace), payload: JSON.stringify(row),
+              validation_errors: JSON.stringify(diagnostics.filter(d => d.table === entityType && d.recordId === row.package_record_id)),
+              validation_state: blocking ? 'blocked' : 'valid',
+            })));
+          }
+          await scoped('migration_job_entities').insert({ migration_job_id: jobId, entity_type: entityType, phase: phaseFor(entityType), planned_count: rows.length });
+        }
+        await scoped('migration_jobs').where({ migration_job_id: jobId }).update({
+          state: blocking ? 'blocked' : 'needs_configuration', manifest: JSON.stringify(result.manifest),
+          package_id: result.manifest.package_id, format_version: result.manifest.format_version,
+          producer_name: result.manifest.producer_name, producer_version: result.manifest.producer_version,
+          updated_at: trx.fn.now(),
+        });
+      });
+    } finally { reader.close(); }
+    return { diagnostics, blocking };
+  }
+}
+
+/** Dry-run planner deliberately only reads staging and tenant-owned configuration. */
+export class MigrationPlanner {
+  constructor(private readonly db: Knex, private readonly tenant: string) {}
+
+  async preflight(jobId: string): Promise<{ blocking: AmpDiagnostic[]; counts: Partial<Record<AmpEntityType, number>> }> {
+    const scoped = tenantDb(this.db, this.tenant);
+    const records = await scoped('migration_staged_records').where({ migration_job_id: jobId }).select('entity_type', 'package_record_id', 'payload');
+    const ids = new Map<AmpEntityType, Set<string>>();
+    const counts: Partial<Record<AmpEntityType, number>> = {};
+    for (const row of records) { const type = row.entity_type as AmpEntityType; (ids.get(type) ?? ids.set(type, new Set()).get(type)!).add(row.package_record_id); counts[type] = (counts[type] ?? 0) + 1; }
+    const blocking: AmpDiagnostic[] = [];
+    for (const row of records) {
+      const type = row.entity_type as AmpEntityType; const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+      for (const reference of AMP_ENTITY_REFERENCES[type]) {
+        const value = payload[reference.column];
+        if (value && !ids.get(reference.targetTable)?.has(value)) blocking.push({ code: 'AMP_INVALID_REFERENCE', message: `Reference ${reference.column} does not resolve in this package.`, table: type, recordId: row.package_record_id, field: reference.column });
+      }
+    }
+    await withTransaction(this.db, async trx => {
+      const tx = tenantDb(trx, this.tenant);
+      await tx('migration_staged_records').where({ migration_job_id: jobId }).update({ validation_state: blocking.length ? 'blocked' : 'valid' });
+      await tx('migration_jobs').where({ migration_job_id: jobId }).update({ state: blocking.length ? 'blocked' : 'ready', preflighted_at: trx.fn.now(), updated_at: trx.fn.now() });
+    });
+    return { blocking, counts };
+  }
+}
+
+export const MIGRATION_PHASE_ORDER: readonly AmpEntityType[] = ['organizations', 'locations', 'contacts', 'tickets', 'ticket_comments', 'assets'];
+function phaseFor(entity: AmpEntityType): number { return MIGRATION_PHASE_ORDER.indexOf(entity) + 1; }
