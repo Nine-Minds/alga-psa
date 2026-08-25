@@ -1,0 +1,1 @@
+{"name":"@alga-psa/migration-connectors","version":"1.0.0","private":true,"type":"module","exports":{".":{"types":"./src/index.ts","import":"./src/index.ts"}},"scripts":{"typecheck":"tsc --noEmit","test":"vitest run"},"dependencies":{"@alga-psa/migration-sdk":"*","@alga-psa/migration-spec":"*","papaparse":"^5.5.3"},"devDependencies":{"typescript":"^5.7.3","vitest":"^4.1.9"}}
