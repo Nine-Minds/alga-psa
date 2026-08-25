@@ -9,13 +9,13 @@
       "import": "./src/index.ts"
     },
     "./csv": {
-      "types": "./src/csv.ts",
-      "import": "./src/csv.ts"
+      "types": "./src/csv/index.ts",
+      "import": "./src/csv/index.ts"
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@alga-psa/migration-sdk": "*",
@@ -24,7 +24,7 @@
     "papaparse": "^5.5.3"
   },
   "devDependencies": {
-    "@types/papaparse": "^5.3.15",
+    "@types/papaparse": "^5.3.16",
     "typescript": "^5.7.3",
     "vitest": "^4.1.9"
   }

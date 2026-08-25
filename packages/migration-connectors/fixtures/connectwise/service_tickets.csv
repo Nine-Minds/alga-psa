@@ -1,0 +1,7 @@
+SR_Service_RecID,Company_RecID,Contact_RecID,Summary,Detail_Description,Status_Description,Urgency,SR_Board_Name,Date_Entered_UTC,Last_Update_UTC,Date_Closed_UTC
+401,101,301,Front desk PC will not boot,The reception workstation powers on but never reaches the login screen.,New,High,Service Desk,1/5/2026 9:30,1/5/2026 10:15,
+402,101,302,Imaging software license expired,The imaging suite reports an expired license on startup.,In Progress,Medium,Service Desk,1/7/2026 14:05,1/8/2026 8:45,
+403,102,303,VPN drops for remote staff,Remote staff lose the VPN every afternoon.,In Progress,High,Service Desk,1/9/2026 15:22,1/12/2026 9:00,
+404,102,304,New hire onboarding,Provision a laptop and accounts for the new hire.,Closed,Low,Projects,1/10/2026 11:00,1/14/2026 16:30,1/14/2026 16:30
+405,103,305,Espresso POS offline,The point of sale terminal cannot reach the network.,Closed,Priority 1,Service Desk,1/11/2026 7:45,1/11/2026 12:10,1/11/2026 12:10
+406,103,,Quarterly patch window,Schedule the quarterly patching window.,New,Low,Service Desk,1/12/2026 13:00,1/12/2026 13:00,

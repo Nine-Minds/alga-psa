@@ -22,6 +22,7 @@ import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './ha
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
 import { handleReconcileHourBlockAllocations, ReconcileHourBlockAllocationsJobData } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
 import {
   inboundEmailRecoveryHandler,
@@ -148,6 +149,9 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await generateInvoiceHandler(job.data);
     });
     jobScheduler.registerJobHandler<AssetImportJobData>('asset_import', handleAssetImportJob);
+
+    // Register the AMP migration application handler
+    jobScheduler.registerJobHandler<MigrationApplyJobData>('migration_apply', handleMigrationApplyJob);
     
     // Register expired credits handler
     jobScheduler.registerJobHandler<ExpiredCreditsJobData>('expired-credits', async (job: Job<ExpiredCreditsJobData>) => {
