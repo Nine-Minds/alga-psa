@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable, PassThrough, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
@@ -42,22 +42,26 @@ export async function POST(request: Request) {
   const storageInput = new PassThrough();
   const tempOutput = createWriteStream(packagePath, { mode: 0o600 });
   try {
-    await pipeline(Readable.fromWeb(request.body as never), meter, tempOutput);
-    const upload = StorageService.uploadStream(user.tenant, storageInput, fileName, {
-      mime_type: request.headers.get('content-type') || 'application/vnd.sqlite3', uploaded_by_id: user.user_id,
-      size: declaredSize,
-      metadata: { context: 'amp_migration_package', retention_days: 30 },
+    // Storage/file-store layers resolve the tenant from AsyncLocalStorage, so
+    // the whole ingest runs inside the session user's tenant context.
+    return await runWithTenant(user.tenant, async () => {
+      await pipeline(Readable.fromWeb(request.body as never), meter, tempOutput);
+      const upload = StorageService.uploadStream(user.tenant, storageInput, fileName, {
+        mime_type: request.headers.get('content-type') || 'application/vnd.sqlite3', uploaded_by_id: user.user_id,
+        size: declaredSize,
+        metadata: { context: 'amp_migration_package', retention_days: 30 },
+      });
+      const [stored] = await Promise.all([upload, pipeline(createReadStream(packagePath), storageInput)]);
+      if (bytes !== declaredSize) throw new Error('AMP_UPLOAD_SIZE_MISMATCH');
+      const sha256 = digest.digest('hex');
+      const { knex } = await createTenantKnex(user.tenant); const db = tenantDb(knex, user.tenant);
+      const [inserted] = await db.table('migration_jobs').insert({ tenant: user.tenant, owner_user_id: user.user_id,
+        source_file_id: stored.file_id, source_file_name: fileName, package_sha256: sha256,
+        state: 'inspecting' }).returning('migration_job_id');
+      const migrationJobId = inserted.migration_job_id ?? inserted;
+      const staged = await new MigrationStager(knex, user.tenant).stage(migrationJobId, packagePath);
+      return NextResponse.json({ migrationJobId, state: staged.rejected ? 'rejected' : 'needs_configuration', diagnostics: staged.validation.diagnostics, rowCounts: staged.validation.rowCounts }, { status: 201 });
     });
-    const [stored] = await Promise.all([upload, pipeline(createReadStream(packagePath), storageInput)]);
-    if (bytes !== declaredSize) throw new Error('AMP_UPLOAD_SIZE_MISMATCH');
-    const sha256 = digest.digest('hex');
-    const { knex } = await createTenantKnex(user.tenant); const db = tenantDb(knex, user.tenant);
-    const [inserted] = await db.table('migration_jobs').insert({ tenant: user.tenant, owner_user_id: user.user_id,
-      source_file_id: stored.file_id, source_file_name: fileName, package_sha256: sha256,
-      state: 'inspecting' }).returning('migration_job_id');
-    const migrationJobId = inserted.migration_job_id ?? inserted;
-    const staged = await new MigrationStager(knex, user.tenant).stage(migrationJobId, packagePath);
-    return NextResponse.json({ migrationJobId, state: staged.rejected ? 'rejected' : 'needs_configuration', diagnostics: staged.validation.diagnostics, rowCounts: staged.validation.rowCounts }, { status: 201 });
   } catch (error) {
     storageInput.destroy(error as Error);
     return NextResponse.json({ error: error instanceof Error ? error.message : 'AMP_UPLOAD_FAILED' }, { status: 400 });
