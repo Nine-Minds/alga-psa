@@ -585,15 +585,23 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     await this.ensureValidToken();
 
     const changes: Array<{ id: string; changeType: 'updated' | 'deleted' }> = [];
-    const initialUrl = deltaLink ?? `${this.getCalendarBasePath()}/events/delta`;
-    let requestUrl: string | undefined = initialUrl;
+    // Real Graph has no /events/delta — event change tracking is served by
+    // calendarView/delta over an explicit date window, and it returns expanded
+    // occurrences rather than series masters. The window below bounds only the
+    // initial round; every later round replays the stored @odata.deltaLink,
+    // which carries the window inside its token.
+    const DELTA_WINDOW_PAST_MS = 90 * 24 * 60 * 60 * 1000;
+    const DELTA_WINDOW_FUTURE_MS = 365 * 24 * 60 * 60 * 1000;
+    const initialUrl =
+      `${this.getCalendarBasePath()}/calendarView/delta` +
+      `?startDateTime=${encodeURIComponent(new Date(Date.now() - DELTA_WINDOW_PAST_MS).toISOString())}` +
+      `&endDateTime=${encodeURIComponent(new Date(Date.now() + DELTA_WINDOW_FUTURE_MS).toISOString())}`;
+    let requestUrl: string | undefined = deltaLink ?? initialUrl;
     let nextDeltaLink: string | undefined;
 
     try {
       while (requestUrl) {
-        const response = await this.httpClient.get(requestUrl, {
-          headers: deltaLink ? {} : { Prefer: 'odata.track-changes' }
-        });
+        const response = await this.httpClient.get(requestUrl);
 
         const items = response.data?.value || [];
         for (const item of items) {

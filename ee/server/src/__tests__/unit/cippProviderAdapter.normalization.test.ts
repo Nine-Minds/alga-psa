@@ -65,6 +65,31 @@ describe('CippProviderAdapter normalization', () => {
     );
   });
 
+  it('consumes customerId, the field real CIPP ListTenants identifies tenants by', async () => {
+    axiosGetMock.mockResolvedValue({
+      data: [
+        {
+          customerId: 'customer-tenant-1',
+          displayName: 'Real CIPP Tenant',
+          defaultDomainName: 'realcipp.example.com',
+        },
+      ],
+    });
+
+    const { createCippProviderAdapter } = await import(
+      '@ee/lib/integrations/entra/providers/cipp/cippProviderAdapter'
+    );
+    const adapter = createCippProviderAdapter();
+    const tenants = await adapter.listManagedTenants({ tenant: 'tenant-real' });
+
+    expect(tenants).toHaveLength(1);
+    expect(tenants[0]).toMatchObject({
+      entraTenantId: 'customer-tenant-1',
+      displayName: 'Real CIPP Tenant',
+      primaryDomain: 'realcipp.example.com',
+    });
+  });
+
   it('T051: normalizes CIPP user responses into canonical sync-user DTO fields', async () => {
     axiosGetMock.mockResolvedValue({
       data: [
@@ -108,7 +133,38 @@ describe('CippProviderAdapter normalization', () => {
       businessPhones: ['+1 555 1051'],
     });
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://cipp.example.com/api/listusers?tenantId=managed-tenant-51',
+      'https://cipp.example.com/api/listusers?tenantFilter=managed-tenant-51',
+      expect.objectContaining({
+        headers: {
+          Authorization: 'Bearer cipp-token',
+          'X-API-KEY': 'cipp-token',
+        },
+      })
+    );
+  });
+
+  it('filters non-security groups out of CIPP ListGroups rows', async () => {
+    // Invoke-ListGroups.ps1 returns every group type and selects
+    // securityEnabled so the caller can filter — matching the direct adapter.
+    axiosGetMock.mockResolvedValue({
+      data: [
+        { id: 'group-sec', displayName: 'Security Group', securityEnabled: true },
+        { id: 'group-dist', displayName: 'Distribution List', securityEnabled: false },
+      ],
+    });
+
+    const { createCippProviderAdapter } = await import(
+      '@ee/lib/integrations/entra/providers/cipp/cippProviderAdapter'
+    );
+    const adapter = createCippProviderAdapter();
+    const groups = await adapter.listSecurityGroupsForTenant({
+      tenant: 'tenant-groups',
+      managedTenantId: 'managed-tenant-groups',
+    });
+
+    expect(groups).toEqual([{ id: 'group-sec', displayName: 'Security Group' }]);
+    expect(axiosGetMock).toHaveBeenCalledWith(
+      'https://cipp.example.com/api/listgroups?tenantFilter=managed-tenant-groups',
       expect.objectContaining({
         headers: {
           Authorization: 'Bearer cipp-token',
@@ -119,10 +175,10 @@ describe('CippProviderAdapter normalization', () => {
   });
 
   it('T114: checks group membership from CIPP user-group endpoint payload', async () => {
+    // The shape Invoke-ListUserGroups.ps1 actually returns: a plain array with
+    // a lowercase id and PascalCase display fields.
     axiosGetMock.mockResolvedValue({
-      data: {
-        value: [{ id: 'group-114' }],
-      },
+      data: [{ id: 'group-114', DisplayName: 'Group 114', SecurityGroup: true }],
     });
 
     const { createCippProviderAdapter } = await import(
@@ -139,7 +195,7 @@ describe('CippProviderAdapter normalization', () => {
 
     expect(isMember).toBe(true);
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://cipp.example.com/api/usergroups?tenantId=managed-tenant-114&userId=user-114',
+      'https://cipp.example.com/api/listusergroups?tenantFilter=managed-tenant-114&userId=user-114',
       expect.objectContaining({
         headers: {
           Authorization: 'Bearer cipp-token',

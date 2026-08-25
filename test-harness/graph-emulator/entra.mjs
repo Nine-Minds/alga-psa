@@ -19,6 +19,7 @@ export const entraState = {
   organization: null,
   tenants: new Map(),
   users: new Map(),
+  groups: new Map(),
   /** When set, CIPP requests must present this key; when null, any key passes. */
   cippApiKey: null,
 };
@@ -27,6 +28,7 @@ export function resetEntra() {
   entraState.organization = null;
   entraState.tenants.clear();
   entraState.users.clear();
+  entraState.groups.clear();
   entraState.cippApiKey = null;
 }
 
@@ -70,8 +72,36 @@ export function upsertUser(input) {
   return user;
 }
 
+export function upsertGroup(input) {
+  const group = {
+    id: String(input.id || randomUUID()),
+    tenantId: String(input.tenantId || ''),
+    displayName: input.displayName ?? null,
+    securityEnabled: input.securityEnabled === undefined ? true : Boolean(input.securityEnabled),
+    memberIds: new Set(Array.isArray(input.memberIds) ? input.memberIds.map(String) : []),
+  };
+  if (!group.tenantId) {
+    throw new Error('a group needs a tenantId');
+  }
+  entraState.groups.set(group.id, group);
+  return group;
+}
+
 function usersForTenant(tenantId) {
   return [...entraState.users.values()].filter((user) => user.tenantId === tenantId);
+}
+
+function groupsForTenant(tenantId) {
+  return [...entraState.groups.values()].filter((group) => group.tenantId === tenantId);
+}
+
+/** A group as Graph returns it: membership stays behind checkMemberGroups. */
+function toGraphGroup(group) {
+  return {
+    id: group.id,
+    displayName: group.displayName,
+    securityEnabled: group.securityEnabled,
+  };
 }
 
 function tenantWithCounts(tenant) {
@@ -146,6 +176,26 @@ export function seedMspPreset() {
   upsertUser({ tenantId: entraState.organization.id, displayName: 'Sam Delgado', givenName: 'Sam', surname: 'Delgado', mail: 'sam@delgado-it.com', jobTitle: 'Owner' });
   upsertUser({ tenantId: entraState.organization.id, displayName: 'Rae Mbeki', givenName: 'Rae', surname: 'Mbeki', mail: 'rae@delgado-it.com', jobTitle: 'Service Desk' });
 
+  // Security groups, so group-scoped sync is exercisable: one security group
+  // covering part of Contoso, and a non-security (distribution) group that
+  // /groups consumers must filter out.
+  const contosoId = '22222222-2222-4222-8222-222222222222';
+  const contosoByMail = new Map(usersForTenant(contosoId).map((user) => [user.mail, user.id]));
+  upsertGroup({
+    id: '55555555-5555-4555-8555-555555555555',
+    tenantId: contosoId,
+    displayName: 'Contoso Synced Staff',
+    securityEnabled: true,
+    memberIds: [contosoByMail.get('ada.lovelace@contoso.com'), contosoByMail.get('grace.hopper@contoso.com')].filter(Boolean),
+  });
+  upsertGroup({
+    id: '66666666-6666-4666-8666-666666666666',
+    tenantId: contosoId,
+    displayName: 'Contoso Announcements',
+    securityEnabled: false,
+    memberIds: [...contosoByMail.values()],
+  });
+
   return summarizeEntra();
 }
 
@@ -154,14 +204,9 @@ export function summarizeEntra() {
     organization: entraState.organization,
     tenants: [...entraState.tenants.values()].map(tenantWithCounts),
     userCount: entraState.users.size,
+    groupCount: entraState.groups.size,
     cippApiKeyPinned: Boolean(entraState.cippApiKey),
   };
-}
-
-/** `$filter=tenantId eq 'x'` is the only filter the adapter sends. */
-function tenantIdFromFilter(filter) {
-  const match = /tenantId\s+eq\s+'([^']*)'/i.exec(filter || '');
-  return match ? decodeURIComponent(match[1]) : null;
 }
 
 /**
@@ -184,10 +229,24 @@ function pagedResponse(rows, url, top) {
 }
 
 /**
- * Graph endpoints the Entra integration reads. Returns true when handled, so
- * the caller can fall through to the mail surface.
+ * The directory a token reads: a token minted against a managed (customer)
+ * tenant's authority reads that tenant, the same way real Microsoft scopes a
+ * token to the authority it was requested from. Anything else ('common',
+ * 'organizations', or the partner's own tenant id) reads the partner org.
  */
-export function handleEntraGraph(req, res, graphPath, url, json) {
+function directoryScope(access) {
+  const authority = String(access?.authorityTenant || 'common');
+  const managedTenant = entraState.tenants.get(authority);
+  if (managedTenant) return managedTenant.tenantId;
+  return entraState.organization ? entraState.organization.id : null;
+}
+
+/**
+ * Graph endpoints the Entra integration reads. Returns true when handled, so
+ * the caller can fall through to the mail surface. `access` is the validated
+ * token record; `readBody` parses a request body for the POST routes.
+ */
+export async function handleEntraGraph(req, res, graphPath, url, json, access = null, readBody = null) {
   const top = Number(url.searchParams.get('$top') || 0);
 
   if (req.method === 'GET' && graphPath === '/tenantRelationships/managedTenants/tenants') {
@@ -196,10 +255,17 @@ export function handleEntraGraph(req, res, graphPath, url, json) {
     return true;
   }
 
-  if (req.method === 'GET' && graphPath === '/tenantRelationships/managedTenants/users') {
-    const tenantId = tenantIdFromFilter(url.searchParams.get('$filter'));
-    const rows = tenantId ? usersForTenant(tenantId) : [...entraState.users.values()];
-    json(res, 200, pagedResponse(rows, url, top));
+  // Faithful to real Graph: the Lighthouse managedTenant resource has no
+  // `users` relationship. This emulator once invented one, production code was
+  // e2e-tested against it, and every real-world sync then failed on this exact
+  // 400. Keep answering the way Microsoft does so that cannot happen again.
+  if (graphPath.startsWith('/tenantRelationships/managedTenants/users')) {
+    json(res, 400, {
+      error: {
+        code: 'BadRequest',
+        message: "Resource not found for the segment 'users'.",
+      },
+    });
     return true;
   }
 
@@ -209,10 +275,36 @@ export function handleEntraGraph(req, res, graphPath, url, json) {
   }
 
   if (req.method === 'GET' && graphPath === '/users') {
-    const rows = entraState.organization
-      ? usersForTenant(entraState.organization.id)
-      : [...entraState.users.values()];
+    const scope = directoryScope(access);
+    const rows = scope ? usersForTenant(scope) : [...entraState.users.values()];
+    // Real /users rows carry no tenantId property — that was part of the
+    // invented managedTenants shape. Strip it so nothing can depend on it.
+    json(res, 200, pagedResponse(rows.map(({ tenantId, ...user }) => user), url, top));
+    return true;
+  }
+
+  if (req.method === 'GET' && graphPath === '/groups') {
+    const scope = directoryScope(access);
+    const rows = (scope ? groupsForTenant(scope) : [...entraState.groups.values()]).map(toGraphGroup);
     json(res, 200, pagedResponse(rows, url, top));
+    return true;
+  }
+
+  const checkMemberGroups = req.method === 'POST' && /^\/users\/([^/]+)\/checkMemberGroups$/.exec(graphPath);
+  if (checkMemberGroups && readBody) {
+    const userId = decodeURIComponent(checkMemberGroups[1]);
+    const scope = directoryScope(access);
+    const input = await readBody(req);
+    const groupIds = Array.isArray(input.groupIds) ? input.groupIds.map(String) : [];
+    const value = groupIds.filter((groupId) => {
+      const group = entraState.groups.get(groupId);
+      return Boolean(
+        group
+        && (!scope || group.tenantId === scope)
+        && group.memberIds.has(userId)
+      );
+    });
+    json(res, 200, { value });
     return true;
   }
 
@@ -238,25 +330,36 @@ export function handleCippApi(req, res, url, json) {
     return true;
   }
 
+  // Faithful to CIPP-API: a tenant is identified by `customerId` (no
+  // `tenantId`, no `userCount` — inventing those once masked a production bug
+  // that read only fields real CIPP never returns).
   if (req.method === 'GET' && url.pathname === '/api/listtenants') {
-    json(res, 200, [...entraState.tenants.values()].map((tenant) => {
-      const withCounts = tenantWithCounts(tenant);
-      return {
-        customerId: withCounts.tenantId,
-        tenantId: withCounts.tenantId,
-        displayName: withCounts.displayName,
-        defaultDomainName: withCounts.defaultDomainName,
-        userCount: withCounts.userCount,
-      };
-    }));
+    json(res, 200, [...entraState.tenants.values()].map((tenant) => ({
+      customerId: tenant.tenantId,
+      displayName: tenant.displayName,
+      defaultDomainName: tenant.defaultDomainName,
+    })));
     return true;
   }
 
+  // Faithful to CIPP-API source (`$Request.Query.tenantFilter`): tenant
+  // scoping is `tenantFilter` (a customerId GUID or default domain), and it
+  // is required. Accepting `tenantId` here once masked production sending a
+  // parameter real CIPP ignores.
+  const requireTenantFilter = () => {
+    const tenantFilter = url.searchParams.get('tenantFilter');
+    if (!tenantFilter) {
+      json(res, 400, { error: 'BadRequest', message: 'tenantFilter is required.' });
+      return null;
+    }
+    return String(tenantFilter);
+  };
+
   if (req.method === 'GET' && url.pathname === '/api/listusers') {
-    const tenantId = url.searchParams.get('tenantId') || url.searchParams.get('TenantFilter');
-    json(res, 200, usersForTenant(String(tenantId || '')).map((user) => ({
+    const tenantFilter = requireTenantFilter();
+    if (tenantFilter === null) return true;
+    json(res, 200, usersForTenant(tenantFilter).map((user) => ({
       id: user.id,
-      tenantId: user.tenantId,
       displayName: user.displayName,
       givenName: user.givenName,
       surname: user.surname,
@@ -267,6 +370,31 @@ export function handleCippApi(req, res, url, json) {
       mobilePhone: user.mobilePhone,
       businessPhones: user.businessPhones,
     })));
+    return true;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/listgroups') {
+    const tenantFilter = requireTenantFilter();
+    if (tenantFilter === null) return true;
+    json(res, 200, groupsForTenant(tenantFilter).map(toGraphGroup));
+    return true;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/listusergroups') {
+    const tenantFilter = requireTenantFilter();
+    if (tenantFilter === null) return true;
+    const userId = String(url.searchParams.get('userId') || '');
+    // Faithful to Invoke-ListUserGroups.ps1's projection: lowercase `id`,
+    // PascalCase display fields — consumers must not expect Graph's
+    // `displayName`/`securityEnabled` here.
+    json(res, 200, groupsForTenant(tenantFilter)
+      .filter((group) => group.memberIds.has(userId))
+      .map((group) => ({
+        id: group.id,
+        DisplayName: group.displayName,
+        SecurityGroup: group.securityEnabled,
+        calculatedGroupType: group.securityEnabled ? 'generic' : 'distributionList',
+      })));
     return true;
   }
 
@@ -318,6 +446,13 @@ export async function handleEntraControl(req, res, url, readBody, json) {
   if (req.method === 'POST' && url.pathname === '/__control/entra/users') {
     const input = await readBody(req);
     json(res, 201, upsertUser(input));
+    return true;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/__control/entra/groups') {
+    const input = await readBody(req);
+    const group = upsertGroup(input);
+    json(res, 201, { ...toGraphGroup(group), tenantId: group.tenantId, memberIds: [...group.memberIds] });
     return true;
   }
 
