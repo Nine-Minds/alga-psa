@@ -36,8 +36,8 @@ export const MIGRATION_ENTITY_LABELS: Record<AmpEntityType, string> = {
   assets: 'Assets',
 };
 
-export function migrationEntityLabel(entityType: AmpEntityType | string): string {
-  return MIGRATION_ENTITY_LABELS[entityType as AmpEntityType] ?? String(entityType);
+export function migrationEntityLabel(entityType: string): string {
+  return MIGRATION_ENTITY_LABELS[entityType as AmpEntityType] ?? entityType;
 }
 
 /** Job-lifecycle steps shown in the detail stepper. */

@@ -162,9 +162,10 @@ const MigrationsEmptyState = (): React.JSX.Element => (
 );
 
 const JobEntitySummary = ({ job }: { job: MigrationJobSummary }): React.JSX.Element => {
-  const parts = MIGRATION_PHASE_ORDER.filter(
-    (entityType): entityType is AmpEntityType => Boolean(job.entityCounts[entityType])
-  );
+  const parts = MIGRATION_PHASE_ORDER.flatMap((entityType: AmpEntityType) => {
+    const progress = job.entityCounts[entityType];
+    return progress ? [{ entityType, progress }] : [];
+  });
 
   if (parts.length === 0) {
     return <span className="text-sm text-muted-foreground">—</span>;
@@ -172,18 +173,15 @@ const JobEntitySummary = ({ job }: { job: MigrationJobSummary }): React.JSX.Elem
 
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-      {parts.map((entityType) => {
-        const progress = job.entityCounts[entityType]!;
-        return (
-          <span key={entityType} className="whitespace-nowrap">
-            <span className="font-medium text-foreground">{migrationEntityLabel(entityType)}</span>{' '}
-            {progress.appliedCount}/{progress.plannedCount}
-            {progress.failedCount > 0 && (
-              <span className="text-destructive"> ({progress.failedCount} failed)</span>
-            )}
-          </span>
-        );
-      })}
+      {parts.map(({ entityType, progress }) => (
+        <span key={entityType} className="whitespace-nowrap">
+          <span className="font-medium text-foreground">{migrationEntityLabel(entityType)}</span>{' '}
+          {progress.appliedCount}/{progress.plannedCount}
+          {progress.failedCount > 0 && (
+            <span className="text-destructive"> ({progress.failedCount} failed)</span>
+          )}
+        </span>
+      ))}
     </div>
   );
 };
@@ -299,7 +297,7 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
         <Button id="amp-upload-cancel-button" variant="outline" onClick={resetAndClose} disabled={isUploading}>
           {rejectionDiagnostics ? 'Close' : 'Cancel'}
         </Button>
-        <Button id="amp-upload-submit-button" onClick={handleUpload} disabled={!file || isUploading}>
+        <Button id="amp-upload-submit-button" onClick={() => void handleUpload()} disabled={!file || isUploading}>
           {isUploading ? (
             <span className="flex items-center gap-2">
               <Spinner size="sm" />

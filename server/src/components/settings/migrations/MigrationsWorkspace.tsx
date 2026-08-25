@@ -16,12 +16,9 @@ const MigrationsWorkspace = (): React.JSX.Element => {
 
   const [selectedJobId, setSelectedJobId] = useState<string | null>(jobIdParam);
 
+  // Resync from the URL when it changes (back/forward, shared links).
   useEffect(() => {
-    if (jobIdParam !== selectedJobId) {
-      setSelectedJobId(jobIdParam);
-    }
-    // Only resync from the URL when the URL itself changes (back/forward, links).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setSelectedJobId(jobIdParam);
   }, [jobIdParam]);
 
   const updateUrl = useCallback((migrationJobId: string | null) => {
