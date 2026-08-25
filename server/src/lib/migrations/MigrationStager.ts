@@ -15,7 +15,6 @@ export class MigrationStager {
     const result = validateAmpPackage(packagePath);
     if (!result.manifest) throw new Error('AMP_INVALID_MANIFEST: package has no usable manifest.');
     const diagnostics = result.diagnostics;
-    const blocking = !result.valid;
     const reader = new AmpSqliteReader(packagePath);
     try {
       await withTransaction(this.db, async trx => {
@@ -33,20 +32,20 @@ export class MigrationStager {
               package_record_id: String(row.package_record_id), source_record_id: String(row.source_record_id),
               namespace: String(row.external_identifier_namespace), payload: JSON.stringify(row),
               validation_errors: JSON.stringify(diagnostics.filter(d => d.table === entityType && d.recordId === row.package_record_id)),
-              validation_state: blocking ? 'blocked' : 'valid',
+              validation_state: diagnostics.some(d => d.table === entityType && d.recordId === row.package_record_id) ? 'blocked' : 'valid',
             })));
           }
           await scoped('migration_job_entities').insert({ migration_job_id: jobId, entity_type: entityType, phase: phaseFor(entityType), planned_count: rows.length });
         }
         await scoped('migration_jobs').where({ migration_job_id: jobId }).update({
-          state: blocking ? 'blocked' : 'needs_configuration', manifest: JSON.stringify(result.manifest),
+          state: !result.valid ? 'blocked' : 'needs_configuration', manifest: JSON.stringify(result.manifest),
           package_id: result.manifest.package_id, format_version: result.manifest.format_version,
           producer_name: result.manifest.producer_name, producer_version: result.manifest.producer_version,
           updated_at: trx.fn.now(),
         });
       });
     } finally { reader.close(); }
-    return { diagnostics, blocking };
+    return { diagnostics, blocking: !result.valid };
   }
 }
 
@@ -56,7 +55,7 @@ export class MigrationPlanner {
 
   async preflight(jobId: string): Promise<{ blocking: AmpDiagnostic[]; counts: Partial<Record<AmpEntityType, number>> }> {
     const scoped = tenantDb(this.db, this.tenant);
-    const records = await scoped('migration_staged_records').where({ migration_job_id: jobId }).select('entity_type', 'package_record_id', 'payload');
+    const records = await scoped('migration_staged_records').where({ migration_job_id: jobId }).select('migration_staged_record_id', 'entity_type', 'package_record_id', 'payload');
     const ids = new Map<AmpEntityType, Set<string>>();
     const counts: Partial<Record<AmpEntityType, number>> = {};
     for (const row of records) {
@@ -76,7 +75,13 @@ export class MigrationPlanner {
     }
     await withTransaction(this.db, async trx => {
       const tx = tenantDb(trx, this.tenant);
-      await tx('migration_staged_records').where({ migration_job_id: jobId }).update({ validation_state: blocking.length ? 'blocked' : 'valid' });
+      for (const row of records) {
+        const rowErrors = blocking.filter(error => error.table === row.entity_type && error.recordId === row.package_record_id);
+        const existing = await tx('migration_staged_records').where({ migration_job_id: jobId, migration_staged_record_id: row.migration_staged_record_id }).first('validation_errors');
+        const existingErrors = typeof existing?.validation_errors === 'string' ? JSON.parse(existing.validation_errors) : (existing?.validation_errors ?? []);
+        const errors = [...existingErrors, ...rowErrors];
+        await tx('migration_staged_records').where({ migration_job_id: jobId, migration_staged_record_id: row.migration_staged_record_id }).update({ validation_state: errors.length ? 'blocked' : 'valid', validation_errors: JSON.stringify(errors) });
+      }
       await tx('migration_jobs').where({ migration_job_id: jobId }).update({ state: blocking.length ? 'blocked' : 'ready', preflighted_at: trx.fn.now(), updated_at: trx.fn.now() });
     });
     return { blocking, counts };
