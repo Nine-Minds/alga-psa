@@ -857,34 +857,20 @@ function formatAssetForOutput(asset: any): Asset {
 }
 
 /**
- * Actor-injectable asset creation core (no withAuth). Shared by the createAsset
- * server action (passes the session user id) and sessionless callers such as
- * the Hudu background sync (passes a resolved tenant audit user id). Permission
- * checks live in the withAuth wrapper; this core trusts its caller.
+ * Transaction-scoped asset creation core: validates, resolves the asset
+ * type and location, and writes the asset, its extension row, and its
+ * history record inside the caller's transaction. Callers own the commit,
+ * so a migration applier can bind this write atomically with its own
+ * ledger rows. Post-commit workflow events are the caller's concern
+ * (createAssetRecord publishes them after its own commit).
  */
-export async function createAssetRecord(
-    knex: Knex,
+export async function createAssetInTransaction(
+    trx: Knex.Transaction,
     tenant: string,
     actorUserId: string,
     data: CreateAssetRequest,
-    // Importers (e.g. Hudu) project best-effort attributes and must never fail
-    // on a required custom field the source didn't supply; they pass false.
     options?: { requireCustomAttributes?: boolean }
 ): Promise<Asset> {
-    try {
-        // Validate input data first
-        try {
-            validateData(createAssetSchema, data);
-        } catch (error) {
-            console.error('Input validation error:', error);
-            if (error instanceof z.ZodError) {
-                throw serializedAssetValidationError(error);
-            }
-            throw new Error('Invalid asset input data. Review required fields and try again.');
-        }
-
-        // Start transaction
-        const result = await knex.transaction(async (trx: Knex.Transaction) => {
             // Validate the input data
             const validatedData = validateData(createAssetSchema, data);
 
@@ -962,8 +948,42 @@ export async function createAssetRecord(
             const completeAsset = await getAssetWithExtensions(trx, tenant, asset.asset_id);
 
             // Format the asset data properly before returning
-            return formatAssetForOutput(completeAsset);
-        });
+            return formatAssetForOutput(completeAsset) as Asset;
+}
+
+/**
+ * Actor-injectable asset creation core (no withAuth). Shared by the createAsset
+ * server action (passes the session user id) and sessionless callers such as
+ * the Hudu background sync (passes a resolved tenant audit user id). Permission
+ * checks live in the withAuth wrapper; this core trusts its caller. It owns
+ * its transaction; callers that must commit atomically with other writes use
+ * createAssetInTransaction and publish events themselves.
+ */
+export async function createAssetRecord(
+    knex: Knex,
+    tenant: string,
+    actorUserId: string,
+    data: CreateAssetRequest,
+    // Importers (e.g. Hudu) project best-effort attributes and must never fail
+    // on a required custom field the source didn't supply; they pass false.
+    options?: { requireCustomAttributes?: boolean }
+): Promise<Asset> {
+    try {
+        // Validate input data first
+        try {
+            validateData(createAssetSchema, data);
+        } catch (error) {
+            console.error('Input validation error:', error);
+            if (error instanceof z.ZodError) {
+                throw serializedAssetValidationError(error);
+            }
+            throw new Error('Invalid asset input data. Review required fields and try again.');
+        }
+
+        // Start transaction
+        const result = await knex.transaction(async (trx: Knex.Transaction) =>
+            createAssetInTransaction(trx, tenant, actorUserId, data, options)
+        );
 
         // Validate the formatted output
         try {
