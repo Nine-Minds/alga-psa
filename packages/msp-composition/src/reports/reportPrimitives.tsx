@@ -43,7 +43,14 @@ export function PrintSummary({ metrics }: { metrics: PrintMetric[] }) {
           <tr>
             {metrics.map((metric) => (
               <td key={metric.label} style={{ verticalAlign: 'top' }}>
-                <div style={{ fontSize: '8pt', color: '#555', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div
+                  style={{
+                    fontSize: '8pt',
+                    color: 'rgb(var(--color-text-500))',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                  }}
+                >
                   {metric.label}
                 </div>
                 <div style={{ fontSize: '15pt', fontWeight: 700, marginTop: '2pt' }}>{metric.value}</div>
