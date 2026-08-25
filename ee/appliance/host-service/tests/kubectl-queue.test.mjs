@@ -44,3 +44,13 @@ test('SerialCommandQueue passes provided stdin to the command', async () => {
   assert.equal(result.stdout, 'secret-value');
   assert.equal(result.command.includes('secret-value'), false);
 });
+
+test('SerialCommandQueue preserves large JSON responses for Kubernetes API consumers', async () => {
+  const queue = createKubectlQueue({ name: 'test-large-json' });
+  const result = await queue.enqueue(
+    "node -e \"process.stdout.write(JSON.stringify({items:[{metadata:{annotations:{payload:'x'.repeat(300 * 1024)}}}]}))\""
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(JSON.parse(result.stdout).items[0].metadata.annotations.payload.length, 300 * 1024);
+});
