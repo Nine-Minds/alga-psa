@@ -83,20 +83,37 @@ export class LocationMigrationApplier implements EntityApplier {
       );
     }
 
+    const countryCode = record.country_code?.trim().toUpperCase() ?? '';
+    const countryName = countryNameForCode(countryCode);
+    if (!record.address_line1?.trim() || !record.city?.trim() || !countryCode || !countryName) {
+      // This should have been caught by preflight. Keep the domain invariant
+      // explicit here too so a manually altered staging row cannot create an
+      // invalid location mid-apply.
+      throw new Error('Location requires address line 1, city, country code, and country name.');
+    }
     const location = await createLocation(trx, context.tenant, clientId, {
       location_name: record.name,
-      address_line1: record.address_line1 ?? '',
+      address_line1: record.address_line1,
       address_line2: record.address_line2 ?? undefined,
-      city: record.city ?? '',
+      city: record.city,
       state_province: record.region ?? undefined,
       postal_code: record.postal_code ?? undefined,
-      country_code: record.country_code ?? '',
-      country_name: '',
+      country_code: countryCode,
+      country_name: countryName,
       phone: record.phone ?? undefined,
       is_active: true,
     });
 
     return { targetEntityType: this.targetEntityType, targetEntityId: location.location_id };
+  }
+}
+
+function countryNameForCode(countryCode: string): string | null {
+  if (!/^[A-Z]{2}$/.test(countryCode)) return null;
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(countryCode) ?? null;
+  } catch {
+    return null;
   }
 }
 

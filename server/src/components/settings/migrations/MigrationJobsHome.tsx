@@ -13,7 +13,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import type { AmpDiagnostic } from '@alga-psa/migration-sdk';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
-import { listMigrationJobs, uploadMigrationPackage } from '@/lib/migrations/migrationActions';
+import { listMigrationJobs } from '@/lib/migrations/migrationActions';
 import { MAX_MIGRATION_PACKAGE_BYTES, MIGRATION_PHASE_ORDER, type MigrationJobSummary } from '@/lib/migrations/types';
 import {
   formatMigrationTimestamp,
@@ -223,9 +223,17 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
     setUploadError(null);
     setRejectionDiagnostics(null);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const result = await uploadMigrationPackage(formData);
+      const response = await fetch('/api/migrations/upload', {
+        method: 'POST',
+        headers: {
+          'content-type': file.type || 'application/vnd.sqlite3',
+          'content-length': String(file.size),
+          'x-amp-file-name': encodeURIComponent(file.name),
+        },
+        body: file.stream(),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to upload the package.');
       if (result.state === 'rejected') {
         setRejectionDiagnostics(result.diagnostics);
         onUploaded(result.migrationJobId, true);

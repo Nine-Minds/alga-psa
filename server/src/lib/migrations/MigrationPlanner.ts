@@ -42,6 +42,7 @@ export class MigrationPlanner {
     if ((stagedCounts.assets ?? 0) > 0) {
       issues.push(...(await this.checkAssetConfiguration(migrationJobId, configuration)));
     }
+    issues.push(...(await this.checkLocationRequirements(migrationJobId)));
     issues.push(...(await this.checkOrphanPlacement(migrationJobId, configuration, stagedCounts)));
 
     const skipCounts = await this.identityMappedCounts(migrationJobId);
@@ -380,6 +381,44 @@ export class MigrationPlanner {
     }
 
     return issues;
+  }
+
+  /** Locations are created through the client domain model, whose address
+   * invariant is stricter than AMP's portable optional address fields. Flag
+   * incompatible records during dry-run rather than failing an apply batch. */
+  private async checkLocationRequirements(migrationJobId: string): Promise<PreflightIssue[]> {
+    const db = tenantDb(this.knex, this.tenant);
+    const rows = await db
+      .table('migration_staged_records')
+      .where({ migration_job_id: migrationJobId, entity_type: 'locations' })
+      .where((query) => query
+        .whereRaw("COALESCE(BTRIM(payload ->> 'address_line1'), '') = ''")
+        .orWhereRaw("COALESCE(BTRIM(payload ->> 'city'), '') = ''")
+        .orWhereRaw("COALESCE(BTRIM(payload ->> 'country_code'), '') !~ '^[A-Za-z]{2}$'"))
+      .count({ count: '*' })
+      .first();
+    const count = Number(rows?.count ?? 0);
+    if (count === 0) return [];
+    const blocked = await this.blockRecords(
+      migrationJobId,
+      'locations',
+      (query) => query
+        .whereRaw("COALESCE(BTRIM(payload ->> 'address_line1'), '') = ''")
+        .orWhereRaw("COALESCE(BTRIM(payload ->> 'city'), '') = ''")
+        .orWhereRaw("COALESCE(BTRIM(payload ->> 'country_code'), '') !~ '^[A-Za-z]{2}$'"),
+      {
+        code: 'LOCATION_REQUIRED_ADDRESS_MISSING',
+        message: 'Location requires address line 1, city, and a two-letter country code for the target location model.',
+      }
+    );
+    return [{
+      severity: 'blocking',
+      code: 'LOCATION_REQUIRED_ADDRESS_MISSING',
+      message: `${count} location record(s) are missing target-required address fields.`,
+      entityType: 'locations',
+      recordCount: blocked.count,
+      sampleRecordIds: blocked.sample,
+    }];
   }
 
   private async identityMappedCounts(

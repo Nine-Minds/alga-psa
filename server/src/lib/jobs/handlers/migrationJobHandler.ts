@@ -1,6 +1,7 @@
 import type { Job } from 'pg-boss';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { runWithTenant } from '@/lib/db';
+import { getConnection } from '@/lib/db/db';
 import { MigrationDomainApplier } from '@/lib/migrations/appliers/MigrationDomainApplier';
 import { MigrationPlanner } from '@/lib/migrations/MigrationPlanner';
 
@@ -34,7 +35,12 @@ export async function handleMigrationApplyJob(job: Job<MigrationApplyJobData>): 
   }
 
   await runWithTenant(tenantId, async () => {
-    const { knex } = await createTenantKnex(tenantId);
+    const knex = await getConnection(tenantId);
+    // Job workers do not have request middleware to seed RLS context. Set
+    // both GUCs on the tenant connection before any migration query; domain
+    // applier transactions remain bounded per record/batch.
+    await knex.raw('select set_config(?, ?, false)', ['app.current_tenant', tenantId]);
+    await knex.raw('select set_config(?, ?, false)', ['app.current_user', userId]);
     const db = tenantDb(knex, tenantId);
 
     const migrationJob = await db

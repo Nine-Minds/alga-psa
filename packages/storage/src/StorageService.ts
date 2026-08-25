@@ -95,6 +95,43 @@ export class StorageService {
       // workflow that produced it. FILE_UPLOADED still fires (unchanged).
       isDerivedArtifact?: boolean;
     }
+
+    /**
+     * Store an already-size-limited non-image stream without materialising it
+     * in process memory. This is deliberately narrow: image normalisation
+     * still belongs to uploadFile, while large immutable import artifacts can
+     * be handed directly to streaming-capable providers.
+     */
+    static async uploadStream(
+      tenant: string,
+      stream: Readable,
+      originalName: string,
+      options: { mime_type?: string; uploaded_by_id: string; size: number; metadata?: Record<string, any> }
+    ): Promise<FileStore> {
+      if (!options.uploaded_by_id) throw new Error('uploaded_by_id is required');
+      await validateFileConfig(options.mime_type || 'application/octet-stream', options.size);
+      const provider = await StorageProviderFactory.createProvider();
+      const storagePath = generateStoragePath(tenant, '', originalName);
+      const uploaded = await provider.upload(stream, storagePath, {
+        mime_type: options.mime_type || 'application/octet-stream',
+      });
+      if (uploaded.size !== options.size) {
+        await provider.delete(uploaded.path);
+        throw new Error('Uploaded stream size did not match the declared size');
+      }
+      const { knex } = await createTenantKnex(tenant);
+      const file = await FileStoreModel.create(knex, {
+        fileId: uuidv4(),
+        file_name: uploaded.path.split('/').pop()!,
+        original_name: originalName,
+        mime_type: uploaded.mime_type,
+        file_size: uploaded.size,
+        storage_path: uploaded.path,
+        uploaded_by_id: options.uploaded_by_id,
+      });
+      if (options.metadata) await FileStoreModel.updateMetadata(knex, file.file_id, options.metadata);
+      return file;
+    }
   ) {
     try {
       if (!options.uploaded_by_id) {
