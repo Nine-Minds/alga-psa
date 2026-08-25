@@ -1,32 +1,21 @@
 'use server';
 
-import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { Buffer } from 'node:buffer';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobService } from '@alga-psa/jobs';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
-import { MigrationStager } from './MigrationStager';
 import { MigrationPlanner, parseConfiguration } from './MigrationPlanner';
 import { MigrationReportService } from './MigrationReportService';
 import {
-  MAX_MIGRATION_PACKAGE_BYTES,
   type MigrationEntityProgress,
   type MigrationJobConfiguration,
   type MigrationJobDetails,
   type MigrationJobSummary,
   type MigrationOutcomeRecord,
   type MigrationOutcomeSummary,
-  type MigrationUploadResult,
   type PreflightResult,
 } from './types';
-
-const SUPPORTED_PACKAGE_EXTENSIONS = ['.amp', '.sqlite'];
 
 async function requirePermission(action: 'read' | 'manage'): Promise<{ tenant: string; userId: string }> {
   const currentUser = await getCurrentUser();
@@ -41,72 +30,6 @@ async function requirePermission(action: 'read' | 'manage'): Promise<{ tenant: s
     throw new Error('No tenant found');
   }
   return { tenant: currentUser.tenant, userId: currentUser.user_id };
-}
-
-/**
- * Upload an AMP package: store it, create the migration job, then inspect and
- * stage it. An invalid package is rejected with its diagnostics; nothing is
- * staged and no Alga entity is ever created by this path.
- */
-export async function uploadMigrationPackage(formData: FormData): Promise<MigrationUploadResult> {
-  const { tenant, userId } = await requirePermission('manage');
-
-  const fileEntry = formData.get('file');
-  if (!(fileEntry instanceof File)) {
-    throw new Error('No package file provided');
-  }
-  if (fileEntry.size > MAX_MIGRATION_PACKAGE_BYTES) {
-    throw new Error('Migration packages must be 250 MB or smaller.');
-  }
-  const normalizedName = fileEntry.name?.toLowerCase() ?? '';
-  const extension = normalizedName.includes('.')
-    ? normalizedName.slice(normalizedName.lastIndexOf('.'))
-    : '';
-  if (!SUPPORTED_PACKAGE_EXTENSIONS.includes(extension)) {
-    throw new Error('Unsupported file format. Upload an .amp package.');
-  }
-
-  await StorageService.validateFileUpload(tenant, 'application/octet-stream', fileEntry.size);
-
-  const buffer = Buffer.from(await fileEntry.arrayBuffer());
-  const sha256 = createHash('sha256').update(buffer).digest('hex');
-
-  const fileRecord = await StorageService.uploadFile(tenant, buffer, fileEntry.name, {
-    mime_type: 'application/octet-stream',
-    uploaded_by_id: userId,
-    metadata: { context: 'migration_package', sha256 },
-  });
-
-  const { knex } = await createTenantKnex(tenant);
-  const db = tenantDb(knex, tenant);
-  const [job] = await db
-    .table('migration_jobs')
-    .insert({
-      tenant,
-      owner_user_id: userId,
-      source_file_id: fileRecord.file_id,
-      source_file_name: fileEntry.name,
-      package_sha256: sha256,
-      state: 'inspecting',
-    })
-    .returning('migration_job_id');
-  const migrationJobId: string = job.migration_job_id ?? job;
-
-  const directory = await mkdtemp(join(tmpdir(), 'amp-upload-'));
-  const packagePath = join(directory, 'package.amp');
-  try {
-    await writeFile(packagePath, buffer, { mode: 0o600 });
-    const stager = new MigrationStager(knex, tenant);
-    const result = await stager.stage(migrationJobId, packagePath);
-    return {
-      migrationJobId,
-      state: result.rejected ? 'rejected' : 'needs_configuration',
-      diagnostics: result.validation.diagnostics,
-      rowCounts: result.validation.rowCounts,
-    };
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
 }
 
 export async function listMigrationJobs(): Promise<MigrationJobSummary[]> {
@@ -406,99 +329,6 @@ export async function getMigrationReportCsv(
       created_at: record.createdAt,
     }))
   );
-}
-
-/**
- * Phase 4: a CSV/XLSX file travels the AMP pipeline. The spreadsheet is
- * converted to an AMP package with the alga-csv-adapter producer, then flows
- * through the exact upload → inspect → stage path a native package uses, so
- * preflight, idempotency, retry, and reporting behave identically.
- */
-export async function uploadSpreadsheetAsMigrationPackage(
-  formData: FormData
-): Promise<MigrationUploadResult & { conversionDiagnostics: unknown[] }> {
-  const { tenant, userId } = await requirePermission('manage');
-
-  const fileEntry = formData.get('file');
-  const entityType = formData.get('entityType');
-  const mappingRaw = formData.get('mapping');
-  if (!(fileEntry instanceof File)) {
-    throw new Error('No spreadsheet file provided');
-  }
-  if (typeof entityType !== 'string' || entityType.trim().length === 0) {
-    throw new Error('entityType is required');
-  }
-  const mapping =
-    typeof mappingRaw === 'string' && mappingRaw.trim().length > 0
-      ? (JSON.parse(mappingRaw) as Record<string, string>)
-      : {};
-
-  const { convertSpreadsheets } = await import('@alga-psa/migration-connectors/csv');
-
-  const directory = await mkdtemp(join(tmpdir(), 'amp-csv-'));
-  try {
-    const inputPath = join(directory, fileEntry.name);
-    await writeFile(inputPath, Buffer.from(await fileEntry.arrayBuffer()), { mode: 0o600 });
-    const outputPath = join(directory, 'converted.amp');
-
-    const conversion = await convertSpreadsheets(
-      {
-        outputPath,
-        namespace: `csv:${tenant}`,
-        sourceSystem: 'csv-upload',
-        files: [
-          {
-            entityType: entityType as never,
-            path: fileEntry.name,
-            mapping,
-          },
-        ],
-      },
-      directory
-    );
-
-    const packageBuffer = await readFile(outputPath);
-    const sha256 = createHash('sha256').update(packageBuffer).digest('hex');
-
-    await StorageService.validateFileUpload(tenant, 'application/octet-stream', packageBuffer.length);
-    const fileRecord = await StorageService.uploadFile(
-      tenant,
-      packageBuffer,
-      `${fileEntry.name}.amp`,
-      {
-        mime_type: 'application/octet-stream',
-        uploaded_by_id: userId,
-        metadata: { context: 'migration_package', sha256, converted_from: fileEntry.name },
-      }
-    );
-
-    const { knex } = await createTenantKnex(tenant);
-    const db = tenantDb(knex, tenant);
-    const [job] = await db
-      .table('migration_jobs')
-      .insert({
-        tenant,
-        owner_user_id: userId,
-        source_file_id: fileRecord.file_id,
-        source_file_name: `${fileEntry.name}.amp`,
-        package_sha256: sha256,
-        state: 'inspecting',
-      })
-      .returning('migration_job_id');
-    const migrationJobId: string = job.migration_job_id ?? job;
-
-    const stager = new MigrationStager(knex, tenant);
-    const result = await stager.stage(migrationJobId, outputPath);
-    return {
-      migrationJobId,
-      state: result.rejected ? 'rejected' : 'needs_configuration',
-      diagnostics: result.validation.diagnostics,
-      rowCounts: result.validation.rowCounts,
-      conversionDiagnostics: (conversion as { diagnostics?: unknown[] }).diagnostics ?? [],
-    };
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
 }
 
 export interface MigrationMappingProfile {
