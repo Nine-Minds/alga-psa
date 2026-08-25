@@ -46,10 +46,11 @@ export async function POST(request: Request) {
     // the whole ingest runs inside the session user's tenant context.
     return await runWithTenant(user.tenant, async () => {
       await pipeline(Readable.fromWeb(request.body as never), meter, tempOutput);
+      // No `metadata` option: external_files has no metadata column; package
+      // provenance (source name, sha256) lives on the migration_jobs row.
       const upload = StorageService.uploadStream(user.tenant, storageInput, fileName, {
         mime_type: request.headers.get('content-type') || 'application/vnd.sqlite3', uploaded_by_id: user.user_id,
         size: declaredSize,
-        metadata: { context: 'amp_migration_package', retention_days: 30 },
       });
       const [stored] = await Promise.all([upload, pipeline(createReadStream(packagePath), storageInput)]);
       if (bytes !== declaredSize) throw new Error('AMP_UPLOAD_SIZE_MISMATCH');
