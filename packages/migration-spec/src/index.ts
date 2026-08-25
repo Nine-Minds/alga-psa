@@ -1,16 +1,53 @@
-export const AMP_FORMAT_VERSION = '1.0.0';
-export const AMP_ENTITY_TABLES = ['organizations', 'locations', 'contacts', 'tickets', 'ticket_comments', 'assets'] as const;
-export const AMP_AUXILIARY_TABLES = ['external_identifiers', 'custom_field_values', 'package_diagnostics'] as const;
-export const AMP_ALLOWLISTED_TABLES = ['amp_manifest', ...AMP_ENTITY_TABLES, ...AMP_AUXILIARY_TABLES] as const;
-export type AmpEntityType = typeof AMP_ENTITY_TABLES[number];
-export type AmpTable = typeof AMP_ALLOWLISTED_TABLES[number];
-export type AmpErrorCode = 'AMP_UNKNOWN_TABLE' | 'AMP_UNSUPPORTED_VERSION' | 'AMP_INVALID_MANIFEST' | 'AMP_INVALID_VALUE' | 'AMP_INVALID_REFERENCE' | 'AMP_FORBIDDEN_SQLITE_OBJECT' | 'AMP_LIMIT_EXCEEDED' | 'AMP_EXTENSION_FORBIDDEN' | 'AMP_CROSS_TENANT_REFERENCE';
-export const AMP_ERROR_CODES: Record<AmpErrorCode, string> = { AMP_UNKNOWN_TABLE: 'Package contains a table that AMP does not allow.', AMP_UNSUPPORTED_VERSION: 'Package format version is not supported.', AMP_INVALID_MANIFEST: 'Package manifest is missing or invalid.', AMP_INVALID_VALUE: 'A package value does not meet AMP requirements.', AMP_INVALID_REFERENCE: 'A package relationship does not resolve.', AMP_FORBIDDEN_SQLITE_OBJECT: 'Package contains a forbidden SQLite object.', AMP_LIMIT_EXCEEDED: 'Package exceeds a configured security limit.', AMP_EXTENSION_FORBIDDEN: 'SQLite extensions are forbidden.', AMP_CROSS_TENANT_REFERENCE: 'Package references a target outside the migration tenant.' };
-export interface AmpManifest { format_version: string; package_id: string; created_at: string; producer_name: string; producer_version: string; source_system: string; source_instance_id?: string; content_sha256: string; capabilities_json?: string; }
-export interface AmpRecord { package_record_id: string; source_record_id: string; external_identifier_namespace: string; created_at?: string; updated_at?: string; extension_json?: string; [key: string]: unknown; }
-export const AMP_LIMITS = { packageBytes: 250 * 1024 * 1024, rowsPerEntity: 500_000, rowsPerPackage: 2_000_000, textBytes: 64 * 1024, extensionJsonBytes: 16 * 1024, extensionJsonDepth: 8, opaqueIdBytes: 256 } as const;
-export const AMP_COMPATIBILITY = { accepted: ['1.0.x'], additiveChanges: 'minor', breakingChanges: 'major' } as const;
-const identity = 'package_record_id TEXT PRIMARY KEY, source_record_id TEXT NOT NULL, external_identifier_namespace TEXT NOT NULL, created_at TEXT, updated_at TEXT, extension_json TEXT';
-export const AMP_SCHEMA_SQL = `CREATE TABLE amp_manifest (format_version TEXT NOT NULL, package_id TEXT NOT NULL, created_at TEXT NOT NULL, producer_name TEXT NOT NULL, producer_version TEXT NOT NULL, source_system TEXT NOT NULL, source_instance_id TEXT, content_sha256 TEXT NOT NULL, capabilities_json TEXT); CREATE TABLE organizations (${identity}, name TEXT NOT NULL); CREATE TABLE locations (${identity}, organization_package_record_id TEXT NOT NULL, name TEXT NOT NULL); CREATE TABLE contacts (${identity}, organization_package_record_id TEXT, location_package_record_id TEXT, email TEXT, first_name TEXT, last_name TEXT); CREATE TABLE tickets (${identity}, organization_package_record_id TEXT, location_package_record_id TEXT, requester_package_record_id TEXT, title TEXT NOT NULL, description TEXT, status_name TEXT, priority_name TEXT); CREATE TABLE ticket_comments (${identity}, ticket_package_record_id TEXT NOT NULL, body TEXT NOT NULL); CREATE TABLE assets (${identity}, organization_package_record_id TEXT, name TEXT NOT NULL); CREATE TABLE external_identifiers (package_record_id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, entity_package_record_id TEXT NOT NULL, namespace TEXT NOT NULL, value TEXT NOT NULL); CREATE TABLE custom_field_values (package_record_id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, entity_package_record_id TEXT NOT NULL, field_name TEXT NOT NULL, value_json TEXT NOT NULL); CREATE TABLE package_diagnostics (package_record_id TEXT PRIMARY KEY, severity TEXT NOT NULL, code TEXT NOT NULL, message TEXT NOT NULL, entity_type TEXT, entity_package_record_id TEXT);`;
-export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = { amp_manifest: ['format_version','package_id','created_at','producer_name','producer_version','source_system','source_instance_id','content_sha256','capabilities_json'], organizations: ['package_record_id','source_record_id','external_identifier_namespace','created_at','updated_at','extension_json','name'], locations: ['package_record_id','source_record_id','external_identifier_namespace','created_at','updated_at','extension_json','organization_package_record_id','name'], contacts: ['package_record_id','source_record_id','external_identifier_namespace','created_at','updated_at','extension_json','organization_package_record_id','location_package_record_id','email','first_name','last_name'], tickets: ['package_record_id','source_record_id','external_identifier_namespace','created_at','updated_at','extension_json','organization_package_record_id','location_package_record_id','requester_package_record_id','title','description','status_name','priority_name'], ticket_comments: ['package_record_id','source_record_id','external_identifier_namespace','created_at','updated_at','extension_json','ticket_package_record_id','body'], assets: ['package_record_id','source_record_id','external_identifier_namespace','created_at','updated_at','extension_json','organization_package_record_id','name'], external_identifiers: ['package_record_id','entity_type','entity_package_record_id','namespace','value'], custom_field_values: ['package_record_id','entity_type','entity_package_record_id','field_name','value_json'], package_diagnostics: ['package_record_id','severity','code','message','entity_type','entity_package_record_id'] };
-export const AMP_RECORD_JSON_SCHEMA = { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object', required: ['package_record_id','source_record_id','external_identifier_namespace'], properties: { package_record_id: { type: 'string', minLength: 1, maxLength: 256 }, source_record_id: { type: 'string', minLength: 1, maxLength: 256 }, external_identifier_namespace: { type: 'string', minLength: 1, maxLength: 256 }, created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' }, extension_json: { type: 'string', maxLength: 16384 } }, additionalProperties: true } as const;
+export {
+  AMP_ENTITY_TABLES,
+  AMP_AUXILIARY_TABLES,
+  AMP_MANIFEST_TABLE,
+  AMP_ALLOWLISTED_TABLES,
+  AMP_ENTITY_IDENTITY_COLUMNS,
+  AMP_TABLE_COLUMNS,
+  AMP_ENTITY_REFERENCES,
+  AMP_DIAGNOSTIC_SEVERITIES,
+} from './tables';
+export type { AmpEntityType, AmpAuxiliaryTable, AmpTable } from './tables';
+
+export { AMP_ERROR_CODES, AMP_CLI_EXIT_CODES } from './errors';
+export type { AmpErrorCode } from './errors';
+
+export { AMP_LIMITS, AMP_RETENTION } from './limits';
+export type { AmpLimits } from './limits';
+
+export {
+  AMP_FORMAT_VERSION,
+  AMP_COMPATIBILITY,
+  parseFormatVersion,
+  isSupportedFormatVersion,
+  unsupportedVersionReason,
+} from './compatibility';
+
+export { AMP_SCHEMA_SQL } from './schema';
+
+export {
+  AMP_ENTITY_ROW_SCHEMAS,
+  AMP_MANIFEST_SCHEMA,
+  AMP_AUXILIARY_ROW_SCHEMAS,
+} from './jsonSchema';
+
+export type {
+  AmpManifest,
+  AmpEntityRecordBase,
+  AmpOrganizationRecord,
+  AmpLocationRecord,
+  AmpContactRecord,
+  AmpTicketRecord,
+  AmpTicketCommentRecord,
+  AmpAssetRecord,
+  AmpExternalIdentifierRecord,
+  AmpCustomFieldValueRecord,
+  AmpPackageDiagnosticRecord,
+  AmpEntityRecordMap,
+  AmpEntityRecord,
+  AmpRecord,
+  AmpEntityRows,
+  AmpAuxiliaryRows,
+  AmpPackageRows,
+} from './types';

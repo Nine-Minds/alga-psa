@@ -1,17 +1,15 @@
-import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { AMP_ALLOWLISTED_TABLES, AMP_ENTITY_TABLES, AMP_LIMITS, type AmpErrorCode, type AmpManifest, type AmpRecord } from '@alga-psa/migration-spec';
-
-const require = createRequire(import.meta.url);
-type Statement = { all(...args: unknown[]): unknown[]; get(...args: unknown[]): unknown };
-type Db = { prepare(sql: string): Statement; close(): void };
-const sqlite = () => require('node:sqlite') as { DatabaseSync: new (path: string, options: { readOnly: boolean; allowExtension: boolean }) => Db };
-const refs: Record<string, string[]> = { locations:['organization_package_record_id'], contacts:['organization_package_record_id','location_package_record_id'], tickets:['organization_package_record_id','location_package_record_id','requester_package_record_id'], ticket_comments:['ticket_package_record_id'], assets:['organization_package_record_id'] };
-const rfc3339 = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$/;
-export type AmpDiagnostic = { code: AmpErrorCode; message: string; table?: string; recordId?: string; field?: string };
-export type AmpValidationResult = { valid: boolean; diagnostics: AmpDiagnostic[]; manifest?: AmpManifest };
-export class AmpSqliteReader { private readonly db: Db; constructor(path:string) { this.db=new (sqlite().DatabaseSync)(path,{readOnly:true,allowExtension:false}); } tables():string[] { return this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map((r:any)=>r.name); } objects():Array<{name:string;type:string}>{return this.db.prepare("SELECT name,type FROM sqlite_master WHERE type IN ('trigger','view')").all() as Array<{name:string;type:string}>;} rows(table: typeof AMP_ALLOWLISTED_TABLES[number]):AmpRecord[]{return this.db.prepare(`SELECT * FROM ${table} ORDER BY package_record_id`).all() as AmpRecord[];} manifests():AmpManifest[]{return this.db.prepare('SELECT * FROM amp_manifest').all() as AmpManifest[];} close(){this.db.close();} }
-export function canonicalContentSha256(records:Record<string,AmpRecord[]>):string { const value=Object.keys(records).filter(t=>(AMP_ENTITY_TABLES as readonly string[]).includes(t)).sort().flatMap(t=>[...records[t]].sort((a,b)=>String(a.package_record_id).localeCompare(String(b.package_record_id))).map(row=>JSON.stringify(Object.fromEntries(Object.entries(row).filter(([,value])=>value!==null&&value!==undefined)),Object.keys(row).sort()))).join('\n'); return createHash('sha256').update(value).digest('hex'); }
-export function validateAmpPackage(path:string):AmpValidationResult { const diagnostics:AmpDiagnostic[]=[]; if(!existsSync(path))return {valid:false,diagnostics:[{code:'AMP_INVALID_MANIFEST',message:'Package file does not exist.'}]}; if(statSync(path).size>AMP_LIMITS.packageBytes)diagnostics.push({code:'AMP_LIMIT_EXCEEDED',message:'Package byte limit exceeded.'}); if(readFileSync(path).subarray(0,16).toString('ascii')!=='SQLite format 3\u0000')return {valid:false,diagnostics:[...diagnostics,{code:'AMP_INVALID_VALUE',message:'Package is not SQLite.'}]}; const reader=new AmpSqliteReader(path); try {const tables=reader.tables(); for(const t of tables)if(!(AMP_ALLOWLISTED_TABLES as readonly string[]).includes(t))diagnostics.push({code:'AMP_UNKNOWN_TABLE',message:`Unknown table: ${t}`,table:t}); for(const object of reader.objects())diagnostics.push({code:'AMP_FORBIDDEN_SQLITE_OBJECT',message:`Forbidden SQLite ${object.type}: ${object.name}`}); const manifests=reader.manifests(); const manifest=manifests[0]; if(manifests.length!==1)diagnostics.push({code:'AMP_INVALID_MANIFEST',message:'Package must have exactly one manifest.'}); if(manifest&&!/^1\.0\.\d+$/.test(manifest.format_version))diagnostics.push({code:'AMP_UNSUPPORTED_VERSION',message:'Unsupported format version.'}); const all:Record<string,AmpRecord[]>={}; let total=0; for(const table of AMP_ENTITY_TABLES){if(!tables.includes(table))continue; const rows=reader.rows(table);all[table]=rows;total+=rows.length;} const ids=new Set(Object.values(all).flat().map(r=>r.package_record_id)); for(const [table,rows] of Object.entries(all))for(const row of rows){for(const id of ['package_record_id','source_record_id','external_identifier_namespace'])if(typeof row[id]!=='string'||!row[id]||Buffer.byteLength(row[id] as string)>AMP_LIMITS.opaqueIdBytes)diagnostics.push({code:'AMP_INVALID_VALUE',message:'Invalid opaque identity.',table,recordId:row.package_record_id,field:id});for(const time of ['created_at','updated_at'])if(row[time]&&(typeof row[time]!=='string'||!rfc3339.test(row[time] as string)))diagnostics.push({code:'AMP_INVALID_VALUE',message:'Timestamp must be RFC3339 UTC.',table,recordId:row.package_record_id,field:time});for(const field of refs[table]??[])if(row[field]&&!ids.has(row[field] as string))diagnostics.push({code:'AMP_INVALID_REFERENCE',message:'Relationship does not resolve.',table,recordId:row.package_record_id,field});} if(total>AMP_LIMITS.rowsPerPackage)diagnostics.push({code:'AMP_LIMIT_EXCEEDED',message:'Package row limit exceeded.'});if(manifest&&manifest.content_sha256!==canonicalContentSha256(all))diagnostics.push({code:'AMP_INVALID_VALUE',message:'content_sha256 does not match.',field:'content_sha256'});return {valid:!diagnostics.length,diagnostics,manifest};}finally{reader.close();} }
-export { AmpPackageBuilder } from './builder.js';
+export { AmpSqliteReader } from './reader';
+export { AmpPackageBuilder } from './builder';
+export type { AmpManifestInput } from './builder';
+export { validateAmpPackage } from './validator';
+export type { AmpDiagnostic, AmpValidationResult } from './validator';
+export { canonicalContentSha256 } from './hash';
+export {
+  sampleManifest,
+  sampleEntityRows,
+  buildSamplePackage,
+  checkProducerConformance,
+} from './conformance';
+export type { ConformanceExpectation, ConformanceReport } from './conformance';
+export { openPackageDatabase, openWritableDatabase } from './sqlite';
+export type { SqliteDatabase, SqliteStatement } from './sqlite';
