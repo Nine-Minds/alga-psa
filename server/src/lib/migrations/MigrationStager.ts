@@ -14,20 +14,21 @@ export class MigrationStager {
   async stage(jobId: string, packagePath: string): Promise<{ diagnostics: AmpDiagnostic[]; blocking: boolean }> {
     const result = validateAmpPackage(packagePath);
     if (!result.manifest) throw new Error('AMP_INVALID_MANIFEST: package has no usable manifest.');
+    const manifest = result.manifest;
     const diagnostics = result.diagnostics;
     const reader = new AmpSqliteReader(packagePath);
     try {
       await withTransaction(this.db, async trx => {
         const scoped = tenantDb(trx, this.tenant);
-        const job = await scoped('migration_jobs').where({ migration_job_id: jobId }).first();
+        const job = await scoped.table('migration_jobs').where({ migration_job_id: jobId }).first();
         if (!job) throw new Error('Migration job was not found in this tenant.');
-        await scoped('migration_staged_records').where({ migration_job_id: jobId }).delete();
-        await scoped('migration_job_entities').where({ migration_job_id: jobId }).delete();
+        await scoped.table('migration_staged_records').where({ migration_job_id: jobId }).delete();
+        await scoped.table('migration_job_entities').where({ migration_job_id: jobId }).delete();
         for (const entityType of AMP_ENTITY_TABLES) {
           if (!reader.tableNames().includes(entityType)) continue;
           const rows = reader.allRows(entityType);
           if (rows.length) {
-            await scoped('migration_staged_records').insert(rows.map(row => ({
+            await scoped.table('migration_staged_records').insert(rows.map(row => ({
               migration_job_id: jobId, entity_type: entityType,
               package_record_id: String(row.package_record_id), source_record_id: String(row.source_record_id),
               namespace: String(row.external_identifier_namespace), payload: JSON.stringify(row),
@@ -35,12 +36,12 @@ export class MigrationStager {
               validation_state: diagnostics.some(d => d.table === entityType && d.recordId === row.package_record_id) ? 'blocked' : 'valid',
             })));
           }
-          await scoped('migration_job_entities').insert({ migration_job_id: jobId, entity_type: entityType, phase: phaseFor(entityType), planned_count: rows.length });
+          await scoped.table('migration_job_entities').insert({ migration_job_id: jobId, entity_type: entityType, phase: phaseFor(entityType), planned_count: rows.length });
         }
-        await scoped('migration_jobs').where({ migration_job_id: jobId }).update({
-          state: !result.valid ? 'blocked' : 'needs_configuration', manifest: JSON.stringify(result.manifest),
-          package_id: result.manifest.package_id, format_version: result.manifest.format_version,
-          producer_name: result.manifest.producer_name, producer_version: result.manifest.producer_version,
+        await scoped.table('migration_jobs').where({ migration_job_id: jobId }).update({
+          state: !result.valid ? 'blocked' : 'needs_configuration', manifest: JSON.stringify(manifest),
+          package_id: manifest.package_id, format_version: manifest.format_version,
+          producer_name: manifest.producer_name, producer_version: manifest.producer_version,
           updated_at: trx.fn.now(),
         });
       });
@@ -55,7 +56,7 @@ export class MigrationPlanner {
 
   async preflight(jobId: string): Promise<{ blocking: AmpDiagnostic[]; counts: Partial<Record<AmpEntityType, number>> }> {
     const scoped = tenantDb(this.db, this.tenant);
-    const records = await scoped('migration_staged_records').where({ migration_job_id: jobId }).select('migration_staged_record_id', 'entity_type', 'package_record_id', 'payload');
+    const records = await scoped.table('migration_staged_records').where({ migration_job_id: jobId }).select('migration_staged_record_id', 'entity_type', 'package_record_id', 'payload');
     const ids = new Map<AmpEntityType, Set<string>>();
     const counts: Partial<Record<AmpEntityType, number>> = {};
     for (const row of records) {
@@ -77,12 +78,12 @@ export class MigrationPlanner {
       const tx = tenantDb(trx, this.tenant);
       for (const row of records) {
         const rowErrors = blocking.filter(error => error.table === row.entity_type && error.recordId === row.package_record_id);
-        const existing = await tx('migration_staged_records').where({ migration_job_id: jobId, migration_staged_record_id: row.migration_staged_record_id }).first('validation_errors');
+        const existing = await tx.table('migration_staged_records').where({ migration_job_id: jobId, migration_staged_record_id: row.migration_staged_record_id }).first('validation_errors');
         const existingErrors = typeof existing?.validation_errors === 'string' ? JSON.parse(existing.validation_errors) : (existing?.validation_errors ?? []);
         const errors = [...existingErrors, ...rowErrors];
-        await tx('migration_staged_records').where({ migration_job_id: jobId, migration_staged_record_id: row.migration_staged_record_id }).update({ validation_state: errors.length ? 'blocked' : 'valid', validation_errors: JSON.stringify(errors) });
+        await tx.table('migration_staged_records').where({ migration_job_id: jobId, migration_staged_record_id: row.migration_staged_record_id }).update({ validation_state: errors.length ? 'blocked' : 'valid', validation_errors: JSON.stringify(errors) });
       }
-      await tx('migration_jobs').where({ migration_job_id: jobId }).update({ state: blocking.length ? 'blocked' : 'ready', preflighted_at: trx.fn.now(), updated_at: trx.fn.now() });
+      await tx.table('migration_jobs').where({ migration_job_id: jobId }).update({ state: blocking.length ? 'blocked' : 'ready', preflighted_at: trx.fn.now(), updated_at: trx.fn.now() });
     });
     return { blocking, counts };
   }

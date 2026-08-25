@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const sha256 = digest.digest('hex');
     const { knex } = await createTenantKnex(user.tenant); const db = tenantDb(knex, user.tenant);
     const migrationJobId = randomUUID();
-    await db('migration_jobs').insert({ tenant: user.tenant, migration_job_id: migrationJobId, owner_user_id: user.user_id,
+    await db.table('migration_jobs').insert({ tenant: user.tenant, migration_job_id: migrationJobId, owner_user_id: user.user_id,
       source_file_id: stored.file_id, source_file_name: file.name, package_sha256: sha256,
       package_id: migrationJobId, format_version: 'pending', producer_name: 'pending', producer_version: 'pending', manifest: {}, state: 'uploaded' });
     return NextResponse.json({ migrationJobId, fileId: stored.file_id, sha256 }, { status: 201 });
