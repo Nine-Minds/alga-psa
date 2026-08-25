@@ -9,6 +9,7 @@ export { buildEntityRows } from './engine';
 export type { CsvConversionDiagnostic, CsvValueTransform, EntityRowsInput } from './engine';
 export { parseSpreadsheet } from './parse';
 export type { ParsedSheet } from './parse';
+export { inferSpreadsheetMapping } from './mapping';
 export {
   normalizeBooleanFlag,
   normalizeDateOnly,

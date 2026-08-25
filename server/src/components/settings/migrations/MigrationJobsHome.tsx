@@ -72,7 +72,7 @@ const MigrationJobsHome = ({ onSelectJob }: MigrationJobsHomeProps): React.JSX.E
           <div>
             <CardTitle>Migrations</CardTitle>
             <CardDescription>
-              Bring data from another PSA into Alga by uploading an Alga Migration Package (.amp).
+              Bring data from another PSA into Alga by uploading an AMP package or a CSV/XLSX spreadsheet.
               Each upload is inspected, configured, and preflighted before anything is created.
             </CardDescription>
           </div>
@@ -196,6 +196,7 @@ interface UploadPackageDialogProps {
 
 const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialogProps): React.JSX.Element => {
   const [file, setFile] = useState<File | null>(null);
+  const [entityType, setEntityType] = useState<AmpEntityType>('assets');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [rejectionDiagnostics, setRejectionDiagnostics] = useState<AmpDiagnostic[] | null>(null);
@@ -223,12 +224,14 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
     setUploadError(null);
     setRejectionDiagnostics(null);
     try {
-      const response = await fetch('/api/migrations/upload', {
+      const spreadsheet = /\.(csv|xlsx)$/i.test(file.name);
+      const response = await fetch(spreadsheet ? '/api/migrations/spreadsheet' : '/api/migrations/upload', {
         method: 'POST',
         headers: {
           'content-type': file.type || 'application/vnd.sqlite3',
           'content-length': String(file.size),
           'x-amp-file-name': encodeURIComponent(file.name),
+          ...(spreadsheet ? { 'x-amp-entity-type': entityType } : {}),
         },
         body: file.stream(),
       });
@@ -246,18 +249,18 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
     } finally {
       setIsUploading(false);
     }
-  }, [file, onUploaded]);
+  }, [entityType, file, onUploaded]);
 
   return (
     <Dialog id="amp-upload-package-dialog" isOpen={isOpen} onClose={resetAndClose} title="Upload migration package">
       <DialogContent>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="amp-package-file-input">Package file</Label>
+            <Label htmlFor="amp-package-file-input">Package or spreadsheet</Label>
             <Input
               id="amp-package-file-input"
               type="file"
-              accept=".amp"
+              accept=".amp,.csv,.xlsx"
               disabled={isUploading}
               onChange={(event) => {
                 setFile(event.target.files?.[0] ?? null);
@@ -266,10 +269,20 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
               }}
             />
             <p className="text-xs text-muted-foreground">
-              Alga Migration Package (.amp), up to {MAX_PACKAGE_MEGABYTES} MB. The package is
-              validated before anything is staged; nothing is imported until you run the migration.
+              AMP (.amp) or CSV/XLSX, up to {MAX_PACKAGE_MEGABYTES} MB. Spreadsheets become an AMP
+              package before staging; nothing is imported until you run the migration.
             </p>
           </div>
+          {file && /\.(csv|xlsx)$/i.test(file.name) && (
+            <div className="space-y-2">
+              <Label htmlFor="amp-spreadsheet-entity">Spreadsheet records represent</Label>
+              <select id="amp-spreadsheet-entity" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={entityType} onChange={(event) => setEntityType(event.target.value as AmpEntityType)} disabled={isUploading}>
+                <option value="assets">Assets (legacy asset import)</option>
+                <option value="organizations">Organizations</option><option value="locations">Locations</option><option value="contacts">Contacts</option><option value="tickets">Tickets</option><option value="ticket_comments">Ticket comments</option>
+              </select>
+              <p className="text-xs text-muted-foreground">Canonical headers are recognized automatically. Legacy asset names such as Asset Name, Asset Type, Serial Number, and MAC Address are preserved through the AMP flow.</p>
+            </div>
+          )}
 
           {uploadError && (
             <Alert variant="destructive">
