@@ -1,1 +1,25 @@
-{"name":"@alga-psa/migration-cli","version":"1.0.0","private":true,"type":"module","bin":{"alga-migrate":"./src/cli.ts"},"scripts":{"typecheck":"tsc --noEmit"},"dependencies":{"@alga-psa/migration-sdk":"*"},"devDependencies":{"typescript":"^5.7.3"}}
+{
+  "name": "@alga-psa/migration-cli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "alga-migrate": "./bin/alga-migrate.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/cli.ts",
+      "import": "./src/cli.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@alga-psa/migration-sdk": "*",
+    "@alga-psa/migration-spec": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -99,8 +100,18 @@ describe('AMP validator attacks', () => {
     return validateAmpPackage(path);
   }
 
+  const testRequire = createRequire(import.meta.url);
+
+  interface RawSqlite {
+    DatabaseSync: new (path: string) => {
+      exec(sql: string): void;
+      prepare(sql: string): { run(...params: unknown[]): unknown };
+      close(): void;
+    };
+  }
+
   function rawDb(path: string) {
-    const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite');
+    const { DatabaseSync } = testRequire('node:sqlite') as RawSqlite;
     return new DatabaseSync(path);
   }
 
