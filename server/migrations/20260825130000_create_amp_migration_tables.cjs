@@ -48,6 +48,15 @@ exports.up = async function up(knex) {
   await knex.raw('CREATE INDEX migration_jobs_state_idx ON migration_jobs (tenant, state, created_at DESC)');
   await knex.raw('CREATE INDEX migration_staged_records_work_idx ON migration_staged_records (tenant, migration_job_id, entity_type, validation_state, package_record_id)');
   await knex.raw('CREATE INDEX migration_outcomes_job_idx ON migration_record_outcomes (tenant, migration_job_id, action, created_at)');
+  // RLS is retained for direct Postgres deployments; Citus tenants remain
+  // colocated by the distribution call below.
+  for (const table of tables) {
+    await knex.raw(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
+    await knex.raw(`CREATE POLICY ${table}_tenant_isolation_policy ON ${table}
+      USING (tenant = current_setting('app.current_tenant', true)::uuid)`);
+    await knex.raw(`CREATE POLICY ${table}_tenant_insert_policy ON ${table} FOR INSERT
+      WITH CHECK (tenant = current_setting('app.current_tenant', true)::uuid)`);
+  }
   const citus = await knex.raw("SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table') AS present");
   if (citus.rows[0].present) for (const table of tables) await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
 };
