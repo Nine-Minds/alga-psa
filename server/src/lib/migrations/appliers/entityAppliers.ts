@@ -51,7 +51,6 @@ export class OrganizationMigrationApplier implements EntityApplier {
       client_name: record.name,
       url: record.website ?? undefined,
       phone_no: record.phone ?? undefined,
-      is_inactive: false,
       properties: {
         ...(record.website ? { website: record.website } : {}),
         ...(record.phone ? { phone: record.phone } : {}),

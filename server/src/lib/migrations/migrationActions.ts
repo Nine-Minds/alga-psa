@@ -390,6 +390,74 @@ export async function getMigrationReportCsv(
   );
 }
 
+export interface MigrationMappingProfile {
+  migrationMappingProfileId: string;
+  entityType: string;
+  sourceSignature: string;
+  name: string;
+  mapping: Record<string, string>;
+  updatedAt: string;
+}
+
+/**
+ * Saved CSV/source→canonical mapping profiles, scoped to entity type and
+ * source signature (the ordered header set) so a repeat import of the same
+ * shape needs no re-mapping.
+ */
+export async function listMigrationMappingProfiles(
+  entityType: string,
+  sourceSignature?: string
+): Promise<MigrationMappingProfile[]> {
+  const { tenant } = await requirePermission('read');
+  const { knex } = await createTenantKnex(tenant);
+  const db = tenantDb(knex, tenant);
+
+  let query = db
+    .table('migration_mapping_profiles')
+    .where({ entity_type: entityType })
+    .orderBy('updated_at', 'desc')
+    .limit(50);
+  if (sourceSignature) {
+    query = query.where({ source_signature: sourceSignature });
+  }
+  const rows = await query;
+  return rows.map((row) => ({
+    migrationMappingProfileId: row.migration_mapping_profile_id,
+    entityType: row.entity_type,
+    sourceSignature: row.source_signature,
+    name: row.name,
+    mapping: typeof row.mapping === 'string' ? JSON.parse(row.mapping) : row.mapping,
+    updatedAt: new Date(row.updated_at).toISOString(),
+  }));
+}
+
+export async function saveMigrationMappingProfile(profile: {
+  entityType: string;
+  sourceSignature: string;
+  name: string;
+  mapping: Record<string, string>;
+}): Promise<void> {
+  const { tenant, userId } = await requirePermission('manage');
+  if (!profile.name.trim()) {
+    throw new Error('A mapping profile needs a name.');
+  }
+  const { knex } = await createTenantKnex(tenant);
+  const db = tenantDb(knex, tenant);
+
+  await db
+    .table('migration_mapping_profiles')
+    .insert({
+      tenant,
+      entity_type: profile.entityType,
+      source_signature: profile.sourceSignature,
+      name: profile.name.trim(),
+      mapping: JSON.stringify(profile.mapping),
+      created_by: userId,
+    })
+    .onConflict(['tenant', 'entity_type', 'source_signature', 'name'])
+    .merge({ mapping: JSON.stringify(profile.mapping), updated_at: knex.fn.now() });
+}
+
 function toSummary(
   job: Record<string, unknown>,
   entities: Array<Record<string, unknown>>

@@ -13,6 +13,7 @@ import {
   ProjectDateReadinessJobData,
 } from './handlers/projectDateReadinessHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
 import {
   KB_ARTICLE_IMPORT_JOB,
   kbArticleImportHandler,
@@ -377,6 +378,20 @@ export async function registerAllJobHandlers(
       },
       retry: { maxAttempts: 3 },
       timeoutMs: 600000, // 10 minutes for large imports
+    },
+    registerOpts
+  );
+
+  // AMP migration apply handler. Retries are safe by construction: the
+  // identity ledger skips every record already applied under its source key.
+  JobHandlerRegistry.register<MigrationApplyJobData & BaseJobData>(
+    {
+      name: 'migration_apply',
+      handler: async (jobId, data) => {
+        await handleMigrationApplyJob({ id: jobId, data } as any);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 3600000, // 1 hour for large packages
     },
     registerOpts
   );

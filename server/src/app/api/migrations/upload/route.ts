@@ -20,7 +20,8 @@ export async function POST(request: Request) {
   if (!(file instanceof File) || file.size > AMP_MAX_PACKAGE_BYTES) {
     return NextResponse.json({ error: 'AMP_LIMIT_EXCEEDED' }, { status: 400 });
   }
-  if (!file.name.toLowerCase().endsWith('.sqlite')) {
+  const lowered = file.name.toLowerCase();
+  if (!lowered.endsWith('.amp') && !lowered.endsWith('.sqlite')) {
     return NextResponse.json({ error: 'AMP_NOT_SQLITE' }, { status: 400 });
   }
   const digest = createHash('sha256'); let bytes = 0;

@@ -16,6 +16,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import type { ImportJobDetails, ImportJobItemRecord, ImportJobRecord } from '@/types/imports.types';
 import { useImportActions } from './hooks/useImportActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import MigrationsWorkspace from '../migrations/MigrationsWorkspace';
 
 const SECTION_SLUGS = ['asset-import', 'asset-export', 'templates-automation'] as const;
 
@@ -93,6 +94,12 @@ const ImportExportSettings = (): React.JSX.Element => {
     setActiveTab(tabId);
     updateURL(tabId);
   }, [updateURL]);
+
+  // Migrations is the primary experience; deep links into the legacy asset
+  // sections (?section=…) still land on the legacy tab.
+  const [workspaceTab, setWorkspaceTab] = useState<string>(() =>
+    sectionParam ? 'asset-import-legacy' : 'migrations'
+  );
 
   const [file, setFile] = useState<File | null>(null);
   const [persistTemplate, setPersistTemplate] = useState(true);
@@ -412,13 +419,15 @@ const ImportExportSettings = (): React.JSX.Element => {
     },
   ], [createPreview, error, fieldDefinitions, fieldMapping, handleMappingChange, handleSubmit, isApproving, isLoading, persistTemplate, preview, previewHasWarnings, selectedSourceId, setPersistTemplate, setSelectedSourceId, setFile, sources, getSourceValueForField]);
 
-  return (
-    <div className="space-y-6" data-testid="import-export-settings">
+  const legacyAssetContent = (
+    <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{t('importExport.title')}</CardTitle>
+          <CardTitle>{t('importExport.legacy.title', { defaultValue: 'Asset import (legacy)' })}</CardTitle>
           <CardDescription>
-            {t('importExport.description')}
+            {t('importExport.legacy.description', {
+              defaultValue: 'The original CSV/XLSX asset import tools, unchanged.',
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -510,6 +519,42 @@ const ImportExportSettings = (): React.JSX.Element => {
     </Drawer>
   </div>
 );
+
+  return (
+    <div className="space-y-6" data-testid="import-export-settings">
+      <div>
+        <h2 className="text-xl font-semibold text-foreground">
+          {t('importExport.workspaceTitle', { defaultValue: 'Imports & Exports' })}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {t('importExport.workspaceDescription', {
+            defaultValue: 'Migrate data into Alga with AMP packages, or use the legacy asset import tools.',
+          })}
+        </p>
+      </div>
+
+      <CustomTabs
+        tabs={[
+          {
+            id: 'migrations',
+            label: t('importExport.workspaceTabs.migrations', { defaultValue: 'Migrations' }),
+            content: <MigrationsWorkspace />,
+          },
+          {
+            id: 'asset-import-legacy',
+            label: t('importExport.workspaceTabs.assetImportLegacy', { defaultValue: 'Asset import (legacy)' }),
+            content: legacyAssetContent,
+          },
+        ]}
+        defaultTab={workspaceTab}
+        onTabChange={setWorkspaceTab}
+        idPrefix="import-export-workspace-"
+        tabStyles={{
+          trigger: 'text-sm font-medium data-[state=active]:bg-primary-500/10 rounded-md transition-colors',
+        }}
+      />
+    </div>
+  );
 };
 
 const JobDetailsDrawerContent = ({
