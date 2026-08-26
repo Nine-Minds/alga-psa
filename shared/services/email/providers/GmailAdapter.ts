@@ -218,8 +218,6 @@ export class GmailAdapter extends BaseEmailAdapter {
         throw new Error('Google Cloud project ID not configured');
       }
 
-      console.log('📦 vendorConfig', vendorConfig);
-
       // Check if user has completed OAuth authorization
       if (!vendorConfig.access_token || !vendorConfig.refresh_token) {
         const errorMsg = `Gmail watch subscription setup failed: OAuth tokens are missing. 

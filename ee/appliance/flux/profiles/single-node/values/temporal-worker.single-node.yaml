@@ -4,6 +4,17 @@ replicaCount: 1
 
 deploymentProfile: appliance
 
+# Existing appliance Deployments include this selector label. Preserve it so a
+# Flux Helm upgrade changes the pod template without changing an immutable selector.
+extraSelectorLabels:
+  app.kubernetes.io/component: temporal-worker
+
+# Share the tenant-secret store with alga-core so the pinned Microsoft profile
+# client secret alga-core writes via the filesystem provider is readable here,
+# letting polling reconciliation resolve client_secret_ref.
+sharedTenantSecrets:
+  enabled: true
+
 image:
   repository: ghcr.io/nine-minds/temporal-worker
   tag: latest
