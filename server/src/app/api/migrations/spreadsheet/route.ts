@@ -41,6 +41,7 @@ export async function POST(request: Request) {
       const mapping = await inferSpreadsheetMapping(inputPath, entityType as never);
       if (Object.keys(mapping).length === 0) throw new Error('AMP_SPREADSHEET_NO_RECOGNIZED_HEADERS');
       const conversion = await convertSpreadsheets({ outputPath, namespace: `csv:${user.tenant}`, sourceSystem: 'csv-upload', files: [{ entityType: entityType as never, path: inputPath, mapping }] }, directory);
+      if (!MigrationStager.hasImportableRecords(outputPath)) throw new Error('AMP_PACKAGE_NO_IMPORTABLE_RECORDS');
       const { size: packageSize } = await stat(outputPath);
       const digest = createHash('sha256'); const storageInput = new PassThrough();
       const packageStream = createReadStream(outputPath); packageStream.on('data', (chunk) => digest.update(chunk));

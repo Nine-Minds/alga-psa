@@ -10,6 +10,7 @@ import { buildSamplePackage, sampleEntityRows } from '@alga-psa/migration-sdk';
 import type { AmpPackageRows } from '@alga-psa/migration-spec';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { MigrationStager } from '../../lib/migrations/MigrationStager';
+import { loadMigrationConfigurationOptions } from '../../lib/migrations/migrationActions';
 import { MigrationPlanner } from '../../lib/migrations/MigrationPlanner';
 import { MigrationDomainApplier } from '../../lib/migrations/appliers/MigrationDomainApplier';
 import type { MigrationJobConfiguration } from '../../lib/migrations/types';
@@ -69,6 +70,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   // rest of the migration_* rows cascade off migration_jobs.
   await tenantTable(tenantId, 'migration_identity_mappings').del();
   await tenantTable(tenantId, 'migration_jobs').del();
+  await tenantTable(tenantId, 'asset_type_registry').del();
   // Domain rows, children before parents.
   await tenantTable(tenantId, 'asset_history').del();
   await tenantTable(tenantId, 'assets').del();
@@ -433,6 +435,30 @@ describe('AMP migration pipeline integration', () => {
       expect(entity.failed_count).toBe(0);
     }
   }, HOOK_TIMEOUT);
+
+  it('loads asset-type configuration options against the migrated registry schema', async () => {
+    const fixture = await createFixture();
+    const migrationJobId = await createJob(fixture);
+    await tenantTable(fixture.tenantId, 'asset_type_registry').insert({
+      tenant: fixture.tenantId,
+      slug: 'door_access',
+      name: 'Door Access',
+      fields_schema: JSON.stringify([]),
+    });
+
+    const options = await loadMigrationConfigurationOptions(
+      tenantDb(db, fixture.tenantId),
+      db,
+      migrationJobId,
+    );
+
+    expect(options.assetTypes).toContainEqual({ slug: 'door_access', name: 'Door Access' });
+  }, HOOK_TIMEOUT);
+
+  it('recognizes an otherwise valid AMP package with no importable records', () => {
+    const packagePath = buildPackage('empty-package', {});
+    expect(MigrationStager.hasImportableRecords(packagePath)).toBe(false);
+  });
 
   it('re-running the same job creates no duplicates', async () => {
     const fixture = await createFixture();

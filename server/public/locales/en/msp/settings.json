@@ -1983,6 +1983,7 @@
     },
     "migration": {
       "actions": { "back": "Back to migrations", "upload": "Upload package" },
+      "errors": { "noImportableRecords": "This package contained no importable records." },
       "preflight": { "title": "Preflight" },
       "run": { "queued": "Migration queued", "applying": "Migration in progress" }
     },

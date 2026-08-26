@@ -4,6 +4,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { JobService } from '@alga-psa/jobs';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
+import type { Knex } from 'knex';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
 import { MigrationPlanner, parseConfiguration } from './MigrationPlanner';
 import { MigrationReportService } from './MigrationReportService';
@@ -89,6 +90,16 @@ export async function getMigrationConfigurationOptions(
   const { knex } = await createTenantKnex(tenant);
   const db = tenantDb(knex, tenant);
 
+  return loadMigrationConfigurationOptions(db, knex, migrationJobId);
+}
+
+/** Kept separate so the database-backed suite exercises this exact query. */
+export async function loadMigrationConfigurationOptions(
+  db: Knex,
+  knex: Knex,
+  migrationJobId: string
+): Promise<MigrationConfigurationOptions> {
+
   const distinctPayloadValues = async (entityType: string, field: string): Promise<string[]> => {
     const rows = await db
       .table('migration_staged_records')
@@ -107,7 +118,7 @@ export async function getMigrationConfigurationOptions(
       .select('status_id', 'name')
       .orderBy('order_number'),
     db.table('priorities').select('priority_id', 'priority_name').orderBy('order_number'),
-    db.table('asset_type_registry').select('slug', 'display_name').orderBy('display_name'),
+    db.table('asset_type_registry').select('slug', 'name').orderBy('name'),
     db.table('clients').where({ is_inactive: false }).select('client_id', 'client_name').orderBy('client_name'),
     db
       .table('users')
@@ -130,7 +141,7 @@ export async function getMigrationConfigurationOptions(
     boards: boards.map((row) => ({ id: row.board_id, name: row.board_name })),
     statuses: statuses.map((row) => ({ id: row.status_id, name: row.name })),
     priorities: priorities.map((row) => ({ id: row.priority_id, name: row.priority_name })),
-    assetTypes: assetTypes.map((row) => ({ slug: row.slug, name: row.display_name })),
+    assetTypes: assetTypes.map((row) => ({ slug: row.slug, name: row.name })),
     clients: clients.map((row) => ({ id: row.client_id, name: row.client_name })),
     users: users.map((row) => ({
       id: row.user_id,

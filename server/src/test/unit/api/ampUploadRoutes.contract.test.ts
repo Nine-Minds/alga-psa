@@ -29,4 +29,15 @@ describe('AMP upload route size contract', () => {
     expect(spreadsheetRoute).toContain('bytes > AMP_MAX_PACKAGE_BYTES');
     expect(spreadsheetRoute).toContain('bytes !== declaredSize');
   });
+
+  it.each([
+    ['package upload', uploadRoute],
+    ['spreadsheet upload', spreadsheetRoute],
+  ])('%s rejects zero-record packages before storage or a migration job is created', (_name, route) => {
+    const guard = route.indexOf("MigrationStager.hasImportableRecords");
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(route.indexOf('StorageService.uploadStream'));
+    expect(guard).toBeLessThan(route.indexOf("db.table('migration_jobs').insert"));
+    expect(route).toContain('AMP_PACKAGE_NO_IMPORTABLE_RECORDS');
+  });
 });

@@ -30,6 +30,26 @@ export class MigrationStager {
     private readonly tenant: string
   ) {}
 
+  /**
+   * Checks the same allowlisted tables that staging reads. Upload routes call
+   * this before persisting either a file or a migration job, so an otherwise
+   * valid but empty package cannot leave cleanup work behind.
+   */
+  static hasImportableRecords(packagePath: string): boolean {
+    const reader = new AmpSqliteReader(packagePath);
+    try {
+      const presentTables = reader.tableNames();
+      return AMP_ENTITY_TABLES.some((entityType) => {
+        if (!presentTables.includes(entityType)) {
+          return false;
+        }
+        return !reader.readRows(entityType, 1).next().done;
+      });
+    } finally {
+      reader.close();
+    }
+  }
+
   async stage(migrationJobId: string, packagePath: string): Promise<StagingResult> {
     const validation = validateAmpPackage(packagePath);
     const stagedCounts: Partial<Record<AmpEntityType, number>> = {};

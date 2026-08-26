@@ -196,6 +196,7 @@ interface UploadPackageDialogProps {
 }
 
 const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialogProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [file, setFile] = useState<File | null>(null);
   const [entityType, setEntityType] = useState<AmpEntityType>('assets');
   const [isUploading, setIsUploading] = useState(false);
@@ -246,11 +247,14 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
         onUploaded(result.migrationJobId, false);
       }
     } catch (error) {
-      setUploadError(migrationErrorMessage(error, 'Failed to upload the package.'));
+      const message = migrationErrorMessage(error, 'Failed to upload the package.');
+      setUploadError(message === 'AMP_PACKAGE_NO_IMPORTABLE_RECORDS'
+        ? t('importExport.migration.errors.noImportableRecords', { defaultValue: 'This package contained no importable records.' })
+        : message);
     } finally {
       setIsUploading(false);
     }
-  }, [entityType, file, onUploaded]);
+  }, [entityType, file, onUploaded, t]);
 
   return (
     <Dialog id="amp-upload-package-dialog" isOpen={isOpen} onClose={resetAndClose} title="Upload migration package">

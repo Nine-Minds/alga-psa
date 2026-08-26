@@ -48,6 +48,9 @@ export async function POST(request: Request) {
     return await runWithTenant(user.tenant, async () => {
       await pipeline(Readable.fromWeb(request.body as never), meter, tempOutput);
       if (bytes !== declaredSize) throw new Error('AMP_UPLOAD_SIZE_MISMATCH');
+      if (!MigrationStager.hasImportableRecords(packagePath)) {
+        throw new Error('AMP_PACKAGE_NO_IMPORTABLE_RECORDS');
+      }
       // No `metadata` option: external_files has no metadata column; package
       // provenance (source name, sha256) lives on the migration_jobs row.
       const upload = StorageService.uploadStream(user.tenant, storageInput, fileName, {
