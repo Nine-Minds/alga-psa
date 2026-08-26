@@ -1593,5 +1593,8 @@
     "noUsedOrders": "Nenhum número de ordem em uso ainda",
     "markClosed": "Marcar como status fechado",
     "setDefault": "Definir como status padrão para novos tickets"
+  },
+  "callLink": {
+    "teamsCall": "Ligar no Microsoft Teams"
   }
 }

@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isEnterpriseEdition, eeUnavailable } from '../../_ceStub';
 import { teamsOptionsResponse } from '../../_eeDelegator';
-import { scheduleImmediateJob } from '@/lib/jobs';
+import { getJobRunner } from '@/lib/jobs/JobRunnerFactory';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -115,7 +115,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       continue;
     }
 
-    await scheduleImmediateJob('process-teams-meeting-artifact-notification', {
+    // Runner seam (Temporal on EE, pg-boss on CE) rather than the legacy
+    // pg-boss-only JobScheduler: on EE this starts genericJobWorkflow, whose
+    // worker forwards execution to the server over the event bus with tenant
+    // context set. The route is EE-gated above, so the runner here is Temporal.
+    const runner = await getJobRunner();
+    await runner.scheduleJob('process-teams-meeting-artifact-notification', {
       tenantId: parsed.tenantId,
       notification,
     });

@@ -112,6 +112,9 @@ function teamsActionErrorMessage(error: unknown, fallback: string): string {
     return 'Forbidden';
   }
 
+  // The caller only ever sees the generic fallback, so without this the real
+  // cause (a Graph HTTP status, a constraint violation) is lost entirely.
+  console.error(`[TeamsActions] ${fallback}`, error);
   return fallback;
 }
 
@@ -206,10 +209,12 @@ async function fetchMicrosoftGraphAppToken(params: {
 }
 
 // Capabilities that default to disabled for new tenants. `group_chat_bot`
-// is opt-in because bot responses in group chats are visible to every
-// member of the chat regardless of their PSA permissions — admins must
-// consciously enable it.
-const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot'];
+// and `channel_bot` are opt-in because bot responses in group chats and team
+// channels are visible to every member regardless of their PSA permissions —
+// admins must consciously enable them. `guest_ticket_submission` opens the bot
+// to non-MSP senders (client contacts submitting tickets), so it too requires
+// a conscious admin decision. Mirrors the EE teamsActions list.
+const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot', 'channel_bot', 'guest_ticket_submission'];
 
 function defaultTeamsIntegrationState() {
   return {
@@ -522,7 +527,15 @@ async function saveTeamsIntegrationSettingsImpl(
       ? next.defaultMeetingOrganizerObjectId
       : null;
 
-    if (input.defaultMeetingOrganizerUpn !== undefined && defaultMeetingOrganizerUpn) {
+    // Resolve the organizer against Graph only when the admin actually changed
+    // the UPN. The settings form posts every field on every save, so re-resolving
+    // an unchanged organizer made an unrelated toggle (a capability checkbox, a
+    // notification route) depend on a live Microsoft round-trip: an expired
+    // secret, revoked consent, or a Graph blip failed the whole save and the
+    // admin could not persist anything. An unchanged UPN keeps its stored object id.
+    const organizerUpnChanged = defaultMeetingOrganizerUpn !== next.defaultMeetingOrganizerUpn;
+
+    if (organizerUpnChanged && defaultMeetingOrganizerUpn) {
       if (!profileValidation.profile) {
         return { success: false, error: 'A Microsoft profile must be selected before saving a Teams meeting organizer' };
       }

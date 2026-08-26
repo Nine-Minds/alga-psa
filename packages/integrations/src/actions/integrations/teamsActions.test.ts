@@ -448,6 +448,61 @@ describe('Teams integration actions', () => {
     });
   });
 
+  it('saves unrelated settings without re-resolving an unchanged meeting organizer', async () => {
+    addMicrosoftProfile({
+      tenant: 'tenant-1',
+      profileId: 'profile-1',
+      clientId: 'tenant-one-client',
+      tenantId: 'tenant-one-guid',
+      secretRef: 'tenant-one-secret-ref',
+    });
+    tenantSecrets.set('tenant-1:tenant-one-secret-ref', 'tenant-one-secret');
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'graph-token' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'organizer-object-1' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }));
+
+    await saveTeamsIntegrationSettings({
+      selectedProfileId: 'profile-1',
+      installStatus: 'install_pending',
+      enabledCapabilities: ['personal_tab', 'channel_bot'],
+      defaultMeetingOrganizerUpn: 'scheduler@acme.com',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Graph is now unreachable (expired secret, revoked consent, outage). The
+    // settings form still posts every field, so an unchanged organizer must not
+    // drag a live Microsoft round-trip into an unrelated capability edit.
+    fetchMock.mockRejectedValue(new Error('graph is unreachable'));
+
+    const saved = await saveTeamsIntegrationSettings({
+      selectedProfileId: 'profile-1',
+      installStatus: 'install_pending',
+      enabledCapabilities: ['personal_tab'],
+      defaultMeetingOrganizerUpn: 'scheduler@acme.com',
+    });
+
+    expect(saved).toEqual({
+      success: true,
+      integration: expect.objectContaining({
+        enabledCapabilities: ['personal_tab'],
+        defaultMeetingOrganizerUpn: 'scheduler@acme.com',
+        defaultMeetingOrganizerObjectId: 'organizer-object-1',
+      }),
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(teamsIntegrations[0]).toMatchObject({
+      enabled_capabilities: JSON.stringify(['personal_tab']),
+      default_meeting_organizer_upn: 'scheduler@acme.com',
+      default_meeting_organizer_object_id: 'organizer-object-1',
+    });
+  });
+
   it('defaults sendMeetingInvites to true for rows created before the column existed and keeps the stored value when the input omits it', async () => {
     addMicrosoftProfile({
       tenant: 'tenant-1',

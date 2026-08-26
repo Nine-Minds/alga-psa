@@ -25,6 +25,9 @@ const REQUIRED_GRAPH_APPLICATION_PERMISSIONS = [
   'OnlineMeetingTranscript.Read.All',
   'TeamsActivity.Send',
   'User.Read.All',
+  // Teams Phone call journaling: the communications/callRecords subscription
+  // and CDR fetch both 403 without it.
+  'CallRecords.Read.All',
 ] as const;
 
 const BOT_ENV_GUIDANCE = 'Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.';

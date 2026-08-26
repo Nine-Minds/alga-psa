@@ -1460,6 +1460,16 @@
         "createFailed": "Teams-Besprechung konnte nicht erstellt werden",
         "createToggle": "Teams-Besprechung erstellen",
         "endRequired": "Zum Erstellen einer Teams-Besprechung ist eine Endzeit erforderlich",
+        "invitesDisabled": "E-Mail-Einladungen sind in den Einstellungen der Teams-Integration deaktiviert — Teilnehmer werden von Microsoft nicht benachrichtigt.",
+        "invitesSummary": "Microsoft sendet Kalendereinladungen per E-Mail an: {{recipients}}.",
+        "invitesSummaryYou": "Sie (Ersteller)",
+        "reason": {
+          "addon_required": "Das Teams-Add-on ist für diesen Mandanten nicht aktiv.",
+          "ee_disabled": "Die Teams-Integration erfordert die Enterprise Edition.",
+          "no_organizer": "In den Teams-Einstellungen ist kein Standard-Besprechungsorganisator konfiguriert.",
+          "not_configured": "Die Teams-Integration wurde nicht konfiguriert."
+        },
+        "scheduleSummary": "Ein Zeitplaneintrag wird zu Ihrem AlgaPSA-Kalender hinzugefügt.",
         "startRequired": "Zum Erstellen einer Teams-Besprechung ist eine Startzeit erforderlich",
         "unavailable": "Die Erstellung von Teams-Besprechungen ist für diesen Mandanten nicht verfügbar."
       },
@@ -1485,6 +1495,9 @@
       "allContacts": "Alle Kontakte",
       "allStatuses": "Alle Status",
       "allUsers": "Alle Benutzer",
+      "columns": { "type": "Typ", "title": "Titel", "client": "Kunde", "contact": "Kontakt", "user": "Benutzer", "date": "Datum", "status": "Status" },
+      "empty": "Keine Interaktionen entsprechen diesen Filtern.",
+      "loading": "Interaktionen werden geladen…",
       "byUser": "Von {{name}}",
       "collapse": "Letzte Interaktionen einklappen",
       "contactsFromClient": "Kontakte des ausgewählten Kunden",

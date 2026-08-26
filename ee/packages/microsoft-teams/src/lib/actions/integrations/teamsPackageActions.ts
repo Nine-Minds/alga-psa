@@ -192,7 +192,7 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     },
     description: {
       short: 'Manage PSA tickets, time, notes, and approvals from Microsoft Teams.',
-      full: 'AlgaPSA for Microsoft Teams gives MSP technicians a personal tab, personal-scope bot, message extension, and activity feed notifications backed by the tenant-selected Microsoft profile.',
+      full: 'AlgaPSA for Microsoft Teams gives MSP technicians a personal tab, bot commands in personal chats, group chats, and team channels, a message extension, and activity feed notifications backed by the tenant-selected Microsoft profile.',
     },
     icons: {
       outline: 'outline.png',
@@ -212,12 +212,12 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     bots: [
       {
         botId: profile.client_id,
-        scopes: ['personal', 'groupChat'],
+        scopes: ['personal', 'groupChat', 'team'],
         supportsFiles: false,
         isNotificationOnly: false,
         commandLists: [
           {
-            scopes: ['personal', 'groupChat'],
+            scopes: ['personal', 'groupChat', 'team'],
             // Single source of truth: the same definitions the bot handler
             // recognizes (Teams caps this list at 10 commands).
             commands: getTeamsManifestBotCommands(),

@@ -1238,8 +1238,8 @@
     }
   },
   "maintenanceCommandCenter": {
-    "title": "⟦Ḿȧīƞŧḗƞȧƞƈḗ Ƈȯḿḿȧƞḓ Ƈḗƞŧḗř⟧",
-    "description": "⟦Ƞḗẋŧ ḓŭḗ ȧḓṽȧƞƈḗş ƒřȯḿ ŧħḗ ȧƈŧŭȧŀ ƈȯḿƥŀḗŧīȯƞ ḓȧŧḗ.⟧",
+    "title": "⟦Ḿȧīƞŧḗƞȧƞƈḗ⟧",
+    "description": "⟦Ƈȯḿḿȧƞḓ ƈḗƞŧḗř ƒȯř ƥřḗṽḗƞŧīṽḗ ẇȯřķ ȧƈřȯşş ȧŀŀ ƈŀīḗƞŧ ȧşşḗŧş.⟧",
     "assetsLink": "⟦Ȧşşḗŧş⟧"
   },
   "maintenanceCompletionDialog": {

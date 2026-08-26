@@ -137,6 +137,8 @@
       "@alga-psa/reference-data/*": ["packages/reference-data/src/*"],
       "@alga-psa/teams": ["packages/teams/src"],
       "@alga-psa/teams/*": ["packages/teams/src/*"],
+      "@alga-psa/telephony": ["packages/telephony/src"],
+      "@alga-psa/telephony/*": ["packages/telephony/src/*"],
       "@alga-psa/users": ["packages/users/src"],
       "@alga-psa/users/*": ["packages/users/src/*"],
       "@alga-psa/licensing": ["packages/licensing/src"],

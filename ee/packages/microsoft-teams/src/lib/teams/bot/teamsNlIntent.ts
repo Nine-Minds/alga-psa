@@ -150,7 +150,7 @@ function buildNlSystemPrompt(availableActions: TeamsNlAvailableAction[]): string
   ].join('\n');
 }
 
-async function resolveAnthropicApiKey(): Promise<string | null> {
+export async function resolveAnthropicApiKey(): Promise<string | null> {
   try {
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
     const provider = await getSecretProviderInstance();

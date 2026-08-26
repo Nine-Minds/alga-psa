@@ -1981,6 +1981,22 @@
     "templates": {
       "comingSoon": "Toewijzingssjablonen en geplande imports komen hier. Sla kolomtoewijzingen op, deel ze met het team en configureer terugkerende taken."
     },
+    "migration": {
+      "actions": {
+        "back": "Terug naar migraties",
+        "upload": "Pakket uploaden"
+      },
+      "errors": {
+        "noImportableRecords": "Dit pakket bevatte geen importeerbare records."
+      },
+      "preflight": {
+        "title": "Voorcontrole"
+      },
+      "run": {
+        "queued": "Migratie in wachtrij",
+        "applying": "Migratie wordt uitgevoerd"
+      }
+    },
     "jobDetails": {
       "title": "Importtaakdetails",
       "stats": {
@@ -2500,6 +2516,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Accepteer creditcardbetalingen voor facturen via Stripe"
+      },
+      "telephony": {
+        "name": "Telefonie",
+        "description": "Leg gesprekken vast als interacties, herken de beller en maak van een gesprek een ticket"
       }
     }
   },

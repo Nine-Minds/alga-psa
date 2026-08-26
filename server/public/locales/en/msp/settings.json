@@ -1981,6 +1981,12 @@
     "templates": {
       "comingSoon": "Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs."
     },
+    "migration": {
+      "actions": { "back": "Back to migrations", "upload": "Upload package" },
+      "errors": { "noImportableRecords": "This package contained no importable records." },
+      "preflight": { "title": "Preflight" },
+      "run": { "queued": "Migration queued", "applying": "Migration in progress" }
+    },
     "jobDetails": {
       "title": "Import Job Details",
       "stats": {
@@ -2500,6 +2506,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Accept credit card payments for invoices via Stripe"
+      },
+      "telephony": {
+        "name": "Telephony",
+        "description": "Journal calls as interactions, recognise callers, and turn a call into a ticket"
       }
     }
   },

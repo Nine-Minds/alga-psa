@@ -1981,6 +1981,22 @@
     "templates": {
       "comingSoon": "Zuordnungsvorlagen und geplante Importe werden hier verfügbar sein. Speichern Sie Spaltenzuordnungen, teilen Sie sie mit dem Team und konfigurieren Sie wiederkehrende Aufträge."
     },
+    "migration": {
+      "actions": {
+        "back": "Zurück zu Migrationen",
+        "upload": "Paket hochladen"
+      },
+      "errors": {
+        "noImportableRecords": "Dieses Paket enthielt keine importierbaren Datensätze."
+      },
+      "preflight": {
+        "title": "Vorprüfung"
+      },
+      "run": {
+        "queued": "Migration in Warteschlange",
+        "applying": "Migration läuft"
+      }
+    },
     "jobDetails": {
       "title": "Import-Auftragsdetails",
       "stats": {
@@ -2500,6 +2516,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Akzeptieren Sie Kreditkartenzahlungen für Rechnungen über Stripe"
+      },
+      "telephony": {
+        "name": "Telefonie",
+        "description": "Anrufe als Interaktionen protokollieren, Anrufer erkennen und aus einem Anruf ein Ticket erstellen"
       }
     }
   },

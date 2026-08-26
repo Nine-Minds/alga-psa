@@ -5,11 +5,14 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
 import { createTenantKnex, tenantDb, getConnection } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import type { CalendarProviderConfig } from '@alga-psa/types';
 import {
   deriveParentStepFromSubsteps,
   type OnboardingProgressSubstep,
 } from '../lib/deriveParentStepFromSubsteps';
+import {
+  summarizeCalendarProviders,
+  type CalendarProviderRow,
+} from './calendarProviderOnboarding';
 
 export type OnboardingStepId =
   | 'identity_sso'
@@ -404,47 +407,27 @@ async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServ
     // Query calendar providers directly to avoid permission checks
     // The onboarding progress should be visible regardless of specific permissions
     const providers = await tenantDb(knex, tenantId).table('calendar_providers')
-      .orderBy('created_at', 'desc') as CalendarProviderConfig[];
-
-    const connected = providers.filter((provider) => provider.active && provider.connection_status === 'connected');
-    const errored = providers.find((provider) => provider.connection_status === 'error');
-
-    const lastUpdated = dateToIso(
-      connected[0]?.updated_at || providers[0]?.updated_at
-    );
-
-    const hasProvider = providers.length > 0;
-    const calendarConnectionFallback = errored
-      ? {
-          blocker: `${errored.name} requires attention before syncing can resume.`,
-          blockerKey: 'onboarding.blockers.calendar.providerAttention',
-          blockerValues: { provider: errored.name },
-        }
-      : null;
+      .orderBy('created_at', 'desc') as CalendarProviderRow[];
+    const summary = summarizeCalendarProviders(providers);
+    const lastUpdated = dateToIso(summary.lastUpdated);
 
     const substeps: OnboardingSubstepServerState[] = [
       {
         id: 'calendar_provider_added',
         title: 'Add a calendar provider',
         titleKey: 'onboarding.substeps.calendar.addProvider',
-        status: hasProvider ? 'complete' : 'not_started',
+        status: summary.hasProvider ? 'complete' : 'not_started',
         lastUpdated,
       },
       {
         id: 'calendar_provider_connected',
         title: 'Connect and authorize the provider',
         titleKey: 'onboarding.substeps.calendar.connectAuthorize',
-        status: connected.length > 0
-          ? 'complete'
-          : errored
-            ? 'blocked'
-            : hasProvider
-              ? 'in_progress'
-              : 'not_started',
+        status: summary.connectionStatus,
         lastUpdated,
-        blocker: errored?.error_message || calendarConnectionFallback?.blocker || null,
-        blockerKey: errored?.error_message ? null : (calendarConnectionFallback?.blockerKey ?? null),
-        blockerValues: errored?.error_message ? undefined : calendarConnectionFallback?.blockerValues,
+        blocker: summary.blocker,
+        blockerKey: summary.blockerKey,
+        blockerValues: summary.blockerValues,
       },
     ];
 
@@ -460,7 +443,7 @@ async function resolveCalendarStep(tenantId: string): Promise<OnboardingStepServ
       progressValue: derived.progressValue,
       substeps,
       meta: {
-        providers: providers.map((provider) => ({ id: provider.id, name: provider.name, status: provider.connection_status })),
+        providers: summary.providers,
       },
     };
   } catch (error) {

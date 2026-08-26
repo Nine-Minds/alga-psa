@@ -1981,6 +1981,22 @@
     "templates": {
       "comingSoon": "Os modelos de mapeamento e as importações programadas ficarão aqui. Salve mapeamentos de colunas, compartilhe-os com toda a equipe e configure trabalhos recorrentes."
     },
+    "migration": {
+      "actions": {
+        "back": "Voltar para migrações",
+        "upload": "Enviar pacote"
+      },
+      "errors": {
+        "noImportableRecords": "Este pacote não continha registros importáveis."
+      },
+      "preflight": {
+        "title": "Verificação prévia"
+      },
+      "run": {
+        "queued": "Migração na fila",
+        "applying": "Migração em andamento"
+      }
+    },
     "jobDetails": {
       "title": "Detalhes do trabalho de importação",
       "stats": {
@@ -2500,6 +2516,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Aceite pagamentos com cartão de crédito para faturas via Stripe"
+      },
+      "telephony": {
+        "name": "Telefonia",
+        "description": "Registre chamadas como interações, reconheça quem liga e transforme uma chamada em chamado"
       }
     }
   },

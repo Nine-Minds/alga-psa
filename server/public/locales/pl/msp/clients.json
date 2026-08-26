@@ -1512,6 +1512,16 @@
         "createFailed": "Nie udało się utworzyć spotkania Teams",
         "createToggle": "Utwórz spotkanie Teams",
         "endRequired": "Godzina zakończenia jest wymagana do utworzenia spotkania Teams",
+        "invitesDisabled": "Zaproszenia e-mail są wyłączone w ustawieniach integracji Teams — Microsoft nie powiadomi uczestników.",
+        "invitesSummary": "Microsoft wyśle zaproszenia kalendarza pocztą e-mail do: {{recipients}}.",
+        "invitesSummaryYou": "Ciebie (twórcy)",
+        "reason": {
+          "addon_required": "Dodatek Teams nie jest aktywny dla tej organizacji.",
+          "ee_disabled": "Integracja Teams wymaga wersji Enterprise Edition.",
+          "no_organizer": "W ustawieniach Teams nie skonfigurowano domyślnego organizatora spotkania.",
+          "not_configured": "Integracja Teams nie została skonfigurowana."
+        },
+        "scheduleSummary": "Wpis harmonogramu zostanie dodany do Twojego kalendarza AlgaPSA.",
         "startRequired": "Godzina rozpoczęcia jest wymagana do utworzenia spotkania Teams",
         "unavailable": "Tworzenie spotkań Teams nie jest dostępne dla tego tenanta."
       },
@@ -1537,6 +1547,9 @@
       "allContacts": "Wszystkie kontakty",
       "allStatuses": "Wszystkie statusy",
       "allUsers": "Wszyscy użytkownicy",
+      "columns": { "type": "Typ", "title": "Tytuł", "client": "Klient", "contact": "Kontakt", "user": "Użytkownik", "date": "Data", "status": "Status" },
+      "empty": "Brak interakcji pasujących do tych filtrów.",
+      "loading": "Ładowanie interakcji…",
       "byUser": "Przez {{name}}",
       "collapse": "Zwiń ostatnie interakcje",
       "contactsFromClient": "Kontakty wybranego klienta",

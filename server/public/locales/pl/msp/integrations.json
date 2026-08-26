@@ -2851,9 +2851,17 @@
             "description": "Dostarczaj osobiste powiadomienia do kanału aktywności Teams.",
             "label": "Powiadomienia o aktywności"
           },
+          "channelBot": {
+            "description": "Zezwalaj botowi na odpowiadanie, gdy zostanie wspomniany przez @ w kanałach zespołu. Odpowiedzi bota (w tym szczegóły zgłoszenia) są widoczne dla wszystkich członków kanału.",
+            "label": "Bot w kanale"
+          },
           "groupChatBot": {
             "description": "Zezwalaj botowi na odpowiadanie w czatach grupowych Teams. Odpowiedzi bota (w tym szczegóły zgłoszenia) są widoczne dla wszystkich członków czatu.",
             "label": "Bot w czacie grupowym"
+          },
+          "guestTicketSubmission": {
+            "description": "Zezwalaj kontaktom klientów piszącym do bota na przesyłanie zgłoszeń bez logowania. Nadawcy są dopasowywani do kontaktów na podstawie zweryfikowanej tożsamości Microsoft; niedopasowani nadawcy są odrzucani.",
+            "label": "Przesyłanie zgłoszeń przez gości"
           },
           "messageExtension": {
             "description": "Włącz wyszukiwanie i akcje PSA oparte na wiadomościach.",
@@ -3579,6 +3587,71 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Aktywne",
+        "error": "Błąd",
+        "disabled": "Wyłączone",
+        "notConfigured": "Nieskonfigurowane"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Zapisuje rozmowy Teams Phone jako interakcje po zakończeniu każdego połączenia. Historia rozmów, a nie podgląd na żywo.",
+          "prerequisite": "Najpierw skonfiguruj integrację z Microsoft Teams — Teams Phone korzysta z jej profilu Microsoft."
+        }
+      },
+      "subscriptionExpires": "Subskrypcja odnowi się przed",
+      "lastNotification": "Ostatnie powiadomienie o połączeniu",
+      "autoTicket": "Automatycznie twórz zgłoszenie dla dopasowanych rozmów",
+      "unknownNumber": "Nieznany numer",
+      "actions": {
+        "enable": "Włącz",
+        "disable": "Wyłącz"
+      },
+      "matchStatus": {
+        "matched": "Dopasowana",
+        "ambiguous": "Niejednoznaczna",
+        "unmatched": "Niedopasowana",
+        "resolved": "Rozstrzygnięta"
+      },
+      "callsPanel": {
+        "title": "Rozmowy"
+      },
+      "recentCalls": {
+        "title": "Ostatnie rozmowy",
+        "description": "Rejestrowane po zakończeniu rozmowy — Microsoft Graph publikuje rekordy połączeń dopiero potem, więc to historia, a nie podgląd na żywo.",
+        "empty": "Nie zarejestrowano jeszcze żadnej rozmowy.",
+        "createTicket": "Utwórz zgłoszenie",
+        "openTicket": "Otwórz zgłoszenie",
+        "linkTicket": "Powiąż ze zgłoszeniem",
+        "selectTicket": "Wybierz zgłoszenie…",
+        "noLinkableTickets": "Brak otwartych zgłoszeń"
+      },
+      "unmatched": {
+        "title": "Rozmowy wymagające przypisania",
+        "description": "Numery, których nie udało się dopasować, oraz numery używane przez kilka kontaktów. Rozstrzygnięcie rozmowy umieszcza ją na właściwej osi czasu.",
+        "empty": "Każda zarejestrowana rozmowa jest przypisana.",
+        "assignTo": "Przypisz do",
+        "searchPlaceholder": "Szukaj kontaktów i klientów…",
+        "noTargets": "Brak pasujących kontaktów lub klientów.",
+        "chooseTarget": "Przypisz do kontaktu lub klienta…"
+      },
+      "forbidden": "Nie masz uprawnień do wyświetlania ustawień telefonii tej organizacji.",
+      "paywall": {
+        "title": "Dodatek Microsoft Teams",
+        "description": "Integracje telefoniczne wymagają dodatku Microsoft Teams dla tej organizacji.",
+        "ceOnly": "Integracje telefoniczne są dostępne wyłącznie w Enterprise Edition.",
+        "includedTitle": "Co obejmuje",
+        "cta": "Zarządzaj dodatkami",
+        "feature": {
+          "recognition": "Rozpoznawanie dzwoniącego wśród kontaktów i klientów przy każdej zarejestrowanej rozmowie.",
+          "history": "Historia rozmów na osi czasu kontaktu i klienta jako pełnoprawne interakcje.",
+          "tickets": "Utwórz zgłoszenie z rozmowy albo powiąż rozmowę ze zgłoszeniem, nad którym już pracujesz.",
+          "queue": "Kolejka numerów niedopasowanych i niejednoznacznych, aby żadna rozmowa nie została przypisana na wyczucie.",
+          "providers": "Dziś Teams Phone; ten sam rdzeń połączeń przyjmie kolejnych dostawców."
+        }
+      }
     }
   },
   "errors": {

@@ -2851,9 +2851,17 @@
             "description": "Inoltra notifiche personali al feed di attività Teams.",
             "label": "Notifiche di attività"
           },
+          "channelBot": {
+            "description": "Consenti al bot di rispondere quando viene menzionato con @ nei canali del team. Le risposte del bot (inclusi i dettagli dei ticket) sono visibili a tutti i membri del canale.",
+            "label": "Bot nei canali"
+          },
           "groupChatBot": {
             "description": "Consenti al bot di rispondere nelle chat di gruppo Teams. Le risposte del bot (inclusi i dettagli dei ticket) sono visibili a tutti i membri della chat.",
             "label": "Bot nelle chat di gruppo"
+          },
+          "guestTicketSubmission": {
+            "description": "Consenti ai contatti dei clienti che scrivono al bot di inviare ticket senza accedere. I mittenti vengono associati ai contatti tramite la loro identità Microsoft verificata; i mittenti senza corrispondenza vengono rifiutati.",
+            "label": "Invio ticket da parte degli ospiti"
           },
           "messageExtension": {
             "description": "Abilita la ricerca e le azioni PSA guidate dai messaggi.",
@@ -3579,6 +3587,71 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Attivo",
+        "error": "Errore",
+        "disabled": "Disattivato",
+        "notConfigured": "Non configurato"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Registra le chiamate di Teams Phone come interazioni al termine di ogni chiamata. Cronologia delle chiamate, non avviso a schermo in tempo reale.",
+          "prerequisite": "Configura prima l'integrazione Microsoft Teams: Teams Phone riusa il suo profilo Microsoft."
+        }
+      },
+      "subscriptionExpires": "L'abbonamento si rinnova entro",
+      "lastNotification": "Ultima notifica di chiamata",
+      "autoTicket": "Crea automaticamente un ticket per le chiamate riconosciute",
+      "unknownNumber": "Numero sconosciuto",
+      "actions": {
+        "enable": "Attiva",
+        "disable": "Disattiva"
+      },
+      "matchStatus": {
+        "matched": "Riconosciuta",
+        "ambiguous": "Ambigua",
+        "unmatched": "Non riconosciuta",
+        "resolved": "Risolta"
+      },
+      "callsPanel": {
+        "title": "Chiamate"
+      },
+      "recentCalls": {
+        "title": "Chiamate recenti",
+        "description": "Acquisite al termine di ogni chiamata: Microsoft Graph pubblica i record dopo la chiamata, quindi questa è una cronologia e non un flusso in tempo reale.",
+        "empty": "Nessuna chiamata acquisita finora.",
+        "createTicket": "Crea ticket",
+        "openTicket": "Apri ticket",
+        "linkTicket": "Collega a ticket",
+        "selectTicket": "Seleziona un ticket…",
+        "noLinkableTickets": "Nessun ticket aperto"
+      },
+      "unmatched": {
+        "title": "Chiamate da attribuire",
+        "description": "Numeri che non siamo riusciti a riconoscere e numeri condivisi da più contatti. Risolvere una chiamata la archivia nella cronologia giusta.",
+        "empty": "Tutte le chiamate acquisite sono attribuite.",
+        "assignTo": "Assegna a",
+        "searchPlaceholder": "Cerca contatti e clienti…",
+        "noTargets": "Nessun contatto o cliente corrispondente.",
+        "chooseTarget": "Assegna a un contatto o cliente…"
+      },
+      "forbidden": "Non hai il permesso di visualizzare le impostazioni di telefonia di questo tenant.",
+      "paywall": {
+        "title": "Componente aggiuntivo Microsoft Teams",
+        "description": "Le integrazioni di telefonia richiedono il componente aggiuntivo Microsoft Teams per questo tenant.",
+        "ceOnly": "Le integrazioni di telefonia sono disponibili solo in Enterprise Edition.",
+        "includedTitle": "Cosa è incluso",
+        "cta": "Gestisci componenti aggiuntivi",
+        "feature": {
+          "recognition": "Riconoscimento del chiamante tra contatti e clienti a ogni chiamata acquisita.",
+          "history": "Cronologia delle chiamate sulla timeline di contatto e cliente come interazioni a pieno titolo.",
+          "tickets": "Crea un ticket da una chiamata oppure collega la chiamata a un ticket già in lavorazione.",
+          "queue": "Una coda per i numeri non riconosciuti e ambigui, così nessuna chiamata viene attribuita a caso.",
+          "providers": "Oggi Teams Phone; lo stesso nucleo per le chiamate accoglierà i futuri fornitori."
+        }
+      }
     }
   },
   "errors": {

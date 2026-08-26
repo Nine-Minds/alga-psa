@@ -13,6 +13,7 @@ import {
   ProjectDateReadinessJobData,
 } from './handlers/projectDateReadinessHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
 import {
   KB_ARTICLE_IMPORT_JOB,
   kbArticleImportHandler,
@@ -71,6 +72,17 @@ import {
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
+import {
+  renewTelephonyCallSubscriptions,
+  processTelephonyCallNotification,
+  TelephonyCallSubscriptionRenewalJobData,
+  TelephonyCallNotificationJobData,
+} from '@alga-psa/jobs/handlers/telephonyCallNotificationHandler';
+import {
+  telephonyCallArtifactSweepHandler,
+  TelephonyCallArtifactSweepJobData,
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/telephonyCallArtifactHandler';
 import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
@@ -381,6 +393,20 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // AMP migration apply handler. Retries are safe by construction: the
+  // identity ledger skips every record already applied under its source key.
+  JobHandlerRegistry.register<MigrationApplyJobData & BaseJobData>(
+    {
+      name: 'migration_apply',
+      handler: async (jobId, data) => {
+        await handleMigrationApplyJob({ id: jobId, data } as any);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 3600000, // 1 hour for large packages
+    },
+    registerOpts
+  );
+
   // KB article import handler — parses staged markdown/HTML off the web
   // request. Retries are safe: kb_import_files rows are consumed only while
   // they are still 'pending'.
@@ -604,6 +630,39 @@ export async function registerAllJobHandlers(
           await processTeamsMeetingArtifactNotification(data);
         },
         retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TelephonyCallSubscriptionRenewalJobData & BaseJobData>(
+      {
+        name: 'renew-telephony-call-subscriptions',
+        handler: async (_jobId, data) => {
+          await renewTelephonyCallSubscriptions(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TelephonyCallNotificationJobData & BaseJobData>(
+      {
+        name: 'process-telephony-call-notification',
+        handler: async (_jobId, data) => {
+          await processTelephonyCallNotification(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TelephonyCallArtifactSweepJobData & BaseJobData>(
+      {
+        name: TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+        handler: async (_jobId, data) => {
+          await telephonyCallArtifactSweepHandler(data);
+        },
+        retry: { maxAttempts: 2 },
       },
       registerOpts
     );
@@ -847,7 +906,7 @@ export function getAvailableJobHandlers(): string[] {
       process.env.EDITION === 'enterprise'
       || process.env.EDITION === 'ee'
       || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
-        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification']
+        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification', 'renew-telephony-call-subscriptions', 'process-telephony-call-notification', TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]
         : []
     ),
     // SLA

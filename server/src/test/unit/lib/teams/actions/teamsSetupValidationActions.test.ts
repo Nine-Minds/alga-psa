@@ -61,6 +61,7 @@ const ALL_REQUIRED_PERMISSIONS = [
   'OnlineMeetingTranscript.Read.All',
   'TeamsActivity.Send',
   'User.Read.All',
+  'CallRecords.Read.All',
 ];
 
 const fetchMock = vi.fn();

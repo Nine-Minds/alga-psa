@@ -12,6 +12,7 @@ interface TeamsMeetingCapabilityRow {
   install_status: TeamsInstallStatus;
   default_meeting_organizer_upn: string | null;
   default_meeting_organizer_object_id?: string | null;
+  send_meeting_invites?: boolean | null;
 }
 
 export type TeamsMeetingCapabilityReason = 'ee_disabled' | 'addon_required' | 'not_configured' | 'no_organizer';
@@ -22,6 +23,8 @@ export interface TeamsMeetingCapabilityResult {
   reason?: TeamsMeetingCapabilityReason;
   recordingsAvailable: boolean;
   recordingReason?: TeamsRecordingCapabilityReason;
+  /** Whether Microsoft will email calendar invites to attendees (tenant toggle). */
+  sendMeetingInvites?: boolean;
 }
 
 function normalizeString(value: unknown): string {
@@ -55,6 +58,8 @@ export async function getTeamsMeetingCapability(
   return {
     available: true,
     recordingsAvailable,
+    // Default-on like meetingConfig: only an explicit false disables invites.
+    sendMeetingInvites: integration.send_meeting_invites !== false,
     ...(recordingsAvailable ? {} : { recordingReason: 'missing_organizer_object_id' as const }),
   };
 }

@@ -1981,6 +1981,22 @@
     "templates": {
       "comingSoon": "Les modèles de correspondance et les importations planifiées seront disponibles ici. Enregistrez les correspondances de colonnes, partagez-les avec l'équipe et configurez des tâches récurrentes."
     },
+    "migration": {
+      "actions": {
+        "back": "Retour aux migrations",
+        "upload": "Téléverser le paquet"
+      },
+      "errors": {
+        "noImportableRecords": "Ce paquet ne contenait aucun enregistrement importable."
+      },
+      "preflight": {
+        "title": "Vérification préalable"
+      },
+      "run": {
+        "queued": "Migration en file d'attente",
+        "applying": "Migration en cours"
+      }
+    },
     "jobDetails": {
       "title": "Détails de la tâche d'importation",
       "stats": {
@@ -2500,6 +2516,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Acceptez les paiements par carte de crédit pour les factures via Stripe"
+      },
+      "telephony": {
+        "name": "Téléphonie",
+        "description": "Journalisez les appels comme interactions, identifiez l'appelant et transformez un appel en ticket"
       }
     }
   },

@@ -45,6 +45,31 @@ export function buildTeamsMeetingAttendees(participants: {
   return attendees;
 }
 
+/**
+ * The meeting's Graph organizer is the tenant's shared resource account, so
+ * the human who scheduled it is invisible to Microsoft unless they are an
+ * attendee. Guarantee the creator is on the invite list (deduped by address).
+ */
+export function ensureCreatorAttendee(
+  attendees: TeamsMeetingAttendee[],
+  creator: { email?: string | null; first_name?: string | null; last_name?: string | null; username?: string | null },
+): TeamsMeetingAttendee[] {
+  const email = (creator.email ?? '').trim();
+  if (!email) {
+    return attendees;
+  }
+  const already = attendees.some(
+    (attendee) => (attendee.emailAddress?.address ?? '').trim().toLowerCase() === email.toLowerCase(),
+  );
+  if (already) {
+    return attendees;
+  }
+  const name = [creator.first_name, creator.last_name].filter(Boolean).join(' ').trim()
+    || creator.username
+    || email;
+  return [...attendees, { emailAddress: { address: email, name }, type: 'required' }];
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

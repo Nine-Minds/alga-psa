@@ -22,6 +22,7 @@ import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './ha
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
 import { handleReconcileHourBlockAllocations, ReconcileHourBlockAllocationsJobData } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
 import {
   inboundEmailRecoveryHandler,
@@ -52,6 +53,17 @@ import {
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
+import {
+  renewTelephonyCallSubscriptions,
+  processTelephonyCallNotification,
+  TelephonyCallSubscriptionRenewalJobData,
+  TelephonyCallNotificationJobData,
+} from '@alga-psa/jobs/handlers/telephonyCallNotificationHandler';
+import {
+  telephonyCallArtifactSweepHandler,
+  TelephonyCallArtifactSweepJobData,
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/telephonyCallArtifactHandler';
 import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
@@ -148,6 +160,9 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await generateInvoiceHandler(job.data);
     });
     jobScheduler.registerJobHandler<AssetImportJobData>('asset_import', handleAssetImportJob);
+
+    // Register the AMP migration application handler
+    jobScheduler.registerJobHandler<MigrationApplyJobData>('migration_apply', handleMigrationApplyJob);
     
     // Register expired credits handler
     jobScheduler.registerJobHandler<ExpiredCreditsJobData>('expired-credits', async (job: Job<ExpiredCreditsJobData>) => {
@@ -295,6 +310,27 @@ export const initializeScheduler = async (storageService?: StorageService) => {
         'process-teams-meeting-artifact-notification',
         async (job: Job<TeamsMeetingArtifactNotificationJobData>) => {
           await processTeamsMeetingArtifactNotification(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallSubscriptionRenewalJobData>(
+        'renew-telephony-call-subscriptions',
+        async (job: Job<TelephonyCallSubscriptionRenewalJobData>) => {
+          await renewTelephonyCallSubscriptions(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallNotificationJobData>(
+        'process-telephony-call-notification',
+        async (job: Job<TelephonyCallNotificationJobData>) => {
+          await processTelephonyCallNotification(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallArtifactSweepJobData>(
+        TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+        async (job: Job<TelephonyCallArtifactSweepJobData>) => {
+          await telephonyCallArtifactSweepHandler(job.data);
         }
       );
 
