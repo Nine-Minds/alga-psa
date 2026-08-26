@@ -2831,9 +2831,17 @@
             "description": "Entregue notificações de feed de atividades pessoais do Teams.",
             "label": "Notificações de atividades"
           },
+          "channelBot": {
+            "description": "Permita que o bot responda quando for mencionado com @ em canais de equipe. As respostas do bot (incluindo detalhes do ticket) ficam visíveis para todos os membros do canal.",
+            "label": "Bot de canal"
+          },
           "groupChatBot": {
             "description": "Permita que o bot responda em chats de grupo do Teams. As respostas do bot (incluindo detalhes do ticket) ficam visíveis para todos os membros do chat.",
             "label": "Bot de bate-papo em grupo"
+          },
+          "guestTicketSubmission": {
+            "description": "Permita que contatos de clientes que enviam mensagens ao bot abram tickets sem fazer login. Os remetentes são associados a contatos pela identidade Microsoft verificada; remetentes sem correspondência são recusados.",
+            "label": "Envio de tickets por convidados"
           },
           "messageExtension": {
             "description": "Habilite ações de pesquisa e PSA orientadas por mensagens.",
@@ -3559,6 +3567,71 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Ativo",
+        "error": "Erro",
+        "disabled": "Desativado",
+        "notConfigured": "Não configurado"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Registra as chamadas do Teams Phone como interações assim que cada chamada termina. Histórico de chamadas, não alerta na tela em tempo real.",
+          "prerequisite": "Configure primeiro a integração com o Microsoft Teams — o Teams Phone reaproveita o perfil Microsoft dela."
+        }
+      },
+      "subscriptionExpires": "A assinatura é renovada antes de",
+      "lastNotification": "Última notificação de chamada",
+      "autoTicket": "Criar um chamado automaticamente para chamadas identificadas",
+      "unknownNumber": "Número desconhecido",
+      "actions": {
+        "enable": "Ativar",
+        "disable": "Desativar"
+      },
+      "matchStatus": {
+        "matched": "Identificada",
+        "ambiguous": "Ambígua",
+        "unmatched": "Não identificada",
+        "resolved": "Resolvida"
+      },
+      "callsPanel": {
+        "title": "Chamadas"
+      },
+      "recentCalls": {
+        "title": "Chamadas recentes",
+        "description": "Capturadas após o fim de cada chamada: o Microsoft Graph publica os registros depois da chamada, portanto isto é histórico e não um fluxo ao vivo.",
+        "empty": "Nenhuma chamada capturada ainda.",
+        "createTicket": "Criar chamado",
+        "openTicket": "Abrir chamado",
+        "linkTicket": "Vincular a chamado",
+        "selectTicket": "Selecionar um chamado…",
+        "noLinkableTickets": "Nenhum chamado aberto"
+      },
+      "unmatched": {
+        "title": "Chamadas sem atribuição",
+        "description": "Números que não conseguimos identificar e números compartilhados por mais de um contato. Resolver uma chamada a arquiva na linha do tempo certa.",
+        "empty": "Todas as chamadas capturadas estão atribuídas.",
+        "assignTo": "Atribuir a",
+        "searchPlaceholder": "Pesquisar contatos e clientes…",
+        "noTargets": "Nenhum contato ou cliente correspondente.",
+        "chooseTarget": "Atribuir a um contato ou cliente…"
+      },
+      "forbidden": "Você não tem permissão para ver as configurações de telefonia deste inquilino.",
+      "paywall": {
+        "title": "Complemento Microsoft Teams",
+        "description": "As integrações de telefonia exigem o complemento Microsoft Teams para este inquilino.",
+        "ceOnly": "As integrações de telefonia estão disponíveis apenas na Enterprise Edition.",
+        "includedTitle": "O que está incluído",
+        "cta": "Gerenciar complementos",
+        "feature": {
+          "recognition": "Reconhecimento de quem liga entre contatos e clientes em cada chamada capturada.",
+          "history": "Histórico de chamadas na linha do tempo do contato e do cliente como interações completas.",
+          "tickets": "Crie um chamado a partir de uma chamada ou vincule a chamada a um chamado em andamento.",
+          "queue": "Uma fila para números não identificados e ambíguos, para que nenhuma chamada seja atribuída por suposição.",
+          "providers": "Hoje o Teams Phone; o mesmo núcleo de chamadas sustentará os próximos provedores."
+        }
+      }
     }
   },
   "errors": {

@@ -589,7 +589,7 @@ async function resolveTargetInternal(
   }
 }
 
-async function resolveDefaultPriorityIdForBoard(tenantId: string, boardId: string): Promise<string | null> {
+export async function resolveDefaultPriorityIdForBoard(tenantId: string, boardId: string): Promise<string | null> {
   const { knex } = await createTenantKnex(tenantId);
   const db = tenantDb(knex, tenantId);
   const board = (await db.table('boards')

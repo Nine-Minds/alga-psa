@@ -2854,9 +2854,17 @@
             "description": "Deliver personal Teams activity-feed notifications.",
             "label": "Activity notifications"
           },
+          "channelBot": {
+            "description": "Allow the bot to respond when @mentioned in team channels. Bot replies (including ticket details) are visible to every channel member.",
+            "label": "Channel bot"
+          },
           "groupChatBot": {
             "description": "Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.",
             "label": "Group chat bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Let client contacts who message the bot submit tickets without signing in. Senders are matched to contacts by their verified Microsoft identity; unmatched senders are declined.",
+            "label": "Guest ticket submission"
           },
           "messageExtension": {
             "description": "Enable lookup and message-driven PSA actions.",
@@ -3558,6 +3566,71 @@
         "bothKeysRequired": "Please enter both secret key and publishable key",
         "secretKeyFormat": "Secret key should start with sk_",
         "publishableKeyFormat": "Publishable key should start with pk_"
+      }
+    },
+    "telephony": {
+      "status": {
+        "active": "Active",
+        "error": "Error",
+        "disabled": "Disabled",
+        "notConfigured": "Not configured"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Journal Teams Phone calls as interactions once each call ends. Call history, not live screen pop.",
+          "prerequisite": "Configure the Microsoft Teams integration first — Teams Phone reuses its Microsoft profile."
+        }
+      },
+      "subscriptionExpires": "Subscription renews before",
+      "lastNotification": "Last call notification",
+      "autoTicket": "Create a ticket automatically for matched calls",
+      "unknownNumber": "Unknown number",
+      "actions": {
+        "enable": "Enable",
+        "disable": "Disable"
+      },
+      "matchStatus": {
+        "matched": "Matched",
+        "ambiguous": "Ambiguous",
+        "unmatched": "Unmatched",
+        "resolved": "Resolved"
+      },
+      "callsPanel": {
+        "title": "Calls"
+      },
+      "recentCalls": {
+        "title": "Recent calls",
+        "description": "Captured after each call ends — Microsoft Graph publishes call records post-call, so this is history rather than a live feed.",
+        "empty": "No calls captured yet.",
+        "createTicket": "Create ticket",
+        "openTicket": "Open ticket",
+        "linkTicket": "Link to ticket",
+        "selectTicket": "Select a ticket…",
+        "noLinkableTickets": "No open tickets"
+      },
+      "unmatched": {
+        "title": "Calls needing attribution",
+        "description": "Numbers we could not match, and numbers shared by more than one contact. Resolving a call files it on the right timeline.",
+        "empty": "Every captured call is attributed.",
+        "assignTo": "Assign to",
+        "searchPlaceholder": "Search contacts and clients…",
+        "noTargets": "No matching contacts or clients.",
+        "chooseTarget": "Assign to a contact or client…"
+      },
+      "forbidden": "You do not have permission to view telephony settings for this tenant.",
+      "paywall": {
+        "title": "Microsoft Teams add-on",
+        "description": "Telephony integrations require the Microsoft Teams add-on for this tenant.",
+        "ceOnly": "Telephony integrations are only available in Enterprise Edition.",
+        "includedTitle": "What's included",
+        "cta": "Manage add-ons",
+        "feature": {
+          "recognition": "Caller recognition against contacts and clients on every captured call.",
+          "history": "Call history on the contact and client timeline as first-class interactions.",
+          "tickets": "Create a ticket from a call, or link the call to a ticket you are already working.",
+          "queue": "A queue for unmatched and ambiguous numbers so no call is attributed by guesswork.",
+          "providers": "Teams Phone today; the same call core is what future providers plug into."
+        }
       }
     }
   },

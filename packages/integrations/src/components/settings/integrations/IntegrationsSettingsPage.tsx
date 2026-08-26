@@ -21,6 +21,7 @@ import {
   Cloud,
   Shield,
   Lock,
+  Phone,
   BookOpen,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
@@ -29,6 +30,7 @@ import { EmailProviderConfiguration } from '../../email/EmailProviderConfigurati
 import { ProviderCredentialsWorkbench } from './ProviderCredentialsWorkbench';
 import { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseIntegrationSettings';
 import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
+import { TelephonyEnterpriseIntegrationSettings } from './telephony/TelephonyEnterpriseIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -87,6 +89,15 @@ interface IntegrationCategory {
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   integrations: IntegrationItem[];
+  /** Optional second level of navigation inside a crowded category. */
+  subSections?: IntegrationSubSection[];
+}
+
+interface IntegrationSubSection {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  integrationIds: string[];
 }
 
 interface IntegrationItem {
@@ -97,11 +108,13 @@ interface IntegrationItem {
   isEE?: boolean;
 }
 
-function AddOnRequiredNotice({ featureName, addOn, addOnName, description }: {
+function AddOnRequiredNotice({ featureName, addOn, addOnName, description, linkId }: {
   featureName: string;
   addOn: AddOnKey;
   addOnName: string;
   description: string;
+  /** Sub-sections stay mounted, so notices sharing an add-on need distinct ids. */
+  linkId?: string;
 }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
@@ -113,7 +126,7 @@ function AddOnRequiredNotice({ featureName, addOn, addOnName, description }: {
       </h2>
       <p className="text-muted-foreground max-w-md mb-6">{description}</p>
       <a
-        id={`manage-${addOnName.toLowerCase()}-addon-link`}
+        id={linkId ?? `manage-${addOnName.toLowerCase()}-addon-link`}
         href={getAddOnDestination(addOn)}
         className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors"
       >
@@ -130,16 +143,78 @@ interface IntegrationsSettingsPageProps {
   canUseCipp?: boolean;
   /** Whether the user can use Teams integration (Teams add-on) */
   canUseTeams?: boolean;
+  /** Whether the user can use telephony integrations (Microsoft Teams add-on) */
+  canUseTelephony?: boolean;
   /** Slot for QBO sync health panel (injected from billing to avoid a circular dep) */
   qboSyncHealthSlot?: React.ReactNode;
   /** Slot for QBO onboarding wizard entry (injected from billing to avoid a circular dep) */
   qboOnboardingSlot?: React.ReactNode;
 }
 
+
+/**
+ * Second-level navigation inside a category. Every sub-section stays mounted and
+ * the inactive ones are hidden rather than unmounted, so switching back does not
+ * re-run each panel's data fetch (and a deep link into one panel does not throw
+ * the others' loaded state away).
+ */
+function CategorySubSections({ category }: { category: IntegrationCategory }) {
+  // CE strips the EE-only integrations out of the category, so a sub-section
+  // with nothing left in it must not leave an empty tab behind.
+  const subSections = (category.subSections ?? []).filter((subSection) =>
+    category.integrations.some((integration) => subSection.integrationIds.includes(integration.id)),
+  );
+  const [activeSubSection, setActiveSubSection] = useState<string>(subSections[0]?.id ?? '');
+
+  return (
+    <div className="space-y-6" id={`integration-subnav-${category.id}`}>
+      <div className="flex flex-wrap gap-2 border-b pb-3">
+        {subSections.map((subSection) => {
+          const isActive = subSection.id === activeSubSection;
+          return (
+            <button
+              key={subSection.id}
+              type="button"
+              id={`integration-subnav-${category.id}-${subSection.id}`}
+              onClick={() => setActiveSubSection(subSection.id)}
+              className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                isActive
+                  // -900 ink, not -700: the -700/-50 pair drops to 3.95:1 once
+                  // the ramp inverts in dark mode (themeContract element audit).
+                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-900))]'
+                  : 'text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <subSection.icon className="h-4 w-4" />
+              {subSection.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {subSections.map((subSection) => (
+        <div
+          key={subSection.id}
+          hidden={subSection.id !== activeSubSection}
+          className="space-y-6"
+          id={`integration-subsection-${category.id}-${subSection.id}`}
+        >
+          {category.integrations
+            .filter((integration) => subSection.integrationIds.includes(integration.id))
+            .map((integration) => (
+              <integration.component key={integration.id} />
+            ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   canUseEntraSync = true,
   canUseCipp = true,
   canUseTeams = true,
+  canUseTelephony = true,
   qboSyncHealthSlot,
   qboOnboardingSlot,
 }) => {
@@ -247,6 +322,37 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
               ),
           isEE: true,
         },
+        {
+          id: 'telephony',
+          name: t('integrations.items.telephony.name', { defaultValue: 'Telephony' }),
+          description: t('integrations.items.telephony.description', {
+            defaultValue: 'Journal calls as interactions, recognise callers, and turn a call into a ticket.',
+          }),
+          component: canUseTelephony
+            ? TelephonyEnterpriseIntegrationSettings
+            : () => (
+                <AddOnRequiredNotice
+                  featureName={t('integrations.items.telephony.name', { defaultValue: 'Telephony' })}
+                  addOn={ADD_ONS.TEAMS}
+                  addOnName="Teams"
+                  description="Purchase the Teams add-on to journal calls as interactions with caller recognition and ticket creation."
+                  linkId="manage-telephony-addon-link"
+                />
+              ),
+          isEE: true,
+        },
+      ],
+      // Communication grew past a single scroll: email, Teams and telephony each
+      // own a sub-section so a Teams admin is not scrolling past call history.
+      subSections: [
+        { id: 'email', label: t('integrations.items.email.name'), icon: Mail, integrationIds: ['email'] },
+        { id: 'microsoft-teams', label: t('integrations.items.teams.name'), icon: Cloud, integrationIds: ['teams'] },
+        {
+          id: 'telephony',
+          label: t('integrations.items.telephony.name', { defaultValue: 'Telephony' }),
+          icon: Phone,
+          integrationIds: ['telephony'],
+        },
       ],
     },
     ...(isEEAvailable ? [{
@@ -321,7 +427,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isHuduEnabled, t]);
+  ], [canUseCipp, canUseEntraSync, canUseTeams, canUseTelephony, isEEAvailable, isHuduEnabled, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {
@@ -356,11 +462,15 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
 
         {/* Integration components */}
         {category.integrations.length > 0 ? (
+          category.subSections ? (
+            <CategorySubSections category={category} />
+          ) : (
           <div className="space-y-6">
             {category.integrations.map(integration => (
               <integration.component key={integration.id} />
             ))}
           </div>
+          )
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             {t('integrations.emptyCategory')}

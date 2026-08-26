@@ -1593,5 +1593,8 @@
     "noUsedOrders": "No order numbers used yet",
     "markClosed": "Mark as closed status",
     "setDefault": "Set as default status for new tickets"
+  },
+  "callLink": {
+    "teamsCall": "Call in Microsoft Teams"
   }
 }

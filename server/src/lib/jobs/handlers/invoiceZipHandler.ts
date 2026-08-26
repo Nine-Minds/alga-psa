@@ -3,6 +3,7 @@
 // headers). Everything here talks to the database and storage directly, acting
 // as the requester recorded in the job data.
 import { JobService, JobStepResult } from 'server/src/services/job.service';
+import { runAsJobActingUser } from './jobActingUser';
 import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
 import type { IDocument } from '@alga-psa/types';
@@ -117,11 +118,25 @@ export class InvoiceZipJobHandler {
     return null;
   }
 
-  public async handleInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> { 
+  public async handleInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> {
     if (!data.jobServiceId) {
       throw new Error('jobServiceId is required in job data');
     }
 
+    // Background execution has no session; install the enqueuing user and
+    // tenant context so the db/storage layers resolve an identity from
+    // AsyncLocalStorage.
+    return runAsJobActingUser(
+      {
+        jobName: 'invoice_zip',
+        tenantId: data.tenantId,
+        userId: data.requesterId ?? data.metadata?.user_id,
+      },
+      () => this.executeInvoiceZipJob(pgBossJobId, data)
+    );
+  }
+
+  private async executeInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> {
     const { jobServiceId, invoiceIds, tenantId, steps } = data;
     let zipDetailId: string | undefined;
     

@@ -6,6 +6,8 @@ export interface TeamsMeetingCapabilityResult {
   reason?: 'ee_disabled' | 'addon_required' | 'not_configured' | 'no_organizer';
   recordingsAvailable: boolean;
   recordingReason?: 'meeting_unavailable' | 'missing_organizer_object_id';
+  /** Whether Microsoft emails calendar invites to attendees (tenant toggle). */
+  sendMeetingInvites?: boolean;
 }
 
 export interface CreateTeamsMeetingInput {

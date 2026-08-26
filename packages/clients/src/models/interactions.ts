@@ -5,6 +5,26 @@ import OnlineMeetingModel from './onlineMeeting';
 
 type DbOrTransaction = Knex | Knex.Transaction;
 
+export interface InteractionPageFilters {
+  search?: string;
+  userId?: string;
+  contactId?: string;
+  clientId?: string;
+  statusId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  typeId?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface InteractionPageResult {
+  interactions: IInteraction[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 async function resolveDb(tenantId: string, trx?: DbOrTransaction): Promise<{ db: DbOrTransaction; tenant: string }> {
   if (trx) {
     return { db: trx, tenant: tenantId };
@@ -244,6 +264,81 @@ class InteractionModel {
       console.error('Error fetching recent interactions:', error);
       throw error;
     }
+  }
+
+  static async getInteractionsPage(
+    filters: InteractionPageFilters,
+    tenantId: string,
+    trx?: DbOrTransaction,
+  ): Promise<InteractionPageResult> {
+    const { db, tenant } = await resolveDb(tenantId, trx);
+    const facade = tenantDb(db, tenant);
+    const page = Math.max(1, Math.floor(filters.page ?? 1));
+    const pageSize = Math.min(100, Math.max(10, Math.floor(filters.pageSize ?? 10)));
+
+    const buildQuery = () => {
+      const query = facade.table('interactions as i');
+      facade.tenantJoin(query, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left' });
+      facade.tenantJoin(query, 'system_interaction_types as sit', 'i.type_id', 'sit.type_id', { type: 'left' });
+      facade.tenantJoin(query, 'contacts as c', 'i.contact_name_id', 'c.contact_name_id', { type: 'left' });
+      facade.tenantJoin(query, 'clients as cl', 'i.client_id', 'cl.client_id', { type: 'left' });
+      facade.tenantJoin(query, 'users as u', 'i.user_id', 'u.user_id', { type: 'left' });
+      facade.tenantJoin(query, 'statuses as s', 'i.status_id', 's.status_id', { type: 'left' });
+      return query;
+    };
+
+    const applyFilters = (query: Knex.QueryBuilder) => {
+      if (filters.userId) query.where('i.user_id', filters.userId);
+      if (filters.contactId) query.where('i.contact_name_id', filters.contactId);
+      if (filters.clientId) query.where('i.client_id', filters.clientId);
+      if (filters.statusId) query.where('i.status_id', filters.statusId);
+      if (filters.typeId) query.where('i.type_id', filters.typeId);
+      if (filters.dateFrom) query.where('i.interaction_date', '>=', filters.dateFrom);
+      if (filters.dateTo) query.where('i.interaction_date', '<=', filters.dateTo);
+
+      const search = filters.search?.trim();
+      if (search) {
+        query.andWhere((searchQuery: Knex.QueryBuilder) => {
+          searchQuery
+            .whereILike('i.title', `%${search}%`)
+            .orWhereILike('i.notes', `%${search}%`)
+            .orWhereILike('c.full_name', `%${search}%`)
+            .orWhereILike('cl.client_name', `%${search}%`)
+            .orWhereILike('u.username', `%${search}%`);
+        });
+      }
+      return query;
+    };
+
+    const countRow = await applyFilters(buildQuery())
+      .countDistinct('i.interaction_id as count')
+      .first() as { count?: string | number } | undefined;
+
+    const rows = await applyFilters(buildQuery())
+      .select(
+        'i.*',
+        db.raw('COALESCE(it.type_name, sit.type_name) as type_name'),
+        db.raw('COALESCE(it.icon, sit.icon) as icon'),
+        'c.full_name as contact_name',
+        'cl.client_name',
+        'u.username as user_name',
+        's.name as status_name',
+        's.is_closed as is_status_closed',
+      )
+      .orderBy('i.interaction_date', 'desc')
+      .orderBy('i.interaction_id', 'desc')
+      .limit(pageSize)
+      .offset((page - 1) * pageSize) as IInteraction[];
+
+    return {
+      interactions: rows.map((row) => ({
+        ...row,
+        type_name: row.type_name?.toLowerCase() ?? null,
+      })) as IInteraction[],
+      total: Number(countRow?.count ?? 0),
+      page,
+      pageSize,
+    };
   }
 
   static async addInteraction(

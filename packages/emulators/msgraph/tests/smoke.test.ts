@@ -495,6 +495,109 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect(claimsOf(accessToken).roles).toBeUndefined();
   });
 
+  it('serves the meetings loop: events, join-URL resolution, artifacts, and change notifications', async () => {
+    const headers = { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' };
+    const organizer = encodeURIComponent('organizer@contoso.example');
+
+    // Create an online-meeting event the way createTeamsMeeting does.
+    const eventResponse = await fetch(`${base}/v1.0/users/${organizer}/events`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        subject: 'Kickoff',
+        start: { dateTime: '2026-08-13T10:00:00Z', timeZone: 'UTC' },
+        end: { dateTime: '2026-08-13T10:30:00Z', timeZone: 'UTC' },
+        isOnlineMeeting: true,
+        onlineMeetingProvider: 'teamsForBusiness',
+      }),
+    });
+    expect(eventResponse.status).toBe(201);
+    const event = (await eventResponse.json()) as any;
+    expect(event.onlineMeeting.joinUrl).toContain('meetup-join');
+
+    // Resolve the meeting id from the join URL ($filter), as the app does.
+    const filter = encodeURIComponent(`JoinWebUrl eq '${event.onlineMeeting.joinUrl}'`);
+    const resolved = (await (
+      await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings?%24filter=${filter}`, { headers })
+    ).json()) as any;
+    expect(resolved.value).toHaveLength(1);
+    const meetingId = resolved.value[0].id;
+
+    // Organizer verification probe: create + delete a throwaway meeting.
+    const probe = await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ subject: 'verification', startDateTime: '2026-08-13T11:00:00Z', endDateTime: '2026-08-13T11:15:00Z' }),
+    });
+    expect(probe.status).toBe(201);
+    const probeId = ((await probe.json()) as any).id;
+    expect(
+      (await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings/${probeId}`, { method: 'DELETE', headers })).status,
+    ).toBe(204);
+
+    // Artifact subscription (getAllRecordings), then seed a recording: the
+    // change notification must reach the webhook with the parseable resource.
+    const subscription = await fetch(`${base}/v1.0/subscriptions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        changeType: 'created,updated',
+        notificationUrl: `http://127.0.0.1:${webhookPort}/webhook`,
+        resource: 'communications/onlineMeetings/getAllRecordings',
+        expirationDateTime: new Date(Date.now() + 3_600_000).toISOString(),
+        clientState: 'teams-online-meeting-artifacts:tenant-1:recordings:secret',
+      }),
+    });
+    expect(subscription.status).toBe(201);
+
+    const notificationsBefore = notifications.length;
+    const seeded = await controlPost('/control/msgraph/seed/meeting-recording', { meetingId });
+    expect(seeded.ok).toBe(true);
+    expect(seeded.result.deliveries).toHaveLength(1);
+    expect(seeded.result.deliveries[0].delivered).toBe(true);
+    const artifactNotification = notifications[notificationsBefore];
+    expect(artifactNotification.value[0].resource).toBe(
+      `communications/onlineMeetings('${meetingId}')/recordings('${seeded.result.artifact.id}')`,
+    );
+    expect(artifactNotification.value[0].clientState).toContain('recordings:secret');
+
+    // The artifact lists and content endpoints the fetcher reads.
+    const recordings = (await (
+      await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}/recordings`, { headers })
+    ).json()) as any;
+    expect(recordings.value).toHaveLength(1);
+    const recordingContent = await fetch(
+      `${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}/recordings/${recordings.value[0].id}/content`,
+      { headers },
+    );
+    expect(recordingContent.headers.get('content-type')).toContain('video/mp4');
+
+    await controlPost('/control/msgraph/seed/meeting-transcript', { meetingId, content: 'WEBVTT\n\n00:00.000 --> 00:02.000\nHi' });
+    const transcripts = (await (
+      await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}/transcripts`, { headers })
+    ).json()) as any;
+    const transcriptContent = await fetch(
+      `${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}/transcripts/${transcripts.value[0].id}/content`,
+      { headers },
+    );
+    expect(transcriptContent.headers.get('content-type')).toContain('text/vtt');
+    expect(await transcriptContent.text()).toContain('WEBVTT');
+
+    // Update then delete the event; deletion tears down the meeting too.
+    const patched = await fetch(`${base}/v1.0/users/${organizer}/events/${event.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ subject: 'Kickoff (moved)' }),
+    });
+    expect(((await patched.json()) as any).subject).toBe('Kickoff (moved)');
+    expect(
+      (await fetch(`${base}/v1.0/users/${organizer}/events/${event.id}`, { method: 'DELETE', headers })).status,
+    ).toBe(204);
+    expect(
+      (await fetch(`${base}/v1.0/users/${organizer}/onlineMeetings/${meetingId}`, { headers })).status,
+    ).toBe(404);
+  });
+
   it('records activity notifications and serves teams, channels, and chats', async () => {
     const headers = { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' };
 

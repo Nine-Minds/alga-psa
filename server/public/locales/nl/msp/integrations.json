@@ -2831,9 +2831,17 @@
             "description": "Lever persoonlijke meldingen aan de Teams-activiteitenfeed.",
             "label": "Activiteitenmeldingen"
           },
+          "channelBot": {
+            "description": "Sta de bot toe om te reageren wanneer deze met @ wordt genoemd in teamkanalen. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van het kanaal.",
+            "label": "Kanaal-bot"
+          },
           "groupChatBot": {
             "description": "Sta de bot toe om te reageren in Teams-groepschats. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van de chat.",
             "label": "Groepschat-bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Laat klantcontacten die de bot een bericht sturen tickets indienen zonder aan te melden. Afzenders worden op basis van hun geverifieerde Microsoft-identiteit aan contacten gekoppeld; afzenders zonder overeenkomst worden geweigerd.",
+            "label": "Ticketindiening door gasten"
           },
           "messageExtension": {
             "description": "Schakel opzoek- en berichtgestuurde PSA-acties in.",
@@ -3559,6 +3567,71 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Actief",
+        "error": "Fout",
+        "disabled": "Uitgeschakeld",
+        "notConfigured": "Niet ingesteld"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Legt Teams Phone-gesprekken na afloop vast als interacties. Gespreksgeschiedenis, geen live schermmelding.",
+          "prerequisite": "Stel eerst de Microsoft Teams-integratie in — Teams Phone hergebruikt het Microsoft-profiel daarvan."
+        }
+      },
+      "subscriptionExpires": "Abonnement wordt vernieuwd vóór",
+      "lastNotification": "Laatste oproepmelding",
+      "autoTicket": "Automatisch een ticket aanmaken voor herkende gesprekken",
+      "unknownNumber": "Onbekend nummer",
+      "actions": {
+        "enable": "Inschakelen",
+        "disable": "Uitschakelen"
+      },
+      "matchStatus": {
+        "matched": "Herkend",
+        "ambiguous": "Meerduidig",
+        "unmatched": "Niet herkend",
+        "resolved": "Opgelost"
+      },
+      "callsPanel": {
+        "title": "Gesprekken"
+      },
+      "recentCalls": {
+        "title": "Recente gesprekken",
+        "description": "Vastgelegd na afloop van elk gesprek: Microsoft Graph publiceert gespreksrecords pas daarna, dus dit is geschiedenis en geen live overzicht.",
+        "empty": "Nog geen gesprekken vastgelegd.",
+        "createTicket": "Ticket aanmaken",
+        "openTicket": "Ticket openen",
+        "linkTicket": "Aan ticket koppelen",
+        "selectTicket": "Selecteer een ticket…",
+        "noLinkableTickets": "Geen open tickets"
+      },
+      "unmatched": {
+        "title": "Gesprekken zonder toewijzing",
+        "description": "Nummers die we niet konden herkennen en nummers die meerdere contacten delen. Een gesprek oplossen zet het op de juiste tijdlijn.",
+        "empty": "Elk vastgelegd gesprek is toegewezen.",
+        "assignTo": "Toewijzen aan",
+        "searchPlaceholder": "Zoek contacten en klanten…",
+        "noTargets": "Geen overeenkomende contacten of klanten.",
+        "chooseTarget": "Toewijzen aan een contact of klant…"
+      },
+      "forbidden": "U hebt geen toestemming om de telefonie-instellingen van deze tenant te bekijken.",
+      "paywall": {
+        "title": "Microsoft Teams-add-on",
+        "description": "Telefonie-integraties vereisen de Microsoft Teams-add-on voor deze tenant.",
+        "ceOnly": "Telefonie-integraties zijn alleen beschikbaar in Enterprise Edition.",
+        "includedTitle": "Wat is inbegrepen",
+        "cta": "Add-ons beheren",
+        "feature": {
+          "recognition": "Bellerherkenning tegen contacten en klanten bij elk vastgelegd gesprek.",
+          "history": "Gespreksgeschiedenis op de tijdlijn van contact en klant als volwaardige interacties.",
+          "tickets": "Maak een ticket vanuit een gesprek of koppel het gesprek aan een ticket waaraan u al werkt.",
+          "queue": "Een wachtrij voor niet-herkende en meerduidige nummers, zodat geen gesprek op gevoel wordt toegewezen.",
+          "providers": "Vandaag Teams Phone; dezelfde gesprekskern draagt toekomstige aanbieders."
+        }
+      }
     }
   },
   "errors": {

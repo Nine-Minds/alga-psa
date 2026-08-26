@@ -12,6 +12,7 @@ export default function IntegrationsSettingsBody(): React.JSX.Element {
   const { hasAddOn } = useTier();
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
+  // Telephony ships inside the Microsoft Teams add-on; there is no separate key.
   const canUseTeams = hasAddOn(ADD_ONS.TEAMS);
 
   return (
@@ -21,6 +22,7 @@ export default function IntegrationsSettingsBody(): React.JSX.Element {
         canUseEntraSync={canUseEntraSync}
         canUseCipp={canUseCipp}
         canUseTeams={canUseTeams}
+        canUseTelephony={canUseTeams}
         qboSyncHealthSlot={<QboSyncHealthPanel />}
         qboOnboardingSlot={<QboOnboardingWizardEntry />}
       />

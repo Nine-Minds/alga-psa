@@ -52,6 +52,15 @@ import {
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+// Keyed by the capability reason the Teams service returns, so the copy under
+// interactions.quickAdd.teams.reason.* stays greppable despite the dynamic key.
+const TEAMS_UNAVAILABLE_REASON_COPY: Record<string, string> = {
+  ee_disabled: 'Teams integration requires Enterprise Edition.',
+  addon_required: 'The Teams add-on is not active for this tenant.',
+  not_configured: 'The Teams integration has not been configured.',
+  no_organizer: 'No default meeting organizer is configured in Teams settings.',
+};
+
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
   entityId: string;
@@ -103,7 +112,7 @@ export function QuickAddInteraction({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
   const [endTimeError, setEndTimeError] = useState('');
-  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
+  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string; sendMeetingInvites?: boolean } | null>(null);
   const [createTeamsMeeting, setCreateTeamsMeeting] = useState(false);
   const [isTeamsCapabilityLoading, setIsTeamsCapabilityLoading] = useState(false);
   const [meetingAttendees, setMeetingAttendees] = useState<MeetingAttendee[]>([]);
@@ -665,6 +674,9 @@ export function QuickAddInteraction({
           client_id: interactionData.client_id ?? null,
           contact_name_id: interactionData.contact_name_id ?? null,
           attendees: meetingAttendees,
+          // The scheduled meeting must exist on the AlgaPSA calendar too;
+          // the creator is the default assignee server-side.
+          createScheduleEntry: true,
         });
         if (!scheduleResult.success || !scheduleResult.data?.interaction_id) {
           throw new Error(scheduleResult.error || t('interactions.quickAdd.teams.createFailed', {
@@ -850,15 +862,37 @@ export function QuickAddInteraction({
                           })}
                         />
                         {createTeamsMeeting && (
-                          <MeetingAttendeesPicker
-                            id={`${id}-attendees`}
-                            users={users}
-                            contacts={contacts}
-                            clientId={meetingClientId}
-                            defaultAttendees={defaultAttendees}
-                            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                            onAttendeesChange={setMeetingAttendees}
-                          />
+                          <>
+                            <MeetingAttendeesPicker
+                              id={`${id}-attendees`}
+                              users={users}
+                              contacts={contacts}
+                              clientId={meetingClientId}
+                              defaultAttendees={defaultAttendees}
+                              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                              onAttendeesChange={setMeetingAttendees}
+                            />
+                            <p id={`${id}-meeting-summary`} className="text-xs text-gray-600">
+                              {teamsMeetingCapability?.sendMeetingInvites === false
+                                ? t('interactions.quickAdd.teams.invitesDisabled', {
+                                    defaultValue:
+                                      'Email invites are turned off in Teams integration settings — attendees will not be notified by Microsoft.',
+                                  })
+                                : t('interactions.quickAdd.teams.invitesSummary', {
+                                    defaultValue:
+                                      'Microsoft will email calendar invites to: {{recipients}}.',
+                                    recipients: [
+                                      ...meetingAttendees
+                                        .map((attendee) => attendee.emailAddress)
+                                        .filter(Boolean),
+                                      t('interactions.quickAdd.teams.invitesSummaryYou', { defaultValue: 'you (creator)' }),
+                                    ].join(', '),
+                                  })}{' '}
+                              {t('interactions.quickAdd.teams.scheduleSummary', {
+                                defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
+                              })}
+                            </p>
+                          </>
                         )}
                       </>
                     ) : (
@@ -869,7 +903,11 @@ export function QuickAddInteraction({
                             })
                           : t('interactions.quickAdd.teams.unavailable', {
                               defaultValue: 'Teams meeting creation is not available for this tenant.',
-                            })}
+                            }) + (teamsMeetingCapability?.reason
+                              ? ' ' + t(`interactions.quickAdd.teams.reason.${teamsMeetingCapability.reason}`, {
+                                  defaultValue: TEAMS_UNAVAILABLE_REASON_COPY[teamsMeetingCapability.reason] ?? '',
+                                })
+                              : '')}
                       </p>
                     )}
                   </div>

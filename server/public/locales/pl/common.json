@@ -1625,5 +1625,8 @@
     "noUsedOrders": "Żaden numer kolejności nie jest jeszcze zajęty",
     "markClosed": "Oznacz jako status zamknięty",
     "setDefault": "Ustaw jako domyślny status nowych zgłoszeń"
+  },
+  "callLink": {
+    "teamsCall": "Zadzwoń w Microsoft Teams"
   }
 }

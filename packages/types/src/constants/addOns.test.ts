@@ -8,6 +8,11 @@ describe('addOns', () => {
     expect(ADD_ONS.ENTERPRISE).toBe('enterprise');
   });
 
+  it('T001: telephony ships inside the Teams add-on, not a key of its own', () => {
+    expect(Object.values(ADD_ONS)).not.toContain('telephony');
+    expect(ADD_ON_DESCRIPTIONS[ADD_ONS.TEAMS]).toContain('call');
+  });
+
   it('defines labels and descriptions for every add-on', () => {
     for (const addOn of Object.values(ADD_ONS)) {
       expect(ADD_ON_LABELS[addOn]).toBeTruthy();

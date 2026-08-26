@@ -1460,6 +1460,16 @@
         "createFailed": "Impossibile creare la riunione Teams",
         "createToggle": "Crea riunione Teams",
         "endRequired": "L'ora di fine è obbligatoria per creare una riunione Teams",
+        "invitesDisabled": "Gli inviti via e-mail sono disattivati nelle impostazioni dell'integrazione Teams: Microsoft non invierà notifiche ai partecipanti.",
+        "invitesSummary": "Microsoft invierà inviti di calendario via e-mail a: {{recipients}}.",
+        "invitesSummaryYou": "tu (creatore)",
+        "reason": {
+          "addon_required": "Il componente aggiuntivo Teams non è attivo per questo tenant.",
+          "ee_disabled": "L'integrazione Teams richiede la Enterprise Edition.",
+          "no_organizer": "Nessun organizzatore riunione predefinito è configurato nelle impostazioni di Teams.",
+          "not_configured": "L'integrazione Teams non è stata configurata."
+        },
+        "scheduleSummary": "Una voce di pianificazione verrà aggiunta al tuo calendario AlgaPSA.",
         "startRequired": "L'ora di inizio è obbligatoria per creare una riunione Teams",
         "unavailable": "La creazione di riunioni Teams non è disponibile per questo tenant."
       },
@@ -1485,6 +1495,9 @@
       "allContacts": "Tutti i contatti",
       "allStatuses": "Tutti gli stati",
       "allUsers": "Tutti gli utenti",
+      "columns": { "type": "Tipo", "title": "Titolo", "client": "Cliente", "contact": "Contatto", "user": "Utente", "date": "Data", "status": "Stato" },
+      "empty": "Nessuna interazione corrisponde a questi filtri.",
+      "loading": "Caricamento delle interazioni…",
       "byUser": "Di {{name}}",
       "collapse": "Comprimi le interazioni recenti",
       "contactsFromClient": "Contatti del cliente selezionato",

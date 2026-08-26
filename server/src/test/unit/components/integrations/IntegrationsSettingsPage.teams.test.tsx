@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
@@ -250,6 +250,10 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     );
 
     render(<IntegrationsSettingsPage canUseTeams={false} />);
+
+    // Communication now has a second level of navigation; the Teams panel is
+    // the one under test, so select it before asserting on its contents.
+    fireEvent.click(screen.getByText('Microsoft Teams', { selector: 'button *, button' }));
 
     expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
     expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();

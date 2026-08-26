@@ -2516,6 +2516,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Akzeptieren Sie Kreditkartenzahlungen für Rechnungen über Stripe"
+      },
+      "telephony": {
+        "name": "Telefonie",
+        "description": "Anrufe als Interaktionen protokollieren, Anrufer erkennen und aus einem Anruf ein Ticket erstellen"
       }
     }
   },

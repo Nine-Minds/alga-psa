@@ -2831,9 +2831,17 @@
             "description": "Persönliche Teams-Aktivitäts-Benachrichtigungen zustellen.",
             "label": "Aktivitätsbenachrichtigungen"
           },
+          "channelBot": {
+            "description": "Dem Bot erlauben, zu antworten, wenn er in Teamkanälen mit @ erwähnt wird. Bot-Antworten (einschließlich Ticketdetails) sind für alle Kanalmitglieder sichtbar.",
+            "label": "Kanal-Bot"
+          },
           "groupChatBot": {
             "description": "Dem Bot erlauben, in Teams-Gruppenchats zu antworten. Bot-Antworten (einschließlich Ticketdetails) sind für alle Mitglieder des Chats sichtbar.",
             "label": "Gruppenchat-Bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Kundenkontakten, die dem Bot schreiben, das Erstellen von Tickets ohne Anmeldung ermöglichen. Absender werden anhand ihrer verifizierten Microsoft-Identität Kontakten zugeordnet; nicht zugeordnete Absender werden abgelehnt.",
+            "label": "Ticketerstellung durch Gäste"
           },
           "messageExtension": {
             "description": "Nachschlagefunktionen und nachrichtengesteuerte PSA-Aktionen aktivieren.",
@@ -3559,6 +3567,71 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Aktiv",
+        "error": "Fehler",
+        "disabled": "Deaktiviert",
+        "notConfigured": "Nicht eingerichtet"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Protokolliert Teams-Phone-Anrufe nach Gesprächsende als Interaktionen. Anrufverlauf, kein Live-Screenpop.",
+          "prerequisite": "Richten Sie zuerst die Microsoft-Teams-Integration ein — Teams Phone nutzt deren Microsoft-Profil."
+        }
+      },
+      "subscriptionExpires": "Abonnement wird erneuert vor",
+      "lastNotification": "Letzte Anrufbenachrichtigung",
+      "autoTicket": "Für zugeordnete Anrufe automatisch ein Ticket erstellen",
+      "unknownNumber": "Unbekannte Nummer",
+      "actions": {
+        "enable": "Aktivieren",
+        "disable": "Deaktivieren"
+      },
+      "matchStatus": {
+        "matched": "Zugeordnet",
+        "ambiguous": "Mehrdeutig",
+        "unmatched": "Nicht zugeordnet",
+        "resolved": "Geklärt"
+      },
+      "callsPanel": {
+        "title": "Anrufe"
+      },
+      "recentCalls": {
+        "title": "Letzte Anrufe",
+        "description": "Wird nach Gesprächsende erfasst — Microsoft Graph veröffentlicht Anrufdatensätze erst danach, dies ist also ein Verlauf und kein Live-Feed.",
+        "empty": "Noch keine Anrufe erfasst.",
+        "createTicket": "Ticket erstellen",
+        "openTicket": "Ticket öffnen",
+        "linkTicket": "Mit Ticket verknüpfen",
+        "selectTicket": "Ticket auswählen…",
+        "noLinkableTickets": "Keine offenen Tickets"
+      },
+      "unmatched": {
+        "title": "Anrufe ohne Zuordnung",
+        "description": "Nummern, die wir nicht zuordnen konnten, und Nummern, die mehrere Kontakte teilen. Das Klären eines Anrufs legt ihn in der richtigen Chronik ab.",
+        "empty": "Jeder erfasste Anruf ist zugeordnet.",
+        "assignTo": "Zuordnen zu",
+        "searchPlaceholder": "Kontakte und Kunden suchen…",
+        "noTargets": "Keine passenden Kontakte oder Kunden.",
+        "chooseTarget": "Einem Kontakt oder Kunden zuordnen…"
+      },
+      "forbidden": "Sie haben keine Berechtigung, die Telefonie-Einstellungen dieses Mandanten anzuzeigen.",
+      "paywall": {
+        "title": "Microsoft Teams-Add-on",
+        "description": "Telefonie-Integrationen erfordern das Microsoft Teams-Add-on für diesen Mandanten.",
+        "ceOnly": "Telefonie-Integrationen sind nur in der Enterprise Edition verfügbar.",
+        "includedTitle": "Enthalten",
+        "cta": "Add-ons verwalten",
+        "feature": {
+          "recognition": "Anrufererkennung anhand von Kontakten und Kunden bei jedem erfassten Anruf.",
+          "history": "Anrufverlauf in der Kontakt- und Kundenchronik als vollwertige Interaktionen.",
+          "tickets": "Aus einem Anruf ein Ticket erstellen oder den Anruf mit einem laufenden Ticket verknüpfen.",
+          "queue": "Eine Warteschlange für nicht zugeordnete und mehrdeutige Nummern, damit kein Anruf geraten wird.",
+          "providers": "Heute Teams Phone; derselbe Anrufkern trägt künftige Anbieter."
+        }
+      }
     }
   },
   "errors": {

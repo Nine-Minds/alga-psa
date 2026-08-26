@@ -1593,5 +1593,8 @@
     "noUsedOrders": "Noch keine Reihenfolgennummern belegt",
     "markClosed": "Als abgeschlossenen Status markieren",
     "setDefault": "Als Standardstatus für neue Tickets festlegen"
+  },
+  "callLink": {
+    "teamsCall": "In Microsoft Teams anrufen"
   }
 }

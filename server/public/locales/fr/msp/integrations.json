@@ -2831,9 +2831,17 @@
             "description": "Délivrer des notifications personnelles au flux d'activité Teams.",
             "label": "Notifications d'activité"
           },
+          "channelBot": {
+            "description": "Permettre au bot de répondre lorsqu'il est mentionné avec @ dans les canaux d'équipe. Les réponses du bot (y compris les détails de ticket) sont visibles par tous les membres du canal.",
+            "label": "Bot de canal"
+          },
           "groupChatBot": {
             "description": "Permettre au bot de répondre dans les chats de groupe Teams. Les réponses du bot (y compris les détails de ticket) sont visibles par tous les membres du chat.",
             "label": "Bot en chat de groupe"
+          },
+          "guestTicketSubmission": {
+            "description": "Permettre aux contacts clients qui écrivent au bot de soumettre des tickets sans se connecter. Les expéditeurs sont associés aux contacts via leur identité Microsoft vérifiée ; les expéditeurs sans correspondance sont refusés.",
+            "label": "Soumission de tickets par les invités"
           },
           "messageExtension": {
             "description": "Activer la recherche et les actions PSA pilotées par message.",
@@ -3559,6 +3567,71 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Actif",
+        "error": "Erreur",
+        "disabled": "Désactivé",
+        "notConfigured": "Non configuré"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Journalise les appels Teams Phone comme interactions une fois l'appel terminé. Historique d'appels, pas de remontée d'écran en direct.",
+          "prerequisite": "Configurez d'abord l'intégration Microsoft Teams : Teams Phone réutilise son profil Microsoft."
+        }
+      },
+      "subscriptionExpires": "L'abonnement se renouvelle avant le",
+      "lastNotification": "Dernière notification d’appel",
+      "autoTicket": "Créer automatiquement un ticket pour les appels rapprochés",
+      "unknownNumber": "Numéro inconnu",
+      "actions": {
+        "enable": "Activer",
+        "disable": "Désactiver"
+      },
+      "matchStatus": {
+        "matched": "Rapproché",
+        "ambiguous": "Ambigu",
+        "unmatched": "Non rapproché",
+        "resolved": "Résolu"
+      },
+      "callsPanel": {
+        "title": "Appels"
+      },
+      "recentCalls": {
+        "title": "Appels récents",
+        "description": "Capturés après la fin de chaque appel : Microsoft Graph publie les enregistrements après coup, il s'agit donc d'un historique et non d'un flux en direct.",
+        "empty": "Aucun appel capturé pour l'instant.",
+        "createTicket": "Créer un ticket",
+        "openTicket": "Ouvrir le ticket",
+        "linkTicket": "Associer à un ticket",
+        "selectTicket": "Sélectionner un ticket…",
+        "noLinkableTickets": "Aucun ticket ouvert"
+      },
+      "unmatched": {
+        "title": "Appels à attribuer",
+        "description": "Numéros que nous n'avons pas pu rapprocher et numéros partagés par plusieurs contacts. Résoudre un appel le classe sur la bonne chronologie.",
+        "empty": "Tous les appels capturés sont attribués.",
+        "assignTo": "Attribuer à",
+        "searchPlaceholder": "Rechercher des contacts et des clients…",
+        "noTargets": "Aucun contact ni client correspondant.",
+        "chooseTarget": "Attribuer à un contact ou à un client…"
+      },
+      "forbidden": "Vous n'avez pas l'autorisation de consulter les paramètres de téléphonie de ce locataire.",
+      "paywall": {
+        "title": "Module complémentaire Microsoft Teams",
+        "description": "Les intégrations de téléphonie nécessitent le module complémentaire Microsoft Teams pour ce locataire.",
+        "ceOnly": "Les intégrations de téléphonie ne sont disponibles qu'en Enterprise Edition.",
+        "includedTitle": "Ce qui est inclus",
+        "cta": "Gérer les modules",
+        "feature": {
+          "recognition": "Identification de l'appelant parmi les contacts et les clients à chaque appel capturé.",
+          "history": "Historique des appels sur la chronologie du contact et du client, comme interactions à part entière.",
+          "tickets": "Créez un ticket depuis un appel, ou reliez l'appel au ticket sur lequel vous travaillez déjà.",
+          "queue": "Une file pour les numéros non rapprochés et ambigus, afin qu'aucun appel ne soit attribué au jugé.",
+          "providers": "Teams Phone aujourd'hui ; le même noyau d'appels accueillera les futurs fournisseurs."
+        }
+      }
     }
   },
   "errors": {

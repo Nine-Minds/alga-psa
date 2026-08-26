@@ -54,6 +54,15 @@ export {
   getTeamsAppPackageStatus,
 } from './teamsPackageActions';
 export {
+  createTicketFromTelephonyCall,
+  getTelephonyOverview,
+  linkTelephonyCallToTicket,
+  listTelephonyLinkableTickets,
+  resolveTelephonyCall,
+  setTelephonyAutoTicketPolicy,
+  setTelephonyProviderEnabled,
+} from './telephonyActions';
+export {
   getXeroConnectionStatus,
   getXeroIntegrationStatus,
   saveXeroCredentials,

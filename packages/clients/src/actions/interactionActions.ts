@@ -7,6 +7,7 @@ import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
 import { StorageService } from '@alga-psa/storage/StorageService';
 import InteractionModel from '../models/interactions';
+import type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
 import {
@@ -24,6 +25,8 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 type InteractionActionError = ActionMessageError | ActionPermissionError;
+
+export type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 
 function interactionActionErrorFrom(error: unknown): InteractionActionError | null {
   if (error instanceof Error) {
@@ -175,6 +178,26 @@ export const getRecentInteractions = withAuth(async (
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
     console.error('Error fetching recent interactions:', error);
+    throw error;
+  }
+});
+
+export const getInteractionsPage = withAuth(async (
+  user,
+  { tenant },
+  filters: InteractionPageFilters,
+): Promise<InteractionPageResult | InteractionActionError> => {
+  try {
+    await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return InteractionModel.getInteractionsPage(filters, tenant, trx);
+    });
+  } catch (error) {
+    const expected = interactionActionErrorFrom(error);
+    if (expected) return expected;
+    console.error('Error fetching interactions page:', error);
     throw error;
   }
 });

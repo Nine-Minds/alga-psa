@@ -1593,5 +1593,8 @@
     "noUsedOrders": "Nog geen volgordenummers gebruikt",
     "markClosed": "Markeren als afgesloten status",
     "setDefault": "Instellen als standaardstatus voor nieuwe tickets"
+  },
+  "callLink": {
+    "teamsCall": "Bellen in Microsoft Teams"
   }
 }

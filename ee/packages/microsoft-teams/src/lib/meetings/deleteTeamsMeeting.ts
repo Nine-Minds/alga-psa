@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import {
   resolveTeamsMeetingConfigState,
   type TeamsMeetingConfigSkipReason,
@@ -51,7 +52,7 @@ export async function deleteTeamsMeetingWithResult(
     });
 
     const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
+      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
       {
         method: 'DELETE',
         headers: {

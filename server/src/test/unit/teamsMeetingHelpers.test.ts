@@ -899,6 +899,7 @@ describe('Teams meeting helpers', () => {
         available: true,
         recordingsAvailable: false,
         recordingReason: 'missing_organizer_object_id',
+        sendMeetingInvites: true,
       });
     });
 
@@ -915,6 +916,25 @@ describe('Teams meeting helpers', () => {
       await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: true,
         recordingsAvailable: true,
+        sendMeetingInvites: true,
+      });
+    });
+
+    it('reports sendMeetingInvites false only when the tenant explicitly disabled invites', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+        default_meeting_organizer_object_id: 'organizer-object-1',
+        send_meeting_invites: false,
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
+        available: true,
+        recordingsAvailable: true,
+        sendMeetingInvites: false,
       });
     });
 

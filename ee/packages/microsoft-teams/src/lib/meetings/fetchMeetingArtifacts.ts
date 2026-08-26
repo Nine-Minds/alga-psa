@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import { resolveTeamsMeetingExecutionConfig } from './meetingConfig';
 
 export interface FetchMeetingArtifactsInput {
@@ -92,7 +93,7 @@ export async function fetchMeetingArtifacts(
 
   const organizerSegment = encodeURIComponent(input.organizerUserId);
   const meetingSegment = encodeURIComponent(input.meetingId);
-  const baseUrl = `https://graph.microsoft.com/v1.0/users/${organizerSegment}/onlineMeetings/${meetingSegment}`;
+  const baseUrl = `${getMicrosoftGraphBaseUrl()}/users/${organizerSegment}/onlineMeetings/${meetingSegment}`;
 
   const [recordings, transcripts] = await Promise.all([
     fetchJsonCollection({ accessToken, url: `${baseUrl}/recordings` }),
