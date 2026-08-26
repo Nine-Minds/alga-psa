@@ -128,6 +128,7 @@ describe('menuConfig i18n metadata', () => {
       'settings.tabs.ticketing',
       'settings.tabs.sla',
       'settings.tabs.projects',
+      'settings.tabs.assets',
       'settings.tabs.interactions',
       'settings.tabs.opportunities',
       'settings.tabs.timeEntry',

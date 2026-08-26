@@ -210,6 +210,7 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
   // getAllowedSettingsTabIds, so a segment missing from BOTH lists is a
   // page nobody classified — that is the failure this test exists for.
   const ALGADESK_BLOCKED_SETTINGS: Record<string, string> = {
+    assets: 'PSA asset type configuration',
     billing: 'PSA billing configuration',
     extensions: 'PSA/EE extension management',
     'import-export': 'PSA data import/export',

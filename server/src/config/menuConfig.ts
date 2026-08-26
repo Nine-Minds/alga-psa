@@ -321,6 +321,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: Ticket, href: '/msp/settings?tab=ticketing' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
+      { name: 'Assets', translationKey: 'settings.tabs.assets', icon: Monitor, href: '/msp/settings/assets' },
       { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings/interactions' },
       { name: 'Opportunities', translationKey: 'settings.tabs.opportunities', icon: Target, href: '/msp/settings/opportunities' },
     ]
