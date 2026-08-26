@@ -101,7 +101,10 @@ export function EntraSetupWizard({
   const mappedCount = status?.mappedTenantCount ?? 0;
   const approvedMappingCount = mappedCount + (status?.pendingCreateTenantCount ?? 0);
 
-  const isConnected = status?.status === 'connected';
+  const isConnected = status?.status === 'connected' && !status?.connectionDetails?.directProfileMissing;
+  React.useEffect(() => {
+    if (status?.connectionDetails?.directProfileMissing) setMethod('direct');
+  }, [status?.connectionDetails?.directProfileMissing]);
   const steps: EntraSetupStep[] = deriveEntraSetupSteps({
     isConnected,
     hasDiscovery: Boolean(status?.lastDiscoveryAt),
@@ -204,6 +207,9 @@ export function EntraSetupWizard({
       return (
         <div className="space-y-4">
           <PreConsentDisclosure />
+          {status?.connectionDetails?.directProfileMissing ? (
+            <p className="text-sm text-destructive" id="entra-direct-profile-missing">Select a Microsoft app registration and reconnect.</p>
+          ) : null}
           <ConnectionMethodChooser
             cippAvailable={cippAvailable}
             value={method}
@@ -353,6 +359,7 @@ export function EntraSetupWizard({
         onOpenChange={setDirectConsentOpen}
         onConfirm={() => void handleDirectRedirect()}
         busy={connectBusy}
+        appRegistrationName={directProfile?.name || status?.connectionDetails?.directProfileName || null}
       />
 
       <EntraCippConnectDialog

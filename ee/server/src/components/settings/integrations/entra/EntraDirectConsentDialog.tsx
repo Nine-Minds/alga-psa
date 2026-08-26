@@ -11,6 +11,7 @@ interface EntraDirectConsentDialogProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   busy?: boolean;
+  appRegistrationName?: string | null;
 }
 
 /**
@@ -26,6 +27,7 @@ export function EntraDirectConsentDialog({
   onOpenChange,
   onConfirm,
   busy = false,
+  appRegistrationName,
 }: EntraDirectConsentDialogProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
 
@@ -60,6 +62,7 @@ export function EntraDirectConsentDialog({
           <DialogTitle>{t('integrations.entra.setup.directConsent.title')}</DialogTitle>
           <DialogDescription>
             {t('integrations.entra.setup.directConsent.intro')}
+            {appRegistrationName ? ` App registration: ${appRegistrationName}.` : ''}
           </DialogDescription>
         </DialogHeader>
 

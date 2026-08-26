@@ -99,6 +99,7 @@ export default function EntraIntegrationSummaryCard(): React.JSX.Element {
               ? t(`integrations.entra.settings.connection.types.${status.connectionType}`)
               : t('integrations.entra.settings.connection.notConfigured')}
           </p>
+          {status?.connectionDetails?.directProfileName ? <p className="text-sm text-muted-foreground">Microsoft app: {status.connectionDetails.directProfileName}</p> : null}
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">
               {t('integrations.entra.settings.overview.mappedTenantsLabel')}

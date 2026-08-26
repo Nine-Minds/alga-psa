@@ -200,6 +200,13 @@ function getConsumerDescriptors(showTeamsUi: boolean, t: TranslateFn): Microsoft
           consumerLabel: t('integrations.microsoft.settings.consumers.teams.label', { defaultValue: 'Teams' }),
           description: t('integrations.microsoft.settings.consumers.teams.description', { defaultValue: 'Choose the Microsoft app for Teams installation and auth flows.' }),
         };
+      case 'entra':
+        return {
+          consumerType,
+          consumerLabel: t('integrations.microsoft.settings.consumers.entra.label', { defaultValue: 'Entra Direct' }),
+          description: t('integrations.microsoft.settings.consumers.entra.description', { defaultValue: 'Choose the Microsoft app for Entra GDAP and Lighthouse sync.' }),
+          reconnectMessage: t('integrations.microsoft.settings.consumers.entra.reconnect', { defaultValue: 'Changing this app disconnects the current Entra connection and requires reconsent.' }),
+        };
     }
   });
 }
@@ -341,6 +348,14 @@ function getGuidanceBlocks(
         ],
       }
     );
+    blocks.push({
+      title: t('integrations.microsoft.settings.guidance.entraTitle', { defaultValue: 'Entra Direct' }),
+      items: [
+        { label: t('integrations.microsoft.settings.guidance.redirectUri', { defaultValue: 'Redirect URI' }), value: status?.redirectUris?.entra || unavailable },
+        { label: t('integrations.microsoft.settings.guidance.scopes', { defaultValue: 'Scopes' }), value: (status?.scopes?.entra || []).join(', ') || unavailable },
+        { label: t('integrations.microsoft.settings.guidance.entraConsent', { defaultValue: 'Requirement' }), value: t('integrations.microsoft.settings.guidance.entraConsentValue', { defaultValue: 'Register this app as multi-tenant and grant admin consent in the partner tenant.' }) },
+      ],
+    });
   }
 
   if (showTeamsUi) {
