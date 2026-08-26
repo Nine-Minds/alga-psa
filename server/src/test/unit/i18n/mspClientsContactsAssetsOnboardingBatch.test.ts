@@ -198,6 +198,7 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
     expect(ROUTE_NAMESPACES['/msp/contacts']).toEqual(['common', 'msp/core', 'msp/contacts']);
     expect(ROUTE_NAMESPACES['/msp/interactions']).toEqual(['common', 'msp/core', 'msp/clients', 'msp/integrations']);
     expect(ROUTE_NAMESPACES['/msp/assets']).toEqual(['common', 'msp/core', 'msp/assets']);
+    expect(ROUTE_NAMESPACES['/msp/assets/maintenance']).toEqual(['common', 'msp/core', 'msp/assets']);
     expect(ROUTE_NAMESPACES['/msp/onboarding']).toEqual(['common', 'msp/core', 'msp/onboarding']);
   });
 
