@@ -207,6 +207,18 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: false, algadesk: false },
   },
   {
+    // Alga Migration Package (AMP) import workspace: tenant-scoped upload,
+    // spreadsheet conversion, dry-run reporting and export endpoints, gated
+    // by the import_export permission. Administrative onboarding surface, not
+    // v1 API, so it never appears in /api/v1/meta metadata. PSA-only.
+    group: 'api_amp_migrations',
+    staticPrefixes: [
+      '/api/migrations',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
     // SCIM 2.0 service provider for directory-driven user lifecycle. Entra
     // authenticates with a tenant-scoped bearer token, so these endpoints are
     // not v1 API surface and never appear in /api/v1/meta metadata. PSA-only,

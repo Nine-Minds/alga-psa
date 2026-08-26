@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, type TenantDb } from '@alga-psa/db';
 import { JobService } from '@alga-psa/jobs';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
@@ -95,7 +95,7 @@ export async function getMigrationConfigurationOptions(
 
 /** Kept separate so the database-backed suite exercises this exact query. */
 export async function loadMigrationConfigurationOptions(
-  db: Knex,
+  db: TenantDb,
   knex: Knex,
   migrationJobId: string
 ): Promise<MigrationConfigurationOptions> {
