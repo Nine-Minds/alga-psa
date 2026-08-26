@@ -15,6 +15,7 @@ export function MicrosoftAppRegistrationPicker({ onBound }: Props): React.JSX.El
   const [value, setValue] = React.useState('');
   const [creating, setCreating] = React.useState(false);
   const [form, setForm] = React.useState({ displayName: '', clientId: '', clientSecret: '', tenantId: 'common' });
+  const [createError, setCreateError] = React.useState<string | null>(null);
   React.useEffect(() => { void Promise.all([listMicrosoftProfiles(), listMicrosoftConsumerBindings()]).then(([p, b]) => {
     const capable = (p.profiles || []).filter((profile) => !profile.isArchived && profile.capabilities.includes('entra'));
     setProfiles(capable.map((profile) => ({ profileId: profile.profileId, displayName: profile.displayName, clientId: profile.clientId })));
@@ -29,12 +30,19 @@ export function MicrosoftAppRegistrationPicker({ onBound }: Props): React.JSX.El
     if (result.success) onBound({ id: profileId, name: profile.displayName });
   };
   const create = async () => {
+    if (!form.displayName.trim() || !form.clientId.trim() || !form.clientSecret.trim() || !form.tenantId.trim()) {
+      setCreateError('Enter a display name, client ID, client secret, and Microsoft tenant ID.');
+      return;
+    }
+    setCreateError(null);
     const result = await createMicrosoftProfile({ ...form, capabilities: ['entra'] });
     if (result.success && result.profile) {
       setProfiles((current) => [...current, { profileId: result.profile!.profileId, displayName: result.profile!.displayName, clientId: result.profile!.clientId || '' }]);
       setCreating(false); await select(result.profile.profileId);
+    } else {
+      setCreateError(result.error || 'Unable to create the Microsoft app registration.');
     }
   };
-  if (!profiles.length) return <><Alert variant="warning" id="entra-app-registration-empty"><AlertDescription>Register a multi-tenant app in your partner tenant, add redirect URI <code>/api/auth/microsoft/entra/callback</code>, and grant admin consent for ManagedTenants.Read.All and Directory.Read.All.</AlertDescription></Alert><Button id="entra-app-registration-add" type="button" onClick={() => setCreating(true)}>Add app registration</Button><Dialog id="entra-app-registration-create" isOpen={creating} onClose={() => setCreating(false)} title="Add Microsoft app registration" footer={<Button id="entra-app-registration-create-save" type="button" onClick={() => void create()}>Save and select</Button>}><DialogContent><div className="space-y-3"><Input id="entra-profile-name" placeholder="Display name" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })}/><Input id="entra-profile-client-id" placeholder="Client ID" value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })}/><Input id="entra-profile-client-secret" type="password" placeholder="Client secret" value={form.clientSecret} onChange={(e) => setForm({ ...form, clientSecret: e.target.value })}/><Input id="entra-profile-tenant-id" placeholder="Microsoft tenant ID" value={form.tenantId} onChange={(e) => setForm({ ...form, tenantId: e.target.value })}/></div></DialogContent></Dialog></>;
+  if (!profiles.length) return <><Alert variant="warning" id="entra-app-registration-empty"><AlertDescription>Register a multi-tenant app in your partner tenant, add redirect URI <code>/api/auth/microsoft/entra/callback</code>, and grant admin consent for ManagedTenants.Read.All and Directory.Read.All.</AlertDescription></Alert><Button id="entra-app-registration-add" type="button" onClick={() => setCreating(true)}>Add app registration</Button><Dialog id="entra-app-registration-create" isOpen={creating} onClose={() => setCreating(false)} title="Add Microsoft app registration" footer={<Button id="entra-app-registration-create-save" type="button" onClick={() => void create()}>Save and select</Button>}><DialogContent><div className="space-y-3"><Input id="entra-profile-name" placeholder="Display name" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })}/><Input id="entra-profile-client-id" placeholder="Client ID" value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })}/><Input id="entra-profile-client-secret" type="password" placeholder="Client secret" value={form.clientSecret} onChange={(e) => setForm({ ...form, clientSecret: e.target.value })}/><Input id="entra-profile-tenant-id" placeholder="Microsoft tenant ID" value={form.tenantId} onChange={(e) => setForm({ ...form, tenantId: e.target.value })}/>{createError ? <p className="text-sm text-destructive" id="entra-profile-create-error">{createError}</p> : null}</div></DialogContent></Dialog></>;
   return <div className="space-y-2" id="entra-app-registration-picker"><label htmlFor="entra-app-registration-select" className="text-sm font-medium">Microsoft app registration</label><CustomSelect id="entra-app-registration-select" value={value} onValueChange={select} options={profiles.map((profile) => ({ value: profile.profileId, label: `${profile.displayName} (${profile.clientId})` }))} placeholder="Select an app registration" /></div>;
 }
