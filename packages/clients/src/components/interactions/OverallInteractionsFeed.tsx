@@ -201,7 +201,7 @@ export default function OverallInteractionsFeed({
         </span>
       ),
     },
-    { title: t('interactions.overall.columns.title', { defaultValue: 'Title' }), dataIndex: 'title', sortable: false },
+    { title: t('interactions.overall.columns.title', { defaultValue: 'Title' }), dataIndex: 'title', sortable: false, render: (value) => value || '—' },
     { title: t('interactions.overall.columns.client', { defaultValue: 'Client' }), dataIndex: 'client_name', sortable: false, render: (value) => value || '—' },
     { title: t('interactions.overall.columns.contact', { defaultValue: 'Contact' }), dataIndex: 'contact_name', sortable: false, render: (value) => value || '—' },
     { title: t('interactions.overall.columns.user', { defaultValue: 'User' }), dataIndex: 'user_name', sortable: false, render: (value) => value || '—' },
