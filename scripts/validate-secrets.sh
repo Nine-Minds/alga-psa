@@ -1,17 +1,22 @@
 #!/bin/bash
 
-# Script to validate secret files before Docker Compose operations
+# Script to validate secret files before Docker Compose operations.
+# Bootstraps any missing required secret first (idempotent, secure — see
+# generate-secrets.sh), so a fresh checkout is provisioned instead of rejected,
+# then validates every required file.
 
-SECRETS_DIR="./secrets"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Default to the repo-root secrets dir (same as generate-secrets.sh and the
+# compose files' `./secrets/*` mounts); honor SECRETS_DIR when set.
+SECRETS_DIR="${SECRETS_DIR:-$REPO_ROOT/secrets}"
+
+# Bootstrap any missing required secret before validating (idempotent).
+SECRETS_DIR="$SECRETS_DIR" "$SCRIPT_DIR/generate-secrets.sh"
+
 ERRORS=0
 
 echo "Validating secret files..."
-
-# Check if secrets directory exists
-if [ ! -d "$SECRETS_DIR" ]; then
-    echo "Error: Secrets directory not found at $SECRETS_DIR"
-    exit 1
-fi
 
 # List of required secret files
 REQUIRED_SECRETS=(

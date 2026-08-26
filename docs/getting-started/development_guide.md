@@ -56,7 +56,18 @@ cp .env.example .env
 > `SALT_BYTES`). These are safe to ignore for local development — the server
 > image carries its own baked-in defaults.
 
-2. Create development secrets. The Compose stack requires these 12 secret files:
+2. Generate development secrets. The Compose stack requires these 12 secret files
+   (including `credential_encryption_key`, the EE credentials-vault encryption
+   key). Generate them all with the idempotent, secure bootstrap script — it
+   creates any missing file and never overwrites existing ones, so it is safe to
+   re-run:
+
+```bash
+./scripts/generate-secrets.sh
+```
+
+   If you prefer to create them by hand (e.g. to pin specific values), the
+   script produces exactly these files:
 
 ```bash
 mkdir -p secrets
@@ -68,6 +79,10 @@ for s in postgres_password db_password_server db_password_hocuspocus \
 done
 chmod 600 secrets/*
 ```
+
+   `scripts/docker-compose-wrapper.sh` runs `generate-secrets.sh` automatically
+   before `docker compose`, and `scripts/validate-secrets.sh` bootstraps any
+   missing required secret before validating.
 
 3. Start development environment (the first run builds the server image from
    source, which can take 15–30 minutes):

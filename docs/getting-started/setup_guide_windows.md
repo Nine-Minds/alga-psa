@@ -49,6 +49,15 @@ This guide provides step-by-step instructions for setting up the PSA system on W
 
 1. Create secret files in the `secrets/` directory (replace placeholders with strong values):
 
+   If you are using Git Bash or WSL, the idempotent bootstrap script generates
+   any missing required secret (including `credential_encryption_key`, the EE
+   credentials-vault encryption key) with random values and never overwrites
+   existing files:
+   ```bash
+   ./scripts/generate-secrets.sh
+   ```
+   The manual steps below remain for operators who want to pin specific values.
+
    Use single quotes around secret values to prevent shell expansion of special characters (for example `$`, `!`, `*`, and backticks).
    If a secret contains a single quote (`'`), use a quoted heredoc instead:
    ```bash
