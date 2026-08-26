@@ -556,6 +556,37 @@ describe('recurring billing run actions', () => {
     expect(unknown.code).toBeUndefined();
   });
 
+  it('keeps unsupported coded errors off the recurring-run UI as raw text', async () => {
+    const target = buildContractCadenceTarget({ contractLineId: 'line-unsupported' });
+
+    // The boundary re-throws coded-but-unallowlisted errors (e.g. SERVICE_NOT_FOUND
+    // from a ManualInvoiceError) so the run's generic catch owns them.
+    mocks.generateInvoiceForSelectionInput.mockRejectedValueOnce(
+      Object.assign(
+        new Error('Cannot generate invoice: Service "service-9" could not be found.'),
+        { code: 'SERVICE_NOT_FOUND' },
+      ),
+    );
+
+    const result = await generateInvoicesAsRecurringBillingRun({
+      targets: [target],
+    });
+
+    expect(result).toMatchObject({
+      invoicesCreated: 0,
+      failedCount: 1,
+      failures: [
+        expect.objectContaining({
+          executionIdentityKey: target.executionWindow.identityKey,
+          errorMessage: 'Failed to generate invoice for this billing cycle.',
+        }),
+      ],
+    });
+    const failure = (result as { failures: Array<{ code?: string }> }).failures[0];
+    expect(failure?.code).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain('service-9');
+  });
+
   it('skips duplicate recurring invoices without marking the canonical recurring run failed', async () => {
     const duplicateInvoiceError = Object.assign(
       new Error('Invoice already exists for this recurring execution window'),

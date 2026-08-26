@@ -322,6 +322,13 @@ export interface IConditionalRule {
   format?: any;
 }
 
+/**
+ * Known, safe recurring-invoice failure codes that may cross the action boundary
+ * for localized, actionable UI remediation. Absent for unknown/internal failures,
+ * which keep the generic error string. Only allowlisted codes belong here.
+ */
+export type RecurringInvoiceFailureCode = 'NO_BILLING_EMAIL';
+
 export type PreviewInvoiceResponse = {
   success: true;
   data: WasmInvoiceViewModel; // Use the imported ViewModel alias
@@ -329,6 +336,10 @@ export type PreviewInvoiceResponse = {
   success: false;
   error: string;
   executionIdentityKey?: string;
+  /** Safe, known failure code so the UI can render localized guidance. */
+  code?: RecurringInvoiceFailureCode;
+  /** Interpolation values for the localized failure copy (e.g. clientName). */
+  params?: Record<string, string>;
 };
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';

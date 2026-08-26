@@ -27,7 +27,7 @@ import {
   type RecurringBillingRunInvoiceFailure,
 } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
-import { WasmInvoiceViewModel } from '@alga-psa/types';
+import { WasmInvoiceViewModel, type PreviewInvoiceResponse } from '@alga-psa/types';
 import {
   getRecurringInvoiceHistoryPaginated,
   reverseRecurringInvoice,
@@ -98,10 +98,10 @@ function localizeRecurringFailure(
  */
 function localizePreviewFailure(
   t: ManualInvoiceTranslation,
-  failure: { error: string; code?: string; params?: Record<string, string> },
+  failure: Extract<PreviewInvoiceResponse, { success: false }>,
 ): string {
   return translateManualInvoiceFailure(t, {
-    code: failure.code as RecurringBillingRunInvoiceFailure['code'],
+    code: failure.code,
     params: failure.params,
     message: failure.error,
   });
@@ -1531,10 +1531,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         selectorInput: null,
       }); // Clear preview state on error
       setErrors({
-        preview: localizePreviewFailure(
-          t,
-          response as { error: string; code?: string; params?: Record<string, string> },
-        )
+        preview: localizePreviewFailure(t, response)
       });
       // Optionally open the dialog even on error to show the message
       setShowPreviewDialog(true);

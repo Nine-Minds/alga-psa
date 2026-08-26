@@ -3,14 +3,16 @@ import {
   IRecurringDueWorkInvoiceCandidate,
   IRecurringRunExecutionWindowIdentity,
   RecurringRunExecutionWindowKind,
+  type RecurringInvoiceFailureCode,
 } from '@alga-psa/types';
 
 /**
  * Structured failure codes the recurring run can expose to the UI as safe,
  * localized remediation. These are the coded billing validations the generation
- * engine produces; everything else stays generic in the UI.
+ * engine produces; everything else stays generic in the UI. Shares the canonical
+ * union with the preview payload (`PreviewInvoiceResponse`).
  */
-export type HandledRecurringFailureCode = 'NO_BILLING_EMAIL';
+export type HandledRecurringFailureCode = RecurringInvoiceFailureCode;
 
 export type RecurringBillingRunInvoiceFailure = {
   billingCycleId?: string | null;

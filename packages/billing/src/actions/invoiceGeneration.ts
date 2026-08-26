@@ -656,10 +656,12 @@ function previewInvoiceErrorInfo(error: unknown): {
 
   // A coded billing validation error carries its code/params straight to the UI
   // so preview surfaces the same localized remediation as its sibling flows.
-  if (error instanceof ManualInvoiceError) {
+  // Only the allowlisted NO_BILLING_EMAIL code crosses; unsupported codes take
+  // the generic fallback so raw validation detail never reaches the user.
+  if (error instanceof ManualInvoiceError && error.code === 'NO_BILLING_EMAIL') {
     return {
       message: error.message,
-      code: error.code === 'NO_BILLING_EMAIL' ? 'NO_BILLING_EMAIL' : undefined,
+      code: 'NO_BILLING_EMAIL',
       params: error.params,
     };
   }
@@ -671,12 +673,9 @@ function previewInvoiceErrorInfo(error: unknown): {
     return 'permissionError' in mapped ? { message: mapped.permissionError } : { message: mapped.actionError };
   }
 
-  // Last resort only: never swallow an actionable cause behind the generic string.
-  return {
-    message: message.trim() !== ''
-      ? message
-      : 'An error occurred while previewing the invoice',
-  };
+  // Unknown/internal exceptions never leak their raw message to the user; the
+  // full cause stays server-side in logPreviewInvoiceFailure.
+  return { message: 'An error occurred while previewing the invoice' };
 }
 
 function logPreviewInvoiceFailure(
@@ -708,6 +707,18 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
+    }
+
+    // Coded billing validation error. Only the allowlisted code crosses this
+    // boundary as a keyed action error; unsupported codes are re-thrown so the
+    // recurring run's generic catch owns them (full logging, generic UI string).
+    // Checked before the message matching below, which would otherwise surface a
+    // raw, uncoded sentence for codes whose message happens to match a prefix.
+    if (error instanceof ManualInvoiceError) {
+      const messageKey = manualInvoiceErrorMessageKey(error.code);
+      return messageKey
+        ? actionError(error.message, messageKey, error.params)
+        : null;
     }
 
     // An expected, actionable refusal, not a failure: a contract covers these
@@ -746,13 +757,6 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
     if (error.message.startsWith('Invoice already exists for this recurring execution window')) {
       // Keyed so the recurring run can recognize it after the boundary translates it.
       return actionError(error.message, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY);
-    }
-
-    if (error instanceof ManualInvoiceError) {
-      const messageKey = manualInvoiceErrorMessageKey(error.code);
-      return messageKey
-        ? actionError(error.message, messageKey, error.params)
-        : actionError(error.message);
     }
   }
 

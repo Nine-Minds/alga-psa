@@ -442,6 +442,24 @@ describe('AutomaticInvoices PO overage dialog', () => {
       });
     });
 
+    it('renders the generic preview fallback instead of any raw internal detail', async () => {
+      // Post-fix server behavior: unknown preview failures are already reduced to
+      // the fixed generic message before they reach the UI.
+      mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValue({
+        success: false,
+        error: 'An error occurred while previewing the invoice',
+      });
+
+      await selectParentAndClickPreview();
+
+      await waitFor(() => {
+        expect(
+          screen.getAllByText(/An error occurred while previewing the invoice/).length,
+        ).toBeGreaterThan(0);
+      });
+      expect(screen.queryByText(/TypeError|client_contract_id|internal/i)).toBeNull();
+    });
+
     it('renders the localized no-billing-email remediation for a coded failure on the PO-overage allow decision', async () => {
       mockGetPurchaseOrderOverageForSelectionInput.mockResolvedValue({
         overage_cents: 61250,

@@ -966,6 +966,75 @@ describe('invoice preview recurring timing', () => {
     expect(generationError).not.toHaveProperty('billingCycleId');
   });
 
+  it('keeps unknown preview failures generic instead of exposing the raw internal message', async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    mocks.calculateBillingForExecutionWindow.mockRejectedValueOnce(
+      new Error("TypeError: Cannot read properties of undefined (reading 'client_contract_id')"),
+    );
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const result = await previewInvoiceForSelectionInput(selectorInput);
+
+    expect(result).toMatchObject({
+      success: false,
+      error: 'An error occurred while previewing the invoice',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    });
+    expect(result).not.toHaveProperty('code');
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain('client_contract_id');
+    expect(serialized).not.toContain('TypeError');
+
+    // The full cause stays server-side.
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    const [, , loggedError] = consoleErrorSpy.mock.calls[0] as [string, unknown, unknown];
+    expect(loggedError).toBeInstanceOf(Error);
+    expect((loggedError as Error).message).toContain('client_contract_id');
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('routes unsupported coded validation errors to the generic path instead of surfacing them raw', async () => {
+    mocks.validateClientBillingEmail.mockResolvedValue({
+      valid: false,
+      code: 'SERVICE_NOT_FOUND',
+      error: 'Service "service-9" could not be found.',
+      params: { serviceId: 'service-9' },
+    });
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const previewResult = await previewInvoiceForSelectionInput(selectorInput);
+    expect(previewResult).toMatchObject({
+      success: false,
+      error: 'An error occurred while previewing the invoice',
+    });
+    expect(previewResult).not.toHaveProperty('code');
+    expect(JSON.stringify(previewResult)).not.toContain('service-9');
+
+    // The generation boundary must not return the raw coded message as an action
+    // error: it re-throws so the recurring run's generic catch owns it.
+    const generationError = await generateInvoiceForSelectionInput(selectorInput).catch((error) => error);
+    expect(generationError).toBeInstanceOf(Error);
+    expect(generationError).not.toHaveProperty('actionError');
+    expect(generationError).not.toHaveProperty('messageKey');
+  });
+
   it('T050: selector-input recurring generation still enforces PO-required contract validation', async () => {
     mocks.calculateBillingForExecutionWindow.mockResolvedValueOnce({
       charges: [
