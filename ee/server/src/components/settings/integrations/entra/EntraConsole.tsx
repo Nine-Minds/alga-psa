@@ -530,6 +530,7 @@ export function EntraConsole({
       cippBaseUrl: status?.connectionDetails?.cippBaseUrl || null,
       directTenantId: status?.connectionDetails?.directTenantId || null,
       directCredentialSource: status?.connectionDetails?.directCredentialSource || null,
+      directProfileName: status?.connectionDetails?.directProfileName || null,
       mappedClients: mappings.map((mapping) => ({
         clientName: mapping.clientName,
         entraTenantId: mapping.entraTenantId,

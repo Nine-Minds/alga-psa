@@ -1,9 +1,9 @@
-export const MICROSOFT_PROFILE_CONSUMERS = ['msp_sso', 'email', 'calendar', 'teams'] as const;
+export const MICROSOFT_PROFILE_CONSUMERS = ['msp_sso', 'email', 'calendar', 'teams', 'entra'] as const;
 
 export type MicrosoftProfileConsumer = typeof MICROSOFT_PROFILE_CONSUMERS[number];
 
 export const DEFAULT_MICROSOFT_PROFILE_CAPABILITIES: MicrosoftProfileConsumer[] = [
-  ...MICROSOFT_PROFILE_CONSUMERS,
+  'msp_sso', 'email', 'calendar', 'teams',
 ];
 
 export function isSupportedMicrosoftProfileConsumer(value: string): value is MicrosoftProfileConsumer {

@@ -20,6 +20,7 @@ import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
 import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 import { PilotSyncControl } from './PilotSyncControl';
 import { PreConsentDisclosure } from './PreConsentDisclosure';
+import { MicrosoftAppRegistrationPicker } from './MicrosoftAppRegistrationPicker';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import {
   ENTRA_SETUP_STEP_SHORT_LABEL_KEYS,
@@ -67,6 +68,7 @@ export function EntraSetupWizard({
   onStatusChanged,
 }: EntraSetupWizardProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
+  const [directProfile, setDirectProfile] = React.useState<{ id: string; name: string } | null>(null);
 
   const [method, setMethod] = React.useState<EntraConnectionMethod | null>(null);
   const [directConsentOpen, setDirectConsentOpen] = React.useState(false);
@@ -208,6 +210,8 @@ export function EntraSetupWizard({
             onChange={setMethod}
             onContinue={handleContinueConnect}
             busy={connectBusy || statusLoading}
+            directProfileBound={Boolean(directProfile)}
+            directProfilePicker={<MicrosoftAppRegistrationPicker onBound={setDirectProfile} />}
           />
           {connectError ? (
             <p className="text-sm text-destructive" id="entra-setup-connect-error">

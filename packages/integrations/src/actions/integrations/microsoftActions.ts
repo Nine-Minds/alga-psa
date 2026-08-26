@@ -172,8 +172,9 @@ export interface MicrosoftProfileStatusResponse {
     teamsTab?: string;
     teamsBot?: string;
     teamsMessageExtension?: string;
+    entra?: string;
   };
-  scopes?: { sso: string[]; email?: string[]; calendar?: string[]; teams?: string[] };
+  scopes?: { sso: string[]; email?: string[]; calendar?: string[]; teams?: string[]; entra?: string[] };
   config?: {
     clientId?: string;
     clientSecretMasked?: string;
@@ -252,6 +253,8 @@ function getMicrosoftConsumerLabel(consumer: MicrosoftProfileConsumer): string {
       return 'Calendar';
     case 'teams':
       return 'Teams';
+    case 'entra':
+      return 'Entra';
   }
 }
 
@@ -812,6 +815,7 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
       teamsTab: `${baseUrl}/api/teams/auth/callback/tab`,
       teamsBot: `${baseUrl}/api/teams/auth/callback/bot`,
       teamsMessageExtension: `${baseUrl}/api/teams/auth/callback/message-extension`,
+      entra: `${baseUrl}/api/auth/microsoft/entra/callback`,
     },
     scopes: {
       email: [
@@ -830,6 +834,7 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
       ],
       sso: ['openid', 'profile', 'email'],
       teams: ['openid', 'profile', 'email', 'offline_access'],
+      entra: ['https://graph.microsoft.com/User.Read', 'https://graph.microsoft.com/ManagedTenants.Read.All', 'https://graph.microsoft.com/Directory.Read.All', 'offline_access'],
     },
   };
 }
@@ -855,12 +860,14 @@ function getVisibleMicrosoftIntegrationMetadata(
             teamsMessageExtension: redirectUris.teamsMessageExtension,
           }
         : {}),
+      ...(visibleConsumers.has('entra') ? { entra: redirectUris.entra } : {}),
     },
     scopes: {
       sso: scopes.sso,
       ...(visibleConsumers.has('email') ? { email: scopes.email } : {}),
       ...(visibleConsumers.has('calendar') ? { calendar: scopes.calendar } : {}),
       ...(visibleConsumers.has('teams') ? { teams: scopes.teams } : {}),
+      ...(visibleConsumers.has('entra') ? { entra: scopes.entra } : {}),
     },
   };
 }
@@ -1666,6 +1673,29 @@ export const setMicrosoftConsumerBinding = withAuth(async (
 
     if (input.consumerType === 'teams') {
       await syncTeamsIntegrationBinding(knex, tenant, input.profileId, (user as any)?.user_id);
+    }
+
+    // A Direct Entra refresh token is issued to a particular application.  It
+    // cannot safely survive rebinding to another application registration.
+    if (input.consumerType === 'entra' && existing?.profile_id !== input.profileId) {
+      const { getActiveEntraPartnerConnection, updateEntraConnectionValidation } = await import(
+        '@enterprise/lib/integrations/entra/connectionRepository'
+      );
+      const connection = await getActiveEntraPartnerConnection(tenant);
+      if (connection?.connection_type === 'direct') {
+        const { clearEntraDirectTokenSet } = await import('@enterprise/lib/integrations/entra/auth/tokenStore');
+        await clearEntraDirectTokenSet(tenant);
+        await updateEntraConnectionValidation({
+          tenant,
+          connectionType: 'direct',
+          status: 'validation_failed',
+          snapshot: {
+            code: 'profile_rebound',
+            message: 'The Microsoft app registration changed. Reconnect Entra to grant consent to the new app.',
+            checkedAt: new Date().toISOString(),
+          },
+        });
+      }
     }
 
     return {

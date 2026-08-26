@@ -23,7 +23,7 @@ async function refreshEntraDirectTokenForAuthority(
   const credentials = await resolveMicrosoftCredentialsForTenant(tenant);
 
   if (!credentials) {
-    throw new Error('Microsoft credentials are not configured for direct Entra token refresh.');
+    throw new Error('Select the Microsoft app registration to use for Entra, then reconnect.');
   }
 
   const refreshToken = await getEntraDirectRefreshToken(tenant);
