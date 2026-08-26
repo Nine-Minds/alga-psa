@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Docker Compose wrapper with automatic secret validation
 # This script ensures secrets are properly formatted before running Docker Compose
@@ -10,7 +11,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SECRETS_DIR="${SECRETS_DIR:-$REPO_ROOT/secrets}"
 
 # Bootstrap any missing required secret files (idempotent — existing values are
-# preserved), then validate/fix them before running compose.
+# preserved; on an existing install only credential_encryption_key is auto-added
+# and other missing established secrets fail loudly), then validate/fix them
+# before running compose. With `set -e`, a generator failure stops the wrapper
+# before `docker compose` is ever invoked.
 SECRETS_DIR="$SECRETS_DIR" "$SCRIPT_DIR/generate-secrets.sh"
 
 # Function to validate and fix secret files

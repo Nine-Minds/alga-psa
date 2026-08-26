@@ -58,13 +58,19 @@ cp .env.example .env
 
 2. Generate development secrets. The Compose stack requires these 12 secret files
    (including `credential_encryption_key`, the EE credentials-vault encryption
-   key). Generate them all with the idempotent, secure bootstrap script — it
-   creates any missing file and never overwrites existing ones, so it is safe to
-   re-run:
+   key). Generate them all with the idempotent, secure bootstrap script:
 
 ```bash
 ./scripts/generate-secrets.sh
 ```
+
+   On a fresh checkout it creates every required secret; on an existing or
+   partial `secrets/` directory it **preserves every established value**, adds
+   only the missing `credential_encryption_key`, and **fails loudly** rather
+   than regenerating any other missing secret (silently replacing a live
+   deployment's database/auth/encryption secret would break database access,
+   invalidate sessions, or make encrypted data unrecoverable). It never
+   overwrites existing files, so it is safe to re-run.
 
    If you prefer to create them by hand (e.g. to pin specific values), the
    script produces exactly these files:

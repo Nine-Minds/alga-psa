@@ -1,9 +1,13 @@
 #!/bin/bash
+set -euo pipefail
 
 # Script to validate secret files before Docker Compose operations.
-# Bootstraps any missing required secret first (idempotent, secure — see
-# generate-secrets.sh), so a fresh checkout is provisioned instead of rejected,
-# then validates every required file.
+# Bootstraps any missing required secret first (see generate-secrets.sh: fresh
+# dirs get the full set; existing dirs preserve values, auto-add only
+# credential_encryption_key, and fail loudly on other missing established
+# secrets), then validates every required file. Generator failure terminates
+# this script before any validation runs (no partial/passed validation on a
+# failed bootstrap).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

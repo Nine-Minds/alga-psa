@@ -47,10 +47,12 @@ If you want a turnkey on-premise install instead of running Docker Compose yours
 
 1. Create secret files in the `secrets/` directory:
 
-   The fastest option is the idempotent bootstrap script — it generates any
-   missing required secret (including `credential_encryption_key`, the EE
-   credentials-vault encryption key) with cryptographically random values and
-   never overwrites existing files:
+   The fastest option is the idempotent bootstrap script. On a fresh checkout it
+   generates every required secret (including `credential_encryption_key`, the
+   EE credentials-vault encryption key) with cryptographically random values; on
+   an existing install it preserves every established value, adds only the new
+   `credential_encryption_key`, and fails loudly instead of regenerating any
+   other missing secret. It never overwrites existing files:
    ```bash
    ./scripts/generate-secrets.sh
    ```

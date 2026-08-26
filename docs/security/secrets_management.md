@@ -15,11 +15,19 @@ Instead of storing sensitive data in environment variables or configuration file
 
 All secrets are stored in the `secrets/` directory at the project root. Each secret is stored in its own file:
 
-> **Bootstrap:** `./scripts/generate-secrets.sh` creates every required secret
-> file with a cryptographically random value (mode `0600`) and **never
-> overwrites an existing file**, so it is safe to re-run. It is invoked
-> automatically by `scripts/docker-compose-wrapper.sh` before `docker compose`
-> and by `scripts/validate-secrets.sh` before validation.
+> **Bootstrap:** `./scripts/generate-secrets.sh` is the persisted, idempotent
+> bootstrap for the Compose flow. On a **fresh** directory it creates every
+> required secret file with a cryptographically random value (mode `0600`) and
+> **never overwrites an existing file**, so it is safe to re-run. On an
+> **existing/partial** installation it preserves every established value, the
+> only auto-add is the newly introduced `credential_encryption_key` (no
+> ciphertext was ever encrypted with it), and it **fails loudly** instead of
+> regenerating any other missing/empty established secret — silently replacing a
+> live deployment's database/auth/encryption secret would break database
+> access, invalidate sessions, or make encrypted data unrecoverable. It is
+> invoked automatically by `scripts/docker-compose-wrapper.sh` before
+> `docker compose` and by `scripts/validate-secrets.sh` before validation; a
+> generator failure stops both callers (`set -e`).
 
 ### Database Secrets
 - `postgres_password` - PostgreSQL admin password (used by 'postgres' user for administration)

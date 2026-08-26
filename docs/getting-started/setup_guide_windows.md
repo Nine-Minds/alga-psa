@@ -50,9 +50,10 @@ This guide provides step-by-step instructions for setting up the PSA system on W
 1. Create secret files in the `secrets/` directory (replace placeholders with strong values):
 
    If you are using Git Bash or WSL, the idempotent bootstrap script generates
-   any missing required secret (including `credential_encryption_key`, the EE
-   credentials-vault encryption key) with random values and never overwrites
-   existing files:
+   every required secret on a fresh checkout (including `credential_encryption_key`,
+   the EE credentials-vault encryption key); on an existing install it preserves
+   established values, adds only the new key, and fails loudly rather than
+   regenerating other missing secrets. It never overwrites existing files:
    ```bash
    ./scripts/generate-secrets.sh
    ```
