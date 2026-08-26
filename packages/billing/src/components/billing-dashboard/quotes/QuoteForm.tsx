@@ -11,6 +11,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   DropdownMenu,
@@ -111,6 +112,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 }) => {
   const { t } = useTranslation('msp/quotes');
   const { formatCurrency: formatLocalizedCurrency, formatDate } = useFormatters();
+  const { renderQuickAddClient } = useQuickAddClient();
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
@@ -155,6 +157,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [notice, setNotice] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
   // Workflow state — sourced from the persisted quote for status-based actions
   const [quote, setQuote] = useState<IQuote | null>(null);
@@ -1349,6 +1352,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                       onClientTypeFilterChange={setClientTypeFilter}
                       placeholder={t('quoteForm.essentials.clientPlaceholder', { defaultValue: 'Select client' })}
                       disabled={isReadOnly}
+                      onAddNew={!isReadOnly ? () => setIsQuickAddClientOpen(true) : undefined}
                     />
                   </div>
                 )}
@@ -1997,6 +2001,27 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           )}
         </DialogContent>
       </Dialog>
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
+          setClients((currentClients) => {
+            const existingIndex = currentClients.findIndex(
+              (client) => client.client_id === newClient.client_id,
+            );
+            if (existingIndex === -1) return [...currentClients, newClient];
+            const nextClients = [...currentClients];
+            nextClients[existingIndex] = newClient;
+            return nextClients;
+          });
+          setForm((current) => ({
+            ...current,
+            client_id: newClient.client_id,
+            contact_id: '',
+          }));
+        },
+        skipSuccessDialog: true,
+      })}
     </Card>
   );
 };
