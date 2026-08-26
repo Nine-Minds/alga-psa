@@ -4,6 +4,8 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import type { Asset, AssetTypeField } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useContentCardVariant } from '@alga-psa/ui/components';
+import { BentoTile } from '@alga-psa/ui/components/bento';
 import { isBuiltinAssetTypeSlug } from '../../lib/assetTypeAttributes';
 import { useAssetTypeRegistry } from '../shared/useAssetTypeOptions';
 
@@ -67,6 +69,7 @@ function renderFieldValue(field: AssetTypeField, value: unknown, t: TranslateFn)
  */
 export const CustomTypeDetailsPanel: React.FC<CustomTypeDetailsPanelProps> = ({ asset }) => {
   const { t } = useTranslation('msp/assets');
+  const variant = useContentCardVariant();
   const isCustom = !isBuiltinAssetTypeSlug(asset.asset_type);
   const entries = useAssetTypeRegistry(isCustom);
 
@@ -90,32 +93,37 @@ export const CustomTypeDetailsPanel: React.FC<CustomTypeDetailsPanelProps> = ({ 
     return null;
   }
 
+  const title = t('customTypeDetailsPanel.title', {
+    defaultValue: '{{name}} Details',
+    name: entry.name,
+  });
+  const content = (
+    <div className="flex flex-col gap-2">
+      {rows.map(({ field, value }) => (
+        <div
+          key={field.key}
+          id={`custom-type-field-${field.key}`}
+          className="flex items-start gap-2 min-h-[24px]"
+        >
+          <span className="text-sm font-bold text-gray-700 w-32 shrink-0">{field.label}:</span>
+          <span className="text-sm text-gray-900 flex-1 break-words">
+            {renderFieldValue(field, value, t)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+
+  if (variant === 'bento') {
+    return <BentoTile id="custom-type-details-card" title={title}>{content}</BentoTile>;
+  }
+
   return (
     <Card id="custom-type-details-card" className="bg-white">
       <CardHeader>
-        <CardTitle>
-          {t('customTypeDetailsPanel.title', {
-            defaultValue: '{{name}} Details',
-            name: entry.name,
-          })}
-        </CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col gap-2">
-          {rows.map(({ field, value }) => (
-            <div
-              key={field.key}
-              id={`custom-type-field-${field.key}`}
-              className="flex items-start gap-2 min-h-[24px]"
-            >
-              <span className="text-sm font-bold text-gray-700 w-32 shrink-0">{field.label}:</span>
-              <span className="text-sm text-gray-900 flex-1 break-words">
-                {renderFieldValue(field, value, t)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 };

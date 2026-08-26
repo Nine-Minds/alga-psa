@@ -4,6 +4,8 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import type { Asset } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useContentCardVariant } from '@alga-psa/ui/components';
+import { BentoTile } from '@alga-psa/ui/components/bento';
 
 interface HuduDocumentationCardProps {
   asset: Asset;
@@ -25,6 +27,7 @@ interface HuduFieldEntry {
  */
 export const HuduDocumentationCard: React.FC<HuduDocumentationCardProps> = ({ asset }) => {
   const { t } = useTranslation('msp/assets');
+  const variant = useContentCardVariant();
 
   const attributes = asset.attributes;
   const rawFields = attributes?.hudu_fields;
@@ -38,33 +41,42 @@ export const HuduDocumentationCard: React.FC<HuduDocumentationCardProps> = ({ as
 
   const syncedAt = typeof attributes?.hudu_synced_at === 'string' ? attributes.hudu_synced_at : null;
 
+  const title = t('huduDocumentationCard.title', { defaultValue: 'Hudu Documentation' });
+  const content = (
+    <>
+      <div className="flex flex-col gap-2">
+        {fields.map((field, idx) => (
+          <div key={`${field.label}-${idx}`} id={`hudu-doc-field-${idx}`} className="flex items-start gap-2 min-h-[24px]">
+            <span className="text-sm font-bold text-gray-700 w-32 shrink-0">{field.label}:</span>
+            <span className="text-sm text-gray-900 flex-1 whitespace-pre-wrap break-words">
+              {field.value === null || field.value === undefined || field.value === ''
+                ? t('common.states.na', { defaultValue: 'N/A' })
+                : String(field.value)}
+            </span>
+          </div>
+        ))}
+      </div>
+      {syncedAt && (
+        <p className="text-xs text-gray-400 mt-3">
+          {t('huduDocumentationCard.syncedAt', {
+            defaultValue: 'Last synced from Hudu: {{value}}',
+            value: new Date(syncedAt).toLocaleString(),
+          })}
+        </p>
+      )}
+    </>
+  );
+
+  if (variant === 'bento') {
+    return <BentoTile id="hudu-doc-card" title={title}>{content}</BentoTile>;
+  }
+
   return (
     <Card id="hudu-doc-card" className="bg-white">
       <CardHeader>
-        <CardTitle>{t('huduDocumentationCard.title', { defaultValue: 'Hudu Documentation' })}</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col gap-2">
-          {fields.map((field, idx) => (
-            <div key={`${field.label}-${idx}`} id={`hudu-doc-field-${idx}`} className="flex items-start gap-2 min-h-[24px]">
-              <span className="text-sm font-bold text-gray-700 w-32 shrink-0">{field.label}:</span>
-              <span className="text-sm text-gray-900 flex-1 whitespace-pre-wrap break-words">
-                {field.value === null || field.value === undefined || field.value === ''
-                  ? t('common.states.na', { defaultValue: 'N/A' })
-                  : String(field.value)}
-              </span>
-            </div>
-          ))}
-        </div>
-        {syncedAt && (
-          <p className="text-xs text-gray-400 mt-3">
-            {t('huduDocumentationCard.syncedAt', {
-              defaultValue: 'Last synced from Hudu: {{value}}',
-              value: new Date(syncedAt).toLocaleString(),
-            })}
-          </p>
-        )}
-      </CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 };
