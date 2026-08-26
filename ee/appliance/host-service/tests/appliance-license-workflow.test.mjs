@@ -4,6 +4,7 @@ import { connectToTemporal } from '../../../../server/scripts/appliance-license-
 
 test('connectToTemporal preserves the Temporal Connection static receiver', async () => {
   const options = { address: 'temporal.example.test:7233' };
+  let connectCalls = 0;
   const connection = {
     ensureConnected: async () => {},
   };
@@ -16,6 +17,7 @@ test('connectToTemporal preserves the Temporal Connection static receiver', asyn
     }
 
     static async connect(receivedOptions) {
+      connectCalls += 1;
       const created = this.lazy(receivedOptions);
       await created.ensureConnected();
       return created;
@@ -23,4 +25,5 @@ test('connectToTemporal preserves the Temporal Connection static receiver', asyn
   }
 
   assert.equal(await connectToTemporal(options, FakeConnection), connection);
+  assert.equal(connectCalls, 1);
 });
