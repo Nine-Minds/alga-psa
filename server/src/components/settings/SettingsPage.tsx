@@ -5,7 +5,7 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Users, MessageSquare, Bell, Monitor, Puzzle, FlaskConical } from 'lucide-react';
+import { Settings, Users, MessageSquare, Bell, Puzzle, FlaskConical } from 'lucide-react';
 import type { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
@@ -40,17 +40,6 @@ function ExperimentalFeaturesLoading() {
   return <SettingsTabSkeleton title={t('tabs.experimentalFeatures')} description={t('tabs.loadingExperimental')} showTabs={false} />;
 }
 
-function AssetTypesLoading() {
-  const { t } = useTranslation('msp/settings');
-  return (
-    <SettingsTabSkeleton
-      title={t('settings.assetTypes.title', { defaultValue: 'Asset Types' })}
-      description={t('settings.assetTypes.loading', { defaultValue: 'Loading asset types...' })}
-      showTabs={false}
-    />
-  );
-}
-
 // Dynamic imports for heavy settings components
 const TicketingSettings = dynamic(() => import('./general/TicketingSettings'), {
   loading: () => <TicketingSettingsLoading />,
@@ -64,11 +53,6 @@ const TeamManagement = dynamic(() => import('./general/TeamManagement'), {
 
 const ExperimentalFeaturesSettings = dynamic(() => import('./general/ExperimentalFeaturesSettings'), {
   loading: () => <ExperimentalFeaturesLoading />,
-  ssr: false
-});
-
-const AssetTypesManager = dynamic(() => import('@alga-psa/assets/components/settings/AssetTypesManager'), {
-  loading: () => <AssetTypesLoading />,
   ssr: false
 });
 
@@ -169,12 +153,6 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
           <TicketingSettings />
         </Suspense>
       ),
-    },
-    {
-      id: 'assets',
-      label: t('settings.assetTypes.tab', { defaultValue: 'Assets' }),
-      icon: Monitor,
-      content: <AssetTypesManager />,
     },
     {
       id: 'notifications',
