@@ -32,6 +32,18 @@ function sharedTenantSecrets(deployment: Record<string, any>) {
 }
 
 describe.skipIf(!helmAvailable)('temporal-worker shared tenant secrets Helm rendering', () => {
+  it('keeps the hosted selector at two labels while the appliance retains its legacy component label', () => {
+    expect(renderDeployment().spec.selector.matchLabels).toEqual({
+      'app.kubernetes.io/name': 'temporal-worker',
+      'app.kubernetes.io/instance': 'temporal-worker',
+    });
+    expect(renderDeployment(['--values', applianceValuesPath]).spec.selector.matchLabels).toEqual({
+      'app.kubernetes.io/name': 'temporal-worker',
+      'app.kubernetes.io/instance': 'temporal-worker',
+      'app.kubernetes.io/component': 'temporal-worker',
+    });
+  });
+
   it('renders the shared hostPath, read-only mount, and filesystem base path when enabled', () => {
     const secrets = sharedTenantSecrets(renderDeployment(['--set', 'sharedTenantSecrets.enabled=true']));
 

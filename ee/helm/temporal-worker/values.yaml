@@ -257,3 +257,7 @@ fullnameOverride: ""
 
 # Pod labels
 podLabels: {}
+
+# Additional immutable Deployment selector labels. Keep empty for hosted
+# compatibility; the appliance profile retains its legacy component label.
+extraSelectorLabels: {}
