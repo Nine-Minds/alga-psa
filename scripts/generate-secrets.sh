@@ -58,7 +58,11 @@ generate_secret() {
 has_established_secret() {
   local name
   for name in "${ALL_SECRETS[@]}"; do
-    if [ -s "$SECRETS_DIR/$name" ]; then
+    # Any managed-secret entry means this is not a fresh installation. In
+    # particular, an empty file must fail in the existing-install path rather
+    # than being mistaken for a fresh directory and silently regenerated.
+    # Count broken symlinks as entries too so they also fail closed.
+    if [ -e "$SECRETS_DIR/$name" ] || [ -L "$SECRETS_DIR/$name" ]; then
       return 0
     fi
   done

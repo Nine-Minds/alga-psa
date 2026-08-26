@@ -156,6 +156,18 @@ test("refuses to regenerate an empty established secret on an existing install",
   assert.equal(fs.statSync(path.join(secretsDir, "db_password_server")).size, 0, "empty secret not overwritten");
 });
 
+test("an empty managed-secret file alone is existing state and is never regenerated", (t) => {
+  const secretsDir = path.join(fixture(t), "secrets");
+  writeSecret(secretsDir, "nextauth_secret", "");
+
+  const result = run(scriptPath, secretsDir);
+  assert.notEqual(result.status, 0, "generator must fail rather than treating the directory as fresh");
+  assert.match(result.stderr, /Missing\/empty established secret/);
+  assert.equal(fs.statSync(path.join(secretsDir, "nextauth_secret")).size, 0, "empty secret not overwritten");
+  assert.ok(!fs.existsSync(path.join(secretsDir, "postgres_password")), "fresh bootstrap must not start");
+  assert.ok(!fs.existsSync(path.join(secretsDir, MIGRATION_SECRET)), "migration secret must not be added");
+});
+
 test("propagates generator failure: validate-secrets.sh and docker-compose-wrapper.sh terminate", (t) => {
   // SECRETS_DIR points at a path occupied by a regular file, so the generator's
   // `mkdir -p` fails and `set -e` makes it exit non-zero before any secret work.
