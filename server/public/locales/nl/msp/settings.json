@@ -1981,6 +1981,22 @@
     "templates": {
       "comingSoon": "Toewijzingssjablonen en geplande imports komen hier. Sla kolomtoewijzingen op, deel ze met het team en configureer terugkerende taken."
     },
+    "migration": {
+      "actions": {
+        "back": "Terug naar migraties",
+        "upload": "Pakket uploaden"
+      },
+      "errors": {
+        "noImportableRecords": "Dit pakket bevatte geen importeerbare records."
+      },
+      "preflight": {
+        "title": "Voorcontrole"
+      },
+      "run": {
+        "queued": "Migratie in wachtrij",
+        "applying": "Migratie wordt uitgevoerd"
+      }
+    },
     "jobDetails": {
       "title": "Importtaakdetails",
       "stats": {

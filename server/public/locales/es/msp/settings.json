@@ -1981,6 +1981,22 @@
     "templates": {
       "comingSoon": "Las plantillas de mapeo y las importaciones programadas se ubicarán aquí. Guarde mapeos de columnas, compártalos con el equipo y configure trabajos recurrentes."
     },
+    "migration": {
+      "actions": {
+        "back": "Volver a migraciones",
+        "upload": "Subir paquete"
+      },
+      "errors": {
+        "noImportableRecords": "Este paquete no contenía registros importables."
+      },
+      "preflight": {
+        "title": "Verificación previa"
+      },
+      "run": {
+        "queued": "Migración en cola",
+        "applying": "Migración en curso"
+      }
+    },
     "jobDetails": {
       "title": "Detalles del trabajo de importación",
       "stats": {

@@ -1981,6 +1981,22 @@
     "templates": {
       "comingSoon": "I modelli di mappatura e le importazioni pianificate saranno disponibili qui. Salva le mappature delle colonne, condividile con il team e configura operazioni ricorrenti."
     },
+    "migration": {
+      "actions": {
+        "back": "Torna alle migrazioni",
+        "upload": "Carica pacchetto"
+      },
+      "errors": {
+        "noImportableRecords": "Questo pacchetto non conteneva record importabili."
+      },
+      "preflight": {
+        "title": "Verifica preliminare"
+      },
+      "run": {
+        "queued": "Migrazione in coda",
+        "applying": "Migrazione in corso"
+      }
+    },
     "jobDetails": {
       "title": "Dettagli operazione di importazione",
       "stats": {
