@@ -116,7 +116,11 @@ exports.up = async function up(knex) {
         .foreign(['tenant', 'owner_user_id'])
         .references(['tenant', 'user_id'])
         .inTable('users');
-      table.foreign(['tenant', 'job_id']).references(['tenant', 'job_id']).inTable('jobs');
+      // job_id links to the background `jobs` row that applies the migration,
+      // but `jobs` is a plain (non-distributed) table on Citus, so a distributed
+      // table cannot carry an enforced FK to it ("referenced table must be a
+      // distributed table or a reference table"). Keep job_id as an indexed soft
+      // reference; the application owns its integrity.
     });
   }
 
@@ -278,6 +282,7 @@ exports.up = async function up(knex) {
   await createIndex(knex, 'idx_migration_jobs_owner', 'migration_jobs (tenant, owner_user_id, created_at DESC)');
   await createIndex(knex, 'idx_migration_jobs_sha256', 'migration_jobs (tenant, package_sha256)');
   await createIndex(knex, 'idx_migration_jobs_source_file', 'migration_jobs (tenant, source_file_id)');
+  await createIndex(knex, 'idx_migration_jobs_job', 'migration_jobs (tenant, job_id)');
   await createIndex(knex, 'idx_migration_job_entities_phase', 'migration_job_entities (tenant, migration_job_id, phase)');
   await createIndex(
     knex,

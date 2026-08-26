@@ -208,6 +208,18 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // import_job_items / import_jobs reference jobs with NO ACTION, so they
   // must be deleted before jobs.
   'import_job_items', 'import_jobs',
+  // AMP (Alga Migration Package) staging/ledger tables. All FK back to
+  // migration_jobs (or users), so the whole subtree is deleted before jobs and
+  // users. Internal order is dependents-first: record_outcomes references
+  // staged_records; staged_records/job_entities/identity_mappings/reports all
+  // reference migration_jobs; mapping_profiles references users only.
+  'migration_record_outcomes',
+  'migration_staged_records',
+  'migration_job_entities',
+  'migration_identity_mappings',
+  'migration_reports',
+  'migration_mapping_profiles',
+  'migration_jobs',
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
   'platform_notification_recipients',
 
