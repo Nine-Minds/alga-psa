@@ -208,7 +208,9 @@ export function EntraSetupWizard({
         <div className="space-y-4">
           <PreConsentDisclosure />
           {status?.connectionDetails?.directProfileMissing ? (
-            <p className="text-sm text-destructive" id="entra-direct-profile-missing">Select a Microsoft app registration and reconnect.</p>
+            <p className="text-sm text-destructive" id="entra-direct-profile-missing">
+              {t('integrations.entra.setup.appRegistration.reconnectRequired', { defaultValue: 'Select a Microsoft app registration and reconnect.' })}
+            </p>
           ) : null}
           <ConnectionMethodChooser
             cippAvailable={cippAvailable}

@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Verbindingstype:",
           "label": "Overzicht",
-          "mappedTenantsLabel": "Toegewezen tenants:"
+          "mappedTenantsLabel": "Toegewezen tenants:",
+          "microsoftAppLabel": "Microsoft-app:"
         },
         "skipped": {
           "empty": "Momenteel zijn er geen tenants gemarkeerd als overgeslagen.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "App-registratie toevoegen",
+          "bindFailed": "De gekozen Microsoft-app voor Entra kon niet worden opgeslagen.",
+          "emptyBody": "De directe verbinding draait op de Microsoft-app-registratie van uw eigen organisatie. Registreer een multitenant-app in uw partnertenant, voeg de Entra-redirect URI toe en verleen beheerderstoestemming voor ManagedTenants.Read.All en Directory.Read.All.",
+          "label": "Microsoft-app-registratie",
+          "placeholder": "Selecteer een app-registratie",
+          "reconnectRequired": "Selecteer een Microsoft-app-registratie en maak opnieuw verbinding.",
+          "redirectUriLabel": "Redirect URI om in Entra toe te voegen",
+          "scopesLabel": "Gedelegeerde scopes (beheerderstoestemming vereist)"
+        },
         "backToCurrentStep": "Terug naar {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga praat met Microsoft Graph via uw partnerrelatie.",
             "label": "Directe Microsoft-partner",
             "prerequisites": {
-              "appRegistration": "Microsoft OAuth-gegevens die voor deze tenant zijn geconfigureerd.",
+              "appRegistration": "Een hieronder gekozen Microsoft-app-registratie — de directe verbinding gebruikt altijd de app van uw eigen organisatie.",
               "globalAdmin": "Een globale beheerder die de machtigingen kan goedkeuren.",
               "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert.",
               "lighthouse": "Microsoft 365 Lighthouse ingericht in uw partnertenant."
@@ -956,6 +967,7 @@
         "description": "Breng de mensen uit de Microsoft-tenants die u beheert als klantcontacten naar Alga. Er wordt niets naar uw contacten geschreven totdat u een voorbeeld hebt gezien en goedgekeurd.",
         "directConsent": {
           "adminNote": "Een globale beheerder moet deze machtigingen goedkeuren. Zo niet, dan lukt de aanmelding wel maar wordt de verbinding geweigerd en wordt er niets opgeslagen.",
+          "appRegistration": "App-registratie: {{name}}.",
           "cancel": "Annuleren",
           "continue": "Doorgaan naar Microsoft",
           "intro": "U verlaat Alga en meldt zich aan bij Microsoft. Dit zijn de machtigingen die worden gevraagd.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Bestaande Outlook-e-mailverbindingen moeten opnieuw worden geautoriseerd om Mail.Send toe te kennen voordat ze uitgaande e-mail kunnen verzenden.",
             "perProviderIssuerNote": "Bestaande postvakverbindingen behouden hun huidige Microsoft-app totdat ze opnieuw worden verbonden. Deze keuze geldt voor nieuwe postvakverbindingen."
           },
+          "entra": {
+            "description": "Kies de Microsoft-app voor Entra-synchronisatie via GDAP en Lighthouse.",
+            "label": "Entra direct",
+            "reconnect": "Het wijzigen van deze app verbreekt de huidige Entra-verbinding en vereist opnieuw toestemming."
+          },
           "mspSso": {
             "description": "Kies welk Microsoft-profiel MSP SSO-aanmeldingsdomeinen, Microsoft-aanmelding en tenant-detectie ondersteunt.",
             "label": "MSP SSO"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Huidige profielwaarden",
           "emailRedirect": "Redirect-URI inkomende e-mail",
           "emailTitle": "E-mailhandleiding",
+          "entraConsent": "Vereiste",
+          "entraConsentValue": "Registreer deze app als multitenant en verleen beheerderstoestemming in de partnertenant.",
+          "entraTitle": "Entra direct",
           "mspSsoTitle": "MSP SSO-handleiding",
           "notConfigured": "Niet geconfigureerd",
           "redirectUri": "Redirect URI",

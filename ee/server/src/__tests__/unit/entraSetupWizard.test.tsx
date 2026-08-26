@@ -16,6 +16,7 @@ const {
   listMicrosoftProfilesMock,
   listMicrosoftConsumerBindingsMock,
   setMicrosoftConsumerBindingMock,
+  getMicrosoftIntegrationStatusMock,
 } = vi.hoisted(() => ({
   disconnectEntraIntegrationMock: vi.fn(),
   discoverEntraManagedTenantsMock: vi.fn(),
@@ -27,6 +28,7 @@ const {
   listMicrosoftProfilesMock: vi.fn(),
   listMicrosoftConsumerBindingsMock: vi.fn(),
   setMicrosoftConsumerBindingMock: vi.fn(),
+  getMicrosoftIntegrationStatusMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -45,6 +47,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   listMicrosoftProfiles: listMicrosoftProfilesMock,
   listMicrosoftConsumerBindings: listMicrosoftConsumerBindingsMock,
   setMicrosoftConsumerBinding: setMicrosoftConsumerBindingMock,
+  getMicrosoftIntegrationStatus: getMicrosoftIntegrationStatusMock,
 }));
 
 // The mapping table and the CIPP dialog have their own suites; the wizard only
@@ -138,6 +141,11 @@ describe('EntraSetupWizard', () => {
   beforeEach(() => {
     listMicrosoftProfilesMock.mockResolvedValue({ success: true, profiles: [] });
     listMicrosoftConsumerBindingsMock.mockResolvedValue({ success: true, bindings: [] });
+    getMicrosoftIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      redirectUris: { entra: 'https://psa.example.com/api/auth/microsoft/entra/callback' },
+      scopes: { entra: ['https://graph.microsoft.com/User.Read', 'offline_access'] },
+    });
     discoverEntraManagedTenantsMock.mockReset();
     initiateEntraDirectOAuthMock.mockReset();
     startEntraSyncMock.mockReset();

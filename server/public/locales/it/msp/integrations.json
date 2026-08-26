@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Tipo di connessione:",
           "label": "Panoramica",
-          "mappedTenantsLabel": "Tenant mappati:"
+          "mappedTenantsLabel": "Tenant mappati:",
+          "microsoftAppLabel": "App Microsoft:"
         },
         "skipped": {
           "empty": "Nessun tenant è attualmente contrassegnato come saltato.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Aggiungi registrazione app",
+          "bindFailed": "Impossibile salvare l'app Microsoft scelta per Entra.",
+          "emptyBody": "La connessione diretta usa la registrazione app Microsoft della tua organizzazione. Registra un'app multi-tenant nel tenant partner, aggiungi l'URI di reindirizzamento di Entra e concedi il consenso amministratore per ManagedTenants.Read.All e Directory.Read.All.",
+          "label": "Registrazione app Microsoft",
+          "placeholder": "Seleziona una registrazione app",
+          "reconnectRequired": "Seleziona una registrazione app Microsoft e riconnettiti.",
+          "redirectUriLabel": "URI di reindirizzamento da aggiungere in Entra",
+          "scopesLabel": "Scope delegati (richiedono il consenso amministratore)"
+        },
         "backToCurrentStep": "Torna a {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga comunica con Microsoft Graph tramite la tua relazione di partner.",
             "label": "Partner Microsoft diretto",
             "prerequisites": {
-              "appRegistration": "Credenziali OAuth Microsoft configurate per questo tenant.",
+              "appRegistration": "Una registrazione app Microsoft scelta qui sotto: la connessione diretta usa sempre l'app della tua organizzazione.",
               "globalAdmin": "Un amministratore globale che possa approvare le autorizzazioni.",
               "partnerRelationship": "Una relazione di partner (GDAP) con i tenant che gestisci.",
               "lighthouse": "Microsoft 365 Lighthouse integrato nel tenant partner."
@@ -956,6 +967,7 @@
         "description": "Porta in Alga come contatti cliente le persone dei tenant Microsoft che gestisci. Nulla viene scritto nei tuoi contatti finché non hai visto un'anteprima e l'hai approvata.",
         "directConsent": {
           "adminNote": "Un amministratore globale deve approvare queste autorizzazioni. In caso contrario l'accesso andrà a buon fine ma la connessione sarà rifiutata e non verrà salvato nulla.",
+          "appRegistration": "Registrazione app: {{name}}.",
           "cancel": "Annulla",
           "continue": "Continua su Microsoft",
           "intro": "Stai per lasciare Alga e accedere su Microsoft. Queste sono le autorizzazioni che verranno richieste.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Le connessioni e-mail Outlook esistenti devono essere autorizzate nuovamente per concedere Mail.Send prima di poter inviare e-mail in uscita.",
             "perProviderIssuerNote": "Le connessioni esistenti della casella di posta mantengono la loro app Microsoft attuale finché non vengono ricollegate. Questa scelta si applica alle nuove connessioni della casella di posta."
           },
+          "entra": {
+            "description": "Scegli l'app Microsoft per la sincronizzazione Entra tramite GDAP e Lighthouse.",
+            "label": "Entra diretto",
+            "reconnect": "Cambiare questa app disconnette la connessione Entra corrente e richiede un nuovo consenso."
+          },
           "mspSso": {
             "description": "Scegli quale profilo Microsoft supporta i domini di accesso MSP SSO, l'accesso Microsoft e la discovery del tenant.",
             "label": "MSP SSO"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Valori del profilo corrente",
           "emailRedirect": "Redirect URI per l'e-mail in arrivo",
           "emailTitle": "Guida all'e-mail",
+          "entraConsent": "Requisito",
+          "entraConsentValue": "Registra questa app come multi-tenant e concedi il consenso amministratore nel tenant partner.",
+          "entraTitle": "Entra diretto",
           "mspSsoTitle": "Guida MSP SSO",
           "notConfigured": "Non configurato",
           "redirectUri": "URI di reindirizzamento",

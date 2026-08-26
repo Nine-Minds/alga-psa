@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Typ połączenia:",
           "label": "Przegląd",
-          "mappedTenantsLabel": "Zmapowane tenanty:"
+          "mappedTenantsLabel": "Zmapowane tenanty:",
+          "microsoftAppLabel": "Aplikacja Microsoft:"
         },
         "skipped": {
           "empty": "Obecnie żadne tenanty nie są oznaczone jako pominięte.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Dodaj rejestrację aplikacji",
+          "bindFailed": "Nie udało się zapisać wybranej aplikacji Microsoft dla usługi Entra.",
+          "emptyBody": "Połączenie bezpośrednie korzysta z rejestracji aplikacji Microsoft Twojej organizacji. Zarejestruj aplikację wielodostępną w dzierżawie partnera, dodaj identyfikator URI przekierowania Entra i udziel zgody administratora dla ManagedTenants.Read.All oraz Directory.Read.All.",
+          "label": "Rejestracja aplikacji Microsoft",
+          "placeholder": "Wybierz rejestrację aplikacji",
+          "reconnectRequired": "Wybierz rejestrację aplikacji Microsoft i połącz ponownie.",
+          "redirectUriLabel": "Identyfikator URI przekierowania do dodania w Entra",
+          "scopesLabel": "Zakresy delegowane (wymagana zgoda administratora)"
+        },
         "backToCurrentStep": "Wróć do {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga komunikuje się z Microsoft Graph przez Twoją relację partnerską.",
             "label": "Bezpośredni partner Microsoft",
             "prerequisites": {
-              "appRegistration": "Dane OAuth Microsoft skonfigurowane dla tej organizacji.",
+              "appRegistration": "Wybrana poniżej rejestracja aplikacji Microsoft — połączenie bezpośrednie zawsze korzysta z aplikacji Twojej organizacji.",
               "globalAdmin": "Administratora globalnego, który zatwierdzi uprawnienia.",
               "partnerRelationship": "Relacja partnerska (GDAP) z zarządzanymi dzierżawami.",
               "lighthouse": "Microsoft 365 Lighthouse wdrożony w organizacji partnerskiej."
@@ -956,6 +967,7 @@
         "description": "Przenieś do Algi osoby z dzierżaw Microsoft, którymi zarządzasz, jako kontakty klientów. Nic nie zostanie zapisane w Twoich kontaktach, dopóki nie zobaczysz podglądu i go nie zatwierdzisz.",
         "directConsent": {
           "adminNote": "Administrator globalny musi zatwierdzić te uprawnienia. W przeciwnym razie logowanie się powiedzie, ale połączenie zostanie odrzucone i nic nie zostanie zapisane.",
+          "appRegistration": "Rejestracja aplikacji: {{name}}.",
           "cancel": "Anuluj",
           "continue": "Przejdź do Microsoftu",
           "intro": "Opuszczasz Algę i zalogujesz się w Microsofcie. Oto uprawnienia, o które zostanie wysłane żądanie.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Istniejące połączenia e-mail Outlook muszą zostać ponownie autoryzowane, aby przyznać Mail.Send przed wysyłaniem poczty wychodzącej.",
             "perProviderIssuerNote": "Istniejące połączenia skrzynek pocztowych zachowują swoją bieżącą aplikację Microsoft, dopóki nie zostaną ponownie połączone. Ten wybór dotyczy nowych połączeń skrzynek pocztowych."
           },
+          "entra": {
+            "description": "Wybierz aplikację Microsoft do synchronizacji Entra przez GDAP i Lighthouse.",
+            "label": "Entra bezpośrednio",
+            "reconnect": "Zmiana tej aplikacji rozłącza bieżące połączenie Entra i wymaga ponownej zgody."
+          },
           "mspSso": {
             "description": "Wybierz, który profil Microsoft obsługuje domeny logowania MSP SSO, logowanie Microsoft i wykrywanie tenanta.",
             "label": "MSP SSO"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Bieżące wartości profilu",
           "emailRedirect": "Redirect URI poczty przychodzącej",
           "emailTitle": "Wskazówki dotyczące poczty",
+          "entraConsent": "Wymaganie",
+          "entraConsentValue": "Zarejestruj tę aplikację jako wielodostępną i udziel zgody administratora w dzierżawie partnera.",
+          "entraTitle": "Entra bezpośrednio",
           "mspSsoTitle": "Wskazówki dotyczące MSP SSO",
           "notConfigured": "Nie skonfigurowano",
           "redirectUri": "Identyfikator URI przekierowania",

@@ -19,12 +19,14 @@ import {
 } from '../../lib/microsoftConsumerVisibility';
 import {
   DEFAULT_MICROSOFT_PROFILE_CAPABILITIES,
+  ENTRA_DIRECT_DISPLAY_SCOPES,
   hasMicrosoftProfileCapability,
   isSupportedMicrosoftProfileConsumer,
   MICROSOFT_PROFILE_CONSUMERS,
   normalizeMicrosoftProfileCapabilities,
   type MicrosoftProfileConsumer,
 } from './microsoftShared';
+import { invalidateEntraDirectConnectionOnRebind } from '../../lib/entraBindingInvalidation';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
 import {
   backfillMicrosoftEmailProviderIssuerMetadata,
@@ -834,7 +836,7 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
       ],
       sso: ['openid', 'profile', 'email'],
       teams: ['openid', 'profile', 'email', 'offline_access'],
-      entra: ['https://graph.microsoft.com/User.Read', 'https://graph.microsoft.com/ManagedTenants.Read.All', 'https://graph.microsoft.com/Directory.Read.All', 'offline_access'],
+      entra: [...ENTRA_DIRECT_DISPLAY_SCOPES],
     },
   };
 }
@@ -1675,27 +1677,12 @@ export const setMicrosoftConsumerBinding = withAuth(async (
       await syncTeamsIntegrationBinding(knex, tenant, input.profileId, (user as any)?.user_id);
     }
 
-    // A Direct Entra refresh token is issued to a particular application.  It
-    // cannot safely survive rebinding to another application registration.
-    if (input.consumerType === 'entra' && existing?.profile_id !== input.profileId) {
-      const { getActiveEntraPartnerConnection, updateEntraConnectionValidation } = await import(
-        '@enterprise/lib/integrations/entra/connectionRepository'
-      );
-      const connection = await getActiveEntraPartnerConnection(tenant);
-      if (connection?.connection_type === 'direct') {
-        const { clearEntraDirectTokenSet } = await import('@enterprise/lib/integrations/entra/auth/tokenStore');
-        await clearEntraDirectTokenSet(tenant);
-        await updateEntraConnectionValidation({
-          tenant,
-          connectionType: 'direct',
-          status: 'validation_failed',
-          snapshot: {
-            code: 'profile_rebound',
-            message: 'The Microsoft app registration changed. Reconnect Entra to grant consent to the new app.',
-            checkedAt: new Date().toISOString(),
-          },
-        });
-      }
+    if (input.consumerType === 'entra') {
+      await invalidateEntraDirectConnectionOnRebind({
+        tenant,
+        previousProfileId: existing?.profile_id ?? null,
+        nextProfileId: input.profileId,
+      });
     }
 
     return {

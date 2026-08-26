@@ -62,7 +62,9 @@ export function EntraDirectConsentDialog({
           <DialogTitle>{t('integrations.entra.setup.directConsent.title')}</DialogTitle>
           <DialogDescription>
             {t('integrations.entra.setup.directConsent.intro')}
-            {appRegistrationName ? ` App registration: ${appRegistrationName}.` : ''}
+            {appRegistrationName
+              ? ` ${t('integrations.entra.setup.directConsent.appRegistration', { defaultValue: 'App registration: {{name}}.', name: appRegistrationName })}`
+              : ''}
           </DialogDescription>
         </DialogHeader>
 
