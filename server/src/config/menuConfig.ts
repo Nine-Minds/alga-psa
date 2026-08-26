@@ -340,7 +340,7 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.dataIntegration',
     items: [
       { name: 'Secrets', translationKey: 'settings.tabs.secrets', icon: KeyRound, href: '/msp/settings/secrets' },
-      { name: 'Import/Export', translationKey: 'settings.tabs.importExport', icon: Download, href: '/msp/settings/import-export' },
+      { name: 'Imports & Exports', translationKey: 'settings.tabs.importExport', icon: Download, href: '/msp/settings/import-export' },
       { name: 'Integrations', translationKey: 'settings.tabs.integrations', icon: Plug, href: '/msp/settings/integrations' },
       {
         name: 'Extensions',

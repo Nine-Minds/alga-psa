@@ -44,7 +44,7 @@ export const SETTINGS_TABS: readonly SettingsTabMeta[] = [
   { id: 'time-entry', labelKey: 'tabs.timeEntry', title: 'Time Entry', hasOwnRoute: true },
   { id: 'billing', labelKey: 'tabs.billing', title: 'Billing', hasOwnRoute: true },
   { id: 'secrets', labelKey: 'tabs.secrets', title: 'Secrets', hasOwnRoute: true },
-  { id: 'import-export', labelKey: 'tabs.importExport', title: 'Import/Export', hasOwnRoute: true },
+  { id: 'import-export', labelKey: 'tabs.importExport', title: 'Imports & Exports', hasOwnRoute: true },
   { id: 'email', labelKey: 'tabs.email', title: 'Email', hasOwnRoute: true },
   { id: 'integrations', labelKey: 'tabs.integrations', title: 'Integrations', requiredFeature: TIER_FEATURES.INTEGRATIONS, hasOwnRoute: true },
   { id: 'extensions', labelKey: 'tabs.extensions', title: 'Extensions', requiredFeature: TIER_FEATURES.EXTENSIONS },

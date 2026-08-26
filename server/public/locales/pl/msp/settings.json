@@ -1987,6 +1987,22 @@
     "templates": {
       "comingSoon": "Szablony mapowania i zaplanowane importy będą dostępne tutaj. Zapisuj mapowania kolumn, udostępniaj je zespołowi i konfiguruj powtarzające się zadania."
     },
+    "migration": {
+      "actions": {
+        "back": "Powrót do migracji",
+        "upload": "Prześlij pakiet"
+      },
+      "errors": {
+        "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania."
+      },
+      "preflight": {
+        "title": "Kontrola wstępna"
+      },
+      "run": {
+        "queued": "Migracja w kolejce",
+        "applying": "Migracja w toku"
+      }
+    },
     "jobDetails": {
       "title": "Szczegóły zadania importu",
       "stats": {
