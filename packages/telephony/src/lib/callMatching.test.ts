@@ -127,7 +127,12 @@ describe('matchCallParty', () => {
   it('T018: a client location phone match returns a client-only match', async () => {
     fixtures.locations.push({ tenant: 't1', client_id: 'client-9', phone: '+1 (555) 999-0000' });
 
-    await expect(matchCallParty({ knex, tenantId: 't1', phoneNumber: '5559990000' })).resolves.toEqual({
+    await expect(matchCallParty({
+      knex,
+      tenantId: 't1',
+      phoneNumber: '5559990000',
+      defaultCountryCode: 'US',
+    })).resolves.toEqual({
       status: 'matched',
       contactId: null,
       clientId: 'client-9',
@@ -217,7 +222,7 @@ describe('auditContactPhoneNormalization', () => {
       },
     );
 
-    const rows = await auditContactPhoneNormalization({ knex, tenantId: 't1' });
+    const rows = await auditContactPhoneNormalization({ knex, tenantId: 't1', defaultCountryCode: 'US' });
     expect(rows.map((row) => row.contact_name_id)).toEqual(['contact-3']);
   });
 

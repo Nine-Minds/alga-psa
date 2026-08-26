@@ -1,21 +1,21 @@
+import {
+  isSupportedCountry,
+  parsePhoneNumberFromString,
+  type CountryCode,
+} from 'libphonenumber-js/min';
+
 /**
  * E.164 normalization shared by the matcher and every provider adapter.
  *
- * Deliberately dependency-free: full libphonenumber metadata is ~500 kB and we
- * only need "make two strings comparable". Anything this cannot confidently
- * normalize returns null and lands in the unmatched queue rather than matching
- * the wrong client.
+ * National numbers are ambiguous without a country. Callers must supply the
+ * tenant's ISO-3166 alpha-2 country code; otherwise only explicitly
+ * international values (`+` or `00`) are normalized. Failing closed sends an
+ * uncertain call to manual attribution instead of matching the wrong client.
  */
 
-const DEFAULT_REGION_CALLING_CODE = '1';
-
-/** Longest national number E.164 allows (country code excluded is 15 total). */
-const MAX_E164_DIGITS = 15;
-const MIN_E164_DIGITS = 7;
-
 export interface NormalizePhoneNumberOptions {
-  /** Calling code applied to national-format numbers (digits only, no '+'). */
-  defaultCallingCode?: string;
+  /** ISO-3166 alpha-2 country used to interpret national-format numbers. */
+  defaultCountryCode?: string | null;
 }
 
 /** Strip a trailing extension ("x123", "ext. 4", ",,123") before parsing. */
@@ -49,50 +49,34 @@ export function normalizeToE164(
     value = value.slice(0, atIndex);
   }
 
-  const hadPlus = value.trimStart().startsWith('+');
-  const digits = value.replace(/\D+/g, '');
-  if (!digits) {
+  if (!/[0-9]/.test(value)) {
     return null;
   }
 
-  // "00" is the international access prefix in most of the world: 004930… is +4930…
-  let national = digits;
-  if (!hadPlus && national.startsWith('00')) {
-    national = national.slice(2);
-    return finalize(national);
+  // Graph and imported address books commonly use 00 even when the tenant's
+  // own country has a different international-dial prefix. Once captured, the
+  // intent is unambiguously international, so canonicalize it before parsing.
+  if (!value.trimStart().startsWith('+') && /^\s*00/.test(value)) {
+    value = value.replace(/^\s*00/, '+');
   }
 
-  if (hadPlus) {
-    return finalize(national);
+  const country = normalizeCountryCode(options.defaultCountryCode);
+  const isInternational = value.trimStart().startsWith('+');
+  if (!isInternational && !country) {
+    return null;
   }
 
-  const callingCode = (options.defaultCallingCode ?? DEFAULT_REGION_CALLING_CODE).replace(/\D+/g, '');
-  // A leading zero is a national trunk prefix ("020 7946 0958"): drop it and
-  // prepend the tenant's calling code.
-  if (callingCode && national.startsWith('0')) {
-    return finalize(`${callingCode}${national.replace(/^0+/, '')}`);
+  try {
+    const parsed = parsePhoneNumberFromString(value, isInternational ? undefined : country);
+    return parsed?.isPossible() ? parsed.number : null;
+  } catch {
+    return null;
   }
-  // A bare national number (10 digits in NANP) gets the default calling code;
-  // anything already long enough to carry one is taken at face value.
-  if (callingCode && national.length === 10) {
-    return finalize(`${callingCode}${national}`);
-  }
-  if (callingCode && national.length === 11 && national.startsWith(callingCode)) {
-    return finalize(national);
-  }
-
-  return finalize(national);
 }
 
-function finalize(digits: string): string | null {
-  if (digits.length < MIN_E164_DIGITS || digits.length > MAX_E164_DIGITS) {
-    return null;
-  }
-  if (digits.startsWith('0')) {
-    // A leading zero is a trunk prefix, never a country code.
-    return null;
-  }
-  return `+${digits}`;
+export function normalizeCountryCode(value: string | null | undefined): CountryCode | undefined {
+  const normalized = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  return normalized && isSupportedCountry(normalized) ? normalized as CountryCode : undefined;
 }
 
 /** Digits-only form used to compare against stored normalized columns. */
@@ -106,18 +90,19 @@ export function toDigits(value: string | null | undefined): string {
  * without a country code). Ordered most specific first.
  */
 export function phoneMatchCandidates(
-  e164: string | null | undefined,
+  value: string | null | undefined,
   options: NormalizePhoneNumberOptions = {},
 ): string[] {
-  const digits = toDigits(e164);
-  if (!digits) {
+  const e164 = normalizeToE164(value, options);
+  if (!e164) {
     return [];
   }
 
+  const digits = toDigits(e164);
   const candidates = new Set<string>([digits]);
-  const callingCode = (options.defaultCallingCode ?? DEFAULT_REGION_CALLING_CODE).replace(/\D+/g, '');
-  if (callingCode && digits.startsWith(callingCode) && digits.length > callingCode.length + 6) {
-    candidates.add(digits.slice(callingCode.length));
+  const parsed = parsePhoneNumberFromString(e164);
+  if (parsed?.nationalNumber) {
+    candidates.add(parsed.nationalNumber);
   }
 
   return [...candidates];

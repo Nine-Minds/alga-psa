@@ -260,8 +260,13 @@ describe('Teams app package actions', () => {
     });
     expect(result.package?.manifest.bots[0]).toMatchObject({
       botId: 'teams-client-id',
-      scopes: ['personal'],
+      scopes: ['personal', 'groupChat', 'team'],
     });
+    expect(result.package?.manifest.bots[0]?.commandLists[0]?.scopes).toEqual([
+      'personal',
+      'groupChat',
+      'team',
+    ]);
     expect(result.package?.manifest.composeExtensions[0]?.commands.map((command) => command.id)).toEqual([
       'searchRecords',
       'createTicketFromMessage',

@@ -50,6 +50,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.opportunities',
       'nav.marketing.label',
       'nav.contacts',
+      'nav.interactions',
       'nav.documents',
       'nav.assets',
       'nav.passwords',

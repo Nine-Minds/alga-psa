@@ -3,7 +3,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { CanonicalCallRecord, CallMatchResult, TelephonyCallRecordRow } from '../types';
 import { canonicalCallRecordSchema } from '../types';
 import { matchCallParty } from '../lib/callMatching';
-import { normalizeToE164 } from '../lib/phoneNumbers';
+import { normalizeCountryCode, normalizeToE164 } from '../lib/phoneNumbers';
 import { tenantHasTelephonyEntitlement } from '../lib/telephonyAddOnGate';
 import {
   buildCallInteractionNotes,
@@ -17,7 +17,8 @@ export interface IngestCanonicalCallInput {
   call: CanonicalCallRecord;
   /** Provided by tests / callers that already hold a connection. */
   knex?: any;
-  defaultCallingCode?: string;
+  /** Overrides the tenant's own-company country for imports/tests. */
+  defaultCountryCode?: string | null;
 }
 
 export type IngestCanonicalCallOutcome =
@@ -65,11 +66,14 @@ export async function ingestCanonicalCall(
     return { status: 'skipped', reason: 'addon_inactive' };
   }
 
+  const defaultCountryCode = normalizeCountryCode(input.defaultCountryCode)
+    ?? await resolveTenantPhoneCountryCode(knex, input.tenantId);
+
   const callerE164 = normalizeToE164(call.callerNumber?.e164 ?? call.callerNumber?.raw, {
-    defaultCallingCode: input.defaultCallingCode,
+    defaultCountryCode,
   });
   const calleeE164 = normalizeToE164(call.calleeNumber?.e164 ?? call.calleeNumber?.raw, {
-    defaultCallingCode: input.defaultCallingCode,
+    defaultCountryCode,
   });
 
   // The counterparty is whoever is not us: the caller on the way in, the callee
@@ -79,7 +83,7 @@ export async function ingestCanonicalCall(
     knex,
     tenantId: input.tenantId,
     phoneNumber: counterpartyE164,
-    defaultCallingCode: input.defaultCallingCode,
+    defaultCountryCode,
   });
 
   return withTransaction(knex, async (trx: any) => {
@@ -162,6 +166,30 @@ export async function ingestCanonicalCall(
       created: true,
     };
   });
+}
+
+/**
+ * Use the MSP's own default company location as the tenant-wide numbering
+ * context. Both reads are tenant-scoped; placeholder/unsupported country codes
+ * intentionally produce no default rather than silently assuming North America.
+ */
+export async function resolveTenantPhoneCountryCode(
+  knex: any,
+  tenantId: string,
+): Promise<string | null> {
+  const db = tenantDb(knex, tenantId);
+  const tenantCompany = await db.table('tenant_companies')
+    .where({ is_default: true, deleted_at: null })
+    .first('client_id');
+  if (!tenantCompany?.client_id) {
+    return null;
+  }
+
+  const location = await db.table('client_locations')
+    .where({ client_id: tenantCompany.client_id, is_default: true, is_active: true })
+    .first('country_code');
+
+  return normalizeCountryCode(location?.country_code) ?? null;
 }
 
 export interface CreateCallInteractionInput {

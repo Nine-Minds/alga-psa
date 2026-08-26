@@ -161,6 +161,12 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/contacts'
       },
       {
+        name: 'Interactions',
+        translationKey: 'nav.interactions',
+        icon: Handshake,
+        href: '/msp/interactions'
+      },
+      {
         name: 'Documents',
         translationKey: 'nav.documents',
         icon: FileText,

@@ -101,6 +101,20 @@ describe('TelephonyCallsPanel', () => {
     expect(screen.getByRole('button', { name: 'Assign to Toto' })).toBeTruthy();
   });
 
+  it('uses a server-loaded overview without fetching it a second time', () => {
+    render(
+      <TelephonyCallsPanel
+        variant="operational"
+        initialOverview={operatorOverview()}
+        showHeading={false}
+      />,
+    );
+
+    expect(screen.getByText('Recent calls')).toBeTruthy();
+    expect(screen.queryByText('Calls')).toBeNull();
+    expect(mocks.getOverview).not.toHaveBeenCalled();
+  });
+
   it('resolving a candidate calls resolveTelephonyCall with its attribution', async () => {
     mocks.getOverview.mockResolvedValue(operatorOverview());
 

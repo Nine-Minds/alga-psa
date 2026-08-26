@@ -131,7 +131,7 @@ In the MSP app, go to `Settings -> Integrations -> Microsoft`:
 Then go to `Settings -> Integrations -> Microsoft Teams`:
 
 2. Select that Microsoft profile for Teams.
-3. Enable the capabilities you want: personal tab, personal bot, group chat bot, message extension, activity notifications. Diagnostics expects at least `personal_bot` and `activity_notifications`.
+3. Enable the capabilities you want: personal tab, personal bot, group chat bot, channel bot, message extension, activity notifications, and guest ticket submission. Group-chat, channel, and guest submission capabilities are opt-in because their replies can be visible beyond the signed-in technician. Diagnostics expects at least `personal_bot` and `activity_notifications`.
 4. Choose the notification categories (assignments, customer replies, approval requests, escalations, SLA risk) and, per category, the delivery channel: activity feed, bot DM, or both.
 5. Decide whether `Send calendar invites to participants` stays on. When on, meeting attendees receive real Outlook/Teams calendar invites from the organizer account; when off, meetings are created without attendees and participants only get the join link.
 6. For meetings, set the default meeting organizer UPN as described in the [meetings runbook](teams-meetings-setup.md#4-save-the-organizer-in-algapsa).
@@ -142,10 +142,11 @@ Then go to `Settings -> Integrations -> Microsoft Teams`:
 Still in `Settings -> Integrations -> Microsoft Teams`:
 
 1. Click `Generate` to build the app package metadata. This records the manifest bot ID (the selected profile's client ID) and the deployment base URL.
-2. Download the package. You get `alga-psa-teams-<tenant-id>.zip` containing `manifest.json`, `color.png`, and `outline.png` (manifest schema `1.24`, package version `1.0.1`).
+2. Download the package. You get `alga-psa-teams-<tenant-id>.zip` containing `manifest.json`, `color.png`, and `outline.png`. Its bot is installable in personal chats, group chats, and team channels; AlgaPSA still responds in a group or channel only when the corresponding tenant capability is enabled.
 3. Upload it to Teams:
    - **Org-wide (recommended):** Teams admin center -> `Teams apps -> Manage apps -> Upload new app`. Then allow the app for the users who need it. Users find it under `Apps -> Built for your org`.
    - **Sideload (testing):** in the Teams client, `Apps -> Manage your apps -> Upload an app -> Upload a custom app`. This requires a custom-app policy that permits sideloading.
+   - **Team channels:** after the app is available in the organization, add it to the target team. With `Channel bot` enabled in AlgaPSA, mention `@AlgaPSA` in a channel before the command so Teams routes the message to the bot.
 
 Regenerate and re-upload the package whenever the deployment base URL or the selected Microsoft profile changes. A stale package points Teams at the wrong host or the wrong bot; the `package_metadata` and `bot_id_consistency` diagnostics steps flag this.
 

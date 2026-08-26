@@ -166,6 +166,23 @@ function seedTenantBasics(): void {
   });
 }
 
+function setTenantCountry(countryCode: string): void {
+  table('tenant_companies').push({
+    tenant: TENANT,
+    client_id: 'client-own-company',
+    is_default: true,
+    deleted_at: null,
+  });
+  table('client_locations').push({
+    tenant: TENANT,
+    client_id: 'client-own-company',
+    is_default: true,
+    is_active: true,
+    country_code: countryCode,
+    phone: null,
+  });
+}
+
 function knownContact(): void {
   table('contact_phone_numbers').push({
     tenant: TENANT,
@@ -255,6 +272,51 @@ describe('ingestCanonicalCall', () => {
     });
     expect(new Date(interaction.start_time).toISOString()).toBe('2026-08-22T15:00:00.000Z');
     expect(new Date(interaction.end_time).toISOString()).toBe('2026-08-22T15:03:30.000Z');
+  });
+
+  it('uses the tenant own-company country to normalize and match national numbers', async () => {
+    grantAddOn();
+    setTenantCountry('GB');
+    table('contact_phone_numbers').push({
+      tenant: TENANT,
+      contact_name_id: 'contact-london',
+      full_name: 'London Contact',
+      client_id: 'client-london',
+      normalized_phone_number: '442079460958',
+      phone_number: '+44 20 7946 0958',
+    });
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: {
+        ...inboundCall,
+        providerCallId: 'graph-call-gb-national',
+        callerNumber: { raw: '020 7946 0958', e164: null },
+      },
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'matched' });
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      caller_number_e164: '+442079460958',
+      matched_contact_id: 'contact-london',
+      matched_client_id: 'client-london',
+    });
+  });
+
+  it('leaves a national number unmatched when the tenant country is not configured', async () => {
+    grantAddOn();
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: {
+        ...inboundCall,
+        providerCallId: 'graph-call-no-country',
+        callerNumber: { raw: '020 7946 0958', e164: null },
+      },
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'unmatched' });
+    expect(table('telephony_call_records')[0].caller_number_e164).toBeNull();
   });
 
   it('T023: the same provider call id ingested twice keeps one record and one interaction', async () => {

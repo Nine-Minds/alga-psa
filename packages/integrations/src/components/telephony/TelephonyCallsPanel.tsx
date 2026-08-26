@@ -43,11 +43,17 @@ export interface TelephonyCallsPanelProps {
    * tenant has no telephony or the caller may not read the call log.
    */
   variant?: 'settings' | 'operational';
+  initialOverview?: TelephonyOverview | null;
+  showHeading?: boolean;
 }
 
-export function TelephonyCallsPanel({ variant = 'settings' }: TelephonyCallsPanelProps) {
+export function TelephonyCallsPanel({
+  variant = 'settings',
+  initialOverview = null,
+  showHeading = variant === 'operational',
+}: TelephonyCallsPanelProps) {
   const { t } = useTranslation('msp/integrations');
-  const [overview, setOverview] = useState<TelephonyOverview | null>(null);
+  const [overview, setOverview] = useState<TelephonyOverview | null>(initialOverview);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Call currently showing the ticket picker, and the options loaded for it.
@@ -68,8 +74,9 @@ export function TelephonyCallsPanel({ variant = 'settings' }: TelephonyCallsPane
   }, []);
 
   useEffect(() => {
+    if (initialOverview) return;
     void load();
-  }, [load]);
+  }, [initialOverview, load]);
 
   const canResolve = Boolean(overview?.canResolve);
 
@@ -175,7 +182,7 @@ export function TelephonyCallsPanel({ variant = 'settings' }: TelephonyCallsPane
 
   return (
     <div className="space-y-6" id="telephony-calls-panel">
-      {variant === 'operational' && (
+      {showHeading && (
         <h2 className="text-xl font-bold">
           {t('integrations.telephony.callsPanel.title', { defaultValue: 'Calls' })}
         </h2>

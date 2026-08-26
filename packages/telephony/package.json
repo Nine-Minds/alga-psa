@@ -33,6 +33,7 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
+    "libphonenumber-js": "^1.13.11",
     "zod": "^3.22.4"
   },
   "devDependencies": {

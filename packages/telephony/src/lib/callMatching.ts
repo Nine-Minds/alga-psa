@@ -23,7 +23,7 @@ export interface MatchCallPartyInput {
   tenantId: string;
   /** Any dialled form; normalized here so callers do not have to. */
   phoneNumber: string | null | undefined;
-  defaultCallingCode?: string;
+  defaultCountryCode?: string | null;
 }
 
 const UNMATCHED: CallMatchResult = {
@@ -34,9 +34,9 @@ const UNMATCHED: CallMatchResult = {
 };
 
 export async function matchCallParty(input: MatchCallPartyInput): Promise<CallMatchResult> {
-  const e164 = normalizeToE164(input.phoneNumber, { defaultCallingCode: input.defaultCallingCode });
+  const e164 = normalizeToE164(input.phoneNumber, { defaultCountryCode: input.defaultCountryCode });
   const candidateKeys = phoneMatchCandidates(e164 ?? input.phoneNumber, {
-    defaultCallingCode: input.defaultCallingCode,
+    defaultCountryCode: input.defaultCountryCode,
   });
   if (candidateKeys.length === 0) {
     return UNMATCHED;
@@ -145,7 +145,7 @@ export async function auditContactPhoneNormalization(params: {
   limit?: number;
   /** Ceiling on rows examined, so the audit cannot walk a huge tenant. */
   scanLimit?: number;
-  defaultCallingCode?: string;
+  defaultCountryCode?: string | null;
 }): Promise<PhoneNormalizationAuditRow[]> {
   const limit = params.limit ?? 500;
   const scanLimit = params.scanLimit ?? 10000;
@@ -166,7 +166,7 @@ export async function auditContactPhoneNormalization(params: {
       .offset(scanned);
 
     for (const row of rows) {
-      if (normalizeToE164(row.phone_number, { defaultCallingCode: params.defaultCallingCode }) === null) {
+      if (normalizeToE164(row.phone_number, { defaultCountryCode: params.defaultCountryCode }) === null) {
         flagged.push(row);
         if (flagged.length >= limit) {
           break;
