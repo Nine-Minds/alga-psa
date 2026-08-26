@@ -64,9 +64,12 @@ export function MicrosoftAppRegistrationPicker({ onBound }: MicrosoftAppRegistra
       );
 
       const bound = bindingsResult.bindings?.find((binding) => binding.consumerType === 'entra');
-      if (bound?.profileId) {
-        setValue(bound.profileId);
-        onBound({ id: bound.profileId, name: bound.profileDisplayName || bound.profileId });
+      const boundProfile = capable.find((profile) => profile.profileId === bound?.profileId);
+      if (boundProfile) {
+        setValue(boundProfile.profileId);
+        onBound({ id: boundProfile.profileId, name: boundProfile.displayName });
+      } else {
+        onBound(null);
       }
 
       if (statusResult.success) {

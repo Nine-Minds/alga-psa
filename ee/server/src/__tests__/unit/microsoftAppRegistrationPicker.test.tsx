@@ -169,6 +169,43 @@ describe('MicrosoftAppRegistrationPicker', () => {
     });
   });
 
+  it.each([
+    ['an archived profile', [archivedProfile], 'profile-archived'],
+    ['a non-Entra-capable profile', [emailOnlyProfile], 'profile-email'],
+    ['a profile absent from the returned list', [], 'profile-missing'],
+  ])('does not trust an existing binding targeting %s', async (_description, profiles, profileId) => {
+    const onBound = vi.fn();
+    listMicrosoftProfilesMock.mockResolvedValue({ success: true, profiles });
+    listMicrosoftConsumerBindingsMock.mockResolvedValue({
+      success: true,
+      bindings: [{ consumerType: 'entra', profileId, profileDisplayName: 'Stale App' }],
+    });
+
+    render(<MicrosoftAppRegistrationPicker onBound={onBound} />);
+
+    await waitFor(() => {
+      expect(onBound).toHaveBeenCalledWith(null);
+    });
+    expect(onBound).not.toHaveBeenCalledWith(expect.objectContaining({ id: profileId }));
+    expect(document.getElementById('entra-app-registration-empty')).not.toBeNull();
+    expect(screen.queryByTestId('entra-app-registration-select')).toBeNull();
+  });
+
+  it('leaves the select unselected when the existing binding targets an ineligible profile', async () => {
+    const onBound = vi.fn();
+    listMicrosoftProfilesMock.mockResolvedValue({ success: true, profiles: [capableProfile, archivedProfile] });
+    listMicrosoftConsumerBindingsMock.mockResolvedValue({
+      success: true,
+      bindings: [{ consumerType: 'entra', profileId: 'profile-archived', profileDisplayName: 'Archived App' }],
+    });
+
+    render(<MicrosoftAppRegistrationPicker onBound={onBound} />);
+
+    const select = await screen.findByTestId('entra-app-registration-select');
+    expect(select).toHaveValue('');
+    expect(onBound).toHaveBeenCalledWith(null);
+  });
+
   it('with no capable profile, inline creation opens the shared form and auto-binds the created profile', async () => {
     const onBound = vi.fn();
     listMicrosoftProfilesMock.mockResolvedValue({ success: true, profiles: [emailOnlyProfile] });
