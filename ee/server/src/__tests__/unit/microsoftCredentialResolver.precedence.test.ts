@@ -58,9 +58,39 @@ describe('resolveMicrosoftCredentialsForTenant', () => {
     { binding: { profile_id: 'gone' }, profile: undefined },
     { binding: { profile_id: 'profile-1' }, profile: { profile_id: 'profile-1', is_archived: true } },
     { binding: { profile_id: 'profile-1' }, profile: { profile_id: 'profile-1', is_archived: false, capabilities: ['email'] } },
-  ])('returns null for unusable bindings', async ({ binding, profile }) => {
+    {
+      binding: { profile_id: 'profile-1' },
+      profile: {
+        profile_id: 'profile-1',
+        display_name: 'MSP Entra App',
+        client_id: ' ',
+        tenant_id: 'partner-tenant',
+        client_secret_ref: 'profile-1-secret',
+        capabilities: ['entra'],
+        is_archived: false,
+      },
+    },
+    {
+      binding: { profile_id: 'profile-1' },
+      profile: {
+        profile_id: 'profile-1',
+        display_name: 'MSP Entra App',
+        client_id: 'customer-app',
+        tenant_id: 'partner-tenant',
+        client_secret_ref: 'profile-1-secret',
+        capabilities: ['entra'],
+        is_archived: false,
+      },
+      secret: ' ',
+    },
+  ])('returns null for unusable bindings', async ({ binding, profile, secret }) => {
     mocks.bindingFirst.mockResolvedValue(binding);
     mocks.profileFirst.mockResolvedValue(profile);
+    if (secret !== undefined) {
+      mocks.getSecretProviderInstance.mockResolvedValue({
+        getTenantSecret: vi.fn().mockResolvedValue(secret),
+      });
+    }
     const { resolveMicrosoftCredentialsForTenant } = await import('@ee/lib/integrations/entra/auth/microsoftCredentialResolver');
     await expect(resolveMicrosoftCredentialsForTenant('tenant-42')).resolves.toBeNull();
   });

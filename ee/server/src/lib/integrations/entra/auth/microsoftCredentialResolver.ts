@@ -1,3 +1,5 @@
+// Kept local to @alga-psa/ee-stubs to avoid a package cycle through @alga-psa/integrations.
+// LEVERAGE: pattern microsoft-consumer-binding-resolution — fourth local binding→profile→secret lookup; defer extraction because edition aliasing is a correctness boundary.
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
