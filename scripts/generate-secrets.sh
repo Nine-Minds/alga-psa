@@ -14,7 +14,11 @@ set -euo pipefail
 #    unrecoverable. Existing values are preserved; the only auto-add is the
 #    credential vault's `credential_encryption_key` (the newly introduced
 #    migration case — affected environments hold no ciphertext, so generating
-#    it is safe). Any other missing or empty established secret fails loudly.
+#    it is safe) and only when it is truly absent. Before anything is written,
+#    a read-only preflight validates the whole set: every present-but-empty or
+#    broken-symlink secret (including `credential_encryption_key` itself) and
+#    every missing non-migration secret fails loudly, so a failed run can never
+#    leave a partially mutated installation.
 #
 # This is the generator behind validate-secrets.sh and
 # docker-compose-wrapper.sh. Files are created before `docker compose up` runs,
@@ -73,20 +77,58 @@ mkdir -p "$SECRETS_DIR"
 chmod 700 "$SECRETS_DIR"
 
 if has_established_secret; then
-  # Existing/partial installation: preserve established values, auto-add only
-  # the migration secret, fail loudly on any other missing/empty secret.
+  # Existing/partial installation. Run a READ-ONLY preflight over every managed
+  # secret first; nothing is written until the whole set is known to be valid
+  # (or the sole permitted auto-add — the migration secret, only when it is
+  # truly absent — is the only remaining gap). This guarantees a failed run
+  # never leaves a partially mutated installation behind.
+  generate_migration_secret=0
   for name in "${ALL_SECRETS[@]}"; do
     file="$SECRETS_DIR/$name"
     if [ -s "$file" ]; then
-      echo "Present (preserved): secrets/$name"
-    elif [ "$name" = "$MIGRATION_SECRET" ]; then
-      generate_secret "$name"
-    else
-      echo "❌ Missing/empty established secret: $file" >&2
+      # Present and non-empty: valid, preserved below.
+      :
+    elif [ -e "$file" ] || [ -L "$file" ]; then
+      # Present but empty, or a broken symlink: an established secret whose
+      # value cannot be read. NEVER regenerate it — even the migration secret:
+      # an empty/broken entry means the installation already manages this
+      # secret, and silently replacing it can break database access,
+      # invalidate sessions, or make encrypted data unrecoverable.
+      echo "❌ Empty or broken established secret: $file" >&2
       echo "   Refusing to regenerate it: replacing an existing deployment's" >&2
       echo "   secret can break database access, invalidate sessions, or make" >&2
       echo "   encrypted data unrecoverable. Restore it from backup or" >&2
       echo "   provision it manually, then re-run." >&2
+      exit 1
+    elif [ "$name" = "$MIGRATION_SECRET" ]; then
+      # Truly absent and it is the migration secret: the only permitted
+      # auto-add, deferred until the preflight has passed for every other
+      # established secret.
+      generate_migration_secret=1
+    else
+      # Missing non-migration secret on an existing install: fail loudly.
+      echo "❌ Missing established secret: $file" >&2
+      echo "   Refusing to regenerate it: replacing an existing deployment's" >&2
+      echo "   secret can break database access, invalidate sessions, or make" >&2
+      echo "   encrypted data unrecoverable. Restore it from backup or" >&2
+      echo "   provision it manually, then re-run." >&2
+      exit 1
+    fi
+  done
+
+  # Preflight passed: preserve every valid established value and auto-add the
+  # migration secret only if it was truly absent. Every failure case above
+  # exited before reaching here, so no partial write is possible.
+  for name in "${ALL_SECRETS[@]}"; do
+    file="$SECRETS_DIR/$name"
+    if [ -s "$file" ]; then
+      echo "Present (preserved): secrets/$name"
+    elif [ "$name" = "$MIGRATION_SECRET" ] && [ "$generate_migration_secret" -eq 1 ]; then
+      generate_secret "$name"
+    else
+      # Unreachable after a passing preflight; fail loudly rather than silently
+      # skipping a write if the preflight logic ever regresses.
+      echo "❌ Unexpected secret state for $file after a passing preflight." >&2
       exit 1
     fi
   done

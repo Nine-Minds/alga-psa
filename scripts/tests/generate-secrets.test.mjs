@@ -162,10 +162,54 @@ test("an empty managed-secret file alone is existing state and is never regenera
 
   const result = run(scriptPath, secretsDir);
   assert.notEqual(result.status, 0, "generator must fail rather than treating the directory as fresh");
-  assert.match(result.stderr, /Missing\/empty established secret/);
+  assert.match(result.stderr, /established secret/);
   assert.equal(fs.statSync(path.join(secretsDir, "nextauth_secret")).size, 0, "empty secret not overwritten");
   assert.ok(!fs.existsSync(path.join(secretsDir, "postgres_password")), "fresh bootstrap must not start");
   assert.ok(!fs.existsSync(path.join(secretsDir, MIGRATION_SECRET)), "migration secret must not be added");
+});
+
+test("an empty credential_encryption_key on an existing install is never regenerated", (t) => {
+  // A complete legacy set PLUS an empty credential_encryption_key: the empty
+  // key is an established (managed) entry and must fail loudly — it must NOT be
+  // treated as "absent" and overwritten with a fresh random value.
+  const secretsDir = path.join(fixture(t), "secrets");
+  const legacy = REQUIRED_SECRETS.filter((name) => name !== MIGRATION_SECRET);
+  for (const name of legacy) writeSecret(secretsDir, name, `legacy-${name}\n`);
+  writeSecret(secretsDir, MIGRATION_SECRET, ""); // empty migration key
+
+  const result = run(scriptPath, secretsDir);
+  assert.notEqual(result.status, 0, "generator must fail loudly on an empty migration key");
+  assert.match(result.stderr, /Empty or broken established secret/);
+  assert.match(result.stderr, /Refusing to regenerate/);
+  // The empty key is preserved (not overwritten) and every other value is
+  // untouched — nothing was generated.
+  assert.equal(fs.statSync(path.join(secretsDir, MIGRATION_SECRET)).size, 0, "empty migration key not overwritten");
+  for (const name of legacy) {
+    assert.equal(fs.readFileSync(path.join(secretsDir, name), "utf8"), `legacy-${name}\n`, `${name} preserved unchanged`);
+  }
+});
+
+test("a missing secret ordered after the migration key prevents any write (no partial mutation)", (t) => {
+  // Every secret up to and including nextauth_secret is present and valid;
+  // credential_encryption_key (the migration secret) is absent — it WOULD be
+  // auto-added — and google_oauth_client_id (ordered after the migration key)
+  // is also absent. The preflight must fail BEFORE creating the migration key:
+  // a partial mutation would leave a broken install with a fresh key but no
+  // later secret.
+  const secretsDir = path.join(fixture(t), "secrets");
+  const beforeMigration = REQUIRED_SECRETS.slice(0, REQUIRED_SECRETS.indexOf(MIGRATION_SECRET));
+  for (const name of beforeMigration) writeSecret(secretsDir, name, `legacy-${name}\n`);
+
+  const result = run(scriptPath, secretsDir);
+  assert.notEqual(result.status, 0, "generator must fail loudly on the missing later secret");
+  assert.match(result.stderr, /Missing established secret/);
+  assert.match(result.stderr, /Refusing to regenerate/);
+  // Nothing may have been created: the migration key must not exist.
+  assert.ok(!fs.existsSync(path.join(secretsDir, MIGRATION_SECRET)), "credential_encryption_key must not be created");
+  assert.ok(!fs.existsSync(path.join(secretsDir, "google_oauth_client_id")), "missing later secret not created");
+  for (const name of beforeMigration) {
+    assert.equal(fs.readFileSync(path.join(secretsDir, name), "utf8"), `legacy-${name}\n`, `${name} preserved unchanged`);
+  }
 });
 
 test("propagates generator failure: validate-secrets.sh and docker-compose-wrapper.sh terminate", (t) => {
