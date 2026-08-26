@@ -289,3 +289,13 @@ resolved secret to SQL; the only secret-like values persisted are OAuth session 
 (access/refresh), which is standard OAuth storage, not filesystem secret material. Confirmed
 `tenant-deletion-activities.ts` reads only the Stripe app secret and has no filesystem tenant-secret
 purge path, so the read-only appliance mount (D1) stays correct.
+
+Flux/Helm owns the rendered pod specification; the Deployment must never be patched by hand. The
+HelmRelease's install/upgrade remediation `retries: 0` mean an upgrade that reaches a Failed state is
+not retried and the HelmRelease sits Stalled. If that happens during an appliance upgrade, retry
+reconciliation with the annotation pair already used by `host-service/manage-engine.mjs`
+(`reconcile.fluxcd.io/requestedAt=<ISO-8601>` first; add `reconcile.fluxcd.io/forceAt` only if a fresh
+revision must be forced) — never edit the live Deployment. Because the selector addition is delivered
+through `extraSelectorLabels` in the values overlay rather than the default template, hosted
+Deployments (two-label selector) and the appliance Deployment (three-label selector) both upgrade in
+place without an immutable-selector migration failure.
