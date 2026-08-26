@@ -924,7 +924,7 @@
         "appRegistration": {
           "addButton": "Dodaj rejestrację aplikacji",
           "bindFailed": "Nie udało się zapisać wybranej aplikacji Microsoft dla usługi Entra.",
-          "emptyBody": "Połączenie bezpośrednie korzysta z rejestracji aplikacji Microsoft Twojej organizacji. Zarejestruj aplikację wielodostępną w dzierżawie partnera, dodaj identyfikator URI przekierowania Entra i udziel zgody administratora dla ManagedTenants.Read.All oraz Directory.Read.All.",
+          "emptyBody": "Połączenie bezpośrednie korzysta z rejestracji aplikacji Microsoft Twojej organizacji. Zarejestruj aplikację wielodostępną w organizacji partnerskiej, dodaj identyfikator URI przekierowania Entra i udziel zgody administratora dla ManagedTenants.Read.All oraz Directory.Read.All.",
           "label": "Rejestracja aplikacji Microsoft",
           "placeholder": "Wybierz rejestrację aplikacji",
           "reconnectRequired": "Wybierz rejestrację aplikacji Microsoft i połącz ponownie.",
@@ -1739,7 +1739,7 @@
           "emailRedirect": "Redirect URI poczty przychodzącej",
           "emailTitle": "Wskazówki dotyczące poczty",
           "entraConsent": "Wymaganie",
-          "entraConsentValue": "Zarejestruj tę aplikację jako wielodostępną i udziel zgody administratora w dzierżawie partnera.",
+          "entraConsentValue": "Zarejestruj tę aplikację jako wielodostępną i udziel zgody administratora w organizacji partnerskiej.",
           "entraTitle": "Entra bezpośrednio",
           "mspSsoTitle": "Wskazówki dotyczące MSP SSO",
           "notConfigured": "Nie skonfigurowano",

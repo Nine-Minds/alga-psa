@@ -1,4 +1,6 @@
-import { resolveMicrosoftConsumerProfileConfigBound } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 export type MicrosoftCredentialSource = 'profile';
 
@@ -17,19 +19,52 @@ function normalize(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+interface EntraMicrosoftProfile {
+  profile_id: string;
+  display_name: string;
+  client_id: string;
+  tenant_id: string;
+  client_secret_ref: string;
+  capabilities: string[] | string | null;
+  is_archived: boolean;
+}
+
+function hasEntraCapability(capabilities: EntraMicrosoftProfile['capabilities']): boolean {
+  if (typeof capabilities === 'string') {
+    try {
+      capabilities = JSON.parse(capabilities);
+    } catch {
+      return false;
+    }
+  }
+  return Array.isArray(capabilities) && capabilities.includes('entra');
+}
+
 export async function resolveMicrosoftCredentialsForTenant(
   tenant: string
 ): Promise<MicrosoftOAuthCredentials | null> {
-  const resolution = await resolveMicrosoftConsumerProfileConfigBound(tenant, 'entra');
-  const clientId = normalize(resolution.clientId);
-  const clientSecret = normalize(resolution.clientSecret);
-  if (resolution.status !== 'ready' || !clientId || !clientSecret || !resolution.profileId) return null;
+  const db = await getAdminConnection();
+  const binding = await tenantDb(db, tenant)
+    .table('microsoft_profile_consumer_bindings')
+    .where({ consumer_type: 'entra' })
+    .first() as { profile_id: string } | undefined;
+  if (!binding) return null;
+
+  const profile = await tenantDb(db, tenant)
+    .table('microsoft_profiles')
+    .where({ profile_id: binding.profile_id })
+    .first() as EntraMicrosoftProfile | undefined;
+  if (!profile || profile.is_archived || !hasEntraCapability(profile.capabilities)) return null;
+
+  const clientId = normalize(profile.client_id);
+  const clientSecret = normalize(await (await getSecretProviderInstance()).getTenantSecret(tenant, profile.client_secret_ref));
+  if (!clientId || !clientSecret) return null;
   return {
     clientId,
     clientSecret,
-    tenantId: normalize(resolution.microsoftTenantId),
+    tenantId: normalize(profile.tenant_id),
     source: 'profile',
-    profileId: resolution.profileId,
-    profileDisplayName: resolution.profileDisplayName || resolution.profileId,
+    profileId: profile.profile_id,
+    profileDisplayName: profile.display_name || profile.profile_id,
   };
 }

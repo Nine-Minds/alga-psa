@@ -924,7 +924,7 @@
         "appRegistration": {
           "addButton": "App-Registrierung hinzufügen",
           "bindFailed": "Die Microsoft-App-Auswahl für Entra konnte nicht gespeichert werden.",
-          "emptyBody": "Die Direktverbindung läuft über die App-Registrierung Ihrer eigenen Organisation. Registrieren Sie eine mandantenfähige App in Ihrem Partner-Tenant, fügen Sie die Entra-Redirect URI hinzu und erteilen Sie die Administratoreinwilligung für ManagedTenants.Read.All und Directory.Read.All.",
+          "emptyBody": "Die Direktverbindung läuft über die App-Registrierung Ihrer eigenen Organisation. Registrieren Sie eine mandantenfähige App in Ihrer Partnerorganisation, fügen Sie die Entra-Redirect URI hinzu und erteilen Sie die Administratoreinwilligung für ManagedTenants.Read.All und Directory.Read.All.",
           "label": "Microsoft-App-Registrierung",
           "placeholder": "App-Registrierung auswählen",
           "reconnectRequired": "Wählen Sie eine Microsoft-App-Registrierung aus und stellen Sie die Verbindung erneut her.",
@@ -1739,7 +1739,7 @@
           "emailRedirect": "Redirect-URI für eingehende E-Mails",
           "emailTitle": "E-Mail-Anleitung",
           "entraConsent": "Anforderung",
-          "entraConsentValue": "Registrieren Sie diese App als mandantenfähig und erteilen Sie die Administratoreinwilligung im Partner-Tenant.",
+          "entraConsentValue": "Registrieren Sie diese App als mandantenfähig und erteilen Sie die Administratoreinwilligung in Ihrer Partnerorganisation.",
           "entraTitle": "Entra Direkt",
           "mspSsoTitle": "MSP-SSO-Anleitung",
           "notConfigured": "Nicht konfiguriert",
