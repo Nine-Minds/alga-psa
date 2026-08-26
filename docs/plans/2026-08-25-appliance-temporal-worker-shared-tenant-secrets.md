@@ -268,3 +268,24 @@ ConfigMap checksum; this is expected from D2, not a hosted secret-mount behavior
 T3 remains pending human/libvirt appliance-VM acceptance: wait for Flux reconciliation, verify the
 three-minute polling reconciliation advances, then exercise controlled inbound Microsoft mail while
 webhook delivery is unavailable and inspect logs/database for secret leakage.
+
+### Mitigation round (2026-08-26)
+
+Re-verified the branch at chart 0.1.3 / HelmRelease 0.1.3 (dossier state, superseding the 0.1.1 note
+above) and ran the T1/T2 suites under `vitest.no-docker.config.ts`; all pass. Confirmed by direct
+`helm template` that the hosted/default render carries no `shared-tenant-secrets` volume, mount, or
+`SECRET_FS_BASE_PATH` and keeps a two-label selector, while the appliance overlay renders the
+`/var/lib/alga-appliance/tenant-secrets` hostPath (read-only) at `/shared-tenant-secrets` with
+`SECRET_FS_BASE_PATH=/shared-tenant-secrets` and the legacy component selector label — the selector
+addition is values-driven through `extraSelectorLabels`, never baked into the default template.
+
+Step-6 audit surfaced one consumer that did log resolved secret material:
+`GmailAdapter.registerWebhookSubscription` emitted the entire `provider_config` (including
+`client_secret` and OAuth tokens) via `console.log` on the Gmail watch-recovery path
+(`shared/services/email/providers/GmailAdapter.ts`). Removed the dump and added
+`gmail-adapter-secret-log-hygiene.test.ts` asserting no captured log line contains the secret value.
+Non-vacuity verified: re-adding the dump fails the test, removing it passes. No consumer writes a
+resolved secret to SQL; the only secret-like values persisted are OAuth session tokens
+(access/refresh), which is standard OAuth storage, not filesystem secret material. Confirmed
+`tenant-deletion-activities.ts` reads only the Stripe app secret and has no filesystem tenant-secret
+purge path, so the read-only appliance mount (D1) stays correct.
