@@ -292,10 +292,12 @@ purge path, so the read-only appliance mount (D1) stays correct.
 
 Flux/Helm owns the rendered pod specification; the Deployment must never be patched by hand. The
 HelmRelease's install/upgrade remediation `retries: 0` mean an upgrade that reaches a Failed state is
-not retried and the HelmRelease sits Stalled. If that happens during an appliance upgrade, retry
-reconciliation with the annotation pair already used by `host-service/manage-engine.mjs`
-(`reconcile.fluxcd.io/requestedAt=<ISO-8601>` first; add `reconcile.fluxcd.io/forceAt` only if a fresh
-revision must be forced) — never edit the live Deployment. Because the selector addition is delivered
-through `extraSelectorLabels` in the values overlay rather than the default template, hosted
-Deployments (two-label selector) and the appliance Deployment (three-label selector) both upgrade in
-place without an immutable-selector migration failure.
+not retried and the HelmRelease sits Stalled. On the appliance, `reconcile.fluxcd.io/requestedAt`
+alone does not retrigger a Stalled HelmRelease with `retries: 0`: recovering the same failed revision
+requires both annotations with the same ISO-8601 value —
+`reconcile.fluxcd.io/requestedAt=<timestamp> reconcile.fluxcd.io/forceAt=<timestamp>` — the pair
+already used by `host-service/manage-engine.mjs` / `host-service/server.mjs`. Never edit the live
+Deployment. Because the selector addition is delivered through `extraSelectorLabels` in the values
+overlay rather than the default template, hosted Deployments (two-label selector) and the appliance
+Deployment (three-label selector) both upgrade in place without an immutable-selector migration
+failure.
