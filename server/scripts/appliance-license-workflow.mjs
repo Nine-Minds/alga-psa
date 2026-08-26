@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { Client, Connection } from '@temporalio/client';
 
 export function connectToTemporal(options, ConnectionClass = Connection) {
+  // Temporal's static connect() calls this.lazy(), so it must retain its class receiver.
   return ConnectionClass.connect(options);
 }
 
