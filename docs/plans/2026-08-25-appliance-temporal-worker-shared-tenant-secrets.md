@@ -295,8 +295,10 @@ HelmRelease's install/upgrade remediation `retries: 0` mean an upgrade that reac
 not retried and the HelmRelease sits Stalled. On the appliance, `reconcile.fluxcd.io/requestedAt`
 alone does not retrigger a Stalled HelmRelease with `retries: 0`: recovering the same failed revision
 requires both annotations with the same ISO-8601 value —
-`reconcile.fluxcd.io/requestedAt=<timestamp> reconcile.fluxcd.io/forceAt=<timestamp>` — the pair
-already used by `host-service/manage-engine.mjs` / `host-service/server.mjs`. Never edit the live
+`reconcile.fluxcd.io/requestedAt=<timestamp> reconcile.fluxcd.io/forceAt=<timestamp>` — the forced
+upgrade pair `host-service/server.mjs` applies (its `alga-core` bootstrap-job recovery). By contrast
+`host-service/manage-engine.mjs` annotates only `requestedAt`; that is ordinary reconciliation, which
+cannot by itself restart a Failed/Stalled release whose retries are zero. Never edit the live
 Deployment. Because the selector addition is delivered through `extraSelectorLabels` in the values
 overlay rather than the default template, hosted Deployments (two-label selector) and the appliance
 Deployment (three-label selector) both upgrade in place without an immutable-selector migration
