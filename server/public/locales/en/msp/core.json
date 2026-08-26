@@ -26,6 +26,8 @@
     "documentsAll": "All Documents",
     "knowledgeBase": "Knowledge Base",
     "assets": "Assets",
+    "assetsAll": "All Assets",
+    "assetsMaintenance": "Maintenance",
     "passwords": "Passwords",
     "inventory": {
       "label": "Inventory",

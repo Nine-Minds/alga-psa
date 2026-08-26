@@ -16,6 +16,8 @@
     "documentsAll": "Alle documenten",
     "knowledgeBase": "Kennisbank",
     "assets": "Assets",
+    "assetsAll": "Alle assets",
+    "assetsMaintenance": "Onderhoud",
     "inventory": {
       "label": "Inventaris",
       "sections": {

@@ -16,6 +16,8 @@
     "documentsAll": "Todos os documentos",
     "knowledgeBase": "Base de conhecimento",
     "assets": "Ativos",
+    "assetsAll": "Todos os ativos",
+    "assetsMaintenance": "Manutenção",
     "inventory": {
       "label": "Inventário",
       "sections": {

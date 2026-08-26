@@ -16,6 +16,8 @@
     "documentsAll": "Alle Dokumente",
     "knowledgeBase": "Wissensdatenbank",
     "assets": "Assets",
+    "assetsAll": "Alle Assets",
+    "assetsMaintenance": "Wartung",
     "inventory": {
       "label": "Lagerbestand",
       "sections": {
