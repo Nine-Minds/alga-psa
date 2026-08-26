@@ -56,14 +56,14 @@ cp .env.example .env
 > `SALT_BYTES`). These are safe to ignore for local development — the server
 > image carries its own baked-in defaults.
 
-2. Create development secrets. The Compose stack requires these 11 secret files:
+2. Create development secrets. The Compose stack requires these 12 secret files:
 
 ```bash
 mkdir -p secrets
 for s in postgres_password db_password_server db_password_hocuspocus \
          redis_password email_password crypto_key token_secret_key \
-         nextauth_secret google_oauth_client_id google_oauth_client_secret \
-         alga_auth_key; do
+         nextauth_secret credential_encryption_key google_oauth_client_id \
+         google_oauth_client_secret alga_auth_key; do
   echo "dev-$(openssl rand -hex 24)" > "secrets/$s"
 done
 chmod 600 secrets/*

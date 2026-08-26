@@ -22,6 +22,7 @@ REQUIRED_SECRETS=(
     "crypto_key"
     "token_secret_key"
     "nextauth_secret"
+    "credential_encryption_key"
 )
 
 for secret in "${REQUIRED_SECRETS[@]}"; do

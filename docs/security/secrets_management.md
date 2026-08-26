@@ -30,6 +30,7 @@ All secrets are stored in the `secrets/` directory at the project root. Each sec
 - `crypto_key` - Encryption key for sensitive data
 - `token_secret_key` - JWT signing key
 - `nextauth_secret` - NextAuth.js secret key
+- `credential_encryption_key` - Credentials vault encryption key (EE). Auto-generated per deployment; rotation invalidates previously stored vault ciphertext and is a follow-up.
 
 ### OAuth Secrets
 - `google_oauth_client_id` - Google OAuth client ID
@@ -132,6 +133,7 @@ echo 'your-secure-password' > secrets/redis_password
 echo 'your-32-char-min-key' > secrets/crypto_key
 echo 'your-32-char-min-key' > secrets/token_secret_key
 echo 'your-32-char-min-key' > secrets/nextauth_secret
+echo "$(openssl rand -base64 32)" > secrets/credential_encryption_key
 
 # Email & OAuth
 echo 'your-email-password' > secrets/email_password

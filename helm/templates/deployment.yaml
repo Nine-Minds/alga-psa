@@ -601,6 +601,14 @@ spec:
               secretKeyRef:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: NEXTAUTH_SECRET
+          # Credential vault encryption key (EE, Pro tier). Auto-generated in
+          # the secrets template; the startup guard fails the pod when it is
+          # missing, so a broken vault is caught at boot, not on first save.
+          - name: CREDENTIAL_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: CREDENTIAL_ENCRYPTION_KEY
           {{- if .Values.setup.applianceBootstrap.enabled }}
           # Lowercase alias (appliance bootstrap): getSecret()/EnvSecretProvider
           # resolves secrets by lowercase name ahead of the uppercase fallback,

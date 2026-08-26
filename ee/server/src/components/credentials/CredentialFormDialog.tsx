@@ -133,6 +133,7 @@ const SAVE_ERROR_KEY: Partial<Record<Exclude<CredentialSaveResult, { ok: true }>
   VALIDATION: 'validation',
   NOT_FOUND: 'notFound',
   CONFIGURATION: 'configuration',
+  VAULT_NOT_CONFIGURED: 'vaultNotConfigured',
 };
 
 /** Read-only edit-dialog summary of the credential's entity attachments. */

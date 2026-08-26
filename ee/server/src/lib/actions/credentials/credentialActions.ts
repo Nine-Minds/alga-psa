@@ -272,6 +272,7 @@ export type CredentialSaveCode =
   | 'VALIDATION'
   | 'NOT_FOUND'
   | 'CONFIGURATION'
+  | 'VAULT_NOT_CONFIGURED'
   | 'UNKNOWN';
 type CredentialSaveLogDetails = { tenant: string; userId: string; clientId?: string; credentialId?: string; source?: string };
 export type CredentialSaveResult =
@@ -286,7 +287,11 @@ function credentialSaveFailure(operation: 'create' | 'update', error: unknown, d
   else if (rawCode === 'HUDU_UNMAPPED') code = 'HUDU_UNMAPPED';
   else if (rawCode === 'CREDENTIAL_NOT_FOUND') code = 'NOT_FOUND';
   else if (rawCode === 'TIER_ACCESS_DENIED' || /^Forbidden/.test(rawMessage)) code = 'PERMISSION_DENIED';
-  else if (/credential vault encryption key is not configured|vault transit scheme selected but transit is not configured/i.test(rawMessage)) code = 'CONFIGURATION';
+  // "Vault not configured" is its own code so the UI can tell the admin the
+  // vault encryption key must be provisioned, distinct from a generic
+  // configuration failure (e.g. a Vault Transit transport error).
+  else if (/credential vault encryption key is not configured|vault transit scheme selected but transit is not configured/i.test(rawMessage)) code = 'VAULT_NOT_CONFIGURED';
+  else if (/Vault Transit (encrypt|decrypt) failed/i.test(rawMessage)) code = 'CONFIGURATION';
   else if (/validation|invalid|base32|otp/i.test(rawMessage)) code = 'VALIDATION';
   else if (details.source === 'hudu') code = 'HUDU_API';
   logger.error('[CredentialActions] credential save failed', { operation, code, tenant: details.tenant, userId: details.userId, credentialId: details.credentialId, clientId: details.clientId, source: details.source });

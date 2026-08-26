@@ -77,6 +77,7 @@ Security Secrets:
 echo 'your-32-char-min-key' > secrets/crypto_key
 echo 'your-32-char-min-key' > secrets/token_secret_key
 echo 'your-32-char-min-key' > secrets/nextauth_secret
+echo "$(openssl rand -base64 32)" > secrets/credential_encryption_key
 ```
 
 Email & OAuth Secrets:
