@@ -32,7 +32,7 @@ const MigrationsWorkspace = (): React.JSX.Element => {
     }
     const query = params.toString();
     const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
-    window.history.pushState({}, '', nextUrl);
+    window.history.pushState(null, '', nextUrl);
   }, []);
 
   const handleSelectJob = useCallback(

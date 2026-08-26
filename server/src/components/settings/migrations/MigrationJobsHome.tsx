@@ -57,11 +57,13 @@ const MigrationJobsHome = ({ onSelectJob }: MigrationJobsHomeProps): React.JSX.E
 
   const handleUploaded = useCallback(
     (migrationJobId: string, rejected: boolean) => {
-      void loadJobs(false);
       if (!rejected) {
         setUploadOpen(false);
         onSelectJob(migrationJobId);
+        return;
       }
+
+      void loadJobs(false);
     },
     [loadJobs, onSelectJob]
   );
