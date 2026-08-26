@@ -19,6 +19,7 @@ const mockGetAvailableRecurringDueWork = vi.fn();
 const mockGetPurchaseOrderOverageForSelectionInput = vi.fn();
 const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn();
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
+const mockGenerateInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -61,7 +62,7 @@ vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/recurringBillingRunActions', () => ({
-  generateInvoicesAsRecurringBillingRun: vi.fn(async () => ({ failures: [] })),
+  generateInvoicesAsRecurringBillingRun: mockGenerateInvoicesAsRecurringBillingRun,
   generateGroupedInvoicesAsRecurringBillingRun: mockGenerateGroupedInvoicesAsRecurringBillingRun,
 }));
 
@@ -145,7 +146,7 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
   AlertDescription: ({ children }: any) => <div>{children}</div>,
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children }: any) => <div>{children}</div>,
+  Dialog: ({ children, footer }: any) => <div>{children}{footer}</div>,
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
   DialogDescription: ({ children }: any) => <div>{children}</div>,
@@ -267,6 +268,62 @@ async function selectParentAndClickPreview() {
   fireEvent.click(previewButton);
 }
 
+// Builds a successful grouped preview response carrying one selector input, so the
+// preview dialog's single-target "Generate Invoice" flow is drivable.
+function buildSinglePreviewSuccess() {
+  return {
+    success: true,
+    invoiceCount: 1,
+    previews: [
+      {
+        previewGroupKey: 'child-selection:client-1:2026-03-01:2026-04-01',
+        selectorInputs: [buildMember(1).selectorInput],
+        data: {
+          customer: { name: 'Acme Co', address: '1 Main St' },
+          invoiceNumber: 'INV-1001',
+          issueDate: '2026-03-01',
+          dueDate: '2026-04-01',
+          items: [{ id: 'item-1', description: 'Managed services', quantity: 1, unitPrice: 12500, total: 12500 }],
+          subtotal: 12500,
+          tax: 0,
+          total: 12500,
+        },
+      },
+    ],
+  };
+}
+
+async function selectSingleChildAndOpenPreview() {
+  const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+  render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+
+  const toggle = await waitFor(() => {
+    const button = document.getElementById(
+      'toggle-group-parent-group:client-1:2026-03-01:2026-04-01',
+    ) as HTMLButtonElement | null;
+    expect(button).not.toBeNull();
+    return button as HTMLButtonElement;
+  }, { timeout: 5000 });
+  fireEvent.click(toggle);
+
+  const childCheckbox = await waitFor(() => {
+    const checkbox = document.getElementById(
+      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
+    ) as HTMLInputElement | null;
+    expect(checkbox).not.toBeNull();
+    return checkbox as HTMLInputElement;
+  }, { timeout: 5000 });
+  fireEvent.click(childCheckbox);
+
+  mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValueOnce(buildSinglePreviewSuccess());
+  const previewButton = await screen.findByText('Preview Selected');
+  fireEvent.click(previewButton);
+
+  await waitFor(() => {
+    expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalled();
+  });
+}
+
 describe('AutomaticInvoices PO overage dialog', () => {
   afterEach(() => {
     cleanup();
@@ -277,6 +334,7 @@ describe('AutomaticInvoices PO overage dialog', () => {
     mockGetAvailableRecurringDueWork.mockReset();
     mockGetPurchaseOrderOverageForSelectionInput.mockReset();
     mockGenerateGroupedInvoicesAsRecurringBillingRun.mockClear();
+    mockGenerateInvoicesAsRecurringBillingRun.mockReset();
     mockDueWorkResponse = {
       invoiceCandidates: [
         {
@@ -489,6 +547,68 @@ describe('AutomaticInvoices PO overage dialog', () => {
           ),
         ).toBeInTheDocument();
       });
+    });
+
+    it('renders the localized no-billing-email remediation for a coded single-target failure from the preview dialog', async () => {
+      mockGenerateInvoicesAsRecurringBillingRun.mockResolvedValueOnce({
+        runId: 'run-single-no-email',
+        selectionKey: 'selection-single-no-email',
+        retryKey: 'retry-single-no-email',
+        invoicesCreated: 0,
+        failedCount: 1,
+        failures: [noBillingEmailFailure()],
+      });
+
+      await selectSingleChildAndOpenPreview();
+
+      const generateButton = await screen.findByText('Generate Invoice');
+      fireEvent.click(generateButton);
+
+      await waitFor(() => {
+        expect(mockGenerateInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
+        expect(
+          screen.getAllByText(
+            /Acme Co has no billing email\. Set a billing contact, a client billing email, or an email on the billing or default location, then try again\./,
+          ).length,
+        ).toBeGreaterThan(0);
+      });
+      // The raw flat validation sentence must not leak into the UI.
+      expect(screen.queryByText(/Cannot generate invoice/i)).toBeNull();
+    });
+
+    it('renders the localized no-billing-email remediation after the PO-overage single-confirm allow decision', async () => {
+      mockGetPurchaseOrderOverageForSelectionInput.mockResolvedValue({
+        overage_cents: 61250,
+        po_number: 'PO-123',
+      });
+      mockGenerateInvoicesAsRecurringBillingRun.mockResolvedValueOnce({
+        runId: 'run-po-single-allow',
+        selectionKey: 'selection-po-single-allow',
+        retryKey: 'retry-po-single-allow',
+        invoicesCreated: 0,
+        failedCount: 1,
+        failures: [noBillingEmailFailure()],
+      });
+
+      await selectSingleChildAndOpenPreview();
+
+      const generateButton = await screen.findByText('Generate Invoice');
+      fireEvent.click(generateButton);
+
+      const proceedButton = await screen.findByText('Proceed Anyway');
+      fireEvent.click(proceedButton);
+
+      await waitFor(() => {
+        expect(mockGenerateInvoicesAsRecurringBillingRun).toHaveBeenCalledWith(
+          expect.objectContaining({ allowPoOverage: true }),
+        );
+        expect(
+          screen.getAllByText(
+            /Acme Co has no billing email\. Set a billing contact, a client billing email, or an email on the billing or default location, then try again\./,
+          ).length,
+        ).toBeGreaterThan(0);
+      });
+      expect(screen.queryByText(/Cannot generate invoice/i)).toBeNull();
     });
   });
 });

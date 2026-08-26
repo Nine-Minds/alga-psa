@@ -32,6 +32,7 @@ import {
   IInvoice,
   IRecurringDueSelectionInput,
   PreviewInvoiceResponse,
+  RecurringInvoiceFailureCode,
   InvoiceViewModel,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
@@ -2162,6 +2163,10 @@ export type RecurringGroupedPreviewResponse = {
   success: false;
   error: string;
   executionIdentityKey?: string;
+  /** Safe, known failure code so the UI can render localized guidance. */
+  code?: RecurringInvoiceFailureCode;
+  /** Interpolation values for the localized failure copy (e.g. clientName). */
+  params?: Record<string, string>;
 };
 
 export const previewGroupedInvoicesForSelectionInputs = withAuth(async (

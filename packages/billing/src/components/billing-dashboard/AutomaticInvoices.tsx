@@ -20,6 +20,7 @@ import type {
 import {
   getPurchaseOrderOverageForSelectionInput,
   previewGroupedInvoicesForSelectionInputs,
+  type RecurringGroupedPreviewResponse,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
   generateGroupedInvoicesAsRecurringBillingRun,
@@ -98,7 +99,7 @@ function localizeRecurringFailure(
  */
 function localizePreviewFailure(
   t: ManualInvoiceTranslation,
-  failure: Extract<PreviewInvoiceResponse, { success: false }>,
+  failure: Extract<PreviewInvoiceResponse | RecurringGroupedPreviewResponse, { success: false }>,
 ): string {
   return translateManualInvoiceFailure(t, {
     code: failure.code,
@@ -1795,7 +1796,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       }
       if (runResult.failures.length > 0) {
         setErrors({
-          preview: runResult.failures[0]?.errorMessage
+          preview: localizeRecurringFailure(t, runResult.failures[0])
             || t('automaticInvoices.dialogs.preview.generateError', {
               defaultValue: 'Failed to generate invoice from preview',
             }),
@@ -1858,7 +1859,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       }
       if (runResult.failures.length > 0) {
         setErrors({
-          preview: runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview',
+          preview: localizeRecurringFailure(t, runResult.failures[0]) || 'Failed to generate invoice from preview',
         });
         return;
       }
