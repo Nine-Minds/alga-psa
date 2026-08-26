@@ -91,6 +91,7 @@ function rowAccentClass(occurrence: AssetMaintenanceOccurrence): string {
 
 function NewMaintenancePlanAssetDialog({ isOpen, onClose, onSelect }: { isOpen: boolean; onClose: () => void; onSelect: (assetId: string) => void }) {
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [assetTotal, setAssetTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +104,7 @@ function NewMaintenancePlanAssetDialog({ isOpen, onClose, onSelect }: { isOpen: 
       setError(null);
       try {
         const response: AssetListResponse = unwrapAssetActionResult(await listAssets({ page: 1, limit: 20, search: search || undefined }));
-        if (!cancelled) setAssets(response.assets);
+        if (!cancelled) { setAssets(response.assets); setAssetTotal(response.total); }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to load assets.');
       } finally {
@@ -131,7 +132,7 @@ function NewMaintenancePlanAssetDialog({ isOpen, onClose, onSelect }: { isOpen: 
           {isLoading ? <div className="p-4 text-sm text-[rgb(var(--color-text-500))]">Loading assets…</div>
             : error ? <div className="p-4 text-sm text-[rgb(var(--badge-error-text))]">{error}</div>
             : assets.length === 0 ? <div className="p-4 text-sm text-[rgb(var(--color-text-500))]">No assets found.</div>
-            : <div className="divide-y divide-[rgb(var(--color-border-100))]">{assets.map((asset) => <Button key={asset.asset_id} id={`maintenance-plan-select-asset-${asset.asset_id}`} variant="ghost" className="h-auto w-full justify-start rounded-none px-4 py-3 text-left" onClick={() => onSelect(asset.asset_id)}><span className="min-w-0"><span className="block truncate font-medium text-[rgb(var(--color-text-900))]">{asset.name}</span><span className="block truncate text-xs text-[rgb(var(--color-text-500))]">{[asset.asset_tag, asset.asset_type, asset.client?.client_name].filter(Boolean).join(' · ')}</span></span></Button>)}</div>}
+            : <><div className="divide-y divide-[rgb(var(--color-border-100))]">{assets.map((asset) => <Button key={asset.asset_id} id={`maintenance-plan-select-asset-${asset.asset_id}`} variant="ghost" className="h-auto w-full justify-start rounded-none px-4 py-3 text-left" onClick={() => onSelect(asset.asset_id)}><span className="min-w-0"><span className="block truncate font-medium text-[rgb(var(--color-text-900))]">{asset.name}</span><span className="block truncate text-xs text-[rgb(var(--color-text-500))]">{[asset.asset_tag, asset.asset_type, asset.client?.client_name].filter(Boolean).join(' · ')}</span></span></Button>)}</div>{assetTotal > assets.length && <p className="border-t border-[rgb(var(--color-border-100))] px-4 py-2 text-xs text-[rgb(var(--color-text-500))]">Showing first {assets.length} of {assetTotal} — refine your search.</p>}</>}
         </div>
       </div>
     </DialogContent>
