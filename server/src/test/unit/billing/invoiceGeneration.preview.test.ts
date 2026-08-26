@@ -955,9 +955,13 @@ describe('invoice preview recurring timing', () => {
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
     expect(previewResult).not.toHaveProperty('billingCycleId');
+    // The coded validation failure is returned (not re-thrown) as a keyed action
+    // error so the recurring run can recover the structured failure after the
+    // localization boundary rewrites the sentence.
     expect(generationError).toMatchObject({
-      message: 'Billing email is required before generating recurring invoices.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
+      actionError: 'Billing email is required before generating recurring invoices.',
+      messageKey: 'msp/invoicing:manualInvoices.errors.NO_BILLING_EMAIL',
+      messageParams: { clientName: 'Acme Corp' },
     });
     expect(generationError).not.toHaveProperty('billingCycleId');
   });

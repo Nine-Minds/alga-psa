@@ -21,7 +21,11 @@ import {
   getPurchaseOrderOverageForSelectionInput,
   previewGroupedInvoicesForSelectionInputs,
 } from '@alga-psa/billing/actions/invoiceGeneration';
-import { generateGroupedInvoicesAsRecurringBillingRun, generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
+import {
+  generateGroupedInvoicesAsRecurringBillingRun,
+  generateInvoicesAsRecurringBillingRun,
+  type RecurringBillingRunInvoiceFailure,
+} from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
 import {
@@ -44,6 +48,10 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  translateManualInvoiceFailure,
+  type ManualInvoiceTranslation,
+} from './manualInvoiceErrorTranslation';
 // Added imports for DropdownMenu
 import {
   DropdownMenu,
@@ -67,6 +75,37 @@ interface AutomaticInvoicesProps {
 const isReturnedActionError = (result: unknown) => (
   isActionMessageError(result) || isActionPermissionError(result)
 );
+
+/**
+ * Renders a recurring-run invoice failure as localized, actionable guidance when it
+ * carries a known structured code (e.g. NO_BILLING_EMAIL), and as the generic error
+ * string otherwise. Never leaks stacks, SQL, or raw exception text to the user.
+ */
+function localizeRecurringFailure(
+  t: ManualInvoiceTranslation,
+  failure: RecurringBillingRunInvoiceFailure,
+): string {
+  return translateManualInvoiceFailure(t, {
+    code: failure.code,
+    params: failure.params,
+    message: failure.errorMessage,
+  });
+}
+
+/**
+ * Same contract as {@link localizeRecurringFailure} for the preview failure
+ * payload, which carries the same structured code/params across the boundary.
+ */
+function localizePreviewFailure(
+  t: ManualInvoiceTranslation,
+  failure: { error: string; code?: string; params?: Record<string, string> },
+): string {
+  return translateManualInvoiceFailure(t, {
+    code: failure.code as RecurringBillingRunInvoiceFailure['code'],
+    params: failure.params,
+    message: failure.error,
+  });
+}
 
 // Placeholder for a DataTable while its (independent) section data loads, so the
 // rest of the screen can render immediately instead of waiting behind one spinner.
@@ -1492,7 +1531,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         selectorInput: null,
       }); // Clear preview state on error
       setErrors({
-        preview: (response as { success: false; error: string }).error
+        preview: localizePreviewFailure(
+          t,
+          response as { error: string; code?: string; params?: Record<string, string> },
+        )
       });
       // Optionally open the dialog even on error to show the message
       setShowPreviewDialog(true);
@@ -1576,7 +1618,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       const newErrors: { [key: string]: string } = {};
       for (const failure of runResult.failures) {
         const label = resolveRecurringFailureLabel(failure);
-        newErrors[label] = failure.errorMessage;
+        newErrors[label] = localizeRecurringFailure(t, failure);
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -1638,7 +1680,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       }
       for (const failure of runResult.failures) {
         const label = resolveRecurringFailureLabel(failure);
-        newErrors[label] = failure.errorMessage;
+        newErrors[label] = localizeRecurringFailure(t, failure);
       }
 
       if (Object.keys(newErrors).length > 0) {
