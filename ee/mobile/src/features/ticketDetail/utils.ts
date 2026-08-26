@@ -21,9 +21,26 @@ export function stringOrDash(value: unknown): string {
 export function extractDescription(ticket: TicketDetail): string | null {
   const attrs = ticket.attributes;
   if (!attrs || typeof attrs !== "object") return null;
-  return typeof attrs.description === "string" && attrs.description.trim()
-    ? attrs.description.trim()
-    : null;
+
+  const description = attrs.description;
+  if (typeof description === "string") {
+    return description.trim() || null;
+  }
+
+  if (Array.isArray(description)) {
+    return description.length > 0 ? JSON.stringify(description) : null;
+  }
+
+  if (
+    description
+    && typeof description === "object"
+    && (description as { type?: unknown }).type === "doc"
+    && Array.isArray((description as { content?: unknown }).content)
+  ) {
+    return JSON.stringify(description);
+  }
+
+  return null;
 }
 
 export function getTicketAttributes(ticket: TicketDetail): Record<string, unknown> {
