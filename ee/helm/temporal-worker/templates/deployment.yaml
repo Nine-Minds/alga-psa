@@ -17,6 +17,9 @@ spec:
   selector:
     matchLabels:
       {{- include "temporal-worker.selectorLabels" . | nindent 6 }}
+      # Retain the label used by already-installed appliance releases: Kubernetes
+      # does not permit a Deployment selector to change during a Helm upgrade.
+      app.kubernetes.io/component: temporal-worker
   template:
     metadata:
       annotations:
