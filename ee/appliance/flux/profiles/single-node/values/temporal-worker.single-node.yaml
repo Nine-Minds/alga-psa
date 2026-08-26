@@ -4,6 +4,12 @@ replicaCount: 1
 
 deploymentProfile: appliance
 
+# Share the tenant-secret store with alga-core so the pinned Microsoft profile
+# client secret alga-core writes via the filesystem provider is readable here,
+# letting polling reconciliation resolve client_secret_ref.
+sharedTenantSecrets:
+  enabled: true
+
 image:
   repository: ghcr.io/nine-minds/temporal-worker
   tag: latest
