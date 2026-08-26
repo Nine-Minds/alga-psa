@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "repository": "https://github.com/microsoftgraph/msgraph-metadata",
+    "commit": "455b2d375b0a81abc0a96210994b07ce9fb7ea3e",
+    "v1.0": "metadata/v1.0.xml.gz",
+    "beta": "metadata/beta.xml.gz",
+    "sha256": {
+      "v1.0": "6fb2e1b8f2f1669eada0265833af30d22510e3c4ca482cad98b0ee46e3c71e22",
+      "beta": "1e1705bc8bbf4a6074ea35bf8b214a4836e0b816070b4f4de112dcba1a713252"
+    }
+  },
+  "endpoints": [
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me", "usedBy": ["mail", "calendar", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/organization", "usedBy": ["entra", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users", "usedBy": ["entra", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}", "usedBy": ["teams", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/groups", "usedBy": ["entra", "emulator"] },
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/users/{userId}/checkMemberGroups", "usedBy": ["entra", "emulator"] },
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/users/{userId}/teamwork/sendActivityNotification", "usedBy": ["teams", "emulator"] },
+
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/users/{userId}/sendMail", "usedBy": ["mail"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/mailFolders", "usedBy": ["mail", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/mailFolders", "usedBy": ["mail", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/mailFolders/{folderId}", "usedBy": ["mail"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/mailFolders/{folderId}", "usedBy": ["mail"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/mailFolders/{folderId}/messages", "usedBy": ["mail", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/mailFolders/{folderId}/messages", "usedBy": ["mail", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/messages/{messageId}", "usedBy": ["mail", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/messages/{messageId}", "usedBy": ["mail", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/messages/{messageId}/attachments/{attachmentId}", "usedBy": ["mail"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/messages/{messageId}/attachments/{attachmentId}", "usedBy": ["mail"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/messages/{messageId}/$value", "usedBy": ["mail", "emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/messages/{messageId}/$value", "usedBy": ["mail", "emulator"] },
+
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/subscriptions", "usedBy": ["mail", "emulator", "scripts"] },
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/subscriptions", "usedBy": ["mail", "calendar", "teams", "emulator"] },
+    { "version": "v1.0", "method": "PATCH", "pathTemplate": "/subscriptions/{subscriptionId}", "usedBy": ["mail", "calendar", "teams", "emulator"] },
+    { "version": "v1.0", "method": "DELETE", "pathTemplate": "/subscriptions/{subscriptionId}", "usedBy": ["mail", "teams", "emulator"] },
+
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/applications", "usedBy": ["app-registration", "emulator"] },
+    { "version": "v1.0", "method": "DELETE", "pathTemplate": "/applications/{applicationId}", "usedBy": ["app-registration", "emulator"] },
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/applications/{applicationId}/addPassword", "usedBy": ["app-registration", "emulator"] },
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/servicePrincipals", "usedBy": ["app-registration", "emulator"] },
+    { "version": "v1.0", "method": "DELETE", "pathTemplate": "/servicePrincipals/{servicePrincipalId}", "usedBy": ["app-registration", "emulator"] },
+
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/calendar", "usedBy": ["calendar"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/calendars", "usedBy": ["calendar"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/calendar/events", "usedBy": ["calendar"] },
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/me/calendar/events", "usedBy": ["calendar"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/calendar/events/{eventId}", "usedBy": ["calendar"] },
+    { "version": "v1.0", "method": "PATCH", "pathTemplate": "/me/calendar/events/{eventId}", "usedBy": ["calendar"] },
+    { "version": "v1.0", "method": "DELETE", "pathTemplate": "/me/calendar/events/{eventId}", "usedBy": ["calendar"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/me/calendarView/delta", "usedBy": ["calendar"] },
+
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/users/{userId}/events", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "PATCH", "pathTemplate": "/users/{userId}/events/{eventId}", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "DELETE", "pathTemplate": "/users/{userId}/events/{eventId}", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/onlineMeetings", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "POST", "pathTemplate": "/users/{userId}/onlineMeetings", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "DELETE", "pathTemplate": "/users/{userId}/onlineMeetings/{meetingId}", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/onlineMeetings/{meetingId}", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/onlineMeetings/{meetingId}/recordings", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/onlineMeetings/{meetingId}/recordings/{recordingId}/content", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/onlineMeetings/{meetingId}/transcripts", "usedBy": ["teams"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/users/{userId}/onlineMeetings/{meetingId}/transcripts/{transcriptId}/content", "usedBy": ["teams"] },
+
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/teams", "usedBy": ["emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/teams/{teamId}", "usedBy": ["emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/teams/{teamId}/channels", "usedBy": ["emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/chats", "usedBy": ["emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/chats/{chatId}", "usedBy": ["emulator"] },
+    { "version": "v1.0", "method": "GET", "pathTemplate": "/chats/{chatId}/messages", "usedBy": ["emulator"] },
+
+    { "version": "beta", "method": "GET", "pathTemplate": "/tenantRelationships/managedTenants/tenants", "usedBy": ["entra", "emulator"] }
+  ]
+}
