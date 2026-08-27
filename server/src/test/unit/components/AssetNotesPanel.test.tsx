@@ -110,7 +110,8 @@ describe('AssetNotesPanel', () => {
     expect(screen.getAllByRole('heading', { name: 'Notes' })).toHaveLength(1);
     const shell = container.querySelector('section#asset-bento-notes');
     expect(shell).toHaveClass('p-4');
-    expect(screen.getByTestId('text-editor').parentElement).toHaveClass(
+    expect(screen.getByTestId('text-editor')).toHaveClass('min-h-[100px]', 'p-4');
+    expect(screen.getByTestId('text-editor').parentElement).not.toHaveClass(
       '[&_.editor-paper]:min-h-10',
       '[&_.editor-paper]:p-1.5'
     );
@@ -125,7 +126,7 @@ describe('AssetNotesPanel', () => {
     const { container } = renderBentoPanel();
 
     expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
-    expect(container.querySelector('section#asset-bento-notes .animate-pulse')).toHaveClass('min-h-10');
+    expect(container.querySelector('section#asset-bento-notes .animate-pulse')).toHaveClass('min-h-[100px]');
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });
 
