@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Plus, Trash2, Layers } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
+import { NumericInput } from '@alga-psa/ui/components/NumericInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import type { BucketPoolDraft } from '../ContractWizard';
@@ -17,6 +19,7 @@ export interface BucketPoolDraftEditorProps {
   /** Business-hours schedules for the after-hours rule (tenant default first). */
   schedules: Array<{ schedule_id: string; schedule_name: string; is_default: boolean }>;
   lineKey: 'hourly' | 'usage';
+  currencyCode?: string;
   onChange: (pools: BucketPoolDraft[]) => void;
 }
 
@@ -35,6 +38,7 @@ export function BucketPoolDraftEditor({
   lineServices,
   schedules,
   lineKey,
+  currencyCode = 'USD',
   onChange,
 }: BucketPoolDraftEditorProps) {
   const { t } = useTranslation('msp/contracts');
@@ -94,6 +98,7 @@ export function BucketPoolDraftEditor({
           hasCatchAll={hasCatchAll}
           defaultSchedule={defaultSchedule}
           schedules={schedules}
+          currencyCode={currencyCode}
           onUpdate={(patch) => updatePool(index, patch)}
           onRemove={() => removePool(index)}
         />
@@ -107,6 +112,7 @@ export function BucketPoolDraftEditor({
           schedules={schedules}
           onCancel={() => setShowCreate(false)}
           onCreate={addPool}
+          currencyCode={currencyCode}
         />
       )}
 
@@ -127,6 +133,7 @@ interface DraftPoolCardProps {
   hasCatchAll: boolean;
   defaultSchedule?: { schedule_id: string; schedule_name: string; is_default: boolean };
   schedules: Array<{ schedule_id: string; schedule_name: string; is_default: boolean }>;
+  currencyCode: string;
   onUpdate: (patch: Partial<BucketPoolDraft>) => void;
   onRemove: () => void;
 }
@@ -137,6 +144,7 @@ function DraftPoolCard({
   hasCatchAll,
   defaultSchedule,
   schedules,
+  currencyCode,
   onUpdate,
   onRemove,
 }: DraftPoolCardProps) {
@@ -361,6 +369,7 @@ interface CreateDraftPoolFormProps {
   hasCatchAll: boolean;
   defaultSchedule?: { schedule_id: string; schedule_name: string; is_default: boolean };
   schedules: Array<{ schedule_id: string; schedule_name: string; is_default: boolean }>;
+  currencyCode: string;
   onCancel: () => void;
   onCreate: (draft: Omit<BucketPoolDraft, 'line_key'>) => void;
 }
@@ -370,6 +379,7 @@ function CreateDraftPoolForm({
   hasCatchAll,
   defaultSchedule,
   schedules,
+  currencyCode,
   onCancel,
   onCreate,
 }: CreateDraftPoolFormProps) {
@@ -418,11 +428,11 @@ function CreateDraftPoolForm({
         </div>
         <div className="space-y-1">
           <Label className="text-xs">{t('bucketPools.labels.totalHours', { defaultValue: 'Total hours' })}</Label>
-          <Input type="number" min="0" value={totalHours} onChange={(e) => setTotalHours(e.target.value)} />
+          <NumericInput id="wizard-pool-hours" precision={2} value={Number(totalHours)} onChange={(value) => setTotalHours(String(value ?? 0))} />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate ($/hr)' })}</Label>
-          <Input type="number" min="0" step="0.01" value={overageRate} onChange={(e) => setOverageRate(e.target.value)} />
+          <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate per hour' })}</Label>
+          <CurrencyInput id="wizard-pool-overage-rate" currencyCode={currencyCode} value={Number(overageRate)} onChange={(value) => setOverageRate(String(value ?? 0))} />
         </div>
       </div>
 

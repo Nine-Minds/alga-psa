@@ -134,6 +134,15 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
                   onFilterStateChange={setFilterState}
                   disabledClientIds={new Set([credit.client_id])}
                 />
+                {targetClientId && (() => {
+                  const target = clients.find((client) => client.client_id === targetClientId);
+                  const targetCurrency = target?.default_currency_code || 'USD';
+                  return <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+                    {targetCurrency === creditCurrency
+                      ? t('transferDialog.hints.currencyMatch', { defaultValue: 'Target client currency: {{currency}}', currency: targetCurrency })
+                      : t('transferDialog.hints.currencyMismatch', { defaultValue: 'Target client uses {{currency}}; credits can only be transferred to a {{sourceCurrency}} client.', currency: targetCurrency, sourceCurrency: creditCurrency })}
+                  </p>;
+                })()}
               </div>
             </div>
 

@@ -391,6 +391,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
               }))}
             schedules={bucketSchedules}
             lineKey="hourly"
+            currencyCode={data.currency_code || 'USD'}
             onChange={(pools) => {
               updateData({
                 bucket_pools: [
