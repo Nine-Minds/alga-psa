@@ -598,9 +598,15 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     [users]
   );
 
+  // "All authorized technicians" is a real, enabled choice (no team filter).
+  // A disabled placeholder row here silently swallows clicks and leaves the
+  // modal dropdown open, which blocks every other pointer interaction.
   const teamOptions: SelectOption[] = useMemo(() =>
-    managedTeams.map((team) => ({ value: team.team_id, label: team.team_name })),
-    [managedTeams]
+    [
+      { value: '', label: t('availabilitySettings.userHours.scope.allTeams', { defaultValue: 'All authorized technicians' }) },
+      ...managedTeams.map((team) => ({ value: team.team_id, label: team.team_name })),
+    ],
+    [managedTeams, t]
   );
 
   const selectedUser = useMemo(
@@ -874,10 +880,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   id="team-selector"
                   label={t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Filter technicians by team' })}
                   options={teamOptions}
-                  value={selectedTeamId || undefined}
+                  value={selectedTeamId}
                   onValueChange={setSelectedTeamId}
                   placeholder={t('availabilitySettings.common.teamSelect.placeholder', { defaultValue: 'All authorized technicians' })}
-                  allowClear
+                  showPlaceholderInDropdown={false}
                   disabled={isSavingUserHours}
                 />
               </div>
@@ -892,6 +898,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 value={selectedUserId || undefined}
                 onValueChange={setSelectedUserId}
                 placeholder={t('availabilitySettings.userHours.userSelect.placeholder', { defaultValue: 'Select a technician to configure' })}
+                showPlaceholderInDropdown={false}
                 disabled={users.length === 0 || isSavingUserHours}
               />
             </div>

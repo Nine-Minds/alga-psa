@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -131,17 +131,19 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  default: ({ id, value, onValueChange, disabled, options, placeholder }: any) => (
+  default: ({ id, value, onValueChange, disabled, options, showPlaceholderInDropdown, allowClear }: any) => (
     <select
       data-testid={id}
       id={id}
       value={value ?? ''}
       disabled={!!disabled}
+      data-placeholder-in-dropdown={String(showPlaceholderInDropdown !== false)}
+      data-allow-clear={String(!!allowClear)}
       onChange={(event: React.ChangeEvent<HTMLSelectElement>) => onValueChange?.(event.target.value)}
     >
-      <option value="">{placeholder ?? ''}</option>
-      {(options ?? []).map((option: { value: string; label: string }) => (
-        <option key={option.value} value={option.value}>{option.label}</option>
+      <option value="" data-sentinel="true" />
+      {(options ?? []).map((option: { value: string; label: string }, index: number) => (
+        <option key={`${option.value}-${index}`} value={option.value}>{option.label}</option>
       ))}
     </select>
   ),
@@ -366,6 +368,36 @@ describe('AvailabilitySettings rendered regressions', () => {
     // The save response for user A must not populate user B's editor.
     expect(screen.getByTestId('day-3-end-time')).toHaveValue('15:00');
     expect(screen.getByText('Technician:').parentElement).toHaveTextContent('Bella Ozma');
+  });
+
+  it('offers only enabled dropdown rows, with All authorized technicians as a real team choice', async () => {
+    bootstrap();
+    await openUserHoursTab();
+
+    const teamSelect = await screen.findByTestId('team-selector');
+    // No disabled placeholder row and no separate clear row: a click on any
+    // visible entry must land, or automation/users are left with a stuck-open
+    // modal dropdown that blocks the rest of the page.
+    expect(teamSelect).toHaveAttribute('data-placeholder-in-dropdown', 'false');
+    expect(teamSelect).toHaveAttribute('data-allow-clear', 'false');
+    const teamRows = within(teamSelect).getAllByRole('option').filter((option) => !option.hasAttribute('data-sentinel'));
+    expect(teamRows.map((option) => [option.textContent, (option as HTMLOptionElement).value])).toEqual([
+      ['All authorized technicians', ''],
+      ['team', 'team-1'],
+    ]);
+
+    const technicianSelect = screen.getByTestId('user-hours-selector');
+    expect(technicianSelect).toHaveAttribute('data-placeholder-in-dropdown', 'false');
+
+    // Selecting the enabled all-technicians row really clears the filter.
+    fireEvent.change(teamSelect, { target: { value: 'team-1' } });
+    await waitFor(() => {
+      expect(within(technicianSelect).queryByText('Bella Ozma')).toBeNull();
+    });
+    fireEvent.change(teamSelect, { target: { value: '' } });
+    expect(await within(technicianSelect).findByText('Bella Ozma')).toBeInTheDocument();
+    expect(within(technicianSelect).getByText('Morgan Chen')).toBeInTheDocument();
+    expect(teamSelect).toHaveValue('');
   });
 
   it('restores a valid persisted team and technician scope after refresh', async () => {
