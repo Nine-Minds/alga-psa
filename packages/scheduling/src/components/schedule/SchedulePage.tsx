@@ -108,12 +108,14 @@ export default function SchedulePage() {
               defaultValue: 'Appointment Requests',
             })}
             {pendingCount > 0 && (
-              <Badge variant="error" className="ml-2 px-2 py-0.5">
+              <Badge variant="error" className="absolute -top-2 -right-2 px-2 py-0.5">
                 {pendingCount}
               </Badge>
             )}
           </Button>
-          <div ref={setHeaderActionsSlot} className="flex items-center" />
+          {/* The calendar portals a w-9 share menu here after mount; reserving
+              the width keeps the header buttons from shifting mid-click. */}
+          <div ref={setHeaderActionsSlot} className="flex min-w-9 items-center justify-end" />
         </div>
       </div>
       <div className="h-[calc(100vh-120px)]">
