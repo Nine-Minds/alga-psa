@@ -45,7 +45,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
           title={t('assetNotesPanel.title', { defaultValue: 'Notes' })}
           icon={<StickyNote className="h-4 w-4" />}
         >
-          <div className="min-h-16 animate-pulse skeleton-fill" />
+          <div className="min-h-10 animate-pulse skeleton-fill" />
         </BentoTile>
       );
     }
@@ -100,7 +100,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
       <div
         className={
           variant === 'bento'
-            ? '[&_.editor-paper]:min-h-16 [&_.editor-paper]:p-2'
+            ? '[&_.editor-paper]:min-h-10 [&_.editor-paper]:p-1.5'
             : 'min-h-[200px]'
         }
       >

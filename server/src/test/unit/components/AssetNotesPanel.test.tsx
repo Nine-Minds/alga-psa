@@ -111,8 +111,8 @@ describe('AssetNotesPanel', () => {
     const shell = container.querySelector('section#asset-bento-notes');
     expect(shell).toHaveClass('p-4');
     expect(screen.getByTestId('text-editor').parentElement).toHaveClass(
-      '[&_.editor-paper]:min-h-16',
-      '[&_.editor-paper]:p-2'
+      '[&_.editor-paper]:min-h-10',
+      '[&_.editor-paper]:p-1.5'
     );
     expect(screen.getByTestId('text-editor').parentElement).not.toHaveClass('min-h-[200px]');
     expect(container.querySelector('.bg-white')).toBeNull();
@@ -125,7 +125,7 @@ describe('AssetNotesPanel', () => {
     const { container } = renderBentoPanel();
 
     expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
-    expect(container.querySelector('section#asset-bento-notes .animate-pulse')).toHaveClass('min-h-16');
+    expect(container.querySelector('section#asset-bento-notes .animate-pulse')).toHaveClass('min-h-10');
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });
 
@@ -169,8 +169,8 @@ describe('AssetNotesPanel', () => {
     expect(container.querySelector('#asset-bento-notes')).toBeNull();
     expect(screen.getByTestId('text-editor').parentElement).toHaveClass('min-h-[200px]');
     expect(screen.getByTestId('text-editor').parentElement).not.toHaveClass(
-      '[&_.editor-paper]:min-h-16',
-      '[&_.editor-paper]:p-2'
+      '[&_.editor-paper]:min-h-10',
+      '[&_.editor-paper]:p-1.5'
     );
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
