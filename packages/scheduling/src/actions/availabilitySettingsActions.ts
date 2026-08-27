@@ -106,7 +106,8 @@ function availabilityActionErrorMessage(error: unknown, fallback: string): strin
 
   if (
     message === 'Availability setting not found' ||
-    message === 'Availability exception not found'
+    message === 'Availability exception not found' ||
+    message.startsWith('Insufficient permissions')
   ) {
     return message;
   }
@@ -460,6 +461,15 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
 
         if (!existing) {
           throw new Error('Availability setting not found');
+        }
+
+        // Re-authorize against the row being overwritten: the pre-check above
+        // only covers the submitted scope, not the scope the ID resolves to.
+        const existingAccess = existing.setting_type === 'user_hours' && existing.user_id
+          ? await canAccessUserHours(trx, tenant, user, 'update', existing.user_id)
+          : { allowed: await hasPermission(user, 'system_settings', 'update', trx) };
+        if (!existingAccess.allowed) {
+          throw new Error('Insufficient permissions to manage availability settings');
         }
 
         // Update existing setting
