@@ -9,7 +9,12 @@ export default defineConfig({
     // The pre-existing tests/*.test.tsx files predate tsx inclusion here and
     // no longer collect/pass; they stay dormant until repaired, so only the
     // availability component regression is listed explicitly.
-    include: ['tests/**/*.test.ts', 'src/**/*.test.ts', 'tests/AvailabilitySettings.component.test.tsx'],
+    include: [
+      'tests/**/*.test.ts',
+      'src/**/*.test.ts',
+      'tests/AvailabilitySettings.component.test.tsx',
+      'tests/SchedulePage.accessRetry.test.tsx',
+    ],
     testTimeout: 10000,
   },
   resolve: {

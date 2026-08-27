@@ -32,15 +32,27 @@ export default function SchedulePage() {
     }
   };
 
+  // Transient failures (e.g. action calls interrupted mid-navigation) must not
+  // permanently hide the Configure Availability button, so retry before giving up.
   const checkPermissions = async () => {
-    try {
-      const result = await getAvailabilitySettingsAccess();
-      setCanConfigureAvailability(Boolean(
-        result.success && (result.data?.canReadSystemSettings || result.data?.canManageUserHours)
-      ));
-    } catch (error) {
-      console.error('Failed to check availability access:', error);
-      setCanConfigureAvailability(false);
+    const retryDelaysMs = [1000, 2500];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const result = await getAvailabilitySettingsAccess();
+        if (result.success) {
+          setCanConfigureAvailability(Boolean(
+            result.data?.canReadSystemSettings || result.data?.canManageUserHours
+          ));
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to check availability access:', error);
+      }
+      if (attempt >= retryDelaysMs.length) {
+        setCanConfigureAvailability(false);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryDelaysMs[attempt]));
     }
   };
 
