@@ -91,7 +91,6 @@ describe('TenantSecretProvider mutation ordering', () => {
     const service = new TenantSecretProvider(updated.db, 'tenant-1', provider);
     await service.create({ name: 'API_KEY', value: 'old' }, 'user-1');
     provider.values.set('API_KEY', 'old');
-    provider.values.set('API_KEY', 'old');
     const originalSet = provider.setTenantSecret.bind(provider);
     provider.setTenantSecret = async (_tenant: string, name: string, value: string) => { if (value === 'new') throw new Error('provider set failed'); return originalSet(_tenant, name, value); };
     const failing = new TenantSecretProvider(updated.db, 'tenant-1', provider);
@@ -127,10 +126,16 @@ describe('TenantSecretProvider mutation ordering', () => {
     const { db, state } = harness(); const events = state.events; const provider = providerStub(events);
     const service = new TenantSecretProvider(db, 'tenant-1', provider);
     await service.create({ name: 'DELETE_ME', value: 'value' }, 'user-1');
+    const deleteEventStart = events.length;
     await service.delete('DELETE_ME', 'user-1');
     expect(state.secrets).toEqual([]); expect(state.audit.at(-1)?.event_type).toBe('deleted');
-    expect(events.at(-1)).toBe('provider:delete:DELETE_ME');
-    expect(events.indexOf('tx:commit')).toBeLessThan(events.indexOf('provider:delete:DELETE_ME'));
+    expect(events.slice(deleteEventStart)).toEqual([
+      'tx:begin',
+      'db:delete:tenant_secrets',
+      'db:insert:tenant_secrets_audit_log',
+      'tx:commit',
+      'provider:delete:DELETE_ME',
+    ]);
     await expect(service.delete('DELETE_ME', 'user-1')).rejects.toThrow('not found');
   });
 });
