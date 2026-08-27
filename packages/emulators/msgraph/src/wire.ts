@@ -188,7 +188,7 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   });
 
   // Teams surface: activity feed notifications plus the channel/chat lookups
-  // the Teams add-on resolves conversation targets with.
+  // the Teams integration resolves conversation targets with.
   graph.post('/users/:userId/teamwork/sendActivityNotification', (req, res) => {
     core.recordActivityNotification(String(req.params.userId), req.body ?? {});
     res.status(202).end();

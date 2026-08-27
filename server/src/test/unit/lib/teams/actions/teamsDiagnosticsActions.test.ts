@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const hoisted = vi.hoisted(() => {
   const state = {
     hasPermission: true,
-    hasAddon: true,
+    featureEnabled: true,
     integrations: [] as Array<Record<string, unknown>>,
     profiles: [] as Array<Record<string, unknown>>,
     conversationReferences: [] as Array<Record<string, unknown>>,
@@ -16,22 +16,6 @@ const hoisted = vi.hoisted(() => {
   const fn = {
     now: () => 'now()',
   };
-
-  function buildTenantAddonQuery() {
-    const chain: any = {
-      where: () => chain,
-      andWhere: (callback: (builder: any) => void) => {
-        callback({
-          whereNull: () => ({
-            orWhere: () => undefined,
-          }),
-        });
-        return chain;
-      },
-      first: async () => (state.hasAddon ? { addon_key: 'teams' } : undefined),
-    };
-    return chain;
-  }
 
   function buildIntegrationQuery() {
     const filters: Record<string, unknown> = {};
@@ -140,7 +124,6 @@ const hoisted = vi.hoisted(() => {
   }
 
   const knex: any = (table: string) => {
-    if (table === 'tenant_addons') return buildTenantAddonQuery();
     if (table === 'teams_integrations') return buildIntegrationQuery();
     if (table === 'microsoft_profiles') return buildProfileQuery();
     if (table === 'teams_conversation_references') return buildConversationReferenceQuery();
@@ -196,6 +179,11 @@ vi.mock('@alga-psa/db', () => ({
     tenantWhereColumn: (q: any) => q,
   }),
   createTenantKnex: hoisted.createTenantKnexMock,
+}));
+
+vi.mock('@alga-psa/core/features', () => ({
+  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
+  isFeatureFlagEnabled: vi.fn(async () => hoisted.state.featureEnabled),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -329,7 +317,7 @@ function resetTeamsState() {
     process.env.EDITION = 'enterprise';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     hoisted.state.hasPermission = true;
-    hoisted.state.hasAddon = true;
+    hoisted.state.featureEnabled = true;
     hoisted.state.integrations.length = 0;
     hoisted.state.profiles.length = 0;
     hoisted.state.conversationReferences.length = 0;
@@ -364,12 +352,12 @@ describe('Teams diagnostics test message action', () => {
     expect(hoisted.hasPermissionMock).toHaveBeenCalledWith(USER, 'system_settings', 'update');
   });
 
-  it("records skipped addon_inactive and does not send when the add-on isn't active", async () => {
-    hoisted.state.hasAddon = false;
+  it('records skipped feature_disabled and does not send when the release feature is off', async () => {
+    hoisted.state.featureEnabled = false;
 
     await expect(send()).resolves.toMatchObject({
       status: 'skipped',
-      reason: 'addon_inactive',
+      reason: 'feature_disabled',
     });
     expect(hoisted.sendBotActivityMock).not.toHaveBeenCalled();
     expect(hoisted.state.deliveries).toHaveLength(1);
@@ -378,7 +366,7 @@ describe('Teams diagnostics test message action', () => {
       category: 'test',
       destination_type: 'bot_test',
       status: 'skipped',
-      error_code: 'addon_inactive',
+      error_code: 'feature_disabled',
     });
   });
 
@@ -555,7 +543,7 @@ describe('Teams diagnostics report action', () => {
     const report = await diagnose();
 
     expect(report.steps.map((step) => step.id)).toEqual([
-      'addon_entitlement',
+      'feature_flag',
       'integration_status',
       'capabilities',
       'microsoft_profile',
@@ -572,16 +560,16 @@ describe('Teams diagnostics report action', () => {
     expect(report.steps.every((step) => ['pass', 'warn', 'fail', 'skip'].includes(step.status))).toBe(true);
   });
 
-  it('fails the add-on check with a recommendation when the add-on is unavailable', async () => {
+  it('fails the release feature check with a recommendation when the feature is unavailable', async () => {
     healthyTenant();
-    hoisted.state.hasAddon = false;
+    hoisted.state.featureEnabled = false;
 
     const report = await diagnose();
-    expect(report.steps.find((step) => step.id === 'addon_entitlement')).toMatchObject({
+    expect(report.steps.find((step) => step.id === 'feature_flag')).toMatchObject({
       status: 'fail',
-      data: { reason: 'addon_required' },
+      data: { reason: 'feature_disabled' },
     });
-    expect(report.recommendations).toContain('Enable the Microsoft Teams add-on for this tenant.');
+    expect(report.recommendations).toContain('Enable release-v1-5-feature for this tenant.');
   });
 
   it('fails when no integration row exists and warns when it is not active', async () => {

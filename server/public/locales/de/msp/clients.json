@@ -1467,7 +1467,7 @@
         "invitesSummary": "Microsoft sendet Kalendereinladungen per E-Mail an: {{recipients}}.",
         "invitesSummaryYou": "Sie (Ersteller)",
         "reason": {
-          "addon_required": "Das Teams-Add-on ist für diesen Mandanten nicht aktiv.",
+          "feature_disabled": "Microsoft Teams ist für diesen Mandanten nicht aktiviert.",
           "ee_disabled": "Die Teams-Integration erfordert die Enterprise Edition.",
           "no_organizer": "In den Teams-Einstellungen ist kein Standard-Besprechungsorganisator konfiguriert.",
           "not_configured": "Die Teams-Integration wurde nicht konfiguriert."

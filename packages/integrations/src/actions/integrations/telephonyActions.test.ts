@@ -649,13 +649,13 @@ describe('telephony link-to-ticket', () => {
       addCall();
       availabilityMock.mockResolvedValue({
         enabled: false,
-        reason: 'addon_required',
-        message: 'Telephony integrations require the Microsoft Teams add-on.',
+        reason: 'feature_disabled',
+        message: 'Telephony integrations are not enabled for this tenant.',
       } as any);
 
       const result = await getTelephonyOverview();
 
-      expect(result).toMatchObject({ success: true, available: false, reason: 'addon_required' });
+      expect(result).toMatchObject({ success: true, available: false, reason: 'feature_disabled' });
       expect(result.recentCalls).toEqual([]);
     });
   });
@@ -692,17 +692,17 @@ describe('telephony link-to-ticket', () => {
       expect(resolveCallMatchMock).toHaveBeenCalled();
     });
 
-    it('T044: resolving is refused without the Teams add-on', async () => {
+    it('T044: resolving is refused when the release feature is disabled', async () => {
       availabilityMock.mockResolvedValue({
         enabled: false,
-        reason: 'addon_required',
-        message: 'Telephony integrations require the Microsoft Teams add-on.',
+        reason: 'feature_disabled',
+        message: 'Telephony integrations are not enabled for this tenant.',
       } as any);
 
       const result = await resolveTelephonyCall({ callRecordId: 'call-1', contactId: 'contact-1' });
 
       expect(result.success).toBe(false);
-      expect(result.error).toMatch(/Microsoft Teams add-on/);
+      expect(result.error).toMatch(/not enabled/);
       expect(resolveCallMatchMock).not.toHaveBeenCalled();
     });
 
@@ -720,17 +720,17 @@ describe('telephony link-to-ticket', () => {
   });
 
   describe('provider activation', () => {
-    it('T030: activation is refused without the Teams add-on', async () => {
+    it('T030: activation is refused when the release feature is disabled', async () => {
       availabilityMock.mockResolvedValue({
         enabled: false,
-        reason: 'addon_required',
-        message: 'Telephony integrations require the Microsoft Teams add-on.',
+        reason: 'feature_disabled',
+        message: 'Telephony integrations are not enabled for this tenant.',
       } as any);
 
       const result = await setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: true });
 
       expect(result.success).toBe(false);
-      expect(result.error).toMatch(/Microsoft Teams add-on/);
+      expect(result.error).toMatch(/not enabled/);
       expect(activateMock).not.toHaveBeenCalled();
     });
 

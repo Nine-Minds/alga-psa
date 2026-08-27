@@ -1519,7 +1519,7 @@
         "invitesSummary": "Microsoft wyśle zaproszenia kalendarza pocztą e-mail do: {{recipients}}.",
         "invitesSummaryYou": "Ciebie (twórcy)",
         "reason": {
-          "addon_required": "Dodatek Teams nie jest aktywny dla tej organizacji.",
+          "feature_disabled": "Microsoft Teams nie jest włączony dla tej organizacji.",
           "ee_disabled": "Integracja Teams wymaga wersji Enterprise Edition.",
           "no_organizer": "W ustawieniach Teams nie skonfigurowano domyślnego organizatora spotkania.",
           "not_configured": "Integracja Teams nie została skonfigurowana."

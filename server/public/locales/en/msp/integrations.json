@@ -3021,7 +3021,7 @@
           "test": {
             "sent": "Teams test message sent.",
             "failed": "Teams test message failed.",
-            "addonInactive": "The Teams add-on is not active for this tenant.",
+            "featureDisabled": "Microsoft Teams integration is not enabled for this tenant.",
             "integrationInactive": "Activate the Teams integration before sending a test message.",
             "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
             "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
@@ -3030,7 +3030,7 @@
             "skipped": "Teams test message was skipped."
           },
           "steps": {
-            "addonEntitlement": "Teams add-on entitlement",
+            "featureFlag": "Teams feature availability",
             "integrationStatus": "Teams integration status",
             "capabilities": "Teams capabilities",
             "microsoftProfile": "Microsoft profile readiness",
@@ -3042,7 +3042,7 @@
             "recentDeliveryHealth": "Recent Teams delivery health"
           },
           "recommendation": {
-            "addon": "Enable the Microsoft Teams add-on for this tenant.",
+            "featureFlag": "Enable release-v1-5-feature for this tenant.",
             "activate": "Activate the Teams integration in settings.",
             "capabilities": "Enable personal bot and activity notifications for Teams.",
             "profile": "Select a ready Microsoft profile for Teams.",
@@ -3232,9 +3232,9 @@
               "cause": "The recipient has not signed in to AlgaPSA with Microsoft, so no account mapping exists.",
               "remedy": "Have the user sign in with Microsoft (MSP portal SSO or the Teams tab) so their account is mapped."
             },
-            "addon_inactive": {
-              "cause": "The Teams add-on is expired or absent, so sends are skipped while configuration is preserved.",
-              "remedy": "Renew the Teams add-on for this tenant."
+            "feature_disabled": {
+              "cause": "The Teams release feature is disabled, so sends are skipped.",
+              "remedy": "Enable release-v1-5-feature for this tenant."
             },
             "integration_inactive": {
               "cause": "The Teams integration is not active for this tenant.",
@@ -3265,26 +3265,6 @@
               "remedy": "Check the server logs for the delivery error detail and re-run diagnostics."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams add-on",
-          "description": "The Microsoft Teams integration requires the Teams add-on for this tenant.",
-          "includedTitle": "What's included",
-          "feature": {
-            "tab": "Personal tab: open AlgaPSA inside Microsoft Teams.",
-            "bot": "Personal and group-chat bot for tickets, approvals, time, and notes.",
-            "messageExtension": "Message extension and quick actions to act on PSA records from any message.",
-            "meetings": "Teams meetings on appointment approvals with real Outlook/Teams calendar invites.",
-            "recordings": "Automatic capture of meeting recordings and transcripts onto interactions.",
-            "notifications": "Activity-feed and bot-DM notifications for assignments, replies, approvals, and SLA risk."
-          },
-          "cta": "Purchase Teams add-on",
-          "nonBilling": "Contact a billing administrator to purchase the Teams add-on for this tenant."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams add-on expired",
-          "message": "The Microsoft Teams add-on has expired. Your configuration and delivery history are preserved, but Teams notifications are being skipped until the add-on is renewed.",
-          "cta": "Renew Teams add-on"
         },
         "staleManifest": {
           "title": "Teams app package is out of date",
@@ -3619,11 +3599,12 @@
       },
       "forbidden": "You do not have permission to view telephony settings for this tenant.",
       "paywall": {
-        "title": "Microsoft Teams add-on",
-        "description": "Telephony integrations require the Microsoft Teams add-on for this tenant.",
+        "title": "Telephony",
+        "description": "Telephony integrations are not available for this tenant.",
+        "unavailable": "Telephony integrations are not available for this tenant.",
         "ceOnly": "Telephony integrations are only available in Enterprise Edition.",
         "includedTitle": "What's included",
-        "cta": "Manage add-ons",
+        "cta": "Manage integrations",
         "feature": {
           "recognition": "Caller recognition against contacts and clients on every captured call.",
           "history": "Call history on the contact and client timeline as first-class interactions.",

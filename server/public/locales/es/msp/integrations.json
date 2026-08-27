@@ -2998,7 +2998,7 @@
           "test": {
             "sent": "Mensaje de prueba de Teams enviado.",
             "failed": "Error en el mensaje de prueba de Teams.",
-            "addonInactive": "El complemento de Teams no está activo para este inquilino.",
+            "featureDisabled": "Microsoft Teams no está habilitado para este inquilino.",
             "integrationInactive": "Active la integración de Teams antes de enviar un mensaje de prueba.",
             "capabilityDisabled": "Habilite la capacidad de bot personal antes de enviar un mensaje de prueba.",
             "botNotConfigured": "Configure las credenciales del bot de Teams antes de enviar un mensaje de prueba.",
@@ -3007,7 +3007,7 @@
             "skipped": "Se omitió el mensaje de prueba de Teams."
           },
           "steps": {
-            "addonEntitlement": "Derecho al complemento de Teams",
+            "featureFlag": "Habilitación de la función Microsoft Teams",
             "integrationStatus": "Estado de la integración de Teams",
             "capabilities": "Capacidades de Teams",
             "microsoftProfile": "Disponibilidad del perfil de Microsoft",
@@ -3019,7 +3019,7 @@
             "recentDeliveryHealth": "Estado reciente de la entrega de Teams"
           },
           "recommendation": {
-            "addon": "Habilite el complemento de Microsoft Teams para este inquilino.",
+            "featureFlag": "Habilite Microsoft Teams para este inquilino.",
             "activate": "Active la integración de Teams en la configuración.",
             "capabilities": "Habilite el bot personal y las notificaciones de actividad para Teams.",
             "profile": "Seleccione un perfil de Microsoft listo para Teams.",
@@ -3209,9 +3209,9 @@
               "cause": "El destinatario no ha iniciado sesión en AlgaPSA con Microsoft, por lo que no existe ninguna asignación de cuenta.",
               "remedy": "Haga que el usuario inicie sesión con Microsoft (SSO del portal MSP o la pestaña de Teams) para que su cuenta quede asignada."
             },
-            "addon_inactive": {
-              "cause": "El complemento de Teams ha caducado o no está presente, por lo que los envíos se omiten mientras se conserva la configuración.",
-              "remedy": "Renueve el complemento de Teams para este inquilino."
+            "feature_disabled": {
+              "cause": "Microsoft Teams no está habilitado para este inquilino, por lo que los envíos se omiten mientras se conserva la configuración.",
+              "remedy": "Habilite la función de la versión 1.5 para este inquilino."
             },
             "integration_inactive": {
               "cause": "La integración de Teams no está activa para este inquilino.",
@@ -3242,26 +3242,6 @@
               "remedy": "Consulte los registros del servidor para ver el detalle del error de entrega y vuelva a ejecutar los diagnósticos."
             }
           }
-        },
-        "paywall": {
-          "title": "Complemento de Microsoft Teams",
-          "description": "La integración de Microsoft Teams requiere el complemento de Teams para este inquilino.",
-          "includedTitle": "Qué incluye",
-          "feature": {
-            "tab": "Pestaña personal: abra AlgaPSA dentro de Microsoft Teams.",
-            "bot": "Bot personal y de chat de grupo para tickets, aprobaciones, tiempos y notas.",
-            "messageExtension": "Extensión de mensajería y acciones rápidas para actuar sobre registros de PSA desde cualquier mensaje.",
-            "meetings": "Reuniones de Teams en las aprobaciones de citas con invitaciones de calendario reales de Outlook/Teams.",
-            "recordings": "Captura automática de grabaciones y transcripciones de reuniones en las interacciones.",
-            "notifications": "Notificaciones de fuente de actividad y de mensaje directo del bot para asignaciones, respuestas, aprobaciones y riesgo de SLA."
-          },
-          "cta": "Comprar complemento de Teams",
-          "nonBilling": "Póngase en contacto con un administrador de facturación para comprar el complemento de Teams para este inquilino."
-        },
-        "addonExpiredBanner": {
-          "title": "Complemento de Microsoft Teams caducado",
-          "message": "El complemento de Microsoft Teams ha caducado. Su configuración y su historial de entregas se conservan, pero las notificaciones de Teams se omiten hasta que se renueve el complemento.",
-          "cta": "Renovar complemento de Teams"
         },
         "staleManifest": {
           "title": "El paquete de la aplicación de Teams está desactualizado",
@@ -3619,11 +3599,12 @@
       },
       "forbidden": "No tiene permiso para ver la configuración de telefonía de este inquilino.",
       "paywall": {
-        "title": "Complemento de Microsoft Teams",
-        "description": "Las integraciones de telefonía requieren el complemento de Microsoft Teams para este inquilino.",
+        "title": "Telefonía",
+        "description": "Las integraciones de telefonía no están disponibles para este inquilino.",
+        "unavailable": "Las integraciones de telefonía no están disponibles para este inquilino.",
         "ceOnly": "Las integraciones de telefonía solo están disponibles en Enterprise Edition.",
         "includedTitle": "Qué incluye",
-        "cta": "Gestionar complementos",
+        "cta": "Gestionar integraciones",
         "feature": {
           "recognition": "Reconocimiento de quien llama frente a contactos y clientes en cada llamada capturada.",
           "history": "Historial de llamadas en la cronología del contacto y del cliente como interacciones de pleno derecho.",

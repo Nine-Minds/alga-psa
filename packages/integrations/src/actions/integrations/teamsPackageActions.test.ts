@@ -29,7 +29,7 @@ const hoisted = vi.hoisted(() => {
     appSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
-    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
+    featureEnabled: true,
   };
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -45,9 +45,6 @@ const hoisted = vi.hoisted(() => {
       }
       if (table === 'teams_integrations') {
         return state.teamsIntegrations;
-      }
-      if (table === 'tenant_addons') {
-        return state.tenantAddOns;
       }
       return [] as Array<Record<string, unknown>>;
     };
@@ -94,7 +91,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-const { microsoftProfiles, teamsIntegrations, tenantAddOns, tenantSecrets, appSecrets } = hoisted.state;
+const { microsoftProfiles, teamsIntegrations, tenantSecrets, appSecrets } = hoisted.state;
 const { hasPermissionMock, getTenantSecretMock, getAppSecretMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
@@ -113,6 +110,11 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getTenantSecret: hoisted.getTenantSecretMock,
     getAppSecret: hoisted.getAppSecretMock,
   }),
+}));
+
+vi.mock('@alga-psa/core/features', () => ({
+  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
+  isFeatureFlagEnabled: vi.fn(async () => hoisted.state.featureEnabled),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -181,8 +183,7 @@ describe('Teams app package actions', () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
-    tenantAddOns.length = 0;
-    tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
+    hoisted.state.featureEnabled = true;
     tenantSecrets.clear();
     appSecrets.clear();
     hasPermissionMock.mockClear();
@@ -205,6 +206,18 @@ describe('Teams app package actions', () => {
     expect(result).toEqual({
       success: false,
       error: 'Microsoft Teams integration is only available in Enterprise Edition.',
+    });
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+  });
+
+  it('returns feature-disabled package results before loading Teams state', async () => {
+    hoisted.state.featureEnabled = false;
+
+    const result = await getTeamsAppPackageStatus();
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Microsoft Teams integration is not enabled for this tenant.',
     });
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });

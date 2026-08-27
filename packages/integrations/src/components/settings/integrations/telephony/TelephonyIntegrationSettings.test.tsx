@@ -106,12 +106,12 @@ describe('TelephonyIntegrationSettings', () => {
       .toContain('Last call notification');
   });
 
-  it('T008: a tenant without the add-on gets the paywall and no provider controls', async () => {
+  it('shows an unavailable state and no provider controls when the release feature is disabled', async () => {
     mocks.getOverview.mockResolvedValue({
       success: true,
       available: false,
-      reason: 'addon_required',
-      error: 'Microsoft Teams add-on required',
+      reason: 'feature_disabled',
+      error: 'Telephony integrations are not enabled for this tenant.',
       canManage: true,
       canResolve: true,
       providers: [],
@@ -121,7 +121,7 @@ describe('TelephonyIntegrationSettings', () => {
 
     render(<TelephonyIntegrationSettings />);
 
-    expect(await screen.findByText('Microsoft Teams add-on')).toBeTruthy();
+    expect(await screen.findByText('Telephony integrations are not enabled for this tenant.')).toBeTruthy();
     expect(screen.queryByText('Teams Phone')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Enable' })).toBeNull();
   });

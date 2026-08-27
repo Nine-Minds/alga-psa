@@ -168,7 +168,6 @@ export {
   validateTeamsBotConnector,
   listTeamsDeliveries,
   listTeamsAuditEvents,
-  getTeamsAddonPurchaseAccess,
   type TeamsDiagnosticsReport,
   type TeamsTestMessageResult,
   type TeamsGraphCredentialValidationResult,

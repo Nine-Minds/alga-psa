@@ -1467,7 +1467,7 @@
         "invitesSummary": "Microsoft e-mailt agenda-uitnodigingen naar: {{recipients}}.",
         "invitesSummaryYou": "u (maker)",
         "reason": {
-          "addon_required": "De Teams-add-on is niet actief voor deze tenant.",
+          "feature_disabled": "Microsoft Teams is niet ingeschakeld voor deze tenant.",
           "ee_disabled": "De Teams-integratie vereist de Enterprise Edition.",
           "no_organizer": "Er is geen standaard vergaderingsorganisator geconfigureerd in de Teams-instellingen.",
           "not_configured": "De Teams-integratie is niet geconfigureerd."

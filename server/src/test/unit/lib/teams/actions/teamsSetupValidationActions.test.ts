@@ -20,7 +20,7 @@ const hoisted = vi.hoisted(() => {
     getTeamsAvailabilityMock: vi.fn(async () =>
       state.availability.enabled
         ? { enabled: true, reason: 'enabled' }
-        : { enabled: false, reason: 'addon_required', message: state.availability.message }
+        : { enabled: false, reason: 'feature_disabled', message: state.availability.message }
     ),
     resolveProviderConfigMock: vi.fn(async () => state.resolution),
   };
@@ -136,17 +136,17 @@ describe('validateTeamsGraphCredentials (T091)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('short-circuits with addon_inactive when the Teams add-on is unavailable', async () => {
+  it('short-circuits with feature_disabled when the release feature is unavailable', async () => {
     hoisted.state.availability = {
       enabled: false,
-      reason: 'addon_required',
-      message: 'Microsoft Teams integration requires the Teams add-on.',
+      reason: 'feature_disabled',
+      message: 'Microsoft Teams integration is not enabled for this tenant.',
     };
 
     await expect(validateTeamsGraphCredentialsImpl(USER, { tenant: TENANT })).resolves.toEqual({
       status: 'failed',
-      reason: 'addon_inactive',
-      message: 'Microsoft Teams integration requires the Teams add-on.',
+      reason: 'feature_disabled',
+      message: 'Microsoft Teams integration is not enabled for this tenant.',
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -311,16 +311,16 @@ describe('probeTeamsGraphPermissions (T092)', () => {
     expect(result).toMatchObject({ status: 'failed', reason: 'token_failure' });
   });
 
-  it('short-circuits with addon_inactive when the Teams add-on is unavailable', async () => {
+  it('short-circuits with feature_disabled when the release feature is unavailable', async () => {
     hoisted.state.availability = {
       enabled: false,
-      reason: 'addon_required',
-      message: 'Microsoft Teams integration requires the Teams add-on.',
+      reason: 'feature_disabled',
+      message: 'Microsoft Teams integration is not enabled for this tenant.',
     };
 
     await expect(probeTeamsGraphPermissionsImpl(USER, { tenant: TENANT })).resolves.toMatchObject({
       status: 'failed',
-      reason: 'addon_inactive',
+      reason: 'feature_disabled',
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -449,17 +449,17 @@ describe('validateTeamsBotConnector (T093)', () => {
     expect(result).toMatchObject({ status: 'failed', reason: 'network_error' });
   });
 
-  it('short-circuits with addon_inactive before touching bot credentials', async () => {
+  it('short-circuits with feature_disabled before touching bot credentials', async () => {
     stubBotEnv();
     hoisted.state.availability = {
       enabled: false,
-      reason: 'addon_required',
-      message: 'Microsoft Teams integration requires the Teams add-on.',
+      reason: 'feature_disabled',
+      message: 'Microsoft Teams integration is not enabled for this tenant.',
     };
 
     await expect(validateTeamsBotConnectorImpl(USER, { tenant: TENANT })).resolves.toMatchObject({
       status: 'failed',
-      reason: 'addon_inactive',
+      reason: 'feature_disabled',
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });

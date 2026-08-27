@@ -1,10 +1,9 @@
-import { createTenantKnex } from '@alga-psa/db';
-import { tenantHasTeamsAddOn } from './teamsAddOnGate';
+import { tenantHasTeamsFeatureAccess } from './teamsFeatureGate';
 
 export type TeamsAvailabilityDisabledReason =
   | 'ce_unavailable'
   | 'tenant_not_configured'
-  | 'addon_required';
+  | 'feature_disabled';
 
 export type TeamsAvailability =
   | {
@@ -34,7 +33,7 @@ export interface GetTeamsAvailabilityInput {
 export const TEAMS_AVAILABILITY_MESSAGES: Record<TeamsAvailabilityDisabledReason, string> = {
   ce_unavailable: 'Microsoft Teams integration is only available in Enterprise Edition.',
   tenant_not_configured: 'Microsoft Teams integration requires tenant context.',
-  addon_required: 'Microsoft Teams integration requires the Teams add-on.',
+  feature_disabled: 'Microsoft Teams integration is not enabled for this tenant.',
 };
 
 export function isTeamsEnterpriseEdition(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -81,9 +80,8 @@ export async function getTeamsAvailability(input: GetTeamsAvailabilityInput = {}
   }
 
   if (tenantId) {
-    const { knex } = await createTenantKnex();
-    if (!(await tenantHasTeamsAddOn(knex, tenantId))) {
-      return disabledAvailability('addon_required');
+    if (!(await tenantHasTeamsFeatureAccess(tenantId, input.userId))) {
+      return disabledAvailability('feature_disabled');
     }
   }
 

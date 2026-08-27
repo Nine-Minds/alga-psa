@@ -1467,7 +1467,7 @@
         "invitesSummary": "Microsoft will email calendar invites to: {{recipients}}.",
         "invitesSummaryYou": "you (creator)",
         "reason": {
-          "addon_required": "The Teams add-on is not active for this tenant.",
+          "feature_disabled": "Microsoft Teams integration is not enabled for this tenant.",
           "ee_disabled": "Teams integration requires Enterprise Edition.",
           "no_organizer": "No default meeting organizer is configured in Teams settings.",
           "not_configured": "The Teams integration has not been configured."

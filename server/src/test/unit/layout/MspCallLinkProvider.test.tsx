@@ -11,11 +11,11 @@ import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
 const hoisted = vi.hoisted(() => ({
   getState: vi.fn(),
   createIntent: vi.fn(),
-  hasAddOn: vi.fn(() => true),
+  featureEnabled: true,
 }));
 
-vi.mock('@/context/TierContext', () => ({
-  useTier: () => ({ hasAddOn: hoisted.hasAddOn }),
+vi.mock('@/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: hoisted.featureEnabled, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/integrations/actions/integrations/telephonyActions', () => ({
@@ -37,11 +37,10 @@ describe('MspCallLinkProvider', () => {
   beforeEach(() => {
     hoisted.getState.mockReset();
     hoisted.createIntent.mockReset();
-    hoisted.hasAddOn.mockReset();
-    hoisted.hasAddOn.mockReturnValue(true);
+    hoisted.featureEnabled = true;
   });
 
-  it('uses active integration/provider state instead of the add-on alone', async () => {
+  it('uses active integration/provider state after the release gate passes', async () => {
     hoisted.getState.mockResolvedValue({
       success: true,
       teamsIntegrationActive: true,
@@ -59,8 +58,8 @@ describe('MspCallLinkProvider', () => {
     expect(hoisted.getState).toHaveBeenCalledTimes(1);
   });
 
-  it('does not read integration state when the tenant lacks the Teams add-on', async () => {
-    hoisted.hasAddOn.mockReturnValue(false);
+  it('does not read integration state when the release feature is disabled', async () => {
+    hoisted.featureEnabled = false;
 
     render(
       <MspCallLinkProvider>

@@ -1467,7 +1467,7 @@
         "invitesSummary": "Microsoft enviará invitaciones de calendario por correo electrónico a: {{recipients}}.",
         "invitesSummaryYou": "usted (creador)",
         "reason": {
-          "addon_required": "El complemento de Teams no está activo para este inquilino.",
+          "feature_disabled": "Microsoft Teams no está habilitado para este inquilino.",
           "ee_disabled": "La integración con Teams requiere Enterprise Edition.",
           "no_organizer": "No hay ningún organizador de reunión predeterminado configurado en la configuración de Teams.",
           "not_configured": "La integración con Teams no se ha configurado."

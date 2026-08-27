@@ -8,10 +8,10 @@ export {
 } from './lib/phoneNumbers';
 export { auditContactPhoneNormalization, matchCallParty } from './lib/callMatching';
 export {
-  assertTelephonyEntitlement,
-  TelephonyEntitlementInactiveError,
-  tenantHasTelephonyEntitlement,
-} from './lib/telephonyAddOnGate';
+  assertTelephonyFeatureAccess,
+  TelephonyFeatureDisabledError,
+  tenantHasTelephonyFeatureAccess,
+} from './lib/telephonyFeatureGate';
 export {
   buildCallInteractionNotes,
   buildCallInteractionTitle,

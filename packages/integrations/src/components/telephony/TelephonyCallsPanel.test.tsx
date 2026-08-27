@@ -206,8 +206,8 @@ describe('TelephonyCallsPanel', () => {
   it('a tenant without telephony renders nothing, never an error', async () => {
     mocks.getOverview.mockResolvedValue(operatorOverview({
       available: false,
-      reason: 'addon_required',
-      error: 'Microsoft Teams add-on required',
+      reason: 'feature_disabled',
+      error: 'Telephony integrations are not enabled for this tenant.',
       recentCalls: [],
       unresolvedCalls: [],
     }));

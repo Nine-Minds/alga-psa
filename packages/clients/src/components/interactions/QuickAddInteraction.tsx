@@ -57,7 +57,7 @@ const isReturnedActionError = (value: unknown): value is ActionMessageError | Ac
 // interactions.quickAdd.teams.reason.* stays greppable despite the dynamic key.
 const TEAMS_UNAVAILABLE_REASON_COPY: Record<string, string> = {
   ee_disabled: 'Teams integration requires Enterprise Edition.',
-  addon_required: 'The Teams add-on is not active for this tenant.',
+  feature_disabled: 'Microsoft Teams integration is not enabled for this tenant.',
   not_configured: 'The Teams integration has not been configured.',
   no_organizer: 'No default meeting organizer is configured in Teams settings.',
 };

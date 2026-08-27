@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const state = {
-    addonActive: true,
+    featureEnabled: true,
     integration: {
       selected_profile_id: 'profile-1',
       install_status: 'active',
@@ -54,9 +54,6 @@ const hoisted = vi.hoisted(() => {
         return this;
       },
       async first() {
-        if (table === 'tenant_addons') {
-          return state.addonActive ? { addon_key: 'teams' } : undefined;
-        }
         if (table === 'teams_integrations') {
           return state.integration ?? undefined;
         }
@@ -100,6 +97,11 @@ vi.mock('@alga-psa/core/logger', () => ({
   default: {
     warn: hoisted.warnMock,
   },
+}));
+
+vi.mock('@alga-psa/core/features', () => ({
+  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
+  isFeatureFlagEnabled: vi.fn(async () => hoisted.state.featureEnabled),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -170,7 +172,7 @@ function graphResponse(status: number, requestId = 'request-1') {
 
 describe('deliverTeamsNotificationImpl per-category channel routing (F044/F045)', () => {
   beforeEach(() => {
-    hoisted.state.addonActive = true;
+    hoisted.state.featureEnabled = true;
     hoisted.state.integration = {
       selected_profile_id: 'profile-1',
       install_status: 'active',

@@ -1,13 +1,12 @@
 'use client';
 
 import React from 'react';
-import { ADD_ONS } from '@alga-psa/types';
 import { CallLinkProvider } from '@alga-psa/ui/components/CallLink';
 import {
   createTelephonyCallIntent,
   getTelephonyCallLinkState,
 } from '@alga-psa/integrations/actions/integrations/telephonyActions';
-import { useTier } from '@/context/TierContext';
+import { useFeatureFlag } from '@/hooks/useFeatureFlag';
 
 /**
  * Supplies click-to-call affordances with the tenant's live integration state.
@@ -15,8 +14,9 @@ import { useTier } from '@/context/TierContext';
  * additionally require the Teams Phone provider, while `tel:` always remains.
  */
 export function MspCallLinkProvider({ children }: { children: React.ReactNode }) {
-  const { hasAddOn } = useTier();
-  const hasTeamsAddOn = hasAddOn(ADD_ONS.TEAMS);
+  const { enabled: teamsFeatureEnabled } = useFeatureFlag('release-v1-5-feature', {
+    defaultValue: false,
+  });
   const [state, setState] = React.useState({
     teamsIntegrationActive: false,
     teamsPhoneConnected: false,
@@ -24,7 +24,7 @@ export function MspCallLinkProvider({ children }: { children: React.ReactNode })
 
   React.useEffect(() => {
     let cancelled = false;
-    if (!hasTeamsAddOn) {
+    if (!teamsFeatureEnabled) {
       setState({ teamsIntegrationActive: false, teamsPhoneConnected: false });
       return () => { cancelled = true; };
     }
@@ -45,7 +45,7 @@ export function MspCallLinkProvider({ children }: { children: React.ReactNode })
       });
 
     return () => { cancelled = true; };
-  }, [hasTeamsAddOn]);
+  }, [teamsFeatureEnabled]);
 
   const recordCallIntent = React.useCallback(async (input: { ticketId: string; phoneNumber: string }) => {
     // A failed intent must never prevent the Teams deep link from opening. The

@@ -13,7 +13,7 @@ import {
   setTelephonyProviderEnabled,
 } from '../../../../actions/integrations/telephonyActions';
 import type { TelephonyOverview } from '../../../../actions/integrations/telephonyActions';
-import { TelephonyPaywallCard } from './TelephonyPaywallCard';
+import { TelephonyUnavailableCard } from './TelephonyUnavailableCard';
 
 const PROVIDER_LABELS: Record<string, string> = {
   'teams-phone': 'Teams Phone',
@@ -97,7 +97,7 @@ export function TelephonyIntegrationSettings() {
   }
 
   if (overview && !overview.available) {
-    return <TelephonyPaywallCard reason={overview.reason} message={overview.error} />;
+    return <TelephonyUnavailableCard reason={overview.reason} message={overview.error} />;
   }
 
   return (

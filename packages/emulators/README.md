@@ -64,7 +64,7 @@ behaves exactly as it does in production. Any other value — unset, empty,
 `NODE_ENV` cannot redirect anything by accident, and `NODE_ENV=production` is a
 second lock the flag cannot unlock. The vars it gates are
 `TEAMS_BOT_OPENID_CONFIG_URL` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST`, plus — for
-the Teams add-on specifically — `MICROSOFT_LOGIN_BASE_URL` and
+the Teams integration specifically — `MICROSOFT_LOGIN_BASE_URL` and
 `MICROSOFT_GRAPH_BASE_URL`, which is where the bot secret, the setup-probe
 credentials, the Graph client secret, and activity-notification tokens are
 sent. (The email module honors those two Microsoft vars unconditionally; that
@@ -146,10 +146,9 @@ algasim seed msgraph client -p '{
 algasim seed msgraph client -p '{"clientId":"11111111-2222-4333-8444-999999999999","clientSecret":"algasim-bot-secret"}'
 ```
 
-**3. Set the tenant up through the product.** The Teams add-on has to be
-granted (`POST /api/v1/tenant-management/tenants/<tenant>/addons` with
-`{"action":"grant","addonKey":"teams"}`, from the master billing tenant), then
-in **Settings → Integrations**:
+**3. Set the tenant up through the product.** Enable
+`release-v1-5-feature` for the tenant in PostHog (or disable feature flags in a
+local-only environment), then open **Settings → Integrations**:
 
 - *Providers → Microsoft → Add profile*: client id, tenant id
   (`11111111-2222-4333-8444-555555555555`) and secret from step 2.
@@ -206,7 +205,7 @@ teams-user id>`, `user_id=<PSA user>`); the bot then runs commands as that user.
 
 ### Teams meetings and recordings
 
-The msgraph emulator also serves the meetings surface the Teams add-on uses:
+The msgraph emulator also serves the meetings surface the Teams integration uses:
 calendar events (`POST/PATCH/DELETE /users/{upn}/events`, an `isOnlineMeeting`
 event auto-creates an online meeting with a join URL), `onlineMeetings`
 (creation probe, join-URL `$filter` resolution), recordings/transcripts lists
@@ -272,7 +271,7 @@ The whole loop, end to end:
 #   INSERT INTO pgboss.job (name, data) VALUES
 #     ('renew-telephony-call-subscriptions', '{"tenantId":"<tenant>"}');
 # (`telephony_providers` must have an active teams-phone row, and the tenant
-#  needs the Microsoft Teams add-on — the ingest path is deny-by-default.)
+#  needs release-v1-5-feature enabled — the ingest path is deny-by-default.)
 
 algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15551234567","durationSeconds":180}'
 algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15557654321","answered":false}'

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const state = {
-    addonActive: true,
+    featureEnabled: true,
     integration: {
       selected_profile_id: 'profile-1',
       install_status: 'active',
@@ -41,9 +41,6 @@ const hoisted = vi.hoisted(() => {
         return this;
       },
       async first() {
-        if (table === 'tenant_addons') {
-          return state.addonActive ? { addon_key: 'teams' } : undefined;
-        }
         if (table === 'teams_integrations') {
           return state.integration ?? undefined;
         }
@@ -85,6 +82,11 @@ vi.mock('@alga-psa/core/logger', () => ({
   default: {
     warn: hoisted.warnMock,
   },
+}));
+
+vi.mock('@alga-psa/core/features', () => ({
+  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
+  isFeatureFlagEnabled: vi.fn(async () => hoisted.state.featureEnabled),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -147,7 +149,7 @@ function graphResponse(status: number, body = 'graph body', requestId = 'request
 
 describe('deliverTeamsNotificationImpl observability rows', () => {
   beforeEach(() => {
-    hoisted.state.addonActive = true;
+    hoisted.state.featureEnabled = true;
     hoisted.state.integration = {
       selected_profile_id: 'profile-1',
       install_status: 'active',
@@ -173,7 +175,7 @@ describe('deliverTeamsNotificationImpl observability rows', () => {
   });
 
   it.each([
-    ['addon_inactive', () => { hoisted.state.addonActive = false; }, 'addon_inactive'],
+    ['feature_disabled', () => { hoisted.state.featureEnabled = false; }, 'feature_disabled'],
     ['integration_inactive', () => { hoisted.state.integration = { ...hoisted.state.integration, install_status: 'error' }; }, 'integration_inactive'],
     ['user_not_mapped', () => { hoisted.state.accountLinks = []; }, 'user_not_mapped'],
     ['package_misconfigured', () => { hoisted.state.integration = { ...hoisted.state.integration, package_metadata: {} }; }, 'package_misconfigured'],

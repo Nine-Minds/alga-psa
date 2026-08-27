@@ -20,7 +20,6 @@ const probeTeamsGraphPermissionsMock = vi.hoisted(() => vi.fn());
 const validateTeamsBotConnectorMock = vi.hoisted(() => vi.fn());
 const listTeamsDeliveriesMock = vi.hoisted(() => vi.fn());
 const listTeamsAuditEventsMock = vi.hoisted(() => vi.fn());
-const getTeamsAddonPurchaseAccessMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../actions', () => ({
   getMicrosoftIntegrationStatus: (...a: unknown[]) => getMicrosoftIntegrationStatusMock(...a),
@@ -34,7 +33,6 @@ vi.mock('../../../actions', () => ({
   validateTeamsBotConnector: (...a: unknown[]) => validateTeamsBotConnectorMock(...a),
   listTeamsDeliveries: (...a: unknown[]) => listTeamsDeliveriesMock(...a),
   listTeamsAuditEvents: (...a: unknown[]) => listTeamsAuditEventsMock(...a),
-  getTeamsAddonPurchaseAccess: (...a: unknown[]) => getTeamsAddonPurchaseAccessMock(...a),
 }));
 
 import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
@@ -79,7 +77,6 @@ function integration(overrides: Record<string, unknown> = {}) {
     downloadRecordings: false,
     exposeRecordingsInPortal: false,
     botConnectorConfigured: false,
-    addOnState: 'active',
     ...overrides,
   };
 }
@@ -106,7 +103,6 @@ describe('TeamsIntegrationSettings guided setup wizard (F053)', () => {
     validateTeamsBotConnectorMock.mockResolvedValue({ status: 'ok', appId: 'bot-app' });
     listTeamsDeliveriesMock.mockResolvedValue({ rows: [], nextCursor: null });
     listTeamsAuditEventsMock.mockResolvedValue({ rows: [], nextCursor: null });
-    getTeamsAddonPurchaseAccessMock.mockResolvedValue({ canPurchase: false });
   });
 
   afterEach(() => {
