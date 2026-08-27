@@ -2182,8 +2182,8 @@
     },
     "runBar": {
       "compareToggle": "Pokaż zmiany względem bieżącego kontraktu",
-      "horizonOption": "{{count}} okresów rozliczeniowych",
-      "lastRun": "Symulacja aktualna · {{count}} okresów rozliczeniowych",
+      "horizonOption": "{{count}} okresów rozliczeniowych klienta",
+      "lastRun": "Symulacja aktualna · {{count}} okresów rozliczeniowych klienta",
       "neverRun": "Jeszcze nie symulowano",
       "simulate": "Symuluj",
       "simulating": "Symulowanie…",

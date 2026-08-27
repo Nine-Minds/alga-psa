@@ -2178,8 +2178,8 @@
     },
     "runBar": {
       "compareToggle": "Änderungen gegenüber aktuellem Vertrag anzeigen",
-      "horizonOption": "{{count}} Abrechnungszeiträume",
-      "lastRun": "Simulation aktuell · {{count}} Abrechnungszeiträume",
+      "horizonOption": "{{count}} Kundenabrechnungszeiträume",
+      "lastRun": "Simulation aktuell · {{count}} Kundenabrechnungszeiträume",
       "neverRun": "Noch nicht simuliert",
       "simulate": "Simulieren",
       "simulating": "Simulation läuft…",

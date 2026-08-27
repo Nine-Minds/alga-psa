@@ -2178,8 +2178,8 @@
     },
     "runBar": {
       "compareToggle": "Wijzigingen ten opzichte van het huidige contract tonen",
-      "horizonOption": "{{count}} factureringsperioden",
-      "lastRun": "Simulatie actueel · {{count}} factureringsperioden",
+      "horizonOption": "{{count}} factureringsperioden van de klant",
+      "lastRun": "Simulatie actueel · {{count}} factureringsperioden van de klant",
       "neverRun": "Nog niet gesimuleerd",
       "simulate": "Simuleren",
       "simulating": "Simuleren…",

@@ -2178,8 +2178,8 @@
     },
     "runBar": {
       "compareToggle": "Show changes from current contract",
-      "horizonOption": "{{count}} billing periods",
-      "lastRun": "Simulation current · {{count}} billing periods",
+      "horizonOption": "{{count}} client billing periods",
+      "lastRun": "Simulation current · {{count}} client billing periods",
       "neverRun": "Not simulated yet",
       "simulate": "Simulate",
       "simulating": "Simulating…",

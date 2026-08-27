@@ -2178,8 +2178,8 @@
     },
     "runBar": {
       "compareToggle": "Mostrar cambios respecto al contrato actual",
-      "horizonOption": "{{count}} períodos de facturación",
-      "lastRun": "Simulación al día · {{count}} períodos de facturación",
+      "horizonOption": "{{count}} períodos de facturación del cliente",
+      "lastRun": "Simulación al día · {{count}} períodos de facturación del cliente",
       "neverRun": "Aún no simulado",
       "simulate": "Simular",
       "simulating": "Simulando…",
