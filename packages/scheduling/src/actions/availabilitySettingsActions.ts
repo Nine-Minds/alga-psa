@@ -4,15 +4,18 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { isEnterprise } from '@alga-psa/core/features';
-import { ADD_ONS } from '@alga-psa/types';
+import { ADD_ONS, IUser } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import {
   availabilitySettingSchema,
   availabilityExceptionSchema,
+  availabilityUserHoursWeekSchema,
   AvailabilitySettingInput,
   AvailabilityExceptionInput,
-  AvailabilitySettingFilters
+  AvailabilitySettingFilters,
+  AvailabilityUserHoursWeekInput
 } from '../schemas/appointmentSchemas';
+import { normalizeAvailabilityTime } from '../lib/availabilityUserHours';
 
 export interface IAvailabilitySetting {
   availability_setting_id: string;
@@ -52,6 +55,33 @@ export interface AvailabilitySettingsResult<T> {
   error?: string;
 }
 
+export interface AvailabilityAccessUser {
+  user_id: string;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  email: string;
+  is_inactive: boolean;
+  tenant: string;
+  user_type: 'internal';
+  reports_to?: string | null;
+}
+
+export interface AvailabilityAccessTeam {
+  team_id: string;
+  team_name: string;
+  manager_id: string | null;
+  member_ids: string[];
+}
+
+export interface AvailabilitySettingsAccess {
+  canReadSystemSettings: boolean;
+  canManageSystemSettings: boolean;
+  canManageUserHours: boolean;
+  users: AvailabilityAccessUser[];
+  teams: AvailabilityAccessTeam[];
+}
+
 export interface TeamsMeetingsTabState {
   visible: boolean;
   organizerUpn?: string | null;
@@ -83,6 +113,99 @@ function availabilityActionErrorMessage(error: unknown, fallback: string): strin
 
   return fallback;
 }
+
+async function getScopedUserIds(db: Knex | Knex.Transaction, tenant: string, actorUserId: string): Promise<Set<string>> {
+  const scopedDb = tenantDb(db, tenant);
+  const managedTeams = await scopedDb.table('teams')
+    .where({ manager_id: actorUserId })
+    .select('team_id');
+  const teamIds = managedTeams.map((team) => team.team_id);
+
+  const [members, directReports] = await Promise.all([
+    teamIds.length > 0
+      ? scopedDb.table('team_members').whereIn('team_id', teamIds).select('user_id')
+      : Promise.resolve([]),
+    scopedDb.table('users').where({ reports_to: actorUserId, user_type: 'internal', is_inactive: false }).select('user_id'),
+  ]);
+
+  return new Set([...members, ...directReports].map((row) => row.user_id));
+}
+
+async function canAccessUserHours(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  action: 'read' | 'update' | 'delete',
+  targetUserId?: string,
+): Promise<{ allowed: boolean; hasSystemAccess: boolean; scopedUserIds: Set<string> }> {
+  const hasSystemAccess = await hasPermission(user, 'system_settings', action, db)
+    || (action === 'read' && await hasPermission(user, 'system_settings', 'update', db));
+  if (hasSystemAccess) {
+    return { allowed: true, hasSystemAccess: true, scopedUserIds: new Set() };
+  }
+
+  const scopedUserIds = await getScopedUserIds(db, tenant, user.user_id);
+  return {
+    allowed: targetUserId ? scopedUserIds.has(targetUserId) : scopedUserIds.size > 0,
+    hasSystemAccess: false,
+    scopedUserIds,
+  };
+}
+
+export const getAvailabilitySettingsAccess = withAuth(async (
+  user,
+  { tenant }
+): Promise<AvailabilitySettingsResult<AvailabilitySettingsAccess>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const [canReadSystemSettings, canManageSystemSettings, scopedUserIds] = await Promise.all([
+      hasPermission(user, 'system_settings', 'read', db),
+      hasPermission(user, 'system_settings', 'update', db),
+      getScopedUserIds(db, tenant, user.user_id),
+    ]);
+    const scopedDb = tenantDb(db, tenant);
+    const hasTenantWideAccess = canReadSystemSettings || canManageSystemSettings;
+
+    const usersQuery = scopedDb.table('users')
+      .where({ user_type: 'internal', is_inactive: false })
+      .select('user_id', 'username', 'first_name', 'last_name', 'email', 'is_inactive', 'tenant', 'user_type', 'reports_to')
+      .orderBy('first_name')
+      .orderBy('last_name');
+    if (!hasTenantWideAccess) {
+      usersQuery.whereIn('user_id', Array.from(scopedUserIds));
+    }
+
+    const teamsQuery = scopedDb.table('teams')
+      .select('team_id', 'team_name', 'manager_id')
+      .orderBy('team_name');
+    if (!hasTenantWideAccess) {
+      teamsQuery.where({ manager_id: user.user_id });
+    }
+
+    const [users, teams] = await Promise.all([usersQuery, teamsQuery]);
+    const teamIds = teams.map((team) => team.team_id);
+    const memberships = teamIds.length > 0
+      ? await scopedDb.table('team_members').whereIn('team_id', teamIds).select('team_id', 'user_id')
+      : [];
+
+    return {
+      success: true,
+      data: {
+        canReadSystemSettings,
+        canManageSystemSettings,
+        canManageUserHours: canManageSystemSettings || scopedUserIds.size > 0,
+        users: users as AvailabilityAccessUser[],
+        teams: teams.map((team) => ({
+          ...team,
+          member_ids: memberships.filter((member) => member.team_id === team.team_id).map((member) => member.user_id),
+        })),
+      },
+    };
+  } catch (error) {
+    console.error('Error loading availability access:', error);
+    return { success: false, error: 'Failed to load availability access' };
+  }
+});
 
 async function tenantHasTeamsAddOn(db: any, tenant: string): Promise<boolean> {
   const scopedDb = tenantDb(db, tenant);
@@ -229,6 +352,78 @@ export const verifyMeetingOrganizer = withAuth(async (
 });
 
 /**
+ * Replace one technician's complete booking-availability week atomically.
+ */
+export const saveUserAvailabilityWeek = withAuth(async (
+  user,
+  { tenant },
+  data: AvailabilityUserHoursWeekInput
+): Promise<AvailabilitySettingsResult<IAvailabilitySetting[]>> => {
+  try {
+    const validatedData = availabilityUserHoursWeekSchema.parse(data);
+    const { knex: db } = await createTenantKnex();
+    const access = await canAccessUserHours(db, tenant, user, 'update', validatedData.user_id);
+    if (!access.allowed) {
+      return { success: false, error: 'Insufficient permissions to manage availability for this user' };
+    }
+
+    const saved = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
+      const targetUser = await scopedDb.table('users')
+        .where({ user_id: validatedData.user_id, user_type: 'internal', is_inactive: false })
+        .forUpdate()
+        .first('user_id');
+      if (!targetUser) {
+        throw new Error('Availability user not found');
+      }
+
+      await scopedDb.table('availability_settings')
+        .where({ setting_type: 'user_hours', user_id: validatedData.user_id })
+        .del();
+
+      const now = new Date();
+      await scopedDb.table('availability_settings').insert(
+        validatedData.days.map((day) => ({
+          availability_setting_id: uuidv4(),
+          tenant,
+          setting_type: 'user_hours',
+          user_id: validatedData.user_id,
+          service_id: null,
+          day_of_week: day.day_of_week,
+          start_time: day.start_time,
+          end_time: day.end_time,
+          is_available: day.is_available,
+          buffer_before_minutes: validatedData.buffer_before_minutes,
+          buffer_after_minutes: validatedData.buffer_after_minutes,
+          config_json: validatedData.config_json,
+          created_at: now,
+          updated_at: now,
+        }))
+      );
+
+      const rows = await scopedDb.table('availability_settings')
+        .where({ setting_type: 'user_hours', user_id: validatedData.user_id })
+        .orderBy('day_of_week');
+      if (rows.length !== 7) {
+        throw new Error('Availability save could not be confirmed');
+      }
+
+      return rows.map((row) => ({
+        ...row,
+        start_time: normalizeAvailabilityTime(row.start_time, '09:00'),
+        end_time: normalizeAvailabilityTime(row.end_time, '17:00'),
+      })) as IAvailabilitySetting[];
+    });
+
+    return { success: true, data: saved };
+  } catch (error) {
+    console.error('Error saving user availability week:', error);
+    const message = availabilityActionErrorMessage(error, 'Failed to save user hours');
+    return { success: false, error: message };
+  }
+});
+
+/**
  * Create or update an availability setting
  * If a matching setting exists (same type, user_id, service_id, day_of_week), it will be updated
  */
@@ -243,9 +438,10 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
 
     const { knex: db } = await createTenantKnex();
 
-    // Check permissions
-    const canManage = await hasPermission(user, 'system_settings', 'update', db);
-    if (!canManage) {
+    const access = validatedData.setting_type === 'user_hours' && validatedData.user_id
+      ? await canAccessUserHours(db, tenant, user, 'update', validatedData.user_id)
+      : { allowed: await hasPermission(user, 'system_settings', 'update', db) };
+    if (!access.allowed) {
       return { success: false, error: 'Insufficient permissions to manage availability settings' };
     }
 
@@ -377,16 +573,21 @@ export const getAvailabilitySettings = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
 
-    // Check permissions
-    const canRead = await hasPermission(user, 'system_settings', 'read', db);
-    if (!canRead) {
+    const access = await canAccessUserHours(db, tenant, user, 'read', filters?.user_id ?? undefined);
+    if (!access.hasSystemAccess && filters?.setting_type && filters.setting_type !== 'user_hours') {
       return { success: false, error: 'Insufficient permissions to view availability settings' };
     }
+    if (!access.allowed) return { success: false, error: 'Insufficient permissions to view availability settings' };
 
     const settings = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       let query = scopedDb.table('availability_settings')
         .orderBy('created_at', 'desc');
+
+      if (!access.hasSystemAccess) {
+        query = query.where({ setting_type: 'user_hours' })
+          .whereIn('user_id', Array.from(access.scopedUserIds));
+      }
 
       if (filters) {
         if (filters.setting_type) {
@@ -425,12 +626,6 @@ export const deleteAvailabilitySetting = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
 
-    // Check permissions
-    const canDelete = await hasPermission(user, 'system_settings', 'delete', db);
-    if (!canDelete) {
-      return { success: false, error: 'Insufficient permissions to delete availability settings' };
-    }
-
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       const setting = await scopedDb.table('availability_settings')
@@ -442,6 +637,13 @@ export const deleteAvailabilitySetting = withAuth(async (
 
       if (!setting) {
         throw new Error('Availability setting not found');
+      }
+
+      const access = setting.setting_type === 'user_hours' && setting.user_id
+        ? await canAccessUserHours(trx, tenant, user, 'delete', setting.user_id)
+        : { allowed: await hasPermission(user, 'system_settings', 'delete', trx) };
+      if (!access.allowed) {
+        throw new Error('Insufficient permissions to delete availability settings');
       }
 
       await scopedDb.table('availability_settings')

@@ -279,8 +279,9 @@
         "placeholder": "Select approvers"
       },
       "teamSelect": {
-        "label": "Select Team",
-        "placeholder": "Select a team"
+        "label": "Filter technicians by team",
+        "placeholder": "All authorized technicians",
+        "help": "This filters the technician list only; booking availability belongs to the technician across every team."
       }
     },
     "feedback": {
@@ -319,16 +320,16 @@
     "userHours": {
       "roleManager": {
         "label": "Team Manager:",
-        "description": "You can configure availability settings for members of your team(s). The \"Configured Users\" table below shows all users with availability settings across the system."
+        "description": "You can configure booking availability only for authorized team members and direct reports. The table below follows the current team filter."
       },
       "roleAdmin": {
         "label": "Administrator:",
-        "description": "You can configure availability settings for any user in the system. The \"Configured Users\" table below shows all users with availability settings."
+        "description": "You can configure user-wide booking availability for any authorized technician. The table below follows the current team filter."
       },
       "userSelect": {
-        "label": "Select User to Configure",
+        "label": "Technician",
         "placeholderSelectTeamFirst": "Select a team first",
-        "placeholder": "Select a user to configure"
+        "placeholder": "Select a technician to configure"
       },
       "appointmentSettings": {
         "title": "Appointment Settings",
@@ -361,8 +362,8 @@
       },
       "configuredUsers": {
         "title": "Configured Users",
-        "description": "Users with availability settings configured",
-        "empty": "No users configured yet",
+        "description": "Technicians with saved booking availability in the current filter",
+        "empty": "No technicians in this filter have saved booking availability yet",
         "columns": {
           "userName": "User Name",
           "status": "Status"
@@ -372,7 +373,9 @@
         }
       },
       "actions": {
-        "save": "Save User Hours"
+        "save": "Save User Hours",
+        "retry": "Retry",
+        "saving": "Saving..."
       },
       "feedback": {
         "selectUserError": "Please select a user",
@@ -384,7 +387,19 @@
       "deleteDialog": {
         "title": "Delete User Availability",
         "message": "Are you sure you want to delete availability settings for {{userName}}? This will remove all their configured working hours. This action cannot be undone."
-      }
+      },
+      "scope": {
+        "team": "Team filter:",
+        "allTeams": "All authorized technicians",
+        "technician": "Technician:",
+        "schedule": "Schedule:",
+        "loading": "Checking saved booking hours",
+        "saved": "Saved booking hours",
+        "partial": "Saved booking hours with unsaved defaults for missing days",
+        "draft": "Unsaved Monday–Friday 9:00 AM–5:00 PM template",
+        "explanation": "These booking hours are user-wide across teams. They do not inherit from the separate work schedule."
+      },
+      "loading": "Loading technician hours..."
     },
     "serviceRules": {
       "serviceSelect": {

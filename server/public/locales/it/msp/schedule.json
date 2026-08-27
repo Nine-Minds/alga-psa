@@ -279,8 +279,9 @@
         "placeholder": "Seleziona gli approvatori"
       },
       "teamSelect": {
-        "label": "Seleziona Squadra",
-        "placeholder": "Seleziona una squadra"
+        "label": "Filtra tecnici per team",
+        "placeholder": "Tutti i tecnici autorizzati",
+        "help": "Questo filtro riguarda solo l’elenco dei tecnici; la disponibilità di prenotazione appartiene al tecnico in tutti i team."
       }
     },
     "feedback": {
@@ -319,16 +320,16 @@
     "userHours": {
       "roleManager": {
         "label": "Direttore della squadra:",
-        "description": "Puoi configurare le impostazioni di disponibilità per i membri dei tuoi team. La tabella \"Utenti configurati\" riportata di seguito mostra tutti gli utenti con impostazioni di disponibilità nel sistema."
+        "description": "Puoi configurare la disponibilità di prenotazione solo per i membri autorizzati del team e i collaboratori diretti. La tabella seguente segue il filtro del team corrente."
       },
       "roleAdmin": {
         "label": "Amministratore:",
-        "description": "È possibile configurare le impostazioni di disponibilità per qualsiasi utente nel sistema. La tabella \"Utenti configurati\" di seguito mostra tutti gli utenti con impostazioni di disponibilità."
+        "description": "Puoi configurare la disponibilità di prenotazione generale per qualsiasi tecnico autorizzato. La tabella seguente segue il filtro del team corrente."
       },
       "userSelect": {
-        "label": "Seleziona Utente da configurare",
+        "label": "Tecnico",
         "placeholderSelectTeamFirst": "Seleziona prima una squadra",
-        "placeholder": "Seleziona un utente da configurare"
+        "placeholder": "Seleziona un tecnico da configurare"
       },
       "appointmentSettings": {
         "title": "Impostazioni dell'appuntamento",
@@ -361,8 +362,8 @@
       },
       "configuredUsers": {
         "title": "Utenti configurati",
-        "description": "Utenti con impostazioni di disponibilità configurate",
-        "empty": "Nessun utente ancora configurato",
+        "description": "Tecnici con disponibilità di prenotazione salvata nel filtro corrente",
+        "empty": "Nessun tecnico in questo filtro ha ancora una disponibilità di prenotazione salvata",
         "columns": {
           "userName": "Nome utente",
           "status": "Stato"
@@ -372,7 +373,9 @@
         }
       },
       "actions": {
-        "save": "Salva ore utente"
+        "save": "Salva ore utente",
+        "retry": "Riprova",
+        "saving": "Salvataggio..."
       },
       "feedback": {
         "selectUserError": "Seleziona un utente",
@@ -384,7 +387,19 @@
       "deleteDialog": {
         "title": "Elimina disponibilità utente",
         "message": "Sei sicuro di voler eliminare le impostazioni di disponibilità per {{userName}}? Verranno rimossi tutti gli orari di lavoro configurati. Questa azione non può essere annullata."
-      }
+      },
+      "scope": {
+        "team": "Filtro team:",
+        "allTeams": "Tutti i tecnici autorizzati",
+        "technician": "Tecnico:",
+        "schedule": "Orario:",
+        "loading": "Verifica degli orari di prenotazione salvati",
+        "saved": "Orari di prenotazione salvati",
+        "partial": "Orari di prenotazione salvati con valori predefiniti non salvati per i giorni mancanti",
+        "draft": "Modello non salvato da lunedì a venerdì, 09:00–17:00",
+        "explanation": "Questi orari di prenotazione si applicano all’utente in tutti i team. Non vengono ereditati dall’orario di lavoro separato."
+      },
+      "loading": "Caricamento degli orari del tecnico..."
     },
     "serviceRules": {
       "serviceSelect": {

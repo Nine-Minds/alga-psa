@@ -279,8 +279,9 @@
         "placeholder": "Sélectionnez des approbateurs"
       },
       "teamSelect": {
-        "label": "Sélectionnez une équipe",
-        "placeholder": "Sélectionnez une équipe"
+        "label": "Filtrer les techniciens par équipe",
+        "placeholder": "Tous les techniciens autorisés",
+        "help": "Ce filtre agit uniquement sur la liste des techniciens ; la disponibilité de réservation du technicien s’applique à toutes les équipes."
       }
     },
     "feedback": {
@@ -319,16 +320,16 @@
     "userHours": {
       "roleManager": {
         "label": "Responsable d'équipe :",
-        "description": "Vous pouvez configurer les paramètres de disponibilité pour les membres de votre (vos) équipe(s). Le tableau « Utilisateurs configurés » ci-dessous affiche tous les utilisateurs avec des paramètres de disponibilité sur l'ensemble du système."
+        "description": "Vous pouvez configurer la disponibilité de réservation uniquement pour les membres autorisés de l’équipe et vos subordonnés directs. Le tableau ci-dessous suit le filtre d’équipe actuel."
       },
       "roleAdmin": {
         "label": "Administrateur:",
-        "description": "Vous pouvez configurer les paramètres de disponibilité pour n'importe quel utilisateur du système. Le tableau « Utilisateurs configurés » ci-dessous affiche tous les utilisateurs avec des paramètres de disponibilité."
+        "description": "Vous pouvez configurer la disponibilité de réservation globale de tout technicien autorisé. Le tableau ci-dessous suit le filtre d’équipe actuel."
       },
       "userSelect": {
-        "label": "Sélectionnez l'utilisateur à configurer",
+        "label": "Technicien",
         "placeholderSelectTeamFirst": "Sélectionnez d'abord une équipe",
-        "placeholder": "Sélectionnez un utilisateur à configurer"
+        "placeholder": "Sélectionnez un technicien à configurer"
       },
       "appointmentSettings": {
         "title": "Paramètres de rendez-vous",
@@ -361,8 +362,8 @@
       },
       "configuredUsers": {
         "title": "Utilisateurs configurés",
-        "description": "Utilisateurs avec des paramètres de disponibilité configurés",
-        "empty": "Aucun utilisateur configuré pour le moment",
+        "description": "Techniciens dont la disponibilité de réservation est enregistrée dans le filtre actuel",
+        "empty": "Aucun technicien de ce filtre n’a encore de disponibilité de réservation enregistrée",
         "columns": {
           "userName": "Nom d'utilisateur",
           "status": "Statut"
@@ -372,7 +373,9 @@
         }
       },
       "actions": {
-        "save": "Enregistrer les heures des utilisateurs"
+        "save": "Enregistrer les heures des utilisateurs",
+        "retry": "Réessayer",
+        "saving": "Enregistrement..."
       },
       "feedback": {
         "selectUserError": "Veuillez sélectionner un utilisateur",
@@ -384,7 +387,19 @@
       "deleteDialog": {
         "title": "Supprimer la disponibilité de l'utilisateur",
         "message": "Êtes-vous sûr de vouloir supprimer les paramètres de disponibilité pour {{userName}} ? Cela supprimera toutes les heures de travail configurées. Cette action est irréversible."
-      }
+      },
+      "scope": {
+        "team": "Filtre d’équipe :",
+        "allTeams": "Tous les techniciens autorisés",
+        "technician": "Technicien :",
+        "schedule": "Horaires :",
+        "loading": "Vérification des heures de réservation enregistrées",
+        "saved": "Heures de réservation enregistrées",
+        "partial": "Heures de réservation enregistrées avec des valeurs par défaut non enregistrées pour les jours manquants",
+        "draft": "Modèle non enregistré du lundi au vendredi, de 9 h à 17 h",
+        "explanation": "Ces heures de réservation s’appliquent à l’utilisateur dans toutes les équipes. Elles ne sont pas héritées du planning de travail distinct."
+      },
+      "loading": "Chargement des horaires du technicien..."
     },
     "serviceRules": {
       "serviceSelect": {

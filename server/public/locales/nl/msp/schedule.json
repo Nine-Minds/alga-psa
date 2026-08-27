@@ -279,8 +279,9 @@
         "placeholder": "Selecteer goedkeurders"
       },
       "teamSelect": {
-        "label": "Selecteer Team",
-        "placeholder": "Selecteer een team"
+        "label": "Technici filteren op team",
+        "placeholder": "Alle bevoegde technici",
+        "help": "Dit filtert alleen de lijst met technici; boekingsbeschikbaarheid geldt voor de technicus in alle teams."
       }
     },
     "feedback": {
@@ -319,16 +320,16 @@
     "userHours": {
       "roleManager": {
         "label": "Teammanager:",
-        "description": "U kunt beschikbaarheidsinstellingen configureren voor leden van uw team(s). In de onderstaande tabel 'Geconfigureerde gebruikers' worden alle gebruikers weergegeven met beschikbaarheidsinstellingen voor het hele systeem."
+        "description": "U kunt boekingsbeschikbaarheid alleen instellen voor bevoegde teamleden en directe ondergeschikten. De onderstaande tabel volgt het huidige teamfilter."
       },
       "roleAdmin": {
         "label": "Beheerder:",
-        "description": "U kunt beschikbaarheidsinstellingen configureren voor elke gebruiker in het systeem. In de onderstaande tabel 'Geconfigureerde gebruikers' worden alle gebruikers met beschikbaarheidsinstellingen weergegeven."
+        "description": "U kunt teamoverstijgende boekingsbeschikbaarheid instellen voor elke bevoegde technicus. De onderstaande tabel volgt het huidige teamfilter."
       },
       "userSelect": {
-        "label": "Selecteer Gebruiker om te configureren",
+        "label": "Technicus",
         "placeholderSelectTeamFirst": "Selecteer eerst een team",
-        "placeholder": "Selecteer een gebruiker om te configureren"
+        "placeholder": "Selecteer een technicus om in te stellen"
       },
       "appointmentSettings": {
         "title": "Afspraakinstellingen",
@@ -361,8 +362,8 @@
       },
       "configuredUsers": {
         "title": "Geconfigureerde gebruikers",
-        "description": "Gebruikers met geconfigureerde beschikbaarheidsinstellingen",
-        "empty": "Er zijn nog geen gebruikers geconfigureerd",
+        "description": "Technici met opgeslagen boekingsbeschikbaarheid in het huidige filter",
+        "empty": "Geen technici in dit filter hebben al opgeslagen boekingsbeschikbaarheid",
         "columns": {
           "userName": "Gebruikersnaam",
           "status": "Status"
@@ -372,7 +373,9 @@
         }
       },
       "actions": {
-        "save": "Bewaar gebruikersuren"
+        "save": "Bewaar gebruikersuren",
+        "retry": "Opnieuw proberen",
+        "saving": "Opslaan..."
       },
       "feedback": {
         "selectUserError": "Selecteer een gebruiker",
@@ -384,7 +387,19 @@
       "deleteDialog": {
         "title": "Beschikbaarheid van gebruiker verwijderen",
         "message": "Weet u zeker dat u de beschikbaarheidsinstellingen voor {{userName}} wilt verwijderen? Hierdoor worden alle geconfigureerde werkuren verwijderd. Deze actie kan niet ongedaan worden gemaakt."
-      }
+      },
+      "scope": {
+        "team": "Teamfilter:",
+        "allTeams": "Alle bevoegde technici",
+        "technician": "Technicus:",
+        "schedule": "Schema:",
+        "loading": "Opgeslagen boekingsuren controleren",
+        "saved": "Opgeslagen boekingsuren",
+        "partial": "Opgeslagen boekingsuren met niet-opgeslagen standaardwaarden voor ontbrekende dagen",
+        "draft": "Niet-opgeslagen sjabloon maandag–vrijdag, 09:00–17:00",
+        "explanation": "Deze boekingsuren gelden voor de gebruiker in alle teams. Ze worden niet overgenomen uit het afzonderlijke werkrooster."
+      },
+      "loading": "Uren van technicus laden..."
     },
     "serviceRules": {
       "serviceSelect": {

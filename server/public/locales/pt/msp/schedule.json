@@ -279,8 +279,9 @@
         "placeholder": "Selecione aprovadores"
       },
       "teamSelect": {
-        "label": "Selecione a equipe",
-        "placeholder": "Selecione uma equipe"
+        "label": "Filtrar técnicos por equipe",
+        "placeholder": "Todos os técnicos autorizados",
+        "help": "Isso filtra apenas a lista de técnicos; a disponibilidade de reserva pertence ao técnico em todas as equipes."
       }
     },
     "feedback": {
@@ -319,16 +320,16 @@
     "userHours": {
       "roleManager": {
         "label": "Gerente de equipe:",
-        "description": "Você pode definir configurações de disponibilidade para membros de sua(s) equipe(s). A tabela \"Usuários configurados\" abaixo mostra todos os usuários com configurações de disponibilidade no sistema."
+        "description": "Você pode configurar a disponibilidade de reserva apenas para membros autorizados da equipe e subordinados diretos. A tabela abaixo segue o filtro de equipe atual."
       },
       "roleAdmin": {
         "label": "Administrador:",
-        "description": "Você pode definir configurações de disponibilidade para qualquer usuário no sistema. A tabela \"Usuários configurados\" abaixo mostra todos os usuários com configurações de disponibilidade."
+        "description": "Você pode configurar a disponibilidade geral de reserva de qualquer técnico autorizado. A tabela abaixo segue o filtro de equipe atual."
       },
       "userSelect": {
-        "label": "Selecione o usuário para configurar",
+        "label": "Técnico",
         "placeholderSelectTeamFirst": "Selecione uma equipe primeiro",
-        "placeholder": "Selecione um usuário para configurar"
+        "placeholder": "Selecione um técnico para configurar"
       },
       "appointmentSettings": {
         "title": "Configurações de compromisso",
@@ -361,8 +362,8 @@
       },
       "configuredUsers": {
         "title": "Usuários configurados",
-        "description": "Usuários com configurações de disponibilidade definidas",
-        "empty": "Nenhum usuário configurado ainda",
+        "description": "Técnicos com disponibilidade de reserva salva no filtro atual",
+        "empty": "Nenhum técnico neste filtro tem disponibilidade de reserva salva ainda",
         "columns": {
           "userName": "Nome de usuário",
           "status": "Status"
@@ -372,7 +373,9 @@
         }
       },
       "actions": {
-        "save": "Economize horas do usuário"
+        "save": "Economize horas do usuário",
+        "retry": "Tentar novamente",
+        "saving": "Salvando..."
       },
       "feedback": {
         "selectUserError": "Selecione um usuário",
@@ -384,7 +387,19 @@
       "deleteDialog": {
         "title": "Excluir disponibilidade do usuário",
         "message": "Tem certeza de que deseja excluir as configurações de disponibilidade de {{userName}}? Isso removerá todos os horários de trabalho configurados. Esta ação não pode ser desfeita."
-      }
+      },
+      "scope": {
+        "team": "Filtro de equipe:",
+        "allTeams": "Todos os técnicos autorizados",
+        "technician": "Técnico:",
+        "schedule": "Horário:",
+        "loading": "Verificando horas de reserva salvas",
+        "saved": "Horas de reserva salvas",
+        "partial": "Horas de reserva salvas com padrões não salvos para os dias ausentes",
+        "draft": "Modelo não salvo de segunda a sexta, das 09:00 às 17:00",
+        "explanation": "Essas horas de reserva valem para o usuário em todas as equipes. Elas não são herdadas do horário de trabalho separado."
+      },
+      "loading": "Carregando horas do técnico..."
     },
     "serviceRules": {
       "serviceSelect": {

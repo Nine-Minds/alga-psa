@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -22,11 +22,12 @@ import { ColumnDefinition } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Plus, Trash2, Save } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getAvailabilitySettings,
+  getAvailabilitySettingsAccess,
   createOrUpdateAvailabilitySetting,
+  saveUserAvailabilityWeek,
   deleteAvailabilitySetting,
   getAvailabilityExceptions,
   addAvailabilityException,
@@ -34,19 +35,20 @@ import {
   IAvailabilitySetting,
   IAvailabilityException
 } from '@alga-psa/scheduling/actions';
-import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getServices } from '@alga-psa/scheduling/actions';
 import { IService } from '@alga-psa/types';
-import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';
+import {
+  buildDefaultUserHours,
+  hydrateUserHours,
+  userHoursToOrderedWeek,
+  UserHoursDay,
+  UserHoursSource,
+} from '../../lib/availabilityUserHours';
+import { readAvailabilityContext, writeAvailabilityContext } from '../../lib/availabilityContext';
 
-interface UserHoursSetting {
-  day_of_week: number;
-  is_available: boolean;
-  start_time: string;
-  end_time: string;
-}
+type UserHoursSetting = UserHoursDay;
 
 interface AvailabilitySettingsProps {
   isOpen: boolean;
@@ -57,7 +59,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const { t } = useTranslation('msp/schedule');
   const [activeTab, setActiveTab] = useState('general');
   const [isLoading, setIsLoading] = useState(true);
-  const { data: session } = useSession();
+  const [contextHydrated, setContextHydrated] = useState(false);
+  const [canReadSystemSettings, setCanReadSystemSettings] = useState(false);
+  const [canManageSystemSettings, setCanManageSystemSettings] = useState(false);
+  const [canManageUserHours, setCanManageUserHours] = useState(false);
 
   // Team management state
   const [allUsers, setAllUsers] = useState<IUser[]>([]);
@@ -81,7 +86,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   // User hours state
   const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [userHours, setUserHours] = useState<Record<number, UserHoursSetting>>({});
+  const [userHours, setUserHours] = useState<Record<number, UserHoursSetting>>(buildDefaultUserHours);
+  const [userHoursSource, setUserHoursSource] = useState<UserHoursSource>('draft');
+  const [isUserHoursLoading, setIsUserHoursLoading] = useState(false);
+  const [userHoursError, setUserHoursError] = useState<string | null>(null);
+  const [isSavingUserHours, setIsSavingUserHours] = useState(false);
   const [userDefaultDuration, setUserDefaultDuration] = useState('60');
   const [userBufferBefore, setUserBufferBefore] = useState('0');
   const [userBufferAfter, setUserBufferAfter] = useState('15');
@@ -119,6 +128,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   // Refs for scrolling edit forms into view
   const userHoursFormRef = useRef<HTMLDivElement>(null);
   const serviceRulesFormRef = useRef<HTMLDivElement>(null);
+  const userHoursRequestRef = useRef(0);
 
   const daysOfWeek = useMemo(() => ([
     { value: 0, label: t('availabilitySettings.days.sunday', { defaultValue: 'Sunday' }) },
@@ -130,127 +140,86 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     { value: 6, label: t('availabilitySettings.days.saturday', { defaultValue: 'Saturday' }) }
   ]), [t]);
 
-  const buildReportsToUserIds = (usersList: Omit<IUser, 'tenant'>[]) => {
-    if (!session?.user?.id) {
-      return new Set<string>();
+  useEffect(() => {
+    const persisted = readAvailabilityContext();
+    if (persisted) {
+      setActiveTab(persisted.activeTab);
+      setSelectedTeamId(persisted.selectedTeamId);
+      setSelectedUserId(persisted.selectedUserId);
     }
-
-    const ids = new Set<string>();
-    const queue: string[] = [session.user.id];
-
-    while (queue.length > 0) {
-      const current = queue.shift();
-      if (!current) {
-        continue;
-      }
-
-      allUsers.forEach((user) => {
-        if (user.reports_to === current && !ids.has(user.user_id)) {
-          ids.add(user.user_id);
-          queue.push(user.user_id);
-        }
-      });
-    }
-
-    return ids;
-  };
-
-  const reportsToUserIds = useMemo(
-    () => buildReportsToUserIds(allUsers),
-    [allUsers, session?.user?.id]
-  );
+    setContextHydrated(true);
+  }, []);
 
   useEffect(() => {
-    if (isOpen) {
+    if (!contextHydrated) return;
+    writeAvailabilityContext({ isOpen, activeTab, selectedTeamId, selectedUserId });
+  }, [activeTab, contextHydrated, isOpen, selectedTeamId, selectedUserId]);
+
+  useEffect(() => {
+    if (isOpen && contextHydrated) {
       loadInitialData();
     }
-  }, [isOpen]);
+  }, [contextHydrated, isOpen]);
 
   const loadInitialData = async () => {
     setIsLoading(true);
     try {
-      console.log('[AvailabilitySettings] Starting loadInitialData');
-
-      // Check if current user is a manager first
-      let userManagedTeams: ITeam[] = [];
-      if (session?.user?.id) {
-        const teams = await getTeams();
-        if (isTeamActionError(teams)) {
-          console.warn('[AvailabilitySettings] Cannot load teams for manager check; defaulting to non-manager', teams);
-        } else {
-          setAllTeams(teams);
-          userManagedTeams = teams.filter(team => team.manager_id === session.user.id);
-
-          if (userManagedTeams.length > 0) {
-            setIsManager(true);
-            setManagedTeams(userManagedTeams);
-          }
-        }
+      const [accessResult, servicesResponse, settingsResult, exceptionsResult] = await Promise.all([
+        getAvailabilitySettingsAccess(),
+        getServices().catch(() => null),
+        getAvailabilitySettings(),
+        getAvailabilityExceptions(),
+      ]);
+      if (!accessResult.success || !accessResult.data) {
+        throw new Error(accessResult.error || 'Failed to load availability access');
       }
 
-      // Try to load all users (requires user:read permission)
-      let fetchedUsers: IUser[] = [];
-      try {
-        fetchedUsers = await getAllUsersBasic(false, 'internal');
-        console.log('[AvailabilitySettings] Loaded all users:', fetchedUsers.length);
-        setAllUsers(fetchedUsers);
-      } catch (error) {
-        console.log('[AvailabilitySettings] Cannot load all users (permission denied), loading team members only');
-        // If user doesn't have permission to load all users, load team members from managed teams
-        if (userManagedTeams.length > 0) {
-          const allMembers: IUser[] = [];
-          userManagedTeams.forEach(team => {
-            if (team.members) {
-              allMembers.push(...team.members);
-            }
-          });
-          // Remove duplicates
-          const uniqueMembers = Array.from(
-            new Map(allMembers.map(m => [m.user_id, m])).values()
-          );
-          fetchedUsers = uniqueMembers;
-          setAllUsers(uniqueMembers);
-          console.log('[AvailabilitySettings] Loaded team members:', uniqueMembers.length);
-        }
-      }
+      const access = accessResult.data;
+      const fetchedUsers = access.users as IUser[];
+      const teams = access.teams.map((team): ITeam => ({
+        tenant: fetchedUsers[0]?.tenant || '',
+        team_id: team.team_id,
+        team_name: team.team_name,
+        manager_id: team.manager_id,
+        members: team.member_ids
+          .map((userId) => fetchedUsers.find((candidate) => candidate.user_id === userId))
+          .filter(Boolean)
+          .map((member) => ({ ...member!, roles: [], role: 'member' as const })),
+      }));
 
-      // Set up users based on manager status
-      if (userManagedTeams.length > 0) {
-        const reportsToIds = buildReportsToUserIds(fetchedUsers);
-        // Auto-select first team if only one team
-        if (userManagedTeams.length === 1) {
-          setSelectedTeamId(userManagedTeams[0].team_id);
-          // Filter users for this team
-          const teamMemberIds = userManagedTeams[0].members?.map(m => m.user_id) || [];
-          const allowedIds = new Set(teamMemberIds);
-          reportsToIds.forEach((id) => allowedIds.add(id));
-          const filteredUsers = fetchedUsers.filter(user => allowedIds.has(user.user_id));
-          setUsers(filteredUsers);
-        } else {
-          // Multiple teams - wait for user to select
-          setUsers([]);
-        }
-      } else {
-        // Not a manager - show all users (admin)
-        setIsManager(false);
-        setUsers(fetchedUsers);
-      }
+      setCanReadSystemSettings(access.canReadSystemSettings);
+      setCanManageSystemSettings(access.canManageSystemSettings);
+      setCanManageUserHours(access.canManageUserHours);
+      setIsManager(!access.canReadSystemSettings);
+      setAllUsers(fetchedUsers);
+      setUsers(fetchedUsers);
+      setAllTeams(teams);
+      setManagedTeams(teams);
+      setServices(servicesResponse?.services ?? []);
 
-      // Load services
-      const servicesResponse = await getServices();
-      setServices(servicesResponse.services);
+      const settings = settingsResult.success && settingsResult.data ? settingsResult.data : [];
+      processSettings(settings);
+      setConfiguredUsers(new Set(settings.flatMap((setting) => setting.setting_type === 'user_hours' && setting.user_id ? [setting.user_id] : [])));
+      setServiceSettings(Object.fromEntries(
+        settings.flatMap((setting) => setting.setting_type === 'service_rules' && setting.service_id ? [[setting.service_id, setting]] : [])
+      ));
 
-      // Load availability settings
-      const settingsResult = await getAvailabilitySettings();
-      if (settingsResult.success && settingsResult.data) {
-        processSettings(settingsResult.data);
-      }
-
-      // Load exceptions
-      const exceptionsResult = await getAvailabilityExceptions();
       if (exceptionsResult.success && exceptionsResult.data) {
         setExceptions(exceptionsResult.data);
+      } else {
+        setExceptions([]);
       }
+
+      const validTabs = new Set<string>();
+      if (access.canReadSystemSettings) {
+        validTabs.add('general');
+        validTabs.add('service-rules');
+        validTabs.add('exceptions');
+      }
+      if (access.canManageUserHours) validTabs.add('user-hours');
+      setActiveTab((current) => validTabs.has(current)
+        ? current
+        : access.canReadSystemSettings ? 'general' : 'user-hours');
     } catch (error) {
       handleError(error, t('availabilitySettings.feedback.loadError', { defaultValue: 'Failed to load settings' }));
     } finally {
@@ -280,86 +249,45 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     });
   };
 
-  const loadUserHours = async (userId: string) => {
-    const result = await getAvailabilitySettings({
-      setting_type: 'user_hours',
-      user_id: userId
-    });
+  const loadUserHours = useCallback(async (userId: string) => {
+    const requestId = ++userHoursRequestRef.current;
+    setIsUserHoursLoading(true);
+    setUserHoursError(null);
+    setUserHours(buildDefaultUserHours());
+    setUserHoursSource('draft');
 
-    if (result.success && result.data) {
-      const hoursMap: Record<number, UserHoursSetting> = {};
-      let foundUserSettings = false;
-
-      result.data.forEach(setting => {
-        if (setting.day_of_week !== undefined && setting.day_of_week !== null) {
-          hoursMap[setting.day_of_week] = {
-            day_of_week: setting.day_of_week,
-            is_available: setting.is_available,
-            start_time: setting.start_time || '09:00',
-            end_time: setting.end_time || '17:00'
-          };
-        }
-
-        // Load per-user appointment settings from the first record
-        if (!foundUserSettings) {
-          foundUserSettings = true;
-          if (setting.config_json?.default_duration !== undefined) {
-            setUserDefaultDuration(String(setting.config_json.default_duration));
-          } else {
-            setUserDefaultDuration(''); // Empty means use service default
-          }
-          if (setting.buffer_before_minutes !== undefined) {
-            setUserBufferBefore(String(setting.buffer_before_minutes));
-          } else {
-            setUserBufferBefore('0');
-          }
-          if (setting.buffer_after_minutes !== undefined) {
-            setUserBufferAfter(String(setting.buffer_after_minutes));
-          } else {
-            setUserBufferAfter('15');
-          }
-          if (setting.config_json?.allow_client_preference !== undefined) {
-            setUserAllowClientPreference(setting.config_json.allow_client_preference);
-          } else {
-            setUserAllowClientPreference(true);
-          }
-          const userApprovers = readApproverIdsFromConfig(setting.config_json);
-          setUserApproverUserIds(userApprovers.userIds);
-          setUserApproverTeamIds(userApprovers.teamIds);
-        }
-      });
-      setUserHours(hoursMap);
-    } else {
-      // Initialize with default hours
-      const defaultHours: Record<number, UserHoursSetting> = {};
-      for (let day = 1; day <= 5; day++) {
-        defaultHours[day] = {
-          day_of_week: day,
-          is_available: true,
-          start_time: '09:00',
-          end_time: '17:00'
-        };
+    try {
+      const result = await getAvailabilitySettings({ setting_type: 'user_hours', user_id: userId });
+      if (requestId !== userHoursRequestRef.current) return;
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to load user hours');
       }
-      defaultHours[0] = { day_of_week: 0, is_available: false, start_time: '09:00', end_time: '17:00' };
-      defaultHours[6] = { day_of_week: 6, is_available: false, start_time: '09:00', end_time: '17:00' };
-      setUserHours(defaultHours);
 
-      // Reset per-user settings to defaults
-      setUserDefaultDuration(''); // Empty means use service default
-      setUserBufferBefore('0');
-      setUserBufferAfter('15');
-      setUserAllowClientPreference(true);
-      setUserApproverUserIds([]);
-      setUserApproverTeamIds([]);
+      const hydrated = hydrateUserHours(result.data);
+      setUserHours(hydrated.hours);
+      setUserHoursSource(hydrated.source);
+      const first = result.data[0];
+      setUserDefaultDuration(first?.config_json?.default_duration !== undefined ? String(first.config_json.default_duration) : '');
+      setUserBufferBefore(first?.buffer_before_minutes !== undefined ? String(first.buffer_before_minutes) : '0');
+      setUserBufferAfter(first?.buffer_after_minutes !== undefined ? String(first.buffer_after_minutes) : '15');
+      setUserAllowClientPreference(first?.config_json?.allow_client_preference ?? true);
+      const userApprovers = readApproverIdsFromConfig(first?.config_json);
+      setUserApproverUserIds(userApprovers.userIds);
+      setUserApproverTeamIds(userApprovers.teamIds);
+    } catch (error) {
+      if (requestId !== userHoursRequestRef.current) return;
+      setUserHoursError(error instanceof Error ? error.message : 'Failed to load user hours');
+    } finally {
+      if (requestId === userHoursRequestRef.current) setIsUserHoursLoading(false);
     }
-  };
+  }, []);
 
   const loadAllServiceRules = async () => {
     const result = await getAvailabilitySettings({
       setting_type: 'service_rules'
     });
 
-    if (result.success && result.data && result.data.length > 0) {
+    if (result.success && result.data) {
       const settingsMap: Record<string, IAvailabilitySetting> = {};
       result.data.forEach(setting => {
         if (setting.service_id) {
@@ -375,7 +303,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       setting_type: 'user_hours'
     });
 
-    if (result.success && result.data && result.data.length > 0) {
+    if (result.success && result.data) {
       const userIds = new Set<string>();
       result.data.forEach(setting => {
         if (setting.user_id) {
@@ -388,35 +316,29 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
   // Update users list when team selection changes
   useEffect(() => {
-    if (isManager && selectedTeamId) {
-      const selectedTeam = managedTeams.find(t => t.team_id === selectedTeamId);
-      if (selectedTeam) {
-        const teamMemberIds = selectedTeam.members?.map(m => m.user_id) || [];
-        const allowedIds = new Set(teamMemberIds);
-        reportsToUserIds.forEach((id) => allowedIds.add(id));
-        const filteredUsers = allUsers.filter(user => allowedIds.has(user.user_id));
-        setUsers(filteredUsers);
-      }
+    if (isLoading) return;
+    const selectedTeam = managedTeams.find((team) => team.team_id === selectedTeamId);
+    if (selectedTeamId && !selectedTeam) {
+      setSelectedTeamId('');
+      return;
     }
-  }, [selectedTeamId, isManager, managedTeams, allUsers, reportsToUserIds]);
+
+    const nextUsers = selectedTeam
+      ? allUsers.filter((user) => selectedTeam.members.some((member) => member.user_id === user.user_id))
+      : allUsers;
+    setUsers(nextUsers);
+    if (selectedUserId && !nextUsers.some((user) => user.user_id === selectedUserId)) {
+      setSelectedUserId('');
+      setUserHours(buildDefaultUserHours());
+      setUserHoursSource('draft');
+    }
+  }, [allUsers, isLoading, managedTeams, selectedTeamId, selectedUserId]);
 
   useEffect(() => {
-    if (selectedUserId && activeTab === 'user-hours') {
+    if (!isLoading && selectedUserId && activeTab === 'user-hours') {
       loadUserHours(selectedUserId);
     }
-  }, [selectedUserId, activeTab]);
-
-  useEffect(() => {
-    if (activeTab === 'user-hours') {
-      loadConfiguredUsers();
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (activeTab === 'service-rules') {
-      loadAllServiceRules();
-    }
-  }, [activeTab]);
+  }, [activeTab, isLoading, loadUserHours, selectedUserId]);
 
   const handleSaveGeneralSettings = async () => {
     try {
@@ -454,6 +376,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       return;
     }
 
+    setIsSavingUserHours(true);
     try {
       // Build config_json, only including default_duration if it's set
       const configJson: any = {
@@ -467,25 +390,27 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         configJson.default_duration = parseInt(userDefaultDuration);
       }
 
-      for (const [dayStr, hours] of Object.entries(userHours)) {
-        const day = parseInt(dayStr);
-        await createOrUpdateAvailabilitySetting({
-          setting_type: 'user_hours',
-          user_id: selectedUserId,
-          day_of_week: day,
-          is_available: hours.is_available,
-          start_time: hours.start_time,
-          end_time: hours.end_time,
-          buffer_before_minutes: parseInt(userBufferBefore) || 0,
-          buffer_after_minutes: parseInt(userBufferAfter) || 0,
-          config_json: configJson
-        });
+      const result = await saveUserAvailabilityWeek({
+        user_id: selectedUserId,
+        days: userHoursToOrderedWeek(userHours),
+        buffer_before_minutes: parseInt(userBufferBefore) || 0,
+        buffer_after_minutes: parseInt(userBufferAfter) || 0,
+        config_json: configJson,
+      });
+      if (!result.success || !result.data || result.data.length !== 7) {
+        toast.error(result.error || t('availabilitySettings.userHours.feedback.saveError', { defaultValue: 'Failed to save user hours' }));
+        return;
       }
+
+      const authoritative = hydrateUserHours(result.data);
+      setUserHours(authoritative.hours);
+      setUserHoursSource('saved');
+      setConfiguredUsers((current) => new Set(current).add(selectedUserId));
       toast.success(t('availabilitySettings.userHours.feedback.saveSuccess', { defaultValue: 'User hours saved' }));
-      // Reload configured users list
-      await loadConfiguredUsers();
     } catch (error) {
       handleError(error, t('availabilitySettings.userHours.feedback.saveError', { defaultValue: 'Failed to save user hours' }));
+    } finally {
+      setIsSavingUserHours(false);
     }
   };
 
@@ -667,6 +592,21 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     [users]
   );
 
+  const teamOptions: SelectOption[] = useMemo(() =>
+    managedTeams.map((team) => ({ value: team.team_id, label: team.team_name })),
+    [managedTeams]
+  );
+
+  const selectedUser = useMemo(
+    () => allUsers.find((user) => user.user_id === selectedUserId),
+    [allUsers, selectedUserId]
+  );
+
+  const selectedTeam = useMemo(
+    () => managedTeams.find((team) => team.team_id === selectedTeamId),
+    [managedTeams, selectedTeamId]
+  );
+
   const serviceOptions: SelectOption[] = useMemo(() =>
     services.map(service => ({
       value: service.service_id,
@@ -738,7 +678,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     {
       title: t('availabilitySettings.common.columns.action', { defaultValue: 'Action' }),
       dataIndex: 'service_id' as any,
-      render: (_, service: IService) => (
+      render: (_, service: IService) => canManageSystemSettings ? (
         <div className="flex items-center gap-1">
           <Button
             id={`edit-service-${service.service_id}`}
@@ -758,9 +698,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             <Trash2 className="h-4 w-4 text-red-600" />
           </Button>
         </div>
-      )
+      ) : null
     }
-  ], [serviceSettings, t]);
+  ], [canManageSystemSettings, serviceSettings, t]);
 
   // Filtered data for configured users
   const configuredUsersData = useMemo(() =>
@@ -784,10 +724,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         <div>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="general">{t('availabilitySettings.tabs.general', { defaultValue: 'General Settings' })}</TabsTrigger>
-            <TabsTrigger value="user-hours">{t('availabilitySettings.tabs.userHours', { defaultValue: 'User Hours' })}</TabsTrigger>
-            <TabsTrigger value="service-rules">{t('availabilitySettings.tabs.serviceRules', { defaultValue: 'Service Rules' })}</TabsTrigger>
-            <TabsTrigger value="exceptions">{t('availabilitySettings.tabs.exceptions', { defaultValue: 'Exceptions' })}</TabsTrigger>
+            {canReadSystemSettings && <TabsTrigger value="general">{t('availabilitySettings.tabs.general', { defaultValue: 'General Settings' })}</TabsTrigger>}
+            {canManageUserHours && <TabsTrigger value="user-hours">{t('availabilitySettings.tabs.userHours', { defaultValue: 'User Hours' })}</TabsTrigger>}
+            {canReadSystemSettings && <TabsTrigger value="service-rules">{t('availabilitySettings.tabs.serviceRules', { defaultValue: 'Service Rules' })}</TabsTrigger>}
+            {canReadSystemSettings && <TabsTrigger value="exceptions">{t('availabilitySettings.tabs.exceptions', { defaultValue: 'Exceptions' })}</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
@@ -897,10 +837,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 />
               </div>
             </div>
-            <Button id="save-general-settings" onClick={handleSaveGeneralSettings}>
+            {canManageSystemSettings && <Button id="save-general-settings" onClick={handleSaveGeneralSettings}>
               <Save className="h-4 w-4 mr-2" />
               {t('availabilitySettings.general.actions.save', { defaultValue: 'Save General Settings' })}
-            </Button>
+            </Button>}
           </TabsContent>
 
           <TabsContent value="user-hours" className="space-y-4 mt-4">
@@ -908,46 +848,78 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
               <AlertDescription>
                 {isManager ? (
                   <>
-                    <strong>{t('availabilitySettings.userHours.roleManager.label', { defaultValue: 'Team Manager:' })}</strong> {t('availabilitySettings.userHours.roleManager.description', { defaultValue: 'You can configure availability settings for members of your team(s). The "Configured Users" table below shows all users with availability settings across the system.' })}
+                    <strong>{t('availabilitySettings.userHours.roleManager.label', { defaultValue: 'Team Manager:' })}</strong> {t('availabilitySettings.userHours.roleManager.description', { defaultValue: 'You can configure booking availability only for authorized team members and direct reports. The table below follows the current team filter.' })}
                   </>
                 ) : (
                   <>
-                    <strong>{t('availabilitySettings.userHours.roleAdmin.label', { defaultValue: 'Administrator:' })}</strong> {t('availabilitySettings.userHours.roleAdmin.description', { defaultValue: 'You can configure availability settings for any user in the system. The "Configured Users" table below shows all users with availability settings.' })}
+                    <strong>{t('availabilitySettings.userHours.roleAdmin.label', { defaultValue: 'Administrator:' })}</strong> {t('availabilitySettings.userHours.roleAdmin.description', { defaultValue: 'You can configure user-wide booking availability for any authorized technician. The table below follows the current team filter.' })}
                   </>
                 )}
               </AlertDescription>
             </Alert>
 
-            {isManager && managedTeams.length > 1 && (
+            {managedTeams.length > 0 && (
               <div>
-                <Label>{t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Select Team' })}</Label>
+                <Label htmlFor="team-selector">{t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Filter technicians by team' })}</Label>
+                <p className="text-xs text-gray-600 mb-2">
+                  {t('availabilitySettings.common.teamSelect.help', { defaultValue: 'This filters the technician list only; booking availability belongs to the technician across every team.' })}
+                </p>
                 <CustomSelect
                   id="team-selector"
-                  options={managedTeams.map(team => ({
-                    value: team.team_id,
-                    label: team.team_name
-                  }))}
+                  label={t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Filter technicians by team' })}
+                  options={teamOptions}
                   value={selectedTeamId || undefined}
                   onValueChange={setSelectedTeamId}
-                  placeholder={t('availabilitySettings.common.teamSelect.placeholder', { defaultValue: 'Select a team' })}
+                  placeholder={t('availabilitySettings.common.teamSelect.placeholder', { defaultValue: 'All authorized technicians' })}
+                  allowClear
                 />
               </div>
             )}
 
             <div>
-              <Label>{t('availabilitySettings.userHours.userSelect.label', { defaultValue: 'Select User to Configure' })}</Label>
+              <Label htmlFor="user-hours-selector">{t('availabilitySettings.userHours.userSelect.label', { defaultValue: 'Technician' })}</Label>
               <CustomSelect
                 id="user-hours-selector"
+                label={t('availabilitySettings.userHours.userSelect.label', { defaultValue: 'Technician' })}
                 options={userOptions}
                 value={selectedUserId || undefined}
                 onValueChange={setSelectedUserId}
-                placeholder={isManager && !selectedTeamId && managedTeams.length > 1 ? t('availabilitySettings.userHours.userSelect.placeholderSelectTeamFirst', { defaultValue: 'Select a team first' }) : t('availabilitySettings.userHours.userSelect.placeholder', { defaultValue: 'Select a user to configure' })}
-                disabled={isManager && !selectedTeamId && managedTeams.length > 1}
+                placeholder={t('availabilitySettings.userHours.userSelect.placeholder', { defaultValue: 'Select a technician to configure' })}
+                disabled={users.length === 0}
               />
             </div>
 
             {selectedUserId && (
               <div ref={userHoursFormRef} className="space-y-4 scroll-mt-4">
+                <div className="rounded-lg border p-4 text-sm space-y-1" aria-live="polite">
+                  <p><strong>{t('availabilitySettings.userHours.scope.team', { defaultValue: 'Team filter:' })}</strong> {selectedTeam?.team_name || t('availabilitySettings.userHours.scope.allTeams', { defaultValue: 'All authorized technicians' })}</p>
+                  <p><strong>{t('availabilitySettings.userHours.scope.technician', { defaultValue: 'Technician:' })}</strong> {`${selectedUser?.first_name || ''} ${selectedUser?.last_name || ''}`.trim()}</p>
+                  <p>
+                    <strong>{t('availabilitySettings.userHours.scope.schedule', { defaultValue: 'Schedule:' })}</strong>{' '}
+                    {isUserHoursLoading
+                      ? t('availabilitySettings.userHours.scope.loading', { defaultValue: 'Checking saved booking hours' })
+                      : userHoursSource === 'saved'
+                      ? t('availabilitySettings.userHours.scope.saved', { defaultValue: 'Saved booking hours' })
+                      : userHoursSource === 'partial'
+                        ? t('availabilitySettings.userHours.scope.partial', { defaultValue: 'Saved booking hours with unsaved defaults for missing days' })
+                        : t('availabilitySettings.userHours.scope.draft', { defaultValue: 'Unsaved Monday–Friday 9:00 AM–5:00 PM template' })}
+                  </p>
+                  <p className="text-gray-600">{t('availabilitySettings.userHours.scope.explanation', { defaultValue: 'These booking hours are user-wide across teams. They do not inherit from the separate work schedule.' })}</p>
+                </div>
+
+                {isUserHoursLoading ? (
+                  <div className="p-6 text-center" role="status">{t('availabilitySettings.userHours.loading', { defaultValue: 'Loading technician hours...' })}</div>
+                ) : userHoursError ? (
+                  <Alert variant="destructive">
+                    <AlertDescription className="flex items-center justify-between gap-4">
+                      <span>{userHoursError}</span>
+                      <Button id="retry-user-hours" variant="outline" size="sm" onClick={() => loadUserHours(selectedUserId)}>
+                        {t('availabilitySettings.userHours.actions.retry', { defaultValue: 'Retry' })}
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                <>
                 <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                   <h3 className="text-sm font-semibold">{t('availabilitySettings.userHours.appointmentSettings.title', { defaultValue: 'Appointment Settings' })}</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1018,12 +990,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     </TableHeader>
                     <TableBody>
                       {daysOfWeek.map(day => {
-                        const hours = userHours[day.value] || {
-                          day_of_week: day.value,
-                          is_available: false,
-                          start_time: '09:00',
-                          end_time: '17:00'
-                        };
+                        const hours = userHours[day.value] || buildDefaultUserHours()[day.value];
 
                         return (
                           <TableRow key={day.value} className="hover:bg-gray-50">
@@ -1072,20 +1039,24 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     </TableBody>
                   </Table>
                 </div>
-                <Button id="save-user-hours" onClick={handleSaveUserHours}>
+                <Button id="save-user-hours" onClick={handleSaveUserHours} disabled={isSavingUserHours || !canManageUserHours}>
                   <Save className="h-4 w-4 mr-2" />
-                  {t('availabilitySettings.userHours.actions.save', { defaultValue: 'Save User Hours' })}
+                  {isSavingUserHours
+                    ? t('availabilitySettings.userHours.actions.saving', { defaultValue: 'Saving...' })
+                    : t('availabilitySettings.userHours.actions.save', { defaultValue: 'Save User Hours' })}
                 </Button>
+                </>
+                )}
               </div>
             )}
 
             {/* Configured Users Table */}
             <div className="border-t pt-4 mt-6">
               <h3 className="text-lg font-semibold mb-2">{t('availabilitySettings.userHours.configuredUsers.title', { defaultValue: 'Configured Users' })}</h3>
-              <p className="text-sm text-gray-600 mb-4">{t('availabilitySettings.userHours.configuredUsers.description', { defaultValue: 'Users with availability settings configured' })}</p>
+              <p className="text-sm text-gray-600 mb-4">{t('availabilitySettings.userHours.configuredUsers.description', { defaultValue: 'Technicians with saved booking availability in the current filter' })}</p>
               {configuredUsersData.length === 0 ? (
                 <div className="text-center text-gray-500 py-8 border rounded-lg">
-                  {t('availabilitySettings.userHours.configuredUsers.empty', { defaultValue: 'No users configured yet' })}
+                  {t('availabilitySettings.userHours.configuredUsers.empty', { defaultValue: 'No technicians in this filter have saved booking availability yet' })}
                 </div>
               ) : (
                 <DataTable
@@ -1189,10 +1160,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     </div>
                   </div>
 
-                  <Button id="save-service-rules" onClick={handleSaveServiceRules} className="mt-4">
+                  {canManageSystemSettings && <Button id="save-service-rules" onClick={handleSaveServiceRules} className="mt-4">
                     <Save className="h-4 w-4 mr-2" />
                     {t('availabilitySettings.serviceRules.actions.save', { defaultValue: 'Save Service Rules' })}
-                  </Button>
+                  </Button>}
                 </div>
               </div>
             )}
@@ -1285,10 +1256,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     />
                   </div>
 
-                  <Button id="add-exception" onClick={handleAddException}>
+                  {canManageSystemSettings && <Button id="add-exception" onClick={handleAddException}>
                     <Plus className="h-4 w-4 mr-2" />
                     {t('availabilitySettings.exceptions.actions.add', { defaultValue: 'Add Exception' })}
-                  </Button>
+                  </Button>}
                 </div>
               </div>
 
@@ -1322,14 +1293,14 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                               {exception.is_available ? t('availabilitySettings.exceptions.list.status.available', { defaultValue: 'Available' }) : t('availabilitySettings.exceptions.list.status.unavailable', { defaultValue: 'Unavailable' })}
                             </Badge>
                           </div>
-                          <Button
+                          {canManageSystemSettings && <Button
                             id={`delete-exception-${exception.exception_id}`}
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteException(exception.exception_id)}
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button>
+                          </Button>}
                         </div>
                       );
                     })

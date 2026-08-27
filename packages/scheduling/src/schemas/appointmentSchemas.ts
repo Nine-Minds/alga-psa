@@ -175,6 +175,35 @@ export const availabilitySettingSchema = z.object({
 
 export type AvailabilitySettingInput = z.infer<typeof availabilitySettingSchema>;
 
+export const availabilityUserHoursDaySchema = z.object({
+  day_of_week: z.number().int().min(0).max(6),
+  is_available: z.boolean(),
+  start_time: timeStringSchema,
+  end_time: timeStringSchema,
+}).refine((day) => day.start_time < day.end_time, {
+  message: 'Start time must be before end time',
+  path: ['start_time'],
+});
+
+export const availabilityUserHoursWeekSchema = z.object({
+  user_id: z.string().uuid('User ID must be a valid UUID'),
+  days: z.array(availabilityUserHoursDaySchema).length(7, 'All seven days are required'),
+  buffer_before_minutes: z.number().int().min(0).max(120),
+  buffer_after_minutes: z.number().int().min(0).max(120),
+  config_json: z.record(z.any()),
+}).superRefine((week, ctx) => {
+  const days = new Set(week.days.map((day) => day.day_of_week));
+  if (days.size !== 7 || Array.from({ length: 7 }, (_, day) => day).some((day) => !days.has(day))) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Each weekday from 0 through 6 must appear exactly once',
+      path: ['days'],
+    });
+  }
+});
+
+export type AvailabilityUserHoursWeekInput = z.infer<typeof availabilityUserHoursWeekSchema>;
+
 /**
  * Availability Exception Schema
  * Used to create or update availability exceptions

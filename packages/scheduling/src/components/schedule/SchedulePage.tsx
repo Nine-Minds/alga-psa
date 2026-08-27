@@ -9,9 +9,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
-import { getCurrentUserPermissions, getCurrentUser, getReportsToSubordinates } from '@alga-psa/user-composition/actions';
-import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
+import { getAppointmentRequests, getAvailabilitySettingsAccess } from '@alga-psa/scheduling/actions';
+import { readAvailabilityContext, writeAvailabilityContext } from '../../lib/availabilityContext';
 
 export default function SchedulePage() {
   const { t } = useTranslation('msp/schedule');
@@ -34,36 +33,13 @@ export default function SchedulePage() {
   };
 
   const checkPermissions = async () => {
-    const permissions = await getCurrentUserPermissions();
-    // User can configure availability if they have 'user:read' permission OR are a team manager
-    const hasUserReadPermission = permissions.includes('user:read');
-
-    if (hasUserReadPermission) {
-      setCanConfigureAvailability(true);
-      return;
-    }
-
-    // Check if user is a team manager
     try {
-      const currentUser = await getCurrentUser();
-      if (currentUser) {
-        const teams = await getTeams();
-        if (isTeamActionError(teams)) {
-          console.warn('Cannot load teams for availability permission check:', teams);
-          setCanConfigureAvailability(false);
-          return;
-        }
-        const isManager = teams.some(team => team.manager_id === currentUser.user_id);
-        if (isManager) {
-          setCanConfigureAvailability(true);
-          return;
-        }
-
-        const subordinates = await getReportsToSubordinates(currentUser.user_id);
-        setCanConfigureAvailability(subordinates.length > 0);
-      }
+      const result = await getAvailabilitySettingsAccess();
+      setCanConfigureAvailability(Boolean(
+        result.success && (result.data?.canReadSystemSettings || result.data?.canManageUserHours)
+      ));
     } catch (error) {
-      console.error('Failed to check team manager status:', error);
+      console.error('Failed to check availability access:', error);
       setCanConfigureAvailability(false);
     }
   };
@@ -72,6 +48,12 @@ export default function SchedulePage() {
     fetchPendingCount();
     checkPermissions();
   }, [refreshKey]);
+
+  useEffect(() => {
+    if (readAvailabilityContext()?.isOpen) {
+      setShowAvailabilitySettings(true);
+    }
+  }, []);
 
   // Auto-open requests panel if requestId is in URL
   useEffect(() => {
@@ -92,7 +74,10 @@ export default function SchedulePage() {
             <Button
               id="configure-availability-button"
               variant="outline"
-              onClick={() => setShowAvailabilitySettings(true)}
+              onClick={() => {
+                setShowAvailabilitySettings(true);
+                writeAvailabilityContext({ isOpen: true });
+              }}
             >
               <Settings className="h-4 w-4 mr-2" />
               {t('page.actions.configureAvailability', {
@@ -139,7 +124,10 @@ export default function SchedulePage() {
       {canConfigureAvailability && (
         <AvailabilitySettings
           isOpen={showAvailabilitySettings}
-          onClose={() => setShowAvailabilitySettings(false)}
+          onClose={() => {
+            setShowAvailabilitySettings(false);
+            writeAvailabilityContext({ isOpen: false });
+          }}
         />
       )}
     </div>

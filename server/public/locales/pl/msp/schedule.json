@@ -279,8 +279,9 @@
         "placeholder": "Wybierz osoby zatwierdzające"
       },
       "teamSelect": {
-        "label": "Wybierz zespół",
-        "placeholder": "Wybierz zespół"
+        "label": "Filtruj techników według zespołu",
+        "placeholder": "Wszyscy autoryzowani technicy",
+        "help": "Filtr dotyczy tylko listy techników; dostępność rezerwacji technika obowiązuje we wszystkich zespołach."
       }
     },
     "feedback": {
@@ -319,16 +320,16 @@
     "userHours": {
       "roleManager": {
         "label": "Menedżer zespołu:",
-        "description": "Możesz skonfigurować ustawienia dostępności dla członków swojego zespołu(ów). Poniższa tabela „Skonfigurowani użytkownicy” przedstawia wszystkich użytkowników z ustawieniami dostępności w całym systemie."
+        "description": "Możesz konfigurować dostępność rezerwacji tylko dla autoryzowanych członków zespołu i bezpośrednich podwładnych. Poniższa tabela uwzględnia bieżący filtr zespołu."
       },
       "roleAdmin": {
         "label": "Administrator systemu:",
-        "description": "Możesz skonfigurować ustawienia dostępności dla dowolnego użytkownika w systemie. Poniższa tabela „Skonfigurowani użytkownicy” przedstawia wszystkich użytkowników z ustawieniami dostępności."
+        "description": "Możesz konfigurować ogólną dostępność rezerwacji każdego autoryzowanego technika. Poniższa tabela uwzględnia bieżący filtr zespołu."
       },
       "userSelect": {
-        "label": "Wybierz użytkownika do skonfigurowania",
+        "label": "Technik",
         "placeholderSelectTeamFirst": "Najpierw wybierz zespół",
-        "placeholder": "Wybierz użytkownika do skonfigurowania"
+        "placeholder": "Wybierz technika do konfiguracji"
       },
       "appointmentSettings": {
         "title": "Ustawienia spotkania",
@@ -361,8 +362,8 @@
       },
       "configuredUsers": {
         "title": "Skonfigurowani Użytkownicy",
-        "description": "Użytkownicy ze skonfigurowanymi ustawieniami dostępności",
-        "empty": "Żaden użytkownik nie został jeszcze skonfigurowany",
+        "description": "Technicy z zapisaną dostępnością rezerwacji w bieżącym filtrze",
+        "empty": "Żaden technik w tym filtrze nie ma jeszcze zapisanej dostępności rezerwacji",
         "columns": {
           "userName": "Nazwa użytkownika",
           "status": "Status"
@@ -372,7 +373,9 @@
         }
       },
       "actions": {
-        "save": "Zapisz godziny użytkownika"
+        "save": "Zapisz godziny użytkownika",
+        "retry": "Spróbuj ponownie",
+        "saving": "Zapisywanie..."
       },
       "feedback": {
         "selectUserError": "Wybierz użytkownika",
@@ -384,7 +387,19 @@
       "deleteDialog": {
         "title": "Usuń dostępność użytkownika",
         "message": "Czy na pewno chcesz usunąć ustawienia dostępności dla {{userName}}? Spowoduje to usunięcie wszystkich skonfigurowanych godzin pracy. Tej operacji nie można cofnąć."
-      }
+      },
+      "scope": {
+        "team": "Filtr zespołu:",
+        "allTeams": "Wszyscy autoryzowani technicy",
+        "technician": "Technik:",
+        "schedule": "Harmonogram:",
+        "loading": "Sprawdzanie zapisanych godzin rezerwacji",
+        "saved": "Zapisane godziny rezerwacji",
+        "partial": "Zapisane godziny rezerwacji z niezapisanymi wartościami domyślnymi dla brakujących dni",
+        "draft": "Niezapisany szablon od poniedziałku do piątku, 09:00–17:00",
+        "explanation": "Te godziny rezerwacji dotyczą użytkownika we wszystkich zespołach. Nie są dziedziczone z oddzielnego harmonogramu pracy."
+      },
+      "loading": "Wczytywanie godzin technika..."
     },
     "serviceRules": {
       "serviceSelect": {

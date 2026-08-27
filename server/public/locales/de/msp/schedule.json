@@ -279,8 +279,9 @@
         "placeholder": "Genehmiger auswählen"
       },
       "teamSelect": {
-        "label": "Wählen Sie Team",
-        "placeholder": "Wählen Sie ein Team aus"
+        "label": "Techniker nach Team filtern",
+        "placeholder": "Alle autorisierten Techniker",
+        "help": "Dies filtert nur die Technikerliste; die Buchungsverfügbarkeit gilt für den Techniker in allen Teams."
       }
     },
     "feedback": {
@@ -319,16 +320,16 @@
     "userHours": {
       "roleManager": {
         "label": "Teammanager:",
-        "description": "Sie können Verfügbarkeitseinstellungen für Mitglieder Ihres Teams konfigurieren. Die Tabelle „Konfigurierte Benutzer“ unten zeigt alle Benutzer mit Verfügbarkeitseinstellungen im gesamten System."
+        "description": "Sie können die Buchungsverfügbarkeit nur für autorisierte Teammitglieder und direkte Mitarbeiter konfigurieren. Die Tabelle unten folgt dem aktuellen Teamfilter."
       },
       "roleAdmin": {
         "label": "Administrator:",
-        "description": "Sie können Verfügbarkeitseinstellungen für jeden Benutzer im System konfigurieren. Die Tabelle „Konfigurierte Benutzer“ unten zeigt alle Benutzer mit Verfügbarkeitseinstellungen."
+        "description": "Sie können die teamübergreifende Buchungsverfügbarkeit für jeden autorisierten Techniker konfigurieren. Die Tabelle unten folgt dem aktuellen Teamfilter."
       },
       "userSelect": {
-        "label": "Wählen Sie den zu konfigurierenden Benutzer aus",
+        "label": "Techniker",
         "placeholderSelectTeamFirst": "Wählen Sie zunächst ein Team aus",
-        "placeholder": "Wählen Sie einen Benutzer zum Konfigurieren aus"
+        "placeholder": "Techniker zum Konfigurieren auswählen"
       },
       "appointmentSettings": {
         "title": "Termineinstellungen",
@@ -361,8 +362,8 @@
       },
       "configuredUsers": {
         "title": "Konfigurierte Benutzer",
-        "description": "Benutzer mit konfigurierten Verfügbarkeitseinstellungen",
-        "empty": "Noch keine Benutzer konfiguriert",
+        "description": "Techniker mit gespeicherter Buchungsverfügbarkeit im aktuellen Filter",
+        "empty": "Für keinen Techniker in diesem Filter ist bisher Buchungsverfügbarkeit gespeichert",
         "columns": {
           "userName": "Benutzername",
           "status": "Status"
@@ -372,7 +373,9 @@
         }
       },
       "actions": {
-        "save": "Benutzerstunden speichern"
+        "save": "Benutzerstunden speichern",
+        "retry": "Erneut versuchen",
+        "saving": "Wird gespeichert..."
       },
       "feedback": {
         "selectUserError": "Bitte wählen Sie einen Benutzer aus",
@@ -384,7 +387,19 @@
       "deleteDialog": {
         "title": "Benutzerverfügbarkeit löschen",
         "message": "Möchten Sie die Verfügbarkeitseinstellungen für {{userName}} wirklich löschen? Dadurch werden alle konfigurierten Arbeitszeiten entfernt. Diese Aktion kann nicht rückgängig gemacht werden."
-      }
+      },
+      "scope": {
+        "team": "Teamfilter:",
+        "allTeams": "Alle autorisierten Techniker",
+        "technician": "Techniker:",
+        "schedule": "Zeitplan:",
+        "loading": "Gespeicherte Buchungszeiten werden geprüft",
+        "saved": "Gespeicherte Buchungszeiten",
+        "partial": "Gespeicherte Buchungszeiten mit ungespeicherten Standardwerten für fehlende Tage",
+        "draft": "Ungespeicherte Vorlage Montag–Freitag, 09:00–17:00 Uhr",
+        "explanation": "Diese Buchungszeiten gelten teamübergreifend für den Benutzer. Sie werden nicht aus dem separaten Arbeitsplan übernommen."
+      },
+      "loading": "Technikerzeiten werden geladen..."
     },
     "serviceRules": {
       "serviceSelect": {
