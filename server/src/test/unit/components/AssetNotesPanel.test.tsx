@@ -114,8 +114,8 @@ describe('AssetNotesPanel', () => {
     expect(shell).toHaveClass('p-4');
     expect(screen.getByTestId('text-editor')).toHaveClass('min-h-[100px]', 'p-4');
     expect(screen.getByTestId('text-editor').parentElement).toHaveClass(
-      '[&_.editor-paper]:p-2',
-      '[&_.bn-editor]:!px-2'
+      '[&_.editor-paper]:p-0',
+      '[&_.bn-editor]:!px-0'
     );
     expect(screen.getByTestId('text-editor').parentElement).not.toHaveClass('min-h-[200px]');
     expect(container.querySelector('.bg-white')).toBeNull();
@@ -172,8 +172,8 @@ describe('AssetNotesPanel', () => {
     expect(container.querySelector('#asset-bento-notes')).toBeNull();
     expect(screen.getByTestId('text-editor').parentElement).toHaveClass('min-h-[200px]');
     expect(screen.getByTestId('text-editor').parentElement).not.toHaveClass(
-      '[&_.editor-paper]:p-2',
-      '[&_.bn-editor]:!px-2'
+      '[&_.editor-paper]:p-0',
+      '[&_.bn-editor]:!px-0'
     );
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });

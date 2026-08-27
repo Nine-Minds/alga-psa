@@ -100,7 +100,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
       <div
         className={
           variant === 'bento'
-            ? '[&_.editor-paper]:p-2 [&_.bn-editor]:!px-2'
+            ? '[&_.editor-paper]:p-0 [&_.bn-editor]:!px-0'
             : 'min-h-[200px]'
         }
       >
