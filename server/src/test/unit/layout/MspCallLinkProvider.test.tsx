@@ -18,7 +18,7 @@ vi.mock('@/context/TierContext', () => ({
   useTier: () => ({ hasAddOn: hoisted.hasAddOn }),
 }));
 
-vi.mock('@alga-psa/integrations/actions', () => ({
+vi.mock('@alga-psa/integrations/actions/integrations/telephonyActions', () => ({
   getTelephonyCallLinkState: hoisted.getState,
   createTelephonyCallIntent: hoisted.createIntent,
 }));
