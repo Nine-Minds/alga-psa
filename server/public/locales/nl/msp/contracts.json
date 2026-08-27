@@ -2348,7 +2348,7 @@
       "scopeCatchAll": "Dekt alle services op de contractregel (aangesloten services overschrijven de vermenigvuldigingsfactor)",
       "scopeMembers": "Alleen aangesloten services",
       "totalHours": "Totaal aantal uren",
-      "overageRate": "Overschrijdingstarief ($/uur)",
+      "overageRate": "Overschrijdingstarief per uur",
       "rollover": "Overdracht toestaan",
       "afterHours": "Verbruiksfactor buiten kantooruren",
       "afterHoursMultiplier": "Factor (bijv. 1,5)",

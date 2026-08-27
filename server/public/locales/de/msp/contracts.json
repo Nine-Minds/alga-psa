@@ -2348,7 +2348,7 @@
       "scopeCatchAll": "Deckt alle Dienste der Vertragslinie ab (zugeordnete Dienste überschreiben den Multiplikator)",
       "scopeMembers": "Nur zugeordnete Dienste",
       "totalHours": "Gesamtstunden",
-      "overageRate": "Überschreitungstarif ($/Std.)",
+      "overageRate": "Überschreitungstarif pro Stunde",
       "rollover": "Übertrag erlauben",
       "afterHours": "Verbrauchsmultiplikator außerhalb der Geschäftszeiten",
       "afterHoursMultiplier": "Multiplikator (z. B. 1,5)",

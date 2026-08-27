@@ -2352,7 +2352,7 @@
       "scopeCatchAll": "Obejmuje wszystkie usługi linii (usługi członkowskie nadpisują mnożnik)",
       "scopeMembers": "Tylko usługi członkowskie",
       "totalHours": "Łączna liczba godzin",
-      "overageRate": "Stawka za przekroczenie ($/godz.)",
+      "overageRate": "Godzinowa stawka za przekroczenie",
       "rollover": "Zezwól na przeniesienie",
       "afterHours": "Mnożnik zużycia poza godzinami pracy",
       "afterHoursMultiplier": "Mnożnik (np. 1,5)",

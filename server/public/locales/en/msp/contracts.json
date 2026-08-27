@@ -2348,7 +2348,7 @@
       "scopeCatchAll": "Covers all services on the line (members are multiplier overrides)",
       "scopeMembers": "Member services only",
       "totalHours": "Total hours",
-      "overageRate": "Overage rate ($/hr)",
+      "overageRate": "Overage rate per hour",
       "rollover": "Allow rollover",
       "afterHours": "After-hours burn multiplier",
       "afterHoursMultiplier": "Multiplier (e.g. 1.5)",

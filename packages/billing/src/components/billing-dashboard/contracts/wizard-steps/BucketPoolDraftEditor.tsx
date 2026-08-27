@@ -20,6 +20,7 @@ export interface BucketPoolDraftEditorProps {
   schedules: Array<{ schedule_id: string; schedule_name: string; is_default: boolean }>;
   lineKey: 'hourly' | 'usage';
   currencyCode?: string;
+  scheduleLoadError?: boolean;
   onChange: (pools: BucketPoolDraft[]) => void;
 }
 
@@ -39,6 +40,7 @@ export function BucketPoolDraftEditor({
   schedules,
   lineKey,
   currencyCode = 'USD',
+  scheduleLoadError = false,
   onChange,
 }: BucketPoolDraftEditorProps) {
   const { t } = useTranslation('msp/contracts');
@@ -93,12 +95,14 @@ export function BucketPoolDraftEditor({
       {pools.map((pool, index) => (
         <DraftPoolCard
           key={index}
+          poolIndex={index}
           pool={pool}
           unpooledServices={pool.covers_all_services ? lineServices : unpooledLineServices}
           hasCatchAll={hasCatchAll}
           defaultSchedule={defaultSchedule}
           schedules={schedules}
           currencyCode={currencyCode}
+          scheduleLoadError={scheduleLoadError}
           onUpdate={(patch) => updatePool(index, patch)}
           onRemove={() => removePool(index)}
         />
@@ -113,6 +117,7 @@ export function BucketPoolDraftEditor({
           onCancel={() => setShowCreate(false)}
           onCreate={addPool}
           currencyCode={currencyCode}
+          scheduleLoadError={scheduleLoadError}
         />
       )}
 
@@ -128,23 +133,27 @@ export function BucketPoolDraftEditor({
 }
 
 interface DraftPoolCardProps {
+  poolIndex: number;
   pool: BucketPoolDraft;
   unpooledServices: Array<{ service_id: string; service_name: string }>;
   hasCatchAll: boolean;
   defaultSchedule?: { schedule_id: string; schedule_name: string; is_default: boolean };
   schedules: Array<{ schedule_id: string; schedule_name: string; is_default: boolean }>;
   currencyCode: string;
+  scheduleLoadError: boolean;
   onUpdate: (patch: Partial<BucketPoolDraft>) => void;
   onRemove: () => void;
 }
 
 function DraftPoolCard({
+  poolIndex,
   pool,
   unpooledServices,
   hasCatchAll,
   defaultSchedule,
   schedules,
   currencyCode,
+  scheduleLoadError,
   onUpdate,
   onRemove,
 }: DraftPoolCardProps) {
@@ -185,26 +194,23 @@ function DraftPoolCard({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">{t('bucketPools.labels.totalHours', { defaultValue: 'Total hours' })}</Label>
-          <Input
-            type="number"
-            min="0"
+          <NumericInput
+            id={`wizard-saved-pool-${poolIndex}-hours`}
+            precision={2}
             value={pool.total_minutes / 60}
-            onChange={(e) => {
-              const hours = parseFloat(e.target.value);
-              if (Number.isFinite(hours)) onUpdate({ total_minutes: Math.max(0, Math.round(hours * 60)) });
+            onChange={(hours) => {
+              if (hours !== undefined) onUpdate({ total_minutes: Math.max(0, Math.round(hours * 60)) });
             }}
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate ($/hr)' })}</Label>
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
+          <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate per hour' })}</Label>
+          <CurrencyInput
+            id={`wizard-saved-pool-${poolIndex}-overage-rate`}
+            currencyCode={currencyCode}
             value={pool.overage_rate / 100}
-            onChange={(e) => {
-              const dollars = parseFloat(e.target.value);
-              if (Number.isFinite(dollars)) onUpdate({ overage_rate: Math.max(0, Math.round(dollars * 100)) });
+            onChange={(amount) => {
+              if (amount !== undefined) onUpdate({ overage_rate: Math.max(0, Math.round(amount * 100)) });
             }}
           />
         </div>
@@ -231,21 +237,40 @@ function DraftPoolCard({
         <SwitchWithLabel
           label={t('bucketPools.labels.afterHours', { defaultValue: 'After-hours burn multiplier' })}
           checked={ruleEnabled}
+          disabled={!defaultSchedule}
           onCheckedChange={(checked) => {
             setRuleEnabled(Boolean(checked));
-            if (!checked) onUpdate({ after_hours_multiplier: null, business_hours_schedule_id: null });
+            if (!checked) {
+              onUpdate({ after_hours_multiplier: null, business_hours_schedule_id: null });
+            } else if (defaultSchedule) {
+              const multiplier = Number(ruleMultiplierInput) > 0 ? Number(ruleMultiplierInput) : 1.5;
+              setRuleMultiplierInput(String(multiplier));
+              setRuleScheduleId(defaultSchedule.schedule_id);
+              onUpdate({ after_hours_multiplier: multiplier, business_hours_schedule_id: defaultSchedule.schedule_id });
+            }
           }}
         />
+        {!defaultSchedule && (
+          <p className="text-xs text-[rgb(var(--color-text-500))]">
+            {scheduleLoadError
+              ? t('bucketPools.errors.scheduleLoadFailed', { defaultValue: 'Business hours schedules could not be loaded. Try again before enabling this rule.' })
+              : t('bucketPools.errors.scheduleRequired', { defaultValue: 'Create a business hours schedule in Settings before enabling this rule.' })}
+          </p>
+        )}
         {ruleEnabled && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">{t('bucketPools.labels.afterHoursMultiplier', { defaultValue: 'Multiplier (e.g. 1.5)' })}</Label>
-              <Input
-                type="number"
-                min="0.001"
-                step="0.001"
-                value={ruleMultiplierInput}
-                onChange={(e) => setRuleMultiplierInput(e.target.value)}
+              <NumericInput
+                id={`wizard-saved-pool-${poolIndex}-after-hours-multiplier`}
+                precision={3}
+                value={ruleMultiplierInput === '' ? undefined : Number(ruleMultiplierInput)}
+                onChange={(value) => {
+                  setRuleMultiplierInput(String(value ?? ''));
+                  if (value !== undefined && value > 0 && effectiveScheduleId) {
+                    onUpdate({ after_hours_multiplier: value, business_hours_schedule_id: effectiveScheduleId });
+                  }
+                }}
               />
             </div>
             <div className="space-y-1">
@@ -253,7 +278,14 @@ function DraftPoolCard({
               <select
                 className="w-full h-10 rounded-md border border-[rgb(var(--color-border-200))] bg-background px-3 text-sm"
                 value={effectiveScheduleId}
-                onChange={(e) => setRuleScheduleId(e.target.value)}
+                onChange={(e) => {
+                  const scheduleId = e.target.value;
+                  setRuleScheduleId(scheduleId);
+                  const multiplier = Number(ruleMultiplierInput);
+                  if (scheduleId && multiplier > 0) {
+                    onUpdate({ after_hours_multiplier: multiplier, business_hours_schedule_id: scheduleId });
+                  }
+                }}
               >
                 {schedules.map((schedule) => (
                   <option key={schedule.schedule_id} value={schedule.schedule_id}>
@@ -262,21 +294,6 @@ function DraftPoolCard({
                 ))}
               </select>
             </div>
-            <Button
-              id="apply-wizard-after-hours-rule-button"
-              type="button"
-              variant="outline"
-              size="sm"
-              className="md:col-span-2 justify-self-start"
-              onClick={() => {
-                const multiplier = parseFloat(ruleMultiplierInput);
-                if (Number.isFinite(multiplier) && multiplier > 0 && effectiveScheduleId) {
-                  onUpdate({ after_hours_multiplier: multiplier, business_hours_schedule_id: effectiveScheduleId });
-                }
-              }}
-            >
-              {t('bucketPools.actions.applyRule', { defaultValue: 'Apply after-hours rule' })}
-            </Button>
           </div>
         )}
       </div>
@@ -286,7 +303,7 @@ function DraftPoolCard({
         <Label className="text-xs font-semibold">
           {t('bucketPools.labels.members', { defaultValue: 'Member services' })}
         </Label>
-        {pool.members.length > 0 && (
+        {pool.members.length > 0 ? (
           <ul className="space-y-1">
             {pool.members.map((member) => (
               <li key={member.service_id} className="flex items-center justify-between text-sm">
@@ -306,7 +323,13 @@ function DraftPoolCard({
               </li>
             ))}
           </ul>
-        )}
+        ) : !pool.covers_all_services ? (
+          <p className="text-xs text-[rgb(var(--color-text-400))]">
+            {unpooledServices.length === 0
+              ? t('bucketPools.labels.noServicesOnLine', { defaultValue: 'Add an hourly service to this contract line before choosing pool members.' })
+              : t('bucketPools.labels.noMembers', { defaultValue: 'No member services attached.' })}
+          </p>
+        ) : null}
         {!pool.covers_all_services && unpooledServices.length > 0 && (
           <div className="flex items-center gap-2">
             <select
@@ -323,15 +346,17 @@ function DraftPoolCard({
                 </option>
               ))}
             </select>
-            <Input
-              type="number"
-              min="0.001"
-              step="0.001"
-              className="w-20"
-              value={newMultiplier}
-              onChange={(e) => setNewMultiplier(e.target.value)}
-              aria-label={t('bucketPools.labels.multiplier', { defaultValue: 'Multiplier' })}
-            />
+            <div className="w-28 space-y-1">
+              <Label htmlFor={`wizard-saved-pool-${poolIndex}-member-multiplier`} className="text-xs">
+                {t('bucketPools.labels.burnMultiplier', { defaultValue: 'Burn multiplier (×)' })}
+              </Label>
+              <NumericInput
+                id={`wizard-saved-pool-${poolIndex}-member-multiplier`}
+                precision={3}
+                value={newMultiplier === '' ? undefined : Number(newMultiplier)}
+                onChange={(value) => setNewMultiplier(String(value ?? ''))}
+              />
+            </div>
             <Button
               id="add-wizard-pool-member-button"
               type="button"
@@ -370,6 +395,7 @@ interface CreateDraftPoolFormProps {
   defaultSchedule?: { schedule_id: string; schedule_name: string; is_default: boolean };
   schedules: Array<{ schedule_id: string; schedule_name: string; is_default: boolean }>;
   currencyCode: string;
+  scheduleLoadError: boolean;
   onCancel: () => void;
   onCreate: (draft: Omit<BucketPoolDraft, 'line_key'>) => void;
 }
@@ -380,6 +406,7 @@ function CreateDraftPoolForm({
   defaultSchedule,
   schedules,
   currencyCode,
+  scheduleLoadError,
   onCancel,
   onCreate,
 }: CreateDraftPoolFormProps) {
@@ -466,8 +493,14 @@ function CreateDraftPoolForm({
               </span>
             </div>
           ))}
+          {availableServices.length === 0 && members.length === 0 && (
+            <p className="text-xs text-[rgb(var(--color-text-400))]">
+              {t('bucketPools.labels.noServicesOnLine', { defaultValue: 'Add an hourly service to this contract line before choosing pool members.' })}
+            </p>
+          )}
           <div className="flex items-center gap-2">
             <select
+              disabled={availableServices.length === 0}
               className="h-9 flex-1 rounded-md border border-[rgb(var(--color-border-200))] bg-background px-2 text-sm"
               value={selectedServiceId}
               onChange={(e) => setSelectedServiceId(e.target.value)}
@@ -479,14 +512,17 @@ function CreateDraftPoolForm({
                 </option>
               ))}
             </select>
-            <Input
-              type="number"
-              min="0.001"
-              step="0.001"
-              className="w-20"
-              value={multiplier}
-              onChange={(e) => setMultiplier(e.target.value)}
-            />
+            <div className="w-28 space-y-1">
+              <Label htmlFor="wizard-create-pool-member-multiplier" className="text-xs">
+                {t('bucketPools.labels.burnMultiplier', { defaultValue: 'Burn multiplier (×)' })}
+              </Label>
+              <NumericInput
+                id="wizard-create-pool-member-multiplier"
+                precision={3}
+                value={multiplier === '' ? undefined : Number(multiplier)}
+                onChange={(value) => setMultiplier(String(value ?? ''))}
+              />
+            </div>
             <Button
               id="add-create-wizard-pool-member-button"
               type="button"
@@ -514,13 +550,21 @@ function CreateDraftPoolForm({
         <SwitchWithLabel
           label={t('bucketPools.labels.afterHours', { defaultValue: 'After-hours burn multiplier' })}
           checked={afterHoursMultiplier !== ''}
+          disabled={!defaultSchedule}
           onCheckedChange={(checked) => setAfterHoursMultiplier(checked ? (defaultSchedule ? '1.5' : '') : '')}
         />
+        {!defaultSchedule && (
+          <p className="text-xs text-[rgb(var(--color-text-500))]">
+            {scheduleLoadError
+              ? t('bucketPools.errors.scheduleLoadFailed', { defaultValue: 'Business hours schedules could not be loaded. Try again before enabling this rule.' })
+              : t('bucketPools.errors.scheduleRequired', { defaultValue: 'Create a business hours schedule in Settings before enabling this rule.' })}
+          </p>
+        )}
         {afterHoursMultiplier !== '' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">{t('bucketPools.labels.afterHoursMultiplier', { defaultValue: 'Multiplier (e.g. 1.5)' })}</Label>
-              <Input type="number" min="0.001" step="0.001" value={afterHoursMultiplier} onChange={(e) => setAfterHoursMultiplier(e.target.value)} />
+              <NumericInput id="wizard-create-pool-after-hours-multiplier" precision={3} value={afterHoursMultiplier === '' ? undefined : Number(afterHoursMultiplier)} onChange={(value) => setAfterHoursMultiplier(String(value ?? ''))} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">{t('bucketPools.labels.schedule', { defaultValue: 'Business hours schedule' })}</Label>

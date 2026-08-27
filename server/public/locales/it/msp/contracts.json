@@ -2348,7 +2348,7 @@
       "scopeCatchAll": "Copre tutti i servizi della linea (i servizi membri sostituiscono il moltiplicatore)",
       "scopeMembers": "Solo servizi membri",
       "totalHours": "Ore totali",
-      "overageRate": "Tariffa di superamento ($/ora)",
+      "overageRate": "Tariffa di superamento oraria",
       "rollover": "Consenti riporto",
       "afterHours": "Moltiplicatore di consumo fuori orario",
       "afterHoursMultiplier": "Moltiplicatore (es. 1,5)",
