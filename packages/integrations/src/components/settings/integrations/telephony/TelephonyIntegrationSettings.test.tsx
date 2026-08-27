@@ -1,30 +1,19 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import type { TelephonyCallSummary, TelephonyOverview } from '../../../../actions/integrations/telephonyActions';
+import { cleanup, render, screen } from '@testing-library/react';
+import type { TelephonyOverview } from '../../../../actions/integrations/telephonyActions';
 
 const mocks = vi.hoisted(() => ({
   getOverview: vi.fn(),
   setProviderEnabled: vi.fn(async () => ({ success: true })),
   setAutoTicketPolicy: vi.fn(async () => ({ success: true })),
-  resolveCall: vi.fn(async () => ({ success: true })),
-  listTargets: vi.fn(async () => ({ success: true, targets: [] as any[] })),
-  listLinkableTickets: vi.fn(async () => ({ success: true, tickets: [] as any[] })),
-  linkToTicket: vi.fn(async () => ({ success: true })),
-  createTicket: vi.fn(async () => ({ success: true })),
 }));
 
 vi.mock('../../../../actions/integrations/telephonyActions', () => ({
   getTelephonyOverview: mocks.getOverview,
   setTelephonyProviderEnabled: mocks.setProviderEnabled,
   setTelephonyAutoTicketPolicy: mocks.setAutoTicketPolicy,
-  resolveTelephonyCall: mocks.resolveCall,
-  listTelephonyResolutionTargets: mocks.listTargets,
-  listTelephonyLinkableTickets: mocks.listLinkableTickets,
-  linkTelephonyCallToTicket: mocks.linkToTicket,
-  createTicketFromTelephonyCall: mocks.createTicket,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
@@ -33,27 +22,6 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
 });
 
 import { TelephonyIntegrationSettings } from './TelephonyIntegrationSettings';
-
-function call(overrides: Partial<TelephonyCallSummary> = {}): TelephonyCallSummary {
-  return {
-    callRecordId: 'call-1',
-    provider: 'teams-phone',
-    direction: 'inbound',
-    counterpartyNumber: '+15551234567',
-    counterpartyLabel: null,
-    startedAt: '2026-08-22T15:00:00.000Z',
-    durationSeconds: 210,
-    matchStatus: 'matched',
-    matchedContactId: 'contact-1',
-    matchedContactName: 'Dorothy Gale',
-    matchedClientId: 'client-1',
-    matchedClientName: 'Emerald City',
-    interactionId: 'interaction-1',
-    ticketId: null,
-    candidates: [],
-    ...overrides,
-  };
-}
 
 function overview(overrides: Partial<TelephonyOverview> = {}): TelephonyOverview {
   return {
@@ -73,7 +41,7 @@ function overview(overrides: Partial<TelephonyOverview> = {}): TelephonyOverview
         prerequisiteMet: true,
       },
     ],
-    recentCalls: [call()],
+    recentCalls: [],
     unresolvedCalls: [],
     ...overrides,
   };
@@ -83,8 +51,6 @@ describe('TelephonyIntegrationSettings', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    mocks.listTargets.mockResolvedValue({ success: true, targets: [] });
-    mocks.resolveCall.mockResolvedValue({ success: true });
   });
 
   it('T007: renders the Teams Phone provider card with its current status', async () => {
@@ -140,12 +106,12 @@ describe('TelephonyIntegrationSettings', () => {
       .toContain('Last call notification');
   });
 
-  it('T008: a tenant without the add-on gets the paywall and no provider controls', async () => {
+  it('shows an unavailable state and no provider controls when the release feature is disabled', async () => {
     mocks.getOverview.mockResolvedValue({
       success: true,
       available: false,
-      reason: 'addon_required',
-      error: 'Microsoft Teams add-on required',
+      reason: 'feature_disabled',
+      error: 'Telephony integrations are not enabled for this tenant.',
       canManage: true,
       canResolve: true,
       providers: [],
@@ -155,7 +121,7 @@ describe('TelephonyIntegrationSettings', () => {
 
     render(<TelephonyIntegrationSettings />);
 
-    expect(await screen.findByText('Microsoft Teams add-on')).toBeTruthy();
+    expect(await screen.findByText('Telephony integrations are not enabled for this tenant.')).toBeTruthy();
     expect(screen.queryByText('Teams Phone')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Enable' })).toBeNull();
   });
@@ -179,147 +145,26 @@ describe('TelephonyIntegrationSettings', () => {
     expect(screen.queryByText('Teams Phone')).toBeNull();
   });
 
-  it('T009: the recent-calls strip lists direction, number, duration and match state', async () => {
+  it('keeps operational call lists out of the provider settings page', async () => {
     mocks.getOverview.mockResolvedValue(overview());
 
     render(<TelephonyIntegrationSettings />);
 
-    expect(await screen.findByText('+15551234567')).toBeTruthy();
-    expect(screen.getByText('3m 30s')).toBeTruthy();
-    expect(screen.getByText('Dorothy Gale')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Create ticket' })).toBeTruthy();
-  });
-
-  it('T009: a call already filed on a ticket offers the ticket instead of creating another', async () => {
-    mocks.getOverview.mockResolvedValue(overview({
-      recentCalls: [call({ ticketId: 'ticket-9' })],
-    }));
-
-    render(<TelephonyIntegrationSettings />);
-
-    const link = await screen.findByRole('link', { name: 'Open ticket' });
-    expect(link.getAttribute('href')).toBe('/msp/tickets/ticket-9');
-    expect(screen.queryByRole('button', { name: 'Create ticket' })).toBeNull();
-  });
-
-  it('T010: an ambiguous call offers its candidates and no guessed attribution', async () => {
-    mocks.getOverview.mockResolvedValue(overview({
-      recentCalls: [],
-      unresolvedCalls: [call({
-        matchStatus: 'ambiguous',
-        matchedContactId: null,
-        matchedContactName: null,
-        matchedClientId: null,
-        matchedClientName: null,
-        interactionId: null,
-        candidates: [
-          { contactId: 'contact-1', clientId: 'client-1', contactName: 'Dorothy Gale' },
-          { contactId: 'contact-2', clientId: 'client-2', contactName: 'Toto' },
-        ],
-      })],
-    }));
-
-    render(<TelephonyIntegrationSettings />);
-
-    const candidate = await screen.findByRole('button', { name: 'Assign to Dorothy Gale' });
-    expect(screen.getByRole('button', { name: 'Assign to Toto' })).toBeTruthy();
-
-    await userEvent.click(candidate);
-
-    await waitFor(() => expect(mocks.resolveCall).toHaveBeenCalledWith({
-      callRecordId: 'call-1',
-      contactId: 'contact-1',
-      clientId: 'client-1',
-    }));
-  });
-
-  it('T010: an unmatched call with no candidates can still be attributed by search', async () => {
-    // The ladder returns no candidates for an unmatched number by definition, so
-    // without a picker this row would be a dead end.
-    mocks.getOverview.mockResolvedValue(overview({
-      recentCalls: [],
-      unresolvedCalls: [call({
-        matchStatus: 'unmatched',
-        matchedContactId: null,
-        matchedContactName: null,
-        matchedClientId: null,
-        matchedClientName: null,
-        interactionId: null,
-        candidates: [],
-      })],
-    }));
-    mocks.listTargets.mockResolvedValue({
-      success: true,
-      targets: [
-        { contactId: 'contact-7', clientId: 'client-7', label: 'Glinda', sublabel: 'Emerald City' },
-        { contactId: null, clientId: 'client-8', label: 'Munchkin Co', sublabel: null },
-      ],
-    });
-
-    render(<TelephonyIntegrationSettings />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Assign to a contact or client…' }));
-
-    const search = await screen.findByPlaceholderText('Search contacts and clients…');
-    await userEvent.type(search, 'glin');
-    await waitFor(() => expect(mocks.listTargets).toHaveBeenCalledWith({ search: 'glin' }));
-
-    await userEvent.click(screen.getByRole('button', { name: 'Assign to Glinda · Emerald City' }));
-
-    await waitFor(() => expect(mocks.resolveCall).toHaveBeenCalledWith({
-      callRecordId: 'call-1',
-      contactId: 'contact-7',
-      clientId: 'client-7',
-    }));
-  });
-
-  it('T010: a client-only target resolves the call to the client', async () => {
-    mocks.getOverview.mockResolvedValue(overview({
-      recentCalls: [],
-      unresolvedCalls: [call({ matchStatus: 'unmatched', interactionId: null, candidates: [] })],
-    }));
-    mocks.listTargets.mockResolvedValue({
-      success: true,
-      targets: [{ contactId: null, clientId: 'client-8', label: 'Munchkin Co', sublabel: null }],
-    });
-
-    render(<TelephonyIntegrationSettings />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Assign to a contact or client…' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Assign to Munchkin Co' }));
-
-    await waitFor(() => expect(mocks.resolveCall).toHaveBeenCalledWith({
-      callRecordId: 'call-1',
-      contactId: null,
-      clientId: 'client-8',
-    }));
-  });
-
-  it('T010: an empty queue says so rather than showing an empty list', async () => {
-    mocks.getOverview.mockResolvedValue(overview());
-
-    render(<TelephonyIntegrationSettings />);
-
-    expect(await screen.findByText('Every captured call is attributed.')).toBeTruthy();
+    expect(await screen.findByText('Teams Phone')).toBeTruthy();
+    expect(screen.queryByText('Recent calls')).toBeNull();
+    expect(screen.queryByText('Calls needing attribution')).toBeNull();
   });
 
   it('T011: the interactive elements carry kebab-case reflection ids', async () => {
-    mocks.getOverview.mockResolvedValue(overview({
-      unresolvedCalls: [call({ matchStatus: 'unmatched', interactionId: null, candidates: [] })],
-    }));
+    mocks.getOverview.mockResolvedValue(overview());
 
     const { container } = render(<TelephonyIntegrationSettings />);
 
     await screen.findByText('Teams Phone');
-    // The calls panel loads its own overview, so its rows land a beat later.
-    await waitFor(() => expect(container.querySelector('#telephony-unmatched-row-call-1')).toBeTruthy());
     const ids = [...container.querySelectorAll('[id]')].map((node) => node.id);
     expect(ids).toEqual(expect.arrayContaining([
       'telephony-integrations-setup',
       'telephony-provider-card-teams-phone',
-      'telephony-recent-calls',
-      'telephony-unmatched-queue',
-      'telephony-unmatched-row-call-1',
     ]));
     expect(ids.every((id) => /^[a-z0-9-]+$/.test(id))).toBe(true);
   });

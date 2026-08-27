@@ -12,8 +12,6 @@ const NEW_SETTINGS_SUBTREES = [
   'deliveryLog',
   'auditLog',
   'troubleshooting',
-  'paywall',
-  'addonExpiredBanner',
   'staleManifest',
 ] as const;
 

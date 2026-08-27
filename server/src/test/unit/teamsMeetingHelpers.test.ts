@@ -7,6 +7,7 @@ const loggerWarnMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
 const renewTeamsMeetingArtifactSubscriptionsMock = vi.hoisted(() => vi.fn(async () => []));
 const enterpriseState = vi.hoisted(() => ({ value: true }));
+const featureState = vi.hoisted(() => ({ value: true }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
@@ -19,6 +20,8 @@ vi.mock('@alga-psa/core/features', () => ({
   get isEnterprise() {
     return enterpriseState.value;
   },
+  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
+  isFeatureFlagEnabled: vi.fn(async () => featureState.value),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -51,16 +54,8 @@ import { fetchMeetingArtifacts } from '@alga-psa/ee-microsoft-teams/lib/meetings
 import { getTeamsMeetingCapability } from '@alga-psa/ee-microsoft-teams/lib/actions/meetings/meetingCapabilityActions';
 import { resolveTeamsMeetingService } from '@alga-psa/scheduling/lib/teamsMeetingService';
 
-function buildTeamsIntegrationKnex(
-  row: Record<string, unknown> | undefined | null,
-  options: { hasTeamsAddOn?: boolean } = {}
-) {
-  const hasTeamsAddOn = options.hasTeamsAddOn ?? true;
+function buildTeamsIntegrationKnex(row: Record<string, unknown> | undefined | null) {
   const first = vi.fn(async function first(this: { table?: string; filters?: Record<string, unknown>[] }) {
-    if (this?.table === 'tenant_addons') {
-      return hasTeamsAddOn ? { addon_key: 'teams' } : undefined;
-    }
-
     return row ?? undefined;
   });
   const where = vi.fn(function where(this: { table?: string; filters?: Record<string, unknown>[] }, conditions: Record<string, unknown>) {
@@ -86,6 +81,7 @@ describe('Teams meeting helpers', () => {
 
   beforeEach(() => {
     enterpriseState.value = true;
+    featureState.value = true;
     createTenantKnexMock.mockReset();
     resolveProviderConfigMock.mockReset();
     fetchMicrosoftGraphAppTokenMock.mockReset();
@@ -271,13 +267,14 @@ describe('Teams meeting helpers', () => {
       }]);
     });
 
-    it('returns null without calling Graph when the Teams add-on is inactive', async () => {
+    it('returns null without calling Graph when the release feature is disabled', async () => {
+      featureState.value = false;
       const db = buildTeamsIntegrationKnex({
         tenant: 'tenant-1',
         install_status: 'active',
         selected_profile_id: 'profile-1',
         default_meeting_organizer_upn: 'organizer@example.com',
-      }, { hasTeamsAddOn: false });
+      });
       createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
 
       await expect(createTeamsMeeting({
@@ -823,18 +820,19 @@ describe('Teams meeting helpers', () => {
   });
 
   describe('getTeamsMeetingCapability', () => {
-    it('returns addon_required when the Teams add-on is inactive', async () => {
+    it('returns feature_disabled when the release feature is disabled', async () => {
+      featureState.value = false;
       const db = buildTeamsIntegrationKnex({
         tenant: 'tenant-1',
         install_status: 'active',
         selected_profile_id: 'profile-1',
         default_meeting_organizer_upn: 'organizer@example.com',
-      }, { hasTeamsAddOn: false });
+      });
       createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
 
       await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: false,
-        reason: 'addon_required',
+        reason: 'feature_disabled',
         recordingsAvailable: false,
         recordingReason: 'meeting_unavailable',
       });
@@ -1053,8 +1051,9 @@ describe('Teams meeting helpers', () => {
       })).resolves.toEqual({ status: 'skipped', reason: 'not_configured' });
     });
 
-    it('T041: create returns skipped/addon_inactive when the Teams add-on is inactive', async () => {
-      const db = buildTeamsIntegrationKnex(readyIntegrationRow, { hasTeamsAddOn: false });
+    it('T041: create returns skipped/feature_disabled when the release feature is disabled', async () => {
+      featureState.value = false;
+      const db = buildTeamsIntegrationKnex(readyIntegrationRow);
       createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
 
       await expect(createTeamsMeetingWithResult({
@@ -1062,7 +1061,7 @@ describe('Teams meeting helpers', () => {
         subject: 'Virtual consultation',
         startDateTime: '2026-04-24T14:00:00.000Z',
         endDateTime: '2026-04-24T14:30:00.000Z',
-      })).resolves.toEqual({ status: 'skipped', reason: 'addon_inactive' });
+      })).resolves.toEqual({ status: 'skipped', reason: 'feature_disabled' });
 
       expect(fetchMicrosoftGraphAppTokenMock).not.toHaveBeenCalled();
       expect(fetchMock).not.toHaveBeenCalled();

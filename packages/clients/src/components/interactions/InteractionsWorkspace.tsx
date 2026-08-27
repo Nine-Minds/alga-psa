@@ -12,6 +12,7 @@ interface InteractionsWorkspaceProps {
   contacts: IContact[];
   clients: IClient[];
   callsPanel?: React.ReactNode;
+  onOpenUser?: (userId: string, onUpdate?: () => void) => void;
 }
 
 export default function InteractionsWorkspace({
@@ -19,6 +20,7 @@ export default function InteractionsWorkspace({
   contacts,
   clients,
   callsPanel,
+  onOpenUser,
 }: InteractionsWorkspaceProps) {
   const { t: tCore } = useTranslation('msp/core');
   const { t: tIntegrations } = useTranslation('msp/integrations');
@@ -47,6 +49,7 @@ export default function InteractionsWorkspace({
             users={users}
             contacts={contacts}
             clients={clients}
+            onOpenUser={onOpenUser}
           />
         </TabsContent>
         {callsPanel ? (

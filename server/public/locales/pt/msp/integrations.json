@@ -3018,7 +3018,7 @@
           "test": {
             "sent": "Mensagem de teste das equipes enviada.",
             "failed": "A mensagem de teste do Teams falhou.",
-            "addonInactive": "O complemento Teams não está ativo para este locatário.",
+            "featureDisabled": "O Microsoft Teams não está habilitado para este locatário.",
             "integrationInactive": "Ative a integração do Teams antes de enviar uma mensagem de teste.",
             "capabilityDisabled": "Habilite o recurso de bot pessoal antes de enviar uma mensagem de teste.",
             "botNotConfigured": "Configure as credenciais do bot do Teams antes de enviar uma mensagem de teste.",
@@ -3027,7 +3027,7 @@
             "skipped": "A mensagem de teste do Teams foi ignorada."
           },
           "steps": {
-            "addonEntitlement": "Direito ao complemento do Teams",
+            "featureFlag": "Habilitação do recurso Microsoft Teams",
             "integrationStatus": "Status de integração de equipes",
             "capabilities": "Capacidades de equipes",
             "microsoftProfile": "Preparação do perfil da Microsoft",
@@ -3039,7 +3039,7 @@
             "recentDeliveryHealth": "Integridade recente da entrega do Teams"
           },
           "recommendation": {
-            "addon": "Habilite o complemento Microsoft Teams para este locatário.",
+            "featureFlag": "Habilite o Microsoft Teams para este locatário.",
             "activate": "Ative a integração do Teams nas configurações.",
             "capabilities": "Habilite bot pessoal e notificações de atividades para equipes.",
             "profile": "Selecione um perfil Microsoft pronto para Teams.",
@@ -3229,9 +3229,9 @@
               "cause": "O destinatário não entrou no AlgaPSA com a Microsoft, portanto não existe nenhum mapeamento de conta.",
               "remedy": "Peça ao usuário para entrar com a Microsoft (SSO do portal MSP ou a guia do Teams) para que sua conta seja mapeada."
             },
-            "addon_inactive": {
-              "cause": "O complemento do Teams expirou ou está ausente, portanto os envios são ignorados enquanto a configuração é preservada.",
-              "remedy": "Renove o complemento do Teams para este locatário."
+            "feature_disabled": {
+              "cause": "O Microsoft Teams não está habilitado para este locatário, portanto os envios são ignorados enquanto a configuração é preservada.",
+              "remedy": "Habilite o recurso da versão 1.5 para este locatário."
             },
             "integration_inactive": {
               "cause": "A integração do Teams não está ativa para este locatário.",
@@ -3262,26 +3262,6 @@
               "remedy": "Verifique os logs do servidor para obter o detalhe do erro de entrega e execute o diagnóstico novamente."
             }
           }
-        },
-        "paywall": {
-          "title": "Complemento do Microsoft Teams",
-          "description": "A integração do Microsoft Teams requer o complemento do Teams para este locatário.",
-          "includedTitle": "O que está incluído",
-          "feature": {
-            "tab": "Guia pessoal: abra o AlgaPSA dentro do Microsoft Teams.",
-            "bot": "Bot pessoal e de chat em grupo para tickets, aprovações, tempo e anotações.",
-            "messageExtension": "Extensão de mensagem e ações rápidas para atuar sobre registros do PSA a partir de qualquer mensagem.",
-            "meetings": "Reuniões do Teams nas aprovações de compromissos com convites reais de calendário do Outlook/Teams.",
-            "recordings": "Captura automática de gravações e transcrições de reuniões nas interações.",
-            "notifications": "Notificações do feed de atividades e de mensagem direta do bot para atribuições, respostas, aprovações e risco de SLA."
-          },
-          "cta": "Comprar complemento do Teams",
-          "nonBilling": "Entre em contato com um administrador de faturamento para comprar o complemento do Teams para este locatário."
-        },
-        "addonExpiredBanner": {
-          "title": "Complemento do Microsoft Teams expirado",
-          "message": "O complemento do Microsoft Teams expirou. Sua configuração e seu histórico de entregas são preservados, mas as notificações do Teams estão sendo ignoradas até que o complemento seja renovado.",
-          "cta": "Renovar complemento do Teams"
         },
         "staleManifest": {
           "title": "O pacote do aplicativo do Teams está desatualizado",
@@ -3635,15 +3615,16 @@
         "assignTo": "Atribuir a",
         "searchPlaceholder": "Pesquisar contatos e clientes…",
         "noTargets": "Nenhum contato ou cliente correspondente.",
-        "chooseTarget": "Atribuir a um contato ou cliente…"
+        "chooseTarget": "Atribuir a um cliente…"
       },
       "forbidden": "Você não tem permissão para ver as configurações de telefonia deste inquilino.",
       "paywall": {
-        "title": "Complemento Microsoft Teams",
-        "description": "As integrações de telefonia exigem o complemento Microsoft Teams para este inquilino.",
+        "title": "Telefonia",
+        "description": "As integrações de telefonia não estão disponíveis para este inquilino.",
+        "unavailable": "As integrações de telefonia não estão disponíveis para este inquilino.",
         "ceOnly": "As integrações de telefonia estão disponíveis apenas na Enterprise Edition.",
         "includedTitle": "O que está incluído",
-        "cta": "Gerenciar complementos",
+        "cta": "Gerenciar integrações",
         "feature": {
           "recognition": "Reconhecimento de quem liga entre contatos e clientes em cada chamada capturada.",
           "history": "Histórico de chamadas na linha do tempo do contato e do cliente como interações completas.",

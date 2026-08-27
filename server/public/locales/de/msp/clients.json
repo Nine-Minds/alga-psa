@@ -1432,6 +1432,9 @@
       "viewTranscript": "Transkript anzeigen"
     },
     "quickAdd": {
+      "clientRequired": "Wählen Sie einen Kunden für diese Interaktion aus",
+      "contactPlaceholder": "Kontakt auswählen",
+      "selectClientFirst": "Zuerst Kunden auswählen",
       "teams": {
         "attendees": {
           "add": "Hinzufügen",
@@ -1464,7 +1467,7 @@
         "invitesSummary": "Microsoft sendet Kalendereinladungen per E-Mail an: {{recipients}}.",
         "invitesSummaryYou": "Sie (Ersteller)",
         "reason": {
-          "addon_required": "Das Teams-Add-on ist für diesen Mandanten nicht aktiv.",
+          "feature_disabled": "Microsoft Teams ist für diesen Mandanten nicht aktiviert.",
           "ee_disabled": "Die Teams-Integration erfordert die Enterprise Edition.",
           "no_organizer": "In den Teams-Einstellungen ist kein Standard-Besprechungsorganisator konfiguriert.",
           "not_configured": "Die Teams-Integration wurde nicht konfiguriert."
@@ -1498,6 +1501,10 @@
       "columns": { "type": "Typ", "title": "Titel", "client": "Kunde", "contact": "Kontakt", "user": "Benutzer", "date": "Datum", "status": "Status" },
       "empty": "Keine Interaktionen entsprechen diesen Filtern.",
       "loading": "Interaktionen werden geladen…",
+      "openClient": "Kunden {{name}} öffnen",
+      "openContact": "Kontakt {{name}} öffnen",
+      "openInteraction": "Interaktion {{title}} öffnen",
+      "openUser": "Benutzer {{name}} öffnen",
       "byUser": "Von {{name}}",
       "collapse": "Letzte Interaktionen einklappen",
       "contactsFromClient": "Kontakte des ausgewählten Kunden",

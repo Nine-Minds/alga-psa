@@ -1,5 +1,5 @@
 import { getAdminConnection, getTenantIdBySlug, tenantDb } from '@alga-psa/db';
-import { ADD_ONS } from '@alga-psa/types';
+import { tenantHasTeamsFeatureAccess } from './teamsFeatureGate';
 import {
   TEAMS_CAPABILITIES,
   type TeamsCapability,
@@ -13,7 +13,6 @@ interface TeamsTenantContextRow {
   app_id: string | null;
   bot_id: string | null;
   microsoft_tenant_id: string;
-  active_teams_addon?: string | null;
 }
 
 export type TeamsTenantContextResolution =
@@ -92,10 +91,6 @@ function mapRow(row: TeamsTenantContextRow): ResolvedTeamsTenantContext {
 }
 
 function isRowEligible(row: TeamsTenantContextRow, requiredCapability?: TeamsCapability): boolean {
-  if (row.active_teams_addon !== ADD_ONS.TEAMS) {
-    return false;
-  }
-
   if (row.install_status !== 'active') {
     return false;
   }
@@ -129,22 +124,11 @@ async function queryTeamsIntegrationRows(
       'teams.enabled_capabilities',
       'teams.app_id',
       'teams.bot_id',
-      'profiles.tenant_id as microsoft_tenant_id',
-      'addons.addon_key as active_teams_addon'
+      'profiles.tenant_id as microsoft_tenant_id'
     )
     .where('profiles.is_archived', false);
 
   teamsDb.tenantJoin(rowsQuery, 'microsoft_profiles as profiles', 'teams.selected_profile_id', 'profiles.profile_id');
-  teamsDb.tenantJoin(rowsQuery, 'tenant_addons as addons', 'teams.tenant', 'addons.tenant', {
-    type: 'left',
-    rootTenantColumn: 'teams.tenant',
-    on(join) {
-      join
-        .andOn(db.raw('addons.addon_key = ?', [ADD_ONS.TEAMS]))
-        .andOn(db.raw('(addons.expires_at IS NULL OR addons.expires_at > now())'));
-    },
-  });
-
   if (microsoftTenantId) {
     rowsQuery.where('profiles.tenant_id', microsoftTenantId);
   }
@@ -198,7 +182,11 @@ export async function resolveTeamsTenantContext(
   const microsoftTenantId = normalizeOptionalString(input.microsoftTenantId);
   const db = await getAdminConnection();
   const rows = await queryTeamsIntegrationRows(db, explicitTenantId, microsoftTenantId);
-  const eligibleRows = rows.filter((row) => isRowEligible(row, input.requiredCapability));
+  const eligibleRows = (await Promise.all(rows.map(async (row) =>
+    isRowEligible(row, input.requiredCapability) && await tenantHasTeamsFeatureAccess(row.tenant)
+      ? row
+      : null
+  ))).filter((row): row is TeamsTenantContextRow => row !== null);
 
   if (eligibleRows.length === 1) {
     return mapRow(eligibleRows[0]);
@@ -224,9 +212,11 @@ export async function resolveTeamsTenantContext(
     );
     if (clientMatch && (!explicitTenantId || clientMatch.tenant === explicitTenantId)) {
       const clientTenantRows = await queryTeamsIntegrationRows(db, clientMatch.tenant, null);
-      const clientTenantEligible = clientTenantRows.filter((row) =>
-        isRowEligible(row, input.requiredCapability)
-      );
+      const clientTenantEligible = (await Promise.all(clientTenantRows.map(async (row) =>
+        isRowEligible(row, input.requiredCapability) && await tenantHasTeamsFeatureAccess(row.tenant)
+          ? row
+          : null
+      ))).filter((row): row is TeamsTenantContextRow => row !== null);
       if (clientTenantEligible.length === 1) {
         return { ...mapRow(clientTenantEligible[0]), entraMatchedClientId: clientMatch.clientId };
       }

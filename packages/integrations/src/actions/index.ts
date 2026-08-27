@@ -168,7 +168,6 @@ export {
   validateTeamsBotConnector,
   listTeamsDeliveries,
   listTeamsAuditEvents,
-  getTeamsAddonPurchaseAccess,
   type TeamsDiagnosticsReport,
   type TeamsTestMessageResult,
   type TeamsGraphCredentialValidationResult,
@@ -184,6 +183,12 @@ export {
 export {
   getTeamsAppPackageStatus,
 } from './integrations/teamsPackageActions';
+export {
+  createTelephonyCallIntent,
+  getTelephonyCallLinkState,
+  type CreateTelephonyCallIntentResult,
+  type TelephonyCallLinkState,
+} from './integrations/telephonyActions';
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,

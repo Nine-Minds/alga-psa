@@ -5,18 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getAllContactsMock = vi.fn();
 const getAllClientsMock = vi.fn();
-const getAllUsersBasicMock = vi.fn();
-const getTelephonyOverviewMock = vi.fn();
+const loadMspInteractionsPageDataMock = vi.fn();
 
 function ContactsLayoutMock() {
   return null;
 }
 
-function InteractionsWorkspaceMock() {
-  return null;
-}
-
-function TelephonyCallsPanelMock() {
+function InteractionsPageWorkspaceMock() {
   return null;
 }
 
@@ -25,21 +20,16 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getAllClients: getAllClientsMock,
 }));
 
-vi.mock('@alga-psa/user-composition/actions', () => ({
-  getAllUsersBasic: getAllUsersBasicMock,
-}));
-
-vi.mock('@alga-psa/integrations/actions/integrations/telephonyActions', () => ({
-  getTelephonyOverview: getTelephonyOverviewMock,
-}));
-
 vi.mock('@alga-psa/clients', () => ({
   ContactsLayout: ContactsLayoutMock,
-  InteractionsWorkspace: InteractionsWorkspaceMock,
 }));
 
-vi.mock('@alga-psa/integrations/components/telephony/TelephonyCallsPanel', () => ({
-  default: TelephonyCallsPanelMock,
+vi.mock('@alga-psa/msp-composition/clients/loadMspInteractionsPageData', () => ({
+  loadMspInteractionsPageData: loadMspInteractionsPageDataMock,
+}));
+
+vi.mock('server/src/app/msp/interactions/InteractionsPageWorkspace', () => ({
+  default: InteractionsPageWorkspaceMock,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
@@ -76,8 +66,12 @@ describe('MSP contacts and interactions page composition', () => {
     vi.clearAllMocks();
     getAllContactsMock.mockResolvedValue(contacts);
     getAllClientsMock.mockResolvedValue(clients);
-    getAllUsersBasicMock.mockResolvedValue(users);
-    getTelephonyOverviewMock.mockResolvedValue(availableOverview);
+    loadMspInteractionsPageDataMock.mockResolvedValue({
+      users,
+      contacts: [contacts[1], contacts[2]],
+      clients,
+      telephonyOverview: availableOverview,
+    });
   });
 
   it('keeps the contacts route focused on the deduplicated contact list', async () => {
@@ -89,27 +83,18 @@ describe('MSP contacts and interactions page composition', () => {
     });
     expect(getAllContactsMock).toHaveBeenCalledWith('all');
     expect(getAllClientsMock).not.toHaveBeenCalled();
-    expect(getAllUsersBasicMock).not.toHaveBeenCalled();
-    expect(getTelephonyOverviewMock).not.toHaveBeenCalled();
+    expect(loadMspInteractionsPageDataMock).not.toHaveBeenCalled();
   });
 
-  it('loads the interaction workspace and composes available calls from the server overview', async () => {
+  it('loads the interaction workspace through MSP composition', async () => {
     const result = await InteractionsPage();
-    const callsPanel = result.props.callsPanel as React.ReactElement;
 
-    expect(result.type).toBe(InteractionsWorkspaceMock);
+    expect(result.type).toBe(InteractionsPageWorkspaceMock);
     expect(result.props.users).toBe(users);
     expect(result.props.clients).toBe(clients);
     expect(result.props.contacts).toEqual([contacts[1], contacts[2]]);
-    expect(getAllContactsMock).toHaveBeenCalledWith('all');
-    expect(getAllUsersBasicMock).toHaveBeenCalledWith(true);
-    expect(getAllClientsMock).toHaveBeenCalledWith(true);
-    expect(callsPanel.type).toBe(TelephonyCallsPanelMock);
-    expect(callsPanel.props).toMatchObject({
-      variant: 'operational',
-      initialOverview: availableOverview,
-      showHeading: false,
-    });
+    expect(result.props.telephonyOverview).toBe(availableOverview);
+    expect(loadMspInteractionsPageDataMock).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -117,19 +102,21 @@ describe('MSP contacts and interactions page composition', () => {
     { success: false, available: false },
     null,
   ])('omits the calls surface when telephony cannot be used: %j', async (overview) => {
-    if (overview === null) {
-      getTelephonyOverviewMock.mockRejectedValue(new Error('overview failed'));
-    } else {
-      getTelephonyOverviewMock.mockResolvedValue({
-        ...availableOverview,
-        ...overview,
-      });
-    }
+    const telephonyOverview = overview === null ? null : {
+      ...availableOverview,
+      ...overview,
+    };
+    loadMspInteractionsPageDataMock.mockResolvedValue({
+      users,
+      contacts: [contacts[1], contacts[2]],
+      clients,
+      telephonyOverview,
+    });
 
     const result = await InteractionsPage();
 
-    expect(result.type).toBe(InteractionsWorkspaceMock);
-    expect(result.props.callsPanel).toBeUndefined();
+    expect(result.type).toBe(InteractionsPageWorkspaceMock);
+    expect(result.props.telephonyOverview).toBe(telephonyOverview);
   });
 
   it('provides translated metadata for the new route', async () => {

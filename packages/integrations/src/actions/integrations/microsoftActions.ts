@@ -2,10 +2,10 @@
 
 import { randomUUID } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { isFeatureFlagEnabled, RELEASE_V1_5_FEATURE_FLAG } from '@alga-psa/core/features';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { ADD_ONS } from '@alga-psa/types';
 import {
   getMicrosoftEmailSetupReadiness,
   getMicrosoftProfileReadiness,
@@ -367,16 +367,6 @@ async function getTeamsIntegrationSelectionRow(
     .first();
 
   return row || undefined;
-}
-
-async function tenantHasTeamsAddOn(knex: any, tenant: string): Promise<boolean> {
-  const row = await tenantDb(knex, tenant).table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-  return Boolean(row);
 }
 
 async function listBlockingMicrosoftProfileConsumers(
@@ -1616,8 +1606,11 @@ export const setMicrosoftConsumerBinding = withAuth(async (
     }
 
     const { knex } = await createTenantKnex();
-    if (input.consumerType === 'teams' && !(await tenantHasTeamsAddOn(knex, tenant))) {
-      return { success: false, error: 'Microsoft Teams integration requires the Teams add-on.' };
+    if (input.consumerType === 'teams' && !(await isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    }))) {
+      return { success: false, error: 'Microsoft Teams integration is not enabled for this tenant.' };
     }
 
     const secretProvider = await getSecretProviderInstance();

@@ -7,6 +7,8 @@ export const isEnterprise =
 
 const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
 
+export const RELEASE_V1_5_FEATURE_FLAG = 'release-v1-5-feature';
+
 function featureFlagsAreDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
   const raw = env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? env.DISABLE_FEATURE_FLAGS;
   if (typeof raw !== 'string') {

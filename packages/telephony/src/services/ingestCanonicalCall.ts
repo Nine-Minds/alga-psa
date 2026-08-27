@@ -4,7 +4,7 @@ import type { CanonicalCallRecord, CallMatchResult, TelephonyCallRecordRow } fro
 import { canonicalCallRecordSchema } from '../types';
 import { matchCallParty } from '../lib/callMatching';
 import { normalizeCountryCode, normalizeToE164 } from '../lib/phoneNumbers';
-import { tenantHasTelephonyEntitlement } from '../lib/telephonyAddOnGate';
+import { tenantHasTelephonyFeatureAccess } from '../lib/telephonyFeatureGate';
 import {
   buildCallInteractionNotes,
   buildCallInteractionTitle,
@@ -22,7 +22,7 @@ export interface IngestCanonicalCallInput {
 }
 
 export type IngestCanonicalCallOutcome =
-  | { status: 'skipped'; reason: 'addon_inactive' | 'invalid_payload' }
+  | { status: 'skipped'; reason: 'feature_disabled' | 'invalid_payload' }
   | {
       status: 'ingested';
       callRecordId: string;
@@ -30,6 +30,71 @@ export type IngestCanonicalCallOutcome =
       interactionId: string | null;
       created: boolean;
     };
+
+interface PendingCallIntentRow {
+  intent_id: string;
+  user_id: string;
+  provider_user_id: string | null;
+  ticket_id: string;
+  client_id: string | null;
+  contact_id: string | null;
+  created_at: string | Date;
+  expires_at: string | Date;
+}
+
+/**
+ * Find the ticket-screen click that launched this outbound call. An exact
+ * Microsoft user match wins; without one we only accept a single unambiguous
+ * intent for the number and time window. This avoids filing a call on the
+ * wrong ticket when two technicians dial the same number near-simultaneously.
+ */
+async function resolvePendingCallIntent(input: {
+  trx: any;
+  tenantId: string;
+  provider: string;
+  providerUserId: string | null;
+  phoneNumberE164: string | null;
+  startedAt: string | null | undefined;
+}): Promise<PendingCallIntentRow | null> {
+  if (!input.phoneNumberE164 || !input.startedAt) return null;
+
+  const callStartedAt = new Date(input.startedAt).getTime();
+  if (!Number.isFinite(callStartedAt)) return null;
+
+  const rows: PendingCallIntentRow[] = await tenantDb(input.trx, input.tenantId)
+    .table('telephony_call_intents')
+    .where({
+      provider: input.provider,
+      status: 'pending',
+      phone_number_e164: input.phoneNumberE164,
+    })
+    .orderBy('created_at', 'desc')
+    .limit(20);
+
+  // Allow a small clock-skew margin. The normal window starts when the user
+  // clicks and ends at expires_at; delayed Graph delivery does not matter
+  // because the CDR's actual started_at is used here.
+  const eligible = rows.filter((row) => {
+    const createdAt = new Date(row.created_at).getTime();
+    const expiresAt = new Date(row.expires_at).getTime();
+    return Number.isFinite(createdAt)
+      && Number.isFinite(expiresAt)
+      && createdAt <= callStartedAt + (5 * 60 * 1000)
+      && expiresAt >= callStartedAt - (5 * 60 * 1000);
+  });
+
+  if (input.providerUserId) {
+    const exact = eligible.filter((row) => row.provider_user_id === input.providerUserId);
+    if (exact.length > 0) return exact[0];
+
+    // A lone intent from a user without a Microsoft account link is still
+    // useful. Never fall back across a conflicting, known Teams identity.
+    const unbound = eligible.filter((row) => !row.provider_user_id);
+    return eligible.length === 1 && unbound.length === 1 ? unbound[0] : null;
+  }
+
+  return eligible.length === 1 ? eligible[0] : null;
+}
 
 /**
  * Idempotent ingestion of one canonical call.
@@ -58,12 +123,12 @@ export async function ingestCanonicalCall(
   const call = parsed.data;
   const knex = input.knex ?? (await createTenantKnex(input.tenantId)).knex;
 
-  if (!(await tenantHasTelephonyEntitlement(knex, input.tenantId))) {
-    logger.info('[Telephony] Skipping call ingestion: Microsoft Teams add-on inactive', {
+  if (!(await tenantHasTelephonyFeatureAccess(input.tenantId))) {
+    logger.info('[Telephony] Skipping call ingestion: release feature disabled', {
       tenantId: input.tenantId,
       provider: call.provider,
     });
-    return { status: 'skipped', reason: 'addon_inactive' };
+    return { status: 'skipped', reason: 'feature_disabled' };
   }
 
   const defaultCountryCode = normalizeCountryCode(input.defaultCountryCode)
@@ -79,7 +144,7 @@ export async function ingestCanonicalCall(
   // The counterparty is whoever is not us: the caller on the way in, the callee
   // on the way out.
   const counterpartyE164 = call.direction === 'outbound' ? calleeE164 : callerE164;
-  const match = await matchCallParty({
+  const numberMatch = await matchCallParty({
     knex,
     tenantId: input.tenantId,
     phoneNumber: counterpartyE164,
@@ -125,6 +190,26 @@ export async function ingestCanonicalCall(
       };
     }
 
+    const callIntent = call.direction === 'outbound'
+      ? await resolvePendingCallIntent({
+          trx,
+          tenantId: input.tenantId,
+          provider: call.provider,
+          providerUserId: call.organizerUserId ?? null,
+          phoneNumberE164: counterpartyE164,
+          startedAt: call.startedAt,
+        })
+      : null;
+
+    const match: CallMatchResult = callIntent
+      ? {
+          status: 'matched',
+          contactId: callIntent.contact_id,
+          clientId: callIntent.client_id,
+          candidates: [],
+        }
+      : numberMatch;
+
     const [inserted] = await db.table('telephony_call_records')
       .insert({
         ...columns,
@@ -133,6 +218,7 @@ export async function ingestCanonicalCall(
         matched_contact_id: match.contactId,
         matched_client_id: match.clientId,
         match_candidates: JSON.stringify(match.candidates),
+        ticket_id: callIntent?.ticket_id ?? null,
         created_at: trx.fn.now(),
       } as any)
       .returning('call_record_id');
@@ -149,6 +235,8 @@ export async function ingestCanonicalCall(
         calleeE164,
         contactId: match.contactId,
         clientId: match.clientId,
+        actingUserId: callIntent?.user_id ?? null,
+        ticketId: callIntent?.ticket_id ?? null,
       });
 
       if (interactionId) {
@@ -156,6 +244,17 @@ export async function ingestCanonicalCall(
           .where({ call_record_id: callRecordId })
           .update({ interaction_id: interactionId, updated_at: trx.fn.now() });
       }
+    }
+
+    if (callIntent) {
+      await db.table('telephony_call_intents')
+        .where({ intent_id: callIntent.intent_id, status: 'pending' })
+        .update({
+          status: 'matched',
+          call_record_id: callRecordId,
+          matched_at: trx.fn.now(),
+          updated_at: trx.fn.now(),
+        });
     }
 
     return {

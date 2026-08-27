@@ -1631,6 +1631,7 @@
       "client": "Cliente",
       "nextVisit": "Próxima visita",
       "callsAndEmails": "Ligações e e-mails",
+      "call": "Ligar",
       "viewAll": "Ver todos",
       "viewAllCount": "Ver todos os {{count}}",
       "timeLogged": "Tempo registrado",

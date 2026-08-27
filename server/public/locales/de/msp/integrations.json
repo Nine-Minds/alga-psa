@@ -3018,7 +3018,7 @@
           "test": {
             "sent": "Teams-Testnachricht gesendet.",
             "failed": "Teams-Testnachricht fehlgeschlagen.",
-            "addonInactive": "Das Teams-Add-on ist für diesen Mandanten nicht aktiv.",
+            "featureDisabled": "Microsoft Teams ist für diesen Mandanten nicht aktiviert.",
             "integrationInactive": "Aktivieren Sie die Teams-Integration, bevor Sie eine Testnachricht senden.",
             "capabilityDisabled": "Aktivieren Sie die Funktion für den persönlichen Bot, bevor Sie eine Testnachricht senden.",
             "botNotConfigured": "Konfigurieren Sie die Teams-Bot-Anmeldedaten, bevor Sie eine Testnachricht senden.",
@@ -3027,7 +3027,7 @@
             "skipped": "Die Teams-Testnachricht wurde übersprungen."
           },
           "steps": {
-            "addonEntitlement": "Teams-Add-on-Berechtigung",
+            "featureFlag": "Microsoft Teams-Funktionsfreigabe",
             "integrationStatus": "Status der Teams-Integration",
             "capabilities": "Teams-Funktionen",
             "microsoftProfile": "Bereitschaft des Microsoft-Profils",
@@ -3039,7 +3039,7 @@
             "recentDeliveryHealth": "Aktueller Zustand der Teams-Zustellung"
           },
           "recommendation": {
-            "addon": "Aktivieren Sie das Microsoft Teams-Add-on für diesen Mandanten.",
+            "featureFlag": "Aktivieren Sie Microsoft Teams für diesen Mandanten.",
             "activate": "Aktivieren Sie die Teams-Integration in den Einstellungen.",
             "capabilities": "Aktivieren Sie den persönlichen Bot und Aktivitätsbenachrichtigungen für Teams.",
             "profile": "Wählen Sie ein bereites Microsoft-Profil für Teams aus.",
@@ -3229,9 +3229,9 @@
               "cause": "Der Empfänger hat sich nicht mit Microsoft bei AlgaPSA angemeldet, daher besteht keine Kontozuordnung.",
               "remedy": "Lassen Sie den Benutzer sich mit Microsoft anmelden (MSP-Portal-SSO oder die Teams-Registerkarte), damit sein Konto zugeordnet wird."
             },
-            "addon_inactive": {
-              "cause": "Das Teams-Add-on ist abgelaufen oder nicht vorhanden, daher werden Sendungen übersprungen, während die Konfiguration erhalten bleibt.",
-              "remedy": "Erneuern Sie das Teams-Add-on für diesen Mandanten."
+            "feature_disabled": {
+              "cause": "Microsoft Teams ist für diesen Mandanten nicht aktiviert, daher werden Sendungen übersprungen, während die Konfiguration erhalten bleibt.",
+              "remedy": "Aktivieren Sie die Version-1.5-Funktionsfreigabe für diesen Mandanten."
             },
             "integration_inactive": {
               "cause": "Die Teams-Integration ist für diesen Mandanten nicht aktiv.",
@@ -3262,26 +3262,6 @@
               "remedy": "Prüfen Sie die Serverprotokolle auf die Details des Zustellungsfehlers und führen Sie die Diagnose erneut aus."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams-Add-on",
-          "description": "Die Microsoft Teams-Integration erfordert das Teams-Add-on für diesen Mandanten.",
-          "includedTitle": "Was enthalten ist",
-          "feature": {
-            "tab": "Persönliche Registerkarte: Öffnen Sie AlgaPSA in Microsoft Teams.",
-            "bot": "Persönlicher und Gruppenchat-Bot für Tickets, Genehmigungen, Zeiten und Notizen.",
-            "messageExtension": "Nachrichtenerweiterung und Schnellaktionen, um aus jeder Nachricht heraus auf PSA-Datensätze zu reagieren.",
-            "meetings": "Teams-Besprechungen bei Terminbestätigungen mit echten Outlook/Teams-Kalendereinladungen.",
-            "recordings": "Automatische Erfassung von Besprechungsaufzeichnungen und Transkripten in Interaktionen.",
-            "notifications": "Activity-Feed- und Bot-DM-Benachrichtigungen für Zuweisungen, Antworten, Genehmigungen und SLA-Risiko."
-          },
-          "cta": "Teams-Add-on kaufen",
-          "nonBilling": "Wenden Sie sich an einen Abrechnungsadministrator, um das Teams-Add-on für diesen Mandanten zu kaufen."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams-Add-on abgelaufen",
-          "message": "Das Microsoft Teams-Add-on ist abgelaufen. Ihre Konfiguration und Ihr Zustellungsverlauf bleiben erhalten, aber Teams-Benachrichtigungen werden übersprungen, bis das Add-on erneuert wird.",
-          "cta": "Teams-Add-on erneuern"
         },
         "staleManifest": {
           "title": "Teams-App-Paket ist veraltet",
@@ -3635,15 +3615,16 @@
         "assignTo": "Zuordnen zu",
         "searchPlaceholder": "Kontakte und Kunden suchen…",
         "noTargets": "Keine passenden Kontakte oder Kunden.",
-        "chooseTarget": "Einem Kontakt oder Kunden zuordnen…"
+        "chooseTarget": "Einem Kunden zuordnen…"
       },
       "forbidden": "Sie haben keine Berechtigung, die Telefonie-Einstellungen dieses Mandanten anzuzeigen.",
       "paywall": {
-        "title": "Microsoft Teams-Add-on",
-        "description": "Telefonie-Integrationen erfordern das Microsoft Teams-Add-on für diesen Mandanten.",
+        "title": "Telefonie",
+        "description": "Telefonie-Integrationen sind für diesen Mandanten nicht verfügbar.",
+        "unavailable": "Telefonie-Integrationen sind für diesen Mandanten nicht verfügbar.",
         "ceOnly": "Telefonie-Integrationen sind nur in der Enterprise Edition verfügbar.",
         "includedTitle": "Enthalten",
-        "cta": "Add-ons verwalten",
+        "cta": "Integrationen verwalten",
         "feature": {
           "recognition": "Anrufererkennung anhand von Kontakten und Kunden bei jedem erfassten Anruf.",
           "history": "Anrufverlauf in der Kontakt- und Kundenchronik als vollwertige Interaktionen.",

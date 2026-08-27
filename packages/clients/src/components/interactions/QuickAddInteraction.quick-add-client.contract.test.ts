@@ -25,4 +25,15 @@ describe('quick add interaction client creation wiring contract', () => {
     expect(source).toContain('handleClientSelect(newClient.client_id);');
     expect(source).toContain('skipSuccessDialog');
   });
+
+  it('supports standalone creation with client and contact selection', () => {
+    const source = readSource();
+
+    expect(source).toContain('entityId?: string;');
+    expect(source).toContain('const isStandaloneCreate = !isEditMode && !entityId;');
+    expect(source).toContain('if (isEditMode || isStandaloneCreate) {');
+    expect(source).toContain('{isStandaloneCreate && (');
+    expect(source).toContain('if (isStandaloneCreate && !selectedClientId) {');
+    expect(source).toContain('interactionData.client_id = selectedClientId');
+  });
 });

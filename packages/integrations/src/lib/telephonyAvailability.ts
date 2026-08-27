@@ -1,4 +1,4 @@
-import { ADD_ONS } from '@alga-psa/types';
+import { isFeatureFlagEnabled, RELEASE_V1_5_FEATURE_FLAG } from '@alga-psa/core/features';
 import {
   disabledTelephonyAvailability,
   resolveTelephonyAvailability,
@@ -20,22 +20,14 @@ export type {
   TelephonyAvailabilityDisabledReason,
 } from './telephonyAvailabilityCore';
 
-/**
- * Canonical telephony entitlement check. Telephony ships inside the Microsoft
- * Teams add-on, so a non-expired `ADD_ONS.TEAMS` row is what entitles it. The
- * expiry predicate is evaluated in SQL so it matches the database clock.
- */
-export async function tenantHasTelephonyEntitlement(tenantId: string, knexOverride?: any): Promise<boolean> {
-  const { createTenantKnex, tenantDb } = await import('@alga-psa/db');
-  const knex = knexOverride ?? (await createTenantKnex(tenantId)).knex;
-  const row = await tenantDb(knex, tenantId).table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-
-  return Boolean(row);
+export async function tenantHasTelephonyFeatureAccess(
+  tenantId: string,
+  userId?: string | null,
+): Promise<boolean> {
+  return isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
+    tenantId,
+    userId: userId || undefined,
+  });
 }
 
 export async function getTelephonyAvailability(
@@ -47,8 +39,8 @@ export async function getTelephonyAvailability(
   }
 
   const tenantId = (input.tenantId || '').trim();
-  if (tenantId && !(await tenantHasTelephonyEntitlement(tenantId))) {
-    return disabledTelephonyAvailability('addon_required');
+  if (tenantId && !(await tenantHasTelephonyFeatureAccess(tenantId, input.userId))) {
+    return disabledTelephonyAvailability('feature_disabled');
   }
 
   return baseAvailability;

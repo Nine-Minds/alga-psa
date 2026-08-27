@@ -1432,6 +1432,9 @@
       "viewTranscript": "Ver transcrição"
     },
     "quickAdd": {
+      "clientRequired": "Selecione um cliente para esta interação",
+      "contactPlaceholder": "Selecionar contato",
+      "selectClientFirst": "Selecione primeiro um cliente",
       "teams": {
         "attendees": {
           "add": "Adicionar",
@@ -1464,7 +1467,7 @@
         "invitesSummary": "A Microsoft enviará convites de calendário por e-mail para: {{recipients}}.",
         "invitesSummaryYou": "você (criador)",
         "reason": {
-          "addon_required": "O complemento Teams não está ativo para este locatário.",
+          "feature_disabled": "O Microsoft Teams não está habilitado para este locatário.",
           "ee_disabled": "A integração do Teams requer a Enterprise Edition.",
           "no_organizer": "Nenhum organizador de reunião padrão está configurado nas configurações do Teams.",
           "not_configured": "A integração do Teams não foi configurada."
@@ -1498,6 +1501,10 @@
       "columns": { "type": "Tipo", "title": "Título", "client": "Cliente", "contact": "Contato", "user": "Usuário", "date": "Data", "status": "Status" },
       "empty": "Nenhuma interação corresponde a estes filtros.",
       "loading": "Carregando interações…",
+      "openClient": "Abrir cliente {{name}}",
+      "openContact": "Abrir contato {{name}}",
+      "openInteraction": "Abrir interação {{title}}",
+      "openUser": "Abrir usuário {{name}}",
       "byUser": "Por {{name}}",
       "collapse": "Recolher interações recentes",
       "contactsFromClient": "Contatos do cliente selecionado",

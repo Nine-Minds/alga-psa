@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
+import { isFeatureFlagEnabled, RELEASE_V1_5_FEATURE_FLAG } from '@alga-psa/core/features';
 import { getActionRegistryV2 } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { throwActionError } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
@@ -8,8 +9,6 @@ import type { TeamsActivityType, TeamsIntegrationContext } from './teamsWorkflow
 import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 const loadTeamsRuntimeSupport = () => import('./teamsWorkflowRuntimeSupport');
-
-const TEAMS_ADDON_KEY = 'teams';
 
 const CATEGORY_TO_ACTIVITY_TYPE: Record<string, TeamsActivityType> = {
   assignment: 'assignmentCreated',
@@ -38,18 +37,12 @@ const parseJsonish = (value: unknown): unknown => {
 const errorStatus = (error: unknown): number | undefined =>
   error instanceof Error ? (error as { status?: number }).status : undefined;
 
-export async function tenantHasActiveTeamsAddOn(knex: Knex, tenantId: string): Promise<boolean> {
-  const row = await workflowTenantTable(knex, tenantId, 'tenant_addons')
-    .where({ addon_key: TEAMS_ADDON_KEY })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-  return Boolean(row);
+export async function tenantHasTeamsFeatureAccess(tenantId: string): Promise<boolean> {
+  return isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, { tenantId });
 }
 
 export async function teamsIntegrationAvailability(knex: Knex, tenantId: string): Promise<boolean> {
-  if (!(await tenantHasActiveTeamsAddOn(knex, tenantId))) return false;
+  if (!(await tenantHasTeamsFeatureAccess(tenantId))) return false;
   const integration = await workflowTenantTable(knex, tenantId, 'teams_integrations').first();
   return normalizeString(integration?.install_status) === 'active';
 }
@@ -68,11 +61,11 @@ async function requireTeamsIntegration(ctx: ActionContext): Promise<{
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
   }
 
-  if (!(await tenantHasActiveTeamsAddOn(knex, tenantId))) {
+  if (!(await tenantHasTeamsFeatureAccess(tenantId))) {
     throwActionError(ctx, {
       category: 'ActionError',
       code: 'INTEGRATION_INACTIVE',
-      message: 'The Teams add-on is not active for this tenant.'
+      message: 'Microsoft Teams integration is not enabled for this tenant.'
     });
   }
 

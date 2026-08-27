@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import type { CanonicalCallRecord } from '../types';
 
 /**
@@ -150,9 +151,8 @@ function table(name: string): any[] {
   return hoisted.rowsFor(name);
 }
 
-function grantAddOn(): void {
-  // Telephony is gated by the Microsoft Teams add-on.
-  table('tenant_addons').push({ tenant: TENANT, addon_key: 'teams', expires_at: null });
+function enableReleaseFeature(): void {
+  registerFeatureFlagChecker(async () => true);
 }
 
 function seedTenantBasics(): void {
@@ -214,21 +214,22 @@ describe('ingestCanonicalCall', () => {
     }
     hoisted.interactionCreate.mockClear();
     hoisted.createTicketWithRetry.mockClear();
+    registerFeatureFlagChecker(async () => false);
     seedTenantBasics();
   });
 
-  it('T027: refuses a tenant without the Teams add-on and writes nothing', async () => {
+  it('T027: refuses a tenant when the release feature is disabled and writes nothing', async () => {
     knownContact();
 
     const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
 
-    expect(outcome).toEqual({ status: 'skipped', reason: 'addon_inactive' });
+    expect(outcome).toEqual({ status: 'skipped', reason: 'feature_disabled' });
     expect(table('telephony_call_records')).toHaveLength(0);
     expect(hoisted.interactionCreate).not.toHaveBeenCalled();
   });
 
   it('rejects a payload that is not a canonical call record', async () => {
-    grantAddOn();
+    enableReleaseFeature();
 
     const outcome = await ingestCanonicalCall({
       tenantId: TENANT,
@@ -240,7 +241,7 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T024: a matched inbound call is stored and filed as a Call interaction', async () => {
-    grantAddOn();
+    enableReleaseFeature();
     knownContact();
 
     const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
@@ -275,7 +276,7 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('uses the tenant own-company country to normalize and match national numbers', async () => {
-    grantAddOn();
+    enableReleaseFeature();
     setTenantCountry('GB');
     table('contact_phone_numbers').push({
       tenant: TENANT,
@@ -304,7 +305,7 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('leaves a national number unmatched when the tenant country is not configured', async () => {
-    grantAddOn();
+    enableReleaseFeature();
 
     const outcome = await ingestCanonicalCall({
       tenantId: TENANT,
@@ -320,7 +321,7 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T023: the same provider call id ingested twice keeps one record and one interaction', async () => {
-    grantAddOn();
+    enableReleaseFeature();
     knownContact();
 
     const first = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
@@ -344,7 +345,7 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T025: an unmatched call is recorded without an interaction', async () => {
-    grantAddOn();
+    enableReleaseFeature();
 
     const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
 
@@ -358,7 +359,7 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T025: a contact with no client still persists the call instead of losing it', async () => {
-    grantAddOn();
+    enableReleaseFeature();
     // contacts.client_id is nullable by design, so the ladder can match a
     // contact and still have nowhere to file the interaction.
     table('contact_phone_numbers').push({
@@ -384,7 +385,7 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T025: an ambiguous call is recorded with its candidates and no attribution', async () => {
-    grantAddOn();
+    enableReleaseFeature();
     knownContact();
     table('contact_phone_numbers').push({
       tenant: TENANT,
@@ -405,7 +406,7 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T029: an outbound call matches on the callee and titles as outbound', async () => {
-    grantAddOn();
+    enableReleaseFeature();
     table('contact_phone_numbers').push({
       tenant: TENANT,
       contact_name_id: 'contact-scarecrow',
@@ -434,8 +435,89 @@ describe('ingestCanonicalCall', () => {
     expect(table('interactions')[0].title).toBe('Outbound call to +1 (555) 765-4321');
   });
 
+  it('uses a matching outbound call intent to file the call on its originating ticket', async () => {
+    enableReleaseFeature();
+    table('telephony_call_intents').push({
+      tenant: TENANT,
+      intent_id: 'intent-ticket-1',
+      provider: 'teams-phone',
+      user_id: 'user-agent',
+      provider_user_id: 'entra-agent-1',
+      ticket_id: 'ticket-1',
+      client_id: 'client-oz',
+      contact_id: 'contact-scarecrow',
+      phone_number_e164: '+15557654321',
+      status: 'pending',
+      created_at: '2026-08-22T14:59:30.000Z',
+      expires_at: '2026-08-22T17:00:00.000Z',
+    });
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: {
+        ...inboundCall,
+        providerCallId: 'graph-call-intent',
+        direction: 'outbound',
+        organizerUserId: 'entra-agent-1',
+        callerNumber: { raw: '+15559998888', e164: '+15559998888' },
+        calleeNumber: { raw: '+1 (555) 765-4321', e164: '+15557654321' },
+      },
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'matched' });
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      matched_contact_id: 'contact-scarecrow',
+      matched_client_id: 'client-oz',
+      ticket_id: 'ticket-1',
+    });
+    expect(table('interactions')[0]).toMatchObject({
+      user_id: 'user-agent',
+      contact_name_id: 'contact-scarecrow',
+      client_id: 'client-oz',
+      ticket_id: 'ticket-1',
+    });
+    expect(table('telephony_call_intents')[0]).toMatchObject({
+      status: 'matched',
+      call_record_id: (outcome as any).callRecordId,
+    });
+  });
+
+  it('does not consume another Teams user\'s outbound intent', async () => {
+    enableReleaseFeature();
+    table('telephony_call_intents').push({
+      tenant: TENANT,
+      intent_id: 'intent-other-user',
+      provider: 'teams-phone',
+      user_id: 'user-other',
+      provider_user_id: 'entra-other-user',
+      ticket_id: 'ticket-other',
+      client_id: 'client-other',
+      contact_id: null,
+      phone_number_e164: '+15557654321',
+      status: 'pending',
+      created_at: '2026-08-22T14:59:30.000Z',
+      expires_at: '2026-08-22T17:00:00.000Z',
+    });
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: {
+        ...inboundCall,
+        providerCallId: 'graph-call-other-user',
+        direction: 'outbound',
+        organizerUserId: 'entra-agent-1',
+        callerNumber: { raw: '+15559998888', e164: '+15559998888' },
+        calleeNumber: { raw: '+1 (555) 765-4321', e164: '+15557654321' },
+      },
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'unmatched' });
+    expect(table('telephony_call_records')[0].ticket_id).toBeNull();
+    expect(table('telephony_call_intents')[0].status).toBe('pending');
+  });
+
   it('T024: a client-only match still files the call on the client timeline', async () => {
-    grantAddOn();
+    enableReleaseFeature();
     table('client_locations').push({ tenant: TENANT, client_id: 'client-emerald', phone: '+1 (555) 123-4567' });
 
     const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
@@ -453,7 +535,7 @@ describe('resolveCallMatch', () => {
     }
     hoisted.interactionCreate.mockClear();
     seedTenantBasics();
-    grantAddOn();
+    enableReleaseFeature();
   });
 
   it('T026: resolving an unmatched call mints the interaction and stamps the record', async () => {
@@ -553,7 +635,7 @@ describe('autoCreateTicketForCall', () => {
     hoisted.interactionCreate.mockClear();
     hoisted.createTicketWithRetry.mockClear();
     seedTenantBasics();
-    grantAddOn();
+    enableReleaseFeature();
   });
 
   it('T043: a matched call yields a ticket carrying the call attribution', async () => {

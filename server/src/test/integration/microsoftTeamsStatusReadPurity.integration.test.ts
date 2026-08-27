@@ -255,12 +255,6 @@ describe('Teams status read path purity (DB-backed)', () => {
       updated_at: new Date(),
     });
 
-    // Teams add-on present so the Teams picker path is exercised.
-    await tenantTable('tenant_addons').insert({
-      tenant: testTenant,
-      addon_key: 'teams',
-      expires_at: null,
-    });
   }, 180_000);
 
   afterAll(async () => {
@@ -270,7 +264,6 @@ describe('Teams status read path purity (DB-backed)', () => {
       await tenantTable('roles').delete();
       await tenantTable('permissions').delete();
       await tenantTable('users').where('user_id', sessionUserId).delete();
-      await tenantTable('tenant_addons').delete();
       await tenantTable('microsoft_email_provider_config').delete();
       await tenantTable('email_providers').delete();
       await tenantTable('microsoft_profile_consumer_bindings').delete();

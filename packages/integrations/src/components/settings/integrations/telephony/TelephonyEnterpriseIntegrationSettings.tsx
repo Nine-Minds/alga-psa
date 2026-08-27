@@ -2,7 +2,7 @@
 
 import { resolveTelephonyAvailability } from '../../../../lib/telephonyAvailabilityCore';
 import { TelephonyIntegrationSettings } from './TelephonyIntegrationSettings';
-import { TelephonyPaywallCard } from './TelephonyPaywallCard';
+import { TelephonyUnavailableCard } from './TelephonyUnavailableCard';
 
 export function TelephonyEnterpriseIntegrationSettings() {
   const availability = resolveTelephonyAvailability({
@@ -11,7 +11,7 @@ export function TelephonyEnterpriseIntegrationSettings() {
   });
 
   if (!availability.enabled) {
-    return <TelephonyPaywallCard reason={availability.reason} message={availability.message} />;
+    return <TelephonyUnavailableCard reason={availability.reason} message={availability.message} />;
   }
 
   return <TelephonyIntegrationSettings />;

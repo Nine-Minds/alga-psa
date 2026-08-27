@@ -3018,7 +3018,7 @@
           "test": {
             "sent": "Wiadomość testowa Teams wysłana.",
             "failed": "Wiadomość testowa Teams nie powiodła się.",
-            "addonInactive": "Dodatek Teams nie jest aktywny dla tej organizacji.",
+            "featureDisabled": "Microsoft Teams nie jest włączony dla tej organizacji.",
             "integrationInactive": "Aktywuj integrację Teams przed wysłaniem wiadomości testowej.",
             "capabilityDisabled": "Włącz funkcję bota osobistego przed wysłaniem wiadomości testowej.",
             "botNotConfigured": "Skonfiguruj poświadczenia bota Teams przed wysłaniem wiadomości testowej.",
@@ -3027,7 +3027,7 @@
             "skipped": "Wiadomość testowa Teams została pominięta."
           },
           "steps": {
-            "addonEntitlement": "Uprawnienie do dodatku Teams",
+            "featureFlag": "Włączenie funkcji Microsoft Teams",
             "integrationStatus": "Stan integracji Teams",
             "capabilities": "Możliwości Teams",
             "microsoftProfile": "Gotowość profilu Microsoft",
@@ -3039,7 +3039,7 @@
             "recentDeliveryHealth": "Ostatni stan dostarczania Teams"
           },
           "recommendation": {
-            "addon": "Włącz dodatek Microsoft Teams dla tej organizacji.",
+            "featureFlag": "Włącz Microsoft Teams dla tej organizacji.",
             "activate": "Aktywuj integrację Teams w ustawieniach.",
             "capabilities": "Włącz bota osobistego i powiadomienia o aktywności dla Teams.",
             "profile": "Wybierz gotowy profil Microsoft dla Teams.",
@@ -3229,9 +3229,9 @@
               "cause": "Odbiorca nie zalogował się do AlgaPSA za pomocą konta Microsoft, więc nie istnieje żadne mapowanie konta.",
               "remedy": "Poproś użytkownika o zalogowanie się za pomocą konta Microsoft (SSO portalu MSP lub karta Teams), aby jego konto zostało zmapowane."
             },
-            "addon_inactive": {
-              "cause": "Dodatek Teams wygasł lub jest nieobecny, więc wysyłki są pomijane, natomiast konfiguracja jest zachowywana.",
-              "remedy": "Odnów dodatek Teams dla tej organizacji."
+            "feature_disabled": {
+              "cause": "Microsoft Teams nie jest włączony dla tej organizacji, więc wysyłki są pomijane, natomiast konfiguracja jest zachowywana.",
+              "remedy": "Włącz funkcję wersji 1.5 dla tej organizacji."
             },
             "integration_inactive": {
               "cause": "Integracja Teams nie jest aktywna dla tej organizacji.",
@@ -3262,26 +3262,6 @@
               "remedy": "Sprawdź dzienniki serwera pod kątem szczegółów błędu dostarczania i ponownie uruchom diagnostykę."
             }
           }
-        },
-        "paywall": {
-          "title": "Dodatek Microsoft Teams",
-          "description": "Integracja Microsoft Teams wymaga dodatku Teams dla tej organizacji.",
-          "includedTitle": "Co jest w zestawie",
-          "feature": {
-            "tab": "Karta osobista: otwórz AlgaPSA w programie Microsoft Teams.",
-            "bot": "Osobisty bot i bot czatu grupowego do obsługi zgłoszeń, zatwierdzeń, czasu i notatek.",
-            "messageExtension": "Rozszerzenie komunikatów i szybkie akcje umożliwiające działanie na rekordach PSA z poziomu dowolnej wiadomości.",
-            "meetings": "Spotkania Teams przy zatwierdzeniach terminów z prawdziwymi zaproszeniami z kalendarza Outlook/Teams.",
-            "recordings": "Automatyczne przechwytywanie nagrań i transkrypcji spotkań w interakcjach.",
-            "notifications": "Powiadomienia w kanale aktywności i wiadomości bezpośrednich bota dotyczące przypisań, odpowiedzi, zatwierdzeń i ryzyka SLA."
-          },
-          "cta": "Kup dodatek Teams",
-          "nonBilling": "Skontaktuj się z administratorem rozliczeń, aby kupić dodatek Teams dla tej organizacji."
-        },
-        "addonExpiredBanner": {
-          "title": "Dodatek Microsoft Teams wygasł",
-          "message": "Dodatek Microsoft Teams wygasł. Twoja konfiguracja i historia dostarczania są zachowane, ale powiadomienia Teams są pomijane do czasu odnowienia dodatku.",
-          "cta": "Odnów dodatek Teams"
         },
         "staleManifest": {
           "title": "Pakiet aplikacji Teams jest nieaktualny",
@@ -3635,15 +3615,16 @@
         "assignTo": "Przypisz do",
         "searchPlaceholder": "Szukaj kontaktów i klientów…",
         "noTargets": "Brak pasujących kontaktów lub klientów.",
-        "chooseTarget": "Przypisz do kontaktu lub klienta…"
+        "chooseTarget": "Przypisz do klienta…"
       },
       "forbidden": "Nie masz uprawnień do wyświetlania ustawień telefonii tej organizacji.",
       "paywall": {
-        "title": "Dodatek Microsoft Teams",
-        "description": "Integracje telefoniczne wymagają dodatku Microsoft Teams dla tej organizacji.",
+        "title": "Telefonia",
+        "description": "Integracje telefoniczne nie są dostępne dla tej organizacji.",
+        "unavailable": "Integracje telefoniczne nie są dostępne dla tej organizacji.",
         "ceOnly": "Integracje telefoniczne są dostępne wyłącznie w Enterprise Edition.",
         "includedTitle": "Co obejmuje",
-        "cta": "Zarządzaj dodatkami",
+        "cta": "Zarządzaj integracjami",
         "feature": {
           "recognition": "Rozpoznawanie dzwoniącego wśród kontaktów i klientów przy każdej zarejestrowanej rozmowie.",
           "history": "Historia rozmów na osi czasu kontaktu i klienta jako pełnoprawne interakcje.",

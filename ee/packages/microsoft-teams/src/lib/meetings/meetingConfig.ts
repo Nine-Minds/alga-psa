@@ -1,5 +1,5 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { tenantHasTeamsAddOn } from '../teams/teamsAddOnGate';
+import { tenantHasTeamsFeatureAccess } from '../teams/teamsFeatureGate';
 import { resolveTeamsMicrosoftProviderConfigImpl } from '../auth/teamsMicrosoftProviderResolution';
 
 type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'error';
@@ -31,7 +31,7 @@ export interface TeamsMeetingGraphConfig {
   sendMeetingInvites: boolean;
 }
 
-export type TeamsMeetingConfigSkipReason = 'addon_inactive' | 'not_configured' | 'no_organizer';
+export type TeamsMeetingConfigSkipReason = 'feature_disabled' | 'not_configured' | 'no_organizer';
 
 export type TeamsMeetingConfigState =
   | { status: 'ready'; config: TeamsMeetingExecutionConfig }
@@ -43,12 +43,12 @@ function normalizeString(value: unknown): string {
 
 type GraphConfigResolution =
   | { status: 'ready'; config: TeamsMeetingGraphConfig }
-  | { status: 'skipped'; reason: 'addon_inactive' | 'not_configured' };
+  | { status: 'skipped'; reason: 'feature_disabled' | 'not_configured' };
 
 async function resolveGraphConfigState(tenantId: string): Promise<GraphConfigResolution> {
   const { knex } = await createTenantKnex(tenantId);
-  if (!(await tenantHasTeamsAddOn(knex, tenantId))) {
-    return { status: 'skipped', reason: 'addon_inactive' };
+  if (!(await tenantHasTeamsFeatureAccess(tenantId))) {
+    return { status: 'skipped', reason: 'feature_disabled' };
   }
 
   const integration = await tenantDb(knex, tenantId).table<TeamsMeetingIntegrationRow>('teams_integrations')

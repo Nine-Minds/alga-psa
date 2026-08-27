@@ -3018,7 +3018,7 @@
           "test": {
             "sent": "Teams-testbericht verzonden.",
             "failed": "Teams-testbericht mislukt.",
-            "addonInactive": "De Teams-add-on is niet actief voor deze tenant.",
+            "featureDisabled": "Microsoft Teams is niet ingeschakeld voor deze tenant.",
             "integrationInactive": "Activeer de Teams-integratie voordat u een testbericht verzendt.",
             "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat u een testbericht verzendt.",
             "botNotConfigured": "Configureer de Teams-botreferenties voordat u een testbericht verzendt.",
@@ -3027,7 +3027,7 @@
             "skipped": "Het Teams-testbericht is overgeslagen."
           },
           "steps": {
-            "addonEntitlement": "Teams-add-on-recht",
+            "featureFlag": "Microsoft Teams-functievrijgave",
             "integrationStatus": "Status van Teams-integratie",
             "capabilities": "Teams-mogelijkheden",
             "microsoftProfile": "Gereedheid van Microsoft-profiel",
@@ -3039,7 +3039,7 @@
             "recentDeliveryHealth": "Recente Teams-leveringsstatus"
           },
           "recommendation": {
-            "addon": "Schakel de Microsoft Teams-add-on in voor deze tenant.",
+            "featureFlag": "Schakel Microsoft Teams in voor deze tenant.",
             "activate": "Activeer de Teams-integratie in de instellingen.",
             "capabilities": "Schakel de persoonlijke bot en activiteitsmeldingen voor Teams in.",
             "profile": "Selecteer een gereed Microsoft-profiel voor Teams.",
@@ -3229,9 +3229,9 @@
               "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij AlgaPSA, dus er bestaat geen accountkoppeling.",
               "remedy": "Laat de gebruiker zich aanmelden met Microsoft (MSP-portal-SSO of het Teams-tabblad) zodat hun account wordt gekoppeld."
             },
-            "addon_inactive": {
-              "cause": "De Teams-invoegtoepassing is verlopen of afwezig, dus verzendingen worden overgeslagen terwijl de configuratie behouden blijft.",
-              "remedy": "Vernieuw de Teams-invoegtoepassing voor deze tenant."
+            "feature_disabled": {
+              "cause": "Microsoft Teams is niet ingeschakeld voor deze tenant, dus verzendingen worden overgeslagen terwijl de configuratie behouden blijft.",
+              "remedy": "Schakel de versie 1.5-functie in voor deze tenant."
             },
             "integration_inactive": {
               "cause": "De Teams-integratie is niet actief voor deze tenant.",
@@ -3262,26 +3262,6 @@
               "remedy": "Controleer de serverlogboeken voor de details van de bezorgfout en voer de diagnostiek opnieuw uit."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams-invoegtoepassing",
-          "description": "Voor de Microsoft Teams-integratie is de Teams-invoegtoepassing voor deze tenant vereist.",
-          "includedTitle": "Wat is inbegrepen",
-          "feature": {
-            "tab": "Persoonlijk tabblad: open AlgaPSA binnen Microsoft Teams.",
-            "bot": "Persoonlijke en groepschat-bot voor tickets, goedkeuringen, tijd en notities.",
-            "messageExtension": "Berichtextensie en snelle acties om vanuit elk bericht op PSA-records te reageren.",
-            "meetings": "Teams-vergaderingen bij goedkeuringen van afspraken met echte Outlook/Teams-agenda-uitnodigingen.",
-            "recordings": "Automatische vastlegging van vergaderopnamen en transcripties in interacties.",
-            "notifications": "Meldingen via activiteitenfeed en bot-DM voor toewijzingen, reacties, goedkeuringen en SLA-risico."
-          },
-          "cta": "Teams-invoegtoepassing kopen",
-          "nonBilling": "Neem contact op met een factureringsbeheerder om de Teams-invoegtoepassing voor deze tenant te kopen."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams-invoegtoepassing verlopen",
-          "message": "De Microsoft Teams-invoegtoepassing is verlopen. Uw configuratie en bezorggeschiedenis blijven behouden, maar Teams-meldingen worden overgeslagen totdat de invoegtoepassing wordt vernieuwd.",
-          "cta": "Teams-invoegtoepassing vernieuwen"
         },
         "staleManifest": {
           "title": "Teams-app-pakket is verouderd",
@@ -3635,15 +3615,16 @@
         "assignTo": "Toewijzen aan",
         "searchPlaceholder": "Zoek contacten en klanten…",
         "noTargets": "Geen overeenkomende contacten of klanten.",
-        "chooseTarget": "Toewijzen aan een contact of klant…"
+        "chooseTarget": "Toewijzen aan een klant…"
       },
       "forbidden": "U hebt geen toestemming om de telefonie-instellingen van deze tenant te bekijken.",
       "paywall": {
-        "title": "Microsoft Teams-add-on",
-        "description": "Telefonie-integraties vereisen de Microsoft Teams-add-on voor deze tenant.",
+        "title": "Telefonie",
+        "description": "Telefonie-integraties zijn niet beschikbaar voor deze tenant.",
+        "unavailable": "Telefonie-integraties zijn niet beschikbaar voor deze tenant.",
         "ceOnly": "Telefonie-integraties zijn alleen beschikbaar in Enterprise Edition.",
         "includedTitle": "Wat is inbegrepen",
-        "cta": "Add-ons beheren",
+        "cta": "Integraties beheren",
         "feature": {
           "recognition": "Bellerherkenning tegen contacten en klanten bij elk vastgelegd gesprek.",
           "history": "Gespreksgeschiedenis op de tijdlijn van contact en klant als volwaardige interacties.",

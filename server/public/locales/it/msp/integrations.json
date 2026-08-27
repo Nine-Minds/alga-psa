@@ -3018,7 +3018,7 @@
           "test": {
             "sent": "Messaggio di prova di Teams inviato.",
             "failed": "Messaggio di prova di Teams non riuscito.",
-            "addonInactive": "Il componente aggiuntivo Teams non è attivo per questo tenant.",
+            "featureDisabled": "Microsoft Teams non è abilitato per questo tenant.",
             "integrationInactive": "Attiva l'integrazione di Teams prima di inviare un messaggio di prova.",
             "capabilityDisabled": "Abilita la funzionalità bot personale prima di inviare un messaggio di prova.",
             "botNotConfigured": "Configura le credenziali del bot di Teams prima di inviare un messaggio di prova.",
@@ -3027,7 +3027,7 @@
             "skipped": "Il messaggio di prova di Teams è stato ignorato."
           },
           "steps": {
-            "addonEntitlement": "Diritto al componente aggiuntivo Teams",
+            "featureFlag": "Abilitazione della funzionalità Microsoft Teams",
             "integrationStatus": "Stato dell'integrazione di Teams",
             "capabilities": "Funzionalità di Teams",
             "microsoftProfile": "Disponibilità del profilo Microsoft",
@@ -3039,7 +3039,7 @@
             "recentDeliveryHealth": "Stato recente della consegna di Teams"
           },
           "recommendation": {
-            "addon": "Abilita il componente aggiuntivo Microsoft Teams per questo tenant.",
+            "featureFlag": "Abilita Microsoft Teams per questo tenant.",
             "activate": "Attiva l'integrazione di Teams nelle impostazioni.",
             "capabilities": "Abilita il bot personale e le notifiche di attività per Teams.",
             "profile": "Seleziona un profilo Microsoft pronto per Teams.",
@@ -3229,9 +3229,9 @@
               "cause": "Il destinatario non ha effettuato l'accesso ad AlgaPSA con Microsoft, pertanto non esiste alcuna associazione dell'account.",
               "remedy": "Fai in modo che l'utente acceda con Microsoft (SSO del portale MSP o la scheda Teams) affinché il suo account venga associato."
             },
-            "addon_inactive": {
-              "cause": "Il componente aggiuntivo Teams è scaduto o assente, pertanto gli invii vengono ignorati mentre la configurazione viene conservata.",
-              "remedy": "Rinnova il componente aggiuntivo Teams per questo tenant."
+            "feature_disabled": {
+              "cause": "Microsoft Teams non è abilitato per questo tenant, pertanto gli invii vengono ignorati mentre la configurazione viene conservata.",
+              "remedy": "Abilita la funzionalità della versione 1.5 per questo tenant."
             },
             "integration_inactive": {
               "cause": "L'integrazione di Teams non è attiva per questo tenant.",
@@ -3262,26 +3262,6 @@
               "remedy": "Controlla i log del server per i dettagli dell'errore di consegna ed esegui di nuovo la diagnostica."
             }
           }
-        },
-        "paywall": {
-          "title": "Componente aggiuntivo Microsoft Teams",
-          "description": "L'integrazione di Microsoft Teams richiede il componente aggiuntivo Teams per questo tenant.",
-          "includedTitle": "Cosa è incluso",
-          "feature": {
-            "tab": "Scheda personale: apri AlgaPSA all'interno di Microsoft Teams.",
-            "bot": "Bot personale e per chat di gruppo per ticket, approvazioni, tempi e note.",
-            "messageExtension": "Estensione di messaggistica e azioni rapide per agire sui record PSA da qualsiasi messaggio.",
-            "meetings": "Riunioni di Teams sulle approvazioni degli appuntamenti con inviti di calendario reali di Outlook/Teams.",
-            "recordings": "Acquisizione automatica di registrazioni e trascrizioni delle riunioni nelle interazioni.",
-            "notifications": "Notifiche del feed attività e dei messaggi diretti del bot per assegnazioni, risposte, approvazioni e rischio SLA."
-          },
-          "cta": "Acquista il componente aggiuntivo Teams",
-          "nonBilling": "Contatta un amministratore della fatturazione per acquistare il componente aggiuntivo Teams per questo tenant."
-        },
-        "addonExpiredBanner": {
-          "title": "Componente aggiuntivo Microsoft Teams scaduto",
-          "message": "Il componente aggiuntivo Microsoft Teams è scaduto. La configurazione e la cronologia delle consegne vengono conservate, ma le notifiche di Teams vengono ignorate fino al rinnovo del componente aggiuntivo.",
-          "cta": "Rinnova il componente aggiuntivo Teams"
         },
         "staleManifest": {
           "title": "Il pacchetto dell'app Teams non è aggiornato",
@@ -3635,15 +3615,16 @@
         "assignTo": "Assegna a",
         "searchPlaceholder": "Cerca contatti e clienti…",
         "noTargets": "Nessun contatto o cliente corrispondente.",
-        "chooseTarget": "Assegna a un contatto o cliente…"
+        "chooseTarget": "Assegna a un cliente…"
       },
       "forbidden": "Non hai il permesso di visualizzare le impostazioni di telefonia di questo tenant.",
       "paywall": {
-        "title": "Componente aggiuntivo Microsoft Teams",
-        "description": "Le integrazioni di telefonia richiedono il componente aggiuntivo Microsoft Teams per questo tenant.",
+        "title": "Telefonia",
+        "description": "Le integrazioni di telefonia non sono disponibili per questo tenant.",
+        "unavailable": "Le integrazioni di telefonia non sono disponibili per questo tenant.",
         "ceOnly": "Le integrazioni di telefonia sono disponibili solo in Enterprise Edition.",
         "includedTitle": "Cosa è incluso",
-        "cta": "Gestisci componenti aggiuntivi",
+        "cta": "Gestisci integrazioni",
         "feature": {
           "recognition": "Riconoscimento del chiamante tra contatti e clienti a ogni chiamata acquisita.",
           "history": "Cronologia delle chiamate sulla timeline di contatto e cliente come interazioni a pieno titolo.",

@@ -3018,7 +3018,7 @@
           "test": {
             "sent": "Message de test Teams envoyé.",
             "failed": "Échec du message de test Teams.",
-            "addonInactive": "Le module complémentaire Teams n'est pas actif pour ce locataire.",
+            "featureDisabled": "Microsoft Teams n'est pas activé pour ce locataire.",
             "integrationInactive": "Activez l'intégration Teams avant d'envoyer un message de test.",
             "capabilityDisabled": "Activez la fonctionnalité de bot personnel avant d'envoyer un message de test.",
             "botNotConfigured": "Configurez les identifiants du bot Teams avant d'envoyer un message de test.",
@@ -3027,7 +3027,7 @@
             "skipped": "Le message de test Teams a été ignoré."
           },
           "steps": {
-            "addonEntitlement": "Droit au module complémentaire Teams",
+            "featureFlag": "Activation de la fonctionnalité Microsoft Teams",
             "integrationStatus": "État de l'intégration Teams",
             "capabilities": "Fonctionnalités Teams",
             "microsoftProfile": "Disponibilité du profil Microsoft",
@@ -3039,7 +3039,7 @@
             "recentDeliveryHealth": "Santé récente de la distribution Teams"
           },
           "recommendation": {
-            "addon": "Activez le module complémentaire Microsoft Teams pour ce locataire.",
+            "featureFlag": "Activez Microsoft Teams pour ce locataire.",
             "activate": "Activez l'intégration Teams dans les paramètres.",
             "capabilities": "Activez le bot personnel et les notifications d'activité pour Teams.",
             "profile": "Sélectionnez un profil Microsoft prêt pour Teams.",
@@ -3229,9 +3229,9 @@
               "cause": "Le destinataire ne s'est pas connecté à AlgaPSA avec Microsoft, il n'existe donc aucune association de compte.",
               "remedy": "Demandez à l'utilisateur de se connecter avec Microsoft (SSO du portail MSP ou l'onglet Teams) afin que son compte soit associé."
             },
-            "addon_inactive": {
-              "cause": "Le module complémentaire Teams est expiré ou absent, les envois sont donc ignorés tandis que la configuration est conservée.",
-              "remedy": "Renouvelez le module complémentaire Teams pour ce locataire."
+            "feature_disabled": {
+              "cause": "Microsoft Teams n'est pas activé pour ce locataire, les envois sont donc ignorés tandis que la configuration est conservée.",
+              "remedy": "Activez la fonctionnalité de la version 1.5 pour ce locataire."
             },
             "integration_inactive": {
               "cause": "L'intégration Teams n'est pas active pour ce locataire.",
@@ -3262,26 +3262,6 @@
               "remedy": "Consultez les journaux du serveur pour le détail de l'erreur de distribution et relancez les diagnostics."
             }
           }
-        },
-        "paywall": {
-          "title": "Module complémentaire Microsoft Teams",
-          "description": "L'intégration Microsoft Teams nécessite le module complémentaire Teams pour ce locataire.",
-          "includedTitle": "Ce qui est inclus",
-          "feature": {
-            "tab": "Onglet personnel : ouvrez AlgaPSA dans Microsoft Teams.",
-            "bot": "Bot personnel et de conversation de groupe pour les tickets, approbations, temps et notes.",
-            "messageExtension": "Extension de message et actions rapides pour agir sur les enregistrements PSA depuis n'importe quel message.",
-            "meetings": "Réunions Teams sur les approbations de rendez-vous avec de véritables invitations de calendrier Outlook/Teams.",
-            "recordings": "Capture automatique des enregistrements et transcriptions de réunions dans les interactions.",
-            "notifications": "Notifications de fil d'activité et de message direct du bot pour les attributions, réponses, approbations et risque de SLA."
-          },
-          "cta": "Acheter le module complémentaire Teams",
-          "nonBilling": "Contactez un administrateur de facturation pour acheter le module complémentaire Teams pour ce locataire."
-        },
-        "addonExpiredBanner": {
-          "title": "Module complémentaire Microsoft Teams expiré",
-          "message": "Le module complémentaire Microsoft Teams a expiré. Votre configuration et votre historique de distribution sont conservés, mais les notifications Teams sont ignorées jusqu'au renouvellement du module complémentaire.",
-          "cta": "Renouveler le module complémentaire Teams"
         },
         "staleManifest": {
           "title": "Le package d'application Teams est obsolète",
@@ -3635,15 +3615,16 @@
         "assignTo": "Attribuer à",
         "searchPlaceholder": "Rechercher des contacts et des clients…",
         "noTargets": "Aucun contact ni client correspondant.",
-        "chooseTarget": "Attribuer à un contact ou à un client…"
+        "chooseTarget": "Attribuer à un client…"
       },
       "forbidden": "Vous n'avez pas l'autorisation de consulter les paramètres de téléphonie de ce locataire.",
       "paywall": {
-        "title": "Module complémentaire Microsoft Teams",
-        "description": "Les intégrations de téléphonie nécessitent le module complémentaire Microsoft Teams pour ce locataire.",
+        "title": "Téléphonie",
+        "description": "Les intégrations de téléphonie ne sont pas disponibles pour ce locataire.",
+        "unavailable": "Les intégrations de téléphonie ne sont pas disponibles pour ce locataire.",
         "ceOnly": "Les intégrations de téléphonie ne sont disponibles qu'en Enterprise Edition.",
         "includedTitle": "Ce qui est inclus",
-        "cta": "Gérer les modules",
+        "cta": "Gérer les intégrations",
         "feature": {
           "recognition": "Identification de l'appelant parmi les contacts et les clients à chaque appel capturé.",
           "history": "Historique des appels sur la chronologie du contact et du client, comme interactions à part entière.",

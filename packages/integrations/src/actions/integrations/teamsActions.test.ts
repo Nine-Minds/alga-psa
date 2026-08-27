@@ -51,7 +51,6 @@ const hoisted = vi.hoisted(() => {
     tenantSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
-    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
     microsoftConsumerBindings: [] as MicrosoftConsumerBindingRecord[],
   };
 
@@ -71,9 +70,6 @@ const hoisted = vi.hoisted(() => {
       }
       if (table === 'microsoft_profile_consumer_bindings') {
         return state.microsoftConsumerBindings;
-      }
-      if (table === 'tenant_addons') {
-        return state.tenantAddOns;
       }
       return [] as Array<Record<string, unknown>>;
     };
@@ -130,7 +126,7 @@ const hoisted = vi.hoisted(() => {
 	  };
 	});
 
-const { microsoftProfiles, teamsIntegrations, tenantAddOns, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
+const { microsoftProfiles, teamsIntegrations, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
 const { hasPermissionMock, isFeatureFlagEnabledMock, fetchMock, knexMock } = hoisted;
 
 const DEFAULT_MEETING_SETTINGS = {
@@ -161,13 +157,10 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/core', async () => {
-  const actual = await vi.importActual<object>('@alga-psa/core');
-  return {
-    ...actual,
-    isFeatureFlagEnabled: hoisted.isFeatureFlagEnabledMock,
-  };
-});
+vi.mock('@alga-psa/core/features', () => ({
+  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
+  isFeatureFlagEnabled: hoisted.isFeatureFlagEnabledMock,
+}));
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
@@ -235,8 +228,6 @@ describe('Teams integration actions', () => {
     delete process.env.TEAMS_BOT_APP_PASSWORD;
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
-    tenantAddOns.length = 0;
-    tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
     microsoftConsumerBindings.length = 0;
     tenantSecrets.clear();
     hasPermissionMock.mockClear();
@@ -285,29 +276,28 @@ describe('Teams integration actions', () => {
     expect(diagnostics.overallStatus).toBe('fail');
     expect(diagnostics.steps).toEqual([
       expect.objectContaining({
-        id: 'addon_entitlement',
+        id: 'feature_flag',
         status: 'fail',
         detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
       }),
     ]);
     expect(testMessage).toEqual({
       status: 'skipped',
-      reason: 'addon_inactive',
+      reason: 'feature_disabled',
       detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
       deliveryId: null,
     });
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
-  it('returns an add-on required result when the tenant lacks the Teams add-on', async () => {
-    tenantAddOns.length = 0;
+  it('returns a disabled result when release-v1-5-feature is off', async () => {
+    isFeatureFlagEnabledMock.mockResolvedValue(false);
 
     const result = await getTeamsIntegrationStatus();
 
     expect(result).toEqual({
       success: false,
-      error: 'Microsoft Teams integration requires the Teams add-on.',
-      addOnState: 'absent',
+      error: 'Microsoft Teams integration is not enabled for this tenant.',
     });
   });
 
@@ -320,7 +310,6 @@ describe('Teams integration actions', () => {
       secretRef: 'tenant-two-secret-ref',
     });
     tenantSecrets.set('tenant-2:tenant-two-secret-ref', 'tenant-two-secret');
-    tenantAddOns.push({ tenant: 'tenant-2', addon_key: 'teams', expires_at: null });
 
     hoisted.state.mockCtx = { tenant: 'tenant-2' };
     await saveTeamsIntegrationSettings({
@@ -344,7 +333,6 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
-	        addOnState: 'active',
 	      },
 	    });
 
@@ -384,7 +372,6 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
-	        addOnState: 'active',
 	      },
 	    });
 
@@ -660,7 +647,6 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
-	        addOnState: 'active',
 	      },
 	    });
   });
@@ -811,7 +797,6 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
-	        addOnState: 'active',
 	      },
 	    });
     expect(microsoftConsumerBindings).toEqual([

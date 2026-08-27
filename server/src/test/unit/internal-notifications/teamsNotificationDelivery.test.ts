@@ -26,7 +26,6 @@ const hoisted = vi.hoisted(() => {
   const state = {
     teamsIntegrations: [] as TeamsIntegrationRecord[],
     microsoftProfiles: [] as MicrosoftProfileRecord[],
-    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
     tenantSecrets: new Map<string, string>(),
     accountLinks: [] as Array<{
       tenant: string;
@@ -55,9 +54,6 @@ const hoisted = vi.hoisted(() => {
       }
       if (table === 'microsoft_profiles') {
         return state.microsoftProfiles;
-      }
-      if (table === 'tenant_addons') {
-        return state.tenantAddOns;
       }
       return [] as Array<Record<string, unknown>>;
     };
@@ -120,6 +116,8 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/core/features', () => ({
+  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
+  isFeatureFlagEnabled: vi.fn(async () => true),
   get isEnterprise() {
     return hoisted.enterpriseState.value;
   },
@@ -202,7 +200,6 @@ describe('Teams notification delivery', () => {
   beforeEach(() => {
     hoisted.state.teamsIntegrations.length = 0;
     hoisted.state.microsoftProfiles.length = 0;
-    hoisted.state.tenantAddOns.length = 0;
     hoisted.state.accountLinks.length = 0;
     hoisted.state.tenantSecrets.clear();
     hoisted.getTenantSecretMock.mockClear();
@@ -243,12 +240,6 @@ describe('Teams notification delivery', () => {
       tenant_id: 'tenant-guid',
       client_secret_ref: 'teams-secret-ref',
       is_archived: false,
-    });
-
-    hoisted.state.tenantAddOns.push({
-      tenant: 'tenant-1',
-      addon_key: 'teams',
-      expires_at: null,
     });
 
     hoisted.state.tenantSecrets.set('tenant-1:teams-secret-ref', 'teams-secret');

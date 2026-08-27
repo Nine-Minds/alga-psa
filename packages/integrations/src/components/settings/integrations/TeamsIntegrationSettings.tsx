@@ -41,8 +41,6 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { TeamsDeliveryLogViewer } from './teams/TeamsDeliveryLogViewer';
 import { TeamsAuditLogViewer } from './teams/TeamsAuditLogViewer';
 import { TeamsTroubleshootingPanel } from './teams/TeamsTroubleshootingPanel';
-import { TeamsPaywallCard } from './teams/TeamsPaywallCard';
-import { TeamsAddonExpiredBanner } from './teams/TeamsAddonExpiredBanner';
 import { TeamsStaleManifestWarning } from './teams/TeamsStaleManifestWarning';
 import { teamsRunbookHref, type TeamsRunbookSection } from './teams/teamsRunbook';
 
@@ -237,8 +235,8 @@ function getTestMessageResultText(result: TeamsTestMessageResult, t: TranslateFn
   }
 
   switch (result.reason) {
-    case 'addon_inactive':
-      return t('integrations.teams.settings.diagnostics.test.addonInactive', { defaultValue: 'The Teams add-on is not active for this tenant.' });
+    case 'feature_disabled':
+      return t('integrations.teams.settings.diagnostics.test.featureDisabled', { defaultValue: 'Microsoft Teams integration is not enabled for this tenant.' });
     case 'integration_inactive':
       return t('integrations.teams.settings.diagnostics.test.integrationInactive', { defaultValue: 'Activate the Teams integration before sending a test message.' });
     case 'capability_disabled':
@@ -256,8 +254,8 @@ function getTestMessageResultText(result: TeamsTestMessageResult, t: TranslateFn
 
 function getDiagnosticsStepTitle(step: TeamsDiagnosticsStep, t: TranslateFn): string {
   switch (step.id) {
-    case 'addon_entitlement':
-      return t('integrations.teams.settings.diagnostics.steps.addonEntitlement', { defaultValue: 'Teams add-on entitlement' });
+    case 'feature_flag':
+      return t('integrations.teams.settings.diagnostics.steps.featureFlag', { defaultValue: 'Teams feature availability' });
     case 'integration_status':
       return t('integrations.teams.settings.diagnostics.steps.integrationStatus', { defaultValue: 'Teams integration status' });
     case 'capabilities':
@@ -283,8 +281,8 @@ function getDiagnosticsStepTitle(step: TeamsDiagnosticsStep, t: TranslateFn): st
 
 function getDiagnosticsRecommendationText(recommendation: string, t: TranslateFn): string {
   switch (recommendation) {
-    case 'Enable the Microsoft Teams add-on for this tenant.':
-      return t('integrations.teams.settings.diagnostics.recommendation.addon', { defaultValue: recommendation });
+    case 'Enable release-v1-5-feature for this tenant.':
+      return t('integrations.teams.settings.diagnostics.recommendation.featureFlag', { defaultValue: recommendation });
     case 'Activate the Teams integration in settings.':
       return t('integrations.teams.settings.diagnostics.recommendation.activate', { defaultValue: recommendation });
     case 'Enable personal bot and activity notifications for Teams.':
@@ -710,10 +708,6 @@ export function TeamsIntegrationSettings() {
     lastFailure?: { createdAt?: string | null; status?: string | null; errorMessage?: string | null; errorCode?: string | null } | null;
   } | undefined;
 
-  const addOnState = currentIntegration?.addOnState ?? teamsStatus?.addOnState;
-  const isAddonAbsent = Boolean(teamsStatus && !teamsStatus.success && teamsStatus.addOnState === 'absent');
-  const isAddonExpired = addOnState === 'expired';
-
   // F059: client-side stale-manifest detection. The freshly-generated package (this
   // session) wins over the persisted metadata so regeneration clears the warning.
   const persistedPackageMeta = (currentIntegration?.packageMetadata ?? null) as
@@ -757,14 +751,6 @@ export function TeamsIntegrationSettings() {
       <div className="space-y-4">
         <Skeleton className="h-10 w-56" />
         <Skeleton className="h-80 w-full" />
-      </div>
-    );
-  }
-
-  if (isAddonAbsent) {
-    return (
-      <div className="space-y-6">
-        <TeamsPaywallCard />
       </div>
     );
   }
@@ -965,8 +951,6 @@ export function TeamsIntegrationSettings() {
 
   return (
     <div className="space-y-6">
-      {isAddonExpired ? <TeamsAddonExpiredBanner /> : null}
-
       {packageStale ? (
         <TeamsStaleManifestWarning
           onRegenerate={() => void handlePackageRefresh()}

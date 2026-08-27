@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ADD_ONS } from '@alga-psa/types';
+import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 
 const hoisted = vi.hoisted(() => {
   type MicrosoftProfileRecord = {
@@ -65,12 +65,6 @@ const hoisted = vi.hoisted(() => {
     is_active: boolean;
   };
 
-  type TenantAddonRecord = {
-    tenant: string;
-    addon_key: string;
-    expires_at: string | Date | null;
-  };
-
   const state = {
     mockUser: { user_id: 'user-1', user_type: 'internal' } as any,
     mockCtx: { tenant: 'tenant-1' } as any,
@@ -82,7 +76,6 @@ const hoisted = vi.hoisted(() => {
     emailProviders: [] as EmailProviderRecord[],
     calendarProviders: [] as CalendarProviderRecord[],
     mspSsoLoginDomains: [] as MspSsoLoginDomainRecord[],
-    tenantAddons: [] as TenantAddonRecord[],
   };
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -111,10 +104,6 @@ const hoisted = vi.hoisted(() => {
       if (table === 'msp_sso_tenant_login_domains') {
         return state.mspSsoLoginDomains;
       }
-      if (table === 'tenant_addons') {
-        return state.tenantAddons;
-      }
-
       return [] as Array<Record<string, unknown>>;
     };
 
@@ -223,7 +212,6 @@ const {
   emailProviders,
   calendarProviders,
   mspSsoLoginDomains,
-  tenantAddons,
 } = hoisted.state;
 const {
   getTenantSecretMock,
@@ -283,7 +271,7 @@ describe('Microsoft consumer binding actions', () => {
     emailProviders.length = 0;
     calendarProviders.length = 0;
     mspSsoLoginDomains.length = 0;
-    tenantAddons.length = 0;
+    registerFeatureFlagChecker(async () => true);
     hasPermissionMock.mockResolvedValue(true);
     getTenantSecretMock.mockClear();
     setTenantSecretMock.mockClear();
@@ -344,7 +332,6 @@ describe('Microsoft consumer binding actions', () => {
 
   it('returns all supported EE bindings and allows per-consumer reassignment in enterprise edition', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
-    tenantAddons.push({ tenant: 'tenant-1', addon_key: ADD_ONS.TEAMS, expires_at: null });
 
     const primary = await createMicrosoftProfile({
       displayName: 'Primary Profile',
@@ -761,7 +748,6 @@ describe('Microsoft consumer binding actions', () => {
 
   it('requires an explicit Teams binding instead of falling back to a default Microsoft profile', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
-    tenantAddons.push({ tenant: 'tenant-1', addon_key: ADD_ONS.TEAMS, expires_at: null });
 
     const created = await createMicrosoftProfile({
       displayName: 'Primary Profile',

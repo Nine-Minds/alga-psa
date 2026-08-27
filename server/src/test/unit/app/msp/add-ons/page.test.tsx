@@ -28,17 +28,17 @@ afterEach(() => {
 });
 
 describe('/msp/add-ons', () => {
-  it('selects the Teams add-on from the canonical query parameter', async () => {
-    render(await AddOnsPage({ searchParams: Promise.resolve({ addon: 'teams' }) }));
+  it('selects a supported add-on from the canonical query parameter', async () => {
+    render(await AddOnsPage({ searchParams: Promise.resolve({ addon: 'enterprise' }) }));
 
     expect(accountManagementMock).toHaveBeenCalledWith({
-      selectedAddOn: 'teams',
+      selectedAddOn: 'enterprise',
     });
   });
 
   it.each([
     ['an unknown key', 'not-an-addon'],
-    ['a repeated query parameter', ['teams', 'ai_assistant']],
+    ['a repeated query parameter', ['enterprise', 'ai_assistant']],
   ])('falls back to the normal account view for %s', async (_label, addon) => {
     render(await AddOnsPage({ searchParams: Promise.resolve({ addon }) }));
 

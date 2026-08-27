@@ -3,8 +3,7 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { isEnterprise } from '@alga-psa/core/features';
-import { ADD_ONS } from '@alga-psa/types';
+import { isEnterprise, isFeatureFlagEnabled, RELEASE_V1_5_FEATURE_FLAG } from '@alga-psa/core/features';
 import { v4 as uuidv4 } from 'uuid';
 import {
   availabilitySettingSchema,
@@ -64,7 +63,7 @@ export interface TeamsMeetingOrganizerState {
 export interface TeamsMeetingOrganizerVerification {
   valid: boolean;
   displayName?: string;
-  reason?: 'ee_disabled' | 'addon_required' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
+  reason?: 'ee_disabled' | 'feature_disabled' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
 }
 
 function availabilityActionErrorMessage(error: unknown, fallback: string): string {
@@ -84,18 +83,6 @@ function availabilityActionErrorMessage(error: unknown, fallback: string): strin
   return fallback;
 }
 
-async function tenantHasTeamsAddOn(db: any, tenant: string): Promise<boolean> {
-  const scopedDb = tenantDb(db, tenant);
-  const row = await scopedDb.table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', db.fn.now());
-    })
-    .first('addon_key');
-
-  return Boolean(row);
-}
-
 export const getTeamsMeetingsTabState = withAuth(async (
   user,
   { tenant }
@@ -112,7 +99,10 @@ export const getTeamsMeetingsTabState = withAuth(async (
       return { success: true, data: { visible: false, organizerUpn: null } };
     }
 
-    if (!(await tenantHasTeamsAddOn(db, tenant))) {
+    if (!(await isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
+      tenantId: tenant,
+      userId: user?.user_id,
+    }))) {
       return { success: true, data: { visible: false, organizerUpn: null } };
     }
 
@@ -151,8 +141,11 @@ export const setDefaultMeetingOrganizer = withAuth(async (
       return { success: false, error: 'Teams integration is not available in this environment' };
     }
 
-    if (!(await tenantHasTeamsAddOn(db, tenant))) {
-      return { success: false, error: 'Microsoft Teams meetings require the Teams add-on.' };
+    if (!(await isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
+      tenantId: tenant,
+      userId: user?.user_id,
+    }))) {
+      return { success: false, error: 'Microsoft Teams meetings are not enabled for this tenant.' };
     }
 
     const scopedDb = tenantDb(db, tenant);
@@ -201,8 +194,11 @@ export const verifyMeetingOrganizer = withAuth(async (
       return { success: true, data: { valid: false, reason: 'ee_disabled' } };
     }
 
-    if (!(await tenantHasTeamsAddOn(db, tenant))) {
-      return { success: true, data: { valid: false, reason: 'addon_required' } };
+    if (!(await isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
+      tenantId: tenant,
+      userId: user?.user_id,
+    }))) {
+      return { success: true, data: { valid: false, reason: 'feature_disabled' } };
     }
 
     const organizerUpn = (input.upn || '').trim();

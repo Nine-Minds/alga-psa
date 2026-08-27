@@ -22,6 +22,11 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
+vi.mock('@alga-psa/core/features', () => ({
+  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
+  isFeatureFlagEnabled: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/ee-microsoft-teams/lib/auth/teamsMicrosoftProviderResolution', () => ({
   resolveTeamsMicrosoftProviderConfigImpl: resolveProviderConfigMock,
 }));
@@ -42,9 +47,6 @@ type IntegrationRow = Record<string, unknown>;
 function buildKnex(row: IntegrationRow) {
   const updates: Array<Record<string, unknown>> = [];
   const first = vi.fn(async function first(this: { table?: string }) {
-    if (this?.table === 'tenant_addons') {
-      return { addon_key: 'teams' };
-    }
     if (this?.table === 'teams_integrations') {
       return row;
     }
