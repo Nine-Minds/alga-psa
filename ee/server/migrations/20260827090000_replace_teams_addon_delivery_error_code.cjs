@@ -19,9 +19,12 @@ const LEGACY_DELIVERY_ERROR_CODES = [
 async function replaceConstraint(knex, codes) {
   await knex.raw(`
     ALTER TABLE teams_notification_deliveries
-      DROP CONSTRAINT IF EXISTS teams_notification_deliveries_error_code_check,
+      DROP CONSTRAINT IF EXISTS teams_notification_deliveries_error_code_check;
+  `);
+  await knex.raw(`
+    ALTER TABLE teams_notification_deliveries
       ADD CONSTRAINT teams_notification_deliveries_error_code_check
-        CHECK (error_code IS NULL OR error_code IN (${codes.map((code) => `'${code}'`).join(', ')}));
+      CHECK (error_code IS NULL OR error_code IN (${codes.map((code) => `'${code}'`).join(', ')}));
   `);
 }
 

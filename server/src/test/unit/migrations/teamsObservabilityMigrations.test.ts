@@ -48,6 +48,7 @@ describe('teams observability migrations', () => {
     expect(featureGateMigration).toContain("'addon_inactive'");
     expect(featureGateMigration).toContain('teams_notification_deliveries_error_code_check');
     expect(featureGateMigration).toContain(".where({ error_code: 'feature_disabled' })");
+    expect(featureGateMigration).not.toMatch(/DROP CONSTRAINT[\s\S]*?,\s*ADD CONSTRAINT/);
   });
 
   it('defines cleanup functions with safe retention cutoffs for deliveries and audit events', () => {
