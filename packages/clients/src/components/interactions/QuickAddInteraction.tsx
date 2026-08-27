@@ -40,6 +40,7 @@ import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useOptionalClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import QuickAddContact from '../contacts/QuickAddContact';
+import QuickAddClient from '../clients/QuickAddClient';
 import MeetingAttendeesPicker, { type MeetingAttendee, type DefaultMeetingAttendee } from './MeetingAttendeesPicker';
 import {
   getErrorMessage,
@@ -104,6 +105,7 @@ export function QuickAddInteraction({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const tenant = useTenant()!;
   const { data: session } = useSession();
   const { t } = useTranslation('msp/clients');
@@ -121,6 +123,14 @@ export function QuickAddInteraction({
   const [hasLoadedAttendeeOptions, setHasLoadedAttendeeOptions] = useState(false);
 
   const isEditMode = !!editingInteraction;
+
+  const handleClientSelect = (clientId: string | null) => {
+    const nextClientId = clientId || '';
+    if (nextClientId !== selectedClientId) {
+      setSelectedContactId('');
+    }
+    setSelectedClientId(nextClientId);
+  };
 
   // Resolve the client/contact this new interaction is attached to (create mode only).
   const meetingClientId = !isEditMode
@@ -975,13 +985,14 @@ export function QuickAddInteraction({
                       <ClientPicker
                         id={`${id}-client-picker`}
                         clients={clients}
-                        onSelect={(clientId) => setSelectedClientId(clientId || '')}
+                        onSelect={handleClientSelect}
                         selectedClientId={selectedClientId}
                         filterState={clientFilterState}
                         onFilterStateChange={setClientFilterState}
                         clientTypeFilter={clientTypeFilter}
                         onClientTypeFilterChange={setClientTypeFilter}
                         fitContent={true}
+                        onAddNew={() => setIsQuickAddClientOpen(true)}
                       />
                     </div>
                     
@@ -1021,6 +1032,23 @@ export function QuickAddInteraction({
                 }}
                 clients={clients}
                 selectedClientId={selectedClientId}
+              />
+              <QuickAddClient
+                open={isQuickAddClientOpen}
+                onOpenChange={setIsQuickAddClientOpen}
+                onClientAdded={(newClient) => {
+                  setClients((currentClients) => {
+                    const existingIndex = currentClients.findIndex(
+                      (client) => client.client_id === newClient.client_id,
+                    );
+                    if (existingIndex === -1) return [...currentClients, newClient];
+                    const nextClients = [...currentClients];
+                    nextClients[existingIndex] = newClient;
+                    return nextClients;
+                  });
+                  handleClientSelect(newClient.client_id);
+                }}
+                skipSuccessDialog
               />
               
               {/* Status for non-edit mode - shown for create mode */}
