@@ -14,6 +14,7 @@ import pl from "../../../../../server/public/locales/pl/msp/contracts.json";
 import pt from "../../../../../server/public/locales/pt/msp/contracts.json";
 import xx from "../../../../../server/public/locales/xx/msp/contracts.json";
 import yy from "../../../../../server/public/locales/yy/msp/contracts.json";
+import { pseudoString } from "../../../../../tools/i18n/lib/pseudo-locale.mjs";
 
 type TranslationResource = Record<string, unknown>;
 
@@ -107,6 +108,16 @@ const scenario = {
   assumptions: {},
 } as unknown as ContractScenario;
 
+// The English source strings the pseudo-locales (xx/yy) are generated from.
+// Deriving the xx/yy expectations through the shared pseudoString contract
+// keeps this test in lockstep with scripts/generate-pseudo-locales.cjs instead
+// of hardcoding the yy padding-dot count, which drifts whenever the English
+// copy length changes.
+const EN_HORIZON_OPTION = "{{count}} client billing periods";
+const EN_LAST_RUN = "Simulation current · {{count}} client billing periods";
+const pseudo = (source: string, locale: "xx" | "yy") =>
+  pseudoString(source, locale).replaceAll("{{count}}", "6");
+
 const resources = [
   [de, "6 Kundenabrechnungszeiträume", "Simulation aktuell · 6 Kundenabrechnungszeiträume"],
   [en, "6 client billing periods", "Simulation current · 6 client billing periods"],
@@ -116,8 +127,8 @@ const resources = [
   [nl, "6 factureringsperioden van de klant", "Simulatie actueel · 6 factureringsperioden van de klant"],
   [pl, "6 okresów rozliczeniowych klienta", "Symulacja aktualna · 6 okresów rozliczeniowych klienta"],
   [pt, "6 períodos de faturamento do cliente", "Simulação atualizada · 6 períodos de faturamento do cliente"],
-  [xx, "⟦6 ƈŀīḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓş⟧", "⟦Şīḿŭŀȧŧīȯƞ ƈŭřřḗƞŧ · 6 ƈŀīḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓş⟧"],
-  [yy, "〖6 ƈŀīḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓş ··········〗", "〖Şīḿŭŀȧŧīȯƞ ƈŭřřḗƞŧ · 6 ƈŀīḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓş ···················〗"],
+  [xx, pseudo(EN_HORIZON_OPTION, "xx"), pseudo(EN_LAST_RUN, "xx")],
+  [yy, pseudo(EN_HORIZON_OPTION, "yy"), pseudo(EN_LAST_RUN, "yy")],
 ] as const;
 
 describe("contract simulator run-bar locale resources", () => {
