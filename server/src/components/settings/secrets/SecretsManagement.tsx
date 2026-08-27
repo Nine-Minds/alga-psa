@@ -63,11 +63,11 @@ export default function SecretsManagement() {
   const loadSecrets = useCallback(async () => {
     try {
       setLoading(true);
-      const [secretsData, usageData, posture] = await Promise.all([
+      const [secretsData, posture] = await Promise.all([
         listTenantSecrets(),
-        getSecretUsage(),
         getTenantSecretStoragePosture(),
       ]);
+      const usageData = secretsData.permissionDenied ? new Map<string, string[]>() : await getSecretUsage();
       setSecrets(secretsData.secrets);
       setPermissionDenied(secretsData.permissionDenied);
       setSecretUsage(usageData);

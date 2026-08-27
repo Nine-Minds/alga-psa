@@ -276,6 +276,10 @@ export const getSecretUsage = withAuth(async (user, { tenant }): Promise<Map<str
     throw new Error('Tenant not found');
   }
 
+  if (!(await hasPermission(user, 'secrets', 'view', knex))) {
+    return new Map();
+  }
+
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.getSecretUsage();
 });

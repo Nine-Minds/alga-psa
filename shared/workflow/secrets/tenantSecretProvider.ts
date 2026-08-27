@@ -65,9 +65,10 @@ export class TenantSecretProvider {
   private tenantId: string;
   private secretProvider: ISecretProvider | undefined;
 
-  constructor(knex: Knex, tenantId: string) {
+  constructor(knex: Knex, tenantId: string, secretProvider?: ISecretProvider) {
     this.knex = knex;
     this.tenantId = tenantId;
+    this.secretProvider = secretProvider;
   }
 
   /**
@@ -320,6 +321,10 @@ export class TenantSecretProvider {
 /**
  * Factory function to create a TenantSecretProvider for a given tenant.
  */
-export function createTenantSecretProvider(knex: Knex, tenantId: string): TenantSecretProvider {
-  return new TenantSecretProvider(knex, tenantId);
+export function createTenantSecretProvider(
+  knex: Knex,
+  tenantId: string,
+  secretProvider?: ISecretProvider,
+): TenantSecretProvider {
+  return new TenantSecretProvider(knex, tenantId, secretProvider);
 }

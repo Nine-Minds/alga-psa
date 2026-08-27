@@ -1,29 +1,106 @@
-/*
- * Deployment-safe permission catalog. Do not read source files here: this module
- * is loaded by migrations in packaged installations where the repository is absent.
- */
-const PERMISSIONS = [
-  ['asset','create'],['asset','read'],['asset','update'],['asset','delete'],
-  ['billing','create'],['billing','read'],['billing','update'],['billing','delete'],
-  ['client','create'],['client','read'],['client','update'],['client','delete'],
-  ['contact','create'],['contact','read'],['contact','update'],['contact','delete'],
-  ['document','create'],['document','read'],['document','update'],['document','delete'],
-  ['email','process'],['job','delete'],['priority','create'],['quotes','approve'],
-  ['secrets','view'],['secrets','manage'],['secrets','use'],
-  ['ticket','create'],['ticket','read'],['ticket','update'],['ticket','delete'],
-  ['user','create'],['user','read'],['user','update'],['user','delete'],
-  ['workflow','read'],['workflow','view'],['workflow','manage'],['workflow','publish'],['workflow','admin'],
-].map(([resource, action]) => ({ resource, action, msp: true, client: false, description: `${action} ${resource}` }));
-const ROLE_GRANTS = { psa: { Admin: '*', Editor: ['secrets.view', 'secrets.use'] }, algadesk: { Admin: '*' } };
-const RETIRED = ['client_documents.read', 'credit.reconcile'];
-async function reconcileTenantPermissions(knex, tenant, productCode = 'psa') {
-  const current = await knex('permissions').where({ tenant }).select('permission_id', 'resource', 'action', 'msp', 'client');
-  const currentKeys = new Set(current.map((p) => `${p.resource}.${p.action}.${p.msp}.${p.client}`));
-  const missing = PERMISSIONS.filter((p) => !currentKeys.has(`${p.resource}.${p.action}.${p.msp}.${p.client}`)).map((p) => ({ tenant, permission_id: knex.raw('gen_random_uuid()'), ...p, created_at: new Date() }));
-  if (missing.length) await knex('permissions').insert(missing);
-  for (const pair of RETIRED) { const [resource, action] = pair.split('.'); const rows = await knex('permissions').where({ tenant, resource, action }).select('permission_id'); if (rows.length) await knex('role_permissions').where({ tenant }).whereIn('permission_id', rows.map((r) => r.permission_id)).delete(); await knex('permissions').where({ tenant, resource, action }).delete(); }
-  const grants = ROLE_GRANTS[productCode] || ROLE_GRANTS.psa; const roles = await knex('roles').where({ tenant, msp: true }).select('role_id', 'role_name'); const permissions = await knex('permissions').where({ tenant }).select('permission_id', 'resource', 'action', 'msp');
-  for (const role of roles) { const allowed = grants[role.role_name]; const ids = allowed === '*' ? permissions.filter((p) => p.msp).map((p) => p.permission_id) : Array.isArray(allowed) ? permissions.filter((p) => allowed.includes(`${p.resource}.${p.action}`)).map((p) => p.permission_id) : []; for (const permission_id of ids) if (!await knex('role_permissions').where({ tenant, role_id: role.role_id, permission_id }).first()) await knex('role_permissions').insert({ tenant, role_id: role.role_id, permission_id }); }
+const { ALL_MSP, PERMISSIONS, ROLE_GRANTS } = require('./permissionCatalogData.cjs');
+
+const RETIRED = [
+  { resource: 'client_documents', action: 'read' },
+  { resource: 'credit', action: 'reconcile' },
+];
+
+function normalizeProductCode(productCode) {
+  return String(productCode || 'psa').toLowerCase() === 'algadesk' ? 'algadesk' : 'psa';
 }
-async function reconcileAllTenants(knex) { for (const row of await knex('tenants').select('tenant', 'product_code')) await reconcileTenantPermissions(knex, row.tenant, row.product_code || 'psa'); }
-module.exports = { PERMISSIONS, ROLE_GRANTS, RETIRED, reconcileTenantPermissions, reconcileAllTenants };
+
+function permissionKey(permission) {
+  return `${permission.resource}:${permission.action}:${Boolean(permission.msp)}:${Boolean(permission.client)}`;
+}
+
+function permissionMatchesGrant(permission, grant) {
+  const [resource, action, scope] = grant.split(':');
+  return permission.resource === resource
+    && permission.action === action
+    && (scope === 'msp' ? permission.msp : permission.client);
+}
+
+async function reconcileTenantPermissions(knex, tenant, productCode = 'psa') {
+  const existingPermissions = await knex('permissions')
+    .where({ tenant })
+    .select('permission_id', 'resource', 'action', 'msp', 'client');
+  const existingKeys = new Set(existingPermissions.map(permissionKey));
+  const missingPermissions = PERMISSIONS
+    .filter((permission) => !existingKeys.has(permissionKey(permission)))
+    .map((permission) => ({
+      tenant,
+      permission_id: knex.raw('gen_random_uuid()'),
+      ...permission,
+      created_at: new Date(),
+    }));
+
+  if (missingPermissions.length > 0) await knex('permissions').insert(missingPermissions);
+
+  for (const retired of RETIRED) {
+    const permissionIds = await knex('permissions')
+      .where({ tenant, ...retired })
+      .pluck('permission_id');
+    if (permissionIds.length === 0) continue;
+    await knex('role_permissions')
+      .where({ tenant })
+      .whereIn('permission_id', permissionIds)
+      .delete();
+    await knex('permissions').where({ tenant, ...retired }).delete();
+  }
+
+  const roles = await knex('roles')
+    .where({ tenant })
+    .select('role_id', 'role_name', 'msp', 'client');
+  const permissions = await knex('permissions')
+    .where({ tenant })
+    .select('permission_id', 'resource', 'action', 'msp', 'client');
+  const grants = ROLE_GRANTS[normalizeProductCode(productCode)];
+
+  for (const role of roles) {
+    const roleGrants = role.msp ? grants.msp[role.role_name] : grants.client[role.role_name];
+    const permissionIds = roleGrants === ALL_MSP
+      ? permissions.filter((permission) => permission.msp).map((permission) => permission.permission_id)
+      : Array.isArray(roleGrants)
+        ? permissions
+          .filter((permission) => roleGrants.some((grant) => permissionMatchesGrant(permission, grant)))
+          .map((permission) => permission.permission_id)
+        : [];
+    if (permissionIds.length === 0) continue;
+
+    const existingRolePermissionIds = new Set(await knex('role_permissions')
+      .where({ tenant, role_id: role.role_id })
+      .whereIn('permission_id', permissionIds)
+      .pluck('permission_id'));
+    const missingRolePermissions = permissionIds
+      .filter((permissionId) => !existingRolePermissionIds.has(permissionId))
+      .map((permissionId) => ({ tenant, role_id: role.role_id, permission_id: permissionId }));
+    if (missingRolePermissions.length > 0) await knex('role_permissions').insert(missingRolePermissions);
+  }
+}
+
+async function reconcileAllTenants(knex) {
+  const tenants = await knex('tenants').select('tenant', 'product_code');
+  for (const row of tenants) await reconcileTenantPermissions(knex, row.tenant, row.product_code);
+}
+
+async function reconcileSeedTenants(knex, { tenantId, productCode, firstOnly = false } = {}) {
+  if (tenantId) {
+    await reconcileTenantPermissions(knex, tenantId, productCode);
+    return;
+  }
+  let query = knex('tenants').select('tenant', 'product_code');
+  if (productCode === 'algadesk') query = query.where({ product_code: 'algadesk' });
+  if (firstOnly) query = query.first();
+  const result = await query;
+  const tenants = firstOnly ? (result ? [result] : []) : result;
+  for (const row of tenants) await reconcileTenantPermissions(knex, row.tenant, productCode || row.product_code);
+}
+
+module.exports = {
+  PERMISSIONS,
+  ROLE_GRANTS,
+  RETIRED,
+  reconcileTenantPermissions,
+  reconcileAllTenants,
+  reconcileSeedTenants,
+};
