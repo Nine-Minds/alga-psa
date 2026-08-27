@@ -155,17 +155,18 @@ export class TenantSecretProvider {
     const secretProviderKey = generateSecretProviderKey(this.tenantId, validated.name);
 
     try {
-      return await this.knex.transaction(async (trx) => {
-        // The database unique constraint arbitrates concurrent creates.  Writing the
-        // provider write before the audit. A provider failure rejects this
-        // transaction and rolls back the metadata row.
+      const metadata = await this.knex.transaction(async (trx) => {
+        // The database unique constraint arbitrates concurrent creates. Commit the
+        // metadata and audit first: a provider failure may leave an inert orphaned
+        // row, but cannot make a rolled-back transaction point at a changed value.
         const [row] = await tenantTable<TenantSecretModel>(trx, this.tenantId, 'tenant_secrets')
           .insert({ tenant: this.tenantId, name: validated.name, description: validated.description ?? null, secret_provider_key: secretProviderKey, created_by: userId, updated_by: userId })
           .returning<TenantSecretModel[]>('*');
-        await (await this.getSecretProvider()).setTenantSecret(this.tenantId, validated.name, validated.value);
         await this.logAuditEvent(trx, row.id, validated.name, 'created', userId);
         return modelToMetadata(row);
       });
+      await (await this.getSecretProvider()).setTenantSecret(this.tenantId, validated.name, validated.value);
+      return metadata;
     } catch (error) {
       if ((error as { code?: string }).code === '23505') throw new Error(`Secret with name "${validated.name}" already exists`);
       throw error;
@@ -201,10 +202,6 @@ export class TenantSecretProvider {
         .returning<TenantSecretModel[]>('*');
       if (!row) throw new Error(`Secret with name "${name}" not found`);
 
-      // Replace the value before audit. If the provider rejects, metadata rolls
-      // back and the provider retains its old value (setTenantSecret is atomic).
-      if (validated.value !== undefined) await (await this.getSecretProvider()).setTenantSecret(this.tenantId, name, validated.value);
-
       // Log audit event
       await this.logAuditEvent(trx, row.id, name, 'updated', userId, undefined, {
         valueUpdated: validated.value !== undefined,
@@ -213,6 +210,10 @@ export class TenantSecretProvider {
 
       return modelToMetadata(row);
     });
+    // Only overwrite an external value after the metadata and audit commit. A
+    // provider failure leaves committed metadata with the old value, which is
+    // recoverable; it never destroys the old value during a SQL rollback.
+    if (validated.value !== undefined) await (await this.getSecretProvider()).setTenantSecret(this.tenantId, name, validated.value);
     return metadata;
   }
 

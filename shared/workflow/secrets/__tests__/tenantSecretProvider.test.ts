@@ -7,7 +7,7 @@ import { TenantSecretProvider } from '../tenantSecretProvider';
 
 type Row = Record<string, any>;
 
-function harness(failures: { insert?: boolean; update?: boolean; delete?: boolean } = {}) {
+function harness(failures: { insert?: boolean; update?: boolean; delete?: boolean; audit?: boolean; commit?: boolean } = {}) {
   const state = { secrets: [] as Row[], audit: [] as Row[], sequence: 0, events: [] as string[] };
   const rollback = () => ({ secrets: structuredClone(state.secrets), audit: structuredClone(state.audit), sequence: state.sequence });
   const db: any = (table: string) => {
@@ -18,6 +18,7 @@ function harness(failures: { insert?: boolean; update?: boolean; delete?: boolea
       where(input: Row) { where = input; return query; },
       insert(input: Row) {
         state.events.push(`db:insert:${table}`);
+        if (failures.audit && table === 'tenant_secrets_audit_log') throw new Error('audit failed');
         if (failures.insert && table === 'tenant_secrets') throw new Error('insert failed');
         if (table === 'tenant_secrets' && rows.some((row) => row.tenant === input.tenant && row.name === input.name)) {
           throw Object.assign(new Error('duplicate'), { code: '23505' });
@@ -48,7 +49,7 @@ function harness(failures: { insert?: boolean; update?: boolean; delete?: boolea
   db.transaction = async (fn: (trx: any) => Promise<any>) => {
     const before = rollback();
     state.events.push('tx:begin');
-    try { const result = await fn(db); state.events.push('tx:commit'); return result; } catch (error) { state.secrets = before.secrets; state.audit = before.audit; state.sequence = before.sequence; state.events.push('tx:rollback'); throw error; }
+    try { const result = await fn(db); if (failures.commit) throw new Error('commit failed'); state.events.push('tx:commit'); return result; } catch (error) { state.secrets = before.secrets; state.audit = before.audit; state.sequence = before.sequence; state.events.push('tx:rollback'); throw error; }
   };
   return { db, state };
 }
@@ -71,7 +72,7 @@ function providerStub(events: string[], options: { failSet?: boolean; failDelete
 }
 
 describe('TenantSecretProvider mutation ordering', () => {
-  it('creates metadata, writes provider, then audits in one transaction', async () => {
+  it('commits create metadata and audit before writing the provider', async () => {
     const { db, state } = harness(); const events = state.events;
     const provider = providerStub(events);
     const service = new TenantSecretProvider(db, 'tenant-1', provider);
@@ -79,13 +80,30 @@ describe('TenantSecretProvider mutation ordering', () => {
     expect(state.secrets).toHaveLength(1);
     expect(state.audit.map((row) => row.event_type)).toEqual(['created']);
     expect(provider.values.get('API_KEY')).toBe('new-value');
-    expect(state.events).toEqual(['tx:begin', 'db:insert:tenant_secrets', 'provider:set:API_KEY', 'db:insert:tenant_secrets_audit_log', 'tx:commit']);
+    expect(state.events).toEqual(['tx:begin', 'db:insert:tenant_secrets', 'db:insert:tenant_secrets_audit_log', 'tx:commit', 'provider:set:API_KEY']);
   });
 
-  it('rolls back create/update metadata and audit when provider write fails', async () => {
+  it('does not call the provider when audit or commit fails', async () => {
+    for (const failure of ['audit', 'commit'] as const) {
+      const created = harness({ [failure]: true });
+      const createProvider = providerStub(created.state.events);
+      await expect(new TenantSecretProvider(created.db, 'tenant-1', createProvider).create({ name: 'API_KEY', value: 'new' }, 'user-1')).rejects.toThrow();
+      expect(created.state.events.some((event) => event.startsWith('provider:'))).toBe(false);
+
+      const updated = harness({ [failure]: true });
+      updated.state.secrets.push({ id: 'existing', tenant: 'tenant-1', name: 'API_KEY', description: null, created_by: 'u', updated_by: 'u', created_at: 'now', updated_at: 'now' });
+      const updateProvider = providerStub(updated.state.events);
+      updateProvider.values.set('API_KEY', 'old');
+      await expect(new TenantSecretProvider(updated.db, 'tenant-1', updateProvider).update('API_KEY', { value: 'new' }, 'user-2')).rejects.toThrow();
+      expect(updateProvider.values.get('API_KEY')).toBe('old');
+      expect(updated.state.events.some((event) => event.startsWith('provider:'))).toBe(false);
+    }
+  });
+
+  it('keeps committed metadata when a post-commit provider write fails', async () => {
     const created = harness(); const createProvider = providerStub([], { failSet: true });
     await expect(new TenantSecretProvider(created.db, 'tenant-1', createProvider).create({ name: 'API_KEY', value: 'new' }, 'user-1')).rejects.toThrow('provider set failed');
-    expect(created.state.secrets).toEqual([]); expect(created.state.audit).toEqual([]);
+    expect(created.state.secrets).toHaveLength(1); expect(created.state.audit).toHaveLength(1);
 
     const updated = harness(); const provider = providerStub(updated.state.events);
     const service = new TenantSecretProvider(updated.db, 'tenant-1', provider);
@@ -95,9 +113,19 @@ describe('TenantSecretProvider mutation ordering', () => {
     provider.setTenantSecret = async (_tenant: string, name: string, value: string) => { if (value === 'new') throw new Error('provider set failed'); return originalSet(_tenant, name, value); };
     const failing = new TenantSecretProvider(updated.db, 'tenant-1', provider);
     await expect(failing.update('API_KEY', { value: 'new', description: 'changed' }, 'user-2')).rejects.toThrow('provider set failed');
-    expect(updated.state.secrets[0].description).toBeNull();
+    expect(updated.state.secrets[0].description).toBe('changed');
     expect(provider.values.get('API_KEY')).toBe('old');
-    expect(updated.state.audit).toHaveLength(1);
+    expect(updated.state.audit).toHaveLength(2);
+  });
+
+  it('commits update metadata and audit before overwriting the provider value', async () => {
+    const { db, state } = harness();
+    state.secrets.push({ id: 'existing', tenant: 'tenant-1', name: 'API_KEY', description: null, created_by: 'u', updated_by: 'u', created_at: 'now', updated_at: 'now' });
+    const provider = providerStub(state.events);
+    provider.values.set('API_KEY', 'old');
+    await new TenantSecretProvider(db, 'tenant-1', provider).update('API_KEY', { value: 'new' }, 'user-2');
+    expect(state.events).toEqual(['tx:begin', 'db:update:tenant_secrets', 'db:insert:tenant_secrets_audit_log', 'tx:commit', 'provider:set:API_KEY']);
+    expect(provider.values.get('API_KEY')).toBe('new');
   });
 
   it('does not call the provider when database insert, update, or delete fails', async () => {
@@ -122,10 +150,11 @@ describe('TenantSecretProvider mutation ordering', () => {
     expect(provider.values.get('RACE')).toBe('winner');
   });
 
-  it('commits delete before the provider call and reports a concurrent delete as not found', async () => {
+  it('commits every provider mutation before calling it and reports a concurrent delete as not found', async () => {
     const { db, state } = harness(); const events = state.events; const provider = providerStub(events);
     const service = new TenantSecretProvider(db, 'tenant-1', provider);
     await service.create({ name: 'DELETE_ME', value: 'value' }, 'user-1');
+    expect(events.indexOf('tx:commit')).toBeLessThan(events.indexOf('provider:set:DELETE_ME'));
     const deleteEventStart = events.length;
     await service.delete('DELETE_ME', 'user-1');
     expect(state.secrets).toEqual([]); expect(state.audit.at(-1)?.event_type).toBe('deleted');
