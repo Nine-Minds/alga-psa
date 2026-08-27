@@ -1903,7 +1903,8 @@
         "valueRequired": "La valeur du secret est obligatoire",
         "noChanges": "Aucune modification à enregistrer",
         "fixValidation": "Veuillez corriger les erreurs de validation"
-      }
+      },
+      "permissionDenied": "Vous n’avez pas l’autorisation d’afficher les secrets."
     }
   },
   "importExport": {

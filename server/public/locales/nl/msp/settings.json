@@ -1903,7 +1903,8 @@
         "valueRequired": "Geheime waarde is vereist",
         "noChanges": "Geen wijzigingen om op te slaan",
         "fixValidation": "Corrigeer de validatiefouten"
-      }
+      },
+      "permissionDenied": "U hebt geen toestemming om geheimen te bekijken."
     }
   },
   "importExport": {

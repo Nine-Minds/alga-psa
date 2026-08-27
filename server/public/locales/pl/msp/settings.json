@@ -1909,7 +1909,8 @@
         "valueRequired": "Wartość sekretu jest wymagana",
         "noChanges": "Brak zmian do zapisania",
         "fixValidation": "Proszę poprawić błędy walidacji"
-      }
+      },
+      "permissionDenied": "Nie masz uprawnień do wyświetlania sekretów."
     }
   },
   "importExport": {

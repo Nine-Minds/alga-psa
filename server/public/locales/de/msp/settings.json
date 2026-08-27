@@ -1903,7 +1903,8 @@
         "valueRequired": "Geheimniswert ist erforderlich",
         "noChanges": "Keine Änderungen zum Speichern",
         "fixValidation": "Bitte beheben Sie die Validierungsfehler"
-      }
+      },
+      "permissionDenied": "Sie haben keine Berechtigung, Geheimnisse anzuzeigen."
     }
   },
   "importExport": {

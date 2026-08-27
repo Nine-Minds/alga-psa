@@ -1903,7 +1903,8 @@
         "valueRequired": "Secret value is required",
         "noChanges": "No changes to save",
         "fixValidation": "Please fix the validation errors"
-      }
+      },
+      "permissionDenied": "You do not have permission to view secrets."
     }
   },
   "importExport": {

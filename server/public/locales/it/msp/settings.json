@@ -1903,7 +1903,8 @@
         "valueRequired": "Il valore del segreto è obbligatorio",
         "noChanges": "Nessuna modifica da salvare",
         "fixValidation": "Corregga gli errori di validazione"
-      }
+      },
+      "permissionDenied": "Non hai l'autorizzazione per visualizzare i segreti."
     }
   },
   "importExport": {
