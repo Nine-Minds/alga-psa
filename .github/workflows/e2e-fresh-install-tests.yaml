@@ -80,6 +80,7 @@ jobs:
           printf "placeholder-key-32-chars-long-02" > secrets/crypto_key
           printf "placeholder-key-32-chars-long-03" > secrets/token_secret_key
           printf "placeholder-key-32-chars-long-04" > secrets/nextauth_secret
+          printf "placeholder-key-32-chars-long-05" > secrets/credential_encryption_key
           printf "placeholder-password" > secrets/email_password
           printf "placeholder-id" > secrets/google_oauth_client_id
           printf "placeholder-secret" > secrets/google_oauth_client_secret

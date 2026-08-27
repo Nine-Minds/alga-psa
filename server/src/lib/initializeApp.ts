@@ -345,6 +345,23 @@ export async function initializeApp() {
     // Initialize enterprise features
     if (isEnterprise) {
 
+      // The credentials vault (EE, Pro tier) must be encryptable at boot, not
+      // on the user's first save: a non-empty password save throws today when
+      // the credential encryption key is missing. Fail loud & early here so a
+      // misconfigured vault is caught at startup with an actionable message
+      // instead of surfacing as a vague save error to the first technician
+      // who tries to store a password.
+      try {
+        const { assertCredentialEncryptionConfigured } = await import(
+          '@enterprise/lib/credentials/encryption'
+        );
+        await assertCredentialEncryptionConfigured();
+        logger.info('Credential vault encryption configuration validated');
+      } catch (error) {
+        logger.error('Credential vault encryption configuration failed:', error);
+        throw error;
+      }
+
       // Register EE implementations for the auth package's SSO registry
       // (NextAuth provider callbacks call into @alga-psa/auth's registry; EE must register the real implementations)
       try {

@@ -244,14 +244,21 @@ describe('credential save safe-error boundary', () => {
     expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('do-not-log');
   });
 
-  it('maps validation, configuration, and Hudu upstream failures without serializing raw errors', async () => {
+  it('maps validation, vault-not-configured, configuration, and Hudu upstream failures without serializing raw errors', async () => {
     nativeCreateMock
       .mockRejectedValueOnce(new Error('Invalid base32 TOTP secret character: "SENSITIVE".'))
-      .mockRejectedValueOnce(new Error('Credential vault encryption key is not configured.'));
+      .mockRejectedValueOnce(new Error('Credential vault encryption key is not configured. Set CREDENTIAL_ENCRYPTION_KEY or provision the `credential_encryption_key` secret.'))
+      .mockRejectedValueOnce(new Error('Vault Transit scheme selected but transit is not configured.'))
+      .mockRejectedValueOnce(new Error('Vault Transit encrypt failed (HTTP 502); check VAULT_ADDR/VAULT_TOKEN'));
     huduCreateMock.mockRejectedValue(new Error('upstream response body contains token=do-not-log'));
     const { createCredential } = await importActions();
 
     await expect(createCredential(secretInput)).resolves.toEqual({ ok: false, code: 'VALIDATION' });
+    // Missing encryption key / unconfigured transit are their own code so the
+    // UI can point the admin at the vault key, distinct from generic config.
+    await expect(createCredential(secretInput)).resolves.toEqual({ ok: false, code: 'VAULT_NOT_CONFIGURED' });
+    await expect(createCredential(secretInput)).resolves.toEqual({ ok: false, code: 'VAULT_NOT_CONFIGURED' });
+    // A Vault Transit transport failure is still a plain configuration error.
     await expect(createCredential(secretInput)).resolves.toEqual({ ok: false, code: 'CONFIGURATION' });
     await expect(createCredential({ ...secretInput, destination: 'hudu' })).resolves.toEqual({ ok: false, code: 'HUDU_API' });
     expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('SENSITIVE');
