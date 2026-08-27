@@ -150,7 +150,7 @@ const quickCreateOptions: QuickCreateOption[] = [
 
 type HeaderTranslator = (key: string, options?: Record<string, unknown>) => string;
 
-const getMenuItemNameByPath = (
+export const getMenuItemNameByPath = (
   path: string | null | undefined,
   t: HeaderTranslator,
 ): string => {
@@ -163,22 +163,21 @@ const getMenuItemNameByPath = (
   const segments = path.split('/');
   const topLevelPath = segments.length > 1 ? '/' + segments[1] : '/';
 
-  const findMenuItem = (items: MenuItem[]): string | null => {
-    for (const item of items) {
-      if (item.href === topLevelPath || (item.href && path.startsWith(item.href))) {
-        return item.translationKey
-          ? t(item.translationKey, { defaultValue: item.name })
-          : item.name;
-      }
-      if (item.subItems) {
-        const subItemName = findMenuItem(item.subItems);
-        if (subItemName) return subItemName;
-      }
-    }
-    return null;
-  };
+  const matchingItems = (items: MenuItem[]): MenuItem[] => items.flatMap((item) => {
+    const matchesPath = item.href === path
+      || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)));
+    return [
+      ...(matchesPath ? [item] : []),
+      ...(item.subItems ? matchingItems(item.subItems) : []),
+    ];
+  });
 
-  return findMenuItem(allMenuItems) || t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
+  const item = matchingItems(allMenuItems)
+    .sort((left, right) => (right.href?.length ?? 0) - (left.href?.length ?? 0))[0];
+
+  return item
+    ? (item.translationKey ? t(item.translationKey, { defaultValue: item.name }) : item.name)
+    : t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
 };
 
 const TenantBadge: React.FC<{
