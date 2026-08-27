@@ -727,7 +727,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   );
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} id="availability-settings" title={t('availabilitySettings.dialog.title', { defaultValue: 'Availability Settings' })} className="max-w-4xl">
+    // Fixed height so loading/tab/content swaps scroll internally instead of
+    // resizing and re-centering the dialog under in-flight clicks.
+    <Dialog isOpen={isOpen} onClose={onClose} id="availability-settings" title={t('availabilitySettings.dialog.title', { defaultValue: 'Availability Settings' })} className="max-w-4xl h-[85vh]">
       {isLoading ? (
         <div className="p-6">
           <div className="text-center">{t('availabilitySettings.loading', { defaultValue: 'Loading settings...' })}</div>
@@ -872,10 +874,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
             {managedTeams.length > 0 && (
               <div>
-                <Label htmlFor="team-selector">{t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Filter technicians by team' })}</Label>
-                <p className="text-xs text-gray-600 mb-2">
-                  {t('availabilitySettings.common.teamSelect.help', { defaultValue: 'This filters the technician list only; booking availability belongs to the technician across every team.' })}
-                </p>
+                {/* CustomSelect renders its own labelled control; no outer Label
+                    or the caption shows twice. */}
                 <CustomSelect
                   id="team-selector"
                   label={t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Filter technicians by team' })}
@@ -886,11 +886,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   showPlaceholderInDropdown={false}
                   disabled={isSavingUserHours}
                 />
+                <p className="text-xs text-gray-600 -mt-2">
+                  {t('availabilitySettings.common.teamSelect.help', { defaultValue: 'This filters the technician list only; booking availability belongs to the technician across every team.' })}
+                </p>
               </div>
             )}
 
             <div>
-              <Label htmlFor="user-hours-selector">{t('availabilitySettings.userHours.userSelect.label', { defaultValue: 'Technician' })}</Label>
               <CustomSelect
                 id="user-hours-selector"
                 label={t('availabilitySettings.userHours.userSelect.label', { defaultValue: 'Technician' })}

@@ -62,7 +62,8 @@ vi.mock('lucide-react', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children, title }: any) => (isOpen ? <div><h1>{title}</h1>{children}</div> : null),
+  Dialog: ({ isOpen, children, title, className }: any) =>
+    (isOpen ? <div data-testid="availability-dialog" data-dialog-class={className}><h1>{title}</h1>{children}</div> : null),
 }));
 
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
@@ -437,5 +438,13 @@ describe('AvailabilitySettings rendered regressions', () => {
     expect(screen.getByTestId('team-selector')).toHaveValue('');
     expect(screen.getByTestId('user-hours-selector')).toHaveValue('');
     expect(screen.queryByTestId('day-3-end-time')).toBeNull();
+  });
+
+  it('pins the dialog to a fixed height so content swaps cannot re-center it mid-click', async () => {
+    bootstrap();
+
+    render(<AvailabilitySettings isOpen onClose={() => {}} />);
+
+    expect(screen.getByTestId('availability-dialog').getAttribute('data-dialog-class')).toContain('h-[85vh]');
   });
 });

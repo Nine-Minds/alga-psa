@@ -10,8 +10,10 @@ describe('AvailabilitySettings UX contracts', () => {
     expect(component).toMatch(/Promise\.all\(\[\s*getAvailabilitySettingsAccess\(\),\s*getServices\(\)/);
     expect(component).toContain('const userOptions: SelectOption[] = useMemo');
     expect(component).toContain('const teamOptions: SelectOption[] = useMemo');
-    expect(component).toContain('htmlFor="team-selector"');
-    expect(component).toContain('htmlFor="user-hours-selector"');
+    // CustomSelect renders its own associated label from the label prop; the
+    // outer <Label> duplicates were removed so the caption shows once.
+    expect(component).toMatch(/id="team-selector"\s+label=\{t\('availabilitySettings\.common\.teamSelect\.label'/);
+    expect(component).toMatch(/id="user-hours-selector"\s+label=\{t\('availabilitySettings\.userHours\.userSelect\.label'/);
   });
 
   it('guards stale reads and renders explicit loading and error states', () => {
