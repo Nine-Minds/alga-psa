@@ -135,9 +135,9 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
   AlertDescription: ({ children }: any) => <div>{children}</div>,
 }));
 
-vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  default: ({ id, options = [], value, onValueChange }: any) => (
-    <select id={id} value={value} onChange={(event) => onValueChange(event.target.value)}>
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({
+  default: ({ id, options = [], value, onChange }: any) => (
+    <select id={id} value={value} onChange={(event) => onChange(event.target.value)}>
       {options.map((option: any) => (
         <option key={option.value} value={option.value}>
           {option.label}

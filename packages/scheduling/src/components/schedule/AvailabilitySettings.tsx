@@ -10,7 +10,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import SearchableSelect, { SelectOption } from '@alga-psa/ui/components/SearchableSelect';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { readApproverIdsFromConfig } from '../../lib/appointmentApprovers';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
@@ -598,9 +598,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     [users]
   );
 
-  // "All authorized technicians" is a real, enabled choice (no team filter).
-  // A disabled placeholder row here silently swallows clicks and leaves the
-  // modal dropdown open, which blocks every other pointer interaction.
+  // "All authorized technicians" is a real, enabled choice (no team filter),
+  // so clearing the filter is one ordinary click like any other row.
   const teamOptions: SelectOption[] = useMemo(() =>
     [
       { value: '', label: t('availabilitySettings.userHours.scope.allTeams', { defaultValue: 'All authorized technicians' }) },
@@ -874,16 +873,20 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
             {managedTeams.length > 0 && (
               <div>
-                {/* CustomSelect renders its own labelled control; no outer Label
-                    or the caption shows twice. */}
-                <CustomSelect
+                {/* SearchableSelect renders its own labelled control; no outer
+                    Label or the caption shows twice. Every dropdown in this
+                    dialog is SearchableSelect because Radix Select is always
+                    modal: it pointer-locks the page while open, so any click
+                    outside the menu (the trigger again, Edit, Close) is
+                    swallowed instead of dismissing it and landing. */}
+                <SearchableSelect
                   id="team-selector"
                   label={t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Filter technicians by team' })}
                   options={teamOptions}
                   value={selectedTeamId}
-                  onValueChange={setSelectedTeamId}
+                  onChange={setSelectedTeamId}
                   placeholder={t('availabilitySettings.common.teamSelect.placeholder', { defaultValue: 'All authorized technicians' })}
-                  showPlaceholderInDropdown={false}
+                  dropdownMode="overlay"
                   disabled={isSavingUserHours}
                 />
                 <p className="text-xs text-gray-600 -mt-2">
@@ -893,14 +896,14 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             )}
 
             <div>
-              <CustomSelect
+              <SearchableSelect
                 id="user-hours-selector"
                 label={t('availabilitySettings.userHours.userSelect.label', { defaultValue: 'Technician' })}
                 options={userOptions}
-                value={selectedUserId || undefined}
-                onValueChange={setSelectedUserId}
+                value={selectedUserId}
+                onChange={setSelectedUserId}
                 placeholder={t('availabilitySettings.userHours.userSelect.placeholder', { defaultValue: 'Select a technician to configure' })}
-                showPlaceholderInDropdown={false}
+                dropdownMode="overlay"
                 disabled={users.length === 0 || isSavingUserHours}
               />
             </div>
@@ -1095,12 +1098,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           <TabsContent value="service-rules" className="space-y-4 mt-4">
             <div>
               <Label>{t('availabilitySettings.serviceRules.serviceSelect.label', { defaultValue: 'Select Service to Configure' })}</Label>
-              <CustomSelect
+              <SearchableSelect
                 id="service-rules-selector"
                 options={serviceOptions}
-                value={selectedServiceId || undefined}
-                onValueChange={setSelectedServiceId}
+                value={selectedServiceId}
+                onChange={setSelectedServiceId}
                 placeholder={t('availabilitySettings.serviceRules.serviceSelect.placeholder', { defaultValue: 'Select a service to configure' })}
+                dropdownMode="overlay"
               />
             </div>
 
@@ -1214,15 +1218,16 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             {isManager && managedTeams.length > 1 && (
               <div>
                 <Label>{t('availabilitySettings.common.teamSelect.label', { defaultValue: 'Select Team' })}</Label>
-                <CustomSelect
+                <SearchableSelect
                   id="team-selector-exceptions"
                   options={managedTeams.map(team => ({
                     value: team.team_id,
                     label: team.team_name
                   }))}
-                  value={selectedTeamId || undefined}
-                  onValueChange={setSelectedTeamId}
+                  value={selectedTeamId}
+                  onChange={setSelectedTeamId}
                   placeholder={t('availabilitySettings.common.teamSelect.placeholder', { defaultValue: 'Select a team' })}
+                  dropdownMode="overlay"
                 />
               </div>
             )}
@@ -1243,12 +1248,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
                   <div>
                     <Label>{t('availabilitySettings.exceptions.form.user.label', { defaultValue: 'User (Optional - leave empty for company-wide)' })}</Label>
-                    <CustomSelect
+                    <SearchableSelect
                       id="exception-user-selector"
                       options={[{ value: '__company_wide__', label: t('availabilitySettings.exceptions.common.companyWide', { defaultValue: 'Company-wide' }) }, ...userOptions]}
                       value={exceptionUserId || '__company_wide__'}
-                      onValueChange={setExceptionUserId}
+                      onChange={setExceptionUserId}
                       placeholder={t('availabilitySettings.exceptions.form.user.placeholder', { defaultValue: 'Select user' })}
+                      dropdownMode="overlay"
                       disabled={isManager && !selectedTeamId && managedTeams.length > 1}
                     />
                   </div>

@@ -131,16 +131,15 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
   AlertDescription: ({ children }: any) => <div>{children}</div>,
 }));
 
-vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  default: ({ id, value, onValueChange, disabled, options, showPlaceholderInDropdown, allowClear }: any) => (
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({
+  default: ({ id, value, onChange, disabled, options, label }: any) => (
     <select
       data-testid={id}
       id={id}
+      aria-label={label}
       value={value ?? ''}
       disabled={!!disabled}
-      data-placeholder-in-dropdown={String(showPlaceholderInDropdown !== false)}
-      data-allow-clear={String(!!allowClear)}
-      onChange={(event: React.ChangeEvent<HTMLSelectElement>) => onValueChange?.(event.target.value)}
+      onChange={(event: React.ChangeEvent<HTMLSelectElement>) => onChange?.(event.target.value)}
     >
       <option value="" data-sentinel="true" />
       {(options ?? []).map((option: { value: string; label: string }, index: number) => (
@@ -378,9 +377,7 @@ describe('AvailabilitySettings rendered regressions', () => {
     const teamSelect = await screen.findByTestId('team-selector');
     // No disabled placeholder row and no separate clear row: a click on any
     // visible entry must land, or automation/users are left with a stuck-open
-    // modal dropdown that blocks the rest of the page.
-    expect(teamSelect).toHaveAttribute('data-placeholder-in-dropdown', 'false');
-    expect(teamSelect).toHaveAttribute('data-allow-clear', 'false');
+    // dropdown that blocks the rest of the page.
     const teamRows = within(teamSelect).getAllByRole('option').filter((option) => !option.hasAttribute('data-sentinel'));
     expect(teamRows.map((option) => [option.textContent, (option as HTMLOptionElement).value])).toEqual([
       ['All authorized technicians', ''],
@@ -388,7 +385,6 @@ describe('AvailabilitySettings rendered regressions', () => {
     ]);
 
     const technicianSelect = screen.getByTestId('user-hours-selector');
-    expect(technicianSelect).toHaveAttribute('data-placeholder-in-dropdown', 'false');
 
     // Selecting the enabled all-technicians row really clears the filter.
     fireEvent.change(teamSelect, { target: { value: 'team-1' } });

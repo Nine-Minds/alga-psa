@@ -10,10 +10,21 @@ describe('AvailabilitySettings UX contracts', () => {
     expect(component).toMatch(/Promise\.all\(\[\s*getAvailabilitySettingsAccess\(\),\s*getServices\(\)/);
     expect(component).toContain('const userOptions: SelectOption[] = useMemo');
     expect(component).toContain('const teamOptions: SelectOption[] = useMemo');
-    // CustomSelect renders its own associated label from the label prop; the
-    // outer <Label> duplicates were removed so the caption shows once.
+    // SearchableSelect renders its own associated label from the label prop;
+    // the outer <Label> duplicates were removed so the caption shows once.
     expect(component).toMatch(/id="team-selector"\s+label=\{t\('availabilitySettings\.common\.teamSelect\.label'/);
     expect(component).toMatch(/id="user-hours-selector"\s+label=\{t\('availabilitySettings\.userHours\.userSelect\.label'/);
+  });
+
+  it('uses non-modal SearchableSelect dropdowns only, never modal Radix selects', () => {
+    // Radix Select is always modal: while open it pointer-locks the page, so
+    // a click anywhere else (the trigger again, Edit, Close) is swallowed
+    // instead of dismissing the menu and landing on its target.
+    expect(component).toContain("from '@alga-psa/ui/components/SearchableSelect'");
+    expect(component).not.toContain('<CustomSelect');
+    const dropdownCount = (component.match(/<SearchableSelect/g) || []).length;
+    expect(dropdownCount).toBe(5);
+    expect((component.match(/dropdownMode="overlay"/g) || []).length).toBe(dropdownCount);
   });
 
   it('guards stale reads and renders explicit loading and error states', () => {
