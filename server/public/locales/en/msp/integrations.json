@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Connection Type:",
           "label": "Overview",
-          "mappedTenantsLabel": "Mapped Tenants:"
+          "mappedTenantsLabel": "Mapped Tenants:",
+          "microsoftAppLabel": "Microsoft app:"
         },
         "skipped": {
           "empty": "No tenants are currently marked as skipped.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Add app registration",
+          "bindFailed": "Could not save the Microsoft app choice for Entra.",
+          "emptyBody": "Direct connect runs on your own Microsoft app registration. Register a multi-tenant app in your partner tenant, add the Entra redirect URI, and grant admin consent for ManagedTenants.Read.All and Directory.Read.All.",
+          "label": "Microsoft app registration",
+          "placeholder": "Select an app registration",
+          "reconnectRequired": "Select a Microsoft app registration and reconnect.",
+          "redirectUriLabel": "Redirect URI to add in Entra",
+          "scopesLabel": "Delegated scopes (admin consent required)"
+        },
         "backToCurrentStep": "Back to {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga talks to Microsoft Graph through your partner relationship.",
             "label": "Direct Microsoft partner",
             "prerequisites": {
-              "appRegistration": "Microsoft OAuth credentials configured for this tenant.",
+              "appRegistration": "A Microsoft app registration chosen below — Direct always connects with your organization's own app.",
               "globalAdmin": "A Global Administrator who can approve the permissions.",
               "partnerRelationship": "A partner relationship (GDAP) with the tenants you manage.",
               "lighthouse": "Microsoft 365 Lighthouse onboarded in your partner tenant."
@@ -956,6 +967,7 @@
         "description": "Bring the people from the Microsoft tenants you manage into Alga as client contacts. Nothing is written to your contacts until you have seen a preview and approved it.",
         "directConsent": {
           "adminNote": "A Global Administrator must approve these permissions. If you are not one, the sign-in will complete but the connection will be refused, and nothing will be saved.",
+          "appRegistration": "App registration: {{name}}.",
           "cancel": "Cancel",
           "continue": "Continue to Microsoft",
           "intro": "You are about to leave Alga and sign in at Microsoft. These are the permissions that will be requested.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Existing Outlook email connections need re-authorization to grant Mail.Send before they can send outbound email.",
             "perProviderIssuerNote": "Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections."
           },
+          "entra": {
+            "description": "Choose the Microsoft app for Entra GDAP and Lighthouse sync.",
+            "label": "Entra Direct",
+            "reconnect": "Changing this app disconnects the current Entra connection and requires reconsent."
+          },
           "mspSso": {
             "description": "Choose the Microsoft app for staff sign-in and login-domain discovery.",
             "label": "Staff sign-in"
@@ -1726,6 +1743,9 @@
           "currentProfileTitle": "Saved app values",
           "emailRedirect": "Inbound email redirect URI",
           "emailTitle": "Email",
+          "entraConsent": "Requirement",
+          "entraConsentValue": "Register this app as multitenant and grant admin consent in your partner Microsoft tenant.",
+          "entraTitle": "Entra Direct",
           "mspSsoTitle": "Staff sign-in",
           "notConfigured": "Not configured",
           "redirectUri": "Redirect URI",

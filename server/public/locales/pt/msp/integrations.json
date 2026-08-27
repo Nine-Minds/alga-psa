@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Tipo de conexão:",
           "label": "Visão geral",
-          "mappedTenantsLabel": "Tenants mapeados:"
+          "mappedTenantsLabel": "Tenants mapeados:",
+          "microsoftAppLabel": "Aplicativo Microsoft:"
         },
         "skipped": {
           "empty": "Nenhum tenant está marcado como ignorado no momento.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Adicionar registro de aplicativo",
+          "bindFailed": "Não foi possível salvar o aplicativo Microsoft escolhido para o Entra.",
+          "emptyBody": "A conexão direta usa o registro de aplicativo Microsoft da sua própria organização. Registre um aplicativo multilocatário no locatário de parceiro, adicione o URI de redirecionamento do Entra e conceda o consentimento de administrador para ManagedTenants.Read.All e Directory.Read.All.",
+          "label": "Registro de aplicativo Microsoft",
+          "placeholder": "Selecione um registro de aplicativo",
+          "reconnectRequired": "Selecione um registro de aplicativo Microsoft e reconecte.",
+          "redirectUriLabel": "URI de redirecionamento a adicionar no Entra",
+          "scopesLabel": "Escopos delegados (consentimento de administrador obrigatório)"
+        },
         "backToCurrentStep": "Voltar a {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "O Alga comunica com o Microsoft Graph através da sua relação de parceiro.",
             "label": "Parceiro Microsoft direto",
             "prerequisites": {
-              "appRegistration": "Credenciais OAuth da Microsoft configuradas para este tenant.",
+              "appRegistration": "Um registro de aplicativo Microsoft escolhido abaixo — a conexão direta sempre usa o aplicativo da sua própria organização.",
               "globalAdmin": "Um administrador global que possa aprovar as permissões.",
               "partnerRelationship": "Uma relação de parceiro (GDAP) com os tenants que você gerencia.",
               "lighthouse": "Microsoft 365 Lighthouse integrado no seu tenant de parceiro."
@@ -956,6 +967,7 @@
         "description": "Importe para o Alga as pessoas dos tenants da Microsoft que você gerencia como contatos dos clientes. Nenhum contato será alterado antes de você revisar e aprovar uma prévia.",
         "directConsent": {
           "adminNote": "Um administrador global deve aprovar estas permissões. Caso contrário, o login será concluído, mas a conexão será recusada e nada será salvo.",
+          "appRegistration": "Registro de aplicativo: {{name}}.",
           "cancel": "Cancelar",
           "continue": "Continuar para a Microsoft",
           "intro": "Você sairá do Alga para entrar na Microsoft. Estas permissões serão solicitadas.",
@@ -1665,6 +1677,11 @@
             "reconnect": "As conexões de e-mail existentes do Outlook precisam ser autorizadas novamente para conceder Mail.Send antes de poderem enviar e-mails.",
             "perProviderIssuerNote": "Conexões de caixa de correio existentes mantêm seu aplicativo da Microsoft atual até serem reconectadas. Esta escolha se aplica a novas conexões de caixa de correio."
           },
+          "entra": {
+            "description": "Escolha o aplicativo Microsoft para a sincronização do Entra via GDAP e Lighthouse.",
+            "label": "Entra direto",
+            "reconnect": "Alterar este aplicativo desconecta a conexão atual do Entra e exige novo consentimento."
+          },
           "mspSso": {
             "description": "Escolha qual perfil da Microsoft oferece suporte a domínios de login SSO do MSP, entrada da Microsoft e descoberta de locatário.",
             "label": "SSO MSP"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Valores atuais do perfil",
           "emailRedirect": "URI de redirecionamento de e-mail de entrada",
           "emailTitle": "Orientação por e-mail",
+          "entraConsent": "Requisito",
+          "entraConsentValue": "Registre este aplicativo como multilocatário e conceda o consentimento de administrador no locatário de parceiro.",
+          "entraTitle": "Entra direto",
           "mspSsoTitle": "Orientação de SSO MSP",
           "notConfigured": "Não configurado",
           "redirectUri": "Redirecionar URI",

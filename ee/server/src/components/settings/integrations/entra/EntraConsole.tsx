@@ -52,6 +52,7 @@ import {
 import { EntraCippConnectDialog } from '../EntraCippConnectDialog';
 import { ConnectionMethodChooser, type EntraConnectionMethod } from './ConnectionMethodChooser';
 import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
+import { MicrosoftAppRegistrationPicker } from './MicrosoftAppRegistrationPicker';
 import { EntraClientsTab } from './EntraClientsTab';
 import { EntraHistoryTab } from './EntraHistoryTab';
 import { EntraScheduleTab } from './EntraScheduleTab';
@@ -237,6 +238,10 @@ export function EntraConsole({
   // mappings, so it has to keep a way back in as well.
   const [reconnectMethod, setReconnectMethod] = React.useState<EntraConnectionMethod | null>(null);
   const [reconnectBusy, setReconnectBusy] = React.useState(false);
+  const [reconnectDirectProfile, setReconnectDirectProfile] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [mappingSummary, setMappingSummary] = React.useState<EntraMappingSummary>({
     mapped: 0,
     skipped: 0,
@@ -530,6 +535,7 @@ export function EntraConsole({
       cippBaseUrl: status?.connectionDetails?.cippBaseUrl || null,
       directTenantId: status?.connectionDetails?.directTenantId || null,
       directCredentialSource: status?.connectionDetails?.directCredentialSource || null,
+      directProfileName: status?.connectionDetails?.directProfileName || null,
       mappedClients: mappings.map((mapping) => ({
         clientName: mapping.clientName,
         entraTenantId: mapping.entraTenantId,
@@ -1116,6 +1122,8 @@ export function EntraConsole({
                 onChange={setReconnectMethod}
                 onContinue={handleReconnect}
                 busy={reconnectBusy || rotateBusy}
+                directProfileBound={Boolean(reconnectDirectProfile)}
+                directProfilePicker={<MicrosoftAppRegistrationPicker onBound={setReconnectDirectProfile} />}
               />
             </div>
           ) : null}
