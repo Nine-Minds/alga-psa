@@ -1,15 +1,44 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const publishEventMock = vi.fn();
+const registerAfterCommitMock = vi.fn();
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  registerAfterCommit: (...args: any[]) => registerAfterCommitMock(...args),
 }));
 
 describe('WorkflowEventPublisher', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     publishEventMock.mockResolvedValue(undefined);
+  });
+
+  it('defers ticket-created publication until the creating transaction commits', async () => {
+    const { WorkflowEventPublisher } = await import('../workflowEventPublisher');
+    const trx = {} as any;
+    const publisher = new WorkflowEventPublisher({ transaction: trx });
+
+    await publisher.publishTicketCreated({
+      tenantId: '91a53464-0b67-4e3f-ae88-922d9c5af6ed',
+      ticketId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
+      metadata: { source: 'email' },
+    });
+
+    expect(publishEventMock).not.toHaveBeenCalled();
+    expect(registerAfterCommitMock).toHaveBeenCalledWith(
+      trx,
+      expect.any(Function),
+      'TICKET_CREATED ticket=7fa265ac-3a50-4ad6-9454-4a860d884996',
+    );
+
+    const hook = registerAfterCommitMock.mock.calls[0][1] as () => Promise<void>;
+    await hook();
+
+    expect(publishEventMock).toHaveBeenCalledTimes(1);
   });
 
   it('publishes ticket-created events through the configured event bus fanout', async () => {

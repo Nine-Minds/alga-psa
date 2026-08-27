@@ -31,6 +31,7 @@ const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
 const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
+const PUBLISH_SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
@@ -172,6 +173,12 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // PDF generation), so the worker forwards them like the jobs above.
   registerJobHandlerForActivities('invoice_zip', forwardJobToServer('invoice_zip'));
   registerJobHandlerForActivities('invoice_email', forwardJobToServer('invoice_email'));
+  // Scheduled comment publication reaches server-local ticket settings and job
+  // modules, so execute it through the same server-side forwarding boundary.
+  registerJobHandlerForActivities(
+    PUBLISH_SCHEDULED_COMMENT_JOB,
+    forwardJobToServer(PUBLISH_SCHEDULED_COMMENT_JOB),
+  );
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
