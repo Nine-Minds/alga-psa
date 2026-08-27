@@ -1,4 +1,5 @@
 exports.seed = async function(knex, tenantId) {
+    const { reconcileTenantPermissions } = require('../../../../../server/migrations/utils/permissionCatalog.cjs');
     const { tenantDb } = await import('@alga-psa/db');
 
     // Use provided tenantId or seed all tenants
@@ -329,5 +330,6 @@ exports.seed = async function(knex, tenantId) {
         } else {
             console.log(`All permissions already exist for tenant ${tenant}`);
         }
+        await reconcileTenantPermissions(knex, tenant, 'psa');
     }
 };

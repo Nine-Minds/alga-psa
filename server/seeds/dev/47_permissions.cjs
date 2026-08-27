@@ -1,4 +1,5 @@
 const { getTenantDb } = require('./_tenant.cjs');
+const { reconcileTenantPermissions } = require('../../migrations/utils/permissionCatalog.cjs');
 
 exports.seed = async function(knex) {
     // This seed provisions every tenant; only tenant-owned permission work uses the facade.
@@ -372,5 +373,6 @@ exports.seed = async function(knex) {
                     updated_at: knex.fn.now()
                 });
         }
+        await reconcileTenantPermissions(knex, tenantId, 'psa');
     }
 };

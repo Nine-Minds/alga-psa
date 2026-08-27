@@ -8,7 +8,9 @@ import type { ColumnDefinition } from '@alga-psa/types';
 import {
   listTenantSecrets,
   deleteSecret,
-  getSecretUsage
+  getSecretUsage,
+  getTenantSecretStoragePosture,
+  type TenantSecretStoragePosture,
 } from '@alga-psa/tenancy/actions/tenant-secret-actions';
 import type { TenantSecretMetadata } from '@alga-psa/workflows/secrets';
 import { toast } from 'react-hot-toast';
@@ -37,6 +39,8 @@ export default function SecretsManagement() {
   const [secretUsage, setSecretUsage] = useState<Map<string, string[]>>(new Map());
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [storagePosture, setStoragePosture] = useState<TenantSecretStoragePosture>({ writable: false });
 
   // Search/filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,12 +63,15 @@ export default function SecretsManagement() {
   const loadSecrets = useCallback(async () => {
     try {
       setLoading(true);
-      const [secretsData, usageData] = await Promise.all([
+      const [secretsData, usageData, posture] = await Promise.all([
         listTenantSecrets(),
-        getSecretUsage()
+        getSecretUsage(),
+        getTenantSecretStoragePosture(),
       ]);
-      setSecrets(secretsData);
+      setSecrets(secretsData.secrets);
+      setPermissionDenied(secretsData.permissionDenied);
       setSecretUsage(usageData);
+      setStoragePosture(posture);
     } catch (error) {
       handleError(error, t('secrets.messages.error.loadFailed'));
     } finally {
@@ -82,16 +89,19 @@ export default function SecretsManagement() {
   };
 
   const handleCreate = () => {
+    if (!storagePosture.writable || permissionDenied) return;
     setEditingSecret(null);
     setDialogOpen(true);
   };
 
   const handleEdit = (secret: TenantSecretMetadata) => {
+    if (!storagePosture.writable || permissionDenied) return;
     setEditingSecret(secret);
     setDialogOpen(true);
   };
 
   const handleDeleteClick = (secret: TenantSecretMetadata) => {
+    if (!storagePosture.writable || permissionDenied) return;
     setSecretToDelete(secret);
     setDeleteConfirmName('');
     setDeleteDialogOpen(true);
@@ -171,6 +181,7 @@ export default function SecretsManagement() {
             variant="ghost"
             size="sm"
             onClick={() => handleEdit(record)}
+            disabled={!storagePosture.writable || permissionDenied}
             title={t('secrets.list.tooltips.edit')}
           >
             <Edit className="h-4 w-4" />
@@ -180,6 +191,7 @@ export default function SecretsManagement() {
             variant="ghost"
             size="sm"
             onClick={() => handleDeleteClick(record)}
+            disabled={!storagePosture.writable || permissionDenied}
             title={t('secrets.list.tooltips.delete')}
             className="text-destructive hover:text-destructive hover:bg-destructive/10"
           >
@@ -188,7 +200,7 @@ export default function SecretsManagement() {
         </div>
       ),
     }
-  ], [t]);
+  ], [t, storagePosture.writable, permissionDenied]);
 
   return (
     <div className="space-y-6">
@@ -203,11 +215,19 @@ export default function SecretsManagement() {
           <Button
             id="create-secret-button"
             onClick={handleCreate}
+            disabled={!storagePosture.writable || permissionDenied}
           >
             <Plus className="h-4 w-4 mr-2" />
             {t('secrets.list.createSecret')}
           </Button>
         </div>
+
+        {permissionDenied && <p role="alert" className="mb-4 text-sm text-[rgb(var(--color-text-700))]">{t('secrets.messages.permissionDenied')}</p>}
+        {!permissionDenied && !storagePosture.writable && (
+          <p role="alert" className="mb-4 text-sm text-[rgb(var(--color-text-700))]">
+            {storagePosture.reason === 'NO_DURABLE_PATH' ? t('errors.secrets.noDurablePath') : t('errors.secrets.readOnly')}
+          </p>
+        )}
 
         {/* Search/Filter */}
         <div className="mb-4">

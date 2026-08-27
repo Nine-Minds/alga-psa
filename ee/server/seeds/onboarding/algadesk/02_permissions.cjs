@@ -1,4 +1,5 @@
 exports.seed = async function(knex, tenantId) {
+    const { reconcileTenantPermissions } = require('../../../../../server/migrations/utils/permissionCatalog.cjs');
     const { tenantDb } = await import('@alga-psa/db');
 
     let tenants;
@@ -82,5 +83,6 @@ exports.seed = async function(knex, tenantId) {
         } else {
             console.log(`All Algadesk permissions already exist for tenant ${tenant}`);
         }
+        await reconcileTenantPermissions(knex, tenant, 'algadesk');
     }
 };

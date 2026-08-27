@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "No tiene permiso para ver secretos.",
       "success": {
         "tenantNameUpdated": "Nombre del inquilino actualizado correctamente",
         "timezoneUpdated": "Zona horaria predeterminada actualizada correctamente",
@@ -3172,6 +3173,7 @@
       "notFound": "No se encontró el secreto. Es posible que ya se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "invalidName": "Nombre de inquilino o de secreto no válido.",
       "readOnly": "El almacenamiento de secretos es de solo lectura en este entorno.",
+      "noDurablePath": "El almacenamiento de secretos no está configurado para escrituras duraderas en este entorno.",
       "recordInvalid": "Uno de los registros de secreto seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
       "referenceMissing": "Uno de los registros de secreto seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe un secreto con este nombre.",
