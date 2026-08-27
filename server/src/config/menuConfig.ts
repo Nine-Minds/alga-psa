@@ -58,7 +58,8 @@ import {
   Star,
   Target,
   Ticket,
-  BadgeCheck
+  BadgeCheck,
+  Wrench
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
@@ -179,7 +180,10 @@ export const navigationSections: NavigationSection[] = [
         name: 'Assets',
         translationKey: 'nav.assets',
         icon: Monitor,
-        href: '/msp/assets'
+        subItems: [
+          { name: 'All Assets', translationKey: 'nav.assetsAll', icon: Monitor, href: '/msp/assets' },
+          { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' }
+        ]
       },
       {
         name: 'Passwords',

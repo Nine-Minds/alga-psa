@@ -86,6 +86,8 @@ describe('menuConfig i18n metadata', () => {
       'nav.marketing.channels',
       'nav.documentsAll',
       'nav.knowledgeBase',
+      'nav.assetsAll',
+      'nav.assetsMaintenance',
       'nav.timeEntry',
       'nav.approvals',
       'nav.controlPanel',
