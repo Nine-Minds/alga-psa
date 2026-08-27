@@ -1484,6 +1484,9 @@
       "viewTranscript": "Zobacz transkrypcję"
     },
     "quickAdd": {
+      "clientRequired": "Wybierz klienta dla tej interakcji",
+      "contactPlaceholder": "Wybierz kontakt",
+      "selectClientFirst": "Najpierw wybierz klienta",
       "teams": {
         "attendees": {
           "add": "Dodaj",
@@ -1550,6 +1553,10 @@
       "columns": { "type": "Typ", "title": "Tytuł", "client": "Klient", "contact": "Kontakt", "user": "Użytkownik", "date": "Data", "status": "Status" },
       "empty": "Brak interakcji pasujących do tych filtrów.",
       "loading": "Ładowanie interakcji…",
+      "openClient": "Otwórz klienta {{name}}",
+      "openContact": "Otwórz kontakt {{name}}",
+      "openInteraction": "Otwórz interakcję {{title}}",
+      "openUser": "Otwórz użytkownika {{name}}",
       "byUser": "Przez {{name}}",
       "collapse": "Zwiń ostatnie interakcje",
       "contactsFromClient": "Kontakty wybranego klienta",
