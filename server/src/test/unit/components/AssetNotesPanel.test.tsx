@@ -10,7 +10,9 @@ import { ContentCardVariantProvider } from '@alga-psa/ui/components';
 (globalThis as unknown as { React?: typeof React }).React = React;
 
 const useAssetNotesMock = vi.fn();
-const textEditorMock = vi.fn(() => <div data-testid="text-editor" className="min-h-[100px]" />);
+const textEditorMock = vi.fn(() => (
+  <div data-testid="text-editor" className="editor-paper min-h-[100px] p-4" />
+));
 
 vi.mock('@alga-psa/assets/hooks/useAssetNotes', () => ({
   useAssetNotes: (...args: unknown[]) => useAssetNotesMock(...args),
@@ -108,7 +110,10 @@ describe('AssetNotesPanel', () => {
     expect(screen.getAllByRole('heading', { name: 'Notes' })).toHaveLength(1);
     const shell = container.querySelector('section#asset-bento-notes');
     expect(shell).toHaveClass('p-4');
-    expect(screen.getByTestId('text-editor')).toHaveClass('min-h-[100px]');
+    expect(screen.getByTestId('text-editor').parentElement).toHaveClass(
+      '[&_.editor-paper]:min-h-16',
+      '[&_.editor-paper]:p-2'
+    );
     expect(screen.getByTestId('text-editor').parentElement).not.toHaveClass('min-h-[200px]');
     expect(container.querySelector('.bg-white')).toBeNull();
     expect(screen.getByText(/Last updated:/)).toBeInTheDocument();
@@ -120,7 +125,7 @@ describe('AssetNotesPanel', () => {
     const { container } = renderBentoPanel();
 
     expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
-    expect(container.querySelector('section#asset-bento-notes .animate-pulse')).toHaveClass('min-h-[100px]');
+    expect(container.querySelector('section#asset-bento-notes .animate-pulse')).toHaveClass('min-h-16');
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });
 
@@ -163,6 +168,10 @@ describe('AssetNotesPanel', () => {
     expect(container.querySelector('.bg-white')).toBeInTheDocument();
     expect(container.querySelector('#asset-bento-notes')).toBeNull();
     expect(screen.getByTestId('text-editor').parentElement).toHaveClass('min-h-[200px]');
+    expect(screen.getByTestId('text-editor').parentElement).not.toHaveClass(
+      '[&_.editor-paper]:min-h-16',
+      '[&_.editor-paper]:p-2'
+    );
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 });
