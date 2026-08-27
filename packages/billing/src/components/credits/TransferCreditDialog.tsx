@@ -144,6 +144,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
                 required
                 value={amount}
                 onChange={setAmount}
+                currencyCode={creditCurrency}
               />
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 {t('transferDialog.hints.amount', {
