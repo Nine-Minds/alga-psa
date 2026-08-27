@@ -61,6 +61,22 @@ export { getConnection as getDbConnection, cleanupConnections } from './lib/conn
 // Transaction Helpers
 import type { Knex as KnexType } from 'knex';
 import { getAdminConnection } from './lib/admin';
+import { flushAfterCommitHooks } from './lib/afterCommit';
+
+async function runOwnedTransaction<T>(
+  knex: KnexType,
+  callback: (trx: KnexType.Transaction) => Promise<T>
+): Promise<T> {
+  let owned: KnexType.Transaction | undefined;
+  const result = await knex.transaction((trx) => {
+    owned = trx;
+    return callback(trx);
+  });
+  if (owned) {
+    await flushAfterCommitHooks(owned);
+  }
+  return result;
+}
 
 /**
  * Execute a function within a transaction
@@ -69,7 +85,7 @@ export async function withKnexTransaction<T>(
   knex: KnexType,
   callback: (trx: KnexType.Transaction) => Promise<T>
 ): Promise<T> {
-  return await knex.transaction(callback);
+  return await runOwnedTransaction(knex, callback);
 }
 
 /**
@@ -94,7 +110,7 @@ export async function withAdminTransaction<T>(
     // If we have a connection but not a transaction, create one
     if (existingConnection) {
       console.log(`[withAdminTransaction:${transactionId}] Creating transaction on existing connection`);
-      const result = await existingConnection.transaction(callback);
+      const result = await runOwnedTransaction(existingConnection as KnexType, callback);
       console.log(`[withAdminTransaction:${transactionId}] New transaction on existing connection completed successfully`);
       return result;
     }
@@ -103,7 +119,7 @@ export async function withAdminTransaction<T>(
     console.log(`[withAdminTransaction:${transactionId}] Getting admin connection for new transaction`);
     const adminDb = await getAdminConnection();
 
-    const result = await adminDb.transaction(callback);
+    const result = await runOwnedTransaction(adminDb, callback);
     return result;
   } catch (error) {
     console.error(`[withAdminTransaction:${transactionId}] Transaction failed:`, {

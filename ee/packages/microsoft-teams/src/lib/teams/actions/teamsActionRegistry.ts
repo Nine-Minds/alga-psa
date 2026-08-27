@@ -1,4 +1,4 @@
-import { createTenantKnex, runWithTenant, tenantDb, type ServiceContext } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb, withTransaction, type ServiceContext } from '@alga-psa/db';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import type { IUserWithRoles } from '@alga-psa/types';
@@ -1356,7 +1356,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
       }
 
       const { knex } = await createTenantKnex(context.request.tenantId);
-      const createdTicket = await knex.transaction((trx: any) =>
+      const createdTicket = await withTransaction(knex, (trx: any) =>
         TicketModel.createTicketWithRetry(
           {
             title: String(normalized.title),
@@ -1377,7 +1377,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
           context.request.tenantId,
           trx,
           {},
-          new ServerEventPublisher(),
+          new ServerEventPublisher(trx),
           new ServerAnalyticsTracker(),
           context.request.user.user_id,
           3

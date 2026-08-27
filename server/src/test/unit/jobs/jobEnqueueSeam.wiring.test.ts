@@ -62,6 +62,36 @@ function enqueuedJobNames(): string[] {
   return [...new Set(names)];
 }
 
+/** Job names passed through the future-dated scheduling seam. */
+function scheduledJobNames(): string[] {
+  const names: string[] = [];
+  const stack = [path.join(repoRoot, 'packages')];
+
+  while (stack.length) {
+    const dir = stack.pop()!;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!['node_modules', 'dist', '.next', 'tests'].includes(entry.name)) stack.push(full);
+      } else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
+        const text = readFileSync(full, 'utf8');
+        if (!text.includes('scheduleBackgroundJobAt(')) continue;
+
+        const literals = new Map<string, string>();
+        for (const m of text.matchAll(/const\s+([A-Z0-9_]+)\s*=\s*'([^']+)'/g)) {
+          literals.set(m[1], m[2]);
+        }
+        for (const m of text.matchAll(/scheduleBackgroundJobAt\(\s*'([^']+)'/g)) names.push(m[1]);
+        for (const m of text.matchAll(/scheduleBackgroundJobAt\(\s*([A-Z0-9_]+)\s*,/g)) {
+          const value = literals.get(m[1]);
+          if (value) names.push(value);
+        }
+      }
+    }
+  }
+  return [...new Set(names)];
+}
+
 /** Job names the Temporal worker can execute, run in-worker or forwarded. */
 function workerHandledJobNames(source: string): string[] {
   const literals = new Map<string, string>();
@@ -102,7 +132,7 @@ function workerHandledJobNames(source: string): string[] {
   return [...new Set(handled)];
 }
 
-describe('enqueueImmediateJob seam wiring', () => {
+describe('job enqueue seam wiring', () => {
   it('enqueues through the job runner, not the pg-boss-only scheduler', () => {
     const body = enqueuerBody(initializeAppSource);
     expect(body).toContain('await initializeJobRunner()');
@@ -127,6 +157,24 @@ describe('enqueueImmediateJob seam wiring', () => {
         ? ''
         : `${missing.join(', ')} — enqueued via enqueueImmediateJob but not registered in ` +
           'ee/temporal-workflows/src/activities/job-activities.ts. On EE the workflow starts ' +
+          'and fails with "No handler registered for job type".',
+    ).toEqual([]);
+  });
+
+  it('every future-dated job name has a Temporal worker registration', () => {
+    const scheduled = scheduledJobNames();
+    const handled = workerHandledJobNames(jobActivitiesSource);
+
+    // Guards the scanner and the scheduled-comment regression that motivated it.
+    expect(scheduled).toContain('publish-scheduled-comment');
+
+    const missing = scheduled.filter((name) => !handled.includes(name));
+    expect(
+      missing,
+      missing.length === 0
+        ? ''
+        : `${missing.join(', ')} — enqueued through the future-dated job seam but not registered in ` +
+          'ee/temporal-workflows/src/activities/job-activities.ts. On EE the delayed workflow starts ' +
           'and fails with "No handler registered for job type".',
     ).toEqual([]);
   });
