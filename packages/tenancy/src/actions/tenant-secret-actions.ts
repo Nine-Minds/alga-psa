@@ -27,6 +27,19 @@ export type TenantSecretActionError = ActionMessageError | ActionPermissionError
 export type TenantSecretListResult = { secrets: TenantSecretMetadata[]; permissionDenied: boolean };
 export type TenantSecretStoragePosture = { writable: boolean; reason?: 'READ_ONLY_PROVIDER' | 'NO_DURABLE_PATH' };
 
+function tenantSecretStoragePosture(): TenantSecretStoragePosture {
+  const provider = process.env.SECRET_WRITE_PROVIDER || 'filesystem';
+  if (provider === 'vault') return { writable: true };
+  if (provider === 'filesystem' && process.env.SECRET_FS_BASE_PATH) return { writable: true };
+  return { writable: false, reason: provider === 'filesystem' ? 'NO_DURABLE_PATH' : 'READ_ONLY_PROVIDER' };
+}
+
+function requireDurableTenantSecretStorage(): void {
+  if (!tenantSecretStoragePosture().writable) {
+    throw new Error('Secret storage is read-only in this environment. Configure Vault or SECRET_FS_BASE_PATH.');
+  }
+}
+
 function tenantSecretActionErrorFrom(error: unknown): TenantSecretActionError | null {
   if (error instanceof z.ZodError) {
     const first = error.errors[0];
@@ -99,10 +112,7 @@ export const listTenantSecrets = withAuth(async (user, { tenant }): Promise<Tena
 
 /** Report only whether writes would survive across application instances. */
 export const getTenantSecretStoragePosture = withAuth(async (): Promise<TenantSecretStoragePosture> => {
-  const provider = process.env.SECRET_WRITE_PROVIDER || 'filesystem';
-  if (provider === 'vault') return { writable: true };
-  if (provider === 'filesystem' && process.env.SECRET_FS_BASE_PATH) return { writable: true };
-  return { writable: false, reason: provider === 'filesystem' ? 'NO_DURABLE_PATH' : 'READ_ONLY_PROVIDER' };
+  return tenantSecretStoragePosture();
 });
 
 /**
@@ -166,6 +176,7 @@ export const createSecret = withAuth(async (user, { tenant }, input: CreateTenan
     if (!canManage) {
       return permissionError('Permission denied: Cannot create secrets', 'msp/settings:errors.secrets.permissions.create');
     }
+    requireDurableTenantSecretStorage();
 
     const provider = createTenantSecretProvider(knex, tenant);
     return await provider.create(input, user.user_id);
@@ -202,6 +213,7 @@ export const updateSecret = withAuth(async (
     if (!canManage) {
       return permissionError('Permission denied: Cannot update secrets', 'msp/settings:errors.secrets.permissions.update');
     }
+    requireDurableTenantSecretStorage();
 
     const provider = createTenantSecretProvider(knex, tenant);
     return await provider.update(name, input, user.user_id);
@@ -231,6 +243,7 @@ export const deleteSecret = withAuth(async (user, { tenant }, name: string): Pro
     if (!canManage) {
       return permissionError('Permission denied: Cannot delete secrets', 'msp/settings:errors.secrets.permissions.delete');
     }
+    requireDurableTenantSecretStorage();
 
     const provider = createTenantSecretProvider(knex, tenant);
     await provider.delete(name, user.user_id);
