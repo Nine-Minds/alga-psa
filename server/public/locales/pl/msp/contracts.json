@@ -2361,16 +2361,21 @@
       "members": "Usługi członkowskie",
       "multiplier": "×",
       "noMembers": "Brak przypisanych usług.",
+      "noServicesOnLine": "Dodaj usługę do tej linii umowy przed utworzeniem pakietu godzin.",
       "selectService": "Wybierz usługę…",
       "poolName": "Nazwa pakietu (opcjonalnie)",
       "poolNamePlaceholder": "np. Godziny standardowe",
-      "coversAll": "Obejmuje wszystkie usługi w tej linii"
+      "coversAll": "Obejmuje wszystkie usługi w tej linii",
+      "burnMultiplier": "Mnożnik zużycia"
     },
     "badges": {
       "dormant": "brak przypisanych usług — nic nie jest zużywane z tego pakietu"
     },
     "errors": {
-      "catchAllExists": "Ta linia ma już pakiet ogólny."
+      "catchAllExists": "Ta linia ma już pakiet ogólny.",
+      "invalidAfterHoursRule": "Wprowadź prawidłową regułę poza godzinami pracy.",
+      "scheduleLoadFailed": "Nie można załadować harmonogramów godzin pracy.",
+      "scheduleRequired": "Wybierz harmonogram godzin pracy przed zastosowaniem tej reguły."
     }
   },
   "wizardBucketPools": {

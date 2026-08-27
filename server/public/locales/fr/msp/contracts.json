@@ -2357,16 +2357,21 @@
       "members": "Services membres",
       "multiplier": "×",
       "noMembers": "Aucun service membre associé.",
+      "noServicesOnLine": "Ajoutez un service à cette ligne de contrat avant de créer un forfait d’heures.",
       "selectService": "Sélectionner un service…",
       "poolName": "Nom du forfait (facultatif)",
       "poolNamePlaceholder": "p. ex. Heures standard",
-      "coversAll": "Couvre tous les services de cette ligne"
+      "coversAll": "Couvre tous les services de cette ligne",
+      "burnMultiplier": "Multiplicateur de consommation"
     },
     "badges": {
       "dormant": "aucun service associé — rien n’est décompté de ce forfait"
     },
     "errors": {
-      "catchAllExists": "Cette ligne possède déjà un forfait global."
+      "catchAllExists": "Cette ligne possède déjà un forfait global.",
+      "invalidAfterHoursRule": "Saisissez une règle hors horaires valide.",
+      "scheduleLoadFailed": "Impossible de charger les plannings des heures ouvrées.",
+      "scheduleRequired": "Sélectionnez un planning des heures ouvrées avant d’appliquer cette règle."
     }
   },
   "wizardBucketPools": {

@@ -2357,16 +2357,21 @@
       "members": "Serviços membros",
       "multiplier": "×",
       "noMembers": "Nenhum serviço membro vinculado.",
+      "noServicesOnLine": "Adicione um serviço a esta linha de contrato antes de criar um banco de horas.",
       "selectService": "Selecione um serviço…",
       "poolName": "Nome do banco (opcional)",
       "poolNamePlaceholder": "ex.: Horas padrão",
-      "coversAll": "Cobre todos os serviços desta linha"
+      "coversAll": "Cobre todos os serviços desta linha",
+      "burnMultiplier": "Multiplicador de consumo"
     },
     "badges": {
       "dormant": "nenhum serviço vinculado — nada é consumido deste banco"
     },
     "errors": {
-      "catchAllExists": "Esta linha já tem um banco abrangente."
+      "catchAllExists": "Esta linha já tem um banco abrangente.",
+      "invalidAfterHoursRule": "Insira uma regra válida fora do horário.",
+      "scheduleLoadFailed": "Não foi possível carregar as agendas de horário comercial.",
+      "scheduleRequired": "Selecione uma agenda de horário comercial antes de aplicar esta regra."
     }
   },
   "wizardBucketPools": {

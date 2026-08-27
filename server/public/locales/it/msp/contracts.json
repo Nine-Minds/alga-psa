@@ -2357,16 +2357,21 @@
       "members": "Servizi membri",
       "multiplier": "×",
       "noMembers": "Nessun servizio membro associato.",
+      "noServicesOnLine": "Aggiungere un servizio a questa riga contrattuale prima di creare un pacchetto ore.",
       "selectService": "Seleziona un servizio…",
       "poolName": "Nome del pacchetto (facoltativo)",
       "poolNamePlaceholder": "es. Ore standard",
-      "coversAll": "Copre tutti i servizi di questa linea"
+      "coversAll": "Copre tutti i servizi di questa linea",
+      "burnMultiplier": "Moltiplicatore di consumo"
     },
     "badges": {
       "dormant": "nessun servizio associato — nulla viene consumato da questo pacchetto"
     },
     "errors": {
-      "catchAllExists": "Questa linea ha già un pacchetto generale."
+      "catchAllExists": "Questa linea ha già un pacchetto generale.",
+      "invalidAfterHoursRule": "Inserire una regola fuori orario valida.",
+      "scheduleLoadFailed": "Impossibile caricare le pianificazioni dell'orario lavorativo.",
+      "scheduleRequired": "Selezionare una pianificazione dell'orario lavorativo prima di applicare questa regola."
     }
   },
   "wizardBucketPools": {

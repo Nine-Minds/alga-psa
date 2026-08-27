@@ -2357,16 +2357,21 @@
       "members": "Aangesloten services",
       "multiplier": "×",
       "noMembers": "Geen services aangesloten.",
+      "noServicesOnLine": "Voeg een service aan deze contractregel toe voordat u een urenbundel maakt.",
       "selectService": "Selecteer een service…",
       "poolName": "Bundelnaam (optioneel)",
       "poolNamePlaceholder": "bijv. Standaarduren",
-      "coversAll": "Dekt alle services op deze contractregel"
+      "coversAll": "Dekt alle services op deze contractregel",
+      "burnMultiplier": "Verbruiksfactor"
     },
     "badges": {
       "dormant": "geen services aangesloten — er wordt niets uit deze bundel verbruikt"
     },
     "errors": {
-      "catchAllExists": "Deze contractregel heeft al een algemene bundel."
+      "catchAllExists": "Deze contractregel heeft al een algemene bundel.",
+      "invalidAfterHoursRule": "Voer een geldige regel voor buiten kantooruren in.",
+      "scheduleLoadFailed": "Kan kantoorurenplanningen niet laden.",
+      "scheduleRequired": "Selecteer een kantoorurenplanning voordat u deze regel toepast."
     }
   },
   "wizardBucketPools": {
