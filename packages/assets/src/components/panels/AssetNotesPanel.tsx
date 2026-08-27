@@ -5,7 +5,7 @@ import { useAssetNotes } from '@alga-psa/assets/hooks/useAssetNotes';
 import { DEFAULT_BLOCK, TextEditor } from '@alga-psa/ui/editor';
 import { Loader2, Save, StickyNote } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
-import { useContentCardVariant } from '@alga-psa/ui/components';
+import { useContentCardVariant } from '@alga-psa/ui/components/ContentCard';
 import { BentoTile } from '@alga-psa/ui/components/bento';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

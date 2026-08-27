@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import type { Asset } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useContentCardVariant } from '@alga-psa/ui/components';
+import { useContentCardVariant } from '@alga-psa/ui/components/ContentCard';
 import { BentoTile } from '@alga-psa/ui/components/bento';
 
 interface HuduDocumentationCardProps {

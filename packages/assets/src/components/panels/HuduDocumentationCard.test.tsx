@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { ContentCardVariantProvider } from '@alga-psa/ui/components';
+import { ContentCardVariantProvider } from '@alga-psa/ui/components/ContentCard';
 import { HuduDocumentationCard } from './HuduDocumentationCard';
 
 vi.mock('@alga-psa/ui/components/Card', () => ({

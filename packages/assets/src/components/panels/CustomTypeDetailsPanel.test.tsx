@@ -9,8 +9,8 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import { ContentCardVariantProvider } from '@alga-psa/ui/components';
+import '@testing-library/jest-dom/vitest';
+import { ContentCardVariantProvider } from '@alga-psa/ui/components/ContentCard';
 
 import { CustomTypeDetailsPanel } from './CustomTypeDetailsPanel';
 
