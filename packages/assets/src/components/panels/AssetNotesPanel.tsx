@@ -45,7 +45,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
           title={t('assetNotesPanel.title', { defaultValue: 'Notes' })}
           icon={<StickyNote className="h-4 w-4" />}
         >
-          <div className="min-h-[200px] animate-pulse skeleton-fill" />
+          <div className="min-h-[100px] animate-pulse skeleton-fill" />
         </BentoTile>
       );
     }
@@ -97,7 +97,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
           </Alert>
         </div>
       )}
-      <div className="min-h-[200px]">
+      <div className={variant === 'bento' ? undefined : 'min-h-[200px]'}>
         <TextEditor
           // Remount when the backing document changes (or first loads) so saved notes show up on open.
           key={`${assetId}-${noteDocument?.document_id ?? 'new'}-${noteContent ? 'loaded' : 'empty'}`}
