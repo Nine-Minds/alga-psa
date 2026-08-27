@@ -377,6 +377,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     }
 
     setIsSavingUserHours(true);
+    const targetUserId = selectedUserId;
+    // Any later selection change starts a load that bumps this counter, so a
+    // stale save response can never overwrite another technician's editor.
+    const requestId = ++userHoursRequestRef.current;
     try {
       // Build config_json, only including default_duration if it's set
       const configJson: any = {
@@ -391,7 +395,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       }
 
       const result = await saveUserAvailabilityWeek({
-        user_id: selectedUserId,
+        user_id: targetUserId,
         days: userHoursToOrderedWeek(userHours),
         buffer_before_minutes: parseInt(userBufferBefore) || 0,
         buffer_after_minutes: parseInt(userBufferAfter) || 0,
@@ -402,10 +406,12 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         return;
       }
 
-      const authoritative = hydrateUserHours(result.data);
-      setUserHours(authoritative.hours);
-      setUserHoursSource('saved');
-      setConfiguredUsers((current) => new Set(current).add(selectedUserId));
+      if (requestId === userHoursRequestRef.current) {
+        const authoritative = hydrateUserHours(result.data);
+        setUserHours(authoritative.hours);
+        setUserHoursSource('saved');
+      }
+      setConfiguredUsers((current) => new Set(current).add(targetUserId));
       toast.success(t('availabilitySettings.userHours.feedback.saveSuccess', { defaultValue: 'User hours saved' }));
     } catch (error) {
       handleError(error, t('availabilitySettings.userHours.feedback.saveError', { defaultValue: 'Failed to save user hours' }));
@@ -872,6 +878,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   onValueChange={setSelectedTeamId}
                   placeholder={t('availabilitySettings.common.teamSelect.placeholder', { defaultValue: 'All authorized technicians' })}
                   allowClear
+                  disabled={isSavingUserHours}
                 />
               </div>
             )}
@@ -885,7 +892,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 value={selectedUserId || undefined}
                 onValueChange={setSelectedUserId}
                 placeholder={t('availabilitySettings.userHours.userSelect.placeholder', { defaultValue: 'Select a technician to configure' })}
-                disabled={users.length === 0}
+                disabled={users.length === 0 || isSavingUserHours}
               />
             </div>
 

@@ -5,11 +5,17 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    setupFiles: ['./vitest.setup.ts'],
+    // The pre-existing tests/*.test.tsx files predate tsx inclusion here and
+    // no longer collect/pass; they stay dormant until repaired, so only the
+    // availability component regression is listed explicitly.
+    include: ['tests/**/*.test.ts', 'src/**/*.test.ts', 'tests/AvailabilitySettings.component.test.tsx'],
     testTimeout: 10000,
   },
   resolve: {
     alias: [
+      // Lets component tests vi.mock the same specifier the components import.
+      { find: /^@alga-psa\/scheduling\/actions$/, replacement: path.resolve(__dirname, 'src/actions/index.ts') },
       // Must precede the @alga-psa/auth alias, whose regex would otherwise
       // swallow "@alga-psa/authorization/..." specifiers.
       { find: /^@alga-psa\/authorization(.*)$/, replacement: path.resolve(__dirname, '../authorization/src$1') },
