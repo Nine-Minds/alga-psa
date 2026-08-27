@@ -1631,6 +1631,7 @@
       "client": "Klant",
       "nextVisit": "Volgend bezoek",
       "callsAndEmails": "Gesprekken en e-mails",
+      "call": "Bellen",
       "viewAll": "Alles weergeven",
       "viewAllCount": "Alle {{count}} weergeven",
       "timeLogged": "Geregistreerde tijd",

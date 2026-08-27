@@ -13,7 +13,6 @@ import {
   setTelephonyProviderEnabled,
 } from '../../../../actions/integrations/telephonyActions';
 import type { TelephonyOverview } from '../../../../actions/integrations/telephonyActions';
-import { TelephonyCallsPanel } from '../../../telephony/TelephonyCallsPanel';
 import { TelephonyPaywallCard } from './TelephonyPaywallCard';
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -189,8 +188,6 @@ export function TelephonyIntegrationSettings() {
           {error}
         </p>
       )}
-
-      <TelephonyCallsPanel variant="settings" />
     </div>
   );
 }

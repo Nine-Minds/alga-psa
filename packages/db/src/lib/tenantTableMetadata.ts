@@ -484,6 +484,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   teams_notification_deliveries: { scope: 'tenant' },
   team_permissions: { scope: 'tenant' },
   telephony_call_artifacts: { scope: 'tenant' },
+  telephony_call_intents: { scope: 'tenant' },
   telephony_call_records: { scope: 'tenant' },
   telephony_providers: { scope: 'tenant' },
   tenants: { scope: 'tenant' },

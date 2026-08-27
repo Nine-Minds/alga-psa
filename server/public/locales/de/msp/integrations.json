@@ -3615,7 +3615,7 @@
         "assignTo": "Zuordnen zu",
         "searchPlaceholder": "Kontakte und Kunden suchen…",
         "noTargets": "Keine passenden Kontakte oder Kunden.",
-        "chooseTarget": "Einem Kontakt oder Kunden zuordnen…"
+        "chooseTarget": "Einem Kunden zuordnen…"
       },
       "forbidden": "Sie haben keine Berechtigung, die Telefonie-Einstellungen dieses Mandanten anzuzeigen.",
       "paywall": {

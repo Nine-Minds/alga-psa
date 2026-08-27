@@ -54,7 +54,9 @@ export {
   getTeamsAppPackageStatus,
 } from './teamsPackageActions';
 export {
+  createTelephonyCallIntent,
   createTicketFromTelephonyCall,
+  getTelephonyCallLinkState,
   getTelephonyOverview,
   linkTelephonyCallToTicket,
   listTelephonyLinkableTickets,

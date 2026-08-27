@@ -3615,7 +3615,7 @@
         "assignTo": "Atribuir a",
         "searchPlaceholder": "Pesquisar contatos e clientes…",
         "noTargets": "Nenhum contato ou cliente correspondente.",
-        "chooseTarget": "Atribuir a um contato ou cliente…"
+        "chooseTarget": "Atribuir a um cliente…"
       },
       "forbidden": "Você não tem permissão para ver as configurações de telefonia deste inquilino.",
       "paywall": {

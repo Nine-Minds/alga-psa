@@ -4,6 +4,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import type { IClient } from '@alga-psa/types';
 import { getTelephonyAvailability } from '../../lib/telephonyAvailability';
 
 export interface TelephonyProviderCard {
@@ -48,6 +49,7 @@ export interface TelephonyResolutionTarget {
   clientId: string | null;
   label: string;
   sublabel: string | null;
+  clientType?: IClient['client_type'];
 }
 
 export interface TelephonyOverview {
@@ -64,6 +66,21 @@ export interface TelephonyOverview {
   unresolvedCalls: TelephonyCallSummary[];
 }
 
+export interface TelephonyCallLinkState {
+  success: boolean;
+  error?: string;
+  /** The tenant has a configured, active Teams integration/profile. */
+  teamsIntegrationActive: boolean;
+  /** Teams Phone call-record capture is active as well. */
+  teamsPhoneConnected: boolean;
+}
+
+export interface CreateTelephonyCallIntentResult {
+  success: boolean;
+  error?: string;
+  intentId?: string;
+}
+
 async function canManageTelephony(user: unknown): Promise<boolean> {
   return hasPermission(user as any, 'system_settings', 'update');
 }
@@ -71,6 +88,139 @@ async function canManageTelephony(user: unknown): Promise<boolean> {
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
 }
+
+async function readTeamsCallLinkState(tenant: string, knexOverride?: any): Promise<TelephonyCallLinkState> {
+  const knex = knexOverride ?? (await createTenantKnex(tenant)).knex;
+  const db = tenantDb(knex, tenant);
+  const [integration, provider] = await Promise.all([
+    db.table('teams_integrations')
+      .first('install_status', 'selected_profile_id'),
+    db.table('telephony_providers')
+      .where({ provider: 'teams-phone' })
+      .first('status'),
+  ]);
+
+  const teamsIntegrationActive = integration?.install_status === 'active'
+    && Boolean(integration?.selected_profile_id);
+
+  return {
+    success: true,
+    teamsIntegrationActive,
+    teamsPhoneConnected: teamsIntegrationActive && provider?.status === 'active',
+  };
+}
+
+/**
+ * Lightweight workspace-wide read used by CallLink. Entitlement alone is not
+ * enough: dead Teams links stay hidden until the tenant integration is active,
+ * and ticket Call actions additionally require the Teams Phone provider.
+ */
+export const getTelephonyCallLinkState = withAuth(async (user, { tenant }): Promise<TelephonyCallLinkState> => {
+  if (isClientPortalUser(user)) {
+    return {
+      success: false,
+      error: 'Forbidden',
+      teamsIntegrationActive: false,
+      teamsPhoneConnected: false,
+    };
+  }
+
+  const availability = await getTelephonyAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return {
+      success: true,
+      teamsIntegrationActive: false,
+      teamsPhoneConnected: false,
+    };
+  }
+
+  return readTeamsCallLinkState(tenant);
+});
+
+/**
+ * Record that a user launched an outbound Teams call from a ticket. This is
+ * intentionally not an interaction yet: the later Graph call record consumes
+ * the intent and creates the completed Call interaction with real timestamps.
+ */
+export const createTelephonyCallIntent = withAuth(async (
+  user,
+  { tenant },
+  input: { ticketId: string; phoneNumber: string },
+): Promise<CreateTelephonyCallIntentResult> => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' };
+  }
+
+  const availability = await getTelephonyAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return { success: false, error: availability.message };
+  }
+
+  const { knex } = await createTenantKnex(tenant);
+  const [canReadTicket, canCreateInteraction] = await Promise.all([
+    hasPermission(user as any, 'ticket', 'read', knex),
+    hasPermission(user as any, 'interaction', 'create', knex),
+  ]);
+  if (!canReadTicket || !canCreateInteraction) {
+    return { success: false, error: 'Permission denied: Cannot call from this ticket' };
+  }
+
+  const state = await readTeamsCallLinkState(tenant, knex);
+  if (!state.teamsPhoneConnected) {
+    return { success: false, error: 'Teams Phone is not connected.' };
+  }
+
+  const db = tenantDb(knex, tenant);
+  const ticket = await db.table('tickets')
+    .where({ ticket_id: input.ticketId })
+    .first('ticket_id', 'client_id', 'contact_name_id');
+  if (!ticket) {
+    return { success: false, error: 'Ticket not found.' };
+  }
+  if (!ticket.client_id) {
+    return { success: false, error: 'Set a client on the ticket before calling.' };
+  }
+
+  const { normalizeToE164, resolveTenantPhoneCountryCode } = await import('@alga-psa/telephony');
+  const defaultCountryCode = await resolveTenantPhoneCountryCode(knex, tenant);
+  const normalizedPhone = normalizeToE164(input.phoneNumber, { defaultCountryCode });
+  if (!normalizedPhone) {
+    return { success: false, error: 'Enter a valid phone number before calling.' };
+  }
+
+  const accountLink = await db.table('user_auth_accounts')
+    .where({ user_id: (user as any).user_id, provider: 'microsoft' })
+    .first('provider_account_id');
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + (2 * 60 * 60 * 1000));
+
+  // Keep the partial pending-number index bounded without a separate cleanup
+  // job; every new call attempt retires expired intents tenant-wide.
+  await db.table('telephony_call_intents')
+    .where({ status: 'pending' })
+    .andWhere('expires_at', '<', now)
+    .update({ status: 'expired', updated_at: now });
+
+  const [created] = await db.table('telephony_call_intents')
+    .insert({
+      tenant,
+      provider: 'teams-phone',
+      user_id: (user as any).user_id,
+      provider_user_id: accountLink?.provider_account_id ?? null,
+      ticket_id: ticket.ticket_id,
+      client_id: ticket.client_id,
+      contact_id: ticket.contact_name_id ?? null,
+      phone_number_raw: input.phoneNumber,
+      phone_number_e164: normalizedPhone,
+      status: 'pending',
+      expires_at: expiresAt,
+      created_at: now,
+      updated_at: now,
+    } as any)
+    .returning('intent_id');
+
+  return { success: true, intentId: (created as any).intent_id };
+});
 
 /**
  * Provider configuration (enable/disable, auto-ticket policy) stays a settings
@@ -361,7 +511,7 @@ export const resolveTelephonyCall = withAuth(async (
 export const listTelephonyResolutionTargets = withAuth(async (
   user,
   { tenant },
-  input: { search?: string } = {},
+  input: { search?: string; clientsOnly?: boolean } = {},
 ): Promise<{ success: boolean; error?: string; targets: TelephonyResolutionTarget[] }> => {
   const availability = await getTelephonyAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
@@ -377,13 +527,16 @@ export const listTelephonyResolutionTargets = withAuth(async (
   if (!canReadContacts && !canReadClients) {
     return { success: false, error: 'Permission denied: Cannot read contacts or clients', targets: [] };
   }
+  if (input.clientsOnly && !canReadClients) {
+    return { success: false, error: 'Permission denied: Cannot read clients', targets: [] };
+  }
 
   const search = (input.search ?? '').trim();
   const like = `%${search.replace(/[%_]/g, (match) => `\\${match}`)}%`;
   const db = tenantDb(knex, tenant);
   const targets: TelephonyResolutionTarget[] = [];
 
-  if (canReadContacts) {
+  if (canReadContacts && !input.clientsOnly) {
     const contactQuery = db.table('contacts as c');
     db.tenantJoin(contactQuery, 'clients as cl', 'c.client_id', 'cl.client_id', { type: 'left' });
     if (search) {
@@ -408,17 +561,21 @@ export const listTelephonyResolutionTargets = withAuth(async (
     if (search) {
       clientQuery.where('client_name', 'ilike', like);
     }
-    const clients = await clientQuery
+    const orderedClientQuery = clientQuery
       .where('is_inactive', false)
-      .select('client_id', 'client_name')
-      .orderBy('client_name', 'asc')
-      .limit(20);
+      .select('client_id', 'client_name', 'client_type')
+      .orderBy('client_name', 'asc');
+    // The standard ClientPicker searches locally, so its dedicated load needs
+    // the complete active-client set. The combined contact/client search keeps
+    // its bounded result list for existing callers.
+    const clients = await (input.clientsOnly ? orderedClientQuery : orderedClientQuery.limit(20));
 
     targets.push(...clients.map((row: any) => ({
       contactId: null,
       clientId: row.client_id,
       label: row.client_name ?? '',
       sublabel: null,
+      ...(row.client_type ? { clientType: row.client_type } : {}),
     })));
   }
 

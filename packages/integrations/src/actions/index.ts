@@ -185,6 +185,12 @@ export {
   getTeamsAppPackageStatus,
 } from './integrations/teamsPackageActions';
 export {
+  createTelephonyCallIntent,
+  getTelephonyCallLinkState,
+  type CreateTelephonyCallIntentResult,
+  type TelephonyCallLinkState,
+} from './integrations/telephonyActions';
+export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
   testEntraCippCredentials,

@@ -3615,7 +3615,7 @@
         "assignTo": "Przypisz do",
         "searchPlaceholder": "Szukaj kontaktów i klientów…",
         "noTargets": "Brak pasujących kontaktów lub klientów.",
-        "chooseTarget": "Przypisz do kontaktu lub klienta…"
+        "chooseTarget": "Przypisz do klienta…"
       },
       "forbidden": "Nie masz uprawnień do wyświetlania ustawień telefonii tej organizacji.",
       "paywall": {

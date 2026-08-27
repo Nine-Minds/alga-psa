@@ -64,8 +64,9 @@ const TEAMS_UNAVAILABLE_REASON_COPY: Record<string, string> = {
 
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
-  entityId: string;
-  entityType: 'contact' | 'client';
+  /** Omit entityId/entityType for a standalone interaction that selects its client/contact in the form. */
+  entityId?: string;
+  entityType?: 'contact' | 'client';
   clientId?: string;
   ticketId?: string; // Links the new interaction to a ticket (create mode only)
   onInteractionAdded: (newInteraction: IInteraction) => void;
@@ -123,6 +124,7 @@ export function QuickAddInteraction({
   const [hasLoadedAttendeeOptions, setHasLoadedAttendeeOptions] = useState(false);
 
   const isEditMode = !!editingInteraction;
+  const isStandaloneCreate = !isEditMode && !entityId;
 
   const handleClientSelect = (clientId: string | null) => {
     const nextClientId = clientId || '';
@@ -134,9 +136,15 @@ export function QuickAddInteraction({
 
   // Resolve the client/contact this new interaction is attached to (create mode only).
   const meetingClientId = !isEditMode
-    ? (entityType === 'client' ? entityId : (clientId ?? null))
+    ? (isStandaloneCreate
+        ? (selectedClientId || null)
+        : (entityType === 'client' ? (entityId ?? null) : (clientId ?? null)))
     : null;
-  const meetingContactId = !isEditMode && entityType === 'contact' ? entityId : null;
+  const meetingContactId = !isEditMode
+    ? (isStandaloneCreate
+        ? (selectedContactId || null)
+        : (entityType === 'contact' ? (entityId ?? null) : null))
+    : null;
   const selectedInteractionType = useMemo(
     () => interactionTypes.find((type) => type.type_id === typeId) ?? null,
     [interactionTypes, typeId]
@@ -258,6 +266,8 @@ export function QuickAddInteraction({
   });
 
   useEffect(() => {
+    if (!isOpen) return;
+
     console.log('QuickAddInteraction props:', { isEditMode, editingInteraction, isOpen });
     if (editingInteraction) {
       console.log('Editing interaction ID:', editingInteraction.interaction_id);
@@ -283,8 +293,8 @@ export function QuickAddInteraction({
         }
         setStatuses(statusList);
         
-        // Fetch users, clients, and contacts for edit mode
-        if (isEditMode) {
+        // Edit mode and standalone creation both need entity pickers.
+        if (isEditMode || isStandaloneCreate) {
           const usersList = await getAllUsersBasicAsync();
           setUsers(usersList);
           
@@ -377,7 +387,7 @@ export function QuickAddInteraction({
       setSelectedUserId(session?.user?.id || '');
       setIsNotesContentReady(true); // Mark as ready for new interactions
     }
-  }, [isOpen, isEditMode, editingInteraction]);
+  }, [isOpen, isEditMode, isStandaloneCreate, editingInteraction, session?.user?.id, t]);
 
   // Note: ContactPicker handles client filtering internally, 
   // so we don't need to refetch contacts when client changes
@@ -608,6 +618,11 @@ export function QuickAddInteraction({
     if (!title.trim()) {
       errors.push('Title is required');
     }
+    if (isStandaloneCreate && !selectedClientId) {
+      errors.push(t('interactions.quickAdd.clientRequired', {
+        defaultValue: 'Select a client for this interaction',
+      }));
+    }
     if (startTime && endTime && endTime.getTime() < startTime.getTime()) {
       errors.push('End time must be on or after the start time');
       setEndTimeError('End time must be on or after the start time.');
@@ -645,8 +660,8 @@ export function QuickAddInteraction({
         tenant: tenant
       };
   
-      if (isEditMode) {
-        // In edit mode, use the selected values from pickers
+      if (isEditMode || isStandaloneCreate) {
+        // Edit mode and standalone creation use the selected entity values.
         interactionData.contact_name_id = selectedContactId === '' ? null : selectedContactId;
         interactionData.client_id = selectedClientId === '' ? null : selectedClientId;
       } else {
@@ -920,6 +935,46 @@ export function QuickAddInteraction({
                               : '')}
                       </p>
                     )}
+                  </div>
+                )}
+
+                {isStandaloneCreate && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t('interactions.overall.columns.client', { defaultValue: 'Client' })}
+                      </label>
+                      <ClientPicker
+                        id={`${id}-client-picker`}
+                        clients={clients}
+                        onSelect={handleClientSelect}
+                        selectedClientId={selectedClientId}
+                        filterState={clientFilterState}
+                        onFilterStateChange={setClientFilterState}
+                        clientTypeFilter={clientTypeFilter}
+                        onClientTypeFilterChange={setClientTypeFilter}
+                        fitContent={false}
+                        onAddNew={() => setIsQuickAddClientOpen(true)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t('interactions.overall.columns.contact', { defaultValue: 'Contact' })}
+                      </label>
+                      <ContactPicker
+                        id={`${id}-contact-picker`}
+                        contacts={contacts}
+                        value={selectedContactId}
+                        onValueChange={(value) => setSelectedContactId(value || '')}
+                        clientId={selectedClientId}
+                        placeholder={selectedClientId
+                          ? t('interactions.quickAdd.contactPlaceholder', { defaultValue: 'Select contact' })
+                          : t('interactions.quickAdd.selectClientFirst', { defaultValue: 'Select client first' })}
+                        disabled={!selectedClientId}
+                        buttonWidth="full"
+                        onAddNew={selectedClientId ? () => setIsQuickAddContactOpen(true) : undefined}
+                      />
+                    </div>
                   </div>
                 )}
               

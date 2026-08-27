@@ -4,8 +4,8 @@ import React from 'react';
 import { Calendar, CalendarCheck, Phone, CreditCard, Plus } from 'lucide-react';
 import { fromZonedTime } from 'date-fns-tz';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { TeamsCallLink, useCallLinkContext } from '@alga-psa/ui/components/CallLink';
 import {
   BentoDateChip,
   BentoRow,
@@ -256,18 +256,24 @@ export function CallsEmailsTile({
   ticketId,
   refreshKey = 0,
   viewAllHref,
+  callPhoneNumber,
   onLogInteraction,
+  onInteractionClick,
   initialData,
 }: {
   id: string;
   ticketId: string;
   refreshKey?: number;
   viewAllHref?: string;
+  callPhoneNumber?: string | null;
   /** When provided, renders a "Log" affordance in the header that opens the quick-add flow. */
   onLogInteraction?: () => void;
+  /** Opens the selected interaction in the workspace drawer. */
+  onInteractionClick?: (interactionId: string) => void;
   initialData?: Promise<TicketInteractionSummary[]>;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { teamsPhoneConnected } = useCallLinkContext();
   const { data, error, loading } = useTileData(
     () => getTicketInteractions(ticketId, { limit: 5 }),
     [ticketId, refreshKey],
@@ -276,6 +282,7 @@ export function CallsEmailsTile({
   );
 
   const showViewAll = Boolean(viewAllHref && data && data.length > 0);
+  const showCall = Boolean(teamsPhoneConnected && callPhoneNumber);
 
   return (
     <BentoTile
@@ -284,7 +291,7 @@ export function CallsEmailsTile({
       icon={<Phone className="h-4 w-4" />}
       error={error}
       action={
-        showViewAll || onLogInteraction ? (
+        showViewAll || showCall || onLogInteraction ? (
           <div className="flex items-center gap-2">
             {showViewAll ? (
               <a
@@ -294,6 +301,17 @@ export function CallsEmailsTile({
               >
                 {t('bento.tiles.viewAll', 'View all')}
               </a>
+            ) : null}
+            {showCall ? (
+              <TeamsCallLink
+                id={`${id}-call`}
+                phoneNumber={callPhoneNumber}
+                callIntent={{ ticketId }}
+                className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+              >
+                <Phone className="h-3 w-3" />
+                {t('bento.tiles.call', 'Call')}
+              </TeamsCallLink>
             ) : null}
             {onLogInteraction ? (
               <button
@@ -317,7 +335,13 @@ export function CallsEmailsTile({
       ) : (
         <BentoRowList>
           {data.map((interaction) => (
-            <InteractionRow key={interaction.interactionId} id={`${id}-row-${interaction.interactionId}`} interaction={interaction} t={t} />
+            <InteractionRow
+              key={interaction.interactionId}
+              id={`${id}-row-${interaction.interactionId}`}
+              interaction={interaction}
+              onClick={onInteractionClick ? () => onInteractionClick(interaction.interactionId) : undefined}
+              t={t}
+            />
           ))}
         </BentoRowList>
       )}
@@ -325,16 +349,43 @@ export function CallsEmailsTile({
   );
 }
 
-function InteractionRow({ id, interaction, t }: { id: string; interaction: TicketInteractionSummary; t: (key: string, defaultValue: string) => string }) {
+function InteractionRow({
+  id,
+  interaction,
+  onClick,
+  t,
+}: {
+  id: string;
+  interaction: TicketInteractionSummary;
+  onClick?: () => void;
+  t: (key: string, defaultValue: string) => string;
+}) {
   const { locale } = useFormatters();
+  const label = interaction.title || interaction.typeName || t('bento.tiles.interaction', 'Interaction');
+  const date = new Date(interaction.interactionDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+
+  if (onClick) {
+    return (
+      <BentoRow id={id} stacked className="hover:bg-[rgb(var(--color-border-50))] rounded-sm">
+        <button
+          id={`${id}-open`}
+          type="button"
+          onClick={onClick}
+          className="flex w-full items-baseline gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] rounded-sm"
+        >
+          <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">{label}</span>
+          <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))] whitespace-nowrap">{date}</span>
+        </button>
+      </BentoRow>
+    );
+  }
+
   return (
     <BentoRow
       id={id}
-      meta={new Date(interaction.interactionDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
+      meta={date}
     >
-      <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">
-        {interaction.title || interaction.typeName || t('bento.tiles.interaction', 'Interaction')}
-      </span>
+      <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">{label}</span>
     </BentoRow>
   );
 }

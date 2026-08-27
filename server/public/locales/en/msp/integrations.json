@@ -3615,7 +3615,7 @@
         "assignTo": "Assign to",
         "searchPlaceholder": "Search contacts and clients…",
         "noTargets": "No matching contacts or clients.",
-        "chooseTarget": "Assign to a contact or client…"
+        "chooseTarget": "Assign to client…"
       },
       "forbidden": "You do not have permission to view telephony settings for this tenant.",
       "paywall": {

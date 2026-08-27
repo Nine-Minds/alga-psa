@@ -3615,7 +3615,7 @@
         "assignTo": "Assegna a",
         "searchPlaceholder": "Cerca contatti e clienti…",
         "noTargets": "Nessun contatto o cliente corrispondente.",
-        "chooseTarget": "Assegna a un contatto o cliente…"
+        "chooseTarget": "Assegna a un cliente…"
       },
       "forbidden": "Non hai il permesso di visualizzare le impostazioni di telefonia di questo tenant.",
       "paywall": {

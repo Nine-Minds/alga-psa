@@ -3615,7 +3615,7 @@
         "assignTo": "Toewijzen aan",
         "searchPlaceholder": "Zoek contacten en klanten…",
         "noTargets": "Geen overeenkomende contacten of klanten.",
-        "chooseTarget": "Toewijzen aan een contact of klant…"
+        "chooseTarget": "Toewijzen aan een klant…"
       },
       "forbidden": "U hebt geen toestemming om de telefonie-instellingen van deze tenant te bekijken.",
       "paywall": {

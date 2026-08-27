@@ -27,6 +27,22 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
   return { useTranslation: () => ({ t }), useFormatters: () => ({ locale: 'en' }) };
 });
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
+  ClientPicker: ({ id, clients, onSelect, placeholder, disabled }: any) => (
+    <select
+      id={`${id}-trigger`}
+      aria-label={placeholder}
+      value=""
+      disabled={disabled}
+      onChange={(event) => onSelect(event.target.value || null)}
+    >
+      <option value="">{placeholder}</option>
+      {clients.map((client: any) => (
+        <option key={client.client_id} value={client.client_id}>{client.client_name}</option>
+      ))}
+    </select>
+  ),
+}));
 
 import { TelephonyCallsPanel } from './TelephonyCallsPanel';
 
@@ -91,7 +107,7 @@ describe('TelephonyCallsPanel', () => {
   it('the operational panel lists recent calls and the attribution queue', async () => {
     mocks.getOverview.mockResolvedValue(operatorOverview());
 
-    render(<TelephonyCallsPanel variant="operational" />);
+    render(<TelephonyCallsPanel />);
 
     expect(await screen.findByText('Calls')).toBeTruthy();
     expect(screen.getByText('Recent calls')).toBeTruthy();
@@ -104,7 +120,6 @@ describe('TelephonyCallsPanel', () => {
   it('uses a server-loaded overview without fetching it a second time', () => {
     render(
       <TelephonyCallsPanel
-        variant="operational"
         initialOverview={operatorOverview()}
         showHeading={false}
       />,
@@ -118,7 +133,7 @@ describe('TelephonyCallsPanel', () => {
   it('resolving a candidate calls resolveTelephonyCall with its attribution', async () => {
     mocks.getOverview.mockResolvedValue(operatorOverview());
 
-    render(<TelephonyCallsPanel variant="operational" />);
+    render(<TelephonyCallsPanel />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Assign to Dorothy Gale' }));
 
@@ -129,7 +144,7 @@ describe('TelephonyCallsPanel', () => {
     }));
   });
 
-  it('an unmatched call is attributed through the search picker', async () => {
+  it('an unmatched call is attributed through the client picker dropdown', async () => {
     mocks.getOverview.mockResolvedValue(operatorOverview({
       unresolvedCalls: [call({
         callRecordId: 'call-3',
@@ -144,25 +159,30 @@ describe('TelephonyCallsPanel', () => {
     }));
     mocks.listTargets.mockResolvedValue({
       success: true,
-      targets: [{ contactId: 'contact-7', clientId: 'client-7', label: 'Glinda', sublabel: 'Emerald City' }],
+      targets: [{ contactId: null, clientId: 'client-7', label: 'Emerald City', sublabel: null }],
     });
 
-    render(<TelephonyCallsPanel variant="operational" />);
+    render(<TelephonyCallsPanel />);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Assign to a contact or client…' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Assign to Glinda · Emerald City' }));
+    await waitFor(() => expect(mocks.listTargets).toHaveBeenCalledWith({ clientsOnly: true }));
+    await screen.findByRole('option', { name: 'Emerald City' });
+    await userEvent.selectOptions(
+      await screen.findByRole('combobox', { name: 'Assign to client…' }),
+      'client-7',
+    );
 
     await waitFor(() => expect(mocks.resolveCall).toHaveBeenCalledWith({
       callRecordId: 'call-3',
-      contactId: 'contact-7',
+      contactId: null,
       clientId: 'client-7',
     }));
+    expect(screen.queryByRole('button', { name: 'Assign to Emerald City' })).toBeNull();
   });
 
   it('renders fully without system_settings: no provider controls or settings affordances', async () => {
     mocks.getOverview.mockResolvedValue(operatorOverview({ canManage: false }));
 
-    render(<TelephonyCallsPanel variant="operational" />);
+    render(<TelephonyCallsPanel />);
 
     expect((await screen.findAllByText('+15551234567')).length).toBeGreaterThan(0);
     // Nothing settings-only leaks into the operational surface.
@@ -177,7 +197,7 @@ describe('TelephonyCallsPanel', () => {
   it('a viewer without interaction create sees the queue but cannot resolve', async () => {
     mocks.getOverview.mockResolvedValue(operatorOverview({ canResolve: false }));
 
-    render(<TelephonyCallsPanel variant="operational" />);
+    render(<TelephonyCallsPanel />);
 
     const candidate = await screen.findByRole('button', { name: 'Assign to Dorothy Gale' });
     expect(candidate.hasAttribute('disabled')).toBe(true);
@@ -192,7 +212,7 @@ describe('TelephonyCallsPanel', () => {
       unresolvedCalls: [],
     }));
 
-    const { container } = render(<TelephonyCallsPanel variant="operational" />);
+    const { container } = render(<TelephonyCallsPanel />);
 
     await waitFor(() => expect(mocks.getOverview).toHaveBeenCalled());
     expect(container.firstChild).toBeNull();
@@ -208,27 +228,17 @@ describe('TelephonyCallsPanel', () => {
       unresolvedCalls: [],
     }));
 
-    const { container } = render(<TelephonyCallsPanel variant="operational" />);
+    const { container } = render(<TelephonyCallsPanel />);
 
     await waitFor(() => expect(mocks.getOverview).toHaveBeenCalled());
     expect(container.firstChild).toBeNull();
     expect(screen.queryByText(/permission/i)).toBeNull();
   });
 
-  it('the settings variant renders the calls cards without the operational heading', async () => {
-    mocks.getOverview.mockResolvedValue(operatorOverview({ canManage: true }));
-
-    render(<TelephonyCallsPanel variant="settings" />);
-
-    expect(await screen.findByText('Recent calls')).toBeTruthy();
-    expect(screen.getByText('Calls needing attribution')).toBeTruthy();
-    expect(screen.queryByText('Calls')).toBeNull();
-  });
-
   it('interactive elements carry kebab-case reflection ids', async () => {
     mocks.getOverview.mockResolvedValue(operatorOverview());
 
-    const { container } = render(<TelephonyCallsPanel variant="operational" />);
+    const { container } = render(<TelephonyCallsPanel />);
 
     await screen.findAllByText('+15551234567');
     const ids = [...container.querySelectorAll('[id]')].map((node) => node.id);

@@ -1771,6 +1771,7 @@
       "client": "Klient",
       "nextVisit": "Następna wizyta",
       "callsAndEmails": "Połączenia i e-maile",
+      "call": "Zadzwoń",
       "viewAll": "Zobacz wszystkie",
       "viewAllCount": "Zobacz wszystkie {{count}}",
       "timeLogged": "Zarejestrowany czas",

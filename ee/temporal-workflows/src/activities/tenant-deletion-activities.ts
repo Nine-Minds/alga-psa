@@ -163,7 +163,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'teams_integrations', 'microsoft_profiles',
 
   // Telephony (artifacts hang off call records; providers hold the subscription)
-  'telephony_call_artifacts', 'telephony_call_records', 'telephony_providers',
+  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_providers',
 
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and

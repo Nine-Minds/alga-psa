@@ -1639,6 +1639,7 @@
       "client": "Client",
       "nextVisit": "Next visit",
       "callsAndEmails": "Calls and emails",
+      "call": "Call",
       "viewAll": "View all",
       "viewAllCount": "View all {{count}}",
       "timeLogged": "Time logged",

@@ -1477,7 +1477,7 @@
       "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
-      "addInteraction": "Add interaction",
+      "addInteraction": "Add Interaction",
       "allTypes": "All Types",
       "applyFilters": "Apply Filters",
       "endDate": "End Date",

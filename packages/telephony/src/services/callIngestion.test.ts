@@ -434,6 +434,87 @@ describe('ingestCanonicalCall', () => {
     expect(table('interactions')[0].title).toBe('Outbound call to +1 (555) 765-4321');
   });
 
+  it('uses a matching outbound call intent to file the call on its originating ticket', async () => {
+    grantAddOn();
+    table('telephony_call_intents').push({
+      tenant: TENANT,
+      intent_id: 'intent-ticket-1',
+      provider: 'teams-phone',
+      user_id: 'user-agent',
+      provider_user_id: 'entra-agent-1',
+      ticket_id: 'ticket-1',
+      client_id: 'client-oz',
+      contact_id: 'contact-scarecrow',
+      phone_number_e164: '+15557654321',
+      status: 'pending',
+      created_at: '2026-08-22T14:59:30.000Z',
+      expires_at: '2026-08-22T17:00:00.000Z',
+    });
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: {
+        ...inboundCall,
+        providerCallId: 'graph-call-intent',
+        direction: 'outbound',
+        organizerUserId: 'entra-agent-1',
+        callerNumber: { raw: '+15559998888', e164: '+15559998888' },
+        calleeNumber: { raw: '+1 (555) 765-4321', e164: '+15557654321' },
+      },
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'matched' });
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      matched_contact_id: 'contact-scarecrow',
+      matched_client_id: 'client-oz',
+      ticket_id: 'ticket-1',
+    });
+    expect(table('interactions')[0]).toMatchObject({
+      user_id: 'user-agent',
+      contact_name_id: 'contact-scarecrow',
+      client_id: 'client-oz',
+      ticket_id: 'ticket-1',
+    });
+    expect(table('telephony_call_intents')[0]).toMatchObject({
+      status: 'matched',
+      call_record_id: (outcome as any).callRecordId,
+    });
+  });
+
+  it('does not consume another Teams user\'s outbound intent', async () => {
+    grantAddOn();
+    table('telephony_call_intents').push({
+      tenant: TENANT,
+      intent_id: 'intent-other-user',
+      provider: 'teams-phone',
+      user_id: 'user-other',
+      provider_user_id: 'entra-other-user',
+      ticket_id: 'ticket-other',
+      client_id: 'client-other',
+      contact_id: null,
+      phone_number_e164: '+15557654321',
+      status: 'pending',
+      created_at: '2026-08-22T14:59:30.000Z',
+      expires_at: '2026-08-22T17:00:00.000Z',
+    });
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: {
+        ...inboundCall,
+        providerCallId: 'graph-call-other-user',
+        direction: 'outbound',
+        organizerUserId: 'entra-agent-1',
+        callerNumber: { raw: '+15559998888', e164: '+15559998888' },
+        calleeNumber: { raw: '+1 (555) 765-4321', e164: '+15557654321' },
+      },
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'unmatched' });
+    expect(table('telephony_call_records')[0].ticket_id).toBeNull();
+    expect(table('telephony_call_intents')[0].status).toBe('pending');
+  });
+
   it('T024: a client-only match still files the call on the client timeline', async () => {
     grantAddOn();
     table('client_locations').push({ tenant: TENANT, client_id: 'client-emerald', phone: '+1 (555) 123-4567' });
