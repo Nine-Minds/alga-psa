@@ -713,7 +713,8 @@ export const createPrepaymentInvoice = withAuth(async (
      * where it resolves to the only profile there is. The credit this invoice
      * issues inherits the same profile, so it can pay that entity's invoices.
      */
-    billingProfileId?: string
+    billingProfileId?: string,
+    description?: string,
 ): Promise<IInvoice | CreditActionError> => {
     return withCreditActionErrors(async () => {
     // Check permission for credit creation
@@ -757,6 +758,7 @@ export const createPrepaymentInvoice = withAuth(async (
             await generateInvoiceNumber(),
             expirationDate,
             billingProfileId,
+            description,
         );
     });
 
@@ -774,9 +776,10 @@ export async function createPrepaymentInvoiceInternal(
     invoiceNumber: string,
     manualExpirationDate?: string,
     billingProfileId?: string,
+    description?: string,
 ): Promise<IInvoice> {
-    if (!Number.isFinite(amount) || amount <= 0) {
-        throw new Error('Prepayment amount must be greater than zero');
+    if (!Number.isInteger(amount) || amount <= 0) {
+        throw new Error('Prepayment amount must be a positive integer in minor units');
     }
     const now = new Date().toISOString();
     const prepaymentProfileId = await resolvePaymentBillingProfileId(
@@ -803,6 +806,7 @@ export async function createPrepaymentInvoiceInternal(
             currency_code: client.default_currency_code || 'USD',
             is_prepayment: true,
             credit_expiration_date: manualExpirationDate,
+            prepayment_description: description,
         })
         .returning('*');
     return createdInvoice as IInvoice;

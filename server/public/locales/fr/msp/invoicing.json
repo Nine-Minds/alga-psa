@@ -982,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Générer une facture de prépaiement",
-      "creditMemo": "Générer une note de crédit"
+      "prepayment": "Générer une facture de prépaiement"
     },
     "descriptions": {
-      "prepayment": "Les factures à prépaiement créent un crédit client pour une valeur future. Ils ne créent pas de périodes de service récurrentes ; les factures récurrentes ultérieures conservent leur propre couverture de période de service.",
-      "creditMemo": "Les notes de crédit ajustent les soldes financiers sans redéfinir la couverture des périodes de service récurrentes sur la facture source."
+      "prepayment": "Les factures à prépaiement créent un crédit client pour une valeur future. Ils ne créent pas de périodes de service récurrentes ; les factures récurrentes ultérieures conservent leur propre couverture de période de service."
     },
     "fields": {
-      "type": "Taper",
       "client": "Client",
       "amount": "Montant",
-      "description": "Description"
-    },
-    "types": {
-      "prepaymentInvoice": "Facture de prépaiement",
-      "creditMemo": "Note de crédit"
+      "descriptionOptional": "Description (optional)"
     },
     "placeholders": {
       "amount": "Entrez le montant",
-      "prepaymentDescription": "Prépaiement pour les services futurs",
-      "creditMemoDescription": "Motif de la note de crédit"
+      "prepaymentDescription": "Prépaiement pour les services futurs"
     },
     "errors": {
       "allFieldsRequired": "Veuillez remplir tous les champs",
       "validAmount": "Veuillez entrer un montant valide",
-      "creditMemosUnsupported": "Les notes de crédit ne sont pas encore prises en charge",
       "generateFailed": "Erreur lors de la génération de la facture"
     },
     "actions": {
       "generating": "Générateur...",
-      "generatePrepayment": "Générer une facture de prépaiement",
-      "generateCreditMemo": "Générer une note de crédit"
+      "generatePrepayment": "Générer une facture de prépaiement"
     }
   },
   "contractItems": {

@@ -982,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Gerar fatura de pré-pagamento",
-      "creditMemo": "Gerar nota de crédito"
+      "prepayment": "Gerar fatura de pré-pagamento"
     },
     "descriptions": {
-      "prepayment": "Faturas de pré-pagamento criam crédito do cliente para valor futuro. Eles não criam períodos de serviço recorrentes; faturas recorrentes posteriores mantêm sua própria cobertura de período de serviço.",
-      "creditMemo": "As notas de crédito ajustam os saldos financeiros sem redefinir a cobertura do período de serviço recorrente na fatura de origem."
+      "prepayment": "Faturas de pré-pagamento criam crédito do cliente para valor futuro. Eles não criam períodos de serviço recorrentes; faturas recorrentes posteriores mantêm sua própria cobertura de período de serviço."
     },
     "fields": {
-      "type": "Tipo",
       "client": "Cliente",
       "amount": "Quantia",
-      "description": "Descrição"
-    },
-    "types": {
-      "prepaymentInvoice": "Fatura de pré-pagamento",
-      "creditMemo": "Nota de crédito"
+      "descriptionOptional": "Descrição (optional)"
     },
     "placeholders": {
       "amount": "Insira o valor",
-      "prepaymentDescription": "Pré-pagamento para serviços futuros",
-      "creditMemoDescription": "Motivo da nota de crédito"
+      "prepaymentDescription": "Pré-pagamento para serviços futuros"
     },
     "errors": {
       "allFieldsRequired": "Por favor preencha todos os campos",
       "validAmount": "Insira um valor válido",
-      "creditMemosUnsupported": "As notas de crédito ainda não são suportadas",
       "generateFailed": "Erro ao gerar fatura"
     },
     "actions": {
       "generating": "Gerando...",
-      "generatePrepayment": "Gerar fatura de pré-pagamento",
-      "generateCreditMemo": "Gerar nota de crédito"
+      "generatePrepayment": "Gerar fatura de pré-pagamento"
     }
   },
   "contractItems": {
