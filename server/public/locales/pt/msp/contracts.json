@@ -2178,8 +2178,8 @@
     },
     "runBar": {
       "compareToggle": "Mostrar alterações em relação ao contrato atual",
-      "horizonOption": "{{count}} períodos de faturamento",
-      "lastRun": "Simulação atualizada · {{count}} períodos de faturamento",
+      "horizonOption": "{{count}} períodos de faturamento do cliente",
+      "lastRun": "Simulação atualizada · {{count}} períodos de faturamento do cliente",
       "neverRun": "Ainda não simulado",
       "simulate": "Simular",
       "simulating": "Simulando…",
@@ -2348,7 +2348,7 @@
       "scopeCatchAll": "Cobre todos os serviços da linha (os serviços membros substituem o multiplicador)",
       "scopeMembers": "Somente serviços membros",
       "totalHours": "Horas totais",
-      "overageRate": "Taxa de excedente ($/h)",
+      "overageRate": "Taxa de excedente por hora",
       "rollover": "Permitir transferência de saldo",
       "afterHours": "Multiplicador de consumo fora do horário",
       "afterHoursMultiplier": "Multiplicador (ex.: 1,5)",
@@ -2357,16 +2357,21 @@
       "members": "Serviços membros",
       "multiplier": "×",
       "noMembers": "Nenhum serviço membro vinculado.",
+      "noServicesOnLine": "Adicione um serviço a esta linha de contrato antes de criar um banco de horas.",
       "selectService": "Selecione um serviço…",
       "poolName": "Nome do banco (opcional)",
       "poolNamePlaceholder": "ex.: Horas padrão",
-      "coversAll": "Cobre todos os serviços desta linha"
+      "coversAll": "Cobre todos os serviços desta linha",
+      "burnMultiplier": "Multiplicador de consumo"
     },
     "badges": {
       "dormant": "nenhum serviço vinculado — nada é consumido deste banco"
     },
     "errors": {
-      "catchAllExists": "Esta linha já tem um banco abrangente."
+      "catchAllExists": "Esta linha já tem um banco abrangente.",
+      "invalidAfterHoursRule": "Insira uma regra válida fora do horário.",
+      "scheduleLoadFailed": "Não foi possível carregar as agendas de horário comercial.",
+      "scheduleRequired": "Selecione uma agenda de horário comercial antes de aplicar esta regra."
     }
   },
   "wizardBucketPools": {

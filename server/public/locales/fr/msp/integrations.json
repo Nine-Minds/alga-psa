@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Type de connexion :",
           "label": "Vue d'ensemble",
-          "mappedTenantsLabel": "Tenants mappés :"
+          "mappedTenantsLabel": "Tenants mappés :",
+          "microsoftAppLabel": "Application Microsoft :"
         },
         "skipped": {
           "empty": "Aucun tenant n'est actuellement marqué comme ignoré.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Ajouter une inscription d'application",
+          "bindFailed": "Impossible d'enregistrer l'application Microsoft choisie pour Entra.",
+          "emptyBody": "La connexion directe s'appuie sur l'inscription d'application Microsoft de votre propre organisation. Inscrivez une application multilocataire dans votre locataire partenaire, ajoutez l'URI de redirection Entra et accordez le consentement administrateur pour ManagedTenants.Read.All et Directory.Read.All.",
+          "label": "Inscription d'application Microsoft",
+          "placeholder": "Sélectionnez une inscription d'application",
+          "reconnectRequired": "Sélectionnez une inscription d'application Microsoft, puis reconnectez-vous.",
+          "redirectUriLabel": "URI de redirection à ajouter dans Entra",
+          "scopesLabel": "Étendues déléguées (consentement administrateur requis)"
+        },
         "backToCurrentStep": "Retour à {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga dialogue avec Microsoft Graph via votre relation de partenaire.",
             "label": "Partenaire Microsoft direct",
             "prerequisites": {
-              "appRegistration": "Des identifiants OAuth Microsoft configurés pour ce locataire.",
+              "appRegistration": "Une inscription d'application Microsoft choisie ci-dessous — la connexion directe utilise toujours l'application de votre propre organisation.",
               "globalAdmin": "Un administrateur général capable d'approuver les autorisations.",
               "partnerRelationship": "Une relation de partenaire (GDAP) avec les locataires que vous gérez.",
               "lighthouse": "Microsoft 365 Lighthouse intégré dans votre locataire partenaire."
@@ -956,6 +967,7 @@
         "description": "Faites entrer dans Alga, comme contacts clients, les personnes des locataires Microsoft que vous gérez. Rien n'est écrit dans vos contacts tant que vous n'avez pas vu un aperçu et donné votre accord.",
         "directConsent": {
           "adminNote": "Un administrateur général doit approuver ces autorisations. Sinon, la connexion aboutira mais sera refusée, et rien ne sera enregistré.",
+          "appRegistration": "Inscription d'application : {{name}}.",
           "cancel": "Annuler",
           "continue": "Continuer vers Microsoft",
           "intro": "Vous allez quitter Alga et vous connecter chez Microsoft. Voici les autorisations qui seront demandées.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Les connexions e-mail Outlook existantes doivent être autorisées à nouveau pour accorder Mail.Send avant de pouvoir envoyer des e-mails sortants.",
             "perProviderIssuerNote": "Les connexions de boîte aux lettres existantes conservent leur application Microsoft actuelle jusqu'à ce qu'elles soient reconnectées. Ce choix s'applique aux nouvelles connexions de boîte aux lettres."
           },
+          "entra": {
+            "description": "Choisissez l'application Microsoft pour la synchronisation Entra via GDAP et Lighthouse.",
+            "label": "Entra direct",
+            "reconnect": "Changer cette application déconnecte la connexion Entra actuelle et exige un nouveau consentement."
+          },
           "mspSso": {
             "description": "Choisissez quel profil Microsoft sous-tend les domaines de connexion MSP SSO, la connexion Microsoft et la découverte de tenant.",
             "label": "MSP SSO"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Valeurs du profil actuel",
           "emailRedirect": "Redirect URI de l'e-mail entrant",
           "emailTitle": "Guide de l'e-mail",
+          "entraConsent": "Exigence",
+          "entraConsentValue": "Inscrivez cette application en multilocataire et accordez le consentement administrateur dans le locataire partenaire.",
+          "entraTitle": "Entra direct",
           "mspSsoTitle": "Guide MSP SSO",
           "notConfigured": "Non configuré",
           "redirectUri": "URI de redirection",

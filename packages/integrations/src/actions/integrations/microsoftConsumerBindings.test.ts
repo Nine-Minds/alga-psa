@@ -390,6 +390,7 @@ describe('Microsoft consumer binding actions', () => {
       'email',
       'calendar',
       'teams',
+      'entra',
     ]);
     expect(initialEeBindings.bindings?.find((binding) => binding.consumerType === 'teams')).toMatchObject({
       consumerType: 'teams',
@@ -420,7 +421,7 @@ describe('Microsoft consumer binding actions', () => {
     const eeBindings = await listMicrosoftConsumerBindings();
     expect(eeBindings.success).toBe(true);
     expect(new Set(eeBindings.bindings?.map((binding) => binding.consumerType))).toEqual(
-      new Set(['msp_sso', 'email', 'calendar', 'teams'])
+      new Set(['msp_sso', 'email', 'calendar', 'teams', 'entra'])
     );
 
     const teamsBindings = microsoftConsumerBindings.filter(
@@ -502,6 +503,7 @@ describe('Microsoft consumer binding actions', () => {
       expect.objectContaining({ consumerType: 'email', profileId: null }),
       expect.objectContaining({ consumerType: 'calendar', profileId: null }),
       expect.objectContaining({ consumerType: 'teams', profileId: null }),
+      expect.objectContaining({ consumerType: 'entra', profileId: null }),
     ]);
     expect(microsoftProfiles.filter((profile) => profile.tenant === 'tenant-1')).toEqual([]);
     expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-1')).toEqual([]);
@@ -550,6 +552,7 @@ describe('Microsoft consumer binding actions', () => {
         profileDisplayName: 'Primary Profile',
       }),
       expect.objectContaining({ consumerType: 'teams', profileId: null }),
+      expect.objectContaining({ consumerType: 'entra', profileId: null }),
     ]);
     expect(microsoftProfiles.filter((profile) => profile.tenant === 'tenant-1')).toHaveLength(1);
     expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-1')).toEqual([
@@ -672,6 +675,7 @@ describe('Microsoft consumer binding actions', () => {
       expect.objectContaining({ consumerType: 'email', profileId: null }),
       expect.objectContaining({ consumerType: 'calendar', profileId: null }),
       expect.objectContaining({ consumerType: 'teams', profileId: null }),
+      expect.objectContaining({ consumerType: 'entra', profileId: null }),
     ]);
 
     expect(await resolveMicrosoftProfileForConsumer('tenant-1', 'msp_sso')).toBeNull();
@@ -690,6 +694,7 @@ describe('Microsoft consumer binding actions', () => {
       expect.objectContaining({ consumerType: 'email', profileId: null }),
       expect.objectContaining({ consumerType: 'calendar', profileId: null }),
       expect.objectContaining({ consumerType: 'teams', profileId: null }),
+      expect.objectContaining({ consumerType: 'entra', profileId: null }),
     ]);
     expect(microsoftProfiles).toHaveLength(0);
     expect(microsoftConsumerBindings).toHaveLength(0);

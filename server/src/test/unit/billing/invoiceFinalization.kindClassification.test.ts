@@ -166,6 +166,7 @@ describe('invoice finalization kind classification', () => {
       amount: 5000,
       client_id: 'client-1',
       invoice_id: 'invoice-prepayment',
+      description: 'Credit issued from prepayment',
     });
     expect(mocks.db.tables.credit_tracking).toHaveLength(1);
     expect(mocks.db.tables.credit_tracking[0]).toMatchObject({
@@ -178,6 +179,18 @@ describe('invoice finalization kind classification', () => {
       status: 'sent',
       finalized_at: expect.any(String),
     });
+  });
+
+  it('uses a prepayment description for the issued credit transaction', async () => {
+    mocks.db.tables.invoices.push({
+      invoice_id: 'invoice-described-prepayment', tenant: 'tenant-1', client_id: 'client-1',
+      subtotal: 5000, total_amount: 5000, is_prepayment: true, finalized_at: null,
+      status: 'draft', invoice_number: 'INV-1002', prepayment_description: 'Annual services credit',
+    });
+
+    await finalizeInvoiceWithKnex('invoice-described-prepayment', mocks.db.tx, 'tenant-1', 'user-1');
+
+    expect(mocks.db.tables.transactions[0]).toMatchObject({ description: 'Annual services credit' });
   });
 
   it('T046: invoice modification/finalization does not classify a bridge-less recurring invoice as a prepayment', async () => {

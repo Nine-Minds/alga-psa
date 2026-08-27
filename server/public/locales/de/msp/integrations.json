@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Verbindungstyp:",
           "label": "Übersicht",
-          "mappedTenantsLabel": "Zugeordnete Mandanten:"
+          "mappedTenantsLabel": "Zugeordnete Mandanten:",
+          "microsoftAppLabel": "Microsoft-App:"
         },
         "skipped": {
           "empty": "Derzeit sind keine Mandanten als übersprungen markiert.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "App-Registrierung hinzufügen",
+          "bindFailed": "Die Microsoft-App-Auswahl für Entra konnte nicht gespeichert werden.",
+          "emptyBody": "Die Direktverbindung läuft über die App-Registrierung Ihrer eigenen Organisation. Registrieren Sie eine mandantenfähige App in Ihrer Partnerorganisation, fügen Sie die Entra-Redirect URI hinzu und erteilen Sie die Administratoreinwilligung für ManagedTenants.Read.All und Directory.Read.All.",
+          "label": "Microsoft-App-Registrierung",
+          "placeholder": "App-Registrierung auswählen",
+          "reconnectRequired": "Wählen Sie eine Microsoft-App-Registrierung aus und stellen Sie die Verbindung erneut her.",
+          "redirectUriLabel": "In Entra hinzuzufügende Redirect URI",
+          "scopesLabel": "Delegierte Berechtigungsbereiche (Administratoreinwilligung erforderlich)"
+        },
         "backToCurrentStep": "Zurück zu {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga spricht über Ihre Partnerbeziehung mit Microsoft Graph.",
             "label": "Direkter Microsoft-Partner",
             "prerequisites": {
-              "appRegistration": "Für diesen Mandanten konfigurierte Microsoft-OAuth-Anmeldedaten.",
+              "appRegistration": "Eine unten ausgewählte Microsoft-App-Registrierung – die Direktverbindung nutzt immer die App Ihrer eigenen Organisation.",
               "globalAdmin": "Einen globalen Administrator, der die Berechtigungen genehmigen kann.",
               "partnerRelationship": "Eine Partnerbeziehung (GDAP) mit den verwalteten Mandanten.",
               "lighthouse": "Microsoft 365 Lighthouse ist in Ihrem Partner-Mandanten eingerichtet."
@@ -956,6 +967,7 @@
         "description": "Holen Sie die Personen aus den von Ihnen verwalteten Microsoft-Mandanten als Kundenkontakte nach Alga. In Ihre Kontakte wird nichts geschrieben, bevor Sie eine Vorschau gesehen und freigegeben haben.",
         "directConsent": {
           "adminNote": "Ein globaler Administrator muss diese Berechtigungen genehmigen. Andernfalls wird die Anmeldung abgeschlossen, die Verbindung jedoch abgelehnt, und es wird nichts gespeichert.",
+          "appRegistration": "App-Registrierung: {{name}}.",
           "cancel": "Abbrechen",
           "continue": "Weiter zu Microsoft",
           "intro": "Sie verlassen Alga und melden sich bei Microsoft an. Diese Berechtigungen werden angefordert.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Bestehende Outlook-E-Mail-Verbindungen müssen erneut autorisiert werden, um Mail.Send zu gewähren, bevor sie ausgehende E-Mails senden können.",
             "perProviderIssuerNote": "Bestehende Postfachverbindungen behalten ihre aktuelle Microsoft-App, bis sie neu verbunden werden. Diese Auswahl gilt für neue Postfachverbindungen."
           },
+          "entra": {
+            "description": "Wählen Sie die Microsoft-App für die Entra-Synchronisierung über GDAP und Lighthouse.",
+            "label": "Entra Direkt",
+            "reconnect": "Das Ändern dieser App trennt die aktuelle Entra-Verbindung und erfordert eine erneute Einwilligung."
+          },
           "mspSso": {
             "description": "Wählen Sie aus, welches Microsoft-Profil die MSP-SSO-Anmeldedomänen, die Microsoft-Anmeldung und die Tenant-Erkennung unterstützt.",
             "label": "MSP SSO"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Aktuelle Profilwerte",
           "emailRedirect": "Redirect-URI für eingehende E-Mails",
           "emailTitle": "E-Mail-Anleitung",
+          "entraConsent": "Anforderung",
+          "entraConsentValue": "Registrieren Sie diese App als mandantenfähig und erteilen Sie die Administratoreinwilligung in Ihrer Partnerorganisation.",
+          "entraTitle": "Entra Direkt",
           "mspSsoTitle": "MSP-SSO-Anleitung",
           "notConfigured": "Nicht konfiguriert",
           "redirectUri": "Redirect URI",

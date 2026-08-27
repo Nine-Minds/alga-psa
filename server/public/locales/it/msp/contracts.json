@@ -2178,8 +2178,8 @@
     },
     "runBar": {
       "compareToggle": "Mostra le differenze rispetto al contratto corrente",
-      "horizonOption": "{{count}} periodi di fatturazione",
-      "lastRun": "Simulazione aggiornata · {{count}} periodi di fatturazione",
+      "horizonOption": "{{count}} periodi di fatturazione del cliente",
+      "lastRun": "Simulazione aggiornata · {{count}} periodi di fatturazione del cliente",
       "neverRun": "Non ancora simulato",
       "simulate": "Simula",
       "simulating": "Simulazione in corso…",
@@ -2348,7 +2348,7 @@
       "scopeCatchAll": "Copre tutti i servizi della linea (i servizi membri sostituiscono il moltiplicatore)",
       "scopeMembers": "Solo servizi membri",
       "totalHours": "Ore totali",
-      "overageRate": "Tariffa di superamento ($/ora)",
+      "overageRate": "Tariffa di superamento oraria",
       "rollover": "Consenti riporto",
       "afterHours": "Moltiplicatore di consumo fuori orario",
       "afterHoursMultiplier": "Moltiplicatore (es. 1,5)",
@@ -2357,16 +2357,21 @@
       "members": "Servizi membri",
       "multiplier": "×",
       "noMembers": "Nessun servizio membro associato.",
+      "noServicesOnLine": "Aggiungere un servizio a questa riga contrattuale prima di creare un pacchetto ore.",
       "selectService": "Seleziona un servizio…",
       "poolName": "Nome del pacchetto (facoltativo)",
       "poolNamePlaceholder": "es. Ore standard",
-      "coversAll": "Copre tutti i servizi di questa linea"
+      "coversAll": "Copre tutti i servizi di questa linea",
+      "burnMultiplier": "Moltiplicatore di consumo"
     },
     "badges": {
       "dormant": "nessun servizio associato — nulla viene consumato da questo pacchetto"
     },
     "errors": {
-      "catchAllExists": "Questa linea ha già un pacchetto generale."
+      "catchAllExists": "Questa linea ha già un pacchetto generale.",
+      "invalidAfterHoursRule": "Inserire una regola fuori orario valida.",
+      "scheduleLoadFailed": "Impossibile caricare le pianificazioni dell'orario lavorativo.",
+      "scheduleRequired": "Selezionare una pianificazione dell'orario lavorativo prima di applicare questa regola."
     }
   },
   "wizardBucketPools": {

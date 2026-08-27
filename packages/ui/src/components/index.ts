@@ -78,6 +78,7 @@ export { default as HybridThreadNode } from './HybridThreadNode';
 export * from './IconPicker';
 export * from './FieldWarnings';
 export * from './Input';
+export * from './NumericInput';
 export * from './InteractionIcon';
 export { default as InteractionIcon } from './InteractionIcon';
 // InlineReplyComposer pulls the BlockNote editor. Not re-exported from the barrel —

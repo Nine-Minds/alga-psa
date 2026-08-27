@@ -119,7 +119,7 @@ describe('Entra OAuth callback validation', () => {
       clientId: 'client-id-1',
       clientSecret: 'client-secret-1',
       tenantId: null,
-      source: 'tenant-secret',
+      source: 'profile', profileId: 'profile-1', profileDisplayName: 'MSP app',
     });
     axiosPostMock.mockResolvedValue({
       data: {
