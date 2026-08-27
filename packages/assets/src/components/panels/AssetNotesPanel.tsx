@@ -98,7 +98,11 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
         </div>
       )}
       <div
-        className={variant === 'bento' ? undefined : 'min-h-[200px]'}
+        className={
+          variant === 'bento'
+            ? '[&_.editor-paper]:p-2 [&_.bn-editor]:!px-2'
+            : 'min-h-[200px]'
+        }
       >
         <TextEditor
           // Remount when the backing document changes (or first loads) so saved notes show up on open.
