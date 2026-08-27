@@ -6,17 +6,19 @@ import {
   createTelephonyCallIntent,
   getTelephonyCallLinkState,
 } from '@alga-psa/integrations/actions/integrations/telephonyActions';
-import { useFeatureFlag } from '@/hooks/useFeatureFlag';
 
 /**
  * Supplies click-to-call affordances with the tenant's live integration state.
  * The Teams deep link is hidden unless Teams is active; ticket call actions
  * additionally require the Teams Phone provider, while `tel:` always remains.
  */
-export function MspCallLinkProvider({ children }: { children: React.ReactNode }) {
-  const { enabled: teamsFeatureEnabled } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
+export function MspCallLinkProvider({
+  children,
+  teamsFeatureEnabled = false,
+}: {
+  children: React.ReactNode;
+  teamsFeatureEnabled?: boolean;
+}) {
   const [state, setState] = React.useState({
     teamsIntegrationActive: false,
     teamsPhoneConnected: false,

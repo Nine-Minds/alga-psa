@@ -11,11 +11,6 @@ import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
 const hoisted = vi.hoisted(() => ({
   getState: vi.fn(),
   createIntent: vi.fn(),
-  featureEnabled: true,
-}));
-
-vi.mock('@/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: hoisted.featureEnabled, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/integrations/actions/integrations/telephonyActions', () => ({
@@ -37,7 +32,6 @@ describe('MspCallLinkProvider', () => {
   beforeEach(() => {
     hoisted.getState.mockReset();
     hoisted.createIntent.mockReset();
-    hoisted.featureEnabled = true;
   });
 
   it('uses active integration/provider state after the release gate passes', async () => {
@@ -48,7 +42,7 @@ describe('MspCallLinkProvider', () => {
     });
 
     render(
-      <MspCallLinkProvider>
+      <MspCallLinkProvider teamsFeatureEnabled>
         <StateProbe />
       </MspCallLinkProvider>,
     );
@@ -59,10 +53,8 @@ describe('MspCallLinkProvider', () => {
   });
 
   it('does not read integration state when the release feature is disabled', async () => {
-    hoisted.featureEnabled = false;
-
     render(
-      <MspCallLinkProvider>
+      <MspCallLinkProvider teamsFeatureEnabled={false}>
         <StateProbe />
       </MspCallLinkProvider>,
     );
