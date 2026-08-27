@@ -990,7 +990,7 @@
     "fields": {
       "client": "Client",
       "amount": "Montant",
-      "descriptionOptional": "Description (optional)"
+      "descriptionOptional": "Description (facultative)"
     },
     "placeholders": {
       "amount": "Entrez le montant",

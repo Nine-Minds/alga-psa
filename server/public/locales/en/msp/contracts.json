@@ -2357,16 +2357,21 @@
       "members": "Member services",
       "multiplier": "×",
       "noMembers": "No member services attached.",
+      "noServicesOnLine": "Add a service to this contract line before creating a bucket pool.",
       "selectService": "Select a service…",
       "poolName": "Pool name (optional)",
       "poolNamePlaceholder": "e.g. Standard hours",
-      "coversAll": "Covers all services on this line"
+      "coversAll": "Covers all services on this line",
+      "burnMultiplier": "Burn multiplier"
     },
     "badges": {
       "dormant": "no services attached — nothing burns from this pool"
     },
     "errors": {
-      "catchAllExists": "This line already has a catch-all pool."
+      "catchAllExists": "This line already has a catch-all pool.",
+      "invalidAfterHoursRule": "Enter a valid after-hours rule.",
+      "scheduleLoadFailed": "Unable to load business hours schedules.",
+      "scheduleRequired": "Select a business hours schedule before applying this rule."
     }
   },
   "wizardBucketPools": {
