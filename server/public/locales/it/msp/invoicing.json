@@ -982,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Genera fattura di pagamento anticipato",
-      "creditMemo": "Genera nota di credito"
+      "prepayment": "Genera fattura di pagamento anticipato"
     },
     "descriptions": {
-      "prepayment": "Le fatture con pagamento anticipato creano credito al cliente per un valore futuro. Non creano periodi di servizio ricorrenti; le fatture ricorrenti successive mantengono la propria copertura del periodo di servizio.",
-      "creditMemo": "Le note di credito regolano i saldi finanziari senza ridefinire la copertura del periodo di servizio ricorrente nella fattura di origine."
+      "prepayment": "Le fatture con pagamento anticipato creano credito al cliente per un valore futuro. Non creano periodi di servizio ricorrenti; le fatture ricorrenti successive mantengono la propria copertura del periodo di servizio."
     },
     "fields": {
-      "type": "Tipo",
       "client": "Cliente",
       "amount": "Importo",
-      "description": "Descrizione"
-    },
-    "types": {
-      "prepaymentInvoice": "Fattura di pagamento anticipato",
-      "creditMemo": "Nota di credito"
+      "descriptionOptional": "Descrizione (optional)"
     },
     "placeholders": {
       "amount": "Inserisci l'importo",
-      "prepaymentDescription": "Pagamento anticipato per servizi futuri",
-      "creditMemoDescription": "Motivo della nota di credito"
+      "prepaymentDescription": "Pagamento anticipato per servizi futuri"
     },
     "errors": {
       "allFieldsRequired": "Si prega di compilare tutti i campi",
       "validAmount": "Inserisci un importo valido",
-      "creditMemosUnsupported": "Le note di credito non sono ancora supportate",
       "generateFailed": "Errore nella generazione della fattura"
     },
     "actions": {
       "generating": "Generazione...",
-      "generatePrepayment": "Genera fattura di pagamento anticipato",
-      "generateCreditMemo": "Genera nota di credito"
+      "generatePrepayment": "Genera fattura di pagamento anticipato"
     }
   },
   "contractItems": {

@@ -2178,8 +2178,8 @@
     },
     "runBar": {
       "compareToggle": "Afficher les écarts par rapport au contrat actuel",
-      "horizonOption": "{{count}} périodes de facturation",
-      "lastRun": "Simulation à jour · {{count}} périodes de facturation",
+      "horizonOption": "{{count}} périodes de facturation du client",
+      "lastRun": "Simulation à jour · {{count}} périodes de facturation du client",
       "neverRun": "Pas encore simulé",
       "simulate": "Simuler",
       "simulating": "Simulation en cours…",
@@ -2348,7 +2348,7 @@
       "scopeCatchAll": "Couvre tous les services de la ligne (les services membres remplacent le multiplicateur)",
       "scopeMembers": "Services membres uniquement",
       "totalHours": "Heures totales",
-      "overageRate": "Tarif de dépassement ($/h)",
+      "overageRate": "Tarif de dépassement par heure",
       "rollover": "Autoriser le report",
       "afterHours": "Multiplicateur de consommation hors horaires",
       "afterHoursMultiplier": "Multiplicateur (p. ex. 1,5)",
@@ -2357,16 +2357,21 @@
       "members": "Services membres",
       "multiplier": "×",
       "noMembers": "Aucun service membre associé.",
+      "noServicesOnLine": "Ajoutez un service à cette ligne de contrat avant de créer un forfait d’heures.",
       "selectService": "Sélectionner un service…",
       "poolName": "Nom du forfait (facultatif)",
       "poolNamePlaceholder": "p. ex. Heures standard",
-      "coversAll": "Couvre tous les services de cette ligne"
+      "coversAll": "Couvre tous les services de cette ligne",
+      "burnMultiplier": "Multiplicateur de consommation"
     },
     "badges": {
       "dormant": "aucun service associé — rien n’est décompté de ce forfait"
     },
     "errors": {
-      "catchAllExists": "Cette ligne possède déjà un forfait global."
+      "catchAllExists": "Cette ligne possède déjà un forfait global.",
+      "invalidAfterHoursRule": "Saisissez une règle hors horaires valide.",
+      "scheduleLoadFailed": "Impossible de charger les plannings des heures ouvrées.",
+      "scheduleRequired": "Sélectionnez un planning des heures ouvrées avant d’appliquer cette règle."
     }
   },
   "wizardBucketPools": {

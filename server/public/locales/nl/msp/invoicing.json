@@ -982,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Vooruitbetalingsfactuur genereren",
-      "creditMemo": "Creditnota genereren"
+      "prepayment": "Vooruitbetalingsfactuur genereren"
     },
     "descriptions": {
-      "prepayment": "Facturen met vooruitbetaling creëren klantkrediet voor toekomstige waarde. Ze creëren geen terugkerende serviceperioden; latere terugkerende facturen behouden hun eigen serviceperiodedekking.",
-      "creditMemo": "Creditnota's passen financiële saldi aan zonder de dekking van de terugkerende serviceperiode op de bronfactuur opnieuw te definiëren."
+      "prepayment": "Facturen met vooruitbetaling creëren klantkrediet voor toekomstige waarde. Ze creëren geen terugkerende serviceperioden; latere terugkerende facturen behouden hun eigen serviceperiodedekking."
     },
     "fields": {
-      "type": "Type",
       "client": "Klant",
       "amount": "Hoeveelheid",
-      "description": "Beschrijving"
-    },
-    "types": {
-      "prepaymentInvoice": "Vooruitbetalingsfactuur",
-      "creditMemo": "Creditnota"
+      "descriptionOptional": "Beschrijving (optional)"
     },
     "placeholders": {
       "amount": "Voer bedrag in",
-      "prepaymentDescription": "Vooruitbetaling voor toekomstige diensten",
-      "creditMemoDescription": "Reden voor creditnota"
+      "prepaymentDescription": "Vooruitbetaling voor toekomstige diensten"
     },
     "errors": {
       "allFieldsRequired": "Vul alle velden in",
       "validAmount": "Voer een geldig bedrag in",
-      "creditMemosUnsupported": "Creditnota's worden nog niet ondersteund",
       "generateFailed": "Fout bij genereren factuur"
     },
     "actions": {
       "generating": "Genereren...",
-      "generatePrepayment": "Vooruitbetalingsfactuur genereren",
-      "generateCreditMemo": "Creditnota genereren"
+      "generatePrepayment": "Vooruitbetalingsfactuur genereren"
     }
   },
   "contractItems": {

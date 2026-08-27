@@ -309,6 +309,7 @@ function PoolCard({
     pool.business_hours_schedule_id ?? defaultSchedule?.schedule_id ?? '',
   );
   const [ruleEnabled, setRuleEnabled] = useState(pool.after_hours_multiplier != null);
+  const [ruleError, setRuleError] = useState<string | null>(null);
 
   const effectiveScheduleId = ruleScheduleId || defaultSchedule?.schedule_id || '';
 
@@ -333,7 +334,10 @@ function PoolCard({
     }
     const multiplier = parseFloat(ruleMultiplierInput);
     if (Number.isFinite(multiplier) && multiplier > 0 && effectiveScheduleId) {
+      setRuleError(null);
       onSetRule(multiplier, effectiveScheduleId);
+    } else {
+      setRuleError(t('bucketPools.errors.invalidAfterHoursRule', { defaultValue: 'Enter a multiplier greater than zero and select a business hours schedule.' }));
     }
   };
 
@@ -388,6 +392,7 @@ function PoolCard({
         <SwitchWithLabel
           label={t('bucketPools.labels.afterHours', { defaultValue: 'After-hours burn multiplier' })}
           checked={ruleEnabled}
+          disabled={!defaultSchedule}
           onCheckedChange={(checked) => {
             setRuleEnabled(Boolean(checked));
             if (!checked) {
@@ -395,6 +400,11 @@ function PoolCard({
             }
           }}
         />
+        {!defaultSchedule && (
+          <p className="text-xs text-[rgb(var(--color-text-500))]">
+            {t('bucketPools.errors.scheduleRequired', { defaultValue: 'Create a business hours schedule in Settings before enabling this rule.' })}
+          </p>
+        )}
         {ruleEnabled && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -424,6 +434,7 @@ function PoolCard({
             <Button id="apply-after-hours-rule-button" type="button" variant="outline" size="sm" className="md:col-span-2 justify-self-start" onClick={applyRule}>
               {t('bucketPools.actions.applyRule', { defaultValue: 'Apply after-hours rule' })}
             </Button>
+            {ruleError && <p className="md:col-span-2 text-xs text-[rgb(var(--color-destructive))]">{ruleError}</p>}
           </div>
         )}
       </div>
@@ -666,8 +677,14 @@ function CreatePoolForm({
         <SwitchWithLabel
           label={t('bucketPools.labels.afterHours', { defaultValue: 'After-hours burn multiplier' })}
           checked={afterHoursMultiplier !== ''}
+          disabled={!defaultSchedule}
           onCheckedChange={(checked) => setAfterHoursMultiplier(checked ? (defaultSchedule ? '1.5' : '') : '')}
         />
+        {!defaultSchedule && (
+          <p className="text-xs text-[rgb(var(--color-text-500))]">
+            {t('bucketPools.errors.scheduleRequired', { defaultValue: 'Create a business hours schedule in Settings before enabling this rule.' })}
+          </p>
+        )}
         {afterHoursMultiplier !== '' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">

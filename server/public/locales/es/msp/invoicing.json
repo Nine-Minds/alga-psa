@@ -982,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Generar factura de prepago",
-      "creditMemo": "Generar nota de crédito"
+      "prepayment": "Generar factura de prepago"
     },
     "descriptions": {
-      "prepayment": "Las facturas de pago anticipado crean crédito para el cliente por valor futuro. No crean períodos de servicio recurrentes; las facturas recurrentes posteriores mantienen su propia cobertura del período de servicio.",
-      "creditMemo": "Las notas de crédito ajustan los saldos financieros sin redefinir la cobertura del período de servicio recurrente en la factura original."
+      "prepayment": "Las facturas de pago anticipado crean crédito para el cliente por valor futuro. No crean períodos de servicio recurrentes; las facturas recurrentes posteriores mantienen su propia cobertura del período de servicio."
     },
     "fields": {
-      "type": "Tipo",
       "client": "Cliente",
       "amount": "Importe",
-      "description": "Descripción"
-    },
-    "types": {
-      "prepaymentInvoice": "Factura de prepago",
-      "creditMemo": "Nota de crédito"
+      "descriptionOptional": "Descripción (optional)"
     },
     "placeholders": {
       "amount": "Ingrese la cantidad",
-      "prepaymentDescription": "Pago anticipado de servicios futuros",
-      "creditMemoDescription": "Motivo de la nota de crédito"
+      "prepaymentDescription": "Pago anticipado de servicios futuros"
     },
     "errors": {
       "allFieldsRequired": "Por favor complete todos los campos",
       "validAmount": "Por favor ingrese una cantidad válida",
-      "creditMemosUnsupported": "Las notas de crédito aún no son compatibles",
       "generateFailed": "Error al generar factura"
     },
     "actions": {
       "generating": "Generando...",
-      "generatePrepayment": "Generar factura de prepago",
-      "generateCreditMemo": "Generar nota de crédito"
+      "generatePrepayment": "Generar factura de prepago"
     }
   },
   "contractItems": {

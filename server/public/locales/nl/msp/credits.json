@@ -144,7 +144,9 @@
       "reason": "Waarom wordt dit krediet overgeboekt?"
     },
     "hints": {
-      "amount": "Tot {{amount}} beschikbaar"
+      "amount": "Tot {{amount}} beschikbaar",
+      "currencyMatch": "De geselecteerde klant gebruikt dezelfde valuta.",
+      "currencyMismatch": "De geselecteerde klant gebruikt een andere valuta; er kan een omrekening worden toegepast."
     },
     "impact": {
       "current": "Huidig restant",

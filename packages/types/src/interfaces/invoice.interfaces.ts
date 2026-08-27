@@ -27,6 +27,8 @@ export function getTaxImportState(taxSource?: TaxSource | null): TaxImportState 
 export interface IInvoice extends TenantEntity {
   invoice_id: string;
   client_id: string;
+  /** Optional text shown on the credit issuance created by a prepayment invoice. */
+  prepayment_description?: string | null;
   /** Snapshot of the purchase order number for this invoice (nullable). */
   po_number?: string | null;
   /** Client contract assignment that generated this invoice (nullable). */

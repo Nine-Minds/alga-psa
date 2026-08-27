@@ -146,7 +146,9 @@
       "reason": "Dlaczego ten kredyt jest przenoszony?"
     },
     "hints": {
-      "amount": "Dostępne do {{amount}}"
+      "amount": "Dostępne do {{amount}}",
+      "currencyMatch": "Wybrany klient używa tej samej waluty.",
+      "currencyMismatch": "Wybrany klient używa innej waluty; może zostać zastosowane przeliczenie."
     },
     "impact": {
       "current": "Bieżące saldo",
