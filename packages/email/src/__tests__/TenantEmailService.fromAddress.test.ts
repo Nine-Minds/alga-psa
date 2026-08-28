@@ -164,4 +164,23 @@ describe('TenantEmailService from address resolution', () => {
       fromName: 'Escalations',
     })).toEqual({ email: 'support@acme.com', name: 'Escalations' });
   });
+
+  it('forces the verified system sender and tenant reply address for a system fallback', () => {
+    const settings = buildSettings({
+      defaultFromDomain: 'tenant.example',
+      providerConfigs: [{
+        providerId: 'microsoft-provider',
+        providerType: 'microsoft',
+        isEnabled: true,
+        config: { from: 'service@tenant.example' },
+      }],
+    });
+
+    expect(resolveMessageFrom(settings, {
+      from: { email: 'spoofed@unverified.example', name: 'Spoofed' },
+      fromName: 'Spoofed name',
+      resolvedSystemFallbackFromAddress: { email: 'noreply@algapsa.com', name: 'Tenant Services' },
+      resolvedSystemFallbackReplyTo: { email: 'service@tenant.example', name: 'Tenant Services' },
+    })).toEqual({ email: 'noreply@algapsa.com', name: 'Tenant Services' });
+  });
 });

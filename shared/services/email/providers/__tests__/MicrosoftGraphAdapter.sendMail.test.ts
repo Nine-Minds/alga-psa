@@ -27,7 +27,7 @@ describe('MicrosoftGraphAdapter.sendMail', () => {
     vi.restoreAllMocks();
   });
 
-  it('always sends as the URL-encoded configured mailbox and saves to Sent Items', async () => {
+  it('sends through the URL-encoded configured shared mailbox and saves to Sent Items', async () => {
     const adapter = makeAdapter();
     const post = vi.fn(async () => ({
       headers: { 'request-id': 'request-1', 'client-request-id': 'client-request-1' },
@@ -41,6 +41,20 @@ describe('MicrosoftGraphAdapter.sendMail', () => {
       saveToSentItems: true,
     });
     expect(result).toEqual({ requestId: 'request-1', clientRequestId: 'client-request-1' });
+  });
+
+  it('sends through /me when the configured mailbox matches the authenticated user', async () => {
+    const adapter = makeAdapter();
+    (adapter as any).authenticatedUserEmail = ' SUPPORT+DESK@example.com ';
+    const post = vi.fn(async () => ({ headers: { 'request-id': 'request-me' } }));
+    (adapter as any).httpClient = { post };
+
+    await adapter.sendMail({ kind: 'json', message: { subject: 'Personal mailbox' } });
+
+    expect(post).toHaveBeenCalledWith('/me/sendMail', {
+      message: { subject: 'Personal mailbox' },
+      saveToSentItems: true,
+    });
   });
 
   it('refreshes and retries exactly once after a 401', async () => {

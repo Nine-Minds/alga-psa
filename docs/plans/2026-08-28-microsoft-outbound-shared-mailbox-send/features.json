@@ -3,56 +3,56 @@
     "id": "F001",
     "title": "Request Mail.Send.Shared",
     "description": "Add https://graph.microsoft.com/Mail.Send.Shared to MICROSOFT_EMAIL_OAUTH_SCOPES in shared/services/email/microsoftGraphEndpoints.ts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Scope request"]
   },
   {
     "id": "F002",
     "title": "Scope applies to connect",
     "description": "The initial connect authorization URL carries the new scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Scope request"]
   },
   {
     "id": "F003",
     "title": "Scope applies to reconnect",
     "description": "The reconnect authorization URL carries the new scope so existing providers can upgrade their grant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Scope request"]
   },
   {
     "id": "F004",
     "title": "Send path resolution",
     "description": "MicrosoftGraphAdapter.sendMail resolves its endpoint through the same mailbox-path logic the read path uses instead of hardcoding /users/{mailbox}.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Send path resolution"]
   },
   {
     "id": "F005",
     "title": "Personal mailbox sends via /me",
     "description": "When the configured mailbox equals the authenticated user, sendMail posts to /me/sendMail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Send path resolution"]
   },
   {
     "id": "F006",
     "title": "Shared mailbox sends via /users",
     "description": "When the configured mailbox differs from the authenticated user, sendMail posts to /users/{mailbox}/sendMail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Send path resolution"]
   },
   {
     "id": "F007",
     "title": "Mailbox comparison is case-insensitive",
     "description": "Mailbox-to-authenticated-user matching ignores case and surrounding whitespace, matching the read path's behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Send path resolution"]
   },
   {
     "id": "F008",
     "title": "Unknown authenticated user falls back to /users",
     "description": "When the authenticated user's address has not been resolved, sendMail uses /users/{mailbox} rather than guessing /me.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Send path resolution"]
   },
   {
@@ -94,21 +94,21 @@
     "id": "F014",
     "title": "System fallback uses a verified from-address",
     "description": "When the system provider handles a tenant send, the from-address is a verified system domain rather than the tenant's configured address.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Fallback from-address"]
   },
   {
     "id": "F015",
     "title": "Tenant name survives the fallback",
     "description": "The tenant's display name is preserved as the from-name on a system-provider send.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Fallback from-address"]
   },
   {
     "id": "F016",
     "title": "Tenant address moves to Reply-To",
     "description": "A system-provider send sets Reply-To to the tenant's configured address so replies still reach the service desk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Fallback from-address"]
   },
   {
@@ -150,14 +150,14 @@
     "id": "F023",
     "title": "Manifest declares outbound permissions",
     "description": "createMicrosoftEmailApplicationManifest declares Mail.Send and Mail.Send.Shared, with their delegated permission ids added to MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Provisioned app registration"]
   },
   {
     "id": "F024",
     "title": "Manifest assertion inverted",
     "description": "The microsoftEmailSetup test requires the outbound permissions in the manifest instead of asserting Mail.Send is absent.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Product behavior / Provisioned app registration"]
   },
   {
