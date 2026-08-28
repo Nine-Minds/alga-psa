@@ -29,6 +29,10 @@ scan — rather than from the code — also fails the check.
   names the update command. A neglected pin becomes a red check within a
   bounded window instead of quietly passing forever.
 
+`.github/workflows/microsoft-graph-metadata-refresh.yml` repins weekly and
+opens a bump pull request, which surfaces upstream removals as a failing check
+on a real PR. The age gate is the backstop for that job dying silently.
+
 ## Updating the pin
 
 ```
