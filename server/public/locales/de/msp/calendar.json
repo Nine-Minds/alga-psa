@@ -104,6 +104,9 @@
           "confirmLabel": "Anbieter löschen",
           "cancelLabel": "Anbieter behalten"
         }
+      },
+      "errors": {
+        "notAuthorized": "Dieser Kalenderanbieter hat die OAuth-Autorisierung noch nicht abgeschlossen. Öffnen Sie die Einstellungen, klicken Sie auf „Autorisieren“ und synchronisieren Sie erneut."
       }
     },
     "sync": {
