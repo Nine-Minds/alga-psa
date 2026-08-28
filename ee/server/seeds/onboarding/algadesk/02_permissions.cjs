@@ -1,5 +1,10 @@
-const { reconcileSeedTenants } = require('../../../../../server/migrations/utils/permissionCatalog.cjs');
+const { reconcileAllTenants } = require('../lib/permissionCatalog.cjs');
 
-exports.seed = async function seed(knex, tenantId) {
-  await reconcileSeedTenants(knex, { tenantId, productCode: 'algadesk' });
-};
+// Thin adapter over the unified permission catalog
+// (server/migrations/utils/permissions). See the PSA sibling seed.
+exports.seed = (knex, tenantId) => reconcileAllTenants(knex, {
+    label: 'algadesk onboarding permissions',
+    product: 'algadesk',
+    tenantId,
+    onDrift: 'throw',
+});

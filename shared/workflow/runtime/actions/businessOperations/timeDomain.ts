@@ -339,7 +339,7 @@ async function assertCanActOnBehalfForWorkflowTime(
     return;
   }
 
-  const canApprove = await hasPermissionByUserId(trx, tenantId, actorUserId, 'timesheet', 'approve');
+  const canApprove = await hasPermissionByUserId(trx, tenantId, actorUserId, 'time_sheet', 'approve');
   if (!canApprove) {
     throw new WorkflowTimeDomainError({
       category: 'ActionError',
@@ -349,7 +349,7 @@ async function assertCanActOnBehalfForWorkflowTime(
     });
   }
 
-  const canReadAll = await hasPermissionByUserId(trx, tenantId, actorUserId, 'timesheet', 'read_all');
+  const canReadAll = await hasPermissionByUserId(trx, tenantId, actorUserId, 'time_sheet', 'read_all');
   if (canReadAll) {
     return;
   }
@@ -393,7 +393,7 @@ async function scopeFindEntriesInputForActor<T extends WorkflowTimeFindEntriesIn
   actorUserId: string,
   input: T
 ): Promise<T> {
-  const canReadAll = await hasPermissionByUserId(trx, tenantId, actorUserId, 'timesheet', 'read_all');
+  const canReadAll = await hasPermissionByUserId(trx, tenantId, actorUserId, 'time_sheet', 'read_all');
   if (canReadAll) {
     return input;
   }
@@ -433,7 +433,7 @@ async function scopeFindTimeSheetsInputForActor<T extends { user_ids?: string[] 
   actorUserId: string,
   input: T
 ): Promise<T> {
-  const canReadAll = await hasPermissionByUserId(trx, tenantId, actorUserId, 'timesheet', 'read_all');
+  const canReadAll = await hasPermissionByUserId(trx, tenantId, actorUserId, 'time_sheet', 'read_all');
   if (canReadAll) {
     return input;
   }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 
 import {
   navigationSections,
@@ -93,14 +94,16 @@ function settingsTabOf(href: string): string | null {
   return new URLSearchParams(query).get('tab');
 }
 
-const { PERMISSIONS } = require(
-  path.resolve(process.cwd(), '../server/migrations/utils/permissionCatalog.cjs'),
+// Both products provision from the unified permission catalog.
+const permissionCatalog = createRequire(import.meta.url)(
+  path.resolve(process.cwd(), '../server/migrations/utils/permissions/catalog.cjs'),
 );
 
-function catalogDefinesPermission(resource: string, action: string): boolean {
-  return PERMISSIONS.some((permission: { resource: string; action: string }) =>
-    permission.resource === resource && permission.action === action,
-  );
+function seedGrantsPermission(product: ProductCode, resource: string, action: string): boolean {
+  return permissionCatalog
+    .getProductPermissions(product)
+    .some((entry: { resource: string; action: string }) =>
+      entry.resource === resource && entry.action === action);
 }
 
 describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
@@ -167,10 +170,12 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
         `expected ${pin.wiringFile} to gate the entry via ${pin.wiringMarker} (${pin.reachedVia}) — if the gate moved, update this pin`,
       ).toContain(pin.wiringMarker);
 
-      const missing = catalogDefinesPermission(pin.permission, pin.action) ? [] : PRODUCTS;
+      const missing = PRODUCTS.filter(
+        (product) => !seedGrantsPermission(product, pin.permission, pin.action),
+      );
       expect(
         missing,
-        `seed vocabularies missing ${pin.permission}:${pin.action} — "${pin.reachedVia}" is silently unreachable for every tenant of: ${missing.join(', ')}`,
+        `permission catalog missing ${pin.permission}:${pin.action} — "${pin.reachedVia}" is silently unreachable for every tenant of: ${missing.join(', ')}`,
       ).toEqual([]);
 
       // The entry renders whenever the permission is seeded, so the
@@ -183,12 +188,13 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
       ).toBe(true);
 
       const unreachable = PRODUCTS.filter(
-        (product) => catalogDefinesPermission(pin.permission, pin.action) &&
+        (product) =>
+          seedGrantsPermission(product, pin.permission, pin.action) &&
           resolveProductRouteBehavior(product, pin.destination) !== 'allowed',
       );
       expect(
         unreachable,
-        `products whose seeds render "${pin.reachedVia}" but whose route registry blocks ${pin.destination}: ${unreachable.join(', ')}`,
+        `products whose catalog renders "${pin.reachedVia}" but whose route registry blocks ${pin.destination}: ${unreachable.join(', ')}`,
       ).toEqual([]);
     }
   });

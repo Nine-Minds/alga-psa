@@ -1,8 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
+const require = createRequire(import.meta.url);
+const catalog = require(path.join(repoRoot, 'server/migrations/utils/permissions/catalog.cjs'));
 
 function readRepoFile(...segments: string[]): string {
   return fs.readFileSync(path.join(repoRoot, ...segments), 'utf8');
@@ -15,7 +18,6 @@ describe('inbound webhook permissions migration and seed', () => {
     '20260511102000_add_inbound_webhook_permissions.cjs',
   );
   const devPermissionSeed = readRepoFile('server', 'seeds', 'dev', '47_permissions.cjs');
-  const { PERMISSIONS } = require(path.join(repoRoot, 'server', 'migrations', 'utils', 'permissionCatalog.cjs'));
 
   it('T006: seeds inbound_webhook permissions for the MSP Admin role', () => {
     const expectedActions = ['create', 'read', 'update', 'delete', 'replay'];
@@ -23,9 +25,16 @@ describe('inbound webhook permissions migration and seed', () => {
     expect(permissionMigration).toContain("const RESOURCE = 'inbound_webhook'");
     for (const action of expectedActions) {
       expect(permissionMigration).toContain(`{ action: '${action}'`);
-      expect(PERMISSIONS).toContainEqual(expect.objectContaining({ resource: 'inbound_webhook', action, msp: true, client: false }));
+      expect(
+        catalog.getProductPermissions('psa').some((entry: any) =>
+          entry.resource === 'inbound_webhook'
+          && entry.action === action
+          && entry.msp === true
+          && entry.client === false),
+        `inbound_webhook:${action}`,
+      ).toBe(true);
     }
-    expect(devPermissionSeed).toContain('reconcileSeedTenants');
+    expect(devPermissionSeed).toContain('reconcileAllTenants');
 
     expect(permissionMigration).toContain(".where({ tenant, role_name: 'Admin', msp: true })");
     // per-tenant writes flow through the migration tenantDb facade

@@ -1,8 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
+const require = createRequire(import.meta.url);
+const catalog = require(path.join(repoRoot, 'server/migrations/utils/permissions/catalog.cjs'));
+const catalogRoleGrants = require(path.join(repoRoot, 'server/migrations/utils/permissions/roleGrants.cjs'));
 
 function readRepoFile(...segments: string[]): string {
   return fs.readFileSync(path.join(repoRoot, ...segments), 'utf8');
@@ -12,7 +16,7 @@ function readRepoFile(...segments: string[]): string {
 // (ApiInvoiceController.applyCredit) gates on resource 'invoice' action 'credit', a
 // permission no tenant ever had — so the documented manual-credit REST endpoint returned
 // 403 for everyone with nothing to grant through the UI. The fix seeds the permission in
-// both the dev and onboarding seeds (fresh-install path, where the migration backfill is a
+// the unified permission catalog (fresh-install path, where the migration backfill is a
 // no-op because the tenant is created from seeds after migrations run) and backfills
 // existing tenants via a migration.
 describe('invoice:credit permission seed', () => {
@@ -31,26 +35,20 @@ describe('invoice:credit permission seed', () => {
     'psa',
     '02_permissions.cjs',
   );
-  const onboardingRoleGrants = readRepoFile(
-    'ee',
-    'server',
-    'seeds',
-    'onboarding',
-    'lib',
-    'roleGrants.cjs',
-  );
-  const { PERMISSIONS, ROLE_GRANTS } = require(path.join(repoRoot, 'server', 'migrations', 'utils', 'permissionCatalog.cjs'));
 
   it('defines invoice:credit in the catalog used by dev and onboarding permission seeds', () => {
-    expect(PERMISSIONS).toContainEqual(expect.objectContaining({ resource: 'invoice', action: 'credit', msp: true, client: false }));
-    expect(devPermissionSeed).toContain('reconcileSeedTenants');
-    expect(onboardingPermissionSeed).toContain('reconcileSeedTenants');
+    expect(catalog.getProductPermissions('psa').some((entry: any) =>
+      entry.resource === 'invoice'
+      && entry.action === 'credit'
+      && entry.msp === true
+      && entry.client === false)).toBe(true);
+    expect(devPermissionSeed).toContain('reconcileAllTenants');
+    expect(onboardingPermissionSeed).toContain('reconcileAllTenants');
   });
 
   it('grants invoice:credit to the MSP Finance role through the catalog', () => {
-    expect(ROLE_GRANTS.psa.msp.Finance).toContain('invoice:credit:msp');
-    expect(devRolePermissionSeed).toContain('reconcileSeedTenants');
-    expect(onboardingRoleGrants).toContain('invoice:credit:msp');
+    expect(catalogRoleGrants.compileLegacyRoleGrants('psa').msp.Finance).toContain('invoice:credit:msp');
+    expect(devRolePermissionSeed).toContain("apply: 'grants'");
   });
 
   it('backfill migration seeds the permission and grants it to Admin and Finance only', () => {
