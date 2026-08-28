@@ -575,7 +575,11 @@
     "expand": "Rozwiń",
     "showInDrawer": "Pokaż w panelu",
     "replies_few": "{{count}} odpowiedzi",
-    "replies_many": "{{count}} odpowiedzi"
+    "replies_many": "{{count}} odpowiedzi",
+    "showEarlierReplies_one": "Pokaż {{count}} wcześniejszą odpowiedź",
+    "showEarlierReplies_other": "Pokaż {{count}} wcześniejszych odpowiedzi",
+    "showEarlierReplies_few": "Pokaż {{count}} wcześniejsze odpowiedzi",
+    "showEarlierReplies_many": "Pokaż {{count}} wcześniejszych odpowiedzi"
   },
   "pagination": {
     "previous": "Poprzednia",

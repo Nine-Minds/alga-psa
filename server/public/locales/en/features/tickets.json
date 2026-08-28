@@ -372,7 +372,9 @@
     "rescheduleComment": "Reschedule comment",
     "resolvedPublishInstant": "Resolved instant",
     "schedule": "Schedule",
-    "scheduled": "Scheduled"
+    "scheduled": "Scheduled",
+    "showMore": "Show more",
+    "showLess": "Show less"
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -1795,7 +1797,10 @@
       "occurrence": "(occurrence {{count}})",
       "loadError": "Could not load the timeline",
       "closeStatus": "Close status",
-      "noStatusChange": "Do not change status"
+      "noStatusChange": "Do not change status",
+      "showAllActivity": "Show all activity",
+      "collapseActivity": "Collapse older activity",
+      "replyingToComment": "Replying to {{name}}"
     }
   }
 }

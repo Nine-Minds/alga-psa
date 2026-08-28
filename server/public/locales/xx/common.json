@@ -601,7 +601,9 @@
     "replies_other": "⟦{{count}} řḗƥŀīḗş⟧",
     "collapse": "⟦Ƈȯŀŀȧƥşḗ⟧",
     "expand": "⟦Ḗẋƥȧƞḓ⟧",
-    "showInDrawer": "⟦Şħȯẇ īƞ ḓřȧẇḗř⟧"
+    "showInDrawer": "⟦Şħȯẇ īƞ ḓřȧẇḗř⟧",
+    "showEarlierReplies_one": "⟦Şħȯẇ {{count}} ḗȧřŀīḗř řḗƥŀẏ⟧",
+    "showEarlierReplies_other": "⟦Şħȯẇ {{count}} ḗȧřŀīḗř řḗƥŀīḗş⟧"
   },
   "pagination": {
     "previous": "⟦Ƥřḗṽīȯŭş⟧",

@@ -470,7 +470,9 @@
     "replies_other": "{{count}} réponses",
     "collapse": "Réduire",
     "expand": "Développer",
-    "showInDrawer": "Afficher dans le panneau"
+    "showInDrawer": "Afficher dans le panneau",
+    "showEarlierReplies_one": "Afficher {{count}} réponse précédente",
+    "showEarlierReplies_other": "Afficher {{count}} réponses précédentes"
   },
   "pagination": {
     "previous": "Précédent",

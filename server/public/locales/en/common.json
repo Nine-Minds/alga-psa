@@ -601,7 +601,9 @@
     "replies_other": "{{count}} replies",
     "collapse": "Collapse",
     "expand": "Expand",
-    "showInDrawer": "Show in drawer"
+    "showInDrawer": "Show in drawer",
+    "showEarlierReplies_one": "Show {{count}} earlier reply",
+    "showEarlierReplies_other": "Show {{count}} earlier replies"
   },
   "pagination": {
     "previous": "Previous",

@@ -364,7 +364,9 @@
     "rescheduleComment": "Riprogramma commento",
     "resolvedPublishInstant": "Istante risolto",
     "schedule": "Pianifica",
-    "scheduled": "Pianificato"
+    "scheduled": "Pianificato",
+    "showMore": "Mostra di più",
+    "showLess": "Mostra meno"
   },
   "responseState": {
     "awaitingYourResponse": "In attesa della tua risposta",
@@ -1787,7 +1789,10 @@
         "auto_close_warning_sent": "avviso di chiusura automatica inviato"
       },
       "closeStatus": "Stato di chiusura",
-      "noStatusChange": "Non modificare lo stato"
+      "noStatusChange": "Non modificare lo stato",
+      "showAllActivity": "Mostra tutta l'attività",
+      "collapseActivity": "Comprimi attività precedente",
+      "replyingToComment": "Rispondendo a {{name}}"
     }
   },
   "notifications": {
