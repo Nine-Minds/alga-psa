@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 
 const toolDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(toolDir, '../..');
-const registry = JSON.parse(readFileSync(join(toolDir, 'endpoints.json'), 'utf8'));
+const config = JSON.parse(readFileSync(join(toolDir, 'endpoints.json'), 'utf8'));
+const MS_PER_DAY = 86_400_000;
+const VERSIONS = ['v1.0', 'beta'];
 
 function attrs(tag) {
   return Object.fromEntries([...tag.matchAll(/([\w:.-]+)="([^"]*)"/g)].map((match) => [match[1], match[2]]));
@@ -332,48 +334,110 @@ export function discoverLegacyEmulatorRoutes() {
   return routes;
 }
 
-export function runValidation() {
-  const errors = [];
-  const registered = new Set();
-  for (const endpoint of registry.endpoints) {
-    const endpointKey = key(endpoint.version, endpoint.method, endpoint.pathTemplate);
-    if (registered.has(endpointKey)) errors.push(`duplicate registry entry: ${endpointKey}`);
-    registered.add(endpointKey);
-  }
+export function metadataAgeDays(metadata, now = Date.now()) {
+  const pinnedAt = Date.parse(metadata?.pinnedAt ?? '');
+  return Number.isNaN(pinnedAt) ? null : (now - pinnedAt) / MS_PER_DAY;
+}
 
-  for (const version of ['v1.0', 'beta']) {
-    const metadataPath = join(toolDir, registry.metadata[version]);
-    const compressedMetadata = readFileSync(metadataPath);
+export function checkFreshness(metadata, now = Date.now()) {
+  const ageDays = metadataAgeDays(metadata, now);
+  if (ageDays === null) return "metadata.pinnedAt is missing or is not an ISO-8601 date; run 'npm run guard:microsoft-graph-endpoints:update'";
+  if (!(metadata.maxAgeDays > 0)) return 'metadata.maxAgeDays must be a positive number of days';
+  if (ageDays > metadata.maxAgeDays) {
+    return `pinned Graph metadata is ${Math.floor(ageDays)} days old (limit ${metadata.maxAgeDays}); `
+      + "run 'npm run guard:microsoft-graph-endpoints:update' to repin against current Microsoft metadata";
+  }
+  return null;
+}
+
+export function loadModels(metadata, dir = toolDir) {
+  const models = {};
+  const errors = [];
+  for (const version of VERSIONS) {
+    const compressedMetadata = readFileSync(join(dir, metadata[version]));
     const actualHash = createHash('sha256').update(compressedMetadata).digest('hex');
-    if (actualHash !== registry.metadata.sha256[version]) {
-      errors.push(`${version} metadata checksum mismatch: expected ${registry.metadata.sha256[version]}, got ${actualHash}`);
+    if (actualHash !== metadata.sha256[version]) {
+      errors.push(`${version} metadata checksum mismatch: expected ${metadata.sha256[version]}, got ${actualHash}`);
       continue;
     }
-    const model = parseCsdl(gunzipSync(compressedMetadata).toString('utf8'));
-    for (const endpoint of registry.endpoints.filter((entry) => entry.version === version)) {
-      const failure = validatePath(model, endpoint.pathTemplate, endpoint.method);
-      if (failure) errors.push(`${key(version, endpoint.method, endpoint.pathTemplate)}: ${failure}`);
+    models[version] = parseCsdl(gunzipSync(compressedMetadata).toString('utf8'));
+  }
+  return { models, errors };
+}
+
+export function auditCalls(models, calls, suppressions = []) {
+  const errors = [];
+  const suppressed = new Map();
+  for (const suppression of suppressions) {
+    const suppressionKey = key(suppression.version, suppression.method, suppression.pathTemplate);
+    if (suppressed.has(suppressionKey)) errors.push(`duplicate suppression: ${suppressionKey}`);
+    if (!suppression.reason) errors.push(`suppression without a reason: ${suppressionKey}`);
+    suppressed.set(suppressionKey, false);
+  }
+
+  const checked = new Set();
+  for (const call of calls) {
+    const path = canonicalPath(call.path);
+    const method = call.method.toUpperCase();
+    const callKey = key(call.version, method, path);
+    if (suppressed.has(callKey)) {
+      suppressed.set(callKey, true);
+      continue;
+    }
+    if (checked.has(callKey)) continue;
+    checked.add(callKey);
+    const model = models[call.version];
+    if (!model) {
+      errors.push(`${call.origin ?? 'call'}: ${callKey}: unknown Graph version '${call.version}'`);
+      continue;
+    }
+    const failure = validatePath(model, path, method);
+    if (failure) {
+      errors.push(`${call.origin ?? 'call'}: ${callKey}: ${failure}`
+        + ' — fix the call or add a justified suppression to tools/microsoft-graph/endpoints.json');
     }
   }
 
-  for (const call of discoverSourceCalls()) {
-    const callKey = key(call.version, call.method, call.path);
-    if (!registered.has(callKey)) errors.push(`unregistered source call in ${call.file}: ${callKey}`);
+  for (const [suppressionKey, used] of suppressed) {
+    if (!used) errors.push(`stale suppression matches no discovered call: ${suppressionKey} — delete it from tools/microsoft-graph/endpoints.json`);
   }
+  return { errors, checked: checked.size };
+}
+
+export function runValidation({ config: overrides = config, now = Date.now() } = {}) {
+  const errors = [];
+  const freshness = checkFreshness(overrides.metadata, now);
+  if (freshness) errors.push(freshness);
+
+  const { models, errors: metadataErrors } = loadModels(overrides.metadata);
+  errors.push(...metadataErrors);
+
+  const sourceCalls = discoverSourceCalls();
   const emulatorRoutes = [...discoverPackagedEmulatorRoutes(), ...discoverLegacyEmulatorRoutes()];
-  for (const route of emulatorRoutes) {
-    const routeKey = key(route.version, route.method, route.path);
-    if (!registered.has(routeKey)) errors.push(`unregistered emulator route: ${routeKey}`);
-  }
+  const suppressions = overrides.suppressions ?? [];
+  const audit = metadataErrors.length
+    ? { errors: [], checked: 0 }
+    : auditCalls(models, [
+      ...sourceCalls.map((call) => ({ ...call, origin: `source call in ${call.file}` })),
+      ...emulatorRoutes.map((route) => ({ ...route, origin: 'emulator route' })),
+    ], suppressions);
+  errors.push(...audit.errors);
 
   if (errors.length) throw new Error(`Microsoft Graph endpoint guard failed:\n- ${errors.join('\n- ')}`);
-  return { endpoints: registry.endpoints.length, sourceCalls: discoverSourceCalls().length, emulatorRoutes: emulatorRoutes.length };
+  return {
+    sourceCalls: sourceCalls.length,
+    emulatorRoutes: emulatorRoutes.length,
+    validatedPaths: audit.checked,
+    suppressions: suppressions.length,
+    metadataAgeDays: Math.floor(metadataAgeDays(overrides.metadata, now)),
+  };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const result = runValidation();
-    console.log(`Microsoft Graph endpoint guard passed (${result.endpoints} registry entries, ${result.sourceCalls} source call sites, ${result.emulatorRoutes} emulator routes).`);
+    console.log(`Microsoft Graph endpoint guard passed (${result.sourceCalls} source call sites, ${result.emulatorRoutes} emulator routes, `
+      + `${result.validatedPaths} distinct paths validated against a ${result.metadataAgeDays}-day-old CSDL pin, ${result.suppressions} suppressions).`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

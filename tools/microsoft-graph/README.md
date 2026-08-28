@@ -1,20 +1,52 @@
 # Microsoft Graph endpoint reality guard
 
-`endpoints.json` is the source of truth for Microsoft Graph calls made by Alga
-and routes served by its Graph emulators. `validate-endpoints.mjs` checks that:
+Microsoft's published CSDL is the only source of truth here. There is no
+hand-maintained endpoint list to keep in sync: `validate-endpoints.mjs`
+discovers the Graph calls Alga actually makes, then resolves each one against
+the pinned `v1.0` or `beta` model in `metadata/`.
 
-1. each registered path resolves against Microsoft's pinned v1.0 or beta CSDL;
-2. statically discoverable Graph calls in production source are registered; and
-3. every Graph route in the packaged and legacy test-harness emulators is registered.
+What it checks:
 
-Run `npm run guard:microsoft-graph-endpoints`. The check is offline and has no
-package dependencies. Metadata is pinned to the commit recorded in
-`endpoints.json`; update both gzip files and the commit together when bumping it.
+1. every statically discoverable Graph call in `shared`, `packages`, `server`,
+   `ee`, and `scripts` resolves against the CSDL for the version it targets;
+2. every route served by the packaged and legacy test-harness Graph emulators
+   resolves the same way, so the emulators cannot drift into fiction; and
+3. the pinned metadata is younger than `metadata.maxAgeDays` in
+   `endpoints.json`.
 
-Current compressed-file SHA-256 checksums:
+Run `npm run guard:microsoft-graph-endpoints`. It is offline, deterministic,
+and has no package dependencies. `validate-endpoints.test.mjs` runs first and
+asserts floors on how much discovery finds, so call sites disappearing from the
+scan — rather than from the code — also fails the check.
 
-- `v1.0.xml.gz`: `6fb2e1b8f2f1669eada0265833af30d22510e3c4ca482cad98b0ee46e3c71e22`
-- `beta.xml.gz`: `1e1705bc8bbf4a6074ea35bf8b214a4836e0b816070b4f4de112dcba1a713252`
+## Staleness runs in two directions
+
+- **Our code drifts.** A renamed, invented, or wrong-version path fails on the
+  pull request that introduces it, because discovery feeds the CSDL directly.
+- **Microsoft's surface drifts.** An endpoint we call being removed or moved is
+  only visible after repinning the metadata. So the pin has an expiry: once it
+  is older than `maxAgeDays` (90) the guard fails — it does not warn — and
+  names the update command. A neglected pin becomes a red check within a
+  bounded window instead of quietly passing forever.
+
+## Updating the pin
+
+```
+npm run guard:microsoft-graph-endpoints:update   # add --ref=<sha> to pin a specific commit
+```
+
+It resolves `master` in `microsoftgraph/msgraph-metadata`, downloads both clean
+metadata documents at that commit, rewrites the gzips, checksums, commit, and
+`pinnedAt` in `endpoints.json`, then re-runs the full validation so a
+Microsoft-side removal of an endpoint we use fails at bump time.
+
+## Suppressions
+
+`endpoints.json` carries a `suppressions` list, not a registry. Add an entry
+only for a path static discovery cannot resolve, or a known CSDL-versus-routing
+divergence, and always with a `reason`. A suppression that stops matching any
+discovered call is reported as stale and must be deleted, so the list cannot
+quietly outlive its purpose.
 
 The validator deliberately checks API existence and version placement, not
 permissions, filterability, throttling, or runtime response behavior.
