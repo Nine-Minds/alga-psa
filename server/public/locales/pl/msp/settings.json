@@ -79,6 +79,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "Nie masz uprawnień do wyświetlania sekretów.",
       "success": {
         "tenantNameUpdated": "Nazwa organizacji została zaktualizowana pomyślnie",
         "timezoneUpdated": "Domyślna strefa czasowa została zaktualizowana pomyślnie",
@@ -1908,7 +1909,8 @@
         "valueRequired": "Wartość sekretu jest wymagana",
         "noChanges": "Brak zmian do zapisania",
         "fixValidation": "Proszę poprawić błędy walidacji"
-      }
+      },
+      "permissionDenied": "Nie masz uprawnień do wyświetlania sekretów."
     }
   },
   "importExport": {
@@ -3200,6 +3202,7 @@
       "notFound": "Nie znaleziono sekretu. Mógł już zostać usunięty. Odśwież stronę i spróbuj ponownie.",
       "invalidName": "Nieprawidłowa nazwa organizacji lub sekretu.",
       "readOnly": "Magazyn sekretów jest w tym środowisku tylko do odczytu.",
+      "noDurablePath": "Magazyn sekretów nie jest skonfigurowany do trwałego zapisu w tym środowisku.",
       "recordInvalid": "Jeden z wybranych rekordów sekretów jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
       "referenceMissing": "Jeden z wybranych rekordów sekretów już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "Sekret o tej nazwie już istnieje.",

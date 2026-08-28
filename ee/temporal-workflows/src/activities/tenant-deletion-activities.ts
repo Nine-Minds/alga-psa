@@ -483,6 +483,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Permissions and roles (must be deleted before users)
   'permissions', 'roles', 'teams',
 
+  // Tenant secrets metadata references the creating and updating users. Audit
+  // history deliberately has no FK to the secret so delete it explicitly too.
+  'tenant_secrets_audit_log', 'tenant_secrets',
+
   // The correct order to avoid constraint violations:
   // 0. Delete contact child rows first (phones/emails reference contacts)
   // 1. Delete portal_invitations before contacts (portal_invitations.contact_id → contacts NO ACTION)

@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "You do not have permission to view secrets.",
       "success": {
         "tenantNameUpdated": "Tenant name updated successfully",
         "timezoneUpdated": "Default timezone updated successfully",
@@ -1902,7 +1903,8 @@
         "valueRequired": "Secret value is required",
         "noChanges": "No changes to save",
         "fixValidation": "Please fix the validation errors"
-      }
+      },
+      "permissionDenied": "You do not have permission to view secrets."
     }
   },
   "importExport": {
@@ -3162,6 +3164,7 @@
       "notFound": "Secret not found. It may have already been deleted. Please refresh and try again.",
       "invalidName": "Invalid tenant or secret name.",
       "readOnly": "Secret storage is read-only in this environment.",
+      "noDurablePath": "Secret storage is not configured for durable writes in this environment.",
       "recordInvalid": "One of the selected secret records is invalid. Please refresh and try again.",
       "referenceMissing": "One of the selected secret records no longer exists. Please refresh and try again.",
       "duplicate": "A secret with this name already exists.",

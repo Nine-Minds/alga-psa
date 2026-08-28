@@ -93,23 +93,14 @@ function settingsTabOf(href: string): string | null {
   return new URLSearchParams(query).get('tab');
 }
 
-function readSeedSource(product: ProductCode): string {
-  return fs.readFileSync(
-    path.resolve(process.cwd(), `../ee/server/seeds/onboarding/${product}/02_permissions.cjs`),
-    'utf8',
-  );
-}
+const { PERMISSIONS } = require(
+  path.resolve(process.cwd(), '../server/migrations/utils/permissionCatalog.cjs'),
+);
 
-// Both seed dialects: psa uses `{ resource: 'x', action: 'y' }` rows,
-// algadesk uses `['x', ['y', ...], 'description']` tuples.
-function seedGrantsPermission(seedSource: string, resource: string, action: string): boolean {
-  const objectRow = new RegExp(
-    `resource:\\s*'${resource}'[^}]*action:\\s*'${action}'`,
+function catalogDefinesPermission(resource: string, action: string): boolean {
+  return PERMISSIONS.some((permission: { resource: string; action: string }) =>
+    permission.resource === resource && permission.action === action,
   );
-  const tupleRow = new RegExp(
-    `\\['${resource}',\\s*\\[[^\\]]*'${action}'`,
-  );
-  return objectRow.test(seedSource) || tupleRow.test(seedSource);
 }
 
 describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
@@ -176,9 +167,7 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
         `expected ${pin.wiringFile} to gate the entry via ${pin.wiringMarker} (${pin.reachedVia}) — if the gate moved, update this pin`,
       ).toContain(pin.wiringMarker);
 
-      const missing = PRODUCTS.filter(
-        (product) => !seedGrantsPermission(readSeedSource(product), pin.permission, pin.action),
-      );
+      const missing = catalogDefinesPermission(pin.permission, pin.action) ? [] : PRODUCTS;
       expect(
         missing,
         `seed vocabularies missing ${pin.permission}:${pin.action} — "${pin.reachedVia}" is silently unreachable for every tenant of: ${missing.join(', ')}`,
@@ -194,8 +183,7 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
       ).toBe(true);
 
       const unreachable = PRODUCTS.filter(
-        (product) =>
-          seedGrantsPermission(readSeedSource(product), pin.permission, pin.action) &&
+        (product) => catalogDefinesPermission(pin.permission, pin.action) &&
           resolveProductRouteBehavior(product, pin.destination) !== 'allowed',
       );
       expect(
@@ -220,6 +208,7 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
     notifications: 'PSA notification settings',
     opportunities: 'PSA sales opportunities configuration',
     projects: 'PSA project management settings',
+    secrets: 'PSA tenant secrets management requires durable secret storage',
     sla: 'PSA SLA configuration',
     'time-entry': 'PSA time tracking settings',
   };

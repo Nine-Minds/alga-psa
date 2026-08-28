@@ -39,16 +39,18 @@ describe('invoice:credit permission seed', () => {
     'lib',
     'roleGrants.cjs',
   );
+  const { PERMISSIONS, ROLE_GRANTS } = require(path.join(repoRoot, 'server', 'migrations', 'utils', 'permissionCatalog.cjs'));
 
-  it('defines invoice:credit in the dev and onboarding permission seeds', () => {
-    const def = `{ resource: 'invoice', action: 'credit', msp: true, client: false`;
-    expect(devPermissionSeed).toContain(def);
-    expect(onboardingPermissionSeed).toContain(def);
+  it('defines invoice:credit in the catalog used by dev and onboarding permission seeds', () => {
+    expect(PERMISSIONS).toContainEqual(expect.objectContaining({ resource: 'invoice', action: 'credit', msp: true, client: false }));
+    expect(devPermissionSeed).toContain('reconcileSeedTenants');
+    expect(onboardingPermissionSeed).toContain('reconcileSeedTenants');
   });
 
-  it('grants invoice:credit to the MSP Finance role in the dev and onboarding seeds', () => {
-    expect(devRolePermissionSeed).toContain("'invoice:credit:msp'");
-    expect(onboardingRoleGrants).toContain("'invoice:credit:msp'");
+  it('grants invoice:credit to the MSP Finance role through the catalog', () => {
+    expect(ROLE_GRANTS.psa.msp.Finance).toContain('invoice:credit:msp');
+    expect(devRolePermissionSeed).toContain('reconcileSeedTenants');
+    expect(onboardingRoleGrants).toContain('invoice:credit:msp');
   });
 
   it('backfill migration seeds the permission and grants it to Admin and Finance only', () => {
