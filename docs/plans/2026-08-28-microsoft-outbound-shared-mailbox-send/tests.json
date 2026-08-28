@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "The authorization URL for both connect and reconnect contains Mail.Send.Shared alongside the existing scopes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F002", "F003"]
   },
   {

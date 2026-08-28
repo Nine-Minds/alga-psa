@@ -57,6 +57,14 @@ describe('MicrosoftGraphAdapter.sendMail', () => {
     });
   });
 
+  it('rejects a send when no configured mailbox is available', async () => {
+    const adapter = makeAdapter();
+    (adapter as any).config.mailbox = '   ';
+
+    await expect(adapter.sendMail({ kind: 'json', message: { subject: 'Missing mailbox' } }))
+      .rejects.toThrow('Microsoft sending mailbox is not configured');
+  });
+
   it('refreshes and retries exactly once after a 401', async () => {
     const adapter = makeAdapter();
     const unauthorized = Object.assign(new Error('Unauthorized'), { response: { status: 401 } });

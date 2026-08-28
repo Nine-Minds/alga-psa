@@ -60,6 +60,10 @@ interface TenantProviderSnapshot {
   systemFallbackFromAddress?: EmailAddress;
 }
 
+function isValidEmailAddress(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export class TenantEmailService extends BaseEmailService {
   private static instances: Map<string, TenantEmailService> = new Map();
   private tenantId: string;
@@ -687,8 +691,8 @@ export class TenantEmailService extends BaseEmailService {
 
   private buildSystemFallbackFromAddress(tenantCompanyName?: string | null): EmailAddress {
     const systemAddress = parseEmailAddress(process.env.EMAIL_FROM || process.env.SMTP_FROM);
-    if (!systemAddress?.email) {
-      throw new Error('System fallback sender is not configured; set EMAIL_FROM to a verified system-domain address');
+    if (!systemAddress?.email || !isValidEmailAddress(systemAddress.email)) {
+      throw new Error('System fallback sender is missing or malformed; set EMAIL_FROM to a valid, verified system-domain address');
     }
 
     return {
