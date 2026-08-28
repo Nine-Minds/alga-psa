@@ -358,7 +358,10 @@
           "available": "Disponible",
           "startTime": "Hora de inicio",
           "endTime": "Hora de finalización"
-        }
+        },
+        "availableFor": "{{day}} disponible",
+        "startTimeFor": "Hora de inicio del {{day}}",
+        "endTimeFor": "Hora de finalización del {{day}}"
       },
       "configuredUsers": {
         "title": "Usuarios configurados",
@@ -370,6 +373,10 @@
         },
         "status": {
           "configured": "Configurado"
+        },
+        "actions": {
+          "edit": "Editar las horas de reserva de {{name}}",
+          "delete": "Eliminar las horas de reserva de {{name}}"
         }
       },
       "actions": {

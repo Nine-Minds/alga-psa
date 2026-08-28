@@ -358,7 +358,10 @@
           "available": "Available",
           "startTime": "Start Time",
           "endTime": "End Time"
-        }
+        },
+        "availableFor": "{{day}} available",
+        "startTimeFor": "{{day}} start time",
+        "endTimeFor": "{{day}} end time"
       },
       "configuredUsers": {
         "title": "Configured Users",
@@ -370,6 +373,10 @@
         },
         "status": {
           "configured": "Configured"
+        },
+        "actions": {
+          "edit": "Edit booking hours for {{name}}",
+          "delete": "Delete booking hours for {{name}}"
         }
       },
       "actions": {

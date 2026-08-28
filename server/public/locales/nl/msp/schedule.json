@@ -358,7 +358,10 @@
           "available": "Beschikbaar",
           "startTime": "Begintijd",
           "endTime": "Eindtijd"
-        }
+        },
+        "availableFor": "{{day}} beschikbaar",
+        "startTimeFor": "Begintijd op {{day}}",
+        "endTimeFor": "Eindtijd op {{day}}"
       },
       "configuredUsers": {
         "title": "Geconfigureerde gebruikers",
@@ -370,6 +373,10 @@
         },
         "status": {
           "configured": "Geconfigureerd"
+        },
+        "actions": {
+          "edit": "Boekingsuren van {{name}} bewerken",
+          "delete": "Boekingsuren van {{name}} verwijderen"
         }
       },
       "actions": {

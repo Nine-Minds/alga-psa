@@ -358,7 +358,10 @@
           "available": "Verfügbar",
           "startTime": "Startzeit",
           "endTime": "Endzeit"
-        }
+        },
+        "availableFor": "{{day}} verfügbar",
+        "startTimeFor": "Startzeit am {{day}}",
+        "endTimeFor": "Endzeit am {{day}}"
       },
       "configuredUsers": {
         "title": "Konfigurierte Benutzer",
@@ -370,6 +373,10 @@
         },
         "status": {
           "configured": "Konfiguriert"
+        },
+        "actions": {
+          "edit": "Buchungszeiten von {{name}} bearbeiten",
+          "delete": "Buchungszeiten von {{name}} löschen"
         }
       },
       "actions": {

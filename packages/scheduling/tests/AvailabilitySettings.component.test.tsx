@@ -51,7 +51,12 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, opts?: { defaultValue?: string }) => opts?.defaultValue ?? _key,
+    t: (_key: string, opts?: Record<string, unknown> & { defaultValue?: string }) => {
+      const template = (opts?.defaultValue as string) ?? _key;
+      // i18next interpolates {{placeholders}} from the same options object.
+      return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+        opts && name in opts ? String(opts[name]) : match);
+    },
   }),
 }));
 
@@ -103,8 +108,8 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
-  Button: ({ id, onClick, disabled, children }: any) => (
-    <button data-testid={id} id={id} onClick={onClick} disabled={!!disabled}>{children}</button>
+  Button: ({ id, onClick, disabled, children, ...rest }: any) => (
+    <button data-testid={id} id={id} onClick={onClick} disabled={!!disabled} aria-label={rest['aria-label']}>{children}</button>
   ),
 }));
 
@@ -113,12 +118,13 @@ vi.mock('@alga-psa/ui/components/Label', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Switch', () => ({
-  Switch: ({ id, checked, onCheckedChange, disabled }: any) => (
+  Switch: ({ id, checked, onCheckedChange, disabled, ...rest }: any) => (
     <input
       type="checkbox"
       role="switch"
       data-testid={id}
       id={id}
+      aria-label={rest['aria-label']}
       checked={!!checked}
       disabled={!!disabled}
       onChange={(event: React.ChangeEvent<HTMLInputElement>) => onCheckedChange?.(event.target.checked)}
@@ -153,11 +159,13 @@ vi.mock('@alga-psa/ui/components/MultiUserAndTeamPicker', () => ({
   default: () => null,
 }));
 
+// DateTimeField turns the `label` prop into the field's accessible name.
 vi.mock('@alga-psa/ui/components/TimePicker', () => ({
-  TimePicker: ({ id, value, onChange, disabled }: any) => (
+  TimePicker: ({ id, value, onChange, disabled, label }: any) => (
     <input
       data-testid={id}
       id={id}
+      aria-label={label}
       value={value ?? ''}
       disabled={!!disabled}
       onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange?.(event.target.value)}
@@ -434,6 +442,42 @@ describe('AvailabilitySettings rendered regressions', () => {
     expect(screen.getByTestId('team-selector')).toHaveValue('');
     expect(screen.getByTestId('user-hours-selector')).toHaveValue('');
     expect(screen.queryByTestId('day-3-end-time')).toBeNull();
+  });
+
+  it('names every weekday control so one day can be edited without counting rows', async () => {
+    bootstrap();
+
+    await openUserHoursTab();
+    fireEvent.change(await screen.findByTestId('user-hours-selector'), { target: { value: 'user-a' } });
+
+    const wednesdayEnd = await screen.findByLabelText('Wednesday end time');
+    expect(wednesdayEnd).toBe(screen.getByTestId('day-3-end-time'));
+    expect(wednesdayEnd).toBeEnabled();
+    expect(screen.getByLabelText('Wednesday start time')).toBe(screen.getByTestId('day-3-start-time'));
+    expect(screen.getByLabelText('Wednesday available')).toBe(screen.getByTestId('day-3-available'));
+    // Sunday is off by default, so an ambiguous name could hand out a disabled field.
+    expect(screen.getByLabelText('Sunday end time')).toBeDisabled();
+
+    fireEvent.change(wednesdayEnd, { target: { value: '16:30' } });
+    expect(screen.getByTestId('day-3-end-time')).toHaveValue('16:30');
+    expect(screen.getByTestId('day-2-end-time')).toHaveValue('17:00');
+    expect(screen.getByTestId('day-4-end-time')).toHaveValue('17:00');
+  });
+
+  it('names the configured-user row actions after the technician they touch', async () => {
+    bootstrap({ settings: [...weekRows('user-a', '17:00:00'), ...weekRows('user-b', '17:00:00')] });
+
+    await openUserHoursTab();
+
+    expect(await screen.findByLabelText('Edit booking hours for Morgan Chen')).toBe(screen.getByTestId('edit-user-user-a'));
+    expect(screen.getByLabelText('Edit booking hours for Bella Ozma')).toBe(screen.getByTestId('edit-user-user-b'));
+    expect(screen.getByLabelText('Delete booking hours for Morgan Chen')).toBe(screen.getByTestId('delete-user-user-a'));
+
+    fireEvent.click(screen.getByLabelText('Edit booking hours for Bella Ozma'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user-hours-selector')).toHaveValue('user-b');
+    });
   });
 
   it('pins the dialog to a fixed height so content swaps cannot re-center it mid-click', async () => {

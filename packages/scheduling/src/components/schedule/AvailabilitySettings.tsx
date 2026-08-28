@@ -643,10 +643,14 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       dataIndex: 'user_id' as any,
       render: (_, user: Omit<IUser, 'tenant'>) => (
         <div className="flex items-center gap-1">
+          {/* Every row's action reads "Edit" on its own, so the accessible name
+              carries the technician: picking the wrong row edits the wrong
+              person's booking hours. */}
           <Button
             id={`edit-user-${user.user_id}`}
             variant="ghost"
             size="sm"
+            aria-label={t('availabilitySettings.userHours.configuredUsers.actions.edit', { defaultValue: 'Edit booking hours for {{name}}', name: `${user.first_name} ${user.last_name}`.trim() })}
             onClick={() => handleEditUser(user.user_id)}
           >
             {t('availabilitySettings.common.actions.edit', { defaultValue: 'Edit' })}
@@ -656,7 +660,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             variant="ghost"
             size="sm"
             onClick={() => setUserToDelete(user)}
-            aria-label={t('availabilitySettings.common.actions.delete', { defaultValue: 'Delete' })}
+            aria-label={t('availabilitySettings.userHours.configuredUsers.actions.delete', { defaultValue: 'Delete booking hours for {{name}}', name: `${user.first_name} ${user.last_name}`.trim() })}
           >
             <Trash2 className="h-4 w-4 text-red-600" />
           </Button>
@@ -1017,6 +1021,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                             <TableCell className="py-2">
                               <Switch
                                 id={`day-${day.value}-available`}
+                                aria-label={t('availabilitySettings.userHours.schedule.availableFor', { defaultValue: '{{day}} available', day: day.label })}
                                 checked={hours.is_available}
                                 onCheckedChange={(checked) => {
                                   setUserHours(prev => ({
@@ -1027,8 +1032,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                               />
                             </TableCell>
                             <TableCell className="py-2">
+                              {/* Named per day: seven rows of "Select time" tell
+                                  nobody which field changes Wednesday's end. */}
                               <TimePicker
                                 id={`day-${day.value}-start-time`}
+                                label={t('availabilitySettings.userHours.schedule.startTimeFor', { defaultValue: '{{day}} start time', day: day.label })}
                                 value={hours.start_time}
                                 onChange={(time) => {
                                   setUserHours(prev => ({
@@ -1042,6 +1050,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                             <TableCell className="py-2">
                               <TimePicker
                                 id={`day-${day.value}-end-time`}
+                                label={t('availabilitySettings.userHours.schedule.endTimeFor', { defaultValue: '{{day}} end time', day: day.label })}
                                 value={hours.end_time}
                                 onChange={(time) => {
                                   setUserHours(prev => ({
