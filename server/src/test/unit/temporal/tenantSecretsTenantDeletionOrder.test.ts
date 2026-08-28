@@ -19,6 +19,7 @@ describe('tenant secrets tenant deletion ordering', () => {
 
     expect(auditIndex).toBeGreaterThanOrEqual(0);
     expect(secretsIndex).toBeGreaterThanOrEqual(0);
+    expect(usersIndex).toBeGreaterThan(auditIndex);
     expect(usersIndex).toBeGreaterThan(secretsIndex);
   });
 
