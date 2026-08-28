@@ -262,10 +262,31 @@ export function CredentialFormDialog({
     if (!isOpen || !otpSecret.trim()) { setOtpPreview(null); setOtpError(null); return; }
     const validation = validateOtpSeed(otpSecret);
     if (!validation.ok) { setOtpPreview(null); setOtpError(validation.reason); return; }
-    let cancelled = false; let timer: ReturnType<typeof setTimeout> | null = null;
-    const refresh = async () => { try { const preview = await generateTotpInBrowser(validation.secret); if (!cancelled) { setOtpPreview(preview); setOtpError(null); timer = setTimeout(refresh, Math.max(1, preview.secondsRemaining) * 1000); } } catch { if (!cancelled) { setOtpPreview(null); setOtpError('invalid'); } } };
+    let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let remaining = 0;
+    const refresh = async () => {
+      try {
+        const preview = await generateTotpInBrowser(validation.secret);
+        if (!cancelled) {
+          remaining = preview.secondsRemaining;
+          setOtpPreview(preview);
+          setOtpError(null);
+        }
+      } catch {
+        if (!cancelled) { setOtpPreview(null); setOtpError('invalid'); }
+      }
+    };
     void refresh();
-    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+    timer = setInterval(() => {
+      if (remaining <= 1) {
+        void refresh();
+        return;
+      }
+      remaining -= 1;
+      setOtpPreview((current) => current ? { ...current, secondsRemaining: remaining } : current);
+    }, 1000);
+    return () => { cancelled = true; if (timer) clearInterval(timer); };
   }, [isOpen, otpSecret]);
 
   const handleSubmit = async () => {

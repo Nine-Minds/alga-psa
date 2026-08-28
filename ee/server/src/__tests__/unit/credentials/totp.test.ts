@@ -56,6 +56,11 @@ describe('TOTP otpauth URI parsing + normalization', () => {
     expect(normalizeOtpSecret('otpauth://totp/Acme?secret=jbswy3dpehpk3pxp&issuer=Acme')).toBe('JBSWY3DPEHPK3PXP');
   });
 
+  it('validateOtpSeed accepts a raw seed and a default-parameter URI', () => {
+    expect(validateOtpSeed('jbswy3dpehpk3pxp')).toEqual({ ok: true, secret: 'JBSWY3DPEHPK3PXP' });
+    expect(validateOtpSeed('otpauth://totp/Acme?secret=JBSWY3DPEHPK3PXP&algorithm=SHA1&digits=6&period=30')).toEqual({ ok: true, secret: 'JBSWY3DPEHPK3PXP' });
+  });
+
   it('normalizeOtpSecret throws on a malformed seed', () => {
     expect(() => normalizeOtpSecret('not-a-secret!!!')).toThrow();
   });

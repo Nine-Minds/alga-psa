@@ -246,7 +246,6 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   ),
 }));
 
-vi.mock('qrcode/lib/browser', () => ({ default: { toDataURL: vi.fn(async () => 'data:image/png;base64,local-preview') } }));
 
 import { CredentialsScreen } from '@ee/components/credentials/CredentialsScreen';
 import { TotpCountdown } from '@ee/components/credentials/TotpCountdown';
@@ -579,6 +578,8 @@ describe('CredentialsScreen — create dialog destination picker', () => {
     await waitFor(() => expect(document.getElementById('credential-form-otp-code')).toBeTruthy());
     fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'invalid!' } });
     await waitFor(() => expect(document.getElementById('credential-form-otp-code')).toBeNull());
+    fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'otpauth://totp/Example?secret=GEZDGNBVGY3TQOJQ&digits=8' } });
+    await waitFor(() => expect(document.getElementById('credential-form-otp-error')?.textContent).toContain('credentials.form.otpUnsupportedParams'));
   });
 
   it('shows a safe server save code and falls back for unknown codes', async () => {
@@ -912,6 +913,18 @@ describe('CredentialFormDialog — read-only associations summary on edit', () =
     });
     // No asset-attach picker anywhere in the edit dialog.
     expect(document.getElementById('credential-form-assets')).toBeNull();
+  });
+  it('shows saved TOTP state and submits deliberate removal', async () => {
+    const editing = credential({ id: 'otp-edit', hasOtp: true });
+    const onSubmit = vi.fn().mockResolvedValue({ ok: true });
+    const { CredentialFormDialog } = await import('@ee/components/credentials/CredentialFormDialog');
+    render(<CredentialFormDialog isOpen onClose={() => undefined} onSubmit={onSubmit} editing={editing as never} defaultClientId={CLIENT_ID} context={{ tierOk: true, huduConnected: false, flagIrrelevantHere: true } as never} />);
+    await waitFor(() => expect(document.getElementById('credential-form-otp-saved')).toBeTruthy());
+    fireEvent.click(document.getElementById('credential-form-submit')!);
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ otpSecret: undefined })));
+    fireEvent.click(document.getElementById('credential-form-otp-remove')!);
+    fireEvent.click(document.getElementById('credential-form-submit')!);
+    await waitFor(() => expect(onSubmit).toHaveBeenLastCalledWith(expect.objectContaining({ otpSecret: null })));
   });
 });
 
