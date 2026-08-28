@@ -473,7 +473,7 @@ async function resolveEmailStep(tenantId: string): Promise<OnboardingStepServerS
   try {
     const [inboundSubstep, outboundDomainSubstep] = await Promise.all([
       resolveInboundEmailProviderSubstep(tenantId),
-      resolveOutboundCustomEmailDomainSubstep(),
+      resolveOutboundCustomEmailDomainSubstep(tenantId),
     ]);
 
     const substeps: OnboardingSubstepServerState[] = [inboundSubstep, outboundDomainSubstep];
@@ -536,7 +536,28 @@ async function resolveInboundEmailProviderSubstep(tenantId: string): Promise<Onb
   };
 }
 
-async function resolveOutboundCustomEmailDomainSubstep(): Promise<OnboardingSubstepServerState> {
+async function resolveOutboundCustomEmailDomainSubstep(tenantId: string): Promise<OnboardingSubstepServerState> {
+  // A tenant sending through its own SMTP server or Microsoft 365 mailbox has
+  // outbound email configured without a Resend-managed domain — don't leave
+  // the step "in progress" forever for them.
+  const knex = await getConnection(tenantId);
+  const emailSettings = (await tenantDb(knex, tenantId).table('tenant_email_settings')
+    .select('email_provider', 'updated_at')
+    .first()) as { email_provider?: string | null; updated_at?: Date | string | null } | undefined;
+
+  if (emailSettings?.email_provider === 'smtp' || emailSettings?.email_provider === 'microsoft') {
+    return {
+      id: 'email_outbound_custom_domain',
+      title: 'Configure outbound custom email domain',
+      titleKey: 'onboarding.substeps.email.configureOutboundDomain',
+      status: 'complete',
+      lastUpdated: dateToIso(emailSettings.updated_at ?? null),
+      meta: {
+        outboundProvider: emailSettings.email_provider,
+      },
+    };
+  }
+
   const { getManagedEmailDomains } = await import(
     '@enterprise/lib/actions/email-actions/managedDomainActions'
   );
