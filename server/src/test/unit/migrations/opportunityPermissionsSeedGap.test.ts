@@ -1,8 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
+const require = createRequire(import.meta.url);
+const catalog = require(path.join(repoRoot, 'server/migrations/utils/permissions/catalog.cjs'));
 
 function readRepoFile(...segments: string[]): string {
   return fs.readFileSync(path.join(repoRoot, ...segments), 'utf8');
@@ -34,14 +37,20 @@ describe('opportunity permissions seed gap', () => {
     'psa',
     '02_permissions.cjs',
   );
-  const { PERMISSIONS } = require(path.join(repoRoot, 'server', 'migrations', 'utils', 'permissionCatalog.cjs'));
 
   it('defines every opportunity action in the catalog used by both permission seeds', () => {
     for (const action of ACTIONS) {
-      expect(PERMISSIONS).toContainEqual(expect.objectContaining({ resource: 'opportunities', action, msp: true, client: false }));
+      expect(
+        catalog.getProductPermissions('psa').some((entry: any) =>
+          entry.resource === 'opportunities'
+          && entry.action === action
+          && entry.msp === true
+          && entry.client === false),
+        `opportunities:${action}`,
+      ).toBe(true);
     }
-    expect(devPermissionSeed).toContain('reconcileSeedTenants');
-    expect(onboardingPermissionSeed).toContain('reconcileSeedTenants');
+    expect(devPermissionSeed).toContain('reconcileAllTenants');
+    expect(onboardingPermissionSeed).toContain('reconcileAllTenants');
   });
 
   it('backfill migration grants opportunities to the MSP Admin role only', () => {

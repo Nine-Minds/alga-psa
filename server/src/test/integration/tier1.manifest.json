@@ -4,6 +4,7 @@
     "src/test/integration/journeys",
     "src/test/integration/accounting",
     "src/test/integration/authorization",
+    "src/test/integration/permissionCatalogSync.integration.test.ts",
     "src/test/integration/billing",
     "src/test/integration/sla",
     "src/test/integration/billingInvoiceTiming.integration.test.ts",

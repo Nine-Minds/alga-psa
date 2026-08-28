@@ -1,5 +1,11 @@
-const { reconcileSeedTenants } = require('../../../../../server/migrations/utils/permissionCatalog.cjs');
+const { reconcileAllTenants } = require('../lib/permissionCatalog.cjs');
 
-exports.seed = async function seed(knex, tenantId) {
-  await reconcileSeedTenants(knex, { tenantId, productCode: 'algadesk' });
-};
+// Additive default-role grants from the unified permission catalog.
+// See the PSA sibling seed for why the blanket delete is gone.
+exports.seed = (knex, tenantId) => reconcileAllTenants(knex, {
+    label: 'algadesk onboarding role grants',
+    apply: 'grants',
+    product: 'algadesk',
+    tenantId,
+    onDrift: 'throw',
+});
