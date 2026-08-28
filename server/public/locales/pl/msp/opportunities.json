@@ -82,8 +82,8 @@
       "linkQuote": "Powiąż istniejącą ofertę",
       "loadFailed": "Nie udało się załadować możliwości",
       "loading": "Ładowanie możliwości...",
-      "markLost": "Marek przegrał",
-      "markWon": "Marek wygrał",
+      "markLost": "Oznacz jako przegraną",
+      "markWon": "Oznacz jako wygraną",
       "metadataTitle": "Okazja",
       "nextAction": "Następna akcja",
       "nextActionOverdue": "Następna akcja · spóźniona",
@@ -147,7 +147,7 @@
       "plusOneTime": "+ {{amount}} jednorazowo",
       "thisQuarter": "Ten kwartał ({{q}})",
       "weighted": "{{stage}} · ważony {{pct}}%",
-      "won": "Wygrał ten okres"
+      "won": "Wygrane w tym okresie"
     },
     "linkQuoteDialog": {
       "confirm": "Powiąż ofertę",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "Co zespół powinien wiedzieć, jeśli temat wróci?",
       "reason": "Powód",
       "reasonPlaceholder": "Dlaczego nie poszło dalej?",
-      "submit": "Marek przegrał",
-      "title": "Marek przegrał"
+      "submit": "Oznacz jako przegraną",
+      "title": "Oznacz jako przegraną"
     },
     "lossReason": {
       "chose_competitor": "Wybierz konkurenta",
@@ -228,7 +228,7 @@
         "reviewPipeline": "Przejrzyj lejek sprzedaży",
         "viewAssessmentDeals": "Zobacz oferty oceny"
       },
-      "markLost": "Marek przegrał",
+      "markLost": "Oznacz jako przegraną",
       "moneyFound": "Znaleziono pieniądze",
       "moneyFoundSource": "z rachunków, umów i aktywów",
       "needsYou_few": "{{count}} rzeczy Cię dzisiaj potrzebują.",
@@ -352,16 +352,16 @@
     },
     "stage": {
       "assessment": "Ocena",
-      "identified": "Zidentyfikowany",
-      "lost": "Zagubiony",
-      "proposed": "Zaproponowano",
-      "qualified": "Wykwalifikowany",
-      "verbal": "Werbalne",
-      "won": "Wygrane"
+      "identified": "Zidentyfikowana",
+      "lost": "Przegrana",
+      "proposed": "Zaproponowana",
+      "qualified": "Zakwalifikowana",
+      "verbal": "Ustna zgoda",
+      "won": "Wygrana"
     },
     "status": {
-      "lost": "Zagubiony",
-      "won": "Wygrane"
+      "lost": "Przegrana",
+      "won": "Wygrana"
     },
     "steps": {
       "add": "Dodaj krok",
@@ -474,7 +474,7 @@
       "whitespaceSuggestionCreated": "Sugestia gotowa do sprawdzenia",
       "whitespaceSuggestionDismissed": "Sugestia ta została wcześniej odrzucona",
       "whitespaceSuggestionKnown": "Ta propozycja jest już znana",
-      "won": "Wygrane"
+      "won": "Wygrana"
     },
     "type": {
       "expansion": "Ekspansja",
@@ -580,7 +580,7 @@
     "winDialog": {
       "body": "Transakcja zostaje zamknięta jako wygrana.",
       "bodyProspect": "{{client}} staje się aktywnym klientem.",
-      "confirm": "Marek wygrał",
+      "confirm": "Oznacz jako wygraną",
       "convertQuote": "Konwertuj zaakceptowaną wycenę na wersję roboczą umowy (opcjonalnie)",
       "nextConvert": "Przekształć zaakceptowaną ofertę w umowę poniżej lub później na ekranie oferty.",
       "nextSendQuote": "Nie powiązano jeszcze zaakceptowanej oferty. Wyślij ofertę, uzyskaj zatwierdzenie, a potem zamień ją na umowę. Mimo to możesz już teraz oznaczyć transakcję jako wygraną.",
@@ -590,7 +590,7 @@
       "projectStart": "Data rozpoczęcia",
       "projectStatus": "Stan początkowy",
       "projectTemplate": "Utwórz projekt onboardingowy (opcjonalnie)",
-      "title": "Marek wygrał"
+      "title": "Oznacz jako wygraną"
     }
   }
 }
