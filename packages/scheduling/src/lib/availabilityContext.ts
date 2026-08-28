@@ -1,4 +1,5 @@
 export const AVAILABILITY_CONTEXT_STORAGE_KEY = 'schedule:availability-context';
+export const AVAILABILITY_ACCESS_HINT_STORAGE_KEY = 'schedule:availability-access';
 
 export interface PersistedAvailabilityContext {
   isOpen: boolean;
@@ -20,6 +21,30 @@ export function readAvailabilityContext(): PersistedAvailabilityContext | null {
     };
   } catch {
     return null;
+  }
+}
+
+// The Configure Availability button is gated on a bootstrap read (permissions,
+// users, teams, memberships) that costs seconds on a loaded machine, so the
+// button used to pop into the header long after first paint: it shifted the
+// buttons beside it and missed clicks aimed at it. Remembering the last answer
+// for this tab lets a repeat visit paint the button immediately; the live check
+// still runs and corrects the hint, and every action re-authorizes server-side.
+export function readAvailabilityAccessHint(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.sessionStorage.getItem(AVAILABILITY_ACCESS_HINT_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function writeAvailabilityAccessHint(canConfigure: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(AVAILABILITY_ACCESS_HINT_STORAGE_KEY, canConfigure ? 'true' : 'false');
+  } catch {
+    // Storage can be unavailable in private mode; the live check still governs.
   }
 }
 

@@ -10,7 +10,12 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAppointmentRequests, getAvailabilitySettingsAccess } from '@alga-psa/scheduling/actions';
-import { readAvailabilityContext, writeAvailabilityContext } from '../../lib/availabilityContext';
+import {
+  readAvailabilityAccessHint,
+  readAvailabilityContext,
+  writeAvailabilityAccessHint,
+  writeAvailabilityContext,
+} from '../../lib/availabilityContext';
 
 export default function SchedulePage() {
   const { t } = useTranslation('msp/schedule');
@@ -40,16 +45,21 @@ export default function SchedulePage() {
       try {
         const result = await getAvailabilitySettingsAccess();
         if (result.success) {
-          setCanConfigureAvailability(Boolean(
+          const canConfigure = Boolean(
             result.data?.canReadSystemSettings || result.data?.canManageUserHours
-          ));
+          );
+          setCanConfigureAvailability(canConfigure);
+          writeAvailabilityAccessHint(canConfigure);
           return;
         }
       } catch (error) {
         console.error('Failed to check availability access:', error);
       }
       if (attempt >= retryDelaysMs.length) {
-        setCanConfigureAvailability(false);
+        // Only a definitive answer may hide the button. Once the checks are
+        // exhausted we keep this tab's last known-good access rather than
+        // letting a network blip strip a permitted user of the entry point.
+        setCanConfigureAvailability(readAvailabilityAccessHint());
         return;
       }
       await new Promise((resolve) => setTimeout(resolve, retryDelaysMs[attempt]));
@@ -61,7 +71,13 @@ export default function SchedulePage() {
     checkPermissions();
   }, [refreshKey]);
 
+  // Paint the button from this tab's remembered answer instead of waiting on the
+  // bootstrap read; checkPermissions overwrites it either way. Applied on mount
+  // rather than in the initial state so server and client markup still agree.
   useEffect(() => {
+    if (readAvailabilityAccessHint()) {
+      setCanConfigureAvailability(true);
+    }
     if (readAvailabilityContext()?.isOpen) {
       setShowAvailabilitySettings(true);
     }
