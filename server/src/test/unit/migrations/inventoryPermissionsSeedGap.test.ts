@@ -39,16 +39,17 @@ describe('inventory permissions seed gap', () => {
     'psa',
     '02_permissions.cjs',
   );
+  const { PERMISSIONS } = require(path.join(repoRoot, 'server', 'migrations', 'utils', 'permissionCatalog.cjs'));
 
-  it('defines every inventory resource/action in both permission seeds', () => {
+  it('defines every inventory resource/action in the catalog used by both permission seeds', () => {
     const actions = ['create', 'read', 'update', 'delete'];
     for (const resource of INVENTORY_RESOURCES) {
       for (const action of actions) {
-        const def = `{ resource: '${resource}', action: '${action}', msp: true, client: false`;
-        expect(devPermissionSeed).toContain(def);
-        expect(onboardingPermissionSeed).toContain(def);
+        expect(PERMISSIONS).toContainEqual(expect.objectContaining({ resource, action, msp: true, client: false }));
       }
     }
+    expect(devPermissionSeed).toContain('reconcileSeedTenants');
+    expect(onboardingPermissionSeed).toContain('reconcileSeedTenants');
   });
 
   it('readd migration grants the inventory resources to the MSP Admin role only', () => {

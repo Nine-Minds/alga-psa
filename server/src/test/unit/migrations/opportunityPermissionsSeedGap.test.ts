@@ -34,13 +34,14 @@ describe('opportunity permissions seed gap', () => {
     'psa',
     '02_permissions.cjs',
   );
+  const { PERMISSIONS } = require(path.join(repoRoot, 'server', 'migrations', 'utils', 'permissionCatalog.cjs'));
 
-  it('defines every opportunity action in both permission seeds', () => {
+  it('defines every opportunity action in the catalog used by both permission seeds', () => {
     for (const action of ACTIONS) {
-      const def = `{ resource: 'opportunities', action: '${action}', msp: true, client: false`;
-      expect(devPermissionSeed).toContain(def);
-      expect(onboardingPermissionSeed).toContain(def);
+      expect(PERMISSIONS).toContainEqual(expect.objectContaining({ resource: 'opportunities', action, msp: true, client: false }));
     }
+    expect(devPermissionSeed).toContain('reconcileSeedTenants');
+    expect(onboardingPermissionSeed).toContain('reconcileSeedTenants');
   });
 
   it('backfill migration grants opportunities to the MSP Admin role only', () => {
