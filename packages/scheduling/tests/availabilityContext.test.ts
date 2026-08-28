@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   AVAILABILITY_ACCESS_HINT_STORAGE_KEY,
   AVAILABILITY_CONTEXT_STORAGE_KEY,
+  isReloadNavigation,
   readAvailabilityAccessHint,
   readAvailabilityContext,
   writeAvailabilityAccessHint,
@@ -54,5 +55,30 @@ describe('availability access hint', () => {
   it('treats an unrecognised stored value as no access', () => {
     window.sessionStorage.setItem(AVAILABILITY_ACCESS_HINT_STORAGE_KEY, 'yes-please');
     expect(readAvailabilityAccessHint()).toBe(false);
+  });
+});
+
+describe('reload detection', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const stubNavigationType = (type: string) => {
+    vi.spyOn(performance, 'getEntriesByType').mockImplementation((entryType: string) =>
+      (entryType === 'navigation' ? [{ type } as PerformanceNavigationTiming] : []) as PerformanceEntry[],
+    );
+  };
+
+  it('reports a refresh', () => {
+    stubNavigationType('reload');
+    expect(isReloadNavigation()).toBe(true);
+  });
+
+  it('does not treat an ordinary visit as a refresh', () => {
+    stubNavigationType('navigate');
+    expect(isReloadNavigation()).toBe(false);
+  });
+
+  it('says no when the browser reports no navigation entry', () => {
+    vi.spyOn(performance, 'getEntriesByType').mockReturnValue([]);
+    expect(isReloadNavigation()).toBe(false);
   });
 });

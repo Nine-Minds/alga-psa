@@ -30,6 +30,20 @@ export function readAvailabilityContext(): PersistedAvailabilityContext | null {
 // buttons beside it and missed clicks aimed at it. Remembering the last answer
 // for this tab lets a repeat visit paint the button immediately; the live check
 // still runs and corrects the hint, and every action re-authorizes server-side.
+// A refresh is the one navigation that should put the reader back inside the
+// dialog they were working in. Arriving at Schedule any other way must not pop
+// a modal nobody asked for: it would sit over the page and swallow the reader's
+// next click (including the Configure Availability button behind it).
+export function isReloadNavigation(): boolean {
+  if (typeof performance === 'undefined' || typeof performance.getEntriesByType !== 'function') return false;
+  try {
+    const [entry] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    return entry?.type === 'reload';
+  } catch {
+    return false;
+  }
+}
+
 export function readAvailabilityAccessHint(): boolean {
   if (typeof window === 'undefined') return false;
   try {

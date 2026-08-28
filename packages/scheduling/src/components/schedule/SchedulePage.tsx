@@ -11,6 +11,7 @@ import { Calendar, Settings } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAppointmentRequests, getAvailabilitySettingsAccess } from '@alga-psa/scheduling/actions';
 import {
+  isReloadNavigation,
   readAvailabilityAccessHint,
   readAvailabilityContext,
   writeAvailabilityAccessHint,
@@ -78,7 +79,9 @@ export default function SchedulePage() {
     if (readAvailabilityAccessHint()) {
       setCanConfigureAvailability(true);
     }
-    if (readAvailabilityContext()?.isOpen) {
+    // Reopen only after a refresh; on ordinary navigation the remembered scope
+    // is applied when the reader opens the dialog themselves.
+    if (readAvailabilityContext()?.isOpen && isReloadNavigation()) {
       setShowAvailabilitySettings(true);
     }
   }, []);

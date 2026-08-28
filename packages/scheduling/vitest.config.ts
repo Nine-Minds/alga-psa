@@ -14,6 +14,7 @@ export default defineConfig({
       'src/**/*.test.ts',
       'tests/AvailabilitySettings.component.test.tsx',
       'tests/SchedulePage.accessRetry.test.tsx',
+      'tests/SchedulePage.dialogRestore.test.tsx',
       'tests/SchedulePage.headerStability.test.tsx',
     ],
     testTimeout: 10000,
