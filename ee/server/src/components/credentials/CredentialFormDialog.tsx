@@ -261,11 +261,14 @@ export function CredentialFormDialog({
   useEffect(() => {
     if (!isOpen || !otpSecret.trim()) { setOtpPreview(null); setOtpError(null); return; }
     const validation = validateOtpSeed(otpSecret);
-    if (!validation.ok) { setOtpPreview(null); setOtpError(validation.reason); return; }
+    if ("reason" in validation) { setOtpPreview(null); setOtpError(validation.reason); return; }
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | null = null;
     let remaining = 0;
+    let refreshInFlight = false;
     const refresh = async () => {
+      if (refreshInFlight) return;
+      refreshInFlight = true;
       try {
         const preview = await generateTotpInBrowser(validation.secret);
         if (!cancelled) {
@@ -275,11 +278,15 @@ export function CredentialFormDialog({
         }
       } catch {
         if (!cancelled) { setOtpPreview(null); setOtpError('invalid'); }
+      } finally {
+        refreshInFlight = false;
       }
     };
     void refresh();
     timer = setInterval(() => {
       if (remaining <= 1) {
+        remaining = 0;
+        setOtpPreview((current) => current ? { ...current, secondsRemaining: 0 } : current);
         void refresh();
         return;
       }
@@ -299,7 +306,7 @@ export function CredentialFormDialog({
       return;
     }
     const otpValidation = otpSecret.trim() ? validateOtpSeed(otpSecret) : null;
-    if (otpValidation && !otpValidation.ok) {
+    if (otpValidation && "reason" in otpValidation) {
       setError(t(`credentials.form.${otpValidation.reason === 'unsupportedParams' ? 'otpUnsupportedParams' : 'otpInvalid'}`));
       return;
     }

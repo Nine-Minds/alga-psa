@@ -11,15 +11,17 @@
  */
 
 import crypto from 'node:crypto';
-import { base32Decode, counterBytes, counterFor, dynamicTruncate, secondsRemaining, validateOtpSeed } from './totpCore';
+import {
+  base32Decode,
+  counterBytes,
+  counterFor,
+  dynamicTruncate,
+  secondsRemaining,
+  validateOtpSeed,
+  type TotpResult,
+} from './totpCore';
 export * from './totpCore';
 
-/** Decode a (possibly padded) base32 string per RFC 4648. Throws on bad input. */
-/**
- * Extract the `secret` query parameter from an `otpauth://` URI. Returns null
- * when the URI is not a valid otpauth TOTP URI (so callers can fall back to
- * treating the input as a raw base32 secret).
- */
 /**
  * Normalize a user-supplied TOTP seed: `otpauth://` URIs are reduced to their
  * secret; anything else is treated as a raw base32 secret. Throws when the
@@ -27,7 +29,13 @@ export * from './totpCore';
  */
 export function normalizeOtpSecret(input: string): string {
   const result = validateOtpSeed(input);
-  if (!result.ok) throw new Error(result.reason === 'unsupportedParams' ? 'Unsupported TOTP parameters.' : 'Invalid TOTP secret.');
+  if ('reason' in result) {
+    throw new Error(
+      result.reason === 'unsupportedParams'
+        ? 'Unsupported TOTP parameters.'
+        : 'Invalid TOTP secret.'
+    );
+  }
   return result.secret;
 }
 
@@ -37,6 +45,9 @@ export function normalizeOtpSecret(input: string): string {
  * corrupt seed).
  */
 export function generateTotp(secretBase32: string, timestampMs: number = Date.now()): TotpResult {
-  const hash = crypto.createHmac('sha1', base32Decode(secretBase32)).update(counterBytes(counterFor(timestampMs))).digest();
+  const hash = crypto
+    .createHmac('sha1', base32Decode(secretBase32))
+    .update(counterBytes(counterFor(timestampMs)))
+    .digest();
   return { code: dynamicTruncate(hash), secondsRemaining: secondsRemaining(timestampMs) };
 }
