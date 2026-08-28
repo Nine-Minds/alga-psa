@@ -99,8 +99,8 @@
   },
   "po": {
     "labels": {
-      "amount": "Valor da ordem de compra",
-      "number": "Número do pedido",
+      "amount": "Valor do pedido de compra",
+      "number": "Número do pedido de compra",
       "required": "Pedido de compra obrigatório"
     }
   },
@@ -290,7 +290,7 @@
     },
     "po": {
       "prefix": "PO",
-      "requiredForContract": "Ordem de compra necessária para este contrato."
+      "requiredForContract": "Pedido de compra obrigatório para este contrato."
     },
     "status": {
       "active": "Ativo",
@@ -367,14 +367,14 @@
       "useTenantDefaultsLabel": "Usar padrões de renovação de locatário"
     },
     "po": {
-      "amountLabel": "Valor do pedido (opcional)",
+      "amountLabel": "Valor do pedido de compra (opcional)",
       "amountPlaceholder": "0.00",
       "comingSoon": "Integração de faturas em breve. As configurações serão salvas, mas a aplicação do pedido de compra não estará ativa até uma versão futura.",
       "noteLabel": "Observação:",
-      "numberLabel": "Número do pedido *",
+      "numberLabel": "Número do pedido de compra *",
       "numberPlaceholder": "por exemplo, PO-2024-12345",
-      "requirePurchaseOrder": "Exigir ordem de compra",
-      "requirePurchaseOrderTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de ordem de compra seja fornecido."
+      "requirePurchaseOrder": "Exigir pedido de compra",
+      "requirePurchaseOrderTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de pedido de compra seja fornecido."
     },
     "presetDetails": {
       "defaultBaseRate": "Taxa básica padrão:",
@@ -1157,8 +1157,8 @@
         "start": "Começar",
         "end": "Fim",
         "poRequired": "Pedido de compra obrigatório",
-        "poNumber": "Número do pedido",
-        "poAmount": "Valor da ordem de compra"
+        "poNumber": "Número do pedido de compra",
+        "poAmount": "Valor do pedido de compra"
       },
       "status": {
         "active": "Ativo",
@@ -1187,7 +1187,7 @@
         "clearNames": "Use nomes de contratos claros e descritivos (por exemplo, \"Acme Corp - MSP Services Q4 2024\")",
         "endDates": "Defina datas de término para contratos por prazo determinado para rastrear datas de renovação",
         "partialPeriodAdjustment": "Use o ajuste de período parcial quando as datas do contrato cobrirem apenas parte de um período de serviço",
-        "poNumbers": "Adicione números de ordem de compra quando exigido pelas políticas de compras do cliente"
+        "poNumbers": "Adicione números de pedido de compra quando exigido pelas políticas de compras do cliente"
       },
       "title": "Melhores Práticas"
     },
@@ -1394,16 +1394,16 @@
     "heading": "Noções básicas do contrato",
     "po": {
       "amountHint": "Valor total autorizado no pedido de compra.",
-      "amountLabel": "Valor da ordem de compra",
+      "amountLabel": "Valor do pedido de compra",
       "noteLabel": "Observação:",
-      "noteText": "A aplicação da ordem de compra será aplicada quando a automação de faturas estiver habilitada. Configure agora para ficar à frente.",
+      "noteText": "A exigência de pedido de compra será aplicada quando a automação de faturas estiver habilitada. Configure agora para ficar à frente.",
       "numberHint": "Número de referência do pedido de compra do cliente.",
-      "numberLabel": "Número do pedido",
+      "numberLabel": "Número do pedido de compra",
       "numberPlaceholder": "por exemplo, PO-2024-12345",
-      "requireForInvoicing": "Exigir ordem de compra para faturamento",
-      "requireHint": "Bloqueie a geração de fatura se o pedido não for fornecido.",
-      "requireTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de ordem de compra seja fornecido.",
-      "title": "Ordem de compra (opcional)"
+      "requireForInvoicing": "Exigir pedido de compra para faturamento",
+      "requireHint": "Bloqueie a geração de fatura se o pedido de compra não for fornecido.",
+      "requireTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de pedido de compra seja fornecido.",
+      "title": "Pedido de compra (opcional)"
     },
     "renewal": {
       "evergreen": {
@@ -1436,9 +1436,9 @@
         "currency": "Moeda:",
         "noticePeriod": "Período de aviso prévio:",
         "period": "Período:",
-        "poAmount": "Valor da ordem de compra:",
-        "poNumber": "Número da PO:",
-        "poRequired": "PO necessário:",
+        "poAmount": "Valor do pedido de compra:",
+        "poNumber": "Número do pedido de compra:",
+        "poRequired": "Pedido de compra obrigatório:",
         "renewalMode": "Modo de renovação:",
         "renewalTerm": "Prazo de renovação:"
       },
@@ -1679,9 +1679,9 @@
     },
     "po": {
       "title": "Requisitos do pedido de compra",
-      "requiredLabel": "PO necessário:",
-      "numberLabel": "Número da PO:",
-      "amountLabel": "Valor da ordem de compra:"
+      "requiredLabel": "Pedido de compra obrigatório:",
+      "numberLabel": "Número do pedido de compra:",
+      "amountLabel": "Valor do pedido de compra:"
     },
     "bucket": {
       "includedHours": "Horas {{formattedValue}}",

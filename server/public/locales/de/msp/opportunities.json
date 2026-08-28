@@ -82,8 +82,8 @@
       "linkQuote": "Vorhandenes Angebot verknüpfen",
       "loadFailed": "Gelegenheit konnte nicht geladen werden",
       "loading": "Gelegenheit wird geladen...",
-      "markLost": "Mark hat verloren",
-      "markWon": "Mark hat gewonnen",
+      "markLost": "Als verloren markieren",
+      "markWon": "Als gewonnen markieren",
       "metadataTitle": "Gelegenheit",
       "nextAction": "Nächste Aktion",
       "nextActionOverdue": "Nächste Aktion · überfällig",
@@ -147,7 +147,7 @@
       "plusOneTime": "+ {{amount}} einmalig",
       "thisQuarter": "Dieses Quartal ({{q}})",
       "weighted": "{{stage}} · gewichtet {{pct}} %",
-      "won": "Habe diese Periode gewonnen"
+      "won": "In diesem Zeitraum gewonnen"
     },
     "linkQuoteDialog": {
       "confirm": "Angebot verknüpfen",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "Was sollte das Team wissen, falls es erneut aufkommt?",
       "reason": "Grund",
       "reasonPlaceholder": "Warum ging es nicht weiter?",
-      "submit": "Mark hat verloren",
-      "title": "Mark hat verloren"
+      "submit": "Als verloren markieren",
+      "title": "Als verloren markieren"
     },
     "lossReason": {
       "chose_competitor": "Wählte einen Konkurrenten",
@@ -228,7 +228,7 @@
         "reviewPipeline": "Überprüfen Sie die Pipeline",
         "viewAssessmentDeals": "Bewertungsangebote ansehen"
       },
-      "markLost": "Mark hat verloren",
+      "markLost": "Als verloren markieren",
       "moneyFound": "Geld gefunden",
       "moneyFoundSource": "aus Abrechnungen, Verträgen und Vermögenswerten",
       "needsYou_one": "Heute wartet {{count}} Aufgabe auf Sie.",
@@ -352,7 +352,7 @@
       "lost": "Verloren",
       "proposed": "Vorgeschlagen",
       "qualified": "Qualifiziert",
-      "verbal": "Mündlich",
+      "verbal": "Mündliche Zusage",
       "won": "Gewonnen"
     },
     "status": {
@@ -548,7 +548,7 @@
     "winDialog": {
       "body": "Der Deal wird als gewonnen abgeschlossen.",
       "bodyProspect": "{{client}} wird ein aktiver Kunde.",
-      "confirm": "Mark hat gewonnen",
+      "confirm": "Als gewonnen markieren",
       "convertQuote": "Konvertieren Sie ein angenommenes Angebot in einen Vertragsentwurf (optional)",
       "nextConvert": "Wandeln Sie das angenommene Angebot unten oder anschließend im Angebotsbildschirm in einen Vertrag um.",
       "nextSendQuote": "Es ist noch kein angenommenes Angebot verknüpft. Senden Sie das Angebot, holen Sie die Freigabe ein und wandeln Sie es dann in einen Vertrag um. Sie können den Abschluss trotzdem schon jetzt eintragen.",
@@ -558,7 +558,7 @@
       "projectStart": "Startdatum",
       "projectStatus": "Ausgangszustand",
       "projectTemplate": "Erstellen Sie ein Onboarding-Projekt (optional)",
-      "title": "Mark hat gewonnen"
+      "title": "Als gewonnen markieren"
     }
   }
 }
