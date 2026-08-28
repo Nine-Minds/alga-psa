@@ -23,18 +23,15 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Copy, Dice5, Eye, EyeOff, RefreshCw } from 'lucide-react';
-import QRCode from 'qrcode/lib/browser';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient } from '@alga-psa/types';
 import type { CredentialsContext } from '../../lib/actions/credentials/credentialActions';
 import type { CredentialSaveResult } from '../../lib/actions/credentials/credentialActions';
 import type { CredentialAttachment, CredentialAssociationEntityType, CredentialSummary } from '../../lib/credentials/contracts';
-
-// Client-safe TOTP seed validation. The server-side RFC 6238 util lives in
-// totp.ts and depends on node:crypto (server-only); this copy only validates
-// the base32 alphabet so the browser bundle never pulls in node builtins.
-const BASE32_REGEX = /^[A-Z2-7]+$/i;
+import { validateOtpSeed } from '../../lib/credentials/totpCore';
+import { generateTotpInBrowser } from '../../lib/credentials/totpBrowser';
+import { TotpCode } from './TotpCode';
 
 export interface CredentialFormValue {
   clientId: string;
@@ -108,23 +105,6 @@ export function generatePassword(length: number, selected: Array<keyof typeof PA
   return chars.join('');
 }
 
-function isValidOtpSeed(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed) return true;
-  // Reduce an otpauth:// URI to its secret query param, else treat as raw seed.
-  let secret = trimmed;
-  if (/^otpauth:\/\/totp\//i.test(trimmed)) {
-    try {
-      const secretParam = new URL(trimmed).searchParams.get('secret');
-      if (!secretParam) return false;
-      secret = secretParam;
-    } catch {
-      return false;
-    }
-  }
-  return BASE32_REGEX.test(secret.replace(/[=\s-]/g, ''));
-}
-
 const SAVE_ERROR_KEY: Partial<Record<Exclude<CredentialSaveResult, { ok: true }>['code'], string>> = {
   PERMISSION_DENIED: 'permissionDenied',
   CLIENT_MISMATCH: 'clientMismatch',
@@ -186,7 +166,9 @@ export function CredentialFormDialog({
   const [copied, setCopied] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [initialSnapshot, setInitialSnapshot] = useState('');
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [otpCleared, setOtpCleared] = useState(false);
+  const [otpPreview, setOtpPreview] = useState<{ code: string; secondsRemaining: number } | null>(null);
+  const [otpError, setOtpError] = useState<'invalid' | 'unsupportedParams' | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -235,6 +217,7 @@ export function CredentialFormDialog({
         setUsername(editing.username ?? '');
         setPassword('');
         setOtpSecret('');
+        setOtpCleared(false);
         setUrl(editing.url ?? '');
         setDescription(editing.description ?? '');
         setDestination('alga');
@@ -242,20 +225,21 @@ export function CredentialFormDialog({
         // read-only summary, never edited from the credential form
         // (associations are managed from the entity side).
         setAttachments(editing.attachments ?? []);
-        setInitialSnapshot(JSON.stringify([editing.clientId, editing.name, editing.username ?? '', '', '', editing.url ?? '', editing.description ?? '', 'alga']));
+        setInitialSnapshot(JSON.stringify([editing.clientId, editing.name, editing.username ?? '', '', '', false, editing.url ?? '', editing.description ?? '', 'alga']));
       } else {
         setClientId(defaultClientId ?? '');
         setName('');
         setUsername('');
         setPassword('');
         setOtpSecret('');
+        setOtpCleared(false);
         setUrl('');
         setDescription('');
         setDestination('alga');
         // Entity-section create is pre-attached: the new credential must carry
         // the entity it was created from so it appears in the section's list.
         setAttachments(entityType && entityId ? [{ entityType, entityId }] : []);
-        setInitialSnapshot(JSON.stringify([defaultClientId ?? '', '', '', '', '', '', '', 'alga']));
+        setInitialSnapshot(JSON.stringify([defaultClientId ?? '', '', '', '', '', false, '', '', 'alga']));
       }
       setPasswordVisible(false);
       setCopied(false);
@@ -263,30 +247,26 @@ export function CredentialFormDialog({
       setDiscardOpen(false);
       setGenLength(20);
       setGenSets({ uppercase: true, lowercase: true, digits: true, symbols: true });
-      setQrDataUrl(null);
+      setOtpPreview(null); setOtpError(null);
     }
   }, [isOpen, editing, defaultClientId, entityType, entityId]);
 
   const canUseHudu = huduClientMapped === true;
-  const snapshot = useMemo(() => JSON.stringify([clientId, name, username, password, otpSecret, url, description, destination]), [clientId, name, username, password, otpSecret, url, description, destination]);
+  const snapshot = useMemo(() => JSON.stringify([clientId, name, username, password, otpSecret, otpCleared, url, description, destination]), [clientId, name, username, password, otpSecret, otpCleared, url, description, destination]);
   const isDirty = snapshot !== initialSnapshot;
   const requestClose = () => { if (isSaving) return; if (isDirty) setDiscardOpen(true); else onClose(); };
 
   useEffect(() => { onRequestClose?.(requestClose); }, [onRequestClose, requestClose]);
 
   useEffect(() => {
-    const value = otpSecret.trim();
-    if (!value || !isValidOtpSeed(value)) { setQrDataUrl(null); return; }
-    let uri = value;
-    if (!/^otpauth:\/\/totp\//i.test(uri)) {
-      const label = encodeURIComponent(username.trim() || name.trim() || 'Credential');
-      const issuer = encodeURIComponent(name.trim() || 'Credential');
-      uri = `otpauth://totp/${label}?secret=${encodeURIComponent(value.replace(/[\s-]/g, ''))}&issuer=${issuer}`;
-    }
-    let cancelled = false;
-    QRCode.toDataURL(uri).then((data) => { if (!cancelled) setQrDataUrl(data); }).catch(() => { if (!cancelled) setQrDataUrl(null); });
-    return () => { cancelled = true; };
-  }, [otpSecret, name, username]);
+    if (!isOpen || !otpSecret.trim()) { setOtpPreview(null); setOtpError(null); return; }
+    const validation = validateOtpSeed(otpSecret);
+    if (!validation.ok) { setOtpPreview(null); setOtpError(validation.reason); return; }
+    let cancelled = false; let timer: ReturnType<typeof setTimeout> | null = null;
+    const refresh = async () => { try { const preview = await generateTotpInBrowser(validation.secret); if (!cancelled) { setOtpPreview(preview); setOtpError(null); timer = setTimeout(refresh, Math.max(1, preview.secondsRemaining) * 1000); } } catch { if (!cancelled) { setOtpPreview(null); setOtpError('invalid'); } } };
+    void refresh();
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [isOpen, otpSecret]);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -297,8 +277,9 @@ export function CredentialFormDialog({
       setError(t('credentials.form.clientRequired'));
       return;
     }
-    if (!isValidOtpSeed(otpSecret)) {
-      setError(t('credentials.form.otpInvalid'));
+    const otpValidation = otpSecret.trim() ? validateOtpSeed(otpSecret) : null;
+    if (otpValidation && !otpValidation.ok) {
+      setError(t(`credentials.form.${otpValidation.reason === 'unsupportedParams' ? 'otpUnsupportedParams' : 'otpInvalid'}`));
       return;
     }
     setIsSaving(true);
@@ -312,7 +293,7 @@ export function CredentialFormDialog({
         // (undefined), never "clear" (null) — the plaintext is deliberately not
         // echoed back into the dialog, so saving untouched must not wipe it.
         password: password ? password : editing ? undefined : null,
-        otpSecret: otpSecret ? otpSecret : editing ? undefined : null,
+        otpSecret: otpSecret.trim() ? otpSecret : otpCleared ? null : editing ? undefined : null,
         url: url.trim() || '',
         description: description.trim(),
         destination,
@@ -446,11 +427,14 @@ export function CredentialFormDialog({
               id="credential-form-otp"
               placeholder={t('credentials.form.otpSecretPlaceholder')}
               value={otpSecret}
-              onChange={(event) => setOtpSecret(event.target.value)}
+              onChange={(event) => { setOtpSecret(event.target.value); setOtpCleared(false); }}
             />
+            <p className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpLeadIn')}</p>
             <p className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpSecretHelp')}</p>
-            <p className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpWhatSaving')}</p>
-            {qrDataUrl && <div className="pt-2"><p className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpQrPreview')}</p><img id="credential-form-otp-qr" src={qrDataUrl} alt={t('credentials.form.otpQrPreview')} className="mt-1 h-32 w-32" /></div>}
+            {otpError && <p id="credential-form-otp-error" className="text-xs text-[rgb(var(--badge-error-text))]">{t(`credentials.form.${otpError === 'unsupportedParams' ? 'otpUnsupportedParams' : 'otpInvalid'}`)}</p>}
+            {otpPreview && <div className="pt-2"><p className="mb-1 text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpPreviewHint')}</p><TotpCode {...otpPreview} idPrefix="credential-form-otp" onCopy={() => void navigator.clipboard?.writeText(otpPreview.code)} /></div>}
+            {editing?.hasOtp && !otpSecret.trim() && !otpCleared && <div className="flex items-center gap-2 pt-1"><p id="credential-form-otp-saved" className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpSaved')}</p><Button id="credential-form-otp-remove" type="button" variant="ghost" size="sm" onClick={() => setOtpCleared(true)}>{t('credentials.form.otpRemove')}</Button></div>}
+            {otpCleared && <p id="credential-form-otp-removed" className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpRemoved')}</p>}
           </div>
 
           <div className="space-y-1">

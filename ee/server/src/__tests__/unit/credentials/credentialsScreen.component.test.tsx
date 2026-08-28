@@ -574,11 +574,11 @@ describe('CredentialsScreen — create dialog destination picker', () => {
     await waitFor(() => expect(clipboardWriteMock).toHaveBeenCalledWith(password));
     expect(document.getElementById('credential-form-password-copied')).toBeTruthy();
     fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'GEZDGNBVGY3TQOJQ' } });
-    await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeTruthy());
+    await waitFor(() => expect(document.getElementById('credential-form-otp-code')).toBeTruthy());
     fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'otpauth://totp/Example?secret=GEZDGNBVGY3TQOJQ&issuer=Example' } });
-    await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeTruthy());
+    await waitFor(() => expect(document.getElementById('credential-form-otp-code')).toBeTruthy());
     fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'invalid!' } });
-    await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeNull());
+    await waitFor(() => expect(document.getElementById('credential-form-otp-code')).toBeNull());
   });
 
   it('shows a safe server save code and falls back for unknown codes', async () => {
