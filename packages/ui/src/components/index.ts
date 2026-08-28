@@ -23,6 +23,7 @@ export * from './ColorPicker';
 export { default as ColorPicker } from './ColorPicker';
 // CommentThreadDrawer pulls the BlockNote editor (via InlineReplyComposer). Not re-exported
 // from the barrel — import directly from '@alga-psa/ui/components/CommentThreadDrawer'.
+export * from './ClampedContent';
 export * from './CommentThreadList';
 export { default as CommentThreadList } from './CommentThreadList';
 export * from './CollapseToggleButton';

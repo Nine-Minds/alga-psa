@@ -522,6 +522,7 @@ export async function syncCalendarProviderImpl(
   success: boolean;
   started?: boolean;
   error?: string;
+  errorCode?: 'not_authorized';
 }> {
   try {
     if (isClientPortalUser(user)) {
@@ -537,6 +538,18 @@ export async function syncCalendarProviderImpl(
 
     if (provider.user_id !== user.user_id) {
       return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
+    }
+
+    // Refuse to sync a provider whose OAuth flow was never completed. Without
+    // this, the background sync stamps a raw adapter error onto the provider
+    // (or, over an empty window, vacuously flips it to "connected").
+    // errorCode lets the client render a localized message.
+    if (!provider.provider_config?.accessToken || !provider.provider_config?.refreshToken) {
+      return {
+        success: false,
+        errorCode: 'not_authorized',
+        error: 'This calendar provider has not completed OAuth authorization yet. Open its settings and click Authorize, then sync again.',
+      };
     }
 
     const tenantId = tenant;
@@ -558,6 +571,15 @@ export async function syncCalendarProviderImpl(
 
         await runWithTenant(tenantId, async () => {
           const { knex } = await createTenantKnex(tenantId);
+
+          // Validate credentials before doing any work: a sync that finds
+          // nothing to push or pull must not promote a provider to
+          // "connected" without ever having talked to the provider API.
+          const credentialCheckAdapter =
+            provider.provider_type === 'google'
+              ? new GoogleCalendarAdapter(provider)
+              : new MicrosoftCalendarAdapter(provider);
+          await credentialCheckAdapter.connect();
 
           const now = new Date();
           const windowStart = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);

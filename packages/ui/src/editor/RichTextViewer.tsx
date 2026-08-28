@@ -12,6 +12,7 @@ import {
   type PartialBlock,
 } from '@blocknote/core';
 import { Mention } from './Mention';
+import { splitEmbeddedNewlineBlocks } from './normalizeBlocks';
 import styles from './TicketDetails.module.css';
 import dynamic from 'next/dynamic';
 
@@ -464,7 +465,7 @@ function RichTextViewerInternal({
       if (mdText) {
         return { syncBlocks: DEFAULT_EMPTY_BLOCK, rawMarkdown: mdText };
       }
-      return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(content))), rawMarkdown: null };
+      return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(splitEmbeddedNewlineBlocks(content)))), rawMarkdown: null };
     }
 
     // Try JSON parse
@@ -476,7 +477,7 @@ function RichTextViewerInternal({
         if (mdText) {
           return { syncBlocks: DEFAULT_EMPTY_BLOCK, rawMarkdown: mdText };
         }
-        return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(parsed))), rawMarkdown: null };
+        return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(splitEmbeddedNewlineBlocks(parsed)))), rawMarkdown: null };
       }
       // Handle ProseMirror/Tiptap JSON format: { type: "doc", content: [...] }
       if (parsed && typeof parsed === 'object' && parsed.type === 'doc' && Array.isArray(parsed.content)) {

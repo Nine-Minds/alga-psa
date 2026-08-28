@@ -66,6 +66,17 @@ export interface TeamsMeetingOrganizerVerification {
   reason?: 'ee_disabled' | 'feature_disabled' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
 }
 
+// Postgres `time` columns read back as HH:MM:SS; the UI pickers and the
+// validation schema both speak HH:MM, so trim seconds on the way out.
+function normalizeSettingTimes<T extends { start_time?: string | null; end_time?: string | null }>(
+  setting: T | undefined
+): T | undefined {
+  if (!setting) return setting;
+  const trim = (value?: string | null) =>
+    typeof value === 'string' && /^\d{2}:\d{2}:/.test(value) ? value.slice(0, 5) : value;
+  return { ...setting, start_time: trim(setting.start_time), end_time: trim(setting.end_time) };
+}
+
 function availabilityActionErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
 
@@ -280,7 +291,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
           })
           .first();
 
-        return updated as IAvailabilitySetting;
+        return normalizeSettingTimes(updated) as IAvailabilitySetting;
       }
 
       // Check for existing setting with same criteria
@@ -329,7 +340,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
           })
           .first();
 
-        return updated as IAvailabilitySetting;
+        return normalizeSettingTimes(updated) as IAvailabilitySetting;
       }
 
       // Create new setting
@@ -351,7 +362,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
         })
         .first();
 
-      return created as IAvailabilitySetting;
+      return normalizeSettingTimes(created) as IAvailabilitySetting;
     });
 
     return { success: true, data: result };
@@ -402,7 +413,7 @@ export const getAvailabilitySettings = withAuth(async (
       return await query;
     });
 
-    return { success: true, data: settings as IAvailabilitySetting[] };
+    return { success: true, data: settings.map(normalizeSettingTimes) as IAvailabilitySetting[] };
   } catch (error) {
     console.error('Error fetching availability settings:', error);
     const message = availabilityActionErrorMessage(error, 'Failed to fetch availability settings');

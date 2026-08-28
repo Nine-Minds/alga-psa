@@ -601,7 +601,9 @@
     "replies_other": "Respostas {{count}}",
     "collapse": "Colapso",
     "expand": "Expandir",
-    "showInDrawer": "Mostrar na gaveta"
+    "showInDrawer": "Mostrar na gaveta",
+    "showEarlierReplies_one": "Mostrar {{count}} resposta anterior",
+    "showEarlierReplies_other": "Mostrar {{count}} respostas anteriores"
   },
   "pagination": {
     "previous": "Anterior",
