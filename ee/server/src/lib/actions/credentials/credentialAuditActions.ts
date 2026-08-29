@@ -5,7 +5,8 @@
  *
  * Read-only surface for the audit trail the vault writes: per-credential
  * history and the vault-wide audit log. Gating mirrors credentialActions:
- * `withAuth` + `hasPermission(user, 'credential', 'audit')` +
+ * `withAuth` + `hasPermission(user, 'credential', 'read')` +
+ * `hasPermission(user, 'credential', 'audit')` +
  * `assertTierAccess(TIER_FEATURES.CREDENTIALS)`.
  *
  * SECURITY — the audit read-scope is the credential read-scope, never weaker:
@@ -276,8 +277,12 @@ export const getCredentialAuditEvents = withAuth(
     if (user.user_type === 'client') {
       throw new Error('Forbidden');
     }
-    const allowed = await hasPermission(user, 'credential', 'audit');
-    if (!allowed) {
+    const canRead = await hasPermission(user, 'credential', 'read');
+    if (!canRead) {
+      throw new Error('Forbidden: insufficient permissions (credential read)');
+    }
+    const canAudit = await hasPermission(user, 'credential', 'audit');
+    if (!canAudit) {
       throw new Error('Forbidden: insufficient permissions (credential audit)');
     }
     await assertTierAccess(TIER_FEATURES.CREDENTIALS);

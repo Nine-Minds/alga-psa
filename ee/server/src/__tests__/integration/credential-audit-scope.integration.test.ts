@@ -5,8 +5,9 @@
  * credential read-scope, never weaker. A restricted credential's activity is
  * visible only to its owner/grantees (not to other `credential:audit`
  * holders), Hudu activity is visible only to viewers whose bundle scope
- * admits the owning client, and a user without `credential:audit` is refused
- * outright. Also covers keyset pagination, per-credential history ordering,
+ * admits the owning client, and users missing either `credential:read` or
+ * `credential:audit` are refused outright. Also covers keyset pagination,
+ * per-credential history ordering,
  * filters, actor/name resolution, and the value-free enrichment deltas.
  *
  * The action's withAuth/tier wrappers are shimmed (real `hasPermission` runs
@@ -104,7 +105,6 @@ let clientX: string;
 let clientY: string;
 let userA: string;
 let userB: string;
-let strangerId: string;
 let roleId: string;
 let permAuditId: string;
 let permReadId: string;
@@ -275,8 +275,6 @@ describe('credential audit reader — scope + paging + enrichment', () => {
 
     userA = await seedUser('audit-user-a');
     userB = await seedUser('audit-user-b');
-    strangerId = await seedUser('audit-stranger');
-
     const [role] = await db('roles')
       .insert({
         tenant: tenantId,
@@ -359,9 +357,24 @@ describe('credential audit reader — scope + paging + enrichment', () => {
 
   it('refuses a caller without credential:audit outright', async () => {
     await fixtureCredentials();
+    await db('role_permissions')
+      .where({ tenant: tenantId, role_id: roleId, permission_id: permAuditId })
+      .del();
+
     await expect(
-      callAudit(userFor(strangerId), { tenant: tenantId }, {})
-    ).rejects.toThrow(/insufficient permissions/);
+      callAudit(userFor(userA), { tenant: tenantId }, {})
+    ).rejects.toThrow(/credential audit/);
+  });
+
+  it('refuses a caller with credential:audit but without credential:read', async () => {
+    await fixtureCredentials();
+    await db('role_permissions')
+      .where({ tenant: tenantId, role_id: roleId, permission_id: permReadId })
+      .del();
+
+    await expect(
+      callAudit(userFor(userA), { tenant: tenantId }, {})
+    ).rejects.toThrow(/credential read/);
   });
 
   it('scopes the vault-wide log to the credential read-scope (native restricted + Hudu client scope)', async () => {
