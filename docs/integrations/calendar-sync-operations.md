@@ -35,11 +35,12 @@ This runbook covers the day-to-day operational tasks for the Google and Microsof
 3. The provider is removed and a toast confirms success. Any scheduled jobs referencing the provider will skip automatically.
 
 ## Troubleshooting Checklist
-- **Authorization failures**: ensure the OAuth popup is not blocked and that tenant secrets are valid.
+- **"Calendar provider has not completed OAuth authorization yet"**: this message appears immediately when **Sync Now** is clicked on a provider that has no stored OAuth tokens — the OAuth consent flow was never finished. Open the provider's settings card, click **Authorize**, complete the consent flow until you see the **OAuth Complete** badge, save the form, then retry the sync.
+- **Authorization failures (other)**: ensure the OAuth popup is not blocked, that tenant secrets are valid, and that the provider credentials have not been revoked.
 - **Stale last sync**: run a manual sync to force a pass; if the timestamp does not advance check webhook subscriptions.
-- **Webhook errors**: consult the `calendar-webhook-maintenance` job logs. Google uses Calendar “watch” channels (webhook) and Microsoft uses Graph subscriptions; both are renewed by maintenance jobs.
+- **Webhook errors**: consult the `calendar-webhook-maintenance` job logs. Google uses Calendar "watch" channels (webhook) and Microsoft uses Graph subscriptions; both are renewed by maintenance jobs.
 - **Multi-tenant bleed**: confirm the provider belongs to the active tenant. All actions enforce tenant scoping; mismatches result in `Forbidden` errors.
-- **Conflicts stuck**: if repeated conflicts appear, reset the mapping’s `sync_status` through the conflict resolution workflow and retry.
+- **Conflicts stuck**: if repeated conflicts appear, reset the mapping's `sync_status` through the conflict resolution workflow and retry.
 
 ## Escalation
 - Pager duty rotation: **Platform Integrations**.
