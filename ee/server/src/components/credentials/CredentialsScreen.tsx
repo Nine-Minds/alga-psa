@@ -17,17 +17,20 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import {
   ArrowLeft,
   Copy,
   Eye,
   EyeOff,
   ExternalLink,
+  History,
   KeyRound,
   Link2,
   Lock,
@@ -61,6 +64,7 @@ import type {
 import { CredentialFormDialog, type CredentialFormValue } from './CredentialFormDialog';
 import { CredentialLinkDialog } from './CredentialLinkDialog';
 import { CredentialRestrictDialog } from './CredentialRestrictDialog';
+import { CredentialAuditPanel } from './CredentialAuditPanel';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { TotpCountdown } from './TotpCountdown';
 import { useCredentialsList, type RevealErrorKey } from './useCredentialsList';
@@ -159,6 +163,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<CredentialSummary | null>(null);
   const [restrictTarget, setRestrictTarget] = useState<CredentialSummary | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<CredentialSummary | null>(null);
   // Entity embeds swap the body between views instead of stacking overlay
   // dialogs (the embed often already lives inside the tile's manager dialog,
   // and a dialog on a dialog reads as broken chrome).
@@ -387,6 +392,16 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
           )}
+          {!entityScoped && context?.canAudit === true && (
+            <Link
+              id="credentials-screen-audit-log"
+              href="/msp/credentials/audit"
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[rgb(var(--color-border-200))] px-3 text-sm font-medium text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
+            >
+              <History className="h-4 w-4" />
+              {t('credentials.audit.pageTitle')}
+            </Link>
+          )}
         </div>
       </div>
 
@@ -585,6 +600,18 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                       )}
+                      {!entityScoped && context?.canAudit === true && (
+                        <Button
+                          id={`credentials-screen-history-${id}`}
+                          variant="ghost"
+                          size="sm"
+                          aria-label={t('credentials.audit.rowAction')}
+                          title={t('credentials.audit.rowAction')}
+                          onClick={() => setHistoryTarget(item)}
+                        >
+                          <History className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       {!entityScoped && item.source === 'alga' && (
                         <Button
                           id={`credentials-row-restrict-${id}`}
@@ -694,6 +721,26 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
         onClose={() => setRestrictTarget(null)}
         onSaved={handleRestrictSaved}
       />
+
+      <Dialog
+        id="credentials-history-dialog"
+        isOpen={historyTarget !== null}
+        onClose={() => setHistoryTarget(null)}
+        title={t('credentials.audit.historyTitle')}
+        className="max-w-lg"
+      >
+        <DialogContent>
+          <div className="space-y-2">
+            <p className="text-sm text-[rgb(var(--color-text-500))]">
+              {historyTarget?.name}
+            </p>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">
+              {t('credentials.audit.historySubtitle')}
+            </p>
+            {historyTarget && <CredentialAuditPanel credentialId={historyTarget.id} />}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmationDialog
         id="credentials-confirm-dialog"

@@ -15,6 +15,8 @@ describe('credentials vault — CE stub contracts', () => {
       'packages/ee/src/components/credentials/CredentialFormDialog.tsx',
       'packages/ee/src/components/credentials/CredentialRestrictDialog.tsx',
       'packages/ee/src/components/credentials/CredentialLinkDialog.tsx',
+      'packages/ee/src/components/credentials/CredentialAuditPanel.tsx',
+      'packages/ee/src/components/credentials/CredentialAuditScreen.tsx',
       'packages/ee/src/components/credentials/ClientCredentialsTab.tsx',
       'packages/ee/src/components/credentials/AssetCredentialsSection.tsx',
       'packages/ee/src/components/credentials/EntityCredentialsSection.tsx',
@@ -32,10 +34,12 @@ describe('credentials vault — CE stub contracts', () => {
     expect(stub).toContain("code: 'ENTERPRISE_EDITION_REQUIRED'");
     expect(stub).toContain('getCredentialsContext');
     expect(stub).toContain(
-      "return { tierOk: false, huduConnected: false, state: 'unavailable', flagIrrelevantHere: true };"
+      "return { tierOk: false, huduConnected: false, state: 'unavailable', flagIrrelevantHere: true, canAudit: false };"
     );
     for (const action of [
       'listCredentials',
+      'getCredential',
+      'getCredentialAuditEvents',
       'createCredential',
       'updateCredential',
       'deleteCredential',
@@ -66,6 +70,11 @@ describe('credentials vault — CE stub contracts', () => {
   it('the /msp/credentials page resolves the screen through @enterprise (CE renders null)', () => {
     const page = readRepoFile('server/src/app/msp/credentials/page.tsx');
     expect(page).toContain("@enterprise/components/credentials/CredentialsScreen");
+  });
+
+  it('the /msp/credentials/audit page resolves the audit screen through @enterprise (CE renders null)', () => {
+    const page = readRepoFile('server/src/app/msp/credentials/audit/page.tsx');
+    expect(page).toContain("@enterprise/components/credentials/CredentialAuditScreen");
   });
 
   it('the credentials tier feature is EE-agnostic and gated to pro+ (types constant)', () => {

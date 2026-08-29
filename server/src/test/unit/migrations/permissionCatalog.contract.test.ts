@@ -92,4 +92,20 @@ describe('permission catalog contract', () => {
     expect(ACTIVE_PERMISSIONS.filter((permission: { resource: string }) => permission.resource === 'secrets')
       .map((permission: { action: string }) => permission.action).sort()).toEqual(['manage', 'view']);
   });
+
+  it('declares credential:audit with supervisory default grants (msp only)', () => {
+    const audit = ACTIVE_PERMISSIONS.find(
+      (permission: { resource: string; action: string }) =>
+        permission.resource === 'credential' && permission.action === 'audit'
+    );
+    expect(audit).toBeDefined();
+    expect(audit.msp).toBe(true);
+    expect(audit.client).toBe(false);
+    expect(audit.products).toEqual(expect.arrayContaining(['algadesk', 'psa']));
+    // The audit trail is an oversight surface: technicians can reveal but do
+    // not see the report of who else did. Admin on both products; Manager on
+    // PSA.
+    expect(audit.defaultGrants.algadesk).toEqual(['msp:Admin']);
+    expect(audit.defaultGrants.psa).toEqual(['msp:Admin', 'msp:Manager']);
+  });
 });

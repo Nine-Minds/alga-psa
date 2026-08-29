@@ -90,6 +90,7 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'contact', action: 'update', msp: true, client: false, description: 'Edit contact details', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Finance', 'msp:Project Manager'] } },
   { resource: 'contact', action: 'update', msp: false, client: true, description: 'Update contacts', products: ['algadesk'], defaultGrants: { algadesk: ['client:Admin'] } },
 
+  { resource: 'credential', action: 'audit', msp: true, client: false, description: 'View the credentials vault audit log', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Manager'] } },
   { resource: 'credential', action: 'create', msp: true, client: false, description: 'Create credentials in the vault', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Technician'] } },
   { resource: 'credential', action: 'delete', msp: true, client: false, description: 'Delete credentials from the vault', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Technician'] } },
   { resource: 'credential', action: 'read', msp: true, client: false, description: 'View credential metadata and the credentials vault', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
