@@ -55,6 +55,9 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
     if (key === 'credentials.audit.detail.grantsRemoved') return `Removed access from ${options?.count ?? 0}`;
     const friendly: Record<string, string> = {
       'credentials.audit.pageTitle': 'Password audit log',
+      'credentials.audit.subtitle': 'See who viewed or changed passwords across your vault.',
+      'credentials.audit.filtersTitle': 'Filters',
+      'credentials.audit.activityTitle': 'Activity',
       'credentials.audit.loading': 'Loading…',
       'credentials.audit.empty': 'No activity yet.',
       'credentials.audit.emptyFiltered': 'No activity matches these filters.',
@@ -119,6 +122,24 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
 
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: React.InputHTMLAttributes<HTMLInputElement> & { id?: string }) => <input {...props} />,
+}));
+
+vi.mock('@alga-psa/ui/components/UserPicker', () => ({
+  default: ({ id, users, value, onValueChange }: {
+    id?: string;
+    users: Array<{ user_id: string; first_name?: string; last_name?: string }>;
+    value: string;
+    onValueChange: (value: string) => void;
+  }) => (
+    <select id={id} value={value} onChange={(event) => onValueChange(event.target.value)}>
+      <option value="" />
+      {users.map((user) => (
+        <option key={user.user_id} value={user.user_id}>
+          {[user.first_name, user.last_name].filter(Boolean).join(' ')}
+        </option>
+      ))}
+    </select>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/Table', () => ({

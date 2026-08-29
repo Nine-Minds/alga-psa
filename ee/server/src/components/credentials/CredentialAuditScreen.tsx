@@ -17,7 +17,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -38,6 +39,15 @@ import type { CredentialsContext } from '../../lib/actions/credentials/credentia
 import type { CredentialAuditEventOperation } from '../../lib/actions/credentials/credentialAuditActions';
 import { useCredentialAudit, type CredentialAuditFilterState } from './useCredentialAudit';
 import { CREDENTIAL_AUDIT_OPERATIONS, useCredentialAuditLabels } from './credentialAuditLabels';
+
+const CREDENTIAL_AUDIT_OPERATION_FILTERS = CREDENTIAL_AUDIT_OPERATIONS
+  .filter((operation) => operation !== 'hudu_password_reveal')
+  .map((operation) => ({
+    id: operation,
+    operations: operation === 'credential_reveal'
+      ? [operation, 'hudu_password_reveal'] as CredentialAuditEventOperation[]
+      : [operation],
+  }));
 
 function hasActiveFilters(filters: CredentialAuditFilterState): boolean {
   return Boolean(
@@ -115,10 +125,14 @@ export function CredentialAuditScreen() {
     };
   }, [flagEnabled]);
 
-  const toggleOperation = useCallback((operation: CredentialAuditEventOperation) => {
-    setOperations((prev) =>
-      prev.includes(operation) ? prev.filter((op) => op !== operation) : [...prev, operation]
-    );
+  const toggleOperationFilter = useCallback((filterOperations: CredentialAuditEventOperation[]) => {
+    setOperations((prev) => {
+      const isSelected = filterOperations.every((operation) => prev.includes(operation));
+      if (isSelected) {
+        return prev.filter((operation) => !filterOperations.includes(operation));
+      }
+      return [...new Set([...prev, ...filterOperations])];
+    });
   }, []);
 
   const clearFilters = useCallback(() => {
@@ -182,59 +196,65 @@ export function CredentialAuditScreen() {
   };
 
   return (
-    <div id="credentials-audit-screen" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-500))]">
-          <KeyRound className="h-4 w-4 shrink-0" />
-          <span>{t('credentials.audit.pageTitle')}</span>
+    <div id="credentials-audit-screen" className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-[rgb(var(--color-text-900))]">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 text-[rgb(var(--color-primary-600))]">
+              <KeyRound className="h-4 w-4" />
+            </span>
+            {t('credentials.audit.pageTitle')}
+          </h1>
+          <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
+            {t('credentials.audit.subtitle', { defaultValue: 'See who viewed or changed passwords across your vault.' })}
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {activeFilters && (
-            <Button id="credentials-audit-clear-filters" variant="ghost" size="sm" onClick={clearFilters}>
-              {t('credentials.audit.clearFilters')}
-            </Button>
-          )}
-          <Button
-            id="credentials-audit-refresh"
-            variant="outline"
-            size="sm"
-            onClick={() => void refresh()}
-            disabled={isLoading}
-            aria-label={t('credentials.screen.refresh')}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
+        <Button
+          id="credentials-audit-refresh"
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => void refresh()}
+          disabled={isLoading}
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          {t('credentials.screen.refresh')}
+        </Button>
       </div>
 
       <Card id="credentials-audit-filters">
-        <CardContent className="space-y-3">
+        <CardContent className="!p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+              {t('credentials.audit.filtersTitle', { defaultValue: 'Filters' })}
+            </span>
+            {activeFilters && (
+              <Button id="credentials-audit-clear-filters" variant="ghost" size="xs" onClick={clearFilters}>
+                {t('credentials.audit.clearFilters')}
+              </Button>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-[rgb(var(--color-text-700))]">
               {t('credentials.audit.filter.operation')}
             </span>
             <div id="credentials-audit-operation-filters" className="flex flex-wrap items-center gap-2">
-              {CREDENTIAL_AUDIT_OPERATIONS.map((operation) => {
-                const checked = operations.includes(operation);
+              {CREDENTIAL_AUDIT_OPERATION_FILTERS.map((filter) => {
+                const checked = filter.operations.every((operation) => operations.includes(operation));
                 return (
-                  <label
-                    key={operation}
-                    className={`flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs ${
+                  <Checkbox
+                    key={filter.id}
+                    id={`credentials-audit-operation-${filter.id}`}
+                    size="sm"
+                    checked={checked}
+                    onChange={() => toggleOperationFilter(filter.operations)}
+                    label={operationLabel(filter.id)}
+                    containerClassName={`cursor-pointer rounded-md border px-2 py-1 [&_label]:text-xs ${
                       checked
-                        ? 'border-[rgb(var(--color-primary-400))] bg-primary-50 text-[rgb(var(--color-primary-700))] dark:bg-primary-500/20'
-                        : 'border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-500))]'
+                        ? 'border-[rgb(var(--color-primary-400))] bg-primary-50 dark:bg-primary-500/20'
+                        : 'border-[rgb(var(--color-border-200))]'
                     }`}
-                  >
-                    <input
-                      id={`credentials-audit-operation-${operation}`}
-                      type="checkbox"
-                      className="h-3.5 w-3.5"
-                      checked={checked}
-                      onChange={() => toggleOperation(operation)}
-                    />
-                    <span className="sr-only">{t('credentials.audit.filter.operation')}</span>
-                    {operationLabel(operation)}
-                  </label>
+                  />
                 );
               })}
             </div>
@@ -244,19 +264,17 @@ export function CredentialAuditScreen() {
               <span className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                 {t('credentials.audit.filter.actor')}
               </span>
-              <select
+              <UserPicker
                 id="credentials-audit-actor-filter"
-                className="h-9 rounded-md border border-[rgb(var(--color-border-200))] px-2 text-sm"
+                users={users}
                 value={actorUserId}
-                onChange={(event) => setActorUserId(event.target.value)}
-              >
-                <option value="">{t('credentials.audit.filter.allActors')}</option>
-                {users.map((user) => (
-                  <option key={user.user_id} value={user.user_id}>
-                    {[user.first_name, user.last_name].filter(Boolean).join(' ') || user.username}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setActorUserId}
+                placeholder={t('credentials.audit.filter.allActors')}
+                unassignedLabel={t('credentials.audit.filter.allActors')}
+                labelStyle="none"
+                buttonWidth="full"
+                className="min-w-[180px]"
+              />
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -297,22 +315,21 @@ export function CredentialAuditScreen() {
       )}
 
       <Card id="credentials-audit-table">
-        <CardHeader>
+        <CardHeader className="border-b border-[rgb(var(--color-border-200))] p-4">
           <CardTitle className="flex items-center gap-2 text-base">
-            <KeyRound className="h-4 w-4 shrink-0" />
-            {t('credentials.audit.pageTitle')}
+            {t('credentials.audit.activityTitle', { defaultValue: 'Activity' })}
             <Badge id="credentials-audit-count" variant="secondary">
               {events?.length ?? 0}
             </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="!p-0">
           {isLoading && !events ? (
-            <p id="credentials-audit-loading" className="text-sm text-[rgb(var(--color-text-500))]">
+            <p id="credentials-audit-loading" className="p-4 text-sm text-[rgb(var(--color-text-500))]">
               {t('credentials.audit.loading')}
             </p>
           ) : events && events.length === 0 ? (
-            <p id="credentials-audit-empty" className="text-sm text-[rgb(var(--color-text-500))] py-1">
+            <p id="credentials-audit-empty" className="p-4 text-sm text-[rgb(var(--color-text-500))]">
               {activeFilters ? t('credentials.audit.emptyFiltered') : t('credentials.audit.empty')}
             </p>
           ) : (
@@ -354,7 +371,7 @@ export function CredentialAuditScreen() {
             </div>
           )}
           {nextCursor !== null && (
-            <div className="mt-3 flex justify-center">
+            <div className="flex justify-center border-t border-[rgb(var(--color-border-200))] p-4">
               <Button
                 id="credentials-audit-load-more"
                 variant="outline"
