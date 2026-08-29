@@ -24,7 +24,19 @@ the recording/transcript loops, `${root}` for the mailbox roots) are expanded
 from `PACKAGED_ROUTE_LITERALS`, not folded into `{id}` — a literal treated as a
 key segment would either fail against a single-valued entity or bless fiction.
 Adding a new interpolation, or rebinding an existing one, fails discovery with
-the mapping to update.
+the mapping to update. OData function calls are handled the same way:
+`adhocCalls/getAllRecordings(userId=…)` is expanded from
+`PACKAGED_ROUTE_FUNCTIONS` (the emulator's `:fn`) and `SOURCE_PATH_LITERALS`
+(the `${fn}` in the call-artifact builder), the parameter list is dropped, and
+the name is resolved against the CSDL's bound functions instead of passing as an
+entity key.
+
+Discovery is static, so it only sees paths whose base is a literal
+`https://graph.microsoft.com/{v1.0,beta}` URL or one of the declared forms in
+`builderPatterns` — `${graphBaseUrl()}`, `${getMicrosoftGraphBaseUrl()}`, their
+beta twins, and `${graphBaseUrl}` held in a variable or passed as a parameter. A
+path built from some other base variable is invisible to it: add that form to
+`builderPatterns` rather than assuming the file is covered.
 
 ## Staleness runs in two directions
 

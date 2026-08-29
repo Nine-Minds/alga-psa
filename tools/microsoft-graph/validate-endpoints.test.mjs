@@ -10,6 +10,7 @@ import {
   auditCalls,
   checkFreshness,
   discoverPackagedEmulatorRoutes,
+  discoverSourceCalls,
   invokedAsScript,
   parseCsdl,
   runValidation,
@@ -58,6 +59,24 @@ test('an emulator loop that rebinds a route literal fails discovery loudly', () 
     () => assertPackagedLiteralsCurrent(current.replace("['/me', '/users/:userId']", "['/me']")),
     /route shape changed near/,
   );
+});
+
+test('bound function calls are resolved as functions, not as entity keys', () => {
+  const model = loadModel('v1.0');
+  assert.equal(validatePath(model, '/users/{id}/adhocCalls/getAllRecordings', 'GET'), null);
+  assert.match(validatePath(model, '/users/{id}/adhocCalls/getAllHighlights', 'GET'), /does not exist/);
+
+  const routes = discoverPackagedEmulatorRoutes();
+  assert.deepEqual(routes.filter((route) => route.path.endsWith('/:fn')), []);
+  for (const path of ['/users/:userId/adhocCalls/getAllRecordings', '/users/:userId/adhocCalls/getAllTranscripts']) {
+    assert.ok(routes.some((route) => route.path === path), `expected discovery to expand ${path}`);
+  }
+
+  const artifactCalls = discoverSourceCalls().filter((call) => call.path.includes('/adhocCalls/getAll'));
+  assert.deepEqual(artifactCalls.map((call) => call.path.split('/adhocCalls/')[1].split('(')[0]).sort(), [
+    'getAllRecordings',
+    'getAllTranscripts',
+  ]);
 });
 
 test('rejects the fictitious Lighthouse managedTenants users relationship', () => {

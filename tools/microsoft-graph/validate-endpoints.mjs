@@ -177,6 +177,9 @@ function canonicalPath(path) {
   return path
     .replace(/\$\{[^}]+\}/g, '{id}')
     .split('?')[0]
+    // OData parameter lists — getAllRecordings(userId=…) — name no resource, so
+    // drop them and let the function name itself be resolved.
+    .replace(/\([^/]*\)/g, '')
     .replace(/:[A-Za-z][A-Za-z0-9_]*/g, '{id}')
     .replace(/\{[^}]+\}/g, '{id}')
     .replace(/\/+/g, '/')
@@ -211,8 +214,31 @@ function methodNear(source, index) {
   return 'GET';
 }
 
+// Source interpolations that carry a build-time literal rather than an id. The
+// same hazard as the emulator's: `${fn}` folded into {id} reads as an entity key
+// and leaves the bound function it names entirely unchecked.
+const SOURCE_PATH_LITERALS = [
+  {
+    file: 'ee/packages/microsoft-teams/src/lib/telephony/callArtifacts.ts',
+    token: '${fn}',
+    values: ['getAllRecordings', 'getAllTranscripts'],
+    binding: "const fn = params.kind === 'recordings' ? 'getAllRecordings' : 'getAllTranscripts';",
+  },
+];
+
+function expandSourceLiterals(call) {
+  let paths = [call.path];
+  for (const literal of SOURCE_PATH_LITERALS) {
+    if (literal.file !== call.file) continue;
+    if (!paths.some((path) => path.includes(literal.token))) continue;
+    paths = paths.flatMap((path) => literal.values.map((value) => path.replaceAll(literal.token, value)));
+  }
+  return paths.map((path) => ({ ...call, path }));
+}
+
 export function discoverSourceCalls() {
   const calls = [];
+  const declaredFiles = new Set();
   const addExpression = ({ version = 'v1.0', method, expression, file }) => {
     const variants = expression.includes('${mailboxBase}') || expression.includes('${this.getMailboxBasePath()}')
       ? ['/me', '/users/{userId}'].map((root) => expression
@@ -227,6 +253,15 @@ export function discoverSourceCalls() {
       const source = readFileSync(file, 'utf8');
       const rel = relative(repoRoot, file);
 
+      for (const literal of SOURCE_PATH_LITERALS.filter((declared) => declared.file === rel)) {
+        declaredFiles.add(rel);
+        if (!source.includes(literal.binding)) {
+          throw new Error(`${rel} no longer binds '${literal.token}' as declared: ${literal.binding}`
+            + ' — update SOURCE_PATH_LITERALS in tools/microsoft-graph/validate-endpoints.mjs'
+            + ' rather than letting the literal canonicalize into a key segment');
+        }
+      }
+
       for (const match of source.matchAll(/https:\/\/graph\.microsoft\.com\/(v1\.0|beta)(\/[^`'"\n]*)/g)) {
         if (!match[2].startsWith('/')) continue;
         const raw = match[2].split(/[`'"\n]/)[0];
@@ -238,6 +273,9 @@ export function discoverSourceCalls() {
         { regex: /\$\{getMicrosoftGraphBetaBaseUrl\(\)\}([^`]+)/g, version: 'beta' },
         { regex: /\$\{graphBaseUrl\(\)\}([^`]+)/g, version: 'v1.0' },
         { regex: /\$\{graphBetaBaseUrl\(\)\}([^`]+)/g, version: 'beta' },
+        // The same base URL held in a variable or passed as a parameter, which
+        // is how the call-artifact builders reach Graph.
+        { regex: /\$\{(?:params\.)?graphBaseUrl\}([^`]+)/g, version: 'v1.0' },
       ];
       for (const pattern of builderPatterns) {
         for (const match of source.matchAll(pattern.regex)) {
@@ -265,7 +303,16 @@ export function discoverSourceCalls() {
       }
     }
   }
-  return calls.filter((call) => call.path.startsWith('/') && !call.path.includes('${params.path}'));
+  for (const literal of SOURCE_PATH_LITERALS) {
+    if (!declaredFiles.has(literal.file)) {
+      throw new Error(`declared Graph path literal names a file the scan never reached: ${literal.file}`
+        + ' — update SOURCE_PATH_LITERALS in tools/microsoft-graph/validate-endpoints.mjs');
+    }
+  }
+
+  return calls
+    .filter((call) => call.path.startsWith('/') && !call.path.includes('${params.path}'))
+    .flatMap(expandSourceLiterals);
 }
 
 // Emulator route templates interpolate build-time literals, never ids. Leaving
@@ -286,6 +333,19 @@ const PACKAGED_ROUTE_LITERALS = [
     values: ['recordings', 'transcripts'],
     bindings: ["const segment = kind === 'recording' ? 'recordings' : 'transcripts';"],
     markers: [],
+  },
+];
+
+// An express :param is an id everywhere except here: the OData function call
+// arrives whole (parens and commas are URL-legal) and lands in :fn, so folding
+// it to {id} would validate as a key lookup and never check the functions the
+// emulator actually serves.
+const PACKAGED_ROUTE_FUNCTIONS = [
+  {
+    route: '/users/:userId/adhocCalls/:fn',
+    param: ':fn',
+    values: ['getAllRecordings', 'getAllTranscripts'],
+    marker: 'fn.match(/^(getAllRecordings|getAllTranscripts)\\((.*)\\)$/)',
   },
 ];
 
@@ -318,6 +378,7 @@ export function discoverPackagedEmulatorRoutes() {
   assertPackagedLiteralsCurrent(source);
 
   const routes = [];
+  const functionRoutes = new Set();
   for (const match of source.matchAll(/graph\.(get|post|patch|delete|put)\((?:`([^`]+)`|'([^']+)'|"([^"]+)")/g)) {
     const template = match[2] || match[3] || match[4];
     const method = match[1].toUpperCase();
@@ -332,7 +393,26 @@ export function discoverPackagedEmulatorRoutes() {
           + ' — teach PACKAGED_ROUTE_LITERALS in tools/microsoft-graph/validate-endpoints.mjs about it'
           + ' rather than letting it canonicalize into a key segment');
       }
+      const declared = PACKAGED_ROUTE_FUNCTIONS.find((entry) => entry.route === expanded);
+      if (declared) {
+        functionRoutes.add(declared.route);
+        if (!source.includes(declared.marker)) {
+          throw new Error(`packaged Graph emulator no longer parses ${declared.route} as declared: ${declared.marker}`
+            + ' — update PACKAGED_ROUTE_FUNCTIONS in tools/microsoft-graph/validate-endpoints.mjs');
+        }
+        for (const value of declared.values) {
+          routes.push({ version: 'v1.0', method, path: expanded.replace(declared.param, value) });
+        }
+        continue;
+      }
       routes.push({ version: 'v1.0', method, path: expanded.endsWith('/:variant') ? expanded.replace('/:variant', '/$value') : expanded });
+    }
+  }
+
+  for (const declared of PACKAGED_ROUTE_FUNCTIONS) {
+    if (!functionRoutes.has(declared.route)) {
+      throw new Error(`packaged Graph emulator no longer serves ${declared.route}`
+        + ' — update PACKAGED_ROUTE_FUNCTIONS in tools/microsoft-graph/validate-endpoints.mjs');
     }
   }
   return routes;
