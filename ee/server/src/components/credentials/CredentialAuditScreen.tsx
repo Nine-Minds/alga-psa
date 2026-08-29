@@ -380,7 +380,7 @@ export function CredentialAuditScreen() {
                     containerClassName={`min-h-10 cursor-pointer rounded-lg border px-3 py-2 [&_label]:text-sm ${
                       checked
                         ? 'border-[rgb(var(--color-primary-400))] bg-primary-50 dark:bg-primary-500/20'
-                        : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))]'
+                        : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))]'
                     }`}
                   />
                 );
@@ -459,7 +459,7 @@ export function CredentialAuditScreen() {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader className="bg-[rgb(var(--color-background-100))]">
+                <TableHeader className="bg-[rgb(var(--color-border-100))]">
                   <TableRow>
                     <TableHead className="text-sm font-semibold uppercase tracking-wide">{t('credentials.audit.col.when')}</TableHead>
                     <TableHead className="text-sm font-semibold uppercase tracking-wide">{t('credentials.audit.col.who')}</TableHead>
