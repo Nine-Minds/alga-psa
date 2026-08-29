@@ -46,11 +46,13 @@ path built from some other base variable is invisible to it: add that form to
   only visible after repinning the metadata. So the pin has an expiry: once it
   is older than `maxAgeDays` (90) the guard fails — it does not warn — and
   names the update command. A neglected pin becomes a red check within a
-  bounded window instead of quietly passing forever.
+  bounded window instead of quietly passing forever. `maxAgeDays` is itself
+  capped at 120, so the gate cannot be widened away in a one-line diff.
 
-`.github/workflows/microsoft-graph-metadata-refresh.yml` repins monthly and opens
-a bump pull request — monthly because each repin commits ~1.2 MB of gzipped CSDL
-that does not delta-compress, and three attempts still fit inside the 90-day gate. A repin that fails validation still opens that pull request
+`.github/workflows/microsoft-graph-metadata-refresh.yml` repins monthly and
+opens a bump pull request — monthly because each repin commits ~1.2 MB of
+gzipped CSDL that does not delta-compress, and three attempts still fit inside
+the 90-day gate. A repin that fails validation still opens that pull request
 *and* fails the scheduled run, so an upstream removal surfaces as a red job with
 the offending bump branch attached, never as a quietly green one.
 
