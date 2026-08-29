@@ -4,7 +4,15 @@ import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
-import { auditCalls, checkFreshness, parseCsdl, runValidation, validatePath } from './validate-endpoints.mjs';
+import {
+  assertPackagedLiteralsCurrent,
+  auditCalls,
+  checkFreshness,
+  discoverPackagedEmulatorRoutes,
+  parseCsdl,
+  runValidation,
+  validatePath,
+} from './validate-endpoints.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(join(here, 'endpoints.json'), 'utf8'));
@@ -15,9 +23,39 @@ const withMetadata = (overrides) => ({ ...config, metadata: { ...config.metadata
 
 test('every discovered source call and emulator route resolves against the pinned CSDL', () => {
   const result = runValidation();
-  assert.ok(result.sourceCalls >= 50);
-  assert.ok(result.emulatorRoutes >= 20);
-  assert.ok(result.validatedPaths >= 40);
+  assert.ok(result.sourceCalls >= 80);
+  assert.ok(result.emulatorRoutes >= 60);
+  assert.ok(result.validatedPaths >= 55);
+});
+
+test('packaged emulator discovery expands literal segments instead of folding them into ids', () => {
+  const routes = discoverPackagedEmulatorRoutes();
+  assert.deepEqual(routes.filter((route) => route.path.includes('${')), []);
+  for (const path of [
+    '/users/:userId/onlineMeetings/:meetingId/recordings',
+    '/users/:userId/onlineMeetings/:meetingId/transcripts/:artifactId/content',
+    '/users/:userId/adhocCalls/:callId/recordings/:artifactId',
+  ]) {
+    assert.ok(routes.some((route) => route.path === path), `expected discovery to expand ${path}`);
+  }
+});
+
+test('an emulator loop that rebinds a route literal fails discovery loudly', () => {
+  const current = readFileSync(join(here, '../../packages/emulators/msgraph/src/wire.ts'), 'utf8');
+  assert.doesNotThrow(() => assertPackagedLiteralsCurrent(current));
+
+  assert.throws(
+    () => assertPackagedLiteralsCurrent(current.replace("'recordings' : 'transcripts'", "'recordingz' : 'transcripts'")),
+    /binds 'segment' in an undeclared way/,
+  );
+  assert.throws(
+    () => assertPackagedLiteralsCurrent(`${current}\nconst segment = 'attendanceReports';\n`),
+    /binds 'segment' in an undeclared way/,
+  );
+  assert.throws(
+    () => assertPackagedLiteralsCurrent(current.replace("['/me', '/users/:userId']", "['/me']")),
+    /route shape changed near/,
+  );
 });
 
 test('rejects the fictitious Lighthouse managedTenants users relationship', () => {

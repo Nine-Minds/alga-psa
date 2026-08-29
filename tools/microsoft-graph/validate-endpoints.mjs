@@ -265,19 +265,71 @@ export function discoverSourceCalls() {
   return calls.filter((call) => call.path.startsWith('/') && !call.path.includes('${params.path}'));
 }
 
+// Emulator route templates interpolate build-time literals, never ids. Leaving
+// one for canonicalPath to fold into {id} invents a key segment: it either
+// fails against a single-valued entity or, worse, silently blesses fiction.
+// Expand them from the loops that produce them and refuse to guess at the rest.
+const PACKAGED_ROUTE_LITERALS = [
+  {
+    token: '${root}',
+    variable: 'root',
+    values: ['/me', '/users/:userId'],
+    bindings: ['for (const root of mailboxRoots)'],
+    markers: ["const mailboxRoots = ['/me', '/users/:userId'];"],
+  },
+  {
+    token: '${segment}',
+    variable: 'segment',
+    values: ['recordings', 'transcripts'],
+    bindings: ["const segment = kind === 'recording' ? 'recordings' : 'transcripts';"],
+    markers: [],
+  },
+];
+
+// Every place the emulator binds an interpolated route variable has to match a
+// mapping declared above, or the expansion below would quietly use stale
+// literals. Checking that one binding still exists is not enough: a second,
+// differently valued loop would slip past it.
+export function assertPackagedLiteralsCurrent(source) {
+  for (const { variable, bindings, markers } of PACKAGED_ROUTE_LITERALS) {
+    for (const marker of markers) {
+      if (!source.includes(marker)) throw new Error(`packaged Graph emulator route shape changed near: ${marker}`);
+    }
+    const found = [...source.matchAll(
+      new RegExp(`(?:const|let|var)\\s+${variable}\\s*=[^;]*;|for\\s*\\(\\s*(?:const|let)\\s+${variable}\\s+of\\s+[^)]*\\)`, 'g'),
+    )].map((match) => match[0].replace(/\s+/g, ' ').trim());
+    for (const binding of found) {
+      if (!bindings.includes(binding)) {
+        throw new Error(`packaged Graph emulator binds '${variable}' in an undeclared way: ${binding}`
+          + ' — update PACKAGED_ROUTE_LITERALS in tools/microsoft-graph/validate-endpoints.mjs to match');
+      }
+    }
+    for (const binding of bindings) {
+      if (!found.includes(binding)) throw new Error(`packaged Graph emulator route shape changed near: ${binding}`);
+    }
+  }
+}
+
 export function discoverPackagedEmulatorRoutes() {
   const source = readFileSync(join(repoRoot, 'packages/emulators/msgraph/src/wire.ts'), 'utf8');
+  assertPackagedLiteralsCurrent(source);
+
   const routes = [];
   for (const match of source.matchAll(/graph\.(get|post|patch|delete|put)\((?:`([^`]+)`|'([^']+)'|"([^"]+)")/g)) {
-    let path = match[2] || match[3] || match[4];
+    const template = match[2] || match[3] || match[4];
     const method = match[1].toUpperCase();
-    if (path.includes('${root}')) {
-      for (const root of ['/me', '/users/{userId}']) {
-        const expanded = path.replace('${root}', root);
-        routes.push({ version: 'v1.0', method, path: expanded.endsWith('/:variant') ? expanded.replace('/:variant', '/$value') : expanded });
+    let expansions = [template];
+    for (const { token, values } of PACKAGED_ROUTE_LITERALS) {
+      if (!expansions.some((path) => path.includes(token))) continue;
+      expansions = expansions.flatMap((path) => values.map((value) => path.replaceAll(token, value)));
+    }
+    for (const expanded of expansions) {
+      if (expanded.includes('${')) {
+        throw new Error(`unresolved interpolation in packaged Graph emulator route '${template}'`
+          + ' — teach PACKAGED_ROUTE_LITERALS in tools/microsoft-graph/validate-endpoints.mjs about it'
+          + ' rather than letting it canonicalize into a key segment');
       }
-    } else {
-      routes.push({ version: 'v1.0', method, path: path.endsWith('/:variant') ? path.replace('/:variant', '/$value') : path });
+      routes.push({ version: 'v1.0', method, path: expanded.endsWith('/:variant') ? expanded.replace('/:variant', '/$value') : expanded });
     }
   }
   return routes;
