@@ -31,7 +31,7 @@ The generated Teams app manifest registers the bot under the tenant's Microsoft 
 
 ## Prerequisites
 
-- AlgaPSA Pro with the Microsoft Teams add-on enabled for the tenant.
+- Enterprise Edition with `release-v1-5-feature` enabled for the tenant.
 - An AlgaPSA deployment reachable over public HTTPS. `NEXT_PUBLIC_BASE_URL` (or `NEXTAUTH_URL`) must be set to that URL; the Teams app package and webhook URLs are derived from it.
 - Admin access to the Microsoft Entra admin center and the Azure portal.
 - Permission to upload custom apps in the Teams admin center (or a Teams custom-app policy that allows sideloading).
@@ -131,7 +131,7 @@ In the MSP app, go to `Settings -> Integrations -> Microsoft`:
 Then go to `Settings -> Integrations -> Microsoft Teams`:
 
 2. Select that Microsoft profile for Teams.
-3. Enable the capabilities you want: personal tab, personal bot, group chat bot, message extension, activity notifications. Diagnostics expects at least `personal_bot` and `activity_notifications`.
+3. Enable the capabilities you want: personal tab, personal bot, group chat bot, channel bot, message extension, activity notifications, and guest ticket submission. Group-chat, channel, and guest submission capabilities are opt-in because their replies can be visible beyond the signed-in technician. Diagnostics expects at least `personal_bot` and `activity_notifications`.
 4. Choose the notification categories (assignments, customer replies, approval requests, escalations, SLA risk) and, per category, the delivery channel: activity feed, bot DM, or both.
 5. Decide whether `Send calendar invites to participants` stays on. When on, meeting attendees receive real Outlook/Teams calendar invites from the organizer account; when off, meetings are created without attendees and participants only get the join link.
 6. For meetings, set the default meeting organizer UPN as described in the [meetings runbook](teams-meetings-setup.md#4-save-the-organizer-in-algapsa).
@@ -142,10 +142,11 @@ Then go to `Settings -> Integrations -> Microsoft Teams`:
 Still in `Settings -> Integrations -> Microsoft Teams`:
 
 1. Click `Generate` to build the app package metadata. This records the manifest bot ID (the selected profile's client ID) and the deployment base URL.
-2. Download the package. You get `alga-psa-teams-<tenant-id>.zip` containing `manifest.json`, `color.png`, and `outline.png` (manifest schema `1.24`, package version `1.0.1`).
+2. Download the package. You get `alga-psa-teams-<tenant-id>.zip` containing `manifest.json`, `color.png`, and `outline.png`. Its bot is installable in personal chats, group chats, and team channels; AlgaPSA still responds in a group or channel only when the corresponding tenant capability is enabled.
 3. Upload it to Teams:
    - **Org-wide (recommended):** Teams admin center -> `Teams apps -> Manage apps -> Upload new app`. Then allow the app for the users who need it. Users find it under `Apps -> Built for your org`.
    - **Sideload (testing):** in the Teams client, `Apps -> Manage your apps -> Upload an app -> Upload a custom app`. This requires a custom-app policy that permits sideloading.
+   - **Team channels:** after the app is available in the organization, add it to the target team. With `Channel bot` enabled in AlgaPSA, mention `@AlgaPSA` in a channel before the command so Teams routes the message to the bot.
 
 Regenerate and re-upload the package whenever the deployment base URL or the selected Microsoft profile changes. A stale package points Teams at the wrong host or the wrong bot; the `package_metadata` and `bot_id_consistency` diagnostics steps flag this.
 
@@ -171,7 +172,7 @@ In `Settings -> Integrations -> Microsoft Teams`, click `Run diagnostics`. The r
 
 | Step id | Checks |
 |---|---|
-| `addon_entitlement` | The Teams add-on is active for the tenant |
+| `feature_flag` | `release-v1-5-feature` is enabled for the tenant |
 | `integration_status` | The integration is saved and `active` |
 | `capabilities` | `personal_bot` and `activity_notifications` are enabled |
 | `microsoft_profile` | The selected profile exists, is not archived, and has credentials |
@@ -209,7 +210,7 @@ The result records a delivery row you can inspect in the delivery log in the Tea
 | Recordings play but you want them stored in Alga rather than proxied live | `Download recordings` is off, so Alga streams from Graph on each request instead of persisting a copy | Enable `Download recordings` in Teams settings. Newly captured recordings are then stored via the file service (and survive a later Graph content outage); enable `Expose recordings in client portal` if client-portal users should see them |
 | Activity notifications not arriving; delivery log shows `graph_unauthorized` | `TeamsActivity.Send` application permission not consented, or the Graph token was rejected (`401`/`403`) | Re-check [step 2](#2-grant-graph-application-permissions) and grant admin consent |
 | Delivery log shows `graph_not_found` | The Teams app is not installed for the recipient, so Graph cannot target them | Install (or org-allow) the app for that user ([step 5](#5-generate-and-upload-the-teams-app-package)) |
-| Delivery log shows `addon_inactive` | The Teams add-on expired or was disabled; sends are skipped but configuration is preserved | Renew the add-on |
+| Delivery log shows `feature_disabled` | `release-v1-5-feature` is disabled, so sends are skipped | Enable the release flag for the tenant |
 | Delivery log shows `package_misconfigured` | The app package was never generated, or delivery prerequisites (app ID, base URL) are missing | Generate the package in Teams settings, then retry |
 | Delivery log shows `graph_throttled` or `graph_server_error` | Microsoft Graph throttling (`429`) or a Graph outage (`5xx`); these retry | Wait; investigate only if they persist |
 | Calendar invites not received by participants | `Send calendar invites to participants` is off, or the invite landed in spam | Turn the toggle on in Teams settings. Give the organizer mailbox a clear display name (for example `Acme Scheduling`) so invites read sensibly and pass spam filtering |

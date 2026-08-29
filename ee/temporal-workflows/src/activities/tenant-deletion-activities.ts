@@ -162,6 +162,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'teams_notification_deliveries', 'teams_audit_events', 'teams_conversation_references',
   'teams_integrations', 'microsoft_profiles',
 
+  // Telephony (artifacts hang off call records; providers hold the subscription)
+  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_providers',
+
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and
   // bundles also form a cycle via authorization_bundles.published_revision_id,
@@ -208,6 +211,18 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // import_job_items / import_jobs reference jobs with NO ACTION, so they
   // must be deleted before jobs.
   'import_job_items', 'import_jobs',
+  // AMP (Alga Migration Package) staging/ledger tables. All FK back to
+  // migration_jobs (or users), so the whole subtree is deleted before jobs and
+  // users. Internal order is dependents-first: record_outcomes references
+  // staged_records; staged_records/job_entities/identity_mappings/reports all
+  // reference migration_jobs; mapping_profiles references users only.
+  'migration_record_outcomes',
+  'migration_staged_records',
+  'migration_job_entities',
+  'migration_identity_mappings',
+  'migration_reports',
+  'migration_mapping_profiles',
+  'migration_jobs',
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
   'platform_notification_recipients',
 
@@ -467,6 +482,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Permissions and roles (must be deleted before users)
   'permissions', 'roles', 'teams',
+
+  // Tenant secrets metadata references the creating and updating users. Audit
+  // history deliberately has no FK to the secret so delete it explicitly too.
+  'tenant_secrets_audit_log', 'tenant_secrets',
 
   // The correct order to avoid constraint violations:
   // 0. Delete contact child rows first (phones/emails reference contacts)

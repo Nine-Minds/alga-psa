@@ -3,7 +3,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
-import { getTeamsAvailability, resolveTeamsAvailability } from '../../teams/teamsAvailability';
+import { getTeamsAvailability } from '../../teams/teamsAvailability';
 import {
   buildTeamsPersonalTabDeepLink,
   TEAMS_PERSONAL_TAB_ENTITY_ID,
@@ -192,7 +192,7 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     },
     description: {
       short: 'Manage PSA tickets, time, notes, and approvals from Microsoft Teams.',
-      full: 'AlgaPSA for Microsoft Teams gives MSP technicians a personal tab, personal-scope bot, message extension, and activity feed notifications backed by the tenant-selected Microsoft profile.',
+      full: 'AlgaPSA for Microsoft Teams gives MSP technicians a personal tab, bot commands in personal chats, group chats, and team channels, a message extension, and activity feed notifications backed by the tenant-selected Microsoft profile.',
     },
     icons: {
       outline: 'outline.png',
@@ -212,12 +212,12 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     bots: [
       {
         botId: profile.client_id,
-        scopes: ['personal', 'groupChat'],
+        scopes: ['personal', 'groupChat', 'team'],
         supportsFiles: false,
         isNotificationOnly: false,
         commandLists: [
           {
-            scopes: ['personal', 'groupChat'],
+            scopes: ['personal', 'groupChat', 'team'],
             // Single source of truth: the same definitions the bot handler
             // recognizes (Teams caps this list at 10 commands).
             commands: getTeamsManifestBotCommands(),
@@ -403,8 +403,9 @@ export const getTeamsAppPackageStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<TeamsAppPackageStatusResponse> => {
-  const availability = resolveTeamsAvailability({
+  const availability = await getTeamsAvailability({
     tenantId: tenant,
+    userId: (user as any)?.user_id,
   });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };

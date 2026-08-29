@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "Sie haben keine Berechtigung, Geheimnisse anzuzeigen.",
       "success": {
         "tenantNameUpdated": "Mandantenname erfolgreich aktualisiert",
         "timezoneUpdated": "Standardzeitzone erfolgreich aktualisiert",
@@ -1902,7 +1903,8 @@
         "valueRequired": "Geheimniswert ist erforderlich",
         "noChanges": "Keine Änderungen zum Speichern",
         "fixValidation": "Bitte beheben Sie die Validierungsfehler"
-      }
+      },
+      "permissionDenied": "Sie haben keine Berechtigung, Geheimnisse anzuzeigen."
     }
   },
   "importExport": {
@@ -1980,6 +1982,22 @@
     },
     "templates": {
       "comingSoon": "Zuordnungsvorlagen und geplante Importe werden hier verfügbar sein. Speichern Sie Spaltenzuordnungen, teilen Sie sie mit dem Team und konfigurieren Sie wiederkehrende Aufträge."
+    },
+    "migration": {
+      "actions": {
+        "back": "Zurück zu Migrationen",
+        "upload": "Paket hochladen"
+      },
+      "errors": {
+        "noImportableRecords": "Dieses Paket enthielt keine importierbaren Datensätze."
+      },
+      "preflight": {
+        "title": "Vorprüfung"
+      },
+      "run": {
+        "queued": "Migration in Warteschlange",
+        "applying": "Migration läuft"
+      }
     },
     "jobDetails": {
       "title": "Import-Auftragsdetails",
@@ -2500,6 +2518,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Akzeptieren Sie Kreditkartenzahlungen für Rechnungen über Stripe"
+      },
+      "telephony": {
+        "name": "Telefonie",
+        "description": "Anrufe als Interaktionen protokollieren, Anrufer erkennen und aus einem Anruf ein Ticket erstellen"
       }
     }
   },
@@ -3152,6 +3174,7 @@
       "notFound": "Secret nicht gefunden. Es wurde möglicherweise bereits gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "invalidName": "Ungültiger Mandanten- oder Secret-Name.",
       "readOnly": "Der Secret-Speicher ist in dieser Umgebung schreibgeschützt.",
+      "noDurablePath": "Der Secret-Speicher ist in dieser Umgebung nicht für dauerhafte Schreibvorgänge konfiguriert.",
       "recordInvalid": "Einer der ausgewählten Secret-Datensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "referenceMissing": "Einer der ausgewählten Secret-Datensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Ein Secret mit diesem Namen existiert bereits.",

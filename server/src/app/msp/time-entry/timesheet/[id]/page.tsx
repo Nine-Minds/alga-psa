@@ -58,7 +58,7 @@ export default async function TimeSheetPage({ params }: { params: Promise<{ id: 
 
     const isManager = await isManagerOfSubject(db, tenant, currentUser.user_id, subjectUserId);
 
-    const canReverse = await hasPermission(currentUser, 'timesheet', 'reverse', db);
+    const canReverse = await hasPermission(currentUser, 'time_sheet', 'reverse', db);
     const hasInvoicedEntries = !!(await tenantDb(db, tenant).table('time_entries')
       .where({ time_sheet_id: timeSheet.id, invoiced: true })
       .first('entry_id'));

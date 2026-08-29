@@ -218,8 +218,6 @@ export class GmailAdapter extends BaseEmailAdapter {
         throw new Error('Google Cloud project ID not configured');
       }
 
-      console.log('📦 vendorConfig', vendorConfig);
-
       // Check if user has completed OAuth authorization
       if (!vendorConfig.access_token || !vendorConfig.refresh_token) {
         const errorMsg = `Gmail watch subscription setup failed: OAuth tokens are missing. 
@@ -235,40 +233,14 @@ This indicates a problem with the OAuth token saving process.`;
       // Load credentials and ensure valid token
       await this.ensureValidToken();
 
-      // Determine label filters (user-defined label names only)
-      let requestedFilters: string[] = Array.isArray(vendorConfig.label_filters)
-        ? (vendorConfig.label_filters as string[]).map((s: string) => s?.trim()).filter(Boolean)
-        : [];
-      // If not present on the in-memory config, attempt to load from DB
-      if (requestedFilters.length === 0) {
-        try {
-          const knex = await getAdminConnection();
-          const rec: any = await tenantDb(knex, this.config.tenant).table('google_email_provider_config')
-            .select('label_filters')
-            .where({ email_provider_id: this.config.id })
-            .first();
-          const fromDb = Array.isArray(rec?.label_filters)
-            ? rec.label_filters
-            : (() => { try { return JSON.parse(rec?.label_filters || '[]'); } catch { return []; } })();
-          requestedFilters = (Array.isArray(fromDb) ? fromDb : []).map((s: string) => s?.trim()).filter(Boolean);
-        } catch (e: any) {
-          this.log('warn', 'Unable to load label_filters from DB; proceeding without label filters', e);
-        }
-      }
-
-      // Deduplicate while preserving order
-      const uniqueFilters = Array.from(new Set(requestedFilters));
-
-      // Resolve user label names to IDs (no special-casing of system labels)
+      const uniqueFilters = await this.loadMonitoredLabelNames();
       let effectiveLabelIds: string[] = [];
       if (uniqueFilters.length > 0) {
         try {
-          const labelsResp = await this.gmail.users.labels.list({ userId: 'me' });
-          const allLabels: Array<{ id?: string; name?: string }> = (labelsResp.data.labels as any) || [];
-          effectiveLabelIds = uniqueFilters.map(f => allLabels.find(l => l.name === f)?.id).filter((id): id is string => !!id);
-          const missing = uniqueFilters.filter(f => !allLabels.find(l => l.name === f)?.id);
-          if (missing.length > 0) {
-            this.log('warn', `Some Gmail label filters were not found and will be ignored`, { missing });
+          const resolved = await this.resolveLabelIds(uniqueFilters);
+          effectiveLabelIds = resolved.ids;
+          if (resolved.missing.length > 0) {
+            this.log('warn', `Some Gmail label filters were not found and will be ignored`, { missing: resolved.missing });
           }
         } catch (e: any) {
           this.log('warn', `Failed to resolve Gmail labels; proceeding without label filters: ${e?.message || e}`);
@@ -482,7 +454,7 @@ This indicates a problem with the OAuth token saving process.`;
         this.config.provider_config.history_id = newHistoryId;
       } while (pageToken);
 
-      return Array.from(new Set(messageIds));
+      return this.keepMessagesInMonitoredLabels(Array.from(new Set(messageIds)));
     } catch (error) {
       const gmailNotFound = this.isHistoryIdNotFoundError(error);
       if (gmailNotFound) {
@@ -538,7 +510,89 @@ This indicates a problem with the OAuth token saving process.`;
     } while (pageToken && (options?.paginateAll || ids.length < maxResults));
 
     // users.messages.list returns newest-first; reconcile oldest-first.
-    return ids.reverse();
+    return this.keepMessagesInMonitoredLabels(ids.reverse());
+  }
+
+  private async loadMonitoredLabelNames(): Promise<string[]> {
+    const normalize = (value: unknown): string[] => {
+      const list = Array.isArray(value)
+        ? value
+        : (() => { try { return JSON.parse(String(value ?? '[]')); } catch { return []; } })();
+      return Array.from(new Set((Array.isArray(list) ? list : []).map((s: unknown) => String(s ?? '').trim()).filter(Boolean)));
+    };
+
+    let names = normalize(this.config.provider_config?.label_filters);
+    if (names.length === 0) {
+      try {
+        const knex = await getAdminConnection();
+        const rec: any = await tenantDb(knex, this.config.tenant).table('google_email_provider_config')
+          .select('label_filters')
+          .where({ email_provider_id: this.config.id })
+          .first();
+        names = normalize(rec?.label_filters);
+      } catch (e: any) {
+        this.log('warn', 'Unable to load label_filters from DB; proceeding without label filters', e);
+      }
+    }
+    return names;
+  }
+
+  private async resolveLabelIds(names: string[]): Promise<{ ids: string[]; missing: string[] }> {
+    const labelsResp = await this.gmail.users.labels.list({ userId: 'me' });
+    const allLabels: Array<{ id?: string; name?: string }> = (labelsResp.data.labels as any) || [];
+    const ids = names.map(n => allLabels.find(l => l.name === n)?.id).filter((id): id is string => !!id);
+    const missing = names.filter(n => !allLabels.find(l => l.name === n)?.id);
+    return { ids, missing };
+  }
+
+  /**
+   * The watch's label filter only decides when Gmail notifies us; history.list
+   * then returns every message added to the mailbox. This is where a mailbox
+   * shared with personal mail is actually kept out of ticket intake. The INBOX
+   * default keeps today's behaviour (archived/filtered mail still ingested);
+   * only a user-defined label turns filtering on, and a label that does not
+   * exist in the mailbox matches nothing rather than everything.
+   */
+  private async keepMessagesInMonitoredLabels(messageIds: string[]): Promise<string[]> {
+    if (messageIds.length === 0) return messageIds;
+    const names = await this.loadMonitoredLabelNames();
+    if (!names.some(name => name !== 'INBOX')) return messageIds;
+
+    const { ids: monitored, missing } = await this.resolveLabelIds(names);
+    if (missing.length > 0) {
+      this.log('warn', 'Some Gmail label filters were not found in the mailbox', { missing });
+    }
+    if (monitored.length === 0) {
+      this.log('warn', 'No monitored Gmail labels exist in the mailbox; ingesting nothing', { names });
+      return [];
+    }
+
+    const monitoredSet = new Set(monitored);
+    const kept: string[] = [];
+    const chunkSize = 10;
+    for (let i = 0; i < messageIds.length; i += chunkSize) {
+      const chunk = messageIds.slice(i, i + chunkSize);
+      const results = await Promise.all(chunk.map(async (id) => {
+        try {
+          const resp = await this.gmail.users.messages.get({ userId: 'me', id, format: 'minimal' });
+          const labelIds: string[] = resp?.data?.labelIds || [];
+          return labelIds.some(l => monitoredSet.has(l)) ? id : null;
+        } catch (error: any) {
+          const status = Number(error?.response?.status ?? error?.status ?? error?.code);
+          if (status === 404) return null;
+          throw error;
+        }
+      }));
+      for (const id of results) if (id) kept.push(id);
+    }
+
+    this.log('info', 'Filtered Gmail messages by monitored labels', {
+      labels: names,
+      total: messageIds.length,
+      kept: kept.length,
+      dropped: messageIds.length - kept.length,
+    });
+    return kept;
   }
 
   private isHistoryIdNotFoundError(error: any): boolean {    if (!error) return false;

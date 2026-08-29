@@ -10,6 +10,7 @@ import { ITicketResource } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CallLink } from '@alga-psa/ui/components/CallLink';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -1073,10 +1074,21 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 : t('properties.clientPhone', 'Client Phone')}
             </h5>
             <p className="text-sm">
-              {contactInfo?.default_phone_number
-                || contactInfo?.phone_numbers?.find((phoneNumber: { is_default?: boolean; phone_number?: string }) => phoneNumber.is_default)?.phone_number
-                || client?.phone_no
-                || t('properties.notAvailable', 'N/A')}
+              {(() => {
+                const ticketPhone = contactInfo?.default_phone_number
+                  || contactInfo?.phone_numbers?.find((phoneNumber: { is_default?: boolean; phone_number?: string }) => phoneNumber.is_default)?.phone_number
+                  || client?.phone_no
+                  || null;
+                return ticketPhone
+                  ? (
+                      <CallLink
+                        id="ticket-contact-phone-call"
+                        phoneNumber={ticketPhone}
+                        callIntent={ticket.ticket_id ? { ticketId: ticket.ticket_id } : undefined}
+                      />
+                    )
+                  : t('properties.notAvailable', 'N/A');
+              })()}
             </p>
           </div>
           <div>

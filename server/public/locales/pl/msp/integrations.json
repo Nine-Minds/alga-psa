@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Typ połączenia:",
           "label": "Przegląd",
-          "mappedTenantsLabel": "Zmapowane tenanty:"
+          "mappedTenantsLabel": "Zmapowane tenanty:",
+          "microsoftAppLabel": "Aplikacja Microsoft:"
         },
         "skipped": {
           "empty": "Obecnie żadne tenanty nie są oznaczone jako pominięte.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Dodaj rejestrację aplikacji",
+          "bindFailed": "Nie udało się zapisać wybranej aplikacji Microsoft dla usługi Entra.",
+          "emptyBody": "Połączenie bezpośrednie korzysta z rejestracji aplikacji Microsoft Twojej organizacji. Zarejestruj aplikację wielodostępną w organizacji partnerskiej, dodaj identyfikator URI przekierowania Entra i udziel zgody administratora dla ManagedTenants.Read.All oraz Directory.Read.All.",
+          "label": "Rejestracja aplikacji Microsoft",
+          "placeholder": "Wybierz rejestrację aplikacji",
+          "reconnectRequired": "Wybierz rejestrację aplikacji Microsoft i połącz ponownie.",
+          "redirectUriLabel": "Identyfikator URI przekierowania do dodania w Entra",
+          "scopesLabel": "Zakresy delegowane (wymagana zgoda administratora)"
+        },
         "backToCurrentStep": "Wróć do {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga komunikuje się z Microsoft Graph przez Twoją relację partnerską.",
             "label": "Bezpośredni partner Microsoft",
             "prerequisites": {
-              "appRegistration": "Dane OAuth Microsoft skonfigurowane dla tej organizacji.",
+              "appRegistration": "Wybrana poniżej rejestracja aplikacji Microsoft — połączenie bezpośrednie zawsze korzysta z aplikacji Twojej organizacji.",
               "globalAdmin": "Administratora globalnego, który zatwierdzi uprawnienia.",
               "partnerRelationship": "Relacja partnerska (GDAP) z zarządzanymi dzierżawami.",
               "lighthouse": "Microsoft 365 Lighthouse wdrożony w organizacji partnerskiej."
@@ -956,6 +967,7 @@
         "description": "Przenieś do Algi osoby z dzierżaw Microsoft, którymi zarządzasz, jako kontakty klientów. Nic nie zostanie zapisane w Twoich kontaktach, dopóki nie zobaczysz podglądu i go nie zatwierdzisz.",
         "directConsent": {
           "adminNote": "Administrator globalny musi zatwierdzić te uprawnienia. W przeciwnym razie logowanie się powiedzie, ale połączenie zostanie odrzucone i nic nie zostanie zapisane.",
+          "appRegistration": "Rejestracja aplikacji: {{name}}.",
           "cancel": "Anuluj",
           "continue": "Przejdź do Microsoftu",
           "intro": "Opuszczasz Algę i zalogujesz się w Microsofcie. Oto uprawnienia, o które zostanie wysłane żądanie.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Istniejące połączenia e-mail Outlook muszą zostać ponownie autoryzowane, aby przyznać Mail.Send przed wysyłaniem poczty wychodzącej.",
             "perProviderIssuerNote": "Istniejące połączenia skrzynek pocztowych zachowują swoją bieżącą aplikację Microsoft, dopóki nie zostaną ponownie połączone. Ten wybór dotyczy nowych połączeń skrzynek pocztowych."
           },
+          "entra": {
+            "description": "Wybierz aplikację Microsoft do synchronizacji Entra przez GDAP i Lighthouse.",
+            "label": "Entra bezpośrednio",
+            "reconnect": "Zmiana tej aplikacji rozłącza bieżące połączenie Entra i wymaga ponownej zgody."
+          },
           "mspSso": {
             "description": "Wybierz, który profil Microsoft obsługuje domeny logowania MSP SSO, logowanie Microsoft i wykrywanie tenanta.",
             "label": "MSP SSO"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Bieżące wartości profilu",
           "emailRedirect": "Redirect URI poczty przychodzącej",
           "emailTitle": "Wskazówki dotyczące poczty",
+          "entraConsent": "Wymaganie",
+          "entraConsentValue": "Zarejestruj tę aplikację jako wielodostępną i udziel zgody administratora w organizacji partnerskiej.",
+          "entraTitle": "Entra bezpośrednio",
           "mspSsoTitle": "Wskazówki dotyczące MSP SSO",
           "notConfigured": "Nie skonfigurowano",
           "redirectUri": "Identyfikator URI przekierowania",
@@ -2831,9 +2851,17 @@
             "description": "Dostarczaj osobiste powiadomienia do kanału aktywności Teams.",
             "label": "Powiadomienia o aktywności"
           },
+          "channelBot": {
+            "description": "Zezwalaj botowi na odpowiadanie, gdy zostanie wspomniany przez @ w kanałach zespołu. Odpowiedzi bota (w tym szczegóły zgłoszenia) są widoczne dla wszystkich członków kanału.",
+            "label": "Bot w kanale"
+          },
           "groupChatBot": {
             "description": "Zezwalaj botowi na odpowiadanie w czatach grupowych Teams. Odpowiedzi bota (w tym szczegóły zgłoszenia) są widoczne dla wszystkich członków czatu.",
             "label": "Bot w czacie grupowym"
+          },
+          "guestTicketSubmission": {
+            "description": "Zezwalaj kontaktom klientów piszącym do bota na przesyłanie zgłoszeń bez logowania. Nadawcy są dopasowywani do kontaktów na podstawie zweryfikowanej tożsamości Microsoft; niedopasowani nadawcy są odrzucani.",
+            "label": "Przesyłanie zgłoszeń przez gości"
           },
           "messageExtension": {
             "description": "Włącz wyszukiwanie i akcje PSA oparte na wiadomościach.",
@@ -2990,7 +3018,7 @@
           "test": {
             "sent": "Wiadomość testowa Teams wysłana.",
             "failed": "Wiadomość testowa Teams nie powiodła się.",
-            "addonInactive": "Dodatek Teams nie jest aktywny dla tej organizacji.",
+            "featureDisabled": "Microsoft Teams nie jest włączony dla tej organizacji.",
             "integrationInactive": "Aktywuj integrację Teams przed wysłaniem wiadomości testowej.",
             "capabilityDisabled": "Włącz funkcję bota osobistego przed wysłaniem wiadomości testowej.",
             "botNotConfigured": "Skonfiguruj poświadczenia bota Teams przed wysłaniem wiadomości testowej.",
@@ -2999,7 +3027,7 @@
             "skipped": "Wiadomość testowa Teams została pominięta."
           },
           "steps": {
-            "addonEntitlement": "Uprawnienie do dodatku Teams",
+            "featureFlag": "Włączenie funkcji Microsoft Teams",
             "integrationStatus": "Stan integracji Teams",
             "capabilities": "Możliwości Teams",
             "microsoftProfile": "Gotowość profilu Microsoft",
@@ -3011,7 +3039,7 @@
             "recentDeliveryHealth": "Ostatni stan dostarczania Teams"
           },
           "recommendation": {
-            "addon": "Włącz dodatek Microsoft Teams dla tej organizacji.",
+            "featureFlag": "Włącz Microsoft Teams dla tej organizacji.",
             "activate": "Aktywuj integrację Teams w ustawieniach.",
             "capabilities": "Włącz bota osobistego i powiadomienia o aktywności dla Teams.",
             "profile": "Wybierz gotowy profil Microsoft dla Teams.",
@@ -3201,9 +3229,9 @@
               "cause": "Odbiorca nie zalogował się do AlgaPSA za pomocą konta Microsoft, więc nie istnieje żadne mapowanie konta.",
               "remedy": "Poproś użytkownika o zalogowanie się za pomocą konta Microsoft (SSO portalu MSP lub karta Teams), aby jego konto zostało zmapowane."
             },
-            "addon_inactive": {
-              "cause": "Dodatek Teams wygasł lub jest nieobecny, więc wysyłki są pomijane, natomiast konfiguracja jest zachowywana.",
-              "remedy": "Odnów dodatek Teams dla tej organizacji."
+            "feature_disabled": {
+              "cause": "Microsoft Teams nie jest włączony dla tej organizacji, więc wysyłki są pomijane, natomiast konfiguracja jest zachowywana.",
+              "remedy": "Włącz funkcję wersji 1.5 dla tej organizacji."
             },
             "integration_inactive": {
               "cause": "Integracja Teams nie jest aktywna dla tej organizacji.",
@@ -3234,26 +3262,6 @@
               "remedy": "Sprawdź dzienniki serwera pod kątem szczegółów błędu dostarczania i ponownie uruchom diagnostykę."
             }
           }
-        },
-        "paywall": {
-          "title": "Dodatek Microsoft Teams",
-          "description": "Integracja Microsoft Teams wymaga dodatku Teams dla tej organizacji.",
-          "includedTitle": "Co jest w zestawie",
-          "feature": {
-            "tab": "Karta osobista: otwórz AlgaPSA w programie Microsoft Teams.",
-            "bot": "Osobisty bot i bot czatu grupowego do obsługi zgłoszeń, zatwierdzeń, czasu i notatek.",
-            "messageExtension": "Rozszerzenie komunikatów i szybkie akcje umożliwiające działanie na rekordach PSA z poziomu dowolnej wiadomości.",
-            "meetings": "Spotkania Teams przy zatwierdzeniach terminów z prawdziwymi zaproszeniami z kalendarza Outlook/Teams.",
-            "recordings": "Automatyczne przechwytywanie nagrań i transkrypcji spotkań w interakcjach.",
-            "notifications": "Powiadomienia w kanale aktywności i wiadomości bezpośrednich bota dotyczące przypisań, odpowiedzi, zatwierdzeń i ryzyka SLA."
-          },
-          "cta": "Kup dodatek Teams",
-          "nonBilling": "Skontaktuj się z administratorem rozliczeń, aby kupić dodatek Teams dla tej organizacji."
-        },
-        "addonExpiredBanner": {
-          "title": "Dodatek Microsoft Teams wygasł",
-          "message": "Dodatek Microsoft Teams wygasł. Twoja konfiguracja i historia dostarczania są zachowane, ale powiadomienia Teams są pomijane do czasu odnowienia dodatku.",
-          "cta": "Odnów dodatek Teams"
         },
         "staleManifest": {
           "title": "Pakiet aplikacji Teams jest nieaktualny",
@@ -3559,6 +3567,72 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Aktywne",
+        "error": "Błąd",
+        "disabled": "Wyłączone",
+        "notConfigured": "Nieskonfigurowane"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Zapisuje rozmowy Teams Phone jako interakcje po zakończeniu każdego połączenia. Historia rozmów, a nie podgląd na żywo.",
+          "prerequisite": "Najpierw skonfiguruj integrację z Microsoft Teams — Teams Phone korzysta z jej profilu Microsoft."
+        }
+      },
+      "subscriptionExpires": "Subskrypcja odnowi się przed",
+      "lastNotification": "Ostatnie powiadomienie o połączeniu",
+      "autoTicket": "Automatycznie twórz zgłoszenie dla dopasowanych rozmów",
+      "unknownNumber": "Nieznany numer",
+      "actions": {
+        "enable": "Włącz",
+        "disable": "Wyłącz"
+      },
+      "matchStatus": {
+        "matched": "Dopasowana",
+        "ambiguous": "Niejednoznaczna",
+        "unmatched": "Niedopasowana",
+        "resolved": "Rozstrzygnięta"
+      },
+      "callsPanel": {
+        "title": "Rozmowy"
+      },
+      "recentCalls": {
+        "title": "Ostatnie rozmowy",
+        "description": "Rejestrowane po zakończeniu rozmowy — Microsoft Graph publikuje rekordy połączeń dopiero potem, więc to historia, a nie podgląd na żywo.",
+        "empty": "Nie zarejestrowano jeszcze żadnej rozmowy.",
+        "createTicket": "Utwórz zgłoszenie",
+        "openTicket": "Otwórz zgłoszenie",
+        "linkTicket": "Powiąż ze zgłoszeniem",
+        "selectTicket": "Wybierz zgłoszenie…",
+        "noLinkableTickets": "Brak otwartych zgłoszeń"
+      },
+      "unmatched": {
+        "title": "Rozmowy wymagające przypisania",
+        "description": "Numery, których nie udało się dopasować, oraz numery używane przez kilka kontaktów. Rozstrzygnięcie rozmowy umieszcza ją na właściwej osi czasu.",
+        "empty": "Każda zarejestrowana rozmowa jest przypisana.",
+        "assignTo": "Przypisz do",
+        "searchPlaceholder": "Szukaj kontaktów i klientów…",
+        "noTargets": "Brak pasujących kontaktów lub klientów.",
+        "chooseTarget": "Przypisz do klienta…"
+      },
+      "forbidden": "Nie masz uprawnień do wyświetlania ustawień telefonii tej organizacji.",
+      "paywall": {
+        "title": "Telefonia",
+        "description": "Integracje telefoniczne nie są dostępne dla tej organizacji.",
+        "unavailable": "Integracje telefoniczne nie są dostępne dla tej organizacji.",
+        "ceOnly": "Integracje telefoniczne są dostępne wyłącznie w Enterprise Edition.",
+        "includedTitle": "Co obejmuje",
+        "cta": "Zarządzaj integracjami",
+        "feature": {
+          "recognition": "Rozpoznawanie dzwoniącego wśród kontaktów i klientów przy każdej zarejestrowanej rozmowie.",
+          "history": "Historia rozmów na osi czasu kontaktu i klienta jako pełnoprawne interakcje.",
+          "tickets": "Utwórz zgłoszenie z rozmowy albo powiąż rozmowę ze zgłoszeniem, nad którym już pracujesz.",
+          "queue": "Kolejka numerów niedopasowanych i niejednoznacznych, aby żadna rozmowa nie została przypisana na wyczucie.",
+          "providers": "Dziś Teams Phone; ten sam rdzeń połączeń przyjmie kolejnych dostawców."
+        }
+      }
     }
   },
   "errors": {

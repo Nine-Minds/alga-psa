@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Connection Type:",
           "label": "Overview",
-          "mappedTenantsLabel": "Mapped Tenants:"
+          "mappedTenantsLabel": "Mapped Tenants:",
+          "microsoftAppLabel": "Microsoft app:"
         },
         "skipped": {
           "empty": "No tenants are currently marked as skipped.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Add app registration",
+          "bindFailed": "Could not save the Microsoft app choice for Entra.",
+          "emptyBody": "Direct connect runs on your own Microsoft app registration. Register a multi-tenant app in your partner tenant, add the Entra redirect URI, and grant admin consent for ManagedTenants.Read.All and Directory.Read.All.",
+          "label": "Microsoft app registration",
+          "placeholder": "Select an app registration",
+          "reconnectRequired": "Select a Microsoft app registration and reconnect.",
+          "redirectUriLabel": "Redirect URI to add in Entra",
+          "scopesLabel": "Delegated scopes (admin consent required)"
+        },
         "backToCurrentStep": "Back to {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga talks to Microsoft Graph through your partner relationship.",
             "label": "Direct Microsoft partner",
             "prerequisites": {
-              "appRegistration": "Microsoft OAuth credentials configured for this tenant.",
+              "appRegistration": "A Microsoft app registration chosen below — Direct always connects with your organization's own app.",
               "globalAdmin": "A Global Administrator who can approve the permissions.",
               "partnerRelationship": "A partner relationship (GDAP) with the tenants you manage.",
               "lighthouse": "Microsoft 365 Lighthouse onboarded in your partner tenant."
@@ -956,6 +967,7 @@
         "description": "Bring the people from the Microsoft tenants you manage into Alga as client contacts. Nothing is written to your contacts until you have seen a preview and approved it.",
         "directConsent": {
           "adminNote": "A Global Administrator must approve these permissions. If you are not one, the sign-in will complete but the connection will be refused, and nothing will be saved.",
+          "appRegistration": "App registration: {{name}}.",
           "cancel": "Cancel",
           "continue": "Continue to Microsoft",
           "intro": "You are about to leave Alga and sign in at Microsoft. These are the permissions that will be requested.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Existing Outlook email connections need re-authorization to grant Mail.Send before they can send outbound email.",
             "perProviderIssuerNote": "Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections."
           },
+          "entra": {
+            "description": "Choose the Microsoft app for Entra GDAP and Lighthouse sync.",
+            "label": "Entra Direct",
+            "reconnect": "Changing this app disconnects the current Entra connection and requires reconsent."
+          },
           "mspSso": {
             "description": "Choose the Microsoft app for staff sign-in and login-domain discovery.",
             "label": "Staff sign-in"
@@ -1726,6 +1743,9 @@
           "currentProfileTitle": "Saved app values",
           "emailRedirect": "Inbound email redirect URI",
           "emailTitle": "Email",
+          "entraConsent": "Requirement",
+          "entraConsentValue": "Register this app as multitenant and grant admin consent in your partner Microsoft tenant.",
+          "entraTitle": "Entra Direct",
           "mspSsoTitle": "Staff sign-in",
           "notConfigured": "Not configured",
           "redirectUri": "Redirect URI",
@@ -2854,9 +2874,17 @@
             "description": "Deliver personal Teams activity-feed notifications.",
             "label": "Activity notifications"
           },
+          "channelBot": {
+            "description": "Allow the bot to respond when @mentioned in team channels. Bot replies (including ticket details) are visible to every channel member.",
+            "label": "Channel bot"
+          },
           "groupChatBot": {
             "description": "Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.",
             "label": "Group chat bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Let client contacts who message the bot submit tickets without signing in. Senders are matched to contacts by their verified Microsoft identity; unmatched senders are declined.",
+            "label": "Guest ticket submission"
           },
           "messageExtension": {
             "description": "Enable lookup and message-driven PSA actions.",
@@ -3013,7 +3041,7 @@
           "test": {
             "sent": "Teams test message sent.",
             "failed": "Teams test message failed.",
-            "addonInactive": "The Teams add-on is not active for this tenant.",
+            "featureDisabled": "Microsoft Teams integration is not enabled for this tenant.",
             "integrationInactive": "Activate the Teams integration before sending a test message.",
             "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
             "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
@@ -3022,7 +3050,7 @@
             "skipped": "Teams test message was skipped."
           },
           "steps": {
-            "addonEntitlement": "Teams add-on entitlement",
+            "featureFlag": "Teams feature availability",
             "integrationStatus": "Teams integration status",
             "capabilities": "Teams capabilities",
             "microsoftProfile": "Microsoft profile readiness",
@@ -3034,7 +3062,7 @@
             "recentDeliveryHealth": "Recent Teams delivery health"
           },
           "recommendation": {
-            "addon": "Enable the Microsoft Teams add-on for this tenant.",
+            "featureFlag": "Enable release-v1-5-feature for this tenant.",
             "activate": "Activate the Teams integration in settings.",
             "capabilities": "Enable personal bot and activity notifications for Teams.",
             "profile": "Select a ready Microsoft profile for Teams.",
@@ -3224,9 +3252,9 @@
               "cause": "The recipient has not signed in to AlgaPSA with Microsoft, so no account mapping exists.",
               "remedy": "Have the user sign in with Microsoft (MSP portal SSO or the Teams tab) so their account is mapped."
             },
-            "addon_inactive": {
-              "cause": "The Teams add-on is expired or absent, so sends are skipped while configuration is preserved.",
-              "remedy": "Renew the Teams add-on for this tenant."
+            "feature_disabled": {
+              "cause": "The Teams release feature is disabled, so sends are skipped.",
+              "remedy": "Enable release-v1-5-feature for this tenant."
             },
             "integration_inactive": {
               "cause": "The Teams integration is not active for this tenant.",
@@ -3257,26 +3285,6 @@
               "remedy": "Check the server logs for the delivery error detail and re-run diagnostics."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams add-on",
-          "description": "The Microsoft Teams integration requires the Teams add-on for this tenant.",
-          "includedTitle": "What's included",
-          "feature": {
-            "tab": "Personal tab: open AlgaPSA inside Microsoft Teams.",
-            "bot": "Personal and group-chat bot for tickets, approvals, time, and notes.",
-            "messageExtension": "Message extension and quick actions to act on PSA records from any message.",
-            "meetings": "Teams meetings on appointment approvals with real Outlook/Teams calendar invites.",
-            "recordings": "Automatic capture of meeting recordings and transcripts onto interactions.",
-            "notifications": "Activity-feed and bot-DM notifications for assignments, replies, approvals, and SLA risk."
-          },
-          "cta": "Purchase Teams add-on",
-          "nonBilling": "Contact a billing administrator to purchase the Teams add-on for this tenant."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams add-on expired",
-          "message": "The Microsoft Teams add-on has expired. Your configuration and delivery history are preserved, but Teams notifications are being skipped until the add-on is renewed.",
-          "cta": "Renew Teams add-on"
         },
         "staleManifest": {
           "title": "Teams app package is out of date",
@@ -3558,6 +3566,72 @@
         "bothKeysRequired": "Please enter both secret key and publishable key",
         "secretKeyFormat": "Secret key should start with sk_",
         "publishableKeyFormat": "Publishable key should start with pk_"
+      }
+    },
+    "telephony": {
+      "status": {
+        "active": "Active",
+        "error": "Error",
+        "disabled": "Disabled",
+        "notConfigured": "Not configured"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Journal Teams Phone calls as interactions once each call ends. Call history, not live screen pop.",
+          "prerequisite": "Configure the Microsoft Teams integration first — Teams Phone reuses its Microsoft profile."
+        }
+      },
+      "subscriptionExpires": "Subscription renews before",
+      "lastNotification": "Last call notification",
+      "autoTicket": "Create a ticket automatically for matched calls",
+      "unknownNumber": "Unknown number",
+      "actions": {
+        "enable": "Enable",
+        "disable": "Disable"
+      },
+      "matchStatus": {
+        "matched": "Matched",
+        "ambiguous": "Ambiguous",
+        "unmatched": "Unmatched",
+        "resolved": "Resolved"
+      },
+      "callsPanel": {
+        "title": "Calls"
+      },
+      "recentCalls": {
+        "title": "Recent calls",
+        "description": "Captured after each call ends — Microsoft Graph publishes call records post-call, so this is history rather than a live feed.",
+        "empty": "No calls captured yet.",
+        "createTicket": "Create ticket",
+        "openTicket": "Open ticket",
+        "linkTicket": "Link to ticket",
+        "selectTicket": "Select a ticket…",
+        "noLinkableTickets": "No open tickets"
+      },
+      "unmatched": {
+        "title": "Calls needing attribution",
+        "description": "Numbers we could not match, and numbers shared by more than one contact. Resolving a call files it on the right timeline.",
+        "empty": "Every captured call is attributed.",
+        "assignTo": "Assign to",
+        "searchPlaceholder": "Search contacts and clients…",
+        "noTargets": "No matching contacts or clients.",
+        "chooseTarget": "Assign to client…"
+      },
+      "forbidden": "You do not have permission to view telephony settings for this tenant.",
+      "paywall": {
+        "title": "Telephony",
+        "description": "Telephony integrations are not available for this tenant.",
+        "unavailable": "Telephony integrations are not available for this tenant.",
+        "ceOnly": "Telephony integrations are only available in Enterprise Edition.",
+        "includedTitle": "What's included",
+        "cta": "Manage integrations",
+        "feature": {
+          "recognition": "Caller recognition against contacts and clients on every captured call.",
+          "history": "Call history on the contact and client timeline as first-class interactions.",
+          "tickets": "Create a ticket from a call, or link the call to a ticket you are already working.",
+          "queue": "A queue for unmatched and ambiguous numbers so no call is attributed by guesswork.",
+          "providers": "Teams Phone today; the same call core is what future providers plug into."
+        }
       }
     }
   },

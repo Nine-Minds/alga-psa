@@ -15,6 +15,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 import {
   CREDENTIAL_SCHEME_AES_GCM,
   CREDENTIAL_SCHEME_VAULT_TRANSIT,
+  assertCredentialEncryptionConfigured,
   decryptCredentialValue,
   encryptAesGcm,
   decryptAesGcm,
@@ -112,6 +113,37 @@ describe('credential encryption — AES-256-GCM round-trip', () => {
     await expect(
       encryptCredentialValues({ password: 'x', otpSecret: null })
     ).rejects.toThrow(/CREDENTIAL_ENCRYPTION_KEY/);
+  });
+});
+
+describe('credential encryption — startup configuration guard', () => {
+  it('passes when the AES key is provisioned (non-empty password save is possible)', async () => {
+    delete process.env.ALGA_VAULT_ADDR;
+    delete process.env.VAULT_ADDR;
+    getSecretMock.mockResolvedValue('provisioned-credential-key');
+
+    await expect(assertCredentialEncryptionConfigured()).resolves.toBeUndefined();
+    expect(getSecretMock).toHaveBeenCalledWith('credential_encryption_key', 'CREDENTIAL_ENCRYPTION_KEY');
+  });
+
+  it('passes when Vault Transit is configured even without an AES key', async () => {
+    process.env.ALGA_VAULT_ADDR = 'https://vault.example.test';
+    process.env.ALGA_VAULT_TOKEN = 'vault-token';
+    getSecretMock.mockResolvedValue('');
+
+    await expect(assertCredentialEncryptionConfigured()).resolves.toBeUndefined();
+    expect(getSecretMock).not.toHaveBeenCalled();
+  });
+
+  it('throws an actionable error when neither transit nor the key is provisioned (no NEXTAUTH_SECRET fallback)', async () => {
+    delete process.env.ALGA_VAULT_ADDR;
+    delete process.env.VAULT_ADDR;
+    process.env.NEXTAUTH_SECRET = 'present-but-forbidden-fallback';
+    getSecretMock.mockResolvedValue('');
+
+    await expect(assertCredentialEncryptionConfigured()).rejects.toThrow(
+      /credential_encryption_key|CREDENTIAL_ENCRYPTION_KEY/
+    );
   });
 });
 

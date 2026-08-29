@@ -169,7 +169,9 @@
       "reason": "Why is this credit being transferred?"
     },
     "hints": {
-      "amount": "Up to {{amount}} available"
+      "amount": "Up to {{amount}} available",
+      "currencyMatch": "The selected client uses the same currency.",
+      "currencyMismatch": "The selected client uses a different currency; conversion may apply."
     },
     "impact": {
       "current": "Current Remaining",

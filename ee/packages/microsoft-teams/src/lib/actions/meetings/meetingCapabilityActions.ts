@@ -2,7 +2,7 @@
 
 import { isEnterprise } from '@alga-psa/core/features';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { tenantHasTeamsAddOn } from '../../teams/teamsAddOnGate';
+import { tenantHasTeamsFeatureAccess } from '../../teams/teamsFeatureGate';
 
 type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'error';
 
@@ -12,9 +12,10 @@ interface TeamsMeetingCapabilityRow {
   install_status: TeamsInstallStatus;
   default_meeting_organizer_upn: string | null;
   default_meeting_organizer_object_id?: string | null;
+  send_meeting_invites?: boolean | null;
 }
 
-export type TeamsMeetingCapabilityReason = 'ee_disabled' | 'addon_required' | 'not_configured' | 'no_organizer';
+export type TeamsMeetingCapabilityReason = 'ee_disabled' | 'feature_disabled' | 'not_configured' | 'no_organizer';
 export type TeamsRecordingCapabilityReason = 'meeting_unavailable' | 'missing_organizer_object_id';
 
 export interface TeamsMeetingCapabilityResult {
@@ -22,6 +23,8 @@ export interface TeamsMeetingCapabilityResult {
   reason?: TeamsMeetingCapabilityReason;
   recordingsAvailable: boolean;
   recordingReason?: TeamsRecordingCapabilityReason;
+  /** Whether Microsoft will email calendar invites to attendees (tenant toggle). */
+  sendMeetingInvites?: boolean;
 }
 
 function normalizeString(value: unknown): string {
@@ -36,8 +39,8 @@ export async function getTeamsMeetingCapability(
   }
 
   const { knex } = await createTenantKnex(tenantId);
-  if (!(await tenantHasTeamsAddOn(knex, tenantId))) {
-    return { available: false, reason: 'addon_required', recordingsAvailable: false, recordingReason: 'meeting_unavailable' };
+  if (!(await tenantHasTeamsFeatureAccess(tenantId))) {
+    return { available: false, reason: 'feature_disabled', recordingsAvailable: false, recordingReason: 'meeting_unavailable' };
   }
 
   const integration = await tenantDb(knex, tenantId).table<TeamsMeetingCapabilityRow>('teams_integrations')
@@ -55,6 +58,8 @@ export async function getTeamsMeetingCapability(
   return {
     available: true,
     recordingsAvailable,
+    // Default-on like meetingConfig: only an explicit false disables invites.
+    sendMeetingInvites: integration.send_meeting_invites !== false,
     ...(recordingsAvailable ? {} : { recordingReason: 'missing_organizer_object_id' as const }),
   };
 }

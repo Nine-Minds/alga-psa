@@ -1432,6 +1432,9 @@
       "viewTranscript": "Transcriptie bekijken"
     },
     "quickAdd": {
+      "clientRequired": "Selecteer een klant voor deze interactie",
+      "contactPlaceholder": "Contact selecteren",
+      "selectClientFirst": "Selecteer eerst een klant",
       "teams": {
         "attendees": {
           "add": "Toevoegen",
@@ -1460,6 +1463,16 @@
         "createFailed": "Kan Teams-vergadering niet aanmaken",
         "createToggle": "Teams-vergadering aanmaken",
         "endRequired": "Eindtijd is vereist om een Teams-vergadering aan te maken",
+        "invitesDisabled": "E-mailuitnodigingen zijn uitgeschakeld in de instellingen van de Teams-integratie: deelnemers worden niet door Microsoft op de hoogte gebracht.",
+        "invitesSummary": "Microsoft e-mailt agenda-uitnodigingen naar: {{recipients}}.",
+        "invitesSummaryYou": "u (maker)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams is niet ingeschakeld voor deze tenant.",
+          "ee_disabled": "De Teams-integratie vereist de Enterprise Edition.",
+          "no_organizer": "Er is geen standaard vergaderingsorganisator geconfigureerd in de Teams-instellingen.",
+          "not_configured": "De Teams-integratie is niet geconfigureerd."
+        },
+        "scheduleSummary": "Er wordt een planningsinvoer toegevoegd aan uw AlgaPSA-agenda.",
         "startRequired": "Starttijd is vereist om een Teams-vergadering aan te maken",
         "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
       },
@@ -1485,6 +1498,13 @@
       "allContacts": "Alle contacten",
       "allStatuses": "Alle statussen",
       "allUsers": "Alle gebruikers",
+      "columns": { "type": "Type", "title": "Titel", "client": "Klant", "contact": "Contact", "user": "Gebruiker", "date": "Datum", "status": "Status" },
+      "empty": "Geen interacties komen overeen met deze filters.",
+      "loading": "Interacties laden…",
+      "openClient": "Klant {{name}} openen",
+      "openContact": "Contact {{name}} openen",
+      "openInteraction": "Interactie {{title}} openen",
+      "openUser": "Gebruiker {{name}} openen",
       "byUser": "Door {{name}}",
       "collapse": "Recente interacties samenvouwen",
       "contactsFromClient": "Contacten van de geselecteerde klant",

@@ -470,7 +470,9 @@
     "replies_other": "{{count}} antwoorden",
     "collapse": "Inklappen",
     "expand": "Uitklappen",
-    "showInDrawer": "Tonen in zijpaneel"
+    "showInDrawer": "Tonen in zijpaneel",
+    "showEarlierReplies_one": "{{count}} eerder antwoord tonen",
+    "showEarlierReplies_other": "{{count}} eerdere antwoorden tonen"
   },
   "pagination": {
     "previous": "Vorige",
@@ -1593,5 +1595,8 @@
     "noUsedOrders": "Nog geen volgordenummers gebruikt",
     "markClosed": "Markeren als afgesloten status",
     "setDefault": "Instellen als standaardstatus voor nieuwe tickets"
+  },
+  "callLink": {
+    "teamsCall": "Bellen in Microsoft Teams"
   }
 }

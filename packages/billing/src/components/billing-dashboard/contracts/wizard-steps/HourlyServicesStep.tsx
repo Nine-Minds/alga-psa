@@ -33,6 +33,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     schedule_name: string;
     is_default: boolean;
   }>>([]);
+  const [bucketScheduleLoadError, setBucketScheduleLoadError] = React.useState(false);
 
   React.useEffect(() => {
     if (!bucketPoolEditorEnabled) return;
@@ -41,6 +42,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       try {
         const schedules = await listBucketBusinessHoursSchedules();
         if (isActive && Array.isArray(schedules)) {
+          setBucketScheduleLoadError(false);
           setBucketSchedules(schedules.map((schedule) => ({
             schedule_id: schedule.schedule_id,
             schedule_name: schedule.schedule_name,
@@ -48,8 +50,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
           })));
         }
       } catch {
-        // The schedule list is a convenience for the after-hours rule; if it
-        // cannot be loaded, the rule simply has no schedule to pick from.
+        if (isActive) setBucketScheduleLoadError(true);
       }
     })();
     return () => {
@@ -391,6 +392,8 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
               }))}
             schedules={bucketSchedules}
             lineKey="hourly"
+            currencyCode={data.currency_code || 'USD'}
+            scheduleLoadError={bucketScheduleLoadError}
             onChange={(pools) => {
               updateData({
                 bucket_pools: [

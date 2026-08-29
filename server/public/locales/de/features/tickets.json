@@ -364,7 +364,9 @@
     "rescheduleComment": "Kommentar neu planen",
     "resolvedPublishInstant": "Aufgelöster Zeitpunkt",
     "schedule": "Planen",
-    "scheduled": "Geplant"
+    "scheduled": "Geplant",
+    "showMore": "Mehr anzeigen",
+    "showLess": "Weniger anzeigen"
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",
@@ -1631,6 +1633,7 @@
       "client": "Kunde",
       "nextVisit": "Nächster Besuch",
       "callsAndEmails": "Anrufe und E-Mails",
+      "call": "Anrufen",
       "viewAll": "Alle anzeigen",
       "viewAllCount": "Alle {{count}} anzeigen",
       "timeLogged": "Erfasste Zeit",
@@ -1786,7 +1789,10 @@
         "auto_close_warning_sent": "automatische schließwarnung gesendet"
       },
       "closeStatus": "Abschlussstatus",
-      "noStatusChange": "Status nicht ändern"
+      "noStatusChange": "Status nicht ändern",
+      "showAllActivity": "Alle Aktivitäten anzeigen",
+      "collapseActivity": "Ältere Aktivitäten einklappen",
+      "replyingToComment": "Antwort an {{name}}"
     }
   },
   "notifications": {

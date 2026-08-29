@@ -982,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Generate Prepayment Invoice",
-      "creditMemo": "Generate Credit Memo"
+      "prepayment": "Generate Prepayment Invoice"
     },
     "descriptions": {
-      "prepayment": "Prepayment invoices create client credit for future value. They do not create recurring service periods; later recurring invoices keep their own service-period coverage.",
-      "creditMemo": "Credit memos adjust financial balances without redefining recurring service-period coverage on the source invoice."
+      "prepayment": "Prepayment invoices create client credit for future value. They do not create recurring service periods; later recurring invoices keep their own service-period coverage."
     },
     "fields": {
-      "type": "Type",
       "client": "Client",
       "amount": "Amount",
-      "description": "Description"
-    },
-    "types": {
-      "prepaymentInvoice": "Prepayment Invoice",
-      "creditMemo": "Credit Memo"
+      "descriptionOptional": "Description (optional)"
     },
     "placeholders": {
       "amount": "Enter amount",
-      "prepaymentDescription": "Prepayment for future services",
-      "creditMemoDescription": "Reason for credit memo"
+      "prepaymentDescription": "Prepayment for future services"
     },
     "errors": {
       "allFieldsRequired": "Please fill in all fields",
       "validAmount": "Please enter a valid amount",
-      "creditMemosUnsupported": "Credit memos are not yet supported",
       "generateFailed": "Error generating invoice"
     },
     "actions": {
       "generating": "Generating...",
-      "generatePrepayment": "Generate Prepayment Invoice",
-      "generateCreditMemo": "Generate Credit Memo"
+      "generatePrepayment": "Generate Prepayment Invoice"
     }
   },
   "contractItems": {

@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "Você não tem permissão para visualizar segredos.",
       "success": {
         "tenantNameUpdated": "Nome do locatário atualizado com sucesso",
         "timezoneUpdated": "Fuso horário padrão atualizado com sucesso",
@@ -1902,7 +1903,8 @@
         "valueRequired": "O valor secreto é obrigatório",
         "noChanges": "Nenhuma alteração para salvar",
         "fixValidation": "Corrija os erros de validação"
-      }
+      },
+      "permissionDenied": "Você não tem permissão para visualizar segredos."
     }
   },
   "importExport": {
@@ -1980,6 +1982,22 @@
     },
     "templates": {
       "comingSoon": "Os modelos de mapeamento e as importações programadas ficarão aqui. Salve mapeamentos de colunas, compartilhe-os com toda a equipe e configure trabalhos recorrentes."
+    },
+    "migration": {
+      "actions": {
+        "back": "Voltar para migrações",
+        "upload": "Enviar pacote"
+      },
+      "errors": {
+        "noImportableRecords": "Este pacote não continha registros importáveis."
+      },
+      "preflight": {
+        "title": "Verificação prévia"
+      },
+      "run": {
+        "queued": "Migração na fila",
+        "applying": "Migração em andamento"
+      }
     },
     "jobDetails": {
       "title": "Detalhes do trabalho de importação",
@@ -2500,6 +2518,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Aceite pagamentos com cartão de crédito para faturas via Stripe"
+      },
+      "telephony": {
+        "name": "Telefonia",
+        "description": "Registre chamadas como interações, reconheça quem liga e transforme uma chamada em chamado"
       }
     }
   },
@@ -3152,6 +3174,7 @@
       "notFound": "Segredo não encontrado. Ele pode já ter sido excluído. Atualize a página e tente novamente.",
       "invalidName": "Nome de tenant ou de segredo inválido.",
       "readOnly": "O armazenamento de segredos é somente leitura neste ambiente.",
+      "noDurablePath": "O armazenamento de segredos não está configurado para gravações duráveis neste ambiente.",
       "recordInvalid": "Um dos registros de segredo selecionados é inválido. Atualize a página e tente novamente.",
       "referenceMissing": "Um dos registros de segredo selecionados não existe mais. Atualize a página e tente novamente.",
       "duplicate": "Já existe um segredo com este nome.",

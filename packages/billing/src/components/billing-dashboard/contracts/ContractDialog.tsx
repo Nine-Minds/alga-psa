@@ -31,6 +31,7 @@ import { IContractLinePresetService, IContractLinePresetFixedConfig } from '@alg
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -71,6 +72,7 @@ export function ContractDialog({
 }: ContractDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const { money, symbol } = useCurrencyFormat();
+  const { renderQuickAddClient } = useQuickAddClient();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const contractLineTypeOptions = useContractLineTypeOptions();
   const renewalModeOptions = [
@@ -110,6 +112,7 @@ export function ContractDialog({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
   // Contract line presets state
   const [availableContractLinePresets, setAvailableContractLinePresets] = useState<IContractLinePreset[]>([]);
@@ -632,6 +635,7 @@ export function ContractDialog({
                   defaultValue: 'Select a client',
                 })}
                 className="w-full"
+                onAddNew={() => setIsQuickAddClientOpen(true)}
               />
             </div>
 
@@ -1613,6 +1617,24 @@ export function ContractDialog({
           </form>
         </DialogContent>
       </Dialog>
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
+          setClients((currentClients) => {
+            const existingIndex = currentClients.findIndex(
+              (client) => client.client_id === newClient.client_id,
+            );
+            if (existingIndex === -1) return [...currentClients, newClient];
+            const nextClients = [...currentClients];
+            nextClients[existingIndex] = newClient;
+            return nextClients;
+          });
+          setClientId(newClient.client_id);
+          clearErrorIfSubmitted();
+        },
+        skipSuccessDialog: true,
+      })}
     </>
   );
 }

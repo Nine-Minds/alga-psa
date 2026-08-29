@@ -15,7 +15,9 @@ const {
   eventWorkerCtorMock,
   temporalWorkerCtorMock,
   loggerInfoMock,
-  loggerErrorMock
+  loggerErrorMock,
+  registerFeatureFlagCheckerMock,
+  featureFlagIsEnabledMock
 } = vi.hoisted(() => ({
   dotenvConfigMock: vi.fn(),
   initializeWorkflowRuntimeV2Mock: vi.fn(),
@@ -31,7 +33,9 @@ const {
   eventWorkerCtorMock: vi.fn(),
   temporalWorkerCtorMock: vi.fn(),
   loggerInfoMock: vi.fn(),
-  loggerErrorMock: vi.fn()
+  loggerErrorMock: vi.fn(),
+  registerFeatureFlagCheckerMock: vi.fn(),
+  featureFlagIsEnabledMock: vi.fn(async () => false)
 }));
 
 vi.mock('dotenv', () => ({
@@ -113,6 +117,16 @@ vi.mock('@alga-psa/core/logger', () => ({
   }
 }));
 
+vi.mock('@alga-psa/core/features', () => ({
+  registerFeatureFlagChecker: (...args: unknown[]) => registerFeatureFlagCheckerMock(...args)
+}));
+
+vi.mock('@alga-psa/core/server', () => ({
+  featureFlags: {
+    isEnabled: (...args: unknown[]) => featureFlagIsEnabledMock(...args)
+  }
+}));
+
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: class TenantEmailService {},
   StaticTemplateProcessor: class StaticTemplateProcessor {},
@@ -140,6 +154,8 @@ describe('workflow worker startup', () => {
     temporalWorkerCtorMock.mockReset();
     loggerInfoMock.mockReset();
     loggerErrorMock.mockReset();
+    registerFeatureFlagCheckerMock.mockReset();
+    featureFlagIsEnabledMock.mockReset();
   });
 
   it('T024: starts the Temporal worker, event ingress, and data-store sweep unconditionally', async () => {
@@ -149,6 +165,7 @@ describe('workflow worker startup', () => {
       await import('./index.ts');
       await vi.waitFor(() => {
         expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
+        expect(registerFeatureFlagCheckerMock).toHaveBeenCalledTimes(1);
         expect(registerWorkflowEmailProviderMock).toHaveBeenCalledTimes(1);
         expect(registerEnterpriseStorageProvidersMock).toHaveBeenCalledTimes(1);
         expect(temporalWorkerCtorMock).toHaveBeenCalledTimes(1);
@@ -159,6 +176,12 @@ describe('workflow worker startup', () => {
         expect(sweepWorkerStartMock).toHaveBeenCalledTimes(1);
         expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
         expect(processOnSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+      });
+
+      const checker = registerFeatureFlagCheckerMock.mock.calls[0]?.[0];
+      await checker('release-v1-5-feature', { tenantId: 'tenant-1' });
+      expect(featureFlagIsEnabledMock).toHaveBeenCalledWith('release-v1-5-feature', {
+        tenantId: 'tenant-1'
       });
 
       expect(loggerErrorMock).not.toHaveBeenCalled();

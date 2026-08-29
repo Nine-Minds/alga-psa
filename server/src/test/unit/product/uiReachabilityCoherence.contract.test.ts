@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 
 import {
   navigationSections,
@@ -93,23 +94,16 @@ function settingsTabOf(href: string): string | null {
   return new URLSearchParams(query).get('tab');
 }
 
-function readSeedSource(product: ProductCode): string {
-  return fs.readFileSync(
-    path.resolve(process.cwd(), `../ee/server/seeds/onboarding/${product}/02_permissions.cjs`),
-    'utf8',
-  );
-}
+// Both products provision from the unified permission catalog.
+const permissionCatalog = createRequire(import.meta.url)(
+  path.resolve(process.cwd(), '../server/migrations/utils/permissions/catalog.cjs'),
+);
 
-// Both seed dialects: psa uses `{ resource: 'x', action: 'y' }` rows,
-// algadesk uses `['x', ['y', ...], 'description']` tuples.
-function seedGrantsPermission(seedSource: string, resource: string, action: string): boolean {
-  const objectRow = new RegExp(
-    `resource:\\s*'${resource}'[^}]*action:\\s*'${action}'`,
-  );
-  const tupleRow = new RegExp(
-    `\\['${resource}',\\s*\\[[^\\]]*'${action}'`,
-  );
-  return objectRow.test(seedSource) || tupleRow.test(seedSource);
+function seedGrantsPermission(product: ProductCode, resource: string, action: string): boolean {
+  return permissionCatalog
+    .getProductPermissions(product)
+    .some((entry: { resource: string; action: string }) =>
+      entry.resource === resource && entry.action === action);
 }
 
 describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
@@ -177,11 +171,11 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
       ).toContain(pin.wiringMarker);
 
       const missing = PRODUCTS.filter(
-        (product) => !seedGrantsPermission(readSeedSource(product), pin.permission, pin.action),
+        (product) => !seedGrantsPermission(product, pin.permission, pin.action),
       );
       expect(
         missing,
-        `seed vocabularies missing ${pin.permission}:${pin.action} — "${pin.reachedVia}" is silently unreachable for every tenant of: ${missing.join(', ')}`,
+        `permission catalog missing ${pin.permission}:${pin.action} — "${pin.reachedVia}" is silently unreachable for every tenant of: ${missing.join(', ')}`,
       ).toEqual([]);
 
       // The entry renders whenever the permission is seeded, so the
@@ -195,12 +189,12 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
 
       const unreachable = PRODUCTS.filter(
         (product) =>
-          seedGrantsPermission(readSeedSource(product), pin.permission, pin.action) &&
+          seedGrantsPermission(product, pin.permission, pin.action) &&
           resolveProductRouteBehavior(product, pin.destination) !== 'allowed',
       );
       expect(
         unreachable,
-        `products whose seeds render "${pin.reachedVia}" but whose route registry blocks ${pin.destination}: ${unreachable.join(', ')}`,
+        `products whose catalog renders "${pin.reachedVia}" but whose route registry blocks ${pin.destination}: ${unreachable.join(', ')}`,
       ).toEqual([]);
     }
   });
@@ -210,6 +204,7 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
   // getAllowedSettingsTabIds, so a segment missing from BOTH lists is a
   // page nobody classified — that is the failure this test exists for.
   const ALGADESK_BLOCKED_SETTINGS: Record<string, string> = {
+    assets: 'PSA asset type configuration',
     billing: 'PSA billing configuration',
     extensions: 'PSA/EE extension management',
     'import-export': 'PSA data import/export',
@@ -219,6 +214,7 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
     notifications: 'PSA notification settings',
     opportunities: 'PSA sales opportunities configuration',
     projects: 'PSA project management settings',
+    secrets: 'PSA tenant secrets management requires durable secret storage',
     sla: 'PSA SLA configuration',
     'time-entry': 'PSA time tracking settings',
   };

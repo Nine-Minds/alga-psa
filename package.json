@@ -2,7 +2,7 @@
   "name": "sebastian-monorepo",
   "private": true,
   "engines": {
-    "node": ">=20 <25"
+    "node": ">=22 <27"
   },
   "workspaces": [
     "server",

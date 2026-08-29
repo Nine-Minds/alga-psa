@@ -24,6 +24,21 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 export type TenantSecretActionError = ActionMessageError | ActionPermissionError;
+export type TenantSecretListResult = { secrets: TenantSecretMetadata[]; permissionDenied: boolean };
+export type TenantSecretStoragePosture = { writable: boolean; reason?: 'READ_ONLY_PROVIDER' | 'NO_DURABLE_PATH' };
+
+function tenantSecretStoragePosture(): TenantSecretStoragePosture {
+  const provider = process.env.SECRET_WRITE_PROVIDER || 'filesystem';
+  if (provider === 'vault') return { writable: true };
+  if (provider === 'filesystem' && process.env.SECRET_FS_BASE_PATH) return { writable: true };
+  return { writable: false, reason: provider === 'filesystem' ? 'NO_DURABLE_PATH' : 'READ_ONLY_PROVIDER' };
+}
+
+function requireDurableTenantSecretStorage(): void {
+  if (!tenantSecretStoragePosture().writable) {
+    throw new Error('Secret storage is read-only in this environment. Configure Vault or SECRET_FS_BASE_PATH.');
+  }
+}
 
 function tenantSecretActionErrorFrom(error: unknown): TenantSecretActionError | null {
   if (error instanceof z.ZodError) {
@@ -82,20 +97,22 @@ function tenantSecretActionErrorFrom(error: unknown): TenantSecretActionError | 
  * Returns metadata only - never includes actual secret values.
  * Requires secrets.view permission.
  */
-export const listTenantSecrets = withAuth(async (user, { tenant }): Promise<TenantSecretMetadata[]> => {
+export const listTenantSecrets = withAuth(async (user, { tenant }): Promise<TenantSecretListResult> => {
   const { knex } = await createTenantKnex();
 
-  // Secrets are an optional capability in some environments (e.g. local/dev stacks or older schemas).
-  // If the backing tables don't exist, treat secrets as "not configured" and return no entries.
-  if (!tenant) return [];
-  if (!(await knex.schema.hasTable('tenant_secrets'))) return [];
+  if (!tenant) return { secrets: [], permissionDenied: false };
 
   // Check for secrets.view permission
   const canView = await hasPermission(user, 'secrets', 'view', knex);
-  if (!canView) return [];
+  if (!canView) return { secrets: [], permissionDenied: true };
 
   const provider = createTenantSecretProvider(knex, tenant);
-  return provider.list();
+  return { secrets: await provider.list(), permissionDenied: false };
+});
+
+/** Report only whether writes would survive across application instances. */
+export const getTenantSecretStoragePosture = withAuth(async (): Promise<TenantSecretStoragePosture> => {
+  return tenantSecretStoragePosture();
 });
 
 /**
@@ -159,6 +176,7 @@ export const createSecret = withAuth(async (user, { tenant }, input: CreateTenan
     if (!canManage) {
       return permissionError('Permission denied: Cannot create secrets', 'msp/settings:errors.secrets.permissions.create');
     }
+    requireDurableTenantSecretStorage();
 
     const provider = createTenantSecretProvider(knex, tenant);
     return await provider.create(input, user.user_id);
@@ -195,6 +213,7 @@ export const updateSecret = withAuth(async (
     if (!canManage) {
       return permissionError('Permission denied: Cannot update secrets', 'msp/settings:errors.secrets.permissions.update');
     }
+    requireDurableTenantSecretStorage();
 
     const provider = createTenantSecretProvider(knex, tenant);
     return await provider.update(name, input, user.user_id);
@@ -224,6 +243,7 @@ export const deleteSecret = withAuth(async (user, { tenant }, name: string): Pro
     if (!canManage) {
       return permissionError('Permission denied: Cannot delete secrets', 'msp/settings:errors.secrets.permissions.delete');
     }
+    requireDurableTenantSecretStorage();
 
     const provider = createTenantSecretProvider(knex, tenant);
     await provider.delete(name, user.user_id);
@@ -267,6 +287,10 @@ export const getSecretUsage = withAuth(async (user, { tenant }): Promise<Map<str
 
   if (!tenant) {
     throw new Error('Tenant not found');
+  }
+
+  if (!(await hasPermission(user, 'secrets', 'view', knex))) {
+    return new Map();
   }
 
   const provider = createTenantSecretProvider(knex, tenant);

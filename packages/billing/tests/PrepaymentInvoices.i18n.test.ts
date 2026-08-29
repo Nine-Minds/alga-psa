@@ -23,7 +23,7 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
 }
 
 describe('PrepaymentInvoices i18n wiring contract', () => {
-  it('T038: headings, field labels, type options, placeholders, validation errors, and submit states resolve through msp/invoicing', () => {
+  it('T038: headings, field labels, placeholders, validation errors, and submit states resolve through msp/invoicing', () => {
     const source = read('../src/components/billing-dashboard/PrepaymentInvoices.tsx');
     const en = readJson<Record<string, unknown>>(
       '../../../server/public/locales/en/msp/invoicing.json',
@@ -31,25 +31,17 @@ describe('PrepaymentInvoices i18n wiring contract', () => {
 
     const keyChecks = [
       'prepayment.titles.prepayment',
-      'prepayment.titles.creditMemo',
       'prepayment.descriptions.prepayment',
-      'prepayment.descriptions.creditMemo',
-      'prepayment.fields.type',
       'prepayment.fields.client',
       'prepayment.fields.amount',
-      'prepayment.fields.description',
-      'prepayment.types.prepaymentInvoice',
-      'prepayment.types.creditMemo',
+      'prepayment.fields.descriptionOptional',
       'prepayment.placeholders.amount',
       'prepayment.placeholders.prepaymentDescription',
-      'prepayment.placeholders.creditMemoDescription',
       'prepayment.errors.allFieldsRequired',
       'prepayment.errors.validAmount',
-      'prepayment.errors.creditMemosUnsupported',
       'prepayment.errors.generateFailed',
       'prepayment.actions.generating',
       'prepayment.actions.generatePrepayment',
-      'prepayment.actions.generateCreditMemo',
     ];
 
     expect(source).toContain("useTranslation('msp/invoicing')");

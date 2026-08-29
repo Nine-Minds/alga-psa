@@ -1,11 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
+const require = createRequire(import.meta.url);
+const catalog = require(path.join(repoRoot, 'server/migrations/utils/permissions/catalog.cjs'));
 
 function readRepoFile(...segments: string[]): string {
   return fs.readFileSync(path.join(repoRoot, ...segments), 'utf8');
+}
+
+function catalogHas(product: string, resource: string, action: string, msp: boolean, client: boolean): boolean {
+  return catalog.getProductPermissions(product).some((entry: any) =>
+    entry.resource === resource
+    && entry.action === action
+    && entry.msp === msp
+    && entry.client === client);
 }
 
 // Regression guard for the inventory RBAC seed gap: migration 20260626100600
@@ -40,15 +51,15 @@ describe('inventory permissions seed gap', () => {
     '02_permissions.cjs',
   );
 
-  it('defines every inventory resource/action in both permission seeds', () => {
+  it('defines every inventory resource/action in the catalog used by both permission seeds', () => {
     const actions = ['create', 'read', 'update', 'delete'];
     for (const resource of INVENTORY_RESOURCES) {
       for (const action of actions) {
-        const def = `{ resource: '${resource}', action: '${action}', msp: true, client: false`;
-        expect(devPermissionSeed).toContain(def);
-        expect(onboardingPermissionSeed).toContain(def);
+        expect(catalogHas('psa', resource, action, true, false), `${resource}:${action}`).toBe(true);
       }
     }
+    expect(devPermissionSeed).toContain('reconcileAllTenants');
+    expect(onboardingPermissionSeed).toContain('reconcileAllTenants');
   });
 
   it('readd migration grants the inventory resources to the MSP Admin role only', () => {

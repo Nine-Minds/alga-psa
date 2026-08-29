@@ -10,10 +10,8 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Button } from '@alga-psa/ui/components/Button';
-import { Copy, Timer } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { revealCredential } from '../../lib/actions/credentials/credentialActions';
+import { TotpCode } from './TotpCode';
 
 export interface TotpCountdownProps {
   credentialId: string;
@@ -24,7 +22,6 @@ export interface TotpCountdownProps {
 }
 
 export function TotpCountdown({ credentialId, initial, onCopyCode }: TotpCountdownProps) {
-  const { t } = useTranslation('msp/credentials');
   const [code, setCode] = useState(initial.code);
   const [secondsRemaining, setSecondsRemaining] = useState(initial.secondsRemaining);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -59,32 +56,7 @@ export function TotpCountdown({ credentialId, initial, onCopyCode }: TotpCountdo
     };
   }, [secondsRemaining]);
 
-  return (
-    <span
-      id="credentials-totp-countdown"
-      data-code={code}
-      data-seconds-remaining={secondsRemaining}
-      className="flex items-center gap-2 rounded bg-gray-100 px-2 py-1 text-sm"
-    >
-      <Timer className="h-3.5 w-3.5" />
-      <code id="credentials-totp-code" className="font-mono">
-        {code}
-      </code>
-      <span className="text-xs text-gray-500">
-        {t('credentials.reveal.otpExpires', { seconds: secondsRemaining })}
-      </span>
-      <Button
-        id="credentials-totp-copy"
-        variant="ghost"
-        size="sm"
-        onClick={() => onCopyCode?.(code)}
-        disabled={isRefreshing}
-      >
-        <Copy className="h-3.5 w-3.5" />
-        {t('credentials.reveal.copyOtp')}
-      </Button>
-    </span>
-  );
+  return <TotpCode code={code} secondsRemaining={secondsRemaining} isRefreshing={isRefreshing} onCopy={() => onCopyCode?.(code)} />;
 }
 
 export default TotpCountdown;

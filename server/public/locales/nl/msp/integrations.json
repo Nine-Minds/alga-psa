@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Verbindingstype:",
           "label": "Overzicht",
-          "mappedTenantsLabel": "Toegewezen tenants:"
+          "mappedTenantsLabel": "Toegewezen tenants:",
+          "microsoftAppLabel": "Microsoft-app:"
         },
         "skipped": {
           "empty": "Momenteel zijn er geen tenants gemarkeerd als overgeslagen.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "App-registratie toevoegen",
+          "bindFailed": "De gekozen Microsoft-app voor Entra kon niet worden opgeslagen.",
+          "emptyBody": "De directe verbinding draait op de Microsoft-app-registratie van uw eigen organisatie. Registreer een multitenant-app in uw partnertenant, voeg de Entra-redirect URI toe en verleen beheerderstoestemming voor ManagedTenants.Read.All en Directory.Read.All.",
+          "label": "Microsoft-app-registratie",
+          "placeholder": "Selecteer een app-registratie",
+          "reconnectRequired": "Selecteer een Microsoft-app-registratie en maak opnieuw verbinding.",
+          "redirectUriLabel": "Redirect URI om in Entra toe te voegen",
+          "scopesLabel": "Gedelegeerde scopes (beheerderstoestemming vereist)"
+        },
         "backToCurrentStep": "Terug naar {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga praat met Microsoft Graph via uw partnerrelatie.",
             "label": "Directe Microsoft-partner",
             "prerequisites": {
-              "appRegistration": "Microsoft OAuth-gegevens die voor deze tenant zijn geconfigureerd.",
+              "appRegistration": "Een hieronder gekozen Microsoft-app-registratie — de directe verbinding gebruikt altijd de app van uw eigen organisatie.",
               "globalAdmin": "Een globale beheerder die de machtigingen kan goedkeuren.",
               "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert.",
               "lighthouse": "Microsoft 365 Lighthouse ingericht in uw partnertenant."
@@ -956,6 +967,7 @@
         "description": "Breng de mensen uit de Microsoft-tenants die u beheert als klantcontacten naar Alga. Er wordt niets naar uw contacten geschreven totdat u een voorbeeld hebt gezien en goedgekeurd.",
         "directConsent": {
           "adminNote": "Een globale beheerder moet deze machtigingen goedkeuren. Zo niet, dan lukt de aanmelding wel maar wordt de verbinding geweigerd en wordt er niets opgeslagen.",
+          "appRegistration": "App-registratie: {{name}}.",
           "cancel": "Annuleren",
           "continue": "Doorgaan naar Microsoft",
           "intro": "U verlaat Alga en meldt zich aan bij Microsoft. Dit zijn de machtigingen die worden gevraagd.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Bestaande Outlook-e-mailverbindingen moeten opnieuw worden geautoriseerd om Mail.Send toe te kennen voordat ze uitgaande e-mail kunnen verzenden.",
             "perProviderIssuerNote": "Bestaande postvakverbindingen behouden hun huidige Microsoft-app totdat ze opnieuw worden verbonden. Deze keuze geldt voor nieuwe postvakverbindingen."
           },
+          "entra": {
+            "description": "Kies de Microsoft-app voor Entra-synchronisatie via GDAP en Lighthouse.",
+            "label": "Entra direct",
+            "reconnect": "Het wijzigen van deze app verbreekt de huidige Entra-verbinding en vereist opnieuw toestemming."
+          },
           "mspSso": {
             "description": "Kies welk Microsoft-profiel MSP SSO-aanmeldingsdomeinen, Microsoft-aanmelding en tenant-detectie ondersteunt.",
             "label": "MSP SSO"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Huidige profielwaarden",
           "emailRedirect": "Redirect-URI inkomende e-mail",
           "emailTitle": "E-mailhandleiding",
+          "entraConsent": "Vereiste",
+          "entraConsentValue": "Registreer deze app als multitenant en verleen beheerderstoestemming in de partnertenant.",
+          "entraTitle": "Entra direct",
           "mspSsoTitle": "MSP SSO-handleiding",
           "notConfigured": "Niet geconfigureerd",
           "redirectUri": "Redirect URI",
@@ -2831,9 +2851,17 @@
             "description": "Lever persoonlijke meldingen aan de Teams-activiteitenfeed.",
             "label": "Activiteitenmeldingen"
           },
+          "channelBot": {
+            "description": "Sta de bot toe om te reageren wanneer deze met @ wordt genoemd in teamkanalen. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van het kanaal.",
+            "label": "Kanaal-bot"
+          },
           "groupChatBot": {
             "description": "Sta de bot toe om te reageren in Teams-groepschats. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van de chat.",
             "label": "Groepschat-bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Laat klantcontacten die de bot een bericht sturen tickets indienen zonder aan te melden. Afzenders worden op basis van hun geverifieerde Microsoft-identiteit aan contacten gekoppeld; afzenders zonder overeenkomst worden geweigerd.",
+            "label": "Ticketindiening door gasten"
           },
           "messageExtension": {
             "description": "Schakel opzoek- en berichtgestuurde PSA-acties in.",
@@ -2990,7 +3018,7 @@
           "test": {
             "sent": "Teams-testbericht verzonden.",
             "failed": "Teams-testbericht mislukt.",
-            "addonInactive": "De Teams-add-on is niet actief voor deze tenant.",
+            "featureDisabled": "Microsoft Teams is niet ingeschakeld voor deze tenant.",
             "integrationInactive": "Activeer de Teams-integratie voordat u een testbericht verzendt.",
             "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat u een testbericht verzendt.",
             "botNotConfigured": "Configureer de Teams-botreferenties voordat u een testbericht verzendt.",
@@ -2999,7 +3027,7 @@
             "skipped": "Het Teams-testbericht is overgeslagen."
           },
           "steps": {
-            "addonEntitlement": "Teams-add-on-recht",
+            "featureFlag": "Microsoft Teams-functievrijgave",
             "integrationStatus": "Status van Teams-integratie",
             "capabilities": "Teams-mogelijkheden",
             "microsoftProfile": "Gereedheid van Microsoft-profiel",
@@ -3011,7 +3039,7 @@
             "recentDeliveryHealth": "Recente Teams-leveringsstatus"
           },
           "recommendation": {
-            "addon": "Schakel de Microsoft Teams-add-on in voor deze tenant.",
+            "featureFlag": "Schakel Microsoft Teams in voor deze tenant.",
             "activate": "Activeer de Teams-integratie in de instellingen.",
             "capabilities": "Schakel de persoonlijke bot en activiteitsmeldingen voor Teams in.",
             "profile": "Selecteer een gereed Microsoft-profiel voor Teams.",
@@ -3201,9 +3229,9 @@
               "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij AlgaPSA, dus er bestaat geen accountkoppeling.",
               "remedy": "Laat de gebruiker zich aanmelden met Microsoft (MSP-portal-SSO of het Teams-tabblad) zodat hun account wordt gekoppeld."
             },
-            "addon_inactive": {
-              "cause": "De Teams-invoegtoepassing is verlopen of afwezig, dus verzendingen worden overgeslagen terwijl de configuratie behouden blijft.",
-              "remedy": "Vernieuw de Teams-invoegtoepassing voor deze tenant."
+            "feature_disabled": {
+              "cause": "Microsoft Teams is niet ingeschakeld voor deze tenant, dus verzendingen worden overgeslagen terwijl de configuratie behouden blijft.",
+              "remedy": "Schakel de versie 1.5-functie in voor deze tenant."
             },
             "integration_inactive": {
               "cause": "De Teams-integratie is niet actief voor deze tenant.",
@@ -3234,26 +3262,6 @@
               "remedy": "Controleer de serverlogboeken voor de details van de bezorgfout en voer de diagnostiek opnieuw uit."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams-invoegtoepassing",
-          "description": "Voor de Microsoft Teams-integratie is de Teams-invoegtoepassing voor deze tenant vereist.",
-          "includedTitle": "Wat is inbegrepen",
-          "feature": {
-            "tab": "Persoonlijk tabblad: open AlgaPSA binnen Microsoft Teams.",
-            "bot": "Persoonlijke en groepschat-bot voor tickets, goedkeuringen, tijd en notities.",
-            "messageExtension": "Berichtextensie en snelle acties om vanuit elk bericht op PSA-records te reageren.",
-            "meetings": "Teams-vergaderingen bij goedkeuringen van afspraken met echte Outlook/Teams-agenda-uitnodigingen.",
-            "recordings": "Automatische vastlegging van vergaderopnamen en transcripties in interacties.",
-            "notifications": "Meldingen via activiteitenfeed en bot-DM voor toewijzingen, reacties, goedkeuringen en SLA-risico."
-          },
-          "cta": "Teams-invoegtoepassing kopen",
-          "nonBilling": "Neem contact op met een factureringsbeheerder om de Teams-invoegtoepassing voor deze tenant te kopen."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams-invoegtoepassing verlopen",
-          "message": "De Microsoft Teams-invoegtoepassing is verlopen. Uw configuratie en bezorggeschiedenis blijven behouden, maar Teams-meldingen worden overgeslagen totdat de invoegtoepassing wordt vernieuwd.",
-          "cta": "Teams-invoegtoepassing vernieuwen"
         },
         "staleManifest": {
           "title": "Teams-app-pakket is verouderd",
@@ -3559,6 +3567,72 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Actief",
+        "error": "Fout",
+        "disabled": "Uitgeschakeld",
+        "notConfigured": "Niet ingesteld"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Legt Teams Phone-gesprekken na afloop vast als interacties. Gespreksgeschiedenis, geen live schermmelding.",
+          "prerequisite": "Stel eerst de Microsoft Teams-integratie in — Teams Phone hergebruikt het Microsoft-profiel daarvan."
+        }
+      },
+      "subscriptionExpires": "Abonnement wordt vernieuwd vóór",
+      "lastNotification": "Laatste oproepmelding",
+      "autoTicket": "Automatisch een ticket aanmaken voor herkende gesprekken",
+      "unknownNumber": "Onbekend nummer",
+      "actions": {
+        "enable": "Inschakelen",
+        "disable": "Uitschakelen"
+      },
+      "matchStatus": {
+        "matched": "Herkend",
+        "ambiguous": "Meerduidig",
+        "unmatched": "Niet herkend",
+        "resolved": "Opgelost"
+      },
+      "callsPanel": {
+        "title": "Gesprekken"
+      },
+      "recentCalls": {
+        "title": "Recente gesprekken",
+        "description": "Vastgelegd na afloop van elk gesprek: Microsoft Graph publiceert gespreksrecords pas daarna, dus dit is geschiedenis en geen live overzicht.",
+        "empty": "Nog geen gesprekken vastgelegd.",
+        "createTicket": "Ticket aanmaken",
+        "openTicket": "Ticket openen",
+        "linkTicket": "Aan ticket koppelen",
+        "selectTicket": "Selecteer een ticket…",
+        "noLinkableTickets": "Geen open tickets"
+      },
+      "unmatched": {
+        "title": "Gesprekken zonder toewijzing",
+        "description": "Nummers die we niet konden herkennen en nummers die meerdere contacten delen. Een gesprek oplossen zet het op de juiste tijdlijn.",
+        "empty": "Elk vastgelegd gesprek is toegewezen.",
+        "assignTo": "Toewijzen aan",
+        "searchPlaceholder": "Zoek contacten en klanten…",
+        "noTargets": "Geen overeenkomende contacten of klanten.",
+        "chooseTarget": "Toewijzen aan een klant…"
+      },
+      "forbidden": "U hebt geen toestemming om de telefonie-instellingen van deze tenant te bekijken.",
+      "paywall": {
+        "title": "Telefonie",
+        "description": "Telefonie-integraties zijn niet beschikbaar voor deze tenant.",
+        "unavailable": "Telefonie-integraties zijn niet beschikbaar voor deze tenant.",
+        "ceOnly": "Telefonie-integraties zijn alleen beschikbaar in Enterprise Edition.",
+        "includedTitle": "Wat is inbegrepen",
+        "cta": "Integraties beheren",
+        "feature": {
+          "recognition": "Bellerherkenning tegen contacten en klanten bij elk vastgelegd gesprek.",
+          "history": "Gespreksgeschiedenis op de tijdlijn van contact en klant als volwaardige interacties.",
+          "tickets": "Maak een ticket vanuit een gesprek of koppel het gesprek aan een ticket waaraan u al werkt.",
+          "queue": "Een wachtrij voor niet-herkende en meerduidige nummers, zodat geen gesprek op gevoel wordt toegewezen.",
+          "providers": "Vandaag Teams Phone; dezelfde gesprekskern draagt toekomstige aanbieders."
+        }
+      }
     }
   },
   "errors": {

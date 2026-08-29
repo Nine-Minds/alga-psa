@@ -234,13 +234,14 @@ export class ClientModel {
     // reverse-charge applicability is per legal entity, and the client's
     // default profile is the entity a freshly created client bills as.
     const defaultBillingProfileId = await ensureClientDefaultBillingProfile(trx, tenant, clientId);
+    // client_tax_settings carries no created_at/updated_at columns; writing
+    // them errors, and inside a real transaction that error aborts the whole
+    // transaction even though the caller swallows it.
     await db.table('client_tax_settings').insert({
       client_id: clientId,
       billing_profile_id: defaultBillingProfileId,
       tenant,
-      is_reverse_charge_applicable: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      is_reverse_charge_applicable: false
     });
   }
 

@@ -11,10 +11,13 @@
     "clients": "Clients",
     "opportunities": "Opportunités",
     "contacts": "Contacts",
+    "interactions": "Interactions",
     "documents": "Documents",
     "documentsAll": "Tous les documents",
     "knowledgeBase": "Base de connaissances",
     "assets": "Actifs",
+    "assetsAll": "Tous les actifs",
+    "assetsMaintenance": "Entretien",
     "inventory": {
       "label": "Inventaire",
       "sections": {
@@ -133,6 +136,7 @@
       "ticketing": "Gestion des tickets",
       "sla": "SLA",
       "projects": "Projets",
+      "assets": "Actifs",
       "interactions": "Interactions",
       "opportunities": "Opportunités",
       "notifications": "Notifications",

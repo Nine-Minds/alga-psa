@@ -90,51 +90,24 @@ describe('Teams production-readiness admin experience (E6/E7) contracts', () => 
     }
   });
 
-  it('F063/F064/F065: validation delegators, paywall, and expired banner are wired', () => {
+  it('validation delegators remain wired without add-on purchase surfaces', () => {
     const barrel = readRepoFile('packages/integrations/src/actions/integrations/teamsActions.ts');
     expect(barrel).toContain('export const validateTeamsGraphCredentials = withAuth(');
     expect(barrel).toContain('export const probeTeamsGraphPermissions = withAuth(');
     expect(barrel).toContain('export const validateTeamsBotConnector = withAuth(');
-    expect(barrel).toContain('export const getTeamsAddonPurchaseAccess = withAuth(');
-    expect(barrel).toContain("hasPermission(user as any, 'billing', 'update')");
 
     const eeIndex = readRepoFile('ee/packages/microsoft-teams/src/actions/index.ts');
     expect(eeIndex).toContain("export * from '../lib/actions/integrations/teamsSetupValidationActions'");
 
-    const paywall = readRepoFile(`${TEAMS_DIR}/TeamsPaywallCard.tsx`);
-    expect(paywall).toContain('id="teams-paywall-card"');
-    expect(paywall).toContain('id="teams-paywall-purchase"');
-    expect(paywall).toContain('getAddOnDestination(ADD_ONS.TEAMS)');
-
-    const addOnNavigation = readRepoFile('packages/integrations/src/lib/addOnNavigation.ts');
-    expect(addOnNavigation).toContain("'/msp/add-ons'");
-
-    const accountManagement = readRepoFile('ee/server/src/components/settings/account/AccountManagement.tsx');
-    expect(accountManagement).toContain('selectedAddOn?: AddOnKey');
-    expect(accountManagement).toContain('id={`account-addon-${addOnSlug}`}');
-    expect(accountManagement).toContain('selectedCard.focus({ preventScroll: true })');
-
-    const ceDestination = readRepoFile('packages/ee/src/components/settings/account/AccountManagement.tsx');
-    expect(ceDestination).toContain('selectedAddOn?: string');
-
-    const banner = readRepoFile(`${TEAMS_DIR}/TeamsAddonExpiredBanner.tsx`);
-    expect(banner).toContain('id="teams-addon-expired-banner"');
-
-    const component = readRepoFile(COMPONENT);
-    expect(component).toContain("isAddonAbsent");
-    expect(component).toContain("const isAddonExpired = addOnState === 'expired'");
-    expect(component).toContain('<TeamsAddonExpiredBanner />');
-    expect(component).toContain('<TeamsPaywallCard />');
   });
 
   it('E6/E7: every new admin i18n sub-tree is present in all ten locales', () => {
-    const subtrees = ['wizard', 'runbook', 'deliveryLog', 'auditLog', 'troubleshooting', 'paywall', 'addonExpiredBanner', 'staleManifest'];
+    const subtrees = ['wizard', 'runbook', 'deliveryLog', 'auditLog', 'troubleshooting', 'staleManifest'];
     for (const locale of LOCALES) {
       const settings = readLocaleSettings(locale);
       for (const subtree of subtrees) {
         expect(settings[subtree], `${locale} missing settings.${subtree}`).toBeTruthy();
       }
-      expect(typeof settings.paywall.cta, `${locale} paywall.cta`).toBe('string');
       expect(typeof settings.deliveryLog.title, `${locale} deliveryLog.title`).toBe('string');
       expect(typeof settings.troubleshooting.codes.graph_unauthorized.remedy, `${locale} remedy`).toBe('string');
     }

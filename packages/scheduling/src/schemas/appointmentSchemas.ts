@@ -20,9 +20,13 @@ function todayInTimeZone(timeZone?: string | null): string {
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 export const dateStringSchema = z.string().regex(dateRegex, 'Date must be in YYYY-MM-DD format');
 
-// Time validation: HH:MM format (24-hour)
-const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-export const timeStringSchema = z.string().regex(timeRegex, 'Time must be in HH:MM format (24-hour)');
+// Time validation: HH:MM format (24-hour). Postgres `time` columns read back as
+// HH:MM:SS, so seconds are accepted and trimmed instead of failing a round-trip.
+const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
+export const timeStringSchema = z
+  .string()
+  .regex(timeRegex, 'Time must be in HH:MM format (24-hour)')
+  .transform((value) => value.slice(0, 5));
 
 /**
  * Appointment Request Status Schema

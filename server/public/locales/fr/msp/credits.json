@@ -144,7 +144,9 @@
       "reason": "Pourquoi ce crédit est-il transféré ?"
     },
     "hints": {
-      "amount": "Jusqu'à {{amount}} disponible"
+      "amount": "Jusqu'à {{amount}} disponible",
+      "currencyMatch": "Le client sélectionné utilise la même devise.",
+      "currencyMismatch": "Le client sélectionné utilise une devise différente ; une conversion peut s’appliquer."
     },
     "impact": {
       "current": "Restant actuel",

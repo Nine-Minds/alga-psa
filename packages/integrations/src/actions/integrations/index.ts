@@ -37,7 +37,6 @@ export {
   validateTeamsBotConnector,
   listTeamsDeliveries,
   listTeamsAuditEvents,
-  getTeamsAddonPurchaseAccess,
   type TeamsDiagnosticsReport,
   type TeamsTestMessageResult,
   type TeamsGraphCredentialValidationResult,
@@ -53,6 +52,17 @@ export {
 export {
   getTeamsAppPackageStatus,
 } from './teamsPackageActions';
+export {
+  createTelephonyCallIntent,
+  createTicketFromTelephonyCall,
+  getTelephonyCallLinkState,
+  getTelephonyOverview,
+  linkTelephonyCallToTicket,
+  listTelephonyLinkableTickets,
+  resolveTelephonyCall,
+  setTelephonyAutoTicketPolicy,
+  setTelephonyProviderEnabled,
+} from './telephonyActions';
 export {
   getXeroConnectionStatus,
   getXeroIntegrationStatus,

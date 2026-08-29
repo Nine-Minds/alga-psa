@@ -25,12 +25,15 @@ const REQUIRED_GRAPH_APPLICATION_PERMISSIONS = [
   'OnlineMeetingTranscript.Read.All',
   'TeamsActivity.Send',
   'User.Read.All',
+  // Teams Phone call journaling: the communications/callRecords subscription
+  // and CDR fetch both 403 without it.
+  'CallRecords.Read.All',
 ] as const;
 
 const BOT_ENV_GUIDANCE = 'Configure TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID, and TEAMS_BOT_APP_PASSWORD.';
 
 export type TeamsGraphCredentialFailureReason =
-  | 'addon_inactive'
+  | 'feature_disabled'
   | 'profile_not_ready'
   | 'invalid_client_secret'
   | 'invalid_client_id'
@@ -58,7 +61,7 @@ export type TeamsGraphPermissionsProbeResult =
   | { status: 'failed'; reason: TeamsGraphCredentialFailureReason; message: string };
 
 export type TeamsBotConnectorFailureReason =
-  | 'addon_inactive'
+  | 'feature_disabled'
   | 'not_configured'
   | 'invalid_password'
   | 'invalid_app_id'
@@ -107,7 +110,7 @@ function tokenHostLabel(url: string = getMicrosoftLoginBaseUrl()): string {
   }
 }
 
-type GraphTokenFailureReason = Exclude<TeamsGraphCredentialFailureReason, 'addon_inactive'>;
+type GraphTokenFailureReason = Exclude<TeamsGraphCredentialFailureReason, 'feature_disabled'>;
 
 type GraphTokenAcquisition =
   | { status: 'ok'; accessToken: string }
@@ -203,7 +206,7 @@ function decodeGraphTokenRoles(accessToken: string): string[] | null {
 // `message` is always present (empty when enabled) so callers need no
 // discriminated-union narrowing — the EE server app typechecks this file with
 // `strict: false`, where narrowing on the `enabled` boolean does not apply.
-async function checkTeamsAddOn(
+async function checkTeamsFeature(
   user: unknown,
   tenant: string
 ): Promise<{ enabled: boolean; message: string }> {
@@ -224,9 +227,9 @@ export async function validateTeamsGraphCredentialsImpl(
 ): Promise<TeamsGraphCredentialValidationResult> {
   await assertCanManageTeamsSettings(user as any);
 
-  const addOn = await checkTeamsAddOn(user, tenant);
-  if (!addOn.enabled) {
-    return { status: 'failed', reason: 'addon_inactive', message: addOn.message };
+  const feature = await checkTeamsFeature(user, tenant);
+  if (!feature.enabled) {
+    return { status: 'failed', reason: 'feature_disabled', message: feature.message };
   }
 
   const acquisition = await acquireTeamsGraphAppToken(tenant);
@@ -243,9 +246,9 @@ export async function probeTeamsGraphPermissionsImpl(
 ): Promise<TeamsGraphPermissionsProbeResult> {
   await assertCanManageTeamsSettings(user as any);
 
-  const addOn = await checkTeamsAddOn(user, tenant);
-  if (!addOn.enabled) {
-    return { status: 'failed', reason: 'addon_inactive', message: addOn.message };
+  const feature = await checkTeamsFeature(user, tenant);
+  if (!feature.enabled) {
+    return { status: 'failed', reason: 'feature_disabled', message: feature.message };
   }
 
   const acquisition = await acquireTeamsGraphAppToken(tenant);
@@ -287,9 +290,9 @@ export async function probeTeamsGraphPermissionsImpl(
 
 type BotTokenRequestResult =
   | { ok: true }
-  | { ok: false; reason: Exclude<TeamsBotConnectorFailureReason, 'addon_inactive' | 'not_configured'>; message: string };
+  | { ok: false; reason: Exclude<TeamsBotConnectorFailureReason, 'feature_disabled' | 'not_configured'>; message: string };
 
-// Type predicate so the failure branch narrows under `strict: false` (see checkTeamsAddOn).
+// Type predicate so the failure branch narrows under `strict: false` (see checkTeamsFeature).
 function isBotTokenFailure(
   result: BotTokenRequestResult,
 ): result is Extract<BotTokenRequestResult, { ok: false }> {
@@ -375,9 +378,9 @@ export async function validateTeamsBotConnectorImpl(
 ): Promise<TeamsBotConnectorValidationResult> {
   await assertCanManageTeamsSettings(user as any);
 
-  const addOn = await checkTeamsAddOn(user, tenant);
-  if (!addOn.enabled) {
-    return { status: 'failed', reason: 'addon_inactive', message: addOn.message };
+  const feature = await checkTeamsFeature(user, tenant);
+  if (!feature.enabled) {
+    return { status: 'failed', reason: 'feature_disabled', message: feature.message };
   }
 
   const credentials = readBotCredentialsFromEnv();

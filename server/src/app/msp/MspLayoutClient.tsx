@@ -22,6 +22,7 @@ import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
+import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
 import { MspBrandingProvider, type MspBranding } from '@/components/layout/MspBrandingContext';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
@@ -47,6 +48,8 @@ interface Props {
   selfHostLicensing?: boolean;
   /** Enterprise white-label logo/name; null keeps the stock Alga chrome. */
   mspBranding?: MspBranding | null;
+  /** Server-evaluated release gate for Teams and telephony UI. */
+  teamsFeatureEnabled?: boolean;
 }
 
 function OnboardingRedirectFallback() {
@@ -86,6 +89,7 @@ export function MspLayoutClient({
   onboardingResolvedServerSide = false,
   selfHostLicensing = false,
   mspBranding = null,
+  teamsFeatureEnabled = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -166,6 +170,7 @@ export function MspLayoutClient({
       <MspBrandingProvider branding={mspBranding}>
       <ProductProvider>
         <TierProvider selfHostLicensing={selfHostLicensing}>
+          <MspCallLinkProvider teamsFeatureEnabled={teamsFeatureEnabled}>
           {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
@@ -208,6 +213,7 @@ export function MspLayoutClient({
               )}
             </ClientUIStateProvider>
           </TagProvider>
+          </MspCallLinkProvider>
         </TierProvider>
       </ProductProvider>
       </MspBrandingProvider>

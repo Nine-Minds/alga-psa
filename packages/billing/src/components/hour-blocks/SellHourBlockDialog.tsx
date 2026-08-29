@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
+import { NumericInput } from '@alga-psa/ui/components/NumericInput';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -50,7 +53,7 @@ export default function SellHourBlockDialog({ clientId, currencyCode, isOpen, on
     let cancelled = false;
     setServicesLoading(true);
     setError(null);
-    getServices(1, 999, { is_active: true, item_kind: 'service' })
+    getServices(1, 999, { is_active: true, item_kind: 'service', billing_method: 'hourly' })
       .then((result) => {
         if (cancelled) return;
         if (isActionMessageError(result) || isActionPermissionError(result) || 'error' in result) {
@@ -189,25 +192,21 @@ export default function SellHourBlockDialog({ clientId, currencyCode, isOpen, on
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="hb-hours">{t('sell.hoursLabel', { defaultValue: 'Hours' })}</Label>
-              <Input
+              <NumericInput
                 id="hb-hours"
-                type="number"
-                min="0.1"
-                step="0.5"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
+                precision={1}
+                value={hours === '' ? undefined : Number(hours)}
+                onChange={(value) => setHours(value === undefined ? '' : String(value))}
                 placeholder={t('sell.hoursPlaceholder', { defaultValue: 'e.g. 10' })}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="hb-rate">{t('sell.rateLabel', { defaultValue: 'Rate per hour ({{currency}})', currency: currencyCode })}</Label>
-              <Input
+              <Label htmlFor="hb-rate">{t('sell.rateLabel', { defaultValue: 'Rate per hour' })}</Label>
+              <CurrencyInput
                 id="hb-rate"
-                type="number"
-                min="0"
-                step="0.01"
-                value={rate}
-                onChange={(e) => setRate(e.target.value)}
+                currencyCode={currencyCode}
+                value={rate === '' ? undefined : Number(rate)}
+                onChange={(value) => setRate(value === undefined ? '' : String(value))}
                 disabled={!selectedServiceId}
               />
             </div>
@@ -232,9 +231,8 @@ export default function SellHourBlockDialog({ clientId, currencyCode, isOpen, on
               ) : (
                 services.map((service) => (
                   <label key={service.service_id} className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-[rgb(var(--color-border-200))]"
+                    <Checkbox
+                      id={`hb-scope-service-${service.service_id}`}
                       checked={scopeServiceIds.has(service.service_id)}
                       onChange={() => toggleScope(service.service_id)}
                     />

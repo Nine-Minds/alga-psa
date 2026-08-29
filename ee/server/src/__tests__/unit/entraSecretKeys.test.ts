@@ -4,16 +4,10 @@ import {
   ENTRA_ALL_SECRET_KEYS,
   ENTRA_CIPP_SECRET_KEYS,
   ENTRA_DIRECT_SECRET_KEYS,
-  ENTRA_SHARED_MICROSOFT_SECRET_KEYS,
 } from '@ee/lib/integrations/entra/secrets';
 
 describe('Entra secret key constants', () => {
-  it('T045: maps required direct/CIPP/shared secret names consistently', () => {
-    expect(ENTRA_SHARED_MICROSOFT_SECRET_KEYS).toEqual({
-      clientId: 'microsoft_client_id',
-      clientSecret: 'microsoft_client_secret',
-      tenantId: 'microsoft_tenant_id',
-    });
+  it('T045: maps required direct/CIPP secret names consistently', () => {
 
     expect(ENTRA_DIRECT_SECRET_KEYS).toEqual({
       accessToken: 'entra_direct_access_token',
@@ -32,7 +26,6 @@ describe('Entra secret key constants', () => {
     expect(new Set(allKeys).size).toBe(allKeys.length);
 
     const expectedKeys = [
-      ...Object.values(ENTRA_SHARED_MICROSOFT_SECRET_KEYS),
       ...Object.values(ENTRA_DIRECT_SECRET_KEYS),
       ...Object.values(ENTRA_CIPP_SECRET_KEYS),
     ];

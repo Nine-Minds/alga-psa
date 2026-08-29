@@ -92,6 +92,8 @@ secrets:
     file: ./secrets/token_secret_key
   nextauth_secret:
     file: ./secrets/nextauth_secret
+  credential_encryption_key:
+    file: ./secrets/credential_encryption_key
   google_oauth_client_id:
     file: ./secrets/google_oauth_client_id
   google_oauth_client_secret:

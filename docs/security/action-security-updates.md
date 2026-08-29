@@ -226,21 +226,25 @@ The following new permissions need to be added to the database:
 - `tax:delete` - Delete tax rates
 
 #### Time Tracking Permissions
-- `timeentry:create` - Create time entries
-- `timeentry:read` - View time entries
-- `timeentry:update` - Modify time entries
-- `timeentry:delete` - Delete time entries
-- `timesheet:read` - View timesheets
-- `timesheet:read_all` - View all timesheets (admin)
-- `timesheet:submit` - Submit timesheets for approval
-- `timesheet:approve` - Approve timesheets
-- `timesheet:comment` - Add comments to timesheets
-- `timesheet:reverse` - Reverse timesheet approvals
-- `timeperiod:read` - View time periods
-- `timeperiod:create` - Create time periods
-- `timeperiod:update` - Update time periods
-- `timeperiod:delete` - Delete time periods
-- `timeperiod:generate` - Generate time periods
+These shipped as `timeentry` / `timesheet` / `timeperiod` and were later renamed
+to match the names the rest of the system uses; `server/migrations/utils/permissions/catalog.cjs`
+is the current list, and `server/migrations/utils/permissions/README.md` documents
+the catalog and its consumers.
+- `time_entry:create` - Create time entries
+- `time_entry:read` - View time entries
+- `time_entry:update` - Modify time entries
+- `time_entry:delete` - Delete time entries
+- `time_sheet:read` - View timesheets
+- `time_sheet:read_all` - View all timesheets (admin)
+- `time_sheet:submit` - Submit timesheets for approval
+- `time_sheet:approve` - Approve timesheets
+- `time_sheet:comment` - Add comments to timesheets
+- `time_sheet:reverse` - Reverse timesheet approvals
+- `time_period:read` - View time periods
+- `time_period:create` - Create time periods
+- `time_period:update` - Update time periods
+- `time_period:delete` - Delete time periods
+- `time_period:generate` - Generate time periods
 
 #### Other Business Permissions
 - `contact:create`, `contact:read`, `contact:update`, `contact:delete`

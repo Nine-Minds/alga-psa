@@ -559,7 +559,9 @@
     "replies_other": "{{count}} risposte",
     "collapse": "Comprimi",
     "expand": "Espandi",
-    "showInDrawer": "Mostra nel pannello"
+    "showInDrawer": "Mostra nel pannello",
+    "showEarlierReplies_one": "Mostra {{count}} risposta precedente",
+    "showEarlierReplies_other": "Mostra {{count}} risposte precedenti"
   },
   "pagination": {
     "previous": "Precedente",
@@ -1593,5 +1595,8 @@
     "noUsedOrders": "Nessun numero d'ordine ancora usato",
     "markClosed": "Contrassegna come stato chiuso",
     "setDefault": "Imposta come stato predefinito per i nuovi ticket"
+  },
+  "callLink": {
+    "teamsCall": "Chiama in Microsoft Teams"
   }
 }

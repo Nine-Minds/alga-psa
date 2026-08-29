@@ -16,7 +16,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22: the repo's engines range is >=22 <27 (see root package.json)
+          # and AMP's package suites read SQLite via node:sqlite (DatabaseSync),
+          # which only exists on Node >= 22.5. Node 20 fails those suites with
+          # "node:sqlite is unavailable in this runtime".
+          node-version: '22'
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
 
@@ -38,7 +42,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22: the repo's engines range is >=22 <27 (see root package.json)
+          # and AMP's package suites read SQLite via node:sqlite (DatabaseSync),
+          # which only exists on Node >= 22.5. Node 20 fails those suites with
+          # "node:sqlite is unavailable in this runtime".
+          node-version: '22'
           cache: 'npm'
 
       - name: Cache Nx computation cache
@@ -144,7 +152,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22: the repo's engines range is >=22 <27 (see root package.json)
+          # and AMP's package suites read SQLite via node:sqlite (DatabaseSync),
+          # which only exists on Node >= 22.5. Node 20 fails those suites with
+          # "node:sqlite is unavailable in this runtime".
+          node-version: '22'
           cache: 'npm'
       - name: Upgrade npm to version 11
         run: npm install -g npm@11

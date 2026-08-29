@@ -32,6 +32,7 @@ import {
   IInvoice,
   IRecurringDueSelectionInput,
   PreviewInvoiceResponse,
+  RecurringInvoiceFailureCode,
   InvoiceViewModel,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
@@ -76,7 +77,12 @@ import {
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
   POST_DROP_RECURRING_OBLIGATION_TYPES,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY } from './invoiceGeneration.constants';
+import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY, NO_BILLING_EMAIL_MESSAGE_KEY } from './invoiceGeneration.constants';
+import {
+  ManualInvoiceError,
+  type HandledManualInvoiceErrorCode,
+} from '../errors/manualInvoiceErrors';
+import type { HandledRecurringFailureCode } from './recurringBillingRunActions.shared';
 import {
   detectRecurringApprovalBlockers,
   formatApprovalBlockedReason,
@@ -585,39 +591,52 @@ function withRecurringWindowErrorContext<T extends Error>(
 function buildPreviewInvoiceFailure(
   selectorInput: IRecurringDueSelectionInput,
   error: string,
+  code?: HandledRecurringFailureCode,
+  params?: Record<string, string>,
 ): PreviewInvoiceResponse {
   return {
     success: false,
     error,
+    ...(code ? { code } : {}),
+    ...(params ? { params } : {}),
     ...buildRecurringWindowErrorContext(selectorInput),
   };
 }
 
-function previewInvoiceErrorMessage(error: unknown): string {
+/**
+ * Maps a preview failure to the user-safe message plus the structured, known
+ * failure (code/params) the UI needs to render localized, actionable guidance.
+ * Unknown/internal failures carry no code, so the UI keeps the generic string.
+ */
+function previewInvoiceErrorInfo(error: unknown): {
+  message: string;
+  code?: HandledRecurringFailureCode;
+  params?: Record<string, string>;
+} {
   const message = error instanceof Error ? error.message : '';
 
   if (message.startsWith('Permission denied:')) {
-    return message;
+    return { message };
   }
 
   if (message.startsWith('Recurring service periods were not materialized')) {
-    return message;
+    return { message };
   }
 
   if (/^Billing cycle .+ not found for client .+$/.test(message)) {
-    return 'Billing cycle not found';
+    return { message: 'Billing cycle not found' };
   }
 
   if (/^Billing cycle .+ has invalid dates/.test(message)) {
-    return 'Billing cycle has invalid dates';
+    return { message: 'Billing cycle has invalid dates' };
   }
 
   if (/^Billing Error: Client .+ has active contracts in multiple currencies \(.+\)\. Mixed currency billing is not supported\.$/.test(message)) {
-    return 'This client has active contracts in multiple currencies. Mixed currency billing is not supported.';
+    return { message: 'This client has active contracts in multiple currencies. Mixed currency billing is not supported.' };
   }
 
   if (/^Client .+ not found in tenant .+$/.test(message)) {
-    return 'Client not found';
+    return { message: 'Client not found' };
   }
 
   const expectedMessages = new Set([
@@ -633,20 +652,31 @@ function previewInvoiceErrorMessage(error: unknown): string {
   ]);
 
   if (expectedMessages.has(message)) {
-    return message;
+    return { message };
+  }
+
+  // A coded billing validation error carries its code/params straight to the UI
+  // so preview surfaces the same localized remediation as its sibling flows.
+  // Only the allowlisted NO_BILLING_EMAIL code crosses; unsupported codes take
+  // the generic fallback so raw validation detail never reaches the user.
+  if (error instanceof ManualInvoiceError && error.code === 'NO_BILLING_EMAIL') {
+    return {
+      message: error.message,
+      code: 'NO_BILLING_EMAIL',
+      params: error.params,
+    };
   }
 
   // Same mapping the generation path uses, so preview surfaces database and
   // validation causes with the same actionable text as its sibling flows.
   const mapped = invoiceGenerationActionErrorFrom(error);
   if (mapped) {
-    return 'permissionError' in mapped ? mapped.permissionError : mapped.actionError;
+    return 'permissionError' in mapped ? { message: mapped.permissionError } : { message: mapped.actionError };
   }
 
-  // Last resort only: never swallow an actionable cause behind the generic string.
-  return message.trim() !== ''
-    ? message
-    : 'An error occurred while previewing the invoice';
+  // Unknown/internal exceptions never leak their raw message to the user; the
+  // full cause stays server-side in logPreviewInvoiceFailure.
+  return { message: 'An error occurred while previewing the invoice' };
 }
 
 function logPreviewInvoiceFailure(
@@ -657,10 +687,39 @@ function logPreviewInvoiceFailure(
   console.error(`[${action}] Invoice preview failed:`, context, error);
 }
 
+/**
+ * Maps a coded billing validation error (`ManualInvoiceError`) to the localized
+ * message key the recurring run uses to recover the structured failure. Codes the
+ * recurring flow does not handle deliberately have no key, so they fall back to the
+ * generic action-error string.
+ */
+function manualInvoiceErrorMessageKey(
+  code: HandledManualInvoiceErrorCode,
+): string | undefined {
+  switch (code) {
+    case 'NO_BILLING_EMAIL':
+      return NO_BILLING_EMAIL_MESSAGE_KEY;
+    default:
+      return undefined;
+  }
+}
+
 function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActionError | null {
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
+    }
+
+    // Coded billing validation error. Only the allowlisted code crosses this
+    // boundary as a keyed action error; unsupported codes are re-thrown so the
+    // recurring run's generic catch owns them (full logging, generic UI string).
+    // Checked before the message matching below, which would otherwise surface a
+    // raw, uncoded sentence for codes whose message happens to match a prefix.
+    if (error instanceof ManualInvoiceError) {
+      const messageKey = manualInvoiceErrorMessageKey(error.code);
+      return messageKey
+        ? actionError(error.message, messageKey, error.params)
+        : null;
     }
 
     // An expected, actionable refusal, not a failure: a contract covers these
@@ -1852,7 +1911,14 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       clientForValidation.client_name,
     );
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(new Error(emailValidation.error!), canonicalSelection);
+      throw withRecurringWindowErrorContext(
+        new ManualInvoiceError(
+          emailValidation.code ?? 'NO_BILLING_EMAIL',
+          emailValidation.error ?? 'Client billing email is required',
+          emailValidation.params ?? { clientName: clientForValidation.client_name },
+        ),
+        canonicalSelection,
+      );
     }
   }
 
@@ -2097,6 +2163,10 @@ export type RecurringGroupedPreviewResponse = {
   success: false;
   error: string;
   executionIdentityKey?: string;
+  /** Safe, known failure code so the UI can render localized guidance. */
+  code?: RecurringInvoiceFailureCode;
+  /** Interpolation values for the localized failure copy (e.g. clientName). */
+  params?: Record<string, string>;
 };
 
 export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
@@ -2161,14 +2231,19 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
       error,
     );
     const fallbackSelectorInput = normalizedGroupedSelections[0]?.selectorInputs?.[0];
+    const previewInfo = previewInvoiceErrorInfo(error);
     return fallbackSelectorInput
       ? buildPreviewInvoiceFailure(
           fallbackSelectorInput,
-          previewInvoiceErrorMessage(error),
+          previewInfo.message,
+          previewInfo.code,
+          previewInfo.params,
         )
       : {
           success: false,
-          error: previewInvoiceErrorMessage(error),
+          error: previewInfo.message,
+          ...(previewInfo.code ? { code: previewInfo.code } : {}),
+          ...(previewInfo.params ? { params: previewInfo.params } : {}),
         };
   }
 });
@@ -2207,9 +2282,12 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       },
       error,
     );
+    const previewInfo = previewInvoiceErrorInfo(error);
     return buildPreviewInvoiceFailure(
       normalizedSelectorInput,
-      previewInvoiceErrorMessage(error),
+      previewInfo.message,
+      previewInfo.code,
+      previewInfo.params,
     );
   }
 });
@@ -2285,14 +2363,19 @@ export const previewInvoice = withAuth(async (
       },
       error,
     );
+    const previewInfo = previewInvoiceErrorInfo(error);
     return selectorInput
       ? buildPreviewInvoiceFailure(
           selectorInput,
-          previewInvoiceErrorMessage(error),
+          previewInfo.message,
+          previewInfo.code,
+          previewInfo.params,
         )
       : {
           success: false,
-          error: previewInvoiceErrorMessage(error)
+          error: previewInfo.message,
+          ...(previewInfo.code ? { code: previewInfo.code } : {}),
+          ...(previewInfo.params ? { params: previewInfo.params } : {}),
         };
   }
 });
@@ -2653,7 +2736,14 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   if (clientForValidation) {
     const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(new Error(emailValidation.error), normalizedSelectorInput);
+      throw withRecurringWindowErrorContext(
+        new ManualInvoiceError(
+          emailValidation.code ?? 'NO_BILLING_EMAIL',
+          emailValidation.error ?? 'Client billing email is required',
+          emailValidation.params ?? { clientName: clientForValidation.client_name },
+        ),
+        normalizedSelectorInput,
+      );
     }
   }
 

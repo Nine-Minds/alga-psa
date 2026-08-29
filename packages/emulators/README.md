@@ -64,7 +64,7 @@ behaves exactly as it does in production. Any other value — unset, empty,
 `NODE_ENV` cannot redirect anything by accident, and `NODE_ENV=production` is a
 second lock the flag cannot unlock. The vars it gates are
 `TEAMS_BOT_OPENID_CONFIG_URL` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST`, plus — for
-the Teams add-on specifically — `MICROSOFT_LOGIN_BASE_URL` and
+the Teams integration specifically — `MICROSOFT_LOGIN_BASE_URL` and
 `MICROSOFT_GRAPH_BASE_URL`, which is where the bot secret, the setup-probe
 credentials, the Graph client secret, and activity-notification tokens are
 sent. (The email module honors those two Microsoft vars unconditionally; that
@@ -146,10 +146,9 @@ algasim seed msgraph client -p '{
 algasim seed msgraph client -p '{"clientId":"11111111-2222-4333-8444-999999999999","clientSecret":"algasim-bot-secret"}'
 ```
 
-**3. Set the tenant up through the product.** The Teams add-on has to be
-granted (`POST /api/v1/tenant-management/tenants/<tenant>/addons` with
-`{"action":"grant","addonKey":"teams"}`, from the master billing tenant), then
-in **Settings → Integrations**:
+**3. Set the tenant up through the product.** Enable
+`release-v1-5-feature` for the tenant in PostHog (or disable feature flags in a
+local-only environment), then open **Settings → Integrations**:
 
 - *Providers → Microsoft → Add profile*: client id, tenant id
   (`11111111-2222-4333-8444-555555555555`) and secret from step 2.
@@ -200,7 +199,144 @@ The bot answers an unlinked Teams identity with the "Teams sign-in required"
 card. Linking a Teams user to a PSA user happens through Microsoft SSO sign-in,
 which the emulator does not serve yet (no OIDC discovery document on the login
 surface), so richer command replies still need a tenant whose users are already
-linked.
+linked. For local testing, plant the link directly — one row in
+`user_auth_accounts` (`provider='microsoft'`, `provider_account_id=<the
+teams-user id>`, `user_id=<PSA user>`); the bot then runs commands as that user.
+
+### Teams meetings and recordings
+
+The msgraph emulator also serves the meetings surface the Teams integration uses:
+calendar events (`POST/PATCH/DELETE /users/{upn}/events`, an `isOnlineMeeting`
+event auto-creates an online meeting with a join URL), `onlineMeetings`
+(creation probe, join-URL `$filter` resolution), recordings/transcripts lists
+and `/content` endpoints, and `getAllRecordings`/`getAllTranscripts`
+subscriptions with Graph-style change notifications.
+
+The app reaches it through the same `TEAMS_EMULATOR_MODE` gate (the meetings
+module resolves Graph URLs via `getMicrosoftGraphBaseUrl()`), plus one extra
+var so the artifact webhook is reachable from inside the container — plain
+http is accepted only while the emulator gate is on:
+
+```
+TEAMS_RECORDINGS_WEBHOOK_URL=http://host.docker.internal:3000/api/teams/webhooks/recordings
+```
+
+The subscription + artifact loop, end to end:
+
+```bash
+# The app's own renewal job creates both artifact subscriptions against the
+# emulator (validation handshake included). Locally on pg-boss, enqueue it:
+#   INSERT INTO pgboss.job (name, data) VALUES
+#     ('renew-teams-meeting-artifact-subscriptions', '{"tenantId":"<tenant>"}');
+# (`teams_integrations` must be active with default_meeting_organizer_upn set.)
+
+# A meeting the app knows about, then a recording landing on it:
+algasim seed msgraph meeting -p '{"organizerUserId":"organizer@example.test","subject":"Standup"}'
+algasim seed msgraph meeting-recording -p '{"meetingId":"<id from above>"}'
+algasim seed msgraph meeting-transcript -p '{"meetingId":"<id>"}'
+
+algasim state msgraph online-meetings       # meetings + artifact inventory
+algasim state msgraph subscriptions         # who is listening
+```
+
+`meeting-recording`/`meeting-transcript` return the webhook delivery status
+inline. For the app to fetch-and-persist, its `online_meetings` row must match
+the emulator meeting id (`provider_meeting_id`) and have a `created_by` —
+meetings created through the app get both automatically; a hand-planted row
+needs them set. On success the meeting advances to `recording_ready`, with
+recordings stored as files and transcripts as documents.
+
+### Teams Phone call records
+
+The same msgraph emulator serves the telephony surface: a
+`communications/callRecords` subscription, a `call-record` seeder that pushes a
+Graph-style change notification, and
+`GET /v1.0/communications/callRecords/{id}?$expand=sessions` returning the CDR
+the adapter maps. The PSTN leg lives on the session endpoints
+(`identity.phone.id`), which is what decides direction; `answered: false` seeds
+a missed call (zero-length session with `failureInfo`).
+
+Point the webhook at the app the same way the recordings one is pointed —
+plain http is accepted only while the emulator gate is on:
+
+```
+TELEPHONY_CALLS_WEBHOOK_URL=http://host.docker.internal:3000/api/telephony/webhooks/teams-calls
+```
+
+The whole loop, end to end:
+
+```bash
+# The renewal job creates the callRecords subscription against the emulator.
+# Locally on pg-boss, enqueue it:
+#   INSERT INTO pgboss.job (name, data) VALUES
+#     ('renew-telephony-call-subscriptions', '{"tenantId":"<tenant>"}');
+# (`telephony_providers` must have an active teams-phone row, and the tenant
+#  needs release-v1-5-feature enabled — the ingest path is deny-by-default.)
+
+algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15551234567","durationSeconds":180}'
+algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15557654321","answered":false}'
+
+algasim state msgraph call-records    # seeded CDRs + notification delivery
+```
+
+A seeded call whose number matches a contact lands as a `Call` interaction on
+that contact's timeline within one processing cycle. An unmatched or ambiguous
+number stays in the ledger and shows up under Settings → Integrations →
+Communication → Telephony, waiting to be resolved.
+
+### Teams Phone call recordings and transcripts
+
+Call artifacts do not live on an online meeting: Graph serves them from the ad
+hoc call — enumerated ONLY via `getAllRecordings`/`getAllTranscripts` function
+calls (`/v1.0/users/{id}/adhocCalls/getAllRecordings(userId=...,startDateTime=...,endDateTime=...)`,
+items carry `callId`) and fetched by artifact id
+(`.../adhocCalls/{callId}/{recordings,transcripts}/{artifactId}/content`).
+There is no per-call artifact list in real Graph, and the emulator deliberately
+refuses one — serving fictitious routes is how the Entra-sync class of bug got
+validated locally. There is no change notification for call artifacts at all. The app therefore polls, and
+the emulator has no deliveries to report — seed an artifact and it simply sits
+there until the poll finds it:
+
+```bash
+algasim seed msgraph call-transcript -p '{"callId":"<callRecordId>"}'
+algasim seed msgraph call-recording  -p '{"callId":"<callRecordId>"}'
+
+algasim state msgraph call-records    # CDRs now carry their artifacts
+```
+
+The transcript is filed as a document on the matched client/contact and, when
+the call is linked to a ticket and the AI Assistant add-on is active, summarized
+onto that ticket. Recording bytes are only stored when the tenant turned on
+recording downloads in the Teams settings.
+
+### Living with the emulator
+
+Six ergonomics fixes that came out of using it in anger:
+
+- **State survives restarts.** `--state-file <path>` (or `ALGASIM_STATE_FILE`)
+  snapshots seeded state after every mutating control call and on shutdown, and
+  restores it on boot. Compose sets it by default onto a named volume, so
+  `docker compose restart algasim` no longer costs you the seed. The Bot
+  Framework signing key is deliberately *not* part of the snapshot — the app
+  caches the discovered JWKS, so restoring must not rotate it.
+- **A default actor.** `algasim action msgraph configure -p '{"defaultActor":
+  {"fromAadObjectId":"...","conversationId":"..."}}'` fills in the identity
+  every `bot-activity` seed used to repeat. Explicit values still win.
+- **Seed presets.** Every seeder in the console carries a preset row: fill the
+  form, name it, hit **save form**, and **load** puts it straight back into the
+  fields later (**load & seed** does both in one click). They are stored by
+  `save-seed-preset` / `delete-seed-preset` and visible in the `seed-presets`
+  state view, so the CLI and scenarios can reach the same payloads — no more
+  copying a fiddly seed out of a state view by hand.
+- **Adaptive Card preview.** The console renders card attachments found in any
+  state view with a small vendored renderer — no CDN, so it works under the
+  console's CSP.
+- **Prefix faults.** `operation-fault` accepts a trailing `*`, e.g.
+  `"POST /v3/conversations/x/activities/*"`, so reply paths with a
+  server-generated activity id are targetable at all.
+- **Scenario recording.** Start with `--record-scenario` (or
+  `ALGASIM_RECORD_SCENARIO=true`) and `algasim recording` prints everything you
+  did as a scenario document you can save and replay.
 
 ## Drive them
 
@@ -246,8 +382,9 @@ Three tiers, so most failure modes cost nothing to support:
 - **Protocol** — token expiry and revocation actions on `msgraph` and `qbo`.
 - **Domain** — emulator-specific, e.g. `msgraph` `operation-fault` (fail
   `"GET /me"` or `"POST /v3/conversations/{id}/activities"` N times, for
-  Graph throttling and bot-connector failures), QBO stale SyncTokens
-  produced by out-of-band `receive-payment`/`apply-credit` actions.
+  Graph throttling and bot-connector failures; a trailing `*` matches by
+  prefix), QBO stale SyncTokens produced by out-of-band
+  `receive-payment`/`apply-credit` actions.
 
 ### Scenarios
 

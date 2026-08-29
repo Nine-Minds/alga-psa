@@ -13,11 +13,12 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
-import { completeOccurrence, createOccurrenceTicket, getMaintenanceAggregates, listMaintenanceAssignableUsers, listMaintenanceOccurrences, setOccurrenceTicketAssignee, setSchedulePaused, skipOccurrence } from '../actions/assetActions';
+import { completeOccurrence, createOccurrenceTicket, getMaintenanceAggregates, listAssets, listMaintenanceAssignableUsers, listMaintenanceOccurrences, setOccurrenceTicketAssignee, setSchedulePaused, skipOccurrence } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
-import type { AssetMaintenanceOccurrence, AssetMaintenanceOccurrenceStatus, MaintenanceOccurrenceFilters } from '@alga-psa/types';
+import type { Asset, AssetListResponse, AssetMaintenanceOccurrence, AssetMaintenanceOccurrenceStatus, MaintenanceOccurrenceFilters } from '@alga-psa/types';
 import { formatCalendarDate, toCalendarDateString, toCalendarDisplayDate } from '@alga-psa/core';
 import { MaintenanceCompletionDialog, checklistItems, type MaintenanceCompletionValues } from './MaintenanceCompletionDialog';
+import { CreateMaintenanceScheduleDialog } from './tabs/CreateMaintenanceScheduleDialog';
 
 type View = 'queue' | 'plans' | 'history';
 type QueueMode = 'list' | 'calendar';
@@ -88,6 +89,56 @@ function rowAccentClass(occurrence: AssetMaintenanceOccurrence): string {
   return 'border-l-[rgb(var(--badge-info-border))]';
 }
 
+function NewMaintenancePlanAssetDialog({ isOpen, onClose, onSelect }: { isOpen: boolean; onClose: () => void; onSelect: (assetId: string) => void }) {
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [assetTotal, setAssetTotal] = useState(0);
+  const [search, setSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const loadAssets = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response: AssetListResponse = unwrapAssetActionResult(await listAssets({ page: 1, limit: 20, search: search || undefined }));
+        if (!cancelled) { setAssets(response.assets); setAssetTotal(response.total); }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to load assets.');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    const timer = window.setTimeout(() => { void loadAssets(); }, 250);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [isOpen, search]);
+
+  return <Dialog
+    id="maintenance-plan-asset-select-dialog"
+    isOpen={isOpen}
+    onClose={onClose}
+    title="Select an asset"
+    footer={<div className="flex justify-end"><Button id="maintenance-plan-asset-select-cancel" variant="secondary" onClick={onClose}>Cancel</Button></div>}
+  >
+    <DialogContent>
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="maintenance-plan-asset-search">Asset</Label>
+          <Input id="maintenance-plan-asset-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, tag, or serial number" className="mt-1" autoFocus />
+        </div>
+        <div className="overflow-hidden rounded-md border border-[rgb(var(--color-border-200))]">
+          {isLoading ? <div className="p-4 text-sm text-[rgb(var(--color-text-500))]">Loading assets…</div>
+            : error ? <div className="p-4 text-sm text-[rgb(var(--badge-error-text))]">{error}</div>
+            : assets.length === 0 ? <div className="p-4 text-sm text-[rgb(var(--color-text-500))]">No assets found.</div>
+            : <><div className="divide-y divide-[rgb(var(--color-border-100))]">{assets.map((asset) => <Button key={asset.asset_id} id={`maintenance-plan-select-asset-${asset.asset_id}`} variant="ghost" className="h-auto w-full justify-start rounded-none px-4 py-3 text-left" onClick={() => onSelect(asset.asset_id)}><span className="min-w-0"><span className="block truncate font-medium text-[rgb(var(--color-text-900))]">{asset.name}</span><span className="block truncate text-xs text-[rgb(var(--color-text-500))]">{[asset.asset_tag, asset.asset_type, asset.client?.client_name].filter(Boolean).join(' · ')}</span></span></Button>)}</div>{assetTotal > assets.length && <p className="border-t border-[rgb(var(--color-border-100))] px-4 py-2 text-xs text-[rgb(var(--color-text-500))]">Showing first {assets.length} of {assetTotal} — refine your search.</p>}</>}
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>;
+}
+
 export function MaintenanceCommandCenter() {
   const { t } = useTranslation('msp/assets');
   const queueEmptyMessage = 'No maintenance occurrences match these filters. Clear a filter or widen the due-date range.';
@@ -100,6 +151,8 @@ export function MaintenanceCommandCenter() {
   const [completeTarget, setCompleteTarget] = useState<AssetMaintenanceOccurrence | null>(null);
   const [skipTarget, setSkipTarget] = useState<AssetMaintenanceOccurrence | null>(null);
   const [skipReason, setSkipReason] = useState('');
+  const [newPlanOpen, setNewPlanOpen] = useState(false);
+  const [newPlanAssetId, setNewPlanAssetId] = useState<string | null>(null);
   const { renderQuickAddTicket } = useAssetCrossFeature();
   // Queue filters are intentionally scoped to the work queue. Plans and History do
   // not expose those controls, so their data must never be silently narrowed by them.
@@ -141,7 +194,7 @@ export function MaintenanceCommandCenter() {
   const closedCount = allOccurrences.filter((o) => o.status === 'completed' || o.status === 'skipped').length;
   return <div className="h-full min-h-0 overflow-auto bg-[rgb(var(--color-background))] p-4 md:p-6" data-automation-id="maintenance-command-center">
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">{t('maintenanceCommandCenter.title', { defaultValue: 'Maintenance' })}</h1><p className="text-sm text-[rgb(var(--color-text-600))]">{t('maintenanceCommandCenter.description', { defaultValue: 'Command center — asset maintenance schedules across all clients.' })}</p></div>
-      <div className="flex items-center gap-2"><Button id="maintenance-refresh" size="sm" variant="ghost" onClick={refresh}>Refresh</Button><Link id="maintenance-new-plan-link" href="/msp/assets" title="Plans are created from an asset's Maintenance tab" className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"><Plus className="mr-1 h-4 w-4" />New maintenance plan</Link></div></div>
+      <div className="flex items-center gap-2"><Button id="maintenance-refresh" size="sm" variant="ghost" onClick={refresh}>Refresh</Button><Button id="maintenance-new-plan-btn" size="sm" onClick={() => setNewPlanOpen(true)}><Plus className="mr-1 h-4 w-4" />New maintenance plan</Button></div></div>
     <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{([
       { label: 'Overdue', value: aggregates?.overdue ?? 0, accent: aggregates?.overdue ? 'border-[rgb(var(--badge-error-border))]' : 'border-[rgb(var(--badge-success-border))]', num: aggregates?.overdue ? 'font-bold text-[rgb(var(--badge-error-text))]' : 'text-[rgb(var(--badge-success-text))]', hint: aggregates?.overdue ? 'click to filter' : 'all clear', win:'overdue' as const },
       { label: 'Due today', value: aggregates?.due_today ?? 0, accent: aggregates?.due_today ? 'border-[rgb(var(--badge-warning-border))]' : 'border-[rgb(var(--badge-success-border))]', num: aggregates?.due_today ? 'font-bold text-[rgb(var(--badge-warning-text))]' : 'text-[rgb(var(--badge-success-text))]', hint: aggregates?.due_today ? 'click to filter' : 'all clear', win:'today' as const },
@@ -164,6 +217,8 @@ export function MaintenanceCommandCenter() {
     {renderQuickAddTicket({ open: Boolean(ticketTarget), onOpenChange: (open) => !open && setTicketTarget(null), onTicketAdded: async (ticket) => { if (ticketTarget && ticket?.ticket_id) await unwrapAssetActionResult(await createOccurrenceTicket(ticketTarget.occurrence_id, ticket.ticket_id)); setTicketTarget(null); await refresh(); }, prefilledClient: ticketTarget?.client_id && ticketTarget.client_name ? { id: ticketTarget.client_id, name: ticketTarget.client_name } : undefined, assetId: ticketTarget?.asset_id, assetName: ticketTarget?.asset_name, prefilledTitle: ticketTarget ? `Maintenance: ${ticketTarget.schedule_name}` : undefined, prefilledDescription: ticketTarget ? `${ticketTarget.maintenance_type} maintenance due ${dateLabel(ticketTarget.due_date)}. Occurrence: ${ticketTarget.occurrence_id}` : undefined, prefilledDueDate: ticketTarget?.due_date })}
     <MaintenanceCompletionDialog occurrence={completeTarget} isOpen={Boolean(completeTarget)} onClose={() => setCompleteTarget(null)} onComplete={complete} idPrefix="workspace" />
     <Dialog isOpen={Boolean(skipTarget)} onClose={() => setSkipTarget(null)} title="Skip maintenance" id="skip-maintenance-dialog" footer={<div className="flex justify-end gap-2"><Button id="cancel-maintenance-skip" variant="secondary" onClick={() => setSkipTarget(null)}>Cancel</Button><Button id="confirm-maintenance-skip" onClick={skip} disabled={!skipReason.trim()}>Skip</Button></div>}><DialogContent><Label htmlFor="maintenance-skip-reason">Reason</Label><TextArea id="maintenance-skip-reason" value={skipReason} onChange={(event) => setSkipReason(event.target.value)} rows={3} /></DialogContent></Dialog>
+    {newPlanOpen && <NewMaintenancePlanAssetDialog isOpen={newPlanOpen} onClose={() => setNewPlanOpen(false)} onSelect={(assetId) => { setNewPlanOpen(false); setNewPlanAssetId(assetId); }} />}
+    {newPlanAssetId && <CreateMaintenanceScheduleDialog isOpen assetId={newPlanAssetId} schedule={undefined} onClose={() => setNewPlanAssetId(null)} onSuccess={refresh} />}
   </div>;
 }
 

@@ -67,7 +67,7 @@
     "incompatibilityReasons": {
       "invoiceWindowDiffers": "A janela da fatura é diferente",
       "clientDiffers": "O cliente é diferente",
-      "poScopeDiffers": "O escopo do pedido difere",
+      "poScopeDiffers": "O escopo do pedido de compra difere",
       "currencyDiffers": "A moeda é diferente",
       "taxTreatmentDiffers": "O tratamento fiscal difere",
       "exportShapeDiffers": "A forma de exportação é diferente"
@@ -168,13 +168,13 @@
       "poOverage": {
         "title": "Excedentes do limite do pedido de compra",
         "description": "O total da fatura selecionada excede {{amount}}.",
-        "batchDescription": "Uma ou mais faturas excederiam o valor autorizado do Pedido de Compra. O que você quer fazer?",
+        "batchDescription": "Uma ou mais faturas excederiam o valor autorizado do pedido de compra. O que você quer fazer?",
         "batchItem": "{{clientName}}: finalizado por {{amount}}",
         "poNumber": "PO {{number}}",
         "allowOverages": "Permitir excedentes (gerar todas as faturas)",
-        "skipInvoices": "Ignorar faturas que ultrapassariam seu pedido",
+        "skipInvoices": "Ignorar faturas que ultrapassariam seu pedido de compra",
         "continue": "Continuar",
-        "singleDescription": "Esta fatura excederia o valor autorizado do Pedido de Compra por {{amount}}.",
+        "singleDescription": "Esta fatura excederia o valor autorizado do pedido de compra em {{amount}}.",
         "proceedAnyway": "Continuar mesmo assim?",
         "proceedConfirm": "Prossiga de qualquer maneira",
         "skippedError": "Ignorado devido ao excesso de PO ({{poLabel}}): ultrapassado por {{amount}}."
@@ -982,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Gerar fatura de pré-pagamento",
-      "creditMemo": "Gerar nota de crédito"
+      "prepayment": "Gerar fatura de pré-pagamento"
     },
     "descriptions": {
-      "prepayment": "Faturas de pré-pagamento criam crédito do cliente para valor futuro. Eles não criam períodos de serviço recorrentes; faturas recorrentes posteriores mantêm sua própria cobertura de período de serviço.",
-      "creditMemo": "As notas de crédito ajustam os saldos financeiros sem redefinir a cobertura do período de serviço recorrente na fatura de origem."
+      "prepayment": "Faturas de pré-pagamento criam crédito do cliente para valor futuro. Eles não criam períodos de serviço recorrentes; faturas recorrentes posteriores mantêm sua própria cobertura de período de serviço."
     },
     "fields": {
-      "type": "Tipo",
       "client": "Cliente",
       "amount": "Quantia",
-      "description": "Descrição"
-    },
-    "types": {
-      "prepaymentInvoice": "Fatura de pré-pagamento",
-      "creditMemo": "Nota de crédito"
+      "descriptionOptional": "Descrição (optional)"
     },
     "placeholders": {
       "amount": "Insira o valor",
-      "prepaymentDescription": "Pré-pagamento para serviços futuros",
-      "creditMemoDescription": "Motivo da nota de crédito"
+      "prepaymentDescription": "Pré-pagamento para serviços futuros"
     },
     "errors": {
       "allFieldsRequired": "Por favor preencha todos os campos",
       "validAmount": "Insira um valor válido",
-      "creditMemosUnsupported": "As notas de crédito ainda não são suportadas",
       "generateFailed": "Erro ao gerar fatura"
     },
     "actions": {
       "generating": "Gerando...",
-      "generatePrepayment": "Gerar fatura de pré-pagamento",
-      "generateCreditMemo": "Gerar nota de crédito"
+      "generatePrepayment": "Gerar fatura de pré-pagamento"
     }
   },
   "contractItems": {
@@ -1096,8 +1086,8 @@
   "purchaseOrder": {
     "labels": {
       "short": "PO",
-      "number": "Número do pedido",
-      "authorized": "PO Autorizado",
+      "number": "Número do pedido de compra",
+      "authorized": "PO autorizado",
       "consumed": "PO consumido (finalizado)",
       "remaining": "PO restante"
     }
@@ -1598,8 +1588,8 @@
         "description": "A data de vencimento do pagamento."
       },
       "invoice_poNumber": {
-        "label": "Número do pedido",
-        "description": "A referência da ordem de compra para esta fatura."
+        "label": "Número do pedido de compra",
+        "description": "A referência do pedido de compra para esta fatura."
       },
       "invoice_subtotal": {
         "label": "Subtotal",

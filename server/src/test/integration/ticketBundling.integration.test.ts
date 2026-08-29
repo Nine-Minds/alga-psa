@@ -216,7 +216,7 @@ describe('Ticket bundling integration', () => {
     await grantUserPermissions(db, tenantId, internalUserId, [
       { resource: 'ticket', action: 'read' },
       { resource: 'ticket', action: 'update' },
-      { resource: 'timeentry', action: 'create' },
+      { resource: 'time_entry', action: 'create' },
     ]);
 
     const clientUserId = await createUser(db, tenantId, {

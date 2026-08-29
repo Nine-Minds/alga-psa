@@ -144,7 +144,9 @@
       "reason": "Warum wird diese Gutschrift übertragen?"
     },
     "hints": {
-      "amount": "Bis zu {{amount}} verfügbar"
+      "amount": "Bis zu {{amount}} verfügbar",
+      "currencyMatch": "Der ausgewählte Kunde verwendet dieselbe Währung.",
+      "currencyMismatch": "Der ausgewählte Kunde verwendet eine andere Währung; eine Umrechnung kann erfolgen."
     },
     "impact": {
       "current": "Aktuelles Restguthaben",

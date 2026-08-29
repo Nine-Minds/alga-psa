@@ -21,10 +21,13 @@
       "channels": "Channels"
     },
     "contacts": "Contacts",
+    "interactions": "Interactions",
     "documents": "Documents",
     "documentsAll": "All Documents",
     "knowledgeBase": "Knowledge Base",
     "assets": "Assets",
+    "assetsAll": "All Assets",
+    "assetsMaintenance": "Maintenance",
     "passwords": "Passwords",
     "inventory": {
       "label": "Inventory",
@@ -485,6 +488,7 @@
       "ticketing": "Ticketing",
       "sla": "SLA",
       "projects": "Projects",
+      "assets": "Assets",
       "interactions": "Interactions",
       "opportunities": "Opportunities",
       "notifications": "Notifications",

@@ -34,6 +34,8 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 
   ref?: React.Ref<HTMLInputElement>;
   /** Size variant */
   size?: InputSize;
+  /** Content displayed inside the input before its value. */
+  leadingAdornment?: React.ReactNode;
 }
 
 export function Input({
@@ -50,6 +52,7 @@ export function Input({
   errors,
   hasError,
   size = 'md',
+  leadingAdornment,
   ref: forwardedRef,
   "data-automation-type": dataAutomationType = 'input',
   "data-automation-id": dataAutomationId,
@@ -150,11 +153,17 @@ export function Input({
           {required && <span className="text-[rgb(var(--color-text-500))] ml-0.5" aria-hidden="true">*</span>}
         </label>
       )}
-      <input
-        {...finalAutomationProps}
-        id={id}
-        ref={mergedRef}
-        className={`w-full ${inputSizeClasses[size]} border rounded-lg shadow-sm focus:outline-none focus:ring-2 bg-white dark:bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] ${
+      <div className="relative">
+        {leadingAdornment && (
+          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[rgb(var(--color-text-500))]" aria-hidden="true">
+            {leadingAdornment}
+          </span>
+        )}
+        <input
+          {...finalAutomationProps}
+          id={id}
+          ref={mergedRef}
+          className={`w-full ${inputSizeClasses[size]} border rounded-lg shadow-sm focus:outline-none focus:ring-2 bg-white dark:bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] ${leadingAdornment ? 'pl-8' : ''} ${
           hasErrorState
             ? 'border-destructive focus:ring-destructive focus:border-destructive bg-[rgb(var(--color-destructive)/0.1)]'
             : 'border-border focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))]'
@@ -165,8 +174,9 @@ export function Input({
         onChange={handleChange}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
-        {...props}
-      />
+          {...props}
+        />
+      </div>
       {displayErrors.length > 0 && (
         <div className="mt-1">
           {displayErrors.map((errorMsg, index) => (

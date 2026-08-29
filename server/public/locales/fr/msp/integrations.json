@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Type de connexion :",
           "label": "Vue d'ensemble",
-          "mappedTenantsLabel": "Tenants mappés :"
+          "mappedTenantsLabel": "Tenants mappés :",
+          "microsoftAppLabel": "Application Microsoft :"
         },
         "skipped": {
           "empty": "Aucun tenant n'est actuellement marqué comme ignoré.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Ajouter une inscription d'application",
+          "bindFailed": "Impossible d'enregistrer l'application Microsoft choisie pour Entra.",
+          "emptyBody": "La connexion directe s'appuie sur l'inscription d'application Microsoft de votre propre organisation. Inscrivez une application multilocataire dans votre locataire partenaire, ajoutez l'URI de redirection Entra et accordez le consentement administrateur pour ManagedTenants.Read.All et Directory.Read.All.",
+          "label": "Inscription d'application Microsoft",
+          "placeholder": "Sélectionnez une inscription d'application",
+          "reconnectRequired": "Sélectionnez une inscription d'application Microsoft, puis reconnectez-vous.",
+          "redirectUriLabel": "URI de redirection à ajouter dans Entra",
+          "scopesLabel": "Étendues déléguées (consentement administrateur requis)"
+        },
         "backToCurrentStep": "Retour à {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "Alga dialogue avec Microsoft Graph via votre relation de partenaire.",
             "label": "Partenaire Microsoft direct",
             "prerequisites": {
-              "appRegistration": "Des identifiants OAuth Microsoft configurés pour ce locataire.",
+              "appRegistration": "Une inscription d'application Microsoft choisie ci-dessous — la connexion directe utilise toujours l'application de votre propre organisation.",
               "globalAdmin": "Un administrateur général capable d'approuver les autorisations.",
               "partnerRelationship": "Une relation de partenaire (GDAP) avec les locataires que vous gérez.",
               "lighthouse": "Microsoft 365 Lighthouse intégré dans votre locataire partenaire."
@@ -956,6 +967,7 @@
         "description": "Faites entrer dans Alga, comme contacts clients, les personnes des locataires Microsoft que vous gérez. Rien n'est écrit dans vos contacts tant que vous n'avez pas vu un aperçu et donné votre accord.",
         "directConsent": {
           "adminNote": "Un administrateur général doit approuver ces autorisations. Sinon, la connexion aboutira mais sera refusée, et rien ne sera enregistré.",
+          "appRegistration": "Inscription d'application : {{name}}.",
           "cancel": "Annuler",
           "continue": "Continuer vers Microsoft",
           "intro": "Vous allez quitter Alga et vous connecter chez Microsoft. Voici les autorisations qui seront demandées.",
@@ -1665,6 +1677,11 @@
             "reconnect": "Les connexions e-mail Outlook existantes doivent être autorisées à nouveau pour accorder Mail.Send avant de pouvoir envoyer des e-mails sortants.",
             "perProviderIssuerNote": "Les connexions de boîte aux lettres existantes conservent leur application Microsoft actuelle jusqu'à ce qu'elles soient reconnectées. Ce choix s'applique aux nouvelles connexions de boîte aux lettres."
           },
+          "entra": {
+            "description": "Choisissez l'application Microsoft pour la synchronisation Entra via GDAP et Lighthouse.",
+            "label": "Entra direct",
+            "reconnect": "Changer cette application déconnecte la connexion Entra actuelle et exige un nouveau consentement."
+          },
           "mspSso": {
             "description": "Choisissez quel profil Microsoft sous-tend les domaines de connexion MSP SSO, la connexion Microsoft et la découverte de tenant.",
             "label": "MSP SSO"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Valeurs du profil actuel",
           "emailRedirect": "Redirect URI de l'e-mail entrant",
           "emailTitle": "Guide de l'e-mail",
+          "entraConsent": "Exigence",
+          "entraConsentValue": "Inscrivez cette application en multilocataire et accordez le consentement administrateur dans le locataire partenaire.",
+          "entraTitle": "Entra direct",
           "mspSsoTitle": "Guide MSP SSO",
           "notConfigured": "Non configuré",
           "redirectUri": "URI de redirection",
@@ -2831,9 +2851,17 @@
             "description": "Délivrer des notifications personnelles au flux d'activité Teams.",
             "label": "Notifications d'activité"
           },
+          "channelBot": {
+            "description": "Permettre au bot de répondre lorsqu'il est mentionné avec @ dans les canaux d'équipe. Les réponses du bot (y compris les détails de ticket) sont visibles par tous les membres du canal.",
+            "label": "Bot de canal"
+          },
           "groupChatBot": {
             "description": "Permettre au bot de répondre dans les chats de groupe Teams. Les réponses du bot (y compris les détails de ticket) sont visibles par tous les membres du chat.",
             "label": "Bot en chat de groupe"
+          },
+          "guestTicketSubmission": {
+            "description": "Permettre aux contacts clients qui écrivent au bot de soumettre des tickets sans se connecter. Les expéditeurs sont associés aux contacts via leur identité Microsoft vérifiée ; les expéditeurs sans correspondance sont refusés.",
+            "label": "Soumission de tickets par les invités"
           },
           "messageExtension": {
             "description": "Activer la recherche et les actions PSA pilotées par message.",
@@ -2990,7 +3018,7 @@
           "test": {
             "sent": "Message de test Teams envoyé.",
             "failed": "Échec du message de test Teams.",
-            "addonInactive": "Le module complémentaire Teams n'est pas actif pour ce locataire.",
+            "featureDisabled": "Microsoft Teams n'est pas activé pour ce locataire.",
             "integrationInactive": "Activez l'intégration Teams avant d'envoyer un message de test.",
             "capabilityDisabled": "Activez la fonctionnalité de bot personnel avant d'envoyer un message de test.",
             "botNotConfigured": "Configurez les identifiants du bot Teams avant d'envoyer un message de test.",
@@ -2999,7 +3027,7 @@
             "skipped": "Le message de test Teams a été ignoré."
           },
           "steps": {
-            "addonEntitlement": "Droit au module complémentaire Teams",
+            "featureFlag": "Activation de la fonctionnalité Microsoft Teams",
             "integrationStatus": "État de l'intégration Teams",
             "capabilities": "Fonctionnalités Teams",
             "microsoftProfile": "Disponibilité du profil Microsoft",
@@ -3011,7 +3039,7 @@
             "recentDeliveryHealth": "Santé récente de la distribution Teams"
           },
           "recommendation": {
-            "addon": "Activez le module complémentaire Microsoft Teams pour ce locataire.",
+            "featureFlag": "Activez Microsoft Teams pour ce locataire.",
             "activate": "Activez l'intégration Teams dans les paramètres.",
             "capabilities": "Activez le bot personnel et les notifications d'activité pour Teams.",
             "profile": "Sélectionnez un profil Microsoft prêt pour Teams.",
@@ -3201,9 +3229,9 @@
               "cause": "Le destinataire ne s'est pas connecté à AlgaPSA avec Microsoft, il n'existe donc aucune association de compte.",
               "remedy": "Demandez à l'utilisateur de se connecter avec Microsoft (SSO du portail MSP ou l'onglet Teams) afin que son compte soit associé."
             },
-            "addon_inactive": {
-              "cause": "Le module complémentaire Teams est expiré ou absent, les envois sont donc ignorés tandis que la configuration est conservée.",
-              "remedy": "Renouvelez le module complémentaire Teams pour ce locataire."
+            "feature_disabled": {
+              "cause": "Microsoft Teams n'est pas activé pour ce locataire, les envois sont donc ignorés tandis que la configuration est conservée.",
+              "remedy": "Activez la fonctionnalité de la version 1.5 pour ce locataire."
             },
             "integration_inactive": {
               "cause": "L'intégration Teams n'est pas active pour ce locataire.",
@@ -3234,26 +3262,6 @@
               "remedy": "Consultez les journaux du serveur pour le détail de l'erreur de distribution et relancez les diagnostics."
             }
           }
-        },
-        "paywall": {
-          "title": "Module complémentaire Microsoft Teams",
-          "description": "L'intégration Microsoft Teams nécessite le module complémentaire Teams pour ce locataire.",
-          "includedTitle": "Ce qui est inclus",
-          "feature": {
-            "tab": "Onglet personnel : ouvrez AlgaPSA dans Microsoft Teams.",
-            "bot": "Bot personnel et de conversation de groupe pour les tickets, approbations, temps et notes.",
-            "messageExtension": "Extension de message et actions rapides pour agir sur les enregistrements PSA depuis n'importe quel message.",
-            "meetings": "Réunions Teams sur les approbations de rendez-vous avec de véritables invitations de calendrier Outlook/Teams.",
-            "recordings": "Capture automatique des enregistrements et transcriptions de réunions dans les interactions.",
-            "notifications": "Notifications de fil d'activité et de message direct du bot pour les attributions, réponses, approbations et risque de SLA."
-          },
-          "cta": "Acheter le module complémentaire Teams",
-          "nonBilling": "Contactez un administrateur de facturation pour acheter le module complémentaire Teams pour ce locataire."
-        },
-        "addonExpiredBanner": {
-          "title": "Module complémentaire Microsoft Teams expiré",
-          "message": "Le module complémentaire Microsoft Teams a expiré. Votre configuration et votre historique de distribution sont conservés, mais les notifications Teams sont ignorées jusqu'au renouvellement du module complémentaire.",
-          "cta": "Renouveler le module complémentaire Teams"
         },
         "staleManifest": {
           "title": "Le package d'application Teams est obsolète",
@@ -3559,6 +3567,72 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Actif",
+        "error": "Erreur",
+        "disabled": "Désactivé",
+        "notConfigured": "Non configuré"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Journalise les appels Teams Phone comme interactions une fois l'appel terminé. Historique d'appels, pas de remontée d'écran en direct.",
+          "prerequisite": "Configurez d'abord l'intégration Microsoft Teams : Teams Phone réutilise son profil Microsoft."
+        }
+      },
+      "subscriptionExpires": "L'abonnement se renouvelle avant le",
+      "lastNotification": "Dernière notification d’appel",
+      "autoTicket": "Créer automatiquement un ticket pour les appels rapprochés",
+      "unknownNumber": "Numéro inconnu",
+      "actions": {
+        "enable": "Activer",
+        "disable": "Désactiver"
+      },
+      "matchStatus": {
+        "matched": "Rapproché",
+        "ambiguous": "Ambigu",
+        "unmatched": "Non rapproché",
+        "resolved": "Résolu"
+      },
+      "callsPanel": {
+        "title": "Appels"
+      },
+      "recentCalls": {
+        "title": "Appels récents",
+        "description": "Capturés après la fin de chaque appel : Microsoft Graph publie les enregistrements après coup, il s'agit donc d'un historique et non d'un flux en direct.",
+        "empty": "Aucun appel capturé pour l'instant.",
+        "createTicket": "Créer un ticket",
+        "openTicket": "Ouvrir le ticket",
+        "linkTicket": "Associer à un ticket",
+        "selectTicket": "Sélectionner un ticket…",
+        "noLinkableTickets": "Aucun ticket ouvert"
+      },
+      "unmatched": {
+        "title": "Appels à attribuer",
+        "description": "Numéros que nous n'avons pas pu rapprocher et numéros partagés par plusieurs contacts. Résoudre un appel le classe sur la bonne chronologie.",
+        "empty": "Tous les appels capturés sont attribués.",
+        "assignTo": "Attribuer à",
+        "searchPlaceholder": "Rechercher des contacts et des clients…",
+        "noTargets": "Aucun contact ni client correspondant.",
+        "chooseTarget": "Attribuer à un client…"
+      },
+      "forbidden": "Vous n'avez pas l'autorisation de consulter les paramètres de téléphonie de ce locataire.",
+      "paywall": {
+        "title": "Téléphonie",
+        "description": "Les intégrations de téléphonie ne sont pas disponibles pour ce locataire.",
+        "unavailable": "Les intégrations de téléphonie ne sont pas disponibles pour ce locataire.",
+        "ceOnly": "Les intégrations de téléphonie ne sont disponibles qu'en Enterprise Edition.",
+        "includedTitle": "Ce qui est inclus",
+        "cta": "Gérer les intégrations",
+        "feature": {
+          "recognition": "Identification de l'appelant parmi les contacts et les clients à chaque appel capturé.",
+          "history": "Historique des appels sur la chronologie du contact et du client, comme interactions à part entière.",
+          "tickets": "Créez un ticket depuis un appel, ou reliez l'appel au ticket sur lequel vous travaillez déjà.",
+          "queue": "Une file pour les numéros non rapprochés et ambigus, afin qu'aucun appel ne soit attribué au jugé.",
+          "providers": "Teams Phone aujourd'hui ; le même noyau d'appels accueillera les futurs fournisseurs."
+        }
+      }
     }
   },
   "errors": {

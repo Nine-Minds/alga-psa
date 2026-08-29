@@ -6,8 +6,17 @@ import type { QuickAddClientCallbacks, QuickAddClientRenderProps, QuickAddContac
 import QuickAddClient from '../components/clients/QuickAddClient';
 import QuickAddContact from '../components/contacts/QuickAddContact';
 import { QuickAddInteraction } from '../components/interactions/QuickAddInteraction';
+import InteractionDetails from '../components/interactions/InteractionDetails';
+import { getInteractionById } from '../actions/queryActions';
+import { useDrawer } from '@alga-psa/ui';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export function QuickAddClientProviderWithCallbacks({ children }: { children: ReactNode }) {
+  const { openDrawer } = useDrawer();
   const renderQuickAddClient = useCallback(
     (props: QuickAddClientRenderProps) => (
       <QuickAddClient
@@ -50,9 +59,35 @@ export function QuickAddClientProviderWithCallbacks({ children }: { children: Re
     []
   );
 
+  const openInteractionDetails = useCallback(async (interactionId: string, onChanged?: () => void) => {
+    try {
+      const interaction = await getInteractionById(interactionId);
+      if (isActionMessageError(interaction) || isActionPermissionError(interaction)) {
+        handleError(interaction);
+        return;
+      }
+
+      openDrawer(
+        <InteractionDetails
+          interaction={interaction}
+          isInDrawer
+          onInteractionDeleted={onChanged}
+          onInteractionUpdated={onChanged ? () => onChanged() : undefined}
+        />,
+      );
+    } catch (error) {
+      handleError(error);
+    }
+  }, [openDrawer]);
+
   const value = useMemo<QuickAddClientCallbacks>(
-    () => ({ renderQuickAddClient, renderQuickAddContact, renderQuickAddInteraction }),
-    [renderQuickAddClient, renderQuickAddContact, renderQuickAddInteraction]
+    () => ({
+      renderQuickAddClient,
+      renderQuickAddContact,
+      renderQuickAddInteraction,
+      openInteractionDetails,
+    }),
+    [renderQuickAddClient, renderQuickAddContact, renderQuickAddInteraction, openInteractionDetails]
   );
 
   return (

@@ -601,7 +601,9 @@
     "replies_other": "Respostas {{count}}",
     "collapse": "Colapso",
     "expand": "Expandir",
-    "showInDrawer": "Mostrar na gaveta"
+    "showInDrawer": "Mostrar na gaveta",
+    "showEarlierReplies_one": "Mostrar {{count}} resposta anterior",
+    "showEarlierReplies_other": "Mostrar {{count}} respostas anteriores"
   },
   "pagination": {
     "previous": "Anterior",
@@ -1593,5 +1595,8 @@
     "noUsedOrders": "Nenhum número de ordem em uso ainda",
     "markClosed": "Marcar como status fechado",
     "setDefault": "Definir como status padrão para novos tickets"
+  },
+  "callLink": {
+    "teamsCall": "Ligar no Microsoft Teams"
   }
 }

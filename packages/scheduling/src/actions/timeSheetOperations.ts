@@ -130,7 +130,7 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
   const {knex: db} = await createTenantKnex();
 
   try {
-    if (!await hasPermission(user, 'timesheet', 'submit', db)) {
+    if (!await hasPermission(user, 'time_sheet', 'submit', db)) {
       throw new Error('Permission denied: Cannot submit timesheets');
     }
 

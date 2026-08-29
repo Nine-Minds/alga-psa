@@ -1432,6 +1432,9 @@
       "viewTranscript": "View transcript"
     },
     "quickAdd": {
+      "clientRequired": "Select a client for this interaction",
+      "contactPlaceholder": "Select contact",
+      "selectClientFirst": "Select client first",
       "teams": {
         "attendees": {
           "add": "Add",
@@ -1460,6 +1463,16 @@
         "createFailed": "Failed to create Teams meeting",
         "createToggle": "Create Teams meeting",
         "endRequired": "End time is required to create a Teams meeting",
+        "invitesDisabled": "Email invites are turned off in Teams integration settings — attendees will not be notified by Microsoft.",
+        "invitesSummary": "Microsoft will email calendar invites to: {{recipients}}.",
+        "invitesSummaryYou": "you (creator)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams integration is not enabled for this tenant.",
+          "ee_disabled": "Teams integration requires Enterprise Edition.",
+          "no_organizer": "No default meeting organizer is configured in Teams settings.",
+          "not_configured": "The Teams integration has not been configured."
+        },
+        "scheduleSummary": "A schedule entry will be added to your AlgaPSA calendar.",
         "startRequired": "Start time is required to create a Teams meeting",
         "unavailable": "Teams meeting creation is not available for this tenant."
       },
@@ -1467,7 +1480,7 @@
       "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
-      "addInteraction": "Add interaction",
+      "addInteraction": "Add Interaction",
       "allTypes": "All Types",
       "applyFilters": "Apply Filters",
       "endDate": "End Date",
@@ -1485,6 +1498,13 @@
       "allContacts": "All Contacts",
       "allStatuses": "All Statuses",
       "allUsers": "All Users",
+      "columns": { "type": "Type", "title": "Title", "client": "Client", "contact": "Contact", "user": "User", "date": "Date", "status": "Status" },
+      "empty": "No interactions match these filters.",
+      "loading": "Loading interactions…",
+      "openClient": "Open client {{name}}",
+      "openContact": "Open contact {{name}}",
+      "openInteraction": "Open interaction {{title}}",
+      "openUser": "Open user {{name}}",
       "byUser": "By {{name}}",
       "collapse": "Collapse Recent Interactions",
       "contactsFromClient": "Contacts from selected client",

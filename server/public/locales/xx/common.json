@@ -601,7 +601,9 @@
     "replies_other": "⟦{{count}} řḗƥŀīḗş⟧",
     "collapse": "⟦Ƈȯŀŀȧƥşḗ⟧",
     "expand": "⟦Ḗẋƥȧƞḓ⟧",
-    "showInDrawer": "⟦Şħȯẇ īƞ ḓřȧẇḗř⟧"
+    "showInDrawer": "⟦Şħȯẇ īƞ ḓřȧẇḗř⟧",
+    "showEarlierReplies_one": "⟦Şħȯẇ {{count}} ḗȧřŀīḗř řḗƥŀẏ⟧",
+    "showEarlierReplies_other": "⟦Şħȯẇ {{count}} ḗȧřŀīḗř řḗƥŀīḗş⟧"
   },
   "pagination": {
     "previous": "⟦Ƥřḗṽīȯŭş⟧",
@@ -1593,5 +1595,8 @@
     "noUsedOrders": "⟦Ƞȯ ȯřḓḗř ƞŭḿƀḗřş ŭşḗḓ ẏḗŧ⟧",
     "markClosed": "⟦Ḿȧřķ ȧş ƈŀȯşḗḓ şŧȧŧŭş⟧",
     "setDefault": "⟦Şḗŧ ȧş ḓḗƒȧŭŀŧ şŧȧŧŭş ƒȯř ƞḗẇ ŧīƈķḗŧş⟧"
+  },
+  "callLink": {
+    "teamsCall": "⟦Ƈȧŀŀ īƞ Ḿīƈřȯşȯƒŧ Ŧḗȧḿş⟧"
   }
 }

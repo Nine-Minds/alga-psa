@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
@@ -187,7 +187,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
     );
 
-    render(<IntegrationsSettingsPage />);
+    render(<IntegrationsSettingsPage teamsFeatureEnabled />);
 
     expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
     expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();
@@ -222,7 +222,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
     );
 
-    render(<IntegrationsSettingsPage />);
+    render(<IntegrationsSettingsPage teamsFeatureEnabled />);
 
     expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
     expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();
@@ -233,10 +233,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByText('Microsoft Integration Settings')).not.toBeInTheDocument();
   });
 
-  it('T038/T043/T044/T075/T076/T387/T388/T401/T402/T409/T410/T421: keeps the concrete Teams settings shell out of view when the Teams add-on is not entitled in EE', async () => {
-    // Teams visibility moved from a tenant feature flag to add-on entitlement
-    // (canUseTeams). Without the add-on, the page renders the add-on notice
-    // instead of the Teams settings shell.
+  it('keeps Teams settings and navigation out of view when the release feature is disabled', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     useFeatureFlagMock.mockImplementation(() => ({
       enabled: false,
@@ -249,7 +246,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
     );
 
-    render(<IntegrationsSettingsPage canUseTeams={false} />);
+    render(<IntegrationsSettingsPage teamsFeatureEnabled={false} />);
 
     expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
     expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();
@@ -257,9 +254,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByTestId('teams-integration-disabled-shell')).not.toBeInTheDocument();
     expect(screen.queryByText('Microsoft Teams integration disabled')).not.toBeInTheDocument();
     expect(screen.queryByText('Microsoft Teams integration is disabled for this tenant.')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Manage add-ons' })).toHaveAttribute(
-      'href',
-      '/msp/add-ons?addon=teams',
-    );
+    expect(screen.queryByText('Microsoft Teams', { selector: 'button *, button' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Manage add-ons' })).not.toBeInTheDocument();
   });
 });

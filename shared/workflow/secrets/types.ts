@@ -126,8 +126,7 @@ export const updateSecretInputSchema = z.object({
  */
 export const SECRET_PERMISSIONS = {
   VIEW: 'secrets.view',
-  MANAGE: 'secrets.manage',
-  USE: 'secrets.use'
+  MANAGE: 'secrets.manage'
 } as const;
 
 export type SecretPermission = typeof SECRET_PERMISSIONS[keyof typeof SECRET_PERMISSIONS];

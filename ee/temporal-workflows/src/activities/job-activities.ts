@@ -31,6 +31,7 @@ const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
 const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
+const PUBLISH_SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
@@ -150,12 +151,34 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // recurring sweep-teams-online-meetings maintenance job re-attempts any
   // cancel_pending rows if a forwarded run is lost.
   registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));
-  // Invoice bundling/delivery, enqueued from billing UI actions through the
-  // shared enqueueImmediateJob seam (Temporal on EE). The handlers need
-  // StorageService and PDF generation, so the worker forwards them to the
-  // server like the jobs above.
+  // Teams meeting recording/transcript capture, enqueued by the app's
+  // /api/teams/webhooks/recordings route when Graph notifies about a new
+  // artifact. Same constraint as the cleanup job: the handler imports
+  // src-consumed vertical packages (@alga-psa/clients, @alga-psa/scheduling),
+  // so it executes server-side via the event bus.
+  registerJobHandlerForActivities(
+    'process-teams-meeting-artifact-notification',
+    forwardJobToServer('process-teams-meeting-artifact-notification'),
+  );
+  // Teams Phone call journaling, enqueued by the app's
+  // /api/telephony/webhooks/teams-calls route when Graph notifies about a new
+  // call record. The handler reaches the EE Teams lib and the telephony core
+  // (both src-consumed), so it executes server-side via the event bus.
+  registerJobHandlerForActivities(
+    'process-telephony-call-notification',
+    forwardJobToServer('process-telephony-call-notification'),
+  );
+  // Invoice bundling/delivery, enqueued from billing UI actions via the shared
+  // enqueueImmediateJob seam. The handlers live server-side (StorageService,
+  // PDF generation), so the worker forwards them like the jobs above.
   registerJobHandlerForActivities('invoice_zip', forwardJobToServer('invoice_zip'));
   registerJobHandlerForActivities('invoice_email', forwardJobToServer('invoice_email'));
+  // Scheduled comment publication reaches server-local ticket settings and job
+  // modules, so execute it through the same server-side forwarding boundary.
+  registerJobHandlerForActivities(
+    PUBLISH_SCHEDULED_COMMENT_JOB,
+    forwardJobToServer(PUBLISH_SCHEDULED_COMMENT_JOB),
+  );
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /

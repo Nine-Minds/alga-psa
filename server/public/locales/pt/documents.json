@@ -34,7 +34,7 @@
     "phase": "Fase",
     "pickListTitle": "LISTA DE SEPARAÇÃO",
     "picked": "Separado",
-    "poNumber": "Ordem de compra nº",
+    "poNumber": "Referência nº",
     "preparedFor": "Preparado para",
     "price": "Preço",
     "product": "Produto",
@@ -57,7 +57,7 @@
     "unitPrice": "Preço unitário",
     "validUntil": "Válido até",
     "version": "Versão",
-    "yourPoNumber": "Sua ordem de compra",
+    "yourPoNumber": "Sua referência nº",
     "emptyState": {
       "noBillableLineItems": "Nenhum item faturável",
       "noItemsOnOrder": "Nenhum item neste pedido",

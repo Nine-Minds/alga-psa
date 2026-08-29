@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "U hebt geen toestemming om geheimen te bekijken.",
       "success": {
         "tenantNameUpdated": "Tenantnaam succesvol bijgewerkt",
         "timezoneUpdated": "Standaard tijdzone succesvol bijgewerkt",
@@ -1902,7 +1903,8 @@
         "valueRequired": "Geheime waarde is vereist",
         "noChanges": "Geen wijzigingen om op te slaan",
         "fixValidation": "Corrigeer de validatiefouten"
-      }
+      },
+      "permissionDenied": "U hebt geen toestemming om geheimen te bekijken."
     }
   },
   "importExport": {
@@ -1980,6 +1982,22 @@
     },
     "templates": {
       "comingSoon": "Toewijzingssjablonen en geplande imports komen hier. Sla kolomtoewijzingen op, deel ze met het team en configureer terugkerende taken."
+    },
+    "migration": {
+      "actions": {
+        "back": "Terug naar migraties",
+        "upload": "Pakket uploaden"
+      },
+      "errors": {
+        "noImportableRecords": "Dit pakket bevatte geen importeerbare records."
+      },
+      "preflight": {
+        "title": "Voorcontrole"
+      },
+      "run": {
+        "queued": "Migratie in wachtrij",
+        "applying": "Migratie wordt uitgevoerd"
+      }
     },
     "jobDetails": {
       "title": "Importtaakdetails",
@@ -2500,6 +2518,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Accepteer creditcardbetalingen voor facturen via Stripe"
+      },
+      "telephony": {
+        "name": "Telefonie",
+        "description": "Leg gesprekken vast als interacties, herken de beller en maak van een gesprek een ticket"
       }
     }
   },
@@ -3152,6 +3174,7 @@
       "notFound": "Secret niet gevonden. Mogelijk is het al verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "invalidName": "Ongeldige tenant- of secretnaam.",
       "readOnly": "De secretopslag is alleen-lezen in deze omgeving.",
+      "noDurablePath": "De secretopslag is in deze omgeving niet geconfigureerd voor duurzame schrijfacties.",
       "recordInvalid": "Een van de geselecteerde secretrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
       "referenceMissing": "Een van de geselecteerde secretrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een secret met deze naam.",

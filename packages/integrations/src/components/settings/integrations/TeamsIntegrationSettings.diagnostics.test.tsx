@@ -79,10 +79,10 @@ function diagnosticsReport(overrides: Record<string, unknown> = {}) {
     recommendations: ['Open the AlgaPSA bot in Teams and send it any message first, then retry.'],
     steps: [
       {
-        id: 'addon_entitlement',
-        title: 'Teams add-on entitlement',
+        id: 'feature_flag',
+        title: 'Teams feature availability',
         status: 'pass',
-        detail: 'Teams add-on is active.',
+        detail: 'The Teams release feature is enabled.',
         durationMs: 1,
       },
       {
@@ -147,7 +147,7 @@ describe('TeamsIntegrationSettings diagnostics panel', () => {
 
     await user.click(screen.getByRole('button', { name: /Run diagnostics/i }));
 
-    expect(await screen.findByText('Teams add-on entitlement')).toBeInTheDocument();
+    expect(await screen.findByText('Teams feature availability')).toBeInTheDocument();
     expect(screen.getByText('Admin Teams conversation reference')).toBeInTheDocument();
     expect(screen.getByText('Pass')).toBeInTheDocument();
     expect(screen.getAllByText('Warn').length).toBeGreaterThan(0);
@@ -165,7 +165,7 @@ describe('TeamsIntegrationSettings diagnostics panel', () => {
     runTeamsDiagnosticsMock.mockResolvedValueOnce(diagnosticsReport({ recommendations: [] }));
     await renderSettings();
     await user.click(screen.getByRole('button', { name: /Run diagnostics/i }));
-    await screen.findByText('Teams add-on entitlement');
+    await screen.findByText('Teams feature availability');
     expect(screen.queryByText('Recommendations')).not.toBeInTheDocument();
   });
 
@@ -201,7 +201,7 @@ describe('TeamsIntegrationSettings diagnostics panel', () => {
     expect(screen.getByRole('button', { name: /Send test message/i })).toBeDisabled();
 
     cleanup();
-    getTeamsIntegrationStatusMock.mockResolvedValue({ success: false, error: 'Teams add-on required' });
+    getTeamsIntegrationStatusMock.mockResolvedValue({ success: false, error: 'Microsoft Teams integration is not enabled' });
     await renderSettings();
     expect(screen.getByRole('button', { name: /Run diagnostics/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Send test message/i })).toBeDisabled();

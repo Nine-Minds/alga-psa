@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "Non hai l'autorizzazione per visualizzare i segreti.",
       "success": {
         "tenantNameUpdated": "Nome del tenant aggiornato con successo",
         "timezoneUpdated": "Fuso orario predefinito aggiornato con successo",
@@ -1902,7 +1903,8 @@
         "valueRequired": "Il valore del segreto è obbligatorio",
         "noChanges": "Nessuna modifica da salvare",
         "fixValidation": "Corregga gli errori di validazione"
-      }
+      },
+      "permissionDenied": "Non hai l'autorizzazione per visualizzare i segreti."
     }
   },
   "importExport": {
@@ -1980,6 +1982,22 @@
     },
     "templates": {
       "comingSoon": "I modelli di mappatura e le importazioni pianificate saranno disponibili qui. Salva le mappature delle colonne, condividile con il team e configura operazioni ricorrenti."
+    },
+    "migration": {
+      "actions": {
+        "back": "Torna alle migrazioni",
+        "upload": "Carica pacchetto"
+      },
+      "errors": {
+        "noImportableRecords": "Questo pacchetto non conteneva record importabili."
+      },
+      "preflight": {
+        "title": "Verifica preliminare"
+      },
+      "run": {
+        "queued": "Migrazione in coda",
+        "applying": "Migrazione in corso"
+      }
     },
     "jobDetails": {
       "title": "Dettagli operazione di importazione",
@@ -2500,6 +2518,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Accetta pagamenti con carta di credito per le fatture tramite Stripe"
+      },
+      "telephony": {
+        "name": "Telefonia",
+        "description": "Registra le chiamate come interazioni, riconosci il chiamante e trasforma una chiamata in un ticket"
       }
     }
   },
@@ -3152,6 +3174,7 @@
       "notFound": "Secret non trovato. Potrebbe essere già stato eliminato. Aggiornare la pagina e riprovare.",
       "invalidName": "Nome del tenant o del secret non valido.",
       "readOnly": "L’archivio dei secret è di sola lettura in questo ambiente.",
+      "noDurablePath": "L’archivio dei secret non è configurato per scritture durature in questo ambiente.",
       "recordInvalid": "Uno dei record dei secret selezionati non è valido. Aggiornare la pagina e riprovare.",
       "referenceMissing": "Uno dei record dei secret selezionati non esiste più. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già un secret con questo nome.",

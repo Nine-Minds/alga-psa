@@ -863,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Tipo de conexão:",
           "label": "Visão geral",
-          "mappedTenantsLabel": "Tenants mapeados:"
+          "mappedTenantsLabel": "Tenants mapeados:",
+          "microsoftAppLabel": "Aplicativo Microsoft:"
         },
         "skipped": {
           "empty": "Nenhum tenant está marcado como ignorado no momento.",
@@ -920,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Adicionar registro de aplicativo",
+          "bindFailed": "Não foi possível salvar o aplicativo Microsoft escolhido para o Entra.",
+          "emptyBody": "A conexão direta usa o registro de aplicativo Microsoft da sua própria organização. Registre um aplicativo multilocatário no locatário de parceiro, adicione o URI de redirecionamento do Entra e conceda o consentimento de administrador para ManagedTenants.Read.All e Directory.Read.All.",
+          "label": "Registro de aplicativo Microsoft",
+          "placeholder": "Selecione um registro de aplicativo",
+          "reconnectRequired": "Selecione um registro de aplicativo Microsoft e reconecte.",
+          "redirectUriLabel": "URI de redirecionamento a adicionar no Entra",
+          "scopesLabel": "Escopos delegados (consentimento de administrador obrigatório)"
+        },
         "backToCurrentStep": "Voltar a {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +951,7 @@
             "description": "O Alga comunica com o Microsoft Graph através da sua relação de parceiro.",
             "label": "Parceiro Microsoft direto",
             "prerequisites": {
-              "appRegistration": "Credenciais OAuth da Microsoft configuradas para este tenant.",
+              "appRegistration": "Um registro de aplicativo Microsoft escolhido abaixo — a conexão direta sempre usa o aplicativo da sua própria organização.",
               "globalAdmin": "Um administrador global que possa aprovar as permissões.",
               "partnerRelationship": "Uma relação de parceiro (GDAP) com os tenants que você gerencia.",
               "lighthouse": "Microsoft 365 Lighthouse integrado no seu tenant de parceiro."
@@ -956,6 +967,7 @@
         "description": "Importe para o Alga as pessoas dos tenants da Microsoft que você gerencia como contatos dos clientes. Nenhum contato será alterado antes de você revisar e aprovar uma prévia.",
         "directConsent": {
           "adminNote": "Um administrador global deve aprovar estas permissões. Caso contrário, o login será concluído, mas a conexão será recusada e nada será salvo.",
+          "appRegistration": "Registro de aplicativo: {{name}}.",
           "cancel": "Cancelar",
           "continue": "Continuar para a Microsoft",
           "intro": "Você sairá do Alga para entrar na Microsoft. Estas permissões serão solicitadas.",
@@ -1665,6 +1677,11 @@
             "reconnect": "As conexões de e-mail existentes do Outlook precisam ser autorizadas novamente para conceder Mail.Send antes de poderem enviar e-mails.",
             "perProviderIssuerNote": "Conexões de caixa de correio existentes mantêm seu aplicativo da Microsoft atual até serem reconectadas. Esta escolha se aplica a novas conexões de caixa de correio."
           },
+          "entra": {
+            "description": "Escolha o aplicativo Microsoft para a sincronização do Entra via GDAP e Lighthouse.",
+            "label": "Entra direto",
+            "reconnect": "Alterar este aplicativo desconecta a conexão atual do Entra e exige novo consentimento."
+          },
           "mspSso": {
             "description": "Escolha qual perfil da Microsoft oferece suporte a domínios de login SSO do MSP, entrada da Microsoft e descoberta de locatário.",
             "label": "SSO MSP"
@@ -1721,6 +1738,9 @@
           "currentProfileTitle": "Valores atuais do perfil",
           "emailRedirect": "URI de redirecionamento de e-mail de entrada",
           "emailTitle": "Orientação por e-mail",
+          "entraConsent": "Requisito",
+          "entraConsentValue": "Registre este aplicativo como multilocatário e conceda o consentimento de administrador no locatário de parceiro.",
+          "entraTitle": "Entra direto",
           "mspSsoTitle": "Orientação de SSO MSP",
           "notConfigured": "Não configurado",
           "redirectUri": "Redirecionar URI",
@@ -2831,9 +2851,17 @@
             "description": "Entregue notificações de feed de atividades pessoais do Teams.",
             "label": "Notificações de atividades"
           },
+          "channelBot": {
+            "description": "Permita que o bot responda quando for mencionado com @ em canais de equipe. As respostas do bot (incluindo detalhes do ticket) ficam visíveis para todos os membros do canal.",
+            "label": "Bot de canal"
+          },
           "groupChatBot": {
             "description": "Permita que o bot responda em chats de grupo do Teams. As respostas do bot (incluindo detalhes do ticket) ficam visíveis para todos os membros do chat.",
             "label": "Bot de bate-papo em grupo"
+          },
+          "guestTicketSubmission": {
+            "description": "Permita que contatos de clientes que enviam mensagens ao bot abram tickets sem fazer login. Os remetentes são associados a contatos pela identidade Microsoft verificada; remetentes sem correspondência são recusados.",
+            "label": "Envio de tickets por convidados"
           },
           "messageExtension": {
             "description": "Habilite ações de pesquisa e PSA orientadas por mensagens.",
@@ -2990,7 +3018,7 @@
           "test": {
             "sent": "Mensagem de teste das equipes enviada.",
             "failed": "A mensagem de teste do Teams falhou.",
-            "addonInactive": "O complemento Teams não está ativo para este locatário.",
+            "featureDisabled": "O Microsoft Teams não está habilitado para este locatário.",
             "integrationInactive": "Ative a integração do Teams antes de enviar uma mensagem de teste.",
             "capabilityDisabled": "Habilite o recurso de bot pessoal antes de enviar uma mensagem de teste.",
             "botNotConfigured": "Configure as credenciais do bot do Teams antes de enviar uma mensagem de teste.",
@@ -2999,7 +3027,7 @@
             "skipped": "A mensagem de teste do Teams foi ignorada."
           },
           "steps": {
-            "addonEntitlement": "Direito ao complemento do Teams",
+            "featureFlag": "Habilitação do recurso Microsoft Teams",
             "integrationStatus": "Status de integração de equipes",
             "capabilities": "Capacidades de equipes",
             "microsoftProfile": "Preparação do perfil da Microsoft",
@@ -3011,7 +3039,7 @@
             "recentDeliveryHealth": "Integridade recente da entrega do Teams"
           },
           "recommendation": {
-            "addon": "Habilite o complemento Microsoft Teams para este locatário.",
+            "featureFlag": "Habilite o Microsoft Teams para este locatário.",
             "activate": "Ative a integração do Teams nas configurações.",
             "capabilities": "Habilite bot pessoal e notificações de atividades para equipes.",
             "profile": "Selecione um perfil Microsoft pronto para Teams.",
@@ -3201,9 +3229,9 @@
               "cause": "O destinatário não entrou no AlgaPSA com a Microsoft, portanto não existe nenhum mapeamento de conta.",
               "remedy": "Peça ao usuário para entrar com a Microsoft (SSO do portal MSP ou a guia do Teams) para que sua conta seja mapeada."
             },
-            "addon_inactive": {
-              "cause": "O complemento do Teams expirou ou está ausente, portanto os envios são ignorados enquanto a configuração é preservada.",
-              "remedy": "Renove o complemento do Teams para este locatário."
+            "feature_disabled": {
+              "cause": "O Microsoft Teams não está habilitado para este locatário, portanto os envios são ignorados enquanto a configuração é preservada.",
+              "remedy": "Habilite o recurso da versão 1.5 para este locatário."
             },
             "integration_inactive": {
               "cause": "A integração do Teams não está ativa para este locatário.",
@@ -3234,26 +3262,6 @@
               "remedy": "Verifique os logs do servidor para obter o detalhe do erro de entrega e execute o diagnóstico novamente."
             }
           }
-        },
-        "paywall": {
-          "title": "Complemento do Microsoft Teams",
-          "description": "A integração do Microsoft Teams requer o complemento do Teams para este locatário.",
-          "includedTitle": "O que está incluído",
-          "feature": {
-            "tab": "Guia pessoal: abra o AlgaPSA dentro do Microsoft Teams.",
-            "bot": "Bot pessoal e de chat em grupo para tickets, aprovações, tempo e anotações.",
-            "messageExtension": "Extensão de mensagem e ações rápidas para atuar sobre registros do PSA a partir de qualquer mensagem.",
-            "meetings": "Reuniões do Teams nas aprovações de compromissos com convites reais de calendário do Outlook/Teams.",
-            "recordings": "Captura automática de gravações e transcrições de reuniões nas interações.",
-            "notifications": "Notificações do feed de atividades e de mensagem direta do bot para atribuições, respostas, aprovações e risco de SLA."
-          },
-          "cta": "Comprar complemento do Teams",
-          "nonBilling": "Entre em contato com um administrador de faturamento para comprar o complemento do Teams para este locatário."
-        },
-        "addonExpiredBanner": {
-          "title": "Complemento do Microsoft Teams expirado",
-          "message": "O complemento do Microsoft Teams expirou. Sua configuração e seu histórico de entregas são preservados, mas as notificações do Teams estão sendo ignoradas até que o complemento seja renovado.",
-          "cta": "Renovar complemento do Teams"
         },
         "staleManifest": {
           "title": "O pacote do aplicativo do Teams está desatualizado",
@@ -3559,6 +3567,72 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Ativo",
+        "error": "Erro",
+        "disabled": "Desativado",
+        "notConfigured": "Não configurado"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Registra as chamadas do Teams Phone como interações assim que cada chamada termina. Histórico de chamadas, não alerta na tela em tempo real.",
+          "prerequisite": "Configure primeiro a integração com o Microsoft Teams — o Teams Phone reaproveita o perfil Microsoft dela."
+        }
+      },
+      "subscriptionExpires": "A assinatura é renovada antes de",
+      "lastNotification": "Última notificação de chamada",
+      "autoTicket": "Criar um chamado automaticamente para chamadas identificadas",
+      "unknownNumber": "Número desconhecido",
+      "actions": {
+        "enable": "Ativar",
+        "disable": "Desativar"
+      },
+      "matchStatus": {
+        "matched": "Identificada",
+        "ambiguous": "Ambígua",
+        "unmatched": "Não identificada",
+        "resolved": "Resolvida"
+      },
+      "callsPanel": {
+        "title": "Chamadas"
+      },
+      "recentCalls": {
+        "title": "Chamadas recentes",
+        "description": "Capturadas após o fim de cada chamada: o Microsoft Graph publica os registros depois da chamada, portanto isto é histórico e não um fluxo ao vivo.",
+        "empty": "Nenhuma chamada capturada ainda.",
+        "createTicket": "Criar chamado",
+        "openTicket": "Abrir chamado",
+        "linkTicket": "Vincular a chamado",
+        "selectTicket": "Selecionar um chamado…",
+        "noLinkableTickets": "Nenhum chamado aberto"
+      },
+      "unmatched": {
+        "title": "Chamadas sem atribuição",
+        "description": "Números que não conseguimos identificar e números compartilhados por mais de um contato. Resolver uma chamada a arquiva na linha do tempo certa.",
+        "empty": "Todas as chamadas capturadas estão atribuídas.",
+        "assignTo": "Atribuir a",
+        "searchPlaceholder": "Pesquisar contatos e clientes…",
+        "noTargets": "Nenhum contato ou cliente correspondente.",
+        "chooseTarget": "Atribuir a um cliente…"
+      },
+      "forbidden": "Você não tem permissão para ver as configurações de telefonia deste inquilino.",
+      "paywall": {
+        "title": "Telefonia",
+        "description": "As integrações de telefonia não estão disponíveis para este inquilino.",
+        "unavailable": "As integrações de telefonia não estão disponíveis para este inquilino.",
+        "ceOnly": "As integrações de telefonia estão disponíveis apenas na Enterprise Edition.",
+        "includedTitle": "O que está incluído",
+        "cta": "Gerenciar integrações",
+        "feature": {
+          "recognition": "Reconhecimento de quem liga entre contatos e clientes em cada chamada capturada.",
+          "history": "Histórico de chamadas na linha do tempo do contato e do cliente como interações completas.",
+          "tickets": "Crie um chamado a partir de uma chamada ou vincule a chamada a um chamado em andamento.",
+          "queue": "Uma fila para números não identificados e ambíguos, para que nenhuma chamada seja atribuída por suposição.",
+          "providers": "Hoje o Teams Phone; o mesmo núcleo de chamadas sustentará os próximos provedores."
+        }
+      }
     }
   },
   "errors": {

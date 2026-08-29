@@ -93,6 +93,90 @@ export interface GraphChatMessage {
   body: { contentType: string; content: string };
 }
 
+export interface GraphOnlineMeeting {
+  id: string;
+  subject: string | null;
+  joinWebUrl: string;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  /** Path segment the meeting was created under (organizer UPN or object id). */
+  organizerUserId: string;
+  createdDateTime: string;
+}
+
+export interface GraphCalendarEvent {
+  id: string;
+  subject: string | null;
+  organizerUserId: string;
+  start: unknown;
+  end: unknown;
+  isOnlineMeeting: boolean;
+  onlineMeeting: { joinUrl: string } | null;
+  /** The auto-created online meeting behind an isOnlineMeeting event. */
+  onlineMeetingId: string | null;
+  body: unknown;
+  attendees: unknown[];
+  createdDateTime: string;
+}
+
+export type MeetingArtifactKind = 'recording' | 'transcript';
+
+export interface GraphMeetingArtifact {
+  id: string;
+  meetingId: string;
+  kind: MeetingArtifactKind;
+  createdDateTime: string;
+  /** VTT text for transcripts; stand-in payload for recordings. */
+  content: string;
+  contentType: string;
+}
+
+/** One Graph callRecords session endpoint (PSTN leg carries identity.phone). */
+export interface GraphCallRecordEndpoint {
+  identity: {
+    phone?: { id: string } | null;
+    user?: { id: string; displayName: string | null } | null;
+  };
+}
+
+export interface GraphCallRecordSession {
+  id: string;
+  caller: GraphCallRecordEndpoint;
+  callee: GraphCallRecordEndpoint;
+  startDateTime: string;
+  endDateTime: string;
+  modalities: string[];
+  failureInfo: { reason: string; stage: string } | null;
+}
+
+/**
+ * A recording/transcript on an ad hoc call — the Teams Phone equivalent of a
+ * meeting artifact, served from /users/{id}/adhocCalls/{callId}.
+ */
+export interface GraphCallArtifact {
+  id: string;
+  callId: string;
+  kind: MeetingArtifactKind;
+  createdDateTime: string;
+  /** VTT text for transcripts; stand-in payload for recordings. */
+  content: string;
+  contentType: string;
+}
+
+/** A Teams Phone call detail record served by /communications/callRecords. */
+export interface GraphCallRecord {
+  id: string;
+  version: number;
+  type: string;
+  modalities: string[];
+  startDateTime: string;
+  endDateTime: string;
+  lastModifiedDateTime: string;
+  organizer: { user: { id: string; displayName: string | null } } | null;
+  participants: unknown[];
+  sessions: GraphCallRecordSession[];
+}
+
 /** A conversation created through the Bot Framework connector (proactive send). */
 export interface BotConversation {
   id: string;
@@ -155,6 +239,28 @@ export interface InboundBotActivityInput {
    * so buildInboundActivity ignores it.
    */
   tokenAgeSeconds?: number;
+}
+
+/**
+ * Identity applied to bot-activity seeds that omit it. Repeating the same
+ * fromAadObjectId/conversationId on every seed was the single most common piece
+ * of boilerplate during the Teams work.
+ */
+export interface DefaultActor {
+  fromAadObjectId?: string;
+  fromId?: string;
+  fromName?: string;
+  conversationId?: string;
+  conversationType?: 'personal' | 'groupChat' | 'channel';
+  tenantId?: string;
+}
+
+/** A named seed payload the console can save and replay. */
+export interface SeedPreset {
+  name: string;
+  seeder: string;
+  payload: Record<string, unknown>;
+  savedAt: string;
 }
 
 export interface OperationFault {
@@ -267,6 +373,18 @@ export class MsGraphCore implements EmulatorCore {
   readonly teams = new Map<string, GraphTeam>();
   readonly chats = new Map<string, GraphChat>();
   readonly chatMessages = new Map<string, GraphChatMessage[]>();
+  readonly calendarEvents = new Map<string, GraphCalendarEvent>();
+  readonly onlineMeetings = new Map<string, GraphOnlineMeeting>();
+  /** Keyed by meeting id; holds both recordings and transcripts. */
+  readonly meetingArtifacts = new Map<string, GraphMeetingArtifact[]>();
+  /** Teams Phone call detail records, keyed by call record id. */
+  readonly callRecords = new Map<string, GraphCallRecord>();
+  /** Keyed by call id; holds both call recordings and call transcripts. */
+  readonly callArtifacts = new Map<string, GraphCallArtifact[]>();
+  /** Notification delivery results per call record, for the state view. */
+  readonly callRecordDeliveries = new Map<string, unknown[]>();
+  readonly seedPresets = new Map<string, SeedPreset>();
+  defaultActor: DefaultActor = {};
   readonly botConversations = new Map<string, BotConversation>();
   readonly capturedBotActivities: CapturedBotActivity[] = [];
   readonly activityNotifications: ActivityNotificationRecord[] = [];
@@ -292,6 +410,14 @@ export class MsGraphCore implements EmulatorCore {
     this.teams.clear();
     this.chats.clear();
     this.chatMessages.clear();
+    this.calendarEvents.clear();
+    this.onlineMeetings.clear();
+    this.meetingArtifacts.clear();
+    this.callRecords.clear();
+    this.callArtifacts.clear();
+    this.callRecordDeliveries.clear();
+    this.seedPresets.clear();
+    this.defaultActor = {};
     this.botConversations.clear();
     this.capturedBotActivities.length = 0;
     this.activityNotifications.length = 0;
@@ -560,13 +686,30 @@ export class MsGraphCore implements EmulatorCore {
     this.faults.clear();
   }
 
-  /** Consume one occurrence of an operation-scoped fault, if armed. */
+  /**
+   * Consume one occurrence of an operation-scoped fault, if armed.
+   *
+   * Exact match first, then trailing-wildcard patterns
+   * ("POST /v3/conversations/x/activities/*"): reply paths embed a
+   * server-generated activity id, so there is no literal to arm against.
+   */
   consumeFault(operation: string): OperationFault | null {
-    const fault = this.faults.get(operation);
+    let key: string | undefined = this.faults.has(operation) ? operation : undefined;
+    if (!key) {
+      for (const candidate of this.faults.keys()) {
+        if (candidate.endsWith('*') && operation.startsWith(candidate.slice(0, -1))) {
+          key = candidate;
+          break;
+        }
+      }
+    }
+    if (!key) return null;
+
+    const fault = this.faults.get(key);
     if (!fault) return null;
     if (fault.remaining !== undefined) {
       fault.remaining -= 1;
-      if (fault.remaining <= 0) this.faults.delete(operation);
+      if (fault.remaining <= 0) this.faults.delete(key);
     }
     return fault;
   }
@@ -722,6 +865,278 @@ export class MsGraphCore implements EmulatorCore {
     return this.chatMessages.get(id) ?? [];
   }
 
+  // --- Meetings (calendar events, onlineMeetings, recordings/transcripts) ---
+
+  createOnlineMeeting(
+    organizerUserId: string,
+    input: { subject?: string | null; startDateTime?: string | null; endDateTime?: string | null } = {},
+  ): GraphOnlineMeeting {
+    const id = this.newId('meeting');
+    const meeting: GraphOnlineMeeting = {
+      id,
+      subject: input.subject ?? null,
+      // Shaped like a real Teams join link; the app stores and displays it opaquely.
+      joinWebUrl: `https://teams.microsoft.com/l/meetup-join/19%3ameeting_${id}/0`,
+      startDateTime: input.startDateTime ?? null,
+      endDateTime: input.endDateTime ?? null,
+      organizerUserId,
+      createdDateTime: this.env.clock.now().toISOString(),
+    };
+    this.onlineMeetings.set(id, meeting);
+    return meeting;
+  }
+
+  getOnlineMeeting(meetingId: string): GraphOnlineMeeting {
+    const meeting = this.onlineMeetings.get(meetingId);
+    if (!meeting) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return meeting;
+  }
+
+  deleteOnlineMeeting(meetingId: string): void {
+    this.getOnlineMeeting(meetingId);
+    this.onlineMeetings.delete(meetingId);
+    this.meetingArtifacts.delete(meetingId);
+  }
+
+  findOnlineMeetingsByJoinUrl(joinWebUrl: string): GraphOnlineMeeting[] {
+    return [...this.onlineMeetings.values()].filter((meeting) => meeting.joinWebUrl === joinWebUrl);
+  }
+
+  createCalendarEvent(organizerUserId: string, body: Record<string, unknown>): GraphCalendarEvent {
+    const isOnlineMeeting = body.isOnlineMeeting === true;
+    const subject = typeof body.subject === 'string' ? body.subject : null;
+    const start = (body.start as { dateTime?: string } | undefined) ?? null;
+    const end = (body.end as { dateTime?: string } | undefined) ?? null;
+    const meeting = isOnlineMeeting
+      ? this.createOnlineMeeting(organizerUserId, {
+          subject,
+          startDateTime: start?.dateTime ?? null,
+          endDateTime: end?.dateTime ?? null,
+        })
+      : null;
+    const event: GraphCalendarEvent = {
+      id: this.newId('event'),
+      subject,
+      organizerUserId,
+      start,
+      end,
+      isOnlineMeeting,
+      onlineMeeting: meeting ? { joinUrl: meeting.joinWebUrl } : null,
+      onlineMeetingId: meeting?.id ?? null,
+      body: body.body ?? null,
+      attendees: Array.isArray(body.attendees) ? body.attendees : [],
+      createdDateTime: this.env.clock.now().toISOString(),
+    };
+    this.calendarEvents.set(event.id, event);
+    return event;
+  }
+
+  getCalendarEvent(eventId: string): GraphCalendarEvent {
+    const event = this.calendarEvents.get(eventId);
+    if (!event) {
+      throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
+    }
+    return event;
+  }
+
+  updateCalendarEvent(eventId: string, patch: Record<string, unknown>): GraphCalendarEvent {
+    const event = this.getCalendarEvent(eventId);
+    if (typeof patch.subject === 'string') event.subject = patch.subject;
+    if (patch.start !== undefined) event.start = patch.start;
+    if (patch.end !== undefined) event.end = patch.end;
+    if (patch.body !== undefined) event.body = patch.body;
+    if (Array.isArray(patch.attendees)) event.attendees = patch.attendees;
+    return event;
+  }
+
+  deleteCalendarEvent(eventId: string): void {
+    const event = this.getCalendarEvent(eventId);
+    this.calendarEvents.delete(eventId);
+    if (event.onlineMeetingId) {
+      this.onlineMeetings.delete(event.onlineMeetingId);
+      this.meetingArtifacts.delete(event.onlineMeetingId);
+    }
+  }
+
+  addMeetingArtifact(
+    kind: MeetingArtifactKind,
+    meetingId: string,
+    input: { id?: string; content?: string; createdDateTime?: string } = {},
+  ): GraphMeetingArtifact {
+    this.getOnlineMeeting(meetingId);
+    const artifact: GraphMeetingArtifact = {
+      id: input.id ?? this.newId(kind),
+      meetingId,
+      kind,
+      createdDateTime: input.createdDateTime ?? this.env.clock.now().toISOString(),
+      content:
+        input.content ??
+        (kind === 'transcript'
+          ? 'WEBVTT\n\n00:00:00.000 --> 00:00:04.000\n<v Emulated Speaker>Hello from the algasim transcript.'
+          : `algasim-recording-bytes:${meetingId}`),
+      contentType: kind === 'transcript' ? 'text/vtt' : 'video/mp4',
+    };
+    const list = this.meetingArtifacts.get(meetingId) ?? [];
+    list.push(artifact);
+    this.meetingArtifacts.set(meetingId, list);
+    return artifact;
+  }
+
+  listMeetingArtifacts(kind: MeetingArtifactKind, meetingId: string): GraphMeetingArtifact[] {
+    this.getOnlineMeeting(meetingId);
+    return (this.meetingArtifacts.get(meetingId) ?? []).filter((artifact) => artifact.kind === kind);
+  }
+
+  getMeetingArtifact(kind: MeetingArtifactKind, meetingId: string, artifactId: string): GraphMeetingArtifact {
+    const artifact = this.listMeetingArtifacts(kind, meetingId).find((candidate) => candidate.id === artifactId);
+    if (!artifact) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return artifact;
+  }
+
+  // --- Teams Phone call records ---
+
+  /**
+   * Build a callRecord the shape real Graph returns: the PSTN leg lives on a
+   * session endpoint's `identity.phone.id`, which is what the adapter reads to
+   * decide direction and extract the counterparty number. An unanswered call
+   * carries `failureInfo` and a zero-length session, exactly as Graph reports
+   * a missed call.
+   */
+  addCallRecord(input: {
+    id?: string;
+    direction?: 'inbound' | 'outbound';
+    callerNumber?: string;
+    calleeNumber?: string;
+    organizerUserId?: string;
+    startedAt?: string;
+    durationSeconds?: number;
+    answered?: boolean;
+    modality?: 'audio' | 'video';
+  } = {}): GraphCallRecord {
+    const id = input.id ?? this.newId('callRecord');
+    const direction = input.direction ?? 'inbound';
+    const answered = input.answered ?? true;
+    const durationSeconds = answered ? input.durationSeconds ?? 120 : 0;
+    const start = input.startedAt ?? this.env.clock.now().toISOString();
+    const end = new Date(new Date(start).getTime() + durationSeconds * 1000).toISOString();
+    const organizerUserId = input.organizerUserId ?? 'emulated-organizer';
+    const modality = input.modality ?? 'audio';
+
+    const phoneEndpoint = (number: string): GraphCallRecordEndpoint => ({ identity: { phone: { id: number } } });
+    const userEndpoint = (): GraphCallRecordEndpoint => ({
+      identity: { user: { id: organizerUserId, displayName: 'Emulated Agent' } },
+    });
+
+    const callerNumber = input.callerNumber ?? '+15551234567';
+    const calleeNumber = input.calleeNumber ?? '+15559990000';
+
+    const session: GraphCallRecordSession = {
+      id: `${id}-session-1`,
+      caller: direction === 'inbound' ? phoneEndpoint(callerNumber) : userEndpoint(),
+      callee: direction === 'inbound' ? userEndpoint() : phoneEndpoint(calleeNumber),
+      startDateTime: start,
+      endDateTime: end,
+      modalities: [modality],
+      failureInfo: answered ? null : { reason: 'The call was not answered.', stage: 'callSetup' },
+    };
+
+    const record: GraphCallRecord = {
+      id,
+      version: 1,
+      type: 'peerToPeer',
+      modalities: [modality],
+      startDateTime: start,
+      endDateTime: end,
+      lastModifiedDateTime: this.env.clock.now().toISOString(),
+      organizer: { user: { id: organizerUserId, displayName: 'Emulated Agent' } },
+      participants: [],
+      sessions: [session],
+    };
+
+    this.callRecords.set(id, record);
+    return record;
+  }
+
+  getCallRecord(callRecordId: string): GraphCallRecord {
+    const record = this.callRecords.get(callRecordId);
+    if (!record) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return record;
+  }
+
+  /**
+   * Attach a recording/transcript to a call. Real Graph publishes these on the
+   * ad hoc call minutes after it ends and never notifies about them, so there
+   * are no deliveries here: the app has to poll, and this is what it finds.
+   */
+  addCallArtifact(
+    kind: MeetingArtifactKind,
+    callId: string,
+    input: { id?: string; content?: string; createdDateTime?: string } = {},
+  ): GraphCallArtifact {
+    this.getCallRecord(callId);
+    const artifact: GraphCallArtifact = {
+      id: input.id ?? this.newId(`call-${kind}`),
+      callId,
+      kind,
+      createdDateTime: input.createdDateTime ?? this.env.clock.now().toISOString(),
+      content:
+        input.content ??
+        (kind === 'transcript'
+          ? 'WEBVTT\n\n00:00:00.000 --> 00:00:04.000\n<v Emulated Caller>Hello from the algasim call transcript.'
+          : `algasim-call-recording-bytes:${callId}`),
+      contentType: kind === 'transcript' ? 'text/vtt' : 'video/mp4',
+    };
+    const list = this.callArtifacts.get(callId) ?? [];
+    list.push(artifact);
+    this.callArtifacts.set(callId, list);
+    return artifact;
+  }
+
+  listCallArtifacts(kind: MeetingArtifactKind, callId: string): GraphCallArtifact[] {
+    this.getCallRecord(callId);
+    return (this.callArtifacts.get(callId) ?? []).filter((artifact) => artifact.kind === kind);
+  }
+
+  getCallArtifact(kind: MeetingArtifactKind, callId: string, artifactId: string): GraphCallArtifact {
+    const artifact = this.listCallArtifacts(kind, callId).find((candidate) => candidate.id === artifactId);
+    if (!artifact) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return artifact;
+  }
+
+  /**
+   * The documented enumeration surface: getAllRecordings/getAllTranscripts —
+   * every artifact of the given kind across the organizer's calls, optionally
+   * windowed by createdDateTime. Real Graph exposes NO per-call artifact list.
+   */
+  listAdhocArtifactsForOrganizer(
+    kind: MeetingArtifactKind,
+    organizerUserId: string,
+    window: { startDateTime?: string; endDateTime?: string } = {},
+  ): GraphCallArtifact[] {
+    const start = window.startDateTime ? new Date(window.startDateTime).getTime() : null;
+    const end = window.endDateTime ? new Date(window.endDateTime).getTime() : null;
+    const results: GraphCallArtifact[] = [];
+    for (const record of this.callRecords.values()) {
+      if (record.organizer?.user?.id !== organizerUserId) continue;
+      for (const artifact of this.callArtifacts.get(record.id) ?? []) {
+        if (artifact.kind !== kind) continue;
+        const created = new Date(artifact.createdDateTime).getTime();
+        if (start !== null && !Number.isNaN(created) && created < start) continue;
+        if (end !== null && !Number.isNaN(created) && created > end) continue;
+        results.push(artifact);
+      }
+    }
+    return results;
+  }
+
   // --- Bot Framework connector ---
 
   createConversation(input: { isGroup?: boolean; tenantId?: string; members?: unknown[] }): BotConversation {
@@ -781,6 +1196,106 @@ export class MsGraphCore implements EmulatorCore {
    * Assemble the Bot Framework Activity that inbound injection delivers to the
    * app's bot endpoint. Pure: the notifier signs it and performs the POST.
    */
+  /**
+   * `--state-file` support. Only durable seeded state is serialized: OAuth
+   * codes, access tokens and armed faults are per-run and deliberately dropped,
+   * and the Bot Framework signing key is NOT part of the snapshot (the app
+   * caches the discovered JWKS, so restoring must not rotate it).
+   *
+   * Registered clients ARE durable: they are configuration, not a session, and
+   * without them a restarted emulator answers every app-only token request with
+   * invalid_client while its seeds sit there looking healthy.
+   */
+  snapshot(): unknown {
+    return {
+      clients: [...this.clients.entries()].map(([clientId, client]) => ({ clientId, ...client })),
+      messages: [...this.messages.values()],
+      subscriptions: [...this.subscriptions.values()],
+      organizations: [...this.organizations.values()],
+      directoryUsers: [...this.directoryUsers.values()],
+      applications: [...this.applications.values()],
+      servicePrincipals: [...this.servicePrincipals.values()],
+      teams: [...this.teams.values()],
+      chats: [...this.chats.values()],
+      chatMessages: [...this.chatMessages.entries()],
+      calendarEvents: [...this.calendarEvents.values()],
+      onlineMeetings: [...this.onlineMeetings.values()],
+      meetingArtifacts: [...this.meetingArtifacts.entries()],
+      callRecords: [...this.callRecords.values()],
+      callArtifacts: [...this.callArtifacts.entries()],
+      seedPresets: [...this.seedPresets.values()],
+      defaultActor: this.defaultActor,
+      accessTokenTtlSeconds: this.accessTokenTtlSeconds,
+      rotateRefreshTokens: this.rotateRefreshTokens,
+      botConfig: this.botConfig,
+      idCounter: this.idCounter,
+    };
+  }
+
+  restore(state: unknown): void {
+    const snapshot = (state ?? {}) as Record<string, any>;
+    const load = <V>(target: Map<string, V>, rows: unknown, key: (row: any) => string) => {
+      target.clear();
+      for (const row of Array.isArray(rows) ? rows : []) {
+        target.set(key(row), row as V);
+      }
+    };
+    const loadEntries = <V>(target: Map<string, V>, entries: unknown) => {
+      target.clear();
+      for (const entry of Array.isArray(entries) ? entries : []) {
+        if (Array.isArray(entry) && typeof entry[0] === 'string') {
+          target.set(entry[0], entry[1] as V);
+        }
+      }
+    };
+
+    this.clients.clear();
+    for (const row of Array.isArray(snapshot.clients) ? snapshot.clients : []) {
+      this.registerClient(String(row.clientId), String(row.secret), Array.isArray(row.appRoles) ? row.appRoles : []);
+    }
+    load(this.messages, snapshot.messages, (row) => row.id);
+    load(this.subscriptions, snapshot.subscriptions, (row) => row.id);
+    load(this.organizations, snapshot.organizations, (row) => row.id);
+    load(this.directoryUsers, snapshot.directoryUsers, (row) => row.id);
+    load(this.applications, snapshot.applications, (row) => row.id);
+    load(this.servicePrincipals, snapshot.servicePrincipals, (row) => row.id);
+    load(this.teams, snapshot.teams, (row) => row.id);
+    load(this.chats, snapshot.chats, (row) => row.id);
+    loadEntries(this.chatMessages, snapshot.chatMessages);
+    load(this.calendarEvents, snapshot.calendarEvents, (row) => row.id);
+    load(this.onlineMeetings, snapshot.onlineMeetings, (row) => row.id);
+    loadEntries(this.meetingArtifacts, snapshot.meetingArtifacts);
+    load(this.callRecords, snapshot.callRecords, (row) => row.id);
+    loadEntries(this.callArtifacts, snapshot.callArtifacts);
+    load(this.seedPresets, snapshot.seedPresets, (row) => row.name);
+
+    this.defaultActor = snapshot.defaultActor ?? {};
+    if (typeof snapshot.accessTokenTtlSeconds === 'number') this.accessTokenTtlSeconds = snapshot.accessTokenTtlSeconds;
+    if (typeof snapshot.rotateRefreshTokens === 'boolean') this.rotateRefreshTokens = snapshot.rotateRefreshTokens;
+    if (snapshot.botConfig) this.botConfig = { ...this.botConfig, ...snapshot.botConfig };
+    // Keep minting ids past the restored high-water mark so a restored run
+    // cannot collide with what the previous run already handed to the app.
+    if (typeof snapshot.idCounter === 'number') this.idCounter = snapshot.idCounter;
+  }
+
+  recordCallDeliveries(callRecordId: string, deliveries: unknown[]): void {
+    this.callRecordDeliveries.set(callRecordId, deliveries);
+  }
+
+  saveSeedPreset(name: string, seeder: string, payload: Record<string, unknown>): SeedPreset {
+    const preset: SeedPreset = { name, seeder, payload, savedAt: this.env.clock.now().toISOString() };
+    this.seedPresets.set(name, preset);
+    return preset;
+  }
+
+  deleteSeedPreset(name: string): boolean {
+    return this.seedPresets.delete(name);
+  }
+
+  listSeedPresets(): SeedPreset[] {
+    return [...this.seedPresets.values()];
+  }
+
   buildInboundActivity(input: InboundBotActivityInput): {
     activity: Record<string, unknown>;
     targetUrl: string;
@@ -790,10 +1305,11 @@ export class MsGraphCore implements EmulatorCore {
     tenantId: string;
   } {
     const serviceUrl = input.serviceUrl ?? this.botConfig.serviceUrl;
-    const tenantId = input.tenantId ?? this.botConfig.tenantId;
+    // Explicit values always win over the configured default actor.
+    const tenantId = input.tenantId ?? this.defaultActor.tenantId ?? this.botConfig.tenantId;
     const audience = input.appId ?? this.botConfig.appId;
-    const aadObjectId = input.fromAadObjectId ?? this.newId('aad-object');
-    const conversationType = input.conversationType ?? 'personal';
+    const aadObjectId = input.fromAadObjectId ?? this.defaultActor.fromAadObjectId ?? this.newId('aad-object');
+    const conversationType = input.conversationType ?? this.defaultActor.conversationType ?? 'personal';
     const activity: Record<string, unknown> = {
       type: input.type ?? 'message',
       id: this.newId('inbound-activity'),
@@ -801,13 +1317,13 @@ export class MsGraphCore implements EmulatorCore {
       channelId: 'msteams',
       serviceUrl,
       from: {
-        id: input.fromId ?? `29:${aadObjectId}`,
+        id: input.fromId ?? this.defaultActor.fromId ?? `29:${aadObjectId}`,
         aadObjectId,
-        name: input.fromName ?? 'Emulated Teams User',
+        name: input.fromName ?? this.defaultActor.fromName ?? 'Emulated Teams User',
       },
       recipient: { id: `28:${audience}`, name: 'AlgaPSA' },
       conversation: {
-        id: input.conversationId ?? this.newId('conversation'),
+        id: input.conversationId ?? this.defaultActor.conversationId ?? this.newId('conversation'),
         conversationType,
         tenantId,
         isGroup: conversationType !== 'personal',
@@ -837,5 +1353,17 @@ export function publicTeam(team: GraphTeam): Omit<GraphTeam, 'channels'> {
 /** Vendor-surface representation: the owning client id stays internal. */
 export function publicSubscription(subscription: GraphSubscription): Omit<GraphSubscription, 'clientId'> {
   const { clientId: _clientId, ...rest } = subscription;
+  return rest;
+}
+
+/** Vendor-surface event: the linked online-meeting id stays internal. */
+export function publicEvent(event: GraphCalendarEvent): Omit<GraphCalendarEvent, 'organizerUserId' | 'onlineMeetingId'> {
+  const { organizerUserId: _organizer, onlineMeetingId: _meetingId, ...rest } = event;
+  return rest;
+}
+
+/** Vendor-surface online meeting: the organizer path segment stays internal. */
+export function publicOnlineMeeting(meeting: GraphOnlineMeeting): Omit<GraphOnlineMeeting, 'organizerUserId'> {
+  const { organizerUserId: _organizer, ...rest } = meeting;
   return rest;
 }
