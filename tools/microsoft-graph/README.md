@@ -48,8 +48,9 @@ path built from some other base variable is invisible to it: add that form to
   names the update command. A neglected pin becomes a red check within a
   bounded window instead of quietly passing forever.
 
-`.github/workflows/microsoft-graph-metadata-refresh.yml` repins weekly and opens
-a bump pull request. A repin that fails validation still opens that pull request
+`.github/workflows/microsoft-graph-metadata-refresh.yml` repins monthly and opens
+a bump pull request — monthly because each repin commits ~1.2 MB of gzipped CSDL
+that does not delta-compress, and three attempts still fit inside the 90-day gate. A repin that fails validation still opens that pull request
 *and* fails the scheduled run, so an upstream removal surfaces as a red job with
 the offending bump branch attached, never as a quietly green one.
 

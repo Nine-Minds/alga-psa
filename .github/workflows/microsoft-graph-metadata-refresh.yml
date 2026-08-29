@@ -2,8 +2,10 @@ name: Microsoft Graph metadata refresh
 
 on:
   workflow_dispatch:
+  # Monthly, not weekly: each repin commits ~1.2 MB of incompressible gzipped
+  # CSDL, and three attempts still fit inside the guard's 90-day age gate.
   schedule:
-    - cron: '0 7 * * 1'
+    - cron: '0 7 1 * *'
 
 permissions:
   contents: write
@@ -73,7 +75,7 @@ jobs:
           fi
           if ! gh pr create \
             --title "chore: repin Microsoft Graph metadata (${commit})" \
-            --body "Automated weekly repin of the Microsoft Graph CSDL used by \`npm run guard:microsoft-graph-endpoints\`. If the endpoint guard fails on this PR, Microsoft changed or removed a surface Alga calls." \
+            --body "Automated monthly repin of the Microsoft Graph CSDL used by \`npm run guard:microsoft-graph-endpoints\`. If the endpoint guard fails on this PR, Microsoft changed or removed a surface Alga calls." \
             --base main \
             --head "${branch}"; then
             echo "::error::Could not open the bump pull request; deleting ${branch} so the next run retries from a clean slate."
