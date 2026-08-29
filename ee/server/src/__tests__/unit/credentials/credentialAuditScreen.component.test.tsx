@@ -58,6 +58,10 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
       'credentials.audit.subtitle': 'See who viewed or changed passwords across your vault.',
       'credentials.audit.filtersTitle': 'Filters',
       'credentials.audit.activityTitle': 'Activity',
+      'credentials.audit.summary.activity': 'Activity in view',
+      'credentials.audit.summary.reveals': 'Password reveals',
+      'credentials.audit.summary.changes': 'Changes',
+      'credentials.audit.summary.actors': 'People active',
       'credentials.audit.loading': 'Loading…',
       'credentials.audit.empty': 'No activity yet.',
       'credentials.audit.emptyFiltered': 'No activity matches these filters.',
@@ -140,6 +144,10 @@ vi.mock('@alga-psa/ui/components/UserPicker', () => ({
       ))}
     </select>
   ),
+}));
+
+vi.mock('@alga-psa/ui/components/UserAvatar', () => ({
+  default: ({ userName }: { userName: string }) => <span aria-hidden="true">{userName.slice(0, 1)}</span>,
 }));
 
 vi.mock('@alga-psa/ui/components/Table', () => ({
@@ -273,6 +281,11 @@ describe('CredentialAuditScreen — data + paging', () => {
     expect(document.body.textContent).toContain('Alice Example');
     expect(document.body.textContent).toContain('Domain Admin');
     expect(document.body.textContent).toContain('System');
+    const summary = document.getElementById('credentials-audit-summary');
+    expect(summary?.textContent).toContain('2Activity in view');
+    expect(summary?.textContent).toContain('1Password reveals');
+    expect(summary?.textContent).toContain('1Changes');
+    expect(summary?.textContent).toContain('2People active');
   });
 
   it('renders the empty state without filters and the filtered-empty state with them', async () => {

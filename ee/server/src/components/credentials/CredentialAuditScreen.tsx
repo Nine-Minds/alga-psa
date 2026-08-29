@@ -21,11 +21,12 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Badge } from '@alga-psa/ui/components/Badge';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { StringDateRangePicker } from '@alga-psa/ui/components/DateRangePicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { KeyRound, RefreshCw } from 'lucide-react';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import { Activity, Eye, KeyRound, PencilLine, RefreshCw, SlidersHorizontal, Users } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -48,6 +49,59 @@ const CREDENTIAL_AUDIT_OPERATION_FILTERS = CREDENTIAL_AUDIT_OPERATIONS
       ? [operation, 'hudu_password_reveal'] as CredentialAuditEventOperation[]
       : [operation],
   }));
+
+const REVEAL_OPERATIONS: CredentialAuditEventOperation[] = [
+  'credential_reveal',
+  'credential_otp_seed_reveal',
+  'hudu_password_reveal',
+];
+
+const CHANGE_OPERATIONS: CredentialAuditEventOperation[] = [
+  'credential_updated',
+  'credential_grants_changed',
+];
+
+const OPERATION_BADGE_VARIANTS: Record<CredentialAuditEventOperation, BadgeVariant> = {
+  credential_reveal: 'primary',
+  credential_otp_seed_reveal: 'info',
+  credential_created: 'success',
+  credential_updated: 'info',
+  credential_deleted: 'error',
+  credential_grants_changed: 'warning',
+  credential_associated: 'default-muted',
+  credential_detached: 'outline',
+  hudu_password_reveal: 'primary',
+};
+
+interface AuditMetricProps {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  accentClassName: string;
+  iconClassName: string;
+}
+
+function AuditMetric({ label, value, icon, accentClassName, iconClassName }: AuditMetricProps) {
+  return (
+    <Card className={`overflow-hidden border-l-4 ${accentClassName}`}>
+      <CardContent className="!p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-3xl font-semibold tabular-nums tracking-tight text-[rgb(var(--color-text-900))]">
+              {value}
+            </div>
+            <div className="mt-1 text-sm font-medium text-[rgb(var(--color-text-600))]">
+              {label}
+            </div>
+          </div>
+          <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconClassName}`}>
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function hasActiveFilters(filters: CredentialAuditFilterState): boolean {
   return Boolean(
@@ -93,6 +147,19 @@ export function CredentialAuditScreen() {
   const { formatDate } = useFormatters();
 
   const activeFilters = hasActiveFilters(filters);
+
+  const summary = useMemo(() => {
+    const visibleEvents = events ?? [];
+    const actors = new Set(
+      visibleEvents.map((event) => event.actor.userId ?? event.actor.name ?? 'system')
+    );
+    return {
+      activity: visibleEvents.length,
+      reveals: visibleEvents.filter((event) => REVEAL_OPERATIONS.includes(event.operation)).length,
+      changes: visibleEvents.filter((event) => CHANGE_OPERATIONS.includes(event.operation)).length,
+      actors: actors.size,
+    };
+  }, [events]);
 
   useEffect(() => {
     if (!flagEnabled) return;
@@ -197,48 +264,90 @@ export function CredentialAuditScreen() {
 
   return (
     <div id="credentials-audit-screen" className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-[rgb(var(--color-text-900))]">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 text-[rgb(var(--color-primary-600))]">
-              <KeyRound className="h-4 w-4" />
-            </span>
-            {t('credentials.audit.pageTitle')}
-          </h1>
-          <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-            {t('credentials.audit.subtitle', { defaultValue: 'See who viewed or changed passwords across your vault.' })}
-          </p>
-        </div>
-        <Button
-          id="credentials-audit-refresh"
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => void refresh()}
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          {t('credentials.screen.refresh')}
-        </Button>
+      <Card
+        id="credentials-audit-hero"
+        className="relative overflow-hidden border-0 bg-primary-900 shadow-lg shadow-primary-900/10"
+      >
+        <div className="pointer-events-none absolute -right-14 -top-24 h-64 w-64 rounded-full border-[40px] border-white/5" />
+        <CardContent className="!p-5 sm:!p-6">
+          <div className="relative flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-inset ring-white/20">
+                  <KeyRound className="h-6 w-6" />
+                </span>
+                {t('credentials.audit.pageTitle')}
+              </h1>
+              <p className="mt-3 text-base text-white/80">
+                {t('credentials.audit.subtitle', { defaultValue: 'See who viewed or changed passwords across your vault.' })}
+              </p>
+            </div>
+            <Button
+              id="credentials-audit-refresh"
+              variant="outline"
+              size="sm"
+              className="gap-2 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              onClick={() => void refresh()}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {t('credentials.screen.refresh')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div id="credentials-audit-summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AuditMetric
+          label={t('credentials.audit.summary.activity', { defaultValue: 'Activity in view' })}
+          value={summary.activity}
+          icon={<Activity className="h-5 w-5" />}
+          accentClassName="border-l-[rgb(var(--color-primary-500))]"
+          iconClassName="bg-primary-50 text-[rgb(var(--color-primary-600))]"
+        />
+        <AuditMetric
+          label={t('credentials.audit.summary.reveals', { defaultValue: 'Password reveals' })}
+          value={summary.reveals}
+          icon={<Eye className="h-5 w-5" />}
+          accentClassName="border-l-[rgb(var(--badge-warning-border))]"
+          iconClassName="bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))]"
+        />
+        <AuditMetric
+          label={t('credentials.audit.summary.changes', { defaultValue: 'Changes' })}
+          value={summary.changes}
+          icon={<PencilLine className="h-5 w-5" />}
+          accentClassName="border-l-[rgb(var(--badge-info-border))]"
+          iconClassName="bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))]"
+        />
+        <AuditMetric
+          label={t('credentials.audit.summary.actors', { defaultValue: 'People active' })}
+          value={summary.actors}
+          icon={<Users className="h-5 w-5" />}
+          accentClassName="border-l-[rgb(var(--badge-success-border))]"
+          iconClassName="bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]"
+        />
       </div>
 
       <Card id="credentials-audit-filters">
-        <CardContent className="!p-4 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+        <CardHeader className="!flex-row !items-center justify-between !space-y-0 border-b border-[rgb(var(--color-border-200))] p-5">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <SlidersHorizontal className="h-5 w-5 text-[rgb(var(--color-primary-600))]" />
+            <span>
               {t('credentials.audit.filtersTitle', { defaultValue: 'Filters' })}
             </span>
-            {activeFilters && (
-              <Button id="credentials-audit-clear-filters" variant="ghost" size="xs" onClick={clearFilters}>
-                {t('credentials.audit.clearFilters')}
-              </Button>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-[rgb(var(--color-text-700))]">
+          </CardTitle>
+          {activeFilters && (
+            <Button id="credentials-audit-clear-filters" variant="ghost" size="sm" onClick={clearFilters}>
+              {t('credentials.audit.clearFilters')}
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="!p-5 space-y-5">
+          <div>
+            <div className="mb-2 text-sm font-semibold text-[rgb(var(--color-text-700))]">
               {t('credentials.audit.filter.operation')}
-            </span>
-            <div id="credentials-audit-operation-filters" className="flex flex-wrap items-center gap-2">
+            </div>
+            <div id="credentials-audit-operation-filters" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {CREDENTIAL_AUDIT_OPERATION_FILTERS.map((filter) => {
                 const checked = filter.operations.every((operation) => operations.includes(operation));
                 return (
@@ -249,18 +358,18 @@ export function CredentialAuditScreen() {
                     checked={checked}
                     onChange={() => toggleOperationFilter(filter.operations)}
                     label={operationLabel(filter.id)}
-                    containerClassName={`cursor-pointer rounded-md border px-2 py-1 [&_label]:text-xs ${
+                    containerClassName={`min-h-10 cursor-pointer rounded-lg border px-3 py-2 [&_label]:text-sm ${
                       checked
                         ? 'border-[rgb(var(--color-primary-400))] bg-primary-50 dark:bg-primary-500/20'
-                        : 'border-[rgb(var(--color-border-200))]'
+                        : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))]'
                     }`}
                   />
                 );
               })}
             </div>
           </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1">
+          <div className="grid items-end gap-4 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(300px,2fr)]">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <span className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                 {t('credentials.audit.filter.actor')}
               </span>
@@ -276,7 +385,7 @@ export function CredentialAuditScreen() {
                 className="min-w-[180px]"
               />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <span className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                 {t('credentials.audit.filter.client')}
               </span>
@@ -285,11 +394,10 @@ export function CredentialAuditScreen() {
                 clients={clients}
                 selectedClientId={clientId}
                 onSelect={setClientId}
-                fitContent
                 placeholder={t('credentials.audit.filter.allClients')}
               />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <span className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                 {t('credentials.audit.filter.dateRange')}
               </span>
@@ -316,11 +424,8 @@ export function CredentialAuditScreen() {
 
       <Card id="credentials-audit-table">
         <CardHeader className="border-b border-[rgb(var(--color-border-200))] p-4">
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-lg">
             {t('credentials.audit.activityTitle', { defaultValue: 'Activity' })}
-            <Badge id="credentials-audit-count" variant="secondary">
-              {events?.length ?? 0}
-            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="!p-0">
@@ -335,33 +440,62 @@ export function CredentialAuditScreen() {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-[rgb(var(--color-background-100))]">
                   <TableRow>
-                    <TableHead>{t('credentials.audit.col.when')}</TableHead>
-                    <TableHead>{t('credentials.audit.col.who')}</TableHead>
-                    <TableHead>{t('credentials.audit.col.action')}</TableHead>
-                    <TableHead>{t('credentials.audit.col.credential')}</TableHead>
+                    <TableHead className="text-sm font-semibold uppercase tracking-wide">{t('credentials.audit.col.when')}</TableHead>
+                    <TableHead className="text-sm font-semibold uppercase tracking-wide">{t('credentials.audit.col.who')}</TableHead>
+                    <TableHead className="text-sm font-semibold uppercase tracking-wide">{t('credentials.audit.col.action')}</TableHead>
+                    <TableHead className="text-sm font-semibold uppercase tracking-wide">{t('credentials.audit.col.credential')}</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="[&_tr]:border-t [&_tr]:border-[rgb(var(--color-border-100))]">
                   {(events ?? []).map((event) => {
                     const when = new Date(event.timestamp);
-                    const whenLabel = Number.isNaN(when.getTime())
-                      ? event.timestamp
-                      : formatDate(when, { dateStyle: 'medium', timeStyle: 'medium' });
+                    const invalidDate = Number.isNaN(when.getTime());
+                    const actorName = actorLabel(event.actor);
                     return (
                       <TableRow key={event.auditId}>
-                        <TableCell className="whitespace-nowrap text-xs text-[rgb(var(--color-text-500))]">
-                          {whenLabel}
+                        <TableCell className="whitespace-nowrap">
+                          {invalidDate ? (
+                            <span className="text-sm text-[rgb(var(--color-text-500))]">{event.timestamp}</span>
+                          ) : (
+                            <div>
+                              <div className="text-base font-medium text-[rgb(var(--color-text-800))]">
+                                {formatDate(when, { dateStyle: 'medium' })}
+                              </div>
+                              <div className="mt-0.5 text-sm text-[rgb(var(--color-text-600))]">
+                                {formatDate(when, { timeStyle: 'short' })}
+                              </div>
+                            </div>
+                          )}
                         </TableCell>
-                        <TableCell className="text-sm text-[rgb(var(--color-text-900))]">
-                          {actorLabel(event.actor)}
+                        <TableCell>
+                          <div className="flex items-center gap-2.5">
+                            <UserAvatar
+                              userId={event.actor.userId ?? event.auditId}
+                              userName={actorName}
+                              avatarUrl={null}
+                              size="sm"
+                            />
+                            <span className="text-base font-medium text-[rgb(var(--color-text-900))]">
+                              {actorName}
+                            </span>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-sm text-[rgb(var(--color-text-700))]">
-                          {operationLabel(event.operation, event.entity?.type)}
+                        <TableCell>
+                          <Badge variant={OPERATION_BADGE_VARIANTS[event.operation]} size="lg" className="font-medium">
+                            {operationLabel(event.operation, event.entity?.type)}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-[rgb(var(--color-text-700))]">
-                          {credentialCell(event.credentialId, event.credentialName)}
+                        <TableCell>
+                          <div className="text-base font-medium text-[rgb(var(--color-text-900))]">
+                            {credentialCell(event.credentialId, event.credentialName)}
+                          </div>
+                          {event.clientName && (
+                            <div className="mt-0.5 text-sm text-[rgb(var(--color-text-600))]">
+                              {event.clientName}
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
