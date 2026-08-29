@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, lstatSync } from 'node:fs';
+import { readFileSync, readdirSync, lstatSync, realpathSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,6 +10,9 @@ const repoRoot = resolve(toolDir, '../..');
 const config = JSON.parse(readFileSync(join(toolDir, 'endpoints.json'), 'utf8'));
 const MS_PER_DAY = 86_400_000;
 const VERSIONS = ['v1.0', 'beta'];
+// A gate that can be widened without bound is not a gate; past this the pin has
+// to be refreshed or the guard deleted outright, not renegotiated in a diff.
+const MAX_ALLOWED_AGE_DAYS = 120;
 
 function attrs(tag) {
   return Object.fromEntries([...tag.matchAll(/([\w:.-]+)="([^"]*)"/g)].map((match) => [match[1], match[2]]));
@@ -395,6 +398,10 @@ export function checkFreshness(metadata, now = Date.now()) {
   const ageDays = metadataAgeDays(metadata, now);
   if (ageDays === null) return "metadata.pinnedAt is missing or is not an ISO-8601 date; run 'npm run guard:microsoft-graph-endpoints:update'";
   if (!(metadata.maxAgeDays > 0)) return 'metadata.maxAgeDays must be a positive number of days';
+  if (metadata.maxAgeDays > MAX_ALLOWED_AGE_DAYS) {
+    return `metadata.maxAgeDays is ${metadata.maxAgeDays}, above the ${MAX_ALLOWED_AGE_DAYS}-day cap; `
+      + 'repin the metadata instead of widening the gate';
+  }
   if (ageDays > metadata.maxAgeDays) {
     return `pinned Graph metadata is ${Math.floor(ageDays)} days old (limit ${metadata.maxAgeDays}); `
       + "run 'npm run guard:microsoft-graph-endpoints:update' to repin against current Microsoft metadata";
@@ -485,7 +492,19 @@ export function runValidation({ config: overrides = config, now = Date.now() } =
   };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Node resolves symlinks in import.meta.url but not in argv[1], so comparing
+// them unresolved makes an invocation through a symlinked path print nothing
+// and exit 0 — a silent green in the tool built to abolish silent greens.
+export function invokedAsScript(argv1 = process.argv[1], moduleUrl = import.meta.url) {
+  if (!argv1) return false;
+  try {
+    return realpathSync(argv1) === realpathSync(fileURLToPath(moduleUrl));
+  } catch {
+    return false;
+  }
+}
+
+if (invokedAsScript()) {
   try {
     const result = runValidation();
     console.log(`Microsoft Graph endpoint guard passed (${result.sourceCalls} source call sites, ${result.emulatorRoutes} emulator routes, `

@@ -26,15 +26,22 @@ const commit = await fetchUpstream(`https://api.github.com/repos/${slug}/commits
 const pinnedAt = commit.commit?.committer?.date ?? commit.commit?.author?.date;
 if (!commit.sha || !pinnedAt) throw new Error(`could not resolve ${slug}@${ref} to a commit with a date`);
 
+// Download and vet both documents before touching the tree: a fetch that fails
+// halfway would otherwise leave a checksum-mismatched working copy behind.
+const downloads = [];
 for (const version of ['v1.0', 'beta']) {
   const source = config.metadata.sources[version];
   const xml = await fetchUpstream(`https://raw.githubusercontent.com/${slug}/${commit.sha}/${source}`);
   const model = parseCsdl(xml.toString('utf8'));
   if (model.roots.size < 50) throw new Error(`${source} parsed to only ${model.roots.size} entity sets; refusing to pin a truncated download`);
   const compressed = gzipSync(xml, { level: 9 });
+  downloads.push({ version, compressed, roots: model.roots.size, sha256: createHash('sha256').update(compressed).digest('hex') });
+}
+
+for (const { version, compressed, roots, sha256 } of downloads) {
   writeFileSync(join(toolDir, config.metadata[version]), compressed);
-  config.metadata.sha256[version] = createHash('sha256').update(compressed).digest('hex');
-  console.log(`pinned ${version}: ${model.roots.size} entity sets, ${config.metadata.sha256[version]}`);
+  config.metadata.sha256[version] = sha256;
+  console.log(`pinned ${version}: ${roots} entity sets, ${sha256}`);
 }
 
 config.metadata.commit = commit.sha;

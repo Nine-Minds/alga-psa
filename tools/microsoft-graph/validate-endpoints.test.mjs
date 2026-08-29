@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import {
   assertPackagedLiteralsCurrent,
   auditCalls,
   checkFreshness,
   discoverPackagedEmulatorRoutes,
+  invokedAsScript,
   parseCsdl,
   runValidation,
   validatePath,
@@ -93,6 +95,30 @@ test('a pin older than maxAgeDays fails the guard rather than warning', () => {
 test('a missing or unparsable pin date fails the guard', () => {
   assert.match(checkFreshness({ maxAgeDays: 90 }), /pinnedAt is missing/);
   assert.match(checkFreshness({ pinnedAt: 'last tuesday', maxAgeDays: 90 }), /pinnedAt is missing/);
+});
+
+test('the age gate cannot be defused by raising maxAgeDays', () => {
+  const fresh = { pinnedAt: '2026-01-01T00:00:00Z' };
+  const now = Date.parse('2026-01-02T00:00:00Z');
+  assert.match(checkFreshness({ ...fresh, maxAgeDays: 3650 }, now), /above the 120-day cap/);
+  assert.throws(() => runValidation({ config: withMetadata({ ...fresh, maxAgeDays: 3650 }), now }), /above the 120-day cap/);
+  assert.ok(config.metadata.maxAgeDays <= 120);
+});
+
+test('the entry point still runs when invoked through a symlinked path', () => {
+  const target = join(here, 'validate-endpoints.mjs');
+  const targetUrl = pathToFileURL(target).href;
+  const scratch = mkdtempSync(join(tmpdir(), 'graph-guard-'));
+  try {
+    const link = join(scratch, 'validate-endpoints.mjs');
+    symlinkSync(target, link);
+    assert.equal(invokedAsScript(link, targetUrl), true);
+    assert.equal(invokedAsScript(target, targetUrl), true);
+    assert.equal(invokedAsScript(join(here, 'update-metadata.mjs'), targetUrl), false);
+    assert.equal(invokedAsScript(undefined, targetUrl), false);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 });
 
 test('suppressions excuse a single unresolvable call and nothing else', () => {
