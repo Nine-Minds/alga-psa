@@ -588,7 +588,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     const DELTA_WINDOW_PAST_MS = 90 * 24 * 60 * 60 * 1000;
     const DELTA_WINDOW_FUTURE_MS = 365 * 24 * 60 * 60 * 1000;
     const initialUrl =
-      `${this.getCalendarBasePath()}/calendarView/delta` +
+      '/me/calendarView/delta' +
       `?startDateTime=${encodeURIComponent(new Date(Date.now() - DELTA_WINDOW_PAST_MS).toISOString())}` +
       `&endDateTime=${encodeURIComponent(new Date(Date.now() + DELTA_WINDOW_FUTURE_MS).toISOString())}`;
     let requestUrl: string | undefined = deltaLink ?? initialUrl;

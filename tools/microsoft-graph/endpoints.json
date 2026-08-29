@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "repository": "https://github.com/microsoftgraph/msgraph-metadata",
+    "branch": "master",
+    "commit": "1c83b0a4b892c35080695906dc55c662736119ad",
+    "pinnedAt": "2026-08-27T19:24:47Z",
+    "maxAgeDays": 90,
+    "sources": {
+      "v1.0": "clean_v10_metadata/cleanMetadata.xml",
+      "beta": "clean_beta_metadata/cleanMetadata.xml"
+    },
+    "v1.0": "metadata/v1.0.xml.gz",
+    "beta": "metadata/beta.xml.gz",
+    "sha256": {
+      "v1.0": "4a2de7bb3a70b4f62b41902d1adcc3df52078da884084f36e2386331f90a479e",
+      "beta": "7a042bfa3beb0eeb435e7ee273fb9c23fdcbd259f335628477c3f8cf27340b49"
+    }
+  },
+  "suppressions": []
+}
