@@ -83,7 +83,7 @@ interface AuditMetricProps {
 
 function AuditMetric({ label, value, icon, accentClassName, iconClassName }: AuditMetricProps) {
   return (
-    <Card className={`overflow-hidden border-l-4 ${accentClassName}`}>
+    <Card className={`overflow-hidden border-2 ${accentClassName}`}>
       <CardContent className="!p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -302,28 +302,28 @@ export function CredentialAuditScreen() {
           label={t('credentials.audit.summary.activity', { defaultValue: 'Activity in view' })}
           value={summary.activity}
           icon={<Activity className="h-5 w-5" />}
-          accentClassName="border-l-[rgb(var(--color-primary-500))]"
+          accentClassName="border-[rgb(var(--color-primary-500))]"
           iconClassName="bg-primary-50 text-[rgb(var(--color-primary-600))]"
         />
         <AuditMetric
           label={t('credentials.audit.summary.reveals', { defaultValue: 'Password reveals' })}
           value={summary.reveals}
           icon={<Eye className="h-5 w-5" />}
-          accentClassName="border-l-[rgb(var(--badge-warning-border))]"
+          accentClassName="border-[rgb(var(--badge-warning-border))]"
           iconClassName="bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))]"
         />
         <AuditMetric
           label={t('credentials.audit.summary.changes', { defaultValue: 'Changes' })}
           value={summary.changes}
           icon={<PencilLine className="h-5 w-5" />}
-          accentClassName="border-l-[rgb(var(--badge-info-border))]"
+          accentClassName="border-[rgb(var(--badge-info-border))]"
           iconClassName="bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))]"
         />
         <AuditMetric
           label={t('credentials.audit.summary.actors', { defaultValue: 'People active' })}
           value={summary.actors}
           icon={<Users className="h-5 w-5" />}
-          accentClassName="border-l-[rgb(var(--badge-success-border))]"
+          accentClassName="border-[rgb(var(--badge-success-border))]"
           iconClassName="bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]"
         />
       </div>
