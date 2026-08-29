@@ -22,10 +22,13 @@ jobs:
         with:
           node-version: 22
 
-      # A failing repin still opens the pull request. The bump branch matches the
-      # endpoint guard's push trigger, so the guard runs on the pushed commit and
-      # a Microsoft-side removal lands as a red check on a real pull request. The
-      # final step then fails this run too, so the failure is never swallowed.
+      # A failing repin still opens the pull request, and the final step fails
+      # this run, so a Microsoft-side removal is never swallowed. That failed run
+      # is the signal to rely on: because the branch and the pull request are
+      # both created with GITHUB_TOKEN, the push starts no workflow at all and
+      # the bump PR's guard run sits in "Approve workflows to run" until someone
+      # with write access starts it. Swap in a PAT if that check must be
+      # unattended.
       - name: Repin Microsoft Graph metadata
         id: repin
         continue-on-error: true

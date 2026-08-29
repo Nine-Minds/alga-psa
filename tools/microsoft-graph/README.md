@@ -38,15 +38,17 @@ the mapping to update.
 
 `.github/workflows/microsoft-graph-metadata-refresh.yml` repins weekly and opens
 a bump pull request. A repin that fails validation still opens that pull request
-*and* fails the scheduled run, so an upstream removal produces two signals
-rather than a quietly green job.
+*and* fails the scheduled run, so an upstream removal surfaces as a red job with
+the offending bump branch attached, never as a quietly green one.
 
-Pull requests opened with `GITHUB_TOKEN` do not trigger `pull_request`
-workflows, so the bump branch pattern `chore/microsoft-graph-metadata-*` is in
-the endpoint guard's **push** trigger; that is what puts a real guard result on
-the bump PR. The job also needs *Allow GitHub Actions to create and approve pull
-requests* (Settings > Actions > General) — without it `gh pr create` fails, the
-run goes red, and the pushed branch is deleted so the next run retries cleanly.
+Both the branch push and `gh pr create` use `GITHUB_TOKEN`, so the push starts
+no workflow run at all, and the guard run on the bump pull request itself opens
+in the *Approve workflows to run* state until someone with write access starts
+it. The red scheduled run is the signal that needs no click; give the job a PAT
+if the pull request's own check has to run unattended. The job also needs *Allow
+GitHub Actions to create and approve pull requests* (Settings > Actions >
+General) — without it `gh pr create` fails, the run goes red, and the pushed
+branch is deleted so the next run retries cleanly.
 
 The age gate is the backstop for that job dying silently.
 

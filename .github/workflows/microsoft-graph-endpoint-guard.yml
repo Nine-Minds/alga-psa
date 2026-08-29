@@ -12,12 +12,8 @@ on:
       - 'tools/microsoft-graph/**'
       - 'package.json'
   push:
-    # The weekly repin branch is included so the bump pull request carries a real
-    # guard result: pull requests opened by GITHUB_TOKEN do not trigger
-    # `pull_request` workflows, so without this the bump PR would have no checks.
     branches:
       - main
-      - 'chore/microsoft-graph-metadata-*'
     paths:
       - '.github/workflows/microsoft-graph-endpoint-guard.yml'
       - 'ee/**'
