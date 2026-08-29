@@ -408,15 +408,18 @@ export function useFormatters() {
       const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
 
       const diff = dateObj.getTime() - Date.now();
-      const seconds = Math.floor(diff / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
+      const absoluteDiff = Math.abs(diff);
 
-      if (Math.abs(days) > 0) return rtf.format(days, 'day');
-      if (Math.abs(hours) > 0) return rtf.format(hours, 'hour');
-      if (Math.abs(minutes) > 0) return rtf.format(minutes, 'minute');
-      return rtf.format(seconds, 'second');
+      if (absoluteDiff >= 24 * 60 * 60 * 1000) {
+        return rtf.format(Math.trunc(diff / (24 * 60 * 60 * 1000)), 'day');
+      }
+      if (absoluteDiff >= 60 * 60 * 1000) {
+        return rtf.format(Math.trunc(diff / (60 * 60 * 1000)), 'hour');
+      }
+      if (absoluteDiff >= 60 * 1000) {
+        return rtf.format(Math.trunc(diff / (60 * 1000)), 'minute');
+      }
+      return rtf.format(Math.trunc(diff / 1000), 'second');
     },
   }), [locale]);
 }

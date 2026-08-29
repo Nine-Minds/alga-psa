@@ -16,14 +16,16 @@ export interface CredentialsContext {
   huduConnected: boolean;
   state: 'ok' | 'tier' | 'forbidden' | 'unavailable';
   flagIrrelevantHere: true;
+  canAudit: boolean;
 }
 
 export async function getCredentialsContext(..._args: unknown[]): Promise<CredentialsContext> {
-  return { tierOk: false, huduConnected: false, state: 'unavailable', flagIrrelevantHere: true };
+  return { tierOk: false, huduConnected: false, state: 'unavailable', flagIrrelevantHere: true, canAudit: false };
 }
 
 export async function listCredentials(..._args: unknown[]): Promise<never> { return unavailable(); }
 export async function getCredential(..._args: unknown[]): Promise<never> { return unavailable(); }
+export async function getCredentialAuditEvents(..._args: unknown[]): Promise<never> { return unavailable(); }
 export async function createCredential(..._args: unknown[]): Promise<never> { return unavailable(); }
 export async function updateCredential(..._args: unknown[]): Promise<never> { return unavailable(); }
 export async function deleteCredential(..._args: unknown[]): Promise<never> { return unavailable(); }
