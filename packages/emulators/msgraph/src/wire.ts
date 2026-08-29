@@ -160,6 +160,26 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   const mailboxUser = { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' };
   graph.get('/me', (_req, res) => res.json(mailboxUser));
 
+  // Graph simulator only: capture the send request for adapter smoke tests.
+  // It does not model Entra consent, Exchange Send As, or real mail delivery.
+  const captureSendMail = (req: Request, res: Response, mailbox: string | null) => {
+    const rawPath = req.originalUrl.split('?')[0];
+    const rawMailbox = rawPath.match(/^\/v1\.0\/users\/([^/]+)\/sendMail$/)?.[1] ?? null;
+    core.recordSendMail({
+      route: rawPath,
+      mailbox,
+      encodedMailbox: rawMailbox,
+      payload: req.body ?? {},
+      contentType: req.get('content-type') ?? null,
+    });
+    res.status(202).end();
+  };
+
+  graph.post('/me/sendMail', (req, res) => captureSendMail(req, res, null));
+  graph.post('/users/:mailbox/sendMail', (req, res) =>
+    captureSendMail(req, res, decodePath(String(req.params.mailbox)))
+  );
+
   // Entra self-tenant smoke surface. The production adapter deliberately uses
   // these standard Graph routes when ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=true,
   // avoiding a dependency on a real CSP/GDAP relationship during local tests.

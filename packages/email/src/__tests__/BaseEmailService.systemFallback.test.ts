@@ -1,4 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { BaseEmailService, type BaseEmailParams } from '../BaseEmailService';
 import type { IEmailProvider } from '@alga-psa/types';
 
@@ -22,8 +27,8 @@ class TestEmailService extends BaseEmailService {
   }
 }
 
-describe('BaseEmailService system fallback identity', () => {
-  it('uses the forced verified From and tenant Reply-To instead of caller-supplied identities', async () => {
+describe('BaseEmailService system-Resend fallback smoke', () => {
+  it('uses the configured verified EMAIL_FROM envelope From, preserves tenant display name, and sends replies to the tenant address', async () => {
     const sendEmail = vi.fn(async () => ({ success: true, messageId: 'message-1' }));
     const provider = { providerId: 'system', providerType: 'resend', sendEmail } as unknown as IEmailProvider;
     const service = new TestEmailService(provider);

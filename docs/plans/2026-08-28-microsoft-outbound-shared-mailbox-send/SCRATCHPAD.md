@@ -95,6 +95,7 @@ The stored `microsoft_email_provider_config.tenant_id` is `951536bd-...` (the Ni
 
 ## Draft implementation verification
 
-- Focused adapter tests exercise the `/me/sendMail` and `/users/{mailbox}/sendMail` selection directly. The Graph emulator has no `sendMail` route, so this is not a real Microsoft tenant send.
+- The maintained `packages/emulators/msgraph` now captures `POST /v1.0/me/sendMail` and `POST /v1.0/users/{encoded-mailbox}/sendMail` in its `send-mails` state view. Adapter smoke coverage uses that simulator to assert the actual route and payload, but it cannot prove delegated `Mail.Send.Shared`, a refreshed grant, Exchange Send As, or delivery by a real Microsoft tenant.
+- Focused adapter tests additionally exercise the `/me/sendMail` and `/users/{mailbox}/sendMail` selection directly. The Graph simulator is not a real Microsoft tenant send.
 - The system fallback rejects a missing or malformed configured sender rather than passing an invalid tenant identity to the shared provider. A configured system sender remains an operator-managed verified-domain requirement; Resend verification cannot be inferred locally.
 - Existing OAuth grants do not gain `Mail.Send.Shared` automatically. Shared-mailbox tenants must reconnect to receive it, then separately receive Exchange Send As permission.

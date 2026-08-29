@@ -7,7 +7,7 @@
   },
   {
     "id": "T002",
-    "description": "sendMail posts to /me/sendMail when the configured mailbox equals the authenticated user, and to /users/{mailbox}/sendMail when it does not, including a case- and whitespace-differing match and an unresolved authenticated user.",
+    "description": "Graph-simulator smoke: sendMail posts to /me/sendMail when the configured mailbox equals the authenticated user, and to /users/{encoded-mailbox}/sendMail when it does not, including the expected send payload; focused adapter coverage retains the case/whitespace and unresolved-user paths. This is not a real Microsoft tenant send.",
     "implemented": true,
     "featureIds": ["F004", "F005", "F006", "F007", "F008"]
   },
@@ -25,7 +25,7 @@
   },
   {
     "id": "T005",
-    "description": "A system-provider send for a tenant with a custom sending domain uses a verified system from-address, preserves the tenant display name, and sets Reply-To to the tenant address.",
+    "description": "System-Resend fallback smoke: a tenant with a custom sending domain uses the configured verified EMAIL_FROM envelope From, preserves the tenant display name, and sets Reply-To to the tenant address.",
     "implemented": true,
     "featureIds": ["F014", "F015", "F016"]
   },
