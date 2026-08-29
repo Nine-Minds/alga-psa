@@ -408,6 +408,137 @@ describe('credential audit reader — scope + paging + enrichment', () => {
     expect(bHistory.events).toHaveLength(0);
   });
 
+  it('keeps a deleted native credential visible to authorized viewers and hidden from others', async () => {
+    const source = new NativeCredentialSource();
+    const ctxA = { tenant: tenantId, userId: userA, user: userFor(userA) };
+
+    // Restricted credential granted to user A only, on client X — outside user
+    // B's bundle (selected_clients = [clientY]).
+    const restricted = await source.create(ctxA, {
+      clientId: clientX,
+      name: 'Delete Me',
+      password: 'delete-secret',
+    });
+    await source.setRestriction(ctxA, restricted.id, {
+      isRestricted: true,
+      grants: [{ subjectType: 'user', subjectId: userA }],
+    });
+    await source.reveal(ctxA, restricted.id);
+    await source.remove(ctxA, restricted.id);
+
+    // The value-free delete snapshot keeps the history visible to its owner.
+    const aPage = await callAudit(userFor(userA), { tenant: tenantId }, {});
+    const aIds = aPage.events.map((event) => event.credentialId);
+    expect(aIds).toContain(restricted.id);
+    expect(
+      aPage.events
+        .filter((event) => event.credentialId === restricted.id)
+        .some((event) => event.operation === 'credential_deleted')
+    ).toBe(true);
+
+    // User B (bundle narrows credential:read to client Y) must not see the
+    // deleted credential's activity.
+    const bPage = await callAudit(userFor(userB), { tenant: tenantId }, {});
+    expect(bPage.events.map((event) => event.credentialId)).not.toContain(restricted.id);
+  });
+
+  it('hides deleted native credentials whose delete rows lack a safe snapshot (legacy rows)', async () => {
+    const source = new NativeCredentialSource();
+    const ctxA = { tenant: tenantId, userId: userA, user: userFor(userA) };
+
+    // A properly-deleted credential keeps its history via the snapshot.
+    const open = await source.create(ctxA, { clientId: clientY, name: 'Snapshot Delete', password: 'x' });
+    await source.remove(ctxA, open.id);
+
+    // A legacy deleted credential: audit rows exist but the delete row carries
+    // no credential_scope, so there is no safe authorization source — it must
+    // stay hidden even for a user who could read it while it existed.
+    const legacyId = randomUUID();
+    await writeCredentialAudit(db, tenantId, 'credential_created', {
+      userId: userA,
+      credentialId: legacyId,
+      clientId: clientY,
+    });
+    await writeCredentialAudit(db, tenantId, 'credential_deleted', {
+      userId: userA,
+      credentialId: legacyId,
+      clientId: clientY,
+    });
+
+    const page = await callAudit(userFor(userA), { tenant: tenantId }, {});
+    const ids = page.events.map((event) => event.credentialId);
+    expect(ids).toContain(open.id);
+    expect(ids).not.toContain(legacyId);
+  });
+
+  it('hides deleted credentials whose snapshot is partial or malformed (strict validation)', async () => {
+    const source = new NativeCredentialSource();
+    const ctxA = { tenant: tenantId, userId: userA, user: userFor(userA) };
+
+    // A properly-deleted credential keeps its history via the full snapshot.
+    const good = await source.create(ctxA, { clientId: clientY, name: 'Good Snapshot', password: 'x' });
+    await source.remove(ctxA, good.id);
+
+    // Partial: is_restricted missing. Coercing it to `false` would turn a
+    // malformed restricted snapshot into an unrestricted credential and leak
+    // its history — the reader must treat it as unsafe and hide it.
+    const partialId = randomUUID();
+    await writeCredentialAudit(db, tenantId, 'credential_created', {
+      userId: userA,
+      credentialId: partialId,
+      clientId: clientY,
+    });
+    await writeCredentialAudit(db, tenantId, 'credential_deleted', {
+      userId: userA,
+      credentialId: partialId,
+      clientId: clientY,
+    }, {
+      credential_scope: { created_by: userA, client_id: clientY, grants: [] },
+    });
+
+    // Malformed: is_restricted is a string and created_by is missing.
+    const malformedId = randomUUID();
+    await writeCredentialAudit(db, tenantId, 'credential_created', {
+      userId: userA,
+      credentialId: malformedId,
+      clientId: clientY,
+    });
+    await writeCredentialAudit(db, tenantId, 'credential_deleted', {
+      userId: userA,
+      credentialId: malformedId,
+      clientId: clientY,
+    }, {
+      credential_scope: { is_restricted: 'false', created_by: '', client_id: clientY, grants: [] },
+    });
+
+    // Malformed grant: a user subject with an empty subject id.
+    const badGrantId = randomUUID();
+    await writeCredentialAudit(db, tenantId, 'credential_created', {
+      userId: userA,
+      credentialId: badGrantId,
+      clientId: clientY,
+    });
+    await writeCredentialAudit(db, tenantId, 'credential_deleted', {
+      userId: userA,
+      credentialId: badGrantId,
+      clientId: clientY,
+    }, {
+      credential_scope: {
+        is_restricted: true,
+        created_by: userA,
+        client_id: clientY,
+        grants: [{ subject_type: 'user', subject_id: '' }],
+      },
+    });
+
+    const page = await callAudit(userFor(userA), { tenant: tenantId }, {});
+    const ids = page.events.map((event) => event.credentialId);
+    expect(ids).toContain(good.id);
+    expect(ids).not.toContain(partialId);
+    expect(ids).not.toContain(malformedId);
+    expect(ids).not.toContain(badGrantId);
+  });
+
   it('filters by operation, actor, client, and date range; keyset pagination is stable', async () => {
     const { restrictedId } = await fixtureCredentials();
 

@@ -241,6 +241,75 @@ function parseHuduCredentialId(id: string): { companyId: string; passwordId: str
 }
 
 /**
+ * Value-free authorization snapshot captured at delete time so the audit
+ * reader can keep authorizing a native credential after its row is gone. Only
+ * subjects and flags — never values. A deleted credential whose delete row
+ * lacks a safe snapshot stays hidden (legacy rows).
+ */
+interface DeletedCredentialSnapshot {
+  is_restricted: boolean;
+  created_by: string;
+  client_id: string;
+  grants: CredentialGrantRow[];
+}
+
+async function loadDeletedCredentialSnapshots(
+  trx: Knex.Transaction,
+  tenant: string
+): Promise<Map<string, DeletedCredentialSnapshot>> {
+  const rows = await tenantDb(trx, tenant)
+    .table<{ record_id: string; details: Record<string, unknown> | null }>('audit_logs')
+    .where('table_name', 'credentials')
+    .where('operation', 'credential_deleted')
+    .orderBy('timestamp', 'desc')
+    .orderBy('audit_id', 'desc')
+    .select('record_id', 'details');
+  const map = new Map<string, DeletedCredentialSnapshot>();
+  for (const row of rows) {
+    if (map.has(row.record_id)) continue;
+    const scope = (row.details as { credential_scope?: unknown } | null)?.credential_scope;
+    if (!scope || typeof scope !== 'object') continue;
+    const raw = scope as Record<string, unknown>;
+
+    // Strict validation — a malformed snapshot must NOT weaken the scope. In
+    // particular `is_restricted` must be an explicit boolean: coercing a
+    // missing/string value to `false` would turn a malformed restricted
+    // snapshot into an unrestricted credential and leak its history. Every
+    // field must be present and well-typed, and every grant entry must carry a
+    // valid subject type and a nonempty subject id; anything else is treated
+    // like a legacy row with no safe snapshot and stays hidden.
+    if (typeof raw.is_restricted !== 'boolean') continue;
+    if (typeof raw.created_by !== 'string' || raw.created_by.length === 0) continue;
+    if (typeof raw.client_id !== 'string' || raw.client_id.length === 0) continue;
+    if (!Array.isArray(raw.grants)) continue;
+    const grants: CredentialGrantRow[] = [];
+    let grantsValid = true;
+    for (const grant of raw.grants) {
+      if (
+        !grant
+        || typeof grant !== 'object'
+        || (grant.subject_type !== 'user' && grant.subject_type !== 'team')
+        || typeof grant.subject_id !== 'string'
+        || grant.subject_id.length === 0
+      ) {
+        grantsValid = false;
+        break;
+      }
+      grants.push({ subject_type: grant.subject_type, subject_id: grant.subject_id });
+    }
+    if (!grantsValid) continue;
+
+    map.set(row.record_id, {
+      is_restricted: raw.is_restricted,
+      created_by: raw.created_by,
+      client_id: raw.client_id,
+      grants,
+    });
+  }
+  return map;
+}
+
+/**
  * Run the JS authorization kernel over the live credential set (the fallback
  * used when a bundle rule is not representable in SQL). Produces the explicit
  * allowed-id list the list screen would show.
@@ -304,6 +373,24 @@ export const getCredentialAuditEvents = withAuth(
         ? null
         : await loadAuthorizedLiveCredentialIds(trx, authContext);
 
+      // Deleted native credentials no longer exist in the live table, so the
+      // live scope alone would silently drop their history. The delete writer
+      // captures a value-free authorization snapshot; authorize each deleted
+      // credential through the same kernel (restriction, creator/client and
+      // grant subjects). Legacy delete rows without a safe snapshot stay
+      // hidden — the scope is never weaker than the live one.
+      const deletedCredentialScopes = await loadDeletedCredentialSnapshots(trx, tenant);
+      const deletedNativeIds: string[] = [];
+      for (const [credentialId, snapshot] of deletedCredentialScopes) {
+        const ok = await authorizeCredentialRecord(trx, authContext, {
+          credential_id: credentialId,
+          created_by: snapshot.created_by,
+          client_id: snapshot.client_id,
+          is_restricted: snapshot.is_restricted,
+        }, snapshot.grants);
+        if (ok) deletedNativeIds.push(credentialId);
+      }
+
       // Hudu client scope: the viewer may see a client's Hudu rows only when
       // the kernel's bundle narrowing admits that client (Hudu rows are not
       // per-item restricted).
@@ -335,13 +422,18 @@ export const getCredentialAuditEvents = withAuth(
       q.where(function (scopeWhere) {
         scopeWhere.where(function (native) {
           native.where('table_name', 'credentials');
-          if (liveNativeSubquery !== null) {
-            native.whereIn('record_id', liveNativeSubquery);
-          } else {
-            const live = liveNativeIds ?? [];
-            if (live.length === 0) native.whereRaw('1 = 0');
-            else native.whereIn('record_id', live);
-          }
+          native.where(function (nativeIds) {
+            if (liveNativeSubquery !== null) {
+              nativeIds.whereIn('record_id', liveNativeSubquery);
+            } else {
+              const live = liveNativeIds ?? [];
+              if (live.length === 0) nativeIds.whereRaw('1 = 0');
+              else nativeIds.whereIn('record_id', live);
+            }
+            if (deletedNativeIds.length > 0) {
+              nativeIds.orWhereIn('record_id', deletedNativeIds);
+            }
+          });
         });
         scopeWhere.orWhere(function (huduCreds) {
           huduCreds.where('table_name', 'credentials');
