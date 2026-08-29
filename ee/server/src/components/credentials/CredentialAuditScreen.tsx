@@ -103,6 +103,25 @@ function AuditMetric({ label, value, icon, accentClassName, iconClassName }: Aud
   );
 }
 
+/**
+ * The date-range picker yields calendar days (`YYYY-MM-DD`) the viewer chose in
+ * their own timezone. The audit filter compares against UTC timestamps, so we
+ * must anchor each day to the START/END of that *local* day and let
+ * `toISOString()` shift it into UTC — not append a literal `Z` boundary, which
+ * would treat the local calendar day as if it were a UTC day and leak (or drop)
+ * rows by the local UTC offset (e.g. Aug 28 evening rows appearing under an
+ * Aug 29 filter in America/New_York).
+ */
+function localDayBoundaryIso(day: string, edge: 'start' | 'end'): string | undefined {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) return undefined;
+  const [, year, month, dayOfMonth] = match;
+  const date = edge === 'start'
+    ? new Date(Number(year), Number(month) - 1, Number(dayOfMonth), 0, 0, 0, 0)
+    : new Date(Number(year), Number(month) - 1, Number(dayOfMonth), 23, 59, 59, 999);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
 function hasActiveFilters(filters: CredentialAuditFilterState): boolean {
   return Boolean(
     (filters.operations && filters.operations.length > 0)
@@ -133,8 +152,8 @@ export function CredentialAuditScreen() {
       operations,
       actorUserId: actorUserId || undefined,
       clientId: clientId ?? undefined,
-      from: from ? `${from}T00:00:00.000Z` : undefined,
-      to: to ? `${to}T23:59:59.999Z` : undefined,
+      from: from ? localDayBoundaryIso(from, 'start') : undefined,
+      to: to ? localDayBoundaryIso(to, 'end') : undefined,
     }),
     [operations, actorUserId, clientId, from, to]
   );
