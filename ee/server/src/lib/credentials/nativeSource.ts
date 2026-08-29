@@ -560,11 +560,25 @@ export class NativeCredentialSource implements CredentialSource {
       const existing = await fetchCredentialById(trx, ctx.tenant, id);
       if (!existing) notFound();
       if (!(await isCredentialAuthorizedForUser(trx, ctx, existing))) notFound();
+      const grants = await fetchGrantsForCredential(trx, ctx.tenant, id);
       await tenantDb(trx, ctx.tenant).table('credentials').where('credential_id', id).del();
       await writeCredentialAudit(trx, ctx.tenant, 'credential_deleted', {
         userId: ctx.userId,
         credentialId: id,
         clientId: existing.client_id,
+      }, {
+        // Value-free authorization snapshot so the audit reader can keep
+        // showing this credential's history after the row is gone — and hide
+        // it from viewers who could not have read it while it existed.
+        credential_scope: {
+          is_restricted: existing.is_restricted === true,
+          created_by: existing.created_by,
+          client_id: existing.client_id,
+          grants: grants.map((grant) => ({
+            subject_type: grant.subject_type,
+            subject_id: grant.subject_id,
+          })),
+        },
       });
     });
   }

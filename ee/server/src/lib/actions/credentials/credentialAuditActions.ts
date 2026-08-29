@@ -39,6 +39,7 @@ import {
   authorizeCredentialRecord,
   compileCredentialReadScopeSql,
   createCredentialAuthorizationContext,
+  type CredentialAuthorizationContext,
   type CredentialRow,
   type CredentialGrantRow,
 } from '../../credentials/credentialAuthorization';
@@ -227,6 +228,117 @@ async function collectCandidateHuduClientIds(
   return Array.from(ids);
 }
 
+/**
+ * Parse a Hudu synthetic credential id (`hudu:<companyId>:<passwordId>`) back
+ * into its parts. Hudu password reveals store the client id in `record_id` and
+ * the company/password ids only in `details`, so a per-credential History must
+ * match reveal rows through these raw ids rather than `record_id`.
+ */
+function parseHuduCredentialId(id: string): { companyId: string; passwordId: string } | null {
+  const parts = id.split(':');
+  if (parts.length !== 3 || parts[0] !== 'hudu' || parts[1] === '' || parts[2] === '') return null;
+  return { companyId: parts[1], passwordId: parts[2] };
+}
+
+/**
+ * Value-free authorization snapshot captured at delete time so the audit
+ * reader can keep authorizing a native credential after its row is gone. Only
+ * subjects and flags — never values. A deleted credential whose delete row
+ * lacks a safe snapshot stays hidden (legacy rows).
+ */
+interface DeletedCredentialSnapshot {
+  is_restricted: boolean;
+  created_by: string;
+  client_id: string;
+  grants: CredentialGrantRow[];
+}
+
+async function loadDeletedCredentialSnapshots(
+  trx: Knex.Transaction,
+  tenant: string
+): Promise<Map<string, DeletedCredentialSnapshot>> {
+  const rows = await tenantDb(trx, tenant)
+    .table<{ record_id: string; details: Record<string, unknown> | null }>('audit_logs')
+    .where('table_name', 'credentials')
+    .where('operation', 'credential_deleted')
+    .orderBy('timestamp', 'desc')
+    .orderBy('audit_id', 'desc')
+    .select('record_id', 'details');
+  const map = new Map<string, DeletedCredentialSnapshot>();
+  for (const row of rows) {
+    if (map.has(row.record_id)) continue;
+    const scope = (row.details as { credential_scope?: unknown } | null)?.credential_scope;
+    if (!scope || typeof scope !== 'object') continue;
+    const raw = scope as Record<string, unknown>;
+
+    // Strict validation — a malformed snapshot must NOT weaken the scope. In
+    // particular `is_restricted` must be an explicit boolean: coercing a
+    // missing/string value to `false` would turn a malformed restricted
+    // snapshot into an unrestricted credential and leak its history. Every
+    // field must be present and well-typed, and every grant entry must carry a
+    // valid subject type and a nonempty subject id; anything else is treated
+    // like a legacy row with no safe snapshot and stays hidden.
+    if (typeof raw.is_restricted !== 'boolean') continue;
+    if (typeof raw.created_by !== 'string' || raw.created_by.length === 0) continue;
+    if (typeof raw.client_id !== 'string' || raw.client_id.length === 0) continue;
+    if (!Array.isArray(raw.grants)) continue;
+    const grants: CredentialGrantRow[] = [];
+    let grantsValid = true;
+    for (const grant of raw.grants) {
+      if (
+        !grant
+        || typeof grant !== 'object'
+        || (grant.subject_type !== 'user' && grant.subject_type !== 'team')
+        || typeof grant.subject_id !== 'string'
+        || grant.subject_id.length === 0
+      ) {
+        grantsValid = false;
+        break;
+      }
+      grants.push({ subject_type: grant.subject_type, subject_id: grant.subject_id });
+    }
+    if (!grantsValid) continue;
+
+    map.set(row.record_id, {
+      is_restricted: raw.is_restricted,
+      created_by: raw.created_by,
+      client_id: raw.client_id,
+      grants,
+    });
+  }
+  return map;
+}
+
+/**
+ * Run the JS authorization kernel over the live credential set (the fallback
+ * used when a bundle rule is not representable in SQL). Produces the explicit
+ * allowed-id list the list screen would show.
+ */
+async function loadAuthorizedLiveCredentialIds(
+  trx: Knex.Transaction,
+  authContext: CredentialAuthorizationContext
+): Promise<string[]> {
+  const rows = await tenantDb(trx, authContext.subject.tenant)
+    .table<Pick<CredentialRow, 'credential_id' | 'created_by' | 'client_id' | 'is_restricted'>>('credentials')
+    .select('credential_id', 'created_by', 'client_id', 'is_restricted');
+  const grantsByCredential = await loadGrants(
+    trx,
+    authContext.subject.tenant,
+    rows.map((row) => row.credential_id)
+  );
+  const allowedIds: string[] = [];
+  for (const row of rows) {
+    const ok = await authorizeCredentialRecord(
+      trx,
+      authContext,
+      row,
+      grantsByCredential.get(row.credential_id) ?? []
+    );
+    if (ok) allowedIds.push(row.credential_id);
+  }
+  return allowedIds;
+}
+
 export const getCredentialAuditEvents = withAuth(
   async (user: IUserWithRoles, context: { tenant: string }, input: CredentialAuditFilter = {}): Promise<CredentialAuditPage> => {
     const { tenant } = context;
@@ -251,33 +363,32 @@ export const getCredentialAuditEvents = withAuth(
       // performance), producing an explicit allowed-id list.
       const scopeQuery = tenantDb(trx, tenant).scoped('credentials as cr');
       const scope = compileCredentialReadScopeSql(scopeQuery, authContext);
-      let nativeAllowedIds: string[] | null = null;
-      let nativeSubquery: Knex.QueryBuilder | null = null;
-      if (scope.supported) {
+      const liveNativeSubquery = scope.supported
         // `audit_logs.record_id` is varchar while `credentials.credential_id`
         // is uuid; cast the subquery column to text so the comparison holds
         // without casting hudu-prefixed record ids (which would throw).
-        nativeSubquery = scopeQuery.builder.clone().select(trx.raw('cr.credential_id::text as credential_id'));
-      } else {
-        const rows = await tenantDb(trx, tenant)
-          .table<Pick<CredentialRow, 'credential_id' | 'created_by' | 'client_id' | 'is_restricted'>>('credentials')
-          .select('credential_id', 'created_by', 'client_id', 'is_restricted');
-        const grantsByCredential = await loadGrants(
-          trx,
-          tenant,
-          rows.map((row) => row.credential_id)
-        );
-        const allowedIds: string[] = [];
-        for (const row of rows) {
-          const ok = await authorizeCredentialRecord(
-            trx,
-            authContext,
-            row,
-            grantsByCredential.get(row.credential_id) ?? []
-          );
-          if (ok) allowedIds.push(row.credential_id);
-        }
-        nativeAllowedIds = allowedIds;
+        ? scopeQuery.builder.clone().select(trx.raw('cr.credential_id::text as credential_id'))
+        : null;
+      const liveNativeIds = scope.supported
+        ? null
+        : await loadAuthorizedLiveCredentialIds(trx, authContext);
+
+      // Deleted native credentials no longer exist in the live table, so the
+      // live scope alone would silently drop their history. The delete writer
+      // captures a value-free authorization snapshot; authorize each deleted
+      // credential through the same kernel (restriction, creator/client and
+      // grant subjects). Legacy delete rows without a safe snapshot stay
+      // hidden — the scope is never weaker than the live one.
+      const deletedCredentialScopes = await loadDeletedCredentialSnapshots(trx, tenant);
+      const deletedNativeIds: string[] = [];
+      for (const [credentialId, snapshot] of deletedCredentialScopes) {
+        const ok = await authorizeCredentialRecord(trx, authContext, {
+          credential_id: credentialId,
+          created_by: snapshot.created_by,
+          client_id: snapshot.client_id,
+          is_restricted: snapshot.is_restricted,
+        }, snapshot.grants);
+        if (ok) deletedNativeIds.push(credentialId);
       }
 
       // Hudu client scope: the viewer may see a client's Hudu rows only when
@@ -311,12 +422,18 @@ export const getCredentialAuditEvents = withAuth(
       q.where(function (scopeWhere) {
         scopeWhere.where(function (native) {
           native.where('table_name', 'credentials');
-          if (nativeAllowedIds !== null) {
-            if (nativeAllowedIds.length === 0) native.whereRaw('1 = 0');
-            else native.whereIn('record_id', nativeAllowedIds);
-          } else {
-            native.whereIn('record_id', nativeSubquery!);
-          }
+          native.where(function (nativeIds) {
+            if (liveNativeSubquery !== null) {
+              nativeIds.whereIn('record_id', liveNativeSubquery);
+            } else {
+              const live = liveNativeIds ?? [];
+              if (live.length === 0) nativeIds.whereRaw('1 = 0');
+              else nativeIds.whereIn('record_id', live);
+            }
+            if (deletedNativeIds.length > 0) {
+              nativeIds.orWhereIn('record_id', deletedNativeIds);
+            }
+          });
         });
         scopeWhere.orWhere(function (huduCreds) {
           huduCreds.where('table_name', 'credentials');
@@ -343,7 +460,22 @@ export const getCredentialAuditEvents = withAuth(
 
       // Filters (all ANDed; credentialId is still read-scoped above).
       if (input.credentialId) {
-        q.where('record_id', input.credentialId);
+        // For a native credential `record_id` matches directly. A Hudu
+        // synthetic id (`hudu:<company>:<password>`) must ALSO match the
+        // `hudu_password_reveal` rows, which store the client id in
+        // `record_id` and the company/password ids only in `details`.
+        const huduRef = parseHuduCredentialId(input.credentialId);
+        q.where(function (credWhere) {
+          credWhere.where('record_id', input.credentialId!);
+          if (huduRef) {
+            credWhere.orWhere(function (revealMatch) {
+              revealMatch.where('table_name', 'clients');
+              revealMatch.where('operation', 'hudu_password_reveal');
+              revealMatch.whereRaw(`(details->>'hudu_company_id') = ?`, [huduRef.companyId]);
+              revealMatch.whereRaw(`(details->>'hudu_password_id') = ?`, [huduRef.passwordId]);
+            });
+          }
+        });
       }
       if (input.operations && input.operations.length > 0) {
         q.whereIn('operation', input.operations as string[]);
