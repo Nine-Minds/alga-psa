@@ -65,8 +65,13 @@ export function useCredentialAuditLabels() {
 
   const operationLabel = (operation: CredentialAuditEventOperation, entityType?: string | null): string => {
     const key = CREDENTIAL_OPERATION_KEYS[operation] ?? 'credentials.audit.op.credential_reveal';
-    const entityLabel = entityType ? ENTITY_LABEL_KEYS[entityType] ?? entityType : null;
-    return entityLabel ? t(key, { entity: t(entityLabel) }) : t(key);
+    // Row rendering passes the concrete entity type; the filter chips have no
+    // entity, so `{{entity}}` interpolates to a neutral generic (never the raw
+    // placeholder leaking into the UI).
+    const entityLabel = entityType
+      ? ENTITY_LABEL_KEYS[entityType] ?? entityType
+      : t('credentials.audit.filter.entityAny');
+    return t(key, { entity: t(entityLabel) });
   };
 
   const actorLabel = (actor: { userId: string | null; name: string | null }): string => {
