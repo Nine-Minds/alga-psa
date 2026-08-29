@@ -380,6 +380,10 @@ function resolveLegacyProviderType(legacy: LegacyProcessedRow): InboundProviderT
  * permits them terminal (`legacy_imported = true` + terminal status); inserting
  * as `received` first would violate the check.
  */
+/** Digest sentinel for rows imported from the legacy audit table: they have
+ *  no staged source to hash, but the inbox dedupe key includes source_sha256. */
+const LEGACY_SOURCE_DIGEST = 'legacy';
+
 async function upsertLegacyInbox(
   db: any,
   params: {
@@ -408,9 +412,9 @@ async function upsertLegacyInbox(
       tenant: params.tenant,
       providerId: params.legacy.provider_id,
       normalizedMessageId: params.identity.normalized,
-      sourceSha256: 'legacy',
+      sourceSha256: LEGACY_SOURCE_DIGEST,
     }),
-    source_sha256: 'legacy',
+    source_sha256: LEGACY_SOURCE_DIGEST,
     source_size_bytes: 0,
     source_staged_at: new Date(),
     envelope: {
@@ -524,7 +528,11 @@ export async function backfillTenantLegacyRows(tenant: string, limit: number = 2
       tenant,
       provider_id: legacy.provider_id,
       normalized_message_id: identity.normalized,
-      source_sha256: null,
+      // The backfill checkpoint is per normalized identity, not per digest: a
+      // row already in the ledger may have been staged by the live pipeline
+      // (real digest), an older backfill (LEGACY_SOURCE_DIGEST), or no source
+      // at all (null). Pinning any one of those re-imports the rest forever.
+      source_sha256: 'any',
     });
     if (existing) {
       result.skipped += 1;

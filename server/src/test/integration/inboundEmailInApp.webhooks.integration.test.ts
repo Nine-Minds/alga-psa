@@ -85,6 +85,9 @@ vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => {
   };
 });
 
+const MONITORED_FOLDER_ID = vi.hoisted(() => 'monitored-inbox-folder-id');
+const inboundReopenCounters = vi.hoisted(() => new Map<string, number>());
+
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => {
   return {
     MicrosoftGraphAdapter: class MicrosoftGraphAdapter {
@@ -95,6 +98,14 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
       async downloadMessageSource(messageId: string) {
         return microsoftDownloadMessageSourceMock(messageId);
       }
+      // fetchMicrosoftMessageForPointer refuses any message that does not live in
+      // a monitored folder; the fixture's messages always do.
+      async getMessageParentFolderId(_messageId: string) {
+        return MONITORED_FOLDER_ID;
+      }
+      async resolveFolderIds(_folderFilters: unknown) {
+        return new Set([MONITORED_FOLDER_ID]);
+      }
     },
   };
 });
@@ -104,6 +115,18 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
   enqueueUnifiedInboundEmailQueueJob: (...args: any[]) =>
     enqueueUnifiedInboundEmailQueueJobMock(...args),
+  // checkInboundReopenRateLimit fails CLOSED, so a missing export here silently
+  // downgrades every reopen to comment-only. In-memory counters keep the
+  // backstop real without a Redis dependency; reset per test in afterEach.
+  getInboundEmailRedisClient: async () => ({
+    incr: async (key: string) => {
+      const next = (inboundReopenCounters.get(key) ?? 0) + 1;
+      inboundReopenCounters.set(key, next);
+      return next;
+    },
+    expire: async () => 1,
+    ttl: async () => 3600,
+  }),
 }));
 
 vi.mock('@alga-psa/storage', () => ({
@@ -305,6 +328,11 @@ async function setupInboundDefaults(params: { providerId: string; mailbox: strin
   return { defaultsId, subscriptionName };
 }
 
+// handleMicrosoftWebhookPost fails closed: a notification is rejected with 401
+// unless the provider has a stored verification token and the notification's
+// clientState matches it exactly.
+const MS_WEBHOOK_CLIENT_STATE = 'test-microsoft-webhook-client-state';
+
 async function setupMicrosoftProvider(params: {
   providerId: string;
   mailbox: string;
@@ -356,7 +384,7 @@ async function setupMicrosoftProvider(params: {
     token_expires_at: null,
     webhook_subscription_id: params.subscriptionId,
     webhook_expires_at: null,
-    webhook_verification_token: null,
+    webhook_verification_token: MS_WEBHOOK_CLIENT_STATE,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
@@ -518,6 +546,41 @@ async function ensureSecondaryOpenStatus(boardIdForStatus: string): Promise<stri
 describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   const cleanup: Array<() => Promise<void>> = [];
 
+  // Thread-header correlation is not sender-authenticated, so a reply matched by
+  // In-Reply-To/References is only applied to the ticket when the sender is the
+  // ticket's own client contact, an internal user, or an active watcher —
+  // otherwise it is quarantined as a thread-header hijack. Sender attribution
+  // additionally requires aligned SPF/DKIM (DMARC for internal identities), so a
+  // legitimate-reply fixture needs both a contact row and an auth-results header.
+  async function seedClientContactSender(email: string, fullName = 'Client Sender') {
+    const contactId = uuidv4();
+    await tenantTable('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: fullName,
+      email,
+      client_id: clientId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    // afterEach pops LIFO; unshift so the contact outlives the comments that
+    // reference it (comments_tenant_contact_id_fk).
+    cleanup.unshift(async () => {
+      await tenantTable('contacts').where({ contact_name_id: contactId }).delete();
+    });
+    return contactId;
+  }
+
+  // Aligned DKIM authorizes contact attribution; aligned DMARC is required
+  // before an internal identity is granted (see allowsInternalSenderAttribution).
+  function dkimPassHeaders(email: string) {
+    return { 'authentication-results': `mx.example.com; dkim=pass header.d=${email.split('@')[1]}` };
+  }
+
+  function dmarcPassHeaders(email: string) {
+    return { 'authentication-results': `mx.example.com; dmarc=pass header.from=${email.split('@')[1]}` };
+  }
+
   beforeAll(async () => {
     process.env.NEXTAUTH_URL = 'http://localhost:3000';
     wireLocalTestDbEnv();
@@ -579,6 +642,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = '';
     process.env.INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
     process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
+    inboundReopenCounters.clear();
     enqueueUnifiedInboundEmailQueueJobMock.mockClear();
     storageUploadMock.mockReset();
     storageUploadMock.mockImplementation(async (_buffer: Buffer, storagePath: string) => ({
@@ -808,7 +872,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       value: [
         {
           changeType: 'created',
-          clientState: 'ignored',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
           resource: `/users/${uuidv4()}/messages/${messageId}`,
           resourceData: {
             '@odata.type': '#microsoft.graph.message',
@@ -894,7 +958,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       value: [
         {
           changeType: 'created',
-          clientState: 'ignored',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
           resource: `/users/${uuidv4()}/messages/${messageId}`,
           resourceData: {
             '@odata.type': '#microsoft.graph.message',
@@ -1308,6 +1372,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `thread-sender-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail, 'Sender');
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1317,7 +1384,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: 'sender@example.com', name: 'Sender' },
+        from: { email: threadSenderEmail, name: 'Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Header threaded ticket',
         inReplyTo: originalMessageId,
@@ -1327,6 +1394,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -1454,6 +1522,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        headers: dmarcPassHeaders(internalReplyEmail),
       } as any,
     });
 
@@ -1578,6 +1647,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Follow-up requiring reopen', html: undefined },
         attachments: [],
+        headers: dmarcPassHeaders(internalReplyEmail),
       } as any,
     });
 
@@ -1651,6 +1721,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1660,13 +1733,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for reopen-disabled test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Any update?', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -1745,6 +1819,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
 
     const subject = `Re: Closed ticket for cutoff reroute test ${uuidv4().slice(0, 6)}`;
+    const threadSenderEmail = `client-cutoff-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1754,18 +1831,29 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-cutoff-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject,
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Need more work on this issue.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
     expect(result.outcome).toBe('created');
     expect(result.outcome === 'created' ? result.ticketId : null).not.toBe(oldTicketId);
+
+    // The reroute creates a ticket the fixture never inserted; it pins the
+    // sender's contact row (tickets_tenant_contact_name_id_foreign).
+    const reroutedTicketId = result.outcome === 'created' ? result.ticketId : null;
+    if (reroutedTicketId) {
+      cleanup.push(async () => {
+        await tenantTable('comments').where({ ticket_id: reroutedTicketId }).delete();
+        await deleteTicketRows(reroutedTicketId);
+      });
+    }
 
     const oldTicketAfter = await tenantTable('tickets').where({ ticket_id: oldTicketId }).first<any>();
     expect(oldTicketAfter.status_id).toBe(closedStatus.status_id);
@@ -1844,6 +1932,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-reopen-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1853,13 +1944,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-reopen-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for client reopen test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Can you continue this work?', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -1947,6 +2039,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-ack-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1956,13 +2051,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-ack-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for client ACK suppression test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Thanks, all set.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2059,6 +2155,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-not-ack-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2068,13 +2167,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-not-ack-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for client NOT_ACK suppression test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Please reopen and continue work on this issue.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2165,6 +2265,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-addon-missing-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2174,13 +2277,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-addon-missing-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for missing AI add-on fallback test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Please proceed with additional work.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2271,6 +2375,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-ai-fallback-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2280,13 +2387,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-ai-fallback-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for AI fallback reopen test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Please continue work despite classification fallback.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2470,6 +2578,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-meta-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2479,13 +2590,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-meta-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for metadata test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Thanks for closing this.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -3551,7 +3663,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       body: JSON.stringify({
         value: [{
           changeType: 'created',
-          clientState: 'ignored',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
           resource: `/users/${uuidv4()}/messages/${messageId}`,
           resourceData: {
             '@odata.type': '#microsoft.graph.message',

@@ -560,7 +560,12 @@ export async function getInboxByIdentity(db: DurableDb, params: {
   tenant: string;
   provider_id: string;
   normalized_message_id: string;
-  source_sha256: string | null;
+  /**
+   * Digest half of the dedupe key: a concrete digest, or `null` for a row
+   * staged without one. Pass `'any'` to match the identity whatever its digest
+   * — for callers that only ask "does the ledger already know this message?".
+   */
+  source_sha256: string | null | 'any';
 }): Promise<InboundEmailInboxRecord | null> {
   const query = tenantDb(db, params.tenant).table('inbound_email_inbox')
     .where({
@@ -568,7 +573,9 @@ export async function getInboxByIdentity(db: DurableDb, params: {
       provider_id: params.provider_id,
       normalized_message_id: params.normalized_message_id,
     });
-  if (params.source_sha256 === null) {
+  if (params.source_sha256 === 'any') {
+    // no digest predicate
+  } else if (params.source_sha256 === null) {
     query.whereNull('source_sha256');
   } else {
     query.where('source_sha256', params.source_sha256);
