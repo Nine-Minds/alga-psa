@@ -110,6 +110,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The Tier-1 gate diffs against TIER1_BASE_SHA to pick affected suites.
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -161,6 +164,9 @@ jobs:
           echo -n "test_password" > secrets/db_password_server
           chmod 600 secrets/*
 
+      # Manifest floor + every suite whose import graph reaches the diff
+      # (scripts/run-tier1-integration.mjs). Schema/harness changes widen this
+      # to the full directory; a missing base falls back to the manifest alone.
       - name: Run Tier-1 integration subset
         id: tier1
         if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
@@ -168,6 +174,7 @@ jobs:
         run: npm run test:integration:tier1 -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
 
       - name: Run full integration suite
         id: full

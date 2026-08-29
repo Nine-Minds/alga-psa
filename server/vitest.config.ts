@@ -309,6 +309,7 @@ export default defineConfig({
 
       { find: /^@alga-psa\/users$/, replacement: path.resolve(__dirname, '../packages/users/src/index.ts') },
       { find: /^@alga-psa\/users\/actions$/, replacement: path.resolve(__dirname, '../packages/users/src/actions/index.ts') },
+      { find: /^@alga-psa\/users\/(.*)$/, replacement: path.resolve(__dirname, '../packages/users/src/$1') },
       { find: /^@alga-psa\/user-composition$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/index.ts') },
       { find: /^@alga-psa\/user-composition\/actions$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/actions/index.ts') },
       { find: /^@alga-psa\/user-composition\/(.*)$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/$1') },
