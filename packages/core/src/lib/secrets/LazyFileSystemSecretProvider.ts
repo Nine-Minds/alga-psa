@@ -1,52 +1,26 @@
 import type { ISecretProvider } from './ISecretProvider';
+import {
+  appSecretPath,
+  ensurePrivateDirectory,
+  ensureWriteBasePath,
+  readFileContentSafe,
+  resolveBasePath,
+  tenantDir,
+  tenantSecretPath,
+  unlinkSecret,
+  validateSecretComponent,
+  writeTenantSecretAtomic,
+} from './fsSecretCore';
 
 /**
- * The hardened filesystem secret core. Dynamically imported so Node's
- * fs/path modules never enter static Next client graphs; only the provider
- * that actually reads or writes filesystem secrets loads it.
- */
-type FsSecretCore = typeof import('./fsSecretCore');
-
-const runtimeImport = <TModule,>(specifier: string): Promise<TModule> => {
-  const importer = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;
-  return importer<TModule>(specifier);
-};
-
-// Some sandboxed runtimes (e.g. vitest's VM-evaluated forks) provide no
-// dynamic-import callback, so this provider can never load fs there. Treat it
-// as "provider unavailable" once instead of erroring on every secret access.
-// The raw TypeError Node throws ("A dynamic import callback was not
-// specified") does not always carry the ERR_VM code, so match both shapes.
-let warnedDynamicImportUnavailable = false;
-function handleModulesUnavailable(error: unknown): boolean {
-  const err = error as (NodeJS.ErrnoException & { cause?: NodeJS.ErrnoException }) | undefined;
-  const code = err?.code ?? err?.cause?.code;
-  const messages = [err?.message, err?.cause?.message].filter(
-    (m): m is string => typeof m === 'string'
-  );
-  const inMessage = messages.some(
-    (m) =>
-      m.includes('ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING') ||
-      m.includes('A dynamic import callback was not specified')
-  );
-  if (code !== 'ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING' && !inMessage) {
-    return false;
-  }
-  if (!warnedDynamicImportUnavailable) {
-    warnedDynamicImportUnavailable = true;
-    console.warn('FileSystemSecretProvider unavailable in this runtime (no dynamic import); falling back to other providers.');
-  }
-  return true;
-}
-
-function loadFsSecretCore(): Promise<FsSecretCore> {
-  return runtimeImport<FsSecretCore>('./fsSecretCore');
-}
-
-/**
- * Filesystem-backed secret provider that keeps Node's fs/path modules out of
- * static Next client graphs. The Node modules are loaded only when an instance
- * actually reads or writes filesystem secrets.
+ * Filesystem-backed secret provider.
+ *
+ * The hardened write path lives in `fsSecretCore`, which is imported statically
+ * so bundlers always include it (a relative dynamic import would fail to
+ * resolve in dist ESM and would be invisible to webpack in source mode).
+ * `fsSecretCore` itself lazily loads Node's `fs`/`path`/`crypto` builtins at
+ * call time, so the `node:` specifiers never enter static Next client graphs
+ * even though this module is part of the bundle.
  *
  * Secret storage is hardened:
  * - tenant directories are `0o700`, secret files are `0o600` regardless of
@@ -61,7 +35,6 @@ function loadFsSecretCore(): Promise<FsSecretCore> {
 export class FileSystemSecretProvider implements ISecretProvider {
   private readonly serverRoot: string;
   private basePath: string | undefined;
-  private corePromise: Promise<FsSecretCore> | null = null;
   private writeBasePathPromise: Promise<string> | null = null;
   private writeRefusalLogged = false;
 
@@ -71,14 +44,8 @@ export class FileSystemSecretProvider implements ISecretProvider {
       : '.';
   }
 
-  private getCore(): Promise<FsSecretCore> {
-    this.corePromise ??= loadFsSecretCore();
-    return this.corePromise;
-  }
-
   private async getBasePath(): Promise<string> {
     if (!this.basePath) {
-      const { resolveBasePath } = await this.getCore();
       this.basePath = await resolveBasePath(this.serverRoot);
     }
     return this.basePath;
@@ -92,8 +59,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
   private async ensureWritableBasePath(): Promise<string> {
     if (!this.writeBasePathPromise) {
       this.writeBasePathPromise = (async () => {
-        const core = await this.getCore();
-        return core.ensureWriteBasePath(await this.getBasePath());
+        return ensureWriteBasePath(await this.getBasePath());
       })();
       this.writeBasePathPromise.catch((error) => {
         if (error instanceof Error && !this.writeRefusalLogged) {
@@ -106,15 +72,8 @@ export class FileSystemSecretProvider implements ISecretProvider {
   }
 
   async getAppSecret(name: string): Promise<string | undefined> {
-    let core: FsSecretCore;
     try {
-      core = await this.getCore();
-    } catch (error) {
-      if (handleModulesUnavailable(error)) return undefined;
-      throw error;
-    }
-    try {
-      core.validateSecretComponent(name, 'app secret name');
+      validateSecretComponent(name, 'app secret name');
     } catch (error) {
       if (error instanceof Error && error.name === 'InvalidSecretPathError') {
         console.warn(`Potential path traversal attempt detected for app secret name: ${name}. Denying access.`);
@@ -123,21 +82,14 @@ export class FileSystemSecretProvider implements ISecretProvider {
       throw error;
     }
     const basePath = await this.getBasePath();
-    const filePath = core.appSecretPath(basePath, name);
-    return core.readFileContentSafe(filePath);
+    const filePath = await appSecretPath(basePath, name);
+    return readFileContentSafe(filePath);
   }
 
   async getTenantSecret(tenantId: string, name: string): Promise<string | undefined> {
-    let core: FsSecretCore;
     try {
-      core = await this.getCore();
-    } catch (error) {
-      if (handleModulesUnavailable(error)) return undefined;
-      throw error;
-    }
-    try {
-      core.validateSecretComponent(tenantId, 'tenantId');
-      core.validateSecretComponent(name, 'secret name');
+      validateSecretComponent(tenantId, 'tenantId');
+      validateSecretComponent(name, 'secret name');
     } catch (error) {
       if (error instanceof Error && error.name === 'InvalidSecretPathError') {
         console.warn(`Potential path traversal attempt detected for tenantId: ${tenantId}, name: ${name}. Denying access.`);
@@ -146,25 +98,17 @@ export class FileSystemSecretProvider implements ISecretProvider {
       throw error;
     }
     const basePath = await this.getBasePath();
-    const filePath = core.tenantSecretPath(basePath, tenantId, name);
+    const filePath = await tenantSecretPath(basePath, tenantId, name);
     console.debug(`Attempting to read tenant secret: ${filePath}`);
-    return core.readFileContentSafe(filePath);
+    return readFileContentSafe(filePath);
   }
 
   async setTenantSecret(tenantId: string, name: string, value: string | null): Promise<void> {
-    let core: FsSecretCore;
-    try {
-      core = await this.getCore();
-    } catch (error) {
-      // Provider unavailable in this runtime; the write cannot be persisted.
-      if (handleModulesUnavailable(error)) return;
-      throw error;
-    }
-    core.validateSecretComponent(tenantId, 'tenantId');
-    core.validateSecretComponent(name, 'secret name');
+    validateSecretComponent(tenantId, 'tenantId');
+    validateSecretComponent(name, 'secret name');
 
     const basePath = await this.ensureWritableBasePath();
-    const filePath = core.tenantSecretPath(basePath, tenantId, name);
+    const filePath = await tenantSecretPath(basePath, tenantId, name);
 
     if (value === null) {
       await this.deleteTenantSecret(tenantId, name);
@@ -172,8 +116,8 @@ export class FileSystemSecretProvider implements ISecretProvider {
     }
 
     try {
-      await core.ensurePrivateDirectory(core.tenantDir(basePath, tenantId));
-      await core.writeTenantSecretAtomic(filePath, value);
+      await ensurePrivateDirectory(await tenantDir(basePath, tenantId));
+      await writeTenantSecretAtomic(filePath, value);
       console.debug(`Successfully wrote tenant secret: ${filePath}`);
     } catch (error: unknown) {
       const fsError = error as NodeJS.ErrnoException;
@@ -183,22 +127,14 @@ export class FileSystemSecretProvider implements ISecretProvider {
   }
 
   async deleteTenantSecret(tenantId: string, name: string): Promise<void> {
-    let core: FsSecretCore;
-    try {
-      core = await this.getCore();
-    } catch (error) {
-      // Provider unavailable in this runtime; nothing was persisted to delete.
-      if (handleModulesUnavailable(error)) return;
-      throw error;
-    }
-    core.validateSecretComponent(tenantId, 'tenantId');
-    core.validateSecretComponent(name, 'secret name');
+    validateSecretComponent(tenantId, 'tenantId');
+    validateSecretComponent(name, 'secret name');
 
     const basePath = await this.getBasePath();
-    const filePath = core.tenantSecretPath(basePath, tenantId, name);
+    const filePath = await tenantSecretPath(basePath, tenantId, name);
 
     try {
-      await core.unlinkSecret(filePath);
+      await unlinkSecret(filePath);
       console.debug(`Successfully deleted tenant secret file: ${filePath}`);
     } catch (error: unknown) {
       const fsError = error as NodeJS.ErrnoException;

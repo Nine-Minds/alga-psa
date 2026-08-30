@@ -2,9 +2,15 @@
  * Hardened filesystem operations for the filesystem secret provider.
  *
  * `LazyFileSystemSecretProvider` (the `FileSystemSecretProvider` exported from
- * `@alga-psa/core/secrets`, dynamically importing this module to keep Node's
- * fs/path out of static Next client graphs) delegates here so the write path
- * is implemented exactly once:
+ * `@alga-psa/core/secrets`) imports this module statically, so bundlers always
+ * include it — no runtime-dependent relative dynamic import can fail to resolve
+ * in dist (ESM needs the `.js` extension) or in webpack source mode (a dynamic
+ * import is hidden from the bundler and never emitted). To keep Node builtins
+ * out of static Next client graphs, this module never imports a `node:`
+ * specifier at the top level; `node:fs/promises`, `node:path`, and
+ * `node:crypto` are loaded lazily at call time via `lazyBuiltin.ts`.
+ *
+ * The write path is implemented exactly once:
  *
  * - Directories are created with an explicit `0o700` (mkdir mode is masked by
  *   umask, so a post-create `chmod` is applied) and files are written with an
@@ -20,14 +26,9 @@
  *   owned by the running user, safe modes). Writes are refused with an
  *   actionable operator message when the location cannot be made safe; reads
  *   are unaffected.
- *
- * This module is Node-only and must only be loaded lazily by the provider that
- * keeps `node:fs`/`node:path` out of static Next client graphs.
  */
 
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import { randomBytes } from 'node:crypto';
+import { loadBuiltin } from './lazyBuiltin';
 import type { FileHandle } from 'node:fs/promises';
 import type { Dirent, Stats } from 'node:fs';
 
@@ -37,6 +38,24 @@ export const TENANTS_SUBDIR = 'tenants';
 export const DOCKER_SECRETS_PATH = '/run/secrets';
 
 const MAX_COMPONENT_LENGTH = 255;
+
+let fsModulePromise: Promise<typeof import('node:fs/promises')> | null = null;
+function getFs(): Promise<typeof import('node:fs/promises')> {
+  fsModulePromise ??= loadBuiltin<typeof import('node:fs/promises')>('node:fs/promises');
+  return fsModulePromise;
+}
+
+let pathModulePromise: Promise<typeof import('node:path')> | null = null;
+function getPath(): Promise<typeof import('node:path')> {
+  pathModulePromise ??= loadBuiltin<typeof import('node:path')>('node:path');
+  return pathModulePromise;
+}
+
+let cryptoModulePromise: Promise<typeof import('node:crypto')> | null = null;
+function getCrypto(): Promise<typeof import('node:crypto')> {
+  cryptoModulePromise ??= loadBuiltin<typeof import('node:crypto')>('node:crypto');
+  return cryptoModulePromise;
+}
 
 /**
  * Raised when a secret cannot be written because the filesystem location is
@@ -78,8 +97,9 @@ function runningUid(): number | undefined {
 
 /**
  * Validates a single path component derived from a tenant id or secret name.
- * Rejects empty components, `.`/`..`, NUL, path separators, and anything whose
- * basename differs (i.e. anything that would traverse or escape).
+ * Rejects empty components, `.`/`..`, NUL, and path separators (a component
+ * containing a separator can never be a single path segment, so it would
+ * traverse or escape).
  *
  * @returns The validated component.
  */
@@ -96,9 +116,6 @@ export function validateSecretComponent(component: string, label: string): strin
   if (component.includes('/') || component.includes('\\') || component.includes('\0')) {
     throw new InvalidSecretPathError(`${label} must not contain path separators or NUL`);
   }
-  if (path.basename(component) !== component) {
-    throw new InvalidSecretPathError(`${label} must be a single path component`);
-  }
   return component;
 }
 
@@ -106,16 +123,17 @@ export function validateSecretComponent(component: string, label: string): strin
  * Builds `<base>/tenants/<tenantId>/<secretName>` after validating every
  * component, and verifies the resolved path stays under the secret root.
  */
-export function tenantSecretPath(basePath: string, tenantId: string, name: string): string {
+export async function tenantSecretPath(basePath: string, tenantId: string, name: string): Promise<string> {
   validateSecretComponent(tenantId, 'tenantId');
   validateSecretComponent(name, 'secret name');
 
-  const resolvedBase = path.resolve(basePath);
-  const filePath = path.resolve(path.join(resolvedBase, TENANTS_SUBDIR, tenantId, name));
+  const p = await getPath();
+  const resolvedBase = p.resolve(basePath);
+  const filePath = p.resolve(p.join(resolvedBase, TENANTS_SUBDIR, tenantId, name));
 
   // Defense in depth: the validated components cannot contain '..', but an
   // escape would otherwise be silent, so assert it.
-  const rootPrefix = resolvedBase.endsWith(path.sep) ? resolvedBase : `${resolvedBase}${path.sep}`;
+  const rootPrefix = resolvedBase.endsWith(p.sep) ? resolvedBase : `${resolvedBase}${p.sep}`;
   if (filePath !== resolvedBase && !filePath.startsWith(rootPrefix)) {
     throw new InvalidSecretPathError('resolved secret path escapes the secret root');
   }
@@ -127,24 +145,27 @@ export function tenantSecretPath(basePath: string, tenantId: string, name: strin
  * Builds `<base>/<name>` for an application-level secret after validating the
  * name, keeping it directly under the base path (the historical layout).
  */
-export function appSecretPath(basePath: string, name: string): string {
+export async function appSecretPath(basePath: string, name: string): Promise<string> {
   validateSecretComponent(name, 'app secret name');
-  const resolvedBase = path.resolve(basePath);
-  const filePath = path.resolve(path.join(resolvedBase, name));
-  const rootPrefix = resolvedBase.endsWith(path.sep) ? resolvedBase : `${resolvedBase}${path.sep}`;
+  const p = await getPath();
+  const resolvedBase = p.resolve(basePath);
+  const filePath = p.resolve(p.join(resolvedBase, name));
+  const rootPrefix = resolvedBase.endsWith(p.sep) ? resolvedBase : `${resolvedBase}${p.sep}`;
   if (filePath !== resolvedBase && !filePath.startsWith(rootPrefix)) {
     throw new InvalidSecretPathError('resolved secret path escapes the secret root');
   }
   return filePath;
 }
 
-export function tenantsDir(basePath: string): string {
-  return path.join(path.resolve(basePath), TENANTS_SUBDIR);
+export async function tenantsDir(basePath: string): Promise<string> {
+  const p = await getPath();
+  return p.join(p.resolve(basePath), TENANTS_SUBDIR);
 }
 
-export function tenantDir(basePath: string, tenantId: string): string {
+export async function tenantDir(basePath: string, tenantId: string): Promise<string> {
   validateSecretComponent(tenantId, 'tenantId');
-  return path.join(tenantsDir(basePath), tenantId);
+  const p = await getPath();
+  return p.join(await tenantsDir(basePath), tenantId);
 }
 
 /**
@@ -153,9 +174,10 @@ export function tenantDir(basePath: string, tenantId: string): string {
  * Mirrors the historical resolution so reads keep working unchanged.
  */
 export async function resolveBasePath(serverRoot: string): Promise<string> {
+  const [fs, p] = await Promise.all([getFs(), getPath()]);
   const configured = process.env.SECRET_FS_BASE_PATH;
   if (configured && configured.trim() !== '') {
-    return path.isAbsolute(configured) ? configured : path.resolve(serverRoot, configured);
+    return p.isAbsolute(configured) ? configured : p.resolve(serverRoot, configured);
   }
 
   try {
@@ -166,8 +188,8 @@ export async function resolveBasePath(serverRoot: string): Promise<string> {
   }
 
   const candidates = [
-    path.resolve(serverRoot, 'secrets'),
-    path.resolve(serverRoot, '../secrets'),
+    p.resolve(serverRoot, 'secrets'),
+    p.resolve(serverRoot, '../secrets'),
   ];
   for (const candidate of candidates) {
     try {
@@ -178,7 +200,7 @@ export async function resolveBasePath(serverRoot: string): Promise<string> {
     }
   }
 
-  return path.resolve(serverRoot, '../secrets');
+  return p.resolve(serverRoot, '../secrets');
 }
 
 function unsafeLocation(pathLabel: string, reason: string): UnsafeSecretLocationError {
@@ -193,6 +215,7 @@ function unsafeLocation(pathLabel: string, reason: string): UnsafeSecretLocation
 }
 
 async function lstatOrNull(target: string): Promise<Stats | null> {
+  const fs = await getFs();
   try {
     return await fs.lstat(target);
   } catch (error) {
@@ -202,6 +225,7 @@ async function lstatOrNull(target: string): Promise<Stats | null> {
 }
 
 async function createPrivateDir(target: string): Promise<void> {
+  const fs = await getFs();
   // mkdir mode is umask-masked, so always follow with an explicit chmod.
   await fs.mkdir(target, { recursive: true, mode: SECRET_DIR_MODE });
   await fs.chmod(target, SECRET_DIR_MODE);
@@ -214,6 +238,7 @@ async function createPrivateDir(target: string): Promise<void> {
  * store and are safe to correct.
  */
 export async function ensurePrivateDirectory(target: string): Promise<void> {
+  const fs = await getFs();
   let stat = await lstatOrNull(target);
   if (!stat) {
     await createPrivateDir(target);
@@ -255,7 +280,8 @@ export async function ensurePrivateDirectory(target: string): Promise<void> {
  * deployment decision — changing it automatically could break other readers.
  */
 export async function ensureWriteBasePath(basePath: string): Promise<string> {
-  const root = path.resolve(basePath);
+  const p = await getPath();
+  const root = p.resolve(basePath);
   let stat = await lstatOrNull(root);
 
   if (!stat) {
@@ -285,7 +311,7 @@ export async function ensureWriteBasePath(basePath: string): Promise<string> {
     throw unsafeLocation(root, `it has mode ${(stat.mode & 0o777).toString(8)}`);
   }
 
-  await ensurePrivateDirectory(tenantsDir(root));
+  await ensurePrivateDirectory(await tenantsDir(root));
   return root;
 }
 
@@ -295,6 +321,7 @@ export async function ensureWriteBasePath(basePath: string): Promise<string> {
  * secret mounts. Never logs secret values — only the file path.
  */
 export async function readFileContentSafe(filePath: string): Promise<string | undefined> {
+  const fs = await getFs();
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     return content.trim();
@@ -337,6 +364,7 @@ async function assertRegularTarget(filePath: string): Promise<void> {
  * previous content is left intact. Never logs secret values.
  */
 export async function writeTenantSecretAtomic(filePath: string, value: string): Promise<void> {
+  const [fs, p, { randomBytes }] = await Promise.all([getFs(), getPath(), getCrypto()]);
   await assertRegularTarget(filePath);
 
   const tempPath = `${filePath}.tmp-${randomBytes(6).toString('hex')}`;
@@ -370,7 +398,7 @@ export async function writeTenantSecretAtomic(filePath: string, value: string): 
     // to the pre-rename state. Directory fsync is not supported everywhere
     // (e.g. some Windows/FUSE filesystems raise EINVAL/EISDIR), so failures
     // are ignored — the file contents are already durable.
-    await fsyncDirectory(path.dirname(filePath));
+    await fsyncDirectory(p.dirname(filePath));
   } catch (error: unknown) {
     if (handle) {
       await handle.close().catch(() => undefined);
@@ -386,6 +414,7 @@ export async function writeTenantSecretAtomic(filePath: string, value: string): 
  * filesystems do not support fsync on directories.
  */
 async function fsyncDirectory(dirPath: string): Promise<void> {
+  const fs = await getFs();
   let dirHandle: FileHandle | null = null;
   try {
     dirHandle = await fs.open(dirPath, 'r');
@@ -412,6 +441,7 @@ export async function unlinkSecret(filePath: string): Promise<void> {
   if (!stat.isFile()) {
     throw new InvalidSecretPathError(`secret file ${filePath} is not a regular file; refusing to delete it`);
   }
+  const fs = await getFs();
   await fs.unlink(filePath);
 }
 
@@ -432,7 +462,8 @@ export interface PermissionIssue {
 }
 
 export async function scanSecretStoreModes(basePath: string): Promise<PermissionIssue[]> {
-  const root = path.resolve(basePath);
+  const p = await getPath();
+  const root = p.resolve(basePath);
   const issues: PermissionIssue[] = [];
 
   const rootStat = await lstatOrNull(root);
@@ -457,7 +488,7 @@ export async function scanSecretStoreModes(basePath: string): Promise<Permission
     });
   }
 
-  const tenants = path.join(root, TENANTS_SUBDIR);
+  const tenants = p.join(root, TENANTS_SUBDIR);
   const tenantsStat = await lstatOrNull(tenants);
   if (tenantsStat) {
     if (tenantsStat.isSymbolicLink()) {
@@ -479,6 +510,8 @@ export async function scanSecretStoreModes(basePath: string): Promise<Permission
 }
 
 async function scanDirectory(dirPath: string, issues: PermissionIssue[]): Promise<void> {
+  const fs = await getFs();
+  const p = await getPath();
   let entries: Dirent[];
   try {
     entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -487,7 +520,7 @@ async function scanDirectory(dirPath: string, issues: PermissionIssue[]): Promis
   }
 
   for (const entry of entries) {
-    const entryPath = path.join(dirPath, entry.name);
+    const entryPath = p.join(dirPath, entry.name);
     if (entry.isSymbolicLink()) {
       issues.push({ kind: 'unsafe', path: entryPath, current: 'is a symlink; manual intervention required' });
       continue;
@@ -525,7 +558,9 @@ async function scanDirectory(dirPath: string, issues: PermissionIssue[]): Promis
  * intervention and are reported, not modified.
  */
 export async function repairSecretStoreModes(basePath: string): Promise<PermissionIssue[]> {
-  const root = path.resolve(basePath);
+  const p = await getPath();
+  const fs = await getFs();
+  const root = p.resolve(basePath);
   const rootStat = await lstatOrNull(root);
   if (!rootStat) {
     await createPrivateDir(root);

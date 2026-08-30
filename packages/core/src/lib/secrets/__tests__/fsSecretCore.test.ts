@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile, rename as realRename } from 'node:fs/promises';
 import * as fsPromises from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -23,14 +24,23 @@ import {
 
 /**
  * Failures during the rename that finishes an atomic write must never corrupt
- * the previous value. `rename` is wrapped once per module load; tests arm it
- * with `mockRejectedValueOnce` to inject a mid-write failure.
+ * the previous value. The lazy builtin loader resolves `node:fs/promises`
+ * through `lazyBuiltin.ts`; this mock wraps that one module so `rename` is a
+ * controllable call-through mock that tests can arm with `mockRejectedValueOnce`.
  */
-vi.mock('node:fs/promises', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:fs/promises')>();
+const renameMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../lazyBuiltin', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lazyBuiltin')>();
   return {
     ...actual,
-    rename: vi.fn(actual.rename),
+    loadBuiltin: async (specifier: string) => {
+      const mod = await actual.loadBuiltin(specifier);
+      if (specifier === 'node:fs/promises') {
+        return { ...(mod as typeof import('node:fs/promises')), rename: renameMock };
+      }
+      return mod;
+    },
   };
 });
 
@@ -38,19 +48,20 @@ const REPO_ROOT = path.resolve(import.meta.dirname, '../../../../../..');
 const TSSX_BIN = path.join(REPO_ROOT, 'node_modules/.bin/tsx');
 const PROVIDER_FILE = path.join(import.meta.dirname, '../LazyFileSystemSecretProvider.ts');
 const REPAIR_SCRIPT = path.join(REPO_ROOT, 'scripts/repair-secret-permissions.sh');
+const DIST_PROVIDER = path.join(REPO_ROOT, 'packages/core/dist/lib/secrets/LazyFileSystemSecretProvider.js');
 
 const SECRET_VALUE = 'super-secret-value-that-must-never-be-logged';
 
 let rootDir: string;
 let previousUmask: number;
 
-function tenantSecret(tenantId: string, name: string): string {
+async function tenantSecret(tenantId: string, name: string): Promise<string> {
   return tenantSecretPath(rootDir, tenantId, name);
 }
 
 async function seedTenantSecret(tenantId: string, name: string, value: string): Promise<string> {
-  const filePath = tenantSecret(tenantId, name);
-  await ensurePrivateDirectory(tenantDir(rootDir, tenantId));
+  const filePath = await tenantSecret(tenantId, name);
+  await ensurePrivateDirectory(await tenantDir(rootDir, tenantId));
   await writeTenantSecretAtomic(filePath, value);
   return filePath;
 }
@@ -58,7 +69,8 @@ async function seedTenantSecret(tenantId: string, name: string, value: string): 
 beforeEach(async () => {
   rootDir = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-secret-'));
   previousUmask = process.umask(0o000);
-  vi.mocked(fsPromises.rename).mockClear();
+  renameMock.mockClear();
+  renameMock.mockImplementation(realRename);
 });
 
 afterEach(async () => {
@@ -70,13 +82,13 @@ describe('fsSecretCore mode handling', () => {
   it('creates directories with exactly 0700 and files with exactly 0600 under a permissive umask', async () => {
     const filePath = await seedTenantSecret('tenant-mode', 'token', SECRET_VALUE);
 
-    expect((await fsPromises.lstat(tenantDir(rootDir, 'tenant-mode'))).mode & 0o777).toBe(SECRET_DIR_MODE);
-    expect((await fsPromises.lstat(path.dirname(tenantDir(rootDir, 'tenant-mode')))).mode & 0o777).toBe(SECRET_DIR_MODE);
+    expect((await fsPromises.lstat(await tenantDir(rootDir, 'tenant-mode'))).mode & 0o777).toBe(SECRET_DIR_MODE);
+    expect((await fsPromises.lstat(path.dirname(await tenantDir(rootDir, 'tenant-mode')))).mode & 0o777).toBe(SECRET_DIR_MODE);
     expect((await fsPromises.lstat(filePath)).mode & 0o777).toBe(SECRET_FILE_MODE);
   });
 
   it('corrects a pre-existing tenant directory to 0700 instead of trusting its current mode', async () => {
-    const dirPath = tenantDir(rootDir, 'tenant-pre-existing');
+    const dirPath = await tenantDir(rootDir, 'tenant-pre-existing');
     await mkdir(dirPath, { recursive: true });
     await fsPromises.chmod(dirPath, 0o755);
 
@@ -100,7 +112,7 @@ describe('fsSecretCore atomic writes', () => {
   it('leaves the previous secret intact and no partial file at the final path when the rename fails', async () => {
     const filePath = await seedTenantSecret('tenant-atomic', 'token', JSON.stringify({ v: 'before' }));
     const injected = new Error('injected rename failure');
-    vi.mocked(fsPromises.rename).mockRejectedValueOnce(injected);
+    renameMock.mockRejectedValueOnce(injected);
 
     await expect(writeTenantSecretAtomic(filePath, JSON.stringify({ v: 'after' }))).rejects.toThrow('injected rename failure');
 
@@ -114,7 +126,7 @@ describe('fsSecretCore atomic writes', () => {
 
   it('never prints the secret value in error output when a write fails', async () => {
     const filePath = await seedTenantSecret('tenant-no-leak', 'token', 'before');
-    vi.mocked(fsPromises.rename).mockRejectedValueOnce(new Error('injected'));
+    renameMock.mockRejectedValueOnce(new Error('injected'));
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
       await expect(writeTenantSecretAtomic(filePath, SECRET_VALUE)).rejects.toThrow();
@@ -126,12 +138,12 @@ describe('fsSecretCore atomic writes', () => {
 });
 
 describe('fsSecretCore path validation', () => {
-  it('rejects traversal, separators, empty and dot components in tenant ids and secret names', () => {
+  it('rejects traversal, separators, empty and dot components in tenant ids and secret names', async () => {
     for (const bad of ['../x', 'a/b', 'a\\b', '..', '.', '', '/absolute', 'x\0']) {
       expect(() => validateSecretComponent(bad, 'tenantId')).toThrow(InvalidSecretPathError);
       expect(() => validateSecretComponent(bad, 'secret name')).toThrow(InvalidSecretPathError);
-      expect(() => tenantSecretPath(rootDir, bad, 'name')).toThrow(InvalidSecretPathError);
-      expect(() => tenantSecretPath(rootDir, 'tenant', bad)).toThrow(InvalidSecretPathError);
+      await expect(tenantSecretPath(rootDir, bad, 'name')).rejects.toThrow(InvalidSecretPathError);
+      await expect(tenantSecretPath(rootDir, 'tenant', bad)).rejects.toThrow(InvalidSecretPathError);
     }
   });
 
@@ -153,7 +165,7 @@ describe('fsSecretCore path validation', () => {
   it('rejects a symlinked tenant directory without writing outside the store', async () => {
     const elsewhere = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-tenant-link-'));
     try {
-      const linkPath = tenantDir(rootDir, 'evil-tenant');
+      const linkPath = await tenantDir(rootDir, 'evil-tenant');
       await mkdir(path.dirname(linkPath), { recursive: true });
       await symlink(elsewhere, linkPath);
 
@@ -166,8 +178,8 @@ describe('fsSecretCore path validation', () => {
   });
 
   it('rejects a symlinked secret file and a non-regular-file target instead of replacing them', async () => {
-    const filePath = tenantSecret('tenant-file', 'token');
-    await ensurePrivateDirectory(tenantDir(rootDir, 'tenant-file'));
+    const filePath = await tenantSecret('tenant-file', 'token');
+    await ensurePrivateDirectory(await tenantDir(rootDir, 'tenant-file'));
 
     const elsewhere = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-file-link-'));
     try {
@@ -213,7 +225,7 @@ describe('fsSecretCore root validation', () => {
   it('continues to allow reads of a legacy-moded store while refusing writes', async () => {
     const filePath = await seedTenantSecret('tenant-legacy', 'token', SECRET_VALUE);
     await fsPromises.chmod(rootDir, 0o755);
-    await fsPromises.chmod(tenantDir(rootDir, 'tenant-legacy'), 0o755);
+    await fsPromises.chmod(await tenantDir(rootDir, 'tenant-legacy'), 0o755);
 
     expect(await readFileContentSafe(filePath)).toBe(SECRET_VALUE);
     await expect(ensureWriteBasePath(rootDir)).rejects.toBeInstanceOf(UnsafeSecretLocationError);
@@ -293,6 +305,44 @@ describe('FileSystemSecretProvider provider round trip', () => {
     expect(writeMessage).not.toContain('WRITE_SHOULD_FAIL_VALUE_12345');
     const allOutput = `${stdout}\n${stderr}`;
     expect(allOutput).not.toContain(SECRET_VALUE);
+  });
+
+  it('loads from the compiled dist in plain node outside the package and round-trips a secret', async () => {
+    // The tsx subprocess tests above resolve TypeScript source and cannot see
+    // the runtime-loadability regression: a relative dynamic import hidden in
+    // `new Function` cannot resolve in dist ESM, and in webpack source mode it
+    // is never emitted. This probe runs plain `node` against the built dist
+    // from a cwd outside the package, exercising the exact path real
+    // deployments use. It skips when the dist has not been built.
+    if (!existsSync(DIST_PROVIDER)) {
+      return;
+    }
+    const probeDir = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-dist-probe-'));
+    try {
+      const resultPath = path.join(probeDir, 'result');
+      const program = [
+        `import { FileSystemSecretProvider } from ${JSON.stringify(DIST_PROVIDER)};`,
+        `import { writeFileSync } from 'node:fs';`,
+        `process.env.SECRET_FS_BASE_PATH = ${JSON.stringify(probeDir)};`,
+        '(async () => {',
+        '  const p = new FileSystemSecretProvider();',
+        '  await p.setTenantSecret(process.argv[1], process.argv[2], process.argv[3]);',
+        '  const v = await p.getTenantSecret(process.argv[1], process.argv[2]);',
+        `  writeFileSync(${JSON.stringify(resultPath)}, v || 'NULL');`,
+        '})().catch((e) => { console.error(e); process.exit(1); });',
+      ].join('\n');
+
+      execFileSync('node', ['--input-type=module', '-e', program, 'dist-tenant', 'token', SECRET_VALUE], {
+        cwd: probeDir,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      expect(await readFile(resultPath, 'utf-8')).toBe(SECRET_VALUE);
+      expect((await fsPromises.lstat(path.join(probeDir, 'tenants', 'dist-tenant', 'token'))).mode & 0o777).toBe(SECRET_FILE_MODE);
+    } finally {
+      await rm(probeDir, { recursive: true, force: true });
+    }
   });
 });
 
