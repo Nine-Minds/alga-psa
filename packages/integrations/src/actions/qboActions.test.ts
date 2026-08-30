@@ -125,7 +125,8 @@ vi.mock('@alga-psa/db', () => {
 
   return {
     createTenantKnex: async () => ({ knex: knexStub, tenant: 'tenant-1' }),
-    tenantDb: () => knexStub
+    tenantDb: () => knexStub,
+    writeAccountingAudit: async () => undefined
   };
 });
 
