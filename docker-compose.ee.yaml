@@ -465,7 +465,8 @@ services:
     command: ["node", "dist/ee/temporal-workflows/src/worker.js"]
     environment:
       - LOG_LEVEL=INFO
-      - SECRET_READ_CHAIN=filesystem,env
+      - SECRET_READ_CHAIN=${SECRET_READ_CHAIN:-filesystem,env}
+      - SECRET_WRITE_PROVIDER=${SECRET_WRITE_PROVIDER:-filesystem}
       - APPLICATION_URL=${APPLICATION_URL:-http://localhost:3000}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}
