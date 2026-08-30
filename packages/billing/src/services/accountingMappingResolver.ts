@@ -225,12 +225,13 @@ export class AccountingMappingResolver {
         alga_entity_type: entityType,
         alga_entity_id: entityId
       })
-      .orderByRaw('CASE WHEN external_realm_id IS NOT NULL THEN 0 ELSE 1 END');
+      .whereNull('deleted_at');
 
+    // Exact realm match only when a realm is the target: a catalog mapping in
+    // another company must never put the wrong item, account, or tax code on a
+    // document in this company.
     if (targetRealm) {
-      query.andWhere((builder) => {
-        builder.where('external_realm_id', targetRealm).orWhereNull('external_realm_id');
-      });
+      query.andWhere('external_realm_id', targetRealm);
     } else {
       query.whereNull('external_realm_id');
     }
