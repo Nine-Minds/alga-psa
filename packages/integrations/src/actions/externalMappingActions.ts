@@ -18,7 +18,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { getStoredQboCredentialsMap, QboClientService } from '../lib/qbo/qboClientService';
-import { getStoredXeroConnections } from '../lib/xero/xeroClientService';
+import { getStoredXeroConnections, XeroClientService } from '../lib/xero/xeroClientService';
 
 const MAPPING_CACHE_TTL_MS = 30_000;
 
@@ -305,23 +305,37 @@ const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
 };
 
 /**
+ * Xero record kind a catalog mapping of the given local entity type must name.
+ * Only the entity types the live Xero mapping screen can produce are listed;
+ * the stored external id is the human-facing code the exporter consumes
+ * (`service` → Xero Item Code / `itemCode`, `tax_code` → Xero `TaxType`), which
+ * is why validation matches on code rather than record id. Anything not listed
+ * has no Xero counterpart on this surface and is rejected fail-closed.
+ */
+type XeroCatalogKind = 'item' | 'taxRate';
+const XERO_CATALOG_KIND: Record<string, XeroCatalogKind> = {
+  service: 'item',
+  tax_code: 'taxRate',
+};
+
+/** A Xero catalog record in DELETED/ARCHIVED state is treated as non-existent. */
+function isXeroRecordUsable(status: string | undefined): boolean {
+  if (!status) return true;
+  const normalized = status.toUpperCase();
+  return normalized !== 'DELETED' && normalized !== 'ARCHIVED';
+}
+
+/**
  * Fail-closed remote check for a manually-linked QuickBooks mapping: the
  * external id must resolve to a live entity of the expected type in the
- * connected company, or the link is rejected. Xero catalog links are validated
- * by realm connection only — the mapping screen loads its external list live
- * from the connected org, and Xero catalog ids are codes (ItemCode, TaxType)
- * rather than record ids, so a uniform id read would be wrong for them.
+ * connected company, or the link is rejected.
  */
-async function assertRemoteEntityExists(
+async function assertQboRemoteEntityExists(
   tenant: string,
-  integrationType: string,
   algaEntityType: string,
   externalEntityId: string,
   realm: string
 ): Promise<void> {
-  if (integrationType !== 'quickbooks_online') {
-    return;
-  }
   const remoteType = QBO_REMOTE_ENTITY_TYPE[algaEntityType];
   if (!remoteType) {
     throw new ExpectedExternalMappingError(
@@ -335,6 +349,79 @@ async function assertRemoteEntityExists(
     throw new ExpectedExternalMappingError(
       `QuickBooks ${remoteType} ${externalEntityId} does not exist in the connected company.`
     );
+  }
+}
+
+/**
+ * Fail-closed remote check for a Xero catalog mapping. Xero exposes no
+ * GET-by-code endpoint for Items or Tax Rates, so existence is proven by
+ * listing the connected organisation's catalog and matching the stored code
+ * (or, for callers that stored the raw record id, the record id) against a
+ * usable — not DELETED/ARCHIVED — record. An unknown, stale, or archived id is
+ * rejected before the mapping is persisted.
+ */
+async function assertXeroRemoteEntityExists(
+  tenant: string,
+  algaEntityType: string,
+  externalEntityId: string,
+  realm: string
+): Promise<void> {
+  const kind = XERO_CATALOG_KIND[algaEntityType];
+  if (!kind) {
+    throw new ExpectedExternalMappingError(
+      `Mapping entity type ${algaEntityType} is not managed by the Xero mapping screen.`
+    );
+  }
+
+  const wanted = externalEntityId.trim();
+  const client = await XeroClientService.create(tenant, realm);
+
+  if (kind === 'item') {
+    const items = await client.listItems();
+    const match = items.find(
+      (item) => (item.code ?? '').trim() === wanted || (item.itemId ?? '').trim() === wanted
+    );
+    if (!match || !isXeroRecordUsable(match.status)) {
+      throw new ExpectedExternalMappingError(
+        `Xero item ${externalEntityId} does not exist in the connected organisation.`
+      );
+    }
+    return;
+  }
+
+  const rates = await client.listTaxRates();
+  const match = rates.find(
+    (rate) => (rate.taxType ?? '').trim() === wanted || (rate.taxRateId ?? '').trim() === wanted
+  );
+  if (!match || !isXeroRecordUsable(match.status)) {
+    throw new ExpectedExternalMappingError(
+      `Xero tax rate ${externalEntityId} does not exist in the connected organisation.`
+    );
+  }
+}
+
+/**
+ * Fail-closed remote check for a manually-linked catalog mapping. The external
+ * id must resolve to a live entity of the expected type in the connected realm,
+ * or the link is rejected before it can become a confused-deputy pointer for a
+ * later sync. Provider-specific because the remote catalogs and their id
+ * semantics differ (QBO reads a record by id; Xero matches a code against the
+ * connected organisation's catalog).
+ */
+async function assertRemoteEntityExists(
+  tenant: string,
+  integrationType: string,
+  algaEntityType: string,
+  externalEntityId: string,
+  realm: string
+): Promise<void> {
+  if (integrationType === 'quickbooks_online') {
+    await assertQboRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm);
+    return;
+  }
+  if (integrationType === 'xero') {
+    await assertXeroRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm);
+    return;
   }
 }
 
