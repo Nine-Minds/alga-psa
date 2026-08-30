@@ -9,6 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { FileText, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 /**
  * CSV Integration Settings Component
@@ -21,6 +22,23 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
  */
 const CSVIntegrationSettings: React.FC = () => {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
+
+  if (!caps.hasAny) {
+    return (
+      <div className="space-y-6" id="csv-integration-no-permission">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('integrations.csv.settings.qbo.title', { defaultValue: 'QuickBooks CSV Integration' })}</CardTitle>
+            <CardDescription>
+              {t('integrations.csv.settings.noPermissionDescription', { defaultValue: 'You do not have permission to view or configure accounting integrations.' })}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Overview Card */}
@@ -62,7 +80,15 @@ const CSVIntegrationSettings: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CSVMappingManager />
+          {caps.mappingsManage ? (
+            <CSVMappingManager />
+          ) : (
+            <Alert variant="info" id="qbcsv-mapping-permission-notice">
+              <AlertDescription>
+                {t('integrations.csv.settings.qbo.mappings.permissionNotice', { defaultValue: 'Editing CSV mappings requires the manage-mappings capability. Ask an administrator to grant it.' })}
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 

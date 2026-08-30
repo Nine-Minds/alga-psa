@@ -20,6 +20,7 @@ import {
 } from '../../../actions/qboActions';
 import { QboLiveMappingManager } from '../../qbo/QboLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 type QboStatus = Awaited<ReturnType<typeof getQboConnectionStatus>>;
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
@@ -67,6 +68,7 @@ function statusBadgeVariant(status?: 'active' | 'expired' | 'error'): 'success' 
 
 export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot }: QboIntegrationSettingsProps = {}) {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
   const searchParams = useSearchParams();
   const [status, setStatus] = React.useState<QboStatus | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -204,6 +206,23 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
   const readyToSave = clientId.trim().length > 0 && clientSecret.trim().length > 0;
   const canConnect = Boolean(status?.credentials.ready);
   const defaultConnection = status?.defaultConnection;
+  const canManageConnections = caps.connectionsManage;
+  const canManageMappings = caps.mappingsManage;
+
+  if (!caps.hasAny) {
+    return (
+      <div className="space-y-6" id="qbo-integration-settings">
+        <Card id="qbo-integration-no-permission-card">
+          <CardHeader>
+            <CardTitle>{t('integrations.qbo.settings.title', { defaultValue: 'QuickBooks Online' })}</CardTitle>
+            <CardDescription>
+              {t('integrations.qbo.settings.noPermissionDescription', { defaultValue: 'You do not have permission to view or configure accounting integrations.' })}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" id="qbo-integration-settings">
@@ -216,6 +235,14 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {!canManageConnections ? (
+        <Alert variant="info" id="qbo-connection-manage-permission-notice">
+          <AlertDescription>
+            {t('integrations.qbo.settings.connectionsPermissionNotice', { defaultValue: 'You can view QuickBooks settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.' })}
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -322,6 +349,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                   <Input
                     id="qbo-client-id"
                     value={clientId}
+                    disabled={!canManageConnections}
                     onChange={(event) => setClientId(event.target.value)}
                     placeholder={t('integrations.qbo.settings.clientIdPlaceholder', { defaultValue: 'Paste your Intuit app client ID' })}
                   />
@@ -342,6 +370,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                     id="qbo-client-secret"
                     type="password"
                     value={clientSecret}
+                    disabled={!canManageConnections}
                     onChange={(event) => setClientSecret(event.target.value)}
                     placeholder={t('integrations.qbo.settings.clientSecretPlaceholder', { defaultValue: 'Paste your Intuit app client secret' })}
                   />
@@ -390,7 +419,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                   id="qbo-settings-save"
                   type="button"
                   onClick={() => void handleSave()}
-                  disabled={!readyToSave || saving}
+                  disabled={!readyToSave || saving || !canManageConnections}
                 >
                   {saving
                     ? t('integrations.qbo.settings.actions.saving', { defaultValue: 'Saving…' })
@@ -450,7 +479,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                 <Switch
                   id="qbo-automated-sales-tax-toggle"
                   checked={automatedSalesTax}
-                  disabled={savingAutomatedSalesTax || loading}
+                  disabled={savingAutomatedSalesTax || loading || !canManageConnections}
                   onCheckedChange={(checked) => void handleAutomatedSalesTaxChange(checked)}
                 />
               </div>
@@ -467,7 +496,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           <Button
             id="qbo-connect-button"
             type="button"
-            disabled={!canConnect}
+            disabled={!canConnect || !canManageConnections}
             onClick={() => window.location.assign('/api/integrations/qbo/connect')}
           >
             {defaultConnection
@@ -480,7 +509,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
               id="qbo-disconnect-button"
               type="button"
               variant="destructive"
-              disabled={!defaultConnection || disconnecting}
+              disabled={!defaultConnection || disconnecting || !canManageConnections}
               onClick={() => void handleDisconnect()}
             >
               {disconnecting
@@ -517,7 +546,15 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                 {t('integrations.qbo.settings.mapping.alert', { defaultValue: 'QuickBooks items, tax codes, and terms are loaded from the connected company so live exports can keep using the first stored QuickBooks connection in v1.' })}
               </AlertDescription>
             </Alert>
-            <QboLiveMappingManager defaultConnection={defaultConnection} />
+            {canManageMappings ? (
+              <QboLiveMappingManager defaultConnection={defaultConnection} />
+            ) : (
+              <Alert variant="info" id="qbo-mapping-permission-notice">
+                <AlertDescription>
+                  {t('integrations.qbo.settings.mapping.permissionNotice', { defaultValue: 'You can view the connected company, but editing mappings requires the manage-mappings capability. Ask an administrator to grant it.' })}
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       ) : (
