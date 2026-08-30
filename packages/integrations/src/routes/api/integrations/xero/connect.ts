@@ -14,6 +14,7 @@ import {
   getXeroRedirectUri,
   resolveXeroOAuthCredentials
 } from '../../../../lib/xero/xeroClientService';
+import { isProviderDisconnectActive, PROVIDER_XERO } from '../../../../lib/providerDisconnect';
 import { generateOauthCsrfToken, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
 
@@ -76,10 +77,19 @@ async function handleConnectRequest(): Promise<NextResponse> {
   if (!canManageBilling) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const { tenant } = await createTenantKnex(sessionTenant);
+  const { knex, tenant } = await createTenantKnex(sessionTenant);
 
   if (!tenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  }
+
+  const disconnectActive = await isProviderDisconnectActive(knex, tenant, PROVIDER_XERO).catch(() => false);
+  if (disconnectActive) {
+    logger.info('[xeroOAuth] Connect blocked: Xero disconnect in progress', { tenantId: tenant });
+    return NextResponse.json(
+      { error: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.' },
+      { status: 409 }
+    );
   }
 
   const redirectUri = await getXeroRedirectUri(secretProvider);

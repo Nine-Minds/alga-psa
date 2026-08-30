@@ -1,7 +1,6 @@
 /* eslint-env node */
 'use server';
 
-import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth';
 import { revalidatePath } from 'next/cache';
@@ -9,7 +8,6 @@ import { ISecretProvider } from '@alga-psa/core';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
-import { notifyQboConnectionChanged } from '../lib/qbo/qboConnectionChangeProvider';
 import {
   isQboAutomatedSalesTaxEnabled,
   setQboAutomatedSalesTaxEnabled
@@ -30,9 +28,15 @@ import {
   resolveQboOAuthCredentials,
   type QboEnvironment
 } from '../lib/qbo/qboClientService';
+import {
+  PROVIDER_QBO,
+  disconnectProvider,
+  forceFinalizeProviderDisconnect,
+  getProviderDisconnectStatusInfo,
+  type ProviderDisconnectStatusInfo,
+  type DisconnectServiceResult,
+} from '../lib/providerDisconnect';
 import type { IUserWithRoles } from '@alga-psa/types';
-
-const QBO_TOKEN_REVOKE_URL = 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
 
 // Corrected QboCredentials interface (using ISO strings for dates)
 interface QboCredentials {
@@ -76,6 +80,12 @@ export interface QboConnectionStatus {
   scopes: string[];
   environment: QboEnvironment;
   credentials: QboCredentialStatus;
+  /**
+   * Durable disconnect state, when a disconnect has been started. Non-null
+   * while provider-side cleanup is pending or after it concluded; the settings
+   * UI uses it to show pending/partial/force-finalize states.
+   */
+  disconnect?: ProviderDisconnectStatusInfo | null;
   error?: string;
   errorCode?: 'FORBIDDEN' | 'ENTERPRISE_REQUIRED';
 }
@@ -559,45 +569,72 @@ export async function getTenantQboCredentials(
   }
 }
 
-async function deleteTenantQboCredentials(secretProvider: ISecretProvider, tenantId: string): Promise<void> {
-  await secretProvider.deleteTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
-  logger.info('QBO credentials secret deleted', { tenantId });
-  clearAllCatalogCachesForTenant(tenantId);
-  await notifyQboConnectionChanged(tenantId);
+// --- Disconnect result types ---
+export interface QboDisconnectActionResult {
+  success: boolean;
+  /**
+   * 'disconnected' when provider cleanup was confirmed and local credentials
+   * were removed; 'pending'/'partial' while retryable provider cleanup is in
+   * flight; 'failed_permanent' when an operator force-finalize is required.
+   */
+  status: 'disconnected' | 'pending' | 'partial' | 'failed_permanent';
+  error?: string;
+  pendingTargets?: number;
+  failedTargets?: number;
 }
 
-async function revokeQboTokens(tenantId: string, credentialMap: QboCredentialsMap): Promise<void> {
-  const resolved = await resolveQboOAuthCredentials(tenantId).catch(() => null);
-  if (!resolved) {
-    logger.warn('Skipping QuickBooks token revocation: no usable client credentials', { tenantId });
-    return;
+function mapDisconnectProgress(progress: DisconnectServiceResult): QboDisconnectActionResult {
+  switch (progress.status) {
+    case 'disconnected':
+    case 'already_disconnected':
+    case 'no_credentials':
+      return { success: true, status: 'disconnected' };
+    case 'partial':
+      return {
+        success: false,
+        status: 'partial',
+        error: progress.error,
+        pendingTargets: progress.record?.targets.filter((t) => t.status === 'pending_revocation').length,
+        failedTargets: progress.record?.targets.filter((t) => t.status === 'failed_permanent').length,
+      };
+    case 'pending':
+      return { success: false, status: 'pending', error: progress.error };
+    case 'failed_permanent':
+      return { success: false, status: 'failed_permanent', error: progress.error };
   }
+}
 
-  const authHeader = `Basic ${Buffer.from(`${resolved.clientId}:${resolved.clientSecret}`).toString('base64')}`;
-  for (const [realmId, credentials] of Object.entries(credentialMap)) {
-    try {
-      await axios.post(
-        QBO_TOKEN_REVOKE_URL,
-        { token: credentials.refreshToken },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: authHeader
-          },
-          timeout: 10000
-        }
-      );
-      logger.info('Revoked QuickBooks tokens with Intuit', { tenantId, realmId });
-    } catch (error) {
-      logger.warn('Best-effort QuickBooks token revocation failed', {
-        tenantId,
-        realmId,
-        error: error instanceof Error ? error.message : error
-      });
+export const forceFinalizeQboDisconnect = withAuth(async (
+  user,
+  { tenant },
+  input: { reason: string }
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const accessError = await getQboUpdateAccessError(user);
+    if (accessError) {
+      return { success: false, error: accessError };
     }
+
+    if (!input?.reason?.trim()) {
+      return { success: false, error: 'A reason is required to force-finalize a QuickBooks disconnect.' };
+    }
+
+    const { knex } = await createTenantKnex();
+    const progress = await forceFinalizeProviderDisconnect(knex, tenant, PROVIDER_QBO, {
+      userId: user.user_id,
+      reason: input.reason.trim(),
+    });
+
+    revalidatePath('/msp/settings');
+    if (progress.status === 'disconnected' || progress.status === 'already_disconnected') {
+      return { success: true };
+    }
+    return { success: false, error: progress.error };
+  } catch (error) {
+    logger.error('QuickBooks force-finalize disconnect failed', { tenantId: tenant, error });
+    return { success: false, error: 'Failed to finalize the QuickBooks disconnect. Please try again.' };
   }
-}
+});
 
 // --- QBO API Call Helper ---
 
@@ -937,6 +974,10 @@ export const getQboConnectionStatus = withAuth(async (
     credentials: credentialStatus
   };
 
+  const { knex } = await createTenantKnex();
+  const disconnect = await getProviderDisconnectStatusInfo(knex, tenant, PROVIDER_QBO).catch(() => null);
+  const disconnectBlocking = disconnect !== null && disconnect.status !== 'finalized';
+
   try {
     const credentialMap = await getTenantCredentialMap(tenant);
     const entries = Object.entries(credentialMap);
@@ -947,9 +988,12 @@ export const getQboConnectionStatus = withAuth(async (
         ...baseStatus,
         connected: false,
         connections: [],
-        error: credentialStatus.ready
-          ? 'No QuickBooks company is connected yet. Click Connect QuickBooks to authorize one.'
-          : 'Add a QuickBooks client ID and client secret before connecting QuickBooks Online.'
+        disconnect,
+        error: disconnectBlocking
+          ? 'QuickBooks is being disconnected. Sync and exports are paused until the disconnect completes.'
+          : credentialStatus.ready
+            ? 'No QuickBooks company is connected yet. Click Connect QuickBooks to authorize one.'
+            : 'Add a QuickBooks client ID and client secret before connecting QuickBooks Online.'
       };
     }
 
@@ -1022,6 +1066,7 @@ export const getQboConnectionStatus = withAuth(async (
       connections: summaries,
       defaultRealmId,
       defaultConnection,
+      disconnect,
       error: hasActiveConnection
         ? undefined
         : aggregatedError ?? 'QuickBooks connections require attention. Please reconnect.'
@@ -1033,6 +1078,7 @@ export const getQboConnectionStatus = withAuth(async (
       ...baseStatus,
       connected: false,
       connections: [],
+      disconnect,
       error: message
     };
   }
@@ -1089,40 +1135,44 @@ export const saveQboCredentials = withAuth(async (
 });
 
 /**
- * Disconnects the QuickBooks Online integration for the current tenant
- * by deleting stored credentials and optionally revoking the token with Intuit.
+ * Disconnects the QuickBooks Online integration for the current tenant.
+ *
+ * Durable, provider-first workflow: credentials are tombstoned immediately so
+ * sync/export paths stop using them, then each connected realm's OAuth grant
+ * is revoked with Intuit before local deletion. Transient provider failures
+ * leave the disconnect pending (retried by the scheduled job); permanent
+ * failures require an operator force-finalize. Repeat calls are idempotent.
  * Corresponds to Task 84.
  */
 export const disconnectQbo = withAuth(async (
   user,
   { tenant }
-): Promise<{ success: boolean; error?: string }> => {
-  const secretProvider = await getSecretProviderInstance();
-
+): Promise<QboDisconnectActionResult> => {
   try {
     const accessError = await getQboUpdateAccessError(user);
     if (accessError) {
-      return { success: false, error: accessError };
+      return { success: false, status: 'failed_permanent', error: accessError };
     }
 
     logger.info('Disconnecting QuickBooks integration', { tenantId: tenant });
 
-    const credentialMap = await getTenantCredentialMap(tenant);
+    // Drop any cached QBO catalog data immediately; the tombstone already stops
+    // the sync/export path, and the cache would otherwise serve up to 60s of
+    // stale data.
+    clearAllCatalogCachesForTenant(tenant);
 
-    await deleteTenantQboCredentials(secretProvider, tenant);
-    logger.info('Deleted stored QuickBooks credentials', { tenantId: tenant });
-
-    if (Object.keys(credentialMap).length > 0) {
-      await revokeQboTokens(tenant, credentialMap);
-    }
+    const { knex } = await createTenantKnex();
+    const progress = await disconnectProvider(knex, tenant, PROVIDER_QBO, {
+      userId: user.user_id,
+    });
 
     revalidatePath('/msp/settings');
-
-    return { success: true };
+    return mapDisconnectProgress(progress);
   } catch (error: unknown) {
     logger.error('QuickBooks disconnect failed', { tenantId: tenant, error });
     return {
       success: false,
+      status: 'pending',
       error: 'Failed to disconnect QuickBooks. Please try again.'
     };
   }

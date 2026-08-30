@@ -13,6 +13,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { ExternalLink, Link2, RefreshCw } from 'lucide-react';
 import {
   disconnectQbo,
+  forceFinalizeQboDisconnect,
   getQboAutomatedSalesTaxMode,
   getQboConnectionStatus,
   saveQboCredentials,
@@ -189,12 +190,50 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
 
     try {
       const result = await disconnectQbo();
-      if (!result.success) {
-        setError(result.error ?? t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to disconnect QuickBooks.' }));
+      if (result.status === 'disconnected') {
+        setSuccessMessage(t('integrations.qbo.settings.disconnectSuccess', { defaultValue: 'The stored QuickBooks connection was removed. Tenant-owned QuickBooks app credentials were preserved.' }));
+        await load();
         return;
       }
 
-      setSuccessMessage(t('integrations.qbo.settings.disconnectSuccess', { defaultValue: 'The stored QuickBooks connection was removed. Tenant-owned QuickBooks app credentials were preserved.' }));
+      if (result.status === 'pending' || result.status === 'partial') {
+        setSuccessMessage(t('integrations.qbo.settings.disconnectPending', { defaultValue: 'QuickBooks is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.' }));
+        await load();
+        return;
+      }
+
+      if (result.status === 'failed_permanent') {
+        setError(result.error ?? t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to disconnect QuickBooks.' }));
+        await load();
+        return;
+      }
+
+      setError(result.error ?? t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to disconnect QuickBooks.' }));
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleRetryDisconnect = async () => {
+    await handleDisconnect();
+  };
+
+  const handleForceFinalize = async () => {
+    const reason = window.prompt(
+      t('integrations.qbo.settings.disconnect.forceFinalizePrompt', { defaultValue: 'Reason for force-finalizing the QuickBooks disconnect (recorded in the audit log):' })
+    );
+    if (!reason?.trim()) return;
+
+    setDisconnecting(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const result = await forceFinalizeQboDisconnect({ reason: reason.trim() });
+      if (!result.success) {
+        setError(result.error ?? t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to finalize the QuickBooks disconnect.' }));
+        return;
+      }
+      setSuccessMessage(t('integrations.qbo.settings.disconnectForceFinalized', { defaultValue: 'The QuickBooks disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.' }));
       await load();
     } finally {
       setDisconnecting(false);
@@ -204,6 +243,8 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
   const readyToSave = clientId.trim().length > 0 && clientSecret.trim().length > 0;
   const canConnect = Boolean(status?.credentials.ready);
   const defaultConnection = status?.defaultConnection;
+  const disconnectPending = Boolean(status?.disconnect && status.disconnect.status !== 'finalized');
+  const disconnectFailedPermanent = status?.disconnect?.status === 'failed_permanent';
 
   return (
     <div className="space-y-6" id="qbo-integration-settings">
@@ -410,6 +451,38 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {status?.disconnect && status.disconnect.status !== 'finalized' ? (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/40 dark:bg-amber-500/10" id="qbo-disconnect-progress">
+              <p className="text-sm font-medium text-foreground">
+                {t('integrations.qbo.settings.disconnect.inProgressTitle', { defaultValue: 'QuickBooks disconnect in progress' })}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('integrations.qbo.settings.disconnect.inProgressDescription', { defaultValue: 'Provider grants are being revoked. Sync and exports stay paused until every connected company is confirmed revoked.' })}
+              </p>
+              <ul className="mt-3 space-y-1.5 text-xs">
+                {status.disconnect.targets.map((target) => (
+                  <li key={target.targetId} className="flex items-center justify-between gap-2">
+                    <span className="truncate font-mono">{target.targetId}</span>
+                    <Badge variant={target.status === 'revoked' ? 'success' : target.status === 'failed_permanent' ? 'error' : 'secondary'}>
+                      {target.status === 'revoked'
+                        ? t('integrations.qbo.settings.disconnect.targetRevoked', { defaultValue: 'revoked' })
+                        : target.status === 'failed_permanent'
+                          ? t('integrations.qbo.settings.disconnect.targetFailed', { defaultValue: 'needs attention' })
+                          : t('integrations.qbo.settings.disconnect.targetPending', { defaultValue: 'pending' })}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+              {status.disconnect.status === 'failed_permanent' ? (
+                <Alert variant="destructive" className="mt-3">
+                  <AlertDescription>
+                    {t('integrations.qbo.settings.disconnect.failedPermanentDescription', { defaultValue: 'Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record.' })}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+            </div>
+          ) : null}
+
           {defaultConnection ? (
             <div className="rounded-lg border bg-muted/20 p-4 text-sm">
               <div className="flex flex-wrap items-center gap-2">
@@ -467,7 +540,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           <Button
             id="qbo-connect-button"
             type="button"
-            disabled={!canConnect}
+            disabled={!canConnect || disconnectPending}
             onClick={() => window.location.assign('/api/integrations/qbo/connect')}
           >
             {defaultConnection
@@ -476,11 +549,33 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           </Button>
 
           <div className="flex flex-wrap items-center gap-2">
+            {disconnectPending ? (
+              <Button
+                id="qbo-retry-disconnect-button"
+                type="button"
+                variant="outline"
+                disabled={disconnecting}
+                onClick={() => void handleRetryDisconnect()}
+              >
+                {t('integrations.qbo.settings.actions.retryDisconnect', { defaultValue: 'Retry Disconnect' })}
+              </Button>
+            ) : null}
+            {disconnectFailedPermanent ? (
+              <Button
+                id="qbo-force-finalize-disconnect-button"
+                type="button"
+                variant="destructive"
+                disabled={disconnecting}
+                onClick={() => void handleForceFinalize()}
+              >
+                {t('integrations.qbo.settings.actions.forceFinalizeDisconnect', { defaultValue: 'Force Finalize' })}
+              </Button>
+            ) : null}
             <Button
               id="qbo-disconnect-button"
               type="button"
               variant="destructive"
-              disabled={!defaultConnection || disconnecting}
+              disabled={(!defaultConnection && !disconnectPending) || disconnecting}
               onClick={() => void handleDisconnect()}
             >
               {disconnecting

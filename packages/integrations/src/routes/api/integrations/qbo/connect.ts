@@ -13,6 +13,7 @@ import {
   getQboRedirectUri,
   resolveQboOAuthCredentials
 } from '../../../../lib/qbo/qboClientService';
+import { isProviderDisconnectActive, PROVIDER_QBO } from '../../../../lib/providerDisconnect';
 import {
   buildQboOAuthStateCookie,
   createQboOAuthState,
@@ -52,10 +53,19 @@ export async function GET(): Promise<NextResponse> {
   if (!canManageBilling) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const { tenant } = await createTenantKnex(sessionTenant);
+  const { knex, tenant } = await createTenantKnex(sessionTenant);
 
   if (!tenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  }
+
+  const disconnectActive = await isProviderDisconnectActive(knex, tenant, PROVIDER_QBO).catch(() => false);
+  if (disconnectActive) {
+    logger.info('[qboOAuth] Connect blocked: QuickBooks disconnect in progress', { tenantId: tenant });
+    return NextResponse.json(
+      { error: 'QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.' },
+      { status: 409 }
+    );
   }
 
   const redirectUri = await getQboRedirectUri(secretProvider);

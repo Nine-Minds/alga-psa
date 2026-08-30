@@ -33,6 +33,7 @@ import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHand
 import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob } from './handlers/cleanupWebhookDeliveriesJob';
 import { inboundEmailRecoveryHandler } from './handlers/inboundEmailRecoveryHandler';
+import { providerDisconnectRetryHandler } from './handlers/providerDisconnectRetryHandler';
 
 const RENEWAL_HORIZON_DAYS = 90;
 const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
@@ -66,6 +67,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
   'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }) },
+  'provider-disconnect-retry': { scope: 'tenant', run: (tenantId) => providerDisconnectRetryHandler({ tenantId }) },
 };
 
 export type MaintenanceJobResult = {
