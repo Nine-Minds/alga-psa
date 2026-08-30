@@ -171,6 +171,73 @@ The `.env.example` file indicates which values are managed via Docker secrets. W
 2. Fill in non-sensitive values in `.env`
 3. Create corresponding secret files for sensitive values
 
+## Tenant Secrets on the Filesystem
+
+Tenant-scoped secrets (OAuth tokens for QBO/Xero, Gmail service-account keys, and
+similar runtime credentials) are written by the application through the secret
+provider abstraction. When `SECRET_WRITE_PROVIDER=filesystem`, they are stored
+under the filesystem secret root as:
+
+```
+<SECRET_FS_BASE_PATH>/tenants/<tenantId>/<secretName>
+```
+
+The filesystem provider maintains strict permissions on this store,
+independent of the process umask:
+
+- Every directory (`<root>`, `tenants/`, and each tenant directory) is
+  `0700`. Directories are created with an explicit `0700` mode and re-checked
+  with `chmod` where they may already exist.
+- Every secret file is `0600`. Writes go through an exclusively-created
+  (`O_EXCL`) temporary file in the same directory, are `fsync`ed, and are then
+  atomically `rename()`d over the target — a crash or interruption mid-write
+  never leaves a partial file at the final path, and a rewrite always ends at
+  `0600`.
+- Tenant IDs and secret names are validated as single path components; the
+  resolved path must stay under the secret root.
+- The provider refuses to write through symlinks or non-regular files, and
+  validates the secret root before the first write: a root that is missing,
+  a symlink, not a directory, owned by another user, or not mode `0700` causes
+  writes to be refused with a precise operator message. Reads are unaffected,
+  so existing deployments continue to boot; only writes fail closed.
+- Secret values are never written to logs; only paths are logged.
+
+### Operator message on refused writes
+
+When the secret root cannot be made safe, writes fail with a message naming the
+exact path and the fix, for example:
+
+```
+Filesystem secret store at /var/lib/alga/tenant-secrets is not safe for secret
+writes: it has mode 755. Expected a real directory owned by uid 1000 with mode
+0700. Refusing secret writes; reads continue. Fix with: sudo chown 1000
+/var/lib/alga/tenant-secrets && sudo chmod 700 /var/lib/alga/tenant-secrets, or
+run scripts/repair-secret-permissions.sh --apply /var/lib/alga/tenant-secrets
+(see docs/security/secrets_management.md).
+```
+
+### Repairing an existing store
+
+Installs created before the strict-modes behavior (or restored from a backup
+that preserved a permissive umask) may hold `0755` directories or `0644` secret
+files. Run the non-destructive repair script to bring the store in line. It
+never deletes, rewrites, or reads out secret contents:
+
+```bash
+# Report what would change (no changes made):
+scripts/repair-secret-permissions.sh --path <SECRET_FS_BASE_PATH>
+
+# Apply mode fixes (dirs 0700, files 0600) for entries owned by the running user:
+scripts/repair-secret-permissions.sh --apply --path <SECRET_FS_BASE_PATH>
+
+# As root, also hand ownership of fixed entries to the service user:
+sudo scripts/repair-secret-permissions.sh --apply --path <SECRET_FS_BASE_PATH> --uid 1000
+```
+
+Without `--path`, the script uses `SECRET_FS_BASE_PATH` (or `<repo>/secrets`).
+Symlinks and non-regular entries are reported for manual intervention and are
+never changed.
+
 ## Best Practices
 
 1. Always use secrets for sensitive data, never environment variables
