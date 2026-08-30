@@ -50,6 +50,19 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'account_management', action: 'read', msp: true, client: false, description: 'Read account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'update', msp: true, client: false, description: 'Update account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
+  // Accounting integration capabilities. The old single `billing_settings:update`
+  // gate over every accounting integration action is split into five capabilities
+  // so each server action and route is gated by the narrowest capability. Admin is
+  // the only default role that may touch connections or remote state; Finance gets
+  // the read/mapping/export capabilities but no connection administration and no
+  // remote destructive operations. Every other default role gets none of these —
+  // the accounting integration screens are an Admin/Finance surface.
+  { resource: 'accounting_integrations', action: 'catalog_read', msp: true, client: false, description: 'Read remote accounting catalogs and integration status (accounts, items, tax codes, terms, connections)', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
+  { resource: 'accounting_integrations', action: 'connections_manage', msp: true, client: false, description: 'Save OAuth client credentials, connect and disconnect accounting integrations, and choose the default company', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
+  { resource: 'accounting_integrations', action: 'exports_execute', msp: true, client: false, description: 'Create and execute accounting exports and sync cycles', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
+  { resource: 'accounting_integrations', action: 'mappings_manage', msp: true, client: false, description: 'Create, update, retarget and reconcile accounting mappings', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
+  { resource: 'accounting_integrations', action: 'remote_mutate', msp: true, client: false, description: 'Perform remote destructive or money-moving operations in connected accounting integrations', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
+
   { resource: 'asset', action: 'create', msp: true, client: false, description: 'Create new assets and equipment records', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
   { resource: 'asset', action: 'delete', msp: true, client: false, description: 'Remove assets from the system', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'asset', action: 'read', msp: true, client: false, description: 'View asset details and inventory', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
