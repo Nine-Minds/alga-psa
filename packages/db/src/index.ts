@@ -35,6 +35,8 @@ export { resolveTenantId, requireTenantId } from './lib/tenantId';
 
 // Audit logging
 export { auditLog } from './lib/auditLog';
+export { writeAccountingAudit } from './lib/accountingAudit';
+export type { AccountingAuditOperation, AccountingAuditProvider, AccountingAuditParams } from './lib/accountingAudit';
 export * from './lib/workDate';
 
 // Tenant Slug utilities

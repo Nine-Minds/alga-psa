@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { ISecretProvider } from '@alga-psa/core';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 import { notifyQboConnectionChanged } from '../lib/qbo/qboConnectionChangeProvider';
 import {
   isQboAutomatedSalesTaxEnabled,
@@ -249,9 +249,9 @@ async function getQboUpdateAccessError(user: IUserWithRoles): Promise<string | n
     return 'QuickBooks Online integration is only available in Enterprise Edition.';
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'update');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'connections_manage');
   if (!allowed) {
-    return 'Forbidden: You do not have permission to manage QuickBooks integration settings.';
+    return 'Forbidden: You do not have permission to manage QuickBooks integration connections.';
   }
 
   return null;
@@ -448,7 +448,7 @@ function normalizeTermRow(row: QboTermRow): QboTerm {
 }
 
 async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) {
     throw new Error('Forbidden: You do not have permission to view QuickBooks integration settings.');
   }
@@ -459,7 +459,7 @@ async function getQboCatalogAccessError(user: IUserWithRoles): Promise<QboCatalo
     return actionError('QuickBooks Online integration is only available in Enterprise Edition.', 'msp/integrations:errors.qbo.enterpriseOnly');
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) {
     return permissionError('Forbidden: You do not have permission to view QuickBooks integration settings.', 'msp/integrations:errors.qbo.viewPermission');
   }
@@ -1074,6 +1074,15 @@ export const saveQboCredentials = withAuth(async (
       clientSecretConfigured: true
     });
 
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenant, 'accounting_credentials_saved', {
+      userId: user.user_id,
+      provider: 'qbo',
+      details: { action: 'replace_client_credentials', source: 'tenant' },
+    }).catch((error) => {
+      logger.warn('Failed to write QBO credentials audit entry', { tenantId: tenant, error });
+    });
+
     revalidatePath('/msp/settings');
     return { success: true };
   } catch (error) {
@@ -1112,9 +1121,22 @@ export const disconnectQbo = withAuth(async (
     await deleteTenantQboCredentials(secretProvider, tenant);
     logger.info('Deleted stored QuickBooks credentials', { tenantId: tenant });
 
-    if (Object.keys(credentialMap).length > 0) {
+    const revokedCount = Object.keys(credentialMap).length;
+    if (revokedCount > 0) {
       await revokeQboTokens(tenant, credentialMap);
     }
+
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenant, 'accounting_disconnected', {
+      userId: user.user_id,
+      provider: 'qbo',
+      details: {
+        realmsDisconnected: Object.keys(credentialMap),
+        tokensRevoked: revokedCount > 0,
+      },
+    }).catch((error) => {
+      logger.warn('Failed to write QBO disconnect audit entry', { tenantId: tenant, error });
+    });
 
     revalidatePath('/msp/settings');
 

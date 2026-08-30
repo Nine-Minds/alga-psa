@@ -58,6 +58,24 @@ export const voidInvoice = withAuth(async (
     return { success: false, error: 'Invoice is already voided.' };
   }
 
+  // An invoice that was exported to the accounting integration carries its
+  // void into the remote ledger (QuickBooks void / credit-memo delete). That
+  // remote mutation is a distinct, admin-only capability: Finance can run
+  // exports but cannot void remote documents, so a void that would propagate
+  // remotely is refused up front rather than silently desynchronizing the
+  // books. Unmapped invoices void locally with invoice:update alone.
+  const remoteMapping = await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
+    .where({
+      tenant,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'invoice',
+      alga_entity_id: invoiceId
+    })
+    .first('id');
+  if (remoteMapping && !(await hasPermission(user, 'accounting_integrations', 'remote_mutate', knex))) {
+    return { success: false, error: 'Permission denied: voiding invoices that sync to the accounting integration requires the accounting remote-mutate permission.' };
+  }
+
   // Guard: payments exist
   let paymentSum = 0;
   try {

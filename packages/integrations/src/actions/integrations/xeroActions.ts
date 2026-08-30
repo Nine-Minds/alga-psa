@@ -5,6 +5,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 import {
   actionError,
   permissionError,
@@ -28,7 +29,7 @@ type XeroCatalogActionError = ActionMessageError | ActionPermissionError;
 type XeroCatalogResult<T> = Promise<T[] | XeroCatalogActionError>;
 
 async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) {
     throw new Error('Forbidden: You do not have permission to view Xero integration settings.');
   }
@@ -39,7 +40,7 @@ async function getXeroCatalogAccessError(user: IUserWithRoles): Promise<XeroCata
     return actionError('Xero integration is only available in Enterprise Edition.', 'msp/integrations:errors.xero.enterpriseOnly');
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) {
     return permissionError('Forbidden: You do not have permission to view Xero integration settings.', 'msp/integrations:errors.xero.viewPermission');
   }
@@ -280,9 +281,9 @@ async function getXeroUpdateAccessError(user: IUserWithRoles): Promise<string | 
     return 'Xero integration is only available in Enterprise Edition.';
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'update');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'connections_manage');
   if (!allowed) {
-    return 'Forbidden: You do not have permission to manage Xero integration settings.';
+    return 'Forbidden: You do not have permission to manage Xero integration connections.';
   }
 
   return null;
@@ -319,6 +320,15 @@ export const saveXeroCredentials = withAuth(async (
       clientSecretConfigured: true
     });
 
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenant, 'accounting_credentials_saved', {
+      userId: user.user_id,
+      provider: 'xero',
+      details: { action: 'replace_client_credentials', source: 'tenant' },
+    }).catch((error) => {
+      logger.warn('[xeroActions] Failed to write Xero credentials audit entry', { tenantId: tenant, error });
+    });
+
     revalidatePath('/msp/settings');
     return { success: true };
   } catch (error) {
@@ -343,6 +353,14 @@ export const disconnectXero = withAuth(async (
 
     logger.info('[xeroActions] Disconnecting Xero integration', { tenantId: tenant });
     await secretProvider.deleteTenantSecret(tenant, XERO_CREDENTIALS_SECRET_NAME);
+
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenant, 'accounting_disconnected', {
+      userId: user.user_id,
+      provider: 'xero',
+    }).catch((error) => {
+      logger.warn('[xeroActions] Failed to write Xero disconnect audit entry', { tenantId: tenant, error });
+    });
 
     revalidatePath('/msp/settings');
 

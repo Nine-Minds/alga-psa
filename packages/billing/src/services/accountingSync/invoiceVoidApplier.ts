@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier intentionally bridges billing to the QuickBooks client (same bridge as the accounting export adapter)
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { writeAccountingAudit } from '@alga-psa/db';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import { MAPPING_SYNC_STATUS } from './accountingSync.types';
 import type { SyncOperationsRepository } from './syncOperationsRepository';
@@ -116,6 +117,25 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
         invoiceId: op.alga_entity_id,
         externalId,
         externalEntityType
+      });
+
+      // Remote destructive operations are audited with no secret material:
+      // only the provider, the remote entity, and the outcome.
+      await writeAccountingAudit(deps.knex, deps.tenantId, 'accounting_remote_void', {
+        provider: 'quickbooks_online',
+        recordId: externalId,
+        details: {
+          algaEntityType: 'invoice',
+          algaEntityId: op.alga_entity_id,
+          externalEntityType,
+          operation: op.operation,
+          source: 'sync_cycle',
+        },
+      }).catch((error) => {
+        logger.warn('[invoiceVoidApplier] Failed to write remote-void audit entry', {
+          tenantId: deps.tenantId,
+          error,
+        });
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'QBO void/delete failed';

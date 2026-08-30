@@ -48,8 +48,8 @@ export async function GET(): Promise<NextResponse> {
   if (!sessionTenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
-  const canManageBilling = await hasPermission(permissionUser, 'billing_settings', 'update');
-  if (!canManageBilling) {
+  const canManageConnections = await hasPermission(permissionUser, 'accounting_integrations', 'connections_manage');
+  if (!canManageConnections) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   const { tenant } = await createTenantKnex(sessionTenant);

@@ -51,13 +51,18 @@ function assertEnterpriseEdition(): void {
   }
 }
 
-async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+async function checkCatalogReadAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) throw new Error('Forbidden');
 }
 
-async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'update');
+async function checkMappingsManageAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage');
+  if (!allowed) throw new Error('Forbidden');
+}
+
+async function checkExportsExecuteAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'exports_execute');
   if (!allowed) throw new Error('Forbidden');
 }
 
@@ -105,7 +110,7 @@ export const getCustomerMatchCandidates = withAuth(async (
   error?: string;
 }> => {
   assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+  await checkCatalogReadAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -246,7 +251,7 @@ export const linkClientToQboCustomer = withAuth(async (
   input: { clientId: string; externalId: string; externalName: string; billingProfileId?: string }
 ): Promise<{ linked: boolean; error?: string }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkMappingsManageAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -308,10 +313,11 @@ export const linkClientToQboCustomer = withAuth(async (
 // ─── 3. bulkLinkExactCustomerMatches ─────────────────────────────────────────
 
 export const bulkLinkExactCustomerMatches = withAuth(async (
-  _user,
+  user,
   _ctx
 ): Promise<{ linked: number }> => {
   assertEnterpriseEdition();
+  await checkMappingsManageAccess(user);
 
   const { rows } = await getCustomerMatchCandidates();
   const exactRows = rows.filter((r) => r.suggestion?.exact && !r.mappedExternalId);
@@ -338,7 +344,7 @@ export const createQboCustomerForClient = withAuth(async (
   clientId: string
 ): Promise<{ created: boolean; externalId?: string; error?: string }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
 
   try {
     const { knex } = await createTenantKnex();
@@ -392,7 +398,7 @@ export const createQboSubCustomerForProfile = withAuth(async (
   input: { clientId: string; billingProfileId: string }
 ): Promise<{ created: boolean; externalId?: string; error?: string }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
 
   try {
     const { knex } = await createTenantKnex();
@@ -489,7 +495,7 @@ export const getHistoricalInvoiceMatches = withAuth(async (
   input?: { windowStart?: string }
 ): Promise<{ confident: HistMatch[]; review: Array<HistMatch & { reason: string }> }> => {
   assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+  await checkCatalogReadAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -562,7 +568,7 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
   }>
 ): Promise<{ linked: number }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkMappingsManageAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -610,7 +616,7 @@ export const backfillPaymentsForLinkedInvoices = withAuth(async (
   invoiceIds: string[]
 ): Promise<{ processed: number; paymentsApplied: number; skippedPaid: number; errors: number }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -782,7 +788,7 @@ export const getOnboardingWizardState = withAuth(async (
   { tenant }
 ): Promise<{ completedAt: string | null; lastRunAt: string | null; connected: boolean }> => {
   assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+  await checkCatalogReadAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await getDefaultQboRealmId(tenant);
@@ -808,7 +814,7 @@ export const completeOnboardingWizard = withAuth(async (
   input: { autoSyncStartDate: string; enableAutoSync: boolean }
 ): Promise<{ done: boolean }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);

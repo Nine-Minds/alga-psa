@@ -24,8 +24,8 @@ export const importExternalTaxForInvoice = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<SingleImportResult | ActionPermissionError> => {
-  if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
+  if (!await hasPermission(user, 'accounting_integrations', 'exports_execute')) {
+    return permissionError('Permission denied: accounting export execution required', 'msp/billing:errors.permissions.exportExecute');
   }
   const service = getExternalTaxImportService();
   return service.importTaxForInvoice(invoiceId, user.user_id);
@@ -39,8 +39,8 @@ export const batchImportExternalTaxes = withAuth(async (
   user,
   { tenant }
 ): Promise<BatchImportResult | ActionPermissionError> => {
-  if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
+  if (!await hasPermission(user, 'accounting_integrations', 'exports_execute')) {
+    return permissionError('Permission denied: accounting export execution required', 'msp/billing:errors.permissions.exportExecute');
   }
   const service = getExternalTaxImportService();
   return service.batchImportPendingTaxes(user.user_id);
@@ -55,8 +55,8 @@ export const getExternalTaxImportHistory = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<IExternalTaxImport[] | ActionPermissionError> => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+  if (!await hasPermission(user, 'accounting_integrations', 'exports_execute')) {
+    return permissionError('Permission denied: accounting export execution required', 'msp/billing:errors.permissions.exportExecute');
   }
   const service = getExternalTaxImportService();
   return service.getImportHistory(invoiceId);
@@ -70,8 +70,8 @@ export const getInvoiceTaxReconciliation = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<ReconciliationResult | null | ActionPermissionError> => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+  if (!await hasPermission(user, 'accounting_integrations', 'exports_execute')) {
+    return permissionError('Permission denied: accounting export execution required', 'msp/billing:errors.permissions.exportExecute');
   }
   const service = getExternalTaxImportService();
   return service.reconcileTaxDifferences(invoiceId);
@@ -84,6 +84,9 @@ export const getPendingExternalTaxCount = withAuth(async (
   user,
   { tenant }
 ): Promise<number> => {
+  if (!await hasPermission(user, 'accounting_integrations', 'exports_execute')) {
+    return 0;
+  }
   const service = getExternalTaxImportService();
   return service.getPendingImportCount();
 });
@@ -104,8 +107,8 @@ export const getInvoicesPendingExternalTax = withAuth(async (
     adapter_type?: string;
   }> | ActionPermissionError
 > => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+  if (!await hasPermission(user, 'accounting_integrations', 'exports_execute')) {
+    return permissionError('Permission denied: accounting export execution required', 'msp/billing:errors.permissions.exportExecute');
   }
   const { knex } = await createTenantKnex();
   const facade = tenantDb(knex, tenant);

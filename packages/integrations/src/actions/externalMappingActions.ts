@@ -1,7 +1,8 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, writeAccountingAudit } from '@alga-psa/db';
+import type { AccountingAuditProvider } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -139,7 +140,7 @@ export const getExternalEntityMappings = withAuth(async (
   params: GetMappingsParams
 ): Promise<ExternalEntityMapping[] | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, 'billing_settings', 'read', knex);
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read', knex);
   if (!allowed) {
     return permissionError('Permission denied: You do not have permission to view accounting mappings.', 'msp/integrations:errors.mappings.viewPermission');
   }
@@ -214,7 +215,7 @@ export const createExternalEntityMapping = withAuth(async (
   mappingData: CreateMappingData
 ): Promise<ExternalEntityMapping | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
   if (!allowed) {
     return permissionError('Permission denied: You do not have permission to manage accounting mappings.', 'msp/integrations:errors.mappings.managePermission');
   }
@@ -285,6 +286,21 @@ export const createExternalEntityMapping = withAuth(async (
     });
 
     invalidateTenantMappingCache(tenant);
+
+    await writeAccountingAudit(knex, tenant, 'accounting_mapping_created', {
+      userId: user.user_id,
+      provider: integration_type as AccountingAuditProvider,
+      recordId: newMapping.id,
+      details: {
+        alga_entity_type,
+        alga_entity_id,
+        external_entity_id,
+        external_realm_id,
+      },
+    }).catch((error) => {
+      logger.warn('Failed to write mapping-created audit entry', { tenantId: tenant, error });
+    });
+
     return cloneMapping(newMapping);
   } catch (error: any) {
     logger.error('Failed to create external entity mapping', {
@@ -318,7 +334,7 @@ export const updateExternalEntityMapping = withAuth(async (
   updates: UpdateMappingData
 ): Promise<ExternalEntityMapping | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
   if (!allowed) {
     return permissionError('Permission denied: You do not have permission to manage accounting mappings.', 'msp/integrations:errors.mappings.managePermission');
   }
@@ -389,6 +405,29 @@ export const updateExternalEntityMapping = withAuth(async (
     });
 
     invalidateTenantMappingCache(tenant);
+
+    await writeAccountingAudit(knex, tenant, 'accounting_mapping_updated', {
+      userId: user.user_id,
+      provider: after.integration_type as AccountingAuditProvider,
+      recordId: after.id,
+      details: {
+        before: {
+          alga_entity_id: before?.alga_entity_id ?? null,
+          external_entity_id: before?.external_entity_id ?? null,
+          sync_status: before?.sync_status ?? null,
+          external_realm_id: before?.external_realm_id ?? null,
+        },
+        after: {
+          alga_entity_id: after.alga_entity_id,
+          external_entity_id: after.external_entity_id,
+          sync_status: after.sync_status ?? null,
+          external_realm_id: after.external_realm_id ?? null,
+        },
+      },
+    }).catch((error) => {
+      logger.warn('Failed to write mapping-updated audit entry', { tenantId: tenant, error });
+    });
+
     return cloneMapping(after);
   } catch (error: unknown) {
     logger.error('Failed to update external mapping', {
@@ -412,7 +451,7 @@ export const deleteExternalEntityMapping = withAuth(async (
   mappingId: string
 ): Promise<{ success: true } | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
   if (!allowed) {
     return permissionError('Permission denied: You do not have permission to manage accounting mappings.', 'msp/integrations:errors.mappings.managePermission');
   }
@@ -473,6 +512,21 @@ export const deleteExternalEntityMapping = withAuth(async (
     });
 
     invalidateTenantMappingCache(tenant);
+
+    await writeAccountingAudit(knex, tenant, 'accounting_mapping_deleted', {
+      userId: user.user_id,
+      provider: before.integration_type as AccountingAuditProvider,
+      recordId: before.id,
+      details: {
+        alga_entity_type: before.alga_entity_type,
+        alga_entity_id: before.alga_entity_id,
+        external_entity_id: before.external_entity_id,
+        external_realm_id: before.external_realm_id ?? null,
+      },
+    }).catch((error) => {
+      logger.warn('Failed to write mapping-deleted audit entry', { tenantId: tenant, error });
+    });
+
     return { success: true };
   } catch (error: unknown) {
     logger.error('Failed to delete external entity mapping', {

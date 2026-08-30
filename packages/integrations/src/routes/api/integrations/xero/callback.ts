@@ -6,6 +6,8 @@ import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 
 import {
   getXeroRedirectUri,
@@ -132,6 +134,22 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     return createRedirect(FAILURE_PATH, { xero_error: 'tenant_mismatch' });
   }
 
+  // The connect flow is connection administration: the session user must still
+  // hold `accounting_integrations:connections_manage` at completion time, or
+  // the callback is refused with the same failure landing as any other
+  // unauthorized connect attempt.
+  const canManageConnections = await hasPermission(
+    sessionUser as Parameters<typeof hasPermission>[0],
+    'accounting_integrations',
+    'connections_manage',
+  );
+  if (!canManageConnections) {
+    logger.warn('[xeroOAuth] Callback refused: session user lacks accounting connection management', {
+      tenantId,
+    });
+    return createRedirect(FAILURE_PATH, { xero_error: 'forbidden' });
+  }
+
   const secretProvider = await getSecretProviderInstance();
   const redirectUri = await getXeroRedirectUri(secretProvider);
 
@@ -238,6 +256,19 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
       credentialSource: credentials.source,
       connectionCount: Object.keys(connectionUpdates).length,
       defaultConnectionId: Object.keys(connectionUpdates)[0]
+    });
+
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenantId, 'accounting_connected', {
+      userId: sessionUser.user_id,
+      provider: 'xero',
+      recordId: Object.keys(connectionUpdates)[0],
+      details: {
+        connectionIds: Object.keys(connectionUpdates),
+        connectionCount: Object.keys(connectionUpdates).length,
+      },
+    }).catch((error) => {
+      logger.warn('[xeroOAuth] Failed to write connect audit entry', { tenantId, error });
     });
 
     return createRedirect(SUCCESS_PATH);

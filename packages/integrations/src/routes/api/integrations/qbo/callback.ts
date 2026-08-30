@@ -6,6 +6,8 @@ import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getSession } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 
 import {
   getQboRedirectUri,
@@ -101,7 +103,17 @@ export async function GET(request: Request): Promise<NextResponse> {
   // completed by an authenticated session belonging to the same tenant that
   // started the flow (mirrors the session-tenant binding added on main).
   const session = await getSession();
-  const sessionTenant = (session?.user as { tenant?: string } | undefined)?.tenant;
+  const sessionUser = (session?.user ?? {}) as {
+    tenant?: string;
+    user_id?: string;
+    id?: string;
+    user_type?: string;
+    username?: string;
+    email?: string;
+    is_inactive?: boolean;
+    roles?: unknown[];
+  };
+  const sessionTenant = sessionUser?.tenant;
   if (!sessionTenant) {
     logger.warn('[qboOAuth] Callback received without an authenticated session');
     return createRedirect(FAILURE_PATH, { qbo_error: 'session_expired' });
@@ -112,6 +124,27 @@ export async function GET(request: Request): Promise<NextResponse> {
       sessionTenant
     });
     return createRedirect(FAILURE_PATH, { qbo_error: 'tenant_mismatch' });
+  }
+
+  // The connect flow is connection administration: the session user must still
+  // hold `accounting_integrations:connections_manage` at completion time, or
+  // the callback is refused with the same failure landing as any other
+  // unauthorized connect attempt.
+  const permissionUser = sessionUser.user_id
+    ? sessionUser
+    : sessionUser.id
+      ? { ...sessionUser, user_id: sessionUser.id }
+      : sessionUser;
+  const canManageConnections = await hasPermission(
+    permissionUser as Parameters<typeof hasPermission>[0],
+    'accounting_integrations',
+    'connections_manage',
+  );
+  if (!canManageConnections) {
+    logger.warn('[qboOAuth] Callback refused: session user lacks accounting connection management', {
+      tenantId: sessionTenant
+    });
+    return createRedirect(FAILURE_PATH, { qbo_error: 'forbidden' });
   }
 
   const tenantId = statePayload.tenantId;
@@ -174,6 +207,16 @@ export async function GET(request: Request): Promise<NextResponse> {
       tenantId,
       realmId,
       credentialSource: credentials.source
+    });
+
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenantId, 'accounting_connected', {
+      userId: permissionUser.user_id,
+      provider: 'qbo',
+      recordId: realmId,
+      details: { realmId },
+    }).catch((error) => {
+      logger.warn('[qboOAuth] Failed to write connect audit entry', { tenantId, error });
     });
 
     return createRedirect(SUCCESS_PATH);

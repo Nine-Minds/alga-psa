@@ -223,11 +223,11 @@ export function registerPublicResourcesV1Routes(
   registry.registerRoute({
     method: 'get', path: '/api/v1/accounting-exports/{batchId}/download',
     summary: 'Download an accounting export batch',
-    description: 'Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires billing_settings:update.',
+    description: 'Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires accounting_integrations:exports_execute.',
     tags: ['Accounting Exports'], security: [{ ApiKeyAuth: [] }],
     request: { params: registry.registerSchema('AccountingBatchIdParam', zOpenApi.object({ batchId: zOpenApi.string().describe('Export batch identifier.') })) },
     responses: { 200: { description: 'Regenerated export file (attachment).', schema: Success }, ...stdErrs({ 404: 'Batch not found.' }) },
-    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'billing_settings', 'x-rbac-action': 'update' },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'accounting_integrations', 'x-rbac-action': 'exports_execute' },
     edition: 'both',
   });
 }
