@@ -301,6 +301,7 @@ import {
   PROVIDER_QBO,
   PROVIDER_XERO,
   XERO_GRANT_TARGET_ID,
+  MAX_RETRY_ATTEMPTS,
   disconnectProvider,
   forceFinalizeProviderDisconnect,
   getProviderDisconnectStatusInfo,
@@ -795,6 +796,60 @@ describe('provider disconnect — shared behavior', () => {
     const again = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
     expect(again.status).toBe('already_disconnected');
     expect(providerHarness.calls).toHaveLength(0);
+  });
+
+  it('retry-budget exhaustion turns a persistently transient target into an operator-finalizable state', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    providerHarness.setQboRevoke(() => providerHarness.fail(500, { error: 'server_error' }));
+
+    // First pass goes pending (attempt 1) — the provider keeps failing.
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, { userId: 'user-1' });
+    expect(recordRows()[0].status).toBe('pending_revocation');
+
+    // Simulate the retry job having spent the bounded budget over time.
+    recordRows()[0].attempt_count = MAX_RETRY_ATTEMPTS;
+    const callsBeforeExhaust = providerHarness.calls.length;
+
+    const exhausted = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, { fromRetry: true });
+
+    expect(exhausted.status).toBe('failed_permanent');
+    expect(recordRows()[0].status).toBe('failed_permanent');
+    expect(recordRows()[0].next_retry_at).toBeNull();
+    expect(recordRows()[0].last_error_class).toBe('retry_budget_exhausted');
+    expect(recordRows()[0].targets[0]).toMatchObject({ targetId: 'realm-a', status: 'failed_permanent' });
+    // The exhausting pass made no further provider calls.
+    expect(providerHarness.calls.length).toBe(callsBeforeExhaust);
+    // A single audit event marks the budget crossing.
+    const budgetEvents = auditRows().filter((r) => r.operation === 'disconnect_retry_budget_exhausted');
+    expect(budgetEvents).toHaveLength(1);
+
+    // Operator force-finalize now succeeds with reason + audit.
+    const finalized = await forceFinalizeProviderDisconnect(makeKnex(), TENANT, PROVIDER_QBO, {
+      userId: 'admin-1',
+      reason: 'Provider kept failing for over a day; operator confirms local removal.',
+    });
+    expect(finalized.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(recordRows()[0].finalize_reason).toContain('operator confirms');
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
+    expect(auditRows().map((r) => r.operation)).toContain('disconnect_force_finalized');
+  });
+
+  it('force-finalize is still refused while the retry budget is not yet exhausted', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    providerHarness.setQboRevoke(() => providerHarness.fail(500, { error: 'server_error' }));
+
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(recordRows()[0].attempt_count).toBeLessThan(MAX_RETRY_ATTEMPTS);
+
+    const refused = await forceFinalizeProviderDisconnect(makeKnex(), TENANT, PROVIDER_QBO, {
+      userId: 'admin-1',
+      reason: 'skip the retry budget',
+    });
+    expect(refused.status).toBe('pending');
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(recordRows()[0].finalize_reason).toBeUndefined();
   });
 
   it('never logs tokens, secrets, or raw provider bodies', async () => {

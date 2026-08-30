@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { ProviderType } from './types';
@@ -8,6 +9,7 @@ export type DisconnectAuditOperation =
   | 'disconnect_target_revoked'
   | 'disconnect_target_failed'
   | 'disconnect_retry_started'
+  | 'disconnect_retry_budget_exhausted'
   | 'disconnect_finalized'
   | 'disconnect_force_finalized';
 
@@ -61,7 +63,7 @@ export async function writeDisconnectAudit(params: DisconnectAuditParams): Promi
   } catch (error) {
     // Audit is best-effort: a failed audit write must not fail the disconnect
     // itself, but it should be loud so it gets fixed.
-    console.error('[providerDisconnect] Failed to write disconnect audit row', {
+    logger.error('[providerDisconnect] Failed to write disconnect audit row', {
       tenantId: params.tenantId,
       provider: params.provider,
       operation: params.operation,

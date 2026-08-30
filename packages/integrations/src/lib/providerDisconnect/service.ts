@@ -63,6 +63,17 @@ export interface ForceFinalizeOptions {
 const RETRY_BASE_MS = 60_000;
 const RETRY_MAX_MS = 60 * 60 * 1000;
 
+/**
+ * Bounded retry budget for transient provider failures. 20 attempts with the
+ * exponential backoff capped at 1h keeps retrying for well over a day before
+ * the disconnect surfaces an operator-actionable terminal state. Chosen over
+ * retrying indefinitely: the work order requires a visible terminal path for
+ * "retry budget exhaustion or a definitive permanent error", and permanently
+ * relaxing the force-finalize guard while the record still reads "pending"
+ * would hide the reason behind a status that claims retrying continues.
+ */
+export const MAX_RETRY_ATTEMPTS = 20;
+
 function computeNextRetryAt(attemptCount: number): string {
   const delay = Math.min(RETRY_BASE_MS * 2 ** Math.min(attemptCount, 6), RETRY_MAX_MS);
   return new Date(Date.now() + delay).toISOString();
@@ -308,6 +319,20 @@ async function runRevocationPass(
     firstPermanentErrorClass: null,
   };
 
+  // Retry-budget exhaustion: once the bounded budget is spent, stop calling
+  // the provider and surface an operator-actionable terminal state instead of
+  // retrying forever. Still-pending targets are recorded as permanently failed
+  // so the existing force-finalize path becomes available.
+  if (record.attemptCount >= MAX_RETRY_ATTEMPTS) {
+    await exhaustRetryBudget(knex, tenantId, provider, record, opts);
+    return {
+      status: 'failed_permanent',
+      transientTargets: 0,
+      permanentTargets: 1,
+      error: 'Provider cleanup kept failing and the retry budget is exhausted. An admin must finalize the disconnect manually.',
+    };
+  }
+
   // Process pending targets, looping once more when revoking the last Xero
   // connection introduces the OAuth-grant target. The loop is bounded: the
   // grant target can only be introduced once, so at most one extra iteration
@@ -418,6 +443,50 @@ async function runRevocationPass(
     permanentTargets: counters.permanentTargets,
     error: 'Provider cleanup hit a permanent error. An admin must finalize the disconnect manually.',
   };
+}
+
+/**
+ * Terminal transition for retry-budget exhaustion. Marks any still-pending
+ * targets as permanently failed (preserving their last error class), records
+ * the record as `failed_permanent`, and emits one audit event for the
+ * crossing. Runs without any further provider call; the operator's
+ * force-finalize is then the only path to local deletion.
+ */
+async function exhaustRetryBudget(
+  knex: Knex,
+  tenantId: string,
+  provider: ProviderType,
+  record: ProviderDisconnectRecord,
+  opts: DisconnectServiceOptions,
+): Promise<void> {
+  const now = new Date().toISOString();
+  const targets: DisconnectTargetEntry[] = record.targets.map((target) =>
+    target.status === 'pending_revocation'
+      ? {
+          ...target,
+          status: 'failed_permanent',
+          errorClass: target.errorClass ?? 'retry_budget_exhausted',
+          updatedAt: now,
+        }
+      : target,
+  );
+  await replaceDisconnectTargets(knex, tenantId, provider, targets);
+  await setRecordStatus(knex, tenantId, provider, 'failed_permanent', {
+    attemptCount: record.attemptCount + 1,
+    nextRetryAt: null,
+    lastErrorClass: 'retry_budget_exhausted',
+  });
+  await writeDisconnectAudit({
+    knex,
+    tenantId,
+    provider,
+    operation: 'disconnect_retry_budget_exhausted',
+    targetId: null,
+    result: 'retry_budget_exhausted',
+    attemptCount: record.attemptCount + 1,
+    correlationId: record.correlationId,
+    userId: opts.userId,
+  });
 }
 
 async function revokeSingleTarget(

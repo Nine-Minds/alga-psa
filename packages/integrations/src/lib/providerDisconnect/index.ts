@@ -14,6 +14,7 @@ export {
 export {
   disconnectProvider,
   forceFinalizeProviderDisconnect,
+  MAX_RETRY_ATTEMPTS,
 } from './service';
 export type {
   DisconnectServiceResult,
