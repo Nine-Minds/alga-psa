@@ -48,6 +48,7 @@ function makeStatefulLedger() {
     findByExternalId: vi.fn(async (entityType: string, externalId: string) =>
       rows.find((r) => r.alga_entity_type === entityType && r.external_entity_id === externalId) ?? null
     ),
+    findNonConsumable: vi.fn(async () => undefined),
     insert: vi.fn(async (record: any) => {
       const row = {
         id: `map-${rows.length + 1}`,
