@@ -5,10 +5,8 @@ import crypto from 'crypto';
 import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getSession } from '@alga-psa/auth';
-import { hasPermission } from '@alga-psa/auth/rbac';
-
 import { createTenantKnex } from '@alga-psa/db';
+
 import {
   getXeroOAuthScopeConfig,
   getXeroRedirectUri,
@@ -16,6 +14,11 @@ import {
 } from '../../../../lib/xero/xeroClientService';
 import { generateOauthCsrfToken, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
+import {
+  canManageAccountingConnections,
+  getAccountingConnectionSessionUser
+} from '../../../../lib/accountingConnectionAuth';
+import { storeAccountingOAuthNonce } from '../../../../lib/accountingOAuthStateStore';
 
 const XERO_AUTHORIZE_URL =
   process.env.XERO_OAUTH_AUTHORIZE_URL ?? 'https://login.xero.com/identity/connect/authorize';
@@ -61,43 +64,43 @@ async function handleConnectRequest(): Promise<NextResponse> {
     );
   }
 
-  const secretProvider = await getSecretProviderInstance();
-  const session = await getSession();
-  const sessionUser = session?.user as any;
-  const permissionUser =
-    sessionUser && !sessionUser.user_id && sessionUser.id
-      ? { ...sessionUser, user_id: sessionUser.id }
-      : sessionUser;
-  const sessionTenant = sessionUser?.tenant;
-  if (!sessionTenant) {
+  const sessionUser = await getAccountingConnectionSessionUser();
+  if (!sessionUser) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
-  const canManageBilling = await hasPermission(permissionUser, 'billing_settings', 'update');
+  const canManageBilling = await canManageAccountingConnections(sessionUser);
   if (!canManageBilling) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const { tenant } = await createTenantKnex(sessionTenant);
+  const { tenant } = await createTenantKnex(sessionUser.tenant);
 
   if (!tenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
+  const secretProvider = await getSecretProviderInstance();
   const redirectUri = await getXeroRedirectUri(secretProvider);
 
   try {
     const credentials = await resolveXeroOAuthCredentials(tenant, secretProvider);
     const csrfToken = generateOauthCsrfToken();
     const { verifier, challenge } = createPkcePair();
+    const nonce = crypto.randomBytes(12).toString('hex');
     const statePayload = {
       tenantId: tenant,
+      userId: sessionUser.user_id,
       csrf: csrfToken,
-      codeVerifier: verifier
+      codeVerifier: verifier,
+      nonce
     };
     const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
 
     const scopeConfig = getXeroOAuthScopeConfig();
+    await storeAccountingOAuthNonce('xero', nonce);
+
     logger.info('[xeroOAuth] Starting Xero OAuth connect flow', {
       tenantId: tenant,
+      userId: sessionUser.user_id,
       credentialSource: credentials.source,
       scopeSource: scopeConfig.source,
       scopes: scopeConfig.scopes
