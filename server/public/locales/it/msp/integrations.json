@@ -3494,7 +3494,10 @@
         "tenantOauthDescription": "Incolla le credenziali dell'app Xero registrate per questo tenant. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
         "tenantOauthTitle": "App OAuth di proprietà del tenant",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "scopeOverride": "Override di distribuzione (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "L'override XERO_OAUTH_SCOPES è stato ignorato perché contiene voci non valide ({{scopes}}). Vengono invece utilizzati gli ambiti predefiniti.",
+        "scopeReconnectNote": "Questi ambiti si applicano alle nuove autorizzazioni. Una connessione esistente mantiene gli ambiti concessi in origine; per applicare l'insieme corrente, disconnetti e riconnetti Xero. Puoi anche rimuovere questa app dalle app connesse in Xero per revocare le concessioni precedenti."
       }
     },
     "stripe": {
