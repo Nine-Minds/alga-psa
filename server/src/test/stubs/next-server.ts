@@ -21,11 +21,6 @@ type StubCookieSetOptions = {
 type StubCookieObjectForm = StubCookieSetOptions & { name: string; value: string };
 
 class StubResponseCookies {
-  // Track the most recently set cookie per name so reads (get/getAll) return the
-  // structured cookie the route set, mirroring Next.js's ResponseCookies which
-  // keeps an in-memory map alongside the serialized Set-Cookie headers.
-  private store = new Map<string, StubCookieObjectForm>();
-
   constructor(private headers: Headers) {}
 
   // Next.js supports both set(name, value, options) and set({ name, value, ...options }).
@@ -38,8 +33,6 @@ class StubResponseCookies {
       typeof nameOrCookie === 'string'
         ? { name: nameOrCookie, value: value ?? '', ...options }
         : nameOrCookie;
-
-    this.store.set(cookie.name, cookie);
 
     const parts = [`${cookie.name}=${encodeURIComponent(cookie.value)}`];
     if (cookie.path) parts.push(`Path=${cookie.path}`);
@@ -60,16 +53,70 @@ class StubResponseCookies {
     return this.set(name, '', { maxAge: 0 });
   }
 
-  // Next.js's ResponseCookies exposes get/getAll so a handler (and its tests)
-  // can read back a cookie it just set on the response. Return the structured
-  // cookie object (name, value, and any options such as httpOnly/path/sameSite).
+  // Next's ResponseCookies reads back what the route just set, attributes
+  // included. Reparse the Set-Cookie headers rather than caching state so
+  // cookies written straight onto the headers are visible too.
   get(name: string): StubCookieObjectForm | undefined {
-    return this.store.get(name);
+    const matches = this.getAll().filter((cookie) => cookie.name === name);
+    return matches.length === 0 ? undefined : matches[matches.length - 1];
   }
 
   getAll(): StubCookieObjectForm[] {
-    return [...this.store.values()];
+    return this.rawCookies().map((raw) => parseSetCookie(raw));
   }
+
+  has(name: string): boolean {
+    return this.get(name) !== undefined;
+  }
+
+  private rawCookies(): string[] {
+    const headers = this.headers as Headers & { getSetCookie?: () => string[] };
+    if (typeof headers.getSetCookie === 'function') {
+      return headers.getSetCookie();
+    }
+    const joined = this.headers.get('set-cookie');
+    return joined ? [joined] : [];
+  }
+}
+
+function parseSetCookie(raw: string): StubCookieObjectForm {
+  const [pair, ...attributes] = raw.split(';');
+  const idx = pair.indexOf('=');
+  const cookie: StubCookieObjectForm = {
+    name: (idx === -1 ? pair : pair.slice(0, idx)).trim(),
+    value: idx === -1 ? '' : decodeURIComponent(pair.slice(idx + 1).trim()),
+  };
+
+  for (const attribute of attributes) {
+    const attrIdx = attribute.indexOf('=');
+    const key = (attrIdx === -1 ? attribute : attribute.slice(0, attrIdx)).trim().toLowerCase();
+    const attrValue = attrIdx === -1 ? '' : attribute.slice(attrIdx + 1).trim();
+    switch (key) {
+      case 'path':
+        cookie.path = attrValue;
+        break;
+      case 'domain':
+        cookie.domain = attrValue;
+        break;
+      case 'max-age':
+        cookie.maxAge = Number(attrValue);
+        break;
+      case 'expires':
+        cookie.expires = new Date(attrValue);
+        break;
+      case 'httponly':
+        cookie.httpOnly = true;
+        break;
+      case 'secure':
+        cookie.secure = true;
+        break;
+      case 'samesite':
+        cookie.sameSite = attrValue.toLowerCase() as StubCookieSetOptions['sameSite'];
+        break;
+    }
+  }
+
+  return cookie;
 }
 
 class StubRequestCookies {
