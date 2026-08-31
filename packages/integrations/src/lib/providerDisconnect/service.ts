@@ -459,14 +459,29 @@ async function runRevocationPass(
   }
 
   const latest = (await getDisconnectRecord(knex, tenantId, provider)) ?? record;
-  const remainingPending = latest.targets.filter(
-    (target) => target.status === 'pending_revocation',
-  ).length;
-  const remainingPermanent = latest.targets.filter(
-    (target) => target.status === 'failed_permanent',
-  ).length;
+  const persistedState = latest.targets.reduce(
+    (summary, target) => {
+      if (target.status === 'revoked') summary.revoked += 1;
+      if (target.status === 'pending_revocation') {
+        summary.pending += 1;
+        summary.firstPendingErrorClass ??= target.errorClass ?? null;
+      }
+      if (target.status === 'failed_permanent') {
+        summary.permanent += 1;
+        summary.firstPermanentErrorClass ??= target.errorClass ?? null;
+      }
+      return summary;
+    },
+    {
+      pending: 0,
+      permanent: 0,
+      revoked: 0,
+      firstPendingErrorClass: null as string | null,
+      firstPermanentErrorClass: null as string | null,
+    },
+  );
 
-  if (remainingPending === 0 && remainingPermanent === 0) {
+  if (persistedState.pending === 0 && persistedState.permanent === 0) {
     // Provider cleanup confirmed for every target — finalize local deletion.
     // Atomic-in-effect: the record only transitions to `finalized` after the
     // tombstoned credential secret is actually deleted. A deletion failure
@@ -534,13 +549,13 @@ async function runRevocationPass(
     return { status: 'disconnected', transientTargets: counters.transientTargets, permanentTargets: counters.permanentTargets };
   }
 
-  if (remainingPending > 0) {
+  if (persistedState.pending > 0) {
     // Transient failure: stay retryable with bounded backoff.
     const nextAttempt = attemptCount + 1;
     await setRecordStatus(knex, tenantId, provider, 'pending_revocation', {
       attemptCount: nextAttempt,
       nextRetryAt: computeNextRetryAt(nextAttempt),
-      lastErrorClass: counters.firstTransientErrorClass,
+      lastErrorClass: persistedState.firstPendingErrorClass,
     });
     await writeDisconnectAudit({
       knex,
@@ -553,7 +568,7 @@ async function runRevocationPass(
       correlationId: latest.correlationId,
       userId: opts.userId,
     });
-    const isPartial = counters.permanentTargets > 0 || counters.revokedTargets > 0;
+    const isPartial = persistedState.revoked > 0 || persistedState.permanent > 0;
     return {
       status: isPartial ? 'partial' : 'pending',
       transientTargets: counters.transientTargets,
@@ -566,7 +581,7 @@ async function runRevocationPass(
   await setRecordStatus(knex, tenantId, provider, 'failed_permanent', {
     attemptCount: attemptCount + 1,
     nextRetryAt: null,
-    lastErrorClass: counters.firstPermanentErrorClass,
+    lastErrorClass: persistedState.firstPermanentErrorClass,
   });
   return {
     status: 'failed_permanent',

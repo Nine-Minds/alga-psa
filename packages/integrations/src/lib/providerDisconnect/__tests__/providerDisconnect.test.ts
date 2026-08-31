@@ -344,6 +344,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: async () => 'test-xero-verifier-key',
   getSecretProviderInstance: async () => ({
     getTenantSecret: getTenantSecretMock,
     setTenantSecret: setTenantSecretMock,
@@ -351,6 +352,12 @@ vi.mock('@alga-psa/core/secrets', () => ({
     // App-level config (redirect URIs, base URLs) is absent in tests; the
     // callback routes fall back to their localhost defaults.
     getAppSecret: async () => null,
+  }),
+}));
+
+vi.mock('redis', () => ({
+  createClient: vi.fn(() => {
+    throw new Error('redis unavailable');
   }),
 }));
 
@@ -458,6 +465,12 @@ import { getStoredQboCredentialsMap, upsertStoredQboCredentials, QBO_TOKEN_URL }
 import { getStoredXeroConnections, upsertStoredXeroConnections } from '../../xero/xeroClientService';
 import { createQboOAuthState, QBO_OAUTH_STATE_COOKIE } from '../../qbo/qboOAuthState';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../xero/oauthCsrf';
+import {
+  _resetXeroConnectAttemptStoreForTests,
+  storeXeroConnectAttempt,
+  XERO_CONNECT_ATTEMPT_PROVIDER,
+} from '../../xero/xeroOAuthConnectAttemptStore';
+import { encryptXeroVerifier } from '../../xero/xeroOAuthVerifierCipher';
 import { GET as QboCallbackGET } from '../../../routes/api/integrations/qbo/callback';
 import { GET as XeroCallbackGET } from '../../../routes/api/integrations/xero/callback';
 import { NextRequest } from 'next/server';
@@ -492,6 +505,26 @@ function xeroConnectionMaterial(connectionId: string, refreshToken: string) {
 
 function xeroCredentialSecret(connections: Record<string, ReturnType<typeof xeroConnectionMaterial>>): void {
   secretStore.set(TENANT, 'xero_credentials', JSON.stringify(connections));
+}
+
+async function seedXeroConnectAttempt(params: {
+  nonce: string;
+  csrf: string;
+  initiatedAt: string;
+  verifier: string;
+}): Promise<string> {
+  const createdAt = Date.parse(params.initiatedAt);
+  await storeXeroConnectAttempt(params.nonce, {
+    verifier: await encryptXeroVerifier(params.verifier),
+    tenantId: TENANT,
+    userId: USER_ID,
+    provider: XERO_CONNECT_ATTEMPT_PROVIDER,
+    redirectUri: 'http://localhost:3000/api/integrations/xero/callback',
+    csrf: params.csrf,
+    createdAt,
+    expiresAt: Math.max(Date.now(), createdAt) + 600_000,
+  });
+  return params.nonce;
 }
 
 function qboCredentialSecret(realms: Record<string, { realmId: string; refreshToken: string }>): void {
@@ -546,6 +579,7 @@ beforeEach(() => {
   providerHarness.reset();
   knexHarness.reset();
   oauthStateHarness.reset();
+  _resetXeroConnectAttemptStoreForTests();
   vi.clearAllMocks();
 
   // Default secret-provider behavior; individual tests override to simulate
@@ -1324,7 +1358,7 @@ describe('Xero disconnect state machine', () => {
     expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
   });
 
-  it('a transient grant failure on a resumed record stays pending and a later pass converges', async () => {
+  it('a transient grant failure on a resumed record remains retryable and represents persisted revoked work as partial', async () => {
     seedPendingXeroRecordWithRevokedConnections({
       'conn-a': xeroConnectionMaterial('conn-a', 'rt-a'),
     });
@@ -1332,7 +1366,8 @@ describe('Xero disconnect state machine', () => {
 
     const first = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { fromRetry: true });
 
-    expect(first.status).toBe('pending');
+    expect(first.status).toBe('partial');
+    expect(first.record?.status).toBe('pending_revocation');
     expect(recordRows()[0].status).toBe('pending_revocation');
     expect(recordRows()[0].finalized_at).toBeNull();
     expect(new Date(recordRows()[0].next_retry_at).getTime()).toBeGreaterThan(Date.now());
@@ -1342,6 +1377,19 @@ describe('Xero disconnect state machine', () => {
     ]));
     expect(providerCalls().filter((call) => call.method === 'delete')).toHaveLength(0);
     expect(providerCalls().filter((call) => call.url.includes('connect/revocation'))).toHaveLength(1);
+    expect(auditRows()).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        operation: 'disconnect_target_failed',
+        details: expect.objectContaining({
+          target_id: XERO_GRANT_TARGET_ID,
+          result: 'transient_failure',
+        }),
+      }),
+      expect.objectContaining({
+        operation: 'disconnect_retry_started',
+        details: expect.objectContaining({ result: 'pending' }),
+      }),
+    ]));
     expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toContain('rt-a');
 
     providerHarness.setXeroGrantRevoke(() => providerHarness.ok(200, {}));
@@ -1356,6 +1404,54 @@ describe('Xero disconnect state machine', () => {
     expect(providerCalls().filter((call) => call.method === 'delete')).toHaveLength(0);
     expect(providerCalls().filter((call) => call.url.includes('connect/revocation'))).toHaveLength(2);
     expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
+  });
+
+  it('a permanent grant failure on a resumed record is terminal with revoked connections preserved and can be force-finalized', async () => {
+    seedPendingXeroRecordWithRevokedConnections({
+      'conn-a': xeroConnectionMaterial('conn-a', 'rt-a'),
+    });
+    providerHarness.setXeroGrantRevoke(() => providerHarness.fail(400, { error: 'invalid_client' }));
+
+    const failed = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { fromRetry: true });
+
+    expect(failed.status).toBe('failed_permanent');
+    expect(failed.record?.status).toBe('failed_permanent');
+    expect(recordRows()[0].status).toBe('failed_permanent');
+    expect(recordRows()[0].targets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ targetId: 'conn-a', status: 'revoked' }),
+      expect.objectContaining({
+        targetId: XERO_GRANT_TARGET_ID,
+        status: 'failed_permanent',
+        errorClass: expect.stringContaining('invalid_client'),
+      }),
+    ]));
+    expect(recordRows()[0].last_error_class).toContain('invalid_client');
+    expect(providerCalls().filter((call) => call.method === 'delete')).toHaveLength(0);
+    expect(providerCalls().filter((call) => call.url.includes('connect/revocation'))).toHaveLength(1);
+    expect(auditRows()).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        operation: 'disconnect_target_failed',
+        details: expect.objectContaining({
+          target_id: XERO_GRANT_TARGET_ID,
+          result: 'permanent_failure',
+        }),
+      }),
+    ]));
+
+    const finalized = await forceFinalizeProviderDisconnect(makeKnex(), TENANT, PROVIDER_XERO, {
+      userId: 'admin-1',
+      reason: 'Xero grant revocation was rejected permanently.',
+    });
+
+    expect(finalized.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
+    expect(auditRows()).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        operation: 'disconnect_force_finalized',
+        details: expect.objectContaining({ result: 'force_finalized' }),
+      }),
+    ]));
   });
 
   it('clean success deletes every connection, revokes the grant once, deletes local credentials, finalizes', async () => {
@@ -1677,17 +1773,7 @@ describe('Xero disconnect state machine', () => {
     const csrfToken = 'a'.repeat(64);
     const nonce = 'race-test-nonce';
     const initiatedAt = new Date(Date.now() - 1000).toISOString();
-    const state = Buffer.from(
-      JSON.stringify({
-        tenantId: TENANT,
-        userId: USER_ID,
-        csrf: csrfToken,
-        codeVerifier: 'race-verifier',
-        nonce,
-        initiatedAt,
-      }),
-    ).toString('base64url');
-    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
+    const state = await seedXeroConnectAttempt({ nonce, csrf: csrfToken, initiatedAt, verifier: 'race-verifier' });
 
     providerHarness.setXeroConnection(() => providerHarness.fail(500, { error: 'server_error' }));
     await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
@@ -1737,15 +1823,7 @@ describe('Xero disconnect state machine', () => {
     const csrfToken = 'b'.repeat(64);
     const nonce = 'delayed-xero-nonce';
     const initiatedAt = new Date(Date.now() - 1000).toISOString();
-    const state = Buffer.from(JSON.stringify({
-      tenantId: TENANT,
-      userId: USER_ID,
-      csrf: csrfToken,
-      codeVerifier: 'delayed-verifier',
-      nonce,
-      initiatedAt,
-    })).toString('base64url');
-    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
+    const state = await seedXeroConnectAttempt({ nonce, csrf: csrfToken, initiatedAt, verifier: 'delayed-verifier' });
 
     const disconnected = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
     expect(disconnected.status).toBe('disconnected');
@@ -1783,15 +1861,7 @@ describe('Xero disconnect state machine', () => {
     const initiatedAt = new Date(Date.parse(recordRows()[0].finalized_at) + 1).toISOString();
     const csrfToken = 'c'.repeat(64);
     const nonce = 'fresh-xero-nonce';
-    const state = Buffer.from(JSON.stringify({
-      tenantId: TENANT,
-      userId: USER_ID,
-      csrf: csrfToken,
-      codeVerifier: 'fresh-verifier',
-      nonce,
-      initiatedAt,
-    })).toString('base64url');
-    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
+    const state = await seedXeroConnectAttempt({ nonce, csrf: csrfToken, initiatedAt, verifier: 'fresh-verifier' });
     providerHarness.setXeroRefresh(() => providerHarness.ok(200, {
       access_token: 'fresh-at',
       refresh_token: 'fresh-rt',
@@ -1875,10 +1945,7 @@ describe('Xero disconnect state machine', () => {
     const csrfToken = 'a'.repeat(64);
     const nonce = 'race-write-nonce';
     const initiatedAt = new Date().toISOString();
-    const state = Buffer.from(
-      JSON.stringify({ tenantId: TENANT, userId: USER_ID, csrf: csrfToken, codeVerifier: 'race-verifier', nonce, initiatedAt }),
-    ).toString('base64url');
-    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
+    const state = await seedXeroConnectAttempt({ nonce, csrf: csrfToken, initiatedAt, verifier: 'race-verifier' });
 
     const previousEdition = process.env.EDITION;
     process.env.EDITION = 'ee';
@@ -1957,10 +2024,7 @@ describe('Xero disconnect state machine', () => {
     const csrfToken = 'a'.repeat(64);
     const nonce = 'race-gate-nonce';
     const initiatedAt = new Date().toISOString();
-    const state = Buffer.from(
-      JSON.stringify({ tenantId: TENANT, userId: USER_ID, csrf: csrfToken, codeVerifier: 'race-verifier', nonce, initiatedAt }),
-    ).toString('base64url');
-    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
+    const state = await seedXeroConnectAttempt({ nonce, csrf: csrfToken, initiatedAt, verifier: 'race-verifier' });
 
     const previousEdition = process.env.EDITION;
     process.env.EDITION = 'ee';
