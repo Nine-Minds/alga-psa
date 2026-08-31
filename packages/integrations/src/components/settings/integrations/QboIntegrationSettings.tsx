@@ -47,6 +47,16 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
       return t('integrations.qbo.settings.callback.oauthFailed', { defaultValue: 'The QuickBooks OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.' });
     case 'invalid_state':
       return t('integrations.qbo.settings.callback.invalidState', { defaultValue: 'The QuickBooks OAuth state was invalid or expired. Start the connect flow again.' });
+    case 'state_replayed':
+      return t('integrations.qbo.settings.callback.stateReplayed', { defaultValue: 'This QuickBooks connection request was already used. Start the connect flow again.' });
+    case 'session_expired':
+      return t('integrations.qbo.settings.callback.sessionExpired', { defaultValue: 'Your session is no longer valid. Sign in and start the QuickBooks connection again.' });
+    case 'user_mismatch':
+      return t('integrations.qbo.settings.callback.userMismatch', { defaultValue: 'This QuickBooks connection request belongs to another user. Sign in as the user who started it and try again.' });
+    case 'tenant_mismatch':
+      return t('integrations.qbo.settings.callback.tenantMismatch', { defaultValue: 'This QuickBooks connection request belongs to another workspace. Sign in to the correct workspace and start again.' });
+    case 'forbidden':
+      return t('integrations.qbo.settings.callback.forbidden', { defaultValue: 'You no longer have permission to manage accounting connections. Ask an administrator for access.' });
     case 'missing_params':
       return t('integrations.qbo.settings.callback.missingParams', { defaultValue: 'The QuickBooks callback was missing required parameters. Start the connect flow again.' });
     case 'access_denied':

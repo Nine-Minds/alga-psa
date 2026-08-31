@@ -4,10 +4,8 @@ import { NextResponse } from 'next/server';
 import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getSession } from '@alga-psa/auth';
-import { hasPermission } from '@alga-psa/auth/rbac';
-
 import { createTenantKnex } from '@alga-psa/db';
+
 import {
   getQboOAuthScopesString,
   getQboRedirectUri,
@@ -18,6 +16,11 @@ import {
   createQboOAuthState,
   getQboStateSigningSecret
 } from '../../../../lib/qbo/qboOAuthState';
+import {
+  canManageAccountingConnections,
+  getAccountingConnectionSessionUser
+} from '../../../../lib/accountingConnectionAuth';
+import { storeAccountingOAuthNonce } from '../../../../lib/accountingOAuthStateStore';
 
 const INTUIT_AUTHORIZE_URL =
   process.env.QBO_OAUTH_AUTHORIZE_URL ?? 'https://appcenter.intuit.com/connect/oauth2';
@@ -37,32 +40,25 @@ export async function GET(): Promise<NextResponse> {
     );
   }
 
-  const secretProvider = await getSecretProviderInstance();
-  const session = await getSession();
-  const sessionUser = session?.user as any;
-  const permissionUser =
-    sessionUser && !sessionUser.user_id && sessionUser.id
-      ? { ...sessionUser, user_id: sessionUser.id }
-      : sessionUser;
-  const sessionTenant = sessionUser?.tenant;
-  if (!sessionTenant) {
+  const sessionUser = await getAccountingConnectionSessionUser();
+  if (!sessionUser) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
-  const canManageConnections = await hasPermission(permissionUser, 'accounting_integrations', 'connections_manage');
-  if (!canManageConnections) {
+  const canManageBilling = await canManageAccountingConnections(sessionUser);
+  if (!canManageBilling) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const { tenant } = await createTenantKnex(sessionTenant);
+  const { tenant } = await createTenantKnex(sessionUser.tenant);
 
   if (!tenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
+  const secretProvider = await getSecretProviderInstance();
   const redirectUri = await getQboRedirectUri(secretProvider);
 
   try {
     const credentials = await resolveQboOAuthCredentials(tenant, secretProvider);
-
     const signingSecret = await getQboStateSigningSecret();
     if (!signingSecret) {
       logger.error('[qboOAuth] NEXTAUTH_SECRET is not configured; cannot sign OAuth state');
@@ -72,13 +68,17 @@ export async function GET(): Promise<NextResponse> {
       );
     }
 
-    const { stateParam, cookieValue } = createQboOAuthState({
+    const { stateParam, cookieValue, payload } = createQboOAuthState({
       tenantId: tenant,
+      userId: sessionUser.user_id,
       secret: signingSecret
     });
 
+    await storeAccountingOAuthNonce('qbo', payload.nonce);
+
     logger.info('[qboOAuth] Starting QuickBooks OAuth connect flow', {
       tenantId: tenant,
+      userId: sessionUser.user_id,
       credentialSource: credentials.source
     });
 

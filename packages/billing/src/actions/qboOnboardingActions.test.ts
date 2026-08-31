@@ -44,7 +44,13 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   getDefaultQboRealmId: vi.fn(async () => 'realm-1'),
   QboClientService: {
-    create: vi.fn()
+    create: vi.fn(async () => ({
+      // bulkLinkHistoricalInvoices proves the remote document exists before linking.
+      read: vi.fn(async (entityType: string, id: string) => {
+        if (entityType === 'Invoice') return { Id: id, SyncToken: '0' };
+        return null;
+      })
+    }))
   }
 }));
 
@@ -126,6 +132,15 @@ function makeKnexQuery(rows: any[]) {
 describe('bulkLinkHistoricalInvoices', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The QBO client mock factory is shared with other suites in this worker
+    // (singleFork); pin the create() return here so bulk-link's remote
+    // existence check gets a read-capable client regardless of file order.
+    vi.mocked(QboClientService.create).mockResolvedValue({
+      read: vi.fn(async (entityType: string, id: string) => {
+        if (entityType === 'Invoice') return { Id: id, SyncToken: '0' };
+        return null;
+      })
+    } as any);
   });
 
   /**
@@ -134,7 +149,8 @@ describe('bulkLinkHistoricalInvoices', () => {
    * Also supports .insert().returning() for SyncMappingLedger.insert.
    */
   function makeFullKnexMock(
-    alreadyMappedIds: string[]
+    alreadyMappedIds: string[],
+    localInvoiceIds: string[] = alreadyMappedIds
   ) {
     const fakeRow = {
       id: 'new-id',
@@ -159,6 +175,7 @@ describe('bulkLinkHistoricalInvoices', () => {
       andWhere: vi.fn().mockReturnThis(),
       whereIn: vi.fn().mockReturnThis(),
       whereNotIn: vi.fn().mockReturnThis(),
+      whereNull: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       first: vi.fn(async () => {
         const id = lastWhereArgs?.alga_entity_id;
@@ -176,16 +193,20 @@ describe('bulkLinkHistoricalInvoices', () => {
 
     const settingsQuery = makeKnexQuery([{ settings: {} }]);
 
-    // The shared invoice lock re-check (lockInvoiceForExternalSync) reads the
-    // invoice row FOR UPDATE; it must resolve to a non-cancelled row.
-    const invoicesQuery = makeKnexQuery([
-      { status: 'sent', finalized_at: new Date().toISOString() }
-    ]);
-
     const knexMock: any = vi.fn((table: string) => {
       if (table === 'tenant_external_entity_mappings') return mappingsQuery;
       if (table === 'tenant_settings') return settingsQuery;
-      if (table === 'invoices') return invoicesQuery;
+      // bulkLinkHistoricalInvoices proves the local side by loading each
+      // invoice's id + prepayment flag; the shared invoice lock itself is
+      // stubbed at the module boundary, so the rows only need those two fields.
+      if (table === 'invoices') {
+        return makeKnexQuery(
+          localInvoiceIds.map((invoiceId) => ({
+            invoice_id: invoiceId,
+            is_prepayment: false
+          }))
+        );
+      }
       return makeKnexQuery([]);
     });
     knexMock.fn = { now: vi.fn(() => new Date()) };
@@ -193,7 +214,7 @@ describe('bulkLinkHistoricalInvoices', () => {
   }
 
   it('inserts new mappings and returns linked count', async () => {
-    const { knexMock, mappingsQuery } = makeFullKnexMock([]); // nothing pre-mapped
+    const { knexMock, mappingsQuery } = makeFullKnexMock([], ['inv-1', 'inv-2']); // nothing pre-mapped
     vi.mocked(createTenantKnex).mockResolvedValue({ knex: knexMock } as any);
 
     const result = await bulkLinkHistoricalInvoices([
@@ -206,7 +227,7 @@ describe('bulkLinkHistoricalInvoices', () => {
   });
 
   it('idempotent: skips already-mapped invoices', async () => {
-    const { knexMock, mappingsQuery } = makeFullKnexMock(['inv-1']); // inv-1 already mapped
+    const { knexMock, mappingsQuery } = makeFullKnexMock(['inv-1'], ['inv-1', 'inv-2']); // inv-1 already mapped
     vi.mocked(createTenantKnex).mockResolvedValue({ knex: knexMock } as any);
 
     const result = await bulkLinkHistoricalInvoices([
@@ -216,6 +237,20 @@ describe('bulkLinkHistoricalInvoices', () => {
 
     // Only inv-2 is new
     expect(result.linked).toBe(1);
+    expect(mappingsQuery.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a match for an invoice that is not local to this tenant', async () => {
+    const { knexMock, mappingsQuery } = makeFullKnexMock([], ['inv-1']);
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: knexMock } as any);
+
+    const result = await bulkLinkHistoricalInvoices([
+      { invoiceId: 'inv-1', externalId: 'qbo-1', externalTotal: 10000, externalDocNumber: 'INV-001' },
+      { invoiceId: 'inv-foreign', externalId: 'qbo-2', externalTotal: 5000, externalDocNumber: 'INV-002' }
+    ]);
+
+    expect(result.linked).toBe(1);
+    expect(result.skipped).toBe(1);
     expect(mappingsQuery.insert).toHaveBeenCalledTimes(1);
   });
 });

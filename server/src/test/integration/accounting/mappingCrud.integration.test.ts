@@ -2,6 +2,22 @@ import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect, vi } 
 
 import { TestContext } from '../../../../test-utils/testContext';
 import { setupCommonMocks, createMockUser, mockGetCurrentUser } from '../../../../test-utils/testMocks';
+import { createTestService } from '../../../../test-utils/billingTestHelpers';
+
+// A QuickBooks catalog mapping is a link to a live remote Item, so the server
+// derives the connected realm and proves the Item exists before persisting.
+// Pin a connected realm and make the remote read resolve so the CRUD lifecycle
+// exercises the real create/update/delete path rather than the realm/remote
+// rejection paths (those are covered exhaustively in the action's db test).
+const qboReadMock = vi.hoisted(() => vi.fn(async () => ({ Id: 'qbo-item' })));
+const CONNECTED_REALM = 'realm-crud-1';
+
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
+  getStoredQboCredentialsMap: vi.fn(async () => ({ [CONNECTED_REALM]: { realmId: CONNECTED_REALM } })),
+  QboClientService: {
+    create: vi.fn(async () => ({ read: qboReadMock })),
+  },
+}));
 
 import {
   getExternalEntityMappings,
@@ -94,7 +110,8 @@ describe('Accounting Mapping CRUD integration', () => {
   }, HOOK_TIMEOUT);
 
   it('performs create, list, update, and delete for a service mapping', async () => {
-    const serviceId = 'svc-001';
+    // The local entity must exist and belong to the tenant, so map a real service.
+    const serviceId = await createTestService(ctx, { service_name: 'CRUD Mapping Service' });
     const initialExternalId = 'QBO-ITEM-ABC';
 
     const created = await createExternalEntityMapping({
@@ -102,6 +119,7 @@ describe('Accounting Mapping CRUD integration', () => {
       alga_entity_type: 'service',
       alga_entity_id: serviceId,
       external_entity_id: initialExternalId,
+      external_realm_id: CONNECTED_REALM,
       metadata: { source: 'test' }
     });
 

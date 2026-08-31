@@ -5,8 +5,6 @@ import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 
 import {
@@ -16,21 +14,42 @@ import {
   upsertStoredXeroConnections,
   XERO_TOKEN_URL
 } from '../../../../lib/xero/xeroClientService';
-import { oauthCsrfTokensMatch, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
+import { oauthCsrfTokensMatch } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
+import {
+  canManageAccountingConnections,
+  getAccountingConnectionSessionUser,
+  reauthorizeAccountingOAuthCallback,
+  revokeAccountingOAuthGrant,
+  type AccountingOAuthAuthzErrorCode
+} from '../../../../lib/accountingConnectionAuth';
+import { consumeXeroConnectAttempt } from '../../../../lib/xero/xeroOAuthConnectAttemptStore';
+import { decryptXeroVerifier } from '../../../../lib/xero/xeroOAuthVerifierCipher';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
+// Env override exists so test environments can point at the Xero emulator
+// (packages/emulators/xero), mirroring XERO_OAUTH_AUTHORIZE_URL in connect.ts.
+const XERO_CONNECTIONS_URL =
+  process.env.XERO_CONNECTIONS_URL?.trim() || 'https://api.xero.com/connections';
 
 const SUCCESS_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=success';
 const FAILURE_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=failure';
 
-type XeroStatePayload = {
-  tenantId: string;
-  csrf: string;
-  codeVerifier: string;
+// Coarse, non-leaky Xero provider error codes a callback may surface. Anything
+// else from the provider maps to a fixed code so the redirect never echoes
+// provider-controlled content.
+const COARSE_XERO_ERROR_CODES = new Set(['access_denied']);
+
+// Neutral, actionable callback error params for the persistence-time
+// re-authorization check. They never include provider-side org/company details.
+const AUTHZ_ERROR_TO_PARAM: Record<AccountingOAuthAuthzErrorCode, string> = {
+  STATE_REPLAYED: 'state_replayed',
+  AUTH_REQUIRED: 'session_expired',
+  USER_MISMATCH: 'user_mismatch',
+  TENANT_MISMATCH: 'tenant_mismatch',
+  FORBIDDEN: 'forbidden'
 };
 
 function isEnterpriseEdition(): boolean {
@@ -49,23 +68,43 @@ function createRedirect(path: string, params?: Record<string, string | undefined
       }
     }
   }
-  const response = NextResponse.redirect(url);
-  // The CSRF cookie is single-use: clear it on every outcome.
-  response.cookies.set(
-    XERO_OAUTH_CSRF_COOKIE.name,
-    '',
-    buildOauthCsrfCookieOptions(XERO_OAUTH_CSRF_COOKIE, { clear: true })
-  );
-  return response;
+  // The CSRF cookie is deliberately not cleared on callback: a browser may
+  // hold several parallel in-flight attempts (two tabs), each bound to the
+  // same cookie value, and clearing it after the first callback would fail the
+  // rest. It expires by its own 600s TTL.
+  return NextResponse.redirect(url);
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  let response: NextResponse;
   try {
-    return await handleCallbackRequest(request);
+    response = await handleCallbackRequest(request);
   } catch (error) {
-    logger.error('[xeroOAuth] Unexpected Xero OAuth callback failure', { error });
-    return createRedirect(FAILURE_PATH, { xero_error: 'unexpected_failure' });
+    logger.error('[xeroOAuth] Unexpected Xero OAuth callback failure', {
+      errorCode: error instanceof Error ? error.constructor.name : 'unknown_error'
+    });
+    response = createRedirect(FAILURE_PATH, { xero_error: 'unexpected_failure' });
   }
+  logCallbackAccess(request, response);
+  return response;
+}
+
+// The dev server's incoming-request access line is suppressed for callback
+// paths (they carry one-time credentials on the query string). Preserve
+// method/path/status-level diagnostics here; the redirect's coarse xero_error
+// code conveys the outcome and never echoes provider- or browser-supplied
+// content. Query values are deliberately not included.
+function logCallbackAccess(request: NextRequest, response: NextResponse): void {
+  const location = response.headers.get('location');
+  const xeroError = location
+    ? new URL(location, NEXTAUTH_URL).searchParams.get('xero_error') ?? undefined
+    : undefined;
+  logger.info('[xeroOAuth] Callback handled', {
+    method: request.method,
+    path: request.nextUrl.pathname,
+    status: response.status,
+    ...(xeroError ? { xeroError } : {})
+  });
 }
 
 async function handleCallbackRequest(request: NextRequest): Promise<NextResponse> {
@@ -82,76 +121,107 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
   const state = searchParams.get('state');
 
   if (errorParam) {
-    return createRedirect(FAILURE_PATH, { xero_error: errorParam });
+    // Xero rejected the authorization before any token exchange. The flow is
+    // over: consume the bound attempt (only when the initiating browser's CSRF
+    // cookie is present) so the state can never be replayed into an exchange,
+    // then redirect with a coarse error code.
+    if (state && request.cookies.get(XERO_OAUTH_CSRF_COOKIE.name)?.value) {
+      await consumeXeroConnectAttempt(state).catch(() => null);
+    }
+    const coarseCode = COARSE_XERO_ERROR_CODES.has(errorParam) ? errorParam : 'provider_denied';
+    return createRedirect(FAILURE_PATH, { xero_error: coarseCode });
   }
 
   if (!code || !state) {
     return createRedirect(FAILURE_PATH, { xero_error: 'missing_params' });
   }
 
-  let statePayload: XeroStatePayload;
-  try {
-    statePayload = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8')) as XeroStatePayload;
-    if (
-      !statePayload?.tenantId ||
-      typeof statePayload.tenantId !== 'string' ||
-      typeof statePayload.csrf !== 'string' ||
-      !statePayload.csrf ||
-      !statePayload?.codeVerifier
-    ) {
-      throw new Error('state missing required fields');
-    }
-  } catch (error) {
-    console.error('[xeroOAuth] failed to decode state', error);
-    return createRedirect(FAILURE_PATH, { xero_error: 'invalid_state' });
-  }
-
-  const tenantId = statePayload.tenantId;
-
-  // Verify the CSRF token in the state against the HttpOnly cookie set by the
-  // connect route. Only the initiating browser holds the cookie, so a forged
-  // or replayed callback URL fails here.
+  // Verify the CSRF cookie set by the connect route is present: only the
+  // browser that started the flow holds it. The value is re-checked against
+  // the server-side attempt record after atomic consumption.
   const csrfCookie = request.cookies.get(XERO_OAUTH_CSRF_COOKIE.name)?.value;
-  if (!csrfCookie || !oauthCsrfTokensMatch(csrfCookie, statePayload.csrf)) {
-    logger.warn('[xeroOAuth] CSRF token mismatch on callback', { tenantId });
+  if (!csrfCookie) {
+    logger.warn('[xeroOAuth] CSRF cookie missing on callback');
     return createRedirect(FAILURE_PATH, { xero_error: 'csrf_mismatch' });
   }
 
-  // The state payload is not integrity-protected, so never trust its tenantId
-  // alone: require it to match the authenticated session's tenant. This blocks
-  // a logged-in user from binding a Xero connection to another tenant by
-  // tampering with the state.
-  const sessionUser = await getCurrentUser();
+  // Atomically consume the attempt bound to the opaque state nonce before any
+  // session, binding, or permission check. A replayed, tampered, expired, or
+  // already-consumed state finds no record and fails here, and every terminal
+  // failure path below leaves no reusable verifier record behind. The one path
+  // that does not consume is a missing CSRF cookie: an attacker who only knows
+  // the state nonce must not be able to burn the initiating browser's attempt.
+  const attempt = await consumeXeroConnectAttempt(state);
+  if (!attempt) {
+    logger.warn('[xeroOAuth] Xero OAuth state unknown, expired, or already used');
+    return createRedirect(FAILURE_PATH, { xero_error: 'invalid_state' });
+  }
+
+  // The callback must be completed by a live authenticated session. The
+  // revocation-checked resolver rejects a revoked session, a disabled user, or
+  // a removed user.
+  const sessionUser = await getAccountingConnectionSessionUser();
   if (!sessionUser?.tenant) {
-    logger.warn('[xeroOAuth] Callback received without an authenticated session', { tenantId });
+    logger.warn('[xeroOAuth] Callback received without an authenticated session');
     return createRedirect(FAILURE_PATH, { xero_error: 'session_expired' });
   }
-  if (sessionUser.tenant !== tenantId) {
-    logger.warn('[xeroOAuth] State tenant does not match session tenant', {
-      stateTenant: tenantId,
-      sessionTenant: sessionUser.tenant,
+
+  // Every binding must hold; all rejections happen before token storage and
+  // leave no reusable record behind (the attempt is already consumed).
+  if (attempt.expiresAt <= Date.now()) {
+    logger.warn('[xeroOAuth] Xero OAuth attempt expired', {
+      tenantId: sessionUser.tenant
+    });
+    return createRedirect(FAILURE_PATH, { xero_error: 'expired_state' });
+  }
+
+  if (!oauthCsrfTokensMatch(csrfCookie, attempt.csrf)) {
+    logger.warn('[xeroOAuth] CSRF token mismatch on callback', {
+      tenantId: sessionUser.tenant
+    });
+    return createRedirect(FAILURE_PATH, { xero_error: 'csrf_mismatch' });
+  }
+
+  if (attempt.provider !== 'xero') {
+    logger.warn('[xeroOAuth] OAuth attempt provider mismatch on callback', {
+      tenantId: sessionUser.tenant
+    });
+    return createRedirect(FAILURE_PATH, { xero_error: 'provider_mismatch' });
+  }
+
+  if (sessionUser.tenant !== attempt.tenantId) {
+    logger.warn('[xeroOAuth] Attempt tenant does not match session tenant', {
+      stateTenant: attempt.tenantId,
+      sessionTenant: sessionUser.tenant
     });
     return createRedirect(FAILURE_PATH, { xero_error: 'tenant_mismatch' });
   }
 
-  // The connect flow is connection administration: the session user must still
-  // hold `accounting_integrations:connections_manage` at completion time, or
-  // the callback is refused with the same failure landing as any other
-  // unauthorized connect attempt.
-  const canManageConnections = await hasPermission(
-    sessionUser as Parameters<typeof hasPermission>[0],
-    'accounting_integrations',
-    'connections_manage',
-  );
-  if (!canManageConnections) {
-    logger.warn('[xeroOAuth] Callback refused: session user lacks accounting connection management', {
-      tenantId,
+  if (!sessionUser.user_id || sessionUser.user_id !== attempt.userId) {
+    logger.warn('[xeroOAuth] Attempt user does not match session user', {
+      tenantId: sessionUser.tenant
     });
-    return createRedirect(FAILURE_PATH, { xero_error: 'forbidden' });
+    return createRedirect(FAILURE_PATH, { xero_error: 'user_mismatch' });
   }
 
   const secretProvider = await getSecretProviderInstance();
   const redirectUri = await getXeroRedirectUri(secretProvider);
+  if (attempt.redirectUri !== redirectUri) {
+    logger.warn('[xeroOAuth] Attempt redirect does not match current redirect URI', {
+      tenantId: sessionUser.tenant
+    });
+    return createRedirect(FAILURE_PATH, { xero_error: 'redirect_mismatch' });
+  }
+
+  const canManageBilling = await canManageAccountingConnections(sessionUser);
+  if (!canManageBilling) {
+    logger.warn('[xeroOAuth] Callback user no longer has billing settings permission', {
+      tenantId: sessionUser.tenant
+    });
+    return createRedirect(FAILURE_PATH, { xero_error: 'forbidden' });
+  }
+
+  const tenantId = attempt.tenantId;
 
   let credentials;
   try {
@@ -165,13 +235,15 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
   }
 
   try {
+    const verifier = await decryptXeroVerifier(attempt.verifier);
+
     const tokenParams = new URLSearchParams({
       grant_type: 'authorization_code',
       code,
       redirect_uri: redirectUri,
       client_id: String(credentials.clientId),
       client_secret: String(credentials.clientSecret),
-      code_verifier: statePayload.codeVerifier
+      code_verifier: verifier
     });
 
     const tokenResponse = await axios.post(
@@ -186,7 +258,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     const accessToken: string | undefined = tokenData.access_token;
     const refreshToken: string | undefined = tokenData.refresh_token;
     if (!accessToken || !refreshToken) {
-      console.error('[xeroOAuth] token response missing access or refresh token', tokenData);
+      logger.error('[xeroOAuth] Token response missing access or refresh token', { tenantId });
       return createRedirect(FAILURE_PATH, { xero_error: 'token_exchange_failed' });
     }
 
@@ -220,7 +292,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
       : [];
 
     if (!connections.length) {
-      console.error('[xeroOAuth] no connections returned for tenant', tenantId);
+      logger.error('[xeroOAuth] No Xero connections returned for tenant', { tenantId });
       return createRedirect(FAILURE_PATH, { xero_error: 'no_connections' });
     }
 
@@ -243,8 +315,29 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     }
 
     if (!Object.keys(connectionUpdates).length) {
-      console.error('[xeroOAuth] unable to map Xero connections for tenant', tenantId);
+      logger.error('[xeroOAuth] Unable to map Xero connections for tenant', { tenantId });
       return createRedirect(FAILURE_PATH, { xero_error: 'connections_unmapped' });
+    }
+
+    // Re-check authorization immediately before persisting. If a denial lands
+    // here (permission/user/tenant changed between the exchange and the write),
+    // revoke the just-obtained grant provider-side and store nothing.
+    const reauthz = await reauthorizeAccountingOAuthCallback({
+      tenantId,
+      userId: attempt.userId
+    });
+    if (!reauthz.ok) {
+      await revokeAccountingOAuthGrant({
+        provider: 'xero',
+        clientId: credentials.clientId,
+        clientSecret: credentials.clientSecret,
+        refreshToken
+      });
+      logger.warn('[xeroOAuth] Persistence-time authorization failed; grant revoked', {
+        tenantId,
+        code: reauthz.code
+      });
+      return createRedirect(FAILURE_PATH, { xero_error: AUTHZ_ERROR_TO_PARAM[reauthz.code] });
     }
 
     await upsertStoredXeroConnections(tenantId, connectionUpdates, {
@@ -258,6 +351,8 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
       defaultConnectionId: Object.keys(connectionUpdates)[0]
     });
 
+    // Audit the connection lifecycle event (no secrets recorded). The actor is
+    // the re-verified initiating user carried on the OAuth attempt.
     const { knex: auditKnex } = await createTenantKnex();
     await writeAccountingAudit(auditKnex, tenantId, 'accounting_connected', {
       userId: sessionUser.user_id,
@@ -273,9 +368,11 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
 
     return createRedirect(SUCCESS_PATH);
   } catch (error) {
-    logger.error('[xeroOAuth] Failed to complete OAuth callback', {
+    logger.error('[xeroOAuth] Failed to complete Xero OAuth callback', {
       tenantId,
-      error: error instanceof Error ? error.message : 'unknown_error'
+      errorCode: axios.isAxiosError(error)
+        ? `status_${String(error.response?.status ?? 'unknown')}`
+        : 'unknown_error'
     });
     return createRedirect(FAILURE_PATH, { xero_error: 'oauth_failed' });
   }

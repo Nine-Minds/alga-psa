@@ -1,24 +1,34 @@
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getSession } from '@alga-psa/auth';
-import { hasPermission } from '@alga-psa/auth/rbac';
-
 import { createTenantKnex } from '@alga-psa/db';
+
 import {
-  getXeroOAuthScopesString,
+  getXeroOAuthScopeConfig,
   getXeroRedirectUri,
   resolveXeroOAuthCredentials
 } from '../../../../lib/xero/xeroClientService';
 import { generateOauthCsrfToken, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
+import {
+  canManageAccountingConnections,
+  getAccountingConnectionSessionUser
+} from '../../../../lib/accountingConnectionAuth';
+import {
+  XERO_CONNECT_ATTEMPT_PROVIDER,
+  XERO_CONNECT_ATTEMPT_TTL_SECONDS,
+  storeXeroConnectAttempt
+} from '../../../../lib/xero/xeroOAuthConnectAttemptStore';
+import { encryptXeroVerifier } from '../../../../lib/xero/xeroOAuthVerifierCipher';
 
 const XERO_AUTHORIZE_URL =
   process.env.XERO_OAUTH_AUTHORIZE_URL ?? 'https://login.xero.com/identity/connect/authorize';
+
+const CSRF_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 
 function isEnterpriseEdition(): boolean {
   return (
@@ -41,11 +51,13 @@ function createPkcePair(): { verifier: string; challenge: string } {
   return { verifier, challenge };
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    return await handleConnectRequest();
+    return await handleConnectRequest(request);
   } catch (error) {
-    logger.error('[xeroOAuth] Unexpected failure while starting Xero OAuth', { error });
+    logger.error('[xeroOAuth] Unexpected failure while starting Xero OAuth', {
+      errorCode: error instanceof Error ? error.constructor.name : 'unknown_error'
+    });
     return NextResponse.json(
       { error: 'Unable to start the Xero connection. Please refresh and try again.' },
       { status: 503 }
@@ -53,7 +65,7 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-async function handleConnectRequest(): Promise<NextResponse> {
+async function handleConnectRequest(request: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json(
       { error: 'Xero integration is only available in Enterprise Edition.' },
@@ -61,60 +73,80 @@ async function handleConnectRequest(): Promise<NextResponse> {
     );
   }
 
-  const secretProvider = await getSecretProviderInstance();
-  const session = await getSession();
-  const sessionUser = session?.user as any;
-  const permissionUser =
-    sessionUser && !sessionUser.user_id && sessionUser.id
-      ? { ...sessionUser, user_id: sessionUser.id }
-      : sessionUser;
-  const sessionTenant = sessionUser?.tenant;
-  if (!sessionTenant) {
+  const sessionUser = await getAccountingConnectionSessionUser();
+  if (!sessionUser) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
-  const canManageConnections = await hasPermission(permissionUser, 'accounting_integrations', 'connections_manage');
-  if (!canManageConnections) {
+  const canManageBilling = await canManageAccountingConnections(sessionUser);
+  if (!canManageBilling) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const { tenant } = await createTenantKnex(sessionTenant);
+  const { tenant } = await createTenantKnex(sessionUser.tenant);
 
   if (!tenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
+  const secretProvider = await getSecretProviderInstance();
   const redirectUri = await getXeroRedirectUri(secretProvider);
 
   try {
     const credentials = await resolveXeroOAuthCredentials(tenant, secretProvider);
-    const csrfToken = generateOauthCsrfToken();
+    // The CSRF cookie is a single browser-slot value. Reuse an existing
+    // well-formed token so a second parallel attempt in the same browser does
+    // not clobber the first: both attempts bind to the same cookie value and
+    // each callback still passes the double-submit check.
+    const existingCsrf = request.cookies.get(XERO_OAUTH_CSRF_COOKIE.name)?.value;
+    const csrfToken =
+      existingCsrf && CSRF_TOKEN_PATTERN.test(existingCsrf) ? existingCsrf : generateOauthCsrfToken();
     const { verifier, challenge } = createPkcePair();
-    const statePayload = {
-      tenantId: tenant,
-      csrf: csrfToken,
-      codeVerifier: verifier
-    };
-    const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
+    // The public state is an opaque 256-bit nonce. The PKCE verifier and every
+    // binding live in a short-lived, single-use server-side record keyed by the
+    // nonce; nothing confidential is sent through the browser.
+    const nonce = crypto.randomBytes(32).toString('base64url');
+    const encryptedVerifier = await encryptXeroVerifier(verifier);
+    await storeXeroConnectAttempt(
+      nonce,
+      {
+        verifier: encryptedVerifier,
+        tenantId: tenant,
+        userId: sessionUser.user_id,
+        provider: XERO_CONNECT_ATTEMPT_PROVIDER,
+        redirectUri,
+        csrf: csrfToken,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + XERO_CONNECT_ATTEMPT_TTL_SECONDS * 1000
+      },
+      XERO_CONNECT_ATTEMPT_TTL_SECONDS
+    );
+
+    const scopeConfig = getXeroOAuthScopeConfig();
 
     logger.info('[xeroOAuth] Starting Xero OAuth connect flow', {
       tenantId: tenant,
-      credentialSource: credentials.source
+      userId: sessionUser.user_id,
+      credentialSource: credentials.source,
+      scopeSource: scopeConfig.source,
+      scopes: scopeConfig.scopes
     });
 
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: String(credentials.clientId),
       redirect_uri: redirectUri,
-      scope: getXeroOAuthScopesString(),
-      state,
+      scope: scopeConfig.scopes.join(' '),
+      state: nonce,
       code_challenge: challenge,
       code_challenge_method: 'S256'
     });
 
     const authorizeUrl = `${XERO_AUTHORIZE_URL}?${params.toString()}`;
-    // Carry the CSRF token in an HttpOnly cookie scoped to the callback route so
-    // the callback can confirm the response landed in the same browser that
-    // started the flow (the PKCE code_verifier lives in the unsigned state and
-    // must not be the only binding).
+    // Carry the CSRF token in an HttpOnly cookie shared by the connect and
+    // callback routes so the callback can confirm the response landed in the
+    // same browser that started the flow. The token is also bound to the
+    // server-side attempt record, so a forged callback that knows the state
+    // nonce still fails.
     const response = NextResponse.redirect(authorizeUrl);
     response.cookies.set(
       XERO_OAUTH_CSRF_COOKIE.name,

@@ -60,12 +60,11 @@ describe('XeroIntegrationSettings contracts', () => {
       redirectUri: 'https://example.com/api/integrations/xero/callback',
       scopes: [
         'offline_access',
-        'accounting.settings',
+        'accounting.settings.read',
         'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
         'accounting.contacts'
       ],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: false,
         clientSecretConfigured: false,
@@ -88,11 +87,44 @@ describe('XeroIntegrationSettings contracts', () => {
 
     expect(await screen.findByText('https://example.com/api/integrations/xero/callback')).toBeInTheDocument();
     expect(screen.getByText('offline_access')).toBeInTheDocument();
-    expect(screen.getByText('accounting.settings')).toBeInTheDocument();
+    expect(screen.getByText('accounting.settings.read')).toBeInTheDocument();
     expect(screen.getByText('accounting.invoices')).toBeInTheDocument();
-    expect(screen.getByText('accounting.banktransactions')).toBeInTheDocument();
-    expect(screen.getByText('accounting.payments')).toBeInTheDocument();
     expect(screen.getByText('accounting.contacts')).toBeInTheDocument();
+    expect(screen.queryByText('accounting.banktransactions')).not.toBeInTheDocument();
+    expect(screen.queryByText('accounting.payments')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/An existing connection keeps the scopes it was originally granted/)
+    ).toBeInTheDocument();
+  });
+
+  it('flags a deployment scope override and reports ignored invalid override entries', async () => {
+    getXeroConnectionStatusMock.mockResolvedValueOnce({
+      connections: [],
+      connected: false,
+      defaultConnectionId: undefined,
+      defaultConnection: undefined,
+      redirectUri: 'https://example.com/api/integrations/xero/callback',
+      scopes: [
+        'offline_access',
+        'accounting.settings.read',
+        'accounting.invoices',
+        'accounting.contacts'
+      ],
+      scopeSource: 'default',
+      scopeOverrideInvalid: ['Accounting.Settings'],
+      credentials: {
+        clientIdConfigured: false,
+        clientSecretConfigured: false,
+        ready: false
+      }
+    });
+    const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
+
+    render(<XeroIntegrationSettings />);
+
+    expect(
+      await screen.findByText(/XERO_OAUTH_SCOPES override was ignored because it contains invalid entries/)
+    ).toBeInTheDocument();
   });
 
   it('T009/T027: keeps Connect disabled and surfaces missing-credentials guidance until credentials are configured', async () => {
@@ -144,12 +176,11 @@ describe('XeroIntegrationSettings contracts', () => {
       redirectUri: 'https://example.com/api/integrations/xero/callback',
       scopes: [
         'offline_access',
-        'accounting.settings',
+        'accounting.settings.read',
         'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
         'accounting.contacts'
       ],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: true,
         clientSecretConfigured: true,
@@ -174,12 +205,11 @@ describe('XeroIntegrationSettings contracts', () => {
       redirectUri: 'https://example.com/api/integrations/xero/callback',
       scopes: [
         'offline_access',
-        'accounting.settings',
+        'accounting.settings.read',
         'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
         'accounting.contacts'
       ],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: true,
         clientSecretConfigured: true,
@@ -222,12 +252,11 @@ describe('XeroIntegrationSettings contracts', () => {
       redirectUri: 'https://example.com/api/integrations/xero/callback',
       scopes: [
         'offline_access',
-        'accounting.settings',
+        'accounting.settings.read',
         'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
         'accounting.contacts'
       ],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: true,
         clientSecretConfigured: true,
@@ -265,12 +294,11 @@ describe('XeroIntegrationSettings contracts', () => {
       redirectUri: 'https://example.com/api/integrations/xero/callback',
       scopes: [
         'offline_access',
-        'accounting.settings',
+        'accounting.settings.read',
         'accounting.invoices',
-        'accounting.banktransactions',
-        'accounting.payments',
         'accounting.contacts'
       ],
+      scopeSource: 'default',
       credentials: {
         clientIdConfigured: true,
         clientSecretConfigured: true,

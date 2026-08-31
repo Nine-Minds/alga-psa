@@ -102,6 +102,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
       orWhere: () => knexSub,
       whereNull: () => knexSub,
       orWhereNull: () => knexSub,
+      whereNotNull: () => knexSub,
+      orWhereNotNull: () => knexSub,
     };
     const knexQb: any = {
       select: () => knexQb,
