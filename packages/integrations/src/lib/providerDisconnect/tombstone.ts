@@ -51,6 +51,14 @@ export async function tombstoneLiveCredentials(
 
   const tombstoned = await providerInstance.getTenantSecret(tenantId, tombstoneName);
   if (typeof tombstoned === 'string' && tombstoned) {
+    // A live value alongside an existing tombstone is a partially-completed
+    // earlier move (the copy landed, the delete did not). Finish the move so
+    // the ordinary credential path stays empty; the tombstoned material
+    // remains authoritative for the in-flight disconnect.
+    const lingering = await providerInstance.getTenantSecret(tenantId, standardName);
+    if (typeof lingering === 'string' && lingering) {
+      await providerInstance.deleteTenantSecret(tenantId, standardName);
+    }
     return { movedValue: tombstoned, alreadyTombstoned: true };
   }
 

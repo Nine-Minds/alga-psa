@@ -3,7 +3,7 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { notifyQboConnectionChanged } from '../qbo/qboConnectionChangeProvider';
 import { getDisconnectRecord, createDisconnectRecord, deleteDisconnectRecord, updateTargetOutcome, setRecordStatus, replaceDisconnectTargets } from './repository';
-import { writeDisconnectAudit } from './audit';
+import { writeDisconnectAudit, writeDisconnectAuditInTransaction } from './audit';
 import {
   tombstoneLiveCredentials,
   clearTombstoneCredentials,
@@ -171,17 +171,14 @@ export async function disconnectProvider(
       return { status: 'no_credentials', record };
     }
 
-    // First disconnect: move credentials out of the normal sync/export path
-    // before anything else, then record the pending state.
-    const moved = await tombstoneLiveCredentials(tenantId, provider, secretProvider);
-    if (!moved.movedValue) {
-      // The revoke material came from the live secret; tombstoning returned
-      // nothing only when the tombstone already held a value, which read*Material
-      // would have surfaced first. Defensive: if we still have material, write
-      // it to the tombstone directly.
-      await secretProvider.setTenantSecret(tenantId, tombstoneSecretName, JSON.stringify(material));
-    }
-
+    // First disconnect: persist the durable pending record before touching any
+    // secret, so a failure between the database write and the credential
+    // tombstoning can never strand moved credentials without a retry-drivable
+    // record. From the moment this row exists the disconnect gates
+    // (isProviderDisconnectActive) hold, so the brief not-yet-tombstoned
+    // window admits no new syncs, exports, or reconnects; the revocation pass
+    // below performs — and after a crash, repeats — the tombstone move as its
+    // first step.
     const correlationId = await generateCorrelationId();
     const targetIds = Object.keys(material);
     record = await createDisconnectRecord(knex, {
@@ -342,9 +339,25 @@ async function runRevocationPass(
   const tombstoneSecretName = tombstoneCredentialsSecretName(provider);
   const attemptCount = record.attemptCount;
 
+  // Complete (or repeat) the initiation's credential tombstoning: the durable
+  // record is persisted before any secret is touched, so a crash between the
+  // two operations leaves live credentials alongside a pending record. Every
+  // pass — user repeat or the scheduled retry job — re-drives this move until
+  // it sticks. Idempotent: existing tombstone material wins, and with nothing
+  // live it is a no-op. A secret-store failure here propagates, leaving the
+  // record pending (and due) for the next pass.
+  const moved = await tombstoneLiveCredentials(tenantId, provider, secretProvider);
+
   const material = provider === PROVIDER_QBO
     ? await readQboRevokeMaterial(tenantId, secretProvider, tombstoneSecretName)
     : await readXeroRevokeMaterial(tenantId, secretProvider, tombstoneSecretName);
+
+  if (!moved.movedValue && Object.keys(material).length > 0) {
+    // Defensive: material was readable (e.g. a non-string live secret the
+    // move does not handle) but nothing landed under the tombstone name —
+    // write it there directly so finalization's strict deletion covers it.
+    await secretProvider.setTenantSecret(tenantId, tombstoneSecretName, JSON.stringify(material));
+  }
 
   const counters: PassCounters = {
     transientTargets: 0,
@@ -641,24 +654,46 @@ export async function forceFinalizeProviderDisconnect(
   // failure propagates so the operator sees it and the record stays in its
   // current state (never finalized over orphaned credential material).
   await clearTombstoneCredentialsStrict(tenantId, provider, secretProvider);
-  await setRecordStatus(knex, tenantId, provider, 'finalized', {
-    attemptCount: record.attemptCount + 1,
-    nextRetryAt: null,
-    finalizedAt: new Date().toISOString(),
-    finalizeReason: opts.reason,
-  });
-  await writeDisconnectAudit({
-    knex,
-    tenantId,
-    provider,
-    operation: 'disconnect_force_finalized',
-    targetId: null,
-    result: 'force_finalized',
-    attemptCount: record.attemptCount + 1,
-    correlationId: record.correlationId,
-    userId: opts.userId,
-    reason: opts.reason,
-  });
+
+  // The terminal transition and its audit event commit together: force-finalize
+  // is a deliberate, audited operator action, so a finalization the audit trail
+  // cannot attest to must not be reported as success. The audit row is written
+  // first (it is the transition's precondition); a failure of either write
+  // rolls the transaction back, the record keeps its operator-actionable
+  // status, and a retried force-finalize converges — the strict tombstone
+  // deletion above treats an already-absent secret as success.
+  try {
+    await knex.transaction(async (trx) => {
+      await writeDisconnectAuditInTransaction(trx, {
+        tenantId,
+        provider,
+        operation: 'disconnect_force_finalized',
+        targetId: null,
+        result: 'force_finalized',
+        attemptCount: record.attemptCount + 1,
+        correlationId: record.correlationId,
+        userId: opts.userId,
+        reason: opts.reason,
+      });
+      await setRecordStatus(trx, tenantId, provider, 'finalized', {
+        attemptCount: record.attemptCount + 1,
+        nextRetryAt: null,
+        finalizedAt: new Date().toISOString(),
+        finalizeReason: opts.reason,
+      });
+    });
+  } catch (error) {
+    logger.error(
+      '[providerDisconnect] Force-finalize could not durably record its terminal transition; the record stays operator-actionable',
+      {
+        tenantId,
+        provider,
+        correlationId: record.correlationId,
+        error: error instanceof Error ? error.message : error,
+      },
+    );
+    throw error;
+  }
   if (provider === PROVIDER_QBO) {
     await notifyQboConnectionChanged(tenantId);
   }

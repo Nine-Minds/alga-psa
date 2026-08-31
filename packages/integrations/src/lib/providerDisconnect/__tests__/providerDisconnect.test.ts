@@ -779,6 +779,46 @@ describe('QuickBooks Online disconnect state machine', () => {
     expect(providerCalls().filter((c) => c.url.includes('tokens/revoke'))).toHaveLength(0);
   });
 
+  it('a failure between the disconnect record write and the credential tombstoning stays durable and the next pass completes it', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+
+    // Initiation persists the pending record first; the credential move then
+    // dies (secret store outage) before anything has been copied.
+    setTenantSecretMock.mockImplementationOnce(async () => {
+      throw new Error('secret store unavailable');
+    });
+
+    await expect(
+      disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, { userId: 'user-1' }),
+    ).rejects.toThrow('secret store unavailable');
+
+    // Durable, retry-drivable state: the pending record exists and is due
+    // immediately, the disconnect gates already hold, no credential material
+    // was lost, and no provider call happened yet.
+    expect(recordRows()).toHaveLength(1);
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(recordRows()[0].targets).toEqual([
+      expect.objectContaining({ targetId: 'realm-a', status: 'pending_revocation' }),
+    ]);
+    expect(await listDueDisconnectRecords(makeKnex(), TENANT)).toHaveLength(1);
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_QBO)).toBe(true);
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toContain('rt-a');
+    expect(providerHarness.calls).toHaveLength(0);
+    expect(auditRows().map((r) => r.operation)).toContain('disconnect_started');
+
+    // The next pass (same handler the scheduled retry job drives) completes
+    // the interrupted tombstone move and the full disconnect.
+    const retry = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, { userId: 'system', fromRetry: true });
+    expect(retry.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(providerCalls()).toEqual([
+      { method: 'post', url: 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke', body: { token: 'rt-a' } },
+    ]);
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_QBO)).toBe(false);
+  });
+
   it('a valid-looking OAuth callback that lands while a QuickBooks disconnect is pending is rejected and never resurrects credentials', async () => {
     qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
     providerHarness.setQboRevoke(() => providerHarness.fail(500, { error: 'server_error' }));
@@ -1129,6 +1169,48 @@ describe('Xero disconnect state machine', () => {
     expect(providerHarness.calls).toHaveLength(0);
   });
 
+  it('a half-completed credential move after the record write is finished by the next pass, which then completes the disconnect', async () => {
+    xeroCredentialSecret({
+      'conn-1': xeroConnectionMaterial('conn-1', 'xrt-1'),
+      'conn-2': xeroConnectionMaterial('conn-2', 'xrt-2'),
+    });
+
+    // The move copies credentials to the tombstone name, then the live-secret
+    // delete dies — the other half of the initiation crash window.
+    deleteTenantSecretMock.mockImplementationOnce(async () => {
+      throw new Error('secret store unavailable');
+    });
+
+    await expect(
+      disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { userId: 'user-1' }),
+    ).rejects.toThrow('secret store unavailable');
+
+    // Durable: pending record with both connection targets, due immediately,
+    // gates active, tombstone copy retained, no provider call yet.
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect((recordRows()[0].targets as Array<{ targetId: string }>).map((t) => t.targetId).sort()).toEqual([
+      'conn-1',
+      'conn-2',
+    ]);
+    expect(await listDueDisconnectRecords(makeKnex(), TENANT)).toHaveLength(1);
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_XERO)).toBe(true);
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toContain('xrt-1');
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toContain('xrt-1');
+    expect(providerHarness.calls).toHaveLength(0);
+
+    // The next pass finishes the interrupted move (the lingering live copy is
+    // removed; the tombstoned material stays authoritative) and drives the
+    // multi-connection cleanup plus the grant revocation to completion.
+    const retry = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { userId: 'system', fromRetry: true });
+    expect(retry.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
+    expect(providerCalls().filter((c) => c.method === 'delete')).toHaveLength(2);
+    expect(providerCalls().filter((c) => c.url.includes('connect/revocation'))).toHaveLength(1);
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_XERO)).toBe(false);
+  });
+
   it('a valid-looking OAuth callback that lands while a Xero disconnect is pending is rejected and never resurrects connections', async () => {
     xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
     providerHarness.setXeroConnection(() => providerHarness.fail(500, { error: 'server_error' }));
@@ -1268,6 +1350,52 @@ describe('provider disconnect — shared behavior', () => {
     expect(refused.status).toBe('pending');
     expect(recordRows()[0].status).toBe('pending_revocation');
     expect(recordRows()[0].finalize_reason).toBeUndefined();
+  });
+
+  it('force-finalize does not report success when its audit event cannot be persisted', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    providerHarness.setQboRevoke(() => providerHarness.fail(401, { error: 'invalid_client' }));
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(recordRows()[0].status).toBe('failed_permanent');
+
+    // The audit write inside the terminal transaction dies (audit store
+    // unavailable) — the transition must not commit or be reported as done.
+    const failingKnex = {
+      fn: { now: () => new Date().toISOString() },
+      transaction: async (cb: any) =>
+        cb({
+          fn: { now: () => new Date().toISOString() },
+          raw: async () => {
+            throw new Error('audit store unavailable');
+          },
+        }),
+      raw: async () => ({ rows: [] }),
+    } as unknown as Knex;
+
+    await expect(
+      forceFinalizeProviderDisconnect(failingKnex, TENANT, PROVIDER_QBO, {
+        userId: 'admin-1',
+        reason: 'provider tenant deleted upstream',
+      }),
+    ).rejects.toThrow('audit store unavailable');
+
+    // Still operator-actionable, never finalized without its audit row.
+    expect(recordRows()[0].status).toBe('failed_permanent');
+    expect(recordRows()[0].finalize_reason).toBeUndefined();
+    expect(auditRows().map((r) => r.operation)).not.toContain('disconnect_force_finalized');
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_QBO)).toBe(true);
+
+    // Retrying once the audit store is healthy converges: finalized WITH the
+    // audit event, even though the failed attempt already deleted the secret.
+    const retry = await forceFinalizeProviderDisconnect(makeKnex(), TENANT, PROVIDER_QBO, {
+      userId: 'admin-1',
+      reason: 'provider tenant deleted upstream',
+    });
+    expect(retry.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(recordRows()[0].finalize_reason).toBe('provider tenant deleted upstream');
+    expect(auditRows().map((r) => r.operation)).toContain('disconnect_force_finalized');
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
   });
 
   it('finalized record with no credentials anywhere still returns already_disconnected', async () => {

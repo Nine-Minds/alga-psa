@@ -30,6 +30,47 @@ interface DisconnectAuditParams {
   reason?: string | null;
 }
 
+async function insertDisconnectAuditRow(
+  trx: Knex | Knex.Transaction,
+  params: DisconnectAuditParams,
+): Promise<void> {
+  await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', params.tenantId]);
+  await trx.raw('select set_config(?, ?, true)', ['app.current_user', params.userId ?? 'system']);
+
+  const details: Record<string, unknown> = {
+    provider: params.provider,
+    target_id: params.targetId ?? null,
+    result: params.result ?? null,
+    attempt_count: params.attemptCount ?? null,
+    correlation_id: params.correlationId ?? null,
+    reason: params.reason ?? null,
+  };
+
+  await tenantDb(trx, params.tenantId).table('audit_logs').insert({
+    audit_id: uuidv4(),
+    user_id: params.userId ?? null,
+    operation: params.operation,
+    table_name: 'provider_disconnect_records',
+    record_id: params.correlationId ?? `${params.tenantId}:${params.provider}`,
+    changed_data: {},
+    details,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Writes the audit row inside the caller's transaction and propagates
+ * failures. Used where the audit event is a required part of the state
+ * transition (operator force-finalize): the transition must not commit — or
+ * be reported as success — without its audit row.
+ */
+export async function writeDisconnectAuditInTransaction(
+  trx: Knex.Transaction,
+  params: Omit<DisconnectAuditParams, 'knex'>,
+): Promise<void> {
+  await insertDisconnectAuditRow(trx, { ...params, knex: trx });
+}
+
 /**
  * Writes a disconnect audit row to `audit_logs`. The row is scoped to the
  * tenant via the `app.current_tenant` GUC (set inside the transaction) so the
@@ -38,30 +79,7 @@ interface DisconnectAuditParams {
  */
 export async function writeDisconnectAudit(params: DisconnectAuditParams): Promise<void> {
   try {
-    await params.knex.transaction(async (trx) => {
-      await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', params.tenantId]);
-      await trx.raw('select set_config(?, ?, true)', ['app.current_user', params.userId ?? 'system']);
-
-      const details: Record<string, unknown> = {
-        provider: params.provider,
-        target_id: params.targetId ?? null,
-        result: params.result ?? null,
-        attempt_count: params.attemptCount ?? null,
-        correlation_id: params.correlationId ?? null,
-        reason: params.reason ?? null,
-      };
-
-      await tenantDb(trx, params.tenantId).table('audit_logs').insert({
-        audit_id: uuidv4(),
-        user_id: params.userId ?? null,
-        operation: params.operation,
-        table_name: 'provider_disconnect_records',
-        record_id: params.correlationId ?? `${params.tenantId}:${params.provider}`,
-        changed_data: {},
-        details,
-        timestamp: new Date().toISOString(),
-      });
-    });
+    await params.knex.transaction(async (trx) => insertDisconnectAuditRow(trx, params));
   } catch (error) {
     // Audit is best-effort: a failed audit write must not fail the disconnect
     // itself, but it should be loud so it gets fixed.
