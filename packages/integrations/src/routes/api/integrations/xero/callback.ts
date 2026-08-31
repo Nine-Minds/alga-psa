@@ -57,14 +57,35 @@ function createRedirect(path: string, params?: Record<string, string | undefined
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  let response: NextResponse;
   try {
-    return await handleCallbackRequest(request);
+    response = await handleCallbackRequest(request);
   } catch (error) {
     logger.error('[xeroOAuth] Unexpected Xero OAuth callback failure', {
       errorCode: error instanceof Error ? error.constructor.name : 'unknown_error'
     });
-    return createRedirect(FAILURE_PATH, { xero_error: 'unexpected_failure' });
+    response = createRedirect(FAILURE_PATH, { xero_error: 'unexpected_failure' });
   }
+  logCallbackAccess(request, response);
+  return response;
+}
+
+// The dev server's incoming-request access line is suppressed for callback
+// paths (they carry one-time credentials on the query string). Preserve
+// method/path/status-level diagnostics here; the redirect's coarse xero_error
+// code conveys the outcome and never echoes provider- or browser-supplied
+// content. Query values are deliberately not included.
+function logCallbackAccess(request: NextRequest, response: NextResponse): void {
+  const location = response.headers.get('location');
+  const xeroError = location
+    ? new URL(location, NEXTAUTH_URL).searchParams.get('xero_error') ?? undefined
+    : undefined;
+  logger.info('[xeroOAuth] Callback handled', {
+    method: request.method,
+    path: request.nextUrl.pathname,
+    status: response.status,
+    ...(xeroError ? { xeroError } : {})
+  });
 }
 
 async function handleCallbackRequest(request: NextRequest): Promise<NextResponse> {
