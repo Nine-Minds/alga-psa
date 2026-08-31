@@ -551,6 +551,31 @@ export const getExternalEntityMappings = withAuth(async (
     );
   }
 
+  // Validate the complete scope before consulting the cache or opening the
+  // mapping query. A syntactically complete but unknown provider/entity pair,
+  // or a realm owned by a different connection, is not a narrower lookup.
+  // Treat it as invalid rather than allowing an empty/fallback query.
+  try {
+    assertKnownIntegrationType(params.integrationType);
+    assertCatalogEntityType(params.algaEntityType);
+    await assertRealmAllowed(tenant, params.integrationType, params.externalRealmId);
+  } catch (error: unknown) {
+    if (error instanceof ExpectedExternalMappingError) {
+      return actionError(error.message, 'msp/integrations:errors.mappings.scopeRequired');
+    }
+    logger.error('Failed to validate external mapping read scope', {
+      tenantId: tenant,
+      integrationType: params.integrationType,
+      algaEntityType: params.algaEntityType,
+      externalRealmId: params.externalRealmId,
+      error,
+    });
+    return actionError(
+      'Unable to validate mapping scope. Please try again.',
+      'msp/integrations:errors.mappings.loadFailed'
+    );
+  }
+
   const cacheKey = buildCacheKey(tenant, params);
   const cached = getCachedMappings(cacheKey);
   if (cached) {
