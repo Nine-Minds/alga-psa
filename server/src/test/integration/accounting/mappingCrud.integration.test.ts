@@ -136,4 +136,61 @@ describe('Accounting Mapping CRUD integration', () => {
 
     expect(finalList).toHaveLength(0);
   });
+
+  it('drops forbidden fields from an update payload — a service row cannot be converted into an invoice mapping', async () => {
+    // The TypeScript signature of updateExternalEntityMapping only admits the
+    // editable fields, but a direct server-action call can carry extra JSON
+    // keys. The action must pick the editable fields instead of spreading the
+    // caller's object, so alga_entity_type/tenant/integration_type/id in a
+    // payload are dropped — a non-invoice row can never be rewritten into an
+    // invoice-typed mapping (which would need the shared invoice lock and a
+    // cancelled check).
+    const serviceId = 'svc-immutable';
+    const created = await createExternalEntityMapping({
+      integration_type: integrationType,
+      alga_entity_type: 'service',
+      alga_entity_id: serviceId,
+      external_entity_id: 'QBO-ITEM-FIXED',
+      external_realm_id: 'realm-1',
+    });
+
+    const updated = await updateExternalEntityMapping(created.id, {
+      external_entity_id: 'QBO-ITEM-MOVED',
+      ...({ alga_entity_type: 'invoice', tenant: 'tenant-999', integration_type: 'xero', id: 'forged-id' } as Record<string, unknown>),
+    });
+
+    // Editable field applied; every forbidden column unchanged.
+    expect(updated.external_entity_id).toBe('QBO-ITEM-MOVED');
+    expect(updated.alga_entity_type).toBe('service');
+    expect(updated.tenant).toBe(ctx.tenantId);
+    expect(updated.integration_type).toBe(integrationType);
+    expect(updated.id).toBe(created.id);
+
+    // The persisted row agrees — the invoice-lock invariant was not bypassed.
+    const row = await ctx.db('tenant_external_entity_mappings').where({ id: created.id }).first();
+    expect(row.alga_entity_type).toBe('service');
+    expect(row.tenant).toBe(ctx.tenantId);
+    expect(row.integration_type).toBe(integrationType);
+    expect(row.external_entity_id).toBe('QBO-ITEM-MOVED');
+  });
+
+  it('refuses an update payload that only carried forbidden fields', async () => {
+    const serviceId = 'svc-forged-only';
+    const created = await createExternalEntityMapping({
+      integration_type: integrationType,
+      alga_entity_type: 'service',
+      alga_entity_id: serviceId,
+      external_entity_id: 'QBO-ITEM-UNTOUCHED',
+    });
+
+    const result = await updateExternalEntityMapping(created.id, {
+      ...({ alga_entity_type: 'invoice', tenant: 'tenant-999' } as Record<string, unknown>),
+    });
+
+    expect(result).toMatchObject({ actionError: 'No update data provided.', messageKey: 'msp/integrations:errors.mappings.noUpdateData' });
+
+    const row = await ctx.db('tenant_external_entity_mappings').where({ id: created.id }).first();
+    expect(row.alga_entity_type).toBe('service');
+    expect(row.tenant).toBe(ctx.tenantId);
+  });
 });

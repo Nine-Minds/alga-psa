@@ -380,9 +380,27 @@ export const updateExternalEntityMapping = withAuth(async (
   if (!mappingId) {
     return actionError('Mapping ID is required for update.', 'msp/integrations:errors.mappings.idRequiredForUpdate');
   }
-  if (Object.keys(updates).length === 0) {
+
+  // Build the update by explicitly picking the fields UpdateMappingData
+  // declares. Never spread the caller's object into the write: a direct
+  // server-action call can otherwise smuggle alga_entity_type, tenant, id, or
+  // integration_type past the TypeScript constraint — which would let a
+  // non-invoice row be converted into an invoice-typed mapping (or the row's
+  // identity be rewritten) with no invoice lock and no cancelled check.
+  // Dropping unknown keys is deliberate, so the invoice-lock guard below keys
+  // on the row's real, persisted type. A payload that only carried forbidden
+  // keys has nothing editable to do and is refused like an empty payload.
+  const updatePayload: Partial<ExternalEntityMapping> = {};
+  if (updates.alga_entity_id !== undefined) updatePayload.alga_entity_id = updates.alga_entity_id;
+  if (updates.external_entity_id !== undefined) updatePayload.external_entity_id = updates.external_entity_id;
+  if (updates.sync_status !== undefined) updatePayload.sync_status = updates.sync_status;
+  if (updates.external_realm_id !== undefined) updatePayload.external_realm_id = updates.external_realm_id;
+  if (updates.metadata !== undefined) updatePayload.metadata = updates.metadata ?? null;
+
+  if (Object.keys(updatePayload).length === 0) {
     return actionError('No update data provided.', 'msp/integrations:errors.mappings.noUpdateData');
   }
+  updatePayload.updated_at = new Date().toISOString();
 
   logger.info('Updating external mapping', {
     tenantId: tenant,
@@ -390,12 +408,6 @@ export const updateExternalEntityMapping = withAuth(async (
     hasMetadata: updates.metadata !== undefined,
     hasExternalEntityIdUpdate: updates.external_entity_id !== undefined
   });
-
-  const updatePayload: Partial<ExternalEntityMapping> = { ...updates };
-  if (updatePayload.metadata !== undefined) {
-    updatePayload.metadata = updatePayload.metadata ?? null;
-  }
-  updatePayload.updated_at = new Date().toISOString();
 
   try {
     const { before, after } = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -411,8 +423,11 @@ export const updateExternalEntityMapping = withAuth(async (
       // mapped, both the old and the new invoice are involved; multi-lock
       // acquisition is sorted to match the deadlock-avoidance convention.
       // Non-invoice mappings (service/client/…) link no invoice and need no
-      // lock; alga_entity_type itself is immutable, so the row's type cannot
-      // become invoice through an update.
+      // lock. A row's type cannot become invoice through an update:
+      // alga_entity_type is not an editable field, and the action drops unknown
+      // keys from a runtime payload before writing, so a service row can never
+      // be converted into an invoice-typed mapping that would need this lock
+      // and the cancelled check.
       if (before?.alga_entity_type === 'invoice') {
         const targetInvoiceId = updates.alga_entity_id ?? before.alga_entity_id;
         const involvedInvoiceIds =
