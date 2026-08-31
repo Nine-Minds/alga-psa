@@ -1,7 +1,8 @@
 import { vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { NextRequest } from 'next/server';
+import { tenantDb, runWithTenant } from '@alga-psa/db';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 // ---------------------------------------------------------------------------
@@ -105,13 +106,17 @@ import {
   runAccountingSyncNow,
   setDefaultQboRealm,
 } from '@alga-psa/billing/actions/accountingSyncActions';
+import { applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
 import { voidInvoice } from '@alga-psa/billing/actions/voidInvoiceActions';
+import { enqueueInvoiceVoid } from '@alga-psa/billing/services';
 import { GET as qboConnect } from '@alga-psa/integrations/routes/api/integrations/qbo/connect';
 import {
   QBO_OAUTH_STATE_COOKIE,
   createQboOAuthState,
   getQboStateSigningSecret,
 } from '@alga-psa/integrations/lib/qbo/qboOAuthState';
+import { GET as legacyXeroCsvClientExport } from '../../../app/api/v1/accounting-exports/xero-csv/client-export/route';
+import { POST as legacyXeroCsvClientImport } from '../../../app/api/v1/accounting-exports/xero-csv/client-import/route';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -240,6 +245,125 @@ async function seedExportedInvoice(clientId: string): Promise<string> {
     sync_status: 'synced',
   });
   return invoiceId;
+}
+
+/**
+ * Seeds a QBO-mapped credit-note invoice with issued credit in the client's
+ * pool, plus a plain target invoice with a charge line, so an
+ * applyCreditToInvoice call draws from a credit note that the sync pipeline
+ * would push to QBO as an apply_credit op. Returns the ids involved.
+ */
+async function seedRemoteCreditScenario(clientId: string): Promise<{ creditNoteId: string; targetInvoiceId: string }> {
+  const creditNoteId = randomUUID();
+  const targetInvoiceId = randomUUID();
+  const now = new Date().toISOString();
+
+  // Credit note that issued credit into the pool (source of the apply_credit op).
+  await db('invoices').insert({
+    tenant: tenantId,
+    invoice_id: creditNoteId,
+    client_id: clientId,
+    invoice_number: `CN-${creditNoteId.slice(0, 8)}`,
+    invoice_date: now,
+    due_date: now,
+    subtotal: -5000,
+    tax: 0,
+    total_amount: -5000,
+    status: 'sent',
+    credit_applied: 0,
+    currency_code: 'USD',
+    is_manual: false,
+    is_prepayment: false,
+    invoice_type: 'credit_note',
+    finalized_at: now,
+  });
+  await tenantDb(db, tenantId).table('tenant_external_entity_mappings').insert({
+    tenant: tenantId,
+    integration_type: 'quickbooks_online',
+    alga_entity_type: 'invoice',
+    alga_entity_id: creditNoteId,
+    external_entity_id: `QBO-CM-${creditNoteId.slice(0, 8)}`,
+    external_realm_id: 'realm-1',
+    sync_status: 'synced',
+  });
+  const issuanceTxnId = randomUUID();
+  await db('transactions').insert({
+    tenant: tenantId,
+    transaction_id: issuanceTxnId,
+    client_id: clientId,
+    invoice_id: creditNoteId,
+    amount: 5000,
+    type: 'credit_issuance',
+    status: 'completed',
+    description: 'Matrix credit note issued',
+    created_at: now,
+    balance_after: 5000,
+    currency_code: 'USD',
+  });
+  await db('credit_tracking').insert({
+    tenant: tenantId,
+    credit_id: randomUUID(),
+    client_id: clientId,
+    transaction_id: issuanceTxnId,
+    amount: 5000,
+    remaining_amount: 5000,
+    created_at: now,
+    is_expired: false,
+    updated_at: now,
+    currency_code: 'USD',
+  });
+
+  // Target invoice with a charge line so the eligible-amount clamp is non-zero.
+  await db('invoices').insert({
+    tenant: tenantId,
+    invoice_id: targetInvoiceId,
+    client_id: clientId,
+    invoice_number: `TGT-${targetInvoiceId.slice(0, 8)}`,
+    invoice_date: now,
+    due_date: now,
+    subtotal: 10000,
+    tax: 0,
+    total_amount: 10000,
+    status: 'sent',
+    credit_applied: 0,
+    currency_code: 'USD',
+    is_manual: false,
+    is_prepayment: false,
+    invoice_type: 'standard',
+    finalized_at: now,
+  });
+  await db('invoice_charges').insert({
+    tenant: tenantId,
+    invoice_id: targetInvoiceId,
+    description: 'Matrix line',
+    quantity: 1,
+    unit_price: 10000,
+    total_price: 10000,
+    tax_amount: 0,
+    net_amount: 10000,
+    is_manual: false,
+  });
+
+  return { creditNoteId, targetInvoiceId };
+}
+
+/** Enable auto-sync in tenant settings and resolve a default realm via the mocked secret provider. */
+async function enableAutoSyncAndRealm(): Promise<void> {
+  remote.getDefaultQboRealmId.mockResolvedValue('realm-1');
+  await tenantDb(db, tenantId).table('tenant_settings').update({
+    settings: {
+      accountingSync: {
+        autoSyncEnabled: true,
+        autoSyncStartDate: null,
+        autoProvisionCustomers: false,
+        depositAccountRef: null,
+        defaultClassRef: null,
+        defaultDepartmentRef: null,
+        defaultExpenseAccountRef: null,
+        defaultRealm: null,
+      },
+    },
+  });
 }
 
 async function readAuditRows(operation: string, userId?: string): Promise<Array<Record<string, unknown>>> {
@@ -509,6 +633,180 @@ describe('accounting integration capability role matrix', () => {
       const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
       expect(invoice.status).toBe('cancelled');
       expect(remote.qboClientCreateCalls.count).toBe(0);
+    });
+
+    it('records the remote-void audit attempt with the acting user for an Admin void', async () => {
+      const clientId = await seedClient('Matrix Void Audit Client');
+      const invoiceId = await seedExportedInvoice(clientId);
+
+      runAs(adminUserId);
+      const result = await voidInvoice(invoiceId, 'Matrix audited void');
+      expect(result).toEqual({ success: true });
+
+      const auditRows = await readAuditRows('accounting_remote_void', adminUserId);
+      expect(auditRows.length).toBeGreaterThanOrEqual(1);
+      const row = auditRows[0];
+      const details = row.details as Record<string, unknown>;
+      expect(details.algaEntityId).toBe(invoiceId);
+      expect(details.outcome).toBe('enqueued');
+      const detailsJson = JSON.stringify(details);
+      expect(detailsJson).not.toContain('accessToken');
+      expect(detailsJson).not.toContain('refreshToken');
+      expect(detailsJson).not.toContain('secret');
+    });
+
+    it('writes no remote-void audit row when Finance is refused', async () => {
+      const clientId = await seedClient('Matrix Void NoAudit Client');
+      const invoiceId = await seedExportedInvoice(clientId);
+
+      runAs(financeUserId);
+      const result = await voidInvoice(invoiceId, 'Matrix denied void');
+      expect(result.success).toBe(false);
+
+      const auditRows = await readAuditRows('accounting_remote_void');
+      expect(auditRows.some((row) => row.details && (row.details as Record<string, unknown>).algaEntityId === invoiceId)).toBe(false);
+    });
+  });
+
+  describe('remote void enqueue is gated on the actor remote-mutate capability (race closure)', () => {
+    it('does not enqueue a remote void op when the actor lacks remote_mutate, even with a mapping and realm', async () => {
+      await enableAutoSyncAndRealm();
+      const clientId = await seedClient('Matrix Void Race Client');
+      const invoiceId = await seedExportedInvoice(clientId);
+
+      await enqueueInvoiceVoid(db, tenantId, invoiceId, {
+        actorUserId: financeUserId,
+        allowRemoteMutate: false,
+      });
+      await new Promise((resolve) => setImmediate(resolve));
+
+      const ops = await tenantDb(db, tenantId).table('accounting_sync_operations')
+        .where({ operation: 'void_invoice', alga_entity_id: invoiceId });
+      expect(ops).toHaveLength(0);
+      expect(remote.qboClientCreateCalls.count).toBe(0);
+    });
+
+    it('enqueues a remote void op for an actor with remote_mutate', async () => {
+      await enableAutoSyncAndRealm();
+      const clientId = await seedClient('Matrix Void Race Client 2');
+      const invoiceId = await seedExportedInvoice(clientId);
+
+      await enqueueInvoiceVoid(db, tenantId, invoiceId, {
+        actorUserId: adminUserId,
+        allowRemoteMutate: true,
+      });
+      await new Promise((resolve) => setImmediate(resolve));
+
+      const ops = await tenantDb(db, tenantId).table('accounting_sync_operations')
+        .where({ operation: 'void_invoice', alga_entity_id: invoiceId });
+      expect(ops).toHaveLength(1);
+      expect((ops[0].payload as Record<string, unknown>).requestedByUserId).toBe(adminUserId);
+      expect(remote.qboClientCreateCalls.count).toBe(0);
+    });
+  });
+
+  describe('remote credit application (apply_credit enqueue)', () => {
+    it('refuses Finance (no remote_mutate) when the application would push an apply_credit op, rolling back the local apply', async () => {
+      await enableAutoSyncAndRealm();
+      const clientId = await seedClient('Matrix Credit Remote Client');
+      const { targetInvoiceId } = await seedRemoteCreditScenario(clientId);
+
+      runAs(financeUserId);
+      const result = await applyCreditToInvoice(clientId, targetInvoiceId, 5000);
+      expect(isActionPermissionError(result)).toBe(true);
+
+      const invoice = await db('invoices').where({ invoice_id: targetInvoiceId, tenant: tenantId }).first();
+      expect(Number(invoice.credit_applied)).toBe(0);
+      const ops = await tenantDb(db, tenantId).table('accounting_sync_operations')
+        .where({ operation: 'apply_credit', alga_entity_id: targetInvoiceId });
+      expect(ops).toHaveLength(0);
+      expect(remote.qboClientCreateCalls.count).toBe(0);
+    });
+
+    it('allows Admin (remote_mutate) to apply credit that would sync to QBO', async () => {
+      await enableAutoSyncAndRealm();
+      const clientId = await seedClient('Matrix Credit Remote Client 2');
+      const { targetInvoiceId } = await seedRemoteCreditScenario(clientId);
+
+      runAs(adminUserId);
+      const result = await applyCreditToInvoice(clientId, targetInvoiceId, 5000);
+      expect(isActionPermissionError(result)).toBe(false);
+
+      const invoice = await db('invoices').where({ invoice_id: targetInvoiceId, tenant: tenantId }).first();
+      expect(Number(invoice.credit_applied)).toBe(5000);
+      expect(remote.qboClientCreateCalls.count).toBe(0);
+    });
+
+    it('lets Finance apply credit locally when nothing would reach the remote provider (no connected realm)', async () => {
+      // beforeEach leaves the default realm unresolved, so the same credit note
+      // is a purely local application and must not require remote_mutate.
+      const clientId = await seedClient('Matrix Credit Local Client');
+      const { targetInvoiceId } = await seedRemoteCreditScenario(clientId);
+
+      runAs(financeUserId);
+      const result = await applyCreditToInvoice(clientId, targetInvoiceId, 5000);
+      expect(isActionPermissionError(result)).toBe(false);
+
+      const invoice = await db('invoices').where({ invoice_id: targetInvoiceId, tenant: tenantId }).first();
+      expect(Number(invoice.credit_applied)).toBe(5000);
+      expect(remote.qboClientCreateCalls.count).toBe(0);
+    });
+  });
+
+  describe('legacy xero-csv v1 routes (exports_execute)', () => {
+    async function callLegacyClientExport(): Promise<Response> {
+      // The route handlers read the tenant from the request context; the
+      // authenticated session establishes it in production, so wrap the call
+      // the same way here.
+      return runWithTenant(tenantId, () =>
+        legacyXeroCsvClientExport(
+          new NextRequest('https://example.test/api/v1/accounting-exports/xero-csv/client-export')
+        )
+      );
+    }
+
+    it('allows Admin, Finance, and the custom reviewer (exports_execute); denies PM and no-permission users', async () => {
+      for (const userId of [adminUserId, financeUserId, customUserId]) {
+        runAs(userId);
+        const response = await callLegacyClientExport();
+        expect(response.status).toBe(200);
+        expect(response.headers.get('content-type')).toContain('text/csv');
+      }
+
+      for (const userId of [pmUserId, noPermUserId]) {
+        runAs(userId);
+        const response = await callLegacyClientExport();
+        expect(response.status).toBe(403);
+        expect(await response.json()).toEqual({ error: 'Forbidden' });
+      }
+    });
+
+    it('gates the client-import route the same way (exports_execute) and denies before touching the parser', async () => {
+      async function callLegacyClientImport(): Promise<Response> {
+        return runWithTenant(tenantId, () =>
+          legacyXeroCsvClientImport(
+            new NextRequest('https://example.test/api/v1/accounting-exports/xero-csv/client-import?preview=true', {
+              method: 'POST',
+              headers: { 'content-type': 'text/csv' },
+              body: '*ContactName,EmailAddress\nPreview Client,preview@example.com\n',
+            })
+          )
+        );
+      }
+
+      for (const userId of [adminUserId, financeUserId, customUserId]) {
+        runAs(userId);
+        const response = await callLegacyClientImport();
+        expect(response.status).toBe(200);
+        expect(await response.json()).toMatchObject({ success: true });
+      }
+
+      for (const userId of [pmUserId, noPermUserId]) {
+        runAs(userId);
+        const response = await callLegacyClientImport();
+        expect(response.status).toBe(403);
+        expect(await response.json()).toEqual({ error: 'Forbidden' });
+      }
     });
   });
 
