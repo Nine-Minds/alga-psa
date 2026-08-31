@@ -20,8 +20,59 @@ type StubCookieSetOptions = {
 
 type StubCookieObjectForm = StubCookieSetOptions & { name: string; value: string };
 
+const parseSetCookie = (raw: string): StubCookieObjectForm | null => {
+  const [pair, ...attributes] = raw.split(';');
+  const idx = pair.indexOf('=');
+  if (idx === -1) return null;
+  const name = pair.slice(0, idx).trim();
+  if (!name) return null;
+
+  const cookie: StubCookieObjectForm = { name, value: decodeURIComponent(pair.slice(idx + 1).trim()) };
+  for (const attribute of attributes) {
+    const sep = attribute.indexOf('=');
+    const key = (sep === -1 ? attribute : attribute.slice(0, sep)).trim().toLowerCase();
+    const value = sep === -1 ? '' : attribute.slice(sep + 1).trim();
+    if (key === 'path') cookie.path = value;
+    else if (key === 'domain') cookie.domain = value;
+    else if (key === 'max-age') cookie.maxAge = Number(value);
+    else if (key === 'expires') cookie.expires = new Date(value);
+    else if (key === 'httponly') cookie.httpOnly = true;
+    else if (key === 'secure') cookie.secure = true;
+    else if (key === 'samesite') cookie.sameSite = value.toLowerCase() as StubCookieSetOptions['sameSite'];
+  }
+  return cookie;
+};
+
 class StubResponseCookies {
   constructor(private headers: Headers) {}
+
+  // Next's ResponseCookies reads back what was written. Parsing the header
+  // instead of caching also surfaces cookies appended straight to it.
+  private parsed(): StubCookieObjectForm[] {
+    const headers = this.headers as Headers & { getSetCookie?: () => string[] };
+    const raw =
+      typeof headers.getSetCookie === 'function'
+        ? headers.getSetCookie()
+        : [headers.get('set-cookie')].filter((entry): entry is string => Boolean(entry));
+    return raw
+      .map(parseSetCookie)
+      .filter((cookie): cookie is StubCookieObjectForm => cookie !== null);
+  }
+
+  // Last write wins, mirroring Next's replace-on-set semantics.
+  get(name: string): StubCookieObjectForm | undefined {
+    const matches = this.parsed().filter((cookie) => cookie.name === name);
+    return matches.length ? matches[matches.length - 1] : undefined;
+  }
+
+  getAll(name?: string): StubCookieObjectForm[] {
+    const cookies = this.parsed();
+    return name === undefined ? cookies : cookies.filter((cookie) => cookie.name === name);
+  }
+
+  has(name: string): boolean {
+    return this.get(name) !== undefined;
+  }
 
   // Next.js supports both set(name, value, options) and set({ name, value, ...options }).
   set(
