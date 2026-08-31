@@ -29,6 +29,7 @@ vi.mock('./accountingSyncSettings', async (importOriginal) => ({
 
 import { drainVoidInvoiceOps } from './invoiceVoidApplier';
 import { drainRecordPaymentOps } from './paymentPushApplier';
+import { drainApplyCreditOps } from './creditApplicationApplier';
 import { emptyCycleStats } from './accountingSync.types';
 
 const TENANT = 'tenant-realms';
@@ -124,6 +125,22 @@ function makeExceptions() {
     createOrUpdate: vi.fn(async () => ({ created: true })),
     resolve: vi.fn(async () => undefined)
   };
+}
+
+/**
+ * Fake knex for the credit applier's source-invoice lookups: no prepayment
+ * invoice and no project-deposit transaction exist, so every credit reads as
+ * an ordinary credit-note application.
+ */
+function makeCreditKnex() {
+  const query: any = {
+    where: vi.fn(() => query),
+    whereRaw: vi.fn(() => query),
+    select: vi.fn(() => query),
+    first: vi.fn(async () => undefined)
+  };
+  const table = vi.fn(() => query);
+  return Object.assign(table, { fn: { now: vi.fn() } }) as any;
 }
 
 /** Fake knex sufficient for the payment applier's invoice → client lookup. */
@@ -267,5 +284,40 @@ describe('realm-scoped mapping resolution', () => {
     const untouchedB = await simB.client.read<any>('Invoice', invoiceB.Id);
     expect(untouchedA.Balance).toBeGreaterThan(0);
     expect(untouchedB.Balance).toBeGreaterThan(0);
+  });
+
+  it('never applies a credit whose documents are mapped to a different company', async () => {
+    const { simA, simB, customerA, customerB, invoiceA, invoiceB } = seedCollidingCompanies();
+    // Extend the collision to CreditMemos: both companies hold one with the same Id.
+    const creditMemoA = simA.seedCreditMemo({ customerId: customerA.Id, amountCents: 5_000 });
+    const creditMemoB = simB.seedCreditMemo({ customerId: customerB.Id, amountCents: 5_000 });
+    expect(creditMemoA.Id).toBe(creditMemoB.Id);
+
+    const ledger = makeRealmLedger();
+    // Both documents only ever synced to company A.
+    seedMapping(ledger, { entityType: 'invoice', algaId: 'inv-1', externalId: invoiceA.Id, realm: REALM_A });
+    seedMapping(ledger, { entityType: 'invoice', algaId: 'cn-1', externalId: creditMemoA.Id, realm: REALM_A });
+
+    const op = {
+      op_id: 'op-credit-1',
+      alga_entity_id: 'alloc-1',
+      attempts: 0,
+      created_at: new Date().toISOString(),
+      payload: { creditNoteInvoiceId: 'cn-1', targetInvoiceId: 'inv-1', amountCents: 5_000 }
+    };
+    const ops = makeOps([op]);
+    // Default switched to realm-b: the application now targets company B.
+    await drainApplyCreditOps(baseDeps({ knex: makeCreditKnex(), targetRealm: REALM_B, ops, ledger }));
+
+    // The op did not complete, and no linking Payment exists in either company.
+    expect(ops.done).toEqual([]);
+    expect(ops.failed).toEqual(['op-credit-1']);
+    expect(simA.entities('Payment')).toHaveLength(0);
+    expect(simB.entities('Payment')).toHaveLength(0);
+    // Both companies' colliding invoices keep their balances.
+    const a = await simA.client.read<any>('Invoice', invoiceA.Id);
+    const b = await simB.client.read<any>('Invoice', invoiceB.Id);
+    expect(a.Balance).toBeGreaterThan(0);
+    expect(b.Balance).toBeGreaterThan(0);
   });
 });

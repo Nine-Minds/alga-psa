@@ -332,6 +332,53 @@ describe('qbo emulator', { shuffle: false }, () => {
     expect(recovered.status).toBe(200);
   });
 
+  it('hosts multiple company files whose colliding ids stay isolated per realm', async () => {
+    const minted = (await controlPost('/control/qbo/actions/mint-tokens', { clientId: 'alga-app' })).result;
+    const twoRealmAuthed = { authorization: `Bearer ${minted.access_token}`, 'content-type': 'application/json' };
+    const realmApi = (realm: string, path: string) => `${base}/v3/company/${realm}${path}`;
+
+    // Two fresh company files seeded in the same order → colliding entity ids.
+    await controlPost('/control/qbo/seed/realm', { realmId: 'realm-one' });
+    await controlPost('/control/qbo/seed/realm', { realmId: 'realm-two' });
+
+    const customerA = (await controlPost('/control/qbo/seed/customer', { name: 'Twin Co', realmId: 'realm-one' })).result;
+    const customerB = (await controlPost('/control/qbo/seed/customer', { name: 'Twin Co', realmId: 'realm-two' })).result;
+    expect(customerA.Id).toBe(customerB.Id);
+    const invoiceA = (await controlPost('/control/qbo/seed/invoice', {
+      customerId: customerA.Id,
+      amountCents: 10_000,
+      realmId: 'realm-one',
+    })).result;
+    const invoiceB = (await controlPost('/control/qbo/seed/invoice', {
+      customerId: customerB.Id,
+      amountCents: 25_000,
+      realmId: 'realm-two',
+    })).result;
+    expect(invoiceA.Id).toBe(invoiceB.Id);
+
+    // A payment received in realm-two only changes realm-two's books.
+    await controlPost('/control/qbo/actions/receive-payment', {
+      invoiceId: invoiceB.Id,
+      amountCents: 25_000,
+      realmId: 'realm-two',
+    });
+    const readA = (await (await fetch(realmApi('realm-one', `/invoice/${invoiceA.Id}`), { headers: twoRealmAuthed })).json()) as any;
+    const readB = (await (await fetch(realmApi('realm-two', `/invoice/${invoiceB.Id}`), { headers: twoRealmAuthed })).json()) as any;
+    expect(readA.Invoice.Balance).toBe(100);
+    expect(readB.Invoice.Balance).toBe(0);
+
+    // Per-realm state assertion through the control API.
+    const paymentsA = (await controlPost('/control/qbo/actions/entities', { entityType: 'Payment', realmId: 'realm-one' })).result;
+    const paymentsB = (await controlPost('/control/qbo/actions/entities', { entityType: 'Payment', realmId: 'realm-two' })).result;
+    expect(paymentsA).toHaveLength(0);
+    expect(paymentsB).toHaveLength(1);
+
+    // A realm with no company file still fails like Intuit does.
+    const unknown = await fetch(realmApi('realm-nope', `/invoice/${invoiceA.Id}`), { headers: twoRealmAuthed });
+    expect(unknown.status).toBe(403);
+    expect(((await unknown.json()) as any).Fault.Error[0].code).toBe('3202');
+  });
+
   it('mints tokens directly for harness wiring', async () => {
     const minted = await controlPost('/control/qbo/actions/mint-tokens', { clientId: 'alga-app' });
     expect(minted.ok).toBe(true);
