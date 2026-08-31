@@ -21,6 +21,11 @@ type StubCookieSetOptions = {
 type StubCookieObjectForm = StubCookieSetOptions & { name: string; value: string };
 
 class StubResponseCookies {
+  // Track the most recently set cookie per name so reads (get/getAll) return the
+  // structured cookie the route set, mirroring Next.js's ResponseCookies which
+  // keeps an in-memory map alongside the serialized Set-Cookie headers.
+  private store = new Map<string, StubCookieObjectForm>();
+
   constructor(private headers: Headers) {}
 
   // Next.js supports both set(name, value, options) and set({ name, value, ...options }).
@@ -33,6 +38,8 @@ class StubResponseCookies {
       typeof nameOrCookie === 'string'
         ? { name: nameOrCookie, value: value ?? '', ...options }
         : nameOrCookie;
+
+    this.store.set(cookie.name, cookie);
 
     const parts = [`${cookie.name}=${encodeURIComponent(cookie.value)}`];
     if (cookie.path) parts.push(`Path=${cookie.path}`);
@@ -51,6 +58,17 @@ class StubResponseCookies {
 
   delete(name: string): this {
     return this.set(name, '', { maxAge: 0 });
+  }
+
+  // Next.js's ResponseCookies exposes get/getAll so a handler (and its tests)
+  // can read back a cookie it just set on the response. Return the structured
+  // cookie object (name, value, and any options such as httpOnly/path/sameSite).
+  get(name: string): StubCookieObjectForm | undefined {
+    return this.store.get(name);
+  }
+
+  getAll(): StubCookieObjectForm[] {
+    return [...this.store.values()];
   }
 }
 
