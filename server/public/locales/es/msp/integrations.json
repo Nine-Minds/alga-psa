@@ -1852,11 +1852,16 @@
         "callback": {
           "accessDenied": "Se denegó el acceso a QuickBooks antes de completar la conexión.",
           "configMissing": "No se pudo iniciar QuickBooks OAuth porque el client ID y el client secret no estaban completamente configurados.",
+          "forbidden": "Ya no tiene permiso para gestionar conexiones de contabilidad. Solicite acceso a un administrador.",
           "generic": "QuickBooks devolvió un error de OAuth: {{code}}",
           "invalidState": "El estado OAuth de QuickBooks no era válido o había caducado. Inicie el flujo de conexión de nuevo.",
           "missingParams": "Faltaban parámetros requeridos en la llamada de retorno de QuickBooks. Inicie el flujo de conexión de nuevo.",
           "oauthFailed": "Falló la llamada de retorno OAuth de QuickBooks. Intente conectarse de nuevo. Si el problema persiste, revise su redirect URI y scopes.",
-          "tokenExchangeFailed": "Intuit no devolvió los tokens esperados. Intente conectarse de nuevo."
+          "sessionExpired": "Su sesión ya no es válida. Inicie sesión y comience la conexión de QuickBooks de nuevo.",
+          "stateReplayed": "Esta solicitud de conexión de QuickBooks ya se utilizó. Inicie el flujo de conexión de nuevo.",
+          "tenantMismatch": "Esta solicitud de conexión de QuickBooks pertenece a otro espacio de trabajo. Inicie sesión en el espacio de trabajo correcto y comience de nuevo.",
+          "tokenExchangeFailed": "Intuit no devolvió los tokens esperados. Intente conectarse de nuevo.",
+          "userMismatch": "Esta solicitud de conexión de QuickBooks pertenece a otro usuario. Inicie sesión como el usuario que la inició e inténtelo de nuevo."
         },
         "clientIdLabel": "ID de cliente de QuickBooks",
         "clientIdPlaceholder": "Pegue el client ID de su aplicación Intuit",
@@ -3435,11 +3440,16 @@
           "accessDenied": "Se denegó el acceso a Xero antes de completar la conexión.",
           "configMissing": "No se pudo iniciar Xero OAuth porque el client ID y el client secret del inquilino no estaban completamente configurados.",
           "connectionsUnmapped": "Xero devolvió organizaciones, pero ninguna incluía los identificadores necesarios para guardar una conexión.",
+          "forbidden": "Ya no tiene permiso para gestionar conexiones de contabilidad. Solicite acceso a un administrador.",
           "generic": "Xero devolvió un error de OAuth: {{code}}",
           "invalidState": "El estado OAuth de Xero no era válido o había caducado. Inicie el flujo de conexión de nuevo.",
           "missingParams": "Faltaban parámetros requeridos en la llamada de retorno de Xero. Inicie el flujo de conexión de nuevo.",
           "noConnections": "Xero no devolvió ninguna organización para este inicio de sesión. Verifique su aplicación de Xero y el acceso a la organización y vuelva a intentarlo.",
-          "oauthFailed": "Falló la llamada de retorno OAuth de Xero. Intente conectarse de nuevo. Si el problema persiste, revise su redirect URI y scopes."
+          "oauthFailed": "Falló la llamada de retorno OAuth de Xero. Intente conectarse de nuevo. Si el problema persiste, revise su redirect URI y scopes.",
+          "sessionExpired": "Su sesión ya no es válida. Inicie sesión y comience la conexión de Xero de nuevo.",
+          "stateReplayed": "Esta solicitud de conexión de Xero ya se utilizó. Inicie el flujo de conexión de nuevo.",
+          "tenantMismatch": "Esta solicitud de conexión de Xero pertenece a otro espacio de trabajo. Inicie sesión en el espacio de trabajo correcto y comience de nuevo.",
+          "userMismatch": "Esta solicitud de conexión de Xero pertenece a otro usuario. Inicie sesión como el usuario que la inició e inténtelo de nuevo."
         },
         "clientIdLabel": "ID de cliente de Xero",
         "clientIdPlaceholder": "Pegue su Xero Client ID propio del inquilino",
