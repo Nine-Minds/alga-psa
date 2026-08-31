@@ -31,12 +31,11 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({}))
 }));
 
-vi.mock('@alga-psa/user-composition/actions', () => ({
-  getCurrentUser: vi.fn(async () => ({ tenant: TENANT_ID }))
-}));
+const REDIRECT_URI = 'http://localhost:3000/api/integrations/xero/callback';
+const USER_ID = 'user-1';
 
 vi.mock('../../../../lib/xero/xeroClientService', () => ({
-  getXeroRedirectUri: vi.fn(async () => 'http://localhost:3000/api/integrations/xero/callback'),
+  getXeroRedirectUri: vi.fn(async () => REDIRECT_URI),
   resolveXeroOAuthCredentials: vi.fn(async () => ({
     clientId: 'client-id',
     clientSecret: SENTINELS.clientSecret,
@@ -47,15 +46,45 @@ vi.mock('../../../../lib/xero/xeroClientService', () => ({
   XERO_TOKEN_URL: 'https://identity.xero.com/connect/token'
 }));
 
+// New opaque-nonce + server-side attempt-record model (main). The callback
+// atomically consumes an attempt keyed by the opaque state nonce, then binds
+// it to the live session before the token exchange.
+vi.mock('../../../../lib/xero/xeroOAuthConnectAttemptStore', () => ({
+  consumeXeroConnectAttempt: vi.fn(async () => ({
+    verifier: 'enc:verifier-ciphertext',
+    tenantId: TENANT_ID,
+    userId: USER_ID,
+    provider: 'xero',
+    redirectUri: REDIRECT_URI,
+    csrf: 'csrf-token',
+    createdAt: Date.now() - 1000,
+    expiresAt: Date.now() + 60_000
+  }))
+}));
+
+vi.mock('../../../../lib/xero/xeroOAuthVerifierCipher', () => ({
+  decryptXeroVerifier: vi.fn(async () => 'verifier-123')
+}));
+
+vi.mock('../../../../lib/accountingConnectionAuth', () => ({
+  getAccountingConnectionSessionUser: vi.fn(async () => ({
+    tenant: TENANT_ID,
+    user_id: USER_ID
+  })),
+  canManageAccountingConnections: vi.fn(async () => true),
+  reauthorizeAccountingOAuthCallback: vi.fn(async () => ({ ok: true })),
+  revokeAccountingOAuthGrant: vi.fn(async () => undefined)
+}));
+
 vi.mock('../../../../lib/oauth/oauthCsrf', () => ({
   oauthCsrfTokensMatch: () => true,
   buildOauthCsrfCookieOptions: () => ({ path: '/' })
 }));
 
 function buildRequest(): NextRequest {
-  const state = Buffer.from(
-    JSON.stringify({ tenantId: TENANT_ID, csrf: 'csrf-token', codeVerifier: 'verifier-123' })
-  ).toString('base64url');
+  // State is now an opaque nonce; the attempt record (mocked above) carries the
+  // binding data the callback checks.
+  const state = 'opaque-state-nonce';
   const url = `http://localhost:3000/api/integrations/xero/callback?code=auth-code-1&state=${state}`;
   return new NextRequest(url, {
     headers: { cookie: 'alga_xero_oauth_csrf=csrf-token' }

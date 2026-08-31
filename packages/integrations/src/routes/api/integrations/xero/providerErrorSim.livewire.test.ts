@@ -70,8 +70,37 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }))
 }));
 
-vi.mock('@alga-psa/user-composition/actions', () => ({
-  getCurrentUser: vi.fn(async () => ({ tenant: TENANT_ID }))
+const USER_ID = 'user-1';
+const CALLBACK_REDIRECT_URI = 'http://localhost:3000/api/integrations/xero/callback';
+
+// Session, CSRF, and the server-side attempt record are plumbing, not part of
+// the provider-error path under test — stub them so the callback reaches the
+// live token exchange against the simulator.
+vi.mock('../../../../lib/xero/xeroOAuthConnectAttemptStore', () => ({
+  consumeXeroConnectAttempt: vi.fn(async () => ({
+    verifier: 'enc:verifier-ciphertext',
+    tenantId: TENANT_ID,
+    userId: USER_ID,
+    provider: 'xero',
+    redirectUri: CALLBACK_REDIRECT_URI,
+    csrf: 'csrf-token',
+    createdAt: Date.now() - 1000,
+    expiresAt: Date.now() + 60_000
+  }))
+}));
+
+vi.mock('../../../../lib/xero/xeroOAuthVerifierCipher', () => ({
+  decryptXeroVerifier: vi.fn(async () => 'verifier-123')
+}));
+
+vi.mock('../../../../lib/accountingConnectionAuth', () => ({
+  getAccountingConnectionSessionUser: vi.fn(async () => ({
+    tenant: TENANT_ID,
+    user_id: USER_ID
+  })),
+  canManageAccountingConnections: vi.fn(async () => true),
+  reauthorizeAccountingOAuthCallback: vi.fn(async () => ({ ok: true })),
+  revokeAccountingOAuthGrant: vi.fn(async () => undefined)
 }));
 
 vi.mock('../../../../lib/oauth/oauthCsrf', () => ({
@@ -98,9 +127,8 @@ async function waitForSim(): Promise<void> {
 }
 
 function buildCallbackRequest(): NextRequest {
-  const state = Buffer.from(
-    JSON.stringify({ tenantId: TENANT_ID, csrf: 'csrf-token', codeVerifier: 'verifier-123' })
-  ).toString('base64url');
+  // State is an opaque nonce; the stubbed attempt store carries the binding.
+  const state = 'opaque-state-nonce';
   const url = `http://localhost:3000/api/integrations/xero/callback?code=auth-code-1&state=${state}`;
   return new NextRequest(url, { headers: { cookie: 'alga_xero_oauth_csrf=csrf-token' } });
 }
