@@ -716,15 +716,18 @@ describe('remote credit sync enqueue decision — transactional gate', () => {
   }
 
   /** A finalized credit note whose issuance transaction carries its invoice id — the source of an apply_credit op. */
-  async function seedRemoteCredit(clientId: string, amount: number): Promise<string> {
-    const { invoiceId } = await seedCreditNote(clientId, amount);
-    return invoiceId;
+  async function seedRemoteCredit(
+    clientId: string,
+    amount: number
+  ): Promise<{ creditNoteInvoiceId: string; creditId: string }> {
+    const { invoiceId, creditId } = await seedCreditNote(clientId, amount);
+    return { creditNoteInvoiceId: invoiceId, creditId };
   }
 
   it('refuses when remote_mutate is revoked while the application is in flight, rolling back every local write', async () => {
     const clientId = await seedClient('Enqueue Deny Client');
     const targetInvoiceId = await seedInvoice(clientId, 2000, 5000);
-    await seedRemoteCredit(clientId, 10000);
+    const { creditId } = await seedRemoteCredit(clientId, 10000);
     await updateAccountingSyncSettings(db, tenantId, { autoSyncEnabled: true });
 
     const invoiceHolder = await db.transaction();
@@ -770,18 +773,20 @@ describe('remote credit sync enqueue decision — transactional gate', () => {
       .where({ invoice_id: targetInvoiceId, tenant: tenantId, type: 'credit_application' })
       .select('transaction_id');
     expect(applications).toHaveLength(0);
-    const creditRows = await db('credit_tracking').where({ tenant: tenantId });
-    const totalSpent = creditRows.reduce(
-      (sum, row) => sum + (Number(row.amount) - Number(row.remaining_amount)),
-      0
-    );
-    expect(totalSpent).toBe(0);
+
+    // Scoped to exactly the fixture's credit: the denied application must not
+    // have drawn down this note's pool, proving the in-transaction refusal
+    // rolled the draw-down back rather than committing it.
+    const creditRow = await db('credit_tracking')
+      .where({ credit_id: creditId, tenant: tenantId })
+      .first();
+    expect(Number(creditRow.remaining_amount)).toBe(10000);
   }, 60000);
 
   it('enqueues the op decided in-transaction even after auto-sync is disabled post-commit', async () => {
     const clientId = await seedClient('Enqueue Allow Client');
     const targetInvoiceId = await seedInvoice(clientId, 2000, 5000);
-    const creditNoteInvoiceId = await seedRemoteCredit(clientId, 10000);
+    const { creditNoteInvoiceId } = await seedRemoteCredit(clientId, 10000);
     await updateAccountingSyncSettings(db, tenantId, { autoSyncEnabled: true });
 
     await applyCreditToInvoiceInternal(
