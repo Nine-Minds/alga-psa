@@ -11,7 +11,8 @@ export type DisconnectAuditOperation =
   | 'disconnect_retry_started'
   | 'disconnect_retry_budget_exhausted'
   | 'disconnect_finalized'
-  | 'disconnect_force_finalized';
+  | 'disconnect_force_finalized'
+  | 'disconnect_record_retired';
 
 interface DisconnectAuditParams {
   knex: Knex;

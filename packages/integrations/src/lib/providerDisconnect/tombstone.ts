@@ -81,6 +81,22 @@ export async function clearTombstoneCredentials(
 }
 
 /**
+ * True when credential material exists under the standard (live) name only.
+ * Used by the disconnect service to distinguish "live credentials exist" (a
+ * fresh cycle must run) from "nothing live anywhere" (a finalized record is a
+ * stable no-op).
+ */
+export async function hasLiveProviderCredentials(
+  tenantId: string,
+  provider: ProviderType,
+  secretProvider?: SecretProviderLike,
+): Promise<boolean> {
+  const providerInstance = secretProvider ?? (await resolveSecretProvider());
+  const standard = await providerInstance.getTenantSecret(tenantId, standardCredentialsSecretName(provider));
+  return typeof standard === 'string' && standard.length > 0;
+}
+
+/**
  * True when any credential material exists under either the standard or the
  * tombstone name. Used to distinguish "genuinely nothing connected" (a clean,
  * no-op disconnect) from "credentials exist but failed to parse" (must not be

@@ -27,6 +27,9 @@ export {
   isProviderDisconnectActive,
 } from './status';
 export {
+  retireTerminalDisconnectRecord,
+} from './retire';
+export {
   tombstoneCredentialsSecretName,
   standardCredentialsSecretName,
 } from './tombstone';

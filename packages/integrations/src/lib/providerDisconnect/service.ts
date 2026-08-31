@@ -2,19 +2,14 @@ import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { notifyQboConnectionChanged } from '../qbo/qboConnectionChangeProvider';
-import {
-  getDisconnectRecord,
-  createDisconnectRecord,
-  updateTargetOutcome,
-  setRecordStatus,
-  replaceDisconnectTargets,
-} from './repository';
+import { getDisconnectRecord, createDisconnectRecord, deleteDisconnectRecord, updateTargetOutcome, setRecordStatus, replaceDisconnectTargets } from './repository';
 import { writeDisconnectAudit } from './audit';
 import {
   tombstoneLiveCredentials,
   clearTombstoneCredentials,
   tombstoneCredentialsSecretName,
   hasAnyProviderCredentials,
+  hasLiveProviderCredentials,
   type SecretProviderLike,
 } from './tombstone';
 import {
@@ -87,7 +82,9 @@ async function generateCorrelationId(): Promise<string> {
 /**
  * Disconnect a provider for a tenant: tombstone credentials immediately, then
  * drive provider-side cleanup (per-target) to provider-confirmed completion.
- * Idempotent — a pending record resumes; a finalized record is a no-op.
+ * Idempotent — a pending record resumes; a finalized record is a no-op only
+ * while no live credentials exist, and otherwise starts a fresh cycle over the
+ * current live credentials.
  */
 export async function disconnectProvider(
   knex: Knex,
@@ -97,9 +94,46 @@ export async function disconnectProvider(
 ): Promise<DisconnectServiceResult> {
   const secretProvider = (await getSecretProviderInstance()) as unknown as SecretProviderLike;
 
-  const existing = await getDisconnectRecord(knex, tenantId, provider);
-  if (existing?.status === 'finalized') {
-    return { status: 'already_disconnected', record: existing };
+  let existing = await getDisconnectRecord(knex, tenantId, provider);
+
+  // A terminal record (finalized, or failed_permanent pre-force-finalize) is
+  // only a true "already disconnected" when no live credentials exist: if live
+  // credentials are present alongside the record, the tenant reconnected after
+  // the prior cycle and the record is stale. Leaving it in place would either
+  // short-circuit the next disconnect into a silent no-op (`finalized`) or an
+  // operator dead-end (`failed_permanent`) while the live connection stays
+  // reachable — exactly the lifecycle defect this card fixes. The row is keyed
+  // by (tenant, provider), so the stale row is retired (deleted) and the
+  // first-disconnect path below builds a brand-new cycle: targets computed from
+  // the current live credentials, a fresh correlation id, attempt counts
+  // reset, and the live credentials tombstoned immediately. This is defense in
+  // depth: the OAuth reconnect paths retire terminal records at credential
+  // storage time, but the service must not depend on that cleanup having run.
+  if (existing && (existing.status === 'finalized' || existing.status === 'failed_permanent')) {
+    const hasLive = await hasLiveProviderCredentials(tenantId, provider, secretProvider);
+    if (hasLive) {
+      logger.warn('[providerDisconnect] Starting a fresh disconnect cycle over live credentials after a terminal record', {
+        tenantId,
+        provider,
+        staleStatus: existing.status,
+        staleCorrelationId: existing.correlationId,
+      });
+      // Clear any orphaned tombstone material first so the fresh cycle reads
+      // (and tombstones) the current live credentials as its authoritative
+      // target material.
+      await clearTombstoneCredentials(tenantId, provider, secretProvider);
+      await deleteDisconnectRecord(knex, tenantId, provider);
+      existing = null;
+    } else if (existing.status === 'finalized') {
+      // No live credentials: a finalized record is a stable no-op. Finalization
+      // normally clears the tombstone too; clear it if it ever survived so the
+      // record truly reflects "nothing anywhere".
+      await clearTombstoneCredentials(tenantId, provider, secretProvider);
+      return { status: 'already_disconnected', record: existing };
+    }
+    // `failed_permanent` with no live credentials falls through to the
+    // operator-actionable short-circuit below — an un-finalized operator state
+    // is not silently swallowed.
   }
 
   const tombstoneSecretName = tombstoneCredentialsSecretName(provider);

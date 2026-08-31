@@ -253,7 +253,19 @@ vi.mock('@alga-psa/db', () => ({
       return new MemQuery(fakeDb.tables[name]);
     },
   }),
-  createTenantKnex: async () => ({ knex: {}, tenant: 'tenant-1' }),
+  createTenantKnex: async () => ({
+    knex: {
+      fn: { now: () => new Date().toISOString() },
+      transaction: async (cb: (trx: any) => Promise<any>) =>
+        cb({
+          fn: { now: () => new Date().toISOString() },
+          transaction: async (cb2: (trx: any) => Promise<any>) => cb2(undefined),
+          raw: async () => ({ rows: [] }),
+        }),
+      raw: async () => ({ rows: [] }),
+    },
+    tenant: 'tenant-1',
+  }),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -308,8 +320,8 @@ import {
   isProviderDisconnectActive,
   listDueDisconnectRecords,
 } from '..';
-import { getStoredQboCredentialsMap } from '../../qbo/qboClientService';
-import { getStoredXeroConnections } from '../../xero/xeroClientService';
+import { getStoredQboCredentialsMap, upsertStoredQboCredentials } from '../../qbo/qboClientService';
+import { getStoredXeroConnections, upsertStoredXeroConnections } from '../../xero/xeroClientService';
 
 const TENANT = 'tenant-1';
 
@@ -328,6 +340,7 @@ function futureIso(ms: number): string {
 function xeroConnectionMaterial(connectionId: string, refreshToken: string) {
   return {
     connectionId,
+    xeroTenantId: connectionId,
     accessToken: `access-${connectionId}`,
     accessTokenExpiresAt: futureIso(3600_000),
     refreshToken,
@@ -603,6 +616,58 @@ describe('QuickBooks Online disconnect state machine', () => {
     // disconnect is pending.
     expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
   });
+
+  it('reconnect after a finalized disconnect retires the record and the next disconnect runs a real fresh cycle', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+
+    // Cycle 1: disconnect completes and finalizes; credentials gone.
+    const first = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(first.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
+
+    // Reconnect: persist fresh credentials via the OAuth storage path. The
+    // stale finalized record must be retired before the new connection becomes
+    // visible, and a `disconnect_record_retired` audit event must be written.
+    await upsertStoredQboCredentials(TENANT, {
+      realmId: 'realm-a',
+      accessToken: 'at-a2',
+      refreshToken: 'rt-a2',
+      accessTokenExpiresAt: futureIso(3600_000),
+      refreshTokenExpiresAt: futureIso(86_400_000),
+    });
+    expect(recordRows()).toHaveLength(0);
+    expect(auditRows().map((r) => r.operation)).toContain('disconnect_record_retired');
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toContain('rt-a2');
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_QBO)).toBe(false);
+
+    // Cycle 2: force a transient provider failure so the immediate
+    // tombstoning is observable mid-cycle.
+    providerHarness.calls.length = 0;
+    providerHarness.setQboRevoke(() => providerHarness.fail(500, { error: 'server_error' }));
+    const second = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(second.status).toBe('pending');
+
+    // The second disconnect tombstoned the fresh live credentials immediately:
+    // the ordinary sync/export credential fetch is empty again.
+    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toContain('rt-a2');
+    const revokeTokens = providerCalls()
+      .filter((c) => c.url.includes('tokens/revoke'))
+      .map((c) => (c.body as { token: string }).token);
+    expect(revokeTokens).toEqual(['rt-a2']);
+
+    // Retry completes the fresh cycle; the provider was really called.
+    providerHarness.setQboRevoke(() => providerHarness.ok(200, {}));
+    const third = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, { fromRetry: true });
+    expect(third.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
+    expect(
+      providerCalls().filter((c) => c.url.includes('tokens/revoke')).map((c) => (c.body as { token: string }).token),
+    ).toEqual(['rt-a2', 'rt-a2']);
+  });
 });
 
 describe('Xero disconnect state machine', () => {
@@ -785,6 +850,53 @@ describe('Xero disconnect state machine', () => {
     expect(providerHarness.calls).toHaveLength(0);
     expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
   });
+
+  it('reconnect after a finalized disconnect retires the record and the next disconnect runs a real fresh cycle', async () => {
+    xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
+
+    // Cycle 1: disconnect completes and finalizes; credentials gone.
+    const first = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+    expect(first.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
+
+    // Reconnect: persist fresh credentials via the OAuth storage path. The
+    // stale finalized record must be retired before the new connection becomes
+    // visible, and a `disconnect_record_retired` audit event must be written.
+    await upsertStoredXeroConnections(TENANT, {
+      'conn-a': xeroConnectionMaterial('conn-a', 'rt-a2'),
+    });
+    expect(recordRows()).toHaveLength(0);
+    expect(auditRows().map((r) => r.operation)).toContain('disconnect_record_retired');
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toContain('rt-a2');
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_XERO)).toBe(false);
+
+    // Cycle 2: force a transient provider failure so the immediate
+    // tombstoning is observable mid-cycle.
+    providerHarness.calls.length = 0;
+    providerHarness.setXeroConnection(() => providerHarness.fail(500, { error: 'server_error' }));
+    const second = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+    expect(second.status).toBe('pending');
+
+    // The second disconnect tombstoned the fresh live credentials immediately:
+    // the ordinary sync/export connection fetch is empty again.
+    expect(await getStoredXeroConnections(TENANT)).toEqual({});
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toContain('rt-a2');
+    const deleteIds = providerCalls()
+      .filter((c) => c.method === 'delete')
+      .map((c) => c.url.substring(c.url.lastIndexOf('/') + 1));
+    expect(deleteIds).toEqual(['conn-a']);
+
+    // Retry completes the fresh cycle (connection delete + grant revocation);
+    // the provider was really called.
+    providerHarness.setXeroConnection(() => providerHarness.ok(204));
+    const third = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { fromRetry: true });
+    expect(third.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
+    expect(providerCalls().filter((c) => c.method === 'delete')).toHaveLength(2);
+  });
 });
 
 describe('provider disconnect — shared behavior', () => {
@@ -850,6 +962,84 @@ describe('provider disconnect — shared behavior', () => {
     expect(refused.status).toBe('pending');
     expect(recordRows()[0].status).toBe('pending_revocation');
     expect(recordRows()[0].finalize_reason).toBeUndefined();
+  });
+
+  it('finalized record with no credentials anywhere still returns already_disconnected', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(recordRows()[0].status).toBe('finalized');
+    // Finalization cleared both the live and tombstoned credential names.
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
+
+    providerHarness.calls.length = 0;
+    const again = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(again.status).toBe('already_disconnected');
+    expect(providerHarness.calls).toHaveLength(0);
+    expect(recordRows()[0].status).toBe('finalized');
+  });
+
+  it('finalized record with live credentials starts a fresh cycle with a new correlation id (defense in depth)', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+
+    // Cycle 1 completes and finalizes.
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(recordRows()[0].status).toBe('finalized');
+    const firstCorrelationId = recordRows()[0].correlation_id;
+    expect(firstCorrelationId).toBeTruthy();
+
+    // Simulate a reconnect path that failed to retire the row: fresh live
+    // credentials are stored while the finalized record is left in place.
+    qboCredentialSecret({ 'realm-b': { realmId: 'realm-b', refreshToken: 'rt-b' } });
+    expect(recordRows()).toHaveLength(1);
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toContain('rt-b');
+
+    providerHarness.calls.length = 0;
+    const result = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+
+    // A fresh cycle ran against the current live credentials — not a
+    // short-circuit.
+    expect(result.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    // New cycle: new correlation id, targets recomputed from live credentials.
+    expect(recordRows()[0].correlation_id).not.toBe(firstCorrelationId);
+    const targets = recordRows()[0].targets as Array<{ targetId: string; status: string }>;
+    expect(targets).toEqual([expect.objectContaining({ targetId: 'realm-b', status: 'revoked' })]);
+    const revokeTokens = providerCalls()
+      .filter((c) => c.url.includes('tokens/revoke'))
+      .map((c) => (c.body as { token: string }).token);
+    expect(revokeTokens).toEqual(['rt-b']);
+    expect(revokeTokens).not.toContain('rt-a');
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
+  });
+
+  it('failed_permanent record with live credentials also starts a fresh cycle (reconnect supersedes a stale operator state)', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    providerHarness.setQboRevoke(() => providerHarness.fail(400, { error: 'invalid_client' }));
+
+    // Cycle 1 lands in the operator-actionable terminal state.
+    const failed = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(failed.status).toBe('failed_permanent');
+    expect(recordRows()[0].status).toBe('failed_permanent');
+
+    // Fresh live credentials appear (a reconnect that bypassed the guarded
+    // connect route, e.g. a manual secret write). The stale tombstoned material
+    // from the failed cycle must NOT become the next cycle's targets.
+    qboCredentialSecret({ 'realm-b': { realmId: 'realm-b', refreshToken: 'rt-b' } });
+
+    providerHarness.calls.length = 0;
+    providerHarness.setQboRevoke(() => providerHarness.ok(200, {}));
+    const result = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(result.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    const revokeTokens = providerCalls()
+      .filter((c) => c.url.includes('tokens/revoke'))
+      .map((c) => (c.body as { token: string }).token);
+    expect(revokeTokens).toEqual(['rt-b']);
+    expect(recordRows()[0].targets as Array<{ targetId: string }>).toEqual([
+      expect.objectContaining({ targetId: 'realm-b' }),
+    ]);
   });
 
   it('never logs tokens, secrets, or raw provider bodies', async () => {

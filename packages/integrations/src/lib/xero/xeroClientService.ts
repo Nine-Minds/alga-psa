@@ -1,6 +1,8 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
+import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
+import { PROVIDER_XERO } from '../providerDisconnect/types';
 import { AppError } from '@alga-psa/core';
 import type {
   ExternalCompanyRecord,
@@ -893,6 +895,15 @@ export async function upsertStoredXeroConnections(
 ): Promise<XeroConnectionsStore> {
   const existing = await getTenantConnections(tenantId);
   const merged: XeroConnectionsStore = { ...existing, ...updates };
+
+  // Reconnect after a completed (or force-finalized) disconnect: retire the
+  // stale terminal disconnect record BEFORE the new connection becomes visible
+  // to the rest of the system, so the next disconnect starts a fresh cycle
+  // instead of short-circuiting on the old finalized row. A pending disconnect
+  // record is deliberately left alone — reconnect during an in-flight cycle is
+  // blocked upstream. The disconnect service independently treats a terminal
+  // record with live credentials as stale (defense in depth).
+  await retireTerminalDisconnectRecord(tenantId, PROVIDER_XERO);
 
   if (options.prioritize?.length) {
     const prioritizedEntries: XeroConnectionsStore = {};

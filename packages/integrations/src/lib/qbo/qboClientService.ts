@@ -1,6 +1,8 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
 import { notifyQboConnectionChanged } from './qboConnectionChangeProvider';
+import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
+import { PROVIDER_QBO } from '../providerDisconnect/types';
 import type { QboTenantCredentials } from './types';
 import { AppError } from '@alga-psa/core';
 import type {
@@ -300,6 +302,15 @@ export async function upsertStoredQboCredentials(tenantId: string, credentials: 
   const allCredentials = await getStoredQboCredentialsMap(tenantId);
 
   allCredentials[credentials.realmId] = credentials;
+
+  // Reconnect after a completed (or force-finalized) disconnect: retire the
+  // stale terminal disconnect record BEFORE the new connection becomes visible
+  // to the rest of the system, so the next disconnect starts a fresh cycle
+  // instead of short-circuiting on the old finalized row. A pending disconnect
+  // record is deliberately left alone — reconnect during an in-flight cycle is
+  // blocked upstream. The disconnect service independently treats a terminal
+  // record with live credentials as stale (defense in depth).
+  await retireTerminalDisconnectRecord(tenantId, PROVIDER_QBO);
 
   await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET, JSON.stringify(allCredentials));
   logger.info(`Stored QBO credentials for tenant ${tenantId}, realm ${credentials.realmId}`);
