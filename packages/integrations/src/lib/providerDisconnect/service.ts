@@ -415,11 +415,26 @@ async function runRevocationPass(
   }
 
   // Process pending targets, looping once more when revoking the last Xero
-  // connection introduces the OAuth-grant target. The loop is bounded: the
-  // grant target can only be introduced once, so at most one extra iteration
-  // runs before every target has a terminal (or re-pending) status.
+  // connection makes the OAuth-grant target due. Check for that target before
+  // the empty-pending exit too: a resumed pass may observe every connection as
+  // revoked after the prior pass persisted its last target but before it could
+  // append the grant target. The loop is bounded because the grant target can
+  // only be introduced once.
   let targets = record.targets;
   while (true) {
+    if (provider === PROVIDER_XERO && xeroGrantDue(targets)) {
+      const hasGrant = targets.some((target) => target.targetId === XERO_GRANT_TARGET_ID);
+      if (!hasGrant) {
+        const now = new Date().toISOString();
+        const withGrant: DisconnectTargetEntry[] = [
+          ...targets,
+          { targetId: XERO_GRANT_TARGET_ID, status: 'pending_revocation', updatedAt: now },
+        ];
+        await replaceDisconnectTargets(knex, tenantId, provider, withGrant);
+        targets = withGrant;
+      }
+    }
+
     const pending = targets.filter((target) => target.status === 'pending_revocation');
     if (pending.length === 0) break;
 
@@ -429,19 +444,12 @@ async function runRevocationPass(
 
     const latestTargets = (await getDisconnectRecord(knex, tenantId, provider))?.targets ?? targets;
 
-    // Xero: once every connection is revoked, revoke the OAuth grant too. The
-    // work order requires grant revocation once no connections remain, and it
-    // must run in the same pass so a single disconnect converges.
+    // Xero: once every connection is revoked, loop back so the top-of-loop
+    // check appends and processes the OAuth grant in this same pass.
     if (provider === PROVIDER_XERO && xeroGrantDue(latestTargets)) {
       const hasGrant = latestTargets.some((target) => target.targetId === XERO_GRANT_TARGET_ID);
       if (!hasGrant) {
-        const now = new Date().toISOString();
-        const withGrant: DisconnectTargetEntry[] = [
-          ...latestTargets,
-          { targetId: XERO_GRANT_TARGET_ID, status: 'pending_revocation', updatedAt: now },
-        ];
-        await replaceDisconnectTargets(knex, tenantId, provider, withGrant);
-        targets = withGrant;
+        targets = latestTargets;
         continue;
       }
     }

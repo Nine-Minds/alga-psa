@@ -511,6 +511,31 @@ function auditRows(): Record<string, any>[] {
   return fakeDb.tables.audit_logs;
 }
 
+function seedPendingXeroRecordWithRevokedConnections(
+  connections: Record<string, ReturnType<typeof xeroConnectionMaterial>>,
+): void {
+  const now = new Date().toISOString();
+  secretStore.set(TENANT, XERO_TOMBSTONE_SECRET, JSON.stringify(connections));
+  recordRows().push({
+    tenant: TENANT,
+    provider: PROVIDER_XERO,
+    status: 'pending_revocation',
+    targets: Object.keys(connections).map((targetId) => ({
+      targetId,
+      status: 'revoked',
+      updatedAt: now,
+    })),
+    attempt_count: 1,
+    next_retry_at: null,
+    last_error_class: null,
+    correlation_id: 'resumed-xero-disconnect',
+    started_at: now,
+    finalized_at: null,
+    finalize_reason: null,
+    updated_at: now,
+  });
+}
+
 function providerCalls(): Array<{ method: string; url: string; body?: unknown }> {
   return providerHarness.calls.map(({ method, url, body }) => ({ method, url, body }));
 }
@@ -1275,6 +1300,64 @@ describe('QuickBooks Online disconnect state machine', () => {
 });
 
 describe('Xero disconnect state machine', () => {
+  it('a resumed record with every connection revoked appends and revokes the missing grant before finalizing', async () => {
+    seedPendingXeroRecordWithRevokedConnections({
+      'conn-a': xeroConnectionMaterial('conn-a', 'rt-a'),
+    });
+    let statusDuringGrantRevocation: string | undefined;
+    providerHarness.setXeroGrantRevoke(() => {
+      statusDuringGrantRevocation = recordRows()[0].status;
+      return providerHarness.ok(200, {});
+    });
+
+    const result = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { fromRetry: true });
+
+    expect(statusDuringGrantRevocation).toBe('pending_revocation');
+    expect(result.status).toBe('disconnected');
+    expect(providerCalls().filter((call) => call.method === 'delete')).toHaveLength(0);
+    expect(providerCalls().filter((call) => call.url.includes('connect/revocation'))).toHaveLength(1);
+    expect(recordRows()[0].targets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ targetId: 'conn-a', status: 'revoked' }),
+      expect.objectContaining({ targetId: XERO_GRANT_TARGET_ID, status: 'revoked' }),
+    ]));
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
+  });
+
+  it('a transient grant failure on a resumed record stays pending and a later pass converges', async () => {
+    seedPendingXeroRecordWithRevokedConnections({
+      'conn-a': xeroConnectionMaterial('conn-a', 'rt-a'),
+    });
+    providerHarness.setXeroGrantRevoke(() => providerHarness.fail(503, { error: 'server_error' }));
+
+    const first = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { fromRetry: true });
+
+    expect(first.status).toBe('pending');
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(recordRows()[0].finalized_at).toBeNull();
+    expect(new Date(recordRows()[0].next_retry_at).getTime()).toBeGreaterThan(Date.now());
+    expect(recordRows()[0].targets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ targetId: 'conn-a', status: 'revoked' }),
+      expect.objectContaining({ targetId: XERO_GRANT_TARGET_ID, status: 'pending_revocation' }),
+    ]));
+    expect(providerCalls().filter((call) => call.method === 'delete')).toHaveLength(0);
+    expect(providerCalls().filter((call) => call.url.includes('connect/revocation'))).toHaveLength(1);
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toContain('rt-a');
+
+    providerHarness.setXeroGrantRevoke(() => providerHarness.ok(200, {}));
+    const second = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { fromRetry: true });
+
+    expect(second.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(recordRows()[0].targets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ targetId: 'conn-a', status: 'revoked' }),
+      expect.objectContaining({ targetId: XERO_GRANT_TARGET_ID, status: 'revoked' }),
+    ]));
+    expect(providerCalls().filter((call) => call.method === 'delete')).toHaveLength(0);
+    expect(providerCalls().filter((call) => call.url.includes('connect/revocation'))).toHaveLength(2);
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
+  });
+
   it('clean success deletes every connection, revokes the grant once, deletes local credentials, finalizes', async () => {
     xeroCredentialSecret({
       'conn-a': xeroConnectionMaterial('conn-a', 'rt-a'),
