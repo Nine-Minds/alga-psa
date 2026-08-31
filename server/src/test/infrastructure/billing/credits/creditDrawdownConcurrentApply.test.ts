@@ -364,8 +364,8 @@ describe('applyCreditToInvoiceInternal under concurrent applications', () => {
     const creditIds = [await seedCredit(clientId, 10000), await seedCredit(clientId, 10000)];
 
     const results = await Promise.all([
-      applyCreditToInvoiceInternal(tenantId, userId, clientId, invoiceId, eligibleCap),
-      applyCreditToInvoiceInternal(tenantId, userId, clientId, invoiceId, eligibleCap),
+      applyCreditToInvoiceInternal(tenantId, { ...currentUserRef.user, user_id: userId }, clientId, invoiceId, eligibleCap),
+      applyCreditToInvoiceInternal(tenantId, { ...currentUserRef.user, user_id: userId }, clientId, invoiceId, eligibleCap),
     ]);
 
     const appliedAmounts = results.map((result) => result.appliedAmount);
@@ -392,8 +392,8 @@ describe('applyCreditToInvoiceInternal under concurrent applications', () => {
     const creditIds = [await seedCredit(clientId, 10000), await seedCredit(clientId, 10000)];
 
     const results = await Promise.all([
-      applyCreditToInvoiceInternal(tenantId, userId, clientId, invoiceId, 4000),
-      applyCreditToInvoiceInternal(tenantId, userId, clientId, invoiceId, 4000),
+      applyCreditToInvoiceInternal(tenantId, { ...currentUserRef.user, user_id: userId }, clientId, invoiceId, 4000),
+      applyCreditToInvoiceInternal(tenantId, { ...currentUserRef.user, user_id: userId }, clientId, invoiceId, 4000),
     ]);
 
     const appliedAmounts = results.map((result) => result.appliedAmount);
@@ -424,8 +424,8 @@ describe('applyCreditToInvoiceInternal under concurrent applications', () => {
     const creditIds = [await seedCredit(clientId, 10000)];
 
     const results = await Promise.all([
-      applyCreditToInvoiceInternal(tenantId, userId, clientId, invoiceA, 3000),
-      applyCreditToInvoiceInternal(tenantId, userId, clientId, invoiceB, 4000),
+      applyCreditToInvoiceInternal(tenantId, { ...currentUserRef.user, user_id: userId }, clientId, invoiceA, 3000),
+      applyCreditToInvoiceInternal(tenantId, { ...currentUserRef.user, user_id: userId }, clientId, invoiceB, 4000),
     ]);
 
     // The shared credit covers both requests in full — the race under test is

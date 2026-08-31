@@ -3,8 +3,8 @@
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { auditLog } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
-import { IInvoice, IInvoiceCharge } from '@alga-psa/types';
-import { ITransaction, ICreditTracking } from '@alga-psa/types';
+import { IInvoice, IInvoiceCharge, ITransaction, ICreditTracking } from '@alga-psa/types';
+import type { IUser } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
@@ -22,6 +22,7 @@ import {
     buildCreditNoteCreatedPayload,
 } from '@alga-psa/workflow-streams';
 import { enqueueCreditApplication } from '../services/accountingSync/syncProducers';
+import { getAccountingSyncSettings, resolveDefaultRealm } from '../services/accountingSync/accountingSyncSettings';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import {
     actionError,
@@ -69,6 +70,37 @@ type CreditActionTableRows = {
     credit_tracking: CreditTrackingRow;
     credit_allocations: CreditAllocationRow;
 };
+
+// LEVERAGE: pattern edition-gate — same local isEnterpriseEdition as syncProducers.ts
+function isEnterpriseEdition(): boolean {
+  return (
+    (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+    (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise'
+  );
+}
+
+/**
+ * Whether a credit application that collected apply_credit ops would actually
+ * enqueue them for the remote provider. Mirrors the guards inside
+ * enqueueCreditApplication (syncProducers.ts): Enterprise Edition, auto-sync
+ * enabled, and a default realm to target. This is the "remote-affecting branch"
+ * test for the remote_mutate gate — a purely local application (no ops, no
+ * sync config, or no connected realm) must not be gated.
+ */
+async function creditApplicationReachesRemote(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string
+): Promise<boolean> {
+    if (!isEnterpriseEdition()) {
+        return false;
+    }
+    const settings = await getAccountingSyncSettings(knexOrTrx, tenant);
+    if (!settings.autoSyncEnabled) {
+        return false;
+    }
+    const realm = await resolveDefaultRealm(knexOrTrx, tenant);
+    return Boolean(realm);
+}
 
 function creditActionErrorFrom(error: unknown): CreditActionError | null {
     if (error instanceof Error) {
@@ -828,7 +860,7 @@ export async function createPrepaymentInvoiceInternal(
  */
 export async function applyCreditToInvoiceInternal(
     tenant: string,
-    userId: string,
+    user: IUser,
     clientId: string,
     invoiceId: string,
     requestedAmount: number
@@ -1234,7 +1266,7 @@ export async function applyCreditToInvoiceInternal(
             amountApplied: appliedCredit.amount,
             currency: invoiceCurrency,
             appliedAt: now,
-            appliedByUserId: userId,
+            appliedByUserId: user.user_id,
             idempotencyKey: `credit_note_applied:${creditTransaction.transaction_id}:${appliedCredit.creditId}`,
             appliedInvoiceNumber: appliedInvoice.invoice?.invoice_number ?? null,
             appliedInvoiceStatus: appliedInvoice.invoice?.status ?? null,
@@ -1265,6 +1297,21 @@ export async function applyCreditToInvoiceInternal(
                     amountCents: appliedCredit.amount
                 });
             }
+        }
+
+        // The apply_credit ops are a remote money-moving operation: pushing a
+        // credit application into the connected accounting ledger. That branch
+        // is gated by accounting_integrations:remote_mutate (Admin-only), so a
+        // user without it is refused up front rather than silently applying
+        // locally and desynchronizing the books. The check runs inside this
+        // transaction so the refusal rolls back every write above — a purely
+        // local application (no ops, no auto-sync, no realm) is untouched.
+        if (
+            creditSyncOps.length > 0 &&
+            await creditApplicationReachesRemote(trx, tenant) &&
+            !(await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx))
+        ) {
+            throw new Error('Permission denied: applying credits that sync to the accounting integration requires the accounting remote-mutate permission.');
         }
     });
 
@@ -1365,7 +1412,7 @@ export const applyCreditToInvoice = withAuth(async (
         throw new Error('Permission denied: Cannot apply credits to invoices');
     }
 
-    const { appliedAmount } = await applyCreditToInvoiceInternal(tenant, user.user_id, clientId, invoiceId, requestedAmount);
+    const { appliedAmount } = await applyCreditToInvoiceInternal(tenant, user, clientId, invoiceId, requestedAmount);
 
     // Reconcile any still-active Checkout links now that the balance changed:
     // a customer must not be able to pay the pre-credit amount through an old
