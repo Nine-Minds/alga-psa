@@ -57,12 +57,28 @@ const SECRET_VALUE = 'super-secret-value-that-must-never-be-logged';
 /**
  * The repair script's chown branches only run as root with --uid. A user
  * namespace (`unshare -r --map-auto`) provides an unprivileged fake root with
- * a mapped uid range, letting those branches execute for real. Skipped where
- * user namespaces are unavailable.
+ * a mapped subordinate uid range, letting those branches execute for real.
+ *
+ * Probing that the namespace can merely be created is not enough: some CI
+ * kernels (e.g. GitHub-hosted runners without an /etc/subuid range for the
+ * runner user) create the namespace but map only uid 0, so a chown to a
+ * subordinate uid fails with EPERM. The ownership tests below need a real
+ * `chown 1`, so the probe performs one end to end and only enables the tests
+ * when it actually succeeds. Skipped where that capability is unavailable.
  */
-const HAS_USERNS = (() => {
+const HAS_USERNS_CHOWN = (() => {
   try {
-    execFileSync('unshare', ['-r', '--map-auto', 'true'], { stdio: 'ignore' });
+    execFileSync(
+      'unshare',
+      [
+        '-r',
+        '--map-auto',
+        'bash',
+        '-c',
+        'set -e; d=$(mktemp -d); f="$d/probe"; : > "$f"; chown 1 "$f"; chown 0 "$f"; rm -rf "$d"',
+      ],
+      { stdio: 'ignore' },
+    );
     return true;
   } catch {
     return false;
@@ -648,7 +664,7 @@ describe('repair script', () => {
     }
   });
 
-  it.runIf(HAS_USERNS)('--apply --uid as root fixes mode and ownership together, including the root itself', async () => {
+  it.runIf(HAS_USERNS_CHOWN)('--apply --uid as root fixes mode and ownership together, including the root itself', async () => {
     const store = path.join(rootDir, 'chown-store');
     const secretFile = path.join(store, 'tenants', 't1', 'token');
     await mkdir(path.dirname(secretFile), { recursive: true });
@@ -688,7 +704,7 @@ describe('repair script', () => {
     expect(await readFile(secretFile, 'utf-8')).toBe(SECRET_VALUE);
   });
 
-  it.runIf(HAS_USERNS)('--apply without --uid exits non-zero when ownership is mixed', async () => {
+  it.runIf(HAS_USERNS_CHOWN)('--apply without --uid exits non-zero when ownership is mixed', async () => {
     const store = path.join(rootDir, 'mixed-owner-store');
     const secretFile = path.join(store, 'tenants', 't1', 'token');
     await mkdir(path.dirname(secretFile), { recursive: true });
