@@ -300,6 +300,68 @@ describe('createExternalEntityMapping — the generic surface is constrained', (
   });
 });
 
+describe('createExternalEntityMapping — sync state is server-derived, not caller-supplied', () => {
+  it('ignores a caller-supplied sync_status on create: stores manual_link and audits derived state', async () => {
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      {
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'service',
+        alga_entity_id: serviceA,
+        external_entity_id: 'item-claim-1',
+        external_realm_id: realmA,
+        sync_status: 'synced',
+      }
+    );
+
+    expect(result).toMatchObject({ id: expect.any(String), external_entity_id: 'item-claim-1' });
+
+    const row = await db('tenant_external_entity_mappings').where({ id: result.id }).first();
+    expect(row).toBeTruthy();
+    expect(row.sync_status).toBe('manual_link');
+
+    const audit = await lastAudit(tenantA, 'CREATE');
+    expect(audit).toBeTruthy();
+    expect(audit.changed_data.sync_status).toBe('manual_link');
+    // The caller's fabricated 'synced' state appears nowhere in the trail.
+    expect(JSON.stringify(audit)).not.toContain('synced');
+  });
+
+  it('ignores a caller-supplied sync_status on tombstone relink: stores manual_link and audits derived state', async () => {
+    const { id } = await seedMapping({ alga_entity_id: serviceA });
+    await (deleteExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, id);
+
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      {
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'service',
+        alga_entity_id: serviceA,
+        external_entity_id: 'item-relinked-claim',
+        external_realm_id: realmA,
+        sync_status: 'synced',
+      }
+    );
+
+    // Relinked in place: same row id, revived tombstone.
+    expect(result.id).toBe(id);
+    expect(result.external_entity_id).toBe('item-relinked-claim');
+
+    const row = await db('tenant_external_entity_mappings').where({ id }).first();
+    expect(row).toBeTruthy();
+    expect(row.deleted_at).toBeNull();
+    expect(row.sync_status).toBe('manual_link');
+
+    const audit = await lastAudit(tenantA, 'CREATE');
+    expect(audit).toBeTruthy();
+    expect(audit.details).toMatchObject({ relinked: true });
+    expect(audit.changed_data.sync_status).toBe('manual_link');
+    expect(JSON.stringify(audit)).not.toContain('synced');
+  });
+});
+
 describe('createExternalEntityMapping — Xero catalog links are proven against the connected org', () => {
   it('rejects a Xero service item code that is not in the connected organisation', async () => {
     const result = await (createExternalEntityMapping as any)(

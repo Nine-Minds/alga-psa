@@ -181,7 +181,7 @@ describe('QBO live mapping modules', () => {
     ]);
   });
 
-  it('T039: create passes external_realm_id from context.realmId and sync_status manual_link', async () => {
+  it('T039: create passes external_realm_id from context.realmId without sync state', async () => {
     const [serviceModule] = createQboLiveMappingModules();
     const context = { realmId: 'realm-abc', connectionId: 'conn-1', realmDisplayValue: 'Acme' };
 
@@ -196,10 +196,11 @@ describe('QBO live mapping modules', () => {
         alga_entity_type: 'service',
         alga_entity_id: 'service-1',
         external_entity_id: 'qbo-item-1',
-        external_realm_id: 'realm-abc',
-        sync_status: 'manual_link'
+        external_realm_id: 'realm-abc'
       })
     );
+    // The create contract no longer carries sync state; the server derives it.
+    expect(createExternalEntityMappingMock.mock.calls[0][0]).not.toHaveProperty('sync_status');
   });
 
   it('T040: create with null realmId passes external_realm_id as null', async () => {
@@ -231,8 +232,7 @@ describe('QBO live mapping modules', () => {
       expect.objectContaining({
         integration_type: 'quickbooks_online',
         alga_entity_type: 'tax_code',
-        external_realm_id: 'realm-abc',
-        sync_status: 'manual_link'
+        external_realm_id: 'realm-abc'
       })
     );
   });
@@ -250,8 +250,7 @@ describe('QBO live mapping modules', () => {
       expect.objectContaining({
         integration_type: 'quickbooks_online',
         alga_entity_type: 'payment_term',
-        external_realm_id: 'realm-xyz',
-        sync_status: 'manual_link'
+        external_realm_id: 'realm-xyz'
       })
     );
   });

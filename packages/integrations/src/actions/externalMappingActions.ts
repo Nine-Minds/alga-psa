@@ -62,13 +62,18 @@ interface GetMappingsParams {
   externalEntityId?: string;
 }
 
+/**
+ * Browser-facing create contract. Notably does NOT carry `sync_status`: the
+ * persisted state is derived server-side (`manual_link`) so a caller cannot
+ * mint a mapping that downstream consumers read as synced by an automated
+ * workflow that never ran.
+ */
 export interface CreateMappingData {
   integration_type: string;
   alga_entity_type: string;
   alga_entity_id: string;
   external_entity_id: string;
   external_realm_id?: string | null;
-  sync_status?: 'synced' | 'pending' | 'error' | 'manual_link' | null;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -604,7 +609,6 @@ export const createExternalEntityMapping = withAuth(async (
     alga_entity_id,
     external_entity_id,
     external_realm_id,
-    sync_status,
     metadata,
   } = mappingData;
 
@@ -663,7 +667,9 @@ export const createExternalEntityMapping = withAuth(async (
         const patch: Partial<ExternalEntityMapping> = {
           external_entity_id,
           external_realm_id: normalizedRealm,
-          sync_status: sync_status ?? 'manual_link',
+          // A manual link is always manual_link — even a hostile caller cannot
+          // relink a tombstone into a fabricated 'synced' state.
+          sync_status: 'manual_link',
           metadata: metadata ?? null,
           deleted_at: null,
           updated_at: new Date().toISOString(),
@@ -702,7 +708,8 @@ export const createExternalEntityMapping = withAuth(async (
           alga_entity_id,
           external_entity_id,
           external_realm_id: normalizedRealm,
-          sync_status: sync_status ?? 'pending',
+          // Sync state is server-derived; caller-supplied state is ignored.
+          sync_status: 'manual_link',
           metadata: metadata ?? null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
