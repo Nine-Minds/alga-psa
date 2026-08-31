@@ -10,8 +10,13 @@ import type {
 // Re-export types for dependent modules
 export type { ExternalCompanyRecord, NormalizedCompanyPayload } from '@alga-psa/types';
 
-const XERO_TOKEN_ENDPOINT = 'https://identity.xero.com/connect/token';
-const XERO_API_BASE_URL = 'https://api.xero.com/api.xro/2.0';
+// Env overrides exist so test environments can point at the Xero emulator
+// (packages/emulators/xero), mirroring QBO_OAUTH_TOKEN_URL/QBO_API_BASE_URL
+// for QBO and MICROSOFT_GRAPH_BASE_URL for Graph.
+const XERO_TOKEN_ENDPOINT =
+  process.env.XERO_OAUTH_TOKEN_URL?.trim() || 'https://identity.xero.com/connect/token';
+const XERO_API_BASE_URL =
+  process.env.XERO_API_BASE_URL?.trim() || 'https://api.xero.com/api.xro/2.0';
 const XERO_CREDENTIALS_SECRET = 'xero_credentials';
 const XERO_CLIENT_ID_SECRET = 'xero_client_id';
 const XERO_CLIENT_SECRET_SECRET = 'xero_client_secret';
