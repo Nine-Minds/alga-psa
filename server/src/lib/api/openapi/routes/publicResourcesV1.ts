@@ -184,21 +184,24 @@ export function registerPublicResourcesV1Routes(
     edition: 'both',
   });
 
-  // Accounting exports (Xero CSV).
+  // Accounting exports (Xero CSV). The legacy v1 xero-csv route handlers are
+  // gated by accounting_integrations:exports_execute — the same capability as
+  // the modern /api/accounting/csv/* routes — not the phantom billing:manage
+  // resource that used to always deny by accident.
   registry.registerRoute({
     method: 'get', path: '/api/v1/accounting-exports/xero-csv/client-export',
     summary: 'Export clients as Xero Contacts CSV',
-    description: 'Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires billing:manage.',
+    description: 'Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires accounting_integrations:exports_execute.',
     tags: ['Accounting Exports'], security: [{ ApiKeyAuth: [] }],
     request: { query: registry.registerSchema('XeroClientExportQuery', zOpenApi.object({ clientIds: zOpenApi.string().optional().describe('Comma-separated client UUIDs to limit the export.') })) },
     responses: { 200: { description: 'CSV file (text/csv attachment).', schema: Success }, ...stdErrs() },
-    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'billing', 'x-rbac-action': 'manage', 'x-response-content-type': 'text/csv' },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'accounting_integrations', 'x-rbac-action': 'exports_execute', 'x-response-content-type': 'text/csv' },
     edition: 'both',
   });
   registry.registerRoute({
     method: 'post', path: '/api/v1/accounting-exports/xero-csv/client-import',
     summary: 'Import Xero Contacts CSV',
-    description: 'Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires billing:manage.',
+    description: 'Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires accounting_integrations:exports_execute.',
     tags: ['Accounting Exports'], security: [{ ApiKeyAuth: [] }],
     request: { query: registry.registerSchema('XeroClientImportQuery', zOpenApi.object({
       preview: zOpenApi.enum(['true', 'false']).optional(),
@@ -207,17 +210,17 @@ export function registerPublicResourcesV1Routes(
       matchBy: zOpenApi.string().optional(),
     })) },
     responses: { 200: { description: 'Import preview or result.', schema: Success }, ...stdErrs() },
-    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'billing', 'x-rbac-action': 'manage', 'x-request-content-type': 'multipart/form-data or application/json or text/csv' },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'accounting_integrations', 'x-rbac-action': 'exports_execute', 'x-request-content-type': 'multipart/form-data or application/json or text/csv' },
     edition: 'both',
   });
   registry.registerRoute({
     method: 'post', path: '/api/v1/accounting-exports/xero-csv/tax-import',
     summary: 'Import Xero invoice tax CSV',
-    description: 'Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires billing:manage.',
+    description: 'Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires accounting_integrations:exports_execute.',
     tags: ['Accounting Exports'], security: [{ ApiKeyAuth: [] }],
     request: { query: registry.registerSchema('XeroTaxImportQuery', zOpenApi.object({ preview: zOpenApi.enum(['true', 'false']).optional() })) },
     responses: { 200: { description: 'Import preview or result.', schema: Success }, ...stdErrs() },
-    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'billing', 'x-rbac-action': 'manage', 'x-request-content-type': 'multipart/form-data or application/json or text/csv' },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'accounting_integrations', 'x-rbac-action': 'exports_execute', 'x-request-content-type': 'multipart/form-data or application/json or text/csv' },
     edition: 'both',
   });
   registry.registerRoute({
