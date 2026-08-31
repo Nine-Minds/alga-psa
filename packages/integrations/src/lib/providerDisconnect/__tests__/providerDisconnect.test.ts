@@ -191,13 +191,15 @@ const providerHarness = vi.hoisted(() => {
 
   async function post(url: string, data?: unknown, config?: { headers?: Record<string, unknown> }): Promise<any> {
     calls.push({ method: 'post', url, body: data, authorization: config?.headers?.Authorization as string | undefined });
-    if (url.includes('developer.api.intuit.com/v2/oauth2/tokens/revoke')) {
+    // Match on path suffixes so both the real hosts and the dev-only env
+    // override URLs (see the env-driven override suite below) route identically.
+    if (url.includes('tokens/revoke') || url.endsWith('/revoke')) {
       return respond(qboRevoke(data));
     }
-    if (url.includes('identity.xero.com/connect/revocation')) {
+    if (url.includes('connect/revocation')) {
       return respond(xeroGrantRevoke(data));
     }
-    if (url.includes('identity.xero.com/connect/token')) {
+    if (url.includes('connect/token')) {
       return respond(xeroRefresh(data));
     }
     return ok(200, {});
@@ -1324,5 +1326,80 @@ describe('provider disconnect — shared behavior', () => {
     expect(logged).not.toContain('distinctive-raw-body-leak');
     expect(JSON.stringify(auditRows())).not.toContain('rt-secret-token-value');
     expect(JSON.stringify(auditRows())).not.toContain('distinctive-raw-body-leak');
+  });
+});
+
+describe('env-driven provider endpoint overrides (dev-only, default to real hosts)', () => {
+  const OVERRIDES: Record<string, string> = {
+    QBO_OAUTH_REVOKE_URL: 'http://127.0.0.1:4901/qbo/oauth2/v1/revoke',
+    XERO_OAUTH_TOKEN_URL: 'http://127.0.0.1:4901/xero/connect/token',
+    XERO_CONNECTIONS_URL: 'http://127.0.0.1:4901/xero/connections',
+    XERO_REVOCATION_URL: 'http://127.0.0.1:4901/xero/connect/revocation',
+  };
+
+  const clearOverrides = () => {
+    for (const key of Object.keys(OVERRIDES)) {
+      delete process.env[key];
+    }
+  };
+
+  beforeEach(() => {
+    clearOverrides();
+  });
+
+  afterEach(() => {
+    clearOverrides();
+  });
+
+  it('points the QBO revoker at the override URL without changing default behavior when unset', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+
+    // Default (no env): the real Intuit host.
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(providerCalls()).toEqual([
+      { method: 'post', url: 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke', body: { token: 'rt-a' } },
+    ]);
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
+
+    // Override set: the disconnect revoker targets the simulator.
+    providerHarness.reset();
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    process.env.QBO_OAUTH_REVOKE_URL = OVERRIDES.QBO_OAUTH_REVOKE_URL;
+
+    const result = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(result.status).toBe('disconnected');
+    expect(providerCalls()).toEqual([
+      { method: 'post', url: OVERRIDES.QBO_OAUTH_REVOKE_URL, body: { token: 'rt-a' } },
+    ]);
+    expect(recordRows()[0].status).toBe('finalized');
+  });
+
+  it('points the Xero refresh, connection delete, and grant revocation at the override URLs', async () => {
+    // Expire the access token so the revoker must refresh through the token
+    // endpoint before deleting the connection, exercising all three overrides.
+    xeroCredentialSecret({
+      'conn-a': {
+        connectionId: 'conn-a',
+        xeroTenantId: 'conn-a',
+        accessToken: 'access-conn-a',
+        accessTokenExpiresAt: new Date(Date.now() - 60_000).toISOString(),
+        refreshToken: 'rt-xero',
+        refreshTokenExpiresAt: futureIso(86_400_000),
+      },
+    });
+    Object.assign(process.env, OVERRIDES);
+
+    const result = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+    expect(result.status).toBe('disconnected');
+
+    const urls = providerCalls().map((c) => c.url);
+    expect(urls).toContain(OVERRIDES.XERO_OAUTH_TOKEN_URL);
+    expect(urls).toContain(`${OVERRIDES.XERO_CONNECTIONS_URL}/conn-a`);
+    expect(urls).toContain(OVERRIDES.XERO_REVOCATION_URL);
+    // No production host was reached.
+    expect(JSON.stringify(providerCalls())).not.toContain('https://api.xero.com');
+    expect(JSON.stringify(providerCalls())).not.toContain('https://identity.xero.com');
+    expect(JSON.stringify(providerCalls())).not.toContain('https://developer.api.intuit.com');
+    expect(recordRows()[0].status).toBe('finalized');
   });
 });

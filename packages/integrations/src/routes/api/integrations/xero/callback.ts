@@ -13,7 +13,8 @@ import {
   XeroConnectionsStore,
   resolveXeroOAuthCredentials,
   upsertStoredXeroConnections,
-  XERO_TOKEN_URL
+  getXeroTokenUrl,
+  getXeroConnectionsUrl,
 } from '../../../../lib/xero/xeroClientService';
 import {
   isProviderDisconnectActive,
@@ -23,7 +24,6 @@ import { oauthCsrfTokensMatch, buildOauthCsrfCookieOptions } from '../../../../l
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
 
 const SUCCESS_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=success';
@@ -177,7 +177,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     });
 
     const tokenResponse = await axios.post(
-      XERO_TOKEN_URL,
+      getXeroTokenUrl(),
       tokenParams.toString(),
       {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -208,7 +208,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
           ? tokenData.scope.join(' ')
           : undefined;
 
-    const connectionsResponse = await axios.get(XERO_CONNECTIONS_URL, {
+    const connectionsResponse = await axios.get(getXeroConnectionsUrl(), {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/json'

@@ -68,6 +68,13 @@ export const QBO_CREDENTIALS_SECRET_NAME = QBO_CREDENTIALS_SECRET;
 export const QBO_CLIENT_ID_SECRET_NAME = QBO_CLIENT_ID_SECRET;
 export const QBO_CLIENT_SECRET_SECRET_NAME = QBO_CLIENT_SECRET_SECRET;
 
+// Dev/test override for the Intuit token-revocation endpoint; defaults to the
+// production host. Lazy so tests can redirect the disconnect revoker at the
+// local provider simulator after module load.
+export function getQboRevokeUrl(): string {
+  return process.env.QBO_OAUTH_REVOKE_URL?.trim() || 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
+}
+
 const QBO_CLIENT_ID_ENV_FALLBACKS = [
   QBO_CLIENT_ID_SECRET,
   'QBO_CLIENT_ID',

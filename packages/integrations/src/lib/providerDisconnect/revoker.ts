@@ -3,17 +3,16 @@ import logger from '@alga-psa/core/logger';
 import {
   resolveQboOAuthCredentials,
   QBO_CREDENTIALS_SECRET_NAME,
+  getQboRevokeUrl,
 } from '../qbo/qboClientService';
 import {
   resolveXeroOAuthCredentials,
   XERO_CREDENTIALS_SECRET_NAME,
-  XERO_TOKEN_URL,
+  getXeroTokenUrl,
+  getXeroConnectionsUrl,
+  getXeroRevocationUrl,
 } from '../xero/xeroClientService';
 import { XERO_GRANT_TARGET_ID } from './types';
-
-const QBO_TOKEN_REVOKE_URL = 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
-const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
-const XERO_REVOCATION_URL = 'https://identity.xero.com/connect/revocation';
 
 export type RevokeOutcome = 'revoked' | 'transient_failure' | 'permanent_failure';
 
@@ -171,7 +170,7 @@ export async function revokeQboRealm(
   const authHeader = `Basic ${Buffer.from(`${resolved.clientId}:${resolved.clientSecret}`).toString('base64')}`;
   try {
     await axios.post(
-      QBO_TOKEN_REVOKE_URL,
+      getQboRevokeUrl(),
       { token: material.refreshToken },
       {
         headers: {
@@ -274,7 +273,7 @@ async function ensureXeroAccessToken(
       client_id: resolved.clientId,
       client_secret: resolved.clientSecret,
     });
-    const response = await axios.post(XERO_TOKEN_URL, params.toString(), {
+    const response = await axios.post(getXeroTokenUrl(), params.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       timeout: 10000,
     });
@@ -316,7 +315,7 @@ export async function revokeXeroConnection(
     allowUnauthorizedRetry: boolean,
   ): Promise<RevokeResult> => {
     try {
-      await axios.delete(`${XERO_CONNECTIONS_URL}/${encodeURIComponent(material.connectionId)}`, {
+      await axios.delete(`${getXeroConnectionsUrl()}/${encodeURIComponent(material.connectionId)}`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: 'application/json',
@@ -369,7 +368,7 @@ export async function revokeXeroGrant(
       token: refreshToken,
       token_type_hint: 'refresh_token',
     });
-    await axios.post(XERO_REVOCATION_URL, params.toString(), {
+    await axios.post(getXeroRevocationUrl(), params.toString(), {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Authorization: authHeader,

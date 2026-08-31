@@ -14,8 +14,10 @@ import type {
 // Re-export types for dependent modules
 export type { ExternalCompanyRecord, NormalizedCompanyPayload } from '@alga-psa/types';
 
-const XERO_TOKEN_ENDPOINT = 'https://identity.xero.com/connect/token';
-const XERO_API_BASE_URL = 'https://api.xero.com/api.xro/2.0';
+const XERO_TOKEN_ENDPOINT_DEFAULT = 'https://identity.xero.com/connect/token';
+const XERO_API_BASE_URL_DEFAULT = 'https://api.xero.com/api.xro/2.0';
+const XERO_CONNECTIONS_URL_DEFAULT = 'https://api.xero.com/connections';
+const XERO_REVOCATION_URL_DEFAULT = 'https://identity.xero.com/connect/revocation';
 const XERO_CREDENTIALS_SECRET = 'xero_credentials';
 const XERO_CLIENT_ID_SECRET = 'xero_client_id';
 const XERO_CLIENT_SECRET_SECRET = 'xero_client_secret';
@@ -29,7 +31,31 @@ const DEFAULT_XERO_SCOPES = [
   'accounting.contacts'
 ];
 
-export const XERO_TOKEN_URL = XERO_TOKEN_ENDPOINT;
+// Provider endpoint overrides so test environments can point at the local
+// provider simulator (tools/smoke-sim/accounting-provider-simulator.cjs)
+// without touching production hosts. They resolve lazily so a test can set
+// them after module load; when unset every call targets the real Xero hosts.
+function readEndpointOverride(key: string, fallback: string): string {
+  return process.env[key]?.trim() || fallback;
+}
+
+export function getXeroTokenUrl(): string {
+  return readEndpointOverride('XERO_OAUTH_TOKEN_URL', XERO_TOKEN_ENDPOINT_DEFAULT);
+}
+
+export function getXeroApiBaseUrl(): string {
+  return readEndpointOverride('XERO_API_BASE_URL', XERO_API_BASE_URL_DEFAULT);
+}
+
+export function getXeroConnectionsUrl(): string {
+  return readEndpointOverride('XERO_CONNECTIONS_URL', XERO_CONNECTIONS_URL_DEFAULT);
+}
+
+export function getXeroRevocationUrl(): string {
+  return readEndpointOverride('XERO_REVOCATION_URL', XERO_REVOCATION_URL_DEFAULT);
+}
+
+export const XERO_TOKEN_URL = getXeroTokenUrl();
 export const XERO_CREDENTIALS_SECRET_NAME = XERO_CREDENTIALS_SECRET;
 export const XERO_CLIENT_ID_SECRET_NAME = XERO_CLIENT_ID_SECRET;
 export const XERO_CLIENT_SECRET_SECRET_NAME = XERO_CLIENT_SECRET_SECRET;
@@ -684,7 +710,7 @@ export class XeroClientService {
 
     try {
       const response = await axios.request<T>({
-        baseURL: XERO_API_BASE_URL,
+        baseURL: getXeroApiBaseUrl(),
         ...config,
         headers
       });
@@ -744,7 +770,7 @@ export class XeroClientService {
         client_secret: this.appSecrets.clientSecret
       });
 
-      const response = await axios.post(XERO_TOKEN_ENDPOINT, params.toString(), {
+      const response = await axios.post(getXeroTokenUrl(), params.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         }
