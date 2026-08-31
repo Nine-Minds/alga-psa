@@ -19,14 +19,15 @@ const deleteTenantSecretMock = vi.hoisted(() => vi.fn(async (tenant: string, key
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
 const getXeroConnectionSummariesMock = vi.hoisted(() => vi.fn(async () => []));
 const getXeroRedirectUriMock = vi.hoisted(() => vi.fn(async () => 'https://example.com/api/integrations/xero/callback'));
-const getXeroOAuthScopesMock = vi.hoisted(() => vi.fn(() => [
-  'offline_access',
-  'accounting.settings',
-  'accounting.invoices',
-  'accounting.banktransactions',
-  'accounting.payments',
-  'accounting.contacts'
-]));
+const getXeroOAuthScopeConfigMock = vi.hoisted(() => vi.fn(() => ({
+  scopes: [
+    'offline_access',
+    'accounting.settings.read',
+    'accounting.invoices',
+    'accounting.contacts'
+  ],
+  source: 'default'
+})));
 const resolveXeroOAuthCredentialsMock = vi.hoisted(() => vi.fn(async () => ({
   clientId: 'tenant-client-id',
   clientSecret: 'tenant-client-secret',
@@ -75,7 +76,7 @@ vi.mock('../../lib/xero/xeroClientService', () => ({
   XERO_CLIENT_SECRET_SECRET_NAME: 'xero_client_secret',
   getXeroConnectionSummaries: getXeroConnectionSummariesMock,
   getXeroRedirectUri: getXeroRedirectUriMock,
-  getXeroOAuthScopes: getXeroOAuthScopesMock,
+  getXeroOAuthScopeConfig: getXeroOAuthScopeConfigMock,
   resolveXeroOAuthCredentials: resolveXeroOAuthCredentialsMock,
   XeroClientService: {
     create: xeroCreateMock
@@ -104,14 +105,15 @@ describe('Xero integration actions', () => {
     hasPermissionMock.mockResolvedValue(true);
     getXeroConnectionSummariesMock.mockResolvedValue([]);
     getXeroRedirectUriMock.mockResolvedValue('https://example.com/api/integrations/xero/callback');
-    getXeroOAuthScopesMock.mockReturnValue([
-      'offline_access',
-      'accounting.settings',
-      'accounting.invoices',
-      'accounting.banktransactions',
-      'accounting.payments',
-      'accounting.contacts'
-    ]);
+    getXeroOAuthScopeConfigMock.mockReturnValue({
+      scopes: [
+        'offline_access',
+        'accounting.settings.read',
+        'accounting.invoices',
+        'accounting.contacts'
+      ],
+      source: 'default'
+    });
     resolveXeroOAuthCredentialsMock.mockResolvedValue({
       clientId: 'tenant-client-id',
       clientSecret: 'tenant-client-secret',
@@ -146,10 +148,16 @@ describe('Xero integration actions', () => {
     expect(result.credentials.clientSecretMasked).not.toContain('super-secret-value');
     expect(JSON.stringify(result)).not.toContain('super-secret-value');
     expect(result.redirectUri).toBe('https://example.com/api/integrations/xero/callback');
-    expect(result.scopes).toContain('accounting.invoices');
-    expect(result.scopes).toContain('accounting.banktransactions');
-    expect(result.scopes).toContain('accounting.payments');
-    expect(result.scopes).not.toContain('accounting.transactions');
+    expect(result.scopes).toEqual([
+      'offline_access',
+      'accounting.settings.read',
+      'accounting.invoices',
+      'accounting.contacts'
+    ]);
+    expect(result.scopes).not.toContain('accounting.banktransactions');
+    expect(result.scopes).not.toContain('accounting.payments');
+    expect(result.scopes).not.toContain('accounting.settings');
+    expect(result.scopeSource).toBe('default');
     expect(result.defaultConnectionId).toBe('connection-1');
     expect(result.defaultConnection?.tenantName).toBe('Acme Holdings');
     expect(result.connected).toBe(true);
