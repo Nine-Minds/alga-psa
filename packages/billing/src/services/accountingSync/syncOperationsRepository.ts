@@ -26,22 +26,14 @@ export class SyncOperationsRepository {
    * operations, never collapsed into one.
    */
   async enqueue(input: EnqueueSyncOperationInput): Promise<AccountingSyncOperation> {
-    const existing = await this.table<AccountingSyncOperation>(input.tenant)
-      .where({
-        adapter_type: input.adapterType,
-        target_realm: input.targetRealm,
-        operation: input.operation,
-        alga_entity_type: input.algaEntityType,
-        alga_entity_id: input.algaEntityId,
-        status: 'pending'
-      })
-      .first();
-
-    if (existing) {
-      return existing;
-    }
-
-    const [row] = await this.table<AccountingSyncOperation>(input.tenant)
+    // Atomic, idempotent enqueue. The partial unique index
+    // `accounting_sync_operations_pending_unique` guarantees at most one pending
+    // op per (tenant, adapter, operation, entity, realm). Rather than SELECT then
+    // INSERT — which races: two concurrent callers both see no existing row and
+    // the loser's INSERT hits the unique constraint — we INSERT ... ON CONFLICT
+    // DO NOTHING and, on conflict, reuse the winner's pending row. Both callers
+    // return the same single pending operation; neither throws.
+    const inserted = await this.table<AccountingSyncOperation>(input.tenant)
       .insert({
         tenant: input.tenant,
         adapter_type: input.adapterType,
@@ -53,9 +45,87 @@ export class SyncOperationsRepository {
         attempts: 0,
         payload: input.payload ?? null
       })
+      // Match the partial expression index exactly (columns, COALESCE, predicate)
+      // so Postgres uses it as the conflict arbiter.
+      .onConflict(
+        this.knex.raw(
+          "(tenant, adapter_type, operation, alga_entity_type, alga_entity_id, COALESCE(target_realm, '')) WHERE status = 'pending'"
+        ) as unknown as string
+      )
+      .ignore()
       .returning('*');
 
-    return row;
+    if (inserted.length > 0) {
+      return inserted[0];
+    }
+
+    // Lost the race (or a pending op already existed): the INSERT was a no-op.
+    // The conflicting row is committed by the time this statement returns, so
+    // reuse it. This is the deduplication contract.
+    const existing = await this.findExistingPending(input);
+    if (existing) {
+      return existing;
+    }
+
+    // Defensive: the pending row changed status between our INSERT and this
+    // SELECT (e.g. it was picked up and marked in_progress). Retry the insert
+    // once — there is now no pending row to conflict with.
+    const [retry] = await this.table<AccountingSyncOperation>(input.tenant)
+      .insert({
+        tenant: input.tenant,
+        adapter_type: input.adapterType,
+        target_realm: input.targetRealm,
+        operation: input.operation,
+        alga_entity_type: input.algaEntityType,
+        alga_entity_id: input.algaEntityId,
+        status: 'pending',
+        attempts: 0,
+        payload: input.payload ?? null
+      })
+      .onConflict(
+        this.knex.raw(
+          "(tenant, adapter_type, operation, alga_entity_type, alga_entity_id, COALESCE(target_realm, '')) WHERE status = 'pending'"
+        ) as unknown as string
+      )
+      .ignore()
+      .returning('*');
+
+    if (retry) {
+      return retry;
+    }
+
+    // A new pending row raced in during the retry window; return it.
+    const afterRetry = await this.findExistingPending(input);
+    if (afterRetry) {
+      return afterRetry;
+    }
+
+    throw new Error(
+      `Failed to enqueue accounting sync operation for entity ${input.algaEntityId} (${input.operation}) in realm ${String(input.targetRealm)}: no row was inserted and none is pending.`
+    );
+  }
+
+  private async findExistingPending(
+    input: EnqueueSyncOperationInput
+  ): Promise<AccountingSyncOperation | undefined> {
+    const query = this.table<AccountingSyncOperation>(input.tenant)
+      .where({
+        adapter_type: input.adapterType,
+        operation: input.operation,
+        alga_entity_type: input.algaEntityType,
+        alga_entity_id: input.algaEntityId,
+        status: 'pending'
+      });
+
+    // Match the index's COALESCE(target_realm, '') semantics so a null realm
+    // is looked up correctly rather than via `= NULL` (which never matches).
+    if (input.targetRealm === null || input.targetRealm === undefined) {
+      query.whereNull('target_realm');
+    } else {
+      query.andWhere({ target_realm: input.targetRealm });
+    }
+
+    return query.first();
   }
 
   async listPending(
