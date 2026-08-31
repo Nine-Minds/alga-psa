@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createRequire } from 'node:module';
+import path from 'node:path';
 import {
   createTestDbConnection,
   wireLocalTestDbEnv,
@@ -9,10 +9,25 @@ import {
 import { SyncMappingLedger } from './syncMappingLedger';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 
-const require = createRequire(import.meta.url);
-const MIGRATION = require('../../../../../server/migrations/20260830120000_external_mapping_tombstone_and_realm_normalization.cjs') as {
-  up: (knex: Knex) => Promise<void>;
-};
+// Load the migration under test via a computed path so Nx's static graph does
+// not record a billing -> server project edge for a test-only fixture (mirrors
+// standardTemplateI18n.test.ts). The `up`/`down` shape is asserted at load.
+type MigrationModule = { up: (knex: Knex) => Promise<void> };
+let migration: MigrationModule;
+
+async function loadMigration(): Promise<MigrationModule> {
+  const mod = await import(
+    /* @vite-ignore */ path.resolve(
+      __dirname,
+      '../../../../../server/migrations/20260830120000_external_mapping_tombstone_and_realm_normalization.cjs'
+    )
+  );
+  const up = (mod as any).up ?? (mod as any).default?.up;
+  if (typeof up !== 'function') {
+    throw new Error('external_mapping_tombstone_and_realm_normalization migration is missing an up() export');
+  }
+  return { up };
+}
 
 /**
  * Fail-closed mapping ledger + realm-normalization migration.
@@ -59,6 +74,7 @@ function mappingRow(overrides: Record<string, unknown> = {}) {
 
 beforeAll(async () => {
   wireLocalTestDbEnv();
+  migration = await loadMigration();
   db = await createTestDbConnection();
   await seedTenant(tenantA);
   await seedTenant(tenantB);
@@ -102,7 +118,7 @@ describe('migration: realm normalization backfills legacy NULL-realm QBO rows', 
 
     const liveId = inserted.find((row) => row.alga_entity_id === liveRealmRow.alga_entity_id)?.id;
 
-    await MIGRATION.up(db);
+    await migration.up(db);
 
     const qboRow = await db('tenant_external_entity_mappings').where({ alga_entity_id: qboInvoiceId }).first();
     expect(qboRow.external_realm_id).toBe(realmA);
@@ -119,7 +135,7 @@ describe('migration: realm normalization backfills legacy NULL-realm QBO rows', 
       mappingRow({ alga_entity_id: legacyId, external_realm_id: null })
     );
 
-    await MIGRATION.up(db);
+    await migration.up(db);
 
     const row = await db('tenant_external_entity_mappings').where({ alga_entity_id: legacyId }).first();
     expect(row.external_realm_id).toBeNull();
