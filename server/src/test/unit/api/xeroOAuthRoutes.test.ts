@@ -239,8 +239,8 @@ describe('Xero OAuth routes', () => {
         id: 'user-1',
         user_id: 'user-1'
       }),
-      'billing_settings',
-      'update'
+      'accounting_integrations',
+      'connections_manage'
     );
     expect(resolveXeroOAuthCredentialsMock).toHaveBeenCalledWith('tenant-1', expect.anything());
     expect(response.status).toBe(307);
