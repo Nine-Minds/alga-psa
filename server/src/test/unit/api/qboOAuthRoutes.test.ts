@@ -5,7 +5,7 @@ import {
   QBO_OAUTH_STATE_COOKIE
 } from '@alga-psa/integrations/lib/qbo/qboOAuthState';
 
-const getSessionMock = vi.hoisted(() => vi.fn());
+const getCurrentUserWithRevocationCheckMock = vi.hoisted(() => vi.fn());
 const hasPermissionMock = vi.hoisted(() => vi.fn());
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const resolveQboOAuthCredentialsMock = vi.hoisted(() => vi.fn());
@@ -14,16 +14,18 @@ const getQboOAuthScopesStringMock = vi.hoisted(() => vi.fn());
 const upsertStoredQboCredentialsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
 const isProviderDisconnectActiveMock = vi.hoisted(() => vi.fn());
+const storeAccountingOAuthNonceMock = vi.hoisted(() => vi.fn());
+const consumeAccountingOAuthNonceMock = vi.hoisted(() => vi.fn());
 const axiosPostMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
 const loggerErrorMock = vi.hoisted(() => vi.fn());
 
+// The connect and callback routes resolve and re-authorize the live user via the
+// central accounting-connection policy (getCurrentUserWithRevocationCheck +
+// hasPermission), so both must be present on the auth mock.
 vi.mock('@alga-psa/auth', () => ({
-  getSession: getSessionMock
-}));
-
-vi.mock('@alga-psa/auth/rbac', () => ({
+  getCurrentUserWithRevocationCheck: getCurrentUserWithRevocationCheckMock,
   hasPermission: hasPermissionMock
 }));
 
@@ -41,6 +43,14 @@ vi.mock('@alga-psa/core/logger', () => ({
     warn: loggerWarnMock,
     error: loggerErrorMock
   }
+}));
+
+// The single-use OAuth state store is Redis-backed in production; here it is a
+// deterministic double so the connect route can issue a nonce and the callback
+// can consume it exactly once.
+vi.mock('@alga-psa/integrations/lib/accountingOAuthStateStore', () => ({
+  storeAccountingOAuthNonce: storeAccountingOAuthNonceMock,
+  consumeAccountingOAuthNonce: consumeAccountingOAuthNonceMock
 }));
 
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
@@ -64,6 +74,14 @@ vi.mock('axios', () => ({
 }));
 
 const SIGNING_SECRET = 'qbo-test-signing-secret';
+
+const liveUser = {
+  id: 'user-1',
+  user_id: 'user-1',
+  tenant: 'tenant-1',
+  user_type: 'internal',
+  roles: ['admin']
+};
 
 function buildCallbackRequest(params: {
   query: Record<string, string>;
@@ -92,17 +110,12 @@ describe('QBO OAuth routes', () => {
     process.env.EDITION = 'ee';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     process.env.NEXTAUTH_SECRET = SIGNING_SECRET;
-    getSessionMock.mockResolvedValue({
-      user: {
-        id: 'user-1',
-        tenant: 'tenant-1',
-        user_type: 'internal',
-        roles: ['admin']
-      }
-    });
+    getCurrentUserWithRevocationCheckMock.mockResolvedValue({ ...liveUser });
     hasPermissionMock.mockResolvedValue(true);
     createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-1' });
     getSecretProviderInstanceMock.mockResolvedValue({});
+    storeAccountingOAuthNonceMock.mockResolvedValue(undefined);
+    consumeAccountingOAuthNonceMock.mockResolvedValue(true);
     resolveQboOAuthCredentialsMock.mockResolvedValue({
       clientId: 'tenant-client-id',
       clientSecret: 'tenant-client-secret',
@@ -167,6 +180,17 @@ describe('QBO OAuth routes', () => {
     });
   });
 
+  it('connect route requires the accounting connection-admin permission', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const { GET } = await import('@/app/api/integrations/qbo/connect/route');
+
+    const response = await GET();
+
+    expect(response.status).toBe(403);
+    expect(axiosPostMock).not.toHaveBeenCalled();
+  });
+
   it('connect route redirects to Intuit with the resolved credentials, sets the state cookie, and never logs secrets', async () => {
     const { GET } = await import('@/app/api/integrations/qbo/connect/route');
 
@@ -180,7 +204,7 @@ describe('QBO OAuth routes', () => {
       'billing_settings',
       'update'
     );
-    expect(resolveQboOAuthCredentialsMock).toHaveBeenCalledWith('tenant-1', {});
+    expect(resolveQboOAuthCredentialsMock).toHaveBeenCalledWith('tenant-1', expect.anything());
     expect(response.status).toBe(307);
 
     const location = response.headers.get('location');
@@ -197,8 +221,12 @@ describe('QBO OAuth routes', () => {
     expect(setCookie).toContain('HttpOnly');
     expect(setCookie).toContain('Path=/api/integrations/qbo');
 
+    // The nonce backing the issued state is registered for single use.
+    expect(storeAccountingOAuthNonceMock).toHaveBeenCalledWith('qbo', expect.any(String));
+
     expect(loggerInfoMock).toHaveBeenCalledWith('[qboOAuth] Starting QuickBooks OAuth connect flow', {
       tenantId: 'tenant-1',
+      userId: 'user-1',
       credentialSource: 'tenant'
     });
     expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('tenant-client-secret');
@@ -220,6 +248,7 @@ describe('QBO OAuth routes', () => {
   it('callback exchanges the code with Basic auth and persists credentials for the realm', async () => {
     const { stateParam, cookieValue } = createQboOAuthState({
       tenantId: 'tenant-1',
+      userId: 'user-1',
       secret: SIGNING_SECRET
     });
 
@@ -258,9 +287,82 @@ describe('QBO OAuth routes', () => {
     expect(setCookie).toContain('Max-Age=0');
   });
 
+  it('callback denies and stores nothing when the connection-admin permission was revoked', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const { stateParam, cookieValue } = createQboOAuthState({
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      secret: SIGNING_SECRET
+    });
+
+    const { GET } = await import('@/app/api/integrations/qbo/callback/route');
+
+    const response = await GET(
+      buildCallbackRequest({
+        query: { code: 'auth-code', state: stateParam, realmId: 'realm-1' },
+        cookieValue
+      })
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('qbo_error=forbidden');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredQboCredentialsMock).not.toHaveBeenCalled();
+  });
+
+  it('callback denies and stores nothing when a different user completes the flow', async () => {
+    getCurrentUserWithRevocationCheckMock.mockResolvedValue({ ...liveUser, id: 'user-2', user_id: 'user-2' });
+
+    const { stateParam, cookieValue } = createQboOAuthState({
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      secret: SIGNING_SECRET
+    });
+
+    const { GET } = await import('@/app/api/integrations/qbo/callback/route');
+
+    const response = await GET(
+      buildCallbackRequest({
+        query: { code: 'auth-code', state: stateParam, realmId: 'realm-1' },
+        cookieValue
+      })
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('qbo_error=user_mismatch');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredQboCredentialsMock).not.toHaveBeenCalled();
+  });
+
+  it('callback denies a replayed state (already consumed) with no side effects', async () => {
+    consumeAccountingOAuthNonceMock.mockResolvedValue(false);
+
+    const { stateParam, cookieValue } = createQboOAuthState({
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      secret: SIGNING_SECRET
+    });
+
+    const { GET } = await import('@/app/api/integrations/qbo/callback/route');
+
+    const response = await GET(
+      buildCallbackRequest({
+        query: { code: 'auth-code', state: stateParam, realmId: 'realm-1' },
+        cookieValue
+      })
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('qbo_error=state_replayed');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredQboCredentialsMock).not.toHaveBeenCalled();
+  });
+
   it('callback rejects a missing state cookie as invalid_state', async () => {
     const { stateParam } = createQboOAuthState({
       tenantId: 'tenant-1',
+      userId: 'user-1',
       secret: SIGNING_SECRET
     });
 
@@ -280,10 +382,12 @@ describe('QBO OAuth routes', () => {
   it('callback rejects a state param that does not match the cookie as invalid_state', async () => {
     const { cookieValue } = createQboOAuthState({
       tenantId: 'tenant-1',
+      userId: 'user-1',
       secret: SIGNING_SECRET
     });
     const { stateParam: foreignState } = createQboOAuthState({
       tenantId: 'tenant-1',
+      userId: 'user-1',
       secret: SIGNING_SECRET
     });
 
@@ -317,6 +421,7 @@ describe('QBO OAuth routes', () => {
   it('callback requires code, state, and realmId', async () => {
     const { stateParam, cookieValue } = createQboOAuthState({
       tenantId: 'tenant-1',
+      userId: 'user-1',
       secret: SIGNING_SECRET
     });
 
@@ -335,9 +440,12 @@ describe('QBO OAuth routes', () => {
 
   it('callback rejects with disconnect_in_progress while a QuickBooks disconnect is active and never stores credentials', async () => {
     isProviderDisconnectActiveMock.mockResolvedValue(true);
+    // The connect route registered the state nonce for single use.
+    consumeAccountingOAuthNonceMock.mockResolvedValue(true);
 
     const { stateParam, cookieValue } = createQboOAuthState({
       tenantId: 'tenant-1',
+      userId: 'user-1',
       secret: SIGNING_SECRET
     });
 

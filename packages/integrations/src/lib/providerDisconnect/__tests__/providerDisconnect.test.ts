@@ -311,12 +311,35 @@ vi.mock('../../qbo/qboConnectionChangeProvider', () => ({
 }));
 
 // The OAuth callback routes authenticate through these before they reach the
-// disconnect gate under test.
+// disconnect gate under test: the connect/callback policy resolves the live
+// user via getCurrentUserWithRevocationCheck and gates on billing_settings:update.
+const USER_ID = 'user-1';
 const getSessionMock = vi.hoisted(() => vi.fn(async () => ({ user: { tenant: 'tenant-1' } })));
-vi.mock('@alga-psa/auth', () => ({ getSession: getSessionMock }));
+const getCurrentUserWithRevocationCheckMock = vi.hoisted(() =>
+  vi.fn(async () => ({ user_id: USER_ID, tenant: TENANT, user_type: 'internal' })),
+);
+const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('@alga-psa/auth', () => ({
+  getSession: getSessionMock,
+  getCurrentUserWithRevocationCheck: getCurrentUserWithRevocationCheckMock,
+  hasPermission: hasPermissionMock,
+}));
 
 const getCurrentUserMock = vi.hoisted(() => vi.fn(async () => ({ tenant: 'tenant-1' })));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: getCurrentUserMock }));
+
+// The callback consumes the OAuth state nonce (single-use) via the shared
+// accounting store before it reaches the disconnect gate under test.
+const storeAccountingOAuthNonceMock = vi.hoisted(() =>
+  vi.fn(async (_provider: 'qbo' | 'xero', _nonce: string) => undefined),
+);
+const consumeAccountingOAuthNonceMock = vi.hoisted(() =>
+  vi.fn(async (_provider: 'qbo' | 'xero', _nonce: string) => true),
+);
+vi.mock('../../accountingOAuthStateStore', () => ({
+  storeAccountingOAuthNonce: storeAccountingOAuthNonceMock,
+  consumeAccountingOAuthNonce: consumeAccountingOAuthNonceMock,
+}));
 
 // ── Imports under test ──────────────────────────────────────────────────────
 import {
@@ -414,6 +437,14 @@ beforeEach(() => {
 
   getSessionMock.mockResolvedValue({ user: { tenant: TENANT } });
   getCurrentUserMock.mockResolvedValue({ tenant: TENANT });
+  getCurrentUserWithRevocationCheckMock.mockResolvedValue({
+    user_id: USER_ID,
+    tenant: TENANT,
+    user_type: 'internal',
+  });
+  hasPermissionMock.mockResolvedValue(true);
+  storeAccountingOAuthNonceMock.mockResolvedValue(undefined);
+  consumeAccountingOAuthNonceMock.mockResolvedValue(true);
 });
 
 describe('QuickBooks Online disconnect state machine', () => {
@@ -761,7 +792,9 @@ describe('QuickBooks Online disconnect state machine', () => {
     const targetsBefore = JSON.stringify(recordRows()[0].targets);
 
     const signingSecret = 'race-test-state-signing-secret';
-    const { stateParam, cookieValue } = createQboOAuthState({ tenantId: TENANT, secret: signingSecret });
+    const created = createQboOAuthState({ tenantId: TENANT, userId: USER_ID, secret: signingSecret });
+    const { stateParam, cookieValue } = created;
+    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce);
 
     const previousEdition = process.env.EDITION;
     const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
@@ -1109,9 +1142,17 @@ describe('Xero disconnect state machine', () => {
     const targetsBefore = JSON.stringify(recordRows()[0].targets);
 
     const csrfToken = 'a'.repeat(64);
+    const nonce = 'race-test-nonce';
     const state = Buffer.from(
-      JSON.stringify({ tenantId: TENANT, csrf: csrfToken, codeVerifier: 'race-verifier' }),
+      JSON.stringify({
+        tenantId: TENANT,
+        userId: USER_ID,
+        csrf: csrfToken,
+        codeVerifier: 'race-verifier',
+        nonce,
+      }),
     ).toString('base64url');
+    await storeAccountingOAuthNonceMock('xero', nonce);
 
     const previousEdition = process.env.EDITION;
     process.env.EDITION = 'ee';

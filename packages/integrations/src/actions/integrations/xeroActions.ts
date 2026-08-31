@@ -18,7 +18,7 @@ import {
   XERO_CLIENT_ID_SECRET_NAME,
   XERO_CLIENT_SECRET_SECRET_NAME,
   getXeroRedirectUri,
-  getXeroOAuthScopes,
+  getXeroOAuthScopeConfig,
   resolveXeroOAuthCredentials
 } from '../../lib/xero/xeroClientService';
 import {
@@ -145,6 +145,10 @@ export interface XeroConnectionStatus {
   defaultConnection?: XeroConnectionSummary;
   redirectUri: string;
   scopes: string[];
+  /** Whether the requested scopes come from the built-in default set or the XERO_OAUTH_SCOPES deployment override. */
+  scopeSource: 'default' | 'override';
+  /** Override tokens that failed validation and were ignored in favour of the defaults. */
+  scopeOverrideInvalid?: string[];
   credentials: {
     clientIdConfigured: boolean;
     clientSecretConfigured: boolean;
@@ -165,11 +169,14 @@ function xeroConnectionStatusError(
   error: string,
   errorCode?: NonNullable<XeroConnectionStatus['errorCode']>
 ): XeroConnectionStatus {
+  const scopeConfig = getXeroOAuthScopeConfig();
   return {
     connections: [],
     connected: false,
     redirectUri: '',
-    scopes: getXeroOAuthScopes(),
+    scopes: scopeConfig.scopes,
+    scopeSource: scopeConfig.source,
+    scopeOverrideInvalid: scopeConfig.invalidOverrideScopes,
     credentials: {
       clientIdConfigured: false,
       clientSecretConfigured: false,
@@ -449,6 +456,7 @@ export const getXeroConnectionStatus = withAuth(async (
   try {
     await checkBillingReadAccess(user);
 
+    const scopeConfig = getXeroOAuthScopeConfig();
     const secretProvider = await getSecretProviderInstance();
     const [storedClientId, storedClientSecret, redirectUri, resolvedCredentials] = await Promise.all([
       secretProvider.getTenantSecret(tenant, XERO_CLIENT_ID_SECRET_NAME),
@@ -496,7 +504,9 @@ export const getXeroConnectionStatus = withAuth(async (
       defaultConnectionId: defaultConnection?.connectionId,
       defaultConnection,
       redirectUri,
-      scopes: getXeroOAuthScopes(),
+      scopes: scopeConfig.scopes,
+      scopeSource: scopeConfig.source,
+      scopeOverrideInvalid: scopeConfig.invalidOverrideScopes,
       credentials,
       disconnect,
       error

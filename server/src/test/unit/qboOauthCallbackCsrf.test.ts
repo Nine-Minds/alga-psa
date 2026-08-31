@@ -3,6 +3,8 @@ import { NextRequest } from 'next/server';
 
 vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(),
+  getCurrentUserWithRevocationCheck: vi.fn(),
+  hasPermission: vi.fn(),
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -17,6 +19,20 @@ vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
   isProviderDisconnectActive: vi.fn(async () => false),
   PROVIDER_QBO: 'quickbooks_online',
   PROVIDER_XERO: 'xero',
+}));
+
+vi.mock('redis', () => ({
+  createClient: vi.fn(() => {
+    throw new Error('redis unavailable');
+  }),
+}));
+
+vi.mock('@alga-psa/event-bus', () => ({
+  getRedisConfig: () => ({ url: 'redis://localhost:6379' }),
+}));
+
+vi.mock('@alga-psa/core/logger', () => ({
+  default: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
 vi.mock('axios', () => {
@@ -52,7 +68,8 @@ import {
   resolveQboOAuthCredentials,
   upsertStoredQboCredentials,
 } from '@alga-psa/integrations/lib/qbo/qboClientService';
-import { getSession } from '@alga-psa/auth';
+import { getCurrentUserWithRevocationCheck, hasPermission } from '@alga-psa/auth';
+import { storeAccountingOAuthNonce } from '@alga-psa/integrations/lib/accountingOAuthStateStore';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
 
@@ -109,6 +126,7 @@ describe('qboOauthCsrfTokensMatch', () => {
 
 describe('QBO OAuth callback CSRF and tenant validation', () => {
   const tenantId = 'tenant-a';
+  const userId = 'user-a';
   const secretProvider = {
     getAppSecret: vi.fn(async (name: string) =>
       name === 'qbo_client_id' ? 'client-id' : 'client-secret'
@@ -117,13 +135,16 @@ describe('QBO OAuth callback CSRF and tenant validation', () => {
     setTenantSecret: vi.fn(async () => undefined),
   };
 
-  // A correctly signed state/cookie pair for `tenantId`.
-  const validState = createQboOAuthState({ tenantId, secret: SIGNING_SECRET });
+  const liveUser = { user_id: userId, tenant: tenantId, user_type: 'internal' };
+
+  // A correctly signed state/cookie pair for `tenantId`/`userId`.
+  const validState = createQboOAuthState({ tenantId, userId, secret: SIGNING_SECRET });
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getSecretProviderInstance).mockResolvedValue(secretProvider as any);
-    vi.mocked(getSession).mockResolvedValue({ user: { tenant: tenantId } } as any);
+    vi.mocked(getCurrentUserWithRevocationCheck).mockResolvedValue(liveUser as any);
+    vi.mocked(hasPermission).mockResolvedValue(true);
     vi.mocked(resolveQboOAuthCredentials).mockResolvedValue({
       clientId: 'client-id',
       clientSecret: 'client-secret',
@@ -138,6 +159,9 @@ describe('QBO OAuth callback CSRF and tenant validation', () => {
         x_refresh_token_expires_in: 8640000,
       },
     });
+    // The callback consumes the state nonce; make it present for the default
+    // success path (the CSRF tests that reject before consumption are unaffected).
+    return storeAccountingOAuthNonce('qbo', validState.payload.nonce);
   });
 
   it('rejects a callback without the signed state cookie', async () => {
@@ -147,21 +171,24 @@ describe('QBO OAuth callback CSRF and tenant validation', () => {
   });
 
   it('rejects a callback whose state cookie signature does not match', async () => {
-    const tampered = createQboOAuthState({ tenantId, secret: 'a-different-secret' });
+    const tampered = createQboOAuthState({ tenantId, userId, secret: 'a-different-secret' });
     const response = await GET(makeRequest(validState.stateParam, tampered.cookieValue));
     expect(redirectError(response)).toBe('invalid_state');
     expect(axios.post).not.toHaveBeenCalled();
   });
 
   it('rejects a callback without an authenticated session', async () => {
-    vi.mocked(getSession).mockResolvedValue(null);
+    vi.mocked(getCurrentUserWithRevocationCheck).mockResolvedValue(null);
     const response = await GET(makeRequest(validState.stateParam, validState.cookieValue));
     expect(redirectError(response)).toBe('session_expired');
     expect(axios.post).not.toHaveBeenCalled();
   });
 
   it('rejects a state tenantId that does not match the session tenant', async () => {
-    vi.mocked(getSession).mockResolvedValue({ user: { tenant: 'tenant-victim' } } as any);
+    vi.mocked(getCurrentUserWithRevocationCheck).mockResolvedValue({
+      ...liveUser,
+      tenant: 'tenant-victim',
+    } as any);
     const response = await GET(makeRequest(validState.stateParam, validState.cookieValue));
     expect(redirectError(response)).toBe('tenant_mismatch');
     expect(axios.post).not.toHaveBeenCalled();

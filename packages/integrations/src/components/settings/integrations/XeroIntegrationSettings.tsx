@@ -34,6 +34,16 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
       return t('integrations.xero.settings.callback.oauthFailed', { defaultValue: 'The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.' });
     case 'invalid_state':
       return t('integrations.xero.settings.callback.invalidState', { defaultValue: 'The Xero OAuth state was invalid or expired. Start the connect flow again.' });
+    case 'state_replayed':
+      return t('integrations.xero.settings.callback.stateReplayed', { defaultValue: 'This Xero connection request was already used. Start the connect flow again.' });
+    case 'session_expired':
+      return t('integrations.xero.settings.callback.sessionExpired', { defaultValue: 'Your session is no longer valid. Sign in and start the Xero connection again.' });
+    case 'user_mismatch':
+      return t('integrations.xero.settings.callback.userMismatch', { defaultValue: 'This Xero connection request belongs to another user. Sign in as the user who started it and try again.' });
+    case 'tenant_mismatch':
+      return t('integrations.xero.settings.callback.tenantMismatch', { defaultValue: 'This Xero connection request belongs to another workspace. Sign in to the correct workspace and start again.' });
+    case 'forbidden':
+      return t('integrations.xero.settings.callback.forbidden', { defaultValue: 'You no longer have permission to manage accounting connections. Ask an administrator for access.' });
     case 'missing_params':
       return t('integrations.xero.settings.callback.missingParams', { defaultValue: 'The Xero callback was missing required parameters. Start the connect flow again.' });
     case 'access_denied':
@@ -261,7 +271,23 @@ export default function XeroIntegrationSettings() {
                         {scope}
                       </Badge>
                     ))}
+                    {status?.scopeSource === 'override' ? (
+                      <Badge id="xero-scope-override-badge" variant="outline">
+                        {t('integrations.xero.settings.scopeOverride', { defaultValue: 'Deployment override (XERO_OAUTH_SCOPES)' })}
+                      </Badge>
+                    ) : null}
                   </div>
+                  {status?.scopeOverrideInvalid?.length ? (
+                    <p id="xero-scope-override-invalid" className="mt-2 text-xs text-destructive">
+                      {t('integrations.xero.settings.scopeOverrideInvalid', {
+                        defaultValue: 'The XERO_OAUTH_SCOPES override was ignored because it contains invalid entries ({{scopes}}). The default scopes are used instead.',
+                        scopes: status.scopeOverrideInvalid.join(', ')
+                      })}
+                    </p>
+                  ) : null}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t('integrations.xero.settings.scopeReconnectNote', { defaultValue: 'These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. You can also remove this app from Connected apps in Xero to revoke earlier grants.' })}
+                  </p>
                 </div>
               </div>
 
