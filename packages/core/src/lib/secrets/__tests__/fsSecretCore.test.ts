@@ -17,6 +17,8 @@ import {
   SECRET_FILE_MODE,
   tenantDir,
   tenantSecretPath,
+  tenantsDir,
+  unlinkTenantSecret,
   UnsafeSecretLocationError,
   validateSecretComponent,
   writeTenantSecretAtomic,
@@ -52,8 +54,46 @@ const DIST_PROVIDER = path.join(REPO_ROOT, 'packages/core/dist/lib/secrets/LazyF
 
 const SECRET_VALUE = 'super-secret-value-that-must-never-be-logged';
 
+/**
+ * The repair script's chown branches only run as root with --uid. A user
+ * namespace (`unshare -r --map-auto`) provides an unprivileged fake root with
+ * a mapped uid range, letting those branches execute for real. Skipped where
+ * user namespaces are unavailable.
+ */
+const HAS_USERNS = (() => {
+  try {
+    execFileSync('unshare', ['-r', '--map-auto', 'true'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 let rootDir: string;
 let previousUmask: number;
+
+async function runProviderProgram(program: string, args: string[] = []): Promise<{ stdout: string; stderr: string }> {
+  try {
+    const stdout = execFileSync(TSSX_BIN, ['-e', program, ...args], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return { stdout, stderr: '' };
+  } catch (error) {
+    const err = error as { stdout?: string; stderr?: string; message: string };
+    return { stdout: err.stdout ?? '', stderr: err.stderr ?? `${err.message}\n` };
+  }
+}
+
+function providerProgram(basePath: string, script: string): string {
+  return [
+    `import { FileSystemSecretProvider } from ${JSON.stringify(PROVIDER_FILE)};`,
+    `import { writeFileSync } from 'node:fs';`,
+    `process.env.SECRET_FS_BASE_PATH = ${JSON.stringify(basePath)};`,
+    script,
+  ].join('\n');
+}
 
 async function tenantSecret(tenantId: string, name: string): Promise<string> {
   return tenantSecretPath(rootDir, tenantId, name);
@@ -196,6 +236,93 @@ describe('fsSecretCore path validation', () => {
   });
 });
 
+describe('fsSecretCore deletion path validation', () => {
+  const DECOY_VALUE = 'decoy-file-that-deletion-must-never-touch';
+
+  it('deletes a secret through the validated chain and is idempotent', async () => {
+    const filePath = await seedTenantSecret('tenant-delete', 'token', SECRET_VALUE);
+    expect(await readFileContentSafe(filePath)).toBe(SECRET_VALUE);
+
+    await unlinkTenantSecret(rootDir, 'tenant-delete', 'token');
+    expect(await readFileContentSafe(filePath)).toBeUndefined();
+
+    // Absent file and absent tenant directory both resolve without error.
+    await unlinkTenantSecret(rootDir, 'tenant-delete', 'token');
+    await unlinkTenantSecret(rootDir, 'tenant-never-existed', 'token');
+  });
+
+  it('refuses to delete through a symlinked per-tenant directory and leaves the target intact', async () => {
+    const elsewhere = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-del-tenant-'));
+    try {
+      const decoy = path.join(elsewhere, 'token');
+      await writeFile(decoy, DECOY_VALUE);
+
+      await ensurePrivateDirectory(await tenantsDir(rootDir));
+      await symlink(elsewhere, await tenantDir(rootDir, 'evil-tenant'));
+
+      await expect(unlinkTenantSecret(rootDir, 'evil-tenant', 'token')).rejects.toThrow(InvalidSecretPathError);
+
+      expect(await readFile(decoy, 'utf-8')).toBe(DECOY_VALUE);
+    } finally {
+      await rm(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses to delete through a symlinked tenants/ directory and leaves the target intact', async () => {
+    const elsewhere = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-del-tenants-'));
+    try {
+      const decoy = path.join(elsewhere, 't1', 'token');
+      await mkdir(path.dirname(decoy), { recursive: true });
+      await writeFile(decoy, DECOY_VALUE);
+
+      const base = path.join(rootDir, 'store-linked-tenants');
+      await mkdir(base, { recursive: true });
+      await symlink(elsewhere, path.join(base, 'tenants'));
+
+      await expect(unlinkTenantSecret(base, 't1', 'token')).rejects.toThrow(InvalidSecretPathError);
+
+      expect(await readFile(decoy, 'utf-8')).toBe(DECOY_VALUE);
+    } finally {
+      await rm(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses to delete through a symlinked root and leaves the target intact', async () => {
+    const elsewhere = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-del-root-'));
+    try {
+      const decoy = path.join(elsewhere, 'tenants', 't1', 'token');
+      await mkdir(path.dirname(decoy), { recursive: true });
+      await writeFile(decoy, DECOY_VALUE);
+
+      const linkRoot = path.join(rootDir, 'root-link');
+      await symlink(elsewhere, linkRoot);
+
+      await expect(unlinkTenantSecret(linkRoot, 't1', 'token')).rejects.toThrow(InvalidSecretPathError);
+
+      expect(await readFile(decoy, 'utf-8')).toBe(DECOY_VALUE);
+    } finally {
+      await rm(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses to delete a symlinked secret file and leaves the target intact', async () => {
+    const elsewhere = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-del-file-'));
+    try {
+      const decoy = path.join(elsewhere, 'real-secret');
+      await writeFile(decoy, DECOY_VALUE);
+
+      await ensurePrivateDirectory(await tenantDir(rootDir, 'tenant-file-link'));
+      await symlink(decoy, await tenantSecret('tenant-file-link', 'token'));
+
+      await expect(unlinkTenantSecret(rootDir, 'tenant-file-link', 'token')).rejects.toThrow(InvalidSecretPathError);
+
+      expect(await readFile(decoy, 'utf-8')).toBe(DECOY_VALUE);
+    } finally {
+      await rm(elsewhere, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('fsSecretCore root validation', () => {
   it('passes a safe root (0700, owned by the running user)', async () => {
     const resolved = await ensureWriteBasePath(rootDir);
@@ -233,32 +360,9 @@ describe('fsSecretCore root validation', () => {
 });
 
 describe('FileSystemSecretProvider provider round trip', () => {
-  async function runProviderProgram(program: string, args: string[] = []): Promise<{ stdout: string; stderr: string }> {
-    try {
-      const stdout = execFileSync(TSSX_BIN, ['-e', program, ...args], {
-        cwd: REPO_ROOT,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-      return { stdout, stderr: '' };
-    } catch (error) {
-      const err = error as { stdout?: string; stderr?: string; message: string };
-      return { stdout: err.stdout ?? '', stderr: err.stderr ?? `${err.message}\n` };
-    }
-  }
-
-  function providerProgram(script: string): string {
-    return [
-      `import { FileSystemSecretProvider } from ${JSON.stringify(PROVIDER_FILE)};`,
-      `import { writeFileSync } from 'node:fs';`,
-      `process.env.SECRET_FS_BASE_PATH = ${JSON.stringify(rootDir)};`,
-      script,
-    ].join('\n');
-  }
-
   it('round-trips a tenant secret through the provider API without logging its value', async () => {
     const resultPath = path.join(rootDir, 'provider-result');
-    const program = providerProgram([
+    const program = providerProgram(rootDir, [
       'console.debug = console.error;',
       '(async () => {',
       '  const p = new FileSystemSecretProvider();',
@@ -275,6 +379,57 @@ describe('FileSystemSecretProvider provider round trip', () => {
     expect(allOutput).not.toContain(SECRET_VALUE);
   });
 
+  it('deletes a tenant secret through the provider API (write, delete, read returns undefined)', async () => {
+    const resultPath = path.join(rootDir, 'provider-result');
+    const program = providerProgram(rootDir, [
+      '(async () => {',
+      '  const p = new FileSystemSecretProvider();',
+      `  await p.setTenantSecret(process.argv[1], process.argv[2], ${JSON.stringify(SECRET_VALUE)});`,
+      '  await p.deleteTenantSecret(process.argv[1], process.argv[2]);',
+      '  const v = await p.getTenantSecret(process.argv[1], process.argv[2]);',
+      `  writeFileSync(${JSON.stringify(resultPath)}, v === undefined ? 'DELETED' : 'STILL_PRESENT');`,
+      '})().catch((e) => { console.error(e); process.exit(1); });',
+    ].join('\n'));
+
+    const { stdout, stderr } = await runProviderProgram(program, ['tenant-del-rt', 'xero_token']);
+
+    expect(await readFile(resultPath, 'utf-8')).toBe('DELETED');
+    expect(`${stdout}\n${stderr}`).not.toContain(SECRET_VALUE);
+  });
+
+  it('rejects deletion through a symlinked tenant directory instead of treating it as already deleted', async () => {
+    const decoyDir = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-provider-del-'));
+    try {
+      const decoy = path.join(decoyDir, 'qbo_token');
+      await writeFile(decoy, 'decoy-outside-the-store');
+
+      await ensurePrivateDirectory(await tenantsDir(rootDir));
+      await symlink(decoyDir, await tenantDir(rootDir, 'evil-tenant'));
+
+      const resultPath = path.join(rootDir, 'provider-result');
+      const program = providerProgram(rootDir, [
+        '(async () => {',
+        '  const p = new FileSystemSecretProvider();',
+        '  try {',
+        '    await p.deleteTenantSecret(process.argv[1], process.argv[2]);',
+        `    writeFileSync(${JSON.stringify(resultPath)}, 'UNEXPECTED_DELETE_OK');`,
+        '  } catch (e) {',
+        `    writeFileSync(${JSON.stringify(resultPath)}, 'REJECTED: ' + (e instanceof Error ? e.message : String(e)));`,
+        '  }',
+        '})().catch((e) => { console.error(e); process.exit(1); });',
+      ].join('\n'));
+
+      await runProviderProgram(program, ['evil-tenant', 'qbo_token']);
+
+      const result = await readFile(resultPath, 'utf-8');
+      expect(result).toContain('REJECTED');
+      expect(result).toContain('symlink');
+      expect(await readFile(decoy, 'utf-8')).toBe('decoy-outside-the-store');
+    } finally {
+      await rm(decoyDir, { recursive: true, force: true });
+    }
+  });
+
   it('continues reading from a legacy-moded store while refusing writes with the operator message', async () => {
     const resultPath = path.join(rootDir, 'provider-result');
     const tenant = 'tenant-read-legacy';
@@ -282,7 +437,7 @@ describe('FileSystemSecretProvider provider round trip', () => {
     await seedTenantSecret(tenant, name, SECRET_VALUE);
     await fsPromises.chmod(rootDir, 0o755);
 
-    const program = providerProgram([
+    const program = providerProgram(rootDir, [
       '(async () => {',
       '  const p = new FileSystemSecretProvider();',
       '  const v = await p.getTenantSecret(process.argv[1], process.argv[2]);',
@@ -359,18 +514,44 @@ describe('repair script', () => {
     return store;
   }
 
-  it('dry-run reports mode issues without mutating the store', async () => {
+  function runRepairScript(args: string[]): { status: number; output: string } {
+    try {
+      const output = execFileSync('bash', [REPAIR_SCRIPT, ...args], { encoding: 'utf8' });
+      return { status: 0, output };
+    } catch (error) {
+      const err = error as { status?: number; stdout?: string; stderr?: string; message: string };
+      return { status: err.status ?? 1, output: `${err.stdout ?? ''}${err.stderr ?? ''}` || err.message };
+    }
+  }
+
+  it('dry-run reports mode issues, exits non-zero, and does not mutate the store', async () => {
     const store = await createMisModesStore();
     const secretFile = path.join(store, 'tenants', 't1', 'token');
 
-    const output = execFileSync('bash', [REPAIR_SCRIPT, '--path', store], { encoding: 'utf8' });
+    const { status, output } = runRepairScript(['--path', store]);
 
+    expect(status).not.toBe(0);
     expect(output).toContain('Dry run');
     expect(output).toContain('mode 755 (expected 700)');
     expect(output).toContain('mode 644 (expected 600)');
     expect((await fsPromises.lstat(store)).mode & 0o777).toBe(0o755);
     expect((await fsPromises.lstat(secretFile)).mode & 0o777).toBe(0o644);
     expect(await readFile(secretFile, 'utf-8')).toBe(SECRET_VALUE);
+  });
+
+  it('dry-run exits zero on an already-safe store', async () => {
+    const store = path.join(rootDir, 'clean-store');
+    await mkdir(path.join(store, 'tenants', 't1'), { recursive: true });
+    await writeFile(path.join(store, 'tenants', 't1', 'token'), SECRET_VALUE);
+    await fsPromises.chmod(path.join(store, 'tenants', 't1', 'token'), 0o600);
+    for (const dir of [store, path.join(store, 'tenants'), path.join(store, 'tenants', 't1')]) {
+      await fsPromises.chmod(dir, 0o700);
+    }
+
+    const { status, output } = runRepairScript(['--path', store]);
+
+    expect(status).toBe(0);
+    expect(output).toContain('Store is clean');
   });
 
   it('--apply fixes modes without touching file contents', async () => {
@@ -392,18 +573,147 @@ describe('repair script', () => {
     const linkPath = path.join(store, 'tenants', 't1', 'link');
     await symlink(linkTarget, linkPath);
 
-    let result = '';
-    try {
-      result = execFileSync('bash', [REPAIR_SCRIPT, '--apply', '--path', store], { encoding: 'utf8' });
-    } catch (error) {
-      // Symlink issues remain after --apply, so the script exits non-zero.
-      const err = error as { stdout?: string; message: string };
-      result = err.stdout ?? err.message;
-    }
-    expect(result).toContain('Symlink');
+    const { status, output } = runRepairScript(['--apply', '--path', store]);
+
+    // Symlink issues remain after --apply, so the script must not claim success.
+    expect(status).not.toBe(0);
+    expect(output).toContain('Symlink');
 
     expect((await fsPromises.lstat(linkPath)).isSymbolicLink()).toBe(true);
     expect(await readFile(linkTarget, 'utf-8')).toBe(SECRET_VALUE);
+  });
+
+  it('documented procedure (dry-run, --apply, verify) yields a store the provider can write to', async () => {
+    // A store with wrong modes everywhere, including a tenant directory that
+    // cannot even be traversed (0000) until its own mode is repaired — the
+    // repair must descend into it on a later pass and fix its contents too.
+    const store = path.join(rootDir, 'procedure-store');
+    const lockedDir = path.join(store, 'tenants', 't2');
+    const lockedFile = path.join(lockedDir, 'token');
+    const secretFile = path.join(store, 'tenants', 't1', 'token');
+    await mkdir(path.dirname(secretFile), { recursive: true });
+    await mkdir(lockedDir, { recursive: true });
+    await writeFile(secretFile, SECRET_VALUE);
+    await writeFile(lockedFile, SECRET_VALUE);
+    await fsPromises.chmod(secretFile, 0o644);
+    await fsPromises.chmod(lockedFile, 0o644);
+    await fsPromises.chmod(path.join(store, 'tenants', 't1'), 0o755);
+    await fsPromises.chmod(store, 0o755);
+    await fsPromises.chmod(lockedDir, 0o000);
+
+    try {
+      // Step 1 (documented): dry run reports and exits non-zero, mutating nothing.
+      const dryRun = runRepairScript(['--path', store]);
+      expect(dryRun.status).not.toBe(0);
+      expect(dryRun.output).toContain('Dry run');
+      expect((await fsPromises.lstat(store)).mode & 0o777).toBe(0o755);
+
+      // Step 2 (documented): --apply fixes everything fixable and exits zero.
+      const apply = runRepairScript(['--apply', '--path', store]);
+      expect(apply.status).toBe(0);
+      expect(apply.output).toContain('Store is safe');
+
+      expect((await fsPromises.lstat(store)).mode & 0o777).toBe(SECRET_DIR_MODE);
+      expect((await fsPromises.lstat(lockedDir)).mode & 0o777).toBe(SECRET_DIR_MODE);
+      expect((await fsPromises.lstat(lockedFile)).mode & 0o777).toBe(SECRET_FILE_MODE);
+      expect((await fsPromises.lstat(secretFile)).mode & 0o777).toBe(SECRET_FILE_MODE);
+      expect(await readFile(secretFile, 'utf-8')).toBe(SECRET_VALUE);
+      expect(await readFile(lockedFile, 'utf-8')).toBe(SECRET_VALUE);
+
+      // Step 3 (documented): the verification dry run now reports clean.
+      const verify = runRepairScript(['--path', store]);
+      expect(verify.status).toBe(0);
+      expect(verify.output).toContain('Store is clean');
+
+      // The point of the procedure: the provider can actually write secrets
+      // to the repaired store, and read back both old and new values.
+      const resultPath = path.join(rootDir, 'procedure-result');
+      const program = providerProgram(store, [
+        '(async () => {',
+        '  const p = new FileSystemSecretProvider();',
+        `  await p.setTenantSecret('t3', 'new_token', ${JSON.stringify(SECRET_VALUE)});`,
+        "  const oldValue = await p.getTenantSecret('t1', 'token');",
+        "  const newValue = await p.getTenantSecret('t3', 'new_token');",
+        `  writeFileSync(${JSON.stringify(resultPath)}, oldValue === newValue && newValue !== undefined ? 'WRITABLE' : 'MISMATCH');`,
+        '})().catch((e) => { console.error(e); process.exit(1); });',
+      ].join('\n'));
+      const { stdout, stderr } = await runProviderProgram(program);
+
+      expect(await readFile(resultPath, 'utf-8')).toBe('WRITABLE');
+      expect(`${stdout}\n${stderr}`).not.toContain(SECRET_VALUE);
+    } finally {
+      // Restore traversability so afterEach can remove rootDir even when an
+      // assertion fails before the repair runs.
+      await fsPromises.chmod(lockedDir, 0o700).catch(() => undefined);
+    }
+  });
+
+  it.runIf(HAS_USERNS)('--apply --uid as root fixes mode and ownership together, including the root itself', async () => {
+    const store = path.join(rootDir, 'chown-store');
+    const secretFile = path.join(store, 'tenants', 't1', 'token');
+    await mkdir(path.dirname(secretFile), { recursive: true });
+    await writeFile(secretFile, SECRET_VALUE);
+    await fsPromises.chmod(secretFile, 0o644);
+    await fsPromises.chmod(path.join(store, 'tenants', 't1'), 0o755);
+    await fsPromises.chmod(path.join(store, 'tenants'), 0o700);
+    await fsPromises.chmod(store, 0o755);
+
+    // Inside `unshare -r --map-auto` the test uid maps to root (0) and a
+    // subordinate range is available, so chown to uid 1 really executes. All
+    // entries are owned by ns-uid 0 while the target is uid 1: every entry
+    // needs a chown, and the wrong-moded ones (including the root) need a
+    // chmod in the same pass. Ownership is restored to ns-uid 0 (the real
+    // test uid outside) before leaving the namespace so cleanup works.
+    const script = [
+      'set -e',
+      'REPAIR="$0"; STORE="$1"',
+      'bash "$REPAIR" --apply --path "$STORE" --uid 1',
+      'stat -c "%u %a" "$STORE" "$STORE/tenants" "$STORE/tenants/t1" "$STORE/tenants/t1/token"',
+      'chown -R 0 "$STORE"',
+    ].join('\n');
+    const output = execFileSync('unshare', ['-r', '--map-auto', 'bash', '-c', script, REPAIR_SCRIPT, store], {
+      encoding: 'utf8',
+    });
+
+    // The root had both a wrong mode and (relative to --uid 1) a wrong owner:
+    // both must be fixed, not just one.
+    expect(output).toContain(`Fixed dir mode to 700: ${store}`);
+    expect(output).toContain(`Fixed owner to uid 1: ${store}`);
+    expect(output).toContain('Store is safe');
+    const stats = output.trim().split('\n').filter((line) => /^\d+ \d+$/.test(line.trim()));
+    expect(stats).toEqual(['1 700', '1 700', '1 700', '1 600']);
+
+    expect((await fsPromises.lstat(store)).mode & 0o777).toBe(SECRET_DIR_MODE);
+    expect((await fsPromises.lstat(secretFile)).mode & 0o777).toBe(SECRET_FILE_MODE);
+    expect(await readFile(secretFile, 'utf-8')).toBe(SECRET_VALUE);
+  });
+
+  it.runIf(HAS_USERNS)('--apply without --uid exits non-zero when ownership is mixed', async () => {
+    const store = path.join(rootDir, 'mixed-owner-store');
+    const secretFile = path.join(store, 'tenants', 't1', 'token');
+    await mkdir(path.dirname(secretFile), { recursive: true });
+    await writeFile(secretFile, SECRET_VALUE);
+    await fsPromises.chmod(secretFile, 0o600);
+    for (const dir of [store, path.join(store, 'tenants'), path.join(store, 'tenants', 't1')]) {
+      await fsPromises.chmod(dir, 0o700);
+    }
+
+    // Modes are already correct; only one file's owner differs from the store
+    // root's owner. Without --uid the script cannot fix it — it must report
+    // the mismatch and refuse to claim success.
+    const script = [
+      'REPAIR="$0"; STORE="$1"',
+      'chown 1 "$STORE/tenants/t1/token"',
+      'if bash "$REPAIR" --apply --path "$STORE"; then echo "EXIT_ZERO"; else echo "EXIT_NONZERO"; fi',
+      'chown -R 0 "$STORE"',
+    ].join('\n');
+    const output = execFileSync('unshare', ['-r', '--map-auto', 'bash', '-c', script, REPAIR_SCRIPT, store], {
+      encoding: 'utf8',
+    });
+
+    expect(output).toContain('Owner mismatch');
+    expect(output).toContain('EXIT_NONZERO');
+    expect(await readFile(secretFile, 'utf-8')).toBe(SECRET_VALUE);
   });
 });
 

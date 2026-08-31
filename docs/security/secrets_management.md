@@ -212,31 +212,47 @@ Filesystem secret store at /var/lib/alga/tenant-secrets is not safe for secret
 writes: it has mode 755. Expected a real directory owned by uid 1000 with mode
 0700. Refusing secret writes; reads continue. Fix with: sudo chown 1000
 /var/lib/alga/tenant-secrets && sudo chmod 700 /var/lib/alga/tenant-secrets, or
-run scripts/repair-secret-permissions.sh --apply /var/lib/alga/tenant-secrets
-(see docs/security/secrets_management.md).
+run scripts/repair-secret-permissions.sh --apply --path
+/var/lib/alga/tenant-secrets (see docs/security/secrets_management.md).
 ```
 
 ### Repairing an existing store
 
 Installs created before the strict-modes behavior (or restored from a backup
-that preserved a permissive umask) may hold `0755` directories or `0644` secret
-files. Run the non-destructive repair script to bring the store in line. It
-never deletes, rewrites, or reads out secret contents:
+that preserved a permissive umask or a different volume owner) may hold `0755`
+directories, `0644` secret files, or entries owned by another uid. Run the
+non-destructive repair script to bring the store in line. It never deletes,
+rewrites, or reads out secret contents, and never follows symlinks:
 
 ```bash
-# Report what would change (no changes made):
+# 1. Report what would change (no changes made). Exits 0 only when the store
+#    is already fully safe; exits 1 when anything needs fixing:
 scripts/repair-secret-permissions.sh --path <SECRET_FS_BASE_PATH>
 
-# Apply mode fixes (dirs 0700, files 0600) for entries owned by the running user:
+# 2a. Modes only wrong (owner already correct) — run as the service user:
 scripts/repair-secret-permissions.sh --apply --path <SECRET_FS_BASE_PATH>
 
-# As root, also hand ownership of fixed entries to the service user:
+# 2b. Ownership also wrong — run as root with the service uid; this chowns
+#     every entry, including the store root itself, to that uid:
 sudo scripts/repair-secret-permissions.sh --apply --path <SECRET_FS_BASE_PATH> --uid 1000
+
+# 3. Verify: the dry run now reports a clean store and exits 0:
+scripts/repair-secret-permissions.sh --path <SECRET_FS_BASE_PATH>
 ```
 
+`--apply` repeats its walk until nothing more can be fixed, so directories that
+were untraversable before their own repair (e.g. mode `0000`) are descended
+into and their contents repaired too. It exits `0` only when the store ends
+fully safe for provider writes — correct modes **and** uniform ownership; any
+remaining issue (a symlink, a non-regular entry, or ownership that needs
+root + `--uid`) is reported and the exit status is `1`, so the script never
+claims success while the provider would still refuse writes.
+
 Without `--path`, the script uses `SECRET_FS_BASE_PATH` (or `<repo>/secrets`).
-Symlinks and non-regular entries are reported for manual intervention and are
-never changed.
+Without `--uid`, the store root's current owner is treated as the expected
+owner and mismatched entries are reported (fixing them requires root +
+`--uid`). Symlinks and non-regular entries are reported for manual
+intervention and are never changed.
 
 ## Best Practices
 

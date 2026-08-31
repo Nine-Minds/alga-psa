@@ -210,7 +210,7 @@ function unsafeLocation(pathLabel: string, reason: string): UnsafeSecretLocation
     `Filesystem secret store at ${pathLabel} is not safe for secret writes: ${reason}. ` +
     `Expected a real directory ${ownerClause} with mode 0700. Refusing secret writes; reads continue. ` +
     `Fix with: sudo chown <running uid> ${pathLabel} && sudo chmod 700 ${pathLabel}, or run ` +
-    `scripts/repair-secret-permissions.sh --apply ${pathLabel} (see docs/security/secrets_management.md).`;
+    `scripts/repair-secret-permissions.sh --apply --path ${pathLabel} (see docs/security/secrets_management.md).`;
   return new UnsafeSecretLocationError(message);
 }
 
@@ -443,6 +443,47 @@ export async function unlinkSecret(filePath: string): Promise<void> {
   }
   const fs = await getFs();
   await fs.unlink(filePath);
+}
+
+/**
+ * Verifies, immediately before a deletion, that a directory component the
+ * deletion traverses is a real (non-symlink) directory. Returns `false` when
+ * the component is absent — there is nothing to delete — and throws when it is
+ * a symlink or not a directory, so a redirected component can never carry an
+ * unlink outside the secret store.
+ */
+async function isRealDirectoryForDelete(target: string): Promise<boolean> {
+  const stat = await lstatOrNull(target);
+  if (!stat) return false;
+  if (stat.isSymbolicLink()) {
+    throw new InvalidSecretPathError(`secret store path ${target} is a symlink; refusing to delete through it`);
+  }
+  if (!stat.isDirectory()) {
+    throw new InvalidSecretPathError(`secret store path ${target} is not a directory; refusing to delete through it`);
+  }
+  return true;
+}
+
+/**
+ * Removes `<base>/tenants/<tenantId>/<name>` after validating every component
+ * and re-checking, at deletion time, that the resolved root, `tenants/`, and
+ * the per-tenant directory are all real (non-symlink) directories — the same
+ * component checks the write path performs, so a symlinked directory cannot
+ * redirect the unlink outside the store. A missing directory or file means
+ * there is nothing to delete (idempotent). The final target itself must be a
+ * regular file (`unlinkSecret`).
+ */
+export async function unlinkTenantSecret(basePath: string, tenantId: string, name: string): Promise<void> {
+  const p = await getPath();
+  const filePath = await tenantSecretPath(basePath, tenantId, name);
+  const root = p.resolve(basePath);
+  const chain = [root, await tenantsDir(root), await tenantDir(root, tenantId)];
+  for (const dir of chain) {
+    if (!(await isRealDirectoryForDelete(dir))) {
+      return;
+    }
+  }
+  await unlinkSecret(filePath);
 }
 
 /**

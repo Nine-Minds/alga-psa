@@ -7,7 +7,7 @@ import {
   resolveBasePath,
   tenantDir,
   tenantSecretPath,
-  unlinkSecret,
+  unlinkTenantSecret,
   validateSecretComponent,
   writeTenantSecretAtomic,
 } from './fsSecretCore';
@@ -131,19 +131,23 @@ export class FileSystemSecretProvider implements ISecretProvider {
     validateSecretComponent(name, 'secret name');
 
     const basePath = await this.getBasePath();
-    const filePath = await tenantSecretPath(basePath, tenantId, name);
 
     try {
-      await unlinkSecret(filePath);
-      console.debug(`Successfully deleted tenant secret file: ${filePath}`);
+      // Validates the whole directory chain (root, tenants/, tenant dir) as
+      // real non-symlink directories immediately before the unlink; a missing
+      // component or file is an idempotent no-op. A symlinked component throws
+      // InvalidSecretPathError (no ENOENT code), so it can never be swallowed
+      // by the already-deleted branch below.
+      await unlinkTenantSecret(basePath, tenantId, name);
+      console.debug(`Successfully deleted tenant secret '${name}' for tenant ${tenantId}`);
     } catch (error: unknown) {
       const fsError = error as NodeJS.ErrnoException;
       if (fsError.code === 'ENOENT') {
-        console.debug(`Tenant secret file not found during delete (already deleted?): ${filePath}`);
+        console.debug(`Tenant secret '${name}' for tenant ${tenantId} not found during delete (already deleted?)`);
         return;
       }
 
-      console.error(`Error deleting tenant secret file ${filePath}: ${fsError.message}`);
+      console.error(`Error deleting tenant secret '${name}' for tenant ${tenantId}: ${fsError.message}`);
       throw new Error(`Failed to delete tenant secret: ${fsError.message}`);
     }
   }
