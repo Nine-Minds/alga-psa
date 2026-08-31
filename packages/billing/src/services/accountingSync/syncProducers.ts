@@ -408,6 +408,13 @@ export async function enqueueExternalPaymentPush(
  * fire-and-forget after applyCreditToInvoice commits. The op stays pending
  * until both the credit-note invoice and the target invoice are mapped in QBO,
  * at which point the creditApplicationApplier drains it.
+ *
+ * The `decision` is the authoritative in-transaction decision computed by
+ * applyCreditToInvoiceInternal (creditActions.ts): whether to enqueue and which
+ * realm to target. The enqueue derives STRICTLY from it — this function never
+ * re-evaluates edition, auto-sync, or connection state at enqueue time, because
+ * a config or permission change between the credit transaction and this call
+ * must not flip a decision that was made atomically with the credit write.
  */
 export async function enqueueCreditApplication(
   knex: Knex,
@@ -417,27 +424,18 @@ export async function enqueueCreditApplication(
     creditNoteInvoiceId: string;
     targetInvoiceId: string;
     amountCents: number;
-  }
+  },
+  decision: { shouldEnqueue: boolean; realm: string | null }
 ): Promise<void> {
   try {
-    if (!isEnterpriseEdition()) {
-      return;
-    }
-
-    const settings = await getAccountingSyncSettings(knex, tenantId);
-    if (!settings.autoSyncEnabled) {
-      return;
-    }
-
-    const realm = await resolveDefaultRealm(knex, tenantId);
-    if (!realm) {
+    if (!decision.shouldEnqueue || !decision.realm) {
       return;
     }
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
       adapterType: QBO_ADAPTER_TYPE,
-      targetRealm: realm,
+      targetRealm: decision.realm,
       operation: 'apply_credit',
       algaEntityType: 'credit_allocation',
       algaEntityId: params.allocationId,
@@ -453,7 +451,7 @@ export async function enqueueCreditApplication(
       allocationId: params.allocationId,
       creditNoteInvoiceId: params.creditNoteInvoiceId,
       targetInvoiceId: params.targetInvoiceId,
-      realm
+      realm: decision.realm
     });
   } catch (error) {
     logger.warn('[accountingSync] Failed to queue credit application (apply unaffected)', {

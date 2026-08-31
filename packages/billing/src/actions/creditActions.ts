@@ -80,26 +80,48 @@ function isEnterpriseEdition(): boolean {
 }
 
 /**
- * Whether a credit application that collected apply_credit ops would actually
- * enqueue them for the remote provider. Mirrors the guards inside
- * enqueueCreditApplication (syncProducers.ts): Enterprise Edition, auto-sync
- * enabled, and a default realm to target. This is the "remote-affecting branch"
- * test for the remote_mutate gate — a purely local application (no ops, no
- * sync config, or no connected realm) must not be gated.
+ * Authoritative, in-transaction decision about whether a credit application
+ * that collected apply_credit ops may enqueue them for the remote provider.
+ * Evaluates the full gate — Enterprise Edition, auto-sync enabled, a default
+ * realm to target, and the actor's accounting_integrations:remote_mutate
+ * capability — against the SAME transaction that records the credit
+ * application, and returns the realm that decision is pinned to.
+ *
+ * The enqueue that fires after the transaction commits is derived strictly
+ * from this decision (creditActions.ts passes it through to
+ * enqueueCreditApplication). Nothing is re-evaluated at enqueue time, so a
+ * permission revocation, auto-sync disable, or connection change between the
+ * in-transaction decision and the enqueue cannot turn a decided "yes" into a
+ * skipped remote mutation or a decided "no" into a fired one.
+ *
+ * Mirrors the voidInvoiceActions.ts idiom: fast-fail checks may run on a
+ * snapshot, but the authoritative re-check runs under the transaction.
  */
-async function creditApplicationReachesRemote(
-    knexOrTrx: Knex | Knex.Transaction,
-    tenant: string
-): Promise<boolean> {
+async function resolveCreditSyncEnqueueDecision(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUser,
+    collectedOps: boolean
+): Promise<{ shouldEnqueue: boolean; realm: string | null }> {
+    if (!collectedOps) {
+        return { shouldEnqueue: false, realm: null };
+    }
     if (!isEnterpriseEdition()) {
-        return false;
+        return { shouldEnqueue: false, realm: null };
     }
-    const settings = await getAccountingSyncSettings(knexOrTrx, tenant);
+    const settings = await getAccountingSyncSettings(trx, tenant);
     if (!settings.autoSyncEnabled) {
-        return false;
+        return { shouldEnqueue: false, realm: null };
     }
-    const realm = await resolveDefaultRealm(knexOrTrx, tenant);
-    return Boolean(realm);
+    const realm = await resolveDefaultRealm(trx, tenant);
+    if (!realm) {
+        return { shouldEnqueue: false, realm: null };
+    }
+    if (!(await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx))) {
+        // Generic denial: never hint whether the integration exists.
+        throw new Error('Permission denied: applying credits that sync to the accounting integration requires the accounting remote-mutate permission.');
+    }
+    return { shouldEnqueue: true, realm };
 }
 
 function creditActionErrorFrom(error: unknown): CreditActionError | null {
@@ -891,6 +913,14 @@ export async function applyCreditToInvoiceInternal(
         amountCents: number;
     }> = [];
 
+    // Authoritative decision, computed inside the transaction below, that the
+    // post-commit enqueue derives from strictly. Unset until the transaction
+    // body runs; reading it outside the transaction is the creditSyncOps guard.
+    let creditSyncDecision: { shouldEnqueue: boolean; realm: string | null } = {
+        shouldEnqueue: false,
+        realm: null,
+    };
+
     await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check if the invoice already has credit applied and get its currency.
         //
@@ -1306,13 +1336,17 @@ export async function applyCreditToInvoiceInternal(
         // locally and desynchronizing the books. The check runs inside this
         // transaction so the refusal rolls back every write above — a purely
         // local application (no ops, no auto-sync, no realm) is untouched.
-        if (
-            creditSyncOps.length > 0 &&
-            await creditApplicationReachesRemote(trx, tenant) &&
-            !(await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx))
-        ) {
-            throw new Error('Permission denied: applying credits that sync to the accounting integration requires the accounting remote-mutate permission.');
-        }
+        //
+        // The decision captured here is the single source of truth for the
+        // post-commit enqueue: permission and connection configuration are
+        // evaluated atomically with the write that commits the credit
+        // application, and the enqueue derives strictly from this decision.
+        creditSyncDecision = await resolveCreditSyncEnqueueDecision(
+            trx,
+            tenant,
+            user,
+            creditSyncOps.length > 0
+        );
     });
 
     for (const event of creditNoteAppliedEvents) {
@@ -1342,9 +1376,16 @@ export async function applyCreditToInvoiceInternal(
 
     // Fire-and-forget: enqueue apply_credit ops for QBO. Never throw — applyCreditToInvoice
     // must succeed even if the accounting sync enqueue fails.
-    for (const op of creditSyncOps) {
-        const { knex: syncKnex } = await createTenantKnex();
-        void enqueueCreditApplication(syncKnex, tenant, op);
+    //
+    // The enqueue derives strictly from the in-transaction decision: it fires
+    // exactly when that decision said yes (and uses the realm it pinned), and
+    // never when it said no — a config or permission change after the credit
+    // transaction commits cannot resurrect or cancel the enqueue.
+    if (creditSyncDecision.shouldEnqueue) {
+        for (const op of creditSyncOps) {
+            const { knex: syncKnex } = await createTenantKnex();
+            void enqueueCreditApplication(syncKnex, tenant, op, creditSyncDecision);
+        }
     }
 
     return { appliedAmount: appliedAmountResult };

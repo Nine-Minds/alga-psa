@@ -322,7 +322,7 @@ describe('enqueueCreditApplication', () => {
     vi.unstubAllEnvs();
   });
 
-  it('enqueues apply_credit op with correct payload when all gates pass', async () => {
+  it('enqueues apply_credit op with correct payload when the decision allows', async () => {
     vi.stubEnv('EDITION', 'ee');
 
     await enqueueCreditApplication({} as any, 't1', {
@@ -330,7 +330,7 @@ describe('enqueueCreditApplication', () => {
       creditNoteInvoiceId: 'inv-cn-99',
       targetInvoiceId: 'inv-target-99',
       amountCents: 5000
-    });
+    }, { shouldEnqueue: true, realm: 'realm-1' });
 
     // Capture the most recent SyncOperationsRepository instance and check enqueue.
     const results = vi.mocked(SyncOperationsRepository).mock.results;
@@ -341,6 +341,7 @@ describe('enqueueCreditApplication', () => {
         operation: 'apply_credit',
         algaEntityType: 'credit_allocation',
         algaEntityId: 'alloc-1',
+        targetRealm: 'realm-1',
         payload: expect.objectContaining({
           creditNoteInvoiceId: 'inv-cn-99',
           targetInvoiceId: 'inv-target-99',
@@ -351,18 +352,38 @@ describe('enqueueCreditApplication', () => {
     );
   });
 
-  it('does nothing when not enterprise edition', async () => {
-    vi.stubEnv('EDITION', 'community');
-    vi.stubEnv('NEXT_PUBLIC_EDITION', 'community');
-
+  it('does nothing when the in-transaction decision denied the enqueue', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    // The decision is authoritative: even with EE on and the settings mocks
+    // reporting auto-sync enabled, a decision of "no" must not enqueue.
     await enqueueCreditApplication({} as any, 't1', {
       allocationId: 'alloc-2',
       creditNoteInvoiceId: 'inv-cn-1',
       targetInvoiceId: 'inv-target-1',
       amountCents: 1000
-    });
+    }, { shouldEnqueue: false, realm: null });
 
-    // No SyncOperationsRepository should have been constructed when gating out early.
+    // No SyncOperationsRepository should have been constructed when the
+    // decision says no.
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+
+  it('does nothing when the decision allowed but pinned no realm', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueCreditApplication({} as any, 't1', {
+      allocationId: 'alloc-3',
+      creditNoteInvoiceId: 'inv-cn-2',
+      targetInvoiceId: 'inv-target-2',
+      amountCents: 2000
+    }, { shouldEnqueue: true, realm: null });
+
     const results = vi.mocked(SyncOperationsRepository).mock.results;
     for (const result of results) {
       const enqueueFn = (result.value as any)?.enqueue;
@@ -374,15 +395,14 @@ describe('enqueueCreditApplication', () => {
 
   it('swallows errors without throwing (fire-and-forget)', async () => {
     vi.stubEnv('EDITION', 'ee');
-    mockGetSettings.mockRejectedValue(new Error('db boom'));
 
     await expect(
       enqueueCreditApplication({} as any, 't1', {
-        allocationId: 'alloc-3',
-        creditNoteInvoiceId: 'inv-cn-2',
-        targetInvoiceId: 'inv-target-2',
-        amountCents: 2000
-      })
+        allocationId: 'alloc-4',
+        creditNoteInvoiceId: 'inv-cn-3',
+        targetInvoiceId: 'inv-target-3',
+        amountCents: 3000
+      }, { shouldEnqueue: true, realm: 'realm-1' })
     ).resolves.toBeUndefined();
   });
 });

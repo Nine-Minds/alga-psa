@@ -97,11 +97,24 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true)),
 }));
 
-import { createTestDbConnection } from '../../../../../test-utils/dbConfig';
+// resolveDefaultRealm resolves the target realm through the stored QBO
+// connection (dynamic import), which the credit sync gate reads inside the
+// transaction. A fixed realm keeps the gate's "reaches remote" branch
+// deterministic.
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
+  getDefaultQboRealmId: vi.fn(async () => 'realm-1'),
+  getStoredQboCredentialsMap: vi.fn(async () => ({ 'realm-1': {} })),
+}));
+
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../../test-utils/dbConfig';
 import { createClient } from '../../../../../test-utils/testDataFactory';
 import { currentUserRef } from '../../../../../test-utils/authModuleMock';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
 import { voidInvoice } from '@alga-psa/billing/actions/voidInvoiceActions';
+import { updateAccountingSyncSettings } from '@alga-psa/billing/services/accountingSync/accountingSyncSettings';
+import { hasPermission } from '@alga-psa/auth/rbac';
+
+const permissionMock = vi.mocked(hasPermission);
 
 let db: Knex;
 
@@ -640,5 +653,233 @@ describe('applyCreditToInvoiceInternal under concurrent applications', () => {
       .where({ invoice_id: invoiceId, tenant: tenantId, type: 'credit_adjustment' })
       .select('transaction_id');
     expect(reversals).toHaveLength(1);
+  }, 60000);
+});
+
+/**
+ * Race closure for the remote credit enqueue decision: the apply_credit op must
+ * derive strictly from the in-transaction gate (permission + configuration
+ * evaluated atomically with the credit write), never from a re-check at enqueue
+ * time. Real transactions, committed rows, controlled interleavings.
+ */
+describe('remote credit sync enqueue decision — transactional gate', () => {
+  beforeAll(async () => {
+    wireLocalTestDbEnv();
+    db = await createTestDbConnection();
+    testDbRef.db = db;
+    const tenantRow = await db('tenants').first('tenant');
+    if (!tenantRow) {
+      throw new Error('Seeded test database has no tenant');
+    }
+    tenantId = String(tenantRow.tenant);
+    currentUserRef.user = { ...currentUserRef.user, tenant: tenantId };
+
+    process.env.EDITION = 'ee';
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+  }, 240000);
+
+  afterAll(async () => {
+    await db?.destroy();
+  }, 30000);
+
+  beforeEach(() => {
+    // The file-level mock defaults to allow; each test that needs a denial or
+    // a revocation flips it explicitly.
+    permissionMock.mockReset();
+    permissionMock.mockResolvedValue(true);
+  });
+
+  async function countApplyCreditOps(invoiceId: string): Promise<number> {
+    const rows = await db('accounting_sync_operations')
+      .where({ tenant: tenantId, operation: 'apply_credit' })
+      .select('payload');
+    return rows.filter((row) => (row.payload as any)?.targetInvoiceId === invoiceId).length;
+  }
+
+  async function awaitApplyCreditOps(
+    expected: number,
+    invoiceId: string,
+    timeoutMs = 10000
+  ): Promise<Array<Record<string, unknown>>> {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const rows = await db('accounting_sync_operations')
+        .where({ tenant: tenantId, operation: 'apply_credit' })
+        .select('*');
+      const matching = rows.filter((row) => (row.payload as any)?.targetInvoiceId === invoiceId);
+      if (matching.length >= expected) return matching;
+      if (Date.now() > deadline) {
+        throw new Error(`Timed out waiting for ${expected} apply_credit op(s) for invoice ${invoiceId}`);
+      }
+      await sleep(100);
+    }
+  }
+
+  /** A finalized credit note whose issuance transaction carries its invoice id — the source of an apply_credit op. */
+  async function seedRemoteCredit(clientId: string, amount: number): Promise<string> {
+    const { invoiceId } = await seedCreditNote(clientId, amount);
+    return invoiceId;
+  }
+
+  it('refuses when remote_mutate is revoked while the application is in flight, rolling back every local write', async () => {
+    const clientId = await seedClient('Enqueue Deny Client');
+    const targetInvoiceId = await seedInvoice(clientId, 2000, 5000);
+    await seedRemoteCredit(clientId, 10000);
+    await updateAccountingSyncSettings(db, tenantId, { autoSyncEnabled: true });
+
+    const invoiceHolder = await db.transaction();
+    let capturedError: unknown;
+    try {
+      await invoiceHolder('invoices')
+        .where({ invoice_id: targetInvoiceId, tenant: tenantId })
+        .forUpdate()
+        .first();
+
+      const applyPromise = applyCreditToInvoiceInternal(
+        tenantId,
+        { ...currentUserRef.user, user_id: userId },
+        clientId,
+        targetInvoiceId,
+        2000
+      ).catch((error: unknown) => {
+        capturedError = error;
+        return { appliedAmount: 0 };
+      });
+
+      // The application is blocked on the invoice row lock. Revoke
+      // remote_mutate while it waits: the in-transaction gate must see the
+      // revocation and refuse, rather than deciding on the pre-flight
+      // permission and enqueueing anyway.
+      await waitForLockWaiters(1);
+      permissionMock.mockResolvedValue(false);
+      await invoiceHolder.rollback();
+      await applyPromise;
+    } catch (error) {
+      if (!invoiceHolder.isCompleted()) await invoiceHolder.rollback();
+      throw error;
+    }
+
+    expect(capturedError).toBeInstanceOf(Error);
+    expect((capturedError as Error).message).toContain('accounting remote-mutate permission');
+
+    expect(await countApplyCreditOps(targetInvoiceId)).toBe(0);
+
+    const invoice = await db('invoices').where({ invoice_id: targetInvoiceId, tenant: tenantId }).first();
+    expect(Number(invoice.credit_applied)).toBe(0);
+    const applications = await db('transactions')
+      .where({ invoice_id: targetInvoiceId, tenant: tenantId, type: 'credit_application' })
+      .select('transaction_id');
+    expect(applications).toHaveLength(0);
+    const creditRows = await db('credit_tracking').where({ tenant: tenantId });
+    const totalSpent = creditRows.reduce(
+      (sum, row) => sum + (Number(row.amount) - Number(row.remaining_amount)),
+      0
+    );
+    expect(totalSpent).toBe(0);
+  }, 60000);
+
+  it('enqueues the op decided in-transaction even after auto-sync is disabled post-commit', async () => {
+    const clientId = await seedClient('Enqueue Allow Client');
+    const targetInvoiceId = await seedInvoice(clientId, 2000, 5000);
+    const creditNoteInvoiceId = await seedRemoteCredit(clientId, 10000);
+    await updateAccountingSyncSettings(db, tenantId, { autoSyncEnabled: true });
+
+    await applyCreditToInvoiceInternal(
+      tenantId,
+      { ...currentUserRef.user, user_id: userId },
+      clientId,
+      targetInvoiceId,
+      2000
+    );
+
+    // Flip the config off immediately after the credit transaction committed.
+    // The enqueue must still fire — its decision was made inside the
+    // transaction, not re-evaluated against the flipped config.
+    await updateAccountingSyncSettings(db, tenantId, { autoSyncEnabled: false });
+
+    const ops = await awaitApplyCreditOps(1, targetInvoiceId);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toMatchObject({
+      operation: 'apply_credit',
+      adapter_type: 'quickbooks_online',
+      target_realm: 'realm-1',
+      alga_entity_type: 'credit_allocation',
+    });
+    expect((ops[0].payload as any)?.targetInvoiceId).toBe(targetInvoiceId);
+    expect((ops[0].payload as any)?.creditNoteInvoiceId).toBe(creditNoteInvoiceId);
+  }, 60000);
+
+  it('never enqueues when the in-transaction decision said no, even if auto-sync is enabled afterward', async () => {
+    const clientId = await seedClient('Enqueue None Client');
+    const targetInvoiceId = await seedInvoice(clientId, 2000, 5000);
+    await seedRemoteCredit(clientId, 10000);
+    await updateAccountingSyncSettings(db, tenantId, { autoSyncEnabled: false });
+
+    await applyCreditToInvoiceInternal(
+      tenantId,
+      { ...currentUserRef.user, user_id: userId },
+      clientId,
+      targetInvoiceId,
+      500
+    );
+
+    // Flip the config on AFTER the first application committed. The first
+    // application's in-transaction decision said no — the enable must not
+    // resurrect an enqueue for it.
+    await updateAccountingSyncSettings(db, tenantId, { autoSyncEnabled: true });
+
+    await sleep(500);
+    expect(await countApplyCreditOps(targetInvoiceId)).toBe(0);
+
+    // A second application under the now-enabled config does enqueue.
+    const secondResult = await applyCreditToInvoiceInternal(
+      tenantId,
+      { ...currentUserRef.user, user_id: userId },
+      clientId,
+      targetInvoiceId,
+      500
+    );
+    expect(secondResult.appliedAmount).toBe(500);
+    const ops = await awaitApplyCreditOps(1, targetInvoiceId);
+    expect(ops).toHaveLength(1);
+  }, 60000);
+
+  it('an auto-sync enable committed while the application waits lands inside the in-transaction gate', async () => {
+    const clientId = await seedClient('Enqueue Concurrent Enable Client');
+    const targetInvoiceId = await seedInvoice(clientId, 2000, 5000);
+    await seedRemoteCredit(clientId, 10000);
+    await updateAccountingSyncSettings(db, tenantId, { autoSyncEnabled: false });
+
+    const invoiceHolder = await db.transaction();
+    let appliedAmount = 0;
+    try {
+      await invoiceHolder('invoices')
+        .where({ invoice_id: targetInvoiceId, tenant: tenantId })
+        .forUpdate()
+        .first();
+
+      const applyPromise = applyCreditToInvoiceInternal(
+        tenantId,
+        { ...currentUserRef.user, user_id: userId },
+        clientId,
+        targetInvoiceId,
+        2000
+      );
+
+      await waitForLockWaiters(1);
+      // Enable auto-sync while the application waits on the invoice row lock.
+      // The gate reads tenant_settings inside the credit transaction, so it
+      // sees the committed enable and the application becomes remote-affecting.
+      await updateAccountingSyncSettings(db, tenantId, { autoSyncEnabled: true });
+      await invoiceHolder.rollback();
+      appliedAmount = (await applyPromise).appliedAmount;
+    } catch (error) {
+      if (!invoiceHolder.isCompleted()) await invoiceHolder.rollback();
+      throw error;
+    }
+
+    expect(appliedAmount).toBe(2000);
+    const ops = await awaitApplyCreditOps(1, targetInvoiceId);
+    expect(ops).toHaveLength(1);
   }, 60000);
 });
