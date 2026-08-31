@@ -3666,7 +3666,9 @@
       "updateFailed": "Nie można zaktualizować powiązania. Spróbuj ponownie.",
       "idRequiredForDelete": "Do usunięcia wymagany jest identyfikator powiązania.",
       "notFound": "Nie znaleziono powiązania. Odśwież powiązania i spróbuj ponownie.",
-      "deleteFailed": "Nie można usunąć powiązania. Spróbuj ponownie."
+      "deleteFailed": "Nie można usunąć powiązania. Spróbuj ponownie.",
+      "invoiceCancelled": "Faktura została anulowana i nie można jej zmapować do integracji księgowej.",
+      "invoiceNotFound": "Faktura już nie istnieje i nie można jej zmapować do integracji księgowej."
     },
     "qbo": {
       "enterpriseOnly": "Integracja z QuickBooks Online jest dostępna tylko w wersji Enterprise Edition.",

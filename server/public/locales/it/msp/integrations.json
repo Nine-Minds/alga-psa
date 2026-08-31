@@ -3666,7 +3666,9 @@
       "updateFailed": "Impossibile aggiornare la mappatura. Riprovare.",
       "idRequiredForDelete": "Per l’eliminazione è necessario l’ID della mappatura.",
       "notFound": "Mappatura non trovata. Aggiornare le mappature e riprovare.",
-      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare."
+      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare.",
+      "invoiceCancelled": "La fattura è stata annullata e non può essere mappata all'integrazione contabile.",
+      "invoiceNotFound": "La fattura non esiste più e non può essere mappata all'integrazione contabile."
     },
     "qbo": {
       "enterpriseOnly": "L’integrazione con QuickBooks Online è disponibile solo nella Enterprise Edition.",

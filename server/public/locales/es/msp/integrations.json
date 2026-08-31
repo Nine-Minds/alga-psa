@@ -3666,7 +3666,9 @@
       "updateFailed": "No se puede actualizar la asignación. Inténtelo de nuevo.",
       "idRequiredForDelete": "Se requiere el ID de la asignación para eliminarla.",
       "notFound": "No se encontró la asignación. Actualice las asignaciones e inténtelo de nuevo.",
-      "deleteFailed": "No se puede eliminar la asignación. Inténtelo de nuevo."
+      "deleteFailed": "No se puede eliminar la asignación. Inténtelo de nuevo.",
+      "invoiceCancelled": "La factura ha sido anulada y no puede asignarse a la integración contable.",
+      "invoiceNotFound": "La factura ya no existe y no puede asignarse a la integración contable."
     },
     "qbo": {
       "enterpriseOnly": "La integración con QuickBooks Online solo está disponible en Enterprise Edition.",

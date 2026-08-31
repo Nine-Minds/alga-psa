@@ -33,7 +33,12 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, _tenant: string) => ({ table: (name: string) => conn(name) }),
   // bulkLinkHistoricalInvoices serializes the mapping insert on the invoice
   // row lock; the passthrough makes the "transaction" the same fake knex.
-  withTransaction: async (_knex: any, cb: any) => cb(_knex)
+  withTransaction: async (_knex: any, cb: any) => cb(_knex),
+  // The shared invoice lock helper is re-exported through @alga-psa/db; the
+  // fake invoice rows the harness serves are never cancelled, so the guard
+  // passes without inspecting the fake further.
+  lockInvoiceForExternalSync: vi.fn(async () => ({ status: 'sent' })),
+  lockInvoicesForExternalSync: vi.fn(async () => [{ status: 'sent' }]),
 }));
 
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({

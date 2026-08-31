@@ -3666,7 +3666,9 @@
       "updateFailed": "Die Zuordnung kann nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
       "idRequiredForDelete": "Für das Löschen ist die Zuordnungs-ID erforderlich.",
       "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie die Zuordnungen und versuchen Sie es erneut.",
-      "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut."
+      "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+      "invoiceCancelled": "Die Rechnung wurde storniert und kann nicht der Buchhaltungsintegration zugeordnet werden.",
+      "invoiceNotFound": "Die Rechnung existiert nicht mehr und kann nicht der Buchhaltungsintegration zugeordnet werden."
     },
     "qbo": {
       "enterpriseOnly": "Die QuickBooks-Online-Integration ist nur in der Enterprise Edition verfügbar.",

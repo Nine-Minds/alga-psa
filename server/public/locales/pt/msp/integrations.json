@@ -3666,7 +3666,9 @@
       "updateFailed": "Não é possível atualizar o mapeamento. Tente novamente.",
       "idRequiredForDelete": "O ID do mapeamento é obrigatório para a exclusão.",
       "notFound": "Mapeamento não encontrado. Atualize os mapeamentos e tente novamente.",
-      "deleteFailed": "Não é possível excluir o mapeamento. Tente novamente."
+      "deleteFailed": "Não é possível excluir o mapeamento. Tente novamente.",
+      "invoiceCancelled": "A fatura foi anulada e não pode ser mapeada para a integração contábil.",
+      "invoiceNotFound": "A fatura não existe mais e não pode ser mapeada para a integração contábil."
     },
     "qbo": {
       "enterpriseOnly": "A integração com o QuickBooks Online está disponível apenas na Enterprise Edition.",

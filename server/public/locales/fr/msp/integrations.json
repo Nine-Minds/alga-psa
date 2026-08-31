@@ -3666,7 +3666,9 @@
       "updateFailed": "Impossible de mettre à jour la correspondance. Veuillez réessayer.",
       "idRequiredForDelete": "L’identifiant de la correspondance est obligatoire pour la suppression.",
       "notFound": "Correspondance introuvable. Actualisez les correspondances et réessayez.",
-      "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer."
+      "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer.",
+      "invoiceCancelled": "La facture a été annulée et ne peut pas être mappée à l'intégration comptable.",
+      "invoiceNotFound": "La facture n'existe plus et ne peut pas être mappée à l'intégration comptable."
     },
     "qbo": {
       "enterpriseOnly": "L’intégration QuickBooks Online n’est disponible que dans l’édition Enterprise.",

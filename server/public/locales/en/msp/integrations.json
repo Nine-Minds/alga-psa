@@ -3666,7 +3666,9 @@
       "updateFailed": "Unable to update mapping. Please try again.",
       "idRequiredForDelete": "Mapping ID is required for deletion.",
       "notFound": "Mapping not found. Refresh mappings and try again.",
-      "deleteFailed": "Unable to delete mapping. Please try again."
+      "deleteFailed": "Unable to delete mapping. Please try again.",
+      "invoiceCancelled": "The invoice has been voided and cannot be mapped to the accounting integration.",
+      "invoiceNotFound": "The invoice no longer exists and cannot be mapped to the accounting integration."
     },
     "qbo": {
       "enterpriseOnly": "QuickBooks Online integration is only available in Enterprise Edition.",

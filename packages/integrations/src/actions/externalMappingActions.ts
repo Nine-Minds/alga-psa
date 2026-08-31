@@ -1,7 +1,16 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, tenantDb, withTransaction, writeAccountingAudit } from '@alga-psa/db';
+import {
+  createTenantKnex,
+  tenantDb,
+  withTransaction,
+  writeAccountingAudit,
+  lockInvoiceForExternalSync,
+  lockInvoicesForExternalSync,
+  ACCOUNTING_EXPORT_INVOICE_CANCELLED,
+  ACCOUNTING_EXPORT_INVOICE_NOT_FOUND,
+} from '@alga-psa/db';
 import type { AccountingAuditProvider } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
@@ -242,6 +251,20 @@ export const createExternalEntityMapping = withAuth(async (
 
   try {
     const [newMapping] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Invoice-typed mappings must serialize against invoice void on the
+      // shared invoice row lock (packages/db/src/lib/invoiceExternalSyncLock.ts):
+      // the void transaction's first statement is a FOR UPDATE on the invoice
+      // row, so this insert either commits before the void re-reads the mapping
+      // (the void then treats the invoice as remote-affecting) or blocks until
+      // the void commits and is refused on the now-cancelled invoice — a
+      // cancelled local invoice can never gain a mapping to a live remote
+      // document. The same lock refuses invoices already cancelled. Only the
+      // invoice entity type touches the remote ledger this way; service/client/
+      // other mappings link no invoice and need no lock.
+      if (alga_entity_type === 'invoice') {
+        await lockInvoiceForExternalSync(trx, tenant, alga_entity_id);
+      }
+
       return await tenantDb(trx, tenant).table<ExternalEntityMapping>('tenant_external_entity_mappings')
         .insert({
           id: trx.raw('gen_random_uuid()'),
@@ -319,6 +342,21 @@ export const createExternalEntityMapping = withAuth(async (
       , 'msp/integrations:errors.mappings.duplicate');
     }
 
+    // The invoice guard inside the transaction refuses with a business-rule
+    // code (cancelled invoice, or the invoice row disappeared). Surface it as
+    // the same local-state reason rather than a generic save failure — nothing
+    // here confirms whether any remote entity exists.
+    if (error?.code === ACCOUNTING_EXPORT_INVOICE_CANCELLED) {
+      return actionError(
+        'The invoice has been voided and cannot be mapped to the accounting integration.'
+      , 'msp/integrations:errors.mappings.invoiceCancelled');
+    }
+    if (error?.code === ACCOUNTING_EXPORT_INVOICE_NOT_FOUND) {
+      return actionError(
+        'The invoice no longer exists and cannot be mapped to the accounting integration.'
+      , 'msp/integrations:errors.mappings.invoiceNotFound');
+    }
+
     if (error instanceof ExpectedExternalMappingError) {
       return actionError(error.message);
     }
@@ -364,6 +402,25 @@ export const updateExternalEntityMapping = withAuth(async (
       const before = await tenantDb(trx, tenant).table<ExternalEntityMapping>('tenant_external_entity_mappings')
         .where({ id: mappingId })
         .first();
+
+      // An invoice-typed mapping row write retargets which remote document (or
+      // which local invoice) it links — the same remote-affecting state change
+      // as a fresh insert, so it must hold the shared invoice row lock and
+      // refuse cancelled invoices before the update commits (see
+      // lockInvoiceForExternalSync). When the update repoints which invoice is
+      // mapped, both the old and the new invoice are involved; multi-lock
+      // acquisition is sorted to match the deadlock-avoidance convention.
+      // Non-invoice mappings (service/client/…) link no invoice and need no
+      // lock; alga_entity_type itself is immutable, so the row's type cannot
+      // become invoice through an update.
+      if (before?.alga_entity_type === 'invoice') {
+        const targetInvoiceId = updates.alga_entity_id ?? before.alga_entity_id;
+        const involvedInvoiceIds =
+          targetInvoiceId === before.alga_entity_id
+            ? [before.alga_entity_id]
+            : [before.alga_entity_id, targetInvoiceId];
+        await lockInvoicesForExternalSync(trx, tenant, involvedInvoiceIds);
+      }
 
       const [after] = await tenantDb(trx, tenant).table<ExternalEntityMapping>('tenant_external_entity_mappings')
         .where({ id: mappingId })
@@ -438,8 +495,15 @@ export const updateExternalEntityMapping = withAuth(async (
     if (error instanceof ExpectedExternalMappingError) {
       return actionError(error.message);
     }
-    if ((error as { code?: string } | null)?.code === '23505') {
+    const updateError = error as { code?: string } | null;
+    if (updateError?.code === '23505') {
       return actionError('A mapping already exists for this entity. Edit the existing mapping instead.', 'msp/integrations:errors.mappings.duplicate');
+    }
+    if (updateError?.code === ACCOUNTING_EXPORT_INVOICE_CANCELLED) {
+      return actionError('The invoice has been voided and cannot be mapped to the accounting integration.', 'msp/integrations:errors.mappings.invoiceCancelled');
+    }
+    if (updateError?.code === ACCOUNTING_EXPORT_INVOICE_NOT_FOUND) {
+      return actionError('The invoice no longer exists and cannot be mapped to the accounting integration.', 'msp/integrations:errors.mappings.invoiceNotFound');
     }
     return actionError('Unable to update mapping. Please try again.', 'msp/integrations:errors.mappings.updateFailed');
   }
@@ -461,6 +525,18 @@ export const deleteExternalEntityMapping = withAuth(async (
   }
 
   logger.info('Deleting external mapping', { tenantId: tenant, mappingId });
+
+  // Deletion deliberately does NOT take the invoice row lock that invoice
+  // mapping creation/update must hold. The invariant guarded by that lock is
+  // that a cancelled invoice can never GAIN a remote link after the void
+  // decided no remote void is needed; removing a link cannot create that state.
+  // The void's remote-affecting decision is made under the invoice lock against
+  // the mapping as it then exists, and the post-commit enqueue re-reads the
+  // mapping (syncProducers.enqueueInvoiceVoid) and simply skips once it is
+  // gone. Requiring the lock here would only serialize operator unmapping
+  // behind in-flight voids and could suppress an admin's remote void in the
+  // delete-first interleaving — which is the operator's explicit choice to
+  // sever the link, not a race-induced desync.
 
   try {
     const { before, deletedCount } = await withTransaction(knex, async (trx: Knex.Transaction) => {
