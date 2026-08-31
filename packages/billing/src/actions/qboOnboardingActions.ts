@@ -3,7 +3,8 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- onboarding actions consult QBO customers and connection state */
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { lockInvoiceForExternalSync } from '../lib/invoiceExternalSyncLock';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
@@ -580,20 +581,29 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
     const existing = await ledger.findByAlgaId('invoice', match.invoiceId);
     if (existing) continue;
 
-    await ledger.insert({
-      algaEntityType: 'invoice',
-      algaEntityId: match.invoiceId,
-      externalEntityId: match.externalId,
-      targetRealm: realm,
-      syncStatus: 'synced',
-      metadata: {
-        sync_token: match.externalSyncToken ?? null,
-        // Snapshot convention is QBO dollars (adapter stores response.TotalAmt);
-        // the matcher carries cents internally.
-        exported_total: match.externalTotal / 100,
-        doc_number: match.externalDocNumber,
-        linked_via: 'onboarding'
-      }
+    // The mapping insert serializes against invoice void on the shared invoice
+    // row lock (invoiceExternalSyncLock.ts). A voided invoice must never gain
+    // a mapping after the void decided no remote void is needed — the remote
+    // copy would outlive the cancelled local document with nothing enqueued to
+    // void it.
+    await withTransaction(knex, async (trx) => {
+      await lockInvoiceForExternalSync(trx, tenant, match.invoiceId);
+      const trxLedger = new SyncMappingLedger(trx, tenant, SYNC_ADAPTER_TYPE);
+      await trxLedger.insert({
+        algaEntityType: 'invoice',
+        algaEntityId: match.invoiceId,
+        externalEntityId: match.externalId,
+        targetRealm: realm,
+        syncStatus: 'synced',
+        metadata: {
+          sync_token: match.externalSyncToken ?? null,
+          // Snapshot convention is QBO dollars (adapter stores response.TotalAmt);
+          // the matcher carries cents internally.
+          exported_total: match.externalTotal / 100,
+          doc_number: match.externalDocNumber,
+          linked_via: 'onboarding'
+        }
+      });
     });
     linked++;
   }

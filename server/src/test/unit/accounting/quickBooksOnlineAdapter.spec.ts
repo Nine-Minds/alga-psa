@@ -26,6 +26,16 @@ vi.mock('../../../../../packages/billing/src/services/accountingSync/accountingS
   getAccountingSyncSettings: getAccountingSyncSettingsMock
 }));
 
+// The adapter now serializes delivery on the shared invoice row lock
+// (invoiceExternalSyncLock.ts). This spec exercises the adapter's transform/
+// deliver payload logic, not the lock discipline — that is covered by the
+// real-concurrency suite — so the lock re-check resolves to a live invoice.
+vi.mock('../../../../../packages/billing/src/lib/invoiceExternalSyncLock', () => ({
+  lockInvoiceForExternalSync: vi.fn(async () => ({ status: 'sent' })),
+  ACCOUNTING_EXPORT_INVOICE_CANCELLED: 'ACCOUNTING_EXPORT_INVOICE_CANCELLED',
+  ACCOUNTING_EXPORT_INVOICE_NOT_FOUND: 'ACCOUNTING_EXPORT_INVOICE_NOT_FOUND',
+}));
+
 import { QuickBooksOnlineAdapter } from '../../../../../packages/billing/src/adapters/accounting/quickBooksOnlineAdapter';
 import type { AccountingExportAdapterContext } from '@alga-psa/types';
 import { AccountingMappingResolver } from '../../../../../packages/billing/src/services/accountingMappingResolver';
@@ -34,6 +44,18 @@ import * as dbModule from 'server/src/lib/db';
 const TENANT_ID = 'tenant-qbo-spec';
 const INVOICE_ID = 'invoice-qbo-spec';
 const CLIENT_ID = 'client-qbo-spec';
+
+/**
+ * Minimal knex for deliver(): the adapter runs delivery inside
+ * withTransaction, so the mock needs a transaction() that hands back the same
+ * object as the trx. The lock re-check and the mapping repository methods are
+ * mocked/spied, so no real querying happens inside the transaction.
+ */
+function makeKnexMock(): any {
+  const knex: any = {};
+  knex.transaction = async (cb: any) => cb(knex);
+  return knex;
+}
 
 type MinimalLine = {
   line_id: string;
@@ -97,7 +119,7 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
   beforeEach(() => {
     mockResolver.resolveServiceMapping.mockReset();
     mockResolver.resolveTaxCodeMapping.mockReset();
-    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: makeKnexMock() as any, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(
       mockResolver as unknown as AccountingMappingResolver
     );
@@ -654,7 +676,7 @@ describe('QuickBooksOnlineAdapter credit-note (CreditMemo) transform', () => {
     mockResolver.resolveServiceMapping.mockReset();
     mockResolver.resolveTaxCodeMapping.mockReset();
     mockResolver.resolvePaymentTermMapping?.mockReset?.();
-    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: makeKnexMock() as any, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(
       mockResolver as unknown as AccountingMappingResolver
     );
@@ -790,7 +812,7 @@ describe('QuickBooksOnlineAdapter deliver CreditMemo branch', () => {
   beforeEach(() => {
     qboClientCreateMock.mockReset();
     getDefaultQboRealmIdMock.mockReset();
-    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: makeKnexMock() as any, tenant: TENANT_ID });
   });
 
   afterEach(() => {
@@ -849,7 +871,7 @@ describe('QuickBooksOnlineAdapter deliver realm defaulting', () => {
   beforeEach(() => {
     qboClientCreateMock.mockReset();
     getDefaultQboRealmIdMock.mockReset();
-    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: makeKnexMock() as any, tenant: TENANT_ID });
   });
 
   afterEach(() => {
@@ -954,7 +976,7 @@ describe('QuickBooksOnlineAdapter class/department transform', () => {
     mockResolver.resolveServiceMapping.mockReset();
     mockResolver.resolveTaxCodeMapping.mockReset();
     getAccountingSyncSettingsMock.mockReset();
-    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: makeKnexMock() as any, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(mockResolver as unknown as AccountingMappingResolver);
     mockResolver.resolveTaxCodeMapping.mockResolvedValue(null);
   });
@@ -1154,7 +1176,7 @@ describe('QuickBooksOnlineAdapter customer auto-provisioning gate', () => {
     mockResolver.resolveTaxCodeMapping.mockReset();
     mockResolver.ensureCompanyMapping.mockReset();
     getAccountingSyncSettingsMock.mockReset();
-    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: makeKnexMock() as any, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(
       mockResolver as unknown as AccountingMappingResolver
     );
@@ -1329,7 +1351,7 @@ describe('QuickBooksOnlineAdapter Automated Sales Tax mode', () => {
     mockResolver.resolveTaxCodeMapping.mockReset();
     isQboAutomatedSalesTaxEnabledMock.mockReset();
     isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(false);
-    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: makeKnexMock() as any, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(
       mockResolver as unknown as AccountingMappingResolver
     );

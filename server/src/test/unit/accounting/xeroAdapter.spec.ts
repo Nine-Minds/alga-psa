@@ -12,6 +12,16 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
   createTenantKnex: createTenantKnexMock,
 }));
 
+// The adapter now serializes delivery on the shared invoice row lock
+// (invoiceExternalSyncLock.ts). This spec exercises the adapter's transform/
+// deliver payload logic, not the lock discipline — that is covered by the
+// real-concurrency suite — so the lock re-check resolves to a live invoice.
+vi.mock('../../../../../packages/billing/src/lib/invoiceExternalSyncLock', () => ({
+  lockInvoiceForExternalSync: vi.fn(async () => ({ status: 'sent' })),
+  ACCOUNTING_EXPORT_INVOICE_CANCELLED: 'ACCOUNTING_EXPORT_INVOICE_CANCELLED',
+  ACCOUNTING_EXPORT_INVOICE_NOT_FOUND: 'ACCOUNTING_EXPORT_INVOICE_NOT_FOUND',
+}));
+
 /**
  * Specs referenced from:
  * https://developer.xero.com/documentation/accounting/invoices
@@ -105,6 +115,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     };
     const knexMock: any = () => knexQb;
     knexMock.raw = (sql: string) => ({ __raw: sql });
+    // deliver() runs inside withTransaction; hand the same mock back as the trx.
+    knexMock.transaction = async (cb: any) => cb(knexMock);
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(mockResolver as unknown as AccountingMappingResolver);
     mockResolver.resolveServiceMapping.mockResolvedValue({

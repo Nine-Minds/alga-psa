@@ -20,7 +20,8 @@ import {
   XeroTrackingCategoryOption,
   XeroTaxComponentPayload
 } from '@alga-psa/integrations/lib/xero/xeroClientService';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { CompanyAccountingSyncService } from '../../services/companySync/companySyncService';
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
@@ -434,7 +435,6 @@ export class XeroAdapter implements AccountingExportAdapter {
 
     const { knex } = await createTenantKnex();
     const client = await XeroClientService.create(tenantId, context.batch.target_realm ?? null);
-    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const documents = transformResult.documents;
     logger.info('[XeroAdapter] delivering invoices to Xero', {
@@ -448,75 +448,91 @@ export class XeroAdapter implements AccountingExportAdapter {
       return payload.invoice;
     });
 
-    const deliveryResults = await client.createInvoices(payloads);
-    if (deliveryResults.length !== documents.length) {
-      throw new AppError('XERO_DELIVERY_MISMATCH', 'Xero returned unexpected number of invoices', {
-        expected: documents.length,
-        actual: deliveryResults.length
-      });
-    }
+    // Serialize against invoice void on the shared invoice row lock
+    // (invoiceExternalSyncLock.ts). Xero delivers the whole batch in one remote
+    // call, so every invoice row is locked FOR UPDATE and confirmed not
+    // cancelled BEFORE any remote mutation, and the mapping writes commit with
+    // those locks held. A void that already committed cancels its invoice and
+    // refuses this batch; a void that starts later queues on the same lock and
+    // re-reads the mapping under its own lock once this batch commits.
+    return withTransaction(knex, async (trx) => {
+      const invoiceIds = Array.from(new Set(documents.map((document) => document.documentId))).sort();
+      for (const invoiceId of invoiceIds) {
+        await lockInvoiceForExternalSync(trx, tenantId, invoiceId);
+      }
 
-    const deliveredLines: { lineId: string; externalDocumentRef: string }[] = [];
-
-    for (let i = 0; i < documents.length; i++) {
-      const document = documents[i];
-      const result = deliveryResults[i];
-      const payload = document.payload as unknown as XeroDocumentPayload;
-      const externalRef = result.invoiceId ?? result.documentId;
-
-      if (!externalRef) {
-        throw new AppError('XERO_DELIVERY_NO_ID', 'Xero did not return an invoice identifier', {
-          documentId: document.documentId
+      const deliveryResults = await client.createInvoices(payloads);
+      if (deliveryResults.length !== documents.length) {
+        throw new AppError('XERO_DELIVERY_MISMATCH', 'Xero returned unexpected number of invoices', {
+          expected: documents.length,
+          actual: deliveryResults.length
         });
       }
 
-      // Build charge-to-Xero-line mapping from response
-      // Xero may return line IDs in the raw response - extract if available
-      const rawInvoice = result.raw as Record<string, any> | undefined;
-      const xeroLines = rawInvoice?.LineItems ?? [];
-      const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> = [];
+      const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
 
-      for (let j = 0; j < payload.chargeIds.length && j < xeroLines.length; j++) {
-        const xeroLineItemId = xeroLines[j]?.LineItemID;
-        if (xeroLineItemId) {
-          chargeLineMappings.push({
-            chargeId: payload.chargeIds[j],
-            xeroLineItemId
+      const deliveredLines: { lineId: string; externalDocumentRef: string }[] = [];
+
+      for (let i = 0; i < documents.length; i++) {
+        const document = documents[i];
+        const result = deliveryResults[i];
+        const payload = document.payload as unknown as XeroDocumentPayload;
+        const externalRef = result.invoiceId ?? result.documentId;
+
+        if (!externalRef) {
+          throw new AppError('XERO_DELIVERY_NO_ID', 'Xero did not return an invoice identifier', {
+            documentId: document.documentId
           });
         }
+
+        // Build charge-to-Xero-line mapping from response
+        // Xero may return line IDs in the raw response - extract if available
+        const rawInvoice = result.raw as Record<string, any> | undefined;
+        const xeroLines = rawInvoice?.LineItems ?? [];
+        const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> = [];
+
+        for (let j = 0; j < payload.chargeIds.length && j < xeroLines.length; j++) {
+          const xeroLineItemId = xeroLines[j]?.LineItemID;
+          if (xeroLineItemId) {
+            chargeLineMappings.push({
+              chargeId: payload.chargeIds[j],
+              xeroLineItemId
+            });
+          }
+        }
+
+        // Store invoice mapping with charge line mappings
+        const metadata = {
+          last_exported_at: new Date().toISOString(),
+          invoiceNumber: result.invoiceNumber,
+          chargeLineMappings // Store mapping for tax import
+        };
+
+        await invoiceMappingRepository.upsertInvoiceMapping({
+          tenantId,
+          adapterType: this.type,
+          invoiceId: document.documentId,
+          externalInvoiceId: externalRef,
+          targetRealm: context.batch.target_realm ?? undefined,
+          metadata
+        });
+
+        deliveredLines.push(
+          ...document.lineIds.map((lineId) => ({
+            lineId,
+            externalDocumentRef: externalRef
+          }))
+        );
       }
 
-      // Store invoice mapping with charge line mappings
-      const metadata = {
-        last_exported_at: new Date().toISOString(),
-        invoiceNumber: result.invoiceNumber,
-        chargeLineMappings // Store mapping for tax import
+      return {
+        deliveredLines,
+        metadata: {
+          adapter: this.type,
+          deliveredInvoices: documents.length
+        }
       };
-
-      await invoiceMappingRepository.upsertInvoiceMapping({
-        tenantId,
-        adapterType: this.type,
-        invoiceId: document.documentId,
-        externalInvoiceId: externalRef,
-        targetRealm: context.batch.target_realm ?? undefined,
-        metadata
-      });
-
-      deliveredLines.push(
-        ...document.lineIds.map((lineId) => ({
-          lineId,
-          externalDocumentRef: externalRef
-        }))
-      );
-    }
-
-    return {
-      deliveredLines,
-      metadata: {
-        adapter: this.type,
-        deliveredInvoices: documents.length
-      }
-    };
+    });
   }
 
   private async loadInvoices(

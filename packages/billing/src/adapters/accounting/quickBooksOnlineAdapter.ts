@@ -17,7 +17,8 @@ import {
   ExternalTaxComponent,
   PendingTaxImportRecord
 } from '@alga-psa/types';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { CompanyAccountingSyncService } from '../../services/companySync/companySyncService';
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
@@ -643,57 +644,77 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       });
     }
 
-    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
+    // Invoice/CreditMemo delivery serializes against invoice void on the shared
+    // invoice row lock (invoiceExternalSyncLock.ts). The whole batch runs in
+    // one transaction: each invoice row is locked FOR UPDATE and confirmed not
+    // cancelled before its remote mutation, and the mapping writes commit with
+    // those locks held. A concurrent void therefore either waits until the
+    // batch commits and then re-reads the mapping under its own lock (enqueuing
+    // the remote void), or commits first and causes the export of its invoice
+    // to be refused — never a cancelled local invoice with a live remote copy
+    // and no void op.
+    return withTransaction(knex, async (trx) => {
+      const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
 
-    const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
-    const failedDocuments: AccountingExportDeliveryDocumentFailure[] = [];
+      const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
+      const failedDocuments: AccountingExportDeliveryDocumentFailure[] = [];
 
-    for (const document of transformResult.documents) {
-      try {
-        const externalRef = await this.deliverInvoiceDocument(document, qboClient, invoiceMappingRepository, {
-          tenantId,
-          realmId
-        });
+      // One batch transaction holds every invoice row lock until it commits,
+      // so lock acquisition must be in a consistent order to avoid a 40P01
+      // deadlock between two concurrent batches delivering the same invoices
+      // (the same discipline the Xero adapter follows).
+      const documents = [...transformResult.documents].sort((a, b) =>
+        a.documentId.localeCompare(b.documentId)
+      );
 
-        deliveredLines.push(
-          ...document.lineIds.map((lineId) => ({
-            lineId,
-            externalDocumentRef: externalRef
-          }))
-        );
-      } catch (error) {
-        // Auth/connection failures affect every remaining call, so isolating them
-        // per invoice would only repeat the same failure across the batch.
-        if (error instanceof AppError && error.code === 'QBO_AUTH_ERROR') {
-          throw error;
+      for (const document of documents) {
+        try {
+          const externalRef = await this.deliverInvoiceDocument(document, qboClient, invoiceMappingRepository, {
+            tenantId,
+            realmId,
+            trx
+          });
+
+          deliveredLines.push(
+            ...document.lineIds.map((lineId) => ({
+              lineId,
+              externalDocumentRef: externalRef
+            }))
+          );
+        } catch (error) {
+          // Auth/connection failures affect every remaining call, so isolating them
+          // per invoice would only repeat the same failure across the batch.
+          if (error instanceof AppError && error.code === 'QBO_AUTH_ERROR') {
+            throw error;
+          }
+
+          const code = error instanceof AppError ? error.code : 'QBO_DELIVERY_ERROR';
+          const message = error instanceof Error ? error.message : 'Unknown QuickBooks delivery error';
+          logger.warn('QuickBooks adapter: invoice delivery failed, continuing with remaining invoices', {
+            invoiceId: document.documentId,
+            tenant: tenantId,
+            code,
+            error: message
+          });
+          failedDocuments.push({
+            documentId: document.documentId,
+            lineIds: document.lineIds,
+            code,
+            message
+          });
         }
-
-        const code = error instanceof AppError ? error.code : 'QBO_DELIVERY_ERROR';
-        const message = error instanceof Error ? error.message : 'Unknown QuickBooks delivery error';
-        logger.warn('QuickBooks adapter: invoice delivery failed, continuing with remaining invoices', {
-          invoiceId: document.documentId,
-          tenant: tenantId,
-          code,
-          error: message
-        });
-        failedDocuments.push({
-          documentId: document.documentId,
-          lineIds: document.lineIds,
-          code,
-          message
-        });
       }
-    }
 
-    return {
-      deliveredLines,
-      failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
-      metadata: {
-        adapter: this.type,
-        deliveredInvoices: transformResult.documents.length - failedDocuments.length,
-      failedInvoices: failedDocuments.length
-      }
-    };
+      return {
+        deliveredLines,
+        failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
+        metadata: {
+          adapter: this.type,
+          deliveredInvoices: transformResult.documents.length - failedDocuments.length,
+        failedInvoices: failedDocuments.length
+        }
+      };
+    });
   }
 
   private async transformVendorBills(
@@ -1065,10 +1086,19 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     document: AccountingExportDocument,
     qboClient: QboClientService,
     invoiceMappingRepository: KnexInvoiceMappingRepository,
-    target: { tenantId: string; realmId: string }
+    target: { tenantId: string; realmId: string; trx: Knex.Transaction }
   ): Promise<string> {
-    const { tenantId, realmId } = target;
+    const { tenantId, realmId, trx } = target;
     const payload = document.payload as unknown as InvoiceDocumentPayload;
+
+    // Serialize against a concurrent void before touching the remote document
+    // or its mapping: the invoice row is locked FOR UPDATE and confirmed not
+    // cancelled. A void that already committed shows its cancelled status here
+    // and the export is refused; a void that starts later queues on this same
+    // lock until the mapping commits, then re-reads the mapping under its own
+    // lock and enqueues the remote void.
+    await lockInvoiceForExternalSync(trx, tenantId, document.documentId);
+
     const mapping = await invoiceMappingRepository.findInvoiceMapping({
       tenantId,
       adapterType: this.type,

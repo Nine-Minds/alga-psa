@@ -39,7 +39,6 @@ export const voidInvoice = withAuth(async (
 
   const { knex } = await createTenantKnex();
   const now = new Date().toISOString();
-
   // Load invoice
   const invoice = await tenantDb(knex, tenant).table('invoices')
     .where({ invoice_id: invoiceId })
@@ -130,6 +129,11 @@ export const voidInvoice = withAuth(async (
     }
   }
 
+  // Hoisted authoritative remote-mutate capability: starts as the fast-fail
+  // snapshot and is superseded by the in-transaction re-check below. Read by
+  // the audit decision (inside the transaction) and the post-commit enqueue.
+  let actorCanRemoteMutateUnderLock = actorCanRemoteMutate;
+
   const outcome = await withTransaction(knex, async (trx: Knex.Transaction): Promise<VoidInvoiceResult> => {
     // Lock-order contract with applyCreditToInvoiceInternal (creditActions.ts):
     // invoice row FIRST, credit_tracking rows only after. Credit application
@@ -157,6 +161,15 @@ export const voidInvoice = withAuth(async (
       return { success: false, error: 'Invoice is already voided.' };
     }
 
+    // Authoritative re-check of the remote-mutate capability under the
+    // transaction. The pre-transaction read above is only a fast-fail on a
+    // snapshot: the capability can be revoked between that read and here, and
+    // the remote-affecting decision (mapping + permission) that decides whether
+    // a remote void is enqueued must be evaluated atomically with the local
+    // state change. This value supersedes `actorCanRemoteMutate` for every
+    // decision below (including the post-commit enqueue).
+    actorCanRemoteMutateUnderLock = await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx);
+
     // Authoritative re-check of the remote-mapping gate under the transaction.
     // The pre-transaction read above is only a fast-fail on a snapshot: a
     // concurrent export can map this invoice between that read and here, in
@@ -173,7 +186,7 @@ export const voidInvoice = withAuth(async (
         alga_entity_id: invoiceId
       })
       .first('id', 'external_entity_id');
-    if (remoteMapping && !actorCanRemoteMutate) {
+    if (remoteMapping && !actorCanRemoteMutateUnderLock) {
       return { success: false, error: 'Permission denied: voiding invoices that sync to the accounting integration requires the accounting remote-mutate permission.' };
     }
     const remoteVoidWillPropagate = Boolean(remoteMapping);
@@ -294,7 +307,7 @@ export const voidInvoice = withAuth(async (
     // (voided/failed) is appended by the sync-cycle applier, which carries the
     // same actor through the op payload. No secret material — only the
     // provider, the remote entity, and the outcome so far.
-    if (remoteVoidWillPropagate && actorCanRemoteMutate) {
+    if (remoteVoidWillPropagate && actorCanRemoteMutateUnderLock) {
       await writeAccountingAudit(trx, tenant, 'accounting_remote_void', {
         userId: user.user_id,
         provider: 'quickbooks_online',
@@ -322,13 +335,14 @@ export const voidInvoice = withAuth(async (
 
   // Fire-and-forget: enqueue void_invoice op if accounting mapping exists.
   // The enqueue is additionally gated on the actor's remote-mutate capability
-  // so a mapping created by a concurrent export between the gate check and
-  // this point cannot turn a local-only void into a remote mutation the actor
-  // was not authorized to perform.
+  // (re-evaluated under the void transaction above) so a mapping created by a
+  // concurrent export between the gate check and this point cannot turn a
+  // local-only void into a remote mutation the actor was not authorized to
+  // perform.
   const { knex: syncKnex } = await createTenantKnex();
   void enqueueInvoiceVoid(syncKnex, tenant, invoiceId, {
     actorUserId: user.user_id,
-    allowRemoteMutate: actorCanRemoteMutate,
+    allowRemoteMutate: actorCanRemoteMutateUnderLock,
   });
 
   // Reconcile any still-active Checkout sessions: a voided invoice must never
