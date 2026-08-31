@@ -29,7 +29,7 @@ import {
   CLIENT_ENTITY_TYPE,
   resolveInvoiceExportTarget,
 } from '@alga-psa/shared/billingClients/billingProfileExternalMapping';
-import { QboClientService, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
 import { isQboAutomatedSalesTaxEnabled } from '@alga-psa/integrations/lib/qbo/qboTaxSettings';
 import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
@@ -227,11 +227,14 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   }
 
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
-    const { knex } = await createTenantKnex();
     const tenantId = context.batch.tenant;
     if (!tenantId) {
       throw new Error('QuickBooks adapter requires batch tenant identifier');
     }
+    if (!context.batch.target_realm) {
+      throw new Error('QuickBooks adapter requires an immutable batch target realm to transform invoices');
+    }
+    const { knex } = await createTenantKnex();
 
     if (context.batch.export_type === 'vendor_bill') {
       return this.transformVendorBills(context, knex, tenantId);
@@ -630,9 +633,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       throw new Error('QuickBooks adapter requires batch tenant identifier for delivery');
     }
 
-    const realmId = context.batch.target_realm ?? await getDefaultQboRealmId(tenantId);
+    const realmId = context.batch.target_realm;
     if (!realmId) {
-      throw new Error('QuickBooks adapter requires a connected QuickBooks Online company to deliver invoices');
+      throw new Error('QuickBooks adapter requires an immutable batch target realm to deliver invoices');
     }
     const qboClient = await QboClientService.create(tenantId, realmId);
 

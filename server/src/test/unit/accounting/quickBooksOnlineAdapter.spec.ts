@@ -845,7 +845,7 @@ describe('QuickBooksOnlineAdapter deliver CreditMemo branch', () => {
   });
 });
 
-describe('QuickBooksOnlineAdapter deliver realm defaulting', () => {
+describe('QuickBooksOnlineAdapter delivery realm', () => {
   beforeEach(() => {
     qboClientCreateMock.mockReset();
     getDefaultQboRealmIdMock.mockReset();
@@ -856,19 +856,17 @@ describe('QuickBooksOnlineAdapter deliver realm defaulting', () => {
     vi.restoreAllMocks();
   });
 
-  it('falls back to the default stored realm when batch.target_realm is null', async () => {
+  it('fails closed without a stamped batch realm even when a default realm exists', async () => {
     getDefaultQboRealmIdMock.mockResolvedValue('realm-default-1');
-    qboClientCreateMock.mockResolvedValue({} as any);
-
     const adapter = new QuickBooksOnlineAdapter();
     const context = buildContext([]);
     (context.batch as any).target_realm = null;
 
-    const result = await adapter.deliver({ documents: [] } as any, context);
-
-    expect(getDefaultQboRealmIdMock).toHaveBeenCalledWith(TENANT_ID);
-    expect(qboClientCreateMock).toHaveBeenCalledWith(TENANT_ID, 'realm-default-1');
-    expect(result.deliveredLines).toEqual([]);
+    await expect(adapter.deliver({ documents: [] } as any, context)).rejects.toThrow(
+      /immutable batch target realm/
+    );
+    expect(getDefaultQboRealmIdMock).not.toHaveBeenCalled();
+    expect(qboClientCreateMock).not.toHaveBeenCalled();
   });
 
   it('keeps using the batch target realm when one is stamped', async () => {
@@ -883,16 +881,24 @@ describe('QuickBooksOnlineAdapter deliver realm defaulting', () => {
     expect(qboClientCreateMock).toHaveBeenCalledWith(TENANT_ID, 'realm-qbo-demo');
   });
 
-  it('throws a clear error when no realm is stamped and none is connected', async () => {
-    getDefaultQboRealmIdMock.mockResolvedValue(null);
+});
 
+describe('QuickBooksOnlineAdapter transform realm', () => {
+  beforeEach(() => {
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('fails before mapping work when the batch realm is missing', async () => {
     const adapter = new QuickBooksOnlineAdapter();
     const context = buildContext([]);
     (context.batch as any).target_realm = null;
 
-    await expect(adapter.deliver({ documents: [] } as any, context)).rejects.toThrow(
-      /connected QuickBooks Online company/
-    );
+    await expect(adapter.transform(context)).rejects.toThrow(/immutable batch target realm/);
+    expect(dbModule.createTenantKnex).not.toHaveBeenCalled();
     expect(qboClientCreateMock).not.toHaveBeenCalled();
   });
 });

@@ -791,3 +791,48 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     });
   });
 });
+
+describe('XeroAdapter realm requirements', () => {
+  beforeEach(() => {
+    createTenantKnexMock.mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('fails transform before any mapping or provider work when the batch realm is missing', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([]);
+    (context.batch as any).target_realm = null;
+    const clientCreate = vi.spyOn(XeroClientService, 'create');
+
+    await expect(adapter.transform(context)).rejects.toThrow(/immutable batch target realm/);
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(clientCreate).not.toHaveBeenCalled();
+  });
+
+  it('fails delivery before any provider call when the batch realm is missing', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([]);
+    (context.batch as any).target_realm = null;
+    const clientCreate = vi.spyOn(XeroClientService, 'create');
+
+    await expect(adapter.deliver({ documents: [] } as any, context)).rejects.toThrow(
+      /immutable batch target realm/
+    );
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(clientCreate).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unstamped invoice fetch without calling Xero', async () => {
+    const adapter = new XeroAdapter();
+    const clientCreate = vi.spyOn(XeroClientService, 'create');
+
+    await expect(adapter.fetchExternalInvoice('colliding-id')).resolves.toEqual({
+      success: false,
+      error: 'Xero adapter requires targetRealm to fetch invoices'
+    });
+    expect(clientCreate).not.toHaveBeenCalled();
+  });
+});

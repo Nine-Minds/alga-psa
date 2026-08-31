@@ -200,6 +200,7 @@ describe('realm-exact export invoice selection (DB-backed)', () => {
 describe('realm-exact company mapping lookup (DB-backed)', () => {
   const companyRealmScoped = randomUUID();
   const companyLegacy = randomUUID();
+  const companyLegacyForUpsert = randomUUID();
   const companySingleRealm = randomUUID();
 
   beforeAll(async () => {
@@ -221,6 +222,12 @@ describe('realm-exact company mapping lookup (DB-backed)', () => {
       entityType: 'client',
       entityId: companyLegacy,
       externalId: '888',
+      realm: null
+    });
+    await insertMapping({
+      entityType: 'client',
+      entityId: companyLegacyForUpsert,
+      externalId: '889',
       realm: null
     });
     // Mapped in one realm only.
@@ -273,16 +280,16 @@ describe('realm-exact company mapping lookup (DB-backed)', () => {
     await repo().upsertCompanyMapping({
       tenantId,
       adapterType: ADAPTER,
-      algaCompanyId: companyLegacy,
+      algaCompanyId: companyLegacyForUpsert,
       externalCompanyId: '999',
       targetRealm: REALM_A
     });
 
-    await expect(find(companyLegacy, REALM_A)).resolves.toMatchObject({
+    await expect(find(companyLegacyForUpsert, REALM_A)).resolves.toMatchObject({
       externalCompanyId: '999'
     });
-    await expect(find(companyLegacy, null)).resolves.toMatchObject({
-      externalCompanyId: '888'
+    await expect(find(companyLegacyForUpsert, null)).resolves.toMatchObject({
+      externalCompanyId: '889'
     });
   });
 });
