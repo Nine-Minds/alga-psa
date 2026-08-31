@@ -3,6 +3,7 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { notifyQboConnectionChanged } from '../qbo/qboConnectionChangeProvider';
 import { getDisconnectRecord, createDisconnectRecord, deleteDisconnectRecord, updateTargetOutcome, setRecordStatus, replaceDisconnectTargets } from './repository';
+import { withProviderCredentialLock } from './lock';
 import { writeDisconnectAudit, writeDisconnectAuditInTransaction } from './audit';
 import {
   tombstoneLiveCredentials,
@@ -95,111 +96,135 @@ export async function disconnectProvider(
 ): Promise<DisconnectServiceResult> {
   const secretProvider = (await getSecretProviderInstance()) as unknown as SecretProviderLike;
 
-  let existing = await getDisconnectRecord(knex, tenantId, provider);
-
-  // A terminal record (finalized, or failed_permanent pre-force-finalize) is
-  // only a true "already disconnected" when no live credentials exist: if live
-  // credentials are present alongside the record, the tenant reconnected after
-  // the prior cycle and the record is stale. Leaving it in place would either
-  // short-circuit the next disconnect into a silent no-op (`finalized`) or an
-  // operator dead-end (`failed_permanent`) while the live connection stays
-  // reachable — exactly the lifecycle defect this card fixes. The row is keyed
-  // by (tenant, provider), so the stale row is retired (deleted) and the
-  // first-disconnect path below builds a brand-new cycle: targets computed from
-  // the current live credentials, a fresh correlation id, attempt counts
-  // reset, and the live credentials tombstoned immediately. This is defense in
-  // depth: the OAuth reconnect paths retire terminal records at credential
-  // storage time, but the service must not depend on that cleanup having run.
-  if (existing && (existing.status === 'finalized' || existing.status === 'failed_permanent')) {
-    const hasLive = await hasLiveProviderCredentials(tenantId, provider, secretProvider);
-    if (hasLive) {
-      logger.warn('[providerDisconnect] Starting a fresh disconnect cycle over live credentials after a terminal record', {
-        tenantId,
-        provider,
-        staleStatus: existing.status,
-        staleCorrelationId: existing.correlationId,
-      });
-      // Clear any orphaned tombstone material first so the fresh cycle reads
-      // (and tombstones) the current live credentials as its authoritative
-      // target material.
-      await clearTombstoneCredentials(tenantId, provider, secretProvider);
-      await deleteDisconnectRecord(knex, tenantId, provider);
-      existing = null;
-    } else if (existing.status === 'finalized') {
-      // No live credentials: a finalized record is a stable no-op. Finalization
-      // normally clears the tombstone too; clear it if it ever survived so the
-      // record truly reflects "nothing anywhere".
-      await clearTombstoneCredentials(tenantId, provider, secretProvider);
-      return { status: 'already_disconnected', record: existing };
-    }
-    // `failed_permanent` with no live credentials falls through to the
-    // operator-actionable short-circuit below — an un-finalized operator state
-    // is not silently swallowed.
+  // Initiation runs under the shared credential-write lock (see lock.ts):
+  // observing the current record/credential state and persisting the pending
+  // record must be atomic with respect to the credential storage layer, whose
+  // own check-and-write holds the same lock. A credential write therefore
+  // either completes before this section reads the material (and becomes a
+  // revocation target of the cycle it starts), or begins after the record
+  // exists and is refused by the storage gate — it can never land between the
+  // gate check and the tombstone sweep. Only initiation is locked; the
+  // revocation pass below runs outside it because once the record exists the
+  // gate holds on its own, and provider HTTP calls must not extend a database
+  // transaction.
+  interface InitiationOutcome {
+    earlyResult?: DisconnectServiceResult;
+    record?: ProviderDisconnectRecord;
   }
+  const initiation = await withProviderCredentialLock<InitiationOutcome>(knex, tenantId, provider, async (trx) => {
+    let existing = await getDisconnectRecord(trx, tenantId, provider);
 
-  const tombstoneSecretName = tombstoneCredentialsSecretName(provider);
-  const material = provider === PROVIDER_QBO
-    ? await readQboRevokeMaterial(tenantId, secretProvider, tombstoneSecretName)
-    : await readXeroRevokeMaterial(tenantId, secretProvider, tombstoneSecretName);
-  const hasMaterial = Object.keys(material).length > 0;
+    // A terminal record (finalized, or failed_permanent pre-force-finalize) is
+    // only a true "already disconnected" when no live credentials exist: if live
+    // credentials are present alongside the record, the tenant reconnected after
+    // the prior cycle and the record is stale. Leaving it in place would either
+    // short-circuit the next disconnect into a silent no-op (`finalized`) or an
+    // operator dead-end (`failed_permanent`) while the live connection stays
+    // reachable — exactly the lifecycle defect this card fixes. The row is keyed
+    // by (tenant, provider), so the stale row is retired (deleted) and the
+    // first-disconnect path below builds a brand-new cycle: targets computed from
+    // the current live credentials, a fresh correlation id, attempt counts
+    // reset, and the live credentials tombstoned immediately. This is defense in
+    // depth: the OAuth reconnect paths retire terminal records at credential
+    // storage time, but the service must not depend on that cleanup having run.
+    if (existing && (existing.status === 'finalized' || existing.status === 'failed_permanent')) {
+      const hasLive = await hasLiveProviderCredentials(tenantId, provider, secretProvider);
+      if (hasLive) {
+        logger.warn('[providerDisconnect] Starting a fresh disconnect cycle over live credentials after a terminal record', {
+          tenantId,
+          provider,
+          staleStatus: existing.status,
+          staleCorrelationId: existing.correlationId,
+        });
+        // Clear any orphaned tombstone material first so the fresh cycle reads
+        // (and tombstones) the current live credentials as its authoritative
+        // target material.
+        await clearTombstoneCredentials(tenantId, provider, secretProvider);
+        await deleteDisconnectRecord(trx, tenantId, provider);
+        existing = null;
+      } else if (existing.status === 'finalized') {
+        // No live credentials: a finalized record is a stable no-op. Finalization
+        // normally clears the tombstone too; clear it if it ever survived so the
+        // record truly reflects "nothing anywhere".
+        await clearTombstoneCredentials(tenantId, provider, secretProvider);
+        return { earlyResult: { status: 'already_disconnected' as const, record: existing } };
+      }
+      // `failed_permanent` with no live credentials falls through to the
+      // operator-actionable short-circuit below — an un-finalized operator state
+      // is not silently swallowed.
+    }
 
-  let record = existing;
-  if (!record) {
-    if (!hasMaterial && !(await hasAnyProviderCredentials(tenantId, provider, secretProvider))) {
-      // Nothing connected and nothing tombstoned: record a finalized marker so
-      // repeat disconnect calls are stable no-ops with an audit trail.
+    const tombstoneSecretName = tombstoneCredentialsSecretName(provider);
+    const material = provider === PROVIDER_QBO
+      ? await readQboRevokeMaterial(tenantId, secretProvider, tombstoneSecretName)
+      : await readXeroRevokeMaterial(tenantId, secretProvider, tombstoneSecretName);
+    const hasMaterial = Object.keys(material).length > 0;
+
+    let record = existing;
+    if (!record) {
+      if (!hasMaterial && !(await hasAnyProviderCredentials(tenantId, provider, secretProvider))) {
+        // Nothing connected and nothing tombstoned: record a finalized marker so
+        // repeat disconnect calls are stable no-ops with an audit trail.
+        const correlationId = await generateCorrelationId();
+        record = await createDisconnectRecord(trx, {
+          tenantId,
+          provider,
+          targets: [],
+          correlationId,
+        });
+        await setRecordStatus(trx, tenantId, provider, 'finalized', {
+          finalizedAt: new Date().toISOString(),
+        });
+        await writeDisconnectAudit({
+          knex: trx,
+          tenantId,
+          provider,
+          operation: 'disconnect_finalized',
+          targetId: null,
+          result: 'no_credentials',
+          correlationId,
+          userId: opts.userId,
+        });
+        return { earlyResult: { status: 'no_credentials' as const, record } };
+      }
+
+      // First disconnect: persist the durable pending record before touching any
+      // secret, so a failure between the database write and the credential
+      // tombstoning can never strand moved credentials without a retry-drivable
+      // record. From the moment this row exists the disconnect gates
+      // (isProviderDisconnectActive) hold, so the brief not-yet-tombstoned
+      // window admits no new syncs, exports, or reconnects; the revocation pass
+      // below performs — and after a crash, repeats — the tombstone move as its
+      // first step.
       const correlationId = await generateCorrelationId();
-      record = await createDisconnectRecord(knex, {
+      const targetIds = Object.keys(material);
+      record = await createDisconnectRecord(trx, {
         tenantId,
         provider,
-        targets: [],
+        targets: targetIds.map((targetId) => ({ targetId })),
         correlationId,
       });
-      await setRecordStatus(knex, tenantId, provider, 'finalized', {
-        finalizedAt: new Date().toISOString(),
-      });
+
       await writeDisconnectAudit({
-        knex,
+        knex: trx,
         tenantId,
         provider,
-        operation: 'disconnect_finalized',
+        operation: 'disconnect_started',
         targetId: null,
-        result: 'no_credentials',
+        result: 'pending',
+        attemptCount: 0,
         correlationId,
         userId: opts.userId,
       });
-      return { status: 'no_credentials', record };
     }
 
-    // First disconnect: persist the durable pending record before touching any
-    // secret, so a failure between the database write and the credential
-    // tombstoning can never strand moved credentials without a retry-drivable
-    // record. From the moment this row exists the disconnect gates
-    // (isProviderDisconnectActive) hold, so the brief not-yet-tombstoned
-    // window admits no new syncs, exports, or reconnects; the revocation pass
-    // below performs — and after a crash, repeats — the tombstone move as its
-    // first step.
-    const correlationId = await generateCorrelationId();
-    const targetIds = Object.keys(material);
-    record = await createDisconnectRecord(knex, {
-      tenantId,
-      provider,
-      targets: targetIds.map((targetId) => ({ targetId })),
-      correlationId,
-    });
+    return { record };
+  });
 
-    await writeDisconnectAudit({
-      knex,
-      tenantId,
-      provider,
-      operation: 'disconnect_started',
-      targetId: null,
-      result: 'pending',
-      attemptCount: 0,
-      correlationId,
-      userId: opts.userId,
-    });
+  if (initiation.earlyResult) {
+    return initiation.earlyResult;
   }
+  const record = initiation.record!;
 
   if (record.status === 'failed_permanent') {
     // Nothing retryable remains; the operator must force-finalize.

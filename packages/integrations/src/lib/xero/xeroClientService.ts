@@ -4,6 +4,7 @@ import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/
 import { createTenantKnex } from '@alga-psa/db';
 import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
 import { isProviderDisconnectActive } from '../providerDisconnect/status';
+import { withProviderCredentialLock } from '../providerDisconnect/lock';
 import { PROVIDER_XERO } from '../providerDisconnect/types';
 import { AppError } from '@alga-psa/core';
 import type {
@@ -844,7 +845,15 @@ export class XeroClientService {
       };
 
       this.connections[this.connection.connectionId] = this.connection;
-      await storeTenantConnections(this.tenantId, this.connections);
+      // Persist through the gated upsert (not a raw store): a refresh from a
+      // client instantiated before a disconnect started must not write the
+      // live credential secret back while the disconnect is in flight. Only
+      // the refreshed connection is passed so a concurrently updated sibling
+      // connection is not clobbered with this client's stale copy. QBO's
+      // refresh path does the same via upsertStoredQboCredentials.
+      await upsertStoredXeroConnections(this.tenantId, {
+        [this.connection.connectionId]: this.connection
+      });
     } catch (error) {
       const normalized = this.normalizeError(error);
       if (normalized.code === 'XERO_API_ERROR') {
@@ -974,51 +983,61 @@ export async function upsertStoredXeroConnections(
   updates: XeroConnectionsStore,
   options: { prioritize?: string[] } = {}
 ): Promise<XeroConnectionsStore> {
-  const existing = await getTenantConnections(tenantId);
-  const merged: XeroConnectionsStore = { ...existing, ...updates };
-
-  // No write path (OAuth callback) may store live connections while a
-  // disconnect is in flight: doing so would resurrect a connection the pending
-  // disconnect tombstoned and resume sync. Fail closed — if the disconnect
-  // record cannot be read we assume the disconnect is active. A terminal
-  // record is handled below (retired), never here; only a non-finalized record
-  // blocks storage.
   const { knex } = await createTenantKnex(tenantId);
-  const disconnectActive = await isProviderDisconnectActive(knex, tenantId, PROVIDER_XERO).catch(() => true);
-  if (disconnectActive) {
-    throw new AppError(
-      'XERO_DISCONNECT_IN_PROGRESS',
-      'Xero is being disconnected. Finish or finalize the disconnect before connecting again.'
-    );
-  }
 
-  // Reconnect after a completed (or force-finalized) disconnect: retire the
-  // stale terminal disconnect record BEFORE the new connection becomes visible
-  // to the rest of the system, so the next disconnect starts a fresh cycle
-  // instead of short-circuiting on the old finalized row. A pending disconnect
-  // record is deliberately left alone — reconnect during an in-flight cycle is
-  // blocked upstream. The disconnect service independently treats a terminal
-  // record with live credentials as stale (defense in depth).
-  await retireTerminalDisconnectRecord(tenantId, PROVIDER_XERO);
-
-  if (options.prioritize?.length) {
-    const prioritizedEntries: XeroConnectionsStore = {};
-    for (const id of options.prioritize) {
-      if (merged[id]) {
-        prioritizedEntries[id] = merged[id];
-      }
+  // No write path (OAuth callback, token refresh) may store live connections
+  // while a disconnect is in flight: doing so would resurrect a connection the
+  // pending disconnect tombstoned and resume sync. The gate check and the
+  // secret write hold the shared credential-write lock (see
+  // providerDisconnect/lock.ts), which disconnect initiation also holds while
+  // persisting its record — so the check-and-write is atomic with respect to
+  // initiation and a write can never land between the gate passing and the
+  // disconnect's credential sweep. Fail closed — if the disconnect record
+  // cannot be read we assume the disconnect is active. A terminal record is
+  // handled below (retired), never here; only a non-finalized record blocks
+  // storage.
+  return withProviderCredentialLock(knex, tenantId, PROVIDER_XERO, async (trx) => {
+    const disconnectActive = await isProviderDisconnectActive(trx, tenantId, PROVIDER_XERO).catch(() => true);
+    if (disconnectActive) {
+      throw new AppError(
+        'XERO_DISCONNECT_IN_PROGRESS',
+        'Xero is being disconnected. Finish or finalize the disconnect before connecting again.'
+      );
     }
-    for (const [id, connection] of Object.entries(merged)) {
-      if (!(id in prioritizedEntries)) {
-        prioritizedEntries[id] = connection;
-      }
-    }
-    await storeTenantConnections(tenantId, prioritizedEntries);
-    return prioritizedEntries;
-  }
 
-  await storeTenantConnections(tenantId, merged);
-  return merged;
+    // Reconnect after a completed (or force-finalized) disconnect: retire the
+    // stale terminal disconnect record BEFORE the new connection becomes visible
+    // to the rest of the system, so the next disconnect starts a fresh cycle
+    // instead of short-circuiting on the old finalized row. A pending disconnect
+    // record is deliberately left alone — reconnect during an in-flight cycle is
+    // blocked upstream. The disconnect service independently treats a terminal
+    // record with live credentials as stale (defense in depth).
+    await retireTerminalDisconnectRecord(tenantId, PROVIDER_XERO, trx);
+
+    // Read-merge-write inside the lock so concurrent upserts serialize instead
+    // of losing entries to a stale read.
+    const existing = await getTenantConnections(tenantId);
+    const merged: XeroConnectionsStore = { ...existing, ...updates };
+
+    if (options.prioritize?.length) {
+      const prioritizedEntries: XeroConnectionsStore = {};
+      for (const id of options.prioritize) {
+        if (merged[id]) {
+          prioritizedEntries[id] = merged[id];
+        }
+      }
+      for (const [id, connection] of Object.entries(merged)) {
+        if (!(id in prioritizedEntries)) {
+          prioritizedEntries[id] = connection;
+        }
+      }
+      await storeTenantConnections(tenantId, prioritizedEntries);
+      return prioritizedEntries;
+    }
+
+    await storeTenantConnections(tenantId, merged);
+    return merged;
+  });
 }
 
 export async function resolveXeroOAuthCredentials(

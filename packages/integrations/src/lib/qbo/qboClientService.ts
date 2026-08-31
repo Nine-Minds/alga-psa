@@ -4,6 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { notifyQboConnectionChanged } from './qboConnectionChangeProvider';
 import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
 import { isProviderDisconnectActive } from '../providerDisconnect/status';
+import { withProviderCredentialLock } from '../providerDisconnect/lock';
 import { PROVIDER_QBO } from '../providerDisconnect/types';
 import type { QboTenantCredentials } from './types';
 import { AppError } from '@alga-psa/core';
@@ -308,35 +309,44 @@ async function getTenantQboCredentials(tenantId: string, realmId: string): Promi
 
 export async function upsertStoredQboCredentials(tenantId: string, credentials: QboTenantCredentials): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
-  const allCredentials = await getStoredQboCredentialsMap(tenantId);
+  const { knex } = await createTenantKnex(tenantId);
 
   // No write path (OAuth callback, token refresh) may store live credentials
   // while a disconnect is in flight: doing so would resurrect a connection the
-  // pending disconnect tombstoned and resume sync. Fail closed — if the
-  // disconnect record cannot be read we assume the disconnect is active. A
-  // terminal record is handled below (retired), never here; only a
-  // non-finalized record blocks storage.
-  const { knex } = await createTenantKnex(tenantId);
-  const disconnectActive = await isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => true);
-  if (disconnectActive) {
-    throw new AppError(
-      'QBO_DISCONNECT_IN_PROGRESS',
-      'QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.'
-    );
-  }
+  // pending disconnect tombstoned and resume sync. The gate check and the
+  // secret write hold the shared credential-write lock (see
+  // providerDisconnect/lock.ts), which disconnect initiation also holds while
+  // persisting its record — so the check-and-write is atomic with respect to
+  // initiation and a write can never land between the gate passing and the
+  // disconnect's credential sweep. Fail closed — if the disconnect record
+  // cannot be read we assume the disconnect is active. A terminal record is
+  // handled below (retired), never here; only a non-finalized record blocks
+  // storage.
+  await withProviderCredentialLock(knex, tenantId, PROVIDER_QBO, async (trx) => {
+    const disconnectActive = await isProviderDisconnectActive(trx, tenantId, PROVIDER_QBO).catch(() => true);
+    if (disconnectActive) {
+      throw new AppError(
+        'QBO_DISCONNECT_IN_PROGRESS',
+        'QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.'
+      );
+    }
 
-  allCredentials[credentials.realmId] = credentials;
+    // Reconnect after a completed (or force-finalized) disconnect: retire the
+    // stale terminal disconnect record BEFORE the new connection becomes visible
+    // to the rest of the system, so the next disconnect starts a fresh cycle
+    // instead of short-circuiting on the old finalized row. A pending disconnect
+    // record is deliberately left alone — reconnect during an in-flight cycle is
+    // blocked upstream. The disconnect service independently treats a terminal
+    // record with live credentials as stale (defense in depth).
+    await retireTerminalDisconnectRecord(tenantId, PROVIDER_QBO, trx);
 
-  // Reconnect after a completed (or force-finalized) disconnect: retire the
-  // stale terminal disconnect record BEFORE the new connection becomes visible
-  // to the rest of the system, so the next disconnect starts a fresh cycle
-  // instead of short-circuiting on the old finalized row. A pending disconnect
-  // record is deliberately left alone — reconnect during an in-flight cycle is
-  // blocked upstream. The disconnect service independently treats a terminal
-  // record with live credentials as stale (defense in depth).
-  await retireTerminalDisconnectRecord(tenantId, PROVIDER_QBO);
+    // Read-merge-write inside the lock so concurrent upserts (two realms
+    // connecting at once) serialize instead of losing one realm's entry.
+    const allCredentials = await getStoredQboCredentialsMap(tenantId);
+    allCredentials[credentials.realmId] = credentials;
+    await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET, JSON.stringify(allCredentials));
+  });
 
-  await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET, JSON.stringify(allCredentials));
   logger.info(`Stored QBO credentials for tenant ${tenantId}, realm ${credentials.realmId}`);
   await notifyQboConnectionChanged(tenantId);
 }

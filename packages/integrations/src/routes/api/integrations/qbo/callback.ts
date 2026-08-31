@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 import logger from '@alga-psa/core/logger';
+import { AppError } from '@alga-psa/core';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
@@ -163,8 +164,11 @@ export async function GET(request: Request): Promise<NextResponse> {
   // credential slot and resume sync. The connect route already blocks new
   // flows; this closes the in-flight-callback window. Fail closed — if the
   // disconnect record cannot be read, we cannot prove no disconnect is in
-  // flight, so the callback is refused. The storage layer re-checks the same
-  // gate before any write as defense in depth.
+  // flight, so the callback is refused. This early check is a fast path for a
+  // good error before the token exchange; the storage layer enforces the same
+  // gate atomically with respect to disconnect initiation (shared
+  // credential-write lock), covering a disconnect that starts after this
+  // check passes.
   const { knex } = await createTenantKnex(tenantId);
   const disconnectActive = await isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => true);
   if (disconnectActive) {
@@ -256,6 +260,14 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     return createRedirect(SUCCESS_PATH);
   } catch (error) {
+    // The storage layer refuses the write when a disconnect started after the
+    // route-level gate above passed (its check-and-write is atomic with
+    // disconnect initiation). Surface the same accurate status as the
+    // route-level rejection instead of a generic failure.
+    if (error instanceof AppError && error.code === 'QBO_DISCONNECT_IN_PROGRESS') {
+      logger.info('[qboOAuth] Callback blocked at credential storage: QuickBooks disconnect in progress', { tenantId });
+      return createRedirect(FAILURE_PATH, { qbo_error: 'disconnect_in_progress' });
+    }
     logger.error('[qboOAuth] Failed to complete OAuth callback', {
       tenantId,
       error: error instanceof Error ? error.message : 'unknown_error'

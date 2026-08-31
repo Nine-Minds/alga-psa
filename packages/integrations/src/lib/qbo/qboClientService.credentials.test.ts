@@ -22,7 +22,20 @@ vi.mock('@alga-psa/core/secrets', () => ({
 // which retires any stale terminal provider-disconnect record before the write.
 // Stub the DB so that no-op retirement lookup never reaches a real database.
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async () => ({ knex: {}, tenant: 'tenant-unit-test-1' }),
+  // Minimal transactional knex: the credential upsert holds its disconnect
+  // serialization lock (a raw advisory-lock statement) inside a transaction.
+  createTenantKnex: async () => ({
+    knex: {
+      fn: { now: () => new Date().toISOString() },
+      raw: async () => ({ rows: [] }),
+      transaction: async (cb: (trx: any) => Promise<any>) =>
+        cb({
+          fn: { now: () => new Date().toISOString() },
+          raw: async () => ({ rows: [] }),
+        }),
+    },
+    tenant: 'tenant-unit-test-1',
+  }),
   tenantDb: () => ({
     table: () => ({
       where: () => ({

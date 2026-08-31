@@ -30,6 +30,9 @@ export {
   retireTerminalDisconnectRecord,
 } from './retire';
 export {
+  withProviderCredentialLock,
+} from './lock';
+export {
   tombstoneCredentialsSecretName,
   standardCredentialsSecretName,
 } from './tombstone';

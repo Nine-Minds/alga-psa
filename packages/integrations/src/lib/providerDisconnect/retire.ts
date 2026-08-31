@@ -1,3 +1,4 @@
+import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import { getDisconnectRecord, deleteDisconnectRecord } from './repository';
@@ -40,9 +41,13 @@ import type { DisconnectRecordStatus, ProviderType } from './types';
 export async function retireTerminalDisconnectRecord(
   tenantId: string,
   provider: ProviderType,
+  conn?: Knex,
 ): Promise<{ retired: boolean; recordStatus?: DisconnectRecordStatus }> {
   try {
-    const { knex } = await createTenantKnex(tenantId);
+    // The credential storage layer passes its lock-holding transaction so the
+    // retirement serializes with disconnect initiation like the write it
+    // precedes; standalone callers omit it and get their own connection.
+    const knex = conn ?? (await createTenantKnex(tenantId)).knex;
     const record = await getDisconnectRecord(knex, tenantId, provider);
     if (!record) {
       return { retired: false };

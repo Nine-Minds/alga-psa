@@ -177,9 +177,12 @@ const providerHarness = vi.hoisted(() => {
   type Handler = (arg: any) => any;
 
   let qboRevoke: Handler = () => ok(200, {});
+  let qboTokenExchange: Handler = () =>
+    ok(200, { access_token: 'exchanged-at', refresh_token: 'exchanged-rt', expires_in: 3600, x_refresh_token_expires_in: 8_726_400 });
   let xeroConnection: Handler = () => ok(204);
   let xeroRefresh: Handler = () => ok(200, { access_token: 'refreshed-token' });
   let xeroGrantRevoke: Handler = () => ok(200, {});
+  let xeroConnectionsList: Handler = () => ok(200, []);
 
   function respond(result: any): any {
     if (result?.throw) throw result.throw;
@@ -193,14 +196,18 @@ const providerHarness = vi.hoisted(() => {
     calls.push({ method: 'post', url, body: data, authorization: config?.headers?.Authorization as string | undefined });
     // Match on path suffixes so both the real hosts and the dev-only env
     // override URLs (see the env-driven override suite below) route identically.
+    // Handlers may be async (the interleaving tests pause them mid-flight).
     if (url.includes('tokens/revoke') || url.endsWith('/revoke')) {
-      return respond(qboRevoke(data));
+      return respond(await qboRevoke(data));
+    }
+    if (url.includes('tokens/bearer')) {
+      return respond(await qboTokenExchange(data));
     }
     if (url.includes('connect/revocation')) {
-      return respond(xeroGrantRevoke(data));
+      return respond(await xeroGrantRevoke(data));
     }
     if (url.includes('connect/token')) {
-      return respond(xeroRefresh(data));
+      return respond(await xeroRefresh(data));
     }
     return ok(200, {});
   }
@@ -208,7 +215,15 @@ const providerHarness = vi.hoisted(() => {
   async function del(url: string, config?: { headers?: Record<string, unknown> }): Promise<any> {
     calls.push({ method: 'delete', url, authorization: config?.headers?.Authorization as string | undefined });
     const connectionId = decodeURIComponent(url.substring(url.lastIndexOf('/') + 1));
-    return respond(xeroConnection(connectionId));
+    return respond(await xeroConnection(connectionId));
+  }
+
+  async function get(url: string, config?: { headers?: Record<string, unknown> }): Promise<any> {
+    calls.push({ method: 'get', url, authorization: config?.headers?.Authorization as string | undefined });
+    if (url.includes('/connections')) {
+      return respond(await xeroConnectionsList(url));
+    }
+    return ok(200, {});
   }
 
   return {
@@ -218,8 +233,12 @@ const providerHarness = vi.hoisted(() => {
     ok,
     post,
     del,
+    get,
     setQboRevoke: (h: Handler) => {
       qboRevoke = h;
+    },
+    setQboTokenExchange: (h: Handler) => {
+      qboTokenExchange = h;
     },
     setXeroConnection: (h: Handler) => {
       xeroConnection = h;
@@ -229,6 +248,9 @@ const providerHarness = vi.hoisted(() => {
     },
     setXeroGrantRevoke: (h: Handler) => {
       xeroGrantRevoke = h;
+    },
+    setXeroConnectionsList: (h: Handler) => {
+      xeroConnectionsList = h;
     },
   };
 });
@@ -247,6 +269,66 @@ const loggerMock = vi.hoisted(() => ({
   debug: vi.fn(),
 }));
 
+// ── Advisory-lock-simulating knex ───────────────────────────────────────────
+// The credential-write lock (providerDisconnect/lock.ts) is a transaction-
+// scoped Postgres advisory lock. Every fake knex here shares one in-memory
+// lock table with the same semantics — `pg_advisory_xact_lock` blocks until
+// the holder's outermost transaction settles — so the interleaving tests
+// below exercise real mutual exclusion between the credential storage layer
+// and disconnect initiation instead of a no-op `raw`.
+const knexHarness = vi.hoisted(() => {
+  // key -> waiter queue; key present in the map = lock held.
+  const held = new Map<string, Array<() => void>>();
+  const acquire = async (key: string): Promise<void> => {
+    const waiters = held.get(key);
+    if (!waiters) {
+      held.set(key, []);
+      return;
+    }
+    await new Promise<void>((resolve) => waiters.push(resolve));
+  };
+  const release = (key: string): void => {
+    const waiters = held.get(key);
+    if (!waiters) return;
+    const next = waiters.shift();
+    if (next) next();
+    else held.delete(key);
+  };
+  const nowIso = () => new Date().toISOString();
+  const makeKnex = (): any => {
+    const makeTrx = (heldKeys: string[]): any => ({
+      fn: { now: nowIso },
+      raw: async (sql: string, bindings?: unknown[]) => {
+        if (typeof sql === 'string' && sql.includes('pg_advisory_xact_lock')) {
+          const key = (bindings ?? []).join(' ');
+          // Reentrant within a transaction, like the real advisory lock.
+          if (!heldKeys.includes(key)) {
+            await acquire(key);
+            heldKeys.push(key);
+          }
+        }
+        return { rows: [] };
+      },
+      // Nested transactions (savepoints) share the outer transaction's locks.
+      transaction: async (cb: (trx: any) => Promise<any>) => cb(makeTrx(heldKeys)),
+    });
+    return {
+      fn: { now: nowIso },
+      raw: async () => ({ rows: [] }),
+      transaction: async (cb: (trx: any) => Promise<any>) => {
+        const heldKeys: string[] = [];
+        try {
+          return await cb(makeTrx(heldKeys));
+        } finally {
+          for (const key of heldKeys.splice(0)) release(key);
+        }
+      },
+    };
+  };
+  const reset = () => held.clear();
+  return { makeKnex, reset };
+});
+
 // ── Module seams ────────────────────────────────────────────────────────────
 vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({
@@ -256,16 +338,7 @@ vi.mock('@alga-psa/db', () => ({
     },
   }),
   createTenantKnex: async () => ({
-    knex: {
-      fn: { now: () => new Date().toISOString() },
-      transaction: async (cb: (trx: any) => Promise<any>) =>
-        cb({
-          fn: { now: () => new Date().toISOString() },
-          transaction: async (cb2: (trx: any) => Promise<any>) => cb2(undefined),
-          raw: async () => ({ rows: [] }),
-        }),
-      raw: async () => ({ rows: [] }),
-    },
+    knex: knexHarness.makeKnex(),
     tenant: 'tenant-1',
   }),
 }));
@@ -275,6 +348,9 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getTenantSecret: getTenantSecretMock,
     setTenantSecret: setTenantSecretMock,
     deleteTenantSecret: deleteTenantSecretMock,
+    // App-level config (redirect URIs, base URLs) is absent in tests; the
+    // callback routes fall back to their localhost defaults.
+    getAppSecret: async () => null,
   }),
 }));
 
@@ -284,6 +360,7 @@ vi.mock('axios', () => ({
   default: {
     post: providerHarness.post,
     delete: providerHarness.del,
+    get: providerHarness.get,
     isAxiosError: (e: any) => Boolean(e?.isAxiosError),
   },
   isAxiosError: (e: any) => Boolean(e?.isAxiosError),
@@ -364,15 +441,18 @@ import { NextRequest } from 'next/server';
 const TENANT = 'tenant-1';
 
 function makeKnex(): Knex {
-  return {
-    fn: { now: () => new Date().toISOString() },
-    transaction: async (cb: any) => cb(makeKnex()),
-    raw: async () => ({ rows: [] }),
-  } as unknown as Knex;
+  return knexHarness.makeKnex() as unknown as Knex;
 }
 
 function futureIso(ms: number): string {
   return new Date(Date.now() + ms).toISOString();
+}
+
+/** Drains pending macro/microtasks so a blocked promise chain provably stays blocked. */
+async function flushTasks(rounds = 10): Promise<void> {
+  for (let i = 0; i < rounds; i += 1) {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
 }
 
 function xeroConnectionMaterial(connectionId: string, refreshToken: string) {
@@ -415,6 +495,7 @@ beforeEach(() => {
   fakeDb.reset();
   secretStore.reset();
   providerHarness.reset();
+  knexHarness.reset();
   vi.clearAllMocks();
 
   // Default secret-provider behavior; individual tests override to simulate
@@ -431,9 +512,13 @@ beforeEach(() => {
   resolveQboOAuthCredentialsMock.mockResolvedValue({ clientId: 'qbo-client', clientSecret: 'qbo-secret', source: 'app' });
   resolveXeroOAuthCredentialsMock.mockResolvedValue({ clientId: 'xero-client', clientSecret: 'xero-secret', source: 'app' });
   providerHarness.setQboRevoke(() => providerHarness.ok(200, {}));
+  providerHarness.setQboTokenExchange(() =>
+    providerHarness.ok(200, { access_token: 'exchanged-at', refresh_token: 'exchanged-rt', expires_in: 3600, x_refresh_token_expires_in: 8_726_400 }),
+  );
   providerHarness.setXeroConnection(() => providerHarness.ok(204));
   providerHarness.setXeroRefresh(() => providerHarness.ok(200, { access_token: 'refreshed-token' }));
   providerHarness.setXeroGrantRevoke(() => providerHarness.ok(200, {}));
+  providerHarness.setXeroConnectionsList(() => providerHarness.ok(200, []));
 
   getSessionMock.mockResolvedValue({ user: { tenant: TENANT } });
   getCurrentUserMock.mockResolvedValue({ tenant: TENANT });
@@ -895,6 +980,166 @@ describe('QuickBooks Online disconnect state machine', () => {
     expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toContain('rt-a');
     expect(recordRows()[0].status).toBe('pending_revocation');
   });
+
+  it('a callback credential write in flight when disconnect starts serializes with initiation and its credentials are revoked, not resurrected', async () => {
+    // Forced interleaving: the callback passes the route-level disconnect
+    // check AND the storage-layer gate, then its secret write is paused; a
+    // disconnect is requested mid-write; the write is then released. The write
+    // and disconnect initiation must serialize — the write completes first and
+    // its credentials become revocation targets of the disconnect — so live
+    // credentials can never land after the disconnect's sweep and survive it.
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    providerHarness.setQboTokenExchange(() =>
+      providerHarness.ok(200, { access_token: 'at-b', refresh_token: 'rt-b', expires_in: 3600, x_refresh_token_expires_in: 8_726_400 }),
+    );
+
+    let releaseWrite!: () => void;
+    const writeGate = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    let signalWriteReached!: () => void;
+    const writeReached = new Promise<void>((resolve) => {
+      signalWriteReached = resolve;
+    });
+    setTenantSecretMock.mockImplementation(async (tenant, name, value) => {
+      if (name === QBO_STANDARD_SECRET) {
+        signalWriteReached();
+        await writeGate;
+      }
+      secretStore.set(tenant, name, value);
+    });
+
+    const signingSecret = 'race-test-state-signing-secret';
+    const created = createQboOAuthState({ tenantId: TENANT, userId: USER_ID, secret: signingSecret });
+    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce);
+
+    const previousEdition = process.env.EDITION;
+    const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
+    process.env.EDITION = 'ee';
+    process.env.NEXTAUTH_SECRET = signingSecret;
+    try {
+      const callbackPromise = QboCallbackGET(
+        new Request(
+          `http://localhost:3000/api/integrations/qbo/callback?code=valid-auth-code&realmId=realm-b&state=${encodeURIComponent(created.stateParam)}`,
+          { headers: { cookie: `${QBO_OAUTH_STATE_COOKIE}=${encodeURIComponent(created.cookieValue)}` } },
+        ),
+      );
+      await writeReached;
+
+      // Disconnect requested while the callback's credential write is
+      // mid-flight: initiation must wait for the write, so no disconnect
+      // record may appear while the write is paused.
+      const disconnectPromise = disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+      await flushTasks();
+      expect(recordRows()).toHaveLength(0);
+
+      releaseWrite();
+      const response = await callbackPromise;
+      expect(response.status).toBe(307);
+      expect(response.headers.get('location') ?? '').toContain('qbo_status=success');
+
+      const result = await disconnectPromise;
+      expect(result.status).toBe('disconnected');
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+      if (previousNextAuthSecret === undefined) delete process.env.NEXTAUTH_SECRET;
+      else process.env.NEXTAUTH_SECRET = previousNextAuthSecret;
+    }
+
+    // The raced write became part of the disconnect cycle: both realms were
+    // revoked upstream, the record is finalized over both, and nothing is
+    // available locally to ordinary sync.
+    const revokeBodies = providerHarness.calls
+      .filter((c) => c.url.includes('tokens/revoke') || c.url.endsWith('/revoke'))
+      .map((c) => JSON.stringify(c.body));
+    expect(revokeBodies.some((b) => b.includes('rt-a'))).toBe(true);
+    expect(revokeBodies.some((b) => b.includes('rt-b'))).toBe(true);
+    const record = recordRows()[0];
+    expect(record.status).toBe('finalized');
+    expect(record.targets.map((t: any) => t.targetId).sort()).toEqual(['realm-a', 'realm-b']);
+    expect(record.targets.every((t: any) => t.status === 'revoked')).toBe(true);
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
+    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_QBO)).toBe(false);
+  });
+
+  it('a callback that passed the route gate before a disconnect started cannot store credentials once the disconnect is in flight', async () => {
+    // Forced interleaving: the callback passes the route-level disconnect
+    // check, pauses at the token exchange, a disconnect starts and goes
+    // pending, and only then does the callback proceed to store. The storage
+    // layer must refuse — the check it shares with initiation is atomic, so
+    // the record that now exists is always visible to it.
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    providerHarness.setQboRevoke(() => providerHarness.fail(503, { error: 'server_error' }));
+
+    let releaseExchange!: () => void;
+    const exchangeGate = new Promise<void>((resolve) => {
+      releaseExchange = resolve;
+    });
+    let signalExchangeReached!: () => void;
+    const exchangeReached = new Promise<void>((resolve) => {
+      signalExchangeReached = resolve;
+    });
+    providerHarness.setQboTokenExchange(async () => {
+      signalExchangeReached();
+      await exchangeGate;
+      return providerHarness.ok(200, { access_token: 'at-b', refresh_token: 'rt-b', expires_in: 3600, x_refresh_token_expires_in: 8_726_400 });
+    });
+
+    const signingSecret = 'race-test-state-signing-secret';
+    const created = createQboOAuthState({ tenantId: TENANT, userId: USER_ID, secret: signingSecret });
+    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce);
+
+    const previousEdition = process.env.EDITION;
+    const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
+    process.env.EDITION = 'ee';
+    process.env.NEXTAUTH_SECRET = signingSecret;
+    try {
+      const callbackPromise = QboCallbackGET(
+        new Request(
+          `http://localhost:3000/api/integrations/qbo/callback?code=valid-auth-code&realmId=realm-b&state=${encodeURIComponent(created.stateParam)}`,
+          { headers: { cookie: `${QBO_OAUTH_STATE_COOKIE}=${encodeURIComponent(created.cookieValue)}` } },
+        ),
+      );
+      await exchangeReached;
+
+      // The disconnect starts while the callback is between its gate check
+      // and its write, and stays pending on a transient provider failure.
+      const pending = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+      expect(pending.status).toBe('pending');
+      expect(recordRows()[0].status).toBe('pending_revocation');
+
+      releaseExchange();
+      const response = await callbackPromise;
+      expect(response.status).toBe(307);
+      const location = response.headers.get('location') ?? '';
+      expect(location).toContain('qbo_status=failure');
+      expect(location).toContain('qbo_error=disconnect_in_progress');
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+      if (previousNextAuthSecret === undefined) delete process.env.NEXTAUTH_SECRET;
+      else process.env.NEXTAUTH_SECRET = previousNextAuthSecret;
+    }
+
+    // Nothing stored: the pending disconnect still owns only the original
+    // realm's tombstoned material; the raced tokens never became credentials.
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toContain('rt-a');
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).not.toContain('rt-b');
+    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
+    expect(recordRows()[0].targets.map((t: any) => t.targetId)).toEqual(['realm-a']);
+
+    // The disconnect stays retryable and converges; nothing resurrects after.
+    providerHarness.setQboRevoke(() => providerHarness.ok(200, {}));
+    const done = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(done.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
+  });
 });
 
 describe('Xero disconnect state machine', () => {
@@ -1284,6 +1529,171 @@ describe('Xero disconnect state machine', () => {
     expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
     expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toContain('rt-a');
     expect(recordRows()[0].status).toBe('pending_revocation');
+  });
+
+  it('a callback connection write in flight when disconnect starts serializes with initiation and its connections are revoked, not resurrected', async () => {
+    // Forced interleaving: the callback passes the route-level disconnect
+    // check AND the storage-layer gate, then its secret write is paused; a
+    // disconnect is requested mid-write; the write is then released. The write
+    // and disconnect initiation must serialize — the write completes first and
+    // its connections become revocation targets of the disconnect — so live
+    // connections can never land after the disconnect's sweep and survive it.
+    xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
+    providerHarness.setXeroRefresh(() =>
+      providerHarness.ok(200, { access_token: 'at-new', refresh_token: 'rt-new', expires_in: 1800, refresh_token_expires_in: 7_776_000 }),
+    );
+    providerHarness.setXeroConnectionsList(() =>
+      providerHarness.ok(200, [{ id: 'conn-b', tenantId: 'xt-b', tenantName: 'Org B' }]),
+    );
+
+    let releaseWrite!: () => void;
+    const writeGate = new Promise<void>((resolve) => {
+      releaseWrite = resolve;
+    });
+    let signalWriteReached!: () => void;
+    const writeReached = new Promise<void>((resolve) => {
+      signalWriteReached = resolve;
+    });
+    setTenantSecretMock.mockImplementation(async (tenant, name, value) => {
+      if (name === XERO_STANDARD_SECRET) {
+        signalWriteReached();
+        await writeGate;
+      }
+      secretStore.set(tenant, name, value);
+    });
+
+    const csrfToken = 'a'.repeat(64);
+    const nonce = 'race-write-nonce';
+    const state = Buffer.from(
+      JSON.stringify({ tenantId: TENANT, userId: USER_ID, csrf: csrfToken, codeVerifier: 'race-verifier', nonce }),
+    ).toString('base64url');
+    await storeAccountingOAuthNonceMock('xero', nonce);
+
+    const previousEdition = process.env.EDITION;
+    process.env.EDITION = 'ee';
+    try {
+      const callbackPromise = XeroCallbackGET(
+        new NextRequest(
+          `http://localhost:3000/api/integrations/xero/callback?code=valid-auth-code&state=${state}`,
+          { headers: { cookie: `${XERO_OAUTH_CSRF_COOKIE.name}=${csrfToken}` } },
+        ),
+      );
+      await writeReached;
+
+      // Disconnect requested while the callback's connection write is
+      // mid-flight: initiation must wait for the write, so no disconnect
+      // record may appear while the write is paused.
+      const disconnectPromise = disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+      await flushTasks();
+      expect(recordRows()).toHaveLength(0);
+
+      releaseWrite();
+      const response = await callbackPromise;
+      expect(response.status).toBe(307);
+      expect(response.headers.get('location') ?? '').toContain('xero_status=success');
+
+      const result = await disconnectPromise;
+      expect(result.status).toBe('disconnected');
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+    }
+
+    // The raced write became part of the disconnect cycle: both connections
+    // were deleted upstream, the grant was revoked after the last one, the
+    // record is finalized over all targets, and nothing is available locally
+    // to ordinary sync.
+    const deleteUrls = providerHarness.calls.filter((c) => c.method === 'delete').map((c) => c.url);
+    expect(deleteUrls.some((url) => url.endsWith('/conn-a'))).toBe(true);
+    expect(deleteUrls.some((url) => url.endsWith('/conn-b'))).toBe(true);
+    expect(providerHarness.calls.some((c) => c.url.includes('connect/revocation'))).toBe(true);
+    const record = recordRows()[0];
+    expect(record.status).toBe('finalized');
+    expect(record.targets.map((t: any) => t.targetId).sort()).toEqual([XERO_GRANT_TARGET_ID, 'conn-a', 'conn-b']);
+    expect(record.targets.every((t: any) => t.status === 'revoked')).toBe(true);
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
+    expect(await getStoredXeroConnections(TENANT)).toEqual({});
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_XERO)).toBe(false);
+  });
+
+  it('a callback that passed the route gate before a disconnect started cannot store connections once the disconnect is in flight', async () => {
+    // Forced interleaving: the callback passes the route-level disconnect
+    // check, pauses at the token exchange, a disconnect starts and goes
+    // pending, and only then does the callback proceed to store. The storage
+    // layer must refuse — the check it shares with initiation is atomic, so
+    // the record that now exists is always visible to it.
+    xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
+    providerHarness.setXeroConnection(() => providerHarness.fail(503, { error: 'server_error' }));
+    providerHarness.setXeroConnectionsList(() =>
+      providerHarness.ok(200, [{ id: 'conn-b', tenantId: 'xt-b', tenantName: 'Org B' }]),
+    );
+
+    let releaseExchange!: () => void;
+    const exchangeGate = new Promise<void>((resolve) => {
+      releaseExchange = resolve;
+    });
+    let signalExchangeReached!: () => void;
+    const exchangeReached = new Promise<void>((resolve) => {
+      signalExchangeReached = resolve;
+    });
+    providerHarness.setXeroRefresh(async () => {
+      signalExchangeReached();
+      await exchangeGate;
+      return providerHarness.ok(200, { access_token: 'at-new', refresh_token: 'rt-new', expires_in: 1800, refresh_token_expires_in: 7_776_000 });
+    });
+
+    const csrfToken = 'a'.repeat(64);
+    const nonce = 'race-gate-nonce';
+    const state = Buffer.from(
+      JSON.stringify({ tenantId: TENANT, userId: USER_ID, csrf: csrfToken, codeVerifier: 'race-verifier', nonce }),
+    ).toString('base64url');
+    await storeAccountingOAuthNonceMock('xero', nonce);
+
+    const previousEdition = process.env.EDITION;
+    process.env.EDITION = 'ee';
+    try {
+      const callbackPromise = XeroCallbackGET(
+        new NextRequest(
+          `http://localhost:3000/api/integrations/xero/callback?code=valid-auth-code&state=${state}`,
+          { headers: { cookie: `${XERO_OAUTH_CSRF_COOKIE.name}=${csrfToken}` } },
+        ),
+      );
+      await exchangeReached;
+
+      // The disconnect starts while the callback is between its gate check
+      // and its write, and stays pending on a transient provider failure.
+      const pending = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+      expect(pending.status).toBe('pending');
+      expect(recordRows()[0].status).toBe('pending_revocation');
+
+      releaseExchange();
+      const response = await callbackPromise;
+      expect(response.status).toBe(307);
+      const location = response.headers.get('location') ?? '';
+      expect(location).toContain('xero_status=failure');
+      expect(location).toContain('xero_error=disconnect_in_progress');
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+    }
+
+    // Nothing stored: the pending disconnect still owns only the original
+    // connection's tombstoned material; the raced tokens never became
+    // connections.
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toContain('rt-a');
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).not.toContain('rt-new');
+    expect(await getStoredXeroConnections(TENANT)).toEqual({});
+    expect(recordRows()[0].targets.map((t: any) => t.targetId)).toEqual(['conn-a']);
+
+    // The disconnect stays retryable and converges; nothing resurrects after.
+    providerHarness.setXeroConnection(() => providerHarness.ok(204));
+    const done = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+    expect(done.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
+    expect(await getStoredXeroConnections(TENANT)).toEqual({});
   });
 });
 
