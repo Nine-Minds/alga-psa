@@ -370,8 +370,29 @@ function makeOpsDb() {
       first: async () => rows.find((r) => q._match(r)),
       insert(record: any) {
         const row = { op_id: `op-${++idSeq}`, ...record };
-        rows.push(row);
-        return { returning: async () => [row] };
+        const insertQuery: any = {
+          onConflict() {
+            return insertQuery;
+          },
+          ignore() {
+            return insertQuery;
+          },
+          async returning() {
+            const conflict = rows.some((existing) =>
+              existing.tenant === row.tenant &&
+              existing.adapter_type === row.adapter_type &&
+              existing.operation === row.operation &&
+              existing.alga_entity_type === row.alga_entity_type &&
+              existing.alga_entity_id === row.alga_entity_id &&
+              (existing.target_realm ?? '') === (row.target_realm ?? '') &&
+              existing.status === 'pending'
+            );
+            if (conflict) return [];
+            rows.push(row);
+            return [row];
+          }
+        };
+        return insertQuery;
       },
       update: async (patch: any) => {
         const matched = rows.filter((r) => q._match(r));
@@ -385,7 +406,10 @@ function makeOpsDb() {
   }
 
   const table = vi.fn(() => makeQuery());
-  const knex = Object.assign(table, { fn: { now: () => 'now()' } });
+  const knex = Object.assign(table, {
+    fn: { now: () => 'now()' },
+    raw: (sql: string) => sql
+  });
   return { knex: knex as any, rows };
 }
 
