@@ -592,46 +592,71 @@ describe('accounting integration capability role matrix', () => {
     });
   });
 
-  describe('remote destructive action (voiding an exported invoice)', () => {
-    it('denies Finance (has invoice:update but not remote_mutate) without voiding', async () => {
-      const clientId = await seedClient('Matrix Void Client');
-      const invoiceId = await seedExportedInvoice(clientId);
+  describe('remote destructive action (voiding an invoice)', () => {
+    // The void denial is connection-based: on a connected tenant an actor
+    // without remote_mutate is refused identically for mapped and unmapped
+    // invoices (the predicate never reads the per-invoice mapping row), and on
+    // an unconnected tenant invoice:update alone suffices.
+    const remoteMutateDenial =
+      'Permission denied: voiding invoices while the accounting integration is connected requires the accounting remote-mutate permission.';
+    const credentials = { 'realm-1': { accessToken: 'x', refreshToken: 'y' } } as Record<string, unknown>;
+
+    it('denies Finance on a connected tenant — byte-identical for a mapped and an unmapped invoice', async () => {
+      // Connect at the secret-provider level: the predicate reads connection
+      // state, never a mapping row, so both invoices are refused with the same
+      // error and the denial event cannot reveal which invoice is mapped.
+      remote.getStoredQboCredentialsMap.mockResolvedValue(credentials);
+
+      const clientId = await seedClient('Matrix Void Connected Client');
+      const mappedInvoiceId = await seedExportedInvoice(clientId);
+      const unmappedInvoiceId = await seedLocalInvoice(clientId);
 
       runAs(financeUserId);
-      const result = await voidInvoice(invoiceId, 'Matrix remote-mutate denial');
-      expect(result).toEqual({
-        success: false,
-        error: 'Permission denied: voiding invoices that sync to the accounting integration requires the accounting remote-mutate permission.',
-      });
+      const mappedResult = await voidInvoice(mappedInvoiceId, 'Matrix connected mapped void');
+      const unmappedResult = await voidInvoice(unmappedInvoiceId, 'Matrix connected unmapped void');
 
-      const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
-      expect(invoice.status).toBe('sent');
+      expect(mappedResult).toEqual({ success: false, error: remoteMutateDenial });
+      expect(unmappedResult).toEqual({ success: false, error: remoteMutateDenial });
+
+      for (const invoiceId of [mappedInvoiceId, unmappedInvoiceId]) {
+        const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
+        expect(invoice.status).toBe('sent');
+      }
       expect(remote.qboClientCreateCalls.count).toBe(0);
     });
 
-    it('lets Finance void an unmapped (purely local) invoice without remote_mutate', async () => {
+    it('lets Finance void on an unconnected tenant with invoice:update alone', async () => {
+      // beforeEach leaves the tenant unconnected (empty credentials map); a
+      // purely local invoice voids normally, and even a stale mapping row on an
+      // unconnected tenant does not trigger the remote-mutate gate.
       const clientId = await seedClient('Matrix Local Void Client');
-      const invoiceId = await seedLocalInvoice(clientId);
+      const localInvoiceId = await seedLocalInvoice(clientId);
+      const staleMappedInvoiceId = await seedExportedInvoice(clientId);
 
       runAs(financeUserId);
-      const result = await voidInvoice(invoiceId, 'Matrix local void');
-      expect(result).toEqual({ success: true });
-
-      const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
-      expect(invoice.status).toBe('cancelled');
+      for (const invoiceId of [localInvoiceId, staleMappedInvoiceId]) {
+        const result = await voidInvoice(invoiceId, 'Matrix local void');
+        expect(result).toEqual({ success: true });
+        const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
+        expect(invoice.status).toBe('cancelled');
+      }
       expect(remote.qboClientCreateCalls.count).toBe(0);
     });
 
-    it('allows Admin (remote_mutate) to void an exported invoice', async () => {
-      const clientId = await seedClient('Matrix Void Client 2');
-      const invoiceId = await seedExportedInvoice(clientId);
+    it('allows Admin (remote_mutate) to void mapped and unmapped invoices on a connected tenant', async () => {
+      remote.getStoredQboCredentialsMap.mockResolvedValue(credentials);
+
+      const clientId = await seedClient('Matrix Void Admin Client');
+      const mappedInvoiceId = await seedExportedInvoice(clientId);
+      const unmappedInvoiceId = await seedLocalInvoice(clientId);
 
       runAs(adminUserId);
-      const result = await voidInvoice(invoiceId, 'Matrix admin void');
-      expect(result).toEqual({ success: true });
-
-      const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
-      expect(invoice.status).toBe('cancelled');
+      for (const invoiceId of [mappedInvoiceId, unmappedInvoiceId]) {
+        const result = await voidInvoice(invoiceId, 'Matrix admin void');
+        expect(result).toEqual({ success: true });
+        const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
+        expect(invoice.status).toBe('cancelled');
+      }
       expect(remote.qboClientCreateCalls.count).toBe(0);
     });
 
@@ -655,13 +680,14 @@ describe('accounting integration capability role matrix', () => {
       expect(detailsJson).not.toContain('secret');
     });
 
-    it('writes no remote-void audit row when Finance is refused', async () => {
+    it('writes no remote-void audit row when Finance is refused on a connected tenant', async () => {
+      remote.getStoredQboCredentialsMap.mockResolvedValue(credentials);
       const clientId = await seedClient('Matrix Void NoAudit Client');
       const invoiceId = await seedExportedInvoice(clientId);
 
       runAs(financeUserId);
       const result = await voidInvoice(invoiceId, 'Matrix denied void');
-      expect(result.success).toBe(false);
+      expect(result).toEqual({ success: false, error: remoteMutateDenial });
 
       const auditRows = await readAuditRows('accounting_remote_void');
       expect(auditRows.some((row) => row.details && (row.details as Record<string, unknown>).algaEntityId === invoiceId)).toBe(false);

@@ -152,9 +152,12 @@ describe('Accounting mapping permissions', () => {
       tenantId: ctx.tenantId,
       userId: supportUser.user_id,
       user: supportUser,
+      // The capability split gates mapping mutation on
+      // accounting_integrations:mappings_manage; this user may only read the
+      // catalog (catalog_read) and must be refused every write.
       permissionCheck: (_user, resource, action) => {
-        if (resource === 'billing_settings') {
-          return action === 'read';
+        if (resource === 'accounting_integrations') {
+          return action === 'catalog_read';
         }
         return true;
       }

@@ -12,10 +12,17 @@ import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import { suppressPrepaidReplenishmentForVoidedInvoice } from '../lib/prepaidAutoReplenishment';
+import { hasConnectedQboRealm } from '../services/accountingSync/accountingSyncSettings';
 
 export type VoidInvoiceResult =
   | { success: true }
   | { success: false; error: string };
+
+// Single, connection-based denial for every remote-affecting void refused for an
+// actor without accounting_integrations:remote_mutate. Identical for mapped and
+// unmapped invoices (it never names a per-invoice mapping), so the denial event
+// cannot be used to learn whether any given invoice has a remote entity.
+const VOID_REMOTE_MUTATE_DENIAL = 'Permission denied: voiding invoices while the accounting integration is connected requires the accounting remote-mutate permission.';
 
 export const voidInvoice = withAuth(async (
   user,
@@ -63,23 +70,24 @@ export const voidInvoice = withAuth(async (
   // remote mutation is a distinct, admin-only capability: Finance can run
   // exports but cannot void remote documents, so a void that would propagate
   // remotely is refused up front rather than silently desynchronizing the
-  // books. Unmapped invoices void locally with invoice:update alone.
+  // books.
+  //
+  // The denial depends on the tenant's CONNECTION state, never on whether this
+  // invoice happens to be mapped: when the accounting integration is connected
+  // and the actor lacks remote_mutate, the void is refused identically for
+  // mapped and unmapped invoices, so a denial can never be used to learn
+  // whether a remote entity exists for this invoice. Connection existence is
+  // tenant-level configuration already visible to settings/catalog readers. On
+  // an unconnected tenant invoice:update alone suffices.
   //
   // This read is a fast-fail only. The authoritative re-check runs inside the
-  // transaction below (a mapping can be created by a concurrent export between
-  // this read and the commit), and the enqueue that would trigger the remote
-  // side effect is additionally gated on the actor's remote-mutate capability.
+  // transaction below (the capability can be revoked, or the connection added,
+  // between this read and the commit), and the enqueue that would trigger the
+  // remote side effect is additionally gated on the actor's remote-mutate
+  // capability.
   const actorCanRemoteMutate = await hasPermission(user, 'accounting_integrations', 'remote_mutate', knex);
-  const remoteMapping = await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
-    .where({
-      tenant,
-      integration_type: 'quickbooks_online',
-      alga_entity_type: 'invoice',
-      alga_entity_id: invoiceId
-    })
-    .first('id');
-  if (remoteMapping && !actorCanRemoteMutate) {
-    return { success: false, error: 'Permission denied: voiding invoices that sync to the accounting integration requires the accounting remote-mutate permission.' };
+  if (!actorCanRemoteMutate && await hasConnectedQboRealm(tenant)) {
+    return { success: false, error: VOID_REMOTE_MUTATE_DENIAL };
   }
 
   // Guard: payments exist
@@ -164,20 +172,29 @@ export const voidInvoice = withAuth(async (
     // Authoritative re-check of the remote-mutate capability under the
     // transaction. The pre-transaction read above is only a fast-fail on a
     // snapshot: the capability can be revoked between that read and here, and
-    // the remote-affecting decision (mapping + permission) that decides whether
-    // a remote void is enqueued must be evaluated atomically with the local
-    // state change. This value supersedes `actorCanRemoteMutate` for every
-    // decision below (including the post-commit enqueue).
+    // the remote-affecting decision that decides whether a remote void is
+    // enqueued must be evaluated atomically with the local state change. This
+    // value supersedes `actorCanRemoteMutate` for every decision below
+    // (including the post-commit enqueue).
     actorCanRemoteMutateUnderLock = await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx);
 
-    // Authoritative re-check of the remote-mapping gate under the transaction.
-    // The pre-transaction read above is only a fast-fail on a snapshot: a
-    // concurrent export can map this invoice between that read and here, in
-    // which case the void is now remote-affecting and must be refused for an
-    // actor without remote_mutate rather than cancelled locally while the books
-    // desynchronize. Nothing has been written yet, so returning refuses the
-    // whole void. The remote entity id read here also feeds the audit record
-    // for the remote-affecting branch.
+    // The connection-based denial is repeated under the transaction so a
+    // connection added between the fast-fail and here is caught. Like the
+    // fast-fail it is independent of the per-invoice mapping read below:
+    // mapped and unmapped invoices are refused identically for an actor
+    // without remote_mutate on a connected tenant.
+    if (!actorCanRemoteMutateUnderLock && await hasConnectedQboRealm(tenant)) {
+      return { success: false, error: VOID_REMOTE_MUTATE_DENIAL };
+    }
+
+    // Authoritative read of the remote-mapping gate under the transaction.
+    // This decides the BEHAVIORAL branch — whether a remote void is enqueued
+    // and which remote entity the audit record names — not the permission
+    // denial above. It runs under the invoice row lock so a mapping created by
+    // a concurrent export is visible here; a cancelled invoice can never gain
+    // a mapping because every mapping write holds this same lock and refuses
+    // cancelled invoices (lockInvoiceForExternalSync). Nothing has been written
+    // yet, so returning here refuses the whole void.
     const remoteMapping = await tenantDb(trx, tenant).table('tenant_external_entity_mappings')
       .where({
         tenant,
@@ -186,9 +203,6 @@ export const voidInvoice = withAuth(async (
         alga_entity_id: invoiceId
       })
       .first('id', 'external_entity_id');
-    if (remoteMapping && !actorCanRemoteMutateUnderLock) {
-      return { success: false, error: 'Permission denied: voiding invoices that sync to the accounting integration requires the accounting remote-mutate permission.' };
-    }
     const remoteVoidWillPropagate = Boolean(remoteMapping);
 
     if (isCreditNote) {

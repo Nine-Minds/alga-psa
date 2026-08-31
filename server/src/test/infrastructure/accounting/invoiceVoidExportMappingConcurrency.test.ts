@@ -106,9 +106,14 @@ import { voidInvoice } from '@alga-psa/billing/actions/voidInvoiceActions';
 import { bulkLinkHistoricalInvoices } from '@alga-psa/billing/actions/qboOnboardingActions';
 import { lockInvoiceForExternalSync } from '@alga-psa/billing/lib/invoiceExternalSyncLock';
 import { ACCOUNTING_EXPORT_INVOICE_CANCELLED } from '@alga-psa/billing/lib/invoiceExternalSyncLock';
+import { createExternalEntityMapping, updateExternalEntityMapping } from '@alga-psa/integrations/actions/externalMappingActions';
+import { isActionMessageError } from '@alga-psa/ui/lib/errorHandling';
 import { hasPermission } from '@alga-psa/auth/rbac';
 
 const permissionMock = vi.mocked(hasPermission);
+
+const REMOTE_MUTATE_DENIAL =
+  'Permission denied: voiding invoices while the accounting integration is connected requires the accounting remote-mutate permission.';
 
 let db: Knex;
 
@@ -218,6 +223,11 @@ describe('invoice void vs invoice export mapping — real concurrency', () => {
   });
 
   it('void-then-export: the mapping insertion is refused for an already-cancelled invoice', async () => {
+    // The permission gate is connection-based (this suite's tenant is
+    // connected), so the void needs remote_mutate to proceed — this test is
+    // about the serialize ordering, not the permission denial.
+    permissionMock.mockImplementation(async () => true);
+
     const clientId = await seedClient('Void Then Export Client');
     const invoiceId = await seedFinalizedInvoice(clientId);
 
@@ -305,18 +315,49 @@ describe('invoice void vs invoice export mapping — real concurrency', () => {
     expect((ops[0].payload as Record<string, unknown>).requestedByUserId).toBe(userId);
   }, 60000);
 
-  it('export-then-void without remote_mutate: the void refuses instead of cancelling a now-mapped invoice', async () => {
-    // Default mock: remote_mutate denied, everything else allowed. The void is
-    // launched before the export's mapping commits, so its pre-transaction
-    // fast-fail passes; under the lock it must see the committed mapping and
-    // refuse the remote-affecting void — never cancel locally with no void op.
-    const clientId = await seedClient('Export Then Void Denied Client');
+  it('no-remote-mutate actor on the connected tenant is refused for an unmapped invoice — the denial is connection-based, not mapping-based', async () => {
+    // This suite's tenant is connected (the file-level qbo mock serves a
+    // realm), and the default permission mock denies remote_mutate. The void
+    // must therefore be refused even though this invoice has no mapping at
+    // all: the denial predicate reads connection state, never the per-invoice
+    // mapping row, so a denial cannot be used to learn whether an invoice is
+    // mapped.
+    const clientId = await seedClient('Unmapped Connected Denial Client');
+    const invoiceId = await seedFinalizedInvoice(clientId);
+
+    const voidResult = await voidInvoice(invoiceId, 'unmapped connected void');
+    expect(voidResult.success).toBe(false);
+    expect(voidResult.error).toBe(REMOTE_MUTATE_DENIAL);
+
+    const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
+    expect(invoice.status).toBe('sent');
+    expect(await mappingCount(invoiceId)).toBe(0);
+
+    const ops = await db('accounting_sync_operations')
+      .where({ tenant: tenantId, operation: 'void_invoice', alga_entity_id: invoiceId });
+    expect(ops).toHaveLength(0);
+  }, 60000);
+
+  it('denies when remote_mutate is revoked between the fast-fail and the in-transaction re-check', async () => {
+    // The fast-fail reads the capability against the pool connection; the
+    // in-transaction re-check reads against the transaction. Grant at the pool
+    // (the void proceeds), revoke under the transaction — the re-check must
+    // catch the revocation even though a mapping lands while the void was
+    // queued on the export's held invoice lock.
+    permissionMock.mockImplementation(async (_user, resource, action, conn) => {
+      if (resource === 'accounting_integrations' && action === 'remote_mutate') {
+        return conn === db;
+      }
+      return true;
+    });
+
+    const clientId = await seedClient('Revoked Mid-Flight Client');
     const invoiceId = await seedFinalizedInvoice(clientId);
 
     const exportHolder = await db.transaction();
     try {
       await lockInvoiceForExternalSync(exportHolder, tenantId, invoiceId);
-      const voidPromise = voidInvoice(invoiceId, 'void without remote mutate');
+      const voidPromise = voidInvoice(invoiceId, 'revoked under lock');
       await waitForLockWaiters(1);
 
       await exportHolder('tenant_external_entity_mappings').insert({
@@ -335,16 +376,12 @@ describe('invoice void vs invoice export mapping — real concurrency', () => {
 
       const voidResult = await voidPromise;
       expect(voidResult.success).toBe(false);
-      expect(voidResult.error).toBe(
-        'Permission denied: voiding invoices that sync to the accounting integration requires the accounting remote-mutate permission.'
-      );
+      expect(voidResult.error).toBe(REMOTE_MUTATE_DENIAL);
     } catch (error) {
       if (!exportHolder.isCompleted()) await exportHolder.rollback();
       throw error;
     }
 
-    // The invoice was NOT cancelled: the void was refused before any local
-    // state change, so the local and remote sides stay in agreement.
     const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
     expect(invoice.status).toBe('sent');
     expect(await mappingCount(invoiceId)).toBe(1);
@@ -352,5 +389,89 @@ describe('invoice void vs invoice export mapping — real concurrency', () => {
     const ops = await db('accounting_sync_operations')
       .where({ tenant: tenantId, operation: 'void_invoice', alga_entity_id: invoiceId });
     expect(ops).toHaveLength(0);
+  }, 60000);
+
+  it('createExternalEntityMapping-vs-void: a void that commits first makes the mapping insertion refuse on the cancelled invoice', async () => {
+    permissionMock.mockImplementation(async () => true);
+    const clientId = await seedClient('Mapping After Void Client');
+    const invoiceId = await seedFinalizedInvoice(clientId);
+
+    const voidResult = await voidInvoice(invoiceId, 'void before mapping');
+    expect(voidResult).toEqual({ success: true });
+
+    // The generic mapping CRUD now holds the shared invoice lock before an
+    // invoice-typed insert; on the cancelled invoice it refuses instead of
+    // writing a mapping that would leave a live remote document behind.
+    const result = await createExternalEntityMapping({
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'invoice',
+      alga_entity_id: invoiceId,
+      external_entity_id: `QBO-INV-${invoiceId.slice(0, 8)}`,
+      external_realm_id: 'realm-1',
+    });
+    expect(isActionMessageError(result)).toBe(true);
+    expect((result as { actionError: string }).actionError).toContain('voided');
+    expect(await mappingCount(invoiceId)).toBe(0);
+  }, 60000);
+
+  it('createExternalEntityMapping creates an invoice mapping the void then treats as remote-affecting', async () => {
+    permissionMock.mockImplementation(async () => true);
+    const clientId = await seedClient('Mapping Before Void Client');
+    const invoiceId = await seedFinalizedInvoice(clientId);
+
+    const created = await createExternalEntityMapping({
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'invoice',
+      alga_entity_id: invoiceId,
+      external_entity_id: `QBO-INV-${invoiceId.slice(0, 8)}`,
+      external_realm_id: 'realm-1',
+    });
+    expect(isActionMessageError(created)).toBe(false);
+    expect((created as { id: string }).id).toBeTruthy();
+
+    // The void re-reads the mapping under its invoice lock and enqueues the
+    // remote void rather than cancelling locally with no void op.
+    const voidResult = await voidInvoice(invoiceId, 'void after mapping');
+    expect(voidResult).toEqual({ success: true });
+
+    const invoice = await db('invoices').where({ invoice_id: invoiceId, tenant: tenantId }).first();
+    expect(invoice.status).toBe('cancelled');
+    expect(await mappingCount(invoiceId)).toBe(1);
+
+    const ops = await awaitVoidOps(invoiceId);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toMatchObject({ operation: 'void_invoice', target_realm: 'realm-1' });
+  }, 60000);
+
+  it('updateExternalEntityMapping refuses to retarget an invoice mapping onto a cancelled invoice', async () => {
+    permissionMock.mockImplementation(async () => true);
+    const clientId = await seedClient('Mapping Retarget Client');
+    const liveInvoiceId = await seedFinalizedInvoice(clientId);
+    const cancelledInvoiceId = await seedFinalizedInvoice(clientId);
+
+    const created = await createExternalEntityMapping({
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'invoice',
+      alga_entity_id: liveInvoiceId,
+      external_entity_id: 'QBO-LIVE-1',
+      external_realm_id: 'realm-1',
+    });
+    expect((created as { id: string }).id).toBeTruthy();
+
+    const voidResult = await voidInvoice(cancelledInvoiceId, 'void retarget target');
+    expect(voidResult).toEqual({ success: true });
+
+    // Retargeting which invoice the mapping points at concerns the old and the
+    // new invoice; the lock refuses because the new one is cancelled.
+    const result = await updateExternalEntityMapping((created as { id: string }).id, {
+      alga_entity_id: cancelledInvoiceId,
+    });
+    expect(isActionMessageError(result)).toBe(true);
+    expect((result as { actionError: string }).actionError).toContain('voided');
+
+    const row = await db('tenant_external_entity_mappings')
+      .where({ id: (created as { id: string }).id })
+      .first();
+    expect(row.alga_entity_id).toBe(liveInvoiceId);
   }, 60000);
 });
