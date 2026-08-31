@@ -79,6 +79,11 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
     const externalEntityType: string =
       (mapping.metadata as any)?.external_entity_type ?? 'Invoice';
     const externalId = mapping.external_entity_id;
+    // The actor who voided the invoice in Alga (recorded on the op at enqueue
+    // time by the void action). Null for legacy ops enqueued before this field
+    // existed — the audit then records a system actor.
+    const requestedByUserId: string | null =
+      (op.payload as Record<string, unknown> | null)?.requestedByUserId as string | null ?? null;
 
     try {
       await deps.ops.markInProgress(deps.tenantId, op.op_id);
@@ -120,8 +125,10 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
       });
 
       // Remote destructive operations are audited with no secret material:
-      // only the provider, the remote entity, and the outcome.
+      // only the provider, the remote entity, the outcome, and the actor who
+      // requested the void.
       await writeAccountingAudit(deps.knex, deps.tenantId, 'accounting_remote_void', {
+        userId: requestedByUserId ?? undefined,
         provider: 'quickbooks_online',
         recordId: externalId,
         details: {
@@ -129,6 +136,7 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
           algaEntityId: op.alga_entity_id,
           externalEntityType,
           operation: op.operation,
+          outcome: 'voided',
           source: 'sync_cycle',
         },
       }).catch((error) => {
@@ -147,6 +155,28 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
       });
       const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
       deps.stats.opsFailed += 1;
+
+      // Record the failed remote-void attempt with the same actor as the
+      // enqueue, so partial failures still leave an audit trail.
+      await writeAccountingAudit(deps.knex, deps.tenantId, 'accounting_remote_void', {
+        userId: requestedByUserId ?? undefined,
+        provider: 'quickbooks_online',
+        recordId: externalId,
+        details: {
+          algaEntityType: 'invoice',
+          algaEntityId: op.alga_entity_id,
+          externalEntityType,
+          operation: op.operation,
+          outcome: 'failed',
+          error: message,
+          source: 'sync_cycle',
+        },
+      }).catch((error) => {
+        logger.warn('[invoiceVoidApplier] Failed to write remote-void failure audit entry', {
+          tenantId: deps.tenantId,
+          error,
+        });
+      });
 
       if (nextStatus === 'skipped') {
         await deps.exceptions.createOrUpdate({

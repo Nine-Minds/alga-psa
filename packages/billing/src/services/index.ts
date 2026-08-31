@@ -120,6 +120,7 @@ export {
 export { WorkflowTaskSyncExceptionService } from './accountingSync/syncExceptionService';
 export {
   enqueueInvoiceAutoExport,
+  enqueueInvoiceVoid,
   enqueueVendorBillAutoExport,
   enqueueVendorBillExportRetry,
   satisfyExportOpsForManualBatch

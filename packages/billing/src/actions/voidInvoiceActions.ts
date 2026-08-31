@@ -3,6 +3,7 @@
 
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
+import { writeAccountingAudit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
@@ -64,6 +65,12 @@ export const voidInvoice = withAuth(async (
   // exports but cannot void remote documents, so a void that would propagate
   // remotely is refused up front rather than silently desynchronizing the
   // books. Unmapped invoices void locally with invoice:update alone.
+  //
+  // This read is a fast-fail only. The authoritative re-check runs inside the
+  // transaction below (a mapping can be created by a concurrent export between
+  // this read and the commit), and the enqueue that would trigger the remote
+  // side effect is additionally gated on the actor's remote-mutate capability.
+  const actorCanRemoteMutate = await hasPermission(user, 'accounting_integrations', 'remote_mutate', knex);
   const remoteMapping = await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
     .where({
       tenant,
@@ -72,7 +79,7 @@ export const voidInvoice = withAuth(async (
       alga_entity_id: invoiceId
     })
     .first('id');
-  if (remoteMapping && !(await hasPermission(user, 'accounting_integrations', 'remote_mutate', knex))) {
+  if (remoteMapping && !actorCanRemoteMutate) {
     return { success: false, error: 'Permission denied: voiding invoices that sync to the accounting integration requires the accounting remote-mutate permission.' };
   }
 
@@ -149,6 +156,27 @@ export const voidInvoice = withAuth(async (
     if (lockedInvoice.status === 'cancelled') {
       return { success: false, error: 'Invoice is already voided.' };
     }
+
+    // Authoritative re-check of the remote-mapping gate under the transaction.
+    // The pre-transaction read above is only a fast-fail on a snapshot: a
+    // concurrent export can map this invoice between that read and here, in
+    // which case the void is now remote-affecting and must be refused for an
+    // actor without remote_mutate rather than cancelled locally while the books
+    // desynchronize. Nothing has been written yet, so returning refuses the
+    // whole void. The remote entity id read here also feeds the audit record
+    // for the remote-affecting branch.
+    const remoteMapping = await tenantDb(trx, tenant).table('tenant_external_entity_mappings')
+      .where({
+        tenant,
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'invoice',
+        alga_entity_id: invoiceId
+      })
+      .first('id', 'external_entity_id');
+    if (remoteMapping && !actorCanRemoteMutate) {
+      return { success: false, error: 'Permission denied: voiding invoices that sync to the accounting integration requires the accounting remote-mutate permission.' };
+    }
+    const remoteVoidWillPropagate = Boolean(remoteMapping);
 
     if (isCreditNote) {
       // Claw back the issued pool credit: voiding the source document must
@@ -260,6 +288,31 @@ export const voidInvoice = withAuth(async (
       }
     });
 
+    // The remote-affecting branch is audited in the same transaction as the
+    // local state change so the record survives even if the background drain
+    // is delayed or the process dies between commit and enqueue. The outcome
+    // (voided/failed) is appended by the sync-cycle applier, which carries the
+    // same actor through the op payload. No secret material — only the
+    // provider, the remote entity, and the outcome so far.
+    if (remoteVoidWillPropagate && actorCanRemoteMutate) {
+      await writeAccountingAudit(trx, tenant, 'accounting_remote_void', {
+        userId: user.user_id,
+        provider: 'quickbooks_online',
+        recordId: String(remoteMapping.external_entity_id ?? remoteMapping.id),
+        details: {
+          algaEntityType: 'invoice',
+          algaEntityId: invoiceId,
+          operation: 'void_invoice',
+          outcome: 'enqueued',
+          source: 'invoice_void',
+        },
+      }).catch((error) => {
+        // The audit is durable evidence, never a reason to fail the void
+        // itself — the background applier records the outcome independently.
+        console.warn('[voidInvoice] Failed to write remote-void audit entry', error);
+      });
+    }
+
     return { success: true };
   });
 
@@ -267,9 +320,16 @@ export const voidInvoice = withAuth(async (
     return outcome;
   }
 
-  // Fire-and-forget: enqueue void_invoice op if accounting mapping exists
+  // Fire-and-forget: enqueue void_invoice op if accounting mapping exists.
+  // The enqueue is additionally gated on the actor's remote-mutate capability
+  // so a mapping created by a concurrent export between the gate check and
+  // this point cannot turn a local-only void into a remote mutation the actor
+  // was not authorized to perform.
   const { knex: syncKnex } = await createTenantKnex();
-  void enqueueInvoiceVoid(syncKnex, tenant, invoiceId);
+  void enqueueInvoiceVoid(syncKnex, tenant, invoiceId, {
+    actorUserId: user.user_id,
+    allowRemoteMutate: actorCanRemoteMutate,
+  });
 
   // Reconcile any still-active Checkout sessions: a voided invoice must never
   // be chargeable through an old email link. Best-effort (isolated handlers),

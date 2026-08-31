@@ -251,14 +251,30 @@ export async function satisfyExportOpsForManualBatch(
  * Enqueue a void_invoice op for the given invoice. Unlike auto-export, this
  * fires regardless of the auto-sync toggle because voids must propagate to
  * keep the books consistent. Only fires when EE + connected realm + mapping.
+ *
+ * The remote-affecting branch is additionally gated on the actor's
+ * remote-mutate capability (`allowRemoteMutate`): a mapping created by a
+ * concurrent export between the void action's gate check and this enqueue
+ * must not turn a local-only void into a remote mutation the actor was not
+ * authorized to perform. The actor is carried through to the applier so the
+ * remote-void audit row records the real user, not the sync service.
  */
 export async function enqueueInvoiceVoid(
   knex: Knex,
   tenantId: string,
-  invoiceId: string
+  invoiceId: string,
+  options: { actorUserId?: string; allowRemoteMutate?: boolean } = {}
 ): Promise<void> {
   try {
     if (!isEnterpriseEdition()) {
+      return;
+    }
+
+    if (options.allowRemoteMutate === false) {
+      logger.debug('[accountingSync] Skipping invoice void enqueue — actor lacks remote-mutate', {
+        tenantId,
+        invoiceId,
+      });
       return;
     }
 
@@ -286,7 +302,8 @@ export async function enqueueInvoiceVoid(
       targetRealm: realm,
       operation: 'void_invoice',
       algaEntityType: 'invoice',
-      algaEntityId: invoiceId
+      algaEntityId: invoiceId,
+      payload: { requestedByUserId: options.actorUserId ?? null }
     });
 
     logger.debug('[accountingSync] Queued invoice void', { tenantId, invoiceId, realm });
