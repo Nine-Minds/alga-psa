@@ -49,6 +49,9 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: authUser.tenant })),
   tenantDb: tenantDbMock,
   auditLog: vi.fn(),
+  withTransaction: vi.fn(async (_knex: unknown, cb: (trx: unknown) => Promise<unknown>) =>
+    cb({ raw: vi.fn() })
+  ),
 }));
 
 import {

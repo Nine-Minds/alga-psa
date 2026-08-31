@@ -3,7 +3,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- onboarding actions consult QBO customers and connection state */
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { auditLog, createTenantKnex, tenantDb } from '@alga-psa/db';
+import { auditLog, createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
@@ -79,19 +79,26 @@ async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
  */
 async function auditBroadAccountingRead(
   knex: Knex,
+  tenant: string,
   userId: string | undefined,
   realm: string,
   action: string,
   counts: Record<string, number>
 ): Promise<void> {
   try {
-    await auditLog(knex, {
-      userId,
-      operation: 'ACCOUNTING_CATALOG_READ',
-      tableName: 'tenant_external_entity_mappings',
-      recordId: realm,
-      changedData: {},
-      details: { action, realm, ...counts }
+    // auditLog (and the audit_logs RLS/tenant trigger) read the
+    // app.current_tenant GUC, which server-action request handling does not
+    // establish — so set it transaction-locally around the insert.
+    await withTransaction(knex, async (trx) => {
+      await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenant]);
+      await auditLog(trx, {
+        userId,
+        operation: 'ACCOUNTING_CATALOG_READ',
+        tableName: 'tenant_external_entity_mappings',
+        recordId: realm,
+        changedData: {},
+        details: { action, realm, ...counts }
+      });
     });
   } catch (error) {
     logger.warn('[qboOnboarding] Failed to audit accounting catalog read', {
@@ -276,7 +283,7 @@ export const getCustomerMatchCandidates = withAuth(async (
     }
   }
 
-  await auditBroadAccountingRead(knex, user?.user_id, realm, 'getCustomerMatchCandidates', {
+  await auditBroadAccountingRead(knex, tenant, user?.user_id, realm, 'getCustomerMatchCandidates', {
     localClients: clientRows.length,
     remoteCustomers: qboCustomers.length
   });
@@ -591,7 +598,7 @@ export const getHistoricalInvoiceMatches = withAuth(async (
     clientMappingRows.map((r) => [r.external_entity_id, r.alga_entity_id])
   );
 
-  await auditBroadAccountingRead(knex, user?.user_id, realm, 'getHistoricalInvoiceMatches', {
+  await auditBroadAccountingRead(knex, tenant, user?.user_id, realm, 'getHistoricalInvoiceMatches', {
     localInvoices: allAlgaInvoices.length,
     remoteInvoices: qboInvoices.length
   });
