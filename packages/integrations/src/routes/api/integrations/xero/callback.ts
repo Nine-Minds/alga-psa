@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import logger from '@alga-psa/core/logger';
+import { toSafeProviderError } from '@alga-psa/core';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -61,7 +62,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     return await handleCallbackRequest(request);
   } catch (error) {
-    logger.error('[xeroOAuth] Unexpected Xero OAuth callback failure', { error });
+    logger.error('[xeroOAuth] Unexpected Xero OAuth callback failure', {
+      error: toSafeProviderError('xero', error, { operation: 'oauthCallback' })
+    });
     return createRedirect(FAILURE_PATH, { xero_error: 'unexpected_failure' });
   }
 }
@@ -100,7 +103,11 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
       throw new Error('state missing required fields');
     }
   } catch (error) {
-    console.error('[xeroOAuth] failed to decode state', error);
+    // The state payload carries the PKCE code verifier; never log it or the
+    // decode error content, only that decoding failed.
+    logger.warn('[xeroOAuth] failed to decode state', {
+      errorName: error instanceof Error ? error.name : 'unknown'
+    });
     return createRedirect(FAILURE_PATH, { xero_error: 'invalid_state' });
   }
 
@@ -168,7 +175,16 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     const accessToken: string | undefined = tokenData.access_token;
     const refreshToken: string | undefined = tokenData.refresh_token;
     if (!accessToken || !refreshToken) {
-      console.error('[xeroOAuth] token response missing access or refresh token', tokenData);
+      // Token-exchange responses are sensitive even when malformed: whatever
+      // Xero returned may still contain tokens or request metadata. Log only
+      // which expected fields were absent.
+      logger.error('[xeroOAuth] token response missing expected fields', {
+        tenantId,
+        missingFields: [
+          !accessToken ? 'access_token' : null,
+          !refreshToken ? 'refresh_token' : null
+        ].filter(Boolean)
+      });
       return createRedirect(FAILURE_PATH, { xero_error: 'token_exchange_failed' });
     }
 
@@ -202,7 +218,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
       : [];
 
     if (!connections.length) {
-      console.error('[xeroOAuth] no connections returned for tenant', tenantId);
+      logger.error('[xeroOAuth] no connections returned for tenant', { tenantId });
       return createRedirect(FAILURE_PATH, { xero_error: 'no_connections' });
     }
 
@@ -225,7 +241,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     }
 
     if (!Object.keys(connectionUpdates).length) {
-      console.error('[xeroOAuth] unable to map Xero connections for tenant', tenantId);
+      logger.error('[xeroOAuth] unable to map Xero connections for tenant', { tenantId });
       return createRedirect(FAILURE_PATH, { xero_error: 'connections_unmapped' });
     }
 
@@ -242,9 +258,12 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
 
     return createRedirect(SUCCESS_PATH);
   } catch (error) {
+    // The failed request may be the token exchange itself: reduce to the safe
+    // allowlist (status, provider error code, sanitized message, correlation
+    // ID) — never the response body or request config.
     logger.error('[xeroOAuth] Failed to complete OAuth callback', {
       tenantId,
-      error: error instanceof Error ? error.message : 'unknown_error'
+      error: toSafeProviderError('xero', error, { operation: 'tokenExchange' })
     });
     return createRedirect(FAILURE_PATH, { xero_error: 'oauth_failed' });
   }

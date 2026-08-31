@@ -2,6 +2,7 @@
 import DailyRotateFile from 'winston-daily-rotate-file';
 import winston from 'winston';
 import path from 'path';
+import { sanitizeLogMeta } from '@alga-psa/core';
 
 // Define custom log levels
 const levels = {
@@ -59,8 +60,26 @@ const getCallerInfo = () => {
   return 'Unknown';
 };
 
+// Defense in depth: redact credential-shaped keys (tokens, secrets,
+// Authorization headers, Axios request configs) from structured meta before
+// any transport serializes it.
+const redactFormat = winston.format((info) => {
+  for (const key of Object.keys(info)) {
+    if (key === 'level' || key === 'message' || key === 'timestamp' || key === 'label') {
+      continue;
+    }
+    try {
+      (info as Record<string, unknown>)[key] = sanitizeLogMeta((info as Record<string, unknown>)[key]);
+    } catch {
+      (info as Record<string, unknown>)[key] = '[Unserializable log meta]';
+    }
+  }
+  return info;
+})();
+
 // Define custom formats
 const jsonSimpleFormat = winston.format.combine(
+  redactFormat,
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format((info) => {
     const { timestamp, level, message, ...meta } = info;
@@ -73,6 +92,7 @@ const jsonSimpleFormat = winston.format.combine(
 );
 
 const jsonFormat = winston.format.combine(
+  redactFormat,
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
   winston.format.splat(),
@@ -90,6 +110,7 @@ const jsonFormat = winston.format.combine(
 );
 
 const prettyFormat = winston.format.combine(
+  redactFormat,
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
   winston.format.splat(),
@@ -132,6 +153,7 @@ const prettyFormat = winston.format.combine(
 );
 
 const prettySimpleFormat = winston.format.combine(
+  redactFormat,
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
     const paddedLevel = level.toUpperCase().padEnd(7);

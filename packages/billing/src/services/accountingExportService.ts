@@ -466,11 +466,11 @@ export class AccountingExportService {
     adapterType: string,
     failure: AccountingExportDeliveryDocumentFailure
   ): Promise<void> {
-    const metadata = {
+    const metadata = sanitizeExportErrorMetadata({
       adapterType,
       documentId: failure.documentId,
       ...(failure.metadata ?? {})
-    };
+    });
 
     if (failure.lineIds.length === 0) {
       await this.repository.addError({
@@ -556,14 +556,15 @@ export class AccountingExportService {
       const detailMessage =
         detailMessageParts.length > 0 ? detailMessageParts.join(' | ') : error.message;
 
-      const metadata = {
+      // Batch error metadata is readable with billing settings access, so it
+      // holds allowlisted diagnostics only — never raw provider payloads.
+      const metadata = sanitizeExportErrorMetadata({
         adapterType,
         adapterCode: error.code,
         documentId: documentId ?? null,
         correlationId: correlationId ?? null,
-        validationErrors: Array.isArray(detail.validationErrors) ? detail.validationErrors : undefined,
-        raw: detail.raw ?? undefined
-      };
+        validationErrors: Array.isArray(detail.validationErrors) ? detail.validationErrors : undefined
+      });
 
       if (lineIds.length > 0) {
         for (const lineId of lineIds) {
@@ -656,6 +657,33 @@ export class AccountingExportService {
       }
     }
   }
+}
+
+/**
+ * Batch error metadata is later readable through the billing settings UI/API,
+ * so only allowlisted diagnostics may be persisted. Strips raw provider
+ * payload keys wherever an adapter forwarded them and reduces validation
+ * errors to `{ message, field }` pairs.
+ */
+function sanitizeExportErrorMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if (key === 'raw' || key === 'originalError') {
+      continue;
+    }
+    if (key === 'validationErrors' && Array.isArray(value)) {
+      result[key] = value.map((item) => {
+        const entry = (item ?? {}) as Record<string, unknown>;
+        return {
+          message: typeof entry.message === 'string' ? entry.message : 'Validation error',
+          field: typeof entry.field === 'string' ? entry.field : undefined
+        };
+      });
+      continue;
+    }
+    result[key] = value;
+  }
+  return result;
 }
 
 function collectTransactionIds(lines: AccountingExportLine[]): string[] {

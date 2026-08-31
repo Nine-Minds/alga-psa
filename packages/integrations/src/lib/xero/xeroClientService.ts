@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
-import { AppError } from '@alga-psa/core';
+import { AppError, sanitizeProviderMessage, toSafeProviderError } from '@alga-psa/core';
 import type {
   ExternalCompanyRecord,
   NormalizedCompanyPayload
@@ -663,7 +663,7 @@ export class XeroClientService {
       logger.warn('[XeroClientService] failed to lookup contact after create', {
         tenantId: this.tenantId,
         connectionId: this.connection.connectionId,
-        error
+        error: toSafeProviderError('xero', error, { operation: 'findContactByName' })
       });
       return null;
     }
@@ -798,14 +798,16 @@ export class XeroClientService {
               }))
             : [];
 
+          // Allowlisted fields only — never attach the raw provider element:
+          // it carries the full invoice (customer, line items, amounts).
           return {
             documentId: invoiceNumber ?? undefined,
             validationErrors,
-            message:
+            message: sanitizeProviderMessage(
               validationErrors.length > 0
                 ? validationErrors.map((item) => item.message).join('; ')
-                : 'Validation error',
-            raw: element
+                : 'Validation error'
+            )
           };
         });
 
@@ -823,15 +825,19 @@ export class XeroClientService {
         });
       }
 
+      // Reduce the provider response to allowlisted fields; the body itself
+      // can contain tokens, contact data, and invoice contents.
+      const safe = toSafeProviderError('xero', error, { correlationId });
       return new AppError('XERO_API_ERROR', 'Unexpected Xero API error', {
         status,
-        correlationId,
-        raw: data
+        correlationId: safe.correlationId,
+        providerErrorCode: safe.providerErrorCode,
+        providerMessage: safe.message
       });
     }
 
     return new AppError('XERO_UNKNOWN_ERROR', 'Unknown Xero client error', {
-      originalError: error
+      originalError: toSafeProviderError('xero', error)
     });
   }
 }
@@ -872,7 +878,11 @@ async function getTenantConnections(tenantId: string): Promise<XeroConnectionsSt
       return parsed as XeroConnectionsStore;
     }
   } catch (error) {
-    logger.error('[XeroClientService] failed to parse stored credentials', { tenantId, error });
+    // Parse errors can quote the stored secret payload; log only the error type.
+    logger.error('[XeroClientService] failed to parse stored credentials', {
+      tenantId,
+      errorName: error instanceof Error ? error.name : 'unknown'
+    });
   }
   return {};
 }
