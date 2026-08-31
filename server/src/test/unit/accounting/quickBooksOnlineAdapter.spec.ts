@@ -812,6 +812,7 @@ describe('QuickBooksOnlineAdapter deliver CreditMemo branch', () => {
       '../../../../../packages/billing/src/repositories/invoiceMappingRepository'
     );
     vi.spyOn(KnexInvoiceMappingRepository.prototype, 'findInvoiceMapping').mockResolvedValue(null);
+    vi.spyOn(KnexInvoiceMappingRepository.prototype, 'findUnlinkedInvoiceMapping').mockResolvedValue(null);
     vi.spyOn(KnexInvoiceMappingRepository.prototype, 'upsertInvoiceMapping').mockResolvedValue(undefined);
 
     const adapter = new QuickBooksOnlineAdapter();
