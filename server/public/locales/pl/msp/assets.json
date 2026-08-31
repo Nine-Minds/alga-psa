@@ -1178,14 +1178,6 @@
       "saveFailed": "Nie udało się utworzyć harmonogramu konserwacji"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Dokumenty i hasła",
-    "description": "Połączona karta zawierająca dokumenty zasobów, dane uwierzytelniające i powiązane bezpieczne zapisy",
-    "passwords": {
-      "title": "Hasła i tajemnice",
-      "comingSoon": "Już wkrótce bezpieczne zarządzanie hasłami."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Harmonogramy konserwacji",
     "description": "Zakładka zarządzania harmonogramem konserwacji dla planowanych usług i prac cyklicznych",

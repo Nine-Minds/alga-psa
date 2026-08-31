@@ -179,8 +179,8 @@ describe('workflow worker startup', () => {
       });
 
       const checker = registerFeatureFlagCheckerMock.mock.calls[0]?.[0];
-      await checker('release-v1-5-feature', { tenantId: 'tenant-1' });
-      expect(featureFlagIsEnabledMock).toHaveBeenCalledWith('release-v1-5-feature', {
+      await checker('sample-flag', { tenantId: 'tenant-1' });
+      expect(featureFlagIsEnabledMock).toHaveBeenCalledWith('sample-flag', {
         tenantId: 'tenant-1'
       });
 

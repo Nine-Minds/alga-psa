@@ -3023,7 +3023,6 @@
           "test": {
             "sent": "Teams-Testnachricht gesendet.",
             "failed": "Teams-Testnachricht fehlgeschlagen.",
-            "featureDisabled": "Microsoft Teams ist für diesen Mandanten nicht aktiviert.",
             "integrationInactive": "Aktivieren Sie die Teams-Integration, bevor Sie eine Testnachricht senden.",
             "capabilityDisabled": "Aktivieren Sie die Funktion für den persönlichen Bot, bevor Sie eine Testnachricht senden.",
             "botNotConfigured": "Konfigurieren Sie die Teams-Bot-Anmeldedaten, bevor Sie eine Testnachricht senden.",
@@ -3032,7 +3031,6 @@
             "skipped": "Die Teams-Testnachricht wurde übersprungen."
           },
           "steps": {
-            "featureFlag": "Microsoft Teams-Funktionsfreigabe",
             "integrationStatus": "Status der Teams-Integration",
             "capabilities": "Teams-Funktionen",
             "microsoftProfile": "Bereitschaft des Microsoft-Profils",
@@ -3044,7 +3042,6 @@
             "recentDeliveryHealth": "Aktueller Zustand der Teams-Zustellung"
           },
           "recommendation": {
-            "featureFlag": "Aktivieren Sie Microsoft Teams für diesen Mandanten.",
             "activate": "Aktivieren Sie die Teams-Integration in den Einstellungen.",
             "capabilities": "Aktivieren Sie den persönlichen Bot und Aktivitätsbenachrichtigungen für Teams.",
             "profile": "Wählen Sie ein bereites Microsoft-Profil für Teams aus.",
@@ -3235,8 +3232,8 @@
               "remedy": "Lassen Sie den Benutzer sich mit Microsoft anmelden (MSP-Portal-SSO oder die Teams-Registerkarte), damit sein Konto zugeordnet wird."
             },
             "feature_disabled": {
-              "cause": "Microsoft Teams ist für diesen Mandanten nicht aktiviert, daher werden Sendungen übersprungen, während die Konfiguration erhalten bleibt.",
-              "remedy": "Aktivieren Sie die Version-1.5-Funktionsfreigabe für diesen Mandanten."
+              "cause": "Die Teams-Funktion war für diesen Mandanten deaktiviert, als die Zustellung versucht wurde (vor 1.5).",
+              "remedy": "Teams ist jetzt allgemein verfügbar; wiederholen Sie den Versand."
             },
             "integration_inactive": {
               "cause": "Die Teams-Integration ist für diesen Mandanten nicht aktiv.",

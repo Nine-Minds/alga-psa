@@ -4,14 +4,13 @@
  * (client-passwords-tab group).
  *
  * Since the credentials vault, the client Passwords surface is gated by
- * `useCredentialsVaultTab` (EE + release-v1-5-feature + credentials tier);
- * when that vault gate is ON the unified Passwords tab REPLACES only the
- * legacy Hudu-only Passwords tab. The general "Hudu" client tab (F070) stays
- * registered whenever EE + Hudu connected + this client mapped — the flag
- * never removes it. Flag off ⇒ the legacy Hudu pair (Hudu + Hudu Passwords
- * behind `useHuduClientTab`) is preserved exactly. A registration probe
- * mirrors that spread, and a source-wiring check pins the real ClientDetails
- * registration.
+ * `useCredentialsVaultTab` (EE + credentials tier); when that vault gate is
+ * ON the unified Passwords tab REPLACES only the legacy Hudu-only Passwords
+ * tab. The general "Hudu" client tab (F070) stays registered whenever EE +
+ * Hudu connected + this client mapped — the vault gate never removes it.
+ * Gate closed ⇒ the legacy Hudu pair (Hudu + Hudu Passwords behind
+ * `useHuduClientTab`) is preserved exactly. A registration probe mirrors that
+ * spread, and a source-wiring check pins the real ClientDetails registration.
  */
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -25,22 +24,16 @@ const {
   isEnterpriseRef,
   getHuduClientContextMock,
   getCredentialsContextMock,
-  useFeatureFlagMock,
 } = vi.hoisted(() => ({
   isEnterpriseRef: { value: true },
   getHuduClientContextMock: vi.fn(),
   getCredentialsContextMock: vi.fn(),
-  useFeatureFlagMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {
     return isEnterpriseRef.value;
   },
-}));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: useFeatureFlagMock,
 }));
 
 vi.mock('@enterprise/lib/actions/integrations/huduDataActions', () => ({
@@ -95,19 +88,16 @@ function passwordsTab() {
 beforeEach(() => {
   getHuduClientContextMock.mockReset();
   getCredentialsContextMock.mockReset();
-  useFeatureFlagMock.mockReset();
   isEnterpriseRef.value = true;
-  // Default: vault gate closed (flag off), legacy Hudu gate open.
-  useFeatureFlagMock.mockReturnValue({ enabled: false });
+  // Default: vault gate closed (tier probe false), legacy Hudu gate open.
   getCredentialsContextMock.mockResolvedValue({ tierOk: false, huduConnected: false, flagIrrelevantHere: true });
   getHuduClientContextMock.mockResolvedValue({ connected: true, mapped: true });
 });
 
 describe('T080: client "Passwords" tab registration gate', () => {
   it('keeps the general Hudu tab and swaps only the password surface when the vault gate is on', async () => {
-    // Vault gate on: EE + flag + tier. The general Hudu tab must remain; only
-    // the legacy Hudu Passwords tab is replaced by the unified credentials tab.
-    useFeatureFlagMock.mockReturnValue({ enabled: true });
+    // Vault gate on: EE + tier. The general Hudu tab must remain; only the
+    // legacy Hudu Passwords tab is replaced by the unified credentials tab.
     getCredentialsContextMock.mockResolvedValue({ tierOk: true, huduConnected: false, flagIrrelevantHere: true });
 
     const tabs = await renderTabs();

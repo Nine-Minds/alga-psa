@@ -833,7 +833,6 @@
         "editPricingSchedule": "Prijsschema bewerken"
       },
       "validation": {
-        "currencySettingsLoading": "Valuta-instellingen worden nog geladen; probeer het zo opnieuw",
         "customRatePositive": "Aangepast tarief moet een positief getal zijn",
         "customRateRequired": "Aangepast tarief is vereist wanneer het standaardtarief niet wordt gebruikt",
         "durationPositive": "Duur moet een positief getal zijn",

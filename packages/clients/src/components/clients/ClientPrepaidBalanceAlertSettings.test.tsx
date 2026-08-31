@@ -4,17 +4,6 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-let flagEnabled = true;
-let flagLoading = false;
-const flagMock = vi.fn((_flagKey: string, _opts?: { defaultValue?: boolean }) => ({
-  enabled: flagEnabled,
-  loading: flagLoading,
-}));
-
-vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: (flagKey: string, opts?: { defaultValue?: boolean }) => flagMock(flagKey, opts),
-}));
-
 const getSettingsMock = vi.fn();
 const updateSettingsMock = vi.fn();
 const getContractOverridesMock = vi.fn();
@@ -58,8 +47,6 @@ import ClientPrepaidBalanceAlertSettings from './ClientPrepaidBalanceAlertSettin
 
 describe('ClientPrepaidBalanceAlertSettings', () => {
   beforeEach(() => {
-    flagEnabled = true;
-    flagLoading = false;
     getSettingsMock.mockReset();
     updateSettingsMock.mockReset();
     getContractOverridesMock.mockReset();
@@ -76,21 +63,6 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     updateSettingsMock.mockResolvedValue({ success: true });
     getContractOverridesMock.mockResolvedValue([]);
     updateContractOverrideMock.mockResolvedValue({ success: true });
-  });
-
-  it('renders nothing while the feature flag is loading', async () => {
-    flagLoading = true;
-    const { container } = render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
-    expect(container.innerHTML).toBe('');
-    expect(screen.queryByText('Prepaid Balance Alerts')).toBeNull();
-  });
-
-  it('renders nothing (structurally absent) when the flag is disabled', async () => {
-    flagEnabled = false;
-    flagLoading = false;
-    const { container } = render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
-    expect(container.innerHTML).toBe('');
-    expect(screen.queryByText('Prepaid Balance Alerts')).toBeNull();
   });
 
   it('initializes the credit currency from the client default when no policy exists', async () => {
@@ -281,20 +253,10 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     );
   });
 
-  it('keeps the card busy while the flag is still resolving and while the read is in flight', async () => {
-    // While the flag loads the read action must not fire.
-    flagLoading = true;
-    flagEnabled = false;
-    const { rerender } = render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(getSettingsMock).not.toHaveBeenCalled();
-
-    // Flag resolves enabled; the read fires and Save stays disabled until done.
-    flagLoading = false;
-    flagEnabled = true;
+  it('keeps the card busy while the read is in flight', async () => {
     let resolveRead: (value: unknown) => void = () => undefined;
     getSettingsMock.mockReturnValue(new Promise((res) => { resolveRead = res; }));
-    rerender(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
+    render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
     await waitFor(() => expect(getSettingsMock).toHaveBeenCalled());
     expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
 

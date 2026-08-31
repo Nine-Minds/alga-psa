@@ -1162,14 +1162,6 @@
       "saveFailed": "Kan onderhoudsschema niet maken"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documenten en wachtwoorden",
-    "description": "Gecombineerd tabblad voor activadocumenten, inloggegevens en gerelateerde beveiligde records",
-    "passwords": {
-      "title": "Wachtwoorden en geheimen",
-      "comingSoon": "Veilig wachtwoordbeheer binnenkort beschikbaar."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Onderhoudsschema's",
     "description": "Tabblad Onderhoudsschemabeheer voor geplande service en terugkerende werkzaamheden",

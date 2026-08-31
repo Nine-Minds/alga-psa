@@ -3,9 +3,8 @@
 /**
  * Credentials vault list screen (EE-only, Pro tier).
  *
- * Gating: `release-v1-5-feature` flag, EE edition (implicit — this module is
- * only reachable from EE via the `@enterprise` alias), and `getCredentialsContext`
- * (tier). Off ⇒ renders nothing, so the nav-less flag-off state is preserved.
+ * Gating: EE edition (implicit — this module is only reachable from EE via
+ * the `@enterprise` alias) and `getCredentialsContext` (tier).
  *
  * SECURITY (NFR1): list payloads are metadata-only. Revealed values live ONLY in
  * transient component state keyed by row id — cleared on Hide, on Refresh, and
@@ -44,7 +43,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient } from '@alga-psa/types';
@@ -130,8 +128,6 @@ function ListChrome({
 
 export function CredentialsScreen({ clientId, entityType, entityId, defaultClientId }: CredentialsScreenProps) {
   const { t } = useTranslation('msp/credentials');
-  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
-  const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
 
   const entityScoped = Boolean(entityType && entityId);
 
@@ -154,7 +150,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     hide: handleHide,
     copyPassword: handleCopy,
     copyOtp: handleCopyOtp,
-  } = useCredentialsList({ enabled: flagEnabled, clientId, entityType, entityId });
+  } = useCredentialsList({ enabled: true, clientId, entityType, entityId });
 
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState<string>('all');
@@ -198,7 +194,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   // client), so skip the fetch there; the form dialog self-fetches when it
   // needs a picker.
   useEffect(() => {
-    if (!flagEnabled || entityScoped) return;
+    if (entityScoped) return;
     let cancelled = false;
     getAllClients(false)
       .then((list) => {
@@ -208,7 +204,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     return () => {
       cancelled = true;
     };
-  }, [flagEnabled, entityScoped]);
+  }, [entityScoped]);
 
   const handleFormSubmit = async (value: CredentialFormValue) => {
     let result: CredentialSaveResult;
@@ -298,10 +294,6 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
 
   const clientName = (id: string) =>
     clients.find((client) => client.client_id === id)?.client_name ?? null;
-
-  if (!flagEnabled) {
-    return null;
-  }
 
   if (isLoading && !credentials) {
     return (

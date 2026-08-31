@@ -3023,7 +3023,6 @@
           "test": {
             "sent": "Wiadomość testowa Teams wysłana.",
             "failed": "Wiadomość testowa Teams nie powiodła się.",
-            "featureDisabled": "Microsoft Teams nie jest włączony dla tej organizacji.",
             "integrationInactive": "Aktywuj integrację Teams przed wysłaniem wiadomości testowej.",
             "capabilityDisabled": "Włącz funkcję bota osobistego przed wysłaniem wiadomości testowej.",
             "botNotConfigured": "Skonfiguruj poświadczenia bota Teams przed wysłaniem wiadomości testowej.",
@@ -3032,7 +3031,6 @@
             "skipped": "Wiadomość testowa Teams została pominięta."
           },
           "steps": {
-            "featureFlag": "Włączenie funkcji Microsoft Teams",
             "integrationStatus": "Stan integracji Teams",
             "capabilities": "Możliwości Teams",
             "microsoftProfile": "Gotowość profilu Microsoft",
@@ -3044,7 +3042,6 @@
             "recentDeliveryHealth": "Ostatni stan dostarczania Teams"
           },
           "recommendation": {
-            "featureFlag": "Włącz Microsoft Teams dla tej organizacji.",
             "activate": "Aktywuj integrację Teams w ustawieniach.",
             "capabilities": "Włącz bota osobistego i powiadomienia o aktywności dla Teams.",
             "profile": "Wybierz gotowy profil Microsoft dla Teams.",
@@ -3235,8 +3232,8 @@
               "remedy": "Poproś użytkownika o zalogowanie się za pomocą konta Microsoft (SSO portalu MSP lub karta Teams), aby jego konto zostało zmapowane."
             },
             "feature_disabled": {
-              "cause": "Microsoft Teams nie jest włączony dla tej organizacji, więc wysyłki są pomijane, natomiast konfiguracja jest zachowywana.",
-              "remedy": "Włącz funkcję wersji 1.5 dla tej organizacji."
+              "cause": "Funkcja Teams była wyłączona dla tej organizacji w momencie próby dostarczenia (przed 1.5).",
+              "remedy": "Teams jest teraz ogólnie dostępny; ponów wysyłkę."
             },
             "integration_inactive": {
               "cause": "Integracja Teams nie jest aktywna dla tej organizacji.",
