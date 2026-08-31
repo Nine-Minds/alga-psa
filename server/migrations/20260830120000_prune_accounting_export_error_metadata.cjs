@@ -12,7 +12,8 @@
  */
 
 const BATCH_SIZE = 500;
-const AFFECTED_PREDICATE = "metadata ?| array['raw', 'originalError', 'validationErrors']";
+// `\\?` keeps knex from reading the jsonb `?|` operator as a binding placeholder.
+const AFFECTED_PREDICATE = "metadata \\?| array['raw', 'originalError', 'validationErrors']";
 const MAX_MESSAGE_LENGTH = 300;
 
 // Mirrors MESSAGE_SECRET_PATTERNS in packages/core/src/lib/providerErrors.ts:
