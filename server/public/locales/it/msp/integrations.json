@@ -3023,7 +3023,6 @@
           "test": {
             "sent": "Messaggio di prova di Teams inviato.",
             "failed": "Messaggio di prova di Teams non riuscito.",
-            "featureDisabled": "Microsoft Teams non è abilitato per questo tenant.",
             "integrationInactive": "Attiva l'integrazione di Teams prima di inviare un messaggio di prova.",
             "capabilityDisabled": "Abilita la funzionalità bot personale prima di inviare un messaggio di prova.",
             "botNotConfigured": "Configura le credenziali del bot di Teams prima di inviare un messaggio di prova.",
@@ -3032,7 +3031,6 @@
             "skipped": "Il messaggio di prova di Teams è stato ignorato."
           },
           "steps": {
-            "featureFlag": "Abilitazione della funzionalità Microsoft Teams",
             "integrationStatus": "Stato dell'integrazione di Teams",
             "capabilities": "Funzionalità di Teams",
             "microsoftProfile": "Disponibilità del profilo Microsoft",
@@ -3044,7 +3042,6 @@
             "recentDeliveryHealth": "Stato recente della consegna di Teams"
           },
           "recommendation": {
-            "featureFlag": "Abilita Microsoft Teams per questo tenant.",
             "activate": "Attiva l'integrazione di Teams nelle impostazioni.",
             "capabilities": "Abilita il bot personale e le notifiche di attività per Teams.",
             "profile": "Seleziona un profilo Microsoft pronto per Teams.",
@@ -3235,8 +3232,8 @@
               "remedy": "Fai in modo che l'utente acceda con Microsoft (SSO del portale MSP o la scheda Teams) affinché il suo account venga associato."
             },
             "feature_disabled": {
-              "cause": "Microsoft Teams non è abilitato per questo tenant, pertanto gli invii vengono ignorati mentre la configurazione viene conservata.",
-              "remedy": "Abilita la funzionalità della versione 1.5 per questo tenant."
+              "cause": "La funzionalità Teams era disabilitata per questo tenant al momento del tentativo di consegna (prima della 1.5).",
+              "remedy": "Teams è ora disponibile per tutti; riprova l'invio."
             },
             "integration_inactive": {
               "cause": "L'integrazione di Teams non è attiva per questo tenant.",

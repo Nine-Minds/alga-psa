@@ -38,7 +38,6 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { ClientBillingSchedule } from './ClientBillingSchedule';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface BillingConfigurationProps {
     client: IClient;
@@ -52,9 +51,6 @@ const isReturnedActionError = (value: unknown) =>
 const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onSave, contacts = [] }) => {
     const { t } = useTranslation('msp/clients');
     const [activeTab, setActiveTab] = useState('general');
-    const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1-5-feature', {
-        defaultValue: false,
-    });
     const [billingConfig, setBillingConfig] = useState({
         payment_terms: client.payment_terms || 'net_30',
         credit_limit: client.credit_limit || 0,
@@ -273,11 +269,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                         defaultCurrencyCode={client.default_currency_code}
                     />
 
-                    {creditDrawdownEnabled && (
-                        <ClientCreditDrawdownSettings
-                            clientId={client.client_id}
-                        />
-                    )}
+                    <ClientCreditDrawdownSettings
+                        clientId={client.client_id}
+                    />
 
                     <ClientExternalCreditSettings
                         clientId={client.client_id}

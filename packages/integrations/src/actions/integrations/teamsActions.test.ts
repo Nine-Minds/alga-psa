@@ -120,14 +120,13 @@ const hoisted = vi.hoisted(() => {
 	  return {
 	    state,
 	    hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
-	    isFeatureFlagEnabledMock: vi.fn(async (..._args: unknown[]) => true),
 	    fetchMock: vi.fn(),
 	    knexMock,
 	  };
 	});
 
 const { microsoftProfiles, teamsIntegrations, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
-const { hasPermissionMock, isFeatureFlagEnabledMock, fetchMock, knexMock } = hoisted;
+const { hasPermissionMock, fetchMock, knexMock } = hoisted;
 
 const DEFAULT_MEETING_SETTINGS = {
   defaultMeetingOrganizerUpn: null,
@@ -155,11 +154,6 @@ vi.mock('@alga-psa/db', () => ({
     table: (table: string) => conn(table).where({ tenant }),
     unscoped: (table: string) => conn(table),
   }),
-}));
-
-vi.mock('@alga-psa/core/features', () => ({
-  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
-  isFeatureFlagEnabled: hoisted.isFeatureFlagEnabledMock,
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -232,8 +226,6 @@ describe('Teams integration actions', () => {
     tenantSecrets.clear();
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
-    isFeatureFlagEnabledMock.mockClear();
-    isFeatureFlagEnabledMock.mockResolvedValue(true);
     fetchMock.mockReset();
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ access_token: 'graph-token' }), {
       status: 200,
@@ -263,7 +255,6 @@ describe('Teams integration actions', () => {
       success: false,
       error: 'Microsoft Teams integration is only available in Enterprise Edition.',
     });
-    expect(isFeatureFlagEnabledMock).not.toHaveBeenCalled();
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
@@ -276,29 +267,18 @@ describe('Teams integration actions', () => {
     expect(diagnostics.overallStatus).toBe('fail');
     expect(diagnostics.steps).toEqual([
       expect.objectContaining({
-        id: 'feature_flag',
+        id: 'availability',
         status: 'fail',
         detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
       }),
     ]);
     expect(testMessage).toEqual({
       status: 'skipped',
-      reason: 'feature_disabled',
+      reason: 'ee_unavailable',
       detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
       deliveryId: null,
     });
     expect(hasPermissionMock).not.toHaveBeenCalled();
-  });
-
-  it('returns a disabled result when release-v1-5-feature is off', async () => {
-    isFeatureFlagEnabledMock.mockResolvedValue(false);
-
-    const result = await getTeamsIntegrationStatus();
-
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft Teams integration is not enabled for this tenant.',
-    });
   });
 
   it('T083/T084: keeps the Teams integration record tenant-scoped and returns defaults when missing', async () => {

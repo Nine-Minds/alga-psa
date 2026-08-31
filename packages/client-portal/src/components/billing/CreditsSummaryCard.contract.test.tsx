@@ -6,18 +6,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CreditsSummaryCard from './CreditsSummaryCard';
 
-const featureFlagState = vi.hoisted(() => ({
-  enabled: false,
-  loading: false,
-  error: null as Error | null,
-}));
-
 const getClientCreditSummaryMock = vi.hoisted(() => vi.fn());
 const getClientCreditHistoryMock = vi.hoisted(() => vi.fn());
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => featureFlagState,
-}));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
@@ -79,12 +69,9 @@ function activeCreditRow() {
   };
 }
 
-describe('CreditsSummaryCard credit history (release-v1-5-feature)', () => {
+describe('CreditsSummaryCard credit history', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    featureFlagState.enabled = false;
-    featureFlagState.loading = false;
-    featureFlagState.error = null;
     getClientCreditSummaryMock.mockResolvedValue(summaryWith([activeCreditRow()]));
     getClientCreditHistoryMock.mockResolvedValue([
       {
@@ -116,17 +103,7 @@ describe('CreditsSummaryCard credit history (release-v1-5-feature)', () => {
     cleanup();
   });
 
-  it('T154: renders no history affordance when the flag is off', async () => {
-    render(
-      <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />
-    );
-
-    expect(await screen.findByText('Available Credit')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /view history/i })).not.toBeInTheDocument();
-  });
-
-  it('T155: flag on renders the history button and opens a ledger dialog listing rows', async () => {
-    featureFlagState.enabled = true;
+  it('T155: renders the history button and opens a ledger dialog listing rows', async () => {
     render(
       <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />
     );
@@ -145,7 +122,6 @@ describe('CreditsSummaryCard credit history (release-v1-5-feature)', () => {
   });
 
   it('T155a: credit_issuance rows (production prepayment finalization) keep their invoice reference', async () => {
-    featureFlagState.enabled = true;
     getClientCreditHistoryMock.mockResolvedValue([
       {
         transaction_id: 'tx-real-issuance',
@@ -180,8 +156,7 @@ describe('CreditsSummaryCard credit history (release-v1-5-feature)', () => {
     expect(screen.getByText('Issued')).toBeInTheDocument();
   });
 
-  it('T156: flag on with empty history shows the empty state', async () => {
-    featureFlagState.enabled = true;
+  it('T156: empty history shows the empty state', async () => {
     getClientCreditHistoryMock.mockResolvedValue([]);
     render(
       <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />
@@ -193,7 +168,6 @@ describe('CreditsSummaryCard credit history (release-v1-5-feature)', () => {
   });
 
   it('T157: a history load error degrades to the dialog empty state', async () => {
-    featureFlagState.enabled = true;
     getClientCreditHistoryMock.mockResolvedValue({ permissionError: 'denied' });
     render(
       <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />
@@ -205,7 +179,6 @@ describe('CreditsSummaryCard credit history (release-v1-5-feature)', () => {
   });
 
   it('T158: history errors never break the underlying credit card', async () => {
-    featureFlagState.enabled = true;
     getClientCreditHistoryMock.mockRejectedValue(new Error('boom'));
     render(
       <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />

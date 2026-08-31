@@ -77,7 +77,6 @@
     "invoiceAmount": "Factuurbedrag:",
     "selectCreditToApply": "Krediet selecteren om toe te passen",
     "amountToApply": "Toe te passen bedrag",
-    "creditOrderNote": "Kredieten worden toegepast op volgorde van vervaldatum (oudste eerst)",
     "creditOrderNoteExpirationFirst": "Kredieten worden toegepast op volgorde van vervaldatum (eerst het snelst vervallende)",
     "creditOrderNoteOldestFirst": "Kredieten worden toegepast op volgorde van aanmaakdatum (oudste eerst)",
     "creditOrderNoteNewestFirst": "Kredieten worden toegepast op volgorde van aanmaakdatum (nieuwste eerst)",

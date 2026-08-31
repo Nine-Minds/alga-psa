@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const state = {
-    featureEnabled: true,
     integration: {
       selected_profile_id: 'profile-1',
       install_status: 'active',
@@ -99,11 +98,6 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/core/features', () => ({
-  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
-  isFeatureFlagEnabled: vi.fn(async () => hoisted.state.featureEnabled),
-}));
-
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
     getTenantSecret: vi.fn(async () => 'client-secret'),
@@ -172,7 +166,6 @@ function graphResponse(status: number, requestId = 'request-1') {
 
 describe('deliverTeamsNotificationImpl per-category channel routing (F044/F045)', () => {
   beforeEach(() => {
-    hoisted.state.featureEnabled = true;
     hoisted.state.integration = {
       selected_profile_id: 'profile-1',
       install_status: 'active',

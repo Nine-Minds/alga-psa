@@ -3023,7 +3023,6 @@
           "test": {
             "sent": "Mensagem de teste das equipes enviada.",
             "failed": "A mensagem de teste do Teams falhou.",
-            "featureDisabled": "O Microsoft Teams não está habilitado para este locatário.",
             "integrationInactive": "Ative a integração do Teams antes de enviar uma mensagem de teste.",
             "capabilityDisabled": "Habilite o recurso de bot pessoal antes de enviar uma mensagem de teste.",
             "botNotConfigured": "Configure as credenciais do bot do Teams antes de enviar uma mensagem de teste.",
@@ -3032,7 +3031,6 @@
             "skipped": "A mensagem de teste do Teams foi ignorada."
           },
           "steps": {
-            "featureFlag": "Habilitação do recurso Microsoft Teams",
             "integrationStatus": "Status de integração de equipes",
             "capabilities": "Capacidades de equipes",
             "microsoftProfile": "Preparação do perfil da Microsoft",
@@ -3044,7 +3042,6 @@
             "recentDeliveryHealth": "Integridade recente da entrega do Teams"
           },
           "recommendation": {
-            "featureFlag": "Habilite o Microsoft Teams para este locatário.",
             "activate": "Ative a integração do Teams nas configurações.",
             "capabilities": "Habilite bot pessoal e notificações de atividades para equipes.",
             "profile": "Selecione um perfil Microsoft pronto para Teams.",
@@ -3235,8 +3232,8 @@
               "remedy": "Peça ao usuário para entrar com a Microsoft (SSO do portal MSP ou a guia do Teams) para que sua conta seja mapeada."
             },
             "feature_disabled": {
-              "cause": "O Microsoft Teams não está habilitado para este locatário, portanto os envios são ignorados enquanto a configuração é preservada.",
-              "remedy": "Habilite o recurso da versão 1.5 para este locatário."
+              "cause": "O recurso do Teams estava desabilitado para este locatário quando a entrega foi tentada (antes da 1.5).",
+              "remedy": "O Teams agora está disponível de forma geral; tente enviar novamente."
             },
             "integration_inactive": {
               "cause": "A integração do Teams não está ativa para este locatário.",

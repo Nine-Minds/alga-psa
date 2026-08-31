@@ -148,9 +148,7 @@ algasim seed msgraph client -p '{
 algasim seed msgraph client -p '{"clientId":"11111111-2222-4333-8444-999999999999","clientSecret":"algasim-bot-secret"}'
 ```
 
-**3. Set the tenant up through the product.** Enable
-`release-v1-5-feature` for the tenant in PostHog (or disable feature flags in a
-local-only environment), then open **Settings → Integrations**:
+**3. Set the tenant up through the product.** Open **Settings → Integrations**:
 
 - *Providers → Microsoft → Add profile*: client id, tenant id
   (`11111111-2222-4333-8444-555555555555`) and secret from step 2.
@@ -272,8 +270,7 @@ The whole loop, end to end:
 # Locally on pg-boss, enqueue it:
 #   INSERT INTO pgboss.job (name, data) VALUES
 #     ('renew-telephony-call-subscriptions', '{"tenantId":"<tenant>"}');
-# (`telephony_providers` must have an active teams-phone row, and the tenant
-#  needs release-v1-5-feature enabled — the ingest path is deny-by-default.)
+# (`telephony_providers` must have an active teams-phone row.)
 
 algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15551234567","durationSeconds":180}'
 algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15557654321","answered":false}'
