@@ -64,6 +64,11 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
 
 vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
   isProviderDisconnectActive: isProviderDisconnectActiveMock,
+  getProviderDisconnectStatusInfo: vi.fn(async () => null),
+  getProviderCredentialWriteDisposition: vi.fn(async (knex, tenant, provider) =>
+    (await isProviderDisconnectActiveMock(knex, tenant, provider)) ? 'disconnect_in_progress' : 'allowed'
+  ),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
   PROVIDER_QBO: 'quickbooks_online',
   PROVIDER_XERO: 'xero'
 }));
@@ -94,6 +99,7 @@ function buildXeroState(overrides: Partial<{
   csrf: string;
   codeVerifier: string;
   nonce: string;
+  initiatedAt: string;
 }> = {}): string {
   const payload = {
     tenantId: 'tenant-1',
@@ -101,6 +107,7 @@ function buildXeroState(overrides: Partial<{
     csrf: 'csrf-token',
     codeVerifier: 'verifier-123',
     nonce: 'nonce-123',
+    initiatedAt: '2026-08-31T12:00:00.000Z',
     ...overrides
   };
   return Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -135,10 +142,13 @@ describe('Xero OAuth routes', () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     getCurrentUserWithRevocationCheckMock.mockResolvedValue({ ...liveUser });
     hasPermissionMock.mockResolvedValue(true);
-    createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-1' });
+    createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-1', knex: {} });
     getSecretProviderInstanceMock.mockResolvedValue({});
     storeAccountingOAuthNonceMock.mockResolvedValue(undefined);
-    consumeAccountingOAuthNonceMock.mockResolvedValue(true);
+    consumeAccountingOAuthNonceMock.mockResolvedValue({
+      tenantId: 'tenant-1',
+      initiatedAt: '2026-08-31T12:00:00.000Z'
+    });
     resolveXeroOAuthCredentialsMock.mockResolvedValue({
       clientId: 'tenant-client-id',
       clientSecret: 'tenant-client-secret',
@@ -260,7 +270,11 @@ describe('Xero OAuth routes', () => {
     );
 
     // The nonce backing the issued state is registered for single use.
-    expect(storeAccountingOAuthNonceMock).toHaveBeenCalledWith('xero', expect.any(String));
+    expect(storeAccountingOAuthNonceMock).toHaveBeenCalledWith(
+      'xero',
+      expect.any(String),
+      expect.objectContaining({ tenantId: 'tenant-1', initiatedAt: expect.any(String) })
+    );
 
     expect(loggerInfoMock).toHaveBeenCalledWith('[xeroOAuth] Starting Xero OAuth connect flow', {
       tenantId: 'tenant-1',
@@ -300,7 +314,10 @@ describe('Xero OAuth routes', () => {
           refreshToken: 'refresh-token'
         })
       }),
-      { prioritize: ['connection-1'] }
+      {
+        prioritize: ['connection-1'],
+        authorizationFlowStartedAt: '2026-08-31T12:00:00.000Z'
+      }
     );
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('xero_status=success');
@@ -337,7 +354,7 @@ describe('Xero OAuth routes', () => {
   });
 
   it('callback denies a replayed state (already consumed) with no side effects', async () => {
-    consumeAccountingOAuthNonceMock.mockResolvedValue(false);
+    consumeAccountingOAuthNonceMock.mockResolvedValue(null);
 
     const { GET } = await import('@/app/api/integrations/xero/callback/route');
 
@@ -380,7 +397,10 @@ describe('Xero OAuth routes', () => {
   it('T032: callback rejects with disconnect_in_progress while a Xero disconnect is active and never stores connections', async () => {
     isProviderDisconnectActiveMock.mockResolvedValue(true);
     // The connect route registered the state nonce for single use.
-    consumeAccountingOAuthNonceMock.mockResolvedValue(true);
+    consumeAccountingOAuthNonceMock.mockResolvedValue({
+      tenantId: 'tenant-1',
+      initiatedAt: '2026-08-31T12:00:00.000Z'
+    });
 
     const { GET } = await import('@/app/api/integrations/xero/callback/route');
     const state = buildXeroState();

@@ -9,6 +9,7 @@ export interface QboOAuthStatePayload {
   tenantId: string;
   userId: string;
   csrf: string;
+  initiatedAt: string;
   issuedAt: number;
   expiresAt: number;
   nonce: string;
@@ -46,13 +47,20 @@ export function createQboOAuthState(params: {
   userId: string;
   secret: string;
   ttlSeconds?: number;
+  initiatedAt?: string;
 }): { stateParam: string; cookieValue: string; payload: QboOAuthStatePayload } {
-  const issuedAt = Math.floor(Date.now() / 1000);
+  const initiatedAt = params.initiatedAt ?? new Date().toISOString();
+  const initiatedAtMs = Date.parse(initiatedAt);
+  if (!Number.isFinite(initiatedAtMs)) {
+    throw new Error('QuickBooks OAuth state requires a valid initiation timestamp.');
+  }
+  const issuedAt = Math.floor(initiatedAtMs / 1000);
   const expiresAt = issuedAt + (params.ttlSeconds ?? QBO_OAUTH_STATE_MAX_AGE_SECONDS);
   const payload: QboOAuthStatePayload = {
     tenantId: params.tenantId,
     userId: params.userId,
     csrf: randomBytes(24).toString('hex'),
+    initiatedAt,
     issuedAt,
     expiresAt,
     nonce: randomBytes(12).toString('hex'),
@@ -102,6 +110,8 @@ export function validateQboOAuthState(params: {
       typeof payload.tenantId !== 'string' ||
       typeof payload.userId !== 'string' ||
       typeof payload.csrf !== 'string' ||
+      typeof payload.initiatedAt !== 'string' ||
+      !Number.isFinite(Date.parse(payload.initiatedAt)) ||
       typeof payload.issuedAt !== 'number' ||
       typeof payload.expiresAt !== 'number' ||
       typeof payload.nonce !== 'string'
@@ -129,6 +139,7 @@ export function validateQboOAuthState(params: {
       tenantId: payload.tenantId,
       userId: payload.userId,
       csrf: payload.csrf,
+      initiatedAt: payload.initiatedAt,
       issuedAt: payload.issuedAt,
       expiresAt: payload.expiresAt,
       nonce: payload.nonce,

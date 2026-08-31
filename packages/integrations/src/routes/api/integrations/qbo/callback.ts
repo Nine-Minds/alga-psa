@@ -15,8 +15,9 @@ import {
   QBO_TOKEN_URL
 } from '../../../../lib/qbo/qboClientService';
 import {
-  isProviderDisconnectActive,
-  PROVIDER_QBO
+  getProviderCredentialWriteDisposition,
+  PROVIDER_QBO,
+  withProviderCredentialLock
 } from '../../../../lib/providerDisconnect';
 import {
   buildClearedQboOAuthStateCookie,
@@ -146,7 +147,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     provider: 'qbo',
     tenantId: statePayload.tenantId,
     userId: statePayload.userId,
-    nonce: statePayload.nonce
+    nonce: statePayload.nonce,
+    initiatedAt: statePayload.initiatedAt
   });
   if (!authz.ok) {
     logger.warn('[qboOAuth] Callback authorization failed', {
@@ -158,22 +160,22 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const tenantId = statePayload.tenantId;
 
-  // Reject a callback that lands while a QuickBooks disconnect is pending or
-  // otherwise non-finalized: the authorization may predate the disconnect, but
-  // completing it would write live credentials back into the tombstoned
-  // credential slot and resume sync. The connect route already blocks new
-  // flows; this closes the in-flight-callback window. Fail closed — if the
-  // disconnect record cannot be read, we cannot prove no disconnect is in
-  // flight, so the callback is refused. This early check is a fast path for a
-  // good error before the token exchange; the storage layer enforces the same
-  // gate atomically with respect to disconnect initiation (shared
-  // credential-write lock), covering a disconnect that starts after this
-  // check passes.
+  // Check the trusted flow start under the same lock as disconnect initiation.
+  // This rejects active disconnects and pre-disconnect flows even after their
+  // record finalized. The storage layer repeats the check atomically with the
+  // credential write in case a disconnect starts after this early gate.
   const { knex } = await createTenantKnex(tenantId);
-  const disconnectActive = await isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => true);
-  if (disconnectActive) {
-    logger.info('[qboOAuth] Callback blocked: QuickBooks disconnect in progress', { tenantId });
-    return createRedirect(FAILURE_PATH, { qbo_error: 'disconnect_in_progress' });
+  const writeDisposition = await withProviderCredentialLock(knex, tenantId, PROVIDER_QBO, (trx) =>
+    getProviderCredentialWriteDisposition(trx, tenantId, PROVIDER_QBO, authz.flowInitiatedAt)
+  ).catch(() => 'disconnect_in_progress' as const);
+  if (writeDisposition !== 'allowed') {
+    logger.info('[qboOAuth] Callback blocked by credential-write provenance gate', {
+      tenantId,
+      disposition: writeDisposition
+    });
+    return createRedirect(FAILURE_PATH, {
+      qbo_error: writeDisposition === 'stale_authorization' ? 'state_replayed' : writeDisposition
+    });
   }
 
   const secretProvider = await getSecretProviderInstance();
@@ -250,7 +252,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       realmId,
       accessTokenExpiresAt: new Date(now + expiresInSeconds * 1000).toISOString(),
       refreshTokenExpiresAt: new Date(now + refreshExpiresInSeconds * 1000).toISOString()
-    });
+    }, { authorizationFlowStartedAt: authz.flowInitiatedAt });
 
     logger.info('[qboOAuth] Completed QuickBooks OAuth callback', {
       tenantId,
@@ -267,6 +269,10 @@ export async function GET(request: Request): Promise<NextResponse> {
     if (error instanceof AppError && error.code === 'QBO_DISCONNECT_IN_PROGRESS') {
       logger.info('[qboOAuth] Callback blocked at credential storage: QuickBooks disconnect in progress', { tenantId });
       return createRedirect(FAILURE_PATH, { qbo_error: 'disconnect_in_progress' });
+    }
+    if (error instanceof AppError && error.code === 'QBO_STALE_AUTHORIZATION') {
+      logger.info('[qboOAuth] Callback blocked at credential storage: stale QuickBooks authorization', { tenantId });
+      return createRedirect(FAILURE_PATH, { qbo_error: 'state_replayed' });
     }
     logger.error('[qboOAuth] Failed to complete OAuth callback', {
       tenantId,

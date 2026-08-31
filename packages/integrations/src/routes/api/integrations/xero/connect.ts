@@ -12,7 +12,12 @@ import {
   getXeroRedirectUri,
   resolveXeroOAuthCredentials
 } from '../../../../lib/xero/xeroClientService';
-import { isProviderDisconnectActive, PROVIDER_XERO } from '../../../../lib/providerDisconnect';
+import {
+  getProviderDisconnectStatusInfo,
+  isProviderDisconnectActive,
+  PROVIDER_XERO,
+  withProviderCredentialLock
+} from '../../../../lib/providerDisconnect';
 import { generateOauthCsrfToken, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
 import {
@@ -93,20 +98,40 @@ async function handleConnectRequest(): Promise<NextResponse> {
 
   try {
     const credentials = await resolveXeroOAuthCredentials(tenant, secretProvider);
-    const csrfToken = generateOauthCsrfToken();
-    const { verifier, challenge } = createPkcePair();
-    const nonce = crypto.randomBytes(12).toString('hex');
-    const statePayload = {
-      tenantId: tenant,
-      userId: sessionUser.user_id,
-      csrf: csrfToken,
-      codeVerifier: verifier,
-      nonce
-    };
-    const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
-
     const scopeConfig = getXeroOAuthScopeConfig();
-    await storeAccountingOAuthNonce('xero', nonce);
+    const oauthState = await withProviderCredentialLock(knex, tenant, PROVIDER_XERO, async (trx) => {
+      const active = await isProviderDisconnectActive(trx, tenant, PROVIDER_XERO).catch(() => true);
+      if (active) return null;
+      const status = await getProviderDisconnectStatusInfo(trx, tenant, PROVIDER_XERO);
+      const finalizedAtMs = status?.finalizedAt ? Date.parse(status.finalizedAt) : Number.NaN;
+      const initiatedAt = new Date(
+        Number.isFinite(finalizedAtMs) ? Math.max(Date.now(), finalizedAtMs + 1) : Date.now()
+      ).toISOString();
+      const csrfToken = generateOauthCsrfToken();
+      const { verifier, challenge } = createPkcePair();
+      const nonce = crypto.randomBytes(12).toString('hex');
+      const statePayload = {
+        tenantId: tenant,
+        userId: sessionUser.user_id,
+        csrf: csrfToken,
+        codeVerifier: verifier,
+        nonce,
+        initiatedAt
+      };
+      await storeAccountingOAuthNonce('xero', nonce, { tenantId: tenant, initiatedAt });
+      return {
+        csrfToken,
+        challenge,
+        state: Buffer.from(JSON.stringify(statePayload)).toString('base64url')
+      };
+    });
+    if (!oauthState) {
+      return NextResponse.json(
+        { error: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.' },
+        { status: 409 }
+      );
+    }
+    const { csrfToken, challenge, state } = oauthState;
 
     logger.info('[xeroOAuth] Starting Xero OAuth connect flow', {
       tenantId: tenant,

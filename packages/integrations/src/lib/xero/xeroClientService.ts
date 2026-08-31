@@ -3,8 +3,10 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
-import { isProviderDisconnectActive } from '../providerDisconnect/status';
-import { withProviderCredentialLock } from '../providerDisconnect/lock';
+import {
+  getProviderCredentialWriteDisposition,
+  withProviderCredentialLock,
+} from '../providerDisconnect/lock';
 import { PROVIDER_XERO } from '../providerDisconnect/types';
 import { AppError } from '@alga-psa/core';
 import type {
@@ -981,27 +983,32 @@ export async function getStoredXeroConnections(tenantId: string): Promise<XeroCo
 export async function upsertStoredXeroConnections(
   tenantId: string,
   updates: XeroConnectionsStore,
-  options: { prioritize?: string[] } = {}
+  options: { prioritize?: string[]; authorizationFlowStartedAt?: string } = {}
 ): Promise<XeroConnectionsStore> {
   const { knex } = await createTenantKnex(tenantId);
 
-  // No write path (OAuth callback, token refresh) may store live connections
-  // while a disconnect is in flight: doing so would resurrect a connection the
-  // pending disconnect tombstoned and resume sync. The gate check and the
-  // secret write hold the shared credential-write lock (see
+  // The gate check and secret write hold the shared credential-write lock (see
   // providerDisconnect/lock.ts), which disconnect initiation also holds while
-  // persisting its record — so the check-and-write is atomic with respect to
-  // initiation and a write can never land between the gate passing and the
-  // disconnect's credential sweep. Fail closed — if the disconnect record
-  // cannot be read we assume the disconnect is active. A terminal record is
-  // handled below (retired), never here; only a non-finalized record blocks
-  // storage.
+  // persisting its record and invalidating outstanding flows. Active records
+  // block every write; a finalized record is retired only for an OAuth flow
+  // provably started after finalization. Record-read failures fail closed.
   return withProviderCredentialLock(knex, tenantId, PROVIDER_XERO, async (trx) => {
-    const disconnectActive = await isProviderDisconnectActive(trx, tenantId, PROVIDER_XERO).catch(() => true);
-    if (disconnectActive) {
+    const disposition = await getProviderCredentialWriteDisposition(
+      trx,
+      tenantId,
+      PROVIDER_XERO,
+      options.authorizationFlowStartedAt,
+    ).catch(() => 'disconnect_in_progress' as const);
+    if (disposition === 'disconnect_in_progress') {
       throw new AppError(
         'XERO_DISCONNECT_IN_PROGRESS',
         'Xero is being disconnected. Finish or finalize the disconnect before connecting again.'
+      );
+    }
+    if (disposition === 'stale_authorization') {
+      throw new AppError(
+        'XERO_STALE_AUTHORIZATION',
+        'This Xero authorization started before the last disconnect completed. Start the connection again.'
       );
     }
 

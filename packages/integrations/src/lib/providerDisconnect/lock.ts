@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { ProviderType } from './types';
+import { getDisconnectRecord } from './repository';
 
 const LOCK_NAMESPACE = 'provider_disconnect';
 
@@ -43,4 +44,41 @@ export async function withProviderCredentialLock<T>(
     ]);
     return fn(trx);
   });
+}
+
+export type ProviderCredentialWriteDisposition =
+  | 'allowed'
+  | 'disconnect_in_progress'
+  | 'stale_authorization';
+
+/**
+ * Evaluates an OAuth-originated credential write while the caller holds the
+ * provider credential lock. A terminal record may only be retired by a flow
+ * whose trusted server-side start time is strictly after finalization.
+ */
+export async function getProviderCredentialWriteDisposition(
+  knex: Knex,
+  tenantId: string,
+  provider: ProviderType,
+  authorizationFlowStartedAt?: string,
+): Promise<ProviderCredentialWriteDisposition> {
+  const record = await getDisconnectRecord(knex, tenantId, provider);
+  if (!record) return 'allowed';
+  if (record.status !== 'finalized') return 'disconnect_in_progress';
+
+  const flowStartedAtMs = authorizationFlowStartedAt
+    ? Date.parse(authorizationFlowStartedAt)
+    : Number.NaN;
+  const disconnectStartedAtMs = Date.parse(record.startedAt);
+  const finalizedAtMs = record.finalizedAt ? Date.parse(record.finalizedAt) : Number.NaN;
+  if (
+    !Number.isFinite(flowStartedAtMs) ||
+    !Number.isFinite(disconnectStartedAtMs) ||
+    !Number.isFinite(finalizedAtMs) ||
+    flowStartedAtMs <= disconnectStartedAtMs ||
+    flowStartedAtMs <= finalizedAtMs
+  ) {
+    return 'stale_authorization';
+  }
+  return 'allowed';
 }

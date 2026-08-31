@@ -407,15 +407,39 @@ vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: getCurren
 
 // The callback consumes the OAuth state nonce (single-use) via the shared
 // accounting store before it reaches the disconnect gate under test.
-const storeAccountingOAuthNonceMock = vi.hoisted(() =>
-  vi.fn(async (_provider: 'qbo' | 'xero', _nonce: string) => undefined),
-);
-const consumeAccountingOAuthNonceMock = vi.hoisted(() =>
-  vi.fn(async (_provider: 'qbo' | 'xero', _nonce: string) => true),
-);
+const oauthStateHarness = vi.hoisted(() => {
+  const states = new Map<string, { tenantId: string; initiatedAt: string }>();
+  const key = (provider: 'qbo' | 'xero', nonce: string) => `${provider}:${nonce}`;
+  return {
+    reset: () => states.clear(),
+    store: vi.fn(async (
+      provider: 'qbo' | 'xero',
+      nonce: string,
+      record: { tenantId: string; initiatedAt: string },
+    ) => {
+      states.set(key(provider, nonce), record);
+    }),
+    consume: vi.fn(async (provider: 'qbo' | 'xero', nonce: string) => {
+      const stateKey = key(provider, nonce);
+      const record = states.get(stateKey) ?? null;
+      states.delete(stateKey);
+      return record;
+    }),
+    invalidate: vi.fn(async (provider: 'qbo' | 'xero', tenantId: string) => {
+      for (const [stateKey, record] of states) {
+        if (stateKey.startsWith(`${provider}:`) && record.tenantId === tenantId) {
+          states.delete(stateKey);
+        }
+      }
+    }),
+  };
+});
+const storeAccountingOAuthNonceMock = oauthStateHarness.store;
+const consumeAccountingOAuthNonceMock = oauthStateHarness.consume;
 vi.mock('../../accountingOAuthStateStore', () => ({
-  storeAccountingOAuthNonce: storeAccountingOAuthNonceMock,
-  consumeAccountingOAuthNonce: consumeAccountingOAuthNonceMock,
+  storeAccountingOAuthNonce: oauthStateHarness.store,
+  consumeAccountingOAuthNonce: oauthStateHarness.consume,
+  invalidateAccountingOAuthStates: oauthStateHarness.invalidate,
 }));
 
 // ── Imports under test ──────────────────────────────────────────────────────
@@ -496,6 +520,7 @@ beforeEach(() => {
   secretStore.reset();
   providerHarness.reset();
   knexHarness.reset();
+  oauthStateHarness.reset();
   vi.clearAllMocks();
 
   // Default secret-provider behavior; individual tests override to simulate
@@ -528,8 +553,6 @@ beforeEach(() => {
     user_type: 'internal',
   });
   hasPermissionMock.mockResolvedValue(true);
-  storeAccountingOAuthNonceMock.mockResolvedValue(undefined);
-  consumeAccountingOAuthNonceMock.mockResolvedValue(true);
 });
 
 describe('QuickBooks Online disconnect state machine', () => {
@@ -775,13 +798,14 @@ describe('QuickBooks Online disconnect state machine', () => {
     // Reconnect: persist fresh credentials via the OAuth storage path. The
     // stale finalized record must be retired before the new connection becomes
     // visible, and a `disconnect_record_retired` audit event must be written.
+    const reconnectStartedAt = new Date(Date.parse(recordRows()[0].finalized_at) + 1).toISOString();
     await upsertStoredQboCredentials(TENANT, {
       realmId: 'realm-a',
       accessToken: 'at-a2',
       refreshToken: 'rt-a2',
       accessTokenExpiresAt: futureIso(3600_000),
       refreshTokenExpiresAt: futureIso(86_400_000),
-    });
+    }, { authorizationFlowStartedAt: reconnectStartedAt });
     expect(recordRows()).toHaveLength(0);
     expect(auditRows().map((r) => r.operation)).toContain('disconnect_record_retired');
     expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toContain('rt-a2');
@@ -917,9 +941,17 @@ describe('QuickBooks Online disconnect state machine', () => {
     const targetsBefore = JSON.stringify(recordRows()[0].targets);
 
     const signingSecret = 'race-test-state-signing-secret';
-    const created = createQboOAuthState({ tenantId: TENANT, userId: USER_ID, secret: signingSecret });
+    const created = createQboOAuthState({
+      tenantId: TENANT,
+      userId: USER_ID,
+      secret: signingSecret,
+      initiatedAt: new Date(Date.now() - 1000).toISOString(),
+    });
     const { stateParam, cookieValue } = created;
-    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce);
+    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce, {
+      tenantId: TENANT,
+      initiatedAt: created.payload.initiatedAt,
+    });
 
     const previousEdition = process.env.EDITION;
     const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
@@ -956,6 +988,100 @@ describe('QuickBooks Online disconnect state machine', () => {
     expect(recordRows()[0].status).toBe('pending_revocation');
     expect(JSON.stringify(recordRows()[0].targets)).toBe(targetsBefore);
     expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_QBO)).toBe(true);
+  });
+
+  it('invalidates a pre-disconnect QuickBooks flow so its delayed callback cannot write after clean finalization', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    const signingSecret = 'delayed-qbo-state-signing-secret';
+    const created = createQboOAuthState({
+      tenantId: TENANT,
+      userId: USER_ID,
+      secret: signingSecret,
+      initiatedAt: new Date(Date.now() - 1000).toISOString(),
+    });
+    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce, {
+      tenantId: TENANT,
+      initiatedAt: created.payload.initiatedAt,
+    });
+
+    const disconnected = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(disconnected.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    const finalizedRecord = JSON.stringify(recordRows()[0]);
+    providerHarness.calls.length = 0;
+
+    const previousEdition = process.env.EDITION;
+    const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
+    process.env.EDITION = 'ee';
+    process.env.NEXTAUTH_SECRET = signingSecret;
+    try {
+      const response = await QboCallbackGET(
+        new Request(
+          `http://localhost:3000/api/integrations/qbo/callback?code=held-code&realmId=realm-a&state=${encodeURIComponent(created.stateParam)}`,
+          { headers: { cookie: `${QBO_OAUTH_STATE_COOKIE}=${encodeURIComponent(created.cookieValue)}` } },
+        ),
+      );
+      expect(response.headers.get('location') ?? '').toContain('qbo_error=state_replayed');
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+      if (previousNextAuthSecret === undefined) delete process.env.NEXTAUTH_SECRET;
+      else process.env.NEXTAUTH_SECRET = previousNextAuthSecret;
+    }
+
+    expect(providerHarness.calls.filter((c) => c.url.includes(QBO_TOKEN_URL))).toHaveLength(0);
+    await expect(upsertStoredQboCredentials(TENANT, {
+      realmId: 'realm-a',
+      accessToken: 'stale-at',
+      refreshToken: 'stale-rt',
+      accessTokenExpiresAt: futureIso(3600_000),
+      refreshTokenExpiresAt: futureIso(86_400_000),
+    }, { authorizationFlowStartedAt: created.payload.initiatedAt })).rejects.toThrow(/started before/i);
+    expect(JSON.stringify(recordRows()[0])).toBe(finalizedRecord);
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
+  });
+
+  it('allows a QuickBooks authorization started after finalization to reconnect and retire the finalized row', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    const finalizedAt = Date.parse(recordRows()[0].finalized_at);
+    const signingSecret = 'fresh-qbo-state-signing-secret';
+    const created = createQboOAuthState({
+      tenantId: TENANT,
+      userId: USER_ID,
+      secret: signingSecret,
+      initiatedAt: new Date(finalizedAt + 1).toISOString(),
+    });
+    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce, {
+      tenantId: TENANT,
+      initiatedAt: created.payload.initiatedAt,
+    });
+    providerHarness.calls.length = 0;
+
+    const previousEdition = process.env.EDITION;
+    const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
+    process.env.EDITION = 'ee';
+    process.env.NEXTAUTH_SECRET = signingSecret;
+    try {
+      const response = await QboCallbackGET(
+        new Request(
+          `http://localhost:3000/api/integrations/qbo/callback?code=fresh-code&realmId=realm-new&state=${encodeURIComponent(created.stateParam)}`,
+          { headers: { cookie: `${QBO_OAUTH_STATE_COOKIE}=${encodeURIComponent(created.cookieValue)}` } },
+        ),
+      );
+      expect(response.headers.get('location') ?? '').toContain('qbo_status=success');
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+      if (previousNextAuthSecret === undefined) delete process.env.NEXTAUTH_SECRET;
+      else process.env.NEXTAUTH_SECRET = previousNextAuthSecret;
+    }
+
+    expect(providerHarness.calls.filter((c) => c.url.includes(QBO_TOKEN_URL))).toHaveLength(1);
+    expect(recordRows()).toHaveLength(0);
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toContain('exchanged-rt');
+    expect(Object.keys(await getStoredQboCredentialsMap(TENANT))).toEqual(['realm-new']);
   });
 
   it('upsertStoredQboCredentials refuses to store live credentials while a QuickBooks disconnect is active', async () => {
@@ -1011,7 +1137,10 @@ describe('QuickBooks Online disconnect state machine', () => {
 
     const signingSecret = 'race-test-state-signing-secret';
     const created = createQboOAuthState({ tenantId: TENANT, userId: USER_ID, secret: signingSecret });
-    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce);
+    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce, {
+      tenantId: TENANT,
+      initiatedAt: created.payload.initiatedAt,
+    });
 
     const previousEdition = process.env.EDITION;
     const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
@@ -1090,7 +1219,10 @@ describe('QuickBooks Online disconnect state machine', () => {
 
     const signingSecret = 'race-test-state-signing-secret';
     const created = createQboOAuthState({ tenantId: TENANT, userId: USER_ID, secret: signingSecret });
-    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce);
+    await storeAccountingOAuthNonceMock('qbo', created.payload.nonce, {
+      tenantId: TENANT,
+      initiatedAt: created.payload.initiatedAt,
+    });
 
     const previousEdition = process.env.EDITION;
     const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
@@ -1336,9 +1468,10 @@ describe('Xero disconnect state machine', () => {
     // Reconnect: persist fresh credentials via the OAuth storage path. The
     // stale finalized record must be retired before the new connection becomes
     // visible, and a `disconnect_record_retired` audit event must be written.
+    const reconnectStartedAt = new Date(Date.parse(recordRows()[0].finalized_at) + 1).toISOString();
     await upsertStoredXeroConnections(TENANT, {
       'conn-a': xeroConnectionMaterial('conn-a', 'rt-a2'),
-    });
+    }, { authorizationFlowStartedAt: reconnectStartedAt });
     expect(recordRows()).toHaveLength(0);
     expect(auditRows().map((r) => r.operation)).toContain('disconnect_record_retired');
     expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toContain('rt-a2');
@@ -1470,6 +1603,7 @@ describe('Xero disconnect state machine', () => {
 
     const csrfToken = 'a'.repeat(64);
     const nonce = 'race-test-nonce';
+    const initiatedAt = new Date(Date.now() - 1000).toISOString();
     const state = Buffer.from(
       JSON.stringify({
         tenantId: TENANT,
@@ -1477,9 +1611,10 @@ describe('Xero disconnect state machine', () => {
         csrf: csrfToken,
         codeVerifier: 'race-verifier',
         nonce,
+        initiatedAt,
       }),
     ).toString('base64url');
-    await storeAccountingOAuthNonceMock('xero', nonce);
+    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
 
     const previousEdition = process.env.EDITION;
     process.env.EDITION = 'ee';
@@ -1512,6 +1647,98 @@ describe('Xero disconnect state machine', () => {
     expect(recordRows()[0].status).toBe('pending_revocation');
     expect(JSON.stringify(recordRows()[0].targets)).toBe(targetsBefore);
     expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_XERO)).toBe(true);
+  });
+
+  it('invalidates a pre-disconnect Xero flow so its delayed callback cannot write after clean finalization', async () => {
+    xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
+    const csrfToken = 'b'.repeat(64);
+    const nonce = 'delayed-xero-nonce';
+    const initiatedAt = new Date(Date.now() - 1000).toISOString();
+    const state = Buffer.from(JSON.stringify({
+      tenantId: TENANT,
+      userId: USER_ID,
+      csrf: csrfToken,
+      codeVerifier: 'delayed-verifier',
+      nonce,
+      initiatedAt,
+    })).toString('base64url');
+    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
+
+    const disconnected = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+    expect(disconnected.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    const finalizedRecord = JSON.stringify(recordRows()[0]);
+    providerHarness.calls.length = 0;
+
+    const previousEdition = process.env.EDITION;
+    process.env.EDITION = 'ee';
+    try {
+      const response = await XeroCallbackGET(
+        new NextRequest(
+          `http://localhost:3000/api/integrations/xero/callback?code=held-code&state=${state}`,
+          { headers: { cookie: `${XERO_OAUTH_CSRF_COOKIE.name}=${csrfToken}` } },
+        ),
+      );
+      expect(response.headers.get('location') ?? '').toContain('xero_error=state_replayed');
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+    }
+
+    expect(providerHarness.calls.filter((c) => c.url.includes('connect/token'))).toHaveLength(0);
+    await expect(upsertStoredXeroConnections(TENANT, {
+      'conn-stale': xeroConnectionMaterial('conn-stale', 'stale-rt'),
+    }, { authorizationFlowStartedAt: initiatedAt })).rejects.toThrow(/started before/i);
+    expect(JSON.stringify(recordRows()[0])).toBe(finalizedRecord);
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
+    expect(await getStoredXeroConnections(TENANT)).toEqual({});
+  });
+
+  it('allows a Xero authorization started after finalization to reconnect and retire the finalized row', async () => {
+    xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+    const initiatedAt = new Date(Date.parse(recordRows()[0].finalized_at) + 1).toISOString();
+    const csrfToken = 'c'.repeat(64);
+    const nonce = 'fresh-xero-nonce';
+    const state = Buffer.from(JSON.stringify({
+      tenantId: TENANT,
+      userId: USER_ID,
+      csrf: csrfToken,
+      codeVerifier: 'fresh-verifier',
+      nonce,
+      initiatedAt,
+    })).toString('base64url');
+    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
+    providerHarness.setXeroRefresh(() => providerHarness.ok(200, {
+      access_token: 'fresh-at',
+      refresh_token: 'fresh-rt',
+      expires_in: 1800,
+      refresh_token_expires_in: 7_776_000,
+    }));
+    providerHarness.setXeroConnectionsList(() => providerHarness.ok(200, [
+      { id: 'conn-new', tenantId: 'xero-new', tenantName: 'New Org' },
+    ]));
+    providerHarness.calls.length = 0;
+
+    const previousEdition = process.env.EDITION;
+    process.env.EDITION = 'ee';
+    try {
+      const response = await XeroCallbackGET(
+        new NextRequest(
+          `http://localhost:3000/api/integrations/xero/callback?code=fresh-code&state=${state}`,
+          { headers: { cookie: `${XERO_OAUTH_CSRF_COOKIE.name}=${csrfToken}` } },
+        ),
+      );
+      expect(response.headers.get('location') ?? '').toContain('xero_status=success');
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+    }
+
+    expect(providerHarness.calls.filter((c) => c.url.includes('connect/token'))).toHaveLength(1);
+    expect(recordRows()).toHaveLength(0);
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toContain('fresh-rt');
+    expect(Object.keys(await getStoredXeroConnections(TENANT))).toEqual(['conn-new']);
   });
 
   it('upsertStoredXeroConnections refuses to store live connections while a Xero disconnect is active', async () => {
@@ -1564,10 +1791,11 @@ describe('Xero disconnect state machine', () => {
 
     const csrfToken = 'a'.repeat(64);
     const nonce = 'race-write-nonce';
+    const initiatedAt = new Date().toISOString();
     const state = Buffer.from(
-      JSON.stringify({ tenantId: TENANT, userId: USER_ID, csrf: csrfToken, codeVerifier: 'race-verifier', nonce }),
+      JSON.stringify({ tenantId: TENANT, userId: USER_ID, csrf: csrfToken, codeVerifier: 'race-verifier', nonce, initiatedAt }),
     ).toString('base64url');
-    await storeAccountingOAuthNonceMock('xero', nonce);
+    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
 
     const previousEdition = process.env.EDITION;
     process.env.EDITION = 'ee';
@@ -1645,10 +1873,11 @@ describe('Xero disconnect state machine', () => {
 
     const csrfToken = 'a'.repeat(64);
     const nonce = 'race-gate-nonce';
+    const initiatedAt = new Date().toISOString();
     const state = Buffer.from(
-      JSON.stringify({ tenantId: TENANT, userId: USER_ID, csrf: csrfToken, codeVerifier: 'race-verifier', nonce }),
+      JSON.stringify({ tenantId: TENANT, userId: USER_ID, csrf: csrfToken, codeVerifier: 'race-verifier', nonce, initiatedAt }),
     ).toString('base64url');
-    await storeAccountingOAuthNonceMock('xero', nonce);
+    await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
 
     const previousEdition = process.env.EDITION;
     process.env.EDITION = 'ee';

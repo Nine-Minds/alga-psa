@@ -100,6 +100,7 @@ export async function createDisconnectRecord(
       next_retry_at: null,
       last_error_class: null,
       correlation_id: input.correlationId ?? null,
+      started_at: now,
       updated_at: now,
     })
     .onConflict(['tenant', 'provider'])

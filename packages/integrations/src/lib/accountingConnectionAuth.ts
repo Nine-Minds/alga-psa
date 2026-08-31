@@ -46,16 +46,27 @@ export interface AccountingOAuthStateClaim {
   tenantId: string;
   userId: string;
   nonce: string;
+  initiatedAt: string;
 }
 
+type AccountingOAuthAuthzFailure = {
+  ok: false;
+  code: AccountingOAuthAuthzErrorCode;
+  message: string;
+};
+
 export type AccountingOAuthAuthzResult =
+  | { ok: true; liveUser: IUserWithRoles; flowInitiatedAt: string }
+  | AccountingOAuthAuthzFailure;
+
+export type AccountingOAuthReauthzResult =
   | { ok: true; liveUser: IUserWithRoles }
-  | { ok: false; code: AccountingOAuthAuthzErrorCode; message: string };
+  | AccountingOAuthAuthzFailure;
 
 function reject(
   code: AccountingOAuthAuthzErrorCode,
   message: string
-): AccountingOAuthAuthzResult {
+): AccountingOAuthAuthzFailure {
   return { ok: false, code, message };
 }
 
@@ -85,7 +96,7 @@ export async function getAccountingConnectionSessionUser(): Promise<IUserWithRol
 
 async function verifyLiveUserMatchesClaim(
   claim: Pick<AccountingOAuthStateClaim, 'tenantId' | 'userId'>
-): Promise<AccountingOAuthAuthzResult> {
+): Promise<AccountingOAuthReauthzResult> {
   const liveUser = await getCurrentUserWithRevocationCheck();
   if (!liveUser) {
     return reject(
@@ -130,15 +141,27 @@ async function verifyLiveUserMatchesClaim(
 export async function authorizeAccountingOAuthCallback(
   claim: AccountingOAuthStateClaim
 ): Promise<AccountingOAuthAuthzResult> {
-  const consumed = await consumeAccountingOAuthNonce(claim.provider, claim.nonce);
-  if (!consumed) {
+  const storedState = await consumeAccountingOAuthNonce(claim.provider, claim.nonce);
+  if (!storedState) {
     return reject(
       ACCOUNTING_OAUTH_AUTHZ_ERRORS.STATE_REPLAYED,
       'This connection request was already used. Start the connection again.'
     );
   }
 
-  return verifyLiveUserMatchesClaim(claim);
+  if (
+    storedState.tenantId !== claim.tenantId
+  ) {
+    return reject(
+      ACCOUNTING_OAUTH_AUTHZ_ERRORS.STATE_REPLAYED,
+      'This connection request is no longer valid. Start the connection again.'
+    );
+  }
+
+  const authz = await verifyLiveUserMatchesClaim(claim);
+  return authz.ok
+    ? { ...authz, flowInitiatedAt: storedState.initiatedAt }
+    : authz;
 }
 
 /**
@@ -149,7 +172,7 @@ export async function authorizeAccountingOAuthCallback(
  */
 export async function reauthorizeAccountingOAuthCallback(
   claim: Pick<AccountingOAuthStateClaim, 'tenantId' | 'userId'>
-): Promise<AccountingOAuthAuthzResult> {
+): Promise<AccountingOAuthReauthzResult> {
   return verifyLiveUserMatchesClaim(claim);
 }
 

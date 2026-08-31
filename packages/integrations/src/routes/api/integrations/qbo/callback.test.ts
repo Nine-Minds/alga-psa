@@ -34,6 +34,8 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('../../../../lib/providerDisconnect', () => ({
   isProviderDisconnectActive: vi.fn(async () => false),
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed'),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
   PROVIDER_QBO: 'quickbooks_online',
   PROVIDER_XERO: 'xero',
 }));
@@ -115,7 +117,10 @@ function makeState() {
 }
 
 async function storeFor(created: ReturnType<typeof makeState>) {
-  await storeAccountingOAuthNonce('qbo', created.payload.nonce);
+  await storeAccountingOAuthNonce('qbo', created.payload.nonce, {
+    tenantId: TENANT_ID,
+    initiatedAt: created.payload.initiatedAt,
+  });
 }
 
 describe('QBO OAuth callback authorization', () => {
@@ -155,7 +160,8 @@ describe('QBO OAuth callback authorization', () => {
         accessToken: 'access-token',
         refreshToken: 'refresh-token',
         realmId: 'realm-1',
-      })
+      }),
+      { authorizationFlowStartedAt: created.payload.initiatedAt }
     );
   });
 

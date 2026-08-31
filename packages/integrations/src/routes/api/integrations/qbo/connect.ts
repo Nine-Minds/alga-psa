@@ -11,7 +11,12 @@ import {
   getQboRedirectUri,
   resolveQboOAuthCredentials
 } from '../../../../lib/qbo/qboClientService';
-import { isProviderDisconnectActive, PROVIDER_QBO } from '../../../../lib/providerDisconnect';
+import {
+  getProviderDisconnectStatusInfo,
+  isProviderDisconnectActive,
+  PROVIDER_QBO,
+  withProviderCredentialLock
+} from '../../../../lib/providerDisconnect';
 import {
   buildQboOAuthStateCookie,
   createQboOAuthState,
@@ -78,13 +83,33 @@ export async function GET(): Promise<NextResponse> {
       );
     }
 
-    const { stateParam, cookieValue, payload } = createQboOAuthState({
-      tenantId: tenant,
-      userId: sessionUser.user_id,
-      secret: signingSecret
+    const oauthState = await withProviderCredentialLock(knex, tenant, PROVIDER_QBO, async (trx) => {
+      const active = await isProviderDisconnectActive(trx, tenant, PROVIDER_QBO).catch(() => true);
+      if (active) return null;
+      const status = await getProviderDisconnectStatusInfo(trx, tenant, PROVIDER_QBO);
+      const finalizedAtMs = status?.finalizedAt ? Date.parse(status.finalizedAt) : Number.NaN;
+      const initiatedAt = new Date(
+        Number.isFinite(finalizedAtMs) ? Math.max(Date.now(), finalizedAtMs + 1) : Date.now()
+      ).toISOString();
+      const created = createQboOAuthState({
+        tenantId: tenant,
+        userId: sessionUser.user_id,
+        secret: signingSecret,
+        initiatedAt
+      });
+      await storeAccountingOAuthNonce('qbo', created.payload.nonce, {
+        tenantId: tenant,
+        initiatedAt
+      });
+      return created;
     });
-
-    await storeAccountingOAuthNonce('qbo', payload.nonce);
+    if (!oauthState) {
+      return NextResponse.json(
+        { error: 'QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.' },
+        { status: 409 }
+      );
+    }
+    const { stateParam, cookieValue } = oauthState;
 
     logger.info('[qboOAuth] Starting QuickBooks OAuth connect flow', {
       tenantId: tenant,

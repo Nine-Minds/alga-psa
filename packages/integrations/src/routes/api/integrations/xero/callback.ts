@@ -17,8 +17,9 @@ import {
   getXeroConnectionsUrl,
 } from '../../../../lib/xero/xeroClientService';
 import {
-  isProviderDisconnectActive,
-  PROVIDER_XERO
+  getProviderCredentialWriteDisposition,
+  PROVIDER_XERO,
+  withProviderCredentialLock
 } from '../../../../lib/providerDisconnect';
 import { oauthCsrfTokensMatch, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
@@ -53,6 +54,7 @@ type XeroStatePayload = {
   csrf: string;
   codeVerifier: string;
   nonce: string;
+  initiatedAt: string;
 };
 
 function isEnterpriseEdition(): boolean {
@@ -155,7 +157,9 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
       typeof statePayload.csrf !== 'string' ||
       !statePayload.csrf ||
       !statePayload?.codeVerifier ||
-      !statePayload?.nonce
+      !statePayload?.nonce ||
+      typeof statePayload.initiatedAt !== 'string' ||
+      !Number.isFinite(Date.parse(statePayload.initiatedAt))
     ) {
       throw new Error('state missing required fields');
     }
@@ -183,7 +187,8 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     provider: 'xero',
     tenantId: statePayload.tenantId,
     userId: statePayload.userId,
-    nonce: statePayload.nonce
+    nonce: statePayload.nonce,
+    initiatedAt: statePayload.initiatedAt
   });
   if (!authz.ok) {
     logger.warn('[xeroOAuth] Callback authorization failed', {
@@ -193,22 +198,22 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     return createRedirect(FAILURE_PATH, { xero_error: AUTHZ_ERROR_TO_PARAM[authz.code] });
   }
 
-  // Reject a callback that lands while a Xero disconnect is pending or
-  // otherwise non-finalized: the authorization may predate the disconnect, but
-  // completing it would write live credentials back into the tombstoned
-  // credential slot and resume sync. The connect route already blocks new
-  // flows; this closes the in-flight-callback window. Fail closed — if the
-  // disconnect record cannot be read, we cannot prove no disconnect is in
-  // flight, so the callback is refused. This early check is a fast path for a
-  // good error before the token exchange; the storage layer enforces the same
-  // gate atomically with respect to disconnect initiation (shared
-  // credential-write lock), covering a disconnect that starts after this
-  // check passes.
+  // Check the trusted flow start under the same lock as disconnect initiation.
+  // This rejects active disconnects and pre-disconnect flows even after their
+  // record finalized. The storage layer repeats the check atomically with the
+  // credential write in case a disconnect starts after this early gate.
   const { knex } = await createTenantKnex(tenantId);
-  const disconnectActive = await isProviderDisconnectActive(knex, tenantId, PROVIDER_XERO).catch(() => true);
-  if (disconnectActive) {
-    logger.info('[xeroOAuth] Callback blocked: Xero disconnect in progress', { tenantId });
-    return createRedirect(FAILURE_PATH, { xero_error: 'disconnect_in_progress' });
+  const writeDisposition = await withProviderCredentialLock(knex, tenantId, PROVIDER_XERO, (trx) =>
+    getProviderCredentialWriteDisposition(trx, tenantId, PROVIDER_XERO, authz.flowInitiatedAt)
+  ).catch(() => 'disconnect_in_progress' as const);
+  if (writeDisposition !== 'allowed') {
+    logger.info('[xeroOAuth] Callback blocked by credential-write provenance gate', {
+      tenantId,
+      disposition: writeDisposition
+    });
+    return createRedirect(FAILURE_PATH, {
+      xero_error: writeDisposition === 'stale_authorization' ? 'state_replayed' : writeDisposition
+    });
   }
 
   const secretProvider = await getSecretProviderInstance();
@@ -330,7 +335,8 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     }
 
     await upsertStoredXeroConnections(tenantId, connectionUpdates, {
-      prioritize: Object.keys(connectionUpdates)
+      prioritize: Object.keys(connectionUpdates),
+      authorizationFlowStartedAt: authz.flowInitiatedAt
     });
 
     logger.info('[xeroOAuth] Completed Xero OAuth callback', {
@@ -349,6 +355,10 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     if (error instanceof AppError && error.code === 'XERO_DISCONNECT_IN_PROGRESS') {
       logger.info('[xeroOAuth] Callback blocked at credential storage: Xero disconnect in progress', { tenantId });
       return createRedirect(FAILURE_PATH, { xero_error: 'disconnect_in_progress' });
+    }
+    if (error instanceof AppError && error.code === 'XERO_STALE_AUTHORIZATION') {
+      logger.info('[xeroOAuth] Callback blocked at credential storage: stale Xero authorization', { tenantId });
+      return createRedirect(FAILURE_PATH, { xero_error: 'state_replayed' });
     }
     logger.error('[xeroOAuth] Failed to complete OAuth callback', {
       tenantId,

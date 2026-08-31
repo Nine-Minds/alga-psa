@@ -51,6 +51,8 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
   isProviderDisconnectActive: vi.fn(async () => false),
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed'),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
   PROVIDER_QBO: 'quickbooks_online',
   PROVIDER_XERO: 'xero',
 }));
@@ -72,6 +74,7 @@ const CALLBACK_URL = 'http://localhost:3000/api/integrations/xero/callback';
 const tenantId = 'tenant-a';
 const userId = 'user-a';
 const csrfToken = 'a'.repeat(64);
+const initiatedAt = '2026-08-31T12:00:00.000Z';
 
 const prevEdition = process.env.EDITION;
 process.env.EDITION = 'ee';
@@ -117,13 +120,13 @@ describe('Xero OAuth callback CSRF and tenant validation', () => {
       data: [{ id: 'conn-1', tenantId: 'xero-tenant-1', tenantName: 'Acme' }],
     });
     // The callback consumes the state nonce; make it present for success paths.
-    await storeAccountingOAuthNonce('xero', 'nonce-1');
+    await storeAccountingOAuthNonce('xero', 'nonce-1', { tenantId, initiatedAt });
   });
 
   it('rejects a callback without the CSRF cookie', async () => {
     const response = await GET(
       makeRequest(
-        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1' })
+        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1', initiatedAt })
       )
     );
     expect(redirectError(response)).toBe('csrf_mismatch');
@@ -133,7 +136,7 @@ describe('Xero OAuth callback CSRF and tenant validation', () => {
   it('rejects a callback whose state csrf does not match the cookie', async () => {
     const response = await GET(
       makeRequest(
-        encodeState({ tenantId, userId, csrf: 'b'.repeat(64), codeVerifier: 'v', nonce: 'nonce-1' }),
+        encodeState({ tenantId, userId, csrf: 'b'.repeat(64), codeVerifier: 'v', nonce: 'nonce-1', initiatedAt }),
         csrfToken
       )
     );
@@ -145,7 +148,7 @@ describe('Xero OAuth callback CSRF and tenant validation', () => {
     vi.mocked(getCurrentUserWithRevocationCheck).mockResolvedValue(null);
     const response = await GET(
       makeRequest(
-        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1' }),
+        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1', initiatedAt }),
         csrfToken
       )
     );
@@ -160,7 +163,7 @@ describe('Xero OAuth callback CSRF and tenant validation', () => {
     } as any);
     const response = await GET(
       makeRequest(
-        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1' }),
+        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1', initiatedAt }),
         csrfToken
       )
     );
@@ -172,7 +175,7 @@ describe('Xero OAuth callback CSRF and tenant validation', () => {
   it('completes the exchange when cookie, state, and session agree', async () => {
     const response = await GET(
       makeRequest(
-        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1' }),
+        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1', initiatedAt }),
         csrfToken
       )
     );

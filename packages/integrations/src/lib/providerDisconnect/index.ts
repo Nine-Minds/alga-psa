@@ -31,6 +31,7 @@ export {
 } from './retire';
 export {
   withProviderCredentialLock,
+  getProviderCredentialWriteDisposition,
 } from './lock';
 export {
   tombstoneCredentialsSecretName,

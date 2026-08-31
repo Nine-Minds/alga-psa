@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { notifyQboConnectionChanged } from '../qbo/qboConnectionChangeProvider';
+import { invalidateAccountingOAuthStates } from '../accountingOAuthStateStore';
 import { getDisconnectRecord, createDisconnectRecord, deleteDisconnectRecord, updateTargetOutcome, setRecordStatus, replaceDisconnectTargets } from './repository';
 import { withProviderCredentialLock } from './lock';
 import { writeDisconnectAudit, writeDisconnectAuditInTransaction } from './audit';
@@ -112,6 +113,13 @@ export async function disconnectProvider(
     record?: ProviderDisconnectRecord;
   }
   const initiation = await withProviderCredentialLock<InitiationOutcome>(knex, tenantId, provider, async (trx) => {
+    // State issuance uses this same lock. Therefore an authorization flow is
+    // either stored first and invalidated here, or it starts only after this
+    // initiation has committed (and is blocked until finalization).
+    await invalidateAccountingOAuthStates(
+      provider === PROVIDER_QBO ? 'qbo' : 'xero',
+      tenantId,
+    );
     let existing = await getDisconnectRecord(trx, tenantId, provider);
 
     // A terminal record (finalized, or failed_permanent pre-force-finalize) is

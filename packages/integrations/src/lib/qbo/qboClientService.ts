@@ -3,8 +3,10 @@ import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/
 import { createTenantKnex } from '@alga-psa/db';
 import { notifyQboConnectionChanged } from './qboConnectionChangeProvider';
 import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
-import { isProviderDisconnectActive } from '../providerDisconnect/status';
-import { withProviderCredentialLock } from '../providerDisconnect/lock';
+import {
+  getProviderCredentialWriteDisposition,
+  withProviderCredentialLock,
+} from '../providerDisconnect/lock';
 import { PROVIDER_QBO } from '../providerDisconnect/types';
 import type { QboTenantCredentials } from './types';
 import { AppError } from '@alga-psa/core';
@@ -307,27 +309,36 @@ async function getTenantQboCredentials(tenantId: string, realmId: string): Promi
   return null;
 }
 
-export async function upsertStoredQboCredentials(tenantId: string, credentials: QboTenantCredentials): Promise<void> {
+export async function upsertStoredQboCredentials(
+  tenantId: string,
+  credentials: QboTenantCredentials,
+  options: { authorizationFlowStartedAt?: string } = {},
+): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
   const { knex } = await createTenantKnex(tenantId);
 
-  // No write path (OAuth callback, token refresh) may store live credentials
-  // while a disconnect is in flight: doing so would resurrect a connection the
-  // pending disconnect tombstoned and resume sync. The gate check and the
-  // secret write hold the shared credential-write lock (see
+  // The gate check and secret write hold the shared credential-write lock (see
   // providerDisconnect/lock.ts), which disconnect initiation also holds while
-  // persisting its record — so the check-and-write is atomic with respect to
-  // initiation and a write can never land between the gate passing and the
-  // disconnect's credential sweep. Fail closed — if the disconnect record
-  // cannot be read we assume the disconnect is active. A terminal record is
-  // handled below (retired), never here; only a non-finalized record blocks
-  // storage.
+  // persisting its record and invalidating outstanding flows. Active records
+  // block every write; a finalized record is retired only for an OAuth flow
+  // provably started after finalization. Record-read failures fail closed.
   await withProviderCredentialLock(knex, tenantId, PROVIDER_QBO, async (trx) => {
-    const disconnectActive = await isProviderDisconnectActive(trx, tenantId, PROVIDER_QBO).catch(() => true);
-    if (disconnectActive) {
+    const disposition = await getProviderCredentialWriteDisposition(
+      trx,
+      tenantId,
+      PROVIDER_QBO,
+      options.authorizationFlowStartedAt,
+    ).catch(() => 'disconnect_in_progress' as const);
+    if (disposition === 'disconnect_in_progress') {
       throw new AppError(
         'QBO_DISCONNECT_IN_PROGRESS',
         'QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.'
+      );
+    }
+    if (disposition === 'stale_authorization') {
+      throw new AppError(
+        'QBO_STALE_AUTHORIZATION',
+        'This QuickBooks authorization started before the last disconnect completed. Start the connection again.'
       );
     }
 

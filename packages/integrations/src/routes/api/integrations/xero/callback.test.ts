@@ -35,6 +35,8 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('../../../../lib/providerDisconnect', () => ({
   isProviderDisconnectActive: vi.fn(async () => false),
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed'),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
   PROVIDER_QBO: 'quickbooks_online',
   PROVIDER_XERO: 'xero',
 }));
@@ -81,6 +83,7 @@ const OTHER_USER_ID = 'user-b';
 const OTHER_TENANT_ID = 'tenant-b';
 const CSRF_TOKEN = 'a'.repeat(64);
 const NONCE = 'nonce-1';
+const INITIATED_AT = '2026-08-31T12:00:00.000Z';
 const REVOKE_URL = 'https://identity.xero.com/connect/revocation';
 
 const previousEdition = process.env.EDITION;
@@ -106,6 +109,7 @@ function makeState(overrides: Record<string, unknown> = {}) {
     csrf: CSRF_TOKEN,
     codeVerifier: 'code-verifier',
     nonce: NONCE,
+    initiatedAt: INITIATED_AT,
     ...overrides,
   });
 }
@@ -148,7 +152,10 @@ describe('Xero OAuth callback authorization', () => {
     vi.mocked(axios.get).mockResolvedValue({
       data: [{ id: 'conn-1', tenantId: 'xero-tenant-1', tenantName: 'Acme' }],
     });
-    await storeAccountingOAuthNonce('xero', NONCE);
+    await storeAccountingOAuthNonce('xero', NONCE, {
+      tenantId: TENANT_ID,
+      initiatedAt: INITIATED_AT,
+    });
   });
 
   it('allows the same authorized user to complete the flow end-to-end', async () => {

@@ -8,8 +8,10 @@
  * every later presentation fails closed. Redis-backed with an in-memory
  * fallback, mirroring the Microsoft email and calendar OAuth state stores.
  *
- * The identity binding (tenant + initiating user) lives in the OAuth state
- * payload itself; this store only gates single use keyed by the state nonce.
+ * The server-side record also carries tenant and initiation-time provenance.
+ * Disconnect initiation can therefore invalidate every outstanding flow for a
+ * tenant/provider, while callbacks get a trusted timestamp that cannot be
+ * advanced by editing provider-returned state.
  */
 
 import { createClient, type RedisClientType } from 'redis';
@@ -23,7 +25,16 @@ const STATE_NAMESPACE = 'accounting:oauth';
 const DEFAULT_TTL_SECONDS = 10 * 60;
 
 let redisClientPromise: Promise<RedisClientType | null> | null = null;
-const memoryStore = new Map<string, { consumed: boolean; expiresAt: number }>();
+export interface AccountingOAuthStateRecord {
+  tenantId: string;
+  initiatedAt: string;
+}
+
+interface StoredAccountingOAuthState extends AccountingOAuthStateRecord {
+  expiresAt: number;
+}
+
+const memoryStore = new Map<string, StoredAccountingOAuthState>();
 
 async function getRedisClient(): Promise<RedisClientType | null> {
   if (!redisClientPromise) {
@@ -55,16 +66,44 @@ function buildKey(provider: AccountingOAuthProvider, nonce: string): string {
   return `${STATE_NAMESPACE}:${provider}:${nonce}`;
 }
 
+function buildTenantIndexKey(provider: AccountingOAuthProvider, tenantId: string): string {
+  return `${STATE_NAMESPACE}:${provider}:tenant:${tenantId}`;
+}
+
+function parseRecord(value: string | null): AccountingOAuthStateRecord | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as Partial<AccountingOAuthStateRecord>;
+    if (typeof parsed.tenantId !== 'string' || typeof parsed.initiatedAt !== 'string') {
+      return null;
+    }
+    if (!Number.isFinite(Date.parse(parsed.initiatedAt))) return null;
+    return { tenantId: parsed.tenantId, initiatedAt: parsed.initiatedAt };
+  } catch {
+    return null;
+  }
+}
+
 export async function storeAccountingOAuthNonce(
   provider: AccountingOAuthProvider,
   nonce: string,
+  record: AccountingOAuthStateRecord,
   ttlSeconds = DEFAULT_TTL_SECONDS
 ): Promise<void> {
   const key = buildKey(provider, nonce);
+  const indexKey = buildTenantIndexKey(provider, record.tenantId);
+  if (!Number.isFinite(Date.parse(record.initiatedAt))) {
+    throw new Error('Accounting OAuth state requires a valid initiation timestamp.');
+  }
   try {
     const client = await getRedisClient();
     if (client) {
-      await client.set(key, '1', { EX: ttlSeconds });
+      await client
+        .multi()
+        .set(key, JSON.stringify(record), { EX: ttlSeconds })
+        .sAdd(indexKey, nonce)
+        .expire(indexKey, ttlSeconds)
+        .exec();
       return;
     }
   } catch (error) {
@@ -75,7 +114,7 @@ export async function storeAccountingOAuthNonce(
   }
 
   memoryStore.set(key, {
-    consumed: false,
+    ...record,
     expiresAt: Date.now() + ttlSeconds * 1000,
   });
 }
@@ -88,15 +127,17 @@ export async function storeAccountingOAuthNonce(
 export async function consumeAccountingOAuthNonce(
   provider: AccountingOAuthProvider,
   nonce: string
-): Promise<boolean> {
+): Promise<AccountingOAuthStateRecord | null> {
   const key = buildKey(provider, nonce);
   try {
     const client = await getRedisClient();
     if (client) {
-      const removed = await client.del(key);
-      // A missing key means it was already consumed or never stored. The
-      // callback must not proceed on an unknown nonce.
-      return removed === 1;
+      const value = await client.getDel(key);
+      const record = parseRecord(value);
+      if (record) {
+        await client.sRem(buildTenantIndexKey(provider, record.tenantId), nonce);
+      }
+      return record;
     }
   } catch (error) {
     logger.warn(
@@ -106,7 +147,36 @@ export async function consumeAccountingOAuthNonce(
   }
 
   const stored = memoryStore.get(key);
-  if (!stored || stored.consumed || stored.expiresAt <= Date.now()) return false;
-  stored.consumed = true;
-  return true;
+  memoryStore.delete(key);
+  if (!stored || stored.expiresAt <= Date.now()) return null;
+  return { tenantId: stored.tenantId, initiatedAt: stored.initiatedAt };
+}
+
+/** Invalidates every unconsumed authorization flow for one tenant/provider. */
+export async function invalidateAccountingOAuthStates(
+  provider: AccountingOAuthProvider,
+  tenantId: string
+): Promise<void> {
+  const indexKey = buildTenantIndexKey(provider, tenantId);
+  try {
+    const client = await getRedisClient();
+    if (client) {
+      const nonces = await client.sMembers(indexKey);
+      const keys = nonces.map((nonce) => buildKey(provider, nonce));
+      if (keys.length > 0) await client.del(keys);
+      await client.del(indexKey);
+    }
+  } catch (error) {
+    logger.warn(
+      '[AccountingOAuthStateStore] Redis unavailable while invalidating tenant states',
+      error instanceof Error ? error.message : error
+    );
+  }
+
+  const prefix = `${STATE_NAMESPACE}:${provider}:`;
+  for (const [key, stored] of memoryStore) {
+    if (key.startsWith(prefix) && stored.tenantId === tenantId) {
+      memoryStore.delete(key);
+    }
+  }
 }
