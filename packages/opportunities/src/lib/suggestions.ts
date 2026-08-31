@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import type {
   IOpportunity,
   IOpportunitySuggestion,
@@ -111,13 +112,7 @@ function normalizeSuggestion(row: Record<string, unknown>): IOpportunitySuggesti
 }
 
 async function nextOpportunityNumber(trx: Knex.Transaction, tenant: string): Promise<string> {
-  const result = await trx.raw(
-    'SELECT generate_next_number(:tenant::uuid, :type::text) as number',
-    { tenant, type: 'OPPORTUNITY' },
-  );
-  const number = result?.rows?.[0]?.number;
-  if (!number) throw new Error('Failed to generate opportunity number');
-  return number;
+  return SharedNumberingService.getNextNumber('OPPORTUNITY', { knex: trx, tenant });
 }
 
 export async function listSuggestionsInternal(
