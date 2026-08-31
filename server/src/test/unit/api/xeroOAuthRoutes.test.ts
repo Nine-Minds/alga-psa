@@ -7,6 +7,7 @@ const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const resolveXeroOAuthCredentialsMock = vi.hoisted(() => vi.fn());
 const getXeroRedirectUriMock = vi.hoisted(() => vi.fn());
 const getXeroOAuthScopesStringMock = vi.hoisted(() => vi.fn());
+const getXeroOAuthScopeConfigMock = vi.hoisted(() => vi.fn());
 const upsertStoredXeroConnectionsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
 const axiosPostMock = vi.hoisted(() => vi.fn());
@@ -66,6 +67,7 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   resolveXeroOAuthCredentials: resolveXeroOAuthCredentialsMock,
   getXeroRedirectUri: getXeroRedirectUriMock,
   getXeroOAuthScopesString: getXeroOAuthScopesStringMock,
+  getXeroOAuthScopeConfig: getXeroOAuthScopeConfigMock,
   upsertStoredXeroConnections: upsertStoredXeroConnectionsMock
 }));
 
@@ -102,8 +104,12 @@ describe('Xero OAuth routes', () => {
     });
     getXeroRedirectUriMock.mockResolvedValue('https://example.com/api/integrations/xero/callback');
     getXeroOAuthScopesStringMock.mockReturnValue(
-      'offline_access accounting.settings accounting.invoices accounting.banktransactions accounting.payments accounting.contacts'
+      'offline_access accounting.settings.read accounting.invoices accounting.contacts'
     );
+    getXeroOAuthScopeConfigMock.mockReturnValue({
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts'],
+      source: 'default'
+    });
     upsertStoredXeroConnectionsMock.mockResolvedValue({});
     axiosPostMock.mockResolvedValue({
       data: {
@@ -111,7 +117,7 @@ describe('Xero OAuth routes', () => {
         refresh_token: 'refresh-token',
         expires_in: 1800,
         refresh_token_expires_in: 3600,
-        scope: 'offline_access accounting.invoices accounting.banktransactions accounting.payments'
+        scope: 'offline_access accounting.settings.read accounting.invoices accounting.contacts'
       }
     });
     axiosGetMock.mockResolvedValue({
@@ -189,12 +195,20 @@ describe('Xero OAuth routes', () => {
     const location = response.headers.get('location');
     expect(location).toContain('https://login.xero.com/identity/connect/authorize');
     expect(location).toContain('client_id=tenant-client-id');
+    // URLSearchParams form-encodes spaces as '+'.
+    expect(location).toContain(
+      'scope=offline_access+accounting.settings.read+accounting.invoices+accounting.contacts'
+    );
+    expect(location).not.toContain('banktransactions');
+    expect(location).not.toContain('accounting.payments');
     expect(location).toContain(
       encodeURIComponent('https://example.com/api/integrations/xero/callback')
     );
     expect(loggerInfoMock).toHaveBeenCalledWith('[xeroOAuth] Starting Xero OAuth connect flow', {
       tenantId: 'tenant-1',
-      credentialSource: 'tenant'
+      credentialSource: 'tenant',
+      scopeSource: 'default',
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts']
     });
     expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('tenant-client-secret');
   });
