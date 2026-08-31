@@ -65,7 +65,7 @@ export class SharedNumberingService {
         .onConflict(['tenant', 'entity_type'])
         .ignore();
 
-      const settings = await tenantDb(knex, tenant).table('next_number')
+      const settings = await db.table('next_number')
         .where('entity_type', entityType)
         .select('prefix', 'prefix_date_format')
         .first();
