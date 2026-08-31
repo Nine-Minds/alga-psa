@@ -618,7 +618,7 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
     externalDocNumber: string;
     externalSyncToken?: string;
   }>
-): Promise<{ linked: number }> => {
+): Promise<{ linked: number; skipped: number }> => {
   assertEnterpriseEdition();
   await checkBillingUpdateAccess(user);
 
@@ -626,11 +626,66 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
   const realm = await requireDefaultRealm(tenant);
   const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
 
+  if (matches.length === 0) {
+    return { linked: 0, skipped: 0 };
+  }
+
+  // Caller-supplied matches must be proven on both sides before persisting.
+  // Local side: the invoice exists in this tenant and is not a prepayment
+  // (prepayments never sync to QuickBooks).
+  const invoiceRows: Array<{ invoice_id: string; is_prepayment: boolean | null }> =
+    await tenantDb(knex, tenant).table('invoices')
+      .whereIn('invoice_id', matches.map((m) => m.invoiceId))
+      .select('invoice_id', 'is_prepayment');
+
+  const localById = new Map<string, { is_prepayment: boolean | null }>(
+    invoiceRows.map((row) => [row.invoice_id, row])
+  );
+
+  // Remote side: the QBO document exists in the connected company and is an
+  // Invoice, not some other entity type wearing the same id.
+  const qboClient = await QboClientService.create(tenant, realm);
+
   let linked = 0;
+  let skipped = 0;
   for (const match of matches) {
-    // Idempotent: skip if already mapped
-    const existing = await ledger.findByAlgaId('invoice', match.invoiceId);
-    if (existing) continue;
+    // Idempotent: skip if already mapped in this realm.
+    const existing = await ledger.findByAlgaId('invoice', match.invoiceId, realm);
+    if (existing) {
+      skipped++;
+      continue;
+    }
+
+    const local = localById.get(match.invoiceId);
+    if (!local) {
+      logger.warn('[bulkLinkHistoricalInvoices] Skipping match for unknown or foreign invoice', {
+        tenant,
+        invoiceId: match.invoiceId,
+        externalId: match.externalId
+      });
+      skipped++;
+      continue;
+    }
+    if (local.is_prepayment) {
+      logger.warn('[bulkLinkHistoricalInvoices] Skipping match for prepayment invoice', {
+        tenant,
+        invoiceId: match.invoiceId
+      });
+      skipped++;
+      continue;
+    }
+
+    const remoteInvoice = await qboClient.read<any>('Invoice', match.externalId).catch(() => null);
+    if (!remoteInvoice) {
+      logger.warn('[bulkLinkHistoricalInvoices] Skipping match — QuickBooks invoice does not exist', {
+        tenant,
+        invoiceId: match.invoiceId,
+        externalId: match.externalId,
+        realm
+      });
+      skipped++;
+      continue;
+    }
 
     await ledger.insert({
       algaEntityType: 'invoice',
@@ -639,7 +694,7 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
       targetRealm: realm,
       syncStatus: 'synced',
       metadata: {
-        sync_token: match.externalSyncToken ?? null,
+        sync_token: match.externalSyncToken ?? remoteInvoice.SyncToken ?? null,
         // Snapshot convention is QBO dollars (adapter stores response.TotalAmt);
         // the matcher carries cents internally.
         exported_total: match.externalTotal / 100,
@@ -650,7 +705,7 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
     linked++;
   }
 
-  return { linked };
+  return { linked, skipped };
 });
 
 // ─── 7. backfillPaymentsForLinkedInvoices ────────────────────────────────────

@@ -55,9 +55,50 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
   }
 
   for (const op of pending) {
-    const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id);
+    // Exact tenant + provider + entity type + realm match, no NULL-realm
+    // fallback, tombstones excluded: a mapping in another company or one that
+    // was unlinked must never drive a void in this company.
+    const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id, deps.targetRealm);
 
     if (!mapping) {
+      const blocked = await deps.ledger.findNonConsumable('invoice', op.alga_entity_id, deps.targetRealm);
+      if (blocked) {
+        const reason = blocked.deleted_at
+          ? 'invoice was unlinked from QuickBooks'
+          : 'invoice maps to a different QuickBooks company';
+        const message = `Cannot void in QuickBooks: ${reason}. Relink the invoice mapping to this company first.`;
+        logger.warn('[invoiceVoidApplier] Void blocked by non-consumable mapping', {
+          opId: op.op_id,
+          tenantId: deps.tenantId,
+          invoiceId: op.alga_entity_id,
+          mappingId: blocked.id,
+          deleted: Boolean(blocked.deleted_at),
+          externalRealm: blocked.external_realm_id
+        });
+        const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+        deps.stats.opsFailed += 1;
+        if (nextStatus === 'skipped') {
+          await deps.exceptions.createOrUpdate({
+            type: 'accounting_sync_export_error',
+            entityType: 'invoice',
+            entityId: op.alga_entity_id,
+            title: 'Invoice void blocked — mapping is unlinked or points at another company',
+            context: {
+              alga_entity_id: op.alga_entity_id,
+              external_entity_id: blocked.external_entity_id,
+              attempts: op.attempts + 1,
+              message,
+              details:
+                `${message} The QuickBooks document was not touched. ` +
+                'Relink the invoice in the accounting mapping screen, then retry the void.',
+              realm: deps.targetRealm
+            }
+          });
+          deps.stats.exceptionsCreated += 1;
+        }
+        continue;
+      }
+
       // Nothing to void in QBO — the invoice was never exported
       logger.debug('[invoiceVoidApplier] No mapping found; marking done', {
         opId: op.op_id,

@@ -307,8 +307,7 @@ function createMapping({
     alga_entity_id: input.algaEntityId,
     external_entity_id: input.externalEntityId,
     external_realm_id: context.realmId ?? null,
-    metadata: input.metadata ?? null,
-    sync_status: 'manual_link'
+    metadata: input.metadata ?? null
   };
 
   return createExternalEntityMapping(payload).then((result) => {

@@ -16,6 +16,17 @@ vi.mock('@alga-psa/core/secrets', () => ({
     getTenantSecret: vi.fn(async () => null),
     setTenantSecret: vi.fn(async () => undefined),
   })),
+  getSecret: vi.fn(async () => 'test-verifier-key'),
+}));
+
+vi.mock('@alga-psa/event-bus', () => ({
+  getRedisConfig: () => ({ url: 'redis://localhost:6379' }),
+}));
+
+vi.mock('redis', () => ({
+  createClient: vi.fn(() => {
+    throw new Error('redis unavailable');
+  }),
 }));
 
 vi.mock('redis', () => ({
@@ -54,6 +65,11 @@ import { XERO_OAUTH_CSRF_COOKIE } from '@alga-psa/integrations/lib/xero/oauthCsr
 import { getCurrentUserWithRevocationCheck, hasPermission } from '@alga-psa/auth';
 import { storeAccountingOAuthNonce } from '@alga-psa/integrations/lib/accountingOAuthStateStore';
 import * as xeroMocks from '@alga-psa/integrations/lib/xero/xeroClientService';
+import {
+  storeXeroConnectAttempt,
+  XERO_CONNECT_ATTEMPT_PROVIDER,
+} from '@alga-psa/integrations/lib/xero/xeroOAuthConnectAttemptStore';
+import { encryptXeroVerifier } from '@alga-psa/integrations/lib/xero/xeroOAuthVerifierCipher';
 import axios from 'axios';
 
 const CALLBACK_URL = 'http://localhost:3000/api/integrations/xero/callback';
@@ -69,10 +85,6 @@ afterAll(() => {
 
 const liveUser = { user_id: userId, tenant: tenantId, user_type: 'internal' };
 
-function encodeState(payload: unknown): string {
-  return Buffer.from(JSON.stringify(payload)).toString('base64url');
-}
-
 function makeRequest(state: string, csrfCookie?: string): NextRequest {
   const url = `${CALLBACK_URL}?code=auth-code&state=${state}`;
   const headers = csrfCookie
@@ -85,6 +97,26 @@ function redirectError(response: Response): string | null {
   const location = response.headers.get('location');
   if (!location) return null;
   return new URL(location).searchParams.get('xero_error');
+}
+
+async function seedAttempt(overrides: Record<string, unknown> = {}): Promise<string> {
+  const nonce = `nonce-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+  await storeXeroConnectAttempt(
+    nonce,
+    {
+      verifier: await encryptXeroVerifier('seed-verifier'),
+      tenantId,
+      userId: 'user-a',
+      provider: XERO_CONNECT_ATTEMPT_PROVIDER,
+      redirectUri: 'http://localhost:3000/api/integrations/xero/callback',
+      csrf: csrfToken,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 600 * 1000,
+      ...overrides,
+    } as any,
+    600
+  );
+  return nonce;
 }
 
 describe('Xero OAuth callback CSRF and tenant validation', () => {
@@ -108,70 +140,52 @@ describe('Xero OAuth callback CSRF and tenant validation', () => {
     await storeAccountingOAuthNonce('xero', 'nonce-1');
   });
 
-  it('rejects a callback without the CSRF cookie', async () => {
-    const response = await GET(
-      makeRequest(
-        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1' })
-      )
-    );
+  it('rejects a callback without the CSRF cookie without consuming the attempt', async () => {
+    const state = await seedAttempt();
+    const response = await GET(makeRequest(state));
     expect(redirectError(response)).toBe('csrf_mismatch');
     expect(axios.post).not.toHaveBeenCalled();
   });
 
-  it('rejects a callback whose state csrf does not match the cookie', async () => {
-    const response = await GET(
-      makeRequest(
-        encodeState({ tenantId, userId, csrf: 'b'.repeat(64), codeVerifier: 'v', nonce: 'nonce-1' }),
-        csrfToken
-      )
-    );
+  it('rejects a callback whose attempt csrf does not match the cookie', async () => {
+    const state = await seedAttempt();
+    const response = await GET(makeRequest(state, 'b'.repeat(64)));
     expect(redirectError(response)).toBe('csrf_mismatch');
     expect(axios.post).not.toHaveBeenCalled();
   });
 
   it('rejects a callback without an authenticated session', async () => {
     vi.mocked(getCurrentUserWithRevocationCheck).mockResolvedValue(null);
-    const response = await GET(
-      makeRequest(
-        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1' }),
-        csrfToken
-      )
-    );
+    const state = await seedAttempt();
+    const response = await GET(makeRequest(state, csrfToken));
     expect(redirectError(response)).toBe('session_expired');
     expect(axios.post).not.toHaveBeenCalled();
   });
 
-  it('rejects a state tenantId that does not match the session tenant', async () => {
+  it('rejects a callback completed in a different tenant', async () => {
+    const state = await seedAttempt();
     vi.mocked(getCurrentUserWithRevocationCheck).mockResolvedValue({
       ...liveUser,
       tenant: 'tenant-victim',
     } as any);
-    const response = await GET(
-      makeRequest(
-        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1' }),
-        csrfToken
-      )
-    );
+    const response = await GET(makeRequest(state, csrfToken));
     expect(redirectError(response)).toBe('tenant_mismatch');
     expect(axios.post).not.toHaveBeenCalled();
     expect(vi.mocked(xeroMocks.upsertStoredXeroConnections)).not.toHaveBeenCalled();
   });
 
   it('completes the exchange when cookie, state, and session agree', async () => {
-    const response = await GET(
-      makeRequest(
-        encodeState({ tenantId, userId, csrf: csrfToken, codeVerifier: 'v', nonce: 'nonce-1' }),
-        csrfToken
-      )
-    );
+    const state = await seedAttempt();
+    const response = await GET(makeRequest(state, csrfToken));
     const location = response.headers.get('location');
     expect(location).toContain('xero_status=success');
     expect(axios.post).toHaveBeenCalledTimes(1);
     expect(vi.mocked(xeroMocks.upsertStoredXeroConnections)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(xeroMocks.upsertStoredXeroConnections).mock.calls[0][0]).toBe(tenantId);
 
-    const setCookie = response.headers.get('set-cookie') ?? '';
-    expect(setCookie).toContain(`${XERO_OAUTH_CSRF_COOKIE.name}=`);
-    expect(setCookie.toLowerCase()).toContain('max-age=0');
+    // Replaying the consumed state is rejected before any second exchange.
+    const replay = await GET(makeRequest(state, csrfToken));
+    expect(redirectError(replay)).toBe('invalid_state');
+    expect(axios.post).toHaveBeenCalledTimes(1);
   });
 });
