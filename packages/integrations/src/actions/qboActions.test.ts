@@ -401,6 +401,45 @@ describe('QBO integration actions', () => {
     expect(qboClientCreateMock).not.toHaveBeenCalled();
   });
 
+  it('getQboAccounts: a requested realm that is not connected returns a validation error and never contacts QuickBooks', async () => {
+    const credMap = {
+      'realm-111': {
+        accessToken: 'at', refreshToken: 'rt', realmId: 'realm-111',
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+      }
+    };
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify(credMap));
+
+    const result = await getQboAccounts({ realmId: 'realm-unknown' });
+
+    expect(Array.isArray(result)).toBe(false);
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('not connected'),
+      messageKey: 'msp/integrations:errors.qbo.accounts.notConnected'
+    });
+    expect(qboClientCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('getQboAccounts: a requested realm that fails does not fall back to another connected company', async () => {
+    const makeCreds = (realmId: string) => ({
+      accessToken: 'at', refreshToken: 'rt', realmId,
+      accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+      refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+    });
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify({
+      'realm-a': makeCreds('realm-a'),
+      'realm-b': makeCreds('realm-b')
+    }));
+    qboClientCreateMock.mockRejectedValue(new Error('boom'));
+
+    const result = await getQboAccounts({ realmId: 'realm-a' });
+
+    expect(Array.isArray(result)).toBe(false);
+    expect(qboClientCreateMock).toHaveBeenCalledTimes(1);
+    expect(qboClientCreateMock).toHaveBeenCalledWith('tenant-1', 'realm-a');
+  });
+
   it('getQboAccounts: reports an expired QuickBooks connection as a reconnect-required catalog error', async () => {
     const credMap = {
       'realm-expired': {

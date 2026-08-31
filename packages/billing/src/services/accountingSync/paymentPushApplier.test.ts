@@ -23,6 +23,7 @@ import { emptyCycleStats } from './accountingSync.types';
 function makeFakeLedger(overrides: Partial<Record<string, any>> = {}) {
   const base: any = {
     findByAlgaId: vi.fn(async () => undefined),
+    findByAlgaIdAnyRealm: vi.fn(async () => []),
     findByExternalId: vi.fn(async () => undefined),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),

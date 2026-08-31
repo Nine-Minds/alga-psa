@@ -571,7 +571,7 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
   let linked = 0;
   for (const match of matches) {
     // Idempotent: skip if already mapped
-    const existing = await ledger.findByAlgaId('invoice', match.invoiceId);
+    const existing = await ledger.findByAlgaId('invoice', match.invoiceId, realm);
     if (existing) continue;
 
     await ledger.insert({

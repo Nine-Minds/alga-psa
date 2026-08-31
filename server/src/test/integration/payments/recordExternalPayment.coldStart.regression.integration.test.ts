@@ -438,6 +438,7 @@ function makeColdStartLedger(invoiceMapping: any): any {
       return null;
     }),
     findByAlgaId: vi.fn(async () => undefined),
+    findByAlgaIdAnyRealm: vi.fn(async () => []),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn(),

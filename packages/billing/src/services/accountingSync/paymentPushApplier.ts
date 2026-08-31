@@ -83,7 +83,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
     // ── Idempotency: skip if payment mapping already exists ──────────────
     // This covers both already-pushed payments and the pulled-payment case
     // (inbound applier wrote the mapping row before this drain ran).
-    const existingMapping = await deps.ledger.findByAlgaId('invoice_payment', paymentId);
+    const existingMapping = await deps.ledger.findByAlgaId('invoice_payment', paymentId, deps.targetRealm);
     if (existingMapping) {
       logger.debug('[paymentPushApplier] Payment already mapped; marking done', {
         opId: op.op_id,
@@ -95,12 +95,20 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
     }
 
     // ── Resolve invoice mapping (QBO Invoice ID) ─────────────────────────
-    const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.invoiceId);
+    const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.invoiceId, deps.targetRealm);
     if (!invoiceMapping) {
-      const message = `No QBO invoice mapping found for invoice ${payload.invoiceId}`;
-      logger.debug('[paymentPushApplier] Invoice mapping missing; marking failed', {
+      // Realm-exact miss: report whether the invoice is mapped elsewhere so a
+      // mis-targeted operation reads as a realm mismatch, not a missing export.
+      const otherRealms = (await deps.ledger.findByAlgaIdAnyRealm('invoice', payload.invoiceId))
+        .map((row) => row.external_realm_id ?? '(none)');
+      const message = otherRealms.length > 0
+        ? `Invoice ${payload.invoiceId} is mapped to realm(s) [${otherRealms.join(', ')}], not the operation realm ${deps.targetRealm}`
+        : `No QBO invoice mapping found for invoice ${payload.invoiceId}`;
+      logger.debug('[paymentPushApplier] Invoice mapping missing for operation realm; marking failed', {
         opId: op.op_id,
-        invoiceId: payload.invoiceId
+        invoiceId: payload.invoiceId,
+        operationRealm: deps.targetRealm,
+        mappedRealms: otherRealms
       });
       const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
       deps.stats.opsFailed += 1;
@@ -133,7 +141,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
 
     const clientId = invoiceRow?.client_id;
     const customerMapping = clientId
-      ? await deps.ledger.findByAlgaId('client', clientId)
+      ? await deps.ledger.findByAlgaId('client', clientId, deps.targetRealm)
       : undefined;
 
     if (!customerMapping) {

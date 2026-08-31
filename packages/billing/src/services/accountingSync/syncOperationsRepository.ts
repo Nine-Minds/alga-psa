@@ -42,7 +42,7 @@ export class SyncOperationsRepository {
       .insert({
         tenant: input.tenant,
         adapter_type: input.adapterType,
-        target_realm: input.targetRealm ?? null,
+        target_realm: input.targetRealm,
         operation: input.operation,
         alga_entity_type: input.algaEntityType,
         alga_entity_id: input.algaEntityId,
@@ -58,7 +58,7 @@ export class SyncOperationsRepository {
   async listPending(
     tenant: string,
     adapterType: string,
-    options: { operation?: SyncOperationType; targetRealm?: string | null; limit?: number } = {}
+    options: { operation?: SyncOperationType; targetRealm?: string; limit?: number } = {}
   ): Promise<AccountingSyncOperation[]> {
     const query = this.table<AccountingSyncOperation>(tenant)
       .where({ adapter_type: adapterType, status: 'pending' })
@@ -68,9 +68,10 @@ export class SyncOperationsRepository {
       query.andWhere({ operation: options.operation });
     }
     if (options.targetRealm !== undefined) {
-      query.andWhere((builder) => {
-        builder.where('target_realm', options.targetRealm).orWhereNull('target_realm');
-      });
+      // Realm-exact: an operation was enqueued against one immutable target
+      // realm and may only drain in a cycle for that same realm. Legacy
+      // null-realm ops never match; migration backfills or retires them.
+      query.andWhere({ target_realm: options.targetRealm });
     }
     if (options.limit) {
       query.limit(options.limit);

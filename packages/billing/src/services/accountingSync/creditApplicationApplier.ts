@@ -113,7 +113,8 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     // ── Idempotency: skip if a credit_application mapping already exists ──
     const existingApplicationMapping = await deps.ledger.findByAlgaId(
       'credit_application',
-      op.alga_entity_id
+      op.alga_entity_id,
+      deps.targetRealm
     );
     if (existingApplicationMapping) {
       logger.debug('[creditApplicationApplier] Credit application already mapped; marking done', {
@@ -165,10 +166,55 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     }
 
     // ── Resolve both QBO entity IDs ────────────────────────────────────
-    const creditMemoMapping = await deps.ledger.findByAlgaId('invoice', payload.creditNoteInvoiceId);
-    const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.targetInvoiceId);
+    const creditMemoMapping = await deps.ledger.findByAlgaId('invoice', payload.creditNoteInvoiceId, deps.targetRealm);
+    const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.targetInvoiceId, deps.targetRealm);
 
     if (!creditMemoMapping || !invoiceMapping) {
+      // A document mapped to a *different* realm will never appear in this
+      // realm's ledger — that is a mis-targeted operation, not a pending
+      // export. Fail it with a realm-mismatch diagnostic instead of waiting.
+      const missingDocIds = [
+        ...(!creditMemoMapping ? [payload.creditNoteInvoiceId] : []),
+        ...(!invoiceMapping ? [payload.targetInvoiceId] : [])
+      ];
+      const mismatches: Array<{ invoiceId: string; mappedRealms: string[] }> = [];
+      for (const invoiceId of missingDocIds) {
+        const rows = await deps.ledger.findByAlgaIdAnyRealm('invoice', invoiceId);
+        if (rows.length > 0) {
+          mismatches.push({ invoiceId, mappedRealms: rows.map((row) => row.external_realm_id ?? '(none)') });
+        }
+      }
+      if (mismatches.length > 0) {
+        const message =
+          `Credit application documents are mapped outside the operation realm ${deps.targetRealm}: ` +
+          mismatches.map((m) => `invoice ${m.invoiceId} → [${m.mappedRealms.join(', ')}]`).join('; ');
+        logger.warn('[creditApplicationApplier] Mapping realm mismatch; refusing to apply credit', {
+          opId: op.op_id,
+          tenantId: deps.tenantId,
+          operationRealm: deps.targetRealm,
+          mismatches
+        });
+        const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+        deps.stats.opsFailed += 1;
+        if (nextStatus === 'skipped') {
+          await deps.exceptions.createOrUpdate({
+            type: 'accounting_sync_export_error',
+            entityType: 'credit_allocation',
+            entityId: op.alga_entity_id,
+            title: 'Credit application skipped — documents belong to a different QuickBooks company',
+            context: {
+              reason: 'mapping_realm_mismatch',
+              alga_entity_id: op.alga_entity_id,
+              operation_realm: deps.targetRealm,
+              mismatched_documents: mismatches,
+              message,
+              details: message
+            }
+          });
+          deps.stats.exceptionsCreated += 1;
+        }
+        continue;
+      }
       // Otherwise an export simply hasn't drained yet — leave pending without
       // burning attempts. But waiting is only healthy for so long: past the
       // stall window, surface an exception instead of hiding behind the

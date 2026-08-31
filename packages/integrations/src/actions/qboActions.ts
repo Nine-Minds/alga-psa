@@ -508,20 +508,32 @@ async function getTenantCredentialMap(tenantId: string): Promise<QboCredentialsM
   }
 }
 
+/**
+ * Resolve which realms a catalog fetch may touch.
+ *
+ * - No requested realm: any connected realm (discovery).
+ * - Requested realm that is connected: that realm only — never fall through to
+ *   a different company when the requested one errors.
+ * - Requested realm that is not connected: null (fail closed). The caller must
+ *   return a validation error without contacting the provider.
+ */
 function resolveRealmPriority(
   credentials: QboCredentialsMap,
   preferredRealmId?: string | null
-): string[] {
+): string[] | null {
   const realmIds = Object.keys(credentials);
   if (!preferredRealmId) {
     return realmIds;
   }
 
-  if (realmIds.includes(preferredRealmId)) {
-    return [preferredRealmId, ...realmIds.filter((realmId) => realmId !== preferredRealmId)];
-  }
+  return realmIds.includes(preferredRealmId) ? [preferredRealmId] : null;
+}
 
-  return realmIds;
+function qboCatalogInvalidRealm(catalog: QboCatalog): QboCatalogActionError {
+  return actionError(
+    `The requested QuickBooks company is not connected. Reload the page or pick a connected company before loading ${QBO_CATALOG_LABELS[catalog]}.`,
+    QBO_CATALOG_KEYS[catalog].notConnected,
+  );
 }
 
 export async function getTenantQboCredentials(
@@ -717,6 +729,11 @@ export const getQboAccounts = withAuth(async (
   const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
 
+  if (candidateRealmIds === null) {
+    logger.warn('Requested QBO realm is not connected for tenant', { tenantId: tenant, requestedRealmId: targetRealm });
+    return qboCatalogInvalidRealm('accounts');
+  }
+
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO accounts: no credential entries found', { tenantId: tenant });
     return qboCatalogNotConnected('accounts');
@@ -765,6 +782,11 @@ export const getQboClasses = withAuth(async (
 
   const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+
+  if (candidateRealmIds === null) {
+    logger.warn('Requested QBO realm is not connected for tenant', { tenantId: tenant, requestedRealmId: targetRealm });
+    return qboCatalogInvalidRealm('classes');
+  }
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO classes: no credential entries found', { tenantId: tenant });
@@ -815,6 +837,11 @@ export const getQboDepartments = withAuth(async (
   const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
 
+  if (candidateRealmIds === null) {
+    logger.warn('Requested QBO realm is not connected for tenant', { tenantId: tenant, requestedRealmId: targetRealm });
+    return qboCatalogInvalidRealm('departments');
+  }
+
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO departments: no credential entries found', { tenantId: tenant });
     return qboCatalogNotConnected('departments');
@@ -862,6 +889,11 @@ export const getQboItems = withAuth(async (
 
   const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+
+  if (candidateRealmIds === null) {
+    logger.warn('Requested QBO realm is not connected for tenant', { tenantId: tenant, requestedRealmId: targetRealm });
+    return qboCatalogInvalidRealm('items');
+  }
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO items: no credential entries found', { tenantId: tenant });
@@ -1131,7 +1163,7 @@ export const disconnectQbo = withAuth(async (
 
 /**
  * Fetches a list of TaxCodes from QuickBooks Online.
- * Respects the requested realm and falls back to other connected realms.
+ * A requested realm must be connected; unknown realms return a validation error.
  */
 export const getQboTaxCodes = withAuth(async (
   user,
@@ -1150,6 +1182,11 @@ export const getQboTaxCodes = withAuth(async (
 
   const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+
+  if (candidateRealmIds === null) {
+    logger.warn('Requested QBO realm is not connected for tenant', { tenantId: tenant, requestedRealmId: targetRealm });
+    return qboCatalogInvalidRealm('taxCodes');
+  }
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO tax codes: no credential entries found', { tenantId: tenant });
@@ -1266,12 +1303,12 @@ export const setQboAutomatedSalesTaxMode = withAuth(async (
 
 /**
  * Fetches a list of Terms from QuickBooks Online.
- * Respects the requested realm and falls back to other connected realms.
+ * A requested realm must be connected; unknown realms return a validation error.
  */
 /**
  * Fetches a paged list of Customers from QuickBooks Online.
  * Pages through all results using STARTPOSITION/MAXRESULTS (1000 per page).
- * Respects the requested realm and falls back to other connected realms.
+ * A requested realm must be connected; unknown realms return a validation error.
  * Results are cached for CATALOG_CACHE_TTL_MS per (tenant, realm) pair.
  */
 export const getQboCustomers = withAuth(async (
@@ -1291,6 +1328,11 @@ export const getQboCustomers = withAuth(async (
 
   const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+
+  if (candidateRealmIds === null) {
+    logger.warn('Requested QBO realm is not connected for tenant', { tenantId: tenant, requestedRealmId: targetRealm });
+    return qboCatalogInvalidRealm('customers');
+  }
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO customers: no credential entries found', { tenantId: tenant });
@@ -1339,6 +1381,11 @@ export const getQboTerms = withAuth(async (
 
   const credentials = await getTenantCredentialMap(tenant);
   const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+
+  if (candidateRealmIds === null) {
+    logger.warn('Requested QBO realm is not connected for tenant', { tenantId: tenant, requestedRealmId: targetRealm });
+    return qboCatalogInvalidRealm('paymentTerms');
+  }
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO terms: no credential entries found', { tenantId: tenant });

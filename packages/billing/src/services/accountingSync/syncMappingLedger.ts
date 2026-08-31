@@ -35,45 +35,66 @@ export class SyncMappingLedger {
     return tenantDb(this.knex, this.tenantId).table<Row>(TABLE);
   }
 
+  /**
+   * Mapping lookups are realm-exact: external ids are company-local in QBO, so
+   * a mapping is only usable by an operation targeting the same realm. Legacy
+   * rows with a null realm never match — they are backfilled or quarantined by
+   * migration, not guessed at lookup time.
+   */
   async findByExternalId(
     algaEntityType: string,
     externalEntityId: string,
-    targetRealm?: string | null
+    targetRealm: string
   ): Promise<ExternalEntityMappingRow | undefined> {
-    const query = this.table<ExternalEntityMappingRow>()
+    return this.table<ExternalEntityMappingRow>()
       .where({
         integration_type: this.integrationType,
         alga_entity_type: algaEntityType,
-        external_entity_id: externalEntityId
-      });
-
-    if (targetRealm) {
-      query.andWhere((builder) => {
-        builder.where('external_realm_id', targetRealm).orWhereNull('external_realm_id');
-      });
-    }
-
-    return query.first();
+        external_entity_id: externalEntityId,
+        external_realm_id: targetRealm
+      })
+      .first();
   }
 
   async findByAlgaId(
     algaEntityType: string,
-    algaEntityId: string
+    algaEntityId: string,
+    targetRealm: string
   ): Promise<ExternalEntityMappingRow | undefined> {
+    return this.table<ExternalEntityMappingRow>()
+      .where({
+        integration_type: this.integrationType,
+        alga_entity_type: algaEntityType,
+        alga_entity_id: algaEntityId,
+        external_realm_id: targetRealm
+      })
+      .first();
+  }
+
+  /**
+   * Diagnostic lookup across realms (including legacy null-realm rows). Never
+   * use the result to address an external write — it exists so callers can
+   * distinguish "never mapped" from "mapped to a different realm" and report
+   * the mismatch.
+   */
+  async findByAlgaIdAnyRealm(
+    algaEntityType: string,
+    algaEntityId: string
+  ): Promise<ExternalEntityMappingRow[]> {
     return this.table<ExternalEntityMappingRow>()
       .where({
         integration_type: this.integrationType,
         alga_entity_type: algaEntityType,
         alga_entity_id: algaEntityId
       })
-      .first();
+      .select('*');
   }
 
   async insert(params: {
     algaEntityType: string;
     algaEntityId: string;
     externalEntityId: string;
-    targetRealm?: string | null;
+    targetRealm: string;
     syncStatus?: string;
     metadata?: Record<string, unknown> | null;
   }): Promise<ExternalEntityMappingRow> {
@@ -84,7 +105,7 @@ export class SyncMappingLedger {
         alga_entity_type: params.algaEntityType,
         alga_entity_id: params.algaEntityId,
         external_entity_id: params.externalEntityId,
-        external_realm_id: params.targetRealm ?? null,
+        external_realm_id: params.targetRealm,
         sync_status: params.syncStatus ?? 'synced',
         last_synced_at: this.knex.fn.now() as unknown as string,
         metadata: params.metadata ?? null

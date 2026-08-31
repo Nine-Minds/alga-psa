@@ -55,9 +55,47 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
   }
 
   for (const op of pending) {
-    const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id);
+    const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id, deps.targetRealm);
 
     if (!mapping) {
+      // Distinguish "never exported" (nothing to void — done) from "mapped,
+      // but not to this realm" (a void here would be aimed at the wrong
+      // company file — fail without touching the provider).
+      const otherRealmRows = await deps.ledger.findByAlgaIdAnyRealm('invoice', op.alga_entity_id);
+      if (otherRealmRows.length > 0) {
+        const mappedRealms = otherRealmRows.map((row) => row.external_realm_id ?? '(none)');
+        const message =
+          `Invoice ${op.alga_entity_id} is mapped to realm(s) [${mappedRealms.join(', ')}], ` +
+          `not the operation realm ${deps.targetRealm}; refusing to void`;
+        logger.warn('[invoiceVoidApplier] Mapping realm mismatch; refusing to void', {
+          opId: op.op_id,
+          tenantId: deps.tenantId,
+          invoiceId: op.alga_entity_id,
+          operationRealm: deps.targetRealm,
+          mappedRealms
+        });
+        const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+        deps.stats.opsFailed += 1;
+        if (nextStatus === 'skipped') {
+          await deps.exceptions.createOrUpdate({
+            type: 'accounting_sync_export_error',
+            entityType: 'invoice',
+            entityId: op.alga_entity_id,
+            title: 'Invoice void skipped — mapping belongs to a different QuickBooks company',
+            context: {
+              reason: 'mapping_realm_mismatch',
+              alga_entity_id: op.alga_entity_id,
+              operation_realm: deps.targetRealm,
+              mapped_realms: mappedRealms,
+              message,
+              details: message
+            }
+          });
+          deps.stats.exceptionsCreated += 1;
+        }
+        continue;
+      }
+
       // Nothing to void in QBO — the invoice was never exported
       logger.debug('[invoiceVoidApplier] No mapping found; marking done', {
         opId: op.op_id,

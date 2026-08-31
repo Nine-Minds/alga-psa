@@ -177,10 +177,15 @@ export const resolveAccountingDriftAccept = withAuth(async (
   await checkBillingUpdateAccess(user);
   const { knex } = await createTenantKnex();
 
+  const realm = await resolveDefaultRealm(knex, tenant);
+  if (!realm) {
+    return { resolved: false, error: 'No QuickBooks company is connected.' };
+  }
+
   const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
-  const mapping = await ledger.findByAlgaId('invoice', invoiceId);
+  const mapping = await ledger.findByAlgaId('invoice', invoiceId, realm);
   if (!mapping) {
-    return { resolved: false, error: 'Invoice has no QuickBooks mapping.' };
+    return { resolved: false, error: 'Invoice has no QuickBooks mapping for the connected company.' };
   }
 
   const metadata = mapping.metadata ?? {};

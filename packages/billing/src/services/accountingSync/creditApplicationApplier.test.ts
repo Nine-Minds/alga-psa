@@ -39,6 +39,7 @@ function makeOps(overrides: any = {}) {
 function makeLedger(overrides: any = {}) {
   return {
     findByAlgaId: vi.fn(async () => undefined),
+    findByAlgaIdAnyRealm: vi.fn(async () => []),
     findByExternalId: vi.fn(async () => undefined),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
