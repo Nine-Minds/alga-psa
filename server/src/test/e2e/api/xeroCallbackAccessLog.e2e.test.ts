@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import net from 'node:net';
@@ -62,8 +61,14 @@ describe('Xero callback access-log redaction (real Next server)', () => {
     originalPort = process.env.PORT;
 
     // Use a throwaway .next dir so this server never touches the shared
-    // .next/dev cache used by the worktree's own running server.
-    distDir = fs.mkdtempSync(path.join(os.tmpdir(), 'xero-accesslog-dist-'));
+    // .next/dev cache used by the worktree's own running server. Next resolves
+    // `distDir` as path.join(projectDir, distDir), so an absolute os.tmpdir()
+    // path would silently re-root under server/tmp and escape cleanup; create
+    // the dir there directly and pass the relative path so afterAll removes
+    // the directory Next actually writes.
+    const tmpRoot = path.join(appDir, 'tmp');
+    fs.mkdirSync(tmpRoot, { recursive: true });
+    distDir = fs.mkdtempSync(path.join(tmpRoot, 'xero-accesslog-dist-'));
     port = await allocatePort();
     baseUrl = `http://127.0.0.1:${port}`;
 
@@ -71,7 +76,7 @@ describe('Xero callback access-log redaction (real Next server)', () => {
       ...process.env,
       NODE_ENV: 'development',
       PORT: String(port),
-      NEXT_DIST_DIR: distDir,
+      NEXT_DIST_DIR: path.relative(appDir, distDir),
       E2E_SKIP_APP_INIT: 'true',
       NEXT_PUBLIC_EDITION: 'enterprise',
       NEXT_TELEMETRY_DISABLED: '1',
