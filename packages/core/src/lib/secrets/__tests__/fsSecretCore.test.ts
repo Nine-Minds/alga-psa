@@ -353,25 +353,45 @@ describe('fsSecretCore root validation', () => {
     expect((await fsPromises.lstat(missing)).mode & 0o777).toBe(SECRET_DIR_MODE);
   });
 
-  it('refuses writes with an actionable operator message when the root mode is unsafe', async () => {
+  it('tightens a too-permissive owned root to 0700 instead of refusing writes', async () => {
     await fsPromises.chmod(rootDir, 0o755);
 
-    await expect(ensureWriteBasePath(rootDir)).rejects.toSatisfy((error: unknown) => {
-      if (!(error instanceof UnsafeSecretLocationError)) return false;
-      expect(error.message).toContain(rootDir);
-      expect(error.message).toContain('0700');
-      expect(error.message).toContain('chmod 700');
-      return true;
-    });
+    const resolved = await ensureWriteBasePath(rootDir);
+
+    expect(resolved).toBe(rootDir);
+    // The root and the tenants/ directory it manages are enforced to owner-only.
+    expect((await fsPromises.lstat(rootDir)).mode & 0o777).toBe(SECRET_DIR_MODE);
+    expect((await fsPromises.lstat(await tenantsDir(rootDir))).mode & 0o777).toBe(SECRET_DIR_MODE);
   });
 
-  it('continues to allow reads of a legacy-moded store while refusing writes', async () => {
+  it('reads a legacy-moded store and hardens the root to 0700 on the write path', async () => {
     const filePath = await seedTenantSecret('tenant-legacy', 'token', SECRET_VALUE);
     await fsPromises.chmod(rootDir, 0o755);
     await fsPromises.chmod(await tenantDir(rootDir, 'tenant-legacy'), 0o755);
 
+    // Reads keep working regardless of the loose mode.
     expect(await readFileContentSafe(filePath)).toBe(SECRET_VALUE);
-    await expect(ensureWriteBasePath(rootDir)).rejects.toBeInstanceOf(UnsafeSecretLocationError);
+
+    // The write path enforces owner-only on the root rather than refusing.
+    const resolved = await ensureWriteBasePath(rootDir);
+    expect(resolved).toBe(rootDir);
+    expect((await fsPromises.lstat(rootDir)).mode & 0o777).toBe(SECRET_DIR_MODE);
+  });
+
+  it('refuses writes with an actionable operator message when the root is a symlink', async () => {
+    const target = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-symlink-target-'));
+    const symlinkRoot = path.join(rootDir, 'root-symlink');
+    try {
+      await symlink(target, symlinkRoot);
+      await expect(ensureWriteBasePath(symlinkRoot)).rejects.toSatisfy((error: unknown) => {
+        if (!(error instanceof UnsafeSecretLocationError)) return false;
+        expect(error.message).toContain(symlinkRoot);
+        expect(error.message).toContain('symlink');
+        return true;
+      });
+    } finally {
+      await rm(target, { recursive: true, force: true });
+    }
   });
 });
 
@@ -446,10 +466,11 @@ describe('FileSystemSecretProvider provider round trip', () => {
     }
   });
 
-  it('continues reading from a legacy-moded store while refusing writes with the operator message', async () => {
+  it('reads and writes a legacy-moded store, hardening the root to 0700 without logging secrets', async () => {
     const resultPath = path.join(rootDir, 'provider-result');
     const tenant = 'tenant-read-legacy';
     const name = 'token';
+    const WRITTEN_VALUE = 'WRITE_SHOULD_SUCCEED_VALUE_12345';
     await seedTenantSecret(tenant, name, SECRET_VALUE);
     await fsPromises.chmod(rootDir, 0o755);
 
@@ -458,24 +479,24 @@ describe('FileSystemSecretProvider provider round trip', () => {
       '  const p = new FileSystemSecretProvider();',
       '  const v = await p.getTenantSecret(process.argv[1], process.argv[2]);',
       `  writeFileSync(${JSON.stringify(resultPath)}, v || 'NULL');`,
-      '  try {',
-      '    await p.setTenantSecret(process.argv[1], "other", "WRITE_SHOULD_FAIL_VALUE_12345");',
-      `    writeFileSync(${JSON.stringify(`${resultPath}-write`)}, 'UNEXPECTED_WRITE_OK');`,
-      '  } catch (e) {',
-      `    writeFileSync(${JSON.stringify(`${resultPath}-write`)}, String(e instanceof Error ? e.message : e));`,
-      '  }',
+      `  await p.setTenantSecret(process.argv[1], "other", ${JSON.stringify(WRITTEN_VALUE)});`,
+      '  const w = await p.getTenantSecret(process.argv[1], "other");',
+      `  writeFileSync(${JSON.stringify(`${resultPath}-write`)}, w === ${JSON.stringify(WRITTEN_VALUE)} ? 'WRITE_OK' : ('WRITE_BAD:' + String(w)));`,
       '})().catch((e) => { console.error(e); process.exit(1); });',
     ].join('\n'));
 
     const { stdout, stderr } = await runProviderProgram(program, [tenant, name]);
 
+    // The pre-existing secret still reads back, and the new write succeeds
+    // through the provider abstraction (as QBO/Xero token storage does).
     expect(await readFile(resultPath, 'utf-8')).toBe(SECRET_VALUE);
-    const writeMessage = await readFile(`${resultPath}-write`, 'utf-8');
-    expect(writeMessage).toContain('not safe for secret writes');
-    expect(writeMessage).toContain('chmod 700');
-    expect(writeMessage).not.toContain('WRITE_SHOULD_FAIL_VALUE_12345');
+    expect(await readFile(`${resultPath}-write`, 'utf-8')).toBe('WRITE_OK');
+    // The write path enforced owner-only on the previously 0755 root.
+    expect((await fsPromises.lstat(rootDir)).mode & 0o777).toBe(SECRET_DIR_MODE);
+    // Neither secret value is ever emitted to the logs.
     const allOutput = `${stdout}\n${stderr}`;
     expect(allOutput).not.toContain(SECRET_VALUE);
+    expect(allOutput).not.toContain(WRITTEN_VALUE);
   });
 
   it('loads from the compiled dist in plain node outside the package and round-trips a secret', async () => {

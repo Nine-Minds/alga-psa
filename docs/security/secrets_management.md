@@ -196,24 +196,31 @@ independent of the process umask:
 - Tenant IDs and secret names are validated as single path components; the
   resolved path must stay under the secret root.
 - The provider refuses to write through symlinks or non-regular files, and
-  validates the secret root before the first write: a root that is missing,
-  a symlink, not a directory, owned by another user, or not mode `0700` causes
-  writes to be refused with a precise operator message. Reads are unaffected,
-  so existing deployments continue to boot; only writes fail closed.
+  validates the secret root before the first write. A root the service **owns**
+  but that is merely too permissive (e.g. `0755` from a looser umask or a
+  volume mounted world-readable) is tightened to `0700` in place before the
+  first write — the same non-destructive correction applied to `tenants/` and
+  per-tenant directories, and it only ever removes group/other access. Writes
+  fail closed with a precise operator message only when the root cannot be made
+  safe automatically: it is a **symlink**, **not a directory**, or **owned by a
+  different user** (re-owning another user's directory is a deployment decision
+  the provider will not make silently). Reads are unaffected in every case.
 - Secret values are never written to logs; only paths are logged.
 
 ### Operator message on refused writes
 
-When the secret root cannot be made safe, writes fail with a message naming the
-exact path and the fix, for example:
+When the secret root cannot be made safe automatically (a symlink, a
+non-directory, or a directory owned by a different user), writes fail with a
+message naming the exact path and the fix, for example:
 
 ```
 Filesystem secret store at /var/lib/alga/tenant-secrets is not safe for secret
-writes: it has mode 755. Expected a real directory owned by uid 1000 with mode
-0700. Refusing secret writes; reads continue. Fix with: sudo chown 1000
-/var/lib/alga/tenant-secrets && sudo chmod 700 /var/lib/alga/tenant-secrets, or
-run scripts/repair-secret-permissions.sh --apply --path
-/var/lib/alga/tenant-secrets (see docs/security/secrets_management.md).
+writes: it is owned by uid 0 and the process runs as uid 1000. Expected a real
+directory owned by uid 1000 with mode 0700. Refusing secret writes; reads
+continue. Fix with: sudo chown 1000 /var/lib/alga/tenant-secrets && sudo chmod
+700 /var/lib/alga/tenant-secrets, or run scripts/repair-secret-permissions.sh
+--apply --path /var/lib/alga/tenant-secrets (see
+docs/security/secrets_management.md).
 ```
 
 ### Repairing an existing store

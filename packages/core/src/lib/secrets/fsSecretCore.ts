@@ -23,9 +23,11 @@
  *   allowlist-validated, and the resolved path is verified to stay under the
  *   secret root.
  * - The secret root is validated before writes (real directory, not a symlink,
- *   owned by the running user, safe modes). Writes are refused with an
- *   actionable operator message when the location cannot be made safe; reads
- *   are unaffected.
+ *   owned by the running user). A root we own but whose mode is too permissive
+ *   is tightened to `0o700` in place (the non-destructive repair path); writes
+ *   are refused with an actionable operator message only when the location
+ *   cannot be made safe (a symlink, a non-directory, or owned by another user).
+ *   Reads are unaffected.
  */
 
 import { loadBuiltin } from './lazyBuiltin';
@@ -273,14 +275,17 @@ export async function ensurePrivateDirectory(target: string): Promise<void> {
  * Validates the secret root and the `tenants/` directory for writes and
  * returns the resolved root.
  *
- * The root itself is validated strictly: a missing root is created with
- * `0o700`, but an existing root with the wrong mode, a foreign owner, or a
- * symlink refuses writes with an operator message. The root may be a shared or
- * mounted directory (e.g. the appliance hostPath), so its ownership/mode is a
- * deployment decision — changing it automatically could break other readers.
+ * A missing root is created with `0o700`. An existing root that is a symlink,
+ * a non-directory, or owned by a *different* user refuses writes with an
+ * operator message — re-owning another user's directory is a deployment
+ * decision we must not make automatically. A root we own whose mode is merely
+ * too permissive is tightened to `0o700` in place: this only ever removes
+ * group/other access, so a store created under a looser umask (or a volume
+ * mounted 0755) is enforced to owner-only without operator intervention, the
+ * same way per-tenant directories are corrected.
  */
 export async function ensureWriteBasePath(basePath: string): Promise<string> {
-  const p = await getPath();
+  const [fs, p] = await Promise.all([getFs(), getPath()]);
   const root = p.resolve(basePath);
   let stat = await lstatOrNull(root);
 
@@ -307,8 +312,19 @@ export async function ensureWriteBasePath(basePath: string): Promise<string> {
   if (typeof uid === 'number' && stat.uid !== uid) {
     throw unsafeLocation(root, `it is owned by uid ${stat.uid} and the process runs as uid ${uid}`);
   }
+
+  // We own the root (or the platform has no uid concept): enforce owner-only
+  // mode by tightening it in place. Because ownership was confirmed above, this
+  // chmod only ever removes group/other access — it never grants any — so a
+  // world/other-writable window (if one existed) is closed before the first
+  // write, and every path component is re-validated as a real, non-symlink
+  // directory afterwards. A root owned by a different user was already refused.
   if ((stat.mode & 0o777) !== SECRET_DIR_MODE) {
-    throw unsafeLocation(root, `it has mode ${(stat.mode & 0o777).toString(8)}`);
+    await fs.chmod(root, SECRET_DIR_MODE);
+    stat = await lstatOrNull(root);
+    if (!stat || (stat.mode & 0o777) !== SECRET_DIR_MODE) {
+      throw unsafeLocation(root, 'the directory mode could not be corrected');
+    }
   }
 
   await ensurePrivateDirectory(await tenantsDir(root));
