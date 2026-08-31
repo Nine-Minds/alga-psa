@@ -63,14 +63,11 @@ export class KnexInvoiceMappingRepository {
           .where('alga_entity_id', params.invoiceId);
       });
 
+    // Realm-exact: external entity ids are provider-company-local, so a
+    // mapping from another realm — or a legacy realm-less row — must never
+    // resolve for a realm-scoped export or write.
     if (params.targetRealm) {
-      query.andWhere((builder) => {
-        builder.where('external_realm_id', params.targetRealm as string).orWhereNull('external_realm_id');
-      });
-      query.orderByRaw(
-        'CASE WHEN external_realm_id = ? THEN 0 WHEN external_realm_id IS NULL THEN 1 ELSE 2 END',
-        [params.targetRealm]
-      );
+      query.andWhere('external_realm_id', params.targetRealm);
     } else {
       query.andWhere((builder) => {
         builder.whereNull('external_realm_id');
@@ -104,7 +101,9 @@ export class KnexInvoiceMappingRepository {
         created_at: now,
         updated_at: now
       })
-      .onConflict(['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
+      // Matches idx_unique_alga_mapping, which includes the realm expression —
+      // the same invoice may be mapped once per realm.
+      .onConflict(this.knex.raw("(tenant, integration_type, alga_entity_type, alga_entity_id, COALESCE(external_realm_id, ''))"))
       .merge({
         external_entity_id: params.externalInvoiceId,
         external_realm_id: params.targetRealm ?? null,

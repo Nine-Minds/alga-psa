@@ -227,10 +227,11 @@ export class AccountingMappingResolver {
       })
       .orderByRaw('CASE WHEN external_realm_id IS NOT NULL THEN 0 ELSE 1 END');
 
+    // Realm-exact: external ids are provider-company-local, so a mapping from
+    // another realm — or a legacy realm-less row — must never resolve for a
+    // realm-scoped export.
     if (targetRealm) {
-      query.andWhere((builder) => {
-        builder.where('external_realm_id', targetRealm).orWhereNull('external_realm_id');
-      });
+      query.andWhere('external_realm_id', targetRealm);
     } else {
       query.whereNull('external_realm_id');
     }

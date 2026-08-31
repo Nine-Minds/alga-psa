@@ -224,7 +224,8 @@ export async function satisfyExportOpsForManualBatch(
   knex: Knex,
   tenantId: string,
   adapterType: string,
-  invoiceIds: string[]
+  invoiceIds: string[],
+  targetRealm: string | null
 ): Promise<void> {
   try {
     if (invoiceIds.length === 0) {
@@ -234,7 +235,8 @@ export async function satisfyExportOpsForManualBatch(
       tenantId,
       adapterType,
       'export_invoice',
-      invoiceIds
+      invoiceIds,
+      targetRealm
     );
     if (satisfied > 0) {
       logger.debug('[accountingSync] Manual batch satisfied queued export ops', { tenantId, satisfied });
@@ -267,12 +269,15 @@ export async function enqueueInvoiceVoid(
       return;
     }
 
-    // Only enqueue when a mapping exists (otherwise there's nothing to void in QBO)
+    // Only enqueue when a mapping exists in the operation realm (otherwise
+    // there's nothing to void in this QBO company; a mapping in another realm
+    // or a legacy realm-less row must not produce a void against this one).
     const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
         integration_type: QBO_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
-        alga_entity_id: invoiceId
+        alga_entity_id: invoiceId,
+        external_realm_id: realm
       })
       .first('id');
 
@@ -338,12 +343,15 @@ export async function enqueueExternalPaymentPush(
       return;
     }
 
-    // Skip invoices that don't have a QBO mapping yet (pre-go-live invoices).
+    // Skip invoices that don't have a QBO mapping in the operation realm
+    // (pre-go-live invoices, or invoices mapped to a different company —
+    // neither may drive a payment into this realm).
     const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
         integration_type: QBO_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
-        alga_entity_id: params.invoiceId
+        alga_entity_id: params.invoiceId,
+        external_realm_id: realm
       })
       .first('id');
 

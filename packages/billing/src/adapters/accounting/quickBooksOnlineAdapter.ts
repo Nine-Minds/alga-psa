@@ -1007,14 +1007,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       })
       .select('external_entity_id', 'metadata');
 
+    // Realm-exact: QBO entity ids are company-local, so a mapping only means
+    // anything within its own realm. Legacy realm-less rows are never usable
+    // for a remote write — they await backfill or reconciliation.
     if (params.targetRealm) {
-      query.andWhere((builder) => {
-        builder.where('external_realm_id', params.targetRealm as string).orWhereNull('external_realm_id');
-      });
-      query.orderByRaw(
-        'CASE WHEN external_realm_id = ? THEN 0 WHEN external_realm_id IS NULL THEN 1 ELSE 2 END',
-        [params.targetRealm]
-      );
+      query.andWhere('external_realm_id', params.targetRealm);
     } else {
       query.whereNull('external_realm_id');
     }
@@ -1050,7 +1047,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         created_at: now,
         updated_at: now
       })
-      .onConflict(['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
+      // Matches idx_unique_alga_mapping, which includes the realm expression —
+      // the same local entity may be mapped once per realm.
+      .onConflict(knex.raw("(tenant, integration_type, alga_entity_type, alga_entity_id, COALESCE(external_realm_id, ''))"))
       .merge({
         external_entity_id: params.externalEntityId,
         external_realm_id: params.targetRealm ?? null,
@@ -1262,10 +1261,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       .whereIn('alga_entity_type', [CLIENT_ENTITY_TYPE, BILLING_PROFILE_ENTITY_TYPE])
       .whereIn('alga_entity_id', [...clientIds, ...profileIds])
       .modify((qb) => {
+        // Realm-exact: a customer/profile mapping from another realm (or a
+        // legacy realm-less row) must not select the QBO customer this batch
+        // exports against.
         if (context.batch.target_realm) {
-          qb.andWhere((builder) => {
-            builder.where('external_realm_id', context.batch.target_realm as string).orWhereNull('external_realm_id');
-          });
+          qb.andWhere('external_realm_id', context.batch.target_realm);
         } else {
           qb.andWhere((builder) => builder.whereNull('external_realm_id'));
         }
@@ -1318,7 +1318,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         .where({
           integration_type: this.type,
           alga_entity_type: 'invoice',
-          external_entity_id: externalInvoiceRef
+          external_entity_id: externalInvoiceRef,
+          // QBO ids are company-local: the same Invoice id can exist in two
+          // realms, so the metadata lookup must be scoped to the realm the
+          // invoice was fetched from.
+          external_realm_id: targetRealm
         })
         .first();
 

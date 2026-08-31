@@ -59,15 +59,34 @@ function makeKnex(invoiceType: string | null = 'standard', invoiceDate: string |
 }
 
 /**
- * Build a fake knex for enqueueInvoiceVoid tests.
- * The void producer queries tenant_external_entity_mappings to check for a mapping.
+ * Build a fake knex for enqueueInvoiceVoid / enqueueExternalPaymentPush tests.
+ * Simulates the tenant_external_entity_mappings table with a single mapping
+ * row living in `mappingRealm` (or no row at all): the producer's realm-scoped
+ * existence check only finds the row when the queried realm matches.
  */
-function makeVoidKnex(hasMapping: boolean = true): any {
-  const mappingRow = hasMapping ? { id: 'map-1' } : null;
+function makeVoidKnex(hasMapping: boolean | { mappingRealm: string | null } = true): any {
+  const seeded = typeof hasMapping === 'boolean'
+    ? (hasMapping ? { mappingRealm: 'realm-1' } : null)
+    : hasMapping;
+  const criteria: Record<string, unknown> = {};
   const query: any = {
-    where: vi.fn(() => query),
-    first: vi.fn(async (..._args: any[]) => mappingRow)
+    where: vi.fn((arg: any, value?: any) => {
+      if (typeof arg === 'object' && arg !== null) {
+        Object.assign(criteria, arg);
+      } else if (typeof arg === 'string') {
+        criteria[arg] = value;
+      }
+      return query;
+    }),
+    first: vi.fn(async (..._args: any[]) => {
+      if (!seeded) return null;
+      if ('external_realm_id' in criteria && criteria.external_realm_id !== seeded.mappingRealm) {
+        return null;
+      }
+      return { id: 'map-1' };
+    })
   };
+  query.andWhere = query.where;
   const table = vi.fn(() => query);
   const fn = Object.assign(table, { fn: { now: vi.fn() } });
   return fn;
@@ -454,6 +473,34 @@ describe('enqueueInvoiceVoid', () => {
     );
   });
 
+  it('does not enqueue when the invoice is only mapped in a different realm', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueInvoiceVoid(makeVoidKnex({ mappingRealm: 'realm-other' }), 't1', 'inv-void-x');
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+
+  it('does not enqueue when the invoice only has a legacy realm-less mapping', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueInvoiceVoid(makeVoidKnex({ mappingRealm: null }), 't1', 'inv-void-y');
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+
   it('does NOT check autoSyncEnabled (always enqueues regardless of toggle)', async () => {
     vi.stubEnv('EDITION', 'ee');
     // autoSyncEnabled=false should NOT stop void from enqueuing
@@ -493,6 +540,34 @@ describe('enqueueExternalPaymentPush', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it('does not enqueue when the invoice is only mapped in a different realm', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueExternalPaymentPush(makeVoidKnex({ mappingRealm: 'realm-other' }), 't1', BASE_PARAMS);
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+
+  it('does not enqueue when the invoice only has a legacy realm-less mapping', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueExternalPaymentPush(makeVoidKnex({ mappingRealm: null }), 't1', BASE_PARAMS);
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
   });
 
   it('enqueues record_payment when all gates pass (EE + non-qbo provider + realm + mapped invoice)', async () => {
@@ -584,16 +659,16 @@ describe('satisfyExportOpsForManualBatch', () => {
     vi.clearAllMocks();
   });
 
-  it('satisfies pending export ops for any adapterType', async () => {
-    await satisfyExportOpsForManualBatch(knex, 't1', 'xero', ['inv-1']);
+  it('satisfies pending export ops for any adapterType, scoped to the batch realm', async () => {
+    await satisfyExportOpsForManualBatch(knex, 't1', 'xero', ['inv-1'], 'xero-org-1');
     const results = vi.mocked(SyncOperationsRepository).mock.results;
     expect(results.length).toBeGreaterThan(0);
     const satisfyPending = (results[results.length - 1].value as any)?.satisfyPending as ReturnType<typeof vi.fn>;
-    expect(satisfyPending).toHaveBeenCalledWith('t1', 'xero', 'export_invoice', ['inv-1']);
+    expect(satisfyPending).toHaveBeenCalledWith('t1', 'xero', 'export_invoice', ['inv-1'], 'xero-org-1');
   });
 
   it('does nothing for empty invoiceIds', async () => {
-    await satisfyExportOpsForManualBatch(knex, 't1', 'quickbooks_online', []);
+    await satisfyExportOpsForManualBatch(knex, 't1', 'quickbooks_online', [], 'realm-1');
     // SyncOperationsRepository should not be called with satisfyPending
     const instances = vi.mocked(SyncOperationsRepository).mock.instances;
     for (const inst of instances) {

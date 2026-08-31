@@ -611,12 +611,11 @@ export class XeroAdapter implements AccountingExportAdapter {
       .whereIn('alga_entity_type', ['client'])
       .whereIn('alga_entity_id', Array.from(clientIds))
       .modify((qb) => {
+        // Realm-exact: a contact mapping from another Xero organisation (or a
+        // legacy realm-less row) must not select the contact this batch
+        // exports against.
         if (context.batch.target_realm) {
-          qb.andWhere((builder) => {
-            builder
-              .where('external_realm_id', context.batch.target_realm as string)
-              .orWhereNull('external_realm_id');
-          });
+          qb.andWhere('external_realm_id', context.batch.target_realm);
         } else {
           qb.andWhere((builder) => builder.whereNull('external_realm_id'));
         }

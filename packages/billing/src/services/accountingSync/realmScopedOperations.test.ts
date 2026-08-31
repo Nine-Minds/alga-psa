@@ -321,3 +321,141 @@ describe('realm-scoped mapping resolution', () => {
     expect(b.Balance).toBeGreaterThan(0);
   });
 });
+
+// ── Operation queue: dedup and satisfaction are realm-exact ─────────────────
+//
+// The queue is exercised through the real SyncOperationsRepository over a
+// stateful in-memory operations table, so the assertions are about which
+// queued operations exist / complete — not about query text.
+
+import { SyncOperationsRepository } from './syncOperationsRepository';
+
+function makeOpsDb() {
+  const rows: any[] = [];
+  let idSeq = 0;
+
+  // tenantDb qualifies its tenant predicate ("<table>.tenant"); the row store
+  // is flat, so column references are normalized to their bare name.
+  const bare = (col: string) => col.split('.').pop() as string;
+
+  function makeQuery() {
+    const preds: Array<(r: any) => boolean> = [];
+    const q: any = {
+      where(arg: any, value?: any) {
+        if (typeof arg === 'function') {
+          const sub = makeQuery();
+          arg.call(sub, sub);
+          preds.push((r: any) => sub._match(r));
+        } else if (typeof arg === 'object' && arg !== null) {
+          preds.push((r: any) => Object.entries(arg).every(([k, v]) => r[bare(k)] === v));
+        } else {
+          preds.push((r: any) => r[bare(arg)] === value);
+        }
+        return q;
+      },
+      whereIn(col: string, values: any[]) {
+        preds.push((r: any) => values.includes(r[bare(col)]));
+        return q;
+      },
+      whereNull(col: string) {
+        preds.push((r: any) => r[bare(col)] === null || r[bare(col)] === undefined);
+        return q;
+      },
+      orderBy() {
+        return q;
+      },
+      limit() {
+        return q;
+      },
+      first: async () => rows.find((r) => q._match(r)),
+      insert(record: any) {
+        const row = { op_id: `op-${++idSeq}`, ...record };
+        rows.push(row);
+        return { returning: async () => [row] };
+      },
+      update: async (patch: any) => {
+        const matched = rows.filter((r) => q._match(r));
+        for (const row of matched) Object.assign(row, patch);
+        return matched.length;
+      },
+      _match: (r: any) => preds.every((p) => p(r))
+    };
+    q.andWhere = q.where;
+    return q;
+  }
+
+  const table = vi.fn(() => makeQuery());
+  const knex = Object.assign(table, { fn: { now: () => 'now()' } });
+  return { knex: knex as any, rows };
+}
+
+describe('realm-scoped operation queue', () => {
+  const enqueueInput = (realm: string) => ({
+    tenant: TENANT,
+    adapterType: ADAPTER,
+    targetRealm: realm,
+    operation: 'export_invoice' as const,
+    algaEntityType: 'invoice',
+    algaEntityId: 'inv-1'
+  });
+
+  it('queues the same local entity separately per realm — no cross-realm dedup', async () => {
+    const { knex, rows } = makeOpsDb();
+    const repo = new SyncOperationsRepository(knex);
+
+    const opA = await repo.enqueue(enqueueInput(REALM_A));
+    const opB = await repo.enqueue(enqueueInput(REALM_B));
+
+    expect(rows.filter((r) => r.status === 'pending')).toHaveLength(2);
+    expect(opA.op_id).not.toBe(opB.op_id);
+  });
+
+  it('returns the existing pending op for a duplicate enqueue in the same realm', async () => {
+    const { knex, rows } = makeOpsDb();
+    const repo = new SyncOperationsRepository(knex);
+
+    const first = await repo.enqueue(enqueueInput(REALM_A));
+    const second = await repo.enqueue(enqueueInput(REALM_A));
+
+    expect(second.op_id).toBe(first.op_id);
+    expect(rows.filter((r) => r.status === 'pending')).toHaveLength(1);
+  });
+
+  it('satisfying work delivered into one realm leaves the other realm queued', async () => {
+    const { knex, rows } = makeOpsDb();
+    const repo = new SyncOperationsRepository(knex);
+
+    await repo.enqueue(enqueueInput(REALM_A));
+    await repo.enqueue(enqueueInput(REALM_B));
+
+    const satisfied = await repo.satisfyPending(TENANT, ADAPTER, 'export_invoice', ['inv-1'], REALM_A);
+
+    expect(satisfied).toBe(1);
+    const byRealm = Object.fromEntries(rows.map((r) => [r.target_realm, r.status]));
+    expect(byRealm[REALM_A]).toBe('done');
+    expect(byRealm[REALM_B]).toBe('pending');
+  });
+
+  it('a null-realm satisfy touches only legacy realm-less ops', async () => {
+    const { knex, rows } = makeOpsDb();
+    const repo = new SyncOperationsRepository(knex);
+
+    await repo.enqueue(enqueueInput(REALM_A));
+    rows.push({
+      op_id: 'op-legacy',
+      tenant: TENANT,
+      adapter_type: ADAPTER,
+      target_realm: null,
+      operation: 'export_invoice',
+      alga_entity_type: 'invoice',
+      alga_entity_id: 'inv-1',
+      status: 'pending'
+    });
+
+    const satisfied = await repo.satisfyPending(TENANT, ADAPTER, 'export_invoice', ['inv-1'], null);
+
+    expect(satisfied).toBe(1);
+    expect(rows.find((r) => r.op_id === 'op-legacy')?.status).toBe('done');
+    expect(rows.find((r) => r.target_realm === REALM_A)?.status).toBe('pending');
+  });
+});

@@ -20,13 +20,16 @@ export class SyncOperationsRepository {
 
   /**
    * Enqueue an operation. Deduplicates: while a pending op exists for the same
-   * tenant + operation + entity, the existing op is returned instead of
-   * inserting a duplicate.
+   * tenant + operation + entity + target realm, the existing op is returned
+   * instead of inserting a duplicate. The realm is part of the identity — the
+   * same local entity queued against two QuickBooks companies is two distinct
+   * operations, never collapsed into one.
    */
   async enqueue(input: EnqueueSyncOperationInput): Promise<AccountingSyncOperation> {
     const existing = await this.table<AccountingSyncOperation>(input.tenant)
       .where({
         adapter_type: input.adapterType,
+        target_realm: input.targetRealm,
         operation: input.operation,
         alga_entity_type: input.algaEntityType,
         alga_entity_id: input.algaEntityId,
@@ -136,22 +139,33 @@ export class SyncOperationsRepository {
 
   /**
    * Mark pending ops done because the work happened elsewhere (e.g. a manual
-   * export batch covered queued invoice exports). Returns affected count.
+   * export batch covered queued invoice exports). Realm-exact: work delivered
+   * into one target realm only satisfies ops queued against that same realm —
+   * a manual batch for company A must not retire a pending export for company
+   * B. A null realm satisfies only legacy null-realm ops. Returns affected count.
    */
   async satisfyPending(
     tenant: string,
     adapterType: string,
     operation: SyncOperationType,
-    algaEntityIds: string[]
+    algaEntityIds: string[],
+    targetRealm: string | null
   ): Promise<number> {
     if (algaEntityIds.length === 0) {
       return 0;
     }
 
-    return this.table(tenant)
+    const query = this.table(tenant)
       .where({ adapter_type: adapterType, operation, status: 'pending' })
-      .whereIn('alga_entity_id', algaEntityIds)
-      .update({ status: 'done', processed_at: this.knex.fn.now(), last_error: null });
+      .whereIn('alga_entity_id', algaEntityIds);
+
+    if (targetRealm === null) {
+      query.whereNull('target_realm');
+    } else {
+      query.andWhere({ target_realm: targetRealm });
+    }
+
+    return query.update({ status: 'done', processed_at: this.knex.fn.now(), last_error: null });
   }
 
   async countByStatus(tenant: string, adapterType: string): Promise<Record<string, number>> {

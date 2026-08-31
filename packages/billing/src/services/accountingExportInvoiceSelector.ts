@@ -368,7 +368,8 @@ export class AccountingExportInvoiceSelector {
         this.knex,
         this.tenantId,
         options.adapterType,
-        Array.from(new Set(preview.map((line) => line.invoiceId)))
+        Array.from(new Set(preview.map((line) => line.invoiceId))),
+        targetRealm ?? null
       );
     }
 
