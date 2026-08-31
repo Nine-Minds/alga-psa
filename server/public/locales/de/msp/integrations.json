@@ -3666,7 +3666,8 @@
       "updateFailed": "Die Zuordnung kann nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
       "idRequiredForDelete": "Für das Löschen ist die Zuordnungs-ID erforderlich.",
       "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie die Zuordnungen und versuchen Sie es erneut.",
-      "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut."
+      "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+      "scopeRequired": "Zuordnungsabfragen erfordern eine Integration, einen Entitätstyp und einen Bereichs-Scope."
     },
     "qbo": {
       "enterpriseOnly": "Die QuickBooks-Online-Integration ist nur in der Enterprise Edition verfügbar.",

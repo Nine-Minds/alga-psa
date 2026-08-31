@@ -52,12 +52,36 @@ export interface ExternalEntityMapping {
 }
 
 interface GetMappingsParams {
+  /** Required: the integration (e.g. 'quickbooks_online', 'xero') to read. */
   integrationType?: string;
+  /** Required: the local entity type (e.g. 'service', 'tax_region') to read. */
   algaEntityType?: string;
+  /**
+   * Required key: the realm / Xero tenant scope. Pass null for mappings that
+   * are not realm-bound (CSV-style integrations). Leaving it undefined is a
+   * scope error — a read may never span realms.
+   */
   externalRealmId?: string | null;
   algaEntityId?: string;
   externalEntityId?: string;
 }
+
+/** Columns returned to callers — the full ExternalEntityMapping DTO, named so
+ * the read never widens silently with the table. */
+const MAPPING_COLUMNS = [
+  'id',
+  'tenant',
+  'integration_type',
+  'alga_entity_type',
+  'alga_entity_id',
+  'external_entity_id',
+  'external_realm_id',
+  'sync_status',
+  'last_synced_at',
+  'metadata',
+  'created_at',
+  'updated_at'
+] as const;
 
 export interface CreateMappingData {
   integration_type: string;
@@ -139,9 +163,20 @@ export const getExternalEntityMappings = withAuth(async (
   params: GetMappingsParams
 ): Promise<ExternalEntityMapping[] | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, 'billing_settings', 'read', knex);
+  const allowed = await hasPermission(user, 'accounting_catalog', 'read', knex);
   if (!allowed) {
     return permissionError('Permission denied: You do not have permission to view accounting mappings.', 'msp/integrations:errors.mappings.viewPermission');
+  }
+
+  // A mapping read is always scoped to one integration, one local entity type,
+  // and one realm (null realm meaning the integration is not realm-bound).
+  // Anything broader would let one screen enumerate every mapping the tenant
+  // has, across integrations and companies.
+  if (!params.integrationType || !params.algaEntityType || params.externalRealmId === undefined) {
+    return actionError(
+      'Mapping lookups require an integration, an entity type, and a realm scope.',
+      'msp/integrations:errors.mappings.scopeRequired',
+    );
   }
 
   const cacheKey = buildCacheKey(tenant, params);
@@ -189,7 +224,7 @@ export const getExternalEntityMappings = withAuth(async (
         }
       }
 
-      return await query.select('*').orderBy('updated_at', 'desc');
+      return await query.select(...MAPPING_COLUMNS).orderBy('updated_at', 'desc');
     });
 
     logger.debug('External mapping lookup completed', {

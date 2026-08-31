@@ -3666,7 +3666,8 @@
       "updateFailed": "Impossible de mettre à jour la correspondance. Veuillez réessayer.",
       "idRequiredForDelete": "L’identifiant de la correspondance est obligatoire pour la suppression.",
       "notFound": "Correspondance introuvable. Actualisez les correspondances et réessayez.",
-      "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer."
+      "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer.",
+      "scopeRequired": "Les recherches de correspondances nécessitent une intégration, un type d'entité et une portée de realm."
     },
     "qbo": {
       "enterpriseOnly": "L’intégration QuickBooks Online n’est disponible que dans l’édition Enterprise.",

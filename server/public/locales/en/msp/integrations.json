@@ -3666,7 +3666,8 @@
       "updateFailed": "Unable to update mapping. Please try again.",
       "idRequiredForDelete": "Mapping ID is required for deletion.",
       "notFound": "Mapping not found. Refresh mappings and try again.",
-      "deleteFailed": "Unable to delete mapping. Please try again."
+      "deleteFailed": "Unable to delete mapping. Please try again.",
+      "scopeRequired": "Mapping lookups require an integration, an entity type, and a realm scope."
     },
     "qbo": {
       "enterpriseOnly": "QuickBooks Online integration is only available in Enterprise Edition.",

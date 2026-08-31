@@ -3666,7 +3666,8 @@
       "updateFailed": "Nie można zaktualizować powiązania. Spróbuj ponownie.",
       "idRequiredForDelete": "Do usunięcia wymagany jest identyfikator powiązania.",
       "notFound": "Nie znaleziono powiązania. Odśwież powiązania i spróbuj ponownie.",
-      "deleteFailed": "Nie można usunąć powiązania. Spróbuj ponownie."
+      "deleteFailed": "Nie można usunąć powiązania. Spróbuj ponownie.",
+      "scopeRequired": "Wyszukiwanie mapowań wymaga integracji, typu encji i zakresu realm."
     },
     "qbo": {
       "enterpriseOnly": "Integracja z QuickBooks Online jest dostępna tylko w wersji Enterprise Edition.",

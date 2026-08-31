@@ -3666,7 +3666,8 @@
       "updateFailed": "Kan de koppeling niet bijwerken. Probeer het opnieuw.",
       "idRequiredForDelete": "Voor het verwijderen is de koppelings-ID verplicht.",
       "notFound": "Koppeling niet gevonden. Vernieuw de koppelingen en probeer het opnieuw.",
-      "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw."
+      "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw.",
+      "scopeRequired": "Voor het opzoeken van koppelingen zijn een integratie, een entiteitstype en een realm-scope vereist."
     },
     "qbo": {
       "enterpriseOnly": "De QuickBooks Online-integratie is alleen beschikbaar in de Enterprise Edition.",

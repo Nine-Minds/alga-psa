@@ -3666,7 +3666,8 @@
       "updateFailed": "Impossibile aggiornare la mappatura. Riprovare.",
       "idRequiredForDelete": "Per l’eliminazione è necessario l’ID della mappatura.",
       "notFound": "Mappatura non trovata. Aggiornare le mappature e riprovare.",
-      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare."
+      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare.",
+      "scopeRequired": "Le ricerche di mappature richiedono un'integrazione, un tipo di entità e un ambito realm."
     },
     "qbo": {
       "enterpriseOnly": "L’integrazione con QuickBooks Online è disponibile solo nella Enterprise Edition.",

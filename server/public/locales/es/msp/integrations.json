@@ -3666,7 +3666,8 @@
       "updateFailed": "No se puede actualizar la asignación. Inténtelo de nuevo.",
       "idRequiredForDelete": "Se requiere el ID de la asignación para eliminarla.",
       "notFound": "No se encontró la asignación. Actualice las asignaciones e inténtelo de nuevo.",
-      "deleteFailed": "No se puede eliminar la asignación. Inténtelo de nuevo."
+      "deleteFailed": "No se puede eliminar la asignación. Inténtelo de nuevo.",
+      "scopeRequired": "Las búsquedas de asignaciones requieren una integración, un tipo de entidad y un ámbito de realm."
     },
     "qbo": {
       "enterpriseOnly": "La integración con QuickBooks Online solo está disponible en Enterprise Edition.",

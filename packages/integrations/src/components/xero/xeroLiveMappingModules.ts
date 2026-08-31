@@ -238,7 +238,7 @@ async function loadMappings<TAlga>({
   loadExternalEntities,
   mapAlga
 }: MappingLoadConfig<TAlga>): Promise<AccountingMappingLoadResult> {
-  const externalRealmId = context.realmId === undefined ? undefined : context.realmId;
+  const externalRealmId = context.realmId ?? null;
 
   const [mappings, algaEntities, externalEntities] = await Promise.all([
     getExternalEntityMappings({

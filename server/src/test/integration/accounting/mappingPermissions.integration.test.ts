@@ -115,7 +115,8 @@ describe('Accounting mapping permissions', () => {
     const remaining = await getExternalEntityMappings({
       integrationType: 'quickbooks_online',
       algaEntityType: 'service',
-      algaEntityId: 'svc-finance'
+      algaEntityId: 'svc-finance',
+      externalRealmId: null
     });
 
     expect(remaining).toHaveLength(0);
@@ -164,7 +165,8 @@ describe('Accounting mapping permissions', () => {
     const visible = await getExternalEntityMappings({
       integrationType: 'quickbooks_online',
       algaEntityType: 'service',
-      algaEntityId: 'svc-support'
+      algaEntityId: 'svc-support',
+      externalRealmId: null
     });
     expect(visible).toHaveLength(1);
 
@@ -195,7 +197,8 @@ describe('Accounting mapping permissions', () => {
     const afterAttempts = await getExternalEntityMappings({
       integrationType: 'quickbooks_online',
       algaEntityType: 'service',
-      algaEntityId: 'svc-support'
+      algaEntityId: 'svc-support',
+      externalRealmId: null
     });
     expect(afterAttempts).toHaveLength(1);
     expect(afterAttempts[0].external_entity_id).toBe('SUP-001');
