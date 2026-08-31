@@ -36,6 +36,24 @@ vi.mock('../../../../../packages/billing/src/lib/invoiceExternalSyncLock', () =>
   ACCOUNTING_EXPORT_INVOICE_NOT_FOUND: 'ACCOUNTING_EXPORT_INVOICE_NOT_FOUND',
 }));
 
+// The adapter obtains its knex handle via createTenantKnex() imported from
+// '@alga-psa/db' (not server/src/lib/db, which is a different module), and now
+// runs invoice/credit-memo delivery inside withTransaction(knex, ...). Give it
+// an inert in-memory knex whose transaction() invokes the callback with itself
+// as the trx, so the real withTransaction never opens a Postgres transaction.
+// The delivery-path DB access (row lock, mapping repository) is mocked per test.
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => {
+      const knex: any = {};
+      knex.transaction = async (cb: any) => cb(knex);
+      return { knex, tenant: 'tenant-qbo-spec' };
+    }),
+  };
+});
+
 import { QuickBooksOnlineAdapter } from '../../../../../packages/billing/src/adapters/accounting/quickBooksOnlineAdapter';
 import type { AccountingExportAdapterContext } from '@alga-psa/types';
 import { AccountingMappingResolver } from '../../../../../packages/billing/src/services/accountingMappingResolver';
