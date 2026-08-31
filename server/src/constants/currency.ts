@@ -16,6 +16,7 @@ export const CURRENCY_OPTIONS: CurrencyOption[] = [
   { value: 'BRL', label: 'BRL (R$)', symbol: 'R$' },
   { value: 'JPY', label: 'JPY (¥)', symbol: '¥' },
   { value: 'CHF', label: 'CHF (Fr.)', symbol: 'Fr.' },
+  { value: 'ZAR', label: 'ZAR (R)', symbol: 'R' },
 ];
 
 export const getCurrencySymbol = (code: string): string => {
