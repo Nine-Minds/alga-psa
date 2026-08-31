@@ -42,6 +42,7 @@ function makeLedger(overrides: any = {}) {
   return {
     findByAlgaId: vi.fn(async () => undefined),
     findByExternalId: vi.fn(async () => undefined),
+    findNonConsumable: vi.fn(async () => undefined),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn().mockReturnThis(),
