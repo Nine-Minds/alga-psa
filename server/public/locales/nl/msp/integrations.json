@@ -1852,11 +1852,16 @@
         "callback": {
           "accessDenied": "QuickBooks-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "QuickBooks OAuth kon niet worden gestart omdat het client ID en client secret niet volledig waren geconfigureerd.",
+          "forbidden": "U hebt geen toestemming meer om boekhoudkoppelingen te beheren. Vraag een beheerder om toegang.",
           "generic": "QuickBooks heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De QuickBooks OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
           "missingParams": "In de QuickBooks-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
           "oauthFailed": "De QuickBooks OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes.",
-          "tokenExchangeFailed": "Intuit heeft de verwachte tokens niet geretourneerd. Probeer opnieuw verbinding te maken."
+          "sessionExpired": "Uw sessie is niet meer geldig. Meld u aan en start de QuickBooks-verbinding opnieuw.",
+          "stateReplayed": "Deze QuickBooks-verbindingsaanvraag is al gebruikt. Start de verbindingsflow opnieuw.",
+          "tenantMismatch": "Deze QuickBooks-verbindingsaanvraag hoort bij een andere werkruimte. Meld u aan bij de juiste werkruimte en start opnieuw.",
+          "tokenExchangeFailed": "Intuit heeft de verwachte tokens niet geretourneerd. Probeer opnieuw verbinding te maken.",
+          "userMismatch": "Deze QuickBooks-verbindingsaanvraag hoort bij een andere gebruiker. Meld u aan als de gebruiker die deze is gestart en probeer het opnieuw."
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Plak uw Intuit app-client ID",
@@ -3435,11 +3440,16 @@
           "accessDenied": "Xero-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "Xero OAuth kon niet worden gestart omdat het client ID en client secret van de tenant niet volledig waren geconfigureerd.",
           "connectionsUnmapped": "Xero heeft organisaties geretourneerd, maar geen enkele bevatte de identifiers die nodig zijn om een verbinding op te slaan.",
+          "forbidden": "U hebt geen toestemming meer om boekhoudkoppelingen te beheren. Vraag een beheerder om toegang.",
           "generic": "Xero heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De Xero OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
           "missingParams": "In de Xero-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
           "noConnections": "Xero heeft geen organisaties geretourneerd voor deze aanmelding. Controleer uw Xero-app en organisatietoegang en probeer het opnieuw.",
-          "oauthFailed": "De Xero OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes."
+          "oauthFailed": "De Xero OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes.",
+          "sessionExpired": "Uw sessie is niet meer geldig. Meld u aan en start de Xero-verbinding opnieuw.",
+          "stateReplayed": "Deze Xero-verbindingsaanvraag is al gebruikt. Start de verbindingsflow opnieuw.",
+          "tenantMismatch": "Deze Xero-verbindingsaanvraag hoort bij een andere werkruimte. Meld u aan bij de juiste werkruimte en start opnieuw.",
+          "userMismatch": "Deze Xero-verbindingsaanvraag hoort bij een andere gebruiker. Meld u aan als de gebruiker die deze is gestart en probeer het opnieuw."
         },
         "clientIdLabel": "Xero Client ID",
         "clientIdPlaceholder": "Plak uw tenant-eigen Xero Client ID",
