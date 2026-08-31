@@ -5,7 +5,6 @@ import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
 import {
   getXeroRedirectUri,
@@ -16,19 +15,41 @@ import {
 } from '../../../../lib/xero/xeroClientService';
 import { oauthCsrfTokensMatch, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
+import {
+  authorizeAccountingOAuthCallback,
+  reauthorizeAccountingOAuthCallback,
+  revokeAccountingOAuthGrant,
+  type AccountingOAuthAuthzErrorCode
+} from '../../../../lib/accountingConnectionAuth';
+import { consumeAccountingOAuthNonce } from '../../../../lib/accountingOAuthStateStore';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
+// Env override exists so test environments can point at the Xero emulator
+// (packages/emulators/xero), mirroring XERO_OAUTH_AUTHORIZE_URL in connect.ts.
+const XERO_CONNECTIONS_URL =
+  process.env.XERO_CONNECTIONS_URL?.trim() || 'https://api.xero.com/connections';
 
 const SUCCESS_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=success';
 const FAILURE_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=failure';
 
+// Neutral, actionable callback error params surfaced in the settings UI. They
+// never include provider-side org/company details.
+const AUTHZ_ERROR_TO_PARAM: Record<AccountingOAuthAuthzErrorCode, string> = {
+  STATE_REPLAYED: 'state_replayed',
+  AUTH_REQUIRED: 'session_expired',
+  USER_MISMATCH: 'user_mismatch',
+  TENANT_MISMATCH: 'tenant_mismatch',
+  FORBIDDEN: 'forbidden'
+};
+
 type XeroStatePayload = {
   tenantId: string;
+  userId: string;
   csrf: string;
   codeVerifier: string;
+  nonce: string;
 };
 
 function isEnterpriseEdition(): boolean {
@@ -57,6 +78,38 @@ function createRedirect(path: string, params?: Record<string, string | undefined
   return response;
 }
 
+// A provider-side denial (error param) still leaves no reusable state: burn the
+// state nonce when the state is present, best-effort. The Xero state is not
+// signed, so only burn when the presenter holds the CSRF cookie — the same gate
+// the success path enforces — otherwise a captured state URL could be used to
+// burn a victim's state.
+async function burnXeroOAuthStateIfPresent(request: NextRequest): Promise<void> {
+  try {
+    const state = new URL(request.url).searchParams.get('state');
+    if (!state) {
+      return;
+    }
+    const payload = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8')) as {
+      csrf?: unknown;
+      nonce?: unknown;
+    };
+    if (typeof payload?.nonce !== 'string' || !payload.nonce) {
+      return;
+    }
+    const csrfCookie = request.cookies.get(XERO_OAUTH_CSRF_COOKIE.name)?.value;
+    if (
+      typeof payload.csrf !== 'string' ||
+      !csrfCookie ||
+      !oauthCsrfTokensMatch(csrfCookie, payload.csrf)
+    ) {
+      return;
+    }
+    await consumeAccountingOAuthNonce('xero', payload.nonce);
+  } catch {
+    // Best-effort only: denial redirects must never fail because a burn did.
+  }
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     return await handleCallbackRequest(request);
@@ -80,6 +133,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
   const state = searchParams.get('state');
 
   if (errorParam) {
+    await burnXeroOAuthStateIfPresent(request);
     return createRedirect(FAILURE_PATH, { xero_error: errorParam });
   }
 
@@ -93,9 +147,12 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     if (
       !statePayload?.tenantId ||
       typeof statePayload.tenantId !== 'string' ||
+      !statePayload?.userId ||
+      typeof statePayload.userId !== 'string' ||
       typeof statePayload.csrf !== 'string' ||
       !statePayload.csrf ||
-      !statePayload?.codeVerifier
+      !statePayload?.codeVerifier ||
+      !statePayload?.nonce
     ) {
       throw new Error('state missing required fields');
     }
@@ -115,21 +172,22 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     return createRedirect(FAILURE_PATH, { xero_error: 'csrf_mismatch' });
   }
 
-  // The state payload is not integrity-protected, so never trust its tenantId
-  // alone: require it to match the authenticated session's tenant. This blocks
-  // a logged-in user from binding a Xero connection to another tenant by
-  // tampering with the state.
-  const sessionUser = await getCurrentUser();
-  if (!sessionUser?.tenant) {
-    logger.warn('[xeroOAuth] Callback received without an authenticated session', { tenantId });
-    return createRedirect(FAILURE_PATH, { xero_error: 'session_expired' });
-  }
-  if (sessionUser.tenant !== tenantId) {
-    logger.warn('[xeroOAuth] State tenant does not match session tenant', {
-      stateTenant: tenantId,
-      sessionTenant: sessionUser.tenant,
+  // Re-authorize the current live user before exchanging the code: the state is
+  // atomically consumed here, and the callback proceeds only if the live user
+  // is still the initiating user in the initiating tenant with the
+  // connection-admin permission.
+  const authz = await authorizeAccountingOAuthCallback({
+    provider: 'xero',
+    tenantId: statePayload.tenantId,
+    userId: statePayload.userId,
+    nonce: statePayload.nonce
+  });
+  if (!authz.ok) {
+    logger.warn('[xeroOAuth] Callback authorization failed', {
+      tenantId,
+      code: authz.code
     });
-    return createRedirect(FAILURE_PATH, { xero_error: 'tenant_mismatch' });
+    return createRedirect(FAILURE_PATH, { xero_error: AUTHZ_ERROR_TO_PARAM[authz.code] });
   }
 
   const secretProvider = await getSecretProviderInstance();
@@ -227,6 +285,27 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     if (!Object.keys(connectionUpdates).length) {
       console.error('[xeroOAuth] unable to map Xero connections for tenant', tenantId);
       return createRedirect(FAILURE_PATH, { xero_error: 'connections_unmapped' });
+    }
+
+    // Re-check authorization immediately before persisting. If a denial lands
+    // here (permission/user/tenant changed between the exchange and the write),
+    // revoke the just-obtained grant provider-side and store nothing.
+    const reauthz = await reauthorizeAccountingOAuthCallback({
+      tenantId,
+      userId: statePayload.userId
+    });
+    if (!reauthz.ok) {
+      await revokeAccountingOAuthGrant({
+        provider: 'xero',
+        clientId: credentials.clientId,
+        clientSecret: credentials.clientSecret,
+        refreshToken
+      });
+      logger.warn('[xeroOAuth] Persistence-time authorization failed; grant revoked', {
+        tenantId,
+        code: reauthz.code
+      });
+      return createRedirect(FAILURE_PATH, { xero_error: AUTHZ_ERROR_TO_PARAM[reauthz.code] });
     }
 
     await upsertStoredXeroConnections(tenantId, connectionUpdates, {

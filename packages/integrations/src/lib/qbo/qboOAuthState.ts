@@ -7,6 +7,7 @@ const QBO_OAUTH_STATE_COOKIE_PATH = '/api/integrations/qbo';
 
 export interface QboOAuthStatePayload {
   tenantId: string;
+  userId: string;
   csrf: string;
   issuedAt: number;
   expiresAt: number;
@@ -42,6 +43,7 @@ export async function getQboStateSigningSecret(): Promise<string | null> {
 
 export function createQboOAuthState(params: {
   tenantId: string;
+  userId: string;
   secret: string;
   ttlSeconds?: number;
 }): { stateParam: string; cookieValue: string; payload: QboOAuthStatePayload } {
@@ -49,13 +51,16 @@ export function createQboOAuthState(params: {
   const expiresAt = issuedAt + (params.ttlSeconds ?? QBO_OAUTH_STATE_MAX_AGE_SECONDS);
   const payload: QboOAuthStatePayload = {
     tenantId: params.tenantId,
+    userId: params.userId,
     csrf: randomBytes(24).toString('hex'),
     issuedAt,
     expiresAt,
     nonce: randomBytes(12).toString('hex'),
   };
 
-  const stateParam = toBase64Url(JSON.stringify({ tenantId: payload.tenantId, csrf: payload.csrf }));
+  const stateParam = toBase64Url(
+    JSON.stringify({ tenantId: payload.tenantId, userId: payload.userId, csrf: payload.csrf })
+  );
   const payloadEncoded = toBase64Url(JSON.stringify(payload));
   const signature = computeSignature(payloadEncoded, params.secret);
 
@@ -95,6 +100,7 @@ export function validateQboOAuthState(params: {
     const payload = JSON.parse(fromBase64Url(payloadEncoded)) as Partial<QboOAuthStatePayload>;
     if (
       typeof payload.tenantId !== 'string' ||
+      typeof payload.userId !== 'string' ||
       typeof payload.csrf !== 'string' ||
       typeof payload.issuedAt !== 'number' ||
       typeof payload.expiresAt !== 'number' ||
@@ -108,13 +114,20 @@ export function validateQboOAuthState(params: {
       return null;
     }
 
-    const state = JSON.parse(fromBase64Url(params.stateParam)) as Partial<{ tenantId: string; csrf: string }>;
-    if (state.tenantId !== payload.tenantId || state.csrf !== payload.csrf) {
+    const state = JSON.parse(
+      fromBase64Url(params.stateParam)
+    ) as Partial<{ tenantId: string; userId: string; csrf: string }>;
+    if (
+      state.tenantId !== payload.tenantId ||
+      state.userId !== payload.userId ||
+      state.csrf !== payload.csrf
+    ) {
       return null;
     }
 
     return {
       tenantId: payload.tenantId,
+      userId: payload.userId,
       csrf: payload.csrf,
       issuedAt: payload.issuedAt,
       expiresAt: payload.expiresAt,
