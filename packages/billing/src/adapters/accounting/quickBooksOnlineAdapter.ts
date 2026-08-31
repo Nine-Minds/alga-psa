@@ -1003,18 +1003,15 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         tenant: params.tenantId,
         integration_type: this.type,
         alga_entity_type: params.entityType,
-        alga_entity_id: params.entityId
+        alga_entity_id: params.entityId,
       })
+      .whereNull('deleted_at')
       .select('external_entity_id', 'metadata');
 
+    // Exact realm match only — a NULL-realm or other-realm row is never a
+    // stand-in for the connected company.
     if (params.targetRealm) {
-      query.andWhere((builder) => {
-        builder.where('external_realm_id', params.targetRealm as string).orWhereNull('external_realm_id');
-      });
-      query.orderByRaw(
-        'CASE WHEN external_realm_id = ? THEN 0 WHEN external_realm_id IS NULL THEN 1 ELSE 2 END',
-        [params.targetRealm]
-      );
+      query.andWhere('external_realm_id', params.targetRealm);
     } else {
       query.whereNull('external_realm_id');
     }
@@ -1075,6 +1072,26 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       invoiceId: document.documentId,
       targetRealm: realmId
     });
+
+    // Export suppression: a tombstoned (unlinked) mapping must never be
+    // re-exported as a brand-new remote document. Unlink is an explicit stop —
+    // a later export requires an explicit relink-or-recreate choice.
+    if (!mapping) {
+      const unlinked = await invoiceMappingRepository.findUnlinkedInvoiceMapping({
+        tenantId,
+        adapterType: this.type,
+        invoiceId: document.documentId,
+        targetRealm: realmId
+      });
+      if (unlinked) {
+        throw new AppError(
+          'QBO_EXPORT_UNLINKED_DOCUMENT',
+          `Invoice ${document.documentId} was unlinked from QuickBooks (external id ${unlinked.externalInvoiceId}). ` +
+            'Relink it or explicitly re-create it before exporting — nothing was written to QuickBooks.'
+        );
+      }
+    }
+
     const mappingMetadata = mapping?.metadata ?? null;
     const existingMetadata = mappingMetadata ?? undefined;
     const qboEntityType = payload.documentType ?? 'Invoice';
@@ -1261,11 +1278,12 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       // a per-invoice lookup.
       .whereIn('alga_entity_type', [CLIENT_ENTITY_TYPE, BILLING_PROFILE_ENTITY_TYPE])
       .whereIn('alga_entity_id', [...clientIds, ...profileIds])
+      .whereNull('deleted_at')
       .modify((qb) => {
+        // Exact realm match only — a NULL-realm or other-realm customer mapping
+        // must never put this company's customer ref on a document.
         if (context.batch.target_realm) {
-          qb.andWhere((builder) => {
-            builder.where('external_realm_id', context.batch.target_realm as string).orWhereNull('external_realm_id');
-          });
+          qb.andWhere('external_realm_id', context.batch.target_realm);
         } else {
           qb.andWhere((builder) => builder.whereNull('external_realm_id'));
         }

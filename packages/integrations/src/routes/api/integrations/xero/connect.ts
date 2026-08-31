@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import logger from '@alga-psa/core/logger';
 
@@ -24,10 +24,17 @@ import {
   canManageAccountingConnections,
   getAccountingConnectionSessionUser
 } from '../../../../lib/accountingConnectionAuth';
-import { storeAccountingOAuthNonce } from '../../../../lib/accountingOAuthStateStore';
+import {
+  XERO_CONNECT_ATTEMPT_PROVIDER,
+  XERO_CONNECT_ATTEMPT_TTL_SECONDS,
+  storeXeroConnectAttempt
+} from '../../../../lib/xero/xeroOAuthConnectAttemptStore';
+import { encryptXeroVerifier } from '../../../../lib/xero/xeroOAuthVerifierCipher';
 
 const XERO_AUTHORIZE_URL =
   process.env.XERO_OAUTH_AUTHORIZE_URL ?? 'https://login.xero.com/identity/connect/authorize';
+
+const CSRF_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 
 function isEnterpriseEdition(): boolean {
   return (
@@ -50,11 +57,13 @@ function createPkcePair(): { verifier: string; challenge: string } {
   return { verifier, challenge };
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    return await handleConnectRequest();
+    return await handleConnectRequest(request);
   } catch (error) {
-    logger.error('[xeroOAuth] Unexpected failure while starting Xero OAuth', { error });
+    logger.error('[xeroOAuth] Unexpected failure while starting Xero OAuth', {
+      errorCode: error instanceof Error ? error.constructor.name : 'unknown_error'
+    });
     return NextResponse.json(
       { error: 'Unable to start the Xero connection. Please refresh and try again.' },
       { status: 503 }
@@ -62,7 +71,7 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-async function handleConnectRequest(): Promise<NextResponse> {
+async function handleConnectRequest(request: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json(
       { error: 'Xero integration is only available in Enterprise Edition.' },
@@ -104,25 +113,35 @@ async function handleConnectRequest(): Promise<NextResponse> {
       if (active) return null;
       const status = await getProviderDisconnectStatusInfo(trx, tenant, PROVIDER_XERO);
       const finalizedAtMs = status?.finalizedAt ? Date.parse(status.finalizedAt) : Number.NaN;
-      const initiatedAt = new Date(
-        Number.isFinite(finalizedAtMs) ? Math.max(Date.now(), finalizedAtMs + 1) : Date.now()
-      ).toISOString();
-      const csrfToken = generateOauthCsrfToken();
+      const createdAt = Number.isFinite(finalizedAtMs)
+        ? Math.max(Date.now(), finalizedAtMs + 1)
+        : Date.now();
+      // The CSRF cookie is a single browser-slot value. Reuse an existing
+      // well-formed token so parallel attempts remain bound to the same cookie.
+      const existingCsrf = request.cookies.get(XERO_OAUTH_CSRF_COOKIE.name)?.value;
+      const csrfToken =
+        existingCsrf && CSRF_TOKEN_PATTERN.test(existingCsrf) ? existingCsrf : generateOauthCsrfToken();
       const { verifier, challenge } = createPkcePair();
-      const nonce = crypto.randomBytes(12).toString('hex');
-      const statePayload = {
-        tenantId: tenant,
-        userId: sessionUser.user_id,
-        csrf: csrfToken,
-        codeVerifier: verifier,
+      const nonce = crypto.randomBytes(32).toString('base64url');
+      const encryptedVerifier = await encryptXeroVerifier(verifier);
+      await storeXeroConnectAttempt(
         nonce,
-        initiatedAt
-      };
-      await storeAccountingOAuthNonce('xero', nonce, { tenantId: tenant, initiatedAt });
+        {
+          verifier: encryptedVerifier,
+          tenantId: tenant,
+          userId: sessionUser.user_id,
+          provider: XERO_CONNECT_ATTEMPT_PROVIDER,
+          redirectUri,
+          csrf: csrfToken,
+          createdAt,
+          expiresAt: createdAt + XERO_CONNECT_ATTEMPT_TTL_SECONDS * 1000
+        },
+        XERO_CONNECT_ATTEMPT_TTL_SECONDS
+      );
       return {
         csrfToken,
         challenge,
-        state: Buffer.from(JSON.stringify(statePayload)).toString('base64url')
+        state: nonce
       };
     });
     if (!oauthState) {
@@ -152,10 +171,11 @@ async function handleConnectRequest(): Promise<NextResponse> {
     });
 
     const authorizeUrl = `${XERO_AUTHORIZE_URL}?${params.toString()}`;
-    // Carry the CSRF token in an HttpOnly cookie scoped to the callback route so
-    // the callback can confirm the response landed in the same browser that
-    // started the flow (the PKCE code_verifier lives in the unsigned state and
-    // must not be the only binding).
+    // Carry the CSRF token in an HttpOnly cookie shared by the connect and
+    // callback routes so the callback can confirm the response landed in the
+    // same browser that started the flow. The token is also bound to the
+    // server-side attempt record, so a forged callback that knows the state
+    // nonce still fails.
     const response = NextResponse.redirect(authorizeUrl);
     response.cookies.set(
       XERO_OAUTH_CSRF_COOKIE.name,

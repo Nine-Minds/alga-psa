@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 import path from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
@@ -16,6 +16,12 @@ export default defineConfig({
     },
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     include: ['src/**/*.test.{ts,tsx}'],
+    // *.db.test.* suites recreate a live Postgres database and are integration
+    // tests by naming convention (same rule as server/vitest.config.ts). This
+    // package's `nx test` target runs in the no-database unit job, so exclude
+    // them here — they run via server/vitest.config.ts where a DB is present.
+    // Mirrors packages/billing, whose config never globs its db tests.
+    exclude: [...configDefaults.exclude, '**/*.db.test.{ts,tsx}'],
     testTimeout: 20000,
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },

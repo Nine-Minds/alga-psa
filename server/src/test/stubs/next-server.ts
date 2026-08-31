@@ -52,6 +52,71 @@ class StubResponseCookies {
   delete(name: string): this {
     return this.set(name, '', { maxAge: 0 });
   }
+
+  // Next's ResponseCookies reads back what the route just set, attributes
+  // included. Reparse the Set-Cookie headers rather than caching state so
+  // cookies written straight onto the headers are visible too.
+  get(name: string): StubCookieObjectForm | undefined {
+    const matches = this.getAll().filter((cookie) => cookie.name === name);
+    return matches.length === 0 ? undefined : matches[matches.length - 1];
+  }
+
+  getAll(): StubCookieObjectForm[] {
+    return this.rawCookies().map((raw) => parseSetCookie(raw));
+  }
+
+  has(name: string): boolean {
+    return this.get(name) !== undefined;
+  }
+
+  private rawCookies(): string[] {
+    const headers = this.headers as Headers & { getSetCookie?: () => string[] };
+    if (typeof headers.getSetCookie === 'function') {
+      return headers.getSetCookie();
+    }
+    const joined = this.headers.get('set-cookie');
+    return joined ? [joined] : [];
+  }
+}
+
+function parseSetCookie(raw: string): StubCookieObjectForm {
+  const [pair, ...attributes] = raw.split(';');
+  const idx = pair.indexOf('=');
+  const cookie: StubCookieObjectForm = {
+    name: (idx === -1 ? pair : pair.slice(0, idx)).trim(),
+    value: idx === -1 ? '' : decodeURIComponent(pair.slice(idx + 1).trim()),
+  };
+
+  for (const attribute of attributes) {
+    const attrIdx = attribute.indexOf('=');
+    const key = (attrIdx === -1 ? attribute : attribute.slice(0, attrIdx)).trim().toLowerCase();
+    const attrValue = attrIdx === -1 ? '' : attribute.slice(attrIdx + 1).trim();
+    switch (key) {
+      case 'path':
+        cookie.path = attrValue;
+        break;
+      case 'domain':
+        cookie.domain = attrValue;
+        break;
+      case 'max-age':
+        cookie.maxAge = Number(attrValue);
+        break;
+      case 'expires':
+        cookie.expires = new Date(attrValue);
+        break;
+      case 'httponly':
+        cookie.httpOnly = true;
+        break;
+      case 'secure':
+        cookie.secure = true;
+        break;
+      case 'samesite':
+        cookie.sameSite = attrValue.toLowerCase() as StubCookieSetOptions['sameSite'];
+        break;
+    }
+  }
+
+  return cookie;
 }
 
 class StubRequestCookies {
