@@ -191,11 +191,32 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     initiatedAt: statePayload.initiatedAt
   });
   if (!authz.ok) {
+    let errorParam = AUTHZ_ERROR_TO_PARAM[authz.code];
+    if (authz.code === 'STATE_REPLAYED') {
+      // Disconnect initiation invalidates outstanding nonces. Distinguish that
+      // deliberate invalidation from an ordinary replay while the disconnect
+      // is still active, without ever reaching the provider token endpoint.
+      const { knex } = await createTenantKnex(tenantId);
+      const disposition = await withProviderCredentialLock(
+        knex,
+        tenantId,
+        PROVIDER_XERO,
+        (trx) => getProviderCredentialWriteDisposition(
+          trx,
+          tenantId,
+          PROVIDER_XERO,
+          statePayload.initiatedAt
+        )
+      ).catch(() => 'disconnect_in_progress' as const);
+      if (disposition === 'disconnect_in_progress') {
+        errorParam = disposition;
+      }
+    }
     logger.warn('[xeroOAuth] Callback authorization failed', {
       tenantId,
       code: authz.code
     });
-    return createRedirect(FAILURE_PATH, { xero_error: AUTHZ_ERROR_TO_PARAM[authz.code] });
+    return createRedirect(FAILURE_PATH, { xero_error: errorParam });
   }
 
   // Check the trusted flow start under the same lock as disconnect initiation.

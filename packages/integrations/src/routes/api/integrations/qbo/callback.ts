@@ -151,11 +151,32 @@ export async function GET(request: Request): Promise<NextResponse> {
     initiatedAt: statePayload.initiatedAt
   });
   if (!authz.ok) {
+    let errorParam = AUTHZ_ERROR_TO_PARAM[authz.code];
+    if (authz.code === 'STATE_REPLAYED') {
+      // Disconnect initiation invalidates outstanding nonces. Distinguish that
+      // deliberate invalidation from an ordinary replay while the disconnect
+      // is still active, without ever reaching the provider token endpoint.
+      const { knex } = await createTenantKnex(statePayload.tenantId);
+      const disposition = await withProviderCredentialLock(
+        knex,
+        statePayload.tenantId,
+        PROVIDER_QBO,
+        (trx) => getProviderCredentialWriteDisposition(
+          trx,
+          statePayload.tenantId,
+          PROVIDER_QBO,
+          statePayload.initiatedAt
+        )
+      ).catch(() => 'disconnect_in_progress' as const);
+      if (disposition === 'disconnect_in_progress') {
+        errorParam = disposition;
+      }
+    }
     logger.warn('[qboOAuth] Callback authorization failed', {
       tenantId: statePayload.tenantId,
       code: authz.code
     });
-    return createRedirect(FAILURE_PATH, { qbo_error: AUTHZ_ERROR_TO_PARAM[authz.code] });
+    return createRedirect(FAILURE_PATH, { qbo_error: errorParam });
   }
 
   const tenantId = statePayload.tenantId;

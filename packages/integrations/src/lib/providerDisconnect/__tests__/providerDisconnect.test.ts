@@ -930,16 +930,6 @@ describe('QuickBooks Online disconnect state machine', () => {
 
   it('a valid-looking OAuth callback that lands while a QuickBooks disconnect is pending is rejected and never resurrects credentials', async () => {
     qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
-    providerHarness.setQboRevoke(() => providerHarness.fail(500, { error: 'server_error' }));
-    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
-
-    // The race frame: the authorization was issued BEFORE the disconnect
-    // started, the callback lands AFTER. Disconnect is pending: creds
-    // tombstoned, sync blocked.
-    expect(recordRows()[0].status).toBe('pending_revocation');
-    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
-    const targetsBefore = JSON.stringify(recordRows()[0].targets);
-
     const signingSecret = 'race-test-state-signing-secret';
     const created = createQboOAuthState({
       tenantId: TENANT,
@@ -952,6 +942,16 @@ describe('QuickBooks Online disconnect state machine', () => {
       tenantId: TENANT,
       initiatedAt: created.payload.initiatedAt,
     });
+
+    providerHarness.setQboRevoke(() => providerHarness.fail(500, { error: 'server_error' }));
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+
+    // The race frame: the authorization was issued BEFORE the disconnect
+    // started, the callback lands AFTER. Disconnect is pending: creds
+    // tombstoned, sync blocked.
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
+    const targetsBefore = JSON.stringify(recordRows()[0].targets);
 
     const previousEdition = process.env.EDITION;
     const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
@@ -1591,16 +1591,6 @@ describe('Xero disconnect state machine', () => {
 
   it('a valid-looking OAuth callback that lands while a Xero disconnect is pending is rejected and never resurrects connections', async () => {
     xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
-    providerHarness.setXeroConnection(() => providerHarness.fail(500, { error: 'server_error' }));
-    await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
-
-    // The race frame: the authorization was issued BEFORE the disconnect
-    // started, the callback lands AFTER. Disconnect is pending: connections
-    // tombstoned, sync blocked.
-    expect(recordRows()[0].status).toBe('pending_revocation');
-    expect(await getStoredXeroConnections(TENANT)).toEqual({});
-    const targetsBefore = JSON.stringify(recordRows()[0].targets);
-
     const csrfToken = 'a'.repeat(64);
     const nonce = 'race-test-nonce';
     const initiatedAt = new Date(Date.now() - 1000).toISOString();
@@ -1615,6 +1605,16 @@ describe('Xero disconnect state machine', () => {
       }),
     ).toString('base64url');
     await storeAccountingOAuthNonceMock('xero', nonce, { tenantId: TENANT, initiatedAt });
+
+    providerHarness.setXeroConnection(() => providerHarness.fail(500, { error: 'server_error' }));
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+
+    // The race frame: the authorization was issued BEFORE the disconnect
+    // started, the callback lands AFTER. Disconnect is pending: connections
+    // tombstoned, sync blocked.
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(await getStoredXeroConnections(TENANT)).toEqual({});
+    const targetsBefore = JSON.stringify(recordRows()[0].targets);
 
     const previousEdition = process.env.EDITION;
     process.env.EDITION = 'ee';
