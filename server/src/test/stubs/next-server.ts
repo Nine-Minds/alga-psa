@@ -52,6 +52,72 @@ class StubResponseCookies {
   delete(name: string): this {
     return this.set(name, '', { maxAge: 0 });
   }
+
+  // Next.js ResponseCookies also exposes get()/getAll(), reading back the
+  // cookies that were set on this response. Tests inspect the CSRF cookie's
+  // value and attributes, so parse them out of the serialized set-cookie
+  // header(s). Last write for a given name wins, mirroring Next semantics.
+  get(name: string): (StubCookieObjectForm) | undefined {
+    let found: StubCookieObjectForm | undefined;
+    for (const cookie of this.getAll()) {
+      if (cookie.name === name) found = cookie;
+    }
+    return found;
+  }
+
+  getAll(): StubCookieObjectForm[] {
+    const raw =
+      typeof (this.headers as any).getSetCookie === 'function'
+        ? ((this.headers as any).getSetCookie() as string[])
+        : this.headers.get('set-cookie')
+          ? [this.headers.get('set-cookie') as string]
+          : [];
+
+    const cookies: StubCookieObjectForm[] = [];
+    for (const serialized of raw) {
+      const segments = serialized.split(';').map((s) => s.trim()).filter(Boolean);
+      if (segments.length === 0) continue;
+      const [pair, ...attrs] = segments;
+      const eq = pair.indexOf('=');
+      if (eq === -1) continue;
+      const cookie: StubCookieObjectForm = {
+        name: pair.slice(0, eq).trim(),
+        value: decodeURIComponent(pair.slice(eq + 1).trim()),
+      };
+      for (const attr of attrs) {
+        const aeq = attr.indexOf('=');
+        const key = (aeq === -1 ? attr : attr.slice(0, aeq)).trim().toLowerCase();
+        const val = aeq === -1 ? undefined : attr.slice(aeq + 1).trim();
+        switch (key) {
+          case 'path':
+            cookie.path = val;
+            break;
+          case 'domain':
+            cookie.domain = val;
+            break;
+          case 'max-age':
+            cookie.maxAge = val === undefined ? undefined : Number(val);
+            break;
+          case 'expires':
+            cookie.expires = val === undefined ? undefined : new Date(val);
+            break;
+          case 'httponly':
+            cookie.httpOnly = true;
+            break;
+          case 'secure':
+            cookie.secure = true;
+            break;
+          case 'samesite':
+            cookie.sameSite = (val ?? '').toLowerCase() as StubCookieSetOptions['sameSite'];
+            break;
+          default:
+            break;
+        }
+      }
+      cookies.push(cookie);
+    }
+    return cookies;
+  }
 }
 
 class StubRequestCookies {
