@@ -45,9 +45,11 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 const qboCreateMock = vi.hoisted(() => vi.fn());
 const qboQueryMock = vi.hoisted(() => vi.fn());
+const getStoredQboCredentialsMapMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/qbo/qboClientService', () => ({
   QboClientService: { create: qboCreateMock },
+  getStoredQboCredentialsMap: getStoredQboCredentialsMapMock,
   QBO_CLIENT_ID_SECRET_NAME: 'qbo_client_id',
   QBO_CLIENT_SECRET_SECRET_NAME: 'qbo_client_secret',
   getQboEnvironment: () => 'sandbox',
@@ -74,9 +76,11 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 const xeroCreateMock = vi.hoisted(() => vi.fn());
 const xeroSummariesMock = vi.hoisted(() => vi.fn());
+const getStoredXeroConnectionsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/xero/xeroClientService', () => ({
   XeroClientService: { create: xeroCreateMock },
+  getStoredXeroConnections: getStoredXeroConnectionsMock,
   getXeroConnectionSummaries: xeroSummariesMock,
   XERO_CREDENTIALS_SECRET_NAME: 'xero_credentials',
   XERO_CLIENT_ID_SECRET_NAME: 'xero_client_id',
@@ -142,6 +146,8 @@ beforeEach(() => {
   qboCreateMock.mockResolvedValue({ query: qboQueryMock });
   qboQueryMock.mockResolvedValue([]);
   xeroSummariesMock.mockResolvedValue([]);
+  getStoredQboCredentialsMapMock.mockResolvedValue({});
+  getStoredXeroConnectionsMock.mockResolvedValue({});
 });
 
 describe('QBO catalog permission boundary', () => {
@@ -176,6 +182,48 @@ describe('QBO catalog permission boundary', () => {
     expect(qboCreateMock).toHaveBeenCalledTimes(1);
     expect(qboCreateMock).toHaveBeenCalledWith(authUser.tenant, CONNECTED_REALM);
   });
+
+  it('enforces permission on repeated paged reads and returns only projected customer fields on every page', async () => {
+    seedQboCredentials([CONNECTED_REALM]);
+
+    grantOnly();
+    await expect(getQboCustomers({ realmId: CONNECTED_REALM })).resolves.toSatisfy(isActionPermissionError);
+    await expect(getQboCustomers({ realmId: CONNECTED_REALM })).resolves.toSatisfy(isActionPermissionError);
+    expect(qboCreateMock).not.toHaveBeenCalled();
+    expect(qboQueryMock).not.toHaveBeenCalled();
+
+    grantOnly('accounting_catalog:read');
+    const firstPage = Array.from({ length: 1000 }, (_, index) => ({
+      Id: `customer-${index}`,
+      DisplayName: `Customer ${index}`,
+      Active: true,
+      PrimaryEmailAddr: { Address: `private-${index}@example.test` },
+      Balance: 1234,
+    }));
+    qboQueryMock
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce([{
+        Id: 'customer-1000',
+        DisplayName: 'Customer 1000',
+        Active: false,
+        PrimaryEmailAddr: { Address: 'private-1000@example.test' },
+        Balance: 5678,
+      }]);
+
+    const result = await getQboCustomers({ realmId: CONNECTED_REALM });
+
+    expect(result).toHaveLength(1001);
+    expect(result[0]).toEqual({ id: 'customer-0', name: 'Customer 0', active: true });
+    expect(result[1000]).toEqual({ id: 'customer-1000', name: 'Customer 1000', active: false });
+    expect(qboQueryMock).toHaveBeenNthCalledWith(
+      1,
+      'SELECT Id, DisplayName, Active FROM Customer STARTPOSITION 1 MAXRESULTS 1000'
+    );
+    expect(qboQueryMock).toHaveBeenNthCalledWith(
+      2,
+      'SELECT Id, DisplayName, Active FROM Customer STARTPOSITION 1001 MAXRESULTS 1000'
+    );
+  });
 });
 
 describe('QBO realm scoping', () => {
@@ -187,6 +235,17 @@ describe('QBO realm scoping', () => {
 
     expect(isActionMessageError(result)).toBe(true);
     expect(qboCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('does not let a disconnected realm reach any page of the paged customer catalog', async () => {
+    grantOnly('accounting_catalog:read');
+    seedQboCredentials([CONNECTED_REALM]);
+
+    const result = await getQboCustomers({ realmId: OTHER_REALM });
+
+    expect(isActionMessageError(result)).toBe(true);
+    expect(qboCreateMock).not.toHaveBeenCalled();
+    expect(qboQueryMock).not.toHaveBeenCalled();
   });
 
   it('never falls back to another realm when the requested realm errors', async () => {
@@ -310,5 +369,62 @@ describe('External mapping read scope', () => {
 
     expect(result).toEqual([]);
     expect(withTransactionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['unknown_provider', 'service', CONNECTED_REALM],
+    ['quickbooks_online', 'invoice', CONNECTED_REALM],
+    ['quickbooks_csv', 'service', CONNECTED_REALM],
+  ])('rejects invalid provider/entity/realm scope before database or provider contact', async (
+    integrationType,
+    algaEntityType,
+    externalRealmId
+  ) => {
+    grantOnly('accounting_catalog:read');
+    getStoredQboCredentialsMapMock.mockResolvedValue({ [CONNECTED_REALM]: { realmId: CONNECTED_REALM } });
+
+    const result = await getExternalEntityMappings({
+      integrationType,
+      algaEntityType,
+      externalRealmId,
+    });
+
+    expect(isActionMessageError(result)).toBe(true);
+    expect(withTransactionMock).not.toHaveBeenCalled();
+    expect(qboCreateMock).not.toHaveBeenCalled();
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a disconnected QBO realm before database or provider contact', async () => {
+    grantOnly('accounting_catalog:read');
+    getStoredQboCredentialsMapMock.mockResolvedValue({ [CONNECTED_REALM]: { realmId: CONNECTED_REALM } });
+
+    const result = await getExternalEntityMappings({
+      integrationType: 'quickbooks_online',
+      algaEntityType: 'service',
+      externalRealmId: OTHER_REALM,
+    });
+
+    expect(isActionMessageError(result)).toBe(true);
+    expect(withTransactionMock).not.toHaveBeenCalled();
+    expect(qboCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a QBO realm presented as a Xero scope', async () => {
+    grantOnly('accounting_catalog:read');
+    getStoredQboCredentialsMapMock.mockResolvedValue({ [CONNECTED_REALM]: { realmId: CONNECTED_REALM } });
+    getStoredXeroConnectionsMock.mockResolvedValue({
+      'xero-connection': { xeroTenantId: OTHER_REALM },
+    });
+
+    const result = await getExternalEntityMappings({
+      integrationType: 'xero',
+      algaEntityType: 'service',
+      externalRealmId: CONNECTED_REALM,
+    });
+
+    expect(isActionMessageError(result)).toBe(true);
+    expect(withTransactionMock).not.toHaveBeenCalled();
+    expect(xeroCreateMock).not.toHaveBeenCalled();
   });
 });

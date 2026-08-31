@@ -131,7 +131,7 @@ describe('Accounting Mapping CRUD integration', () => {
       integrationType,
       algaEntityType: 'service',
       algaEntityId: serviceId,
-      externalRealmId: null
+      externalRealmId: CONNECTED_REALM
     });
 
     expect(listed).toHaveLength(1);
@@ -151,7 +151,7 @@ describe('Accounting Mapping CRUD integration', () => {
       integrationType,
       algaEntityType: 'service',
       algaEntityId: serviceId,
-      externalRealmId: null
+      externalRealmId: CONNECTED_REALM
     });
 
     expect(finalList).toHaveLength(0);
