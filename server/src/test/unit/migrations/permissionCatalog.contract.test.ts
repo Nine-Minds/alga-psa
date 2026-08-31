@@ -27,10 +27,11 @@ const FOLLOW_UP_CARD = '63db81a4-76cf-4486-aca3-a09f7c02efb1';
  * Six entries left it when the 2026-08-27 usage audit promoted
  * billing_profile_report:read, credential:read, cycle_count:approve,
  * import_export:manage, import_export:read and marketing:manage into the
- * catalog.
+ * catalog. billing:manage then left it once the Xero CSV export/import routes
+ * moved to the granular accounting_integrations:exports_execute permission and
+ * no production code checked billing:manage any longer.
  */
 const KNOWN_UNDECLARED = [
-  'billing.manage',
   'role.read',
   'tenant.create',
   'user.admin',
@@ -73,7 +74,7 @@ describe('permission catalog contract', () => {
 
     expect(missing, `Add new production permissions to the catalog; never extend KNOWN_UNDECLARED (${FOLLOW_UP_CARD})`).toEqual([]);
     expect(stale, `Remove stale quarantine entries tracked by ${FOLLOW_UP_CARD}`).toEqual([]);
-    expect(KNOWN_UNDECLARED).toHaveLength(5);
+    expect(KNOWN_UNDECLARED).toHaveLength(4);
   });
 
   it('retains product-specific grants and the secrets screen grants', () => {
