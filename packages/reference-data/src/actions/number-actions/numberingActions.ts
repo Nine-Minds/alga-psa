@@ -40,7 +40,7 @@ function invoiceDateFormatBudget(settings: Partial<NumberSettings>): number {
   const prefixLength = (settings.prefix ?? '').length;
   const nextNumber = Math.max(Number(settings.last_number ?? 0) + 1, Number(settings.initial_value ?? 1));
   const digits = Math.max(Number(settings.padding_length ?? 0), String(nextNumber).length);
-  return QBO_DOC_NUMBER_MAX_LENGTH - prefixLength - digits;
+  return Math.max(QBO_DOC_NUMBER_MAX_LENGTH - prefixLength - digits, 0);
 }
 
 export const getNumberSettings = withAuth(async (_user, { tenant }, entityType: EntityType): Promise<NumberSettingsView> => {
