@@ -2,6 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { createPurchaseOrderDraftCore } from './purchaseOrders';
 
+// PO numbering now goes through the shared service (prefix + padding + the
+// tenant's optional date format) instead of a raw generate_next_number call.
+const numbering = vi.hoisted(() => ({
+  getNextNumber: vi.fn(async () => 'PO-1042'),
+}));
+
+vi.mock('@alga-psa/shared/services/numberingService', () => ({
+  SharedNumberingService: { getNextNumber: numbering.getNextNumber },
+}));
+
 function fakeTransaction() {
   const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
 
@@ -37,7 +47,6 @@ function fakeTransaction() {
 
   const trx = ((table: string) => new Query(table)) as unknown as Knex.Transaction;
   (trx as any).fn = { now: () => '2026-07-16T12:00:00.000Z' };
-  (trx as any).raw = vi.fn(async () => ({ rows: [{ number: 'PO-1042' }] }));
   return { trx, inserts };
 }
 
@@ -54,10 +63,7 @@ describe('purchase order draft core', () => {
       ],
     });
 
-    expect((trx.raw as any)).toHaveBeenCalledWith(
-      'SELECT generate_next_number(?::uuid, ?) as number',
-      ['tenant-1', 'PURCHASE_ORDER'],
-    );
+    expect(numbering.getNextNumber).toHaveBeenCalledWith('PURCHASE_ORDER', { knex: trx, tenant: 'tenant-1' });
     expect(inserts.find((insert) => insert.table === 'purchase_orders')?.row).toMatchObject({
       tenant: 'tenant-1',
       po_number: 'PO-1042',

@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { SharedNumberingService } from '../services/numberingService';
 
 const TICKET_ORIGINS = {
   INTERNAL: 'internal',
@@ -719,16 +720,9 @@ export class TicketModel {
       throw new Error(businessRuleValidation.error);
     }
 
-    // Generate ticket number using the database function
-    const numberResult = await trx.raw(
-      'SELECT generate_next_number(?::uuid, ?::text) as number',
-      [tenant, 'TICKET']
-    );
-    
-    const ticketNumber = numberResult?.rows?.[0]?.number;
-    if (!ticketNumber) {
-      throw new Error('Failed to generate ticket number');
-    }
+    // Single numbering entry point: applies the tenant's prefix, padding and
+    // optional date format.
+    const ticketNumber = await SharedNumberingService.getNextNumber('TICKET', { knex: trx, tenant });
 
     const ticketId = uuidv4();
     const now = new Date();
