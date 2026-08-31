@@ -73,6 +73,10 @@
         "unavailable": {
           "description": "Esta integração ainda não está disponível. Selecione QuickBooks CSV ou Xero CSV para configurar exportações manuais.",
           "title": "Configuração indisponível"
+        },
+        "noPermission": {
+          "title": "Sem acesso às integrações contábeis",
+          "description": "Você não tem permissão para visualizar ou configurar integrações contábeis. Solicite acesso a um administrador."
         }
       },
       "modules": {
@@ -215,11 +219,13 @@
           "intro": "Esta integração fornece uma alternativa à conectividade QuickBooks baseada em OAuth:",
           "mappings": {
             "description": "Mapeie clientes, serviços, códigos fiscais e condições de pagamento da Alga para os identificadores usados ​​em sua empresa QuickBooks. Esses valores são usados ​​ao gerar a exportação CSV.",
-            "title": "Mapeamentos CSV QuickBooks"
+            "title": "Mapeamentos CSV QuickBooks",
+            "permissionNotice": "Editar os mapeamentos CSV requer a capacidade manage-mappings. Peça a um administrador para concedê-la."
           },
           "note": "Observação: configure os mapeamentos abaixo antes de exportar. As exportações de CSV e as importações de impostos são gerenciadas em Faturamento → Exportações contábeis.",
           "title": "Integração QuickBooks CSV"
-        }
+        },
+        "noPermissionDescription": "Você não tem permissão para visualizar ou configurar integrações contábeis."
       },
       "taxImport": {
         "actions": {
@@ -1899,7 +1905,8 @@
           "descriptionPrefix": "Configure mapeamentos QuickBooks ao vivo para a empresa conectada. Esses mapeamentos têm como escopo",
           "placeholderAlert": "O gerenciador de mapeamento fica disponível depois que a primeira empresa QuickBooks é conectada e definida como o contexto padrão do QuickBooks ativo.",
           "placeholderDescription": "Conecte uma empresa QuickBooks antes de configurar mapeamentos de impostos e itens QuickBooks ativos.",
-          "title": "Mapeamento e configuração de QuickBooks ao vivo"
+          "title": "Mapeamento e configuração de QuickBooks ao vivo",
+          "permissionNotice": "Você pode visualizar a empresa conectada, mas editar os mapeamentos requer a capacidade manage-mappings. Peça a um administrador para concedê-la."
         },
         "noClientId": "Nenhum ID de cliente está armazenado para este locatário ainda.",
         "noClientSecret": "Nenhum segredo do cliente está armazenado para este locatário ainda.",
@@ -1922,7 +1929,9 @@
           "none": "Ainda não há nenhuma aplicação Intuit disponível. Registe uma no portal Intuit Developer e cole abaixo o ID de cliente e o segredo — o guia de configuração explica o processo.",
           "tenant": "Este inquilino liga-se através da sua própria aplicação Intuit, com as credenciais guardadas abaixo."
         },
-        "setupGuideLink": "Guia de configuração do QuickBooks"
+        "setupGuideLink": "Guia de configuração do QuickBooks",
+        "noPermissionDescription": "Você não tem permissão para visualizar ou configurar integrações contábeis.",
+        "connectionsPermissionNotice": "Você pode visualizar as configurações do QuickBooks, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la."
       },
       "sync": {
         "healthCardTitle": "Sincronizar saúde",
@@ -3337,7 +3346,8 @@
             "s3": "Após alterações no Xero, exporte contatos do Xero",
             "s4": "Importe o CSV de contatos do Xero de volta para o Alga para sincronizar atualizações"
           },
-          "workflowTitle": "Fluxo de trabalho de sincronização do cliente"
+          "workflowTitle": "Fluxo de trabalho de sincronização do cliente",
+          "permissionNotice": "Exportar e importar clientes requer a capacidade execute-exports. Peça a um administrador para concedê-la."
         },
         "settings": {
           "dateFormat": "Formato de data",
@@ -3361,7 +3371,8 @@
           "managedSuffix": "para selecionar faturas, gerar exportações Xero CSV, importar relatórios fiscais e gerenciar lotes.",
           "mappings": {
             "description": "Mapeie clientes, serviços e códigos fiscais da Alga para os identificadores usados ​​em sua organização Xero. Esses valores são usados ​​ao gerar a exportação CSV.",
-            "title": "Mapeamentos Xero CSV"
+            "title": "Mapeamentos Xero CSV",
+            "permissionNotice": "Editar os mapeamentos CSV requer a capacidade manage-mappings. Peça a um administrador para concedê-la."
           },
           "overview": {
             "description": "Exporte faturas para CSV para importação manual para o Xero e importe dados fiscais de relatórios do Xero.",
@@ -3413,7 +3424,9 @@
             "title": "Fluxo de trabalho CSV",
             "trackingDescription": "A exportação CSV inclui colunas de categoria de rastreamento que vinculam cada fatura Xero à sua origem Alga. Quando você importa impostos do Xero, essas categorias de rastreamento são usadas para conciliar faturas automaticamente - sem necessidade de reconciliação manual.",
             "trackingTitle": "Categorias de rastreamento para reconciliação"
-          }
+          },
+          "noPermissionDescription": "Você não tem permissão para visualizar ou configurar integrações contábeis.",
+          "connectionsPermissionNotice": "Você pode visualizar as configurações do Xero CSV, mas alterá-las requer a capacidade manage-connections. Peça a um administrador para concedê-la."
         }
       },
       "live": {
@@ -3483,7 +3496,8 @@
           "descriptionPrefix": "Configure mapeamentos Xero em tempo real para a organização conectada padrão. Esses mapeamentos têm como escopo",
           "placeholderAlert": "O gerenciador de mapeamento fica disponível depois que a primeira organização Xero é conectada e definida como o contexto Xero ativo padrão.",
           "placeholderDescription": "Conecte uma organização Xero ativa antes de configurar mapeamentos fiscais e de itens Xero ativos.",
-          "title": "Mapeamento e configuração do Xero ao vivo"
+          "title": "Mapeamento e configuração do Xero ao vivo",
+          "permissionNotice": "Você pode visualizar a organização conectada padrão, mas editar os mapeamentos requer a capacidade manage-mappings. Peça a um administrador para concedê-la."
         },
         "noClientId": "Nenhum ID de cliente está armazenado para este locatário ainda.",
         "noClientSecret": "Nenhum segredo do cliente está armazenado para este locatário ainda.",
@@ -3497,7 +3511,9 @@
         "tenantOauthDescription": "Cole as credenciais do aplicativo Xero registradas para este locatário. Os valores secretos nunca são retornados ao navegador depois de salvos.",
         "tenantOauthTitle": "Aplicativo OAuth de propriedade do locatário",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "noPermissionDescription": "Você não tem permissão para visualizar ou configurar integrações contábeis.",
+        "connectionsPermissionNotice": "Você pode visualizar as configurações do Xero, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la."
       }
     },
     "stripe": {

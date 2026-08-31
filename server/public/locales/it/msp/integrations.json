@@ -73,6 +73,10 @@
         "unavailable": {
           "description": "Questa integrazione non è ancora disponibile. Seleziona QuickBooks CSV o Xero CSV per configurare le esportazioni manuali.",
           "title": "Configurazione non disponibile"
+        },
+        "noPermission": {
+          "title": "Nessun accesso alle integrazioni contabili",
+          "description": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili. Richiedi l'accesso a un amministratore."
         }
       },
       "modules": {
@@ -215,11 +219,13 @@
           "intro": "Questa integrazione offre un'alternativa alla connettività QuickBooks basata su OAuth:",
           "mappings": {
             "description": "Mappa i clienti, i servizi, i codici fiscali e i termini di pagamento di Alga agli identificatori utilizzati nella tua azienda QuickBooks. Questi valori vengono utilizzati durante la generazione dell'esportazione CSV.",
-            "title": "Mappature CSV QuickBooks"
+            "title": "Mappature CSV QuickBooks",
+            "permissionNotice": "La modifica delle mappature CSV richiede la capacità manage-mappings. Chiedi a un amministratore di concederla."
           },
           "note": "Nota: configura le mappature qui sotto prima di esportare. Le esportazioni CSV e le importazioni fiscali sono gestite da Fatturazione → Esportazioni contabili.",
           "title": "Integrazione CSV QuickBooks"
-        }
+        },
+        "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili."
       },
       "taxImport": {
         "actions": {
@@ -1899,7 +1905,8 @@
           "descriptionPrefix": "Configura le mappature QuickBooks live per l'azienda connessa. Queste mappature sono limitate a",
           "placeholderAlert": "Il gestore delle mappature diventa disponibile dopo la connessione della prima azienda QuickBooks e la sua impostazione come contesto QuickBooks live predefinito.",
           "placeholderDescription": "Connetti un'azienda QuickBooks prima di configurare le mappature di articoli e imposte QuickBooks live.",
-          "title": "Mappatura e configurazione QuickBooks live"
+          "title": "Mappatura e configurazione QuickBooks live",
+          "permissionNotice": "Puoi visualizzare l'azienda connessa, ma la modifica delle mappature richiede la capacità manage-mappings. Chiedi a un amministratore di concederla."
         },
         "noClientId": "Nessun client ID ancora memorizzato per questo tenant.",
         "noClientSecret": "Nessun client secret ancora memorizzato per questo tenant.",
@@ -1922,7 +1929,9 @@
           "none": "Non è ancora disponibile alcuna app Intuit. Registrane una nel portale Intuit Developer e incolla qui sotto client ID e secret: la guida alla configurazione spiega come fare.",
           "tenant": "Questo tenant si collega tramite la propria app Intuit, con le credenziali salvate qui sotto."
         },
-        "setupGuideLink": "Guida alla configurazione di QuickBooks"
+        "setupGuideLink": "Guida alla configurazione di QuickBooks",
+        "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di QuickBooks, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla."
       },
       "sync": {
         "healthCardTitle": "Stato della sincronizzazione",
@@ -3337,7 +3346,8 @@
             "s3": "Dopo le modifiche in Xero, esporta i contatti da Xero",
             "s4": "Importa il CSV dei contatti Xero di nuovo in Alga per sincronizzare gli aggiornamenti"
           },
-          "workflowTitle": "Flusso di sincronizzazione clienti"
+          "workflowTitle": "Flusso di sincronizzazione clienti",
+          "permissionNotice": "L'esportazione e l'importazione dei clienti richiedono la capacità execute-exports. Chiedi a un amministratore di concederla."
         },
         "settings": {
           "dateFormat": "Formato data",
@@ -3361,7 +3371,8 @@
           "managedSuffix": "per selezionare le fatture, generare esportazioni CSV di Xero, importare report fiscali e gestire i batch.",
           "mappings": {
             "description": "Mappa i clienti, i servizi e i codici fiscali di Alga agli identificatori utilizzati nella tua organizzazione Xero. Questi valori vengono utilizzati durante la generazione dell'esportazione CSV.",
-            "title": "Mappature CSV Xero"
+            "title": "Mappature CSV Xero",
+            "permissionNotice": "La modifica delle mappature CSV richiede la capacità manage-mappings. Chiedi a un amministratore di concederla."
           },
           "overview": {
             "description": "Esporta le fatture in CSV per l'importazione manuale in Xero e importa i dati fiscali dai report Xero.",
@@ -3413,7 +3424,9 @@
             "title": "Flusso CSV",
             "trackingDescription": "L'esportazione CSV include colonne delle categorie di tracciamento che collegano ogni fattura Xero alla sua origine Alga. Quando importi le imposte da Xero, queste categorie di tracciamento vengono utilizzate per abbinare automaticamente le fatture, senza alcuna riconciliazione manuale.",
             "trackingTitle": "Categorie di tracciamento per la riconciliazione"
-          }
+          },
+          "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
+          "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di Xero CSV, ma la loro modifica richiede la capacità manage-connections. Chiedi a un amministratore di concederla."
         }
       },
       "live": {
@@ -3483,7 +3496,8 @@
           "descriptionPrefix": "Configura le mappature Xero live per l'organizzazione connessa predefinita. Queste mappature sono limitate a",
           "placeholderAlert": "Il gestore delle mappature diventa disponibile dopo la connessione della prima organizzazione Xero e la sua impostazione come contesto Xero live predefinito.",
           "placeholderDescription": "Connetti un'organizzazione Xero live prima di configurare le mappature di articoli e imposte Xero live.",
-          "title": "Mappatura e configurazione Xero live"
+          "title": "Mappatura e configurazione Xero live",
+          "permissionNotice": "Puoi visualizzare l'organizzazione connessa predefinita, ma la modifica delle mappature richiede la capacità manage-mappings. Chiedi a un amministratore di concederla."
         },
         "noClientId": "Nessun client ID ancora memorizzato per questo tenant.",
         "noClientSecret": "Nessun client secret ancora memorizzato per questo tenant.",
@@ -3497,7 +3511,9 @@
         "tenantOauthDescription": "Incolla le credenziali dell'app Xero registrate per questo tenant. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
         "tenantOauthTitle": "App OAuth di proprietà del tenant",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di Xero, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla."
       }
     },
     "stripe": {
