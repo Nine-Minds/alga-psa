@@ -1205,7 +1205,12 @@
     "fields": {
       "prefix": {
         "label": "Prefisso del numero",
-        "help": "Prefisso facoltativo per la sequenza di numeri. Lascia vuoto per non usare alcun prefisso o inserisci un prefisso personalizzato."
+        "help": "Prefisso fisso facoltativo per la sequenza di numeri. Lascia vuoto per non usare alcun prefisso o inserisci un prefisso personalizzato. Per includere la data di emissione usa il campo Formato data, invece di digitarla qui."
+      },
+      "dateFormat": {
+        "label": "Formato data",
+        "help": "Data facoltativa inserita tra il prefisso e il numero sequenziale. Ad esempio, {YYYY}-{MM}- produce INV-2026-08-000001. Lascia vuoto per mantenere i numeri senza data.",
+        "tokensHint": "Segnaposto: {YYYY} anno a quattro cifre, {YY} anno a due cifre, {MM} mese, {DD} giorno. La data viene calcolata al momento dell'assegnazione del numero, nel fuso orario predefinito configurato in Impostazioni. La sequenza resta continua: non riparte ogni anno, mese o giorno."
       },
       "minimumDigits": {
         "label": "Cifre minime",

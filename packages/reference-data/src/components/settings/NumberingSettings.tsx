@@ -10,16 +10,22 @@ import { Edit2, Info } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { NUMBERING_DEFAULTS, type EntityType } from '@alga-psa/shared/services/numberingDefaults';
+import { expandDateFormat } from '@alga-psa/shared/services/numberingFormat';
 import { getNumberSettings, updateNumberSettings, canEditNumberingSettings, type NumberSettings } from '../../actions/number-actions/numberingActions';
 
 interface NumberingSettingsProps {
   entityType: EntityType;
 }
 
+const TEXT_FIELDS: ReadonlyArray<keyof NumberSettings> = ['prefix', 'prefix_date_format'];
+
 const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.Element => {
   const { t } = useTranslation('msp/billing-settings');
   // General state
   const [settings, setSettings] = useState<NumberSettings | null>(null);
+  // Zone the server will stamp the date tokens in, so the preview cannot drift
+  // with the admin's own browser timezone.
+  const [tenantTimezone, setTenantTimezone] = useState('UTC');
   const [canEdit, setCanEdit] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +52,8 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
             prefix: '',
             padding_length: 6,
             last_number: 0,
-            initial_value: 1
+            initial_value: 1,
+            prefix_date_format: null
           };
           setSettings(defaultSettings);
           setFormState(defaultSettings);
@@ -54,6 +61,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         } else {
           setSettings(numberSettings);
           setFormState(numberSettings);
+          setTenantTimezone(numberSettings.tenantTimezone);
         }
 
         setCanEdit(hasEditPermission);
@@ -69,7 +77,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
   const handleInputChange = (field: keyof NumberSettings, value: string) => {
     setFormState(prev => ({
       ...prev,
-      [field]: field === 'prefix' ? value : parseInt(value, 10) || 0
+      [field]: TEXT_FIELDS.includes(field) ? value : parseInt(value, 10) || 0
     }));
   };
 
@@ -83,6 +91,10 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         // Handle prefix - explicitly include empty string to clear prefix
         if (formState.prefix !== settings.prefix) {
           changes.prefix = formState.prefix === '' ? '' : (formState.prefix || '');
+        }
+        // Empty string clears the date format (the server normalizes it to NULL)
+        if ((formState.prefix_date_format ?? '') !== (settings.prefix_date_format ?? '')) {
+          changes.prefix_date_format = formState.prefix_date_format ?? '';
         }
         if (formState.padding_length !== settings.padding_length) changes.padding_length = formState.padding_length;
         if (formState.last_number !== settings.last_number) changes.last_number = formState.last_number;
@@ -129,10 +141,19 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
     ? (formState.prefix ?? '')
     : (settings?.prefix ?? '');
 
-  const paddedNumber = paddingLength > 0 
+  const dateFormat = isEditing
+    ? (formState.prefix_date_format ?? '')
+    : (settings?.prefix_date_format ?? '');
+
+  const paddedNumber = paddingLength > 0
     ? nextNumber.toString().padStart(paddingLength, '0')
     : nextNumber.toString();
-  const previewNumber = `${prefix}${paddedNumber}`;
+  // Mirrors server issuance: static prefix, then the expanded date tokens in the
+  // tenant's timezone, then the padded counter.
+  const expandedDate = dateFormat
+    ? expandDateFormat(dateFormat, { date: new Date(), timeZone: tenantTimezone })
+    : '';
+  const previewNumber = `${prefix}${expandedDate}${paddedNumber}`;
 
   const InfoTooltip: React.FC<{ text: string }> = ({ text }) => (
     <div className="group relative inline-block ml-1">
@@ -186,6 +207,27 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Date Format Field (optional — empty means no date in the number) */}
+        <div>
+          <div className="flex items-center mb-2">
+            <Label htmlFor={`${entityId}-prefix-date-format-input`} className="text-sm font-medium text-gray-700">
+              {t('numbering.fields.dateFormat.label')}
+            </Label>
+            <InfoTooltip text={t('numbering.fields.dateFormat.help')} />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Input
+              id={`${entityId}-prefix-date-format-input`}
+              value={isEditing ? (formState.prefix_date_format ?? '') : (settings?.prefix_date_format ?? '')}
+              onChange={(e) => handleInputChange('prefix_date_format', e.target.value)}
+              disabled={!isEditing}
+              className="!w-48"
+              placeholder="{YYYY}-{MM}-"
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-1">{t('numbering.fields.dateFormat.tokensHint')}</p>
         </div>
 
         {/* Minimum Digits Field */}

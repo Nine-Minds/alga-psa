@@ -1,16 +1,23 @@
 'use server';
 
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, resolveEffectiveTimeZone, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { NUMBERING_DEFAULTS, type EntityType } from '@alga-psa/shared/services/numberingService';
+import { validateNumberDateFormat } from '@alga-psa/shared/services/numberingFormat';
 
 export interface NumberSettings {
   prefix: string;
   last_number: number;
   initial_value: number;
   padding_length: number | null;
+  prefix_date_format: string | null;
+}
+
+export interface NumberSettingsView extends NumberSettings {
+  /** Zone the date format is evaluated in at issuance. Derived, never persisted. */
+  tenantTimezone: string;
 }
 
 export interface UpdateResponse {
@@ -24,15 +31,30 @@ type NumberSettingsRow = NumberSettings & {
   entity_type: EntityType;
 };
 
-export const getNumberSettings = withAuth(async (_user, { tenant }, entityType: EntityType): Promise<NumberSettings> => {
+// QuickBooks Online rejects a DocNumber longer than 21 characters, and
+// invoice_number syncs verbatim (quickBooksOnlineAdapter DocNumber mapping).
+const QBO_DOC_NUMBER_MAX_LENGTH = 21;
+
+/** Characters an INVOICE date format may still spend without breaking QBO sync. */
+function invoiceDateFormatBudget(settings: Partial<NumberSettings>): number {
+  const prefixLength = (settings.prefix ?? '').length;
+  const nextNumber = Math.max(Number(settings.last_number ?? 0) + 1, Number(settings.initial_value ?? 1));
+  const digits = Math.max(Number(settings.padding_length ?? 0), String(nextNumber).length);
+  return QBO_DOC_NUMBER_MAX_LENGTH - prefixLength - digits;
+}
+
+export const getNumberSettings = withAuth(async (_user, { tenant }, entityType: EntityType): Promise<NumberSettingsView> => {
   const { knex: db } = await createTenantKnex();
-  const settings = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await tenantDb(trx, tenant).table<NumberSettingsRow>('next_number')
+  const { settings, tenantTimezone } = await withTransaction(db, async (trx: Knex.Transaction) => ({
+    settings: await tenantDb(trx, tenant).table<NumberSettingsRow>('next_number')
       .where('entity_type', entityType)
-      .first();
-  });
+      .first(),
+    // Tenant-scoped, matching issuance: the preview must not drift with the
+    // admin's browser zone.
+    tenantTimezone: await resolveEffectiveTimeZone(trx, tenant),
+  }));
   if (settings) {
-    return settings as NumberSettings;
+    return { ...(settings as NumberSettings), tenantTimezone };
   }
   // No row yet (a type whose first number hasn't been generated — the row is
   // self-initialized on first getNextNumber). Return the effective defaults so
@@ -44,6 +66,8 @@ export const getNumberSettings = withAuth(async (_user, { tenant }, entityType: 
     padding_length: defaults.padding_length,
     last_number: 0,
     initial_value: defaults.initial_value,
+    prefix_date_format: null,
+    tenantTimezone,
   };
 });
 
@@ -65,10 +89,19 @@ export const updateNumberSettings = withAuth(async (
         .first();
       const isNewSettings = !currentSettings;
 
+      // An empty date format clears the feature; store NULL so issuance takes
+      // the untouched pre-change path.
+      const normalizedUpdates: Partial<NumberSettings> = { ...updates };
+      if ('prefix_date_format' in updates) {
+        const template = updates.prefix_date_format;
+        normalizedUpdates.prefix_date_format =
+          typeof template === 'string' && template.trim() !== '' ? template : null;
+      }
+
       // Combine current settings with updates
       const finalSettings = {
-        ...(currentSettings || { last_number: 0, ...NUMBERING_DEFAULTS[entityType] }),
-        ...updates
+        ...(currentSettings || { last_number: 0, prefix_date_format: null, ...NUMBERING_DEFAULTS[entityType] }),
+        ...normalizedUpdates
       };
 
       // Only validate fields that are being updated
@@ -108,6 +141,16 @@ export const updateNumberSettings = withAuth(async (
         }
       }
 
+      if ('prefix_date_format' in normalizedUpdates && normalizedUpdates.prefix_date_format) {
+        const validation = validateNumberDateFormat(
+          normalizedUpdates.prefix_date_format,
+          entityType === 'INVOICE' ? { maxExpandedLength: invoiceDateFormatBudget(finalSettings) } : {}
+        );
+        if (!validation.valid) {
+          return { success: false, error: validation.error };
+        }
+      }
+
       // Insert or update settings
       if (isNewSettings) {
         await db.table<NumberSettingsRow>('next_number').insert({
@@ -118,7 +161,7 @@ export const updateNumberSettings = withAuth(async (
       } else {
         await db.table<NumberSettingsRow>('next_number')
           .where('entity_type', entityType)
-          .update(updates);
+          .update(normalizedUpdates);
       }
 
       const updatedSettings = await db.table<NumberSettingsRow>('next_number')

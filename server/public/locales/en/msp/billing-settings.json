@@ -1205,7 +1205,12 @@
     "fields": {
       "prefix": {
         "label": "Number Prefix",
-        "help": "Optional prefix for the number sequence. Leave empty for no prefix or enter a custom prefix."
+        "help": "Optional literal prefix for the number sequence. Leave empty for no prefix or enter a custom prefix. To include the issue date, use the Date Format field below instead of typing it here."
+      },
+      "dateFormat": {
+        "label": "Date Format",
+        "help": "Optional date inserted between the prefix and the sequential number. For example, {YYYY}-{MM}- produces INV-2026-08-000001. Leave empty to keep numbers without a date.",
+        "tokensHint": "Tokens: {YYYY} four-digit year, {YY} two-digit year, {MM} month, {DD} day. The date is evaluated when the number is issued, in the default timezone configured in Settings. The sequence stays continuous — it does not restart each year, month or day."
       },
       "minimumDigits": {
         "label": "Minimum Digits",

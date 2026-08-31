@@ -1205,7 +1205,12 @@
     "fields": {
       "prefix": {
         "label": "Prefijo del número",
-        "help": "Prefijo opcional para la secuencia de números. Déjelo vacío para no usar prefijo o ingrese un prefijo personalizado."
+        "help": "Prefijo fijo opcional para la secuencia de números. Déjelo vacío para no usar prefijo o ingrese un prefijo personalizado. Para incluir la fecha de emisión, use el campo Formato de fecha en lugar de escribirla aquí."
+      },
+      "dateFormat": {
+        "label": "Formato de fecha",
+        "help": "Fecha opcional que se inserta entre el prefijo y el número secuencial. Por ejemplo, {YYYY}-{MM}- produce INV-2026-08-000001. Déjelo vacío para mantener los números sin fecha.",
+        "tokensHint": "Marcadores: {YYYY} año de cuatro dígitos, {YY} año de dos dígitos, {MM} mes, {DD} día. La fecha se calcula al asignar el número, en la zona horaria predeterminada configurada en Configuración. La secuencia es continua: no se reinicia cada año, mes ni día."
       },
       "minimumDigits": {
         "label": "Dígitos mínimos",

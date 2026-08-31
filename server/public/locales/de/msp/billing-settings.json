@@ -1205,7 +1205,12 @@
     "fields": {
       "prefix": {
         "label": "Nummernpräfix",
-        "help": "Optionales Präfix für die Nummernsequenz. Leer lassen für kein Präfix oder ein eigenes Präfix eingeben."
+        "help": "Optionales festes Präfix für die Nummernsequenz. Leer lassen für kein Präfix oder ein eigenes Präfix eingeben. Für das Ausstellungsdatum verwenden Sie das Feld Datumsformat, statt es hier einzutragen."
+      },
+      "dateFormat": {
+        "label": "Datumsformat",
+        "help": "Optionales Datum, das zwischen Präfix und laufender Nummer eingefügt wird. Beispiel: {YYYY}-{MM}- ergibt INV-2026-08-000001. Leer lassen, um Nummern ohne Datum zu vergeben.",
+        "tokensHint": "Platzhalter: {YYYY} vierstelliges Jahr, {YY} zweistelliges Jahr, {MM} Monat, {DD} Tag. Das Datum wird bei der Vergabe der Nummer in der unter Einstellungen konfigurierten Standard-Zeitzone bestimmt. Die Sequenz läuft fortlaufend weiter — sie beginnt nicht jedes Jahr, jeden Monat oder jeden Tag neu."
       },
       "minimumDigits": {
         "label": "Mindestanzahl Ziffern",
