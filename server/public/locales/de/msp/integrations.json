@@ -1840,7 +1840,9 @@
           "reconnect": "QuickBooks erneut verbinden",
           "refresh": "Aktualisieren",
           "saveCredentials": "QuickBooks-Anmeldedaten speichern",
-          "saving": "Speichern…"
+          "saving": "Speichern…",
+          "retryDisconnect": "Trennung wiederholen",
+          "forceFinalizeDisconnect": "Abschluss erzwingen"
         },
         "badges": {
           "connectionExpired": "Verbindung benötigt Aufmerksamkeit",
@@ -1923,7 +1925,18 @@
           "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine im Intuit-Developer-Portal und fügen Sie Client-ID und Secret unten ein — die Einrichtungsanleitung führt Sie durch die Schritte.",
           "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten."
         },
-        "setupGuideLink": "QuickBooks-Einrichtungsanleitung"
+        "setupGuideLink": "QuickBooks-Einrichtungsanleitung",
+        "disconnectPending": "QuickBooks wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
+        "disconnectForceFinalized": "Die Trennung von QuickBooks wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
+        "disconnect": {
+          "forceFinalizePrompt": "Grund für den zwangsweisen Abschluss der QuickBooks-Trennung (wird im Audit-Log erfasst):",
+          "inProgressTitle": "QuickBooks-Trennung läuft",
+          "inProgressDescription": "Anbieterberechtigungen werden widerrufen. Synchronisierung und Exporte bleiben pausiert, bis für jedes verbundene Unternehmen der Widerruf bestätigt ist.",
+          "targetRevoked": "widerrufen",
+          "targetFailed": "benötigt Aufmerksamkeit",
+          "targetPending": "ausstehend",
+          "failedPermanentDescription": "Bei der Anbieterbereinigung ist ein dauerhafter Fehler aufgetreten. Sie können es erneut versuchen oder den Abschluss erzwingen, um die gespeicherten Anmeldedaten mit einem Audit-Eintrag zu entfernen."
+        }
       },
       "sync": {
         "healthCardTitle": "Synchronisierungsstatus",
@@ -3428,7 +3441,9 @@
           "reconnect": "Xero erneut verbinden",
           "refresh": "Aktualisieren",
           "saveCredentials": "Xero-Anmeldedaten speichern",
-          "saving": "Speichern…"
+          "saving": "Speichern…",
+          "retryDisconnect": "Trennung wiederholen",
+          "forceFinalizeDisconnect": "Abschluss erzwingen"
         },
         "badges": {
           "connectionExpired": "Verbindung abgelaufen",
@@ -3499,7 +3514,19 @@
         "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Xero-App-Anmeldedaten ein. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
         "tenantOauthTitle": "Mandanteneigene OAuth-App",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "disconnectPending": "Xero wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
+        "disconnectForceFinalized": "Die Trennung von Xero wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
+        "disconnect": {
+          "forceFinalizePrompt": "Grund für den zwangsweisen Abschluss der Xero-Trennung (wird im Audit-Log erfasst):",
+          "inProgressTitle": "Xero-Trennung läuft",
+          "inProgressDescription": "Anbieterverbindungen werden widerrufen. Synchronisierung und Exporte bleiben pausiert, bis für jede Verbindung die Entfernung bestätigt ist.",
+          "grantTarget": "Widerruf der OAuth-Berechtigung",
+          "targetRevoked": "widerrufen",
+          "targetFailed": "benötigt Aufmerksamkeit",
+          "targetPending": "ausstehend",
+          "failedPermanentDescription": "Bei der Anbieterbereinigung ist ein dauerhafter Fehler aufgetreten. Sie können es erneut versuchen oder den Abschluss erzwingen, um die gespeicherten Anmeldedaten mit einem Audit-Eintrag zu entfernen."
+        }
       }
     },
     "stripe": {

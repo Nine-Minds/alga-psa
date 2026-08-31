@@ -349,6 +349,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // mappings live in tenant_external_entity_mappings (deleted below).
   'hudu_integrations',
 
+  // Accounting provider disconnect state machine: one row per (tenant, provider)
+  // tracking QBO/Xero revocation progress. A leaf table — its only FK is to
+  // tenants (CASCADE) and nothing references it — so position is free; kept with
+  // the other integration rows for readability.
+  'provider_disconnect_records',
+
   // Project billing: schedule entries and cap usage reference project_billing_configs;
   // configs reference projects; phase rate overrides reference project_phases and
   // service_catalog. All must be deleted before those parents.

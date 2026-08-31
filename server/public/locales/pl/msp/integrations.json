@@ -1840,7 +1840,9 @@
           "reconnect": "Połącz ponownie QuickBooks",
           "refresh": "Odśwież",
           "saveCredentials": "Zapisz poświadczenia QuickBooks",
-          "saving": "Zapisywanie…"
+          "saving": "Zapisywanie…",
+          "retryDisconnect": "Ponów rozłączanie",
+          "forceFinalizeDisconnect": "Wymuś finalizację"
         },
         "badges": {
           "connectionExpired": "Połączenie wymaga uwagi",
@@ -1923,7 +1925,18 @@
           "none": "Nie ma jeszcze dostępnej aplikacji Intuit. Zarejestruj ją w portalu Intuit Developer i wklej poniżej identyfikator klienta oraz sekret — przewodnik konfiguracji opisuje ten proces.",
           "tenant": "Ta organizacja łączy się przez własną aplikację Intuit, używając zapisanych poniżej poświadczeń."
         },
-        "setupGuideLink": "Przewodnik konfiguracji QuickBooks"
+        "setupGuideLink": "Przewodnik konfiguracji QuickBooks",
+        "disconnectPending": "Trwa rozłączanie QuickBooks. Synchronizacja i eksporty są wstrzymane do czasu zakończenia czyszczenia po stronie dostawcy; rozłączanie jest automatycznie ponawiane.",
+        "disconnectForceFinalized": "Rozłączanie QuickBooks zostało przymusowo sfinalizowane. Nie udało się potwierdzić czyszczenia po stronie dostawcy, dlatego poświadczenia zostały usunięte lokalnie wraz z wpisem audytowym.",
+        "disconnect": {
+          "forceFinalizePrompt": "Powód przymusowej finalizacji rozłączenia QuickBooks (zapisywany w dzienniku audytu):",
+          "inProgressTitle": "Trwa rozłączanie QuickBooks",
+          "inProgressDescription": "Uprawnienia po stronie dostawcy są unieważniane. Synchronizacja i eksporty pozostają wstrzymane, dopóki każda połączona firma nie zostanie potwierdzona jako unieważniona.",
+          "targetRevoked": "unieważnione",
+          "targetFailed": "wymaga uwagi",
+          "targetPending": "oczekuje",
+          "failedPermanentDescription": "Czyszczenie po stronie dostawcy napotkało trwały błąd. Możesz ponowić próbę lub wymusić finalizację, aby usunąć zapisane poświadczenia wraz z wpisem audytowym."
+        }
       },
       "sync": {
         "healthCardTitle": "Stan synchronizacji",
@@ -3428,7 +3441,9 @@
           "reconnect": "Połącz ponownie Xero",
           "refresh": "Odśwież",
           "saveCredentials": "Zapisz poświadczenia Xero",
-          "saving": "Zapisywanie…"
+          "saving": "Zapisywanie…",
+          "retryDisconnect": "Ponów rozłączanie",
+          "forceFinalizeDisconnect": "Wymuś finalizację"
         },
         "badges": {
           "connectionExpired": "Połączenie wygasło",
@@ -3499,7 +3514,19 @@
         "tenantOauthDescription": "Wklej poświadczenia aplikacji Xero zarejestrowane dla tego tenanta. Wartości secret nigdy nie są zwracane do przeglądarki po zapisaniu.",
         "tenantOauthTitle": "Aplikacja OAuth należąca do tenanta",
         "title": "Xero",
-        "xeroCsv": "Plik CSV Xero"
+        "xeroCsv": "Plik CSV Xero",
+        "disconnectPending": "Trwa rozłączanie Xero. Synchronizacja i eksporty są wstrzymane do czasu zakończenia czyszczenia po stronie dostawcy; rozłączanie jest automatycznie ponawiane.",
+        "disconnectForceFinalized": "Rozłączanie Xero zostało przymusowo sfinalizowane. Nie udało się potwierdzić czyszczenia po stronie dostawcy, dlatego poświadczenia zostały usunięte lokalnie wraz z wpisem audytowym.",
+        "disconnect": {
+          "forceFinalizePrompt": "Powód przymusowej finalizacji rozłączenia Xero (zapisywany w dzienniku audytu):",
+          "inProgressTitle": "Trwa rozłączanie Xero",
+          "inProgressDescription": "Połączenia po stronie dostawcy są unieważniane. Synchronizacja i eksporty pozostają wstrzymane, dopóki każde połączenie nie zostanie potwierdzone jako usunięte.",
+          "grantTarget": "Unieważnienie uprawnienia OAuth",
+          "targetRevoked": "unieważnione",
+          "targetFailed": "wymaga uwagi",
+          "targetPending": "oczekuje",
+          "failedPermanentDescription": "Czyszczenie po stronie dostawcy napotkało trwały błąd. Możesz ponowić próbę lub wymusić finalizację, aby usunąć zapisane poświadczenia wraz z wpisem audytowym."
+        }
       }
     },
     "stripe": {

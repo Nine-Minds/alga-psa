@@ -1840,7 +1840,9 @@
           "reconnect": "Reconnecter QuickBooks",
           "refresh": "Actualiser",
           "saveCredentials": "Enregistrer les identifiants QuickBooks",
-          "saving": "Enregistrement…"
+          "saving": "Enregistrement…",
+          "retryDisconnect": "Réessayer la déconnexion",
+          "forceFinalizeDisconnect": "Finaliser de force"
         },
         "badges": {
           "connectionExpired": "La connexion nécessite une attention",
@@ -1923,7 +1925,18 @@
           "none": "Aucune application Intuit n’est encore disponible. Enregistrez-en une dans le portail Intuit Developer et collez ci-dessous son ID client et son secret — le guide d’installation détaille la marche à suivre.",
           "tenant": "Ce locataire se connecte via sa propre application Intuit, avec les identifiants enregistrés ci-dessous."
         },
-        "setupGuideLink": "Guide de configuration QuickBooks"
+        "setupGuideLink": "Guide de configuration QuickBooks",
+        "disconnectPending": "QuickBooks est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
+        "disconnectForceFinalized": "La déconnexion de QuickBooks a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motif de la finalisation forcée de la déconnexion de QuickBooks (consigné dans le journal d'audit) :",
+          "inProgressTitle": "Déconnexion de QuickBooks en cours",
+          "inProgressDescription": "Les autorisations côté fournisseur sont en cours de révocation. La synchronisation et les exports restent en pause jusqu'à ce que la révocation soit confirmée pour chaque entreprise connectée.",
+          "targetRevoked": "révoquée",
+          "targetFailed": "nécessite une attention",
+          "targetPending": "en attente",
+          "failedPermanentDescription": "Le nettoyage côté fournisseur a rencontré une erreur permanente. Vous pouvez réessayer ou finaliser de force pour supprimer les identifiants enregistrés avec un enregistrement d'audit."
+        }
       },
       "sync": {
         "healthCardTitle": "État de la synchronisation",
@@ -3428,7 +3441,9 @@
           "reconnect": "Reconnecter Xero",
           "refresh": "Actualiser",
           "saveCredentials": "Enregistrer les identifiants Xero",
-          "saving": "Enregistrement…"
+          "saving": "Enregistrement…",
+          "retryDisconnect": "Réessayer la déconnexion",
+          "forceFinalizeDisconnect": "Finaliser de force"
         },
         "badges": {
           "connectionExpired": "Connexion expirée",
@@ -3499,7 +3514,19 @@
         "tenantOauthDescription": "Collez les identifiants de l'application Xero enregistrés pour ce tenant. Les valeurs de secret ne sont jamais renvoyées au navigateur après l'enregistrement.",
         "tenantOauthTitle": "Application OAuth propre au tenant",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "disconnectPending": "Xero est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
+        "disconnectForceFinalized": "La déconnexion de Xero a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motif de la finalisation forcée de la déconnexion de Xero (consigné dans le journal d'audit) :",
+          "inProgressTitle": "Déconnexion de Xero en cours",
+          "inProgressDescription": "Les connexions côté fournisseur sont en cours de révocation. La synchronisation et les exports restent en pause jusqu'à ce que la suppression soit confirmée pour chaque connexion.",
+          "grantTarget": "Révocation de l'autorisation OAuth",
+          "targetRevoked": "révoquée",
+          "targetFailed": "nécessite une attention",
+          "targetPending": "en attente",
+          "failedPermanentDescription": "Le nettoyage côté fournisseur a rencontré une erreur permanente. Vous pouvez réessayer ou finaliser de force pour supprimer les identifiants enregistrés avec un enregistrement d'audit."
+        }
       }
     },
     "stripe": {

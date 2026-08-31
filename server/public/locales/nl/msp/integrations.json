@@ -1840,7 +1840,9 @@
           "reconnect": "QuickBooks opnieuw verbinden",
           "refresh": "Vernieuwen",
           "saveCredentials": "QuickBooks-inloggegevens opslaan",
-          "saving": "Opslaan…"
+          "saving": "Opslaan…",
+          "retryDisconnect": "Ontkoppeling opnieuw proberen",
+          "forceFinalizeDisconnect": "Geforceerd afronden"
         },
         "badges": {
           "connectionExpired": "Verbinding vereist aandacht",
@@ -1923,7 +1925,18 @@
           "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een in het Intuit Developer-portaal en plak hieronder de client-ID en het secret — de installatiegids legt dit stap voor stap uit.",
           "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app, met de hieronder opgeslagen gegevens."
         },
-        "setupGuideLink": "QuickBooks-installatiegids"
+        "setupGuideLink": "QuickBooks-installatiegids",
+        "disconnectPending": "QuickBooks wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
+        "disconnectForceFinalized": "De QuickBooks-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reden voor het geforceerd afronden van de QuickBooks-ontkoppeling (vastgelegd in de auditlog):",
+          "inProgressTitle": "QuickBooks-ontkoppeling bezig",
+          "inProgressDescription": "De machtigingen bij de aanbieder worden ingetrokken. Synchronisatie en exports blijven gepauzeerd tot van elk verbonden bedrijf is bevestigd dat deze zijn ingetrokken.",
+          "targetRevoked": "ingetrokken",
+          "targetFailed": "vereist aandacht",
+          "targetPending": "in behandeling",
+          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
+        }
       },
       "sync": {
         "healthCardTitle": "Synchronisatiestatus",
@@ -3428,7 +3441,9 @@
           "reconnect": "Xero opnieuw verbinden",
           "refresh": "Vernieuwen",
           "saveCredentials": "Xero-inloggegevens opslaan",
-          "saving": "Opslaan…"
+          "saving": "Opslaan…",
+          "retryDisconnect": "Ontkoppeling opnieuw proberen",
+          "forceFinalizeDisconnect": "Geforceerd afronden"
         },
         "badges": {
           "connectionExpired": "Verbinding verlopen",
@@ -3499,7 +3514,19 @@
         "tenantOauthDescription": "Plak de Xero-app-inloggegevens die voor deze tenant zijn geregistreerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
         "tenantOauthTitle": "Tenant-eigen OAuth-app",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "disconnectPending": "Xero wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
+        "disconnectForceFinalized": "De Xero-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reden voor het geforceerd afronden van de Xero-ontkoppeling (vastgelegd in de auditlog):",
+          "inProgressTitle": "Xero-ontkoppeling bezig",
+          "inProgressDescription": "De verbindingen bij de aanbieder worden ingetrokken. Synchronisatie en exports blijven gepauzeerd tot van elke verbinding is bevestigd dat deze is verwijderd.",
+          "grantTarget": "Intrekking van OAuth-machtiging",
+          "targetRevoked": "ingetrokken",
+          "targetFailed": "vereist aandacht",
+          "targetPending": "in behandeling",
+          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
+        }
       }
     },
     "stripe": {

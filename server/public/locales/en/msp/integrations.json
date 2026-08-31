@@ -1863,7 +1863,9 @@
           "reconnect": "Reconnect QuickBooks",
           "refresh": "Refresh",
           "saveCredentials": "Save QuickBooks Credentials",
-          "saving": "Saving…"
+          "saving": "Saving…",
+          "retryDisconnect": "Retry Disconnect",
+          "forceFinalizeDisconnect": "Force Finalize"
         },
         "badges": {
           "connectionExpired": "Connection Needs Attention",
@@ -1946,7 +1948,18 @@
           "none": "No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.",
           "tenant": "This tenant connects through its own Intuit app, using the credentials stored below."
         },
-        "setupGuideLink": "QuickBooks setup guide"
+        "setupGuideLink": "QuickBooks setup guide",
+        "disconnectPending": "QuickBooks is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
+        "disconnectForceFinalized": "The QuickBooks disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reason for force-finalizing the QuickBooks disconnect (recorded in the audit log):",
+          "inProgressTitle": "QuickBooks disconnect in progress",
+          "inProgressDescription": "Provider grants are being revoked. Sync and exports stay paused until every connected company is confirmed revoked.",
+          "targetRevoked": "revoked",
+          "targetFailed": "needs attention",
+          "targetPending": "pending",
+          "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
+        }
       },
       "sync": {
         "healthCardTitle": "Sync Health",
@@ -3451,7 +3464,9 @@
           "reconnect": "Reconnect Xero",
           "refresh": "Refresh",
           "saveCredentials": "Save Xero Credentials",
-          "saving": "Saving…"
+          "saving": "Saving…",
+          "retryDisconnect": "Retry Disconnect",
+          "forceFinalizeDisconnect": "Force Finalize"
         },
         "badges": {
           "connectionExpired": "Connection Expired",
@@ -3522,7 +3537,19 @@
         "tenantOauthDescription": "Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.",
         "tenantOauthTitle": "Tenant-Owned OAuth App",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "disconnectPending": "Xero is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
+        "disconnectForceFinalized": "The Xero disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reason for force-finalizing the Xero disconnect (recorded in the audit log):",
+          "inProgressTitle": "Xero disconnect in progress",
+          "inProgressDescription": "Provider connections are being revoked. Sync and exports stay paused until every connection is confirmed removed.",
+          "grantTarget": "OAuth grant revocation",
+          "targetRevoked": "revoked",
+          "targetFailed": "needs attention",
+          "targetPending": "pending",
+          "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
+        }
       }
     },
     "stripe": {

@@ -1840,7 +1840,9 @@
           "reconnect": "Riconnetti QuickBooks",
           "refresh": "Aggiorna",
           "saveCredentials": "Salva credenziali QuickBooks",
-          "saving": "Salvataggio…"
+          "saving": "Salvataggio…",
+          "retryDisconnect": "Riprova disconnessione",
+          "forceFinalizeDisconnect": "Finalizza forzatamente"
         },
         "badges": {
           "connectionExpired": "La connessione richiede attenzione",
@@ -1923,7 +1925,18 @@
           "none": "Non è ancora disponibile alcuna app Intuit. Registrane una nel portale Intuit Developer e incolla qui sotto client ID e secret: la guida alla configurazione spiega come fare.",
           "tenant": "Questo tenant si collega tramite la propria app Intuit, con le credenziali salvate qui sotto."
         },
-        "setupGuideLink": "Guida alla configurazione di QuickBooks"
+        "setupGuideLink": "Guida alla configurazione di QuickBooks",
+        "disconnectPending": "QuickBooks è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
+        "disconnectForceFinalized": "La disconnessione di QuickBooks è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo della finalizzazione forzata della disconnessione di QuickBooks (registrato nel registro di audit):",
+          "inProgressTitle": "Disconnessione di QuickBooks in corso",
+          "inProgressDescription": "Le concessioni lato provider sono in fase di revoca. La sincronizzazione e le esportazioni restano in pausa finché ogni azienda connessa non risulta revocata.",
+          "targetRevoked": "revocata",
+          "targetFailed": "richiede attenzione",
+          "targetPending": "in sospeso",
+          "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit."
+        }
       },
       "sync": {
         "healthCardTitle": "Stato della sincronizzazione",
@@ -3428,7 +3441,9 @@
           "reconnect": "Riconnetti Xero",
           "refresh": "Aggiorna",
           "saveCredentials": "Salva credenziali Xero",
-          "saving": "Salvataggio…"
+          "saving": "Salvataggio…",
+          "retryDisconnect": "Riprova disconnessione",
+          "forceFinalizeDisconnect": "Finalizza forzatamente"
         },
         "badges": {
           "connectionExpired": "Connessione scaduta",
@@ -3499,7 +3514,19 @@
         "tenantOauthDescription": "Incolla le credenziali dell'app Xero registrate per questo tenant. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
         "tenantOauthTitle": "App OAuth di proprietà del tenant",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "disconnectPending": "Xero è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
+        "disconnectForceFinalized": "La disconnessione di Xero è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo della finalizzazione forzata della disconnessione di Xero (registrato nel registro di audit):",
+          "inProgressTitle": "Disconnessione di Xero in corso",
+          "inProgressDescription": "Le connessioni lato provider sono in fase di revoca. La sincronizzazione e le esportazioni restano in pausa finché ogni connessione non risulta rimossa.",
+          "grantTarget": "Revoca della concessione OAuth",
+          "targetRevoked": "revocata",
+          "targetFailed": "richiede attenzione",
+          "targetPending": "in sospeso",
+          "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit."
+        }
       }
     },
     "stripe": {

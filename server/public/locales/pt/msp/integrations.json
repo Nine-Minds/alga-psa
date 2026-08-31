@@ -1840,7 +1840,9 @@
           "reconnect": "Reconectar QuickBooks",
           "refresh": "Atualizar",
           "saveCredentials": "Salvar credenciais do QuickBooks",
-          "saving": "Salvando…"
+          "saving": "Salvando…",
+          "retryDisconnect": "Tentar desconectar novamente",
+          "forceFinalizeDisconnect": "Finalizar à força"
         },
         "badges": {
           "connectionExpired": "Conexão precisa de atenção",
@@ -1923,7 +1925,18 @@
           "none": "Ainda não há nenhuma aplicação Intuit disponível. Registe uma no portal Intuit Developer e cole abaixo o ID de cliente e o segredo — o guia de configuração explica o processo.",
           "tenant": "Este inquilino liga-se através da sua própria aplicação Intuit, com as credenciais guardadas abaixo."
         },
-        "setupGuideLink": "Guia de configuração do QuickBooks"
+        "setupGuideLink": "Guia de configuração do QuickBooks",
+        "disconnectPending": "O QuickBooks está sendo desconectado. A sincronização e as exportações ficam pausadas até que a limpeza do provedor seja concluída; a desconexão continua tentando novamente automaticamente.",
+        "disconnectForceFinalized": "A desconexão do QuickBooks foi finalizada à força. Não foi possível confirmar a limpeza do provedor, portanto as credenciais foram removidas localmente com um registro de auditoria.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo para finalizar à força a desconexão do QuickBooks (gravado no registro de auditoria):",
+          "inProgressTitle": "Desconexão do QuickBooks em andamento",
+          "inProgressDescription": "As concessões do provedor estão sendo revogadas. A sincronização e as exportações permanecem pausadas até que a revogação de todas as empresas conectadas seja confirmada.",
+          "targetRevoked": "Revogado",
+          "targetFailed": "Precisa de atenção",
+          "targetPending": "Pendente",
+          "failedPermanentDescription": "A limpeza do provedor encontrou um erro permanente. Você pode tentar novamente ou finalizar à força para remover as credenciais armazenadas com um registro de auditoria."
+        }
       },
       "sync": {
         "healthCardTitle": "Sincronizar saúde",
@@ -3428,7 +3441,9 @@
           "reconnect": "Reconectar o Xero",
           "refresh": "Atualizar",
           "saveCredentials": "Salvar credenciais Xero",
-          "saving": "Salvando…"
+          "saving": "Salvando…",
+          "retryDisconnect": "Tentar desconectar novamente",
+          "forceFinalizeDisconnect": "Finalizar à força"
         },
         "badges": {
           "connectionExpired": "Conexão expirada",
@@ -3499,7 +3514,19 @@
         "tenantOauthDescription": "Cole as credenciais do aplicativo Xero registradas para este locatário. Os valores secretos nunca são retornados ao navegador depois de salvos.",
         "tenantOauthTitle": "Aplicativo OAuth de propriedade do locatário",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "disconnectPending": "O Xero está sendo desconectado. A sincronização e as exportações ficam pausadas até que a limpeza do provedor seja concluída; a desconexão continua tentando novamente automaticamente.",
+        "disconnectForceFinalized": "A desconexão do Xero foi finalizada à força. Não foi possível confirmar a limpeza do provedor, portanto as credenciais foram removidas localmente com um registro de auditoria.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo para finalizar à força a desconexão do Xero (gravado no registro de auditoria):",
+          "inProgressTitle": "Desconexão do Xero em andamento",
+          "inProgressDescription": "As conexões do provedor estão sendo revogadas. A sincronização e as exportações permanecem pausadas até que a remoção de todas as conexões seja confirmada.",
+          "grantTarget": "Revogação da concessão OAuth",
+          "targetRevoked": "Revogado",
+          "targetFailed": "Precisa de atenção",
+          "targetPending": "Pendente",
+          "failedPermanentDescription": "A limpeza do provedor encontrou um erro permanente. Você pode tentar novamente ou finalizar à força para remover as credenciais armazenadas com um registro de auditoria."
+        }
       }
     },
     "stripe": {

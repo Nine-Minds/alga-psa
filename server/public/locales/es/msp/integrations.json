@@ -1840,7 +1840,9 @@
           "reconnect": "Reconectar QuickBooks",
           "refresh": "Actualizar",
           "saveCredentials": "Guardar credenciales de QuickBooks",
-          "saving": "Guardando…"
+          "saving": "Guardando…",
+          "retryDisconnect": "Reintentar desconexión",
+          "forceFinalizeDisconnect": "Forzar finalización"
         },
         "badges": {
           "connectionExpired": "La conexión requiere atención",
@@ -1923,7 +1925,18 @@
           "none": "Todavía no hay ninguna app de Intuit disponible. Registre una en el portal Intuit Developer y pegue abajo su ID de cliente y su secreto; la guía de configuración lo explica paso a paso.",
           "tenant": "Este inquilino se conecta mediante su propia app de Intuit, con las credenciales guardadas abajo."
         },
-        "setupGuideLink": "Guía de configuración de QuickBooks"
+        "setupGuideLink": "Guía de configuración de QuickBooks",
+        "disconnectPending": "QuickBooks se está desconectando. La sincronización y las exportaciones están en pausa hasta que se complete la limpieza del proveedor; la desconexión sigue reintentándose automáticamente.",
+        "disconnectForceFinalized": "La desconexión de QuickBooks se finalizó de forma forzada. No se pudo confirmar la limpieza del proveedor, por lo que las credenciales se eliminaron localmente con un registro de auditoría.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo para forzar la finalización de la desconexión de QuickBooks (se documenta en el registro de auditoría):",
+          "inProgressTitle": "Desconexión de QuickBooks en curso",
+          "inProgressDescription": "Se están revocando las concesiones del proveedor. La sincronización y las exportaciones permanecen en pausa hasta que se confirme la revocación de cada empresa conectada.",
+          "targetRevoked": "revocado",
+          "targetFailed": "requiere atención",
+          "targetPending": "pendiente",
+          "failedPermanentDescription": "La limpieza del proveedor encontró un error permanente. Puede reintentar o forzar la finalización para eliminar las credenciales almacenadas con un registro de auditoría."
+        }
       },
       "sync": {
         "healthCardTitle": "Estado de sincronización",
@@ -3428,7 +3441,9 @@
           "reconnect": "Reconectar Xero",
           "refresh": "Actualizar",
           "saveCredentials": "Guardar credenciales de Xero",
-          "saving": "Guardando…"
+          "saving": "Guardando…",
+          "retryDisconnect": "Reintentar desconexión",
+          "forceFinalizeDisconnect": "Forzar finalización"
         },
         "badges": {
           "connectionExpired": "Conexión caducada",
@@ -3499,7 +3514,19 @@
         "tenantOauthDescription": "Pegue las credenciales de la aplicación Xero registradas para este inquilino. Los valores de secreto nunca se devuelven al navegador después de guardarse.",
         "tenantOauthTitle": "Aplicación OAuth propia del inquilino",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "disconnectPending": "Xero se está desconectando. La sincronización y las exportaciones están en pausa hasta que se complete la limpieza del proveedor; la desconexión sigue reintentándose automáticamente.",
+        "disconnectForceFinalized": "La desconexión de Xero se finalizó de forma forzada. No se pudo confirmar la limpieza del proveedor, por lo que las credenciales se eliminaron localmente con un registro de auditoría.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo para forzar la finalización de la desconexión de Xero (se documenta en el registro de auditoría):",
+          "inProgressTitle": "Desconexión de Xero en curso",
+          "inProgressDescription": "Se están revocando las conexiones del proveedor. La sincronización y las exportaciones permanecen en pausa hasta que se confirme la eliminación de cada conexión.",
+          "grantTarget": "Revocación de la concesión de OAuth",
+          "targetRevoked": "revocado",
+          "targetFailed": "requiere atención",
+          "targetPending": "pendiente",
+          "failedPermanentDescription": "La limpieza del proveedor encontró un error permanente. Puede reintentar o forzar la finalización para eliminar las credenciales almacenadas con un registro de auditoría."
+        }
       }
     },
     "stripe": {
