@@ -111,6 +111,82 @@ describe('accounting export error metadata redaction', () => {
     expectNoSentinels(JSON.stringify(readBack));
   });
 
+  it('scrubs token-bearing validation message text from persisted metadata, messages, and line notes', async () => {
+    const repository = makeFakeRepository();
+    const service = new AccountingExportService(repository as any, {} as any);
+
+    // Provider validation text that quotes credentials verbatim — the message
+    // strings themselves are the leak vector here, not sibling raw keys.
+    const adapterError = new AppError('XERO_VALIDATION_ERROR', 'Xero rejected one or more invoices', {
+      status: 400,
+      correlationId: 'xero-corr-77',
+      errors: [
+        {
+          documentId: 'doc-2',
+          message: `Request rejected with header ${SENTINELS.authHeader}`,
+          validationErrors: [
+            {
+              message: `Invalid grant: access token ${SENTINELS.accessToken} expired (client secret ${SENTINELS.clientSecret})`,
+              field: 'AccountCode'
+            },
+            { message: 42 },
+            null
+          ]
+        }
+      ]
+    });
+
+    await (service as any).persistAdapterFailure({
+      batchId: 'batch-3',
+      adapterType: 'xero',
+      context: { batch: { batch_id: 'batch-3' }, lines: [] },
+      transformResult: {
+        documents: [{ documentId: 'doc-2', lineIds: ['line-7'] }]
+      },
+      error: adapterError
+    });
+
+    expect(repository.errors).toHaveLength(1);
+    const persisted = repository.errors[0];
+
+    // Sentinels are gone from the durable row (metadata AND message column)…
+    expectNoSentinels(JSON.stringify(persisted));
+    // …and from the line notes written alongside it.
+    expectNoSentinels(JSON.stringify(repository.lineUpdates));
+
+    // Malformed validation entries reduce deterministically.
+    expect(persisted.metadata.validationErrors).toHaveLength(3);
+    expect(persisted.metadata.validationErrors[1]).toEqual({ message: 'Validation error', field: undefined });
+    expect(persisted.metadata.validationErrors[2]).toEqual({ message: 'Validation error', field: undefined });
+
+    // Diagnostics survive: field, code, correlation, and a sanitized message.
+    expect(persisted.metadata.validationErrors[0].field).toBe('AccountCode');
+    expect(persisted.metadata.validationErrors[0].message).toContain('Invalid grant');
+    expect(persisted.metadata.validationErrors[0].message).toContain('[REDACTED]');
+    expect(persisted.metadata.correlationId).toBe('xero-corr-77');
+    expect(persisted.message).toContain('[REDACTED]');
+  });
+
+  it('scrubs token-bearing delivery failure messages before persisting them', async () => {
+    const repository = makeFakeRepository();
+    const service = new AccountingExportService(repository as any, {} as any);
+
+    await (service as any).persistDeliveryDocumentFailure('batch-4', 'qbo', {
+      documentId: 'doc-11',
+      lineIds: ['line-9'],
+      code: 'QBO_AUTH_ERROR',
+      message: `Token refresh failed: refresh token ${SENTINELS.refreshToken} rejected`,
+      metadata: { intuitTid: 'tid-88' }
+    });
+
+    expect(repository.errors).toHaveLength(1);
+    expectNoSentinels(JSON.stringify(repository.errors));
+    expectNoSentinels(JSON.stringify(repository.lineUpdates));
+    expect(repository.errors[0].message).toContain('Token refresh failed');
+    expect(repository.errors[0].message).toContain('[REDACTED]');
+    expect(repository.errors[0].metadata.intuitTid).toBe('tid-88');
+  });
+
   it('strips raw payload keys from delivery document failure metadata', async () => {
     const repository = makeFakeRepository();
     const service = new AccountingExportService(repository as any, {} as any);
