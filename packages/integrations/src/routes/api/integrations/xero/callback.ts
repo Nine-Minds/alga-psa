@@ -24,7 +24,10 @@ import {
 import { consumeAccountingOAuthNonce } from '../../../../lib/accountingOAuthStateStore';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
+// Env override exists so test environments can point at the Xero emulator
+// (packages/emulators/xero), mirroring XERO_OAUTH_AUTHORIZE_URL in connect.ts.
+const XERO_CONNECTIONS_URL =
+  process.env.XERO_CONNECTIONS_URL?.trim() || 'https://api.xero.com/connections';
 
 const SUCCESS_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=success';

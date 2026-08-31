@@ -8,7 +8,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 
 import {
-  getXeroOAuthScopesString,
+  getXeroOAuthScopeConfig,
   getXeroRedirectUri,
   resolveXeroOAuthCredentials
 } from '../../../../lib/xero/xeroClientService';
@@ -95,19 +95,22 @@ async function handleConnectRequest(): Promise<NextResponse> {
     };
     const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
 
+    const scopeConfig = getXeroOAuthScopeConfig();
     await storeAccountingOAuthNonce('xero', nonce);
 
     logger.info('[xeroOAuth] Starting Xero OAuth connect flow', {
       tenantId: tenant,
       userId: sessionUser.user_id,
-      credentialSource: credentials.source
+      credentialSource: credentials.source,
+      scopeSource: scopeConfig.source,
+      scopes: scopeConfig.scopes
     });
 
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: String(credentials.clientId),
       redirect_uri: redirectUri,
-      scope: getXeroOAuthScopesString(),
+      scope: scopeConfig.scopes.join(' '),
       state,
       code_challenge: challenge,
       code_challenge_method: 'S256'

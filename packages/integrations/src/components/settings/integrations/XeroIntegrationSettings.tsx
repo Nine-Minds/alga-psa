@@ -228,7 +228,23 @@ export default function XeroIntegrationSettings() {
                         {scope}
                       </Badge>
                     ))}
+                    {status?.scopeSource === 'override' ? (
+                      <Badge id="xero-scope-override-badge" variant="outline">
+                        {t('integrations.xero.settings.scopeOverride', { defaultValue: 'Deployment override (XERO_OAUTH_SCOPES)' })}
+                      </Badge>
+                    ) : null}
                   </div>
+                  {status?.scopeOverrideInvalid?.length ? (
+                    <p id="xero-scope-override-invalid" className="mt-2 text-xs text-destructive">
+                      {t('integrations.xero.settings.scopeOverrideInvalid', {
+                        defaultValue: 'The XERO_OAUTH_SCOPES override was ignored because it contains invalid entries ({{scopes}}). The default scopes are used instead.',
+                        scopes: status.scopeOverrideInvalid.join(', ')
+                      })}
+                    </p>
+                  ) : null}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t('integrations.xero.settings.scopeReconnectNote', { defaultValue: 'These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. You can also remove this app from Connected apps in Xero to revoke earlier grants.' })}
+                  </p>
                 </div>
               </div>
 
