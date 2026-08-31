@@ -5,17 +5,19 @@ import crypto from 'crypto';
 import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getSession } from '@alga-psa/auth';
-import { hasPermission } from '@alga-psa/auth/rbac';
-
 import { createTenantKnex } from '@alga-psa/db';
+
 import {
-  getXeroOAuthScopesString,
+  getXeroOAuthScopeConfig,
   getXeroRedirectUri,
   resolveXeroOAuthCredentials
 } from '../../../../lib/xero/xeroClientService';
 import { generateOauthCsrfToken, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
+import {
+  canManageAccountingConnections,
+  getAccountingConnectionSessionUser
+} from '../../../../lib/accountingConnectionAuth';
 import {
   XERO_CONNECT_ATTEMPT_PROVIDER,
   XERO_CONNECT_ATTEMPT_TTL_SECONDS,
@@ -71,27 +73,21 @@ async function handleConnectRequest(request: NextRequest): Promise<NextResponse>
     );
   }
 
-  const secretProvider = await getSecretProviderInstance();
-  const session = await getSession();
-  const sessionUser = session?.user as any;
-  const permissionUser =
-    sessionUser && !sessionUser.user_id && sessionUser.id
-      ? { ...sessionUser, user_id: sessionUser.id }
-      : sessionUser;
-  const sessionTenant = sessionUser?.tenant;
-  if (!sessionTenant) {
+  const sessionUser = await getAccountingConnectionSessionUser();
+  if (!sessionUser) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
-  const canManageBilling = await hasPermission(permissionUser, 'billing_settings', 'update');
+  const canManageBilling = await canManageAccountingConnections(sessionUser);
   if (!canManageBilling) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const { tenant } = await createTenantKnex(sessionTenant);
+  const { tenant } = await createTenantKnex(sessionUser.tenant);
 
   if (!tenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
+  const secretProvider = await getSecretProviderInstance();
   const redirectUri = await getXeroRedirectUri(secretProvider);
 
   try {
@@ -115,7 +111,7 @@ async function handleConnectRequest(request: NextRequest): Promise<NextResponse>
       {
         verifier: encryptedVerifier,
         tenantId: tenant,
-        userId: permissionUser?.user_id,
+        userId: sessionUser.user_id,
         provider: XERO_CONNECT_ATTEMPT_PROVIDER,
         redirectUri,
         csrf: csrfToken,
@@ -125,16 +121,21 @@ async function handleConnectRequest(request: NextRequest): Promise<NextResponse>
       XERO_CONNECT_ATTEMPT_TTL_SECONDS
     );
 
+    const scopeConfig = getXeroOAuthScopeConfig();
+
     logger.info('[xeroOAuth] Starting Xero OAuth connect flow', {
       tenantId: tenant,
-      credentialSource: credentials.source
+      userId: sessionUser.user_id,
+      credentialSource: credentials.source,
+      scopeSource: scopeConfig.source,
+      scopes: scopeConfig.scopes
     });
 
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: String(credentials.clientId),
       redirect_uri: redirectUri,
-      scope: getXeroOAuthScopesString(),
+      scope: scopeConfig.scopes.join(' '),
       state: nonce,
       code_challenge: challenge,
       code_challenge_method: 'S256'

@@ -1,13 +1,10 @@
 {
-  "name": "@alga-psa/emulator-suite",
+  "name": "@alga-psa/emulator-xero",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./src/index.ts",
-  "bin": {
-    "algasim-suite": "./dist/cli.js"
-  },
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -18,19 +15,16 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "start": "node dist/cli.js"
+    "test": "vitest run"
   },
   "dependencies": {
     "@alga-psa/emulator-host": "*",
-    "@alga-psa/emulator-msgraph": "*",
-    "@alga-psa/emulator-qbo": "*",
-    "@alga-psa/emulator-smtp-sink": "*",
-    "@alga-psa/emulator-stripe": "*",
-    "@alga-psa/emulator-webhook-sink": "*",
-    "@alga-psa/emulator-xero": "*"
+    "express": "^5.1.0",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.7.3",
     "vitest": "^4.1.9"

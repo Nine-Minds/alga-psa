@@ -3,14 +3,14 @@ import crypto from 'crypto';
 import { NextRequest } from 'next/server';
 
 const mocks = vi.hoisted(() => ({
-  getCurrentUser: vi.fn(),
+  getCurrentUserWithRevocationCheck: vi.fn(),
   hasPermission: vi.fn(),
   getSecretProviderInstance: vi.fn(),
   getSecret: vi.fn(),
   createTenantKnex: vi.fn(),
   getXeroRedirectUri: vi.fn(),
   resolveXeroOAuthCredentials: vi.fn(),
-  getXeroOAuthScopesString: vi.fn(),
+  getXeroOAuthScopeConfig: vi.fn(),
   upsertStoredXeroConnections: vi.fn(),
   createClient: vi.fn(),
   loggerInfo: vi.fn(),
@@ -18,7 +18,11 @@ const mocks = vi.hoisted(() => ({
   loggerError: vi.fn(),
 }));
 
-vi.mock('@alga-psa/auth/rbac', () => ({
+// The connect route resolves and authorizes the live user via the central
+// accounting-connection policy (getCurrentUserWithRevocationCheck +
+// hasPermission).
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUserWithRevocationCheck: mocks.getCurrentUserWithRevocationCheck,
   hasPermission: mocks.hasPermission,
 }));
 
@@ -47,12 +51,11 @@ vi.mock('../../../../lib/xero/xeroClientService', () => ({
   XERO_TOKEN_URL: 'https://identity.xero.com/connect/token',
   getXeroRedirectUri: mocks.getXeroRedirectUri,
   resolveXeroOAuthCredentials: mocks.resolveXeroOAuthCredentials,
-  getXeroOAuthScopesString: mocks.getXeroOAuthScopesString,
+  getXeroOAuthScopeConfig: mocks.getXeroOAuthScopeConfig,
   upsertStoredXeroConnections: mocks.upsertStoredXeroConnections,
 }));
 
 import { GET } from './connect';
-import { getSession } from '@alga-psa/auth';
 import {
   XERO_OAUTH_CSRF_COOKIE,
 } from '../../../../lib/xero/oauthCsrf';
@@ -79,14 +82,14 @@ function sha256Base64Url(value: string): string {
 describe('Xero OAuth connect route', () => {
   beforeEach(() => {
     process.env.EDITION = 'ee';
-    mocks.getCurrentUser.mockReset();
+    mocks.getCurrentUserWithRevocationCheck.mockReset();
     mocks.hasPermission.mockReset();
     mocks.getSecretProviderInstance.mockReset();
     mocks.getSecret.mockReset();
     mocks.createTenantKnex.mockReset();
     mocks.getXeroRedirectUri.mockReset();
     mocks.resolveXeroOAuthCredentials.mockReset();
-    mocks.getXeroOAuthScopesString.mockReset();
+    mocks.getXeroOAuthScopeConfig.mockReset();
     mocks.upsertStoredXeroConnections.mockReset();
     mocks.createClient.mockReset();
     mocks.loggerInfo.mockClear();
@@ -95,7 +98,7 @@ describe('Xero OAuth connect route', () => {
 
     _resetXeroConnectAttemptStoreForTests();
 
-    vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', tenant: 'tenant-1' } } as any);
+    mocks.getCurrentUserWithRevocationCheck.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' } as any);
     mocks.hasPermission.mockResolvedValue(true);
     mocks.getSecretProviderInstance.mockResolvedValue({
       getAppSecret: async () => null,
@@ -109,7 +112,10 @@ describe('Xero OAuth connect route', () => {
       clientSecret: 'client-secret-1',
       source: 'tenant',
     });
-    mocks.getXeroOAuthScopesString.mockReturnValue('offline_access accounting.invoices');
+    mocks.getXeroOAuthScopeConfig.mockReturnValue({
+      scopes: ['offline_access', 'accounting.invoices'],
+      source: 'default',
+    });
     mocks.createClient.mockImplementation(() => {
       throw new Error('redis unavailable');
     });

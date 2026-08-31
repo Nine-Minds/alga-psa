@@ -5,8 +5,6 @@ import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { hasPermission } from '@alga-psa/auth/rbac';
 
 import {
   getXeroRedirectUri,
@@ -17,11 +15,21 @@ import {
 } from '../../../../lib/xero/xeroClientService';
 import { oauthCsrfTokensMatch } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
+import {
+  canManageAccountingConnections,
+  getAccountingConnectionSessionUser,
+  reauthorizeAccountingOAuthCallback,
+  revokeAccountingOAuthGrant,
+  type AccountingOAuthAuthzErrorCode
+} from '../../../../lib/accountingConnectionAuth';
 import { consumeXeroConnectAttempt } from '../../../../lib/xero/xeroOAuthConnectAttemptStore';
 import { decryptXeroVerifier } from '../../../../lib/xero/xeroOAuthVerifierCipher';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
+// Env override exists so test environments can point at the Xero emulator
+// (packages/emulators/xero), mirroring XERO_OAUTH_AUTHORIZE_URL in connect.ts.
+const XERO_CONNECTIONS_URL =
+  process.env.XERO_CONNECTIONS_URL?.trim() || 'https://api.xero.com/connections';
 
 const SUCCESS_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=success';
@@ -32,6 +40,16 @@ const FAILURE_PATH =
 // else from the provider maps to a fixed code so the redirect never echoes
 // provider-controlled content.
 const COARSE_XERO_ERROR_CODES = new Set(['access_denied']);
+
+// Neutral, actionable callback error params for the persistence-time
+// re-authorization check. They never include provider-side org/company details.
+const AUTHZ_ERROR_TO_PARAM: Record<AccountingOAuthAuthzErrorCode, string> = {
+  STATE_REPLAYED: 'state_replayed',
+  AUTH_REQUIRED: 'session_expired',
+  USER_MISMATCH: 'user_mismatch',
+  TENANT_MISMATCH: 'tenant_mismatch',
+  FORBIDDEN: 'forbidden'
+};
 
 function isEnterpriseEdition(): boolean {
   return (
@@ -138,8 +156,10 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     return createRedirect(FAILURE_PATH, { xero_error: 'invalid_state' });
   }
 
-  // The callback must be completed by a live authenticated session.
-  const sessionUser = await getCurrentUser();
+  // The callback must be completed by a live authenticated session. The
+  // revocation-checked resolver rejects a revoked session, a disabled user, or
+  // a removed user.
+  const sessionUser = await getAccountingConnectionSessionUser();
   if (!sessionUser?.tenant) {
     logger.warn('[xeroOAuth] Callback received without an authenticated session');
     return createRedirect(FAILURE_PATH, { xero_error: 'session_expired' });
@@ -192,7 +212,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     return createRedirect(FAILURE_PATH, { xero_error: 'redirect_mismatch' });
   }
 
-  const canManageBilling = await hasPermission(sessionUser as any, 'billing_settings', 'update');
+  const canManageBilling = await canManageAccountingConnections(sessionUser);
   if (!canManageBilling) {
     logger.warn('[xeroOAuth] Callback user no longer has billing settings permission', {
       tenantId: sessionUser.tenant
@@ -296,6 +316,27 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     if (!Object.keys(connectionUpdates).length) {
       logger.error('[xeroOAuth] Unable to map Xero connections for tenant', { tenantId });
       return createRedirect(FAILURE_PATH, { xero_error: 'connections_unmapped' });
+    }
+
+    // Re-check authorization immediately before persisting. If a denial lands
+    // here (permission/user/tenant changed between the exchange and the write),
+    // revoke the just-obtained grant provider-side and store nothing.
+    const reauthz = await reauthorizeAccountingOAuthCallback({
+      tenantId,
+      userId: attempt.userId
+    });
+    if (!reauthz.ok) {
+      await revokeAccountingOAuthGrant({
+        provider: 'xero',
+        clientId: credentials.clientId,
+        clientSecret: credentials.clientSecret,
+        refreshToken
+      });
+      logger.warn('[xeroOAuth] Persistence-time authorization failed; grant revoked', {
+        tenantId,
+        code: reauthz.code
+      });
+      return createRedirect(FAILURE_PATH, { xero_error: AUTHZ_ERROR_TO_PARAM[reauthz.code] });
     }
 
     await upsertStoredXeroConnections(tenantId, connectionUpdates, {

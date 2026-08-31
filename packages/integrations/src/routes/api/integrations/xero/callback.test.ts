@@ -2,15 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 
 const mocks = vi.hoisted(() => ({
-  getSession: vi.fn(),
-  getCurrentUser: vi.fn(),
+  getCurrentUserWithRevocationCheck: vi.fn(),
   hasPermission: vi.fn(),
   getSecretProviderInstance: vi.fn(),
   getSecret: vi.fn(),
   createTenantKnex: vi.fn(),
   getXeroRedirectUri: vi.fn(),
   resolveXeroOAuthCredentials: vi.fn(),
-  getXeroOAuthScopesString: vi.fn(),
+  getXeroOAuthScopeConfig: vi.fn(),
   upsertStoredXeroConnections: vi.fn(),
   createClient: vi.fn(),
   axiosPost: vi.fn(),
@@ -20,12 +19,12 @@ const mocks = vi.hoisted(() => ({
   loggerError: vi.fn(),
 }));
 
-vi.mock('@alga-psa/auth/rbac', () => ({
+// The connect and callback routes resolve and re-authorize the live user via the
+// central accounting-connection policy (getCurrentUserWithRevocationCheck +
+// hasPermission), so both must be present on the auth mock.
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUserWithRevocationCheck: mocks.getCurrentUserWithRevocationCheck,
   hasPermission: mocks.hasPermission,
-}));
-
-vi.mock('@alga-psa/user-composition/actions', () => ({
-  getCurrentUser: mocks.getCurrentUser,
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -62,13 +61,12 @@ vi.mock('../../../../lib/xero/xeroClientService', () => ({
   XERO_TOKEN_URL: 'https://identity.xero.com/connect/token',
   getXeroRedirectUri: mocks.getXeroRedirectUri,
   resolveXeroOAuthCredentials: mocks.resolveXeroOAuthCredentials,
-  getXeroOAuthScopesString: mocks.getXeroOAuthScopesString,
+  getXeroOAuthScopeConfig: mocks.getXeroOAuthScopeConfig,
   upsertStoredXeroConnections: mocks.upsertStoredXeroConnections,
 }));
 
 import { GET as connectGET } from './connect';
 import { GET as callbackGET } from './callback';
-import { getSession } from '@alga-psa/auth';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
 import {
   consumeXeroConnectAttempt,
@@ -80,6 +78,9 @@ import {
 import { decryptXeroVerifier, encryptXeroVerifier } from '../../../../lib/xero/xeroOAuthVerifierCipher';
 
 const REDIRECT_URI = 'https://example.com/api/integrations/xero/callback';
+// The persistence-time revoke helper targets Xero's revocation endpoint; its
+// default value (no env override set here) is asserted directly.
+const XERO_REVOKE_URL = 'https://identity.xero.com/connect/revocation';
 
 function connectRequest(cookieHeader?: string): NextRequest {
   const headers: Record<string, string> = {};
@@ -164,14 +165,14 @@ async function seedAttempt(
 describe('Xero OAuth callback route', () => {
   beforeEach(() => {
     process.env.EDITION = 'ee';
-    mocks.getCurrentUser.mockReset();
+    mocks.getCurrentUserWithRevocationCheck.mockReset();
     mocks.hasPermission.mockReset();
     mocks.getSecretProviderInstance.mockReset();
     mocks.getSecret.mockReset();
     mocks.createTenantKnex.mockReset();
     mocks.getXeroRedirectUri.mockReset();
     mocks.resolveXeroOAuthCredentials.mockReset();
-    mocks.getXeroOAuthScopesString.mockReset();
+    mocks.getXeroOAuthScopeConfig.mockReset();
     mocks.upsertStoredXeroConnections.mockReset();
     mocks.createClient.mockReset();
     mocks.axiosPost.mockReset();
@@ -182,8 +183,7 @@ describe('Xero OAuth callback route', () => {
 
     _resetXeroConnectAttemptStoreForTests();
 
-    vi.mocked(getSession).mockResolvedValue({ user: { id: 'user-1', tenant: 'tenant-1' } } as any);
-    mocks.getCurrentUser.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
+    mocks.getCurrentUserWithRevocationCheck.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
     mocks.hasPermission.mockResolvedValue(true);
     mocks.getSecretProviderInstance.mockResolvedValue({
       getAppSecret: async () => null,
@@ -197,7 +197,10 @@ describe('Xero OAuth callback route', () => {
       clientSecret: 'client-secret-1',
       source: 'tenant',
     });
-    mocks.getXeroOAuthScopesString.mockReturnValue('offline_access accounting.invoices');
+    mocks.getXeroOAuthScopeConfig.mockReturnValue({
+      scopes: ['offline_access', 'accounting.invoices'],
+      source: 'default',
+    });
     mocks.createClient.mockImplementation(() => {
       throw new Error('redis unavailable');
     });
@@ -308,13 +311,13 @@ describe('Xero OAuth callback route', () => {
   it('rejects a callback whose session disappeared mid-flow and consumes the attempt', async () => {
     const { state, cookie } = await startFlow();
 
-    mocks.getCurrentUser.mockResolvedValue(null);
+    mocks.getCurrentUserWithRevocationCheck.mockResolvedValue(null);
     const res = await callbackGET(callbackRequest(state, { cookie }));
     expect(locationParams(res).get('xero_error')).toBe('session_expired');
     expect(_peekXeroConnectAttemptForTests(state)).toBeNull(); // consumed
 
     // Even with the session restored, the state can no longer be used.
-    mocks.getCurrentUser.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
+    mocks.getCurrentUserWithRevocationCheck.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
     const retry = await callbackGET(callbackRequest(state, { cookie }));
     expect(locationParams(retry).get('xero_error')).toBe('invalid_state');
     expect(mocks.axiosPost).not.toHaveBeenCalled();
@@ -323,7 +326,7 @@ describe('Xero OAuth callback route', () => {
   it('rejects a callback completed by a different user', async () => {
     const { state, cookie } = await startFlow();
 
-    mocks.getCurrentUser.mockResolvedValue({ user_id: 'user-2', tenant: 'tenant-1' });
+    mocks.getCurrentUserWithRevocationCheck.mockResolvedValue({ user_id: 'user-2', tenant: 'tenant-1' });
     const res = await callbackGET(callbackRequest(state, { cookie }));
     expect(locationParams(res).get('xero_error')).toBe('user_mismatch');
     expect(mocks.axiosPost).not.toHaveBeenCalled();
@@ -333,7 +336,7 @@ describe('Xero OAuth callback route', () => {
   it('rejects a callback completed in a different tenant', async () => {
     const { state, cookie } = await startFlow();
 
-    mocks.getCurrentUser.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-2' });
+    mocks.getCurrentUserWithRevocationCheck.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-2' });
     const res = await callbackGET(callbackRequest(state, { cookie }));
     expect(locationParams(res).get('xero_error')).toBe('tenant_mismatch');
     expect(mocks.axiosPost).not.toHaveBeenCalled();
@@ -402,10 +405,24 @@ describe('Xero OAuth callback route', () => {
     expect(_peekXeroConnectAttemptForTests(state)).toBeNull();
 
     // Replay after a provider error also fails: the attempt is consumed.
-    mocks.getCurrentUser.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
+    mocks.getCurrentUserWithRevocationCheck.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' });
     const retry = await callbackGET(callbackRequest(state, { cookie }));
     expect(locationParams(retry).get('xero_error')).toBe('invalid_state');
     expect(mocks.axiosPost).not.toHaveBeenCalled();
+  });
+
+  it('does not burn the attempt on a provider denial that omits the CSRF cookie', async () => {
+    // An attacker with only the state URL (no CSRF cookie) must not burn the
+    // victim's state; the victim's own callback still completes.
+    const { state, cookie } = await startFlow();
+
+    const denial = await callbackGET(callbackRequest(state, { error: 'access_denied' }));
+    expect(locationParams(denial).get('xero_error')).toBe('access_denied');
+    expect(_peekXeroConnectAttemptForTests(state)).not.toBeNull();
+
+    const res = await callbackGET(callbackRequest(state, { cookie }));
+    expect(locationParams(res).get('xero_status')).toBe('success');
+    expect(mocks.upsertStoredXeroConnections).toHaveBeenCalledTimes(1);
   });
 
   it('never echoes provider-controlled error content into the redirect', async () => {
@@ -416,6 +433,28 @@ describe('Xero OAuth callback route', () => {
     );
     expect(locationParams(res).get('xero_error')).toBe('provider_denied');
     expect(res.headers.get('location')).not.toContain('attacker_controlled_xyz_987');
+  });
+
+  it('revokes the obtained grant and stores nothing when a persistence-time denial races the exchange', async () => {
+    // Pre-exchange authorization passes; the persistence-time re-check fails,
+    // so the just-obtained grant is revoked and nothing is stored.
+    const { csrf } = await seedAttempt('nonce-persist-denial');
+    mocks.getCurrentUserWithRevocationCheck
+      .mockResolvedValueOnce({ user_id: 'user-1', tenant: 'tenant-1' })
+      .mockResolvedValueOnce(null);
+
+    const res = await callbackGET(callbackRequest('nonce-persist-denial', { cookie: csrf }));
+
+    expect(locationParams(res).get('xero_error')).toBe('session_expired');
+    expect(mocks.upsertStoredXeroConnections).not.toHaveBeenCalled();
+    // Token exchange, then revocation.
+    expect(mocks.axiosPost).toHaveBeenCalledTimes(2);
+    expect(mocks.axiosGet).toHaveBeenCalledTimes(1);
+    const calls = mocks.axiosPost.mock.calls;
+    expect(calls[1][0]).toBe(XERO_REVOKE_URL);
+    const revokeBody = calls[1][1] as string;
+    expect(revokeBody).toContain('token=refresh-token-1');
+    expect(revokeBody).toContain('token_type_hint=refresh_token');
   });
 
   it('keeps verifier, state nonce, and token material out of logs and redirect URLs', async () => {
@@ -448,7 +487,7 @@ describe('Xero OAuth callback route', () => {
 
     // A terminal failure path: wrong user. The redirect and its log must not
     // carry the state nonce, verifier, or ciphertext.
-    mocks.getCurrentUser.mockResolvedValue({ user_id: 'user-2', tenant: 'tenant-1' });
+    mocks.getCurrentUserWithRevocationCheck.mockResolvedValue({ user_id: 'user-2', tenant: 'tenant-1' });
     const res = await callbackGET(callbackRequest(state, { cookie }));
     expect(locationParams(res).get('xero_error')).toBe('user_mismatch');
 
