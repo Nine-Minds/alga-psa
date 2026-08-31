@@ -198,15 +198,32 @@ export class AccountingExportInvoiceSelector {
         .andWhere('map.alga_entity_type', 'invoice')
         .andWhereRaw('map.alga_entity_id = inv.invoice_id::text');
 
+      // Realm-scoped selection is realm-exact: only a mapping in the target
+      // realm proves the invoice was synced there. Legacy realm-less rows are
+      // handled by the quarantine below, never treated as synced-to-this-realm.
       if (targetRealm) {
-        mappingExists.andWhere(function () {
-          this.where('map.external_realm_id', targetRealm).orWhereNull('map.external_realm_id');
-        });
+        mappingExists.andWhere('map.external_realm_id', targetRealm);
       } else {
         mappingExists.whereNull('map.external_realm_id');
       }
 
       query.whereNotExists(mappingExists);
+    }
+
+    // Quarantine: an invoice carrying a legacy realm-less mapping for this
+    // adapter has ambiguous remote ownership. It must never be selected for a
+    // realm-scoped export (including deliberate re-exports) until the mapping
+    // is reconciled to a realm — exporting would guess and could double-post
+    // into the wrong company.
+    if (adapterType && targetRealm) {
+      const realmlessMapping = db.table('tenant_external_entity_mappings as qmap')
+        .select(this.knex.raw('1'))
+        .where('qmap.integration_type', adapterType)
+        .andWhere('qmap.alga_entity_type', 'invoice')
+        .andWhereRaw('qmap.alga_entity_id = inv.invoice_id::text')
+        .whereNull('qmap.external_realm_id');
+
+      query.whereNotExists(realmlessMapping);
     }
 
     const rows = (await query.orderBy('inv.invoice_date', 'asc').orderBy('inv.invoice_number', 'asc')) as InvoicePreviewSelectionRow[];
