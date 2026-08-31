@@ -103,3 +103,8 @@ exports.up = async function up(knex) {
 exports.down = async function down() {
   // Forward-only: raw provider payloads are removed permanently by design.
 };
+
+// Each tenant batch commits independently; a single wrapping transaction
+// would defeat the bounded-batch design and is unsupported on Citus for
+// large multi-shard update sequences.
+exports.config = { transaction: false };

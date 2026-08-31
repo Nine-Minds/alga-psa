@@ -133,6 +133,35 @@ describe('sanitizeLogMeta', () => {
     expect(meta.error.correlationId).toBe('tid-123');
   });
 
+  it('scrubs token-shaped substrings from primitive string meta', () => {
+    const sanitized = sanitizeLogMeta(
+      `token exchange failed: ${SENTINELS.authHeader} refresh=${SENTINELS.refreshToken}`
+    );
+    expectNoSentinels(JSON.stringify(sanitized));
+    expect(sanitized).toContain('token exchange failed');
+    expect(sanitized).toContain('[REDACTED]');
+  });
+
+  it('scrubs strings inside array meta', () => {
+    const sanitized = sanitizeLogMeta([
+      'refresh failed',
+      `authorization: ${SENTINELS.authHeader}`,
+      { client_secret: SENTINELS.clientSecret }
+    ]) as unknown[];
+    expectNoSentinels(JSON.stringify(sanitized));
+    expect(sanitized[0]).toBe('refresh failed');
+  });
+
+  it('sanitizes plain Error meta without leaking message secrets', () => {
+    const sanitized = sanitizeLogMeta(
+      new Error(`token endpoint rejected ${SENTINELS.accessToken}`)
+    ) as any;
+    expectNoSentinels(JSON.stringify(sanitized));
+    expect(sanitized.name).toBe('Error');
+    expect(sanitized.message).toContain('token endpoint rejected');
+    expect(sanitized.stack).toBeUndefined();
+  });
+
   it('is cycle-safe', () => {
     const a: any = { name: 'a' };
     a.self = a;
@@ -161,5 +190,32 @@ describe('logger redaction (defense in depth)', () => {
     const emitted = JSON.stringify(errorSpy.mock.calls[0]);
     expectNoSentinels(emitted);
     expect(emitted).toContain('tenant-1');
+  });
+
+  it('never emits sentinel secrets passed as primitive string meta', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const logger = (await import('./logger')).default;
+
+    logger.error('token exchange failed', `authorization header was ${SENTINELS.authHeader}`);
+
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const emitted = JSON.stringify(errorSpy.mock.calls[0]);
+    expectNoSentinels(emitted);
+    expect(emitted).toContain('token exchange failed');
+  });
+
+  it('never emits sentinel secrets passed as array or Error meta', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const logger = (await import('./logger')).default;
+
+    logger.warn('provider refresh issues', [
+      `refresh token ${SENTINELS.refreshToken}`,
+      new Error(`client secret ${SENTINELS.clientSecret} rejected`)
+    ]);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const emitted = JSON.stringify(warnSpy.mock.calls[0]);
+    expectNoSentinels(emitted);
+    expect(emitted).toContain('provider refresh issues');
   });
 });

@@ -49,6 +49,20 @@ const MESSAGE_SECRET_PATTERNS: RegExp[] = [
  * strip token-shaped substrings and cap the length so embedded payload dumps
  * cannot ride along.
  */
+/**
+ * Scrub token-shaped substrings out of an arbitrary string without the
+ * provider-message fallback/truncation semantics. Used for free-form log
+ * text (primitive meta values, Error messages/stacks) where the content
+ * itself should otherwise be preserved.
+ */
+export function sanitizeLogString(value: string): string {
+  let sanitized = value;
+  for (const pattern of MESSAGE_SECRET_PATTERNS) {
+    sanitized = sanitized.replace(pattern, '[REDACTED]');
+  }
+  return sanitized;
+}
+
 export function sanitizeProviderMessage(message: unknown): string {
   if (typeof message !== 'string' || message.length === 0) {
     return 'Unknown provider error';
@@ -254,6 +268,12 @@ export function sanitizeLogMeta<T>(value: T): T {
   const visit = (input: unknown, depth: number): unknown => {
     if (input === null || input === undefined) {
       return input;
+    }
+    if (typeof input === 'string') {
+      // Primitive string meta must not bypass redaction: a raw token or
+      // Authorization header passed directly as a log argument gets scrubbed
+      // the same way string fields inside objects do.
+      return sanitizeLogString(input);
     }
     if (typeof input !== 'object') {
       return input;

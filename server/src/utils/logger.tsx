@@ -63,15 +63,28 @@ const getCallerInfo = () => {
 // Defense in depth: redact credential-shaped keys (tokens, secrets,
 // Authorization headers, Axios request configs) from structured meta before
 // any transport serializes it.
+const SPLAT = Symbol.for('splat');
+
 const redactFormat = winston.format((info) => {
   for (const key of Object.keys(info)) {
-    if (key === 'level' || key === 'message' || key === 'timestamp' || key === 'label') {
+    if (key === 'level' || key === 'timestamp' || key === 'label') {
       continue;
     }
     try {
+      // Includes `message`: winston merges primitive string meta into the
+      // message, so it must pass through the same scrubbing as object meta.
       (info as Record<string, unknown>)[key] = sanitizeLogMeta((info as Record<string, unknown>)[key]);
     } catch {
       (info as Record<string, unknown>)[key] = '[Unserializable log meta]';
+    }
+  }
+  // Splat args (extra positional log arguments) live under a symbol key and
+  // would otherwise reach format.splat()/transports unsanitized.
+  if ((info as any)[SPLAT] !== undefined) {
+    try {
+      (info as any)[SPLAT] = sanitizeLogMeta((info as any)[SPLAT]);
+    } catch {
+      (info as any)[SPLAT] = ['[Unserializable log meta]'];
     }
   }
   return info;
