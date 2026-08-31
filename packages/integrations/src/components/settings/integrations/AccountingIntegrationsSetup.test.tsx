@@ -33,6 +33,24 @@ vi.mock('./QboIntegrationSettings', () => ({
   default: () => <div data-testid="qbo-settings-stub">Live QBO Settings</div>
 }));
 
+// The capability hook drives the permission-aware navigation gate. Default to
+// a fully-capable user so the setup grid renders; tests that exercise the
+// denied state override it.
+const useAccountingCapabilitiesMock = vi.hoisted(() => vi.fn());
+vi.mock('./useAccountingCapabilities', () => ({
+  useAccountingCapabilities: useAccountingCapabilitiesMock,
+}));
+
+const fullCaps = {
+  catalogRead: true,
+  connectionsManage: true,
+  mappingsManage: true,
+  exportsExecute: true,
+  remoteMutate: true,
+  hasAny: true,
+  loaded: true,
+};
+
 describe('AccountingIntegrationsSetup live Xero contracts', () => {
   const originalEdition = process.env.NEXT_PUBLIC_EDITION;
 
@@ -40,6 +58,7 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     vi.resetModules();
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     useSearchParamsMock.mockReturnValue(new URLSearchParams());
+    useAccountingCapabilitiesMock.mockReturnValue(fullCaps);
   });
 
   afterEach(() => {
@@ -187,5 +206,23 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     // QBO card should not exist, so QBO panel should not be rendered
     expect(document.getElementById('accounting-integration-card-quickbooks_online')).not.toBeInTheDocument();
     expect(screen.queryByTestId('qbo-settings-stub')).not.toBeInTheDocument();
+  });
+
+  it('T017: a user with no accounting capability sees the no-permission notice instead of the configure grid', async () => {
+    useAccountingCapabilitiesMock.mockReturnValue({
+      catalogRead: false,
+      connectionsManage: false,
+      mappingsManage: false,
+      exportsExecute: false,
+      remoteMutate: false,
+      hasAny: false,
+      loaded: true,
+    });
+    const { default: AccountingIntegrationsSetup } = await import('./AccountingIntegrationsSetup');
+
+    render(<AccountingIntegrationsSetup />);
+
+    expect(document.getElementById('accounting-integrations-no-permission-card')).toBeInTheDocument();
+    expect(document.getElementById('accounting-integration-card-quickbooks_csv')).not.toBeInTheDocument();
   });
 });

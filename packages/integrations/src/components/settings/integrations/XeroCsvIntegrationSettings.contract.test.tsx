@@ -22,6 +22,27 @@ vi.mock('./XeroCsvClientSyncPanel', () => ({
   XeroCsvClientSyncPanel: () => <div data-testid="xero-csv-client-sync-panel">Xero CSV Client Sync</div>
 }));
 
+// The accounting-capability hook is exercised per-test through this mutable
+// state holder; default to a fully-capable user so the panels render their
+// content (an unauthenticated test session would otherwise show the
+// no-permission card).
+const accountingCapsState = vi.hoisted(() => ({
+  current: {
+    catalogRead: true,
+    connectionsManage: true,
+    mappingsManage: true,
+    exportsExecute: true,
+    remoteMutate: true,
+    hasAny: true,
+    loaded: true,
+  },
+}));
+
+vi.mock('./useAccountingCapabilities', () => ({
+  useAccountingCapabilities: () => accountingCapsState.current,
+}));
+
+
 describe('XeroCsvIntegrationSettings contracts', () => {
   beforeEach(() => {
     vi.clearAllMocks();

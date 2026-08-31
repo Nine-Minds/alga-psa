@@ -151,7 +151,9 @@ export default function XeroIntegrationSettings() {
   const canManageConnections = caps.connectionsManage;
   const canManageMappings = caps.mappingsManage;
 
-  if (!caps.hasAny) {
+  // Wait for the capability check to resolve before hiding the panel, so a
+  // capable user never sees a brief "no permission" card while it loads.
+  if (caps.loaded && !caps.hasAny) {
     return (
       <div className="space-y-6" id="xero-integration-settings">
         <Card id="xero-integration-no-permission-card">

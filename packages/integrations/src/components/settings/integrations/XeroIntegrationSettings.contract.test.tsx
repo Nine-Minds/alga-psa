@@ -27,6 +27,27 @@ vi.mock('../../../actions/integrations/xeroActions', () => ({
   disconnectXero: (...args: unknown[]) => disconnectXeroMock(...args)
 }));
 
+// The accounting-capability hook is exercised per-test through this mutable
+// state holder; default to a fully-capable user so the panels render their
+// content (an unauthenticated test session would otherwise show the
+// no-permission card).
+const accountingCapsState = vi.hoisted(() => ({
+  current: {
+    catalogRead: true,
+    connectionsManage: true,
+    mappingsManage: true,
+    exportsExecute: true,
+    remoteMutate: true,
+    hasAny: true,
+    loaded: true,
+  },
+}));
+
+vi.mock('./useAccountingCapabilities', () => ({
+  useAccountingCapabilities: () => accountingCapsState.current,
+}));
+
+
 describe('XeroIntegrationSettings contracts', () => {
   beforeEach(() => {
     vi.clearAllMocks();

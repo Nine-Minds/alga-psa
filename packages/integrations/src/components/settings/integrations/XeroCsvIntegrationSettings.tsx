@@ -107,7 +107,9 @@ const XeroCsvIntegrationSettings: React.FC = () => {
   const canManageConnections = caps.connectionsManage;
   const canManageMappings = caps.mappingsManage;
 
-  if (!caps.hasAny) {
+  // Wait for the capability check to resolve before hiding the panel, so a
+  // capable user never sees a brief "no permission" card while it loads.
+  if (caps.loaded && !caps.hasAny) {
     return (
       <div className="space-y-6" id="xero-csv-integration-no-permission">
         <Card>

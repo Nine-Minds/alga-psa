@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
+import { checkCurrentUserPermissions } from '@alga-psa/auth/actions/permissionActions';
 
 /**
  * The five accounting-integration capability permissions, fetched in one
@@ -16,6 +16,8 @@ export interface AccountingCapabilities {
   remoteMutate: boolean;
   /** True when the user holds at least one accounting capability. */
   hasAny: boolean;
+  /** False until the batch permission check has resolved. */
+  loaded: boolean;
 }
 
 const EMPTY: AccountingCapabilities = {
@@ -25,6 +27,7 @@ const EMPTY: AccountingCapabilities = {
   exportsExecute: false,
   remoteMutate: false,
   hasAny: false,
+  loaded: false,
 };
 
 export function useAccountingCapabilities(): AccountingCapabilities {
@@ -50,10 +53,11 @@ export function useAccountingCapabilities(): AccountingCapabilities {
           exportsExecute: granted('accounting_integrations', 'exports_execute'),
           remoteMutate: granted('accounting_integrations', 'remote_mutate'),
           hasAny: results.some((result) => result.resource === 'accounting_integrations' && result.granted),
+          loaded: true,
         });
       })
       .catch(() => {
-        if (!cancelled) setCapabilities(EMPTY);
+        if (!cancelled) setCapabilities({ ...EMPTY, loaded: true });
       });
     return () => {
       cancelled = true;
