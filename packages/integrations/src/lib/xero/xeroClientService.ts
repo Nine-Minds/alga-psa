@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
-import { AppError } from '@alga-psa/core';
+import { AppError, sanitizeProviderMessage, toSafeProviderError } from '@alga-psa/core';
 import type {
   ExternalCompanyRecord,
   NormalizedCompanyPayload
@@ -11,8 +11,10 @@ import type {
 export type { ExternalCompanyRecord, NormalizedCompanyPayload } from '@alga-psa/types';
 
 // Env overrides exist so test environments can point at the Xero emulator
-// (packages/emulators/xero), mirroring QBO_OAUTH_TOKEN_URL/QBO_API_BASE_URL
-// for QBO and MICROSOFT_GRAPH_BASE_URL for Graph.
+// (packages/emulators/xero) or a local provider simulator
+// (tools/smoke-sim/accounting-provider-sim.mjs), mirroring
+// QBO_OAUTH_TOKEN_URL/QBO_API_BASE_URL for QBO and MICROSOFT_GRAPH_BASE_URL
+// for Graph.
 const XERO_TOKEN_ENDPOINT =
   process.env.XERO_OAUTH_TOKEN_URL?.trim() || 'https://identity.xero.com/connect/token';
 const XERO_API_BASE_URL =
@@ -715,7 +717,7 @@ export class XeroClientService {
       logger.warn('[XeroClientService] failed to lookup contact after create', {
         tenantId: this.tenantId,
         connectionId: this.connection.connectionId,
-        error
+        error: toSafeProviderError('xero', error, { operation: 'findContactByName' })
       });
       return null;
     }
@@ -843,21 +845,23 @@ export class XeroClientService {
             null;
           const validationErrors = Array.isArray(element?.ValidationErrors)
             ? element.ValidationErrors.map((validation: Record<string, any>) => ({
-                message: validation.Message ?? 'Validation error',
+                message: sanitizeProviderMessage(validation.Message ?? 'Validation error'),
                 field: validation.Message?.includes(':')
                   ? validation.Message.split(':')[0]?.trim()
                   : undefined
               }))
             : [];
 
+          // Allowlisted fields only — never attach the raw provider element:
+          // it carries the full invoice (customer, line items, amounts).
           return {
             documentId: invoiceNumber ?? undefined,
             validationErrors,
-            message:
+            message: sanitizeProviderMessage(
               validationErrors.length > 0
                 ? validationErrors.map((item) => item.message).join('; ')
-                : 'Validation error',
-            raw: element
+                : 'Validation error'
+            )
           };
         });
 
@@ -875,15 +879,19 @@ export class XeroClientService {
         });
       }
 
+      // Reduce the provider response to allowlisted fields; the body itself
+      // can contain tokens, contact data, and invoice contents.
+      const safe = toSafeProviderError('xero', error, { correlationId });
       return new AppError('XERO_API_ERROR', 'Unexpected Xero API error', {
         status,
-        correlationId,
-        raw: data
+        correlationId: safe.correlationId,
+        providerErrorCode: safe.providerErrorCode,
+        providerMessage: safe.message
       });
     }
 
     return new AppError('XERO_UNKNOWN_ERROR', 'Unknown Xero client error', {
-      originalError: error
+      originalError: toSafeProviderError('xero', error)
     });
   }
 }
@@ -924,7 +932,11 @@ async function getTenantConnections(tenantId: string): Promise<XeroConnectionsSt
       return parsed as XeroConnectionsStore;
     }
   } catch (error) {
-    logger.error('[XeroClientService] failed to parse stored credentials', { tenantId, error });
+    // Parse errors can quote the stored secret payload; log only the error type.
+    logger.error('[XeroClientService] failed to parse stored credentials', {
+      tenantId,
+      errorName: error instanceof Error ? error.name : 'unknown'
+    });
   }
   return {};
 }
