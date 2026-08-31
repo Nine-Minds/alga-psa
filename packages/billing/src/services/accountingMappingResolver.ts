@@ -227,11 +227,17 @@ export class AccountingMappingResolver {
       })
       .whereNull('deleted_at');
 
-    // Exact realm match only when a realm is the target: a catalog mapping in
-    // another company must never put the wrong item, account, or tax code on a
-    // document in this company.
+    // A catalog mapping bound to another company's realm must never put the
+    // wrong item, account, or tax code on this company's document — so a
+    // realm-bound row only matches its own realm. A realm-agnostic (NULL-realm)
+    // catalog default is not "in another company"; it is a tenant-wide default
+    // (CSV imports and pre-realm data), and stays a legitimate fallback for any
+    // realm. Prefer an exact realm match over the NULL-realm default.
     if (targetRealm) {
-      query.andWhere('external_realm_id', targetRealm);
+      query.andWhere((builder) => {
+        builder.where('external_realm_id', targetRealm).orWhereNull('external_realm_id');
+      });
+      query.orderByRaw('CASE WHEN external_realm_id IS NOT NULL THEN 0 ELSE 1 END');
     } else {
       query.whereNull('external_realm_id');
     }
