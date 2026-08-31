@@ -1212,6 +1212,16 @@ const nextConfig = {
   // Explicitly disable production browser source maps (default but be explicit).
   // Eliminates source-map emit work for every client chunk.
   productionBrowserSourceMaps: false,
+  // OAuth callback routes receive one-time credentials (authorization codes,
+  // PKCE state nonces, and provider error text) on the query string. The dev
+  // access-log line prints the full request URL, so suppress it for callback
+  // paths; the routes' own coarse diagnostics remain. Dev-only — Next ignores
+  // incoming-request logging outside the dev server.
+  logging: {
+    incomingRequests: {
+      ignore: [/\/callback([\/?]|$)/],
+    },
+  },
   // SWC compiler: strip console.* in production output (excluding error/warn).
   // Cuts bytes; minify pass also has less to walk.
   compiler: {
