@@ -1852,6 +1852,7 @@
         "callback": {
           "accessDenied": "Dostęp do QuickBooks został odmówiony przed ukończeniem połączenia.",
           "configMissing": "Nie można uruchomić QuickBooks OAuth, ponieważ Client ID i Client Secret nie zostały w pełni skonfigurowane.",
+          "disconnectInProgress": "Trwa rozłączanie QuickBooks. Zakończ rozłączanie przed ponownym połączeniem.",
           "generic": "QuickBooks zwróciło błąd OAuth: {{code}}",
           "invalidState": "Stan OAuth QuickBooks był nieprawidłowy lub wygasł. Rozpocznij przepływ łączenia ponownie.",
           "missingParams": "W wywołaniu zwrotnym QuickBooks brakowało wymaganych parametrów. Rozpocznij przepływ łączenia ponownie.",
@@ -3435,6 +3436,7 @@
           "accessDenied": "Dostęp do Xero został odmówiony przed ukończeniem połączenia.",
           "configMissing": "Nie można uruchomić Xero OAuth, ponieważ Client ID i Client Secret tenanta nie zostały w pełni skonfigurowane.",
           "connectionsUnmapped": "Xero zwróciło organizacje, ale żadna nie zawierała identyfikatorów wymaganych do zapisania połączenia.",
+          "disconnectInProgress": "Trwa rozłączanie Xero. Zakończ rozłączanie przed ponownym połączeniem.",
           "generic": "Xero zwróciło błąd OAuth: {{code}}",
           "invalidState": "Stan OAuth Xero był nieprawidłowy lub wygasł. Rozpocznij przepływ łączenia ponownie.",
           "missingParams": "W wywołaniu zwrotnym Xero brakowało wymaganych parametrów. Rozpocznij przepływ łączenia ponownie.",

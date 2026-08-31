@@ -1,7 +1,9 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
+import { createTenantKnex } from '@alga-psa/db';
 import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
+import { isProviderDisconnectActive } from '../providerDisconnect/status';
 import { PROVIDER_XERO } from '../providerDisconnect/types';
 import { AppError } from '@alga-psa/core';
 import type {
@@ -895,6 +897,21 @@ export async function upsertStoredXeroConnections(
 ): Promise<XeroConnectionsStore> {
   const existing = await getTenantConnections(tenantId);
   const merged: XeroConnectionsStore = { ...existing, ...updates };
+
+  // No write path (OAuth callback) may store live connections while a
+  // disconnect is in flight: doing so would resurrect a connection the pending
+  // disconnect tombstoned and resume sync. Fail closed — if the disconnect
+  // record cannot be read we assume the disconnect is active. A terminal
+  // record is handled below (retired), never here; only a non-finalized record
+  // blocks storage.
+  const { knex } = await createTenantKnex(tenantId);
+  const disconnectActive = await isProviderDisconnectActive(knex, tenantId, PROVIDER_XERO).catch(() => true);
+  if (disconnectActive) {
+    throw new AppError(
+      'XERO_DISCONNECT_IN_PROGRESS',
+      'Xero is being disconnected. Finish or finalize the disconnect before connecting again.'
+    );
+  }
 
   // Reconnect after a completed (or force-finalized) disconnect: retire the
   // stale terminal disconnect record BEFORE the new connection becomes visible

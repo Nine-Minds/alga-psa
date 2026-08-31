@@ -6,6 +6,7 @@ import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getSession } from '@alga-psa/auth';
+import { createTenantKnex } from '@alga-psa/db';
 
 import {
   getQboRedirectUri,
@@ -13,6 +14,10 @@ import {
   upsertStoredQboCredentials,
   QBO_TOKEN_URL
 } from '../../../../lib/qbo/qboClientService';
+import {
+  isProviderDisconnectActive,
+  PROVIDER_QBO
+} from '../../../../lib/providerDisconnect';
 import {
   buildClearedQboOAuthStateCookie,
   getQboStateSigningSecret,
@@ -115,6 +120,22 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const tenantId = statePayload.tenantId;
+
+  // Reject a callback that lands while a QuickBooks disconnect is pending or
+  // otherwise non-finalized: the authorization may predate the disconnect, but
+  // completing it would write live credentials back into the tombstoned
+  // credential slot and resume sync. The connect route already blocks new
+  // flows; this closes the in-flight-callback window. Fail closed — if the
+  // disconnect record cannot be read, we cannot prove no disconnect is in
+  // flight, so the callback is refused. The storage layer re-checks the same
+  // gate before any write as defense in depth.
+  const { knex } = await createTenantKnex(tenantId);
+  const disconnectActive = await isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => true);
+  if (disconnectActive) {
+    logger.info('[qboOAuth] Callback blocked: QuickBooks disconnect in progress', { tenantId });
+    return createRedirect(FAILURE_PATH, { qbo_error: 'disconnect_in_progress' });
+  }
+
   const secretProvider = await getSecretProviderInstance();
   const redirectUri = await getQboRedirectUri(secretProvider);
 

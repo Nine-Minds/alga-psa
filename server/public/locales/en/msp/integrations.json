@@ -1875,6 +1875,7 @@
         "callback": {
           "accessDenied": "QuickBooks access was denied before the connection completed.",
           "configMissing": "QuickBooks OAuth could not start because the client ID and client secret were not fully configured.",
+          "disconnectInProgress": "QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.",
           "generic": "QuickBooks returned an OAuth error: {{code}}",
           "invalidState": "The QuickBooks OAuth state was invalid or expired. Start the connect flow again.",
           "missingParams": "The QuickBooks callback was missing required parameters. Start the connect flow again.",
@@ -3458,6 +3459,7 @@
           "accessDenied": "Xero access was denied before the connection completed.",
           "configMissing": "Xero OAuth could not start because the tenant client ID and client secret were not fully configured.",
           "connectionsUnmapped": "Xero returned organisations, but none included the identifiers required to save a connection.",
+          "disconnectInProgress": "Xero is being disconnected. Finish or finalize the disconnect before connecting again.",
           "generic": "Xero returned an OAuth error: {{code}}",
           "invalidState": "The Xero OAuth state was invalid or expired. Start the connect flow again.",
           "missingParams": "The Xero callback was missing required parameters. Start the connect flow again.",

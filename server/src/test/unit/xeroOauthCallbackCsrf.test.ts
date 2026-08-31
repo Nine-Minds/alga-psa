@@ -24,6 +24,16 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   XERO_TOKEN_URL: 'https://identity.xero.com/connect/token',
 }));
 
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-a' })),
+}));
+
+vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
+  isProviderDisconnectActive: vi.fn(async () => false),
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero',
+}));
+
 vi.mock('axios', () => {
   const post = vi.fn();
   const get = vi.fn();

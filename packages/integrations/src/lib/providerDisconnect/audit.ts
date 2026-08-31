@@ -10,6 +10,7 @@ export type DisconnectAuditOperation =
   | 'disconnect_target_failed'
   | 'disconnect_retry_started'
   | 'disconnect_retry_budget_exhausted'
+  | 'disconnect_cleanup_failed'
   | 'disconnect_finalized'
   | 'disconnect_force_finalized'
   | 'disconnect_record_retired';

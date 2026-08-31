@@ -51,6 +51,8 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
       return t('integrations.qbo.settings.callback.missingParams', { defaultValue: 'The QuickBooks callback was missing required parameters. Start the connect flow again.' });
     case 'access_denied':
       return t('integrations.qbo.settings.callback.accessDenied', { defaultValue: 'QuickBooks access was denied before the connection completed.' });
+    case 'disconnect_in_progress':
+      return t('integrations.qbo.settings.callback.disconnectInProgress', { defaultValue: 'QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.' });
     default:
       return code ? t('integrations.qbo.settings.callback.generic', { defaultValue: 'QuickBooks returned an OAuth error: {{code}}', code }) : null;
   }

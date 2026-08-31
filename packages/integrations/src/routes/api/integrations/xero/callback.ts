@@ -6,6 +6,7 @@ import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { createTenantKnex } from '@alga-psa/db';
 
 import {
   getXeroRedirectUri,
@@ -14,6 +15,10 @@ import {
   upsertStoredXeroConnections,
   XERO_TOKEN_URL
 } from '../../../../lib/xero/xeroClientService';
+import {
+  isProviderDisconnectActive,
+  PROVIDER_XERO
+} from '../../../../lib/providerDisconnect';
 import { oauthCsrfTokensMatch, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
 
@@ -130,6 +135,21 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
       sessionTenant: sessionUser.tenant,
     });
     return createRedirect(FAILURE_PATH, { xero_error: 'tenant_mismatch' });
+  }
+
+  // Reject a callback that lands while a Xero disconnect is pending or
+  // otherwise non-finalized: the authorization may predate the disconnect, but
+  // completing it would write live credentials back into the tombstoned
+  // credential slot and resume sync. The connect route already blocks new
+  // flows; this closes the in-flight-callback window. Fail closed — if the
+  // disconnect record cannot be read, we cannot prove no disconnect is in
+  // flight, so the callback is refused. The storage layer re-checks the same
+  // gate before any write as defense in depth.
+  const { knex } = await createTenantKnex(tenantId);
+  const disconnectActive = await isProviderDisconnectActive(knex, tenantId, PROVIDER_XERO).catch(() => true);
+  if (disconnectActive) {
+    logger.info('[xeroOAuth] Callback blocked: Xero disconnect in progress', { tenantId });
+    return createRedirect(FAILURE_PATH, { xero_error: 'disconnect_in_progress' });
   }
 
   const secretProvider = await getSecretProviderInstance();

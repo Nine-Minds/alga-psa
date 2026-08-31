@@ -9,6 +9,7 @@ const getXeroRedirectUriMock = vi.hoisted(() => vi.fn());
 const getXeroOAuthScopesStringMock = vi.hoisted(() => vi.fn());
 const upsertStoredXeroConnectionsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
+const isProviderDisconnectActiveMock = vi.hoisted(() => vi.fn());
 const axiosPostMock = vi.hoisted(() => vi.fn());
 const axiosGetMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
@@ -69,6 +70,12 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   upsertStoredXeroConnections: upsertStoredXeroConnectionsMock
 }));
 
+vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
+  isProviderDisconnectActive: isProviderDisconnectActiveMock,
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero'
+}));
+
 vi.mock('axios', () => ({
   default: {
     post: axiosPostMock,
@@ -105,6 +112,7 @@ describe('Xero OAuth routes', () => {
       'offline_access accounting.settings accounting.invoices accounting.banktransactions accounting.payments accounting.contacts'
     );
     upsertStoredXeroConnectionsMock.mockResolvedValue({});
+    isProviderDisconnectActiveMock.mockResolvedValue(false);
     axiosPostMock.mockResolvedValue({
       data: {
         access_token: 'access-token',
@@ -262,5 +270,35 @@ describe('Xero OAuth routes', () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('xero_error=no_connections');
+  });
+
+  it('T032: callback rejects with disconnect_in_progress while a Xero disconnect is active and never stores connections', async () => {
+    isProviderDisconnectActiveMock.mockResolvedValue(true);
+
+    const { GET } = await import('@/app/api/integrations/xero/callback/route');
+    const state = Buffer.from(
+      JSON.stringify({
+        tenantId: 'tenant-1',
+        csrf: 'csrf-token',
+        codeVerifier: 'verifier-123'
+      })
+    ).toString('base64url');
+
+    const response = await GET(
+      new NextRequest(`https://example.com/api/integrations/xero/callback?code=auth-code&state=${state}`, {
+        headers: { cookie: 'alga_xero_oauth_csrf=csrf-token' }
+      })
+    );
+
+    expect(response.status).toBe(307);
+    const location = response.headers.get('location') ?? '';
+    expect(location).toContain('xero_status=failure');
+    expect(location).toContain('xero_error=disconnect_in_progress');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredXeroConnectionsMock).not.toHaveBeenCalled();
+    expect(isProviderDisconnectActiveMock).toHaveBeenCalledTimes(1);
+    expect(isProviderDisconnectActiveMock.mock.calls[0]).toEqual(
+      expect.arrayContaining(['tenant-1', 'xero'])
+    );
   });
 });

@@ -1,7 +1,9 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
+import { createTenantKnex } from '@alga-psa/db';
 import { notifyQboConnectionChanged } from './qboConnectionChangeProvider';
 import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
+import { isProviderDisconnectActive } from '../providerDisconnect/status';
 import { PROVIDER_QBO } from '../providerDisconnect/types';
 import type { QboTenantCredentials } from './types';
 import { AppError } from '@alga-psa/core';
@@ -300,6 +302,21 @@ async function getTenantQboCredentials(tenantId: string, realmId: string): Promi
 export async function upsertStoredQboCredentials(tenantId: string, credentials: QboTenantCredentials): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
   const allCredentials = await getStoredQboCredentialsMap(tenantId);
+
+  // No write path (OAuth callback, token refresh) may store live credentials
+  // while a disconnect is in flight: doing so would resurrect a connection the
+  // pending disconnect tombstoned and resume sync. Fail closed — if the
+  // disconnect record cannot be read we assume the disconnect is active. A
+  // terminal record is handled below (retired), never here; only a
+  // non-finalized record blocks storage.
+  const { knex } = await createTenantKnex(tenantId);
+  const disconnectActive = await isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => true);
+  if (disconnectActive) {
+    throw new AppError(
+      'QBO_DISCONNECT_IN_PROGRESS',
+      'QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.'
+    );
+  }
 
   allCredentials[credentials.realmId] = credentials;
 

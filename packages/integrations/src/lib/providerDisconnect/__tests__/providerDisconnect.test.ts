@@ -308,6 +308,14 @@ vi.mock('../../qbo/qboConnectionChangeProvider', () => ({
   registerQboConnectionChangeHandler: vi.fn(),
 }));
 
+// The OAuth callback routes authenticate through these before they reach the
+// disconnect gate under test.
+const getSessionMock = vi.hoisted(() => vi.fn(async () => ({ user: { tenant: 'tenant-1' } })));
+vi.mock('@alga-psa/auth', () => ({ getSession: getSessionMock }));
+
+const getCurrentUserMock = vi.hoisted(() => vi.fn(async () => ({ tenant: 'tenant-1' })));
+vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: getCurrentUserMock }));
+
 // ── Imports under test ──────────────────────────────────────────────────────
 import {
   PROVIDER_QBO,
@@ -320,8 +328,13 @@ import {
   isProviderDisconnectActive,
   listDueDisconnectRecords,
 } from '..';
-import { getStoredQboCredentialsMap, upsertStoredQboCredentials } from '../../qbo/qboClientService';
+import { getStoredQboCredentialsMap, upsertStoredQboCredentials, QBO_TOKEN_URL } from '../../qbo/qboClientService';
 import { getStoredXeroConnections, upsertStoredXeroConnections } from '../../xero/xeroClientService';
+import { createQboOAuthState, QBO_OAUTH_STATE_COOKIE } from '../../qbo/qboOAuthState';
+import { XERO_OAUTH_CSRF_COOKIE } from '../../xero/oauthCsrf';
+import { GET as QboCallbackGET } from '../../../routes/api/integrations/qbo/callback';
+import { GET as XeroCallbackGET } from '../../../routes/api/integrations/xero/callback';
+import { NextRequest } from 'next/server';
 
 const TENANT = 'tenant-1';
 
@@ -379,12 +392,26 @@ beforeEach(() => {
   providerHarness.reset();
   vi.clearAllMocks();
 
+  // Default secret-provider behavior; individual tests override to simulate
+  // failures. The defaults are re-applied here so a failure simulation never
+  // leaks into the next test.
+  getTenantSecretMock.mockImplementation(async (tenant, name) => secretStore.get(tenant, name));
+  setTenantSecretMock.mockImplementation(async (tenant, name, value) => {
+    secretStore.set(tenant, name, value);
+  });
+  deleteTenantSecretMock.mockImplementation(async (tenant, name) => {
+    secretStore.delete(tenant, name);
+  });
+
   resolveQboOAuthCredentialsMock.mockResolvedValue({ clientId: 'qbo-client', clientSecret: 'qbo-secret', source: 'app' });
   resolveXeroOAuthCredentialsMock.mockResolvedValue({ clientId: 'xero-client', clientSecret: 'xero-secret', source: 'app' });
   providerHarness.setQboRevoke(() => providerHarness.ok(200, {}));
   providerHarness.setXeroConnection(() => providerHarness.ok(204));
   providerHarness.setXeroRefresh(() => providerHarness.ok(200, { access_token: 'refreshed-token' }));
   providerHarness.setXeroGrantRevoke(() => providerHarness.ok(200, {}));
+
+  getSessionMock.mockResolvedValue({ user: { tenant: TENANT } });
+  getCurrentUserMock.mockResolvedValue({ tenant: TENANT });
 });
 
 describe('QuickBooks Online disconnect state machine', () => {
@@ -668,6 +695,131 @@ describe('QuickBooks Online disconnect state machine', () => {
       providerCalls().filter((c) => c.url.includes('tokens/revoke')).map((c) => (c.body as { token: string }).token),
     ).toEqual(['rt-a2', 'rt-a2']);
   });
+
+  it('tombstone deletion failure during finalization keeps the record retryable and never finalizes over orphaned material', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    // Provider revocation succeeds; the tombstone secret deletion throws.
+    deleteTenantSecretMock.mockImplementation(async (tenant, name) => {
+      if (name === QBO_TOMBSTONE_SECRET) throw new Error('vault unavailable');
+      secretStore.delete(tenant, name);
+    });
+
+    const first = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, { userId: 'user-1' });
+
+    // NOT finalized: the record stays in a retryable state and keeps the
+    // already-revoked target revoked.
+    expect(first.status).toBe('partial');
+    expect(first.error).toContain('local credential removal failed');
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(recordRows()[0].targets[0]).toMatchObject({ targetId: 'realm-a', status: 'revoked' });
+    expect(recordRows()[0].last_error_class).toContain('credential_secret_deletion_failed');
+    expect(recordRows()[0].finalized_at).toBeUndefined();
+    expect(new Date(recordRows()[0].next_retry_at).getTime()).toBeGreaterThan(Date.now());
+
+    // The encrypted material was retained (deletion failed), so the tombstone
+    // gate still holds and sync stays blocked.
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toContain('rt-a');
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_QBO)).toBe(true);
+
+    // A sanitized audit event records the cleanup failure — never the secret.
+    expect(auditRows().map((r) => r.operation)).toContain('disconnect_cleanup_failed');
+    expect(auditRows().every((r) => r.correlation_id || r.details.correlation_id)).toBe(true);
+    expect(JSON.stringify(auditRows())).not.toContain('rt-a');
+
+    // The retry schedule picks the record up once its window arrives.
+    expect(await listDueDisconnectRecords(makeKnex(), TENANT)).toHaveLength(0);
+    recordRows()[0].next_retry_at = new Date(Date.now() - 1000).toISOString();
+    expect(await listDueDisconnectRecords(makeKnex(), TENANT)).toHaveLength(1);
+
+    // Retry pass with deletion now working converges to finalized WITHOUT
+    // re-calling the provider (the target is already revoked).
+    deleteTenantSecretMock.mockImplementation(async (tenant, name) => {
+      secretStore.delete(tenant, name);
+    });
+    providerHarness.calls.length = 0;
+    const second = await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, { fromRetry: true });
+    expect(second.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toBeNull();
+    expect(providerCalls().filter((c) => c.url.includes('tokens/revoke'))).toHaveLength(0);
+  });
+
+  it('a valid-looking OAuth callback that lands while a QuickBooks disconnect is pending is rejected and never resurrects credentials', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    providerHarness.setQboRevoke(() => providerHarness.fail(500, { error: 'server_error' }));
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+
+    // The race frame: the authorization was issued BEFORE the disconnect
+    // started, the callback lands AFTER. Disconnect is pending: creds
+    // tombstoned, sync blocked.
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
+    const targetsBefore = JSON.stringify(recordRows()[0].targets);
+
+    const signingSecret = 'race-test-state-signing-secret';
+    const { stateParam, cookieValue } = createQboOAuthState({ tenantId: TENANT, secret: signingSecret });
+
+    const previousEdition = process.env.EDITION;
+    const previousNextAuthSecret = process.env.NEXTAUTH_SECRET;
+    process.env.EDITION = 'ee';
+    process.env.NEXTAUTH_SECRET = signingSecret;
+    try {
+      const response = await QboCallbackGET(
+        new Request(
+          `http://localhost:3000/api/integrations/qbo/callback?code=valid-auth-code&realmId=realm-a&state=${encodeURIComponent(stateParam)}`,
+          { headers: { cookie: `${QBO_OAUTH_STATE_COOKIE}=${encodeURIComponent(cookieValue)}` } },
+        ),
+      );
+
+      // Rejected with a disconnect-specific failure redirect, and the token
+      // exchange never ran.
+      expect(response.status).toBe(307);
+      const location = response.headers.get('location') ?? '';
+      expect(location).toContain('qbo_status=failure');
+      expect(location).toContain('qbo_error=disconnect_in_progress');
+      expect(providerHarness.calls.filter((c) => c.url.includes(QBO_TOKEN_URL))).toHaveLength(0);
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+      if (previousNextAuthSecret === undefined) delete process.env.NEXTAUTH_SECRET;
+      else process.env.NEXTAUTH_SECRET = previousNextAuthSecret;
+    }
+
+    // State untouched: credentials stay tombstoned/absent for sync, the
+    // disconnect record is still pending with unchanged targets, and the sync
+    // gate still blocks.
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toContain('rt-a');
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(await getStoredQboCredentialsMap(TENANT)).toEqual({});
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(JSON.stringify(recordRows()[0].targets)).toBe(targetsBefore);
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_QBO)).toBe(true);
+  });
+
+  it('upsertStoredQboCredentials refuses to store live credentials while a QuickBooks disconnect is active', async () => {
+    qboCredentialSecret({ 'realm-a': { realmId: 'realm-a', refreshToken: 'rt-a' } });
+    providerHarness.setQboRevoke(() => providerHarness.fail(500, { error: 'server_error' }));
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_QBO, {});
+    expect(recordRows()[0].status).toBe('pending_revocation');
+
+    // A write that bypasses the callback route guard (token refresh, a direct
+    // persistence call) must still fail while the disconnect is active.
+    const err = await upsertStoredQboCredentials(TENANT, {
+      realmId: 'realm-a',
+      accessToken: 'fresh-at',
+      refreshToken: 'fresh-rt',
+      accessTokenExpiresAt: futureIso(3600_000),
+      refreshTokenExpiresAt: futureIso(86_400_000),
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(String(err?.message)).toMatch(/being disconnected/i);
+
+    expect(secretStore.get(TENANT, QBO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, QBO_TOMBSTONE_SECRET)).toContain('rt-a');
+    expect(recordRows()[0].status).toBe('pending_revocation');
+  });
 });
 
 describe('Xero disconnect state machine', () => {
@@ -896,6 +1048,117 @@ describe('Xero disconnect state machine', () => {
     expect(recordRows()[0].status).toBe('finalized');
     expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
     expect(providerCalls().filter((c) => c.method === 'delete')).toHaveLength(2);
+  });
+
+  it('tombstone deletion failure during Xero finalization keeps the record retryable and never finalizes over orphaned material', async () => {
+    xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
+    // Connection delete and grant revocation succeed; the tombstone deletion throws.
+    deleteTenantSecretMock.mockImplementation(async (tenant, name) => {
+      if (name === XERO_TOMBSTONE_SECRET) throw new Error('vault unavailable');
+      secretStore.delete(tenant, name);
+    });
+
+    const first = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { userId: 'user-1' });
+
+    // NOT finalized: retryable record, revoked targets preserved.
+    expect(first.status).toBe('partial');
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    const targets = recordRows()[0].targets as Array<{ targetId: string; status: string }>;
+    expect(targets.find((t) => t.targetId === 'conn-a')).toMatchObject({ status: 'revoked' });
+    expect(targets.find((t) => t.targetId === XERO_GRANT_TARGET_ID)).toMatchObject({ status: 'revoked' });
+    expect(recordRows()[0].last_error_class).toContain('credential_secret_deletion_failed');
+    expect(recordRows()[0].finalized_at).toBeUndefined();
+
+    // Provider revocation already burned the work: the retry pass must NOT
+    // re-delete the connection or re-revoke the grant.
+    expect(providerCalls().filter((c) => c.method === 'delete')).toHaveLength(1);
+    expect(providerCalls().filter((c) => c.url.includes('connect/revocation'))).toHaveLength(1);
+
+    // Tombstone retained → sync still blocked.
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toContain('rt-a');
+    expect(await getStoredXeroConnections(TENANT)).toEqual({});
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_XERO)).toBe(true);
+
+    expect(auditRows().map((r) => r.operation)).toContain('disconnect_cleanup_failed');
+    expect(JSON.stringify(auditRows())).not.toContain('rt-a');
+
+    // Retry with deletion working converges without re-calling the provider.
+    deleteTenantSecretMock.mockImplementation(async (tenant, name) => {
+      secretStore.delete(tenant, name);
+    });
+    providerHarness.calls.length = 0;
+    const second = await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, { fromRetry: true });
+    expect(second.status).toBe('disconnected');
+    expect(recordRows()[0].status).toBe('finalized');
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toBeNull();
+    expect(providerHarness.calls).toHaveLength(0);
+  });
+
+  it('a valid-looking OAuth callback that lands while a Xero disconnect is pending is rejected and never resurrects connections', async () => {
+    xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
+    providerHarness.setXeroConnection(() => providerHarness.fail(500, { error: 'server_error' }));
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+
+    // The race frame: the authorization was issued BEFORE the disconnect
+    // started, the callback lands AFTER. Disconnect is pending: connections
+    // tombstoned, sync blocked.
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(await getStoredXeroConnections(TENANT)).toEqual({});
+    const targetsBefore = JSON.stringify(recordRows()[0].targets);
+
+    const csrfToken = 'a'.repeat(64);
+    const state = Buffer.from(
+      JSON.stringify({ tenantId: TENANT, csrf: csrfToken, codeVerifier: 'race-verifier' }),
+    ).toString('base64url');
+
+    const previousEdition = process.env.EDITION;
+    process.env.EDITION = 'ee';
+    try {
+      const response = await XeroCallbackGET(
+        new NextRequest(
+          `http://localhost:3000/api/integrations/xero/callback?code=valid-auth-code&state=${state}`,
+          { headers: { cookie: `${XERO_OAUTH_CSRF_COOKIE.name}=${csrfToken}` } },
+        ),
+      );
+
+      // Rejected with a disconnect-specific failure redirect, and neither the
+      // token exchange nor the connections fetch ran.
+      expect(response.status).toBe(307);
+      const location = response.headers.get('location') ?? '';
+      expect(location).toContain('xero_status=failure');
+      expect(location).toContain('xero_error=disconnect_in_progress');
+      expect(providerHarness.calls.filter((c) => c.url.includes('identity.xero.com/connect/token'))).toHaveLength(0);
+    } finally {
+      if (previousEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = previousEdition;
+    }
+
+    // State untouched: connections stay tombstoned/absent for sync, the
+    // disconnect record is still pending with unchanged targets, and the sync
+    // gate still blocks.
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toContain('rt-a');
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
+    expect(await getStoredXeroConnections(TENANT)).toEqual({});
+    expect(recordRows()[0].status).toBe('pending_revocation');
+    expect(JSON.stringify(recordRows()[0].targets)).toBe(targetsBefore);
+    expect(await isProviderDisconnectActive(makeKnex(), TENANT, PROVIDER_XERO)).toBe(true);
+  });
+
+  it('upsertStoredXeroConnections refuses to store live connections while a Xero disconnect is active', async () => {
+    xeroCredentialSecret({ 'conn-a': xeroConnectionMaterial('conn-a', 'rt-a') });
+    providerHarness.setXeroConnection(() => providerHarness.fail(500, { error: 'server_error' }));
+    await disconnectProvider(makeKnex(), TENANT, PROVIDER_XERO, {});
+    expect(recordRows()[0].status).toBe('pending_revocation');
+
+    const err = await upsertStoredXeroConnections(TENANT, {
+      'conn-a': xeroConnectionMaterial('conn-a', 'fresh-rt'),
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(String(err?.message)).toMatch(/being disconnected/i);
+
+    expect(secretStore.get(TENANT, XERO_STANDARD_SECRET)).toBeNull();
+    expect(secretStore.get(TENANT, XERO_TOMBSTONE_SECRET)).toContain('rt-a');
+    expect(recordRows()[0].status).toBe('pending_revocation');
   });
 });
 

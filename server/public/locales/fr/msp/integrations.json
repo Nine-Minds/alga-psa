@@ -1852,6 +1852,7 @@
         "callback": {
           "accessDenied": "L'accès QuickBooks a été refusé avant la fin de la connexion.",
           "configMissing": "Impossible de démarrer QuickBooks OAuth car le client ID et le client secret n'étaient pas entièrement configurés.",
+          "disconnectInProgress": "QuickBooks est en cours de déconnexion. Terminez ou finalisez la déconnexion avant de vous reconnecter.",
           "generic": "QuickBooks a retourné une erreur OAuth : {{code}}",
           "invalidState": "L'état OAuth QuickBooks était invalide ou expiré. Relancez le flux de connexion.",
           "missingParams": "Des paramètres requis étaient absents du rappel QuickBooks. Relancez le flux de connexion.",
@@ -3435,6 +3436,7 @@
           "accessDenied": "L'accès Xero a été refusé avant la fin de la connexion.",
           "configMissing": "Impossible de démarrer Xero OAuth car le client ID et le client secret du tenant n'étaient pas entièrement configurés.",
           "connectionsUnmapped": "Xero a retourné des organisations, mais aucune n'incluait les identifiants requis pour enregistrer une connexion.",
+          "disconnectInProgress": "Xero est en cours de déconnexion. Terminez ou finalisez la déconnexion avant de vous reconnecter.",
           "generic": "Xero a retourné une erreur OAuth : {{code}}",
           "invalidState": "L'état OAuth Xero était invalide ou expiré. Relancez le flux de connexion.",
           "missingParams": "Des paramètres requis étaient absents du rappel Xero. Relancez le flux de connexion.",

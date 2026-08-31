@@ -70,14 +70,38 @@ export async function clearTombstoneCredentials(
   provider: ProviderType,
   secretProvider?: SecretProviderLike,
 ): Promise<void> {
+  try {
+    await clearTombstoneCredentialsStrict(tenantId, provider, secretProvider);
+  } catch {
+    // Best-effort: the disconnect service's strict path is the one that must
+    // not swallow deletion failures; a provider that throws on missing keys
+    // must not fail the defense-in-depth cleanups that call this variant.
+  }
+}
+
+/**
+ * Removes the tombstoned credential material and propagates deletion failures.
+ *
+ * Unlike `clearTombstoneCredentials` (best-effort), this is used by the
+ * finalization paths where `finalized` must mean the encrypted credential
+ * material is actually gone. An absent tombstone is treated as success so a
+ * partially-failed finalization converges on the next retry instead of
+ * erroring or double-finalizing.
+ */
+export async function clearTombstoneCredentialsStrict(
+  tenantId: string,
+  provider: ProviderType,
+  secretProvider?: SecretProviderLike,
+): Promise<void> {
   const providerInstance = secretProvider ?? (await resolveSecretProvider());
   const tombstoneName = tombstoneCredentialsSecretName(provider);
-  try {
-    await providerInstance.deleteTenantSecret(tenantId, tombstoneName);
-  } catch {
-    // Deleting an absent secret is a no-op for the in-memory/fs providers; a
-    // provider that throws on missing keys must not fail finalization.
+
+  const existing = await providerInstance.getTenantSecret(tenantId, tombstoneName);
+  if (typeof existing !== 'string' || !existing) {
+    return;
   }
+
+  await providerInstance.deleteTenantSecret(tenantId, tombstoneName);
 }
 
 /**

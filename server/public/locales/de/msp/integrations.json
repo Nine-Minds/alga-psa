@@ -1852,6 +1852,7 @@
         "callback": {
           "accessDenied": "Der QuickBooks-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
           "configMissing": "QuickBooks OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret nicht vollständig konfiguriert waren.",
+          "disconnectInProgress": "QuickBooks wird gerade getrennt. Schließen Sie die Trennung ab, bevor Sie erneut eine Verbindung herstellen.",
           "generic": "QuickBooks hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der QuickBooks-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
           "missingParams": "Dem QuickBooks-Callback fehlten erforderliche Parameter. Starten Sie den Verbindungs-Flow erneut.",
@@ -3435,6 +3436,7 @@
           "accessDenied": "Der Xero-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
           "configMissing": "Xero OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret des Mandanten nicht vollständig konfiguriert waren.",
           "connectionsUnmapped": "Xero hat Organisationen zurückgegeben, aber keine enthielt die zum Speichern einer Verbindung erforderlichen Kennungen.",
+          "disconnectInProgress": "Xero wird gerade getrennt. Schließen Sie die Trennung ab, bevor Sie erneut eine Verbindung herstellen.",
           "generic": "Xero hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der Xero-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
           "missingParams": "Dem Xero-Callback fehlten erforderliche Parameter. Starten Sie den Verbindungs-Flow erneut.",

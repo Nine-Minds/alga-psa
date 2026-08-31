@@ -38,6 +38,8 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
       return t('integrations.xero.settings.callback.missingParams', { defaultValue: 'The Xero callback was missing required parameters. Start the connect flow again.' });
     case 'access_denied':
       return t('integrations.xero.settings.callback.accessDenied', { defaultValue: 'Xero access was denied before the connection completed.' });
+    case 'disconnect_in_progress':
+      return t('integrations.xero.settings.callback.disconnectInProgress', { defaultValue: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.' });
     default:
       return code ? t('integrations.xero.settings.callback.generic', { defaultValue: 'Xero returned an OAuth error: {{code}}', code }) : null;
   }

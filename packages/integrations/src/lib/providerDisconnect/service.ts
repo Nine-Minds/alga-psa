@@ -7,6 +7,7 @@ import { writeDisconnectAudit } from './audit';
 import {
   tombstoneLiveCredentials,
   clearTombstoneCredentials,
+  clearTombstoneCredentialsStrict,
   tombstoneCredentialsSecretName,
   hasAnyProviderCredentials,
   hasLiveProviderCredentials,
@@ -413,7 +414,49 @@ async function runRevocationPass(
 
   if (remainingPending === 0 && remainingPermanent === 0) {
     // Provider cleanup confirmed for every target — finalize local deletion.
-    await clearTombstoneCredentials(tenantId, provider, secretProvider);
+    // Atomic-in-effect: the record only transitions to `finalized` after the
+    // tombstoned credential secret is actually deleted. A deletion failure
+    // leaves the record retryable (targets already `revoked` stay `revoked`,
+    // so the retry pass re-runs only the local-cleanup step) and emits a
+    // sanitized audit event; `finalized` must always mean the encrypted
+    // credential material is gone.
+    try {
+      await clearTombstoneCredentialsStrict(tenantId, provider, secretProvider);
+    } catch (error) {
+      const nextAttempt = attemptCount + 1;
+      await setRecordStatus(knex, tenantId, provider, 'pending_revocation', {
+        attemptCount: nextAttempt,
+        nextRetryAt: computeNextRetryAt(nextAttempt),
+        lastErrorClass: 'credential_secret_deletion_failed',
+      });
+      await writeDisconnectAudit({
+        knex,
+        tenantId,
+        provider,
+        operation: 'disconnect_cleanup_failed',
+        targetId: null,
+        result: 'credential_deletion_failed',
+        attemptCount: nextAttempt,
+        correlationId: latest.correlationId,
+        userId: opts.userId,
+      });
+      logger.error(
+        '[providerDisconnect] Finalization blocked: tombstone credential deletion failed; local cleanup will retry',
+        {
+          tenantId,
+          provider,
+          correlationId: latest.correlationId,
+          attemptCount: nextAttempt,
+          error: error instanceof Error ? error.message : error,
+        },
+      );
+      return {
+        status: 'partial',
+        transientTargets: counters.transientTargets,
+        permanentTargets: counters.permanentTargets,
+        error: 'Provider cleanup is complete, but local credential removal failed. The disconnect will retry the local cleanup.',
+      };
+    }
     await setRecordStatus(knex, tenantId, provider, 'finalized', {
       attemptCount: attemptCount + 1,
       nextRetryAt: null,
@@ -593,7 +636,11 @@ export async function forceFinalizeProviderDisconnect(
     };
   }
 
-  await clearTombstoneCredentials(tenantId, provider, secretProvider);
+  // Atomic-in-effect like the automatic finalization path: `finalized` only
+  // after the tombstoned credential secret is actually deleted. A deletion
+  // failure propagates so the operator sees it and the record stays in its
+  // current state (never finalized over orphaned credential material).
+  await clearTombstoneCredentialsStrict(tenantId, provider, secretProvider);
   await setRecordStatus(knex, tenantId, provider, 'finalized', {
     attemptCount: record.attemptCount + 1,
     nextRetryAt: null,

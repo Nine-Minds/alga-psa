@@ -1852,6 +1852,7 @@
         "callback": {
           "accessDenied": "QuickBooks-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "QuickBooks OAuth kon niet worden gestart omdat het client ID en client secret niet volledig waren geconfigureerd.",
+          "disconnectInProgress": "QuickBooks wordt losgekoppeld. Rond de ontkoppeling af voordat u opnieuw verbinding maakt.",
           "generic": "QuickBooks heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De QuickBooks OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
           "missingParams": "In de QuickBooks-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
@@ -3435,6 +3436,7 @@
           "accessDenied": "Xero-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "Xero OAuth kon niet worden gestart omdat het client ID en client secret van de tenant niet volledig waren geconfigureerd.",
           "connectionsUnmapped": "Xero heeft organisaties geretourneerd, maar geen enkele bevatte de identifiers die nodig zijn om een verbinding op te slaan.",
+          "disconnectInProgress": "Xero wordt losgekoppeld. Rond de ontkoppeling af voordat u opnieuw verbinding maakt.",
           "generic": "Xero heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De Xero OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
           "missingParams": "In de Xero-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",

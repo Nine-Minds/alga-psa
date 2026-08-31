@@ -1852,6 +1852,7 @@
         "callback": {
           "accessDenied": "O acesso ao QuickBooks foi negado antes da conexão ser concluída.",
           "configMissing": "O QuickBooks OAuth não pôde ser iniciado porque o ID do cliente e o segredo do cliente não foram totalmente configurados.",
+          "disconnectInProgress": "O QuickBooks está sendo desconectado. Conclua a desconexão antes de conectar novamente.",
           "generic": "QuickBooks retornou um erro OAuth: {{code}}",
           "invalidState": "O estado QuickBooks OAuth era inválido ou expirou. Inicie o fluxo de conexão novamente.",
           "missingParams": "O retorno de chamada do QuickBooks não tinha parâmetros obrigatórios. Inicie o fluxo de conexão novamente.",
@@ -3435,6 +3436,7 @@
           "accessDenied": "O acesso ao Xero foi negado antes da conexão ser concluída.",
           "configMissing": "O Xero OAuth não pôde ser iniciado porque o ID do cliente locatário e o segredo do cliente não estavam totalmente configurados.",
           "connectionsUnmapped": "O Xero retornou organizações, mas nenhuma incluiu os identificadores necessários para salvar uma conexão.",
+          "disconnectInProgress": "O Xero está sendo desconectado. Conclua a desconexão antes de conectar novamente.",
           "generic": "O Xero retornou um erro OAuth: {{code}}",
           "invalidState": "O estado do Xero OAuth era inválido ou expirou. Inicie o fluxo de conexão novamente.",
           "missingParams": "O retorno de chamada do Xero não tinha parâmetros obrigatórios. Inicie o fluxo de conexão novamente.",

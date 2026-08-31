@@ -13,6 +13,7 @@ const getQboRedirectUriMock = vi.hoisted(() => vi.fn());
 const getQboOAuthScopesStringMock = vi.hoisted(() => vi.fn());
 const upsertStoredQboCredentialsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
+const isProviderDisconnectActiveMock = vi.hoisted(() => vi.fn());
 const axiosPostMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
@@ -48,6 +49,12 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   getQboRedirectUri: getQboRedirectUriMock,
   getQboOAuthScopesString: getQboOAuthScopesStringMock,
   upsertStoredQboCredentials: upsertStoredQboCredentialsMock
+}));
+
+vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
+  isProviderDisconnectActive: isProviderDisconnectActiveMock,
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero'
 }));
 
 vi.mock('axios', () => ({
@@ -104,6 +111,7 @@ describe('QBO OAuth routes', () => {
     getQboRedirectUriMock.mockResolvedValue('https://example.com/api/integrations/qbo/callback');
     getQboOAuthScopesStringMock.mockReturnValue('com.intuit.quickbooks.accounting');
     upsertStoredQboCredentialsMock.mockResolvedValue(undefined);
+    isProviderDisconnectActiveMock.mockResolvedValue(false);
     axiosPostMock.mockResolvedValue({
       data: {
         access_token: 'access-token',
@@ -323,5 +331,34 @@ describe('QBO OAuth routes', () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('qbo_error=missing_params');
+  });
+
+  it('callback rejects with disconnect_in_progress while a QuickBooks disconnect is active and never stores credentials', async () => {
+    isProviderDisconnectActiveMock.mockResolvedValue(true);
+
+    const { stateParam, cookieValue } = createQboOAuthState({
+      tenantId: 'tenant-1',
+      secret: SIGNING_SECRET
+    });
+
+    const { GET } = await import('@/app/api/integrations/qbo/callback/route');
+
+    const response = await GET(
+      buildCallbackRequest({
+        query: { code: 'auth-code', state: stateParam, realmId: 'realm-1' },
+        cookieValue
+      })
+    );
+
+    expect(response.status).toBe(307);
+    const location = response.headers.get('location') ?? '';
+    expect(location).toContain('qbo_status=failure');
+    expect(location).toContain('qbo_error=disconnect_in_progress');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredQboCredentialsMock).not.toHaveBeenCalled();
+    expect(isProviderDisconnectActiveMock).toHaveBeenCalledTimes(1);
+    expect(isProviderDisconnectActiveMock.mock.calls[0]).toEqual(
+      expect.arrayContaining(['tenant-1', 'quickbooks_online'])
+    );
   });
 });
