@@ -1205,7 +1205,12 @@
     "fields": {
       "prefix": {
         "label": "Préfixe du numéro",
-        "help": "Préfixe facultatif pour la séquence de numéros. Laissez vide pour ne pas utiliser de préfixe ou saisissez un préfixe personnalisé."
+        "help": "Préfixe fixe facultatif pour la séquence de numéros. Laissez vide pour ne pas utiliser de préfixe ou saisissez un préfixe personnalisé. Pour inclure la date d'émission, utilisez le champ Format de date au lieu de la saisir ici."
+      },
+      "dateFormat": {
+        "label": "Format de date",
+        "help": "Date facultative insérée entre le préfixe et le numéro séquentiel. Par exemple, {YYYY}-{MM}- produit INV-2026-08-000001. Laissez vide pour conserver des numéros sans date.",
+        "tokensHint": "Jetons : {YYYY} année sur quatre chiffres, {YY} année sur deux chiffres, {MM} mois, {DD} jour. La date est évaluée au moment de l'attribution du numéro, dans le fuseau horaire par défaut configuré dans Paramètres. La séquence reste continue — elle ne redémarre pas chaque année, chaque mois ni chaque jour."
       },
       "minimumDigits": {
         "label": "Nombre minimum de chiffres",

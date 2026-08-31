@@ -1205,7 +1205,12 @@
     "fields": {
       "prefix": {
         "label": "Nummervoorvoegsel",
-        "help": "Optioneel voorvoegsel voor de nummerreeks. Laat leeg voor geen voorvoegsel of voer een aangepast voorvoegsel in."
+        "help": "Optioneel vast voorvoegsel voor de nummerreeks. Laat leeg voor geen voorvoegsel of voer een aangepast voorvoegsel in. Gebruik voor de uitgiftedatum het veld Datumnotatie in plaats van die hier te typen."
+      },
+      "dateFormat": {
+        "label": "Datumnotatie",
+        "help": "Optionele datum die tussen het voorvoegsel en het volgnummer wordt geplaatst. {YYYY}-{MM}- levert bijvoorbeeld INV-2026-08-000001 op. Laat leeg om nummers zonder datum te houden.",
+        "tokensHint": "Tekens: {YYYY} jaar met vier cijfers, {YY} jaar met twee cijfers, {MM} maand, {DD} dag. De datum wordt bepaald op het moment dat het nummer wordt toegekend, in de standaard tijdzone die is ingesteld bij Instellingen. De reeks loopt door — hij begint niet elk jaar, elke maand of elke dag opnieuw."
       },
       "minimumDigits": {
         "label": "Minimaal aantal cijfers",

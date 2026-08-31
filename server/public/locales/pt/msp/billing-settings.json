@@ -1205,7 +1205,12 @@
     "fields": {
       "prefix": {
         "label": "Prefixo numérico",
-        "help": "Prefixo opcional para a sequência numérica. Deixe em branco para nenhum prefixo ou insira um prefixo personalizado."
+        "help": "Prefixo fixo opcional para a sequência numérica. Deixe em branco para nenhum prefixo ou insira um prefixo personalizado. Para incluir a data de emissão, use o campo Formato de data em vez de digitá-la aqui."
+      },
+      "dateFormat": {
+        "label": "Formato de data",
+        "help": "Data opcional inserida entre o prefixo e o número sequencial. Por exemplo, {YYYY}-{MM}- produz INV-2026-08-000001. Deixe em branco para manter os números sem data.",
+        "tokensHint": "Marcadores: {YYYY} ano com quatro dígitos, {YY} ano com dois dígitos, {MM} mês, {DD} dia. A data é calculada no momento em que o número é atribuído, no fuso horário padrão configurado em Configurações. A sequência é contínua — ela não recomeça a cada ano, mês ou dia."
       },
       "minimumDigits": {
         "label": "Dígitos Mínimos",

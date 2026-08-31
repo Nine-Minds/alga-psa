@@ -1207,7 +1207,12 @@
     "fields": {
       "prefix": {
         "label": "Prefiks numeru",
-        "help": "Opcjonalny prefiks dla sekwencji numerów. Pozostaw puste, aby nie używać prefiksu, lub wprowadź własny prefiks."
+        "help": "Opcjonalny stały prefiks dla sekwencji numerów. Pozostaw puste, aby nie używać prefiksu, lub wprowadź własny prefiks. Aby dodać datę wystawienia, użyj pola Format daty zamiast wpisywać ją tutaj."
+      },
+      "dateFormat": {
+        "label": "Format daty",
+        "help": "Opcjonalna data wstawiana między prefiks a numer kolejny. Na przykład {YYYY}-{MM}- daje INV-2026-08-000001. Pozostaw puste, aby numery były bez daty.",
+        "tokensHint": "Znaczniki: {YYYY} rok czterocyfrowy, {YY} rok dwucyfrowy, {MM} miesiąc, {DD} dzień. Data jest ustalana w momencie nadania numeru, w domyślnej strefie czasowej skonfigurowanej w Ustawieniach. Sekwencja jest ciągła — nie zaczyna się od nowa co roku, co miesiąc ani codziennie."
       },
       "minimumDigits": {
         "label": "Minimalna liczba cyfr",
