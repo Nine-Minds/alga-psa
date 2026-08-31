@@ -73,6 +73,10 @@
         "unavailable": {
           "description": "This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.",
           "title": "Configuration unavailable"
+        },
+        "noPermission": {
+          "title": "No access to accounting integrations",
+          "description": "You do not have permission to view or configure accounting integrations. Ask an administrator for access."
         }
       },
       "modules": {
@@ -215,11 +219,13 @@
           "intro": "This integration provides an alternative to OAuth-based QuickBooks connectivity:",
           "mappings": {
             "description": "Map Alga clients, services, tax codes, and payment terms to the identifiers used in your QuickBooks company. These values are used when generating the CSV export.",
-            "title": "QuickBooks CSV Mappings"
+            "title": "QuickBooks CSV Mappings",
+            "permissionNotice": "Editing CSV mappings requires the manage-mappings capability. Ask an administrator to grant it."
           },
           "note": "Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.",
           "title": "QuickBooks CSV Integration"
-        }
+        },
+        "noPermissionDescription": "You do not have permission to view or configure accounting integrations."
       },
       "taxImport": {
         "actions": {
@@ -1922,7 +1928,8 @@
           "descriptionPrefix": "Configure live QuickBooks mappings for the connected company. These mappings are scoped to",
           "placeholderAlert": "The mapping manager becomes available after the first QuickBooks company is connected and set as the default live QuickBooks context.",
           "placeholderDescription": "Connect a QuickBooks company before configuring live QuickBooks item and tax mappings.",
-          "title": "Live QuickBooks Mapping & Configuration"
+          "title": "Live QuickBooks Mapping & Configuration",
+          "permissionNotice": "You can view the connected company, but editing mappings requires the manage-mappings capability. Ask an administrator to grant it."
         },
         "noClientId": "No client ID is stored for this tenant yet.",
         "noClientSecret": "No client secret is stored for this tenant yet.",
@@ -1945,7 +1952,9 @@
           "none": "No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.",
           "tenant": "This tenant connects through its own Intuit app, using the credentials stored below."
         },
-        "setupGuideLink": "QuickBooks setup guide"
+        "setupGuideLink": "QuickBooks setup guide",
+        "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
+        "connectionsPermissionNotice": "You can view QuickBooks settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it."
       },
       "sync": {
         "healthCardTitle": "Sync Health",
@@ -3360,7 +3369,8 @@
             "s3": "After changes in Xero, export contacts from Xero",
             "s4": "Import the Xero contacts CSV back into Alga to sync updates"
           },
-          "workflowTitle": "Client Sync Workflow"
+          "workflowTitle": "Client Sync Workflow",
+          "permissionNotice": "Exporting and importing clients requires the execute-exports capability. Ask an administrator to grant it."
         },
         "settings": {
           "dateFormat": "Date Format",
@@ -3384,7 +3394,8 @@
           "managedSuffix": "to select invoices, generate Xero CSV exports, import tax reports, and manage batches.",
           "mappings": {
             "description": "Map Alga clients, services, and tax codes to the identifiers used in your Xero organisation. These values are used when generating the CSV export.",
-            "title": "Xero CSV Mappings"
+            "title": "Xero CSV Mappings",
+            "permissionNotice": "Editing CSV mappings requires the manage-mappings capability. Ask an administrator to grant it."
           },
           "overview": {
             "description": "Export invoices to CSV for manual import into Xero, and import tax data from Xero reports.",
@@ -3436,7 +3447,9 @@
             "title": "CSV Workflow",
             "trackingDescription": "The CSV export includes tracking category columns that link each Xero invoice back to its Alga source. When you import tax from Xero, these tracking categories are used to automatically match invoices - no manual reconciliation needed.",
             "trackingTitle": "Tracking Categories for Reconciliation"
-          }
+          },
+          "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
+          "connectionsPermissionNotice": "You can view Xero CSV settings, but changing them requires the manage-connections capability. Ask an administrator to grant it."
         }
       },
       "live": {
@@ -3506,7 +3519,8 @@
           "descriptionPrefix": "Configure live Xero mappings for the default connected organisation. These mappings are scoped to",
           "placeholderAlert": "The mapping manager becomes available after the first Xero organisation is connected and set as the default live Xero context.",
           "placeholderDescription": "Connect a live Xero organisation before configuring live Xero item and tax mappings.",
-          "title": "Live Xero Mapping & Configuration"
+          "title": "Live Xero Mapping & Configuration",
+          "permissionNotice": "You can view the default connected organisation, but editing mappings requires the manage-mappings capability. Ask an administrator to grant it."
         },
         "noClientId": "No client ID is stored for this tenant yet.",
         "noClientSecret": "No client secret is stored for this tenant yet.",
@@ -3520,7 +3534,9 @@
         "tenantOauthDescription": "Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.",
         "tenantOauthTitle": "Tenant-Owned OAuth App",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
+        "connectionsPermissionNotice": "You can view Xero settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it."
       }
     },
     "stripe": {
