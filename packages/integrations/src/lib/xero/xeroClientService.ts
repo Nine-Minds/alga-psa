@@ -1,6 +1,13 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
+import { createTenantKnex } from '@alga-psa/db';
+import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
+import {
+  getProviderCredentialWriteDisposition,
+  withProviderCredentialLock,
+} from '../providerDisconnect/lock';
+import { PROVIDER_XERO } from '../providerDisconnect/types';
 import { AppError, sanitizeProviderMessage, toSafeProviderError } from '@alga-psa/core';
 import type {
   ExternalCompanyRecord,
@@ -10,15 +17,16 @@ import type {
 // Re-export types for dependent modules
 export type { ExternalCompanyRecord, NormalizedCompanyPayload } from '@alga-psa/types';
 
-// Env overrides exist so test environments can point at the Xero emulator
-// (packages/emulators/xero) or a local provider simulator
-// (tools/smoke-sim/accounting-provider-sim.mjs), mirroring
-// QBO_OAUTH_TOKEN_URL/QBO_API_BASE_URL for QBO and MICROSOFT_GRAPH_BASE_URL
-// for Graph.
-const XERO_TOKEN_ENDPOINT =
-  process.env.XERO_OAUTH_TOKEN_URL?.trim() || 'https://identity.xero.com/connect/token';
-const XERO_API_BASE_URL =
-  process.env.XERO_API_BASE_URL?.trim() || 'https://api.xero.com/api.xro/2.0';
+// Env overrides exist so test environments can point at a local Xero
+// provider simulator (tools/smoke-sim/accounting-provider-simulator.cjs or
+// packages/emulators/xero), mirroring QBO_OAUTH_TOKEN_URL/QBO_API_BASE_URL
+// for QBO and MICROSOFT_GRAPH_BASE_URL for Graph. They resolve lazily so a
+// test can set them after module load; when unset every call targets the real
+// Xero hosts.
+const XERO_TOKEN_ENDPOINT_DEFAULT = 'https://identity.xero.com/connect/token';
+const XERO_API_BASE_URL_DEFAULT = 'https://api.xero.com/api.xro/2.0';
+const XERO_CONNECTIONS_URL_DEFAULT = 'https://api.xero.com/connections';
+const XERO_REVOCATION_URL_DEFAULT = 'https://identity.xero.com/connect/revocation';
 const XERO_CREDENTIALS_SECRET = 'xero_credentials';
 const XERO_CLIENT_ID_SECRET = 'xero_client_id';
 const XERO_CLIENT_SECRET_SECRET = 'xero_client_secret';
@@ -35,11 +43,35 @@ const DEFAULT_XERO_SCOPES = [
   'accounting.contacts'
 ];
 
+// Provider endpoint overrides so test environments can point at the local
+// provider simulator (tools/smoke-sim/accounting-provider-simulator.cjs)
+// without touching production hosts. They resolve lazily so a test can set
+// them after module load; when unset every call targets the real Xero hosts.
+function readEndpointOverride(key: string, fallback: string): string {
+  return process.env[key]?.trim() || fallback;
+}
+
+export function getXeroTokenUrl(): string {
+  return readEndpointOverride('XERO_OAUTH_TOKEN_URL', XERO_TOKEN_ENDPOINT_DEFAULT);
+}
+
+export function getXeroApiBaseUrl(): string {
+  return readEndpointOverride('XERO_API_BASE_URL', XERO_API_BASE_URL_DEFAULT);
+}
+
+export function getXeroConnectionsUrl(): string {
+  return readEndpointOverride('XERO_CONNECTIONS_URL', XERO_CONNECTIONS_URL_DEFAULT);
+}
+
+export function getXeroRevocationUrl(): string {
+  return readEndpointOverride('XERO_REVOCATION_URL', XERO_REVOCATION_URL_DEFAULT);
+}
+
 // OAuth scope tokens are dot-separated lowercase identifiers such as
 // offline_access or accounting.settings.read.
 const XERO_SCOPE_TOKEN_PATTERN = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
 
-export const XERO_TOKEN_URL = XERO_TOKEN_ENDPOINT;
+export const XERO_TOKEN_URL = getXeroTokenUrl();
 export const XERO_CREDENTIALS_SECRET_NAME = XERO_CREDENTIALS_SECRET;
 export const XERO_CLIENT_ID_SECRET_NAME = XERO_CLIENT_ID_SECRET;
 export const XERO_CLIENT_SECRET_SECRET_NAME = XERO_CLIENT_SECRET_SECRET;
@@ -734,7 +766,7 @@ export class XeroClientService {
 
     try {
       const response = await axios.request<T>({
-        baseURL: XERO_API_BASE_URL,
+        baseURL: getXeroApiBaseUrl(),
         ...config,
         headers
       });
@@ -794,7 +826,7 @@ export class XeroClientService {
         client_secret: this.appSecrets.clientSecret
       });
 
-      const response = await axios.post(XERO_TOKEN_ENDPOINT, params.toString(), {
+      const response = await axios.post(getXeroTokenUrl(), params.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         }
@@ -815,7 +847,15 @@ export class XeroClientService {
       };
 
       this.connections[this.connection.connectionId] = this.connection;
-      await storeTenantConnections(this.tenantId, this.connections);
+      // Persist through the gated upsert (not a raw store): a refresh from a
+      // client instantiated before a disconnect started must not write the
+      // live credential secret back while the disconnect is in flight. Only
+      // the refreshed connection is passed so a concurrently updated sibling
+      // connection is not clobbered with this client's stale copy. QBO's
+      // refresh path does the same via upsertStoredQboCredentials.
+      await upsertStoredXeroConnections(this.tenantId, {
+        [this.connection.connectionId]: this.connection
+      });
     } catch (error) {
       const normalized = this.normalizeError(error);
       if (normalized.code === 'XERO_API_ERROR') {
@@ -953,29 +993,68 @@ export async function getStoredXeroConnections(tenantId: string): Promise<XeroCo
 export async function upsertStoredXeroConnections(
   tenantId: string,
   updates: XeroConnectionsStore,
-  options: { prioritize?: string[] } = {}
+  options: { prioritize?: string[]; authorizationFlowStartedAt?: string } = {}
 ): Promise<XeroConnectionsStore> {
-  const existing = await getTenantConnections(tenantId);
-  const merged: XeroConnectionsStore = { ...existing, ...updates };
+  const { knex } = await createTenantKnex(tenantId);
 
-  if (options.prioritize?.length) {
-    const prioritizedEntries: XeroConnectionsStore = {};
-    for (const id of options.prioritize) {
-      if (merged[id]) {
-        prioritizedEntries[id] = merged[id];
-      }
+  // The gate check and secret write hold the shared credential-write lock (see
+  // providerDisconnect/lock.ts), which disconnect initiation also holds while
+  // persisting its record and invalidating outstanding flows. Active records
+  // block every write; a finalized record is retired only for an OAuth flow
+  // provably started after finalization. Record-read failures fail closed.
+  return withProviderCredentialLock(knex, tenantId, PROVIDER_XERO, async (trx) => {
+    const disposition = await getProviderCredentialWriteDisposition(
+      trx,
+      tenantId,
+      PROVIDER_XERO,
+      options.authorizationFlowStartedAt,
+    ).catch(() => 'disconnect_in_progress' as const);
+    if (disposition === 'disconnect_in_progress') {
+      throw new AppError(
+        'XERO_DISCONNECT_IN_PROGRESS',
+        'Xero is being disconnected. Finish or finalize the disconnect before connecting again.'
+      );
     }
-    for (const [id, connection] of Object.entries(merged)) {
-      if (!(id in prioritizedEntries)) {
-        prioritizedEntries[id] = connection;
-      }
+    if (disposition === 'stale_authorization') {
+      throw new AppError(
+        'XERO_STALE_AUTHORIZATION',
+        'This Xero authorization started before the last disconnect completed. Start the connection again.'
+      );
     }
-    await storeTenantConnections(tenantId, prioritizedEntries);
-    return prioritizedEntries;
-  }
 
-  await storeTenantConnections(tenantId, merged);
-  return merged;
+    // Reconnect after a completed (or force-finalized) disconnect: retire the
+    // stale terminal disconnect record BEFORE the new connection becomes visible
+    // to the rest of the system, so the next disconnect starts a fresh cycle
+    // instead of short-circuiting on the old finalized row. A pending disconnect
+    // record is deliberately left alone — reconnect during an in-flight cycle is
+    // blocked upstream. The disconnect service independently treats a terminal
+    // record with live credentials as stale (defense in depth).
+    await retireTerminalDisconnectRecord(tenantId, PROVIDER_XERO, trx);
+
+    // Read-merge-write inside the lock so concurrent upserts serialize instead
+    // of losing entries to a stale read.
+    const existing = await getTenantConnections(tenantId);
+    const merged: XeroConnectionsStore = { ...existing, ...updates };
+
+    if (options.prioritize?.length) {
+      const prioritizedEntries: XeroConnectionsStore = {};
+      for (const id of options.prioritize) {
+        if (merged[id]) {
+          prioritizedEntries[id] = merged[id];
+        }
+      }
+      for (const [id, connection] of Object.entries(merged)) {
+        if (!(id in prioritizedEntries)) {
+          prioritizedEntries[id] = connection;
+        }
+      }
+      await storeTenantConnections(tenantId, prioritizedEntries);
+      return prioritizedEntries;
+    }
+
+    await storeTenantConnections(tenantId, merged);
+    return merged;
+  });
 }
 
 export async function resolveXeroOAuthCredentials(

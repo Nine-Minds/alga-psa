@@ -1846,7 +1846,9 @@
           "reconnect": "QuickBooks erneut verbinden",
           "refresh": "Aktualisieren",
           "saveCredentials": "QuickBooks-Anmeldedaten speichern",
-          "saving": "Speichern…"
+          "saving": "Speichern…",
+          "retryDisconnect": "Trennung wiederholen",
+          "forceFinalizeDisconnect": "Abschluss erzwingen"
         },
         "badges": {
           "connectionExpired": "Verbindung benötigt Aufmerksamkeit",
@@ -1858,6 +1860,7 @@
         "callback": {
           "accessDenied": "Der QuickBooks-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
           "configMissing": "QuickBooks OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret nicht vollständig konfiguriert waren.",
+          "disconnectInProgress": "QuickBooks wird gerade getrennt. Schließen Sie die Trennung ab, bevor Sie erneut eine Verbindung herstellen.",
           "forbidden": "Sie haben keine Berechtigung mehr, Buchhaltungsverbindungen zu verwalten. Bitten Sie einen Administrator um Zugriff.",
           "generic": "QuickBooks hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der QuickBooks-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
@@ -1932,6 +1935,18 @@
         "setupGuideLink": "QuickBooks-Einrichtungsanleitung",
         "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
         "connectionsPermissionNotice": "Sie können die QuickBooks-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
+,
+        "disconnectPending": "QuickBooks wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
+        "disconnectForceFinalized": "Die Trennung von QuickBooks wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
+        "disconnect": {
+          "forceFinalizePrompt": "Grund für den zwangsweisen Abschluss der QuickBooks-Trennung (wird im Audit-Log erfasst):",
+          "inProgressTitle": "QuickBooks-Trennung läuft",
+          "inProgressDescription": "Anbieterberechtigungen werden widerrufen. Synchronisierung und Exporte bleiben pausiert, bis für jedes verbundene Unternehmen der Widerruf bestätigt ist.",
+          "targetRevoked": "widerrufen",
+          "targetFailed": "benötigt Aufmerksamkeit",
+          "targetPending": "ausstehend",
+          "failedPermanentDescription": "Bei der Anbieterbereinigung ist ein dauerhafter Fehler aufgetreten. Sie können es erneut versuchen oder den Abschluss erzwingen, um die gespeicherten Anmeldedaten mit einem Audit-Eintrag zu entfernen."
+        }
       },
       "sync": {
         "healthCardTitle": "Synchronisierungsstatus",
@@ -3437,7 +3452,9 @@
           "reconnect": "Xero erneut verbinden",
           "refresh": "Aktualisieren",
           "saveCredentials": "Xero-Anmeldedaten speichern",
-          "saving": "Speichern…"
+          "saving": "Speichern…",
+          "retryDisconnect": "Trennung wiederholen",
+          "forceFinalizeDisconnect": "Abschluss erzwingen"
         },
         "badges": {
           "connectionExpired": "Verbindung abgelaufen",
@@ -3450,6 +3467,7 @@
           "accessDenied": "Der Xero-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
           "configMissing": "Xero OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret des Mandanten nicht vollständig konfiguriert waren.",
           "connectionsUnmapped": "Xero hat Organisationen zurückgegeben, aber keine enthielt die zum Speichern einer Verbindung erforderlichen Kennungen.",
+          "disconnectInProgress": "Xero wird gerade getrennt. Schließen Sie die Trennung ab, bevor Sie erneut eine Verbindung herstellen.",
           "forbidden": "Sie haben keine Berechtigung mehr, Buchhaltungsverbindungen zu verwalten. Bitten Sie einen Administrator um Zugriff.",
           "generic": "Xero hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der Xero-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
@@ -3511,6 +3529,19 @@
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
         "connectionsPermissionNotice": "Sie können die Xero-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
+,
+        "disconnectPending": "Xero wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
+        "disconnectForceFinalized": "Die Trennung von Xero wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
+        "disconnect": {
+          "forceFinalizePrompt": "Grund für den zwangsweisen Abschluss der Xero-Trennung (wird im Audit-Log erfasst):",
+          "inProgressTitle": "Xero-Trennung läuft",
+          "inProgressDescription": "Anbieterverbindungen werden widerrufen. Synchronisierung und Exporte bleiben pausiert, bis für jede Verbindung die Entfernung bestätigt ist.",
+          "grantTarget": "Widerruf der OAuth-Berechtigung",
+          "targetRevoked": "widerrufen",
+          "targetFailed": "benötigt Aufmerksamkeit",
+          "targetPending": "ausstehend",
+          "failedPermanentDescription": "Bei der Anbieterbereinigung ist ein dauerhafter Fehler aufgetreten. Sie können es erneut versuchen oder den Abschluss erzwingen, um die gespeicherten Anmeldedaten mit einem Audit-Eintrag zu entfernen."
+        }
       }
     },
     "stripe": {
@@ -3695,6 +3726,8 @@
       "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut.",
       "invoiceCancelled": "Die Rechnung wurde storniert und kann nicht der Buchhaltungsintegration zugeordnet werden.",
       "invoiceNotFound": "Die Rechnung existiert nicht mehr und kann nicht der Buchhaltungsintegration zugeordnet werden."
+,
+      "scopeRequired": "Zuordnungsabfragen erfordern eine Integration, einen Entitätstyp und einen Bereichs-Scope."
     },
     "qbo": {
       "enterpriseOnly": "Die QuickBooks-Online-Integration ist nur in der Enterprise Edition verfügbar.",

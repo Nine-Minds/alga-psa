@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import logger from '@alga-psa/core/logger';
-import { toSafeProviderError } from '@alga-psa/core';
+import { AppError, toSafeProviderError } from '@alga-psa/core';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
@@ -13,8 +13,14 @@ import {
   XeroConnectionsStore,
   resolveXeroOAuthCredentials,
   upsertStoredXeroConnections,
-  XERO_TOKEN_URL
+  getXeroTokenUrl,
+  getXeroConnectionsUrl,
 } from '../../../../lib/xero/xeroClientService';
+import {
+  getProviderCredentialWriteDisposition,
+  PROVIDER_XERO,
+  withProviderCredentialLock
+} from '../../../../lib/providerDisconnect';
 import { oauthCsrfTokensMatch } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
 import {
@@ -28,10 +34,6 @@ import { consumeXeroConnectAttempt } from '../../../../lib/xero/xeroOAuthConnect
 import { decryptXeroVerifier } from '../../../../lib/xero/xeroOAuthVerifierCipher';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-// Env override exists so test environments can point at the Xero emulator
-// (packages/emulators/xero), mirroring XERO_OAUTH_AUTHORIZE_URL in connect.ts.
-const XERO_CONNECTIONS_URL =
-  process.env.XERO_CONNECTIONS_URL?.trim() || 'https://api.xero.com/connections';
 
 const SUCCESS_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=success';
@@ -223,6 +225,23 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
   }
 
   const tenantId = attempt.tenantId;
+  const authorizationFlowStartedAt = new Date(attempt.createdAt).toISOString();
+
+  // Check the trusted flow start under the same lock as disconnect initiation.
+  // This rejects active disconnects and attempts that predate a finalized disconnect.
+  const { knex } = await createTenantKnex(tenantId);
+  const writeDisposition = await withProviderCredentialLock(knex, tenantId, PROVIDER_XERO, (trx) =>
+    getProviderCredentialWriteDisposition(trx, tenantId, PROVIDER_XERO, authorizationFlowStartedAt)
+  ).catch(() => 'disconnect_in_progress' as const);
+  if (writeDisposition !== 'allowed') {
+    logger.info('[xeroOAuth] Callback blocked by credential-write provenance gate', {
+      tenantId,
+      disposition: writeDisposition
+    });
+    return createRedirect(FAILURE_PATH, {
+      xero_error: writeDisposition === 'stale_authorization' ? 'state_replayed' : writeDisposition
+    });
+  }
 
   let credentials;
   try {
@@ -248,7 +267,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     });
 
     const tokenResponse = await axios.post(
-      XERO_TOKEN_URL,
+      getXeroTokenUrl(),
       tokenParams.toString(),
       {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -288,7 +307,7 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
           ? tokenData.scope.join(' ')
           : undefined;
 
-    const connectionsResponse = await axios.get(XERO_CONNECTIONS_URL, {
+    const connectionsResponse = await axios.get(getXeroConnectionsUrl(), {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/json'
@@ -351,7 +370,8 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     }
 
     await upsertStoredXeroConnections(tenantId, connectionUpdates, {
-      prioritize: Object.keys(connectionUpdates)
+      prioritize: Object.keys(connectionUpdates),
+      authorizationFlowStartedAt
     });
 
     logger.info('[xeroOAuth] Completed Xero OAuth callback', {
@@ -383,6 +403,18 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
 
     return createRedirect(SUCCESS_PATH);
   } catch (error) {
+    // The storage layer refuses the write when a disconnect started after the
+    // route-level gate above passed (its check-and-write is atomic with
+    // disconnect initiation). Surface the same accurate status as the
+    // route-level rejection instead of a generic failure.
+    if (error instanceof AppError && error.code === 'XERO_DISCONNECT_IN_PROGRESS') {
+      logger.info('[xeroOAuth] Callback blocked at credential storage: Xero disconnect in progress', { tenantId });
+      return createRedirect(FAILURE_PATH, { xero_error: 'disconnect_in_progress' });
+    }
+    if (error instanceof AppError && error.code === 'XERO_STALE_AUTHORIZATION') {
+      logger.info('[xeroOAuth] Callback blocked at credential storage: stale Xero authorization', { tenantId });
+      return createRedirect(FAILURE_PATH, { xero_error: 'state_replayed' });
+    }
     // The failed request may be the token exchange itself: reduce to the safe
     // allowlist (status, provider error code, sanitized message, correlation
     // ID) — never the response body or request config.

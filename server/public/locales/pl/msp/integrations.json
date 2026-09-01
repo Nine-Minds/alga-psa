@@ -1846,7 +1846,9 @@
           "reconnect": "Połącz ponownie QuickBooks",
           "refresh": "Odśwież",
           "saveCredentials": "Zapisz poświadczenia QuickBooks",
-          "saving": "Zapisywanie…"
+          "saving": "Zapisywanie…",
+          "retryDisconnect": "Ponów rozłączanie",
+          "forceFinalizeDisconnect": "Wymuś finalizację"
         },
         "badges": {
           "connectionExpired": "Połączenie wymaga uwagi",
@@ -1858,6 +1860,7 @@
         "callback": {
           "accessDenied": "Dostęp do QuickBooks został odmówiony przed ukończeniem połączenia.",
           "configMissing": "Nie można uruchomić QuickBooks OAuth, ponieważ Client ID i Client Secret nie zostały w pełni skonfigurowane.",
+          "disconnectInProgress": "Trwa rozłączanie QuickBooks. Zakończ rozłączanie przed ponownym połączeniem.",
           "forbidden": "Nie masz już uprawnień do zarządzania połączeniami księgowymi. Poproś administratora o dostęp.",
           "generic": "QuickBooks zwróciło błąd OAuth: {{code}}",
           "invalidState": "Stan OAuth QuickBooks był nieprawidłowy lub wygasł. Rozpocznij przepływ łączenia ponownie.",
@@ -1932,6 +1935,18 @@
         "setupGuideLink": "Przewodnik konfiguracji QuickBooks",
         "noPermissionDescription": "Nie masz uprawnień do wyświetlania ani konfigurowania integracji księgowych.",
         "connectionsPermissionNotice": "Możesz wyświetlić ustawienia QuickBooks, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie."
+,
+        "disconnectPending": "Trwa rozłączanie QuickBooks. Synchronizacja i eksporty są wstrzymane do czasu zakończenia czyszczenia po stronie dostawcy; rozłączanie jest automatycznie ponawiane.",
+        "disconnectForceFinalized": "Rozłączanie QuickBooks zostało przymusowo sfinalizowane. Nie udało się potwierdzić czyszczenia po stronie dostawcy, dlatego poświadczenia zostały usunięte lokalnie wraz z wpisem audytowym.",
+        "disconnect": {
+          "forceFinalizePrompt": "Powód przymusowej finalizacji rozłączenia QuickBooks (zapisywany w dzienniku audytu):",
+          "inProgressTitle": "Trwa rozłączanie QuickBooks",
+          "inProgressDescription": "Uprawnienia po stronie dostawcy są unieważniane. Synchronizacja i eksporty pozostają wstrzymane, dopóki każda połączona firma nie zostanie potwierdzona jako unieważniona.",
+          "targetRevoked": "unieważnione",
+          "targetFailed": "wymaga uwagi",
+          "targetPending": "oczekuje",
+          "failedPermanentDescription": "Czyszczenie po stronie dostawcy napotkało trwały błąd. Możesz ponowić próbę lub wymusić finalizację, aby usunąć zapisane poświadczenia wraz z wpisem audytowym."
+        }
       },
       "sync": {
         "healthCardTitle": "Stan synchronizacji",
@@ -3437,7 +3452,9 @@
           "reconnect": "Połącz ponownie Xero",
           "refresh": "Odśwież",
           "saveCredentials": "Zapisz poświadczenia Xero",
-          "saving": "Zapisywanie…"
+          "saving": "Zapisywanie…",
+          "retryDisconnect": "Ponów rozłączanie",
+          "forceFinalizeDisconnect": "Wymuś finalizację"
         },
         "badges": {
           "connectionExpired": "Połączenie wygasło",
@@ -3450,6 +3467,7 @@
           "accessDenied": "Dostęp do Xero został odmówiony przed ukończeniem połączenia.",
           "configMissing": "Nie można uruchomić Xero OAuth, ponieważ Client ID i Client Secret tenanta nie zostały w pełni skonfigurowane.",
           "connectionsUnmapped": "Xero zwróciło organizacje, ale żadna nie zawierała identyfikatorów wymaganych do zapisania połączenia.",
+          "disconnectInProgress": "Trwa rozłączanie Xero. Zakończ rozłączanie przed ponownym połączeniem.",
           "forbidden": "Nie masz już uprawnień do zarządzania połączeniami księgowymi. Poproś administratora o dostęp.",
           "generic": "Xero zwróciło błąd OAuth: {{code}}",
           "invalidState": "Stan OAuth Xero był nieprawidłowy lub wygasł. Rozpocznij przepływ łączenia ponownie.",
@@ -3511,6 +3529,19 @@
         "xeroCsv": "Plik CSV Xero",
         "noPermissionDescription": "Nie masz uprawnień do wyświetlania ani konfigurowania integracji księgowych.",
         "connectionsPermissionNotice": "Możesz wyświetlić ustawienia Xero, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie."
+,
+        "disconnectPending": "Trwa rozłączanie Xero. Synchronizacja i eksporty są wstrzymane do czasu zakończenia czyszczenia po stronie dostawcy; rozłączanie jest automatycznie ponawiane.",
+        "disconnectForceFinalized": "Rozłączanie Xero zostało przymusowo sfinalizowane. Nie udało się potwierdzić czyszczenia po stronie dostawcy, dlatego poświadczenia zostały usunięte lokalnie wraz z wpisem audytowym.",
+        "disconnect": {
+          "forceFinalizePrompt": "Powód przymusowej finalizacji rozłączenia Xero (zapisywany w dzienniku audytu):",
+          "inProgressTitle": "Trwa rozłączanie Xero",
+          "inProgressDescription": "Połączenia po stronie dostawcy są unieważniane. Synchronizacja i eksporty pozostają wstrzymane, dopóki każde połączenie nie zostanie potwierdzone jako usunięte.",
+          "grantTarget": "Unieważnienie uprawnienia OAuth",
+          "targetRevoked": "unieważnione",
+          "targetFailed": "wymaga uwagi",
+          "targetPending": "oczekuje",
+          "failedPermanentDescription": "Czyszczenie po stronie dostawcy napotkało trwały błąd. Możesz ponowić próbę lub wymusić finalizację, aby usunąć zapisane poświadczenia wraz z wpisem audytowym."
+        }
       }
     },
     "stripe": {
@@ -3695,6 +3726,8 @@
       "deleteFailed": "Nie można usunąć powiązania. Spróbuj ponownie.",
       "invoiceCancelled": "Faktura została anulowana i nie można jej zmapować do integracji księgowej.",
       "invoiceNotFound": "Faktura już nie istnieje i nie można jej zmapować do integracji księgowej."
+,
+      "scopeRequired": "Wyszukiwanie mapowań wymaga integracji, typu encji i zakresu realm."
     },
     "qbo": {
       "enterpriseOnly": "Integracja z QuickBooks Online jest dostępna tylko w wersji Enterprise Edition.",

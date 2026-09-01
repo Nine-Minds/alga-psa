@@ -60,6 +60,8 @@ export interface QboSimulatorOptions {
   automatedSalesTax?: { defaultTaxCodeId: string };
   /** Realm id reported in change sets. */
   realmId?: string;
+  /** Company display name served for CompanyInfo reads. */
+  companyName?: string;
 }
 
 interface ChangeJournalEntry {
@@ -76,7 +78,19 @@ export class QboSimError extends Error {
   }
 }
 
-const SUPPORTED_ENTITIES = ['Customer', 'Invoice', 'CreditMemo', 'Payment', 'Item', 'TaxCode', 'TaxRate'] as const;
+const SUPPORTED_ENTITIES = [
+  'Customer',
+  'Invoice',
+  'CreditMemo',
+  'Payment',
+  'Item',
+  'TaxCode',
+  'TaxRate',
+  'Account',
+  'Class',
+  'Department',
+  'Term'
+] as const;
 type SimEntityType = (typeof SUPPORTED_ENTITIES)[number];
 
 function toCents(amount: unknown): number {
@@ -96,7 +110,11 @@ export class QboSimulator {
     Payment: new Map(),
     Item: new Map(),
     TaxCode: new Map(),
-    TaxRate: new Map()
+    TaxRate: new Map(),
+    Account: new Map(),
+    Class: new Map(),
+    Department: new Map(),
+    Term: new Map()
   };
 
   private journal: ChangeJournalEntry[] = [];
@@ -125,7 +143,7 @@ export class QboSimulator {
   };
 
   constructor(options: QboSimulatorOptions = {}) {
-    this.options = { realmId: 'realm-sim', ...options };
+    this.options = { realmId: 'realm-sim', companyName: 'Alga Emulated Co', ...options };
 
     this.client = {
       create: async (entityType, data) => this.createEntity(entityType, data) as any,
@@ -516,7 +534,85 @@ export class QboSimulator {
       return this.page(rows, taxRatePage[1], taxRatePage[2]);
     }
 
+    // ── Allowlisted catalog projections (mapping & onboarding screens) ─────
+    // These mirror the exact field lists the integration's catalog actions
+    // issue; anything wider still fails loud below.
+
+    const namedCatalog = selectQuery.match(/^SELECT\s+Id,\s*Name\s+FROM\s+(Class|Department|Term|Item)\s*$/i);
+    if (namedCatalog) {
+      const entityType = this.normalizeEntityType(namedCatalog[1]);
+      // QBO returns ACTIVE rows only unless Active is filtered explicitly.
+      return this.activeRows(entityType).map((row) => ({ Id: row.Id, Name: row.Name }));
+    }
+
+    const accountCatalog = selectQuery.match(/^SELECT\s+Id,\s*Name,\s*AccountType\s+FROM\s+Account\s*$/i);
+    if (accountCatalog) {
+      return this.activeRows('Account').map((row) => ({
+        Id: row.Id,
+        Name: row.Name,
+        AccountType: row.AccountType
+      }));
+    }
+
+    const companyInfo = selectQuery.match(/^SELECT\s+CompanyName\s+FROM\s+CompanyInfo\s*$/i);
+    if (companyInfo) {
+      return [{ CompanyName: this.options.companyName }];
+    }
+
+    const customerPage = selectQuery.match(
+      /^SELECT\s+Id,\s*DisplayName,\s*Active\s+FROM\s+Customer\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)$/i
+    );
+    if (customerPage) {
+      const rows = this.activeRows('Customer').map((row) => ({
+        Id: row.Id,
+        DisplayName: row.DisplayName,
+        Active: row.Active
+      }));
+      return this.page(rows, customerPage[1], customerPage[2]);
+    }
+
+    const invoicePage = selectQuery.match(
+      /^SELECT\s+Id,\s*DocNumber,\s*TotalAmt,\s*SyncToken,\s*CustomerRef\s+FROM\s+Invoice(?:\s+WHERE\s+TxnDate\s*>=\s*'([^']*)')?\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)$/i
+    );
+    if (invoicePage) {
+      const windowStart = invoicePage[1];
+      const rows = Array.from(this.stores.Invoice.values())
+        .filter((invoice) => !invoice.deleted)
+        .filter((invoice) => !windowStart || String(invoice.TxnDate ?? '') >= windowStart)
+        .map((invoice) => ({
+          Id: invoice.Id,
+          DocNumber: invoice.DocNumber,
+          TotalAmt: invoice.TotalAmt,
+          SyncToken: invoice.SyncToken,
+          CustomerRef: invoice.CustomerRef ? { ...invoice.CustomerRef } : invoice.CustomerRef
+        }));
+      return this.page(rows, invoicePage[2], invoicePage[3]);
+    }
+
+    const paymentByCustomer = selectQuery.match(
+      /^SELECT\s+\*\s+FROM\s+Payment\s+WHERE\s+CustomerRef\s*=\s*'((?:[^']|'')*)'\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)$/i
+    );
+    if (paymentByCustomer) {
+      const customerId = paymentByCustomer[1].replace(/''/g, "'");
+      const rows = Array.from(this.stores.Payment.values())
+        .filter((payment) => !payment.deleted)
+        .filter((payment) => String(payment.CustomerRef?.value ?? '') === customerId);
+      return this.page(rows, paymentByCustomer[2], paymentByCustomer[3]);
+    }
+
     throw new QboSimError('SIM_UNSUPPORTED', `QboSimulator does not model query: ${selectQuery}`);
+  }
+
+  /** Case-normalize a regex-captured entity name to its store key. */
+  private normalizeEntityType(raw: string): SimEntityType {
+    const normalized = raw[0].toUpperCase() + raw.slice(1).toLowerCase();
+    return normalized as SimEntityType;
+  }
+
+  private activeRows(entityType: SimEntityType): QboSimEntity[] {
+    return Array.from(this.stores[entityType].values()).filter(
+      (row) => !row.deleted && row.Active !== false
+    );
   }
 
   private page<T>(rows: T[], startPosition: string, maxResults: string): T[] {
@@ -558,10 +654,11 @@ export class QboSimulator {
     return entity;
   }
 
-  seedInvoice(params: { customerId: string; amountCents: number; docNumber?: string }): QboSimEntity {
+  seedInvoice(params: { customerId: string; amountCents: number; docNumber?: string; txnDate?: string }): QboSimEntity {
     return this.createEntity('Invoice', {
       CustomerRef: { value: params.customerId },
       DocNumber: params.docNumber,
+      ...(params.txnDate ? { TxnDate: params.txnDate } : {}),
       Line: [
         {
           DetailType: 'SalesItemLineDetail',
@@ -669,6 +766,45 @@ export class QboSimulator {
     };
     this.stores.Item.set(entity.Id, entity);
     this.journalChange('Item', entity.Id);
+    return entity;
+  }
+
+  seedAccount(params: { name: string; accountType: string; id?: string; active?: boolean }): QboSimEntity {
+    return this.seedNamedEntity('Account', {
+      name: params.name,
+      id: params.id,
+      active: params.active,
+      extra: { AccountType: params.accountType }
+    });
+  }
+
+  seedClass(params: { name: string; id?: string; active?: boolean }): QboSimEntity {
+    return this.seedNamedEntity('Class', params);
+  }
+
+  seedDepartment(params: { name: string; id?: string; active?: boolean }): QboSimEntity {
+    return this.seedNamedEntity('Department', params);
+  }
+
+  seedTerm(params: { name: string; id?: string; active?: boolean }): QboSimEntity {
+    return this.seedNamedEntity('Term', params);
+  }
+
+  private seedNamedEntity(
+    entityType: SimEntityType,
+    params: { name: string; id?: string; active?: boolean; extra?: Record<string, unknown> }
+  ): QboSimEntity {
+    const at = this.tick();
+    const entity: QboSimEntity = {
+      Id: params.id ?? this.allocateId(entityType),
+      SyncToken: '0',
+      Name: params.name,
+      Active: params.active !== false,
+      ...(params.extra ?? {}),
+      MetaData: { CreateTime: at, LastUpdatedTime: at }
+    };
+    this.stores[entityType].set(entity.Id, entity);
+    this.journalChange(entityType, entity.Id);
     return entity;
   }
 

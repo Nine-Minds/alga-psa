@@ -12,6 +12,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { ExternalLink, Link2, RefreshCw } from 'lucide-react';
 import {
   disconnectXero,
+  forceFinalizeXeroDisconnect,
   getXeroConnectionStatus,
   saveXeroCredentials
 } from '../../../actions/integrations/xeroActions';
@@ -48,6 +49,8 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
       return t('integrations.xero.settings.callback.missingParams', { defaultValue: 'The Xero callback was missing required parameters. Start the connect flow again.' });
     case 'access_denied':
       return t('integrations.xero.settings.callback.accessDenied', { defaultValue: 'Xero access was denied before the connection completed.' });
+    case 'disconnect_in_progress':
+      return t('integrations.xero.settings.callback.disconnectInProgress', { defaultValue: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.' });
     default:
       return code ? t('integrations.xero.settings.callback.generic', { defaultValue: 'Xero returned an OAuth error: {{code}}', code }) : null;
   }
@@ -143,12 +146,50 @@ export default function XeroIntegrationSettings() {
 
     try {
       const result = await disconnectXero();
-      if (!result.success) {
-        setError(result.error ?? t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
+      if (result.status === 'disconnected') {
+        setSuccessMessage(t('integrations.xero.settings.disconnectSuccess', { defaultValue: 'The stored Xero connection was removed. Tenant-owned Xero app credentials were preserved.' }));
+        await load();
         return;
       }
 
-      setSuccessMessage(t('integrations.xero.settings.disconnectSuccess', { defaultValue: 'The stored Xero connection was removed. Tenant-owned Xero app credentials were preserved.' }));
+      if (result.status === 'pending' || result.status === 'partial') {
+        setSuccessMessage(t('integrations.xero.settings.disconnectPending', { defaultValue: 'Xero is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.' }));
+        await load();
+        return;
+      }
+
+      if (result.status === 'failed_permanent') {
+        setError(result.error ?? t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
+        await load();
+        return;
+      }
+
+      setError(result.error ?? t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleRetryDisconnect = async () => {
+    await handleDisconnect();
+  };
+
+  const handleForceFinalize = async () => {
+    const reason = window.prompt(
+      t('integrations.xero.settings.disconnect.forceFinalizePrompt', { defaultValue: 'Reason for force-finalizing the Xero disconnect (recorded in the audit log):' })
+    );
+    if (!reason?.trim()) return;
+
+    setDisconnecting(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const result = await forceFinalizeXeroDisconnect({ reason: reason.trim() });
+      if (!result.success) {
+        setError(result.error ?? t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to finalize the Xero disconnect.' }));
+        return;
+      }
+      setSuccessMessage(t('integrations.xero.settings.disconnectForceFinalized', { defaultValue: 'The Xero disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.' }));
       await load();
     } finally {
       setDisconnecting(false);
@@ -177,6 +218,8 @@ export default function XeroIntegrationSettings() {
       </div>
     );
   }
+  const disconnectPending = Boolean(status?.disconnect && status.disconnect.status !== 'finalized');
+  const disconnectFailedPermanent = status?.disconnect?.status === 'failed_permanent';
 
   return (
     <div className="space-y-6" id="xero-integration-settings">
@@ -373,6 +416,38 @@ export default function XeroIntegrationSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {status?.disconnect && status.disconnect.status !== 'finalized' ? (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/40 dark:bg-amber-500/10" id="xero-disconnect-progress">
+              <p className="text-sm font-medium text-foreground">
+                {t('integrations.xero.settings.disconnect.inProgressTitle', { defaultValue: 'Xero disconnect in progress' })}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('integrations.xero.settings.disconnect.inProgressDescription', { defaultValue: 'Provider connections are being revoked. Sync and exports stay paused until every connection is confirmed removed.' })}
+              </p>
+              <ul className="mt-3 space-y-1.5 text-xs">
+                {status.disconnect.targets.map((target) => (
+                  <li key={target.targetId} className="flex items-center justify-between gap-2">
+                    <span className="truncate font-mono">{target.targetId === '__xero_oauth_grant__' ? t('integrations.xero.settings.disconnect.grantTarget', { defaultValue: 'OAuth grant revocation' }) : target.targetId}</span>
+                    <Badge variant={target.status === 'revoked' ? 'success' : target.status === 'failed_permanent' ? 'error' : 'secondary'}>
+                      {target.status === 'revoked'
+                        ? t('integrations.xero.settings.disconnect.targetRevoked', { defaultValue: 'revoked' })
+                        : target.status === 'failed_permanent'
+                          ? t('integrations.xero.settings.disconnect.targetFailed', { defaultValue: 'needs attention' })
+                          : t('integrations.xero.settings.disconnect.targetPending', { defaultValue: 'pending' })}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+              {status.disconnect.status === 'failed_permanent' ? (
+                <Alert variant="destructive" className="mt-3">
+                  <AlertDescription>
+                    {t('integrations.xero.settings.disconnect.failedPermanentDescription', { defaultValue: 'Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record.' })}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+            </div>
+          ) : null}
+
           {defaultConnection ? (
             <div className="rounded-lg border bg-muted/20 p-4 text-sm">
               <div className="flex flex-wrap items-center gap-2">
@@ -407,7 +482,7 @@ export default function XeroIntegrationSettings() {
           <Button
             id="xero-connect-button"
             type="button"
-            disabled={!canConnect || !canManageConnections}
+            disabled={!canConnect || !canManageConnections || disconnectPending}
             onClick={() => window.location.assign('/api/integrations/xero/connect')}
           >
             {defaultConnection
@@ -416,11 +491,33 @@ export default function XeroIntegrationSettings() {
           </Button>
 
           <div className="flex flex-wrap items-center gap-2">
+            {disconnectPending ? (
+              <Button
+                id="xero-retry-disconnect-button"
+                type="button"
+                variant="outline"
+                disabled={disconnecting || !canManageConnections}
+                onClick={() => void handleRetryDisconnect()}
+              >
+                {t('integrations.xero.settings.actions.retryDisconnect', { defaultValue: 'Retry Disconnect' })}
+              </Button>
+            ) : null}
+            {disconnectFailedPermanent ? (
+              <Button
+                id="xero-force-finalize-disconnect-button"
+                type="button"
+                variant="destructive"
+                disabled={disconnecting || !canManageConnections}
+                onClick={() => void handleForceFinalize()}
+              >
+                {t('integrations.xero.settings.actions.forceFinalizeDisconnect', { defaultValue: 'Force Finalize' })}
+              </Button>
+            ) : null}
             <Button
               id="xero-disconnect-button"
               type="button"
               variant="destructive"
-              disabled={!defaultConnection || disconnecting || !canManageConnections}
+              disabled={(!defaultConnection && !disconnectPending) || disconnecting || !canManageConnections}
               onClick={() => void handleDisconnect()}
             >
               {disconnecting

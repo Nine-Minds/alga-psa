@@ -277,16 +277,18 @@ describe('QBO live mapping modules', () => {
     expect(modules[2].labels.tab).toBe('Payment Terms');
   });
 
-  it('T045: load with undefined realmId passes undefined externalRealmId', async () => {
+  it('T045: load with undefined realmId scopes the read to the null realm explicitly', async () => {
     const [serviceModule] = createQboLiveMappingModules();
     const context = { realmId: undefined, connectionId: 'conn-1', realmDisplayValue: 'Acme' };
 
     await serviceModule.load(context);
 
+    // A mapping read is always realm-scoped; without a realm in context the
+    // read pins itself to unrealmed rows rather than spanning every realm.
     expect(getExternalEntityMappingsMock).toHaveBeenCalledWith({
       integrationType: 'quickbooks_online',
       algaEntityType: 'service',
-      externalRealmId: undefined
+      externalRealmId: null
     });
   });
   // --- Automated Sales Tax pseudo codes ---

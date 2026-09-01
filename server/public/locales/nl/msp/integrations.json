@@ -1846,7 +1846,9 @@
           "reconnect": "QuickBooks opnieuw verbinden",
           "refresh": "Vernieuwen",
           "saveCredentials": "QuickBooks-inloggegevens opslaan",
-          "saving": "Opslaan…"
+          "saving": "Opslaan…",
+          "retryDisconnect": "Ontkoppeling opnieuw proberen",
+          "forceFinalizeDisconnect": "Geforceerd afronden"
         },
         "badges": {
           "connectionExpired": "Verbinding vereist aandacht",
@@ -1858,6 +1860,7 @@
         "callback": {
           "accessDenied": "QuickBooks-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "QuickBooks OAuth kon niet worden gestart omdat het client ID en client secret niet volledig waren geconfigureerd.",
+          "disconnectInProgress": "QuickBooks wordt losgekoppeld. Rond de ontkoppeling af voordat u opnieuw verbinding maakt.",
           "forbidden": "U hebt geen toestemming meer om boekhoudkoppelingen te beheren. Vraag een beheerder om toegang.",
           "generic": "QuickBooks heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De QuickBooks OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
@@ -1932,6 +1935,18 @@
         "setupGuideLink": "QuickBooks-installatiegids",
         "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
         "connectionsPermissionNotice": "U kunt de QuickBooks-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen."
+,
+        "disconnectPending": "QuickBooks wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
+        "disconnectForceFinalized": "De QuickBooks-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reden voor het geforceerd afronden van de QuickBooks-ontkoppeling (vastgelegd in de auditlog):",
+          "inProgressTitle": "QuickBooks-ontkoppeling bezig",
+          "inProgressDescription": "De machtigingen bij de aanbieder worden ingetrokken. Synchronisatie en exports blijven gepauzeerd tot van elk verbonden bedrijf is bevestigd dat deze zijn ingetrokken.",
+          "targetRevoked": "ingetrokken",
+          "targetFailed": "vereist aandacht",
+          "targetPending": "in behandeling",
+          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
+        }
       },
       "sync": {
         "healthCardTitle": "Synchronisatiestatus",
@@ -3437,7 +3452,9 @@
           "reconnect": "Xero opnieuw verbinden",
           "refresh": "Vernieuwen",
           "saveCredentials": "Xero-inloggegevens opslaan",
-          "saving": "Opslaan…"
+          "saving": "Opslaan…",
+          "retryDisconnect": "Ontkoppeling opnieuw proberen",
+          "forceFinalizeDisconnect": "Geforceerd afronden"
         },
         "badges": {
           "connectionExpired": "Verbinding verlopen",
@@ -3450,6 +3467,7 @@
           "accessDenied": "Xero-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "Xero OAuth kon niet worden gestart omdat het client ID en client secret van de tenant niet volledig waren geconfigureerd.",
           "connectionsUnmapped": "Xero heeft organisaties geretourneerd, maar geen enkele bevatte de identifiers die nodig zijn om een verbinding op te slaan.",
+          "disconnectInProgress": "Xero wordt losgekoppeld. Rond de ontkoppeling af voordat u opnieuw verbinding maakt.",
           "forbidden": "U hebt geen toestemming meer om boekhoudkoppelingen te beheren. Vraag een beheerder om toegang.",
           "generic": "Xero heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De Xero OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
@@ -3511,6 +3529,19 @@
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
         "connectionsPermissionNotice": "U kunt de Xero-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen."
+,
+        "disconnectPending": "Xero wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
+        "disconnectForceFinalized": "De Xero-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reden voor het geforceerd afronden van de Xero-ontkoppeling (vastgelegd in de auditlog):",
+          "inProgressTitle": "Xero-ontkoppeling bezig",
+          "inProgressDescription": "De verbindingen bij de aanbieder worden ingetrokken. Synchronisatie en exports blijven gepauzeerd tot van elke verbinding is bevestigd dat deze is verwijderd.",
+          "grantTarget": "Intrekking van OAuth-machtiging",
+          "targetRevoked": "ingetrokken",
+          "targetFailed": "vereist aandacht",
+          "targetPending": "in behandeling",
+          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
+        }
       }
     },
     "stripe": {
@@ -3695,6 +3726,8 @@
       "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw.",
       "invoiceCancelled": "De factuur is geannuleerd en kan niet worden gekoppeld aan de boekhoudintegratie.",
       "invoiceNotFound": "De factuur bestaat niet meer en kan niet worden gekoppeld aan de boekhoudintegratie."
+,
+      "scopeRequired": "Voor het opzoeken van koppelingen zijn een integratie, een entiteitstype en een realm-scope vereist."
     },
     "qbo": {
       "enterpriseOnly": "De QuickBooks Online-integratie is alleen beschikbaar in de Enterprise Edition.",

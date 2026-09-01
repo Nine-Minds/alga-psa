@@ -1846,7 +1846,9 @@
           "reconnect": "Reconnecter QuickBooks",
           "refresh": "Actualiser",
           "saveCredentials": "Enregistrer les identifiants QuickBooks",
-          "saving": "Enregistrement…"
+          "saving": "Enregistrement…",
+          "retryDisconnect": "Réessayer la déconnexion",
+          "forceFinalizeDisconnect": "Finaliser de force"
         },
         "badges": {
           "connectionExpired": "La connexion nécessite une attention",
@@ -1858,6 +1860,7 @@
         "callback": {
           "accessDenied": "L'accès QuickBooks a été refusé avant la fin de la connexion.",
           "configMissing": "Impossible de démarrer QuickBooks OAuth car le client ID et le client secret n'étaient pas entièrement configurés.",
+          "disconnectInProgress": "QuickBooks est en cours de déconnexion. Terminez ou finalisez la déconnexion avant de vous reconnecter.",
           "forbidden": "Vous n'avez plus l'autorisation de gérer les connexions comptables. Demandez l'accès à un administrateur.",
           "generic": "QuickBooks a retourné une erreur OAuth : {{code}}",
           "invalidState": "L'état OAuth QuickBooks était invalide ou expiré. Relancez le flux de connexion.",
@@ -1932,6 +1935,18 @@
         "setupGuideLink": "Guide de configuration QuickBooks",
         "noPermissionDescription": "Vous n'avez pas l'autorisation d'afficher ou de configurer les intégrations comptables.",
         "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder."
+,
+        "disconnectPending": "QuickBooks est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
+        "disconnectForceFinalized": "La déconnexion de QuickBooks a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motif de la finalisation forcée de la déconnexion de QuickBooks (consigné dans le journal d'audit) :",
+          "inProgressTitle": "Déconnexion de QuickBooks en cours",
+          "inProgressDescription": "Les autorisations côté fournisseur sont en cours de révocation. La synchronisation et les exports restent en pause jusqu'à ce que la révocation soit confirmée pour chaque entreprise connectée.",
+          "targetRevoked": "révoquée",
+          "targetFailed": "nécessite une attention",
+          "targetPending": "en attente",
+          "failedPermanentDescription": "Le nettoyage côté fournisseur a rencontré une erreur permanente. Vous pouvez réessayer ou finaliser de force pour supprimer les identifiants enregistrés avec un enregistrement d'audit."
+        }
       },
       "sync": {
         "healthCardTitle": "État de la synchronisation",
@@ -3437,7 +3452,9 @@
           "reconnect": "Reconnecter Xero",
           "refresh": "Actualiser",
           "saveCredentials": "Enregistrer les identifiants Xero",
-          "saving": "Enregistrement…"
+          "saving": "Enregistrement…",
+          "retryDisconnect": "Réessayer la déconnexion",
+          "forceFinalizeDisconnect": "Finaliser de force"
         },
         "badges": {
           "connectionExpired": "Connexion expirée",
@@ -3450,6 +3467,7 @@
           "accessDenied": "L'accès Xero a été refusé avant la fin de la connexion.",
           "configMissing": "Impossible de démarrer Xero OAuth car le client ID et le client secret du tenant n'étaient pas entièrement configurés.",
           "connectionsUnmapped": "Xero a retourné des organisations, mais aucune n'incluait les identifiants requis pour enregistrer une connexion.",
+          "disconnectInProgress": "Xero est en cours de déconnexion. Terminez ou finalisez la déconnexion avant de vous reconnecter.",
           "forbidden": "Vous n'avez plus l'autorisation de gérer les connexions comptables. Demandez l'accès à un administrateur.",
           "generic": "Xero a retourné une erreur OAuth : {{code}}",
           "invalidState": "L'état OAuth Xero était invalide ou expiré. Relancez le flux de connexion.",
@@ -3511,6 +3529,19 @@
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Vous n'avez pas l'autorisation d'afficher ou de configurer les intégrations comptables.",
         "connectionsPermissionNotice": "Vous pouvez consulter les paramètres Xero, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder."
+,
+        "disconnectPending": "Xero est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
+        "disconnectForceFinalized": "La déconnexion de Xero a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motif de la finalisation forcée de la déconnexion de Xero (consigné dans le journal d'audit) :",
+          "inProgressTitle": "Déconnexion de Xero en cours",
+          "inProgressDescription": "Les connexions côté fournisseur sont en cours de révocation. La synchronisation et les exports restent en pause jusqu'à ce que la suppression soit confirmée pour chaque connexion.",
+          "grantTarget": "Révocation de l'autorisation OAuth",
+          "targetRevoked": "révoquée",
+          "targetFailed": "nécessite une attention",
+          "targetPending": "en attente",
+          "failedPermanentDescription": "Le nettoyage côté fournisseur a rencontré une erreur permanente. Vous pouvez réessayer ou finaliser de force pour supprimer les identifiants enregistrés avec un enregistrement d'audit."
+        }
       }
     },
     "stripe": {
@@ -3695,6 +3726,8 @@
       "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer.",
       "invoiceCancelled": "La facture a été annulée et ne peut pas être mappée à l'intégration comptable.",
       "invoiceNotFound": "La facture n'existe plus et ne peut pas être mappée à l'intégration comptable."
+,
+      "scopeRequired": "Les recherches de correspondances nécessitent une intégration, un type d'entité et une portée de realm."
     },
     "qbo": {
       "enterpriseOnly": "L’intégration QuickBooks Online n’est disponible que dans l’édition Enterprise.",
