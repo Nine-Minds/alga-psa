@@ -1840,7 +1840,9 @@
           "reconnect": "Reconectar QuickBooks",
           "refresh": "Actualizar",
           "saveCredentials": "Guardar credenciales de QuickBooks",
-          "saving": "Guardando…"
+          "saving": "Guardando…",
+          "retryDisconnect": "Reintentar desconexión",
+          "forceFinalizeDisconnect": "Forzar finalización"
         },
         "badges": {
           "connectionExpired": "La conexión requiere atención",
@@ -1852,6 +1854,7 @@
         "callback": {
           "accessDenied": "Se denegó el acceso a QuickBooks antes de completar la conexión.",
           "configMissing": "No se pudo iniciar QuickBooks OAuth porque el client ID y el client secret no estaban completamente configurados.",
+          "disconnectInProgress": "QuickBooks se está desconectando. Finalice la desconexión antes de volver a conectar.",
           "forbidden": "Ya no tiene permiso para gestionar conexiones de contabilidad. Solicite acceso a un administrador.",
           "generic": "QuickBooks devolvió un error de OAuth: {{code}}",
           "invalidState": "El estado OAuth de QuickBooks no era válido o había caducado. Inicie el flujo de conexión de nuevo.",
@@ -1922,7 +1925,18 @@
           "none": "Todavía no hay ninguna app de Intuit disponible. Registre una en el portal Intuit Developer y pegue abajo su ID de cliente y su secreto; la guía de configuración lo explica paso a paso.",
           "tenant": "Este inquilino se conecta mediante su propia app de Intuit, con las credenciales guardadas abajo."
         },
-        "setupGuideLink": "Guía de configuración de QuickBooks"
+        "setupGuideLink": "Guía de configuración de QuickBooks",
+        "disconnectPending": "QuickBooks se está desconectando. La sincronización y las exportaciones están en pausa hasta que se complete la limpieza del proveedor; la desconexión sigue reintentándose automáticamente.",
+        "disconnectForceFinalized": "La desconexión de QuickBooks se finalizó de forma forzada. No se pudo confirmar la limpieza del proveedor, por lo que las credenciales se eliminaron localmente con un registro de auditoría.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo para forzar la finalización de la desconexión de QuickBooks (se documenta en el registro de auditoría):",
+          "inProgressTitle": "Desconexión de QuickBooks en curso",
+          "inProgressDescription": "Se están revocando las concesiones del proveedor. La sincronización y las exportaciones permanecen en pausa hasta que se confirme la revocación de cada empresa conectada.",
+          "targetRevoked": "revocado",
+          "targetFailed": "requiere atención",
+          "targetPending": "pendiente",
+          "failedPermanentDescription": "La limpieza del proveedor encontró un error permanente. Puede reintentar o forzar la finalización para eliminar las credenciales almacenadas con un registro de auditoría."
+        }
       },
       "sync": {
         "healthCardTitle": "Estado de sincronización",
@@ -3424,7 +3438,9 @@
           "reconnect": "Reconectar Xero",
           "refresh": "Actualizar",
           "saveCredentials": "Guardar credenciales de Xero",
-          "saving": "Guardando…"
+          "saving": "Guardando…",
+          "retryDisconnect": "Reintentar desconexión",
+          "forceFinalizeDisconnect": "Forzar finalización"
         },
         "badges": {
           "connectionExpired": "Conexión caducada",
@@ -3437,6 +3453,7 @@
           "accessDenied": "Se denegó el acceso a Xero antes de completar la conexión.",
           "configMissing": "No se pudo iniciar Xero OAuth porque el client ID y el client secret del inquilino no estaban completamente configurados.",
           "connectionsUnmapped": "Xero devolvió organizaciones, pero ninguna incluía los identificadores necesarios para guardar una conexión.",
+          "disconnectInProgress": "Xero se está desconectando. Finalice la desconexión antes de volver a conectar.",
           "forbidden": "Ya no tiene permiso para gestionar conexiones de contabilidad. Solicite acceso a un administrador.",
           "generic": "Xero devolvió un error de OAuth: {{code}}",
           "invalidState": "El estado OAuth de Xero no era válido o había caducado. Inicie el flujo de conexión de nuevo.",
@@ -3495,9 +3512,18 @@
         "tenantOauthTitle": "Aplicación OAuth propia del inquilino",
         "title": "Xero",
         "xeroCsv": "Xero CSV",
-        "scopeOverride": "Anulación de despliegue (XERO_OAUTH_SCOPES)",
-        "scopeOverrideInvalid": "La anulación XERO_OAUTH_SCOPES se ignoró porque contiene entradas no válidas ({{scopes}}). En su lugar se utilizan los ámbitos predeterminados.",
-        "scopeReconnectNote": "Estos ámbitos se aplican a las nuevas autorizaciones. Una conexión existente conserva los ámbitos que se le concedieron originalmente; para aplicar el conjunto actual, desconecte y vuelva a conectar Xero. También puede eliminar esta aplicación de las aplicaciones conectadas en Xero para revocar las concesiones anteriores."
+        "disconnectPending": "Xero se está desconectando. La sincronización y las exportaciones están en pausa hasta que se complete la limpieza del proveedor; la desconexión sigue reintentándose automáticamente.",
+        "disconnectForceFinalized": "La desconexión de Xero se finalizó de forma forzada. No se pudo confirmar la limpieza del proveedor, por lo que las credenciales se eliminaron localmente con un registro de auditoría.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo para forzar la finalización de la desconexión de Xero (se documenta en el registro de auditoría):",
+          "inProgressTitle": "Desconexión de Xero en curso",
+          "inProgressDescription": "Se están revocando las conexiones del proveedor. La sincronización y las exportaciones permanecen en pausa hasta que se confirme la eliminación de cada conexión.",
+          "grantTarget": "Revocación de la concesión de OAuth",
+          "targetRevoked": "revocado",
+          "targetFailed": "requiere atención",
+          "targetPending": "pendiente",
+          "failedPermanentDescription": "La limpieza del proveedor encontró un error permanente. Puede reintentar o forzar la finalización para eliminar las credenciales almacenadas con un registro de auditoría."
+        }
       }
     },
     "stripe": {

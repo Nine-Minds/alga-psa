@@ -66,6 +66,31 @@ const axiosMock = axios as unknown as {
   post: vi.Mock;
 };
 
+// The token-refresh path persists the refreshed connection through the gated
+// credential upsert (upsertStoredXeroConnections), which opens a tenant knex
+// handle and takes the provider credential lock before writing. None of that
+// belongs in a REST-client unit test, so stub the persistence substrate: a
+// no-op knex handle, a lock wrapper that just runs its callback, and a write
+// disposition that always allows (no disconnect in flight). Connection reads
+// and writes still flow through the mocked secret provider above.
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: {} })),
+}));
+
+vi.mock('@alga-psa/integrations/lib/providerDisconnect/lock', () => ({
+  withProviderCredentialLock: (
+    _knex: unknown,
+    _tenantId: string,
+    _provider: string,
+    fn: (trx: unknown) => Promise<unknown>,
+  ) => fn({}),
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed' as const),
+}));
+
+vi.mock('@alga-psa/integrations/lib/providerDisconnect/retire', () => ({
+  retireTerminalDisconnectRecord: vi.fn(async () => undefined),
+}));
+
 function createService(overrides: Partial<XeroInvoicePayload> = {}) {
   const now = Date.now();
   const connection = {

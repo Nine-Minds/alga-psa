@@ -36,6 +36,9 @@ const qboClientCreateMock = vi.hoisted(() => vi.fn(async (): Promise<any> => ({
 })));
 
 const axiosPostMock = vi.hoisted(() => vi.fn(async () => ({ status: 200 })));
+const disconnectProviderMock = vi.hoisted(() => vi.fn());
+const forceFinalizeProviderDisconnectMock = vi.hoisted(() => vi.fn());
+const getProviderDisconnectStatusInfoMock = vi.hoisted(() => vi.fn(async () => null));
 
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
@@ -79,6 +82,13 @@ vi.mock('axios', () => ({
   default: {
     post: axiosPostMock
   }
+}));
+
+vi.mock('../lib/providerDisconnect', () => ({
+  PROVIDER_QBO: 'quickbooks_online',
+  disconnectProvider: disconnectProviderMock,
+  forceFinalizeProviderDisconnect: forceFinalizeProviderDisconnectMock,
+  getProviderDisconnectStatusInfo: getProviderDisconnectStatusInfoMock
 }));
 
 /**
@@ -182,6 +192,8 @@ describe('QBO integration actions', () => {
       query: vi.fn(async () => [])
     });
     axiosPostMock.mockResolvedValue({ status: 200 });
+    disconnectProviderMock.mockResolvedValue({ status: 'disconnected', record: null });
+    getProviderDisconnectStatusInfoMock.mockResolvedValue(null);
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     process.env.EDITION = 'ee';
   });
@@ -306,7 +318,7 @@ describe('QBO integration actions', () => {
 
   // --- disconnectQbo ---
 
-  it('disconnectQbo (EE): deletes tenant secret, posts revocation per realm, revalidates path; success even when axios.post rejects', async () => {
+  it('disconnectQbo (EE): delegates to the durable provider-first workflow and revalidates path', async () => {
     const credMap = {
       'realm-456': {
         accessToken: 'access-token',
@@ -318,23 +330,45 @@ describe('QBO integration actions', () => {
     };
     tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify(credMap));
 
-    // Simulate revocation failure — action should still succeed
-    axiosPostMock.mockRejectedValue(new Error('Network error'));
-
+    disconnectProviderMock.mockResolvedValue({ status: 'disconnected', record: null });
     const result = await disconnectQbo();
 
-    expect(result).toEqual({ success: true });
-    expect(deleteTenantSecretMock).toHaveBeenCalledWith('tenant-1', 'qbo_credentials');
-    expect(revalidatePathMock).toHaveBeenCalledWith('/msp/settings');
-
-    // Revocation was attempted with the refresh token
-    expect(axiosPostMock).toHaveBeenCalledWith(
-      'https://developer.api.intuit.com/v2/oauth2/tokens/revoke',
-      { token: 'refresh-token-to-revoke' },
-      expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: expect.stringContaining('Basic ') })
-      })
+    expect(result).toEqual({ success: true, status: 'disconnected' });
+    expect(disconnectProviderMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'tenant-1',
+      'quickbooks_online',
+      expect.objectContaining({ userId: 'user-1' })
     );
+    // Local credential deletion is the durable service's job, not the action's.
+    expect(deleteTenantSecretMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).toHaveBeenCalledWith('/msp/settings');
+  });
+
+  it('disconnectQbo (EE): a failed revocation is surfaced as pending, never as success', async () => {
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify({
+      'realm-456': {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token-to-revoke',
+        realmId: 'realm-456',
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+      }
+    }));
+
+    disconnectProviderMock.mockResolvedValue({
+      status: 'pending',
+      record: null,
+      error: 'Provider cleanup is not complete yet. The disconnect will keep retrying.'
+    });
+    const result = await disconnectQbo();
+
+    expect(result).toEqual({
+      success: false,
+      status: 'pending',
+      error: 'Provider cleanup is not complete yet. The disconnect will keep retrying.'
+    });
+    expect(deleteTenantSecretMock).not.toHaveBeenCalled();
   });
 
   it('disconnectQbo in CE returns success:false with EE message', async () => {
@@ -355,9 +389,10 @@ describe('QBO integration actions', () => {
 
     expect(result).toEqual({
       success: false,
+      status: 'failed_permanent',
       error: 'QuickBooks Online integration is only available in Enterprise Edition.'
     });
-    expect(deleteTenantSecretMock).not.toHaveBeenCalled();
+    expect(disconnectProviderMock).not.toHaveBeenCalled();
     expect(axiosPostMock).not.toHaveBeenCalled();
   });
 

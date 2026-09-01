@@ -1863,7 +1863,9 @@
           "reconnect": "Reconnect QuickBooks",
           "refresh": "Refresh",
           "saveCredentials": "Save QuickBooks Credentials",
-          "saving": "Saving…"
+          "saving": "Saving…",
+          "retryDisconnect": "Retry Disconnect",
+          "forceFinalizeDisconnect": "Force Finalize"
         },
         "badges": {
           "connectionExpired": "Connection Needs Attention",
@@ -1875,6 +1877,7 @@
         "callback": {
           "accessDenied": "QuickBooks access was denied before the connection completed.",
           "configMissing": "QuickBooks OAuth could not start because the client ID and client secret were not fully configured.",
+          "disconnectInProgress": "QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.",
           "forbidden": "You no longer have permission to manage accounting connections. Ask an administrator for access.",
           "generic": "QuickBooks returned an OAuth error: {{code}}",
           "invalidState": "The QuickBooks OAuth state was invalid or expired. Start the connect flow again.",
@@ -1945,7 +1948,18 @@
           "none": "No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.",
           "tenant": "This tenant connects through its own Intuit app, using the credentials stored below."
         },
-        "setupGuideLink": "QuickBooks setup guide"
+        "setupGuideLink": "QuickBooks setup guide",
+        "disconnectPending": "QuickBooks is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
+        "disconnectForceFinalized": "The QuickBooks disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reason for force-finalizing the QuickBooks disconnect (recorded in the audit log):",
+          "inProgressTitle": "QuickBooks disconnect in progress",
+          "inProgressDescription": "Provider grants are being revoked. Sync and exports stay paused until every connected company is confirmed revoked.",
+          "targetRevoked": "revoked",
+          "targetFailed": "needs attention",
+          "targetPending": "pending",
+          "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
+        }
       },
       "sync": {
         "healthCardTitle": "Sync Health",
@@ -3447,7 +3461,9 @@
           "reconnect": "Reconnect Xero",
           "refresh": "Refresh",
           "saveCredentials": "Save Xero Credentials",
-          "saving": "Saving…"
+          "saving": "Saving…",
+          "retryDisconnect": "Retry Disconnect",
+          "forceFinalizeDisconnect": "Force Finalize"
         },
         "badges": {
           "connectionExpired": "Connection Expired",
@@ -3460,6 +3476,7 @@
           "accessDenied": "Xero access was denied before the connection completed.",
           "configMissing": "Xero OAuth could not start because the tenant client ID and client secret were not fully configured.",
           "connectionsUnmapped": "Xero returned organisations, but none included the identifiers required to save a connection.",
+          "disconnectInProgress": "Xero is being disconnected. Finish or finalize the disconnect before connecting again.",
           "forbidden": "You no longer have permission to manage accounting connections. Ask an administrator for access.",
           "generic": "Xero returned an OAuth error: {{code}}",
           "invalidState": "The Xero OAuth state was invalid or expired. Start the connect flow again.",
@@ -3518,9 +3535,18 @@
         "tenantOauthTitle": "Tenant-Owned OAuth App",
         "title": "Xero",
         "xeroCsv": "Xero CSV",
-        "scopeOverride": "Deployment override (XERO_OAUTH_SCOPES)",
-        "scopeOverrideInvalid": "The XERO_OAUTH_SCOPES override was ignored because it contains invalid entries ({{scopes}}). The default scopes are used instead.",
-        "scopeReconnectNote": "These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. You can also remove this app from Connected apps in Xero to revoke earlier grants."
+        "disconnectPending": "Xero is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
+        "disconnectForceFinalized": "The Xero disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reason for force-finalizing the Xero disconnect (recorded in the audit log):",
+          "inProgressTitle": "Xero disconnect in progress",
+          "inProgressDescription": "Provider connections are being revoked. Sync and exports stay paused until every connection is confirmed removed.",
+          "grantTarget": "OAuth grant revocation",
+          "targetRevoked": "revoked",
+          "targetFailed": "needs attention",
+          "targetPending": "pending",
+          "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
+        }
       }
     },
     "stripe": {

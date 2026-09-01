@@ -26,6 +26,20 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
+// The callback re-checks the disconnect gate before writing credentials; mock
+// the DB and gate so the happy path under test is deterministic.
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async () => ({ knex: {}, tenant: 'tenant-a' }),
+}));
+
+vi.mock('../../../../lib/providerDisconnect', () => ({
+  isProviderDisconnectActive: vi.fn(async () => false),
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed'),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero',
+}));
+
 vi.mock('redis', () => ({
   createClient: vi.fn(() => {
     throw new Error('redis unavailable');
@@ -103,7 +117,10 @@ function makeState() {
 }
 
 async function storeFor(created: ReturnType<typeof makeState>) {
-  await storeAccountingOAuthNonce('qbo', created.payload.nonce);
+  await storeAccountingOAuthNonce('qbo', created.payload.nonce, {
+    tenantId: TENANT_ID,
+    initiatedAt: created.payload.initiatedAt,
+  });
 }
 
 describe('QBO OAuth callback authorization', () => {
@@ -143,7 +160,8 @@ describe('QBO OAuth callback authorization', () => {
         accessToken: 'access-token',
         refreshToken: 'refresh-token',
         realmId: 'realm-1',
-      })
+      }),
+      { authorizationFlowStartedAt: created.payload.initiatedAt }
     );
   });
 

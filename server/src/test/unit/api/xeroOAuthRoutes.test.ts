@@ -10,6 +10,7 @@ const getXeroOAuthScopesStringMock = vi.hoisted(() => vi.fn());
 const getXeroOAuthScopeConfigMock = vi.hoisted(() => vi.fn());
 const upsertStoredXeroConnectionsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
+const isProviderDisconnectActiveMock = vi.hoisted(() => vi.fn());
 const getSecretMock = vi.hoisted(() => vi.fn());
 const axiosPostMock = vi.hoisted(() => vi.fn());
 const axiosGetMock = vi.hoisted(() => vi.fn());
@@ -53,11 +54,24 @@ vi.mock('redis', () => ({
 
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   XERO_TOKEN_URL: 'https://identity.xero.com/connect/token',
+  getXeroTokenUrl: () => 'https://identity.xero.com/connect/token',
+  getXeroConnectionsUrl: () => 'https://api.xero.com/connections',
   resolveXeroOAuthCredentials: resolveXeroOAuthCredentialsMock,
   getXeroRedirectUri: getXeroRedirectUriMock,
   getXeroOAuthScopesString: getXeroOAuthScopesStringMock,
   getXeroOAuthScopeConfig: getXeroOAuthScopeConfigMock,
   upsertStoredXeroConnections: upsertStoredXeroConnectionsMock
+}));
+
+vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
+  isProviderDisconnectActive: isProviderDisconnectActiveMock,
+  getProviderDisconnectStatusInfo: vi.fn(async () => null),
+  getProviderCredentialWriteDisposition: vi.fn(async (knex, tenant, provider) =>
+    (await isProviderDisconnectActiveMock(knex, tenant, provider)) ? 'disconnect_in_progress' : 'allowed'
+  ),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero'
 }));
 
 vi.mock('axios', () => ({
@@ -133,7 +147,7 @@ describe('Xero OAuth routes', () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     getCurrentUserWithRevocationCheckMock.mockResolvedValue({ ...liveUser });
     hasPermissionMock.mockResolvedValue(true);
-    createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-1' });
+    createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-1', knex: {} });
     getSecretProviderInstanceMock.mockResolvedValue({});
     resolveXeroOAuthCredentialsMock.mockResolvedValue({
       clientId: 'tenant-client-id',
@@ -149,6 +163,7 @@ describe('Xero OAuth routes', () => {
       source: 'default'
     });
     upsertStoredXeroConnectionsMock.mockResolvedValue({});
+    isProviderDisconnectActiveMock.mockResolvedValue(false);
     axiosPostMock.mockResolvedValue({
       data: {
         access_token: 'access-token',
@@ -306,7 +321,10 @@ describe('Xero OAuth routes', () => {
           refreshToken: 'refresh-token'
         })
       }),
-      { prioritize: ['connection-1'] }
+      {
+        prioritize: ['connection-1'],
+        authorizationFlowStartedAt: expect.any(String)
+      }
     );
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('xero_status=success');
@@ -321,6 +339,25 @@ describe('Xero OAuth routes', () => {
     );
     expect(replay.headers.get('location')).toContain('xero_error=invalid_state');
     expect(axiosPostMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('callback denies an already-consumed state with no provider or storage side effects', async () => {
+    const { state, csrfCookie } = await seedAttemptViaConnect();
+    const { consumeXeroConnectAttempt } = await import(
+      '@alga-psa/integrations/lib/xero/xeroOAuthConnectAttemptStore'
+    );
+    await consumeXeroConnectAttempt(state);
+    const { GET: callbackGET } = await import('@/app/api/integrations/xero/callback/route');
+
+    const response = await callbackGET(
+      buildCallbackRequest({ state, csrfCookie, code: 'auth-code' })
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('xero_error=invalid_state');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(axiosGetMock).not.toHaveBeenCalled();
+    expect(upsertStoredXeroConnectionsMock).not.toHaveBeenCalled();
   });
 
   it('callback denies and stores nothing when the connection-admin permission was revoked', async () => {
@@ -386,5 +423,27 @@ describe('Xero OAuth routes', () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('xero_error=no_connections');
+  });
+
+  it('T032: callback rejects with disconnect_in_progress while a Xero disconnect is active and never stores connections', async () => {
+    const { state, csrfCookie } = await seedAttemptViaConnect();
+    isProviderDisconnectActiveMock.mockResolvedValue(true);
+    const { GET } = await import('@/app/api/integrations/xero/callback/route');
+
+    const response = await GET(
+      new NextRequest(`https://example.com/api/integrations/xero/callback?code=auth-code&state=${state}`, {
+        headers: { cookie: `alga_xero_oauth_csrf=${csrfCookie}` }
+      })
+    );
+
+    expect(response.status).toBe(307);
+    const location = response.headers.get('location') ?? '';
+    expect(location).toContain('xero_status=failure');
+    expect(location).toContain('xero_error=disconnect_in_progress');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredXeroConnectionsMock).not.toHaveBeenCalled();
+    expect(isProviderDisconnectActiveMock.mock.calls.at(-1)).toEqual(
+      expect.arrayContaining(['tenant-1', 'xero'])
+    );
   });
 });
