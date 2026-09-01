@@ -21,16 +21,26 @@ import {
   unlinkTenantSecret,
   UnsafeSecretLocationError,
   validateSecretComponent,
+  writeTenantSecret,
   writeTenantSecretAtomic,
 } from '../fsSecretCore';
 
 /**
  * Failures during the rename that finishes an atomic write must never corrupt
- * the previous value. The lazy builtin loader resolves `node:fs/promises`
- * through `lazyBuiltin.ts`; this mock wraps that one module so `rename` is a
- * controllable call-through mock that tests can arm with `mockRejectedValueOnce`.
+ * the previous value, and a store component swapped mid-operation must never
+ * redirect a write or delete. The lazy builtin loader resolves
+ * `node:fs/promises` through `lazyBuiltin.ts`; this mock wraps that one module
+ * so `rename` is a controllable call-through mock (armed with
+ * `mockRejectedValueOnce` / `mockImplementationOnce`), and `lstat`/`unlink`
+ * gain optional before-call hooks that let a test deterministically mutate the
+ * filesystem at an exact point inside the write/delete sequence — the
+ * behavioral equivalent of an attacker winning the race.
  */
 const renameMock = vi.hoisted(() => vi.fn());
+const fsCallHooks = vi.hoisted(() => ({
+  beforeLstat: null as null | ((target: string) => Promise<void> | void),
+  beforeUnlink: null as null | ((target: string) => Promise<void> | void),
+}));
 
 vi.mock('../lazyBuiltin', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lazyBuiltin')>();
@@ -39,7 +49,16 @@ vi.mock('../lazyBuiltin', async (importOriginal) => {
     loadBuiltin: async (specifier: string) => {
       const mod = await actual.loadBuiltin(specifier);
       if (specifier === 'node:fs/promises') {
-        return { ...(mod as typeof import('node:fs/promises')), rename: renameMock };
+        const realFs = mod as typeof import('node:fs/promises');
+        const lstat = (async (target: Parameters<typeof realFs.lstat>[0], ...rest: unknown[]) => {
+          await fsCallHooks.beforeLstat?.(String(target));
+          return (realFs.lstat as (...args: unknown[]) => unknown)(target, ...rest);
+        }) as typeof realFs.lstat;
+        const unlink = (async (target: Parameters<typeof realFs.unlink>[0]) => {
+          await fsCallHooks.beforeUnlink?.(String(target));
+          return realFs.unlink(target);
+        }) as typeof realFs.unlink;
+        return { ...realFs, rename: renameMock, lstat, unlink };
       }
       return mod;
     },
@@ -127,6 +146,8 @@ beforeEach(async () => {
   previousUmask = process.umask(0o000);
   renameMock.mockClear();
   renameMock.mockImplementation(realRename);
+  fsCallHooks.beforeLstat = null;
+  fsCallHooks.beforeUnlink = null;
 });
 
 afterEach(async () => {
@@ -191,6 +212,178 @@ describe('fsSecretCore atomic writes', () => {
       errorSpy.mockRestore();
     }
   });
+});
+
+describe('fsSecretCore anchored writes under concurrent store mutation', () => {
+  // The anchored resolution (child operations through /proc/self/fd/<fd>) is
+  // what makes an already-started operation immune to a component swap; where
+  // /proc is unavailable the swap-mid-operation tests cannot assert the same
+  // final state, so they run only where the anchor is real.
+  const HAS_PROC_FD = existsSync('/proc/self/fd');
+
+  /** The attacker's move: relocate the real directory, symlink its path elsewhere. */
+  async function swapDirForSymlink(dirPath: string, movedTo: string, linkTarget: string): Promise<void> {
+    await realRename(dirPath, movedTo);
+    await symlink(linkTarget, dirPath);
+  }
+
+  it('writes and rewrites through the anchored chain: 0600 kept, inode replaced, no temp residue', async () => {
+    const dirPath = await tenantDir(rootDir, 'tenant-anchored');
+    await ensurePrivateDirectory(dirPath);
+    const filePath = await tenantSecret('tenant-anchored', 'token');
+
+    await writeTenantSecret(rootDir, 'tenant-anchored', 'token', 'first-value');
+    const firstStat = await fsPromises.lstat(filePath);
+    expect(firstStat.mode & 0o777).toBe(SECRET_FILE_MODE);
+    expect(await readFileContentSafe(filePath)).toBe('first-value');
+
+    await writeTenantSecret(rootDir, 'tenant-anchored', 'token', 'second-value');
+    const secondStat = await fsPromises.lstat(filePath);
+    expect(secondStat.mode & 0o777).toBe(SECRET_FILE_MODE);
+    expect(secondStat.ino).not.toBe(firstStat.ino);
+    expect(await readFileContentSafe(filePath)).toBe('second-value');
+    expect((await readdir(dirPath)).filter((entry) => entry.includes('.tmp-'))).toEqual([]);
+  });
+
+  it('leaves the previous value intact when the rename fails inside the anchored write', async () => {
+    const filePath = await seedTenantSecret('tenant-anchored-fail', 'token', 'before-value');
+    renameMock.mockRejectedValueOnce(new Error('injected rename failure'));
+
+    await expect(writeTenantSecret(rootDir, 'tenant-anchored-fail', 'token', 'after-value')).rejects.toThrow(
+      'injected rename failure'
+    );
+
+    expect(await readFile(filePath, 'utf-8')).toBe('before-value');
+    expect((await readdir(path.dirname(filePath))).filter((entry) => entry.includes('.tmp-'))).toEqual([]);
+  });
+
+  it('fails closed when the validated tenant directory is swapped for a symlink before the write begins', async () => {
+    const outside = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-race-pre-'));
+    try {
+      const decoy = path.join(outside, 'redirect-target');
+      const moved = path.join(outside, 'moved-tenant-dir');
+      await mkdir(decoy);
+
+      const dirPath = await tenantDir(rootDir, 'tenant-race-pre');
+      await ensurePrivateDirectory(dirPath); // the validation the attacker races
+      await swapDirForSymlink(dirPath, moved, decoy);
+
+      await expect(writeTenantSecret(rootDir, 'tenant-race-pre', 'token', SECRET_VALUE)).rejects.toThrow(
+        InvalidSecretPathError
+      );
+
+      // No secret bytes anywhere outside the store: the symlink target and the
+      // relocated directory both stay empty, and the store holds no temp files.
+      expect(await readdir(decoy)).toEqual([]);
+      expect(await readdir(moved)).toEqual([]);
+      expect(await readdir(await tenantsDir(rootDir))).toEqual(['tenant-race-pre']);
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it.runIf(HAS_PROC_FD)(
+    'fails closed when the tenant directory is swapped after the temp file is written but before the rename',
+    async () => {
+      const outside = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-race-mid-'));
+      try {
+        const decoy = path.join(outside, 'redirect-target');
+        const moved = path.join(outside, 'moved-tenant-dir');
+        await mkdir(decoy);
+
+        const filePath = await seedTenantSecret('tenant-race-mid', 'token', 'old-value');
+        const dirPath = path.dirname(filePath);
+
+        // The first lstat naming a temp file happens right after the temp
+        // write and right before the rename-boundary revalidation — the exact
+        // instant the attacker swaps the validated directory for a symlink.
+        fsCallHooks.beforeLstat = async (target) => {
+          if (!target.includes('.tmp-')) return;
+          fsCallHooks.beforeLstat = null;
+          await swapDirForSymlink(dirPath, moved, decoy);
+        };
+
+        await expect(writeTenantSecret(rootDir, 'tenant-race-mid', 'token', SECRET_VALUE)).rejects.toThrow(
+          InvalidSecretPathError
+        );
+
+        // The symlink target never receives a byte, the temp file written into
+        // the (relocated) directory is removed through the anchor, and the old
+        // value is untouched.
+        expect(await readdir(decoy)).toEqual([]);
+        expect(await readdir(moved)).toEqual(['token']);
+        expect(await readFile(path.join(moved, 'token'), 'utf-8')).toBe('old-value');
+      } finally {
+        await rm(outside, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.runIf(HAS_PROC_FD)(
+    'fails closed and removes the renamed file when the tenant directory is swapped during the rename itself',
+    async () => {
+      const outside = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-race-rn-'));
+      try {
+        const decoy = path.join(outside, 'redirect-target');
+        const moved = path.join(outside, 'moved-tenant-dir');
+        await mkdir(decoy);
+
+        const filePath = await seedTenantSecret('tenant-race-rn', 'token', 'old-value');
+        const dirPath = path.dirname(filePath);
+
+        // The swap lands after the rename-boundary revalidation and before the
+        // rename syscall — the narrowest possible window.
+        renameMock.mockImplementationOnce(async (src, dest) => {
+          await swapDirForSymlink(dirPath, moved, decoy);
+          return realRename(src as string, dest as string);
+        });
+
+        await expect(writeTenantSecret(rootDir, 'tenant-race-rn', 'token', SECRET_VALUE)).rejects.toThrow(
+          InvalidSecretPathError
+        );
+
+        // The rename resolved through the anchor (never the symlink target),
+        // post-write verification detected the swap, and the just-renamed file
+        // was removed — no bytes written by this call survive anywhere.
+        expect(await readdir(decoy)).toEqual([]);
+        expect(await readdir(moved)).toEqual([]);
+      } finally {
+        await rm(outside, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.runIf(HAS_PROC_FD)(
+    'deletes through the anchor when the tenant directory is swapped between validation and unlink',
+    async () => {
+      const outside = await mkdtemp(path.join(os.tmpdir(), 'alga-fs-race-del-'));
+      try {
+        const decoy = path.join(outside, 'redirect-target');
+        const moved = path.join(outside, 'moved-tenant-dir');
+        await mkdir(decoy);
+        const decoyFile = path.join(decoy, 'token');
+        await writeFile(decoyFile, 'decoy-file-that-deletion-must-never-touch');
+
+        const filePath = await seedTenantSecret('tenant-race-del', 'token', SECRET_VALUE);
+        const dirPath = path.dirname(filePath);
+
+        // The swap lands after every validation, immediately before the unlink
+        // syscall. The unlink resolves through the anchor, so it removes the
+        // real secret (its legitimate target) and can never reach the decoy.
+        fsCallHooks.beforeUnlink = async () => {
+          fsCallHooks.beforeUnlink = null;
+          await swapDirForSymlink(dirPath, moved, decoy);
+        };
+
+        await unlinkTenantSecret(rootDir, 'tenant-race-del', 'token');
+
+        expect(await readFile(decoyFile, 'utf-8')).toBe('decoy-file-that-deletion-must-never-touch');
+        expect(await readdir(moved)).toEqual([]);
+      } finally {
+        await rm(outside, { recursive: true, force: true });
+      }
+    }
+  );
 });
 
 describe('fsSecretCore path validation', () => {

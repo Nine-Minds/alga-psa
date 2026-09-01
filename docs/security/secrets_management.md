@@ -195,6 +195,14 @@ independent of the process umask:
   `0600`.
 - Tenant IDs and secret names are validated as single path components; the
   resolved path must stay under the secret root.
+- Writes and deletes anchor the directory chain (`<root>`, `tenants/`, tenant
+  directory) for the duration of the operation: each component is opened with
+  `O_DIRECTORY|O_NOFOLLOW`, children resolve through the held descriptor
+  (via `/proc/self/fd` where the platform provides it), and the chain is
+  re-verified against the anchored identity at the write, rename, and unlink
+  boundaries. A component that changes mid-operation aborts the operation; a
+  change after the final check cannot redirect it, because the syscalls resolve
+  through the descriptor rather than the path.
 - The provider refuses to write through symlinks or non-regular files, and
   validates the secret root before the first write. A root the service **owns**
   but that is merely too permissive (e.g. `0755` from a looser umask or a

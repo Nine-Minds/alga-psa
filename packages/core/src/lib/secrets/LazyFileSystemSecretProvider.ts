@@ -9,7 +9,7 @@ import {
   tenantSecretPath,
   unlinkTenantSecret,
   validateSecretComponent,
-  writeTenantSecretAtomic,
+  writeTenantSecret,
 } from './fsSecretCore';
 
 /**
@@ -117,7 +117,10 @@ export class FileSystemSecretProvider implements ISecretProvider {
 
     try {
       await ensurePrivateDirectory(await tenantDir(basePath, tenantId));
-      await writeTenantSecretAtomic(filePath, value);
+      // Anchors the root → tenants/ → tenant-dir chain for the duration of the
+      // write and re-verifies it at the write and rename boundaries, so a path
+      // component swapped after the validation above cannot redirect the write.
+      await writeTenantSecret(basePath, tenantId, name, value);
       console.debug(`Successfully wrote tenant secret: ${filePath}`);
     } catch (error: unknown) {
       const fsError = error as NodeJS.ErrnoException;

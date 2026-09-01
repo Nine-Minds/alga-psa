@@ -22,6 +22,16 @@
  * - Every path component derived from a tenant id or secret name is
  *   allowlist-validated, and the resolved path is verified to stay under the
  *   secret root.
+ * - The destination directory identity is anchored across the whole mutation:
+ *   the chain root → `tenants/` → tenant directory is opened component by
+ *   component with `O_DIRECTORY|O_NOFOLLOW`, each child resolved through the
+ *   parent's held descriptor (via `/proc/self/fd/<fd>/…` where available, so
+ *   the kernel resolves from the directory inode, not the path). The chain is
+ *   re-verified against the anchored identity (same dev/ino, every component a
+ *   real non-symlink directory) immediately before the temp-file write, before
+ *   the rename, and after it; any change aborts the operation. The temp write,
+ *   rename, and unlink themselves resolve through the anchor, so a path
+ *   component swapped mid-operation cannot redirect them.
  * - The secret root is validated before writes (real directory, not a symlink,
  *   owned by the running user). A root we own but whose mode is too permissive
  *   is tightened to `0o700` in place (the non-destructive repair path); writes
@@ -351,76 +361,313 @@ export async function readFileContentSafe(filePath: string): Promise<string | un
 
 /**
  * Verifies, at write time, that the target is absent or a regular file — not a
- * symlink, directory, or device — narrowing the TOCTOU window before the
- * rename that replaces it.
+ * symlink, directory, or device. `opPath` is the path the check resolves
+ * (usually through an anchored descriptor); `logicalPath` is the plain path
+ * used in diagnostics.
  */
-async function assertRegularTarget(filePath: string): Promise<void> {
-  const stat = await lstatOrNull(filePath);
+async function assertRegularTarget(opPath: string, logicalPath: string): Promise<void> {
+  const stat = await lstatOrNull(opPath);
   if (!stat) return;
   if (stat.isSymbolicLink()) {
-    throw new InvalidSecretPathError(`secret file ${filePath} is a symlink; refusing to replace it`);
+    throw new InvalidSecretPathError(`secret file ${logicalPath} is a symlink; refusing to replace it`);
   }
   if (!stat.isFile()) {
-    throw new InvalidSecretPathError(`secret file ${filePath} is not a regular file; refusing to replace it`);
+    throw new InvalidSecretPathError(`secret file ${logicalPath} is not a regular file; refusing to replace it`);
   }
 }
 
 /**
- * Atomically writes `value` to `filePath`:
+ * A directory whose identity is held across a mutation.
  *
- * 1. verifies the target is absent or a regular file,
- * 2. writes to an exclusively-created temp file in the same directory with
- *    explicit `0o600`,
- * 3. fsyncs and closes the temp file,
- * 4. re-verifies the temp file's type, then renames it over the target.
+ * `handle` keeps the directory inode open; `opPath` is the prefix child
+ * operations resolve against — `/proc/self/fd/<fd>` where the platform
+ * provides it, so the kernel resolves children from the held inode itself and
+ * a concurrent swap of any path component cannot redirect the operation. On
+ * platforms without that facility `opPath` falls back to the plain directory
+ * path and safety rests on the boundary revalidation in
+ * {@link assertChainUnchanged}.
+ */
+interface AnchoredDirHandle {
+  handle: FileHandle | null;
+  opPath: string;
+  stat: Stats;
+  dirPath: string;
+}
+
+let procFdSupportPromise: Promise<boolean> | null = null;
+function procFdSupported(): Promise<boolean> {
+  procFdSupportPromise ??= (async () => {
+    const fs = await getFs();
+    try {
+      return (await fs.stat('/proc/self/fd')).isDirectory();
+    } catch {
+      return false;
+    }
+  })();
+  return procFdSupportPromise;
+}
+
+/**
+ * Opens `openPath` as a directory with `O_DIRECTORY|O_NOFOLLOW` — a symlink or
+ * non-directory is refused by the kernel in the open itself, with no separate
+ * check to race — and verifies it is owned by the running user. `openPath` may
+ * resolve through a parent's anchor; `dirPath` is the logical path for
+ * diagnostics.
+ */
+async function openDirAnchored(openPath: string, dirPath: string): Promise<AnchoredDirHandle> {
+  const fs = await getFs();
+  const flags =
+    ((fs.constants.O_RDONLY ?? 0) as number) |
+    (((fs.constants as { O_DIRECTORY?: number }).O_DIRECTORY ?? 0) as number) |
+    ((fs.constants.O_NOFOLLOW ?? 0) as number);
+
+  let handle: FileHandle;
+  try {
+    handle = await fs.open(openPath, flags);
+  } catch (error: unknown) {
+    if (isErrno(error) && (error.code === 'ELOOP' || error.code === 'ENOTDIR')) {
+      throw new InvalidSecretPathError(
+        `secret store path ${dirPath} is a symlink or not a directory; refusing to write through it`
+      );
+    }
+    if (typeof process !== 'undefined' && process.platform === 'win32' && !isEnoent(error)) {
+      // Windows cannot hold a read descriptor on a directory; fall back to
+      // path-based operations guarded by the same boundary revalidation.
+      const stat = await lstatOrNull(dirPath);
+      if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new InvalidSecretPathError(
+          `secret store path ${dirPath} is a symlink or not a directory; refusing to write through it`
+        );
+      }
+      return { handle: null, opPath: dirPath, stat, dirPath };
+    }
+    throw error;
+  }
+
+  try {
+    const stat = await handle.stat();
+    if (!stat.isDirectory()) {
+      throw new InvalidSecretPathError(`secret store path ${dirPath} is not a directory; refusing to write through it`);
+    }
+    const uid = runningUid();
+    if (typeof uid === 'number' && stat.uid !== uid) {
+      throw unsafeLocation(dirPath, `it is owned by uid ${stat.uid} and the process runs as uid ${uid}`);
+    }
+    const anchored = await procFdSupported();
+    return {
+      handle,
+      opPath: anchored ? `/proc/self/fd/${handle.fd}` : dirPath,
+      stat,
+      dirPath,
+    };
+  } catch (error) {
+    await handle.close().catch(() => undefined);
+    throw error;
+  }
+}
+
+async function closeAnchored(dir: AnchoredDirHandle): Promise<void> {
+  if (dir.handle) {
+    await dir.handle.close().catch(() => undefined);
+  }
+}
+
+/**
+ * Opens the directory chain `rootPath` → `components…`, resolving each child
+ * through its parent's anchor so no already-verified component is re-resolved
+ * from the path. Returns the anchored final directory; intermediate handles
+ * are closed.
+ */
+async function openAnchoredDirChain(rootPath: string, components: string[]): Promise<AnchoredDirHandle> {
+  const p = await getPath();
+  let current = await openDirAnchored(rootPath, rootPath);
+  for (const name of components) {
+    let next: AnchoredDirHandle;
+    try {
+      next = await openDirAnchored(p.join(current.opPath, name), p.join(current.dirPath, name));
+    } finally {
+      await closeAnchored(current);
+    }
+    current = next;
+  }
+  return current;
+}
+
+/**
+ * Re-verifies, at an operation boundary, that every controlled path component
+ * is still a real (non-symlink) directory and that the final component still
+ * resolves to the anchored directory identity (same dev/ino). Any change —
+ * a component replaced, removed, or turned into a symlink or non-directory —
+ * aborts the operation.
+ */
+async function assertChainUnchanged(chainPaths: string[], dir: AnchoredDirHandle): Promise<void> {
+  let finalStat: Stats | null = null;
+  for (const componentPath of chainPaths) {
+    const stat = await lstatOrNull(componentPath);
+    if (!stat) {
+      throw new InvalidSecretPathError(`secret store path ${componentPath} disappeared during the operation; aborting`);
+    }
+    if (stat.isSymbolicLink()) {
+      throw new InvalidSecretPathError(`secret store path ${componentPath} became a symlink during the operation; aborting`);
+    }
+    if (!stat.isDirectory()) {
+      throw new InvalidSecretPathError(`secret store path ${componentPath} is no longer a directory; aborting`);
+    }
+    finalStat = stat;
+  }
+  if (finalStat && (finalStat.dev !== dir.stat.dev || finalStat.ino !== dir.stat.ino)) {
+    throw new InvalidSecretPathError(`secret store directory ${dir.dirPath} was replaced during the operation; aborting`);
+  }
+}
+
+/**
+ * Writes `value` as `fileName` inside the anchored directory `dir`:
+ *
+ * 1. re-verifies `chainPaths` against the anchor before any bytes exist,
+ * 2. verifies the target is absent or a regular file,
+ * 3. writes to an exclusively-created temp file (resolved through the anchor)
+ *    with explicit `0o600` (`fchmod` on the handle, immune to path state),
+ * 4. fsyncs and closes the temp file,
+ * 5. re-verifies the chain at the rename boundary, then renames through the
+ *    anchor,
+ * 6. re-verifies the chain and the final entry (regular file, `0o600`, same
+ *    filesystem as the anchor) after the rename; on failure the just-renamed
+ *    file is removed through the anchor so no secret bytes remain at a
+ *    redirected location.
  *
  * The rename preserves the temp file's inode and therefore its `0o600` mode,
  * so a rewrite always ends with the file at `0o600` regardless of the
  * pre-existing file's modes. On any failure the temp file is removed and the
  * previous content is left intact. Never logs secret values.
  */
-export async function writeTenantSecretAtomic(filePath: string, value: string): Promise<void> {
+async function writeSecretFileInDir(
+  dir: AnchoredDirHandle,
+  chainPaths: string[],
+  fileName: string,
+  value: string
+): Promise<void> {
   const [fs, p, { randomBytes }] = await Promise.all([getFs(), getPath(), getCrypto()]);
-  await assertRegularTarget(filePath);
+  const targetOp = p.join(dir.opPath, fileName);
+  const targetLogical = p.join(dir.dirPath, fileName);
+  const tempOp = p.join(dir.opPath, `${fileName}.tmp-${randomBytes(6).toString('hex')}`);
 
-  const tempPath = `${filePath}.tmp-${randomBytes(6).toString('hex')}`;
+  await assertChainUnchanged(chainPaths, dir);
+  await assertRegularTarget(targetOp, targetLogical);
+
   let handle: FileHandle | null = null;
   try {
-    // O_CREAT|O_EXCL|O_WRONLY: exclusive creation never overwrites. O_NOFOLLOW
-    // is added where the platform provides it so the temp path cannot be a
-    // symlink even if an attacker races the lstat checks above; on platforms
-    // without O_NOFOLLOW the post-open lstat re-validation below still covers
-    // the same ground.
+    // O_CREAT|O_EXCL|O_WRONLY: exclusive creation never overwrites and never
+    // follows a symlink at the final component; O_NOFOLLOW is added where the
+    // platform provides it as further belt-and-braces.
     const noFollow = (fs.constants?.O_NOFOLLOW ?? 0) as number;
-    handle = await fs.open(tempPath, noFollow | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY, SECRET_FILE_MODE);
+    handle = await fs.open(
+      tempOp,
+      noFollow | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY,
+      SECRET_FILE_MODE
+    );
     await handle.writeFile(value, 'utf-8');
     await handle.sync();
+    // fchmod through the handle: open() mode is umask-masked, and this is also
+    // the mode the rename carries onto the target inode. Operating on the
+    // handle rather than a path cannot be redirected.
+    await handle.chmod(SECRET_FILE_MODE);
     await handle.close();
     handle = null;
 
-    // Explicit chmod: open() mode is umask-masked, and this is also the mode
-    // the rename carries onto the target inode.
-    await fs.chmod(tempPath, SECRET_FILE_MODE);
-
-    const tempStat = await lstatOrNull(tempPath);
-    if (!tempStat || tempStat.isSymbolicLink() || !tempStat.isFile()) {
-      throw new InvalidSecretPathError('temporary secret file is not a regular file; aborting write');
+    const tempStat = await lstatOrNull(tempOp);
+    if (!tempStat || tempStat.isSymbolicLink() || !tempStat.isFile() || tempStat.dev !== dir.stat.dev) {
+      throw new InvalidSecretPathError('temporary secret file is not a regular file inside the store; aborting write');
     }
 
-    await fs.rename(tempPath, filePath);
+    // Rename boundary: fail closed if any controlled component changed since
+    // validation. The rename itself resolves both names through the anchor, so
+    // a swap after this check still cannot redirect it.
+    await assertChainUnchanged(chainPaths, dir);
+    await fs.rename(tempOp, targetOp);
 
-    // Best-effort durability of the rename itself: fsync the parent directory
-    // so a crash right after this point cannot roll the directory entry back
-    // to the pre-rename state. Directory fsync is not supported everywhere
-    // (e.g. some Windows/FUSE filesystems raise EINVAL/EISDIR), so failures
-    // are ignored — the file contents are already durable.
-    await fsyncDirectory(p.dirname(filePath));
+    try {
+      await assertChainUnchanged(chainPaths, dir);
+      const finalStat = await lstatOrNull(targetOp);
+      if (
+        !finalStat ||
+        finalStat.isSymbolicLink() ||
+        !finalStat.isFile() ||
+        (finalStat.mode & 0o777) !== SECRET_FILE_MODE ||
+        finalStat.dev !== dir.stat.dev
+      ) {
+        throw new InvalidSecretPathError(`secret file ${targetLogical} failed post-write verification`);
+      }
+    } catch (error: unknown) {
+      // The store changed under the rename: remove the just-renamed file
+      // through the anchor so nothing written by this call survives outside a
+      // verified store, then fail closed.
+      await fs.unlink(targetOp).catch(() => undefined);
+      throw error;
+    }
+
+    // Best-effort durability of the rename itself: fsync the directory so a
+    // crash right after this point cannot roll the directory entry back to the
+    // pre-rename state. Directory fsync is not supported everywhere (e.g. some
+    // Windows/FUSE filesystems raise EINVAL/EISDIR), so failures are ignored —
+    // the file contents are already durable.
+    if (dir.handle) {
+      await dir.handle.sync().catch(() => undefined);
+    } else {
+      await fsyncDirectory(dir.dirPath);
+    }
   } catch (error: unknown) {
     if (handle) {
       await handle.close().catch(() => undefined);
     }
-    await fs.unlink(tempPath).catch(() => undefined);
+    await fs.unlink(tempOp).catch(() => undefined);
     throw error;
+  }
+}
+
+/**
+ * Atomically writes `value` to `filePath`, anchoring the parent directory for
+ * the duration of the write (see {@link writeSecretFileInDir}). The parent is
+ * opened with `O_DIRECTORY|O_NOFOLLOW`, so a symlinked parent is refused.
+ * Callers that know the full store chain should prefer
+ * {@link writeTenantSecret}, which anchors and re-verifies every controlled
+ * component.
+ */
+export async function writeTenantSecretAtomic(filePath: string, value: string): Promise<void> {
+  const p = await getPath();
+  const resolved = p.resolve(filePath);
+  const parentDir = p.dirname(resolved);
+  const dir = await openDirAnchored(parentDir, parentDir);
+  try {
+    await writeSecretFileInDir(dir, [parentDir], p.basename(resolved), value);
+  } finally {
+    await closeAnchored(dir);
+  }
+}
+
+/**
+ * Writes `<base>/tenants/<tenantId>/<name>` with the whole controlled chain
+ * anchored: root, `tenants/`, and the tenant directory are opened component by
+ * component with `O_DIRECTORY|O_NOFOLLOW`, each resolved through its parent's
+ * descriptor, and the chain is re-verified at the write and rename boundaries.
+ * A path component swapped at any point either fails the operation closed or
+ * is bypassed entirely by the anchored resolution — it can never redirect the
+ * write outside the store.
+ */
+export async function writeTenantSecret(
+  basePath: string,
+  tenantId: string,
+  name: string,
+  value: string
+): Promise<void> {
+  const p = await getPath();
+  await tenantSecretPath(basePath, tenantId, name); // validates all components
+  const root = p.resolve(basePath);
+  const chain = [root, p.join(root, TENANTS_SUBDIR), p.join(root, TENANTS_SUBDIR, tenantId)];
+  const dir = await openAnchoredDirChain(root, [TENANTS_SUBDIR, tenantId]);
+  try {
+    await writeSecretFileInDir(dir, chain, name, value);
+  } finally {
+    await closeAnchored(dir);
   }
 }
 
@@ -442,23 +689,6 @@ async function fsyncDirectory(dirPath: string): Promise<void> {
       await dirHandle.close().catch(() => undefined);
     }
   }
-}
-
-/**
- * Removes a tenant secret. Missing files are tolerated (idempotent). A symlink
- * or non-file target is rejected rather than deleted.
- */
-export async function unlinkSecret(filePath: string): Promise<void> {
-  const stat = await lstatOrNull(filePath);
-  if (!stat) return;
-  if (stat.isSymbolicLink()) {
-    throw new InvalidSecretPathError(`secret file ${filePath} is a symlink; refusing to delete it`);
-  }
-  if (!stat.isFile()) {
-    throw new InvalidSecretPathError(`secret file ${filePath} is not a regular file; refusing to delete it`);
-  }
-  const fs = await getFs();
-  await fs.unlink(filePath);
 }
 
 /**
@@ -484,22 +714,51 @@ async function isRealDirectoryForDelete(target: string): Promise<boolean> {
  * Removes `<base>/tenants/<tenantId>/<name>` after validating every component
  * and re-checking, at deletion time, that the resolved root, `tenants/`, and
  * the per-tenant directory are all real (non-symlink) directories — the same
- * component checks the write path performs, so a symlinked directory cannot
- * redirect the unlink outside the store. A missing directory or file means
- * there is nothing to delete (idempotent). The final target itself must be a
- * regular file (`unlinkSecret`).
+ * component checks the write path performs. The tenant directory is then
+ * anchored (`O_DIRECTORY|O_NOFOLLOW` chain, resolved descriptor to
+ * descriptor), the chain is re-verified at the unlink boundary, and the unlink
+ * itself resolves through the anchor — a symlinked or swapped directory can
+ * never redirect it outside the store. A missing directory or file means there
+ * is nothing to delete (idempotent). The final target itself must be a regular
+ * file.
  */
 export async function unlinkTenantSecret(basePath: string, tenantId: string, name: string): Promise<void> {
   const p = await getPath();
-  const filePath = await tenantSecretPath(basePath, tenantId, name);
+  await tenantSecretPath(basePath, tenantId, name); // validates all components
   const root = p.resolve(basePath);
-  const chain = [root, await tenantsDir(root), await tenantDir(root, tenantId)];
-  for (const dir of chain) {
-    if (!(await isRealDirectoryForDelete(dir))) {
+  const chain = [root, p.join(root, TENANTS_SUBDIR), p.join(root, TENANTS_SUBDIR, tenantId)];
+  for (const dirPath of chain) {
+    if (!(await isRealDirectoryForDelete(dirPath))) {
       return;
     }
   }
-  await unlinkSecret(filePath);
+
+  let dir: AnchoredDirHandle;
+  try {
+    dir = await openAnchoredDirChain(root, [TENANTS_SUBDIR, tenantId]);
+  } catch (error: unknown) {
+    if (isEnoent(error)) return; // a component vanished: nothing left to delete
+    throw error;
+  }
+  try {
+    const targetOp = p.join(dir.opPath, name);
+    const targetLogical = p.join(dir.dirPath, name);
+    const stat = await lstatOrNull(targetOp);
+    if (!stat) return;
+    if (stat.isSymbolicLink()) {
+      throw new InvalidSecretPathError(`secret file ${targetLogical} is a symlink; refusing to delete it`);
+    }
+    if (!stat.isFile()) {
+      throw new InvalidSecretPathError(`secret file ${targetLogical} is not a regular file; refusing to delete it`);
+    }
+    // Unlink boundary: fail closed if any controlled component changed; the
+    // unlink itself resolves through the anchor.
+    await assertChainUnchanged(chain, dir);
+    const fs = await getFs();
+    await fs.unlink(targetOp);
+  } finally {
+    await closeAnchored(dir);
+  }
 }
 
 /**
