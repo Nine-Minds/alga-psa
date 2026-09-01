@@ -55,15 +55,17 @@ vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
   DropdownMenuItem: ({
     children,
     onSelect,
+    asChild,
     ...props
   }: {
     children: React.ReactNode;
     onSelect?: () => void;
-  }) => (
+    asChild?: boolean;
+  }) => (asChild ? <>{children}</> : (
     <button type="button" onClick={onSelect} {...props}>
       {children}
     </button>
-  ),
+  )),
   DropdownMenuSeparator: () => <hr />,
 }));
 
@@ -228,6 +230,10 @@ describe('Header i18n wiring', () => {
       'header.profile': 'Profil FR',
       'header.account': 'Compte FR',
       'header.signOut': 'Deconnexion FR',
+      'header.resources.ariaLabel': 'Ressources et aide FR',
+      'header.resources.title': 'Ressources FR',
+      'header.resources.documentation': 'Documentation FR',
+      'header.resources.support': 'Contacter assistance FR',
     };
   });
 
@@ -258,6 +264,31 @@ describe('Header i18n wiring', () => {
     expect(screen.getByText('Ajouter un service facturable')).toBeInTheDocument();
     expect(screen.getByText('Produit FR')).toBeInTheDocument();
     expect(screen.getByText('Ajouter un produit au catalogue')).toBeInTheDocument();
+  });
+
+  it('opens documentation and support from the header resources menu in new tabs', () => {
+    render(
+      <Header
+        sidebarOpen={true}
+        setSidebarOpen={vi.fn()}
+        rightSidebarOpen={false}
+        setRightSidebarOpen={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Ressources et aide FR' }))
+      .toHaveAttribute('id', 'header-resources-menu-trigger');
+    expect(screen.getByText('Ressources FR')).toBeInTheDocument();
+
+    const documentation = screen.getByRole('link', { name: 'Documentation FR' });
+    expect(documentation).toHaveAttribute('href', 'https://www.nineminds.com/documentation');
+    expect(documentation).toHaveAttribute('target', '_blank');
+    expect(documentation).toHaveAttribute('rel', 'noopener noreferrer');
+
+    const support = screen.getByRole('link', { name: 'Contacter assistance FR' });
+    expect(support).toHaveAttribute('href', 'https://www.nineminds.com/support');
+    expect(support).toHaveAttribute('target', '_blank');
+    expect(support).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('shows the workflow Quick Ask trigger in the header when AI is available on workflow editor routes', () => {

@@ -103,7 +103,7 @@ describe('menuConfig i18n metadata', () => {
       'settings.tabs.general',
       'settings.tabs.profile',
       'settings.tabs.security',
-      'sidebar.support',
+      'sidebar.resources',
     ]);
   });
 
