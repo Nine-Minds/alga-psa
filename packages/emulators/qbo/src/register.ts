@@ -38,6 +38,39 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
   });
 
   reg.seeder({
+    name: 'account',
+    description: 'Create a QBO chart-of-accounts entry',
+    params: z.object({
+      name: z.string(),
+      accountType: z.string(),
+      id: z.string().optional(),
+      active: z.boolean().optional(),
+    }),
+    run: (params) => core.sim.seedAccount(params),
+  });
+
+  reg.seeder({
+    name: 'class',
+    description: 'Create a QBO Class (tracking category)',
+    params: z.object({ name: z.string(), id: z.string().optional(), active: z.boolean().optional() }),
+    run: (params) => core.sim.seedClass(params),
+  });
+
+  reg.seeder({
+    name: 'department',
+    description: 'Create a QBO Department (location tracking)',
+    params: z.object({ name: z.string(), id: z.string().optional(), active: z.boolean().optional() }),
+    run: (params) => core.sim.seedDepartment(params),
+  });
+
+  reg.seeder({
+    name: 'term',
+    description: 'Create a QBO payment Term',
+    params: z.object({ name: z.string(), id: z.string().optional(), active: z.boolean().optional() }),
+    run: (params) => core.sim.seedTerm(params),
+  });
+
+  reg.seeder({
     name: 'tax-rate',
     description: 'Create a QBO TaxRate component (RateValue is a percentage: 8 means 8%)',
     params: z.object({ name: z.string(), ratePercent: z.number(), id: z.string().optional() }),
@@ -143,6 +176,10 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
     ['items', 'Item'],
     ['tax-codes', 'TaxCode'],
     ['tax-rates', 'TaxRate'],
+    ['accounts', 'Account'],
+    ['classes', 'Class'],
+    ['departments', 'Department'],
+    ['terms', 'Term'],
   ] as const) {
     reg.stateView({
       name: view,

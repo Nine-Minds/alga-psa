@@ -92,7 +92,12 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
 
   company.get('/companyinfo/:companyId', (_req, res) => {
     res.json({
-      CompanyInfo: { Id: core.realmId, CompanyName: 'Alga Emulated Co', Country: 'US', CompanyStartDate: '2020-01-01' },
+      CompanyInfo: {
+        Id: core.realmId,
+        CompanyName: core.sim.options.companyName,
+        Country: 'US',
+        CompanyStartDate: '2020-01-01',
+      },
     });
   });
 
