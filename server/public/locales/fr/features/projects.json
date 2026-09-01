@@ -12,6 +12,7 @@
   "phasesAndTasks": "Phases et Tâches",
   "kanbanView": "Kanban",
   "listView": "Liste",
+  "ganttView": "Chronologie",
   "task": "tâche",
   "tasks": {
     "title": "Tâches",
@@ -294,7 +295,9 @@
     "bulkTagsSuccess_other": "Étiquettes ajoutées à {{count}} tâches",
     "bulkTagsPartial": "Impossible d'ajouter des étiquettes à certaines tâches",
     "bulkTagsFailure": "Échec de l'ajout d'étiquettes aux tâches sélectionnées",
-    "taskTypeFallback": "Tâche"
+    "taskTypeFallback": "Tâche",
+    "timeline": "Chronologie",
+    "loadingTimeline": "Chargement de la chronologie..."
   },
   "taskForm": {
     "addTitle": "Ajouter une tâche",
@@ -408,7 +411,10 @@
     "movedSuccess": "Tâche déplacée avec succès",
     "duplicatedSuccess": "Tâche \"{{taskName}}\" dupliquée avec succès !",
     "willBeSetOnCreate": "Sera défini à la création",
-    "unknownPhase": "Phase inconnue"
+    "unknownPhase": "Phase inconnue",
+    "startDateLabel": "Date de début",
+    "taskStartDateLabel": "Date de début de la tâche",
+    "startDatePlaceholder": "Sélectionner une date de début"
   },
   "taskDependencies": {
     "title": "Dépendances",
@@ -1865,5 +1871,22 @@
       "loadRecipient": "Échec du chargement des informations du destinataire",
       "sendFailed": "Échec de l’envoi du point d’avancement"
     }
+  },
+  "gantt": {
+    "taskColumn": "Phase / Tâche",
+    "zoomLabel": "Échelle de temps",
+    "zoomDay": "Jour",
+    "zoomWeek": "Semaine",
+    "zoomMonth": "Mois",
+    "today": "Aujourd'hui",
+    "showBlocking": "Blocage",
+    "showRelated": "Liée",
+    "legendScheduled": "Planifié",
+    "legendInferred": "Déduit des dépendances",
+    "legendViolated": "Conflit d'ordre",
+    "legendRelated": "Liée (non planifiée)",
+    "inferredHint": "Dates déduites des dépendances et de l'estimation",
+    "blockedHint": "En attente d'une tâche bloquante ouverte",
+    "empty": "Aucune phase ni tâche à placer sur la chronologie pour l'instant."
   }
 }

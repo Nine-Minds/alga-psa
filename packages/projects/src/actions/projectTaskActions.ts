@@ -2316,6 +2316,7 @@ export const duplicateTaskToPhase = withAuth(async (
                 task_name: originalTask.task_name + ' (Copy)', // Add (Copy) suffix
                 description: originalTask.description,
                 description_rich_text: originalTask.description_rich_text,
+                start_date: originalTask.start_date,
                 due_date: originalTask.due_date,
                 estimated_hours: originalTask.estimated_hours,
                 assigned_to: options?.duplicatePrimaryAssignee ? originalTask.assigned_to : null,

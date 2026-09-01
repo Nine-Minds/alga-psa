@@ -12,6 +12,7 @@
   "phasesAndTasks": "Fasen & Taken",
   "kanbanView": "Kanban",
   "listView": "Lijst",
+  "ganttView": "Tijdlijn",
   "task": "taak",
   "tasks": {
     "title": "Taken",
@@ -294,7 +295,9 @@
     "bulkTagsSuccess_other": "Labels toegevoegd aan {{count}} taken",
     "bulkTagsPartial": "Labels konden niet aan sommige taken worden toegevoegd",
     "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd",
-    "taskTypeFallback": "Taak"
+    "taskTypeFallback": "Taak",
+    "timeline": "Tijdlijn",
+    "loadingTimeline": "Tijdlijn laden..."
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
@@ -408,7 +411,10 @@
     "movedSuccess": "Taak is succesvol verplaatst",
     "duplicatedSuccess": "Taak \"{{taskName}}\" is succesvol gedupliceerd!",
     "willBeSetOnCreate": "Wordt ingesteld op de schepping",
-    "unknownPhase": "Onbekende fase"
+    "unknownPhase": "Onbekende fase",
+    "startDateLabel": "Startdatum",
+    "taskStartDateLabel": "Startdatum van taak",
+    "startDatePlaceholder": "Selecteer startdatum"
   },
   "taskDependencies": {
     "title": "Afhankelijkheden",
@@ -1865,5 +1871,22 @@
       "loadRecipient": "Ontvangersgegevens konden niet worden geladen",
       "sendFailed": "Statusupdate kon niet worden verstuurd"
     }
+  },
+  "gantt": {
+    "taskColumn": "Fase / Taak",
+    "zoomLabel": "Tijdschaal",
+    "zoomDay": "Dag",
+    "zoomWeek": "Week",
+    "zoomMonth": "Maand",
+    "today": "Vandaag",
+    "showBlocking": "Blokkerend",
+    "showRelated": "Gerelateerd",
+    "legendScheduled": "Gepland",
+    "legendInferred": "Afgeleid uit afhankelijkheden",
+    "legendViolated": "Volgordeconflict",
+    "legendRelated": "Gerelateerd (niet ingepland)",
+    "inferredHint": "Datums afgeleid uit afhankelijkheden en schatting",
+    "blockedHint": "Wacht op een openstaande blokkerende taak",
+    "empty": "Nog geen fasen of taken om op de tijdlijn te plaatsen."
   }
 }

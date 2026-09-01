@@ -12,6 +12,7 @@
   "phasesAndTasks": "Fases y Tareas",
   "kanbanView": "Kanban",
   "listView": "Lista",
+  "ganttView": "Cronograma",
   "task": "tarea",
   "tasks": {
     "title": "Tareas",
@@ -294,7 +295,9 @@
     "bulkTagsSuccess_other": "Etiquetas añadidas a {{count}} tareas",
     "bulkTagsPartial": "No se pudieron añadir etiquetas a algunas tareas",
     "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas",
-    "taskTypeFallback": "Tarea"
+    "taskTypeFallback": "Tarea",
+    "timeline": "Cronograma",
+    "loadingTimeline": "Cargando cronograma..."
   },
   "taskForm": {
     "addTitle": "Agregar tarea",
@@ -408,7 +411,10 @@
     "movedSuccess": "Tarea movida correctamente",
     "duplicatedSuccess": "¡La tarea \"{{taskName}}\" se duplicó correctamente!",
     "willBeSetOnCreate": "Se establecerá al crearla",
-    "unknownPhase": "Fase desconocida"
+    "unknownPhase": "Fase desconocida",
+    "startDateLabel": "Fecha de inicio",
+    "taskStartDateLabel": "Fecha de inicio de la tarea",
+    "startDatePlaceholder": "Seleccionar fecha de inicio"
   },
   "taskDependencies": {
     "title": "Dependencias",
@@ -1865,5 +1871,22 @@
       "loadRecipient": "No se pudo cargar la información del destinatario",
       "sendFailed": "No se pudo enviar la actualización de estado"
     }
+  },
+  "gantt": {
+    "taskColumn": "Fase / Tarea",
+    "zoomLabel": "Escala de tiempo",
+    "zoomDay": "Día",
+    "zoomWeek": "Semana",
+    "zoomMonth": "Mes",
+    "today": "Hoy",
+    "showBlocking": "Bloqueo",
+    "showRelated": "Relacionada",
+    "legendScheduled": "Programado",
+    "legendInferred": "Inferido de las dependencias",
+    "legendViolated": "Conflicto de orden",
+    "legendRelated": "Relacionada (no programada)",
+    "inferredHint": "Fechas inferidas de las dependencias y la estimación",
+    "blockedHint": "Esperando una tarea bloqueante abierta",
+    "empty": "Todavía no hay fases ni tareas para mostrar en el cronograma."
   }
 }

@@ -32,6 +32,7 @@ import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
+import ProjectGanttView from './ProjectGanttView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
@@ -65,7 +66,7 @@ import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye, Receipt } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye, Receipt, GanttChart } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
@@ -222,7 +223,7 @@ interface ProjectDetailProps {
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
   initialTaskId?: string | null;
   initialPhaseId?: string | null;
-  initialViewMode?: 'kanban' | 'list' | 'billing' | null;
+  initialViewMode?: 'kanban' | 'list' | 'billing' | 'gantt' | null;
   onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
 }
 
@@ -252,7 +253,7 @@ export default function ProjectDetail({
   const isDark = resolvedTheme === 'dark';
 
   // Batch-load all user preferences in a single server action (instead of 5 separate calls)
-  type ProjectViewMode = 'kanban' | 'list' | 'billing';
+  type ProjectViewMode = 'kanban' | 'list' | 'billing' | 'gantt';
   // Column widths are scoped per project (each project can show different
   // columns), so the preference key includes the project id.
   const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
@@ -773,6 +774,7 @@ export default function ProjectDetail({
     const options: { value: ProjectViewMode; label: string; icon: typeof LayoutGrid }[] = [
       { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
       { value: 'list', label: t('listView', 'List'), icon: List },
+      { value: 'gantt', label: t('ganttView', 'Timeline'), icon: GanttChart },
     ];
     if (canViewBilling && billingIntegration) {
       options.push({ value: 'billing', label: t('billingView', 'Billing'), icon: Receipt });
@@ -3498,6 +3500,25 @@ export default function ProjectDetail({
       );
     }
 
+    // Timeline header: the Gantt carries its own scale/dependency controls, so
+    // only the heading and the view switcher belong here.
+    if (viewMode === 'gantt') {
+      return (
+        <div className="mb-4 flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-xl font-bold">{t('projectDetail.timeline', 'Timeline')}</h2>
+            <div className="ml-auto">
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={(v) => setViewMode(v as ProjectViewMode)}
+                options={viewSwitcherOptions}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (viewMode === 'list') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
@@ -4040,6 +4061,29 @@ export default function ProjectDetail({
           canManage={canManageBilling}
           highlightEntryId={billingHighlightEntryId}
           onChanged={() => { void refreshBilling(); }}
+        />
+      );
+    }
+
+    // Timeline (Gantt) rendering: same project-wide task/dependency data the
+    // list view already loaded.
+    if (viewMode === 'gantt') {
+      if (!projectTaskDataLoaded) {
+        return (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">{t('projectDetail.loadingTimeline', 'Loading timeline...')}</div>
+          </div>
+        );
+      }
+
+      return (
+        <ProjectGanttView
+          phases={projectPhases}
+          tasks={allProjectTasks}
+          statuses={projectStatuses}
+          statusesByPhase={statusesByPhase}
+          taskDependencies={allTaskDependencies}
+          onTaskClick={handleTaskSelected}
         />
       );
     }

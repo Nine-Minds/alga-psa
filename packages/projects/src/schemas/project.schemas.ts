@@ -99,6 +99,7 @@ export const projectTaskSchema = tenantSchema.extend({
   created_at: z.date(),
   updated_at: z.date(),
   wbs_code: z.string(),
+  start_date: z.date().nullable().optional(),
   due_date: z.date().nullable(),
   priority_id: z.string().uuid().nullable().optional(),
   service_id: z.string().uuid().nullable().optional(),

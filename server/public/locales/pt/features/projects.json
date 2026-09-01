@@ -12,6 +12,7 @@
   "phasesAndTasks": "Fases e Tarefas",
   "kanbanView": "Kanban",
   "listView": "Lista",
+  "ganttView": "Linha do tempo",
   "task": "tarefa",
   "tasks": {
     "title": "Tarefas",
@@ -294,7 +295,9 @@
     "bulkTasksMovedToPhase": "Tarefas {{count}} movidas para {{phaseName}}",
     "moveTasksTitle": "Mover tarefas",
     "confirmMoveTasksMessage": "Tem certeza de que deseja mover as tarefas selecionadas de {{count}} para a fase \"{{targetPhase}}\"?",
-    "taskTypeFallback": "Tarefa"
+    "taskTypeFallback": "Tarefa",
+    "timeline": "Linha do tempo",
+    "loadingTimeline": "Carregando linha do tempo..."
   },
   "taskForm": {
     "addTitle": "Adicionar nova tarefa",
@@ -408,7 +411,10 @@
     "movedSuccess": "Tarefa movida com sucesso",
     "duplicatedSuccess": "Tarefa \"{{taskName}}\" duplicada com sucesso!",
     "willBeSetOnCreate": "Será definido na criação",
-    "unknownPhase": "Fase Desconhecida"
+    "unknownPhase": "Fase Desconhecida",
+    "startDateLabel": "Data de início",
+    "taskStartDateLabel": "Data de início da tarefa",
+    "startDatePlaceholder": "Selecione a data de início"
   },
   "taskDependencies": {
     "title": "Dependências",
@@ -1865,5 +1871,22 @@
       "loadRecipient": "Não foi possível carregar as informações do destinatário",
       "sendFailed": "Não foi possível enviar a atualização de status"
     }
+  },
+  "gantt": {
+    "taskColumn": "Fase / Tarefa",
+    "zoomLabel": "Escala de tempo",
+    "zoomDay": "Dia",
+    "zoomWeek": "Semana",
+    "zoomMonth": "Mês",
+    "today": "Hoje",
+    "showBlocking": "Bloqueio",
+    "showRelated": "Relacionada",
+    "legendScheduled": "Agendado",
+    "legendInferred": "Inferido das dependências",
+    "legendViolated": "Conflito de ordem",
+    "legendRelated": "Relacionada (não agendada)",
+    "inferredHint": "Datas inferidas das dependências e da estimativa",
+    "blockedHint": "Aguardando uma tarefa bloqueadora em aberto",
+    "empty": "Ainda não há fases ou tarefas para exibir na linha do tempo."
   }
 }

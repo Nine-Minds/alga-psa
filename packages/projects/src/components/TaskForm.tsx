@@ -185,6 +185,9 @@ export default function TaskForm({
       : prefillData?.estimated_hours ?? 0
   );
   const actualHours = Number(task?.actual_hours) / 60 || 0;
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    task?.start_date ? new Date(task.start_date) : undefined
+  );
   const [dueDate, setDueDate] = useState<Date | undefined>(
     task?.due_date
       ? new Date(task.due_date)
@@ -329,6 +332,7 @@ export default function TaskForm({
     setDescriptionContent(parseTaskRichTextContent(prefillData.description || null));
     setDescriptionEditorKey(prev => prev + 1);
     setAssignedUser(prefillData.assigned_to);
+    setStartDate(undefined);
     setDueDate(prefillData.due_date ?? undefined);
     setEstimatedHours(prefillData.estimated_hours);
 
@@ -674,6 +678,7 @@ export default function TaskForm({
           assigned_to: assignedUser || null,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          start_date: startDate || null,
           due_date: dueDate || null,
           checklist_items: checklistItems,
           phase_id: selectedPhaseId,
@@ -900,6 +905,7 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          start_date: startDate || null,
           due_date: dueDate || null,
           priority_id: selectedPriorityId,
           checklist_items: checklistItems,
@@ -938,6 +944,7 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          start_date: startDate || null,
           due_date: dueDate || null, // Use selected due date or null
           priority_id: selectedPriorityId,
           phase_id: phase.phase_id,
@@ -1836,6 +1843,19 @@ export default function TaskForm({
                   {taskFormT('willBeSetOnCreate', 'Will be set on creation')}
                 </div>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('startDateLabel', 'Start Date')}</label>
+              <DatePicker
+                value={startDate}
+                onChange={setStartDate}
+                id="task-start-date-picker"
+                label={taskFormT('taskStartDateLabel', 'Task Start Date')}
+                placeholder={taskFormT('startDatePlaceholder', 'Select start date')}
+                maxDate={dueDate}
+                clearable
+                disabled={isSubmitting}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('dueDateLabel', 'Due Date')}</label>

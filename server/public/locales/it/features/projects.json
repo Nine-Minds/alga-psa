@@ -12,6 +12,7 @@
   "phasesAndTasks": "Fasi e Attività",
   "kanbanView": "Kanban",
   "listView": "Elenco",
+  "ganttView": "Cronologia",
   "task": "attività",
   "tasks": {
     "title": "Attività",
@@ -294,7 +295,9 @@
     "bulkTagsSuccess_other": "Tag aggiunti a {{count}} attività",
     "bulkTagsPartial": "Impossibile aggiungere i tag ad alcune attività",
     "bulkTagsFailure": "Impossibile aggiungere i tag alle attività selezionate",
-    "taskTypeFallback": "Attività"
+    "taskTypeFallback": "Attività",
+    "timeline": "Cronologia",
+    "loadingTimeline": "Caricamento cronologia..."
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",
@@ -408,7 +411,10 @@
     "movedSuccess": "Attività spostata con successo",
     "duplicatedSuccess": "Attività \"{{taskName}}\" duplicata con successo!",
     "willBeSetOnCreate": "Verrà impostato alla creazione",
-    "unknownPhase": "Fase sconosciuta"
+    "unknownPhase": "Fase sconosciuta",
+    "startDateLabel": "Data di inizio",
+    "taskStartDateLabel": "Data di inizio dell'attività",
+    "startDatePlaceholder": "Seleziona data di inizio"
   },
   "taskDependencies": {
     "title": "Dipendenze",
@@ -1865,5 +1871,22 @@
       "loadRecipient": "Impossibile caricare le informazioni del destinatario",
       "sendFailed": "Impossibile inviare l’aggiornamento di stato"
     }
+  },
+  "gantt": {
+    "taskColumn": "Fase / Attività",
+    "zoomLabel": "Scala temporale",
+    "zoomDay": "Giorno",
+    "zoomWeek": "Settimana",
+    "zoomMonth": "Mese",
+    "today": "Oggi",
+    "showBlocking": "Bloccante",
+    "showRelated": "Correlata",
+    "legendScheduled": "Pianificato",
+    "legendInferred": "Dedotto dalle dipendenze",
+    "legendViolated": "Conflitto di sequenza",
+    "legendRelated": "Correlata (non pianificata)",
+    "inferredHint": "Date dedotte dalle dipendenze e dalla stima",
+    "blockedHint": "In attesa di un'attività bloccante aperta",
+    "empty": "Nessuna fase o attività da collocare sulla cronologia."
   }
 }

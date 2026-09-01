@@ -1115,6 +1115,7 @@ export const importPhasesAndTasks = withAuth(async (
               description_rich_text: null,
               assigned_to: taskData.assigned_to,
               estimated_hours: taskData.estimated_hours,
+              start_date: null,
               due_date: taskData.due_date,
               priority_id: taskData.priority_id,
               service_id: taskData.service_id,

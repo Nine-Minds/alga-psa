@@ -277,6 +277,7 @@ describe('TaskForm create-from-ticket flow', () => {
             created_at: new Date(),
             updated_at: new Date(),
             wbs_code: '1',
+            start_date: null,
             due_date: null,
             task_type_key: 'task',
             tenant: 'tenant-1'

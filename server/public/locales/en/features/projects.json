@@ -12,6 +12,7 @@
   "phasesAndTasks": "Phases & Tasks",
   "kanbanView": "Kanban",
   "listView": "List",
+  "ganttView": "Timeline",
   "task": "task",
   "tasks": {
     "title": "Tasks",
@@ -294,7 +295,9 @@
     "bulkTasksMovedToPhase": "{{count}} tasks moved to {{phaseName}}",
     "moveTasksTitle": "Move Tasks",
     "confirmMoveTasksMessage": "Are you sure you want to move {{count}} selected tasks to phase \"{{targetPhase}}\"?",
-    "taskTypeFallback": "Task"
+    "taskTypeFallback": "Task",
+    "timeline": "Timeline",
+    "loadingTimeline": "Loading timeline..."
   },
   "taskForm": {
     "addTitle": "Add New Task",
@@ -408,7 +411,10 @@
     "movedSuccess": "Task moved successfully",
     "duplicatedSuccess": "Task \"{{taskName}}\" duplicated successfully!",
     "willBeSetOnCreate": "Will be set on creation",
-    "unknownPhase": "Unknown Phase"
+    "unknownPhase": "Unknown Phase",
+    "startDateLabel": "Start Date",
+    "taskStartDateLabel": "Task Start Date",
+    "startDatePlaceholder": "Select start date"
   },
   "taskDependencies": {
     "title": "Dependencies",
@@ -1865,5 +1871,22 @@
       "loadRecipient": "Failed to load recipient information",
       "sendFailed": "Failed to send the status update"
     }
+  },
+  "gantt": {
+    "taskColumn": "Phase / Task",
+    "zoomLabel": "Timeline scale",
+    "zoomDay": "Day",
+    "zoomWeek": "Week",
+    "zoomMonth": "Month",
+    "today": "Today",
+    "showBlocking": "Blocking",
+    "showRelated": "Related",
+    "legendScheduled": "Scheduled",
+    "legendInferred": "Inferred from dependencies",
+    "legendViolated": "Order conflict",
+    "legendRelated": "Related (not scheduled)",
+    "inferredHint": "Dates inferred from dependencies and estimate",
+    "blockedHint": "Waiting on an open blocking task",
+    "empty": "No phases or tasks to place on the timeline yet."
   }
 }

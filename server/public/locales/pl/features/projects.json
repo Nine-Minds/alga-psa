@@ -12,6 +12,7 @@
   "phasesAndTasks": "Fazy i zadania",
   "kanbanView": "Kanban",
   "listView": "Lista",
+  "ganttView": "Harmonogram",
   "task": "zadanie",
   "tasks": {
     "title": "Zadania",
@@ -298,7 +299,9 @@
     "bulkTagsFailure": "Nie udało się dodać tagów do wybranych zadań",
     "bulkTagsSuccess_few": "Dodano tagi do {{count}} zadań",
     "bulkTagsSuccess_many": "Dodano tagi do {{count}} zadań",
-    "taskTypeFallback": "Zadanie"
+    "taskTypeFallback": "Zadanie",
+    "timeline": "Harmonogram",
+    "loadingTimeline": "Ładowanie harmonogramu..."
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
@@ -420,7 +423,10 @@
     "movedSuccess": "Zadanie zostało pomyślnie przeniesione",
     "duplicatedSuccess": "Zadanie „{{taskName}}” zostało pomyślnie zduplikowane!",
     "willBeSetOnCreate": "Zostanie ustawiony podczas tworzenia",
-    "unknownPhase": "Nieznana faza"
+    "unknownPhase": "Nieznana faza",
+    "startDateLabel": "Data rozpoczęcia",
+    "taskStartDateLabel": "Data rozpoczęcia zadania",
+    "startDatePlaceholder": "Wybierz datę rozpoczęcia"
   },
   "taskDependencies": {
     "title": "Zależności",
@@ -1893,5 +1899,22 @@
       "loadRecipient": "Nie udało się załadować informacji o odbiorcy",
       "sendFailed": "Nie udało się wysłać aktualizacji statusu"
     }
+  },
+  "gantt": {
+    "taskColumn": "Faza / Zadanie",
+    "zoomLabel": "Skala czasu",
+    "zoomDay": "Dzień",
+    "zoomWeek": "Tydzień",
+    "zoomMonth": "Miesiąc",
+    "today": "Dzisiaj",
+    "showBlocking": "Blokujące",
+    "showRelated": "Powiązane",
+    "legendScheduled": "Zaplanowane",
+    "legendInferred": "Wywnioskowane z zależności",
+    "legendViolated": "Konflikt kolejności",
+    "legendRelated": "Powiązane (poza harmonogramem)",
+    "inferredHint": "Daty wywnioskowane z zależności i szacowanego czasu",
+    "blockedHint": "Oczekuje na otwarte zadanie blokujące",
+    "empty": "Brak faz lub zadań do umieszczenia na harmonogramie."
   }
 }

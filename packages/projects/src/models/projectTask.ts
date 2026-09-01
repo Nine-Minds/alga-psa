@@ -83,6 +83,7 @@ const ProjectTaskModel = {
         'description_rich_text',
         'assigned_to',
         'estimated_hours',
+        'start_date',
         'due_date',
         'wbs_code',
         'project_status_mapping_id',
@@ -124,6 +125,7 @@ const ProjectTaskModel = {
                 finalTaskData[typedKey] = value;
               }
               break;
+            case 'start_date':
             case 'due_date':
               // Convert string to Date if needed
               if (typeof value === 'string') {

@@ -12,6 +12,7 @@
   "phasesAndTasks": "Phasen & Aufgaben",
   "kanbanView": "Kanban",
   "listView": "Liste",
+  "ganttView": "Zeitplan",
   "task": "Aufgabe",
   "tasks": {
     "title": "Aufgaben",
@@ -294,7 +295,9 @@
     "bulkTagsSuccess_other": "Tags zu {{count}} Aufgaben hinzugefügt",
     "bulkTagsPartial": "Tags konnten zu einigen Aufgaben nicht hinzugefügt werden",
     "bulkTagsFailure": "Tags konnten nicht zu den ausgewählten Aufgaben hinzugefügt werden",
-    "taskTypeFallback": "Aufgabe"
+    "taskTypeFallback": "Aufgabe",
+    "timeline": "Zeitplan",
+    "loadingTimeline": "Zeitplan wird geladen..."
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",
@@ -408,7 +411,10 @@
     "movedSuccess": "Aufgabe erfolgreich verschoben",
     "duplicatedSuccess": "Aufgabe \"{{taskName}}\" erfolgreich dupliziert!",
     "willBeSetOnCreate": "Wird bei der Erstellung gesetzt",
-    "unknownPhase": "Unbekannte Phase"
+    "unknownPhase": "Unbekannte Phase",
+    "startDateLabel": "Startdatum",
+    "taskStartDateLabel": "Startdatum der Aufgabe",
+    "startDatePlaceholder": "Startdatum auswählen"
   },
   "taskDependencies": {
     "title": "Abhängigkeiten",
@@ -1865,5 +1871,22 @@
       "loadRecipient": "Empfängerinformationen konnten nicht geladen werden",
       "sendFailed": "Statusupdate konnte nicht gesendet werden"
     }
+  },
+  "gantt": {
+    "taskColumn": "Phase / Aufgabe",
+    "zoomLabel": "Zeitskala",
+    "zoomDay": "Tag",
+    "zoomWeek": "Woche",
+    "zoomMonth": "Monat",
+    "today": "Heute",
+    "showBlocking": "Blockierend",
+    "showRelated": "Verknüpft",
+    "legendScheduled": "Geplant",
+    "legendInferred": "Aus Abhängigkeiten abgeleitet",
+    "legendViolated": "Reihenfolgekonflikt",
+    "legendRelated": "Verknüpft (nicht eingeplant)",
+    "inferredHint": "Daten aus Abhängigkeiten und Schätzung abgeleitet",
+    "blockedHint": "Wartet auf eine offene blockierende Aufgabe",
+    "empty": "Noch keine Phasen oder Aufgaben für den Zeitplan vorhanden."
   }
 }
