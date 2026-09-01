@@ -200,6 +200,12 @@
         }
       }
     },
+    "resources": {
+      "ariaLabel": "Recursos y ayuda",
+      "title": "Recursos",
+      "documentation": "Documentación",
+      "support": "Contactar con soporte"
+    },
     "jobs": {
       "ariaLabel": "Ver actividad de trabajos en segundo plano",
       "title": "Trabajos en segundo plano",

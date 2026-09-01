@@ -557,6 +557,12 @@
         }
       }
     },
+    "resources": {
+      "ariaLabel": "Resources and help",
+      "title": "Resources",
+      "documentation": "Documentation",
+      "support": "Contact Support"
+    },
     "jobs": {
       "ariaLabel": "View background job activity",
       "title": "Background Jobs",

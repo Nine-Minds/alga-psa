@@ -200,6 +200,12 @@
         }
       }
     },
+    "resources": {
+      "ariaLabel": "Ressourcen und Hilfe",
+      "title": "Ressourcen",
+      "documentation": "Dokumentation",
+      "support": "Support kontaktieren"
+    },
     "jobs": {
       "ariaLabel": "Aktivität der Hintergrundjobs anzeigen",
       "title": "Hintergrundjobs",
