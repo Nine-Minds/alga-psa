@@ -5,7 +5,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getClientContractLineSettingsAsync,
@@ -48,7 +48,9 @@ const ClientExternalCreditSettings: React.FC<ClientExternalCreditSettingsProps> 
   const handleFlagChange = async (checked: boolean) => {
     try {
       const result = await updateClientContractLineSettingsAsync(clientId, { hasExternalCredit: checked });
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         setHasExternalCredit(checked);
         toast.success(
           t('clientExternalCreditSettings.updatedSuccess', { defaultValue: 'External credit setting updated.' })
@@ -64,7 +66,9 @@ const ClientExternalCreditSettings: React.FC<ClientExternalCreditSettingsProps> 
       const result = await updateClientContractLineSettingsAsync(clientId, {
         externalCreditNote: note.trim() ? note.trim() : null
       });
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         toast.success(
           t('clientExternalCreditSettings.noteUpdatedSuccess', { defaultValue: 'External credit note updated.' })
         );

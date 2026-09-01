@@ -49,6 +49,16 @@ This guide provides step-by-step instructions for setting up the PSA system on W
 
 1. Create secret files in the `secrets/` directory (replace placeholders with strong values):
 
+   If you are using Git Bash or WSL, the idempotent bootstrap script generates
+   every required secret on a fresh checkout (including `credential_encryption_key`,
+   the EE credentials-vault encryption key); on an existing install it preserves
+   established values, adds only the new key, and fails loudly rather than
+   regenerating other missing secrets. It never overwrites existing files:
+   ```bash
+   ./scripts/generate-secrets.sh
+   ```
+   The manual steps below remain for operators who want to pin specific values.
+
    Use single quotes around secret values to prevent shell expansion of special characters (for example `$`, `!`, `*`, and backticks).
    If a secret contains a single quote (`'`), use a quoted heredoc instead:
    ```bash
@@ -79,6 +89,7 @@ This guide provides step-by-step instructions for setting up the PSA system on W
    echo 'your-32-char-min-key' > secrets/crypto_key
    echo 'your-32-char-min-key' > secrets/token_secret_key
    echo 'your-32-char-min-key' > secrets/nextauth_secret
+   echo "$(openssl rand -base64 32)" > secrets/credential_encryption_key
    ```
 
    Email & OAuth secrets:

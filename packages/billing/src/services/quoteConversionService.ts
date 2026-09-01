@@ -12,6 +12,7 @@ import type {
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
+import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
@@ -371,8 +372,27 @@ export async function buildQuoteConversionPreview(
     item.location_id ? (locationNameMap.get(item.location_id) ?? null) : null
   );
 
+  // Mirror the conversions themselves: which product lines a sales order takes
+  // (or has taken), and which one-time items an invoice conversion would still
+  // bill after that. Without this the preview promises invoice charges the
+  // conversion then refuses.
+  const salesOrder = knexOrTrx && resolvedTenant
+    ? await getSalesOrderByQuoteId(knexOrTrx, resolvedTenant, quote.quote_id)
+    : null;
+  const productServiceIds = knexOrTrx && resolvedTenant
+    ? await resolveProductServiceIds(knexOrTrx, resolvedTenant, quoteItems)
+    : new Set<string>();
+  const invoiceableOneTimeIds = new Set(
+    (salesOrder ? excludeSalesOrderProductItems(oneTimeItems, productServiceIds) : oneTimeItems)
+      .map((item) => item.quote_item_id)
+  );
+  const newSalesOrderItemIds = new Set(
+    getSelectedProductOneTimeItems(quoteItems, productServiceIds).map((item) => item.quote_item_id)
+  );
+
   const contractItems: QuoteConversionPreviewItem[] = [];
   const invoiceItems: QuoteConversionPreviewItem[] = [];
+  const salesOrderItems: QuoteConversionPreviewItem[] = [];
   const excludedItems: QuoteConversionPreviewItem[] = [];
 
   for (const item of quoteItems) {
@@ -382,6 +402,18 @@ export async function buildQuoteConversionPreview(
     }
 
     if (oneTimeIds.has(item.quote_item_id)) {
+      if (salesOrder && !invoiceableOneTimeIds.has(item.quote_item_id)) {
+        // Claimed by the existing sales order (product line or a discount tied
+        // to one) — billed from the sales order on fulfillment, never twice.
+        salesOrderItems.push(toPreviewItem(item, 'sales_order', null, lookupName(item)));
+        continue;
+      }
+      if (!salesOrder && newSalesOrderItemIds.has(item.quote_item_id)) {
+        // No sales order yet: this line invoices directly today, but is also
+        // exactly what a sales-order conversion would take. Listed in both
+        // buckets so either dialog mode shows the truth for its action.
+        salesOrderItems.push(toPreviewItem(item, 'sales_order', null, lookupName(item)));
+      }
       invoiceItems.push(toPreviewItem(item, 'invoice', null, lookupName(item)));
       continue;
     }
@@ -416,7 +448,11 @@ export async function buildQuoteConversionPreview(
     available_actions: availableActions,
     contract_items: contractItems,
     invoice_items: invoiceItems,
+    sales_order_items: salesOrderItems,
     excluded_items: excludedItems,
+    existing_sales_order: salesOrder
+      ? { so_id: salesOrder.so_id, so_number: salesOrder.so_number ?? null }
+      : null,
   };
 }
 
@@ -874,6 +910,13 @@ export async function convertQuoteToDraftInvoice(
   });
 
   const invoiceItemIdsByQuoteItemId = new Map<string, string>();
+  // A quote-converted charge has no contract line and no work item, so the
+  // chain terminates immediately at the client default (F032).
+  const quoteBillingProfileId = await getClientDefaultBillingProfileId(
+    knexOrTrx,
+    tenant,
+    quote.client_id,
+  );
   const invoiceChargeRows = oneTimeItems.map((item) => {
     const itemId = uuidv4();
     invoiceItemIdsByQuoteItemId.set(item.quote_item_id, itemId);
@@ -907,6 +950,8 @@ export async function convertQuoteToDraftInvoice(
       applies_to_item_id: item.applies_to_item_id ?? null,
       applies_to_service_id: item.applies_to_service_id ?? null,
       location_id: item.location_id ?? null,
+      billing_profile_id: quoteBillingProfileId,
+      billing_profile_source: 'client_default',
       created_by: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
       updated_by: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
       created_at: nowIso,

@@ -24,7 +24,6 @@ import ContactAvatarUpload from './ContactAvatarUpload';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
-  translateContactPhoneValidationErrors,
   validateContactPhoneNumbers,
 } from './ContactPhoneNumbersEditor';
 import ContactEmailAddressesEditor, {
@@ -32,6 +31,7 @@ import ContactEmailAddressesEditor, {
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { parseContactActionError } from '../../lib/contactActionErrorCodes';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -194,10 +194,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         return;
       }
 
-      const currentPhoneErrors = translateContactPhoneValidationErrors(
-        validateContactPhoneNumbers(contact.phone_numbers),
-        t
-      );
+      const currentPhoneErrors = validateContactPhoneNumbers(contact.phone_numbers, { existingRows: initialContact.phone_numbers, t });
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
         setError(currentPhoneErrors[0]);
@@ -229,30 +226,29 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     } catch (err) {
       console.error('Error updating contact:', err);
       if (err instanceof Error) {
-        // Handle specific error types with more detailed messages
-        if (err.message.includes('VALIDATION_ERROR:')) {
-          setError(err.message.replace(
-            'VALIDATION_ERROR:',
-            t('contactDetailsEdit.errors.validationPrefix', { defaultValue: 'Please fix the following:' })
-          ));
-        } else if (err.message.includes('EMAIL_EXISTS:')) {
-          setError(t('contactDetailsEdit.errors.emailExists', {
-            defaultValue: 'Email already exists: A contact with this email address already exists in the system'
-          }));
-        } else if (err.message.includes('FOREIGN_KEY_ERROR:')) {
-          setError(err.message.replace(
-            'FOREIGN_KEY_ERROR:',
-            t('contactDetailsEdit.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })
-          ));
-        } else if (err.message.includes('SYSTEM_ERROR:')) {
-          setError(t('contactDetailsEdit.errors.saveFailed', {
-            defaultValue: 'An error occurred while saving. Please try again.'
-          }));
-        } else {
-          console.log('Unhandled error:', err.message);
-          setError(t('contactDetailsEdit.errors.saveFailed', {
-            defaultValue: 'An error occurred while saving. Please try again.'
-          }));
+        const { code, detail } = parseContactActionError(err.message);
+        const saveFailed = t('contactDetailsEdit.errors.saveFailed', {
+          defaultValue: 'An error occurred while saving. Please try again.'
+        });
+
+        switch (code) {
+          case 'VALIDATION_ERROR':
+            setError(`${t('contactDetailsEdit.errors.validationPrefix', { defaultValue: 'Please fix the following:' })} ${detail}`);
+            break;
+          case 'EMAIL_EXISTS':
+            setError(t('contactDetailsEdit.errors.emailExists', {
+              defaultValue: 'Email already exists: A contact with this email address already exists in the system'
+            }));
+            break;
+          case 'FOREIGN_KEY_ERROR':
+            setError(`${t('contactDetailsEdit.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })} ${detail}`);
+            break;
+          case 'SYSTEM_ERROR':
+            setError(saveFailed);
+            break;
+          default:
+            console.log('Unhandled error:', err.message);
+            setError(saveFailed);
         }
       } else {
         setError(t('contactDetailsEdit.errors.unexpected', {

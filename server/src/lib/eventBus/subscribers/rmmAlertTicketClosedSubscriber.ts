@@ -14,6 +14,14 @@ import {
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '../../db/db';
 import { getEventBus } from '../index';
+import {
+  INBOUND_OUTBOX_EVENT_TYPES,
+  withInboundOutboxDelivery,
+  newInboundDeliveryOwner,
+} from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
+
+/** Stable ledger consumer id for the RMM alert reset subscriber. */
+const INBOUND_OUTBOX_RMM_ALERT_CONSUMER = 'rmm-alert-ticket-closed';
 
 let isRegistered = false;
 
@@ -47,65 +55,116 @@ export async function handleTicketClosed(event: unknown): Promise<void> {
   const ticketId = typeof payload.ticketId === 'string' ? payload.ticketId : null;
   if (!tenantId || !ticketId) return;
 
+  const eventLike = {
+    id: typeof event === 'object' && event !== null && 'id' in event ? String((event as { id?: unknown }).id ?? '') : '',
+    eventType: 'TICKET_CLOSED',
+    payload,
+  };
+  const isCandidate = INBOUND_OUTBOX_EVENT_TYPES.has(eventLike.eventType);
+  if (isCandidate) {
+    let knex: Awaited<ReturnType<typeof getConnection>> | undefined;
+    try {
+      knex = await getConnection(tenantId);
+    } catch (error) {
+      // Ledger outage fails open: fall through to the normal delivery path so
+      // a transient DB error never suppresses the alert reset.
+      logger.warn('[RmmAlertTicketClosedSubscriber] Delivery gate unavailable; delivering normally', {
+        tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    if (knex) {
+      const outcome = await withInboundOutboxDelivery({
+        event: eventLike,
+        consumer: INBOUND_OUTBOX_RMM_ALERT_CONSUMER,
+        db: knex,
+        owner: newInboundDeliveryOwner(),
+        effect: () => dispatchRmmAlertReset(tenantId, ticketId, knex),
+      });
+      if (outcome.status === 'skipped') {
+        logger.info('[RmmAlertTicketClosedSubscriber] Skipping already-delivered inbound outbox event', {
+          eventId: eventLike.id,
+          tenantId,
+          consumer: INBOUND_OUTBOX_RMM_ALERT_CONSUMER,
+        });
+      } else if (outcome.status === 'failed') {
+        logger.warn('[RmmAlertTicketClosedSubscriber] Inbound outbox delivery failed; recovery will retry', {
+          eventId: eventLike.id,
+          tenantId,
+          consumer: INBOUND_OUTBOX_RMM_ALERT_CONSUMER,
+        });
+      }
+      return;
+    }
+  }
+
   try {
     const knex = await getConnection(tenantId);
-    const db = tenantDb(knex, tenantId);
-
-    const alertsQuery = db.table('rmm_alerts as a')
-      .andWhere('a.ticket_id', ticketId)
-      .whereIn('a.status', ['active', 'acknowledged'])
-      .select(
-        'a.alert_id as alert_id',
-        'a.external_alert_id as external_alert_id',
-        'a.integration_id as integration_id',
-        'a.matched_rule_id as matched_rule_id',
-        'i.provider as provider'
-      );
-    db.tenantJoin(alertsQuery, 'rmm_integrations as i', 'i.integration_id', 'a.integration_id');
-    const alerts = (await alertsQuery) as unknown as AlertResetRow[];
-    if (alerts.length === 0) return;
-
-    for (const alert of alerts) {
-      const shouldReset = await resetEnabledForAlert(knex, tenantId, alert.matched_rule_id);
-      if (!shouldReset) continue;
-
-      const adapter = await resolveAdapter(alert.provider);
-      if (!adapter) continue;
-
-      const now = new Date().toISOString();
-      try {
-        await adapter.resetAlert({
-          tenantId,
-          integrationId: alert.integration_id,
-          externalAlertId: alert.external_alert_id,
-        });
-        await db.table('rmm_alerts')
-          .where({ alert_id: alert.alert_id })
-          .update({ status: 'resolved', resolved_at: now, updated_at: now });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logger.warn('[RmmAlertTicketClosedSubscriber] Outbound alert reset failed', {
-          tenantId,
-          alertId: alert.alert_id,
-          provider: alert.provider,
-          error: message,
-        });
-        await db.table('rmm_alerts')
-          .where({ alert_id: alert.alert_id })
-          .update({
-            metadata: knex.raw('metadata || ?::jsonb', [
-              JSON.stringify({ outbound_reset_error: message, outbound_reset_failed_at: now }),
-            ]),
-            updated_at: now,
-          });
-      }
-    }
+    await dispatchRmmAlertReset(tenantId, ticketId, knex);
   } catch (error) {
     logger.error('[RmmAlertTicketClosedSubscriber] Failed handling TICKET_CLOSED', {
       tenantId,
       ticketId,
       error: error instanceof Error ? error.message : String(error),
     });
+  }
+}
+
+async function dispatchRmmAlertReset(
+  tenantId: string,
+  ticketId: string,
+  knex: Awaited<ReturnType<typeof getConnection>>
+): Promise<void> {
+  const db = tenantDb(knex, tenantId);
+
+  const alertsQuery = db.table('rmm_alerts as a')
+    .andWhere('a.ticket_id', ticketId)
+    .whereIn('a.status', ['active', 'acknowledged'])
+    .select(
+      'a.alert_id as alert_id',
+      'a.external_alert_id as external_alert_id',
+      'a.integration_id as integration_id',
+      'a.matched_rule_id as matched_rule_id',
+      'i.provider as provider'
+    );
+  db.tenantJoin(alertsQuery, 'rmm_integrations as i', 'i.integration_id', 'a.integration_id');
+  const alerts = (await alertsQuery) as unknown as AlertResetRow[];
+  if (alerts.length === 0) return;
+
+  for (const alert of alerts) {
+    const shouldReset = await resetEnabledForAlert(knex, tenantId, alert.matched_rule_id);
+    if (!shouldReset) continue;
+
+    const adapter = await resolveAdapter(alert.provider);
+    if (!adapter) continue;
+
+    const now = new Date().toISOString();
+    try {
+      await adapter.resetAlert({
+        tenantId,
+        integrationId: alert.integration_id,
+        externalAlertId: alert.external_alert_id,
+      });
+      await db.table('rmm_alerts')
+        .where({ alert_id: alert.alert_id })
+        .update({ status: 'resolved', resolved_at: now, updated_at: now });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn('[RmmAlertTicketClosedSubscriber] Outbound alert reset failed', {
+        tenantId,
+        alertId: alert.alert_id,
+        provider: alert.provider,
+        error: message,
+      });
+      await db.table('rmm_alerts')
+        .where({ alert_id: alert.alert_id })
+        .update({
+          metadata: knex.raw('metadata || ?::jsonb', [
+            JSON.stringify({ outbound_reset_error: message, outbound_reset_failed_at: now }),
+          ]),
+          updated_at: now,
+        });
+    }
   }
 }
 

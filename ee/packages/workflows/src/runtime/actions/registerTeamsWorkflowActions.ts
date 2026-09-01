@@ -9,8 +9,6 @@ import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 const loadTeamsRuntimeSupport = () => import('./teamsWorkflowRuntimeSupport');
 
-const TEAMS_ADDON_KEY = 'teams';
-
 const CATEGORY_TO_ACTIVITY_TYPE: Record<string, TeamsActivityType> = {
   assignment: 'assignmentCreated',
   customer_reply: 'customerReplyReceived',
@@ -38,18 +36,7 @@ const parseJsonish = (value: unknown): unknown => {
 const errorStatus = (error: unknown): number | undefined =>
   error instanceof Error ? (error as { status?: number }).status : undefined;
 
-export async function tenantHasActiveTeamsAddOn(knex: Knex, tenantId: string): Promise<boolean> {
-  const row = await workflowTenantTable(knex, tenantId, 'tenant_addons')
-    .where({ addon_key: TEAMS_ADDON_KEY })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-  return Boolean(row);
-}
-
 export async function teamsIntegrationAvailability(knex: Knex, tenantId: string): Promise<boolean> {
-  if (!(await tenantHasActiveTeamsAddOn(knex, tenantId))) return false;
   const integration = await workflowTenantTable(knex, tenantId, 'teams_integrations').first();
   return normalizeString(integration?.install_status) === 'active';
 }
@@ -66,14 +53,6 @@ async function requireTeamsIntegration(ctx: ActionContext): Promise<{
   const knex = ctx.knex;
   if (!knex) {
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
-  }
-
-  if (!(await tenantHasActiveTeamsAddOn(knex, tenantId))) {
-    throwActionError(ctx, {
-      category: 'ActionError',
-      code: 'INTEGRATION_INACTIVE',
-      message: 'The Teams add-on is not active for this tenant.'
-    });
   }
 
   const integration = await workflowTenantTable(knex, tenantId, 'teams_integrations').first();

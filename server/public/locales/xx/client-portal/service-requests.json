@@ -1,71 +1,71 @@
 {
   "catalog": {
-    "title": "11111",
-    "description": "11111",
-    "myRequests": "11111",
-    "empty": "11111",
-    "fallbackCategory": "11111",
-    "noDescription": "11111",
-    "newRequestHeading": "11111"
+    "title": "⟦Şḗřṽīƈḗ Řḗʠŭḗşŧş⟧",
+    "description": "⟦Şŭƀḿīŧ ȧ şŧřŭƈŧŭřḗḓ řḗʠŭḗşŧ ȧƞḓ ẇḗ'ŀŀ ƈřḗȧŧḗ ȧ ŧīƈķḗŧ ƒȯř īŧ ȧŭŧȯḿȧŧīƈȧŀŀẏ.⟧",
+    "myRequests": "⟦Ḿẏ Řḗʠŭḗşŧş⟧",
+    "empty": "⟦Ƞȯ řḗʠŭḗşŧ şḗřṽīƈḗş ȧřḗ ƈŭřřḗƞŧŀẏ ȧṽȧīŀȧƀŀḗ.⟧",
+    "fallbackCategory": "⟦Şḗřṽīƈḗ⟧",
+    "noDescription": "⟦Ƞȯ ḓḗşƈřīƥŧīȯƞ ƥřȯṽīḓḗḓ⟧",
+    "newRequestHeading": "⟦Şŭƀḿīŧ ȧ ƞḗẇ řḗʠŭḗşŧ⟧"
   },
   "detail": {
-    "version": "11111 {{version}} 11111",
-    "submitted": "11111",
-    "requestIdLabel": "11111",
-    "ticketIdLabel": "11111",
-    "unableToSubmit": "11111",
-    "formTitle": "11111",
-    "noFields": "11111",
-    "selectOption": "11111",
-    "datePlaceholder": "11111",
-    "optionLabel": "11111 {{index}} 11111",
-    "submit": "11111",
-    "initialValuesTitle": "11111",
-    "noInitialValues": "11111"
+    "version": "⟦Ṽḗřşīȯƞ {{version}}⟧",
+    "submitted": "⟦Řḗʠŭḗşŧ şŭƀḿīŧŧḗḓ⟧",
+    "requestIdLabel": "⟦Řḗʠŭḗşŧ ĪḒ: ⟧",
+    "ticketIdLabel": "⟦Ŧīƈķḗŧ ĪḒ: ⟧",
+    "unableToSubmit": "⟦Ŭƞȧƀŀḗ ŧȯ şŭƀḿīŧ řḗʠŭḗşŧ⟧",
+    "formTitle": "⟦Řḗʠŭḗşŧ Ƒȯřḿ⟧",
+    "noFields": "⟦Ƞȯ ƒīḗŀḓş ƈȯƞƒīɠŭřḗḓ.⟧",
+    "selectOption": "⟦Şḗŀḗƈŧ ȧƞ ȯƥŧīȯƞ⟧",
+    "datePlaceholder": "⟦Şḗŀḗƈŧ ḓȧŧḗ⟧",
+    "optionLabel": "⟦Ȯƥŧīȯƞ {{index}}⟧",
+    "submit": "⟦Şŭƀḿīŧ Řḗʠŭḗşŧ⟧",
+    "initialValuesTitle": "⟦Īƞīŧīȧŀ Ṽȧŀŭḗş⟧",
+    "noInitialValues": "⟦Ƞȯ şŧȧŧīƈ ḓḗƒȧŭŀŧş ƈȯƞƒīɠŭřḗḓ.⟧"
   },
   "myRequests": {
-    "title": "11111",
-    "browseServices": "11111",
-    "empty": "11111",
+    "title": "⟦Ḿẏ Řḗʠŭḗşŧş⟧",
+    "browseServices": "⟦Ɓřȯẇşḗ Şḗřṽīƈḗş⟧",
+    "empty": "⟦Ẏȯŭ ħȧṽḗ ƞȯŧ şŭƀḿīŧŧḗḓ ȧƞẏ şḗřṽīƈḗ řḗʠŭḗşŧş ẏḗŧ.⟧",
     "columns": {
-      "request": "11111",
-      "submitted": "11111",
-      "status": "11111",
-      "details": "11111",
-      "ticket": "11111"
+      "request": "⟦Řḗʠŭḗşŧ⟧",
+      "submitted": "⟦Şŭƀḿīŧŧḗḓ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "details": "⟦Ḓḗŧȧīŀş⟧",
+      "ticket": "⟦Ŧīƈķḗŧ⟧"
     },
-    "view": "11111",
-    "unknownDate": "11111",
+    "view": "⟦Ṽīḗẇ⟧",
+    "unknownDate": "⟦Ŭƞķƞȯẇƞ⟧",
     "statuses": {
-      "pending": "11111",
-      "succeeded": "11111",
-      "failed": "11111"
+      "pending": "⟦Ƥḗƞḓīƞɠ⟧",
+      "succeeded": "⟦Şŭƈƈḗḗḓḗḓ⟧",
+      "failed": "⟦Ƒȧīŀḗḓ⟧"
     },
-    "noTicket": "11111"
+    "noTicket": "⟦Ƞȯ ŧīƈķḗŧ⟧"
   },
   "submissionDetail": {
-    "backToMyRequests": "11111",
-    "requestIdLabel": "11111",
-    "statusSection": "11111",
-    "submittedAt": "11111 {{date}} 11111",
-    "executionStatus": "11111 {{status}} 11111",
-    "ticketLabel": "11111",
-    "workflowLabel": "11111 {{id}} 11111",
-    "submittedAnswersTitle": "11111",
-    "noResponse": "11111",
-    "attachmentsTitle": "11111",
-    "noAttachments": "11111",
-    "fileIdLabel": "11111 {{id}} 11111",
-    "fileTypeLabel": "11111 {{mime}} 11111"
+    "backToMyRequests": "⟦Ɓȧƈķ ŧȯ Ḿẏ Řḗʠŭḗşŧş⟧",
+    "requestIdLabel": "⟦Řḗʠŭḗşŧ ĪḒ:⟧",
+    "statusSection": "⟦Şŧȧŧŭş⟧",
+    "submittedAt": "⟦Şŭƀḿīŧŧḗḓ: {{date}}⟧",
+    "executionStatus": "⟦Ḗẋḗƈŭŧīȯƞ şŧȧŧŭş: {{status}}⟧",
+    "ticketLabel": "⟦Ŧīƈķḗŧ:⟧",
+    "workflowLabel": "⟦Ẇȯřķƒŀȯẇ: {{id}}⟧",
+    "submittedAnswersTitle": "⟦Şŭƀḿīŧŧḗḓ Ȧƞşẇḗřş⟧",
+    "noResponse": "⟦Ƞȯ řḗşƥȯƞşḗ⟧",
+    "attachmentsTitle": "⟦Ȧŧŧȧƈħḿḗƞŧş⟧",
+    "noAttachments": "⟦Ƞȯ ȧŧŧȧƈħḿḗƞŧş īƞƈŀŭḓḗḓ.⟧",
+    "fileIdLabel": "⟦Ƒīŀḗ ĪḒ: {{id}}⟧",
+    "fileTypeLabel": "⟦Ŧẏƥḗ: {{mime}}⟧"
   },
   "recent": {
-    "title": "11111",
-    "viewAll": "11111",
-    "empty": "11111",
-    "ticket": "11111 {{number}} 11111",
-    "noTicket": "11111"
+    "title": "⟦Ẏȯŭř řḗƈḗƞŧ řḗʠŭḗşŧş⟧",
+    "viewAll": "⟦Ṽīḗẇ ȧŀŀ⟧",
+    "empty": "⟦Ƞȯ řḗʠŭḗşŧş şŭƀḿīŧŧḗḓ ẏḗŧ.⟧",
+    "ticket": "⟦Ŧīƈķḗŧ #{{number}}⟧",
+    "noTicket": "⟦Ƞȯ ŧīƈķḗŧ ẏḗŧ⟧"
   },
   "myRequestsAll": {
-    "title": "11111"
+    "title": "⟦Ẏȯŭř řḗʠŭḗşŧş⟧"
   }
 }

@@ -22,7 +22,8 @@
     "success": "Sucesso",
     "update": "Atualizar",
     "yes": "Sim",
-    "no": "Não"
+    "no": "Não",
+    "export": "Exportar"
   },
   "dashboard": {
     "title": "Faturamento",
@@ -408,7 +409,6 @@
     },
     "detailDialog": {
       "title": "Lote de exportação contábil",
-      "subtitle": "Detalhes do lote",
       "fields": {
         "batchId": "ID do lote",
         "adapter": "Adaptador",
@@ -500,5 +500,209 @@
     "unknownValue": "Valor desconhecido",
     "noDataForList": "Sem dados para lista: {{name}}",
     "uncategorized": "Sem categoria"
+  },
+  "spendByProfile": {
+    "title": "Despesa por perfil de faturamento",
+    "description": "Quanto custou cada instalação ou entidade deste cliente no período. Abra uma linha para ver os encargos por trás do número.",
+    "from": "De",
+    "to": "Até",
+    "comparePrevious": "Comparar com o período anterior",
+    "defaultBadge": "Predefinido",
+    "empty": "Sem encargos finalizados para este cliente no período selecionado.",
+    "drillDownTitle": "Encargos por trás deste número",
+    "drillDownEmpty": "Nenhum encargo encontrado.",
+    "priorPeriod": "era {{amount}}",
+    "unattributedHint": "Nenhum contrato, linha de contrato ou item de trabalho reclamou estes encargos, pelo que recaíram no perfil padrão.",
+    "columns": {
+      "profile": "Perfil de faturamento",
+      "charges": "Encargos",
+      "net": "Líquido",
+      "tax": "Imposto",
+      "total": "Total",
+      "unattributed": "Recaiu no padrão",
+      "priorTotal": "Total do período anterior",
+      "change": "Variação"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "Faturado a {{profile}} porque foi escolhido diretamente para este encargo.",
+      "contractLine": "Faturado a {{profile}} porque a linha de contrato lhe está atribuída.",
+      "contractLineNamed": "Faturado a {{profile}} porque a linha de contrato «{{line}}» lhe está atribuída.",
+      "contract": "Faturado a {{profile}} porque o contrato lhe está atribuído.",
+      "contractNamed": "Faturado a {{profile}} porque o contrato «{{contract}}» lhe está atribuído.",
+      "workItem": "Faturado a {{profile}} porque o ticket ou projeto lhe está atribuído; não se aplica qualquer atribuição de contrato.",
+      "workItemNamed": "Faturado a {{profile}} porque «{{workItem}}» lhe está atribuído; não se aplica qualquer atribuição de contrato.",
+      "clientDefault": "Faturado a {{profile}} porque mais nada reclamou este encargo — recaiu no perfil padrão do cliente.",
+      "unknown": "Este encargo não tem atribuição registada."
+    },
+    "line": {
+      "explicit": "Alguém escolheu {{line}} para este registro.",
+      "autoUniqueService": "{{line}} era a única linha de contrato que cobria este serviço.",
+      "autoBucketOverlay": "Várias linhas de contrato cobriam este serviço; só {{line}} tinha um pacote.",
+      "autoBillingProfile": "Várias linhas de contrato cobriam este serviço; {{line}} foi escolhida por pertencer ao perfil de faturamento do item de trabalho.",
+      "reconciled": "{{line}} foi associada a este registro quando a fatura foi gerada.",
+      "unresolved": "Não foi possível escolher qualquer linha de contrato para este registro.",
+      "unknown": "Não foi registado como esta linha de contrato foi escolhida."
+    },
+    "limitation": {
+      "contractGranular": "Este tipo de encargo não tem um registro por item por trás, pelo que só pode ser atribuído até ao contrato — não à instalação ou ao trabalho concretos de que provém."
+    }
+  },
+  "unresolvedReview": {
+    "title": "Itens sem linha de contrato",
+    "description": "Estes itens ainda não estão ligados a uma linha de contrato, pelo que seriam faturados pela tarifa do catálogo de serviços.",
+    "catalogPricingCaveat": "A tarifa de catálogo ignora a tarifa do contrato, o arredondamento, o tempo mínimo faturável, as horas extra e qualquer tabela de preços.",
+    "ambiguousBlocked": "{{count}} item(ns) estão cobertos por um contrato mas corresponderam a mais de uma linha de contrato. Não serão faturados enquanto não atribuir uma linha ou escolher a tarifa de catálogo para eles.",
+    "unknownService": "Serviço desconhecido",
+    "timeEntry": "Registro de tempo · {{minutes}} min",
+    "usageRecord": "Registro de uso · {{quantity}}",
+    "assignLine": "Atribuir uma linha de contrato",
+    "assigned": "Atribuído — este item será faturado pela tarifa do contrato.",
+    "useCatalogPricing": "Usar tarifa de catálogo",
+    "undoCatalogPricing": "Anular",
+    "catalogPricingChosen": "Tarifa de catálogo escolhida",
+    "catalogPricingAccepted": "Tarifa de catálogo escolhida para este item.",
+    "catalogPricingRevoked": "Tarifa de catálogo retirada.",
+    "uncoveredExplanation": "Nenhum contrato cobre este serviço, pelo que a tarifa de catálogo é a única disponível. Será faturado tal como está.",
+    "ambiguousExplanation": "Um contrato cobre este serviço, pelo que existe uma tarifa negociada. Escolha a linha de contrato a que pertence.",
+    "reason": {
+      "uncovered": "Não coberto por qualquer contrato",
+      "ambiguous": "Corresponde a mais de uma linha de contrato"
+    }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Já existe uma fatura para este período de faturamento recorrente.",
+    "permissions": {
+      "billingRead": "Permissão negada: é necessária permissão de leitura de faturamento",
+      "billingUpdate": "Permissão negada: é necessária permissão de atualização de faturamento",
+      "billingCreate": "Permissão negada: é necessária permissão de criação de faturamento",
+      "billingDelete": "Permissão negada: é necessária permissão de exclusão de faturamento",
+      "clientRead": "Permissão negada: é necessária permissão de leitura de clientes",
+      "otherClientLocations": "Permissão negada: não é possível acessar os locais de outro cliente",
+      "clientPortalUnavailable": "Permissão negada: operação não disponível no portal do cliente",
+      "resolveCurrency": "Permissão negada: não é possível determinar a moeda de faturamento do cliente",
+      "clientBillingAccess": "Permissão negada: você não tem acesso ao faturamento deste cliente."
+    },
+    "context": {
+      "tenantNotFound": "Tenant não encontrado",
+      "tenantContextNotFound": "Contexto do tenant não encontrado",
+      "noTenantContext": "Sem contexto de tenant. Atualize a página e tente novamente.",
+      "clientContextNotFound": "Contexto do cliente não encontrado",
+      "notAuthenticated": "Não autorizado: nenhum usuário autenticado encontrado",
+      "notLoggedIn": "o usuário não está conectado"
+    },
+    "client": {
+      "notFound": "Cliente não encontrado",
+      "notFoundRefresh": "Cliente não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "idRequired": "O ID do cliente é obrigatório."
+    },
+    "clientContract": {
+      "notFound": "Atribuição de contrato do cliente não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores selecionados do contrato do cliente é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O cliente, contrato ou registro de faturamento selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Esta atribuição de contrato do cliente já existe.",
+      "missingField": "Falta um campo obrigatório do contrato do cliente.",
+      "missingFieldNamed": "Falta um campo obrigatório do contrato do cliente: {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "Não é possível criar o próximo ciclo de faturamento no momento"
+    },
+    "currency": {
+      "multipleActive": "O cliente tem contratos ativos em várias moedas ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "Um dos valores selecionados da sobreposição do banco de horas é inválido. Atualize a página e tente novamente.",
+      "recordInvalid": "Um dos registros selecionados da sobreposição do banco de horas não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma sobreposição de banco de horas para este serviço.",
+      "notAllowed": "Um dos valores da sobreposição do banco de horas não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório da sobreposição do banco de horas.",
+      "missingFieldNamed": "Falta um campo obrigatório da sobreposição do banco de horas: {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "Já existe um pool de banco de horas ou membro com esta configuração. Atualize a página e tente novamente.",
+      "recordInvalid": "Um dos registros selecionados do pool de banco de horas não é mais válido. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores do pool de banco de horas não é permitido. Revise o formulário e tente novamente."
+    },
+    "material": {
+      "invalidValue": "Um dos valores de material selecionados é inválido. Atualize a página e tente novamente.",
+      "recordInvalid": "Um dos registros de material selecionados não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Este registro de material já existe.",
+      "notAllowed": "Um dos valores de material não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do material.",
+      "missingFieldNamed": "Falta um campo obrigatório do material: {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "Registro de uso não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "bucketUpdateFailed": "Não é possível atualizar o consumo do banco de horas para este registro de uso. Atualize a página e tente novamente.",
+      "invalidValue": "O registro de uso, cliente, serviço ou linha de contrato selecionado é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O cliente, serviço ou linha de contrato selecionado não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro de uso conflitante. Atualize a página e tente novamente.",
+      "alreadyDeleted": "Registro de uso não encontrado. Ele pode já ter sido excluído.",
+      "missingField": "Falta um campo obrigatório do registro de uso.",
+      "missingFieldNamed": "Falta um campo obrigatório do registro de uso: {{field}}."
+    },
+    "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "A data de acionamento deve ser uma data de calendário válida.",
+        "thresholdsAscending": "Os limites de notificação devem estar em ordem estritamente crescente.",
+        "amountOrPercentage": "É obrigatório informar exatamente um entre valor e porcentagem.",
+        "increaseTotalAmountOnly": "O aumento do total é válido somente para entradas baseadas em valor.",
+        "amountAndPercentageTogether": "O valor e a porcentagem devem ser atualizados juntos, com exatamente um deles definido como nulo."
+      },
+      "invalidValue": "Um dos valores selecionados do faturamento do projeto é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O projeto, fatura, fase, serviço ou registro de faturamento selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro de faturamento do projeto conflitante. Atualize a página e tente novamente.",
+      "ruleViolation": "Os valores de faturamento do projeto violam uma regra de dados. Revise o formulário e tente novamente.",
+      "requestFailed": "O faturamento do projeto não conseguiu concluir a solicitação. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório do faturamento do projeto.",
+      "missingFieldNamed": "Falta um campo obrigatório do faturamento do projeto: {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "A data de início e a data de término são obrigatórias."
+    },
+    "recurringRun": {
+      "selectPeriods": "Selecione pelo menos um período de faturamento recorrente para gerar.",
+      "invoicePermission": "Permissão negada: é necessária permissão para criar ou gerar faturas"
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "É necessária uma chave de agenda para inspecionar os períodos de serviço recorrentes.",
+      "scheduleKeyRequiredRepair": "É necessária uma chave de agenda para reparar os períodos de serviço recorrentes."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Usuários do portal do cliente não têm permissão para gerenciar exportações contábeis",
+      "permissions": {
+        "create": "Permissão negada: não é possível criar lotes de exportação contábil",
+        "read": "Permissão negada: não é possível acessar os lotes de exportação contábil",
+        "update": "Permissão negada: não é possível modificar os lotes de exportação contábil",
+        "execute": "Permissão negada: não é possível executar os lotes de exportação contábil"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "Fatura do fornecedor não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente."
+    },
+    "documentTemplate": {
+      "unknownType": "Tipo de documento desconhecido: {{documentType}}",
+      "permissions": {
+        "read": "Permissão negada: não é possível ler os modelos de documento",
+        "modify": "Permissão negada: não é possível modificar os modelos de documento",
+        "setDefault": "Permissão negada: não é possível definir o modelo de documento padrão",
+        "clearOverride": "Permissão negada: não é possível remover a substituição do modelo de documento",
+        "delete": "Permissão negada: não é possível excluir os modelos de documento",
+        "preview": "Permissão negada: não é possível pré-visualizar os modelos de documento",
+        "readSalesOrders": "Permissão negada: não é possível ler os pedidos de venda"
+      },
+      "existingNotFound": "Documento não encontrado."
+    },
+    "billingProfile": {
+      "periodOrder": "Escolha um período cujo início seja anterior ou igual ao fim.",
+      "comparisonPeriodOrder": "Escolha um período de comparação cujo início seja anterior ou igual ao fim.",
+      "notThisClient": "Esse perfil de faturamento não pertence a este cliente."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Esse item não existe mais.",
+      "alreadyInvoiced": "Esse item já foi faturado.",
+      "contractLineNotFound": "Essa linha de contrato não existe mais."
+    }
   }
 }

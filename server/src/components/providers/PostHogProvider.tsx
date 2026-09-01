@@ -24,10 +24,12 @@ function SuspendedPostHogPageView() {
 
 interface PostHogProviderProps {
   children: React.ReactNode;
-  initialFeatureFlags: Record<string, boolean | string>;
+  // Server-evaluated flags handed to the client so gated UI renders without a
+  // flicker. Empty unless a rollout in progress needs it.
+  initialFeatureFlags?: Record<string, boolean | string>;
 }
 
-export function PostHogProvider({ children, initialFeatureFlags }: PostHogProviderProps) {
+export function PostHogProvider({ children, initialFeatureFlags = {} }: PostHogProviderProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const initialFeatureFlagsRef = useRef(initialFeatureFlags);

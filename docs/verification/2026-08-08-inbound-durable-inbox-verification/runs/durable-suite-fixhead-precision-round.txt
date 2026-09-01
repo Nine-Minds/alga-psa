@@ -1,0 +1,13 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
+      Running tests with seed "1786390829419"
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+ ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (45 tests) 10935ms 147 MB heap used
+   ✓ Inbound email durable inbox (integration) > crash after commit before ACK: redelivery returns stored IDs without new effects  652ms
+
+ Test Files  1 passed (1)
+      Tests  45 passed (45)
+   Start at  19:40:29
+   Duration  11.79s (transform 616ms, setup 61ms, collect 453ms, tests 10.93s, environment 0ms, prepare 29ms)
+

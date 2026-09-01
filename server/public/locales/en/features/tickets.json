@@ -31,7 +31,9 @@
     "skipDropped_one": "Skip ({{count}} ticket dropped)",
     "skipDropped_other": "Skip ({{count}} tickets dropped)",
     "createdSuccess_one": "Successfully created {{count}} ticket.",
-    "createdSuccess_other": "Successfully created {{count}} tickets."
+    "createdSuccess_other": "Successfully created {{count}} tickets.",
+    "rowLimitExceeded": "Row limit exceeded:",
+    "rowLimitDescription": "Your CSV has {{original}} rows, but only the first {{kept}} rows will be imported. Please split your file into smaller batches for the remaining rows."
   },
   "title": "Support Tickets",
   "subtitle": "View and manage your support tickets",
@@ -305,7 +307,10 @@
     "timeEntryDeleted": "Time entry deleted",
     "closeFailed": "Failed to close ticket",
     "loadCommentsFailed": "Failed to load comments",
-    "updateTicketFailed": "Failed to update ticket"
+    "updateTicketFailed": "Failed to update ticket",
+    "errorWithMessage": "Error: {{message}}",
+    "billingProfileUpdated": "Billing profile updated",
+    "updateBillingProfileFailed": "Failed to update billing profile"
   },
   "conversation": {
     "comments": "Comments",
@@ -350,11 +355,26 @@
     "ticketPrefix": "Ticket {{number}}",
     "clipboardDraftCancelMessage": "This draft includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?",
     "replyCommentAriaLabel": "Reply to comment",
+    "copyCommentAriaLabel": "Copy comment text",
+    "commentCopied": "Copied",
+    "commentCopyFailed": "Copy failed",
     "clientComments": "Client Comments",
     "commentEditor": "Comment Editor",
     "deleteComment": "Delete Comment",
     "deleteCommentImages": "Delete Comment + Images",
-    "deleteCommentOnly": "Delete Comment Only"
+    "deleteCommentOnly": "Delete Comment Only",
+    "cancelScheduledComment": "Cancel scheduled comment",
+    "cancelScheduledCommentConfirm": "Cancel this scheduled comment?",
+    "invalidScheduleTime": "Choose an unambiguous future time in this time zone.",
+    "publishAt": "Publish at",
+    "publishes": "Publishes",
+    "reschedule": "Reschedule",
+    "rescheduleComment": "Reschedule comment",
+    "resolvedPublishInstant": "Resolved instant",
+    "schedule": "Schedule",
+    "scheduled": "Scheduled",
+    "showMore": "Show more",
+    "showLess": "Show less"
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -500,7 +520,31 @@
     },
     "exportSelectedAction": "Export selected ({{count}})",
     "exportAction": "Export CSV",
-    "importAction": "Import CSV"
+    "importAction": "Import CSV",
+    "boardTabs": {
+      "all": "All tickets"
+    },
+    "boardHeader": {
+      "open": "Open",
+      "overdue": "Overdue",
+      "slaBreach": "SLA breach",
+      "unassigned": "Unassigned",
+      "managedBy": "Managed by",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "View",
+      "columns": "Columns",
+      "density": "Density",
+      "saveBoardDefault": "Save as this board's default view",
+      "saveTenantDefault": "Save as the default view for everyone",
+      "resetToTenant": "Reset to tenant default",
+      "unsavedChanges": "This view differs from the saved default",
+      "saved": "Default view saved",
+      "saveFailed": "Failed to save the default view",
+      "reset": "Reset to tenant default",
+      "resetFailed": "Failed to reset the view"
+    }
   },
   "bulk": {
     "bundleTickets": "Bundle Tickets",
@@ -960,7 +1004,10 @@
       "selective": "Select individual members to keep/remove"
     },
     "noTeamMembersOnTicket": "No team members found on this ticket.",
-    "unnamedUser": "Unnamed User"
+    "unnamedUser": "Unnamed User",
+    "billingProfile": "Billing profile",
+    "billingProfileUnassigned": "Use the default profile",
+    "billingProfileHint": "Only used when no contract assigns this work to a profile."
   },
   "settings": {
     "categories": {
@@ -1316,7 +1363,93 @@
     "updateWatchList": "Unable to update watch list. Please try again.",
     "fetchCategoryImports": "Failed to fetch available categories for import",
     "validateDeletionFailed": "Failed to validate deletion. Please try again.",
-    "deleteTicketUnexpected": "An unexpected error occurred while deleting the ticket."
+    "deleteTicketUnexpected": "An unexpected error occurred while deleting the ticket.",
+    "action": {
+      "ticketNotFound": "Ticket not found. It may have been deleted or moved. Please refresh and try again.",
+      "ticketResourceNotFound": "Ticket resource not found. Please refresh and try again.",
+      "agentAlreadyAssigned": "This user is already assigned as an additional agent.",
+      "teamNotFound": "Team not found. It may have been deleted. Please refresh and try again.",
+      "teamLeadNotFound": "The selected team does not have a team lead. Choose another team or assign a lead first.",
+      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again."
+    },
+    "bundle": {
+      "masterAlreadyBundleMaster": "Ticket {{tickets}} is already a bundle master and cannot be added as children. Unbundle them first, or use one of them as the master.",
+      "masterAlreadyBundleMasters": "Tickets {{tickets}} are already bundle masters and cannot be added as children. Unbundle them first, or use one of them as the master.",
+      "selectChild": "Select at least one child ticket different from the master.",
+      "masterNotFound": "Master ticket not found.",
+      "childNotFound": "Child ticket not found: {{ticket}}",
+      "childAsMaster": "Cannot select a child ticket as the master.",
+      "alreadyBundled": "Ticket is already bundled: {{ticket}}",
+      "masterAsChild": "Master ticket cannot also be a child ticket.",
+      "noChildren": "No child tickets provided.",
+      "childrenOnBundledChild": "Cannot add children to a bundled child ticket."
+    },
+    "ticket": {
+      "validationDetails": "Please fix the ticket details: {{details}}",
+      "invalidValue": "One of the selected ticket values is invalid. Please refresh and try again.",
+      "missingField": "Missing required ticket field.",
+      "missingFieldNamed": "Missing required ticket field: {{field}}.",
+      "referenceMissing": "One of the selected ticket records no longer exists. Please refresh and try again.",
+      "conflict": "This ticket change conflicts with an existing record. Please refresh and try again.",
+      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again."
+    },
+    "board": {
+      "invalidReference": "The selected board, status, or rule is invalid. Please refresh and try again.",
+      "missingField": "Missing required board field.",
+      "missingFieldNamed": "Missing required board field: {{field}}.",
+      "referenceInvalid": "The selected board, status, priority, assignee, team, or SLA policy is no longer valid. Please refresh and try again.",
+      "duplicateName": "A board with this name already exists.",
+      "duplicate": "A board or status with the same settings already exists.",
+      "invalidValue": "One of the board or status values is invalid. Please refresh and try again."
+    },
+    "material": {
+      "invalidValue": "One of the selected material values is invalid. Please refresh and try again.",
+      "missingField": "Missing required material field.",
+      "missingFieldNamed": "Missing required material field: {{field}}.",
+      "referenceInvalid": "The selected ticket, client, product, or stock unit is no longer valid. Please refresh and try again.",
+      "conflict": "This material conflicts with an existing ticket material or stock assignment. Please refresh and try again.",
+      "valueNotAllowed": "One of the material values is not allowed. Please review the form and try again."
+    },
+    "settings": {
+      "updateDenied": "Permission denied: Cannot update ticket settings"
+    },
+    "list": {
+      "filtersInvalid": "Ticket list filters are no longer valid. Refresh the page and try again."
+    },
+    "layoutPreference": {
+      "contextMissing": "Your session is missing required ticket preference context. Please refresh and try again.",
+      "userNotFound": "Current user not found. Please refresh and sign in again.",
+      "invalidLayout": "Invalid ticket detail layout. Please refresh and try again.",
+      "invalidTimelineOrder": "Invalid ticket timeline order. Please refresh and try again.",
+      "invalidValue": "One of the ticket layout preference values is invalid. Please refresh and try again.",
+      "missingField": "Missing required ticket preference field.",
+      "missingFieldNamed": "Missing required ticket preference field: {{field}}.",
+      "userMissing": "The current user for these ticket preferences no longer exists. Please refresh and sign in again.",
+      "concurrentUpdate": "Ticket layout preferences were updated concurrently. Please refresh and try again."
+    },
+    "category": {
+      "invalidReference": "The selected category or board is invalid. Please refresh and try again.",
+      "missingField": "Missing required category field.",
+      "missingFieldNamed": "Missing required category field: {{field}}.",
+      "referenceInvalid": "The selected board or parent category is no longer valid. Please refresh and try again.",
+      "duplicate": "A category with these settings already exists.",
+      "invalidValue": "One of the category values is invalid. Please refresh and try again."
+    },
+    "import": {
+      "invalidValue": "One of the imported ticket values is invalid. Please refresh reference data and try again.",
+      "conflict": "A ticket import record conflicts with an existing record. Review duplicate clients, contacts, statuses, priorities, categories, or tags.",
+      "referenceMissing": "A referenced client, contact, board, status, priority, category, team, or user was not found. Refresh reference data and try again.",
+      "missingValue": "Missing required import value.",
+      "missingValueNamed": "Missing required import value: {{field}}.",
+      "invalidForField": "One of the imported values is invalid for this field."
+    },
+    "checklist": {
+      "invalidReference": "The selected checklist item, template, or rule is invalid. Please refresh and try again.",
+      "missingField": "Missing required checklist field.",
+      "missingFieldNamed": "Missing required checklist field: {{field}}.",
+      "referenceInvalid": "The selected ticket, checklist template, or rule filter is no longer valid. Please refresh and try again.",
+      "invalidValue": "One of the checklist values is invalid. Please refresh and try again."
+    }
   },
   "ticketSection": {
     "title": "Appointment Request",
@@ -1357,7 +1490,9 @@
       "noChildren": "No children in this bundle.",
       "addChildMultiClientMessage": "This will add {{ticket}} from a different client into the bundle. Confirm you want to proceed.",
       "thisTicket": "this ticket"
-    }
+    },
+    "autoClose": "Will close automatically on {{date}} unless there's new activity.",
+    "autoCloseWarned": "The customer has been warned."
   },
   "invalidTicketData": "Invalid ticket data",
   "timeEntries": {
@@ -1506,6 +1641,7 @@
       "client": "Client",
       "nextVisit": "Next visit",
       "callsAndEmails": "Calls and emails",
+      "call": "Call",
       "viewAll": "View all",
       "viewAllCount": "View all {{count}}",
       "timeLogged": "Time logged",
@@ -1661,7 +1797,10 @@
       "occurrence": "(occurrence {{count}})",
       "loadError": "Could not load the timeline",
       "closeStatus": "Close status",
-      "noStatusChange": "Do not change status"
+      "noStatusChange": "Do not change status",
+      "showAllActivity": "Show all activity",
+      "collapseActivity": "Collapse older activity",
+      "replyingToComment": "Replying to {{name}}"
     }
   }
 }

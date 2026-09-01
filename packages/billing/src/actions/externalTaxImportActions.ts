@@ -25,7 +25,7 @@ export const importExternalTaxForInvoice = withAuth(async (
   invoiceId: string
 ): Promise<SingleImportResult | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   const service = getExternalTaxImportService();
   return service.importTaxForInvoice(invoiceId, user.user_id);
@@ -40,7 +40,7 @@ export const batchImportExternalTaxes = withAuth(async (
   { tenant }
 ): Promise<BatchImportResult | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   const service = getExternalTaxImportService();
   return service.batchImportPendingTaxes(user.user_id);
@@ -56,7 +56,7 @@ export const getExternalTaxImportHistory = withAuth(async (
   invoiceId: string
 ): Promise<IExternalTaxImport[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const service = getExternalTaxImportService();
   return service.getImportHistory(invoiceId);
@@ -71,7 +71,7 @@ export const getInvoiceTaxReconciliation = withAuth(async (
   invoiceId: string
 ): Promise<ReconciliationResult | null | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const service = getExternalTaxImportService();
   return service.reconcileTaxDifferences(invoiceId);
@@ -105,7 +105,7 @@ export const getInvoicesPendingExternalTax = withAuth(async (
   }> | ActionPermissionError
 > => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
   const facade = tenantDb(knex, tenant);

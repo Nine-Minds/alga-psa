@@ -88,6 +88,43 @@
         "save": "Impossibile salvare le impostazioni"
       }
     },
+    "creditDrawdown": {
+      "title": "Utilizzo del credito",
+      "description": "Controlla quando i crediti dei clienti vengono applicati alle fatture e come vengono consumati.",
+      "fields": {
+        "autoApply": {
+          "label": "Applica automaticamente il credito alla finalizzazione",
+          "help": "Se abilitato, il credito disponibile viene applicato automaticamente quando una fattura viene finalizzata"
+        },
+        "order": {
+          "label": "Ordine di applicazione del credito",
+          "placeholder": "Seleziona l'ordine del credito",
+          "help": "Scegli l'ordine in cui i crediti vengono consumati"
+        },
+        "serviceTypes": {
+          "label": "Tipi di servizio idonei",
+          "help": "Scegli se il credito può essere applicato a tutti gli addebiti o solo agli addebiti dei tipi di servizio selezionati.",
+          "empty": "Nessun tipo di servizio configurato.",
+          "restricted": "Il credito è limitato ai tipi di servizio selezionati.",
+          "mode": {
+            "all": "Tutti i tipi di servizio",
+            "restricted": "Solo i tipi selezionati"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Prima quelli in scadenza",
+        "oldestFirst": "Prima il credito più vecchio",
+        "newestFirst": "Prima il credito più recente"
+      },
+      "toast": {
+        "updated": "Le impostazioni di utilizzo del credito sono state aggiornate."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni",
+        "save": "Impossibile salvare le impostazioni"
+      }
+    },
     "renewal": {
       "title": "Automazione del rinnovamento",
       "description": "Configura il comportamento predefinito quando i contratti raggiungono la data di rinnovo.",
@@ -114,7 +151,7 @@
         "queueOnly": "Solo coda"
       },
       "states": {
-        "unnamedBoard": "Consiglio senza nome"
+        "unnamedBoard": "Bacheca senza nome"
       },
       "actions": {
         "save": "Salva",
@@ -419,6 +456,46 @@
         "create": "Impossibile creare un'esenzione fiscale.",
         "update": "Impossibile aggiornare l'esenzione fiscale.",
         "delete": "Impossibile eliminare l'esenzione fiscale."
+      }
+    },
+    "delegation": {
+      "defaultProvider": "il sistema contabile in uso",
+      "actions": {
+        "applying": "Applicazione…"
+      },
+      "errors": {
+        "enableFailed": "Impossibile abilitare il calcolo esterno delle imposte."
+      },
+      "banner": {
+        "title": "Affidare a {{provider}} il calcolo delle imposte?",
+        "description": "{{provider}} è connesso. La maggior parte dei clienti preferisce affidare le imposte al proprio sistema contabile affinché i due registri restino allineati — Alga registrerà le fatture senza importi fiscali, {{provider}} applicherà le proprie regole fiscali e il risultato verrà sincronizzato con Alga. Alga non è un software fiscale; consigliamo di delegare il calcolo.",
+        "actions": {
+          "enable": "Usa {{provider}} per le imposte",
+          "dismiss": "Non ora",
+          "dismissing": "Chiusura…"
+        },
+        "toast": {
+          "enabled": "Calcolo esterno delle imposte abilitato.",
+          "enabledWithProvider": "{{provider}} calcolerà le imposte sulle nuove fatture."
+        },
+        "errors": {
+          "loadState": "Impossibile caricare lo stato del consiglio per la delega delle imposte.",
+          "dismissFailed": "Impossibile chiudere il banner."
+        }
+      },
+      "nudge": {
+        "title": "Affidare a {{provider}} il calcolo delle imposte sulle fatture future?",
+        "description": "Consigliato. Le nuove fatture verranno registrate in {{provider}} senza importi fiscali, {{provider}} applicherà le proprie regole fiscali e l’imposta calcolata verrà sincronizzata con Alga, mantenendo allineati i due registri. Puoi modificare questa scelta in qualsiasi momento in Fatturazione → Impostazioni fiscali.",
+        "actions": {
+          "enable": "Sì, usa {{provider}}",
+          "keepInternal": "Continua a calcolare le imposte in Alga"
+        },
+        "toast": {
+          "enabled": "{{provider}} calcolerà le imposte sulle nuove fatture. Puoi modificare questa scelta nelle impostazioni di fatturazione."
+        },
+        "errors": {
+          "loadSettings": "Impossibile caricare le impostazioni fiscali correnti."
+        }
       }
     }
   },
@@ -1074,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Impossibile caricare le impostazioni",
-    "failedToSaveSettings": "Impossibile salvare le impostazioni"
+    "failedToSaveSettings": "Impossibile salvare le impostazioni",
+    "permissions": {
+      "readSettings": "Autorizzazione negata: impossibile leggere le impostazioni di fatturazione",
+      "updateSettings": "Autorizzazione negata: impossibile aggiornare le impostazioni di fatturazione",
+      "readClientSettings": "Autorizzazione negata: impossibile leggere le impostazioni di fatturazione del cliente",
+      "updateClientSettings": "Autorizzazione negata: impossibile aggiornare le impostazioni di fatturazione del cliente",
+      "settingsRead": "Autorizzazione negata: è richiesta l’autorizzazione di lettura per le impostazioni di fatturazione",
+      "settingsUpdate": "Autorizzazione negata: è richiesta l’autorizzazione di aggiornamento per le impostazioni di fatturazione",
+      "readTaxRates": "Autorizzazione negata: impossibile leggere le aliquote d’imposta",
+      "createTaxRates": "Autorizzazione negata: impossibile creare aliquote d’imposta",
+      "updateTaxRates": "Autorizzazione negata: impossibile aggiornare le aliquote d’imposta",
+      "updateTaxRegions": "Autorizzazione negata: impossibile aggiornare le regioni fiscali"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Autorizzazione negata: le aliquote d’imposta di fatturazione non sono disponibili per questo tenant.",
+      "overlap": "L’intervallo di date dell’aliquota d’imposta si sovrappone a un’aliquota esistente per questa regione.",
+      "regionRequired": "La regione è obbligatoria.",
+      "idRequired": "Per gli aggiornamenti è necessario l’ID dell’aliquota d’imposta.",
+      "notFound": "Aliquota d’imposta non trovata.",
+      "notFoundOrAlreadyDeleted": "Aliquota d’imposta non trovata o già eliminata.",
+      "invalid": "L’aliquota d’imposta o la regione selezionata non è valida. Aggiornare la pagina e riprovare.",
+      "regionInvalid": "La regione fiscale selezionata non è più valida. Aggiornare la pagina e scegliere un’altra regione.",
+      "duplicate": "Esiste già un’aliquota d’imposta per questa regione e questo intervallo di date.",
+      "missingField": "Manca un campo obbligatorio dell’aliquota d’imposta.",
+      "missingFieldNamed": "Manca un campo obbligatorio dell’aliquota d’imposta: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Configurare almeno un’aliquota d’imposta attiva prima di creare le impostazioni fiscali predefinite.",
+      "componentNotFound": "Componente d’imposta non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "bracketNotFound": "Scaglione d’imposta non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "holidayNotFound": "Esenzione fiscale non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiornare la pagina e riprovare.",
+      "recordInvalid": "Uno dei record fiscali selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno dei record fiscali selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un record fiscale con questi dati.",
+      "notAllowed": "Uno dei valori d’imposta non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio d’imposta.",
+      "missingFieldNamed": "Manca un campo obbligatorio d’imposta: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Esiste già una regione fiscale con il codice «{{code}}».",
+      "notFoundCode": "Regione fiscale con il codice «{{code}}» non trovata."
+    }
   },
   "toast": {
     "saved": "Salvato con successo"

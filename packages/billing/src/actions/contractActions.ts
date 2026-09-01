@@ -59,28 +59,37 @@ function contractActionErrorFrom(error: unknown): ContractActionError | null {
 
   if (error instanceof Error) {
     if (error.message.startsWith('Base contract line') && error.message.includes('not found')) {
-      return actionError('The selected contract line is no longer available. Please refresh and try again.');
+      return actionError('The selected contract line is no longer available. Please refresh and try again.', 'msp/contract-lines:errors.line.unavailable');
     }
     if (error.message.startsWith('Template contract line') && error.message.includes('not found')) {
-      return actionError('The selected template line is no longer available. Please refresh and try again.');
+      return actionError('The selected template line is no longer available. Please refresh and try again.', 'msp/contract-lines:errors.templateLine.unavailable');
+    }
+    if (error.message === 'Cannot delete contract that has associated invoices') {
+      return actionError('This contract has associated invoices and cannot be deleted.', 'msp/contracts:errors.contract.hasInvoices');
     }
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected contract values is invalid. Please refresh and try again.');
+    return actionError('One of the selected contract values is invalid. Please refresh and try again.', 'msp/contracts:errors.contract.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required contract field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required contract field: ${dbError.column}.`,
+          'msp/contracts:errors.contract.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required contract field.', 'msp/contracts:errors.contract.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected contract, client, or related record no longer exists. Please refresh and try again.');
+    return actionError('The selected contract, client, or related record no longer exists. Please refresh and try again.', 'msp/contracts:errors.contract.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('This contract change conflicts with an existing record. Please refresh and try again.');
+    return actionError('This contract change conflicts with an existing record. Please refresh and try again.', 'msp/contracts:errors.contract.conflict');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the contract values is not allowed. Please review the form and try again.');
+    return actionError('One of the contract values is not allowed. Please review the form and try again.', 'msp/contracts:errors.contract.notAllowed');
   }
 
   return null;
@@ -337,7 +346,7 @@ export const addContractLine = withAuth(async (
 
     const canUpdate = await hasPermission(user, 'billing', 'create');
     if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines');
+      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
     }
 
     return knex.transaction((trx: Knex.Transaction) =>
@@ -366,7 +375,7 @@ export const removeContractLine = withAuth(async (user, { tenant }, contractId: 
 
     const canUpdate = await hasPermission(user, 'billing', 'update');
     if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines');
+      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
     }
 
     await repoRemoveContractLine(knex, tenant, contractId, contractLineId);
@@ -392,7 +401,7 @@ export const updateContractLineAssociation = withAuth(async (
 
     const canUpdate = await hasPermission(user, 'billing', 'update');
     if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines');
+      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
     }
 
     const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
@@ -427,7 +436,7 @@ export const updateContractLineRate = withAuth(async (
 
     const canUpdate = await hasPermission(user, 'billing', 'update');
     if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines');
+      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
     }
 
     await knex.transaction(async (trx) => {
@@ -647,7 +656,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
     if (!isBypass) {
       const canDeleteBilling = await hasPermission(user, 'billing', 'delete');
       if (!canDeleteBilling) {
-        return permissionError('Permission denied: Cannot delete billing contracts');
+        return permissionError('Permission denied: Cannot delete billing contracts', 'msp/contracts:errors.permissions.deleteContracts');
       }
     }
 
@@ -860,6 +869,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       'cc.po_required',
       'cc.po_number',
       'cc.po_amount',
+      'cc.credit_drawdown_opt_out',
       'cc.renewal_ticket_board_id',
       'cc.renewal_ticket_status_id',
       'co.status as contract_status',
@@ -941,6 +951,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         po_required: Boolean(row.po_required),
         po_number: row.po_number,
         po_amount: row.po_amount,
+        credit_drawdown_opt_out: row.credit_drawdown_opt_out === true ? true : (row.credit_drawdown_opt_out === false ? false : null),
         tenant: row.tenant,
       };
     });

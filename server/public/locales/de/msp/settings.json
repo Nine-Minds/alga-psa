@@ -9,6 +9,7 @@
   "tabs": {
     "general": "Allgemein",
     "experimentalFeatures": "Experimentelle Funktionen",
+    "appearance": "Erscheinungsbild",
     "clientPortal": "Kundenportal",
     "users": "Benutzer",
     "teams": "Teams",
@@ -30,7 +31,10 @@
     "loadingTeam": "Team-Konfiguration wird geladen...",
     "loadingExperimental": "Experimentelle Funktionskonfiguration wird geladen...",
     "loadingInteractions": "Interaktionseinstellungen werden geladen...",
-    "keyboardShortcuts": "Tastenkürzel"
+    "keyboardShortcuts": "Tastenkürzel",
+    "mcpServer": "MCP-Server",
+    "opportunities": "Verkaufschancen",
+    "settingsFallback": "Einstellungen"
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",
@@ -73,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "Sie haben keine Berechtigung, Geheimnisse anzuzeigen.",
       "success": {
         "tenantNameUpdated": "Mandantenname erfolgreich aktualisiert",
         "timezoneUpdated": "Standardzeitzone erfolgreich aktualisiert",
@@ -263,7 +268,9 @@
         "licenseLimitReached": "Sie haben Ihr MSP-Benutzerlizenzlimit erreicht.",
         "soloPlanLimit": "Der Solo-Tarif ist auf 1 Benutzer begrenzt. Führen Sie ein Upgrade auf Pro durch, um weitere Benutzer hinzuzufügen.",
         "revokeInvitation": "Einladung konnte nicht widerrufen werden",
-        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet"
+        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet",
+        "createContact": "Kontakt konnte nicht erstellt werden: {{reason}}",
+        "unknown": "Unbekannter Fehler"
       }
     },
     "invitations": {
@@ -776,6 +783,8 @@
         "sections": {
           "general": "Allgemein",
           "generalHelp": "Name, Beschreibung, Sichtbarkeit und Standard",
+          "appearance": "Darstellung & Standardwerte",
+          "appearanceHelp": "Tab-Anheftung und die Standard-Listenansicht des Boards",
           "assignment": "Zuweisung & SLA",
           "assignmentHelp": "Standard-Routing, SLA und Board-Manager",
           "inbound": "E-Mail & eingehende Antworten",
@@ -796,6 +805,22 @@
         "allSaved": "Alle Änderungen gespeichert",
         "reopenBadge": "erneut öffnen",
         "required": "Erforderlich"
+      },
+      "appearance": {
+        "pinLabel": "An den Ticket-Bildschirm anheften",
+        "pinHelp": "Angeheftete Boards erhalten einen festen Tab auf dem Ticket-Bildschirm. Nicht angeheftete Boards bleiben über „Alle Tickets“ und den Board-Filter erreichbar.",
+        "savedView": "Gespeicherte Ansicht",
+        "inheritsTenant": "Übernimmt die Mandantenstandards",
+        "openBoard": "Dieses Board öffnen",
+        "resetToTenant": "Auf Mandantenstandard zurücksetzen",
+        "arrangeNote": "Richten Sie die Ansicht dieses Boards direkt auf dem Board ein und speichern Sie sie anschließend über das Menü „Ansicht“.",
+        "preview": "Vorschau",
+        "summary": {
+          "openOnly": "Nur offene",
+          "columns": "{{columns}} Spalten",
+          "density": "Dichte {{level}}",
+          "sortedBy": "sortiert nach {{field}}"
+        }
       },
       "empty": "Keine Boards gefunden.",
       "searchPlaceholder": "Boards suchen…"
@@ -1106,25 +1131,42 @@
       "fields": {
         "companyName": "Firmenname",
         "companyLogo": "Firmenlogo",
+        "companyLogoDark": "Logo für dunkle Hintergründe",
         "colorPalette": "Farbpalette",
         "primaryColor": "Primärfarbe",
         "secondaryColor": "Sekundärfarbe",
         "supportEmail": "Support-E-Mail",
         "supportPhone": "Support-Telefon",
-        "heroGradient": "Dashboard-Hintergrundverlauf"
+        "heroGradient": "Dashboard-Hintergrundverlauf",
+        "sidebarStyle": "Farbe der Seitenleiste",
+        "sidebarColor": "Eigene Farbe der Seitenleiste",
+        "followTheme": "Organisationsdesign im Kundenportal verwenden"
       },
       "help": {
         "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",
+        "colorPalette": "Das sind Akzente auf dem Organisations-Theme: Die Primärfarbe färbt Schaltflächen, Links und das Willkommensbanner, die Sekundärfarbe die zweite Hälfte des Banners und ergänzende Akzente, und das Seitenmenü übernimmt die von Ihnen gewählte Farbe. Alle übrigen Flächen – Seite, Karten, Text, Rahmen – stammen aus dem Theme unter Einstellungen → Darstellung.",
         "companyLogo": "Empfohlen: PNG oder SVG, max. 2 MB, transparenter Hintergrund",
+        "companyLogoMsp": "Dieses Logo ersetzt außerdem die Alga-Marke im MSP-Seitenmenü.",
+        "companyLogoDark": "Optional. Wird in der Seitenleiste des Portals und im dunklen Modus verwendet. Ohne Angabe wird das Firmenlogo verwendet.",
         "primaryColor": "Wird für Schaltflächen, Links und Hervorhebungen verwendet",
         "secondaryColor": "Wird für Akzente und sekundäre Aktionen verwendet",
         "supportEmail": "Wird Kunden in Terminbestätigungen und anderen ausgehenden E-Mails als Kontaktadresse für den Support angezeigt.",
         "supportPhone": "Optional. Wird neben der Support-E-Mail in E-Mails an Kunden angezeigt.",
-        "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard."
+        "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard.",
+        "sidebarStyle": "Färbt die Seitenleiste des Kundenportals in Ihrer Primär- oder Sekundärfarbe.",
+        "sidebarColor": "Eine beliebige Farbe. Das Panel verwendet einen abgedunkelten Farbton davon, damit der helle Text der Seitenleiste lesbar bleibt.",
+        "followTheme": "Wenn aktiviert, verwendet das Kundenportal das unter Einstellungen → Erscheinungsbild gewählte Design. Wenn deaktiviert, überschreiben die Farben unten dieses Design.",
+        "followThemeActive": "Die Farben unten bleiben gespeichert, werden aber nicht angewendet, solange das Portal dem Organisationsdesign folgt."
       },
       "heroGradient": {
         "primaryShades": "Primärfarbe zu Primärfarbton",
         "primarySecondary": "Primärfarbe zu Sekundärfarbe"
+      },
+      "sidebarStyle": {
+        "default": "Standard (dunkles Schiefergrau)",
+        "primary": "Primärfarbe",
+        "secondary": "Sekundärfarbe",
+        "custom": "Eigene Farbe"
       },
       "preview": "Vorschau",
       "previewDarkMode": "Dunkelmodus-Vorschau",
@@ -1278,6 +1320,130 @@
     "yourCompanyName": "Name Ihres Unternehmens",
     "brandingPreviewMode": "Branding-Vorschau-Themenmodus",
     "brandingUpdated": "Branding-Einstellungen aktualisiert"
+  },
+  "appearance": {
+    "title": "Design",
+    "description": "Wählen Sie das Hell-/Dunkel-Paar, das alle in dieser Organisation sehen – in der MSP-App und im Kundenportal. Jede Person wählt weiterhin selbst zwischen Hell, Dunkel und System.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "Das Standarddesign: klare weiße Flächen bei Tag, violett getönt bei Nacht."
+      },
+      "slate": {
+        "label": "Schiefer",
+        "description": "Neutrale Grautöne mit dem ursprünglichen blaugrauen Dunkeldesign."
+      },
+      "ocean": {
+        "label": "Ozean",
+        "description": "Ein marineblaues Seitenmenü mit kühlen Blautönen auf klaren, leicht kühlen Flächen."
+      },
+      "sky": {
+        "label": "Himmel",
+        "description": "Ein helleres, luftigeres Blau mit indigofarbener Sekundärfarbe."
+      },
+      "forest": {
+        "label": "Wald",
+        "description": "Tiefe Grüntöne mit türkisfarbener Erfolgsfarbe, damit Status lesbar bleibt."
+      },
+      "sunset": {
+        "label": "Sonnenuntergang",
+        "description": "Warme Orangetöne und Dämmerungsrosa auf sandfarbenen Flächen."
+      },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Kaffeebraun auf Creme, geröstetes Espresso-Dunkel."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Neonpink und Cyan auf einem Miami-Nachtviolett."
+      },
+      "highContrast": {
+        "label": "Hoher Kontrast",
+        "description": "Nur Schwarz und Weiß mit betonten Rahmen. Nur die Statusfarben behalten ihren Farbton."
+      },
+      "custom": {
+        "label": "Benutzerdefiniert",
+        "description": "Ihre eigenen Farben, unten bearbeitet."
+      }
+    },
+    "custom": {
+      "title": "Eigenes Design",
+      "description": "Erstellen Sie eigene helle und dunkle Varianten. Die vollständigen Farbskalen werden aus diesen Grundfarben abgeleitet, und der Kontrast wird vor dem Speichern geprüft.",
+      "lightMode": "Helle Variante",
+      "darkMode": "Dunkle Variante",
+      "previewAlt": "Vorschau des eigenen Designs",
+      "seededFrom": "Diese Farben starten beim Design {{pair}} – ändern Sie nur die wenigen, die Sie brauchen, die vollen Farbskalen folgen automatisch.",
+      "contrastTitle": "Diese Farben liegen zu nah beieinander und sind schlecht lesbar. Bitte vor dem Speichern korrigieren:",
+      "contrastIssue": "{{foreground}} ist auf {{background}} möglicherweise schwer lesbar. {{hint}}",
+      "tokens": {
+        "background": "Seitenhintergrund",
+        "card": "Kartenfläche",
+        "surface": "Erhöhte Fläche",
+        "textPrimary": "Primärer Text",
+        "textSecondary": "Sekundärer Text",
+        "textMuted": "Gedämpfter Text",
+        "border": "Rahmen",
+        "borderStrong": "Kräftiger Rahmen",
+        "primary": "Primärfarbe",
+        "secondary": "Sekundärfarbe",
+        "accent": "Akzentfarbe",
+        "sidebarBg": "Hintergrund der Seitenleiste",
+        "sidebarText": "Text der Seitenleiste",
+        "sidebarHover": "Seitenleiste beim Überfahren",
+        "headerBg": "Kopfzeilenhintergrund",
+        "buttonLabel": "Weiße Schaltflächenbeschriftungen"
+      },
+      "actions": {
+        "save": "Eigenes Design speichern und verwenden",
+        "reset": "Auf Farben von {{pair}} zurücksetzen",
+        "resetDone": "Farben auf das Design {{pair}} zurückgesetzt – zum Anwenden speichern",
+        "useSaved": "Meine gespeicherten Farben verwenden",
+        "useSavedDone": "Ihre gespeicherten Farben sind wieder da – zum Anwenden speichern"
+      },
+      "contrastHints": {
+        "lighten": "Wählen Sie ein helleres {{foreground}} oder ein dunkleres {{background}}.",
+        "darken": "Wählen Sie ein dunkleres {{foreground}} oder ein helleres {{background}}."
+      },
+      "mock": {
+        "caption": "Zeigen Sie unten auf eine Farbe, um zu sehen, welchen Teil der App sie einfärbt.",
+        "showing": "Hervorgehoben: {{token}}",
+        "nav": "Start",
+        "navActive": "Tickets",
+        "navMuted": "Berichte",
+        "headerTitle": "Tickets",
+        "cardTitle": "Drucker am Empfang offline",
+        "cardBody": "Zugewiesen an Dana Reyes",
+        "cardMuted": "Vor 2 Stunden aktualisiert",
+        "primaryAction": "Speichern",
+        "secondaryAction": "Zuweisen",
+        "ghostAction": "Abbrechen",
+        "surface": "Letzte Aktivität"
+      }
+    },
+    "whiteLabel": {
+      "title": "MSP-App mit eigener Marke",
+      "description": "Laden Sie Ihr Logo einmal hoch. Es ersetzt die Alga-Marke im MSP-Seitenmenü, und das Kundenportal verwendet dieselben Bilder.",
+      "logoHelp": "Das MSP-Seitenmenü ist in beiden Designs dunkel. Es verwendet daher das Logo für dunkle Hintergründe, sofern vorhanden, und sonst das Hauptlogo.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo für dunkle Hintergründe"
+      },
+      "colors": {
+        "label": "Markenfarben in der MSP-App verwenden",
+        "help": "Standardmäßig deaktiviert. Wenn aktiviert, ersetzen Ihre Primär- und Sekundärfarben die Designakzente für MSP-Benutzer, so wie bereits im Kundenportal."
+      }
+    },
+    "messages": {
+      "loadFailed": "Einstellungen zum Erscheinungsbild konnten nicht geladen werden",
+      "saved": "Erscheinungsbild aktualisiert",
+      "saveFailed": "Einstellungen zum Erscheinungsbild konnten nicht gespeichert werden",
+      "discarded": "Vorschau verworfen"
+    },
+    "unsaved": {
+      "notice": "Sie sehen eine Vorschau eines nicht gespeicherten Themes. Alle anderen behalten das gespeicherte, bis Sie es anwenden.",
+      "save": "Für alle übernehmen",
+      "discard": "Verwerfen"
+    }
   },
   "mspLanguage": {
     "title": "Organisationssprache",
@@ -1491,7 +1657,8 @@
         "description": "Beschreibung",
         "enabled": "Aktiviert",
         "defaultForUsers": "Standard für Benutzer",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "priority": "Priorität"
       },
       "actions": {
         "enableAllSubtypes": "Alle Untertypen aktivieren",
@@ -1503,7 +1670,8 @@
         "discardChanges": "Änderungen verwerfen",
         "saving": "Wird gespeichert...",
         "saveChanges": "Änderungen speichern",
-        "cancel": "Abbrechen"
+        "cancel": "Abbrechen",
+        "resetToDefault": "Auf Standard zurücksetzen"
       },
       "intro": "Legen Sie fest, welche internen Benachrichtigungstypen verfügbar sind, und definieren Sie Standardwerte für neue Benutzer.",
       "enabledLabel": "Aktiviert:",
@@ -1514,12 +1682,148 @@
       "discardDialog": {
         "title": "Änderungen verwerfen?",
         "message": "Sind Sie sicher, dass Sie alle nicht gespeicherten Änderungen verwerfen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "priority": {
+        "high": "Hoch",
+        "normal": "Normal",
+        "low": "Niedrig"
       }
     }
   },
   "timeEntry": {
     "title": "Zeiterfassungseinstellungen",
-    "description": "Verwalten Sie Ihre Zeiterfassungseinstellungen und Zeiträume"
+    "description": "Verwalten Sie Ihre Zeiterfassungseinstellungen und Zeiträume",
+    "timePeriods": {
+      "title": "Abrechnungszeitraum-Einstellungen",
+      "description": "Abrechnungszeiträume konfigurieren",
+      "loading": "Abrechnungszeitraum-Einstellungen werden geladen...",
+      "addNew": "Neue Abrechnungszeitraum-Einstellung hinzufügen",
+      "help": {
+        "title": "Abrechnungszeitraum-Einstellungen verstehen",
+        "intro": "Sie können mehrere aktive Einstellungen definieren, um komplexe Abrechnungszyklen abzubilden. Der Endtag ist der letzte Tag, der zum Zeitraum gehört.",
+        "exampleIntro": "Beispiel für halbmonatliche Zeiträume (1.–15. und 16.–Monatsende):",
+        "firstSettingLabel": "Einstellung 1:",
+        "firstSetting": "Starttag: 1, Endtag: 15 → Zeitraum umfasst den 1. bis 15.",
+        "secondSettingLabel": "Einstellung 2:",
+        "secondSetting": "Starttag: 16, Endtag: Monatsende → Zeitraum umfasst den 16. bis zum letzten Tag",
+        "outro": "Das System nutzt diese Einstellungen, um Zeiträume vorzuschlagen und zu erzeugen. Achten Sie darauf, dass die Einstellungen den gesamten Zyklus lückenlos abdecken."
+      },
+      "form": {
+        "requiredFields": "Bitte füllen Sie die erforderlichen Felder aus:",
+        "frequency": "Häufigkeit *",
+        "frequencyPlaceholder": "Häufigkeit eingeben",
+        "frequencyUnit": "Häufigkeitseinheit *",
+        "frequencyUnitPlaceholder": "Häufigkeitseinheit wählen",
+        "startDay": "Starttag *",
+        "selectDay": "Tag wählen",
+        "startDayPlaceholder": "Starttag eingeben",
+        "endDay": "Endtag *",
+        "endDayPlaceholder": "Endtag eingeben",
+        "endOfUnit": "Ende: {{unit}}",
+        "endOfMonth": "Monatsende",
+        "startMonth": "Startmonat",
+        "endMonth": "Endmonat",
+        "startDayOfMonth": "Starttag im Monat *",
+        "endDayOfMonth": "Endtag im Monat *",
+        "add": "Abrechnungszeitraum-Einstellung hinzufügen"
+      },
+      "validation": {
+        "frequencyMin": "Die Häufigkeit muss mindestens 1 betragen",
+        "startDayRequired": "Starttag ist erforderlich",
+        "endDayRequired": "Endtag ist erforderlich",
+        "startDayOfMonthRequired": "Starttag im Monat ist erforderlich",
+        "endDayOfMonthRequired": "Endtag im Monat ist erforderlich"
+      },
+      "errors": {
+        "fetch": "Die Abrechnungszeitraum-Einstellungen konnten nicht geladen werden",
+        "overlap": "Diese Abrechnungszeitraum-Einstellung überschneidet sich mit einer bestehenden aktiven Einstellung.",
+        "add": "Die Abrechnungszeitraum-Einstellung konnte nicht hinzugefügt werden. Bitte prüfen Sie die Werte und versuchen Sie es erneut.",
+        "update": "Die Abrechnungszeitraum-Einstellung konnte nicht aktualisiert werden",
+        "delete": "Die Abrechnungszeitraum-Einstellung konnte nicht gelöscht werden"
+      },
+      "summary": {
+        "frequency": "Häufigkeit: alle {{count}} × {{unit}}",
+        "startDay": "Starttag: {{value}}",
+        "endDay": "Endtag: {{value}}",
+        "start": "Beginn: {{value}}",
+        "end": "Ende: {{value}}",
+        "effectiveFrom": "Gültig ab: {{value}}",
+        "effectiveTo": "Gültig bis: {{value}}",
+        "noEnd": "Kein Enddatum",
+        "notSet": "Nicht festgelegt"
+      },
+      "units": {
+        "day": "Tag",
+        "week": "Woche",
+        "month": "Monat",
+        "year": "Jahr"
+      },
+      "months": {
+        "1": "Januar",
+        "2": "Februar",
+        "3": "März",
+        "4": "April",
+        "5": "Mai",
+        "6": "Juni",
+        "7": "Juli",
+        "8": "August",
+        "9": "September",
+        "10": "Oktober",
+        "11": "November",
+        "12": "Dezember"
+      },
+      "weekDays": {
+        "1": "Montag",
+        "2": "Dienstag",
+        "3": "Mittwoch",
+        "4": "Donnerstag",
+        "5": "Freitag",
+        "6": "Samstag",
+        "7": "Sonntag"
+      }
+    },
+    "periods": {
+      "title": "Zeiträume",
+      "description": "Zeiträume für die Zeiterfassung anzeigen und verwalten",
+      "loading": "Zeiträume werden geladen ...",
+      "create": "Neuen Zeitraum erstellen",
+      "openMenu": "Menü öffnen",
+      "columns": {
+        "startDate": "Startdatum",
+        "endDate": "Enddatum",
+        "actions": "Aktionen"
+      },
+      "form": {
+        "createTitle": "Neuen Zeitraum erstellen",
+        "editTitle": "Zeitraum bearbeiten",
+        "suggestion": "Basierend auf Ihren Einstellungen wird der nächste Zeitraum vorgeschlagen.",
+        "frequency": "Häufigkeit: alle {{value}} × {{unit}}",
+        "overrideDates": "Vorgeschlagene Daten überschreiben",
+        "startDate": "Startdatum",
+        "startDatePlaceholder": "Startdatum auswählen",
+        "noEndDate": "Kein Enddatum",
+        "endDate": "Enddatum",
+        "endDatePlaceholder": "Enddatum auswählen",
+        "deletePeriod": "Zeitraum löschen",
+        "confirmDeleteTitle": "Löschen bestätigen",
+        "confirmDeleteBody": "Möchten Sie diesen Zeitraum wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "checkSettingsLink": "Bitte prüfen Sie Ihre Abrechnungszeitraum-Einstellungen."
+      },
+      "errors": {
+        "load": "Die Zeiträume konnten nicht geladen werden.",
+        "suggest": "Es konnte kein neuer Zeitraum vorgeschlagen werden",
+        "noApplicableSettings": "Keine passenden Abrechnungszeitraum-Einstellungen gefunden.",
+        "noSettings": "Keine Abrechnungszeitraum-Einstellungen vorhanden. Es kann kein neuer Zeitraum erstellt werden.",
+        "settingsRequired": "Ohne Einstellungen kann kein Zeitraum verwaltet werden.",
+        "startDateRequired": "Es muss ein Startdatum angegeben werden.",
+        "startBeforeEnd": "Das Startdatum muss vor dem Enddatum liegen.",
+        "overlap": "Der Zeitraum überschneidet sich mit einem bestehenden Zeitraum.",
+        "overlapRetry": "Dieser Zeitraum überschneidet sich mit einem bestehenden. Bitte wählen Sie andere Daten.",
+        "create": "Der Zeitraum konnte nicht erstellt werden.",
+        "delete": "Der Zeitraum konnte nicht gelöscht werden",
+        "unexpected": "Ein unerwarteter Fehler ist aufgetreten."
+      }
+    }
   },
   "billing": {
     "title": "Abrechnungseinstellungen",
@@ -1599,7 +1903,8 @@
         "valueRequired": "Geheimniswert ist erforderlich",
         "noChanges": "Keine Änderungen zum Speichern",
         "fixValidation": "Bitte beheben Sie die Validierungsfehler"
-      }
+      },
+      "permissionDenied": "Sie haben keine Berechtigung, Geheimnisse anzuzeigen."
     }
   },
   "importExport": {
@@ -1678,6 +1983,22 @@
     "templates": {
       "comingSoon": "Zuordnungsvorlagen und geplante Importe werden hier verfügbar sein. Speichern Sie Spaltenzuordnungen, teilen Sie sie mit dem Team und konfigurieren Sie wiederkehrende Aufträge."
     },
+    "migration": {
+      "actions": {
+        "back": "Zurück zu Migrationen",
+        "upload": "Paket hochladen"
+      },
+      "errors": {
+        "noImportableRecords": "Dieses Paket enthielt keine importierbaren Datensätze."
+      },
+      "preflight": {
+        "title": "Vorprüfung"
+      },
+      "run": {
+        "queued": "Migration in Warteschlange",
+        "applying": "Migration läuft"
+      }
+    },
     "jobDetails": {
       "title": "Import-Auftragsdetails",
       "stats": {
@@ -1752,6 +2073,50 @@
     "loading": {
       "extensions": "Erweiterungen werden geladen...",
       "installer": "Installationsprogramm wird geladen..."
+    }
+  },
+  "policyManagement": {
+    "title": "Richtlinienverwaltung",
+    "upgradeDescription": "Die Richtlinienverwaltung ist eine Pro-Funktion. Führen Sie ein Upgrade durch, um auf erweiterte Richtliniensteuerungen zuzugreifen."
+  },
+  "roleManagement": {
+    "title": "Rollen verwalten",
+    "description": "Erstellen und verwalten Sie Rollen für den Zugriff auf das MSP- und das Kundenportal",
+    "columns": {
+      "roleNameRequired": "Rollenname *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Rollenname",
+      "roleNamePlaceholder": "Rollennamen eingeben",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Rollenbeschreibung eingeben"
+    },
+    "portal": {
+      "none": "Keine",
+      "access": "Portalzugriff",
+      "msp": "MSP-Portal",
+      "client": "Kundenportal",
+      "mspShort": "MSP",
+      "clientShort": "Kunde",
+      "required": "Eine Rolle muss Zugriff auf mindestens ein Portal haben"
+    },
+    "actions": {
+      "addRole": "Rolle hinzufügen",
+      "createRole": "Rolle erstellen"
+    },
+    "createDialog": {
+      "title": "Neue Rolle erstellen"
+    },
+    "deleteDialog": {
+      "entityFallback": "diese Rolle"
+    },
+    "adminDeleteDisabled": "Administratorrollen können nicht gelöscht werden, da sie Systemrollen sind",
+    "errors": {
+      "createFailed": "Rolle konnte nicht erstellt werden",
+      "updateFailed": "Rolle konnte nicht aktualisiert werden",
+      "validateDeletionFailed": "Das Löschen konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
+      "deleteFailed": "Rolle konnte nicht gelöscht werden"
     }
   },
   "security": {
@@ -2153,6 +2518,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Akzeptieren Sie Kreditkartenzahlungen für Rechnungen über Stripe"
+      },
+      "telephony": {
+        "name": "Telefonie",
+        "description": "Anrufe als Interaktionen protokollieren, Anrufer erkennen und aus einem Anruf ein Ticket erstellen"
       }
     }
   },
@@ -2184,6 +2553,266 @@
       "holidayDateRequired": "Feiertagsdatum ist erforderlich",
       "holidayAdded": "Feiertag erfolgreich hinzugefügt",
       "holidayDeleted": "Feiertag erfolgreich gelöscht"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "Derzeit besteht bei keinem Ticket die Gefahr eines SLA-Verstoßes",
+        "overdueHours": "Seit {{hours}} Std. {{minutes}} Min. überfällig",
+        "overdueMinutes": "Seit {{minutes}} Min. überfällig",
+        "title": "Gefährdete Tickets"
+      },
+      "breachChart": {
+        "breachRate": "Verstoßquote",
+        "empty": "Keine Daten zu SLA-Verstößen verfügbar",
+        "title": "Verstöße nach Priorität"
+      },
+      "columns": {
+        "assignee": "Zugewiesener Benutzer",
+        "breachType": "Verstoßart",
+        "client": "Kunde",
+        "priority": "Priorität",
+        "progress": "Fortschritt",
+        "slaType": "SLA-Typ",
+        "ticket": "Ticket",
+        "timeRemaining": "Verbleibende Zeit",
+        "when": "Zeitpunkt"
+      },
+      "gauge": {
+        "title": "SLA-Einhaltung"
+      },
+      "labels": {
+        "resolution": "Lösung",
+        "resolutionSla": "Lösungs-SLA",
+        "response": "Reaktion",
+        "responseSla": "Reaktions-SLA"
+      },
+      "metrics": {
+        "approachingBreach": "Tickets kurz vor einem SLA-Verstoß",
+        "atRisk": "Gefährdet",
+        "currentlyPaused": "Derzeit pausiert",
+        "metBreached": "{{met}} eingehalten / {{breached}} überschritten",
+        "overallCompliance": "Gesamteinhaltung",
+        "pausedSla": "Tickets mit pausiertem SLA",
+        "ticketsTracked_one": "{{count}} Ticket erfasst",
+        "ticketsTracked_other": "{{count}} Tickets erfasst"
+      },
+      "recentBreaches": {
+        "empty": "Keine SLA-Verstöße im ausgewählten Zeitraum",
+        "title": "Kürzliche SLA-Verstöße",
+        "unassigned": "Nicht zugewiesen"
+      },
+      "trendChart": {
+        "breaches": "SLA-Verstöße",
+        "compliance": "Einhaltung",
+        "compliancePercent": "Einhaltung in %",
+        "empty": "Für den ausgewählten Zeitraum sind keine Trenddaten verfügbar",
+        "tickets": "Tickets",
+        "title": "Einhaltungstrend"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "Globale SLA-Einstellungen konnten nicht aktualisiert werden",
+        "loadFailed": "Einstellungen für SLA-Pausen konnten nicht geladen werden",
+        "responseTrackingUpdateFailed": "Verfolgung des Reaktionsstatus konnte nicht aktualisiert werden",
+        "saveStatusesFailed": "Statuskonfigurationen konnten nicht gespeichert werden"
+      },
+      "global": {
+        "description": "Globales Verhalten für das Pausieren von SLA-Zeitgebern konfigurieren",
+        "pauseOnAwaitingClient": {
+          "description": "Wenn diese Option aktiviert ist, wird der SLA-Zeitgeber automatisch pausiert, sobald ein Ticket als auf eine Antwort des Kunden wartend markiert wird. Der Zeitgeber wird fortgesetzt, wenn der Kunde antwortet oder sich der Ticketstatus ändert.",
+          "label": "SLA beim Warten auf eine Kundenantwort automatisch pausieren",
+          "requiresTracking": "Aktivieren Sie oben die Verfolgung des Reaktionsstatus, um diese Option zu verwenden."
+        },
+        "responseTracking": {
+          "description": "Wenn diese Option aktiviert ist, erfassen Tickets automatisch, wer als Nächstes antworten muss (Kunde oder interner Mitarbeiter). Dies steuert außerdem die Sichtbarkeit von Kennzeichnungen und Filtern für den Reaktionsstatus.",
+          "label": "Reaktionsstatus bei Tickets verfolgen"
+        },
+        "title": "Globale SLA-Einstellungen"
+      },
+      "loading": "Einstellungen für SLA-Pausen werden geladen...",
+      "messages": {
+        "globalSettingsUpdated": "Globale SLA-Einstellungen wurden erfolgreich aktualisiert",
+        "noChangesToSave": "Keine Änderungen zu speichern",
+        "responseTrackingDisabled": "Verfolgung des Reaktionsstatus deaktiviert",
+        "responseTrackingEnabled": "Verfolgung des Reaktionsstatus aktiviert",
+        "statusesUpdated_one": "{{count}} Statuskonfiguration wurde erfolgreich aktualisiert",
+        "statusesUpdated_other": "{{count}} Statuskonfigurationen wurden erfolgreich aktualisiert"
+      },
+      "perStatus": {
+        "description": "Konfigurieren Sie, bei welchen Ticketstatus der SLA-Zeitgeber pausiert werden soll. Wenn ein Ticket in einen Status mit aktivierter Pause verschoben wird, hält der SLA-Zeitgeber an, bis das Ticket in einen anderen Status verschoben wird.",
+        "empty": "Keine Ticketstatus gefunden.",
+        "modified": "Geändert",
+        "modifiedCount_one": "{{count}} Status geändert",
+        "modifiedCount_other": "{{count}} Status geändert",
+        "noUnsavedChanges": "Keine ungespeicherten Änderungen",
+        "resetChanges": "Änderungen zurücksetzen",
+        "saveChanges": "Änderungen speichern",
+        "saving": "Wird gespeichert...",
+        "title": "Pausenkonfiguration nach Status"
+      },
+      "retry": "Erneut versuchen"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "Abbrechen",
+        "create": "Richtlinie erstellen",
+        "saveChanges": "Änderungen speichern",
+        "saving": "Wird gespeichert..."
+      },
+      "basics": {
+        "assignBoards": "Boards zuweisen",
+        "assignClients": "Kunden zuweisen",
+        "businessHours": "Geschäftszeitenplan",
+        "businessHoursPlaceholder": "Geschäftszeitenplan auswählen",
+        "description": "Beschreibung",
+        "descriptionPlaceholder": "Optionale Beschreibung dieser SLA-Richtlinie",
+        "noBusinessHours": "Keine Geschäftszeiten (24/7)",
+        "policyName": "Richtlinienname",
+        "policyNamePlaceholder": "Richtliniennamen eingeben",
+        "scheduleAlways": "{{name}} (rund um die Uhr)",
+        "searchBoards": "Boards durchsuchen...",
+        "searchClients": "Kunden durchsuchen...",
+        "setAsDefault": "Als Standardrichtlinie festlegen",
+        "title": "Grundlegende Informationen"
+      },
+      "errors": {
+        "loadFailed": "Daten konnten nicht geladen werden",
+        "notFound": "SLA-Richtlinie nicht gefunden",
+        "saveFailed": "SLA-Richtlinie konnte nicht gespeichert werden"
+      },
+      "loading": "Wird geladen...",
+      "multiSelect": {
+        "deselectAll": "Auswahl vollständig aufheben",
+        "deselectAllVisible": "Auswahl aller sichtbaren Einträge aufheben",
+        "noItems": "Keine Einträge verfügbar",
+        "noResults": "Keine Ergebnisse gefunden",
+        "placeholder": "Auswählen...",
+        "searchPlaceholder": "Suchen...",
+        "selectAll": "Alle auswählen",
+        "selectAllVisible": "Alle sichtbaren Einträge auswählen",
+        "selectedCount_one": "{{count}} ausgewählt",
+        "selectedCount_other": "{{count}} ausgewählt"
+      },
+      "targets": {
+        "always": "24/7 (Geschäftszeiten ignorieren)",
+        "description": "Legen Sie für jede Prioritätsstufe die maximal zulässige Zeit bis zur ersten Reaktion und bis zur vollständigen Lösung von Tickets fest.",
+        "escalationThresholds": "Eskalationsschwellen (% der verstrichenen Zeit)",
+        "level1": "Stufe 1 (%)",
+        "level2": "Stufe 2 (%)",
+        "level3": "Stufe 3 (%)",
+        "minutesPlaceholder": "Minuten",
+        "minutesUnit": "Minuten",
+        "noTarget": "Kein Zielwert",
+        "notConfigured": "Nicht konfiguriert",
+        "resolutionSummary": "Lösung: {{time}}",
+        "resolutionTime": "Lösungszeit",
+        "responseSummary": "Reaktion: {{time}}",
+        "responseTime": "Reaktionszeit",
+        "selectResolutionTime": "Lösungszeit auswählen",
+        "selectResponseTime": "Reaktionszeit auswählen",
+        "title": "Zielwerte für Reaktion und Lösung",
+        "usePreset": "Voreinstellung verwenden"
+      },
+      "thresholds": {
+        "add": "Schwellenwert hinzufügen",
+        "channelEmail": "E-Mail",
+        "channelInApp": "In-App-Benachrichtigung",
+        "channelsLabel": "Benachrichtigungskanäle",
+        "description": "Konfigurieren Sie, wann und wie Teammitglieder benachrichtigt werden, wenn SLA-Fristen näher rücken oder überschritten werden.",
+        "empty": "Keine Benachrichtigungsschwellen konfiguriert. Klicken Sie auf \"Schwellenwert hinzufügen\", um eine zu erstellen.",
+        "noChannels": "keine",
+        "noRecipients": "Keine Empfänger",
+        "percentLabel": "Schwellenwert (%)",
+        "recipientAssignee": "Zugewiesener Benutzer",
+        "recipientBoardManager": "Board-Manager",
+        "recipientBoardManagerShort": "Board-Mgr.",
+        "recipientEscalationManager": "Eskalationsmanager",
+        "recipientEscalationManagerShort": "Eskalations-Mgr.",
+        "recipientsLabel": "Empfänger",
+        "remove": "Entfernen",
+        "title": "Benachrichtigungsschwellen",
+        "typeBreach": "SLA-Verstoß",
+        "typeLabel": "Benachrichtigungstyp",
+        "typeWarning": "Warnung",
+        "viaChannels": "über {{channels}}"
+      },
+      "timeOptions": {
+        "custom": "Benutzerdefiniert...",
+        "hours1": "1 Stunde",
+        "hours168": "168 Stunden (7 Tage)",
+        "hours2": "2 Stunden",
+        "hours24": "24 Stunden (1 Tag)",
+        "hours4": "4 Stunden",
+        "hours48": "48 Stunden (2 Tage)",
+        "hours72": "72 Stunden (3 Tage)",
+        "hours8": "8 Stunden",
+        "minutes15": "15 Minuten",
+        "minutes30": "30 Minuten"
+      },
+      "validation": {
+        "channelRequired": "Mindestens ein Kanal ist erforderlich",
+        "duplicateThreshold": "Doppelter Schwellenwert in Prozent",
+        "percentRange": "Muss zwischen 0 und 200 liegen",
+        "policyNameRequired": "Richtlinienname ist erforderlich",
+        "targetRequired": "Mindestens eine Priorität muss einen Zielwert für die Reaktions- oder Lösungszeit haben"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "Abbrechen",
+        "delete": "Löschen",
+        "edit": "Bearbeiten",
+        "openMenu": "Menü öffnen",
+        "setDefault": "Als Standard festlegen"
+      },
+      "addPolicy": "Richtlinie hinzufügen",
+      "columns": {
+        "actions": "Aktionen",
+        "description": "Beschreibung",
+        "name": "Name"
+      },
+      "defaultLabel": "Standard",
+      "delete": {
+        "checkingUsage": "Verwendung wird geprüft...",
+        "confirm": "Möchten Sie die Richtlinie {{name}} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "defaultWarning": "Dies ist die Standardrichtlinie. Legen Sie gegebenenfalls zuerst eine andere Richtlinie als Standard fest.",
+        "inUseTitle": "Diese Richtlinie wird derzeit verwendet",
+        "title": "SLA-Richtlinie löschen",
+        "unlinkNote": "Diese Verweise werden aufgehoben. Vorhandene SLA-Verfolgungsdaten zu Tickets bleiben erhalten.",
+        "usageBoards_one": "Zugewiesenes Board: {{names}}",
+        "usageBoards_other": "Zugewiesene Boards: {{names}}",
+        "usageClients_one": "Kunde: {{names}}",
+        "usageClients_other": "Kunden: {{names}}",
+        "usageTickets_one": "{{count}} Ticket",
+        "usageTickets_other": "{{count}} Tickets"
+      },
+      "description": "SLA-Richtlinien verwalten, die Zielwerte für Reaktions- und Lösungszeiten festlegen",
+      "empty": "Keine SLA-Richtlinien gefunden. Klicken Sie auf \"Richtlinie hinzufügen\", um Ihre erste Richtlinie zu erstellen.",
+      "errors": {
+        "deleteFailed": "Richtlinie konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+        "loadFailed": "SLA-Richtlinien konnten nicht geladen werden. Versuchen Sie es erneut.",
+        "setDefaultFailed": "Standardrichtlinie konnte nicht festgelegt werden. Versuchen Sie es erneut."
+      },
+      "loading": "SLA-Richtlinien werden geladen...",
+      "title": "SLA-Richtlinien"
+    },
+    "status": {
+      "atRisk": "Gefährdet",
+      "breached": "Überschritten",
+      "onTrack": "Im Zeitplan",
+      "paused": "Pausiert",
+      "resolutionBreached": "Lösungs-SLA überschritten",
+      "responseBreached": "Reaktions-SLA überschritten",
+      "tooltip": {
+        "resolutionBreachedBy": "Lösung: seit {{time}} überschritten",
+        "resolutionRemaining": "Lösung: {{time}} verbleibend",
+        "responseBreachedBy": "Reaktion: seit {{time}} überschritten",
+        "responseRemaining": "Reaktion: {{time}} verbleibend",
+        "statusLine": "SLA-Status: {{status}}",
+        "timerPaused": "SLA-Zeitgeber: pausiert"
+      },
+      "unknown": "Unbekannt"
     }
   },
   "clientPortalLanguage": {
@@ -2445,6 +3074,171 @@
         "confirm": "Trennen",
         "cancel": "Abbrechen"
       }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Berechtigung verweigert: Team kann nicht erstellt werden.",
+        "update": "Berechtigung verweigert: Team kann nicht aktualisiert werden.",
+        "modify": "Berechtigung verweigert: Team kann nicht geändert werden.",
+        "modifyMembers": "Berechtigung verweigert: Teammitglieder können nicht geändert werden.",
+        "view": "Berechtigung verweigert: Team kann nicht angezeigt werden.",
+        "viewAll": "Berechtigung verweigert: Teams können nicht angezeigt werden.",
+        "assignManager": "Berechtigung verweigert: Teamleitung kann nicht zugewiesen werden."
+      },
+      "notFoundRefresh": "Team nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "leadRequired": "Ein Team muss eine Teamleitung haben. Wählen Sie eine Teamleitung und versuchen Sie es erneut.",
+      "inactiveUser": "Inaktive Benutzer können keinem Team hinzugefügt werden.",
+      "cannotRemoveLead": "Die Teamleitung kann nicht entfernt werden. Weisen Sie zuerst eine neue Teamleitung zu.",
+      "invalidValue": "Einer der ausgewählten Teamwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicateMember": "Dieser Benutzer ist bereits Mitglied des Teams.",
+      "referenceMissing": "Die ausgewählte Teamleitung oder das Mitglied ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Teamfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Teamfeld fehlt: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien anzuzeigen",
+        "create": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien zu erstellen",
+        "update": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien zu aktualisieren",
+        "delete": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien zu löschen"
+      },
+      "policyNotFound": "SLA-Richtlinie nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "targetNotFound": "SLA-Richtlinienziel nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "priorityNotFound": "Ausgewählte Priorität nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "clientNotFound": "Ausgewählter Kunde nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "boardNotFound": "Ausgewähltes Board nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ticketNotFound": "Ticket nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicateTarget": "Für diese Priorität existiert in dieser Richtlinie bereits ein Ziel.",
+      "pauseRequiresBoardStatus": "Die SLA-Pausenkonfiguration erfordert einen Ticketstatus, der zu einem Board gehört.",
+      "invalidValue": "Einer der ausgewählten SLA-Werte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte SLA-Datensatz oder ein zugehöriger Wert existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese SLA-Änderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der SLA-Werte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches SLA-Feld fehlt.",
+      "missingFieldNamed": "Erforderliches SLA-Feld fehlt: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Board nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "userNotFound": "Der ausgewählte Benutzer für die Eskalationsleitung wurde nicht gefunden. Bitte aktualisieren Sie die Seite und wählen Sie einen anderen Benutzer.",
+      "configNotFound": "Konfiguration der Eskalationsleitung nicht gefunden. Sie wurde möglicherweise bereits gelöscht.",
+      "recordInvalid": "Einer der ausgewählten Datensätze der Eskalationsleitung ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Das ausgewählte Board oder der Benutzer existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Für dieses Board und diese Stufe ist bereits eine Eskalationsleitung konfiguriert.",
+      "missingField": "Erforderliches Feld der Eskalationsleitung fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Eskalationsleitung fehlt: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte zugehörige Datensatz für diesen Status existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "orderInUse": "Diese Reihenfolgennummer wird bereits verwendet. Bitte wählen Sie eine andere Nummer.",
+      "duplicateName": "Ein Status mit diesem Namen existiert bereits.",
+      "notAllowed": "Einer der Statuswerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Statusfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Statusfeld fehlt: {{field}}.",
+      "nameRequired": "Der Statusname ist erforderlich",
+      "nameEmpty": "Der Statusname darf nicht leer sein",
+      "idRequired": "Die Status-ID ist erforderlich",
+      "manageFromBoard": "Ticketstatus müssen in den Board-Einstellungen verwaltet werden"
+    },
+    "priority": {
+      "notFound": "Priorität nicht gefunden.",
+      "boardMissing": "Das ausgewählte Board existiert nicht mehr.",
+      "duplicate": "Eine Priorität mit diesen Angaben existiert bereits.",
+      "referenceInvalid": "Der ausgewählte Prioritätsverweis ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidData": "Ungültige Prioritätsdaten übermittelt. Bitte prüfen Sie die Prioritätsdetails.",
+      "missingField": "Erforderliches Prioritätsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Prioritätsfeld fehlt: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Einer der ausgewählten Benutzer ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Benutzer existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "readClientInfoPermission": "Berechtigung verweigert: Kundeninformationen des Benutzers können nicht gelesen werden"
+    },
+    "roles": {
+      "userNotFound": "Benutzer nicht gefunden. Aktualisieren Sie die Benutzerliste und versuchen Sie es erneut.",
+      "roleNotFound": "Rolle nicht gefunden. Aktualisieren Sie die Rollenliste und versuchen Sie es erneut.",
+      "portalRoleOnMspUser": "Einem MSP-Benutzer kann keine Kundenportal-Rolle zugewiesen werden.",
+      "mspRoleOnPortalUser": "Einem Kundenportal-Benutzer kann keine MSP-Rolle zugewiesen werden.",
+      "invalidValue": "Einer der ausgewählten Benutzer- oder Rollenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte Benutzer oder die Rolle existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Dieser Benutzer hat die ausgewählte Rolle bereits.",
+      "changePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
+      "missingField": "Erforderliches Feld der Benutzerrolle fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Der Mandantenkontext fehlt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notFound": "Secret nicht gefunden. Es wurde möglicherweise bereits gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidName": "Ungültiger Mandanten- oder Secret-Name.",
+      "readOnly": "Der Secret-Speicher ist in dieser Umgebung schreibgeschützt.",
+      "noDurablePath": "Der Secret-Speicher ist in dieser Umgebung nicht für dauerhafte Schreibvorgänge konfiguriert.",
+      "recordInvalid": "Einer der ausgewählten Secret-Datensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Secret-Datensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein Secret mit diesem Namen existiert bereits.",
+      "missingField": "Erforderliches Secret-Feld fehlt.",
+      "missingFieldNamed": "Erforderliches Secret-Feld fehlt: {{field}}.",
+      "permissions": {
+        "create": "Berechtigung verweigert: Secrets können nicht erstellt werden",
+        "update": "Berechtigung verweigert: Secrets können nicht aktualisiert werden",
+        "delete": "Berechtigung verweigert: Secrets können nicht gelöscht werden"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Die Mandanten-ID ist erforderlich.",
+      "invalidValue": "Einer der ausgewählten Werte der Mandanteneinstellungen ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Mandanteneinstellungen fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Mandanteneinstellungen fehlt: {{field}}.",
+      "invalidTimezone": "Ungültige Zeitzone: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Berechtigung verweigert: Nur Administratoren können Onboarding-Daten löschen.",
+        "update": "Berechtigung verweigert: Einstellungen können nicht aktualisiert werden",
+        "enableAiAssistant": "Berechtigung verweigert: Der KI-Assistent kann für diesen Mandanten nicht aktiviert werden"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Systemvorlage nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "templateNotFound": "Benachrichtigungsvorlage nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "categoryNotFound": "Benachrichtigungskategorie nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "subtypeNotFound": "Benachrichtigungsuntertyp nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notificationNotFound": "Benachrichtigung nicht gefunden. Sie wurde möglicherweise bereits aktualisiert oder gelöscht.",
+      "recordInvalid": "Einer der ausgewählten Benachrichtigungsdatensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Benachrichtigungsdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Benachrichtigungseinstellung mit diesen Angaben existiert bereits.",
+      "missingField": "Erforderliches Benachrichtigungsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Benachrichtigungsfeld fehlt: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Rolle oder Berechtigung nicht gefunden. Aktualisieren Sie die Berechtigungsliste und versuchen Sie es erneut.",
+      "ticketNotFound": "Ticket nicht gefunden. Aktualisieren Sie das Ticket und versuchen Sie es erneut.",
+      "policyNotFound": "Richtlinie nicht gefunden. Aktualisieren Sie die Richtlinienliste und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Rollen-, Berechtigungs- oder Richtlinienwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Sicherheitsdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "permissionAlreadyAssigned": "Diese Berechtigung ist dieser Rolle bereits zugewiesen.",
+      "duplicate": "Ein Sicherheitsdatensatz mit diesen Angaben existiert bereits.",
+      "missingField": "Erforderliches Sicherheitsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Sicherheitsfeld fehlt: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Berechtigung verweigert: Kundenportal-Administratoren dürfen nur Kundenportal-Rollen verwalten.",
+        "portalUsersOnly": "Berechtigung verweigert: Kundenportal-Administratoren dürfen nur Kundenportal-Benutzer verwalten.",
+        "portalAdminRequired": "Berechtigung verweigert: Administratorzugriff für das Kundenportal ist erforderlich.",
+        "otherClientUsers": "Berechtigung verweigert: Benutzer eines anderen Kunden können nicht verwaltet werden."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Benutzer des Kundenportals können keine eigenen Domains verwalten.",
+      "noPermission": "Sie haben keine Berechtigung, die Einstellungen des Kundenportals zu verwalten.",
+      "required": "Die Domain ist erforderlich.",
+      "length": "Die Domain muss zwischen 3 und 253 Zeichen lang sein.",
+      "charset": "Die Domain darf nur Buchstaben, Ziffern, Bindestriche und Punkte enthalten.",
+      "needsDot": "Die Domain muss mindestens einen Punkt enthalten.",
+      "notCanonicalHost": "Bitte wählen Sie eine andere Domain als den kanonischen Host.",
+      "noLeadingTrailingDot": "Die Domain darf nicht mit einem Punkt beginnen oder enden.",
+      "notApplianceHost": "Wählen Sie eine andere Domain als den primären Host dieser Appliance. Die eigene Portal-Domain muss ein anderer Hostname sein, den Ihr Reverse-Proxy hierher weiterleitet.",
+      "nothingToRetry": "Es gibt keine fehlgeschlagene Registrierung einer eigenen Domain, die wiederholt werden könnte.",
+      "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich."
     }
   }
 }

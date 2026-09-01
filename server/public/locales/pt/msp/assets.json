@@ -1162,14 +1162,6 @@
       "saveFailed": "Falha ao criar cronograma de manutenção"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documentos e Senhas",
-    "description": "Guia combinada para documentos de ativos, credenciais e registros seguros relacionados",
-    "passwords": {
-      "title": "Senhas e segredos",
-      "comingSoon": "Gerenciamento seguro de senhas em breve."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Cronogramas de manutenção",
     "description": "Guia de gerenciamento do cronograma de manutenção para serviços planejados e trabalhos recorrentes",
@@ -1215,6 +1207,7 @@
     },
     "types": {
       "preventive": "Preventivo",
+      "corrective": "Corretivo",
       "inspection": "Inspeção",
       "calibration": "Calibração",
       "replacement": "Substituição"
@@ -1234,6 +1227,17 @@
         "title": "Excluir cronograma de manutenção",
         "message": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Central de controle de manutenção",
+    "description": "A próxima data de vencimento é calculada a partir da data de conclusão real.",
+    "assetsLink": "Ativos"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "É necessária uma data de execução.",
+      "completeFailed": "Não foi possível concluir a manutenção."
     }
   },
   "relatedAssetsTab": {
@@ -1489,6 +1493,36 @@
       "active": "ativo",
       "inactive": "inativo",
       "maintenance": "manutenção"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "Permissão negada: não é possível ler os ativos",
+      "readAssetTypes": "Permissão negada: não é possível ler os tipos de ativo",
+      "manageAssetTypes": "Permissão negada: não é possível gerenciar os tipos de ativo",
+      "readDocuments": "Permissão negada: não é possível ler os documentos do ativo",
+      "associateDocuments": "Permissão negada: não é possível associar documentos aos ativos",
+      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos",
+      "updateDocumentNotes": "Permissão negada: não é possível atualizar as notas dos documentos do ativo"
+    },
+    "asset": {
+      "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "clientNotFound": "Cliente não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "maintenanceNotFound": "Agenda de manutenção não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "maintenanceMismatch": "Este registro de manutenção não corresponde ao ativo selecionado. Atualize a página e tente novamente.",
+      "locationUnavailable": "O local selecionado não está disponível para este cliente.",
+      "selfRelation": "Um ativo não pode ser relacionado a si mesmo.",
+      "selectAtLeastOne": "Selecione pelo menos um ativo.",
+      "typeUnavailable": "O tipo de ativo não está disponível. Escolha um tipo de ativo válido.",
+      "typeUnavailableNamed": "O tipo de ativo \"{{assetType}}\" não está disponível. Escolha um tipo de ativo válido.",
+      "documentAssociationNotFound": "Associação do documento não encontrada. Ela pode já ter sido removida. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores de ativo selecionados é inválido. Atualize a página e tente novamente.",
+      "invalidDate": "Uma das datas de ativo selecionadas é inválida. Revise o formulário e tente novamente.",
+      "referenceMissing": "O ativo, documento ou registro relacionado selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração do ativo conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores do ativo não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do ativo.",
+      "missingFieldNamed": "Falta um campo obrigatório do ativo: {{field}}."
     }
   }
 }

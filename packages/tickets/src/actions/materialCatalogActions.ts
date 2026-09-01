@@ -40,19 +40,25 @@ function ticketMaterialActionErrorFrom(error: unknown): TicketMaterialActionErro
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected material values is invalid. Please refresh and try again.');
+    return actionError('One of the selected material values is invalid. Please refresh and try again.', 'features/tickets:errors.material.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required material field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required material field: ${dbError.column}.`,
+          'features/tickets:errors.material.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required material field.', 'features/tickets:errors.material.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected ticket, client, product, or stock unit is no longer valid. Please refresh and try again.');
+    return actionError('The selected ticket, client, product, or stock unit is no longer valid. Please refresh and try again.', 'features/tickets:errors.material.referenceInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This material conflicts with an existing ticket material or stock assignment. Please refresh and try again.');
+    return actionError('This material conflicts with an existing ticket material or stock assignment. Please refresh and try again.', 'features/tickets:errors.material.conflict');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the material values is not allowed. Please review the form and try again.');
+    return actionError('One of the material values is not allowed. Please review the form and try again.', 'features/tickets:errors.material.valueNotAllowed');
   }
 
   return null;

@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "Ilość musi być większa od zera",
         "updateFailed": "Nie udało się zaktualizować ilości"
       },
-      "heading": "Dostosuj ilość",
       "helperText": "Pozostaw puste, aby użyć ceny katalogowej produktu w walucie kontraktu.",
       "labels": {
         "quantity": "Ilość",
@@ -802,5 +801,49 @@
     },
     "label": "Typ linii kontraktu",
     "placeholder": "Wybierz typ linii kontraktu"
+  },
+  "errors": {
+    "line": {
+      "unavailable": "Wybrana linia umowy nie jest już dostępna. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości linii umowy jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana umowa lub linia umowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana linii umowy jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości linii umowy jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola linii umowy.",
+      "missingFieldNamed": "Brakuje wymaganego pola linii umowy: {{field}}."
+    },
+    "templateLine": {
+      "unavailable": "Wybrany wiersz szablonu nie jest już dostępny. Odśwież stronę i spróbuj ponownie."
+    },
+    "mapping": {
+      "duplicate": "Ta linia umowy jest już powiązana z wybraną umową."
+    },
+    "preset": {
+      "invalidValue": "Jedna z wybranych wartości ustawienia wstępnego linii umowy jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrane ustawienie wstępne linii umowy, umowa lub usługa już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana ustawienia wstępnego linii umowy jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości ustawienia wstępnego linii umowy jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola ustawienia wstępnego linii umowy.",
+      "missingFieldNamed": "Brakuje wymaganego pola ustawienia wstępnego linii umowy: {{field}}.",
+      "notFoundDuringUpdate": "Nie znaleziono ustawienia wstępnego linii umowy o identyfikatorze {{presetId}} podczas aktualizacji."
+    },
+    "service": {
+      "unavailable": "Wybrana usługa linii umowy nie jest już dostępna. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana linia umowy lub usługa już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Ta usługa jest już powiązana z wybraną linią umowy.",
+      "notAllowed": "Jedna z wartości usługi jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "addedOnce": "Usługę można dodać tylko raz podczas edycji linii umowy.",
+      "removedOnce": "Usługę można usunąć tylko raz podczas edycji linii umowy.",
+      "addedAndRemoved": "Tej samej usługi nie można dodać i usunąć w ramach jednej edycji linii umowy."
+    },
+    "configuration": {
+      "unavailable": "Wybrana konfiguracja usługi nie jest już dostępna. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości konfiguracji usługi jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Ta konfiguracja usługi już istnieje dla wybranej linii umowy.",
+      "notAllowed": "Jedna z wartości konfiguracji usługi jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola konfiguracji usługi.",
+      "missingFieldNamed": "Brakuje wymaganego pola konfiguracji usługi: {{field}}.",
+      "bucketOverlayFieldsMissing": "Brakuje wymaganych pól nakładki pakietu godzin."
+    }
   }
 }

@@ -44,6 +44,19 @@ interface AdminApiKeyListView extends ApiKeyListView {
   last_name: string | null;
 }
 
+/**
+ * API keys are internal-user credentials. A client-portal identity must not be
+ * able to mint, list, or deactivate them — even when a client role happens to
+ * carry an admin-like name. Returns a permission error for client users and
+ * null for internal users.
+ */
+function clientUserPermissionError(user: { user_type?: string }): ActionPermissionError | null {
+  if (user.user_type === 'client') {
+    return permissionError('Permission denied: API key management is restricted to internal users', 'msp/profile:errors.apiKeys.internalOnly');
+  }
+  return null;
+}
+
 async function isTenantAdmin(userId: string): Promise<boolean> {
   const userRoles = await getUserRoles(userId);
   return userRoles.some((role: IRole) => role.role_name.toLowerCase() === 'admin');
@@ -54,7 +67,7 @@ async function requireTenantAdmin(userId: string): Promise<ActionPermissionError
     return null;
   }
 
-  return permissionError('Permission denied: Admin access required');
+  return permissionError('Permission denied: Admin access required', 'msp/profile:errors.permissions.adminRequired');
 }
 
 /**
@@ -66,9 +79,14 @@ export const createApiKey = withAuth(async (
   description?: string,
   expiresAt?: string,
 ): Promise<ApiKeyCreateView | ApiKeyActionError> => {
+  const clientError = clientUserPermissionError(user);
+  if (clientError) {
+    return clientError;
+  }
+
   const expiresOn = expiresAt ? new Date(expiresAt) : undefined;
   if (expiresAt && Number.isNaN(expiresOn?.getTime())) {
-    return actionError('Choose a valid expiration date for this API key.');
+    return actionError('Choose a valid expiration date for this API key.', 'msp/profile:errors.apiKeys.invalidExpiration');
   }
 
   const apiKey = await ApiKeyService.createApiKey(
@@ -96,6 +114,11 @@ export const createApiKey = withAuth(async (
  * List all API keys for the current user
  */
 export const listApiKeys = withAuth(async (user, { tenant }): Promise<ApiKeyListView[]> => {
+  const clientError = clientUserPermissionError(user);
+  if (clientError) {
+    return clientError;
+  }
+
   const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, tenant);
 
   // Remove sensitive information from the response
@@ -121,12 +144,17 @@ export const deactivateApiKey = withAuth(async (
   { tenant },
   apiKeyId: string,
 ): Promise<{ deactivated: true } | ApiKeyActionError> => {
+  const clientError = clientUserPermissionError(user);
+  if (clientError) {
+    return clientError;
+  }
+
   // Verify the API key exists and belongs to the user
   const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, tenant);
   const keyExists = apiKeys.some(key => key.api_key_id === apiKeyId);
 
   if (!keyExists) {
-    return actionError('API key not found.');
+    return actionError('API key not found.', 'msp/profile:errors.apiKeys.notFound');
   }
 
   await ApiKeyService.deactivateApiKey(apiKeyId, tenant);
@@ -140,6 +168,13 @@ export const adminListApiKeys = withAuth(async (
   user,
   { tenant },
 ): Promise<AdminApiKeyListView[] | ApiKeyActionError> => {
+  // The internal-user boundary precedes the admin role check: a client user
+  // with an admin-like role name must still be denied.
+  const clientError = clientUserPermissionError(user);
+  if (clientError) {
+    return clientError;
+  }
+
   // Check if user has admin role
   const adminError = await requireTenantAdmin(user.user_id);
   if (adminError) {
@@ -174,6 +209,11 @@ export const adminDeactivateApiKey = withAuth(async (
   { tenant },
   apiKeyId: string,
 ): Promise<{ deactivated: true } | ApiKeyActionError> => {
+  const clientError = clientUserPermissionError(user);
+  if (clientError) {
+    return clientError;
+  }
+
   // Check if user has admin role
   const adminError = await requireTenantAdmin(user.user_id);
   if (adminError) {
@@ -185,7 +225,7 @@ export const adminDeactivateApiKey = withAuth(async (
     return { deactivated: true };
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
-      return actionError('API key not found.');
+      return actionError('API key not found.', 'msp/profile:errors.apiKeys.notFound');
     }
     throw error;
   }

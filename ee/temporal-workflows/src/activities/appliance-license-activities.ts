@@ -443,14 +443,131 @@ function escapeApplianceHtml(s: string): string {
   );
 }
 
+/** Appliance setup walkthrough, linked from the install-code email. */
+const APPLIANCE_SETUP_VIDEO_URL = 'https://youtu.be/-YtaT2OvoIQ';
+
+/** Absolute site base for links that leave the inbox. */
+function applianceSiteBaseUrl(): string {
+  return (process.env.NM_STORE_BASE_URL || 'https://www.nineminds.com').replace(/\/$/, '');
+}
+
+const POPPINS = "'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const INTER = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+/**
+ * Kept deliberately in step with nm-store's `installCodeEmailHtml`
+ * (packages/nm-store/src/lib/appliance/applianceRegistration.ts) — this renders
+ * the free Essentials path, that one renders paid + re-issue. Edit both together.
+ *
+ * Shell (purple band, white card, #faf8ff callouts, dark footer) mirrors the
+ * tenant welcome email in email-activities.ts so the two read as one family.
+ */
 function renderEssentialsInstallEmail(input: DeliverEssentialsInstallEmailInput): string {
-  return `
-    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#111">
-      <h2>Your AlgaPSA appliance is ready to install</h2>
-      <p>Thanks for registering <strong>${escapeApplianceHtml(input.companyName)}</strong> for an on-prem AlgaPSA appliance (Essentials).</p>
-      <p>Enter this <strong>install code</strong> on the appliance setup screen. It binds the appliance to your account:</p>
-      <p style="font-family:monospace;font-size:24px;letter-spacing:0.15em;background:#f3f4f6;padding:16px 20px;border-radius:8px;text-align:center">${escapeApplianceHtml(input.installCode)}</p>
-      <p><a href="${input.downloadUrl}" style="display:inline-block;background:#7c3aed;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">Download the appliance ISO</a></p>
-      <p style="color:#6b7280;font-size:13px">The install code is single-use. If you reinstall, re-issue a fresh one from your account.</p>
-    </div>`;
+  const base = applianceSiteBaseUrl();
+  const videoUrl = process.env.APPLIANCE_SETUP_VIDEO_URL || APPLIANCE_SETUP_VIDEO_URL;
+  const year = new Date().getFullYear();
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body style="margin:0;padding:0;background-color:#f8fafc;font-family:${INTER};">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#f8fafc" style="border-collapse:collapse;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" bgcolor="#ffffff" style="width:600px;max-width:600px;border-collapse:separate;border-spacing:0;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
+
+            <tr>
+              <td align="center" bgcolor="#8a4dea" style="background:linear-gradient(135deg,#8a4dea 0%,#a366f0 100%);background-color:#8a4dea;padding:40px 24px;text-align:center;border-radius:12px 12px 0 0;">
+                <h1 style="font-family:${POPPINS};font-weight:700;font-size:28px;color:#ffffff;margin:0 0 8px 0;line-height:1.2;">Your AlgaPSA appliance is ready to install</h1>
+                <p style="font-family:${INTER};font-size:16px;color:#ffffff;margin:0;opacity:0.95;">${escapeApplianceHtml(input.companyName)} &middot; Essentials edition</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td bgcolor="#ffffff" style="background-color:#ffffff;padding:40px 32px;">
+
+                <h2 style="color:#0f172a;font-family:${POPPINS};font-size:22px;font-weight:600;margin:0 0 12px 0;line-height:1.3;">Your install code</h2>
+                <p style="color:#334155;font-family:${INTER};line-height:1.6;font-size:16px;margin:0 0 20px 0;">You enter this in the appliance setup wizard. It binds the appliance to your registration.</p>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse:separate;margin:0 0 32px 0;">
+                  <tr>
+                    <td bgcolor="#faf8ff" align="center" style="background-color:#faf8ff;border:1px solid #e9e5f5;border-left:4px solid #8a4dea;border-radius:8px;padding:24px;text-align:center;">
+                      <p style="font-family:'SFMono-Regular',Consolas,Menlo,monospace;font-size:26px;font-weight:600;letter-spacing:0.15em;color:#0f172a;margin:0;">${escapeApplianceHtml(input.installCode)}</p>
+                      <p style="color:#64748b;font-family:${INTER};font-size:13px;line-height:1.6;margin:12px 0 0 0;">Single-use, and valid for <b style="color:#334155;">30 days</b> &mdash; install whenever you are ready.</p>
+                    </td>
+                  </tr>
+                </table>
+
+                <h3 style="color:#0f172a;font-family:${POPPINS};font-size:18px;font-weight:600;margin:0 0 16px 0;">Installing, in three steps</h3>
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 8px 0;">
+                  <tr>
+                    <td style="color:#334155;font-family:${INTER};padding-bottom:12px;line-height:1.6;font-size:15px;"><b style="color:#8a4dea;">1.</b> <b style="color:#0f172a;font-weight:600;">Download the appliance ISO</b> &mdash; the button below.</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#334155;font-family:${INTER};padding-bottom:12px;line-height:1.6;font-size:15px;"><b style="color:#8a4dea;">2.</b> <a href="${base}/documentation/installing-the-appliance-os" style="color:#8a4dea;text-decoration:underline;">Install the operating system</a> on your hardware or VM.</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#334155;font-family:${INTER};padding-bottom:12px;line-height:1.6;font-size:15px;"><b style="color:#8a4dea;">3.</b> <a href="${base}/documentation/appliance-setup-wizard" style="color:#8a4dea;text-decoration:underline;">Run the setup wizard</a> and enter the install code above.</td>
+                  </tr>
+                </table>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse:collapse;margin:24px 0 0 0;">
+                  <tr>
+                    <td align="center">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:separate;">
+                        <tr>
+                          <td bgcolor="#8a4dea" align="center" style="background-color:#8a4dea;border-radius:8px;">
+                            <a href="${input.downloadUrl}" style="background-color:#8a4dea;color:#ffffff;display:inline-block;padding:14px 28px;font-family:${POPPINS};font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;">Download the appliance ISO</a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+                ${
+                  videoUrl
+                    ? `<p style="color:#334155;font-family:${INTER};font-size:14px;line-height:1.6;text-align:center;margin:16px 0 0 0;"><a href="${videoUrl}" style="color:#8a4dea;text-decoration:underline;">Watch the setup walkthrough</a> if you would rather follow along on video.</p>`
+                    : ''
+                }
+
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse:collapse;">
+                  <tr>
+                    <td style="padding:32px 0 24px 0;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse:collapse;">
+                        <tr><td style="height:1px;background-color:#e2e8f0;font-size:1px;line-height:1px;">&nbsp;</td></tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse:separate;">
+                  <tr>
+                    <td bgcolor="#f0fbff" style="background-color:#f0fbff;border:1px solid #bae6fd;border-left:4px solid #40cff9;border-radius:8px;padding:24px;">
+                      <h4 style="color:#0284c7;font-family:${POPPINS};font-size:16px;font-weight:600;margin:0 0 12px 0;">Expired, lost, or reinstalling?</h4>
+                      <p style="color:#334155;font-family:${INTER};font-size:14px;line-height:1.6;margin:0;">Getting a fresh code is free and takes a moment &mdash; <a href="${base}/order/appliance/reissue" style="color:#0284c7;text-decoration:underline;">re-issue it here</a>, or sign in to your <a href="${base}/portal" style="color:#0284c7;text-decoration:underline;">licensing portal</a> with this email address (no password).</p>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="color:#64748b;font-family:${INTER};font-size:14px;line-height:1.6;margin:24px 0 0 0;">Planning to buy Pro later? That uses a separate <i>activation code</i>, and your appliance upgrades in place from <b style="color:#334155;font-weight:600;">Settings &rarr; License</b> &mdash; no reinstall, no data migration. <a href="${base}/documentation/licensing-portal" style="color:#8a4dea;text-decoration:underline;">How licensing works</a>.</p>
+
+              </td>
+            </tr>
+
+            <tr>
+              <td align="center" bgcolor="#1e293b" style="background-color:#1e293b;color:#cbd5e1;padding:32px 24px;text-align:center;font-size:14px;line-height:1.6;border-radius:0 0 12px 12px;">
+                <p style="color:#cbd5e1;font-family:${INTER};margin:0 0 8px 0;">This email was sent automatically when your appliance was registered.</p>
+                <p style="color:#cbd5e1;font-family:${INTER};margin:0 0 16px 0;">If you did not request an appliance, please contact support.</p>
+                <p style="color:#94a3b8;font-family:${INTER};font-size:13px;margin:0;">&copy; ${year} Nine Minds. All rights reserved.</p>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }

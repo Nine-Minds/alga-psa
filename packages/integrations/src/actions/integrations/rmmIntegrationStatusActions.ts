@@ -2,18 +2,17 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
 import type { RmmProvider } from '@alga-psa/types';
+import {
+  readRmmIntegrationStatuses,
+  writeDeviceSyncSettings,
+  type RmmIntegrationStatus,
+} from '../../lib/rmm/rmmIntegrationStatus';
 
-export interface RmmIntegrationStatus {
-  provider: RmmProvider;
-  isActive: boolean;
-  syncStatus: string | null;
-  syncError: string | null;
-  connectedAt: string | null;
-  lastSyncAt: string | null;
-  deviceCount: number;
-}
+// The device-sync bounds are NOT re-exported here: a 'use server' module may
+// only export async functions. Import shared types from lib/rmm/rmmIntegrationStatus
+// and bounds from lib/rmm/contracts instead.
 
 export const getRmmIntegrationStatuses = withAuth(async (user, { tenant }): Promise<{
   success: boolean;
@@ -25,34 +24,26 @@ export const getRmmIntegrationStatuses = withAuth(async (user, { tenant }): Prom
 
   try {
     const { knex } = await createTenantKnex();
-    const db = tenantDb(knex, tenant);
-    const [integrations, deviceCounts] = await Promise.all([
-      db.table('rmm_integrations')
-        .select(['provider', 'is_active', 'sync_status', 'sync_error', 'connected_at', 'last_sync_at']),
-      db.table('assets')
-        .whereNotNull('rmm_provider')
-        .select('rmm_provider')
-        .count({ count: 'asset_id' })
-        .groupBy('rmm_provider') as Promise<Array<{ rmm_provider: string; count: string | number }>>,
-    ]);
-
-    const countsByProvider = new Map(deviceCounts.map((row) => [row.rmm_provider, Number(row.count)]));
-
-    const statuses: Record<string, RmmIntegrationStatus> = {};
-    for (const row of integrations) {
-      statuses[row.provider] = {
-        provider: row.provider,
-        isActive: Boolean(row.is_active),
-        syncStatus: row.sync_status ?? null,
-        syncError: row.sync_error ?? null,
-        connectedAt: row.connected_at ? new Date(row.connected_at).toISOString() : null,
-        lastSyncAt: row.last_sync_at ? new Date(row.last_sync_at).toISOString() : null,
-        deviceCount: countsByProvider.get(row.provider) ?? 0,
-      };
-    }
-
-    return { success: true, statuses };
+    return { success: true, statuses: await readRmmIntegrationStatuses(knex, tenant) };
   } catch {
     return { success: false, error: 'Unable to load RMM integration statuses.' };
+  }
+});
+
+export const updateRmmDeviceSyncSettings = withAuth(async (
+  user,
+  { tenant },
+  input: { provider: RmmProvider; enabled: boolean; intervalMinutes?: number }
+): Promise<{ success: boolean; error?: string; intervalMinutes?: number }> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex } = await createTenantKnex();
+    const result = await writeDeviceSyncSettings(knex, tenant, input);
+    if (!result.found) return { success: false, error: 'Integration not found.' };
+    return { success: true, intervalMinutes: result.intervalMinutes };
+  } catch {
+    return { success: false, error: 'Unable to update device sync settings.' };
   }
 });

@@ -88,6 +88,43 @@
         "save": "Kan instellingen niet opslaan"
       }
     },
+    "creditDrawdown": {
+      "title": "Kredietopname",
+      "description": "Bepaal wanneer klantkrediet op facturen wordt toegepast en hoe het wordt verbruikt.",
+      "fields": {
+        "autoApply": {
+          "label": "Krediet automatisch toepassen bij finalisatie",
+          "help": "Indien ingeschakeld, wordt beschikbaar krediet automatisch toegepast wanneer een factuur wordt gefinaliseerd"
+        },
+        "order": {
+          "label": "Volgorde van krediettoepassing",
+          "placeholder": "Selecteer kredietvolgorde",
+          "help": "Kies de volgorde waarin kredieten worden verbruikt"
+        },
+        "serviceTypes": {
+          "label": "In aanmerking komende servicetypen",
+          "help": "Kies of krediet kan worden toegepast op alle kosten of alleen op kosten voor de geselecteerde servicetypen.",
+          "empty": "Geen servicetypen geconfigureerd.",
+          "restricted": "Krediet is beperkt tot de geselecteerde servicetypen.",
+          "mode": {
+            "all": "Alle servicetypen",
+            "restricted": "Alleen geselecteerde typen"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Eerst het snelst vervallende",
+        "oldestFirst": "Oudste krediet eerst",
+        "newestFirst": "Nieuwste krediet eerst"
+      },
+      "toast": {
+        "updated": "De instellingen voor kredietopname zijn bijgewerkt."
+      },
+      "errors": {
+        "load": "Kan instellingen niet laden",
+        "save": "Kan instellingen niet opslaan"
+      }
+    },
     "renewal": {
       "title": "Automatisering van vernieuwing",
       "description": "Configureer het standaardgedrag wanneer contracten hun verlengingsdatum bereiken.",
@@ -419,6 +456,46 @@
         "create": "Kan tax holiday niet maken.",
         "update": "Kan tax holiday niet updaten.",
         "delete": "Kan tax holiday niet verwijderen."
+      }
+    },
+    "delegation": {
+      "defaultProvider": "uw boekhoudsysteem",
+      "actions": {
+        "applying": "Toepassen…"
+      },
+      "errors": {
+        "enableFailed": "Externe belastingberekening inschakelen mislukt."
+      },
+      "banner": {
+        "title": "Belasting laten berekenen door {{provider}}?",
+        "description": "{{provider}} is verbonden. De meeste klanten laten hun boekhoudsysteem de belasting afhandelen, zodat beide grootboeken op elkaar afgestemd blijven — Alga boekt facturen zonder belastingbedragen, {{provider}} past de eigen belastingregels toe en het resultaat wordt teruggesynchroniseerd met Alga. Alga is geen belastingpakket; we raden aan de berekening uit te besteden.",
+        "actions": {
+          "enable": "{{provider}} gebruiken voor belasting",
+          "dismiss": "Niet nu",
+          "dismissing": "Negeren…"
+        },
+        "toast": {
+          "enabled": "Externe belastingberekening ingeschakeld.",
+          "enabledWithProvider": "{{provider}} berekent de belasting op nieuwe facturen."
+        },
+        "errors": {
+          "loadState": "De status van de aanbeveling voor belastingdelegatie kan niet worden geladen.",
+          "dismissFailed": "De banner negeren mislukt."
+        }
+      },
+      "nudge": {
+        "title": "Belasting op toekomstige facturen laten berekenen door {{provider}}?",
+        "description": "Aanbevolen. Nieuwe facturen worden zonder belastingbedragen naar {{provider}} geboekt, {{provider}} past de eigen belastingregels toe en de berekende belasting wordt teruggesynchroniseerd met Alga, zodat beide grootboeken op elkaar afgestemd blijven. U kunt dit op elk moment wijzigen onder Facturatie → Belastinginstellingen.",
+        "actions": {
+          "enable": "Ja, {{provider}} gebruiken",
+          "keepInternal": "Belasting door Alga laten berekenen"
+        },
+        "toast": {
+          "enabled": "{{provider}} berekent de belasting op nieuwe facturen. U kunt dit wijzigen in de facturatie-instellingen."
+        },
+        "errors": {
+          "loadSettings": "De huidige belastinginstellingen kunnen niet worden geladen."
+        }
       }
     }
   },
@@ -1074,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Kan instellingen niet laden",
-    "failedToSaveSettings": "Kan instellingen niet opslaan"
+    "failedToSaveSettings": "Kan instellingen niet opslaan",
+    "permissions": {
+      "readSettings": "Toestemming geweigerd: facturatie-instellingen kunnen niet worden gelezen",
+      "updateSettings": "Toestemming geweigerd: facturatie-instellingen kunnen niet worden bijgewerkt",
+      "readClientSettings": "Toestemming geweigerd: facturatie-instellingen van de klant kunnen niet worden gelezen",
+      "updateClientSettings": "Toestemming geweigerd: facturatie-instellingen van de klant kunnen niet worden bijgewerkt",
+      "settingsRead": "Toestemming geweigerd: leesrechten voor facturatie-instellingen vereist",
+      "settingsUpdate": "Toestemming geweigerd: bijwerkrechten voor facturatie-instellingen vereist",
+      "readTaxRates": "Toestemming geweigerd: belastingtarieven kunnen niet worden gelezen",
+      "createTaxRates": "Toestemming geweigerd: belastingtarieven kunnen niet worden aangemaakt",
+      "updateTaxRates": "Toestemming geweigerd: belastingtarieven kunnen niet worden bijgewerkt",
+      "updateTaxRegions": "Toestemming geweigerd: belastingregio’s kunnen niet worden bijgewerkt"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Toestemming geweigerd: belastingtarieven voor facturatie zijn niet beschikbaar voor deze tenant.",
+      "overlap": "De periode van het belastingtarief overlapt met een bestaand tarief voor deze regio.",
+      "regionRequired": "Regio is verplicht.",
+      "idRequired": "Voor updates is de ID van het belastingtarief verplicht.",
+      "notFound": "Belastingtarief niet gevonden.",
+      "notFoundOrAlreadyDeleted": "Belastingtarief niet gevonden of al verwijderd.",
+      "invalid": "Het geselecteerde belastingtarief of de regio is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "regionInvalid": "De geselecteerde belastingregio is niet meer geldig. Vernieuw de pagina en kies een andere regio.",
+      "duplicate": "Er bestaat al een belastingtarief voor deze regio en periode.",
+      "missingField": "Er ontbreekt een verplicht veld van het belastingtarief.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het belastingtarief: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Configureer minstens één actief belastingtarief voordat u standaardbelastinginstellingen aanmaakt.",
+      "componentNotFound": "Belastingcomponent niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "bracketNotFound": "Belastingschijf niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "holidayNotFound": "Belastingvrijstelling niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "recordInvalid": "Een van de geselecteerde belastingrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde belastingrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een belastingrecord met deze gegevens.",
+      "notAllowed": "Een van de belastingwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht belastingveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht belastingveld: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Er bestaat al een belastingregio met de code ‘{{code}}’.",
+      "notFoundCode": "Belastingregio met de code ‘{{code}}’ niet gevonden."
+    }
   },
   "toast": {
     "saved": "Succesvol opgeslagen"

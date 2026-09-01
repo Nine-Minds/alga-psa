@@ -110,11 +110,35 @@ function deepClone<T>(value: T): T {
   return value;
 }
 
+/**
+ * Legacy per-service bucket overlay fields are mutually exclusive with the
+ * flag-on pool payload: under the flag, a submission must never carry them.
+ */
+const withoutLegacyBucketOverlay = <T extends { bucket_overlay?: unknown }>(
+  service: T,
+): Omit<T, "bucket_overlay"> => {
+  const { bucket_overlay: _legacyOverlay, ...rest } = service;
+  return rest;
+};
+
 export interface BucketOverlayInput {
   total_minutes?: number;
   overage_rate?: number;
   allow_rollover?: boolean;
   billing_period?: "monthly" | "weekly";
+}
+
+export interface BucketPoolDraft {
+  /** Which wizard line the pool belongs to ('hourly' | 'usage'). */
+  line_key?: 'hourly' | 'usage';
+  bucket_name?: string | null;
+  total_minutes: number;
+  overage_rate: number;
+  allow_rollover: boolean;
+  covers_all_services: boolean;
+  after_hours_multiplier?: number | null;
+  business_hours_schedule_id?: string | null;
+  members: Array<{ service_id: string; service_name?: string; burn_multiplier: number }>;
 }
 
 export interface ContractWizardData {
@@ -167,6 +191,8 @@ export interface ContractWizardData {
     bucket_overlay?: BucketOverlayInput | null;
   }>;
   usage_billing_frequency?: string;
+  /** Flag-on line-level bucket pools (weighted-burn model), materialized after the line is created. */
+  bucket_pools?: BucketPoolDraft[];
   contract_id?: string;
   is_draft?: boolean;
   template_id?: string;
@@ -194,6 +220,7 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   minimum_billable_time: undefined,
   round_up_to_nearest: undefined,
   usage_services: [],
+  bucket_pools: [],
   template_id: undefined,
 });
 
@@ -504,7 +531,7 @@ export function ContractWizard({
           tenantDefaultNoticePeriodDays ??
           HARD_DEFAULT_NOTICE_PERIOD_DAYS);
 
-      return {
+      const submission: ClientContractWizardSubmission = {
         contract_id: wizardData.contract_id,
         contract_name: wizardData.contract_name.trim(),
         description: wizardData.description?.trim() || undefined,
@@ -523,11 +550,11 @@ export function ContractWizard({
         fixed_base_rate: wizardData.fixed_base_rate,
         fixed_billing_frequency: wizardData.fixed_billing_frequency,
         enable_proration: wizardData.enable_proration,
-        hourly_services: wizardData.hourly_services ?? [],
+        hourly_services: (wizardData.hourly_services ?? []).map(withoutLegacyBucketOverlay),
         hourly_billing_frequency: wizardData.hourly_billing_frequency,
         fixed_services: wizardData.fixed_services ?? [],
         product_services: wizardData.product_services ?? [],
-        usage_services: wizardData.usage_services ?? [],
+        usage_services: (wizardData.usage_services ?? []).map(withoutLegacyBucketOverlay),
         usage_billing_frequency: wizardData.usage_billing_frequency,
         minimum_billable_time: wizardData.minimum_billable_time,
         round_up_to_nearest: wizardData.round_up_to_nearest,
@@ -535,6 +562,11 @@ export function ContractWizard({
         currency_code: wizardData.currency_code,
         template_id: wizardData.template_id,
       };
+
+      // Bucket authoring is line-level pools; conflicting legacy
+      // bucket_overlay fields are stripped from every service above.
+      submission.bucket_pools = wizardData.bucket_pools ?? [];
+      return submission;
     };
 
   const getRecurringAuthoringValidationError = (): string | null => {

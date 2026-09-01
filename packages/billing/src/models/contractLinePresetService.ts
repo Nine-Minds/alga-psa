@@ -29,6 +29,26 @@ const ContractLinePresetService = {
   },
 
   /**
+   * Get the service count for every preset in one query (keyed by preset_id).
+   */
+  getServiceCountsByPreset: async (
+    knexOrTrx: Knex | Knex.Transaction
+  ): Promise<Record<string, number>> => {
+    const tenant = await requireTenantId(knexOrTrx);
+
+    const rows = await tenantDb(knexOrTrx, tenant).table('contract_line_preset_services')
+      .where({ tenant })
+      .groupBy('preset_id')
+      .select('preset_id')
+      .count<{ preset_id: string; count: string | number }[]>('* as count');
+
+    return rows.reduce<Record<string, number>>((counts, row) => {
+      counts[row.preset_id] = Number(row.count) || 0;
+      return counts;
+    }, {});
+  },
+
+  /**
    * Create a service association for a preset
    */
   create: async (

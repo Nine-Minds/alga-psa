@@ -82,8 +82,8 @@
       "linkQuote": "Vincular una cotización existente",
       "loadFailed": "No se pudo cargar la oportunidad",
       "loading": "Cargando oportunidad...",
-      "markLost": "Marque como perdida",
-      "markWon": "marcos gano",
+      "markLost": "Marcar como perdida",
+      "markWon": "Marcar como ganada",
       "metadataTitle": "Oportunidad",
       "nextAction": "Siguiente acción",
       "nextActionOverdue": "Próxima acción · vencida",
@@ -147,7 +147,7 @@
       "plusOneTime": "+ {{amount}} una vez",
       "thisQuarter": "Este trimestre ({{q}})",
       "weighted": "{{stage}} · ponderado {{pct}}%",
-      "won": "Ganó este período"
+      "won": "Ganado en este período"
     },
     "linkQuoteDialog": {
       "confirm": "cotización de enlace",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "¿Qué debería saber el equipo si esto vuelve?",
       "reason": "Motivo",
       "reasonPlaceholder": "¿Por qué no avanzó?",
-      "submit": "Marque como perdida",
-      "title": "Marque como perdida"
+      "submit": "Marcar como perdida",
+      "title": "Marcar como perdida"
     },
     "lossReason": {
       "chose_competitor": "Elige un competidor",
@@ -185,10 +185,10 @@
     },
     "meeting": {
       "daysAgo": "Hace {{count}} días",
-      "done": "Tubería revisada. {{count}} ofertas registradas.",
+      "done": "Embudo de ventas revisado. {{count}} ofertas registradas.",
       "evidenceSays": "La evidencia dice",
       "gap": "La confianza es {{confidence}} pero la evidencia se detiene en {{stage}}. ¿Qué ha hecho realmente el cliente?",
-      "intro": "Dirige la reunión semanal de pipeline operación por operación, empezando por la más silenciosa, con las pruebas junto a la confianza del responsable. Marque cada operación como revisada y la sesión queda registrada, para poder demostrar que se recorrió todo el pipeline.",
+      "intro": "Dirige la reunión semanal del embudo de ventas operación por operación, empezando por la más silenciosa, con las pruebas junto a la confianza del responsable. Marque cada operación como revisada y la sesión queda registrada, para poder demostrar que se recorrió todo el embudo de ventas.",
       "keys": "← volver · → revisado",
       "markReviewed": "Revisado → siguiente",
       "next": "Próxima acción:",
@@ -197,7 +197,7 @@
       "repSays": "El dueño dice",
       "reviewed": "Revisado",
       "silence": "último toque",
-      "title": "Revisión del pipeline"
+      "title": "Revisión del embudo de ventas"
     },
     "new": "Nueva oportunidad",
     "onePager": {
@@ -225,10 +225,10 @@
       "doToday": "hacer hoy",
       "goingQuiet": "yendo en silencio",
       "lesson": {
-        "reviewPipeline": "Revisar el oleoducto",
+        "reviewPipeline": "Revisar el embudo de ventas",
         "viewAssessmentDeals": "Ver ofertas de evaluación"
       },
-      "markLost": "Marque como perdida",
+      "markLost": "Marcar como perdida",
       "moneyFound": "dinero encontrado",
       "moneyFoundSource": "de facturación, contratos y activos",
       "needsYou_one": "{{count}} cosa requiere su atención hoy.",
@@ -249,30 +249,30 @@
         "nextAction": "Siguiente acción",
         "value": "Valor"
       },
-      "tableView": "mesa",
+      "tableView": "Tabla",
       "viewLabel": "Vista de cola"
     },
     "reports": {
       "byStage": "Por fase",
       "closing30": "Cierra en 30 días",
       "deals": "Negocios",
-      "emptyBody": "Abra un trato y los totales de la cartera aparecerán aquí.",
+      "emptyBody": "Abra un trato y los totales del embudo de ventas aparecerán aquí.",
       "emptyTitle": "Aún no hay nada que informar",
-      "intro": "El pipeline abierto tal como está hoy, agrupado por la moneda en la que se cotiza cada operación. Abra un total para ver las etapas que lo componen y seleccione una etapa para revisar las operaciones contadas.",
-      "loading": "Cargando informe de cartera",
+      "intro": "El embudo de ventas abierto tal como está hoy, agrupado por la moneda en la que se cotiza cada operación. Abra un total para ver las etapas que lo componen y seleccione una etapa para revisar las operaciones contadas.",
+      "loading": "Cargando informe del embudo de ventas",
       "newMrrQuarter": "Nuevo MRR este trimestre",
       "openCount": "{{n}} abiertas",
       "openForecast": "Abrir la previsión calibrada",
-      "openPipeline": "Cartera abierta",
+      "openPipeline": "Embudo de ventas abierto",
       "plusOneTime": "+ {{amount}} único",
       "print": "Imprimir",
       "printCurrencies": "Monedas",
-      "printCurrencySection": "Pipeline en {{currency}}",
+      "printCurrencySection": "Embudo de ventas en {{currency}}",
       "printQuarter": "Trimestre",
       "printSubtitle": "A fecha de {{date}}",
-      "printTitle": "Informe de pipeline",
+      "printTitle": "Informe del embudo de ventas",
       "rate": "{{pct}} % de tasa base",
-      "unavailable": "Los totales de la cartera no están disponibles temporalmente.",
+      "unavailable": "Los totales del embudo de ventas no están disponibles temporalmente.",
       "view": "Ver",
       "weighted": "Previsión ponderada",
       "weightedNote": "Tasas base por etapa",
@@ -340,23 +340,23 @@
       "openCount": "Oportunidades abiertas",
       "opportunityCount_one": "{{count}} oportunidad",
       "opportunityCount_other": "{{count}} oportunidades",
-      "pipelineByStage": "Tubería por etapa",
+      "pipelineByStage": "Embudo de ventas por etapa",
       "stalled": "estancado",
-      "subtitle": "Tubería abierta y trabajo de seguimiento que necesita atención.",
+      "subtitle": "Embudo de ventas abierto y trabajo de seguimiento que necesita atención.",
       "title": "Instantánea de la oportunidad",
       "unavailable": "Los totales de oportunidades no están disponibles temporalmente. Oportunidades Abiertas para seguir trabajando."
     },
     "stage": {
       "assessment": "Evaluación",
       "identified": "Identificado",
-      "lost": "perdido",
+      "lost": "Perdido",
       "proposed": "Propuesto",
       "qualified": "Calificado",
-      "verbal": "verbal",
+      "verbal": "Acuerdo verbal",
       "won": "Ganado"
     },
     "status": {
-      "lost": "perdido",
+      "lost": "Perdido",
       "won": "Ganado"
     },
     "steps": {
@@ -427,10 +427,10 @@
       "snooze": "posponer"
     },
     "tabs": {
-      "board": "tablero",
+      "board": "Tablero",
       "forecast": "Pronóstico",
       "meeting": "reunión",
-      "pipeline": "Tubería",
+      "pipeline": "Embudo de ventas",
       "queue": "cola",
       "reports": "Informes",
       "suggestions": "Sugerencias"
@@ -548,7 +548,7 @@
     "winDialog": {
       "body": "El trato se cierra como ganado.",
       "bodyProspect": "{{client}} se convierte en un cliente activo.",
-      "confirm": "marcos gano",
+      "confirm": "Marcar como ganada",
       "convertQuote": "Convertir una cotización aceptada en un borrador de acuerdo (opcional)",
       "nextConvert": "Convierta la cotización aceptada en un acuerdo a continuación, o después desde la pantalla de la cotización.",
       "nextSendQuote": "Todavía no hay una cotización aceptada vinculada. Envíe la cotización, consiga su aprobación y conviértala después en un acuerdo. Puede marcar la oportunidad como ganada igualmente.",
@@ -558,7 +558,7 @@
       "projectStart": "Fecha de inicio",
       "projectStatus": "Estado inicial",
       "projectTemplate": "Crear un proyecto de incorporación (opcional)",
-      "title": "marcos gano"
+      "title": "Marcar como ganada"
     }
   }
 }

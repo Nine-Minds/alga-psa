@@ -54,9 +54,9 @@ import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPubli
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
-import { prepareTicketResourceReassignment } from '../lib/reassignTicketResources';
+import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
-import { withAuth } from '@alga-psa/auth';
+import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -91,10 +91,15 @@ export async function registerSlaCancellation(fn: (tenantId: string, ticketId: s
   _cancelSlaFn = fn;
 }
 
-function ticketBulkFailureMessage(error: unknown, fallback: string): string {
+// Reported as a bare string rather than returned as a payload, so withAuth's
+// boundary never sees the messageKey. Localize before flattening.
+async function ticketBulkFailureMessage(error: unknown, fallback: string): Promise<string> {
   const expected = ticketActionErrorFrom(error);
   if (expected) {
-    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    const candidate = (await localizeActionError(expected)) as unknown as {
+      actionError?: unknown;
+      permissionError?: unknown;
+    };
     return typeof candidate.actionError === 'string'
       ? candidate.actionError
       : String(candidate.permissionError ?? fallback);
@@ -421,6 +426,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const subcategory_id = data.get('subcategory_id');
       const description = data.get('description');
       const location_id = data.get('location_id');
+      const billing_profile_id = data.get('billing_profile_id');
       const asset_id = data.get('asset_id');
       const due_date = data.get('due_date');
 
@@ -456,6 +462,9 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         board_id: data.get('board_id') as string,
         client_id: data.get('client_id') as string,
         location_id: location_id === '' ? undefined : (location_id as string),
+        billing_profile_id: billing_profile_id === '' || billing_profile_id === null
+          ? undefined
+          : (billing_profile_id as string),
         contact_id: contact_name_id === '' ? undefined : (contact_name_id as string), // Note: maps to contact_name_id
         status_id: data.get('status_id') as string,
         assigned_to: data.get('assigned_to') as string,
@@ -632,7 +641,10 @@ export const fetchTicketAttributes = withAuth(async (user, { tenant }, ticketId:
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
     if (expected) {
-      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+      const candidate = (await localizeActionError(expected)) as unknown as {
+        actionError?: unknown;
+        permissionError?: unknown;
+      };
       return {
         success: false,
         error: typeof candidate.permissionError === 'string'
@@ -695,6 +707,9 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       if ('location_id' in updateData && !updateData.location_id) {
         updateData.location_id = null;
       }
+      if ('billing_profile_id' in updateData && !updateData.billing_profile_id) {
+        updateData.billing_profile_id = null;
+      }
       if ('due_date' in updateData && !updateData.due_date) {
         updateData.due_date = null;
       }
@@ -737,6 +752,23 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
         if (!location) {
           throw new Error('Invalid location: Location does not belong to the selected client');
+        }
+      }
+
+      // A billing profile decides which invoice this ticket's charges land on,
+      // so one belonging to another client is a billing error, not a UI slip
+      // (F051).
+      if ('billing_profile_id' in updateData && updateData.billing_profile_id) {
+        const clientId = 'client_id' in updateData ? updateData.client_id : currentTicket.client_id;
+        const profile = await tenantScopedTable(trx, 'client_billing_profiles', tenant)
+          .where({
+            billing_profile_id: updateData.billing_profile_id,
+            client_id: clientId
+          })
+          .first();
+
+        if (!profile) {
+          throw new Error('Invalid billing profile: Profile does not belong to the selected client');
         }
       }
 
@@ -1651,7 +1683,7 @@ export const deleteTicket = withAuth(async (
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: ticketBulkFailureMessage(error, 'Failed to delete ticket'),
+      message: await ticketBulkFailureMessage(error, 'Failed to delete ticket'),
       dependencies: [],
       alternatives: []
     };
@@ -1697,7 +1729,7 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
       console.error(`Failed to delete ticket ${ticketId}:`, error);
       failed.push({
         ticketId,
-        message: ticketBulkFailureMessage(error, 'Failed to delete ticket')
+        message: await ticketBulkFailureMessage(error, 'Failed to delete ticket')
       });
     }
   }
@@ -1758,7 +1790,7 @@ export const moveTicketsToBoard = withAuth(async (
       return destinationStatusId;
     });
   } catch (error: unknown) {
-    const message = ticketBulkFailureMessage(error, 'Destination board or status is invalid');
+    const message = await ticketBulkFailureMessage(error, 'Destination board or status is invalid');
     return {
       movedIds: [],
       failed: uniqueIds.map((ticketId) => ({ ticketId, message })),
@@ -1793,7 +1825,7 @@ export const moveTicketsToBoard = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: ticketBulkFailureMessage(error, 'Failed to move ticket'),
+        message: await ticketBulkFailureMessage(error, 'Failed to move ticket'),
       });
     }
   }
@@ -1862,7 +1894,7 @@ export const bulkAssignTickets = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: ticketBulkFailureMessage(error, 'Failed to assign ticket'),
+        message: await ticketBulkFailureMessage(error, 'Failed to assign ticket'),
       });
     }
   }
@@ -1942,7 +1974,7 @@ export const bulkAddTagsToTickets = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: ticketBulkFailureMessage(error, 'Failed to add tags to ticket'),
+        message: await ticketBulkFailureMessage(error, 'Failed to add tags to ticket'),
       });
     }
   }
@@ -1992,7 +2024,7 @@ export const bulkUpdateTicketDueDate = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: ticketBulkFailureMessage(error, 'Failed to update due date'),
+        message: await ticketBulkFailureMessage(error, 'Failed to update due date'),
       });
     }
   }
@@ -2044,7 +2076,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
         ticketId,
         message: error instanceof TicketCloseValidationError
           ? error.message
-          : ticketBulkFailureMessage(error, 'Failed to update status'),
+          : await ticketBulkFailureMessage(error, 'Failed to update status'),
         closeRuleFailures: error instanceof TicketCloseValidationError ? error.failures : undefined,
       });
     }
@@ -2095,7 +2127,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: ticketBulkFailureMessage(error, 'Failed to update priority'),
+        message: await ticketBulkFailureMessage(error, 'Failed to update priority'),
       });
     }
   }
@@ -2389,7 +2421,10 @@ export const getTicketAppointmentRequests = withAuth(async (
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
     if (expected) {
-      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+      const candidate = (await localizeActionError(expected)) as unknown as {
+        actionError?: unknown;
+        permissionError?: unknown;
+      };
       return {
         success: false,
         error: typeof candidate.permissionError === 'string'

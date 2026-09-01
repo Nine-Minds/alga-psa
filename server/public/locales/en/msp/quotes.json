@@ -114,7 +114,9 @@
       "delete": "Failed to delete quote.",
       "duplicate": "Failed to duplicate quote.",
       "load": "Failed to load quotes",
-      "send": "Failed to send quote."
+      "send": "Failed to send quote.",
+      "resend": "Failed to resend quote.",
+      "sendReminder": "Failed to send quote reminder."
     },
     "loading": "Loading quotes...",
     "rowActions": {
@@ -153,7 +155,8 @@
       "previewPdf": "Preview PDF",
       "backToQuotes": "Back to Quotes",
       "backToTemplates": "Back to Quote Templates",
-      "convertToSalesOrder": "Convert to Sales Order"
+      "convertToSalesOrder": "Convert to Sales Order",
+      "convert": "Convert to…"
     },
     "headings": {
       "editQuote": "Edit Quote",
@@ -587,20 +590,26 @@
     "sections": {
       "contractItems": "Contract Items",
       "conversionMode": "Conversion Mode",
-      "excludedItems": "Excluded Items",
       "excludedFromConversion": "Excluded from Conversion",
+      "excludedItems": "Excluded Items",
       "invoiceItems": "Invoice Items",
       "itemMappingPreview": "Item Mapping Preview",
+      "onSalesOrder": "On Sales Order {{soNumber}}",
       "quoteTotal": "Quote Total",
+      "salesOrderItems": "Sales Order Lines",
       "statusAfterConversion": "Status After Conversion",
       "willBecomeContractLines": "Will Become Contract Lines",
-      "willBecomeInvoiceCharges": "Will Become Invoice Charges"
+      "willBecomeInvoiceCharges": "Will Become Invoice Charges",
+      "willBecomeSalesOrderLines": "Will Become Sales Order Lines"
     },
     "empty": {
       "contractItems": "No recurring items will convert to a contract.",
-      "invoiceItems": "No one-time items will convert to an invoice."
+      "invoiceItems": "No one-time items will convert to an invoice.",
+      "invoiceItemsOnSalesOrder": "All one-time lines are on sales order {{soNumber}} and will be invoiced from there on fulfillment.",
+      "salesOrderItems": "No product lines will move to a sales order."
     },
     "summary": {
+      "billedViaSalesOrder": "Billed from sales order {{soNumber}} on fulfillment",
       "converted": "Converted",
       "discount": "Discount",
       "fixed": "fixed",
@@ -628,10 +637,11 @@
       "title": "Error"
     },
     "salesOrder": {
-      "successTitle": "Sales order {{number}} created",
-      "successBody": "Product lines will bill on fulfillment.",
+      "existingNote": "This quote was already converted to sales order {{soNumber}}.",
+      "note": "Product lines can be billed one of two ways: create a sales order to bill them on fulfillment, or invoice them directly. Creating the sales order removes them from invoice conversion, so nothing double-bills.",
       "openSalesOrders": "Open sales orders",
-      "note": "Product one-time lines move to a draft sales order (billed on fulfillment) and are excluded from any draft-invoice conversion, so nothing double-bills."
+      "successBody": "Product lines will bill on fulfillment.",
+      "successTitle": "Sales order {{number}} created"
     }
   },
   "quoteApproval": {
@@ -725,7 +735,9 @@
       "notFound": "Quote document template not found.",
       "previewPipeline": "Preview pipeline failed.",
       "saveFailed": "Failed to save quote template",
-      "unknownAstExport": "Unknown AST export error"
+      "unknownAstExport": "Unknown AST export error",
+      "quoteNotFound": "Could not load quote details for preview.",
+      "quoteDetailLoad": "Failed to load quote details."
     },
     "fields": {
       "layoutDetails": "Layout Details",
@@ -749,7 +761,17 @@
       "sampleScenario": "Sample Scenario",
       "selectScenario": "Select scenario...",
       "selectScenarioPrompt": "Select a sample scenario to generate an authoritative preview.",
-      "templateGenerationFailed": "Preview template could not be generated from the current workspace."
+      "templateGenerationFailed": "Preview template could not be generated from the current workspace.",
+      "source": {
+        "sample": "Sample",
+        "existing": "Existing"
+      },
+      "searchQuotes": "Search quotes...",
+      "searchQuotesHint": "Search by number or client...",
+      "noQuotesFound": "No quotes found.",
+      "selectQuote": "Select Quote",
+      "selectQuoteHint": "Select a quote to preview data-bound output.",
+      "loadingQuoteDetails": "Loading quote details..."
     },
     "pipeline": {
       "render": "Render",
@@ -787,6 +809,33 @@
     },
     "labels": {
       "custom": "Custom"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Permission denied: Cannot create quotes",
+      "update": "Permission denied: Cannot update quotes",
+      "read": "Permission denied: Cannot read quotes",
+      "delete": "Permission denied: Cannot delete quotes",
+      "readOne": "Permission denied: Cannot read quote",
+      "approve": "Permission denied: Cannot approve quotes",
+      "updateApprovalSettings": "Permission denied: Cannot update quote approval settings",
+      "readDocumentTemplates": "Permission denied: Cannot read quote document templates",
+      "modifyDocumentTemplates": "Permission denied: Cannot modify quote document templates",
+      "setDefaultDocumentTemplate": "Permission denied: Cannot set default quote document template",
+      "deleteDocumentTemplates": "Permission denied: Cannot delete quote document templates"
+    },
+    "quote": {
+      "formInvalid": "Quote form contains invalid values. Please review and try again.",
+      "notFoundRefresh": "Quote not found. It may have been updated or deleted. Please refresh and try again.",
+      "itemNotFoundRefresh": "Quote item not found. It may have been updated or deleted. Please refresh and try again.",
+      "templateNotFoundRefresh": "Quote template not found. It may have been updated or deleted. Please refresh and try again.",
+      "invalidValue": "One of the selected quote values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected quote, client, contact, or service no longer exists. Please refresh and try again.",
+      "conflict": "This quote change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the quote values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required quote field.",
+      "missingFieldNamed": "Missing required quote field: {{field}}."
     }
   }
 }

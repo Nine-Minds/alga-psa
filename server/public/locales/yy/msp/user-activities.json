@@ -1,528 +1,537 @@
 {
   "dashboard": {
-    "title": "55555",
+    "title": "〖Ŭşḗř Ȧƈŧīṽīŧīḗş ······〗",
     "viewSwitcher": {
-      "cards": "55555",
-      "table": "55555"
+      "cards": "〖Ƈȧřḓş ··〗",
+      "table": "〖Ŧȧƀŀḗ ··〗"
     },
     "sections": {
-      "notifications": "55555",
-      "schedule": "55555"
+      "notifications": "〖Ƞȯŧīƒīƈȧŧīȯƞş ······〗",
+      "schedule": "〖Şƈħḗḓŭŀḗ ····〗"
     },
-    "filteredTitle": "55555",
-    "allActivitiesTitle": "55555"
+    "filteredTitle": "〖Ƒīŀŧḗřḗḓ Ȧƈŧīṽīŧīḗş ········〗",
+    "allActivitiesTitle": "〖Ȧŀŀ Ȧƈŧīṽīŧīḗş ······〗"
   },
   "table": {
     "title": {
-      "all": "55555"
+      "all": "〖Ȧŀŀ Ȧƈŧīṽīŧīḗş ······〗"
     },
     "columns": {
-      "type": "55555",
-      "title": "55555",
-      "status": "55555",
-      "priority": "55555",
-      "dueDate": "55555",
-      "actions": "55555"
+      "type": "〖Ŧẏƥḗ ··〗",
+      "title": "〖Ŧīŧŀḗ ··〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "priority": "〖Ƥřīȯřīŧẏ ····〗",
+      "dueDate": "〖Ḓŭḗ Ḓȧŧḗ ····〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗"
     },
     "values": {
-      "noDueDate": "55555",
-      "emDash": "55555",
-      "unread": "55555",
-      "recurringEvent": "55555",
-      "adHocBadge": "55555"
+      "noDueDate": "〖Ƞȯ ḓŭḗ ḓȧŧḗ ·····〗",
+      "emDash": "〖— ·〗",
+      "unread": "〖Ŭƞřḗȧḓ ···〗",
+      "recurringEvent": "〖Řḗƈŭřřīƞɠ Ḗṽḗƞŧ ······〗",
+      "adHocBadge": "〖Ȧḓ ħȯƈ ···〗"
     },
     "actions": {
-      "refresh": "55555",
-      "print": "55555"
+      "refresh": "〖Řḗƒřḗşħ ···〗",
+      "print": "〖Ƥřīƞŧ ··〗"
     },
     "viewSwitcher": {
-      "flat": "55555",
-      "grouped": "55555"
+      "flat": "〖Ƒŀȧŧ ··〗",
+      "grouped": "〖Ɠřȯŭƥḗḓ ···〗"
     },
     "states": {
-      "noActivities": "55555",
-      "noMatching": "55555"
+      "noActivities": "〖Ƞȯ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ ········〗",
+      "noMatching": "〖Ƞȯ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ ḿȧŧƈħīƞɠ ƒīŀŧḗřş ···············〗"
     },
     "errors": {
-      "loadFailed": "55555",
-      "addAdHocFailed": "55555"
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ····················〗",
+      "addAdHocFailed": "〖Ƒȧīŀḗḓ ŧȯ ȧḓḓ ȧḓ-ħȯƈ īŧḗḿ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ··················〗"
     },
     "activityTypes": {
-      "schedule": "55555",
-      "projectTask": "55555",
-      "ticket": "55555",
-      "timeEntry": "55555",
-      "workflowTask": "55555",
-      "notification": "55555",
-      "unknown": "55555",
-      "activity": "55555"
+      "schedule": "〖Şƈħḗḓŭŀḗ ····〗",
+      "projectTask": "〖Ƥřȯĵḗƈŧ Ŧȧşķ ·····〗",
+      "ticket": "〖Ŧīƈķḗŧ ···〗",
+      "timeEntry": "〖Ŧīḿḗ Ḗƞŧřẏ ····〗",
+      "workflowTask": "〖Ẇȯřķƒŀȯẇ Ŧȧşķ ······〗",
+      "notification": "〖Ƞȯŧīƒīƈȧŧīȯƞ ·····〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗",
+      "activity": "〖Ȧƈŧīṽīŧẏ ····〗"
     },
     "print": {
       "optionsDialog": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Ƥřīƞŧ ȯƥŧīȯƞş ······〗",
+        "description": "〖Ƈħȯȯşḗ ẇħīƈħ ƈȯŀŭḿƞş ŧȯ īƞƈŀŭḓḗ ẇħḗƞ ƥřīƞŧīƞɠ ȧƈŧīṽīŧīḗş. ·······················〗"
       }
     },
     "adHoc": {
-      "addPlaceholder": "55555",
-      "addButton": "55555",
-      "markDone": "55555",
-      "markNotDone": "55555",
-      "convertToTicket": "55555",
-      "convertToTask": "55555"
+      "addPlaceholder": "〖Ȧḓḓ Ȧƈŧīṽīŧẏ ·····〗",
+      "addButton": "〖Ȧḓḓ ··〗",
+      "markDone": "〖Ḿȧřķ ȧş ḓȯƞḗ ·····〗",
+      "markNotDone": "〖Ḿȧřķ ȧş ƞȯŧ ḓȯƞḗ ·······〗",
+      "convertToTicket": "〖Ƈȯƞṽḗřŧ ŧȯ ŧīƈķḗŧ ·······〗",
+      "convertToTask": "〖Ƈȯƞṽḗřŧ ŧȯ ƥřȯĵḗƈŧ ŧȧşķ ··········〗"
     },
     "viewingUser": {
-      "label": "55555",
-      "me": "55555"
+      "label": "〖Ṽīḗẇīƞɠ: ····〗",
+      "me": "〖Ḿẏ ȧƈŧīṽīŧīḗş ······〗"
     }
   },
   "card": {
-    "noDescription": "55555",
-    "due": "55555 {{date}} 55555",
-    "recurringEvent": "55555",
-    "unread": "55555",
-    "noMessage": "55555",
-    "estimatedHours": "55555 {{hours}} 55555",
-    "duration": "55555 {{hours}} 55555",
-    "hasForm": "55555",
-    "roles": "55555 {{roles}} 55555"
+    "noDescription": "〖Ƞȯ ḓḗşƈřīƥŧīȯƞ ƥřȯṽīḓḗḓ ··········〗",
+    "due": "〖Ḓŭḗ: {{date}} ······〗",
+    "recurringEvent": "〖Řḗƈŭřřīƞɠ Ḗṽḗƞŧ ······〗",
+    "unread": "〖Ŭƞřḗȧḓ ···〗",
+    "noMessage": "〖Ƞȯ ḿḗşşȧɠḗ ····〗",
+    "estimatedHours": "〖Ḗşŧ: {{hours}}ħ ······〗",
+    "duration": "〖Ḓŭřȧŧīȯƞ: {{hours}}ħ ········〗",
+    "hasForm": "〖Ħȧş ƒȯřḿ ····〗",
+    "roles": "〖Řȯŀḗş: {{roles}} ·······〗"
   },
   "drawer": {
-    "loading": "55555",
-    "errorLoadingTitle": "55555",
-    "errorLoadingMessage": "55555",
-    "userNotAuthenticated": "55555",
-    "scheduleEntryNotFound": "55555",
-    "timeEntryNotFound": "55555",
-    "unknownWorkItem": "55555",
-    "timeEntryDetailsTitle": "55555",
-    "errorLoadingTimeEntry": "55555",
-    "workflowTaskTitle": "55555",
-    "noAdditionalDetails": "55555",
-    "failedToLoadDocument": "55555",
-    "notificationNotFound": "55555",
-    "failedToLoadTicket": "55555",
-    "failedToLoadTask": "55555",
-    "unsupportedTitle": "55555",
-    "unsupportedDescription": "55555 {{activityType}} 55555",
-    "saveDocumentSuccess": "55555",
-    "saveDocumentError": "55555",
-    "timeEntryUpdatedSuccess": "55555",
-    "timeEntryUpdatedError": "55555",
-    "backToNotification": "55555",
-    "documentTitleEdit": "55555",
-    "documentTitleViewer": "55555",
+    "loading": "〖Ŀȯȧḓīƞɠ... ····〗",
+    "errorLoadingTitle": "〖Ḗřřȯř ŀȯȧḓīƞɠ ȧƈŧīṽīŧẏ ḓḗŧȧīŀş ············〗",
+    "errorLoadingMessage": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧƈŧīṽīŧẏ ḓḗŧȧīŀş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ·······················〗",
+    "userNotAuthenticated": "〖Ŭşḗř ƞȯŧ ȧŭŧħḗƞŧīƈȧŧḗḓ ·········〗",
+    "scheduleEntryNotFound": "〖Şƈħḗḓŭŀḗ ḗƞŧřẏ ƞȯŧ ƒȯŭƞḓ ··········〗",
+    "timeEntryNotFound": "〖Ŧīḿḗ ḗƞŧřẏ ƞȯŧ ƒȯŭƞḓ ········〗",
+    "unknownWorkItem": "〖Ŭƞķƞȯẇƞ Ẇȯřķ Īŧḗḿ ·······〗",
+    "timeEntryDetailsTitle": "〖Ŧīḿḗ Ḗƞŧřẏ Ḓḗŧȧīŀş ········〗",
+    "errorLoadingTimeEntry": "〖Ḗřřȯř ŀȯȧḓīƞɠ ŧīḿḗ ḗƞŧřẏ ··········〗",
+    "workflowTaskTitle": "〖Ẇȯřķƒŀȯẇ Ŧȧşķ ······〗",
+    "noAdditionalDetails": "〖Ƞȯ ȧḓḓīŧīȯƞȧŀ ḓḗŧȧīŀş ȧṽȧīŀȧƀŀḗ. ·············〗",
+    "failedToLoadDocument": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓȯƈŭḿḗƞŧ ƈȯƞŧḗƞŧ ·············〗",
+    "notificationNotFound": "〖Ƞȯŧīƒīƈȧŧīȯƞ ƞȯŧ ƒȯŭƞḓ ·········〗",
+    "failedToLoadTicket": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ḓḗŧȧīŀş ············〗",
+    "failedToLoadTask": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧşķ ḓḗŧȧīŀş ···········〗",
+    "unsupportedTitle": "〖Ŭƞşŭƥƥȯřŧḗḓ Ȧƈŧīṽīŧẏ Ŧẏƥḗ ··········〗",
+    "unsupportedDescription": "〖Ŧħīş ȧƈŧīṽīŧẏ ŧẏƥḗ ({{activityType}}) īş ƞȯŧ şŭƥƥȯřŧḗḓ īƞ ŧħḗ ḓḗŧȧīŀ ṽīḗẇḗř. ·······························〗",
+    "saveDocumentSuccess": "〖Ḓȯƈŭḿḗƞŧ şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ ···········〗",
+    "saveDocumentError": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ḓȯƈŭḿḗƞŧ ··········〗",
+    "timeEntryUpdatedSuccess": "〖Ŧīḿḗ ḗƞŧřẏ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ·············〗",
+    "timeEntryUpdatedError": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧīḿḗ ḗƞŧřẏ ···········〗",
+    "backToNotification": "〖Ɓȧƈķ ŧȯ Ƞȯŧīƒīƈȧŧīȯƞ ········〗",
+    "documentTitleEdit": "〖Ḗḓīŧ Ḓȯƈŭḿḗƞŧ ······〗",
+    "documentTitleViewer": "〖Ḓȯƈŭḿḗƞŧ Ṽīḗẇḗř ······〗",
     "actions": {
-      "edit": "55555",
-      "cancel": "55555",
-      "save": "55555",
-      "saving": "55555"
+      "edit": "〖Ḗḓīŧ ··〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "save": "〖Şȧṽḗ ··〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗"
     },
     "menu": {
-      "openMenu": "55555",
-      "goToPage": "55555",
-      "dismissError": "55555 {{message}} 55555"
+      "openMenu": "〖Ȯƥḗƞ ḿḗƞŭ ····〗",
+      "goToPage": "〖Ɠȯ ŧȯ ƥȧɠḗ ····〗",
+      "dismissError": "〖Ƒȧīŀḗḓ ŧȯ ḓīşḿīşş ŧȧşķ: {{message}} ··············〗"
     },
-    "retryLater": "55555",
+    "retryLater": "〖Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ··········〗",
     "adHoc": {
-      "endBeforeStart": "55555",
+      "endBeforeStart": "〖Ḗƞḓ ŧīḿḗ ḿŭşŧ ƀḗ ȧƒŧḗř ŧħḗ şŧȧřŧ ŧīḿḗ. ················〗",
       "fields": {
-        "end": "55555",
-        "noTime": "55555",
-        "notes": "55555",
-        "notesPlaceholder": "55555",
-        "start": "55555",
-        "title": "55555",
-        "titlePlaceholder": "55555"
+        "end": "〖Ḗƞḓ (ȯƥŧīȯƞȧŀ) ······〗",
+        "noTime": "〖Ƞȯ ŧīḿḗ ···〗",
+        "notes": "〖Ƞȯŧḗş ··〗",
+        "notesPlaceholder": "〖Ȧḓḓ ƞȯŧḗş… ····〗",
+        "start": "〖Şŧȧřŧ (ȯƥŧīȯƞȧŀ) ·······〗",
+        "title": "〖Ŧīŧŀḗ ··〗",
+        "titlePlaceholder": "〖Ŧīŧŀḗ ··〗"
       },
-      "loadError": "55555",
-      "saveError": "55555",
-      "saveSuccess": "55555",
-      "statusDone": "55555",
-      "statusOpen": "55555",
-      "title": "55555",
-      "toggleDoneError": "55555"
+      "loadError": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧħīş īŧḗḿ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ····················〗",
+      "saveError": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ īŧḗḿ. ········〗",
+      "saveSuccess": "〖Īŧḗḿ şȧṽḗḓ ····〗",
+      "statusDone": "〖Ḓȯƞḗ ··〗",
+      "statusOpen": "〖Ȯƥḗƞ ··〗",
+      "title": "〖Ȧḓ ħȯƈ īŧḗḿ ·····〗",
+      "toggleDoneError": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ īŧḗḿ. ·········〗"
     },
-    "enterpriseOnly": "55555",
-    "nextAction": "55555",
-    "overdueSince": "55555 {{date}} 55555",
-    "dueOn": "55555 {{date}} 55555",
-    "stage": "55555",
-    "confidence": "55555",
-    "owner": "55555",
-    "expectedClose": "55555",
-    "mrr": "55555",
-    "nrr": "55555",
-    "hardware": "55555",
-    "contact": "55555",
-    "linkedQuotes": "55555",
-    "openOpportunity": "55555",
-    "opportunityNotFound": "55555"
+    "enterpriseOnly": "〖Ẇȯřķƒŀȯẇ ŧȧşķş ȧřḗ ȧ Ƥřȯ ƒḗȧŧŭřḗ. ··············〗",
+    "nextAction": "〖Ƞḗẋŧ ȧƈŧīȯƞ ·····〗",
+    "overdueSince": "〖Ȯṽḗřḓŭḗ şīƞƈḗ {{date}} ·········〗",
+    "dueOn": "〖Ḓŭḗ {{date}} ·····〗",
+    "stage": "〖Şŧȧɠḗ ··〗",
+    "confidence": "〖Ƈȯƞƒīḓḗƞƈḗ ····〗",
+    "owner": "〖Ȯẇƞḗř ··〗",
+    "expectedClose": "〖Ḗẋƥḗƈŧḗḓ ƈŀȯşḗ ······〗",
+    "mrr": "〖ḾŘŘ ··〗",
+    "nrr": "〖ȠŘŘ ··〗",
+    "hardware": "〖Ħȧřḓẇȧřḗ ····〗",
+    "contact": "〖Ƈȯƞŧȧƈŧ ···〗",
+    "linkedQuotes": "〖Ŀīƞķḗḓ ʠŭȯŧḗş ······〗",
+    "openOpportunity": "〖Ȯƥḗƞ Ȯƥƥȯřŧŭƞīŧẏ ·······〗",
+    "opportunityNotFound": "〖Ȯƥƥȯřŧŭƞīŧẏ ƞȯŧ ƒȯŭƞḓ. ·········〗"
   },
   "groupedView": {
-    "addGroup": "55555",
-    "groupNamePlaceholder": "55555",
+    "addGroup": "〖Ȧḓḓ Ɠřȯŭƥ ····〗",
+    "groupNamePlaceholder": "〖Ɠřȯŭƥ ƞȧḿḗ ····〗",
     "ariaLabels": {
-      "dragToReorder": "55555",
-      "dragToReorderGroup": "55555",
-      "expandGroup": "55555",
-      "collapseGroup": "55555",
-      "renameGroup": "55555",
-      "deleteGroup": "55555"
+      "dragToReorder": "〖Ḓřȧɠ ŧȯ řḗȯřḓḗř ······〗",
+      "dragToReorderGroup": "〖Ḓřȧɠ ŧȯ řḗȯřḓḗř ɠřȯŭƥ ·········〗",
+      "expandGroup": "〖Ḗẋƥȧƞḓ ɠřȯŭƥ ·····〗",
+      "collapseGroup": "〖Ƈȯŀŀȧƥşḗ ɠřȯŭƥ ······〗",
+      "renameGroup": "〖Řḗƞȧḿḗ ɠřȯŭƥ ·····〗",
+      "deleteGroup": "〖Ḓḗŀḗŧḗ ɠřȯŭƥ ·····〗"
     },
-    "dropActivitiesHere": "55555",
-    "ungroupedHeading": "55555",
-    "allInGroups": "55555",
+    "dropActivitiesHere": "〖Ḓřȯƥ ȧƈŧīṽīŧīḗş ħḗřḗ ········〗",
+    "ungroupedHeading": "〖Ŭƞɠřȯŭƥḗḓ ····〗",
+    "allInGroups": "〖Ȧŀŀ ȧƈŧīṽīŧīḗş ȧřḗ īƞ ɠřȯŭƥş ············〗",
     "columns": {
-      "title": "55555",
-      "status": "55555",
-      "priority": "55555",
-      "dueDate": "55555"
+      "title": "〖Ŧīŧŀḗ ··〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "priority": "〖Ƥřīȯřīŧẏ ····〗",
+      "dueDate": "〖Ḓŭḗ Ḓȧŧḗ ····〗"
     }
   },
   "printable": {
-    "defaultTitle": "55555",
-    "ungroupedHeading": "55555",
-    "empty": "55555"
+    "defaultTitle": "〖Ȧƈŧīṽīŧīḗş ····〗",
+    "ungroupedHeading": "〖Ŭƞɠřȯŭƥḗḓ ····〗",
+    "empty": "〖(ḗḿƥŧẏ) ···〗"
   },
   "sections": {
     "projects": {
-      "title": "55555",
+      "title": "〖Ƥřȯĵḗƈŧ Ŧȧşķş ······〗",
       "actions": {
-        "refresh": "55555",
-        "filter": "55555",
-        "reset": "55555",
-        "viewAll": "55555"
+        "refresh": "〖Řḗƒřḗşħ ···〗",
+        "filter": "〖Ƒīŀŧḗř ···〗",
+        "reset": "〖Řḗşḗŧ ··〗",
+        "viewAll": "〖Ṽīḗẇ Ȧŀŀ ····〗"
       },
       "ariaLabels": {
-        "refresh": "55555",
-        "filter": "55555"
+        "refresh": "〖Řḗƒřḗşħ Ƥřȯĵḗƈŧ Ŧȧşķş ·········〗",
+        "filter": "〖Ƒīŀŧḗř Ƥřȯĵḗƈŧ Ŧȧşķş ········〗"
       },
       "states": {
-        "loading": "55555",
-        "empty": "55555"
+        "loading": "〖Ŀȯȧḓīƞɠ ƥřȯĵḗƈŧ ȧƈŧīṽīŧīḗş... ············〗",
+        "empty": "〖Ƞȯ ƥřȯĵḗƈŧ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ ···········〗"
       },
       "errors": {
-        "loadFailed": "55555"
+        "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřȯĵḗƈŧ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ························〗"
       },
       "filterDialog": {
-        "title": "55555",
-        "description": "55555",
+        "title": "〖Ƒīŀŧḗř Ƥřȯĵḗƈŧ Ŧȧşķş ········〗",
+        "description": "〖Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř ƥřȯĵḗƈŧ ŧȧşķ ȧƈŧīṽīŧīḗş. ····················〗",
         "fields": {
-          "search": "55555",
-          "searchPlaceholder": "55555",
-          "project": "55555",
-          "projectPlaceholder": "55555",
-          "allProjects": "55555",
-          "phase": "55555",
-          "phasePlaceholder": "55555",
-          "phaseLoadingPlaceholder": "55555",
-          "phaseSelectFirstPlaceholder": "55555",
-          "allPhases": "55555",
-          "priority": "55555",
-          "priorityPlaceholder": "55555",
-          "allPriorities": "55555",
-          "dueDateRange": "55555",
-          "createdDateRange": "55555",
-          "showClosedTasks": "55555"
+          "search": "〖Şḗȧřƈħ ···〗",
+          "searchPlaceholder": "〖Şḗȧřƈħ ŧīŧŀḗ, ḓḗşƈřīƥŧīȯƞ ··········〗",
+          "project": "〖Ƥřȯĵḗƈŧ ···〗",
+          "projectPlaceholder": "〖Şḗŀḗƈŧ Ƥřȯĵḗƈŧ... ·······〗",
+          "allProjects": "〖Ȧŀŀ Ƥřȯĵḗƈŧş ·····〗",
+          "phase": "〖Ƥħȧşḗ ··〗",
+          "phasePlaceholder": "〖Şḗŀḗƈŧ Ƥħȧşḗ... ······〗",
+          "phaseLoadingPlaceholder": "〖Ŀȯȧḓīƞɠ ƥħȧşḗş... ·······〗",
+          "phaseSelectFirstPlaceholder": "〖Şḗŀḗƈŧ ȧ ƥřȯĵḗƈŧ ƒīřşŧ ·········〗",
+          "allPhases": "〖Ȧŀŀ Ƥħȧşḗş ····〗",
+          "priority": "〖Ƥřīȯřīŧẏ ····〗",
+          "priorityPlaceholder": "〖Şḗŀḗƈŧ Ƥřīȯřīŧẏ... ········〗",
+          "allPriorities": "〖Ȧŀŀ Ƥřīȯřīŧīḗş ······〗",
+          "dueDateRange": "〖Ḓŭḗ Ḓȧŧḗ Řȧƞɠḗ ······〗",
+          "createdDateRange": "〖Ƈřḗȧŧḗḓ Ḓȧŧḗ Řȧƞɠḗ ········〗",
+          "showClosedTasks": "〖Şħȯẇ Ƈŀȯşḗḓ Ŧȧşķş ·······〗"
         },
         "actions": {
-          "reset": "55555",
-          "cancel": "55555",
-          "apply": "55555",
-          "clearDates": "55555"
+          "reset": "〖Řḗşḗŧ ··〗",
+          "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+          "apply": "〖Ȧƥƥŀẏ Ƒīŀŧḗřş ······〗",
+          "clearDates": "〖Ƈŀḗȧř ··〗"
         }
       }
     },
     "tickets": {
-      "title": "55555",
+      "title": "〖Ŧīƈķḗŧş ···〗",
       "actions": {
-        "refresh": "55555",
-        "filter": "55555",
-        "reset": "55555",
-        "viewAll": "55555"
+        "refresh": "〖Řḗƒřḗşħ ···〗",
+        "filter": "〖Ƒīŀŧḗř ···〗",
+        "reset": "〖Řḗşḗŧ ··〗",
+        "viewAll": "〖Ṽīḗẇ Ȧŀŀ ····〗"
       },
       "ariaLabels": {
-        "refresh": "55555",
-        "filter": "55555"
+        "refresh": "〖Řḗƒřḗşħ Ŧīƈķḗŧş ······〗",
+        "filter": "〖Ƒīŀŧḗř Ŧīƈķḗŧş ······〗"
       },
       "states": {
-        "loading": "55555",
-        "empty": "55555"
+        "loading": "〖Ŀȯȧḓīƞɠ ŧīƈķḗŧ ȧƈŧīṽīŧīḗş... ············〗",
+        "empty": "〖Ƞȯ ŧīƈķḗŧ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ ···········〗"
       },
       "errors": {
-        "loadFailed": "55555"
+        "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ·······················〗"
       },
       "filterDialog": {
-        "title": "55555",
-        "description": "55555",
+        "title": "〖Ƒīŀŧḗř Ŧīƈķḗŧş ······〗",
+        "description": "〖Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř ŧīƈķḗŧ ȧƈŧīṽīŧīḗş. ··················〗",
         "fields": {
-          "search": "55555",
-          "searchPlaceholder": "55555",
-          "client": "55555",
-          "contact": "55555",
-          "status": "55555",
-          "statusPlaceholder": "55555",
-          "allStatuses": "55555",
-          "priority": "55555",
-          "priorityPlaceholder": "55555",
-          "allPriorities": "55555",
-          "dueDateRange": "55555",
-          "createdDateRange": "55555",
-          "showClosedTickets": "55555"
+          "search": "〖Şḗȧřƈħ ···〗",
+          "searchPlaceholder": "〖Şḗȧřƈħ ŧīŧŀḗ, ḓḗşƈřīƥŧīȯƞ, ŧīƈķḗŧ # ··············〗",
+          "client": "〖Ƈŀīḗƞŧ ···〗",
+          "contact": "〖Ƈȯƞŧȧƈŧ ···〗",
+          "status": "〖Şŧȧŧŭş ···〗",
+          "statusPlaceholder": "〖Şḗŀḗƈŧ Şŧȧŧŭş... ·······〗",
+          "allStatuses": "〖Ȧŀŀ Şŧȧŧŭşḗş ·····〗",
+          "priority": "〖Ƥřīȯřīŧẏ ····〗",
+          "priorityPlaceholder": "〖Şḗŀḗƈŧ Ƥřīȯřīŧẏ... ········〗",
+          "allPriorities": "〖Ȧŀŀ Ƥřīȯřīŧīḗş ······〗",
+          "dueDateRange": "〖Ḓŭḗ Ḓȧŧḗ Řȧƞɠḗ ······〗",
+          "createdDateRange": "〖Ƈřḗȧŧḗḓ Ḓȧŧḗ Řȧƞɠḗ ········〗",
+          "showClosedTickets": "〖Şħȯẇ Ƈŀȯşḗḓ Ŧīƈķḗŧş ········〗"
         },
         "actions": {
-          "reset": "55555",
-          "cancel": "55555",
-          "apply": "55555",
-          "clearDates": "55555"
+          "reset": "〖Řḗşḗŧ ··〗",
+          "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+          "apply": "〖Ȧƥƥŀẏ Ƒīŀŧḗřş ······〗",
+          "clearDates": "〖Ƈŀḗȧř ··〗"
         }
       }
     },
     "workflowTasks": {
-      "title": "55555",
-      "drawerTitle": "55555",
+      "title": "〖Ẇȯřķƒŀȯẇ Ŧȧşķş ······〗",
+      "drawerTitle": "〖Ẇȯřķƒŀȯẇ Ŧȧşķş ······〗",
       "actions": {
-        "refresh": "55555",
-        "filter": "55555",
-        "reset": "55555",
-        "viewAll": "55555"
+        "refresh": "〖Řḗƒřḗşħ ···〗",
+        "filter": "〖Ƒīŀŧḗř ···〗",
+        "reset": "〖Řḗşḗŧ ··〗",
+        "viewAll": "〖Ṽīḗẇ Ȧŀŀ ····〗"
       },
       "ariaLabels": {
-        "refresh": "55555",
-        "filter": "55555"
+        "refresh": "〖Řḗƒřḗşħ Ẇȯřķƒŀȯẇ Ŧȧşķş ·········〗",
+        "filter": "〖Ƒīŀŧḗř Ẇȯřķƒŀȯẇ Ŧȧşķş ·········〗"
       },
       "states": {
-        "loading": "55555",
-        "empty": "55555"
+        "loading": "〖Ŀȯȧḓīƞɠ ẇȯřķƒŀȯẇ ŧȧşķ ȧƈŧīṽīŧīḗş... ··············〗",
+        "empty": "〖Ƞȯ ẇȯřķƒŀȯẇ ŧȧşķ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ ··············〗"
       },
       "errors": {
-        "loadFailed": "55555"
+        "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ẇȯřķƒŀȯẇ ŧȧşķ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ··························〗"
       },
       "filterDialog": {
-        "title": "55555",
-        "description": "55555",
+        "title": "〖Ƒīŀŧḗř Ẇȯřķƒŀȯẇ Ŧȧşķş ·········〗",
+        "description": "〖Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř ẇȯřķƒŀȯẇ ŧȧşķ ȧƈŧīṽīŧīḗş. ·····················〗",
         "fields": {
-          "search": "55555",
-          "searchPlaceholder": "55555",
-          "workflowExecution": "55555",
-          "workflowExecutionPlaceholder": "55555",
-          "allExecutions": "55555",
-          "priority": "55555",
-          "priorityPlaceholder": "55555",
-          "allPriorities": "55555",
-          "priorityHigh": "55555",
-          "priorityMedium": "55555",
-          "priorityLow": "55555",
-          "dueDateRange": "55555",
-          "createdDateRange": "55555",
-          "showClosedTasks": "55555",
-          "includeHiddenTasks": "55555"
+          "search": "〖Şḗȧřƈħ ···〗",
+          "searchPlaceholder": "〖Şḗȧřƈħ ŧīŧŀḗ, ḓḗşƈřīƥŧīȯƞ ··········〗",
+          "workflowExecution": "〖Ẇȯřķƒŀȯẇ Ḗẋḗƈŭŧīȯƞ ········〗",
+          "workflowExecutionPlaceholder": "〖Şḗŀḗƈŧ Ẇȯřķƒŀȯẇ Ḗẋḗƈŭŧīȯƞ... ············〗",
+          "allExecutions": "〖Ȧŀŀ Ḗẋḗƈŭŧīȯƞş ······〗",
+          "priority": "〖Ƥřīȯřīŧẏ ····〗",
+          "priorityPlaceholder": "〖Şḗŀḗƈŧ Ƥřīȯřīŧẏ... ········〗",
+          "allPriorities": "〖Ȧŀŀ Ƥřīȯřīŧīḗş ······〗",
+          "priorityHigh": "〖Ħīɠħ ··〗",
+          "priorityMedium": "〖Ḿḗḓīŭḿ ···〗",
+          "priorityLow": "〖Ŀȯẇ ··〗",
+          "dueDateRange": "〖Ḓŭḗ Ḓȧŧḗ Řȧƞɠḗ ······〗",
+          "createdDateRange": "〖Ƈřḗȧŧḗḓ Ḓȧŧḗ Řȧƞɠḗ ········〗",
+          "showClosedTasks": "〖Şħȯẇ Ƈŀȯşḗḓ Ŧȧşķş ·······〗",
+          "includeHiddenTasks": "〖Īƞƈŀŭḓḗ Ħīḓḓḗƞ Ŧȧşķş ········〗"
         },
         "actions": {
-          "reset": "55555",
-          "cancel": "55555",
-          "apply": "55555",
-          "clearDates": "55555"
+          "reset": "〖Řḗşḗŧ ··〗",
+          "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+          "apply": "〖Ȧƥƥŀẏ Ƒīŀŧḗřş ······〗",
+          "clearDates": "〖Ƈŀḗȧř ··〗"
         }
       },
       "listDrawer": {
-        "searchPlaceholder": "55555",
-        "filters": "55555",
-        "refresh": "55555",
-        "sortBy": "55555",
+        "searchPlaceholder": "〖Şḗȧřƈħ ŧȧşķş... ······〗",
+        "filters": "〖Ƒīŀŧḗřş ···〗",
+        "refresh": "〖Řḗƒřḗşħ ···〗",
+        "sortBy": "〖Şȯřŧ ƀẏ: ····〗",
         "sortOptions": {
-          "priority": "55555",
-          "dueDate": "55555",
-          "createdAt": "55555",
-          "title": "55555"
+          "priority": "〖Ƥřīȯřīŧẏ ····〗",
+          "dueDate": "〖Ḓŭḗ Ḓȧŧḗ ····〗",
+          "createdAt": "〖Ƈřḗȧŧḗḓ Ḓȧŧḗ ·····〗",
+          "title": "〖Ŧīŧŀḗ ··〗"
         },
-        "ascending": "55555",
-        "descending": "55555",
+        "ascending": "〖Ȧşƈḗƞḓīƞɠ ····〗",
+        "descending": "〖Ḓḗşƈḗƞḓīƞɠ ····〗",
         "states": {
-          "loading": "55555",
-          "empty": "55555"
+          "loading": "〖Ŀȯȧḓīƞɠ ẇȯřķƒŀȯẇ ŧȧşķş... ··········〗",
+          "empty": "〖Ƞȯ ẇȯřķƒŀȯẇ ŧȧşķş ƒȯŭƞḓ ··········〗"
         },
         "errors": {
-          "loadFailed": "55555"
+          "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ẇȯřķƒŀȯẇ ŧȧşķş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ······················〗"
         }
       }
     },
     "schedule": {
-      "title": "55555",
+      "title": "〖Şƈħḗḓŭŀḗ ····〗",
       "actions": {
-        "refresh": "55555",
-        "filter": "55555",
-        "reset": "55555",
-        "viewAll": "55555"
+        "refresh": "〖Řḗƒřḗşħ ···〗",
+        "filter": "〖Ƒīŀŧḗř ···〗",
+        "reset": "〖Řḗşḗŧ ··〗",
+        "viewAll": "〖Ṽīḗẇ Ȧŀŀ ····〗"
       },
       "states": {
-        "loading": "55555",
-        "empty": "55555"
+        "loading": "〖Ŀȯȧḓīƞɠ şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş... ············〗",
+        "empty": "〖Ƞȯ şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ ············〗"
       },
       "errors": {
-        "loadFailed": "55555",
-        "refreshFailed": "55555",
-        "addAdHocFailed": "55555"
+        "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ························〗",
+        "refreshFailed": "〖Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ·························〗",
+        "addAdHocFailed": "〖Ƒȧīŀḗḓ ŧȯ ȧḓḓ ȧƈŧīṽīŧẏ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ·················〗"
       },
       "filterDialog": {
-        "title": "55555",
-        "description": "55555",
+        "title": "〖Ƒīŀŧḗř Şƈħḗḓŭŀḗ Ḗƞŧřīḗş ··········〗",
+        "description": "〖Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş. ···················〗",
         "fields": {
-          "search": "55555",
-          "searchPlaceholder": "55555",
-          "dateRange": "55555",
-          "workItemType": "55555",
-          "workItemTypePlaceholder": "55555",
-          "allTypes": "55555",
-          "ticket": "55555",
-          "projectTask": "55555",
-          "workflowTask": "55555",
-          "showClosedEntries": "55555",
-          "showRecurringOnly": "55555"
+          "search": "〖Şḗȧřƈħ ···〗",
+          "searchPlaceholder": "〖Şḗȧřƈħ ŧīŧŀḗ, ḓḗşƈřīƥŧīȯƞ ··········〗",
+          "dateRange": "〖Ḓȧŧḗ Řȧƞɠḗ ····〗",
+          "workItemType": "〖Řḗŀȧŧḗḓ Ẇȯřķ Īŧḗḿ Ŧẏƥḗ ·········〗",
+          "workItemTypePlaceholder": "〖Şḗŀḗƈŧ Ẇȯřķ Īŧḗḿ Ŧẏƥḗ... ··········〗",
+          "allTypes": "〖Ȧŀŀ Ŧẏƥḗş ····〗",
+          "ticket": "〖Ŧīƈķḗŧ ···〗",
+          "projectTask": "〖Ƥřȯĵḗƈŧ Ŧȧşķ ·····〗",
+          "workflowTask": "〖Ẇȯřķƒŀȯẇ Ŧȧşķ ······〗",
+          "showClosedEntries": "〖Şħȯẇ Ƈŀȯşḗḓ Ḗƞŧřīḗş ········〗",
+          "showRecurringOnly": "〖Şħȯẇ Řḗƈŭřřīƞɠ Ȯƞŀẏ ········〗"
         },
         "actions": {
-          "reset": "55555",
-          "cancel": "55555",
-          "apply": "55555"
+          "reset": "〖Řḗşḗŧ ··〗",
+          "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+          "apply": "〖Ȧƥƥŀẏ Ƒīŀŧḗřş ······〗"
         }
       }
     },
     "notifications": {
-      "title": "55555",
+      "title": "〖Ƞȯŧīƒīƈȧŧīȯƞş ······〗",
       "actions": {
-        "refresh": "55555",
-        "filter": "55555",
-        "reset": "55555",
-        "viewAll": "55555"
+        "refresh": "〖Řḗƒřḗşħ ···〗",
+        "filter": "〖Ƒīŀŧḗř ···〗",
+        "reset": "〖Řḗşḗŧ ··〗",
+        "viewAll": "〖Ṽīḗẇ Ȧŀŀ ····〗"
       },
       "ariaLabels": {
-        "refresh": "55555",
-        "filter": "55555"
+        "refresh": "〖Řḗƒřḗşħ Ƞȯŧīƒīƈȧŧīȯƞş ·········〗",
+        "filter": "〖Ƒīŀŧḗř Ƞȯŧīƒīƈȧŧīȯƞş ········〗"
       },
       "tabs": {
-        "unread": "55555",
-        "all": "55555",
-        "read": "55555"
+        "unread": "〖Ŭƞřḗȧḓ ···〗",
+        "all": "〖Ȧŀŀ ··〗",
+        "read": "〖Řḗȧḓ ··〗"
       },
       "states": {
-        "loading": "55555",
-        "empty": "55555"
+        "loading": "〖Ŀȯȧḓīƞɠ ƞȯŧīƒīƈȧŧīȯƞ ȧƈŧīṽīŧīḗş... ··············〗",
+        "empty": "〖Ƞȯ ƞȯŧīƒīƈȧŧīȯƞ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ ·············〗"
       },
       "errors": {
-        "loadFailed": "55555"
+        "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƞȯŧīƒīƈȧŧīȯƞ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř. ··························〗"
       },
       "filterDialog": {
-        "title": "55555",
-        "description": "55555",
+        "title": "〖Ƒīŀŧḗř Ƞȯŧīƒīƈȧŧīȯƞş ········〗",
+        "description": "〖Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř ƞȯŧīƒīƈȧŧīȯƞ ȧƈŧīṽīŧīḗş. ····················〗",
         "fields": {
-          "status": "55555",
-          "unreadOnly": "55555",
-          "showRead": "55555",
-          "category": "55555",
-          "categoryPlaceholder": "55555",
-          "allCategories": "55555",
+          "status": "〖Şŧȧŧŭş ···〗",
+          "unreadOnly": "〖Ŭƞřḗȧḓ Ȯƞŀẏ ·····〗",
+          "showRead": "〖Şħȯẇ Řḗȧḓ ····〗",
+          "category": "〖Ƈȧŧḗɠȯřẏ ····〗",
+          "categoryPlaceholder": "〖Şḗŀḗƈŧ Ƈȧŧḗɠȯřẏ... ········〗",
+          "allCategories": "〖Ȧŀŀ Ƈȧŧḗɠȯřīḗş ······〗",
           "categories": {
-            "tickets": "55555",
-            "projects": "55555",
-            "invoices": "55555",
-            "system": "55555"
+            "tickets": "〖Ŧīƈķḗŧş ···〗",
+            "projects": "〖Ƥřȯĵḗƈŧş ····〗",
+            "invoices": "〖Īƞṽȯīƈḗş ····〗",
+            "system": "〖Şẏşŧḗḿ ···〗"
           },
-          "dateRange": "55555"
+          "dateRange": "〖Ḓȧŧḗ Řȧƞɠḗ ····〗"
         },
         "actions": {
-          "reset": "55555",
-          "cancel": "55555",
-          "apply": "55555"
+          "reset": "〖Řḗşḗŧ ··〗",
+          "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+          "apply": "〖Ȧƥƥŀẏ Ƒīŀŧḗřş ······〗"
         }
+      },
+      "priority": {
+        "label": "〖Ƥřīȯřīŧẏ ····〗",
+        "all": "〖Ȧŀŀ ··〗",
+        "allPriorities": "〖Ȧŀŀ Ƥřīȯřīŧīḗş ······〗",
+        "placeholder": "〖Şḗŀḗƈŧ Ƥřīȯřīŧẏ... ········〗",
+        "high": "〖Ħīɠħ ··〗",
+        "normal": "〖Ƞȯřḿȧŀ ···〗",
+        "low": "〖Ŀȯẇ ··〗"
       }
     }
   },
   "pickers": {
     "priority": {
-      "loading": "55555",
-      "empty": "55555",
-      "none": "55555"
+      "loading": "〖Ŀȯȧḓīƞɠ... ····〗",
+      "empty": "〖Ƞȯ ƥřīȯřīŧīḗş ȧṽȧīŀȧƀŀḗ ··········〗",
+      "none": "〖Ƞȯƞḗ ··〗"
     },
     "status": {
-      "loading": "55555",
-      "empty": "55555",
-      "closedSuffix": "55555"
+      "loading": "〖Ŀȯȧḓīƞɠ... ····〗",
+      "empty": "〖Ƞȯ şŧȧŧŭşḗş ȧṽȧīŀȧƀŀḗ ·········〗",
+      "closedSuffix": "〖ƈŀȯşḗḓ ···〗"
     }
   },
   "filters": {
     "labels": {
-      "types": "55555",
-      "tickets": "55555",
-      "tasks": "55555",
-      "priority": "55555",
-      "search": "55555",
-      "dueDate": "55555",
-      "showClosed": "55555",
-      "client": "55555",
-      "dueDateShort": "55555",
-      "createdShort": "55555",
-      "tags": "55555",
-      "tagsSelected": "55555 {{count}} 55555",
-      "tasksCompact": "55555",
-      "ticketsCompact": "55555",
-      "opportunityScope": "55555"
+      "types": "〖Ŧẏƥḗş: ···〗",
+      "tickets": "〖Ŧīƈķḗŧş: ····〗",
+      "tasks": "〖Ŧȧşķş: ···〗",
+      "priority": "〖Ƥřīȯřīŧẏ ····〗",
+      "search": "〖Şḗȧřƈħ ···〗",
+      "dueDate": "〖Ḓŭḗ Ḓȧŧḗ ····〗",
+      "showClosed": "〖Şħȯẇ ƈŀȯşḗḓ ·····〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "dueDateShort": "〖Ḓŭḗ ··〗",
+      "createdShort": "〖Ƈřḗȧŧḗḓ ···〗",
+      "tags": "〖Ŧȧɠş ··〗",
+      "tagsSelected": "〖{{count}} ŧȧɠş ······〗",
+      "tasksCompact": "〖Ŧȧşķş ··〗",
+      "ticketsCompact": "〖Ŧīƈķḗŧş ···〗",
+      "opportunityScope": "〖Ḓḗȧŀ ẇȯřķ ····〗"
     },
     "activityTypeOptions": {
-      "schedule": "55555",
-      "projectTask": "55555",
-      "ticket": "55555",
-      "workflowTask": "55555"
+      "schedule": "〖Şƈħḗḓŭŀḗ ····〗",
+      "projectTask": "〖Ƥřȯĵḗƈŧ Ŧȧşķş ······〗",
+      "ticket": "〖Ŧīƈķḗŧş ···〗",
+      "workflowTask": "〖Ẇȯřķƒŀȯẇ Ŧȧşķş ······〗"
     },
     "placeholders": {
-      "allBoards": "55555",
-      "allStatuses": "55555",
-      "allProjects": "55555",
-      "allPriorities": "55555",
-      "selectPriority": "55555",
-      "search": "55555",
-      "searchBoards": "55555",
-      "searchStatuses": "55555",
-      "searchProjects": "55555",
-      "allClients": "55555",
-      "fromDateShort": "55555",
-      "projectTaskTags": "55555",
-      "ticketTags": "55555",
-      "toDateShort": "55555"
+      "allBoards": "〖Ȧŀŀ Ɓȯȧřḓş ····〗",
+      "allStatuses": "〖Ȧŀŀ Şŧȧŧŭşḗş ·····〗",
+      "allProjects": "〖Ȧŀŀ Ƥřȯĵḗƈŧş ·····〗",
+      "allPriorities": "〖Ȧŀŀ Ƥřīȯřīŧīḗş ······〗",
+      "selectPriority": "〖Şḗŀḗƈŧ Ƥřīȯřīŧẏ... ········〗",
+      "search": "〖Şḗȧřƈħ ȧƈŧīṽīŧīḗş... ········〗",
+      "searchBoards": "〖Şḗȧřƈħ ƀȯȧřḓş... ·······〗",
+      "searchStatuses": "〖Şḗȧřƈħ şŧȧŧŭşḗş... ········〗",
+      "searchProjects": "〖Şḗȧřƈħ ƥřȯĵḗƈŧş... ········〗",
+      "allClients": "〖Ȧŀŀ Ƈŀīḗƞŧş ·····〗",
+      "fromDateShort": "〖Ƒřȯḿ ··〗",
+      "projectTaskTags": "〖Ƒīŀŧḗř ŧȧşķ ŧȧɠş... ········〗",
+      "ticketTags": "〖Ƒīŀŧḗř ŧīƈķḗŧ ŧȧɠş... ·········〗",
+      "toDateShort": "〖Ŧȯ ·〗"
     },
     "actions": {
-      "reset": "55555",
-      "clearClient": "55555",
-      "clearDueDate": "55555",
-      "clearCreatedDate": "55555"
+      "reset": "〖Řḗşḗŧ ··〗",
+      "clearClient": "〖Ƈŀḗȧř ƈŀīḗƞŧ ƒīŀŧḗř ········〗",
+      "clearDueDate": "〖Ƈŀḗȧř ḓŭḗ ḓȧŧḗ ƒīŀŧḗř ·········〗",
+      "clearCreatedDate": "〖Ƈŀḗȧř ƈřḗȧŧḗḓ ḓȧŧḗ ƒīŀŧḗř ··········〗"
     },
-    "statusClosedSuffix": "55555",
+    "statusClosedSuffix": "〖 (ƈŀȯşḗḓ) ····〗",
     "summary": {
-      "boards_one": "55555 {{count}} 55555",
-      "boards_other": "55555 {{count}} 55555",
-      "statuses_one": "55555 {{count}} 55555",
-      "statuses_other": "55555 {{count}} 55555",
-      "projects_one": "55555 {{count}} 55555",
-      "projects_other": "55555 {{count}} 55555",
-      "phases_one": "55555 {{count}} 55555",
-      "phases_other": "55555 {{count}} 55555",
-      "excludingName": "55555 {{name}} 55555",
-      "excludingCount_one": "55555 {{count}} 55555",
-      "excludingCount_other": "55555 {{count}} 55555",
-      "boards": "55555 {{count}} 55555",
-      "excludingCount": "55555 {{count}} 55555",
-      "phases": "55555 {{count}} 55555",
-      "projects": "55555 {{count}} 55555",
-      "statuses": "55555 {{count}} 55555"
+      "boards_one": "〖{{count}} ƀȯȧřḓ ······〗",
+      "boards_other": "〖{{count}} ƀȯȧřḓş ·······〗",
+      "statuses_one": "〖{{count}} şŧȧŧŭş ·······〗",
+      "statuses_other": "〖{{count}} şŧȧŧŭşḗş ········〗",
+      "projects_one": "〖{{count}} ƥřȯĵḗƈŧ ·······〗",
+      "projects_other": "〖{{count}} ƥřȯĵḗƈŧş ········〗",
+      "phases_one": "〖{{count}} ƥħȧşḗ ······〗",
+      "phases_other": "〖{{count}} ƥħȧşḗş ·······〗",
+      "excludingName": "〖ḗẋƈŀ {{name}} ······〗",
+      "excludingCount_one": "〖ḗẋƈŀ {{count}} ······〗",
+      "excludingCount_other": "〖ḗẋƈŀ {{count}} ······〗",
+      "boards": "〖{{count}} ƀȯȧřḓş ·······〗",
+      "excludingCount": "〖ḗẋƈŀ {{count}} ······〗",
+      "phases": "〖{{count}} ƥħȧşḗş ·······〗",
+      "projects": "〖{{count}} ƥřȯĵḗƈŧş ········〗",
+      "statuses": "〖{{count}} şŧȧŧŭşḗş ········〗"
     },
     "opportunityScopeOptions": {
-      "assigned": "55555",
-      "owned": "55555",
-      "all": "55555"
+      "assigned": "〖Ḓḗȧŀ şŧḗƥş ȧşşīɠƞḗḓ ········〗",
+      "owned": "〖Ḓḗȧŀ şŧḗƥş ȯƞ ȯẇƞḗḓ ḓḗȧŀş ··········〗",
+      "all": "〖Ḓḗȧŀ şŧḗƥş ȧşşīɠƞḗḓ ȯř ȯẇƞḗḓ ············〗"
     }
   },
   "actions": {
-    "print": "55555",
-    "printOptions": "55555"
+    "print": "〖Ƥřīƞŧ ··〗",
+    "printOptions": "〖Ƥřīƞŧ ȯƥŧīȯƞş ······〗"
   }
 }

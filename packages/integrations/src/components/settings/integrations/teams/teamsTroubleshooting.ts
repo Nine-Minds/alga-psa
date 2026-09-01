@@ -12,7 +12,7 @@
 export const TEAMS_DELIVERY_ERROR_CODES = [
   'graph_unauthorized',
   'user_not_mapped',
-  'addon_inactive',
+  'feature_disabled',
   'integration_inactive',
   'package_misconfigured',
   'graph_not_found',
@@ -51,10 +51,10 @@ export const TEAMS_DELIVERY_ERROR_REMEDIES: Record<TeamsDeliveryErrorCode, Teams
     'The recipient has not signed in to AlgaPSA with Microsoft, so no account mapping exists.',
     'Have the user sign in with Microsoft (MSP portal SSO or the Teams tab) so their account is mapped.',
   ),
-  addon_inactive: entry(
-    'addon_inactive',
-    'The Teams add-on is expired or absent, so sends are skipped while configuration is preserved.',
-    'Renew the Teams add-on for this tenant.',
+  feature_disabled: entry(
+    'feature_disabled',
+    'The Teams feature was disabled for this tenant when the delivery was attempted (pre-1.5).',
+    'Teams is now generally available; retry the send.',
   ),
   integration_inactive: entry(
     'integration_inactive',

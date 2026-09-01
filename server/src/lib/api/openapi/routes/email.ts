@@ -261,7 +261,7 @@ export function registerEmailRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/email/oauth/initiate',
     summary: 'Initiate email OAuth flow',
     description:
-      'Starts the OAuth 2.0 authorization flow for a Google or Microsoft email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit.',
+      'Starts the OAuth 2.0 authorization flow for a Google email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit. Microsoft mailbox OAuth is not served by this unsigned route: it must be initiated from the mailbox form with an explicit application selection so the callback receives a signed state token.',
     tags: [tag],
     security: [{ SessionCookieAuth: [] }],
     request: {
@@ -450,7 +450,7 @@ export function registerEmailRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/email/webhooks/microsoft',
     summary: 'Receive Microsoft Graph email webhook',
     description:
-      'Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, validates clientState against the stored webhook_verification_token when configured, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.',
+      'Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, requires a timing-safe clientState match against the stored webhook_verification_token, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.',
     tags: [tag],
     security: [],
     request: {

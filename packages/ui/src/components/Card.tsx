@@ -17,7 +17,7 @@ export function Card({
   const cardContent = (
     <div
       ref={ref}
-      className={`rounded-lg border dark:border-[rgb(var(--color-border-100))] bg-card text-card-foreground shadow-sm ${className ?? ''}`}
+      className={`rounded-lg border bg-card text-card-foreground card-elevated ${className ?? ''}`}
       id={id}
       data-automation-id={dataAutomationId}
       data-automation-type={dataAutomationType}
@@ -98,7 +98,7 @@ export function CardFooter({
   return (
     <div
       ref={ref}
-      className={`flex items-center p-6 pt-0 ${className ?? ''}`}
+      className={`flex items-center gap-2 p-6 pt-0 ${className ?? ''}`}
       {...props}
     />
   );

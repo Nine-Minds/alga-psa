@@ -12,6 +12,42 @@ export function localToUtc(localDate: Date, timeZone: string): Date {
   return fromZonedTime(localDate, timeZone);
 }
 
+/**
+ * Convert an HTML datetime-local wall time to an instant in an explicit IANA
+ * zone. `reject` is deliberate: DST gaps and repeated wall times require the
+ * user to choose an unambiguous time instead of silently moving the schedule.
+ */
+export function zonedWallTimeToUtc(wallTime: string, timeZone: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(wallTime);
+  if (!match) throw new Error('Enter a valid local date and time');
+  try {
+    const zoned = Temporal.ZonedDateTime.from({
+      timeZone,
+      year: Number(match[1]),
+      month: Number(match[2]),
+      day: Number(match[3]),
+      hour: Number(match[4]),
+      minute: Number(match[5]),
+      second: Number(match[6] ?? 0),
+    }, { disambiguation: 'reject' });
+    return new Date(zoned.epochMilliseconds);
+  } catch {
+    throw new Error('That local time is invalid or ambiguous in the selected time zone');
+  }
+}
+
+/**
+ * Serialize a Date's local wall-clock fields to an HTML datetime-local string
+ * (`YYYY-MM-DDTHH:mm`). The design-system DateTimePicker emits a browser-local
+ * Date; pairing this with zonedWallTimeToUtc lets callers reinterpret the picked
+ * wall time in an explicit IANA zone with the same DST-reject guarantee a raw
+ * datetime-local string carried.
+ */
+export function dateToWallTimeString(date: Date): string {
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function formatDateTime(
   date: Date,
   timeZone: string,
@@ -37,6 +73,112 @@ export function formatRelativeDateTime(date: Date, timeZone: string): string {
 
 export function formatDateOnly(date: Date, formatString: string = 'yyyy-MM-dd'): string {
   return format(date, formatString);
+}
+
+/**
+ * Build a Date from a calendar-date value that displays the same day in every
+ * timezone, by anchoring at local noon (the contracts screens' established
+ * pattern for date-only values like `expiration_date`). Without the noon anchor,
+ * `new Date('2026-08-31')` becomes UTC midnight and shifts back a day in
+ * negative-offset timezones (and forward a day at UTC+12 and beyond). Returns
+ * null for empty or unparseable input.
+ */
+export function toCalendarDisplayDate(
+  value: string | Date | Temporal.PlainDate | null | undefined,
+): Date | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  try {
+    const plainDate = toPlainDate(value);
+    return new Date(plainDate.year, plainDate.month - 1, plainDate.day, 12);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Format a calendar-date value for display without a timezone round-trip.
+ * Returns null for empty or unparseable input. Use for date-only values
+ * (e.g. `expiration_date`); true instants like `created_at` should keep going
+ * through {@link formatDateOnly} so they render in local time.
+ */
+export function formatCalendarDate(
+  value: string | Date | Temporal.PlainDate | null | undefined,
+  formatString: string = 'yyyy-MM-dd',
+): string | null {
+  const displayDate = toCalendarDisplayDate(value);
+  return displayDate ? formatDateOnly(displayDate, formatString) : null;
+}
+
+/**
+ * Convert a DatePicker-produced local-midnight `Date` (or any date-like value)
+ * to a plain calendar-date string (YYYY-MM-DD), reading LOCAL calendar
+ * components. Never round-trips through `toISOString()`: a local-midnight Date
+ * at UTC+2 serializes as the previous UTC day, which is how selected dates
+ * drifted backwards on persist. This is the safe inverse of
+ * {@link toCalendarDisplayDate} — keep the two in step.
+ *
+ * - `Date` → local getFullYear/getMonth/getDate. Safe both for DatePicker
+ *   selections and for pg DATE columns, which node-postgres materializes as
+ *   local-midnight Date objects.
+ * - `YYYY-MM-DD` string → validated via `Temporal.PlainDate.from` and passed
+ *   through byte-for-byte.
+ * - Full ISO instant string → existing UTC calendar-date semantics (legacy
+ *   callers; date-only values never take this branch).
+ * - `Temporal.PlainDate` → its calendar date.
+ * - `null`/`undefined`/`''` → `null`.
+ *
+ * Throws on invalid values; callers treat that as a validation failure.
+ */
+export function toCalendarDateString(
+  value: Date | string | Temporal.PlainDate | null | undefined,
+): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      throw new Error(`Invalid date value: ${String(value)}`);
+    }
+    return (
+      String(value.getFullYear()) +
+      '-' +
+      String(value.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(value.getDate()).padStart(2, '0')
+    );
+  }
+  if (value instanceof Temporal.PlainDate) {
+    return value.toString();
+  }
+  if (value.length === 10) {
+    return Temporal.PlainDate.from(value).toString();
+  }
+  return toPlainDate(value).toString();
+}
+
+/**
+ * Calendar date (YYYY-MM-DD) of `value` in the given IANA timezone. Derived via
+ * Intl.DateTimeFormat parts so the result is the wall-clock calendar day in
+ * `timeZone` regardless of the host's timezone — never routed through Date
+ * reparsing or toISOString (which would re-read the host/UTC calendar). This is
+ * the timezone-aware counterpart to {@link toCalendarDateString}: use it where
+ * "today" must be evaluated on a tenant's calendar (expiration boundaries) and
+ * the worker host's timezone is not authoritative.
+ *
+ * Throws on an invalid timeZone string (Intl rejects garbage); callers should
+ * resolve the timezone through a validating fallback (e.g. the tenant-settings
+ * read + `normalizeIanaTimeZone` pattern) and default to 'UTC' when unset.
+ */
+export function toCalendarDateStringInTimeZone(value: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 export function formatUtcDateNoTime(date: Date): string {

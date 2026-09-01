@@ -89,12 +89,12 @@ async function checkPermission(
   knex: Knex
 ): Promise<PortalDomainActionError | null> {
   if (action === UPDATE_ACTION && user.user_type === 'client') {
-    return permissionError('Client portal users cannot manage custom domains.');
+    return permissionError('Client portal users cannot manage custom domains.', 'msp/settings:errors.clientPortalDomain.portalUsersNotAllowed');
   }
 
   const allowed = await hasPermission(user, REQUIRED_RESOURCE, action, knex);
   if (!allowed) {
-    return permissionError('You do not have permission to manage client portal settings.');
+    return permissionError('You do not have permission to manage client portal settings.', 'msp/settings:errors.clientPortalDomain.noPermission');
   }
 
   return null;
@@ -102,29 +102,29 @@ async function checkPermission(
 
 function validateRequestedDomain(rawDomain: string, canonicalHost: string): string | ActionMessageError {
   if (!rawDomain?.trim()) {
-    return actionError('Domain is required.');
+    return actionError('Domain is required.', 'msp/settings:errors.clientPortalDomain.required');
   }
 
   const normalized = normalizeHostname(rawDomain);
 
   if (normalized.length < 3 || normalized.length > 253) {
-    return actionError('Domain must be between 3 and 253 characters.');
+    return actionError('Domain must be between 3 and 253 characters.', 'msp/settings:errors.clientPortalDomain.length');
   }
 
   if (!/^[a-z0-9.-]+$/.test(normalized)) {
-    return actionError('Domain may only include letters, numbers, hyphens, and dots.');
+    return actionError('Domain may only include letters, numbers, hyphens, and dots.', 'msp/settings:errors.clientPortalDomain.charset');
   }
 
   if (!normalized.includes('.')) {
-    return actionError('Domain must include at least one dot.');
+    return actionError('Domain must include at least one dot.', 'msp/settings:errors.clientPortalDomain.needsDot');
   }
 
   if (normalized === canonicalHost) {
-    return actionError('Please choose a domain other than the canonical host.');
+    return actionError('Please choose a domain other than the canonical host.', 'msp/settings:errors.clientPortalDomain.notCanonicalHost');
   }
 
   if (normalized.startsWith('.') || normalized.endsWith('.')) {
-    return actionError('Domain cannot start or end with a dot.');
+    return actionError('Domain cannot start or end with a dot.', 'msp/settings:errors.clientPortalDomain.noLeadingTrailingDot');
   }
 
   return normalized;
@@ -150,9 +150,7 @@ function validateDirectModeDomain(domain: string): ActionMessageError | null {
 
   const appHost = getNextAuthHostname();
   if (appHost && domain === appHost) {
-    return actionError(
-      "Choose a domain other than this appliance's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here."
-    );
+    return actionError("Choose a domain other than this appliance's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.", 'msp/settings:errors.clientPortalDomain.notApplianceHost');
   }
 
   return null;
@@ -274,11 +272,11 @@ export const retryPortalDomainRegistrationAction = withAuth(async (user, { tenan
   const current = await getPortalDomain(knex, tenant);
 
   if (!current || !current.domain) {
-    return actionError('No failed custom domain registration to retry.');
+    return actionError('No failed custom domain registration to retry.', 'msp/settings:errors.clientPortalDomain.nothingToRetry');
   }
 
   if (!RETRYABLE_FAILURE_STATUSES.includes(current.status)) {
-    return actionError('Retry is only available after a failed registration.');
+    return actionError('Retry is only available after a failed registration.', 'msp/settings:errors.clientPortalDomain.retryOnlyAfterFailure');
   }
 
   await getPortalDomainProvisioner().retry({ knex, tenant, existing: current });

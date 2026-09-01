@@ -12,6 +12,7 @@ const fetchInvoicesPaginatedMock = vi.fn();
 const getInvoiceForRenderingMock = vi.fn();
 const mapDbInvoiceToWasmViewModelMock = vi.fn();
 const runAuthoritativeInvoiceTemplatePreviewMock = vi.fn();
+const getTenantBrandingForDocumentPreviewMock = vi.fn();
 const templateRendererMock = vi.fn();
 const paperInvoiceMock = vi.fn();
 
@@ -29,6 +30,11 @@ vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', () => ({
 vi.mock('@alga-psa/billing/actions/invoiceTemplatePreview', () => ({
   runAuthoritativeInvoiceTemplatePreview: (...args: unknown[]) =>
     runAuthoritativeInvoiceTemplatePreviewMock(...args),
+}));
+
+vi.mock('@alga-psa/billing/actions/tenantBrandingPreview', () => ({
+  getTenantBrandingForDocumentPreview: (...args: unknown[]) =>
+    getTenantBrandingForDocumentPreviewMock(...args),
 }));
 
 vi.mock('../billing-dashboard/PaperInvoice', () => ({
@@ -143,6 +149,20 @@ afterEach(() => {
   cleanup();
 });
 
+// The preview panel now holds two comboboxes — the existing-invoice picker and
+// the preview-language select — so target the picker by component rather than
+// by role. `combobox` takes no name from content, so it has no accessible name.
+const openExistingInvoiceSelect = async () => {
+  const trigger = await waitFor(() => {
+    const element = document.querySelector(
+      '[data-automation-type="async-searchable-select"] button[role="combobox"]'
+    );
+    if (!element) throw new Error('Existing-invoice select is not rendered');
+    return element as HTMLElement;
+  });
+  fireEvent.click(trigger);
+};
+
 describe('DesignerVisualWorkspace', () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -159,8 +179,10 @@ describe('DesignerVisualWorkspace', () => {
     getInvoiceForRenderingMock.mockReset();
     mapDbInvoiceToWasmViewModelMock.mockReset();
     runAuthoritativeInvoiceTemplatePreviewMock.mockReset();
+    getTenantBrandingForDocumentPreviewMock.mockReset();
     templateRendererMock.mockReset();
     paperInvoiceMock.mockReset();
+    getTenantBrandingForDocumentPreviewMock.mockResolvedValue(null);
     fetchInvoicesPaginatedMock.mockResolvedValue(buildInvoiceListResult());
     getInvoiceForRenderingMock.mockResolvedValue({ invoice_id: 'inv-1' });
     mapDbInvoiceToWasmViewModelMock.mockReturnValue({
@@ -328,7 +350,7 @@ describe('DesignerVisualWorkspace', () => {
   it('calls paginated invoice search with status=all and query filters', async () => {
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    fireEvent.click(await screen.findByRole('combobox'));
+    await openExistingInvoiceSelect();
 
     await waitFor(() => expect(fetchInvoicesPaginatedMock).toHaveBeenCalled());
     expect(fetchInvoicesPaginatedMock.mock.calls.at(-1)?.[0]).toMatchObject({
@@ -352,7 +374,7 @@ describe('DesignerVisualWorkspace', () => {
     fetchInvoicesPaginatedMock.mockResolvedValue(buildInvoiceListResult({ totalPages: 3 }));
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    fireEvent.click(await screen.findByRole('combobox'));
+    await openExistingInvoiceSelect();
     await waitFor(() => expect(fetchInvoicesPaginatedMock.mock.calls.at(-1)?.[0]).toMatchObject({ page: 1 }));
     expect(await screen.findByText('INV-001 · Acme Co.')).toBeTruthy();
   });
@@ -360,7 +382,7 @@ describe('DesignerVisualWorkspace', () => {
   it('loads selected existing invoice detail and maps it for preview', async () => {
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    fireEvent.click(await screen.findByRole('combobox'));
+    await openExistingInvoiceSelect();
     fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
 
     await waitFor(() => expect(getInvoiceForRenderingMock).toHaveBeenCalledWith('inv-1'));
@@ -396,7 +418,7 @@ describe('DesignerVisualWorkspace', () => {
 
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    fireEvent.click(await screen.findByRole('combobox'));
+    await openExistingInvoiceSelect();
     fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
 
     await waitFor(() =>
@@ -432,9 +454,9 @@ describe('DesignerVisualWorkspace', () => {
 
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    fireEvent.click(await screen.findByRole('combobox'));
+    await openExistingInvoiceSelect();
     fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
-    fireEvent.click((await screen.findAllByRole('combobox'))[0]!);
+    await openExistingInvoiceSelect();
     fireEvent.click(await screen.findByText('INV-002 · Globex'));
 
     resolveFirst({ invoice_id: 'inv-1' });
@@ -449,7 +471,7 @@ describe('DesignerVisualWorkspace', () => {
     fetchInvoicesPaginatedMock.mockResolvedValueOnce(buildInvoiceListResult({ invoices: [], total: 0, totalPages: 0 }));
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    fireEvent.click(await screen.findByRole('combobox'));
+    await openExistingInvoiceSelect();
     await waitFor(() => {
       expect(screen.getByText('No invoices found.')).toBeTruthy();
     });
@@ -504,7 +526,7 @@ describe('DesignerVisualWorkspace', () => {
   it('shows the selected existing invoice label after selection', async () => {
     renderWorkspace('preview');
     fireEvent.click(screen.getByText('Existing'));
-    fireEvent.click(await screen.findByRole('combobox'));
+    await openExistingInvoiceSelect();
     fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
     await waitFor(() => expect(getInvoiceForRenderingMock).toHaveBeenCalled());
     expect(screen.getByText('INV-001 · Acme Co.')).toBeTruthy();
@@ -540,13 +562,25 @@ describe('DesignerVisualWorkspace', () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
 
-    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    // This is the only preview assertion that waits for an *additional* pipeline
+    // call after a user interaction (the Re-run click), so its window is the
+    // tightest in the suite. Under the unit-test gate's parallel CI load the
+    // event loop can be starved past waitFor's 1s default before the forced
+    // recompute registers, so give both waits the same 5s budget the sibling
+    // automaticInvoices load-fragile assertions use.
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled(), { timeout: 5000 });
     const baselineCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
 
-    fireEvent.click(screen.getByRole('button', { name: 'Re-run' }));
+    const rerunButton = await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'Re-run' });
+      expect(button.hasAttribute('disabled')).toBe(false);
+      return button;
+    });
+    fireEvent.click(rerunButton);
 
-    await waitFor(() =>
-      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls)
+    await waitFor(
+      () => expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls),
+      { timeout: 5000 }
     );
 
     const latestCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0];
@@ -690,6 +724,69 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
+  it('renders the tenant real branding on sample previews instead of the synthetic issuer', async () => {
+    getTenantBrandingForDocumentPreviewMock.mockResolvedValue({
+      name: 'Cascade IT Partners',
+      address: '88 Pearl St, Boulder, CO 80302',
+      email: 'billing@cascadeit.example',
+      phone: '+1-303-555-0114',
+      logo_url: 'https://cdn.example/logo.png',
+    });
+
+    renderWorkspace('preview');
+
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.tenantClient).toEqual({
+        name: 'Cascade IT Partners',
+        address: '88 Pearl St, Boulder, CO 80302',
+        logoUrl: 'https://cdn.example/logo.png',
+      })
+    );
+    // The rest of the sample must survive the overlay untouched.
+    expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.invoiceNumber).toBe(
+      'INV-2026-0147'
+    );
+  });
+
+  it('keeps the synthetic sample issuer when the tenant has no resolvable branding', async () => {
+    getTenantBrandingForDocumentPreviewMock.mockResolvedValue(null);
+
+    renderWorkspace('preview');
+
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.tenantClient).toEqual({
+      name: 'Northwind MSP',
+      address: '400 SW Main St, Portland, OR 97204',
+      logoUrl: null,
+    });
+  });
+
+  it('leaves an existing invoice preview on its own persisted branding', async () => {
+    getTenantBrandingForDocumentPreviewMock.mockResolvedValue({
+      name: 'Cascade IT Partners',
+      address: '88 Pearl St, Boulder, CO 80302',
+      email: null,
+      phone: null,
+      logo_url: 'https://cdn.example/logo.png',
+    });
+
+    renderWorkspace('preview');
+    fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
+    await openExistingInvoiceSelect();
+    fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
+
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.invoiceNumber).toBe(
+        'INV-001'
+      )
+    );
+    expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.tenantClient).toEqual({
+      name: 'Northwind MSP',
+      address: '400 SW Main',
+      logoUrl: null,
+    });
+  });
+
   it('refreshes preview output when switching Sample -> Existing -> Sample', async () => {
     seedBoundField('invoice.number');
     const baselineNodeIds = useInvoiceDesignerStore.getState().nodes.map((node) => node.id);
@@ -713,7 +810,7 @@ describe('DesignerVisualWorkspace', () => {
       'INV-2026-0147'
     );
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    fireEvent.click(await screen.findByRole('combobox'));
+    await openExistingInvoiceSelect();
     fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
     await waitFor(() =>
       expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.invoiceNumber).toBe(

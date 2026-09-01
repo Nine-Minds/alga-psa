@@ -62,10 +62,17 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({
     isOpen,
     children,
+    footer,
   }: {
     isOpen: boolean;
     children: React.ReactNode;
-  }) => (isOpen ? <div data-testid="workflow-editor-dialog">{children}</div> : null),
+    footer?: React.ReactNode;
+  }) => (isOpen ? (
+    <div data-testid="workflow-editor-dialog">
+      {children}
+      {footer}
+    </div>
+  ) : null),
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,

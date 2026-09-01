@@ -18,6 +18,7 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ISlaBreachRateByDimension } from '../../types';
 
 interface SlaBreachChartProps {
@@ -28,14 +29,17 @@ interface SlaBreachChartProps {
 
 export const SlaBreachChart: React.FC<SlaBreachChartProps> = ({
   data,
-  title = 'Breaches by Priority',
+  title,
   loading
 }) => {
+  const { t } = useTranslation('msp/settings');
+  const chartTitle = title ?? t('sla.dashboard.breachChart.title', { defaultValue: 'Breaches by Priority' });
+
   if (loading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{title}</CardTitle>
+          <CardTitle>{chartTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse h-64 bg-muted rounded"></div>
@@ -48,11 +52,11 @@ export const SlaBreachChart: React.FC<SlaBreachChartProps> = ({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{title}</CardTitle>
+          <CardTitle>{chartTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No breach data available
+            {t('sla.dashboard.breachChart.empty', { defaultValue: 'No breach data available' })}
           </div>
         </CardContent>
       </Card>
@@ -90,7 +94,7 @@ export const SlaBreachChart: React.FC<SlaBreachChartProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle>{chartTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64">
@@ -122,7 +126,10 @@ export const SlaBreachChart: React.FC<SlaBreachChartProps> = ({
                 itemStyle={{ color: textColor }}
                 formatter={(value: number, name: string, props: { payload?: { breached: number; total: number } }) => {
                   if (name === 'breachRate' && props.payload) {
-                    return [`${value}% (${props.payload.breached}/${props.payload.total})`, 'Breach Rate'];
+                    return [
+                      `${value}% (${props.payload.breached}/${props.payload.total})`,
+                      t('sla.dashboard.breachChart.breachRate', { defaultValue: 'Breach Rate' })
+                    ];
                   }
                   return [value, name];
                 }}

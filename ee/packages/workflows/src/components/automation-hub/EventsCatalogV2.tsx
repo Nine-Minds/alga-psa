@@ -7,9 +7,12 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { dateFromString, dateTimeFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -532,22 +535,6 @@ const setDeepValue = (obj: unknown, path: Array<string | number>, nextValue: unk
 const pathToKey = (path: Array<string | number>): string =>
   path.reduce<string>((acc, part) => (typeof part === 'number' ? `${acc}[${part}]` : acc ? `${acc}.${part}` : String(part)), '');
 
-const toDateTimeLocalInputValue = (value: string): string => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
-const fromDateTimeLocalInputValue = (value: string): string => {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toISOString();
-};
-
 type ValidationT = (key: string, options?: Record<string, unknown>) => string;
 
 const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSchema, t: ValidationT, path = ''): ValidationIssue[] => {
@@ -745,31 +732,60 @@ const SchemaForm: React.FC<{
       );
     }
 
-    const inputType = resolved.format === 'date-time' ? 'datetime-local' : resolved.format === 'date' ? 'date' : 'text';
-    const renderedValue = (() => {
-      if (currentValue == null) return '';
-      if (resolved.format === 'date-time' && typeof currentValue === 'string') {
-        return toDateTimeLocalInputValue(currentValue);
-      }
-      return String(currentValue);
-    })();
+    const isNumeric = type === 'number' || type === 'integer';
+    const dateFormat = !isNumeric && (resolved.format === 'date' || resolved.format === 'date-time')
+      ? resolved.format
+      : null;
+
+    if (dateFormat) {
+      const rawValue = typeof currentValue === 'string' ? currentValue : '';
+      const commit = (next: Date | undefined) => {
+        const serialized = !next
+          ? null
+          : dateFormat === 'date-time' ? next.toISOString() : dateToString(next);
+        onChange(setDeepValue(value, path, serialized) as Record<string, unknown>);
+      };
+
+      return (
+        <div className="rounded border border-gray-200 bg-white p-3 space-y-1">
+          {commonHeader}
+          {dateFormat === 'date-time' ? (
+            <DateTimePicker
+              id={`simulate-form-${fieldPath}`}
+              label={label}
+              required={isRequired}
+              clearable
+              value={dateTimeFromString(rawValue)}
+              onChange={commit}
+            />
+          ) : (
+            <DatePicker
+              id={`simulate-form-${fieldPath}`}
+              label={label}
+              required={isRequired}
+              clearable
+              value={dateFromString(rawValue)}
+              onChange={commit}
+            />
+          )}
+          {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
+          {fieldErrors.map((err) => (
+            <div key={`${fieldPath}-${err.message}`} className="text-xs text-destructive">{err.message}</div>
+          ))}
+        </div>
+      );
+    }
 
     return (
       <div className="rounded border border-gray-200 bg-white p-3 space-y-1">
         {commonHeader}
         <Input
           id={`simulate-form-${fieldPath}`}
-          type={type === 'number' || type === 'integer' ? 'number' : inputType}
-          value={renderedValue}
+          type={isNumeric ? 'number' : 'text'}
+          value={currentValue == null ? '' : String(currentValue)}
           onChange={(e) => {
             const raw = e.target.value;
-            const parsed = raw === ''
-              ? null
-              : (type === 'number' || type === 'integer'
-                ? Number(raw)
-                : resolved.format === 'date-time'
-                  ? fromDateTimeLocalInputValue(raw)
-                  : raw);
+            const parsed = raw === '' ? null : (isNumeric ? Number(raw) : raw);
             onChange(setDeepValue(value, path, parsed) as Record<string, unknown>);
           }}
         />
@@ -1514,7 +1530,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
       <Dialog
         isOpen={schemaModalOpen}
         onClose={() => setSchemaModalOpen(false)}
-        title={t('automation.eventsCatalog.schemaModal.title', { defaultValue: 'Schema' })}
+        title={t('automation.eventsCatalog.schemaModal.headerTitle', { defaultValue: 'Payload schema' })}
         className="max-w-4xl"
         footer={
           <div className="flex justify-end space-x-2">
@@ -1523,9 +1539,6 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
         }
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('automation.eventsCatalog.schemaModal.headerTitle', { defaultValue: 'Payload schema' })}</DialogTitle>
-          </DialogHeader>
           {schemaLoading && <div className="text-sm text-gray-500">{t('automation.eventsCatalog.schemaModal.loading', { defaultValue: 'Loading…' })}</div>}
           {!schemaLoading && !fullSchema && <div className="text-sm text-destructive">{t('automation.eventsCatalog.schemaModal.unavailable', { defaultValue: 'Schema not available.' })}</div>}
           {!schemaLoading && fullSchema && (
@@ -1631,7 +1644,7 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
     <Dialog
       isOpen={open}
       onClose={onClose}
-      title={t('automation.eventsCatalog.metricsDialog.title', { defaultValue: 'Metrics' })}
+      title={t('automation.eventsCatalog.metricsDialog.headerTitle', { defaultValue: 'Metrics · {{eventType}}', eventType: eventType ?? '' })}
       className="max-w-4xl"
       footer={
         <div className="flex justify-end space-x-2">
@@ -1640,18 +1653,23 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
       }
     >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('automation.eventsCatalog.metricsDialog.headerTitle', { defaultValue: 'Metrics · {{eventType}}', eventType: eventType ?? '' })}</DialogTitle>
-        </DialogHeader>
         <div className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1">
               <div className="text-xs text-gray-500">{t('automation.eventsCatalog.metricsDialog.from', { defaultValue: 'From' })}</div>
-              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <DatePicker
+                label={t('automation.eventsCatalog.metricsDialog.from', { defaultValue: 'From' })}
+                value={dateFromString(from)}
+                onChange={(date) => setFrom(dateToString(date))}
+              />
             </div>
             <div className="flex flex-col gap-1">
               <div className="text-xs text-gray-500">{t('automation.eventsCatalog.metricsDialog.to', { defaultValue: 'To' })}</div>
-              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              <DatePicker
+                label={t('automation.eventsCatalog.metricsDialog.to', { defaultValue: 'To' })}
+                value={dateFromString(to)}
+                onChange={(date) => setTo(dateToString(date))}
+              />
             </div>
             <Button id="workflow-event-metrics-refresh" variant="outline" onClick={() => void load()} disabled={loading}>
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -1933,7 +1951,7 @@ const SimulateDialog: React.FC<{
     <Dialog
       isOpen={open}
       onClose={onClose}
-      title={t('automation.eventsCatalog.simulateDialog.title', { defaultValue: 'Simulate event' })}
+      title={t('automation.eventsCatalog.simulateDialog.headerTitle', { defaultValue: 'Simulate · {{eventType}}', eventType: eventType ?? '' })}
       className="max-w-4xl"
       footer={
         <div className="flex justify-end space-x-2">
@@ -1947,10 +1965,6 @@ const SimulateDialog: React.FC<{
       }
     >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('automation.eventsCatalog.simulateDialog.headerTitle', { defaultValue: 'Simulate · {{eventType}}', eventType: eventType ?? '' })}</DialogTitle>
-        </DialogHeader>
-
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Input
@@ -2142,9 +2156,6 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
       }
     >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('automation.eventsCatalog.defineEventDialog.headerTitle', { defaultValue: 'Define Custom Event' })}</DialogTitle>
-        </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Input label={t('automation.eventsCatalog.defineEventDialog.fields.eventType', { defaultValue: 'Event type' })} value={eventType} onChange={(e) => setEventType(e.target.value)} placeholder={t('automation.eventsCatalog.defineEventDialog.fields.eventTypePlaceholder', { defaultValue: 'e.g. ticket.created' })} />

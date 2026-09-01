@@ -42,7 +42,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
   };
 
   if (isLoading) {
-    return <Card className="h-64 animate-pulse bg-gray-50" />;
+    return <Card className="h-64 animate-pulse skeleton-fill" />;
   }
 
   return (

@@ -17,7 +17,9 @@ spec:
   selector:
     matchLabels:
       {{- include "temporal-worker.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: temporal-worker
+      {{- with .Values.extraSelectorLabels }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
   template:
     metadata:
       annotations:
@@ -91,7 +93,7 @@ spec:
             - |
               . /vault/secrets/internal-api
               . /vault/secrets/auth-key
-              exec node dist/worker.js
+              exec node dist/ee/temporal-workflows/src/worker.js
           {{- end }}
           env:
             # Node.js module resolution
@@ -131,14 +133,27 @@ spec:
             # Application Configuration
             - name: NODE_ENV
               value: "production"
+            - name: DEPLOYMENT_PROFILE
+              value: {{ .Values.deploymentProfile | default "hosted" | quote }}
             - name: LOG_LEVEL
               value: "{{ .Values.logLevel }}"
             - name: APPLICATION_URL
+              {{- with .Values.applicationUrlSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name | quote }}
+                  key: {{ .key | quote }}
+              {{- else }}
               value: "{{ .Values.applicationUrl }}"
+              {{- end }}
             - name: NEXT_PUBLIC_BASE_URL
               value: "{{ .Values.publicBaseUrl }}"
             - name: NM_STORE_URL
               value: "{{ .Values.nm_store.baseUrl }}"
+            {{- if .Values.sharedTenantSecrets.enabled }}
+            - name: SECRET_FS_BASE_PATH
+              value: "{{ .Values.sharedTenantSecrets.mountPath }}"
+            {{- end }}
             
             # Email Configuration
             - name: RESEND_API_KEY
@@ -252,11 +267,24 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           
           volumeMounts:
+            {{- if .Values.sharedTenantSecrets.enabled }}
+            - name: shared-tenant-secrets
+              mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
+              {{- if .Values.sharedTenantSecrets.readOnly }}
+              readOnly: true
+              {{- end }}
+            {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
       
       volumes:
+        {{- if .Values.sharedTenantSecrets.enabled }}
+        - name: shared-tenant-secrets
+          hostPath:
+            path: {{ .Values.sharedTenantSecrets.hostPath }}
+            type: DirectoryOrCreate
+        {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

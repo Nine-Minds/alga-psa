@@ -419,7 +419,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       >
       <div
         ref={dropdownRef}
-        className="fixed z-[10000] bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
+        className="fixed z-[10000] bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-md shadow-lg overflow-hidden"
         style={{
           top: dropdownCoords.top,
           bottom: dropdownCoords.bottom,
@@ -433,7 +433,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
         onWheel={(e) => e.stopPropagation()}
         data-radix-popper-content-wrapper=""
       >
-        <div className="p-3 border-b border-gray-100 bg-gray-50">
+        <div className="p-3 border-b border-[rgb(var(--color-border-200))]">
           <div className="flex items-center gap-2">
             <Input
               ref={searchInputRef}
@@ -507,7 +507,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                   className={`flex w-full items-center gap-2 p-3 text-left ${
                     isDisabled
                       ? 'opacity-50 cursor-not-allowed'
-                      : `cursor-pointer hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset ${isSelected ? 'bg-gray-50' : ''}`
+                      : `cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset ${isSelected ? 'bg-[rgb(var(--color-table-selected))]' : ''}`
                   }`}
                 >
                   <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size="sm" />
@@ -528,7 +528,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
         </div>
         {onAddNew && (
           <>
-            <div className="border-t border-gray-200" />
+            <div className="border-t border-[rgb(var(--color-border-200))]" />
             <Button
               id="client-picker-add-new-btn"
               type="button"

@@ -226,7 +226,8 @@
       "loadHistory": "Der Verlauf der wiederkehrenden Rechnungen konnte nicht geladen werden. Bitte versuchen Sie es erneut."
     },
     "loading": {
-      "billingData": "Abrechnungsdaten werden geladen"
+      "billingData": "Abrechnungsdaten werden geladen",
+      "candidates": "Rechnungskandidaten werden geladen."
     },
     "views": {
       "all": "Alle",
@@ -342,7 +343,7 @@
       "refresh": "Beim Aktualisieren der Rechnungsdaten ist ein Fehler aufgetreten.",
       "updateFailed": "Fehler beim Aktualisieren der Rechnung",
       "generateFailed": "Fehler beim Generieren der Rechnung",
-      "NO_BILLING_EMAIL": "Für {{clientName}} ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege eine E-Mail-Adresse am Rechnungsstandort des Kunden fest und versuche es erneut.",
+      "NO_BILLING_EMAIL": "Für {{clientName}} ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest und versuche es erneut.",
       "CLIENT_NOT_FOUND": "Der ausgewählte Kunde wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
       "SERVICE_NOT_FOUND": "Der Dienst {{serviceId}} wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
       "INVALID_QUANTITY": "Die Menge muss größer als null sein.",
@@ -356,7 +357,7 @@
       "salesOrderNotInvoiceable": "Dieser Kundenauftrag kann nicht mehr abgerechnet werden."
     },
     "warnings": {
-      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung eine E-Mail-Adresse am Rechnungsstandort fest."
+      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."
     },
     "errorFallback": {
       "title": "Etwas ist schief gelaufen",
@@ -369,8 +370,6 @@
   "draftsTab": {
     "title": "Rechnungsentwürfe",
     "searchPlaceholder": "Rechnungen suchen...",
-    "bulkActions_one": "Aktionen ({{count}})",
-    "bulkActions_other": "Aktionen ({{count}})",
     "columns": {
       "invoiceNumber": "Rechnungsnummer",
       "client": "Kunde",
@@ -421,13 +420,17 @@
       "message": "Diese Rechnung ist so eingestellt, dass die Steuer von einem externen Buchhaltungssystem berechnet wird, aber es wurde noch keine Steuer importiert, sodass sie nicht abgeschlossen werden kann. Exportieren Sie sie in Ihr Buchhaltungssystem (QuickBooks, Xero) und importieren Sie die Steuer zurück, um sie mit externer Steuer abzuschließen – oder wechseln Sie diese Rechnung jetzt zur internen Steuer, damit Alga die Steuer berechnet, und schließen Sie sie ab.",
       "confirm": "Zur internen Steuer wechseln & abschließen",
       "cancel": "Abbrechen"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "clear": "Auswahl aufheben"
+      }
     }
   },
   "finalizedTab": {
     "title": "Abgeschlossene Rechnungen",
     "searchPlaceholder": "Rechnungen suchen...",
-    "bulkActions_one": "Aktionen ({{count}})",
-    "bulkActions_other": "Aktionen ({{count}})",
     "columns": {
       "invoiceNumber": "Rechnungsnummer",
       "client": "Kunde",
@@ -461,6 +464,12 @@
       "unfinalizeFailed": "Die Rechnung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
       "bulkUnfinalizeFailed": "Rechnungen konnten nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
       "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} konnte nicht wieder geöffnet werden: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "clear": "Auswahl aufheben"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -973,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Erstellen Sie eine Vorauszahlungsrechnung",
-      "creditMemo": "Gutschrift erstellen"
+      "prepayment": "Erstellen Sie eine Vorauszahlungsrechnung"
     },
     "descriptions": {
-      "prepayment": "Vorauszahlungsrechnungen schaffen eine Gutschrift des Kunden für den zukünftigen Wert. Sie schaffen keine wiederkehrenden Servicezeiträume; Später wiederkehrende Rechnungen behalten ihren eigenen Leistungszeitraumschutz.",
-      "creditMemo": "Gutschriften passen Finanzsalden an, ohne die Abdeckung wiederkehrender Serviceperioden auf der Quellrechnung neu zu definieren."
+      "prepayment": "Vorauszahlungsrechnungen schaffen eine Gutschrift des Kunden für den zukünftigen Wert. Sie schaffen keine wiederkehrenden Servicezeiträume; Später wiederkehrende Rechnungen behalten ihren eigenen Leistungszeitraumschutz."
     },
     "fields": {
-      "type": "Typ",
       "client": "Kunde",
       "amount": "Betrag",
-      "description": "Beschreibung"
-    },
-    "types": {
-      "prepaymentInvoice": "Vorauszahlungsrechnung",
-      "creditMemo": "Gutschrift"
+      "descriptionOptional": "Beschreibung (optional)"
     },
     "placeholders": {
       "amount": "Betrag eingeben",
-      "prepaymentDescription": "Vorauszahlung für zukünftige Dienstleistungen",
-      "creditMemoDescription": "Grund für die Gutschrift"
+      "prepaymentDescription": "Vorauszahlung für zukünftige Dienstleistungen"
     },
     "errors": {
       "allFieldsRequired": "Bitte füllen Sie alle Felder aus",
       "validAmount": "Bitte geben Sie einen gültigen Betrag ein",
-      "creditMemosUnsupported": "Gutschriften werden noch nicht unterstützt",
       "generateFailed": "Fehler beim Generieren der Rechnung"
     },
     "actions": {
       "generating": "Generieren...",
-      "generatePrepayment": "Erstellen Sie eine Vorauszahlungsrechnung",
-      "generateCreditMemo": "Gutschrift erstellen"
+      "generatePrepayment": "Erstellen Sie eine Vorauszahlungsrechnung"
     }
   },
   "contractItems": {
@@ -1119,7 +1118,8 @@
       "unknownClient": "Unbekannter Kunde",
       "status": "Status",
       "system": "System",
-      "total": "Gesamt"
+      "total": "Gesamt",
+      "invoiceDate": "Rechnungsdatum"
     },
     "states": {
       "empty": "Keine Daten verfügbar",
@@ -1238,7 +1238,12 @@
         "emptyState": "Wählen Sie Beispiel- oder vorhandene Rechnungsdaten, um eine verbindliche Vorschau zu erzeugen.",
         "loadingPreview": "Vorschau wird geformt und gerendert…",
         "templateError": "Vorschau-Vorlage konnte aus dem aktuellen Arbeitsbereich nicht erzeugt werden.",
-        "renderError": "Vorschau-Rendering fehlgeschlagen."
+        "renderError": "Vorschau-Rendering fehlgeschlagen.",
+        "searchQuotes": "Angebote suchen…",
+        "noQuotesFound": "Keine Angebote gefunden.",
+        "selectQuote": "Angebot wählen",
+        "loadingQuoteDetails": "Angebotsdetails werden geladen…",
+        "loadingDocumentDetails": "Dokumentdetails werden geladen…"
       },
       "tabs": {
         "design": "Entwurf",
@@ -1660,7 +1665,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Vorlagenbegrenzung"
+      "templateBoundary": "Vorlagenbegrenzung",
+      "translatableHint": "Wird automatisch in die Sprache des Empfängers übersetzt. Wenn Sie den Text bearbeiten, gilt stattdessen Ihr eigener fester Text."
     },
     "dragOverlay": {
       "component": "Komponente"
@@ -1668,7 +1674,6 @@
   },
   "projectBilling": {
     "subtitle": "Bereite Meilensteine und Anzahlungen aus allen Projekten, die auf Genehmigung warten.",
-    "bulkActions": "Aktionen ({{count}})",
     "loading": "Warteschlange der Projektabrechnung wird geladen…",
     "empty": "Es wartet nichts auf Prüfung. Bereite Meilensteine und Anzahlungen werden hier angezeigt.",
     "columns": {
@@ -1724,6 +1729,345 @@
       "message": "Durch das Stornieren wird dieser Zeitplaneintrag aus der Abrechnung entfernt. Dies kann nicht rückgängig gemacht werden.",
       "confirm": "Eintrag stornieren",
       "dismiss": "Eintrag behalten"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "clear": "Auswahl aufheben"
+      }
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} Zeilen",
+      "operators": {
+        "eq": "Ist gleich",
+        "neq": "Ist ungleich",
+        "gt": "Größer als",
+        "gte": "Größer oder gleich",
+        "lt": "Kleiner als",
+        "lte": "Kleiner oder gleich",
+        "in": "In Liste"
+      },
+      "sortDirections": {
+        "asc": "Aufsteigend",
+        "desc": "Absteigend"
+      },
+      "aggregations": {
+        "sum": "Summe",
+        "count": "Anzahl",
+        "avg": "Durchschnitt",
+        "min": "Kleinstwert",
+        "max": "Höchstwert"
+      },
+      "operations": {
+        "advancedPredicate": "Erweiterte Bedingung",
+        "groupBy": "Nach {{field}} gruppieren",
+        "readOnly": "In V1 schreibgeschützt beibehalten"
+      },
+      "source": {
+        "title": "Quelldaten",
+        "description": "Wählen Sie Vorschaudaten und die zu formende Sammlungsbindung aus.",
+        "sampleScenario": "Beispielszenario",
+        "selectInvoice": "Rechnung auswählen",
+        "collection": "Quellsammlung",
+        "outputBindingId": "ID der Ausgabebindung"
+      },
+      "metadata": {
+        "title": "Quellmetadaten",
+        "binding": "Bindung:",
+        "bindingNone": "Keine",
+        "resolvedPath": "Aufgelöster Pfad:",
+        "pathNotResolved": "Nicht aufgelöst",
+        "noFields": "Wählen Sie Vorschaudaten und eine Sammlungsbindung aus, um Felder zu ermitteln."
+      },
+      "pipeline": {
+        "title": "Transformationspipeline",
+        "description": "Vorgänge werden von oben nach unten ausgeführt.",
+        "addFilter": "+ Filter hinzufügen",
+        "addSort": "+ Sortierung",
+        "addGroup": "+ Gruppe",
+        "addAggregate": "+ Aggregation",
+        "empty": "Fügen Sie Vorgänge hinzu, um die Transformationspipeline zu erstellen.",
+        "moveUp": "{{operation}} nach oben verschieben",
+        "moveDown": "{{operation}} nach unten verschieben",
+        "duplicate": "{{operation}} duplizieren",
+        "delete": "{{operation}} löschen"
+      },
+      "inspector": {
+        "description": "Bearbeiten Sie den ausgewählten Transformationsvorgang.",
+        "empty": "Wählen Sie eine Transformationskarte aus, um deren Einstellungen zu bearbeiten.",
+        "advancedPredicateNotice": "Dieser Filter verwendet eine erweiterte Bedingungsstruktur. Bei der Bearbeitung hier wird sie in einen einfachen Vergleich umgewandelt.",
+        "unsupportedOperation": "Dieser Vorgangstyp bleibt im Arbeitsbereich erhalten, der V1-Designer bearbeitet jedoch nur Filter-, Sortier-, Gruppierungs- und Aggregationsvorgänge.",
+        "field": "Feld",
+        "operator": "Vergleichsoperator",
+        "value": "Wert",
+        "valueList": "Werte (durch Kommas getrennt)",
+        "sortKey": "Sortierschlüssel {{index}}",
+        "remove": "Entfernen",
+        "direction": "Richtung",
+        "addSortKey": "+ Sortierschlüssel",
+        "groupField": "Gruppierungsfeld",
+        "groupLabel": "Bezeichnung (optional)",
+        "aggregation": "Aggregat {{index}}",
+        "outputId": "Ausgabe-ID",
+        "operation": "Vorgang",
+        "addAggregation": "+ Aggregat hinzufügen"
+      },
+      "output": {
+        "title": "Ausgabevorschau",
+        "description": "Vorschau der aus der aktuellen Transformationspipeline erzeugten Zeilen.",
+        "rowPaths": "Verfügbare Zeilenpfade",
+        "groupedRows": "{{count}} gruppierte Zeilen",
+        "binding": "Bindung: {{binding}}",
+        "bindingNotSet": "Nicht festgelegt",
+        "groupKey": "Schlüssel: {{value}}",
+        "groupItems": "{{count}} Elemente",
+        "emptyConfigure": "Konfigurieren Sie Quelle, Ausgabebindung und Vorgänge, um eine Vorschau der transformierten Zeilen anzuzeigen.",
+        "emptyNoData": "Wählen Sie Vorschaudaten aus, um die transformierte Ausgabe zu prüfen.",
+        "previewFailed": "Vorschau der Transformationen fehlgeschlagen."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Alle Positionen",
+        "phases": "Phasen",
+        "recurringItems": "Wiederkehrende Positionen",
+        "onetimeItems": "Einmalige Positionen",
+        "serviceItems": "Dienstpositionen",
+        "productItems": "Produktpositionen",
+        "items": "Positionen",
+        "transformsSource": "{{binding}} (Transformationsquelle)",
+        "transformsOutput": "{{binding}} (Transformationsausgabe)"
+      },
+      "presets": {
+        "description": {
+          "label": "Beschreibung",
+          "hint": "Beschreibung der Position"
+        },
+        "quantity": {
+          "label": "Menge",
+          "hint": "Anzahl"
+        },
+        "unitPrice": {
+          "label": "Satz",
+          "hint": "Stückpreis"
+        },
+        "amount": {
+          "label": "Betrag",
+          "hint": "Zeilensumme"
+        }
+      },
+      "sourceBinding": {
+        "title": "Quellbindung",
+        "description": "Binden Sie diese Tabelle an eine Rohdatensammlung oder die erstellte Transformationsausgabe."
+      },
+      "columns": {
+        "title": "Tabellenspalten",
+        "add": "+ Spalte",
+        "quickAdd": "Schnell hinzufügen:",
+        "newColumnHeader": "Neue Spalte",
+        "empty": "Keine Spalten definiert. Fügen Sie mindestens eine Spalte hinzu.",
+        "itemLabel": "Spalte",
+        "moveUp": "{{column}} nach oben verschieben",
+        "moveDown": "{{column}} nach unten verschieben",
+        "remove": "{{column}} entfernen",
+        "header": "Kopfzeile",
+        "headerPlaceholder": "Kopfzeilenbezeichnung",
+        "bindingKey": "Bindungsschlüssel",
+        "type": "Typ",
+        "width": "Breite"
+      },
+      "columnTypes": {
+        "text": "Text",
+        "number": "Zahl",
+        "currency": "Währung",
+        "date": "Datum"
+      },
+      "style": {
+        "title": "Tabellenstil",
+        "borderPreset": "Rahmenvoreinstellung",
+        "headerWeight": "Schriftstärke der Kopfzeile",
+        "borderOuter": "Außen",
+        "borderRows": "Zeilen",
+        "borderColumns": "Spalten"
+      },
+      "borderPresets": {
+        "list": "Liste",
+        "boxed": "Umrahmt",
+        "grid": "Raster",
+        "none": "Keine",
+        "custom": "Benutzerdefiniert"
+      },
+      "headerWeights": {
+        "normal": "Standard",
+        "medium": "Mittel",
+        "semibold": "Halbfett",
+        "bold": "Fett"
+      },
+      "reference": {
+        "title": "Referenz für Feldschlüssel",
+        "transformAggregate": "Transformationsaggregation",
+        "groupedRowKey": "Schlüssel der gruppierten Zeile",
+        "groupedRowItems": "Elemente der gruppierten Zeile",
+        "availableBinding": "Verfügbare Bindung"
+      }
+    },
+    "imagePicker": {
+      "browse": "Dokumente durchsuchen",
+      "hiddenFromClients": "{{document}} ist für Kunden ausgeblendet. Es wird nicht in Angeboten oder Rechnungen angezeigt, die über das Kundenportal aufgerufen werden.",
+      "updating": "Wird aktualisiert...",
+      "markVisible": "Als für Kunden sichtbar markieren",
+      "visibleInPortal": "Im Kundenportal sichtbar",
+      "dialogTitle": "Bild auswählen",
+      "dialogDescription": "Wählen Sie ein Bild aus Ihren Dokumenten aus, das in dieser Vorlage verwendet werden soll."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Rechnungsdetails",
+    "description": "Bearbeiten Sie vor dem Abschluss die Metadaten des Rechnungsentwurfs.",
+    "actions": {
+      "saving": "Wird gespeichert..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Die Rechnungsnummer ist erforderlich.",
+      "invoiceDateRequired": "Das Rechnungsdatum ist erforderlich."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Dokument",
+    "title": "Layouts für {{type}}",
+    "description": "Entwerfen Sie die Layouts, die zum Rendern von {{type}}-PDFs und -Vorschauen verwendet werden.",
+    "availableLayouts": "Verfügbare Layouts",
+    "actions": {
+      "newLayout": "Neues Layout"
+    },
+    "columns": {
+      "name": "Name",
+      "source": "Quelle"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Standardversion)",
+      "copyName": "{{name}} (Kopie)"
+    },
+    "toasts": {
+      "cloned": "Vorlage geklont",
+      "defaultUpdated": "Standardvorlage aktualisiert",
+      "deleted": "Vorlage gelöscht"
+    },
+    "errors": {
+      "loadFailed": "Vorlagen für {{type}} konnten nicht geladen werden",
+      "cloneFailed": "Vorlage konnte nicht geklont werden",
+      "setDefaultFailed": "Standardvorlage konnte nicht festgelegt werden",
+      "deleteFailed": "Vorlage konnte nicht gelöscht werden"
+    },
+    "deleteDialog": {
+      "title": "Layout für {{type}} löschen",
+      "message": "Möchten Sie „{{name}}“ wirklich löschen?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Neues Layout für {{type}}",
+        "edit": "Layout für {{type}} bearbeiten"
+      },
+      "description": "Entwerfen Sie das Layout für {{type}} im visuellen Editor und zeigen Sie es anschließend mit Beispieldaten in der Vorschau an.",
+      "errorTitle": "Layout-Editor für {{type}}",
+      "sections": {
+        "details": "Layoutdetails"
+      },
+      "fields": {
+        "version": "Version"
+      },
+      "placeholders": {
+        "templateName": "Vorlage für {{type}}"
+      },
+      "actions": {
+        "back": "Zurück zu den Layouts",
+        "save": "Layout speichern"
+      },
+      "labels": {
+        "created": "Erstellt: {{date}}",
+        "lastUpdated": "Zuletzt aktualisiert: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Mit repräsentativen Beispieldaten für {{type}} gerendert.",
+        "frameTitle": "Vorschau für {{type}}",
+        "empty": "Öffnen Sie diese Registerkarte, um eine verbindliche Vorschau zu erzeugen.",
+        "existingNote": "Wird anhand des gewählten Kundenauftrags gerendert.",
+        "searchDocuments": "Kundenaufträge suchen…",
+        "searchDocumentsHint": "Nach Nummer oder Kunde suchen…",
+        "noDocumentsFound": "Keine Kundenaufträge gefunden.",
+        "selectDocument": "Kundenauftrag wählen",
+        "selectDocumentHint": "Wählen Sie einen Kundenauftrag für die datengebundene Vorschau."
+      },
+      "errors": {
+        "nameRequired": "Der Vorlagenname ist erforderlich.",
+        "astExportFailed": "Die Vorlage konnte nicht aus dem visuellen Arbeitsbereich exportiert werden: {{message}}",
+        "saveFailed": "Das Layout für {{type}} konnte nicht gespeichert werden",
+        "previewFailed": "Die Vorschau konnte nicht erzeugt werden."
+      },
+      "toasts": {
+        "saved": "Layout für {{type}} gespeichert"
+      }
+    },
+    "types": {
+      "salesOrder": "Verkaufsauftrag",
+      "packingSlip": "Lieferschein",
+      "pickList": "Kommissionierliste"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Rechnungen erforderlich",
+      "invoiceDelete": "Berechtigung verweigert: Löschberechtigung für Rechnungen erforderlich",
+      "invoiceAccess": "Berechtigung verweigert: Zugriff auf die Rechnung verweigert",
+      "otherClientInvoices": "Berechtigung verweigert: Auf Rechnungen eines anderen Kunden kann nicht zugegriffen werden"
+    },
+    "invoice": {
+      "notFound": "Rechnung nicht gefunden",
+      "notFoundRefresh": "Rechnung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notFoundNumbered": "Rechnung {{invoiceId}} wurde nicht gefunden.",
+      "clientNotFoundForInvoice": "Für die Rechnung {{invoiceNumber}} wurde kein Kunde gefunden.",
+      "numberRequired": "Rechnungsnummer ist erforderlich",
+      "dateRequired": "Rechnungsdatum ist erforderlich",
+      "dateInvalid": "Rechnungsdatum ist ungültig",
+      "dueDateInvalid": "Fälligkeitsdatum ist ungültig",
+      "onlyDraftEditable": "Nur Rechnungsentwürfe können bearbeitet werden",
+      "numberExists": "Die Rechnungsnummer existiert bereits. Wählen Sie eine andere Nummer.",
+      "notFinalized": "Die Rechnung ist nicht finalisiert",
+      "unfinalizeFailed": "Die Finalisierung der Rechnung konnte wegen eines unerwarteten Datenfehlers nicht aufgehoben werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "paidOrCancelled": "Eine bezahlte oder stornierte Rechnung kann nicht geändert werden",
+      "syncedVoidInstead": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert – stornieren Sie sie, statt sie zu löschen.",
+      "invalidValue": "Einer der ausgewählten Rechnungswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Rechnung, der Kunde, Vertrag oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Es existiert bereits eine widersprüchliche Rechnung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Rechnungsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Rechnungsfeld fehlt: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Abrechnungszeitraum nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidDates": "Der Abrechnungszeitraum enthält ungültige Daten. Bitte prüfen Sie den Zeitraum und versuchen Sie es erneut."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Wählen Sie mindestens eine Rechnung aus, um PDFs zu erzeugen.",
+      "selectInvoicesEmail": "Wählen Sie mindestens eine Rechnung zum Versenden per E-Mail aus.",
+      "selectInvoices": "Wählen Sie mindestens eine Rechnung aus.",
+      "emailNotConfigured": "E-Mail ist nicht konfiguriert. Bitte konfigurieren Sie die E-Mail-Einstellungen unter „Einstellungen“, bevor Sie Rechnungen versenden.",
+      "schedulePdfFailed": "Die PDF-Erstellung für Rechnungen konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+      "scheduleEmailFailed": "Der Versand der Rechnungs-E-Mails konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+      "recipientFailed": "Die Empfängerinformationen für diese Rechnung konnten nicht geladen werden.",
+      "sendFailed": "Die Rechnungs-E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+    },
+    "template": {
+      "selectStandard": "Wählen Sie vor dem Speichern eine Standard-Rechnungsvorlage aus.",
+      "selectBeforePreview": "Wählen Sie vor der Vorschau eine Rechnungsvorlage aus.",
+      "notFoundRefresh": "Rechnungsvorlage nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingDesign": "Der Rechnungsvorlage fehlt ihr Design-Inhalt. Bitte wählen Sie eine andere Vorlage.",
+      "invalidValue": "Einer der ausgewählten Werte der Rechnungsvorlage ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Rechnungsvorlage oder der Kunde existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Rechnungsvorlage mit diesen Einstellungen existiert bereits.",
+      "missingField": "Erforderliches Feld der Rechnungsvorlage fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Rechnungsvorlage fehlt: {{field}}."
     }
   }
 }

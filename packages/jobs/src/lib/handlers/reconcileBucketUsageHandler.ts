@@ -41,21 +41,11 @@ export async function handleReconcileBucketUsage(job: Job<ReconcileBucketUsageJo
     for (const record of recordsToReconcile) {
       const { usage_id } = record;
       try {
-        // Use a separate transaction for each reconciliation attempt
+        // Use a separate transaction for each reconciliation attempt. Tenant is
+        // passed explicitly to the service — never mutate the shared transaction
+        // config (it is reused across tenants on a multi-tenant worker).
         await knex.transaction(async (trx) => {
-          // Manually set tenant context on the transaction object if needed by the service
-          // This depends on how createTenantKnex and the service interact with transactions
-          // If createTenantKnex already configures the trx object, this might not be necessary.
-          // Assuming reconcileBucketUsageRecord can derive tenant from trx or uses its own logic.
-
-          // Ensure the transaction object has the tenant context if required by the service
-          if (!trx.client?.config?.tenant) {
-             trx.client = trx.client || {}; // Ensure client exists
-             trx.client.config = trx.client.config || {}; // Ensure config exists
-             trx.client.config.tenant = tenantId;
-          }
-
-          await reconcileBucketUsageRecord(trx, usage_id);
+          await reconcileBucketUsageRecord(trx, usage_id, tenantId);
         });
         logger.info(`Successfully reconciled bucket usage record ${usage_id} for tenant ${tenantId}.`);
         successCount++;

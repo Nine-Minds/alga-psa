@@ -1,0 +1,40 @@
+# Extension gateway `assertAccess()` review packet
+
+**Companion to:** [`2026-08-14-extension-gateway-assert-access-plan.md`](./2026-08-14-extension-gateway-assert-access-plan.md) (approved, commit `85deeb5f29`)
+**Branch head:** `086bf65d58` (`feature/sec-extension-gateway-assertaccess-is-a-no-op-st`)
+**Workflow card:** `1491d80b-8fa7-4313-a134-f68e5b9dba79`
+
+This packet maps plan requirements to implementing files and to the evidence that verifies them. Read it before the plan: the plan defines the invariant, this packet tells you where each piece landed and how it was checked.
+
+## What the branch does
+
+Both extension execution surfaces now enforce one fail-closed access policy before any install config, provider grant, or secret envelope can be hydrated or forwarded: the direct server gateway at `server/src/app/api/ext/[extensionId]/[[...path]]/route.ts` and the ext-proxy handler at `packages/product-ext-proxy/ee/handler.ts`. The canonical policy and execution audit live in `packages/product-ext-proxy/ee/gateway/access.ts` and `packages/product-ext-proxy/ee/gateway/executionAudit.ts`; the server modules `server/src/lib/extensions/gateway/{access,executionAudit,registry}.ts` are re-export shims over that package (chosen to avoid a `server <-> @product/ext-proxy` import cycle). The policy denies unless the request has an authenticated session principal whose tenant matches, an active tenant-owned install (`is_enabled=true` and `status='enabled'`), a declared endpoint on the installed version, MSP `extension:read`/`write` RBAC or client-portal opt-in with a resolvable client, an available atomic rate-limit budget, and a durable pre-dispatch audit row. Every absent, malformed, stale, or unavailable input denies the request; header-only tenant resolution and `DEV_TENANT_ID` never authorize execution. The prior no-op `assertAccess` in `server/src/lib/extensions/gateway/auth.ts` (previously a stub) and the second no-op in `packages/product-ext-proxy/ee/gateway/auth.ts` are gone; both now re-export the canonical function.
+
+## Requirement → implementation → verification
+
+| Plan requirement | Implementing file(s) | How verified |
+| --- | --- | --- |
+| Tenant-scoped active-install check (`is_enabled` + `status='enabled'`, incl. fallback path) | `packages/product-ext-proxy/ee/gateway/access.ts:145-179` (`loadTenantInstall`, tenant-scoped via `tenantDb`); hydration guard in `ee/server/src/lib/extensions/installConfig.ts:101-119,144-155`; direct-install fallback in `server/src/lib/extensions/gateway/registry.ts:23` | Unit `server/src/lib/extensions/gateway/access.test.ts` (tests 1, 5); registry guard `server/src/lib/extensions/gateway/registry.test.ts`; real-query integration `server/src/test/integration/extensionGatewayAccess.integration.test.ts` (tests 2, 3); live smoke `04-head-both-gateways-pass.png`, `07-authorized-head-audits.txt` |
+| Installed-version endpoint matching (`matchEndpoint`, fail-closed on empty/malformed) | `access.ts:97-120` (`parseApiEndpoints`) + `access.ts:214-218` | Unit `access.test.ts` (test 6); integration test 4 (version switch invalidates old path); smoke `09-undeclared-head-denied.png` |
+| HEAD→GET fold with GET/HEAD→`extension:read`, mutating→`extension:write` | `access.ts:90-95` (`normalizeMethod` folds HEAD→GET) + `access.ts:234` (`method === 'GET' ? 'read' : 'write'`) | Unit `access.test.ts` (test 10); boundary `server/src/test/unit/api/extGatewayBoundary.test.ts`; registry-docs `extensionGatewayRegistryDocs.test.ts` (asserts mapping in OpenAPI/MCP artifacts) |
+| Client-portal gating (`clientPortalMenu` label + resolvable `client_id`) | `access.ts:122-130` (hook label) + `access.ts:136-143` (client resolution); menu-discovery predicate in `ee/server/src/lib/actions/clientPortalExtActions.ts:24` (`status='enabled'`) | Unit `access.test.ts` (test 7); boundary `extensionProxyFlow.test.ts` (test 6); smoke `07-runner-observations.jsonl` |
+| Sessionless fail-closed (headers/`DEV_TENANT_ID` never authorize) | `access.ts:198-204` (`getCurrentUser`, tenant equality) | Unit `access.test.ts` (test 3); smoke `08-sessionless-direct-head.txt`, `08-sessionless-proxy-head.txt`, `08-sessionless-no-dispatch.txt` |
+| Atomic Redis token-bucket rate limiting (`tryConsumeAtomic`, fail-closed semantics) | `packages/core/src/lib/rateLimit/TokenBucketRateLimiter.ts:394-491` (single-EVAL consume; `remaining<0` sentinel); consumed at `access.ts:242-267` | Unit `TokenBucketRateLimiter.atomic.test.ts` (11 tests incl. concurrency); `access.test.ts` (test 8); smoke `10-browser-4xx-network.json` (429s); captain's accepted-risk ruling on limiter reply handling (bridge `07eb5e3e`) |
+| Per-execution audit outcomes (`ok` / `error` / `upstream_error`, redacted metrics) | `packages/product-ext-proxy/ee/gateway/executionAudit.ts:42-102`; wired in `handler.ts:243-253,390-395` and `route.ts:280-290,464-470` | Unit/boundary `extensionProxyFlow.test.ts` (tests 1, 5, 7); smoke `07-authorized-head-audits.txt`, `10-audit-invariants.txt` |
+| Canonical `registryId`/`installId`/`versionId` forwarding | `handler.ts:324-333,364-370` and `route.ts:381-404` (runner context/headers use canonical IDs; slug/install-ID aliases resolved once in `access.ts`) | Boundary `extensionProxyFlow.test.ts` (test 1); smoke `07-runner-observations.jsonl` |
+| Ext-proxy cache bypass (no secret stays executable during cache TTL) | `handler.ts:255-305` — hydrates fresh via active-state-filtered `getInstallConfig()`, rejects install/version mismatch with `policy_denied` + 503 | Boundary `extensionProxyFlow.test.ts` (test 3); integration `extensionGatewayAccess.integration.test.ts` (tests 2, 3) |
+| Sanitized runner error bodies (no upstream text into errors/logs) | `packages/product-ext-proxy/ee/runner-backend.ts:156-166`; handler log guard at `handler.ts:402-426` | Unit `runnerBackend.logs.test.ts` (2 tests); boundary `extensionProxyFlow.test.ts` (tests 8, 9) |
+| OpenAPI/MCP registry regeneration (read/write mapping, no placeholder language) | `server/src/lib/api/openapi/routes/extensionGateway.ts:152-155` (shared posture text); regenerated artifacts `sdk/docs/openapi/*`, `server/src/lib/mcp/registry.generated.ts`, `ee/server/src/chat/registry/apiRegistry.generated.ts` | Unit `extensionGatewayRegistryDocs.test.ts` (4 tests); `tsc --noEmit` green |
+
+## Evidence pointers
+
+- **Live smoke evidence (external to repo, redacted):** `/tmp/alga-smoke-evidence/sec-extension-gateway-head-20260815T0928Z/` — two HEAD smoke passes over both gateways, sessionless denials, RBAC read-only/write-only dispatch checks, audit-invariant and 4xx/429 captures. Redaction and cleanup documented in [`2026-08-15-extension-gateway-assert-access-smoke-evidence-hygiene.md`](./2026-08-15-extension-gateway-assert-access-smoke-evidence-hygiene.md). The dir is outside the repo by design and is not part of this branch's diff.
+- **Known pre-existing broken EE suites (broken at base, not introduced by this branch):** `ee/server/src/__tests__/integration/extension-schedules.actions.integration.test.ts` and `ee/server/src/__tests__/integration/extension-scheduled-invocation.handler.integration.test.ts`. Note the branch does update two `expect` strings in `extension-schedules.actions` (`/disabled/i` → `/not found/i`) to match the new fail-closed message; that file remains broken for pre-existing reasons at base.
+- **Captain's ruling:** limiter reply handling (fail-closed on abnormal replies) accepted as-is; bridge `07eb5e3e`.
+
+## Verification status (this round)
+
+- Diff hygiene: branch scope is the 37 files in `origin/main...HEAD` (base `0fe579d624` == `85deeb5f29^`); all task-scoped, no secrets/binaries/logs in tracked content. Local `main` ref is stale (behind `origin/main`); use `origin/main` as the comparison base.
+- `cd server && NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit` — green at 12 GB heap (default and 8 GB OOM on this box).
+- `git status` clean.
+- No new smoke runs launched in this mitigation round; the two HEAD passes cited above are the prior accepted runs.

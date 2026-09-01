@@ -84,7 +84,9 @@
     "@js-temporal/polyfill": "^0.4.4",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "htmlparser2": "^8.0.2",
     "knex": "^3.1.0",
+    "marked": "^15.0.7",
     "lucide-react": "^0.428.0",
     "pg-boss": "^10.1.5",
     "uuid": "^11.1.1"

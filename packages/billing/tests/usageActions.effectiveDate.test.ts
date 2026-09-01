@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.fn();
-const determineDefaultContractLineMock = vi.fn();
+const getEligibleContractLinesMock = vi.fn();
 const revalidatePathMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
@@ -21,16 +21,15 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/billing/lib/contractLineDisambiguation', () => ({
-  determineDefaultContractLine: (...args: any[]) => determineDefaultContractLineMock(...args),
+  getEligibleContractLines: (...args: any[]) => getEligibleContractLinesMock(...args),
 }));
 
 vi.mock('next/cache', () => ({
   revalidatePath: (...args: any[]) => revalidatePathMock(...args),
 }));
 
-vi.mock('../src/services/bucketUsageService', () => ({
-  findOrCreateCurrentBucketUsageRecord: vi.fn(),
-  updateBucketUsageMinutes: vi.fn(),
+vi.mock('@alga-psa/shared/billingClients/drawAdjustments', () => ({
+  adjustQuantityDraw: vi.fn(async () => 0),
 }));
 
 vi.mock('../src/lib/authHelpers', () => ({
@@ -107,7 +106,9 @@ describe('usage actions effective-date contract resolution', () => {
   it('T004: createUsageRecord resolves default line with the usage effective date', async () => {
     const { db, calls } = createUsageDbStub();
     createTenantKnexMock.mockResolvedValue({ knex: db });
-    determineDefaultContractLineMock.mockResolvedValue('line-default');
+    getEligibleContractLinesMock.mockResolvedValue([
+      { client_contract_line_id: 'line-default' },
+    ]);
 
     const { createUsageRecord } = await import('../src/actions/usageActions');
 
@@ -122,8 +123,15 @@ describe('usage actions effective-date contract resolution', () => {
       },
     );
 
-    expect(determineDefaultContractLineMock).toHaveBeenCalledWith('client-1', 'service-1', '2025-02-10');
+    expect(getEligibleContractLinesMock).toHaveBeenCalledWith(
+      db,
+      'tenant-1',
+      'client-1',
+      'service-1',
+      '2025-02-10',
+    );
     expect(calls.inserts[0]?.contract_line_id).toBe('line-default');
+    expect(calls.inserts[0]?.contract_line_source).toBe('auto_unique_service');
     expect(revalidatePathMock).toHaveBeenCalledWith('/msp/billing');
   });
 
@@ -140,7 +148,9 @@ describe('usage actions effective-date contract resolution', () => {
       },
     });
     createTenantKnexMock.mockResolvedValue({ knex: db });
-    determineDefaultContractLineMock.mockResolvedValue('line-default-next');
+    getEligibleContractLinesMock.mockResolvedValue([
+      { client_contract_line_id: 'line-default-next' },
+    ]);
 
     const { updateUsageRecord } = await import('../src/actions/usageActions');
 
@@ -153,8 +163,74 @@ describe('usage actions effective-date contract resolution', () => {
       },
     );
 
-    expect(determineDefaultContractLineMock).toHaveBeenCalledWith('client-1', 'service-1', '2027-08-01');
+    expect(getEligibleContractLinesMock).toHaveBeenCalledWith(
+      db,
+      'tenant-1',
+      'client-1',
+      'service-1',
+      '2027-08-01',
+    );
     expect(calls.updates[0]?.contract_line_id).toBe('line-default-next');
+    expect(calls.updates[0]?.contract_line_source).toBe('auto_unique_service');
     expect(revalidatePathMock).toHaveBeenCalledWith('/msp/billing');
+  });
+
+  it('persists bucket-overlay attribution as an assigned line on usage create', async () => {
+    const { db, calls } = createUsageDbStub();
+    createTenantKnexMock.mockResolvedValue({ knex: db });
+    getEligibleContractLinesMock.mockResolvedValue([
+      { client_contract_line_id: 'line-overlay', bucket_overlay: { config_id: 'bucket-1' } },
+      { client_contract_line_id: 'line-other' },
+    ]);
+
+    const { createUsageRecord } = await import('../src/actions/usageActions');
+
+    await (createUsageRecord as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      {
+        client_id: 'client-1',
+        service_id: 'service-1',
+        quantity: 3,
+        usage_date: '2025-02-10',
+      },
+    );
+
+    expect(calls.inserts[0]).toMatchObject({
+      contract_line_id: 'line-overlay',
+      contract_line_source: 'auto_bucket_overlay',
+      contract_line_unresolved_reason: null,
+    });
+  });
+
+  it('preserves the original attribution tuple when update resolution fails', async () => {
+    const original = {
+      usage_id: 'usage-1',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      service_id: 'service-1',
+      quantity: 1,
+      usage_date: '2026-03-11',
+      contract_line_id: 'line-original',
+      contract_line_source: 'explicit',
+      contract_line_unresolved_reason: null,
+    };
+    const { db, calls } = createUsageDbStub({ existing: original });
+    createTenantKnexMock.mockResolvedValue({ knex: db });
+    getEligibleContractLinesMock.mockRejectedValue(new Error('resolver unavailable'));
+
+    const { updateUsageRecord } = await import('../src/actions/usageActions');
+
+    await (updateUsageRecord as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { usage_id: 'usage-1', usage_date: '2027-08-01' },
+    );
+
+    expect(calls.updates[0]).toMatchObject({
+      contract_line_id: 'line-original',
+      contract_line_source: 'explicit',
+      contract_line_unresolved_reason: null,
+    });
   });
 });

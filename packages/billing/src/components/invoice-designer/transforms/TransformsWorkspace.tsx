@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import type { TFunction } from 'i18next';
 import { generateUUID } from '@alga-psa/core';
 import type {
   TemplateAggregateTransform,
@@ -18,11 +19,16 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { exportWorkspaceToTemplateAst } from '../ast/workspaceAst';
 import {
   DEFAULT_PREVIEW_SAMPLE_ID,
   INVOICE_PREVIEW_SAMPLE_SCENARIOS,
 } from '../preview/sampleScenarios';
+import {
+  DEFAULT_QUOTE_PREVIEW_SAMPLE_ID,
+  QUOTE_PREVIEW_SAMPLE_SCENARIOS,
+} from '../preview/quoteSampleScenarios';
 import type { PreviewSessionState, PreviewSourceKind } from '../preview/previewSessionState';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../state/designerStore';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../../../lib/invoice-template-ast/evaluator';
@@ -50,7 +56,8 @@ type PreviewIssue = {
 };
 
 type Props = {
-  previewState: PreviewSessionState;
+  // The workspace only reads the session, so it accepts any designer's detail payload shape.
+  previewState: PreviewSessionState<unknown>;
   previewData: object | null;
   activeSample: { id: string; label: string; description: string } | null;
   onSourceKindChange: (source: PreviewSourceKind) => void;
@@ -63,32 +70,33 @@ type Props = {
   }>;
 };
 
-const PREVIEW_SOURCE_OPTIONS: { value: PreviewSourceKind; label: string }[] = [
-  { value: 'sample', label: 'Sample' },
-  { value: 'existing', label: 'Existing' },
+// Option labels are built per render so they can reach `t`.
+const buildPreviewSourceOptions = (t: TFunction): { value: PreviewSourceKind; label: string }[] => [
+  { value: 'sample', label: t('designer.workspace.preview.source.sample', { defaultValue: 'Sample' }) },
+  { value: 'existing', label: t('designer.workspace.preview.source.existing', { defaultValue: 'Existing' }) },
 ];
 
-const FILTER_OPERATOR_OPTIONS = [
-  { value: 'eq', label: 'Equals' },
-  { value: 'neq', label: 'Not equal' },
-  { value: 'gt', label: 'Greater than' },
-  { value: 'gte', label: 'Greater or equal' },
-  { value: 'lt', label: 'Less than' },
-  { value: 'lte', label: 'Less or equal' },
-  { value: 'in', label: 'In list' },
+const buildFilterOperatorOptions = (t: TFunction) => [
+  { value: 'eq', label: t('invoiceDesigner.transforms.operators.eq', { defaultValue: 'Equals' }) },
+  { value: 'neq', label: t('invoiceDesigner.transforms.operators.neq', { defaultValue: 'Not equal' }) },
+  { value: 'gt', label: t('invoiceDesigner.transforms.operators.gt', { defaultValue: 'Greater than' }) },
+  { value: 'gte', label: t('invoiceDesigner.transforms.operators.gte', { defaultValue: 'Greater or equal' }) },
+  { value: 'lt', label: t('invoiceDesigner.transforms.operators.lt', { defaultValue: 'Less than' }) },
+  { value: 'lte', label: t('invoiceDesigner.transforms.operators.lte', { defaultValue: 'Less or equal' }) },
+  { value: 'in', label: t('invoiceDesigner.transforms.operators.in', { defaultValue: 'In list' }) },
 ];
 
-const SORT_DIRECTION_OPTIONS = [
-  { value: 'asc', label: 'Ascending' },
-  { value: 'desc', label: 'Descending' },
+const buildSortDirectionOptions = (t: TFunction) => [
+  { value: 'asc', label: t('invoiceDesigner.transforms.sortDirections.asc', { defaultValue: 'Ascending' }) },
+  { value: 'desc', label: t('invoiceDesigner.transforms.sortDirections.desc', { defaultValue: 'Descending' }) },
 ];
 
-const AGGREGATION_OPTIONS = [
-  { value: 'sum', label: 'Sum' },
-  { value: 'count', label: 'Count' },
-  { value: 'avg', label: 'Average' },
-  { value: 'min', label: 'Minimum' },
-  { value: 'max', label: 'Maximum' },
+const buildAggregationOptions = (t: TFunction) => [
+  { value: 'sum', label: t('invoiceDesigner.transforms.aggregations.sum', { defaultValue: 'Sum' }) },
+  { value: 'count', label: t('invoiceDesigner.transforms.aggregations.count', { defaultValue: 'Count' }) },
+  { value: 'avg', label: t('invoiceDesigner.transforms.aggregations.avg', { defaultValue: 'Average' }) },
+  { value: 'min', label: t('invoiceDesigner.transforms.aggregations.min', { defaultValue: 'Minimum' }) },
+  { value: 'max', label: t('invoiceDesigner.transforms.aggregations.max', { defaultValue: 'Maximum' }) },
 ];
 
 type ComparisonPredicate = Extract<TemplatePredicate, { type: 'comparison' }>;
@@ -146,21 +154,24 @@ const parsePredicateValue = (rawValue: string, operator: ComparisonPredicate['op
   return rawValue;
 };
 
-const describeOperation = (operation: TemplateTransformOperation): string => {
+const describeOperation = (operation: TemplateTransformOperation, t: TFunction): string => {
   switch (operation.type) {
     case 'filter':
       if (operation.predicate.type !== 'comparison') {
-        return 'Advanced predicate';
+        return t('invoiceDesigner.transforms.operations.advancedPredicate', { defaultValue: 'Advanced predicate' });
       }
       return `${operation.predicate.path || 'field'} ${operation.predicate.op} ${formatValuePreview(operation.predicate.value)}`;
     case 'sort':
       return operation.keys.map((key) => `${key.path || 'field'} ${key.direction ?? 'asc'}`).join(', ');
     case 'group':
-      return `Group by ${operation.key || 'field'}`;
+      return t('invoiceDesigner.transforms.operations.groupBy', {
+        defaultValue: 'Group by {{field}}',
+        field: operation.key || 'field',
+      });
     case 'aggregate':
       return operation.aggregations.map((entry) => `${entry.op} ${entry.path ?? 'rows'} -> ${entry.id}`).join(', ');
     default:
-      return 'Preserved read-only in V1';
+      return t('invoiceDesigner.transforms.operations.readOnly', { defaultValue: 'Preserved read-only in V1' });
   }
 };
 
@@ -257,6 +268,7 @@ const TransformsWorkspace: React.FC<Props> = ({
   onClearExistingInvoice,
   loadExistingInvoiceOptions,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
@@ -268,6 +280,38 @@ const TransformsWorkspace: React.FC<Props> = ({
   const setTransforms = useInvoiceDesignerStore((state) => state.setTransforms);
   const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null);
   const [outputBindingDraft, setOutputBindingDraft] = useState('');
+
+  // The workspace serves every designer, so the source panel names the documents this template is
+  // actually bound to (quotes, sales orders) instead of always saying "invoice".
+  const previewDocumentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
+  const sampleScenarios = previewDocumentKind === 'quote'
+    ? QUOTE_PREVIEW_SAMPLE_SCENARIOS
+    : previewDocumentKind === 'sales-order'
+      ? []
+      : INVOICE_PREVIEW_SAMPLE_SCENARIOS;
+  const defaultSampleId = previewDocumentKind === 'quote'
+    ? DEFAULT_QUOTE_PREVIEW_SAMPLE_ID
+    : DEFAULT_PREVIEW_SAMPLE_ID;
+  const existingSourceLabels = previewDocumentKind === 'quote'
+    ? {
+      search: t('designer.workspace.preview.searchQuotes', { defaultValue: 'Search quotes...' }),
+      empty: t('designer.workspace.preview.noQuotesFound', { defaultValue: 'No quotes found.' }),
+      select: t('designer.workspace.preview.selectQuote', { defaultValue: 'Select quote' }),
+      loading: t('designer.workspace.preview.loadingQuoteDetails', { defaultValue: 'Loading quote details...' }),
+    }
+    : previewDocumentKind === 'sales-order'
+      ? {
+        search: t('documentTemplates.editor.preview.searchDocuments', { defaultValue: 'Search sales orders...' }),
+        empty: t('documentTemplates.editor.preview.noDocumentsFound', { defaultValue: 'No sales orders found.' }),
+        select: t('documentTemplates.editor.preview.selectDocument', { defaultValue: 'Select Sales Order' }),
+        loading: t('designer.workspace.preview.loadingDocumentDetails', { defaultValue: 'Loading document details...' }),
+      }
+      : {
+        search: t('designer.workspace.preview.searchInvoices', { defaultValue: 'Search invoices...' }),
+        empty: t('designer.workspace.preview.noInvoicesFound', { defaultValue: 'No invoices found.' }),
+        select: t('invoiceDesigner.transforms.source.selectInvoice', { defaultValue: 'Select invoice' }),
+        loading: t('designer.workspace.preview.loadingDetails', { defaultValue: 'Loading invoice details...' }),
+      };
 
   const workspaceSnapshot = useMemo(
     () => ({
@@ -466,7 +510,7 @@ const TransformsWorkspace: React.FC<Props> = ({
           {
             key: 'unknown-error',
             tone: 'destructive' as const,
-            text: 'Transforms preview failed.',
+            text: t('invoiceDesigner.transforms.output.previewFailed', { defaultValue: 'Transforms preview failed.' }),
           },
         ],
         rowPaths: [],
@@ -474,7 +518,7 @@ const TransformsWorkspace: React.FC<Props> = ({
         rows: [],
       };
     }
-  }, [nodes, previewData, workspaceSnapshot]);
+  }, [nodes, previewData, t, workspaceSnapshot]);
 
   const combinedIssues = useMemo(
     () => [
@@ -616,7 +660,9 @@ const TransformsWorkspace: React.FC<Props> = ({
     if (!selectedOperation) {
       return (
         <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
-          Select a transform card to edit its settings.
+          {t('invoiceDesigner.transforms.inspector.empty', {
+            defaultValue: 'Select a transform card to edit its settings.',
+          })}
         </div>
       );
     }
@@ -628,12 +674,17 @@ const TransformsWorkspace: React.FC<Props> = ({
           {selectedOperation.predicate.type !== 'comparison' && (
             <Alert variant="info">
               <AlertDescription>
-                This filter uses an advanced predicate shape. Editing here converts it to a simple comparison.
+                {t('invoiceDesigner.transforms.inspector.advancedPredicateNotice', {
+                  defaultValue:
+                    'This filter uses an advanced predicate shape. Editing here converts it to a simple comparison.',
+                })}
               </AlertDescription>
             </Alert>
           )}
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Field</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
+            </label>
             <CustomSelect
               id={`transform-filter-field-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
@@ -654,10 +705,12 @@ const TransformsWorkspace: React.FC<Props> = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Operator</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t('invoiceDesigner.transforms.inspector.operator', { defaultValue: 'Operator' })}
+            </label>
             <CustomSelect
               id={`transform-filter-operator-${selectedOperation.id}`}
-              options={FILTER_OPERATOR_OPTIONS}
+              options={buildFilterOperatorOptions(t)}
               value={predicate.op}
               onValueChange={(value: string) =>
                 updateOperation(selectedOperation.id, (operation) => ({
@@ -683,7 +736,9 @@ const TransformsWorkspace: React.FC<Props> = ({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
-              {predicate.op === 'in' ? 'Values (comma separated)' : 'Value'}
+              {predicate.op === 'in'
+                ? t('invoiceDesigner.transforms.inspector.valueList', { defaultValue: 'Values (comma separated)' })
+                : t('invoiceDesigner.transforms.inspector.value', { defaultValue: 'Value' })}
             </label>
             <Input
               id={`transform-filter-value-${selectedOperation.id}`}
@@ -729,7 +784,7 @@ const TransformsWorkspace: React.FC<Props> = ({
           {keys.map((key, index) => (
             <div key={`${selectedOperation.id}-${index}`} className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] p-3 space-y-2">
 	              <div className="flex items-center justify-between">
-	                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Sort key {index + 1}</p>
+	                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">{t('invoiceDesigner.transforms.inspector.sortKey', { defaultValue: 'Sort key {{index}}', index: index + 1 })}</p>
 	                <Button
 	                  id={`transform-sort-remove-${selectedOperation.id}-${index}`}
 	                  variant="outline"
@@ -744,11 +799,13 @@ const TransformsWorkspace: React.FC<Props> = ({
                     }))
                   }
                 >
-                  Remove
+                  {t('invoiceDesigner.transforms.inspector.remove', { defaultValue: 'Remove' })}
                 </Button>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Field</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
+                </label>
                 <CustomSelect
                   id={`transform-sort-field-${selectedOperation.id}-${index}`}
                   options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
@@ -767,10 +824,12 @@ const TransformsWorkspace: React.FC<Props> = ({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Direction</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {t('invoiceDesigner.transforms.inspector.direction', { defaultValue: 'Direction' })}
+                </label>
                 <CustomSelect
                   id={`transform-sort-direction-${selectedOperation.id}-${index}`}
-                  options={SORT_DIRECTION_OPTIONS}
+                  options={buildSortDirectionOptions(t)}
                   value={key.direction ?? 'asc'}
                   onValueChange={(value: string) =>
                     updateOperation(selectedOperation.id, (operation) => ({
@@ -800,7 +859,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               }))
             }
           >
-            + Sort key
+            {t('invoiceDesigner.transforms.inspector.addSortKey', { defaultValue: '+ Sort key' })}
           </Button>
         </div>
       );
@@ -810,7 +869,9 @@ const TransformsWorkspace: React.FC<Props> = ({
       return (
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Group field</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t('invoiceDesigner.transforms.inspector.groupField', { defaultValue: 'Group field' })}
+            </label>
             <CustomSelect
               id={`transform-group-key-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
@@ -825,7 +886,9 @@ const TransformsWorkspace: React.FC<Props> = ({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Label (optional)</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t('invoiceDesigner.transforms.inspector.groupLabel', { defaultValue: 'Label (optional)' })}
+            </label>
             <Input
               id={`transform-group-label-${selectedOperation.id}`}
               value={selectedOperation.label ?? ''}
@@ -858,7 +921,7 @@ const TransformsWorkspace: React.FC<Props> = ({
           {aggregations.map((aggregation, index) => (
             <div key={`${selectedOperation.id}-${index}`} className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] p-3 space-y-2">
 	              <div className="flex items-center justify-between">
-	                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Aggregation {index + 1}</p>
+	                <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">{t('invoiceDesigner.transforms.inspector.aggregation', { defaultValue: 'Aggregation {{index}}', index: index + 1 })}</p>
 	                <Button
 	                  id={`transform-aggregate-remove-${selectedOperation.id}-${index}`}
 	                  variant="outline"
@@ -873,11 +936,13 @@ const TransformsWorkspace: React.FC<Props> = ({
                     }))
                   }
                 >
-                  Remove
+                  {t('invoiceDesigner.transforms.inspector.remove', { defaultValue: 'Remove' })}
                 </Button>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Output ID</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {t('invoiceDesigner.transforms.inspector.outputId', { defaultValue: 'Output ID' })}
+                </label>
                 <Input
                   id={`transform-aggregate-id-${selectedOperation.id}-${index}`}
                   value={aggregation.id}
@@ -908,10 +973,12 @@ const TransformsWorkspace: React.FC<Props> = ({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Operation</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {t('invoiceDesigner.transforms.inspector.operation', { defaultValue: 'Operation' })}
+                </label>
                 <CustomSelect
                   id={`transform-aggregate-op-${selectedOperation.id}-${index}`}
-                  options={AGGREGATION_OPTIONS}
+                  options={buildAggregationOptions(t)}
                   value={aggregation.op}
                   onValueChange={(value: string) =>
                     updateOperation(selectedOperation.id, (operation) => ({
@@ -934,7 +1001,9 @@ const TransformsWorkspace: React.FC<Props> = ({
               </div>
               {aggregation.op !== 'count' && (
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Field</label>
+                  <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                    {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
+                  </label>
                   <CustomSelect
                     id={`transform-aggregate-path-${selectedOperation.id}-${index}`}
                     options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
@@ -975,7 +1044,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               }))
             }
           >
-            + Aggregation
+            {t('invoiceDesigner.transforms.inspector.addAggregation', { defaultValue: '+ Aggregation' })}
           </Button>
         </div>
       );
@@ -984,8 +1053,10 @@ const TransformsWorkspace: React.FC<Props> = ({
     return (
       <Alert variant="info">
         <AlertDescription>
-          This operation type is preserved in the workspace, but the V1 designer edits only filter, sort, group, and
-          aggregate operations.
+          {t('invoiceDesigner.transforms.inspector.unsupportedOperation', {
+            defaultValue:
+              'This operation type is preserved in the workspace, but the V1 designer edits only filter, sort, group, and aggregate operations.',
+          })}
         </AlertDescription>
       </Alert>
     );
@@ -996,30 +1067,40 @@ const TransformsWorkspace: React.FC<Props> = ({
       <div className="space-y-4">
         <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Source data</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Pick preview data and choose the collection binding to shape.</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {t('invoiceDesigner.transforms.source.title', { defaultValue: 'Source data' })}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('invoiceDesigner.transforms.source.description', {
+                defaultValue: 'Pick preview data and choose the collection binding to shape.',
+              })}
+            </p>
           </div>
           <ViewSwitcher
             currentView={previewState.sourceKind}
             onChange={onSourceKindChange}
-            options={PREVIEW_SOURCE_OPTIONS}
+            options={buildPreviewSourceOptions(t)}
           />
 
           {previewState.sourceKind === 'sample' ? (
             <div className="space-y-1">
-              <label htmlFor="invoice-designer-transforms-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Sample scenario
-              </label>
-              <CustomSelect
-                id="invoice-designer-transforms-sample-select"
-                options={INVOICE_PREVIEW_SAMPLE_SCENARIOS.map((scenario) => ({
-                  value: scenario.id,
-                  label: scenario.label,
-                }))}
-                value={activeSample?.id ?? DEFAULT_PREVIEW_SAMPLE_ID ?? ''}
-                onValueChange={onSampleChange}
-                size="sm"
-              />
+              {sampleScenarios.length > 0 && (
+                <>
+                  <label htmlFor="invoice-designer-transforms-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t('invoiceDesigner.transforms.source.sampleScenario', { defaultValue: 'Sample scenario' })}
+                  </label>
+                  <CustomSelect
+                    id="invoice-designer-transforms-sample-select"
+                    options={sampleScenarios.map((scenario) => ({
+                      value: scenario.id,
+                      label: scenario.label,
+                    }))}
+                    value={activeSample?.id ?? defaultSampleId ?? ''}
+                    onValueChange={onSampleChange}
+                    size="sm"
+                  />
+                </>
+              )}
               {activeSample && <p className="text-xs text-slate-500 dark:text-slate-400">{activeSample.description}</p>}
             </div>
           ) : (
@@ -1035,15 +1116,17 @@ const TransformsWorkspace: React.FC<Props> = ({
                   onExistingInvoiceChange(value);
                 }}
                 loadOptions={loadExistingInvoiceOptions}
-                placeholder="Search invoices..."
-                searchPlaceholder="Search by number or client..."
-                emptyMessage="No invoices found."
+                placeholder={existingSourceLabels.search}
+                searchPlaceholder={t('designer.workspace.preview.searchInvoicesHint', {
+                  defaultValue: 'Search by number or client...',
+                })}
+                emptyMessage={existingSourceLabels.empty}
                 dropdownMode="overlay"
-                label="Select invoice"
+                label={existingSourceLabels.select}
               />
               {previewState.isInvoiceDetailLoading && (
                 <p className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
-                  Loading invoice details...
+                  {existingSourceLabels.loading}
                 </p>
               )}
               {previewState.invoiceDetailError && (
@@ -1056,7 +1139,7 @@ const TransformsWorkspace: React.FC<Props> = ({
 
           <div className="space-y-1">
             <label htmlFor="invoice-designer-transforms-source-binding" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Source collection
+              {t('invoiceDesigner.transforms.source.collection', { defaultValue: 'Source collection' })}
             </label>
             <CustomSelect
               id="invoice-designer-transforms-source-binding"
@@ -1078,7 +1161,7 @@ const TransformsWorkspace: React.FC<Props> = ({
 
           <div className="space-y-1">
             <label htmlFor="invoice-designer-transforms-output-binding" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Output binding ID
+              {t('invoiceDesigner.transforms.source.outputBindingId', { defaultValue: 'Output binding ID' })}
             </label>
             <Input
               id="invoice-designer-transforms-output-binding"
@@ -1097,17 +1180,21 @@ const TransformsWorkspace: React.FC<Props> = ({
 
         <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Source metadata</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {t('invoiceDesigner.transforms.metadata.title', { defaultValue: 'Source metadata' })}
+            </p>
             <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-slate-600 dark:text-slate-400">
-              {sourceCollection.length} rows
+              {t('invoiceDesigner.transforms.rowCount', { defaultValue: '{{count}} rows', count: sourceCollection.length })}
             </span>
           </div>
           <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
             <p>
-              <span className="font-semibold text-slate-700 dark:text-slate-300">Binding</span>: {transforms.sourceBindingId || 'None'}
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{t('invoiceDesigner.transforms.metadata.binding', { defaultValue: 'Binding:' })}</span>{' '}
+              {transforms.sourceBindingId || t('invoiceDesigner.transforms.metadata.bindingNone', { defaultValue: 'None' })}
             </p>
             <p>
-              <span className="font-semibold text-slate-700 dark:text-slate-300">Resolved path</span>: {selectedSourceOption?.path ?? 'Not resolved'}
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{t('invoiceDesigner.transforms.metadata.resolvedPath', { defaultValue: 'Resolved path:' })}</span>{' '}
+              {selectedSourceOption?.path ?? t('invoiceDesigner.transforms.metadata.pathNotResolved', { defaultValue: 'Not resolved' })}
             </p>
           </div>
           {sourceFieldPaths.length > 0 ? (
@@ -1119,7 +1206,11 @@ const TransformsWorkspace: React.FC<Props> = ({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400">Choose preview data and a collection binding to discover fields.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('invoiceDesigner.transforms.metadata.noFields', {
+                defaultValue: 'Choose preview data and a collection binding to discover fields.',
+              })}
+            </p>
           )}
         </section>
       </div>
@@ -1128,28 +1219,34 @@ const TransformsWorkspace: React.FC<Props> = ({
         <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Transform pipeline</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Operations run top to bottom.</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                {t('invoiceDesigner.transforms.pipeline.title', { defaultValue: 'Transform pipeline' })}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {t('invoiceDesigner.transforms.pipeline.description', { defaultValue: 'Operations run top to bottom.' })}
+              </p>
             </div>
           </div>
 	          <div className="flex flex-wrap gap-2">
 	            <Button id="transform-add-filter" size="sm" variant="outline" onClick={() => addOperation('filter')}>
-	              + Filter
+	              {t('invoiceDesigner.transforms.pipeline.addFilter', { defaultValue: '+ Filter' })}
 	            </Button>
 	            <Button id="transform-add-sort" size="sm" variant="outline" onClick={() => addOperation('sort')}>
-	              + Sort
+	              {t('invoiceDesigner.transforms.pipeline.addSort', { defaultValue: '+ Sort' })}
 	            </Button>
 	            <Button id="transform-add-group" size="sm" variant="outline" onClick={() => addOperation('group')}>
-	              + Group
+	              {t('invoiceDesigner.transforms.pipeline.addGroup', { defaultValue: '+ Group' })}
 	            </Button>
 	            <Button id="transform-add-aggregate" size="sm" variant="outline" onClick={() => addOperation('aggregate')}>
-	              + Aggregate
+	              {t('invoiceDesigner.transforms.pipeline.addAggregate', { defaultValue: '+ Aggregate' })}
 	            </Button>
 	          </div>
 
           {transforms.operations.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
-              Add operations to build the transform pipeline.
+              {t('invoiceDesigner.transforms.pipeline.empty', {
+                defaultValue: 'Add operations to build the transform pipeline.',
+              })}
             </div>
           ) : (
             <div className="space-y-2">
@@ -1181,7 +1278,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                           </span>
                           <span className="text-sm font-semibold capitalize text-slate-800 dark:text-slate-200">{operation.type}</span>
                         </div>
-                        <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{describeOperation(operation)}</p>
+                        <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{describeOperation(operation, t)}</p>
                       </div>
 	                      <div className="flex shrink-0 items-center gap-1">
 	                        <Button
@@ -1194,7 +1291,10 @@ const TransformsWorkspace: React.FC<Props> = ({
                             event.stopPropagation();
                             moveOperation(operation.id, -1);
                           }}
-                          aria-label={`Move ${operation.id} up`}
+                          aria-label={t('invoiceDesigner.transforms.pipeline.moveUp', {
+                            defaultValue: 'Move {{operation}} up',
+                            operation: operation.id,
+                          })}
                         >
                           ↑
                         </Button>
@@ -1208,7 +1308,10 @@ const TransformsWorkspace: React.FC<Props> = ({
                             event.stopPropagation();
                             moveOperation(operation.id, 1);
                           }}
-                          aria-label={`Move ${operation.id} down`}
+                          aria-label={t('invoiceDesigner.transforms.pipeline.moveDown', {
+                            defaultValue: 'Move {{operation}} down',
+                            operation: operation.id,
+                          })}
                         >
                           ↓
                         </Button>
@@ -1221,7 +1324,10 @@ const TransformsWorkspace: React.FC<Props> = ({
                             event.stopPropagation();
                             duplicateOperation(operation.id);
                           }}
-                          aria-label={`Duplicate ${operation.id}`}
+                          aria-label={t('invoiceDesigner.transforms.pipeline.duplicate', {
+                            defaultValue: 'Duplicate {{operation}}',
+                            operation: operation.id,
+                          })}
                         >
                           ⧉
                         </Button>
@@ -1234,7 +1340,10 @@ const TransformsWorkspace: React.FC<Props> = ({
                             event.stopPropagation();
                             removeOperation(operation.id);
                           }}
-                          aria-label={`Delete ${operation.id}`}
+                          aria-label={t('invoiceDesigner.transforms.pipeline.delete', {
+                            defaultValue: 'Delete {{operation}}',
+                            operation: operation.id,
+                          })}
                         >
                           ×
                         </Button>
@@ -1249,8 +1358,14 @@ const TransformsWorkspace: React.FC<Props> = ({
 
         <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Inspector</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Edit the selected transform operation.</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {t('designer.inspector.title', { defaultValue: 'Inspector' })}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('invoiceDesigner.transforms.inspector.description', {
+                defaultValue: 'Edit the selected transform operation.',
+              })}
+            </p>
           </div>
           {renderInspector()}
         </section>
@@ -1259,8 +1374,14 @@ const TransformsWorkspace: React.FC<Props> = ({
       <div className="space-y-4">
         <section className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Output preview</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Preview rows generated from the current transform pipeline.</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {t('invoiceDesigner.transforms.output.title', { defaultValue: 'Output preview' })}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('invoiceDesigner.transforms.output.description', {
+                defaultValue: 'Preview rows generated from the current transform pipeline.',
+              })}
+            </p>
           </div>
 
           {combinedIssues.length > 0 && (
@@ -1275,7 +1396,9 @@ const TransformsWorkspace: React.FC<Props> = ({
 
           {outputPreview.rowPaths.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Available row paths</p>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                {t('invoiceDesigner.transforms.output.rowPaths', { defaultValue: 'Available row paths' })}
+              </p>
               <div className="flex flex-wrap gap-1">
                 {outputPreview.rowPaths.map((path) => (
                   <code key={path} className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[11px] text-slate-700 dark:text-slate-300">
@@ -1289,14 +1412,36 @@ const TransformsWorkspace: React.FC<Props> = ({
           {outputPreview.groups ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                <span>{outputPreview.groups.length} grouped rows</span>
-                <span>Binding: {transforms.outputBindingId || 'Not set'}</span>
+                <span>
+                  {t('invoiceDesigner.transforms.output.groupedRows', {
+                    defaultValue: '{{count}} grouped rows',
+                    count: outputPreview.groups.length,
+                  })}
+                </span>
+                <span>
+                  {t('invoiceDesigner.transforms.output.binding', {
+                    defaultValue: 'Binding: {{binding}}',
+                    binding:
+                      transforms.outputBindingId ||
+                      t('invoiceDesigner.transforms.output.bindingNotSet', { defaultValue: 'Not set' }),
+                  })}
+                </span>
               </div>
               {outputPreview.groups.slice(0, 5).map((group, index) => (
                 <div key={`group-${index}`} className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] p-3 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">key: {formatValuePreview(group.key)}</span>
-                    <span className="text-slate-500 dark:text-slate-400">{Array.isArray(group.items) ? group.items.length : 0} items</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {t('invoiceDesigner.transforms.output.groupKey', {
+                        defaultValue: 'key: {{value}}',
+                        value: formatValuePreview(group.key),
+                      })}
+                    </span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      {t('invoiceDesigner.transforms.output.groupItems', {
+                        defaultValue: '{{count}} items',
+                        count: Array.isArray(group.items) ? group.items.length : 0,
+                      })}
+                    </span>
                   </div>
                   <pre className="overflow-x-auto rounded bg-white dark:bg-[rgb(var(--color-card))] p-2 text-[11px] text-slate-700 dark:text-slate-300">
                     {JSON.stringify(group.aggregates ?? {}, null, 2)}
@@ -1307,8 +1452,20 @@ const TransformsWorkspace: React.FC<Props> = ({
           ) : outputPreview.rows.length > 0 ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                <span>{outputPreview.rows.length} rows</span>
-                <span>Binding: {transforms.outputBindingId || 'Not set'}</span>
+                <span>
+                  {t('invoiceDesigner.transforms.rowCount', {
+                    defaultValue: '{{count}} rows',
+                    count: outputPreview.rows.length,
+                  })}
+                </span>
+                <span>
+                  {t('invoiceDesigner.transforms.output.binding', {
+                    defaultValue: 'Binding: {{binding}}',
+                    binding:
+                      transforms.outputBindingId ||
+                      t('invoiceDesigner.transforms.output.bindingNotSet', { defaultValue: 'Not set' }),
+                  })}
+                </span>
               </div>
               <div className="space-y-2">
                 {outputPreview.rows.slice(0, 5).map((row, index) => (
@@ -1321,8 +1478,12 @@ const TransformsWorkspace: React.FC<Props> = ({
           ) : (
             <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
               {previewData
-                ? 'Configure the source, output binding, and operations to preview transformed rows.'
-                : 'Choose preview data to inspect transformed output.'}
+                ? t('invoiceDesigner.transforms.output.emptyConfigure', {
+                    defaultValue: 'Configure the source, output binding, and operations to preview transformed rows.',
+                  })
+                : t('invoiceDesigner.transforms.output.emptyNoData', {
+                    defaultValue: 'Choose preview data to inspect transformed output.',
+                  })}
             </div>
           )}
         </section>

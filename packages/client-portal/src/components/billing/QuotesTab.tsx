@@ -9,6 +9,7 @@ import { useFormatQuoteStatus } from '@alga-psa/ui/hooks/useQuoteEnumOptions';
 import { getClientQuotes } from '@alga-psa/client-portal/actions';
 import { useRouter } from 'next/navigation';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface QuotesTabProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
@@ -35,6 +36,7 @@ const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
 };
 
 const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, formatDate }) => {
+  const { t } = useTranslation('client-portal');
   const router = useRouter();
   const formatQuoteStatus = useFormatQuoteStatus();
   const [quotes, setQuotes] = useState<IQuoteWithClient[]>([]);
@@ -57,32 +59,33 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
         setQuotes(fetchedQuotes);
       } catch (err) {
         console.error('Error loading quotes:', err);
-        setError('Failed to load quotes');
+        setError(t('billing.quotes.errors.loadFailed', { defaultValue: 'Failed to load quotes' }));
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [t]);
 
   const quoteColumns: ColumnDefinition<IQuoteWithClient>[] = useMemo(() => [
     {
-      title: 'Quote #',
+      title: t('billing.quotes.columns.quoteNumber', { defaultValue: 'Quote #' }),
       dataIndex: 'quote_number',
-      render: (value, record) => value || `Draft ${record.quote_id}`,
+      render: (value, record) =>
+        value || t('billing.quotes.draftQuote', { defaultValue: 'Draft {{quoteId}}', quoteId: record.quote_id }),
     },
     {
-      title: 'Title',
+      title: t('billing.quotes.columns.title', { defaultValue: 'Title' }),
       dataIndex: 'title',
     },
     {
-      title: 'Amount',
+      title: t('billing.quotes.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
       render: (value, record) => formatCurrency(Number(value) || 0, record.currency_code),
     },
     {
-      title: 'Status',
+      title: t('billing.quotes.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (value) => {
         const status = (value || 'draft') as QuoteStatus;
@@ -94,11 +97,11 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
       },
     },
     {
-      title: 'Date',
+      title: t('billing.quotes.columns.date', { defaultValue: 'Date' }),
       dataIndex: 'quote_date',
       render: (value) => formatDate(value),
     },
-  ], [formatCurrency, formatDate, formatQuoteStatus]);
+  ], [formatCurrency, formatDate, formatQuoteStatus, t]);
 
   if (isLoading) {
     return (
@@ -132,7 +135,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
       />
       {quotes.length === 0 && (
         <div className="py-10 text-center">
-          <p className="text-gray-500">No quotes found</p>
+          <p className="text-gray-500">{t('billing.quotes.empty', { defaultValue: 'No quotes found' })}</p>
         </div>
       )}
     </div>

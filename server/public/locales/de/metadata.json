@@ -1,0 +1,618 @@
+{
+  "clientPortal": {
+    "appointments": {
+      "layout": {
+        "title": "Termine"
+      },
+      "detail": {
+        "layout": {
+          "title": "Termindetails"
+        }
+      }
+    },
+    "devices": {
+      "title": "Meine Geräte"
+    },
+    "licenses": {
+      "title": "Lizenzen"
+    },
+    "projects": {
+      "title": "Projekte",
+      "detail": {
+        "fallbackTitle": "Projektdetails"
+      }
+    },
+    "billing": {
+      "invoices": {
+        "detail": {
+          "pay": {
+            "title": "Rechnung bezahlen"
+          },
+          "paymentSuccess": {
+            "title": "Zahlung erfolgreich"
+          }
+        }
+      },
+      "quotes": {
+        "detail": {
+          "title": "Angebotsdetails"
+        }
+      },
+      "title": "Abrechnung"
+    },
+    "clientSettings": {
+      "description": "Verwalten Sie Ihre Unternehmenseinstellungen und -konfigurationen",
+      "title": "Unternehmenseinstellungen"
+    },
+    "dashboard": {
+      "title": "Dashboard"
+    },
+    "documents": {
+      "title": "Dokumente"
+    },
+    "tickets": {
+      "detail": {
+        "title": "Ticket #{{ticketNumber}} – {{ticketTitle}}",
+        "fallbackTitle": "Ticketdetails"
+      },
+      "layout": {
+        "title": "Kunden-Tickets"
+      }
+    },
+    "account": {
+      "layout": {
+        "title": "Konto"
+      }
+    },
+    "extensions": {
+      "detail": {
+        "title": "Erweiterung"
+      }
+    },
+    "knowledgeBase": {
+      "layout": {
+        "title": "Wissensdatenbank"
+      }
+    },
+    "profile": {
+      "layout": {
+        "title": "Profil"
+      }
+    },
+    "requestServices": {
+      "detail": {
+        "title": "Serviceanfrage"
+      },
+      "myRequests": {
+        "title": "Meine Anfragen",
+        "detail": {
+          "title": "Anfragedetails"
+        }
+      },
+      "title": "Services anfordern"
+    },
+    "layout": {
+      "titleTemplate": "%s | Kundenportal",
+      "defaultTitle": "Dashboard | Kundenportal"
+    }
+  },
+  "msp": {
+    "clients": {
+      "title": "Kunden",
+      "detail": {
+        "fallbackTitle": "Kundendetails"
+      }
+    },
+    "contacts": {
+      "title": "Kontakte",
+      "detail": {
+        "fallbackTitle": "Kontaktdetails",
+        "activity": {
+          "title": "{{contactName}} – Aktivität",
+          "fallbackTitle": "Kontaktaktivität"
+        }
+      }
+    },
+    "createAsset": {
+      "title": "Asset erstellen"
+    },
+    "createClient": {
+      "title": "Kunde erstellen"
+    },
+    "createProject": {
+      "title": "Projekt erstellen"
+    },
+    "createTicket": {
+      "title": "Ticket erstellen"
+    },
+    "extensions": {
+      "layout": {
+        "title": "Erweiterungen"
+      },
+      "detail": {
+        "debug": {
+          "layout": {
+            "title": "Erweiterungs-Debugging"
+          }
+        }
+      }
+    },
+    "inventory": {
+      "counts": {
+        "title": "Bestandszählungen"
+      },
+      "ghostUsage": {
+        "title": "Ghost-Verbrauch"
+      },
+      "loaners": {
+        "title": "Leihgeräte"
+      },
+      "locations": {
+        "title": "Bestandsstandorte"
+      },
+      "margin": {
+        "title": "Margenbericht"
+      },
+      "purchaseOrders": {
+        "title": "Bestellungen"
+      },
+      "salesOrders": {
+        "title": "Kundenaufträge"
+      },
+      "stock": {
+        "title": "Bestand"
+      },
+      "transfers": {
+        "title": "Umlagerungen"
+      },
+      "units": {
+        "title": "Bestandseinheiten"
+      },
+      "vendorBills": {
+        "title": "Lieferantenrechnungen"
+      },
+      "vendors": {
+        "title": "Lieferanten"
+      },
+      "writeOffs": {
+        "title": "Abschreibungen"
+      },
+      "kits": {
+        "title": "Kits"
+      },
+      "title": "Lagerbestand",
+      "rma": {
+        "title": "RMA"
+      }
+    },
+    "knowledgeBase": {
+      "title": "Wissensdatenbank",
+      "review": {
+        "title": "Wissensdatenbank-Prüfung"
+      }
+    },
+    "projects": {
+      "detail": {
+        "tasks": {
+          "detail": {
+            "title": "Projektaufgabe"
+          }
+        },
+        "fallbackTitle": "Projektdetails"
+      },
+      "title": "Projekte",
+      "templates": {
+        "layout": {
+          "title": "Projektvorlagen"
+        },
+        "detail": {
+          "layout": {
+            "title": "Vorlagendetails"
+          }
+        }
+      }
+    },
+    "quoteApprovals": {
+      "title": "Angebotsfreigaben"
+    },
+    "quoteDocumentTemplates": {
+      "title": "Angebotslayouts"
+    },
+    "reports": {
+      "title": "Berichte",
+      "deferredRevenue": {
+        "title": "Abgegrenzte Umsatzerlöse"
+      }
+    },
+    "securitySettings": {
+      "title": "Sicherheitseinstellungen"
+    },
+    "serviceRequests": {
+      "detail": {
+        "fallbackTitle": "Serviceanfrage"
+      },
+      "title": "Serviceanfragen"
+    },
+    "surveys": {
+      "dashboard": {
+        "title": "Umfrage-Dashboard"
+      },
+      "analytics": {
+        "title": "Umfrage-Analysen"
+      },
+      "responses": {
+        "title": "Umfrageantworten",
+        "detail": {
+          "title": "Antwortdetails"
+        }
+      },
+      "settings": {
+        "title": "Umfrageeinstellungen"
+      },
+      "title": "Umfragen"
+    },
+    "tickets": {
+      "export": {
+        "title": "Tickets exportieren"
+      },
+      "bulkAssign": {
+        "title": "Tickets zuweisen"
+      },
+      "bulkDueDate": {
+        "title": "Fälligkeitsdatum festlegen"
+      },
+      "bulkPriority": {
+        "title": "Priorität festlegen"
+      },
+      "bulkStatus": {
+        "title": "Status festlegen"
+      },
+      "bulkTags": {
+        "title": "Tags festlegen"
+      },
+      "import": {
+        "title": "Tickets importieren"
+      },
+      "title": "Tickets",
+      "detail": {
+        "title": "Ticket #{{ticketNumber}} – {{ticketTitle}}",
+        "fallbackTitle": "Ticketdetails"
+      }
+    },
+    "userActivities": {
+      "title": "Benutzeraktivitäten"
+    },
+    "workflowEditor": {
+      "new": {
+        "title": "Neuer Workflow"
+      },
+      "title": "Workflow-Editor",
+      "detail": {
+        "title": "Workflow bearbeiten"
+      }
+    },
+    "documentTemplates": {
+      "detail": {
+        "fallbackTitle": "Dokumentenlayouts",
+        "title": "{{documentType}}-Layouts"
+      }
+    },
+    "settings": {
+      "title": "Einstellungen",
+      "extensions": {
+        "description": "Erweiterungen verwalten",
+        "detail": {
+          "description": "Erweiterungsdetails anzeigen",
+          "layout": {
+            "title": "Erweiterungseinstellungen"
+          },
+          "settings": {
+            "description": "Erweiterungseinstellungen konfigurieren",
+            "title": "Erweiterungseinstellungen",
+            "layout": {
+              "title": "Erweiterungskonfiguration"
+            }
+          },
+          "title": "Erweiterungsdetails"
+        },
+        "layout": {
+          "title": "Erweiterungseinstellungen"
+        },
+        "title": "Erweiterungen"
+      },
+      "notifications": {
+        "layout": {
+          "title": "Benachrichtigungseinstellungen"
+        }
+      },
+      "sla": {
+        "layout": {
+          "title": "SLA-Einstellungen"
+        }
+      }
+    },
+    "assets": {
+      "automation": {
+        "title": "Asset-Automatisierung"
+      },
+      "imports": {
+        "title": "Asset-Importe"
+      },
+      "integrations": {
+        "title": "Asset-Integrationen"
+      },
+      "maintenance": {
+        "title": "Asset-Wartung"
+      },
+      "policies": {
+        "title": "Asset-Richtlinien"
+      },
+      "detail": {
+        "edit": {
+          "title": "Asset bearbeiten",
+          "description": "Asset-Details bearbeiten"
+        },
+        "fallbackTitle": "Asset-Details"
+      },
+      "title": "Asset-Inventar"
+    },
+    "chat": {
+      "title": "Chat"
+    },
+    "createContact": {
+      "title": "Kontakt erstellen"
+    },
+    "createOpportunity": {
+      "title": "Opportunity erstellen"
+    },
+    "createProduct": {
+      "title": "Produkt erstellen"
+    },
+    "createService": {
+      "title": "Dienst erstellen"
+    },
+    "dashboard": {
+      "title": "Dashboard"
+    },
+    "invoices": {
+      "detail": {
+        "title": "Rechnung"
+      }
+    },
+    "jobs": {
+      "title": "Jobs"
+    },
+    "marketing": {
+      "calendar": {
+        "title": "Marketing-Kalender"
+      },
+      "campaigns": {
+        "title": "Marketing-Kampagnen"
+      },
+      "channels": {
+        "title": "Marketing-Kanäle"
+      },
+      "content": {
+        "title": "Marketing-Inhalte"
+      },
+      "forms": {
+        "title": "Marketing-Formulare"
+      },
+      "posts": {
+        "title": "Marketing-Beiträge"
+      },
+      "sequences": {
+        "title": "Marketing-Sequenzen"
+      },
+      "title": "Marketing"
+    },
+    "onboarding": {
+      "layout": {
+        "title": "Onboarding"
+      }
+    },
+    "platformUpdates": {
+      "detail": {
+        "title": "Plattform-Update"
+      }
+    },
+    "schedule": {
+      "title": "Zeitplan"
+    },
+    "search": {
+      "title": "Suche"
+    },
+    "technicianDispatch": {
+      "title": "Techniker-Einsatzplanung"
+    },
+    "timeEntry": {
+      "timesheet": {
+        "detail": {
+          "title": "Stundenzettel"
+        }
+      },
+      "title": "Zeiteintrag"
+    },
+    "workflowControl": {
+      "title": "Workflow-Steuerung"
+    },
+    "account": {
+      "layout": {
+        "title": "Konto"
+      }
+    },
+    "addOns": {
+      "layout": {
+        "title": "Zusatzmodule"
+      }
+    },
+    "emailLogs": {
+      "title": "E-Mail-Protokolle"
+    },
+    "profile": {
+      "layout": {
+        "title": "Profil"
+      }
+    },
+    "workflows": {
+      "runs": {
+        "detail": {
+          "layout": {
+            "title": "Workflow-Ausführung"
+          }
+        }
+      },
+      "title": "Automatisierungs-Hub"
+    },
+    "billing": {
+      "title": "Abrechnung",
+      "credits": {
+        "title": "Gutschriften"
+      }
+    },
+    "documents": {
+      "title": "Dokumente"
+    },
+    "shareDocument": {
+      "title": "Dokument freigeben"
+    },
+    "test": {
+      "collab": {
+        "title": "Kollaborationstest"
+      },
+      "layout": {
+        "title": "Test"
+      },
+      "onboarding": {
+        "layout": {
+          "title": "Onboarding-Test"
+        }
+      },
+      "uiKit": {
+        "layout": {
+          "title": "UI-Kit"
+        }
+      }
+    },
+    "timeSheetApprovals": {
+      "title": "Stundenzettel-Genehmigungen"
+    },
+    "layout": {
+      "defaultTitle": "Dashboard | AlgaPSA"
+    }
+  },
+  "auth": {
+    "clientPortal": {
+      "handoff": {
+        "title": "Anmeldung läuft"
+      },
+      "signin": {
+        "title": "Anmeldung Kundenportal"
+      },
+      "forgotPassword": {
+        "layout": {
+          "title": "Passwort vergessen"
+        }
+      }
+    },
+    "msp": {
+      "signin": {
+        "title": "MSP-Anmeldung"
+      },
+      "forgotPassword": {
+        "layout": {
+          "title": "Passwort vergessen"
+        }
+      }
+    },
+    "verify": {
+      "layout": {
+        "description": "Bestätigen Sie Ihre E-Mail-Adresse, um die Registrierung abzuschließen",
+        "title": "E-Mail bestätigen"
+      }
+    },
+    "signin": {
+      "title": "Anmelden"
+    },
+    "verifyEmail": {
+      "layout": {
+        "title": "E-Mail bestätigen"
+      }
+    },
+    "checkEmail": {
+      "layout": {
+        "title": "E-Mail prüfen"
+      }
+    },
+    "passwordReset": {
+      "confirmation": {
+        "layout": {
+          "title": "Passwort zurücksetzen"
+        }
+      },
+      "setNewPassword": {
+        "layout": {
+          "title": "Neues Passwort festlegen"
+        }
+      }
+    },
+    "portal": {
+      "setup": {
+        "layout": {
+          "title": "Portal-Einrichtung"
+        }
+      }
+    },
+    "register": {
+      "layout": {
+        "title": "Registrieren"
+      }
+    },
+    "team": {
+      "setup": {
+        "layout": {
+          "title": "Team-Einrichtung"
+        }
+      }
+    },
+    "layout": {
+      "defaultTitle": "Anmelden | AlgaPSA"
+    }
+  },
+  "app": {
+    "keywords": "MSP, Managed Service Provider, IT-Dienstleistungen, Netzwerkmanagement, Cloud-Dienste",
+    "description": "Anwendung für Managed Service Provider"
+  },
+  "teams": {
+    "tab": {
+      "title": "Teams-Anleitung"
+    },
+    "auth": {
+      "popupComplete": {
+        "title": "Teams-Authentifizierung"
+      }
+    }
+  },
+  "share": {
+    "detail": {
+      "layout": {
+        "title": "Freigegebenes Dokument"
+      }
+    }
+  },
+  "static": {
+    "layout": {
+      "title": "AlgaPSA"
+    },
+    "masterTerms": {
+      "layout": {
+        "title": "Rahmenbedingungen"
+      }
+    },
+    "privacyPolicy": {
+      "layout": {
+        "title": "Datenschutzerklärung"
+      }
+    }
+  }
+}

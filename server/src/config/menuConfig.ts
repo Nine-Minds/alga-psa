@@ -39,6 +39,7 @@ import {
   Megaphone,
   Monitor,
   Package,
+  Palette,
   Percent,
   Plug,
   Puzzle,
@@ -57,7 +58,8 @@ import {
   Star,
   Target,
   Ticket,
-  BadgeCheck
+  BadgeCheck,
+  Wrench
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
@@ -160,6 +162,12 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/contacts'
       },
       {
+        name: 'Interactions',
+        translationKey: 'nav.interactions',
+        icon: Handshake,
+        href: '/msp/interactions'
+      },
+      {
         name: 'Documents',
         translationKey: 'nav.documents',
         icon: FileText,
@@ -172,7 +180,18 @@ export const navigationSections: NavigationSection[] = [
         name: 'Assets',
         translationKey: 'nav.assets',
         icon: Monitor,
-        href: '/msp/assets'
+        subItems: [
+          { name: 'All Assets', translationKey: 'nav.assetsAll', icon: Monitor, href: '/msp/assets' },
+          { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' }
+        ]
+      },
+      {
+        name: 'Passwords',
+        translationKey: 'nav.passwords',
+        icon: KeyRound,
+        href: '/msp/credentials',
+        requiredFeature: TIER_FEATURES.CREDENTIALS,
+        availableEditions: ENTERPRISE_ONLY_EDITIONS,
       },
       {
         name: 'Inventory',
@@ -288,6 +307,13 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Users', translationKey: 'settings.tabs.users', icon: UserCog, href: '/msp/settings/users' },
       { name: 'Teams', translationKey: 'settings.tabs.teams', icon: Users, href: '/msp/settings?tab=teams' },
       { name: 'Language', translationKey: 'settings.tabs.language', icon: Globe, href: '/msp/settings/language' },
+      {
+        name: 'Appearance',
+        translationKey: 'settings.tabs.appearance',
+        icon: Palette,
+        href: '/msp/settings/appearance',
+        availableEditions: ENTERPRISE_ONLY_EDITIONS,
+      },
       { name: 'Client Portal', translationKey: 'settings.tabs.clientPortal', icon: AtSign, href: '/msp/settings/client-portal' },
       { name: 'License', translationKey: 'settings.tabs.license', icon: BadgeCheck, href: '/msp/licenses', requiresSelfHost: true },
     ]
@@ -299,6 +325,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: Ticket, href: '/msp/settings?tab=ticketing' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
+      { name: 'Assets', translationKey: 'settings.tabs.assets', icon: Monitor, href: '/msp/settings/assets' },
       { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings/interactions' },
       { name: 'Opportunities', translationKey: 'settings.tabs.opportunities', icon: Target, href: '/msp/settings/opportunities' },
     ]
@@ -324,7 +351,7 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.dataIntegration',
     items: [
       { name: 'Secrets', translationKey: 'settings.tabs.secrets', icon: KeyRound, href: '/msp/settings/secrets' },
-      { name: 'Import/Export', translationKey: 'settings.tabs.importExport', icon: Download, href: '/msp/settings/import-export' },
+      { name: 'Imports & Exports', translationKey: 'settings.tabs.importExport', icon: Download, href: '/msp/settings/import-export' },
       { name: 'Integrations', translationKey: 'settings.tabs.integrations', icon: Plug, href: '/msp/settings/integrations' },
       {
         name: 'Extensions',

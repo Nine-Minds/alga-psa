@@ -191,6 +191,13 @@
     "wholeWord": "Całe słowo",
     "wholeWordShort": "Wyraz",
     "clearSearch": "Wyczyść wyszukiwanie",
+    "spacing": {
+      "compact": "Kompaktowo",
+      "spacious": "Przestronnie",
+      "decrease": "Zmniejsz odstępy na liście",
+      "increase": "Zwiększ odstępy na liście",
+      "reset": "Resetuj odstępy na liście"
+    },
     "taskList": "Lista zadań",
     "kanbanBoard": "Tablica Kanbana",
     "kanbanBoardWithPhase": "Tablica Kanban: {{phaseName}}",
@@ -290,7 +297,8 @@
     "bulkTagsPartial": "Nie udało się dodać tagów do niektórych zadań",
     "bulkTagsFailure": "Nie udało się dodać tagów do wybranych zadań",
     "bulkTagsSuccess_few": "Dodano tagi do {{count}} zadań",
-    "bulkTagsSuccess_many": "Dodano tagi do {{count}} zadań"
+    "bulkTagsSuccess_many": "Dodano tagi do {{count}} zadań",
+    "taskTypeFallback": "Zadanie"
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
@@ -550,15 +558,34 @@
     "billed": "Rozliczono",
     "pending": "Oczekujące",
     "unbilledTotal": "Nierozliczone ({{currency}}):",
-    "priceCurrency": "Waluta ceny", "salePrice": "Cena sprzedaży", "catalogUnitCost": "Katalogowy koszt jednostkowy", "costNotConfigured": "Nie skonfigurowano",
-    "invoiceDestination": "Faktura", "invoiceNextProject": "Następna faktura za projekt", "invoiceSeparate": "Oddzielna faktura za produkty",
-    "invoiceProjectCompletion": "Po ukończeniu projektu", "invoiceOnHold": "Wstrzymane", "currencySeparateHelp": "Produkty w innej walucie są ujmowane na oddzielnej fakturze za produkty.",
-    "invoiceColumn": "Faktura", "editProduct": "Edytuj produkt", "removeProduct": "Usuń produkt", "salePriceOverrideHelp": "Ta cena ma zastosowanie tylko do tego wiersza produktu w projekcie.",
-    "updateFailed": "Nie udało się zaktualizować produktu", "updatedSuccess": "Zaktualizowano produkt", "createProductInvoices": "Utwórz faktury za produkty",
-    "invoiceReviewTitle": "Przejrzyj faktury za produkty", "invoiceReviewHelp": "Kwalifikujące się produkty są wstępnie zaznaczone. Dla każdej waluty zostanie utworzona jedna wersja robocza faktury.",
-    "invoiceReviewFailed": "Nie udało się wczytać przeglądu faktur", "invoiceCreateFailed": "Nie udało się utworzyć faktur za produkty", "invoiceCreatedSuccess": "Utworzono wersje robocze faktur za produkty: {{count}}",
-    "createDrafts": "Utwórz szkice", "draftPreview": "Szkic w walucie {{currency}} ({{count}} produktów)", "invoiceLinksHelp": "Utworzono wersje robocze faktur. Otwórz każdą grupę walutową, aby ją sprawdzić.",
-    "currencyDraftLink": "Wersja robocza faktury w walucie {{currency}}", "productCount": "{{count}} produktów", "productsMovedToHoldOnClose": "Przeniesiono {{count}} powiązanych produktów do stanu Wstrzymane, ponieważ ich zdarzenie rozliczeniowe zostało anulowane."
+    "priceCurrency": "Waluta ceny",
+    "salePrice": "Cena sprzedaży",
+    "catalogUnitCost": "Katalogowy koszt jednostkowy",
+    "costNotConfigured": "Nie skonfigurowano",
+    "invoiceDestination": "Faktura",
+    "invoiceNextProject": "Następna faktura za projekt",
+    "invoiceSeparate": "Oddzielna faktura za produkty",
+    "invoiceProjectCompletion": "Po ukończeniu projektu",
+    "invoiceOnHold": "Wstrzymane",
+    "currencySeparateHelp": "Produkty w innej walucie są ujmowane na oddzielnej fakturze za produkty.",
+    "invoiceColumn": "Faktura",
+    "editProduct": "Edytuj produkt",
+    "removeProduct": "Usuń produkt",
+    "salePriceOverrideHelp": "Ta cena ma zastosowanie tylko do tego wiersza produktu w projekcie.",
+    "updateFailed": "Nie udało się zaktualizować produktu",
+    "updatedSuccess": "Zaktualizowano produkt",
+    "createProductInvoices": "Utwórz faktury za produkty",
+    "invoiceReviewTitle": "Przejrzyj faktury za produkty",
+    "invoiceReviewHelp": "Kwalifikujące się produkty są wstępnie zaznaczone. Dla każdej waluty zostanie utworzona jedna wersja robocza faktury.",
+    "invoiceReviewFailed": "Nie udało się wczytać przeglądu faktur",
+    "invoiceCreateFailed": "Nie udało się utworzyć faktur za produkty",
+    "invoiceCreatedSuccess": "Utworzono wersje robocze faktur za produkty: {{count}}",
+    "createDrafts": "Utwórz szkice",
+    "draftPreview": "Szkic w walucie {{currency}} ({{count}} produktów)",
+    "invoiceLinksHelp": "Utworzono wersje robocze faktur. Otwórz każdą grupę walutową, aby ją sprawdzić.",
+    "currencyDraftLink": "Wersja robocza faktury w walucie {{currency}}",
+    "productCount": "{{count}} produktów",
+    "productsMovedToHoldOnClose": "Przeniesiono {{count}} powiązanych produktów do stanu Wstrzymane, ponieważ ich zdarzenie rozliczeniowe zostało anulowane."
   },
   "export": {
     "title": "Eksportuj zadania projektu",
@@ -761,7 +788,8 @@
       "phasePlaceholder": "Wybierz fazę",
       "statusLabel": "Status",
       "statusPlaceholder": "Wybierz stan",
-      "linkTicketLabel": "Połącz zgłoszenie z utworzonym zadaniem"
+      "linkTicketLabel": "Połącz zgłoszenie z utworzonym zadaniem",
+      "createdSuccess": "Zadanie zostało utworzone pomyślnie"
     },
     "linkTicketToTask": {
       "title": "Połącz zgłoszenie z zadaniem",
@@ -962,7 +990,17 @@
       "add_title": "Dodaj kolumnę statusu",
       "select_placeholder": "Wybierz status...",
       "all_in_use": "Wszystkie dostępne statusy są w użyciu",
-      "create_new": "Utwórz nowy"
+      "create_new": "Utwórz nowy",
+      "status_no_longer_exists": "Status już nie istnieje",
+      "missing_status": "Brakujący status",
+      "ambiguous_status": "Niejednoznaczny status historyczny",
+      "replace_placeholder": "Wybierz status zastępczy...",
+      "replace_status": "Zastąp status",
+      "replacing": "Zastępowanie...",
+      "replaced": "Kolumna statusu zastąpiona",
+      "replace_failed": "Nie udało się zastąpić kolumny statusu",
+      "repair_status_columns": "Napraw kolumny statusu",
+      "unresolved_apply_guard": "Kolumny statusu wymagają naprawy ({{count}})"
     },
     "list": {
       "title": "Szablony projektów",
@@ -1050,7 +1088,8 @@
         "all": "Skopiuj wszystkie zadania"
       },
       "fixErrors": "Popraw następujące błędy:",
-      "addStatus": "Dodaj nowy status"
+      "addStatus": "Dodaj nowy status",
+      "unresolved_guard": "Ten szablon ma kolumny statusu, które wymagają naprawy przed zastosowaniem."
     },
     "detail": {
       "description": "Opis:",
@@ -1160,6 +1199,8 @@
       "doneEditing": "Zakończono edycję",
       "editChecklist": "Edytuj listę kontrolną",
       "addChecklistItem": "Dodaj element",
+      "editChecklistItem": "Edytuj element listy kontrolnej",
+      "removeChecklistItem": "Usuń element listy kontrolnej",
       "checklistItemPlaceholder": "Element listy kontrolnej",
       "emptyChecklistItem": "Pusty przedmiot",
       "reorderChecklistItem": "Przeciągnij, aby zmienić kolejność",
@@ -1350,7 +1391,9 @@
     "loadingProjects": "Ładowanie projektów...",
     "noDescription": "Brak opisu",
     "noPhasesOrTasks": "Brak faz lub zadań do wyświetlenia",
-    "loadError": "Nie udało się wczytać szczegółów projektu"
+    "loadError": "Nie udało się wczytać szczegółów projektu",
+    "errorWithMessage": "Błąd: {{message}}",
+    "notFoundOrNoAccess": "Nie znaleziono projektu lub nie masz do niego dostępu."
   },
   "backToProjects": "Wróć do projektów",
   "invalidProjectData": "Nieprawidłowe dane projektu",
@@ -1419,6 +1462,8 @@
     "newestFirst": "Najnowsze",
     "oldestFirst": "Najstarsze",
     "addComment": "Dodaj komentarz",
+    "reply": "Odpowiedz",
+    "addFailed": "Nie udało się dodać komentarza",
     "submitting": "Wysyłanie...",
     "loading": "Ładowanie...",
     "empty": "Brak komentarzy. Bądź pierwszym, który skomentuje!"
@@ -1431,6 +1476,8 @@
     "showPhasesDescription": "Klienci zobaczą karty faz z nazwami, opisami i zakresami dat. Mogą wybierać fazy, aby zobaczyć powiązane zadania.",
     "showCompletion": "Pokaż % ukończenia",
     "showCompletionDescription": "Wyświetl pasek postępu i procent pokazujący, ile zadań jest ukończonych w każdej fazie.",
+    "showBilling": "Pokaż rozliczenia",
+    "showBillingDescription": "Klienci zobaczą podsumowanie rozliczeń tylko do odczytu z harmonogramem płatności, kwotami i wartością zafakturowaną do dziś. Dotyczy tylko projektów z włączonymi rozliczeniami.",
     "showTasks": "Pokaż zadania",
     "showTasksDescription": "Klienci mogą przeglądać poszczególne zadania w każdej fazie. Zadania są wyświetlane na tablicy Kanban lub w widoku listy pogrupowane według statusu.",
     "visibleTaskFields": "Widoczne pola zadań",
@@ -1439,6 +1486,7 @@
     "summary": {
       "projectInfo": "Nazwa projektu, opis, daty i ogólny postęp",
       "budgetHours": "Godziny budżetowe: wykorzystane vs. budżetowe wartości i % wykorzystanego budżetu",
+      "billing": "Podsumowanie rozliczeń: harmonogram płatności, kwoty i zafakturowane do dziś",
       "phaseInfo": "Nazwy faz, opisy i zakresy dat",
       "phaseCompletion": "Procent ukończenia dla każdej fazy",
       "taskDetails": "Szczegóły zadań: {{fields}}",
@@ -1600,6 +1648,10 @@
     },
     "terms": {
       "fixed": "Stała cena {{total}} · fakturowanie {{mode}}",
+      "lockedSummary_one": "{{count}} pozycja na łączną kwotę {{amount}} jest zablokowana i nie ulegnie zmianie.",
+      "lockedSummary_few": "{{count}} pozycje na łączną kwotę {{amount}} są zablokowane i nie ulegną zmianie.",
+      "lockedSummary_many": "{{count}} pozycji na łączną kwotę {{amount}} jest zablokowanych i nie ulegnie zmianie.",
+      "lockedSummary_other": "{{count}} pozycji na łączną kwotę {{amount}} jest zablokowanych i nie ulegnie zmianie.",
       "edit": "Edytuj warunki",
       "saved": "Warunki rozliczenia zaktualizowane",
       "dialogTitle": "Edytuj warunki rozliczenia"
@@ -1633,6 +1685,7 @@
       "milestone": "Kamień milowy",
       "trigger": "Wyzwalacz",
       "amount": "Kwota",
+      "amountLocked": "Kwota zablokowana przy zatwierdzeniu",
       "status": "Status",
       "invoice": "Faktura",
       "empty": "Brak kamieni milowych i zaliczek.",
@@ -1646,6 +1699,7 @@
       "phaseTrigger": "Ukończenie fazy",
       "phaseOverdue": "Data zakończenia fazy minęła — oznacz fazę jako ukończoną, aby przygotować ten wpis",
       "approve": "Zatwierdź",
+      "unapprove": "Cofnij zatwierdzenie",
       "approveInvoice": "Zatwierdź i zafakturuj",
       "hold": "Wstrzymaj",
       "markReady": "Oznacz jako gotowe",
@@ -1655,6 +1709,7 @@
       "allocatedOver": "Przekroczono przydział o {{amount}}",
       "held": "Pozycja wstrzymana",
       "approved": "Pozycja zatwierdzona",
+      "unapproved": "Zatwierdzenie cofnięte",
       "invoiced": "Faktura wygenerowana",
       "markedReady": "Oznaczono jako gotowe",
       "canceled": "Pozycja anulowana",
@@ -1665,10 +1720,16 @@
       "holdReasonRequired": "Powód wstrzymania jest wymagany",
       "heldReason": "Wstrzymane: {{reason}}",
       "releaseHold": "Zwolnij wstrzymanie",
-      "holdReleased": "Wstrzymanie zwolnione", "productsMovedToHold": "Przeniesiono {{count}} powiązanych produktów do stanu Wstrzymane", "setProjectTotal": "Ustaw sumę projektu na {{amount}}",
-      "recalculateTitle": "Przelicz sumę projektu", "currentProjectTotal": "Bieżąca suma projektu", "currentScheduleSum": "Bieżąca suma harmonogramu",
-      "resultingProjectTotal": "Wynikowa suma projektu", "recalculateWarning": "Edytowalne wpisy procentowe zostaną przekształcone we wpisy o stałych kwotach, aby wyświetlane kwoty się nie zmieniały.",
-      "confirmSetProjectTotal": "Ustaw sumę projektu", "totalRecalculated": "Zaktualizowano sumę projektu na podstawie harmonogramu"
+      "holdReleased": "Wstrzymanie zwolnione",
+      "productsMovedToHold": "Przeniesiono {{count}} powiązanych produktów do stanu Wstrzymane",
+      "setProjectTotal": "Ustaw sumę projektu na {{amount}}",
+      "recalculateTitle": "Przelicz sumę projektu",
+      "currentProjectTotal": "Bieżąca suma projektu",
+      "currentScheduleSum": "Bieżąca suma harmonogramu",
+      "resultingProjectTotal": "Wynikowa suma projektu",
+      "recalculateWarning": "Edytowalne wpisy procentowe zostaną przekształcone we wpisy o stałych kwotach, aby wyświetlane kwoty się nie zmieniały.",
+      "confirmSetProjectTotal": "Ustaw sumę projektu",
+      "totalRecalculated": "Zaktualizowano sumę projektu na podstawie harmonogramu"
     },
     "entry": {
       "addTitle": "Dodaj kamień milowy lub zaliczkę",
@@ -1683,6 +1744,8 @@
       "valuePercentage": "Procent całości",
       "amount": "Kwota ({{currency}})",
       "percentage": "Procent",
+      "increaseTotal": "Zwiększ całkowitą wartość projektu o tę kwotę",
+      "increaseTotalHint": "Dla prac dodatkowych lub zmian zakresu. Całkowita wartość projektu rośnie, a istniejące podziały procentowe są przeliczane względem nowej sumy.",
       "trigger": "Wyzwalacz",
       "triggerPhase": "Ukończenie fazy",
       "triggerDate": "W określonym dniu",
@@ -1710,6 +1773,7 @@
       "behavior": "Po osiągnięciu",
       "notify": "Tylko powiadom",
       "hard": "Twardy limit (odpis)",
+      "hardHint": "Robocizna i materiały powyżej limitu są automatycznie odpisywane.",
       "thresholds": "Powiadom przy (%)",
       "thresholdsHint": "Procenty limitu rozdzielone przecinkami.",
       "noCap": "Bez limitu",
@@ -1785,6 +1849,49 @@
       "approved": "Zatwierdzono: {{amount}}",
       "ready": "Gotowe: {{amount}}",
       "total": "Łącznie: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Profil rozliczeniowy",
+      "none": "Użyj domyślnego profilu klienta",
+      "hint": "Opłaty za czas i harmonogram w tym projekcie są rozliczane na tym profilu, o ile nie przejmie ich umowa.",
+      "updated": "Zaktualizowano profil rozliczeniowy"
+    }
+  },
+  "taskTypes": {
+    "task": "Zadanie",
+    "bug": "Błąd",
+    "feature": "Funkcja",
+    "improvement": "Ulepszenie",
+    "epic": "Epik",
+    "story": "Historyjka"
+  },
+  "statusUpdate": {
+    "button": "Wyślij aktualizację statusu",
+    "title": "Wyślij aktualizację statusu",
+    "loading": "Ładowanie informacji o odbiorcy...",
+    "sending": "Wysyłanie aktualizacji statusu...",
+    "sent": "Aktualizacja statusu wysłana do {{email}}",
+    "send": "Wyślij aktualizację",
+    "noRecipient": "Dla kontaktu klienta w tym projekcie nie skonfigurowano adresu e-mail.",
+    "whatTheySee": "Twój klient zobaczy:",
+    "additionalMessage": "Dodatkowa wiadomość",
+    "additionalMessagePlaceholder": "Dodaj osobistą notatkę do aktualizacji...",
+    "preview": "Aktualizacja zostanie wysłana z {{fromEmail}} w imieniu {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Kontakt projektu",
+      "clientEmail": "E-mail klienta",
+      "none": "Nie znaleziono adresu e-mail"
+    },
+    "summary": {
+      "progress": "Ogólny postęp: {{percent}}% ({{closed}} z {{total}} zadań ukończonych)",
+      "budgetHours": "Godziny budżetowe: wykorzystano {{spent}} z {{budgeted}} godzin",
+      "budgetHoursHidden": "Godziny budżetowe są ukryte przez ustawienia portalu klienta tego projektu",
+      "recentlyCompleted": "Ostatnio ukończone: {{items}}",
+      "portalLink": "Link do projektu w portalu klienta"
+    },
+    "errors": {
+      "loadRecipient": "Nie udało się załadować informacji o odbiorcy",
+      "sendFailed": "Nie udało się wysłać aktualizacji statusu"
     }
   }
 }

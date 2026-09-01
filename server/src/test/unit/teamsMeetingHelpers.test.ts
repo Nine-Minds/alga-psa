@@ -51,16 +51,8 @@ import { fetchMeetingArtifacts } from '@alga-psa/ee-microsoft-teams/lib/meetings
 import { getTeamsMeetingCapability } from '@alga-psa/ee-microsoft-teams/lib/actions/meetings/meetingCapabilityActions';
 import { resolveTeamsMeetingService } from '@alga-psa/scheduling/lib/teamsMeetingService';
 
-function buildTeamsIntegrationKnex(
-  row: Record<string, unknown> | undefined | null,
-  options: { hasTeamsAddOn?: boolean } = {}
-) {
-  const hasTeamsAddOn = options.hasTeamsAddOn ?? true;
+function buildTeamsIntegrationKnex(row: Record<string, unknown> | undefined | null) {
   const first = vi.fn(async function first(this: { table?: string; filters?: Record<string, unknown>[] }) {
-    if (this?.table === 'tenant_addons') {
-      return hasTeamsAddOn ? { addon_key: 'teams' } : undefined;
-    }
-
     return row ?? undefined;
   });
   const where = vi.fn(function where(this: { table?: string; filters?: Record<string, unknown>[] }, conditions: Record<string, unknown>) {
@@ -269,26 +261,6 @@ describe('Teams meeting helpers', () => {
         },
         type: 'required',
       }]);
-    });
-
-    it('returns null without calling Graph when the Teams add-on is inactive', async () => {
-      const db = buildTeamsIntegrationKnex({
-        tenant: 'tenant-1',
-        install_status: 'active',
-        selected_profile_id: 'profile-1',
-        default_meeting_organizer_upn: 'organizer@example.com',
-      }, { hasTeamsAddOn: false });
-      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
-
-      await expect(createTeamsMeeting({
-        tenantId: 'tenant-1',
-        subject: 'Virtual consultation',
-        startDateTime: '2026-04-24T14:00:00.000Z',
-        endDateTime: '2026-04-24T14:30:00.000Z',
-      })).resolves.toBeNull();
-
-      expect(fetchMicrosoftGraphAppTokenMock).not.toHaveBeenCalled();
-      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('returns null and logs a warning when Graph responds 403', async () => {
@@ -823,23 +795,6 @@ describe('Teams meeting helpers', () => {
   });
 
   describe('getTeamsMeetingCapability', () => {
-    it('returns addon_required when the Teams add-on is inactive', async () => {
-      const db = buildTeamsIntegrationKnex({
-        tenant: 'tenant-1',
-        install_status: 'active',
-        selected_profile_id: 'profile-1',
-        default_meeting_organizer_upn: 'organizer@example.com',
-      }, { hasTeamsAddOn: false });
-      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
-
-      await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
-        available: false,
-        reason: 'addon_required',
-        recordingsAvailable: false,
-        recordingReason: 'meeting_unavailable',
-      });
-    });
-
     it('returns not_configured when no teams integration row exists', async () => {
       const db = buildTeamsIntegrationKnex(undefined);
       createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
@@ -899,6 +854,7 @@ describe('Teams meeting helpers', () => {
         available: true,
         recordingsAvailable: false,
         recordingReason: 'missing_organizer_object_id',
+        sendMeetingInvites: true,
       });
     });
 
@@ -915,6 +871,25 @@ describe('Teams meeting helpers', () => {
       await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
         available: true,
         recordingsAvailable: true,
+        sendMeetingInvites: true,
+      });
+    });
+
+    it('reports sendMeetingInvites false only when the tenant explicitly disabled invites', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+        default_meeting_organizer_object_id: 'organizer-object-1',
+        send_meeting_invites: false,
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
+        available: true,
+        recordingsAvailable: true,
+        sendMeetingInvites: false,
       });
     });
 
@@ -1031,21 +1006,6 @@ describe('Teams meeting helpers', () => {
         startDateTime: '2026-04-24T14:00:00.000Z',
         endDateTime: '2026-04-24T14:30:00.000Z',
       })).resolves.toEqual({ status: 'skipped', reason: 'not_configured' });
-    });
-
-    it('T041: create returns skipped/addon_inactive when the Teams add-on is inactive', async () => {
-      const db = buildTeamsIntegrationKnex(readyIntegrationRow, { hasTeamsAddOn: false });
-      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
-
-      await expect(createTeamsMeetingWithResult({
-        tenantId: 'tenant-1',
-        subject: 'Virtual consultation',
-        startDateTime: '2026-04-24T14:00:00.000Z',
-        endDateTime: '2026-04-24T14:30:00.000Z',
-      })).resolves.toEqual({ status: 'skipped', reason: 'addon_inactive' });
-
-      expect(fetchMicrosoftGraphAppTokenMock).not.toHaveBeenCalled();
-      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('T027: strips attendees when send_meeting_invites is false and includes them when the column is absent', async () => {

@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
+import { DatePicker } from "@alga-psa/ui/components/DatePicker";
+import { dateFromString, dateToString } from "@alga-psa/ui/lib/dateInput";
 import { cn } from "@alga-psa/ui/lib/utils";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import type { ContractScenario, ScenarioAssumption } from "@alga-psa/types";
@@ -435,24 +437,26 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
             {t("contractSimulator.assumptions.replayStart", {
               defaultValue: "From",
             })}
-            <input
+            <DatePicker
               id="simulation-replay-start"
-              type="date"
-              value={replayStart}
-              onChange={(event) => setReplayStart(event.target.value)}
-              className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-1.5 text-xs text-[rgb(var(--color-text-800))]"
+              label={t("contractSimulator.assumptions.replayStart", {
+                defaultValue: "From",
+              })}
+              value={dateFromString(replayStart)}
+              onChange={(date) => setReplayStart(dateToString(date))}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[rgb(var(--color-text-500))]">
             {t("contractSimulator.assumptions.replayEnd", {
               defaultValue: "Through",
             })}
-            <input
+            <DatePicker
               id="simulation-replay-end"
-              type="date"
-              value={replayEnd}
-              onChange={(event) => setReplayEnd(event.target.value)}
-              className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-1.5 text-xs text-[rgb(var(--color-text-800))]"
+              label={t("contractSimulator.assumptions.replayEnd", {
+                defaultValue: "Through",
+              })}
+              value={dateFromString(replayEnd)}
+              onChange={(date) => setReplayEnd(dateToString(date))}
             />
           </label>
           <Button

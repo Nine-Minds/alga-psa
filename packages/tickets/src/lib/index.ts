@@ -13,8 +13,24 @@ export {
   TICKET_COLUMNS,
   TOGGLEABLE_TICKET_COLUMNS,
   resolveTicketColumnVisibility,
+  resolveTicketColumnOrder,
 } from './ticketColumnCatalog';
 export type { TicketColumnSpec, TicketColumnKind, TicketListColumnKey } from './ticketColumnCatalog';
+export {
+  CAPTURE_EXCLUDED_FILTER_KEYS,
+  TICKET_VIEW_DENSITY_DEFAULT,
+  TICKET_VIEW_DENSITY_STEP,
+  buildBoardArrivalFilters,
+  captureTicketViewSettings,
+  resolveTicketViewSettings,
+  ticketViewDiffersFromSaved,
+  validateCapturedFilters,
+} from './ticketViewSettings';
+export type {
+  CaptureExcludedFilterKey,
+  ResolvedTicketViewSettings,
+  TicketViewSettings,
+} from './ticketViewSettings';
 export { calculateItilPriority, ItilLabels } from './itilUtils';
 export { getCommentResponseSource, getLatestCustomerResponseSource } from './responseSource';
 export { resolveCommentAuthor } from './commentAuthorResolution';
@@ -22,11 +38,13 @@ export {
   convertProseMirrorToTicketRichTextBlocks,
   createEmptyTicketMobileRichTextDocument,
   createTicketRichTextParagraph,
+  extractTicketRichTextPlainText,
   parseTicketMobileRichTextDocument,
   parseTicketRichTextContent,
   serializeTicketMobileRichTextDocument,
   serializeTicketRichTextContent,
 } from './ticketRichText';
+export { extractTicketRichTextHtml } from './ticketRichTextHtml';
 export {
   parseTicketMobileEditorNativeToWebMessage,
   parseTicketMobileEditorWebToNativeMessage,

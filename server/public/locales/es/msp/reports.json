@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Mesa de ayuda",
       "operations": "Operaciones",
-      "billing": "Facturación"
+      "billing": "Facturación",
+      "inventory": "Inventario"
     },
     "badges": {
       "planned": "Planificado"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Ver informe",
       "openInBilling": "Abrir en facturación",
+      "openReport": "Abrir informe",
       "requiresTier": "Requiere {{tier}}",
       "comingSoon": "Próximamente"
     },
@@ -57,11 +59,14 @@
       "noDate": "Sin fecha",
       "notAvailable": "n/d",
       "noEmailChannels": "No hay canales de correo configurados.",
-      "noCapacity": "n/d — sin capacidad definida"
+      "noCapacity": "n/d — sin capacidad definida",
+      "noEstimate": "n/d — sin estimación definida",
+      "noOverruns": "Ninguna tarea ha superado su estimación."
     },
     "fallbackTitle": "Informe",
     "dateRange": {
-      "lastDays": "Últimos {{count}} días"
+      "lastDays": "Últimos {{count}} días",
+      "allActiveProjects": "Todos los proyectos activos, desde el inicio"
     },
     "units": {
       "daysWithCount": "{{count}} días"
@@ -101,7 +106,13 @@
       "capacityHours": "Horas de capacidad",
       "utilization": "Utilización",
       "usersWithoutCapacity": "Sin capacidad",
-      "activeUsers": "Usuarios activos"
+      "activeUsers": "Usuarios activos",
+      "activeProjects": "Proyectos activos",
+      "budgetedHours": "Horas presupuestadas",
+      "estimatedHours": "Horas estimadas",
+      "actualHours": "Horas reales",
+      "projectsOverEstimate": "Por encima de la estimación",
+      "projectsOverBudget": "Por encima del presupuesto"
     },
     "sections": {
       "openByStatus": "Abiertos por estado",
@@ -120,7 +131,10 @@
       "bucketUsage": "Uso de bolsa",
       "performanceByAssignee": "Rendimiento por asignado",
       "closedByAssignee": "Cerrados por asignado",
-      "utilizationByUser": "Utilización por usuario"
+      "utilizationByUser": "Utilización por usuario",
+      "hoursByProject": "Horas por proyecto",
+      "hoursByPhase": "Horas por fase",
+      "largestTaskOverruns": "Mayores desviaciones por tarea"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -150,6 +164,26 @@
       "contractReports": {
         "title": "Informes de contratos",
         "description": "Ingresos de contratos, renovaciones, uso de bolsas y rentabilidad."
+      },
+      "inventoryMargin": {
+        "title": "Informe de margen",
+        "description": "Ingresos, costo de los bienes vendidos y margen por producto de las órdenes de venta cumplidas."
+      },
+      "inventoryWriteOffs": {
+        "title": "Bajas",
+        "description": "Merma de inventario y ajustes dados de baja, por motivo y período."
+      },
+      "inventoryGhostUsage": {
+        "title": "Uso fantasma",
+        "description": "Tickets de hardware cerrados sin piezas registradas — costos que el taller pudo haber absorbido."
+      },
+      "deferredRevenue": {
+        "title": "Ingresos diferidos",
+        "description": "Pasivo prepagado entre clientes: saldos de crédito y horas de bolsa no consumidas por mes."
+      },
+      "projectHours": {
+        "title": "Horas de proyecto frente a estimaciones",
+        "description": "Horas registradas frente a las estimaciones de tareas y los presupuestos de proyecto, con las fases que se alargan."
       }
     },
     "table": {
@@ -173,7 +207,17 @@
       "workedHours": "Horas trabajadas",
       "capacityHours": "Horas de capacidad",
       "utilization": "Utilización",
-      "capacityEstimated": "Estimado a partir de la capacidad semanal; sin horario laboral definido."
+      "capacityEstimated": "Estimado a partir de la capacidad semanal; sin horario laboral definido.",
+      "project": "Proyecto",
+      "client": "Cliente",
+      "phase": "Fase",
+      "task": "Tarea",
+      "budgetedHours": "Presupuestadas",
+      "estimatedHours": "Estimadas",
+      "actualHours": "Reales",
+      "variance": "Variación",
+      "estimateUsed": "Estimación utilizada",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} tareas completadas"
     },
     "statusValues": {
       "connected": "Conectado",
@@ -425,6 +469,75 @@
       "totalClients": "Clientes totales",
       "activeAssignments": "Asignaciones activas",
       "totalBilled": "Total facturado"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Ingresos diferidos / pasivo prepagado",
+    "description": "Evolución por cliente y por mes de los saldos de crédito de los clientes y de las horas de bolsa prepagadas no consumidas.",
+    "printSubtitle": "Mes {{month}}",
+    "printTable": "Evolución por cliente",
+    "empty": "No hay pasivo prepagado para este mes.",
+    "actions": {
+      "csv": "Descargar CSV"
+    },
+    "errors": {
+      "load": "No se pudo cargar el informe de ingresos diferidos."
+    },
+    "summary": {
+      "totalLiability": "Pasivo prepagado total",
+      "credits": "Créditos",
+      "hours": "Horas prepagadas",
+      "delta": "Cambio respecto al mes anterior"
+    },
+    "table": {
+      "client": "Cliente",
+      "credits": "Créditos",
+      "hours": "Horas prepagadas",
+      "total": "Cierre total",
+      "opening": "Apertura",
+      "issued": "Emitidos",
+      "applied": "Aplicados",
+      "expired": "Vencidos",
+      "adjustments": "Ajust.",
+      "closing": "Cierre",
+      "currencyHeading": "Moneda",
+      "noClients": "No hay clientes con saldos prepagados este mes.",
+      "tenantTotal": "Total del tenant"
+    },
+    "detail": {
+      "credits": "Saldos de crédito",
+      "noCredits": "No hay entradas de crédito.",
+      "date": "Emitido",
+      "description": "Descripción",
+      "remaining": "Restante",
+      "expires": "Vence",
+      "qbo": "QBO",
+      "reachable": "Sincronizado",
+      "notReachable": "No está en QBO",
+      "notReachableTitle": "Los créditos de prepago / depósito de proyecto nunca se exportan a QuickBooks; Alga es el sistema de registro.",
+      "buckets": "Horas de bolsa prepagadas",
+      "noBuckets": "No hay períodos de bolsa prepagada.",
+      "line": "Línea",
+      "period": "Período",
+      "included": "Incluidas",
+      "used": "Usadas",
+      "value": "Valor",
+      "feeSource": "Tarifa",
+      "rollover": "traspaso",
+      "notBilled": "Aún sin facturar",
+      "billed": "Facturado"
+    },
+    "csv": {
+      "client": "Cliente",
+      "currency": "Moneda"
+    }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Uno de los registros de informe seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de informe seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del informe.",
+      "missingFieldNamed": "Falta un campo obligatorio del informe: {{field}}."
     }
   }
 }

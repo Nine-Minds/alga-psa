@@ -5,15 +5,17 @@ import type { IClient, IContact, ISlaPolicy, ITag, SurveyClientSatisfactionSumma
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { TagManager } from '@alga-psa/tags/components';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { validateAnnualRevenue, validateClientName, validateCompanySize, validateIndustry, validateWebsiteUrl } from '@alga-psa/validation';
+import { translateFieldValidation, validateAnnualRevenueField, validateClientNameField, validateCompanySizeField, validateIndustryField, validateWebsiteUrlField, type FieldValidation } from '@alga-psa/validation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Flex, Text } from '@radix-ui/themes';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
@@ -63,9 +65,15 @@ const TextDetailItem: React.FC<{
   onEdit: (value: string) => void;
   automationId?: string;
   validate?: (value: string) => string | null;
-}> = ({ label, value, onEdit, automationId, validate }) => {
+  /** Structural error blocks; the warnings it also returns never do. */
+  validateField?: (value: string) => FieldValidation;
+  warnings?: string[];
+}> = ({ label, value, onEdit, automationId, validate, validateField, warnings: externalWarnings }) => {
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
 
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id: automationId,
@@ -88,9 +96,12 @@ const TextDetailItem: React.FC<{
   }, [localValue, updateMetadata, label]);
 
   const handleBlur = () => {
-    if (validate) {
-      const validationError = validate(localValue);
-      setError(validationError);
+    if (validateField) {
+      const result = translateFieldValidation(validateField(localValue), tValidation);
+      setError(result.error);
+      setWarnings(result.warnings);
+    } else if (validate) {
+      setError(validate(localValue));
     }
 
     onEdit(localValue);
@@ -113,9 +124,10 @@ const TextDetailItem: React.FC<{
         className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
           error
             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-            : 'border-gray-200 focus:ring-purple-500 focus:border-transparent'
+            : 'border-gray-200 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent'
         }`}
       />
+      <FieldWarnings warnings={warnings.length > 0 ? warnings : externalWarnings ?? []} />
       {error && (
         <Text size="1" className="text-red-600 mt-1">{error}</Text>
       )}
@@ -155,6 +167,8 @@ export interface ClientDetailsTabContentProps {
   clientActiveContacts: IContact[];
   setDefaultContactOptions: React.Dispatch<React.SetStateAction<IContact[]>>;
   fieldErrors: Record<string, string>;
+  /** Plausibility warnings; rendered beneath fields and never gating the save. */
+  fieldWarnings?: Record<string, string[]>;
   hasAttemptedSubmit: boolean;
   slaPolicies: ISlaPolicy[];
   isLoadingSlaPolicies: boolean;
@@ -174,7 +188,6 @@ export interface ClientDetailsTabContentProps {
   setAliasDraft: (value: string) => void;
   isAliasBusy: boolean;
   isSaving: boolean;
-  t: (key: string, options?: Record<string, unknown>) => string;
   onFieldChange: (field: string, value: string | boolean | null) => void | Promise<void>;
   onDefaultContactChange: (contactId: string) => void;
   onAddInboundDomain: () => void | Promise<void>;
@@ -197,6 +210,7 @@ export function ClientDetailsTabContent({
   clientActiveContacts,
   setDefaultContactOptions,
   fieldErrors,
+  fieldWarnings,
   hasAttemptedSubmit,
   slaPolicies,
   isLoadingSlaPolicies,
@@ -216,7 +230,6 @@ export function ClientDetailsTabContent({
   setAliasDraft,
   isAliasBusy,
   isSaving,
-  t,
   onFieldChange,
   onDefaultContactChange,
   onAddInboundDomain,
@@ -230,6 +243,7 @@ export function ClientDetailsTabContent({
   renderSurveySummaryCard,
 }: ClientDetailsTabContentProps) {
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const { t } = useTranslation('msp/clients');
 
   return (
     <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
@@ -240,7 +254,8 @@ export function ClientDetailsTabContent({
             value={editedClient.client_name}
             onEdit={(value) => onFieldChange('client_name', value)}
             automationId="client-name-field"
-            validate={validateClientName}
+            validateField={validateClientNameField}
+            warnings={fieldWarnings?.client_name}
           />
 
           <FieldContainer
@@ -529,7 +544,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.website || ''}
             onEdit={(value) => onFieldChange('properties.website', value)}
             automationId="website-field"
-            validate={validateWebsiteUrl}
+            validateField={validateWebsiteUrlField}
           />
 
           <TextDetailItem
@@ -537,7 +552,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.industry || ''}
             onEdit={(value) => onFieldChange('properties.industry', value)}
             automationId="industry-field"
-            validate={validateIndustry}
+            validateField={validateIndustryField}
           />
 
           <TextDetailItem
@@ -545,7 +560,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.company_size || ''}
             onEdit={(value) => onFieldChange('properties.company_size', value)}
             automationId="company-size-field"
-            validate={validateCompanySize}
+            validateField={validateCompanySizeField}
           />
 
           <TextDetailItem
@@ -553,7 +568,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.annual_revenue || ''}
             onEdit={(value) => onFieldChange('properties.annual_revenue', value)}
             automationId="annual-revenue-field"
-            validate={validateAnnualRevenue}
+            validateField={validateAnnualRevenueField}
           />
 
           <div className="space-y-2">

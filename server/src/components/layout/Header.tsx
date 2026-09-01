@@ -43,7 +43,7 @@ import { TrialBanner } from './TrialBanner';
 import { PaymentFailedBanner } from './PaymentFailedBanner';
 import { useQuickAsk } from './QuickAskContext';
 import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
-import { useActionPolling, useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useActionPolling } from '@alga-psa/ui/hooks';
 
 export const QUICK_CREATE_OPEN_EVENT = 'alga:quick-create:open';
 
@@ -150,7 +150,7 @@ const quickCreateOptions: QuickCreateOption[] = [
 
 type HeaderTranslator = (key: string, options?: Record<string, unknown>) => string;
 
-const getMenuItemNameByPath = (
+export const getMenuItemNameByPath = (
   path: string | null | undefined,
   t: HeaderTranslator,
 ): string => {
@@ -163,22 +163,21 @@ const getMenuItemNameByPath = (
   const segments = path.split('/');
   const topLevelPath = segments.length > 1 ? '/' + segments[1] : '/';
 
-  const findMenuItem = (items: MenuItem[]): string | null => {
-    for (const item of items) {
-      if (item.href === topLevelPath || (item.href && path.startsWith(item.href))) {
-        return item.translationKey
-          ? t(item.translationKey, { defaultValue: item.name })
-          : item.name;
-      }
-      if (item.subItems) {
-        const subItemName = findMenuItem(item.subItems);
-        if (subItemName) return subItemName;
-      }
-    }
-    return null;
-  };
+  const matchingItems = (items: MenuItem[]): MenuItem[] => items.flatMap((item) => {
+    const matchesPath = item.href === path
+      || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)));
+    return [
+      ...(matchesPath ? [item] : []),
+      ...(item.subItems ? matchingItems(item.subItems) : []),
+    ];
+  });
 
-  return findMenuItem(allMenuItems) || t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
+  const item = matchingItems(allMenuItems)
+    .sort((left, right) => (right.href?.length ?? 0) - (left.href?.length ?? 0))[0];
+
+  return item
+    ? (item.translationKey ? t(item.translationKey, { defaultValue: item.name }) : item.name)
+    : t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
 };
 
 const TenantBadge: React.FC<{
@@ -191,7 +190,7 @@ const TenantBadge: React.FC<{
 
   return (
     <span
-      className="inline-flex items-center rounded-full bg-slate-100 dark:bg-[rgb(var(--color-border-100))] px-3 py-1 text-xs font-medium text-slate-700 dark:text-[rgb(var(--color-text-400))] border border-slate-200 dark:border-[rgb(var(--color-border-200))]"
+      className="inline-flex items-center rounded-full bg-slate-100 dark:bg-[rgb(var(--color-border-100))] px-3 py-1 text-xs font-medium text-slate-700 dark:text-[rgb(var(--color-text-600))] border border-slate-200 dark:border-[rgb(var(--color-border-200))]"
       aria-label={ariaLabel}
     >
       {tenant}
@@ -209,14 +208,9 @@ const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAlgaDesk } = useProduct();
-  const opportunityFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
-  const opportunitiesEnabled = typeof opportunityFlag === 'boolean'
-    ? opportunityFlag
-    : opportunityFlag.enabled;
-  const visibleOptions = (isAlgaDesk
+  const visibleOptions = isAlgaDesk
     ? quickCreateOptions.filter((option) => ALGADESK_QUICK_CREATE_TYPES.has(option.type))
-    : quickCreateOptions
-  ).filter((option) => option.type !== 'opportunity' || opportunitiesEnabled);
+    : quickCreateOptions;
   const translatedOptions = visibleOptions.map((option) => ({
     ...option,
     label: t(option.labelKey, { defaultValue: option.labelDefault }),
@@ -309,7 +303,9 @@ const JobActivityIndicator: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   useActionPolling(fetchMetrics, { intervalMs: 15000 });
 
   const activeJobs = metrics?.active ?? 0;
-  const failedJobs = metrics?.failed ?? 0;
+  // The dot is labelled "Failed last 24h", so it must use the time-bounded
+  // count — the all-time `failed` would keep it amber forever.
+  const failedJobs = metrics?.failedLast24h ?? 0;
   const hasAttention = failedJobs > 0;
 
   return (
@@ -507,7 +503,7 @@ export default function Header({
           <button
             id="workflow-designer-ask-ai"
             type="button"
-            className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-50 hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:bg-purple-950/30 dark:hover:text-purple-200"
+            className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-[rgb(var(--color-primary-600))] transition-colors hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:ring-offset-2"
             aria-label={t('header.quickAsk.ariaLabel', { defaultValue: 'Ask AI about this workflow' })}
             title={t('header.quickAsk.shortcutHint', { defaultValue: 'Open Quick Ask for workflow guidance' })}
             onClick={handleWorkflowQuickAskOpen}

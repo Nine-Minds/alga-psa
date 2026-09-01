@@ -11,6 +11,7 @@ import type {
   DateValue,
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
+import { displayAddressField, displayCountry } from '@alga-psa/core';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
 // Helper function to convert DateValue (Date or ISO string or Temporal) to ISO string for Wasm
@@ -197,15 +198,15 @@ const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null)
   if (!location) return null;
   const lines: string[] = [];
   for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
-    const trimmed = asTrimmedString(field);
+    const trimmed = displayAddressField(field);
     if (trimmed) lines.push(trimmed);
   }
   const cityLine = [location.city, location.state_province, location.postal_code]
-    .map(asTrimmedString)
+    .map(displayAddressField)
     .filter((value) => value.length > 0)
     .join(', ');
   if (cityLine) lines.push(cityLine);
-  const country = asTrimmedString(location.country_name) || asTrimmedString(location.country_code);
+  const country = displayCountry(location.country_name, location.country_code);
   if (country) lines.push(country);
   return lines.length > 0 ? lines.join('\n') : null;
 };

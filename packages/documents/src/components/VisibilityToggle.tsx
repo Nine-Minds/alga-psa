@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface VisibilityToggleProps {
   isClientVisible: boolean;
@@ -18,7 +19,10 @@ export default function VisibilityToggle({
   id,
   className = '',
 }: VisibilityToggleProps) {
-  const label = isClientVisible ? 'Visible to clients' : 'Hidden from clients';
+  const { t } = useTranslation('features/documents');
+  const label = isClientVisible
+    ? t('visibility.visibleToClients', { defaultValue: 'Visible to clients' })
+    : t('visibility.hiddenFromClients', { defaultValue: 'Hidden from clients' });
 
   return (
     <button

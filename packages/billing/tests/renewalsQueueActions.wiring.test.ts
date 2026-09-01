@@ -12,7 +12,7 @@ describe('renewalsQueueActions wiring', () => {
     expect(source).toContain("import { hasPermission } from '@alga-psa/auth/rbac';");
     expect(source).toContain("const requireBillingReadPermission = async (user: unknown): Promise<ActionPermissionError | null> => {");
     expect(source).toContain("if (!await hasPermission(user as any, 'billing', 'read')) {");
-    expect(source).toContain("return permissionError('Permission denied: Cannot read renewals queue');");
+    expect(source).toContain("return permissionError('Permission denied: Cannot read renewals queue', 'msp/contracts:errors.renewals.permissions.read');");
     expect(source).toContain('const DEFAULT_RENEWALS_HORIZON_DAYS = 90;');
     expect(source).toContain("export type RenewalQueueAction =");
     expect(source).toContain('const getAvailableActionsForStatus = (status: RenewalWorkItemStatus): RenewalQueueAction[] => {');

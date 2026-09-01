@@ -33,7 +33,7 @@ interface ReviewContractStepProps {
 
 export function ReviewContractStep({ data }: ReviewContractStepProps) {
   const { t } = useTranslation('msp/contracts');
-  const { formatCurrency } = useFormatters();
+  const { formatCurrency, formatNumber, formatDate: formatDateInLocale } = useFormatters();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatBillingFrequency = useFormatBillingFrequency();
   const [clientName, setClientName] = useState<string>(
@@ -89,7 +89,8 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     }
 
     const included = mode === 'hours' ? overlay.total_minutes / 60 : overlay.total_minutes;
-    const formattedValue = included.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    // toLocaleString(undefined, …) is the browser's locale, not the app's.
+    const formattedValue = formatNumber(included, { maximumFractionDigits: 2 });
 
     const includedLabel =
       mode === 'hours'
@@ -158,7 +159,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
       return t('wizardReview.fallback.notApplicable', { defaultValue: 'N/A' });
     }
     const local = parseLocalYMD(dateString) ?? new Date(dateString);
-    return local.toLocaleDateString();
+    return formatDateInLocale(local);
   };
 
   const calculateTotalMonthly = () => data.fixed_base_rate ?? 0;
@@ -538,7 +539,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </div>
             <Badge
               variant="default"
-              className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))]"
+              className="chip-primary"
             >
               {data.product_services.length === 1
                 ? t('wizardReview.products.badgeCount.one', {
@@ -588,7 +589,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </div>
             <Badge
               variant="default"
-              className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))]"
+              className="chip-primary"
             >
               {data.hourly_services.length === 1
                 ? t('wizardReview.hourly.badgeCount.one', {

@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { randomUUID } from 'crypto';
-import { BaseEmailAdapter } from './base/BaseEmailAdapter';
+import { randomBytes, randomUUID } from 'crypto';
+import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
 import type {
   Microsoft365DiagnosticsOptions,
@@ -14,10 +14,22 @@ import { tenantDb } from '@alga-psa/db';
 import {
   getMicrosoftGraphBaseUrl,
   getMicrosoftTokenUrl,
-  MICROSOFT_EMAIL_OAUTH_SCOPES,
 } from '../microsoftGraphEndpoints';
 
 export type MicrosoftSubscriptionErrorKind = 'validation' | 'authentication' | 'other';
+
+function getAccessTokenTenantId(accessToken: string | undefined): string | undefined {
+  try {
+    const payload = accessToken?.split('.')[1];
+    if (!payload) return undefined;
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return typeof claims?.tid === 'string' && claims.tid.trim()
+      ? claims.tid.trim()
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export class MicrosoftSubscriptionError extends Error {
   constructor(
@@ -30,6 +42,17 @@ export class MicrosoftSubscriptionError extends Error {
     super(message, options);
     this.name = 'MicrosoftSubscriptionError';
   }
+}
+
+/**
+ * Receives a record of Graph subscription mutations performed by the adapter.
+ * The OAuth callback wires this into a compensation ledger so that a failed
+ * webhook setup can delete subscriptions it created and can avoid resurrecting
+ * a subscription id that no longer exists in Graph.
+ */
+export interface MicrosoftGraphWebhookLifecycleObserver {
+  onSubscriptionDeleted(subscriptionId: string): void;
+  onSubscriptionCreated(subscriptionId: string): void;
 }
 
 export interface MicrosoftWebhookInitializationResult {
@@ -85,6 +108,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   private httpClient: AxiosInstance;
   private baseUrl = getMicrosoftGraphBaseUrl();
   private authenticatedUserEmail: string | undefined; // Email of the user who authorized the app
+  private webhookLifecycle: MicrosoftGraphWebhookLifecycleObserver | undefined;
 
   constructor(config: EmailProviderConfig) {
     super(config);
@@ -109,6 +133,15 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   }
 
   /**
+   * Register an observer for Graph subscription mutations so the OAuth
+   * callback can compensate (delete) any subscription created by a setup that
+   * subsequently fails.
+   */
+  attachWebhookLifecycle(observer: MicrosoftGraphWebhookLifecycleObserver): void {
+    this.webhookLifecycle = observer;
+  }
+
+  /**
    * Build Microsoft Graph base path for the configured mailbox.
    * Auto-detects whether to use /me or /users/{mailbox} based on:
    * - If configured mailbox matches the authenticated user → use /me (personal account, no admin consent needed)
@@ -126,7 +159,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     if (this.authenticatedUserEmail) {
       // Normalize emails for comparison (case-insensitive)
       const normalizedConfigured = configuredMailbox.toLowerCase();
-      const normalizedAuthenticated = this.authenticatedUserEmail.toLowerCase();
+      const normalizedAuthenticated = this.authenticatedUserEmail.trim().toLowerCase();
 
       // If they match, this is the authenticated user's personal mailbox → use /me
       if (normalizedConfigured === normalizedAuthenticated) {
@@ -324,9 +357,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      // Determine tenant authority for single-tenant apps
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      let tenantAuthority = vendorTenantId || process.env.MICROSOFT_TENANT_ID;
+      const isHosted = (process.env.DEPLOYMENT_PROFILE || 'hosted').trim().toLowerCase() !== 'appliance';
+
+      // Hosted uses Alga's shared multi-tenant Microsoft app, so preserve the
+      // tenant-independent authority used when the refresh grant was issued.
+      // Appliance deployments use a customer-owned, normally single-tenant app
+      // and therefore require that app's concrete tenant authority.
+      let tenantAuthority = isHosted
+        ? 'common'
+        : vendorTenantId
+          || getAccessTokenTenantId(this.accessToken)
+          || process.env.MICROSOFT_TENANT_ID;
       if (!tenantAuthority) {
         try {
           const secretProvider = await getSecretProviderInstance();
@@ -344,7 +386,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
         grant_type: 'refresh_token',
-        scope: MICROSOFT_EMAIL_OAUTH_SCOPES.join(' '),
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
@@ -413,7 +454,16 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       await this.loadAuthenticatedUserEmail();
       const connection = await this.testConnection();
       if (!connection.success) {
-        throw new Error(connection.error || 'Microsoft Graph connection test failed');
+        // Preserve structured failure metadata (status, code, responseBody)
+        // so callers can classify terminal OAuth errors instead of parsing
+        // the human-readable message.
+        const failure = new Error(connection.error || 'Microsoft Graph connection test failed');
+        Object.assign(failure, {
+          status: (connection as any).status,
+          code: (connection as any).code,
+          responseBody: (connection as any).responseBody,
+        });
+        throw failure;
       }
       this.log('info', 'Connected to Microsoft Graph API successfully');
     } catch (error) {
@@ -438,7 +488,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       throw new Error('Microsoft sending mailbox is not configured');
     }
 
-    const endpoint = `/users/${encodeURIComponent(mailbox)}/sendMail`;
+    const endpoint = `${this.getMailboxBasePath()}/sendMail`;
     const send = () => payload.kind === 'mime'
       ? this.httpClient.post(endpoint, payload.content, {
           headers: { 'Content-Type': 'text/plain' },
@@ -526,13 +576,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     if (!oldSubscriptionId) return;
     try {
       await this.httpClient.delete(`/subscriptions/${encodeURIComponent(oldSubscriptionId)}`);
+      this.webhookLifecycle?.onSubscriptionDeleted(oldSubscriptionId);
     } catch (error: any) {
-      if (error?.response?.status !== 404) {
-        this.log('warn', 'Failed to delete previous Microsoft subscription before replacement', {
-          subscriptionId: oldSubscriptionId,
-          error: error?.message || String(error),
-        });
+      if (error?.response?.status === 404) {
+        // The previous subscription no longer exists in Graph; record that so
+        // compensation never restores a phantom id.
+        this.webhookLifecycle?.onSubscriptionDeleted(oldSubscriptionId);
+        return;
       }
+      this.log('warn', 'Failed to delete previous Microsoft subscription before replacement', {
+        subscriptionId: oldSubscriptionId,
+        error: error?.message || String(error),
+      });
     }
   }
 
@@ -545,6 +600,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       if (!webhookUrl) {
         throw new Error('Webhook notification URL not configured');
       }
+      const verificationToken = await this.ensurePersistedWebhookVerificationToken();
 
       const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
       const { resource, resolvedFolder } = await this.buildFolderResourcePath(desiredFolder);
@@ -557,7 +613,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         expirationDateTime: new Date(
           Date.now() + MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS
         ).toISOString(),
-        clientState: this.config.webhook_verification_token || 'email-webhook-verification',
+        clientState: verificationToken,
       };
 
       // Log payload with masked clientState for diagnostics
@@ -575,12 +631,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       await this.deletePreviousSubscription();
       const response = await this.httpClient.post('/subscriptions', subscription);
-      
+
       // Update config with subscription ID
       this.config.webhook_subscription_id = response.data.id;
       this.config.webhook_expires_at = response.data.expirationDateTime;
+      this.webhookLifecycle?.onSubscriptionCreated(response.data.id);
 
-      // Persist webhook details only in microsoft vendor config
+      // Persist webhook details in the microsoft vendor config. A failure here
+      // MUST propagate: the Graph subscription has already been created and the
+      // previous one already deleted, so a swallowed write would leave the
+      // config row pointing at a subscription that no longer exists in Graph.
+      // The OAuth callback's compensation ledger then deletes the orphaned
+      // subscription and restores the prior connected/polling state.
       try {
         const knex = await getAdminConnection();
         await tenantDb(knex, this.config.tenant).table('microsoft_email_provider_config')
@@ -588,14 +650,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           .update({
             webhook_subscription_id: response.data.id,
             webhook_expires_at: response.data.expirationDateTime,
-            webhook_verification_token: this.config.webhook_verification_token || null,
+            webhook_verification_token: verificationToken,
             delivery_mode: 'webhook',
             webhook_silent_runs: 0,
             next_subscription_probe_at: null,
             updated_at: new Date().toISOString(),
           });
       } catch (dbErr: any) {
-        this.log('warn', `Failed to persist Microsoft webhook subscription: ${dbErr?.message}`);
+        this.log('error', 'Failed to persist Microsoft webhook subscription state; propagating so compensation can delete the orphaned Graph subscription', {
+          subscriptionId: response.data.id,
+          error: dbErr?.message || String(dbErr),
+        });
+        throw dbErr;
       }
 
       this.log('info', `Webhook subscription created: ${response.data.id}`);
@@ -618,6 +684,29 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         { cause: error }
       );
     }
+  }
+
+  private async ensurePersistedWebhookVerificationToken(): Promise<string> {
+    const current = this.config.webhook_verification_token;
+    const token = !current || current === 'email-webhook-verification' || current === this.config.tenant
+      ? randomBytes(32).toString('hex')
+      : current;
+    try {
+      const knex = await getAdminConnection();
+      const updated = await tenantDb(knex, this.config.tenant)
+        .table('microsoft_email_provider_config')
+        .where('email_provider_id', this.config.id)
+        .update({ webhook_verification_token: token, updated_at: new Date().toISOString() });
+      if (!updated) {
+        throw new Error(`Microsoft provider config ${this.config.id} was not found while persisting webhook verification token`);
+      }
+    } catch (error: any) {
+      // Preserve the DB error as the subscription error's direct cause so the
+      // caller can compensate any preceding external side effects accurately.
+      throw error;
+    }
+    this.config.webhook_verification_token = token;
+    return token;
   }
 
   /**
@@ -739,7 +828,12 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         inReplyTo: message.internetMessageHeaders?.find((h: any) => h.name === 'In-Reply-To')?.value,
         tenant: this.config.tenant,
         headers: message.internetMessageHeaders?.reduce((acc: any, header: any) => {
-          acc[header.name] = header.value;
+          const headerName = String(header?.name || '');
+          const normalizedHeaderName = headerName.toLowerCase();
+          if (normalizedHeaderName.startsWith('x-resolved-') || normalizedHeaderName.startsWith('x-list-')) {
+            return acc;
+          }
+          acc[headerName] = header.value;
           return acc;
         }, {}),
         messageSize: message.bodyPreview?.length,
@@ -817,19 +911,86 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
   }
 
+  /** Resolve the Graph parent folder for a fetched message. */
+  async getMessageParentFolderId(messageId: string): Promise<string | null> {
+    try {
+      const response = await this.httpClient.get(`${this.getMailboxBasePath()}/messages/${messageId}`, {
+        params: { $select: 'parentFolderId' },
+      });
+      return typeof response.data?.parentFolderId === 'string' && response.data.parentFolderId
+        ? response.data.parentFolderId
+        : null;
+    } catch (error) {
+      throw this.handleError(error, 'getMessageParentFolderId');
+    }
+  }
+
+  /** Resolve configured folder IDs (well-known names, display names, or IDs). */
+  async resolveFolderIds(folderFilters: unknown): Promise<Set<string>> {
+    const rawFilters = Array.isArray(folderFilters)
+      ? folderFilters
+      : typeof folderFilters === 'string'
+        ? (() => { try { return JSON.parse(folderFilters); } catch { return [folderFilters]; } })()
+        : [];
+    const filters = (Array.isArray(rawFilters) ? rawFilters : [])
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .map((value) => value.trim());
+    const requested = filters.length ? filters : ['Inbox'];
+    const mailboxBase = this.getMailboxBasePath();
+    const folders = await this.httpClient.get(`${mailboxBase}/mailFolders`, {
+      params: { $select: 'id,displayName' },
+    });
+    const resolved = new Set<string>();
+    for (const filter of requested) {
+      const normalized = filter.toLowerCase().replace(/\s+/g, '');
+      const wellKnown = normalized === 'inbox' ? 'inbox' : undefined;
+      if (wellKnown) {
+        const response = await this.httpClient.get(`${mailboxBase}/mailFolders/${wellKnown}`, {
+          params: { $select: 'id' },
+        });
+        if (response.data?.id) resolved.add(String(response.data.id));
+        continue;
+      }
+      const match = (folders.data?.value || []).find((folder: any) =>
+        String(folder.id) === filter || String(folder.displayName || '').toLowerCase() === filter.toLowerCase(),
+      );
+      if (match?.id) resolved.add(String(match.id));
+    }
+    return resolved;
+  }
+
   /**
    * Test the connection to Microsoft Graph
    */
-  async testConnection(): Promise<{ success: boolean; error?: string }> {
+  async testConnection(): Promise<AdapterConnectionTestResult> {
     try {
       const mailboxBase = this.getMailboxBasePath();
-      await this.httpClient.get(mailboxBase);
+      // Test mail-data access rather than reading the mailbox's user object:
+      // for shared mailboxes GET /users/{mailbox} requires directory
+      // permissions (User.Read.All) that the email OAuth scopes do not
+      // include, so it returns 403 even when mail access is fully authorized.
       await this.httpClient.get(`${mailboxBase}/mailFolders`, {
         params: { $top: 1, $select: 'id' },
       });
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || 'Connection test failed' };
+      const failure = this.classifyGraphFailure(error);
+      const detail = [
+        failure.status,
+        failure.code !== String(failure.status) ? failure.code : undefined,
+        failure.requestId && `request-id=${failure.requestId}`,
+      ]
+        .filter(Boolean)
+        .join(' ');
+      return {
+        success: false,
+        error: detail
+          ? `${failure.message} (${detail})`
+          : failure.message || 'Connection test failed',
+        status: failure.status,
+        code: failure.code,
+        responseBody: failure.responseBody,
+      };
     }
   }
 
@@ -868,8 +1029,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     responseBody?: unknown;
   } {
     const res = error?.response;
-    const status = res?.status;
-    const graphErr = res?.data?.error || res?.data;
+    // Already-sanitized errors (e.g. from token refresh inside the request
+    // interceptor) carry status/code/responseBody at the top level.
+    const status = res?.status ?? error?.status;
+    const body = res?.data ?? error?.responseBody;
+    const graphErr = body?.error || body;
     const message =
       graphErr?.message ||
       error?.message ||
@@ -882,7 +1046,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       message,
       requestId: ids.requestId,
       clientRequestId: ids.clientRequestId,
-      responseBody: res?.data,
+      responseBody: body,
     };
   }
 
@@ -899,6 +1063,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       status: failure.status,
       code: failure.code,
       requestId: failure.requestId,
+      responseBody: failure.responseBody,
     });
     return wrapped;
   }
@@ -1465,10 +1630,12 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
     try {
       await this.httpClient.delete(`/subscriptions/${encodeURIComponent(subscriptionId)}`);
+      this.webhookLifecycle?.onSubscriptionDeleted(subscriptionId);
     } catch (error: any) {
       if (error?.response?.status !== 404) {
         throw this.handleError(error, 'deleteWebhookSubscription');
       }
+      this.webhookLifecycle?.onSubscriptionDeleted(subscriptionId);
     }
   }
 

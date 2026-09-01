@@ -7,6 +7,7 @@ export interface TemplateStatusMapping {
   custom_status_name?: string;
   custom_status_color?: string;
   display_order: number;
+  statusSource?: 'tenant' | 'inline';
 }
 
 export interface TemplatePhase {

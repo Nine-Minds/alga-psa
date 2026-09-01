@@ -11,5 +11,83 @@
         "wbsCode": "PSP-Code"
       }
     }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "Berechtigung verweigert: Projekt kann nicht erstellt werden",
+      "readProject": "Berechtigung verweigert: Projekt kann nicht gelesen werden",
+      "updateProject": "Berechtigung verweigert: Projekt kann nicht aktualisiert werden",
+      "deleteProject": "Berechtigung verweigert: Projekt kann nicht gelöscht werden",
+      "materialRead": "Berechtigung verweigert: Leseberechtigung für Projekte erforderlich",
+      "materialUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Projekte erforderlich"
+    },
+    "project": {
+      "notFound": "Projekt nicht gefunden",
+      "validationFailed": "Die Projektprüfung ist fehlgeschlagen. Bitte prüfen Sie die Projektdetails und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Projektwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Projektdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese Projektänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der Projektwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Projektfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Projektfeld fehlt: {{field}}.",
+      "statusesNotConfigured": "Es sind keine Projektstatus konfiguriert. Fügen Sie mindestens einen Projektstatus hinzu, bevor Sie Projekte erstellen.",
+      "taskStatusesNotConfigured": "Es sind keine Projektaufgabenstatus konfiguriert. Fügen Sie mindestens einen Aufgabenstatus hinzu, bevor Sie Projekte erstellen.",
+      "detailsUnavailableAfterCreate": "Das Projekt konnte nicht erstellt werden, da seine Details nicht geladen werden konnten. Bitte versuchen Sie es erneut."
+    },
+    "task": {
+      "validationFailed": "Bitte korrigieren Sie die Aufgabendetails: {{details}}",
+      "invalidValue": "Einer der ausgewählten Aufgabenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Projekt- oder Aufgabendatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese Aufgabenänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der Aufgabenwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Aufgabenfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Aufgabenfeld fehlt: {{field}}."
+    },
+    "comment": {
+      "internalOnly": "Nur interne Benutzer können Aufgaben kommentieren.",
+      "taskNotFound": "Aufgabe nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "parentNotFound": "Der Kommentar, auf den Sie antworten, wurde nicht gefunden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "sameThreadRequired": "Antworten müssen im selben Aufgaben-Thread bleiben. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "parentDeleted": "Auf einen gelöschten Kommentar kann nicht geantwortet werden.",
+      "notFound": "Kommentar nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Aufgabe oder der Kommentar existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Kommentarfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Kommentarfeld fehlt: {{field}}."
+    },
+    "export": {
+      "invalidValue": "Eines der ausgewählten Projekte, Phasen oder Aufgaben ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld des Projektexports fehlt.",
+      "missingFieldNamed": "Erforderliches Feld des Projektexports fehlt: {{field}}."
+    },
+    "status": {
+      "invalidValue": "Einer der ausgewählten Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Projektstatus existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein Projektaufgabenstatus mit diesen Einstellungen existiert bereits.",
+      "notAllowed": "Einer der Statuswerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Statusfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Statusfeld fehlt: {{field}}."
+    },
+    "template": {
+      "validationFailed": "Die Vorlagenprüfung ist fehlgeschlagen. Bitte prüfen Sie die Vorlagendetails und versuchen Sie es erneut.",
+      "invalidUuid": "Die Vorlagenanfrage enthält eine ungültige UUID",
+      "missingStatuses": "Diese Vorlage verweist auf Status, die nicht mehr existieren. Bitte reparieren Sie ihre Statusspalten und versuchen Sie es erneut."
+    },
+    "ordering": {
+      "invalidValue": "Einer der ausgewählten Projekt-, Phasen-, Aufgaben- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Datensätze der Projektreihenfolge existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Projektreihenfolge fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Projektreihenfolge fehlt: {{field}}."
+    },
+    "material": {
+      "referenceMissing": "Das ausgewählte Projekt, der Kunde, das Produkt oder die Lagereinheit ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Materialfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Materialfeld fehlt: {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "Für den Kundenkontakt dieses Projekts ist keine E-Mail-Adresse hinterlegt.",
+      "emailNotConfigured": "E-Mail ist nicht konfiguriert. Bitte konfigurieren Sie die E-Mail-Einstellungen unter „Einstellungen“, bevor Sie Updates versenden.",
+      "templateMissing": "Die E-Mail-Vorlage für das Projektstatus-Update fehlt.",
+      "sendFailed": "Das Projektstatus-Update konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+    }
   }
 }

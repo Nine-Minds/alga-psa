@@ -289,7 +289,10 @@ describe('quoteActions', () => {
     const { createQuote } = await import('../../src/actions/quoteActions');
     const result = await createQuote(baseQuoteInput as any);
 
-    expect(result).toEqual({ permissionError: 'Permission denied: Cannot create quotes' });
+    expect(result).toEqual({
+      permissionError: 'Permission denied: Cannot create quotes',
+      messageKey: 'msp/quotes:errors.permissions.create',
+    });
     expect(Quote.create).not.toHaveBeenCalled();
   });
 
@@ -649,7 +652,10 @@ describe('quoteActions', () => {
     const { approveQuote } = await import('../../src/actions/quoteActions');
     const result = await approveQuote(QUOTE_ID, 'Denied');
 
-    expect(result).toEqual({ permissionError: 'Permission denied: Cannot approve quotes' });
+    expect(result).toEqual({
+      permissionError: 'Permission denied: Cannot approve quotes',
+      messageKey: 'msp/quotes:errors.permissions.approve',
+    });
     expect(Quote.update).not.toHaveBeenCalled();
     expect(QuoteActivity.create).not.toHaveBeenCalled();
   });
@@ -1150,7 +1156,9 @@ describe('quoteActions', () => {
     }));
   });
 
-  it('T129: sendQuote stores a PDF document and creates a quote association', async () => {
+  // Filing (documents row + quote association) moved into the PDF service; see
+  // quotePdfGenerationService.test.ts T084b. The action's job is to delegate.
+  it('T129: sendQuote delegates PDF storage to the generation service', async () => {
     const sendableQuote = {
       quote_id: QUOTE_ID,
       quote_number: 'Q-0001',
@@ -1177,25 +1185,7 @@ describe('quoteActions', () => {
         userId: USER_ID,
       })
     );
-    expect(documentInsertMock).toHaveBeenCalledWith(
-      mockKnex,
-      expect.objectContaining({
-        document_name: 'Quote_Q-0001.pdf',
-        mime_type: 'application/pdf',
-        file_id: 'stored-file-1',
-        folder_path: '/Quotes/Generated',
-        is_client_visible: true,
-        tenant: TENANT_ID,
-      })
-    );
-    expect(documentAssociationCreateMock).toHaveBeenCalledWith(
-      mockKnex,
-      expect.objectContaining({
-        entity_id: QUOTE_ID,
-        entity_type: 'quote',
-        tenant: TENANT_ID,
-      })
-    );
+    expect(documentInsertMock).not.toHaveBeenCalled();
   });
 
   it('T130: sendQuote succeeds even if PDF storage fails', async () => {
@@ -1287,7 +1277,7 @@ describe('quoteActions', () => {
     expect(result).toBeNull();
   });
 
-  it('T133: regenerateQuotePdf generates a new PDF and stores it as a document', async () => {
+  it('T133: regenerateQuotePdf generates a new PDF through the generation service', async () => {
     vi.spyOn(Quote, 'getById').mockResolvedValueOnce({
       quote_id: QUOTE_ID,
       quote_number: 'Q-0001',
@@ -1304,8 +1294,6 @@ describe('quoteActions', () => {
         userId: USER_ID,
       })
     );
-    expect(documentInsertMock).toHaveBeenCalled();
-    expect(documentAssociationCreateMock).toHaveBeenCalled();
     expect(result).toBe('stored-file-1');
   });
 
@@ -1316,6 +1304,7 @@ describe('quoteActions', () => {
 
     await expect(regenerateQuotePdf(QUOTE_ID)).resolves.toEqual({
       actionError: 'Quote not found. It may have been updated or deleted. Please refresh and try again.',
+      messageKey: 'msp/quotes:errors.quote.notFoundRefresh',
     });
   });
 
@@ -1327,7 +1316,10 @@ describe('quoteActions', () => {
     const { regenerateQuotePdf } = await import('../../src/actions/quoteActions');
     const result = await regenerateQuotePdf(QUOTE_ID);
 
-    expect(result).toEqual({ permissionError: 'Permission denied: Cannot update quotes' });
+    expect(result).toEqual({
+      permissionError: 'Permission denied: Cannot update quotes',
+      messageKey: 'msp/quotes:errors.permissions.update',
+    });
     expect(generateAndStoreMock).not.toHaveBeenCalled();
   });
 });

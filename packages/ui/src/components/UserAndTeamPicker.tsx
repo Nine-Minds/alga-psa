@@ -13,6 +13,7 @@ import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndR
 import { useRegisterUIComponent } from '../ui-reflection/useRegisterUIComponent';
 import { CommonActions } from '../ui-reflection/actionBuilders';
 import type { GetUserAvatarUrlsBatch } from './UserPicker';
+import { useTranslation } from '../lib/i18n/client';
 
 export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
 
@@ -89,12 +90,15 @@ const UserAndTeamPicker = ({
   className,
   labelStyle = 'bold',
   buttonWidth = 'fit',
-  placeholder = 'Not assigned',
+  placeholder,
   userTypeFilter = 'internal',
   modal = true,
   'data-automation-id': dataAutomationId,
   'data-automation-type': dataAutomationType = 'user-and-team-picker'
 }: UserAndTeamPickerProps & AutomationProps) => {
+  const { t } = useTranslation('common');
+  const notAssignedLabel = t('pickers.notAssigned', 'Not assigned');
+  const resolvedPlaceholder = placeholder ?? notAssignedLabel;
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
@@ -149,10 +153,10 @@ const UserAndTeamPicker = ({
     .sort((a, b) => (a.team_name || '').localeCompare(b.team_name || ''));
 
   const selectedLabel = currentUser
-    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User'
+    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || t('pickers.unnamedUser', 'Unnamed User')
     : currentTeam
-      ? currentTeam.team_name || 'Unnamed Team'
-      : placeholder;
+      ? currentTeam.team_name || t('pickers.unnamedTeam', 'Unnamed Team')
+      : resolvedPlaceholder;
   const hasSelection = Boolean(currentUser || currentTeam);
 
   useEffect(() => {
@@ -400,17 +404,17 @@ const UserAndTeamPicker = ({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden w-full">
-        <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))]">
+      <div className="bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))] overflow-hidden w-full">
+        <div className="p-2 border-b border-[rgb(var(--color-border-200))]">
           <div className="relative">
             <Input
               ref={searchInputRef}
               data-automation-id={dataAutomationId ? `${dataAutomationId}-search` : undefined}
               type="text"
-              placeholder="Search users or teams..."
+              placeholder={t('pickers.searchUsersOrTeams', 'Search users or teams...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
+              className="w-full px-3 py-2 pl-9 text-sm border border-[rgb(var(--color-border-200))] rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
               autoComplete="off"
             />
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
@@ -429,23 +433,23 @@ const UserAndTeamPicker = ({
         >
           <OptionButton
             id={`${pickerId}-option-unassigned`}
-            label="Not assigned"
+            label={notAssignedLabel}
             onClick={() => handleSelectUser('unassigned')}
-            className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
+            className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)]"
             parentId={pickerId}
           >
-            Not assigned
+            {notAssignedLabel}
           </OptionButton>
 
           {filteredUsers.map((user): React.JSX.Element => {
-            const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
+            const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || t('pickers.unnamedUser', 'Unnamed User');
             return (
               <OptionButton
                 key={user.user_id}
                 id={`${pickerId}-option-${user.user_id}`}
                 label={userName}
                 onClick={() => handleSelectUser(user.user_id)}
-                className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 text-gray-900"
+                className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
                 parentId={pickerId}
               >
                 <div className="flex items-center gap-2">
@@ -472,20 +476,20 @@ const UserAndTeamPicker = ({
               <OptionButton
                 key={team.team_id}
                 id={`${pickerId}-team-option-${team.team_id}`}
-                label={team.team_name || 'Unnamed Team'}
+                label={team.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}
                 onClick={() => void handleSelectTeam(team.team_id)}
-                className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 text-gray-900"
+                className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
                 parentId={pickerId}
               >
                 <div className="flex items-center gap-2">
                   <TeamAvatar
                     teamId={team.team_id}
-                    teamName={team.team_name || 'Unnamed Team'}
+                    teamName={team.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}
                     avatarUrl={resolveTeamAvatar(team.team_id)}
                     size="sm"
                   />
                   <div className="flex flex-col">
-                    <span>{team.team_name || 'Unnamed Team'}</span>
+                    <span>{team.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}</span>
                     <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
                   </div>
                 </div>
@@ -543,7 +547,7 @@ const UserAndTeamPicker = ({
           {currentTeam && (
             <TeamAvatar
               teamId={currentTeam.team_id}
-              teamName={currentTeam.team_name || 'Unnamed Team'}
+              teamName={currentTeam.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}
               avatarUrl={resolveTeamAvatar(currentTeam.team_id)}
               size={size === 'xs' ? 'xs' : 'sm'}
             />

@@ -106,16 +106,26 @@ async function fetchTicketSummary(trx: Knex.Transaction, tenant: string, contact
     .limit(5);
 
   const [openResult, urgentResult, totalResult] = await Promise.all([
-    scopedTable(trx, tenant, 'tickets')
-      .where({ contact_name_id: contactId })
-      .where((builder) => builder.where('is_closed', false).orWhereNull('is_closed'))
-      .count<{ count: string | number }[]>('ticket_id as count'),
+    // Status-backed, not the denormalized tickets.is_closed column: that column
+    // is stale on ~24% of production tickets (all claiming "open" while their
+    // status says closed), which inflated this contact's open count. Same
+    // predicate as getBoardListStats and the client pulse.
+    scopedTable(trx, tenant, 'tickets as t')
+      .leftJoin('statuses as s', function joinOpenStatuses() {
+        this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
+      })
+      .where('t.contact_name_id', contactId)
+      .whereRaw('s.is_closed IS NOT TRUE')
+      .count<{ count: string | number }[]>('t.ticket_id as count'),
     scopedTable(trx, tenant, 'tickets as t')
       .leftJoin('urgencies as u', function joinUrgency() {
         this.on('u.urgency_id', '=', 't.urgency_id').andOn('u.tenant', '=', 't.tenant');
       })
+      .leftJoin('statuses as s', function joinUrgentStatuses() {
+        this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
+      })
       .where('t.contact_name_id', contactId)
-      .where((builder) => builder.where('t.is_closed', false).orWhereNull('t.is_closed'))
+      .whereRaw('s.is_closed IS NOT TRUE')
       .whereRaw(URGENT_TICKET_CONDITION)
       .count<{ count: string | number }[]>('t.ticket_id as count'),
     scopedTable(trx, tenant, 'tickets')

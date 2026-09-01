@@ -85,7 +85,30 @@ describe('previewBindings', () => {
     expect(labelValue.text).toBe('Jan 1, 2026 - Feb 1, 2026');
   });
 
-  it('derives invoice.discount from subtotal + tax - total', () => {
+  // The editor canvas is handed a quote render model but the designer speaks picker paths, so a
+  // quote binding key has to resolve through the quote catalog's snake_case path.
+  it('resolves quote picker paths against a quote render model', () => {
+    const quoteModel = {
+      quote_number: 'QT-2026-0042',
+      total_amount: 94830,
+      currencyCode: 'USD',
+      tenant: { name: 'Northwind MSP', address: '400 SW Main St' },
+    } as unknown as WasmInvoiceViewModel;
+
+    expect(
+      resolveFieldPreviewValue({ invoice: quoteModel, bindingKey: 'quote.quoteNumber', format: 'text' }).text
+    ).toBe('QT-2026-0042');
+    expect(
+      resolveFieldPreviewValue({ invoice: quoteModel, bindingKey: 'quote.total', format: 'currency' }).text
+    ).toBe('$948.30');
+    expect(
+      resolveFieldPreviewValue({ invoice: quoteModel, bindingKey: 'tenant.name', format: 'text' }).text
+    ).toBe('Northwind MSP');
+  });
+
+  // The persisted subtotal is already net of discount lines, so the old derived value was
+  // structurally always zero. Real discount exposure is tracked separately (alga0002295).
+  it('no longer exposes a derived invoice.discount value', () => {
     const value = resolveFieldPreviewValue({
       invoice: {
         ...previewInvoice,
@@ -97,7 +120,7 @@ describe('previewBindings', () => {
       format: 'currency',
     });
 
-    expect(value.text).toBe('$2.00');
+    expect(value.text).toBeNull();
   });
 
   it('returns null recurring service period header bindings when canonical summary is missing', () => {

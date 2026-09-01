@@ -12,7 +12,6 @@
       "downloadCsv": "Download CSV",
       "edit": "Edit",
       "import": "Import",
-      "reactivate": "Reactivate",
       "remove": "Remove",
       "retry": "Retry",
       "save": "Save",
@@ -181,7 +180,18 @@
     "shareTooltip": "Print, import and export",
     "defaultClientDeleteError": "Cannot delete the default client. Please set another client as default in General Settings first.",
     "clientNotFound": "Client not found.",
-    "deletePermissionDenied": "Permission denied: Cannot delete clients."
+    "deletePermissionDenied": "Permission denied: Cannot delete clients.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "markInactive": "Mark Inactive",
+        "reactivate": "Reactivate",
+        "delete": "Delete",
+        "print": "Print selected",
+        "more": "More",
+        "clear": "Clear"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Opportunities",
@@ -479,6 +489,7 @@
     "email": "Email",
     "emailPlaceholder": "Email address",
     "phone": "Phone",
+    "extension": "Extension",
     "phonePlaceholder": "Phone number",
     "name": "Name",
     "creating": "Creating...",
@@ -731,7 +742,10 @@
     "deactivateError": "Failed to deactivate contract",
     "updateError": "Failed to update contract",
     "createContract": "Create Contract",
-    "quickAdd": "Quick Add"
+    "quickAdd": "Quick Add",
+    "billingProfile": "Billing Profile",
+    "billingProfileUnassigned": "Not assigned",
+    "billingProfileUpdated": "Billing profile updated"
   },
   "clientContractDialog": {
     "assignTitle": "Assign Contract to Client",
@@ -909,6 +923,40 @@
     "updateError": "Failed to update settings",
     "useDefaultSuccess": "Client will now use default credit expiration settings."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Credit Draw-Down Settings",
+    "useDefault": "Use Default Settings",
+    "useDefaultHelp": "Use the system-wide default settings for credit draw-down",
+    "useDefaultSuccess": "Client will now use default credit draw-down settings.",
+    "clientSpecificEnabled": "Client-specific credit draw-down settings enabled.",
+    "autoApply": "Automatically apply credit at finalization",
+    "autoApplyHelp": "When enabled, available credit is applied automatically when an invoice is finalized",
+    "orderLabel": "Credit application order",
+    "selectOrder": "Select credit order",
+    "orderHelp": "Choose the order in which credits are consumed",
+    "serviceTypesLabel": "Eligible service types",
+    "serviceTypesHelp": "Choose whether credit can be applied to all charges or only to charges for the selected service types.",
+    "noServiceTypes": "No service types configured.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Use tenant default",
+        "all": "All service types",
+        "restricted": "Only selected types",
+        "placeholder": "Select service type restriction"
+      },
+      "inheritedRestricted": "Tenant default: only selected types ({{types}}).",
+      "restricted": "Credit is restricted to the selected service types. Select at least one to save."
+    },
+    "order": {
+      "expirationFirst": "Expiring soonest first",
+      "oldestFirst": "Oldest credit first",
+      "newestFirst": "Newest credit first"
+    },
+    "updatedSuccess": "Credit draw-down settings have been updated.",
+    "loadError": "Failed to load settings",
+    "saveError": "Failed to save settings",
+    "updateError": "Failed to update settings"
+  },
   "clientExternalCreditSettings": {
     "title": "External Credit on File",
     "enable": "Customer holds credit in the accounting system",
@@ -922,18 +970,19 @@
     "noteUpdatedSuccess": "External credit note updated."
   },
   "clientGridCard": {
-    "actions": "Client Actions",
     "quickView": "Quick View",
-    "defaultClient": "Default Client",
     "taxExempt": "Tax Exempt",
     "taxExemptTooltip": "This client is tax exempt - no taxes will be applied to their invoices",
-    "type": "Type:",
-    "address": "Address:",
-    "phone": "Phone:",
-    "url": "URL:",
     "clientActions": "Client Actions",
     "default": "Default",
-    "selectClient": "Select client {{name}}"
+    "selectClient": "Select client {{name}}",
+    "openTickets_one": "{{count}} open",
+    "openTickets_other": "{{count}} open",
+    "lifecycle": {
+      "prospect": "Prospect",
+      "former": "Former"
+    },
+    "noContactDetails": "No contact details"
   },
   "clientLanguagePreference": {
     "title": "Client Language Settings",
@@ -1315,6 +1364,7 @@
         "notes": "Notes",
         "notesHelper": "Additional notes about this location",
         "phone": "Phone",
+        "extension": "Extension",
         "phoneHelper": "Phone number for this location",
         "placeholder": {
           "addressLine1": "Enter address *",
@@ -1332,7 +1382,10 @@
         "stateProvince": "State/Province",
         "stateProvinceHelper": "State or province name",
         "taxRegion": "Tax Region",
-        "taxRegionHelper": "Select the applicable tax region"
+        "taxRegionHelper": "Select the applicable tax region",
+        "defaultBillingProfile": "Default billing profile",
+        "defaultBillingProfileNone": "None",
+        "defaultBillingProfileHelper": "New tickets at this location start with this billing profile. It can always be changed on the ticket."
       },
       "listTitle": "Locations",
       "loading": "Loading locations...",
@@ -1379,6 +1432,9 @@
       "viewTranscript": "View transcript"
     },
     "quickAdd": {
+      "clientRequired": "Select a client for this interaction",
+      "contactPlaceholder": "Select contact",
+      "selectClientFirst": "Select client first",
       "teams": {
         "attendees": {
           "add": "Add",
@@ -1407,6 +1463,16 @@
         "createFailed": "Failed to create Teams meeting",
         "createToggle": "Create Teams meeting",
         "endRequired": "End time is required to create a Teams meeting",
+        "invitesDisabled": "Email invites are turned off in Teams integration settings — attendees will not be notified by Microsoft.",
+        "invitesSummary": "Microsoft will email calendar invites to: {{recipients}}.",
+        "invitesSummaryYou": "you (creator)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams integration is not enabled for this tenant.",
+          "ee_disabled": "Teams integration requires Enterprise Edition.",
+          "no_organizer": "No default meeting organizer is configured in Teams settings.",
+          "not_configured": "The Teams integration has not been configured."
+        },
+        "scheduleSummary": "A schedule entry will be added to your AlgaPSA calendar.",
         "startRequired": "Start time is required to create a Teams meeting",
         "unavailable": "Teams meeting creation is not available for this tenant."
       },
@@ -1414,7 +1480,7 @@
       "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
-      "addInteraction": "Add interaction",
+      "addInteraction": "Add Interaction",
       "allTypes": "All Types",
       "applyFilters": "Apply Filters",
       "endDate": "End Date",
@@ -1432,6 +1498,13 @@
       "allContacts": "All Contacts",
       "allStatuses": "All Statuses",
       "allUsers": "All Users",
+      "columns": { "type": "Type", "title": "Title", "client": "Client", "contact": "Contact", "user": "User", "date": "Date", "status": "Status" },
+      "empty": "No interactions match these filters.",
+      "loading": "Loading interactions…",
+      "openClient": "Open client {{name}}",
+      "openContact": "Open contact {{name}}",
+      "openInteraction": "Open interaction {{title}}",
+      "openUser": "Open user {{name}}",
       "byUser": "By {{name}}",
       "collapse": "Collapse Recent Interactions",
       "contactsFromClient": "Contacts from selected client",
@@ -1566,6 +1639,206 @@
       "loading": "Loading contact...",
       "notFound": "Contact not found.",
       "loadFailed": "Failed to load contact."
+    }
+  },
+  "clientBillingProfiles": {
+    "title": "Billing profiles",
+    "description": "Bill separate sites, entities, or facilities within this client. Charges are attributed to a profile through the contract, contract line, or work item they come from; anything unassigned falls back to the default profile.",
+    "loading": "Loading billing profiles…",
+    "defaultBadge": "Default",
+    "rename": "Rename",
+    "makeDefault": "Make default",
+    "archive": "Archive",
+    "delete": "Delete",
+    "restore": "Restore",
+    "archivedHeading": "Archived",
+    "addLabel": "Add a billing profile",
+    "addPlaceholder": "e.g. North Plant",
+    "addButton": "Add profile",
+    "created": "Billing profile \"{{name}}\" created",
+    "renamed": "Billing profile renamed",
+    "madeDefault": "\"{{name}}\" is now the default billing profile",
+    "archived": "\"{{name}}\" archived",
+    "deleted": "\"{{name}}\" deleted",
+    "restored": "\"{{name}}\" restored",
+    "settings": "Billing settings"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Billing segments",
+    "restrictedHint": "This user sees only the segments selected below.",
+    "allHint": "This user sees every billing segment, including ones added later.",
+    "save": "Save segment access",
+    "saved": "Portal segment access updated",
+    "emptyWarning": "Select at least one segment, or turn the restriction off to show all of them."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Billing profile settings saved",
+    "inherited": "Inherited: {{value}}",
+    "notSet": "Not set",
+    "billsSeparately": "Bills separately",
+    "billsSeparatelyHint": "Produce a separate invoice for this profile, with its own bill-to, payment method, and balance.",
+    "billToName": "Bill-to name",
+    "billingEmail": "Billing email",
+    "poNumber": "PO number",
+    "taxIdNumber": "Tax ID",
+    "taxExemptionCertificate": "Tax exemption certificate",
+    "invoiceDeliveryMethod": "Invoice delivery method",
+    "billingCycle": "Billing cycle",
+    "paymentTerms": "Payment terms",
+    "taxExempt": "Tax exempt",
+    "taxExemptInherited": "Inheriting from the client ({{value}})",
+    "regionNote": "Tax region is not set here. It follows where the work was delivered — the service, then the contract line’s location, then the client default."
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Prepaid Balance Alerts",
+    "scheduleHelp": "Checks run daily at 09:00 UTC. Saving does not send anything immediately.",
+    "creditSwitch": "Prepaid credit alerts",
+    "creditSwitchHelp": "Alert when available prepaid credit drops below the configured threshold",
+    "creditThreshold": "Credit threshold",
+    "creditThresholdPlaceholder": "e.g. 500.00",
+    "creditThresholdHelp": "Remaining prepaid credit that triggers an alert",
+    "creditCurrency": "Currency",
+    "creditAmountError": "Enter a positive credit threshold",
+    "bucketSwitch": "Bucket usage alerts",
+    "bucketSwitchHelp": "Alert when a prepaid hour bucket reaches the configured consumption",
+    "bucketPercent": "Consumption threshold (%)",
+    "bucketPercentPlaceholder": "e.g. 80",
+    "bucketPercentHelp": "Percentage of bucket capacity that triggers an alert",
+    "percentRangeError": "Enter a whole number from 1 to 100",
+    "notifyClient": "Also email the client billing recipient",
+    "notifyClientHelp": "Sends the alert to the client’s canonical invoice billing recipient",
+    "replenishmentTier": "When an alert fires",
+    "replenishmentNotifyOnly": "Notify only",
+    "replenishmentDraft": "Draft a top-up invoice and notify",
+    "replenishmentAutoIssue": "Draft and issue a top-up invoice",
+    "replenishmentAmount": "Credit top-up amount",
+    "replenishmentAmountHelp": "Amount in the selected currency. Bucket alerts use the minutes below.",
+    "replenishmentAmountError": "Enter a positive credit top-up amount in the selected currency",
+    "replenishmentMinutes": "Bucket top-up minutes",
+    "replenishmentMinutesError": "Enter a positive whole number of minutes",
+    "replenishmentHorizon": "Skip top-ups within this many days of contract end",
+    "replenishmentHorizonError": "Enter a number of days from 0 to 3650",
+    "save": "Save",
+    "saveSuccess": "Prepaid balance alert settings saved",
+    "saveError": "Failed to save prepaid balance alert settings",
+    "loadError": "Failed to load prepaid balance alert settings",
+    "contractOverrideTitle": "Contract replenishment override",
+    "contractOverrideContract": "Contract",
+    "contractOverrideInherit": "Use client default",
+    "saveContractOverride": "Save contract override",
+    "contractSaveSuccess": "Contract replenishment policy saved",
+    "contractSaveError": "Failed to save contract replenishment policy"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Client not found",
+      "signInRequired": "You must be signed in to manage clients.",
+      "duplicateName": "A client with the name \"{{name}}\" already exists. Please choose a different name.",
+      "duplicate": "A client with these details already exists. Please check the client name.",
+      "referencedDataMissing": "Referenced data not found. Please check account manager, billing contact, and related client settings.",
+      "invalidValue": "One of the selected client values is invalid. Please refresh and try again.",
+      "invalidData": "Invalid client data provided. Please check all fields and try again.",
+      "missingField": "Missing required client field.",
+      "missingFieldNamed": "Missing required client field: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Permission denied: Cannot read clients",
+      "updateClients": "Permission denied: Cannot update clients"
+    },
+    "timeline": {
+      "invalidCursor": "Invalid client timeline cursor"
+    },
+    "location": {
+      "notFound": "Location not found or is no longer active.",
+      "defaultRequired": "Add another active location or choose a different default before unsetting this location as the default.",
+      "missingField": "Missing required location field.",
+      "missingFieldNamed": "Missing required location field: {{field}}.",
+      "referenceInvalid": "The selected client, country, tax region, or related location data is no longer valid. Please refresh and try again.",
+      "duplicate": "A conflicting location record already exists. Please refresh locations and try again.",
+      "invalidData": "Invalid location data provided. Please check the address and contact fields."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Failed to add inbound email domain. Please try again.",
+      "notFound": "Inbound email domain not found."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Missing required inbound ticket destination field.",
+      "missingFieldNamed": "Missing required inbound ticket destination field: {{field}}.",
+      "referenceInvalid": "The selected inbound ticket destination is no longer valid. Please refresh and try again."
+    },
+    "interaction": {
+      "notFound": "Interaction not found",
+      "signInRequired": "You must be signed in to manage interactions.",
+      "identifierInvalid": "One of the interaction identifiers is invalid. Please refresh and try again.",
+      "missingField": "Missing required interaction field.",
+      "missingFieldNamed": "Missing required interaction field: {{field}}.",
+      "referenceMissing": "The selected interaction, client, contact, user, status, or type no longer exists. Please refresh and try again.",
+      "duplicate": "An interaction with these details already exists."
+    },
+    "interactionType": {
+      "notFound": "Interaction type not found or you do not have access to it.",
+      "missingField": "Missing required interaction type field.",
+      "missingFieldNamed": "Missing required interaction type field: {{field}}.",
+      "referenceInvalid": "Referenced interaction type data is no longer valid. Please refresh and try again.",
+      "duplicate": "An interaction type with these details already exists.",
+      "invalidData": "Invalid interaction type data provided. Please check the name, icon, and display order."
+    },
+    "taxRate": {
+      "signInRequired": "You must be signed in to update client tax rates.",
+      "invalidReference": "The selected client or tax rate is invalid. Please refresh and try again.",
+      "missingField": "Missing required client tax-rate field.",
+      "missingFieldNamed": "Missing required client tax-rate field: {{field}}.",
+      "referenceMissing": "The selected client or tax rate no longer exists. Please refresh and try again.",
+      "duplicate": "This tax rate is already associated with the client.",
+      "associationNotFound": "Client tax rate association not found.",
+      "rateNotFound": "Tax rate with ID {{id}} not found."
+    },
+    "alias": {
+      "required": "Alias is required",
+      "tooLong": "Alias is too long",
+      "addFailed": "Failed to add client alias. Please try again.",
+      "notFound": "Alias not found."
+    },
+    "contractLine": {
+      "signInRequired": "You must be signed in to manage client contract lines.",
+      "refreshAssignment": "Please refresh the contract assignment and try again.",
+      "sharedByAssignments": "This contract line is shared by multiple active assignments. Edit the specific contract assignment before changing its lines.",
+      "duplicate": "A contract line with these details already exists for this client.",
+      "invalidReference": "The selected client or contract line is invalid. Please refresh and try again.",
+      "missingField": "Missing required contract line field.",
+      "missingFieldNamed": "Missing required contract line field: {{field}}.",
+      "referenceInvalid": "The selected contract line reference is no longer valid. Please refresh and try again.",
+      "storageUnavailable": "Client contract line storage is unavailable. Please try again later.",
+      "invalidData": "Client contract line data is invalid. Please refresh and try again.",
+      "addFailed": "Failed to add client contract line."
+    },
+    "billingSettings": {
+      "updateDenied": "Permission denied: Cannot update billing settings",
+      "readRequired": "Permission denied: billing_settings read required",
+      "updateRequired": "Permission denied: billing_settings update required",
+      "tenantContextMissing": "Tenant context not found",
+      "clientContextMissing": "Client context not found",
+      "prepaidAlertsDisabled": "Prepaid balance alerts are not enabled for this workspace",
+      "invalidPrepaidAlertSettings": "Invalid prepaid balance alert settings",
+      "prepaidAlertUpdateFailed": "Failed to update prepaid balance alert settings",
+      "contractReplenishmentUpdateFailed": "Failed to update contract replenishment policy"
+    },
+    "billingProfile": {
+      "signInRequired": "You must be signed in to manage billing profiles.",
+      "duplicateDefault": "This client already has a default billing profile.",
+      "stillReferenced": "The billing profile is still referenced and cannot be removed.",
+      "defaultRequired": "A client must always have exactly one default billing profile.",
+      "nameRequired": "A billing profile needs a name.",
+      "notThisClient": "That billing profile does not belong to this client.",
+      "archivedCannotBeDefault": "An archived billing profile cannot be made the default.",
+      "notFound": "That billing profile no longer exists.",
+      "defaultCannotArchive": "The default billing profile cannot be archived. Make another profile the default first.",
+      "defaultCannotDelete": "The default billing profile cannot be deleted. Make another profile the default first.",
+      "inUse": "This billing profile is used by {{references}}. Archive it instead — deleting it would erase how those charges were attributed.",
+      "recordNotFound": "That record or billing profile no longer exists.",
+      "otherClient": "That billing profile belongs to a different client.",
+      "archived": "That billing profile is archived.",
+      "selectionNotThisClient": "One of the selected billing profiles does not belong to this client."
     }
   }
 }

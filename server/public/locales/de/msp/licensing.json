@@ -224,6 +224,14 @@
       "heading": "Credits kaufen oder Abonnement verwalten",
       "body": "Aufladungen, automatisches Aufladen und Abonnementänderungen werden im Nine-Minds-Store verwaltet.",
       "openStore": "Store öffnen"
+    },
+    "status": {
+      "active": "Aktiv",
+      "unpaid": "Unbezahlt",
+      "none": "Kein Abonnement",
+      "trialing": "Testphase",
+      "past_due": "Überfällig",
+      "canceled": "Storniert"
     }
   },
   "managementPage": {
@@ -345,5 +353,9 @@
       "startTrial": "Die Testversion konnte nicht gestartet werden.",
       "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden."
     }
+  },
+  "errors": {
+    "notSignedIn": "Nicht autorisiert. Melden Sie sich an, um die Lizenzierung zu verwalten.",
+    "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
   }
 }

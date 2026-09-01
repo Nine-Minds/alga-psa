@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Helpdesk",
       "operations": "Betrieb",
-      "billing": "Abrechnung"
+      "billing": "Abrechnung",
+      "inventory": "Lagerbestand"
     },
     "badges": {
       "planned": "Geplant"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Bericht anzeigen",
       "openInBilling": "In Abrechnung öffnen",
+      "openReport": "Bericht öffnen",
       "requiresTier": "Erfordert {{tier}}",
       "comingSoon": "Demnächst"
     },
@@ -57,11 +59,14 @@
       "noDate": "Kein Datum",
       "notAvailable": "k. A.",
       "noEmailChannels": "Es sind keine E-Mail-Kanaele konfiguriert.",
-      "noCapacity": "nicht verfügbar – keine Kapazität festgelegt"
+      "noCapacity": "nicht verfügbar – keine Kapazität festgelegt",
+      "noEstimate": "nicht verfügbar – keine Schätzung festgelegt",
+      "noOverruns": "Keine Aufgabe hat ihre Schätzung überschritten."
     },
     "fallbackTitle": "Bericht",
     "dateRange": {
-      "lastDays": "Letzte {{count}} Tage"
+      "lastDays": "Letzte {{count}} Tage",
+      "allActiveProjects": "Alle aktiven Projekte, seit Projektbeginn"
     },
     "units": {
       "daysWithCount": "{{count}} Tage"
@@ -101,7 +106,13 @@
       "capacityHours": "Kapazitätsstunden",
       "utilization": "Auslastung",
       "usersWithoutCapacity": "Fehlende Kapazität",
-      "activeUsers": "Aktive Benutzer"
+      "activeUsers": "Aktive Benutzer",
+      "activeProjects": "Aktive Projekte",
+      "budgetedHours": "Budgetierte Stunden",
+      "estimatedHours": "Geschätzte Stunden",
+      "actualHours": "Tatsächliche Stunden",
+      "projectsOverEstimate": "Über Schätzung",
+      "projectsOverBudget": "Über Budget"
     },
     "sections": {
       "openByStatus": "Offen nach Status",
@@ -120,7 +131,10 @@
       "bucketUsage": "Kontingentnutzung",
       "performanceByAssignee": "Leistung nach Bearbeiter",
       "closedByAssignee": "Geschlossen nach Bearbeiter",
-      "utilizationByUser": "Auslastung pro Benutzer"
+      "utilizationByUser": "Auslastung pro Benutzer",
+      "hoursByProject": "Stunden nach Projekt",
+      "hoursByPhase": "Stunden nach Phase",
+      "largestTaskOverruns": "Größte Aufgabenüberschreitungen"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -150,6 +164,26 @@
       "contractReports": {
         "title": "Vertragsberichte",
         "description": "Vertragsumsatz, Verlängerungen, Kontingentnutzung und Rentabilität."
+      },
+      "inventoryMargin": {
+        "title": "Margenbericht",
+        "description": "Umsatz, Wareneinsatz und Marge pro Produkt aus ausgelieferten Kundenaufträgen."
+      },
+      "inventoryWriteOffs": {
+        "title": "Abschreibungen",
+        "description": "Abgeschriebener Bestandsschwund und Anpassungen, nach Grund und Zeitraum."
+      },
+      "inventoryGhostUsage": {
+        "title": "Ghost-Verbrauch",
+        "description": "Geschlossene Hardware-Tickets ohne erfasste Teile — Kosten, die der Betrieb möglicherweise verschluckt hat."
+      },
+      "deferredRevenue": {
+        "title": "Abgegrenzte Umsatzerlöse",
+        "description": "Vorausbezahlte Verbindlichkeiten über alle Kunden: Gutschriftensalden und ungenutzte Stunden aus Stundenkontingenten nach Monat."
+      },
+      "projectHours": {
+        "title": "Projektstunden vs. Schätzungen",
+        "description": "Erfasste Stunden im Verhältnis zu Aufgabenschätzungen und Projektbudgets, samt der Phasen, die überziehen."
       }
     },
     "table": {
@@ -173,7 +207,17 @@
       "workedHours": "Geleistete Stunden",
       "capacityHours": "Kapazitätsstunden",
       "utilization": "Auslastung",
-      "capacityEstimated": "Geschätzt aus der Wochenkapazität; keine Arbeitszeiten festgelegt."
+      "capacityEstimated": "Geschätzt aus der Wochenkapazität; keine Arbeitszeiten festgelegt.",
+      "project": "Projekt",
+      "client": "Kunde",
+      "phase": "Phase",
+      "task": "Aufgabe",
+      "budgetedHours": "Budgetiert",
+      "estimatedHours": "Geschätzt",
+      "actualHours": "Tatsächlich",
+      "variance": "Abweichung",
+      "estimateUsed": "Schätzung verbraucht",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} Aufgaben erledigt"
     },
     "statusValues": {
       "connected": "Verbunden",
@@ -425,6 +469,75 @@
       "totalClients": "Gesamtkunden",
       "activeAssignments": "Aktive Zuordnungen",
       "totalBilled": "Insgesamt abgerechnet"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Abgegrenzte Umsatzerlöse / vorausbezahlte Verbindlichkeiten",
+    "description": "Fortschreibung der Gutschriftensalden von Kunden und ungenutzter vorausbezahlter Stunden aus Stundenkontingenten – pro Kunde und Monat.",
+    "printSubtitle": "Monat {{month}}",
+    "printTable": "Fortschreibung pro Kunde",
+    "empty": "Keine vorausbezahlten Verbindlichkeiten für diesen Monat.",
+    "actions": {
+      "csv": "CSV herunterladen"
+    },
+    "errors": {
+      "load": "Der Bericht zu abgegrenzten Umsatzerlösen konnte nicht geladen werden."
+    },
+    "summary": {
+      "totalLiability": "Vorausbezahlte Verbindlichkeiten gesamt",
+      "credits": "Gutschriften",
+      "hours": "Vorausbezahlte Stunden",
+      "delta": "Veränderung zum Vormonat"
+    },
+    "table": {
+      "client": "Kunde",
+      "credits": "Gutschriften",
+      "hours": "Vorausbezahlte Stunden",
+      "total": "Endbestand gesamt",
+      "opening": "Anfangsbestand",
+      "issued": "Ausgestellt",
+      "applied": "Verrechnet",
+      "expired": "Verfallen",
+      "adjustments": "Anp.",
+      "closing": "Endbestand",
+      "currencyHeading": "Währung",
+      "noClients": "Keine Kunden mit vorausbezahlten Salden in diesem Monat.",
+      "tenantTotal": "Mandantensumme"
+    },
+    "detail": {
+      "credits": "Gutschriftensalden",
+      "noCredits": "Keine Gutschrifteneinträge.",
+      "date": "Ausgestellt",
+      "description": "Beschreibung",
+      "remaining": "Verbleibend",
+      "expires": "Läuft ab",
+      "qbo": "QBO",
+      "reachable": "Synchronisiert",
+      "notReachable": "Nicht in QBO",
+      "notReachableTitle": "Gutschriften aus Vorauszahlungen / Projektanzahlungen werden nie nach QuickBooks exportiert – Alga ist das führende System.",
+      "buckets": "Vorausbezahlte Stunden aus Stundenkontingenten",
+      "noBuckets": "Keine vorausbezahlten Stundenkontingent-Zeiträume.",
+      "line": "Position",
+      "period": "Zeitraum",
+      "included": "Enthalten",
+      "used": "Verwendet",
+      "value": "Wert",
+      "feeSource": "Gebühr",
+      "rollover": "Übertrag",
+      "notBilled": "Noch nicht abgerechnet",
+      "billed": "Abgerechnet"
+    },
+    "csv": {
+      "client": "Kunde",
+      "currency": "Währung"
+    }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Einer der ausgewählten Berichtsdatensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Berichtsdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Berichtsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Berichtsfeld fehlt: {{field}}."
     }
   }
 }

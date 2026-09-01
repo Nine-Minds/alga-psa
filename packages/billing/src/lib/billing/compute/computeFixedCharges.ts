@@ -11,7 +11,9 @@ import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
   ChargeComputeTiming,
+  ChargeProfileAssignments,
 } from "./types";
+import { resolveChargeProfileFor } from "../billingProfileResolution";
 
 /**
  * Fixed-charge math extracted from BillingEngine.calculateFixedPriceCharges.
@@ -67,6 +69,12 @@ export interface FixedChargeComputeInputs {
   planServices: FixedPlanServiceRow[];
   /** Loaded by the caller when planServices is empty; null otherwise. */
   fallbackService: FixedFallbackServiceRow | null;
+  /**
+   * Fixed charges have no per-occurrence source record — there is only the
+   * contract line and its recurring periods — so they stop at the contract
+   * step of the resolution chain (F026, documented via F070).
+   */
+  billingProfile?: ChargeProfileAssignments | null;
 }
 
 export interface FixedChargeComputeResult {
@@ -82,6 +90,102 @@ export interface FixedChargeComputeResult {
     servicePeriodStart: ISO8601String;
     servicePeriodEnd: ISO8601String;
   } | null;
+}
+
+export interface FixedPlanBaseRateInputs {
+  clientContractLine: Pick<IClientContractLine, "custom_rate">;
+  contractLineDetails: FixedChargeComputeInputs["contractLineDetails"];
+  planServices: FixedPlanServiceRow[];
+}
+
+/**
+ * Resolve the fixed plan's base rate in major units using the production
+ * precedence order. Preview priceability checks call this same helper so they
+ * cannot drift from the charge computation when a rate source changes.
+ */
+export function resolveFixedPlanLevelBaseRate({
+  clientContractLine,
+  contractLineDetails,
+  planServices,
+}: FixedPlanBaseRateInputs): number | null {
+  if (contractLineDetails?.contract_line_type !== "Fixed") {
+    return null;
+  }
+
+  let planLevelBaseRate: number | null = null;
+
+  if (
+    contractLineDetails.custom_rate !== undefined &&
+    contractLineDetails.custom_rate !== null
+  ) {
+    const parsedContractRate =
+      typeof contractLineDetails.custom_rate === "string"
+        ? parseFloat(contractLineDetails.custom_rate)
+        : Number(contractLineDetails.custom_rate);
+    if (!Number.isNaN(parsedContractRate)) {
+      // custom_rate is stored in cents; compute operates in major units here.
+      planLevelBaseRate = parsedContractRate / 100;
+    }
+  }
+
+  if (planLevelBaseRate === null && clientContractLine.custom_rate != null) {
+    const parsedAssignmentRate =
+      typeof clientContractLine.custom_rate === "string"
+        ? parseFloat(clientContractLine.custom_rate)
+        : Number(clientContractLine.custom_rate);
+    if (!Number.isNaN(parsedAssignmentRate)) {
+      planLevelBaseRate = parsedAssignmentRate / 100;
+    }
+  }
+
+  if (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate)) {
+    let derivedBaseRate = 0;
+    let hasServiceBaseRate = false;
+
+    for (const service of planServices) {
+      const rawServiceBaseRate = service.service_base_rate;
+      if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
+        const parsedServiceBaseRate =
+          typeof rawServiceBaseRate === "string"
+            ? parseFloat(rawServiceBaseRate)
+            : Number(rawServiceBaseRate);
+        if (!Number.isNaN(parsedServiceBaseRate)) {
+          const quantity =
+            Number(
+              service.configuration_quantity ?? service.service_quantity ?? 1,
+            ) || 1;
+          derivedBaseRate += parsedServiceBaseRate * quantity;
+          hasServiceBaseRate = true;
+        }
+      }
+    }
+
+    if (hasServiceBaseRate) {
+      // service_base_rate is stored in cents.
+      planLevelBaseRate = derivedBaseRate / 100;
+    }
+  }
+
+  if (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate)) {
+    const totalDefaultRateCents = planServices.reduce(
+      (sum: number, service) => {
+        const rate = Number(service.default_rate ?? 0);
+        const quantity =
+          Number(
+            service.configuration_quantity ?? service.service_quantity ?? 1,
+          ) || 1;
+        return sum + rate * quantity;
+      },
+      0,
+    );
+    if (totalDefaultRateCents !== 0) {
+      planLevelBaseRate = totalDefaultRateCents / 100;
+    }
+  }
+
+  return planLevelBaseRate !== null && !Number.isNaN(planLevelBaseRate)
+    ? planLevelBaseRate
+    : null;
 }
 
 export function shouldApplyAdvanceTerminationCoverageSettlement(
@@ -202,7 +306,9 @@ export function computeFixedCharges(
     customRateSource,
     planServices,
     fallbackService,
+    billingProfile,
   } = inputs;
+  const resolvedProfile = resolveChargeProfileFor(billingProfile);
 
   const {
     duePosition: lineBillingTiming,
@@ -220,24 +326,14 @@ export function computeFixedCharges(
   const isFixedFeePlan = contractLineDetails?.contract_line_type === "Fixed";
 
   // --- Plan-level fixed config (base rate and proration) ---
-  let planLevelBaseRate: number | null = null; // dollars
+  const planLevelBaseRate = resolveFixedPlanLevelBaseRate({
+    clientContractLine,
+    contractLineDetails,
+    planServices,
+  });
   let planLevelEnableProration = false;
 
   if (isFixedFeePlan && contractLineDetails) {
-    if (
-      contractLineDetails.custom_rate !== undefined &&
-      contractLineDetails.custom_rate !== null
-    ) {
-      const parsedContractRate =
-        typeof contractLineDetails.custom_rate === "string"
-          ? parseFloat(contractLineDetails.custom_rate)
-          : Number(contractLineDetails.custom_rate);
-      if (!Number.isNaN(parsedContractRate)) {
-        // custom_rate is stored in cents, convert to dollars for planLevelBaseRate
-        planLevelBaseRate = parsedContractRate / 100;
-      }
-    }
-
     if (
       contractLineDetails.enable_proration !== undefined &&
       contractLineDetails.enable_proration !== null
@@ -245,18 +341,6 @@ export function computeFixedCharges(
       planLevelEnableProration = Boolean(contractLineDetails.enable_proration);
     }
     fixedProrationEnabled = planLevelEnableProration;
-  }
-
-  if (isFixedFeePlan) {
-    if (planLevelBaseRate === null && clientContractLine.custom_rate != null) {
-      const parsedAssignmentRate =
-        typeof clientContractLine.custom_rate === "string"
-          ? parseFloat(clientContractLine.custom_rate)
-          : Number(clientContractLine.custom_rate);
-      if (!Number.isNaN(parsedAssignmentRate)) {
-        planLevelBaseRate = parsedAssignmentRate / 100;
-      }
-    }
   }
 
   const normalizedPlanServices = planServices.map((service) => {
@@ -280,57 +364,6 @@ export function computeFixedCharges(
     }
   }
   fixedProrationEnabled = planLevelEnableProration;
-
-  if (
-    isFixedFeePlan &&
-    (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))
-  ) {
-    let derivedBaseRate = 0;
-    let hasServiceBaseRate = false;
-
-    for (const service of planServices) {
-      const rawServiceBaseRate = service.service_base_rate;
-      if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
-        const parsedServiceBaseRate =
-          typeof rawServiceBaseRate === "string"
-            ? parseFloat(rawServiceBaseRate)
-            : Number(rawServiceBaseRate);
-        if (!Number.isNaN(parsedServiceBaseRate)) {
-          const quantity =
-            Number(
-              service.configuration_quantity ?? service.service_quantity ?? 1,
-            ) || 1;
-          derivedBaseRate += parsedServiceBaseRate * quantity;
-          hasServiceBaseRate = true;
-        }
-      }
-    }
-
-    if (hasServiceBaseRate) {
-      // service_base_rate is stored in cents, convert to dollars
-      planLevelBaseRate = derivedBaseRate / 100;
-    }
-  }
-
-  if (
-    isFixedFeePlan &&
-    (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))
-  ) {
-    const totalDefaultRateCents = planServices.reduce(
-      (sum: number, service) => {
-        const rate = Number(service.default_rate ?? 0);
-        const quantity =
-          Number(
-            service.configuration_quantity ?? service.service_quantity ?? 1,
-          ) || 1;
-        return sum + rate * quantity;
-      },
-      0,
-    );
-    if (totalDefaultRateCents !== 0) {
-      planLevelBaseRate = totalDefaultRateCents / 100;
-    }
-  }
 
   if (
     isFixedFeePlan &&
@@ -376,7 +409,13 @@ export function computeFixedCharges(
       taxPorts.getClientDefaultTaxRegionCode(client.client_id);
     let fallbackTaxAmount = 0;
     let fallbackTaxRate = 0;
-    if (!client.is_tax_exempt && fallbackIsTaxable && fallbackTaxRegion) {
+    // Exemption is per billing profile (F131), not per client — one invoice
+    // can carry both exempt and non-exempt lines.
+    if (
+      !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+      fallbackIsTaxable &&
+      fallbackTaxRegion
+    ) {
       const taxResult = taxPorts.calculateTax(
         client.client_id,
         baseRateInCents,
@@ -384,6 +423,7 @@ export function computeFixedCharges(
         fallbackTaxRegion,
         true,
         currencyCode,
+        resolvedProfile?.billingProfileId ?? null,
       );
       fallbackTaxRate = taxResult.taxRate;
       fallbackTaxAmount = taxResult.taxAmount;
@@ -409,6 +449,8 @@ export function computeFixedCharges(
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined,
         location_id: clientContractLine.location_id ?? null,
+        billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+        billing_profile_source: resolvedProfile?.source ?? null,
         base_rate: baseRateInCents,
         enable_proration: planLevelEnableProration,
         fmv: baseRateInCents,
@@ -480,7 +522,7 @@ export function computeFixedCharges(
 
       let taxAmount = 0;
       let taxRate = 0;
-      if (!client.is_tax_exempt && isTaxable) {
+      if (!taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) && isTaxable) {
         const effectiveTaxRegion =
           serviceTaxRegion ??
           taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
@@ -494,6 +536,7 @@ export function computeFixedCharges(
             effectiveTaxRegion,
             true,
             currencyCode,
+            resolvedProfile?.billingProfileId ?? null,
           );
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
@@ -553,6 +596,8 @@ export function computeFixedCharges(
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined,
         location_id: clientContractLine.location_id ?? null,
+        billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+        billing_profile_source: resolvedProfile?.source ?? null,
         config_id: planService.config_id,
         base_rate: baseRateInCents,
         enable_proration: planLevelEnableProration,
@@ -654,6 +699,8 @@ export function computeFixedCharges(
             clientContractLine.client_contract_id || undefined,
           contract_name: clientContractLine.contract_name || undefined,
           location_id: clientContractLine.location_id ?? null,
+          billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+          billing_profile_source: resolvedProfile?.source ?? null,
           tax_amount: 0,
           tax_rate: 0,
           tax_region:
@@ -666,7 +713,7 @@ export function computeFixedCharges(
           config_id: service.config_id,
           base_rate: baseRateInCents,
         };
-        if (!client.is_tax_exempt && charge.is_taxable) {
+        if (!taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) && charge.is_taxable) {
           const effectiveTaxRegion = charge.tax_region ?? "";
           if (effectiveTaxRegion) {
             const taxResult = taxPorts.calculateTax(
@@ -676,6 +723,7 @@ export function computeFixedCharges(
               effectiveTaxRegion,
               true,
               currencyCode,
+              resolvedProfile?.billingProfileId ?? null,
             );
             charge.tax_rate = taxResult.taxRate;
             charge.tax_amount = taxResult.taxAmount;

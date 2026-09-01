@@ -114,10 +114,40 @@ export class StripePaymentProvider implements PaymentProvider {
       throw new Error('Stripe payment configuration not found for tenant');
     }
 
-    this.stripe = new Stripe(this.config.secretKey, {
+    const clientOptions: Stripe.StripeConfig = {
       apiVersion: '2024-12-18.acacia' as any,
       typescript: true,
-    });
+    };
+
+    // Test-only endpoint override: an explicit STRIPE_API_BASE_URL points the
+    // Stripe SDK at a local emulator. With the variable absent, construction is
+    // byte-for-byte equivalent to the production path and uses Stripe's normal
+    // API endpoint.
+    const apiBaseUrl = process.env.STRIPE_API_BASE_URL;
+    if (apiBaseUrl) {
+      let parsed: URL;
+      try {
+        parsed = new URL(apiBaseUrl);
+      } catch {
+        throw new Error(`Invalid STRIPE_API_BASE_URL: ${apiBaseUrl}`);
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error(`Invalid STRIPE_API_BASE_URL protocol: ${parsed.protocol}`);
+      }
+      clientOptions.host = parsed.hostname;
+      if (parsed.port) {
+        clientOptions.port = Number(parsed.port);
+      }
+      clientOptions.protocol = parsed.protocol === 'https:' ? 'https' : 'http';
+      logger.info('[StripePaymentProvider] Using STRIPE_API_BASE_URL override', {
+        tenantId: this.tenantId,
+        host: parsed.hostname,
+        port: parsed.port,
+        protocol: clientOptions.protocol,
+      });
+    }
+
+    this.stripe = new Stripe(this.config.secretKey, clientOptions);
   }
 
   /**
@@ -158,7 +188,7 @@ export class StripePaymentProvider implements PaymentProvider {
       supportsHostedCheckout: true,
       supportsEmbeddedCheckout: true,
       supportsWebhooks: true,
-      supportedCurrencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'NZD', 'ARS', 'BRL'],
+      supportedCurrencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'NZD', 'ARS', 'BRL', 'ZAR', 'SEK'],
       supportsPartialPayments: false, // Not implementing partial payments initially
       supportsRefunds: true,
       supportsSavedPaymentMethods: true,
@@ -355,6 +385,14 @@ export class StripePaymentProvider implements PaymentProvider {
   }
 
   /**
+   * Expires a Checkout Session that no longer matches the invoice balance.
+   */
+  async expirePaymentLink(externalLinkId: string): Promise<void> {
+    const stripe = await this.getStripe();
+    await stripe.checkout.sessions.expire(externalLinkId);
+  }
+
+  /**
    * Verifies the signature of a Stripe webhook payload.
    */
   verifyWebhookSignature(payload: string, signature: string): boolean {
@@ -387,6 +425,7 @@ export class StripePaymentProvider implements PaymentProvider {
     let amount: number | undefined;
     let currency: string | undefined;
     let status: PaymentStatus = 'pending';
+    let externalLinkId: string | undefined;
     let paymentIntentId: string | undefined;
     let customerId: string | undefined;
 
@@ -398,6 +437,9 @@ export class StripePaymentProvider implements PaymentProvider {
         amount = session.amount_total || undefined;
         currency = session.currency?.toUpperCase();
         customerId = session.customer as string;
+        // The Checkout Session id is always known (unlike payment_intent, which
+        // is null until confirmation under apiVersion 2024-12-18.acacia).
+        externalLinkId = session.id;
         paymentIntentId = session.payment_intent as string;
 
         if (session.payment_status === 'paid') {
@@ -434,6 +476,7 @@ export class StripePaymentProvider implements PaymentProvider {
         const session = event.data.object as Stripe.Checkout.Session;
         invoiceId = session.metadata?.invoice_id;
         customerId = session.customer as string;
+        externalLinkId = session.id;
         status = 'cancelled';
         break;
       }
@@ -467,6 +510,7 @@ export class StripePaymentProvider implements PaymentProvider {
       amount,
       currency,
       status,
+      externalLinkId,
       paymentIntentId,
       customerId,
     };

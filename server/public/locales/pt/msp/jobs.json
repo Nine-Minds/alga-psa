@@ -136,5 +136,14 @@
       "success_one": "Trabalho {{count}} apagado do histórico.",
       "success_other": "Trabalhos {{count}} apagados do histórico."
     }
+  },
+  "page": {
+    "heading": "Monitoramento de Trabalho",
+    "recentJobs": "Empregos recentes"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Trabalho não encontrado. Ele pode ter expirado ou sido excluído."
+    }
   }
 }

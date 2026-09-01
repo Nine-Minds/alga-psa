@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { AlertCircle, Bell, CheckCircle, Info } from 'lucide-react';
 import { markAsReadAction } from '@alga-psa/notifications/actions';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { NotificationActivity } from '@alga-psa/types';
 
 interface ClientNotificationCardProps {
@@ -42,11 +43,28 @@ function getBorderColor(type: string) {
   }
 }
 
+// Configurable notification priorities (task 29.8.46). Muted attention-red for
+// high; low renders dimmed. activity.priority is ActivityPriority.
+const PRIORITY_INDICATOR: Record<string, { label: string; dot: string }> = {
+  high: { label: 'High', dot: 'bg-rose-500' },
+  medium: { label: 'Normal', dot: 'bg-gray-400' },
+  low: { label: 'Low', dot: 'bg-gray-300' },
+};
+
 export function ClientNotificationCard({
   activity,
   onActionComplete,
   onOpen,
 }: ClientNotificationCardProps) {
+  const { t } = useTranslation('client-portal');
+  // Priority ring/dim + indicator (task 29.8.46).
+  const priorityCardClass = activity.priority === 'high'
+    ? ' ring-1 ring-rose-400'
+    : activity.priority === 'low'
+      ? ' opacity-70'
+      : '';
+  const priorityIndicator = PRIORITY_INDICATOR[activity.priority];
+
   const handleClick = async () => {
     if (!activity.isRead) {
       try {
@@ -70,7 +88,7 @@ export function ClientNotificationCard({
   return (
     <button
       type="button"
-      className={`w-full rounded-md border-l-4 p-4 text-left shadow-sm transition-shadow hover:shadow-md ${getBorderColor(activity.status)} ${activity.isRead ? 'bg-white' : 'bg-primary-50'}`}
+      className={`w-full rounded-md border-l-4 p-4 text-left transition-shadow card-elevated card-elevated-hover ${getBorderColor(activity.status)} ${activity.isRead ? 'bg-[rgb(var(--color-card))]' : 'bg-primary-50'}${priorityCardClass}`}
       onClick={handleClick}
       id={`notification-card-${activity.id}`}
     >
@@ -79,17 +97,23 @@ export function ClientNotificationCard({
           {getNotificationIcon(activity.status)}
           <h3 className="truncate font-medium text-gray-900">{activity.title}</h3>
           {!activity.isRead ? (
-            <div className="h-2 w-2 flex-shrink-0 rounded-full bg-primary-500" title="Unread" />
+            <div className="h-2 w-2 flex-shrink-0 rounded-full bg-primary-500" title={t('notifications.card.unread', { defaultValue: 'Unread' })} />
           ) : null}
         </div>
       </div>
 
       <div className="mb-3 line-clamp-2 text-sm text-gray-500">
-        {activity.message || activity.description || 'No message'}
+        {activity.message || activity.description || t('notifications.card.noMessage', { defaultValue: 'No message' })}
       </div>
 
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
+          {priorityIndicator ? (
+            <span className="flex items-center gap-1 text-gray-500" title={`Priority: ${priorityIndicator.label}`}>
+              <span className={`h-2 w-2 rounded-full ${priorityIndicator.dot}`} />
+              {priorityIndicator.label}
+            </span>
+          ) : null}
           {activity.category ? <Badge variant="default">{activity.category}</Badge> : null}
           {hasValidCreatedAt ? (
             <span className="text-gray-500">{formatDistanceToNow(createdAt, { addSuffix: true })}</span>

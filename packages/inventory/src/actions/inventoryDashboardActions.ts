@@ -224,7 +224,7 @@ function sameLocalDay(a: Date, b: Date): boolean {
 
 export const getInventoryDashboardData = withAuth(async (user, { tenant }): Promise<InventoryDashboardData | InventoryDashboardActionError> => {
   if (!(await hasPermission(user, 'inventory', 'read'))) {
-    return permissionError('Permission denied: inventory read required');
+    return permissionError('Permission denied: inventory read required', 'features/inventory:errors.permissions.inventoryRead');
   }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {

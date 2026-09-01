@@ -54,11 +54,17 @@ jobs:
           EDITION: ee
           NEXT_PUBLIC_EDITION: enterprise
           USE_PREBUILT: 'true'
+          # NODE_OPTIONS below is inherited by forked children, so each "Collecting
+          # page data" worker also gets a 14 GB heap allowance. Four of those on a
+          # 16 GB runner OOM'd the host — every failure of this job has died there.
+          # Costs ~1m of a ~20m build (that phase is only ~1m45s at 4 workers).
+          NEXT_BUILD_CPUS: '2'
         run: |
           npx nx build-deps server --output-style=static
           # Override the 8 GB cap baked into server/package.json's build script;
           # the EE webpack build hits the heap limit on ubuntu-latest at 8 GB.
           # 14 GB leaves ~2 GB headroom on the 16 GB runner for the OS and other processes.
+          # Only the compile phase (single process, ~11m) needs this much.
           cd server
           NODE_OPTIONS='--max-old-space-size=14336' NODE_ENV=production npx next build --webpack
 

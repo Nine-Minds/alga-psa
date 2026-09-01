@@ -22,7 +22,8 @@
     "success": "Sukces",
     "update": "Aktualizuj",
     "yes": "Tak",
-    "no": "Nie"
+    "no": "Nie",
+    "export": "Eksportuj"
   },
   "dashboard": {
     "title": "Rozliczenia",
@@ -408,7 +409,6 @@
     },
     "detailDialog": {
       "title": "Księgowa partia eksportowa",
-      "subtitle": "Szczegóły partii",
       "fields": {
         "batchId": "Identyfikator partii",
         "adapter": "Adapter",
@@ -500,5 +500,209 @@
     "unknownValue": "Nieznana wartość",
     "noDataForList": "Brak danych dla listy: {{name}}",
     "uncategorized": "Bez kategorii"
+  },
+  "spendByProfile": {
+    "title": "Wydatki wg profilu rozliczeniowego",
+    "description": "Ile kosztowała każda lokalizacja lub jednostka tego klienta w danym okresie. Otwórz wiersz, aby zobaczyć opłaty stojące za liczbą.",
+    "from": "Od",
+    "to": "Do",
+    "comparePrevious": "Porównaj z poprzednim okresem",
+    "defaultBadge": "Domyślny",
+    "empty": "Brak zatwierdzonych opłat dla tego klienta w wybranym okresie.",
+    "drillDownTitle": "Opłaty stojące za tą liczbą",
+    "drillDownEmpty": "Nie znaleziono opłat.",
+    "priorPeriod": "było {{amount}}",
+    "unattributedHint": "Żadna umowa, pozycja umowy ani element pracy nie przejęły tych opłat, więc trafiły do profilu domyślnego.",
+    "columns": {
+      "profile": "Profil rozliczeniowy",
+      "charges": "Opłaty",
+      "net": "Netto",
+      "tax": "Podatek",
+      "total": "Razem",
+      "unattributed": "Trafiło do domyślnego",
+      "priorTotal": "Razem w poprzednim okresie",
+      "change": "Zmiana"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "Rozliczono na {{profile}}, ponieważ profil wybrano bezpośrednio dla tej opłaty.",
+      "contractLine": "Rozliczono na {{profile}}, ponieważ pozycja umowy jest do niego przypisana.",
+      "contractLineNamed": "Rozliczono na {{profile}}, ponieważ pozycja umowy „{{line}}” jest do niego przypisana.",
+      "contract": "Rozliczono na {{profile}}, ponieważ umowa jest do niego przypisana.",
+      "contractNamed": "Rozliczono na {{profile}}, ponieważ umowa „{{contract}}” jest do niego przypisana.",
+      "workItem": "Rozliczono na {{profile}}, ponieważ zgłoszenie lub projekt jest do niego przypisany; żadne przypisanie umowy nie obowiązuje.",
+      "workItemNamed": "Rozliczono na {{profile}}, ponieważ „{{workItem}}” jest do niego przypisany; żadne przypisanie umowy nie obowiązuje.",
+      "clientDefault": "Rozliczono na {{profile}}, ponieważ nic innego nie przejęło tej opłaty — trafiła do domyślnego profilu klienta.",
+      "unknown": "Dla tej opłaty nie zapisano przypisania."
+    },
+    "line": {
+      "explicit": "Ktoś wybrał {{line}} dla tego wpisu.",
+      "autoUniqueService": "{{line}} była jedyną pozycją umowy obejmującą tę usługę.",
+      "autoBucketOverlay": "Kilka pozycji umowy obejmowało tę usługę; tylko {{line}} miała pakiet.",
+      "autoBillingProfile": "Kilka pozycji umowy obejmowało tę usługę; wybrano {{line}}, ponieważ należy do profilu rozliczeniowego elementu pracy.",
+      "reconciled": "{{line}} dopasowano do tego wpisu podczas generowania faktury.",
+      "unresolved": "Nie udało się wybrać pozycji umowy dla tego wpisu.",
+      "unknown": "Nie zapisano, jak wybrano tę pozycję umowy."
+    },
+    "limitation": {
+      "contractGranular": "Ten typ opłaty nie ma za sobą zapisu pojedynczych pozycji, więc można go przypisać najwyżej do umowy — nie do konkretnej lokalizacji ani pracy, z której pochodzi."
+    }
+  },
+  "unresolvedReview": {
+    "title": "Pozycje bez pozycji umowy",
+    "description": "Te pozycje nie są jeszcze powiązane z pozycją umowy, więc zostałyby rozliczone według stawki z katalogu usług.",
+    "catalogPricingCaveat": "Stawka katalogowa pomija stawkę umowną, zaokrąglanie, minimalny czas rozliczeniowy, nadgodziny i wszelkie harmonogramy cen.",
+    "ambiguousBlocked": "{{count}} pozycji jest objętych umową, ale pasowały do więcej niż jednej pozycji umowy. Nie zostaną zafakturowane, dopóki nie przypiszesz pozycji lub nie wybierzesz dla nich stawki katalogowej.",
+    "unknownService": "Nieznana usługa",
+    "timeEntry": "Wpis czasu · {{minutes}} min",
+    "usageRecord": "Wpis zużycia · {{quantity}}",
+    "assignLine": "Przypisz pozycję umowy",
+    "assigned": "Przypisano — ta pozycja zostanie rozliczona według stawki umownej.",
+    "useCatalogPricing": "Użyj stawki katalogowej",
+    "undoCatalogPricing": "Cofnij",
+    "catalogPricingChosen": "Wybrano stawkę katalogową",
+    "catalogPricingAccepted": "Wybrano stawkę katalogową dla tej pozycji.",
+    "catalogPricingRevoked": "Wycofano stawkę katalogową.",
+    "uncoveredExplanation": "Żadna umowa nie obejmuje tej usługi, więc stawka katalogowa jest jedyną dostępną. Zostanie rozliczona bez zmian.",
+    "ambiguousExplanation": "Umowa obejmuje tę usługę, więc istnieje stawka wynegocjowana. Wybierz pozycję umowy, do której należy.",
+    "reason": {
+      "uncovered": "Nieobjęte żadną umową",
+      "ambiguous": "Pasuje więcej niż jedna pozycja umowy"
+    }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Dla tego cyklicznego okresu rozliczeniowego istnieje już faktura.",
+    "permissions": {
+      "billingRead": "Odmowa uprawnień: wymagane uprawnienie odczytu rozliczeń",
+      "billingUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji rozliczeń",
+      "billingCreate": "Odmowa uprawnień: wymagane uprawnienie tworzenia rozliczeń",
+      "billingDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania rozliczeń",
+      "clientRead": "Odmowa uprawnień: wymagane uprawnienie odczytu klientów",
+      "otherClientLocations": "Odmowa uprawnień: brak dostępu do lokalizacji innego klienta",
+      "clientPortalUnavailable": "Odmowa uprawnień: operacja niedostępna w portalu klienta",
+      "resolveCurrency": "Odmowa uprawnień: nie można ustalić waluty rozliczeniowej klienta",
+      "clientBillingAccess": "Odmowa uprawnień: nie masz dostępu do rozliczeń tego klienta."
+    },
+    "context": {
+      "tenantNotFound": "Nie znaleziono organizacji",
+      "tenantContextNotFound": "Nie znaleziono kontekstu organizacji",
+      "noTenantContext": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
+      "clientContextNotFound": "Nie znaleziono kontekstu klienta",
+      "notAuthenticated": "Brak autoryzacji: nie znaleziono uwierzytelnionego użytkownika",
+      "notLoggedIn": "użytkownik nie jest zalogowany"
+    },
+    "client": {
+      "notFound": "Nie znaleziono klienta",
+      "notFoundRefresh": "Nie znaleziono klienta. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "idRequired": "Identyfikator klienta jest wymagany."
+    },
+    "clientContract": {
+      "notFound": "Nie znaleziono przypisania umowy klienta. Mogło zostać zaktualizowane lub usunięte. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości umowy klienta jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany klient, umowa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "To przypisanie umowy klienta już istnieje.",
+      "missingField": "Brakuje wymaganego pola umowy klienta.",
+      "missingFieldNamed": "Brakuje wymaganego pola umowy klienta: {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "Nie można teraz utworzyć następnego cyklu rozliczeniowego"
+    },
+    "currency": {
+      "multipleActive": "Klient ma aktywne umowy w wielu walutach ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "Jedna z wybranych wartości nakładki pakietu godzin jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "recordInvalid": "Jeden z wybranych rekordów nakładki pakietu godzin nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Nakładka pakietu godzin dla tej usługi już istnieje.",
+      "notAllowed": "Jedna z wartości nakładki pakietu godzin jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola nakładki pakietu godzin.",
+      "missingFieldNamed": "Brakuje wymaganego pola nakładki pakietu godzin: {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "Pula pakietu godzin lub członek o tej konfiguracji już istnieje. Odśwież stronę i spróbuj ponownie.",
+      "recordInvalid": "Jeden z wybranych rekordów puli pakietu godzin nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości puli pakietu godzin jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
+    },
+    "material": {
+      "invalidValue": "Jedna z wybranych wartości materiału jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "recordInvalid": "Jeden z wybranych rekordów materiału nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Ten rekord materiału już istnieje.",
+      "notAllowed": "Jedna z wartości materiału jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola materiału.",
+      "missingFieldNamed": "Brakuje wymaganego pola materiału: {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "Nie znaleziono rekordu zużycia. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "bucketUpdateFailed": "Nie można zaktualizować zużycia pakietu godzin dla tego rekordu. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Wybrany rekord zużycia, klient, usługa lub linia umowy jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany klient, usługa lub linia umowy nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Istnieje już sprzeczny rekord zużycia. Odśwież stronę i spróbuj ponownie.",
+      "alreadyDeleted": "Nie znaleziono rekordu zużycia. Mógł już zostać usunięty.",
+      "missingField": "Brakuje wymaganego pola zużycia.",
+      "missingFieldNamed": "Brakuje wymaganego pola zużycia: {{field}}."
+    },
+    "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "Data wyzwolenia musi być prawidłową datą kalendarzową.",
+        "thresholdsAscending": "Progi powiadomień muszą być ułożone w ściśle rosnącej kolejności.",
+        "amountOrPercentage": "Wymagana jest dokładnie jedna z wartości: kwota lub wartość procentowa.",
+        "increaseTotalAmountOnly": "Zwiększenie sumy jest prawidłowe tylko dla pozycji opartych na kwocie.",
+        "amountAndPercentageTogether": "Kwota i wartość procentowa muszą być aktualizowane razem, a dokładnie jedna z nich musi mieć wartość null."
+      },
+      "invalidValue": "Jedna z wybranych wartości rozliczeń projektu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany projekt, faktura, faza, usługa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Istnieje już sprzeczny zapis rozliczeń projektu. Odśwież stronę i spróbuj ponownie.",
+      "ruleViolation": "Wartości rozliczeń projektu naruszają regułę danych. Sprawdź formularz i spróbuj ponownie.",
+      "requestFailed": "Rozliczenia projektu nie mogły zrealizować żądania. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola rozliczeń projektu.",
+      "missingFieldNamed": "Brakuje wymaganego pola rozliczeń projektu: {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "Data początkowa i data końcowa są wymagane."
+    },
+    "recurringRun": {
+      "selectPeriods": "Wybierz co najmniej jeden cykliczny okres rozliczeniowy do wygenerowania.",
+      "invoicePermission": "Odmowa uprawnień: wymagane uprawnienie tworzenia lub generowania faktur"
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "Do sprawdzenia cyklicznych okresów usługi wymagany jest klucz harmonogramu.",
+      "scheduleKeyRequiredRepair": "Do naprawy cyklicznych okresów usługi wymagany jest klucz harmonogramu."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Użytkownicy portalu klienta nie mogą zarządzać eksportami księgowymi",
+      "permissions": {
+        "create": "Odmowa uprawnień: nie można tworzyć partii eksportu księgowego",
+        "read": "Odmowa uprawnień: brak dostępu do partii eksportu księgowego",
+        "update": "Odmowa uprawnień: nie można modyfikować partii eksportu księgowego",
+        "execute": "Odmowa uprawnień: nie można uruchamiać partii eksportu księgowego"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "Nie znaleziono faktury dostawcy. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie."
+    },
+    "documentTemplate": {
+      "unknownType": "Nieznany typ dokumentu: {{documentType}}",
+      "permissions": {
+        "read": "Odmowa uprawnień: nie można odczytywać szablonów dokumentów",
+        "modify": "Odmowa uprawnień: nie można modyfikować szablonów dokumentów",
+        "setDefault": "Odmowa uprawnień: nie można ustawić domyślnego szablonu dokumentu",
+        "clearOverride": "Odmowa uprawnień: nie można wyczyścić nadpisania szablonu dokumentu",
+        "delete": "Odmowa uprawnień: nie można usuwać szablonów dokumentów",
+        "preview": "Odmowa uprawnień: nie można wyświetlać podglądu szablonów dokumentów",
+        "readSalesOrders": "Brak uprawnień: nie można odczytać zamówień sprzedaży"
+      },
+      "existingNotFound": "Nie znaleziono dokumentu."
+    },
+    "billingProfile": {
+      "periodOrder": "Wybierz okres, którego początek nie jest późniejszy niż koniec.",
+      "comparisonPeriodOrder": "Wybierz okres porównawczy, którego początek nie jest późniejszy niż koniec.",
+      "notThisClient": "Ten profil rozliczeniowy nie należy do tego klienta."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Ta pozycja już nie istnieje.",
+      "alreadyInvoiced": "Ta pozycja została już zafakturowana.",
+      "contractLineNotFound": "Ta linia umowy już nie istnieje."
+    }
   }
 }

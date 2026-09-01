@@ -20,10 +20,10 @@ import {
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { PricingScheduleDialog } from './PricingScheduleDialog';
-import { formatCurrency } from '@alga-psa/core';
 import { toPlainDate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -32,11 +32,16 @@ import {
 
 interface PricingSchedulesProps {
   contractId: string;
+  /** Currency the owning contract is denominated in; custom_rate is stored in its minor units. */
+  currencyCode?: string;
   isReadOnly?: boolean;
 }
 
-const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadOnly = false }) => {
+const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currencyCode, isReadOnly = false }) => {
   const { t } = useTranslation('msp/contracts');
+  const { locale } = useFormatters();
+  const { money } = useCurrencyFormat();
+  const formatCustomRate = (minorUnits: number): string => money(minorUnits, currencyCode);
   const [schedules, setSchedules] = useState<IContractPricingSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,20 +131,20 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
     {
       title: t('pricingSchedules.list.columns.effectiveDate', { defaultValue: 'Effective Date' }),
       dataIndex: 'effective_date',
-      render: (value) => toPlainDate(value as string).toLocaleString()
+      render: (value) => toPlainDate(value as string).toLocaleString(locale)
     },
     {
       title: t('pricingSchedules.list.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
       render: (value) => value
-        ? toPlainDate(value as string).toLocaleString()
+        ? toPlainDate(value as string).toLocaleString(locale)
         : t('pricingSchedules.list.values.ongoing', { defaultValue: 'Ongoing' })
     },
     {
       title: t('pricingSchedules.list.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value) => value !== undefined && value !== null
-        ? formatCurrency(value / 100)
+        ? formatCustomRate(value as number)
         : (
           <span className="text-muted-foreground">
             {t('pricingSchedules.list.values.useDefaultRate', { defaultValue: 'Use default rate' })}
@@ -266,9 +271,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
                               <div className="flex justify-between items-start mb-2">
                                 <div>
                                   <div className="text-sm font-medium">
-                                    {toPlainDate(schedule.effective_date).toLocaleString()}
+                                    {toPlainDate(schedule.effective_date).toLocaleString(locale)}
                                     {schedule.end_date && (
-                                      <span className="text-muted-foreground"> → {toPlainDate(schedule.end_date).toLocaleString()}</span>
+                                      <span className="text-muted-foreground"> → {toPlainDate(schedule.end_date).toLocaleString(locale)}</span>
                                     )}
                                     {!schedule.end_date && index === schedules.length - 1 && (
                                       <span className="text-muted-foreground">
@@ -280,7 +285,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
                                   <div className="text-sm text-muted-foreground mt-1 flex items-center">
                                     <Coins className="h-3 w-3 mr-1" />
                                     {schedule.custom_rate !== undefined && schedule.custom_rate !== null
-                                      ? formatCurrency(schedule.custom_rate / 100)
+                                      ? formatCustomRate(schedule.custom_rate)
                                       : t('pricingSchedules.list.values.defaultRate', { defaultValue: 'Default rate' })}
                                   </div>
                                 </div>
@@ -314,9 +319,10 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
       </Card>
 
       {showDialog && !isReadOnly && (
-          <PricingScheduleDialog 
+          <PricingScheduleDialog
             contractId={contractId}
             schedule={editingSchedule}
+            currencyCode={currencyCode}
             onClose={handleDialogClose}
             onSave={handleSaveSuccess}
           />

@@ -12,6 +12,7 @@ import {
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
+import { displayAddressField, displayCountry } from '@alga-psa/core';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
@@ -39,6 +40,14 @@ import {
   sendOneEmailPerWatcher,
   resolveInternalWatcherEmails,
 } from './watcherRecipients';
+import {
+  INBOUND_OUTBOX_EVENT_TYPES,
+  withInboundOutboxDelivery,
+  newInboundDeliveryOwner,
+} from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
+
+/** Stable ledger consumer id for the ticket email subscriber. */
+const INBOUND_OUTBOX_EMAIL_CONSUMER = 'ticket-email';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -1065,9 +1074,9 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -1382,9 +1391,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -1784,9 +1793,9 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -2123,9 +2132,9 @@ async function sendTicketAssignedNotifications(
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -2565,9 +2574,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -3022,9 +3031,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -3355,7 +3364,59 @@ export async function handleTicketEvent(event: BaseEvent): Promise<void> {
 
   const validatedEvent = eventSchema.parse(event);
 
-  switch (event.eventType) {
+  // Durable inbound outbox events are at-least-once with a bounded duplicate
+  // window for external (email) effects: fenced reservation -> send -> fenced
+  // completion. A crash between reservation and completion leaves an expired
+  // reclaimable reservation, so redelivery retries the send (possibly duplicating
+  // it within the window); the attempt cap dead-letters a poisoned send. See
+  // inboundEmailConsumerDedupe.ts.
+  const tenantId = (validatedEvent.payload as { tenantId?: unknown } | null)?.tenantId;
+  const isCandidate = typeof tenantId === 'string' && tenantId
+    && INBOUND_OUTBOX_EVENT_TYPES.has(event.eventType);
+  if (isCandidate) {
+    let db: Knex;
+    try {
+      db = await getConnection(tenantId);
+    } catch (error) {
+      logger.warn('[TicketEmailSubscriber] Tenant connection unavailable; delivering normally', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      await dispatchTicketEmailHandlers(validatedEvent as any);
+      return;
+    }
+    const outcome = await withInboundOutboxDelivery({
+      event: { id: event.id, eventType: event.eventType, payload: (validatedEvent as any).payload },
+      consumer: INBOUND_OUTBOX_EMAIL_CONSUMER,
+      db,
+      owner: newInboundDeliveryOwner(),
+      effect: () => dispatchTicketEmailHandlers(validatedEvent as any),
+    });
+    if (outcome.status === 'skipped') {
+      logger.info('[TicketEmailSubscriber] Skipping already-delivered inbound outbox event', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenantId,
+        consumer: INBOUND_OUTBOX_EMAIL_CONSUMER,
+      });
+    } else if (outcome.status === 'failed') {
+      logger.warn('[TicketEmailSubscriber] Inbound outbox delivery failed; recovery will retry', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenantId,
+        consumer: INBOUND_OUTBOX_EMAIL_CONSUMER,
+      });
+    }
+    return;
+  }
+
+  await dispatchTicketEmailHandlers(validatedEvent as any);
+}
+
+async function dispatchTicketEmailHandlers(validatedEvent: any): Promise<void> {
+  switch (validatedEvent.eventType) {
     case 'TICKET_CREATED':
       await handleTicketCreated(validatedEvent as TicketCreatedEvent);
       break;
@@ -3373,8 +3434,7 @@ export async function handleTicketEvent(event: BaseEvent): Promise<void> {
       break;
     default:
       logger.warn('[TicketEmailSubscriber] Unhandled ticket event type:', {
-        eventType: event.eventType,
-        eventId: event.id
+        eventType: validatedEvent.eventType,
       });
   }
 }

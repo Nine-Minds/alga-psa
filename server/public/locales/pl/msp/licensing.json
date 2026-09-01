@@ -224,6 +224,14 @@
       "heading": "Kup kredyty lub zarządzaj subskrypcją",
       "body": "Doładowania, automatyczne doładowanie i zmiany subskrypcji obsługiwane są w sklepie Nine Minds.",
       "openStore": "Otwórz sklep"
+    },
+    "status": {
+      "unpaid": "Nieopłacona",
+      "none": "Brak subskrypcji",
+      "active": "Aktywna",
+      "trialing": "Okres próbny",
+      "past_due": "Zaległa",
+      "canceled": "Anulowana"
     }
   },
   "managementPage": {
@@ -349,5 +357,9 @@
       "startTrial": "Nie udało się uruchomić okresu próbnego.",
       "refreshLicense": "Nie udało się odświeżyć licencji."
     }
+  },
+  "errors": {
+    "notSignedIn": "Brak autoryzacji. Zaloguj się, aby zarządzać licencjami.",
+    "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami"
   }
 }

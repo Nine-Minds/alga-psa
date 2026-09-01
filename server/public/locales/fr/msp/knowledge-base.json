@@ -88,18 +88,38 @@
     "dialogs": {
       "archive": {
         "title": "Article d'archive",
-        "message": "Êtes-vous sûr de vouloir archiver \"{{title}}\" ? Cela le supprimera de la visibilité client."
+        "message": "Êtes-vous sûr de vouloir archiver \"{{title}}\" ? Cela le supprimera de la visibilité client.",
+        "titleMultiple": "Archiver {{count}} article(s)",
+        "messageMultiple": "Voulez-vous vraiment archiver {{count}} article(s) ? Ils ne seront plus visibles par les clients."
       },
       "delete": {
         "title": "Supprimer l'article",
-        "message": "Voulez-vous vraiment supprimer définitivement \"{{title}}\" ? Cela supprimera l'article et son contenu, et ne pourra pas être annulé."
+        "message": "Voulez-vous vraiment supprimer définitivement \"{{title}}\" ? Cela supprimera l'article et son contenu, et ne pourra pas être annulé.",
+        "titleMultiple": "Supprimer {{count}} article(s)",
+        "messageMultiple": "Voulez-vous vraiment supprimer définitivement {{count}} article(s) ? Les articles et leur contenu seront supprimés, sans possibilité d’annulation.",
+        "skippedNotice": "{{count}} article(s) sélectionné(s) sont publiés ou en révision et seront ignorés — archivez-les d’abord."
       }
     },
     "feedback": {
       "archiveError": "Échec de l'archivage de l'article",
       "archiveSuccess": "Article archivé",
       "deleteError": "Échec de la suppression de l'article",
-      "deleteSuccess": "Article supprimé définitivement"
+      "deleteSuccess": "Article supprimé définitivement",
+      "bulkArchiveSuccess": "{{count}} article(s) archivé(s)",
+      "bulkArchiveError": "Échec de l’archivage de {{count}} article(s)",
+      "bulkArchivePartial": "{{count}} article(s) archivé(s) ; {{failed}} n’ont pas pu être archivés",
+      "bulkDeleteSuccess": "{{count}} article(s) supprimé(s) définitivement",
+      "bulkDeleteError": "Échec de la suppression de {{count}} article(s)",
+      "bulkDeletePartial": "{{count}} article(s) supprimé(s) ; {{failed}} n’ont pas pu être supprimés",
+      "deleteNotAllowed": "Les articles publiés ou en révision doivent être archivés avant de pouvoir être supprimés"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "archive": "Archiver",
+        "delete": "Supprimer",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "editor": {
@@ -288,14 +308,19 @@
     },
     "actions": {
       "import": "Importer le(s) fichier(s) {{count}}",
-      "importing": "Importation..."
+      "importing": "Importation...",
+      "importingProgress": "{{imported}} sur {{total}} importé(s)..."
     },
     "feedback": {
       "unsupportedFileType": "{{fileName}} : type de fichier non pris en charge. Utilisez .md ou .html",
       "permissionDenied": "Autorisation refusée",
       "importSuccess": "{{imported}} importé(s) sur {{total}} article(s)",
       "allFailed": "Toutes les importations ont échoué",
-      "importError": "Échec de l'importation"
+      "importError": "Échec de l'importation",
+      "fileTooLarge": "{{fileName}} dépasse {{limit}} Mo",
+      "tooManyFiles": "Vous pouvez importer au maximum {{limit}} fichiers à la fois",
+      "batchTooLarge": "Ce lot dépasse {{limit}} Mo. Importez moins de fichiers à la fois.",
+      "importTimedOut": "L'importation prend plus de temps que prévu. Revenez dans quelques instants."
     },
     "results": {
       "summary": "{{imported}} sur {{total}} article(s) importé(s)",

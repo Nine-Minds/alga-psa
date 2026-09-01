@@ -322,6 +322,10 @@ def "main cleanup" [
         "quote_activities" "quote_items" "quote_document_template_assignments"
         "quote_document_templates" "standard_quote_document_templates" "quotes"
 
+        # Hour blocks (ad-hoc prepaid hour blocks): allocations/scopes/audit
+        # reference hour_blocks, which references invoices/clients/service_catalog.
+        "hour_block_time_allocations" "hour_block_service_scopes" "hour_block_audit" "hour_blocks"
+
         # Invoice details
         "invoice_charges" "invoice_annotations" "invoice_time_entries" "invoice_usage_records"
         "invoice_charge_details" "invoice_charge_fixed_details" "invoice_items"
@@ -408,6 +412,7 @@ def "main cleanup" [
         # Billing details
         "credit_allocations" "credit_reconciliation_reports" "credit_tracking"
         "usage_tracking" "bucket_usage" "transactions"
+        "contract_line_bucket_services" "contract_line_buckets"
         "client_contracts" "contract_line_service_rate_tiers" "contract_line_service_bucket_config"
         "contract_line_service_hourly_config" "contract_line_service_hourly_configs" "contract_line_service_usage_config"
         "contract_line_service_fixed_config" "contract_line_service_configuration"
@@ -421,6 +426,7 @@ def "main cleanup" [
 
         # Contract templates (must be deleted before contracts)
         "contract_template_line_defaults"
+        "contract_template_line_bucket_services" "contract_template_line_buckets"
         "contract_template_line_fixed_config" "contract_template_line_service_bucket_config"
         "contract_template_line_service_configuration" "contract_template_line_service_hourly_config"
         "contract_template_line_service_usage_config" "contract_template_line_services"

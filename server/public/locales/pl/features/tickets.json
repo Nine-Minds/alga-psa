@@ -63,7 +63,9 @@
     "createdSuccess_one": "Pomyślnie utworzono {{count}} zgłoszenie.",
     "createdSuccess_few": "Pomyślnie utworzono {{count}} zgłoszenia.",
     "createdSuccess_many": "Pomyślnie utworzono {{count}} zgłoszeń.",
-    "createdSuccess_other": "Pomyślnie utworzono {{count}} zgłoszenia."
+    "createdSuccess_other": "Pomyślnie utworzono {{count}} zgłoszenia.",
+    "rowLimitExceeded": "Przekroczono limit wierszy:",
+    "rowLimitDescription": "Twój CSV ma {{original}} wierszy, ale zaimportowane zostanie tylko pierwsze {{kept}}. Podziel plik na mniejsze partie dla pozostałych wierszy."
   },
   "title": "Zgłoszenia wsparcia",
   "subtitle": "Przeglądaj i zarządzaj zgłoszeniami wsparcia",
@@ -339,7 +341,10 @@
     "closeFailed": "Nie udało się zamknąć zgłoszenia",
     "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu",
     "loadCommentsFailed": "Nie udało się wczytać komentarzy",
-    "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia"
+    "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia",
+    "errorWithMessage": "Błąd: {{message}}",
+    "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
+    "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -383,12 +388,27 @@
     "ticketPrefix": "Zgłoszenie {{number}}",
     "clipboardDraftCancelMessage": "Ten szkic zawiera wklejone obrazy, które zostały już przesłane jako dokumenty zgłoszenia. Zachować je czy usunąć na stałe?",
     "replyCommentAriaLabel": "Odpowiedz na komentarz",
+    "copyCommentAriaLabel": "Kopiuj treść komentarza",
+    "commentCopied": "Skopiowano",
+    "commentCopyFailed": "Nie udało się skopiować",
     "clientComments": "Komentarze klienta",
     "commentEditor": "Edytor komentarzy",
     "deleteComment": "Usuń komentarz",
     "deleteCommentImages": "Usuń komentarz i obrazy",
     "deleteCommentOnly": "Usuń tylko komentarz",
-    "clientCommentTooltip": "Komentarz widoczny dla klienta"
+    "clientCommentTooltip": "Komentarz widoczny dla klienta",
+    "cancelScheduledComment": "Anuluj zaplanowany komentarz",
+    "cancelScheduledCommentConfirm": "Anulować ten zaplanowany komentarz?",
+    "invalidScheduleTime": "Wybierz jednoznaczny przyszły czas w tej strefie czasowej.",
+    "publishAt": "Opublikuj o",
+    "publishes": "Publikuje",
+    "reschedule": "Zmień termin",
+    "rescheduleComment": "Zmień termin komentarza",
+    "resolvedPublishInstant": "Ustalony moment",
+    "schedule": "Zaplanuj",
+    "scheduled": "Zaplanowano",
+    "showMore": "Pokaż więcej",
+    "showLess": "Pokaż mniej"
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -547,6 +567,30 @@
     "exportSelectedAction": "Eksportuj zaznaczone ({{count}})",
     "exportAction": "Eksportuj CSV",
     "importAction": "Importuj CSV",
+    "boardTabs": {
+      "all": "Wszystkie zgłoszenia"
+    },
+    "boardHeader": {
+      "open": "Otwarte",
+      "overdue": "Po terminie",
+      "slaBreach": "Przekroczenie SLA",
+      "unassigned": "Nieprzypisane",
+      "managedBy": "Zarządzana przez",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Widok",
+      "columns": "Kolumny",
+      "density": "Gęstość",
+      "saveBoardDefault": "Zapisz jako domyślny widok tej tablicy",
+      "saveTenantDefault": "Zapisz jako domyślny widok dla wszystkich",
+      "resetToTenant": "Przywróć domyślny widok organizacji",
+      "unsavedChanges": "Ten widok różni się od zapisanego widoku domyślnego",
+      "saved": "Zapisano domyślny widok",
+      "saveFailed": "Nie udało się zapisać domyślnego widoku",
+      "reset": "Przywróć domyślny widok organizacji",
+      "resetFailed": "Nie udało się zresetować widoku"
+    },
     "allMatchingSelected_few": "Zaznaczono wszystkie {{count}} zgłoszenia spełniające filtry.",
     "allMatchingSelected_many": "Zaznaczono wszystkie {{count}} zgłoszeń spełniających filtry.",
     "allPageSelected_few": "Zaznaczono wszystkie {{count}} zgłoszenia na tej stronie.",
@@ -1062,7 +1106,10 @@
       "selective": "Wybierz poszczególnych członków do zachowania/usunięcia"
     },
     "noTeamMembersOnTicket": "Nie znaleziono członków zespołu w tym zgłoszeniu.",
-    "unnamedUser": "Nieznany użytkownik"
+    "unnamedUser": "Nieznany użytkownik",
+    "billingProfile": "Profil rozliczeniowy",
+    "billingProfileUnassigned": "Użyj profilu domyślnego",
+    "billingProfileHint": "Używany tylko wtedy, gdy żadna umowa nie przypisuje tej pracy do profilu."
   },
   "settings": {
     "categories": {
@@ -1442,7 +1489,93 @@
     "updateWatchList": "Nie udało się zaktualizować listy obserwujących. Spróbuj ponownie.",
     "fetchCategoryImports": "Nie udało się pobrać dostępnych kategorii do importu",
     "validateDeletionFailed": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie.",
-    "deleteTicketUnexpected": "Wystąpił nieoczekiwany błąd podczas usuwania zgłoszenia."
+    "deleteTicketUnexpected": "Wystąpił nieoczekiwany błąd podczas usuwania zgłoszenia.",
+    "action": {
+      "ticketNotFound": "Nie znaleziono zgłoszenia. Mogło zostać usunięte lub przeniesione. Odśwież stronę i spróbuj ponownie.",
+      "ticketResourceNotFound": "Nie znaleziono zasobu zgłoszenia. Odśwież stronę i spróbuj ponownie.",
+      "agentAlreadyAssigned": "Ten użytkownik jest już przypisany jako dodatkowy agent.",
+      "teamNotFound": "Nie znaleziono zespołu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "teamLeadNotFound": "Wybrany zespół nie ma lidera. Wybierz inny zespół lub najpierw wyznacz lidera.",
+      "commentNotFound": "Nie znaleziono komentarza. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie."
+    },
+    "bundle": {
+      "masterAlreadyBundleMaster": "Zgłoszenie {{tickets}} jest już zgłoszeniem nadrzędnym pakietu i nie może zostać dodane jako zgłoszenie podrzędne. Najpierw rozwiąż pakiet albo użyj go jako zgłoszenia nadrzędnego.",
+      "masterAlreadyBundleMasters": "Zgłoszenia {{tickets}} są już zgłoszeniami nadrzędnymi pakietów i nie mogą zostać dodane jako zgłoszenia podrzędne. Najpierw rozwiąż pakiety albo użyj jednego z nich jako zgłoszenia nadrzędnego.",
+      "selectChild": "Wybierz co najmniej jedno zgłoszenie podrzędne inne niż nadrzędne.",
+      "masterNotFound": "Nie znaleziono zgłoszenia nadrzędnego.",
+      "childNotFound": "Nie znaleziono zgłoszenia podrzędnego: {{ticket}}",
+      "childAsMaster": "Nie można wybrać zgłoszenia podrzędnego jako nadrzędnego.",
+      "alreadyBundled": "Zgłoszenie jest już w pakiecie: {{ticket}}",
+      "masterAsChild": "Zgłoszenie nadrzędne nie może być jednocześnie zgłoszeniem podrzędnym.",
+      "noChildren": "Nie podano zgłoszeń podrzędnych.",
+      "childrenOnBundledChild": "Nie można dodać zgłoszeń podrzędnych do zgłoszenia podrzędnego należącego już do pakietu."
+    },
+    "ticket": {
+      "validationDetails": "Popraw dane zgłoszenia: {{details}}",
+      "invalidValue": "Jedna z wybranych wartości zgłoszenia jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola zgłoszenia.",
+      "missingFieldNamed": "Brakuje wymaganego pola zgłoszenia: {{field}}.",
+      "referenceMissing": "Jeden z wybranych rekordów zgłoszenia już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana zgłoszenia koliduje z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
+    },
+    "board": {
+      "invalidReference": "Wybrana tablica, status lub reguła jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola tablicy.",
+      "missingFieldNamed": "Brakuje wymaganego pola tablicy: {{field}}.",
+      "referenceInvalid": "Wybrana tablica, status, priorytet, osoba przypisana, zespół lub zasada SLA nie jest już prawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "duplicateName": "Tablica o tej nazwie już istnieje.",
+      "duplicate": "Tablica lub status o tych samych ustawieniach już istnieje.",
+      "invalidValue": "Jedna z wartości tablicy lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
+    },
+    "material": {
+      "invalidValue": "Jedna z wybranych wartości materiału jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola materiału.",
+      "missingFieldNamed": "Brakuje wymaganego pola materiału: {{field}}.",
+      "referenceInvalid": "Wybrane zgłoszenie, klient, produkt lub jednostka magazynowa nie jest już prawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ten materiał koliduje z istniejącym materiałem zgłoszenia lub przypisaniem magazynowym. Odśwież stronę i spróbuj ponownie.",
+      "valueNotAllowed": "Jedna z wartości materiału jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
+    },
+    "settings": {
+      "updateDenied": "Odmowa uprawnień: nie można aktualizować ustawień zgłoszeń"
+    },
+    "list": {
+      "filtersInvalid": "Filtry listy zgłoszeń nie są już prawidłowe. Odśwież stronę i spróbuj ponownie."
+    },
+    "layoutPreference": {
+      "contextMissing": "W Twojej sesji brakuje wymaganego kontekstu preferencji zgłoszeń. Odśwież stronę i spróbuj ponownie.",
+      "userNotFound": "Nie znaleziono bieżącego użytkownika. Odśwież stronę i zaloguj się ponownie.",
+      "invalidLayout": "Nieprawidłowy układ szczegółów zgłoszenia. Odśwież stronę i spróbuj ponownie.",
+      "invalidTimelineOrder": "Nieprawidłowa kolejność osi czasu zgłoszenia. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wartości preferencji układu zgłoszeń jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola preferencji zgłoszeń.",
+      "missingFieldNamed": "Brakuje wymaganego pola preferencji zgłoszeń: {{field}}.",
+      "userMissing": "Bieżący użytkownik tych preferencji zgłoszeń już nie istnieje. Odśwież stronę i zaloguj się ponownie.",
+      "concurrentUpdate": "Preferencje układu zgłoszeń zostały zmienione równocześnie. Odśwież stronę i spróbuj ponownie."
+    },
+    "category": {
+      "invalidReference": "Wybrana kategoria lub tablica jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola kategorii.",
+      "missingFieldNamed": "Brakuje wymaganego pola kategorii: {{field}}.",
+      "referenceInvalid": "Wybrana tablica lub kategoria nadrzędna nie jest już prawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Kategoria o tych ustawieniach już istnieje.",
+      "invalidValue": "Jedna z wartości kategorii jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
+    },
+    "import": {
+      "invalidValue": "Jedna z zaimportowanych wartości zgłoszenia jest nieprawidłowa. Odśwież dane referencyjne i spróbuj ponownie.",
+      "conflict": "Rekord importu zgłoszeń koliduje z istniejącym rekordem. Sprawdź zduplikowanych klientów, kontakty, statusy, priorytety, kategorie lub tagi.",
+      "referenceMissing": "Nie znaleziono powiązanego klienta, kontaktu, tablicy, statusu, priorytetu, kategorii, zespołu lub użytkownika. Odśwież dane referencyjne i spróbuj ponownie.",
+      "missingValue": "Brakuje wymaganej wartości importu.",
+      "missingValueNamed": "Brakuje wymaganej wartości importu: {{field}}.",
+      "invalidForField": "Jedna z zaimportowanych wartości jest nieprawidłowa dla tego pola."
+    },
+    "checklist": {
+      "invalidReference": "Wybrany element listy kontrolnej, szablon lub reguła jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola listy kontrolnej.",
+      "missingFieldNamed": "Brakuje wymaganego pola listy kontrolnej: {{field}}.",
+      "referenceInvalid": "Wybrane zgłoszenie, szablon listy kontrolnej lub filtr reguły nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wartości listy kontrolnej jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
+    }
   },
   "ticketSection": {
     "title": "Prośba o wizytę",
@@ -1483,7 +1616,9 @@
       "noChildren": "Brak podrzędnych w tym pakiecie.",
       "addChildMultiClientMessage": "Spowoduje to dodanie {{ticket}} od innego klienta do pakietu. Potwierdź, że chcesz kontynuować.",
       "thisTicket": "to zgłoszenie"
-    }
+    },
+    "autoClose": "Zostanie automatycznie zamknięte {{date}}, jeśli nie pojawi się nowa aktywność.",
+    "autoCloseWarned": "Klient został powiadomiony."
   },
   "invalidTicketData": "Nieprawidłowe dane zgłoszenia",
   "timeEntries": {
@@ -1638,6 +1773,7 @@
       "client": "Klient",
       "nextVisit": "Następna wizyta",
       "callsAndEmails": "Połączenia i e-maile",
+      "call": "Zadzwoń",
       "viewAll": "Zobacz wszystkie",
       "viewAllCount": "Zobacz wszystkie {{count}}",
       "timeLogged": "Zarejestrowany czas",
@@ -1795,7 +1931,10 @@
         "auto_close_warning_sent": "wysłano ostrzeżenie o automatycznym zamknięciu"
       },
       "closeStatus": "Status zamknięcia",
-      "noStatusChange": "Nie zmieniaj statusu"
+      "noStatusChange": "Nie zmieniaj statusu",
+      "showAllActivity": "Pokaż całą aktywność",
+      "collapseActivity": "Zwiń starszą aktywność",
+      "replyingToComment": "Odpowiedź dla {{name}}"
     }
   },
   "notifications": {

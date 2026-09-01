@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getTicketAssets, listTickets } from "./tickets";
+import { getTicketAssets, listTickets, updateTicketStatus } from "./tickets";
 import type { ApiClient } from "./client";
 
 function mockClient(response: unknown): ApiClient {
@@ -34,5 +34,27 @@ describe("tickets api", () => {
         query: expect.objectContaining({ is_open: true, client_id: "cl-1" }),
       }),
     );
+  });
+
+  it("forwards both notification suppression levels on a ticket update", async () => {
+    const client = mockClient({ ok: true, data: { data: {} } });
+    await updateTicketStatus(client, {
+      apiKey: "k",
+      ticketId: "tk-1",
+      status_id: "closed",
+      notificationSuppression: {
+        suppressContactNotifications: true,
+        suppressInternalNotifications: true,
+      },
+    });
+    expect(client.request).toHaveBeenCalledWith(expect.objectContaining({
+      method: "PUT",
+      path: "/api/v1/tickets/tk-1/status",
+      body: {
+        status_id: "closed",
+        suppressContactNotifications: true,
+        suppressInternalNotifications: true,
+      },
+    }));
   });
 });

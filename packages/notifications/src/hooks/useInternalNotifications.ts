@@ -53,6 +53,8 @@ interface UseInternalNotificationsOptions {
 interface UseInternalNotificationsReturn {
   notifications: InternalNotification[];
   unreadCount: number;
+  // Unread count of `high`-priority notifications, for the priority-aware bell badge.
+  highUnreadCount: number;
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
@@ -68,6 +70,7 @@ export function useInternalNotifications(
 
   const [notifications, setNotifications] = useState<InternalNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [highUnreadCount, setHighUnreadCount] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +84,7 @@ export function useInternalNotifications(
     if (!tenant || !userId) {
       setNotifications([]);
       setUnreadCount(0);
+      setHighUnreadCount(0);
       setError(null);
       setIsLoading(false);
       return;
@@ -94,6 +98,13 @@ export function useInternalNotifications(
       });
       setNotifications(response.notifications);
       setUnreadCount(response.unread_count);
+      // Prefer the server's authoritative unread-high count; fall back to
+      // deriving it from the loaded page for older payloads.
+      setHighUnreadCount(
+        typeof response.unread_high === 'number'
+          ? response.unread_high
+          : response.notifications.filter((n) => !n.is_read && n.priority === 'high').length
+      );
       setError(null);
 
       if (ydocRef.current && providerRef.current?.status === 'connected') {
@@ -102,6 +113,9 @@ export function useInternalNotifications(
 
         notificationsMap.set('data', response.notifications);
         unreadCountMap.set('count', response.unread_count);
+        if (typeof response.unread_high === 'number') {
+          unreadCountMap.set('high', response.unread_high);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -117,6 +131,9 @@ export function useInternalNotifications(
 	    try {
 	      const response: UnreadCountResponse = await getUnreadCountAction(tenant, userId);
 	      setUnreadCount(response.unread_count);
+	      if (typeof response.high === 'number') {
+	        setHighUnreadCount(response.high);
+	      }
     } catch (err) {
       console.error('Failed to fetch unread count:', err);
     }
@@ -186,14 +203,25 @@ export function useInternalNotifications(
     notificationsMap.observe(() => {
       const notifData = notificationsMap.get('data');
       if (notifData) {
-        setNotifications(notifData as InternalNotification[]);
+        const list = notifData as InternalNotification[];
+        setNotifications(list);
+        // A shared Yjs document can contain only another consumer's limited
+        // notification window. Recount against the database instead of deriving
+        // the bell badge from that incomplete page.
+        void fetchUnreadCount();
       }
     });
 
-    unreadCountMap.observe(() => {
+    unreadCountMap.observe((event) => {
       const count = unreadCountMap.get('count');
       if (typeof count === 'number') {
         setUnreadCount(count);
+      }
+      const high = unreadCountMap.get('high');
+      if (event.keysChanged.has('high') && typeof high === 'number') {
+        setHighUnreadCount(high);
+      } else if (event.keysChanged.has('count')) {
+        void fetchUnreadCount();
       }
     });
 
@@ -201,7 +229,7 @@ export function useInternalNotifications(
       provider.destroy();
       ydoc.destroy();
     };
-  }, [pollNotificationsNow, tenant, userId]);
+  }, [fetchUnreadCount, pollNotificationsNow, tenant, userId]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -249,6 +277,7 @@ export function useInternalNotifications(
   return {
     notifications,
     unreadCount,
+    highUnreadCount,
     isConnected,
     isLoading,
     error,

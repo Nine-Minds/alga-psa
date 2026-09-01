@@ -480,14 +480,18 @@ export async function setupSchedules() {
       { jobName: 'process-renewal-queue', cron: '0 5 * * *' },
       { jobName: 'search:reconcile', cron: '0 6 * * *' },
       { jobName: 'expiring-credits-notification', cron: '0 9 * * *' },
+      { jobName: 'prepaid-balance-alert-scan', cron: '0 9 * * *' },
       { jobName: 'auto-close-tickets', cron: '*/15 * * * *' },
       { jobName: 'cleanup-webhook-deliveries', cron: '*/15 * * * *' },
       { jobName: 'verify-google-calendar-pubsub', cron: '15 * * * *' },
       { jobName: 'renew-google-gmail-watch', cron: '*/30 * * * *' },
       { jobName: 'renew-teams-meeting-artifact-subscriptions', cron: '*/30 * * * *' },
+      { jobName: 'renew-telephony-call-subscriptions', cron: '*/30 * * * *' },
+      { jobName: 'sweep-telephony-call-artifacts', cron: '*/10 * * * *' },
       { jobName: 'sweep-teams-online-meetings', cron: '*/10 * * * *' },
       { jobName: 'cleanup-ai-session-keys', cron: '*/10 * * * *' },
       { jobName: 'workflow-quota-resume-scan', cron: '*/5 * * * *' },
+      { jobName: 'inbound-email-recovery', cron: '*/1 * * * *' },
     ];
 
     for (const { jobName, cron } of MAINTENANCE_FANOUT_SCHEDULES) {

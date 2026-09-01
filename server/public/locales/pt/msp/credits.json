@@ -77,7 +77,9 @@
     "invoiceAmount": "Valor da fatura:",
     "selectCreditToApply": "Selecione crédito para aplicar",
     "amountToApply": "Valor a aplicar",
-    "creditOrderNote": "Os créditos são aplicados em ordem de data de vencimento (os mais antigos primeiro)",
+    "creditOrderNoteExpirationFirst": "Os créditos são aplicados em ordem de data de vencimento (vencimento mais próximo primeiro)",
+    "creditOrderNoteOldestFirst": "Os créditos são aplicados em ordem de data de criação (crédito mais antigo primeiro)",
+    "creditOrderNoteNewestFirst": "Os créditos são aplicados em ordem de data de criação (crédito mais recente primeiro)",
     "noCreditsAvailable": "Não há créditos disponíveis para este cliente",
     "failedToLoadCredits": "Falha ao carregar os créditos disponíveis",
     "selectCreditError": "Selecione um crédito e insira um valor válido",
@@ -141,7 +143,9 @@
       "reason": "Por que este crédito está sendo transferido?"
     },
     "hints": {
-      "amount": "Até {{amount}} disponível"
+      "amount": "Até {{amount}} disponível",
+      "currencyMatch": "O cliente selecionado usa a mesma moeda.",
+      "currencyMismatch": "O cliente selecionado usa uma moeda diferente; pode haver conversão."
     },
     "impact": {
       "current": "Restante atual",
@@ -190,6 +194,25 @@
       "validAmount": "Insira um valor válido",
       "loadClientsFailed": "Não foi possível carregar os clientes. Tente novamente.",
       "submitFailed": "Não foi possível adicionar o crédito. Tente novamente."
+    }
+  },
+  "errors": {
+    "credit": {
+      "notFoundRefresh": "Crédito não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "originalTransactionMissing": "Não foi possível encontrar a transação de crédito original. Atualize a página e tente novamente.",
+      "sourceNotFound": "Crédito de origem não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "targetClientNotFound": "Cliente de destino não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "insufficientTransferAmount": "O valor restante é insuficiente para a transferência.",
+      "invalidValue": "Um dos valores de crédito selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O crédito, cliente, fatura ou transação selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma transação de crédito conflitante. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores do crédito não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do crédito.",
+      "missingFieldNamed": "Falta um campo obrigatório do crédito: {{field}}."
+    },
+    "prepaidAlerts": {
+      "settingsInvalid": "Configurações de alerta de saldo pré-pago inválidas",
+      "updateFailed": "Falha ao atualizar as configurações de alerta de saldo pré-pago"
     }
   }
 }

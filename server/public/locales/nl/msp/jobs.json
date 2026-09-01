@@ -136,5 +136,14 @@
       "success_one": "{{count}} taak uit de geschiedenis gewist.",
       "success_other": "{{count}} taken uit de geschiedenis gewist."
     }
+  },
+  "page": {
+    "heading": "Jobbewaking",
+    "recentJobs": "Recente achtergrondtaken"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Achtergrondtaak niet gevonden. Mogelijk is deze verlopen of verwijderd."
+    }
   }
 }

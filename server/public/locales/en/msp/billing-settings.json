@@ -88,6 +88,43 @@
         "save": "Failed to save settings"
       }
     },
+    "creditDrawdown": {
+      "title": "Credit Draw-Down",
+      "description": "Control when client credits are applied to invoices and how they are consumed.",
+      "fields": {
+        "autoApply": {
+          "label": "Automatically apply credit at finalization",
+          "help": "When enabled, available credit is applied automatically when an invoice is finalized"
+        },
+        "order": {
+          "label": "Credit application order",
+          "placeholder": "Select credit order",
+          "help": "Choose the order in which credits are consumed"
+        },
+        "serviceTypes": {
+          "label": "Eligible service types",
+          "help": "Choose whether credit can be applied to all charges or only to charges for the selected service types.",
+          "empty": "No service types configured.",
+          "restricted": "Credit is restricted to the selected service types.",
+          "mode": {
+            "all": "All service types",
+            "restricted": "Only selected types"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Expiring soonest first",
+        "oldestFirst": "Oldest credit first",
+        "newestFirst": "Newest credit first"
+      },
+      "toast": {
+        "updated": "Credit draw-down settings have been updated."
+      },
+      "errors": {
+        "load": "Failed to load settings",
+        "save": "Failed to save settings"
+      }
+    },
     "renewal": {
       "title": "Renewal Automation",
       "description": "Configure default behavior when contracts reach their renewal date.",
@@ -419,6 +456,46 @@
         "create": "Failed to create tax holiday.",
         "update": "Failed to update tax holiday.",
         "delete": "Failed to delete tax holiday."
+      }
+    },
+    "delegation": {
+      "defaultProvider": "your accounting system",
+      "actions": {
+        "applying": "Applying…"
+      },
+      "errors": {
+        "enableFailed": "Failed to enable external tax calculation."
+      },
+      "banner": {
+        "title": "Let {{provider}} calculate tax?",
+        "description": "{{provider}} is connected. Most customers prefer to have their accounting system handle tax so the two ledgers stay aligned — Alga will post invoices without tax amounts, {{provider}} applies its tax rules, and the result syncs back to Alga. Alga is not a tax package; we recommend delegating.",
+        "actions": {
+          "enable": "Use {{provider}} for tax",
+          "dismiss": "Not now",
+          "dismissing": "Dismissing…"
+        },
+        "toast": {
+          "enabled": "External tax calculation enabled.",
+          "enabledWithProvider": "{{provider}} will calculate tax on new invoices."
+        },
+        "errors": {
+          "loadState": "Unable to load tax delegation recommendation state.",
+          "dismissFailed": "Failed to dismiss the banner."
+        }
+      },
+      "nudge": {
+        "title": "Let {{provider}} calculate tax on future invoices?",
+        "description": "Recommended. New invoices will post to {{provider}} without tax amounts, {{provider}} will apply its tax rules, and the calculated tax will sync back to Alga — keeping your two ledgers aligned. You can change this anytime in Billing → Tax Settings.",
+        "actions": {
+          "enable": "Yes, use {{provider}}",
+          "keepInternal": "Keep Alga calculating tax"
+        },
+        "toast": {
+          "enabled": "{{provider}} will calculate tax on new invoices. You can change this in Billing settings."
+        },
+        "errors": {
+          "loadSettings": "Unable to load current tax settings."
+        }
       }
     }
   },
@@ -1074,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Failed to load settings",
-    "failedToSaveSettings": "Failed to save settings"
+    "failedToSaveSettings": "Failed to save settings",
+    "permissions": {
+      "readSettings": "Permission denied: Cannot read billing settings",
+      "updateSettings": "Permission denied: Cannot update billing settings",
+      "readClientSettings": "Permission denied: Cannot read client billing settings",
+      "updateClientSettings": "Permission denied: Cannot update client billing settings",
+      "settingsRead": "Permission denied: billing_settings read required",
+      "settingsUpdate": "Permission denied: billing_settings update required",
+      "readTaxRates": "Permission denied: Cannot read tax rates",
+      "createTaxRates": "Permission denied: Cannot create tax rates",
+      "updateTaxRates": "Permission denied: Cannot update tax rates",
+      "updateTaxRegions": "Permission denied: Cannot update tax regions"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Permission denied: Billing tax rates are not available for this tenant.",
+      "overlap": "Tax rate date range overlaps with an existing rate for this region.",
+      "regionRequired": "Region is required.",
+      "idRequired": "Tax rate ID is required for updates.",
+      "notFound": "Tax rate not found.",
+      "notFoundOrAlreadyDeleted": "Tax rate not found or already deleted.",
+      "invalid": "The selected tax rate or region is invalid. Please refresh and try again.",
+      "regionInvalid": "The selected tax region is no longer valid. Please refresh and choose another region.",
+      "duplicate": "A tax rate already exists for this region and date range.",
+      "missingField": "Missing required tax rate field.",
+      "missingFieldNamed": "Missing required tax rate field: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Configure at least one active tax rate before creating default tax settings.",
+      "componentNotFound": "Tax component not found. It may have been updated or deleted. Please refresh and try again.",
+      "bracketNotFound": "Tax bracket not found. It may have been updated or deleted. Please refresh and try again.",
+      "holidayNotFound": "Tax holiday not found. It may have been updated or deleted. Please refresh and try again.",
+      "recordInvalid": "One of the selected tax records is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected tax records no longer exists. Please refresh and try again.",
+      "duplicate": "A tax record with those details already exists.",
+      "notAllowed": "One of the tax values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required tax field.",
+      "missingFieldNamed": "Missing required tax field: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Tax region with code \"{{code}}\" already exists.",
+      "notFoundCode": "Tax region with code \"{{code}}\" not found."
+    }
   },
   "toast": {
     "saved": "Saved successfully"

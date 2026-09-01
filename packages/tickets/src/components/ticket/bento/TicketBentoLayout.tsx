@@ -13,6 +13,7 @@ import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { ContentCardVariantProvider } from '@alga-psa/ui/components';
+import { CallLink } from '@alga-psa/ui/components/CallLink';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import type {
   IClient,
@@ -26,6 +27,7 @@ import type {
 } from '@alga-psa/types';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import TicketChecklistSection from './../TicketChecklistSection';
+import { TicketCredentialsSection } from './../TicketCredentialsSection';
 import { DocumentsTile } from './DocumentsTile';
 import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
@@ -42,6 +44,7 @@ import { SlaClocksTile } from './SlaClocksTile';
 import { NextVisitTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
 import { TimeLoggedSummary } from './TimeLoggedSummary';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
+import { resolveTicketCallPhone } from './ticketCallPhone';
 import type { TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
 import type { TicketNotificationSuppressionValue } from '../TicketNotificationSuppressionControl';
@@ -102,7 +105,13 @@ export interface TicketBentoLayoutProps {
   /** Opens the agent schedule drawer (global drawer system). */
   onAgentClick?: (userId: string) => void;
   /** Client locations for resolving the ticket's location display line. */
-  locations?: { location_id: string; location_name?: string | null; address_line1?: string | null; city?: string | null }[];
+  locations?: {
+    location_id: string;
+    location_name?: string | null;
+    address_line1?: string | null;
+    city?: string | null;
+    phone?: string | null;
+  }[];
   /** Opens the scheduler drawer pre-scoped to this ticket (global drawer system). */
   onScheduleVisit?: () => void;
   /** Bumped by the parent after a visit is scheduled so the "Next visit" tile refetches. */
@@ -227,22 +236,30 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   // Guards against re-entrant add/remove churn on rapid multi-select changes.
   const isProcessingAgentsRef = useRef(false);
 
-  const ticketLocation = React.useMemo(() => {
+  const selectedLocation = React.useMemo(() => {
     if (!ticket.location_id || !props.locations) return null;
-    const location = props.locations.find((loc) => loc.location_id === ticket.location_id);
-    if (!location) return null;
-    return [location.location_name, location.address_line1, location.city].filter(Boolean).join(', ');
+    return props.locations.find((loc) => loc.location_id === ticket.location_id) ?? null;
   }, [ticket.location_id, props.locations]);
 
-  const contactPhone = props.contactInfo
-    ? props.contactInfo.default_phone_number ?? props.contactInfo.phone_numbers?.[0]?.phone_number ?? null
+  const ticketLocation = selectedLocation
+    ? [selectedLocation.location_name, selectedLocation.address_line1, selectedLocation.city].filter(Boolean).join(', ')
     : null;
+
+  const contactPhone = resolveTicketCallPhone({
+    contact: props.contactInfo,
+    locationPhone: selectedLocation?.phone,
+    clientPhone: props.client?.phone_no,
+  });
 
   // Inline contact editing: the tile picks from the same client-scoped contacts
   // the all-fields drawer uses, and quick-add attaches a brand-new one. Editing
   // is only offered when TicketDetails wired a change handler and the ticket has
   // a client to scope the picker/quick-add to.
-  const { renderQuickAddContact, renderQuickAddInteraction } = useQuickAddClient();
+  const {
+    renderQuickAddContact,
+    renderQuickAddInteraction,
+    openInteractionDetails,
+  } = useQuickAddClient();
   const effectiveClientId = props.client?.client_id ?? ticket.client_id ?? undefined;
   const canEditContact = Boolean(props.onChangeContact) && Boolean(effectiveClientId);
   const [contactEditOpen, setContactEditOpen] = React.useState(false);
@@ -277,6 +294,11 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const [isLogInteractionOpen, setIsLogInteractionOpen] = React.useState(false);
   const [interactionRefreshKey, setInteractionRefreshKey] = React.useState(0);
   const logInteractionContactId = props.contactInfo?.contact_name_id ?? ticket.contact_name_id ?? null;
+  const handleInteractionClick = React.useCallback((interactionId: string) => {
+    void openInteractionDetails(interactionId, () => {
+      setInteractionRefreshKey((key) => key + 1);
+    });
+  }, [openInteractionDetails]);
 
   React.useEffect(() => {
     setPickerContacts(props.contacts ?? []);
@@ -402,7 +424,13 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
               <div className="text-[rgb(var(--color-text-600))] truncate">{props.contactInfo.email}</div>
             ) : null}
             {contactPhone ? (
-              <div className="text-[rgb(var(--color-text-600))] truncate">{contactPhone}</div>
+              <div className="text-[rgb(var(--color-text-600))] truncate">
+                <CallLink
+                  id={`${id}-contact-phone-call`}
+                  phoneNumber={contactPhone}
+                  callIntent={ticketId ? { ticketId } : undefined}
+                />
+              </div>
             ) : null}
             {ticketLocation ? (
               <div className="text-[rgb(var(--color-text-500))] text-xs truncate">{ticketLocation}</div>
@@ -554,7 +582,9 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           ticketId={ticketId}
           refreshKey={interactionRefreshKey}
           viewAllHref={ticket.contact_name_id ? `/msp/contacts/${ticket.contact_name_id}/activity` : undefined}
+          callPhoneNumber={contactPhone}
           onLogInteraction={canLogInteraction ? () => setIsLogInteractionOpen(true) : undefined}
+          onInteractionClick={handleInteractionClick}
           initialData={props.bentoStreams?.interactions}
         />
       </Suspense>
@@ -812,6 +842,10 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         allowBlockDocuments={!props.disableAttachmentLinking}
         onDocumentCreated={props.onDocumentCreated}
       />
+
+      {/* Flag-gated; adapts to the bento variant via useContentCardVariant.
+          Mirrors the Entry view's placement after Documents. */}
+      <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} />
     </div>
   );
 

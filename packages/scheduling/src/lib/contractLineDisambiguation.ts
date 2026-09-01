@@ -5,12 +5,20 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { resolveDeterministicContractLineSelection } from './contractLineDisambiguation.shared';
+import {
+  resolveDeterministicContractLineSelection,
+  type ContractLineSelectionOptions,
+  type ContractLineSelectionResult,
+} from './contractLineDisambiguation.shared';
 
 // Copied from @alga-psa/billing/lib/contractLineDisambiguation to avoid scheduling → billing deps.
 
 type EligibleContractLine = IClientContractLine & {
   contract_line_type: string;
+  /** contract_lines.billing_profile_id — step 2 of the resolution chain. */
+  billing_profile_id?: string | null;
+  /** client_contracts.billing_profile_id — step 3 of the resolution chain. */
+  contract_billing_profile_id?: string | null;
   bucket_overlay?: {
     config_id: string;
     total_minutes?: number | null;
@@ -42,7 +50,8 @@ const logResolverDecision = (payload: {
   effectiveDate?: string | Date;
   eligibleCount: number;
   overlayCount: number;
-  decision: 'explicit' | 'default' | 'ambiguous_or_unresolved';
+  decision: ContractLineSelectionResult['decision'];
+  reason: ContractLineSelectionResult['reason'];
   selectedContractLineId: string | null;
 }): void => {
   console.info('[contract_line_resolver.routing]', {
@@ -55,11 +64,17 @@ const logResolverDecision = (payload: {
   });
 };
 
-export async function determineDefaultContractLine(
+/**
+ * Selects the contract line for a time entry or usage record, and reports why.
+ * `options.billingProfileId` narrows a multi-candidate field to the line whose
+ * contract belongs to the work item's billing profile (F133).
+ */
+export async function resolveContractLineSelection(
   clientId: string,
   serviceId: string,
-  effectiveDate?: string | Date
-): Promise<string | null> {
+  effectiveDate?: string | Date,
+  options?: ContractLineSelectionOptions
+): Promise<ContractLineSelectionResult> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('User not authenticated');
@@ -72,7 +87,7 @@ export async function determineDefaultContractLine(
 
   try {
     const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
-    const resolution = resolveDeterministicContractLineSelection(eligibleContractLines);
+    const resolution = resolveDeterministicContractLineSelection(eligibleContractLines, options);
 
     logResolverDecision({
       tenant,
@@ -82,13 +97,36 @@ export async function determineDefaultContractLine(
       eligibleCount: eligibleContractLines.length,
       overlayCount: resolution.overlayCount,
       decision: resolution.decision,
+      reason: resolution.reason,
       selectedContractLineId: resolution.selectedContractLineId,
     });
-    return resolution.selectedContractLineId;
+    return resolution;
   } catch (error) {
     console.error('Error determining default contract line:', error);
-    return null;
+    return {
+      selectedContractLineId: null,
+      decision: 'ambiguous_or_unresolved',
+      reason: 'error',
+      overlayCount: 0,
+      candidateCount: 0,
+    };
   }
+}
+
+/**
+ * The contract line alone, for callers that do not record provenance.
+ * Prefer `resolveContractLineSelection` when the reason matters — an entry that
+ * ends up unresolved needs to say whether nothing covered the service or too
+ * many lines did.
+ */
+export async function determineDefaultContractLine(
+  clientId: string,
+  serviceId: string,
+  effectiveDate?: string | Date,
+  options?: ContractLineSelectionOptions
+): Promise<string | null> {
+  const resolution = await resolveContractLineSelection(clientId, serviceId, effectiveDate, options);
+  return resolution.selectedContractLineId;
 }
 
 export async function getEligibleContractLines(
@@ -116,26 +154,32 @@ export async function getEligibleContractLines(
   db.tenantJoin(query, 'contracts', 'client_contracts.contract_id', 'contracts.contract_id');
   db.tenantJoin(query, 'contract_lines', 'contracts.contract_id', 'contract_lines.contract_id');
   db.tenantJoin(query, 'contract_line_services', 'contract_lines.contract_line_id', 'contract_line_services.contract_line_id');
+  // Scope-resolution rule (weighted-burn model): explicit membership on a line
+  // bucket, else the line's catch-all bucket. Replacement for the legacy
+  // configuration_type='Bucket' overlay join.
   db.tenantJoin(
     query,
-    'contract_line_service_configuration as bucket_config',
-    'bucket_config.contract_line_id',
+    'contract_line_bucket_services as member',
+    'member.contract_line_id',
     'contract_lines.contract_line_id',
     {
       type: 'left',
       on(join) {
-        join
-          .andOn('bucket_config.service_id', '=', 'contract_line_services.service_id')
-          .andOnVal('bucket_config.configuration_type', 'Bucket');
+        join.andOn('member.service_id', '=', 'contract_line_services.service_id');
       },
     }
   );
   db.tenantJoin(
     query,
-    'contract_line_service_bucket_config as bucket_details',
-    'bucket_details.config_id',
-    'bucket_config.config_id',
-    { type: 'left' }
+    'contract_line_buckets as catch_all',
+    'catch_all.contract_line_id',
+    'contract_lines.contract_line_id',
+    {
+      type: 'left',
+      on(join) {
+        join.andOnVal('catch_all.covers_all_services', '=', true);
+      },
+    }
   );
 
   query
@@ -168,18 +212,18 @@ export async function getEligibleContractLines(
     'contract_lines.contract_line_type',
     'contract_lines.contract_line_name',
     'contracts.contract_name',
-    'bucket_config.config_id as bucket_config_id',
-    'bucket_details.total_minutes as bucket_total_minutes',
-    'bucket_details.overage_rate as bucket_overage_rate',
-    'bucket_details.allow_rollover as bucket_allow_rollover'
+    // Steps 2 and 3 of the billing-profile chain, so profile-aware narrowing
+    // can prefer the line whose contract belongs to the work item's profile.
+    'contract_lines.billing_profile_id',
+    'client_contracts.billing_profile_id as contract_billing_profile_id',
+    'member.bucket_id as member_bucket_id',
+    'catch_all.bucket_id as catch_all_bucket_id'
   );
 
   return rows.map((row) => {
     const {
-      bucket_config_id,
-      bucket_total_minutes,
-      bucket_overage_rate,
-      bucket_allow_rollover,
+      member_bucket_id,
+      catch_all_bucket_id,
       start_date,
       end_date,
       ...rest
@@ -187,12 +231,14 @@ export async function getEligibleContractLines(
 
     const { bucket_overlay: existingOverlay, ...restWithoutOverlay } = rest;
 
+    const bucket_config_id = member_bucket_id ?? catch_all_bucket_id ?? null;
+
     const bucket_overlay = bucket_config_id
       ? {
           config_id: bucket_config_id,
-          total_minutes: bucket_total_minutes ?? null,
-          overage_rate: bucket_overage_rate ?? null,
-          allow_rollover: bucket_allow_rollover ?? null,
+          total_minutes: null,
+          overage_rate: null,
+          allow_rollover: null,
         }
       : existingOverlay;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -26,6 +26,8 @@ import {
 interface PricingScheduleDialogProps {
   contractId: string;
   schedule?: IContractPricingSchedule | null;
+  /** Currency the owning contract is denominated in; custom_rate is stored in its minor units. */
+  currencyCode?: string;
   onClose: () => void;
   onSave: () => void;
 }
@@ -33,11 +35,14 @@ interface PricingScheduleDialogProps {
 export function PricingScheduleDialog({
   contractId,
   schedule,
+  currencyCode,
   onClose,
   onSave
 }: PricingScheduleDialogProps) {
   const { t } = useTranslation('msp/contracts');
-  const { symbol } = useCurrencyFormat();
+  const { symbol, fractionDigits } = useCurrencyFormat();
+  const rateFractionDigits = fractionDigits(currencyCode);
+  const rateMinorUnitFactor = 10 ** rateFractionDigits;
   const [effectiveDate, setEffectiveDate] = useState<Date | undefined>(
     schedule?.effective_date ? new Date(schedule.effective_date) : undefined
   );
@@ -52,11 +57,14 @@ export function PricingScheduleDialog({
   const [durationUnit, setDurationUnit] = useState<'days' | 'weeks' | 'months' | 'years'>(
     schedule?.duration_unit || 'months'
   );
-  const [customRate, setCustomRate] = useState<string>(
+  const [customRate, setCustomRate] = useState<string>(() =>
     schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
-      ? (schedule.custom_rate / 100).toFixed(2)
+      ? (schedule.custom_rate / rateMinorUnitFactor).toFixed(rateFractionDigits)
       : ''
   );
+  // Once the user has touched the rate, no schedule re-sync may overwrite
+  // what they typed.
+  const userEditedRateRef = useRef(false);
   const [useDefaultRate, setUseDefaultRate] = useState(
     schedule?.custom_rate === undefined || schedule?.custom_rate === null
   );
@@ -69,15 +77,24 @@ export function PricingScheduleDialog({
       setEffectiveDate(schedule.effective_date ? new Date(schedule.effective_date) : undefined);
       setEndDate(schedule.end_date ? new Date(schedule.end_date) : undefined);
       setHasEndDate(!!schedule.end_date);
-      setCustomRate(
-        schedule.custom_rate !== undefined && schedule.custom_rate !== null
-          ? (schedule.custom_rate / 100).toFixed(2)
-          : ''
-      );
       setUseDefaultRate(schedule.custom_rate === undefined || schedule.custom_rate === null);
       setNotes(schedule.notes || '');
+      userEditedRateRef.current = false;
     }
   }, [schedule]);
+
+  // Re-derive the rate input when the schedule changes; skip once the user
+  // has typed, so a re-sync can't clobber their input.
+  useEffect(() => {
+    if (userEditedRateRef.current) {
+      return;
+    }
+    setCustomRate(
+      schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
+        ? (schedule.custom_rate / rateMinorUnitFactor).toFixed(rateFractionDigits)
+        : ''
+    );
+  }, [schedule, rateMinorUnitFactor, rateFractionDigits]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,7 +156,8 @@ export function PricingScheduleDialog({
         end_date: !useDuration && hasEndDate && endDate ? endDate.toISOString() : null,
         duration_value: useDuration ? parseInt(durationValue) : undefined,
         duration_unit: useDuration ? durationUnit : undefined,
-        custom_rate: useDefaultRate ? undefined : Math.round(parseFloat(customRate) * 100),
+        // Explicit null — undefined is dropped by Knex on update, silently keeping the old rate.
+        custom_rate: useDefaultRate ? null : Math.round(parseFloat(customRate) * rateMinorUnitFactor),
         notes: notes || undefined
       };
 
@@ -316,6 +334,7 @@ export function PricingScheduleDialog({
               onCheckedChange={(checked) => {
                 setUseDefaultRate(checked);
                 if (checked) {
+                  userEditedRateRef.current = true;
                   setCustomRate('');
                 }
               }}
@@ -328,16 +347,21 @@ export function PricingScheduleDialog({
                 {t('pricingSchedules.dialog.fields.customRate', { defaultValue: 'Custom Rate' })} *
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                  {symbol(currencyCode)}
+                </span>
                 <Input
                   id="custom-rate"
                   type="number"
                   min="0"
-                  step="0.01"
+                  step={String(1 / rateMinorUnitFactor)}
                   value={customRate}
-                  onChange={(e) => setCustomRate(e.target.value)}
+                  onChange={(e) => {
+                    userEditedRateRef.current = true;
+                    setCustomRate(e.target.value);
+                  }}
                   className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  placeholder={t('pricingSchedules.dialog.fields.customRatePlaceholder', { defaultValue: '0.00' })}
+                  placeholder={(0).toFixed(rateFractionDigits)}
                 />
               </div>
             </div>

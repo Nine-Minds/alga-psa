@@ -12,8 +12,9 @@ import { registerUser } from '@alga-psa/auth/actions';
 import { Alert } from '@alga-psa/auth/client';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { I18nWrapper } from '@alga-psa/tenancy/components';
 
-export default function Register() {
+function Register() {
   const { t } = useTranslation('msp/auth');
   const [showPassword, setShowPassword] = useState(false);
   const [hasStartedTyping, setHasStartedTyping] = useState(false);
@@ -114,7 +115,7 @@ export default function Register() {
     !hasStartedTyping ? null : met ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />;
 
   return (
-    <div className="flex min-h-screen bg-[rgb(var(--color-background-50))]">
+    <div className="flex min-h-screen bg-[rgb(var(--color-border-50))]">
 
     <Alert
         type={alertInfo.type}
@@ -291,5 +292,14 @@ export default function Register() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Register calls useTranslation itself, so the provider has to sit in a parent.
+export default function RegisterPage() {
+  return (
+    <I18nWrapper portal="msp">
+      <Register />
+    </I18nWrapper>
   );
 }

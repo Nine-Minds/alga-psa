@@ -20,10 +20,15 @@ import type {
 import {
   getPurchaseOrderOverageForSelectionInput,
   previewGroupedInvoicesForSelectionInputs,
+  type RecurringGroupedPreviewResponse,
 } from '@alga-psa/billing/actions/invoiceGeneration';
-import { generateGroupedInvoicesAsRecurringBillingRun, generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
+import {
+  generateGroupedInvoicesAsRecurringBillingRun,
+  generateInvoicesAsRecurringBillingRun,
+  type RecurringBillingRunInvoiceFailure,
+} from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
-import { WasmInvoiceViewModel } from '@alga-psa/types';
+import { WasmInvoiceViewModel, type PreviewInvoiceResponse } from '@alga-psa/types';
 import {
   getRecurringInvoiceHistoryPaginated,
   reverseRecurringInvoice,
@@ -37,13 +42,17 @@ import {
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { formatCurrency } from '@alga-psa/core';
+import { formatCurrency, formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  translateManualInvoiceFailure,
+  type ManualInvoiceTranslation,
+} from './manualInvoiceErrorTranslation';
 // Added imports for DropdownMenu
 import {
   DropdownMenu,
@@ -67,6 +76,37 @@ interface AutomaticInvoicesProps {
 const isReturnedActionError = (result: unknown) => (
   isActionMessageError(result) || isActionPermissionError(result)
 );
+
+/**
+ * Renders a recurring-run invoice failure as localized, actionable guidance when it
+ * carries a known structured code (e.g. NO_BILLING_EMAIL), and as the generic error
+ * string otherwise. Never leaks stacks, SQL, or raw exception text to the user.
+ */
+function localizeRecurringFailure(
+  t: ManualInvoiceTranslation,
+  failure: RecurringBillingRunInvoiceFailure,
+): string {
+  return translateManualInvoiceFailure(t, {
+    code: failure.code,
+    params: failure.params,
+    message: failure.errorMessage,
+  });
+}
+
+/**
+ * Same contract as {@link localizeRecurringFailure} for the preview failure
+ * payload, which carries the same structured code/params across the boundary.
+ */
+function localizePreviewFailure(
+  t: ManualInvoiceTranslation,
+  failure: Extract<PreviewInvoiceResponse | RecurringGroupedPreviewResponse, { success: false }>,
+): string {
+  return translateManualInvoiceFailure(t, {
+    code: failure.code,
+    params: failure.params,
+    message: failure.error,
+  });
+}
 
 // Placeholder for a DataTable while its (independent) section data loads, so the
 // rest of the screen can render immediately instead of waiting behind one spinner.
@@ -805,6 +845,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     const loadPeriods = async () => {
       setIsPeriodsLoading(true);
       setLoadError(null);
+      // Every due-work request is a stale-data boundary: drop the previous
+      // page's candidates, gaps, and totals immediately so nothing from the
+      // prior query is presented as current while the reload is in flight.
+      setPeriods([]);
+      setMaterializationGaps([]);
+      setTotalPeriods(0);
       try {
         const dateRangeFilter = buildDateRangeFilter(appliedDateRange);
         const result = await getAvailableRecurringDueWork({
@@ -820,19 +866,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           setMaterializationGaps([]);
           setTotalPeriods(0);
           setLoadError(getErrorMessage(result));
-          return;
-        }
+        } else {
+          setPeriods(result.invoiceCandidates as ReadyPeriod[]);
+          setMaterializationGaps(result.materializationGaps);
+          setTotalPeriods(result.total);
+          initialLoadDone.current = true;
 
-        setPeriods(result.invoiceCandidates as ReadyPeriod[]);
-        setMaterializationGaps(result.materializationGaps);
-        setTotalPeriods(result.total);
-        initialLoadDone.current = true;
-
-        // Clamp page if current page is beyond available pages (e.g., after delete/filter)
-        const maxPage = Math.max(1, Math.ceil(result.total / pageSize));
-        if (currentReadyPage > maxPage && currentReadyPage !== maxPage) {
-          setCurrentReadyPage(maxPage);
-          setSelectedTargets(new Set()); // Clear selection since visible rows changed
+          // Clamp page if current page is beyond available pages (e.g., after delete/filter)
+          const maxPage = Math.max(1, Math.ceil(result.total / pageSize));
+          if (currentReadyPage > maxPage && currentReadyPage !== maxPage) {
+            setCurrentReadyPage(maxPage);
+            setSelectedTargets(new Set()); // Clear selection since visible rows changed
+          }
         }
       } catch (error) {
         console.error('Error loading billing periods:', error);
@@ -1487,7 +1532,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         selectorInput: null,
       }); // Clear preview state on error
       setErrors({
-        preview: (response as { success: false; error: string }).error
+        preview: localizePreviewFailure(t, response)
       });
       // Optionally open the dialog even on error to show the message
       setShowPreviewDialog(true);
@@ -1519,10 +1564,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }),
       );
 
+      const overageAnalysisErrors: { [key: string]: string } = {};
       const overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }> = {};
       for (const result of overageResults) {
         const overage = result.overage;
-        if (!overage || overage.overage_cents <= 0) {
+        if (isReturnedActionError(overage)) {
+          // The action returns (not throws) expected errors; surface them instead of
+          // letting the error object masquerade as a successful analysis.
+          const clientName = result.period.clientName || result.period.executionIdentityKey;
+          overageAnalysisErrors[clientName] = getErrorMessage(overage);
+          continue;
+        }
+        if (!overage || !Number.isFinite(overage.overage_cents) || overage.overage_cents <= 0) {
           continue;
         }
 
@@ -1532,6 +1585,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
         };
+      }
+
+      if (Object.keys(overageAnalysisErrors).length > 0) {
+        setErrors(overageAnalysisErrors);
+        return;
       }
 
       const overageIds = Object.keys(overageByExecutionIdentityKey);
@@ -1558,7 +1616,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       const newErrors: { [key: string]: string } = {};
       for (const failure of runResult.failures) {
         const label = resolveRecurringFailureLabel(failure);
-        newErrors[label] = failure.errorMessage;
+        newErrors[label] = localizeRecurringFailure(t, failure);
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -1597,11 +1655,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         for (const [, info] of Object.entries(overageByExecutionIdentityKey)) {
           newErrors[info.clientName] =
             t('automaticInvoices.dialogs.poOverage.skippedError', {
-              amount: formatCurrency(info.overageCents),
+              amount: formatCurrencyFromMinorUnits(info.overageCents),
               poLabel: formatPoLabel(info.poNumber),
               defaultValue:
                 `Skipped due to PO overage (${formatPoLabel(info.poNumber)}): `
-                + `over by ${formatCurrency(info.overageCents)}.`,
+                + `over by ${formatCurrencyFromMinorUnits(info.overageCents)}.`,
             });
         }
       }
@@ -1620,7 +1678,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       }
       for (const failure of runResult.failures) {
         const label = resolveRecurringFailureLabel(failure);
-        newErrors[label] = failure.errorMessage;
+        newErrors[label] = localizeRecurringFailure(t, failure);
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -1708,7 +1766,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     try {
       const overage = await getPurchaseOrderOverageForSelectionInput(previewState.selectorInput);
-      if (overage && overage.overage_cents > 0) {
+      if (isReturnedActionError(overage)) {
+        setErrors({ preview: getErrorMessage(overage) });
+        return;
+      }
+      if (overage && Number.isFinite(overage.overage_cents) && overage.overage_cents > 0) {
         setPoOverageSingleConfirm({
           isOpen: true,
           billingCycleId: previewState.billingCycleId,
@@ -1734,7 +1796,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       }
       if (runResult.failures.length > 0) {
         setErrors({
-          preview: runResult.failures[0]?.errorMessage
+          preview: localizeRecurringFailure(t, runResult.failures[0])
             || t('automaticInvoices.dialogs.preview.generateError', {
               defaultValue: 'Failed to generate invoice from preview',
             }),
@@ -1797,7 +1859,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       }
       if (runResult.failures.length > 0) {
         setErrors({
-          preview: runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview',
+          preview: localizeRecurringFailure(t, runResult.failures[0]) || 'Failed to generate invoice from preview',
         });
         return;
       }
@@ -1834,7 +1896,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // immediately instead of waiting behind one combined spinner. The fix-list +
   // Ready-to-Invoice block shares the slow due-work fetch; the History table loads
   // on its own (separate, independent server action).
-  const isReadyInitialLoading = !initialLoadDone.current && isPeriodsLoading;
   const isHistoryInitialLoading = !invoicedInitialLoadDone.current && isInvoicedLoading;
 
   return (
@@ -1869,7 +1930,20 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             </AlertDescription>
           </Alert>
         ) : null}
-        <div>
+        <div
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          data-testid="automatic-invoices-loading-status"
+        >
+          {isPeriodsLoading
+            ? t('automaticInvoices.loading.candidates', { defaultValue: 'Loading invoice candidates.' })
+            : ''}
+        </div>
+        <div
+          aria-busy={isPeriodsLoading}
+          data-testid="automatic-invoices-due-work-region"
+        >
           {needsApprovalParentGroups.length > 0 ? (
             <div className="mb-6 rounded-md border border-warning/40 bg-warning/5 p-4" data-testid="needs-approval-section">
               <h2 className="text-lg font-semibold">
@@ -2339,7 +2413,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               per-column dataIndex tricks (select/tags → compact ids) + mixed px/% widths because
               DataTable's auto-fit overrides plain widths; a first-class "column width spec" on
               DataTable would remove this dance. */}
-          {isReadyInitialLoading ? (
+          {isPeriodsLoading ? (
             <BillingTableSkeleton columns={6} />
           ) : (
           <DataTable
@@ -3174,8 +3248,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <li key={id}>
                   {t('automaticInvoices.dialogs.poOverage.batchItem', {
                     clientName: info.clientName,
-                    amount: formatCurrency(info.overageCents),
-                    defaultValue: `${info.clientName}: over by ${formatCurrency(info.overageCents)}`,
+                    amount: formatCurrencyFromMinorUnits(info.overageCents),
+                    defaultValue: `${info.clientName}: over by ${formatCurrencyFromMinorUnits(info.overageCents)}`,
                   })}
                   {info.poNumber ? ` (${formatPoLabel(info.poNumber)})` : ''}
                 </li>
@@ -3222,9 +3296,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <div className="space-y-2">
             <p>
               {t('automaticInvoices.dialogs.poOverage.singleDescription', {
-                amount: formatCurrency(poOverageSingleConfirm.overageCents),
+                amount: formatCurrencyFromMinorUnits(poOverageSingleConfirm.overageCents),
                 defaultValue:
-                  `This invoice would exceed the Purchase Order authorized amount by ${formatCurrency(poOverageSingleConfirm.overageCents)}.`,
+                  `This invoice would exceed the Purchase Order authorized amount by ${formatCurrencyFromMinorUnits(poOverageSingleConfirm.overageCents)}.`,
               })}
             </p>
             {poOverageSingleConfirm.poNumber && (

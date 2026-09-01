@@ -628,5 +628,35 @@
       "error": "Fehler",
       "metadata": "Metadaten"
     }
+  },
+  "gmailDiagnostics": {
+    "title": "Gmail-Zustelldiagnose",
+    "description": "Prüft das Pub/Sub-Thema, dessen Berechtigungen, den Push-Endpunkt und die Zielgruppe, den Gmail-Watch sowie den Zeitpunkt der letzten eingegangenen Push-Nachricht.",
+    "labels": {
+      "provider": "Anbieter:",
+      "mailbox": "Postfach:",
+      "overall": "Gesamt:",
+      "recommendations": "Empfehlungen",
+      "error": "Fehler"
+    },
+    "audienceMismatch": {
+      "title": "Push-Zielgruppe stimmt nicht mit dieser Instanz überein",
+      "expected": "Erwartet:",
+      "actual": "Google verwendet:"
+    },
+    "actions": {
+      "copySupportBundle": "Supportpaket kopieren",
+      "copied": "Kopiert"
+    },
+    "states": {
+      "running": "Diagnose wird ausgeführt...",
+      "diagnosticsFailed": "Diagnose fehlgeschlagen"
+    },
+    "statuses": {
+      "pass": "Bestanden",
+      "warn": "Warnung",
+      "fail": "Fehlgeschlagen",
+      "skip": "Übersprungen"
+    }
   }
 }

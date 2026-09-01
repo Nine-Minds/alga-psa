@@ -5,7 +5,7 @@ import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/type
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
-import { Download, Edit2, Printer, Save, Settings2 } from 'lucide-react';
+import { Download, Edit2, Mail, Printer, Save, Settings2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
@@ -16,11 +16,11 @@ import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
 import ProjectTaskExportDialog from './ProjectTaskExportDialog';
+import SendStatusUpdateDialog from './SendStatusUpdateDialog';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { useTaskShareActions } from './TaskShareActionsContext';
 import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectBilledSummary {
@@ -63,7 +63,6 @@ export default function ProjectInfo({
   onTagsChange
 }: ProjectInfoProps) {
   const { t } = useTranslation(['features/projects', 'common']);
-  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   const billingIntegration = useProjectBillingIntegration();
   const { openDrawer, closeDrawer } = useDrawer();
   const { selectedTaskIds } = useTaskSelection();
@@ -72,6 +71,7 @@ export default function ProjectInfo({
   const [currentProject, setCurrentProject] = useState(project);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showStatusUpdateDialog, setShowStatusUpdateDialog] = useState(false);
   const [projectMetrics, setProjectMetrics] = useState<{
     taskCompletionPercentage: number;
     hoursCompletionPercentage: number;
@@ -213,6 +213,15 @@ export default function ProjectInfo({
               ? t('export.exportSelected', 'Export {{count}} Selected', { count: selectedTaskCount })
               : t('export.exportTasks', 'Export Tasks')}
           </Button>
+          <Button
+            id="send-status-update-button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowStatusUpdateDialog(true)}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            {t('statusUpdate.button', 'Send status update')}
+          </Button>
           <ProjectTasksShareMenu />
           <Button
             id="project-materials-button"
@@ -286,7 +295,7 @@ export default function ProjectInfo({
         )}
 
         {/* Billed bar (F135) — only when project billing is enabled */}
-        {projectBillingUiEnabled && billingIntegration && billedSummary && (
+        {billingIntegration && billedSummary && (
           <billingIntegration.BilledBar
             invoicedCents={billedSummary.invoicedCents}
             readyCents={billedSummary.readyCents}
@@ -306,6 +315,15 @@ export default function ProjectInfo({
             setShowTemplateDialog(false);
             toast.success(t('projectInfo.templateCreatedSuccess', 'Template created successfully'));
           }}
+        />
+      )}
+
+      {/* Customer status update */}
+      {showStatusUpdateDialog && (
+        <SendStatusUpdateDialog
+          isOpen={showStatusUpdateDialog}
+          onClose={() => setShowStatusUpdateDialog(false)}
+          projectId={currentProject.project_id}
         />
       )}
 

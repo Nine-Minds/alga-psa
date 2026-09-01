@@ -4,6 +4,16 @@ import {
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 type Row = Record<string, any>;
 
 function normalizeTableName(tableName: string): string {
@@ -81,6 +91,7 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       if (typeof columnOrCriteria === 'function') {
         const scopedWhere: any = {
           where: vi.fn(() => scopedWhere),
+          orWhere: vi.fn(() => scopedWhere),
           orWhereNull: vi.fn(() => scopedWhere),
         };
         columnOrCriteria.call(scopedWhere);
@@ -101,6 +112,7 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       );
       return builder;
     }),
+    orWhere: vi.fn(() => builder),
     whereIn: vi.fn((column: string, values: any[]) => {
       const normalized = normalizeColumn(column);
       resultRows = resultRows.filter((row) => values.includes(row[normalized]));
@@ -108,6 +120,10 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
     }),
     whereNotNull: vi.fn((column: string) => {
       resultRows = resultRows.filter((row) => row[normalizeColumn(column)] != null);
+      return builder;
+    }),
+    whereNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => row[normalizeColumn(column)] == null);
       return builder;
     }),
     whereNotIn: vi.fn((column: string, values: any[]) => {
@@ -327,7 +343,21 @@ vi.mock('../../../../../packages/billing/src/services/purchaseOrderService', () 
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => ({
+  // Re-exported from the real module: generation catches this to surface the
+  // unresolved-item block (D10), so a mock without it turns a caught,
+  // explained refusal into an unrelated crash.
+  UnresolvedCatalogPricingError: class UnresolvedCatalogPricingError extends Error {
+    items: Array<{ kind: string; id: string; label: string }>;
+    constructor(message: string, items: Array<{ kind: string; id: string; label: string }> = []) {
+      super(message);
+      this.name = 'UnresolvedCatalogPricingError';
+      this.items = items;
+    }
+  },
   BillingEngine: class {
+    static forTransaction() {
+      return new this();
+    }
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;
@@ -921,15 +951,88 @@ describe('invoice preview recurring timing', () => {
 
     expect(previewResult).toMatchObject({
       success: false,
-      error: 'An error occurred while previewing the invoice',
+      error: 'Billing email is required before generating recurring invoices.',
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
     expect(previewResult).not.toHaveProperty('billingCycleId');
+    // The coded validation failure is returned (not re-thrown) as a keyed action
+    // error so the recurring run can recover the structured failure after the
+    // localization boundary rewrites the sentence.
     expect(generationError).toMatchObject({
-      message: 'Billing email is required before generating recurring invoices.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
+      actionError: 'Billing email is required before generating recurring invoices.',
+      messageKey: 'msp/invoicing:manualInvoices.errors.NO_BILLING_EMAIL',
+      messageParams: { clientName: 'Acme Corp' },
     });
     expect(generationError).not.toHaveProperty('billingCycleId');
+  });
+
+  it('keeps unknown preview failures generic instead of exposing the raw internal message', async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    mocks.calculateBillingForExecutionWindow.mockRejectedValueOnce(
+      new Error("TypeError: Cannot read properties of undefined (reading 'client_contract_id')"),
+    );
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const result = await previewInvoiceForSelectionInput(selectorInput);
+
+    expect(result).toMatchObject({
+      success: false,
+      error: 'An error occurred while previewing the invoice',
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    });
+    expect(result).not.toHaveProperty('code');
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain('client_contract_id');
+    expect(serialized).not.toContain('TypeError');
+
+    // The full cause stays server-side.
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    const [, , loggedError] = consoleErrorSpy.mock.calls[0] as [string, unknown, unknown];
+    expect(loggedError).toBeInstanceOf(Error);
+    expect((loggedError as Error).message).toContain('client_contract_id');
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('routes unsupported coded validation errors to the generic path instead of surfacing them raw', async () => {
+    mocks.validateClientBillingEmail.mockResolvedValue({
+      valid: false,
+      code: 'SERVICE_NOT_FOUND',
+      error: 'Service "service-9" could not be found.',
+      params: { serviceId: 'service-9' },
+    });
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const previewResult = await previewInvoiceForSelectionInput(selectorInput);
+    expect(previewResult).toMatchObject({
+      success: false,
+      error: 'An error occurred while previewing the invoice',
+    });
+    expect(previewResult).not.toHaveProperty('code');
+    expect(JSON.stringify(previewResult)).not.toContain('service-9');
+
+    // The generation boundary must not return the raw coded message as an action
+    // error: it re-throws so the recurring run's generic catch owns it.
+    const generationError = await generateInvoiceForSelectionInput(selectorInput).catch((error) => error);
+    expect(generationError).toBeInstanceOf(Error);
+    expect(generationError).not.toHaveProperty('actionError');
+    expect(generationError).not.toHaveProperty('messageKey');
   });
 
   it('T050: selector-input recurring generation still enforces PO-required contract validation', async () => {

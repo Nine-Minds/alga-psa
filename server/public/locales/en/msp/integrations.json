@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft signed you in but refused access to your managed tenant list. A Global Administrator must grant admin consent for the requested permissions. Nothing was saved — try again once consent is granted.",
             "expired": "The connection attempt expired before it finished. Nothing was saved — start the connection again.",
             "generic": "Microsoft Entra was not connected, and nothing was saved. Please try again.",
-            "validationFailed": "Microsoft signed you in, but we could not read your managed tenant list, so nothing was saved. Check the connection's permissions and try again."
+            "validationFailed": "Microsoft signed you in, but the managed tenant list could not be read, so nothing was saved. Your permissions were accepted — this usually means the partner tenant is not onboarded to Microsoft 365 Lighthouse or has no active GDAP relationships.",
+            "tokenRejected": "Microsoft rejected the connection's access token, so nothing was saved. Start the connection again."
           },
           "cippServerLabel": "CIPP server",
           "connectingSuffix": " (Connecting...)",
@@ -862,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Connection Type:",
           "label": "Overview",
-          "mappedTenantsLabel": "Mapped Tenants:"
+          "mappedTenantsLabel": "Mapped Tenants:",
+          "microsoftAppLabel": "Microsoft app:"
         },
         "skipped": {
           "empty": "No tenants are currently marked as skipped.",
@@ -919,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Add app registration",
+          "bindFailed": "Could not save the Microsoft app choice for Entra.",
+          "emptyBody": "Direct connect runs on your own Microsoft app registration. Register a multi-tenant app in your partner tenant, add the Entra redirect URI, and grant admin consent for ManagedTenants.Read.All and Directory.Read.All.",
+          "label": "Microsoft app registration",
+          "placeholder": "Select an app registration",
+          "reconnectRequired": "Select a Microsoft app registration and reconnect.",
+          "redirectUriLabel": "Redirect URI to add in Entra",
+          "scopesLabel": "Delegated scopes (admin consent required)"
+        },
         "backToCurrentStep": "Back to {{step}}",
         "chooser": {
           "cipp": {
@@ -939,9 +951,10 @@
             "description": "Alga talks to Microsoft Graph through your partner relationship.",
             "label": "Direct Microsoft partner",
             "prerequisites": {
-              "appRegistration": "Microsoft OAuth credentials configured for this tenant.",
+              "appRegistration": "A Microsoft app registration chosen below — Direct always connects with your organization's own app.",
               "globalAdmin": "A Global Administrator who can approve the permissions.",
-              "partnerRelationship": "A partner relationship (GDAP) with the tenants you manage."
+              "partnerRelationship": "A partner relationship (GDAP) with the tenants you manage.",
+              "lighthouse": "Microsoft 365 Lighthouse onboarded in your partner tenant."
             }
           },
           "directReassurance": "You will review the permission prompt before anything is granted.",
@@ -954,6 +967,7 @@
         "description": "Bring the people from the Microsoft tenants you manage into Alga as client contacts. Nothing is written to your contacts until you have seen a preview and approved it.",
         "directConsent": {
           "adminNote": "A Global Administrator must approve these permissions. If you are not one, the sign-in will complete but the connection will be refused, and nothing will be saved.",
+          "appRegistration": "App registration: {{name}}.",
           "cancel": "Cancel",
           "continue": "Continue to Microsoft",
           "intro": "You are about to leave Alga and sign in at Microsoft. These are the permissions that will be requested.",
@@ -1570,7 +1584,8 @@
           "invalidState": "This Microsoft setup request is invalid or expired. Start again from Providers settings.",
           "microsoftError": "Microsoft could not complete the setup request. Try again or use manual setup.",
           "missingCode": "Microsoft did not return an authorization code. Start setup again.",
-          "sessionMismatch": "Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again."
+          "sessionMismatch": "Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again.",
+          "optionsLoadFailed": "Failed to load Microsoft Email setup options."
         },
         "fields": {
           "clientId": "Client ID",
@@ -1659,7 +1674,13 @@
           "email": {
             "description": "Choose the Microsoft app for Outlook inbound and outbound email.",
             "label": "Outlook email",
-            "reconnect": "Existing Outlook email connections need re-authorization to grant Mail.Send before they can send outbound email."
+            "reconnect": "Existing Outlook email connections need re-authorization to grant Mail.Send before they can send outbound email.",
+            "perProviderIssuerNote": "Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections."
+          },
+          "entra": {
+            "description": "Choose the Microsoft app for Entra GDAP and Lighthouse sync.",
+            "label": "Entra Direct",
+            "reconnect": "Changing this app disconnects the current Entra connection and requires reconsent."
           },
           "mspSso": {
             "description": "Choose the Microsoft app for staff sign-in and login-domain discovery.",
@@ -1722,6 +1743,9 @@
           "currentProfileTitle": "Saved app values",
           "emailRedirect": "Inbound email redirect URI",
           "emailTitle": "Email",
+          "entraConsent": "Requirement",
+          "entraConsentValue": "Register this app as multitenant and grant admin consent in your partner Microsoft tenant.",
+          "entraTitle": "Entra Direct",
           "mspSsoTitle": "Staff sign-in",
           "notConfigured": "Not configured",
           "redirectUri": "Redirect URI",
@@ -1851,11 +1875,16 @@
         "callback": {
           "accessDenied": "QuickBooks access was denied before the connection completed.",
           "configMissing": "QuickBooks OAuth could not start because the client ID and client secret were not fully configured.",
+          "forbidden": "You no longer have permission to manage accounting connections. Ask an administrator for access.",
           "generic": "QuickBooks returned an OAuth error: {{code}}",
           "invalidState": "The QuickBooks OAuth state was invalid or expired. Start the connect flow again.",
           "missingParams": "The QuickBooks callback was missing required parameters. Start the connect flow again.",
           "oauthFailed": "The QuickBooks OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.",
-          "tokenExchangeFailed": "Intuit did not return the expected tokens. Try connecting again."
+          "sessionExpired": "Your session is no longer valid. Sign in and start the QuickBooks connection again.",
+          "stateReplayed": "This QuickBooks connection request was already used. Start the connect flow again.",
+          "tenantMismatch": "This QuickBooks connection request belongs to another workspace. Sign in to the correct workspace and start again.",
+          "tokenExchangeFailed": "Intuit did not return the expected tokens. Try connecting again.",
+          "userMismatch": "This QuickBooks connection request belongs to another user. Sign in as the user who started it and try again."
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Paste your Intuit app client ID",
@@ -1880,6 +1909,7 @@
         "environmentProduction": "Production",
         "environmentSandbox": "Sandbox",
         "errors": {
+          "automatedSalesTax": "Failed to update Automated Sales Tax mode.",
           "disconnect": "Failed to disconnect QuickBooks.",
           "load": "Failed to load QuickBooks settings.",
           "saveCredentials": "Failed to save QuickBooks credentials."
@@ -1901,9 +1931,21 @@
         "requiredScopes": "Required Scopes",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
-        "tenantOauthDescription": "Paste the Intuit app credentials registered for this tenant, or leave blank to use the application-level QuickBooks app if one is configured. Secret values are never returned to the browser after they are saved.",
-        "tenantOauthTitle": "Tenant-Owned OAuth App",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Which Intuit app this tenant connects through. Secret values are never returned to the browser after they are saved.",
+        "tenantOauthTitle": "Intuit App Credentials",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "Automated Sales Tax mode is off. Alga keeps calculating tax for this company.",
+          "enabledMessage": "QuickBooks will now calculate sales tax on delegated invoices for this company.",
+          "hint": "Turn this on when this QuickBooks company uses Automated Sales Tax, so exported invoices are taxed by Intuit from the customer address and the tax comes back to Alga.",
+          "label": "QuickBooks calculates sales tax"
+        },
+        "credentialSource": {
+          "app": "This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Fill in the fields below only if you want this tenant to use its own Intuit app instead.",
+          "none": "No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.",
+          "tenant": "This tenant connects through its own Intuit app, using the credentials stored below."
+        },
+        "setupGuideLink": "QuickBooks setup guide"
       },
       "sync": {
         "healthCardTitle": "Sync Health",
@@ -1944,9 +1986,219 @@
         "saving": "Saving…",
         "undepositedFunds": "Undeposited Funds (default)",
         "catalogLoadError": "Failed to load QuickBooks sync configuration options."
+      },
+      "itemImport": {
+        "description": "Import your QuickBooks products and services into the Alga service catalog for the connected QuickBooks company. QuickBooks stays the source of truth for names, rates, SKUs, descriptions, and costs; billing method, unit of measure, and service type are set here and owned by Alga afterwards. This step is optional — skip it with Next.",
+        "defaults": {
+          "title": "Defaults for imported items",
+          "serviceType": "Service type (required)",
+          "serviceTypePlaceholder": "Select a service type…",
+          "unitOfMeasure": "Unit of measure",
+          "serviceBillingMethod": "Billing method for services",
+          "productBillingMethod": "Billing method for products",
+          "includeInactive": "Include inactive QuickBooks items (imported as inactive)"
+        },
+        "billingMethods": {
+          "fixed": "Fixed",
+          "hourly": "Hourly",
+          "usage": "Usage"
+        },
+        "actions": {
+          "preview": "Preview import",
+          "previewing": "Loading preview…",
+          "previewRequiresServiceType": "Choose a service type to enable the preview.",
+          "execute": "Run import",
+          "executing": "Importing…"
+        },
+        "preview": {
+          "summary": "Found {{total}} QuickBooks items for the connected company (realm {{realm}}): {{create}} to create, {{update}} to update, {{link}} to link, {{skip}} skipped. Nothing has been written yet.",
+          "groups": {
+            "create": "Will create",
+            "update": "Will update",
+            "link": "Will link (already matching)",
+            "skip": "Skipped"
+          },
+          "qboName": "QuickBooks name: {{name}} (imported as “{{importedAs}}”)"
+        },
+        "flags": {
+          "inactive": "Inactive in QuickBooks",
+          "unmappedTax": "Tax code not mapped",
+          "skuConflict": "SKU conflict",
+          "nameCollision": "Name already mapped",
+          "categorySkipped": "Category (not imported)"
+        },
+        "result": {
+          "summary": "Import complete: {{created}} created, {{updated}} updated, {{linked}} linked, {{skipped}} skipped.",
+          "summaryWithErrors": "Import complete: {{created}} created, {{updated}} updated, {{linked}} linked, {{skipped}} skipped, {{failed}} failed."
+        },
+        "errors": {
+          "previewFailed": "Failed to load the import preview.",
+          "executeFailed": "The import failed."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · ID {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — non-taxable",
+          "taxable": "TAX — taxable (Automated Sales Tax picks the rate)"
+        }
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Alert Automation",
+        "description": "Configure how incoming RMM alerts are processed, suppressed, and turned into tickets.",
+        "loading": "Loading alert automation settings…",
+        "actions": {
+          "addRule": "Add rule",
+          "addWindow": "Add window",
+          "cancel": "Cancel",
+          "confirm": "Confirm",
+          "deleteRule": "Delete rule",
+          "deleteWindow": "Delete window",
+          "editRule": "Edit rule",
+          "editWindow": "Edit window",
+          "moveDown": "Move down",
+          "moveUp": "Move up",
+          "savePolling": "Save polling settings",
+          "saveRule": "Save Rule",
+          "saveWindow": "Save Window",
+          "saving": "Saving…"
+        },
+        "days": {
+          "sun": "Sun",
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat"
+        },
+        "dialogs": {
+          "addRule": "Add alert rule",
+          "addWindow": "Add maintenance window",
+          "editRule": "Edit rule: {{name}}",
+          "editWindow": "Edit window: {{name}}"
+        },
+        "errors": {
+          "loadRules": "Failed to load alert rules",
+          "loadSettings": "Failed to load alert automation settings",
+          "unknown": "Unknown error"
+        },
+        "fields": {
+          "active": "Active",
+          "commaSeparated": "Comma-separated",
+          "description": "Description",
+          "nameRequired": "Name *",
+          "optionalDescription": "Optional description",
+          "ruleName": "Rule name",
+          "windowName": "Window name"
+        },
+        "polling": {
+          "title": "Alert Polling",
+          "description": "Alga periodically fetches active alerts from the RMM to catch anything a webhook missed. Configure the polling interval below.",
+          "enabled": "Polling enabled",
+          "interval": "Interval (minutes, 5–60)",
+          "intervalError": "Interval must be between 5 and 60 minutes.",
+          "lastPolled": "Last polled: {{time}}"
+        },
+        "rules": {
+          "title": "Alert Rules",
+          "description": "Rules are evaluated top-to-bottom. The first matching rule wins. A rule with no conditions is a catch-all.",
+          "empty": "No rules configured. Alerts will be processed without automation.",
+          "actions": "Actions",
+          "activityTypes": "Activity types",
+          "activityTypesPlaceholder": "e.g. disk, cpu (comma-separated)",
+          "alertClasses": "Alert classes",
+          "assignToUser": "Assign to user",
+          "autoResolve": "Auto-resolve ticket when alert clears",
+          "board": "Board",
+          "catchAllHelp": "No conditions set — this rule will match all incoming alerts (catch-all).",
+          "createTicket": "Create ticket",
+          "defaultBoard": "Default board",
+          "defaultClosedStatus": "Default closed status",
+          "descriptionTemplate": "Ticket description template",
+          "descriptionTemplatePlaceholder": "e.g. Alert on {{device}}: {{message}}",
+          "keywords": "Keywords",
+          "mapFromSeverity": "Map from severity",
+          "matchConditions": "Match conditions",
+          "messagePattern": "Message pattern (regex)",
+          "messagePatternPlaceholder": "e.g. (?i)disk.*full",
+          "notifyUsers": "Notify users",
+          "organizationsFilter": "Organizations (filter)",
+          "placeholders": "Placeholders",
+          "priorityOverride": "Priority override",
+          "resetOnClose": "Reset alert when ticket is closed",
+          "resolveStatus": "Resolve status",
+          "severities": "Severities",
+          "sourceTypes": "Source types",
+          "titleTemplate": "Ticket title template",
+          "titleTemplatePlaceholder": "e.g. [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Unassigned"
+        },
+        "schedule": {
+          "crossesMidnight": "End time is before start time — window crosses midnight.",
+          "days": "Days",
+          "endTime": "End time",
+          "endsAt": "Ends at",
+          "none": "No schedule",
+          "oneOff": "One-off",
+          "startTime": "Start time",
+          "startsAt": "Starts at",
+          "timezone": "Timezone",
+          "type": "Schedule type",
+          "weekly": "Weekly {{days}} {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Weekly recurring"
+        },
+        "scope": {
+          "title": "Scope",
+          "allClients": "All clients",
+          "allRmm": "All RMM",
+          "allRmmHelp": "Window suppresses alerts from all RMM integrations.",
+          "clientOptional": "Client (optional — all clients if blank)",
+          "loadingClients": "Loading clients…",
+          "onlyThisIntegration": "Only this integration",
+          "otherIntegration": "Other integration",
+          "thisIntegration": "This integration",
+          "thisIntegrationHelp": "Window only suppresses alerts from this integration."
+        },
+        "severities": {
+          "critical": "Critical",
+          "major": "Major",
+          "moderate": "Moderate",
+          "minor": "Minor",
+          "none": "None"
+        },
+        "summary": {
+          "autoResolve": "Auto-resolve",
+          "createsTicket": "Creates ticket"
+        },
+        "toasts": {
+          "deleteFailed": "Delete failed",
+          "invalidInterval": "Invalid interval",
+          "namedItemSaved": "\"{{name}}\" saved.",
+          "pollingSaved": "Polling settings saved",
+          "reorderFailed": "Reorder failed",
+          "ruleCreated": "Rule created",
+          "ruleDeleted": "Rule deleted",
+          "ruleUpdated": "Rule updated",
+          "saveFailed": "Save failed",
+          "updateFailed": "Update failed",
+          "windowCreated": "Window created",
+          "windowDeleted": "Window deleted",
+          "windowUpdated": "Window updated"
+        },
+        "validation": {
+          "invalidRegex": "Invalid regular expression"
+        },
+        "windows": {
+          "title": "Maintenance Windows",
+          "description": "Alerts arriving during an active window are suppressed and will not create tickets.",
+          "empty": "No maintenance windows configured."
+        }
+      },
       "ninjaOne": {
         "loading": "Loading NinjaOne integration settings...",
         "card": {
@@ -2495,6 +2747,29 @@
           "updateContact": "Failed to update default contact",
           "updateAutoSync": "Failed to update auto-sync setting"
         }
+      },
+      "deviceSync": {
+        "title": "Scheduled device sync",
+        "description": "Refresh this device inventory on a schedule instead of waiting for someone to run a full sync. Every run calls the provider API, and for some providers an incremental run still reads the whole device list, so a shorter interval costs proportionally more API calls.",
+        "enabledLabel": "Sync devices on a schedule",
+        "intervalLabel": "Run every (minutes)",
+        "intervalHelp": "Choose between {{min}} and {{max}} minutes. A shorter interval keeps device data fresher and calls the provider API more often.",
+        "intervalInvalid": "Enter a whole number of minutes between {{min}} and {{max}}.",
+        "lastScheduledRun": "Last scheduled run: {{time}}",
+        "lastScheduledRunNever": "The scheduled sync has not run yet.",
+        "lastAnySync": "Last sync of any kind, including manual full syncs: {{time}}",
+        "lastAnySyncNever": "No device sync of any kind has run yet.",
+        "lastSyncError": "The last sync failed: {{error}}",
+        "actions": {
+          "save": "Save sync schedule",
+          "saving": "Saving..."
+        },
+        "success": {
+          "saved": "Device sync schedule saved. The scheduler applies it within a few minutes."
+        },
+        "errors": {
+          "saveFailed": "Unable to save the device sync schedule."
+        }
       }
     },
     "sso": {
@@ -2604,9 +2879,17 @@
             "description": "Deliver personal Teams activity-feed notifications.",
             "label": "Activity notifications"
           },
+          "channelBot": {
+            "description": "Allow the bot to respond when @mentioned in team channels. Bot replies (including ticket details) are visible to every channel member.",
+            "label": "Channel bot"
+          },
           "groupChatBot": {
             "description": "Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.",
             "label": "Group chat bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Let client contacts who message the bot submit tickets without signing in. Senders are matched to contacts by their verified Microsoft identity; unmatched senders are declined.",
+            "label": "Guest ticket submission"
           },
           "messageExtension": {
             "description": "Enable lookup and message-driven PSA actions.",
@@ -2763,7 +3046,6 @@
           "test": {
             "sent": "Teams test message sent.",
             "failed": "Teams test message failed.",
-            "addonInactive": "The Teams add-on is not active for this tenant.",
             "integrationInactive": "Activate the Teams integration before sending a test message.",
             "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
             "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
@@ -2772,7 +3054,6 @@
             "skipped": "Teams test message was skipped."
           },
           "steps": {
-            "addonEntitlement": "Teams add-on entitlement",
             "integrationStatus": "Teams integration status",
             "capabilities": "Teams capabilities",
             "microsoftProfile": "Microsoft profile readiness",
@@ -2784,7 +3065,6 @@
             "recentDeliveryHealth": "Recent Teams delivery health"
           },
           "recommendation": {
-            "addon": "Enable the Microsoft Teams add-on for this tenant.",
             "activate": "Activate the Teams integration in settings.",
             "capabilities": "Enable personal bot and activity notifications for Teams.",
             "profile": "Select a ready Microsoft profile for Teams.",
@@ -2974,9 +3254,9 @@
               "cause": "The recipient has not signed in to AlgaPSA with Microsoft, so no account mapping exists.",
               "remedy": "Have the user sign in with Microsoft (MSP portal SSO or the Teams tab) so their account is mapped."
             },
-            "addon_inactive": {
-              "cause": "The Teams add-on is expired or absent, so sends are skipped while configuration is preserved.",
-              "remedy": "Renew the Teams add-on for this tenant."
+            "feature_disabled": {
+              "cause": "The Teams feature was disabled for this tenant when the delivery was attempted (pre-1.5).",
+              "remedy": "Teams is now generally available; retry the send."
             },
             "integration_inactive": {
               "cause": "The Teams integration is not active for this tenant.",
@@ -3007,26 +3287,6 @@
               "remedy": "Check the server logs for the delivery error detail and re-run diagnostics."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams add-on",
-          "description": "The Microsoft Teams integration requires the Teams add-on for this tenant.",
-          "includedTitle": "What's included",
-          "feature": {
-            "tab": "Personal tab: open AlgaPSA inside Microsoft Teams.",
-            "bot": "Personal and group-chat bot for tickets, approvals, time, and notes.",
-            "messageExtension": "Message extension and quick actions to act on PSA records from any message.",
-            "meetings": "Teams meetings on appointment approvals with real Outlook/Teams calendar invites.",
-            "recordings": "Automatic capture of meeting recordings and transcripts onto interactions.",
-            "notifications": "Activity-feed and bot-DM notifications for assignments, replies, approvals, and SLA risk."
-          },
-          "cta": "Purchase Teams add-on",
-          "nonBilling": "Contact a billing administrator to purchase the Teams add-on for this tenant."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams add-on expired",
-          "message": "The Microsoft Teams add-on has expired. Your configuration and delivery history are preserved, but Teams notifications are being skipped until the add-on is renewed.",
-          "cta": "Renew Teams add-on"
         },
         "staleManifest": {
           "title": "Teams app package is out of date",
@@ -3200,11 +3460,16 @@
           "accessDenied": "Xero access was denied before the connection completed.",
           "configMissing": "Xero OAuth could not start because the tenant client ID and client secret were not fully configured.",
           "connectionsUnmapped": "Xero returned organisations, but none included the identifiers required to save a connection.",
+          "forbidden": "You no longer have permission to manage accounting connections. Ask an administrator for access.",
           "generic": "Xero returned an OAuth error: {{code}}",
           "invalidState": "The Xero OAuth state was invalid or expired. Start the connect flow again.",
           "missingParams": "The Xero callback was missing required parameters. Start the connect flow again.",
           "noConnections": "Xero did not return any organisations for this login. Check your Xero app and organisation access, then try again.",
-          "oauthFailed": "The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes."
+          "oauthFailed": "The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.",
+          "sessionExpired": "Your session is no longer valid. Sign in and start the Xero connection again.",
+          "stateReplayed": "This Xero connection request was already used. Start the connect flow again.",
+          "tenantMismatch": "This Xero connection request belongs to another workspace. Sign in to the correct workspace and start again.",
+          "userMismatch": "This Xero connection request belongs to another user. Sign in as the user who started it and try again."
         },
         "clientIdLabel": "Xero Client ID",
         "clientIdPlaceholder": "Paste your tenant-owned Xero client ID",
@@ -3244,6 +3509,9 @@
         "noClientSecret": "No client secret is stored for this tenant yet.",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Required Scopes",
+        "scopeOverride": "Deployment override (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "The XERO_OAUTH_SCOPES override was ignored because it contains invalid entries ({{scopes}}). The default scopes are used instead.",
+        "scopeReconnectNote": "These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. You can also remove this app from Connected apps in Xero to revoke earlier grants.",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
         "tenantOauthDescription": "Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.",
@@ -3309,6 +3577,185 @@
         "secretKeyFormat": "Secret key should start with sk_",
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
+    },
+    "telephony": {
+      "status": {
+        "active": "Active",
+        "error": "Error",
+        "disabled": "Disabled",
+        "notConfigured": "Not configured"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Journal Teams Phone calls as interactions once each call ends. Call history, not live screen pop.",
+          "prerequisite": "Configure the Microsoft Teams integration first — Teams Phone reuses its Microsoft profile."
+        }
+      },
+      "subscriptionExpires": "Subscription renews before",
+      "lastNotification": "Last call notification",
+      "autoTicket": "Create a ticket automatically for matched calls",
+      "unknownNumber": "Unknown number",
+      "actions": {
+        "enable": "Enable",
+        "disable": "Disable"
+      },
+      "matchStatus": {
+        "matched": "Matched",
+        "ambiguous": "Ambiguous",
+        "unmatched": "Unmatched",
+        "resolved": "Resolved"
+      },
+      "callsPanel": {
+        "title": "Calls"
+      },
+      "recentCalls": {
+        "title": "Recent calls",
+        "description": "Captured after each call ends — Microsoft Graph publishes call records post-call, so this is history rather than a live feed.",
+        "empty": "No calls captured yet.",
+        "createTicket": "Create ticket",
+        "openTicket": "Open ticket",
+        "linkTicket": "Link to ticket",
+        "selectTicket": "Select a ticket…",
+        "noLinkableTickets": "No open tickets"
+      },
+      "unmatched": {
+        "title": "Calls needing attribution",
+        "description": "Numbers we could not match, and numbers shared by more than one contact. Resolving a call files it on the right timeline.",
+        "empty": "Every captured call is attributed.",
+        "assignTo": "Assign to",
+        "searchPlaceholder": "Search contacts and clients…",
+        "noTargets": "No matching contacts or clients.",
+        "chooseTarget": "Assign to client…"
+      },
+      "forbidden": "You do not have permission to view telephony settings for this tenant.",
+      "paywall": {
+        "title": "Telephony",
+        "description": "Telephony integrations are not available for this tenant.",
+        "unavailable": "Telephony integrations are not available for this tenant.",
+        "ceOnly": "Telephony integrations are only available in Enterprise Edition.",
+        "includedTitle": "What's included",
+        "cta": "Manage integrations",
+        "feature": {
+          "recognition": "Caller recognition against contacts and clients on every captured call.",
+          "history": "Call history on the contact and client timeline as first-class interactions.",
+          "tickets": "Create a ticket from a call, or link the call to a ticket you are already working.",
+          "queue": "A queue for unmatched and ambiguous numbers so no call is attributed by guesswork.",
+          "providers": "Teams Phone today; the same call core is what future providers plug into."
+        }
+      }
+    }
+  },
+  "errors": {
+    "rmm": {
+      "invalidInput": "Check the RMM alert automation settings and try again.",
+      "permissions": {
+        "read": "Insufficient permissions to view RMM alert automation settings.",
+        "update": "Insufficient permissions to manage RMM alert automation settings."
+      },
+      "integrationNotFound": "RMM integration not found.",
+      "nothingToUpdate": "There are no changes to save.",
+      "ruleNotFound": "Alert rule not found.",
+      "windowNotFound": "Maintenance window not found.",
+      "pollIntervalRange": "The polling interval must be between 5 and 60 minutes.",
+      "validation": {
+        "scheduleRequired": "A window needs either a start and end time or a weekly recurrence.",
+        "startBeforeEnd": "The start time must be before the end time.",
+        "timesMustDiffer": "The start and end times must differ. Use multiple days for a window that spans a full day.",
+        "unknownTimezone": "Unknown time zone: {{timezone}}.",
+        "messagePatternInvalid": "The message pattern is not a valid regular expression."
+      }
+    },
+    "mappings": {
+      "viewPermission": "Permission denied: You do not have permission to view accounting mappings.",
+      "managePermission": "Permission denied: You do not have permission to manage accounting mappings.",
+      "loadFailed": "Unable to load mapping data. Please try again.",
+      "duplicate": "A mapping already exists for this entity. Edit the existing mapping instead.",
+      "saveFailed": "Unable to save mapping. Please try again.",
+      "idRequiredForUpdate": "Mapping ID is required for update.",
+      "noUpdateData": "No update data provided.",
+      "updateFailed": "Unable to update mapping. Please try again.",
+      "idRequiredForDelete": "Mapping ID is required for deletion.",
+      "notFound": "Mapping not found. Refresh mappings and try again.",
+      "deleteFailed": "Unable to delete mapping. Please try again."
+    },
+    "qbo": {
+      "enterpriseOnly": "QuickBooks Online integration is only available in Enterprise Edition.",
+      "viewPermission": "Forbidden: You do not have permission to view QuickBooks integration settings.",
+      "accounts": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks accounts.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks accounts.",
+        "loadFailed": "Could not load QuickBooks accounts. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "classes": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks classes.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks classes.",
+        "loadFailed": "Could not load QuickBooks classes. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "departments": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks departments.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks departments.",
+        "loadFailed": "Could not load QuickBooks departments. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "items": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks items.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks items.",
+        "loadFailed": "Could not load QuickBooks items. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "taxCodes": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks tax codes.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks tax codes.",
+        "loadFailed": "Could not load QuickBooks tax codes. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "customers": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks customers.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks customers.",
+        "loadFailed": "Could not load QuickBooks customers. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "paymentTerms": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks payment terms.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks payment terms.",
+        "loadFailed": "Could not load QuickBooks payment terms. Try again, or reconnect QuickBooks if the problem persists."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "Xero integration is only available in Enterprise Edition.",
+      "viewPermission": "Forbidden: You do not have permission to view Xero integration settings.",
+      "organisationDisconnected": "The selected Xero organisation is no longer connected. Reconnect Xero and try again.",
+      "accounts": {
+        "notConnected": "Connect Xero before loading Xero accounts.",
+        "reconnect": "Reconnect Xero before loading Xero accounts.",
+        "loadFailed": "Could not load Xero accounts. Try again, or reconnect Xero if the problem persists.",
+        "verifyFailed": "Could not verify the Xero connection before loading Xero accounts. Try again."
+      },
+      "items": {
+        "notConnected": "Connect Xero before loading Xero items.",
+        "reconnect": "Reconnect Xero before loading Xero items.",
+        "loadFailed": "Could not load Xero items. Try again, or reconnect Xero if the problem persists.",
+        "verifyFailed": "Could not verify the Xero connection before loading Xero items. Try again."
+      },
+      "taxRates": {
+        "notConnected": "Connect Xero before loading Xero tax rates.",
+        "reconnect": "Reconnect Xero before loading Xero tax rates.",
+        "loadFailed": "Could not load Xero tax rates. Try again, or reconnect Xero if the problem persists.",
+        "verifyFailed": "Could not verify the Xero connection before loading Xero tax rates. Try again."
+      },
+      "trackingCategories": {
+        "notConnected": "Connect Xero before loading Xero tracking categories.",
+        "reconnect": "Reconnect Xero before loading Xero tracking categories.",
+        "loadFailed": "Could not load Xero tracking categories. Try again, or reconnect Xero if the problem persists.",
+        "verifyFailed": "Could not verify the Xero connection before loading Xero tracking categories. Try again."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "User does not have permission to manage integration settings",
+      "manageBillingPermission": "User does not have permission to manage billing",
+      "viewBillingPermission": "User does not have permission to view billing settings",
+      "contentRequired": "CSV content is required"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "A contact with this email address already exists in the system without a client assignment",
+      "emailOnAnotherClient": "This email is already associated with another client",
+      "emailOnAnotherClientNamed": "This email is already associated with {{clientName}}"
     }
   }
 }

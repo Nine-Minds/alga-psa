@@ -9,6 +9,7 @@ import type { Locale } from 'date-fns';
 import { useOptionalI18n } from '../lib/i18n/client';
 import { LOCALE_CONFIG } from '../lib/i18n/config';
 import { getDateFnsLocale } from '../lib/dateFnsLocale';
+import { usePickerText } from '../lib/pickerText';
 // Import default styles first, then our overrides
 import 'react-day-picker/dist/style.css';
 import '../styles/calendar.css';
@@ -29,27 +30,57 @@ interface CalendarProps extends Omit<React.ComponentProps<typeof DayPicker>, 'mo
 interface MonthYearSelectProps {
   value: Date;
   onChange: (date: Date) => void;
-  fromDate: Date;
+  minMonth: Date;
+  maxMonth: Date;
   locale: Locale;
 }
 
-const MonthYearSelect = ({ value, onChange, fromDate, locale }: MonthYearSelectProps) => {
+const MonthYearSelect = ({ value, onChange, minMonth, maxMonth, locale }: MonthYearSelectProps) => {
+  const t = usePickerText();
   const [isOpen, setIsOpen] = React.useState(false);
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
-  
-  // Generate all available month/year combinations
-  const options = React.useMemo((): Date[] => {
-    const start = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
-    const options: Date[] = [];
-    
-    // Generate options for the next 10 years
-    for (let i = 0; i < 120; i++) {
-      options.push(new Date(start));
-      start.setMonth(start.getMonth() + 1);
-    }
-    
-    return options;
-  }, [fromDate]);
+  const [panelYear, setPanelYear] = React.useState(value.getFullYear());
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // A single scrolling list of months could only ever run forwards, so a past
+  // month was unreachable. A year stepper plus a month grid goes both ways.
+  const openPanel = () => {
+    setPanelYear(value.getFullYear());
+    setIsOpen(true);
+  };
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      // Close only this panel, not the surrounding popover/dialog.
+      event.stopPropagation();
+      setIsOpen(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [isOpen]);
+
+  const months = React.useMemo(
+    () => Array.from({ length: 12 }, (_, month) => new Date(panelYear, month, 1)),
+    [panelYear]
+  );
+
+  const isMonthAllowed = (month: Date) =>
+    month.getTime() >= minMonth.getTime() && month.getTime() <= maxMonth.getTime();
+
+  const canGoToPreviousYear = panelYear - 1 >= minMonth.getFullYear();
+  const canGoToNextYear = panelYear + 1 <= maxMonth.getFullYear();
 
   const handleSelect = (date: Date) => {
     onChange(date);
@@ -57,41 +88,59 @@ const MonthYearSelect = ({ value, onChange, fromDate, locale }: MonthYearSelectP
   };
 
   return (
-    <div className="calendar-month-year-select">
+    <div className="calendar-month-year-select" ref={containerRef}>
       <button
-        ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => (isOpen ? setIsOpen(false) : openPanel())}
         className="calendar-month-year-button"
-        aria-label="Select month and year"
+        aria-label={t('datePicker.monthAndYear', 'Select month and year')}
         aria-expanded={isOpen}
+        type="button"
       >
         {format(value, 'MMMM yyyy', { locale })}
         <ChevronDown className="h-4 w-4 opacity-50" />
       </button>
-      
+
       {isOpen && (
-        <div 
-          className="calendar-month-year-dropdown"
-          onWheel={(e) => {
-            e.currentTarget.scrollBy({
-              top: e.deltaY,
-              behavior: 'smooth'
-            });
-            e.stopPropagation();
-          }}
-        >
-          {options.map((date) => (
+        <div className="calendar-month-year-dropdown">
+          <div className="calendar-month-year-yearnav">
             <button
-              key={date.toISOString()}
-              onClick={() => handleSelect(date)}
-              className={cn(
-                'calendar-month-year-option',
-                date.getMonth() === value.getMonth() && date.getFullYear() === value.getFullYear() && 'selected'
-              )}
+              onClick={() => setPanelYear((year) => year - 1)}
+              className="rdp-nav_button"
+              aria-label={t('datePicker.previousYear', 'Previous year')}
+              disabled={!canGoToPreviousYear}
+              type="button"
             >
-              {format(date, 'MMMM yyyy', { locale })}
+              <ChevronLeft className="h-4 w-4" />
             </button>
-          ))}
+            <span className="calendar-month-year-yearlabel">{panelYear}</span>
+            <button
+              onClick={() => setPanelYear((year) => year + 1)}
+              className="rdp-nav_button"
+              aria-label={t('datePicker.nextYear', 'Next year')}
+              disabled={!canGoToNextYear}
+              type="button"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="calendar-month-year-grid">
+            {months.map((month) => (
+              <button
+                key={month.toISOString()}
+                onClick={() => handleSelect(month)}
+                disabled={!isMonthAllowed(month)}
+                type="button"
+                className={cn(
+                  'calendar-month-year-option',
+                  month.getMonth() === value.getMonth() &&
+                    month.getFullYear() === value.getFullYear() &&
+                    'selected'
+                )}
+              >
+                {format(month, 'LLL', { locale })}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -106,13 +155,38 @@ function Calendar({
   onSelect,
   onClear,
   mode = 'single',
+  month,
   ...props
 }: CalendarProps) {
+  const t = usePickerText();
   const i18n = useOptionalI18n();
   const dateFnsLocale = getDateFnsLocale(i18n?.locale ?? LOCALE_CONFIG.defaultLocale);
-  const [monthYear, setMonthYear] = React.useState<Date>(selected || new Date());
-  const fromDate = props.fromDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const [monthYear, setMonthYear] = React.useState<Date>(month || selected || new Date());
+
+  // `month` steers the view from outside (the field family moves it as the user
+  // types) without taking navigation away from the caption's own controls.
+  const monthKey = month ? `${month.getFullYear()}-${month.getMonth()}` : null;
+  React.useEffect(() => {
+    if (!month) return;
+    setMonthYear(new Date(month.getFullYear(), month.getMonth(), 1));
+    // month is re-derived from the same key on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthKey]);
   const today = React.useMemo(() => normalizeDate(new Date()), []);
+  const minMonth = React.useMemo(
+    () =>
+      props.fromDate
+        ? new Date(props.fromDate.getFullYear(), props.fromDate.getMonth(), 1)
+        : new Date(today.getFullYear() - 10, 0, 1),
+    [props.fromDate, today]
+  );
+  const maxMonth = React.useMemo(
+    () =>
+      props.toDate
+        ? new Date(props.toDate.getFullYear(), props.toDate.getMonth(), 1)
+        : new Date(today.getFullYear() + 10, 11, 1),
+    [props.toDate, today]
+  );
   const normalizedFromDate = React.useMemo(
     () => (props.fromDate ? normalizeDate(props.fromDate) : undefined),
     [props.fromDate]
@@ -143,15 +217,12 @@ function Calendar({
     onSelect?.(today);
   };
 
-  const handlePreviousMonth = () => {
-    const newDate = new Date(monthYear.getFullYear(), monthYear.getMonth() - 1, 1);
-    setMonthYear(newDate);
-  };
+  const previousMonth = new Date(monthYear.getFullYear(), monthYear.getMonth() - 1, 1);
+  const nextMonth = new Date(monthYear.getFullYear(), monthYear.getMonth() + 1, 1);
 
-  const handleNextMonth = () => {
-    const newDate = new Date(monthYear.getFullYear(), monthYear.getMonth() + 1, 1);
-    setMonthYear(newDate);
-  };
+  const handlePreviousMonth = () => setMonthYear(previousMonth);
+
+  const handleNextMonth = () => setMonthYear(nextMonth);
 
   return (
     <div className="calendar-container">
@@ -159,14 +230,16 @@ function Calendar({
         <MonthYearSelect
           value={monthYear}
           onChange={setMonthYear}
-          fromDate={fromDate}
+          minMonth={minMonth}
+          maxMonth={maxMonth}
           locale={dateFnsLocale}
         />
         <div className="rdp-nav">
           <button
             onClick={handlePreviousMonth}
             className="rdp-nav_button"
-            aria-label="Previous month"
+            aria-label={t('datePicker.previousMonth', 'Previous month')}
+            disabled={previousMonth.getTime() < minMonth.getTime()}
             type="button"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -174,7 +247,8 @@ function Calendar({
           <button
             onClick={handleNextMonth}
             className="rdp-nav_button"
-            aria-label="Next month"
+            aria-label={t('datePicker.nextMonth', 'Next month')}
+            disabled={nextMonth.getTime() > maxMonth.getTime()}
             type="button"
           >
             <ChevronRight className="h-4 w-4" />
@@ -188,7 +262,9 @@ function Calendar({
         className={cn('rdp', className)}
         classNames={{
           ...classNames,
-          caption: 'rdp-caption-hidden',
+          // v9 renamed `caption`; without the current key the month title
+          // rendered a second time under our own caption row.
+          month_caption: 'rdp-caption-hidden',
           nav: 'rdp-nav-hidden'
         }}
         mode="single"
@@ -204,22 +280,22 @@ function Calendar({
               <button
                 onClick={onClear}
                 className="calendar-today-button"
-                aria-label="Clear date"
+                aria-label={t('datePicker.clear', 'Clear')}
                 type="button"
               >
                 <X className="w-4 h-4" />
-                Clear
+                {t('datePicker.clear', 'Clear')}
               </button>
             )}
             <button
               onClick={handleTodayClick}
               className="calendar-today-button"
-              aria-label="Select today"
+              aria-label={t('datePicker.selectToday', 'Select today')}
               type="button"
               disabled={!isTodaySelectable}
             >
               <ChevronsLeft className="w-4 h-4" />
-              Today
+              {t('datePicker.today', 'Today')}
             </button>
           </div>
         }

@@ -628,5 +628,35 @@
       "error": "Errore",
       "metadata": "Metadati"
     }
+  },
+  "gmailDiagnostics": {
+    "title": "Diagnostica di recapito Gmail",
+    "description": "Verifica l'argomento Pub/Sub, le sue autorizzazioni, l'endpoint push e il relativo destinatario, il watch di Gmail e quando è arrivata l'ultima notifica push.",
+    "labels": {
+      "provider": "Fornitore:",
+      "mailbox": "Casella di posta:",
+      "overall": "Generale:",
+      "recommendations": "Raccomandazioni",
+      "error": "Errore"
+    },
+    "audienceMismatch": {
+      "title": "Il destinatario del push non corrisponde a questa istanza",
+      "expected": "Previsto:",
+      "actual": "Google sta usando:"
+    },
+    "actions": {
+      "copySupportBundle": "Copia pacchetto di supporto",
+      "copied": "Copiato"
+    },
+    "states": {
+      "running": "Diagnostica in esecuzione...",
+      "diagnosticsFailed": "Diagnostica non riuscita"
+    },
+    "statuses": {
+      "pass": "Superato",
+      "warn": "Avviso",
+      "fail": "Non riuscito",
+      "skip": "Saltato"
+    }
   }
 }

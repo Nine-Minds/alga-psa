@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "Client Contract ID: {{id}}",
+      "creditDrawdownOptOut": "Exclude from credit draw-down",
       "empty": "This contract is not assigned to a client yet.",
       "endDate": "End Date",
       "endDateLabel": "Assignment end date",
@@ -470,6 +471,12 @@
       "createCustom": "Create Custom",
       "expandLine": "Expand contract line"
     },
+    "billingProfile": {
+      "hint": "Charges from this line are billed to this profile, overriding the contract.",
+      "label": "Billing profile",
+      "none": "Use the contract's profile",
+      "updated": "Billing profile updated"
+    },
     "bucket": {
       "billingPeriod": "Billing Period: {{period}}",
       "defaultUnit": "unit",
@@ -641,7 +648,6 @@
       "title": "Time Billing Configuration"
     },
     "loading": "Loading contract line presets...",
-    "selectPresetsTitle": "Select Contract Line Presets to Add",
     "selection": {
       "deselectPreset": "Deselect preset",
       "selectPreset": "Select preset",
@@ -2171,8 +2177,8 @@
     },
     "runBar": {
       "compareToggle": "Show changes from current contract",
-      "horizonOption": "{{count}} billing periods",
-      "lastRun": "Simulation current · {{count}} billing periods",
+      "horizonOption": "{{count}} client billing periods",
+      "lastRun": "Simulation current · {{count}} client billing periods",
       "neverRun": "Not simulated yet",
       "simulate": "Simulate",
       "simulating": "Simulating…",
@@ -2322,6 +2328,108 @@
     "unavailable": {
       "description": "The contract simulator is available in AlgaPSA Pro.",
       "title": "Pro Feature"
+    }
+  },
+  "bucketPools": {
+    "heading": "Bucket Pools",
+    "actions": {
+      "addPool": "Add Pool",
+      "create": "Create pool",
+      "cancel": "Cancel",
+      "remove": "Remove",
+      "applyRule": "Apply after-hours rule"
+    },
+    "loading": "Loading bucket pools…",
+    "empty": "No bucket pools on this line. Add a pool to include prepaid hours.",
+    "labels": {
+      "catchAll": "All services on this line",
+      "pool": "Bucket pool",
+      "scopeCatchAll": "Covers all services on the line (members are multiplier overrides)",
+      "scopeMembers": "Member services only",
+      "totalHours": "Total hours",
+      "overageRate": "Overage rate per hour",
+      "rollover": "Allow rollover",
+      "afterHours": "After-hours burn multiplier",
+      "afterHoursMultiplier": "Multiplier (e.g. 1.5)",
+      "schedule": "Business hours schedule",
+      "default": "default",
+      "members": "Member services",
+      "multiplier": "×",
+      "noMembers": "No member services attached.",
+      "noServicesOnLine": "Add a service to this contract line before creating a bucket pool.",
+      "selectService": "Select a service…",
+      "poolName": "Pool name (optional)",
+      "poolNamePlaceholder": "e.g. Standard hours",
+      "coversAll": "Covers all services on this line",
+      "burnMultiplier": "Burn multiplier"
+    },
+    "badges": {
+      "dormant": "no services attached — nothing burns from this pool"
+    },
+    "errors": {
+      "catchAllExists": "This line already has a catch-all pool.",
+      "invalidAfterHoursRule": "Enter a valid after-hours rule.",
+      "scheduleLoadFailed": "Unable to load business hours schedules.",
+      "scheduleRequired": "Select a business hours schedule before applying this rule."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Bucket pools for this line",
+    "empty": "No bucket pools on this line yet. Add a pool to include prepaid hours."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Permission denied: Cannot modify contract lines",
+      "deleteContracts": "Permission denied: Cannot delete billing contracts"
+    },
+    "contract": {
+      "hasInvoices": "This contract has associated invoices and cannot be deleted.",
+      "invalidValue": "One of the selected contract values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected contract, client, or related record no longer exists. Please refresh and try again.",
+      "conflict": "This contract change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the contract values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required contract field.",
+      "missingFieldNamed": "Missing required contract field: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Permission denied: Cannot create billing templates",
+        "createContracts": "Permission denied: Cannot create billing contracts",
+        "listTemplates": "Permission denied: Cannot list contract templates",
+        "viewSnapshot": "Permission denied: Cannot view contract template snapshot",
+        "resumeContracts": "Permission denied: Cannot resume billing contracts"
+      },
+      "templateNotFound": "Template not found",
+      "contractNotFound": "Contract not found",
+      "notDraft": "Contract is not a draft",
+      "missingClient": "Draft contract is missing client assignment",
+      "invalidStartDate": "Draft contract has an invalid start date",
+      "recordInvalid": "One of the selected contract wizard records is no longer valid. Please refresh and try again.",
+      "duplicate": "A matching contract wizard record already exists."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "End date must be after effective date",
+      "overlaps": "This schedule overlaps with an existing pricing schedule",
+      "wouldOverlap": "This schedule would overlap with an existing pricing schedule",
+      "notFound": "Pricing schedule not found"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Permission denied: Cannot read renewals queue",
+        "update": "Permission denied: Cannot update renewals queue",
+        "ownerOtherTenant": "Permission denied: Cannot assign renewals to a user from another tenant.",
+        "contractOtherTenant": "Permission denied: Cannot complete renewal with a contract from another tenant."
+      },
+      "clientContractIdRequired": "Client contract id is required.",
+      "workItemNotFound": "Renewal work item not found. It may have been updated or deleted. Please refresh and try again.",
+      "snoozeDateRequired": "Choose a snooze date before saving.",
+      "snoozeDateInvalid": "Choose a valid snooze date.",
+      "snoozeDateFuture": "Choose a future snooze date.",
+      "ownerInvalid": "Choose a valid renewal owner.",
+      "ownerUnavailable": "The selected renewal owner is no longer available. Please refresh and try again.",
+      "activatedContractIdRequired": "Activated renewal contract id is required.",
+      "contractNotActive": "The activated renewal contract is no longer active. Please refresh and try again.",
+      "manualRetryDueOnly": "Manual retry is only available for due renewal cycles."
     }
   }
 }

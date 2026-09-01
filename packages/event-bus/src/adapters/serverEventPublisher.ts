@@ -4,9 +4,12 @@
  */
 
 import type { IEventPublisher } from '@alga-psa/types';
+import { registerAfterCommit } from '@alga-psa/db';
 import { publishWorkflowEvent } from '../publishers';
 
 export class ServerEventPublisher implements IEventPublisher {
+  constructor(private readonly trx?: Parameters<typeof registerAfterCommit>[0]) {}
+
   async publishTicketCreated(data: {
     tenantId: string;
     ticketId: string;
@@ -75,6 +78,14 @@ export class ServerEventPublisher implements IEventPublisher {
   }): Promise<void> {
     await this.safePublishWorkflowEvent('TICKET_ASSIGNED', data.tenantId, data.assignedByUserId ?? data.userId, {
       ticketId: data.ticketId,
+      // The recipient must ride in payload.userId — that is the single field the
+      // internal-notification subscriber reads for the assignee (handleTicketAssigned
+      // destructures event.payload.userId). Emitting only assignedToUserId (the v2
+      // workflow field) loses the recipient through union validation, so the
+      // notification is either created for the wrong user or stamped the subtype
+      // default. Every other TICKET_ASSIGNED publisher carries userId; this one
+      // must too.
+      userId: data.userId,
       assignedToUserId: data.userId,
       assignedByUserId: data.assignedByUserId,
       assignedAt: new Date().toISOString(),
@@ -87,18 +98,31 @@ export class ServerEventPublisher implements IEventPublisher {
     actorUserId: string | undefined,
     payload: Record<string, unknown>
   ): Promise<void> {
-    try {
-      await publishWorkflowEvent({
-        eventType: eventType as any,
-        payload,
-        ctx: {
-          tenantId,
-          actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
-        }
-      });
-    } catch (error) {
-      console.error(`Failed to publish ${eventType} event:`, error);
-      // Don't throw - event publishing failure shouldn't break ticket operations
+    const publish = async () => {
+      try {
+        await publishWorkflowEvent({
+          eventType: eventType as any,
+          payload,
+          ctx: {
+            tenantId,
+            actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
+          }
+        });
+      } catch (error) {
+        console.error(`Failed to publish ${eventType} event:`, error);
+        // Don't throw - event publishing failure shouldn't break ticket operations
+      }
+    };
+
+    if (this.trx) {
+      registerAfterCommit(
+        this.trx,
+        publish,
+        `${eventType} ticket=${String(payload.ticketId ?? 'unknown')}`
+      );
+      return;
     }
+
+    await publish();
   }
 }

@@ -16,7 +16,8 @@ import {
   createTestService,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  seedBillingChargeSources
 } from '../../../../../test-utils/billingTestHelpers';
 import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
 
@@ -153,6 +154,10 @@ async function generateInvoiceFromCharges(
     totalAmount,
     finalAmount: totalAmount
   };
+
+  // persistInvoiceCharges marks each usage charge's source usage_tracking row
+  // invoiced and throws when there is none behind a fabricated usageId.
+  await seedBillingChargeSources(context, charges as Array<Record<string, unknown>>, { clientId });
 
   const createdInvoice = await createInvoiceFromBillingResult(
     billingResult,
@@ -352,6 +357,8 @@ describe('Negative Invoice Credit Tests', () => {
         finalAmount: -12500
       };
 
+      await seedBillingChargeSources(context, charges as Array<Record<string, unknown>>, { clientId: client_id });
+
       const createdInvoice = await createInvoiceFromBillingResult(
         billingResult,
         client_id,
@@ -426,28 +433,32 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate,
       }, 'billing_cycle_id');
 
+      const recurringCreditCharges: IBillingCharge[] = [
+        {
+          tenant: context.tenantId,
+          type: 'usage',
+          serviceId,
+          serviceName: 'Recurring Credit Service',
+          quantity: 1,
+          rate: -4200,
+          total: -4200,
+          tax_amount: 0,
+          tax_rate: 0,
+          tax_region: 'US-NY',
+          is_taxable: false,
+          usageId: uuidv4(),
+          servicePeriodStart: startDate,
+          servicePeriodEnd: endDate,
+          billingTiming: 'arrears',
+        } as IBillingCharge,
+      ];
+
+      await seedBillingChargeSources(context, recurringCreditCharges as Array<Record<string, unknown>>, { clientId });
+
       const createdInvoice = await createInvoiceFromBillingResult(
         {
           tenant: context.tenantId,
-          charges: [
-            {
-              tenant: context.tenantId,
-              type: 'usage',
-              serviceId,
-              serviceName: 'Recurring Credit Service',
-              quantity: 1,
-              rate: -4200,
-              total: -4200,
-              tax_amount: 0,
-              tax_rate: 0,
-              tax_region: 'US-NY',
-              is_taxable: false,
-              usageId: uuidv4(),
-              servicePeriodStart: startDate,
-              servicePeriodEnd: endDate,
-              billingTiming: 'arrears',
-            },
-          ],
+          charges: recurringCreditCharges,
           discounts: [],
           adjustments: [],
           totalAmount: -4200,
@@ -472,32 +483,28 @@ describe('Negative Invoice Credit Tests', () => {
       const credits = await listClientCredits(clientId, false, 1, 20);
       const creditDetails = await getCreditDetails(creditRow.credit_id);
 
-      expect(credits.credits).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            credit_id: creditRow.credit_id,
-            invoice_id: createdInvoice.invoice_id,
-            invoice_date_basis: 'canonical_recurring_service_period',
-            invoice_service_period_start: startDate,
-            invoice_service_period_end: endDate,
-          }),
-        ])
+      // The service-period columns round-trip through the database, which
+      // renders milliseconds ("…T00:00:00.000Z") that Temporal's toString()
+      // omits ("…T00:00:00Z"). Compare the instants, not the strings.
+      const asInstant = (value: unknown) => new Date(String(value)).toISOString();
+
+      const listedCredit = credits.credits.find(
+        (credit: Record<string, unknown>) => credit.credit_id === creditRow.credit_id
       );
-      expect(creditDetails).toMatchObject({
-        invoice_date_basis: 'canonical_recurring_service_period',
-        invoice_service_period_start: startDate,
-        invoice_service_period_end: endDate,
-      });
-      expect(creditDetails.invoice).toMatchObject({
-        invoice_id: createdInvoice.invoice_id,
-        invoice_charges: [
-          expect.objectContaining({
-            service_period_start: startDate,
-            service_period_end: endDate,
-            billing_timing: 'arrears',
-          }),
-        ],
-      });
+      expect(listedCredit).toBeTruthy();
+      expect(listedCredit!.invoice_id).toBe(createdInvoice.invoice_id);
+      expect(listedCredit!.invoice_date_basis).toBe('canonical_recurring_service_period');
+      expect(asInstant(listedCredit!.invoice_service_period_start)).toBe(asInstant(startDate));
+      expect(asInstant(listedCredit!.invoice_service_period_end)).toBe(asInstant(endDate));
+      expect(creditDetails.invoice_date_basis).toBe('canonical_recurring_service_period');
+      expect(asInstant(creditDetails.invoice_service_period_start)).toBe(asInstant(startDate));
+      expect(asInstant(creditDetails.invoice_service_period_end)).toBe(asInstant(endDate));
+
+      expect(creditDetails.invoice!.invoice_id).toBe(createdInvoice.invoice_id);
+      const detailCharge = creditDetails.invoice!.invoice_charges![0] as Record<string, unknown>;
+      expect(asInstant(detailCharge.service_period_start)).toBe(asInstant(startDate));
+      expect(asInstant(detailCharge.service_period_end)).toBe(asInstant(endDate));
+      expect(detailCharge.billing_timing).toBe('arrears');
     });
   });
 
@@ -766,7 +773,11 @@ describe('Negative Invoice Credit Tests', () => {
       
       expect(creditTransaction).toBeTruthy();
       expect(parseInt(creditTransaction.amount)).toBe(12500);
-      expect(parseInt(creditTransaction.balance_after)).toBe(12500);
+      // balance_after is a running ledger across every transaction type, not a
+      // credit-only total: the invoice_generated row for this -$125.00 invoice
+      // already moved it to -12500, so issuing the credit brings it back to 0.
+      // The spendable figure is getClientCredit above.
+      expect(parseInt(creditTransaction.balance_after)).toBe(0);
 
       // Now create a positive invoice that will use the credit
 
@@ -831,7 +842,11 @@ describe('Negative Invoice Credit Tests', () => {
 
       // Credit should be fully applied
       expect(Number(finalPositiveInvoice.credit_applied)).toBe(11000); // $110.00 credit applied
-      expect(parseInt(finalPositiveInvoice.total_amount)).toBe(0); // $0.00 remaining total
+      // Invoice totals are immutable after finalization; the balance due is
+      // derived as total_amount - credit_applied.
+      expect(
+        parseInt(finalPositiveInvoice.total_amount) - Number(finalPositiveInvoice.credit_applied)
+      ).toBe(0);
 
       // 23. Verify the credit balance is reduced
       const finalCredit = await ClientContractLine.getClientCredit(client_id);
@@ -978,7 +993,9 @@ describe('Negative Invoice Credit Tests', () => {
 
       // Credit should be partially applied
       expect(Number(finalPositiveInvoice.credit_applied)).toBe(5000); // $50.00 credit applied (all available)
-      expect(parseInt(finalPositiveInvoice.total_amount)).toBe(14250); // $142.50 remaining total ($192.50 - $50.00)
+      expect(
+        parseInt(finalPositiveInvoice.total_amount) - Number(finalPositiveInvoice.credit_applied)
+      ).toBe(14250); // $142.50 remaining ($192.50 - $50.00)
 
       // 22. Verify the credit balance is now zero
       const finalCredit = await ClientContractLine.getClientCredit(client_id);
@@ -1125,7 +1142,9 @@ describe('Negative Invoice Credit Tests', () => {
 
       // Credit should fully cover the invoice
       expect(Number(finalPositiveInvoice.credit_applied)).toBe(5500); // $55.00 credit applied
-      expect(parseInt(finalPositiveInvoice.total_amount)).toBe(0); // $0.00 remaining total
+      expect(
+        parseInt(finalPositiveInvoice.total_amount) - Number(finalPositiveInvoice.credit_applied)
+      ).toBe(0);
 
       // 22. Verify the credit balance is reduced but still has remaining credit
       const finalCredit = await ClientContractLine.getClientCredit(client_id);

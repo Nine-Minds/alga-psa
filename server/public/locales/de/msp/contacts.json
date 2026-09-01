@@ -333,6 +333,7 @@
     },
     "fields": {
       "phoneNumber": "Telefonnummer",
+      "extension": "Durchwahl",
       "phoneType": "Telefontyp",
       "customPhoneType": "Benutzerdefinierter Telefontyp",
       "customTypePlaceholder": "Benutzerdefinierten Telefontyp auswählen oder eingeben",
@@ -344,6 +345,7 @@
       "selectExactlyOneDefault": "Genau eine Standardtelefonnummer auswählen.",
       "phoneRow": "Telefon {{number}}",
       "enterCompletePhoneNumber": "Geben Sie eine vollständige Telefonnummer ein.",
+      "includeCountryCallingCode": "Geben Sie die Landesvorwahl an, beginnend mit +.",
       "enterCustomPhoneType": "Geben Sie einen benutzerdefinierten Telefontyp ein.",
       "customTypesUnique": "Bezeichnungen benutzerdefinierter Telefontypen müssen eindeutig sein."
     },
@@ -703,6 +705,29 @@
       "saved": "Kontakt aktualisiert",
       "saveFailed": "Kontakt konnte nicht aktualisiert werden",
       "saveFailedDescription": "Der Kontakt konnte nicht aktualisiert werden. Versuchen Sie es erneut."
+    }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Kontakt nicht gefunden",
+      "otherClient": "Berechtigung verweigert: Kontakte eines anderen Kunden können nicht verwaltet werden",
+      "notAssociatedWithClient": "Der Kontakt ist keinem Kunden zugeordnet",
+      "emailExists": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits im System",
+      "fieldRequired": "{{field}} ist erforderlich",
+      "clientInvalid": "Der ausgewählte Kunde ist nicht mehr gültig",
+      "duplicate": "Ein Kontakt mit diesen Angaben existiert bereits.",
+      "destinationInvalid": "Der ausgewählte Kunde oder das eingehende Ticketziel ist nicht mehr gültig",
+      "invalidDataRefresh": "Ungültige Kontaktdaten übermittelt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidDataFields": "Ungültige Kontaktdaten übermittelt. Bitte prüfen Sie alle Felder und versuchen Sie es erneut.",
+      "bulkEmailExists": "Ein oder mehrere Kontakte haben bereits diese E-Mail-Adresse",
+      "invalidReference": "Ungültiger Verweis in den Aktualisierungsdaten",
+      "visibilityMissingField": "Erforderliches Feld der Sichtbarkeitsgruppe fehlt.",
+      "visibilityMissingFieldNamed": "Erforderliches Feld der Sichtbarkeitsgruppe fehlt: {{field}}.",
+      "visibilityReferenceInvalid": "Der ausgewählte Kontakt, die Sichtbarkeitsgruppe oder das Board ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "visibilityDuplicate": "Eine Sichtbarkeitsgruppe mit diesen Angaben existiert für diesen Kunden bereits.",
+      "visibilityInvalidData": "Ungültige Daten der Sichtbarkeitsgruppe übermittelt. Bitte prüfen Sie die Gruppenangaben und die ausgewählten Boards.",
+      "groupNameRequired": "Gruppenname ist erforderlich",
+      "readPermission": "Berechtigung verweigert: Kontakte können nicht gelesen werden"
     }
   }
 }

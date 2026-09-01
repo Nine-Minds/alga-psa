@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { pseudoPattern } from '../../../../../tools/i18n/lib/pseudo-locale.mjs';
 import {
   I18N_CONFIG as UI_I18N_CONFIG,
   LOCALE_CONFIG as UI_LOCALE_CONFIG,
@@ -112,8 +113,8 @@ const getValueAtPath = (obj: any, keyPath: string): any => {
   return current;
 };
 
-const runPseudoLocale = (_locale: string, _fill: string) => {
-  // generate-pseudo-locales.cjs regenerates both pseudo-locales (xx -> 11111, yy -> 55555).
+const runPseudoLocale = () => {
+  // generate-pseudo-locales.cjs regenerates both pseudo-locales (xx and yy).
   execFileSync(process.execPath, [
     path.join(repoRoot, 'scripts/generate-pseudo-locales.cjs'),
   ], {
@@ -123,7 +124,6 @@ const runPseudoLocale = (_locale: string, _fill: string) => {
 };
 
 const pseudoLocale = 'xx';
-const pseudoFill = '11111';
 const pseudoLocaleRoot = path.join(localesRoot, pseudoLocale);
 const englishRoot = path.join(localesRoot, 'en');
 
@@ -211,7 +211,11 @@ describe('MSP i18n Phase 0 - wrapper/provider wiring', () => {
     expect(src).toContain('namespaces?: string[]');
     expect(src).toContain('i18next.loadNamespaces');
     expect(src).toContain('i18next.hasResourceBundle');
-    expect(src).toMatch(/\[isInitialized, locale, namespaces\]/);
+    // Namespaces are loaded as part of initialization, not in a follow-up
+    // effect gated on isInitialized — that gap let children render and call
+    // t() against a namespace still in flight.
+    expect(src).toContain('await ensureNamespacesLoaded(resolvedLocale, namespaces)');
+    expect(src).not.toMatch(/\[isInitialized, locale, namespaces\]/);
   });
 
   it('T020-T022: I18nWrapper uses usePathname and passes namespaces', () => {
@@ -225,7 +229,7 @@ describe('MSP i18n Phase 0 - wrapper/provider wiring', () => {
 
 describe('MSP i18n Phase 0 - pseudo locale generator', () => {
   beforeAll(() => {
-    runPseudoLocale(pseudoLocale, pseudoFill);
+    runPseudoLocale();
   });
 
   // No cleanup — pseudo-locales are ephemeral and other test suites read them.
@@ -246,7 +250,7 @@ describe('MSP i18n Phase 0 - pseudo locale generator', () => {
     const leafStrings = collectLeafStrings(common);
     expect(leafStrings.length).toBeGreaterThan(0);
     for (const value of leafStrings) {
-      expect(value).toContain(pseudoFill);
+      expect(value).toMatch(pseudoPattern(pseudoLocale));
     }
 
     const originalCommon = readJson('server/public/locales/en/common.json');

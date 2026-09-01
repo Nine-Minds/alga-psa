@@ -1912,7 +1912,7 @@ const ContractTemplateDetail: React.FC = () => {
                                 )}
                                 {service.bucket_overlay && (
                                   <span className="flex items-center gap-1">
-                                    <Package className="h-3 w-3 text-purple-500" />
+                                    <Package className="h-3 w-3 text-[rgb(var(--color-primary-500))]" />
                                     {t(
                                       "templateDetail.composition.bucketSummary",
                                       {

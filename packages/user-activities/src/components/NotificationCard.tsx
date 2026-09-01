@@ -3,7 +3,8 @@ import React from 'react';
 import {
   Activity,
   NotificationActivity,
-  ActivityType
+  ActivityType,
+  ActivityPriority
 } from "@alga-psa/types";
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 import { Badge } from "@alga-psa/ui/components/Badge";
@@ -51,10 +52,31 @@ const getBorderColor = (type: string) => {
   }
 };
 
+// Per-row priority indicator dot colour (task 29.8.46). High uses a muted
+// "attention red" (desaturated, not emergency); normal/low stay neutral.
+const PRIORITY_DOT_COLOR: Record<string, string> = {
+  [ActivityPriority.HIGH]: '#b45454',
+  [ActivityPriority.MEDIUM]: '#9ca3af',
+  [ActivityPriority.LOW]: '#cbd5e1',
+};
+
+// Map the activity priority onto the i18n key stem used for the row label.
+const priorityLabelKey = (priority: ActivityPriority | undefined): 'high' | 'normal' | 'low' => {
+  switch (priority) {
+    case ActivityPriority.HIGH:
+      return 'high';
+    case ActivityPriority.LOW:
+      return 'low';
+    default:
+      return 'normal';
+  }
+};
+
 export function NotificationCard({ activity, onViewDetails, onActionComplete }: NotificationCardProps) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const notification = activity as NotificationActivity;
+  const priority = notification.priority as ActivityPriority | undefined;
 
   const handleClick = async () => {
     // Mark as read if unread
@@ -76,9 +98,28 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
     openActivityDrawer(activity);
   };
 
+  // ~5px corners, no colored left rail, carried by a soft shadow with no border.
+  // High-tier cards add a muted attention-red ring to the shadow; low-tier cards
+  // render dimmed (task 29.8.46).
+  const isHigh = priority === ActivityPriority.HIGH;
+  const isLow = priority === ActivityPriority.LOW;
+
+  const cardClassName = [
+    'p-4 transition-shadow cursor-pointer',
+    !notification.isRead ? 'bg-primary-50' : 'bg-white',
+    isHigh ? 'shadow-md hover:shadow-lg' : 'shadow-sm hover:shadow-md',
+    isLow ? 'opacity-60 hover:opacity-100' : '',
+  ].filter(Boolean).join(' ');
+
+  const cardStyle: React.CSSProperties = {
+    borderRadius: '5px',
+    ...(isHigh ? { boxShadow: '0 1px 3px rgba(0,0,0,0.10), 0 0 0 1px rgba(180,84,84,0.45)' } : {}),
+  };
+
   return (
     <div
-      className={`p-4 border-l-4 ${getBorderColor(notification.status)} ${!notification.isRead ? 'bg-primary-50' : 'bg-white'} rounded-md shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
+      className={cardClassName}
+      style={cardStyle}
       onClick={handleClick}
       id={`notification-card-${notification.id}`}
     >
@@ -107,6 +148,15 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
 
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-gray-600" title={t('sections.notifications.priority.label', { defaultValue: 'Priority' })}>
+            <span
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: PRIORITY_DOT_COLOR[priority ?? ActivityPriority.MEDIUM] }}
+            />
+            {t(`sections.notifications.priority.${priorityLabelKey(priority)}`, {
+              defaultValue: priorityLabelKey(priority) === 'high' ? 'High' : priorityLabelKey(priority) === 'low' ? 'Low' : 'Normal',
+            })}
+          </span>
           {notification.category && (
             <Badge variant="default">{notification.category}</Badge>
           )}

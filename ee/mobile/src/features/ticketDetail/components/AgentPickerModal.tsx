@@ -1,16 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
 import { getUserDisplayName, listUsers, type UserListItem } from "../../../api/users";
 import type { ApiClient } from "../../../api/client";
+import {
+  activeTicketNotificationSuppression,
+  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
+  TicketUpdateFooter,
+} from "./TicketUpdateFooter";
 
 export function AgentPickerModal({
   visible,
   updating,
   updateError,
+  currentAssignedToId,
   currentAssignedToName,
+  onApply,
   onSelect,
   onUnassign,
   onClose,
@@ -21,9 +28,12 @@ export function AgentPickerModal({
   visible: boolean;
   updating: boolean;
   updateError: string | null;
+  currentAssignedToId?: string | null;
   currentAssignedToName: string | null | undefined;
-  onSelect: (userId: string, displayName: string) => void;
-  onUnassign: () => void;
+  onApply?: (userId: string | null, notificationSuppression: ReturnType<typeof activeTicketNotificationSuppression>) => void;
+  /** Selection-only mode used by filters; it does not mutate a ticket. */
+  onSelect?: (userId: string, displayName: string) => void;
+  onUnassign?: () => void;
   onClose: () => void;
   client: ApiClient | null;
   apiKey: string;
@@ -36,6 +46,8 @@ export function AgentPickerModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<{ id: string | null; name: string | null } | null>(null);
+  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -72,6 +84,8 @@ export function AgentPickerModal({
   useEffect(() => {
     if (visible) {
       setSearch("");
+      setSelectedUser(null);
+      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
       void fetchUsers("");
     } else {
       abortRef.current?.abort();
@@ -89,6 +103,7 @@ export function AgentPickerModal({
   };
 
   const busy = updating;
+  const selectionOnly = Boolean(onSelect && !onApply);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -131,14 +146,17 @@ export function AgentPickerModal({
             accessibilityRole="button"
             accessibilityLabel={t("agentPicker.unassign")}
             disabled={busy}
-            onPress={onUnassign}
+            onPress={() => {
+              if (selectionOnly) onUnassign?.();
+              else setSelectedUser({ id: null, name: null });
+            }}
             style={({ pressed }) => ({
               paddingVertical: spacing.sm,
               paddingHorizontal: spacing.lg,
               marginHorizontal: spacing.lg,
               borderRadius: 12,
               borderWidth: 1,
-              borderColor: colors.border,
+              borderColor: selectedUser?.id === null ? colors.primary : colors.border,
               backgroundColor: colors.card,
               opacity: busy ? 0.65 : pressed ? 0.95 : 1,
               marginBottom: spacing.sm,
@@ -186,7 +204,10 @@ export function AgentPickerModal({
                   accessibilityRole="button"
                   accessibilityLabel={t("agentPicker.assignTo", { name: displayName })}
                   disabled={busy}
-                  onPress={() => onSelect(user.user_id, displayName)}
+                  onPress={() => {
+                    if (selectionOnly) onSelect?.(user.user_id, displayName);
+                    else setSelectedUser({ id: user.user_id, name: displayName });
+                  }}
                   style={({ pressed }) => ({
                     flexDirection: "row",
                     alignItems: "center",
@@ -194,7 +215,7 @@ export function AgentPickerModal({
                     paddingHorizontal: spacing.md,
                     borderRadius: 12,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: selectedUser?.id === user.user_id ? colors.primary : colors.border,
                     backgroundColor: colors.card,
                     opacity: busy ? 0.65 : pressed ? 0.95 : 1,
                     marginBottom: spacing.sm,
@@ -211,6 +232,48 @@ export function AgentPickerModal({
             })}
           </ScrollView>
         )}
+        {!selectionOnly ? <View style={{ paddingHorizontal: spacing.lg }}>
+          {selectedUser ? (
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+              {selectedUser.id
+                ? t("agentPicker.selected", "Selected: {{name}}", { name: selectedUser.name })
+                : t("agentPicker.unassignSelected", "The ticket will be unassigned")}
+            </Text>
+          ) : null}
+          <TicketUpdateFooter
+            suppression={suppression}
+            onSuppressionChange={setSuppression}
+            onCancel={onClose}
+            onApply={() => {
+              if (!selectedUser) return;
+              const commit = () => onApply?.(selectedUser.id, activeTicketNotificationSuppression(suppression));
+              if (selectedUser.id === null) {
+                Alert.alert(
+                  t("confirm.unassignTitle", "Unassign this ticket?"),
+                  t("confirm.unassignMessage", "The ticket will no longer have a primary assignee."),
+                  [
+                    { text: t("common:cancel"), style: "cancel" },
+                    { text: t("agentPicker.unassign"), style: "destructive", onPress: commit },
+                  ],
+                );
+              } else if (currentAssignedToId && selectedUser.id !== currentAssignedToId) {
+                Alert.alert(
+                  t("confirm.reassignTitle", "Replace the current assignee?"),
+                  t("confirm.reassignMessage", "This ticket is already assigned. The selected agent will replace the current assignee."),
+                  [
+                    { text: t("common:cancel"), style: "cancel" },
+                    { text: t("confirm.reassignAction", "Replace assignee"), onPress: commit },
+                  ],
+                );
+              } else {
+                commit();
+              }
+            }}
+            applyLabel={selectedUser?.id === null ? t("agentPicker.unassign") : t("agentPicker.apply", "Assign")}
+            applyDisabled={!selectedUser || selectedUser.id === currentAssignedToId}
+            busy={busy}
+          />
+        </View> : null}
       </View>
       </KeyboardAvoidingView>
     </Modal>

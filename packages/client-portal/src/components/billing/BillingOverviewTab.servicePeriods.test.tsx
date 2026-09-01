@@ -17,6 +17,19 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: () => ({ enabled: false, loading: false, error: null }),
+}));
+
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: () => null,
+  DialogContent: () => null,
+}));
+
+vi.mock('@alga-psa/ui/components/Badge', () => ({
+  Badge: ({ children }: any) => <span>{children}</span>,
+}));
+
 vi.mock('./BucketUsageChart', () => ({
   default: () => <div>bucket-chart</div>,
 }));

@@ -14,10 +14,15 @@ export * from './billingAndTax';
 export * from './billingClientLocationActions';
 export * from './billingCurrencyActions';
 export * from './billingCycleActions';
+export * from './billingProfileActions';
+export * from './billingProfileReportActions';
+export * from './billingProfileArActions';
+export * from './unresolvedChargeActions';
 export * from './billingCycleAnchorActions';
 export * from './billingScheduleActions';
 export * from './billingSettingsActions';
 export * from './bucketOverlayActions';
+export * from './bucketPoolActions';
 export * from './accountingExportActions';
 export * from './contractLineAction';
 export * from './contractLinePresetActions';
@@ -28,12 +33,20 @@ export * from './contractReportActions';
 export * from './contractWizardActions';
 export * from './costRateActions';
 export * from './creditActions';
+export * from './hourBlockActions';
 export * from './creditExpirationSettingsActions';
+export * from './prepaidBalanceAlertSettingsActions';
 export * from './externalTaxImportActions';
 export * from './invoiceModification';
 export * from './invoiceCogsActions';
 export * from './invoiceQueries';
 export * from './invoiceJobActions';
+// NOTE: invoiceEmailLinkContext is intentionally NOT re-exported here. It is not a
+// `'use server'` module (it exports a pure sync predicate), so re-exporting it from
+// this barrel pulls its server-only transitive imports (@alga-psa/tenancy/server -> db
+// -> node:async_hooks/crypto/buffer) into any client component that imports from the
+// barrel, breaking the webpack client build. Import it directly from
+// './invoiceEmailLinkContext' or '@alga-psa/billing/actions/invoiceEmailLinkContext'.
 export {
   createSeparateProjectProductInvoices,
   getSeparateProjectProductInvoiceReview,

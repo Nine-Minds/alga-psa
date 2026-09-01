@@ -1,12 +1,14 @@
+// This handler runs inside a background job: there is no request scope, so it
+// must never call withAuth server actions (their getCurrentUser reads request
+// headers). Everything here talks to the database and storage directly, acting
+// as the requester recorded in the job data.
 import { JobService, JobStepResult } from 'server/src/services/job.service';
-import { getTenantDetails } from '@alga-psa/tenancy/actions';
-import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
-import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
-import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { TenantCompany } from 'server/src/lib/types';
-/// <reference types="formdata-node" />
-// @ts-ignore - Types exist but aren't properly exposed in package.json
-const { FormData } = require('formdata-node');
+import { runAsJobActingUser } from './jobActingUser';
+import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
+import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
+import type { IDocument } from '@alga-psa/types';
+import type { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs/promises';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { ZipGenerationService } from 'server/src/services/zip-generation.service';
@@ -33,6 +35,20 @@ export interface InvoiceZipJobData extends Record<string, unknown> {
   };
 }
 
+/**
+ * The client an exported bundle belongs to, or null when it does not belong to
+ * one. A bundle of a single client's invoices files naturally under that client;
+ * a mixed bundle has no defensible owner, so it is filed with no client
+ * association rather than against an unrelated one. The per-invoice PDFs inside
+ * are already associated to their own invoice and client by the PDF service.
+ */
+export function selectBundleClientId(clientIds: readonly (string | null | undefined)[]): string | null {
+  const distinct = new Set(
+    clientIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  );
+  return distinct.size === 1 ? [...distinct][0] : null;
+}
+
 export class InvoiceZipJobHandler {
   private jobService: JobService;
   private storageService: StorageService;
@@ -47,13 +63,12 @@ export class InvoiceZipJobHandler {
   private async processSingleInvoice(invoiceId: string, tenant: string, requesterId: string): Promise<{file_id: string, storage_path: string, invoice_number: string}> {
     // Use the factory function to create the PDF generation service
     const pdfService = createPDFGenerationService(tenant);
-    
-    // Get invoice details first
-    const invoice = await getInvoiceForRendering(invoiceId);
-    if (isActionMessageError(invoice) || isActionPermissionError(invoice)) {
-      throw new Error(getErrorMessage(invoice));
-    }
-    if (!invoice || !invoice.invoice_number) {
+
+    const knex = await getConnection(tenant);
+    const invoice = await tenantDb(knex, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .first<{ invoice_number?: string | null } | undefined>('invoice_number');
+    if (!invoice?.invoice_number) {
       throw new Error(`Failed to get invoice details or invoice number for invoice ${invoiceId}`);
     }
 
@@ -64,7 +79,7 @@ export class InvoiceZipJobHandler {
       version: 1,
       userId: requesterId
     });
-    
+
     return {
       file_id: fileRecord.file_id,
       storage_path: fileRecord.storage_path,
@@ -72,11 +87,56 @@ export class InvoiceZipJobHandler {
     };
   }
 
-  public async handleInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> { 
+  /**
+   * The zip's document type, so the exported bundle carries the same type/icon
+   * as an uploaded archive. Mirrors PDFGenerationService.resolvePdfDocumentType.
+   */
+  private async resolveZipDocumentType(
+    knex: Knex,
+    tenant: string
+  ): Promise<(Pick<IDocument, 'type_id'> & Partial<Pick<IDocument, 'shared_type_id'>>) | null> {
+    try {
+      const db = tenantDb(knex, tenant);
+
+      const tenantType = await db.table('document_types')
+        .where({ type_name: 'application/zip' })
+        .first<{ type_id: string } | undefined>('type_id');
+      if (tenantType?.type_id) {
+        return { type_id: tenantType.type_id };
+      }
+
+      const sharedType = await db.table('shared_document_types')
+        .where({ type_name: 'application/zip' })
+        .first<{ type_id: string } | undefined>('type_id');
+      if (sharedType?.type_id) {
+        return { type_id: null, shared_type_id: sharedType.type_id };
+      }
+    } catch (error) {
+      console.error('Failed to resolve the ZIP document type:', error);
+    }
+
+    return null;
+  }
+
+  public async handleInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> {
     if (!data.jobServiceId) {
       throw new Error('jobServiceId is required in job data');
     }
 
+    // Background execution has no session; install the enqueuing user and
+    // tenant context so the db/storage layers resolve an identity from
+    // AsyncLocalStorage.
+    return runAsJobActingUser(
+      {
+        jobName: 'invoice_zip',
+        tenantId: data.tenantId,
+        userId: data.requesterId ?? data.metadata?.user_id,
+      },
+      () => this.executeInvoiceZipJob(pgBossJobId, data)
+    );
+  }
+
+  private async executeInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> {
     const { jobServiceId, invoiceIds, tenantId, steps } = data;
     let zipDetailId: string | undefined;
     
@@ -170,43 +230,67 @@ export class InvoiceZipJobHandler {
       });
       
       const zipFilePath = await this.zipService.generateZipFromFileRecords(fileRecords);
-      
-      // Get tenant's default client
-      const { clients } = await getTenantDetails();
-      const defaultClient = clients.find(c => c.is_default);
-      if (!defaultClient) {
-        throw new Error('No default client found for tenant');
+
+      const knex = await getConnection(tenantId);
+
+      // The bundle belongs to the invoices in it, not to whichever client the
+      // tenant happens to have flagged default — a fresh tenant has none at all,
+      // and hard-failing here would throw away a ZIP that is already stored.
+      const scopedDb = tenantDb(knex, tenantId);
+      const invoiceClientIds = await scopedDb.table('invoices')
+        .whereIn('invoice_id', invoiceIds)
+        .pluck<Array<string | null>>('client_id');
+      const bundleClientId = selectBundleClientId(invoiceClientIds);
+      if (!bundleClientId) {
+        console.log(
+          `Invoice bundle for tenant ${tenantId} spans ${new Set(invoiceClientIds).size} client(s); ` +
+            'filing the archive without a client association.'
+        );
       }
 
-      // Read zip file contents
+      // Read zip file contents and store the archive as a document owned by
+      // the user who requested the export.
       const zipBuffer = await fs.readFile(zipFilePath);
-      
-      // Create FormData object for upload
-      const formData = new FormData();
       const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
       const fileName = `invoice_bundle_${timestamp}.zip`;
-      formData.append('file', new Blob([new Uint8Array(zipBuffer)], {
-        type: 'application/zip'
-      }), fileName);
 
-      // Upload to document system with client association
-      const uploadResult = await uploadDocument(formData, {
-        userId: data.requesterId,
-        clientId: defaultClient.client_id
+      const storedFile = await StorageService.uploadFile(tenantId, zipBuffer, fileName, {
+        mime_type: 'application/zip',
+        uploaded_by_id: data.requesterId,
       });
 
-      if (isActionPermissionError(uploadResult)) {
-        throw new Error('Permission denied: ' + uploadResult.permissionError);
-      }
+      const zipDocumentType = await this.resolveZipDocumentType(knex, tenantId);
+      const documentId = uuidv4();
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        await DocumentModel.insert(trx, {
+          ...(zipDocumentType ?? { type_id: null }),
+          document_id: documentId,
+          document_name: fileName,
+          user_id: data.requesterId,
+          created_by: data.requesterId,
+          order_number: 0,
+          tenant: tenantId,
+          file_id: storedFile.file_id,
+          storage_path: storedFile.storage_path,
+          mime_type: 'application/zip',
+          file_size: storedFile.file_size,
+          is_client_visible: false,
+        } as IDocument);
 
-      if (!uploadResult.success) {
-        throw new Error((uploadResult as { success: false; error: string }).error || 'Failed to upload zip document');
-      }
+        if (bundleClientId) {
+          await DocumentAssociation.create(trx, {
+            document_id: documentId,
+            entity_id: bundleClientId,
+            entity_type: 'client',
+            tenant: tenantId,
+          });
+        }
+      });
 
       // Complete ZIP creation
       const zipCompleteDetails = {
-        file_id: uploadResult.document.file_id,
-        storage_path: uploadResult.document.storage_path,
+        file_id: storedFile.file_id,
+        storage_path: storedFile.storage_path,
         details: `Created and uploaded ZIP archive '${fileName}' containing ${fileRecords.length} invoice(s)`
       };
 

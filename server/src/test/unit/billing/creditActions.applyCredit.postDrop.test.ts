@@ -107,6 +107,7 @@ function createCreditApplicationTrx() {
       const builder: any = {
         where: vi.fn((_criteria: any) => builder),
         select: vi.fn((_columns: any) => builder),
+        forUpdate: vi.fn(() => builder),
         first: vi.fn(async () => state.invoice),
         update: vi.fn(async (payload: Row) => {
           // Source updates only credit_applied via trx.raw('COALESCE(credit_applied, 0) + ?')
@@ -160,7 +161,12 @@ function createCreditApplicationTrx() {
         where: vi.fn((_criteriaOrColumn: any, _value?: any, _extra?: any) => builder),
         andWhere: vi.fn((_criteriaOrColumn: any, _value?: any, _extra?: any) => builder),
         whereNot: vi.fn(() => builder),
+        whereIn: vi.fn(() => builder),
         orderBy: vi.fn(() => builder),
+        forUpdate: vi.fn(() => builder),
+        // The stable-order lock read (whereIn → orderBy → forUpdate → select)
+        // resolves through the thenable below to the same credit entries.
+        select: vi.fn(() => builder),
         sum: vi.fn(() => { summing = true; return builder; }),
         first: vi.fn(async () =>
           summing
@@ -216,6 +222,42 @@ function createCreditApplicationTrx() {
           }
           return 1;
         }),
+      };
+      return builder;
+    }
+
+    if (tableName === 'client_billing_settings') {
+      // No client-specific draw-down override: policy falls back to defaults.
+      const builder: any = {
+        where: vi.fn(() => builder),
+        first: vi.fn(async () => undefined),
+      };
+      return builder;
+    }
+
+    if (tableName === 'default_billing_settings') {
+      // No tenant default row: resolver keeps its behavior-preserving defaults.
+      const builder: any = {
+        where: vi.fn(() => builder),
+        first: vi.fn(async () => undefined),
+      };
+      return builder;
+    }
+
+    if (tableName === 'invoice_charges') {
+      // A single unrestricted charge covering the invoice total, so the eligible
+      // amount does not clamp the requested credit in this scenario.
+      const builder: any = {
+        where: vi.fn(() => builder),
+        whereIn: vi.fn(() => builder),
+        select: vi.fn(async () => [
+          {
+            total_price: 10000,
+            net_amount: 10000,
+            service_id: null,
+            client_contract_id: null,
+          },
+        ]),
       };
       return builder;
     }

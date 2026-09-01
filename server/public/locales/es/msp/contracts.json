@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "ID de contrato del cliente: {{id}}",
+      "creditDrawdownOptOut": "Excluir del consumo de crédito",
       "empty": "Este contrato aún no está asignado a un cliente.",
       "endDate": "Fecha de finalización",
       "endDateLabel": "Fecha de finalización de la asignación",
@@ -470,6 +471,12 @@
       "createCustom": "Crear personalizada",
       "expandLine": "Expandir línea de contrato"
     },
+    "billingProfile": {
+      "hint": "Los cargos de esta línea se facturan a este perfil, anulando el contrato.",
+      "label": "Perfil de facturación",
+      "none": "Usar el perfil del contrato",
+      "updated": "Perfil de facturación actualizado"
+    },
     "bucket": {
       "billingPeriod": "Período de facturación: {{period}}",
       "defaultUnit": "unidad",
@@ -641,7 +648,6 @@
       "title": "Configuración de facturación por tiempo"
     },
     "loading": "Cargando preajustes de línea de contrato...",
-    "selectPresetsTitle": "Seleccione los preajustes de línea de contrato para agregar",
     "selection": {
       "deselectPreset": "Deseleccionar preajuste",
       "selectPreset": "Seleccionar preajuste",
@@ -2171,8 +2177,8 @@
     },
     "runBar": {
       "compareToggle": "Mostrar cambios respecto al contrato actual",
-      "horizonOption": "{{count}} períodos de facturación",
-      "lastRun": "Simulación al día · {{count}} períodos de facturación",
+      "horizonOption": "{{count}} períodos de facturación del cliente",
+      "lastRun": "Simulación al día · {{count}} períodos de facturación del cliente",
       "neverRun": "Aún no simulado",
       "simulate": "Simular",
       "simulating": "Simulando…",
@@ -2322,6 +2328,108 @@
     "unavailable": {
       "description": "El simulador de contratos está disponible en AlgaPSA Pro.",
       "title": "Función Pro"
+    }
+  },
+  "bucketPools": {
+    "heading": "Bolsas de horas",
+    "actions": {
+      "addPool": "Agregar bolsa",
+      "create": "Crear bolsa",
+      "cancel": "Cancelar",
+      "remove": "Quitar",
+      "applyRule": "Aplicar regla fuera de horario"
+    },
+    "loading": "Cargando bolsas de horas…",
+    "empty": "No hay bolsas de horas en esta línea. Agregue una bolsa para incluir horas prepagadas.",
+    "labels": {
+      "catchAll": "Todos los servicios de esta línea",
+      "pool": "Bolsa de horas",
+      "scopeCatchAll": "Cubre todos los servicios de la línea (los servicios miembros anulan el multiplicador)",
+      "scopeMembers": "Solo servicios miembros",
+      "totalHours": "Horas totales",
+      "overageRate": "Tarifa por exceso por hora",
+      "rollover": "Permitir acumulación",
+      "afterHours": "Multiplicador de consumo fuera de horario",
+      "afterHoursMultiplier": "Multiplicador (p. ej., 1.5)",
+      "schedule": "Calendario de horario laboral",
+      "default": "predeterminado",
+      "members": "Servicios miembros",
+      "multiplier": "×",
+      "noMembers": "No hay servicios miembros asociados.",
+      "noServicesOnLine": "Añada un servicio a esta línea de contrato antes de crear una bolsa de horas.",
+      "selectService": "Seleccione un servicio…",
+      "poolName": "Nombre de la bolsa (opcional)",
+      "poolNamePlaceholder": "p. ej., Horas estándar",
+      "coversAll": "Cubre todos los servicios de esta línea",
+      "burnMultiplier": "Multiplicador de consumo"
+    },
+    "badges": {
+      "dormant": "sin servicios asociados — nada se consume de esta bolsa"
+    },
+    "errors": {
+      "catchAllExists": "Esta línea ya tiene una bolsa general.",
+      "invalidAfterHoursRule": "Introduzca una regla válida fuera de horario.",
+      "scheduleLoadFailed": "No se pudieron cargar los calendarios de horario laboral.",
+      "scheduleRequired": "Seleccione un calendario de horario laboral antes de aplicar esta regla."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Bolsa de horas para esta línea",
+    "empty": "Aún no hay bolsas de horas en esta línea. Añada una bolsa para incluir horas prepagadas."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Permiso denegado: no se pueden modificar las líneas de contrato",
+      "deleteContracts": "Permiso denegado: no se pueden eliminar los contratos de facturación"
+    },
+    "contract": {
+      "hasInvoices": "Este contrato tiene facturas asociadas y no se puede eliminar.",
+      "invalidValue": "Uno de los valores de contrato seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El contrato, cliente o registro relacionado seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio del contrato entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores del contrato no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del contrato.",
+      "missingFieldNamed": "Falta un campo obligatorio del contrato: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Permiso denegado: no se pueden crear plantillas de facturación",
+        "createContracts": "Permiso denegado: no se pueden crear contratos de facturación",
+        "listTemplates": "Permiso denegado: no se pueden listar las plantillas de contrato",
+        "viewSnapshot": "Permiso denegado: no se puede ver la instantánea de la plantilla de contrato",
+        "resumeContracts": "Permiso denegado: no se pueden reanudar los contratos de facturación"
+      },
+      "templateNotFound": "Plantilla no encontrada",
+      "contractNotFound": "Contrato no encontrado",
+      "notDraft": "El contrato no es un borrador",
+      "missingClient": "Al contrato en borrador le falta la asignación de cliente",
+      "invalidStartDate": "El contrato en borrador tiene una fecha de inicio no válida",
+      "recordInvalid": "Uno de los registros seleccionados del asistente de contratos ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un registro coincidente del asistente de contratos."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "La fecha de fin debe ser posterior a la fecha de entrada en vigor",
+      "overlaps": "Este calendario se solapa con un calendario de precios existente",
+      "wouldOverlap": "Este calendario se solaparía con un calendario de precios existente",
+      "notFound": "No se encontró el calendario de precios"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Permiso denegado: no se puede leer la cola de renovaciones",
+        "update": "Permiso denegado: no se puede actualizar la cola de renovaciones",
+        "ownerOtherTenant": "Permiso denegado: no se pueden asignar renovaciones a un usuario de otro inquilino.",
+        "contractOtherTenant": "Permiso denegado: no se puede completar la renovación con un contrato de otro inquilino."
+      },
+      "clientContractIdRequired": "Se requiere el id del contrato del cliente.",
+      "workItemNotFound": "No se encontró el elemento de trabajo de renovación. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "snoozeDateRequired": "Elija una fecha de posposición antes de guardar.",
+      "snoozeDateInvalid": "Elija una fecha de posposición válida.",
+      "snoozeDateFuture": "Elija una fecha de posposición futura.",
+      "ownerInvalid": "Elija un responsable de renovación válido.",
+      "ownerUnavailable": "El responsable de renovación seleccionado ya no está disponible. Actualice la página e inténtelo de nuevo.",
+      "activatedContractIdRequired": "Se requiere el id del contrato de renovación activado.",
+      "contractNotActive": "El contrato de renovación activado ya no está activo. Actualice la página e inténtelo de nuevo.",
+      "manualRetryDueOnly": "El reintento manual solo está disponible para los ciclos de renovación vencidos."
     }
   }
 }

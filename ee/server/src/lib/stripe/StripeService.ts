@@ -100,8 +100,6 @@ async function getStripeConfig() {
   const soloBaseAnnualPriceId = process.env.STRIPE_SOLO_BASE_ANNUAL_PRICE_ID || null;
   const aiAddOnPriceId = process.env.STRIPE_AI_ADDON_PRICE_ID || null;
   const aiAddOnAnnualPriceId = process.env.STRIPE_AI_ADDON_ANNUAL_PRICE_ID || null;
-  const teamsAddOnPriceId = process.env.STRIPE_TEAMS_ADDON_PRICE_ID || null;
-  const teamsAddOnAnnualPriceId = process.env.STRIPE_TEAMS_ADDON_ANNUAL_PRICE_ID || null;
   const enterpriseAddOnPriceId = process.env.STRIPE_ENTERPRISE_ADDON_PRICE_ID || null;
   const enterpriseAddOnAnnualPriceId = process.env.STRIPE_ENTERPRISE_ADDON_ANNUAL_PRICE_ID || null;
 
@@ -144,8 +142,6 @@ async function getStripeConfig() {
     soloBaseAnnualPriceId,
     aiAddOnPriceId,
     aiAddOnAnnualPriceId,
-    teamsAddOnPriceId,
-    teamsAddOnAnnualPriceId,
     enterpriseAddOnPriceId,
     enterpriseAddOnAnnualPriceId,
     earlyAdoptersBasePriceId,
@@ -1941,10 +1937,6 @@ export class StripeService {
       [ADD_ONS.AI_ASSISTANT]: {
         monthly: this.config.aiAddOnPriceId,
         annual: this.config.aiAddOnAnnualPriceId,
-      },
-      [ADD_ONS.TEAMS]: {
-        monthly: this.config.teamsAddOnPriceId,
-        annual: this.config.teamsAddOnAnnualPriceId,
       },
       [ADD_ONS.ENTERPRISE]: {
         monthly: this.config.enterpriseAddOnPriceId,

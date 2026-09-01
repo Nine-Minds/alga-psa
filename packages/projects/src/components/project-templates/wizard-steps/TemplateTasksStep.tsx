@@ -28,6 +28,7 @@ import type { ITeam } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 import { getEffectiveTemplateStatusMappings } from '../../../lib/templateStatusMappingUtils';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../../../lib/useTaskTypeLabel';
 
 interface TemplateTasksStepProps {
   data: TemplateWizardData;
@@ -49,6 +50,7 @@ export function TemplateTasksStep({
   services,
 }: TemplateTasksStepProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(
     data.phases[0]?.temp_id || null
@@ -365,9 +367,9 @@ export function TemplateTasksStep({
                               onValueChange={(value) =>
                                 updateTask(task.temp_id, { task_type_key: value })
                               }
-                              options={taskTypes.map((t) => ({
-                                value: t.type_key,
-                                label: t.type_name,
+                              options={taskTypes.map((taskType) => ({
+                                value: taskType.type_key,
+                                label: taskTypeLabel(taskType),
                               }))}
                             />
                           </div>

@@ -2,12 +2,13 @@
 
 import React, { use, useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, ChevronDown, ChevronRight, EyeOff, Pencil, Trash2 } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { useContentCardVariant } from '@alga-psa/ui/components';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
-import { formatMinutesAsHoursAndMinutes, formatDateTime, utcToLocal, getUserTimeZone } from '@alga-psa/core';
+import { formatMinutesAsHoursAndMinutes, getUserTimeZone } from '@alga-psa/core';
+import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import type {
   TicketTimeEntriesSummary,
   TicketTimeEntrySummaryEntry,
@@ -288,7 +289,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
       {summary.othersHiddenCount > 0 && (
         <div
           {...withDataAutomationId({ id: `${id}-time-entries-others-anonymized` })}
-          className="rounded-md border border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-bg-50))] px-3 py-2 text-sm text-muted-foreground flex items-center gap-2"
+          className="rounded-md border border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-border-50))] px-3 py-2 text-sm text-muted-foreground flex items-center gap-2"
         >
           <EyeOff className="w-3.5 h-3.5 flex-shrink-0" />
           <span>
@@ -329,13 +330,14 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('features/tickets');
+  const { locale } = useFormatters();
   const startLabel = useMemo(() => {
     try {
-      return formatDateTime(utcToLocal(entry.start_time, timeZone), timeZone, dateTimeFormat);
+      return formatTicketDateTime(entry.start_time, dateTimeFormat, locale, timeZone);
     } catch {
       return entry.start_time;
     }
-  }, [entry.start_time, timeZone, dateTimeFormat]);
+  }, [entry.start_time, timeZone, dateTimeFormat, locale]);
 
   const statusKey = entry.approval_status ?? 'DRAFT';
   const statusLabel = t(
@@ -348,7 +350,7 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   return (
     <li
       {...withDataAutomationId({ id })}
-      className="text-sm rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-50))] px-3 py-2 space-y-1"
+      className="text-sm rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-3 py-2 space-y-1"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium text-[rgb(var(--color-text-900))]">
@@ -365,7 +367,7 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
                 event.stopPropagation();
                 onEdit?.(entry);
               }}
-              className="p-1 rounded hover:bg-[rgb(var(--color-bg-100))] text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]"
+              className="p-1 rounded hover:bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]"
               aria-label={t('timeEntries.edit', 'Edit time entry')}
               title={t('timeEntries.edit', 'Edit time entry')}
             >

@@ -13,7 +13,10 @@ describe('tree select add-new contract', () => {
     const source = read('./TreeSelect.tsx');
 
     expect(source).toContain('{onAddNew && (');
-    expect(source).toContain('border-t border-gray-200');
+    // The separator must exist; its colour must come from a token. Pinning the
+    // old literal 'border-gray-200' made this fail when the panel was themed —
+    // the separator never went away, it just stopped being a hardcoded gray.
+    expect(source).toMatch(/border-t border-\[rgb\(var\(--color-border-\d+\)\)\]/);
     expect(source).toContain('<Plus className="h-4 w-4" />');
     expect(source).toContain('{addNewLabel}');
   });

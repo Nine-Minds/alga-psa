@@ -11,6 +11,8 @@ export {
   saveQboCredentials,
   disconnectQbo,
   getQboTaxCodes,
+  getQboAutomatedSalesTaxMode,
+  setQboAutomatedSalesTaxMode,
   getQboTerms,
   getQboCustomers,
   resetQboCatalogCacheForTenant,
@@ -63,7 +65,8 @@ export {
   resyncImapProvider,
   testEmailProviderConnection,
   retryMicrosoftSubscriptionRenewal,
-  runMicrosoft365Diagnostics
+  runMicrosoft365Diagnostics,
+  runGmailDiagnostics
 } from './email-actions/emailProviderActions';
 export {
   pauseEmailProvider,
@@ -122,6 +125,7 @@ export {
 export {
   getMicrosoftIntegrationStatus,
   getMicrosoftConsumerSetupStatus,
+  getMicrosoftEmailIssuerOptions,
   listMicrosoftProfiles,
   listMicrosoftConsumerBindings,
   createMicrosoftProfile,
@@ -132,7 +136,8 @@ export {
   setDefaultMicrosoftProfile,
   resolveMicrosoftProfileForConsumer,
   saveMicrosoftIntegrationSettings,
-  resetMicrosoftProvidersToDisconnected
+  resetMicrosoftProvidersToDisconnected,
+  runMicrosoftEmailIssuerBackfill
 } from './integrations/microsoftActions';
 export {
   getMicrosoftEmailSetupOptions,
@@ -163,7 +168,6 @@ export {
   validateTeamsBotConnector,
   listTeamsDeliveries,
   listTeamsAuditEvents,
-  getTeamsAddonPurchaseAccess,
   type TeamsDiagnosticsReport,
   type TeamsTestMessageResult,
   type TeamsGraphCredentialValidationResult,
@@ -179,6 +183,12 @@ export {
 export {
   getTeamsAppPackageStatus,
 } from './integrations/teamsPackageActions';
+export {
+  createTelephonyCallIntent,
+  getTelephonyCallLinkState,
+  type CreateTelephonyCallIntentResult,
+  type TelephonyCallLinkState,
+} from './integrations/telephonyActions';
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,

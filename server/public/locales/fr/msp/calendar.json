@@ -104,6 +104,9 @@
           "confirmLabel": "Supprimer le fournisseur",
           "cancelLabel": "Conserver le fournisseur"
         }
+      },
+      "errors": {
+        "notAuthorized": "Ce fournisseur de calendrier n'a pas encore terminé l'autorisation OAuth. Ouvrez ses paramètres, cliquez sur Autoriser, puis relancez la synchronisation."
       }
     },
     "sync": {

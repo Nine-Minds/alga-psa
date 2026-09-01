@@ -31,7 +31,9 @@
     "skipDropped_one": "Salta ({{count}} ticket scartato)",
     "skipDropped_other": "Salta ({{count}} ticket scartati)",
     "createdSuccess_one": "{{count}} ticket creato con successo.",
-    "createdSuccess_other": "{{count}} ticket creati con successo."
+    "createdSuccess_other": "{{count}} ticket creati con successo.",
+    "rowLimitExceeded": "Limite righe superato:",
+    "rowLimitDescription": "Il CSV ha {{original}} righe, ma verranno importate solo le prime {{kept}}. Dividi il file in batch più piccoli per le righe rimanenti."
   },
   "title": "Ticket di supporto",
   "subtitle": "Visualizza e gestisci i tuoi ticket di supporto",
@@ -228,7 +230,7 @@
     "contactNotAssociatedWithClient": "Il contatto non è associato a un'azienda. Contatta il supporto.",
     "ticketNotFound": "Ticket non trovato",
     "commentNotFound": "Commento non trovato o non autorizzato",
-    "noDefaultBoard": "Nessun canale predefinito configurato per i ticket",
+    "noDefaultBoard": "Nessuna bacheca predefinita configurata per i ticket",
     "failedToCreateTicket": "Impossibile creare il ticket",
     "failedToFetchTicketDetails": "Impossibile recuperare i dettagli del ticket",
     "failedToAddComment": "Impossibile aggiungere il commento",
@@ -297,7 +299,10 @@
     "closeFailed": "Impossibile chiudere il ticket",
     "scheduleVisitFailed": "Impossibile aprire il pianificatore",
     "loadCommentsFailed": "Impossibile caricare i commenti",
-    "updateTicketFailed": "Impossibile aggiornare il ticket"
+    "updateTicketFailed": "Impossibile aggiornare il ticket",
+    "errorWithMessage": "Errore: {{message}}",
+    "billingProfileUpdated": "Profilo di fatturazione aggiornato",
+    "updateBillingProfileFailed": "Impossibile aggiornare il profilo di fatturazione"
   },
   "conversation": {
     "comments": "Commenti",
@@ -341,12 +346,27 @@
     "ticketPrefix": "Ticket {{number}}",
     "clipboardDraftCancelMessage": "Questa bozza include immagini incollate che sono già state caricate come documenti del ticket. Mantenerle o eliminarle definitivamente?",
     "replyCommentAriaLabel": "Rispondi al commento",
+    "copyCommentAriaLabel": "Copia testo del commento",
+    "commentCopied": "Copiato",
+    "commentCopyFailed": "Copia non riuscita",
     "clientComments": "Commenti del cliente",
     "commentEditor": "Editor commenti",
     "deleteComment": "Elimina commento",
     "deleteCommentImages": "Elimina commento + immagini",
     "deleteCommentOnly": "Elimina solo il commento",
-    "clientCommentTooltip": "Commento visibile al cliente"
+    "clientCommentTooltip": "Commento visibile al cliente",
+    "cancelScheduledComment": "Annulla commento pianificato",
+    "cancelScheduledCommentConfirm": "Annullare questo commento pianificato?",
+    "invalidScheduleTime": "Scegli un orario futuro non ambiguo in questo fuso orario.",
+    "publishAt": "Pubblica il",
+    "publishes": "Pubblica",
+    "reschedule": "Riprogramma",
+    "rescheduleComment": "Riprogramma commento",
+    "resolvedPublishInstant": "Istante risolto",
+    "schedule": "Pianifica",
+    "scheduled": "Pianificato",
+    "showMore": "Mostra di più",
+    "showLess": "Mostra meno"
   },
   "responseState": {
     "awaitingYourResponse": "In attesa della tua risposta",
@@ -492,15 +512,39 @@
     },
     "exportSelectedAction": "Esporta selezionati ({{count}})",
     "exportAction": "Esporta CSV",
-    "importAction": "Importa CSV"
+    "importAction": "Importa CSV",
+    "boardTabs": {
+      "all": "Tutti i ticket"
+    },
+    "boardHeader": {
+      "open": "Aperti",
+      "overdue": "Scaduti",
+      "slaBreach": "Mancato rispetto SLA",
+      "unassigned": "Non assegnato",
+      "managedBy": "Gestita da",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Visualizzazione",
+      "columns": "Colonne",
+      "density": "Densità",
+      "saveBoardDefault": "Salva come visualizzazione predefinita di questa bacheca",
+      "saveTenantDefault": "Salva come visualizzazione predefinita per tutti",
+      "resetToTenant": "Reimposta al valore predefinito del tenant",
+      "unsavedChanges": "Questa visualizzazione differisce dal valore predefinito salvato",
+      "saved": "Visualizzazione predefinita salvata",
+      "saveFailed": "Impossibile salvare la visualizzazione predefinita",
+      "reset": "Reimposta al valore predefinito del tenant",
+      "resetFailed": "Impossibile reimpostare la visualizzazione"
+    }
   },
   "bulk": {
     "bundleTickets": "Raggruppa ticket",
     "moveDialogTitle": "Sposta i ticket selezionati",
-    "moveDialogDescription": "Seleziona un canale e uno stato di destinazione, quindi conferma lo spostamento dei ticket selezionati.",
-    "destinationBoard": "Canale di destinazione",
+    "moveDialogDescription": "Seleziona una bacheca e uno stato di destinazione, quindi conferma lo spostamento dei ticket selezionati.",
+    "destinationBoard": "Bacheca di destinazione",
     "destinationStatus": "Stato di destinazione",
-    "selectDestinationBoard": "Seleziona canale di destinazione...",
+    "selectDestinationBoard": "Seleziona bacheca di destinazione...",
     "selectDestinationStatus": "Seleziona stato di destinazione...",
     "noTicketsSelected": "Nessun ticket selezionato.",
     "moving": "Spostamento in corso...",
@@ -540,12 +584,12 @@
     "exportDisabledTooltip": "Seleziona uno o più ticket da esportare",
     "move": {
       "dialogTitle": "Sposta i ticket selezionati",
-      "description": "Seleziona un canale e uno stato di destinazione, quindi conferma lo spostamento dei ticket selezionati.",
-      "destinationBoard": "Canale di destinazione",
+      "description": "Seleziona una bacheca e uno stato di destinazione, quindi conferma lo spostamento dei ticket selezionati.",
+      "destinationBoard": "Bacheca di destinazione",
       "destinationStatus": "Stato di destinazione",
-      "selectDestinationBoard": "Seleziona canale di destinazione...",
+      "selectDestinationBoard": "Seleziona bacheca di destinazione...",
       "selectDestinationStatus": "Seleziona stato di destinazione...",
-      "unnamedBoard": "Canale senza nome",
+      "unnamedBoard": "Bacheca senza nome",
       "noStatusesConfigured": "Per questa bacheca non sono configurati stati ticket selezionabili.",
       "loadStatusesFailed": "Impossibile caricare gli stati della bacheca.",
       "noTicketsSelected": "Nessun ticket selezionato.",
@@ -609,7 +653,7 @@
     "actionBar": {
       "selectedCount_one": "{{count}} selezionato",
       "selectedCount_other": "{{count}} selezionati",
-      "move": "Sposta su canale",
+      "move": "Sposta su bacheca",
       "bundle": "Raggruppa",
       "delete": "Elimina",
       "clear": "Annulla selezione",
@@ -619,8 +663,8 @@
       "priority": "Priorità",
       "tags": "Tag",
       "dueDate": "Scadenza",
-      "statusDisabledMultiBoard": "I ticket selezionati sono su canali diversi",
-      "statusResolvingBoards": "Verifica dei canali dei ticket selezionati…",
+      "statusDisabledMultiBoard": "I ticket selezionati sono su bacheche diverse",
+      "statusResolvingBoards": "Verifica delle bacheche dei ticket selezionati…",
       "more": "Altro"
     },
     "assign": {
@@ -704,7 +748,7 @@
     "noLocationsForSelectedClient": "Nessuna sede per il cliente selezionato",
     "locationNone": "Nessuno",
     "selectLocation": "Seleziona sede",
-    "selectBoard": "Seleziona canale *",
+    "selectBoard": "Seleziona bacheca *",
     "assignedTo": "Assegnato a",
     "assignToPlaceholder": "Assegna a",
     "additionalAgents": "Agenti aggiuntivi",
@@ -730,7 +774,7 @@
     "defaultSuffix": "(Predefinita)",
     "noLocationsForClient": "Nessuna sede per il cliente selezionato",
     "unnamedLocation": "Sede senza nome",
-    "boardPlaceholder": "Seleziona canale *",
+    "boardPlaceholder": "Seleziona bacheca *",
     "assignTo": "Assegna a",
     "addTeamMembers": "Aggiungi membri del team",
     "statusPlaceholder": "Seleziona stato *",
@@ -839,7 +883,7 @@
     "discardChangesMessage": "Hai modifiche non salvate. Vuoi davvero annullarle?",
     "discard": "Annulla",
     "keepEditing": "Continua a modificare",
-    "statusRequiresSelection": "Seleziona uno stato per il nuovo canale prima di salvare.",
+    "statusRequiresSelection": "Seleziona uno stato per la nuova bacheca prima di salvare.",
     "notAssigned": "Non assegnato",
     "additionalAgentsTooltip": "Agenti aggiuntivi:",
     "loading": "Caricamento...",
@@ -850,7 +894,7 @@
     "board": "Bacheca",
     "itilCategory": "Categoria ITIL",
     "loadingBoardConfig": "Caricamento...",
-    "selectStatusForNewBoard": "Seleziona uno stato per il nuovo canale prima di salvare.",
+    "selectStatusForNewBoard": "Seleziona uno stato per la nuova bacheca prima di salvare.",
     "calculatedPriority": "Priorità calcolata:",
     "slaStatus": "Stato SLA",
     "responseSlaBreached": "SLA di risposta violato",
@@ -900,7 +944,7 @@
     "pause": "Pausa",
     "reset": "Reimposta",
     "enterWorkDescription": "Inserisci la descrizione del lavoro",
-    "liveTimerDisabled": "Il timer live dei ticket è disattivato per questo canale.",
+    "liveTimerDisabled": "Il timer live dei ticket è disattivato per questa bacheca.",
     "addTimeEntry": "Aggiungi inserimento ore",
     "trackedIntervals": "Intervalli tracciati",
     "contactInfo": "Informazioni contatto",
@@ -952,29 +996,32 @@
       "selective": "Seleziona i singoli membri da mantenere/rimuovere"
     },
     "noTeamMembersOnTicket": "Nessun membro del team trovato su questo ticket.",
-    "unnamedUser": "Utente senza nome"
+    "unnamedUser": "Utente senza nome",
+    "billingProfile": "Profilo di fatturazione",
+    "billingProfileUnassigned": "Usa il profilo predefinito",
+    "billingProfileHint": "Usato solo quando nessun contratto assegna questo lavoro a un profilo."
   },
   "settings": {
     "categories": {
       "title": "Categorie",
-      "allBoards": "Tutti i canali",
-      "filterByBoard": "Filtra per canale",
+      "allBoards": "Tutte le bacheche",
+      "filterByBoard": "Filtra per bacheca",
       "addCategory": "Aggiungi categoria",
       "importStandardCategories": "Importa dalle categorie standard",
       "editCategory": "Modifica categoria",
       "categoryName": "Nome categoria *",
       "enterCategoryName": "Inserisci il nome della categoria",
-      "selectBoard": "Seleziona un canale",
+      "selectBoard": "Seleziona una bacheca",
       "displayOrder": "Ordine di visualizzazione",
       "enterDisplayOrder": "Inserisci l'ordine di visualizzazione",
       "displayOrderHelp": "Controlla l'ordine in cui le categorie compaiono nei menu a discesa in tutta la piattaforma. I numeri più bassi vengono mostrati per primi.",
-      "boardChangeWarning": "Cambiare il canale di questa categoria padre aggiornerà anche tutte le sottocategorie allo stesso canale.",
+      "boardChangeWarning": "Cambiare la bacheca di questa categoria padre aggiornerà anche tutte le sottocategorie alla stessa bacheca.",
       "importTitle": "Importa categorie standard",
       "importEmpty": "Nessuna categoria standard disponibile da importare.",
       "importDescription": "Seleziona le categorie standard da importare nella tua organizzazione:",
-      "targetBoard": "Canale di destinazione *",
-      "selectImportBoard": "Seleziona un canale per le categorie importate",
-      "targetBoardHelp": "Tutte le categorie importate saranno assegnate a questo canale",
+      "targetBoard": "Bacheca di destinazione *",
+      "selectImportBoard": "Seleziona una bacheca per le categorie importate",
+      "targetBoardHelp": "Tutte le categorie importate saranno assegnate a questa bacheca",
       "importConflictTitle": "Risolvi conflitti di importazione",
       "importConflictDescription": "I seguenti elementi presentano conflitti. Scegli come risolvere ciascuno:",
       "nameColumn": "Nome",
@@ -991,7 +1038,7 @@
       "name": "Nome",
       "description": "Descrizione",
       "enterName": "Inserisci il nome della categoria",
-      "targetBoardPlaceholder": "Seleziona un canale per le categorie importate",
+      "targetBoardPlaceholder": "Seleziona una bacheca per le categorie importate",
       "noStandardCategories": "Nessuna categoria standard disponibile da importare.",
       "importSelected": "Importa selezionati",
       "importWithResolutions": "Importa con risoluzioni",
@@ -1007,19 +1054,19 @@
       "saveSuccess": "Categoria aggiornata con successo",
       "saveFailed": "Impossibile salvare la categoria",
       "createSuccess": "Categoria creata con successo",
-      "importBoardRequired": "Seleziona un canale per le categorie importate",
+      "importBoardRequired": "Seleziona una bacheca per le categorie importate",
       "importMissingParents": "Impossibile importare sottocategorie senza le rispettive categorie padre. Seleziona anche: {{parents}}",
       "importSuccess": "Categorie importate con successo",
       "importFailed": "Impossibile importare le categorie",
       "fetchAvailableFailed": "Impossibile recuperare le categorie disponibili da importare",
       "noneTopLevelCategory": "Nessuna (categoria di primo livello)",
-      "noBoard": "Nessun canale",
-      "loadingBoards": "Caricamento canali…",
+      "noBoard": "Nessuna bacheca",
+      "loadingBoards": "Caricamento bacheche…",
       "boardRequiredHelp": "Obbligatorio per le categorie di primo livello",
       "parentCategoryOptional": "Categoria padre (facoltativa)",
       "selectParentCategory": "Seleziona categoria padre",
       "parentHelpWithBoard": "Seleziona una categoria padre per creare una sottocategoria, oppure lascia vuoto per il livello superiore",
-      "parentHelpWithoutBoard": "Seleziona prima un canale oppure scegli una categoria padre per ereditarne il canale",
+      "parentHelpWithoutBoard": "Seleziona prima una bacheca oppure scegli una categoria padre per ereditarne la bacheca",
       "creating": "Creazione..."
     },
     "display": {
@@ -1241,12 +1288,12 @@
   },
   "validation": {
     "categoryNameRequired": "Il nome della categoria è obbligatorio",
-    "boardRequiredForTopLevelCategory": "Il canale è obbligatorio per le categorie di primo livello",
-    "selectBoardForImport": "Seleziona un canale per le categorie importate",
+    "boardRequiredForTopLevelCategory": "La bacheca è obbligatoria per le categorie di primo livello",
+    "selectBoardForImport": "Seleziona una bacheca per le categorie importate",
     "importParentCategoriesRequired": "Impossibile importare sottocategorie senza le rispettive categorie padre. Seleziona anche: {{parents}}",
     "quickAdd": {
       "clientRequired": "Seleziona un cliente",
-      "boardRequired": "Seleziona un canale",
+      "boardRequired": "Seleziona una bacheca",
       "statusRequired": "Seleziona uno stato",
       "priorityRequired": "Seleziona una priorità",
       "impactRequired": "Seleziona un impatto",
@@ -1254,7 +1301,7 @@
     },
     "category": {
       "nameRequired": "Il nome della categoria è obbligatorio",
-      "boardRequiredForTopLevel": "Il canale è obbligatorio per le categorie di primo livello"
+      "boardRequiredForTopLevel": "La bacheca è obbligatoria per le categorie di primo livello"
     },
     "materials": {
       "productRequired": "Seleziona un prodotto",
@@ -1276,7 +1323,7 @@
     "clipboardUploadSessionRequired": "È richiesta una sessione utente per il caricamento dell'immagine dagli appunti.",
     "clipboardUploadFailed": "Caricamento dell'immagine dagli appunti non riuscito.",
     "createTicketFailed": "Impossibile creare il ticket. Riprova.",
-    "loadBoardsFailed": "Impossibile caricare i canali",
+    "loadBoardsFailed": "Impossibile caricare le bacheche",
     "createCategoryFailed": "Impossibile creare la categoria",
     "fetchCategoriesFailed": "Impossibile recuperare le categorie",
     "validateCategoryDeletionFailed": "Impossibile verificare l'eliminazione della categoria.",
@@ -1297,7 +1344,7 @@
     "loadBundledTickets": "Impossibile caricare i ticket raggruppati",
     "fetchTickets": "Impossibile recuperare i ticket",
     "fetchCategories": "Impossibile recuperare le categorie",
-    "loadBoards": "Impossibile caricare i canali",
+    "loadBoards": "Impossibile caricare le bacheche",
     "exportFailed": "Impossibile esportare i ticket",
     "saveChanges": "Impossibile salvare le modifiche",
     "updateField": "Impossibile aggiornare {{field}}",
@@ -1308,7 +1355,93 @@
     "updateWatchList": "Impossibile aggiornare l'elenco osservati. Riprova.",
     "fetchCategoryImports": "Impossibile recuperare le categorie disponibili da importare",
     "validateDeletionFailed": "Impossibile convalidare l'eliminazione. Riprova.",
-    "deleteTicketUnexpected": "Si è verificato un errore imprevisto durante l'eliminazione del ticket."
+    "deleteTicketUnexpected": "Si è verificato un errore imprevisto durante l'eliminazione del ticket.",
+    "action": {
+      "ticketNotFound": "Ticket non trovato. Potrebbe essere stato eliminato o spostato. Aggiornare la pagina e riprovare.",
+      "ticketResourceNotFound": "Risorsa del ticket non trovata. Aggiornare la pagina e riprovare.",
+      "agentAlreadyAssigned": "Questo utente è già assegnato come operatore aggiuntivo.",
+      "teamNotFound": "Team non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "teamLeadNotFound": "Il team selezionato non ha un responsabile. Scegliere un altro team o assegnare prima un responsabile.",
+      "commentNotFound": "Commento non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare."
+    },
+    "bundle": {
+      "masterAlreadyBundleMaster": "Il ticket {{tickets}} è già un ticket principale di raggruppamento e non può essere aggiunto come ticket figlio. Sciogliere prima il raggruppamento oppure usarlo come ticket principale.",
+      "masterAlreadyBundleMasters": "I ticket {{tickets}} sono già ticket principali di raggruppamento e non possono essere aggiunti come ticket figlio. Sciogliere prima i raggruppamenti oppure usarne uno come ticket principale.",
+      "selectChild": "Selezionare almeno un ticket figlio diverso dal ticket principale.",
+      "masterNotFound": "Ticket principale non trovato.",
+      "childNotFound": "Ticket figlio non trovato: {{ticket}}",
+      "childAsMaster": "Non è possibile selezionare un ticket figlio come ticket principale.",
+      "alreadyBundled": "Il ticket è già raggruppato: {{ticket}}",
+      "masterAsChild": "Il ticket principale non può essere anche un ticket figlio.",
+      "noChildren": "Nessun ticket figlio fornito.",
+      "childrenOnBundledChild": "Non è possibile aggiungere ticket figlio a un ticket figlio già raggruppato."
+    },
+    "ticket": {
+      "validationDetails": "Correggere i dati del ticket: {{details}}",
+      "invalidValue": "Uno dei valori del ticket selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del ticket.",
+      "missingFieldNamed": "Manca un campo obbligatorio del ticket: {{field}}.",
+      "referenceMissing": "Uno dei record del ticket selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica del ticket è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "valueNotAllowed": "Uno dei valori del ticket non è consentito. Controllare il modulo e riprovare."
+    },
+    "board": {
+      "invalidReference": "La bacheca, lo stato o la regola selezionati non sono validi. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della bacheca.",
+      "missingFieldNamed": "Manca un campo obbligatorio della bacheca: {{field}}.",
+      "referenceInvalid": "La bacheca, lo stato, la priorità, l’incaricato, il team o il criterio SLA selezionati non sono più validi. Aggiornare la pagina e riprovare.",
+      "duplicateName": "Esiste già una bacheca con questo nome.",
+      "duplicate": "Esiste già una bacheca o uno stato con le stesse impostazioni.",
+      "invalidValue": "Uno dei valori della bacheca o dello stato non è valido. Aggiornare la pagina e riprovare."
+    },
+    "material": {
+      "invalidValue": "Uno dei valori del materiale selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del materiale.",
+      "missingFieldNamed": "Manca un campo obbligatorio del materiale: {{field}}.",
+      "referenceInvalid": "Il ticket, il cliente, il prodotto o l’unità di magazzino selezionati non sono più validi. Aggiornare la pagina e riprovare.",
+      "conflict": "Questo materiale è in conflitto con un materiale del ticket o un’assegnazione di magazzino esistenti. Aggiornare la pagina e riprovare.",
+      "valueNotAllowed": "Uno dei valori del materiale non è consentito. Controllare il modulo e riprovare."
+    },
+    "settings": {
+      "updateDenied": "Autorizzazione negata: impossibile aggiornare le impostazioni dei ticket"
+    },
+    "list": {
+      "filtersInvalid": "I filtri dell’elenco ticket non sono più validi. Aggiornare la pagina e riprovare."
+    },
+    "layoutPreference": {
+      "contextMissing": "Alla sessione manca il contesto necessario per le preferenze dei ticket. Aggiornare la pagina e riprovare.",
+      "userNotFound": "Utente corrente non trovato. Aggiornare la pagina ed effettuare nuovamente l’accesso.",
+      "invalidLayout": "Layout dei dettagli del ticket non valido. Aggiornare la pagina e riprovare.",
+      "invalidTimelineOrder": "Ordine della cronologia del ticket non valido. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori delle preferenze di layout dei ticket non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio delle preferenze dei ticket.",
+      "missingFieldNamed": "Manca un campo obbligatorio delle preferenze dei ticket: {{field}}.",
+      "userMissing": "L’utente corrente di queste preferenze dei ticket non esiste più. Aggiornare la pagina ed effettuare nuovamente l’accesso.",
+      "concurrentUpdate": "Le preferenze di layout dei ticket sono state aggiornate contemporaneamente. Aggiornare la pagina e riprovare."
+    },
+    "category": {
+      "invalidReference": "La categoria o la bacheca selezionate non sono valide. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della categoria.",
+      "missingFieldNamed": "Manca un campo obbligatorio della categoria: {{field}}.",
+      "referenceInvalid": "La bacheca o la categoria principale selezionate non sono più valide. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già una categoria con queste impostazioni.",
+      "invalidValue": "Uno dei valori della categoria non è valido. Aggiornare la pagina e riprovare."
+    },
+    "import": {
+      "invalidValue": "Uno dei valori del ticket importati non è valido. Aggiornare i dati di riferimento e riprovare.",
+      "conflict": "Un record di importazione ticket è in conflitto con un record esistente. Controllare clienti, contatti, stati, priorità, categorie o tag duplicati.",
+      "referenceMissing": "Un cliente, contatto, bacheca, stato, priorità, categoria, team o utente di riferimento non è stato trovato. Aggiornare i dati di riferimento e riprovare.",
+      "missingValue": "Manca un valore di importazione obbligatorio.",
+      "missingValueNamed": "Manca un valore di importazione obbligatorio: {{field}}.",
+      "invalidForField": "Uno dei valori importati non è valido per questo campo."
+    },
+    "checklist": {
+      "invalidReference": "L’elemento della lista di controllo, il modello o la regola selezionati non sono validi. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della lista di controllo.",
+      "missingFieldNamed": "Manca un campo obbligatorio della lista di controllo: {{field}}.",
+      "referenceInvalid": "Il ticket, il modello di lista di controllo o il filtro della regola selezionati non sono più validi. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori della lista di controllo non è valido. Aggiornare la pagina e riprovare."
+    }
   },
   "ticketSection": {
     "title": "Richiesta appuntamento",
@@ -1349,7 +1482,9 @@
       "noChildren": "Nessun figlio in questo gruppo.",
       "addChildMultiClientMessage": "Verrà aggiunto {{ticket}} di un cliente diverso al gruppo. Conferma di voler procedere.",
       "thisTicket": "questo ticket"
-    }
+    },
+    "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
+    "autoCloseWarned": "Il cliente è stato avvisato."
   },
   "invalidTicketData": "Dati del ticket non validi",
   "timeEntries": {
@@ -1468,7 +1603,7 @@
       "additionalAgentsTooltip": "Agenti aggiuntivi:",
       "unknownAgent": "Agente sconosciuto",
       "category": "Categoria",
-      "selectDestinationStatus": "Seleziona uno stato per il nuovo canale prima di salvare."
+      "selectDestinationStatus": "Seleziona uno stato per la nuova bacheca prima di salvare."
     },
     "layout": {
       "grid": "Griglia",
@@ -1498,6 +1633,7 @@
       "client": "Cliente",
       "nextVisit": "Prossima visita",
       "callsAndEmails": "Chiamate ed email",
+      "call": "Chiama",
       "viewAll": "Vedi tutto",
       "viewAllCount": "Vedi tutti {{count}}",
       "timeLogged": "Tempo registrato",
@@ -1653,7 +1789,10 @@
         "auto_close_warning_sent": "avviso di chiusura automatica inviato"
       },
       "closeStatus": "Stato di chiusura",
-      "noStatusChange": "Non modificare lo stato"
+      "noStatusChange": "Non modificare lo stato",
+      "showAllActivity": "Mostra tutta l'attività",
+      "collapseActivity": "Comprimi attività precedente",
+      "replyingToComment": "Rispondendo a {{name}}"
     }
   },
   "notifications": {

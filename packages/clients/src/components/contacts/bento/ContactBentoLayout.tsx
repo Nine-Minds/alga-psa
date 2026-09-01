@@ -19,8 +19,10 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { CallLink } from '@alga-psa/ui/components/CallLink';
 import { InteractionIcon } from '@alga-psa/ui/components/InteractionIcon';
 import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyAction } from '@alga-psa/ui/components/bento/BentoTile';
+import { ContentCardVariantProvider } from '@alga-psa/ui/components/ContentCard';
 import { TagManager } from '@alga-psa/tags/components';
 import { useToast, useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -30,6 +32,7 @@ import { useOptionalClientCrossFeature } from '../../../context/ClientCrossFeatu
 import { QuickAddInteraction } from '../../interactions/QuickAddInteraction';
 import InteractionDetails from '../../interactions/InteractionDetails';
 import { ContactPortalTab } from '../ContactPortalTab';
+import { ContactCredentialsSection } from '../ContactCredentialsSection';
 import ContactDetailsEdit from '../ContactDetailsEdit';
 import type {
   ContactPortalSummary,
@@ -450,7 +453,12 @@ export function ContactBentoLayout({
               )}
               <span className="truncate">{contact.email || 'No primary email'}</span>
               <span className="truncate">
-                {primaryPhone ? `${primaryPhone}${primaryPhoneEntry ? ` · ${phoneType(primaryPhoneEntry).toLowerCase()}` : ''}` : 'No phone number'}
+                {primaryPhone ? (
+                  <>
+                    <CallLink id={`${id}-primary-phone-call`} phoneNumber={primaryPhone} />
+                    {primaryPhoneEntry ? ` · ${phoneType(primaryPhoneEntry).toLowerCase()}` : ''}
+                  </>
+                ) : 'No phone number'}
               </span>
             </div>
             {contact.contact_name_id ? (
@@ -519,7 +527,12 @@ export function ContactBentoLayout({
           {contact.phone_numbers.slice(0, 4).map((phone) => (
             <TileRow
               key={phone.contact_phone_number_id ?? phone.phone_number}
-              primary={phone.phone_number}
+              primary={(
+                <CallLink
+                  id={`${id}-phone-call-${phone.contact_phone_number_id ?? phone.phone_number}`}
+                  phoneNumber={phone.phone_number}
+                />
+              )}
               meta={[phoneType(phone).toLowerCase(), phone.is_default ? 'primary' : null].filter(Boolean).join(' · ')}
               emphasize={false}
             />
@@ -835,6 +848,14 @@ export function ContactBentoLayout({
         {reachTile}
         {portalTile}
         {showDocuments ? documentsTile : null}
+        {/* Compact passwords tile (flag-gated inside the section); its own
+            manager dialog handles create/attach/detach. */}
+        <ContentCardVariantProvider variant="bento">
+          <ContactCredentialsSection
+            contactId={contact.contact_name_id}
+            clientId={contact.client_id ?? null}
+          />
+        </ContentCardVariantProvider>
         {showRelatedWork ? relatedWorkTile : null}
         {notesTile}
       </div>

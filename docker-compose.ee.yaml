@@ -57,6 +57,9 @@ services:
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
       MICROSOFT_LOGIN_BASE_URL: ${MICROSOFT_LOGIN_BASE_URL:-}
       MICROSOFT_GRAPH_BASE_URL: ${MICROSOFT_GRAPH_BASE_URL:-}
+      # managedTenants (beta-only API) has its own emulator hook; without it,
+      # emulator-pointed Entra testing silently hits real Graph.
+      MICROSOFT_GRAPH_BETA_BASE_URL: ${MICROSOFT_GRAPH_BETA_BASE_URL:-}
       # Secret provider configuration (EE edition - for local dev, vault is disabled by default)
       # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
@@ -106,6 +109,7 @@ services:
       - crypto_key
       - token_secret_key
       - nextauth_secret
+      - credential_encryption_key
       - google_oauth_client_id
       - google_oauth_client_secret
       - alga_auth_key
@@ -487,6 +491,7 @@ services:
       - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET:-}
       - MICROSOFT_LOGIN_BASE_URL=${MICROSOFT_LOGIN_BASE_URL:-}
       - MICROSOFT_GRAPH_BASE_URL=${MICROSOFT_GRAPH_BASE_URL:-}
+      - MICROSOFT_GRAPH_BETA_BASE_URL=${MICROSOFT_GRAPH_BETA_BASE_URL:-}
       # Smoke-only: defaults to unset so the worker uses the real GDAP endpoints. Override in
       # the compose invocation or shell env to test self-tenant mode without CSP/GDAP.
       - ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=${ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE:-}

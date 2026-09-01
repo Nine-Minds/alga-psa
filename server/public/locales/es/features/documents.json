@@ -69,10 +69,15 @@
     "suggestedDefaultsLoaded_other": "Valores predeterminados cargados para {{count}} tipos de entidad",
     "suggestedDefaultsLoadFailed": "Error al cargar los valores predeterminados sugeridos",
     "entityTypesAllConfigured": "Todos los tipos de entidad ya tienen carpetas predeterminadas configuradas",
-    "defaultFoldersLoadFailed": "Error al cargar las carpetas predeterminadas"
+    "defaultFoldersLoadFailed": "Error al cargar las carpetas predeterminadas",
+    "parseContentFailed": "No se pudo interpretar el contenido del documento"
   },
   "validation": {
-    "nameRequired": "El nombre del documento es obligatorio"
+    "nameRequired": "El nombre del documento es obligatorio",
+    "typeRequired": "El tipo de documento es obligatorio",
+    "userIdRequired": "El ID de usuario es obligatorio",
+    "orderNumberRequired": "El número de orden es obligatorio",
+    "contentRequired": "El contenido es obligatorio"
   },
   "bulkActions": {
     "selected_one": "{{count}} documento seleccionado",
@@ -239,7 +244,9 @@
     "cascadeMakeVisible": "¿También desea hacer visibles los {{count}} documento(s) en \"{{name}}\" en el portal del cliente?",
     "cascadeMakeHidden": "¿También desea ocultar los {{count}} documento(s) en \"{{name}}\" del portal del cliente?",
     "cascadeYes": "Sí, actualizar documentos",
-    "cascadeNo": "No, solo la carpeta"
+    "cascadeNo": "No, solo la carpeta",
+    "visibleToClients": "Visible para los clientes",
+    "hiddenFromClients": "Oculto para los clientes"
   },
   "empty": {
     "default": "No se encontraron documentos"
@@ -283,5 +290,79 @@
     "pageOf": "Página {{current}} de {{total}}",
     "previous": "Anterior"
   },
-  "ticketDocuments": "Documentos del ticket"
+  "ticketDocuments": "Documentos del ticket",
+  "actions": {
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "cancel": "Cancelar"
+  },
+  "card": {
+    "noDate": "Sin fecha",
+    "reflectionLabel": "Tarjeta de documento"
+  },
+  "editor": {
+    "loading": "Cargando...",
+    "initializing": "Inicializando el editor...",
+    "placeholder": "Empiece a escribir...",
+    "errorPrefix": "Error: {{message}}",
+    "status": {
+      "offline": "Sin conexión — los cambios se sincronizarán al volver a conectarse",
+      "allChangesSaved": "Todos los cambios están guardados",
+      "syncing": "{{status}} (sincronizando)"
+    },
+    "connection": {
+      "connected": "Conectado",
+      "connecting": "Conectando",
+      "disconnected": "Desconectado"
+    },
+    "presence": {
+      "unknownUser": "Usuario"
+    },
+    "toolbar": {
+      "bold": "Negrita (Ctrl+B)",
+      "italic": "Cursiva (Ctrl+I)",
+      "underline": "Subrayado (Ctrl+U)",
+      "strikethrough": "Tachado",
+      "code": "Código",
+      "heading1": "Encabezado 1",
+      "heading2": "Encabezado 2",
+      "bulletList": "Lista con viñetas",
+      "orderedList": "Lista numerada",
+      "quote": "Cita en bloque",
+      "link": "Enlace",
+      "image": "Insertar imagen",
+      "linkPrompt": "URL",
+      "imagePrompt": "URL de la imagen"
+    },
+    "imageUpload": {
+      "failed": "Error al subir la imagen",
+      "tooLarge": "La imagen supera el límite de carga de 10 MB",
+      "notAnImage": "Solo se pueden insertar archivos de imagen en el editor",
+      "noSession": "Vuelva a iniciar sesión para subir imágenes"
+    }
+  },
+  "form": {
+    "errorsHeading": "Corrija los siguientes errores:",
+    "submit": "Crear documento",
+    "fields": {
+      "documentName": "Nombre del documento *",
+      "documentType": "Tipo de documento *",
+      "userId": "ID de usuario *",
+      "contactNameId": "ID del nombre del contacto",
+      "clientId": "ID del cliente",
+      "ticketId": "ID del ticket",
+      "orderNumber": "Número de orden *",
+      "content": "Contenido *"
+    }
+  },
+  "previewPane": {
+    "loading": "Cargando vista previa...",
+    "pdfDocument": "Documento PDF",
+    "videoFile": "Archivo de video",
+    "notAvailable": "Vista previa no disponible",
+    "altPdf": "Vista previa de {{name}}",
+    "altVideoThumbnail": "Miniatura de {{name}}",
+    "pageCount_one": "{{count}} página",
+    "pageCount_other": "{{count}} páginas"
+  }
 }

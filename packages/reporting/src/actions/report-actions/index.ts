@@ -11,3 +11,14 @@ export type { RemainingBucketUnitsResult } from './getRemainingBucketUnits'; // 
 
 export { getUsageDataMetrics } from './getUsageDataMetrics';
 export type { UsageMetricResult } from './getUsageDataMetrics'; // Export type if needed
+
+export { getDeferredRevenueReport } from './getDeferredRevenueReport';
+export type { GetDeferredRevenueReportInput } from './getDeferredRevenueReport';
+export type {
+  DeferredRevenueReport,
+  ClientRollforward,
+  CurrencySection,
+  CreditDetailRow,
+  BucketDetailRow,
+  MovementColumns,
+} from './deferred-revenue/types';

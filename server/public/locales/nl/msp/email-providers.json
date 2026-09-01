@@ -12,7 +12,6 @@
       "resyncError": "Het opnieuw synchroniseren van de IMAP-provider is mislukt",
       "resyncStarted": "Hersynchronisatie gestart voor {{providerName}}.",
       "resyncRecovered": "{{providerName}} is opnieuw verbonden.",
-      "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Pro.",
       "loadProvidersError": "Kan e-mailproviders niet laden"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Configuratie van e-mailprovider",
-      "description": {
-        "enterprise": "Configureer Gmail-, Microsoft 365- of IMAP-providers om inkomende e-mails als tickets te ontvangen en te verwerken",
-        "standard": "Configureer Gmail- of IMAP-providers om inkomende e-mails als tickets te ontvangen en te verwerken"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Configureer Gmail-, Microsoft 365- of IMAP-providers om inkomende e-mails als tickets te ontvangen en te verwerken",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "E-mailprovider toevoegen"
@@ -42,6 +35,7 @@
       "title": "Installatie-instructies",
       "microsoft": {
         "title": "Microsoft 365-installatie",
+        "ownApp": "Breng uw eigen Microsoft-app mee – registreer deze in Azure AD (Microsoft Entra ID), verleen e-mailmachtigingen en verbind deze met uw Microsoft 365-postvak.",
         "providersPointer": "De configuratie van de Microsoft-app wordt beheerd in Aanbieders.",
         "openProviders": "Aanbieders openen"
       },
@@ -117,10 +111,7 @@
     "actions": {
       "cancel": "Annuleren"
     },
-    "help": {
-      "enterprise": "Kies de provider die uw organisatie al gebruikt. Gebruikt u Google Workspace, kies dan Gmail; gebruikt u Microsoft 365, kies dan Microsoft 365. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren.",
-      "standard": "Kies de provider die uw organisatie al gebruikt. Gebruikt u Google Workspace, kies dan Gmail; kies anders IMAP. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren."
-    }
+    "help": "Kies de provider die uw organisatie al gebruikt. Gebruikt u Google Workspace, kies dan Gmail; gebruikt u Microsoft 365, kies dan Microsoft 365. U kunt dit later wijzigen door uw e-mailprovider te verwijderen en opnieuw te configureren."
   },
   "wizard": {
     "title": {
@@ -168,7 +159,8 @@
       "resyncMailbox": "Postbus opnieuw synchroniseren",
       "pause": "Inkomende e-mail pauzeren",
       "resume": "Inkomende e-mail hervatten",
-      "delete": "Aanbieder verwijderen"
+      "delete": "Aanbieder verwijderen",
+      "runGmailDiagnostics": "Gmail-bezorgingsdiagnose uitvoeren"
     },
     "feedback": {
       "paused": "Inkomende e-mail gepauzeerd.",
@@ -176,6 +168,11 @@
       "pauseError": "Kan de pauzestatus van inkomende e-mail niet wijzigen."
     },
     "pausedHelp": "Berichten die binnenkomen terwijl deze mailbox is gepauzeerd, worden niet met terugwerkende kracht geïmporteerd.",
+    "authFailure": {
+      "title": "Inkomende e-mail gepauzeerd — opnieuw verbinden vereist",
+      "description": "Inkomende e-mail voor {{mailbox}} is gepauzeerd omdat de inloggegevens niet meer werken. Berichten gaan niet verloren — ze blijven in de bronpostvak staan en worden geïmporteerd nadat u opnieuw verbinding hebt gemaakt.",
+      "action": "Opnieuw verbinden"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Laatste synchronisatie",
@@ -217,6 +214,14 @@
       "title": "Geen e-mailproviders geconfigureerd",
       "description": "Voeg een e-mailprovider toe om inkomende e-mails als tickets te ontvangen en te verwerken.",
       "action": "E-mailprovider toevoegen"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail stuurt hier geen nieuwe e-mail meer heen",
+      "expiredDescription": "De Gmail-watch voor {{mailbox}} is verlopen, dus Google publiceert geen meldingen meer. Berichten gaan niet verloren — ze blijven in de mailbox. Gebruik Vernieuw Pub/Sub en kijk om de bezorging te hervatten.",
+      "missingTitle": "Gmail-pushbezorging is niet geregistreerd",
+      "missingDescription": "Er is geen Gmail-watch geregistreerd voor {{mailbox}}, dus er komt geen inkomende e-mail binnen. Gebruik Vernieuw Pub/Sub en kijk om er een te registreren.",
+      "expiringTitle": "Gmail-pushbezorging verloopt binnen een dag",
+      "expiringDescription": "Een Gmail-watch duurt zeven dagen. Gebruik Vernieuw Pub/Sub en kijk voordat deze verloopt, anders stopt inkomende e-mail zonder verdere melding."
     }
   },
   "forms": {
@@ -246,6 +251,9 @@
         "authorizing": "Autoriseren...",
         "authorized": "Geautoriseerd",
         "authorizeAccess": "Toegang autoriseren"
+      },
+      "messages": {
+        "setupIncomplete": "Provider opgeslagen maar installatie onvolledig: {{error}}"
       }
     },
     "microsoft": {
@@ -260,7 +268,8 @@
         "popupBlocked": "Kan de OAuth-pop-up niet openen. Sta pop-ups toe voor deze site.",
         "closedEarly": "Autorisatievenster gesloten vóór voltooiing. Probeer het opnieuw.",
         "authorizationFailed": "Autorisatie mislukt",
-        "senderDisplayNameInvalid": "Weergavenaam mag geen aanhalingstekens, punthaken of regeleinden bevatten"
+        "senderDisplayNameInvalid": "Weergavenaam mag geen aanhalingstekens, punthaken of regeleinden bevatten",
+        "issuerRequired": "Kies een Microsoft-app voordat u zich aanmeldt"
       },
       "requiredFields": {
         "providerName": "Configuratienaam",
@@ -292,12 +301,24 @@
         "maxEmailsPerSync": "Max. e-mails per synchronisatie"
       },
       "readiness": {
-        "checking": "Microsoft-configuratie controleren…",
-        "ready": "Microsoft is ingesteld. Meld u aan met dit postvak om de configuratie te voltooien.",
-        "pending": "Wachten op uw Microsoft 365-beheerder. De configuratie is gestart in Aanbieders, maar is nog niet goedgekeurd.",
-        "openProviders": "Aanbieders openen",
-        "notConfigured": "Microsoft is nog niet ingesteld. Stel Microsoft eenmaal in via Aanbieders en kom daarna terug.",
-        "setUpInProviders": "Instellen in Aanbieders"
+        "openProviders": "Aanbieders openen"
+      },
+      "issuer": {
+        "title": "Microsoft-app die dit postvak autoriseert",
+        "description": "Kies welke toepassing zich aanmeldt als dit postvak. Deze keuze wordt bij het postvak opgeslagen en heeft geen invloed op andere services.",
+        "managedLabel": "AlgaPSA-app (beheerd door Nine Minds)",
+        "managedDescription": "Aan uw kant is geen registratie van een Microsoft-app vereist.",
+        "recommended": "Aanbevolen",
+        "currentApp": "Huidige app: {{app}}",
+        "selectedApp": "Geselecteerde app: {{app}}",
+        "pendingReauth": "Herautorisatie in behandeling",
+        "switchWarning": "Het wijzigen van de Microsoft-app vereist dat dit postvak opnieuw wordt verbonden. Meld u opnieuw aan met Microsoft om de overstap af te ronden.",
+        "noneAvailable": "Om Microsoft 365 te verbinden, stelt u eerst een Microsoft-app in bij Aanbieders en komt u daarna terug.",
+        "retry": "Opnieuw proberen",
+        "pendingConsentEmpty": "Uw Microsoft-app wacht op goedkeuring van een Microsoft 365-beheerder. Zodra deze bij Aanbieders is goedgekeurd, komt u terug om u aan te melden.",
+        "pendingConsentHint": "Uw eigen Microsoft-app wacht nog op goedkeuring van een Microsoft 365-beheerder.",
+        "ownAppPrompt": "Liever aanmelden met uw eigen Microsoft-app?",
+        "ownAppSetupLink": "Instellen bij Aanbieders"
       }
     },
     "gmail": {
@@ -765,7 +786,7 @@
         "authHint": "Laat gebruikersnaam en wachtwoord leeg als uw relay e-mail zonder authenticatie accepteert.",
         "fromLabel": "Afzenderadres",
         "fromPlaceholder": "noreply@voorbeeld.nl",
-        "fromHelp": "Het standaard afzenderadres voor uitgaande e-mails.",
+        "fromHelp": "Standaardafzender voor alle uitgaande e-mail. Ticket-e-mail kan hieronder een eigen identiteit gebruiken.",
         "security": {
           "title": "Verbindingsbeveiliging",
           "secure": "Impliciete TLS gebruiken (SSL bij verbinden, doorgaans poort 465)",
@@ -842,7 +863,7 @@
           "description": "Geef portaaluitnodigingen, wachtwoordresets, facturen, projectupdates en algemene meldingen onafhankelijk van de ticketroutering een eigen huisstijl.",
           "addressLabel": "Afzenderadres",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Dit is het huisstijladres dat via uw SMTP-server wordt gebruikt voor e-mail die niet aan tickets is gerelateerd.",
+          "smtpAddressHelp": "Wordt bepaald door het afzenderadres in de SMTP-configuratie hierboven. Alle e-mail die niet aan tickets is gerelateerd wordt vanaf dit adres verzonden.",
           "lockedAddressHelp": "Dit adres wordt bepaald door het actieve beheerde domein of het geselecteerde Microsoft 365-postvak.",
           "nameLabel": "Weergavenaam van afzender",
           "namePlaceholder": "Uw bedrijfsnaam",
@@ -1070,6 +1091,72 @@
       "subject": "Onderwerp",
       "title": "Deze regel testen",
       "to": "Aan"
+    }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Kan domeinen niet ophalen",
+      "invalidFormat": "Ongeldige domeinnotatie",
+      "duplicate": "Het domein bestaat al",
+      "addFailed": "Kan het domein niet toevoegen. Probeer het opnieuw.",
+      "notFound": "Domein niet gevonden",
+      "verifyFailed": "Kan het domein niet verifiëren. Probeer het opnieuw.",
+      "stillReferenced": "Er wordt nog naar het domein verwezen; het kan niet worden verwijderd.",
+      "deleteFailed": "Kan het domein niet verwijderen. Probeer het opnieuw."
+    },
+    "provider": {
+      "saveFailed": "Kan de e-mailprovider niet opslaan. Controleer de instellingen en probeer het opnieuw.",
+      "updateFailed": "Kan de e-mailprovider niet bijwerken. Controleer de instellingen en probeer het opnieuw.",
+      "notFound": "E-mailprovider niet gevonden",
+      "deleteFailed": "Kan de e-mailprovider niet verwijderen"
+    },
+    "settings": {
+      "fetchFailed": "Kan de e-mailinstellingen niet ophalen",
+      "mailboxRequired": "Kies een Microsoft 365-postvak voor uitgaande e-mail",
+      "mailboxInactive": "Het geselecteerde Microsoft 365-postvak is niet actief of bestaat niet meer",
+      "mailboxReconnect": "Verbind het geselecteerde Microsoft 365-postvak opnieuw voordat u het voor uitgaande e-mail gebruikt",
+      "ticketIdentityMustMatchMailbox": "De e-mailidentiteit voor tickets moet het geselecteerde Microsoft 365-postvak ({{mailbox}}) gebruiken. Werk het adres voor ticket-e-mails bij voordat u opslaat.",
+      "providerFromAddressInvalid": "Het afzenderadres van {{provider}} moet een geldig e-mailadres zijn",
+      "ticketingFromInvalid": "Het afzenderadres voor tickets moet een geldig e-mailadres zijn",
+      "outboundDomainInvalid": "Het uitgaande verzenddomein moet een geldig domein zijn (bijv. example.com)",
+      "outboundDomainRequired": "Configureer een uitgaand domein voordat u een afzenderadres voor tickets kiest",
+      "ticketingFromDomainMismatch": "Het afzenderadres voor tickets moet het geconfigureerde uitgaande domein gebruiken",
+      "refreshFailed": "Kan de bijgewerkte instellingen niet ophalen",
+      "updateFailed": "Kan de e-mailinstellingen niet bijwerken",
+      "mailboxesLoadFailed": "Kan de Microsoft 365-postvakken niet laden"
+    },
+    "inboundRules": {
+      "notFound": "Regel voor inkomende e-mail niet gevonden",
+      "invalidOrdering": "Ongeldige gegevens voor de regelvolgorde",
+      "aliasRequired": "Alias is verplicht",
+      "aliasTooLong": "De alias is te lang",
+      "clientRequired": "Klant is verplicht",
+      "invalidSampleEmail": "Ongeldige voorbeeld-e-mail",
+      "permissionDenied": "U hebt geen toestemming om regels voor inkomende e-mail te beheren.",
+      "ticketDefaultsUnavailable": "De opgegeven standaardinstellingen voor tickets bestaan niet of zijn inactief.",
+      "orderingMismatch": "De volgorde komt niet overeen met de huidige regelset.",
+      "clientNotFound": "Klant niet gevonden.",
+      "aliasAlreadyAssigned": "De alias ‘{{alias}}’ is al aan een klant toegewezen.",
+      "invalidRegex": "Ongeldige reguliere expressie.",
+      "fallbackDestinationRequired": "Een terugvalbestemming is vereist wanneer voor niet-overeenkomende berichten een terugvalbestemming wordt gebruikt."
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Er bestaat al een configuratie met deze korte naam",
+      "createFailed": "Kan de standaardwaarden voor inkomende tickets niet aanmaken. Probeer het opnieuw.",
+      "notFound": "Standaardconfiguratie niet gevonden",
+      "updateFailed": "Kan de standaardwaarden voor inkomende tickets niet bijwerken. Probeer het opnieuw."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Toestemming geweigerd: ticketveldopties kunnen niet worden gelezen",
+      "loadFailed": {
+        "ticketFieldOptions": "Kan de ticketveldopties niet laden. Probeer het opnieuw.",
+        "boards": "Kan de borden niet laden. Probeer het opnieuw.",
+        "statuses": "Kan de statussen niet laden. Probeer het opnieuw.",
+        "priorities": "Kan de prioriteiten niet laden. Probeer het opnieuw.",
+        "categories": "Kan de categorieën niet laden. Probeer het opnieuw.",
+        "clients": "Kan de klanten niet laden. Probeer het opnieuw.",
+        "users": "Kan de gebruikers niet laden. Probeer het opnieuw."
+      }
     }
   }
 }

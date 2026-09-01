@@ -8,6 +8,7 @@ import type { EmailProvider } from './types';
 
 const getEmailProvidersMock = vi.hoisted(() => vi.fn());
 const resyncImapProviderMock = vi.hoisted(() => vi.fn());
+const isEnterpriseEditionMock = vi.hoisted(() => vi.fn(() => true));
 const toastMock = vi.hoisted(() => Object.assign(vi.fn(), {
   error: vi.fn(),
   loading: vi.fn(() => 'resync-toast'),
@@ -64,7 +65,7 @@ vi.mock('./admin/Microsoft365DiagnosticsDialog', () => ({
 }));
 
 vi.mock('../../lib/microsoftConsumerVisibility', () => ({
-  isMicrosoftConsumerEnterpriseEdition: () => true,
+  isMicrosoftConsumerEnterpriseEdition: () => isEnterpriseEditionMock(),
 }));
 
 vi.mock('./EmailProviderList', () => ({
@@ -297,6 +298,7 @@ describe('IMAP resync status recovery', () => {
         onRetryRenewal={vi.fn()}
         onResyncProvider={vi.fn()}
         onRunDiagnostics={vi.fn()}
+        onReconnect={vi.fn()}
         onChangeDefaults={vi.fn()}
         onTogglePause={vi.fn()}
       />
@@ -306,5 +308,40 @@ describe('IMAP resync status recovery', () => {
     expect(screen.queryByText('Inactive')).not.toBeInTheDocument();
     expect(view.container.firstElementChild).not.toHaveClass('opacity-60');
     expect(screen.getByRole('button')).toBeDisabled();
+  });
+});
+
+describe('EmailProviderConfiguration setup guidance across editions', () => {
+  afterEach(() => {
+    cleanup();
+    isEnterpriseEditionMock.mockImplementation(() => true);
+  });
+
+  it('shows the Microsoft setup guidance without the hosted Providers hint in CE', async () => {
+    isEnterpriseEditionMock.mockImplementation(() => false);
+    getEmailProvidersMock.mockResolvedValueOnce({ providers: [] });
+
+    await act(async () => {
+      render(<EmailProviderConfiguration />);
+    });
+
+    // Edition-neutral bring-your-own-app guidance renders in every edition.
+    expect(screen.getByText(/Bring your own Microsoft app/)).toBeInTheDocument();
+    // The hosted/platform-credentials Providers hint stays EE-only.
+    expect(screen.queryByText('Microsoft app setup is managed in Providers.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Providers' })).not.toBeInTheDocument();
+  });
+
+  it('shows the hosted Providers hint alongside the setup guidance in EE', async () => {
+    isEnterpriseEditionMock.mockImplementation(() => true);
+    getEmailProvidersMock.mockResolvedValueOnce({ providers: [] });
+
+    await act(async () => {
+      render(<EmailProviderConfiguration />);
+    });
+
+    expect(screen.getByText(/Bring your own Microsoft app/)).toBeInTheDocument();
+    expect(screen.getByText('Microsoft app setup is managed in Providers.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Providers' })).toBeInTheDocument();
   });
 });

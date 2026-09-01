@@ -1,2327 +1,2435 @@
 {
   "common": {
     "actions": {
-      "back": "55555",
-      "cancel": "55555",
-      "close": "55555",
-      "create": "55555",
-      "delete": "55555",
-      "discard": "55555",
-      "edit": "55555",
-      "refresh": "55555",
-      "remove": "55555",
-      "retry": "55555",
-      "save": "55555",
-      "saveChanges": "55555",
-      "saveChangesDirty": "55555",
-      "saving": "55555",
-      "view": "55555",
-      "openMenu": "55555"
+      "back": "〖Ɓȧƈķ ··〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "close": "〖Ƈŀȯşḗ ··〗",
+      "create": "〖Ƈřḗȧŧḗ ···〗",
+      "delete": "〖Ḓḗŀḗŧḗ ···〗",
+      "discard": "〖Ḓīşƈȧřḓ ···〗",
+      "edit": "〖Ḗḓīŧ ··〗",
+      "refresh": "〖Řḗƒřḗşħ ···〗",
+      "remove": "〖Řḗḿȯṽḗ ···〗",
+      "retry": "〖Řḗŧřẏ ··〗",
+      "save": "〖Şȧṽḗ ··〗",
+      "saveChanges": "〖Şȧṽḗ Ƈħȧƞɠḗş ·····〗",
+      "saveChangesDirty": "〖Şȧṽḗ Ƈħȧƞɠḗş * ······〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗",
+      "view": "〖Ṽīḗẇ ··〗",
+      "openMenu": "〖Ȯƥḗƞ ḿḗƞŭ ····〗"
     },
     "alerts": {
-      "saveSuccess": "55555",
-      "systemManagedDefault": "55555"
+      "saveSuccess": "〖Ƈħȧƞɠḗş şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ. ···········〗",
+      "systemManagedDefault": "〖Ŧħīş īş ȧ şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ. ·················〗"
     },
     "empty": {
-      "none": "55555",
-      "notAvailable": "55555",
-      "notSpecified": "55555",
-      "ongoing": "55555"
+      "none": "〖Ƞȯƞḗ ··〗",
+      "notAvailable": "〖Ƞ/Ȧ ··〗",
+      "notSpecified": "〖Ƞȯŧ şƥḗƈīƒīḗḓ ······〗",
+      "ongoing": "〖Ȯƞɠȯīƞɠ ···〗"
     },
     "errors": {
-      "failedToLoad": "55555",
-      "failedToSave": "55555",
-      "validationPrefix": "55555"
+      "failedToLoad": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓȧŧȧ. ········〗",
+      "failedToSave": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƈħȧƞɠḗş. ··········〗",
+      "validationPrefix": "〖Ƥŀḗȧşḗ ƈȯřřḗƈŧ ŧħḗ ƒȯŀŀȯẇīƞɠ: ············〗"
     },
     "labels": {
-      "created": "55555",
-      "currency": "55555",
-      "description": "55555",
-      "lastUpdated": "55555",
-      "name": "55555",
-      "no": "55555",
-      "status": "55555",
-      "yes": "55555"
+      "created": "〖Ƈřḗȧŧḗḓ ···〗",
+      "currency": "〖Ƈŭřřḗƞƈẏ ····〗",
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "lastUpdated": "〖Ŀȧşŧ Ŭƥḓȧŧḗḓ ·····〗",
+      "name": "〖Ƞȧḿḗ ··〗",
+      "no": "〖Ƞȯ ·〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "yes": "〖Ẏḗş ··〗"
     },
     "tabs": {
-      "clientContracts": "55555",
-      "drafts": "55555",
-      "templates": "55555"
+      "clientContracts": "〖Ƈŀīḗƞŧ Ƈȯƞŧřȧƈŧş ·······〗",
+      "drafts": "〖Ḓřȧƒŧş ···〗",
+      "templates": "〖Ŧḗḿƥŀȧŧḗş ····〗"
     },
-    "moneyPlaceholder": "55555",
-    "notAvailable": "55555"
+    "moneyPlaceholder": "〖— ·〗",
+    "notAvailable": "〖- ·〗"
   },
   "status": {
-    "active": "55555",
-    "draft": "55555",
-    "expired": "55555",
-    "terminated": "55555"
+    "active": "〖Ȧƈŧīṽḗ ···〗",
+    "draft": "〖Ḓřȧƒŧ ··〗",
+    "expired": "〖Ḗẋƥīřḗḓ ···〗",
+    "terminated": "〖Ŧḗřḿīƞȧŧḗḓ ····〗"
   },
   "renewal": {
     "labels": {
-      "decisionDue": "55555",
-      "mode": "55555",
-      "noticeDays": "55555",
-      "source": "55555",
-      "termMonths": "55555"
+      "decisionDue": "〖Ḓḗƈīşīȯƞ Ḓŭḗ ·····〗",
+      "mode": "〖Řḗƞḗẇȧŀ Ḿȯḓḗ ·····〗",
+      "noticeDays": "〖Ƞȯŧīƈḗ Ƥḗřīȯḓ ······〗",
+      "source": "〖Řḗƞḗẇȧŀ Şȯŭřƈḗ ······〗",
+      "termMonths": "〖Řḗƞḗẇȧŀ Ŧḗřḿ ·····〗"
     },
     "modes": {
-      "auto": "55555",
-      "manual": "55555",
-      "none": "55555"
+      "auto": "〖Ȧŭŧȯ-řḗƞḗẇ ····〗",
+      "manual": "〖Ḿȧƞŭȧŀ řḗƞḗẇȧŀ ······〗",
+      "none": "〖Ƞȯƞ-řḗƞḗẇīƞɠ ·····〗"
     },
     "source": {
-      "contract": "55555",
-      "tenantDefault": "55555"
+      "contract": "〖Ƈȯƞŧřȧƈŧ ····〗",
+      "tenantDefault": "〖Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ······〗"
     }
   },
   "billing": {
     "cadenceOwner": {
-      "client": "55555",
-      "contract": "55555"
+      "client": "〖Ƈŀīḗƞŧ şƈħḗḓŭŀḗ ······〗",
+      "contract": "〖Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ········〗"
     },
     "frequency": {
-      "annually": "55555",
-      "biweekly": "55555",
-      "monthly": "55555",
-      "quarterly": "55555",
-      "weekly": "55555"
+      "annually": "〖Ȧƞƞŭȧŀŀẏ ····〗",
+      "biweekly": "〖Ɓīẇḗḗķŀẏ ····〗",
+      "monthly": "〖Ḿȯƞŧħŀẏ ···〗",
+      "quarterly": "〖Ɋŭȧřŧḗřŀẏ ····〗",
+      "weekly": "〖Ẇḗḗķŀẏ ···〗"
     },
     "labels": {
-      "billingFrequency": "55555",
-      "timing": "55555",
-      "cadenceOwner": "55555"
+      "billingFrequency": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ ·······〗",
+      "timing": "〖Ɓīŀŀīƞɠ Ŧīḿīƞɠ ······〗",
+      "cadenceOwner": "〖Ƈȧḓḗƞƈḗ Ȯẇƞḗř ······〗"
     },
     "timing": {
-      "advance": "55555",
-      "arrears": "55555"
+      "advance": "〖Īƞ Ȧḓṽȧƞƈḗ ····〗",
+      "arrears": "〖Īƞ Ȧřřḗȧřş ····〗"
     }
   },
   "po": {
     "labels": {
-      "amount": "55555",
-      "number": "55555",
-      "required": "55555"
+      "amount": "〖ƤȮ Ȧḿȯŭƞŧ ····〗",
+      "number": "〖ƤȮ Ƞŭḿƀḗř ····〗",
+      "required": "〖ƤȮ Řḗʠŭīřḗḓ ·····〗"
     }
   },
   "contractDetail": {
     "alerts": {
-      "saveSuccess": "55555",
-      "unsavedChanges": "55555"
+      "saveSuccess": "〖Ƈȯƞŧřȧƈŧ şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ! ············〗",
+      "unsavedChanges": "〖Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Ƈŀīƈķ \"Şȧṽḗ Ƈħȧƞɠḗş\" ŧȯ ȧƥƥŀẏ ŧħḗḿ. ·························〗"
     },
     "cards": {
-      "assignment": "55555",
-      "clientOwnership": "55555",
-      "contractDetails": "55555",
-      "header": "55555",
-      "quickActions": "55555",
-      "renewalHandling": "55555"
+      "assignment": "〖Ƈŀīḗƞŧ Ȧşşīɠƞḿḗƞŧ ·······〗",
+      "clientOwnership": "〖Ƈŀīḗƞŧ Ȯẇƞḗřşħīƥ ·······〗",
+      "contractDetails": "〖Ƈȯƞŧřȧƈŧ Ḓḗŧȧīŀş ·······〗",
+      "header": "〖Ƈȯƞŧřȧƈŧ Ħḗȧḓḗř ······〗",
+      "quickActions": "〖Ɋŭīƈķ Ȧƈŧīȯƞş ······〗",
+      "renewalHandling": "〖Řḗƞḗẇȧŀ Ħȧƞḓŀīƞɠ ·······〗"
     },
     "clientAssignment": {
-      "clientContractId": "55555 {{id}} 55555",
-      "empty": "55555",
-      "endDate": "55555",
-      "endDateLabel": "55555",
-      "loadingStatuses": "55555",
-      "notRequired": "55555",
-      "noticePeriodDays": "55555",
-      "noticePeriodPlaceholder": "55555",
-      "noticePrefix": "55555",
-      "renewalHandling": "55555",
-      "renewalTermMonths": "55555",
-      "renewalTermPlaceholder": "55555",
-      "renewalTicketBoard": "55555",
-      "renewalTicketStatus": "55555",
-      "required": "55555",
-      "selectBoard": "55555",
-      "selectBoardFirst": "55555",
-      "selectRenewalMode": "55555",
-      "selectStartDate": "55555",
-      "selectStatus": "55555",
-      "startDate": "55555",
-      "startDateLabel": "55555",
-      "startDateLocked": "55555",
-      "title": "55555",
-      "useTenantRenewalDefaults": "55555",
-      "usingCustomSettings": "55555",
-      "usingTenantDefaults": "55555"
+      "clientContractId": "〖Ƈŀīḗƞŧ Ƈȯƞŧřȧƈŧ ĪḒ: {{id}} ···········〗",
+      "creditDrawdownOptOut": "〖Ḗẋƈŀŭḓḗ ƒřȯḿ ƈřḗḓīŧ ḓřȧẇ-ḓȯẇƞ ············〗",
+      "empty": "〖Ŧħīş ƈȯƞŧřȧƈŧ īş ƞȯŧ ȧşşīɠƞḗḓ ŧȯ ȧ ƈŀīḗƞŧ ẏḗŧ. ···················〗",
+      "endDate": "〖Ḗƞḓ Ḓȧŧḗ ····〗",
+      "endDateLabel": "〖Ȧşşīɠƞḿḗƞŧ ḗƞḓ ḓȧŧḗ ········〗",
+      "loadingStatuses": "〖Ŀȯȧḓīƞɠ şŧȧŧŭşḗş... ········〗",
+      "notRequired": "〖Ƞȯŧ řḗʠŭīřḗḓ ·····〗",
+      "noticePeriodDays": "〖Ƞȯŧīƈḗ Ƥḗřīȯḓ (Ḓȧẏş) ········〗",
+      "noticePeriodPlaceholder": "〖ḗ.ɠ., 30 ····〗",
+      "noticePrefix": "〖Ƞȯŧīƈḗ: ···〗",
+      "renewalHandling": "〖Řḗƞḗẇȧŀ Ħȧƞḓŀīƞɠ ·······〗",
+      "renewalTermMonths": "〖Řḗƞḗẇȧŀ Ŧḗřḿ (Ḿȯƞŧħş) ·········〗",
+      "renewalTermPlaceholder": "〖ḗ.ɠ., 12 ····〗",
+      "renewalTicketBoard": "〖Řḗƞḗẇȧŀ Ŧīƈķḗŧ Ɓȯȧřḓ ········〗",
+      "renewalTicketStatus": "〖Řḗƞḗẇȧŀ Ŧīƈķḗŧ Şŧȧŧŭş ·········〗",
+      "required": "〖Řḗʠŭīřḗḓ ····〗",
+      "selectBoard": "〖Şḗŀḗƈŧ ƀȯȧřḓ ·····〗",
+      "selectBoardFirst": "〖Şḗŀḗƈŧ ȧ ƀȯȧřḓ ƒīřşŧ ········〗",
+      "selectRenewalMode": "〖Şḗŀḗƈŧ řḗƞḗẇȧŀ ḿȯḓḗ ········〗",
+      "selectStartDate": "〖Şḗŀḗƈŧ şŧȧřŧ ḓȧŧḗ ·······〗",
+      "selectStatus": "〖Şḗŀḗƈŧ şŧȧŧŭş ······〗",
+      "startDate": "〖Şŧȧřŧ Ḓȧŧḗ ····〗",
+      "startDateLabel": "〖Ȧşşīɠƞḿḗƞŧ şŧȧřŧ ḓȧŧḗ ·········〗",
+      "startDateLocked": "〖Şŧȧřŧ ḓȧŧḗ ƈȧƞƞȯŧ ƀḗ ƈħȧƞɠḗḓ ƒȯř ȧƈŧīṽḗ ƈȯƞŧřȧƈŧş ····················〗",
+      "title": "〖Ƈŀīḗƞŧ Ȧşşīɠƞḿḗƞŧ ·······〗",
+      "useTenantRenewalDefaults": "〖Ŭşḗ ŧḗƞȧƞŧ řḗƞḗẇȧŀ ḓḗƒȧŭŀŧş ···········〗",
+      "usingCustomSettings": "〖Ŭşīƞɠ ƈŭşŧȯḿ ȧşşīɠƞḿḗƞŧ şḗŧŧīƞɠş ·············〗",
+      "usingTenantDefaults": "〖Ŭşīƞɠ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧş ·········〗"
     },
     "clientOwnership": {
-      "assignmentStatus": "55555",
-      "clientName": "55555",
-      "endDate": "55555",
-      "ownerClient": "55555",
-      "required": "55555",
-      "startDate": "55555",
-      "systemManaged": "55555",
-      "title": "55555"
+      "assignmentStatus": "〖Ȧşşīɠƞḿḗƞŧ Şŧȧŧŭş ·······〗",
+      "clientName": "〖Ƈŀīḗƞŧ Ƞȧḿḗ ·····〗",
+      "endDate": "〖Ḗƞḓ Ḓȧŧḗ ····〗",
+      "ownerClient": "〖Ȯẇƞḗř Ƈŀīḗƞŧ ·····〗",
+      "required": "〖Řḗʠŭīřḗḓ ····〗",
+      "startDate": "〖Şŧȧřŧ Ḓȧŧḗ ····〗",
+      "systemManaged": "〖Ȯẇƞḗřşħīƥ īş şẏşŧḗḿ-ḿȧƞȧɠḗḓ ƒȯř ŧħīş ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ. ······················〗",
+      "title": "〖Ƈŀīḗƞŧ Ȯẇƞḗřşħīƥ ·······〗"
     },
     "detailsCard": {
       "actions": {
-        "cancelDescription": "55555",
-        "cancelName": "55555",
-        "editDescription": "55555",
-        "editName": "55555",
-        "saveDescription": "55555",
-        "saveName": "55555"
+        "cancelDescription": "〖Ƈȧƞƈḗŀ ḓḗşƈřīƥŧīȯƞ ḗḓīŧş ··········〗",
+        "cancelName": "〖Ƈȧƞƈḗŀ ƈȯƞŧřȧƈŧ ƞȧḿḗ ········〗",
+        "editDescription": "〖Ḗḓīŧ ƈȯƞŧřȧƈŧ ḓḗşƈřīƥŧīȯƞ ··········〗",
+        "editName": "〖Ḗḓīŧ ƈȯƞŧřȧƈŧ ƞȧḿḗ ········〗",
+        "saveDescription": "〖Şȧṽḗ ḓḗşƈřīƥŧīȯƞ ·······〗",
+        "saveName": "〖Şȧṽḗ ƈȯƞŧřȧƈŧ ƞȧḿḗ ········〗"
       },
-      "contractNameLabel": "55555",
-      "contractNamePlaceholder": "55555",
-      "descriptionLabel": "55555",
-      "descriptionPlaceholder": "55555",
-      "title": "55555"
+      "contractNameLabel": "〖Ƈȯƞŧřȧƈŧ Ƞȧḿḗ * ······〗",
+      "contractNamePlaceholder": "〖Ḗƞŧḗř ƈȯƞŧřȧƈŧ ƞȧḿḗ ········〗",
+      "descriptionLabel": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "descriptionPlaceholder": "〖Ḗƞŧḗř ƈȯƞŧřȧƈŧ ḓḗşƈřīƥŧīȯƞ ···········〗",
+      "title": "〖Ƈȯƞŧřȧƈŧ Ḓḗŧȧīŀş ·······〗"
     },
     "headerCard": {
-      "assignmentLifecycleHint": "55555",
-      "assignmentStatus": "55555",
-      "billingFrequencyLabel": "55555",
-      "billingFrequencyPlaceholder": "55555",
-      "customSettings": "55555",
-      "expiredStatusNote": "55555",
-      "notice": "55555",
-      "noticeDay": "55555 {{count}} 55555",
-      "noticeDays": "55555 {{count}} 55555",
-      "ongoingNoEndDate": "55555",
-      "renewalHeading": "55555",
-      "tenantDefaults": "55555",
-      "title": "55555"
+      "assignmentLifecycleHint": "〖Ŀīṽḗ ƈŀīḗƞŧ şŧȧŧŭş īş ƈȯƞŧřȯŀŀḗḓ ƀẏ ŧħḗ ȧşşīɠƞḿḗƞŧ ŀīƒḗƈẏƈŀḗ ƀḗŀȯẇ. ···························〗",
+      "assignmentStatus": "〖Ȧşşīɠƞḿḗƞŧ Şŧȧŧŭş ·······〗",
+      "billingFrequencyLabel": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ * ········〗",
+      "billingFrequencyPlaceholder": "〖Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ··········〗",
+      "customSettings": "〖Ƈŭşŧȯḿ şḗŧŧīƞɠş ······〗",
+      "expiredStatusNote": "〖Ḗẋƥīřḗḓ ƈȯƞŧřȧƈŧş ƈȧƞƞȯŧ ƀḗ ƈħȧƞɠḗḓ ŧȯ ȧƞȯŧħḗř şŧȧŧŭş ······················〗",
+      "notice": "〖Ƞȯŧīƈḗ ···〗",
+      "noticeDay": "〖{{count}} ḓȧẏ ······〗",
+      "noticeDays": "〖{{count}} ḓȧẏş ······〗",
+      "ongoingNoEndDate": "〖Ȯƞɠȯīƞɠ (ƞȯ ḗƞḓ ḓȧŧḗ) ·········〗",
+      "renewalHeading": "〖Řḗƞḗẇȧŀ ···〗",
+      "tenantDefaults": "〖Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧş ······〗",
+      "title": "〖Ƈȯƞŧřȧƈŧ Ħḗȧḓḗř ······〗"
     },
     "dialogs": {
       "delete": {
-        "cancel": "55555",
-        "confirm": "55555",
-        "deleting": "55555",
-        "description": "55555",
-        "message": "55555",
-        "title": "55555"
+        "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+        "confirm": "〖Ḓḗŀḗŧḗ Ƈȯƞŧřȧƈŧ ······〗",
+        "deleting": "〖Ḓḗŀḗŧīƞɠ… ····〗",
+        "description": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħīş ƈȯƞŧřȧƈŧ? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ·······························〗",
+        "message": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħīş ƈȯƞŧřȧƈŧ? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ ȧƞḓ ẇīŀŀ řḗḿȯṽḗ ȧŀŀ ȧşşȯƈīȧŧḗḓ ḓȧŧȧ. ·············································〗",
+        "title": "〖Ḓḗŀḗŧḗ Ƈȯƞŧřȧƈŧ ······〗"
       },
       "discard": {
-        "cancel": "55555",
-        "confirm": "55555",
-        "description": "55555",
-        "message": "55555",
-        "title": "55555"
+        "cancel": "〖Ƈȯƞŧīƞŭḗ Ḗḓīŧīƞɠ ·······〗",
+        "confirm": "〖Ḓīşƈȧřḓ Ƈħȧƞɠḗş ······〗",
+        "description": "〖Ḓīşƈȧřḓ ẏȯŭř ŭƞşȧṽḗḓ ƈħȧƞɠḗş? ············〗",
+        "message": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓīşƈȧřḓ ȧŀŀ ƈħȧƞɠḗş? Ȧƞẏ ŭƞşȧṽḗḓ ƈħȧƞɠḗş ẇīŀŀ ƀḗ ŀȯşŧ. ································〗",
+        "title": "〖Ḓīşƈȧřḓ Ƈħȧƞɠḗş ······〗"
       },
       "leave": {
-        "confirm": "55555",
-        "description": "55555",
-        "title": "55555"
+        "confirm": "〖Ŀḗȧṽḗ Ƥȧɠḗ ····〗",
+        "description": "〖Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Ŀḗȧṽḗ ŧħīş ƥȧɠḗ ẇīŧħȯŭŧ şȧṽīƞɠ? ·······················〗",
+        "title": "〖Ŭƞşȧṽḗḓ Ƈħȧƞɠḗş ······〗"
       },
       "unsaved": {
-        "cancel": "55555",
-        "confirm": "55555",
-        "message": "55555",
-        "title": "55555"
+        "cancel": "〖Şŧȧẏ ȯƞ Ƥȧɠḗ ·····〗",
+        "confirm": "〖Ŀḗȧṽḗ Ƥȧɠḗ ····〗",
+        "message": "〖Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ŀḗȧṽḗ ŧħīş ƥȧɠḗ? Ȧŀŀ ƈħȧƞɠḗş ẇīŀŀ ƀḗ ŀȯşŧ. ······································〗",
+        "title": "〖Ŭƞşȧṽḗḓ Ƈħȧƞɠḗş ······〗"
       }
     },
     "invoices": {
       "columns": {
-        "amount": "55555",
-        "createdAt": "55555",
-        "dueDate": "55555",
-        "invoiceDate": "55555",
-        "invoiceNumber": "55555",
-        "preview": "55555",
-        "status": "55555"
+        "amount": "〖Ȧḿȯŭƞŧ ···〗",
+        "createdAt": "〖Ƈřḗȧŧḗḓ ···〗",
+        "dueDate": "〖Ḓŭḗ Ḓȧŧḗ ····〗",
+        "invoiceDate": "〖Īƞṽȯīƈḗ Ḓȧŧḗ ·····〗",
+        "invoiceNumber": "〖Īƞṽȯīƈḗ # ····〗",
+        "preview": "〖Ƥřḗṽīḗẇ ···〗",
+        "status": "〖Şŧȧŧŭş ···〗"
       },
-      "empty": "55555",
-      "loading": "55555",
-      "noTemplatesAvailable": "55555",
-      "preview": "55555",
-      "selectForPreview": "55555",
-      "title": "55555"
+      "empty": "〖Ƞȯ īƞṽȯīƈḗş ƒȯŭƞḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ. ···············〗",
+      "loading": "〖Ŀȯȧḓīƞɠ īƞṽȯīƈḗş... ········〗",
+      "noTemplatesAvailable": "〖Ƞȯ īƞṽȯīƈḗ ŧḗḿƥŀȧŧḗş ȧřḗ ȧṽȧīŀȧƀŀḗ ƒȯř ƥřḗṽīḗẇ. ···················〗",
+      "preview": "〖Ƥřḗṽīḗẇ ···〗",
+      "selectForPreview": "〖Şḗŀḗƈŧ ȧƞ īƞṽȯīƈḗ ŧȯ ȯƥḗƞ ȧ ƒŭŀŀ ƥřḗṽīḗẇ īƞ ŧħḗ ḓřȧẇḗř. ······················〗",
+      "title": "〖Ƈȯƞŧřȧƈŧ Īƞṽȯīƈḗş ·······〗"
     },
     "labels": {
-      "client": "55555",
-      "contractName": "55555",
-      "description": "55555",
-      "noClientAssigned": "55555",
-      "noDescription": "55555",
-      "systemManagedDefault": "55555",
-      "useTenantDefaults": "55555"
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "contractName": "〖Ƈȯƞŧřȧƈŧ Ƞȧḿḗ ······〗",
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "noClientAssigned": "〖Ƞȯ ƈŀīḗƞŧ ȧşşīɠƞḗḓ ········〗",
+      "noDescription": "〖Ƞȯ ḓḗşƈřīƥŧīȯƞ ······〗",
+      "systemManagedDefault": "〖Şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ·········〗",
+      "useTenantDefaults": "〖Ŭşḗ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧş ········〗"
     },
     "quickActions": {
-      "deleteContract": "55555",
-      "manageContractLines": "55555",
-      "managePricingSchedules": "55555",
-      "title": "55555",
-      "viewDocuments": "55555",
-      "viewInvoices": "55555"
+      "deleteContract": "〖Ḓḗŀḗŧḗ Ƈȯƞŧřȧƈŧ ······〗",
+      "manageContractLines": "〖Ḿȧƞȧɠḗ Ƈȯƞŧřȧƈŧ Ŀīƞḗş ·········〗",
+      "managePricingSchedules": "〖Ḿȧƞȧɠḗ Ƥřīƈīƞɠ Şƈħḗḓŭŀḗş ··········〗",
+      "title": "〖Ɋŭīƈķ Ȧƈŧīȯƞş ······〗",
+      "viewDocuments": "〖Ṽīḗẇ Ḓȯƈŭḿḗƞŧş ······〗",
+      "viewInvoices": "〖Ṽīḗẇ Īƞṽȯīƈḗş ······〗"
     },
     "systemManaged": {
-      "attributionOnly": "55555",
-      "configureCustom": "55555",
-      "createdAutomatically": "55555",
-      "title": "55555"
+      "attributionOnly": "〖Ŧħīş ƈȯƞŧřȧƈŧ īş ȧŧŧřīƀŭŧīȯƞ-ȯƞŀẏ ȧƞḓ ḓȯḗş ƞȯŧ ƈȯƞŧřȯŀ řḗƈŭřřīƞɠ ƀīŀŀīƞɠ ƀḗħȧṽīȯř. ·································〗",
+      "configureCustom": "〖Ŧȯ ƈȯƞƒīɠŭřḗ ƈŭşŧȯḿ ƀīŀŀīƞɠ ƀḗħȧṽīȯř, ƈřḗȧŧḗ ȯř ḗḓīŧ ȧ ƞȯřḿȧŀ ŭşḗř-ȧŭŧħȯřḗḓ ƈȯƞŧřȧƈŧ. ··································〗",
+      "createdAutomatically": "〖Ƈřḗȧŧḗḓ ȧŭŧȯḿȧŧīƈȧŀŀẏ ƒȯř ŭƞƈȯƞŧřȧƈŧḗḓ ẇȯřķ. ··················〗",
+      "title": "〖Şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ ·············〗"
     },
     "tabs": {
-      "documents": "55555",
-      "invoices": "55555",
-      "lines": "55555",
-      "overview": "55555",
-      "pricing": "55555",
-      "simulator": "55555"
+      "documents": "〖Ḓȯƈŭḿḗƞŧş ····〗",
+      "invoices": "〖Īƞṽȯīƈḗş ····〗",
+      "lines": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗş ······〗",
+      "overview": "〖Ȯṽḗřṽīḗẇ ····〗",
+      "pricing": "〖Ƥřīƈīƞɠ Şƈħḗḓŭŀḗş ·······〗",
+      "simulator": "〖Şīḿŭŀȧŧḗ ····〗"
     },
     "validation": {
-      "billingFrequencyRequired": "55555",
-      "billingFrequency": "55555",
-      "contractName": "55555",
-      "contractNameRequired": "55555",
-      "failedToUpdate": "55555",
-      "fixErrors": "55555"
+      "billingFrequencyRequired": "〖Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ. ············〗",
+      "billingFrequency": "〖Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ·······〗",
+      "contractName": "〖Ƈȯƞŧřȧƈŧ ƞȧḿḗ ······〗",
+      "contractNameRequired": "〖Ƈȯƞŧřȧƈŧ ƞȧḿḗ īş řḗʠŭīřḗḓ. ···········〗",
+      "failedToUpdate": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈȯƞŧřȧƈŧ ··········〗",
+      "fixErrors": "〖Ƥŀḗȧşḗ ƒīẋ ŧħḗ ƒȯŀŀȯẇīƞɠ ḗřřȯřş: ·············〗"
     },
     "documents": {
-      "loading": "55555"
+      "loading": "〖Ŀȯȧḓīƞɠ ḓȯƈŭḿḗƞŧş... ········〗"
     }
   },
   "contractHeader": {
     "badges": {
-      "clientOwned": "55555",
-      "template": "55555"
+      "clientOwned": "〖Ƈŀīḗƞŧ-ȯẇƞḗḓ ·····〗",
+      "template": "〖Ŧḗḿƥŀȧŧḗ ····〗"
     },
     "labels": {
-      "billingFrequency": "55555",
-      "contractLines": "55555",
-      "currency": "55555",
-      "endDate": "55555",
-      "lastUpdated": "55555",
-      "startDate": "55555"
+      "billingFrequency": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ ·······〗",
+      "contractLines": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗş ······〗",
+      "currency": "〖Ƈŭřřḗƞƈẏ ····〗",
+      "endDate": "〖Ḗƞḓ Ḓȧŧḗ ····〗",
+      "lastUpdated": "〖Ŀȧşŧ Ŭƥḓȧŧḗḓ ·····〗",
+      "startDate": "〖Şŧȧřŧ Ḓȧŧḗ ····〗"
     },
     "po": {
-      "prefix": "55555",
-      "requiredForContract": "55555"
+      "prefix": "〖ƤȮ ·〗",
+      "requiredForContract": "〖Ƥŭřƈħȧşḗ ȯřḓḗř řḗʠŭīřḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ. ·················〗"
     },
     "status": {
-      "active": "55555",
-      "draft": "55555",
-      "expired": "55555",
-      "terminated": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "draft": "〖Ḓřȧƒŧ ··〗",
+      "expired": "〖Ḗẋƥīřḗḓ ···〗",
+      "terminated": "〖Ŧḗřḿīƞȧŧḗḓ ····〗"
     },
     "values": {
-      "ongoing": "55555"
+      "ongoing": "〖Ȯƞɠȯīƞɠ ···〗"
     }
   },
   "contractOverview": {
     "errors": {
-      "failedToLoadOverview": "55555"
+      "failedToLoadOverview": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȯṽḗřṽīḗẇ ··········〗"
     },
     "frequency": {
-      "annually": "55555",
-      "biweekly": "55555",
-      "semi_annually": "55555",
-      "weekly": "55555"
+      "annually": "〖Ȧƞƞŭȧŀŀẏ ····〗",
+      "biweekly": "〖Ɓīẇḗḗķŀẏ ····〗",
+      "semi_annually": "〖Şḗḿī-Ȧƞƞŭȧŀŀẏ ······〗",
+      "weekly": "〖Ẇḗḗķŀẏ ···〗"
     },
     "lines": {
-      "addContractLines": "55555",
-      "collapseAll": "55555",
-      "expandAll": "55555",
-      "includedServices": "55555",
-      "noContractLinesDescription": "55555",
-      "noContractLinesYet": "55555",
-      "noServicesConfigured": "55555",
-      "serviceCountOne": "55555 {{count}} 55555",
-      "serviceCountOther": "55555 {{count}} 55555"
+      "addContractLines": "〖Ȧḓḓ Ƈȯƞŧřȧƈŧ Ŀīƞḗş ········〗",
+      "collapseAll": "〖Ƈȯŀŀȧƥşḗ ȧŀŀ ·····〗",
+      "expandAll": "〖Ḗẋƥȧƞḓ ȧŀŀ ····〗",
+      "includedServices": "〖Īƞƈŀŭḓḗḓ Şḗřṽīƈḗş ·······〗",
+      "noContractLinesDescription": "〖Ȧḓḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ŧȯ ḓḗƒīƞḗ ẇħȧŧ'ş īƞƈŀŭḓḗḓ īƞ ŧħīş ƈȯƞŧřȧƈŧ ·························〗",
+      "noContractLinesYet": "〖Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗş ẏḗŧ ·········〗",
+      "noServicesConfigured": "〖Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ ·········〗",
+      "serviceCountOne": "〖{{count}} şḗřṽīƈḗ ·······〗",
+      "serviceCountOther": "〖{{count}} şḗřṽīƈḗş ········〗"
     },
     "stats": {
-      "contractLines": "55555",
-      "estimatedMonthlyValue": "55555",
-      "totalServices": "55555",
-      "variable": "55555",
-      "variableSuffix": "55555",
-      "viewDetails": "55555"
+      "contractLines": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗş ······〗",
+      "estimatedMonthlyValue": "〖Ḗşŧ. Ḿȯƞŧħŀẏ Ṽȧŀŭḗ ········〗",
+      "totalServices": "〖Ŧȯŧȧŀ Şḗřṽīƈḗş ······〗",
+      "variable": "〖Ṽȧřīȧƀŀḗ ····〗",
+      "variableSuffix": "〖+ ṽȧřīȧƀŀḗ (ħȯŭřŀẏ/ŭşȧɠḗ) ··········〗",
+      "viewDetails": "〖Ṽīḗẇ ḓḗŧȧīŀş ·····〗"
     },
-    "title": "55555"
+    "title": "〖Ẇħȧŧ'ş Īƞƈŀŭḓḗḓ ······〗"
   },
   "contractDialog": {
     "actions": {
-      "createContract": "55555",
-      "saveAsDraft": "55555",
-      "updateContract": "55555"
+      "createContract": "〖Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ ······〗",
+      "saveAsDraft": "〖Şȧṽḗ ȧş Ḓřȧƒŧ ······〗",
+      "updateContract": "〖Ŭƥḓȧŧḗ Ƈȯƞŧřȧƈŧ ······〗"
     },
     "documents": {
-      "loading": "55555"
+      "loading": "〖Ŀȯȧḓīƞɠ ḓȯƈŭḿḗƞŧş... ········〗"
     },
     "form": {
-      "billingFrequencyLabel": "55555",
-      "billingFrequencyPlaceholder": "55555",
-      "clientLabel": "55555",
-      "clientPlaceholder": "55555",
-      "contractNameLabel": "55555",
-      "contractNamePlaceholder": "55555",
-      "currencyHint": "55555",
-      "descriptionLabel": "55555",
-      "descriptionPlaceholder": "55555",
-      "endDateHint": "55555",
-      "endDateLabel": "55555",
-      "noticePeriodLabel": "55555",
-      "noticePeriodPlaceholder": "55555",
-      "renewalModePlaceholder": "55555",
-      "renewalSettingsDescription": "55555",
-      "renewalSettingsTitle": "55555",
-      "renewalTermLabel": "55555",
-      "renewalTermPlaceholder": "55555",
-      "selectClientFirst": "55555",
-      "startDateLabel": "55555",
-      "useTenantDefaultsDescription": "55555",
-      "useTenantDefaultsLabel": "55555"
+      "billingFrequencyLabel": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ * ········〗",
+      "billingFrequencyPlaceholder": "〖Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ··········〗",
+      "clientLabel": "〖Ƈŀīḗƞŧ * ····〗",
+      "clientPlaceholder": "〖Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ······〗",
+      "contractNameLabel": "〖Ƈȯƞŧřȧƈŧ Ƞȧḿḗ * ······〗",
+      "contractNamePlaceholder": "〖ḗ.ɠ., Şŧȧƞḓȧřḓ ḾŞƤ Şḗřṽīƈḗş ···········〗",
+      "currencyHint": "〖Ƈŭřřḗƞƈẏ īş ƀȧşḗḓ ȯƞ ŧħḗ ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ƈŭřřḗƞƈẏ şḗŧŧīƞɠ. ························〗",
+      "descriptionLabel": "〖Ḓḗşƈřīƥŧīȯƞ (Ȯƥŧīȯƞȧŀ) ·········〗",
+      "descriptionPlaceholder": "〖Ȧḓḓ ȧƞẏ ȧḓḓīŧīȯƞȧŀ ƞȯŧḗş ȧƀȯŭŧ ŧħīş ƈȯƞŧřȧƈŧ... ···················〗",
+      "endDateHint": "〖Ŀḗȧṽḗ ƀŀȧƞķ ƒȯř ȯƞɠȯīƞɠ ƈȯƞŧřȧƈŧş ŧħȧŧ ḓȯƞ'ŧ ħȧṽḗ ȧ ƒīẋḗḓ ḗƞḓ ḓȧŧḗ. ···························〗",
+      "endDateLabel": "〖Ḗƞḓ Ḓȧŧḗ (Ȯƥŧīȯƞȧŀ) ········〗",
+      "noticePeriodLabel": "〖Ƞȯŧīƈḗ Ƥḗřīȯḓ (Ḓȧẏş) ········〗",
+      "noticePeriodPlaceholder": "〖ḗ.ɠ., 30 ····〗",
+      "renewalModePlaceholder": "〖Şḗŀḗƈŧ řḗƞḗẇȧŀ ḿȯḓḗ ········〗",
+      "renewalSettingsDescription": "〖Ƈȯƞƒīɠŭřḗ řḗƞḗẇȧŀ ƀḗħȧṽīȯř ƒȯř ŧħīş ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ ȧşşīɠƞḿḗƞŧ. ··························〗",
+      "renewalSettingsTitle": "〖Řḗƞḗẇȧŀ Şḗŧŧīƞɠş ·······〗",
+      "renewalTermLabel": "〖Řḗƞḗẇȧŀ Ŧḗřḿ (Ḿȯƞŧħş) ·········〗",
+      "renewalTermPlaceholder": "〖ḗ.ɠ., 12 ····〗",
+      "selectClientFirst": "〖Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ƒīřşŧ ·········〗",
+      "startDateLabel": "〖Şŧȧřŧ Ḓȧŧḗ * ·····〗",
+      "useTenantDefaultsDescription": "〖Ȧƥƥŀẏ ȯřɠȧƞīẑȧŧīȯƞ-ŀḗṽḗŀ řḗƞḗẇȧŀ ḿȯḓḗ ȧƞḓ ƞȯŧīƈḗ ƥḗřīȯḓ şḗŧŧīƞɠş. ··························〗",
+      "useTenantDefaultsLabel": "〖Ŭşḗ Ŧḗƞȧƞŧ Řḗƞḗẇȧŀ Ḓḗƒȧŭŀŧş ···········〗"
     },
     "po": {
-      "amountLabel": "55555",
-      "amountPlaceholder": "55555",
-      "comingSoon": "55555",
-      "noteLabel": "55555",
-      "numberLabel": "55555",
-      "numberPlaceholder": "55555",
-      "requirePurchaseOrder": "55555",
-      "requirePurchaseOrderTooltip": "55555"
+      "amountLabel": "〖ƤȮ Ȧḿȯŭƞŧ (Ȯƥŧīȯƞȧŀ) ········〗",
+      "amountPlaceholder": "〖0.00 ··〗",
+      "comingSoon": "〖Īƞṽȯīƈḗ īƞŧḗɠřȧŧīȯƞ ƈȯḿīƞɠ şȯȯƞ. Şḗŧŧīƞɠş ẇīŀŀ ƀḗ şȧṽḗḓ ƀŭŧ ƤȮ ḗƞƒȯřƈḗḿḗƞŧ ẇȯƞ'ŧ ƀḗ ȧƈŧīṽḗ ŭƞŧīŀ ȧ ƒŭŧŭřḗ řḗŀḗȧşḗ. ··············································〗",
+      "noteLabel": "〖Ƞȯŧḗ: ··〗",
+      "numberLabel": "〖ƤȮ Ƞŭḿƀḗř * ·····〗",
+      "numberPlaceholder": "〖ḗ.ɠ., ƤȮ-2024-12345 ········〗",
+      "requirePurchaseOrder": "〖Řḗʠŭīřḗ Ƥŭřƈħȧşḗ Ȯřḓḗř ·········〗",
+      "requirePurchaseOrderTooltip": "〖Ẇħḗƞ ḗƞȧƀŀḗḓ, īƞṽȯīƈḗş ƈȧƞƞȯŧ ƀḗ ɠḗƞḗřȧŧḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ŭƞŀḗşş ȧ ƤȮ ƞŭḿƀḗř īş ƥřȯṽīḓḗḓ. ·····································〗"
     },
     "presetDetails": {
-      "defaultBaseRate": "55555",
-      "defaultRatePlaceholder": "55555 {{rate}} 55555",
-      "defaultRateValue": "55555 {{rate}} 55555",
-      "enterBaseRate": "55555",
-      "fixedRateConfiguration": "55555",
-      "fixedServicesReferenceHelp": "55555",
-      "hourlyRate": "55555",
-      "leaveBlankDefaultRate": "55555",
-      "minimumBillableMinutes": "55555",
-      "noServicesConfigured": "55555",
-      "notSet": "55555",
-      "overrideBaseRate": "55555",
-      "quantity": "55555",
-      "quantityShort": "55555 {{quantity}} 55555",
-      "ratePerUnit": "55555",
-      "roundUpToNearestMinutes": "55555",
-      "servicesConfiguration": "55555",
-      "servicesHourlyRates": "55555",
-      "servicesIncludedReference": "55555",
-      "timeBillingConfiguration": "55555",
-      "unitOfMeasure": "55555",
-      "unitOfMeasureHint": "55555"
+      "defaultBaseRate": "〖Ḓḗƒȧŭŀŧ Ɓȧşḗ Řȧŧḗ: ········〗",
+      "defaultRatePlaceholder": "〖Ḓḗƒȧŭŀŧ: ${{rate}} ········〗",
+      "defaultRateValue": "〖Ḓḗƒȧŭŀŧ: ${{rate}} ········〗",
+      "enterBaseRate": "〖Ḗƞŧḗř ƀȧşḗ řȧŧḗ ······〗",
+      "fixedRateConfiguration": "〖Ƒīẋḗḓ Řȧŧḗ Ƈȯƞƒīɠŭřȧŧīȯƞ ··········〗",
+      "fixedServicesReferenceHelp": "〖Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ īƞƈŀŭḓḗḓ ƒȯř řḗƒḗřḗƞƈḗ ȯƞŀẏ. Ŧħḗ ƒīẋḗḓ řȧŧḗ ȧƀȯṽḗ ḓḗŧḗřḿīƞḗş ŧħḗ ƀīŀŀīƞɠ ȧḿȯŭƞŧ. ········································〗",
+      "hourlyRate": "〖Ħȯŭřŀẏ Řȧŧḗ ·····〗",
+      "leaveBlankDefaultRate": "〖Ŀḗȧṽḗ ƀŀȧƞķ ŧȯ ŭşḗ ŧħḗ ḓḗƒȧŭŀŧ řȧŧḗ ··············〗",
+      "minimumBillableMinutes": "〖Ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ḿīƞŭŧḗş ··········〗",
+      "noServicesConfigured": "〖Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƥřḗşḗŧ ················〗",
+      "notSet": "〖Ƞȯŧ şḗŧ ···〗",
+      "overrideBaseRate": "〖Ȯṽḗřřīḓḗ Ɓȧşḗ Řȧŧḗ ········〗",
+      "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗",
+      "quantityShort": "〖Ɋŧẏ: {{quantity}} ·······〗",
+      "ratePerUnit": "〖Řȧŧḗ (ƥḗř ŭƞīŧ) ······〗",
+      "roundUpToNearestMinutes": "〖Řȯŭƞḓ ŭƥ ŧȯ ƞḗȧřḗşŧ (ḿīƞŭŧḗş) ············〗",
+      "servicesConfiguration": "〖Şḗřṽīƈḗş Ƈȯƞƒīɠŭřȧŧīȯƞ ·········〗",
+      "servicesHourlyRates": "〖Şḗřṽīƈḗş & Ħȯŭřŀẏ Řȧŧḗş ··········〗",
+      "servicesIncludedReference": "〖Şḗřṽīƈḗş Īƞƈŀŭḓḗḓ (Řḗƒḗřḗƞƈḗ) ············〗",
+      "timeBillingConfiguration": "〖Ŧīḿḗ Ɓīŀŀīƞɠ Ƈȯƞƒīɠŭřȧŧīȯƞ ···········〗",
+      "unitOfMeasure": "〖Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ ······〗",
+      "unitOfMeasureHint": "〖ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř ··········〗"
     },
     "presets": {
-      "allTypes": "55555",
-      "empty": "55555",
-      "heading": "55555",
-      "headingTooltip": "55555",
-      "loading": "55555",
-      "noMatches": "55555",
-      "resetFilters": "55555",
-      "searchPlaceholder": "55555",
-      "selectedPlural": "55555 {{count}} 55555",
-      "selectedSingle": "55555 {{count}} 55555",
-      "serviceCountPlural": "55555 {{count}} 55555",
-      "serviceCountSingle": "55555 {{count}} 55555",
-      "typePlaceholder": "55555"
+      "allTypes": "〖Ȧŀŀ ŧẏƥḗş ····〗",
+      "empty": "〖Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş ȧṽȧīŀȧƀŀḗ. Ẏȯŭ ƈȧƞ ȧḓḓ ŧħḗḿ ŀȧŧḗř. ························〗",
+      "heading": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƥřḗşḗŧş (Ȯƥŧīȯƞȧŀ) ·············〗",
+      "headingTooltip": "〖Şḗŀḗƈŧ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş ŧȯ ƈȯƥẏ īƞŧȯ ŧħīş ƈȯƞŧřȧƈŧ. Ẏȯŭ ƈȧƞ ȧḓḓ ḿȯřḗ ŀȧŧḗř. ································〗",
+      "loading": "〖Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş... ·············〗",
+      "noMatches": "〖Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ. ··················〗",
+      "resetFilters": "〖Řḗşḗŧ ··〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş... ·············〗",
+      "selectedPlural": "〖{{count}} ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş şḗŀḗƈŧḗḓ ················〗",
+      "selectedSingle": "〖{{count}} ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧ şḗŀḗƈŧḗḓ ················〗",
+      "serviceCountPlural": "〖{{count}} şḗřṽīƈḗş ········〗",
+      "serviceCountSingle": "〖{{count}} şḗřṽīƈḗ ·······〗",
+      "typePlaceholder": "〖Şḗŀḗƈŧ ŧẏƥḗ ·····〗"
     },
     "title": {
-      "create": "55555",
-      "edit": "55555"
+      "create": "〖Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ ······〗",
+      "edit": "〖Ḗḓīŧ Ƈȯƞŧřȧƈŧ ······〗"
     },
     "validation": {
-      "billingFrequency": "55555",
-      "client": "55555",
-      "contractName": "55555",
-      "failedToSave": "55555",
-      "noticePeriodInvalid": "55555",
-      "poNumberRequired": "55555",
-      "renewalTermInvalid": "55555",
-      "requiredFields": "55555",
-      "startDate": "55555"
+      "billingFrequency": "〖Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ·······〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "contractName": "〖Ƈȯƞŧřȧƈŧ ƞȧḿḗ ······〗",
+      "failedToSave": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƈȯƞŧřȧƈŧ ··········〗",
+      "noticePeriodInvalid": "〖Ƞȯŧīƈḗ ƥḗřīȯḓ ḓȧẏş ḿŭşŧ ƀḗ ȧ ƞȯƞ-ƞḗɠȧŧīṽḗ ẇħȯŀḗ ƞŭḿƀḗř ······················〗",
+      "poNumberRequired": "〖ƤȮ ƞŭḿƀḗř (řḗʠŭīřḗḓ ẇħḗƞ ƤȮ īş ḗƞȧƀŀḗḓ) ················〗",
+      "renewalTermInvalid": "〖Řḗƞḗẇȧŀ ŧḗřḿ ḿȯƞŧħş ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ ẇħȯŀḗ ƞŭḿƀḗř ƒȯř ȧŭŧȯ-řḗƞḗẇ ƈȯƞŧřȧƈŧş ·······························〗",
+      "requiredFields": "〖Ƥŀḗȧşḗ ƒīŀŀ īƞ ŧħḗ řḗʠŭīřḗḓ ƒīḗŀḓş: ··············〗",
+      "startDate": "〖Şŧȧřŧ ḓȧŧḗ ····〗"
     }
   },
   "contractForm": {
     "actions": {
-      "saveChanges": "55555",
-      "saving": "55555"
+      "saveChanges": "〖Şȧṽḗ Ƈħȧƞɠḗş ·····〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗"
     },
     "errors": {
-      "failedToUpdateContract": "55555"
+      "failedToUpdateContract": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈȯƞŧřȧƈŧ ··········〗"
     },
     "fields": {
-      "billingFrequency": "55555",
-      "billingFrequencyPlaceholder": "55555",
-      "contractName": "55555",
-      "contractNamePlaceholder": "55555",
-      "currency": "55555",
-      "currencyPlaceholder": "55555",
-      "description": "55555",
-      "descriptionPlaceholder": "55555",
-      "status": "55555"
+      "billingFrequency": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ ·······〗",
+      "billingFrequencyPlaceholder": "〖Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ··········〗",
+      "contractName": "〖Ƈȯƞŧřȧƈŧ Ƞȧḿḗ ······〗",
+      "contractNamePlaceholder": "〖Ḗƞŧḗř ƈȯƞŧřȧƈŧ ƞȧḿḗ ········〗",
+      "currency": "〖Ƈŭřřḗƞƈẏ ····〗",
+      "currencyPlaceholder": "〖Şḗŀḗƈŧ ƈŭřřḗƞƈẏ ······〗",
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "descriptionPlaceholder": "〖Ḗƞŧḗř ƈȯƞŧřȧƈŧ ḓḗşƈřīƥŧīȯƞ ···········〗",
+      "status": "〖Şŧȧŧŭş ···〗"
     },
-    "heading": "55555",
+    "heading": "〖Ƈȯƞŧřȧƈŧ Ḓḗŧȧīŀş ·······〗",
     "status": {
-      "active": "55555",
-      "draft": "55555",
-      "expired": "55555",
-      "expiredHelper": "55555",
-      "terminated": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "draft": "〖Ḓřȧƒŧ ··〗",
+      "expired": "〖Ḗẋƥīřḗḓ ···〗",
+      "expiredHelper": "〖Ḗẋƥīřḗḓ ƈȯƞŧřȧƈŧş ƈȧƞƞȯŧ ƀḗ ƈħȧƞɠḗḓ ŧȯ ȧƞȯŧħḗř şŧȧŧŭş ······················〗",
+      "terminated": "〖Ŧḗřḿīƞȧŧḗḓ ····〗"
     },
     "validation": {
-      "billingFrequency": "55555",
-      "contractName": "55555",
-      "requiredFields": "55555"
+      "billingFrequency": "〖Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ·······〗",
+      "contractName": "〖Ƈȯƞŧřȧƈŧ ƞȧḿḗ ······〗",
+      "requiredFields": "〖Ƥŀḗȧşḗ ƒīŀŀ īƞ ŧħḗ řḗʠŭīřḗḓ ƒīḗŀḓş: ··············〗"
     }
   },
   "contractLines": {
     "actions": {
-      "addFromPresets": "55555",
-      "collapseLine": "55555",
-      "createCustom": "55555",
-      "expandLine": "55555"
+      "addFromPresets": "〖Ȧḓḓ ƒřȯḿ Ƥřḗşḗŧş ·······〗",
+      "collapseLine": "〖Ƈȯŀŀȧƥşḗ ƈȯƞŧřȧƈŧ ŀīƞḗ ·········〗",
+      "createCustom": "〖Ƈřḗȧŧḗ Ƈŭşŧȯḿ ······〗",
+      "expandLine": "〖Ḗẋƥȧƞḓ ƈȯƞŧřȧƈŧ ŀīƞḗ ········〗"
+    },
+    "billingProfile": {
+      "hint": "〖Ƈħȧřɠḗş ƒřȯḿ ŧħīş ŀīƞḗ ȧřḗ ƀīŀŀḗḓ ŧȯ ŧħīş ƥřȯƒīŀḗ, ȯṽḗřřīḓīƞɠ ŧħḗ ƈȯƞŧřȧƈŧ. ······························〗",
+      "label": "〖Ɓīŀŀīƞɠ ƥřȯƒīŀḗ ······〗",
+      "none": "〖Ŭşḗ ŧħḗ ƈȯƞŧřȧƈŧ'ş ƥřȯƒīŀḗ ···········〗",
+      "updated": "〖Ɓīŀŀīƞɠ ƥřȯƒīŀḗ ŭƥḓȧŧḗḓ ··········〗"
     },
     "bucket": {
-      "billingPeriod": "55555 {{period}} 55555",
-      "defaultUnit": "55555",
-      "defaultUnits": "55555",
-      "enableTracking": "55555",
-      "hour": "55555",
-      "hoursValue": "55555 {{hours}} 55555",
-      "included": "55555 {{value}} 55555",
-      "overageRate": "55555 {{rate}} 55555 {{unit}} 55555",
-      "rolloverEnabled": "55555",
-      "title": "55555",
-      "unitsValue": "55555 {{count}} 55555 {{units}} 55555"
+      "billingPeriod": "〖Ɓīŀŀīƞɠ Ƥḗřīȯḓ: {{period}} ···········〗",
+      "defaultUnit": "〖ŭƞīŧ ··〗",
+      "defaultUnits": "〖ŭƞīŧş ··〗",
+      "enableTracking": "〖Ḗƞȧƀŀḗ ƀŭƈķḗŧ ŭşȧɠḗ ŧřȧƈķīƞɠ ············〗",
+      "hour": "〖ħȯŭř ··〗",
+      "hoursValue": "〖{{hours}} ħȯŭřş ······〗",
+      "included": "〖Īƞƈŀŭḓḗḓ: {{value}} ········〗",
+      "overageRate": "〖Ȯṽḗřȧɠḗ Řȧŧḗ: {{rate}} ƥḗř {{unit}} ··············〗",
+      "rolloverEnabled": "〖Řȯŀŀȯṽḗř: Ḗƞȧƀŀḗḓ ·······〗",
+      "title": "〖Ɓŭƈķḗŧ Ƈȯƞƒīɠŭřȧŧīȯƞ ········〗",
+      "unitsValue": "〖{{count}} {{units}} ········〗"
     },
     "columns": {
-      "actions": "55555",
-      "frequency": "55555",
-      "name": "55555",
-      "rate": "55555",
-      "services": "55555",
-      "type": "55555"
+      "actions": "〖Ȧƈŧīȯƞş ···〗",
+      "frequency": "〖Ƒřḗʠŭḗƞƈẏ ····〗",
+      "name": "〖Ƞȧḿḗ ··〗",
+      "rate": "〖Řȧŧḗ ··〗",
+      "services": "〖Şḗřṽīƈḗş ····〗",
+      "type": "〖Ŧẏƥḗ ··〗"
     },
     "configuration": {
-      "description": "55555",
-      "fixedInfo": "55555",
-      "fixedInfoDetails": "55555",
-      "fixedInfoHeading": "55555",
-      "minimumBillableTime": "55555",
-      "minutesValue": "55555 {{count}} 55555",
-      "roundUpToNearest": "55555",
-      "title": "55555",
-      "usageInfo": "55555"
+      "description": "〖Şḗŧŧīƞɠş ŧħȧŧ ȧƥƥŀẏ ŧȯ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ ·················〗",
+      "fixedInfo": "〖Ƒīẋḗḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ƀīŀŀ ȧ ƒŀȧŧ řḗƈŭřřīƞɠ ƒḗḗ řḗɠȧřḓŀḗşş ȯƒ īƞḓīṽīḓŭȧŀ şḗřṽīƈḗ řȧŧḗş. ···································〗",
+      "fixedInfoDetails": "〖Ƒȯř ƒīẋḗḓ ƒḗḗ ŀīƞḗş, ŧħḗ şḗřṽīƈḗ řȧŧḗ ȧƞḓ ʠŭȧƞŧīŧẏ ȧřḗ ŭşḗḓ ȯƞŀẏ ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ ƥŭřƥȯşḗş. Ŧħḗẏ ḓḗŧḗřḿīƞḗ ħȯẇ ŧħḗ ƒīẋḗḓ ƒḗḗ īş ƥřȯƥȯřŧīȯƞȧŀŀẏ ȧŧŧřīƀŭŧḗḓ ȧƈřȯşş şḗřṽīƈḗş ƒȯř ŧȧẋ ƈȧŀƈŭŀȧŧīȯƞş. Ŧħḗ ȧƈŧŭȧŀ ƀīŀŀḗḓ ȧḿȯŭƞŧ īş ŧħḗ ƈȯƞŧřȧƈŧ ŀīƞḗ'ş ƀȧşḗ řȧŧḗ şħȯẇƞ ȧƀȯṽḗ. ··········································································································〗",
+      "fixedInfoHeading": "〖Ȧƀȯŭŧ şḗřṽīƈḗ řȧŧḗş ƀḗŀȯẇ: ···········〗",
+      "minimumBillableTime": "〖Ḿīƞīḿŭḿ Ɓīŀŀȧƀŀḗ Ŧīḿḗ (ḿīƞŭŧḗş) ·············〗",
+      "minutesValue": "〖{{count}} ḿīƞŭŧḗş ·······〗",
+      "roundUpToNearest": "〖Řȯŭƞḓ Ŭƥ Ŧȯ Ƞḗȧřḗşŧ (ḿīƞŭŧḗş) ············〗",
+      "title": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƈȯƞƒīɠŭřȧŧīȯƞ ···········〗",
+      "usageInfo": "〖Ŭşȧɠḗ-ƀȧşḗḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ȧřḗ ƈȯƞƒīɠŭřḗḓ ƥḗř şḗřṽīƈḗ ẇīŧħ ŭƞīŧ řȧŧḗş. ····························〗"
     },
-    "customRate": "55555",
+    "customRate": "〖Ƈŭşŧȯḿ ···〗",
     "description": {
-      "default": "55555",
-      "readOnly": "55555"
+      "default": "〖Ḿȧƞȧɠḗ ŧħḗ ƈȯƞŧřȧƈŧ ŀīƞḗş ȧƞḓ şḗřṽīƈḗş ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ·······················〗",
+      "readOnly": "〖Ŧħīş şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ īş ȧŧŧřīƀŭŧīȯƞ-ȯƞŀẏ. Ƈȯƞŧřȧƈŧ ŀīƞḗ ȧŭŧħȯřīƞɠ īş ḓīşȧƀŀḗḓ. ······································〗"
     },
     "dialogs": {
-      "confirmRemove": "55555 {{name}} 55555"
+      "confirmRemove": "〖Řḗḿȯṽḗ ƈȯƞŧřȧƈŧ ŀīƞḗ \"{{name}}\"? ·············〗"
     },
     "empty": {
-      "noneAdded": "55555",
-      "selectAbove": "55555"
+      "noneAdded": "〖Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗş ȧḓḓḗḓ ẏḗŧ. ············〗",
+      "selectAbove": "〖Şḗŀḗƈŧ ȧ ƈȯƞŧřȧƈŧ ŀīƞḗ ȧƀȯṽḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ. ··················〗"
     },
     "errors": {
-      "cannotEditWithInvoices": "55555",
-      "failedToCheckEditable": "55555",
-      "failedToLoad": "55555",
-      "failedToRefresh": "55555",
-      "failedToRemove": "55555",
-      "failedToUpdate": "55555"
+      "cannotEditWithInvoices": "〖Ƈȧƞƞȯŧ ḗḓīŧ ƈȯƞŧřȧƈŧ ŀīƞḗ: Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ȧşşȯƈīȧŧḗḓ īƞṽȯīƈḗş. Ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȧƞƞȯŧ ƀḗ ḗḓīŧḗḓ ȯƞƈḗ īƞṽȯīƈḗş ħȧṽḗ ƀḗḗƞ ɠḗƞḗřȧŧḗḓ. ·····················································〗",
+      "failedToCheckEditable": "〖Ƒȧīŀḗḓ ŧȯ ƈħḗƈķ īƒ ƈȯƞŧřȧƈŧ ƈȧƞ ƀḗ ḗḓīŧḗḓ ·················〗",
+      "failedToLoad": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ············〗",
+      "failedToRefresh": "〖Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ ƈȯƞŧřȧƈŧ ŀīƞḗş ·············〗",
+      "failedToRemove": "〖Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ ƈȯƞŧřȧƈŧ ŀīƞḗ ············〗",
+      "failedToUpdate": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈȯƞŧřȧƈŧ ŀīƞḗ ············〗"
     },
     "loading": {
-      "contractLines": "55555",
-      "inline": "55555"
+      "contractLines": "〖Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧ ŀīƞḗş ·········〗",
+      "inline": "〖Ŀȯȧḓīƞɠ... ····〗"
     },
     "location": {
-      "addLocation": "55555",
-      "fallback": "55555",
-      "label": "55555",
-      "lineCountPlural": "55555 {{count}} 55555",
-      "lineCountSingle": "55555 {{count}} 55555",
-      "none": "55555",
-      "pendingEmptyHint": "55555",
-      "placeholder": "55555",
-      "removePendingGroup": "55555",
-      "unassigned": "55555",
-      "unnamed": "55555"
+      "addLocation": "〖+ Ȧḓḓ ŀȯƈȧŧīȯƞ ······〗",
+      "fallback": "〖Ŀȯƈȧŧīȯƞ ····〗",
+      "label": "〖Ŀȯƈȧŧīȯƞ ····〗",
+      "lineCountPlural": "〖{{count}} ŀīƞḗş ······〗",
+      "lineCountSingle": "〖{{count}} ŀīƞḗ ······〗",
+      "none": "〖Ƞȯ ŀȯƈȧŧīȯƞ ȧşşīɠƞḗḓ ········〗",
+      "pendingEmptyHint": "〖Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗş ẏḗŧ ƒȯř ŧħīş ŀȯƈȧŧīȯƞ. Ȧḓḓ ȧ ŀīƞḗ, ŧħḗƞ ȧşşīɠƞ īŧ ŧȯ ŧħīş ŀȯƈȧŧīȯƞ ṽīȧ īŧş Ḗḓīŧ ƥȧƞḗŀ. ··········································〗",
+      "placeholder": "〖Şḗŀḗƈŧ ȧ ŀȯƈȧŧīȯƞ ·······〗",
+      "removePendingGroup": "〖Řḗḿȯṽḗ ḗḿƥŧẏ ŀȯƈȧŧīȯƞ ɠřȯŭƥ ···········〗",
+      "unassigned": "〖Ƞȯ ŀȯƈȧŧīȯƞ ȧşşīɠƞḗḓ ········〗",
+      "unnamed": "〖Ŀȯƈȧŧīȯƞ ····〗"
     },
-    "serviceCountPlural": "55555 {{count}} 55555",
-    "serviceCountSingle": "55555 {{count}} 55555",
+    "serviceCountPlural": "〖{{count}} şḗřṽīƈḗş ········〗",
+    "serviceCountSingle": "〖{{count}} şḗřṽīƈḗ ·······〗",
     "services": {
-      "empty": "55555",
-      "hourlyRate": "55555",
-      "quantity": "55555",
-      "quantityShort": "55555 {{quantity}} 55555",
-      "quantityTaxAllocation": "55555",
-      "rateTaxAllocation": "55555",
-      "title": "55555 {{count}} 55555",
-      "typeLabel": "55555 {{type}} 55555",
-      "unitOfMeasure": "55555",
-      "unitPlaceholder": "55555",
-      "unitRate": "55555"
+      "empty": "〖Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ. ···················〗",
+      "hourlyRate": "〖Ħȯŭřŀẏ Řȧŧḗ ·····〗",
+      "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗",
+      "quantityShort": "〖Ɋŧẏ: {{quantity}} ·······〗",
+      "quantityTaxAllocation": "〖Ɋŭȧƞŧīŧẏ (ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ) ············〗",
+      "rateTaxAllocation": "〖Řȧŧḗ (ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ) ··········〗",
+      "title": "〖Şḗřṽīƈḗş ({{count}}) ········〗",
+      "typeLabel": "〖{{type}} Şḗřṽīƈḗ ·······〗",
+      "unitOfMeasure": "〖Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ ······〗",
+      "unitPlaceholder": "〖ŭƞīŧ ··〗",
+      "unitRate": "〖Ŭƞīŧ Řȧŧḗ ····〗"
     },
-    "title": "55555"
+    "title": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗş ······〗"
   },
   "contractLineEdit": {
     "actions": {
-      "cancel": "55555",
-      "saveChanges": "55555",
-      "saving": "55555"
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "saveChanges": "〖Şȧṽḗ Ƈħȧƞɠḗş ·····〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗"
     },
     "errors": {
-      "failedToSaveChanges": "55555"
+      "failedToSaveChanges": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƈħȧƞɠḗş ·········〗"
     },
     "fields": {
-      "billingTimingQuestion": "55555",
-      "rate": "55555"
+      "billingTimingQuestion": "〖Ẇħḗƞ şħȯŭŀḓ ŧħīş ŀīƞḗ ƀḗ ƀīŀŀḗḓ? ·············〗",
+      "rate": "〖Řȧŧḗ ··〗"
     },
     "sections": {
-      "billingTiming": "55555",
-      "pricing": "55555"
+      "billingTiming": "〖Ɓīŀŀīƞɠ Ŧīḿīƞɠ ······〗",
+      "pricing": "〖Ƥřīƈīƞɠ ···〗"
     },
     "timingDescriptions": {
-      "advance": "55555",
-      "arrears": "55555"
+      "advance": "〖Ƈħȧřɠḗş ẇīŀŀ ƀḗ ƀīŀŀḗḓ ƀḗƒȯřḗ ŧħḗ şḗřṽīƈḗ īş ƥřȯṽīḓḗḓ ······················〗",
+      "arrears": "〖Ƈħȧřɠḗş ẇīŀŀ ƀḗ ƀīŀŀḗḓ ȧƒŧḗř ŧħḗ şḗřṽīƈḗ īş ƥřȯṽīḓḗḓ ·····················〗"
     },
     "timingOptions": {
-      "advance": "55555",
-      "arrears": "55555"
+      "advance": "〖Īƞ Ȧḓṽȧƞƈḗ (ȧŧ şŧȧřŧ ȯƒ ƀīŀŀīƞɠ ƥḗřīȯḓ) ················〗",
+      "arrears": "〖Īƞ Ȧřřḗȧřş (ȧŧ ḗƞḓ ȯƒ ƀīŀŀīƞɠ ƥḗřīȯḓ) ···············〗"
     },
-    "title": "55555 {{name}} 55555",
+    "title": "〖Ḗḓīŧ Ƈȯƞŧřȧƈŧ Ŀīƞḗ: {{name}} ············〗",
     "validation": {
-      "validRateRequired": "55555"
+      "validRateRequired": "〖Ƥŀḗȧşḗ ḗƞŧḗř ȧ ṽȧŀīḓ řȧŧḗ (ḿŭşŧ ƀḗ ȧ ƞȯƞ-ƞḗɠȧŧīṽḗ ƞŭḿƀḗř) ·······················〗"
     },
     "values": {
-      "unnamedLine": "55555"
+      "unnamedLine": "〖Ŭƞƞȧḿḗḓ ŀīƞḗ ·····〗"
     }
   },
   "contractLineRate": {
     "actions": {
-      "cancel": "55555",
-      "saveRate": "55555"
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "saveRate": "〖Şȧṽḗ Řȧŧḗ ····〗"
     },
     "fields": {
-      "rate": "55555"
+      "rate": "〖Řȧŧḗ ··〗"
     },
-    "title": "55555 {{name}} 55555",
+    "title": "〖Şḗŧ Ƈŭşŧȯḿ Řȧŧḗ ƒȯř {{name}} ············〗",
     "validation": {
-      "validRateRequired": "55555"
+      "validRateRequired": "〖Ƥŀḗȧşḗ ḗƞŧḗř ȧ ṽȧŀīḓ řȧŧḗ (ḿŭşŧ ƀḗ ȧ ƞȯƞ-ƞḗɠȧŧīṽḗ ƞŭḿƀḗř) ·······················〗"
     }
   },
   "addLines": {
     "actions": {
-      "addPlural": "55555 {{count}} 55555",
-      "addSingle": "55555 {{count}} 55555",
-      "adding": "55555"
+      "addPlural": "〖Ȧḓḓ ({{count}}) Ƥřḗşḗŧş ··········〗",
+      "addSingle": "〖Ȧḓḓ ({{count}}) Ƥřḗşḗŧ ·········〗",
+      "adding": "〖Ȧḓḓīƞɠ... ····〗"
     },
     "empty": {
-      "noMatches": "55555",
-      "noneAvailable": "55555"
+      "noMatches": "〖Ƞȯ ƥřḗşḗŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ. ············〗",
+      "noneAvailable": "〖Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş ȧṽȧīŀȧƀŀḗ. ··············〗"
     },
     "errors": {
-      "failedToAddPresets": "55555",
-      "failedToLoadPresetDetails": "55555",
-      "failedToLoadPresets": "55555"
+      "failedToAddPresets": "〖Ƒȧīŀḗḓ ŧȯ ȧḓḓ şḗŀḗƈŧḗḓ ƥřḗşḗŧş. ·············〗",
+      "failedToLoadPresetDetails": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřḗşḗŧ ḓḗŧȧīŀş. ············〗",
+      "failedToLoadPresets": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş. ···············〗"
     },
     "filters": {
-      "allTypes": "55555",
-      "reset": "55555",
-      "searchPlaceholder": "55555",
-      "typePlaceholder": "55555"
+      "allTypes": "〖Ȧŀŀ ŧẏƥḗş ····〗",
+      "reset": "〖Řḗşḗŧ ··〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ ƥřḗşḗŧş... ·······〗",
+      "typePlaceholder": "〖Şḗŀḗƈŧ ŧẏƥḗ ·····〗"
     },
     "fixedConfig": {
-      "defaultBaseRate": "55555",
-      "defaultRatePlaceholder": "55555 {{rate}} 55555",
-      "enterBaseRate": "55555",
-      "leaveBlankDefault": "55555",
-      "notSet": "55555",
-      "overrideBaseRate": "55555",
-      "title": "55555"
+      "defaultBaseRate": "〖Ḓḗƒȧŭŀŧ Ɓȧşḗ Řȧŧḗ: ········〗",
+      "defaultRatePlaceholder": "〖Ḓḗƒȧŭŀŧ: ${{rate}} ········〗",
+      "enterBaseRate": "〖Ḗƞŧḗř ƀȧşḗ řȧŧḗ ······〗",
+      "leaveBlankDefault": "〖Ŀḗȧṽḗ ƀŀȧƞķ ŧȯ ŭşḗ ŧħḗ ḓḗƒȧŭŀŧ řȧŧḗ ··············〗",
+      "notSet": "〖Ƞȯŧ şḗŧ ···〗",
+      "overrideBaseRate": "〖Ȯṽḗřřīḓḗ Ɓȧşḗ Řȧŧḗ ········〗",
+      "title": "〖Ƒīẋḗḓ Řȧŧḗ Ƈȯƞƒīɠŭřȧŧīȯƞ ··········〗"
     },
     "hourlyConfig": {
-      "defaultRate": "55555 {{rate}} 55555",
-      "hourlyRate": "55555",
-      "minimumBillableMinutes": "55555",
-      "roundUpToNearest": "55555",
-      "servicesAndRates": "55555",
-      "title": "55555"
+      "defaultRate": "〖Ḓḗƒȧŭŀŧ: ${{rate}} ········〗",
+      "hourlyRate": "〖Ħȯŭřŀẏ Řȧŧḗ ·····〗",
+      "minimumBillableMinutes": "〖Ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ḿīƞŭŧḗş ··········〗",
+      "roundUpToNearest": "〖Řȯŭƞḓ ŭƥ ŧȯ ƞḗȧřḗşŧ (ḿīƞŭŧḗş) ············〗",
+      "servicesAndRates": "〖Şḗřṽīƈḗş & Ħȯŭřŀẏ Řȧŧḗş ··········〗",
+      "title": "〖Ŧīḿḗ Ɓīŀŀīƞɠ Ƈȯƞƒīɠŭřȧŧīȯƞ ···········〗"
     },
-    "loading": "55555",
-    "selectPresetsTitle": "55555",
+    "loading": "〖Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧş... ·············〗",
     "selection": {
-      "deselectPreset": "55555",
-      "selectPreset": "55555",
-      "selectedPlural": "55555 {{count}} 55555",
-      "selectedSingle": "55555 {{count}} 55555"
+      "deselectPreset": "〖Ḓḗşḗŀḗƈŧ ƥřḗşḗŧ ······〗",
+      "selectPreset": "〖Şḗŀḗƈŧ ƥřḗşḗŧ ······〗",
+      "selectedPlural": "〖{{count}} ƥřḗşḗŧş şḗŀḗƈŧḗḓ ···········〗",
+      "selectedSingle": "〖{{count}} ƥřḗşḗŧ şḗŀḗƈŧḗḓ ··········〗"
     },
-    "serviceCountPlural": "55555 {{count}} 55555",
-    "serviceCountSingle": "55555 {{count}} 55555",
+    "serviceCountPlural": "〖{{count}} şḗřṽīƈḗş ········〗",
+    "serviceCountSingle": "〖{{count}} şḗřṽīƈḗ ·······〗",
     "services": {
-      "configuration": "55555",
-      "empty": "55555",
-      "fixedReferenceHelp": "55555",
-      "includedReference": "55555",
-      "quantityShort": "55555 {{quantity}} 55555",
-      "unknownService": "55555"
+      "configuration": "〖Şḗřṽīƈḗş Ƈȯƞƒīɠŭřȧŧīȯƞ ·········〗",
+      "empty": "〖Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƥřḗşḗŧ ················〗",
+      "fixedReferenceHelp": "〖Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ īƞƈŀŭḓḗḓ ƒȯř řḗƒḗřḗƞƈḗ ȯƞŀẏ. Ŧħḗ ƒīẋḗḓ řȧŧḗ ȧƀȯṽḗ ḓḗŧḗřḿīƞḗş ŧħḗ ƀīŀŀīƞɠ ȧḿȯŭƞŧ. ········································〗",
+      "includedReference": "〖Şḗřṽīƈḗş Īƞƈŀŭḓḗḓ (Řḗƒḗřḗƞƈḗ) ············〗",
+      "quantityShort": "〖Ɋŧẏ: {{quantity}} ·······〗",
+      "unknownService": "〖Ŭƞķƞȯẇƞ Şḗřṽīƈḗ ······〗"
     },
-    "title": "55555",
+    "title": "〖Ȧḓḓ Ƈȯƞŧřȧƈŧ Ŀīƞḗş ƒřȯḿ Ƥřḗşḗŧş ·············〗",
     "usageConfig": {
-      "defaultRate": "55555 {{rate}} 55555",
-      "quantity": "55555",
-      "ratePerUnit": "55555",
-      "unitHint": "55555",
-      "unitOfMeasure": "55555",
-      "unitPlaceholder": "55555"
+      "defaultRate": "〖Ḓḗƒȧŭŀŧ: ${{rate}} ········〗",
+      "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗",
+      "ratePerUnit": "〖Řȧŧḗ (ƥḗř ŭƞīŧ) ······〗",
+      "unitHint": "〖ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř ··········〗",
+      "unitOfMeasure": "〖Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ ······〗",
+      "unitPlaceholder": "〖ŭƞīŧ ··〗"
     }
   },
   "createCustomLine": {
-    "addBucketOfConsumption": "55555",
-    "addBucketOfHours": "55555",
-    "addHourlyService": "55555",
-    "addItem": "55555",
-    "addUsageService": "55555",
-    "adjustForPartialPeriods": "55555",
-    "adjustForPartialPeriodsHelp": "55555",
-    "basicsDescription": "55555",
-    "basicsTitle": "55555",
-    "billingFrequencyLabel": "55555",
-    "billingFrequencyPlaceholder": "55555",
+    "addBucketOfConsumption": "〖Ȧḓḓ ƀŭƈķḗŧ ȯƒ ƈȯƞşŭḿƥŧīȯƞ ··········〗",
+    "addBucketOfHours": "〖Ȧḓḓ ƀŭƈķḗŧ ȯƒ ħȯŭřş ········〗",
+    "addHourlyService": "〖Ȧḓḓ Ħȯŭřŀẏ Şḗřṽīƈḗ ········〗",
+    "addItem": "〖Ȧḓḓ Īŧḗḿ ····〗",
+    "addUsageService": "〖Ȧḓḓ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗ ··········〗",
+    "adjustForPartialPeriods": "〖Ȧḓĵŭşŧ ƒȯř Ƥȧřŧīȧŀ Ƥḗřīȯḓş ···········〗",
+    "adjustForPartialPeriodsHelp": "〖Ẇħḗƞ ḗƞȧƀŀḗḓ, ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ şƈȧŀḗş ŧȯ ŧħḗ ƈȯṽḗřḗḓ ƥȯřŧīȯƞ ȯƒ ȧ şḗřṽīƈḗ ƥḗřīȯḓ ẇħḗƞ ŧħḗ ƈȯƞŧřȧƈŧ şŧȧřŧş ȯř ḗƞḓş īƞşīḓḗ ŧħȧŧ ƥḗřīȯḓ. ······················································〗",
+    "basicsDescription": "〖Ƈřḗȧŧḗ ȧ ƈŭşŧȯḿ ƈȯƞŧřȧƈŧ ŀīƞḗ ḓīřḗƈŧŀẏ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ. ·······················〗",
+    "basicsTitle": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ɓȧşīƈş ········〗",
+    "billingFrequencyLabel": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ * ········〗",
+    "billingFrequencyPlaceholder": "〖Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ··········〗",
     "billingModel": {
-      "fixedDescription": "55555",
-      "fixedTitle": "55555",
-      "hourlyDescription": "55555",
-      "hourlyTitle": "55555",
-      "usageDescription": "55555",
-      "usageTitle": "55555"
+      "fixedDescription": "〖Ƈħȧřɠḗ ȧ ƒŀȧŧ ȧḿȯŭƞŧ ḗṽḗřẏ ƀīŀŀīƞɠ ƥḗřīȯḓ. ·················〗",
+      "fixedTitle": "〖Ƒīẋḗḓ Ƒḗḗ ····〗",
+      "hourlyDescription": "〖Ɓīŀŀ ƀȧşḗḓ ȯƞ ȧƥƥřȯṽḗḓ ŧīḿḗ ḗƞŧřīḗş. ···············〗",
+      "hourlyTitle": "〖Ħȯŭřŀẏ ···〗",
+      "usageDescription": "〖Īƞṽȯīƈḗ ƒȯř ŭƞīŧş ƈȯƞşŭḿḗḓ. ···········〗",
+      "usageTitle": "〖Ŭşȧɠḗ-Ɓȧşḗḓ ·····〗"
     },
     "billingTiming": {
-      "advance": "55555",
-      "arrears": "55555"
+      "advance": "〖Ȧḓṽȧƞƈḗ (ƀīŀŀ ȧŧ şŧȧřŧ ȯƒ ƥḗřīȯḓ) ··············〗",
+      "arrears": "〖Ȧřřḗȧřş (ƀīŀŀ ȧŧ ḗƞḓ ȯƒ ƥḗřīȯḓ) ·············〗"
     },
-    "billingTimingHelp": "55555",
-    "chooseBillingModel": "55555",
-    "chooseBillingModelDescription": "55555",
-    "contractLineNameLabel": "55555",
-    "contractLineNamePlaceholder": "55555",
-    "create": "55555",
-    "creating": "55555",
-    "defaultUnit": "55555",
-    "defaultUnits": "55555",
-    "enterHourlyRate": "55555",
-    "enterUnitRate": "55555",
-    "fixedServicesAlertBaseRate": "55555",
-    "fixedServicesAlertHeading": "55555",
-    "fixedServicesAlertProducts": "55555",
-    "fixedServicesDescription": "55555",
-    "fixedServicesTitle": "55555",
-    "hourlyRateDisplay": "55555 {{rate}} 55555",
-    "hourlyRateLabel": "55555",
-    "hourlyServicesAlertDescription": "55555",
-    "hourlyServicesAlertHeading": "55555",
-    "hourlyServicesDescription": "55555",
-    "hourlyServicesLabel": "55555",
-    "hourlyServicesTitle": "55555",
-    "itemLabel": "55555 {{index}} 55555",
-    "moneyPlaceholder": "55555",
-    "minimumBillableTimeLabel": "55555",
-    "noFixedItems": "55555",
-    "noHourlyServices": "55555",
-    "noUsageServices": "55555",
-    "quantityLabel": "55555",
-    "ratePerUnitLabel": "55555",
-    "recurringBaseRateHelp": "55555",
-    "recurringBaseRateLabel": "55555",
-    "roundUpToNearestLabel": "55555",
-    "selectItemPlaceholder": "55555",
-    "selectServicePlaceholder": "55555",
-    "serviceLabel": "55555 {{index}} 55555",
-    "servicesAndProductsLabel": "55555",
-    "title": "55555",
-    "unitOfMeasureLabel": "55555",
-    "unitOfMeasurePlaceholder": "55555",
-    "unitRateDisplay": "55555 {{rate}} 55555 {{unit}} 55555",
-    "usageServicesAlertDescription": "55555",
-    "usageServicesAlertHeading": "55555",
-    "usageServicesDescription": "55555",
-    "usageServicesLabel": "55555",
-    "usageServicesTitle": "55555",
+    "billingTimingHelp": "〖Ȧḓṽȧƞƈḗ ƀīŀŀīƞɠ īş ŧẏƥīƈȧŀ ƒȯř ƒīẋḗḓ ƒḗḗş; ȧřřḗȧřş ƒȯř ŧīḿḗ/ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗş. ·································〗",
+    "chooseBillingModel": "〖Ƈħȯȯşḗ ȧ Ɓīŀŀīƞɠ Ḿȯḓḗŀ * ··········〗",
+    "chooseBillingModelDescription": "〖Şḗŀḗƈŧ ŧħḗ ƀīŀŀīƞɠ ƀḗħȧṽīȯř ŧħȧŧ ƒīŧş ŧħīş ȯƒƒḗřīƞɠ. ·····················〗",
+    "contractLineNameLabel": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƞȧḿḗ * ········〗",
+    "contractLineNamePlaceholder": "〖ḗ.ɠ. Ḿȧƞȧɠḗḓ Şŭƥƥȯřŧ - Ɠȯŀḓ ···········〗",
+    "create": "〖Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ Ŀīƞḗ ········〗",
+    "creating": "〖Ƈřḗȧŧīƞɠ... ·····〗",
+    "defaultUnit": "〖ŭƞīŧ ··〗",
+    "defaultUnits": "〖ŭƞīŧş ··〗",
+    "enterHourlyRate": "〖Ḗƞŧḗř ħȯŭřŀẏ řȧŧḗ ·······〗",
+    "enterUnitRate": "〖Ḗƞŧḗř ŭƞīŧ řȧŧḗ ······〗",
+    "fixedServicesAlertBaseRate": "〖Ŧħḗ ƈȯƞŧřȧƈŧ ŀīƞḗ'ş ƀȧşḗ řȧŧḗ (şḗŧ ƀḗŀȯẇ) īş ŧħḗ ƀīŀŀḗḓ ȧḿȯŭƞŧ. ··························〗",
+    "fixedServicesAlertHeading": "〖Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş ········〗",
+    "fixedServicesAlertProducts": "〖Ẏȯŭ ƈȧƞ ȧŀşȯ ȧŧŧȧƈħ ƥřȯḓŭƈŧş ŧȯ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ; ƥřȯḓŭƈŧ ʠŭȧƞŧīŧīḗş ȧřḗ ƀīŀŀḗḓ ȧş ŭƞīŧş, ẇħīŀḗ ƒīẋḗḓ-ƒḗḗ şḗřṽīƈḗ ʠŭȧƞŧīŧīḗş ȧřḗ ŭşḗḓ ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ ȯƞŀẏ. ································································〗",
+    "fixedServicesDescription": "〖Şḗŧ ŭƥ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ȧŧ ȧ ƒīẋḗḓ řḗƈŭřřīƞɠ řȧŧḗ. ························〗",
+    "fixedServicesTitle": "〖Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş ········〗",
+    "hourlyRateDisplay": "〖{{rate}}/ħȯŭř ······〗",
+    "hourlyRateLabel": "〖Ħȯŭřŀẏ Řȧŧḗ ·····〗",
+    "hourlyServicesAlertDescription": "〖Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ŧīḿḗ ŧřȧƈķḗḓ. ······················〗",
+    "hourlyServicesAlertHeading": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş ······〗",
+    "hourlyServicesDescription": "〖Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŧīḿḗ ŧřȧƈķḗḓ. ·······················〗",
+    "hourlyServicesLabel": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş ······〗",
+    "hourlyServicesTitle": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş ······〗",
+    "itemLabel": "〖Īŧḗḿ {{index}} ······〗",
+    "moneyPlaceholder": "〖0.00 ··〗",
+    "minimumBillableTimeLabel": "〖Ḿīƞīḿŭḿ Ɓīŀŀȧƀŀḗ Ŧīḿḗ (ḿīƞŭŧḗş) ·············〗",
+    "noFixedItems": "〖Ƞȯ ƒīẋḗḓ ƒḗḗ īŧḗḿş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ \"Ȧḓḓ Īŧḗḿ\" ȧƀȯṽḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ. ····························〗",
+    "noHourlyServices": "〖Ƞȯ ħȯŭřŀẏ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ \"Ȧḓḓ Ħȯŭřŀẏ Şḗřṽīƈḗ\" ȧƀȯṽḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ. ································〗",
+    "noUsageServices": "〖Ƞȯ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ \"Ȧḓḓ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗ\" ȧƀȯṽḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ. ····································〗",
+    "quantityLabel": "〖Ɋŭȧƞŧīŧẏ ····〗",
+    "ratePerUnitLabel": "〖Řȧŧḗ ƥḗř Ŭƞīŧ ······〗",
+    "recurringBaseRateHelp": "〖Řḗƈŭřřīƞɠ ƒḗḗ ƒȯř ȧŀŀ ƒīẋḗḓ şḗřṽīƈḗş. ···············〗",
+    "recurringBaseRateLabel": "〖Řḗƈŭřřīƞɠ Ɓȧşḗ Řȧŧḗ ········〗",
+    "roundUpToNearestLabel": "〖Řȯŭƞḓ Ŭƥ Ŧȯ Ƞḗȧřḗşŧ (ḿīƞŭŧḗş) ············〗",
+    "selectItemPlaceholder": "〖Şḗŀḗƈŧ ȧƞ īŧḗḿ ······〗",
+    "selectServicePlaceholder": "〖Şḗŀḗƈŧ ȧ şḗřṽīƈḗ ·······〗",
+    "serviceLabel": "〖Şḗřṽīƈḗ {{index}} ·······〗",
+    "servicesAndProductsLabel": "〖Şḗřṽīƈḗş & Ƥřȯḓŭƈŧş ········〗",
+    "title": "〖Ƈřḗȧŧḗ Ƈŭşŧȯḿ Ƈȯƞŧřȧƈŧ Ŀīƞḗ ···········〗",
+    "unitOfMeasureLabel": "〖Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ ······〗",
+    "unitOfMeasurePlaceholder": "〖ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř ··········〗",
+    "unitRateDisplay": "〖{{rate}}/{{unit}} ·······〗",
+    "usageServicesAlertDescription": "〖Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ƈȯƞşŭḿƥŧīȯƞ. ······················〗",
+    "usageServicesAlertHeading": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş ········〗",
+    "usageServicesDescription": "〖Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŭşȧɠḗ ȯř ƈȯƞşŭḿƥŧīȯƞ. ··························〗",
+    "usageServicesLabel": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş ········〗",
+    "usageServicesTitle": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş ········〗",
     "validation": {
-      "billingFrequencyRequired": "55555",
-      "contractLineNameRequired": "55555",
-      "contractLineTypeRequired": "55555",
-      "failedToCreate": "55555",
-      "fixedServiceRequired": "55555",
-      "fixedServiceSelectRequired": "55555 {{index}} 55555",
-      "hourlyRateRequired": "55555 {{index}} 55555",
-      "hourlyServiceRequired": "55555",
-      "hourlyServiceSelectRequired": "55555 {{index}} 55555",
-      "unitOfMeasureRequired": "55555 {{index}} 55555",
-      "unitRateRequired": "55555 {{index}} 55555",
-      "usageServiceRequired": "55555",
-      "usageServiceSelectRequired": "55555 {{index}} 55555"
+      "billingFrequencyRequired": "〖Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ ············〗",
+      "contractLineNameRequired": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƞȧḿḗ īş řḗʠŭīřḗḓ ············〗",
+      "contractLineTypeRequired": "〖Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ŧẏƥḗ īş řḗʠŭīřḗḓ ············〗",
+      "failedToCreate": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ƈȯƞŧřȧƈŧ ŀīƞḗ ············〗",
+      "fixedServiceRequired": "〖Ȧŧ ŀḗȧşŧ ȯƞḗ ƒīẋḗḓ şḗřṽīƈḗ ȯř ƥřȯḓŭƈŧ īş řḗʠŭīřḗḓ ····················〗",
+      "fixedServiceSelectRequired": "〖Īŧḗḿ {{index}}: Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ şḗřṽīƈḗ ȯř ƥřȯḓŭƈŧ ····················〗",
+      "hourlyRateRequired": "〖Şḗřṽīƈḗ {{index}}: Ħȯŭřŀẏ řȧŧḗ īş řḗʠŭīřḗḓ ·················〗",
+      "hourlyServiceRequired": "〖Ȧŧ ŀḗȧşŧ ȯƞḗ ħȯŭřŀẏ şḗřṽīƈḗ īş řḗʠŭīřḗḓ ················〗",
+      "hourlyServiceSelectRequired": "〖Şḗřṽīƈḗ {{index}}: Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ şḗřṽīƈḗ ·················〗",
+      "unitOfMeasureRequired": "〖Şḗřṽīƈḗ {{index}}: Ŭƞīŧ ȯƒ ḿḗȧşŭřḗ īş řḗʠŭīřḗḓ ···················〗",
+      "unitRateRequired": "〖Şḗřṽīƈḗ {{index}}: Ŭƞīŧ řȧŧḗ īş řḗʠŭīřḗḓ ················〗",
+      "usageServiceRequired": "〖Ȧŧ ŀḗȧşŧ ȯƞḗ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗ īş řḗʠŭīřḗḓ ··················〗",
+      "usageServiceSelectRequired": "〖Şḗřṽīƈḗ {{index}}: Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ şḗřṽīƈḗ ·················〗"
     }
   },
   "pricingSchedules": {
     "list": {
       "actions": {
-        "addSchedule": "55555",
-        "deleteSchedule": "55555",
-        "editSchedule": "55555"
+        "addSchedule": "〖Ȧḓḓ Şƈħḗḓŭŀḗ ·····〗",
+        "deleteSchedule": "〖Ḓḗŀḗŧḗ Şƈħḗḓŭŀḗ ······〗",
+        "editSchedule": "〖Ḗḓīŧ şƈħḗḓŭŀḗ ······〗"
       },
       "columns": {
-        "actions": "55555",
-        "customRate": "55555",
-        "effectiveDate": "55555",
-        "endDate": "55555",
-        "notes": "55555"
+        "actions": "〖Ȧƈŧīȯƞş ···〗",
+        "customRate": "〖Ƈŭşŧȯḿ Řȧŧḗ ·····〗",
+        "effectiveDate": "〖Ḗƒƒḗƈŧīṽḗ Ḓȧŧḗ ······〗",
+        "endDate": "〖Ḗƞḓ Ḓȧŧḗ ····〗",
+        "notes": "〖Ƞȯŧḗş ··〗"
       },
       "dialogs": {
-        "confirmDeleteSchedule": "55555"
+        "confirmDeleteSchedule": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ ŧħīş ƥřīƈīƞɠ şƈħḗḓŭŀḗ? ······················〗"
       },
       "empty": {
-        "description": "55555",
-        "noPricingSchedules": "55555"
+        "description": "〖Ȧḓḓ ƥřīƈīƞɠ şƈħḗḓŭŀḗş ŧȯ ḓḗƒīƞḗ ŧīḿḗ-ƀȧşḗḓ řȧŧḗ ƈħȧƞɠḗş ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ······························〗",
+        "noPricingSchedules": "〖Ƞȯ ƥřīƈīƞɠ şƈħḗḓŭŀḗş ẏḗŧ ··········〗"
       },
       "errors": {
-        "failedToDeletePricingSchedule": "55555",
-        "failedToLoadPricingSchedules": "55555"
+        "failedToDeletePricingSchedule": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƥřīƈīƞɠ şƈħḗḓŭŀḗ ··············〗",
+        "failedToLoadPricingSchedules": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřīƈīƞɠ şƈħḗḓŭŀḗş ·············〗"
       },
-      "loading": "55555",
-      "readOnlyNotice": "55555",
+      "loading": "〖Ŀȯȧḓīƞɠ ƥřīƈīƞɠ şƈħḗḓŭŀḗş ··········〗",
+      "readOnlyNotice": "〖Ŧħīş şẏşŧḗḿ-ḿȧƞȧɠḗḓ ḓḗƒȧŭŀŧ ƈȯƞŧřȧƈŧ īş ȧŧŧřīƀŭŧīȯƞ-ȯƞŀẏ. Ƥřīƈīƞɠ şƈħḗḓŭŀḗ ȧŭŧħȯřīƞɠ īş ḓīşȧƀŀḗḓ. ·······································〗",
       "timeline": {
-        "title": "55555"
+        "title": "〖Ƥřīƈīƞɠ Ŧīḿḗŀīƞḗ ·······〗"
       },
-      "title": "55555",
+      "title": "〖Ƥřīƈīƞɠ Şƈħḗḓŭŀḗş ·······〗",
       "values": {
-        "defaultRate": "55555",
-        "ongoing": "55555",
-        "useDefaultRate": "55555"
+        "defaultRate": "〖Ḓḗƒȧŭŀŧ řȧŧḗ ·····〗",
+        "ongoing": "〖Ȯƞɠȯīƞɠ ···〗",
+        "useDefaultRate": "〖Ŭşḗ ḓḗƒȧŭŀŧ řȧŧḗ ·······〗"
       }
     },
     "dialog": {
       "actions": {
-        "addSchedule": "55555",
-        "cancel": "55555",
-        "saving": "55555",
-        "updateSchedule": "55555"
+        "addSchedule": "〖Ȧḓḓ Şƈħḗḓŭŀḗ ·····〗",
+        "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+        "saving": "〖Şȧṽīƞɠ... ····〗",
+        "updateSchedule": "〖Ŭƥḓȧŧḗ Şƈħḗḓŭŀḗ ······〗"
       },
       "durationUnits": {
-        "days": "55555",
-        "months": "55555",
-        "weeks": "55555",
-        "years": "55555"
+        "days": "〖Ḓȧẏş ··〗",
+        "months": "〖Ḿȯƞŧħş ···〗",
+        "weeks": "〖Ẇḗḗķş ··〗",
+        "years": "〖Ẏḗȧřş ··〗"
       },
       "errors": {
-        "failedToSavePricingSchedule": "55555"
+        "failedToSavePricingSchedule": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƥřīƈīƞɠ şƈħḗḓŭŀḗ ·············〗"
       },
       "fields": {
-        "customRate": "55555",
-        "customRatePlaceholder": "55555",
-        "duration": "55555",
-        "durationPlaceholder": "55555",
-        "effectiveDate": "55555",
-        "endDate": "55555",
-        "hasEndDate": "55555",
-        "notes": "55555",
-        "notesPlaceholder": "55555",
-        "unit": "55555",
-        "useDefaultRate": "55555",
-        "useDuration": "55555"
+        "customRate": "〖Ƈŭşŧȯḿ Řȧŧḗ ·····〗",
+        "customRatePlaceholder": "〖0.00 ··〗",
+        "duration": "〖Ḓŭřȧŧīȯƞ ····〗",
+        "durationPlaceholder": "〖ḗ.ɠ., 6 ···〗",
+        "effectiveDate": "〖Ḗƒƒḗƈŧīṽḗ Ḓȧŧḗ ······〗",
+        "endDate": "〖Ḗƞḓ Ḓȧŧḗ ····〗",
+        "hasEndDate": "〖Ħȧş ḗƞḓ ḓȧŧḗ ·····〗",
+        "notes": "〖Ƞȯŧḗş ··〗",
+        "notesPlaceholder": "〖Ȧḓḓ ƞȯŧḗş ȧƀȯŭŧ ŧħīş ƥřīƈīƞɠ ƈħȧƞɠḗ (ḗ.ɠ., 'Ȧƞƞŭȧŀ řȧŧḗ īƞƈřḗȧşḗ') ···························〗",
+        "unit": "〖Ŭƞīŧ ··〗",
+        "useDefaultRate": "〖Ŭşḗ ḓḗƒȧŭŀŧ řȧŧḗ ·······〗",
+        "useDuration": "〖Ŭşḗ ḓŭřȧŧīȯƞ ·····〗"
       },
       "title": {
-        "addPricingSchedule": "55555",
-        "editPricingSchedule": "55555"
+        "addPricingSchedule": "〖Ȧḓḓ Ƥřīƈīƞɠ Şƈħḗḓŭŀḗ ········〗",
+        "editPricingSchedule": "〖Ḗḓīŧ Ƥřīƈīƞɠ Şƈħḗḓŭŀḗ ·········〗"
       },
       "validation": {
-        "customRatePositive": "55555",
-        "customRateRequired": "55555",
-        "durationPositive": "55555",
-        "durationRequired": "55555",
-        "effectiveDateRequired": "55555",
-        "endDateAfterEffectiveDate": "55555",
-        "endDateRequiredWhenEnabled": "55555"
+        "customRatePositive": "〖Ƈŭşŧȯḿ řȧŧḗ ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ ƞŭḿƀḗř ···············〗",
+        "customRateRequired": "〖Ƈŭşŧȯḿ řȧŧḗ īş řḗʠŭīřḗḓ ẇħḗƞ ƞȯŧ ŭşīƞɠ ḓḗƒȧŭŀŧ řȧŧḗ ·····················〗",
+        "durationPositive": "〖Ḓŭřȧŧīȯƞ ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ ƞŭḿƀḗř ··············〗",
+        "durationRequired": "〖Ḓŭřȧŧīȯƞ ṽȧŀŭḗ īş řḗʠŭīřḗḓ ẇħḗƞ ŭşīƞɠ ḓŭřȧŧīȯƞ ···················〗",
+        "effectiveDateRequired": "〖Ḗƒƒḗƈŧīṽḗ ḓȧŧḗ īş řḗʠŭīřḗḓ ···········〗",
+        "endDateAfterEffectiveDate": "〖Ḗƞḓ ḓȧŧḗ ḿŭşŧ ƀḗ ȧƒŧḗř ḗƒƒḗƈŧīṽḗ ḓȧŧḗ ···············〗",
+        "endDateRequiredWhenEnabled": "〖Ḗƞḓ ḓȧŧḗ īş řḗʠŭīřḗḓ ẇħḗƞ \"Ħȧş ḗƞḓ ḓȧŧḗ\" īş ḗƞȧƀŀḗḓ ·····················〗"
       }
     }
   },
   "contractsList": {
     "actions": {
-      "deleting": "55555",
-      "createContract": "55555",
-      "createTemplate": "55555",
-      "openMenu": "55555",
-      "quickAdd": "55555",
-      "resume": "55555",
-      "restore": "55555",
-      "setToActive": "55555",
-      "terminate": "55555"
+      "deleting": "〖Ḓḗŀḗŧīƞɠ… ····〗",
+      "createContract": "〖Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ ······〗",
+      "createTemplate": "〖Ƈřḗȧŧḗ Ŧḗḿƥŀȧŧḗ ······〗",
+      "openMenu": "〖Ȯƥḗƞ ḿḗƞŭ ····〗",
+      "quickAdd": "〖Ɋŭīƈķ Ȧḓḓ ····〗",
+      "resume": "〖Řḗşŭḿḗ ···〗",
+      "restore": "〖Řḗşŧȯřḗ ···〗",
+      "setToActive": "〖Şḗŧ ŧȯ Ȧƈŧīṽḗ ······〗",
+      "terminate": "〖Ŧḗřḿīƞȧŧḗ ····〗"
     },
     "columns": {
-      "actions": "55555",
-      "client": "55555",
-      "contractName": "55555",
-      "created": "55555",
-      "description": "55555",
-      "endDate": "55555",
-      "lastModified": "55555",
-      "sourceTemplate": "55555",
-      "startDate": "55555",
-      "status": "55555"
+      "actions": "〖Ȧƈŧīȯƞş ···〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "contractName": "〖Ƈȯƞŧřȧƈŧ Ƞȧḿḗ ······〗",
+      "created": "〖Ƈřḗȧŧḗḓ ···〗",
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "endDate": "〖Ḗƞḓ Ḓȧŧḗ ····〗",
+      "lastModified": "〖Ŀȧşŧ Ḿȯḓīƒīḗḓ ······〗",
+      "sourceTemplate": "〖Şȯŭřƈḗ Ŧḗḿƥŀȧŧḗ ······〗",
+      "startDate": "〖Şŧȧřŧ Ḓȧŧḗ ····〗",
+      "status": "〖Şŧȧŧŭş ···〗"
     },
     "dialogs": {
       "deleteClient": {
-        "clientSuffix": "55555 {{clientName}} 55555",
-        "message": "55555 {{contractName}} 55555 {{clientSuffix}} 55555",
-        "title": "55555"
+        "clientSuffix": "〖 ƒȯř {{clientName}} ········〗",
+        "message": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ ŧħḗ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ \"{{contractName}}\"{{clientSuffix}}? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ····················································〗",
+        "title": "〖Ḓḗŀḗŧḗ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ? ··········〗"
       },
       "deleteTemplate": {
-        "message": "55555 {{contractName}} 55555",
-        "title": "55555"
+        "message": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ ŧħḗ ŧḗḿƥŀȧŧḗ \"{{contractName}}\"? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ···········································〗",
+        "title": "〖Ḓḗŀḗŧḗ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ? ··········〗"
       },
       "discardDraft": {
-        "message": "55555 {{contractName}} 55555 {{clientName}} 55555",
-        "title": "55555"
+        "message": "〖Ŧħīş ẇīŀŀ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ ŧħḗ ḓřȧƒŧ \"{{contractName}}\" ƒȯř {{clientName}}.\nŦħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ···········································〗",
+        "title": "〖Ḓīşƈȧřḓ Ḓřȧƒŧ Ƈȯƞŧřȧƈŧ? ··········〗"
       }
     },
     "drafts": {
-      "badgeCount": "55555 {{count}} 55555"
+      "badgeCount": "〖{{count}} ḓřȧƒŧ ƈȯƞŧřȧƈŧş ··········〗"
     },
     "empty": {
-      "dash": "55555",
-      "noClientContracts": "55555",
-      "noDescription": "55555",
-      "noDraftMatches": "55555",
-      "noDrafts": "55555",
-      "noTemplates": "55555",
-      "unknownClient": "55555",
-      "untitledContract": "55555",
-      "untitledDraft": "55555",
-      "untitledTemplate": "55555"
+      "dash": "〖— ·〗",
+      "noClientContracts": "〖Ƞȯ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ. ················〗",
+      "noDescription": "〖Ƞȯ ḓḗşƈřīƥŧīȯƞ ······〗",
+      "noDraftMatches": "〖Ƞȯ ḓřȧƒŧ ƈȯƞŧřȧƈŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ. ···············〗",
+      "noDrafts": "〖Ƞȯ ḓřȧƒŧ ƈȯƞŧřȧƈŧş. Şŧȧřŧ ƈřḗȧŧīƞɠ ȧ ƞḗẇ ƈȯƞŧřȧƈŧ ŧȯ şȧṽḗ ȧş ḓřȧƒŧ. ···························〗",
+      "noTemplates": "〖Ƞȯ ŧḗḿƥŀȧŧḗş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ. ·············〗",
+      "unknownClient": "〖Ŭƞķƞȯẇƞ ƈŀīḗƞŧ ······〗",
+      "untitledContract": "〖Ŭƞŧīŧŀḗḓ ƈȯƞŧřȧƈŧ ·······〗",
+      "untitledDraft": "〖Ŭƞŧīŧŀḗḓ ḓřȧƒŧ ······〗",
+      "untitledTemplate": "〖Ŭƞŧīŧŀḗḓ ŧḗḿƥŀȧŧḗ ·······〗"
     },
     "errors": {
-      "failedToFetch": "55555"
+      "failedToFetch": "〖Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ƈȯƞŧřȧƈŧş ··········〗"
     },
     "heading": {
-      "description": "55555",
-      "title": "55555"
+      "description": "〖Ŧḗḿƥŀȧŧḗş ȧřḗ řḗŭşȧƀŀḗ ḓḗƒīƞīŧīȯƞş. Ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ȧřḗ ƈŀīḗƞŧ-ȯẇƞḗḓ īƞşŧȧƞƈḗş. ································〗",
+      "title": "〖Ƈȯƞŧřȧƈŧş ····〗"
     },
     "loading": {
-      "contracts": "55555"
+      "contracts": "〖Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧş... ········〗"
     },
     "search": {
-      "clientContractsAriaLabel": "55555",
-      "clientContractsPlaceholder": "55555",
-      "draftsAriaLabel": "55555",
-      "draftsPlaceholder": "55555",
-      "templatesAriaLabel": "55555",
-      "templatesPlaceholder": "55555"
+      "clientContractsAriaLabel": "〖Şḗȧřƈħ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ··········〗",
+      "clientContractsPlaceholder": "〖Şḗȧřƈħ ƀẏ ƈŀīḗƞŧ ȯř ƈȯƞŧřȧƈŧ... ·············〗",
+      "draftsAriaLabel": "〖Şḗȧřƈħ ḓřȧƒŧ ƈȯƞŧřȧƈŧş ·········〗",
+      "draftsPlaceholder": "〖Şḗȧřƈħ ḓřȧƒŧş... ·······〗",
+      "templatesAriaLabel": "〖Şḗȧřƈħ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗş ··········〗",
+      "templatesPlaceholder": "〖Şḗȧřƈħ ŧḗḿƥŀȧŧḗş... ········〗"
     },
     "status": {
-      "archived": "55555",
-      "published": "55555"
+      "archived": "〖Ȧřƈħīṽḗḓ ····〗",
+      "published": "〖Ƥŭƀŀīşħḗḓ ····〗"
     },
     "toasts": {
-      "draftDiscarded": "55555",
-      "failedToActivateContract": "55555",
-      "failedToDeleteContract": "55555",
-      "failedToDiscardDraft": "55555",
-      "failedToRestoreContract": "55555",
-      "failedToResumeDraft": "55555",
-      "failedToTerminateContract": "55555"
+      "draftDiscarded": "〖Ḓřȧƒŧ ḓīşƈȧřḓḗḓ ······〗",
+      "failedToActivateContract": "〖Ƒȧīŀḗḓ ŧȯ ȧƈŧīṽȧŧḗ ƈȯƞŧřȧƈŧ ···········〗",
+      "failedToDeleteContract": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧřȧƈŧ ··········〗",
+      "failedToDiscardDraft": "〖Ƒȧīŀḗḓ ŧȯ ḓīşƈȧřḓ ḓřȧƒŧ ··········〗",
+      "failedToRestoreContract": "〖Ƒȧīŀḗḓ ŧȯ řḗşŧȯřḗ ƈȯƞŧřȧƈŧ ···········〗",
+      "failedToResumeDraft": "〖Ƒȧīŀḗḓ ŧȯ řḗşŭḿḗ ḓřȧƒŧ ·········〗",
+      "failedToTerminateContract": "〖Ƒȧīŀḗḓ ŧȯ ŧḗřḿīƞȧŧḗ ƈȯƞŧřȧƈŧ ············〗"
     }
   },
   "clientContracts": {
     "actions": {
-      "viewDetails": "55555"
+      "viewDetails": "〖Ṽīḗẇ ḓḗŧȧīŀş ·····〗"
     },
     "columns": {
-      "actions": "55555",
-      "billingFrequency": "55555",
-      "client": "55555",
-      "contractName": "55555",
-      "endDate": "55555",
-      "poIndicator": "55555",
-      "sourceTemplate": "55555",
-      "startDate": "55555",
-      "status": "55555"
+      "actions": "〖Ȧƈŧīȯƞş ···〗",
+      "billingFrequency": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ ·······〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "contractName": "〖Ƈȯƞŧřȧƈŧ Ƞȧḿḗ ······〗",
+      "endDate": "〖Ḗƞḓ Ḓȧŧḗ ····〗",
+      "poIndicator": "〖ƤȮ ·〗",
+      "sourceTemplate": "〖Şȯŭřƈḗ Ŧḗḿƥŀȧŧḗ ······〗",
+      "startDate": "〖Şŧȧřŧ Ḓȧŧḗ ····〗",
+      "status": "〖Şŧȧŧŭş ···〗"
     },
     "dialogs": {
       "terminate": {
-        "clientSuffix": "55555 {{clientName}} 55555",
-        "message": "55555 {{contractName}} 55555 {{clientSuffix}} 55555",
-        "title": "55555"
+        "clientSuffix": "〖 ƒȯř {{clientName}} ········〗",
+        "message": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ŧḗřḿīƞȧŧḗ \"{{contractName}}\"{{clientSuffix}}? ····························〗",
+        "title": "〖Ŧḗřḿīƞȧŧḗ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ? ···········〗"
       }
     },
     "empty": {
-      "noMatches": "55555"
+      "noMatches": "〖Ƞȯ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ. ················〗"
     },
     "errors": {
-      "failedToFetch": "55555"
+      "failedToFetch": "〖Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ·············〗"
     },
-    "loading": "55555",
+    "loading": "〖Ŀȯȧḓīƞɠ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş... ···········〗",
     "po": {
-      "notRequired": "55555",
-      "required": "55555"
+      "notRequired": "〖Ƞȯŧ řḗʠŭīřḗḓ ·····〗",
+      "required": "〖Řḗʠŭīřḗḓ ····〗"
     },
     "search": {
-      "ariaLabel": "55555",
-      "placeholder": "55555"
+      "ariaLabel": "〖Şḗȧřƈħ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ··········〗",
+      "placeholder": "〖Şḗȧřƈħ ƀẏ ƈŀīḗƞŧ ȯř ƈȯƞŧřȧƈŧ... ·············〗"
     },
     "tabs": {
-      "contracts": "55555",
-      "upcomingRenewals": "55555 {{count}} 55555"
+      "contracts": "〖Ƈȯƞŧřȧƈŧş ····〗",
+      "upcomingRenewals": "〖Ŭƥƈȯḿīƞɠ Řḗƞḗẇȧŀş ({{count}}) ············〗"
     },
     "toasts": {
-      "failedToActivate": "55555",
-      "failedToDelete": "55555",
-      "failedToMarkNonRenewing": "55555",
-      "failedToMarkRenewing": "55555",
-      "failedToRestore": "55555",
-      "failedToResumeDraft": "55555",
-      "failedToTerminate": "55555"
+      "failedToActivate": "〖Ƒȧīŀḗḓ ŧȯ ȧƈŧīṽȧŧḗ ƈȯƞŧřȧƈŧ ···········〗",
+      "failedToDelete": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧřȧƈŧ ··········〗",
+      "failedToMarkNonRenewing": "〖Ƒȧīŀḗḓ ŧȯ ḿȧřķ řḗƞḗẇȧŀ ȧş ƞȯƞ-řḗƞḗẇīƞɠ ················〗",
+      "failedToMarkRenewing": "〖Ƒȧīŀḗḓ ŧȯ ḿȧřķ řḗƞḗẇȧŀ ȧş řḗƞḗẇīƞɠ ··············〗",
+      "failedToRestore": "〖Ƒȧīŀḗḓ ŧȯ řḗşŧȯřḗ ƈȯƞŧřȧƈŧ ···········〗",
+      "failedToResumeDraft": "〖Ƒȧīŀḗḓ ŧȯ řḗşŭḿḗ ḓřȧƒŧ ·········〗",
+      "failedToTerminate": "〖Ƒȧīŀḗḓ ŧȯ ŧḗřḿīƞȧŧḗ ƈȯƞŧřȧƈŧ ············〗"
     },
     "upcoming": {
       "actions": {
-        "markNonRenewing": "55555",
-        "markRenewing": "55555",
-        "openMenu": "55555"
+        "markNonRenewing": "〖Ḿȧřķ ƞȯƞ-řḗƞḗẇīƞɠ ·······〗",
+        "markRenewing": "〖Ḿȧřķ řḗƞḗẇīƞɠ ······〗",
+        "openMenu": "〖Ȯƥḗƞ řḗƞḗẇȧŀ ȧƈŧīȯƞş ········〗"
       },
       "columns": {
-        "actions": "55555",
-        "client": "55555",
-        "contract": "55555",
-        "daysUntilDue": "55555",
-        "decisionDue": "55555",
-        "status": "55555",
-        "type": "55555"
+        "actions": "〖Ȧƈŧīȯƞş ···〗",
+        "client": "〖Ƈŀīḗƞŧ ···〗",
+        "contract": "〖Ƈȯƞŧřȧƈŧ ····〗",
+        "daysUntilDue": "〖Ḓȧẏş Ŭƞŧīŀ Ḓŭḗ ······〗",
+        "decisionDue": "〖Ḓḗƈīşīȯƞ Ḓŭḗ ·····〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "type": "〖Ŧẏƥḗ ··〗"
       },
-      "description": "55555",
-      "empty": "55555",
-      "filterAriaLabel": "55555",
-      "filterPlaceholder": "55555",
+      "description": "〖Ƈȯƞŧřȧƈŧş ẇīŧħ řḗƞḗẇȧŀ ḓḗƈīşīȯƞş ḓŭḗ ẇīŧħīƞ ŧħḗ şḗŀḗƈŧḗḓ ẇīƞḓȯẇ. ··························〗",
+      "empty": "〖Ƞȯ ŭƥƈȯḿīƞɠ řḗƞḗẇȧŀş ƒȯř ŧħḗ şḗŀḗƈŧḗḓ ẇīƞḓȯẇ. ··················〗",
+      "filterAriaLabel": "〖Ƒīŀŧḗř ŭƥƈȯḿīƞɠ řḗƞḗẇȧŀş ··········〗",
+      "filterPlaceholder": "〖Ƒīŀŧḗř ŭƥƈȯḿīƞɠ řḗƞḗẇȧŀş... ···········〗",
       "status": {
-        "completed": "55555",
-        "nonRenewing": "55555",
-        "pending": "55555",
-        "renewing": "55555",
-        "snoozed": "55555"
+        "completed": "〖Ƈȯḿƥŀḗŧḗḓ ····〗",
+        "nonRenewing": "〖Ƞȯƞ-řḗƞḗẇīƞɠ ·····〗",
+        "pending": "〖Ƥḗƞḓīƞɠ ···〗",
+        "renewing": "〖Řḗƞḗẇīƞɠ ····〗",
+        "snoozed": "〖Şƞȯȯẑḗḓ ···〗"
       },
-      "title": "55555",
+      "title": "〖Ŭƥƈȯḿīƞɠ Řḗƞḗẇȧŀş ·······〗",
       "type": {
-        "evergreen": "55555",
-        "fixedTerm": "55555"
+        "evergreen": "〖Ḗṽḗřɠřḗḗƞ ····〗",
+        "fixedTerm": "〖Ƒīẋḗḓ-ŧḗřḿ ····〗"
       },
       "window": {
-        "all": "55555",
-        "next30": "55555",
-        "next60": "55555",
-        "next90": "55555"
+        "all": "〖Ȧŀŀ ··〗",
+        "next30": "〖Ƞḗẋŧ 30 ḓȧẏş ·····〗",
+        "next60": "〖Ƞḗẋŧ 60 ḓȧẏş ·····〗",
+        "next90": "〖Ƞḗẋŧ 90 ḓȧẏş ·····〗"
       },
-      "windowPlaceholder": "55555"
+      "windowPlaceholder": "〖Şḗŀḗƈŧ řḗƞḗẇȧŀ ẇīƞḓȯẇ ·········〗"
     }
   },
   "templatesTab": {
     "actions": {
-      "createTemplate": "55555",
-      "delete": "55555",
-      "edit": "55555"
+      "createTemplate": "〖Ƈřḗȧŧḗ Ŧḗḿƥŀȧŧḗ ······〗",
+      "delete": "〖Ḓḗŀḗŧḗ ···〗",
+      "edit": "〖Ḗḓīŧ ··〗"
     },
     "columns": {
-      "actions": "55555",
-      "description": "55555",
-      "status": "55555",
-      "templateName": "55555"
+      "actions": "〖Ȧƈŧīȯƞş ···〗",
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "templateName": "〖Ŧḗḿƥŀȧŧḗ Ƞȧḿḗ ······〗"
     },
     "empty": {
-      "createFirstTemplate": "55555",
-      "noSearchMatches": "55555",
-      "noTemplates": "55555",
-      "tryDifferentSearch": "55555"
+      "createFirstTemplate": "〖Ƈřḗȧŧḗ ẏȯŭř ƒīřşŧ ŧḗḿƥŀȧŧḗ ŧȯ ɠḗŧ şŧȧřŧḗḓ. ·················〗",
+      "noSearchMatches": "〖Ƞȯ ŧḗḿƥŀȧŧḗş ḿȧŧƈħ ẏȯŭř şḗȧřƈħ ············〗",
+      "noTemplates": "〖Ƞȯ ŧḗḿƥŀȧŧḗş ẏḗŧ ·······〗",
+      "tryDifferentSearch": "〖Ŧřẏ ȧ ḓīƒƒḗřḗƞŧ şḗȧřƈħ ŧḗřḿ. ············〗"
     },
     "errors": {
-      "failedToDeleteContract": "55555",
-      "failedToFetchTemplates": "55555"
+      "failedToDeleteContract": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧřȧƈŧ ··········〗",
+      "failedToFetchTemplates": "〖Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ŧḗḿƥŀȧŧḗş ··········〗"
     },
-    "loading": "55555",
+    "loading": "〖Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗş... ········〗",
     "search": {
-      "ariaLabel": "55555",
-      "placeholder": "55555"
+      "ariaLabel": "〖Şḗȧřƈħ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗş ··········〗",
+      "placeholder": "〖Şḗȧřƈħ ŧḗḿƥŀȧŧḗş... ········〗"
     },
     "status": {
-      "active": "55555",
-      "archived": "55555",
-      "draft": "55555",
-      "expired": "55555",
-      "published": "55555",
-      "terminated": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "archived": "〖Ȧřƈħīṽḗḓ ····〗",
+      "draft": "〖Ḓřȧƒŧ ··〗",
+      "expired": "〖Ḗẋƥīřḗḓ ···〗",
+      "published": "〖Ƥŭƀŀīşħḗḓ ····〗",
+      "terminated": "〖Ŧḗřḿīƞȧŧḗḓ ····〗"
     },
     "values": {
-      "noDescription": "55555"
+      "noDescription": "〖Ƞȯ ḓḗşƈřīƥŧīȯƞ ······〗"
     }
   },
   "detailSwitcher": {
     "errors": {
-      "contractNotFound": "55555",
-      "failedToLoadContractDetails": "55555",
-      "missingContractIdentifier": "55555",
-      "noContractSelected": "55555",
-      "unableToLoadContractDetails": "55555"
+      "contractNotFound": "〖Ƈȯƞŧřȧƈŧ ƞȯŧ ƒȯŭƞḓ ········〗",
+      "failedToLoadContractDetails": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş ·············〗",
+      "missingContractIdentifier": "〖Ḿīşşīƞɠ ƈȯƞŧřȧƈŧ īḓḗƞŧīƒīḗř ···········〗",
+      "noContractSelected": "〖Ƞȯ ƈȯƞŧřȧƈŧ şḗŀḗƈŧḗḓ. ·········〗",
+      "unableToLoadContractDetails": "〖Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş ·············〗"
     },
     "loading": {
-      "contract": "55555"
+      "contract": "〖Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧ... ········〗"
     }
   },
   "templateDetail": {
-    "backToTemplates": "55555",
-    "backToTemplatesArrow": "55555",
+    "backToTemplates": "〖Ɓȧƈķ ŧȯ Ŧḗḿƥŀȧŧḗş ·······〗",
+    "backToTemplatesArrow": "〖← Ɓȧƈķ ŧȯ Ŧḗḿƥŀȧŧḗş ········〗",
     "composition": {
-      "addContractLinesBeforeManaging": "55555",
-      "additionalPlans": "55555",
-      "bucketSummary": "55555 {{minutes}} 55555 {{overage}} 55555",
-      "closeManager": "55555",
-      "editRate": "55555",
-      "fixedFeeBundles": "55555",
-      "fixedFeeRate": "55555",
-      "hourlyPlans": "55555",
-      "manageServices": "55555",
-      "manageTemplateServices": "55555",
-      "minimumTimeLabel": "55555",
-      "minutesValue": "55555 {{count}} 55555",
-      "noFixedFeeLines": "55555",
-      "noHourlyLines": "55555",
-      "noServicesAssigned": "55555",
-      "noUsageLines": "55555",
-      "notSet": "55555",
-      "quantityLabel": "55555",
-      "roundUpLabel": "55555",
-      "serviceCountPlural": "55555 {{count}} 55555",
-      "serviceCountSingle": "55555 {{count}} 55555",
-      "serviceFallback": "55555",
-      "title": "55555",
-      "unitLabel": "55555",
-      "usageBasedPlans": "55555"
+      "addContractLinesBeforeManaging": "〖Ȧḓḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ŧȯ ŧħīş ŧḗḿƥŀȧŧḗ ƀḗƒȯřḗ ḿȧƞȧɠīƞɠ şḗřṽīƈḗş. ·························〗",
+      "additionalPlans": "〖Ȧḓḓīŧīȯƞȧŀ Ƥŀȧƞş ·······〗",
+      "bucketSummary": "〖Ɓŭƈķḗŧ: {{minutes}} ḿīƞ • Ȯṽḗřȧɠḗ ${{overage}} ···················〗",
+      "closeManager": "〖Ƈŀȯşḗ Ḿȧƞȧɠḗř ······〗",
+      "editRate": "〖Ḗḓīŧ Řȧŧḗ ····〗",
+      "fixedFeeBundles": "〖Ƒīẋḗḓ Ƒḗḗ Ɓŭƞḓŀḗş ·······〗",
+      "fixedFeeRate": "〖Ƒīẋḗḓ Ƒḗḗ Řȧŧḗ: ······〗",
+      "hourlyPlans": "〖Ħȯŭřŀẏ Ƥŀȧƞş ·····〗",
+      "manageServices": "〖Ḿȧƞȧɠḗ Şḗřṽīƈḗş ······〗",
+      "manageTemplateServices": "〖Ḿȧƞȧɠḗ Ŧḗḿƥŀȧŧḗ Şḗřṽīƈḗş ··········〗",
+      "minimumTimeLabel": "〖Ḿīƞīḿŭḿ Ŧīḿḗ: ······〗",
+      "minutesValue": "〖{{count}} ḿīƞ ······〗",
+      "noFixedFeeLines": "〖Ƞȯ ƒīẋḗḓ ƒḗḗ ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȯƞƒīɠŭřḗḓ ẏḗŧ. ··················〗",
+      "noHourlyLines": "〖Ƞȯ ħȯŭřŀẏ ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȯƞƒīɠŭřḗḓ ẏḗŧ. ················〗",
+      "noServicesAssigned": "〖Ƞȯ şḗřṽīƈḗş ȧşşīɠƞḗḓ ŧȯ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ. ··················〗",
+      "noUsageLines": "〖Ƞȯ ŭşȧɠḗ-ƀȧşḗḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȯƞƒīɠŭřḗḓ ẏḗŧ. ··················〗",
+      "notSet": "〖Ƞȯŧ şḗŧ ···〗",
+      "quantityLabel": "〖Ɋŭȧƞŧīŧẏ: ····〗",
+      "roundUpLabel": "〖Řȯŭƞḓ Ŭƥ: ····〗",
+      "serviceCountPlural": "〖{{count}} şḗřṽīƈḗş ········〗",
+      "serviceCountSingle": "〖{{count}} şḗřṽīƈḗ ·······〗",
+      "serviceFallback": "〖Şḗřṽīƈḗ ···〗",
+      "title": "〖Ŧḗḿƥŀȧŧḗ Ƈȯḿƥȯşīŧīȯƞ ········〗",
+      "unitLabel": "〖Ŭƞīŧ: ··〗",
+      "usageBasedPlans": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Ƥŀȧƞş ·······〗"
     },
-    "editBasicsTitle": "55555",
-    "editGuidanceTitle": "55555",
-    "failedToLoadTemplate": "55555",
+    "editBasicsTitle": "〖Ḗḓīŧ Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş ········〗",
+    "editGuidanceTitle": "〖Ḗḓīŧ Ŧḗḿƥŀȧŧḗ Ɠŭīḓȧƞƈḗ ·········〗",
+    "failedToLoadTemplate": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ ·············〗",
     "form": {
-      "currencyPlaceholder": "55555",
-      "internalNotesLabel": "55555",
-      "internalNotesPlaceholder": "55555",
-      "recommendedBillingFrequencyLabel": "55555",
-      "recommendedBillingFrequencyPlaceholder": "55555",
-      "templateNameLabel": "55555",
-      "templateNamePlaceholder": "55555"
+      "currencyPlaceholder": "〖Şḗŀḗƈŧ ƈŭřřḗƞƈẏ ······〗",
+      "internalNotesLabel": "〖Īƞŧḗřƞȧŀ Ƞȯŧḗş ······〗",
+      "internalNotesPlaceholder": "〖Ḓḗşƈřīƀḗ ẇħḗřḗ ŧħīş ŧḗḿƥŀȧŧḗ ȧƥƥŀīḗş, ȯƞƀȯȧřḓīƞɠ ŧīƥş, ȯř ȧƥƥřȯṽȧŀ řḗʠŭīřḗḿḗƞŧş. ································〗",
+      "recommendedBillingFrequencyLabel": "〖Řḗƈȯḿḿḗƞḓḗḓ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ * ·············〗",
+      "recommendedBillingFrequencyPlaceholder": "〖Şḗŀḗƈŧ ƀīŀŀīƞɠ ƈȧḓḗƞƈḗ ·········〗",
+      "templateNameLabel": "〖Ŧḗḿƥŀȧŧḗ Ƞȧḿḗ * ······〗",
+      "templateNamePlaceholder": "〖Ḿȧƞȧɠḗḓ Şḗřṽīƈḗş Şŧȧřŧḗř, Ƥřḗḿīŭḿ Şŭƥƥȯřŧ Ɓŭƞḓŀḗ, ḗŧƈ. ······················〗"
     },
     "guidance": {
-      "noCadenceProvided": "55555",
-      "recommendedCadenceLabel": "55555",
-      "recommendedCadencePlaceholder": "55555",
-      "tagsHint": "55555",
-      "tagsLabel": "55555",
-      "tagsPlaceholder": "55555",
-      "title": "55555",
-      "usageNotesLabel": "55555",
-      "usageNotesPlaceholder": "55555"
+      "noCadenceProvided": "〖Ƞȯ řḗƈȯḿḿḗƞḓḗḓ ƈȧḓḗƞƈḗ ƥřȯṽīḓḗḓ. ·············〗",
+      "recommendedCadenceLabel": "〖Řḗƈȯḿḿḗƞḓḗḓ Ƈȧḓḗƞƈḗ ········〗",
+      "recommendedCadencePlaceholder": "〖Şḗŀḗƈŧ ȧ ƈȧḓḗƞƈḗ ·······〗",
+      "tagsHint": "〖Ŧȧɠş ħḗŀƥ ŧḗȧḿş ƒīƞḓ řḗŀḗṽȧƞŧ ŧḗḿƥŀȧŧḗş ʠŭīƈķŀẏ. ····················〗",
+      "tagsLabel": "〖Ŧȧɠş ··〗",
+      "tagsPlaceholder": "〖Ƈȯḿḿȧ şḗƥȧřȧŧḗḓ (ḗ.ɠ., ȯƞƀȯȧřḓīƞɠ, ƒīƞȧƞƈḗ) ··················〗",
+      "title": "〖Ŧḗḿƥŀȧŧḗ Ɠŭīḓȧƞƈḗ ·······〗",
+      "usageNotesLabel": "〖Ŭşȧɠḗ Ƞȯŧḗş ·····〗",
+      "usageNotesPlaceholder": "〖Ȧḓḓ ɠŭīḓȧƞƈḗ ŧȯ ħḗŀƥ ȯŧħḗřş ŭƞḓḗřşŧȧƞḓ ħȯẇ ŧȯ ŭşḗ ŧħīş ŧḗḿƥŀȧŧḗ. ··························〗"
     },
-    "loadingTemplate": "55555",
-    "servicesLabel": "55555",
-    "templateBadge": "55555",
-    "templateNotFound": "55555",
-    "templateSnapshotTitle": "55555",
+    "loadingTemplate": "〖Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗ... ········〗",
+    "servicesLabel": "〖Şḗřṽīƈḗş ····〗",
+    "templateBadge": "〖Ŧḗḿƥŀȧŧḗ ····〗",
+    "templateNotFound": "〖Ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ ƞȯŧ ƒȯŭƞḓ ···········〗",
+    "templateSnapshotTitle": "〖Ŧḗḿƥŀȧŧḗ Şƞȧƥşħȯŧ ·······〗",
     "validation": {
-      "billingFrequencyRequired": "55555",
-      "failedToUpdateBasics": "55555",
-      "failedToUpdateGuidance": "55555",
-      "templateNameRequired": "55555"
+      "billingFrequencyRequired": "〖Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ ············〗",
+      "failedToUpdateBasics": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧḗḿƥŀȧŧḗ ƀȧşīƈş ·············〗",
+      "failedToUpdateGuidance": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧḗḿƥŀȧŧḗ ɠŭīḓȧƞƈḗ ··············〗",
+      "templateNameRequired": "〖Ŧḗḿƥŀȧŧḗ ƞȧḿḗ īş řḗʠŭīřḗḓ ··········〗"
     },
     "clientAssignments": {
-      "title": "55555",
-      "totalAssignments": "55555",
-      "activeClients": "55555",
-      "purchaseOrders": "55555",
-      "poRequiredCount": "55555 {{count}} 55555",
-      "noPoRequirements": "55555",
-      "noClientContracts": "55555",
-      "reviewBelow": "55555"
+      "title": "〖Ƈŀīḗƞŧ Ȧşşīɠƞḿḗƞŧş ········〗",
+      "totalAssignments": "〖Ŧȯŧȧŀ Ȧşşīɠƞḿḗƞŧş ·······〗",
+      "activeClients": "〖Ȧƈŧīṽḗ Ƈŀīḗƞŧş ······〗",
+      "purchaseOrders": "〖Ƥŭřƈħȧşḗ Ȯřḓḗřş ······〗",
+      "poRequiredCount": "〖{{count}} ȧşşīɠƞḿḗƞŧş řḗʠŭīřḗ ƤȮ ·············〗",
+      "noPoRequirements": "〖Ƞȯ ƤȮ řḗʠŭīřḗḿḗƞŧş ƈȧƥŧŭřḗḓ. ············〗",
+      "noClientContracts": "〖Ƞȯ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ȧřḗ ƈŭřřḗƞŧŀẏ ŭşīƞɠ ŧħīş ŧḗḿƥŀȧŧḗ. ······················〗",
+      "reviewBelow": "〖Řḗṽīḗẇ ŧħḗ ƒŭŀŀ ȧşşīɠƞḿḗƞŧ ŀīşŧ īƞ ŧħḗ ḓḗŧȧīŀş şḗƈŧīȯƞ ƀḗŀȯẇ. ·························〗"
     },
     "assignmentDetails": {
-      "title": "55555",
-      "empty": "55555",
-      "contractId": "55555 {{id}} 55555",
-      "ongoing": "55555",
-      "notRequired": "55555",
+      "title": "〖Ȧşşīɠƞḿḗƞŧ Ḓḗŧȧīŀş ········〗",
+      "empty": "〖Ẇħḗƞ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧş ȧḓȯƥŧ ŧħīş ŧḗḿƥŀȧŧḗ ŧħḗẏ ẇīŀŀ ƀḗ ŀīşŧḗḓ ħḗřḗ ẇīŧħ ƥŭřƈħȧşḗ ȯřḓḗř ƈȯƞŧḗẋŧ. ······································〗",
+      "contractId": "〖Ƈȯƞŧřȧƈŧ ĪḒ: {{id}} ········〗",
+      "ongoing": "〖Ȯƞɠȯīƞɠ ···〗",
+      "notRequired": "〖Ƞȯŧ řḗʠŭīřḗḓ ·····〗",
       "columns": {
-        "client": "55555",
-        "status": "55555",
-        "start": "55555",
-        "end": "55555",
-        "poRequired": "55555",
-        "poNumber": "55555",
-        "poAmount": "55555"
+        "client": "〖Ƈŀīḗƞŧ ···〗",
+        "status": "〖Şŧȧŧŭş ···〗",
+        "start": "〖Şŧȧřŧ ··〗",
+        "end": "〖Ḗƞḓ ··〗",
+        "poRequired": "〖ƤȮ Řḗʠŭīřḗḓ ·····〗",
+        "poNumber": "〖ƤȮ Ƞŭḿƀḗř ····〗",
+        "poAmount": "〖ƤȮ Ȧḿȯŭƞŧ ····〗"
       },
       "status": {
-        "active": "55555",
-        "inactive": "55555"
+        "active": "〖Ȧƈŧīṽḗ ···〗",
+        "inactive": "〖Īƞȧƈŧīṽḗ ····〗"
       }
     },
     "simulation": {
-      "client": "55555",
-      "hypothetical": "55555",
-      "open": "55555",
-      "title": "55555"
+      "client": "〖Ƈŀīḗƞŧ ƈȯƞŧḗẋŧ ······〗",
+      "hypothetical": "〖Ħẏƥȯŧħḗŧīƈȧŀ ƈŀīḗƞŧ ƥřȯƒīŀḗ ···········〗",
+      "open": "〖Şīḿŭŀȧŧḗ ····〗",
+      "title": "〖Ŧḗḿƥŀȧŧḗ şīḿŭŀȧŧīȯƞ ········〗"
     }
   },
   "quickStart": {
     "actions": {
-      "createFirstContract": "55555",
-      "dismiss": "55555",
-      "minimize": "55555",
-      "showGuide": "55555"
+      "createFirstContract": "〖Ƈřḗȧŧḗ Ẏȯŭř Ƒīřşŧ Ƈȯƞŧřȧƈŧ ···········〗",
+      "dismiss": "〖Ḓīşḿīşş ···〗",
+      "minimize": "〖Ḿīƞīḿīẑḗ ····〗",
+      "showGuide": "〖Şħȯẇ Ɠŭīḓḗ ····〗"
     },
     "badge": {
-      "new": "55555"
+      "new": "〖Ƞḗẇ ··〗"
     },
     "bestPractices": {
       "items": {
-        "clearNames": "55555",
-        "endDates": "55555",
-        "partialPeriodAdjustment": "55555",
-        "poNumbers": "55555"
+        "clearNames": "〖Ŭşḗ ƈŀḗȧř, ḓḗşƈřīƥŧīṽḗ ƈȯƞŧřȧƈŧ ƞȧḿḗş (ḗ.ɠ., \"Ȧƈḿḗ Ƈȯřƥ - ḾŞƤ Şḗřṽīƈḗş Ɋ4 2024\") ································〗",
+        "endDates": "〖Şḗŧ ḗƞḓ ḓȧŧḗş ƒȯř ƒīẋḗḓ-ŧḗřḿ ƈȯƞŧřȧƈŧş ŧȯ ŧřȧƈķ řḗƞḗẇȧŀ ḓȧŧḗş ·························〗",
+        "partialPeriodAdjustment": "〖Ŭşḗ ƥȧřŧīȧŀ-ƥḗřīȯḓ ȧḓĵŭşŧḿḗƞŧ ẇħḗƞ ƈȯƞŧřȧƈŧ ḓȧŧḗş ƈȯṽḗř ȯƞŀẏ ƥȧřŧ ȯƒ ȧ şḗřṽīƈḗ ƥḗřīȯḓ ··································〗",
+        "poNumbers": "〖Ȧḓḓ ƤȮ ƞŭḿƀḗřş ẇħḗƞ řḗʠŭīřḗḓ ƀẏ ƈŀīḗƞŧ ƥřȯƈŭřḗḿḗƞŧ ƥȯŀīƈīḗş ························〗"
       },
-      "title": "55555"
+      "title": "〖Ɓḗşŧ Ƥřȧƈŧīƈḗş ······〗"
     },
     "billingModels": {
       "bucketHours": {
-        "description": "55555",
-        "label": "55555"
+        "description": "〖Ƥřḗƥȧīḓ ħȯŭřş + ȯṽḗřȧɠḗ ··········〗",
+        "label": "〖Ɓŭƈķḗŧ Ħȯŭřş: ······〗"
       },
       "fixedFee": {
-        "description": "55555",
-        "label": "55555"
+        "description": "〖Şȧḿḗ ƥřīƈḗ ḗṽḗřẏ ḿȯƞŧħ ·········〗",
+        "label": "〖Ƒīẋḗḓ Ƒḗḗ: ····〗"
       },
       "hourly": {
-        "description": "55555",
-        "label": "55555"
+        "description": "〖Ɓīŀŀ ƀẏ ŧīḿḗ ŧřȧƈķḗḓ ········〗",
+        "label": "〖Ħȯŭřŀẏ: ···〗"
       },
       "usageBased": {
-        "description": "55555",
-        "label": "55555"
+        "description": "〖Ɓīŀŀ ƀẏ ƈȯƞşŭḿƥŧīȯƞ/ŭşȧɠḗ ··········〗",
+        "label": "〖Ŭşȧɠḗ-Ɓȧşḗḓ: ·····〗"
       }
     },
     "steps": {
       "configureBilling": {
-        "description": "55555",
-        "title": "55555"
+        "description": "〖Ƈħȯȯşḗ ẏȯŭř ƀīŀŀīƞɠ ḿȯḓḗŀ(ş). Ẏȯŭ ƈȧƞ ƈȯḿƀīƞḗ ḿŭŀŧīƥŀḗ ŧẏƥḗş: ·························〗",
+        "title": "〖Ƈȯƞƒīɠŭřḗ Ɓīŀŀīƞɠ ·······〗"
       },
       "createContract": {
-        "description": "55555",
-        "requiredFields": "55555",
-        "title": "55555"
+        "description": "〖Ƈŀīƈķ \"Ƞḗẇ Ƈȯƞŧřȧƈŧ\" ŧȯ şŧȧřŧ ŧħḗ ẇīẑȧřḓ. Ƈħȯȯşḗ ȧ ƈŀīḗƞŧ ȧƞḓ ƞȧḿḗ ẏȯŭř ƈȯƞŧřȧƈŧ. ·································〗",
+        "requiredFields": "〖Řḗʠŭīřḗḓ: Ƈŀīḗƞŧ, Ƈȯƞŧřȧƈŧ Ƞȧḿḗ, Şŧȧřŧ Ḓȧŧḗ ··················〗",
+        "title": "〖Ƈřḗȧŧḗ ȧ Ƈȯƞŧřȧƈŧ ·······〗"
       },
       "reviewCreate": {
-        "description": "55555",
-        "tip": "55555",
-        "title": "55555"
+        "description": "〖Ḓȯŭƀŀḗ-ƈħḗƈķ ḗṽḗřẏŧħīƞɠ ƀḗƒȯřḗ ƈřḗȧŧīƞɠ. Ẏȯŭ ƈȧƞ ȧŀẇȧẏş ḗḓīŧ ŀȧŧḗř. ···························〗",
+        "tip": "〖Ŧīƥ: Ȧŧ ŀḗȧşŧ ȯƞḗ şḗřṽīƈḗ ŀīƞḗ īş řḗʠŭīřḗḓ ·················〗",
+        "title": "〖Řḗṽīḗẇ & Ƈřḗȧŧḗ ······〗"
       }
     },
-    "subtitle": "55555",
-    "title": "55555"
+    "subtitle": "〖Ŀḗȧřƞ ħȯẇ ŧȯ ƈřḗȧŧḗ ȧƞḓ ḿȧƞȧɠḗ ƈȯƞŧřȧƈŧş ················〗",
+    "title": "〖Ɋŭīƈķ Şŧȧřŧ Ɠŭīḓḗ ·······〗"
   },
   "servicePicker": {
-    "emptyMessage": "55555",
-    "placeholder": "55555",
-    "searchPlaceholder": "55555",
+    "emptyMessage": "〖Ƞȯ şḗřṽīƈḗ ƒȯŭƞḓ. ·······〗",
+    "placeholder": "〖Şḗŀḗƈŧ şḗřṽīƈḗ... ·······〗",
+    "searchPlaceholder": "〖Şḗȧřƈħ şḗřṽīƈḗş... ········〗",
     "catalog": {
       "badges": {
-        "product": "55555",
-        "service": "55555"
+        "product": "〖Ƥřȯḓŭƈŧ ···〗",
+        "service": "〖Şḗřṽīƈḗ ···〗"
       },
       "custom": {
-        "addAsCustomItem": "55555 {{name}} 55555",
-        "badge": "55555",
-        "typeNameHint": "55555"
+        "addAsCustomItem": "〖Ȧḓḓ “{{name}}” ȧş ƈŭşŧȯḿ īŧḗḿ ············〗",
+        "badge": "〖Ƈŭşŧȯḿ ···〗",
+        "typeNameHint": "〖Ŧẏƥḗ ȧ ƞȧḿḗ ŧȯ ȧḓḓ ȧ ƈŭşŧȯḿ īŧḗḿ ·············〗"
       },
-      "emptyMessage": "55555",
-      "placeholder": "55555",
-      "searchPlaceholder": "55555"
+      "emptyMessage": "〖Ƞȯ ḿȧŧƈħīƞɠ īŧḗḿş. ········〗",
+      "placeholder": "〖Şḗŀḗƈŧ īŧḗḿ... ······〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ īŧḗḿş... ······〗"
     }
   },
   "bucketOverlay": {
-    "includedLabel": "55555 {{units}} 55555",
-    "includedPlaceholderHours": "55555",
-    "includedPlaceholderUnits": "55555",
-    "includedTooltip": "55555 {{units}} 55555",
-    "overageRateLabel": "55555",
-    "overageRateTooltip": "55555 {{unit}} 55555",
-    "rolloverDescription": "55555",
-    "rolloverLabel": "55555 {{units}} 55555",
+    "includedLabel": "〖Īƞƈŀŭḓḗḓ {{units}} ········〗",
+    "includedPlaceholderHours": "〖ḗ.ɠ., 40 ····〗",
+    "includedPlaceholderUnits": "〖ḗ.ɠ., 1000 ····〗",
+    "includedTooltip": "〖Ȧḿȯŭƞŧ ȯƒ {{units}} īƞƈŀŭḓḗḓ ḗȧƈħ ƀīŀŀīƞɠ ƥḗřīȯḓ ƀḗƒȯřḗ ȯṽḗřȧɠḗş ȧƥƥŀẏ. ·····························〗",
+    "overageRateLabel": "〖Ȯṽḗřȧɠḗ Řȧŧḗ ·····〗",
+    "overageRateTooltip": "〖Ƈħȧřɠḗ ȧƥƥŀīḗḓ ƒȯř ḗȧƈħ {{unit}} ƀḗẏȯƞḓ ŧħḗ īƞƈŀŭḓḗḓ ȧḿȯŭƞŧ. ························〗",
+    "rolloverDescription": "〖Īƒ ḗƞȧƀŀḗḓ, ȧƞẏ ŭƞŭşḗḓ ƀȧŀȧƞƈḗ ƈȧřřīḗş īƞŧȯ ŧħḗ ƞḗẋŧ ƥḗřīȯḓ. ························〗",
+    "rolloverLabel": "〖Ȧŀŀȯẇ ŭƞŭşḗḓ {{units}} ŧȯ řȯŀŀ ȯṽḗř ··············〗",
     "units": {
-      "hour": "55555",
-      "hours": "55555",
-      "units": "55555"
+      "hour": "〖ħȯŭř ··〗",
+      "hours": "〖ħȯŭřş ··〗",
+      "units": "〖ŭƞīŧş ··〗"
     }
   },
   "frequencyOverride": {
-    "confirmation": "55555 {{lineFrequency}} 55555 {{contractFrequency}} 55555",
-    "description": "55555 {{frequency}} 55555",
-    "label": "55555",
-    "optionAlreadySetForContract": "55555 {{label}} 55555",
-    "placeholder": "55555 {{frequency}} 55555"
+    "confirmation": "〖Ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ ẇīŀŀ ƀḗ ƀīŀŀḗḓ {{lineFrequency}} īƞşŧḗȧḓ ȯƒ {{contractFrequency}}. ··································〗",
+    "description": "〖Ȯƥŧīȯƞȧŀ: Ȯṽḗřřīḓḗ ŧħḗ ƈȯƞŧřȧƈŧ'ş ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ({{frequency}}) ƒȯř ŧħīş şƥḗƈīƒīƈ ƈȯƞŧřȧƈŧ ŀīƞḗ. ········································〗",
+    "label": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ Ȯṽḗřřīḓḗ ···········〗",
+    "optionAlreadySetForContract": "〖{{label}} (ȧŀřḗȧḓẏ şḗŧ ƒȯř ƈȯƞŧřȧƈŧ) ···············〗",
+    "placeholder": "〖Ŭşḗ ƈȯƞŧřȧƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ({{frequency}}) ···················〗"
   },
   "wizard": {
     "dialogs": {
       "unsavedChanges": {
-        "cancel": "55555",
-        "confirm": "55555",
-        "message": "55555",
-        "title": "55555"
+        "cancel": "〖Şŧȧẏ ··〗",
+        "confirm": "〖Ḓīşƈȧřḓ Ƈħȧƞɠḗş ······〗",
+        "message": "〖Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş. Īƒ ẏȯŭ ƈŀȯşḗ ŧħīş ḓīȧŀȯɠ ƞȯẇ, ẏȯŭř ƈħȧƞɠḗş ẇīŀŀ ƀḗ ḓīşƈȧřḓḗḓ. ···································〗",
+        "title": "〖Ḓīşƈȧřḓ ƈħȧƞɠḗş? ·······〗"
       }
     },
     "errors": {
-      "failedToCreateContract": "55555",
-      "failedToLoadTemplateDetails": "55555",
-      "failedToLoadTemplates": "55555",
-      "failedToSaveDraft": "55555"
+      "failedToCreateContract": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ƈȯƞŧřȧƈŧ ··········〗",
+      "failedToLoadTemplateDetails": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧḗḿƥŀȧŧḗ ḓḗŧȧīŀş ·············〗",
+      "failedToLoadTemplates": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧḗḿƥŀȧŧḗş ··········〗",
+      "failedToSaveDraft": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ḓřȧƒŧ ········〗"
     },
     "steps": {
-      "contractBasics": "55555",
-      "fixedFeeServices": "55555",
-      "hourlyServices": "55555",
-      "products": "55555",
-      "reviewCreate": "55555",
-      "usageBasedServices": "55555"
+      "contractBasics": "〖Ƈȯƞŧřȧƈŧ Ɓȧşīƈş ······〗",
+      "fixedFeeServices": "〖Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş ········〗",
+      "hourlyServices": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş ······〗",
+      "products": "〖Ƥřȯḓŭƈŧş ····〗",
+      "reviewCreate": "〖Řḗṽīḗẇ & Ƈřḗȧŧḗ ······〗",
+      "usageBasedServices": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş ········〗"
     },
     "title": {
-      "createNewContract": "55555",
-      "editContract": "55555"
+      "createNewContract": "〖Ƈřḗȧŧḗ Ƞḗẇ Ƈȯƞŧřȧƈŧ ········〗",
+      "editContract": "〖Ḗḓīŧ Ƈȯƞŧřȧƈŧ ······〗"
     },
     "validation": {
-      "addAtLeastOneService": "55555",
-      "baseRateRequiredWhenFixedServices": "55555",
-      "billingFrequencyRequired": "55555",
-      "clientRequired": "55555",
-      "contractNameRequired": "55555",
-      "noticePeriodRange": "55555 {{min}} 55555 {{max}} 55555",
-      "noticePeriodWholeNumber": "55555",
+      "addAtLeastOneService": "〖Ȧḓḓ ȧŧ ŀḗȧşŧ ȯƞḗ şḗřṽīƈḗ ƀḗƒȯřḗ ƈřḗȧŧīƞɠ ŧħḗ ƈȯƞŧřȧƈŧ ······················〗",
+      "baseRateRequiredWhenFixedServices": "〖Ɓȧşḗ řȧŧḗ īş řḗʠŭīřḗḓ ẇħḗƞ ƒīẋḗḓ şḗřṽīƈḗş ȧřḗ īƞƈŀŭḓḗḓ ······················〗",
+      "billingFrequencyRequired": "〖Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ ············〗",
+      "clientRequired": "〖Ƈŀīḗƞŧ īş řḗʠŭīřḗḓ ········〗",
+      "contractNameRequired": "〖Ƈȯƞŧřȧƈŧ ƞȧḿḗ īş řḗʠŭīřḗḓ ··········〗",
+      "noticePeriodRange": "〖Ƞȯŧīƈḗ ƥḗřīȯḓ ḿŭşŧ ƀḗ ƀḗŧẇḗḗƞ {{min}} ȧƞḓ {{max}} ḓȧẏş ······················〗",
+      "noticePeriodWholeNumber": "〖Ƞȯŧīƈḗ ƥḗřīȯḓ ḿŭşŧ ƀḗ ȧ ẇħȯŀḗ ƞŭḿƀḗř ȯƒ ḓȧẏş ··················〗",
       "recurring": {
         "frequency": {
-          "annually": "55555",
-          "biweekly": "55555",
-          "monthly": "55555",
-          "quarterly": "55555",
-          "semi-annually": "55555",
-          "weekly": "55555"
+          "annually": "〖ȧƞƞŭȧŀŀẏ ····〗",
+          "biweekly": "〖ƀīẇḗḗķŀẏ ····〗",
+          "monthly": "〖ḿȯƞŧħŀẏ ···〗",
+          "quarterly": "〖ʠŭȧřŧḗřŀẏ ····〗",
+          "semi-annually": "〖şḗḿī-ȧƞƞŭȧŀŀẏ ······〗",
+          "weekly": "〖ẇḗḗķŀẏ ···〗"
         },
         "lineType": {
-          "fixed": "55555",
-          "hourly": "55555",
-          "product": "55555",
-          "usage": "55555"
+          "fixed": "〖Ƒīẋḗḓ ··〗",
+          "hourly": "〖Ħȯŭřŀẏ ···〗",
+          "product": "〖Ƥřȯḓŭƈŧ ···〗",
+          "usage": "〖Ŭşȧɠḗ ··〗"
         }
       },
-      "renewalModeRequiredWithEndDate": "55555",
-      "renewalTermPositiveWhole": "55555",
-      "selectClientBeforeDraft": "55555",
-      "selectProductForEachLine": "55555",
-      "startDateRequired": "55555",
-      "unsupportedRecurringAuthoringCombination": "55555 {{lineType}} 55555 {{supportedFrequencies}} 55555 {{billingFrequency}} 55555"
+      "renewalModeRequiredWithEndDate": "〖Řḗƞḗẇȧŀ ḿȯḓḗ īş řḗʠŭīřḗḓ ẇħḗƞ ȧƞ ḗƞḓ ḓȧŧḗ īş şḗŧ ····················〗",
+      "renewalTermPositiveWhole": "〖Řḗƞḗẇȧŀ ŧḗřḿ ḿȯƞŧħş ḿŭşŧ ƀḗ ȧ ƥȯşīŧīṽḗ ẇħȯŀḗ ƞŭḿƀḗř ·····················〗",
+      "selectClientBeforeDraft": "〖Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ƀḗƒȯřḗ şȧṽīƞɠ ȧş ḓřȧƒŧ ················〗",
+      "selectProductForEachLine": "〖Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ ƥřȯḓŭƈŧ ƒȯř ḗȧƈħ ƥřȯḓŭƈŧ ŀīƞḗ ··················〗",
+      "startDateRequired": "〖Şŧȧřŧ ḓȧŧḗ īş řḗʠŭīřḗḓ ·········〗",
+      "unsupportedRecurringAuthoringCombination": "〖Ŭƞşŭƥƥȯřŧḗḓ řḗƈŭřřīƞɠ ȧŭŧħȯřīƞɠ ƈȯḿƀīƞȧŧīȯƞ ƒȯř {{lineType}} şḗřṽīƈḗş: ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ƈȧḓḗƞƈḗ ƈŭřřḗƞŧŀẏ şŭƥƥȯřŧş {{supportedFrequencies}} ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈīḗş. {{billingFrequency}} īş ƞȯŧ şŭƥƥȯřŧḗḓ ẏḗŧ. Ŭşḗ ȯƞḗ ȯƒ ŧħḗ şŭƥƥȯřŧḗḓ ƒřḗʠŭḗƞƈīḗş ȯř īƞṽȯīƈḗ ȯƞ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ īƞşŧḗȧḓ. ······················································································································〗"
     },
     "nav": {
-      "back": "55555",
-      "next": "55555",
-      "skip": "55555",
-      "finish": "55555",
-      "saveDraft": "55555",
-      "saving": "55555",
-      "completing": "55555"
+      "back": "〖Ɓȧƈķ ··〗",
+      "next": "〖Ƞḗẋŧ ··〗",
+      "skip": "〖Şķīƥ ··〗",
+      "finish": "〖Ƒīƞīşħ Şḗŧŭƥ ·····〗",
+      "saveDraft": "〖Şȧṽḗ ȧş Ḓřȧƒŧ ······〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗",
+      "completing": "〖Ƈȯḿƥŀḗŧīƞɠ... ······〗"
     },
     "simulation": {
-      "description": "55555",
-      "title": "55555"
+      "description": "〖Ŧḗşŧ ŧħīş ŭƞşȧṽḗḓ ḓřȧƒŧ ẇīŧħ ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ. Şīḿŭŀȧŧīȯƞ ḓȯḗş ƞȯŧ şȧṽḗ ȯř īşşŭḗ ȧƞẏŧħīƞɠ. ····································〗",
+      "title": "〖Şīḿŭŀȧŧḗ ƀḗƒȯřḗ ƈřḗȧŧīƞɠ ··········〗"
     }
   },
   "wizardBasics": {
     "additionalDescription": {
-      "hint": "55555",
-      "label": "55555",
-      "placeholder": "55555"
+      "hint": "〖Īƞŧḗřƞȧŀ ƞȯŧḗş ȯř ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş. ··············〗",
+      "label": "〖Ḓḗşƈřīƥŧīȯƞ (Ȯƥŧīȯƞȧŀ) ·········〗",
+      "placeholder": "〖Ȧḓḓ ȧƞẏ ȧḓḓīŧīȯƞȧŀ ƞȯŧḗş ȧƀȯŭŧ ŧħīş ƈȯƞŧřȧƈŧ... ···················〗"
     },
     "billingFrequency": {
-      "hint": "55555",
-      "label": "55555",
-      "placeholder": "55555"
+      "hint": "〖Ħȯẇ ȯƒŧḗƞ şħȯŭŀḓ ŧħīş ƈȯƞŧřȧƈŧ ƀḗ ƀīŀŀḗḓ? ·················〗",
+      "label": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ ·······〗",
+      "placeholder": "〖Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ··········〗"
     },
     "cadenceOwner": {
-      "description": "55555",
-      "label": "55555",
+      "description": "〖Şḗŧş ŧħḗ ḓḗƒȧŭŀŧ ƈȧḓḗƞƈḗ ȯẇƞḗř ȧƥƥŀīḗḓ ŧȯ řḗƈŭřřīƞɠ ŀīƞḗş ƈřḗȧŧḗḓ īƞ ŧħīş ẇīẑȧřḓ. ·································〗",
+      "label": "〖Řḗƈŭřřīƞɠ Ƈȧḓḗƞƈḗ Ḓḗƒȧŭŀŧ ··········〗",
       "options": {
         "client": {
-          "description": "55555",
-          "label": "55555"
+          "description": "〖Ŭşḗ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ ƈȧŀḗƞḓȧř şȯ řḗƈŭřřīƞɠ ŀīƞḗş şŧȧẏ ȧŀīɠƞḗḓ ẇīŧħ ŧħḗ ƈŀīḗƞŧ’ş ƞȯřḿȧŀ īƞṽȯīƈḗ ƈȧḓḗƞƈḗ. ··········································〗",
+          "label": "〖Īƞṽȯīƈḗ ȯƞ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ··············〗"
         },
         "contract": {
-          "description": "55555",
-          "label": "55555"
+          "description": "〖Ŭşḗ ƈȯƞŧřȧƈŧ-ȧƞƞīṽḗřşȧřẏ şḗřṽīƈḗ ƥḗřīȯḓş ƒȯř řḗƈŭřřīƞɠ ŀīƞḗş ŧħȧŧ şħȯŭŀḓ ƒȯŀŀȯẇ ŧħḗ ƈȯƞŧřȧƈŧ ŧīḿḗŀīƞḗ. ·········································〗",
+          "label": "〖Īƞṽȯīƈḗ ȯƞ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ·············〗"
         }
       }
     },
     "client": {
-      "chooseClientHint": "55555",
-      "clientLabel": "55555",
-      "loadingClients": "55555",
-      "selectClient": "55555"
+      "chooseClientHint": "〖Ƈħȯȯşḗ ŧħḗ ƈŀīḗƞŧ ŧħīş ƈȯƞŧřȧƈŧ īş ƒȯř. ················〗",
+      "clientLabel": "〖Ƈŀīḗƞŧ ···〗",
+      "loadingClients": "〖Ŀȯȧḓīƞɠ ƈŀīḗƞŧş… ·······〗",
+      "selectClient": "〖Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ······〗"
     },
     "contractName": {
-      "hint": "55555",
-      "label": "55555",
-      "placeholder": "55555"
+      "hint": "〖Ɠīṽḗ ŧħīş ƈȯƞŧřȧƈŧ ȧ ḓḗşƈřīƥŧīṽḗ ƞȧḿḗ. ················〗",
+      "label": "〖Ƈȯƞŧřȧƈŧ Ƞȧḿḗ ······〗",
+      "placeholder": "〖ḗ.ɠ., Şŧȧƞḓȧřḓ ḾŞƤ Şḗřṽīƈḗş, Ƥřḗḿīŭḿ Şŭƥƥȯřŧ Ƥȧƈķȧɠḗ ·····················〗"
     },
     "currency": {
-      "hint": "55555",
-      "label": "55555",
-      "placeholder": "55555"
+      "hint": "〖Ƈŭřřḗƞƈẏ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ. Ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ƈŀīḗƞŧ'ş ƥřḗƒḗřřḗḓ ƈŭřřḗƞƈẏ. ·····························〗",
+      "label": "〖Ƈŭřřḗƞƈẏ ····〗",
+      "placeholder": "〖Şḗŀḗƈŧ ƈŭřřḗƞƈẏ ······〗"
     },
     "dates": {
-      "endDateAfterStartValidation": "55555",
-      "endDateLabel": "55555",
-      "endDateOngoingHint": "55555",
-      "endDateTooltip": "55555",
-      "startDateHint": "55555",
-      "startDateLabel": "55555"
+      "endDateAfterStartValidation": "〖Ḗƞḓ ḓȧŧḗ ḿŭşŧ ƀḗ ȧƒŧḗř şŧȧřŧ ḓȧŧḗ ··············〗",
+      "endDateLabel": "〖Ḗƞḓ Ḓȧŧḗ (Ȯƥŧīȯƞȧŀ) ········〗",
+      "endDateOngoingHint": "〖Ŀḗȧṽḗ ƀŀȧƞķ ƒȯř ȧƞ ȯƞɠȯīƞɠ ƈȯƞŧřȧƈŧ. ···············〗",
+      "endDateTooltip": "〖Ŀḗȧṽḗ ƀŀȧƞķ ƒȯř ȯƞɠȯīƞɠ ƈȯƞŧřȧƈŧş ŧħȧŧ ḓȯƞ'ŧ ħȧṽḗ ȧ ƒīẋḗḓ ḗƞḓ ḓȧŧḗ. Ẏȯŭ ƈȧƞ ȧŀẇȧẏş şḗŧ ȧƞ ḗƞḓ ḓȧŧḗ ŀȧŧḗř ẇħḗƞ ŧħḗ ƈȯƞŧřȧƈŧ īş ŧḗřḿīƞȧŧḗḓ ȯř ḗẋƥīřḗş. ····························································〗",
+      "startDateHint": "〖Ẇħḗƞ ḓȯḗş ŧħīş ƈȯƞŧřȧƈŧ ƀḗƈȯḿḗ ȧƈŧīṽḗ? ················〗",
+      "startDateLabel": "〖Şŧȧřŧ Ḓȧŧḗ ····〗"
     },
-    "description": "55555",
-    "heading": "55555",
+    "description": "〖Ƈħȯȯşḗ ȧ ŧḗḿƥŀȧŧḗ (ȯƥŧīȯƞȧŀ), şḗŀḗƈŧ ŧħḗ ƈŀīḗƞŧ, ȧƞḓ şḗŧ ƒȯŭƞḓȧŧīȯƞȧŀ ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş. Şḗřṽīƈḗ ḓḗŧȧīŀş ŀȯȧḓ īƞ ŧħḗ ƞḗẋŧ şŧḗƥş. ···················································〗",
+    "heading": "〖Ƈȯƞŧřȧƈŧ Ɓȧşīƈş ······〗",
     "po": {
-      "amountHint": "55555",
-      "amountLabel": "55555",
-      "noteLabel": "55555",
-      "noteText": "55555",
-      "numberHint": "55555",
-      "numberLabel": "55555",
-      "numberPlaceholder": "55555",
-      "requireForInvoicing": "55555",
-      "requireHint": "55555",
-      "requireTooltip": "55555",
-      "title": "55555"
+      "amountHint": "〖Ŧȯŧȧŀ ȧŭŧħȯřīẑḗḓ ȧḿȯŭƞŧ ȯƞ ŧħḗ ƥŭřƈħȧşḗ ȯřḓḗř. ···················〗",
+      "amountLabel": "〖ƤȮ Ȧḿȯŭƞŧ ····〗",
+      "noteLabel": "〖Ƞȯŧḗ: ··〗",
+      "noteText": "〖ƤȮ ḗƞƒȯřƈḗḿḗƞŧ ẇīŀŀ ȧƥƥŀẏ ẇħḗƞ īƞṽȯīƈḗ ȧŭŧȯḿȧŧīȯƞ īş ḗƞȧƀŀḗḓ. Ƈȯƞƒīɠŭřḗ ƞȯẇ ŧȯ şŧȧẏ ȧħḗȧḓ. ····································〗",
+      "numberHint": "〖Ƈŀīḗƞŧ'ş ƥŭřƈħȧşḗ ȯřḓḗř řḗƒḗřḗƞƈḗ ƞŭḿƀḗř. ·················〗",
+      "numberLabel": "〖ƤȮ Ƞŭḿƀḗř ····〗",
+      "numberPlaceholder": "〖ḗ.ɠ., ƤȮ-2024-12345 ········〗",
+      "requireForInvoicing": "〖Řḗʠŭīřḗ Ƥŭřƈħȧşḗ Ȯřḓḗř ƒȯř īƞṽȯīƈīƞɠ ···············〗",
+      "requireHint": "〖Ɓŀȯƈķ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ īƒ ƤȮ īş ƞȯŧ ƥřȯṽīḓḗḓ. ···················〗",
+      "requireTooltip": "〖Ẇħḗƞ ḗƞȧƀŀḗḓ, īƞṽȯīƈḗş ƈȧƞƞȯŧ ƀḗ ɠḗƞḗřȧŧḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ŭƞŀḗşş ȧ ƤȮ ƞŭḿƀḗř īş ƥřȯṽīḓḗḓ. ·····································〗",
+      "title": "〖Ƥŭřƈħȧşḗ Ȯřḓḗř (Ȯƥŧīȯƞȧŀ) ··········〗"
     },
     "renewal": {
       "evergreen": {
-        "description": "55555",
-        "title": "55555"
+        "description": "〖Ŧħīş ƈȯƞŧřȧƈŧ īş ȯƞɠȯīƞɠ. Ƈȯƞƒīɠŭřḗ ȧƞƞŭȧŀ řḗṽīḗẇ ƈȧḓḗƞƈḗ ȧƞḓ ƞȯŧīƈḗ ŧīḿīƞɠ. ·······························〗",
+        "title": "〖Ḗṽḗřɠřḗḗƞ Řḗṽīḗẇ Şḗŧŧīƞɠş ··········〗"
       },
       "fixedTerm": {
-        "description": "55555",
-        "title": "55555"
+        "description": "〖Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ȧ ƒīẋḗḓ ḗƞḓ ḓȧŧḗ. Ƈȯƞƒīɠŭřḗ řḗƞḗẇȧŀ ƀḗħȧṽīȯř ȧƞḓ ƞȯŧīƈḗ ŧīḿīƞɠ. ·································〗",
+        "title": "〖Řḗƞḗẇȧŀ Şḗŧŧīƞɠş ·······〗"
       },
-      "modeLabel": "55555",
+      "modeLabel": "〖Řḗƞḗẇȧŀ Ḿȯḓḗ ·····〗",
       "modeOptions": {
-        "auto": "55555",
-        "manual": "55555",
-        "none": "55555"
+        "auto": "〖Ȧŭŧȯ Řḗƞḗẇ ····〗",
+        "manual": "〖Ḿȧƞŭȧŀ Řḗƞḗẇȧŀ ······〗",
+        "none": "〖Ƞȯ Řḗƞḗẇȧŀ ····〗"
       },
-      "modePlaceholder": "55555",
-      "noticePeriodLabel": "55555",
-      "noticePeriodPlaceholder": "55555",
-      "termLabel": "55555",
-      "termPlaceholder": "55555",
-      "useTenantDefaultsDescription": "55555",
-      "useTenantDefaultsLabel": "55555"
+      "modePlaceholder": "〖Şḗŀḗƈŧ řḗƞḗẇȧŀ ḿȯḓḗ ········〗",
+      "noticePeriodLabel": "〖Ƞȯŧīƈḗ Ƥḗřīȯḓ (Ḓȧẏş) ········〗",
+      "noticePeriodPlaceholder": "〖ḗ.ɠ., 30 ····〗",
+      "termLabel": "〖Řḗƞḗẇȧŀ Ŧḗřḿ (Ḿȯƞŧħş) ·········〗",
+      "termPlaceholder": "〖ḗ.ɠ., 12 ····〗",
+      "useTenantDefaultsDescription": "〖Ȧƥƥŀẏ ȯřɠȧƞīẑȧŧīȯƞ-ŀḗṽḗŀ řḗƞḗẇȧŀ şḗŧŧīƞɠş ŭƞŀḗşş ḗẋƥŀīƈīŧŀẏ ȯṽḗřřīḓḓḗƞ. ·····························〗",
+      "useTenantDefaultsLabel": "〖Ŭşḗ Ŧḗƞȧƞŧ Řḗƞḗẇȧŀ Ḓḗƒȧŭŀŧş ···········〗"
     },
     "summary": {
       "labels": {
-        "billingFrequency": "55555",
-        "client": "55555",
-        "contract": "55555",
-        "currency": "55555",
-        "noticePeriod": "55555",
-        "period": "55555",
-        "poAmount": "55555",
-        "poNumber": "55555",
-        "poRequired": "55555",
-        "renewalMode": "55555",
-        "renewalTerm": "55555"
+        "billingFrequency": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ: ········〗",
+        "client": "〖Ƈŀīḗƞŧ: ···〗",
+        "contract": "〖Ƈȯƞŧřȧƈŧ: ····〗",
+        "currency": "〖Ƈŭřřḗƞƈẏ: ····〗",
+        "noticePeriod": "〖Ƞȯŧīƈḗ Ƥḗřīȯḓ: ······〗",
+        "period": "〖Ƥḗřīȯḓ: ···〗",
+        "poAmount": "〖ƤȮ Ȧḿȯŭƞŧ: ····〗",
+        "poNumber": "〖ƤȮ Ƞŭḿƀḗř: ····〗",
+        "poRequired": "〖ƤȮ Řḗʠŭīřḗḓ: ·····〗",
+        "renewalMode": "〖Řḗƞḗẇȧŀ Ḿȯḓḗ: ······〗",
+        "renewalTerm": "〖Řḗƞḗẇȧŀ Ŧḗřḿ: ······〗"
       },
-      "title": "55555",
+      "title": "〖Ƈȯƞŧřȧƈŧ Şŭḿḿȧřẏ ·······〗",
       "values": {
-        "notSelected": "55555",
-        "noticePeriodDays_one": "55555 {{count}} 55555",
-        "noticePeriodDays_other": "55555 {{count}} 55555",
-        "ongoing": "55555",
-        "renewalTermMonths_one": "55555 {{count}} 55555",
-        "renewalTermMonths_other": "55555 {{count}} 55555",
-        "noticePeriodDays": "55555 {{count}} 55555",
-        "renewalTermMonths": "55555 {{count}} 55555"
+        "notSelected": "〖Ƞȯŧ şḗŀḗƈŧḗḓ ·····〗",
+        "noticePeriodDays_one": "〖{{count}} ḓȧẏ ······〗",
+        "noticePeriodDays_other": "〖{{count}} ḓȧẏş ······〗",
+        "ongoing": "〖Ȯƞɠȯīƞɠ ···〗",
+        "renewalTermMonths_one": "〖{{count}} ḿȯƞŧħ ······〗",
+        "renewalTermMonths_other": "〖{{count}} ḿȯƞŧħş ·······〗",
+        "noticePeriodDays": "〖{{count}} ḓȧẏ ······〗",
+        "renewalTermMonths": "〖{{count}} ḿȯƞŧħ ······〗"
       }
     },
     "template": {
-      "loadingTemplateDetails": "55555",
-      "loadingTemplates": "55555",
-      "prefillHint": "55555",
+      "loadingTemplateDetails": "〖Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗ ḓḗŧȧīŀş… ··········〗",
+      "loadingTemplates": "〖Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗş… ········〗",
+      "prefillHint": "〖Ƥřḗƒīŀŀ şḗřṽīƈḗş, ƞȯŧḗş, ȧƞḓ ƀīŀŀīƞɠ ƈȧḓḗƞƈḗ ƒřȯḿ ȧƞ ḗẋīşŧīƞɠ ŧḗḿƥŀȧŧḗ. Ẏȯŭ ƈȧƞ şŧīŀŀ ȧḓĵŭşŧ ḗṽḗřẏŧħīƞɠ ƀḗƒȯřḗ ƥŭƀŀīşħīƞɠ. ·················································〗",
       "preview": {
-        "billingCadenceLabel": "55555",
-        "notSpecified": "55555",
-        "templateLabel": "55555"
+        "billingCadenceLabel": "〖Ɓīŀŀīƞɠ ƈȧḓḗƞƈḗ: ·······〗",
+        "notSpecified": "〖Ƞȯŧ şƥḗƈīƒīḗḓ ······〗",
+        "templateLabel": "〖Ŧḗḿƥŀȧŧḗ: ····〗"
       },
-      "selectTemplateOptional": "55555",
-      "startFromTemplate": "55555"
+      "selectTemplateOptional": "〖Şḗŀḗƈŧ ȧ ŧḗḿƥŀȧŧḗ (ȯƥŧīȯƞȧŀ) ············〗",
+      "startFromTemplate": "〖Şŧȧřŧ Ƒřȯḿ Ŧḗḿƥŀȧŧḗ ········〗"
     }
   },
   "wizardFixed": {
-    "alternateFrequencyLabel": "55555",
+    "alternateFrequencyLabel": "〖Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ (Ȯƥŧīȯƞȧŀ) ················〗",
     "baseRate": {
-      "hint": "55555",
-      "label": "55555",
-      "placeholder": "55555"
+      "hint": "〖Ŧȯŧȧŀ řḗƈŭřřīƞɠ ƒḗḗ ƒȯř ȧŀŀ ƒīẋḗḓ şḗřṽīƈḗş ƈȯḿƀīƞḗḓ. ·····················〗",
+      "label": "〖Řḗƈŭřřīƞɠ Ɓȧşḗ Řȧŧḗ ········〗",
+      "placeholder": "〖0.00 ··〗"
     },
-    "description": "55555",
-    "emptyState": "55555",
+    "description": "〖Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ȧŧ ȧ ƒīẋḗḓ řȧŧḗ ḗȧƈħ ƀīŀŀīƞɠ ƈẏƈŀḗ. Ẏȯŭ ƈȧƞ şŧīŀŀ ŧřȧƈķ ŧīḿḗ, ƀŭŧ ƀīŀŀīƞɠ īş ƀȧşḗḓ ȯƞ ŧħīş ƒŀȧŧ ȧḿȯŭƞŧ. ························································〗",
+    "emptyState": "〖Ƞȯ ƒīẋḗḓ ƒḗḗ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ “Ȧḓḓ Şḗřṽīƈḗ” ȧƀȯṽḗ ȯř “Şķīƥ” ŧȯ ḿȯṽḗ ȯƞ. ································〗",
     "explainer": {
-      "description": "55555",
-      "title": "55555"
+      "description": "〖Ŧħḗşḗ şḗřṽīƈḗş ħȧṽḗ ȧ şḗŧ řḗƈŭřřīƞɠ ƥřīƈḗ. Ẏȯŭ'ŀŀ şŧīŀŀ ŧřȧƈķ ŧīḿḗ ḗƞŧřīḗş ƒȯř ŧħḗşḗ şḗřṽīƈḗş, ƀŭŧ ƀīŀŀīƞɠ īş ƀȧşḗḓ ȯƞ ŧħḗ ƒīẋḗḓ řȧŧḗ, ƞȯŧ ħȯŭřş ẇȯřķḗḓ. ·····························································〗",
+      "title": "〖Ẇħȧŧ ȧřḗ Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş? ············〗"
     },
-    "heading": "55555",
+    "heading": "〖Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş ········〗",
     "preview": {
       "labels": {
-        "alternateFrequency": "55555",
-        "billingTiming": "55555",
-        "cadenceOwner": "55555",
-        "invoiceWindow": "55555",
-        "recurringRate": "55555",
-        "service": "55555",
-        "services": "55555"
+        "alternateFrequency": "〖Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ: ············〗",
+        "billingTiming": "〖Ɓīŀŀīƞɠ Ŧīḿīƞɠ: ······〗",
+        "cadenceOwner": "〖Ƈȧḓḗƞƈḗ Ȯẇƞḗř: ······〗",
+        "invoiceWindow": "〖Īƞṽȯīƈḗ ẇīƞḓȯẇ: ······〗",
+        "recurringRate": "〖Řḗƈŭřřīƞɠ Řȧŧḗ: ······〗",
+        "service": "〖Şḗřṽīƈḗ: ····〗",
+        "services": "〖Şḗřṽīƈḗş: ····〗"
       },
       "materializedPeriods": {
-        "tooltip": "55555"
+        "tooltip": "〖Ȧ ƥřḗṽīḗẇ ȯƒ ŧħḗ ƞḗẋŧ ƒḗẇ şḗřṽīƈḗ ƥḗřīȯḓş ȧƞḓ ŧħḗ īƞṽȯīƈḗ ẇīƞḓȯẇş ŧħȧŧ ẇȯŭŀḓ ƀḗ ɠḗƞḗřȧŧḗḓ ƒȯř ŧħḗḿ ƀȧşḗḓ ȯƞ ŧħḗ ƈŭřřḗƞŧ şḗŧŧīƞɠş. Ŧħḗşḗ ħḗŀƥ ẏȯŭ şȧƞīŧẏ-ƈħḗƈķ ŧħḗ ƈȧḓḗƞƈḗ ƀḗƒȯřḗ şȧṽīƞɠ — ȧƈŧŭȧŀ īƞṽȯīƈḗş ȧřḗ ƥřȯḓŭƈḗḓ ŀȧŧḗř ƀẏ ŧħḗ ƀīŀŀīƞɠ řŭƞ. ································································································〗"
       },
-      "title": "55555"
+      "title": "〖Řḗƈŭřřīƞɠ Ƥřḗṽīḗẇ Ɓḗƒȯřḗ Şȧṽḗ ············〗"
     },
     "proration": {
-      "label": "55555",
-      "tooltip": "55555"
+      "label": "〖Ȧḓĵŭşŧ ƒȯř Ƥȧřŧīȧŀ Ƥḗřīȯḓş ···········〗",
+      "tooltip": "〖Ȧḓĵŭşŧ ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ ẇħḗƞ ƈȯƞŧřȧƈŧ ḓȧŧḗş ƈȯṽḗř ȯƞŀẏ ƥȧřŧ ȯƒ ȧ şḗřṽīƈḗ ƥḗřīȯḓ. ·································〗"
     },
     "services": {
-      "addService": "55555",
-      "label": "55555",
-      "quantityLabel": "55555",
-      "selectServicePlaceholder": "55555",
-      "serviceItemLabel": "55555 {{index}} 55555"
+      "addService": "〖Ȧḓḓ Şḗřṽīƈḗ ·····〗",
+      "label": "〖Şḗřṽīƈḗş ····〗",
+      "quantityLabel": "〖Ɋŭȧƞŧīŧẏ ····〗",
+      "selectServicePlaceholder": "〖Şḗŀḗƈŧ ȧ şḗřṽīƈḗ ·······〗",
+      "serviceItemLabel": "〖Şḗřṽīƈḗ {{index}} ·······〗"
     }
   },
   "wizardProducts": {
     "actions": {
-      "addProduct": "55555"
+      "addProduct": "〖Ȧḓḓ Ƥřȯḓŭƈŧ ·····〗"
     },
-    "description": "55555",
-    "emptyState": "55555",
-    "heading": "55555",
+    "description": "〖Ȧŧŧȧƈħ ƥřȯḓŭƈŧş ŧħȧŧ ẇīŀŀ ƀḗ ƀīŀŀḗḓ ḗȧƈħ ƈẏƈŀḗ. Ƥřȯḓŭƈŧş ŭşḗ ŧħḗ ƈȧŧȧŀȯɠ ƥřīƈḗ ƒȯř ŧħḗ ƈȯƞŧřȧƈŧ ƈŭřřḗƞƈẏ ŭƞŀḗşş ẏȯŭ ḗƞŧḗř ȧƞ ȯṽḗřřīḓḗ. ······················································〗",
+    "emptyState": "〖Ƞȯ ƥřȯḓŭƈŧş ȧŧŧȧƈħḗḓ ẏḗŧ. Ȧḓḓ ȧ ƥřȯḓŭƈŧ īƒ ẏȯŭ ẇȧƞŧ īŧ ŧȯ ƀīŀŀ ḗṽḗřẏ ƈẏƈŀḗ. ······························〗",
+    "heading": "〖Ƥřȯḓŭƈŧş ····〗",
     "labels": {
-      "defaultCatalogPrice": "55555",
-      "overrideUnitPriceOptional": "55555",
-      "productItem": "55555 {{index}} 55555",
-      "products": "55555",
-      "quantity": "55555",
-      "selectProductPlaceholder": "55555",
-      "catalogPriceInCurrency": "55555 {{currency}} 55555"
+      "defaultCatalogPrice": "〖Ḓḗƒȧŭŀŧ ƈȧŧȧŀȯɠ ƥřīƈḗ: ·········〗",
+      "overrideUnitPriceOptional": "〖Ȯṽḗřřīḓḗ ŭƞīŧ ƥřīƈḗ (ȯƥŧīȯƞȧŀ) ············〗",
+      "productItem": "〖Ƥřȯḓŭƈŧ {{index}} ·······〗",
+      "products": "〖Ƥřȯḓŭƈŧş ····〗",
+      "quantity": "〖Ɋŭȧƞŧīŧẏ ····〗",
+      "selectProductPlaceholder": "〖Şḗŀḗƈŧ ȧ ƥřȯḓŭƈŧ ·······〗",
+      "catalogPriceInCurrency": "〖Ƈȧŧȧŀȯɠ ƥřīƈḗ īƞ {{currency}}: ············〗"
     },
     "validation": {
-      "noDefaultPriceEnterUnitPrice": "55555",
-      "productMissingPrice": "55555",
-      "noCurrencyPriceEnterUnitPrice": "55555 {{currency}} 55555",
-      "noCurrencyPriceWithLegacyHint": "55555 {{currency}} 55555 {{rate}} 55555 {{currency}} 55555"
+      "noDefaultPriceEnterUnitPrice": "〖Ƞȯ ḓḗƒȧŭŀŧ ƥřīƈḗ şḗŧ. Ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ. ·················〗",
+      "productMissingPrice": "〖Ŧħīş ƥřȯḓŭƈŧ ħȧş ƞȯ ḓḗƒȧŭŀŧ ƥřīƈḗ ȧƞḓ ƞȯ ȯṽḗřřīḓḗ. Īŧ ƈȧƞƞȯŧ ƀḗ ƀīŀŀḗḓ ŭƞŧīŀ ẏȯŭ ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ. ········································〗",
+      "noCurrencyPriceEnterUnitPrice": "〖Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ. ·······················〗",
+      "noCurrencyPriceWithLegacyHint": "〖Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ŀḗɠȧƈẏ ḓḗƒȧŭŀŧ řȧŧḗ: {{rate}}. Ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ īƞ {{currency}}. ··········································〗"
     }
   },
   "wizardHourly": {
     "actions": {
-      "addHourlyService": "55555"
+      "addHourlyService": "〖Ȧḓḓ Ħȯŭřŀẏ Şḗřṽīƈḗ ········〗"
     },
-    "alternateFrequencyLabel": "55555",
-    "description": "55555",
-    "emptyState": "55555",
+    "alternateFrequencyLabel": "〖Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ (Ȯƥŧīȯƞȧŀ) ················〗",
+    "description": "〖Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŧīḿḗ ŧřȧƈķḗḓ. Ƥḗřƒḗƈŧ ƒȯř Ŧ&Ḿ (Ŧīḿḗ & Ḿȧŧḗřīȧŀş) ẇȯřķ. ········································〗",
+    "emptyState": "〖Ƞȯ ħȯŭřŀẏ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ “Ȧḓḓ Ħȯŭřŀẏ Şḗřṽīƈḗ” ȧƀȯṽḗ ȯř “Şķīƥ” īƒ ẏȯŭ ḓȯƞ’ŧ ƞḗḗḓ ŧīḿḗ & ḿȧŧḗřīȧŀş ƀīŀŀīƞɠ. ···············································〗",
     "explainer": {
-      "description": "55555",
-      "title": "55555"
+      "description": "〖Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ŧīḿḗ ŧřȧƈķḗḓ. Ḗȧƈħ ŧīḿḗ ḗƞŧřẏ ẇīŀŀ ƀḗ ḿŭŀŧīƥŀīḗḓ ƀẏ ŧħḗ ħȯŭřŀẏ řȧŧḗ ŧȯ ƈȧŀƈŭŀȧŧḗ ŧħḗ īƞṽȯīƈḗ ȧḿȯŭƞŧ. ·························································〗",
+      "title": "〖Ẇħȧŧ ȧřḗ Ħȯŭřŀẏ Şḗřṽīƈḗş? ··········〗"
     },
-    "heading": "55555",
+    "heading": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş ······〗",
     "labels": {
-      "enterHourlyRate": "55555",
-      "hourlyRate": "55555",
-      "hourlyRatePerHour": "55555 {{rate}} 55555",
-      "hourlyRatePlaceholder": "55555",
-      "hourlyServices": "55555",
-      "selectServicePlaceholder": "55555",
-      "serviceItem": "55555 {{index}} 55555",
-      "setBucketOfHours": "55555",
-      "noCurrencyPriceEnterRate": "55555 {{currency}} 55555",
-      "noCurrencyPriceWithLegacyHint": "55555 {{currency}} 55555 {{rate}} 55555 {{currency}} 55555"
+      "enterHourlyRate": "〖Ḗƞŧḗř ŧħḗ ħȯŭřŀẏ řȧŧḗ ·········〗",
+      "hourlyRate": "〖Ħȯŭřŀẏ Řȧŧḗ ·····〗",
+      "hourlyRatePerHour": "〖{{rate}}/ħȯŭř ······〗",
+      "hourlyRatePlaceholder": "〖0.00 ··〗",
+      "hourlyServices": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş ······〗",
+      "selectServicePlaceholder": "〖Şḗŀḗƈŧ ȧ şḗřṽīƈḗ ·······〗",
+      "serviceItem": "〖Şḗřṽīƈḗ {{index}} ·······〗",
+      "setBucketOfHours": "〖Şḗŧ ƀŭƈķḗŧ ȯƒ ħȯŭřş ········〗",
+      "noCurrencyPriceEnterRate": "〖Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ḗƞŧḗř ȧƞ ħȯŭřŀẏ řȧŧḗ. ························〗",
+      "noCurrencyPriceWithLegacyHint": "〖Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ŀḗɠȧƈẏ ḓḗƒȧŭŀŧ řȧŧḗ: {{rate}}. Ḗƞŧḗř ȧƞ ħȯŭřŀẏ řȧŧḗ īƞ {{currency}}. ···········································〗"
     },
     "minimumBillableTime": {
-      "hint": "55555",
-      "label": "55555",
-      "placeholder": "55555"
+      "hint": "〖ḗ.ɠ., 15 ḿīƞŭŧḗş - ȧƞẏ ŧīḿḗ ḗƞŧřẏ ŀḗşş ŧħȧƞ ŧħīş ẇīŀŀ ƀḗ řȯŭƞḓḗḓ ŭƥ ···························〗",
+      "label": "〖Ḿīƞīḿŭḿ Ɓīŀŀȧƀŀḗ Ŧīḿḗ (ḿīƞŭŧḗş) ·············〗",
+      "placeholder": "〖15 ·〗"
     },
     "roundUpToNearest": {
-      "hint": "55555",
-      "label": "55555",
-      "placeholder": "55555"
+      "hint": "〖ḗ.ɠ., 15 ḿīƞŭŧḗş - ŧīḿḗ ḗƞŧřīḗş ẇīŀŀ ƀḗ řȯŭƞḓḗḓ ŭƥ ŧȯ ŧħḗ ƞḗȧřḗşŧ īƞŧḗřṽȧŀ ······························〗",
+      "label": "〖Řȯŭƞḓ Ŭƥ Ŧȯ Ƞḗȧřḗşŧ (ḿīƞŭŧḗş) ············〗",
+      "placeholder": "〖15 ·〗"
     },
     "summary": {
       "labels": {
-        "alternateFrequency": "55555",
-        "bucketsHeading": "55555",
-        "includedHours": "55555",
-        "minimumTime": "55555",
-        "overageRate": "55555",
-        "rollover": "55555",
-        "roundUp": "55555",
-        "serviceFallback": "55555 {{index}} 55555",
-        "services": "55555"
+        "alternateFrequency": "〖Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ: ············〗",
+        "bucketsHeading": "〖Ɓŭƈķḗŧş: ····〗",
+        "includedHours": "〖Īƞƈŀŭḓḗḓ Ħȯŭřş: ······〗",
+        "minimumTime": "〖Ḿīƞīḿŭḿ Ŧīḿḗ: ······〗",
+        "overageRate": "〖Ȯṽḗřȧɠḗ Řȧŧḗ: ······〗",
+        "rollover": "〖Řȯŀŀȯṽḗř: ····〗",
+        "roundUp": "〖Řȯŭƞḓ Ŭƥ: ····〗",
+        "serviceFallback": "〖Şḗřṽīƈḗ {{index}} ·······〗",
+        "services": "〖Şḗřṽīƈḗş: ····〗"
       },
-      "title": "55555",
+      "title": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş Şŭḿḿȧřẏ ··········〗",
       "values": {
-        "everyMinutes": "55555 {{count}} 55555",
-        "hours": "55555 {{count}} 55555",
-        "minutes": "55555 {{count}} 55555",
-        "overageRatePerHour": "55555 {{rate}} 55555",
-        "rolloverDisabled": "55555",
-        "rolloverEnabled": "55555"
+        "everyMinutes": "〖Ḗṽḗřẏ {{count}} ḿīƞŭŧḗş ··········〗",
+        "hours": "〖{{count}} ħȯŭřş ······〗",
+        "minutes": "〖{{count}} ḿīƞŭŧḗş ·······〗",
+        "overageRatePerHour": "〖{{rate}}/ħȯŭř ······〗",
+        "rolloverDisabled": "〖Ḓīşȧƀŀḗḓ ····〗",
+        "rolloverEnabled": "〖Ḗƞȧƀŀḗḓ ···〗"
       }
     }
   },
   "wizardUsage": {
     "actions": {
-      "addUsageBasedService": "55555"
+      "addUsageBasedService": "〖Ȧḓḓ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗ ··········〗"
     },
-    "alternateFrequencyLabel": "55555",
-    "description": "55555",
-    "emptyState": "55555",
+    "alternateFrequencyLabel": "〖Ȧŀŧḗřƞȧŧḗ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ (Ȯƥŧīȯƞȧŀ) ················〗",
+    "description": "〖Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŭşȧɠḗ ȯř ƈȯƞşŭḿƥŧīȯƞ. Ƥḗřƒḗƈŧ ƒȯř ḿḗŧḗřḗḓ şḗřṽīƈḗş ŀīķḗ ḓȧŧȧ ŧřȧƞşƒḗř, ȦƤĪ ƈȧŀŀş, ȯř şŧȯřȧɠḗ. ·······················································〗",
+    "emptyState": "〖Ƞȯ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗş ȧḓḓḗḓ ẏḗŧ. Ƈŀīƈķ “Ȧḓḓ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗ” ȧƀȯṽḗ ȯř “Şķīƥ” īƒ ẏȯŭ ḓȯƞ’ŧ ƞḗḗḓ ƈȯƞşŭḿƥŧīȯƞ ƀīŀŀīƞɠ. ·················································〗",
     "explainer": {
-      "description": "55555",
-      "title": "55555"
+      "description": "〖Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ƈȯƞşŭḿƥŧīȯƞ ȯř ŭşȧɠḗ ḿḗŧřīƈş. Ḗȧƈħ ŭƞīŧ ƈȯƞşŭḿḗḓ ẇīŀŀ ƀḗ ḿŭŀŧīƥŀīḗḓ ƀẏ ŧħḗ ŭƞīŧ řȧŧḗ ŧȯ ƈȧŀƈŭŀȧŧḗ ŧħḗ īƞṽȯīƈḗ ȧḿȯŭƞŧ. ································································〗",
+      "title": "〖Ẇħȧŧ ȧřḗ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş? ············〗"
     },
-    "heading": "55555",
+    "heading": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş ········〗",
     "labels": {
-      "enterUnitRate": "55555",
-      "ratePerUnit": "55555",
-      "ratePerUnitPlaceholder": "55555",
-      "ratePerUnitValue": "55555 {{rate}} 55555 {{unit}} 55555",
-      "selectServicePlaceholder": "55555",
-      "serviceItem": "55555 {{index}} 55555",
-      "services": "55555",
-      "setBucketAllocation": "55555",
-      "unitOfMeasure": "55555",
-      "unitOfMeasureHint": "55555",
-      "unitOfMeasurePlaceholder": "55555",
-      "noCurrencyPriceEnterRate": "55555 {{currency}} 55555",
-      "noCurrencyPriceWithLegacyHint": "55555 {{currency}} 55555 {{rate}} 55555 {{currency}} 55555"
+      "enterUnitRate": "〖Ḗƞŧḗř ŧħḗ ŭƞīŧ řȧŧḗ ········〗",
+      "ratePerUnit": "〖Řȧŧḗ ƥḗř Ŭƞīŧ ······〗",
+      "ratePerUnitPlaceholder": "〖0.00 ··〗",
+      "ratePerUnitValue": "〖{{rate}}/{{unit}} ·······〗",
+      "selectServicePlaceholder": "〖Şḗŀḗƈŧ ȧ şḗřṽīƈḗ ·······〗",
+      "serviceItem": "〖Şḗřṽīƈḗ {{index}} ·······〗",
+      "services": "〖Şḗřṽīƈḗş ····〗",
+      "setBucketAllocation": "〖Şḗŧ ƀŭƈķḗŧ ȧŀŀȯƈȧŧīȯƞ ·········〗",
+      "unitOfMeasure": "〖Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ ······〗",
+      "unitOfMeasureHint": "〖Ƈħȯȯşḗ ŧħḗ ŭƞīŧ ŧħīş şḗřṽīƈḗ ƀīŀŀş ȯƞ. ················〗",
+      "unitOfMeasurePlaceholder": "〖ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř ··········〗",
+      "noCurrencyPriceEnterRate": "〖Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ḗƞŧḗř ȧ ŭƞīŧ řȧŧḗ. ·······················〗",
+      "noCurrencyPriceWithLegacyHint": "〖Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ŀḗɠȧƈẏ ḓḗƒȧŭŀŧ řȧŧḗ: {{rate}}. Ḗƞŧḗř ȧ ŭƞīŧ řȧŧḗ īƞ {{currency}}. ··········································〗"
     },
     "summary": {
       "labels": {
-        "services": "55555"
+        "services": "〖Şḗřṽīƈḗş: ····〗"
       },
-      "title": "55555"
+      "title": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Şŭḿḿȧřẏ ········〗"
     },
     "values": {
-      "defaultUnit": "55555"
+      "defaultUnit": "〖ŭƞīŧ ··〗"
     }
   },
   "wizardReview": {
-    "heading": "55555",
-    "description": "55555",
+    "heading": "〖Řḗṽīḗẇ Ƈȯƞŧřȧƈŧ ······〗",
+    "description": "〖Řḗṽīḗẇ ȧŀŀ ƈȯƞŧřȧƈŧ ḓḗŧȧīŀş ƀḗƒȯřḗ ƈřḗȧŧīƞɠ. Ẏȯŭ ƈȧƞ şŧīŀŀ ḗḓīŧ ȧƒŧḗř ƈřḗȧŧīȯƞ īƒ ƞḗḗḓḗḓ. ····································〗",
     "sections": {
-      "contractBasics": "55555",
-      "fixedFeeServices": "55555",
-      "products": "55555",
-      "hourlyServices": "55555",
-      "usageBasedServices": "55555"
+      "contractBasics": "〖Ƈȯƞŧřȧƈŧ Ɓȧşīƈş ······〗",
+      "fixedFeeServices": "〖Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş ········〗",
+      "products": "〖Ƥřȯḓŭƈŧş ····〗",
+      "hourlyServices": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş ······〗",
+      "usageBasedServices": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş ········〗"
     },
     "fields": {
-      "client": "55555",
-      "contractName": "55555",
-      "billingFrequency": "55555",
-      "currency": "55555",
-      "startDate": "55555",
-      "endDate": "55555",
-      "renewalMode": "55555",
-      "noticePeriod": "55555",
-      "renewalTerm": "55555"
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "contractName": "〖Ƈȯƞŧřȧƈŧ Ƞȧḿḗ ······〗",
+      "billingFrequency": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ ·······〗",
+      "currency": "〖Ƈŭřřḗƞƈẏ ····〗",
+      "startDate": "〖Şŧȧřŧ Ḓȧŧḗ ····〗",
+      "endDate": "〖Ḗƞḓ Ḓȧŧḗ ····〗",
+      "renewalMode": "〖Řḗƞḗẇȧŀ Ḿȯḓḗ ·····〗",
+      "noticePeriod": "〖Ƞȯŧīƈḗ Ƥḗřīȯḓ ······〗",
+      "renewalTerm": "〖Řḗƞḗẇȧŀ Ŧḗřḿ ·····〗"
     },
     "fallback": {
-      "notSelected": "55555",
-      "notSpecified": "55555",
-      "ongoing": "55555",
-      "notApplicable": "55555"
+      "notSelected": "〖Ƞȯŧ şḗŀḗƈŧḗḓ ·····〗",
+      "notSpecified": "〖Ƞȯŧ şƥḗƈīƒīḗḓ ······〗",
+      "ongoing": "〖Ȯƞɠȯīƞɠ ···〗",
+      "notApplicable": "〖Ƞ/Ȧ ··〗"
     },
     "renewalMode": {
-      "none": "55555",
-      "manual": "55555",
-      "auto": "55555"
+      "none": "〖Ƞȯ Řḗƞḗẇȧŀ ····〗",
+      "manual": "〖Ḿȧƞŭȧŀ Řḗƞḗẇȧŀ ······〗",
+      "auto": "〖Ȧŭŧȯ Řḗƞḗẇ ····〗"
     },
     "noticePeriod": {
-      "one": "55555 {{count}} 55555",
-      "other": "55555 {{count}} 55555"
+      "one": "〖{{count}} ḓȧẏ ······〗",
+      "other": "〖{{count}} ḓȧẏş ······〗"
     },
     "renewalTerm": {
-      "one": "55555 {{count}} 55555",
-      "other": "55555 {{count}} 55555"
+      "one": "〖{{count}} ḿȯƞŧħ ······〗",
+      "other": "〖{{count}} ḿȯƞŧħş ·······〗"
     },
     "common": {
-      "yes": "55555",
-      "no": "55555",
-      "enabled": "55555",
-      "disabled": "55555",
-      "bucketLabel": "55555",
-      "billingFrequencyOverrideLabel": "55555",
-      "serviceQuantityRow": "55555 {{serviceName}} 55555 {{quantity}} 55555",
-      "unitSingular": "55555",
-      "unitsFallback": "55555",
-      "hourSingular": "55555"
+      "yes": "〖Ẏḗş ··〗",
+      "no": "〖Ƞȯ ·〗",
+      "enabled": "〖Ḗƞȧƀŀḗḓ ···〗",
+      "disabled": "〖Ḓīşȧƀŀḗḓ ····〗",
+      "bucketLabel": "〖Ɓŭƈķḗŧ: ···〗",
+      "billingFrequencyOverrideLabel": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ Ȯṽḗřřīḓḗ: ···········〗",
+      "serviceQuantityRow": "〖{{serviceName}} (Ɋŧẏ: {{quantity}}) ··············〗",
+      "unitSingular": "〖ŭƞīŧ ··〗",
+      "unitsFallback": "〖ŭƞīŧş ··〗",
+      "hourSingular": "〖ħȯŭř ··〗"
     },
     "po": {
-      "title": "55555",
-      "requiredLabel": "55555",
-      "numberLabel": "55555",
-      "amountLabel": "55555"
+      "title": "〖Ƥŭřƈħȧşḗ Ȯřḓḗř Řḗʠŭīřḗḿḗƞŧş ···········〗",
+      "requiredLabel": "〖ƤȮ Řḗʠŭīřḗḓ: ·····〗",
+      "numberLabel": "〖ƤȮ Ƞŭḿƀḗř: ····〗",
+      "amountLabel": "〖ƤȮ Ȧḿȯŭƞŧ: ····〗"
     },
     "bucket": {
-      "includedHours": "55555 {{formattedValue}} 55555",
-      "includedUnits": "55555 {{formattedValue}} 55555 {{unitLabel}} 55555",
-      "overageLabel": "55555 {{rate}} 55555 {{unit}} 55555",
-      "rolloverEnabled": "55555",
-      "rolloverDisabled": "55555",
-      "summaryWithOverage": "55555 {{included}} 55555 {{overage}} 55555 {{rollover}} 55555",
-      "summaryWithoutOverage": "55555 {{included}} 55555 {{rollover}} 55555"
+      "includedHours": "〖{{formattedValue}} ħȯŭřş ··········〗",
+      "includedUnits": "〖{{formattedValue}} {{unitLabel}} ·············〗",
+      "overageLabel": "〖{{rate}}/{{unit}} ȯṽḗřȧɠḗ ··········〗",
+      "rolloverEnabled": "〖řȯŀŀȯṽḗř ḗƞȧƀŀḗḓ ·······〗",
+      "rolloverDisabled": "〖ƞȯ řȯŀŀȯṽḗř ·····〗",
+      "summaryWithOverage": "〖{{included}}, {{overage}}, {{rollover}} ················〗",
+      "summaryWithoutOverage": "〖{{included}}, {{rollover}} ···········〗"
     },
     "fixed": {
       "badgeCount": {
-        "one": "55555 {{count}} 55555",
-        "other": "55555 {{count}} 55555"
+        "one": "〖{{count}} şḗřṽīƈḗ ·······〗",
+        "other": "〖{{count}} şḗřṽīƈḗş ········〗"
       },
-      "monthlyBaseRate": "55555",
-      "partialPeriodAdjustment": "55555"
+      "monthlyBaseRate": "〖Ḿȯƞŧħŀẏ Ɓȧşḗ Řȧŧḗ: ········〗",
+      "partialPeriodAdjustment": "〖Ƥȧřŧīȧŀ-Ƥḗřīȯḓ Ȧḓĵŭşŧḿḗƞŧ: ···········〗"
     },
     "recurring": {
       "cadenceOwner": {
-        "label": "55555",
-        "contractAnniversary": "55555",
-        "clientBillingSchedule": "55555"
+        "label": "〖Ƈȧḓḗƞƈḗ ȯẇƞḗř: ······〗",
+        "contractAnniversary": "〖Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ········〗",
+        "clientBillingSchedule": "〖Ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ··········〗"
       },
       "firstInvoice": {
         "contract": {
-          "advance": "55555",
-          "arrears": "55555"
+          "advance": "〖Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ẇīƞḓȯẇ ŧħȧŧ ȯƥḗƞş ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ. ········································〗",
+          "arrears": "〖Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƞḗẋŧ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ẇīƞḓȯẇ ȧƒŧḗř ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş. ···········································〗"
         },
         "client": {
-          "advance": "55555",
-          "arrears": "55555"
+          "advance": "〖Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƒīřşŧ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ẇīƞḓȯẇ ƈȯṽḗřīƞɠ ŧħḗ şḗřṽīƈḗ ƥḗřīȯḓ. ·····································〗",
+          "arrears": "〖Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƞḗẋŧ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ẇīƞḓȯẇ ȧƒŧḗř ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş. ············································〗"
         }
       },
       "partialPeriod": {
-        "enabled": "55555",
-        "disabled": "55555"
+        "enabled": "〖Ƥȧřŧīȧŀ ƥḗřīȯḓş ȧḓĵŭşŧ ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ ŧȯ ŧħḗ ƈȯṽḗřḗḓ ƥȯřŧīȯƞ ȯƒ ŧħḗ şḗřṽīƈḗ ƥḗřīȯḓ. ···································〗",
+        "disabled": "〖Ƥȧřŧīȧŀ ƥḗřīȯḓş ķḗḗƥ ŧħḗ ƒŭŀŀ řḗƈŭřřīƞɠ ƒḗḗ ḗṽḗƞ ẇħḗƞ ƈȯƞŧřȧƈŧ ḓȧŧḗş ŀȧƞḓ īƞşīḓḗ ȧ şḗřṽīƈḗ ƥḗřīȯḓ. ········································〗"
       },
       "materialized": {
-        "heading": "55555",
-        "serviceLabel": "55555",
-        "invoiceWindowLabel": "55555",
+        "heading": "〖Īŀŀŭşŧřȧŧīṽḗ ƒŭŧŭřḗ ḿȧŧḗřīȧŀīẑḗḓ ƥḗřīȯḓş ················〗",
+        "serviceLabel": "〖Şḗřṽīƈḗ: ····〗",
+        "invoiceWindowLabel": "〖Īƞṽȯīƈḗ ẇīƞḓȯẇ: ······〗",
         "summary": {
-          "contract": "55555",
-          "client": "55555"
+          "contract": "〖Īƒ ẏȯŭ şȧṽḗ ŧħīş řḗƈŭřřīƞɠ ŀīƞḗ, ƒŭŧŭřḗ ƥḗřīȯḓş ẇȯŭŀḓ ḿȧŧḗřīȧŀīẑḗ ȯƞ ȧƞ ȧƞƞīṽḗřşȧřẏ-şŧẏŀḗ ƥřḗṽīḗẇ ȧƞƈħȯřḗḓ ŧȯ ŧħḗ 8ŧħ ƀḗƒȯřḗ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ. ··························································〗",
+          "client": "〖Īƒ ẏȯŭ şȧṽḗ ŧħīş řḗƈŭřřīƞɠ ŀīƞḗ, ƒŭŧŭřḗ ƥḗřīȯḓş ẇȯŭŀḓ ḿȧŧḗřīȧŀīẑḗ ȯƞ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ƥřḗṽīḗẇ ƀḗƒȯřḗ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ. ·····················································〗"
         }
       }
     },
     "products": {
       "badgeCount": {
-        "one": "55555 {{count}} 55555",
-        "other": "55555 {{count}} 55555"
+        "one": "〖{{count}} ƥřȯḓŭƈŧ ·······〗",
+        "other": "〖{{count}} ƥřȯḓŭƈŧş ········〗"
       },
-      "overrideRate": "55555 {{rate}} 55555 {{currencyCode}} 55555"
+      "overrideRate": "〖- ȯṽḗřřīḓḗ {{rate}}/{{currencyCode}} ···············〗"
     },
     "hourly": {
       "badgeCount": {
-        "one": "55555 {{count}} 55555",
-        "other": "55555 {{count}} 55555"
+        "one": "〖{{count}} şḗřṽīƈḗ ·······〗",
+        "other": "〖{{count}} şḗřṽīƈḗş ········〗"
       },
-      "servicesAndRates": "55555",
-      "serviceRateRow": "55555 {{serviceName}} 55555 {{rate}} 55555",
-      "minimumTimeLabel": "55555",
-      "roundUpLabel": "55555",
-      "minutesValue": "55555 {{count}} 55555"
+      "servicesAndRates": "〖Şḗřṽīƈḗş ȧƞḓ Řȧŧḗş ········〗",
+      "serviceRateRow": "〖{{serviceName}} - {{rate}}/ħȯŭř ·············〗",
+      "minimumTimeLabel": "〖Ḿīƞīḿŭḿ Ŧīḿḗ: ······〗",
+      "roundUpLabel": "〖Řȯŭƞḓ Ŭƥ: ····〗",
+      "minutesValue": "〖{{count}} ḿīƞŭŧḗş ·······〗"
     },
     "usage": {
       "badgeCount": {
-        "one": "55555 {{count}} 55555",
-        "other": "55555 {{count}} 55555"
+        "one": "〖{{count}} şḗřṽīƈḗ ·······〗",
+        "other": "〖{{count}} şḗřṽīƈḗş ········〗"
       },
-      "serviceRateRow": "55555 {{serviceName}} 55555 {{rate}} 55555 {{unit}} 55555"
+      "serviceRateRow": "〖{{serviceName}} - {{rate}}/{{unit}} ··············〗"
     },
     "total": {
-      "title": "55555",
-      "description": "55555",
-      "perMonth": "55555"
+      "title": "〖Ḗşŧīḿȧŧḗḓ Ḿȯƞŧħŀẏ Ŧȯŧȧŀ ··········〗",
+      "description": "〖Ƒīẋḗḓ ƈħȧřɠḗş ȯƞŀẏ. Ħȯŭřŀẏ ȧƞḓ ŭşȧɠḗ şḗřṽīƈḗş ƀīŀŀ şḗƥȧřȧŧḗŀẏ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ŭşȧɠḗ. ··································〗",
+      "perMonth": "〖ƥḗř ḿȯƞŧħ ····〗"
     },
     "finalChecklist": {
-      "title": "55555",
-      "itemRates": "55555",
-      "itemPo": "55555",
-      "itemDates": "55555",
-      "itemEditLater": "55555"
+      "title": "〖Ɓḗƒȯřḗ ẏȯŭ ƒīƞīşħ: ········〗",
+      "itemRates": "〖Ḓȯŭƀŀḗ-ƈħḗƈķ ȧŀŀ řȧŧḗş, ʠŭȧƞŧīŧīḗş, ȧƞḓ ƀŭƈķḗŧş ···················〗",
+      "itemPo": "〖Ƈȯƞƒīřḿ ƤȮ řḗʠŭīřḗḿḗƞŧş (īƒ ȧƞẏ) ·············〗",
+      "itemDates": "〖Ṽḗřīƒẏ ŧħḗ şŧȧřŧ ȧƞḓ ḗƞḓ ḓȧŧḗş ············〗",
+      "itemEditLater": "〖Řḗḿḗḿƀḗř: ẏȯŭ ƈȧƞ ḗḓīŧ ŧħḗ ƈȯƞŧřȧƈŧ ŀȧŧḗř īƒ ƞḗḗḓḗḓ ·····················〗"
     }
   },
   "templateWizard": {
     "title": {
-      "createContractTemplate": "55555"
+      "createContractTemplate": "〖Ƈřḗȧŧḗ Ƈȯƞŧřȧƈŧ Ŧḗḿƥŀȧŧḗ ··········〗"
     },
     "steps": {
-      "templateBasics": "55555",
-      "fixedFeeBlocks": "55555",
-      "products": "55555",
-      "hourlyBlocks": "55555",
-      "usageBasedBlocks": "55555",
-      "reviewPublish": "55555"
+      "templateBasics": "〖Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş ······〗",
+      "fixedFeeBlocks": "〖Ƒīẋḗḓ Ƒḗḗ Ɓŀȯƈķş ·······〗",
+      "products": "〖Ƥřȯḓŭƈŧş ····〗",
+      "hourlyBlocks": "〖Ħȯŭřŀẏ Ɓŀȯƈķş ······〗",
+      "usageBasedBlocks": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Ɓŀȯƈķş ········〗",
+      "reviewPublish": "〖Řḗṽīḗẇ & Ƥŭƀŀīşħ ·······〗"
     },
     "actions": {
-      "continue": "55555",
-      "publishTemplate": "55555"
+      "continue": "〖Ƈȯƞŧīƞŭḗ ····〗",
+      "publishTemplate": "〖Ƥŭƀŀīşħ Ŧḗḿƥŀȧŧḗ ·······〗"
     },
     "errors": {
-      "failedToCreateTemplate": "55555"
+      "failedToCreateTemplate": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ŧḗḿƥŀȧŧḗ ··········〗"
     },
     "validation": {
-      "templateNameRequired": "55555",
-      "billingFrequencyRequired": "55555",
-      "duplicateNameExists": "55555",
-      "templateNameAlreadyInUse": "55555",
-      "atLeastOneServiceRequired": "55555",
-      "unsupportedRecurringAuthoringCombination": "55555 {{lineType}} 55555 {{supportedFrequencies}} 55555 {{billingFrequency}} 55555",
+      "templateNameRequired": "〖Ŧḗḿƥŀȧŧḗ ƞȧḿḗ īş řḗʠŭīřḗḓ ··········〗",
+      "billingFrequencyRequired": "〖Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ ············〗",
+      "duplicateNameExists": "〖Ȧ ŧḗḿƥŀȧŧḗ ẇīŧħ ŧħīş ƞȧḿḗ ȧŀřḗȧḓẏ ḗẋīşŧş ················〗",
+      "templateNameAlreadyInUse": "〖Ŧḗḿƥŀȧŧḗ ƞȧḿḗ īş ȧŀřḗȧḓẏ īƞ ŭşḗ ·············〗",
+      "atLeastOneServiceRequired": "〖Ȧŧ ŀḗȧşŧ ȯƞḗ şḗřṽīƈḗ īş řḗʠŭīřḗḓ ·············〗",
+      "unsupportedRecurringAuthoringCombination": "〖Ŭƞşŭƥƥȯřŧḗḓ řḗƈŭřřīƞɠ ȧŭŧħȯřīƞɠ ƈȯḿƀīƞȧŧīȯƞ ƒȯř {{lineType}} şḗřṽīƈḗş: ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ƈȧḓḗƞƈḗ ƈŭřřḗƞŧŀẏ şŭƥƥȯřŧş {{supportedFrequencies}} ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈīḗş. {{billingFrequency}} īş ƞȯŧ şŭƥƥȯřŧḗḓ ẏḗŧ. Ŭşḗ ȯƞḗ ȯƒ ŧħḗ şŭƥƥȯřŧḗḓ ƒřḗʠŭḗƞƈīḗş ȯř īƞṽȯīƈḗ ȯƞ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ īƞşŧḗȧḓ. ······················································································································〗",
       "recurring": {
         "frequency": {
-          "monthly": "55555",
-          "quarterly": "55555",
-          "semi-annually": "55555",
-          "annually": "55555",
-          "weekly": "55555",
-          "biweekly": "55555"
+          "monthly": "〖ḿȯƞŧħŀẏ ···〗",
+          "quarterly": "〖ʠŭȧřŧḗřŀẏ ····〗",
+          "semi-annually": "〖şḗḿī-ȧƞƞŭȧŀŀẏ ······〗",
+          "annually": "〖ȧƞƞŭȧŀŀẏ ····〗",
+          "weekly": "〖ẇḗḗķŀẏ ···〗",
+          "biweekly": "〖ƀīẇḗḗķŀẏ ····〗"
         },
         "lineType": {
-          "fixed": "55555",
-          "product": "55555",
-          "hourly": "55555",
-          "usage": "55555"
+          "fixed": "〖Ƒīẋḗḓ ··〗",
+          "product": "〖Ƥřȯḓŭƈŧ ···〗",
+          "hourly": "〖Ħȯŭřŀẏ ···〗",
+          "usage": "〖Ŭşȧɠḗ ··〗"
         }
       }
     }
   },
   "templateBasics": {
-    "heading": "55555",
-    "description": "55555",
+    "heading": "〖Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş ······〗",
+    "description": "〖Ƞȧḿḗ ŧħīş ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ ȧƞḓ ƈȧƥŧŭřḗ ħīɠħ-ŀḗṽḗŀ ɠŭīḓȧƞƈḗ. Ƥřīƈīƞɠ ȧƞḓ ƈŀīḗƞŧ şƥḗƈīƒīƈş ẇīŀŀ ƀḗ ƒīƞȧŀīẑḗḓ ẇħḗƞ ŧħḗ ŧḗḿƥŀȧŧḗ īş ȧƥƥŀīḗḓ ŧȯ ȧ ƈŀīḗƞŧ. ····························································〗",
     "fields": {
-      "templateName": "55555",
-      "internalNotes": "55555",
-      "recommendedBillingFrequency": "55555"
+      "templateName": "〖Ŧḗḿƥŀȧŧḗ Ƞȧḿḗ * ······〗",
+      "internalNotes": "〖Īƞŧḗřƞȧŀ Ƞȯŧḗş ······〗",
+      "recommendedBillingFrequency": "〖Řḗƈȯḿḿḗƞḓḗḓ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ * ·············〗"
     },
     "placeholders": {
-      "templateName": "55555",
-      "internalNotes": "55555",
-      "billingFrequency": "55555"
+      "templateName": "〖Ḿȧƞȧɠḗḓ Şḗřṽīƈḗş Şŧȧřŧḗř, Ƥřḗḿīŭḿ Şŭƥƥȯřŧ Ɓŭƞḓŀḗ, ḗŧƈ. ······················〗",
+      "internalNotes": "〖Ḓḗşƈřīƀḗ ẇħḗřḗ ŧħīş ŧḗḿƥŀȧŧḗ ȧƥƥŀīḗş, ȯƞƀȯȧřḓīƞɠ ŧīƥş, ȯř ȧƥƥřȯṽȧŀ řḗʠŭīřḗḿḗƞŧş. ································〗",
+      "billingFrequency": "〖Şḗŀḗƈŧ ƀīŀŀīƞɠ ƈȧḓḗƞƈḗ ·········〗"
     },
     "help": {
-      "templateName": "55555",
-      "internalNotes": "55555",
-      "billingFrequency": "55555"
+      "templateName": "〖Ŭşḗ ȧ ḓḗşƈřīƥŧīṽḗ ƞȧḿḗ şȯ ŧḗȧḿş ƈȧƞ ʠŭīƈķŀẏ īḓḗƞŧīƒẏ ŧħḗ řīɠħŧ ŧḗḿƥŀȧŧḗ. ·····························〗",
+      "internalNotes": "〖Ŧħḗşḗ ƞȯŧḗş şŧȧẏ ẇīŧħ ŧħḗ ŧḗḿƥŀȧŧḗ ŧȯ ƥřȯṽīḓḗ ƈȯƞŧḗẋŧ ẇħḗƞ ŧḗȧḿḿȧŧḗş ŭşḗ īŧ. ·······························〗",
+      "billingFrequency": "〖Şḗŧş ŧħḗ ḓḗƒȧŭŀŧ ƈȧḓḗƞƈḗ ẇħḗƞ ŧħḗ ŧḗḿƥŀȧŧḗ īş ȧƥƥŀīḗḓ. Īŧ ƈȧƞ şŧīŀŀ ƀḗ ȧḓĵŭşŧḗḓ ƥḗř ƈŀīḗƞŧ. ·····································〗"
     }
   },
   "templateFixed": {
-    "heading": "55555",
-    "description": "55555",
+    "heading": "〖Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş ········〗",
+    "description": "〖Ƈȯƞƒīɠŭřḗ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ȧŧ ȧ ƒīẋḗḓ řȧŧḗ ḗȧƈħ ƀīŀŀīƞɠ ƈẏƈŀḗ. Ẏȯŭ ƈȧƞ şŧīŀŀ ŧřȧƈķ ŧīḿḗ, ƀŭŧ ƀīŀŀīƞɠ īş ƀȧşḗḓ ȯƞ ŧħīş ƒŀȧŧ ȧḿȯŭƞŧ. ························································〗",
     "info": {
-      "title": "55555",
-      "description": "55555"
+      "title": "〖Ẇħȧŧ ȧřḗ Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş? ············〗",
+      "description": "〖Ŧħḗşḗ şḗřṽīƈḗş ħȧṽḗ ȧ şḗŧ řḗƈŭřřīƞɠ ƥřīƈḗ. Ẏȯŭ'ŀŀ şŧīŀŀ ŧřȧƈķ ŧīḿḗ ḗƞŧřīḗş ƒȯř ŧħḗşḗ şḗřṽīƈḗş, ƀŭŧ ƀīŀŀīƞɠ īş ƀȧşḗḓ ȯƞ ŧħḗ ƒīẋḗḓ řȧŧḗ, ƞȯŧ ħȯŭřş ẇȯřķḗḓ. ·····························································〗"
     },
     "cadenceOwner": {
-      "label": "55555",
-      "help": "55555",
+      "label": "〖Ƈȧḓḗƞƈḗ Ȯẇƞḗř ······〗",
+      "help": "〖Ƈħȯȯşḗ ẇħīƈħ şƈħḗḓŭŀḗ şħȯŭŀḓ ḓḗƒīƞḗ řḗƈŭřřīƞɠ şḗřṽīƈḗ ƥḗřīȯḓş ƒȯř ƈȯƞŧřȧƈŧş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ŧḗḿƥŀȧŧḗ. ··········································〗",
       "client": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Īƞṽȯīƈḗ ȯƞ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ··············〗",
+        "description": "〖Ŭşḗ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ ƈȧŀḗƞḓȧř şȯ ƈȯƞŧřȧƈŧş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ŧḗḿƥŀȧŧḗ şŧȧẏ ȧŀīɠƞḗḓ ẇīŧħ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ ƈȧḓḗƞƈḗ. ···············································〗"
       },
       "contract": {
-        "label": "55555",
-        "description": "55555"
+        "label": "〖Īƞṽȯīƈḗ ȯƞ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ·············〗",
+        "description": "〖Ŭşḗ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ ȧƞƞīṽḗřşȧřẏ şƈħḗḓŭŀḗ. Ƈȯƞŧřȧƈŧ ƈȧḓḗƞƈḗ ƈŭřřḗƞŧŀẏ şŭƥƥȯřŧş ḿȯƞŧħŀẏ, ʠŭȧřŧḗřŀẏ, şḗḿī-ȧƞƞŭȧŀ, ȧƞḓ ȧƞƞŭȧŀ řḗƈŭřřīƞɠ ƀīŀŀīƞɠ. ··························································〗"
       }
     },
     "billingTiming": {
-      "arrears": "55555",
-      "advance": "55555"
+      "arrears": "〖Ȧřřḗȧřş - īƞṽȯīƈḗ ȧƒŧḗř ŧħḗ ƥḗřīȯḓ ƈŀȯşḗş ·················〗",
+      "advance": "〖Ȧḓṽȧƞƈḗ - īƞṽȯīƈḗ ȧŧ ŧħḗ şŧȧřŧ ȯƒ ŧħḗ ƥḗřīȯḓ ··················〗"
     },
     "fields": {
-      "billingTiming": "55555",
-      "adjustPartialPeriods": "55555",
-      "services": "55555",
-      "serviceNumber": "55555 {{index}} 55555",
-      "quantityOptional": "55555"
+      "billingTiming": "〖Ɓīŀŀīƞɠ Ŧīḿīƞɠ ······〗",
+      "adjustPartialPeriods": "〖Ȧḓĵŭşŧ ƒȯř Ƥȧřŧīȧŀ Ƥḗřīȯḓş ···········〗",
+      "services": "〖Şḗřṽīƈḗş ····〗",
+      "serviceNumber": "〖Şḗřṽīƈḗ {{index}} ·······〗",
+      "quantityOptional": "〖Ɋŭȧƞŧīŧẏ (Ȯƥŧīȯƞȧŀ) ········〗"
     },
     "placeholders": {
-      "billingTiming": "55555",
-      "selectService": "55555"
+      "billingTiming": "〖Şḗŀḗƈŧ ƀīŀŀīƞɠ ŧīḿīƞɠ ·········〗",
+      "selectService": "〖Şḗŀḗƈŧ ȧ şḗřṽīƈḗ ·······〗"
     },
     "help": {
-      "adjustPartialPeriods": "55555",
-      "quantity": "55555"
+      "adjustPartialPeriods": "〖Ŭşḗ ŧħīş ẇħḗƞ ƈȯƞŧřȧƈŧş ƈřḗȧŧḗḓ ƒřȯḿ ŧħḗ ŧḗḿƥŀȧŧḗ şħȯŭŀḓ şƈȧŀḗ ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ īƒ şḗřṽīƈḗ şŧȧřŧş ȯř ḗƞḓş īƞşīḓḗ ȧ ƥḗřīȯḓ. ··················································〗",
+      "quantity": "〖Şŭɠɠḗşŧḗḓ ʠŭȧƞŧīŧẏ ẇħḗƞ ƈřḗȧŧīƞɠ ƈȯƞŧřȧƈŧş ·················〗"
     },
     "preview": {
-      "unknownService": "55555",
-      "cadenceOwnerLabel": "55555",
-      "billingTimingLabel": "55555",
-      "serviceLabel": "55555",
-      "invoiceWindowLabel": "55555"
+      "unknownService": "〖Ŭƞķƞȯẇƞ Şḗřṽīƈḗ ······〗",
+      "cadenceOwnerLabel": "〖Ƈȧḓḗƞƈḗ Ȯẇƞḗř: ······〗",
+      "billingTimingLabel": "〖Ɓīŀŀīƞɠ Ŧīḿīƞɠ: ······〗",
+      "serviceLabel": "〖Şḗřṽīƈḗ: ····〗",
+      "invoiceWindowLabel": "〖Īƞṽȯīƈḗ ẇīƞḓȯẇ: ······〗"
     },
     "actions": {
-      "addService": "55555"
+      "addService": "〖Ȧḓḓ Şḗřṽīƈḗ ·····〗"
     }
   },
   "templateProducts": {
-    "heading": "55555",
-    "description": "55555",
+    "heading": "〖Ƥřȯḓŭƈŧş ····〗",
+    "description": "〖Ȧŧŧȧƈħ ƥřȯḓŭƈŧş ŧȯ ŧħḗ ŧḗḿƥŀȧŧḗ. Ẇħḗƞ ȧ ƈȯƞŧřȧƈŧ īş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ŧḗḿƥŀȧŧḗ, ƥřȯḓŭƈŧş ẇīŀŀ ƀḗ ƀīŀŀḗḓ ḗȧƈħ ƈẏƈŀḗ ŭşīƞɠ ŧħḗ ƥřȯḓŭƈŧ ƈȧŧȧŀȯɠ ƥřīƈḗ ƒȯř ŧħḗ ƈȯƞŧřȧƈŧ ƈŭřřḗƞƈẏ. ······································································〗",
     "fields": {
-      "products": "55555",
-      "productNumber": "55555 {{index}} 55555",
-      "quantityOptional": "55555"
+      "products": "〖Ƥřȯḓŭƈŧş ····〗",
+      "productNumber": "〖Ƥřȯḓŭƈŧ {{index}} ·······〗",
+      "quantityOptional": "〖Ɋŭȧƞŧīŧẏ (Ȯƥŧīȯƞȧŀ) ········〗"
     },
     "placeholders": {
-      "selectProduct": "55555"
+      "selectProduct": "〖Şḗŀḗƈŧ ȧ ƥřȯḓŭƈŧ ·······〗"
     },
     "help": {
-      "quantity": "55555"
+      "quantity": "〖Şŭɠɠḗşŧḗḓ ʠŭȧƞŧīŧẏ ẇħḗƞ ƈřḗȧŧīƞɠ ƈȯƞŧřȧƈŧş ·················〗"
     },
     "actions": {
-      "addProduct": "55555"
+      "addProduct": "〖Ȧḓḓ Ƥřȯḓŭƈŧ ·····〗"
     },
     "preview": {
-      "unknownProduct": "55555"
+      "unknownProduct": "〖Ŭƞķƞȯẇƞ Ƥřȯḓŭƈŧ ······〗"
     }
   },
   "templateHourly": {
-    "heading": "55555",
-    "description": "55555",
+    "heading": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş ······〗",
+    "description": "〖Şḗŀḗƈŧ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŧīḿḗ ŧřȧƈķḗḓ. Řȧŧḗş ẇīŀŀ ƀḗ ḓḗŧḗřḿīƞḗḓ ƀẏ ŧħḗ şḗřṽīƈḗ'ş ƥřīƈīƞɠ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ẇħḗƞ ŧħḗ ƈȯƞŧřȧƈŧ īş ƈřḗȧŧḗḓ. ································································〗",
     "info": {
-      "title": "55555",
-      "description": "55555"
+      "title": "〖Ẇħȧŧ ȧřḗ Ħȯŭřŀẏ Şḗřṽīƈḗş? ··········〗",
+      "description": "〖Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ŧīḿḗ ŧřȧƈķḗḓ. Ḗȧƈħ ŧīḿḗ ḗƞŧřẏ īş ḿŭŀŧīƥŀīḗḓ ƀẏ ŧħḗ şḗřṽīƈḗ'ş ħȯŭřŀẏ řȧŧḗ ŧȯ ƈȧŀƈŭŀȧŧḗ ŧħḗ īƞṽȯīƈḗ ȧḿȯŭƞŧ. ···························································〗"
     },
     "rounding": {
-      "heading": "55555",
-      "minimumBillableTime": "55555",
-      "minimumBillableTimeHelp": "55555",
-      "roundUpToNearest": "55555",
-      "roundUpToNearestHelp": "55555",
-      "defaultIntervalPlaceholder": "55555"
+      "heading": "〖Ŧīḿḗ Řȯŭƞḓīƞɠ Şḗŧŧīƞɠş ·········〗",
+      "minimumBillableTime": "〖Ḿīƞīḿŭḿ Ɓīŀŀȧƀŀḗ Ŧīḿḗ (ḿīƞŭŧḗş) ·············〗",
+      "minimumBillableTimeHelp": "〖Ḗẋȧḿƥŀḗ: 15 ḿīƞŭŧḗş. Ȧƞẏ ŧīḿḗ ḗƞŧřẏ ƀḗŀȯẇ ŧħīş ŧħřḗşħȯŀḓ īş řȯŭƞḓḗḓ ŭƥ. ·····························〗",
+      "roundUpToNearest": "〖Řȯŭƞḓ Ŭƥ Ŧȯ Ƞḗȧřḗşŧ (ḿīƞŭŧḗş) ············〗",
+      "roundUpToNearestHelp": "〖Ḗẋȧḿƥŀḗ: 15 ḿīƞŭŧḗş. Ŧīḿḗ ḗƞŧřīḗş ȧřḗ řȯŭƞḓḗḓ ŭƥ ŧȯ ŧħḗ ƞḗȧřḗşŧ īƞŧḗřṽȧŀ. ······························〗",
+      "defaultIntervalPlaceholder": "〖15 ·〗"
     },
     "fields": {
-      "services": "55555",
-      "serviceNumber": "55555 {{index}} 55555",
-      "setBucketOfHours": "55555"
+      "services": "〖Şḗřṽīƈḗş ····〗",
+      "serviceNumber": "〖Şḗřṽīƈḗ {{index}} ·······〗",
+      "setBucketOfHours": "〖Şḗŧ ƀŭƈķḗŧ ȯƒ ħȯŭřş ········〗"
     },
     "placeholders": {
-      "selectService": "55555"
+      "selectService": "〖Şḗŀḗƈŧ ȧ şḗřṽīƈḗ ·······〗"
     },
     "preview": {
-      "unknownService": "55555"
+      "unknownService": "〖Ŭƞķƞȯẇƞ Şḗřṽīƈḗ ······〗"
     },
     "actions": {
-      "addService": "55555"
+      "addService": "〖Ȧḓḓ Şḗřṽīƈḗ ·····〗"
     }
   },
   "templateUsage": {
-    "heading": "55555",
-    "description": "55555",
+    "heading": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş ········〗",
+    "description": "〖Şḗŀḗƈŧ şḗřṽīƈḗş ŧħȧŧ ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ŭşȧɠḗ ȯř ƈȯƞşŭḿƥŧīȯƞ. Řȧŧḗş ẇīŀŀ ƀḗ ḓḗŧḗřḿīƞḗḓ ƀẏ ŧħḗ şḗřṽīƈḗ'ş ƥřīƈīƞɠ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ẇħḗƞ ŧħḗ ƈȯƞŧřȧƈŧ īş ƈřḗȧŧḗḓ. ···································································〗",
     "info": {
-      "title": "55555",
-      "description": "55555"
+      "title": "〖Ẇħȧŧ ȧřḗ Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş? ············〗",
+      "description": "〖Ŧħḗşḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ƀȧşḗḓ ȯƞ ȧƈŧŭȧŀ ƈȯƞşŭḿƥŧīȯƞ ȯř ŭşȧɠḗ ḿḗŧřīƈş. Ḗȧƈħ ŭƞīŧ ƈȯƞşŭḿḗḓ īş ḿŭŀŧīƥŀīḗḓ ƀẏ ŧħḗ şḗřṽīƈḗ'ş ŭƞīŧ řȧŧḗ ŧȯ ƈȧŀƈŭŀȧŧḗ ŧħḗ īƞṽȯīƈḗ ȧḿȯŭƞŧ. ··································································〗"
     },
     "fields": {
-      "services": "55555",
-      "serviceNumber": "55555 {{index}} 55555",
-      "unitOfMeasureOptional": "55555",
-      "setBucketAllocation": "55555"
+      "services": "〖Şḗřṽīƈḗş ····〗",
+      "serviceNumber": "〖Şḗřṽīƈḗ {{index}} ·······〗",
+      "unitOfMeasureOptional": "〖Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ (Ȯƥŧīȯƞȧŀ) ···········〗",
+      "setBucketAllocation": "〖Şḗŧ ƀŭƈķḗŧ ȧŀŀȯƈȧŧīȯƞ ·········〗"
     },
     "placeholders": {
-      "selectService": "55555",
-      "unitOfMeasure": "55555"
+      "selectService": "〖Şḗŀḗƈŧ ȧ şḗřṽīƈḗ ·······〗",
+      "unitOfMeasure": "〖ḗ.ɠ., ƓƁ, ȦƤĪ ƈȧŀŀ, ŭşḗř ··········〗"
     },
     "help": {
-      "unitOfMeasure": "55555"
+      "unitOfMeasure": "〖Ȯṽḗřřīḓḗ ŧħḗ ḓḗƒȧŭŀŧ ŭƞīŧ ȯƒ ḿḗȧşŭřḗ ƒȯř ŧħīş şḗřṽīƈḗ. ······················〗"
     },
     "preview": {
-      "unknownService": "55555"
+      "unknownService": "〖Ŭƞķƞȯẇƞ Şḗřṽīƈḗ ······〗"
     },
     "actions": {
-      "addService": "55555"
+      "addService": "〖Ȧḓḓ Şḗřṽīƈḗ ·····〗"
     }
   },
   "templateReview": {
-    "heading": "55555",
-    "description": "55555",
+    "heading": "〖Řḗṽīḗẇ Ŧḗḿƥŀȧŧḗ ······〗",
+    "description": "〖Ƈȯƞƒīřḿ ŧħḗ ŧḗḿƥŀȧŧḗ ƈȯƞŧḗƞŧş. Řȧŧḗş ȧřḗ ḓḗŧḗřḿīƞḗḓ ƀẏ ḗȧƈħ şḗřṽīƈḗ'ş ƥřīƈīƞɠ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ẇħḗƞ ȧ ƈȯƞŧřȧƈŧ īş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ŧḗḿƥŀȧŧḗ. ····························································〗",
     "sections": {
-      "basics": "55555",
-      "fixedFeeServices": "55555",
-      "products": "55555",
-      "hourlyServices": "55555",
-      "usageBasedServices": "55555"
+      "basics": "〖Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş ······〗",
+      "fixedFeeServices": "〖Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş ········〗",
+      "products": "〖Ƥřȯḓŭƈŧş ····〗",
+      "hourlyServices": "〖Ħȯŭřŀẏ Şḗřṽīƈḗş ······〗",
+      "usageBasedServices": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş ········〗"
     },
     "fields": {
-      "templateName": "55555",
-      "billingFrequency": "55555",
-      "internalNotes": "55555"
+      "templateName": "〖Ŧḗḿƥŀȧŧḗ Ƞȧḿḗ ······〗",
+      "billingFrequency": "〖Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ ·······〗",
+      "internalNotes": "〖Īƞŧḗřƞȧŀ Ƞȯŧḗş ······〗"
     },
     "fallback": {
-      "none": "55555",
-      "noNotes": "55555",
-      "unnamedService": "55555",
-      "unnamedProduct": "55555"
+      "none": "〖— ·〗",
+      "noNotes": "〖Ƞȯ ƞȯŧḗş ȧḓḓḗḓ. ······〗",
+      "unnamedService": "〖Ŭƞƞȧḿḗḓ Şḗřṽīƈḗ ······〗",
+      "unnamedProduct": "〖Ŭƞƞȧḿḗḓ Ƥřȯḓŭƈŧ ······〗"
     },
     "empty": {
-      "fixed": "55555",
-      "products": "55555",
-      "hourly": "55555",
-      "usage": "55555"
+      "fixed": "〖Ƞȯ ƒīẋḗḓ ƒḗḗ şḗřṽīƈḗş şḗŀḗƈŧḗḓ. ·············〗",
+      "products": "〖Ƞȯ ƥřȯḓŭƈŧş şḗŀḗƈŧḗḓ. ·········〗",
+      "hourly": "〖Ƞȯ ħȯŭřŀẏ şḗřṽīƈḗş şḗŀḗƈŧḗḓ. ············〗",
+      "usage": "〖Ƞȯ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗş şḗŀḗƈŧḗḓ. ··············〗"
     },
     "common": {
-      "quantity": "55555",
-      "bucket": "55555",
-      "enabled": "55555",
-      "disabled": "55555"
+      "quantity": "〖Ɋŭȧƞŧīŧẏ: ····〗",
+      "bucket": "〖Ɓŭƈķḗŧ: ···〗",
+      "enabled": "〖Ḗƞȧƀŀḗḓ ···〗",
+      "disabled": "〖Ḓīşȧƀŀḗḓ ····〗"
     },
     "fixed": {
-      "cadenceOwnerLabel": "55555",
+      "cadenceOwnerLabel": "〖Ƈȧḓḗƞƈḗ ȯẇƞḗř: ······〗",
       "cadenceOwner": {
-        "contract": "55555",
-        "client": "55555"
+        "contract": "〖Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ········〗",
+        "client": "〖Ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ··········〗"
       },
-      "billingTimingLabel": "55555",
+      "billingTimingLabel": "〖Ɓīŀŀīƞɠ ŧīḿīƞɠ: ······〗",
       "billingTiming": {
-        "advance": "55555",
-        "arrears": "55555"
+        "advance": "〖Ȧḓṽȧƞƈḗ ···〗",
+        "arrears": "〖Ȧřřḗȧřş ···〗"
       },
-      "partialPeriodLabel": "55555",
-      "serviceLabel": "55555",
-      "invoiceWindowLabel": "55555"
+      "partialPeriodLabel": "〖Ƥȧřŧīȧŀ-ƥḗřīȯḓ ȧḓĵŭşŧḿḗƞŧ: ···········〗",
+      "serviceLabel": "〖Şḗřṽīƈḗ: ····〗",
+      "invoiceWindowLabel": "〖Īƞṽȯīƈḗ ẇīƞḓȯẇ: ······〗"
     },
     "hourly": {
-      "minimumBillableTimeLabel": "55555",
-      "roundUpLabel": "55555",
-      "minutes": "55555 {{count}} 55555"
+      "minimumBillableTimeLabel": "〖Ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ŧīḿḗ: ·········〗",
+      "roundUpLabel": "〖Řȯŭƞḓ ŭƥ: ····〗",
+      "minutes": "〖{{count}} ḿīƞŭŧḗş ·······〗"
     },
     "usage": {
-      "unitLabel": "55555"
+      "unitLabel": "〖Ŭƞīŧ: ··〗"
     },
     "bucket": {
-      "hoursIncluded": "55555 {{value}} 55555",
-      "unitsIncluded": "55555 {{value}} 55555 {{unit}} 55555",
-      "unitsFallback": "55555",
-      "overage": "55555 {{amount}} 55555 {{unit}} 55555",
-      "hourSingular": "55555",
-      "unitSingular": "55555",
-      "rolloverEnabled": "55555",
-      "period": "55555 {{period}} 55555"
+      "hoursIncluded": "〖{{value}} ħȯŭřş īƞƈŀŭḓḗḓ ··········〗",
+      "unitsIncluded": "〖{{value}} {{unit}} īƞƈŀŭḓḗḓ ···········〗",
+      "unitsFallback": "〖ŭƞīŧş ··〗",
+      "overage": "〖Ȯṽḗřȧɠḗ ${{amount}}/{{unit}} ············〗",
+      "hourSingular": "〖ħȯŭř ··〗",
+      "unitSingular": "〖ŭƞīŧ ··〗",
+      "rolloverEnabled": "〖Řȯŀŀȯṽḗř ḗƞȧƀŀḗḓ ·······〗",
+      "period": "〖Ƥḗřīȯḓ: {{period}} ········〗"
     }
   },
   "templatePreview": {
     "serviceType": {
-      "fixedFee": "55555",
-      "products": "55555",
-      "hourly": "55555",
-      "usageBased": "55555"
+      "fixedFee": "〖Ƒīẋḗḓ Ƒḗḗ ····〗",
+      "products": "〖Ƥřȯḓŭƈŧş ····〗",
+      "hourly": "〖Ħȯŭřŀẏ ···〗",
+      "usageBased": "〖Ŭşȧɠḗ-Ɓȧşḗḓ ·····〗"
     },
-    "selectedHeading": "55555 {{type}} 55555 {{count}} 55555",
+    "selectedHeading": "〖Şḗŀḗƈŧḗḓ {{type}} Şḗřṽīƈḗş ({{count}}) ················〗",
     "labels": {
-      "qty": "55555"
+      "qty": "〖Ɋŧẏ: ··〗"
     },
     "removeDialog": {
-      "title": "55555",
-      "message": "55555 {{serviceName}} 55555 {{presetName}} 55555",
-      "confirm": "55555",
-      "cancel": "55555"
+      "title": "〖Řḗḿȯṽḗ Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƥřḗşḗŧ ···········〗",
+      "message": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ řḗḿȯṽḗ \"{{serviceName}}\" ƒřȯḿ \"{{presetName}}\"? Ŧħīş ẇīŀŀ řḗḿȯṽḗ ȧŀŀ ȯŧħḗř şḗřṽīƈḗş ȧşşȯƈīȧŧḗḓ ẇīŧħ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ ƥřḗşḗŧ ȧş ẇḗŀŀ. ································································〗",
+      "confirm": "〖Řḗḿȯṽḗ Ȧŀŀ ····〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗"
     }
   },
   "recurringPreview": {
-    "rangeSeparator": "55555 {{start}} 55555 {{end}} 55555",
+    "rangeSeparator": "〖{{start}} ŧȯ {{end}} ········〗",
     "cadenceOwner": {
       "contract": {
-        "label": "55555",
-        "summary": "55555"
+        "label": "〖Ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ········〗",
+        "summary": "〖Şḗřṽīƈḗ ƥḗřīȯḓş ȧƞḓ īƞṽȯīƈḗ ẇīƞḓȯẇş ƒȯŀŀȯẇ ŧħḗ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ḓȧŧḗş. ······························〗"
       },
       "client": {
-        "label": "55555",
-        "summary": "55555"
+        "label": "〖Ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ··········〗",
+        "summary": "〖Şḗřṽīƈḗ ƥḗřīȯḓş ȧƞḓ īƞṽȯīƈḗ ẇīƞḓȯẇş şŧȧẏ ȧŀīɠƞḗḓ ŧȯ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ ƈȧŀḗƞḓȧř. ································〗"
       }
     },
     "billingTiming": {
       "advance": {
-        "label": "55555",
-        "summary": "55555"
+        "label": "〖Ȧḓṽȧƞƈḗ ···〗",
+        "summary": "〖Īƞṽȯīƈḗş ƥȯşŧ ȧŧ ŧħḗ ȯƥḗƞīƞɠ ȯƒ ŧħḗ ḓŭḗ şḗřṽīƈḗ ƥḗřīȯḓ. ······················〗"
       },
       "arrears": {
-        "label": "55555",
-        "summary": "55555"
+        "label": "〖Ȧřřḗȧřş ···〗",
+        "summary": "〖Īƞṽȯīƈḗş ƥȯşŧ ȧƒŧḗř ŧħḗ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş. ······················〗"
       }
     },
     "firstInvoice": {
       "contract": {
-        "advance": "55555",
-        "arrears": "55555"
+        "advance": "〖Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ẇīƞḓȯẇ ŧħȧŧ ȯƥḗƞş ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ. ········································〗",
+        "arrears": "〖Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƞḗẋŧ ƈȯƞŧřȧƈŧ ȧƞƞīṽḗřşȧřẏ ẇīƞḓȯẇ ȧƒŧḗř ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş. ···········································〗"
       },
       "client": {
-        "advance": "55555",
-        "arrears": "55555"
+        "advance": "〖Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƒīřşŧ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ẇīƞḓȯẇ ƈȯṽḗřīƞɠ ŧħḗ şḗřṽīƈḗ ƥḗřīȯḓ. ·····································〗",
+        "arrears": "〖Ƒīřşŧ īƞṽȯīƈḗ: ƀīŀŀ ȯƞ ŧħḗ ƞḗẋŧ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ẇīƞḓȯẇ ȧƒŧḗř ŧħḗ ƒīřşŧ ƈȯṽḗřḗḓ şḗřṽīƈḗ ƥḗřīȯḓ ƈŀȯşḗş. ············································〗"
       }
     },
     "partialPeriod": {
-      "prorated": "55555",
-      "full": "55555"
+      "prorated": "〖Ƥȧřŧīȧŀ ƥḗřīȯḓş ȧḓĵŭşŧ ŧħḗ řḗƈŭřřīƞɠ ƒḗḗ ŧȯ ŧħḗ ƈȯṽḗřḗḓ ƥȯřŧīȯƞ ȯƒ ŧħḗ şḗřṽīƈḗ ƥḗřīȯḓ. ···································〗",
+      "full": "〖Ƥȧřŧīȧŀ ƥḗřīȯḓş ķḗḗƥ ŧħḗ ƒŭŀŀ řḗƈŭřřīƞɠ ƒḗḗ ḗṽḗƞ ẇħḗƞ ƈȯƞŧřȧƈŧ ḓȧŧḗş ŀȧƞḓ īƞşīḓḗ ȧ şḗřṽīƈḗ ƥḗřīȯḓ. ········································〗"
     },
     "materializedPeriods": {
-      "heading": "55555",
+      "heading": "〖Īŀŀŭşŧřȧŧīṽḗ ƒŭŧŭřḗ ḿȧŧḗřīȧŀīẑḗḓ ƥḗřīȯḓş ················〗",
       "summary": {
-        "contract": "55555",
-        "client": "55555"
+        "contract": "〖Īƒ ẏȯŭ şȧṽḗ ŧħīş řḗƈŭřřīƞɠ ŀīƞḗ, ƒŭŧŭřḗ ƥḗřīȯḓş ẇȯŭŀḓ ḿȧŧḗřīȧŀīẑḗ ȯƞ ȧƞ ȧƞƞīṽḗřşȧřẏ-şŧẏŀḗ ƥřḗṽīḗẇ ȧƞƈħȯřḗḓ ŧȯ ŧħḗ 8ŧħ ƀḗƒȯřḗ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ. ··························································〗",
+        "client": "〖Īƒ ẏȯŭ şȧṽḗ ŧħīş řḗƈŭřřīƞɠ ŀīƞḗ, ƒŭŧŭřḗ ƥḗřīȯḓş ẇȯŭŀḓ ḿȧŧḗřīȧŀīẑḗ ȯƞ ŧħḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ƥřḗṽīḗẇ ƀḗƒȯřḗ īƞṽȯīƈḗ ɠḗƞḗřȧŧīȯƞ. ·····················································〗"
       }
     }
   },
   "contractSimulator": {
     "assumptions": {
-      "empty": "55555",
-      "hoursUnit": "55555",
-      "inputLabel": "55555 {{unit}} 55555 {{service}} 55555",
-      "loadReplay": "55555",
-      "periodLabel": "55555 {{number}} 55555",
-      "replayEnd": "55555",
-      "replayStart": "55555",
-      "replayTitle": "55555",
-      "rowLabel": "55555 {{service}} 55555 {{unit}} 55555",
-      "subtitle": "55555",
-      "title": "55555",
-      "useRecent": "55555",
-      "varyByPeriod": "55555",
-      "arrearsHint": "55555",
-      "advanceHint": "55555",
-      "invoicePeriodLabel": "55555 {{period}} 55555",
-      "overrideInputLabel": "55555 {{period}} 55555 {{unit}} 55555 {{service}} 55555",
-      "zeroActivity": "55555",
-      "averageLoaded": "55555 {{window}} 55555 {{count}} 55555",
-      "replayLoaded": "55555 {{window}} 55555 {{count}} 55555 {{changed}} 55555",
-      "replayRangeLoaded": "55555 {{count}} 55555 {{window}} 55555",
-      "prefillNextStep": "55555",
-      "prefillUnchanged": "55555 {{window}} 55555",
-      "loadingHistory": "55555",
-      "prefillChange": "55555 {{before}} 55555 {{after}} 55555 {{unit}} 55555",
-      "prefillOverrides": "55555 {{count}} 55555"
+      "empty": "〖Ƒīẋḗḓ-ȯƞŀẏ şƈḗƞȧřīȯ — ƞȯŧħīƞɠ ŧȯ ȧşşŭḿḗ. ················〗",
+      "hoursUnit": "〖ħřş ··〗",
+      "inputLabel": "〖Ȧşşŭḿḗḓ {{unit}} ƥḗř şḗřṽīƈḗ ƥḗřīȯḓ — {{service}} ····················〗",
+      "loadReplay": "〖Ŀȯȧḓ ȧƈŧīṽīŧẏ ȧƞḓ īƞṽȯīƈḗş ···········〗",
+      "periodLabel": "〖Ƥ{{number}} ·····〗",
+      "replayEnd": "〖Ŧħřȯŭɠħ ···〗",
+      "replayStart": "〖Ƒřȯḿ ··〗",
+      "replayTitle": "〖Ƈȯḿƥȧřḗ ẇīŧħ ƥȧşŧ īƞṽȯīƈḗş ···········〗",
+      "rowLabel": "〖{{service}} — ȧşşŭḿḗḓ {{unit}} ƥḗř şḗřṽīƈḗ ƥḗřīȯḓ ····················〗",
+      "subtitle": "〖Ḗƞŧḗř ḗẋƥḗƈŧḗḓ ẇȯřķ ȯř ŭşȧɠḗ ƀẏ şḗřṽīƈḗ ƥḗřīȯḓ. Ƒȯř ȧřřḗȧřş, ḗȧƈħ īƞṽȯīƈḗ ŭşḗş ŧħḗ ƥřḗṽīȯŭş şḗřṽīƈḗ ƥḗřīȯḓ. ···········································〗",
+      "title": "〖Ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ ·······〗",
+      "useRecent": "〖Ŭşḗ ȧṽḗřȧɠḗ ƒřȯḿ ŀȧşŧ 3 ƀīŀŀīƞɠ ƥḗřīȯḓş ················〗",
+      "varyByPeriod": "〖Şḗŧ ȧƈŧīṽīŧẏ ƒȯř ḗȧƈħ īƞṽȯīƈḗ ············〗",
+      "arrearsHint": "〖Ḗȧƈħ īƞṽȯīƈḗ ƀīŀŀş ŧħḗ ƥřḗṽīȯŭş şḗřṽīƈḗ ƥḗřīȯḓ. ···················〗",
+      "advanceHint": "〖Ḗȧƈħ īƞṽȯīƈḗ ƀīŀŀş īŧş ƈŭřřḗƞŧ şḗřṽīƈḗ ƥḗřīȯḓ. ···················〗",
+      "invoicePeriodLabel": "〖{{period}} īƞṽȯīƈḗ ········〗",
+      "overrideInputLabel": "〖{{period}} īƞṽȯīƈḗ — {{unit}} ƒřȯḿ īŧş şḗřṽīƈḗ ƥḗřīȯḓ — {{service}} ···························〗",
+      "zeroActivity": "〖Ŧħīş şḗřṽīƈḗ ƈȯƞŧřīƀŭŧḗş ƞȯŧħīƞɠ ŭƞŧīŀ ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ īş ɠřḗȧŧḗř ŧħȧƞ ẑḗřȯ. ·······························〗",
+      "averageLoaded": "〖Ȧƈŧīṽīŧẏ ȧṽḗřȧɠḗ ŀȯȧḓḗḓ ƒřȯḿ {{window}}. {{count}} ȧşşŭḿḗḓ ṽȧŀŭḗş ƈħȧƞɠḗḓ. ······························〗",
+      "replayLoaded": "〖Ħīşŧȯřīƈȧŀ ȧƈŧīṽīŧẏ ŀȯȧḓḗḓ ƒřȯḿ {{window}} ẇīŧħ {{count}} īşşŭḗḓ īƞṽȯīƈḗş. {{changed}} ȧşşŭḿḗḓ ṽȧŀŭḗş ƈħȧƞɠḗḓ. ············································〗",
+      "replayRangeLoaded": "〖Ħīşŧȯřīƈȧŀ ȧƈŧīṽīŧẏ ȧƞḓ {{count}} īşşŭḗḓ īƞṽȯīƈḗş ŀȯȧḓḗḓ ƒřȯḿ {{window}}. Ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ īş ŭƞƈħȧƞɠḗḓ. ··········································〗",
+      "prefillNextStep": "〖Ŭƥḓȧŧḗḓ ṽȧŀŭḗş ȧřḗ ħīɠħŀīɠħŧḗḓ. Ŭƥḓȧŧḗ ŧħḗ şīḿŭŀȧŧīȯƞ ŧȯ řḗƈȧŀƈŭŀȧŧḗ īƞṽȯīƈḗş. ································〗",
+      "prefillUnchanged": "〖Ŀȯȧḓḗḓ ṽȧŀŭḗş ƒřȯḿ {{window}} ḿȧŧƈħ ŧħḗ ƈŭřřḗƞŧ ȧşşŭḿḗḓ ȧƈŧīṽīŧẏ. ··························〗",
+      "loadingHistory": "〖Ŀȯȧḓīƞɠ ħīşŧȯřīƈȧŀ ȧƈŧīṽīŧẏ… ············〗",
+      "prefillChange": "〖Ŀȯȧḓḗḓ ṽȧŀŭḗ: {{before}} → {{after}} {{unit}} ƥḗř şḗřṽīƈḗ ƥḗřīȯḓ ··························〗",
+      "prefillOverrides": "〖{{count}} ƥḗřīȯḓ ṽȧŀŭḗş ŀȯȧḓḗḓ ············〗"
     },
     "compare": {
-      "added": "55555",
-      "changed": "55555",
-      "horizonImpact": "55555 {{count}} 55555",
-      "horizonImpactHint": "55555",
-      "noChange": "55555",
-      "removed": "55555"
+      "added": "〖Ȧḓḓḗḓ ··〗",
+      "changed": "〖Ƈħȧƞɠḗḓ ···〗",
+      "horizonImpact": "〖Ŧȯŧȧŀ ƈħȧƞɠḗ ȯṽḗř {{count}} ƀīŀŀīƞɠ ƥḗřīȯḓş ··················〗",
+      "horizonImpactHint": "〖Ƈȯḿƥȧřḗḓ ẇīŧħ ŧħḗ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ ··············〗",
+      "noChange": "〖Ƞȯ şīḿŭŀȧŧḗḓ ƈħȧƞɠḗ ········〗",
+      "removed": "〖Řḗḿȯṽḗḓ ƒřȯḿ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ ············〗"
     },
     "emptyScenario": {
-      "description": "55555",
-      "title": "55555"
+      "description": "〖Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗş. Ȧḓḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ƒīřşŧ, ŧħḗƞ ƈȯḿḗ ƀȧƈķ ŧȯ şīḿŭŀȧŧḗ. ····································〗",
+      "title": "〖Ƞȯŧħīƞɠ ŧȯ şīḿŭŀȧŧḗ ẏḗŧ ··········〗"
     },
     "diagnostics": {
-      "title": "55555"
+      "title": "〖Şīḿŭŀȧŧīȯƞ ƞȯŧḗş ·······〗"
     },
     "explanation": {
-      "amount": "55555",
-      "close": "55555",
-      "inputs": "55555",
-      "noBreakdown": "55555",
-      "steps": "55555",
-      "title": "55555"
+      "amount": "〖Ȧḿȯŭƞŧ ···〗",
+      "close": "〖Ƈŀȯşḗ ··〗",
+      "inputs": "〖Īƞƥŭŧş ···〗",
+      "noBreakdown": "〖Ƞȯ ƀřḗȧķḓȯẇƞ ȧṽȧīŀȧƀŀḗ ·········〗",
+      "steps": "〖Ȧřīŧħḿḗŧīƈ ····〗",
+      "title": "〖Ƈħȧřɠḗ ƀřḗȧķḓȯẇƞ ·······〗"
     },
-    "featureName": "55555",
+    "featureName": "〖Ƈȯƞŧřȧƈŧ Şīḿŭŀȧŧȯř ········〗",
     "invoiceDetail": {
       "columns": {
-        "amount": "55555",
-        "line": "55555",
-        "qty": "55555",
-        "rate": "55555"
+        "amount": "〖Ȧḿȯŭƞŧ ···〗",
+        "line": "〖Ŀīƞḗ ··〗",
+        "qty": "〖Ɋŭȧƞŧīŧẏ ····〗",
+        "rate": "〖Řȧŧḗ ··〗"
       },
-      "draftNote": "55555",
-      "billedInAdvance": "55555",
-      "billedInArrears": "55555",
-      "explainHint": "55555",
-      "renderedPreview": "55555",
-      "invoicePeriod": "55555 {{start}} 55555 {{end}} 55555",
-      "servicePeriod": "55555 {{start}} 55555 {{end}} 55555",
-      "subtotal": "55555",
-      "tax": "55555",
-      "title": "55555 {{period}} 55555",
-      "total": "55555"
+      "draftNote": "〖ḓřȧƒŧ, ƞȯŧ īşşŭḗḓ ·······〗",
+      "billedInAdvance": "〖Ɓīŀŀḗḓ īƞ ȧḓṽȧƞƈḗ ·······〗",
+      "billedInArrears": "〖Ɓīŀŀḗḓ īƞ ȧřřḗȧřş ·······〗",
+      "explainHint": "〖Şħȯẇ ħȯẇ ŧħīş ȧḿȯŭƞŧ ẇȧş ƈȯḿƥŭŧḗḓ ··············〗",
+      "renderedPreview": "〖Ƥřḗṽīḗẇ īƞṽȯīƈḗ ŀȧẏȯŭŧ ·········〗",
+      "invoicePeriod": "〖Īƞṽȯīƈḗ ƥḗřīȯḓ: {{start}} – {{end}} ··············〗",
+      "servicePeriod": "〖Şḗřṽīƈḗ ƥḗřīȯḓ: {{start}} – {{end}} ··············〗",
+      "subtotal": "〖Şŭƀŧȯŧȧŀ ····〗",
+      "tax": "〖Ŧȧẋ ··〗",
+      "title": "〖{{period}} şīḿŭŀȧŧḗḓ īƞṽȯīƈḗ ············〗",
+      "total": "〖Ŧȯŧȧŀ ··〗"
     },
-    "loadFailed": "55555",
-    "loadingSnapshot": "55555",
-    "preparingDraft": "55555",
+    "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧħḗ ƈȯƞŧřȧƈŧ şƈḗƞȧřīȯ. ···············〗",
+    "loadingSnapshot": "〖Ŀȯȧḓīƞɠ şƈḗƞȧřīȯ… ·······〗",
+    "preparingDraft": "〖Ƥřḗƥȧřīƞɠ şīḿŭŀȧŧīȯƞ… ·········〗",
     "markers": {
-      "bucketOverage": "55555",
-      "cadenceCoincidence": "55555",
-      "contractEnd": "55555",
-      "oneTime": "55555",
-      "prorated": "55555"
+      "bucketOverage": "〖Ɓŭƈķḗŧ ȯṽḗřȧɠḗ ······〗",
+      "cadenceCoincidence": "〖Ƈȧḓḗƞƈḗ ȯṽḗřŀȧƥ ······〗",
+      "contractEnd": "〖Ƈȯƞŧřȧƈŧ ḗƞḓş ······〗",
+      "oneTime": "〖Ȯƞḗ-ŧīḿḗ ····〗",
+      "prorated": "〖Ƥřȯřȧŧḗḓ ····〗"
     },
     "replay": {
-      "actualInvoice": "55555 {{number}} 55555",
-      "issued": "55555",
-      "previewIssued": "55555",
-      "projected": "55555",
-      "simulatedDelta": "55555"
+      "actualInvoice": "〖Īşşŭḗḓ īƞṽȯīƈḗ {{number}} ··········〗",
+      "issued": "〖īşşŭḗḓ ···〗",
+      "previewIssued": "〖Ƥřḗṽīḗẇ īşşŭḗḓ īƞṽȯīƈḗ ·········〗",
+      "projected": "〖şīḿŭŀȧŧḗḓ ····〗",
+      "simulatedDelta": "〖şīḿŭŀȧŧḗḓ ḓīƒƒḗřḗƞƈḗ ········〗"
     },
     "runBar": {
-      "compareToggle": "55555",
-      "horizonOption": "55555 {{count}} 55555",
-      "lastRun": "55555 {{count}} 55555",
-      "neverRun": "55555",
-      "simulate": "55555",
-      "simulating": "55555",
-      "stale": "55555",
-      "staleBanner": "55555",
-      "updateSimulation": "55555"
+      "compareToggle": "〖Şħȯẇ ƈħȧƞɠḗş ƒřȯḿ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ ··············〗",
+      "horizonOption": "〖{{count}} ƈŀīḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓş ·············〗",
+      "lastRun": "〖Şīḿŭŀȧŧīȯƞ ƈŭřřḗƞŧ · {{count}} ƈŀīḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓş ······················〗",
+      "neverRun": "〖Ƞȯŧ şīḿŭŀȧŧḗḓ ẏḗŧ ·······〗",
+      "simulate": "〖Şīḿŭŀȧŧḗ ····〗",
+      "simulating": "〖Şīḿŭŀȧŧīƞɠ… ·····〗",
+      "stale": "〖Ƈħȧƞɠḗş ƞȯŧ şīḿŭŀȧŧḗḓ ·········〗",
+      "staleBanner": "〖Ŧħḗşḗ ȧḿȯŭƞŧş ȧřḗ ƒřȯḿ ŧħḗ ƥřḗṽīȯŭş şīḿŭŀȧŧīȯƞ. Ŭƥḓȧŧḗ ŧħḗ şīḿŭŀȧŧīȯƞ ŧȯ īƞƈŀŭḓḗ ẏȯŭř ŀȧŧḗşŧ ƈħȧƞɠḗş. ·········································〗",
+      "updateSimulation": "〖Ŭƥḓȧŧḗ şīḿŭŀȧŧīȯƞ ·······〗"
     },
     "scenario": {
-      "addAdjustment": "55555",
-      "advancedChanges": "55555",
-      "advancedSummary": "55555 {{schedules}} 55555 {{discounts}} 55555 {{adjustments}} 55555",
-      "addBucket": "55555",
-      "addCatalogService": "55555",
-      "addCatalogServiceOption": "55555",
-      "addDiscount": "55555",
-      "addIncludedHours": "55555",
-      "addIncludedUnits": "55555",
-      "addLine": "55555",
-      "addSchedule": "55555",
-      "addTier": "55555",
-      "adjustments": "55555",
-      "allocationRate": "55555",
-      "catalogRate": "55555",
-      "allLines": "55555",
-      "bucketIncluded": "55555 {{hours}} 55555",
+      "addAdjustment": "〖+ ȧḓḓ ȧḓĵŭşŧḿḗƞŧ ·······〗",
+      "advancedChanges": "〖Ȧḓṽȧƞƈḗḓ ƈȯƞŧřȧƈŧ ƈħȧƞɠḗş ··········〗",
+      "advancedSummary": "〖{{schedules}} şƈħḗḓŭŀḗş · {{discounts}} ḓīşƈȯŭƞŧş · {{adjustments}} ȧḓĵŭşŧḿḗƞŧş ································〗",
+      "addBucket": "〖Ȧḓḓ īƞƈŀŭḓḗḓ ħȯŭřş ········〗",
+      "addCatalogService": "〖Ȧḓḓ ƈȧŧȧŀȯɠ şḗřṽīƈḗ ········〗",
+      "addCatalogServiceOption": "〖+ Ȧḓḓ ƈȧŧȧŀȯɠ şḗřṽīƈḗ… ·········〗",
+      "addDiscount": "〖+ ȧḓḓ ḓīşƈȯŭƞŧ ······〗",
+      "addIncludedHours": "〖Ȧḓḓ īƞƈŀŭḓḗḓ ħȯŭřş ········〗",
+      "addIncludedUnits": "〖Ȧḓḓ īƞƈŀŭḓḗḓ ŭƞīŧş ········〗",
+      "addLine": "〖Ȧḓḓ ŀīƞḗ ····〗",
+      "addSchedule": "〖+ ȧḓḓ şƈħḗḓŭŀḗ ······〗",
+      "addTier": "〖+ ȧḓḓ ŧīḗř ····〗",
+      "adjustments": "〖Ȧḓĵŭşŧḿḗƞŧş ·····〗",
+      "allocationRate": "〖Ȧŀŀȯƈȧŧīȯƞ řȧŧḗ ······〗",
+      "catalogRate": "〖Ƈȧŧȧŀȯɠ řȧŧḗ ·····〗",
+      "allLines": "〖ȧŀŀ ŀīƞḗş ····〗",
+      "bucketIncluded": "〖Īƞƈŀŭḓḗş {{hours}} ħřş; řȧŧḗ ȧƀȯṽḗ īş ŧħḗ ȯṽḗřȧɠḗ řȧŧḗ ······················〗",
       "cadence": {
-        "client": "55555",
-        "contract": "55555"
+        "client": "〖Ŭşḗ ƈŀīḗƞŧ ƀīŀŀīƞɠ şƈħḗḓŭŀḗ ···········〗",
+        "contract": "〖Ŭşḗ ƈȯƞŧřȧƈŧ ŀīƞḗ şƈħḗḓŭŀḗ ···········〗"
       },
-      "defaultRate": "55555",
+      "defaultRate": "〖ḓḗƒȧŭŀŧ ···〗",
       "discountTypes": {
-        "fixed": "55555",
-        "percentage": "55555"
+        "fixed": "〖ƒīẋḗḓ ··〗",
+        "percentage": "〖ƥḗřƈḗƞŧ ···〗"
       },
-      "discounts": "55555",
+      "discounts": "〖Ḓīşƈȯŭƞŧş ····〗",
       "fields": {
-        "adjustmentAmount": "55555",
-        "adjustmentDescription": "55555",
-        "adjustmentPeriod": "55555",
-        "billingFrequency": "55555",
-        "billingTiming": "55555",
-        "bucketQuantity": "55555",
-        "cadenceOwner": "55555",
-        "configurationType": "55555",
-        "discountLine": "55555",
-        "discountName": "55555",
-        "discountType": "55555",
-        "discountValue": "55555",
-        "lineName": "55555",
-        "lineType": "55555",
-        "minimumBillableMinutes": "55555",
-        "minimumUsage": "55555",
-        "includedHours": "55555",
-        "includedUnits": "55555",
-        "overtimeRate": "55555",
-        "overtimeThreshold": "55555",
-        "roundUpMinutes": "55555",
-        "scheduleEffectiveDate": "55555",
-        "scheduleEndDate": "55555",
-        "scheduleRate": "55555",
-        "serviceQuantity": "55555",
-        "tierMaximum": "55555",
-        "tierMinimum": "55555",
-        "tierRate": "55555",
-        "usageUnit": "55555"
+        "adjustmentAmount": "〖Ȧḓĵŭşŧḿḗƞŧ ȧḿȯŭƞŧ ḓȯŀŀȧřş ··········〗",
+        "adjustmentDescription": "〖Ȧḓĵŭşŧḿḗƞŧ ḓḗşƈřīƥŧīȯƞ ·········〗",
+        "adjustmentPeriod": "〖Ȧḓĵŭşŧḿḗƞŧ ƥḗřīȯḓ ·······〗",
+        "billingFrequency": "〖Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ ·······〗",
+        "billingTiming": "〖Ɓīŀŀīƞɠ ŧīḿīƞɠ ······〗",
+        "bucketQuantity": "〖Īƞƈŀŭḓḗḓ ƀŭƈķḗŧ ʠŭȧƞŧīŧẏ ··········〗",
+        "cadenceOwner": "〖Ɓīŀŀīƞɠ şƈħḗḓŭŀḗ ·······〗",
+        "configurationType": "〖Şḗřṽīƈḗ ƀīŀŀīƞɠ ḿḗŧħȯḓ ·········〗",
+        "discountLine": "〖Ḓīşƈȯŭƞŧ ŀīƞḗ ······〗",
+        "discountName": "〖Ḓīşƈȯŭƞŧ ƞȧḿḗ ······〗",
+        "discountType": "〖Ḓīşƈȯŭƞŧ ŧẏƥḗ ······〗",
+        "discountValue": "〖Ḓīşƈȯŭƞŧ ṽȧŀŭḗ ······〗",
+        "lineName": "〖Ƈȯƞŧřȧƈŧ ŀīƞḗ ƞȧḿḗ ········〗",
+        "lineType": "〖Ŀīƞḗ ŧẏƥḗ ····〗",
+        "minimumBillableMinutes": "〖Ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ḿīƞŭŧḗş ··········〗",
+        "minimumUsage": "〖Ḿīƞīḿŭḿ ŭşȧɠḗ ······〗",
+        "includedHours": "〖Īƞƈŀŭḓḗḓ ħȯŭřş ······〗",
+        "includedUnits": "〖Īƞƈŀŭḓḗḓ ŭƞīŧş ······〗",
+        "overtimeRate": "〖Ȯṽḗřŧīḿḗ řȧŧḗ ($/ħř) ········〗",
+        "overtimeThreshold": "〖Ȯṽḗřŧīḿḗ ŧħřḗşħȯŀḓ (ħȯŭřş) ···········〗",
+        "roundUpMinutes": "〖Řȯŭƞḓ ŭƥ ŧȯ ḿīƞŭŧḗş ········〗",
+        "scheduleEffectiveDate": "〖Şƈħḗḓŭŀḗ ḗƒƒḗƈŧīṽḗ ḓȧŧḗ ··········〗",
+        "scheduleEndDate": "〖Şƈħḗḓŭŀḗ ḗƞḓ ḓȧŧḗ ·······〗",
+        "scheduleRate": "〖Şƈħḗḓŭŀḗ řȧŧḗ ḓȯŀŀȧřş ·········〗",
+        "serviceQuantity": "〖Ŀīƈḗƞşḗ ȯř ƥřȯḓŭƈŧ ʠŭȧƞŧīŧẏ ···········〗",
+        "tierMaximum": "〖Ŧīḗř ḿȧẋīḿŭḿ ·····〗",
+        "tierMinimum": "〖Ŧīḗř ḿīƞīḿŭḿ ·····〗",
+        "tierRate": "〖Ŧīḗř řȧŧḗ ḓȯŀŀȧřş ·······〗",
+        "usageUnit": "〖Ŭşȧɠḗ ŭƞīŧ ····〗"
       },
       "frequencies": {
-        "annually": "55555",
-        "monthly": "55555",
-        "quarterly": "55555",
-        "semi-annually": "55555"
+        "annually": "〖Ȧƞƞŭȧŀŀẏ ····〗",
+        "monthly": "〖Ḿȯƞŧħŀẏ ···〗",
+        "quarterly": "〖Ɋŭȧřŧḗřŀẏ ····〗",
+        "semi-annually": "〖Şḗḿī-ȧƞƞŭȧŀŀẏ ······〗"
       },
-      "licenseSuffix": "55555",
-      "lineCount": "55555 {{count}} 55555",
-      "lineSummary": "55555 {{type}} 55555 {{frequency}} 55555 {{timing}} 55555 {{services}} 55555",
-      "oneService": "55555",
-      "serviceCount": "55555 {{count}} 55555",
-      "collapseDetailsFor": "55555 {{line}} 55555",
-      "editDetails": "55555",
-      "editDetailsFor": "55555 {{line}} 55555",
-      "modified": "55555",
-      "newAdjustmentName": "55555",
-      "newDiscountName": "55555",
-      "newLineName": "55555 {{number}} 55555",
-      "oneTime": "55555",
-      "overtime": "55555",
+      "licenseSuffix": "〖 · ŀīƈḗƞşḗ ····〗",
+      "lineCount": "〖{{count}} ŀīƞḗş ······〗",
+      "lineSummary": "〖{{type}} · {{frequency}} · {{timing}} · {{services}} ·····················〗",
+      "oneService": "〖1 şḗřṽīƈḗ ····〗",
+      "serviceCount": "〖{{count}} şḗřṽīƈḗş ········〗",
+      "collapseDetailsFor": "〖Ƈȯŀŀȧƥşḗ ḓḗŧȧīŀş ƒȯř {{line}} ············〗",
+      "editDetails": "〖Ḗḓīŧ řŭŀḗş ····〗",
+      "editDetailsFor": "〖Ḗḓīŧ ḓḗŧȧīŀş ƒȯř {{line}} ··········〗",
+      "modified": "〖Ḿȯḓīƒīḗḓ ····〗",
+      "newAdjustmentName": "〖Ȯƞḗ-ŧīḿḗ ȧḓĵŭşŧḿḗƞŧ ········〗",
+      "newDiscountName": "〖Şƈḗƞȧřīȯ ḓīşƈȯŭƞŧ ·······〗",
+      "newLineName": "〖Şƈḗƞȧřīȯ ŀīƞḗ {{number}} ··········〗",
+      "oneTime": "〖ȯƞḗ-ŧīḿḗ ····〗",
+      "overtime": "〖ȯṽḗřŧīḿḗ ····〗",
       "placeholders": {
-        "minimum": "55555",
-        "minimumMinutes": "55555",
-        "overtimeRate": "55555",
-        "roundMinutes": "55555",
-        "thresholdHours": "55555"
+        "minimum": "〖ḿīƞīḿŭḿ ···〗",
+        "minimumMinutes": "〖ḿīƞīḿŭḿ ḿīƞŭŧḗş ······〗",
+        "overtimeRate": "〖ȯṽḗřŧīḿḗ $/ħř ······〗",
+        "roundMinutes": "〖řȯŭƞḓ ḿīƞŭŧḗş ······〗",
+        "thresholdHours": "〖ŧħřḗşħȯŀḓ ħȯŭřş ······〗"
       },
-      "pricingSchedules": "55555",
-      "productUnitPrice": "55555",
-      "hourlyRate": "55555",
-      "usageRate": "55555",
-      "overageRate": "55555",
-      "serviceBaseRate": "55555",
-      "rateOverriddenByLine": "55555",
-      "fromServiceRates": "55555",
-      "proration": "55555",
-      "removeAdjustment": "55555",
-      "removeDiscount": "55555",
-      "removeLine": "55555",
-      "removeSchedule": "55555",
-      "removeTier": "55555",
-      "removeService": "55555",
-      "recurringLinePrice": "55555",
-      "resetAll": "55555",
-      "resetLine": "55555",
-      "rollover": "55555",
-      "tieredPricing": "55555",
+      "pricingSchedules": "〖Ƥřīƈīƞɠ şƈħḗḓŭŀḗş ·······〗",
+      "productUnitPrice": "〖Ŭƞīŧ ƥřīƈḗ ····〗",
+      "hourlyRate": "〖Ħȯŭřŀẏ řȧŧḗ ·····〗",
+      "usageRate": "〖Ŭşȧɠḗ řȧŧḗ ····〗",
+      "overageRate": "〖Ȯṽḗřȧɠḗ řȧŧḗ ·····〗",
+      "serviceBaseRate": "〖Şḗřṽīƈḗ ƀȧşḗ řȧŧḗ ·······〗",
+      "rateOverriddenByLine": "〖Řȧŧḗ řḗƥŀȧƈḗḓ ƀẏ řḗƈŭřřīƞɠ ŀīƞḗ ƥřīƈḗ ···············〗",
+      "fromServiceRates": "〖Ƒřȯḿ şḗřṽīƈḗ řȧŧḗş ········〗",
+      "proration": "〖ƥřȯřȧŧīȯƞ ····〗",
+      "removeAdjustment": "〖Řḗḿȯṽḗ ȧḓĵŭşŧḿḗƞŧ ·······〗",
+      "removeDiscount": "〖Řḗḿȯṽḗ ḓīşƈȯŭƞŧ ······〗",
+      "removeLine": "〖Řḗḿȯṽḗ ···〗",
+      "removeSchedule": "〖Řḗḿȯṽḗ ƥřīƈīƞɠ şƈħḗḓŭŀḗ ··········〗",
+      "removeTier": "〖Řḗḿȯṽḗ ŧīḗř ·····〗",
+      "removeService": "〖řḗḿȯṽḗ ···〗",
+      "recurringLinePrice": "〖Řḗƈŭřřīƞɠ ŀīƞḗ ƥřīƈḗ ········〗",
+      "resetAll": "〖Řḗşḗŧ ȧŀŀ ····〗",
+      "resetLine": "〖Řḗşḗŧ ··〗",
+      "rollover": "〖řȯŀŀȯṽḗř ····〗",
+      "tieredPricing": "〖ŧīḗřḗḓ ƥřīƈīƞɠ ······〗",
       "timing": {
-        "advance": "55555",
-        "arrears": "55555"
+        "advance": "〖Ɓīŀŀ īƞ ȧḓṽȧƞƈḗ ······〗",
+        "arrears": "〖Ɓīŀŀ īƞ ȧřřḗȧřş ······〗"
       },
       "types": {
-        "bucket": "55555",
-        "fixed": "55555",
-        "hourly": "55555",
-        "usage": "55555"
+        "bucket": "〖Ɓŭƈķḗŧ ȯṽḗřŀȧẏ ······〗",
+        "fixed": "〖Ƒīẋḗḓ ··〗",
+        "hourly": "〖Ħȯŭřŀẏ ···〗",
+        "usage": "〖Ŭşȧɠḗ ··〗"
       },
-      "title": "55555",
+      "title": "〖Ƈȯƞŧřȧƈŧ ƈħȧƞɠḗş ·······〗",
       "columns": {
-        "name": "55555",
-        "type": "55555",
-        "value": "55555",
-        "appliesTo": "55555",
-        "description": "55555",
-        "amount": "55555",
-        "billingPeriod": "55555",
-        "timing": "55555"
+        "name": "〖Ƞȧḿḗ ··〗",
+        "type": "〖Ŧẏƥḗ ··〗",
+        "value": "〖Ṽȧŀŭḗ ··〗",
+        "appliesTo": "〖Ȧƥƥŀīḗş ŧȯ ····〗",
+        "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+        "amount": "〖Ȧḿȯŭƞŧ ($) ····〗",
+        "billingPeriod": "〖Ɓīŀŀīƞɠ ƥḗřīȯḓ ······〗",
+        "timing": "〖Ŧīḿīƞɠ ···〗"
       }
     },
     "timeline": {
-      "deltaDown": "55555 {{amount}} 55555",
-      "deltaUp": "55555 {{amount}} 55555",
-      "empty": "55555",
-      "noDelta": "55555",
-      "noPreviousDelta": "55555",
-      "invoicePeriod": "55555",
-      "periodAria": "55555 {{period}} 55555 {{total}} 55555",
-      "previousDelta": "55555 {{sign}} 55555 {{amount}} 55555 {{period}} 55555",
-      "title": "55555"
+      "deltaDown": "〖−{{amount}} ƒřȯḿ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ ··············〗",
+      "deltaUp": "〖+{{amount}} ƒřȯḿ ƈŭřřḗƞŧ ƈȯƞŧřȧƈŧ ··············〗",
+      "empty": "〖Şīḿŭŀȧŧḗ ŧȯ şḗḗ ŭƥƈȯḿīƞɠ ƀīŀŀīƞɠ ƥḗřīȯḓş ȧƞḓ īƞşƥḗƈŧ ḗȧƈħ ƈħȧřɠḗ. ··························〗",
+      "noDelta": "〖ƞȯ ƈħȧƞɠḗ ṽş ŀīṽḗ ·······〗",
+      "noPreviousDelta": "〖ƞȯ ƈħȧƞɠḗ ṽş ƥřḗṽīȯŭş ·········〗",
+      "invoicePeriod": "〖Īƞṽȯīƈḗ ƥḗřīȯḓ ······〗",
+      "periodAria": "〖{{period}}, {{total}} ·········〗",
+      "previousDelta": "〖{{sign}}{{amount}} ƒřȯḿ {{period}} īƞṽȯīƈḗ ·················〗",
+      "title": "〖Şīḿŭŀȧŧḗḓ īƞṽȯīƈḗ ƥḗřīȯḓş ··········〗"
     },
     "unavailable": {
-      "description": "55555",
-      "title": "55555"
+      "description": "〖Ŧħḗ ƈȯƞŧřȧƈŧ şīḿŭŀȧŧȯř īş ȧṽȧīŀȧƀŀḗ īƞ ȦŀɠȧƤŞȦ Ƥřȯ. ·····················〗",
+      "title": "〖Ƥřȯ Ƒḗȧŧŭřḗ ·····〗"
+    }
+  },
+  "bucketPools": {
+    "heading": "〖Ɓŭƈķḗŧ Ƥȯȯŀş ·····〗",
+    "actions": {
+      "addPool": "〖Ȧḓḓ Ƥȯȯŀ ····〗",
+      "create": "〖Ƈřḗȧŧḗ ƥȯȯŀ ·····〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "remove": "〖Řḗḿȯṽḗ ···〗",
+      "applyRule": "〖Ȧƥƥŀẏ ȧƒŧḗř-ħȯŭřş řŭŀḗ ·········〗"
+    },
+    "loading": "〖Ŀȯȧḓīƞɠ ƀŭƈķḗŧ ƥȯȯŀş… ·········〗",
+    "empty": "〖Ƞȯ ƀŭƈķḗŧ ƥȯȯŀş ȯƞ ŧħīş ŀīƞḗ. Ȧḓḓ ȧ ƥȯȯŀ ŧȯ īƞƈŀŭḓḗ ƥřḗƥȧīḓ ħȯŭřş. ···························〗",
+    "labels": {
+      "catchAll": "〖Ȧŀŀ şḗřṽīƈḗş ȯƞ ŧħīş ŀīƞḗ ··········〗",
+      "pool": "〖Ɓŭƈķḗŧ ƥȯȯŀ ·····〗",
+      "scopeCatchAll": "〖Ƈȯṽḗřş ȧŀŀ şḗřṽīƈḗş ȯƞ ŧħḗ ŀīƞḗ (ḿḗḿƀḗřş ȧřḗ ḿŭŀŧīƥŀīḗř ȯṽḗřřīḓḗş) ···························〗",
+      "scopeMembers": "〖Ḿḗḿƀḗř şḗřṽīƈḗş ȯƞŀẏ ········〗",
+      "totalHours": "〖Ŧȯŧȧŀ ħȯŭřş ·····〗",
+      "overageRate": "〖Ȯṽḗřȧɠḗ řȧŧḗ ƥḗř ħȯŭř ·········〗",
+      "rollover": "〖Ȧŀŀȯẇ řȯŀŀȯṽḗř ······〗",
+      "afterHours": "〖Ȧƒŧḗř-ħȯŭřş ƀŭřƞ ḿŭŀŧīƥŀīḗř ···········〗",
+      "afterHoursMultiplier": "〖Ḿŭŀŧīƥŀīḗř (ḗ.ɠ. 1.5) ·········〗",
+      "schedule": "〖Ɓŭşīƞḗşş ħȯŭřş şƈħḗḓŭŀḗ ··········〗",
+      "default": "〖ḓḗƒȧŭŀŧ ···〗",
+      "members": "〖Ḿḗḿƀḗř şḗřṽīƈḗş ······〗",
+      "multiplier": "〖× ·〗",
+      "noMembers": "〖Ƞȯ ḿḗḿƀḗř şḗřṽīƈḗş ȧŧŧȧƈħḗḓ. ············〗",
+      "noServicesOnLine": "〖Ȧḓḓ ȧ şḗřṽīƈḗ ŧȯ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ ƀḗƒȯřḗ ƈřḗȧŧīƞɠ ȧ ƀŭƈķḗŧ ƥȯȯŀ. ···························〗",
+      "selectService": "〖Şḗŀḗƈŧ ȧ şḗřṽīƈḗ… ·······〗",
+      "poolName": "〖Ƥȯȯŀ ƞȧḿḗ (ȯƥŧīȯƞȧŀ) ········〗",
+      "poolNamePlaceholder": "〖ḗ.ɠ. Şŧȧƞḓȧřḓ ħȯŭřş ········〗",
+      "coversAll": "〖Ƈȯṽḗřş ȧŀŀ şḗřṽīƈḗş ȯƞ ŧħīş ŀīƞḗ ·············〗",
+      "burnMultiplier": "〖Ɓŭřƞ ḿŭŀŧīƥŀīḗř ······〗"
+    },
+    "badges": {
+      "dormant": "〖ƞȯ şḗřṽīƈḗş ȧŧŧȧƈħḗḓ — ƞȯŧħīƞɠ ƀŭřƞş ƒřȯḿ ŧħīş ƥȯȯŀ ·····················〗"
+    },
+    "errors": {
+      "catchAllExists": "〖Ŧħīş ŀīƞḗ ȧŀřḗȧḓẏ ħȧş ȧ ƈȧŧƈħ-ȧŀŀ ƥȯȯŀ. ················〗",
+      "invalidAfterHoursRule": "〖Ḗƞŧḗř ȧ ṽȧŀīḓ ȧƒŧḗř-ħȯŭřş řŭŀḗ. ·············〗",
+      "scheduleLoadFailed": "〖Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ƀŭşīƞḗşş ħȯŭřş şƈħḗḓŭŀḗş. ················〗",
+      "scheduleRequired": "〖Şḗŀḗƈŧ ȧ ƀŭşīƞḗşş ħȯŭřş şƈħḗḓŭŀḗ ƀḗƒȯřḗ ȧƥƥŀẏīƞɠ ŧħīş řŭŀḗ. ························〗"
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "〖Ɓŭƈķḗŧ ƥȯȯŀş ƒȯř ŧħīş ŀīƞḗ ···········〗",
+    "empty": "〖Ƞȯ ƀŭƈķḗŧ ƥȯȯŀş ȯƞ ŧħīş ŀīƞḗ ẏḗŧ. Ȧḓḓ ȧ ƥȯȯŀ ŧȯ īƞƈŀŭḓḗ ƥřḗƥȧīḓ ħȯŭřş. ····························〗"
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḿȯḓīƒẏ ƈȯƞŧřȧƈŧ ŀīƞḗş ···················〗",
+      "deleteContracts": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḓḗŀḗŧḗ ƀīŀŀīƞɠ ƈȯƞŧřȧƈŧş ····················〗"
+    },
+    "contract": {
+      "hasInvoices": "〖Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ȧşşȯƈīȧŧḗḓ īƞṽȯīƈḗş ȧƞḓ ƈȧƞƞȯŧ ƀḗ ḓḗŀḗŧḗḓ. ························〗",
+      "invalidValue": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ƈȯƞŧřȧƈŧ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·······························〗",
+      "referenceMissing": "〖Ŧħḗ şḗŀḗƈŧḗḓ ƈȯƞŧřȧƈŧ, ƈŀīḗƞŧ, ȯř řḗŀȧŧḗḓ řḗƈȯřḓ ƞȯ ŀȯƞɠḗř ḗẋīşŧş. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·······································〗",
+      "conflict": "〖Ŧħīş ƈȯƞŧřȧƈŧ ƈħȧƞɠḗ ƈȯƞƒŀīƈŧş ẇīŧħ ȧƞ ḗẋīşŧīƞɠ řḗƈȯřḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ··································〗",
+      "notAllowed": "〖Ȯƞḗ ȯƒ ŧħḗ ƈȯƞŧřȧƈŧ ṽȧŀŭḗş īş ƞȯŧ ȧŀŀȯẇḗḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ. ································〗",
+      "missingField": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ƈȯƞŧřȧƈŧ ƒīḗŀḓ. ·············〗",
+      "missingFieldNamed": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ƈȯƞŧřȧƈŧ ƒīḗŀḓ: {{field}}. ··················〗"
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ƈřḗȧŧḗ ƀīŀŀīƞɠ ŧḗḿƥŀȧŧḗş ····················〗",
+        "createContracts": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ƈřḗȧŧḗ ƀīŀŀīƞɠ ƈȯƞŧřȧƈŧş ····················〗",
+        "listTemplates": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ŀīşŧ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗş ····················〗",
+        "viewSnapshot": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ṽīḗẇ ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ şƞȧƥşħȯŧ ·······················〗",
+        "resumeContracts": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗşŭḿḗ ƀīŀŀīƞɠ ƈȯƞŧřȧƈŧş ····················〗"
+      },
+      "templateNotFound": "〖Ŧḗḿƥŀȧŧḗ ƞȯŧ ƒȯŭƞḓ ········〗",
+      "contractNotFound": "〖Ƈȯƞŧřȧƈŧ ƞȯŧ ƒȯŭƞḓ ········〗",
+      "notDraft": "〖Ƈȯƞŧřȧƈŧ īş ƞȯŧ ȧ ḓřȧƒŧ ··········〗",
+      "missingClient": "〖Ḓřȧƒŧ ƈȯƞŧřȧƈŧ īş ḿīşşīƞɠ ƈŀīḗƞŧ ȧşşīɠƞḿḗƞŧ ··················〗",
+      "invalidStartDate": "〖Ḓřȧƒŧ ƈȯƞŧřȧƈŧ ħȧş ȧƞ īƞṽȧŀīḓ şŧȧřŧ ḓȧŧḗ ················〗",
+      "recordInvalid": "〖Ȯƞḗ ȯƒ ŧħḗ şḗŀḗƈŧḗḓ ƈȯƞŧřȧƈŧ ẇīẑȧřḓ řḗƈȯřḓş īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ······································〗",
+      "duplicate": "〖Ȧ ḿȧŧƈħīƞɠ ƈȯƞŧřȧƈŧ ẇīẑȧřḓ řḗƈȯřḓ ȧŀřḗȧḓẏ ḗẋīşŧş. ····················〗"
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "〖Ḗƞḓ ḓȧŧḗ ḿŭşŧ ƀḗ ȧƒŧḗř ḗƒƒḗƈŧīṽḗ ḓȧŧḗ ···············〗",
+      "overlaps": "〖Ŧħīş şƈħḗḓŭŀḗ ȯṽḗřŀȧƥş ẇīŧħ ȧƞ ḗẋīşŧīƞɠ ƥřīƈīƞɠ şƈħḗḓŭŀḗ ·······················〗",
+      "wouldOverlap": "〖Ŧħīş şƈħḗḓŭŀḗ ẇȯŭŀḓ ȯṽḗřŀȧƥ ẇīŧħ ȧƞ ḗẋīşŧīƞɠ ƥřīƈīƞɠ şƈħḗḓŭŀḗ ·························〗",
+      "notFound": "〖Ƥřīƈīƞɠ şƈħḗḓŭŀḗ ƞȯŧ ƒȯŭƞḓ ···········〗"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗȧḓ řḗƞḗẇȧŀş ʠŭḗŭḗ ··················〗",
+        "update": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ŭƥḓȧŧḗ řḗƞḗẇȧŀş ʠŭḗŭḗ ···················〗",
+        "ownerOtherTenant": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ȧşşīɠƞ řḗƞḗẇȧŀş ŧȯ ȧ ŭşḗř ƒřȯḿ ȧƞȯŧħḗř ŧḗƞȧƞŧ. ·····························〗",
+        "contractOtherTenant": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ƈȯḿƥŀḗŧḗ řḗƞḗẇȧŀ ẇīŧħ ȧ ƈȯƞŧřȧƈŧ ƒřȯḿ ȧƞȯŧħḗř ŧḗƞȧƞŧ. ································〗"
+      },
+      "clientContractIdRequired": "〖Ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ īḓ īş řḗʠŭīřḗḓ. ·············〗",
+      "workItemNotFound": "〖Řḗƞḗẇȧŀ ẇȯřķ īŧḗḿ ƞȯŧ ƒȯŭƞḓ. Īŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ŭƥḓȧŧḗḓ ȯř ḓḗŀḗŧḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ······································〗",
+      "snoozeDateRequired": "〖Ƈħȯȯşḗ ȧ şƞȯȯẑḗ ḓȧŧḗ ƀḗƒȯřḗ şȧṽīƞɠ. ··············〗",
+      "snoozeDateInvalid": "〖Ƈħȯȯşḗ ȧ ṽȧŀīḓ şƞȯȯẑḗ ḓȧŧḗ. ···········〗",
+      "snoozeDateFuture": "〖Ƈħȯȯşḗ ȧ ƒŭŧŭřḗ şƞȯȯẑḗ ḓȧŧḗ. ············〗",
+      "ownerInvalid": "〖Ƈħȯȯşḗ ȧ ṽȧŀīḓ řḗƞḗẇȧŀ ȯẇƞḗř. ············〗",
+      "ownerUnavailable": "〖Ŧħḗ şḗŀḗƈŧḗḓ řḗƞḗẇȧŀ ȯẇƞḗř īş ƞȯ ŀȯƞɠḗř ȧṽȧīŀȧƀŀḗ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ································〗",
+      "activatedContractIdRequired": "〖Ȧƈŧīṽȧŧḗḓ řḗƞḗẇȧŀ ƈȯƞŧřȧƈŧ īḓ īş řḗʠŭīřḗḓ. ·················〗",
+      "contractNotActive": "〖Ŧħḗ ȧƈŧīṽȧŧḗḓ řḗƞḗẇȧŀ ƈȯƞŧřȧƈŧ īş ƞȯ ŀȯƞɠḗř ȧƈŧīṽḗ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ·································〗",
+      "manualRetryDueOnly": "〖Ḿȧƞŭȧŀ řḗŧřẏ īş ȯƞŀẏ ȧṽȧīŀȧƀŀḗ ƒȯř ḓŭḗ řḗƞḗẇȧŀ ƈẏƈŀḗş. ······················〗"
     }
   }
 }

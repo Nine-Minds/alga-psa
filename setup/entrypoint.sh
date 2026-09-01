@@ -176,6 +176,12 @@ main() {
             log "Copying EE migrations..."
             cp /app/ee/server/migrations/*.cjs /app/server/combined-migrations/ 2>/dev/null || true
 
+            # Migrations require sibling helpers as ./utils/... (tenantDb, the
+            # notification templates, the permission catalog). A flat *.cjs copy
+            # leaves them unresolvable in the combined directory.
+            log "Copying migration utils..."
+            cp -R /app/server/migrations/utils /app/server/combined-migrations/ 2>/dev/null || true
+
             # Create a temporary knexfile in /app/server where node_modules exist
             log "Creating temporary knexfile for EE..."
             cat > /app/server/knexfile-ee.cjs << 'EOF'

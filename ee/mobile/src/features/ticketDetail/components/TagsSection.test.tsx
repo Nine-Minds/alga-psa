@@ -36,7 +36,6 @@ function render(
     actionError: null,
     updating: false,
     onAddPress: () => undefined,
-    onRemoveTag: () => undefined,
     ...props,
   } as React.ComponentProps<typeof TagsSection>);
   act(() => {
@@ -128,30 +127,11 @@ describe("TagsSection", () => {
     expect(styleOf(chip).backgroundColor).toBe(generateEntityColor("plain").background);
   });
 
-  it("calls onRemoveTag for the chip's remove button", () => {
-    const onRemoveTag = vi.fn();
-    const tags = [makeTag("m1", "vip"), makeTag("m2", "billing")];
-    const renderer = render({ tags, onRemoveTag });
-
-    const remove = pressableByLabel(renderer, "Remove tag billing");
-    expect(remove).toHaveLength(1);
-    act(() => remove[0].props.onPress());
-
-    expect(onRemoveTag).toHaveBeenCalledTimes(1);
-    expect(onRemoveTag.mock.calls[0][0]).toMatchObject({ tag_id: "m2", tag_text: "billing" });
-  });
-
-  it("disables remove buttons while updating", () => {
-    const renderer = render({ tags: [makeTag("m1", "vip")], updating: true });
-    const remove = pressableByLabel(renderer, "Remove tag vip");
-    expect(remove[0].props.disabled).toBe(true);
-  });
-
-  it("calls onAddPress from the add affordance", () => {
+  it("calls onAddPress from the edit affordance", () => {
     const onAddPress = vi.fn();
     const renderer = render({ onAddPress });
 
-    const add = pressableByLabel(renderer, "Add tag");
+    const add = pressableByLabel(renderer, "Edit tags");
     expect(add).toHaveLength(1);
     act(() => add[0].props.onPress());
 

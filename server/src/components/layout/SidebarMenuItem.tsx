@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
 import type { MenuItem } from '@/config/menuConfig';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Construction, ChevronDown } from 'lucide-react';
 
 interface SidebarMenuItemProps {
@@ -24,6 +25,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   onToggleSubmenu,
   onMenuItemClick,
 }) => {
+  const { t } = useTranslation('msp/core');
   const hasActiveSubItem = item.subItems?.some((subItem) => isActive(subItem.href || '')) ?? false;
 
   if (item.subItems) {
@@ -69,7 +71,17 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
         {sidebarOpen && (
           <button
             type="button"
-            aria-label={openSubmenu === item.name ? `Collapse ${item.name}` : `Expand ${item.name}`}
+            aria-label={
+              openSubmenu === item.name
+                ? t('sidebar.collapseSection', {
+                    section: item.name,
+                    defaultValue: 'Collapse {{section}}',
+                  })
+                : t('sidebar.expandSection', {
+                    section: item.name,
+                    defaultValue: 'Expand {{section}}',
+                  })
+            }
             className="ml-auto flex-shrink-0 p-1 rounded hover:bg-white/10"
             onClick={() => onToggleSubmenu(item.name)}
           >

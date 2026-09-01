@@ -12,7 +12,6 @@
       "resyncError": "Échec de la resynchronisation du fournisseur IMAP",
       "resyncStarted": "Resynchronisation démarrée pour {{providerName}}.",
       "resyncRecovered": "{{providerName}} s’est reconnecté avec succès.",
-      "enterpriseOnly": "Le courrier électronique entrant Microsoft 365 est uniquement disponible avec Pro.",
       "loadProvidersError": "Échec du chargement des fournisseurs d'e-mail"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Configuration du fournisseur de messagerie",
-      "description": {
-        "enterprise": "Configurer les fournisseurs Gmail, Microsoft 365 ou IMAP pour recevoir et traiter les e-mails entrants sous forme de tickets",
-        "standard": "Configurer les fournisseurs Gmail ou IMAP pour recevoir et traiter les e-mails entrants sous forme de tickets"
-      },
-      "counts": {
-        "enterprise": "Gmail : {{gmail}} · Microsoft : {{microsoft}} · IMAP : {{imap}}",
-        "standard": "Gmail : {{gmail}} · IMAP : {{imap}}"
-      }
+      "description": "Configurer les fournisseurs Gmail, Microsoft 365 ou IMAP pour recevoir et traiter les e-mails entrants sous forme de tickets",
+      "counts": "Gmail : {{gmail}} · Microsoft : {{microsoft}} · IMAP : {{imap}}"
     },
     "actions": {
       "addProvider": "Ajouter un fournisseur de messagerie"
@@ -42,6 +35,7 @@
       "title": "Instructions de configuration",
       "microsoft": {
         "title": "Configuration de Microsoft 365",
+        "ownApp": "Apportez votre propre application Microsoft – enregistrez-la dans Azure AD (Microsoft Entra ID), accordez les autorisations de messagerie et connectez-la à votre boîte aux lettres Microsoft 365.",
         "providersPointer": "La configuration de l'application Microsoft est gérée dans Fournisseurs.",
         "openProviders": "Ouvrir Fournisseurs"
       },
@@ -117,10 +111,7 @@
     "actions": {
       "cancel": "Annuler"
     },
-    "help": {
-      "enterprise": "Choisissez le fournisseur que votre organisation utilise déjà. Si vous utilisez Google Workspace, choisissez Gmail ; si vous utilisez Microsoft 365, choisissez Microsoft 365. Vous pourrez modifier cela ultérieurement en supprimant et en reconfigurant votre fournisseur de messagerie.",
-      "standard": "Choisissez le fournisseur que votre organisation utilise déjà. Si vous utilisez Google Workspace, choisissez Gmail ; sinon choisissez IMAP. Vous pourrez modifier cela ultérieurement en supprimant et en reconfigurant votre fournisseur de messagerie."
-    }
+    "help": "Choisissez le fournisseur que votre organisation utilise déjà. Si vous utilisez Google Workspace, choisissez Gmail ; si vous utilisez Microsoft 365, choisissez Microsoft 365. Vous pourrez modifier cela ultérieurement en supprimant et en reconfigurant votre fournisseur de messagerie."
   },
   "wizard": {
     "title": {
@@ -168,7 +159,8 @@
       "resyncMailbox": "Resynchroniser la boîte aux lettres",
       "pause": "Suspendre les e-mails entrants",
       "resume": "Reprendre les e-mails entrants",
-      "delete": "Supprimer le fournisseur"
+      "delete": "Supprimer le fournisseur",
+      "runGmailDiagnostics": "Exécuter les diagnostics de distribution Gmail"
     },
     "feedback": {
       "paused": "E-mails entrants suspendus.",
@@ -176,6 +168,11 @@
       "pauseError": "Impossible de modifier l'état de pause des e-mails entrants."
     },
     "pausedHelp": "Les messages reçus pendant que cette boîte est en pause ne sont pas importés rétroactivement.",
+    "authFailure": {
+      "title": "E-mails entrants en pause — reconnexion requise",
+      "description": "Les e-mails entrants de {{mailbox}} sont en pause car ses identifiants ne fonctionnent plus. Aucun message n'est perdu — ils restent dans la boîte source et seront importés après votre reconnexion.",
+      "action": "Reconnecter"
+    },
     "fields": {
       "status": "Statut",
       "lastSync": "Dernière synchronisation",
@@ -217,6 +214,14 @@
       "title": "Aucun fournisseur de messagerie configuré",
       "description": "Ajoutez un fournisseur de messagerie pour commencer à recevoir et à traiter les e-mails entrants sous forme de tickets.",
       "action": "Ajouter un fournisseur de messagerie"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail n'envoie plus de nouveaux messages ici",
+      "expiredDescription": "La surveillance Gmail de {{mailbox}} a expiré, Google a donc cessé de publier des notifications. Aucun message n'est perdu — ils restent dans la boîte. Actualisez Pub/Sub et regardez pour rétablir la distribution.",
+      "missingTitle": "La distribution push Gmail n’est pas enregistrée",
+      "missingDescription": "Aucune surveillance Gmail n'est enregistrée pour {{mailbox}}, aucun e-mail entrant n'arrivera donc. Actualisez Pub/Sub et regardez pour en enregistrer une.",
+      "expiringTitle": "La distribution push Gmail expire dans moins d’un jour",
+      "expiringDescription": "Une surveillance Gmail dure sept jours. Actualisez Pub/Sub et regardez avant son expiration, sinon les e-mails entrants cesseront sans autre avertissement."
     }
   },
   "forms": {
@@ -246,6 +251,9 @@
         "authorizing": "Autoriser...",
         "authorized": "Autorisé",
         "authorizeAccess": "Autoriser l'accès"
+      },
+      "messages": {
+        "setupIncomplete": "Fournisseur enregistré mais configuration incomplète : {{error}}"
       }
     },
     "microsoft": {
@@ -260,7 +268,8 @@
         "popupBlocked": "Échec de l'ouverture de la fenêtre contextuelle OAuth. Veuillez autoriser les popups pour ce site.",
         "closedEarly": "Fenêtre d'autorisation fermée avant de terminer. Veuillez réessayer.",
         "authorizationFailed": "L'autorisation a échoué",
-        "senderDisplayNameInvalid": "Le nom d'affichage ne peut pas contenir de guillemets, de chevrons ni de sauts de ligne"
+        "senderDisplayNameInvalid": "Le nom d'affichage ne peut pas contenir de guillemets, de chevrons ni de sauts de ligne",
+        "issuerRequired": "Choisissez une application Microsoft avant de vous connecter"
       },
       "requiredFields": {
         "providerName": "Nom de configuration",
@@ -292,12 +301,24 @@
         "maxEmailsPerSync": "Nombre maximum d'e-mails par synchronisation"
       },
       "readiness": {
-        "checking": "Vérification de la configuration Microsoft…",
-        "ready": "Microsoft est configuré. Connectez-vous avec cette boîte aux lettres pour terminer.",
-        "pending": "En attente de votre administrateur Microsoft 365. La configuration a été lancée dans Fournisseurs, mais n'a pas encore été approuvée.",
-        "openProviders": "Ouvrir Fournisseurs",
-        "notConfigured": "Microsoft n'est pas encore configuré. Configurez-le une fois dans Fournisseurs, puis revenez.",
-        "setUpInProviders": "Configurer dans Fournisseurs"
+        "openProviders": "Ouvrir Fournisseurs"
+      },
+      "issuer": {
+        "title": "Application Microsoft qui autorise cette boîte aux lettres",
+        "description": "Choisissez l'application qui se connecte en tant que cette boîte aux lettres. Ce choix est enregistré avec la boîte aux lettres et n'affecte pas les autres services.",
+        "managedLabel": "Application AlgaPSA (gérée par Nine Minds)",
+        "managedDescription": "Aucun enregistrement d'application Microsoft n'est requis de votre côté.",
+        "recommended": "Recommandée",
+        "currentApp": "Application actuelle : {{app}}",
+        "selectedApp": "Application sélectionnée : {{app}}",
+        "pendingReauth": "Réautorisation en attente",
+        "switchWarning": "Changer l'application Microsoft nécessite de reconnecter cette boîte aux lettres. Connectez-vous à nouveau avec Microsoft pour terminer le changement.",
+        "noneAvailable": "Pour connecter Microsoft 365, configurez d'abord une application Microsoft dans Fournisseurs, puis revenez.",
+        "retry": "Réessayer",
+        "pendingConsentEmpty": "Votre application Microsoft attend l'approbation d'un administrateur Microsoft 365. Une fois approuvée dans Fournisseurs, revenez pour vous connecter.",
+        "pendingConsentHint": "Votre propre application Microsoft attend encore l'approbation d'un administrateur Microsoft 365.",
+        "ownAppPrompt": "Préférez-vous vous connecter avec votre propre application Microsoft ?",
+        "ownAppSetupLink": "La configurer dans Fournisseurs"
       }
     },
     "gmail": {
@@ -765,7 +786,7 @@
         "authHint": "Laissez le nom d'utilisateur et le mot de passe vides si votre relais accepte les e-mails sans authentification.",
         "fromLabel": "Adresse d'expéditeur",
         "fromPlaceholder": "noreply@exemple.com",
-        "fromHelp": "Adresse d'expéditeur par défaut pour les e-mails sortants.",
+        "fromHelp": "Expéditeur par défaut pour tous les e-mails sortants. Les e-mails de tickets peuvent utiliser leur propre identité ci-dessous.",
         "security": {
           "title": "Sécurité de la connexion",
           "secure": "Utiliser le TLS implicite (SSL à la connexion, généralement le port 465)",
@@ -842,7 +863,7 @@
           "description": "Personnalisez les invitations au portail, les réinitialisations de mot de passe, les factures, les mises à jour de projet et les notifications générales indépendamment du routage des tickets.",
           "addressLabel": "Adresse d'expéditeur",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Il s'agit de l'adresse de marque utilisée pour les e-mails hors tickets envoyés par votre serveur SMTP.",
+          "smtpAddressHelp": "Définie par l'adresse d'expéditeur dans la configuration SMTP ci-dessus. Tous les e-mails hors tickets sont envoyés depuis cette adresse.",
           "lockedAddressHelp": "Cette adresse est déterminée par le domaine géré actif ou la boîte aux lettres Microsoft 365 sélectionnée.",
           "nameLabel": "Nom d'affichage de l'expéditeur",
           "namePlaceholder": "Nom de votre entreprise",
@@ -1070,6 +1091,72 @@
       "subject": "Objet",
       "title": "Tester cette règle",
       "to": "À"
+    }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Échec de la récupération des domaines",
+      "invalidFormat": "Format de domaine non valide",
+      "duplicate": "Le domaine existe déjà",
+      "addFailed": "Échec de l’ajout du domaine. Veuillez réessayer.",
+      "notFound": "Domaine introuvable",
+      "verifyFailed": "Échec de la vérification du domaine. Veuillez réessayer.",
+      "stillReferenced": "Le domaine est encore référencé et ne peut pas être supprimé.",
+      "deleteFailed": "Échec de la suppression du domaine. Veuillez réessayer."
+    },
+    "provider": {
+      "saveFailed": "Échec de l’enregistrement du fournisseur d’e-mail. Veuillez vérifier les paramètres et réessayer.",
+      "updateFailed": "Échec de la mise à jour du fournisseur d’e-mail. Veuillez vérifier les paramètres et réessayer.",
+      "notFound": "Fournisseur d’e-mail introuvable",
+      "deleteFailed": "Échec de la suppression du fournisseur d’e-mail"
+    },
+    "settings": {
+      "fetchFailed": "Échec de la récupération des paramètres d’e-mail",
+      "mailboxRequired": "Choisissez une boîte aux lettres Microsoft 365 pour les e-mails sortants",
+      "mailboxInactive": "La boîte aux lettres Microsoft 365 sélectionnée n’est pas active ou n’existe plus",
+      "mailboxReconnect": "Reconnectez la boîte aux lettres Microsoft 365 sélectionnée avant de l’utiliser pour les e-mails sortants",
+      "ticketIdentityMustMatchMailbox": "L’identité e-mail des tickets doit utiliser la boîte aux lettres Microsoft 365 sélectionnée ({{mailbox}}). Mettez à jour l’adresse des e-mails de tickets avant d’enregistrer.",
+      "providerFromAddressInvalid": "L’adresse d’expéditeur {{provider}} doit être une adresse e-mail valide",
+      "ticketingFromInvalid": "L’adresse d’expéditeur des tickets doit être une adresse e-mail valide",
+      "outboundDomainInvalid": "Le domaine d’envoi sortant doit être un domaine valide (par ex. example.com)",
+      "outboundDomainRequired": "Configurez un domaine d’envoi avant de choisir une adresse d’expéditeur des tickets",
+      "ticketingFromDomainMismatch": "L’adresse d’expéditeur des tickets doit utiliser le domaine d’envoi configuré",
+      "refreshFailed": "Échec de la récupération des paramètres mis à jour",
+      "updateFailed": "Échec de la mise à jour des paramètres d’e-mail",
+      "mailboxesLoadFailed": "Échec du chargement des boîtes aux lettres Microsoft 365"
+    },
+    "inboundRules": {
+      "notFound": "Règle d’e-mail entrant introuvable",
+      "invalidOrdering": "Données d’ordre des règles non valides",
+      "aliasRequired": "L’alias est obligatoire",
+      "aliasTooLong": "L’alias est trop long",
+      "clientRequired": "Le client est obligatoire",
+      "invalidSampleEmail": "E-mail d’exemple non valide",
+      "permissionDenied": "Vous n’avez pas l’autorisation de gérer les règles d’e-mail entrant.",
+      "ticketDefaultsUnavailable": "Le jeu de paramètres de ticket référencé n’existe pas ou est inactif.",
+      "orderingMismatch": "L’ordre ne correspond pas au jeu de règles actuel.",
+      "clientNotFound": "Client introuvable.",
+      "aliasAlreadyAssigned": "L’alias « {{alias}} » est déjà attribué à un client.",
+      "invalidRegex": "Expression régulière non valide.",
+      "fallbackDestinationRequired": "Une destination de secours est obligatoire lorsque le comportement sans correspondance utilise une destination de secours."
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Une configuration portant ce nom court existe déjà",
+      "createFailed": "Échec de la création des valeurs par défaut des tickets entrants. Veuillez réessayer.",
+      "notFound": "Configuration des valeurs par défaut introuvable",
+      "updateFailed": "Échec de la mise à jour des valeurs par défaut des tickets entrants. Veuillez réessayer."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Autorisation refusée : impossible de lire les options de champ de ticket",
+      "loadFailed": {
+        "ticketFieldOptions": "Échec du chargement des options de champ de ticket. Veuillez réessayer.",
+        "boards": "Échec du chargement des tableaux. Veuillez réessayer.",
+        "statuses": "Échec du chargement des statuts. Veuillez réessayer.",
+        "priorities": "Échec du chargement des priorités. Veuillez réessayer.",
+        "categories": "Échec du chargement des catégories. Veuillez réessayer.",
+        "clients": "Échec du chargement des clients. Veuillez réessayer.",
+        "users": "Échec du chargement des utilisateurs. Veuillez réessayer."
+      }
     }
   }
 }

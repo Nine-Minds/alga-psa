@@ -4,9 +4,9 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { getTenantDetails } from '@alga-psa/tenancy/actions';
 import { createTenantKnex } from 'server/src/lib/db';
-import { tenantDb } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
+import { ensureInvoiceEmailLinks } from '@alga-psa/billing/services';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
@@ -249,6 +249,22 @@ export class EmailService {
     }
   }
 
+  /** The tenant's default client name, readable without a request scope. */
+  private async getDefaultClientName(tenantId: string): Promise<string | null> {
+    try {
+      const knex = await getConnection();
+      const db = tenantDb(knex, tenantId);
+      const query = db.table('tenant_companies as tc')
+        .where('tc.is_default', true)
+        .whereNull('tc.deleted_at');
+      db.tenantJoin(query, 'clients as c', 'tc.client_id', 'c.client_id');
+      const row = await query.first<{ client_name?: string | null } | undefined>('c.client_name');
+      return row?.client_name ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   public async sendInvoiceEmail(
     invoice: InvoiceViewModel & { 
       contact?: { name: string; address: string };
@@ -258,15 +274,19 @@ export class EmailService {
     pdfPath: string,
     options?: {
       paymentLink?: string;
+      portalLink?: string;
       companyName?: string;
     }
   ) {
-    const { clients } = await getTenantDetails();
-    const defaultClient = clients.find(c => c.is_default);
-    const senderClient = options?.companyName || defaultClient?.client_name || 'Our Client';
+    // No withAuth action here: invoice emails are also sent from background
+    // jobs, where there is no request scope to resolve a session user from.
+    const senderClient = options?.companyName
+      || (await this.getDefaultClientName(invoice.tenantId))
+      || 'Our Client';
 
     const hasPaymentLink = !!options?.paymentLink;
-    const template = await this.getInvoiceEmailTemplate(hasPaymentLink);
+    const hasPortalLink = !!options?.portalLink;
+    const template = await this.getInvoiceEmailTemplate(hasPaymentLink, hasPortalLink);
     const attachments = [{
       filename: `invoice_${invoice.invoice_number}.pdf`,
       path: pdfPath,
@@ -284,14 +304,25 @@ export class EmailService {
     if (options?.paymentLink) {
       html = html.replace(/{{payment_link}}/g, options.paymentLink);
     }
+    if (options?.portalLink) {
+      html = html.replace(/{{portal_link}}/g, options.portalLink);
+    }
     const text = this.stripHtml(html);
     const subject = template.subject.replace(/{{([^}]+)}}/g, (_, key) => templateData[key as keyof InvoiceEmailTemplateData] || '');
+
+    // Templates that do not render the URLs still get the missing CTAs.
+    const { html: finalHtml, text: finalText } = ensureInvoiceEmailLinks({
+      html,
+      text,
+      paymentUrl: options?.paymentLink,
+      portalUrl: options?.portalLink,
+    });
 
     return await this.sendEmail({
       to: invoice.recipientEmail,
       subject,
-      html,
-      text,
+      html: finalHtml,
+      text: finalText,
       attachments
     });
   }
@@ -314,7 +345,7 @@ export class EmailService {
     });
   }
 
-  private async getInvoiceEmailTemplate(hasPaymentLink: boolean = false) {
+  private async getInvoiceEmailTemplate(hasPaymentLink: boolean = false, hasPortalLink: boolean = false) {
     // TODO: Fetch from database
     const paymentSection = hasPaymentLink ? `
         <div style="margin: 24px 0; text-align: center;">
@@ -327,6 +358,14 @@ export class EmailService {
           Or copy this link to pay: <a href="{{payment_link}}" style="color: #4f46e5;">{{payment_link}}</a>
         </p>
     ` : '';
+    const portalSection = hasPortalLink ? `
+        <div style="margin: 16px 0; text-align: center;">
+          <a href="{{portal_link}}"
+             style="background-color: #ffffff; color: #4f46e5; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500; border: 1px solid #4f46e5;">
+            View invoice in client portal
+          </a>
+        </div>
+    ` : '';
 
     return {
       subject: 'Invoice {{invoice_number}} from {{sender_client}}',
@@ -334,6 +373,7 @@ export class EmailService {
         <p>Dear {{client_name}},</p>
         <p>Please find attached your invoice {{invoice_number}} for {{total_amount}}.</p>
         ${paymentSection}
+        ${portalSection}
         <p>Thank you for your business!</p>
         <p>Best regards,<br>{{sender_client}}</p>
       `

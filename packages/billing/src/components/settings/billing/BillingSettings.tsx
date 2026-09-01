@@ -14,6 +14,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DefaultCurrencySettings from './DefaultCurrencySettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
+import CreditDrawdownSettings from './CreditDrawdownSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
 import CostRatesSettings from './CostRatesSettings';
 import { TaxSourceSettings } from '../tax/TaxSourceSettings';
@@ -122,7 +123,6 @@ const BillingSettings: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
-
   const billingSectionIds: readonly string[] = ['general', 'cost-rates', 'numbering', 'tax', 'payments'];
 
   // Determine initial active tab based on URL parameter
@@ -208,6 +208,20 @@ const BillingSettings: React.FC = () => {
             </CardHeader>
             <CardContent>
               <CreditExpirationSettings />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.creditDrawdown.title', { defaultValue: 'Credit Draw-Down' })}</CardTitle>
+              <CardDescription>
+                {t('general.creditDrawdown.description', {
+                  defaultValue: 'Control when client credits are applied to invoices and how they are consumed.'
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CreditDrawdownSettings />
             </CardContent>
           </Card>
 

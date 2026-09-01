@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function readJson<T>(relativePath: string): T {
   return JSON.parse(
@@ -54,6 +55,7 @@ describe('Quotes i18n wiring contract', () => {
       'quotePreview',
       'templateEditor',
       'templatesPage',
+      'errors',
     ]);
   });
 
@@ -71,7 +73,10 @@ describe('Quotes i18n wiring contract', () => {
       'quoteForm.headings.newTemplate',
       'common.actions.submitForApproval',
       'quoteForm.actions.cancelQuote',
-      'quoteForm.actions.convertToBoth',
+      // Conversion collapsed to one entry button; the dialog footer offers the
+      // per-target actions from quoteConversion.actions.*.
+      'quoteForm.actions.convert',
+      'quoteConversion.actions.salesOrder',
       'quoteForm.fields.createFromTemplate',
       'quoteForm.fields.recipients',
       'quoteForm.dialogs.send.title',
@@ -277,7 +282,7 @@ describe('Quotes i18n wiring contract', () => {
     );
 
     expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
-    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+    expect(source).toMatch(/const \{ t(?:, \w+)* \} = useTranslation\('msp\/quotes'\);/);
 
     const keyChecks = [
       'templateEditor.title',
@@ -683,10 +688,10 @@ describe('Quotes i18n wiring contract', () => {
     expect(getLeaf(de, 'nav.billing.sections.quotes')).toBe('Angebote');
     expect(getLeaf(de, 'nav.billing.quoteBusinessTemplates')).toBe('Angebotsvorlagen');
     expect(getLeaf(de, 'nav.billing.quoteLayouts')).toBe('Angebotslayouts');
-    expect(getLeaf(xx, 'nav.billing.sections.quotes')).toBe('11111');
-    expect(getLeaf(xx, 'nav.billing.quotes')).toBe('11111');
-    expect(getLeaf(xx, 'nav.billing.quoteBusinessTemplates')).toBe('11111');
-    expect(getLeaf(xx, 'nav.billing.quoteLayouts')).toBe('11111');
+    expect(getLeaf(xx, 'nav.billing.sections.quotes')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(xx, 'nav.billing.quotes')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(xx, 'nav.billing.quoteBusinessTemplates')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(xx, 'nav.billing.quoteLayouts')).toMatch(pseudoPattern('xx'));
   });
 
   it('T030: follow-on formatter cleanup removes remaining locale-pinned quote form and draft-money formatting', () => {

@@ -60,8 +60,6 @@
       "runNow": "Corra agora",
       "exportCsv": "Exportar CSV",
       "refresh": "Atualizar",
-      "cancelSelected": "Cancelar selecionado ({{count}})",
-      "clearSelection": "Limpar seleção",
       "details": "Detalhes",
       "loadMore": "Carregar mais",
       "preview": "Visualização"
@@ -92,7 +90,12 @@
       "cancelMessage": "Cancelar execução(ões) selecionada(s) de {{count}}? Isto não pode ser desfeito.",
       "reasonLabel": "Razão",
       "cancelReasonPlaceholder": "Forneça um motivo para o cancelamento",
-      "cancelConfirm": "Cancelar execuções"
+      "cancelConfirm": "Cancelar execuções",
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "cancel": "Cancelar execuções",
+        "clear": "Limpar seleção"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Falha ao carregar execuções de fluxo de trabalho",
@@ -1094,6 +1097,15 @@
       "noFields": "Nenhum campo",
       "copyAllPaths": "Copie todos os caminhos",
       "copyAllFieldPaths": "Copie todos os caminhos de campo"
+    },
+    "logoAlt": "Logotipo do editor de fluxos de trabalho",
+    "nodes": {
+      "action": "Ação:",
+      "process": "Processo:",
+      "clientId": "ID do cliente:",
+      "clientSecret": "Segredo do cliente:",
+      "tenantId": "ID do tenant:",
+      "userEmail": "Email do usuário:"
     }
   },
   "actionInputFieldInfo": {
@@ -1354,7 +1366,9 @@
     "insertReferenceHeading": "Inserir referência de fluxo de trabalho",
     "errors": {
       "noCodeBlock": "As referências não podem ser inseridas dentro de blocos de código. Mova o cursor para outro bloco e tente novamente."
-    }
+    },
+    "placeholder": "Escreva o texto em Markdown…",
+    "referenceHint": "As referências aparecem como chips embutidos e são salvas como nós de referência compatíveis com o fluxo de trabalho."
   },
   "referenceSelector": {
     "placeholders": {
@@ -1369,7 +1383,10 @@
     "start": "Começar",
     "insertStepHere": "Insira a etapa aqui",
     "emptyDisabled": "Nenhuma etapa ainda.",
-    "emptySelectPrompt": "Selecione uma etapa no painel para começar."
+    "emptySelectPrompt": "Selecione uma etapa no painel para começar.",
+    "patchSummary": {
+      "unchanged": "outros campos inalterados"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Editor de expressão",
@@ -1485,6 +1502,37 @@
     "softEnumUseCustom": "Usar \"{{value}}\"",
     "expression": {
       "placeholder": "por exemplo carga útil.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Campos a alterar",
+      "targetFraming": "Esta etapa atualiza {{target}}.",
+      "summaryChanges": "Altera {{list}}",
+      "summaryChangesMore": "Altera {{list}} +{{count}} mais",
+      "unchangedNote": "Todos os outros campos mantêm seus valores atuais.",
+      "emptyGuidance": "Adicione pelo menos um campo para alterar.",
+      "editChanges": "Editar alterações…",
+      "dialogTitle": "Editar alterações",
+      "dialogDescription": "Atualizando {{target}}. Apenas os campos listados à direita serão alterados; todo o resto mantém o valor atual.",
+      "footerSummary": "{{count}} campo(s) serão alterados · todo o resto mantém o valor atual",
+      "done": "Concluído",
+      "added": "Adicionado ✓",
+      "noChangesYet": "Nenhuma alteração ainda. Escolha um campo à esquerda para começar.",
+      "setFieldTo": "Definir {{field}} como",
+      "removeChange": "Parar de alterar este campo (ele mantém o valor atual)",
+      "advancedTitle": "Avançado",
+      "group": {
+        "details": "Detalhes",
+        "assignment": "Atribuição",
+        "datesTags": "Datas e tags",
+        "advanced": "Avançado"
+      },
+      "target": {
+        "genericRecord": "registro",
+        "unset": "o {{record}} selecionado acima",
+        "fromReference": "o {{record}} de \"{{source}}\"",
+        "fromExpression": "o {{record}} escolhido por uma expressão",
+        "fixed": "um {{record}} específico"
+      }
     }
   },
   "schemaReference": {
@@ -2316,7 +2364,6 @@
         }
       },
       "schemaModal": {
-        "title": "Esquema",
         "close": "Fechar",
         "headerTitle": "Esquema de carga útil",
         "loading": "Carregando…",
@@ -2326,7 +2373,6 @@
         "copyFailed": "Falha na cópia"
       },
       "metricsDialog": {
-        "title": "Métricas",
         "close": "Fechar",
         "headerTitle": "Métricas · {{eventType}}",
         "from": "De",
@@ -2353,7 +2399,6 @@
         "next": "Próximo"
       },
       "simulateDialog": {
-        "title": "Simular evento",
         "headerTitle": "Simular · {{eventType}}",
         "submit": "Simular",
         "submitting": "Enviando…",
@@ -2410,7 +2455,6 @@
       },
       "defineEventDialog": {
         "title": "Definir evento personalizado",
-        "headerTitle": "Definir evento personalizado",
         "cancel": "Cancelar",
         "submit": "Criar evento",
         "submitting": "Criando…",
@@ -2525,5 +2569,25 @@
         "selectPriority": "Selecione ou insira uma prioridade"
       }
     }
+  },
+  "mappingEditor": {
+    "error": {
+      "retry": "Tentar novamente",
+      "title": "Falha ao carregar o esquema",
+      "retryWithCount": "Tentar novamente ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Tentativa {{retryCount}} de {{maxRetries}}",
+      "maxRetriesReached": "Número máximo de tentativas atingido.",
+      "contactSupport": "Falar com o suporte →"
+    }
+  },
+  "toggle": {
+    "disableTitle": "Desativar fluxo de trabalho",
+    "enableTitle": "Ativar fluxo de trabalho",
+    "confirmDisable": "Tem certeza de que deseja desativar este fluxo de trabalho?",
+    "confirmEnable": "Tem certeza de que deseja ativar este fluxo de trabalho?"
+  },
+  "actionInputTypeHint": {
+    "coercible": "O tipo \"{{sourceType}}\" será convertido para \"{{targetType}}\"",
+    "incompatible": "O tipo \"{{sourceType}}\" é incompatível com o tipo esperado \"{{targetType}}\""
   }
 }

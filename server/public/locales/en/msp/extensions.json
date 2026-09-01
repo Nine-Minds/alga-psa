@@ -346,5 +346,30 @@
     "scopeToOneInstall": "Scope to one install",
     "overrideTenantContext": "Override tenant context",
     "matchRequestId": "Match x-request-id / context.request_id"
+  },
+  "permissions": {
+    "categoryHeadings": {
+      "storage": "Storage Permissions",
+      "ui": "UI Permissions",
+      "data": "Data Permissions",
+      "api": "API Permissions",
+      "system": "System Permissions",
+      "other": "Other Permissions"
+    },
+    "access": {
+      "low": "Read-only access",
+      "medium": "Modification access",
+      "high": "Advanced access"
+    },
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "legend": {
+      "low": "Read-only permissions allow the extension to view data but not modify it.",
+      "medium": "Modification permissions allow the extension to update existing data.",
+      "high": "Advanced permissions allow the extension to create, delete, or execute operations."
+    }
   }
 }

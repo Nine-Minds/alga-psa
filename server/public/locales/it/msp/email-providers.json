@@ -12,7 +12,6 @@
       "resyncError": "Impossibile risincronizzare il provider IMAP",
       "resyncStarted": "La risincronizzazione è iniziata per {{providerName}}.",
       "resyncRecovered": "{{providerName}} si è riconnesso correttamente.",
-      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Pro.",
       "loadProvidersError": "Impossibile caricare i provider di posta elettronica"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Configurazione del provider di posta elettronica",
-      "description": {
-        "enterprise": "Configura Gmail, Microsoft 365 o i provider IMAP per ricevere ed elaborare le email in entrata come ticket",
-        "standard": "Configura i provider Gmail o IMAP per ricevere ed elaborare le email in entrata come ticket"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Configura Gmail, Microsoft 365 o i provider IMAP per ricevere ed elaborare le email in entrata come ticket",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "Aggiungi fornitore di posta elettronica"
@@ -42,6 +35,7 @@
       "title": "Istruzioni per l'installazione",
       "microsoft": {
         "title": "Installazione di Microsoft 365",
+        "ownApp": "Usa l'app Microsoft: registrala in Azure AD (Microsoft Entra ID), autorizza le autorizzazioni di posta e collegala alla tua cassetta di posta Microsoft 365.",
         "providersPointer": "La configurazione dell'app Microsoft viene gestita in Fornitori.",
         "openProviders": "Apri Fornitori"
       },
@@ -117,10 +111,7 @@
     "actions": {
       "cancel": "Annulla"
     },
-    "help": {
-      "enterprise": "Scegli il provider già utilizzato dalla tua organizzazione. Se utilizzi Google Workspace, scegli Gmail; se utilizzi Microsoft 365, scegli Microsoft 365. Puoi modificare questa impostazione in un secondo momento rimuovendo e riconfigurando il tuo provider di posta elettronica.",
-      "standard": "Scegli il provider già utilizzato dalla tua organizzazione. Se utilizzi Google Workspace, scegli Gmail; altrimenti scegli IMAP. Puoi modificarlo in seguito rimuovendo e riconfigurando il tuo provider di posta elettronica."
-    }
+    "help": "Scegli il provider già utilizzato dalla tua organizzazione. Se utilizzi Google Workspace, scegli Gmail; se utilizzi Microsoft 365, scegli Microsoft 365. Puoi modificare questa impostazione in un secondo momento rimuovendo e riconfigurando il tuo provider di posta elettronica."
   },
   "wizard": {
     "title": {
@@ -168,7 +159,8 @@
       "resyncMailbox": "Risincronizza casella di posta",
       "pause": "Sospendi email in arrivo",
       "resume": "Riprendi email in arrivo",
-      "delete": "Elimina fornitore"
+      "delete": "Elimina fornitore",
+      "runGmailDiagnostics": "Esegui la diagnostica di recapito Gmail"
     },
     "feedback": {
       "paused": "Email in arrivo sospese.",
@@ -176,6 +168,11 @@
       "pauseError": "Impossibile modificare lo stato di pausa delle email in arrivo."
     },
     "pausedHelp": "I messaggi ricevuti mentre questa casella è in pausa non vengono importati retroattivamente.",
+    "authFailure": {
+      "title": "Email in entrata in pausa — riconnessione necessaria",
+      "description": "Le email in entrata per {{mailbox}} sono in pausa perché le credenziali non funzionano più. I messaggi non vanno persi: restano nella casella di origine e verranno importati dopo la riconnessione.",
+      "action": "Riconnetti"
+    },
     "fields": {
       "status": "Stato",
       "lastSync": "Ultima sincronizzazione",
@@ -217,6 +214,14 @@
       "title": "Nessun provider di posta elettronica configurato",
       "description": "Aggiungi un provider di posta elettronica per iniziare a ricevere ed elaborare le email in entrata come ticket.",
       "action": "Aggiungi fornitore di posta elettronica"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail non invia più nuova posta qui",
+      "expiredDescription": "Il watch di Gmail per {{mailbox}} è scaduto, quindi Google ha smesso di pubblicare notifiche. I messaggi non vanno persi: restano nella casella. Usa Aggiorna Pub/Sub e guarda per riprendere il recapito.",
+      "missingTitle": "Il recapito push di Gmail non è registrato",
+      "missingDescription": "Nessun watch di Gmail è registrato per {{mailbox}}, quindi non arriverà posta in entrata. Usa Aggiorna Pub/Sub e guarda per registrarne uno.",
+      "expiringTitle": "Il recapito push di Gmail scade entro un giorno",
+      "expiringDescription": "I watch di Gmail durano sette giorni. Usa Aggiorna Pub/Sub e guarda prima che scada, altrimenti la posta in entrata si fermerà senza altro preavviso."
     }
   },
   "forms": {
@@ -246,6 +251,9 @@
         "authorizing": "Autorizzazione in corso...",
         "authorized": "Autorizzato",
         "authorizeAccess": "Autorizza l'accesso"
+      },
+      "messages": {
+        "setupIncomplete": "Fornitore salvato ma configurazione incompleta: {{error}}"
       }
     },
     "microsoft": {
@@ -260,7 +268,8 @@
         "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
         "closedEarly": "Finestra di autorizzazione chiusa prima del completamento. Per favore riprova.",
         "authorizationFailed": "Autorizzazione fallita",
-        "senderDisplayNameInvalid": "Il nome visualizzato non può contenere virgolette, parentesi angolari o interruzioni di riga"
+        "senderDisplayNameInvalid": "Il nome visualizzato non può contenere virgolette, parentesi angolari o interruzioni di riga",
+        "issuerRequired": "Scegli un'app Microsoft prima di accedere"
       },
       "requiredFields": {
         "providerName": "Nome configurazione",
@@ -292,12 +301,24 @@
         "maxEmailsPerSync": "Numero massimo di email per sincronizzazione"
       },
       "readiness": {
-        "checking": "Verifica della configurazione Microsoft…",
-        "ready": "Microsoft è configurato. Accedi con questa cassetta postale per terminare.",
-        "pending": "In attesa del tuo amministratore di Microsoft 365. La configurazione è stata avviata in Fornitori, ma non è ancora stata approvata.",
-        "openProviders": "Apri Fornitori",
-        "notConfigured": "Microsoft non è ancora configurato. Configuralo una volta in Fornitori, quindi torna qui.",
-        "setUpInProviders": "Configura in Fornitori"
+        "openProviders": "Apri Fornitori"
+      },
+      "issuer": {
+        "title": "App Microsoft che autorizza questa casella di posta",
+        "description": "Scegli quale applicazione accede come questa casella di posta. Questa scelta viene salvata con la casella di posta e non influisce sugli altri servizi.",
+        "managedLabel": "App AlgaPSA (gestita da Nine Minds)",
+        "managedDescription": "Nessuna registrazione di un'app Microsoft è richiesta da parte tua.",
+        "recommended": "Consigliata",
+        "currentApp": "App attuale: {{app}}",
+        "selectedApp": "App selezionata: {{app}}",
+        "pendingReauth": "Ri-autorizzazione in sospeso",
+        "switchWarning": "La modifica dell'app Microsoft richiede di ricollegare questa casella di posta. Accedi di nuovo con Microsoft per completare il passaggio.",
+        "noneAvailable": "Per collegare Microsoft 365, configura prima un'app Microsoft in Fornitori, poi torna qui.",
+        "retry": "Riprova",
+        "pendingConsentEmpty": "La tua app Microsoft è in attesa dell'approvazione di un amministratore di Microsoft 365. Una volta approvata in Fornitori, torna qui per accedere.",
+        "pendingConsentHint": "La tua app Microsoft attende ancora l'approvazione di un amministratore di Microsoft 365.",
+        "ownAppPrompt": "Preferisci accedere con la tua app Microsoft?",
+        "ownAppSetupLink": "Configurala in Fornitori"
       }
     },
     "gmail": {
@@ -765,7 +786,7 @@
         "authHint": "Lascia vuoti nome utente e password se il tuo relay accetta la posta senza autenticazione.",
         "fromLabel": "Indirizzo mittente",
         "fromPlaceholder": "noreply@esempio.it",
-        "fromHelp": "Indirizzo mittente predefinito per le email in uscita.",
+        "fromHelp": "Mittente predefinito per tutte le email in uscita. Le email dei ticket possono usare un'identità dedicata qui sotto.",
         "security": {
           "title": "Sicurezza della connessione",
           "secure": "Usa TLS implicito (SSL alla connessione, in genere porta 465)",
@@ -842,7 +863,7 @@
           "description": "Inviti al portale personalizzato, reimpostazioni della password, fatture, aggiornamenti dei progetti e notifiche generali, indipendentemente dall’instradamento dei ticket.",
           "addressLabel": "Indirizzo mittente",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Questo è l’indirizzo associato al marchio usato per le email non relative ai ticket inviate tramite il tuo server SMTP.",
+          "smtpAddressHelp": "Impostato dall'Indirizzo mittente nella configurazione SMTP qui sopra. Tutte le email non relative ai ticket vengono inviate da questo indirizzo.",
           "lockedAddressHelp": "Questo indirizzo è determinato dal dominio gestito attivo o dalla casella di posta Microsoft 365 selezionata.",
           "nameLabel": "Nome visualizzato del mittente",
           "namePlaceholder": "Nome della tua azienda",
@@ -1070,6 +1091,72 @@
       "subject": "Oggetto",
       "title": "Testa questa regola",
       "to": "A"
+    }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Impossibile recuperare i domini",
+      "invalidFormat": "Formato del dominio non valido",
+      "duplicate": "Il dominio esiste già",
+      "addFailed": "Impossibile aggiungere il dominio. Riprovare.",
+      "notFound": "Dominio non trovato",
+      "verifyFailed": "Impossibile verificare il dominio. Riprovare.",
+      "stillReferenced": "Il dominio è ancora referenziato e non può essere eliminato.",
+      "deleteFailed": "Impossibile eliminare il dominio. Riprovare."
+    },
+    "provider": {
+      "saveFailed": "Impossibile salvare il provider email. Controllare le impostazioni e riprovare.",
+      "updateFailed": "Impossibile aggiornare il provider email. Controllare le impostazioni e riprovare.",
+      "notFound": "Provider email non trovato",
+      "deleteFailed": "Impossibile eliminare il provider email"
+    },
+    "settings": {
+      "fetchFailed": "Impossibile recuperare le impostazioni email",
+      "mailboxRequired": "Scegliere una cassetta postale Microsoft 365 per le email in uscita",
+      "mailboxInactive": "La cassetta postale Microsoft 365 selezionata non è attiva o non esiste più",
+      "mailboxReconnect": "Ricollegare la cassetta postale Microsoft 365 selezionata prima di utilizzarla per le email in uscita",
+      "ticketIdentityMustMatchMailbox": "L’identità email dei ticket deve utilizzare la cassetta postale Microsoft 365 selezionata ({{mailbox}}). Aggiornare l’indirizzo delle email dei ticket prima di salvare.",
+      "providerFromAddressInvalid": "L’indirizzo mittente di {{provider}} deve essere un indirizzo email valido",
+      "ticketingFromInvalid": "L’indirizzo mittente dei ticket deve essere un indirizzo email valido",
+      "outboundDomainInvalid": "Il dominio di invio in uscita deve essere un dominio valido (ad es. example.com)",
+      "outboundDomainRequired": "Configurare un dominio in uscita prima di scegliere un indirizzo mittente dei ticket",
+      "ticketingFromDomainMismatch": "L’indirizzo mittente dei ticket deve utilizzare il dominio in uscita configurato",
+      "refreshFailed": "Impossibile recuperare le impostazioni aggiornate",
+      "updateFailed": "Impossibile aggiornare le impostazioni email",
+      "mailboxesLoadFailed": "Impossibile caricare le cassette postali Microsoft 365"
+    },
+    "inboundRules": {
+      "notFound": "Regola per le email in entrata non trovata",
+      "invalidOrdering": "Dati di ordinamento delle regole non validi",
+      "aliasRequired": "L’alias è obbligatorio",
+      "aliasTooLong": "L’alias è troppo lungo",
+      "clientRequired": "Il cliente è obbligatorio",
+      "invalidSampleEmail": "Email di esempio non valida",
+      "permissionDenied": "Non disponi dell’autorizzazione per gestire le regole delle email in entrata.",
+      "ticketDefaultsUnavailable": "Il set di valori predefiniti dei ticket indicato non esiste o non è attivo.",
+      "orderingMismatch": "L’ordine non corrisponde al set di regole attuale.",
+      "clientNotFound": "Cliente non trovato.",
+      "aliasAlreadyAssigned": "L’alias “{{alias}}” è già assegnato a un cliente.",
+      "invalidRegex": "Espressione regolare non valida.",
+      "fallbackDestinationRequired": "È necessaria una destinazione alternativa quando il comportamento senza corrispondenza utilizza una destinazione alternativa."
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Esiste già una configurazione con questo nome breve",
+      "createFailed": "Impossibile creare i valori predefiniti dei ticket in entrata. Riprovare.",
+      "notFound": "Configurazione dei valori predefiniti non trovata",
+      "updateFailed": "Impossibile aggiornare i valori predefiniti dei ticket in entrata. Riprovare."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Autorizzazione negata: impossibile leggere le opzioni dei campi del ticket",
+      "loadFailed": {
+        "ticketFieldOptions": "Impossibile caricare le opzioni dei campi del ticket. Riprovare.",
+        "boards": "Impossibile caricare le bacheche. Riprovare.",
+        "statuses": "Impossibile caricare gli stati. Riprovare.",
+        "priorities": "Impossibile caricare le priorità. Riprovare.",
+        "categories": "Impossibile caricare le categorie. Riprovare.",
+        "clients": "Impossibile caricare i clienti. Riprovare.",
+        "users": "Impossibile caricare gli utenti. Riprovare."
+      }
     }
   }
 }

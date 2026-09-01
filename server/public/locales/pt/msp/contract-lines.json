@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "A quantidade deve ser maior que zero",
         "updateFailed": "Falha ao atualizar a quantidade"
       },
-      "heading": "Ajustar quantidade",
       "helperText": "Deixe em branco para usar o preço de catálogo do produto para a moeda deste contrato.",
       "labels": {
         "quantity": "Quantidade",
@@ -802,5 +801,49 @@
     },
     "label": "Tipo de linha de contrato",
     "placeholder": "Selecione o tipo de linha de contrato"
+  },
+  "errors": {
+    "line": {
+      "unavailable": "A linha de contrato selecionada não está mais disponível. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores selecionados da linha de contrato é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O contrato ou a linha de contrato selecionada não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração da linha de contrato conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores da linha de contrato não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório da linha de contrato.",
+      "missingFieldNamed": "Falta um campo obrigatório da linha de contrato: {{field}}."
+    },
+    "templateLine": {
+      "unavailable": "A linha de modelo selecionada não está mais disponível. Atualize a página e tente novamente."
+    },
+    "mapping": {
+      "duplicate": "Esta linha de contrato já está associada ao contrato selecionado."
+    },
+    "preset": {
+      "invalidValue": "Um dos valores selecionados da predefinição de linha de contrato é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "A predefinição de linha de contrato, contrato ou serviço selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração da predefinição de linha de contrato conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores da predefinição de linha de contrato não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório da predefinição de linha de contrato.",
+      "missingFieldNamed": "Falta um campo obrigatório da predefinição de linha de contrato: {{field}}.",
+      "notFoundDuringUpdate": "Predefinição de linha de contrato com ID {{presetId}} não encontrada durante a atualização."
+    },
+    "service": {
+      "unavailable": "O serviço da linha de contrato selecionado não está mais disponível. Atualize a página e tente novamente.",
+      "referenceMissing": "A linha de contrato ou o serviço selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Este serviço já está associado à linha de contrato selecionada.",
+      "notAllowed": "Um dos valores do serviço não é permitido. Revise o formulário e tente novamente.",
+      "addedOnce": "Um serviço só pode ser adicionado uma vez na edição de uma linha de contrato.",
+      "removedOnce": "Um serviço só pode ser removido uma vez na edição de uma linha de contrato.",
+      "addedAndRemoved": "O mesmo serviço não pode ser adicionado e removido em uma única edição de linha de contrato."
+    },
+    "configuration": {
+      "unavailable": "A configuração de serviço selecionada não está mais disponível. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores selecionados da configuração de serviço é inválido. Atualize a página e tente novamente.",
+      "duplicate": "Esta configuração de serviço já existe para a linha de contrato selecionada.",
+      "notAllowed": "Um dos valores da configuração de serviço não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório da configuração de serviço.",
+      "missingFieldNamed": "Falta um campo obrigatório da configuração de serviço: {{field}}.",
+      "bucketOverlayFieldsMissing": "Faltam campos obrigatórios da sobreposição do banco de horas."
+    }
   }
 }

@@ -8,6 +8,7 @@ import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
+import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
@@ -39,6 +40,7 @@ import {
   moveTicketsToBoard,
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
+import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter } from 'lucide-react';
@@ -50,6 +52,26 @@ import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings'
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns, TICKET_COLUMNS } from '@alga-psa/tickets/lib';
+import BoardHeader from './BoardHeader';
+import TicketViewMenu from './TicketViewMenu';
+import {
+  captureTicketViewSettings,
+  ticketViewDiffersFromSaved,
+  TICKET_VIEW_DENSITY_DEFAULT,
+  TICKET_VIEW_DENSITY_STEP,
+  type ResolvedTicketViewSettings,
+  type TicketViewSettings,
+} from '../lib/ticketViewSettings';
+import {
+  clearBoardDefaultView,
+  getBoardIdentities,
+  saveBoardDefaultView,
+  type BoardIdentity,
+} from '../actions/board-actions/boardActions';
+import {
+  canManageTicketViewDefaults,
+  updateTicketingDisplaySettings,
+} from '../actions/ticketDisplaySettings';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
@@ -57,16 +79,24 @@ import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
   type TicketStatusFilterOption,
 } from '../lib/ticketStatusFilter';
+import {
+  boardIdFromTabId,
+  boardTabId,
+  boardTabSelection,
+  buildBoardSelectionFilterUpdate,
+  resolveActiveBoardId,
+  buildBoardTabs,
+} from '../lib/boardTabs';
+import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
 import { useTicketsRouteState } from './TicketsRouteProvider';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -92,7 +122,7 @@ interface TicketingDashboardProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onFilterChange: (update: Partial<ITicketListFilters>) => void;
+  onFilterChange: (update: Partial<ITicketListFilters>, options?: TicketFilterChangeOptions) => void;
   filterValues: Partial<ITicketListFilters>;
   isLoadingMore: boolean;
   user?: IUser;
@@ -106,8 +136,27 @@ interface TicketingDashboardProps {
   initialTicketTags?: Record<string, ITag[]>;
   initialTeams?: ITeam[];
   canUpdateTickets?: boolean;
+  /**
+   * Called immediately before any route change out of the list, so the container
+   * can stop mirroring filter state into the URL. A write that lands while the
+   * push is in flight replaces the entry the router just made and bounces the
+   * user back to the list.
+   */
+  onNavigateAway?: () => void;
   allowSlaStatusFilter?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
+  /**
+   * The resolved board→tenant→catalog view. Owned by the container so that
+   * applying a board's default view layers into the one merge path that already
+   * produces a single fetch per navigation, instead of becoming a second effect.
+   */
+  viewPresentation?: ResolvedTicketViewSettings;
+  onViewPresentationChange?: (update: Partial<ResolvedTicketViewSettings>) => void;
+  /** The resolved baseline for the active tab, for the "differs from saved" dot. */
+  savedViewSettings?: TicketViewSettings | null;
+  /** True when this tab has a stored document of its own (Reset has work to do). */
+  hasStoredDefaultView?: boolean;
+  onSavedViewChanged?: (boardId: string | null, saved: TicketViewSettings | null) => void;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -123,10 +172,11 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
-const TICKET_LIST_DENSITY_STORAGE_KEY = 'ticket_list_density_level';
 const EMPTY_STRING_ARRAY: string[] = [];
-const TICKET_LIST_DENSITY_STEP = 10;
-const TICKET_LIST_DENSITY_DEFAULT = 50;
+// Density lives in the view-settings layer now (board -> tenant -> default), so
+// the step and default are read from there rather than re-declared here.
+const TICKET_LIST_DENSITY_STEP = TICKET_VIEW_DENSITY_STEP;
+const TICKET_LIST_DENSITY_DEFAULT = TICKET_VIEW_DENSITY_DEFAULT;
 const TICKET_PRINT_FALLBACK_PAGE_SIZE = 500;
 
 const normalizeTicketListDensityLevel = (value: number): number => {
@@ -171,18 +221,20 @@ const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
   { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
 ];
 
-function formatPrintDate(value?: string | null): string {
+// Module scope has no hook to read the app locale from, so the printing helpers
+// take it as an argument rather than defaulting to the browser's.
+function formatPrintDate(value: string | null | undefined, locale: string): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatPrintDateTime(value?: string | null): string {
+function formatPrintDateTime(value: string | null | undefined, locale: string): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -198,9 +250,9 @@ function getTicketColumnValue(ticket: ITicketListItem, dataIndex: string | strin
   ), ticket);
 }
 
-function formatTicketPrintValue(value: unknown): string {
+function formatTicketPrintValue(value: unknown, locale: string): string {
   if (value === null || value === undefined || value === '') return '';
-  if (value instanceof Date) return value.toLocaleString();
+  if (value instanceof Date) return value.toLocaleString(locale);
   if (Array.isArray(value)) return value.filter(Boolean).join(', ');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -235,12 +287,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialTicketTags = {},
   initialTeams = [],
   canUpdateTickets = true,
+  onNavigateAway,
   allowSlaStatusFilter = true,
   useAlgaDeskQuickAddForm = false,
+  viewPresentation,
+  onViewPresentationChange,
+  savedViewSettings,
+  hasStoredDefaultView = false,
+  onSavedViewChanged,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
+  // These followed the browser locale, so a German UI printed American dates.
+  const { formatDate } = useFormatters();
+  const { locale } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
 
@@ -351,17 +412,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedResponseState = (filterValues.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   const selectedSlaStatus = allowSlaStatusFilter ? (filterValues.slaStatusFilter ?? 'all') : 'all';
   const bundleView = (filterValues.bundleView ?? 'bundled') as 'bundled' | 'individual';
-  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<number>(TICKET_LIST_DENSITY_DEFAULT);
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+
+  // The only way out of this route. Announcing the departure *before* the push
+  // is the point: the container mirrors filter state into the URL, and a write
+  // that lands while the push is still in flight replaces the entry the router
+  // just made — which is what made a freshly-opened ticket snap back to the list.
+  const navigateAwayTo = useCallback((href: string) => {
+    onNavigateAway?.();
+    router.push(href);
+  }, [onNavigateAway, router]);
 
   // Create-ticket is a routed modal now (keeps the rich-text editor out of this route's
   // bundle). Navigate instead of rendering QuickAddTicket inline; the route renders the
   // dialog (intercepted as an overlay over the list) and refreshes the list on success.
   const openQuickAddTicket = useCallback(
-    () => router.push(buildCreateTicketHref({ isAlgaDeskMode: useAlgaDeskQuickAddForm })),
-    [router, useAlgaDeskQuickAddForm],
+    () => navigateAwayTo(buildCreateTicketHref({ isAlgaDeskMode: useAlgaDeskQuickAddForm })),
+    [navigateAwayTo, useAlgaDeskQuickAddForm],
   );
   usePageCreateShortcut(openQuickAddTicket);
 
@@ -487,23 +556,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     window.localStorage.setItem(BUNDLE_VIEW_STORAGE_KEY, bundleView);
   }, [bundleView]);
 
-  // Persist ticket list density preference locally.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = Number(window.localStorage.getItem(TICKET_LIST_DENSITY_STORAGE_KEY));
-    if (Number.isFinite(stored) && stored >= 0 && stored <= 100) {
-      setTicketListDensityLevel(normalizeTicketListDensityLevel(stored));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(TICKET_LIST_DENSITY_STORAGE_KEY, String(ticketListDensityLevel));
-  }, [ticketListDensityLevel]);
+  // Density is board -> tenant -> 50, and localStorage is deliberately neither
+  // read nor written any more. Left in place, a value any user had ever nudged
+  // would silently outrank every board's configured density forever, for that
+  // user, on every board — a per-browser setting quietly beating tenant-wide
+  // configuration is not a precedence anyone can reason about.
+  const ticketListDensityLevel = viewPresentation?.densityLevel ?? TICKET_LIST_DENSITY_DEFAULT;
 
   const handleTicketListDensityChange = useCallback((value: number) => {
-    setTicketListDensityLevel(normalizeTicketListDensityLevel(value));
-  }, []);
+    onViewPresentationChange?.({ densityLevel: normalizeTicketListDensityLevel(value) });
+  }, [onViewPresentationChange]);
 
   const densityClasses = useMemo(() => {
     const index = Math.min(
@@ -518,6 +580,150 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => buildTicketStatusFilterOptions(rawStatusOptions, selectedBoard, selectedStatus),
     [rawStatusOptions, selectedBoard, selectedStatus]
   );
+
+  // Board tab strip: open-ticket counts are decoration, so they load out of band
+  // and the tabs render without pills until (or unless) the stats arrive.
+  const [boardStats, setBoardStats] = useState<Record<string, BoardListStats> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const stats = await getBoardListStats();
+        if (!cancelled) {
+          setBoardStats(stats);
+        }
+      } catch (error) {
+        // Counts are not worth a toast; the strip stays usable without them.
+        console.error('Failed to load board ticket counts:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Board identity (manager, SLA policy) for the header. Loaded out of band
+  // alongside the stats, for the same reason: the header's identity is the part
+  // that must be instant, and its ownership line is decoration that can arrive a
+  // beat later without the header ever looking broken.
+  const [boardIdentities, setBoardIdentities] = useState<Record<string, BoardIdentity> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await getBoardIdentities();
+        if (!cancelled) {
+          setBoardIdentities(Object.fromEntries(rows.map(row => [row.boardId, row])));
+        }
+      } catch (error) {
+        console.error('Failed to load board identities:', error);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Presentation-only gate on the save/reset items; the actions enforce it too.
+  const [canManageViewDefaults, setCanManageViewDefaults] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const allowed = await canManageTicketViewDefaults();
+        if (!cancelled) setCanManageViewDefaults(allowed === true);
+      } catch {
+        // Denied-by-default: a failed permission read must not reveal the control.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const [isSavingView, setIsSavingView] = useState(false);
+
+  const activeBoard = useMemo(
+    () => (selectedBoard ? boards.find(board => board.board_id === selectedBoard) ?? null : null),
+    [boards, selectedBoard]
+  );
+
+  // The live view, projected into the same shape as what is stored, so the
+  // "differs from saved" comparison is between like and like. Board scope and
+  // search are excluded by capture, so they can never make a view look dirty.
+  const liveViewSettings = useMemo<TicketViewSettings>(() => captureTicketViewSettings({
+    filters: { ...filterValues, sortBy, sortDirection },
+    columnVisibility: viewPresentation?.columnVisibility,
+    columnOrder: viewPresentation?.columnOrder,
+    tagsInlineUnderTitle: viewPresentation?.tagsInlineUnderTitle,
+    densityLevel: viewPresentation?.densityLevel,
+  }), [filterValues, sortBy, sortDirection, viewPresentation]);
+
+  const viewIsDirty = useMemo(
+    () => ticketViewDiffersFromSaved(liveViewSettings, savedViewSettings),
+    [liveViewSettings, savedViewSettings]
+  );
+
+  // Where a save goes depends on which tab is active: a board tab writes that
+  // board's document, the All-tickets tab writes the tenant layer that already
+  // backs the Display Settings screen. Same affordance, correct altitude, no new
+  // mechanism on either side.
+  const handleSaveDefaultView = useCallback(async () => {
+    setIsSavingView(true);
+    try {
+      if (selectedBoard) {
+        const result = await saveBoardDefaultView(selectedBoard, liveViewSettings);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          handleError(getErrorMessage(result), t('dashboard.viewMenu.saveFailed', 'Failed to save the default view'));
+          return;
+        }
+        onSavedViewChanged?.(selectedBoard, liveViewSettings);
+      } else {
+        const result = await updateTicketingDisplaySettings({ list: liveViewSettings });
+        if (isActionPermissionError(result)) {
+          handleError(getErrorMessage(result), t('dashboard.viewMenu.saveFailed', 'Failed to save the default view'));
+          return;
+        }
+        onSavedViewChanged?.(null, liveViewSettings);
+      }
+      toast.success(t('dashboard.viewMenu.saved', 'Default view saved'));
+    } catch (error) {
+      handleError(error, t('dashboard.viewMenu.saveFailed', 'Failed to save the default view'));
+    } finally {
+      setIsSavingView(false);
+    }
+  }, [selectedBoard, liveViewSettings, onSavedViewChanged, t]);
+
+  const handleResetDefaultView = useCallback(async () => {
+    if (!selectedBoard) {
+      // The All-tickets tab is the tenant layer itself; "reset to tenant
+      // default" there would mean resetting to the catalog, which is a
+      // different, larger action than this menu item promises.
+      return;
+    }
+    setIsSavingView(true);
+    try {
+      const result = await clearBoardDefaultView(selectedBoard);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(getErrorMessage(result), t('dashboard.viewMenu.resetFailed', 'Failed to reset the view'));
+        return;
+      }
+      onSavedViewChanged?.(selectedBoard, null);
+      toast.success(t('dashboard.viewMenu.reset', 'Reset to tenant default'));
+    } catch (error) {
+      handleError(error, t('dashboard.viewMenu.resetFailed', 'Failed to reset the view'));
+    } finally {
+      setIsSavingView(false);
+    }
+  }, [selectedBoard, onSavedViewChanged, t]);
+
+  const boardTabs = useMemo(
+    () => buildBoardTabs({
+      boards,
+      activeBoardId: selectedBoard,
+      stats: boardStats,
+      allTabLabel: t('dashboard.boardTabs.all', 'All tickets'),
+      unnamedBoardLabel: t('bulk.move.unnamedBoard', 'Unnamed board'),
+    }),
+    [boards, selectedBoard, boardStats, t]
+  );
+  const activeBoardTabId = boardTabId(selectedBoard);
 
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
@@ -633,11 +839,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Custom function for clicking on tickets with filter preservation
   const handleTicketClick = useCallback((ticketId: string) => {
     const filterQuery = getCurrentFiltersQuery();
-    const href = filterQuery 
+    const href = filterQuery
       ? `/msp/tickets/${ticketId}?returnFilters=${encodeURIComponent(filterQuery)}`
       : `/msp/tickets/${ticketId}`;
-    router.push(href);
-  }, [getCurrentFiltersQuery, router]);
+    navigateAwayTo(href);
+  }, [getCurrentFiltersQuery, navigateAwayTo]);
 
 
   // Handle saving time entries created from intervals
@@ -1090,7 +1296,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const baseColumns = createTicketColumns({
       categories,
       boards,
-      displaySettings: displaySettings || undefined,
+      // The live view outranks the tenant document here: the View menu is
+      // interaction state layered over the resolved board->tenant->catalog
+      // result, so what the user just toggled must win over what was stored.
+      displaySettings: viewPresentation
+        ? {
+            ...(displaySettings || {}),
+            list: {
+              ...(displaySettings?.list || {}),
+              columnVisibility: viewPresentation.columnVisibility,
+              tagsInlineUnderTitle: viewPresentation.tagsInlineUnderTitle,
+            },
+          }
+        : displaySettings || undefined,
+      columnOrder: viewPresentation?.columnOrder,
       onTicketClick: handleTicketClick,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
@@ -1103,6 +1322,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
       t,
+      locale,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -1202,6 +1422,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     categories,
     boards,
     displaySettings,
+    viewPresentation,
     handleTicketClick,
     handleTagsChange,
     ticketTagsRef,
@@ -1560,8 +1781,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         const additionalAgents = ticket.additional_agents?.map((agent) => agent.name).filter(Boolean) ?? [];
         return additionalAgents.length > 0 ? `${primary}; +${additionalAgents.length}: ${additionalAgents.join(', ')}` : primary;
       },
-      due_date: (ticket) => formatPrintDate(ticket.due_date) || t('dashboard.print.noDueDate', 'No due date'),
-      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at) || t('dashboard.print.emptyValue', '—'),
+      due_date: (ticket) => formatPrintDate(ticket.due_date, locale) || t('dashboard.print.noDueDate', 'No due date'),
+      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, locale) || t('dashboard.print.emptyValue', '—'),
       entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
       tags: (ticket) => {
         const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
@@ -1588,13 +1809,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (
-          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey))
+          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey), locale)
           || t('dashboard.print.emptyValue', '—')
         )),
       };
     });
   }, [
     categories,
+    locale,
     t,
     ticketTagsRef,
   ]);
@@ -1655,21 +1877,48 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
 
   const handleBoardSelect = useCallback((newSelectedBoards: string[], newExcludedBoards: string[]) => {
-    // Status options are board-scoped; only scope when exactly one real board is selected.
-    const scopedBoardId = newSelectedBoards.length === 1 && newSelectedBoards[0] !== NO_BOARD_VALUE
-      ? newSelectedBoards[0]
-      : undefined;
-    const nextStatusOptions = buildTicketStatusFilterOptions(rawStatusOptions, scopedBoardId, selectedStatus);
-    const statusStillAvailable = nextStatusOptions.some(option => option.value === selectedStatus);
-
-    onFilterChange({
-      boardId: undefined, // clear legacy single-board field; arrays are the source of truth
-      boardIds: newSelectedBoards.length > 0 ? newSelectedBoards : undefined,
-      excludeBoardIds: newExcludedBoards.length > 0 ? newExcludedBoards : undefined,
-      statusId: statusStillAvailable ? selectedStatus : TICKET_STATUS_FILTER_OPEN,
-      showOpenOnly: statusStillAvailable ? isTicketStatusOpenFilter(selectedStatus) : true,
+    const update = buildBoardSelectionFilterUpdate({
+      selectedBoards: newSelectedBoards,
+      excludedBoards: newExcludedBoards,
+      statusOptions: rawStatusOptions,
+      currentStatusId: selectedStatus,
     });
-  }, [onFilterChange, rawStatusOptions, selectedStatus]);
+
+    // Narrowing the picker to exactly one board lands on that board's tab and
+    // reveals its header, so it is an arrival by the same definition
+    // resolveActiveBoardId uses and must apply that board's view. Without this,
+    // the header would name one board while the columns, density and filters
+    // still belonged to the previous one. Any other picker selection (none,
+    // several, the no-board sentinel) is a multi-board filter, not an arrival —
+    // it has no single board whose view could apply.
+    const nextBoardId = resolveActiveBoardId(newSelectedBoards);
+    const isArrival = nextBoardId !== null && nextBoardId !== selectedBoard;
+
+    onFilterChange(update, isArrival ? { activeBoardTab: nextBoardId } : undefined);
+  }, [onFilterChange, rawStatusOptions, selectedBoard, selectedStatus]);
+
+  // A board tab is the same single-board filter the picker sets, so it goes
+  // through the identical update path — the tab only adds "this was a
+  // navigation" (history entry + last-active-board preference).
+  const handleBoardTabSelect = useCallback((tabId: string) => {
+    const nextBoardId = boardIdFromTabId(tabId);
+    // Radix fires onValueChange for the already-active tab in some interactions
+    // (and clicking "All tickets" while already there must not wipe a
+    // multi-board selection). Bail before emitting so one click is one fetch.
+    if (nextBoardId === selectedBoard) {
+      return;
+    }
+    const { selectedBoards: nextSelected, excludedBoards: nextExcluded } = boardTabSelection(nextBoardId);
+    onFilterChange(
+      buildBoardSelectionFilterUpdate({
+        selectedBoards: nextSelected,
+        excludedBoards: nextExcluded,
+        statusOptions: rawStatusOptions,
+        currentStatusId: selectedStatus,
+      }),
+      { pushHistory: true, activeBoardTab: nextBoardId }
+    );
+  }, [onFilterChange, rawStatusOptions, selectedBoard, selectedStatus]);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
     onFilterChange({
@@ -1800,7 +2049,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
 
     if (selectedDueDateFilter !== 'all') {
-      const dateStr = dueDateFilterValue ? dueDateFilterValue.toLocaleDateString() : '';
+      const dateStr = dueDateFilterValue ? formatDate(dueDateFilterValue, { dateStyle: 'medium' }) : '';
       const map: Record<string, string> = {
         overdue: t('dashboard.filters.overdue', 'Overdue'),
         today: t('dashboard.filters.dueToday', 'Due Today'),
@@ -1891,7 +2140,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       defaultValue: 'Export selected ({{count}})',
                     })
                   : t('dashboard.exportAction', { defaultValue: 'Export CSV' }),
-                onSelect: () => router.push('/msp/tickets/export'),
+                onSelect: () => navigateAwayTo('/msp/tickets/export'),
                 disabled: !hasSelection,
                 separator: true,
               },
@@ -1899,7 +2148,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 id: `${id}-share-import`,
                 icon: Upload,
                 label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
-                onSelect: () => router.push('/msp/tickets/import'),
+                onSelect: () => navigateAwayTo('/msp/tickets/import'),
               },
             ] satisfies ShareAction[]}
           />
@@ -1908,8 +2157,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </Button>
         </div>
       </div>
-      <div className="bg-white dark:bg-[rgb(var(--color-card))] shadow rounded-lg">
-        <div className={`sticky top-0 z-40 bg-white dark:bg-[rgb(var(--color-card))] rounded-t-lg border-b border-gray-100 dark:border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
+      <BoardTabStrip
+        id={`${id}-board-tabs`}
+        tabs={boardTabs}
+        value={activeBoardTabId}
+        onChange={handleBoardTabSelect}
+      />
+      <div className="bg-[rgb(var(--color-card))] shadow rounded-lg">
+        {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
+            second board-selection derivation: the highlighted tab, the
+            board-scoped status options and this header must agree by
+            construction, not by two places happening to compute the same thing. */}
+        {activeBoard && (
+          <BoardHeader
+            id={`${id}-board-header`}
+            board={activeBoard}
+            stats={boardStats?.[activeBoard.board_id as string] ?? null}
+            identity={boardIdentities?.[activeBoard.board_id as string] ?? null}
+            t={t as (key: string, fallback: string) => string}
+          />
+        )}
+        <div className={`sticky top-0 z-40 bg-[rgb(var(--color-card))] rounded-t-lg border-b border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
               {/* Candidate #1: always-visible search + Filters toggle + density */}
@@ -1931,7 +2199,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   <Filter className="h-4 w-4" />
                   {t('filters.button', 'Filters')}
                   {activeFilterCount > 0 && (
-                    <span className="ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[rgb(var(--color-primary-100))] px-1.5 text-[11px] font-semibold text-[rgb(var(--color-primary-700))]">
+                    <span className="chip-primary ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold">
                       {activeFilterCount}
                     </span>
                   )}
@@ -1960,19 +2228,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     />
                   </div>
                   <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-                  <div className="shrink-0">
-                    <ViewDensityControl
-                      idPrefix={`${id}-list-density`}
-                      value={ticketListDensityLevel}
-                      onChange={handleTicketListDensityChange}
-                      step={TICKET_LIST_DENSITY_STEP}
-                      compactLabel={t('dashboard.spacing.compact', 'Compact')}
-                      spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
-                      decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
-                      increaseTitle={t('dashboard.spacing.increase', 'Increase ticket list spacing')}
-                      resetTitle={t('dashboard.spacing.reset', 'Reset ticket list spacing')}
+                  {viewPresentation && onViewPresentationChange && (
+                    <TicketViewMenu
+                      id={`${id}-view-menu`}
+                      view={viewPresentation}
+                      onChange={onViewPresentationChange}
+                      isDirty={viewIsDirty}
+                      canManageDefaults={canManageViewDefaults}
+                      scope={selectedBoard ? 'board' : 'tenant'}
+                      onSaveDefault={handleSaveDefaultView}
+                      onResetDefault={handleResetDefaultView}
+                      hasStoredDefault={hasStoredDefaultView}
+                      isSaving={isSavingView}
+                      t={t as (key: string, fallback: string) => string}
                     />
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -1981,14 +2251,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   {activeFilterChips.map((chip) => (
                     <span
                       key={chip.key}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] py-1 pl-2.5 pr-1.5 text-xs font-medium text-[rgb(var(--color-primary-700))]"
+                      className="chip-primary inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] py-1 pl-2.5 pr-1.5 text-xs font-medium"
                     >
                       <span className="max-w-[220px] truncate">{chip.label}</span>
                       <button
                         type="button"
                         onClick={chip.onRemove}
                         aria-label={`Remove ${chip.label}`}
-                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-100))] hover:text-[rgb(var(--color-primary-700))]"
+                        className="chip-primary inline-flex h-4 w-4 items-center justify-center rounded-full hover: hover:"
                       >
                         <XCircle className="h-3.5 w-3.5" />
                       </button>
@@ -2089,10 +2359,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       { value: 'today', label: t('dashboard.filters.dueToday', 'Due Today') },
                       { value: 'upcoming', label: t('dashboard.filters.dueNext7Days', 'Due Next 7 Days') },
                       { value: 'before', label: dueDateFilterValue && selectedDueDateFilter === 'before'
-                        ? t('dashboard.filters.beforeDateSelected', 'Before {{date}}', { date: dueDateFilterValue.toLocaleDateString() })
+                        ? t('dashboard.filters.beforeDateSelected', 'Before {{date}}', { date: formatDate(dueDateFilterValue, { dateStyle: 'medium' }) })
                         : t('dashboard.filters.beforeDate', 'Before Date...') },
                       { value: 'after', label: dueDateFilterValue && selectedDueDateFilter === 'after'
-                        ? t('dashboard.filters.afterDateSelected', 'After {{date}}', { date: dueDateFilterValue.toLocaleDateString() })
+                        ? t('dashboard.filters.afterDateSelected', 'After {{date}}', { date: formatDate(dueDateFilterValue, { dateStyle: 'medium' }) })
                         : t('dashboard.filters.afterDate', 'After Date...') },
                       { value: 'no_due_date', label: t('dashboard.filters.noDueDate', 'No Due Date') },
                     ]}
@@ -2709,19 +2979,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setIsBundleDialogOpen(true);
         }}
         onAssign={() => {
-          router.push('/msp/tickets/bulk-assign');
+          navigateAwayTo('/msp/tickets/bulk-assign');
         }}
         onStatus={() => {
-          router.push('/msp/tickets/bulk-status');
+          navigateAwayTo('/msp/tickets/bulk-status');
         }}
         onPriority={() => {
-          router.push('/msp/tickets/bulk-priority');
+          navigateAwayTo('/msp/tickets/bulk-priority');
         }}
         onTags={() => {
-          router.push('/msp/tickets/bulk-tags');
+          navigateAwayTo('/msp/tickets/bulk-tags');
         }}
         onDueDate={() => {
-          router.push('/msp/tickets/bulk-due-date');
+          navigateAwayTo('/msp/tickets/bulk-due-date');
         }}
         onDelete={() => {
           setBulkDeleteErrors([]);

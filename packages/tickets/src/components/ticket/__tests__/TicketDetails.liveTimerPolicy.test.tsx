@@ -5,6 +5,7 @@ import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
+import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
 const findBoardByIdMock = vi.fn();
 const getTicketByIdMock = vi.fn();
@@ -147,6 +148,18 @@ vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  // Components under test format dates through useFormatters; the real hook
+  // reads the locale off the provider this test does not mount.
+  useFormatters: () => ({
+    locale: 'en',
+    formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en', options).format(typeof date === 'string' ? new Date(date) : date),
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', options).format(value),
+    formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
+    formatRelativeTime: (date: Date | string) => String(date),
+  }),
   useTranslation: () => ({
     t: (_key: string, fallback?: string | Record<string, unknown>) => {
       // Mirror i18next's t(key, options) form where options carries defaultValue.
@@ -381,6 +394,7 @@ describe('TicketDetails live timer board policy', () => {
   it('skips live timer auto-start when the initial board disables the live timer', async () => {
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={{ ...baseTicket, board_id: 'board-disabled' }}
         initialBoard={disabledBoard}
       />
@@ -399,6 +413,7 @@ describe('TicketDetails live timer board policy', () => {
 
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
         onTicketUpdate={onTicketUpdateMock}
@@ -437,6 +452,7 @@ describe('TicketDetails live timer board policy', () => {
 
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
         onTicketUpdate={onTicketUpdateMock}
@@ -471,6 +487,7 @@ describe('TicketDetails live timer board policy', () => {
 
     const { rerender } = render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />
@@ -487,6 +504,7 @@ describe('TicketDetails live timer board policy', () => {
 
     rerender(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />
@@ -501,6 +519,7 @@ describe('TicketDetails live timer board policy', () => {
 
     rerender(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />
@@ -519,6 +538,7 @@ describe('TicketDetails live timer board policy', () => {
 
     const { rerender } = render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />
@@ -533,6 +553,7 @@ describe('TicketDetails live timer board policy', () => {
 
     rerender(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />

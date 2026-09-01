@@ -1,0 +1,745 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`kbImportBlocks html fidelity > produces the golden BlockNote document 1`] = `
+[
+  {
+    "content": [
+      {
+        "text": "Printer Troubleshooting",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "level": 1,
+    },
+    "type": "heading",
+  },
+  {
+    "content": [
+      {
+        "text": "Restart the ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "bold": true,
+        },
+        "text": "spooler",
+        "type": "text",
+      },
+      {
+        "text": " service, then ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "italic": true,
+        },
+        "text": "retry",
+        "type": "text",
+      },
+      {
+        "text": " the job. Run ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "code": true,
+        },
+        "text": "net stop spooler",
+        "type": "text",
+      },
+      {
+        "text": " and read the ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "link": {
+            "href": "https://example.com/printers",
+          },
+        },
+        "text": "vendor guide",
+        "type": "text",
+      },
+      {
+        "text": " before escalating.",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "text": "Symptoms",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "level": 2,
+    },
+    "type": "heading",
+  },
+  {
+    "content": [
+      {
+        "text": "Jobs stay queued",
+        "type": "text",
+      },
+    ],
+    "type": "bulletListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Status shows ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "italic": true,
+        },
+        "text": "offline",
+        "type": "text",
+      },
+    ],
+    "type": "bulletListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Driver reports ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "code": true,
+        },
+        "text": "0x0000011b",
+        "type": "text",
+      },
+    ],
+    "type": "bulletListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Fix order",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "level": 3,
+    },
+    "type": "heading",
+  },
+  {
+    "content": [
+      {
+        "text": "Restart the spooler",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Clear the spool folder",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Reinstall the driver",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Escalate to the vendor when the queue clears but printing still fails.",
+        "type": "text",
+      },
+    ],
+    "type": "blockquote",
+  },
+  {
+    "content": [
+      {
+        "text": "Restart-Service -Name Spooler",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "language": "powershell",
+    },
+    "type": "codeBlock",
+  },
+  {
+    "content": {
+      "rows": [
+        {
+          "cells": [
+            [
+              {
+                "text": "Model",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "Firmware",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "Supported",
+                "type": "text",
+              },
+            ],
+          ],
+          "isHeader": true,
+        },
+        {
+          "cells": [
+            [
+              {
+                "text": "LX-100",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "2.4.1",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "styles": {
+                  "bold": true,
+                },
+                "text": "yes",
+                "type": "text",
+              },
+            ],
+          ],
+          "isHeader": false,
+        },
+        {
+          "cells": [
+            [
+              {
+                "text": "LX-200",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "3.0.0",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "no",
+                "type": "text",
+              },
+            ],
+          ],
+          "isHeader": false,
+        },
+      ],
+      "type": "tableContent",
+    },
+    "type": "table",
+  },
+  {
+    "type": "horizontalRule",
+  },
+  {
+    "content": [
+      {
+        "text": "Contact ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "strike": true,
+        },
+        "text": "the helpdesk",
+        "type": "text",
+      },
+      {
+        "text": " the vendor for ",
+        "type": "text",
+      },
+      {
+        "text": """,
+        "type": "text",
+      },
+      {
+        "text": "RMA",
+        "type": "text",
+      },
+      {
+        "text": """,
+        "type": "text",
+      },
+      {
+        "text": " numbers ",
+        "type": "text",
+      },
+      {
+        "text": "&",
+        "type": "text",
+      },
+      {
+        "text": " parts.",
+        "type": "text",
+      },
+      {
+        "text": " ",
+        "type": "text",
+      },
+      {
+        "text": "Ask for a case ID.",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "props": {
+      "caption": "Spooler service dialog",
+      "url": "https://example.com/img/spooler.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "Compare",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "props": {
+      "caption": "the queue",
+      "url": "https://example.com/img/queue.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "with the driver log.",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+]
+`;
+
+exports[`kbImportBlocks markdown fidelity > produces the golden BlockNote document 1`] = `
+[
+  {
+    "content": [
+      {
+        "text": "Printer Troubleshooting",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "level": 1,
+    },
+    "type": "heading",
+  },
+  {
+    "content": [
+      {
+        "text": "Restart the ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "bold": true,
+        },
+        "text": "spooler",
+        "type": "text",
+      },
+      {
+        "text": " service, then ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "italic": true,
+        },
+        "text": "retry",
+        "type": "text",
+      },
+      {
+        "text": " the job. Run ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "code": true,
+        },
+        "text": "net stop spooler",
+        "type": "text",
+      },
+      {
+        "text": " and read the ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "link": {
+            "href": "https://example.com/printers",
+          },
+        },
+        "text": "vendor guide",
+        "type": "text",
+      },
+      {
+        "text": " before escalating.",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "text": "Symptoms",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "level": 2,
+    },
+    "type": "heading",
+  },
+  {
+    "content": [
+      {
+        "text": "Jobs stay queued",
+        "type": "text",
+      },
+    ],
+    "type": "bulletListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Status shows ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "italic": true,
+        },
+        "text": "offline",
+        "type": "text",
+      },
+    ],
+    "type": "bulletListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Only on the third floor",
+        "type": "text",
+      },
+    ],
+    "type": "bulletListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Driver reports ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "code": true,
+        },
+        "text": "0x0000011b",
+        "type": "text",
+      },
+    ],
+    "type": "bulletListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Fix order",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "level": 3,
+    },
+    "type": "heading",
+  },
+  {
+    "content": [
+      {
+        "text": "Restart the spooler",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Clear ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "code": true,
+        },
+        "text": "%windir%\\System32\\spool\\PRINTERS",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Reinstall the driver",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
+  {
+    "content": [
+      {
+        "text": "Escalate to the vendor when the queue clears but printing still fails. Include the driver version.",
+        "type": "text",
+      },
+    ],
+    "type": "blockquote",
+  },
+  {
+    "content": [
+      {
+        "text": "Restart-Service -Name Spooler",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "language": "powershell",
+    },
+    "type": "codeBlock",
+  },
+  {
+    "content": [
+      {
+        "text": "plain fenced block",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "language": "plain",
+    },
+    "type": "codeBlock",
+  },
+  {
+    "content": {
+      "rows": [
+        {
+          "cells": [
+            [
+              {
+                "text": "Model",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "Firmware",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "Supported",
+                "type": "text",
+              },
+            ],
+          ],
+          "isHeader": true,
+        },
+        {
+          "cells": [
+            [
+              {
+                "text": "LX-100",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "2.4.1",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "styles": {
+                  "bold": true,
+                },
+                "text": "yes",
+                "type": "text",
+              },
+            ],
+          ],
+          "isHeader": false,
+        },
+        {
+          "cells": [
+            [
+              {
+                "text": "LX-200",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "3.0.0",
+                "type": "text",
+              },
+            ],
+            [
+              {
+                "text": "no",
+                "type": "text",
+              },
+            ],
+          ],
+          "isHeader": false,
+        },
+      ],
+      "type": "tableContent",
+    },
+    "type": "table",
+  },
+  {
+    "type": "horizontalRule",
+  },
+  {
+    "content": [
+      {
+        "text": "Contact ",
+        "type": "text",
+      },
+      {
+        "styles": {
+          "strike": true,
+        },
+        "text": "the helpdesk",
+        "type": "text",
+      },
+      {
+        "text": " the vendor for RMA numbers.",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "props": {
+      "caption": "Spooler service dialog",
+      "url": "https://example.com/img/spooler.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "Compare",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "props": {
+      "caption": "the queue",
+      "url": "https://example.com/img/queue.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "with the driver log.",
+        "type": "text",
+      },
+    ],
+    "type": "paragraph",
+  },
+  {
+    "content": [
+      {
+        "text": "Screenshots in steps",
+        "type": "text",
+      },
+    ],
+    "props": {
+      "level": 3,
+    },
+    "type": "heading",
+  },
+  {
+    "content": [
+      {
+        "text": "Open the print queue",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
+  {
+    "props": {
+      "caption": "queue screenshot",
+      "url": "https://example.com/img/step-queue.png",
+    },
+    "type": "image",
+  },
+  {
+    "props": {
+      "caption": "driver dialog",
+      "url": "https://example.com/img/step-driver.png",
+    },
+    "type": "image",
+  },
+  {
+    "content": [
+      {
+        "text": "Restart the service",
+        "type": "text",
+      },
+    ],
+    "type": "numberedListItem",
+  },
+]
+`;

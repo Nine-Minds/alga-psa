@@ -17,21 +17,24 @@ import {
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
 } from '../../../../test-utils/billingTestHelpers';
+import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
 // P0 journey (docs: journey-first testing pivot): the rendering leg the money
 // journeys stop short of — a finalized invoice goes through the REAL renderer
 // (createPDFGenerationService → standard-template AST from the migrations →
 // server-rendered HTML → headless Chromium via puppeteer → PDF bytes) and the
-// REAL storage path (LocalStorageProvider → external_files row → the
-// DOCUMENT_GENERATED workflow event that carries the file↔invoice linkage).
-// Nothing in the render/store pipeline is mocked; the only mocked seam is the
+// REAL storage path (LocalStorageProvider → external_files row → documents row
+// + document_associations → the DOCUMENT_GENERATED workflow event). Nothing in
+// the render/store/file pipeline is mocked; the only mocked seam is the
 // event-bus publisher, replaced with a capture so the linkage payload can be
 // asserted instead of disappearing into Redis.
 //
-// What the code does NOT do (asserted as-is, not aspirationally): invoice PDFs
-// never get a `documents`/`document_associations` row — the only DB record is
-// the external_files row, and the only invoice linkage is the event payload
-// (sourceType/sourceId) plus the invoice-number-derived original_name.
+// The filing contract this pins: a generated invoice PDF becomes a real
+// document — filed under /Clients/Invoices, MSP-only until the invoice is sent,
+// associated with both the invoice and its client, carrying the template and
+// locale it was rendered from. Until it is published to the client that one
+// document is refreshed in place; once published it is frozen and handed back,
+// so the copy the client received never changes underneath them.
 
 let db: Knex;
 let tenantId: string;
@@ -214,7 +217,7 @@ describe('journey: invoice render → stored PDF', () => {
     await assignServiceTaxRate(contextLike as any, '*', 'US-NY', { onlyUnset: true });
 
     const januaryCycleId = uuidv4();
-    await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: januaryCycleId,
       tenant: tenantId,
       client_id: clientId,
@@ -295,10 +298,8 @@ describe('journey: invoice render → stored PDF', () => {
     expect(preview.html).toContain(invoiceNumber);
 
     // Seam 3: generateAndStore writes the bytes through the real
-    // LocalStorageProvider and records them as a tenant-scoped external_files
-    // row. Note what does NOT happen: no documents row, no
-    // document_associations row — for invoice PDFs the file store IS the
-    // document record.
+    // LocalStorageProvider, records them as a tenant-scoped external_files row,
+    // and files the result as a document.
     const fileRecord = await pdfService.generateAndStore({
       invoiceId,
       invoiceNumber,
@@ -306,6 +307,7 @@ describe('journey: invoice render → stored PDF', () => {
       userId: journeyUserId,
     });
     expect(fileRecord?.file_id, JSON.stringify(fileRecord)).toBeDefined();
+    expect(fileRecord?.document_id, JSON.stringify(fileRecord)).toBeDefined();
 
     const storedRow = await tenantTable(db, tenantId, 'external_files')
       .where({ tenant: tenantId, file_id: fileRecord.file_id })
@@ -325,18 +327,45 @@ describe('journey: invoice render → stored PDF', () => {
     expect(storedBytes.subarray(0, 5).toString('utf8')).toBe('%PDF-');
     expect(storedBytes.length).toBe(Number(storedRow?.file_size));
 
-    // Seam 4: the invoice↔file linkage travels on the DOCUMENT_GENERATED
-    // workflow event (there is no linking table for this path).
+    // Seam 4: the PDF is filed as a document — a real row in the Documents UI,
+    // under /Clients/Invoices, MSP-only until the invoice is sent, and carrying
+    // the template it was rendered from.
+    const documentRow = await tenantTable(db, tenantId, 'documents')
+      .where({ tenant: tenantId, document_id: fileRecord.document_id })
+      .first();
+    expect(documentRow, 'documents row for the generated PDF').toBeTruthy();
+    expect(documentRow?.document_name).toBe(`Invoice_${invoiceNumber}.pdf`);
+    expect(documentRow?.folder_path).toBe('/Clients/Invoices');
+    expect(documentRow?.file_id).toBe(fileRecord.file_id);
+    expect(documentRow?.mime_type).toBe('application/pdf');
+    // Explicit, not inherited: /Clients/Invoices is itself a client-visible
+    // default folder, but a generated-but-unsent invoice stays MSP-only.
+    expect(documentRow?.is_client_visible).toBe(false);
+    expect(documentRow?.source_template_id, 'template provenance').toBeTruthy();
+    expect(documentRow).toHaveProperty('rendered_locale');
+
+    // Seam 5: both associations — the invoice it renders and the client it
+    // belongs to, so it surfaces in the client's Documents tab.
+    const associations = await tenantTable(db, tenantId, 'document_associations')
+      .where({ tenant: tenantId, document_id: fileRecord.document_id })
+      .orderBy('entity_type', 'asc');
+    expect(associations.map((a) => a.entity_type).sort()).toEqual(['client', 'invoice']);
+    expect(associations.find((a) => a.entity_type === 'invoice')?.entity_id).toBe(invoiceId);
+    expect(associations.find((a) => a.entity_type === 'client')?.entity_id).toBe(clientId);
+
+    // Seam 6: the linkage event carries the documents row id (not the file id),
+    // which is what the search indexer looks up.
     const generatedEvents = publishWorkflowEventMock.mock.calls
       .map(([event]) => event as PublishedWorkflowEvent)
       .filter((e) => e.eventType === 'DOCUMENT_GENERATED');
     expect(generatedEvents).toHaveLength(1);
     expect(generatedEvents[0].payload).toMatchObject({
-      documentId: fileRecord.file_id,
+      documentId: fileRecord.document_id,
       sourceType: 'invoice',
       sourceId: invoiceId,
       fileName: `${invoiceNumber}.pdf`,
     });
+    expect(generatedEvents[0].payload.documentId).not.toBe(fileRecord.file_id);
 
     // Tenant scoping: the tenantDb facade cannot see the row from another
     // tenant's scope.
@@ -344,34 +373,101 @@ describe('journey: invoice render → stored PDF', () => {
       .where({ file_id: fileRecord.file_id });
     expect(foreignScopeRows).toHaveLength(0);
 
-    // Seam 5: re-render. The code has no reuse or versioning — every
-    // generateAndStore call renders again and creates a brand-new
-    // external_files row and a brand-new file on disk (the `version` option is
-    // accepted but never read). Asserted as the current behavior.
+    // Seam 7: while the invoice is still MSP-only, generating again refreshes the
+    // one filed document in place. Downloads therefore neither pile up documents
+    // nor leave the filed copy behind the invoice it renders.
     const secondRecord = await pdfService.generateAndStore({
       invoiceId,
       invoiceNumber,
       version: 1,
       userId: journeyUserId,
     });
+    expect(secondRecord.document_id).toBe(fileRecord.document_id);
     expect(secondRecord.file_id).not.toBe(fileRecord.file_id);
 
-    const allStoredRows = await tenantTable(db, tenantId, 'external_files')
-      .where({ tenant: tenantId, original_name: `${invoiceNumber}.pdf` })
-      .orderBy('created_at', 'asc');
-    expect(allStoredRows).toHaveLength(2);
-    expect(allStoredRows[0].storage_path).not.toBe(allStoredRows[1].storage_path);
+    const refreshedDocument = await tenantTable(db, tenantId, 'documents')
+      .where({ tenant: tenantId, document_id: fileRecord.document_id })
+      .first();
+    expect(refreshedDocument?.file_id).toBe(secondRecord.file_id);
 
-    const secondBytes = await fs.readFile(path.join(storageBaseDir, String(allStoredRows[1].storage_path)));
-    expect(secondBytes.subarray(0, 5).toString('utf8')).toBe('%PDF-');
+    const allDocumentRows = await tenantTable(db, tenantId, 'documents')
+      .where({ tenant: tenantId, document_name: `Invoice_${invoiceNumber}.pdf` });
+    expect(allDocumentRows).toHaveLength(1);
 
-    // Each render publishes its own linkage event.
-    const eventsAfterRerender = publishWorkflowEventMock.mock.calls
+    // The superseded render is retired rather than left to accumulate.
+    const liveStoredRows = await tenantTable(db, tenantId, 'external_files')
+      .where({ tenant: tenantId, original_name: `${invoiceNumber}.pdf`, is_deleted: false });
+    expect(liveStoredRows).toHaveLength(1);
+    expect(liveStoredRows[0].file_id).toBe(secondRecord.file_id);
+
+    const supersededRow = await tenantTable(db, tenantId, 'external_files')
+      .where({ tenant: tenantId, file_id: fileRecord.file_id })
+      .first();
+    expect(supersededRow?.is_deleted).toBe(true);
+
+    // A refresh changes the bytes, so the search indexer hears about it again.
+    const eventsAfterRefresh = publishWorkflowEventMock.mock.calls
       .map(([event]) => event as PublishedWorkflowEvent)
       .filter((e) => e.eventType === 'DOCUMENT_GENERATED');
-    expect(eventsAfterRerender).toHaveLength(2);
-    expect(eventsAfterRerender[1].payload).toMatchObject({
-      documentId: secondRecord.file_id,
+    expect(eventsAfterRefresh).toHaveLength(2);
+    expect(eventsAfterRefresh[1].payload.documentId).toBe(fileRecord.document_id);
+
+    // Seam 8: once the document has been published to the client — what happens
+    // when the invoice is sent — it is the artifact they received. Generating
+    // again hands the same bytes back rather than re-rendering underneath them.
+    await tenantTable(db, tenantId, 'documents')
+      .where({ tenant: tenantId, document_id: fileRecord.document_id })
+      .update({ is_client_visible: true });
+
+    const issuedRecord = await pdfService.generateAndStore({
+      invoiceId,
+      invoiceNumber,
+      version: 1,
+      userId: journeyUserId,
+    });
+    expect(issuedRecord.document_id).toBe(fileRecord.document_id);
+    expect(issuedRecord.file_id).toBe(secondRecord.file_id);
+
+    const eventsAfterIssuedReuse = publishWorkflowEventMock.mock.calls
+      .map(([event]) => event as PublishedWorkflowEvent)
+      .filter((e) => e.eventType === 'DOCUMENT_GENERATED');
+    expect(eventsAfterIssuedReuse).toHaveLength(2);
+
+    // Seam 9: a deliberate re-render of an issued invoice is visibly a new
+    // document, not a silent mutation of the one already sent.
+    const regenerated = await pdfService.generateAndStore({
+      invoiceId,
+      invoiceNumber,
+      version: 1,
+      userId: journeyUserId,
+      regenerate: true,
+    });
+    expect(regenerated.file_id).not.toBe(secondRecord.file_id);
+    expect(regenerated.document_id).not.toBe(fileRecord.document_id);
+
+    const issuedDocument = await tenantTable(db, tenantId, 'documents')
+      .where({ tenant: tenantId, document_id: fileRecord.document_id })
+      .first();
+    expect(issuedDocument?.file_id, 'the issued copy is left alone').toBe(secondRecord.file_id);
+
+    const documentsAfterRegenerate = await tenantTable(db, tenantId, 'documents')
+      .where({ tenant: tenantId, document_name: `Invoice_${invoiceNumber}.pdf` });
+    expect(documentsAfterRegenerate).toHaveLength(2);
+
+    const regeneratedStoredRow = await tenantTable(db, tenantId, 'external_files')
+      .where({ tenant: tenantId, file_id: regenerated.file_id })
+      .first();
+    const regeneratedBytes = await fs.readFile(
+      path.join(storageBaseDir, String(regeneratedStoredRow!.storage_path)),
+    );
+    expect(regeneratedBytes.subarray(0, 5).toString('utf8')).toBe('%PDF-');
+
+    const eventsAfterRegenerate = publishWorkflowEventMock.mock.calls
+      .map(([event]) => event as PublishedWorkflowEvent)
+      .filter((e) => e.eventType === 'DOCUMENT_GENERATED');
+    expect(eventsAfterRegenerate).toHaveLength(3);
+    expect(eventsAfterRegenerate[2].payload).toMatchObject({
+      documentId: regenerated.document_id,
       sourceType: 'invoice',
       sourceId: invoiceId,
     });

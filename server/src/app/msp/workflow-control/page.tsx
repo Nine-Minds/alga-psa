@@ -1,10 +1,15 @@
 import { redirect } from 'next/navigation';
 import WorkflowAutomationGate from '../_components/WorkflowAutomationGate';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export const metadata: Metadata = {
-  title: 'Workflow Control',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.workflowControl.title', { defaultValue: 'Workflow Control' }),
+  };
+}
 
 type WorkflowControlPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

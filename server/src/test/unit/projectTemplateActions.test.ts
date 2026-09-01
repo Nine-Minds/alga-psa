@@ -797,17 +797,26 @@ describe('Project Template Actions', () => {
 
       knexStub.queries.project_template_phases.orderBy.mockResolvedValue([]);
 
-      // Mock template status mappings
+      // Mock template status mappings (typed tenant variant)
       knexStub.queries.project_template_status_mappings.orderBy.mockResolvedValue([
         {
+          template_status_mapping_id: 'template-mapping-1',
+          template_id: templateId,
           status_id: 'status-1',
-          custom_status_name: 'Custom Status',
+          standard_status_id: null,
+          unresolved_status_id: null,
+          status_source: 'tenant',
+          custom_status_name: null,
           display_order: 1,
           tenant: 'tenant-123'
         }
       ]);
 
-      knexStub.queries.project_status_mappings.delete.mockResolvedValue(1);
+      // Resolver catalog lookup: status-1 is a tenant project_task status
+      knexStub.queries.statuses.select.mockResolvedValue([
+        { status_id: 'status-1', name: 'Custom Status', color: null, is_closed: false }
+      ]);
+
       knexStub.queries.project_status_mappings.returning.mockResolvedValue([
         { project_status_mapping_id: 'mapping-1', tenant: 'tenant-123' }
       ]);
@@ -821,7 +830,8 @@ describe('Project Template Actions', () => {
       expect(knexStub.queries.project_status_mappings.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           status_id: 'status-1',
-          custom_name: 'Custom Status',
+          standard_status_id: null,
+          custom_name: null,
           display_order: 1,
           is_visible: true,
           is_standard: false
@@ -1489,12 +1499,15 @@ describe('Project Template Actions', () => {
         }
       ];
 
-      // Mock status mappings
+      // Mock status mappings (typed tenant variant)
       const mockStatusMappings = [
         {
           template_status_mapping_id: 'mapping-1',
           template_id: templateId,
           status_id: 'status-1',
+          standard_status_id: null,
+          unresolved_status_id: null,
+          status_source: 'tenant',
           tenant: 'tenant-123'
         }
       ];
@@ -1505,6 +1518,13 @@ describe('Project Template Actions', () => {
       knexStub.queries.project_template_status_mappings.orderBy.mockResolvedValue(mockStatusMappings);
       knexStub.queries.project_template_tasks.orderBy.mockResolvedValue(mockTasks);
       knexStub.queries.project_template_checklist_items.orderBy.mockResolvedValue(mockChecklistItems);
+      knexStub.queries.project_template_task_resources.whereIn.mockResolvedValue([]);
+
+      // Resolver catalog lookup for the tenant status + unresolved count
+      knexStub.queries.statuses.select.mockResolvedValue([
+        { status_id: 'status-1', name: 'Status 1', color: null, is_closed: false }
+      ]);
+      knexStub.queries.project_template_status_mappings.first.mockResolvedValue({ count: '0' });
 
       const result = await projectTemplateActions.getTemplateWithDetails(templateId);
 
@@ -1520,9 +1540,11 @@ describe('Project Template Actions', () => {
           expect.objectContaining({
             template_status_mapping_id: 'mapping-1',
             status_id: 'status-1',
+            statusSource: 'tenant',
           }),
         ],
         task_assignments: [],
+        unresolved_status_mapping_count: 0,
       });
     });
 
@@ -1546,6 +1568,10 @@ describe('Project Template Actions', () => {
       knexStub.queries.project_template_phases.orderBy.mockResolvedValue([]);
       knexStub.queries.project_template_dependencies.where.mockResolvedValue([]);
       knexStub.queries.project_template_status_mappings.orderBy.mockResolvedValue([]);
+      knexStub.queries.project_template_tasks.orderBy.mockResolvedValue([]);
+      knexStub.queries.project_template_checklist_items.orderBy.mockResolvedValue([]);
+      knexStub.queries.project_template_task_resources.whereIn.mockResolvedValue([]);
+      knexStub.queries.project_template_status_mappings.first.mockResolvedValue({ count: '0' });
 
       const result = await projectTemplateActions.getTemplateWithDetails(templateId);
 
@@ -1559,6 +1585,7 @@ describe('Project Template Actions', () => {
         checklist_items: [],
         status_mappings: [],
         task_assignments: [],
+        unresolved_status_mapping_count: 0,
       });
     });
 
@@ -1595,11 +1622,14 @@ function createKnexStub() {
         where: vi.fn().mockReturnThis(),
         whereIn: vi.fn().mockReturnThis(),
         whereNotNull: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
         andOn: vi.fn().mockReturnThis(),
         orWhere: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
         select: vi.fn().mockResolvedValue([]),
+        count: vi.fn().mockReturnThis(),
+        max: vi.fn().mockReturnThis(),
         first: vi.fn().mockResolvedValue(null),
         distinct: vi.fn().mockReturnThis(),
         returning: vi.fn().mockResolvedValue([]),
@@ -1630,6 +1660,7 @@ function createKnexStub() {
     'project_template_checklist_items',
     'project_status_mappings',
     'project_template_status_mappings',
+    'standard_statuses',
   ];
 
   for (const table of preseedTables) {

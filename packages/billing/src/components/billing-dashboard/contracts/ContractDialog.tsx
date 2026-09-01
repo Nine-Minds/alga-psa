@@ -26,11 +26,12 @@ import { HelpCircle, Info, Plus, XCircle, ChevronDown, ChevronUp, Search, Coins 
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { getContractLinePresetServices, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
+import { getContractLinePresetServices, getContractLinePresetServiceCounts, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IContractLinePresetService, IContractLinePresetFixedConfig } from '@alga-psa/types';
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -71,6 +72,7 @@ export function ContractDialog({
 }: ContractDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const { money, symbol } = useCurrencyFormat();
+  const { renderQuickAddClient } = useQuickAddClient();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const contractLineTypeOptions = useContractLineTypeOptions();
   const renewalModeOptions = [
@@ -110,6 +112,7 @@ export function ContractDialog({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
   // Contract line presets state
   const [availableContractLinePresets, setAvailableContractLinePresets] = useState<IContractLinePreset[]>([]);
@@ -134,17 +137,10 @@ export function ContractDialog({
   const [hourlyPresetOverrides, setHourlyPresetOverrides] = useState<Record<string, { minimum_billable_time?: number; round_up_to_nearest?: number }>>({});
   const [hourlyPresetInputs, setHourlyPresetInputs] = useState<Record<string, { minimum_billable_time: string; round_up_to_nearest: string }>>({});
 
-  // Load clients and contract line presets on mount
-  useEffect(() => {
-    loadClients();
-    loadContractLinePresets();
-  }, []);
-
-  // Reload clients when dialog opens
+  // Load clients and contract line presets when the dialog opens
   useEffect(() => {
     if (open) {
-      loadClients();
-      loadContractLinePresets();
+      void Promise.all([loadClients(), loadContractLinePresets()]);
       if (initialClientId) {
         setClientId(initialClientId);
       }
@@ -170,33 +166,18 @@ export function ContractDialog({
   const loadContractLinePresets = async () => {
     setIsLoadingContractLinePresets(true);
     try {
-      const presets = await getContractLinePresets();
+      // Service counts for every preset arrive in one round trip, alongside the
+      // presets themselves rather than after them.
+      const [presets, counts] = await Promise.all([
+        getContractLinePresets(),
+        getContractLinePresetServiceCounts(),
+      ]);
       if (isReturnedActionError(presets)) {
         setValidationErrors([getErrorMessage(presets)]);
         return;
       }
       setAvailableContractLinePresets(presets);
-
-      // Load service counts for each preset
-      const counts: Record<string, number> = {};
-      await Promise.all(
-        presets.map(async (preset) => {
-          if (preset.preset_id) {
-            try {
-              const services = await getContractLinePresetServices(preset.preset_id);
-              if (isReturnedActionError(services)) {
-                counts[preset.preset_id] = 0;
-                return;
-              }
-              counts[preset.preset_id] = services.length;
-            } catch (error) {
-              console.error(`Error loading service count for preset ${preset.preset_id}:`, error);
-              counts[preset.preset_id] = 0;
-            }
-          }
-        })
-      );
-      setContractLinePresetServiceCounts(counts);
+      setContractLinePresetServiceCounts(isReturnedActionError(counts) ? {} : counts);
     } catch (error) {
       console.error('Error loading contract line presets:', error);
     } finally {
@@ -654,6 +635,7 @@ export function ContractDialog({
                   defaultValue: 'Select a client',
                 })}
                 className="w-full"
+                onAddNew={() => setIsQuickAddClientOpen(true)}
               />
             </div>
 
@@ -761,7 +743,7 @@ export function ContractDialog({
               />
             </div>
 
-            <div className="border rounded-md p-4 space-y-3 bg-[rgb(var(--color-surface-50))]">
+            <div className="border rounded-md p-4 space-y-3 bg-[rgb(var(--color-border-50))]">
               <div>
                 <h4 className="text-sm font-semibold">
                   {t('contractDialog.form.renewalSettingsTitle', { defaultValue: 'Renewal Settings' })}
@@ -1635,6 +1617,24 @@ export function ContractDialog({
           </form>
         </DialogContent>
       </Dialog>
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
+          setClients((currentClients) => {
+            const existingIndex = currentClients.findIndex(
+              (client) => client.client_id === newClient.client_id,
+            );
+            if (existingIndex === -1) return [...currentClients, newClient];
+            const nextClients = [...currentClients];
+            nextClients[existingIndex] = newClient;
+            return nextClients;
+          });
+          setClientId(newClient.client_id);
+          clearErrorIfSubmitted();
+        },
+        skipSuccessDialog: true,
+      })}
     </>
   );
 }

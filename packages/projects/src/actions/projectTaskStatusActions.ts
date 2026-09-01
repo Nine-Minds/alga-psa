@@ -52,19 +52,25 @@ function projectTaskStatusActionErrorFrom(error: unknown): ProjectTaskStatusActi
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected status values is invalid. Please refresh and try again.');
+    return actionError('One of the selected status values is invalid. Please refresh and try again.', 'projects:errors.status.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required status field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required status field: ${dbError.column}.`,
+          'projects:errors.status.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required status field.', 'projects:errors.status.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected project statuses no longer exists. Please refresh and try again.');
+    return actionError('One of the selected project statuses no longer exists. Please refresh and try again.', 'projects:errors.status.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A project task status with these settings already exists.');
+    return actionError('A project task status with these settings already exists.', 'projects:errors.status.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the status values is not allowed. Please review the form and try again.');
+    return actionError('One of the status values is not allowed. Please review the form and try again.', 'projects:errors.status.notAllowed');
   }
 
   return null;
@@ -112,7 +118,41 @@ async function getTenantProjectStatusUsage(
   };
 }
 
-async function buildTenantProjectStatusDeletionValidation(
+type ProjectTemplateStatusUsage = {
+  count: number;
+  templateNames: string[];
+};
+
+async function getTenantProjectTemplateStatusUsage(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusId: string
+): Promise<ProjectTemplateStatusUsage> {
+  const usageQuery = tenantScopedTable(trx, 'project_template_status_mappings as ptsm', tenant);
+  tenantDb(trx, tenant).tenantJoin(usageQuery, 'project_templates as t', 'ptsm.template_id', 't.template_id', { type: 'left' });
+  const rows = await usageQuery
+    .where({ 'ptsm.status_id': statusId })
+    .distinct<{ template_id: string; template_name: string | null }[]>(
+      'ptsm.template_id as template_id',
+      't.template_name as template_name'
+    )
+    .orderBy('t.template_name');
+
+  return {
+    count: rows.length,
+    templateNames: rows.map((row) => row.template_name || `Unknown template (${row.template_id})`)
+  };
+}
+
+function formatTemplateUsageDescription(templateNames: string[], count: number): string {
+  const visibleNames = templateNames.slice(0, 5);
+  const remainingCount = count - visibleNames.length;
+  const suffix = remainingCount > 0 ? ` and ${remainingCount} more` : '';
+
+  return `Templates: ${visibleNames.join(', ')}${suffix}`;
+}
+
+export async function buildTenantProjectStatusDeletionValidation(
   trx: Knex.Transaction,
   tenant: string,
   statusId: string
@@ -127,6 +167,24 @@ async function buildTenantProjectStatusDeletionValidation(
       code: 'NOT_FOUND',
       message: 'Project task status not found.',
       dependencies: [],
+      alternatives: []
+    };
+  }
+
+  const templateUsage = await getTenantProjectTemplateStatusUsage(trx, tenant, statusId);
+  if (templateUsage.count > 0) {
+    const templateLabel = templateUsage.count === 1 ? 'project template' : 'project templates';
+
+    return {
+      canDelete: false,
+      code: 'DEPENDENCIES_EXIST',
+      message: `Cannot delete status "${status.name}" because it is used by ${templateUsage.count} ${templateLabel}. Replace the status in each template's Status Columns before deleting.`,
+      dependencies: [{
+        type: 'project_template',
+        count: templateUsage.count,
+        label: templateLabel,
+        description: formatTemplateUsageDescription(templateUsage.templateNames, templateUsage.count)
+      }],
       alternatives: []
     };
   }
@@ -311,9 +369,19 @@ export const addStatusToProject = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
-    // Get next display_order
-    const maxOrderQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ project_id: projectId });
+      // When adding the first phase-scoped mapping, the phase is about to move
+      // from "defaults" (phase_id IS NULL) to "custom" (phase-scoped) scope.
+      // Establish the complete effective set by cloning the project defaults
+      // into the phase and remapping existing tasks, so no task is silently
+      // dropped from the phase's columns. If the phase already has scoped
+      // mappings (or the project has no defaults) this is a no-op.
+      if (phaseId) {
+        await ProjectModel.copyProjectStatusMappingsToPhase(trx, tenant, projectId, phaseId);
+      }
+
+      // Get next display_order
+      const maxOrderQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_id: projectId });
 
     if (phaseId) {
       maxOrderQuery.andWhere('phase_id', phaseId);
@@ -391,67 +459,10 @@ export const copyProjectStatusesToPhase = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
-    const phase = await tenantScopedTable(trx, 'project_phases', tenant)
-      .where({ project_id: projectId, phase_id: phaseId })
-      .first();
-
-    if (!phase) {
-      throw new Error('Project phase not found');
-    }
-
-    const existingPhaseMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ project_id: projectId, phase_id: phaseId })
-      .orderBy('display_order') as IProjectStatusMapping[];
-
-    if (existingPhaseMappings.length > 0) {
-      return existingPhaseMappings;
-    }
-
-    const defaultMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .where({ project_id: projectId })
-      .whereNull('phase_id')
-      .orderBy('display_order') as IProjectStatusMapping[];
-
-    if (defaultMappings.length === 0) {
-      return [];
-    }
-
-    const inserts = defaultMappings.map((mapping) => ({
-      tenant,
-      project_id: projectId,
-      phase_id: phaseId,
-      status_id: mapping.status_id,
-      standard_status_id: mapping.standard_status_id,
-      is_standard: mapping.is_standard,
-      custom_name: mapping.custom_name,
-      display_order: mapping.display_order,
-      is_visible: mapping.is_visible
-    }));
-
-    const newMappings: IProjectStatusMapping[] = await tenantScopedTable(trx, 'project_status_mappings', tenant)
-      .insert(inserts)
-      .returning('*');
-
-    // Reassign existing tasks from project-default mappings to the new phase-specific ones
-    // Group by new phase mapping so we can batch with whereIn, matching removePhaseStatuses style
-    const updatesByReplacement = new Map<string, string[]>();
-    for (const defaultMapping of defaultMappings) {
-      const phaseMapping = newMappings.find((m) => m.status_id === defaultMapping.status_id);
-      if (phaseMapping) {
-        const existing = updatesByReplacement.get(phaseMapping.project_status_mapping_id) || [];
-        existing.push(defaultMapping.project_status_mapping_id);
-        updatesByReplacement.set(phaseMapping.project_status_mapping_id, existing);
-      }
-    }
-
-    for (const [newId, oldIds] of updatesByReplacement) {
-      await tenantScopedTable(trx, 'project_tasks', tenant)
-        .where({ phase_id: phaseId })
-        .whereIn('project_status_mapping_id', oldIds)
-        .update({ project_status_mapping_id: newId });
-    }
-
-      return newMappings;
+      // Clone project defaults into the phase and remap existing phase tasks by
+      // stable semantic identity (never nullable status_id alone, which
+      // collapsed every standard mapping onto the first clone).
+      return await ProjectModel.copyProjectStatusMappingsToPhase(trx, tenant, projectId, phaseId);
     });
   } catch (error) {
     const expected = projectTaskStatusActionErrorFrom(error);

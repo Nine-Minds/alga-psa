@@ -1,0 +1,37 @@
+                          Table "public.inbound_email_outbox"
+      Column      |           Type           | Collation | Nullable |      Default      
+------------------+--------------------------+-----------+----------+-------------------
+ tenant           | uuid                     |           | not null | 
+ outbox_id        | uuid                     |           | not null | gen_random_uuid()
+ inbox_id         | uuid                     |           | not null | 
+ event_key        | text                     |           | not null | 
+ event_type       | text                     |           | not null | 
+ payload          | jsonb                    |           | not null | 
+ publish_options  | jsonb                    |           |          | 
+ status           | text                     |           | not null | 'pending'::text
+ attempt_count    | integer                  |           | not null | 0
+ lease_owner      | text                     |           |          | 
+ lease_token      | uuid                     |           |          | 
+ lease_version    | bigint                   |           | not null | '0'::bigint
+ lease_expires_at | timestamp with time zone |           |          | 
+ next_attempt_at  | timestamp with time zone |           |          | 
+ published_at     | timestamp with time zone |           |          | 
+ last_error       | text                     |           |          | 
+ created_at       | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ updated_at       | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+Indexes:
+    "inbound_email_outbox_pkey" PRIMARY KEY, btree (tenant, outbox_id)
+    "inbound_email_outbox_due_idx" btree (tenant, status, next_attempt_at, lease_expires_at)
+    "inbound_email_outbox_event_key_unique" UNIQUE CONSTRAINT, btree (tenant, inbox_id, event_key)
+Check constraints:
+    "inbound_email_outbox_attempt_count_check" CHECK (attempt_count >= 0)
+    "inbound_email_outbox_published_at_check" CHECK (status <> 'published'::text OR published_at IS NOT NULL)
+    "inbound_email_outbox_publishing_lease_check" CHECK (status <> 'publishing'::text OR lease_owner IS NOT NULL AND lease_token IS NOT NULL AND lease_expires_at IS NOT NULL)
+    "inbound_email_outbox_retryable_next_attempt_check" CHECK (status <> 'retryable_failed'::text OR next_attempt_at IS NOT NULL)
+    "inbound_email_outbox_status_check" CHECK (status = ANY (ARRAY['pending'::text, 'publishing'::text, 'published'::text, 'retryable_failed'::text, 'terminal_failed'::text]))
+    "inbound_email_outbox_terminal_lease_check" CHECK ((status <> ALL (ARRAY['published'::text, 'terminal_failed'::text])) OR lease_owner IS NULL AND lease_token IS NULL AND lease_expires_at IS NULL)
+Foreign-key constraints:
+    "inbound_email_outbox_tenant_inbox_id_foreign" FOREIGN KEY (tenant, inbox_id) REFERENCES inbound_email_inbox(tenant, inbox_id)
+Referenced by:
+    TABLE "inbound_email_event_deliveries" CONSTRAINT "inbound_email_event_deliveries_tenant_outbox_id_foreign" FOREIGN KEY (tenant, outbox_id) REFERENCES inbound_email_outbox(tenant, outbox_id)
+

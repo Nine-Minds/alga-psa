@@ -129,6 +129,7 @@ secrets/
 ├── crypto_key
 ├── token_secret_key
 ├── nextauth_secret
+├── credential_encryption_key
 ├── google_oauth_client_id
 └── google_oauth_client_secret
 ```

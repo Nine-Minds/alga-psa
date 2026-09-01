@@ -7,14 +7,28 @@ import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipH
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
+import {
+  PREPAID_BALANCE_ALERT_SCAN_JOB,
+  prepaidBalanceAlertScanHandler,
+  PrepaidBalanceAlertScanJobData,
+} from '@alga-psa/jobs/handlers/prepaidBalanceAlertScanHandler';
+import { expiredHourBlocksHandler, ExpiredHourBlocksJobData } from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
+import { expiringHourBlocksNotificationHandler, ExpiringHourBlocksNotificationJobData } from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
 import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
+import { handleReconcileHourBlockAllocations, ReconcileHourBlockAllocationsJobData } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
+import {
+  inboundEmailRecoveryHandler,
+  InboundEmailRecoveryJobData,
+  INBOUND_EMAIL_RECOVERY_JOB,
+} from './handlers/inboundEmailRecoveryHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
@@ -39,6 +53,17 @@ import {
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
+import {
+  renewTelephonyCallSubscriptions,
+  processTelephonyCallNotification,
+  TelephonyCallSubscriptionRenewalJobData,
+  TelephonyCallNotificationJobData,
+} from '@alga-psa/jobs/handlers/telephonyCallNotificationHandler';
+import {
+  telephonyCallArtifactSweepHandler,
+  TelephonyCallArtifactSweepJobData,
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/telephonyCallArtifactHandler';
 import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
@@ -135,6 +160,9 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await generateInvoiceHandler(job.data);
     });
     jobScheduler.registerJobHandler<AssetImportJobData>('asset_import', handleAssetImportJob);
+
+    // Register the AMP migration application handler
+    jobScheduler.registerJobHandler<MigrationApplyJobData>('migration_apply', handleMigrationApplyJob);
     
     // Register expired credits handler
     jobScheduler.registerJobHandler<ExpiredCreditsJobData>('expired-credits', async (job: Job<ExpiredCreditsJobData>) => {
@@ -144,6 +172,21 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register expiring credits notification handler
     jobScheduler.registerJobHandler<ExpiringCreditsNotificationJobData>('expiring-credits-notification', async (job: Job<ExpiringCreditsNotificationJobData>) => {
       await expiringCreditsNotificationHandler(job.data);
+    });
+
+    // Register prepaid balance alert scan handler (daily 09:00 UTC)
+    jobScheduler.registerJobHandler<PrepaidBalanceAlertScanJobData>(PREPAID_BALANCE_ALERT_SCAN_JOB, async (job: Job<PrepaidBalanceAlertScanJobData>) => {
+      await prepaidBalanceAlertScanHandler(job.data);
+    });
+
+    // Register expired hour blocks handler
+    jobScheduler.registerJobHandler<ExpiredHourBlocksJobData>('expired-hour-blocks', async (job: Job<ExpiredHourBlocksJobData>) => {
+      await expiredHourBlocksHandler(job.data);
+    });
+
+    // Register expiring hour blocks notification handler
+    jobScheduler.registerJobHandler<ExpiringHourBlocksNotificationJobData>('expiring-hour-blocks-notification', async (job: Job<ExpiringHourBlocksNotificationJobData>) => {
+      await expiringHourBlocksNotificationHandler(job.data);
     });
 
     // Register per-location low-stock alert handler (inventory F037/F038)
@@ -194,6 +237,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await handleReconcileBucketUsage(job);
     });
 
+    // Register reconcile hour-block allocations handler
+    jobScheduler.registerJobHandler<ReconcileHourBlockAllocationsJobData>('reconcile-hour-block-allocations', async (job: Job<ReconcileHourBlockAllocationsJobData>) => {
+      await handleReconcileHourBlockAllocations(job);
+    });
+
     // Register auto-close tickets handler
     jobScheduler.registerJobHandler<AutoCloseTicketsJobData>('auto-close-tickets', async (job: Job<AutoCloseTicketsJobData>) => {
       await autoCloseTicketsHandler(job.data);
@@ -202,6 +250,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register email webhook maintenance handler
     jobScheduler.registerJobHandler<EmailWebhookMaintenanceJobData>('email-webhook-maintenance', async (job: Job<EmailWebhookMaintenanceJobData>) => {
       await emailWebhookMaintenanceHandler(job);
+    });
+
+    // Register inbound email recovery handler (per-tenant durable sweep/backfill/mirror)
+    jobScheduler.registerJobHandler<InboundEmailRecoveryJobData>(INBOUND_EMAIL_RECOVERY_JOB, async (job: Job<InboundEmailRecoveryJobData>) => {
+      await inboundEmailRecoveryHandler(job);
     });
 
     // Register renewal queue processing handler
@@ -257,6 +310,27 @@ export const initializeScheduler = async (storageService?: StorageService) => {
         'process-teams-meeting-artifact-notification',
         async (job: Job<TeamsMeetingArtifactNotificationJobData>) => {
           await processTeamsMeetingArtifactNotification(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallSubscriptionRenewalJobData>(
+        'renew-telephony-call-subscriptions',
+        async (job: Job<TelephonyCallSubscriptionRenewalJobData>) => {
+          await renewTelephonyCallSubscriptions(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallNotificationJobData>(
+        'process-telephony-call-notification',
+        async (job: Job<TelephonyCallNotificationJobData>) => {
+          await processTelephonyCallNotification(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallArtifactSweepJobData>(
+        TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+        async (job: Job<TelephonyCallArtifactSweepJobData>) => {
+          await telephonyCallArtifactSweepHandler(job.data);
         }
       );
 
@@ -326,7 +400,11 @@ export type {
   GenerateInvoiceData,
   ExpiredCreditsJobData,
   ExpiringCreditsNotificationJobData,
+  PrepaidBalanceAlertScanJobData,
+  ExpiredHourBlocksJobData,
+  ExpiringHourBlocksNotificationJobData,
   ReconcileBucketUsageJobData,
+  ReconcileHourBlockAllocationsJobData,
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData,
@@ -465,6 +543,65 @@ export const scheduleExpiringCreditsNotificationJob = async (
     'expiring-credits-notification',
     cronExpression,
     { tenantId, clientId }
+  );
+};
+
+/**
+ * Schedule the daily prepaid balance alert scan (09:00 UTC). CE registers one
+ * singleton per tenant; EE runs this through the global Temporal maintenance
+ * fanout schedule, so this returns null on enterprise-workflow editions.
+ */
+export const schedulePrepaidBalanceAlertScanJob = async (
+  tenantId: string,
+  cronExpression: string = '0 9 * * *'
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<PrepaidBalanceAlertScanJobData>(
+    PREPAID_BALANCE_ALERT_SCAN_JOB,
+    cronExpression,
+    { tenantId }
+  );
+};
+
+/**
+ * Schedule a daily job to expire hour blocks whose expiration date has passed
+ * (default 1:30 AM, just after the expired-credits sweep).
+ */
+export const scheduleExpiredHourBlocksJob = async (
+  tenantId: string,
+  cronExpression: string = '30 1 * * *'
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ExpiredHourBlocksJobData>(
+    'expired-hour-blocks',
+    cronExpression,
+    { tenantId }
+  );
+};
+
+/**
+ * Schedule a daily job to notify about hour blocks that will expire soon
+ * (default 9:15 AM, after the expiring-credits notification). Reuses the
+ * credit notification lead-time settings.
+ */
+export const scheduleExpiringHourBlocksNotificationJob = async (
+  tenantId: string,
+  cronExpression: string = '15 9 * * *'
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ExpiringHourBlocksNotificationJobData>(
+    'expiring-hour-blocks-notification',
+    cronExpression,
+    { tenantId }
   );
 };
 
@@ -622,6 +759,21 @@ export const scheduleReconcileBucketUsageJob = async (
   );
 };
 
+export const scheduleReconcileHourBlockAllocationsJob = async (
+  tenantId: string,
+  cronExpression: string = '0 3 * * *' // Default: daily at 3:00 AM, alongside bucket reconcile
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ReconcileHourBlockAllocationsJobData>(
+    'reconcile-hour-block-allocations',
+    cronExpression,
+    { tenantId }
+  );
+};
+
 export const scheduleAutoCloseTicketsJob = async (
   tenantId: string,
   cronExpression: string = '*/15 * * * *' // Default: every 15 minutes
@@ -772,6 +924,21 @@ export const scheduleEmailWebhookMaintenanceJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<EmailWebhookMaintenanceJobData>(
     'email-webhook-maintenance',
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleInboundEmailRecoveryJob = async (
+  tenantId?: string,
+  cronExpression: string = '*/1 * * * *' // Every minute
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this via the Temporal maintenance fanout
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<InboundEmailRecoveryJobData>(
+    INBOUND_EMAIL_RECOVERY_JOB,
     cronExpression,
     { tenantId }
   );

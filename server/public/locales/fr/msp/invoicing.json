@@ -226,7 +226,8 @@
       "loadHistory": "Échec du chargement de l'historique des factures récurrentes. Veuillez réessayer."
     },
     "loading": {
-      "billingData": "Chargement des données de facturation"
+      "billingData": "Chargement des données de facturation",
+      "candidates": "Chargement des factures candidates."
     },
     "views": {
       "all": "Tout",
@@ -342,7 +343,7 @@
       "refresh": "Une erreur s'est produite lors de l'actualisation des données de facture.",
       "updateFailed": "Erreur lors de la mise à jour de la facture",
       "generateFailed": "Erreur lors de la génération de la facture",
-      "NO_BILLING_EMAIL": "{{clientName}} n'a pas d'adresse e-mail de facturation. Ajoutez une adresse e-mail à l'emplacement de facturation du client, puis réessayez.",
+      "NO_BILLING_EMAIL": "{{clientName}} n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à l'emplacement de facturation ou par défaut, puis réessayez.",
       "CLIENT_NOT_FOUND": "Le client sélectionné est introuvable. Actualisez la page et réessayez.",
       "SERVICE_NOT_FOUND": "Le service {{serviceId}} est introuvable. Actualisez la page et réessayez.",
       "INVALID_QUANTITY": "La quantité doit être supérieure à zéro.",
@@ -356,7 +357,7 @@
       "salesOrderNotInvoiceable": "Cette commande client ne peut plus être facturée."
     },
     "warnings": {
-      "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez une adresse e-mail à son emplacement de facturation avant de générer la facture."
+      "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à son emplacement de facturation ou par défaut avant de générer la facture."
     },
     "errorFallback": {
       "title": "Quelque chose s'est mal passé",
@@ -369,8 +370,6 @@
   "draftsTab": {
     "title": "Projets de factures",
     "searchPlaceholder": "Rechercher des factures...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Numéro de facture",
       "client": "Client",
@@ -421,13 +420,17 @@
       "message": "Cette facture est configurée pour utiliser la taxe calculée par un système comptable externe, mais aucune taxe n'a encore été importée, elle ne peut donc pas être finalisée. Exportez-la vers votre système comptable (QuickBooks, Xero) et réimportez la taxe pour la finaliser avec la taxe externe — ou basculez cette facture en taxe interne maintenant pour qu'Alga calcule la taxe, puis finalisez-la.",
       "confirm": "Basculer en taxe interne et finaliser",
       "cancel": "Annuler"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "finalizedTab": {
     "title": "Factures finalisées",
     "searchPlaceholder": "Rechercher des factures...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Numéro de facture",
       "client": "Client",
@@ -461,6 +464,12 @@
       "unfinalizeFailed": "Échec de la finalisation de la facture. Veuillez réessayer.",
       "bulkUnfinalizeFailed": "Échec de la finalisation des factures. Veuillez réessayer.",
       "bulkUnfinalizeInvoiceFailed": "Impossible de rouvrir {{invoiceNumber}} : {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -973,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Générer une facture de prépaiement",
-      "creditMemo": "Générer une note de crédit"
+      "prepayment": "Générer une facture de prépaiement"
     },
     "descriptions": {
-      "prepayment": "Les factures à prépaiement créent un crédit client pour une valeur future. Ils ne créent pas de périodes de service récurrentes ; les factures récurrentes ultérieures conservent leur propre couverture de période de service.",
-      "creditMemo": "Les notes de crédit ajustent les soldes financiers sans redéfinir la couverture des périodes de service récurrentes sur la facture source."
+      "prepayment": "Les factures à prépaiement créent un crédit client pour une valeur future. Ils ne créent pas de périodes de service récurrentes ; les factures récurrentes ultérieures conservent leur propre couverture de période de service."
     },
     "fields": {
-      "type": "Taper",
       "client": "Client",
       "amount": "Montant",
-      "description": "Description"
-    },
-    "types": {
-      "prepaymentInvoice": "Facture de prépaiement",
-      "creditMemo": "Note de crédit"
+      "descriptionOptional": "Description (facultative)"
     },
     "placeholders": {
       "amount": "Entrez le montant",
-      "prepaymentDescription": "Prépaiement pour les services futurs",
-      "creditMemoDescription": "Motif de la note de crédit"
+      "prepaymentDescription": "Prépaiement pour les services futurs"
     },
     "errors": {
       "allFieldsRequired": "Veuillez remplir tous les champs",
       "validAmount": "Veuillez entrer un montant valide",
-      "creditMemosUnsupported": "Les notes de crédit ne sont pas encore prises en charge",
       "generateFailed": "Erreur lors de la génération de la facture"
     },
     "actions": {
       "generating": "Générateur...",
-      "generatePrepayment": "Générer une facture de prépaiement",
-      "generateCreditMemo": "Générer une note de crédit"
+      "generatePrepayment": "Générer une facture de prépaiement"
     }
   },
   "contractItems": {
@@ -1119,7 +1118,8 @@
       "unknownClient": "Client inconnu",
       "status": "Statut",
       "system": "Système",
-      "total": "Total"
+      "total": "Total",
+      "invoiceDate": "Date de la facture"
     },
     "states": {
       "empty": "Aucune donnée disponible",
@@ -1238,7 +1238,12 @@
         "emptyState": "Sélectionnez un exemple ou des données de facture existantes pour générer un aperçu autoritaire.",
         "loadingPreview": "Génération et rendu de l'aperçu…",
         "templateError": "Impossible de générer le modèle d'aperçu à partir de l'espace actuel.",
-        "renderError": "Échec du rendu de l'aperçu."
+        "renderError": "Échec du rendu de l'aperçu.",
+        "searchQuotes": "Rechercher des devis…",
+        "noQuotesFound": "Aucun devis trouvé.",
+        "selectQuote": "Sélectionner un devis",
+        "loadingQuoteDetails": "Chargement des détails du devis…",
+        "loadingDocumentDetails": "Chargement des détails du document…"
       },
       "tabs": {
         "design": "Conception",
@@ -1660,7 +1665,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Limite du modèle"
+      "templateBoundary": "Limite du modèle",
+      "translatableHint": "Traduit automatiquement dans la langue du destinataire. Modifiez le texte pour utiliser votre propre texte fixe."
     },
     "dragOverlay": {
       "component": "Composant"
@@ -1668,7 +1674,6 @@
   },
   "projectBilling": {
     "subtitle": "Jalons et acomptes prêts, en attente d'approbation pour tous les projets.",
-    "bulkActions": "Actions ({{count}})",
     "loading": "Chargement de la file de facturation des projets…",
     "empty": "Aucun élément n'est en attente de vérification. Les jalons et acomptes prêts apparaîtront ici.",
     "columns": {
@@ -1724,6 +1729,345 @@
       "message": "L'annulation de cette entrée de calendrier la retire de la facturation. Cette action est irréversible.",
       "confirm": "Annuler l'entrée",
       "dismiss": "Conserver l'entrée"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "clear": "Effacer la sélection"
+      }
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} lignes",
+      "operators": {
+        "eq": "Égal à",
+        "neq": "Différent de",
+        "gt": "Supérieur à",
+        "gte": "Supérieur ou égal à",
+        "lt": "Inférieur à",
+        "lte": "Inférieur ou égal à",
+        "in": "Dans la liste"
+      },
+      "sortDirections": {
+        "asc": "Croissant",
+        "desc": "Décroissant"
+      },
+      "aggregations": {
+        "sum": "Somme",
+        "count": "Nombre",
+        "avg": "Moyenne",
+        "min": "Valeur minimale",
+        "max": "Valeur maximale"
+      },
+      "operations": {
+        "advancedPredicate": "Prédicat avancé",
+        "groupBy": "Regrouper par {{field}}",
+        "readOnly": "Conservé en lecture seule dans la V1"
+      },
+      "source": {
+        "title": "Données sources",
+        "description": "Choisissez les données d’aperçu et la liaison de collection à structurer.",
+        "sampleScenario": "Exemple de scénario",
+        "selectInvoice": "Sélectionner une facture",
+        "collection": "Collection source",
+        "outputBindingId": "ID de liaison de sortie"
+      },
+      "metadata": {
+        "title": "Métadonnées sources",
+        "binding": "Liaison :",
+        "bindingNone": "Aucune",
+        "resolvedPath": "Chemin résolu :",
+        "pathNotResolved": "Non résolu",
+        "noFields": "Choisissez les données d’aperçu et une liaison de collection pour découvrir les champs."
+      },
+      "pipeline": {
+        "title": "Chaîne de transformation",
+        "description": "Les opérations s’exécutent de haut en bas.",
+        "addFilter": "+ Filtre",
+        "addSort": "+ Tri",
+        "addGroup": "+ Groupe",
+        "addAggregate": "+ Agrégation",
+        "empty": "Ajoutez des opérations pour créer la chaîne de transformation.",
+        "moveUp": "Déplacer {{operation}} vers le haut",
+        "moveDown": "Déplacer {{operation}} vers le bas",
+        "duplicate": "Dupliquer {{operation}}",
+        "delete": "Supprimer {{operation}}"
+      },
+      "inspector": {
+        "description": "Modifiez l’opération de transformation sélectionnée.",
+        "empty": "Sélectionnez une carte de transformation pour modifier ses paramètres.",
+        "advancedPredicateNotice": "Ce filtre utilise une structure de prédicat avancée. Sa modification ici la convertit en comparaison simple.",
+        "unsupportedOperation": "Ce type d’opération est conservé dans l’espace de travail, mais le concepteur V1 ne modifie que les opérations de filtrage, de tri, de regroupement et d’agrégation.",
+        "field": "Champ",
+        "operator": "Opérateur",
+        "value": "Valeur",
+        "valueList": "Valeurs (séparées par des virgules)",
+        "sortKey": "Clé de tri {{index}}",
+        "remove": "Retirer",
+        "direction": "Sens",
+        "addSortKey": "+ Clé de tri",
+        "groupField": "Champ de regroupement",
+        "groupLabel": "Libellé (facultatif)",
+        "aggregation": "Agrégation {{index}}",
+        "outputId": "ID de sortie",
+        "operation": "Opération",
+        "addAggregation": "+ Agrégation"
+      },
+      "output": {
+        "title": "Aperçu de la sortie",
+        "description": "Prévisualisez les lignes générées par la chaîne de transformation actuelle.",
+        "rowPaths": "Chemins de ligne disponibles",
+        "groupedRows": "{{count}} lignes regroupées",
+        "binding": "Liaison : {{binding}}",
+        "bindingNotSet": "Non définie",
+        "groupKey": "clé : {{value}}",
+        "groupItems": "{{count}} éléments",
+        "emptyConfigure": "Configurez la source, la liaison de sortie et les opérations pour prévisualiser les lignes transformées.",
+        "emptyNoData": "Choisissez des données d’aperçu pour inspecter la sortie transformée.",
+        "previewFailed": "Échec de l’aperçu des transformations."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Tous les postes",
+        "phases": "Phases",
+        "recurringItems": "Postes récurrents",
+        "onetimeItems": "Postes ponctuels",
+        "serviceItems": "Postes de service",
+        "productItems": "Postes de produit",
+        "items": "Éléments",
+        "transformsSource": "{{binding}} (source des transformations)",
+        "transformsOutput": "{{binding}} (sortie des transformations)"
+      },
+      "presets": {
+        "description": {
+          "label": "Description",
+          "hint": "Description du poste"
+        },
+        "quantity": {
+          "label": "Qté",
+          "hint": "Quantité"
+        },
+        "unitPrice": {
+          "label": "Tarif",
+          "hint": "Prix unitaire"
+        },
+        "amount": {
+          "label": "Montant",
+          "hint": "Total de la ligne"
+        }
+      },
+      "sourceBinding": {
+        "title": "Liaison source",
+        "description": "Liez ce tableau à une collection brute ou à la sortie des transformations créées."
+      },
+      "columns": {
+        "title": "Colonnes du tableau",
+        "add": "+ Colonne",
+        "quickAdd": "Ajout rapide :",
+        "newColumnHeader": "Nouvelle colonne",
+        "empty": "Aucune colonne définie. Ajoutez au moins une colonne.",
+        "itemLabel": "Colonne",
+        "moveUp": "Déplacer {{column}} vers le haut",
+        "moveDown": "Déplacer {{column}} vers le bas",
+        "remove": "Retirer {{column}}",
+        "header": "En-tête",
+        "headerPlaceholder": "Libellé de l’en-tête",
+        "bindingKey": "Clé de liaison",
+        "type": "Type",
+        "width": "Largeur"
+      },
+      "columnTypes": {
+        "text": "Texte",
+        "number": "Nombre",
+        "currency": "Devise",
+        "date": "Date"
+      },
+      "style": {
+        "title": "Style du tableau",
+        "borderPreset": "Bordure prédéfinie",
+        "headerWeight": "Graisse de l’en-tête",
+        "borderOuter": "Extérieure",
+        "borderRows": "Lignes",
+        "borderColumns": "Colonnes"
+      },
+      "borderPresets": {
+        "list": "Liste simple",
+        "boxed": "Encadré",
+        "grid": "Grille",
+        "none": "Aucune",
+        "custom": "Personnalisée"
+      },
+      "headerWeights": {
+        "normal": "Graisse normale",
+        "medium": "Moyenne",
+        "semibold": "Demi-gras",
+        "bold": "Gras"
+      },
+      "reference": {
+        "title": "Référence des clés de champ",
+        "transformAggregate": "Agrégation de transformation",
+        "groupedRowKey": "Clé de ligne regroupée",
+        "groupedRowItems": "Éléments de ligne regroupée",
+        "availableBinding": "Liaison disponible"
+      }
+    },
+    "imagePicker": {
+      "browse": "Parcourir les documents",
+      "hiddenFromClients": "{{document}} est masqué pour les clients. Il n’apparaîtra pas sur les devis ni les factures consultés depuis le portail client.",
+      "updating": "Mise à jour...",
+      "markVisible": "Rendre visible pour les clients",
+      "visibleInPortal": "Visible dans le portail client",
+      "dialogTitle": "Sélectionner une image",
+      "dialogDescription": "Choisissez dans vos documents une image à utiliser dans ce modèle."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Détails de la facture",
+    "description": "Modifiez les métadonnées du brouillon de facture avant sa finalisation.",
+    "actions": {
+      "saving": "Enregistrement..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Le numéro de facture est obligatoire.",
+      "invoiceDateRequired": "La date de la facture est obligatoire."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Document",
+    "title": "Mises en page pour {{type}}",
+    "description": "Concevez les mises en page utilisées pour produire les PDF et aperçus de type « {{type}} ».",
+    "availableLayouts": "Mises en page disponibles",
+    "actions": {
+      "newLayout": "Nouvelle mise en page"
+    },
+    "columns": {
+      "name": "Nom",
+      "source": "Source"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (standard)",
+      "copyName": "{{name}} (copie)"
+    },
+    "toasts": {
+      "cloned": "Modèle dupliqué",
+      "defaultUpdated": "Modèle par défaut mis à jour",
+      "deleted": "Modèle supprimé"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les modèles pour {{type}}",
+      "cloneFailed": "Impossible de dupliquer le modèle",
+      "setDefaultFailed": "Impossible de définir le modèle par défaut",
+      "deleteFailed": "Impossible de supprimer le modèle"
+    },
+    "deleteDialog": {
+      "title": "Supprimer la mise en page pour {{type}}",
+      "message": "Voulez-vous vraiment supprimer « {{name}} » ?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Nouvelle mise en page pour {{type}}",
+        "edit": "Modifier la mise en page pour {{type}}"
+      },
+      "description": "Concevez la mise en page pour le type « {{type}} » dans l’éditeur visuel, puis prévisualisez-la avec des données d’exemple.",
+      "errorTitle": "Éditeur de mise en page pour {{type}}",
+      "sections": {
+        "details": "Détails de la mise en page"
+      },
+      "fields": {
+        "version": "Version"
+      },
+      "placeholders": {
+        "templateName": "Modèle pour {{type}}"
+      },
+      "actions": {
+        "back": "Retour aux mises en page",
+        "save": "Enregistrer la mise en page"
+      },
+      "labels": {
+        "created": "Créée : {{date}}",
+        "lastUpdated": "Dernière mise à jour : {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Produite à partir de données d’exemple représentatives du type « {{type}} ».",
+        "frameTitle": "Aperçu pour {{type}}",
+        "empty": "Ouvrez cet onglet pour générer un aperçu de référence.",
+        "existingNote": "Généré à partir de la commande client sélectionnée.",
+        "searchDocuments": "Rechercher des commandes client…",
+        "searchDocumentsHint": "Rechercher par numéro ou client…",
+        "noDocumentsFound": "Aucune commande client trouvée.",
+        "selectDocument": "Sélectionner une commande client",
+        "selectDocumentHint": "Sélectionnez une commande client pour prévisualiser la sortie liée aux données."
+      },
+      "errors": {
+        "nameRequired": "Le nom du modèle est obligatoire.",
+        "astExportFailed": "Impossible d’exporter le modèle depuis l’espace de travail visuel : {{message}}",
+        "saveFailed": "Impossible d’enregistrer la mise en page pour {{type}}",
+        "previewFailed": "Impossible de générer l’aperçu."
+      },
+      "toasts": {
+        "saved": "Mise en page pour {{type}} enregistrée"
+      }
+    },
+    "types": {
+      "salesOrder": "Commande client",
+      "packingSlip": "Bon de livraison",
+      "pickList": "Liste de prélèvement"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Autorisation refusée : autorisation de mise à jour des factures requise",
+      "invoiceDelete": "Autorisation refusée : autorisation de suppression des factures requise",
+      "invoiceAccess": "Autorisation refusée : accès à la facture refusé",
+      "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client"
+    },
+    "invoice": {
+      "notFound": "Facture introuvable",
+      "notFoundRefresh": "Facture introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer.",
+      "notFoundNumbered": "La facture {{invoiceId}} est introuvable.",
+      "clientNotFoundForInvoice": "Aucun client trouvé pour la facture {{invoiceNumber}}.",
+      "numberRequired": "Le numéro de facture est obligatoire",
+      "dateRequired": "La date de facture est obligatoire",
+      "dateInvalid": "La date de facture n’est pas valide",
+      "dueDateInvalid": "La date d’échéance n’est pas valide",
+      "onlyDraftEditable": "Seules les factures brouillon peuvent être modifiées",
+      "numberExists": "Ce numéro de facture existe déjà. Choisissez un autre numéro.",
+      "notFinalized": "La facture n’est pas finalisée",
+      "unfinalizeFailed": "Impossible d’annuler la finalisation de la facture en raison d’une erreur de données inattendue. Veuillez actualiser la page et réessayer.",
+      "paidOrCancelled": "Impossible de modifier une facture payée ou annulée",
+      "syncedVoidInstead": "Cette facture est synchronisée avec un système comptable : annulez-la au lieu de la supprimer.",
+      "invalidValue": "L’une des valeurs de facture sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "La facture, le client, le contrat ou l’enregistrement de facturation sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Une facture en conflit existe déjà. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire de la facture est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la facture est manquant : {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Cycle de facturation introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "invalidDates": "Le cycle de facturation comporte des dates non valides. Veuillez vérifier le cycle et réessayer."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Sélectionnez au moins une facture pour générer les PDF.",
+      "selectInvoicesEmail": "Sélectionnez au moins une facture à envoyer par e-mail.",
+      "selectInvoices": "Sélectionnez au moins une facture.",
+      "emailNotConfigured": "L’e-mail n’est pas configuré. Veuillez configurer les paramètres d’e-mail dans les paramètres avant d’envoyer des factures.",
+      "schedulePdfFailed": "Impossible de lancer la génération des PDF des factures. Veuillez réessayer.",
+      "scheduleEmailFailed": "Impossible de lancer l’envoi des factures par e-mail. Veuillez réessayer.",
+      "recipientFailed": "Impossible de charger les informations du destinataire de cette facture.",
+      "sendFailed": "Impossible d’envoyer la facture par e-mail. Veuillez réessayer."
+    },
+    "template": {
+      "selectStandard": "Sélectionnez un modèle de facture standard avant d’enregistrer.",
+      "selectBeforePreview": "Sélectionnez un modèle de facture avant l’aperçu.",
+      "notFoundRefresh": "Modèle de facture introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "missingDesign": "Le modèle de facture ne contient pas ses données de mise en page. Veuillez choisir un autre modèle.",
+      "invalidValue": "L’une des valeurs sélectionnées du modèle de facture n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "Le modèle de facture ou le client sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Un modèle de facture avec ces paramètres existe déjà.",
+      "missingField": "Un champ obligatoire du modèle de facture est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du modèle de facture est manquant : {{field}}."
     }
   }
 }

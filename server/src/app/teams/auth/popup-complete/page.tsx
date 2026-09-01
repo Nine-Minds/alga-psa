@@ -4,9 +4,13 @@ import { isTeamsEnterpriseEdition } from '@alga-psa/integrations/lib/teamsAvaila
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ReactNode } from 'react';
 
-export const metadata: Metadata = {
-  title: 'Teams Authentication',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('teams.auth.popupComplete.title', { defaultValue: 'Teams Authentication' }),
+  };
+}
 
 const PUBLIC_TEAMS_UNAVAILABLE_MESSAGE = 'Microsoft Teams integration is only available in Pro.';
 

@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft heeft u aangemeld maar toegang tot uw lijst met beheerde tenants geweigerd. Een globale beheerder moet beheerderstoestemming verlenen voor de gevraagde machtigingen. Er is niets opgeslagen — probeer het opnieuw zodra de toestemming is verleend.",
             "expired": "De verbindingspoging is verlopen voordat deze was voltooid. Er is niets opgeslagen — start de verbinding opnieuw.",
             "generic": "Microsoft Entra is niet verbonden en er is niets opgeslagen. Probeer het opnieuw.",
-            "validationFailed": "Microsoft heeft u aangemeld, maar uw lijst met beheerde tenants kon niet worden gelezen, dus er is niets opgeslagen. Controleer de machtigingen van de verbinding en probeer het opnieuw."
+            "validationFailed": "Microsoft heeft u aangemeld, maar de lijst met beheerde tenants kon niet worden gelezen; er is niets opgeslagen. Uw machtigingen zijn geaccepteerd — meestal is de partnertenant niet aangesloten op Microsoft 365 Lighthouse of zijn er geen actieve GDAP-relaties.",
+            "tokenRejected": "Microsoft heeft het toegangstoken van de verbinding geweigerd; er is niets opgeslagen. Start de verbinding opnieuw."
           },
           "cippServerLabel": "CIPP-server",
           "connectingSuffix": " (Verbinden...)",
@@ -862,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Verbindingstype:",
           "label": "Overzicht",
-          "mappedTenantsLabel": "Toegewezen tenants:"
+          "mappedTenantsLabel": "Toegewezen tenants:",
+          "microsoftAppLabel": "Microsoft-app:"
         },
         "skipped": {
           "empty": "Momenteel zijn er geen tenants gemarkeerd als overgeslagen.",
@@ -919,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "App-registratie toevoegen",
+          "bindFailed": "De gekozen Microsoft-app voor Entra kon niet worden opgeslagen.",
+          "emptyBody": "De directe verbinding draait op de Microsoft-app-registratie van uw eigen organisatie. Registreer een multitenant-app in uw partnertenant, voeg de Entra-redirect URI toe en verleen beheerderstoestemming voor ManagedTenants.Read.All en Directory.Read.All.",
+          "label": "Microsoft-app-registratie",
+          "placeholder": "Selecteer een app-registratie",
+          "reconnectRequired": "Selecteer een Microsoft-app-registratie en maak opnieuw verbinding.",
+          "redirectUriLabel": "Redirect URI om in Entra toe te voegen",
+          "scopesLabel": "Gedelegeerde scopes (beheerderstoestemming vereist)"
+        },
         "backToCurrentStep": "Terug naar {{step}}",
         "chooser": {
           "cipp": {
@@ -939,9 +951,10 @@
             "description": "Alga praat met Microsoft Graph via uw partnerrelatie.",
             "label": "Directe Microsoft-partner",
             "prerequisites": {
-              "appRegistration": "Microsoft OAuth-gegevens die voor deze tenant zijn geconfigureerd.",
+              "appRegistration": "Een hieronder gekozen Microsoft-app-registratie — de directe verbinding gebruikt altijd de app van uw eigen organisatie.",
               "globalAdmin": "Een globale beheerder die de machtigingen kan goedkeuren.",
-              "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert."
+              "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert.",
+              "lighthouse": "Microsoft 365 Lighthouse ingericht in uw partnertenant."
             }
           },
           "directReassurance": "U ziet de toestemmingsvraag voordat er iets wordt verleend.",
@@ -954,6 +967,7 @@
         "description": "Breng de mensen uit de Microsoft-tenants die u beheert als klantcontacten naar Alga. Er wordt niets naar uw contacten geschreven totdat u een voorbeeld hebt gezien en goedgekeurd.",
         "directConsent": {
           "adminNote": "Een globale beheerder moet deze machtigingen goedkeuren. Zo niet, dan lukt de aanmelding wel maar wordt de verbinding geweigerd en wordt er niets opgeslagen.",
+          "appRegistration": "App-registratie: {{name}}.",
           "cancel": "Annuleren",
           "continue": "Doorgaan naar Microsoft",
           "intro": "U verlaat Alga en meldt zich aan bij Microsoft. Dit zijn de machtigingen die worden gevraagd.",
@@ -1570,7 +1584,8 @@
           "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
           "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
           "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
-          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw."
+          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw.",
+          "optionsLoadFailed": "Kan de configuratieopties voor Microsoft-e-mail niet laden."
         },
         "fields": {
           "clientId": "Client ID",
@@ -1659,7 +1674,13 @@
           "email": {
             "description": "Kies het Microsoft-profiel voor inkomende en uitgaande Outlook-e-mail.",
             "label": "E-mail",
-            "reconnect": "Bestaande Outlook-e-mailverbindingen moeten opnieuw worden geautoriseerd om Mail.Send toe te kennen voordat ze uitgaande e-mail kunnen verzenden."
+            "reconnect": "Bestaande Outlook-e-mailverbindingen moeten opnieuw worden geautoriseerd om Mail.Send toe te kennen voordat ze uitgaande e-mail kunnen verzenden.",
+            "perProviderIssuerNote": "Bestaande postvakverbindingen behouden hun huidige Microsoft-app totdat ze opnieuw worden verbonden. Deze keuze geldt voor nieuwe postvakverbindingen."
+          },
+          "entra": {
+            "description": "Kies de Microsoft-app voor Entra-synchronisatie via GDAP en Lighthouse.",
+            "label": "Entra direct",
+            "reconnect": "Het wijzigen van deze app verbreekt de huidige Entra-verbinding en vereist opnieuw toestemming."
           },
           "mspSso": {
             "description": "Kies welk Microsoft-profiel MSP SSO-aanmeldingsdomeinen, Microsoft-aanmelding en tenant-detectie ondersteunt.",
@@ -1717,6 +1738,9 @@
           "currentProfileTitle": "Huidige profielwaarden",
           "emailRedirect": "Redirect-URI inkomende e-mail",
           "emailTitle": "E-mailhandleiding",
+          "entraConsent": "Vereiste",
+          "entraConsentValue": "Registreer deze app als multitenant en verleen beheerderstoestemming in de partnertenant.",
+          "entraTitle": "Entra direct",
           "mspSsoTitle": "MSP SSO-handleiding",
           "notConfigured": "Niet geconfigureerd",
           "redirectUri": "Redirect URI",
@@ -1828,11 +1852,16 @@
         "callback": {
           "accessDenied": "QuickBooks-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "QuickBooks OAuth kon niet worden gestart omdat het client ID en client secret niet volledig waren geconfigureerd.",
+          "forbidden": "U hebt geen toestemming meer om boekhoudkoppelingen te beheren. Vraag een beheerder om toegang.",
           "generic": "QuickBooks heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De QuickBooks OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
           "missingParams": "In de QuickBooks-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
           "oauthFailed": "De QuickBooks OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes.",
-          "tokenExchangeFailed": "Intuit heeft de verwachte tokens niet geretourneerd. Probeer opnieuw verbinding te maken."
+          "sessionExpired": "Uw sessie is niet meer geldig. Meld u aan en start de QuickBooks-verbinding opnieuw.",
+          "stateReplayed": "Deze QuickBooks-verbindingsaanvraag is al gebruikt. Start de verbindingsflow opnieuw.",
+          "tenantMismatch": "Deze QuickBooks-verbindingsaanvraag hoort bij een andere werkruimte. Meld u aan bij de juiste werkruimte en start opnieuw.",
+          "tokenExchangeFailed": "Intuit heeft de verwachte tokens niet geretourneerd. Probeer opnieuw verbinding te maken.",
+          "userMismatch": "Deze QuickBooks-verbindingsaanvraag hoort bij een andere gebruiker. Meld u aan als de gebruiker die deze is gestart en probeer het opnieuw."
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Plak uw Intuit app-client ID",
@@ -1857,6 +1886,7 @@
         "environmentProduction": "Productie",
         "environmentSandbox": "Sandbox",
         "errors": {
+          "automatedSalesTax": "Bijwerken van de Automated Sales Tax-modus is mislukt.",
           "disconnect": "QuickBooks ontkoppelen mislukt.",
           "load": "QuickBooks-instellingen laden mislukt.",
           "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
@@ -1878,9 +1908,21 @@
         "requiredScopes": "Vereiste scopes",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
-        "tenantOauthDescription": "Plak de Intuit app-inloggegevens die voor deze tenant zijn geregistreerd, of laat leeg om de QuickBooks-app op toepassingsniveau te gebruiken als die is geconfigureerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
-        "tenantOauthTitle": "Tenant-eigen OAuth-app",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Via welke Intuit-app deze tenant verbinding maakt. Secrets worden na opslaan nooit teruggestuurd naar de browser.",
+        "tenantOauthTitle": "Intuit-app-gegevens",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "De Automated Sales Tax-modus staat uit. Alga blijft de belasting voor dit bedrijf berekenen.",
+          "enabledMessage": "QuickBooks berekent vanaf nu de omzetbelasting voor gedelegeerde facturen van dit bedrijf.",
+          "hint": "Zet dit aan wanneer dit QuickBooks-bedrijf Automated Sales Tax gebruikt. Intuit belast geëxporteerde facturen dan op basis van het klantadres en de belasting komt terug naar Alga.",
+          "label": "QuickBooks berekent de omzetbelasting"
+        },
+        "credentialSource": {
+          "app": "Deze omgeving biedt een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Vul de velden hieronder alleen in als deze tenant een eigen Intuit-app moet gebruiken.",
+          "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een in het Intuit Developer-portaal en plak hieronder de client-ID en het secret — de installatiegids legt dit stap voor stap uit.",
+          "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app, met de hieronder opgeslagen gegevens."
+        },
+        "setupGuideLink": "QuickBooks-installatiegids"
       },
       "sync": {
         "healthCardTitle": "Synchronisatiestatus",
@@ -1921,9 +1963,219 @@
         "saving": "Opslaan…",
         "undepositedFunds": "Niet-gestorte middelen (standaard)",
         "catalogLoadError": "Configuratieopties voor QuickBooks-synchronisatie laden mislukt."
+      },
+      "itemImport": {
+        "description": "Importeer uw QuickBooks-producten en -services in de Alga-servicecatalogus voor het verbonden QuickBooks-bedrijf. QuickBooks blijft de gezaghebbende bron voor namen, tarieven, SKU’s, beschrijvingen en kosten; de facturatiemethode, maateenheid en het servicetype worden hier ingesteld en daarna door Alga beheerd. Deze stap is optioneel — sla deze over met Volgende.",
+        "defaults": {
+          "title": "Standaardwaarden voor geïmporteerde artikelen",
+          "serviceType": "Servicetype (verplicht)",
+          "serviceTypePlaceholder": "Selecteer een servicetype…",
+          "unitOfMeasure": "Maateenheid",
+          "serviceBillingMethod": "Facturatiemethode voor services",
+          "productBillingMethod": "Facturatiemethode voor producten",
+          "includeInactive": "Inactieve QuickBooks-artikelen opnemen (worden als inactief geïmporteerd)"
+        },
+        "billingMethods": {
+          "fixed": "Vast",
+          "hourly": "Per uur",
+          "usage": "Op basis van gebruik"
+        },
+        "actions": {
+          "preview": "Importvoorbeeld",
+          "previewing": "Voorbeeld laden…",
+          "previewRequiresServiceType": "Selecteer een servicetype om het voorbeeld in te schakelen.",
+          "execute": "Import uitvoeren",
+          "executing": "Importeren…"
+        },
+        "preview": {
+          "summary": "Er zijn {{total}} QuickBooks-artikelen gevonden voor het verbonden bedrijf (realm {{realm}}): {{create}} om te maken, {{update}} om bij te werken, {{link}} om te koppelen en {{skip}} om over te slaan. Er zijn nog geen gegevens geschreven.",
+          "groups": {
+            "create": "Te maken",
+            "update": "Bij te werken",
+            "link": "Te koppelen (komt al overeen)",
+            "skip": "Over te slaan"
+          },
+          "qboName": "QuickBooks-naam: {{name}} (geïmporteerd als ‘{{importedAs}}’)"
+        },
+        "flags": {
+          "inactive": "Inactief in QuickBooks",
+          "unmappedTax": "Belastingcode niet toegewezen",
+          "skuConflict": "SKU-conflict",
+          "nameCollision": "Naam al toegewezen",
+          "categorySkipped": "Categorie (niet geïmporteerd)"
+        },
+        "result": {
+          "summary": "Import voltooid: {{created}} gemaakt, {{updated}} bijgewerkt, {{linked}} gekoppeld, {{skipped}} overgeslagen.",
+          "summaryWithErrors": "Import voltooid: {{created}} gemaakt, {{updated}} bijgewerkt, {{linked}} gekoppeld, {{skipped}} overgeslagen, {{failed}} mislukt."
+        },
+        "errors": {
+          "previewFailed": "Importvoorbeeld laden mislukt.",
+          "executeFailed": "De import is mislukt."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · identificatie {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — niet belastbaar",
+          "taxable": "TAX — belastbaar (Automated Sales Tax bepaalt het tarief)"
+        }
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Waarschuwingsautomatisering",
+        "description": "Configureer hoe binnenkomende RMM-waarschuwingen worden verwerkt, onderdrukt en omgezet in tickets.",
+        "loading": "Instellingen voor waarschuwingsautomatisering laden…",
+        "actions": {
+          "addRule": "Regel toevoegen",
+          "addWindow": "Venster toevoegen",
+          "cancel": "Annuleren",
+          "confirm": "Bevestigen",
+          "deleteRule": "Regel verwijderen",
+          "deleteWindow": "Venster verwijderen",
+          "editRule": "Regel bewerken",
+          "editWindow": "Venster bewerken",
+          "moveDown": "Omlaag verplaatsen",
+          "moveUp": "Omhoog verplaatsen",
+          "savePolling": "Pollinginstellingen opslaan",
+          "saveRule": "Regel opslaan",
+          "saveWindow": "Venster opslaan",
+          "saving": "Opslaan…"
+        },
+        "days": {
+          "sun": "Zo",
+          "mon": "Ma",
+          "tue": "Di",
+          "wed": "Wo",
+          "thu": "Do",
+          "fri": "Vr",
+          "sat": "Za"
+        },
+        "dialogs": {
+          "addRule": "Waarschuwingsregel toevoegen",
+          "addWindow": "Onderhoudsvenster toevoegen",
+          "editRule": "Regel bewerken: {{name}}",
+          "editWindow": "Venster bewerken: {{name}}"
+        },
+        "errors": {
+          "loadRules": "Waarschuwingsregels konden niet worden geladen",
+          "loadSettings": "Instellingen voor waarschuwingsautomatisering konden niet worden geladen",
+          "unknown": "Onbekende fout"
+        },
+        "fields": {
+          "active": "Actief",
+          "commaSeparated": "Door komma's gescheiden",
+          "description": "Beschrijving",
+          "nameRequired": "Naam *",
+          "optionalDescription": "Optionele beschrijving",
+          "ruleName": "Regelnaam",
+          "windowName": "Vensternaam"
+        },
+        "polling": {
+          "title": "Waarschuwingspolling",
+          "description": "Alga haalt periodiek actieve waarschuwingen op uit het RMM om waarschuwingen te vinden die een webhook heeft gemist. Configureer hieronder het pollinginterval.",
+          "enabled": "Polling ingeschakeld",
+          "interval": "Interval (minuten, 5–60)",
+          "intervalError": "Het interval moet tussen 5 en 60 minuten liggen.",
+          "lastPolled": "Laatst gepolld: {{time}}"
+        },
+        "rules": {
+          "title": "Waarschuwingsregels",
+          "description": "Regels worden van boven naar beneden beoordeeld. De eerste overeenkomende regel wordt toegepast. Een regel zonder voorwaarden geldt voor alle waarschuwingen.",
+          "empty": "Geen regels geconfigureerd. Waarschuwingen worden zonder automatisering verwerkt.",
+          "actions": "Acties",
+          "activityTypes": "Activiteitstypen",
+          "activityTypesPlaceholder": "bijv. schijf, CPU (door komma's gescheiden)",
+          "alertClasses": "Waarschuwingsklassen",
+          "assignToUser": "Aan gebruiker toewijzen",
+          "autoResolve": "Ticket automatisch oplossen wanneer de waarschuwing verdwijnt",
+          "board": "Bord",
+          "catchAllHelp": "Geen voorwaarden ingesteld — deze regel geldt voor alle binnenkomende waarschuwingen.",
+          "createTicket": "Ticket aanmaken",
+          "defaultBoard": "Standaardboard",
+          "defaultClosedStatus": "Standaardstatus voor gesloten tickets",
+          "descriptionTemplate": "Sjabloon voor ticketbeschrijving",
+          "descriptionTemplatePlaceholder": "bijv. waarschuwing op {{device}}: {{message}}",
+          "keywords": "Trefwoorden",
+          "mapFromSeverity": "Afleiden van ernstniveau",
+          "matchConditions": "Overeenkomstvoorwaarden",
+          "messagePattern": "Berichtpatroon (reguliere expressie)",
+          "messagePatternPlaceholder": "bijv. (?i)disk.*full",
+          "notifyUsers": "Gebruikers waarschuwen",
+          "organizationsFilter": "Organisaties (filter)",
+          "placeholders": "Plaatshouders",
+          "priorityOverride": "Prioriteit overschrijven",
+          "resetOnClose": "Waarschuwing resetten wanneer het ticket wordt gesloten",
+          "resolveStatus": "Oplossingsstatus",
+          "severities": "Ernstniveaus",
+          "sourceTypes": "Brontypen",
+          "titleTemplate": "Sjabloon voor tickettitel",
+          "titleTemplatePlaceholder": "bijv. [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Niet toegewezen"
+        },
+        "schedule": {
+          "crossesMidnight": "De eindtijd ligt vóór de starttijd — het venster loopt door na middernacht.",
+          "days": "Dagen",
+          "endTime": "Eindtijd",
+          "endsAt": "Eindigt op",
+          "none": "Geen planning",
+          "oneOff": "Eenmalig",
+          "startTime": "Starttijd",
+          "startsAt": "Begint op",
+          "timezone": "Tijdzone",
+          "type": "Planningstype",
+          "weekly": "Wekelijks {{days}} {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Wekelijks terugkerend"
+        },
+        "scope": {
+          "title": "Bereik",
+          "allClients": "Alle klanten",
+          "allRmm": "Alle RMM-systemen",
+          "allRmmHelp": "Het venster onderdrukt waarschuwingen van alle RMM-integraties.",
+          "clientOptional": "Klant (optioneel — leeg laten voor alle klanten)",
+          "loadingClients": "Klanten laden…",
+          "onlyThisIntegration": "Alleen deze integratie",
+          "otherIntegration": "Andere integratie",
+          "thisIntegration": "Deze integratie",
+          "thisIntegrationHelp": "Het venster onderdrukt alleen waarschuwingen van deze integratie."
+        },
+        "severities": {
+          "critical": "Kritiek",
+          "major": "Ernstig",
+          "moderate": "Gemiddeld",
+          "minor": "Laag",
+          "none": "Geen"
+        },
+        "summary": {
+          "autoResolve": "Automatisch oplossen",
+          "createsTicket": "Maakt een ticket aan"
+        },
+        "toasts": {
+          "deleteFailed": "Verwijderen mislukt",
+          "invalidInterval": "Ongeldig interval",
+          "namedItemSaved": "‘{{name}}’ is opgeslagen.",
+          "pollingSaved": "Pollinginstellingen opgeslagen",
+          "reorderFailed": "Opnieuw ordenen mislukt",
+          "ruleCreated": "Regel aangemaakt",
+          "ruleDeleted": "Regel verwijderd",
+          "ruleUpdated": "Regel bijgewerkt",
+          "saveFailed": "Opslaan mislukt",
+          "updateFailed": "Bijwerken mislukt",
+          "windowCreated": "Venster aangemaakt",
+          "windowDeleted": "Venster verwijderd",
+          "windowUpdated": "Venster bijgewerkt"
+        },
+        "validation": {
+          "invalidRegex": "Ongeldige reguliere expressie"
+        },
+        "windows": {
+          "title": "Onderhoudsvensters",
+          "description": "Waarschuwingen die tijdens een actief venster binnenkomen, worden onderdrukt en maken geen tickets aan.",
+          "empty": "Geen onderhoudsvensters geconfigureerd."
+        }
+      },
       "ninjaOne": {
         "loading": "NinjaOne-integratie-instellingen laden...",
         "card": {
@@ -2472,6 +2724,29 @@
           "updateContact": "Kan standaardcontact niet bijwerken",
           "updateAutoSync": "Kan instelling voor automatisch synchroniseren niet bijwerken"
         }
+      },
+      "deviceSync": {
+        "title": "Geplande apparaatsynchronisatie",
+        "description": "Werk deze apparaatinventaris volgens een schema bij in plaats van te wachten tot iemand een volledige synchronisatie uitvoert. Elke uitvoering roept de API van de provider aan en bij sommige providers leest ook een incrementele uitvoering de volledige apparaatlijst, waardoor een korter interval evenredig meer API-aanroepen kost.",
+        "enabledLabel": "Apparaten volgens een schema synchroniseren",
+        "intervalLabel": "Uitvoeren elke (minuten)",
+        "intervalHelp": "Kies tussen {{min}} en {{max}} minuten. Een korter interval houdt de apparaatgegevens actueler en roept de API van de provider vaker aan.",
+        "intervalInvalid": "Voer een geheel aantal minuten tussen {{min}} en {{max}} in.",
+        "lastScheduledRun": "Laatste geplande uitvoering: {{time}}",
+        "lastScheduledRunNever": "De geplande synchronisatie is nog niet uitgevoerd.",
+        "lastAnySync": "Laatste synchronisatie van welke aard dan ook, inclusief handmatige volledige synchronisaties: {{time}}",
+        "lastAnySyncNever": "Er is nog geen enkele apparaatsynchronisatie uitgevoerd.",
+        "lastSyncError": "De laatste synchronisatie is mislukt: {{error}}",
+        "actions": {
+          "save": "Synchronisatieschema opslaan",
+          "saving": "Opslaan..."
+        },
+        "success": {
+          "saved": "Schema voor apparaatsynchronisatie opgeslagen. De planner past het binnen enkele minuten toe."
+        },
+        "errors": {
+          "saveFailed": "Kan het schema voor apparaatsynchronisatie niet opslaan."
+        }
       }
     },
     "sso": {
@@ -2581,9 +2856,17 @@
             "description": "Lever persoonlijke meldingen aan de Teams-activiteitenfeed.",
             "label": "Activiteitenmeldingen"
           },
+          "channelBot": {
+            "description": "Sta de bot toe om te reageren wanneer deze met @ wordt genoemd in teamkanalen. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van het kanaal.",
+            "label": "Kanaal-bot"
+          },
           "groupChatBot": {
             "description": "Sta de bot toe om te reageren in Teams-groepschats. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van de chat.",
             "label": "Groepschat-bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Laat klantcontacten die de bot een bericht sturen tickets indienen zonder aan te melden. Afzenders worden op basis van hun geverifieerde Microsoft-identiteit aan contacten gekoppeld; afzenders zonder overeenkomst worden geweigerd.",
+            "label": "Ticketindiening door gasten"
           },
           "messageExtension": {
             "description": "Schakel opzoek- en berichtgestuurde PSA-acties in.",
@@ -2740,7 +3023,6 @@
           "test": {
             "sent": "Teams-testbericht verzonden.",
             "failed": "Teams-testbericht mislukt.",
-            "addonInactive": "De Teams-add-on is niet actief voor deze tenant.",
             "integrationInactive": "Activeer de Teams-integratie voordat u een testbericht verzendt.",
             "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat u een testbericht verzendt.",
             "botNotConfigured": "Configureer de Teams-botreferenties voordat u een testbericht verzendt.",
@@ -2749,7 +3031,6 @@
             "skipped": "Het Teams-testbericht is overgeslagen."
           },
           "steps": {
-            "addonEntitlement": "Teams-add-on-recht",
             "integrationStatus": "Status van Teams-integratie",
             "capabilities": "Teams-mogelijkheden",
             "microsoftProfile": "Gereedheid van Microsoft-profiel",
@@ -2761,7 +3042,6 @@
             "recentDeliveryHealth": "Recente Teams-leveringsstatus"
           },
           "recommendation": {
-            "addon": "Schakel de Microsoft Teams-add-on in voor deze tenant.",
             "activate": "Activeer de Teams-integratie in de instellingen.",
             "capabilities": "Schakel de persoonlijke bot en activiteitsmeldingen voor Teams in.",
             "profile": "Selecteer een gereed Microsoft-profiel voor Teams.",
@@ -2951,9 +3231,9 @@
               "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij AlgaPSA, dus er bestaat geen accountkoppeling.",
               "remedy": "Laat de gebruiker zich aanmelden met Microsoft (MSP-portal-SSO of het Teams-tabblad) zodat hun account wordt gekoppeld."
             },
-            "addon_inactive": {
-              "cause": "De Teams-invoegtoepassing is verlopen of afwezig, dus verzendingen worden overgeslagen terwijl de configuratie behouden blijft.",
-              "remedy": "Vernieuw de Teams-invoegtoepassing voor deze tenant."
+            "feature_disabled": {
+              "cause": "De Teams-functie was uitgeschakeld voor deze tenant toen de bezorging werd geprobeerd (vóór 1.5).",
+              "remedy": "Teams is nu algemeen beschikbaar; probeer het verzenden opnieuw."
             },
             "integration_inactive": {
               "cause": "De Teams-integratie is niet actief voor deze tenant.",
@@ -2984,26 +3264,6 @@
               "remedy": "Controleer de serverlogboeken voor de details van de bezorgfout en voer de diagnostiek opnieuw uit."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams-invoegtoepassing",
-          "description": "Voor de Microsoft Teams-integratie is de Teams-invoegtoepassing voor deze tenant vereist.",
-          "includedTitle": "Wat is inbegrepen",
-          "feature": {
-            "tab": "Persoonlijk tabblad: open AlgaPSA binnen Microsoft Teams.",
-            "bot": "Persoonlijke en groepschat-bot voor tickets, goedkeuringen, tijd en notities.",
-            "messageExtension": "Berichtextensie en snelle acties om vanuit elk bericht op PSA-records te reageren.",
-            "meetings": "Teams-vergaderingen bij goedkeuringen van afspraken met echte Outlook/Teams-agenda-uitnodigingen.",
-            "recordings": "Automatische vastlegging van vergaderopnamen en transcripties in interacties.",
-            "notifications": "Meldingen via activiteitenfeed en bot-DM voor toewijzingen, reacties, goedkeuringen en SLA-risico."
-          },
-          "cta": "Teams-invoegtoepassing kopen",
-          "nonBilling": "Neem contact op met een factureringsbeheerder om de Teams-invoegtoepassing voor deze tenant te kopen."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams-invoegtoepassing verlopen",
-          "message": "De Microsoft Teams-invoegtoepassing is verlopen. Uw configuratie en bezorggeschiedenis blijven behouden, maar Teams-meldingen worden overgeslagen totdat de invoegtoepassing wordt vernieuwd.",
-          "cta": "Teams-invoegtoepassing vernieuwen"
         },
         "staleManifest": {
           "title": "Teams-app-pakket is verouderd",
@@ -3177,11 +3437,16 @@
           "accessDenied": "Xero-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "Xero OAuth kon niet worden gestart omdat het client ID en client secret van de tenant niet volledig waren geconfigureerd.",
           "connectionsUnmapped": "Xero heeft organisaties geretourneerd, maar geen enkele bevatte de identifiers die nodig zijn om een verbinding op te slaan.",
+          "forbidden": "U hebt geen toestemming meer om boekhoudkoppelingen te beheren. Vraag een beheerder om toegang.",
           "generic": "Xero heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De Xero OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
           "missingParams": "In de Xero-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
           "noConnections": "Xero heeft geen organisaties geretourneerd voor deze aanmelding. Controleer uw Xero-app en organisatietoegang en probeer het opnieuw.",
-          "oauthFailed": "De Xero OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes."
+          "oauthFailed": "De Xero OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes.",
+          "sessionExpired": "Uw sessie is niet meer geldig. Meld u aan en start de Xero-verbinding opnieuw.",
+          "stateReplayed": "Deze Xero-verbindingsaanvraag is al gebruikt. Start de verbindingsflow opnieuw.",
+          "tenantMismatch": "Deze Xero-verbindingsaanvraag hoort bij een andere werkruimte. Meld u aan bij de juiste werkruimte en start opnieuw.",
+          "userMismatch": "Deze Xero-verbindingsaanvraag hoort bij een andere gebruiker. Meld u aan als de gebruiker die deze is gestart en probeer het opnieuw."
         },
         "clientIdLabel": "Xero Client ID",
         "clientIdPlaceholder": "Plak uw tenant-eigen Xero Client ID",
@@ -3221,6 +3486,9 @@
         "noClientSecret": "Er is nog geen client secret opgeslagen voor deze tenant.",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Vereiste scopes",
+        "scopeOverride": "Implementatie-override (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "De XERO_OAUTH_SCOPES-override is genegeerd omdat deze ongeldige vermeldingen bevat ({{scopes}}). In plaats daarvan worden de standaardscopes gebruikt.",
+        "scopeReconnectNote": "Deze scopes gelden voor nieuwe autorisaties. Een bestaande verbinding behoudt de oorspronkelijk verleende scopes; om de huidige set toe te passen, verbreek de verbinding met Xero en maak opnieuw verbinding. U kunt deze app ook verwijderen bij 'Verbonden apps' in Xero om eerdere machtigingen in te trekken.",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
         "tenantOauthDescription": "Plak de Xero-app-inloggegevens die voor deze tenant zijn geregistreerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
@@ -3309,6 +3577,185 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Actief",
+        "error": "Fout",
+        "disabled": "Uitgeschakeld",
+        "notConfigured": "Niet ingesteld"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Legt Teams Phone-gesprekken na afloop vast als interacties. Gespreksgeschiedenis, geen live schermmelding.",
+          "prerequisite": "Stel eerst de Microsoft Teams-integratie in — Teams Phone hergebruikt het Microsoft-profiel daarvan."
+        }
+      },
+      "subscriptionExpires": "Abonnement wordt vernieuwd vóór",
+      "lastNotification": "Laatste oproepmelding",
+      "autoTicket": "Automatisch een ticket aanmaken voor herkende gesprekken",
+      "unknownNumber": "Onbekend nummer",
+      "actions": {
+        "enable": "Inschakelen",
+        "disable": "Uitschakelen"
+      },
+      "matchStatus": {
+        "matched": "Herkend",
+        "ambiguous": "Meerduidig",
+        "unmatched": "Niet herkend",
+        "resolved": "Opgelost"
+      },
+      "callsPanel": {
+        "title": "Gesprekken"
+      },
+      "recentCalls": {
+        "title": "Recente gesprekken",
+        "description": "Vastgelegd na afloop van elk gesprek: Microsoft Graph publiceert gespreksrecords pas daarna, dus dit is geschiedenis en geen live overzicht.",
+        "empty": "Nog geen gesprekken vastgelegd.",
+        "createTicket": "Ticket aanmaken",
+        "openTicket": "Ticket openen",
+        "linkTicket": "Aan ticket koppelen",
+        "selectTicket": "Selecteer een ticket…",
+        "noLinkableTickets": "Geen open tickets"
+      },
+      "unmatched": {
+        "title": "Gesprekken zonder toewijzing",
+        "description": "Nummers die we niet konden herkennen en nummers die meerdere contacten delen. Een gesprek oplossen zet het op de juiste tijdlijn.",
+        "empty": "Elk vastgelegd gesprek is toegewezen.",
+        "assignTo": "Toewijzen aan",
+        "searchPlaceholder": "Zoek contacten en klanten…",
+        "noTargets": "Geen overeenkomende contacten of klanten.",
+        "chooseTarget": "Toewijzen aan een klant…"
+      },
+      "forbidden": "U hebt geen toestemming om de telefonie-instellingen van deze tenant te bekijken.",
+      "paywall": {
+        "title": "Telefonie",
+        "description": "Telefonie-integraties zijn niet beschikbaar voor deze tenant.",
+        "unavailable": "Telefonie-integraties zijn niet beschikbaar voor deze tenant.",
+        "ceOnly": "Telefonie-integraties zijn alleen beschikbaar in Enterprise Edition.",
+        "includedTitle": "Wat is inbegrepen",
+        "cta": "Integraties beheren",
+        "feature": {
+          "recognition": "Bellerherkenning tegen contacten en klanten bij elk vastgelegd gesprek.",
+          "history": "Gespreksgeschiedenis op de tijdlijn van contact en klant als volwaardige interacties.",
+          "tickets": "Maak een ticket vanuit een gesprek of koppel het gesprek aan een ticket waaraan u al werkt.",
+          "queue": "Een wachtrij voor niet-herkende en meerduidige nummers, zodat geen gesprek op gevoel wordt toegewezen.",
+          "providers": "Vandaag Teams Phone; dezelfde gesprekskern draagt toekomstige aanbieders."
+        }
+      }
+    }
+  },
+  "errors": {
+    "rmm": {
+      "invalidInput": "Controleer de instellingen voor automatisering van RMM-waarschuwingen en probeer het opnieuw.",
+      "permissions": {
+        "read": "Onvoldoende rechten om de instellingen voor automatisering van RMM-waarschuwingen te bekijken.",
+        "update": "Onvoldoende rechten om de instellingen voor automatisering van RMM-waarschuwingen te beheren."
+      },
+      "integrationNotFound": "RMM-integratie niet gevonden.",
+      "nothingToUpdate": "Er zijn geen wijzigingen om op te slaan.",
+      "ruleNotFound": "Waarschuwingsregel niet gevonden.",
+      "windowNotFound": "Onderhoudsvenster niet gevonden.",
+      "pollIntervalRange": "Het pollinginterval moet tussen 5 en 60 minuten liggen.",
+      "validation": {
+        "scheduleRequired": "Een venster heeft een begin- en eindtijd of een wekelijkse herhaling nodig.",
+        "startBeforeEnd": "De begintijd moet vóór de eindtijd liggen.",
+        "timesMustDiffer": "De begin- en eindtijd moeten verschillen. Gebruik meerdere dagen voor een venster dat een volledige dag beslaat.",
+        "unknownTimezone": "Onbekende tijdzone: {{timezone}}.",
+        "messagePatternInvalid": "Het berichtpatroon is geen geldige reguliere expressie."
+      }
+    },
+    "mappings": {
+      "viewPermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te bekijken.",
+      "managePermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te beheren.",
+      "loadFailed": "Kan de koppelingsgegevens niet laden. Probeer het opnieuw.",
+      "duplicate": "Er bestaat al een koppeling voor deze entiteit. Bewerk in plaats daarvan de bestaande koppeling.",
+      "saveFailed": "Kan de koppeling niet opslaan. Probeer het opnieuw.",
+      "idRequiredForUpdate": "Voor het bijwerken is de koppelings-ID verplicht.",
+      "noUpdateData": "Er zijn geen bij te werken gegevens opgegeven.",
+      "updateFailed": "Kan de koppeling niet bijwerken. Probeer het opnieuw.",
+      "idRequiredForDelete": "Voor het verwijderen is de koppelings-ID verplicht.",
+      "notFound": "Koppeling niet gevonden. Vernieuw de koppelingen en probeer het opnieuw.",
+      "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw."
+    },
+    "qbo": {
+      "enterpriseOnly": "De QuickBooks Online-integratie is alleen beschikbaar in de Enterprise Edition.",
+      "viewPermission": "Verboden: u hebt geen rechten om de instellingen van de QuickBooks-integratie te bekijken.",
+      "accounts": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-grootboekrekeningen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-grootboekrekeningen laadt.",
+        "loadFailed": "Kan QuickBooks-grootboekrekeningen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "classes": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-klassen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-klassen laadt.",
+        "loadFailed": "Kan QuickBooks-klassen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "departments": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-afdelingen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-afdelingen laadt.",
+        "loadFailed": "Kan QuickBooks-afdelingen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "items": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-artikelen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-artikelen laadt.",
+        "loadFailed": "Kan QuickBooks-artikelen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "taxCodes": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-belastingcodes laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-belastingcodes laadt.",
+        "loadFailed": "Kan QuickBooks-belastingcodes niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "customers": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-klanten laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-klanten laadt.",
+        "loadFailed": "Kan QuickBooks-klanten niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "paymentTerms": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-betalingsvoorwaarden laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-betalingsvoorwaarden laadt.",
+        "loadFailed": "Kan QuickBooks-betalingsvoorwaarden niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "De Xero-integratie is alleen beschikbaar in de Enterprise Edition.",
+      "viewPermission": "Verboden: u hebt geen rechten om de instellingen van de Xero-integratie te bekijken.",
+      "organisationDisconnected": "De geselecteerde Xero-organisatie is niet meer verbonden. Verbind Xero opnieuw en probeer het nogmaals.",
+      "accounts": {
+        "notConnected": "Verbind Xero voordat u Xero-grootboekrekeningen laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-grootboekrekeningen laadt.",
+        "loadFailed": "Kan Xero-grootboekrekeningen niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-grootboekrekeningen worden geladen. Probeer het opnieuw."
+      },
+      "items": {
+        "notConnected": "Verbind Xero voordat u Xero-artikelen laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-artikelen laadt.",
+        "loadFailed": "Kan Xero-artikelen niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-artikelen worden geladen. Probeer het opnieuw."
+      },
+      "taxRates": {
+        "notConnected": "Verbind Xero voordat u Xero-belastingtarieven laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-belastingtarieven laadt.",
+        "loadFailed": "Kan Xero-belastingtarieven niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-belastingtarieven worden geladen. Probeer het opnieuw."
+      },
+      "trackingCategories": {
+        "notConnected": "Verbind Xero voordat u Xero-trackingcategorieën laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-trackingcategorieën laadt.",
+        "loadFailed": "Kan Xero-trackingcategorieën niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-trackingcategorieën worden geladen. Probeer het opnieuw."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "De gebruiker heeft geen rechten om integratie-instellingen te beheren",
+      "manageBillingPermission": "De gebruiker heeft geen rechten om facturatie te beheren",
+      "viewBillingPermission": "De gebruiker heeft geen rechten om facturatie-instellingen te bekijken",
+      "contentRequired": "CSV-inhoud is verplicht"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Er bestaat al een contact met dit e-mailadres in het systeem zonder klanttoewijzing",
+      "emailOnAnotherClient": "Dit e-mailadres is al gekoppeld aan een andere klant",
+      "emailOnAnotherClientNamed": "Dit e-mailadres is al gekoppeld aan {{clientName}}"
     }
   }
 }

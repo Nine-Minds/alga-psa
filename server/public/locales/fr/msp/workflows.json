@@ -60,8 +60,6 @@
       "runNow": "Exécuter maintenant",
       "exportCsv": "Exporter en CSV",
       "refresh": "Actualiser",
-      "cancelSelected": "Annuler la sélection ({{count}})",
-      "clearSelection": "Effacer la sélection",
       "details": "Détails",
       "loadMore": "Charger plus",
       "preview": "Aperçu"
@@ -92,7 +90,12 @@
       "cancelMessage": "Annuler {{count}} exécution(s) sélectionnée(s) ? Cette action est irréversible.",
       "reasonLabel": "Motif",
       "cancelReasonPlaceholder": "Indiquez un motif pour l’annulation",
-      "cancelConfirm": "Annuler les exécutions"
+      "cancelConfirm": "Annuler les exécutions",
+      "actionBar": {
+        "selectedCount": "{{count}} sélectionnés",
+        "cancel": "Annuler les exécutions",
+        "clear": "Effacer la sélection"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Échec du chargement des exécutions",
@@ -1216,6 +1219,15 @@
       "noFields": "Aucun champ",
       "copyAllPaths": "Copier tous les chemins",
       "copyAllFieldPaths": "Copier tous les chemins de champ"
+    },
+    "logoAlt": "Logo de l'éditeur de workflows",
+    "nodes": {
+      "action": "Action :",
+      "process": "Processus :",
+      "clientId": "ID client :",
+      "clientSecret": "Secret client :",
+      "tenantId": "ID de locataire :",
+      "userEmail": "E-mail de l'utilisateur :"
     }
   },
   "actionInputFieldInfo": {
@@ -1476,7 +1488,9 @@
     "insertReferenceHeading": "Insérer une référence de workflow",
     "errors": {
       "noCodeBlock": "Impossible d’insérer une référence dans un bloc de code. Déplacez le curseur dans un autre bloc et réessayez."
-    }
+    },
+    "placeholder": "Rédigez du texte Markdown…",
+    "referenceHint": "Les références s'affichent sous forme de puces en ligne et sont conservées comme des nœuds de référence compatibles avec le workflow."
   },
   "referenceSelector": {
     "placeholders": {
@@ -1491,7 +1505,10 @@
     "start": "Début",
     "insertStepHere": "Insérer une étape ici",
     "emptyDisabled": "Aucune étape pour l’instant.",
-    "emptySelectPrompt": "Sélectionnez une étape dans le panneau pour commencer."
+    "emptySelectPrompt": "Sélectionnez une étape dans le panneau pour commencer.",
+    "patchSummary": {
+      "unchanged": "autres champs inchangés"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Éditeur d’expression",
@@ -1607,6 +1624,37 @@
     "softEnumUseCustom": "Utiliser « {{value}} »",
     "expression": {
       "placeholder": "ex. : payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Champs à modifier",
+      "targetFraming": "Cette étape met à jour {{target}}.",
+      "summaryChanges": "Modifie {{list}}",
+      "summaryChangesMore": "Modifie {{list}} +{{count}} autres",
+      "unchangedNote": "Tous les autres champs conservent leurs valeurs actuelles.",
+      "emptyGuidance": "Ajoutez au moins un champ à modifier.",
+      "editChanges": "Modifier les changements…",
+      "dialogTitle": "Modifier les changements",
+      "dialogDescription": "Mise à jour de {{target}}. Seuls les champs listés à droite seront modifiés ; tout le reste conserve sa valeur actuelle.",
+      "footerSummary": "{{count}} champ(s) seront modifiés · tout le reste conserve sa valeur actuelle",
+      "done": "Terminé",
+      "added": "Ajouté ✓",
+      "noChangesYet": "Aucun changement pour l'instant. Choisissez un champ à gauche pour commencer.",
+      "setFieldTo": "Définir {{field}} sur",
+      "removeChange": "Ne plus modifier ce champ (il conserve sa valeur actuelle)",
+      "advancedTitle": "Avancé",
+      "group": {
+        "details": "Détails",
+        "assignment": "Attribution",
+        "datesTags": "Dates et étiquettes",
+        "advanced": "Avancé"
+      },
+      "target": {
+        "genericRecord": "enregistrement",
+        "unset": "le {{record}} sélectionné ci-dessus",
+        "fromReference": "le {{record}} provenant de « {{source}} »",
+        "fromExpression": "le {{record}} choisi par une expression",
+        "fixed": "un {{record}} spécifique"
+      }
     }
   },
   "schemaReference": {
@@ -2438,7 +2486,6 @@
         }
       },
       "schemaModal": {
-        "title": "Schéma",
         "close": "Fermer",
         "headerTitle": "Schéma de payload",
         "loading": "Chargement…",
@@ -2448,7 +2495,6 @@
         "copyFailed": "Échec de la copie"
       },
       "metricsDialog": {
-        "title": "Métriques",
         "close": "Fermer",
         "headerTitle": "Métriques · {{eventType}}",
         "from": "Du",
@@ -2475,7 +2521,6 @@
         "next": "Suiv."
       },
       "simulateDialog": {
-        "title": "Simuler un événement",
         "headerTitle": "Simuler · {{eventType}}",
         "submit": "Simuler",
         "submitting": "Envoi…",
@@ -2532,7 +2577,6 @@
       },
       "defineEventDialog": {
         "title": "Définir un événement personnalisé",
-        "headerTitle": "Définir un événement personnalisé",
         "cancel": "Annuler",
         "submit": "Créer l'événement",
         "submitting": "Création…",
@@ -2647,5 +2691,25 @@
         "selectPriority": "Sélectionnez ou saisissez une priorité"
       }
     }
+  },
+  "mappingEditor": {
+    "error": {
+      "retry": "Réessayer",
+      "title": "Échec du chargement du schéma",
+      "retryWithCount": "Réessayer ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Tentative {{retryCount}} sur {{maxRetries}}",
+      "maxRetriesReached": "Nombre maximal de tentatives atteint.",
+      "contactSupport": "Contacter l'assistance →"
+    }
+  },
+  "toggle": {
+    "disableTitle": "Désactiver le workflow",
+    "enableTitle": "Activer le workflow",
+    "confirmDisable": "Voulez-vous vraiment désactiver ce workflow ?",
+    "confirmEnable": "Voulez-vous vraiment activer ce workflow ?"
+  },
+  "actionInputTypeHint": {
+    "coercible": "Le type « {{sourceType}} » sera converti en « {{targetType}} »",
+    "incompatible": "Le type « {{sourceType}} » est incompatible avec le type attendu « {{targetType}} »"
   }
 }

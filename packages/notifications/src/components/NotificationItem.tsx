@@ -13,6 +13,15 @@ interface NotificationItemProps {
 export function NotificationItem({ notification, onClick }: NotificationItemProps) {
   const isUnread = !notification.is_read;
 
+  // Priority styles the row; the `type` icon logic below is unchanged.
+  // Deliberately no tinted row background for high — an attention-red left
+  // accent only (attention-worthy, not emergency).
+  const priorityRowClass = notification.priority === 'high'
+    ? 'border-l-2 border-rose-500'
+    : notification.priority === 'low'
+      ? 'opacity-60'
+      : '';
+
   // Get icon based on notification type
   const getIcon = () => {
     switch (notification.type) {
@@ -204,7 +213,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       onClick={onClick}
       className={`w-full text-left px-4 py-3 hover:bg-[rgb(var(--color-border-50))] transition-colors ${
         isUnread ? 'bg-blue-500/5' : ''
-      }`}
+      }${priorityRowClass ? ` ${priorityRowClass}` : ''}`}
     >
       <div className="flex gap-3">
         {/* Icon */}

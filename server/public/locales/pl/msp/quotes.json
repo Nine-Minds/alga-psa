@@ -114,7 +114,9 @@
       "delete": "Nie udało się usunąć wyceny.",
       "duplicate": "Nie udało się zduplikować wyceny.",
       "load": "Nie udało się załadować wycen",
-      "send": "Nie udało się wysłać wyceny."
+      "send": "Nie udało się wysłać wyceny.",
+      "resend": "Nie udało się ponownie wysłać wyceny.",
+      "sendReminder": "Nie udało się wysłać przypomnienia o wycenie."
     },
     "loading": "Ładowanie wycen...",
     "rowActions": {
@@ -153,7 +155,8 @@
       "previewPdf": "Podgląd PDF",
       "backToQuotes": "Powrót do wycen",
       "backToTemplates": "Powrót do szablonów wycen",
-      "convertToSalesOrder": "Konwertuj na zamówienie sprzedaży"
+      "convertToSalesOrder": "Konwertuj na zamówienie sprzedaży",
+      "convert": "Przekształć w…"
     },
     "headings": {
       "editQuote": "Edytuj wycenę",
@@ -587,20 +590,26 @@
     "sections": {
       "contractItems": "Przedmioty umowy",
       "conversionMode": "Tryb konwersji",
-      "excludedItems": "Elementy wykluczone",
       "excludedFromConversion": "Wykluczone z konwersji",
+      "excludedItems": "Elementy wykluczone",
       "invoiceItems": "Pozycje faktury",
       "itemMappingPreview": "Podgląd mapowania przedmiotów",
+      "onSalesOrder": "W zamówieniu sprzedaży {{soNumber}}",
       "quoteTotal": "Łączna wartość wyceny",
+      "salesOrderItems": "Pozycje zamówienia sprzedaży",
       "statusAfterConversion": "Stan po konwersji",
       "willBecomeContractLines": "Staną się liniami kontraktowymi",
-      "willBecomeInvoiceCharges": "Staną się opłatami na fakturze"
+      "willBecomeInvoiceCharges": "Staną się opłatami na fakturze",
+      "willBecomeSalesOrderLines": "Staną się pozycjami zamówienia sprzedaży"
     },
     "empty": {
       "contractItems": "Żadne elementy powtarzające się nie zostaną przekształcone w umowę.",
-      "invoiceItems": "Żadne jednorazowe pozycje nie zostaną zamienione na fakturę."
+      "invoiceItems": "Żadne jednorazowe pozycje nie zostaną zamienione na fakturę.",
+      "invoiceItemsOnSalesOrder": "Wszystkie pozycje jednorazowe znajdują się w zamówieniu sprzedaży {{soNumber}} i zostaną z niego zafakturowane po realizacji.",
+      "salesOrderItems": "Żadne pozycje produktowe nie przejdą do zamówienia sprzedaży."
     },
     "summary": {
+      "billedViaSalesOrder": "Fakturowane z zamówienia sprzedaży {{soNumber}} po realizacji",
       "converted": "Przekształcony",
       "discount": "Rabat",
       "fixed": "naprawił",
@@ -628,10 +637,11 @@
       "title": "Błąd"
     },
     "salesOrder": {
-      "successTitle": "Utworzono zamówienie sprzedaży {{number}}",
-      "successBody": "Pozycje produktowe zostaną rozliczone przy realizacji.",
+      "existingNote": "Ta oferta została już przekształcona w zamówienie sprzedaży {{soNumber}}.",
+      "note": "Pozycje produktowe można rozliczyć na dwa sposoby: tworząc zamówienie sprzedaży (fakturowanie po realizacji) lub fakturując je bezpośrednio. Utworzenie zamówienia sprzedaży wyklucza je z konwersji na fakturę, więc nic nie jest rozliczane podwójnie.",
       "openSalesOrders": "Otwórz zamówienia sprzedaży",
-      "note": "Jednorazowe pozycje produktowe przechodzą do wersji roboczej zamówienia sprzedaży (rozliczane przy realizacji) i są wykluczone z konwersji na wersję roboczą faktury, więc nic nie jest rozliczane podwójnie."
+      "successBody": "Pozycje produktowe zostaną rozliczone przy realizacji.",
+      "successTitle": "Utworzono zamówienie sprzedaży {{number}}"
     }
   },
   "quoteApproval": {
@@ -725,7 +735,9 @@
       "notFound": "Nie znaleziono szablonu dokumentu wyceny.",
       "previewPipeline": "Potok podglądu nie powiódł się.",
       "saveFailed": "Nie udało się zapisać szablonu wyceny",
-      "unknownAstExport": "Nieznany błąd eksportu AST"
+      "unknownAstExport": "Nieznany błąd eksportu AST",
+      "quoteNotFound": "Nie udało się załadować szczegółów wyceny do podglądu.",
+      "quoteDetailLoad": "Nie udało się załadować szczegółów wyceny."
     },
     "fields": {
       "layoutDetails": "Szczegóły układu",
@@ -749,10 +761,20 @@
       "sampleScenario": "Przykładowy scenariusz",
       "selectScenario": "Wybierz scenariusz...",
       "selectScenarioPrompt": "Wybierz przykładowy scenariusz, aby wygenerować wiarygodny podgląd.",
-      "templateGenerationFailed": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego."
+      "templateGenerationFailed": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego.",
+      "source": {
+        "sample": "Przykład",
+        "existing": "Istniejące"
+      },
+      "searchQuotes": "Szukaj wycen…",
+      "searchQuotesHint": "Szukaj po numerze lub kliencie…",
+      "noQuotesFound": "Brak wycen.",
+      "selectQuote": "Wybierz wycenę",
+      "selectQuoteHint": "Wybierz wycenę, aby zobaczyć podgląd z danymi.",
+      "loadingQuoteDetails": "Ładowanie szczegółów wyceny…"
     },
     "pipeline": {
-      "render": "Oddać",
+      "render": "Renderowanie",
       "shape": "Kształt",
       "renderFailed": "Renderowanie nie powiodło się.",
       "shapeFailed": "Kształtowanie nie powiodło się.",
@@ -787,6 +809,33 @@
     },
     "labels": {
       "custom": "Zwyczaj"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Odmowa uprawnień: nie można tworzyć ofert",
+      "update": "Odmowa uprawnień: nie można aktualizować ofert",
+      "read": "Odmowa uprawnień: nie można odczytywać ofert",
+      "delete": "Odmowa uprawnień: nie można usuwać ofert",
+      "readOne": "Odmowa uprawnień: nie można odczytać oferty",
+      "approve": "Odmowa uprawnień: nie można zatwierdzać ofert",
+      "updateApprovalSettings": "Odmowa uprawnień: nie można aktualizować ustawień zatwierdzania ofert",
+      "readDocumentTemplates": "Odmowa uprawnień: nie można odczytywać szablonów dokumentów oferty",
+      "modifyDocumentTemplates": "Odmowa uprawnień: nie można modyfikować szablonów dokumentów oferty",
+      "setDefaultDocumentTemplate": "Odmowa uprawnień: nie można ustawić domyślnego szablonu dokumentu oferty",
+      "deleteDocumentTemplates": "Odmowa uprawnień: nie można usuwać szablonów dokumentów oferty"
+    },
+    "quote": {
+      "formInvalid": "Formularz oferty zawiera nieprawidłowe wartości. Sprawdź go i spróbuj ponownie.",
+      "notFoundRefresh": "Nie znaleziono oferty. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "itemNotFoundRefresh": "Nie znaleziono pozycji oferty. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "templateNotFoundRefresh": "Nie znaleziono szablonu oferty. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości oferty jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana oferta, klient, kontakt lub usługa już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana oferty jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości oferty jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola oferty.",
+      "missingFieldNamed": "Brakuje wymaganego pola oferty: {{field}}."
     }
   }
 }

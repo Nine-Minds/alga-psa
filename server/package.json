@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.4.1",
+  "version": "1.5.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -27,7 +27,7 @@
     "start:express": "tsx index.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run src/test/unit --coverage.enabled=false",
+    "test": "NODE_OPTIONS=\"${NODE_OPTIONS:---max-old-space-size=4096}\" vitest run src/test/unit --coverage.enabled=false",
     "test:watch": "vitest --watch",
     "test:unit": "vitest src/test/unit",
     "test:integration": "vitest src/test/integration",

@@ -115,7 +115,7 @@ feature is multi-tenant + Temporal/Istio/cert-manager; the appliance is single-M
   and `@ee`->ee/server/src; `server/src/...` is NOT aliased in vitest). Verified by running unit tests.
 - (2026-06-25) Tests passing (18): deploymentProfile (T001), portalDomainProvisioner (T002 + unit-level
   T003/T004/T005/T006), resolveRequestHost (T007). Run: `cd server && npx vitest run --coverage=false <file>`.
-- (2026-06-25) PROXY_SETUP_DOC_URL in the UI is a placeholder (docs.algapsa.com/...); has a TODO to point
+- (2026-06-25) PROXY_SETUP_DOC_URL in the UI is a placeholder; has a TODO to point
   at the published docs URL once it lands.
 - (2026-06-25) NOT YET RUN / cannot run here: DB-backed action tests (T003/T004 full), E2E login (T008),
   appliance smoke. tsc full typecheck not run (heavy project refs) — relied on vitest transpile + targeted tests.

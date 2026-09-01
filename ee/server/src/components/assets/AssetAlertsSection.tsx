@@ -221,7 +221,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
                           </span>
                         )}
                         {alert.ticket_id && (
-                          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-600">
+                          <span className="chip-primary inline-flex items-center px-2 py-0.5 text-xs font-medium rounded">
                             <Ticket className="h-3 w-3 mr-1" />
                             Ticket Created
                           </span>

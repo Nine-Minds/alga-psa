@@ -41,6 +41,12 @@ vi.mock('@alga-psa/reporting/actions/helpdeskReportActions', () => ({
   getTimeUtilizationReport: vi.fn(() => new Promise(() => {})),
 }));
 
+// Project hours lives in its own action module; stub it so importing Reports
+// does not drag the real server action (and next-auth) into the render suite.
+vi.mock('@alga-psa/reporting/actions/projectReportActions', () => ({
+  getProjectHoursReport: vi.fn(() => new Promise(() => {})),
+}));
+
 const { default: Reports } = await import('./Reports');
 
 function reportWith(byUser: any[], summary: Partial<Record<string, unknown>> = {}) {

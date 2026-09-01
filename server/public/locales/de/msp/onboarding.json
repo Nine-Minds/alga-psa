@@ -329,6 +329,33 @@
         "help": "Wird zum Organisationsstandard für alle: MSP-Mitarbeiter und Client-Portal-Benutzer. Einzelne Benutzer und Kunden können ihn später überschreiben."
       }
     },
+    "address": {
+      "title": "Firmenadresse",
+      "description": "Aus Ihren Rechnungsdaten vorausgefüllt — bitte prüfen und bei Bedarf korrigieren. Diese Adresse erscheint auf Ihren Rechnungen und Angeboten.",
+      "fields": {
+        "addressLine1": {
+          "label": "Adresszeile 1",
+          "placeholder": "Hauptstraße 123"
+        },
+        "addressLine2": {
+          "label": "Adresszeile 2",
+          "placeholder": "Büro 100"
+        },
+        "city": {
+          "label": "Stadt"
+        },
+        "stateProvince": {
+          "label": "Bundesland/Provinz"
+        },
+        "postalCode": {
+          "label": "Postleitzahl"
+        },
+        "country": {
+          "label": "Land",
+          "placeholder": "Land auswählen"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "Passwort zurücksetzen erforderlich",

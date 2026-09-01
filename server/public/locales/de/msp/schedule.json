@@ -685,5 +685,34 @@
     "notAvailable": "k. A.",
     "title": "Interaktionsdetails",
     "unknownUser": "Unbekannt"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Zeitplaneintrag nicht gefunden.",
+      "invalid": "Der ausgewählte Zeitplaneintrag ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "assigneesMissing": "Ein oder mehrere zugewiesene Benutzer konnten nicht gefunden werden."
+    },
+    "activities": {
+      "otherUserForbidden": "Berechtigung verweigert: Die Zeitplanaktivitäten eines anderen Benutzers können nicht angezeigt werden"
+    },
+    "workItem": {
+      "adHocTimesRequired": "Für Ad-hoc-Einträge sind Start- und Endzeit erforderlich.",
+      "typeUnsupported": "Dieser Arbeitselementtyp wird für die Zeitplanung nicht unterstützt.",
+      "entryOrUserUnavailable": "Der ausgewählte Zeitplaneintrag oder Benutzer ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalid": "Das ausgewählte Arbeitselement ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Das ausgewählte Arbeitselement, der Zeitplaneintrag oder die zugewiesene Person ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicateEntry": "Dieser Zeitplaneintrag existiert bereits. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Zeitplanfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Zeitplanfeld fehlt: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "Die Besprechungs-ID ist erforderlich",
+      "refreshPermission": "Berechtigung verweigert: Besprechungsaufzeichnungen können nicht aktualisiert werden.",
+      "refreshFailed": "Die Besprechungsaufzeichnungen konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "graphForbidden": "Microsoft Graph hat den Zugriff auf die Teams-Aufzeichnung verweigert. Prüfen Sie die Aufzeichnungsberechtigungen und versuchen Sie es erneut.",
+      "graphNotFound": "Die Teams-Aufzeichnung ist über Microsoft Graph nicht mehr verfügbar.",
+      "graphThrottled": "Microsoft Graph drosselt derzeit Aufzeichnungs-Downloads. Bitte versuchen Sie es in Kürze erneut.",
+      "graphHttpStatus": "Microsoft Graph hat beim Herunterladen der Teams-Aufzeichnung HTTP {{status}} zurückgegeben."
+    }
   }
 }

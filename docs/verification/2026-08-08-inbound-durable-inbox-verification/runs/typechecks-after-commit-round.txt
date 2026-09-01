@@ -1,0 +1,16 @@
+All five typechecks green at the after-commit round HEAD (mitigation round: defer
+internal-notification external effects until after the ledger-transaction commit).
+
+| Check | Command (from dir) | Exit | Wall clock |
+| --- | --- | --- | --- |
+| server | NODE_OPTIONS=--max-old-space-size=16384 npx tsc --noEmit -p tsconfig.json (server/) | 0 | 24s |
+| shared | npx tsc --noEmit (shared/) | 0 | 16s |
+| services/email-service | npx tsc --noEmit -p tsconfig.json (services/email-service/) | 0 | 6s |
+| packages/jobs | npx tsc --noEmit (packages/jobs/) | 0 | 12s |
+| ee/temporal-workflows | npx tsc --noEmit (ee/temporal-workflows/) | 0 | 11s |
+
+Plus the directly-modified package:
+
+| packages/notifications | npx tsc --noEmit (packages/notifications/) | 0 | 7s |
+
+All produced exit code 0 with zero diagnostics (empty tsc output).

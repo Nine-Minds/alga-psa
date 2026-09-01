@@ -224,6 +224,14 @@
       "heading": "Buy credits or manage the subscription",
       "body": "Top-ups, auto-top-up, and subscription changes are handled in the Nine Minds store.",
       "openStore": "Open the store"
+    },
+    "status": {
+      "none": "No subscription",
+      "active": "Active",
+      "trialing": "Trial",
+      "past_due": "Past due",
+      "canceled": "Canceled",
+      "unpaid": "Unpaid"
     }
   },
   "managementPage": {
@@ -345,5 +353,9 @@
       "startTrial": "Failed to start trial.",
       "refreshLicense": "Failed to refresh the license."
     }
+  },
+  "errors": {
+    "notSignedIn": "Unauthorized. Sign in to manage licensing.",
+    "accountManagementRead": "Permission denied: account_management read required"
   }
 }

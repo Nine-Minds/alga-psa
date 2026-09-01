@@ -7,6 +7,9 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import { Label } from "@alga-psa/ui/components/Label";
+import { Button } from "@alga-psa/ui/components/Button";
+import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { RotateCcw } from "lucide-react";
 import {
   getInternalNotificationCategoriesAction as getInternalCategoriesAction,
   getSubtypesAction as getInternalSubtypesAction,
@@ -15,6 +18,7 @@ import {
 } from "../../actions";
 import {
   InternalNotificationCategory,
+  InternalNotificationPriority,
   InternalNotificationSubtype,
   UserInternalNotificationPreference
 } from "../../types/internalNotification";
@@ -170,6 +174,57 @@ export function InternalNotificationPreferences() {
     }
   };
 
+  // Effective priority a user sees for a subtype: their personal override, else
+  // the tenant/default effective priority carried on the subtype row.
+  const getSubtypeEffectivePriority = (categoryId: number, subtypeId: number): InternalNotificationPriority => {
+    const subtypePref = preferences.find(p => p.subtype_id === subtypeId);
+    if (subtypePref?.priority) {
+      return subtypePref.priority;
+    }
+    const categorySubtypes = subtypes[categoryId] || [];
+    const subtype = categorySubtypes.find(s => s.internal_notification_subtype_id === subtypeId);
+    return subtype?.effective_priority ?? subtype?.default_priority ?? 'normal';
+  };
+
+  const subtypeHasPriorityOverride = (subtypeId: number): boolean => {
+    const subtypePref = preferences.find(p => p.subtype_id === subtypeId);
+    return subtypePref?.priority != null;
+  };
+
+  // Set (or reset) the user's personal priority override on a subtype. `null`
+  // clears it. Preserves the current enabled state so the row's toggle is
+  // unaffected. Only reachable when the feature flag is on.
+  const handleSubtypePriorityChange = async (
+    categoryId: number,
+    subtypeId: number,
+    priority: InternalNotificationPriority | null
+  ) => {
+    if (!tenant || !userId) return;
+
+    try {
+      await updateUserInternalNotificationPreferenceAction({
+        tenant,
+        user_id: userId,
+        category_id: categoryId,
+        subtype_id: subtypeId,
+        is_enabled: getSubtypePreference(categoryId, subtypeId),
+        priority
+      });
+
+      const updatedPreferences = await getUserInternalNotificationPreferencesAction(tenant, userId);
+      setPreferences(updatedPreferences);
+    } catch (err) {
+      console.error("Failed to update subtype priority:", err);
+      setError(t('notifications.preferences.saveError', 'Failed to save preference'));
+    }
+  };
+
+  const priorityOptions = [
+    { value: 'high', label: t('notifications.preferences.priority.high', 'High') },
+    { value: 'normal', label: t('notifications.preferences.priority.normal', 'Normal') },
+    { value: 'low', label: t('notifications.preferences.priority.low', 'Low') },
+  ];
+
   if (loading) {
     return <div>{t('notifications.preferences.loading', 'Loading preferences...')}</div>;
   }
@@ -204,14 +259,48 @@ export function InternalNotificationPreferences() {
                 return (
                   <div key={`${category.internal_notification_category_id}-${subtype.internal_notification_subtype_id}-${index}`} className="flex items-center justify-between">
                     <Label className="text-sm">{subtype.display_title || subtype.name}</Label>
-                    <Switch
-                      checked={subtypeEnabled}
-                      disabled={!category.is_enabled || !subtype.is_enabled || !isEnabled}
-                      onCheckedChange={() => handleSubtypeToggle(
-                        category.internal_notification_category_id,
-                        subtype.internal_notification_subtype_id
+                    <div className="flex items-center gap-2">
+                      <CustomSelect
+                        id={`user-internal-subtype-priority-${subtype.internal_notification_subtype_id}`}
+                        size="sm"
+                        value={getSubtypeEffectivePriority(
+                          category.internal_notification_category_id,
+                          subtype.internal_notification_subtype_id
+                        )}
+                        options={priorityOptions}
+                        disabled={!category.is_enabled || !subtype.is_enabled || !isEnabled || !subtypeEnabled}
+                        onValueChange={(v) => handleSubtypePriorityChange(
+                          category.internal_notification_category_id,
+                          subtype.internal_notification_subtype_id,
+                          v as InternalNotificationPriority
+                        )}
+                      />
+                      {subtypeHasPriorityOverride(subtype.internal_notification_subtype_id) && (
+                        <Button
+                          id={`reset-user-internal-subtype-priority-${subtype.internal_notification_subtype_id}`}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          title={t('notifications.preferences.resetPriority', 'Reset')}
+                          aria-label={t('notifications.preferences.resetPriority', 'Reset')}
+                          onClick={() => handleSubtypePriorityChange(
+                            category.internal_notification_category_id,
+                            subtype.internal_notification_subtype_id,
+                            null
+                          )}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
                       )}
-                    />
+                      <Switch
+                        checked={subtypeEnabled}
+                        disabled={!category.is_enabled || !subtype.is_enabled || !isEnabled}
+                        onCheckedChange={() => handleSubtypeToggle(
+                          category.internal_notification_category_id,
+                          subtype.internal_notification_subtype_id
+                        )}
+                      />
+                    </div>
                   </div>
                 );
               })}

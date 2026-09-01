@@ -38,6 +38,27 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
   });
 
   reg.seeder({
+    name: 'tax-rate',
+    description: 'Create a QBO TaxRate component (RateValue is a percentage: 8 means 8%)',
+    params: z.object({ name: z.string(), ratePercent: z.number(), id: z.string().optional() }),
+    run: (params) => core.sim.seedTaxRate(params),
+  });
+
+  reg.seeder({
+    name: 'tax-code',
+    description: 'Create a QBO TaxCode; pass taxRateIds for a real group, or pseudo for TAX/NON',
+    params: z.object({
+      name: z.string(),
+      id: z.string().optional(),
+      description: z.string().optional(),
+      taxRateIds: z.array(z.string()).optional(),
+      pseudo: z.boolean().optional(),
+      active: z.boolean().optional(),
+    }),
+    run: (params) => core.sim.seedTaxCode(params),
+  });
+
+  reg.seeder({
     name: 'invoice',
     description: 'Create a QBO invoice with a single sales line',
     params: z.object({
@@ -91,10 +112,12 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
 
   reg.action({
     name: 'configure',
-    description: 'Toggle company behavior: AutoApplyCredit and the AST tax adjustment applied to new invoices',
+    description:
+      'Toggle company behavior: AutoApplyCredit, the AST tax adjustment, and Automated Sales Tax (pass a default TaxCode id to enable, null to disable)',
     params: z.object({
       autoApplyCredits: z.boolean().optional(),
       taxAdjustmentCents: z.number().int().optional(),
+      automatedSalesTaxDefaultTaxCodeId: z.string().nullable().optional(),
     }),
     run: (params) => core.configure(params),
   });
@@ -118,6 +141,8 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
     ['credit-memos', 'CreditMemo'],
     ['payments', 'Payment'],
     ['items', 'Item'],
+    ['tax-codes', 'TaxCode'],
+    ['tax-rates', 'TaxRate'],
   ] as const) {
     reg.stateView({
       name: view,

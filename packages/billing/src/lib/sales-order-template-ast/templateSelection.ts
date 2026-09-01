@@ -2,19 +2,23 @@ import type { Knex } from 'knex';
 import type { TemplateAst } from '@alga-psa/types';
 
 import {
-  resolveDocumentTemplateAst,
+  resolveDocumentTemplate,
+  type DocumentTemplateRef,
   type DocumentTemplateSource,
 } from '../document-templates/resolution';
 import { getDocumentTypeRegistryEntry, getDocumentTypeStandardAst, type DocumentType } from '../document-templates/registry';
 import {
-  fetchClientOverrideTemplateAst,
-  fetchTenantDefaultTemplateAst,
+  fetchClientOverrideTemplate,
+  fetchTenantDefaultTemplate,
 } from '../document-templates/storage';
 
 export interface ResolveSalesOrderTemplateResult {
   ast: TemplateAst;
   source: DocumentTemplateSource;
   code: string | null;
+  /** Provenance of the winning template: custom uuid or standard code. */
+  templateId: string | null;
+  templateVersion: number | null;
 }
 
 /**
@@ -28,18 +32,21 @@ export async function resolveSalesOrderTemplateAst(
   documentType: DocumentType = 'sales-order',
   opts?: { clientId?: string | null },
 ): Promise<ResolveSalesOrderTemplateResult> {
-  const { ast, source } = await resolveDocumentTemplateAst({
+  const standardCode = getDocumentTypeRegistryEntry(documentType).defaultStandardCode;
+  const { value, source } = await resolveDocumentTemplate<DocumentTemplateRef>({
     fetchOverride: () =>
       opts?.clientId
-        ? fetchClientOverrideTemplateAst(knex, tenant, documentType, opts.clientId)
+        ? fetchClientOverrideTemplate(knex, tenant, documentType, opts.clientId)
         : Promise.resolve(null),
-    fetchTenantDefault: () => fetchTenantDefaultTemplateAst(knex, tenant, documentType),
-    getStandard: () => getDocumentTypeStandardAst(documentType),
+    fetchTenantDefault: () => fetchTenantDefaultTemplate(knex, tenant, documentType),
+    getStandard: () => ({ ast: getDocumentTypeStandardAst(documentType), templateId: standardCode, version: null }),
   });
 
   return {
-    ast,
+    ast: value.ast,
     source,
-    code: source === 'standard' ? getDocumentTypeRegistryEntry(documentType).defaultStandardCode : null,
+    code: source === 'standard' ? standardCode : null,
+    templateId: value.templateId,
+    templateVersion: value.version,
   };
 }

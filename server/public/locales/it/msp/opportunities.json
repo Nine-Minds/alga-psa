@@ -82,8 +82,8 @@
       "linkQuote": "Collega un preventivo esistente",
       "loadFailed": "Impossibile caricare l'opportunità",
       "loading": "Caricamento opportunità...",
-      "markLost": "Marco ha perso",
-      "markWon": "Ha vinto Marco",
+      "markLost": "Segna come persa",
+      "markWon": "Segna come vinta",
       "metadataTitle": "Opportunità",
       "nextAction": "Azione successiva",
       "nextActionOverdue": "Azione successiva · scaduta",
@@ -147,7 +147,7 @@
       "plusOneTime": "+ {{amount}} una volta",
       "thisQuarter": "Questo trimestre ({{q}})",
       "weighted": "{{stage}} · {{pct}}% ponderato",
-      "won": "Ha vinto questo periodo"
+      "won": "Vinto in questo periodo"
     },
     "linkQuoteDialog": {
       "confirm": "Collega preventivo",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "Che cosa deve sapere il team se la trattativa torna?",
       "reason": "Motivo",
       "reasonPlaceholder": "Perché non è andata avanti?",
-      "submit": "Marco ha perso",
-      "title": "Marco ha perso"
+      "submit": "Segna come persa",
+      "title": "Segna come persa"
     },
     "lossReason": {
       "chose_competitor": "Scegli un concorrente",
@@ -228,7 +228,7 @@
         "reviewPipeline": "Rivedere la pipeline",
         "viewAssessmentDeals": "Visualizza le offerte di valutazione"
       },
-      "markLost": "Marco ha perso",
+      "markLost": "Segna come persa",
       "moneyFound": "Soldi trovati",
       "moneyFoundSource": "dalla fatturazione, dai contratti e dagli asset",
       "needsYou_one": "{{count}} cosa ha bisogno di te oggi.",
@@ -340,7 +340,7 @@
       "openCount": "Opportunità aperte",
       "opportunityCount_one": "{{count}} opportunità",
       "opportunityCount_other": "{{count}} opportunità",
-      "pipelineByStage": "Conduttura per fase",
+      "pipelineByStage": "Pipeline per fase",
       "stalled": "In stallo",
       "subtitle": "Pipeline aperta e lavoro di follow-up che richiede attenzione.",
       "title": "Istantanea dell'opportunità",
@@ -352,12 +352,12 @@
       "lost": "Perso",
       "proposed": "Proposto",
       "qualified": "Qualificato",
-      "verbal": "Verbale",
-      "won": "Ha vinto"
+      "verbal": "Accordo verbale",
+      "won": "Vinto"
     },
     "status": {
       "lost": "Perso",
-      "won": "Ha vinto"
+      "won": "Vinto"
     },
     "steps": {
       "add": "Aggiungi un passo",
@@ -427,10 +427,10 @@
       "snooze": "Posticipa"
     },
     "tabs": {
-      "board": "Consiglio",
+      "board": "Bacheca",
       "forecast": "Previsione",
       "meeting": "Incontro",
-      "pipeline": "Conduttura",
+      "pipeline": "Pipeline di vendita",
       "queue": "Coda",
       "reports": "Report",
       "suggestions": "Suggerimenti"
@@ -464,7 +464,7 @@
       "whitespaceSuggestionCreated": "Suggerimento pronto per la revisione",
       "whitespaceSuggestionDismissed": "Questo suggerimento era stato precedentemente respinto",
       "whitespaceSuggestionKnown": "Questo suggerimento è già noto",
-      "won": "Ha vinto"
+      "won": "Vinto"
     },
     "type": {
       "expansion": "Espansione",
@@ -548,7 +548,7 @@
     "winDialog": {
       "body": "L'affare si chiude come vinto.",
       "bodyProspect": "{{client}} diventa un cliente attivo.",
-      "confirm": "Ha vinto Marco",
+      "confirm": "Segna come vinta",
       "convertQuote": "Convertire un preventivo accettato in una bozza di accordo (facoltativo)",
       "nextConvert": "Converti il preventivo accettato in un contratto qui sotto, o successivamente dalla schermata del preventivo.",
       "nextSendQuote": "Nessun preventivo accettato è ancora collegato. Invia il preventivo, fallo approvare e poi convertilo in contratto. Puoi comunque segnarla come vinta ora.",
@@ -558,7 +558,7 @@
       "projectStart": "Data di inizio",
       "projectStatus": "Stato iniziale",
       "projectTemplate": "Crea un progetto di onboarding (facoltativo)",
-      "title": "Ha vinto Marco"
+      "title": "Segna come vinta"
     }
   }
 }

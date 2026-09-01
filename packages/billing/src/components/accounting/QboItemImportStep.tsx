@@ -8,6 +8,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   previewQboItemImport,
   executeQboItemImport,
@@ -26,21 +27,7 @@ import { getServiceTypesForSelection } from '../../actions/serviceActions';
  * Next button is always available.
  */
 
-const BILLING_METHOD_OPTIONS = [
-  { value: 'fixed', label: 'Fixed' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'usage', label: 'Usage' },
-] as const;
-
 type BillingMethod = 'fixed' | 'hourly' | 'usage';
-
-const FLAG_LABELS: Record<string, string> = {
-  inactive: 'Inactive in QuickBooks',
-  unmapped_tax: 'Tax code not mapped',
-  sku_conflict: 'SKU conflict',
-  name_collision: 'Name already mapped',
-  category_skipped: 'Category (not imported)',
-};
 
 const ACTION_LABELS: Record<QboItemImportPreviewRow['action'], string> = {
   create: 'Will create',
@@ -61,12 +48,21 @@ function formatChangeValue(field: string, value: unknown): string {
 }
 
 function RowFlags({ flags }: { flags: QboItemImportPreviewRow['flags'] }) {
+  const { t } = useTranslation('msp/integrations');
   if (flags.length === 0) return null;
+  // Keyed by the flag values the import service returns, which stay snake_case.
+  const flagLabels: Record<string, string> = {
+    inactive: t('integrations.qbo.itemImport.flags.inactive', { defaultValue: 'Inactive in QuickBooks' }),
+    unmapped_tax: t('integrations.qbo.itemImport.flags.unmappedTax', { defaultValue: 'Tax code not mapped' }),
+    sku_conflict: t('integrations.qbo.itemImport.flags.skuConflict', { defaultValue: 'SKU conflict' }),
+    name_collision: t('integrations.qbo.itemImport.flags.nameCollision', { defaultValue: 'Name already mapped' }),
+    category_skipped: t('integrations.qbo.itemImport.flags.categorySkipped', { defaultValue: 'Category (not imported)' }),
+  };
   return (
     <span className="inline-flex flex-wrap gap-1">
       {flags.map((flag) => (
         <Badge key={flag} variant="secondary" className="text-xs">
-          {FLAG_LABELS[flag] ?? flag}
+          {flagLabels[flag] ?? flag}
         </Badge>
       ))}
     </span>
@@ -74,6 +70,7 @@ function RowFlags({ flags }: { flags: QboItemImportPreviewRow['flags'] }) {
 }
 
 function PreviewGroup({ title, rows }: { title: string; rows: QboItemImportPreviewRow[] }) {
+  const { t } = useTranslation('msp/integrations');
   if (rows.length === 0) return null;
   return (
     <div className="space-y-2">
@@ -90,7 +87,11 @@ function PreviewGroup({ title, rows }: { title: string; rows: QboItemImportPrevi
             </div>
             {row.qboFullyQualifiedName && row.qboFullyQualifiedName !== row.qboName && (
               <p className="text-xs text-muted-foreground">
-                QuickBooks name: {row.qboFullyQualifiedName} (imported as “{row.fields?.service_name ?? row.qboName}”)
+                {t('integrations.qbo.itemImport.preview.qboName', {
+                  name: row.qboFullyQualifiedName,
+                  importedAs: row.fields?.service_name ?? row.qboName,
+                  defaultValue: `QuickBooks name: ${row.qboFullyQualifiedName} (imported as “${row.fields?.service_name ?? row.qboName}”)`,
+                })}
               </p>
             )}
             {row.reason && <p className="text-xs text-muted-foreground">{row.reason}</p>}
@@ -112,6 +113,7 @@ function PreviewGroup({ title, rows }: { title: string; rows: QboItemImportPrevi
 }
 
 export function QboItemImportStep() {
+  const { t } = useTranslation('msp/integrations');
   const [serviceTypes, setServiceTypes] = React.useState<Array<{ id: string; name: string }>>([]);
   const [serviceTypeId, setServiceTypeId] = React.useState('');
   const [serviceBillingMethod, setServiceBillingMethod] = React.useState<BillingMethod>('fixed');
@@ -142,6 +144,12 @@ export function QboItemImportStep() {
     return () => { cancelled = true; };
   }, []);
 
+  const billingMethodOptions = [
+    { value: 'fixed', label: t('integrations.qbo.itemImport.billingMethods.fixed', { defaultValue: 'Fixed' }) },
+    { value: 'hourly', label: t('integrations.qbo.itemImport.billingMethods.hourly', { defaultValue: 'Hourly' }) },
+    { value: 'usage', label: t('integrations.qbo.itemImport.billingMethods.usage', { defaultValue: 'Usage' }) },
+  ];
+
   const options = () => ({
     includeInactive,
     defaults: {
@@ -161,7 +169,11 @@ export function QboItemImportStep() {
     try {
       setPreview(await previewQboItemImport(options()));
     } catch (err) {
-      setPreviewError(err instanceof Error ? err.message : 'Failed to load the import preview.');
+      setPreviewError(
+        err instanceof Error
+          ? err.message
+          : t('integrations.qbo.itemImport.errors.previewFailed', { defaultValue: 'Failed to load the import preview.' })
+      );
     } finally {
       setPreviewing(false);
     }
@@ -174,7 +186,11 @@ export function QboItemImportStep() {
       setResult(await executeQboItemImport(options()));
       setPreview(null);
     } catch (err) {
-      setExecuteError(err instanceof Error ? err.message : 'The import failed.');
+      setExecuteError(
+        err instanceof Error
+          ? err.message
+          : t('integrations.qbo.itemImport.errors.executeFailed', { defaultValue: 'The import failed.' })
+      );
     } finally {
       setExecuting(false);
     }
@@ -186,30 +202,38 @@ export function QboItemImportStep() {
   return (
     <div id="qbo-item-import-step" className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Import your QuickBooks products and services into the Alga service catalog for the
-        connected QuickBooks company. QuickBooks stays the source of truth for names, rates,
-        SKUs, descriptions, and costs; billing method, unit of measure, and service type are
-        set here and owned by Alga afterwards. This step is optional — skip it with Next.
+        {t('integrations.qbo.itemImport.description', {
+          defaultValue:
+            'Import your QuickBooks products and services into the Alga service catalog for the connected QuickBooks company. QuickBooks stays the source of truth for names, rates, SKUs, descriptions, and costs; billing method, unit of measure, and service type are set here and owned by Alga afterwards. This step is optional — skip it with Next.',
+        })}
       </p>
 
       {/* Defaults for created items */}
       <div className="rounded-lg border p-4 space-y-4 text-sm">
-        <p className="font-medium text-foreground">Defaults for imported items</p>
+        <p className="font-medium text-foreground">
+          {t('integrations.qbo.itemImport.defaults.title', { defaultValue: 'Defaults for imported items' })}
+        </p>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label htmlFor="qbo-item-import-service-type">Service type (required)</Label>
+            <Label htmlFor="qbo-item-import-service-type">
+              {t('integrations.qbo.itemImport.defaults.serviceType', { defaultValue: 'Service type (required)' })}
+            </Label>
             <CustomSelect
               id="qbo-item-import-service-type"
               value={serviceTypeId}
               onValueChange={setServiceTypeId}
-              placeholder="Select a service type…"
+              placeholder={t('integrations.qbo.itemImport.defaults.serviceTypePlaceholder', {
+                defaultValue: 'Select a service type…',
+              })}
               options={serviceTypes.map((type) => ({ value: type.id, label: type.name }))}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="qbo-item-import-uom">Unit of measure</Label>
+            <Label htmlFor="qbo-item-import-uom">
+              {t('integrations.qbo.itemImport.defaults.unitOfMeasure', { defaultValue: 'Unit of measure' })}
+            </Label>
             <Input
               id="qbo-item-import-uom"
               value={unitOfMeasure}
@@ -218,22 +242,30 @@ export function QboItemImportStep() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="qbo-item-import-service-billing">Billing method for services</Label>
+            <Label htmlFor="qbo-item-import-service-billing">
+              {t('integrations.qbo.itemImport.defaults.serviceBillingMethod', {
+                defaultValue: 'Billing method for services',
+              })}
+            </Label>
             <CustomSelect
               id="qbo-item-import-service-billing"
               value={serviceBillingMethod}
               onValueChange={(value) => setServiceBillingMethod(value as BillingMethod)}
-              options={[...BILLING_METHOD_OPTIONS]}
+              options={billingMethodOptions}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="qbo-item-import-product-billing">Billing method for products</Label>
+            <Label htmlFor="qbo-item-import-product-billing">
+              {t('integrations.qbo.itemImport.defaults.productBillingMethod', {
+                defaultValue: 'Billing method for products',
+              })}
+            </Label>
             <CustomSelect
               id="qbo-item-import-product-billing"
               value={productBillingMethod}
               onValueChange={(value) => setProductBillingMethod(value as BillingMethod)}
-              options={[...BILLING_METHOD_OPTIONS]}
+              options={billingMethodOptions}
             />
           </div>
         </div>
@@ -245,7 +277,9 @@ export function QboItemImportStep() {
             onCheckedChange={setIncludeInactive}
           />
           <Label htmlFor="qbo-item-import-include-inactive">
-            Include inactive QuickBooks items (imported as inactive)
+            {t('integrations.qbo.itemImport.defaults.includeInactive', {
+              defaultValue: 'Include inactive QuickBooks items (imported as inactive)',
+            })}
           </Label>
         </div>
 
@@ -255,10 +289,16 @@ export function QboItemImportStep() {
           disabled={previewing || !serviceTypeId}
           onClick={handlePreview}
         >
-          {previewing ? 'Loading preview…' : 'Preview import'}
+          {previewing
+            ? t('integrations.qbo.itemImport.actions.previewing', { defaultValue: 'Loading preview…' })
+            : t('integrations.qbo.itemImport.actions.preview', { defaultValue: 'Preview import' })}
         </Button>
         {!serviceTypeId && (
-          <p className="text-xs text-muted-foreground">Choose a service type to enable the preview.</p>
+          <p className="text-xs text-muted-foreground">
+            {t('integrations.qbo.itemImport.actions.previewRequiresServiceType', {
+              defaultValue: 'Choose a service type to enable the preview.',
+            })}
+          </p>
         )}
       </div>
 
@@ -271,16 +311,35 @@ export function QboItemImportStep() {
       {preview && (
         <div id="qbo-item-import-preview-panel" className="space-y-4">
           <p className="text-sm">
-            Found <span className="font-medium">{preview.totalQboItems}</span> QuickBooks items for
-            the connected company (realm {preview.realm}): {preview.summary.create} to create,{' '}
-            {preview.summary.update} to update, {preview.summary.link} to link,{' '}
-            {preview.summary.skip} skipped. Nothing has been written yet.
+            {t('integrations.qbo.itemImport.preview.summary', {
+              total: preview.totalQboItems,
+              realm: preview.realm,
+              create: preview.summary.create,
+              update: preview.summary.update,
+              link: preview.summary.link,
+              skip: preview.summary.skip,
+              defaultValue: `Found ${preview.totalQboItems} QuickBooks items for the connected company (realm ${preview.realm}): ${preview.summary.create} to create, ${preview.summary.update} to update, ${preview.summary.link} to link, ${preview.summary.skip} skipped. Nothing has been written yet.`,
+            })}
           </p>
 
-          <PreviewGroup title="Will create" rows={rowsByAction('create')} />
-          <PreviewGroup title="Will update" rows={rowsByAction('update')} />
-          <PreviewGroup title="Will link (already matching)" rows={rowsByAction('link')} />
-          <PreviewGroup title="Skipped" rows={rowsByAction('skip')} />
+          <PreviewGroup
+            title={t('integrations.qbo.itemImport.preview.groups.create', { defaultValue: 'Will create' })}
+            rows={rowsByAction('create')}
+          />
+          <PreviewGroup
+            title={t('integrations.qbo.itemImport.preview.groups.update', { defaultValue: 'Will update' })}
+            rows={rowsByAction('update')}
+          />
+          <PreviewGroup
+            title={t('integrations.qbo.itemImport.preview.groups.link', {
+              defaultValue: 'Will link (already matching)',
+            })}
+            rows={rowsByAction('link')}
+          />
+          <PreviewGroup
+            title={t('integrations.qbo.itemImport.preview.groups.skip', { defaultValue: 'Skipped' })}
+            rows={rowsByAction('skip')}
+          />
 
           <Button
             id="qbo-item-import-execute"
@@ -288,7 +347,9 @@ export function QboItemImportStep() {
             disabled={executing || preview.summary.create + preview.summary.update + preview.summary.link === 0}
             onClick={handleExecute}
           >
-            {executing ? 'Importing…' : 'Run import'}
+            {executing
+              ? t('integrations.qbo.itemImport.actions.executing', { defaultValue: 'Importing…' })
+              : t('integrations.qbo.itemImport.actions.execute', { defaultValue: 'Run import' })}
           </Button>
         </div>
       )}
@@ -302,9 +363,22 @@ export function QboItemImportStep() {
       {result && (
         <Alert id="qbo-item-import-result">
           <AlertDescription>
-            Import complete: {result.created} created, {result.updated} updated, {result.linked}{' '}
-            linked, {result.skipped} skipped
-            {result.errors.length > 0 ? `, ${result.errors.length} failed` : ''}.
+            {result.errors.length > 0
+              ? t('integrations.qbo.itemImport.result.summaryWithErrors', {
+                  created: result.created,
+                  updated: result.updated,
+                  linked: result.linked,
+                  skipped: result.skipped,
+                  failed: result.errors.length,
+                  defaultValue: `Import complete: ${result.created} created, ${result.updated} updated, ${result.linked} linked, ${result.skipped} skipped, ${result.errors.length} failed.`,
+                })
+              : t('integrations.qbo.itemImport.result.summary', {
+                  created: result.created,
+                  updated: result.updated,
+                  linked: result.linked,
+                  skipped: result.skipped,
+                  defaultValue: `Import complete: ${result.created} created, ${result.updated} updated, ${result.linked} linked, ${result.skipped} skipped.`,
+                })}
             {result.errors.length > 0 && (
               <ul className="mt-2 list-disc pl-4 text-xs">
                 {result.errors.map((error) => (

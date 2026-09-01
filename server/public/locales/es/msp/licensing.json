@@ -224,6 +224,14 @@
       "heading": "Comprar créditos o gestionar la suscripción",
       "body": "Las recargas, la recarga automática y los cambios de suscripción se gestionan en la tienda de Nine Minds.",
       "openStore": "Abrir la tienda"
+    },
+    "status": {
+      "canceled": "Cancelado",
+      "unpaid": "Sin pagar",
+      "none": "Sin suscripción",
+      "active": "Activo",
+      "trialing": "Prueba",
+      "past_due": "Vencido"
     }
   },
   "managementPage": {
@@ -347,5 +355,9 @@
       "startTrial": "No se pudo iniciar la prueba.",
       "refreshLicense": "No se pudo actualizar la licencia."
     }
+  },
+  "errors": {
+    "notSignedIn": "No autorizado. Inicie sesión para gestionar las licencias.",
+    "accountManagementRead": "Permiso denegado: se requiere permiso de lectura de la gestión de cuentas"
   }
 }

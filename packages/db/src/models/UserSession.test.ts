@@ -6,6 +6,7 @@ const builder = {
   where: vi.fn(() => builder),
   whereNull: vi.fn(() => builder),
   select: vi.fn(() => builder),
+  leftJoin: vi.fn(() => builder),
   first: firstMock,
   update: updateMock,
 };
@@ -57,5 +58,25 @@ describe('UserSession.extendExpiry', () => {
     await expect(UserSession.isRevoked('tenant-1', 'scim-session-revoked')).resolves.toBe(true);
 
     expect(firstMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a live session when its JWT user type does not match the database user', async () => {
+    firstMock.mockResolvedValue({
+      revoked_at: null,
+      session_user_id: 'client-user-1',
+      actual_user_type: 'client',
+    });
+
+    await expect(UserSession.isRevokedOrIdentityMismatch(
+      'tenant-1',
+      'client-session',
+      { userId: 'client-user-1', userType: 'internal' }
+    )).resolves.toBe(true);
+
+    await expect(UserSession.isRevokedOrIdentityMismatch(
+      'tenant-1',
+      'client-session',
+      { userId: 'client-user-1', userType: 'client' }
+    )).resolves.toBe(false);
   });
 });

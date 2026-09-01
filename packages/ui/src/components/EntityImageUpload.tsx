@@ -298,7 +298,7 @@ const EntityImageUpload = ({
               type="button"
               onClick={() => setIsEditing(true)}
               disabled={isPendingUpload || isPendingDelete}
-              className="absolute bottom-0 right-0 mb-[-4px] mr-[-4px] text-gray-700 p-1 rounded-full hover:bg-purple-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-purple-100 transition-colors"
+              className="absolute bottom-0 right-0 mb-[-4px] mr-[-4px] text-gray-700 p-1 rounded-full hover:bg-[rgb(var(--color-primary-100))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-primary-100))] transition-colors"
               aria-label={`Edit ${entityType} image`}
               data-automation-id={`edit-${entityType}-image-button`}
             >

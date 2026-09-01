@@ -226,7 +226,8 @@
       "loadHistory": "Failed to load recurring invoice history. Please try again."
     },
     "loading": {
-      "billingData": "Loading billing data"
+      "billingData": "Loading billing data",
+      "candidates": "Loading invoice candidates."
     },
     "views": {
       "all": "All",
@@ -342,7 +343,7 @@
       "refresh": "An error occurred while refreshing invoice data.",
       "updateFailed": "Error updating invoice",
       "generateFailed": "Error generating invoice",
-      "NO_BILLING_EMAIL": "{{clientName}} has no billing email. Set an email address on the client's billing location, then try again.",
+      "NO_BILLING_EMAIL": "{{clientName}} has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location, then try again.",
       "CLIENT_NOT_FOUND": "The selected client could not be found. Refresh and try again.",
       "SERVICE_NOT_FOUND": "Service {{serviceId}} could not be found. Refresh and try again.",
       "INVALID_QUANTITY": "Quantity must be greater than zero.",
@@ -356,7 +357,7 @@
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
     },
     "warnings": {
-      "noBillingEmail": "This client has no billing email. Set an email address on the client's billing location before generating the invoice."
+      "noBillingEmail": "This client has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location before generating the invoice."
     },
     "errorFallback": {
       "title": "Something went wrong",
@@ -369,8 +370,6 @@
   "draftsTab": {
     "title": "Draft Invoices",
     "searchPlaceholder": "Search invoices...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Invoice Number",
       "client": "Client",
@@ -421,13 +420,17 @@
       "message": "This invoice is set to use tax calculated by an external accounting system, but no tax has been imported yet, so it cannot be finalized. Export it to your accounting system (QuickBooks, Xero) and import the tax back to finalize with external tax — or switch this invoice to internal tax now so Alga calculates the tax and finalize it.",
       "confirm": "Switch to internal tax & finalize",
       "cancel": "Cancel"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "clear": "Clear"
+      }
     }
   },
   "finalizedTab": {
     "title": "Finalized Invoices",
     "searchPlaceholder": "Search invoices...",
-    "bulkActions_one": "Actions ({{count}})",
-    "bulkActions_other": "Actions ({{count}})",
     "columns": {
       "invoiceNumber": "Invoice Number",
       "client": "Client",
@@ -461,6 +464,12 @@
       "unfinalizeFailed": "Failed to unfinalize invoice. Please try again.",
       "bulkUnfinalizeFailed": "Failed to unfinalize invoices. Please try again.",
       "bulkUnfinalizeInvoiceFailed": "Could not unfinalize {{invoiceNumber}}: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "clear": "Clear"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -973,38 +982,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Generate Prepayment Invoice",
-      "creditMemo": "Generate Credit Memo"
+      "prepayment": "Generate Prepayment Invoice"
     },
     "descriptions": {
-      "prepayment": "Prepayment invoices create client credit for future value. They do not create recurring service periods; later recurring invoices keep their own service-period coverage.",
-      "creditMemo": "Credit memos adjust financial balances without redefining recurring service-period coverage on the source invoice."
+      "prepayment": "Prepayment invoices create client credit for future value. They do not create recurring service periods; later recurring invoices keep their own service-period coverage."
     },
     "fields": {
-      "type": "Type",
       "client": "Client",
       "amount": "Amount",
-      "description": "Description"
-    },
-    "types": {
-      "prepaymentInvoice": "Prepayment Invoice",
-      "creditMemo": "Credit Memo"
+      "descriptionOptional": "Description (optional)"
     },
     "placeholders": {
       "amount": "Enter amount",
-      "prepaymentDescription": "Prepayment for future services",
-      "creditMemoDescription": "Reason for credit memo"
+      "prepaymentDescription": "Prepayment for future services"
     },
     "errors": {
       "allFieldsRequired": "Please fill in all fields",
       "validAmount": "Please enter a valid amount",
-      "creditMemosUnsupported": "Credit memos are not yet supported",
       "generateFailed": "Error generating invoice"
     },
     "actions": {
       "generating": "Generating...",
-      "generatePrepayment": "Generate Prepayment Invoice",
-      "generateCreditMemo": "Generate Credit Memo"
+      "generatePrepayment": "Generate Prepayment Invoice"
     }
   },
   "contractItems": {
@@ -1119,7 +1118,8 @@
       "unknownClient": "Unknown client",
       "status": "Status",
       "system": "System",
-      "total": "Total"
+      "total": "Total",
+      "invoiceDate": "Invoice Date"
     },
     "states": {
       "empty": "No data available",
@@ -1238,7 +1238,12 @@
         "emptyState": "Select sample or existing invoice data to generate an authoritative preview.",
         "loadingPreview": "Shaping and rendering preview...",
         "templateError": "Preview template could not be generated from the current workspace.",
-        "renderError": "Preview rendering failed."
+        "renderError": "Preview rendering failed.",
+        "searchQuotes": "Search quotes...",
+        "noQuotesFound": "No quotes found.",
+        "selectQuote": "Select quote",
+        "loadingQuoteDetails": "Loading quote details...",
+        "loadingDocumentDetails": "Loading document details..."
       },
       "tabs": {
         "design": "Design",
@@ -1660,7 +1665,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Template Boundary"
+      "templateBoundary": "Template Boundary",
+      "translatableHint": "Translated automatically into the recipient's language. Edit it to use your own fixed text instead."
     },
     "dragOverlay": {
       "component": "Component"
@@ -1668,7 +1674,6 @@
   },
   "projectBilling": {
     "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
-    "bulkActions": "Actions ({{count}})",
     "loading": "Loading project billing queue...",
     "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
     "columns": {
@@ -1724,6 +1729,345 @@
       "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
       "confirm": "Cancel entry",
       "dismiss": "Keep entry"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "clear": "Clear"
+      }
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} rows",
+      "operators": {
+        "eq": "Equals",
+        "neq": "Not equal",
+        "gt": "Greater than",
+        "gte": "Greater or equal",
+        "lt": "Less than",
+        "lte": "Less or equal",
+        "in": "In list"
+      },
+      "sortDirections": {
+        "asc": "Ascending",
+        "desc": "Descending"
+      },
+      "aggregations": {
+        "sum": "Sum",
+        "count": "Count",
+        "avg": "Average",
+        "min": "Minimum",
+        "max": "Maximum"
+      },
+      "operations": {
+        "advancedPredicate": "Advanced predicate",
+        "groupBy": "Group by {{field}}",
+        "readOnly": "Preserved read-only in V1"
+      },
+      "source": {
+        "title": "Source data",
+        "description": "Pick preview data and choose the collection binding to shape.",
+        "sampleScenario": "Sample scenario",
+        "selectInvoice": "Select invoice",
+        "collection": "Source collection",
+        "outputBindingId": "Output binding ID"
+      },
+      "metadata": {
+        "title": "Source metadata",
+        "binding": "Binding:",
+        "bindingNone": "None",
+        "resolvedPath": "Resolved path:",
+        "pathNotResolved": "Not resolved",
+        "noFields": "Choose preview data and a collection binding to discover fields."
+      },
+      "pipeline": {
+        "title": "Transform pipeline",
+        "description": "Operations run top to bottom.",
+        "addFilter": "+ Filter",
+        "addSort": "+ Sort",
+        "addGroup": "+ Group",
+        "addAggregate": "+ Aggregate",
+        "empty": "Add operations to build the transform pipeline.",
+        "moveUp": "Move {{operation}} up",
+        "moveDown": "Move {{operation}} down",
+        "duplicate": "Duplicate {{operation}}",
+        "delete": "Delete {{operation}}"
+      },
+      "inspector": {
+        "description": "Edit the selected transform operation.",
+        "empty": "Select a transform card to edit its settings.",
+        "advancedPredicateNotice": "This filter uses an advanced predicate shape. Editing here converts it to a simple comparison.",
+        "unsupportedOperation": "This operation type is preserved in the workspace, but the V1 designer edits only filter, sort, group, and aggregate operations.",
+        "field": "Field",
+        "operator": "Operator",
+        "value": "Value",
+        "valueList": "Values (comma separated)",
+        "sortKey": "Sort key {{index}}",
+        "remove": "Remove",
+        "direction": "Direction",
+        "addSortKey": "+ Sort key",
+        "groupField": "Group field",
+        "groupLabel": "Label (optional)",
+        "aggregation": "Aggregation {{index}}",
+        "outputId": "Output ID",
+        "operation": "Operation",
+        "addAggregation": "+ Aggregation"
+      },
+      "output": {
+        "title": "Output preview",
+        "description": "Preview rows generated from the current transform pipeline.",
+        "rowPaths": "Available row paths",
+        "groupedRows": "{{count}} grouped rows",
+        "binding": "Binding: {{binding}}",
+        "bindingNotSet": "Not set",
+        "groupKey": "key: {{value}}",
+        "groupItems": "{{count}} items",
+        "emptyConfigure": "Configure the source, output binding, and operations to preview transformed rows.",
+        "emptyNoData": "Choose preview data to inspect transformed output.",
+        "previewFailed": "Transforms preview failed."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "All Line Items",
+        "phases": "Phases",
+        "recurringItems": "Recurring Items",
+        "onetimeItems": "One-time Items",
+        "serviceItems": "Service Items",
+        "productItems": "Product Items",
+        "items": "Items",
+        "transformsSource": "{{binding}} (Transforms source)",
+        "transformsOutput": "{{binding}} (Transforms output)"
+      },
+      "presets": {
+        "description": {
+          "label": "Description",
+          "hint": "Line item description"
+        },
+        "quantity": {
+          "label": "Qty",
+          "hint": "Quantity"
+        },
+        "unitPrice": {
+          "label": "Rate",
+          "hint": "Unit price"
+        },
+        "amount": {
+          "label": "Amount",
+          "hint": "Line total"
+        }
+      },
+      "sourceBinding": {
+        "title": "Source Binding",
+        "description": "Bind this table to a raw collection or the authored transforms output."
+      },
+      "columns": {
+        "title": "Table Columns",
+        "add": "+ Column",
+        "quickAdd": "Quick add:",
+        "newColumnHeader": "New Column",
+        "empty": "No columns defined. Add at least one column.",
+        "itemLabel": "Column",
+        "moveUp": "Move {{column}} up",
+        "moveDown": "Move {{column}} down",
+        "remove": "Remove {{column}}",
+        "header": "Header",
+        "headerPlaceholder": "Header label",
+        "bindingKey": "Binding key",
+        "type": "Type",
+        "width": "Width"
+      },
+      "columnTypes": {
+        "text": "Text",
+        "number": "Number",
+        "currency": "Currency",
+        "date": "Date"
+      },
+      "style": {
+        "title": "Table Style",
+        "borderPreset": "Border preset",
+        "headerWeight": "Header weight",
+        "borderOuter": "Outer",
+        "borderRows": "Rows",
+        "borderColumns": "Columns"
+      },
+      "borderPresets": {
+        "list": "List",
+        "boxed": "Boxed",
+        "grid": "Grid",
+        "none": "None",
+        "custom": "Custom"
+      },
+      "headerWeights": {
+        "normal": "Normal",
+        "medium": "Medium",
+        "semibold": "Semibold",
+        "bold": "Bold"
+      },
+      "reference": {
+        "title": "Field key reference",
+        "transformAggregate": "Transform aggregate",
+        "groupedRowKey": "Grouped row key",
+        "groupedRowItems": "Grouped row items",
+        "availableBinding": "Available binding"
+      }
+    },
+    "imagePicker": {
+      "browse": "Browse Documents",
+      "hiddenFromClients": "{{document}} is hidden from clients. It will not appear on quotes or invoices viewed through the client portal.",
+      "updating": "Updating...",
+      "markVisible": "Mark as visible to clients",
+      "visibleInPortal": "Visible in client portal",
+      "dialogTitle": "Select Image",
+      "dialogDescription": "Choose an image from your documents to use in this template."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Invoice Details",
+    "description": "Edit draft invoice metadata before finalizing.",
+    "actions": {
+      "saving": "Saving..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Invoice number is required.",
+      "invoiceDateRequired": "Invoice date is required."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Document",
+    "title": "{{type}} Layouts",
+    "description": "Design the layouts used to render {{type}} PDFs and previews.",
+    "availableLayouts": "Available Layouts",
+    "actions": {
+      "newLayout": "New Layout"
+    },
+    "columns": {
+      "name": "Name",
+      "source": "Source"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Standard)",
+      "copyName": "{{name}} (Copy)"
+    },
+    "toasts": {
+      "cloned": "Template cloned",
+      "defaultUpdated": "Default template updated",
+      "deleted": "Template deleted"
+    },
+    "errors": {
+      "loadFailed": "Failed to load {{type}} templates",
+      "cloneFailed": "Failed to clone template",
+      "setDefaultFailed": "Failed to set default template",
+      "deleteFailed": "Failed to delete template"
+    },
+    "deleteDialog": {
+      "title": "Delete {{type}} Layout",
+      "message": "Are you sure you want to delete \"{{name}}\"?"
+    },
+    "editor": {
+      "titles": {
+        "create": "New {{type}} Layout",
+        "edit": "Edit {{type}} Layout"
+      },
+      "description": "Design the {{type}} layout using the visual editor, then preview with sample data.",
+      "errorTitle": "{{type}} Layout Editor",
+      "sections": {
+        "details": "Layout Details"
+      },
+      "fields": {
+        "version": "Version"
+      },
+      "placeholders": {
+        "templateName": "{{type}} Template"
+      },
+      "actions": {
+        "back": "Back to Layouts",
+        "save": "Save Layout"
+      },
+      "labels": {
+        "created": "Created: {{date}}",
+        "lastUpdated": "Last Updated: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Rendered against representative {{type}} sample data.",
+        "frameTitle": "{{type}} preview",
+        "empty": "Open this tab to generate an authoritative preview.",
+        "existingNote": "Rendered against the selected sales order.",
+        "searchDocuments": "Search sales orders...",
+        "searchDocumentsHint": "Search by number or client...",
+        "noDocumentsFound": "No sales orders found.",
+        "selectDocument": "Select Sales Order",
+        "selectDocumentHint": "Select a sales order to preview data-bound output."
+      },
+      "errors": {
+        "nameRequired": "Template name is required.",
+        "astExportFailed": "Failed to export template from the visual workspace: {{message}}",
+        "saveFailed": "Failed to save {{type}} layout",
+        "previewFailed": "Failed to generate preview."
+      },
+      "toasts": {
+        "saved": "{{type}} layout saved"
+      }
+    },
+    "types": {
+      "salesOrder": "Sales Order",
+      "packingSlip": "Packing Slip",
+      "pickList": "Pick List"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Permission denied: invoice update required",
+      "invoiceDelete": "Permission denied: invoice delete required",
+      "invoiceAccess": "Permission denied: invoice access denied",
+      "otherClientInvoices": "Permission denied: cannot access invoices for another client"
+    },
+    "invoice": {
+      "notFound": "Invoice not found",
+      "notFoundRefresh": "Invoice not found. It may have been updated or deleted. Please refresh and try again.",
+      "notFoundNumbered": "Invoice {{invoiceId}} was not found.",
+      "clientNotFoundForInvoice": "Client not found for invoice {{invoiceNumber}}.",
+      "numberRequired": "Invoice number is required",
+      "dateRequired": "Invoice date is required",
+      "dateInvalid": "Invoice date is invalid",
+      "dueDateInvalid": "Due date is invalid",
+      "onlyDraftEditable": "Only draft invoices can be edited",
+      "numberExists": "Invoice number already exists. Choose a different number.",
+      "notFinalized": "Invoice is not finalized",
+      "unfinalizeFailed": "Invoice could not be unfinalized because an unexpected data error occurred. Please refresh and try again.",
+      "paidOrCancelled": "Cannot modify a paid or cancelled invoice",
+      "syncedVoidInstead": "This invoice is synced to an accounting system — void it instead of deleting.",
+      "invalidValue": "One of the selected invoice values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.",
+      "duplicate": "A conflicting invoice already exists. Please refresh and try again.",
+      "missingField": "Missing required invoice field.",
+      "missingFieldNamed": "Missing required invoice field: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Billing cycle not found. It may have been updated or deleted. Please refresh and try again.",
+      "invalidDates": "Billing cycle has invalid dates. Please review the cycle and try again."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Select at least one invoice to generate PDFs.",
+      "selectInvoicesEmail": "Select at least one invoice to email.",
+      "selectInvoices": "Select at least one invoice.",
+      "emailNotConfigured": "Email is not configured. Please configure email settings in Settings before sending invoices.",
+      "schedulePdfFailed": "Failed to start invoice PDF generation. Please try again.",
+      "scheduleEmailFailed": "Failed to start invoice email sending. Please try again.",
+      "recipientFailed": "Failed to load recipient information for this invoice.",
+      "sendFailed": "Failed to send invoice email. Please try again."
+    },
+    "template": {
+      "selectStandard": "Select a standard invoice template before saving.",
+      "selectBeforePreview": "Select an invoice template before previewing.",
+      "notFoundRefresh": "Invoice template not found. It may have been updated or deleted. Please refresh and try again.",
+      "missingDesign": "Invoice template is missing its design payload. Please choose another template.",
+      "invalidValue": "One of the selected invoice template values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected invoice template or client no longer exists. Please refresh and try again.",
+      "duplicate": "An invoice template with those settings already exists.",
+      "missingField": "Missing required invoice template field.",
+      "missingFieldNamed": "Missing required invoice template field: {{field}}."
     }
   }
 }

@@ -22,7 +22,7 @@ import {
   type ApiRateLimitSettingsView,
 } from '@/lib/actions/apiKeyRateLimitActions';
 import { Search, RotateCcw } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -55,7 +55,7 @@ const AdminSearchInput = memo(({
       id="search-admin-api-keys"
       type="text"
       placeholder={placeholder}
-      className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+      className="border-2 border-gray-200 focus:border-[rgb(var(--color-primary-500))] rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
       value={value}
       onChange={onChange}
       preserveCursor={true}
@@ -67,6 +67,9 @@ AdminSearchInput.displayName = 'AdminSearchInput';
 
 export default function AdminApiKeysSetup() {
   const { t } = useTranslation('msp/profile');
+  // toLocaleString() with no locale renders in the browser's locale, not the
+  // app's; useFormatters is bound to the resolved i18n locale.
+  const { formatDate } = useFormatters();
   const [apiKeys, setApiKeys] = useState<AdminApiKey[]>([]);
   const [rateLimitsByKey, setRateLimitsByKey] = useState<Record<string, ApiRateLimitSettingsView>>({});
   const [rateLimitDrafts, setRateLimitDrafts] = useState<Record<string, ApiRateLimitSettingsValue>>({});
@@ -308,19 +311,19 @@ export default function AdminApiKeysSetup() {
       title: t('security.apiKeys.list.columns.created'),
       dataIndex: 'created_at',
       width: '15%',
-      render: (value: Date) => new Date(value).toLocaleString(),
+      render: (value: Date) => formatDate(new Date(value), { dateStyle: 'medium', timeStyle: 'short' }),
     },
     {
       title: t('security.apiKeys.list.columns.lastUsed'),
       dataIndex: 'last_used_at',
       width: '15%',
-      render: (value: Date | null) => value ? new Date(value).toLocaleString() : t('security.apiKeys.list.never'),
+      render: (value: Date | null) => value ? formatDate(new Date(value), { dateStyle: 'medium', timeStyle: 'short' }) : t('security.apiKeys.list.never'),
     },
     {
       title: t('security.apiKeys.list.columns.expires'),
       dataIndex: 'expires_at',
       width: '15%',
-      render: (value: Date | null) => value ? new Date(value).toLocaleString() : t('security.apiKeys.list.never'),
+      render: (value: Date | null) => value ? formatDate(new Date(value), { dateStyle: 'medium', timeStyle: 'short' }) : t('security.apiKeys.list.never'),
     },
     {
       title: t('security.apiKeys.rateLimit.columnTitle'),

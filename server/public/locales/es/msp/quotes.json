@@ -114,7 +114,9 @@
       "delete": "No se pudo eliminar la cotización.",
       "duplicate": "No se pudo duplicar la cotización.",
       "load": "No se pudieron cargar las cotizaciones",
-      "send": "No se pudo enviar la cotización."
+      "send": "No se pudo enviar la cotización.",
+      "resend": "No se pudo reenviar la cotización.",
+      "sendReminder": "No se pudo enviar el recordatorio de la cotización."
     },
     "loading": "Cargando cotizaciones...",
     "rowActions": {
@@ -153,7 +155,8 @@
       "previewPdf": "Vista previa del PDF",
       "backToQuotes": "Volver a cotizaciones",
       "backToTemplates": "Volver a plantillas de cotización",
-      "convertToSalesOrder": "Convertir a orden de venta"
+      "convertToSalesOrder": "Convertir a orden de venta",
+      "convert": "Convertir en…"
     },
     "headings": {
       "editQuote": "Editar cotización",
@@ -587,20 +590,26 @@
     "sections": {
       "contractItems": "Artículos del contrato",
       "conversionMode": "Modo de conversión",
-      "excludedItems": "Artículos excluidos",
       "excludedFromConversion": "Excluido de la conversión",
+      "excludedItems": "Artículos excluidos",
       "invoiceItems": "Artículos de factura",
       "itemMappingPreview": "Vista previa de asignación de elementos",
+      "onSalesOrder": "En la orden de venta {{soNumber}}",
       "quoteTotal": "Total de cotización",
+      "salesOrderItems": "Líneas de orden de venta",
       "statusAfterConversion": "Estado después de la conversión",
       "willBecomeContractLines": "Se convertirán en líneas de contrato",
-      "willBecomeInvoiceCharges": "Se convertirán en cargos de factura"
+      "willBecomeInvoiceCharges": "Se convertirán en cargos de factura",
+      "willBecomeSalesOrderLines": "Se convertirán en líneas de orden de venta"
     },
     "empty": {
       "contractItems": "Ningún elemento recurrente se convertirá en un contrato.",
-      "invoiceItems": "Ningún artículo único se convertirá en una factura."
+      "invoiceItems": "Ningún artículo único se convertirá en una factura.",
+      "invoiceItemsOnSalesOrder": "Todas las líneas únicas están en la orden de venta {{soNumber}} y se facturarán desde allí al completarse.",
+      "salesOrderItems": "Ninguna línea de producto pasará a una orden de venta."
     },
     "summary": {
+      "billedViaSalesOrder": "Se factura desde la orden de venta {{soNumber}} al completarse",
       "converted": "Convertido",
       "discount": "Descuento",
       "fixed": "fijado",
@@ -628,10 +637,11 @@
       "title": "Error"
     },
     "salesOrder": {
-      "successTitle": "Orden de venta {{number}} creada",
-      "successBody": "Las líneas de producto se facturarán al cumplirse.",
+      "existingNote": "Esta cotización ya se convirtió en la orden de venta {{soNumber}}.",
+      "note": "Las líneas de producto pueden facturarse de dos maneras: creando una orden de venta para facturarlas al completarse, o facturándolas directamente. Al crear la orden de venta quedan excluidas de la conversión a factura, así nada se factura dos veces.",
       "openSalesOrders": "Abrir órdenes de venta",
-      "note": "Las líneas únicas de producto pasan a un borrador de orden de venta (facturado al cumplirse) y se excluyen de cualquier conversión a factura borrador, por lo que nada se factura dos veces."
+      "successBody": "Las líneas de producto se facturarán al cumplirse.",
+      "successTitle": "Orden de venta {{number}} creada"
     }
   },
   "quoteApproval": {
@@ -725,7 +735,9 @@
       "notFound": "No se encontró la plantilla del documento de cotización.",
       "previewPipeline": "Error en la canalización de vista previa.",
       "saveFailed": "No se pudo guardar la plantilla de cotización",
-      "unknownAstExport": "Error de exportación AST desconocido"
+      "unknownAstExport": "Error de exportación AST desconocido",
+      "quoteNotFound": "No se pudieron cargar los detalles de la cotización para la vista previa.",
+      "quoteDetailLoad": "Error al cargar los detalles de la cotización."
     },
     "fields": {
       "layoutDetails": "Detalles de diseño",
@@ -749,10 +761,20 @@
       "sampleScenario": "Escenario de muestra",
       "selectScenario": "Seleccione escenario...",
       "selectScenarioPrompt": "Seleccione un escenario de muestra para generar una vista previa autorizada.",
-      "templateGenerationFailed": "No se pudo generar la plantilla de vista previa desde el espacio de trabajo actual."
+      "templateGenerationFailed": "No se pudo generar la plantilla de vista previa desde el espacio de trabajo actual.",
+      "source": {
+        "sample": "Muestra",
+        "existing": "Existente"
+      },
+      "searchQuotes": "Buscar cotizaciones…",
+      "searchQuotesHint": "Buscar por número o cliente…",
+      "noQuotesFound": "Sin cotizaciones.",
+      "selectQuote": "Seleccionar cotización",
+      "selectQuoteHint": "Seleccione una cotización para ver la vista previa con datos.",
+      "loadingQuoteDetails": "Cargando detalles de la cotización…"
     },
     "pipeline": {
-      "render": "Prestar",
+      "render": "Renderizado",
       "shape": "Forma",
       "renderFailed": "Error de renderizado.",
       "shapeFailed": "Error al dar forma a los datos.",
@@ -787,6 +809,33 @@
     },
     "labels": {
       "custom": "Costumbre"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Permiso denegado: no se pueden crear cotizaciones",
+      "update": "Permiso denegado: no se pueden actualizar cotizaciones",
+      "read": "Permiso denegado: no se pueden leer cotizaciones",
+      "delete": "Permiso denegado: no se pueden eliminar cotizaciones",
+      "readOne": "Permiso denegado: no se puede leer la cotización",
+      "approve": "Permiso denegado: no se pueden aprobar cotizaciones",
+      "updateApprovalSettings": "Permiso denegado: no se puede actualizar la configuración de aprobación de cotizaciones",
+      "readDocumentTemplates": "Permiso denegado: no se pueden leer las plantillas de documento de cotización",
+      "modifyDocumentTemplates": "Permiso denegado: no se pueden modificar las plantillas de documento de cotización",
+      "setDefaultDocumentTemplate": "Permiso denegado: no se puede establecer la plantilla de documento de cotización predeterminada",
+      "deleteDocumentTemplates": "Permiso denegado: no se pueden eliminar las plantillas de documento de cotización"
+    },
+    "quote": {
+      "formInvalid": "El formulario de cotización contiene valores no válidos. Revíselo e inténtelo de nuevo.",
+      "notFoundRefresh": "No se encontró la cotización. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "itemNotFoundRefresh": "No se encontró la línea de la cotización. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "templateNotFoundRefresh": "No se encontró la plantilla de cotización. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de cotización seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "La cotización, cliente, contacto o servicio seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio de la cotización entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores de la cotización no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la cotización.",
+      "missingFieldNamed": "Falta un campo obligatorio de la cotización: {{field}}."
     }
   }
 }

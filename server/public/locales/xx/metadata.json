@@ -1,0 +1,618 @@
+{
+  "app": {
+    "description": "⟦Ḿȧƞȧɠḗḓ Şḗřṽīƈḗ Ƥřȯṽīḓḗř Ȧƥƥŀīƈȧŧīȯƞ⟧",
+    "keywords": "⟦ḾŞƤ, Ḿȧƞȧɠḗḓ Şḗřṽīƈḗ Ƥřȯṽīḓḗř, ĪŦ Şḗřṽīƈḗş, Ƞḗŧẇȯřķ Ḿȧƞȧɠḗḿḗƞŧ, Ƈŀȯŭḓ Şḗřṽīƈḗş⟧"
+  },
+  "auth": {
+    "checkEmail": {
+      "layout": {
+        "title": "⟦Ƈħḗƈķ Ḗḿȧīŀ⟧"
+      }
+    },
+    "clientPortal": {
+      "forgotPassword": {
+        "layout": {
+          "title": "⟦Ƒȯřɠȯŧ Ƥȧşşẇȯřḓ⟧"
+        }
+      },
+      "handoff": {
+        "title": "⟦Şīɠƞīƞɠ Īƞ⟧"
+      },
+      "signin": {
+        "title": "⟦Ƈŀīḗƞŧ Ƥȯřŧȧŀ Şīɠƞ Īƞ⟧"
+      }
+    },
+    "msp": {
+      "forgotPassword": {
+        "layout": {
+          "title": "⟦Ƒȯřɠȯŧ Ƥȧşşẇȯřḓ⟧"
+        }
+      },
+      "signin": {
+        "title": "⟦ḾŞƤ Şīɠƞ Īƞ⟧"
+      }
+    },
+    "passwordReset": {
+      "confirmation": {
+        "layout": {
+          "title": "⟦Ƥȧşşẇȯřḓ Řḗşḗŧ⟧"
+        }
+      },
+      "setNewPassword": {
+        "layout": {
+          "title": "⟦Şḗŧ Ƞḗẇ Ƥȧşşẇȯřḓ⟧"
+        }
+      }
+    },
+    "portal": {
+      "setup": {
+        "layout": {
+          "title": "⟦Ƥȯřŧȧŀ Şḗŧŭƥ⟧"
+        }
+      }
+    },
+    "register": {
+      "layout": {
+        "title": "⟦Řḗɠīşŧḗř⟧"
+      }
+    },
+    "signin": {
+      "title": "⟦Şīɠƞ Īƞ⟧"
+    },
+    "team": {
+      "setup": {
+        "layout": {
+          "title": "⟦Ŧḗȧḿ Şḗŧŭƥ⟧"
+        }
+      }
+    },
+    "verify": {
+      "layout": {
+        "description": "⟦Ṽḗřīƒẏ ẏȯŭř ḗḿȧīŀ ȧḓḓřḗşş ŧȯ ƈȯḿƥŀḗŧḗ řḗɠīşŧřȧŧīȯƞ⟧",
+        "title": "⟦Ṽḗřīƒẏ Ḗḿȧīŀ⟧"
+      }
+    },
+    "verifyEmail": {
+      "layout": {
+        "title": "⟦Ṽḗřīƒẏ Ḗḿȧīŀ⟧"
+      }
+    },
+    "layout": {
+      "defaultTitle": "⟦Şīɠƞ Īƞ | ȦŀɠȧƤŞȦ⟧"
+    }
+  },
+  "clientPortal": {
+    "account": {
+      "layout": {
+        "title": "⟦Ȧƈƈȯŭƞŧ⟧"
+      }
+    },
+    "appointments": {
+      "detail": {
+        "layout": {
+          "title": "⟦Ȧƥƥȯīƞŧḿḗƞŧ Ḓḗŧȧīŀş⟧"
+        }
+      },
+      "layout": {
+        "title": "⟦Ȧƥƥȯīƞŧḿḗƞŧş⟧"
+      }
+    },
+    "billing": {
+      "invoices": {
+        "detail": {
+          "pay": {
+            "title": "⟦Ƥȧẏ Īƞṽȯīƈḗ⟧"
+          },
+          "paymentSuccess": {
+            "title": "⟦Ƥȧẏḿḗƞŧ Şŭƈƈḗşş⟧"
+          }
+        }
+      },
+      "quotes": {
+        "detail": {
+          "title": "⟦Ɋŭȯŧḗ Ḓḗŧȧīŀş⟧"
+        }
+      },
+      "title": "⟦Ɓīŀŀīƞɠ⟧"
+    },
+    "clientSettings": {
+      "description": "⟦Ḿȧƞȧɠḗ ẏȯŭř ƈȯḿƥȧƞẏ şḗŧŧīƞɠş ȧƞḓ ƈȯƞƒīɠŭřȧŧīȯƞş⟧",
+      "title": "⟦Ƈȯḿƥȧƞẏ Şḗŧŧīƞɠş⟧"
+    },
+    "dashboard": {
+      "title": "⟦Ḓȧşħƀȯȧřḓ⟧"
+    },
+    "devices": {
+      "title": "⟦Ḿẏ ḓḗṽīƈḗş⟧"
+    },
+    "documents": {
+      "title": "⟦Ḓȯƈŭḿḗƞŧş⟧"
+    },
+    "extensions": {
+      "detail": {
+        "title": "⟦Ḗẋŧḗƞşīȯƞ⟧"
+      }
+    },
+    "knowledgeBase": {
+      "layout": {
+        "title": "⟦Ķƞȯẇŀḗḓɠḗ Ɓȧşḗ⟧"
+      }
+    },
+    "licenses": {
+      "title": "⟦Ŀīƈḗƞşḗş⟧"
+    },
+    "profile": {
+      "layout": {
+        "title": "⟦Ƥřȯƒīŀḗ⟧"
+      }
+    },
+    "projects": {
+      "detail": {
+        "fallbackTitle": "⟦Ƥřȯĵḗƈŧ Ḓḗŧȧīŀş⟧"
+      },
+      "title": "⟦Ƥřȯĵḗƈŧş⟧"
+    },
+    "requestServices": {
+      "detail": {
+        "title": "⟦Şḗřṽīƈḗ Řḗʠŭḗşŧ⟧"
+      },
+      "myRequests": {
+        "detail": {
+          "title": "⟦Řḗʠŭḗşŧ Ḓḗŧȧīŀş⟧"
+        },
+        "title": "⟦Ḿẏ Řḗʠŭḗşŧş⟧"
+      },
+      "title": "⟦Řḗʠŭḗşŧ Şḗřṽīƈḗş⟧"
+    },
+    "tickets": {
+      "detail": {
+        "fallbackTitle": "⟦Ŧīƈķḗŧ Ḓḗŧȧīŀş⟧",
+        "title": "⟦Ŧīƈķḗŧ #{{ticketNumber}} - {{ticketTitle}}⟧"
+      },
+      "layout": {
+        "title": "⟦Ŧīƈķḗŧş⟧"
+      }
+    },
+    "layout": {
+      "titleTemplate": "⟦%ş | Ƈŀīḗƞŧ Ƥȯřŧȧŀ⟧",
+      "defaultTitle": "⟦Ḓȧşħƀȯȧřḓ | Ƈŀīḗƞŧ Ƥȯřŧȧŀ⟧"
+    }
+  },
+  "msp": {
+    "account": {
+      "layout": {
+        "title": "⟦Ȧƈƈȯŭƞŧ⟧"
+      }
+    },
+    "addOns": {
+      "layout": {
+        "title": "⟦Ȧḓḓ-ȯƞş⟧"
+      }
+    },
+    "assets": {
+      "automation": {
+        "title": "⟦Ȧşşḗŧ Ȧŭŧȯḿȧŧīȯƞ⟧"
+      },
+      "detail": {
+        "edit": {
+          "description": "⟦Ḗḓīŧ ȧşşḗŧ ḓḗŧȧīŀş⟧",
+          "title": "⟦Ḗḓīŧ Ȧşşḗŧ⟧"
+        },
+        "fallbackTitle": "⟦Ȧşşḗŧ Ḓḗŧȧīŀş⟧"
+      },
+      "imports": {
+        "title": "⟦Ȧşşḗŧ Īḿƥȯřŧş⟧"
+      },
+      "integrations": {
+        "title": "⟦Ȧşşḗŧ Īƞŧḗɠřȧŧīȯƞş⟧"
+      },
+      "maintenance": {
+        "title": "⟦Ȧşşḗŧ Ḿȧīƞŧḗƞȧƞƈḗ⟧"
+      },
+      "policies": {
+        "title": "⟦Ȧşşḗŧ Ƥȯŀīƈīḗş⟧"
+      },
+      "title": "⟦Ȧşşḗŧş⟧"
+    },
+    "billing": {
+      "title": "⟦Ɓīŀŀīƞɠ⟧",
+      "credits": {
+        "title": "⟦Ƈřḗḓīŧş⟧"
+      }
+    },
+    "chat": {
+      "title": "⟦Ƈħȧŧ⟧"
+    },
+    "clients": {
+      "detail": {
+        "fallbackTitle": "⟦Ƈŀīḗƞŧ Ḓḗŧȧīŀş⟧"
+      },
+      "title": "⟦Ƈŀīḗƞŧş⟧"
+    },
+    "contacts": {
+      "title": "⟦Ƈȯƞŧȧƈŧş⟧",
+      "detail": {
+        "fallbackTitle": "⟦Ƈȯƞŧȧƈŧ Ḓḗŧȧīŀş⟧",
+        "activity": {
+          "title": "⟦{{contactName}} - Ȧƈŧīṽīŧẏ⟧",
+          "fallbackTitle": "⟦Ƈȯƞŧȧƈŧ Ȧƈŧīṽīŧẏ⟧"
+        }
+      }
+    },
+    "createAsset": {
+      "title": "⟦Ƈřḗȧŧḗ Ȧşşḗŧ⟧"
+    },
+    "createClient": {
+      "title": "⟦Ƈřḗȧŧḗ Ƈŀīḗƞŧ⟧"
+    },
+    "createContact": {
+      "title": "⟦Ƈřḗȧŧḗ Ƈȯƞŧȧƈŧ⟧"
+    },
+    "createOpportunity": {
+      "title": "⟦Ƈřḗȧŧḗ Ȯƥƥȯřŧŭƞīŧẏ⟧"
+    },
+    "createProduct": {
+      "title": "⟦Ƈřḗȧŧḗ Ƥřȯḓŭƈŧ⟧"
+    },
+    "createProject": {
+      "title": "⟦Ƈřḗȧŧḗ Ƥřȯĵḗƈŧ⟧"
+    },
+    "createService": {
+      "title": "⟦Ƈřḗȧŧḗ Şḗřṽīƈḗ⟧"
+    },
+    "createTicket": {
+      "title": "⟦Ƈřḗȧŧḗ Ŧīƈķḗŧ⟧"
+    },
+    "dashboard": {
+      "title": "⟦Ḓȧşħƀȯȧřḓ⟧"
+    },
+    "documentTemplates": {
+      "detail": {
+        "fallbackTitle": "⟦Ḓȯƈŭḿḗƞŧ Ŀȧẏȯŭŧş⟧",
+        "title": "⟦{{documentType}} Ŀȧẏȯŭŧş⟧"
+      }
+    },
+    "documents": {
+      "title": "⟦Ḓȯƈŭḿḗƞŧş⟧"
+    },
+    "emailLogs": {
+      "title": "⟦Ḗḿȧīŀ Ŀȯɠş⟧"
+    },
+    "extensions": {
+      "detail": {
+        "debug": {
+          "layout": {
+            "title": "⟦Ḗẋŧḗƞşīȯƞ Ḓḗƀŭɠ⟧"
+          }
+        }
+      },
+      "layout": {
+        "title": "⟦Ḗẋŧḗƞşīȯƞş⟧"
+      }
+    },
+    "inventory": {
+      "counts": {
+        "title": "⟦Ƈẏƈŀḗ Ƈȯŭƞŧş⟧"
+      },
+      "ghostUsage": {
+        "title": "⟦Ɠħȯşŧ Ŭşȧɠḗ⟧"
+      },
+      "kits": {
+        "title": "⟦Ķīŧş⟧"
+      },
+      "loaners": {
+        "title": "⟦Ŀȯȧƞḗřş⟧"
+      },
+      "locations": {
+        "title": "⟦Şŧȯƈķ Ŀȯƈȧŧīȯƞş⟧"
+      },
+      "margin": {
+        "title": "⟦Ḿȧřɠīƞ Řḗƥȯřŧ⟧"
+      },
+      "purchaseOrders": {
+        "title": "⟦Ƥŭřƈħȧşḗ Ȯřḓḗřş⟧"
+      },
+      "rma": {
+        "title": "⟦ŘḾȦ⟧"
+      },
+      "salesOrders": {
+        "title": "⟦Şȧŀḗş Ȯřḓḗřş⟧"
+      },
+      "stock": {
+        "title": "⟦Şŧȯƈķ⟧"
+      },
+      "title": "⟦Īƞṽḗƞŧȯřẏ⟧",
+      "transfers": {
+        "title": "⟦Ŧřȧƞşƒḗřş⟧"
+      },
+      "units": {
+        "title": "⟦Şŧȯƈķ Ŭƞīŧş⟧"
+      },
+      "vendorBills": {
+        "title": "⟦Ṽḗƞḓȯř Ɓīŀŀş⟧"
+      },
+      "vendors": {
+        "title": "⟦Ṽḗƞḓȯřş⟧"
+      },
+      "writeOffs": {
+        "title": "⟦Ẇřīŧḗ-ȯƒƒş⟧"
+      }
+    },
+    "invoices": {
+      "detail": {
+        "title": "⟦Īƞṽȯīƈḗ⟧"
+      }
+    },
+    "jobs": {
+      "title": "⟦Ĵȯƀş⟧"
+    },
+    "knowledgeBase": {
+      "review": {
+        "title": "⟦Ķƞȯẇŀḗḓɠḗ Ɓȧşḗ Řḗṽīḗẇ⟧"
+      },
+      "title": "⟦Ķƞȯẇŀḗḓɠḗ Ɓȧşḗ⟧"
+    },
+    "marketing": {
+      "calendar": {
+        "title": "⟦Ḿȧřķḗŧīƞɠ Ƈȧŀḗƞḓȧř⟧"
+      },
+      "campaigns": {
+        "title": "⟦Ḿȧřķḗŧīƞɠ Ƈȧḿƥȧīɠƞş⟧"
+      },
+      "channels": {
+        "title": "⟦Ḿȧřķḗŧīƞɠ Ƈħȧƞƞḗŀş⟧"
+      },
+      "content": {
+        "title": "⟦Ḿȧřķḗŧīƞɠ Ƈȯƞŧḗƞŧ⟧"
+      },
+      "forms": {
+        "title": "⟦Ḿȧřķḗŧīƞɠ Ƒȯřḿş⟧"
+      },
+      "posts": {
+        "title": "⟦Ḿȧřķḗŧīƞɠ Ƥȯşŧş⟧"
+      },
+      "sequences": {
+        "title": "⟦Ḿȧřķḗŧīƞɠ Şḗʠŭḗƞƈḗş⟧"
+      },
+      "title": "⟦Ḿȧřķḗŧīƞɠ⟧"
+    },
+    "onboarding": {
+      "layout": {
+        "title": "⟦Ȯƞƀȯȧřḓīƞɠ⟧"
+      }
+    },
+    "platformUpdates": {
+      "detail": {
+        "title": "⟦Ƥŀȧŧƒȯřḿ Ŭƥḓȧŧḗ⟧"
+      }
+    },
+    "profile": {
+      "layout": {
+        "title": "⟦Ƥřȯƒīŀḗ⟧"
+      }
+    },
+    "projects": {
+      "detail": {
+        "fallbackTitle": "⟦Ƥřȯĵḗƈŧ Ḓḗŧȧīŀş⟧",
+        "tasks": {
+          "detail": {
+            "title": "⟦Ƥřȯĵḗƈŧ Ŧȧşķ⟧"
+          }
+        }
+      },
+      "templates": {
+        "detail": {
+          "layout": {
+            "title": "⟦Ŧḗḿƥŀȧŧḗ Ḓḗŧȧīŀş⟧"
+          }
+        },
+        "layout": {
+          "title": "⟦Ƥřȯĵḗƈŧ Ŧḗḿƥŀȧŧḗş⟧"
+        }
+      },
+      "title": "⟦Ƥřȯĵḗƈŧş⟧"
+    },
+    "quoteApprovals": {
+      "title": "⟦Ɋŭȯŧḗ Ȧƥƥřȯṽȧŀş⟧"
+    },
+    "quoteDocumentTemplates": {
+      "title": "⟦Ɋŭȯŧḗ Ŀȧẏȯŭŧş⟧"
+    },
+    "reports": {
+      "title": "⟦Řḗƥȯřŧş⟧",
+      "deferredRevenue": {
+        "title": "⟦Ḓḗƒḗřřḗḓ Řḗṽḗƞŭḗ⟧"
+      }
+    },
+    "schedule": {
+      "title": "⟦Şƈħḗḓŭŀḗ⟧"
+    },
+    "search": {
+      "title": "⟦Şḗȧřƈħ⟧"
+    },
+    "securitySettings": {
+      "title": "⟦Şḗƈŭřīŧẏ Şḗŧŧīƞɠş⟧"
+    },
+    "serviceRequests": {
+      "detail": {
+        "fallbackTitle": "⟦Şḗřṽīƈḗ Řḗʠŭḗşŧ⟧"
+      },
+      "title": "⟦Şḗřṽīƈḗ Řḗʠŭḗşŧş⟧"
+    },
+    "settings": {
+      "extensions": {
+        "description": "⟦Ḿȧƞȧɠḗ ḗẋŧḗƞşīȯƞş⟧",
+        "detail": {
+          "description": "⟦Ṽīḗẇ ḗẋŧḗƞşīȯƞ ḓḗŧȧīŀş⟧",
+          "layout": {
+            "title": "⟦Ḗẋŧḗƞşīȯƞ Şḗŧŧīƞɠş⟧"
+          },
+          "settings": {
+            "description": "⟦Ƈȯƞƒīɠŭřḗ ḗẋŧḗƞşīȯƞ şḗŧŧīƞɠş⟧",
+            "layout": {
+              "title": "⟦Ḗẋŧḗƞşīȯƞ Ƈȯƞƒīɠŭřȧŧīȯƞ⟧"
+            },
+            "title": "⟦Ḗẋŧḗƞşīȯƞ Şḗŧŧīƞɠş⟧"
+          },
+          "title": "⟦Ḗẋŧḗƞşīȯƞ Ḓḗŧȧīŀş⟧"
+        },
+        "layout": {
+          "title": "⟦Ḗẋŧḗƞşīȯƞ Şḗŧŧīƞɠş⟧"
+        },
+        "title": "⟦Ḗẋŧḗƞşīȯƞş⟧"
+      },
+      "notifications": {
+        "layout": {
+          "title": "⟦Ƞȯŧīƒīƈȧŧīȯƞ Şḗŧŧīƞɠş⟧"
+        }
+      },
+      "sla": {
+        "layout": {
+          "title": "⟦ŞĿȦ Şḗŧŧīƞɠş⟧"
+        }
+      },
+      "title": "⟦Şḗŧŧīƞɠş⟧"
+    },
+    "shareDocument": {
+      "title": "⟦Şħȧřḗ Ḓȯƈŭḿḗƞŧ⟧"
+    },
+    "surveys": {
+      "analytics": {
+        "title": "⟦Şŭřṽḗẏ Ȧƞȧŀẏŧīƈş⟧"
+      },
+      "dashboard": {
+        "title": "⟦Şŭřṽḗẏ Ḓȧşħƀȯȧřḓ⟧"
+      },
+      "responses": {
+        "detail": {
+          "title": "⟦Řḗşƥȯƞşḗ Ḓḗŧȧīŀş⟧"
+        },
+        "title": "⟦Şŭřṽḗẏ Řḗşƥȯƞşḗş⟧"
+      },
+      "settings": {
+        "title": "⟦Şŭřṽḗẏ Şḗŧŧīƞɠş⟧"
+      },
+      "title": "⟦Şŭřṽḗẏş⟧"
+    },
+    "technicianDispatch": {
+      "title": "⟦Ŧḗƈħƞīƈīȧƞ Ḓīşƥȧŧƈħ⟧"
+    },
+    "test": {
+      "collab": {
+        "title": "⟦Ƈȯŀŀȧƀȯřȧŧīȯƞ Ŧḗşŧ⟧"
+      },
+      "layout": {
+        "title": "⟦Ŧḗşŧ⟧"
+      },
+      "onboarding": {
+        "layout": {
+          "title": "⟦Ȯƞƀȯȧřḓīƞɠ Ŧḗşŧ⟧"
+        }
+      },
+      "uiKit": {
+        "layout": {
+          "title": "⟦ŬĪ Ķīŧ⟧"
+        }
+      }
+    },
+    "tickets": {
+      "bulkAssign": {
+        "title": "⟦Ȧşşīɠƞ Ŧīƈķḗŧş⟧"
+      },
+      "bulkDueDate": {
+        "title": "⟦Şḗŧ Ḓŭḗ Ḓȧŧḗ⟧"
+      },
+      "bulkPriority": {
+        "title": "⟦Şḗŧ Ƥřīȯřīŧẏ⟧"
+      },
+      "bulkStatus": {
+        "title": "⟦Şḗŧ Şŧȧŧŭş⟧"
+      },
+      "bulkTags": {
+        "title": "⟦Şḗŧ Ŧȧɠş⟧"
+      },
+      "export": {
+        "title": "⟦Ḗẋƥȯřŧ Ŧīƈķḗŧş⟧"
+      },
+      "import": {
+        "title": "⟦Īḿƥȯřŧ Ŧīƈķḗŧş⟧"
+      },
+      "title": "⟦Ŧīƈķḗŧş⟧",
+      "detail": {
+        "title": "⟦Ŧīƈķḗŧ #{{ticketNumber}} - {{ticketTitle}}⟧",
+        "fallbackTitle": "⟦Ŧīƈķḗŧ Ḓḗŧȧīŀş⟧"
+      }
+    },
+    "timeEntry": {
+      "timesheet": {
+        "detail": {
+          "title": "⟦Ŧīḿḗşħḗḗŧ⟧"
+        }
+      },
+      "title": "⟦Ŧīḿḗ Ḗƞŧřẏ⟧"
+    },
+    "timeSheetApprovals": {
+      "title": "⟦Ŧīḿḗşħḗḗŧ Ȧƥƥřȯṽȧŀş⟧"
+    },
+    "userActivities": {
+      "title": "⟦Ŭşḗř Ȧƈŧīṽīŧīḗş⟧"
+    },
+    "workflowControl": {
+      "title": "⟦Ẇȯřķƒŀȯẇ Ƈȯƞŧřȯŀ⟧"
+    },
+    "workflowEditor": {
+      "detail": {
+        "title": "⟦Ḗḓīŧ Ẇȯřķƒŀȯẇ⟧"
+      },
+      "new": {
+        "title": "⟦Ƞḗẇ Ẇȯřķƒŀȯẇ⟧"
+      },
+      "title": "⟦Ẇȯřķƒŀȯẇ Ḗḓīŧȯř⟧"
+    },
+    "workflows": {
+      "runs": {
+        "detail": {
+          "layout": {
+            "title": "⟦Ẇȯřķƒŀȯẇ Řŭƞ⟧"
+          }
+        }
+      },
+      "title": "⟦Ẇȯřķƒŀȯẇş⟧"
+    },
+    "layout": {
+      "defaultTitle": "⟦Ḓȧşħƀȯȧřḓ | ȦŀɠȧƤŞȦ⟧"
+    }
+  },
+  "share": {
+    "detail": {
+      "layout": {
+        "title": "⟦Şħȧřḗḓ Ḓȯƈŭḿḗƞŧ⟧"
+      }
+    }
+  },
+  "static": {
+    "layout": {
+      "title": "⟦ȦŀɠȧƤŞȦ⟧"
+    },
+    "masterTerms": {
+      "layout": {
+        "title": "⟦Ḿȧşŧḗř Ŧḗřḿş⟧"
+      }
+    },
+    "privacyPolicy": {
+      "layout": {
+        "title": "⟦Ƥřīṽȧƈẏ Ƥȯŀīƈẏ⟧"
+      }
+    }
+  },
+  "teams": {
+    "auth": {
+      "popupComplete": {
+        "title": "⟦Ŧḗȧḿş Ȧŭŧħḗƞŧīƈȧŧīȯƞ⟧"
+      }
+    },
+    "tab": {
+      "title": "⟦Ŧḗȧḿş⟧"
+    }
+  }
+}

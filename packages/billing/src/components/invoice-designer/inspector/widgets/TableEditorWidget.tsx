@@ -1,7 +1,9 @@
 import React, { useCallback, useMemo } from 'react';
+import type { TFunction } from 'i18next';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { exportWorkspaceToTemplateAst } from '../../ast/workspaceAst';
 import type { DesignerNode } from '../../state/designerStore';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../../state/designerStore';
@@ -23,18 +25,19 @@ type ColumnModel = {
   width?: number;
 } & Record<string, unknown>;
 
-const COLLECTION_BINDING_LABELS: Record<string, string> = {
-  lineItems: 'All Line Items',
-  phases: 'Phases',
-  recurringItems: 'Recurring Items',
-  onetimeItems: 'One-time Items',
-  serviceItems: 'Service Items',
-  productItems: 'Product Items',
-  items: 'Items',
-};
+// Binding ids are the data contract; only their display labels are translated.
+const buildCollectionBindingLabels = (t: TFunction): Record<string, string> => ({
+  lineItems: t('invoiceDesigner.tableEditor.bindings.lineItems', { defaultValue: 'All Line Items' }),
+  phases: t('invoiceDesigner.tableEditor.bindings.phases', { defaultValue: 'Phases' }),
+  recurringItems: t('invoiceDesigner.tableEditor.bindings.recurringItems', { defaultValue: 'Recurring Items' }),
+  onetimeItems: t('invoiceDesigner.tableEditor.bindings.onetimeItems', { defaultValue: 'One-time Items' }),
+  serviceItems: t('invoiceDesigner.tableEditor.bindings.serviceItems', { defaultValue: 'Service Items' }),
+  productItems: t('invoiceDesigner.tableEditor.bindings.productItems', { defaultValue: 'Product Items' }),
+  items: t('invoiceDesigner.tableEditor.bindings.items', { defaultValue: 'Items' }),
+});
 
-const humanizeCollectionBindingLabel = (bindingId: string, _path: string): string => {
-  return COLLECTION_BINDING_LABELS[bindingId] ?? bindingId;
+const humanizeCollectionBindingLabel = (bindingId: string, _path: string, t: TFunction): string => {
+  return buildCollectionBindingLabels(t)[bindingId] ?? bindingId;
 };
 
 type BorderPreset = 'list' | 'boxed' | 'grid' | 'none' | 'custom';
@@ -49,42 +52,43 @@ type ColumnPreset = {
   description: string;
 };
 
-const COLUMN_PRESETS: ColumnPreset[] = [
+// Preset ids, binding keys, types and widths are the data contract; only labels are translated.
+const buildColumnPresets = (t: TFunction): ColumnPreset[] => [
   {
     id: 'description',
-    label: 'Description',
-    header: 'Description',
+    label: t('invoiceDesigner.tableEditor.presets.description.label', { defaultValue: 'Description' }),
+    header: t('invoiceDesigner.tableEditor.presets.description.label', { defaultValue: 'Description' }),
     key: 'item.description',
     type: 'text',
     width: 280,
-    description: 'Line item description',
+    description: t('invoiceDesigner.tableEditor.presets.description.hint', { defaultValue: 'Line item description' }),
   },
   {
     id: 'quantity',
-    label: 'Qty',
-    header: 'Qty',
+    label: t('invoiceDesigner.tableEditor.presets.quantity.label', { defaultValue: 'Qty' }),
+    header: t('invoiceDesigner.tableEditor.presets.quantity.label', { defaultValue: 'Qty' }),
     key: 'item.quantity',
     type: 'number',
     width: 90,
-    description: 'Quantity',
+    description: t('invoiceDesigner.tableEditor.presets.quantity.hint', { defaultValue: 'Quantity' }),
   },
   {
     id: 'unit-price',
-    label: 'Rate',
-    header: 'Rate',
+    label: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
+    header: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
     key: 'item.unitPrice',
     type: 'currency',
     width: 120,
-    description: 'Unit price',
+    description: t('invoiceDesigner.tableEditor.presets.unitPrice.hint', { defaultValue: 'Unit price' }),
   },
   {
     id: 'amount',
-    label: 'Amount',
-    header: 'Amount',
+    label: t('invoiceDesigner.tableEditor.presets.amount.label', { defaultValue: 'Amount' }),
+    header: t('invoiceDesigner.tableEditor.presets.amount.label', { defaultValue: 'Amount' }),
     key: 'item.total',
     type: 'currency',
     width: 140,
-    description: 'Line total',
+    description: t('invoiceDesigner.tableEditor.presets.amount.hint', { defaultValue: 'Line total' }),
   },
 ];
 
@@ -135,6 +139,8 @@ const getUniqueStrings = (values: Array<string | undefined | null>): string[] =>
   Array.from(new Set(values.map((value) => asTrimmedString(value)).filter(Boolean)));
 
 export const TableEditorWidget: React.FC<Props> = ({ node }) => {
+  const { t } = useTranslation('msp/invoicing');
+  const columnPresets = useMemo(() => buildColumnPresets(t), [t]);
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
@@ -188,25 +194,31 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     if (hasDesignerTransforms(transforms)) {
       options.push({
         value: transforms.sourceBindingId,
-        label: `${transforms.sourceBindingId} (Transforms source)`,
+        label: t('invoiceDesigner.tableEditor.bindings.transformsSource', {
+          defaultValue: '{{binding}} (Transforms source)',
+          binding: transforms.sourceBindingId,
+        }),
       });
       options.push({
         value: transforms.outputBindingId,
-        label: `${transforms.outputBindingId} (Transforms output)`,
+        label: t('invoiceDesigner.tableEditor.bindings.transformsOutput', {
+          defaultValue: '{{binding}} (Transforms output)',
+          binding: transforms.outputBindingId,
+        }),
       });
     }
 
     options.push(
       ...Object.entries(baseAst.bindings?.collections ?? {}).map(([bindingId, binding]) => ({
         value: bindingId,
-        label: humanizeCollectionBindingLabel(bindingId, binding.path),
+        label: humanizeCollectionBindingLabel(bindingId, binding.path, t),
       }))
     );
 
     if (!options.some((option) => option.value === sourceBindingId)) {
       options.unshift({
         value: sourceBindingId,
-        label: humanizeCollectionBindingLabel(sourceBindingId, sourceBindingId),
+        label: humanizeCollectionBindingLabel(sourceBindingId, sourceBindingId, t),
       });
     }
 
@@ -222,12 +234,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     showRulers,
     snapToGrid,
     sourceBindingId,
+    t,
     transforms,
   ]);
 
   const bindingKeySuggestions = useMemo(() => {
     const rawSuggestions = getUniqueStrings([
-      ...COLUMN_PRESETS.map((preset) => preset.key),
+      ...columnPresets.map((preset) => preset.key),
       'item.servicePeriodStart',
       'item.servicePeriodEnd',
       'item.billingTiming',
@@ -247,7 +260,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       'item.items',
       ...aggregateSuggestions,
     ]);
-  }, [columns, isGroupedTransformsOutput, transforms]);
+  }, [columnPresets, columns, isGroupedTransformsOutput, transforms]);
 
   const resolvedBorderPreset: BorderPreset = useMemo(() => {
     const preset = (metadata as { tableBorderPreset?: unknown }).tableBorderPreset;
@@ -302,16 +315,16 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
 
   const handleAddColumn = useCallback(() => {
     appendColumn({
-      header: 'New Column',
+      header: t('invoiceDesigner.tableEditor.columns.newColumnHeader', { defaultValue: 'New Column' }),
       key: 'item.field',
       type: 'text',
       width: 120,
     });
-  }, [appendColumn]);
+  }, [appendColumn, t]);
 
   const handleAddPresetColumn = useCallback(
     (presetId: string) => {
-      const preset = COLUMN_PRESETS.find((candidate) => candidate.id === presetId);
+      const preset = columnPresets.find((candidate) => candidate.id === presetId);
       if (!preset) {
         return;
       }
@@ -322,7 +335,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
         width: preset.width,
       });
     },
-    [appendColumn]
+    [appendColumn, columnPresets]
   );
 
   const handleRemoveColumn = useCallback(
@@ -408,8 +421,14 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       <div className="space-y-2">
         <div className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2.5 shadow-sm space-y-2">
           <div>
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Source Binding</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Bind this table to a raw collection or the authored transforms output.</p>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {t('invoiceDesigner.tableEditor.sourceBinding.title', { defaultValue: 'Source Binding' })}
+            </p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              {t('invoiceDesigner.tableEditor.sourceBinding.description', {
+                defaultValue: 'Bind this table to a raw collection or the authored transforms output.',
+              })}
+            </p>
           </div>
           <CustomSelect
             id="designer-table-source-binding"
@@ -421,15 +440,19 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Table Columns</p>
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+            {t('invoiceDesigner.tableEditor.columns.title', { defaultValue: 'Table Columns' })}
+          </p>
           <Button id="designer-add-column" variant="outline" size="xs" onClick={handleAddColumn}>
-            + Column
+            {t('invoiceDesigner.tableEditor.columns.add', { defaultValue: '+ Column' })}
           </Button>
         </div>
         {!isGroupedTransformsOutput && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">Quick add:</span>
-            {COLUMN_PRESETS.map((preset) => (
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
+              {t('invoiceDesigner.tableEditor.columns.quickAdd', { defaultValue: 'Quick add:' })}
+            </span>
+            {columnPresets.map((preset) => (
               <button
                 key={preset.id}
                 id={`designer-add-column-preset-${preset.id}`}
@@ -446,18 +469,22 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
 
       {/* Table style */}
       <div className={panelClass}>
-        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Table Style</p>
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+          {t('invoiceDesigner.tableEditor.style.title', { defaultValue: 'Table Style' })}
+        </p>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Border preset</label>
+            <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
+              {t('invoiceDesigner.tableEditor.style.borderPreset', { defaultValue: 'Border preset' })}
+            </label>
             <CustomSelect
               id="designer-table-border-preset"
               options={[
-                { value: 'list', label: 'List' },
-                { value: 'boxed', label: 'Boxed' },
-                { value: 'grid', label: 'Grid' },
-                { value: 'none', label: 'None' },
-                { value: 'custom', label: 'Custom' },
+                { value: 'list', label: t('invoiceDesigner.tableEditor.borderPresets.list', { defaultValue: 'List' }) },
+                { value: 'boxed', label: t('invoiceDesigner.tableEditor.borderPresets.boxed', { defaultValue: 'Boxed' }) },
+                { value: 'grid', label: t('invoiceDesigner.tableEditor.borderPresets.grid', { defaultValue: 'Grid' }) },
+                { value: 'none', label: t('invoiceDesigner.tableEditor.borderPresets.none', { defaultValue: 'None' }) },
+                { value: 'custom', label: t('invoiceDesigner.tableEditor.borderPresets.custom', { defaultValue: 'Custom' }) },
               ]}
               value={resolvedBorderPreset}
               onValueChange={(value: string) => applyTableBorderPreset(value as BorderPreset)}
@@ -465,14 +492,16 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             />
           </div>
           <div>
-            <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Header weight</label>
+            <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
+              {t('invoiceDesigner.tableEditor.style.headerWeight', { defaultValue: 'Header weight' })}
+            </label>
             <CustomSelect
               id="designer-table-header-weight"
               options={[
-                { value: 'normal', label: 'Normal' },
-                { value: 'medium', label: 'Medium' },
-                { value: 'semibold', label: 'Semibold' },
-                { value: 'bold', label: 'Bold' },
+                { value: 'normal', label: t('invoiceDesigner.tableEditor.headerWeights.normal', { defaultValue: 'Normal' }) },
+                { value: 'medium', label: t('invoiceDesigner.tableEditor.headerWeights.medium', { defaultValue: 'Medium' }) },
+                { value: 'semibold', label: t('invoiceDesigner.tableEditor.headerWeights.semibold', { defaultValue: 'Semibold' }) },
+                { value: 'bold', label: t('invoiceDesigner.tableEditor.headerWeights.bold', { defaultValue: 'Bold' }) },
               ]}
               value={resolvedHeaderWeight}
               onValueChange={(value: string) => setNodeProp(node.id, 'metadata.tableHeaderFontWeight', value, true)}
@@ -492,7 +521,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 setNodeProp(node.id, 'metadata.tableOuterBorder', event.target.checked, true);
               }}
             />
-            Outer
+            {t('invoiceDesigner.tableEditor.style.borderOuter', { defaultValue: 'Outer' })}
           </label>
           <label className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer">
             <input
@@ -505,7 +534,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 setNodeProp(node.id, 'metadata.tableRowDividers', event.target.checked, true);
               }}
             />
-            Rows
+            {t('invoiceDesigner.tableEditor.style.borderRows', { defaultValue: 'Rows' })}
           </label>
           <label className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer">
             <input
@@ -518,7 +547,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 setNodeProp(node.id, 'metadata.tableColumnDividers', event.target.checked, true);
               }}
             />
-            Columns
+            {t('invoiceDesigner.tableEditor.style.borderColumns', { defaultValue: 'Columns' })}
           </label>
         </div>
       </div>
@@ -526,7 +555,9 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       {/* Column list */}
       {columns.length === 0 && (
         <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
-          No columns defined. Add at least one column.
+          {t('invoiceDesigner.tableEditor.columns.empty', {
+            defaultValue: 'No columns defined. Add at least one column.',
+          })}
         </div>
       )}
 
@@ -538,14 +569,19 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-medium text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
                   {index + 1}
                 </span>
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Column</span>
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  {t('invoiceDesigner.tableEditor.columns.itemLabel', { defaultValue: 'Column' })}
+                </span>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <Button
                   id={`designer-move-column-up-${column.id}`}
                   variant="outline"
                   size="icon"
-                  aria-label={`Move ${column.id} up`}
+                  aria-label={t('invoiceDesigner.tableEditor.columns.moveUp', {
+                    defaultValue: 'Move {{column}} up',
+                    column: column.id,
+                  })}
                   disabled={index === 0}
                   className="h-6 w-6 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                   onClick={() => handleMoveColumn(column.id, -1)}
@@ -556,7 +592,10 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                   id={`designer-move-column-down-${column.id}`}
                   variant="outline"
                   size="icon"
-                  aria-label={`Move ${column.id} down`}
+                  aria-label={t('invoiceDesigner.tableEditor.columns.moveDown', {
+                    defaultValue: 'Move {{column}} down',
+                    column: column.id,
+                  })}
                   disabled={index === columns.length - 1}
                   className="h-6 w-6 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                   onClick={() => handleMoveColumn(column.id, 1)}
@@ -567,7 +606,10 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                   id={`designer-remove-column-${column.id}`}
                   variant="outline"
                   size="icon"
-                  aria-label={`Remove ${column.id}`}
+                  aria-label={t('invoiceDesigner.tableEditor.columns.remove', {
+                    defaultValue: 'Remove {{column}}',
+                    column: column.id,
+                  })}
                   className="h-6 w-6 text-slate-400 hover:text-destructive hover:bg-destructive/10"
                   onClick={() => handleRemoveColumn(column.id)}
                 >
@@ -576,7 +618,9 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
               </div>
             </div>
             <div>
-              <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Header</label>
+              <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
+                {t('invoiceDesigner.tableEditor.columns.header', { defaultValue: 'Header' })}
+              </label>
               <Input
                 id={`column-header-${column.id}`}
                 size="sm"
@@ -584,12 +628,14 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 value={column.header ?? ''}
                 onChange={(event) => updateColumn(column.id, { header: event.target.value }, false)}
                 onBlur={(event) => updateColumn(column.id, { header: event.target.value }, true)}
-                placeholder="Header label"
+                placeholder={t('invoiceDesigner.tableEditor.columns.headerPlaceholder', { defaultValue: 'Header label' })}
                 className="text-xs"
               />
             </div>
             <div>
-              <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Binding key</label>
+              <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
+                {t('invoiceDesigner.tableEditor.columns.bindingKey', { defaultValue: 'Binding key' })}
+              </label>
               <Input
                 id={`column-key-${column.id}`}
                 size="sm"
@@ -617,14 +663,16 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-1.5">
               <div>
-                <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Type</label>
+                <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
+                  {t('invoiceDesigner.tableEditor.columns.type', { defaultValue: 'Type' })}
+                </label>
                 <CustomSelect
                   id={`column-type-${column.id}`}
                   options={[
-                    { value: 'text', label: 'Text' },
-                    { value: 'number', label: 'Number' },
-                    { value: 'currency', label: 'Currency' },
-                    { value: 'date', label: 'Date' },
+                    { value: 'text', label: t('invoiceDesigner.tableEditor.columnTypes.text', { defaultValue: 'Text' }) },
+                    { value: 'number', label: t('invoiceDesigner.tableEditor.columnTypes.number', { defaultValue: 'Number' }) },
+                    { value: 'currency', label: t('invoiceDesigner.tableEditor.columnTypes.currency', { defaultValue: 'Currency' }) },
+                    { value: 'date', label: t('invoiceDesigner.tableEditor.columnTypes.date', { defaultValue: 'Date' }) },
                   ]}
                   value={column.type ?? 'text'}
                   onValueChange={(value: string) => updateColumn(column.id, { type: value }, true)}
@@ -632,7 +680,9 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">Width</label>
+                <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
+                  {t('invoiceDesigner.tableEditor.columns.width', { defaultValue: 'Width' })}
+                </label>
                 <Input
                   id={`column-width-${column.id}`}
                   size="sm"
@@ -652,7 +702,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       {/* Collapsible key reference */}
       <details className="text-[11px]">
         <summary className="text-slate-500 dark:text-slate-400 cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-300 py-1">
-          Field key reference
+          {t('invoiceDesigner.tableEditor.reference.title', { defaultValue: 'Field key reference' })}
         </summary>
         <div className="mt-1 space-y-0.5">
           {bindingKeySuggestions.map((suggestion) => (
@@ -663,17 +713,17 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
               <code className="text-[11px] text-slate-600 dark:text-slate-400">{suggestion}</code>
               <span className="text-[10px] text-slate-400 dark:text-slate-500">
                 {suggestion.startsWith('item.aggregates.')
-                  ? 'Transform aggregate'
+                  ? t('invoiceDesigner.tableEditor.reference.transformAggregate', { defaultValue: 'Transform aggregate' })
                   : suggestion === 'item.key'
-                    ? 'Grouped row key'
+                    ? t('invoiceDesigner.tableEditor.reference.groupedRowKey', { defaultValue: 'Grouped row key' })
                     : suggestion === 'item.items'
-                      ? 'Grouped row items'
-                      : 'Available binding'}
+                      ? t('invoiceDesigner.tableEditor.reference.groupedRowItems', { defaultValue: 'Grouped row items' })
+                      : t('invoiceDesigner.tableEditor.reference.availableBinding', { defaultValue: 'Available binding' })}
               </span>
             </div>
           ))}
           {!isGroupedTransformsOutput &&
-            COLUMN_PRESETS.map((preset) => (
+            columnPresets.map((preset) => (
               <div key={`legend-${preset.id}`} className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50 dark:bg-[rgb(var(--color-background))]">
                 <code className="text-[11px] text-slate-600 dark:text-slate-400">{preset.key}</code>
                 <span className="text-[10px] text-slate-400 dark:text-slate-500">{preset.description}</span>

@@ -10,6 +10,7 @@ import { BarChart, Clock } from 'lucide-react';
 import { ColumnDefinition } from '@alga-psa/types';
 import type { ClientUsageMetricResult } from '@alga-psa/client-portal/actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import BucketUsageHistoryChart from './BucketUsageHistoryChart';
 
 interface UsageMetricsTabProps {
@@ -42,6 +43,7 @@ const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
   dateRange,
   handleDateRangeChange
 }) => {
+  const { t } = useTranslation('client-portal');
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -49,37 +51,37 @@ const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
   // Memoize columns to prevent unnecessary re-creation
   const usageMetricsColumns: ColumnDefinition<ClientUsageMetricResult>[] = useMemo(() => [
     {
-      title: 'Service',
+      title: t('billing.columns.service', { defaultValue: 'Service' }),
       dataIndex: 'service_name'
     },
     {
-      title: 'Unit of Measure',
+      title: t('billing.usageMetrics.columns.unitOfMeasure', { defaultValue: 'Unit of Measure' }),
       dataIndex: 'unit_of_measure',
-      render: (value: string | null) => value || 'N/A'
+      render: (value: string | null) => value || t('billing.columns.notAvailable', { defaultValue: 'N/A' })
     },
     {
-      title: 'Quantity',
+      title: t('billing.usageMetrics.columns.quantity', { defaultValue: 'Quantity' }),
       dataIndex: 'total_quantity',
       render: (value: number) => value.toFixed(2)
     }
-  ], []);
+  ], [t]);
 
   // Memoize the date filter card to prevent unnecessary re-renders
   const dateFilterCard = useMemo(() => (
     <Card id="usage-date-filter-card" className="mb-6">
       <CardHeader>
-        <CardTitle className="text-lg font-medium">Date Range</CardTitle>
+        <CardTitle className="text-lg font-medium">{t('billing.filters.dateRange', { defaultValue: 'Date Range' })}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-4">
           <div className="flex flex-col">
             <label htmlFor="usage-start-date" className="text-sm font-medium text-gray-500 mb-1">
-              Start Date
+              {t('billing.filters.startDate', { defaultValue: 'Start Date' })}
             </label>
             <DatePicker
               id="usage-start-date"
-              label="Start Date"
-              placeholder="Start Date"
+              label={t('billing.filters.startDate', { defaultValue: 'Start Date' })}
+              placeholder={t('billing.filters.startDate', { defaultValue: 'Start Date' })}
               clearable
               className="w-full"
               value={dateFromString(dateRange.startDate)}
@@ -93,12 +95,12 @@ const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
           </div>
           <div className="flex flex-col">
             <label htmlFor="usage-end-date" className="text-sm font-medium text-gray-500 mb-1">
-              End Date
+              {t('billing.filters.endDate', { defaultValue: 'End Date' })}
             </label>
             <DatePicker
               id="usage-end-date"
-              label="End Date"
-              placeholder="End Date"
+              label={t('billing.filters.endDate', { defaultValue: 'End Date' })}
+              placeholder={t('billing.filters.endDate', { defaultValue: 'End Date' })}
               clearable
               className="w-full"
               value={dateFromString(dateRange.endDate)}
@@ -116,13 +118,13 @@ const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
               variant="outline"
               className="mb-0"
             >
-              Apply Filter
+              {t('billing.filters.apply', { defaultValue: 'Apply Filter' })}
             </Button>
           </div>
         </div>
       </CardContent>
     </Card>
-  ), [dateRange, handleDateRangeChange]);
+  ), [dateRange, handleDateRangeChange, t]);
 
   return (
     <div id="usage-metrics-content" className="py-4 space-y-6">
@@ -131,7 +133,7 @@ const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
         <div>
           <div className="flex items-center mb-4">
             <Clock className="h-5 w-5 text-blue-600 mr-2" />
-            <h3 className="text-lg font-medium">Bucket Hours Usage History</h3>
+            <h3 className="text-lg font-medium">{t('billing.usageMetrics.bucketHistoryTitle', { defaultValue: 'Bucket Hours Usage History' })}</h3>
           </div>
           {isBucketHistoryLoading ? (
             <div className="grid gap-6 md:grid-cols-2">
@@ -157,7 +159,7 @@ const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
       <div>
         <div className="flex items-center mb-4">
           <BarChart className="h-5 w-5 text-blue-600 mr-2" />
-          <h3 className="text-lg font-medium">Usage Metrics</h3>
+          <h3 className="text-lg font-medium">{t('billing.usageMetrics.title', { defaultValue: 'Usage Metrics' })}</h3>
         </div>
         {dateFilterCard}
 
@@ -173,9 +175,9 @@ const UsageMetricsTab: React.FC<UsageMetricsTabProps> = React.memo(({
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
                 <BarChart className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-lg font-medium text-gray-900">No usage metrics available</h3>
+                <h3 className="mt-2 text-lg font-medium text-gray-900">{t('billing.usageMetrics.empty.title', { defaultValue: 'No usage metrics available' })}</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  There are no usage metrics recorded for the selected date range.
+                  {t('billing.usageMetrics.empty.description', { defaultValue: 'There are no usage metrics recorded for the selected date range.' })}
                 </p>
               </div>
             </div>

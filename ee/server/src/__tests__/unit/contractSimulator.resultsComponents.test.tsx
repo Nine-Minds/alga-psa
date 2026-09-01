@@ -13,6 +13,7 @@ import SimulatedInvoiceDetail from "@ee/components/billing/simulator/SimulatedIn
 import ChargeExplanationPanel from "@ee/components/billing/simulator/ChargeExplanationPanel";
 
 vi.mock("@alga-psa/ui/lib/i18n/client", () => ({
+  useOptionalI18n: () => ({ locale: "en" }),
   useTranslation: () => ({
     t: (_key: string, options?: Record<string, unknown>) => {
       let value = String(options?.defaultValue ?? _key);
@@ -293,12 +294,13 @@ describe("contract simulator result components", () => {
       }),
     );
     expect(recent).toHaveBeenCalledOnce();
-    fireEvent.change(document.getElementById("simulation-replay-start")!, {
-      target: { value: "2026-08-01" },
-    });
-    fireEvent.change(document.getElementById("simulation-replay-end")!, {
-      target: { value: "2026-08-31" },
-    });
+    // The replay bounds are date fields now: text goes in, and a blur commits.
+    const replayStart = screen.getByLabelText("From");
+    fireEvent.change(replayStart, { target: { value: "2026-08-01" } });
+    fireEvent.blur(replayStart);
+    const replayEnd = screen.getByLabelText("Through");
+    fireEvent.change(replayEnd, { target: { value: "2026-08-31" } });
+    fireEvent.blur(replayEnd);
     fireEvent.click(
       screen.getByRole("button", { name: "Load activity and invoices" }),
     );

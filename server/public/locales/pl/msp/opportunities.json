@@ -82,8 +82,8 @@
       "linkQuote": "Powiąż istniejącą ofertę",
       "loadFailed": "Nie udało się załadować możliwości",
       "loading": "Ładowanie możliwości...",
-      "markLost": "Marek przegrał",
-      "markWon": "Marek wygrał",
+      "markLost": "Oznacz jako przegraną",
+      "markWon": "Oznacz jako wygraną",
       "metadataTitle": "Okazja",
       "nextAction": "Następna akcja",
       "nextActionOverdue": "Następna akcja · spóźniona",
@@ -147,7 +147,7 @@
       "plusOneTime": "+ {{amount}} jednorazowo",
       "thisQuarter": "Ten kwartał ({{q}})",
       "weighted": "{{stage}} · ważony {{pct}}%",
-      "won": "Wygrał ten okres"
+      "won": "Wygrane w tym okresie"
     },
     "linkQuoteDialog": {
       "confirm": "Powiąż ofertę",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "Co zespół powinien wiedzieć, jeśli temat wróci?",
       "reason": "Powód",
       "reasonPlaceholder": "Dlaczego nie poszło dalej?",
-      "submit": "Marek przegrał",
-      "title": "Marek przegrał"
+      "submit": "Oznacz jako przegraną",
+      "title": "Oznacz jako przegraną"
     },
     "lossReason": {
       "chose_competitor": "Wybierz konkurenta",
@@ -185,7 +185,7 @@
     },
     "meeting": {
       "daysAgo": "{{count}} dni temu",
-      "done": "Przegląd rurociągu. Liczba zarejestrowanych transakcji: {{count}}.",
+      "done": "Przegląd lejka sprzedaży. Liczba zarejestrowanych transakcji: {{count}}.",
       "evidenceSays": "Dowody mówią",
       "gap": "Pewność wynosi {{confidence}}, ale dowody zatrzymują się na {{stage}}. Co właściwie zrobił klient?",
       "intro": "Prowadzi cotygodniowe spotkanie o lejku transakcja po transakcji, zaczynając od najcichszej, z dowodami obok oceny właściciela. Oznacz każdą transakcję jako przejrzaną, a sesja zostanie zapisana, więc możesz wykazać, że przeszliście cały lejek.",
@@ -225,10 +225,10 @@
       "doToday": "Zrób dzisiaj",
       "goingQuiet": "Idzie cicho",
       "lesson": {
-        "reviewPipeline": "Przejrzyj rurociąg",
+        "reviewPipeline": "Przejrzyj lejek sprzedaży",
         "viewAssessmentDeals": "Zobacz oferty oceny"
       },
-      "markLost": "Marek przegrał",
+      "markLost": "Oznacz jako przegraną",
       "moneyFound": "Znaleziono pieniądze",
       "moneyFoundSource": "z rachunków, umów i aktywów",
       "needsYou_few": "{{count}} rzeczy Cię dzisiaj potrzebują.",
@@ -344,24 +344,24 @@
       "opportunityCount_many": "Możliwości: {{count}}",
       "opportunityCount_one": "{{count}} możliwość",
       "opportunityCount_other": "Możliwości: {{count}}",
-      "pipelineByStage": "Rurociąg według etapów",
+      "pipelineByStage": "Lejek sprzedaży według etapów",
       "stalled": "Zatrzymane",
-      "subtitle": "Otwarty rurociąg i dalsze prace wymagające uwagi.",
+      "subtitle": "Otwarty lejek sprzedaży i dalsze prace wymagające uwagi.",
       "title": "Migawka możliwości",
       "unavailable": "Sumy możliwości są tymczasowo niedostępne. Otwarte możliwości dalszej pracy."
     },
     "stage": {
       "assessment": "Ocena",
-      "identified": "Zidentyfikowany",
-      "lost": "Zagubiony",
-      "proposed": "Zaproponowano",
-      "qualified": "Wykwalifikowany",
-      "verbal": "Werbalne",
-      "won": "Wygrane"
+      "identified": "Zidentyfikowana",
+      "lost": "Przegrana",
+      "proposed": "Zaproponowana",
+      "qualified": "Zakwalifikowana",
+      "verbal": "Ustna zgoda",
+      "won": "Wygrana"
     },
     "status": {
-      "lost": "Zagubiony",
-      "won": "Wygrane"
+      "lost": "Przegrana",
+      "won": "Wygrana"
     },
     "steps": {
       "add": "Dodaj krok",
@@ -437,10 +437,10 @@
       "snooze": "Odłóż"
     },
     "tabs": {
-      "board": "Deska",
+      "board": "Tablica",
       "forecast": "Prognoza",
       "meeting": "Spotkanie",
-      "pipeline": "Rurociąg",
+      "pipeline": "Lejek sprzedaży",
       "queue": "Kolejka",
       "reports": "Raporty",
       "suggestions": "Sugestie"
@@ -474,7 +474,7 @@
       "whitespaceSuggestionCreated": "Sugestia gotowa do sprawdzenia",
       "whitespaceSuggestionDismissed": "Sugestia ta została wcześniej odrzucona",
       "whitespaceSuggestionKnown": "Ta propozycja jest już znana",
-      "won": "Wygrane"
+      "won": "Wygrana"
     },
     "type": {
       "expansion": "Ekspansja",
@@ -580,7 +580,7 @@
     "winDialog": {
       "body": "Transakcja zostaje zamknięta jako wygrana.",
       "bodyProspect": "{{client}} staje się aktywnym klientem.",
-      "confirm": "Marek wygrał",
+      "confirm": "Oznacz jako wygraną",
       "convertQuote": "Konwertuj zaakceptowaną wycenę na wersję roboczą umowy (opcjonalnie)",
       "nextConvert": "Przekształć zaakceptowaną ofertę w umowę poniżej lub później na ekranie oferty.",
       "nextSendQuote": "Nie powiązano jeszcze zaakceptowanej oferty. Wyślij ofertę, uzyskaj zatwierdzenie, a potem zamień ją na umowę. Mimo to możesz już teraz oznaczyć transakcję jako wygraną.",
@@ -590,7 +590,7 @@
       "projectStart": "Data rozpoczęcia",
       "projectStatus": "Stan początkowy",
       "projectTemplate": "Utwórz projekt onboardingowy (opcjonalnie)",
-      "title": "Marek wygrał"
+      "title": "Oznacz jako wygraną"
     }
   }
 }

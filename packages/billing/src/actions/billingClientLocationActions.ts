@@ -63,7 +63,7 @@ export const getActiveClientLocationsForBilling = withAuth(async (
   clientId: string,
 ): Promise<BillingLocationSummary[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'client', 'read')) {
-    return permissionError('Permission denied: client read required');
+    return permissionError('Permission denied: client read required', 'msp/billing:errors.permissions.clientRead');
   }
   if (!clientId) {
     return [];
@@ -86,7 +86,7 @@ export const getActiveClientLocationsForBilling = withAuth(async (
       portalClientId = contact?.client_id ?? null;
     }
     if (!portalClientId || portalClientId !== clientId) {
-      return permissionError('Permission denied: cannot access locations for another client');
+      return permissionError('Permission denied: cannot access locations for another client', 'msp/billing:errors.permissions.otherClientLocations');
     }
   }
 

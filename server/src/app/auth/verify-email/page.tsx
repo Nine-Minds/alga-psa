@@ -1,4 +1,5 @@
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { I18nWrapper } from '@alga-psa/tenancy/components';
 import { verifyRegisterUser } from '@alga-psa/auth/actions';
 import VerifyEmailRedirect from './VerifyEmailRedirect';
 
@@ -31,7 +32,7 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
   }
 
   return (
-    <div className="min-h-screen bg-[rgb(var(--color-background-50))] flex items-center justify-center">
+    <div className="min-h-screen bg-[rgb(var(--color-border-50))] flex items-center justify-center">
       <div className="bg-card p-8 rounded-lg shadow-lg max-w-md text-center">
         {token ? (
           verificationSuccess ? (
@@ -57,7 +58,11 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
             </p>
           </>
         )}
-        <VerifyEmailRedirect />
+        {/* VerifyEmailRedirect renders its countdown with useTranslation('msp/auth'),
+            so it needs a provider even though the copy above is server-rendered. */}
+        <I18nWrapper portal="msp">
+          <VerifyEmailRedirect />
+        </I18nWrapper>
       </div>
     </div>
   );

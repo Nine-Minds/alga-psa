@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "La cantidad debe ser mayor que cero.",
         "updateFailed": "No se pudo actualizar la cantidad"
       },
-      "heading": "Ajustar cantidad",
       "helperText": "Déjelo en blanco para utilizar el precio del catálogo de productos para la moneda de este contrato.",
       "labels": {
         "quantity": "Cantidad",
@@ -802,5 +801,49 @@
     },
     "label": "Tipo de línea de contrato",
     "placeholder": "Seleccionar tipo de línea de contrato"
+  },
+  "errors": {
+    "line": {
+      "unavailable": "La línea de contrato seleccionada ya no está disponible. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores seleccionados de la línea de contrato no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El contrato o la línea de contrato seleccionada ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio de la línea de contrato entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores de la línea de contrato no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la línea de contrato.",
+      "missingFieldNamed": "Falta un campo obligatorio de la línea de contrato: {{field}}."
+    },
+    "templateLine": {
+      "unavailable": "La línea de plantilla seleccionada ya no está disponible. Actualice la página e inténtelo de nuevo."
+    },
+    "mapping": {
+      "duplicate": "Esta línea de contrato ya está asociada al contrato seleccionado."
+    },
+    "preset": {
+      "invalidValue": "Uno de los valores seleccionados del preajuste de línea de contrato no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El preajuste de línea de contrato, contrato o servicio seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio del preajuste de línea de contrato entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores del preajuste de línea de contrato no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del preajuste de línea de contrato.",
+      "missingFieldNamed": "Falta un campo obligatorio del preajuste de línea de contrato: {{field}}.",
+      "notFoundDuringUpdate": "No se encontró el preajuste de línea de contrato con ID {{presetId}} durante la actualización."
+    },
+    "service": {
+      "unavailable": "El servicio de la línea de contrato seleccionado ya no está disponible. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "La línea de contrato o el servicio seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Este servicio ya está asociado a la línea de contrato seleccionada.",
+      "notAllowed": "Uno de los valores del servicio no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "addedOnce": "Un servicio solo se puede añadir una vez al editar una línea de contrato.",
+      "removedOnce": "Un servicio solo se puede quitar una vez al editar una línea de contrato.",
+      "addedAndRemoved": "El mismo servicio no se puede añadir y quitar en una misma edición de la línea de contrato."
+    },
+    "configuration": {
+      "unavailable": "La configuración de servicio seleccionada ya no está disponible. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores seleccionados de la configuración de servicio no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Esta configuración de servicio ya existe para la línea de contrato seleccionada.",
+      "notAllowed": "Uno de los valores de la configuración de servicio no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la configuración de servicio.",
+      "missingFieldNamed": "Falta un campo obligatorio de la configuración de servicio: {{field}}.",
+      "bucketOverlayFieldsMissing": "Faltan campos obligatorios de la superposición de bolsa de horas."
+    }
   }
 }

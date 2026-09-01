@@ -29,6 +29,8 @@ const canonicalEmailTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
 const phoneRowInputSchema = z.object({
   contact_phone_number_id: z.string().uuid().optional(),
   phone_number: z.string().trim().min(1, 'Phone number is required'),
+  // Extension has its own column; it is never packed into phone_number.
+  extension: z.string().trim().regex(/^\d*$/, 'Extension can only contain digits').max(10).nullish(),
   canonical_type: canonicalPhoneTypeSchema.nullish(),
   custom_type: z.string().trim().min(1).nullish(),
   is_default: z.boolean().optional(),
@@ -193,6 +195,7 @@ type ContactEmailTypeLabelRow = Pick<ContactEmailTypeDefinitionRow, 'contact_ema
 type PreparedPhoneNumberInput = {
   contact_phone_number_id?: string;
   phone_number: string;
+  extension: string | null;
   canonical_type: ContactPhoneCanonicalType | null;
   custom_type: string | null;
   normalized_custom_type: string | null;
@@ -530,6 +533,7 @@ export class ContactModel {
       normalizedRows.push({
         contact_phone_number_id: parsedRow.data.contact_phone_number_id,
         phone_number: trimmedPhoneNumber,
+        extension: parsedRow.data.extension?.trim() || null,
         canonical_type: canonicalType,
         custom_type: customType,
         normalized_custom_type: normalizedCustomType,
@@ -1042,6 +1046,7 @@ export class ContactModel {
         contact_phone_number_id: row.contact_phone_number_id || uuidv4(),
         contact_name_id: contactId,
         phone_number: row.phone_number,
+        extension: row.extension,
         canonical_type: row.canonical_type,
         custom_phone_type_id: row.normalized_custom_type ? customTypeMap.get(row.normalized_custom_type)?.contact_phone_type_id ?? null : null,
         is_default: row.is_default,
@@ -1206,6 +1211,7 @@ export class ContactModel {
         'cpn.contact_phone_number_id',
         'cpn.contact_name_id',
         'cpn.phone_number',
+        'cpn.extension',
         'cpn.normalized_phone_number',
         'cpn.canonical_type',
         'cpn.custom_phone_type_id',
@@ -1222,6 +1228,7 @@ export class ContactModel {
       const phoneNumber: IContactPhoneNumber = {
         contact_phone_number_id: row.contact_phone_number_id,
         phone_number: row.phone_number,
+        extension: row.extension ?? null,
         normalized_phone_number: row.normalized_phone_number,
         canonical_type: row.canonical_type,
         custom_phone_type_id: row.custom_phone_type_id,

@@ -335,6 +335,7 @@
     },
     "fields": {
       "phoneNumber": "Numer telefonu",
+      "extension": "Numer wewnętrzny",
       "phoneType": "Typ telefonu",
       "customPhoneType": "Niestandardowy typ telefonu",
       "customTypePlaceholder": "Wybierz lub wpisz niestandardowy typ telefonu",
@@ -346,6 +347,7 @@
       "selectExactlyOneDefault": "Wybierz dokładnie jeden domyślny numer telefonu.",
       "phoneRow": "Telefon {{number}}",
       "enterCompletePhoneNumber": "Wpisz pełny numer telefonu.",
+      "includeCountryCallingCode": "Podaj numer kierunkowy kraju, zaczynając od +.",
       "enterCustomPhoneType": "Wpisz niestandardowy typ telefonu.",
       "customTypesUnique": "Etykiety niestandardowych typów telefonu muszą być unikalne."
     },
@@ -707,6 +709,29 @@
       "saved": "Kontakt zaktualizowany",
       "saveFailed": "Nie mozna zaktualizowac kontaktu",
       "saveFailedDescription": "Nie udało się zaktualizować kontaktu. Spróbuj ponownie."
+    }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Nie znaleziono kontaktu",
+      "otherClient": "Odmowa uprawnień: nie można zarządzać kontaktami innego klienta",
+      "notAssociatedWithClient": "Kontakt nie jest powiązany z klientem",
+      "emailExists": "Kontakt z tym adresem e-mail już istnieje w systemie",
+      "fieldRequired": "{{field}} jest wymagane",
+      "clientInvalid": "Wybrany klient nie jest już prawidłowy",
+      "duplicate": "Kontakt o takich danych już istnieje.",
+      "destinationInvalid": "Wybrany klient lub miejsce docelowe przychodzących zgłoszeń nie jest już prawidłowe",
+      "invalidDataRefresh": "Podano nieprawidłowe dane kontaktu. Odśwież stronę i spróbuj ponownie.",
+      "invalidDataFields": "Podano nieprawidłowe dane kontaktu. Sprawdź wszystkie pola i spróbuj ponownie.",
+      "bulkEmailExists": "Co najmniej jeden kontakt ma już ten adres e-mail",
+      "invalidReference": "Nieprawidłowe odwołanie w danych aktualizacji",
+      "visibilityMissingField": "Brakuje wymaganego pola grupy widoczności.",
+      "visibilityMissingFieldNamed": "Brakuje wymaganego pola grupy widoczności: {{field}}.",
+      "visibilityReferenceInvalid": "Wybrany kontakt, grupa widoczności lub tablica nie jest już prawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "visibilityDuplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
+      "visibilityInvalidData": "Podano nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice.",
+      "groupNameRequired": "Nazwa grupy jest wymagana",
+      "readPermission": "Odmowa uprawnień: nie można odczytywać kontaktów"
     }
   }
 }

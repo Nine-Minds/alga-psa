@@ -3,9 +3,10 @@ import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
-import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable, materializeRecurringServicePeriods } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
+import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';
 
 
 vi.mock('@alga-psa/auth', async () => {
@@ -179,8 +180,13 @@ describe('Billing Invoice Edge Cases', () => {
       detailBaseRateCents: 7500
     });
 
+    // generateInvoice refuses a window with no recurring service period, and
+    // the fixture only materializes on request. Run it after the extra service
+    // so the line is complete.
+    await materializeRecurringServicePeriods(context, creditContractLineId);
+
     const billingCycleId = uuidv4();
-    await context.db('client_billing_cycles').insert({
+    await seedBillingCycle(context.db, context.tenantId, {
       billing_cycle_id: billingCycleId,
       client_id: context.clientId,
       tenant: context.tenantId,
@@ -222,12 +228,30 @@ describe('Billing Invoice Edge Cases', () => {
       planName: 'Free Plan',
       baseRateCents: 0,
       detailBaseRateCents: 0,
-      startDate: '2025-02-01',
-      clientId: context.clientId
+      // Default billing timing is arrears, and an arrears cycle invoices the
+      // service period before its own window.
+      startDate: '2025-01-01',
+      clientId: context.clientId,
+      materializeServicePeriods: true
     });
 
+    // This test is about a zero-dollar invoice that is actually produced, so
+    // the client must not be on the suppressing default: with
+    // suppress_zero_dollar_invoices set, generateInvoice returns null.
+    await context.db('client_billing_settings')
+      .insert({
+        tenant: context.tenantId,
+        client_id: context.clientId,
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .onConflict(['tenant', 'client_id'])
+      .merge({ zero_dollar_invoice_handling: 'normal', suppress_zero_dollar_invoices: false });
+
     const billingCycleId = uuidv4();
-    await context.db('client_billing_cycles').insert({
+    await seedBillingCycle(context.db, context.tenantId, {
       billing_cycle_id: billingCycleId,
       client_id: context.clientId,
       tenant: context.tenantId,

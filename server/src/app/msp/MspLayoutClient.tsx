@@ -22,6 +22,8 @@ import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
+import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
+import { MspBrandingProvider, type MspBranding } from '@/components/layout/MspBrandingContext';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
 
@@ -44,6 +46,8 @@ interface Props {
   onboardingResolvedServerSide?: boolean;
   /** Self-host install (license_state row present). Hosted/SaaS = false. */
   selfHostLicensing?: boolean;
+  /** Enterprise white-label logo/name; null keeps the stock Alga chrome. */
+  mspBranding?: MspBranding | null;
 }
 
 function OnboardingRedirectFallback() {
@@ -82,6 +86,7 @@ export function MspLayoutClient({
   preloadedLocaleResources,
   onboardingResolvedServerSide = false,
   selfHostLicensing = false,
+  mspBranding = null,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -159,8 +164,10 @@ export function MspLayoutClient({
     <OnboardingRedirectFallback />
   ) : (
     <AppSessionProvider session={session}>
+      <MspBrandingProvider branding={mspBranding}>
       <ProductProvider>
         <TierProvider selfHostLicensing={selfHostLicensing}>
+          <MspCallLinkProvider>
           {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
@@ -203,8 +210,10 @@ export function MspLayoutClient({
               )}
             </ClientUIStateProvider>
           </TagProvider>
+          </MspCallLinkProvider>
         </TierProvider>
       </ProductProvider>
+      </MspBrandingProvider>
     </AppSessionProvider>
   );
 

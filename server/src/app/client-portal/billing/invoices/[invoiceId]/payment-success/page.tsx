@@ -1,18 +1,23 @@
 import { Suspense } from 'react';
 import { PaymentSuccessContent } from '@alga-psa/client-portal/components';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export const metadata: Metadata = {
-  title: 'Payment Success',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('clientPortal.billing.invoices.detail.paymentSuccess.title', { defaultValue: 'Payment Success' }),
+  };
+}
 
 interface PaymentSuccessPageProps {
-  params: {
+  params: Promise<{
     invoiceId: string;
-  };
-  searchParams: {
+  }>;
+  searchParams: Promise<{
     session_id?: string;
-  };
+  }>;
 }
 
 /**
@@ -21,12 +26,15 @@ interface PaymentSuccessPageProps {
  * Displayed after a customer completes payment via Stripe Checkout.
  * Shows payment confirmation and next steps.
  */
-export default function PaymentSuccessPage({ params, searchParams }: PaymentSuccessPageProps) {
+export default async function PaymentSuccessPage({ params, searchParams }: PaymentSuccessPageProps) {
+  const { invoiceId } = await params;
+  const { session_id } = await searchParams;
+
   return (
     <Suspense fallback={<PaymentSuccessLoading />}>
       <PaymentSuccessContent
-        invoiceId={params.invoiceId}
-        sessionId={searchParams.session_id}
+        invoiceId={invoiceId}
+        sessionId={session_id}
       />
     </Suspense>
   );

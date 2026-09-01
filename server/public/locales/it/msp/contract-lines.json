@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "La quantità deve essere maggiore di zero",
         "updateFailed": "Impossibile aggiornare la quantità"
       },
-      "heading": "Regola la quantità",
       "helperText": "Lascia vuoto per utilizzare il prezzo del catalogo prodotti per la valuta di questo contratto.",
       "labels": {
         "quantity": "Quantità",
@@ -802,5 +801,49 @@
     },
     "label": "Tipo di riga contratto",
     "placeholder": "Seleziona il tipo di riga del contratto"
+  },
+  "errors": {
+    "line": {
+      "unavailable": "La linea contrattuale selezionata non è più disponibile. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori selezionati della linea contrattuale non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il contratto o la linea contrattuale selezionata non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica della linea contrattuale è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori della linea contrattuale non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio della linea contrattuale.",
+      "missingFieldNamed": "Manca un campo obbligatorio della linea contrattuale: {{field}}."
+    },
+    "templateLine": {
+      "unavailable": "La riga del modello selezionata non è più disponibile. Aggiornare la pagina e riprovare."
+    },
+    "mapping": {
+      "duplicate": "Questa linea contrattuale è già associata al contratto selezionato."
+    },
+    "preset": {
+      "invalidValue": "Uno dei valori selezionati del preset della linea contrattuale non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il preset della linea contrattuale, il contratto o il servizio selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica del preset della linea contrattuale è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori del preset della linea contrattuale non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio del preset della linea contrattuale.",
+      "missingFieldNamed": "Manca un campo obbligatorio del preset della linea contrattuale: {{field}}.",
+      "notFoundDuringUpdate": "Preset della linea contrattuale con ID {{presetId}} non trovato durante l’aggiornamento."
+    },
+    "service": {
+      "unavailable": "Il servizio della linea contrattuale selezionato non è più disponibile. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "La linea contrattuale o il servizio selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Questo servizio è già associato alla linea contrattuale selezionata.",
+      "notAllowed": "Uno dei valori del servizio non è consentito. Controllare il modulo e riprovare.",
+      "addedOnce": "Un servizio può essere aggiunto una sola volta durante la modifica di una linea contrattuale.",
+      "removedOnce": "Un servizio può essere rimosso una sola volta durante la modifica di una linea contrattuale.",
+      "addedAndRemoved": "Lo stesso servizio non può essere aggiunto e rimosso nella stessa modifica di una linea contrattuale."
+    },
+    "configuration": {
+      "unavailable": "La configurazione del servizio selezionata non è più disponibile. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori selezionati della configurazione del servizio non è valido. Aggiornare la pagina e riprovare.",
+      "duplicate": "Questa configurazione del servizio esiste già per la linea contrattuale selezionata.",
+      "notAllowed": "Uno dei valori della configurazione del servizio non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio della configurazione del servizio.",
+      "missingFieldNamed": "Manca un campo obbligatorio della configurazione del servizio: {{field}}.",
+      "bucketOverlayFieldsMissing": "Mancano campi obbligatori della sovrapposizione del pacchetto ore."
+    }
   }
 }

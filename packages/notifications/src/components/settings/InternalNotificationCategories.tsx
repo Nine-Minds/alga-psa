@@ -4,9 +4,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Switch } from "@alga-psa/ui/components/Switch";
+import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
-import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical } from "lucide-react";
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, RotateCcw } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { getErrorMessage, handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
@@ -19,6 +20,7 @@ import {
 } from "../../actions";
 import {
   InternalNotificationCategory,
+  InternalNotificationPriority,
   InternalNotificationSubtype
 } from "../../types/internalNotification";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
@@ -45,6 +47,10 @@ interface PendingSubtypeChange {
   categoryId: number;
   is_enabled?: boolean;
   is_default_enabled?: boolean;
+  // Present only when the tenant priority override was changed. `null` clears
+  // the override (reset to system default); a value sets it. The key's presence
+  // is what tells the save path to send `priority` at all (task 29.8.46).
+  priority?: InternalNotificationPriority | null;
 }
 
 // Combined row type for the flat list
@@ -242,6 +248,32 @@ function InternalNotificationCategoriesContent({
     });
   };
 
+  // Set (or reset) a subtype's tenant priority override in local state and
+  // stage it into the existing batch. `null` clears the override. Only reachable
+  // when the feature flag is on, so the flag-off save payload is unchanged.
+  const handleChangeSubtypePriority = (
+    subtype: InternalNotificationSubtype,
+    categoryId: number,
+    priority: InternalNotificationPriority | null
+  ) => {
+    setSubtypesByCategory(prev => ({
+      ...prev,
+      [categoryId]: prev[categoryId].map(s =>
+        s.internal_notification_subtype_id === subtype.internal_notification_subtype_id
+          ? { ...s, tenant_priority: priority }
+          : s
+      )
+    }));
+
+    setPendingSubtypeChanges(prev => {
+      const next = new Map(prev);
+      const existing = next.get(subtype.internal_notification_subtype_id)
+        || { id: subtype.internal_notification_subtype_id, categoryId };
+      next.set(subtype.internal_notification_subtype_id, { ...existing, priority });
+      return next;
+    });
+  };
+
   // Save all pending changes
   const handleSave = async () => {
     setIsSaving(true);
@@ -254,13 +286,20 @@ function InternalNotificationCategoriesContent({
         })
       );
 
-      // Save subtype changes
-      const subtypePromises = Array.from(pendingSubtypeChanges.values()).map(change =>
-        updateInternalSubtypeAction(change.id, {
+      // Save subtype changes. Only include `priority` when it was actually
+      // changed — the action treats the mere presence of the key as intent
+      // (a bare `undefined` would clear the override), so we must not send it
+      // for enable/disable-only edits.
+      const subtypePromises = Array.from(pendingSubtypeChanges.values()).map(change => {
+        const updates: Parameters<typeof updateInternalSubtypeAction>[1] = {
           is_enabled: change.is_enabled,
           is_default_enabled: change.is_default_enabled
-        })
-      );
+        };
+        if ('priority' in change) {
+          updates.priority = change.priority;
+        }
+        return updateInternalSubtypeAction(change.id, updates);
+      });
 
       const results = await Promise.all([...categoryPromises, ...subtypePromises]);
       const firstError = results.find(isNotificationActionError);
@@ -542,6 +581,63 @@ function InternalNotificationCategoriesContent({
       },
     },
   ];
+
+  // Priority selector column, inserted before the trailing Actions column.
+  const priorityOptions = [
+    { value: 'high', label: t('notifications.internalCategoriesUi.priority.high', 'High') },
+    { value: 'normal', label: t('notifications.internalCategoriesUi.priority.normal', 'Normal') },
+    { value: 'low', label: t('notifications.internalCategoriesUi.priority.low', 'Low') },
+  ];
+
+  const priorityColumn: ColumnDefinition<NotificationRow> = {
+    title: t('notifications.internalCategoriesUi.columns.priority', 'Priority'),
+    dataIndex: 'id',
+    width: '18%',
+    render: (_value: string, record: NotificationRow) => {
+      // Priority is a subtype-level concept; category rows have none.
+      if (record.isCategory) {
+        return null;
+      }
+      const category = categories.find(c => c.internal_notification_category_id === record.categoryId);
+      const subtype = subtypesByCategory[record.categoryId!]?.find(
+        s => s.internal_notification_subtype_id === record.originalId
+      );
+      if (!subtype) return null;
+
+      const effectivePriority = subtype.tenant_priority ?? subtype.default_priority ?? 'normal';
+      const hasOverride = subtype.tenant_priority != null;
+
+      return (
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <CustomSelect
+            id={`internal-subtype-priority-${record.id}`}
+            size="sm"
+            value={effectivePriority}
+            options={priorityOptions}
+            disabled={!category?.is_enabled}
+            onValueChange={(v) =>
+              handleChangeSubtypePriority(subtype, record.categoryId!, v as InternalNotificationPriority)
+            }
+          />
+          {hasOverride && (
+            <Button
+              id={`reset-internal-subtype-priority-${record.id}`}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              title={t('notifications.internalCategoriesUi.actions.resetToDefault', 'Reset to default')}
+              aria-label={t('notifications.internalCategoriesUi.actions.resetToDefault', 'Reset to default')}
+              onClick={() => handleChangeSubtypePriority(subtype, record.categoryId!, null)}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      );
+    },
+  };
+
+  columns.splice(columns.length - 1, 0, priorityColumn);
 
   return (
     <div className="space-y-4">

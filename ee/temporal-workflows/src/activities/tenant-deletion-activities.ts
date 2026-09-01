@@ -127,6 +127,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
   'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
 
+  // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
+  // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
+  // clients, so the whole group has to precede time tracking below.
+  'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
+  'hour_blocks',
+
   // Time tracking
   'time_sheet_comments', 'time_entry_change_requests', 'time_entries', 'time_sheets',
   'user_cost_rates',
@@ -155,6 +161,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'microsoft_profile_consumer_bindings',
   'teams_notification_deliveries', 'teams_audit_events', 'teams_conversation_references',
   'teams_integrations', 'microsoft_profiles',
+
+  // Telephony (artifacts hang off call records; providers hold the subscription)
+  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_providers',
 
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and
@@ -202,6 +211,18 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // import_job_items / import_jobs reference jobs with NO ACTION, so they
   // must be deleted before jobs.
   'import_job_items', 'import_jobs',
+  // AMP (Alga Migration Package) staging/ledger tables. All FK back to
+  // migration_jobs (or users), so the whole subtree is deleted before jobs and
+  // users. Internal order is dependents-first: record_outcomes references
+  // staged_records; staged_records/job_entities/identity_mappings/reports all
+  // reference migration_jobs; mapping_profiles references users only.
+  'migration_record_outcomes',
+  'migration_staged_records',
+  'migration_job_entities',
+  'migration_identity_mappings',
+  'migration_reports',
+  'migration_mapping_profiles',
+  'migration_jobs',
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
   'platform_notification_recipients',
 
@@ -228,6 +249,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'import_sources',
 
   // Asset details
+  'asset_maintenance_occurrences',
   'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
   'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',
   'asset_history', 'asset_associations', 'asset_software', 'asset_facts',
@@ -275,11 +297,17 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Billing details
   // accounting_export_batches is referenced by transactions.accounting_export_batch_id
   // with NO ACTION, so the accounting_export_* tables must be deleted after transactions.
+  // Low-balance alert ledgers: deliveries FK to alerts, alerts FK to clients,
+  // so deliveries delete before alerts and both before client_billing_settings.
+  'prepaid_balance_alert_deliveries', 'prepaid_balance_alerts',
   'credit_allocations', 'credit_tracking',
-  'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
+  // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
+  // outlive whatever made a usage row unmappable), so it can drop anywhere.
+  'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',
+  'contract_line_bucket_services', 'contract_line_buckets',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
@@ -296,6 +324,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
   'contract_template_line_defaults',
+  'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
@@ -340,6 +369,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 3: Mid-level entities ===
   // Document-related leaf tables (must come before documents)
   'document_share_access_log', 'document_share_links',
+  // KB import staging rows: a leaf (article_id / job_id are soft refs, no FK), so
+  // it only has to precede tenants. Kept next to kb_articles for readability.
+  'kb_import_files',
   'kb_article_relations', 'kb_article_reviewers', 'kb_article_templates', 'kb_articles',
   'document_default_folders',
   // Document folder templates: items and init rows reference document_folder_templates
@@ -347,6 +379,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'document_folder_template_items', 'document_entity_folder_init', 'document_folder_templates',
   // Document associations must come before documents
   'document_associations',
+
+  // Credentials (entity passwords): associations and access grants reference
+  // credentials with CASCADE, so they must be deleted before credentials.
+  // credentials itself references clients (client_id) and users (created_by),
+  // so it must be deleted before both (clients at LEVEL 4, users LAST).
+  'credential_associations', 'credential_access_grants', 'credentials',
 
   // Assets must come after asset details
   'asset_maintenance_schedules', 'assets',
@@ -445,6 +483,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Permissions and roles (must be deleted before users)
   'permissions', 'roles', 'teams',
 
+  // Tenant secrets metadata references the creating and updating users. Audit
+  // history deliberately has no FK to the secret so delete it explicitly too.
+  'tenant_secrets_audit_log', 'tenant_secrets',
+
   // The correct order to avoid constraint violations:
   // 0. Delete contact child rows first (phones/emails reference contacts)
   // 1. Delete portal_invitations before contacts (portal_invitations.contact_id → contacts NO ACTION)
@@ -465,6 +507,13 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'client_portal_visibility_groups',
   'portal_invitations', // references contacts.contact_id with NO ACTION — must come before contacts
   'user_invitations', // no DB FK (role_id is unenforced, for CitusDB compatibility); order is advisory
+  // Billing profiles (billing-profiles S1). Referenced by client_contracts,
+  // contract_lines, client_locations, tickets, projects and invoice_charges
+  // (all deleted above), and references clients — so it must go after all of
+  // those and before clients. The portal access grants reference profiles, so
+  // they go first (S12).
+  'client_portal_user_billing_profiles',
+  'client_billing_profiles',
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)
@@ -560,6 +609,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'inbound_email_rules',
   'inbound_ticket_defaults', 'user_type_rates', 'next_number',
   'event_catalog',
+  // Durable inbound email family. Deletion order follows the composite FKs:
+  // event_deliveries -> outbox, and effects/artifacts/outbox -> inbox -> ingress.
+  'inbound_email_event_deliveries', 'inbound_email_effects', 'inbound_email_artifacts',
+  'inbound_email_outbox', 'inbound_email_inbox', 'inbound_email_ingress',
 
   // Extension installation (must come before tenant_settings)
   'tenant_extension_schedule', 'tenant_extension_install_secrets',

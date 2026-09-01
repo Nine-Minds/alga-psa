@@ -2,9 +2,12 @@
   "title": "Facturation",
   "overview": "Aperçu",
   "tabs": {
-    "overview": "Aperçu",
+    "hoursByService": "Heures par service",
     "invoices": "Factures",
-    "quotes": "Devis"
+    "overview": "Aperçu",
+    "quotes": "Devis",
+    "usageMetrics": "Indicateurs d'utilisation",
+    "segments": "Par segment"
   },
   "currentContractLine": "Forfait actuel",
   "nextInvoice": "Prochaine facture",
@@ -122,13 +125,33 @@
     "usage": "Utilisation",
     "overage": "Dépassement",
     "noContractLineTitle": "Aucune banque d'heures disponible",
-    "noContractLineDescription": "Aucun forfait d'heures actif pour votre compte."
+    "noContractLineDescription": "Aucun forfait d'heures actif pour votre compte.",
+    "remainingSummary": "Il reste {{remaining}} heures sur {{total}}",
+    "remainingSummaryWithRollover": "Il reste {{remaining}} heures sur {{total}} (dont {{rollover}} reportées)",
+    "overageSummary": "{{hours}} heures de dépassement",
+    "overBucket": "QUOTA DÉPASSÉ",
+    "usedHours": "{{hours}} h utilisées",
+    "leftHours": "{{hours}} h restantes",
+    "overHours": "{{hours}} h EN EXCÈS"
   },
   "messages": {
     "noInvoices": "Aucune facture trouvée",
     "loadingInvoices": "Chargement des factures...",
     "paymentSuccessful": "Paiement traité avec succès",
     "paymentFailed": "Échec du paiement. Veuillez réessayer."
+  },
+  "paymentUnavailable": {
+    "title": "Paiement indisponible",
+    "notConfigured": "Le paiement en ligne n'est pas disponible pour cette facture.",
+    "creationFailed": "Nous n'avons pas pu démarrer le paiement. Veuillez réessayer.",
+    "alreadyPaid": "Cette facture a déjà été payée.",
+    "invoiceUnavailable": "Cette facture n'est pas disponible pour le paiement.",
+    "accessDenied": "Vous n'avez pas accès au paiement de cette facture.",
+    "generic": "Le paiement en ligne n'a pas pu être lancé.",
+    "tryAgain": "Réessayer",
+    "backToBilling": "Retour à la facturation",
+    "retryFailed": "Nous n'avons toujours pas pu démarrer le paiement. Veuillez réessayer dans un instant.",
+    "loading": "Chargement..."
   },
   "quotes": {
     "pendingQuotes": "Devis en attente",
@@ -151,6 +174,60 @@
     },
     "lineItems": {
       "searchPlaceholder": "Rechercher ou saisir un nom d'élément personnalisé..."
+    },
+    "detail": {
+      "accept": "Accepter",
+      "acceptHint": "En acceptant, vous confirmez ce devis. Votre prestataire procédera en conséquence.",
+      "acceptHintOptional": "En acceptant, votre sélection d'éléments optionnels est envoyée à votre prestataire pour vérification.",
+      "acceptQuote": "Accepter le devis",
+      "acceptedBanner": "Devis accepté.",
+      "acceptedBannerOptional": "Devis accepté. Vos éléments optionnels sélectionnés ont été transmis à votre prestataire.",
+      "backToQuotes": "Retour aux devis",
+      "cancel": "Annuler",
+      "columns": {
+        "amount": "Montant",
+        "description": "Description",
+        "qty": "Qté",
+        "rate": "Tarif"
+      },
+      "confirmAccept": "Accepter ce devis ? Votre prestataire en sera informé.",
+      "confirmAcceptOptional": "Accepter ce devis avec votre sélection actuelle d'éléments optionnels ? Vos choix seront envoyés à votre prestataire pour vérification.",
+      "confirmReject": "Refuser ce devis et envoyer votre commentaire à votre prestataire ? Il pourra le réviser et le renvoyer.",
+      "discounts": "Remises",
+      "downloadFailed": "Échec du téléchargement du PDF.",
+      "downloadFailedRetry": "Échec du téléchargement du PDF. Veuillez réessayer.",
+      "downloadPdf": "Télécharger le PDF",
+      "downloading": "Téléchargement...",
+      "exclude": "Exclure",
+      "excluded": "Exclu",
+      "fallbackTitle": "Devis {{id}}",
+      "include": "Inclure",
+      "included": "Inclus",
+      "lineItems": "Lignes du devis",
+      "loading": "Chargement du devis...",
+      "notFound": "Devis introuvable",
+      "notes": "Remarques",
+      "optional": "Facultatif",
+      "optionalLockedHint": "La sélection des éléments optionnels est verrouillée dès que le devis n'attend plus votre réponse.",
+      "optionalToggleHint": "Activez ou désactivez les éléments optionnels pour prévisualiser le total souhaité avant de répondre.",
+      "poNumber": "Bon de commande",
+      "quoteDate": "Date du devis",
+      "readyToRespond": "Prêt à répondre ?",
+      "reject": "Refuser",
+      "rejectCommentRequired": "Veuillez ajouter un bref commentaire avant de refuser ce devis.",
+      "rejectPlaceholder": "Indiquez ce qui doit changer",
+      "rejectPrompt": "Si ce devis ne vous convient pas, laissez un commentaire afin que votre prestataire puisse le réviser.",
+      "rejectQuote": "Refuser le devis",
+      "rejectedBanner": "Devis refusé.",
+      "rejectedBannerWithReason": "Devis refusé : {{reason}}",
+      "savingSelections": "Enregistrement de la sélection des éléments optionnels...",
+      "scopeOfWork": "Périmètre des travaux",
+      "submitting": "Envoi...",
+      "subtotal": "Sous-total",
+      "tax": "Taxes",
+      "termsAndConditions": "Conditions générales",
+      "total": "Total",
+      "validUntil": "Valable jusqu'au"
     }
   },
   "enums": {
@@ -335,6 +412,35 @@
     "availableCredit": "Crédit disponible",
     "appliedAutomatically": "Appliqué automatiquement à votre prochaine facture.",
     "credit": "Crédit",
-    "expires": "Expire le {{date}}"
+    "expires": "Expire le {{date}}",
+    "history": {
+      "viewHistory": "Voir l'historique",
+      "title": "Historique des crédits",
+      "empty": "Aucune activité de crédit pour le moment",
+      "issued": "Émis",
+      "issuedWithInvoice": "Émis — prépaiement n°{{invoice}}",
+      "issuedForInvoice": "Émis — facture n°{{invoice}}",
+      "issuedFromCreditNote": "Émis à partir d'une note de crédit",
+      "applied": "Appliqué",
+      "appliedToInvoice": "Appliqué à la facture n°{{invoice}}",
+      "adjusted": "Ajusté",
+      "expired": "Expiré",
+      "transferred": "Transféré",
+      "transaction": "Activité de crédit",
+      "balance": "solde {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Heures prépayées",
+    "viewBilling": "Voir la facturation"
+  },
+  "hourBlocks": {
+    "title": "Blocs d'heures prépayés",
+    "blockLabel": "Bloc {{service}}",
+    "expiringSoon": "Expire dans {{days}} j",
+    "hoursLeft": "{{hours}} h restantes",
+    "expires": "Expire le {{date}}",
+    "recentBurn": "Consommation récente",
+    "timeEntry": "Entrée de temps"
   }
 }

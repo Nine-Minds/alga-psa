@@ -12,7 +12,6 @@
       "resyncError": "Die Neusynchronisierung des IMAP-Anbieters ist fehlgeschlagen",
       "resyncStarted": "Neusynchronisierung für {{providerName}} gestartet.",
       "resyncRecovered": "{{providerName}} wurde erfolgreich wieder verbunden.",
-      "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in Pro verfügbar.",
       "loadProvidersError": "E-Mail-Anbieter konnten nicht geladen werden"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Konfiguration des E-Mail-Anbieters",
-      "description": {
-        "enterprise": "Konfigurieren Sie Gmail-, Microsoft 365- oder IMAP-Anbieter so, dass sie eingehende E-Mails als Tickets empfangen und verarbeiten",
-        "standard": "Konfigurieren Sie Gmail- oder IMAP-Anbieter so, dass sie eingehende E-Mails als Tickets empfangen und verarbeiten"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Konfigurieren Sie Gmail-, Microsoft 365- oder IMAP-Anbieter so, dass sie eingehende E-Mails als Tickets empfangen und verarbeiten",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "E-Mail-Anbieter hinzufügen"
@@ -42,6 +35,7 @@
       "title": "Einrichtungsanweisungen",
       "microsoft": {
         "title": "Microsoft 365-Setup",
+        "ownApp": "Verwenden Sie Ihre eigene Microsoft-App – registrieren Sie sie in Azure AD (Microsoft Entra ID), erteilen Sie E-Mail-Berechtigungen und verbinden Sie sie mit Ihrem Microsoft-365-Postfach.",
         "providersPointer": "Die Einrichtung der Microsoft-App wird unter „Anbieter“ verwaltet.",
         "openProviders": "Anbieter öffnen"
       },
@@ -117,10 +111,7 @@
     "actions": {
       "cancel": "Abbrechen"
     },
-    "help": {
-      "enterprise": "Wählen Sie den Anbieter, den Ihre Organisation bereits nutzt. Wenn Sie Google Workspace verwenden, wählen Sie Gmail; Wenn Sie Microsoft 365 verwenden, wählen Sie Microsoft 365. Sie können dies später ändern, indem Sie Ihren E-Mail-Anbieter entfernen und neu konfigurieren.",
-      "standard": "Wählen Sie den Anbieter, den Ihre Organisation bereits nutzt. Wenn Sie Google Workspace verwenden, wählen Sie Gmail; andernfalls wählen Sie IMAP. Sie können dies später ändern, indem Sie Ihren E-Mail-Anbieter entfernen und neu konfigurieren."
-    }
+    "help": "Wählen Sie den Anbieter, den Ihre Organisation bereits nutzt. Wenn Sie Google Workspace verwenden, wählen Sie Gmail; Wenn Sie Microsoft 365 verwenden, wählen Sie Microsoft 365. Sie können dies später ändern, indem Sie Ihren E-Mail-Anbieter entfernen und neu konfigurieren."
   },
   "wizard": {
     "title": {
@@ -168,7 +159,8 @@
       "resyncMailbox": "Postfach neu synchronisieren",
       "pause": "Eingehende E-Mails pausieren",
       "resume": "Eingehende E-Mails fortsetzen",
-      "delete": "Anbieter löschen"
+      "delete": "Anbieter löschen",
+      "runGmailDiagnostics": "Gmail-Zustelldiagnose ausführen"
     },
     "feedback": {
       "paused": "Eingehende E-Mails pausiert.",
@@ -176,6 +168,11 @@
       "pauseError": "Der Pausenstatus für eingehende E-Mails konnte nicht geändert werden."
     },
     "pausedHelp": "Nachrichten, die eingehen, während dieses Postfach pausiert ist, werden nicht nachträglich importiert.",
+    "authFailure": {
+      "title": "Eingehende E-Mails pausiert — erneute Verbindung erforderlich",
+      "description": "Eingehende E-Mails für {{mailbox}} sind pausiert, da die Anmeldedaten nicht mehr funktionieren. Nachrichten gehen nicht verloren — sie verbleiben im Quellpostfach und werden nach dem erneuten Verbinden importiert.",
+      "action": "Erneut verbinden"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Letzte Synchronisierung",
@@ -217,6 +214,14 @@
       "title": "Keine E-Mail-Anbieter konfiguriert",
       "description": "Fügen Sie einen E-Mail-Anbieter hinzu, um eingehende E-Mails als Tickets zu empfangen und zu verarbeiten.",
       "action": "E-Mail-Anbieter hinzufügen"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail sendet keine neuen Nachrichten mehr hierher",
+      "expiredDescription": "Der Gmail-Watch für {{mailbox}} ist abgelaufen, daher veröffentlicht Google keine Benachrichtigungen mehr. Nachrichten gehen nicht verloren — sie verbleiben im Postfach. Aktualisieren Sie Pub/Sub-Watch, um die Zustellung fortzusetzen.",
+      "missingTitle": "Gmail-Push-Zustellung ist nicht registriert",
+      "missingDescription": "Für {{mailbox}} ist kein Gmail-Watch registriert, daher gehen keine E-Mails ein. Aktualisieren Sie Pub/Sub-Watch, um einen zu registrieren.",
+      "expiringTitle": "Gmail-Push-Zustellung läuft innerhalb eines Tages ab",
+      "expiringDescription": "Ein Gmail-Watch gilt sieben Tage. Aktualisieren Sie Pub/Sub-Watch, bevor dieser abläuft, sonst bleiben eingehende E-Mails ohne weitere Meldung aus."
     }
   },
   "forms": {
@@ -246,6 +251,9 @@
         "authorizing": "Wird autorisiert...",
         "authorized": "Autorisiert",
         "authorizeAccess": "Zugriff autorisieren"
+      },
+      "messages": {
+        "setupIncomplete": "Anbieter gespeichert, aber Einrichtung unvollständig: {{error}}"
       }
     },
     "microsoft": {
@@ -260,7 +268,8 @@
         "popupBlocked": "Das OAuth-Popup konnte nicht geöffnet werden. Bitte erlauben Sie Popups für diese Website.",
         "closedEarly": "Das Autorisierungsfenster wurde vor dem Abschluss geschlossen. Bitte versuchen Sie es erneut.",
         "authorizationFailed": "Die Autorisierung ist fehlgeschlagen",
-        "senderDisplayNameInvalid": "Der Anzeigename darf keine Anführungszeichen, spitzen Klammern oder Zeilenumbrüche enthalten"
+        "senderDisplayNameInvalid": "Der Anzeigename darf keine Anführungszeichen, spitzen Klammern oder Zeilenumbrüche enthalten",
+        "issuerRequired": "Wählen Sie vor der Anmeldung eine Microsoft-App aus."
       },
       "requiredFields": {
         "providerName": "Konfigurationsname",
@@ -292,12 +301,24 @@
         "maxEmailsPerSync": "Maximale E-Mails pro Synchronisierung"
       },
       "readiness": {
-        "checking": "Microsoft-Einrichtung wird geprüft…",
-        "ready": "Microsoft ist eingerichtet. Melden Sie sich zum Abschluss mit diesem Postfach an.",
-        "pending": "Warten auf Ihren Microsoft 365-Administrator. Die Einrichtung wurde unter „Anbieter“ gestartet, aber noch nicht genehmigt.",
-        "openProviders": "Anbieter öffnen",
-        "notConfigured": "Microsoft ist noch nicht eingerichtet. Richten Sie Microsoft einmal unter „Anbieter“ ein und kehren Sie dann zurück.",
-        "setUpInProviders": "Unter „Anbieter“ einrichten"
+        "openProviders": "Anbieter öffnen"
+      },
+      "issuer": {
+        "title": "Microsoft-App, die dieses Postfach autorisiert",
+        "description": "Wählen Sie aus, welche Anwendung sich als dieses Postfach anmeldet. Diese Auswahl wird mit dem Postfach gespeichert und wirkt sich nicht auf andere Dienste aus.",
+        "managedLabel": "AlgaPSA-App (verwaltet von Nine Minds)",
+        "managedDescription": "Auf Ihrer Seite ist keine Registrierung einer Microsoft-App erforderlich.",
+        "recommended": "Empfohlen",
+        "currentApp": "Aktuelle App: {{app}}",
+        "selectedApp": "Ausgewählte App: {{app}}",
+        "pendingReauth": "Erneute Autorisierung ausstehend",
+        "switchWarning": "Der Wechsel der Microsoft-App erfordert eine erneute Verbindung dieses Postfachs. Melden Sie sich erneut bei Microsoft an, um den Wechsel abzuschließen.",
+        "noneAvailable": "Um Microsoft 365 zu verbinden, richten Sie zuerst eine Microsoft-App unter Anbieter ein und kommen Sie dann hierher zurück.",
+        "retry": "Erneut versuchen",
+        "pendingConsentEmpty": "Ihre Microsoft-App wartet auf die Genehmigung eines Microsoft-365-Administrators. Sobald sie unter Anbieter genehmigt wurde, kehren Sie hierher zurück, um sich anzumelden.",
+        "pendingConsentHint": "Ihre eigene Microsoft-App wartet noch auf die Genehmigung eines Microsoft-365-Administrators.",
+        "ownAppPrompt": "Möchten Sie sich lieber mit Ihrer eigenen Microsoft-App anmelden?",
+        "ownAppSetupLink": "Unter Anbieter einrichten"
       }
     },
     "gmail": {
@@ -765,7 +786,7 @@
         "authHint": "Lassen Sie Benutzername und Passwort leer, wenn Ihr Relay E-Mails ohne Authentifizierung akzeptiert.",
         "fromLabel": "Absenderadresse",
         "fromPlaceholder": "noreply@beispiel.de",
-        "fromHelp": "Die Standardabsenderadresse für ausgehende E-Mails.",
+        "fromHelp": "Standardabsender für alle ausgehenden E-Mails. Ticket-E-Mails können unten eine eigene Absenderidentität verwenden.",
         "security": {
           "title": "Verbindungssicherheit",
           "secure": "Implizites TLS verwenden (SSL beim Verbinden, üblicherweise Port 465)",
@@ -842,7 +863,7 @@
           "description": "Versehen Sie Portal-Einladungen, Passwortrücksetzungen, Rechnungen, Projektaktualisierungen und allgemeine Benachrichtigungen unabhängig vom Ticket-Routing mit Ihrem Branding.",
           "addressLabel": "Absenderadresse",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Dies ist die Branding-Adresse, die für E-Mails ohne Ticketbezug über Ihren SMTP-Server verwendet wird.",
+          "smtpAddressHelp": "Wird durch die Absenderadresse in der SMTP-Konfiguration oben festgelegt. Alle E-Mails ohne Ticketbezug werden von dieser Adresse gesendet.",
           "lockedAddressHelp": "Diese Adresse wird durch die aktive verwaltete Domain oder das ausgewählte Microsoft 365-Postfach bestimmt.",
           "nameLabel": "Anzeigename des Absenders",
           "namePlaceholder": "Name Ihres Unternehmens",
@@ -1070,6 +1091,72 @@
       "subject": "Betreff",
       "title": "Diese Regel testen",
       "to": "An"
+    }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Domains konnten nicht abgerufen werden",
+      "invalidFormat": "Ungültiges Domainformat",
+      "duplicate": "Die Domain existiert bereits",
+      "addFailed": "Die Domain konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
+      "notFound": "Domain nicht gefunden",
+      "verifyFailed": "Die Domain konnte nicht verifiziert werden. Bitte versuchen Sie es erneut.",
+      "stillReferenced": "Die Domain wird noch referenziert und kann nicht gelöscht werden.",
+      "deleteFailed": "Die Domain konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    },
+    "provider": {
+      "saveFailed": "Der E-Mail-Anbieter konnte nicht gespeichert werden. Bitte prüfen Sie die Einstellungen und versuchen Sie es erneut.",
+      "updateFailed": "Der E-Mail-Anbieter konnte nicht aktualisiert werden. Bitte prüfen Sie die Einstellungen und versuchen Sie es erneut.",
+      "notFound": "E-Mail-Anbieter nicht gefunden",
+      "deleteFailed": "Der E-Mail-Anbieter konnte nicht gelöscht werden"
+    },
+    "settings": {
+      "fetchFailed": "Die E-Mail-Einstellungen konnten nicht abgerufen werden",
+      "mailboxRequired": "Wählen Sie ein Microsoft-365-Postfach für ausgehende E-Mails",
+      "mailboxInactive": "Das ausgewählte Microsoft-365-Postfach ist nicht aktiv oder existiert nicht mehr",
+      "mailboxReconnect": "Verbinden Sie das ausgewählte Microsoft-365-Postfach neu, bevor Sie es für ausgehende E-Mails verwenden",
+      "ticketIdentityMustMatchMailbox": "Die Ticket-E-Mail-Identität muss das ausgewählte Microsoft-365-Postfach ({{mailbox}}) verwenden. Aktualisieren Sie die Adresse für Ticket-E-Mails vor dem Speichern.",
+      "providerFromAddressInvalid": "Die Absenderadresse für {{provider}} muss eine gültige E-Mail-Adresse sein",
+      "ticketingFromInvalid": "Die Absenderadresse für Tickets muss eine gültige E-Mail-Adresse sein",
+      "outboundDomainInvalid": "Die Versanddomain für ausgehende E-Mails muss eine gültige Domain sein (z. B. example.com)",
+      "outboundDomainRequired": "Konfigurieren Sie eine Versanddomain, bevor Sie eine Absenderadresse für Tickets wählen",
+      "ticketingFromDomainMismatch": "Die Absenderadresse für Tickets muss die konfigurierte Versanddomain verwenden",
+      "refreshFailed": "Die aktualisierten Einstellungen konnten nicht abgerufen werden",
+      "updateFailed": "Die E-Mail-Einstellungen konnten nicht aktualisiert werden",
+      "mailboxesLoadFailed": "Die Microsoft-365-Postfächer konnten nicht geladen werden"
+    },
+    "inboundRules": {
+      "notFound": "Regel für eingehende E-Mails nicht gefunden",
+      "invalidOrdering": "Ungültige Daten für die Regelreihenfolge",
+      "aliasRequired": "Der Alias ist erforderlich",
+      "aliasTooLong": "Der Alias ist zu lang",
+      "clientRequired": "Der Kunde ist erforderlich",
+      "invalidSampleEmail": "Ungültige Beispiel-E-Mail",
+      "permissionDenied": "Sie sind nicht berechtigt, Regeln für eingehende E-Mails zu verwalten.",
+      "ticketDefaultsUnavailable": "Die referenzierten Ticket-Standardeinstellungen sind nicht vorhanden oder inaktiv.",
+      "orderingMismatch": "Die Reihenfolge stimmt nicht mit dem aktuellen Regelsatz überein.",
+      "clientNotFound": "Kunde nicht gefunden.",
+      "aliasAlreadyAssigned": "Der Alias „{{alias}}“ ist bereits einem Kunden zugewiesen.",
+      "invalidRegex": "Ungültiger regulärer Ausdruck.",
+      "fallbackDestinationRequired": "Ein Ausweichziel ist erforderlich, wenn bei fehlender Übereinstimmung ein Ausweichziel verwendet wird."
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Eine Konfiguration mit diesem Kurznamen existiert bereits",
+      "createFailed": "Die Standardwerte für eingehende Tickets konnten nicht erstellt werden. Bitte versuchen Sie es erneut.",
+      "notFound": "Standardkonfiguration nicht gefunden",
+      "updateFailed": "Die Standardwerte für eingehende Tickets konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Berechtigung verweigert: Ticketfeldoptionen können nicht gelesen werden",
+      "loadFailed": {
+        "ticketFieldOptions": "Die Ticketfeldoptionen konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "boards": "Die Boards konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "statuses": "Die Status konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "priorities": "Die Prioritäten konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "categories": "Die Kategorien konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "clients": "Die Kunden konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+        "users": "Die Benutzer konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+      }
     }
   }
 }

@@ -30,6 +30,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
 const PROJECT_TEMPLATES_PAGE_SIZE_KEY = 'project_templates_page_size';
 
@@ -44,6 +45,8 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
 
 export default function ProjectTemplatesList({ initialTemplates, initialCategories }: ProjectTemplatesListProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const router = useRouter();
   const [templates, setTemplates] = useState<IProjectTemplate[]>(initialTemplates);
   const [categories] = useState<string[]>(initialCategories);
@@ -158,7 +161,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
       dataIndex: 'last_used_at',
       render: (value) =>
         value
-          ? new Date(value as string).toLocaleDateString()
+          ? formatDate(new Date(value as string), { dateStyle: 'medium' })
           : t('templates.list.neverUsed', 'Never')
     },
     {
@@ -270,7 +273,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
             <Button
               id="add-template"
               onClick={() => setShowAddDialog(true)}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-[rgb(var(--color-primary-600))] text-white hover:from-blue-700 hover:to-[rgb(var(--color-primary-700))]"
             >
               <Wand2 className="h-4 w-4 mr-2" />
               {t('templates.list.addTemplate', 'Add Template')}

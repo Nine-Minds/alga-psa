@@ -7,6 +7,7 @@ import {
   Monitor,
   X,
 } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { MentionableEntityType } from '../../lib/chat-actions/searchEntitiesForMention';
 
 export type ChatMention = {
@@ -30,6 +31,7 @@ interface ChatMentionChipProps {
 }
 
 export function ChatMentionChip({ mention, onRemove }: ChatMentionChipProps) {
+  const { t } = useTranslation('msp/chat');
   const Icon = typeIcons[mention.type];
 
   return (
@@ -40,7 +42,10 @@ export function ChatMentionChip({ mention, onRemove }: ChatMentionChipProps) {
         type="button"
         className="chat-mention-chip__remove"
         onClick={() => onRemove(mention)}
-        aria-label={`Remove ${mention.displayText}`}
+        aria-label={t('mentions.removeChip', {
+          mention: mention.displayText,
+          defaultValue: 'Remove {{mention}}',
+        })}
       >
         <X size={10} />
       </button>

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
   const requestUse = vi.fn();
+  const tokenPost = vi.fn();
+  const dbUpdate = vi.fn().mockResolvedValue(1);
   const client = {
     interceptors: { request: { use: requestUse } },
     get: vi.fn(),
@@ -9,13 +11,13 @@ const mocks = vi.hoisted(() => {
     patch: vi.fn(),
     delete: vi.fn(),
   };
-  return { client, requestUse };
+  return { client, requestUse, tokenPost, dbUpdate };
 });
 
 vi.mock('axios', () => ({
   default: {
     create: vi.fn(() => mocks.client),
-    post: vi.fn(),
+    post: mocks.tokenPost,
   },
 }));
 
@@ -23,7 +25,7 @@ vi.mock('@alga-psa/shared/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
     const query: any = {
       where: vi.fn().mockReturnThis(),
-      update: vi.fn().mockResolvedValue(1),
+      update: mocks.dbUpdate,
     };
     return vi.fn(() => query);
   }),
@@ -57,9 +59,14 @@ function config() {
   };
 }
 
+function jwt(claims: Record<string, unknown>): string {
+  return `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
+}
+
 describe('MicrosoftGraphAdapter subscription hygiene', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.dbUpdate.mockResolvedValue(1);
     mocks.client.delete.mockResolvedValue({ status: 204 });
     mocks.client.post.mockResolvedValue({
       data: { id: 'new-subscription', expirationDateTime: new Date(Date.now() + 3600000).toISOString() },
@@ -97,6 +104,20 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     expect(mocks.client.delete).toHaveBeenCalledWith('/subscriptions/old-subscription');
     expect(mocks.client.delete.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.client.post.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('generates and persists a strong clientState before creating a subscription when absent', async () => {
+    const providerConfig = config();
+    delete (providerConfig as any).webhook_verification_token;
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await adapter.registerWebhookSubscription();
+
+    const createdSubscription = mocks.client.post.mock.calls[0][1];
+    expect(createdSubscription.clientState).toMatch(/^[a-f0-9]{64}$/);
+    expect(mocks.dbUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.client.post.mock.invocationCallOrder[0],
     );
   });
 
@@ -155,5 +176,102 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
 
     await expect(new MicrosoftGraphAdapter(config()).registerWebhookSubscription())
       .rejects.toMatchObject<Partial<MicrosoftSubscriptionError>>({ kind: 'authentication', status: 403 });
+  });
+
+  it('propagates a subscription-id persistence failure instead of swallowing it (the callback can then compensate)', async () => {
+    const dbError = new Error('injected: UPDATE microsoft_email_provider_config failed');
+    mocks.dbUpdate.mockRejectedValue(dbError);
+
+    // The failure must leave registerWebhookSubscription as a
+    // MicrosoftSubscriptionError classified 'other' (never 'validation', which
+    // the callback would downgrade to a polling fallback), and must keep the
+    // original DB error in its cause chain for diagnostics/compensation.
+    await expect(new MicrosoftGraphAdapter(config()).registerWebhookSubscription())
+      .rejects.toMatchObject<Partial<MicrosoftSubscriptionError>>({ kind: 'other' });
+    await expect(new MicrosoftGraphAdapter(config()).registerWebhookSubscription())
+      .rejects.toSatisfy((err: any) => err?.cause?.message === dbError.message);
+  });
+});
+
+describe('MicrosoftGraphAdapter token refresh authority', () => {
+  const previousDeploymentProfile = process.env.DEPLOYMENT_PROFILE;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.DEPLOYMENT_PROFILE;
+    mocks.tokenPost.mockRejectedValue({
+      message: 'Request failed with status code 400',
+      response: { status: 400, data: { error: 'invalid_grant' }, headers: {} },
+    });
+  });
+
+  afterEach(() => {
+    if (previousDeploymentProfile === undefined) {
+      delete process.env.DEPLOYMENT_PROFILE;
+    } else {
+      process.env.DEPLOYMENT_PROFILE = previousDeploymentProfile;
+    }
+  });
+
+  it('refreshes a hosted provider through the shared multi-tenant authority', async () => {
+    const providerConfig = config();
+    providerConfig.provider_config = {
+      ...providerConfig.provider_config,
+      client_id: 'platform-client',
+      client_secret: 'platform-secret',
+      tenant_id: 'platform-home-tenant',
+      access_token: jwt({ tid: 'customer-token-tenant' }),
+      token_expires_at: new Date(0).toISOString(),
+    };
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await expect(adapter.ensureTokenHealthy()).rejects.toThrow('refreshAccessToken');
+
+    expect(mocks.tokenPost).toHaveBeenCalledOnce();
+    expect(mocks.tokenPost.mock.calls[0][0]).toBe(
+      'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+    );
+    const params = new URLSearchParams(mocks.tokenPost.mock.calls[0][1]);
+    expect(params.get('grant_type')).toBe('refresh_token');
+    expect(params.has('scope')).toBe(false);
+  });
+
+  it('uses the configured tenant authority for an appliance provider', async () => {
+    process.env.DEPLOYMENT_PROFILE = 'appliance';
+    const providerConfig = config();
+    providerConfig.provider_config = {
+      ...providerConfig.provider_config,
+      client_id: 'single-tenant-client',
+      client_secret: 'single-tenant-secret',
+      tenant_id: 'configured-tenant',
+      access_token: 'opaque-access-token',
+      token_expires_at: new Date(0).toISOString(),
+    };
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await expect(adapter.ensureTokenHealthy()).rejects.toThrow('refreshAccessToken');
+
+    expect(mocks.tokenPost.mock.calls[0][0]).toBe(
+      'https://login.microsoftonline.com/configured-tenant/oauth2/v2.0/token'
+    );
+  });
+
+  it('falls back to the token tenant for an appliance provider without a configured tenant', async () => {
+    process.env.DEPLOYMENT_PROFILE = 'appliance';
+    const providerConfig = config();
+    providerConfig.provider_config = {
+      ...providerConfig.provider_config,
+      client_id: 'single-tenant-client',
+      client_secret: 'single-tenant-secret',
+      access_token: jwt({ tid: 'customer-token-tenant' }),
+      token_expires_at: new Date(0).toISOString(),
+    };
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await expect(adapter.ensureTokenHealthy()).rejects.toThrow('refreshAccessToken');
+
+    expect(mocks.tokenPost.mock.calls[0][0]).toBe(
+      'https://login.microsoftonline.com/customer-token-tenant/oauth2/v2.0/token'
+    );
   });
 });

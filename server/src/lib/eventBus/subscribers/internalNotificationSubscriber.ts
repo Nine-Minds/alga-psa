@@ -7,12 +7,36 @@ import {
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
-import { resolveEffectiveTimeZone, normalizeIanaTimeZone, tenantDb } from '@alga-psa/db';
+import { resolveEffectiveTimeZone, normalizeIanaTimeZone, tenantDb, withTransaction } from '@alga-psa/db';
 import { formatInTimeZone } from 'date-fns-tz';
 import { formatDate as formatAppointmentDate, formatTime as formatAppointmentTime } from '@alga-psa/scheduling/actions';
 import type { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
+import {
+  INBOUND_OUTBOX_EVENT_TYPES,
+  reserveInboundOutboxEventForConsumer,
+  completeInboundOutboxEventForConsumer,
+  recordInboundOutboxDeliveryFailure,
+  newInboundDeliveryOwner,
+} from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
+import { isInboundOutboxEvent } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
+
+/** Consumers of the inbound outbox events use this stable ledger consumer id. */
+const INBOUND_OUTBOX_NOTIFICATION_CONSUMER = 'internal-notification';
+
+/**
+ * Handlers accept an optional shared connection/transaction. The durable
+ * inbound-outbox path runs the whole handler inside ONE Postgres transaction
+ * (reserve -> effect -> `delivered` mark) so a crash before commit rolls back
+ * the effect AND the reservation together (true exactly-once). `propagateErrors`
+ * is set only on that path so a failed effect rolls the transaction back and is
+ * recorded for retry by the recovery sweeper instead of being silently swallowed.
+ */
+interface InternalNotificationHandlerOptions {
+  db?: Knex;
+  propagateErrors?: boolean;
+}
 
 function tenantScopedTable(db: Knex, table: string, tenant: string): Knex.QueryBuilder {
   return tenantDb(db, tenant).table(table);
@@ -53,12 +77,12 @@ function shouldCreateTicketCommentNotification(
 /**
  * Handle ticket created events
  */
-async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
+async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId } = payload;
 
   try {
-    const db = await getConnection(tenantId);
+    const db = opts?.db ?? await getConnection(tenantId);
 
     // Get ticket details including contact and the board's default team so we
     // can notify dispatchers when the ticket lands unassigned (e.g. from an
@@ -197,6 +221,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       ticketId,
       tenantId
     });
+    if (opts?.propagateErrors) throw error;
   }
 }
 
@@ -271,12 +296,12 @@ async function getAllTaskAssignees(
 /**
  * Handle ticket assigned events (primary assignment + team members)
  */
-async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
+async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { tenantId, ticketId, userId, assignedByUserId } = event.payload;
   const suppression = resolveTicketNotificationSuppression(event.payload);
 
   try {
-    const db = await getConnection(tenantId);
+    const db = opts?.db ?? await getConnection(tenantId);
 
     // Get ticket details including priority + creation time + contact so we
     // can decide whether to also post a client-portal notification.
@@ -457,6 +482,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     }
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling ticket assigned:', error);
+    if (opts?.propagateErrors) throw error;
   }
 }
 
@@ -467,6 +493,16 @@ async function handleTicketAdditionalAgentAssigned(
   event: TicketAdditionalAgentAssignedEvent
 ): Promise<void> {
   const { tenantId, ticketId, primaryAgentId, additionalAgentId, assignedByUserId } = event.payload;
+  const suppression = resolveTicketNotificationSuppression(event.payload);
+
+  if (!shouldCreateStaffTicketNotification(suppression)) {
+    logger.debug('[InternalNotificationSubscriber] Skipped additional agent assignment notification due to suppression', {
+      ticketId,
+      tenantId,
+      additionalAgentId,
+    });
+    return;
+  }
 
   try {
     const db = await getConnection(tenantId);
@@ -728,7 +764,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
 /**
  * Handle ticket updated events
  */
-async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
+async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, changes } = payload;
   // TICKET_UPDATED accepts two payload shapes (TicketUpdatedPayloadSchema is a
@@ -740,11 +776,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
   const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
-    const db = await getConnection(tenantId);
+    const db = opts?.db ?? await getConnection(tenantId);
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
-      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'status_id', 'priority_id', 'tenant')
+      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
       .where('ticket_id', ticketId)
       .first();
 
@@ -933,19 +969,20 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       ticketId,
       tenantId
     });
+    if (opts?.propagateErrors) throw error;
   }
 }
 
 /**
  * Handle ticket closed events
  */
-async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
+async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
-    const db = await getConnection(tenantId);
+    const db = opts?.db ?? await getConnection(tenantId);
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -1053,6 +1090,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       ticketId,
       tenantId
     });
+    if (opts?.propagateErrors) throw error;
   }
 }
 
@@ -1578,7 +1616,7 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
 /**
  * Handle ticket comment added events
  */
-async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise<void> {
+async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId, comment } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
@@ -1591,7 +1629,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
   });
 
   try {
-    const db = await getConnection(tenantId);
+    const db = opts?.db ?? await getConnection(tenantId);
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -1807,6 +1845,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       ticketId,
       tenantId
     });
+    if (opts?.propagateErrors) throw error;
   }
 }
 
@@ -2944,24 +2983,168 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
 
   const validatedEvent = eventSchema.parse(event);
 
-  switch (event.eventType) {
+  // Durable inbound outbox events carry a stable event id (the outbox row id).
+  // The delivery ledger is a recoverable reservation, and internal notifications
+  // are a transactional consumer: reserve + effect + `delivered` mark happen in
+  // ONE Postgres transaction (true exactly-once). Non-outbox events pass
+  // straight through with zero extra cost beyond the `isInboundOutboxEvent`
+  // check.
+  const tenantId = (validatedEvent.payload as { tenantId?: unknown } | null)?.tenantId;
+  const isCandidate = typeof tenantId === 'string' && tenantId
+    && INBOUND_OUTBOX_EVENT_TYPES.has(event.eventType);
+  if (isCandidate) {
+    const handled = await handleTransactionalOutboxDelivery(validatedEvent as any, event);
+    if (handled) return;
+    // No inbound_email_outbox row for this event id: not an outbox event, so
+    // fall through to the normal dispatch path unchanged.
+  }
+
+  await dispatchInternalNotificationHandlers(validatedEvent as any, {});
+}
+
+/**
+ * Transactional delivery for durable inbound outbox events.
+ *
+ * Returns true when the event was fully handled (delivered, skipped, or a
+ * ledger/effect failure was recorded for the recovery sweeper); false when the
+ * event is NOT an outbox event and the caller must fall through to the normal
+ * dispatch path.
+ *
+ * The whole reserve -> effect -> mark runs inside one transaction, so a crash
+ * before commit rolls back the effect AND the reservation together — nothing is
+ * acknowledged on the strength of a reservation that never completed.
+ */
+async function handleTransactionalOutboxDelivery(
+  validatedEvent: { eventType: string; payload?: Record<string, unknown> },
+  event: BaseEvent
+): Promise<boolean> {
+  const tenantId = (validatedEvent.payload as { tenantId?: unknown } | null)?.tenantId;
+  if (typeof tenantId !== 'string' || !tenantId) return false;
+
+  let db: Knex;
+  try {
+    db = await getConnection(tenantId);
+  } catch (error) {
+    logger.warn('[InternalNotificationSubscriber] Tenant connection unavailable; delivering normally', {
+      eventId: event.id,
+      eventType: event.eventType,
+      tenantId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+
+  // The "existing check": only events backed by an inbound_email_outbox row go
+  // through the transactional protocol. Everything else costs exactly this one
+  // query.
+  let isOutbox = false;
+  try {
+    isOutbox = await isInboundOutboxEvent(db, { tenant: tenantId, eventId: event.id });
+  } catch (error) {
+    // Ledger outage fails open: run the handlers the normal way.
+    logger.warn('[InternalNotificationSubscriber] Outbox delivery gate unavailable; delivering normally', {
+      eventId: event.id,
+      eventType: event.eventType,
+      tenantId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+  if (!isOutbox) return false;
+
+  const eventLike = { id: event.id, eventType: event.eventType, payload: validatedEvent.payload };
+  const owner = newInboundDeliveryOwner();
+
+  try {
+    const outcome = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const reservation = await reserveInboundOutboxEventForConsumer({
+        event: eventLike,
+        consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+        db: trx,
+        owner,
+        // This consumer's effect runs in the same transaction as the
+        // reservation; a ledger error here must reject so the transaction
+        // rolls back and the event retries. Fail-open would commit the effect
+        // with no durable ledger row and no recovery path.
+        failOpenOnLedgerError: false,
+      });
+      if (reservation.decision === 'skip') {
+        logger.info('[InternalNotificationSubscriber] Skipping already-delivered inbound outbox event', {
+          eventId: event.id,
+          eventType: event.eventType,
+          tenantId,
+          consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+          reason: reservation.reason,
+        });
+        return true;
+      }
+      if (!reservation.token || reservation.version === undefined) {
+        // Fail-open (ledger outage): run the effect without marking.
+        await dispatchInternalNotificationHandlers(validatedEvent as any, { db: trx, propagateErrors: true });
+        return true;
+      }
+      await dispatchInternalNotificationHandlers(validatedEvent as any, { db: trx, propagateErrors: true });
+      await completeInboundOutboxEventForConsumer({
+        event: eventLike,
+        consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+        db: trx,
+        owner,
+        token: reservation.token,
+        version: reservation.version,
+      });
+      return true;
+    });
+    return outcome;
+  } catch (error) {
+    // The effect failed; withTransaction rolled everything back (reservation AND
+    // effect, so the notification write is atomic). Record a retryable/terminal
+    // failure so the recovery sweeper re-drives the delivery after backoff; a
+    // poisoned effect dead-letters at the attempt cap instead of looping. If
+    // the failure-ledger write itself fails there is NO committed reservation
+    // left (it rolled back with the effect) and no failure record — rethrow so
+    // the subscriber invocation errors out to the event bus and the message is
+    // redelivered rather than ACKed into permanent loss.
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('[InternalNotificationSubscriber] Transactional outbox delivery failed; recording for retry', {
+      eventId: event.id,
+      eventType: event.eventType,
+      tenantId,
+      consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+      error: errorMessage,
+    });
+    const recordDb = await getConnection(tenantId);
+    await recordInboundOutboxDeliveryFailure({
+      event: eventLike,
+      consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+      db: recordDb,
+      error: errorMessage,
+    });
+    return true;
+  }
+}
+
+async function dispatchInternalNotificationHandlers(
+  validatedEvent: any,
+  opts: InternalNotificationHandlerOptions
+): Promise<void> {
+  switch (validatedEvent.eventType) {
     case 'TICKET_CREATED':
-      await handleTicketCreated(validatedEvent as TicketCreatedEvent);
+      await handleTicketCreated(validatedEvent as TicketCreatedEvent, opts);
       break;
     case 'TICKET_ASSIGNED':
-      await handleTicketAssigned(validatedEvent as TicketAssignedEvent);
+      await handleTicketAssigned(validatedEvent as TicketAssignedEvent, opts);
       break;
     case 'TICKET_ADDITIONAL_AGENT_ASSIGNED':
       await handleTicketAdditionalAgentAssigned(validatedEvent as TicketAdditionalAgentAssignedEvent);
       break;
     case 'TICKET_UPDATED':
-      await handleTicketUpdated(validatedEvent as TicketUpdatedEvent);
+      await handleTicketUpdated(validatedEvent as TicketUpdatedEvent, opts);
       break;
     case 'TICKET_CLOSED':
-      await handleTicketClosed(validatedEvent as TicketClosedEvent);
+      await handleTicketClosed(validatedEvent as TicketClosedEvent, opts);
       break;
     case 'TICKET_COMMENT_ADDED':
-      await handleTicketCommentAdded(validatedEvent as TicketCommentAddedEvent);
+      await handleTicketCommentAdded(validatedEvent as TicketCommentAddedEvent, opts);
       break;
     case 'TICKET_COMMENT_UPDATED':
       await handleTicketCommentUpdated(validatedEvent as TicketCommentUpdatedEvent);
@@ -3028,6 +3211,8 @@ export const internalNotificationSubscriberTestHarness = {
   handleTicketAssigned,
   handleTicketUpdated,
   handleTicketClosed,
+  handleTicketCommentAdded,
+  handleTransactionalOutboxDelivery,
   handleInternalNotificationEvent,
 };
 

@@ -83,6 +83,21 @@ registry. Sales-order HTML pins call the service's private
 `getSalesOrderHtml` (the exact method `generatePDF` uses) because no public
 preview seam exists for that family.
 
+### `documentLanguageResolution`
+Three clients seeded one per tier of the recipient-language hierarchy —
+billing contact's portal user prefers `fr`; client default `pt_BR` (stored
+region-tagged, as imports write it); nothing set (tenant default `de`) — then
+`resolveRenderLocale` walked against the real rows, the migration-seeded
+standard quote template rendered through the real engine with the shipped
+locale packs (DEVIS / COTAÇÃO / ANGEBOT, no translation mocks), and the
+client-portal download leg: `downloadClientQuotePdf` under a real
+role_permissions billing/read grant → real Chromium PDF → the filed document
+records `rendered_locale`, is client-visible, and the document authorizer
+admits the owning client's portal user through the quote association while
+returning null for a sibling client's user. The shared tenant's
+`settings.defaultLocale` is restored in afterAll so sibling journeys keep
+rendering in their expected English default.
+
 ### `portalServiceRequestToTicket`
 Client-portal user submits a published service-request form → the ticket-only
 execution provider creates the ticket at submit time (`created_ticket_id`
@@ -96,12 +111,20 @@ tenant.
 
 `invoiceRenderToDelivery` closes the render-and-store half of the old PDF gap:
 a real Chromium-rendered PDF, the `external_files` row, tenant scoping, and
-the `DOCUMENT_GENERATED` linkage event are all journey-covered. Still
-uncovered above that seam: emailing the PDF. `sendInvoiceEmailAction` and the
-invoice email job handler — recipient resolution (billing contact →
-billing_email → location email), the Handlebars invoice-email template, and
-the attachment round-trip through `StorageService.downloadFile` — have only
-unit-level coverage with mocked PDFs.
+the `DOCUMENT_GENERATED` linkage event are all journey-covered.
+
+`invoiceEmailPaymentLinks` in `../payments` now closes the emailing half for
+the **direct MSP send path**: a real `sendInvoiceEmailAction` walk with the
+Stripe-like emulator asserting the payment + portal CTAs, the shared
+billing-recipient precedence, sequential payment-link reuse, the
+creation-failure portal fallback (with the emulator message retained as the
+logged cause), the tenant/ownership boundary, and the shared-resolver
+precedence/isolation rules.
+
+Still uncovered above that seam: the **scheduled** invoice-email job handler
+(`InvoiceEmailHandler`) has only unit-level coverage with mocked PDFs, and the
+portal-hosted Checkout success/failure browser flows are covered by the e2e
+Playwright spec (`server/src/test/e2e/`), not this journey directory.
 
 ## Running locally
 

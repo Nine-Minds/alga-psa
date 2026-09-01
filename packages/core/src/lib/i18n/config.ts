@@ -67,21 +67,37 @@ export function isSupportedLocale(locale: string): locale is SupportedLocale {
 }
 
 /**
+ * Coerce a stored or supplied locale to one we actually ship, or null.
+ *
+ * Region-tagged values reach us from several directions — `pt_BR` written into
+ * `clients.properties.defaultLocale`, `en-US` from an Accept-Language header,
+ * `FR` from an import. The packs are language-only, so a bare `isSupportedLocale`
+ * check rejected all of them and the setting silently did nothing. Anything that
+ * still does not name a shipped language returns null so callers can fall
+ * through deliberately rather than guess.
+ */
+export function normalizeLocale(value: unknown): SupportedLocale | null {
+  if (typeof value !== 'string') return null;
+
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  if (isSupportedLocale(trimmed)) return trimmed;
+
+  // 'pt_BR' / 'pt-BR' / 'zh-Hans-CN' -> leading language subtag
+  const languagePart = trimmed.split(/[-_]/)[0];
+  return isSupportedLocale(languagePart) ? languagePart : null;
+}
+
+/**
  * Get the best matching locale from a list of preferred locales
  */
 export function getBestMatchingLocale(
   preferredLocales: readonly string[],
 ): SupportedLocale {
   for (const locale of preferredLocales) {
-    // Exact match
-    if (isSupportedLocale(locale)) {
-      return locale;
-    }
-
-    // Try language part only (e.g., 'en' from 'en-US')
-    const languagePart = locale.split('-')[0];
-    if (isSupportedLocale(languagePart)) {
-      return languagePart as SupportedLocale;
+    const normalized = normalizeLocale(locale);
+    if (normalized) {
+      return normalized;
     }
   }
 
@@ -150,6 +166,10 @@ export function filterPseudoLocales(
  * Route prefixes mapped to their required namespaces
  */
 export const ROUTE_NAMESPACES = {
+  // Auth routes serve both portals off one path — which one is decided by a
+  // `portal` query param — so they preload both portals' auth copy.
+  '/auth': ['common', 'msp/auth', 'client-portal'],
+  '/auth/team': ['common', 'msp/auth', 'msp/onboarding'],
   '/client-portal': ['common', 'client-portal'],
   '/client-portal/tickets': ['common', 'client-portal', 'features/tickets'],
   '/client-portal/projects': ['common', 'client-portal', 'features/projects'],
@@ -167,6 +187,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
   '/msp/projects': ['common', 'msp/core', 'features/projects'],
   '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits'],
+  '/msp/reports': ['common', 'msp/core', 'msp/reports'],
   '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing'],
   '/msp/quote-approvals': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
@@ -175,7 +196,9 @@ export const ROUTE_NAMESPACES = {
   // msp/dashboard carries the shared "Good morning" greeting used by the queue.
   '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities', 'msp/dashboard'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
+  '/msp/interactions': ['common', 'msp/core', 'msp/clients', 'msp/integrations'],
   '/msp/assets': ['common', 'msp/core', 'msp/assets'],
+  '/msp/assets/maintenance': ['common', 'msp/core', 'msp/assets'],
   '/msp/onboarding': ['common', 'msp/core', 'msp/onboarding'],
   '/msp/workflows': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflows/runs': ['common', 'msp/core', 'msp/workflows'],
@@ -197,6 +220,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/add-ons': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule', 'msp/opportunities'],
+  '/msp/credentials': ['common', 'msp/core', 'msp/credentials'],
 } as const;
 
 /**

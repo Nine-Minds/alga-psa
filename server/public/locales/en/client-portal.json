@@ -331,7 +331,45 @@
       }
     },
     "captchaRequired": "Please complete the verification below, then sign in again.",
-    "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again."
+    "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again.",
+    "tenantDiscovery": {
+      "title": "Find Your Organization",
+      "description": "Enter your email address and we'll send you login links for all organizations you have access to.",
+      "emailLabel": "Email Address",
+      "emailPlaceholder": "your.email@company.com",
+      "submit": "Send Login Links",
+      "submitting": "Sending...",
+      "invalidEmail": "Please enter a valid email address",
+      "linksSent": "Check your email for login links",
+      "sent": {
+        "title": "Check Your Email",
+        "description": "If an account exists with that email address, we've sent you login links for each organization you have access to.",
+        "noEmailReceived": "Didn't receive an email?",
+        "checkSpam": "Check your spam folder",
+        "verifyAddress": "Verify the email address is correct",
+        "contactSupport": "Contact your organization's support team",
+        "tryAnother": "Try Another Email"
+      }
+    },
+    "register": {
+      "emailLabel": "Email address",
+      "checkingEmail": "Checking email...",
+      "existingContactsOnly": "Registration is only available for existing contacts. Please contact your administrator.",
+      "contactVerified": "Contact verified. Please create your password.",
+      "passwordPlaceholder": "Create a password",
+      "passwordMustContain": "Password must contain:",
+      "completeRequiredFields": "Please fill in the required fields:",
+      "creatingAccount": "Creating account...",
+      "createAccount": "Create account",
+      "failed": "Registration failed",
+      "unexpectedError": "An unexpected error occurred during registration.",
+      "missing": {
+        "email": "Email",
+        "validEmail": "Valid email address",
+        "verifiedContact": "Verified contact email",
+        "validPassword": "Valid password"
+      }
+    }
   },
   "account": {
     "title": "Account",
@@ -407,7 +445,8 @@
       "recentInvoicesTitle": "Recent Invoices",
       "billingHistoryTitle": "Billing History",
       "labels": {
-        "defaultTag": "(Default)"
+        "defaultTag": "(Default)",
+        "paysFor": "Pays for {{profile}}"
       },
       "actions": {
         "setDefault": "Set Default",
@@ -421,7 +460,8 @@
         "expiryMonth": "Month",
         "expiryYear": "Year",
         "cvv": "CVV",
-        "setAsDefault": "Set as default payment method"
+        "setAsDefault": "Set as default payment method",
+        "billingProfile": "Pays for"
       },
       "history": {
         "period": "Period",
@@ -703,13 +743,24 @@
       "cancel": "Cancel",
       "assignSuccess": "Contact visibility assignment updated",
       "assignError": "Unable to assign visibility group"
+    },
+    "domain": {
+      "title": "Custom Domain",
+      "description": "Pro tenants can host the portal on a custom domain. Your default hosted address is shown below.",
+      "defaultAddressLabel": "Default portal address",
+      "upgradeHint": "Upgrade to Pro to configure a branded customer portal domain and automated certificates."
     }
   },
   "notifications": {
     "title": "Notifications",
+    "bellUnreadAria": "Notifications ({{unread}} unread)",
+    "unreadDot": "Unread notifications",
+    "reconnecting": "Reconnecting...",
     "markAsRead": "Mark as read",
     "markAllAsRead": "Mark all as read",
     "noNotifications": "No new notifications",
+    "unreadCount_one": "{{count}} unread notification",
+    "unreadCount_other": "{{count}} unread notifications",
     "settings": "Notification Settings",
     "viewAll": "View all notifications",
     "tabs": {
@@ -725,7 +776,13 @@
       "saveError": "Failed to save preference",
       "noCategories": "No notification categories available",
       "emailPreferences": "Email preferences",
-      "internalPreferences": "Internal preferences"
+      "internalPreferences": "Internal preferences",
+      "priority": {
+        "high": "High",
+        "normal": "Normal",
+        "low": "Low"
+      },
+      "resetPriority": "Reset"
     },
     "categories": {
       "tickets": "Tickets",
@@ -733,6 +790,207 @@
       "messages": "Messages",
       "projects": "Projects",
       "system": "System"
+    },
+    "needsAttention": "Needs attention ({{count}})",
+    "lowPriority": "Low priority ({{count}})",
+    "filters": {
+      "title": "Filter Notifications",
+      "description": "Select criteria to filter notification activities.",
+      "statusLabel": "Status",
+      "unreadOnly": "Unread Only",
+      "showRead": "Show Read",
+      "categoryLabel": "Category",
+      "allCategories": "All Categories",
+      "categoryPlaceholder": "Select Category...",
+      "dateRangeLabel": "Date Range",
+      "priorityLabel": "Priority",
+      "allPriorities": "All Priorities",
+      "priorityPlaceholder": "Select Priority...",
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "apply": "Apply Filters"
+    },
+    "card": {
+      "unread": "Unread",
+      "noMessage": "No message"
+    }
+  },
+  "billing": {
+    "columns": {
+      "service": "Service",
+      "notAvailable": "N/A"
+    },
+    "filters": {
+      "dateRange": "Date Range",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "apply": "Apply Filter"
+    },
+    "usageMetrics": {
+      "title": "Usage Metrics",
+      "bucketHistoryTitle": "Bucket Hours Usage History",
+      "columns": {
+        "unitOfMeasure": "Unit of Measure",
+        "quantity": "Quantity"
+      },
+      "empty": {
+        "title": "No usage metrics available",
+        "description": "There are no usage metrics recorded for the selected date range."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Service Type",
+        "hours": "Hours"
+      },
+      "empty": {
+        "title": "No hours data available",
+        "description": "There are no billable hours recorded for the selected date range."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "Quote #",
+        "title": "Title",
+        "amount": "Amount",
+        "status": "Status",
+        "date": "Date"
+      },
+      "draftQuote": "Draft {{count}}",
+      "empty": "No quotes found",
+      "errors": {
+        "loadFailed": "Failed to load quotes"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Bucket Contract Line",
+      "usage": "Usage",
+      "hoursUsed": "{{hours}} hours used",
+      "hoursTotal": "{{hours}} hours total",
+      "rolloverHours": "Includes {{hours}} rollover hours"
+    },
+    "bucketHistory": {
+      "title": "Usage History",
+      "trendStable": "Stable",
+      "current": "Current",
+      "avgUsage": "Avg Usage",
+      "peak": "Peak",
+      "periods": "Periods"
+    },
+    "invoicePreview": {
+      "loadFailed": "Failed to load invoice",
+      "unavailable": "Unable to display invoice preview."
+    },
+    "payment": {
+      "redirecting": "Redirecting to payment..."
+    },
+    "paymentSuccess": {
+      "unknownStart": "Unknown start",
+      "unknownEnd": "Unknown end",
+      "verifying": {
+        "title": "Verifying Payment",
+        "description": "Please wait while we confirm your payment..."
+      },
+      "success": {
+        "title": "Payment Successful!",
+        "thankYou": "Thank you for your payment.",
+        "amountPaid": "Amount paid: {{amount}}.",
+        "confirmationEmail": "A confirmation email will be sent to your registered email address.",
+        "thankYouForInvoice": "Thank you for your payment for Invoice #{{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Service Period Summary",
+        "description": "This summary comes from the invoice's recurring detail periods, not from invoice-header billing dates alone."
+      },
+      "pending": {
+        "title": "Payment Processing",
+        "description": "Your payment is being processed. This may take a few moments. You will receive a confirmation email once the payment is complete."
+      },
+      "failed": {
+        "title": "Payment Verification Failed",
+        "description": "We could not confirm your payment. Please contact support."
+      },
+      "errors": {
+        "verificationFailed": "Payment verification failed",
+        "verifyFailed": "Failed to verify payment",
+        "unexpected": "An error occurred while verifying your payment"
+      },
+      "actions": {
+        "backToBilling": "Back to Billing",
+        "viewInvoice": "View Invoice"
+      }
+    },
+    "segments": {
+      "allSegments": "Whole organisation",
+      "organizationTotalLabel": "Total across your organisation",
+      "periodLabel": "{{start}} to {{end}}",
+      "selectorLabel": "Show",
+      "empty": "No billed charges in this period.",
+      "chargesTitle": "Charges in this segment",
+      "noCharges": "No charges in this period."
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "location": "Location",
+      "lastUpdated": "Last Updated"
+    },
+    "notAvailable": "N/A",
+    "detailsTitle": "Asset Details"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Your portal user is not linked to a contact. Contact support if this continues.",
+      "userNotLinkedToClient": "Your portal user is not linked to a client account. Contact support if this continues.",
+      "contactNotLinkedToClient": "Your contact is not linked to a client account. Contact support if this continues.",
+      "clientNotFound": "Client account not found. It may have been deleted or you may no longer have access.",
+      "serviceNotFound": "Service not found or no longer active. Please refresh and try again.",
+      "serviceUpgradeUnavailable": "Service upgrade functionality is temporarily unavailable. Please contact support to change your plan."
+    },
+    "records": {
+      "invalid": "One of the selected records is invalid. Please refresh and try again.",
+      "missing": "One of the selected records no longer exists. Please refresh and try again."
+    },
+    "access": {
+      "unauthorized": "Unauthorized",
+      "projectBillingData": "Unauthorized to access project billing data",
+      "quoteData": "Unauthorized to access quote data",
+      "invoiceData": "Unauthorized to access invoice data",
+      "billingData": "Unauthorized to access billing data",
+      "settingsUpdate": "You do not have permission to update these settings.",
+      "billingSegment": "Unauthorized to access that billing segment"
+    },
+    "billing": {
+      "quoteNotFound": "Quote not found or access denied",
+      "quoteStale": "Quote is no longer available. Refresh the quote and try again.",
+      "quoteStaleAccept": "Quote is no longer available. Refresh the quote before accepting it.",
+      "quoteStaleReject": "Quote is no longer available. Refresh the quote before rejecting it.",
+      "invoiceNotFound": "Invoice not found or access denied",
+      "jobNotFound": "Job not found",
+      "quoteInvalidState": "Quote is not in a valid state for this action",
+      "rejectionCommentRequired": "A rejection comment is required",
+      "emailSendFailed": "Failed to start email sending"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket not found or access denied",
+      "invalidData": "Invalid ticket data"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Please check the visibility group details and try again.",
+      "boardsUnavailable": "One or more selected boards are no longer available. Please refresh and try again.",
+      "contactNotFound": "Contact not found. It may have been deleted. Please refresh and try again.",
+      "otherClient": "You do not have permission to manage visibility groups for another client.",
+      "selectClientOrContact": "Select a client or contact before managing visibility groups.",
+      "groupNotFound": "Visibility group not found. It may have been deleted. Please refresh and try again.",
+      "groupNotValidForContact": "The selected visibility group is not valid for this contact. Please refresh and try again.",
+      "missingField": "Missing required visibility group field.",
+      "missingFieldNamed": "Missing required visibility group field: {{field}}.",
+      "recordInvalid": "One of the selected visibility group records is no longer valid. Please refresh and try again.",
+      "duplicate": "A visibility group with these details already exists for this client.",
+      "invalidData": "Invalid visibility group data provided. Please check the group details and selected boards."
     }
   }
 }

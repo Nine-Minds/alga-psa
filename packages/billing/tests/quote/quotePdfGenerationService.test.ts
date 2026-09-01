@@ -12,10 +12,35 @@ const uploadMock = vi.fn();
 const createFileStoreMock = vi.fn();
 const getBrowserMock = vi.fn();
 const releaseBrowserMock = vi.fn();
+const documentInsertMock = vi.fn();
+const documentAssociationCreateMock = vi.fn();
+const publishWorkflowEventMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
   runWithTenant: async (_tenant: string, fn: () => Promise<unknown>) => fn(),
+  withTransaction: (conn: any, handler: (trx: any) => Promise<unknown>) => handler(conn),
+  tenantDb: () => ({
+    table: (table: string) => {
+      throw new Error(`Unexpected tenantDb table access: ${table}`);
+    },
+    tenantJoin: (builder: any) => builder,
+  }),
+}));
+
+vi.mock('@alga-psa/documents/models', () => ({
+  Document: { insert: (...args: any[]) => documentInsertMock(...args) },
+  DocumentAssociation: { create: (...args: any[]) => documentAssociationCreateMock(...args) },
+}));
+
+vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
+  getTenantDefaultLocale: async () => 'en',
+  getUserInfoForEmail: async () => null,
+  resolveEmailLocale: async () => 'en',
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
 }));
 
 vi.mock('../../src/lib/adapters/quoteAdapters', () => ({
@@ -131,7 +156,10 @@ describe('quotePdfGenerationService', () => {
     });
     quoteGetById.mockResolvedValue({ quote_id: QUOTE_ID, quote_number: 'Q-0042' });
     uploadMock.mockResolvedValue({ path: 'stored/pdfs/Q-0042.pdf' });
-    createFileStoreMock.mockResolvedValue({ file_id: 'file-1', storage_path: 'stored/pdfs/Q-0042.pdf' });
+    createFileStoreMock.mockResolvedValue({ file_id: 'file-1', storage_path: 'stored/pdfs/Q-0042.pdf', file_size: 15 });
+    documentInsertMock.mockResolvedValue({ document_id: 'doc-1' });
+    documentAssociationCreateMock.mockResolvedValue({ association_id: 'assoc-1' });
+    publishWorkflowEventMock.mockResolvedValue(undefined);
   });
 
   it('T083: generates a valid PDF buffer from quote data', async () => {
@@ -160,5 +188,46 @@ describe('quotePdfGenerationService', () => {
       })
     );
     expect(result).toMatchObject({ file_id: 'file-1' });
+  });
+
+  it('T084b: files the stored quote PDF as a client-visible document under /Quotes/Generated', async () => {
+    const service = createPDFGenerationService(TENANT_ID);
+    const result = await service.generateAndStore({ quoteId: QUOTE_ID, quoteNumber: 'Q-0042', userId: USER_ID });
+
+    expect(documentInsertMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        document_name: 'Quote_Q-0042.pdf',
+        mime_type: 'application/pdf',
+        file_id: 'file-1',
+        folder_path: '/Quotes/Generated',
+        is_client_visible: true,
+        tenant: TENANT_ID,
+        source_template_id: 'standard-quote-default',
+        rendered_locale: 'en',
+      })
+    );
+    // Quote filing carries the quote association only — unchanged from before.
+    expect(documentAssociationCreateMock).toHaveBeenCalledTimes(1);
+    expect(documentAssociationCreateMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ entity_id: QUOTE_ID, entity_type: 'quote', tenant: TENANT_ID })
+    );
+    expect(result.document_id).toBeDefined();
+  });
+
+  it('T084c: DOCUMENT_GENERATED carries the documents row id, not the file id', async () => {
+    const service = createPDFGenerationService(TENANT_ID);
+    const result = await service.generateAndStore({ quoteId: QUOTE_ID, quoteNumber: 'Q-0042', userId: USER_ID });
+
+    const [event] = publishWorkflowEventMock.mock.calls[0];
+    expect(event.eventType).toBe('DOCUMENT_GENERATED');
+    expect(event.payload).toMatchObject({
+      documentId: result.document_id,
+      sourceType: 'quote',
+      sourceId: QUOTE_ID,
+      fileName: 'Q-0042.pdf',
+    });
+    expect(event.payload.documentId).not.toBe('file-1');
   });
 });

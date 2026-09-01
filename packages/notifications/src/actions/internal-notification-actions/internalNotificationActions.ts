@@ -1,6 +1,6 @@
 "use server"
 
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermissionAsync } from '../../lib/authHelpers';
@@ -10,6 +10,7 @@ import {
   InternalNotificationCategory,
   InternalNotificationSubtype,
   InternalNotificationType,
+  InternalNotificationPriority,
   CreateInternalNotificationRequest,
   GetInternalNotificationsRequest,
   InternalNotificationListResponse,
@@ -26,6 +27,10 @@ import {
 } from "../../realtime/internalNotificationBroadcaster";
 import logger from '@alga-psa/core/logger';
 import { runPostCreationHooks } from './notificationHooks';
+import {
+  createNotificationRowFromTemplate,
+  resolveNotificationPriority as resolveNotificationPriorityCore,
+} from './createNotificationCore';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationReadPayload,
@@ -56,100 +61,10 @@ function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant:
  * 4. Tenant-wide default (tenant_settings.settings.defaultLocale)
  * 5. System default ('en')
  */
-async function getUserLocale(
-  trx: Knex.Transaction,
-  tenant: string,
-  userId: string
-): Promise<string> {
-  const db = tenantDb(trx, tenant);
-  const userQuery = db.table('users as u')
-    .select('u.user_type', 'u.contact_id', 'c.properties')
-    .where('u.user_id', userId);
-  db.tenantJoin(userQuery, 'contacts as con', 'u.contact_id', 'con.contact_name_id', { type: 'left' });
-  db.tenantJoin(userQuery, 'clients as c', 'con.client_id', 'c.client_id', { type: 'left' });
-  const user = (await userQuery.first()) as any;
-
-  // 1. User's language preference (applies to both internal and client users)
-  const userPreference = await tenantScopedTable(trx, 'user_preferences', tenant)
-    .where({
-      user_id: userId,
-      setting_name: 'locale'
-    })
-    .first();
-
-  if (userPreference?.setting_value) {
-    const raw = userPreference.setting_value;
-    const locale = typeof raw === 'string' ? raw.replace(/"/g, '') : raw;
-    if (locale) return locale;
-  }
-
-  // 2. Client-specific default (client users only)
-  if (user?.user_type !== 'internal' && user?.properties?.defaultLocale) {
-    return user.properties.defaultLocale;
-  }
-
-  // 3. Tenant settings — portal-specific default then tenant-wide default
-  const tenantSettings = await tenantScopedTable(trx, 'tenant_settings', tenant)
-    .select('settings')
-    .first();
-
-  if (user?.user_type === 'internal') {
-    const mspPortalLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
-    if (mspPortalLocale) return mspPortalLocale;
-  } else {
-    const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
-    if (clientPortalLocale) return clientPortalLocale;
-  }
-
-  if (tenantSettings?.settings?.defaultLocale) {
-    return tenantSettings.settings.defaultLocale;
-  }
-
-  // 4. System default
-  return 'en';
-}
-
-/**
- * Get notification template in the specified language with fallback to English
- * Note: The locale parameter comes from getUserLocale() which already handles:
- * 1. User's language preference
- * 2. Client company language
- * 3. Tenant language
- * 4. English default
- */
-async function getNotificationTemplate(
-  trx: Knex.Transaction,
-  tenant: string,
-  templateName: string,
-  locale: string
-): Promise<InternalNotificationTemplate | null> {
-  // 1. Try the requested language (from getUserLocale hierarchy)
-  let template = await tenantScopedTable(trx, 'internal_notification_templates', tenant)
-    .where({ name: templateName, language_code: locale })
-    .first();
-
-  if (template) return template;
-
-  // 2. Try English as final fallback
-  template = await tenantScopedTable(trx, 'internal_notification_templates', tenant)
-    .where({ name: templateName, language_code: 'en' })
-    .first();
-
-  if (template) return template;
-
-  // 3. Return null if no template found
-  return null;
-}
-
-/**
- * Render template with provided data
- * Supports simple {{variable}} replacement
- */
-function renderTemplate(template: string, data: Record<string, any>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    return data[key] !== undefined ? String(data[key]) : match;
-  });
-}
+// getUserLocale, getNotificationTemplate, renderTemplate,
+// checkInternalNotificationEnabled, and priority resolution live in
+// createNotificationCore.ts so the temporal worker can reuse them without
+// this module's auth/realtime dependencies.
 
 function normalizeDateTime(value: unknown): string {
   if (typeof value === 'string') return value;
@@ -184,80 +99,60 @@ export async function createNotificationFromTemplateInternal(
     throw new Error('createNotificationFromTemplateInternal requires a server-side database connection');
   }
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Get user's locale
-    const userLocale = await getUserLocale(trx, request.tenant, request.user_id);
-
-    // Get template in user's language
-    const template = await getNotificationTemplate(
+    const notification = await createNotificationRowFromTemplate(
       trx,
       request.tenant,
-      request.template_name,
-      userLocale
+      request.user_id,
+      request
     );
 
-    if (!template) {
-      throw new Error(`Template '${request.template_name}' not found`);
-    }
-
-    // Check if user has this notification type enabled
-    const subtypeId = template.subtype_id;
-    const isEnabled = await checkInternalNotificationEnabled(trx, request.tenant, request.user_id, subtypeId);
-
-    if (!isEnabled) {
-      console.log(`Internal notification disabled for user ${request.user_id}, subtype ${subtypeId}`);
+    if (!notification) {
       return null;
     }
 
-    // Render template with data
-    const title = renderTemplate(template.title, request.data);
-    const message = renderTemplate(template.message, request.data);
-
-    // Insert notification
-    const [notification] = await tenantDb(trx, request.tenant).table<any>('internal_notifications')
-      .insert({
-        tenant: request.tenant,
-        user_id: request.user_id,
-        template_name: request.template_name,
-        language_code: userLocale,
-        title,
-        message,
-        type: request.type || 'info',
-        category: request.category || null,
-        link: request.link || null,
-        metadata: request.metadata ? JSON.stringify(request.metadata) : null,
-        is_read: false,
-        delivery_status: 'pending',
-        delivery_attempts: 0
-      })
-      .returning('*') as InternalNotification[];
-
     const createdAt = normalizeDateTime(notification?.created_at);
 
-    safePublishNotificationWorkflowEvent({
-      eventType: 'NOTIFICATION_SENT',
-      payload: buildNotificationSentPayload({
-        notificationId: notification.internal_notification_id,
-        channel: 'in_app',
-        recipientId: request.user_id,
-        sentAt: createdAt,
-        templateId: request.template_name,
-      }),
-      ctx: {
-        tenantId: request.tenant,
-        occurredAt: createdAt,
-        actor: { actorType: 'SYSTEM' },
-        correlationId: notification.internal_notification_id,
+    // External effects must not run inside the open transaction: the enclosing
+    // ledger transaction can still roll back (effect failure, completion-mark
+    // failure, crash before commit) or be replayed by the recovery sweeper,
+    // either of which would orphan or duplicate them. registerAfterCommit
+    // attaches them to the owning transaction and flushes them exactly once
+    // after a successful commit; on rollback the queue is dropped. This gives
+    // at-most-once per committed transaction: a crash after commit but before
+    // the flush loses the fire-and-forget effect (same exposure as before
+    // deferral) — never emit for a rolled-back transaction, never double-emit
+    // on replay.
+    registerAfterCommit(
+      trx,
+      () => {
+        safePublishNotificationWorkflowEvent({
+          eventType: 'NOTIFICATION_SENT',
+          payload: buildNotificationSentPayload({
+            notificationId: notification.internal_notification_id,
+            channel: 'in_app',
+            recipientId: request.user_id,
+            sentAt: createdAt,
+            templateId: request.template_name,
+          }),
+          ctx: {
+            tenantId: request.tenant,
+            occurredAt: createdAt,
+            actor: { actorType: 'SYSTEM' },
+            correlationId: notification.internal_notification_id,
+          },
+          idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
+        });
+
+        // Broadcast notification to connected clients (async, don't await)
+        broadcastNotification(notification).catch(err => {
+          console.error('Failed to broadcast notification:', err);
+        });
+
+        // Fire post-creation hooks (e.g., push notifications)
+        runPostCreationHooks(notification);
       },
-      idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
-    });
-
-    // Broadcast notification to connected clients (async, don't await)
-    broadcastNotification(notification).catch(err => {
-      console.error('Failed to broadcast notification:', err);
-    });
-
-    // Fire post-creation hooks (e.g., push notifications)
-    runPostCreationHooks(notification);
+      `notification=${notification.internal_notification_id} broadcast`
+    );
 
     return notification;
   });
@@ -283,77 +178,51 @@ export const createNotificationFromTemplateAction = withAuth(async (
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get user's locale
-      const userLocale = await getUserLocale(trx, targetTenant, targetUserId);
-
-      // Get template in user's language
-      const template = await getNotificationTemplate(
+      const notification = await createNotificationRowFromTemplate(
         trx,
         targetTenant,
-        request.template_name,
-        userLocale
+        targetUserId,
+        request
       );
 
-      if (!template) {
-        throw new Error(`Template '${request.template_name}' not found`);
-      }
-
-      // Check if user has this notification type enabled
-      const subtypeId = template.subtype_id;
-      const isEnabled = await checkInternalNotificationEnabled(trx, targetTenant, targetUserId, subtypeId);
-
-      if (!isEnabled) {
-        console.log(`Internal notification disabled for user ${targetUserId}, subtype ${subtypeId}`);
+      if (!notification) {
         return null;
       }
 
-      // Render template with data
-      const title = renderTemplate(template.title, request.data);
-      const message = renderTemplate(template.message, request.data);
-
-      // Insert notification
-      const [notification] = await tenantDb(trx, targetTenant).table<any>('internal_notifications')
-        .insert({
-          tenant: targetTenant,
-          user_id: targetUserId,
-          template_name: request.template_name,
-          language_code: userLocale,
-          title,
-          message,
-          type: request.type || 'info',
-          category: request.category || null,
-          link: request.link || null,
-          metadata: request.metadata ? JSON.stringify(request.metadata) : null,
-          is_read: false,
-          delivery_status: 'pending',
-          delivery_attempts: 0
-        })
-        .returning('*') as InternalNotification[];
-
       const createdAt = normalizeDateTime(notification?.created_at);
 
-      safePublishNotificationWorkflowEvent({
-        eventType: 'NOTIFICATION_SENT',
-        payload: buildNotificationSentPayload({
-          notificationId: notification.internal_notification_id,
-          channel: 'in_app',
-          recipientId: targetUserId,
-          sentAt: createdAt,
-          templateId: request.template_name,
-        }),
-        ctx: {
-          tenantId: targetTenant,
-          occurredAt: createdAt,
-          actor: { actorType: 'SYSTEM' },
-          correlationId: notification.internal_notification_id,
-        },
-        idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
-      });
+      // Defer the external effects (workflow event publication + realtime
+      // broadcast) until the owning transaction commits so a rollback cannot
+      // orphan them and a replay cannot double-emit; see the identical
+      // registerAfterCommit block in createNotificationFromTemplateInternal.
+      registerAfterCommit(
+        trx,
+        () => {
+          safePublishNotificationWorkflowEvent({
+            eventType: 'NOTIFICATION_SENT',
+            payload: buildNotificationSentPayload({
+              notificationId: notification.internal_notification_id,
+              channel: 'in_app',
+              recipientId: targetUserId,
+              sentAt: createdAt,
+              templateId: request.template_name,
+            }),
+            ctx: {
+              tenantId: targetTenant,
+              occurredAt: createdAt,
+              actor: { actorType: 'SYSTEM' },
+              correlationId: notification.internal_notification_id,
+            },
+            idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
+          });
 
-      // Broadcast notification to connected clients (async, don't await)
-      broadcastNotification(notification).catch(err => {
-        console.error('Failed to broadcast notification:', err);
-      });
+          // Broadcast notification to connected clients (async, don't await)
+          broadcastNotification(notification).catch(err => {
+            console.error('Failed to broadcast notification:', err);
+          });
+        },
+        `notification=${notification.internal_notification_id} broadcast`
+      );
 
       return notification;
     });
@@ -365,73 +234,17 @@ export const createNotificationFromTemplateAction = withAuth(async (
 });
 
 /**
- * Internal helper to check if internal notifications are enabled (used within transaction)
+ * Resolve the effective priority for a notification about to be created.
+ * Delegates to createNotificationCore; kept exported here (async, per
+ * "use server" rules) for existing callers.
  */
-async function checkInternalNotificationEnabled(
+export async function resolveNotificationPriority(
   trx: Knex.Transaction,
   tenant: string,
   userId: string,
   subtypeId: number
-): Promise<boolean> {
-  // 1. Get subtype info
-  const subtype = await tenantScopedTable(trx, 'internal_notification_subtypes', tenant)
-    .where({ internal_notification_subtype_id: subtypeId })
-    .first();
-
-  if (!subtype) {
-    return false;
-  }
-
-  // 2. Check tenant-specific subtype setting (replaces global check)
-  const subtypeSetting = await tenantScopedTable(trx, 'tenant_internal_notification_subtype_settings', tenant)
-    .where({ subtype_id: subtypeId })
-    .first();
-
-  const isSubtypeEnabled = subtypeSetting?.is_enabled ?? true;
-  if (!isSubtypeEnabled) {
-    return false;
-  }
-
-  // 3. Verify category exists
-  const category = await tenantScopedTable(trx, 'internal_notification_categories', tenant)
-    .where({ internal_notification_category_id: subtype.internal_category_id })
-    .first();
-
-  if (!category) {
-    return false; // Category not found - don't send notification
-  }
-
-  // 4. Check tenant-specific category setting (replaces global check)
-  const categorySetting = await tenantScopedTable(trx, 'tenant_internal_notification_category_settings', tenant)
-    .where({ category_id: subtype.internal_category_id })
-    .first();
-
-  const isCategoryEnabled = categorySetting?.is_enabled ?? true;
-  if (!isCategoryEnabled) {
-    return false;
-  }
-
-  // 5. Check user-specific preferences (EXISTING - unchanged)
-  const userSubtypePreference = await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
-    .where({ user_id: userId, subtype_id: subtypeId })
-    .first();
-
-  if (userSubtypePreference) {
-    return userSubtypePreference.is_enabled;
-  }
-
-  // 6. Check user category preference (EXISTING - unchanged)
-  const userCategoryPreference = await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
-    .where({ user_id: userId, category_id: subtype.internal_category_id })
-    .whereNull('subtype_id')
-    .first();
-
-  if (userCategoryPreference) {
-    return userCategoryPreference.is_enabled;
-  }
-
-  // 7. Fall back to tenant's default
-  return subtypeSetting?.is_default_enabled ?? true;
+): Promise<InternalNotificationPriority> {
+  return resolveNotificationPriorityCore(trx, tenant, userId, subtypeId);
 }
 
 /**
@@ -496,10 +309,22 @@ export const getNotificationsAction = withAuth(async (
       .whereNull('deleted_at')
       .count('* as count');
 
+    // Unread high-priority count so the bell badge can render high-only
+    // (task 29.8.46) without a second round-trip.
+    const [{ count: unreadHighCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+      .where({
+        user_id: userId,
+        is_read: false,
+        priority: 'high'
+      })
+      .whereNull('deleted_at')
+      .count('* as count');
+
     return {
       notifications,
       total: Number(totalCount),
       unread_count: Number(unreadCount),
+      unread_high: Number(unreadHighCount),
       has_more: Number(totalCount) > offset + limit
     };
   });
@@ -562,8 +387,22 @@ export const getUnreadCountAction = withAuth(async (
       .whereNull('deleted_at')
       .count('* as count');
 
+    // Split the unread count by priority tier so the bell can render a
+    // high-only badge (and a neutral dot for normal/low) without a second
+    // round-trip. `total` mirrors `unread_count`; `high` is unread-high.
+    const [{ count: highUnreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+      .where({
+        user_id: userId,
+        is_read: false,
+        priority: 'high'
+      })
+      .whereNull('deleted_at')
+      .count('* as count');
+
     const response: UnreadCountResponse = {
-      unread_count: Number(unreadCount)
+      unread_count: Number(unreadCount),
+      total: Number(unreadCount),
+      high: Number(highUnreadCount)
     };
 
     // Get counts by category if requested
@@ -813,7 +652,12 @@ export const getSubtypesAction = withAuth(async (
         'ins.created_at',
         'ins.updated_at',
         trx.raw('COALESCE(tiss.is_enabled, true) as is_enabled'),
-        trx.raw('COALESCE(tiss.is_default_enabled, true) as is_default_enabled')
+        trx.raw('COALESCE(tiss.is_default_enabled, true) as is_default_enabled'),
+        // Priority (task 29.8.46): the subtype's system default, the tenant's
+        // override (NULL = inherit), and the effective value to display.
+        trx.raw("COALESCE(ins.default_priority, 'normal') as default_priority"),
+        trx.raw('tiss.priority as tenant_priority'),
+        trx.raw("COALESCE(tiss.priority, ins.default_priority, 'normal') as effective_priority")
       );
 
     // Get translated title using subquery to avoid duplicate rows
@@ -907,6 +751,14 @@ export const updateUserInternalNotificationPreferenceAction = withAuth(async (
       })
       .first();
 
+    // Priority overrides are meaningful on subtype-level rows only; category
+    // rows always keep priority NULL. `null` clears an override; omitting the
+    // key preserves any existing value (task 29.8.46).
+    const isSubtypeRow = (request.subtype_id ?? null) !== null;
+    const priority = isSubtypeRow
+      ? ('priority' in request ? (request.priority ?? null) : (existing?.priority ?? null))
+      : null;
+
     if (existing) {
       // Update existing preference
       const [updated] = await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
@@ -915,6 +767,7 @@ export const updateUserInternalNotificationPreferenceAction = withAuth(async (
         })
         .update({
           is_enabled: request.is_enabled,
+          priority,
           updated_at: trx.fn.now()
         })
         .returning('*');
@@ -927,7 +780,8 @@ export const updateUserInternalNotificationPreferenceAction = withAuth(async (
           user_id: userId,
           category_id: request.category_id || null,
           subtype_id: request.subtype_id || null,
-          is_enabled: request.is_enabled
+          is_enabled: request.is_enabled,
+          priority
         })
         .returning('*');
       return created;
@@ -1069,7 +923,10 @@ export const updateInternalSubtypeAction = withAuth(async (
   currentUser,
   { tenant },
   subtypeId: number,
-  updates: Partial<Pick<InternalNotificationSubtype, 'is_enabled' | 'is_default_enabled'>>
+  updates: Partial<Pick<InternalNotificationSubtype, 'is_enabled' | 'is_default_enabled'>> & {
+    /** Tenant priority override. `null` clears it (reset to subtype default); `undefined` leaves it unchanged. */
+    priority?: InternalNotificationPriority | null;
+  }
 ): Promise<InternalNotificationSubtype | NotificationActionError> => {
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
@@ -1098,6 +955,11 @@ export const updateInternalSubtypeAction = withAuth(async (
       // Build update object with only defined values, defaulting to existing or true
       const is_enabled = updates.is_enabled ?? existingSettings?.is_enabled ?? true;
       const is_default_enabled = updates.is_default_enabled ?? existingSettings?.is_default_enabled ?? true;
+      // Priority override (task 29.8.46): only touch it when the caller supplied a
+      // `priority` key. `null` clears the override; omitting the key preserves it.
+      const priority = 'priority' in updates
+        ? (updates.priority ?? null)
+        : (existingSettings?.priority ?? null);
       // Compute timestamp before query - CitusDB requires IMMUTABLE values in ON CONFLICT UPDATE
       const now = new Date();
 
@@ -1107,19 +969,23 @@ export const updateInternalSubtypeAction = withAuth(async (
           tenant,
           subtype_id: subtypeId,
           is_enabled,
-          is_default_enabled
+          is_default_enabled,
+          priority
         })
         .onConflict(['tenant', 'subtype_id'])
         .merge({
           is_enabled,
           is_default_enabled,
+          priority,
           updated_at: now
         });
 
       return {
         ...subtype,
         is_enabled,
-        is_default_enabled
+        is_default_enabled,
+        tenant_priority: priority as InternalNotificationPriority | null,
+        effective_priority: (priority ?? subtype.default_priority ?? 'normal') as InternalNotificationPriority
       };
     });
   } catch (error) {

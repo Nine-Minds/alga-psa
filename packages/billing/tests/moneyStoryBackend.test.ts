@@ -64,12 +64,20 @@ import { AccountingExportRepository } from '../src/repositories/accountingExport
 import { AccountingAdapterRegistry } from '../src/adapters/accounting/registry';
 import { QuickBooksOnlineAdapter } from '../src/adapters/accounting/quickBooksOnlineAdapter';
 
+// Local-only opt-in. The hooks below are file-level, so they must no-op when
+// the suite is disabled: readEnv() throws ENOENT in CI (no server/.env.local),
+// and today they are spared only because vitest skips a file suite whose every
+// child is skipped — one ungated test added to this file would change that.
+const BILLING_DB_TESTS_ENABLED = process.env.BILLING_DB_TESTS === '1';
+
 function readEnv(): Record<string, string> {
+  // LEVERAGE: pattern env-local-parser — same hand-rolled .env parser as
+  // packages/inventory/src/test-utils/inventoryTestDatabase.ts
   const envPath = path.resolve(__dirname, '../../../server/.env.local');
   const result: Record<string, string> = {};
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
     const match = line.match(/^([A-Z_]+)=(.*)$/);
-    if (match) result[match[1]] = match[2];
+    if (match) result[match[1]] = match[2].replace(/\s+#.*$/, '').trim();
   }
   return result;
 }
@@ -84,6 +92,7 @@ let SERVICE_B: string;
 let TICKET: string;
 
 beforeAll(async () => {
+  if (!BILLING_DB_TESTS_ENABLED) return;
   const env = readEnv();
   knex = knexLib({
     client: 'pg',
@@ -123,6 +132,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  if (!BILLING_DB_TESTS_ENABLED) return;
   trx = await knex.transaction();
   mockedTenant = TENANT;
   mockedKnex = trx;
@@ -133,6 +143,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  if (!BILLING_DB_TESTS_ENABLED) return;
   mockedTenant = null;
   mockedKnex = null;
   await trx.rollback();
@@ -270,7 +281,7 @@ async function seedTicketMaterialInvoice(params: {
   });
 }
 
-describe.skipIf(process.env.BILLING_DB_TESTS !== '1')('S5 money story backend', () => {
+describe.skipIf(!BILLING_DB_TESTS_ENABLED)('S5 money story backend', () => {
   it('T015: getInvoiceLineCogs returns SO COGS, material COGS, and nulls for lines without COGS', async () => {
     const label = randomUUID().slice(0, 8);
     const invoiceId = randomUUID();

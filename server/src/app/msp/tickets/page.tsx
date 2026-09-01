@@ -4,17 +4,33 @@ import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDis
 import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import MspTicketsPageClient from '@alga-psa/msp-composition/tickets/MspTicketsPageClient';
+import { findBoardById } from '@alga-psa/tickets/actions/board-actions/boardActions';
 import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
+import {
+  hasBoardFilterParam,
+  hasTicketViewFilterParams,
+  TICKETS_LAST_ACTIVE_BOARD_SETTING,
+} from '@alga-psa/tickets/lib/boardTabs';
+import {
+  buildBoardArrivalFilters,
+  resolveTicketViewSettings,
+  sanitizeStoredTicketView,
+  validateCapturedFilters,
+} from '@alga-psa/tickets/lib/ticketViewSettings';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Tickets',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.tickets.title', { defaultValue: 'Tickets' }),
+  };
+}
 
 interface TicketsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -200,6 +216,80 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       }
     }
 
+    // ── Board memory, resolved before first paint ──────────────────────────
+    //
+    // The remembered board tab used to be restored by a client effect that fired
+    // once the preference resolved — a second list fetch, a board that visibly
+    // jumped a beat after the list had already rendered, and a
+    // history.replaceState late enough to land *after* a ticket click and bounce
+    // the user back to the list. Resolving it here means first paint is already
+    // the remembered board and nothing re-writes history on arrival.
+    //
+    // A URL that names a board still wins outright, and a URL carrying filter
+    // intent still outranks the board's stored view: a shared link is about
+    // *these tickets*, not about the board's usual way of looking at them.
+    const searchString = new URLSearchParams(
+      Object.entries(params ?? {}).flatMap(([key, value]): [string, string][] => {
+        if (value === undefined) return [];
+        return Array.isArray(value) ? value.map(item => [key, item]) : [[key, value]];
+      })
+    ).toString();
+
+    // Hoisted out of the list fetch below: the board's stored view resolves
+    // through the tenant layer, so both must be in hand before the filters the
+    // list is fetched with are decided.
+    const [displaySettings, rememberedBoardId] = await Promise.all([
+      getTicketingDisplaySettings(),
+      hasBoardFilterParam(searchString)
+        ? Promise.resolve(null)
+        : getUserPreference(user!.user_id, TICKETS_LAST_ACTIVE_BOARD_SETTING).catch(() => null),
+    ]);
+
+    const storedBoardId = typeof rememberedBoardId === 'string' ? rememberedBoardId.trim() : '';
+    if (storedBoardId) {
+      // A stored board that no longer exists (or is no longer readable) is
+      // ignored rather than rendering a tab that cannot be there — the same
+      // 'board-unavailable' rule the client resolver applied.
+      const board = await findBoardById(storedBoardId).catch(() => undefined);
+      if (board && !isReturnedActionError(board) && board.board_id) {
+        filtersFromURL.boardIds = [board.board_id];
+
+        if (!hasTicketViewFilterParams(searchString)) {
+          const resolvedView = resolveTicketViewSettings({
+            board: sanitizeStoredTicketView(board.list_view_settings),
+            tenant: sanitizeStoredTicketView(displaySettings?.list),
+          });
+          const arrivalFilters = buildBoardArrivalFilters({
+            baseline: {
+              statusId: TICKET_STATUS_FILTER_OPEN,
+              priorityId: 'all',
+              showOpenOnly: true,
+              boardFilterState: 'active',
+              bundleView: 'bundled',
+              searchQuery: '',
+              sortBy: 'entered_at',
+              sortDirection: 'desc',
+            },
+            boardSelection: {
+              boardIds: [board.board_id],
+              statusId: TICKET_STATUS_FILTER_OPEN,
+              showOpenOnly: true,
+            },
+            viewFilters: validateCapturedFilters(
+              resolvedView.filters,
+              {},
+              // Pseudo-filters, not ids: they must survive validation untouched.
+              [TICKET_STATUS_FILTER_OPEN, 'all'],
+            ),
+          });
+          if (!allowSlaStatusFilter) {
+            delete arrivalFilters.slaStatusFilter;
+          }
+          Object.assign(filtersFromURL, arrivalFilters);
+        }
+      }
+    }
+
     // Apply defaults for missing parameters
     const initialFilters: Partial<ITicketListFilters> = {
       boardFilterState: 'active',
@@ -240,9 +330,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     };
 
     // Fetch consolidated data for the ticket list with initial filters and pagination
-    const [consolidatedData, displaySettings, teams, userPermissions] = await Promise.all([
+    const [consolidatedData, teams, userPermissions] = await Promise.all([
       getConsolidatedTicketListData(fetchFilters, page, pageSize),
-      getTicketingDisplaySettings(),
       getTeams().catch(() => []),
       getCurrentUserPermissions().catch(() => [] as string[])
     ]);
@@ -258,7 +347,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     }
 
     return (
-      <div id="tickets-page-container" className="bg-gray-100">
+      <div id="tickets-page-container" className="bg-[rgb(var(--color-app-ground))]">
         <MspTicketsPageClient
           consolidatedData={consolidatedData}
           initialFormOptions={consolidatedData.options}

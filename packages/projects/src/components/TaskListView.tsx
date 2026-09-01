@@ -31,7 +31,10 @@ import { TaskTypeSelector } from './TaskTypeSelector';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { highlightSearchMatch } from '../lib/searchUtils';
+import { createFallbackStatus, FALLBACK_STATUS_MAPPING_ID, partitionStatusScope } from '../lib/statusScopeUtils';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useTaskSelection } from './TaskSelectionContext';
@@ -142,7 +145,7 @@ function ProgressBar({ percentage }: { percentage: number }) {
   return (
     <div className="w-full bg-[rgb(var(--color-border-200))] rounded-full h-1.5 overflow-hidden">
       <div
-        className="bg-purple-600 h-1.5 rounded-full transition-all duration-300"
+        className="bg-[rgb(var(--color-primary-600))] h-1.5 rounded-full transition-all duration-300"
         style={{ width: `${Math.min(percentage, 100)}%` }}
       />
     </div>
@@ -284,6 +287,9 @@ export default function TaskListView({
   searchCaseSensitive = false
 }: TaskListViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const { money, symbol } = useCurrencyFormat();
   const { isSelected, toggleTask, setTasksSelected, selectedTaskIds } = useTaskSelection();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
@@ -692,6 +698,14 @@ export default function TaskListView({
         return { status, tasks: statusTasks };
       });
 
+      // Legacy orphans: tasks whose mapping id is outside the phase's effective
+      // scope must stay visible. Append a labelled fallback group so they are
+      // never silently dropped from the list.
+      const { orphanTasks } = partitionStatusScope(phaseStatuses, phaseTasks);
+      if (orphanTasks.length > 0) {
+        statusGroups.push({ status: createFallbackStatus(), tasks: orphanTasks });
+      }
+
       // Calculate completion stats
       const completedTasks = phaseTasks.filter(task =>
         closedStatusIds.has(task.project_status_mapping_id)
@@ -997,6 +1011,11 @@ export default function TaskListView({
   }, []);
 
   const handleStatusDragOver = useCallback((e: React.DragEvent<HTMLTableRowElement>, statusId: string, phaseId: string) => {
+    // The fallback group is not a real status target; never drop into it.
+    if (statusId === FALLBACK_STATUS_MAPPING_ID) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
 
@@ -1049,6 +1068,13 @@ export default function TaskListView({
 
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLTableRowElement>, statusId: string, phaseId: string, tasksInStatus: IProjectTask[], dropIndex: number) => {
     e.preventDefault();
+
+    // The fallback group is not a real status target; never drop into it.
+    if (statusId === FALLBACK_STATUS_MAPPING_ID) {
+      setDragOverStatus(null);
+      setDropIndicatorIndex(null);
+      return;
+    }
 
     // Clear scroll interval
     scrollSpeedRef.current = 0;
@@ -1246,7 +1272,7 @@ export default function TaskListView({
   return (
     <div
       ref={containerRef}
-      className="project-task-list-density flex flex-col bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-xl shadow-sm overflow-hidden h-[calc(100vh-220px)] min-h-[400px]"
+      className="project-task-list-density flex flex-col bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-xl card-elevated overflow-hidden h-[calc(100vh-220px)] min-h-[400px]"
       style={{ ['--tl-font' as string]: `${densityFontPx}px`, ['--tl-cell-pad' as string]: densityCellPadding }}
     >
       {/*
@@ -1420,7 +1446,7 @@ export default function TaskListView({
                             <div>
                               <div className="flex items-center gap-3">
                                 <h4 className="font-semibold text-[rgb(var(--color-text-900))]">{phaseGroup.phase.phase_name}</h4>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                                <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded text-xs font-medium">
                                   {phaseGroup.totalTasks} {t(phaseGroup.totalTasks === 1 ? 'task' : 'tasks.title', phaseGroup.totalTasks === 1 ? 'task' : 'tasks')}
                                 </span>
                                 {phaseBillingBadges?.[phaseGroup.phase.phase_id] && (
@@ -1432,7 +1458,7 @@ export default function TaskListView({
                                   </Tooltip>
                                 )}
                                 {phaseGroup.phase.completed_at && (
-                                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: new Date(phaseGroup.phase.completed_at as string).toLocaleDateString() })}>
+                                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: formatDate(new Date(phaseGroup.phase.completed_at as string), { dateStyle: 'medium' }) })}>
                                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                                   </Tooltip>
                                 )}
@@ -1478,7 +1504,7 @@ export default function TaskListView({
                               {/* Completion percentage */}
                               {phaseGroup.totalTasks > 0 && (
                                 <div className="text-right min-w-[80px]">
-                                  <div className="text-lg font-bold text-purple-600">
+                                  <div className="text-lg font-bold text-[rgb(var(--color-primary-600))]">
                                     {phaseGroup.completionPercentage}%
                                   </div>
                                   <div className="text-xs text-[rgb(var(--color-text-500))]">
@@ -1696,7 +1722,7 @@ export default function TaskListView({
                                                       return newSet;
                                                     });
                                                   }}
-                                                  className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
+                                                  className="text-xs text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium mt-0.5"
                                                 >
                                                   {expandedTitles.has(task.task_id)
                                                     ? t('projectDetail.seeLess', 'See less')
@@ -1727,7 +1753,7 @@ export default function TaskListView({
                                                         return newSet;
                                                       });
                                                     }}
-                                                    className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
+                                                    className="text-xs text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium mt-0.5"
                                                   >
                                                     {expandedDescriptions.has(task.task_id)
                                                       ? t('projectDetail.seeLess', 'See less')
@@ -1820,7 +1846,7 @@ export default function TaskListView({
                                         <td key="task_type" className={`py-2.5 px-3 align-middle ${tdBorder}`}>
                                           <div className="flex items-center gap-1.5">
                                             <TaskTypeIcon className="h-3.5 w-3.5 shrink-0" style={{ color: taskType?.color || '#6B7280' }} />
-                                            <span className="text-[13px] text-[rgb(var(--color-text-700))] truncate">{taskType?.type_name || task.task_type_key}</span>
+                                            <span className="text-[13px] text-[rgb(var(--color-text-700))] truncate">{taskTypeLabel(taskType, task.task_type_key)}</span>
                                           </div>
                                         </td>
                                       );

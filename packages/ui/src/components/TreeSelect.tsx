@@ -72,6 +72,10 @@ interface TreeSelectProps<T extends string = string> extends AutomationProps {
   onModeChange?: (mode: TreeSelectMode) => void;
   // Arbitrary content rendered in the dropdown header (e.g. an active/inactive filter).
   headerContent?: React.ReactNode;
+  // Ancestors of the current selection, as handed back by onValueChange. Needed when the
+  // same value appears under several branches (project task statuses are shared across
+  // phases) — without it the trigger label shows the first match's ancestors.
+  selectedPath?: TreeSelectPath;
 }
 
 function TreeSelect<T extends string>({
@@ -82,10 +86,10 @@ function TreeSelect<T extends string>({
   className,
   disabled,
   label,
-  selectedClassName = 'bg-gray-50',
-  hoverClassName = 'hover:bg-gray-50',
-  triggerClassName = 'hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent',
-  contentClassName = 'bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))]',
+  selectedClassName = 'bg-[rgb(var(--color-table-selected))]',
+  hoverClassName = 'hover:bg-[rgb(var(--color-primary-500)/0.08)]',
+  triggerClassName = 'hover:border-[rgb(var(--color-border-400))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent',
+  contentClassName = 'bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))]',
   multiSelect = false,
   showExclude = false,
   showReset = false,
@@ -99,6 +103,7 @@ function TreeSelect<T extends string>({
   modeToggle = false,
   onModeChange,
   headerContent,
+  selectedPath,
 }: TreeSelectProps<T>): React.JSX.Element {
   const { t } = useTranslation();
   const { modal: parentModal } = useModality();
@@ -145,6 +150,29 @@ function TreeSelect<T extends string>({
     return undefined;
   };
 
+  // Same search, but only through branches whose ancestors agree with the caller-supplied
+  // path, so a value that exists under several branches resolves to the selected one.
+  const findSelectedOptionAlongPath = (
+    opts: TreeSelectOption<T>[],
+    targetValue: string,
+    path: TreeSelectPath,
+    parentPath: TreeSelectOption<T>[] = []
+  ): { option: TreeSelectOption<T>; path: TreeSelectOption<T>[] } | undefined => {
+    for (const opt of opts) {
+      const expected = path[opt.type];
+      if (expected !== undefined && expected !== opt.value) continue;
+      const currentPath = [...parentPath, opt];
+      if (opt.value === targetValue) {
+        return { option: opt, path: currentPath };
+      }
+      if (opt.children) {
+        const found = findSelectedOptionAlongPath(opt.children, targetValue, path, currentPath);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+
   // Update expanded items and display label when value changes
   useEffect(() => {
     if (!Array.isArray(options)) {
@@ -165,7 +193,9 @@ function TreeSelect<T extends string>({
 
     // Otherwise, find and reflect the selected option
     setSelectedValue(value);
-    const result = findSelectedOptionWithPath(options, value);
+    const result =
+      (selectedPath ? findSelectedOptionAlongPath(options, value, selectedPath) : undefined) ??
+      findSelectedOptionWithPath(options, value);
     if (result) {
       // Only auto-expand parent nodes on initial mount, not on subsequent renders
       // This allows users to collapse categories while keeping their selection
@@ -209,7 +239,7 @@ function TreeSelect<T extends string>({
       });
       setDisplayLabel(labels.filter(l => l).join(' > '));
     }
-  }, [value, options]);
+  }, [value, options, selectedPath]);
 
   // Keep the mode in sync when the filter opens with a one-sided selection (e.g. a
   // persisted exclude-only filter). Only corrects a clear mismatch, so it never fights
@@ -411,7 +441,7 @@ function TreeSelect<T extends string>({
         key={option.value}
         className={`
             relative flex items-center py-2 text-sm rounded text-gray-900
-            bg-white select-none whitespace-nowrap pl-3
+            select-none whitespace-nowrap pl-3
             ${hoverClassName}
             ${option.selected ? selectedClassName : ''}
           `}
@@ -437,7 +467,7 @@ function TreeSelect<T extends string>({
                 className={`
                   cursor-pointer truncate
                   ${option.excluded ? 'line-through text-red-500' : ''}
-                  ${option.selected ? 'text-purple-600' : ''}
+                  ${option.selected ? 'text-[rgb(var(--color-primary-600))]' : ''}
                 `}
                 onClick={(e) => activateOption(option, ancestors, e)}
               >
@@ -454,7 +484,7 @@ function TreeSelect<T extends string>({
                   className={`
                     p-1 h-auto min-h-0
                     ${(selectMode === 'include' ? option.selected : option.excluded)
-                      ? (selectMode === 'include' ? 'text-purple-500' : 'text-red-500')
+                      ? (selectMode === 'include' ? 'text-[rgb(var(--color-primary-500))]' : 'text-red-500')
                       : 'text-gray-400'}
                   `}
                   onClick={(e) => {
@@ -487,7 +517,7 @@ function TreeSelect<T extends string>({
                     size="sm"
                     className={`
                       p-1 h-auto min-h-0
-                      ${option.selected ? 'text-purple-500' : 'text-gray-400'}
+                      ${option.selected ? 'text-[rgb(var(--color-primary-500))]' : 'text-gray-400'}
                     `}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -556,7 +586,7 @@ function TreeSelect<T extends string>({
             className={`
               inline-flex items-center justify-center
               border border-[rgb(var(--color-border-400))] rounded-lg p-2
-              bg-white min-h-[38px]
+              bg-[rgb(var(--color-card))] min-h-[38px]
               text-sm w-full
               ${className}
             `}
@@ -587,7 +617,7 @@ function TreeSelect<T extends string>({
             className={`
               inline-flex items-center justify-between
               border border-[rgb(var(--color-border-400))] rounded-lg p-2
-              bg-white min-h-[38px]
+              bg-[rgb(var(--color-card))] min-h-[38px]
               ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
               text-sm w-full
               ${triggerClassName}
@@ -609,7 +639,7 @@ function TreeSelect<T extends string>({
                     e.stopPropagation();
                     handleReset(e);
                   }}
-                  className="p-1 hover:bg-gray-100 rounded-full cursor-pointer"
+                  className="p-1 hover:bg-[rgb(var(--color-primary-500)/0.08)] rounded-full cursor-pointer"
                   role="button"
                   aria-label={t('form.clearSelection', { defaultValue: 'Clear selection' })}
                 >
@@ -632,11 +662,11 @@ function TreeSelect<T extends string>({
               sticky="always"
             >
               {(headerContent || modeToggle || showSearch) && (
-                <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] space-y-2">
+                <div className="p-2 border-b border-[rgb(var(--color-border-200))] space-y-2">
                   {headerContent}
                   {modeToggle && (
                     <div
-                      className="flex items-center gap-0.5 rounded-md bg-gray-100 dark:bg-[rgb(var(--color-border-100))] p-0.5"
+                      className="flex items-center gap-0.5 rounded-md bg-[rgb(var(--color-border-200))] p-0.5"
                       onMouseDown={(e) => e.preventDefault()}
                     >
                       {(['include', 'exclude'] as TreeSelectMode[]).map((m) => (
@@ -646,7 +676,7 @@ function TreeSelect<T extends string>({
                           onClick={(e) => handleModeChange(m, e)}
                           className={`flex-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
                             selectMode === m
-                              ? 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] shadow-sm'
+                              ? 'chip-primary shadow-sm'
                               : 'text-gray-500 hover:text-[rgb(var(--color-primary-600))]'
                           }`}
                         >
@@ -667,7 +697,7 @@ function TreeSelect<T extends string>({
                       // Stop keystrokes from reaching Radix Select's typeahead/keyboard handlers
                       onKeyDown={(e) => e.stopPropagation()}
                       placeholder={searchPlaceholder || t('form.searchPlaceholder', { defaultValue: 'Search...' })}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent bg-white dark:bg-[rgb(var(--color-card))]"
+                      className="w-full px-2 py-1.5 text-sm border border-[rgb(var(--color-border-300))] rounded focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent bg-[rgb(var(--color-card))]"
                     />
                   )}
                 </div>
@@ -677,7 +707,7 @@ function TreeSelect<T extends string>({
                   <div
                     className={`
                       relative flex items-center py-2 text-sm rounded text-gray-900
-                      bg-white select-none whitespace-nowrap pl-3 cursor-pointer
+                      select-none whitespace-nowrap pl-3 cursor-pointer
                       ${hoverClassName}
                     `}
                     onClick={handleReset}
@@ -695,10 +725,10 @@ function TreeSelect<T extends string>({
               </RadixSelect.Viewport>
               {onAddNew && (
                 <>
-                  <div className="border-t border-gray-200" />
+                  <div className="border-t border-[rgb(var(--color-border-200))]" />
                   <button
                     type="button"
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 cursor-pointer"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-[rgb(var(--color-primary-500)/0.08)] cursor-pointer"
                     onClick={handleAddNew}
                   >
                     <Plus className="h-4 w-4" />

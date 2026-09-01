@@ -136,5 +136,14 @@
       "success_one": "{{count}} lavoro cancellato dalla cronologia.",
       "success_other": "{{count}} lavori cancellati dalla cronologia."
     }
+  },
+  "page": {
+    "heading": "Monitoraggio job",
+    "recentJobs": "Job recenti"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Job non trovato. Potrebbe essere scaduto o essere stato eliminato."
+    }
   }
 }

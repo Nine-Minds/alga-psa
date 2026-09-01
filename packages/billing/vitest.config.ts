@@ -10,8 +10,21 @@ export default defineConfig({
       'tests/**/*.test.ts',
       'tests/**/*.test.tsx',
       'src/actions/projectBillingActions.contract.test.ts',
+      'src/lib/prepaidBalanceAlerts.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/schemas/**/*.test.ts',
+      // Colocated suites for the document-preview tenant-branding seam. Most
+      // src/ tests are reached only through server/vitest.config.ts (which globs
+      // ../packages/**), but this package's own `npm test` target is a separate
+      // CI job — listing them here keeps both invocations covering the seam
+      // instead of silently reporting "No test files found".
+      'src/actions/documentTemplateActions.tenantBranding.test.ts',
+      'src/actions/documentTemplateActions.existingDocument.test.ts',
+      'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
+      'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
+      'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
+      'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
+      'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
@@ -50,6 +63,19 @@ export default defineConfig({
       {
         find: /^@alga-psa\/workflow-streams\/(.*)$/,
         replacement: `${path.resolve(__dirname, '../workflow-streams/src/streams/$1')}`,
+      },
+      // @alga-psa/workflows lives under ee/packages, so the generic
+      // @alga-psa/<pkg> -> packages/<pkg>/src rules at the bottom of this list
+      // resolve it to a directory that does not exist. Mirror
+      // server/vitest.config.ts and point at the real tree, otherwise any suite
+      // reaching the designer field catalog fails to transform.
+      {
+        find: /^@alga-psa\/workflows$/,
+        replacement: path.resolve(__dirname, '../../ee/packages/workflows/src/index.ts'),
+      },
+      {
+        find: /^@alga-psa\/workflows\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../../ee/packages/workflows/src')}/$1`,
       },
       {
         find: /^@alga-psa\/core\/logger$/,

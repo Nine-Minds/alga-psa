@@ -4,9 +4,13 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { listMyServiceRequestSubmissionsAction } from './actions';
 import { MyRequestsTable, type MyRequestsTableRow } from './MyRequestsTable';
 
-export const metadata: Metadata = {
-  title: 'My Requests',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('clientPortal.requestServices.myRequests.title', { defaultValue: 'My Requests' }),
+  };
+}
 
 export default async function MyServiceRequestsPage() {
   const [submissions, { t }] = await Promise.all([

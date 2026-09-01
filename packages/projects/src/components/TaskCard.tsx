@@ -28,6 +28,8 @@ import styles from './ProjectDetail.module.css';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { calculateZoomScales } from './KanbanZoomControl';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTaskSelection } from './TaskSelectionContext';
 
 interface TaskCardProps {
@@ -107,6 +109,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   teamAvatarUrls = {},
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const { isSelected, toggleTask, selectedTaskIds } = useTaskSelection();
   const selected = isSelected(task.task_id);
   // Use data from props — parent (StatusColumn) always provides arrays from batch-loaded data
@@ -295,7 +300,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         console.log('Using cached project tree data when selecting task for editing');
         onTaskSelected(task);
       }}
-      className={`${styles.taskCard} relative bg-white ${zoomScales.cardPadding} rounded-lg shadow-sm cursor-pointer hover:shadow-md border flex flex-col ${zoomScales.cardGap} ${
+      className={`${styles.taskCard} relative bg-[rgb(var(--color-card))] ${zoomScales.cardPadding} rounded-lg card-elevated card-elevated-hover cursor-pointer border flex flex-col ${zoomScales.cardGap} ${
         selected ? 'border-primary-500 ring-2 ring-primary-500' : 'border-gray-200'
       } ${
         isDragging ? styles.dragging : ''
@@ -321,7 +326,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       {/* Task type indicator */}
-      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-2 right-8'}`} title={taskType?.type_name || t('task', 'Task')}>
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-2 right-8'}`} title={taskTypeLabel(taskType, task.task_type_key)}>
         <Icon
           className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'}
           style={{ color: taskType?.color || '#6B7280' }}
@@ -393,7 +398,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             id={`toggle-title-${task.task_id}`}
             variant="ghost"
             size="sm"
-            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
+            className={`${zoomScales.metaSize} text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
             onClick={(e) => {
               e.stopPropagation();
               setIsTitleExpanded(!isTitleExpanded);
@@ -418,7 +423,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               id={`toggle-desc-${task.task_id}`}
               variant="ghost"
               size="sm"
-              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
+              className={`${zoomScales.metaSize} text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);
@@ -501,7 +506,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div className={`flex items-center justify-between ${zoomScales.metaSize} text-gray-500`}>
         <div className="flex items-center gap-2">
           {task.due_date ? (
-            <>{zoomLevel > 30 && `${t('projectDetail.dueLabel', 'Due')}: `}<span className='bg-primary-100 p-1 rounded-md'>{new Date(task.due_date).toLocaleDateString()}</span></>
+            <>{zoomLevel > 30 && `${t('projectDetail.dueLabel', 'Due')}: `}<span className='bg-primary-100 p-1 rounded-md'>{formatDate(new Date(task.due_date), { dateStyle: 'medium' })}</span></>
           ) : (
             zoomLevel > 30 && <>{t('projectDetail.noDueDate', 'No due date')}</>
           )}
@@ -532,19 +537,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </Tooltip>
           )}
           {taskTickets !== null && displayTickets.length > 0 && (
-            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-600))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
               <Ticket className="w-3 h-3" />
               <span>{displayTickets.length}</span>
             </div>
           )}
           {documentCount > 0 && (
-            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-600))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
               <Paperclip className="w-3 h-3" />
               <span>{documentCount}</span>
             </div>
           )}
           {commentCount > 0 && (
-            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-600))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
               <MessageSquare className="w-3 h-3" />
               <span>{commentCount}</span>
             </div>

@@ -2,6 +2,7 @@ import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import type { ZodTypeAny } from 'zod';
 import {
   completeOpportunityActionApiSchema,
+  completeOpportunityStepApiSchema,
   correctOpportunityEvidenceApiSchema,
   createOpportunityApiSchema,
   declaredOpportunityEvidenceApiSchema,
@@ -26,6 +27,13 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       id: zOpenApi.string().uuid().describe('Opportunity UUID from opportunities.opportunity_id.'),
       evidenceId: zOpenApi.string().uuid().describe('Evidence UUID from opportunity_evidence.evidence_id.'),
+    }),
+  );
+  const OpportunityStepParams = registry.registerSchema(
+    'OpportunityStepParamsV1',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Opportunity UUID from opportunities.opportunity_id.'),
+      stepId: zOpenApi.string().uuid().describe('Step UUID from opportunity_steps.step_id.'),
     }),
   );
   const OpportunityQuoteParams = registry.registerSchema(
@@ -63,6 +71,7 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
   const WinBody = registry.registerSchema('WinOpportunityBodyV1', winOpportunityApiSchema);
   const LoseBody = registry.registerSchema('LoseOpportunityBodyV1', loseOpportunityApiSchema);
   const CompleteActionBody = registry.registerSchema('CompleteOpportunityActionBodyV1', completeOpportunityActionApiSchema);
+  const CompleteStepBody = registry.registerSchema('CompleteOpportunityStepBodyV1', completeOpportunityStepApiSchema);
   const EvidenceBody = registry.registerSchema('DeclaredOpportunityEvidenceBodyV1', declaredOpportunityEvidenceApiSchema);
   const CorrectEvidenceBody = registry.registerSchema('CorrectOpportunityEvidenceBodyV1', correctOpportunityEvidenceApiSchema);
   const SuggestionListQuery = registry.registerSchema('OpportunitySuggestionListQueryV1', opportunitySuggestionListQuerySchema);
@@ -165,7 +174,17 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     query?: ZodTypeAny;
     successStatus?: 200 | 201 | 204;
     params?: ZodTypeAny;
-    edition?: 'both' | 'ee';
+    /**
+     * Opportunity management is an EE capability gated by
+     * TIER_FEATURES.OPPORTUNITY_MANAGEMENT. These operations are still registered in
+     * BOTH editions on purpose: the route files live in the CE tree and answer with a
+     * structured 403 `ENTERPRISE_EDITION_REQUIRED` rather than 404, so a CE caller can
+     * reach them and deserves to find out why they failed. Registering them CE-side
+     * also keeps the generator's route-inventory scan from backfilling "GET v1"
+     * placeholders over them, which is what the public developer portal was rendering
+     * (it consumes the CE spec).
+     */
+    tierGated?: true;
   };
 
   const defs: Def[] = [
@@ -174,6 +193,8 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/opportunities/work-queue', summary: 'Get the current user work queue', description: 'Returns the shared server-composed opportunity work queue for the authenticated API-key user.' },
     { method: 'get', path: '/api/v1/opportunities/{id}', summary: 'Get opportunity', description: 'Gets one opportunity by UUID.', params: OpportunityIdParam },
     { method: 'get', path: '/api/v1/opportunities/{id}/timeline', summary: 'List opportunity timeline', description: 'Lists interactions linked to the opportunity, newest first.', params: OpportunityIdParam },
+    { method: 'get', path: '/api/v1/opportunities/{id}/steps', summary: 'List opportunity steps', description: 'Lists the current opportunity plan, including done, current, and planned steps.', params: OpportunityIdParam },
+    { method: 'post', path: '/api/v1/opportunities/{id}/steps/{stepId}/complete', summary: 'Complete opportunity step', description: 'Completes a current step and promotes an existing planned successor or creates a replacement action.', body: CompleteStepBody, params: OpportunityStepParams },
     { method: 'put', path: '/api/v1/opportunities/{id}', summary: 'Update opportunity', description: 'Updates editable opportunity fields; status and stage use dedicated flows.', body: UpdateBody, params: OpportunityIdParam },
     { method: 'delete', path: '/api/v1/opportunities/{id}', summary: 'Delete opportunity', description: 'Deletes an open opportunity after linked quotes are removed.', successStatus: 204, params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/win', summary: 'Win opportunity', description: 'Marks an open opportunity won, optionally converting an accepted linked quote to a draft agreement.', body: WinBody, params: OpportunityIdParam },
@@ -188,19 +209,19 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'post', path: '/api/v1/opportunities/suggestions/{id}/accept', summary: 'Accept opportunity suggestion', description: 'Creates a prefilled opportunity and atomically marks the suggestion accepted.', body: AcceptSuggestionBody, successStatus: 201, params: OpportunitySuggestionParams },
     { method: 'post', path: '/api/v1/opportunities/suggestions/{id}/dismiss', summary: 'Dismiss opportunity suggestion', description: 'Dismisses the suggestion and permanently preserves its dedupe key.', params: OpportunitySuggestionParams },
     { method: 'post', path: '/api/v1/opportunities/suggestions/{id}/snooze', summary: 'Snooze opportunity suggestion', description: 'Hides the suggestion until the requested future timestamp.', body: SnoozeSuggestionBody, params: OpportunitySuggestionParams },
-    { method: 'get', path: '/api/v1/opportunities/forecast', summary: 'Get forecast band', description: 'Returns floor and ceiling MRR/NRR with per-deal composition for a period.', query: ManagementPeriodQuery, edition: 'ee' },
-    { method: 'get', path: '/api/v1/opportunities/calibration', summary: 'Get seller calibration', description: 'Returns declared-confidence outcomes and new-logo agreement attach rate per seller.', edition: 'ee' },
-    { method: 'post', path: '/api/v1/opportunities/meeting-sessions', summary: 'Start meeting session', description: 'Starts or resumes the caller’s same-day pipeline meeting session.', successStatus: 201, edition: 'ee' },
-    { method: 'get', path: '/api/v1/opportunities/meeting-sessions/active', summary: 'Get active meeting session', description: 'Returns the caller’s resumable same-day meeting session and reviews.', edition: 'ee' },
-    { method: 'post', path: '/api/v1/opportunities/meeting-sessions/{sessionId}/reviews', summary: 'Mark deal reviewed', description: 'Creates or updates the review marker for a deal in a meeting session.', body: MeetingReviewBody, params: OpportunityMeetingSessionParams, edition: 'ee' },
-    { method: 'get', path: '/api/v1/opportunities/{id}/commitments', summary: 'List commitments', description: 'Lists the promises recorded for an opportunity.', params: OpportunityIdParam, edition: 'ee' },
-    { method: 'post', path: '/api/v1/opportunities/{id}/commitments', summary: 'Create commitment', description: 'Records an unresolved promise on an opportunity.', body: CommitmentCreateBody, params: OpportunityIdParam, successStatus: 201, edition: 'ee' },
-    { method: 'put', path: '/api/v1/opportunities/{id}/commitments/{commitmentId}', summary: 'Update commitment', description: 'Edits or resolves a commitment to a downstream artifact or explicit decline.', body: CommitmentUpdateBody, params: OpportunityCommitmentParams, edition: 'ee' },
-    { method: 'delete', path: '/api/v1/opportunities/{id}/commitments/{commitmentId}', summary: 'Delete commitment', description: 'Deletes a commitment.', params: OpportunityCommitmentParams, successStatus: 204, edition: 'ee' },
-    { method: 'get', path: '/api/v1/opportunities/qbr/{clientId}', summary: 'Get QBR trigger pack', description: 'Assembles renewal, aging/EOL asset, ticket-trend, and whitespace triggers for an account.', params: OpportunityQbrClientParams, edition: 'ee' },
-    { method: 'post', path: '/api/v1/opportunities/qbr/{clientId}/opportunities', summary: 'Create QBR opportunities', description: 'Batch-creates typed opportunities from current QBR trigger keys.', body: QbrCreateBody, params: OpportunityQbrClientParams, successStatus: 201, edition: 'ee' },
-    { method: 'get', path: '/api/v1/opportunities/qbr/yield', summary: 'Get QBR yield', description: 'Returns fired, created, and won trigger counts by account and account manager.', edition: 'ee' },
-    { method: 'get', path: '/api/v1/opportunities/rollups', summary: 'Get seller rollups', description: 'Returns period pipeline, outcomes, and attach rate by seller.', query: ManagementPeriodQuery, edition: 'ee' },
+    { method: 'get', path: '/api/v1/opportunities/forecast', summary: 'Get forecast band', description: 'Returns floor and ceiling MRR/NRR with per-deal composition for a period.', query: ManagementPeriodQuery, tierGated: true },
+    { method: 'get', path: '/api/v1/opportunities/calibration', summary: 'Get seller calibration', description: 'Returns declared-confidence outcomes and new-logo agreement attach rate per seller.', tierGated: true },
+    { method: 'post', path: '/api/v1/opportunities/meeting-sessions', summary: 'Start meeting session', description: 'Starts or resumes the caller’s same-day pipeline meeting session.', successStatus: 201, tierGated: true },
+    { method: 'get', path: '/api/v1/opportunities/meeting-sessions/active', summary: 'Get active meeting session', description: 'Returns the caller’s resumable same-day meeting session and reviews.', tierGated: true },
+    { method: 'post', path: '/api/v1/opportunities/meeting-sessions/{sessionId}/reviews', summary: 'Mark deal reviewed', description: 'Creates or updates the review marker for a deal in a meeting session.', body: MeetingReviewBody, params: OpportunityMeetingSessionParams, tierGated: true },
+    { method: 'get', path: '/api/v1/opportunities/{id}/commitments', summary: 'List commitments', description: 'Lists the promises recorded for an opportunity.', params: OpportunityIdParam, tierGated: true },
+    { method: 'post', path: '/api/v1/opportunities/{id}/commitments', summary: 'Create commitment', description: 'Records an unresolved promise on an opportunity.', body: CommitmentCreateBody, params: OpportunityIdParam, successStatus: 201, tierGated: true },
+    { method: 'put', path: '/api/v1/opportunities/{id}/commitments/{commitmentId}', summary: 'Update commitment', description: 'Edits or resolves a commitment to a downstream artifact or explicit decline.', body: CommitmentUpdateBody, params: OpportunityCommitmentParams, tierGated: true },
+    { method: 'delete', path: '/api/v1/opportunities/{id}/commitments/{commitmentId}', summary: 'Delete commitment', description: 'Deletes a commitment.', params: OpportunityCommitmentParams, successStatus: 204, tierGated: true },
+    { method: 'get', path: '/api/v1/opportunities/qbr/{clientId}', summary: 'Get QBR trigger pack', description: 'Assembles renewal, aging/EOL asset, ticket-trend, and whitespace triggers for an account.', params: OpportunityQbrClientParams, tierGated: true },
+    { method: 'post', path: '/api/v1/opportunities/qbr/{clientId}/opportunities', summary: 'Create QBR opportunities', description: 'Batch-creates typed opportunities from current QBR trigger keys.', body: QbrCreateBody, params: OpportunityQbrClientParams, successStatus: 201, tierGated: true },
+    { method: 'get', path: '/api/v1/opportunities/qbr/yield', summary: 'Get QBR yield', description: 'Returns fired, created, and won trigger counts by account and account manager.', tierGated: true },
+    { method: 'get', path: '/api/v1/opportunities/rollups', summary: 'Get seller rollups', description: 'Returns period pipeline, outcomes, and attach rate by seller.', query: ManagementPeriodQuery, tierGated: true },
   ];
 
   for (const def of defs) {
@@ -219,6 +240,7 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
                   : def.method === 'get' && (
                       def.path === '/api/v1/opportunities/suggestions'
                       || def.path === '/api/v1/opportunities/{id}/evidence'
+                      || def.path === '/api/v1/opportunities/{id}/steps'
                       || def.path === '/api/v1/opportunities/calibration'
                       || def.path === '/api/v1/opportunities/{id}/commitments'
                       || def.path === '/api/v1/opportunities/qbr/yield'
@@ -229,7 +251,12 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
           },
       400: { description: 'Validation or request parsing failure.', schema: ApiError },
       401: { description: 'API key missing or invalid.', schema: ApiError },
-      403: { description: 'RBAC denied for the opportunities resource action.', schema: ApiError },
+      403: {
+        description: def.tierGated
+          ? 'RBAC denied for the opportunities resource action, or the caller’s edition and plan do not include opportunity management (`ENTERPRISE_EDITION_REQUIRED` in Community Edition; `TIER_ACCESS_DENIED` below the Pro plan).'
+          : 'RBAC denied for the opportunities resource action.',
+        schema: ApiError,
+      },
       404: { description: 'Opportunity or nested resource not found.', schema: ApiError },
       409: { description: 'Opportunity state conflicts with the requested operation.', schema: ApiError },
       500: { description: 'Unexpected controller or service failure.', schema: ApiError },
@@ -239,7 +266,9 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
       method: def.method,
       path: def.path,
       summary: def.summary,
-      description: def.description,
+      description: def.tierGated
+        ? `${def.description} Requires opportunity management: Community Edition answers 403 \`ENTERPRISE_EDITION_REQUIRED\`, and plans below Pro answer 403 \`TIER_ACCESS_DENIED\`.`
+        : def.description,
       tags: [tag],
       security: [{ ApiKeyAuth: [] }],
       request: {
@@ -253,9 +282,9 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
         'x-auth-mechanism': 'x-api-key validated in ApiBaseController.authenticate()',
         'x-tenant-header': 'x-tenant-id (optional; inferred from API key when omitted)',
         'x-rbac-resource': 'opportunities',
-        ...(def.edition === 'ee' ? { 'x-tier-feature': 'OPPORTUNITY_MANAGEMENT' } : {}),
+        ...(def.tierGated ? { 'x-tier-feature': 'OPPORTUNITY_MANAGEMENT' } : {}),
       },
-      edition: def.edition ?? 'both',
+      edition: 'both',
     });
   }
 }

@@ -7,9 +7,13 @@ import { buildExtUiSrc } from 'server/src/lib/extensions/assets/url.shared';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Extension',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('clientPortal.extensions.detail.title', { defaultValue: 'Extension' }),
+  };
+}
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

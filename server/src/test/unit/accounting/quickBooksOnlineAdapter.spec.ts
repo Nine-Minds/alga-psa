@@ -11,6 +11,12 @@ const getAccountingSyncSettingsMock = vi.hoisted(() => vi.fn(async () => ({
   defaultRealm: null
 })));
 
+const isQboAutomatedSalesTaxEnabledMock = vi.hoisted(() => vi.fn(async () => false));
+
+vi.mock('@alga-psa/integrations/lib/qbo/qboTaxSettings', () => ({
+  isQboAutomatedSalesTaxEnabled: isQboAutomatedSalesTaxEnabledMock
+}));
+
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   QboClientService: { create: qboClientCreateMock },
   getDefaultQboRealmId: getDefaultQboRealmIdMock
@@ -806,6 +812,7 @@ describe('QuickBooksOnlineAdapter deliver CreditMemo branch', () => {
       '../../../../../packages/billing/src/repositories/invoiceMappingRepository'
     );
     vi.spyOn(KnexInvoiceMappingRepository.prototype, 'findInvoiceMapping').mockResolvedValue(null);
+    vi.spyOn(KnexInvoiceMappingRepository.prototype, 'findUnlinkedInvoiceMapping').mockResolvedValue(null);
     vi.spyOn(KnexInvoiceMappingRepository.prototype, 'upsertInvoiceMapping').mockResolvedValue(undefined);
 
     const adapter = new QuickBooksOnlineAdapter();
@@ -1207,5 +1214,249 @@ describe('QuickBooksOnlineAdapter customer auto-provisioning gate', () => {
       expect.objectContaining({ companyId: CLIENT_ID })
     );
     expect((result.documents[0].payload as any).invoice.CustomerRef).toEqual({ value: 'qb-customer-new' });
+  });
+});
+/**
+ * Automated Sales Tax changes exactly one thing: in delegate mode the adapter
+ * must still tell QuickBooks which lines to tax, because it is deliberately not
+ * sending a tax total. Everything else — including all behavior with AST off —
+ * has to be untouched.
+ */
+describe('QuickBooksOnlineAdapter Automated Sales Tax mode', () => {
+  const mockResolver = {
+    resolveServiceMapping: vi.fn(),
+    resolveTaxCodeMapping: vi.fn()
+  };
+
+  const baseLine: MinimalLine = {
+    line_id: 'line-qbo-ast',
+    batch_id: 'batch-qbo-spec',
+    document_id: INVOICE_ID,
+    document_line_id: 'charge-qbo-1',
+    client_id: CLIENT_ID,
+    amount_cents: 21_775,
+    currency_code: 'USD',
+    status: 'ready',
+    payload: null,
+    mapping_resolution: null,
+    service_period_start: null,
+    service_period_end: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  function stubLoaders(adapter: QuickBooksOnlineAdapter, charge: Record<string, unknown>) {
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-QBO-AST',
+            invoice_date: '2026-04-16',
+            due_date: '2026-04-30',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          'charge-qbo-1',
+          {
+            item_id: 'charge-qbo-1',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-qbo-1',
+            description: 'Remote Support - Hourly',
+            quantity: 2,
+            unit_price: 10_000,
+            net_amount: 20_000,
+            total_price: 21_775,
+            tax_amount: 1_775,
+            ...charge
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [CLIENT_ID, { client_id: CLIENT_ID, client_name: 'Acme', billing_email: 'a@a', payment_terms: null }]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-qbo-ast',
+            integration_type: 'quickbooks_online',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-customer-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+  }
+
+  async function transformWith(options: {
+    astEnabled: boolean;
+    taxDelegationMode: 'none' | 'delegate';
+    excludeTaxFromExport: boolean;
+    charge?: Record<string, unknown>;
+    taxCodeMapping?: { external_entity_id: string; metadata: Record<string, unknown> } | null;
+  }) {
+    isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(options.astEnabled);
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue(options.taxCodeMapping ?? null);
+
+    const adapter = new QuickBooksOnlineAdapter();
+    stubLoaders(adapter, { tax_region: 'US-NY', ...options.charge });
+
+    const context: AccountingExportAdapterContext = {
+      ...buildContext([baseLine]),
+      taxDelegationMode: options.taxDelegationMode,
+      excludeTaxFromExport: options.excludeTaxFromExport
+    } as AccountingExportAdapterContext;
+
+    const result = await adapter.transform(context);
+    return (result.documents[0]?.payload as any).invoice;
+  }
+
+  beforeEach(() => {
+    mockResolver.resolveServiceMapping.mockReset();
+    mockResolver.resolveTaxCodeMapping.mockReset();
+    isQboAutomatedSalesTaxEnabledMock.mockReset();
+    isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(false);
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+    vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(
+      mockResolver as unknown as AccountingMappingResolver
+    );
+    mockResolver.resolveServiceMapping.mockResolvedValue({ external_entity_id: 'ITEM-QBO-1', metadata: {} });
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('AST off, delegate mode: payload is unchanged from the pre-AST behavior', async () => {
+    const invoice = await transformWith({
+      astEnabled: false,
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: true,
+      taxCodeMapping: { external_entity_id: 'TAX-NY', metadata: {} }
+    });
+
+    // The whole point of the flag: with it off, no tax signal reaches QuickBooks.
+    expect(invoice.TxnTaxDetail).toBeUndefined();
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toBeUndefined();
+    expect(invoice.Line[0].Amount).toBe(200.0);
+    expect(invoice.GlobalTaxCalculation).toBeUndefined();
+  });
+
+  it('AST off, internal-tax mode: the mapped tax code and authoritative total are unchanged', async () => {
+    const invoice = await transformWith({
+      astEnabled: false,
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false,
+      taxCodeMapping: { external_entity_id: 'TAX-NY', metadata: {} }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'TAX-NY' });
+    expect(invoice.TxnTaxDetail).toEqual({ TotalTax: 17.75 });
+  });
+
+  it('AST on, delegate mode: sends the mapped tax code per line and no TotalTax', async () => {
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: true,
+      taxCodeMapping: { external_entity_id: 'TAX-NY', metadata: {} }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'TAX-NY' });
+    expect(invoice.TxnTaxDetail).toBeUndefined();
+    expect(invoice.Line[0].Amount).toBe(200.0);
+  });
+
+  it('AST on, delegate mode: falls back to the TAX pseudo code when no mapping resolves', async () => {
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: true,
+      taxCodeMapping: null
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'TAX' });
+    expect(invoice.TxnTaxDetail).toBeUndefined();
+  });
+
+  it('AST on, delegate mode: a charge with no tax region still gets the TAX pseudo code', async () => {
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: true,
+      charge: { tax_region: null }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'TAX' });
+  });
+
+  it('AST on, delegate mode: a non-taxable charge says NON out loud', async () => {
+    // Since Intuit's 2018 AST change an omitted TaxCodeRef means taxable, so
+    // silence is not a way to exempt a line.
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: true,
+      charge: { is_taxable: false },
+      taxCodeMapping: { external_entity_id: 'TAX-NY', metadata: {} }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'NON' });
+  });
+
+  it('never emits GlobalTaxCalculation, which faults on US companies', async () => {
+    for (const astEnabled of [false, true]) {
+      const invoice = await transformWith({
+        astEnabled,
+        taxDelegationMode: 'delegate',
+        excludeTaxFromExport: true
+      });
+      expect(invoice.GlobalTaxCalculation).toBeUndefined();
+      expect(JSON.stringify(invoice)).not.toContain('GlobalTaxCalculation');
+    }
+  });
+
+  it('resolves the AST flag once per batch, not once per line', async () => {
+    isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue(null);
+
+    const adapter = new QuickBooksOnlineAdapter();
+    stubLoaders(adapter, { tax_region: 'US-NY' });
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        ['charge-qbo-1', { item_id: 'charge-qbo-1', invoice_id: INVOICE_ID, service_id: 'svc-qbo-1', net_amount: 10_000, total_price: 10_000, tax_amount: 0, tax_region: 'US-NY' }],
+        ['charge-qbo-2', { item_id: 'charge-qbo-2', invoice_id: INVOICE_ID, service_id: 'svc-qbo-1', net_amount: 10_000, total_price: 10_000, tax_amount: 0, tax_region: 'US-CA' }]
+      ])
+    );
+
+    const context: AccountingExportAdapterContext = {
+      ...buildContext([baseLine, { ...baseLine, line_id: 'line-qbo-ast-2', document_line_id: 'charge-qbo-2' }]),
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: true
+    } as AccountingExportAdapterContext;
+
+    await adapter.transform(context);
+
+    expect(isQboAutomatedSalesTaxEnabledMock).toHaveBeenCalledTimes(1);
+    expect(isQboAutomatedSalesTaxEnabledMock).toHaveBeenCalledWith(
+      expect.anything(),
+      TENANT_ID,
+      'realm-qbo-demo'
+    );
   });
 });

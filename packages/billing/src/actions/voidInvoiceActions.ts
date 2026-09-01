@@ -7,67 +7,10 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
-
-// Exported for testing
-export async function reverseCreditApplicationsForInvoice(
-  trx: Knex.Transaction,
-  tenant: string,
-  invoiceId: string,
-  userId: string
-): Promise<void> {
-  // Find all credit_application transactions for this invoice
-  const creditAppTxns = await tenantDb(trx, tenant).table('transactions')
-    .where({ invoice_id: invoiceId, type: 'credit_application' })
-    .select('*');
-
-  for (const txn of creditAppTxns) {
-    const appliedCredits: Array<{ creditId: string; amount: number }> =
-      (txn.metadata as any)?.applied_credits ?? [];
-
-    let totalRestored = 0;
-
-    for (const applied of appliedCredits) {
-      // Restore the credit tracking pool
-      await tenantDb(trx, tenant).table('credit_tracking')
-        .where({ credit_id: applied.creditId })
-        .increment('remaining_amount', applied.amount)
-        .update({ updated_at: new Date().toISOString() });
-
-      totalRestored += applied.amount;
-    }
-
-    if (totalRestored > 0) {
-      // The restored remaining_amounts above put the credit back in the
-      // derived balance; only the reversing transaction is left to write.
-
-      // Write reversing transaction
-      await tenantDb(trx, tenant).table('transactions').insert({
-        transaction_id: uuidv4(),
-        client_id: txn.client_id,
-        invoice_id: invoiceId,
-        amount: totalRestored,
-        type: 'credit_adjustment',
-        status: 'completed',
-        description: `Credit reversal due to invoice void`,
-        created_at: new Date().toISOString(),
-        balance_after: null,
-        tenant,
-        metadata: {
-          reversal_of: txn.transaction_id,
-          reason: 'invoice_voided'
-        }
-      });
-    }
-  }
-
-  // Zero out credit_applied on the invoice
-  if (creditAppTxns.length > 0) {
-    await tenantDb(trx, tenant).table('invoices')
-      .where({ invoice_id: invoiceId })
-      .update({ credit_applied: 0, updated_at: new Date().toISOString() });
-  }
-}
+import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
+import { suppressPrepaidReplenishmentForVoidedInvoice } from '../lib/prepaidAutoReplenishment';
 
 export type VoidInvoiceResult =
   | { success: true }
@@ -132,7 +75,9 @@ export const voidInvoice = withAuth(async (
 
   // Guard: consumed credit notes (for credit note invoices)
   // A credit note has consumed credit when credit_tracking rows linked to it
-  // have remaining_amount < amount (i.e. some credit was used)
+  // have remaining_amount < amount (i.e. some credit was used).
+  // This read is an unlocked fast-fail only — the authoritative re-check runs
+  // inside the transaction below, after the row locks (TOCTOU).
   const isCreditNote =
     invoice.invoice_type === 'credit_note' ||
     (Number(invoice.total_amount ?? 0) < 0 && !invoice.is_prepayment);
@@ -160,7 +105,33 @@ export const voidInvoice = withAuth(async (
     }
   }
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+  const outcome = await withTransaction(knex, async (trx: Knex.Transaction): Promise<VoidInvoiceResult> => {
+    // Lock-order contract with applyCreditToInvoiceInternal (creditActions.ts):
+    // invoice row FIRST, credit_tracking rows only after. Credit application
+    // locks the invoice row FOR UPDATE and then the client's credit_tracking
+    // rows; before this lock the void path wrote credit_tracking first and the
+    // invoice row last, so a concurrent apply + void could each hold one lock
+    // while waiting on the other — a PostgreSQL deadlock (40P01). Taking the
+    // same invoice row lock as this transaction's first statement makes void
+    // queue behind (or ahead of) apply instead of interleaving with it.
+    //
+    // The re-read under the lock also supersedes the pre-transaction snapshot
+    // for every in-transaction decision: `status` (a concurrent void may have
+    // cancelled the invoice between the guard read and here — without this
+    // re-check both voids would restore the applied credits twice) and
+    // `credit_applied` (a concurrent application may have changed it).
+    const lockedInvoice = await tenantDb(trx, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .forUpdate()
+      .first('status', 'credit_applied');
+
+    if (!lockedInvoice) {
+      return { success: false, error: 'Invoice not found.' };
+    }
+    if (lockedInvoice.status === 'cancelled') {
+      return { success: false, error: 'Invoice is already voided.' };
+    }
+
     if (isCreditNote) {
       // Claw back the issued pool credit: voiding the source document must
       // remove the credit it put into the pool, or the customer keeps
@@ -170,6 +141,32 @@ export const voidInvoice = withAuth(async (
         .where({ invoice_id: invoiceId })
         .whereIn('type', ['credit_issuance', 'credit_issuance_from_negative_invoice'])
         .select('transaction_id', 'client_id', 'amount');
+
+      // Re-check the consumed guard UNDER LOCK. The pre-transaction guard is
+      // only a fast-fail on a snapshot: a concurrent
+      // applyCreditToInvoiceInternal can consume this note's credit between
+      // that read and this transaction. The invoice row lock above does not
+      // serialize against it — the application locks the TARGET invoice's
+      // row, not this credit note's — so contention lands on the
+      // credit_tracking rows, which the apply path holds FOR UPDATE until it
+      // commits. Taking FOR UPDATE here queues behind any in-flight
+      // application (lock order invoice-row-then-credit-rows, matching
+      // applyCreditToInvoiceInternal), making this re-read authoritative:
+      // without it, the claw-back below zeroes out credit the concurrent
+      // application just spent, voiding a consumed credit note.
+      if (creditIssuanceTxns.length > 0) {
+        const lockedCreditRows = await tenantDb(trx, tenant).table('credit_tracking')
+          .whereIn('transaction_id', creditIssuanceTxns.map((t: any) => t.transaction_id))
+          .forUpdate()
+          .select('amount', 'remaining_amount');
+
+        const consumedUnderLock = lockedCreditRows.some(
+          (row: any) => Number(row.remaining_amount) < Number(row.amount)
+        );
+        if (consumedUnderLock) {
+          return { success: false, error: 'This credit note has applied credit. Unapply the credit before voiding.' };
+        }
+      }
 
       for (const txn of creditIssuanceTxns) {
         const creditRow = await tenantDb(trx, tenant).table('credit_tracking')
@@ -206,9 +203,14 @@ export const voidInvoice = withAuth(async (
         }
       }
     } else {
-      // Standard invoice: reverse any credit applications
-      if (Number(invoice.credit_applied ?? 0) > 0) {
-        await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id);
+      // Standard invoice: reverse any credit applications. Decided from the
+      // locked row, not the pre-transaction snapshot — a concurrent
+      // application committing between the two reads is invisible to the
+      // snapshot but must still be reversed. The canonical primitive
+      // (packages/billing/src/lib/creditReversal.ts) is repeat-safe and
+      // restores every application.
+      if (Number(lockedInvoice.credit_applied ?? 0) > 0) {
+        await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id, 'invoice_voided');
       }
     }
 
@@ -216,6 +218,11 @@ export const voidInvoice = withAuth(async (
     await tenantDb(trx, tenant).table('invoices')
       .where({ invoice_id: invoiceId })
       .update({ status: 'cancelled', updated_at: now });
+
+    // A void is terminal for this replenishment episode, but unlike deletion
+    // the invoice row survives. Keep the link and suppress future scans while
+    // the balance remains low; only settlement or explicit deletion re-arms.
+    await suppressPrepaidReplenishmentForVoidedInvoice(trx, tenant, invoiceId);
 
     // Write invoice_cancelled transaction
     await tenantDb(trx, tenant).table('transactions').insert({
@@ -234,11 +241,27 @@ export const voidInvoice = withAuth(async (
         voided_by: user.user_id
       }
     });
+
+    return { success: true };
   });
+
+  if (!outcome.success) {
+    return outcome;
+  }
 
   // Fire-and-forget: enqueue void_invoice op if accounting mapping exists
   const { knex: syncKnex } = await createTenantKnex();
   void enqueueInvoiceVoid(syncKnex, tenant, invoiceId);
+
+  // Reconcile any still-active Checkout sessions: a voided invoice must never
+  // be chargeable through an old email link. Best-effort (isolated handlers),
+  // so the void response is unaffected.
+  await notifyInvoiceTerminalStatus({
+    knex,
+    tenantId: tenant,
+    invoiceId,
+    newStatus: 'cancelled',
+  });
 
   return { success: true };
 });

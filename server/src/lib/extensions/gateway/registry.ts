@@ -20,6 +20,7 @@ export async function getTenantInstall(tenantId: string, extensionId: string): P
       })
       .where('ti.registry_id', extensionId)
       .andWhere('ti.is_enabled', true)
+      .andWhere('ti.status', 'enabled')
       .first();
     if (!row) return null;
     return { install_id: row.install_id, version_id: row.version_id, tenant_id: row.tenant_id };

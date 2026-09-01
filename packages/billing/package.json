@@ -54,13 +54,16 @@
     "@alga-psa/opportunities": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "@alga-psa/sla": "*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

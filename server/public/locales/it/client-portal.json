@@ -282,7 +282,45 @@
       }
     },
     "captchaRequired": "Completa la verifica qui sotto, quindi accedi di nuovo.",
-    "tooManyAttempts": "Troppi tentativi di accesso non riusciti. Attendi qualche minuto prima di riprovare."
+    "tooManyAttempts": "Troppi tentativi di accesso non riusciti. Attendi qualche minuto prima di riprovare.",
+    "tenantDiscovery": {
+      "title": "Trova la tua organizzazione",
+      "description": "Inserisci il tuo indirizzo email e ti invieremo i link di accesso per tutte le organizzazioni a cui hai accesso.",
+      "emailLabel": "Indirizzo email",
+      "emailPlaceholder": "tua.email@azienda.com",
+      "submit": "Invia i link di accesso",
+      "submitting": "Invio in corso...",
+      "invalidEmail": "Inserisci un indirizzo email valido",
+      "linksSent": "Controlla la tua email per i link di accesso",
+      "sent": {
+        "title": "Controlla la tua email",
+        "description": "Se esiste un account con quell’indirizzo email, ti abbiamo inviato i link di accesso per ogni organizzazione a cui hai accesso.",
+        "noEmailReceived": "Non hai ricevuto l’email?",
+        "checkSpam": "Controlla la cartella spam",
+        "verifyAddress": "Verifica che l’indirizzo email sia corretto",
+        "contactSupport": "Contatta il team di supporto della tua organizzazione",
+        "tryAnother": "Prova con un’altra email"
+      }
+    },
+    "register": {
+      "emailLabel": "Indirizzo email",
+      "checkingEmail": "Verifica dell’email in corso...",
+      "existingContactsOnly": "La registrazione è disponibile solo per i contatti esistenti. Contattare l’amministratore.",
+      "contactVerified": "Contatto verificato. Creare la password.",
+      "passwordPlaceholder": "Crea una password",
+      "passwordMustContain": "La password deve contenere:",
+      "completeRequiredFields": "Compilare i campi obbligatori:",
+      "creatingAccount": "Creazione account in corso...",
+      "createAccount": "Crea account",
+      "failed": "Registrazione non riuscita",
+      "unexpectedError": "Si è verificato un errore imprevisto durante la registrazione.",
+      "missing": {
+        "email": "Email",
+        "validEmail": "Indirizzo email valido",
+        "verifiedContact": "Email di contatto verificata",
+        "validPassword": "Password valida"
+      }
+    }
   },
   "account": {
     "title": "Account",
@@ -358,7 +396,8 @@
       "recentInvoicesTitle": "Fatture recenti",
       "billingHistoryTitle": "Storico fatturazione",
       "labels": {
-        "defaultTag": "(Predefinito)"
+        "defaultTag": "(Predefinito)",
+        "paysFor": "Paga per {{profile}}"
       },
       "actions": {
         "setDefault": "Imposta come predefinito",
@@ -372,7 +411,8 @@
         "expiryMonth": "Mese",
         "expiryYear": "Anno",
         "cvv": "CVV",
-        "setAsDefault": "Imposta come metodo di pagamento predefinito"
+        "setAsDefault": "Imposta come metodo di pagamento predefinito",
+        "billingProfile": "Paga per"
       },
       "history": {
         "period": "Periodo",
@@ -654,13 +694,24 @@
       "clientNotFound": "Azienda non trovata",
       "detailsLoadError": "Impossibile caricare i dettagli dell'azienda",
       "updateError": "Impossibile aggiornare i dettagli dell'azienda"
+    },
+    "domain": {
+      "title": "Dominio personalizzato",
+      "description": "I clienti con piano Pro possono ospitare il portale su un dominio personalizzato. Il tuo indirizzo ospitato predefinito è mostrato qui sotto.",
+      "defaultAddressLabel": "Indirizzo predefinito del portale",
+      "upgradeHint": "Passa al piano Pro per configurare un dominio del portale clienti con il tuo marchio e certificati automatici."
     }
   },
   "notifications": {
     "title": "Notifiche",
+    "bellUnreadAria": "Notifiche ({{unread}} non lette)",
+    "unreadDot": "Notifiche non lette",
+    "reconnecting": "Riconnessione...",
     "markAsRead": "Segna come letta",
     "markAllAsRead": "Segna tutto come letto",
     "noNotifications": "Nessuna nuova notifica",
+    "unreadCount_one": "{{count}} notifica non letta",
+    "unreadCount_other": "{{count}} notifiche non lette",
     "settings": "Impostazioni notifiche",
     "viewAll": "Visualizza tutte le notifiche",
     "tabs": {
@@ -676,7 +727,13 @@
       "saveError": "Impossibile salvare la preferenza",
       "noCategories": "Nessuna categoria di notifica disponibile",
       "emailPreferences": "Email",
-      "internalPreferences": "Interne"
+      "internalPreferences": "Interne",
+      "priority": {
+        "high": "Alta",
+        "normal": "Normale",
+        "low": "Bassa"
+      },
+      "resetPriority": "Ripristina"
     },
     "categories": {
       "tickets": "Ticket",
@@ -684,6 +741,29 @@
       "messages": "Messaggi",
       "projects": "Progetti",
       "system": "Sistema"
+    },
+    "needsAttention": "Richiede attenzione ({{count}})",
+    "lowPriority": "Priorità bassa ({{count}})",
+    "filters": {
+      "title": "Filtra notifiche",
+      "description": "Seleziona i criteri per filtrare le attività di notifica.",
+      "statusLabel": "Stato",
+      "unreadOnly": "Solo non lette",
+      "showRead": "Mostra lette",
+      "categoryLabel": "Categoria",
+      "allCategories": "Tutte le categorie",
+      "categoryPlaceholder": "Seleziona categoria...",
+      "dateRangeLabel": "Intervallo date",
+      "priorityLabel": "Priorità",
+      "allPriorities": "Tutte le priorità",
+      "priorityPlaceholder": "Seleziona priorità...",
+      "reset": "Reimposta",
+      "cancel": "Annulla",
+      "apply": "Applica filtri"
+    },
+    "card": {
+      "unread": "Non letta",
+      "noMessage": "Nessun messaggio"
     }
   },
   "sidebar": {
@@ -734,5 +814,183 @@
     "createTicket": "Crea ticket",
     "createTicketForDevice": "Crea un ticket per questo dispositivo",
     "rowActionsLabel": "Azioni riga"
+  },
+  "billing": {
+    "columns": {
+      "service": "Servizio",
+      "notAvailable": "N/D"
+    },
+    "filters": {
+      "dateRange": "Intervallo date",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "apply": "Applica filtro"
+    },
+    "usageMetrics": {
+      "title": "Metriche di utilizzo",
+      "bucketHistoryTitle": "Cronologia di utilizzo del pacchetto ore",
+      "columns": {
+        "unitOfMeasure": "Unità di misura",
+        "quantity": "Quantità"
+      },
+      "empty": {
+        "title": "Nessuna metrica di utilizzo disponibile",
+        "description": "Non sono state registrate metriche di utilizzo per l'intervallo di date selezionato."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Tipo di servizio",
+        "hours": "Ore"
+      },
+      "empty": {
+        "title": "Nessun dato sulle ore disponibile",
+        "description": "Non sono state registrate ore fatturabili per l'intervallo di date selezionato."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "N. preventivo",
+        "title": "Titolo",
+        "amount": "Importo",
+        "status": "Stato",
+        "date": "Data"
+      },
+      "draftQuote": "Preventivo in bozza {{count}}",
+      "empty": "Nessun preventivo trovato",
+      "errors": {
+        "loadFailed": "Impossibile caricare i preventivi"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Linea contrattuale del pacchetto ore",
+      "usage": "Utilizzo",
+      "hoursUsed": "{{hours}} ore utilizzate",
+      "hoursTotal": "{{hours}} ore totali",
+      "rolloverHours": "Include {{hours}} ore riportate"
+    },
+    "bucketHistory": {
+      "title": "Cronologia utilizzo",
+      "trendStable": "Stabile",
+      "current": "Attuale",
+      "avgUsage": "Utilizzo medio",
+      "peak": "Picco",
+      "periods": "Periodi"
+    },
+    "invoicePreview": {
+      "loadFailed": "Impossibile caricare la fattura",
+      "unavailable": "Impossibile visualizzare l'anteprima della fattura."
+    },
+    "payment": {
+      "redirecting": "Reindirizzamento al pagamento..."
+    },
+    "paymentSuccess": {
+      "unknownStart": "Inizio sconosciuto",
+      "unknownEnd": "Fine sconosciuta",
+      "verifying": {
+        "title": "Verifica del pagamento",
+        "description": "Attendi mentre confermiamo il pagamento..."
+      },
+      "success": {
+        "title": "Pagamento riuscito!",
+        "thankYou": "Grazie per il pagamento.",
+        "amountPaid": "Importo pagato: {{amount}}.",
+        "confirmationEmail": "Verrà inviata un'email di conferma al tuo indirizzo email registrato.",
+        "thankYouForInvoice": "Grazie per il pagamento della fattura n. {{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Riepilogo del periodo di servizio",
+        "description": "Questo riepilogo si basa sui periodi di dettaglio ricorrenti della fattura, non soltanto sulle date di fatturazione nell'intestazione della fattura."
+      },
+      "pending": {
+        "title": "Pagamento in elaborazione",
+        "description": "Il pagamento è in elaborazione. Potrebbero essere necessari alcuni istanti. Riceverai un'email di conferma al completamento del pagamento."
+      },
+      "failed": {
+        "title": "Verifica del pagamento non riuscita",
+        "description": "Non è stato possibile confermare il pagamento. Contatta l'assistenza."
+      },
+      "errors": {
+        "verificationFailed": "Verifica del pagamento non riuscita",
+        "verifyFailed": "Impossibile verificare il pagamento",
+        "unexpected": "Si è verificato un errore durante la verifica del pagamento"
+      },
+      "actions": {
+        "backToBilling": "Torna alla fatturazione",
+        "viewInvoice": "Visualizza fattura"
+      }
+    },
+    "segments": {
+      "allSegments": "Intera organizzazione",
+      "organizationTotalLabel": "Totale della tua organizzazione",
+      "periodLabel": "dal {{start}} al {{end}}",
+      "selectorLabel": "Mostra",
+      "empty": "Nessun addebito fatturato in questo periodo.",
+      "chargesTitle": "Addebiti di questo segmento",
+      "noCharges": "Nessun addebito in questo periodo."
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Nome",
+      "type": "Tipo",
+      "status": "Stato",
+      "location": "Ubicazione",
+      "lastUpdated": "Ultimo aggiornamento"
+    },
+    "notAvailable": "N/D",
+    "detailsTitle": "Dettagli asset"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Il suo utente del portale non è collegato ad alcun contatto. Contatti l’assistenza se il problema persiste.",
+      "userNotLinkedToClient": "Il suo utente del portale non è collegato ad alcun account cliente. Contatti l’assistenza se il problema persiste.",
+      "contactNotLinkedToClient": "Il suo contatto non è collegato ad alcun account cliente. Contatti l’assistenza se il problema persiste.",
+      "clientNotFound": "Account cliente non trovato. Potrebbe essere stato eliminato o potrebbe non avervi più accesso.",
+      "serviceNotFound": "Servizio non trovato o non più attivo. Aggiornare la pagina e riprovare.",
+      "serviceUpgradeUnavailable": "L’upgrade dei servizi non è temporaneamente disponibile. Contatti l’assistenza per cambiare piano."
+    },
+    "records": {
+      "invalid": "Uno dei record selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "missing": "Uno dei record selezionati non esiste più. Aggiornare la pagina e riprovare."
+    },
+    "access": {
+      "unauthorized": "Non autorizzato",
+      "projectBillingData": "Accesso non autorizzato ai dati di fatturazione del progetto",
+      "quoteData": "Accesso non autorizzato ai dati del preventivo",
+      "invoiceData": "Accesso non autorizzato ai dati della fattura",
+      "billingData": "Accesso non autorizzato ai dati di fatturazione",
+      "settingsUpdate": "Non ha l’autorizzazione per modificare queste impostazioni.",
+      "billingSegment": "Accesso non autorizzato a questo segmento di fatturazione"
+    },
+    "billing": {
+      "quoteNotFound": "Preventivo non trovato o accesso negato",
+      "quoteStale": "Il preventivo non è più disponibile. Aggiornarlo e riprovare.",
+      "quoteStaleAccept": "Il preventivo non è più disponibile. Aggiornarlo prima di accettarlo.",
+      "quoteStaleReject": "Il preventivo non è più disponibile. Aggiornarlo prima di rifiutarlo.",
+      "invoiceNotFound": "Fattura non trovata o accesso negato",
+      "jobNotFound": "Processo non trovato",
+      "quoteInvalidState": "Il preventivo non è in uno stato valido per questa azione",
+      "rejectionCommentRequired": "È richiesto un commento di rifiuto",
+      "emailSendFailed": "Impossibile avviare l’invio dell’email"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket non trovato o accesso negato",
+      "invalidData": "Dati del ticket non validi"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Verificare i dati del gruppo di visibilità e riprovare.",
+      "boardsUnavailable": "Una o più bacheche selezionate non sono più disponibili. Aggiornare la pagina e riprovare.",
+      "contactNotFound": "Contatto non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "otherClient": "Non ha l’autorizzazione per gestire i gruppi di visibilità di un altro cliente.",
+      "selectClientOrContact": "Selezionare un cliente o un contatto prima di gestire i gruppi di visibilità.",
+      "groupNotFound": "Gruppo di visibilità non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "groupNotValidForContact": "Il gruppo di visibilità selezionato non è valido per questo contatto. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del gruppo di visibilità.",
+      "missingFieldNamed": "Manca un campo obbligatorio del gruppo di visibilità: {{field}}.",
+      "recordInvalid": "Uno dei record del gruppo di visibilità selezionati non è più valido. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un gruppo di visibilità con questi dati per questo cliente.",
+      "invalidData": "Dati del gruppo di visibilità non validi. Verificare i dati del gruppo e le bacheche selezionate."
+    }
   }
 }

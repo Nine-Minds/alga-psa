@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { SettingsTab } from '@/components/settings/SettingsTab';
-import { getSettingsTabTitle } from '@/components/settings/settingsTabsRegistry';
+import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
 import BillingSettingsBody from './BillingSettingsBody';
 
-export const metadata: Metadata = { title: getSettingsTabTitle('billing') };
+export async function generateMetadata(): Promise<Metadata> {
+  return settingsTabMetadata('billing');
+}
 
 export default function BillingSettingsRoute() {
   return (

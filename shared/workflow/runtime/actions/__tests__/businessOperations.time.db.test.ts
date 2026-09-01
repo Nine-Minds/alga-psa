@@ -96,15 +96,15 @@ async function grantWorkflowTimeTestPermissions(db: Knex, tenantId: string, user
   });
 
   const permissions = [
-    ['timeentry', 'create'],
-    ['timeentry', 'read'],
-    ['timeentry', 'update'],
-    ['timeentry', 'delete'],
-    ['timesheet', 'read'],
-    ['timesheet', 'read_all'],
-    ['timesheet', 'submit'],
-    ['timesheet', 'approve'],
-    ['timesheet', 'reverse'],
+    ['time_entry', 'create'],
+    ['time_entry', 'read'],
+    ['time_entry', 'update'],
+    ['time_entry', 'delete'],
+    ['time_sheet', 'read'],
+    ['time_sheet', 'read_all'],
+    ['time_sheet', 'submit'],
+    ['time_sheet', 'approve'],
+    ['time_sheet', 'reverse'],
   ] as const;
 
   for (const [resource, action] of permissions) {
@@ -329,6 +329,34 @@ async function createBucketOverlayForPlan(
   bucketConfig[totalColumn] = totalColumn === 'total_minutes' ? totalMinutes : Math.round(totalMinutes / 60);
 
   await contextTable(context, 'contract_line_service_bucket_config').insert(bucketConfig);
+
+  // Pool-keyed model (weighted-burn): seed the pool + single member so the
+  // canonical service can resolve the draw via the scope-resolution rule.
+  const poolTablesExist = await unscopedTable(
+    context.db,
+    'contract_line_buckets',
+    'pool tables may not exist in the workflow runtime schema'
+  ).columnInfo().then(() => true).catch(() => false);
+  if (poolTablesExist) {
+    const bucketId = uuidv4();
+    await contextTable(context, 'contract_line_buckets').insert({
+      tenant: context.tenantId,
+      bucket_id: bucketId,
+      contract_line_id: contractLineId,
+      total_minutes: totalMinutes,
+      overage_rate: options.overageRateCents ?? 0,
+      allow_rollover: options.allowRollover ?? false,
+      billing_period: options.billingPeriod ?? 'monthly',
+      covers_all_services: false,
+    });
+    await contextTable(context, 'contract_line_bucket_services').insert({
+      tenant: context.tenantId,
+      bucket_id: bucketId,
+      service_id: serviceId,
+      contract_line_id: contractLineId,
+      burn_multiplier: 1,
+    });
+  }
 
   return { configId, serviceId };
 }

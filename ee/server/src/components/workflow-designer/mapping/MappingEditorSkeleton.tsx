@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * Skeleton line component with shimmer animation
@@ -20,7 +21,7 @@ const SkeletonLine: React.FC<{
   className?: string;
 }> = ({ width = '100%', height = '16px', className = '' }) => (
   <div
-    className={`bg-gray-200 rounded animate-pulse ${className}`}
+    className={`skeleton-fill rounded animate-pulse ${className}`}
     style={{ width, height }}
   />
 );
@@ -29,7 +30,7 @@ const SkeletonLine: React.FC<{
  * Skeleton card for a mapping field
  */
 const SkeletonField: React.FC = () => (
-  <div className="border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 space-y-2 bg-white dark:bg-[rgb(var(--color-card))]">
+  <div className="border border-[rgb(var(--color-border-200))] rounded-lg p-3 space-y-2 bg-[rgb(var(--color-card))]">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <SkeletonLine width="16px" height="16px" />
@@ -53,7 +54,7 @@ const SkeletonTree: React.FC = () => (
     <SkeletonLine width="100%" height="32px" className="rounded-md" />
 
     {/* Section header */}
-    <div className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center gap-2 py-2 px-3 bg-[rgb(var(--color-border-50))] rounded-lg">
       <SkeletonLine width="16px" height="16px" />
       <SkeletonLine width="16px" height="16px" />
       <SkeletonLine width="80px" height="14px" />
@@ -73,7 +74,7 @@ const SkeletonTree: React.FC = () => (
     </div>
 
     {/* Another section */}
-    <div className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center gap-2 py-2 px-3 bg-[rgb(var(--color-border-50))] rounded-lg">
       <SkeletonLine width="16px" height="16px" />
       <SkeletonLine width="16px" height="16px" />
       <SkeletonLine width="100px" height="14px" />
@@ -120,7 +121,7 @@ export const MappingEditorSkeleton: React.FC<MappingEditorSkeletonProps> = ({
       {message && (
         <div className="flex items-center justify-center py-4">
           <div className="flex items-center gap-2 text-gray-500">
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-[rgb(var(--color-border-300))] border-t-primary-500 rounded-full animate-spin" />
             <span className="text-sm">{message}</span>
           </div>
         </div>
@@ -130,7 +131,7 @@ export const MappingEditorSkeleton: React.FC<MappingEditorSkeletonProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Source tree panel */}
         {showSourceTree && (
-          <div className="border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden">
+          <div className="border border-[rgb(var(--color-border-200))] rounded-lg bg-[rgb(var(--color-card))] overflow-hidden">
             <SkeletonTree />
           </div>
         )}
@@ -185,6 +186,7 @@ export const MappingEditorError: React.FC<MappingEditorErrorProps> = ({
   retryCount = 0,
   maxRetries = 3
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const canRetry = onRetry && retryCount < maxRetries;
 
   return (
@@ -206,7 +208,7 @@ export const MappingEditorError: React.FC<MappingEditorErrorProps> = ({
       </div>
 
       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        Failed to Load Schema
+        {t('mappingEditor.error.title', { defaultValue: 'Failed to Load Schema' })}
       </h3>
 
       <p className="text-sm text-gray-500 mb-4 max-w-md">
@@ -219,12 +221,22 @@ export const MappingEditorError: React.FC<MappingEditorErrorProps> = ({
             onClick={onRetry}
             className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
           >
-            Retry {retryCount > 0 && `(${retryCount}/${maxRetries})`}
+            {retryCount > 0
+              ? t('mappingEditor.error.retryWithCount', {
+                  retryCount,
+                  maxRetries,
+                  defaultValue: 'Retry ({{retryCount}}/{{maxRetries}})',
+                })
+              : t('mappingEditor.error.retry', { defaultValue: 'Retry' })}
           </button>
 
           {retryCount > 0 && (
             <p className="text-xs text-gray-400">
-              Attempt {retryCount} of {maxRetries}
+              {t('mappingEditor.error.attemptOfMax', {
+                retryCount,
+                maxRetries,
+                defaultValue: 'Attempt {{retryCount}} of {{maxRetries}}',
+              })}
             </p>
           )}
         </div>
@@ -233,7 +245,9 @@ export const MappingEditorError: React.FC<MappingEditorErrorProps> = ({
       {!canRetry && retryCount >= maxRetries && (
         <div className="space-y-2">
           <p className="text-sm text-gray-500">
-            Maximum retry attempts reached.
+            {t('mappingEditor.error.maxRetriesReached', {
+              defaultValue: 'Maximum retry attempts reached.',
+            })}
           </p>
           <a
             href="/support"
@@ -241,7 +255,7 @@ export const MappingEditorError: React.FC<MappingEditorErrorProps> = ({
             rel="noopener noreferrer"
             className="text-sm text-primary-600 hover:text-primary-700 hover:underline"
           >
-            Contact Support →
+            {t('mappingEditor.error.contactSupport', { defaultValue: 'Contact Support →' })}
           </a>
         </div>
       )}

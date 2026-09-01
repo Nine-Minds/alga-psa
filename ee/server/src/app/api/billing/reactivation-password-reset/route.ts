@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Use the MSP recover flow: it mints the JWT and links to the real
-  // /auth/password-reset/set-new-password?...&portal=msp page. (requestPasswordReset
-  // pointed at /auth/reset-password, which is not a real page.)
+  // /auth/password-reset/set-new-password?...&portal=msp page. requestPasswordReset
+  // now delegates to this same action, so every recovery request enters one path.
   await recoverPassword(email, 'msp');
   return NextResponse.json({ success: true });
 }

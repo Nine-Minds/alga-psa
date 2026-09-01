@@ -175,5 +175,8 @@
       "title": "Data-sharing consent required",
       "body": "An administrator must accept AI data-sharing terms on this appliance before AI can be used."
     }
+  },
+  "mentions": {
+    "removeChip": "Remove {{mention}}"
   }
 }

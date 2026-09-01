@@ -11,5 +11,83 @@
         "wbsCode": "Código WBS"
       }
     }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "Permiso denegado: no se puede crear el proyecto",
+      "readProject": "Permiso denegado: no se puede leer el proyecto",
+      "updateProject": "Permiso denegado: no se puede actualizar el proyecto",
+      "deleteProject": "Permiso denegado: no se puede eliminar el proyecto",
+      "materialRead": "Permiso denegado: se requiere permiso de lectura de proyectos",
+      "materialUpdate": "Permiso denegado: se requiere permiso de actualización de proyectos"
+    },
+    "project": {
+      "notFound": "Proyecto no encontrado",
+      "validationFailed": "La validación del proyecto falló. Revise los datos del proyecto e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de proyecto seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de proyecto seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio del proyecto entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores del proyecto no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del proyecto.",
+      "missingFieldNamed": "Falta un campo obligatorio del proyecto: {{field}}.",
+      "statusesNotConfigured": "No hay estados de proyecto configurados. Añada al menos un estado de proyecto antes de crear proyectos.",
+      "taskStatusesNotConfigured": "No hay estados de tarea de proyecto configurados. Añada al menos un estado de tarea antes de crear proyectos.",
+      "detailsUnavailableAfterCreate": "No se pudo crear el proyecto porque no se pudieron cargar sus datos. Inténtelo de nuevo."
+    },
+    "task": {
+      "validationFailed": "Corrija los datos de la tarea: {{details}}",
+      "invalidValue": "Uno de los valores de tarea seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de proyecto o tarea seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio de la tarea entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores de la tarea no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la tarea.",
+      "missingFieldNamed": "Falta un campo obligatorio de la tarea: {{field}}."
+    },
+    "comment": {
+      "internalOnly": "Solo los usuarios internos pueden comentar en las tareas.",
+      "taskNotFound": "No se encontró la tarea. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "parentNotFound": "No se encontró el comentario al que está respondiendo. Actualice la página e inténtelo de nuevo.",
+      "sameThreadRequired": "Las respuestas deben permanecer en el mismo hilo de la tarea. Actualice la página e inténtelo de nuevo.",
+      "parentDeleted": "No puede responder a un comentario eliminado.",
+      "notFound": "No se encontró el comentario. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "La tarea o el comentario seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del comentario.",
+      "missingFieldNamed": "Falta un campo obligatorio del comentario: {{field}}."
+    },
+    "export": {
+      "invalidValue": "Uno de los proyectos, fases o tareas seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la exportación del proyecto.",
+      "missingFieldNamed": "Falta un campo obligatorio de la exportación del proyecto: {{field}}."
+    },
+    "status": {
+      "invalidValue": "Uno de los valores de estado seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los estados de proyecto seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un estado de tarea de proyecto con esta configuración.",
+      "notAllowed": "Uno de los valores de estado no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del estado.",
+      "missingFieldNamed": "Falta un campo obligatorio del estado: {{field}}."
+    },
+    "template": {
+      "validationFailed": "La validación de la plantilla falló. Revise los datos de la plantilla e inténtelo de nuevo.",
+      "invalidUuid": "La solicitud de plantilla contiene un UUID no válido",
+      "missingStatuses": "Esta plantilla hace referencia a estados que ya no existen. Repare sus columnas de estado e inténtelo de nuevo."
+    },
+    "ordering": {
+      "invalidValue": "Uno de los valores de proyecto, fase, tarea o estado seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de orden del proyecto seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del orden del proyecto.",
+      "missingFieldNamed": "Falta un campo obligatorio del orden del proyecto: {{field}}."
+    },
+    "material": {
+      "referenceMissing": "El proyecto, cliente, producto o unidad de existencias seleccionado ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del material.",
+      "missingFieldNamed": "Falta un campo obligatorio del material: {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "No hay ninguna dirección de correo electrónico configurada para el contacto de cliente de este proyecto.",
+      "emailNotConfigured": "El correo electrónico no está configurado. Configure los ajustes de correo electrónico en Configuración antes de enviar actualizaciones.",
+      "templateMissing": "Falta la plantilla de correo de actualización de estado del proyecto.",
+      "sendFailed": "No se pudo enviar la actualización de estado del proyecto. Inténtelo de nuevo."
+    }
   }
 }

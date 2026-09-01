@@ -48,6 +48,12 @@ interface EmailProviderCardProps {
   onRunDiagnostics: (provider: EmailProvider) => void;
   onChangeDefaults: (provider: EmailProvider, defaultsId?: string) => void | Promise<void>;
   onTogglePause: (provider: EmailProvider) => void | Promise<void>;
+  /**
+   * Provider-specific reconnect dispatch for providers auto-paused on
+   * repeated auth failures. Threaded from EmailProviderConfiguration so the
+   * card never owns OAuth logic.
+   */
+  onReconnect: (provider: EmailProvider) => void;
 }
 
 const getProviderIcon = (providerType: string) => {
@@ -80,29 +86,42 @@ export function EmailProviderCard({
   onRunDiagnostics,
   onChangeDefaults,
   onTogglePause,
+  onReconnect,
 }: EmailProviderCardProps) {
   const { t } = useTranslation('msp/email-providers');
+  const authFailurePaused = Boolean(provider.inboundPausedAt) && provider.inboundPauseReason === 'auth_failure';
 
-  const getExpirationStatus = (activeProvider: EmailProvider) => {
-    if (activeProvider.providerType !== 'microsoft' || !activeProvider.microsoftConfig?.webhook_expires_at) {
+  // Gmail watches last seven days. Renewal is scheduled by the Enterprise
+  // Edition workflow engine, so on Community Edition a lapsed watch is the
+  // point where inbound mail stops without anything else changing — the card
+  // has to say so rather than keep showing "Active".
+  const watchExpiresAt =
+    provider.providerType === 'microsoft'
+      ? provider.microsoftConfig?.webhook_expires_at
+      : provider.providerType === 'google'
+      ? provider.googleConfig?.watch_expiration
+      : undefined;
+
+  const hoursUntilExpiry = watchExpiresAt
+    ? (new Date(watchExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60)
+    : null;
+
+  const getExpirationStatus = () => {
+    if (hoursUntilExpiry === null || Number.isNaN(hoursUntilExpiry)) {
       return null;
     }
-    const expiresAt = new Date(activeProvider.microsoftConfig.webhook_expires_at);
-    const now = new Date();
-    const diffMs = expiresAt.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
 
-    if (diffHours < 0) {
+    if (hoursUntilExpiry < 0) {
       return { label: t('providerCard.subscription.expired', { defaultValue: 'Expired' }), color: 'text-red-500' };
     }
-    if (diffHours < 24) {
+    if (hoursUntilExpiry < 24) {
       return {
-        label: t('providerCard.subscription.expiresInHours', { defaultValue: 'Expires in {{count}}h', count: Math.ceil(diffHours) }),
+        label: t('providerCard.subscription.expiresInHours', { defaultValue: 'Expires in {{count}}h', count: Math.ceil(hoursUntilExpiry) }),
         color: 'text-yellow-600'
       };
     }
     return {
-      label: t('providerCard.subscription.expiresInDays', { defaultValue: 'Expires in {{count}}d', count: Math.ceil(diffHours / 24) }),
+      label: t('providerCard.subscription.expiresInDays', { defaultValue: 'Expires in {{count}}d', count: Math.ceil(hoursUntilExpiry / 24) }),
       color: 'text-muted-foreground'
     };
   };
@@ -178,8 +197,19 @@ export function EmailProviderCard({
     return t('providerCard.lastSync.daysAgo', { defaultValue: '{{count}}d ago', count: Math.floor(diffMins / 1440) });
   };
 
-  const expirationStatus = getExpirationStatus(provider);
+  const expirationStatus = getExpirationStatus();
   const interactionBusy = busy || reconnecting;
+
+  const gmailWatchLapsed =
+    provider.providerType === 'google' && hoursUntilExpiry !== null && !Number.isNaN(hoursUntilExpiry) && hoursUntilExpiry < 0;
+  const gmailWatchExpiringSoon =
+    provider.providerType === 'google' &&
+    hoursUntilExpiry !== null &&
+    !Number.isNaN(hoursUntilExpiry) &&
+    hoursUntilExpiry >= 0 &&
+    hoursUntilExpiry < 24;
+  const gmailWatchMissing =
+    provider.providerType === 'google' && provider.isActive && Boolean(provider.googleConfig) && !watchExpiresAt;
 
   return (
     <Card className={`transition-all ${!provider.isActive ? 'opacity-60' : ''}`}>
@@ -218,10 +248,20 @@ export function EmailProviderCard({
                     : t('providerCard.actions.testConnection', { defaultValue: 'Test Connection' })}
                 </DropdownMenuItem>
                 {provider.providerType === 'google' && (
-                  <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)} disabled={interactionBusy}>
-                    <Repeat className="h-4 w-4 mr-2" />
-                    {t('providerCard.actions.refreshWatch', { defaultValue: 'Refresh Pub/Sub & Watch' })}
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)} disabled={interactionBusy}>
+                      <Repeat className="h-4 w-4 mr-2" />
+                      {t('providerCard.actions.refreshWatch', { defaultValue: 'Refresh Pub/Sub & Watch' })}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      id={`run-gmail-diagnostics-${provider.id}`}
+                      onClick={() => onRunDiagnostics(provider)}
+                      disabled={interactionBusy}
+                    >
+                      <Stethoscope className="h-4 w-4 mr-2" />
+                      {t('providerCard.actions.runGmailDiagnostics', { defaultValue: 'Run Gmail Delivery Diagnostics' })}
+                    </DropdownMenuItem>
+                  </>
                 )}
                 {provider.providerType === 'microsoft' && (
                   <>
@@ -249,18 +289,23 @@ export function EmailProviderCard({
                       : t('providerCard.actions.resyncMailbox', { defaultValue: 'Resync Mailbox' })}
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem
-                  id={`${provider.inboundPausedAt ? 'resume' : 'pause'}-provider-${provider.id}`}
-                  onClick={() => onTogglePause(provider)}
-                  disabled={interactionBusy}
-                >
-                  {provider.inboundPausedAt
-                    ? <PlayCircle className="h-4 w-4 mr-2" />
-                    : <PauseCircle className="h-4 w-4 mr-2" />}
-                  {provider.inboundPausedAt
-                    ? t('providerCard.actions.resume')
-                    : t('providerCard.actions.pause')}
-                </DropdownMenuItem>
+                {/* A bare Resume must not be offered for an auth_failure
+                    pause: resuming dead credentials would recreate the
+                    alert loop. Reconnect is the only path back. */}
+                {!authFailurePaused && (
+                  <DropdownMenuItem
+                    id={`${provider.inboundPausedAt ? 'resume' : 'pause'}-provider-${provider.id}`}
+                    onClick={() => onTogglePause(provider)}
+                    disabled={interactionBusy}
+                  >
+                    {provider.inboundPausedAt
+                      ? <PlayCircle className="h-4 w-4 mr-2" />
+                      : <PauseCircle className="h-4 w-4 mr-2" />}
+                    {provider.inboundPausedAt
+                      ? t('providerCard.actions.resume')
+                      : t('providerCard.actions.pause')}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onDelete(provider.id)}
@@ -335,7 +380,10 @@ export function EmailProviderCard({
           )}
         </div>
 
-        {provider.status === 'error' && provider.errorMessage && (
+        {/* The auth-failure banner already carries the actionable error
+            context; stacking the generic status-error alert on top of it is
+            redundant noise. */}
+        {provider.status === 'error' && provider.errorMessage && !authFailurePaused && (
           <Alert variant="destructive" className="mt-3">
             <AlertDescription>
               <strong>{t('providerCard.fields.error', { defaultValue: 'Error:' })}</strong> {provider.errorMessage}
@@ -343,9 +391,95 @@ export function EmailProviderCard({
           </Alert>
         )}
 
-        {provider.inboundPausedAt && (
+        {authFailurePaused ? (
+          <Alert
+            id={`provider-auth-failure-banner-${provider.id}`}
+            variant="destructive"
+            className="mt-3"
+            role="alert"
+          >
+            <AlertDescription>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <strong id={`provider-auth-failure-title-${provider.id}`}>
+                    {t('providerCard.authFailure.title')}
+                  </strong>
+                  <p className="mt-1">
+                    {t('providerCard.authFailure.description', {
+                      defaultValue: 'Inbound email for {{mailbox}} is paused because its credentials no longer work. Messages are not lost — they remain in the source mailbox.',
+                      mailbox: provider.mailbox,
+                    })}
+                  </p>
+                </div>
+                <Button
+                  id={`reconnect-provider-${provider.id}`}
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onReconnect(provider)}
+                  disabled={interactionBusy}
+                  className="shrink-0"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {t('providerCard.authFailure.action')}
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : provider.inboundPausedAt && (
           <Alert id={`provider-paused-help-${provider.id}`} className="mt-3">
             <AlertDescription>{t('providerCard.pausedHelp')}</AlertDescription>
+          </Alert>
+        )}
+
+        {(gmailWatchLapsed || gmailWatchExpiringSoon || gmailWatchMissing) && !provider.inboundPausedAt && (
+          <Alert
+            id={`provider-gmail-watch-warning-${provider.id}`}
+            variant={gmailWatchExpiringSoon ? 'warning' : 'destructive'}
+            className="mt-3"
+            role="alert"
+          >
+            <AlertDescription>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <strong>
+                    {gmailWatchLapsed
+                      ? t('providerCard.gmailWatch.expiredTitle', { defaultValue: 'Gmail is no longer sending new mail here' })
+                      : gmailWatchMissing
+                      ? t('providerCard.gmailWatch.missingTitle', { defaultValue: 'Gmail push delivery is not registered' })
+                      : t('providerCard.gmailWatch.expiringTitle', { defaultValue: 'Gmail push delivery expires within a day' })}
+                  </strong>
+                  <p className="mt-1">
+                    {gmailWatchLapsed
+                      ? t('providerCard.gmailWatch.expiredDescription', {
+                          defaultValue:
+                            'The Gmail watch for {{mailbox}} expired, so Google has stopped publishing notifications. Messages are not lost — they remain in the mailbox. Refresh Pub/Sub & Watch to resume delivery.',
+                          mailbox: provider.mailbox,
+                        })
+                      : gmailWatchMissing
+                      ? t('providerCard.gmailWatch.missingDescription', {
+                          defaultValue:
+                            'No Gmail watch is registered for {{mailbox}}, so no inbound mail will arrive. Refresh Pub/Sub & Watch to register one.',
+                          mailbox: provider.mailbox,
+                        })
+                      : t('providerCard.gmailWatch.expiringDescription', {
+                          defaultValue:
+                            'Gmail watches last seven days. Refresh Pub/Sub & Watch before this one lapses, or inbound mail will stop without further notice.',
+                        })}
+                  </p>
+                </div>
+                <Button
+                  id={`refresh-gmail-watch-${provider.id}`}
+                  variant={gmailWatchExpiringSoon ? 'outline' : 'destructive'}
+                  size="sm"
+                  onClick={() => onRefreshWatchSubscription(provider)}
+                  disabled={interactionBusy}
+                  className="shrink-0"
+                >
+                  <Repeat className="h-4 w-4 mr-2" />
+                  {t('providerCard.actions.refreshWatch', { defaultValue: 'Refresh Pub/Sub & Watch' })}
+                </Button>
+              </div>
+            </AlertDescription>
           </Alert>
         )}
 

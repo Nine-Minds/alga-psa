@@ -25,6 +25,9 @@
       "phoneNumber": {
         "label": "Número de teléfono"
       },
+      "phoneExtension": {
+        "label": "Extensión"
+      },
       "timeZone": {
         "label": "Zona horaria"
       }
@@ -756,6 +759,49 @@
       "linkedAt": "Vinculado el {{date}}",
       "lastUsed": "Último uso el {{date}}",
       "notUsedYet": "Aún no utilizado"
+    }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Permiso denegado: no tiene permiso para ver todas las sesiones."
+    },
+    "permissions": {
+      "adminRequired": "Permiso denegado: se requiere acceso de administrador"
+    },
+    "apiKeys": {
+      "internalOnly": "Permiso denegado: la gestión de claves de API está reservada a los usuarios internos",
+      "configInternalOnly": "Permiso denegado: la configuración de claves de API está reservada a los usuarios internos",
+      "invalidExpiration": "Elija una fecha de caducidad válida para esta clave de API.",
+      "notFound": "Clave de API no encontrada.",
+      "rateLimitsPositive": "Los límites de tasa de la API deben ser números enteros positivos."
+    },
+    "webhooks": {
+      "invalidInput": "Revise la configuración del webhook e inténtelo de nuevo.",
+      "notFound": "Webhook no encontrado.",
+      "signingSecretMissing": "Falta el secreto de firma del webhook. Rote el secreto de firma e inténtelo de nuevo.",
+      "deliveryNotFound": "Entrega no encontrada.",
+      "testNotRetryable": "Las entregas de prueba no se pueden reintentar.",
+      "payloadInvalid": "Esta entrega no se puede reintentar porque la carga útil almacenada no es válida.",
+      "validation": { "unknownEntity": "Entidad de webhook desconocida «{{entity}}».", "unknownField": "Campo desconocido «{{field}}» para la entidad de webhook «{{entity}}»." }
+    },
+    "inboundWebhooks": {
+      "permissions": {
+        "create": "Permiso denegado: se requiere permiso de creación de webhooks entrantes",
+        "read": "Permiso denegado: se requiere permiso de lectura de webhooks entrantes",
+        "update": "Permiso denegado: se requiere permiso de actualización de webhooks entrantes",
+        "delete": "Permiso denegado: se requiere permiso de eliminación de webhooks entrantes",
+        "replay": "Permiso denegado: se requiere permiso de reenvío de webhooks entrantes"
+      },
+      "invalidInput": "Revise la configuración del webhook entrante e inténtelo de nuevo.",
+      "workflowRequiresEe": "Los controladores de flujo de trabajo para webhooks entrantes requieren la edición Enterprise.",
+      "notFound": "Webhook entrante no encontrado.",
+      "duplicateSlug": "El identificador «{{slug}}» de webhook entrante ya existe.",
+      "noSecretToRotate": "Los webhooks entrantes con lista de IP permitidas no tienen un secreto que rotar.",
+      "unsupportedAuthType": "Tipo de autenticación de webhook entrante no admitido: {{authType}}.",
+      "deliveryNotFound": "Entrega entrante no encontrada.",
+      "replayMissingConfig": "No se puede reenviar una entrega entrante sin una configuración de webhook.",
+      "notFoundOrInactive": "Webhook entrante no encontrado o inactivo.",
+      "validation": { "slugReserved": "Este identificador está reservado para una integración incluida.", "authTypeMismatch": "El tipo de configuración de autenticación debe coincidir con el tipo de autenticación seleccionado.", "handlerTypeMismatch": "El tipo de configuración del controlador debe coincidir con el tipo de controlador seleccionado." }
     }
   }
 }

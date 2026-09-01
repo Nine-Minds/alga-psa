@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Suporte técnico",
       "operations": "Operações",
-      "billing": "Cobrança"
+      "billing": "Cobrança",
+      "inventory": "Inventário"
     },
     "badges": {
       "planned": "Planejado"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Ver relatório",
       "openInBilling": "Aberto no faturamento",
+      "openReport": "Abrir relatório",
       "requiresTier": "Requer {{tier}}",
       "comingSoon": "Em breve"
     },
@@ -57,11 +59,14 @@
       "noDate": "Sem data",
       "notAvailable": "n / D",
       "noEmailChannels": "Nenhum canal de e-mail está configurado.",
-      "noCapacity": "n/d — sem capacidade definida"
+      "noCapacity": "n/d — sem capacidade definida",
+      "noEstimate": "n/d — sem estimativa definida",
+      "noOverruns": "Nenhuma tarefa ultrapassou sua estimativa."
     },
     "fallbackTitle": "Relatório",
     "dateRange": {
-      "lastDays": "Últimos dias {{count}}"
+      "lastDays": "Últimos dias {{count}}",
+      "allActiveProjects": "Todos os projetos ativos, desde o início"
     },
     "units": {
       "daysWithCount": "{{count}} dias"
@@ -101,7 +106,13 @@
       "capacityHours": "Horas de capacidade",
       "utilization": "Utilização",
       "usersWithoutCapacity": "Capacidade ausente",
-      "activeUsers": "Usuários ativos"
+      "activeUsers": "Usuários ativos",
+      "activeProjects": "Projetos ativos",
+      "budgetedHours": "Horas orçadas",
+      "estimatedHours": "Horas estimadas",
+      "actualHours": "Horas reais",
+      "projectsOverEstimate": "Acima da estimativa",
+      "projectsOverBudget": "Acima do orçamento"
     },
     "sections": {
       "openByStatus": "Aberto por status",
@@ -120,7 +131,10 @@
       "bucketUsage": "Uso de balde",
       "performanceByAssignee": "Desempenho por responsável",
       "closedByAssignee": "Fechado pelo responsável",
-      "utilizationByUser": "Utilização por usuário"
+      "utilizationByUser": "Utilização por usuário",
+      "hoursByProject": "Horas por projeto",
+      "hoursByPhase": "Horas por fase",
+      "largestTaskOverruns": "Maiores estouros por tarefa"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -150,6 +164,26 @@
       "contractReports": {
         "title": "Relatórios de contrato",
         "description": "Receita de contrato, renovações, utilização de bucket e rentabilidade."
+      },
+      "inventoryMargin": {
+        "title": "Relatório de Margem",
+        "description": "Receita, custo das mercadorias vendidas e margem por produto a partir de pedidos de venda atendidos."
+      },
+      "inventoryWriteOffs": {
+        "title": "Baixas",
+        "description": "Perdas de estoque e ajustes baixados, por motivo e período."
+      },
+      "inventoryGhostUsage": {
+        "title": "Uso Fantasma",
+        "description": "Chamados de hardware fechados sem peças registradas — custos que a oficina pode ter absorvido."
+      },
+      "deferredRevenue": {
+        "title": "Receita diferida",
+        "description": "Passivo pré-pago entre clientes: saldos de crédito e horas não consumidas do banco de horas por mês."
+      },
+      "projectHours": {
+        "title": "Horas do projeto x estimativas",
+        "description": "Horas registradas em relação às estimativas das tarefas e aos orçamentos do projeto, com as fases que estão atrasando."
       }
     },
     "table": {
@@ -173,7 +207,17 @@
       "workedHours": "Horas trabalhadas",
       "capacityHours": "Horas de capacidade",
       "utilization": "Utilização",
-      "capacityEstimated": "Estimado a partir da capacidade semanal; sem horário de trabalho definido."
+      "capacityEstimated": "Estimado a partir da capacidade semanal; sem horário de trabalho definido.",
+      "project": "Projeto",
+      "client": "Cliente",
+      "phase": "Fase",
+      "task": "Tarefa",
+      "budgetedHours": "Orçadas",
+      "estimatedHours": "Estimadas",
+      "actualHours": "Reais",
+      "variance": "Variação",
+      "estimateUsed": "Estimativa utilizada",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} tarefas concluídas"
     },
     "statusValues": {
       "connected": "Conectado",
@@ -425,6 +469,75 @@
       "totalClients": "Total de clientes",
       "activeAssignments": "Tarefas ativas",
       "totalBilled": "Total faturado"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Receita diferida / passivo pré-pago",
+    "description": "Movimentação mensal por cliente dos saldos de crédito do cliente e das horas pré-pagas não consumidas do banco de horas.",
+    "printSubtitle": "Mês {{month}}",
+    "printTable": "Movimentação por cliente",
+    "empty": "Nenhum passivo pré-pago para este mês.",
+    "actions": {
+      "csv": "Baixar CSV"
+    },
+    "errors": {
+      "load": "Falha ao carregar o relatório de receita diferida."
+    },
+    "summary": {
+      "totalLiability": "Passivo pré-pago total",
+      "credits": "Créditos",
+      "hours": "Horas pré-pagas",
+      "delta": "Variação vs. mês anterior"
+    },
+    "table": {
+      "client": "Cliente",
+      "credits": "Créditos",
+      "hours": "Horas pré-pagas",
+      "total": "Saldo final total",
+      "opening": "Saldo inicial",
+      "issued": "Emitido",
+      "applied": "Aplicado",
+      "expired": "Expirado",
+      "adjustments": "Ajs.",
+      "closing": "Saldo final",
+      "currencyHeading": "Moeda",
+      "noClients": "Nenhum cliente com saldos pré-pagos neste mês.",
+      "tenantTotal": "Total do locatário"
+    },
+    "detail": {
+      "credits": "Saldos de crédito",
+      "noCredits": "Nenhum lançamento de crédito.",
+      "date": "Emitido",
+      "description": "Descrição",
+      "remaining": "Restante",
+      "expires": "Expira",
+      "qbo": "QBO",
+      "reachable": "Sincronizado",
+      "notReachable": "Não está no QBO",
+      "notReachableTitle": "Créditos de pré-pagamento / depósito de projeto nunca são exportados para o QuickBooks — o Alga é o sistema de registro.",
+      "buckets": "Horas pré-pagas do banco de horas",
+      "noBuckets": "Nenhum período pré-pago do banco de horas.",
+      "line": "Linha",
+      "period": "Período",
+      "included": "Incluído",
+      "used": "Usado",
+      "value": "Valor",
+      "feeSource": "Taxa",
+      "rollover": "acúmulo",
+      "notBilled": "Ainda não faturado",
+      "billed": "Faturado"
+    },
+    "csv": {
+      "client": "Cliente",
+      "currency": "Moeda"
+    }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Um dos registros de relatório selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de relatório selecionados não existe mais. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório do relatório.",
+      "missingFieldNamed": "Falta um campo obrigatório do relatório: {{field}}."
     }
   }
 }

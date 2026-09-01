@@ -25,6 +25,9 @@
       "phoneNumber": {
         "label": "Numéro de téléphone"
       },
+      "phoneExtension": {
+        "label": "Poste"
+      },
       "timeZone": {
         "label": "Fuseau horaire"
       }
@@ -756,6 +759,49 @@
       "linkedAt": "Lié le {{date}}",
       "lastUsed": "Dernière utilisation le {{date}}",
       "notUsedYet": "Pas encore utilisé"
+    }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Autorisation refusée : vous n’avez pas l’autorisation de consulter toutes les sessions."
+    },
+    "permissions": {
+      "adminRequired": "Autorisation refusée : accès administrateur requis"
+    },
+    "apiKeys": {
+      "internalOnly": "Autorisation refusée : la gestion des clés d'API est réservée aux utilisateurs internes",
+      "configInternalOnly": "Autorisation refusée : la configuration des clés d'API est réservée aux utilisateurs internes",
+      "invalidExpiration": "Choisissez une date d'expiration valide pour cette clé d'API.",
+      "notFound": "Clé d'API introuvable.",
+      "rateLimitsPositive": "Les limites de débit de l'API doivent être des nombres entiers positifs."
+    },
+    "webhooks": {
+      "invalidInput": "Vérifiez les paramètres du webhook et réessayez.",
+      "notFound": "Webhook introuvable.",
+      "signingSecretMissing": "Le secret de signature du webhook est manquant. Renouvelez le secret de signature et réessayez.",
+      "deliveryNotFound": "Livraison introuvable.",
+      "testNotRetryable": "Les livraisons de test ne peuvent pas être relancées.",
+      "payloadInvalid": "Cette livraison ne peut pas être relancée car la charge utile enregistrée n'est pas valide.",
+      "validation": { "unknownEntity": "Entité de webhook inconnue « {{entity}} ».", "unknownField": "Champ « {{field}} » inconnu pour l’entité de webhook « {{entity}} »." }
+    },
+    "inboundWebhooks": {
+      "permissions": {
+        "create": "Autorisation refusée : autorisation de création sur les webhooks entrants requise",
+        "read": "Autorisation refusée : autorisation de lecture sur les webhooks entrants requise",
+        "update": "Autorisation refusée : autorisation de mise à jour sur les webhooks entrants requise",
+        "delete": "Autorisation refusée : autorisation de suppression sur les webhooks entrants requise",
+        "replay": "Autorisation refusée : autorisation de rejeu sur les webhooks entrants requise"
+      },
+      "invalidInput": "Vérifiez les paramètres du webhook entrant et réessayez.",
+      "workflowRequiresEe": "Les gestionnaires de workflow des webhooks entrants nécessitent l'édition Enterprise.",
+      "notFound": "Webhook entrant introuvable.",
+      "duplicateSlug": "L'identifiant « {{slug}} » de webhook entrant existe déjà.",
+      "noSecretToRotate": "Les webhooks entrants à liste d'IP autorisées n'ont pas de secret à renouveler.",
+      "unsupportedAuthType": "Type d'authentification de webhook entrant non pris en charge : {{authType}}.",
+      "deliveryNotFound": "Livraison entrante introuvable.",
+      "replayMissingConfig": "Impossible de rejouer une livraison entrante sans configuration de webhook.",
+      "notFoundOrInactive": "Webhook entrant introuvable ou inactif.",
+      "validation": { "slugReserved": "Cet identifiant est réservé à une intégration incluse.", "authTypeMismatch": "Le type de configuration d’authentification doit correspondre au type d’authentification sélectionné.", "handlerTypeMismatch": "Le type de configuration du gestionnaire doit correspondre au type de gestionnaire sélectionné." }
     }
   }
 }

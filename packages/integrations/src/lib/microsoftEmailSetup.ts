@@ -5,6 +5,8 @@ export const MICROSOFT_GRAPH_RESOURCE_APP_ID = '00000003-0000-0000-c000-00000000
 export const MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS = {
   mailRead: '570282fd-fa5c-430d-a7fd-fc8dc98a9dca',
   mailReadShared: '7b9103a5-4610-446b-9670-80643382c1fa',
+  mailSend: 'e383f46e-2787-4529-855e-0e479a3ffac0',
+  mailSendShared: 'a367ab51-6b49-43bf-a716-a1fb06d2a174',
   offlineAccess: '7427e0e9-2fba-42fe-b0c0-848c9e6a8182',
   // MicrosoftGraphAdapter reads /me to decide between the /me and
   // /users/{mailbox} paths. Portal-created registrations get User.Read by

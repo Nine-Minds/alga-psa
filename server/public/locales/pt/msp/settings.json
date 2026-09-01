@@ -9,6 +9,7 @@
   "tabs": {
     "general": "Em geral",
     "experimentalFeatures": "Recursos experimentais",
+    "appearance": "Aparência",
     "clientPortal": "Portal do cliente",
     "users": "Usuários",
     "teams": "Teams",
@@ -30,7 +31,10 @@
     "loadingTeam": "Carregando configuração da equipe...",
     "loadingExperimental": "Carregando configuração de recurso experimental...",
     "loadingInteractions": "Carregando configurações de interação...",
-    "keyboardShortcuts": "Atalhos de teclado"
+    "keyboardShortcuts": "Atalhos de teclado",
+    "opportunities": "Oportunidades",
+    "mcpServer": "Servidor MCP",
+    "settingsFallback": "Configurações"
   },
   "unsavedChanges": {
     "title": "Alterações não salvas",
@@ -73,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "Você não tem permissão para visualizar segredos.",
       "success": {
         "tenantNameUpdated": "Nome do locatário atualizado com sucesso",
         "timezoneUpdated": "Fuso horário padrão atualizado com sucesso",
@@ -263,7 +268,9 @@
         "licenseLimitReached": "Você atingiu o limite de licença de usuário MSP.",
         "soloPlanLimit": "O plano Solo é limitado a 1 usuário. Atualize para o Pro para adicionar mais usuários.",
         "revokeInvitation": "Falha ao revogar o convite",
-        "invitationNotFound": "Convite não encontrado ou já utilizado"
+        "invitationNotFound": "Convite não encontrado ou já utilizado",
+        "createContact": "Não foi possível criar o contato: {{reason}}",
+        "unknown": "Erro desconhecido"
       }
     },
     "invitations": {
@@ -525,7 +532,7 @@
     },
     "boards": {
       "title": "Quadros",
-      "alert": "Os quadros organizam os tickets em grupos lógicos. Cada conselho pode ter seu próprio agente padrão, prioridade e política de SLA.",
+      "alert": "Os quadros organizam os tickets em grupos lógicos. Cada quadro pode ter seu próprio agente padrão, prioridade e política de SLA.",
       "table": {
         "name": "Nome",
         "description": "Descrição",
@@ -533,9 +540,9 @@
         "default": "Padrão",
         "defaultAgent": "Agente padrão",
         "defaultPriority": "Prioridade padrão",
-        "boardManager": "Gerente do Conselho",
+        "boardManager": "Gerente do Quadro",
         "order": "Ordem",
-        "itilBoard": "Conselho ITIL",
+        "itilBoard": "Quadro ITIL",
         "actions": "Ações",
         "ticketLoad": "Carga de tickets",
         "statuses": "Status"
@@ -562,7 +569,7 @@
       },
       "fields": {
         "boardName": {
-          "label": "Nome do Conselho",
+          "label": "Nome do Quadro",
           "placeholder": "Digite o nome do quadro"
         },
         "description": {
@@ -578,8 +585,8 @@
         "itilCompliant": "Compatível com ITIL",
         "boardConfiguration": "Configuração do quadro",
         "boardManager": {
-          "label": "Gerente do Conselho",
-          "placeholder": "Selecione um gerente do conselho",
+          "label": "Gerente do Quadro",
+          "placeholder": "Selecione um gerente do quadro",
           "help": "O usuário responsável por gerenciar este fórum"
         },
         "defaultAssignedAgent": {
@@ -671,7 +678,7 @@
       },
       "itilInfo": {
         "title": "Informações ITIL",
-        "tooltip": "Este conselho segue as melhores práticas do ITIL",
+        "tooltip": "Este quadro segue as melhores práticas do ITIL",
         "categoriesTitle": "Categorias ITIL",
         "priorityMatrixTitle": "Matriz Prioritária",
         "impactDescription": "Os níveis de impacto definem o escopo do problema",
@@ -721,7 +728,7 @@
         "error": {
           "fetchFailed": "Falha ao carregar quadros",
           "fetchAvailableFailed": "Falha ao buscar quadros disponíveis para importação",
-          "nameRequired": "O nome do conselho é obrigatório",
+          "nameRequired": "O nome do quadro é obrigatório",
           "saveFailed": "Falha ao salvar o quadro",
           "lastDefault": "Não é possível remover o último quadro padrão",
           "statusRequired": "Adicione pelo menos um status de ticket antes de salvar o quadro.",
@@ -776,6 +783,8 @@
         "sections": {
           "general": "Geral",
           "generalHelp": "Nome, descrição, visibilidade e padrão",
+          "appearance": "Aparência e padrões",
+          "appearanceHelp": "Fixação da aba e visualização de lista padrão do quadro",
           "assignment": "Atribuição e SLA",
           "assignmentHelp": "Roteamento padrão, SLA e responsável pelo quadro",
           "inbound": "E-mail e respostas recebidas",
@@ -796,6 +805,22 @@
         "allSaved": "Todas as alterações salvas",
         "reopenBadge": "reabrir",
         "required": "Obrigatório"
+      },
+      "appearance": {
+        "pinLabel": "Fixar na tela de tickets",
+        "pinHelp": "Quadros fixados ganham uma aba permanente na tela de tickets. Quadros não fixados continuam acessíveis em \"Todos os tickets\" e no filtro de quadros.",
+        "savedView": "Visualização salva",
+        "inheritsTenant": "Herda os padrões do locatário",
+        "openBoard": "Abrir este quadro",
+        "resetToTenant": "Redefinir para o padrão do locatário",
+        "arrangeNote": "Organize a visualização deste quadro no próprio quadro e depois salve-a pelo menu \"Exibição\".",
+        "preview": "Pré-visualização",
+        "summary": {
+          "openOnly": "Somente abertos",
+          "columns": "{{columns}} colunas",
+          "density": "densidade {{level}}",
+          "sortedBy": "ordenado por {{field}}"
+        }
       },
       "empty": "Nenhum quadro encontrado.",
       "searchPlaceholder": "Pesquisar quadros…"
@@ -1106,25 +1131,42 @@
       "fields": {
         "companyName": "nome da empresa",
         "companyLogo": "Logotipo da empresa",
+        "companyLogoDark": "Logotipo para fundos escuros",
         "colorPalette": "Paleta de cores",
         "primaryColor": "Cor Primária",
         "secondaryColor": "Cor Secundária",
         "supportEmail": "E-mail de suporte",
         "supportPhone": "Telefone de suporte",
-        "heroGradient": "Gradiente do cabeçalho do painel"
+        "heroGradient": "Gradiente do cabeçalho do painel",
+        "sidebarStyle": "Cor do painel lateral",
+        "sidebarColor": "Cor personalizada do painel lateral",
+        "followTheme": "Usar o tema da organização no portal"
       },
       "help": {
         "companyName": "Isso será exibido no cabeçalho do portal do cliente",
+        "colorPalette": "São acentos sobre o tema da organização: a cor primária pinta botões, ligações e o banner de boas-vindas, a cor secundária a segunda metade do banner e os acentos de apoio, e o painel lateral adota a que escolher. Todas as outras superfícies — página, cartões, texto, contornos — vêm do tema em Definições → Aparência.",
         "companyLogo": "Recomendado: PNG ou SVG, máximo de 2 MB, fundo transparente",
+        "companyLogoMsp": "Este logotipo também substitui a marca Alga no menu lateral MSP.",
+        "companyLogoDark": "Opcional. Usado no painel lateral do portal e nas telas em modo escuro. Se ficar vazio, o logotipo da empresa é usado.",
         "primaryColor": "Usado para botões, links e destaques",
         "secondaryColor": "Usado para acentos e ações secundárias",
         "supportEmail": "Mostrado aos clientes em confirmações de compromissos e outros e-mails enviados como o endereço de contato para obter ajuda.",
         "supportPhone": "Opcional. Exibido ao lado do e-mail de suporte em e-mails direcionados ao cliente.",
-        "heroGradient": "Controla o gradiente do banner de boas-vindas no painel do cliente."
+        "heroGradient": "Controla o gradiente do banner de boas-vindas no painel do cliente.",
+        "sidebarStyle": "Aplica sua cor primária ou secundária ao painel lateral do portal do cliente.",
+        "sidebarColor": "Qualquer cor que preferir. O painel usa um tom escurecido dela para que o texto claro do painel lateral continue legível.",
+        "followTheme": "Quando ativado, o portal do cliente usa o tema escolhido em Configurações → Aparência. Quando desativado, as cores abaixo o substituem.",
+        "followThemeActive": "As cores abaixo ficam salvas, mas não são aplicadas enquanto o portal seguir o tema da organização."
       },
       "heroGradient": {
         "primaryShades": "Cor primária para tom primário",
         "primarySecondary": "Cor primária para cor secundária"
+      },
+      "sidebarStyle": {
+        "default": "Padrão (ardósia escura)",
+        "primary": "Cor Primária",
+        "secondary": "Cor Secundária",
+        "custom": "Cor personalizada"
       },
       "preview": "Visualização",
       "previewDarkMode": "Visualizar modo escuro",
@@ -1278,6 +1320,130 @@
     "yourCompanyName": "Nome da sua empresa",
     "brandingPreviewMode": "Modo de tema de visualização da marca",
     "brandingUpdated": "Configurações de marca atualizadas"
+  },
+  "appearance": {
+    "title": "Tema",
+    "description": "Escolha o par claro/escuro que todos nesta organização veem, tanto no aplicativo MSP quanto no portal do cliente. Cada pessoa continua escolhendo claro, escuro ou sistema para si.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "A aparência padrão: superfícies brancas e limpas de dia, com tom roxo à noite."
+      },
+      "slate": {
+        "label": "Ardósia",
+        "description": "Cinzas neutros com o tema escuro azul-ardósia original."
+      },
+      "ocean": {
+        "label": "Oceano",
+        "description": "Um painel lateral azul-marinho com azuis frios sobre superfícies nítidas e levemente frias."
+      },
+      "sky": {
+        "label": "Céu",
+        "description": "Um azul mais claro e leve com um secundário índigo."
+      },
+      "forest": {
+        "label": "Floresta",
+        "description": "Verdes profundos com uma cor de sucesso turquesa, para que o status continue legível."
+      },
+      "sunset": {
+        "label": "Pôr do sol",
+        "description": "Laranjas quentes e rosa do crepúsculo sobre superfícies em tom de areia."
+      },
+      "cappuccino": {
+        "label": "Capuccino",
+        "description": "Marrons de café sobre creme, com um espresso torrado no escuro."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Rosa e ciano neon sobre um roxo de noite em Miami."
+      },
+      "highContrast": {
+        "label": "Alto contraste",
+        "description": "Apenas preto e branco, com bordas destacadas. Só as cores de estado mantêm o seu tom."
+      },
+      "custom": {
+        "label": "Personalizado",
+        "description": "As suas próprias cores, editadas abaixo."
+      }
+    },
+    "custom": {
+      "title": "Tema personalizado",
+      "description": "Crie suas próprias variantes clara e escura. As escalas de cor completas são derivadas destas cores base e o contraste é verificado antes de o tema poder ser salvo.",
+      "lightMode": "Variante clara",
+      "darkMode": "Variante escura",
+      "previewAlt": "Pré-visualização do tema personalizado",
+      "seededFrom": "Estas cores partem do tema {{pair}} — altere apenas as que importam e as escalas completas acompanham.",
+      "contrastTitle": "Estas cores estão muito próximas para serem lidas. Corrija-as antes de salvar:",
+      "contrastIssue": "{{foreground}} pode ser difícil de ler sobre {{background}}. {{hint}}",
+      "tokens": {
+        "background": "Fundo da página",
+        "card": "Superfície do cartão",
+        "surface": "Superfície elevada",
+        "textPrimary": "Texto principal",
+        "textSecondary": "Texto secundário",
+        "textMuted": "Texto atenuado",
+        "border": "Borda",
+        "borderStrong": "Borda forte",
+        "primary": "Cor principal",
+        "secondary": "Cor secundária",
+        "accent": "Cor de destaque",
+        "sidebarBg": "Fundo do painel lateral",
+        "sidebarText": "Texto do painel lateral",
+        "sidebarHover": "Painel lateral ao passar o cursor",
+        "headerBg": "Fundo do cabeçalho",
+        "buttonLabel": "Rótulos de botão em branco"
+      },
+      "actions": {
+        "save": "Salvar e usar o tema personalizado",
+        "reset": "Redefinir para as cores de {{pair}}",
+        "resetDone": "Cores redefinidas para o tema {{pair}} — salve para aplicar",
+        "useSaved": "Usar minhas cores salvas",
+        "useSavedDone": "Suas cores salvas voltaram — salve para aplicar"
+      },
+      "contrastHints": {
+        "lighten": "Escolha um {{foreground}} mais claro ou um {{background}} mais escuro.",
+        "darken": "Escolha um {{foreground}} mais escuro ou um {{background}} mais claro."
+      },
+      "mock": {
+        "caption": "Aponte para uma cor abaixo para ver que parte da aplicação ela pinta.",
+        "showing": "Destacado: {{token}}",
+        "nav": "Início",
+        "navActive": "Tickets",
+        "navMuted": "Relatórios",
+        "headerTitle": "Tickets",
+        "cardTitle": "Impressora offline na receção",
+        "cardBody": "Atribuído a Dana Reyes",
+        "cardMuted": "Atualizado há 2 horas",
+        "primaryAction": "Guardar",
+        "secondaryAction": "Atribuir",
+        "ghostAction": "Cancelar",
+        "surface": "Atividade recente"
+      }
+    },
+    "whiteLabel": {
+      "title": "Marca própria no aplicativo MSP",
+      "description": "Envie seu logotipo uma vez. Ele substitui a marca Alga no menu lateral MSP, e o portal do cliente usa as mesmas imagens.",
+      "logoHelp": "O menu lateral MSP é escuro nos dois temas, por isso usa o logotipo para fundos escuros quando você fornece um e, caso contrário, o logotipo principal.",
+      "fields": {
+        "logo": "Logotipo",
+        "logoDark": "Logotipo para fundos escuros"
+      },
+      "colors": {
+        "label": "Usar as cores da sua marca no aplicativo MSP",
+        "help": "Desativado por padrão. Quando ativado, suas cores primária e secundária substituem os destaques do tema para usuários MSP, como já acontece no portal do cliente."
+      }
+    },
+    "messages": {
+      "loadFailed": "Falha ao carregar as configurações de aparência",
+      "saved": "Aparência atualizada",
+      "saveFailed": "Falha ao salvar as configurações de aparência",
+      "discarded": "Pré-visualização descartada"
+    },
+    "unsaved": {
+      "notice": "Está a pré-visualizar um tema não guardado. Os restantes mantêm o tema guardado até o aplicar.",
+      "save": "Aplicar a todos",
+      "discard": "Descartar"
+    }
   },
   "mspLanguage": {
     "title": "Idioma da organização",
@@ -1491,7 +1657,8 @@
         "description": "Descrição",
         "enabled": "Habilitado",
         "defaultForUsers": "Padrão para usuários",
-        "actions": "Ações"
+        "actions": "Ações",
+        "priority": "Prioridade"
       },
       "actions": {
         "enableAllSubtypes": "Habilitar todos os subtipos",
@@ -1503,7 +1670,8 @@
         "discardChanges": "Descartar alterações",
         "saving": "Salvando...",
         "saveChanges": "Salvar alterações",
-        "cancel": "Cancelar"
+        "cancel": "Cancelar",
+        "resetToDefault": "Repor predefinição"
       },
       "intro": "Controle quais tipos de notificação interna estão disponíveis e defina os padrões para novos usuários.",
       "enabledLabel": "Habilitado:",
@@ -1514,12 +1682,148 @@
       "discardDialog": {
         "title": "Descartar alterações?",
         "message": "Tem certeza de que deseja descartar todas as alterações não salvas? Esta ação não pode ser desfeita."
+      },
+      "priority": {
+        "high": "Alta",
+        "normal": "Normal",
+        "low": "Baixa"
       }
     }
   },
   "timeEntry": {
     "title": "Configurações de entrada de tempo",
-    "description": "Gerencie suas configurações de entrada de tempo e períodos de tempo"
+    "description": "Gerencie suas configurações de entrada de tempo e períodos de tempo",
+    "timePeriods": {
+      "title": "Configurações de período",
+      "description": "Configure os períodos de faturamento",
+      "loading": "Carregando as configurações de período...",
+      "addNew": "Adicionar nova configuração de período",
+      "help": {
+        "title": "Entendendo as configurações de período",
+        "intro": "Você pode definir várias configurações ativas para criar ciclos de faturamento complexos. O dia final é o último dia incluído no período.",
+        "exampleIntro": "Por exemplo, para configurar períodos quinzenais (do dia 1 ao 15 e do 16 ao fim do mês):",
+        "firstSettingLabel": "Configuração 1:",
+        "firstSetting": "Dia inicial: 1, dia final: 15 → o período cobre do dia 1 ao 15",
+        "secondSettingLabel": "Configuração 2:",
+        "secondSetting": "Dia inicial: 16, dia final: fim do mês → o período cobre do dia 16 até o último dia",
+        "outro": "O sistema usa estas configurações para sugerir e gerar períodos. Garanta que elas cubram todo o ciclo sem lacunas."
+      },
+      "form": {
+        "requiredFields": "Preencha os campos obrigatórios:",
+        "frequency": "Frequência *",
+        "frequencyPlaceholder": "Informe a frequência",
+        "frequencyUnit": "Unidade de frequência *",
+        "frequencyUnitPlaceholder": "Selecione a unidade de frequência",
+        "startDay": "Dia inicial *",
+        "selectDay": "Selecione o dia",
+        "startDayPlaceholder": "Informe o dia inicial",
+        "endDay": "Dia final *",
+        "endDayPlaceholder": "Informe o dia final",
+        "endOfUnit": "Fim: {{unit}}",
+        "endOfMonth": "Fim do mês",
+        "startMonth": "Mês inicial",
+        "endMonth": "Mês final",
+        "startDayOfMonth": "Dia inicial do mês *",
+        "endDayOfMonth": "Dia final do mês *",
+        "add": "Adicionar configuração de período"
+      },
+      "validation": {
+        "frequencyMin": "A frequência deve ser de pelo menos 1",
+        "startDayRequired": "O dia inicial é obrigatório",
+        "endDayRequired": "O dia final é obrigatório",
+        "startDayOfMonthRequired": "O dia inicial do mês é obrigatório",
+        "endDayOfMonthRequired": "O dia final do mês é obrigatório"
+      },
+      "errors": {
+        "fetch": "Não foi possível carregar as configurações de período",
+        "overlap": "Esta configuração de período se sobrepõe a uma configuração ativa existente.",
+        "add": "Não foi possível adicionar a configuração de período. Verifique os valores e tente novamente.",
+        "update": "Não foi possível atualizar a configuração de período",
+        "delete": "Não foi possível excluir a configuração de período"
+      },
+      "summary": {
+        "frequency": "Frequência: a cada {{count}} × {{unit}}",
+        "startDay": "Dia inicial: {{value}}",
+        "endDay": "Dia final: {{value}}",
+        "start": "Início: {{value}}",
+        "end": "Fim: {{value}}",
+        "effectiveFrom": "Vigente desde: {{value}}",
+        "effectiveTo": "Vigente até: {{value}}",
+        "noEnd": "Sem fim",
+        "notSet": "Não definido"
+      },
+      "units": {
+        "day": "Dia",
+        "week": "Semana",
+        "month": "Mês",
+        "year": "Ano"
+      },
+      "months": {
+        "1": "janeiro",
+        "2": "fevereiro",
+        "3": "março",
+        "4": "abril",
+        "5": "maio",
+        "6": "junho",
+        "7": "julho",
+        "8": "agosto",
+        "9": "setembro",
+        "10": "outubro",
+        "11": "novembro",
+        "12": "dezembro"
+      },
+      "weekDays": {
+        "1": "segunda-feira",
+        "2": "terça-feira",
+        "3": "quarta-feira",
+        "4": "quinta-feira",
+        "5": "sexta-feira",
+        "6": "sábado",
+        "7": "domingo"
+      }
+    },
+    "periods": {
+      "title": "Períodos",
+      "description": "Visualize e gerencie os períodos de lançamento de horas usados no controle de tempo",
+      "loading": "Carregando períodos...",
+      "create": "Criar novo período",
+      "openMenu": "Abrir menu",
+      "columns": {
+        "startDate": "Data de início",
+        "endDate": "Data de término",
+        "actions": "Ações"
+      },
+      "form": {
+        "createTitle": "Criar novo período",
+        "editTitle": "Editar período",
+        "suggestion": "Com base nas suas configurações, o próximo período é sugerido.",
+        "frequency": "Frequência: a cada {{value}} × {{unit}}",
+        "overrideDates": "Substituir as datas sugeridas",
+        "startDate": "Data de início",
+        "startDatePlaceholder": "Selecione a data de início",
+        "noEndDate": "Sem data de término",
+        "endDate": "Data de término",
+        "endDatePlaceholder": "Selecione a data de término",
+        "deletePeriod": "Excluir período",
+        "confirmDeleteTitle": "Confirmar exclusão",
+        "confirmDeleteBody": "Tem certeza de que deseja excluir este período? Esta ação não pode ser desfeita.",
+        "checkSettingsLink": "Verifique suas configurações de período."
+      },
+      "errors": {
+        "load": "Não foi possível carregar os períodos.",
+        "suggest": "Não foi possível sugerir um novo período",
+        "noApplicableSettings": "Nenhuma configuração de período aplicável foi encontrada.",
+        "noSettings": "Nenhuma configuração de período disponível. Não é possível criar um novo período.",
+        "settingsRequired": "Não é possível gerenciar o período sem configurações.",
+        "startDateRequired": "É necessário informar uma data de início.",
+        "startBeforeEnd": "A data de início deve ser anterior à data de término.",
+        "overlap": "O período se sobrepõe a um período existente.",
+        "overlapRetry": "Este período se sobrepõe a outro existente. Escolha datas diferentes.",
+        "create": "Não foi possível criar o período.",
+        "delete": "Não foi possível excluir o período",
+        "unexpected": "Ocorreu um erro inesperado."
+      }
+    }
   },
   "billing": {
     "title": "Configurações de faturamento",
@@ -1599,7 +1903,8 @@
         "valueRequired": "O valor secreto é obrigatório",
         "noChanges": "Nenhuma alteração para salvar",
         "fixValidation": "Corrija os erros de validação"
-      }
+      },
+      "permissionDenied": "Você não tem permissão para visualizar segredos."
     }
   },
   "importExport": {
@@ -1678,6 +1983,22 @@
     "templates": {
       "comingSoon": "Os modelos de mapeamento e as importações programadas ficarão aqui. Salve mapeamentos de colunas, compartilhe-os com toda a equipe e configure trabalhos recorrentes."
     },
+    "migration": {
+      "actions": {
+        "back": "Voltar para migrações",
+        "upload": "Enviar pacote"
+      },
+      "errors": {
+        "noImportableRecords": "Este pacote não continha registros importáveis."
+      },
+      "preflight": {
+        "title": "Verificação prévia"
+      },
+      "run": {
+        "queued": "Migração na fila",
+        "applying": "Migração em andamento"
+      }
+    },
     "jobDetails": {
       "title": "Detalhes do trabalho de importação",
       "stats": {
@@ -1752,6 +2073,50 @@
     "loading": {
       "extensions": "Carregando extensões...",
       "installer": "Carregando instalador..."
+    }
+  },
+  "policyManagement": {
+    "title": "Gerenciamento de políticas",
+    "upgradeDescription": "O gerenciamento de políticas é um recurso Pro. Faça upgrade para acessar controles avançados de políticas."
+  },
+  "roleManagement": {
+    "title": "Gerenciar funções",
+    "description": "Crie e gerencie funções para acesso MSP e ao portal do cliente",
+    "columns": {
+      "roleNameRequired": "Nome da função *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Nome da função",
+      "roleNamePlaceholder": "Digite o nome da função",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Digite a descrição da função"
+    },
+    "portal": {
+      "none": "Nenhum",
+      "access": "Acesso ao portal",
+      "msp": "Portal MSP",
+      "client": "Portal do cliente",
+      "mspShort": "MSP",
+      "clientShort": "Cliente",
+      "required": "Uma função deve ter acesso a pelo menos um portal"
+    },
+    "actions": {
+      "addRole": "Adicionar função",
+      "createRole": "Criar função"
+    },
+    "createDialog": {
+      "title": "Criar nova função"
+    },
+    "deleteDialog": {
+      "entityFallback": "esta função"
+    },
+    "adminDeleteDisabled": "As funções de administrador não podem ser excluídas porque são funções do sistema",
+    "errors": {
+      "createFailed": "Falha ao criar a função",
+      "updateFailed": "Falha ao atualizar a função",
+      "validateDeletionFailed": "Falha ao validar a exclusão. Tente novamente.",
+      "deleteFailed": "Falha ao excluir a função"
     }
   },
   "security": {
@@ -2153,6 +2518,10 @@
       "stripe": {
         "name": "Stripe",
         "description": "Aceite pagamentos com cartão de crédito para faturas via Stripe"
+      },
+      "telephony": {
+        "name": "Telefonia",
+        "description": "Registre chamadas como interações, reconheça quem liga e transforme uma chamada em chamado"
       }
     }
   },
@@ -2184,6 +2553,266 @@
       "holidayDateRequired": "A data do feriado é obrigatória",
       "holidayAdded": "Feriado adicionado com sucesso",
       "holidayDeleted": "Feriado excluído com sucesso"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "No momento, nenhum ticket corre risco de descumprir o SLA",
+        "overdueHours": "Atrasado em {{hours}} h e {{minutes}} min",
+        "overdueMinutes": "Atrasado em {{minutes}} min",
+        "title": "Tickets em risco"
+      },
+      "breachChart": {
+        "breachRate": "Taxa de descumprimento",
+        "empty": "Não há dados de descumprimento disponíveis",
+        "title": "Descumprimentos por prioridade"
+      },
+      "columns": {
+        "assignee": "Responsável",
+        "breachType": "Tipo de descumprimento",
+        "client": "Cliente",
+        "priority": "Prioridade",
+        "progress": "Progresso",
+        "slaType": "Tipo de SLA",
+        "ticket": "Ticket",
+        "timeRemaining": "Tempo restante",
+        "when": "Quando"
+      },
+      "gauge": {
+        "title": "Conformidade com o SLA"
+      },
+      "labels": {
+        "resolution": "Resolução",
+        "resolutionSla": "SLA de resolução",
+        "response": "Resposta",
+        "responseSla": "SLA de resposta"
+      },
+      "metrics": {
+        "approachingBreach": "tickets próximos de descumprir o SLA",
+        "atRisk": "Em risco",
+        "currentlyPaused": "Pausados no momento",
+        "metBreached": "{{met}} cumpridos / {{breached}} descumpridos",
+        "overallCompliance": "Conformidade geral",
+        "pausedSla": "tickets com SLA pausado",
+        "ticketsTracked_one": "{{count}} ticket monitorado",
+        "ticketsTracked_other": "{{count}} tickets monitorados"
+      },
+      "recentBreaches": {
+        "empty": "Nenhum descumprimento do SLA no período selecionado",
+        "title": "Descumprimentos recentes",
+        "unassigned": "Não atribuído"
+      },
+      "trendChart": {
+        "breaches": "Descumprimentos",
+        "compliance": "Conformidade",
+        "compliancePercent": "% de conformidade",
+        "empty": "Não há dados de tendência disponíveis para o período selecionado",
+        "tickets": "Tickets",
+        "title": "Tendência de conformidade"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "Não foi possível atualizar as configurações globais de SLA",
+        "loadFailed": "Não foi possível carregar as configurações de pausa do SLA",
+        "responseTrackingUpdateFailed": "Não foi possível atualizar o monitoramento do estado da resposta",
+        "saveStatusesFailed": "Não foi possível salvar as configurações de status"
+      },
+      "global": {
+        "description": "Configure o comportamento global da pausa do temporizador de SLA",
+        "pauseOnAwaitingClient": {
+          "description": "Quando esta opção está ativada, o temporizador de SLA pausa automaticamente quando um ticket é marcado como aguardando uma resposta do cliente. O temporizador é retomado quando o cliente responde ou o status do ticket muda.",
+          "label": "Pausar automaticamente o SLA enquanto aguarda a resposta do cliente",
+          "requiresTracking": "Ative acima o monitoramento do estado da resposta para usar esta opção."
+        },
+        "responseTracking": {
+          "description": "Quando esta opção está ativada, os tickets monitoram automaticamente quem deve responder em seguida (o cliente ou a equipe interna). Ela também controla a visibilidade dos indicadores e filtros do estado da resposta.",
+          "label": "Monitorar o estado da resposta nos tickets"
+        },
+        "title": "Configurações globais de SLA"
+      },
+      "loading": "Carregando configurações de pausa do SLA...",
+      "messages": {
+        "globalSettingsUpdated": "As configurações globais de SLA foram atualizadas",
+        "noChangesToSave": "Não há alterações para salvar",
+        "responseTrackingDisabled": "Monitoramento do estado da resposta desativado",
+        "responseTrackingEnabled": "Monitoramento do estado da resposta ativado",
+        "statusesUpdated_one": "{{count}} configuração de status atualizada",
+        "statusesUpdated_other": "{{count}} configurações de status atualizadas"
+      },
+      "perStatus": {
+        "description": "Configure quais status de ticket devem pausar o temporizador de SLA. Quando um ticket é movido para um status com pausa ativada, o temporizador de SLA para até que o ticket seja movido para outro status.",
+        "empty": "Nenhum status de ticket encontrado.",
+        "modified": "Modificado",
+        "modifiedCount_one": "{{count}} status modificado",
+        "modifiedCount_other": "{{count}} status modificados",
+        "noUnsavedChanges": "Não há alterações não salvas",
+        "resetChanges": "Redefinir alterações",
+        "saveChanges": "Salvar alterações",
+        "saving": "Salvando...",
+        "title": "Configuração de pausa por status"
+      },
+      "retry": "Tentar novamente"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "Cancelar",
+        "create": "Criar política",
+        "saveChanges": "Salvar alterações",
+        "saving": "Salvando..."
+      },
+      "basics": {
+        "assignBoards": "Atribuir a quadros",
+        "assignClients": "Atribuir a clientes",
+        "businessHours": "Agenda do horário comercial",
+        "businessHoursPlaceholder": "Selecione a agenda do horário comercial",
+        "description": "Descrição",
+        "descriptionPlaceholder": "Descrição opcional desta política de SLA",
+        "noBusinessHours": "Sem horário comercial (24 horas)",
+        "policyName": "Nome da política",
+        "policyNamePlaceholder": "Digite o nome da política",
+        "scheduleAlways": "{{name}} (o tempo todo)",
+        "searchBoards": "Pesquisar quadros...",
+        "searchClients": "Pesquisar clientes...",
+        "setAsDefault": "Definir como política padrão",
+        "title": "Informações básicas"
+      },
+      "errors": {
+        "loadFailed": "Não foi possível carregar os dados",
+        "notFound": "Política de SLA não encontrada",
+        "saveFailed": "Não foi possível salvar a política de SLA"
+      },
+      "loading": "Carregando...",
+      "multiSelect": {
+        "deselectAll": "Desmarcar tudo",
+        "deselectAllVisible": "Desmarcar todos os itens visíveis",
+        "noItems": "Não há itens disponíveis",
+        "noResults": "Nenhum resultado encontrado",
+        "placeholder": "Selecionar...",
+        "searchPlaceholder": "Pesquisar...",
+        "selectAll": "Selecionar tudo",
+        "selectAllVisible": "Selecionar todos os itens visíveis",
+        "selectedCount_one": "{{count}} selecionado",
+        "selectedCount_other": "{{count}} selecionados"
+      },
+      "targets": {
+        "always": "O tempo todo (ignorar o horário comercial)",
+        "description": "Defina o tempo máximo permitido para a primeira resposta e a resolução completa dos tickets em cada nível de prioridade.",
+        "escalationThresholds": "Limites de escalonamento (% do tempo decorrido)",
+        "level1": "Nível 1 (%)",
+        "level2": "Nível 2 (%)",
+        "level3": "Nível 3 (%)",
+        "minutesPlaceholder": "Minutos",
+        "minutesUnit": "minutos",
+        "noTarget": "Sem meta",
+        "notConfigured": "Não configurado",
+        "resolutionSummary": "Resolução: {{time}}",
+        "resolutionTime": "Tempo de resolução",
+        "responseSummary": "Resposta: {{time}}",
+        "responseTime": "Tempo de resposta",
+        "selectResolutionTime": "Selecione o tempo de resolução",
+        "selectResponseTime": "Selecione o tempo de resposta",
+        "title": "Metas de resposta e resolução",
+        "usePreset": "Usar valor predefinido"
+      },
+      "thresholds": {
+        "add": "Adicionar limite",
+        "channelEmail": "Canal de email",
+        "channelInApp": "No aplicativo",
+        "channelsLabel": "Canais de notificação",
+        "description": "Configure quando e como notificar os membros da equipe à medida que os prazos de SLA se aproximam ou são descumpridos.",
+        "empty": "Nenhum limite de notificação configurado. Clique em \"Adicionar limite\" para criar um.",
+        "noChannels": "nenhum",
+        "noRecipients": "Nenhum destinatário",
+        "percentLabel": "Limite (%)",
+        "recipientAssignee": "Responsável",
+        "recipientBoardManager": "Gerente do quadro",
+        "recipientBoardManagerShort": "Ger. do quadro",
+        "recipientEscalationManager": "Gerente de escalonamento",
+        "recipientEscalationManagerShort": "Ger. de escalonamento",
+        "recipientsLabel": "Destinatários",
+        "remove": "Remover",
+        "title": "Limites de notificação",
+        "typeBreach": "Descumprimento",
+        "typeLabel": "Tipo de notificação",
+        "typeWarning": "Aviso",
+        "viaChannels": "por {{channels}}"
+      },
+      "timeOptions": {
+        "custom": "Personalizado...",
+        "hours1": "1 hora",
+        "hours168": "168 horas (7 dias)",
+        "hours2": "2 horas",
+        "hours24": "24 horas (1 dia)",
+        "hours4": "4 horas",
+        "hours48": "48 horas (2 dias)",
+        "hours72": "72 horas (3 dias)",
+        "hours8": "8 horas",
+        "minutes15": "15 minutos",
+        "minutes30": "30 minutos"
+      },
+      "validation": {
+        "channelRequired": "É necessário pelo menos um canal",
+        "duplicateThreshold": "Percentual do limite duplicado",
+        "percentRange": "Deve estar entre 0 e 200",
+        "policyNameRequired": "O nome da política é obrigatório",
+        "targetRequired": "Pelo menos uma prioridade deve ter uma meta de tempo de resposta ou resolução"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "Cancelar",
+        "delete": "Excluir",
+        "edit": "Editar",
+        "openMenu": "Abrir menu",
+        "setDefault": "Definir como padrão"
+      },
+      "addPolicy": "Adicionar política",
+      "columns": {
+        "actions": "Ações",
+        "description": "Descrição",
+        "name": "Nome"
+      },
+      "defaultLabel": "Padrão",
+      "delete": {
+        "checkingUsage": "Verificando o uso...",
+        "confirm": "Tem certeza de que deseja excluir a política {{name}}? Esta ação não pode ser desfeita.",
+        "defaultWarning": "Esta é a política padrão. Convém definir outra política como padrão primeiro.",
+        "inUseTitle": "Esta política está em uso no momento",
+        "title": "Excluir política de SLA",
+        "unlinkNote": "Essas referências serão desvinculadas. Os dados existentes de monitoramento de SLA nos tickets serão preservados.",
+        "usageBoards_one": "Quadro: {{names}}",
+        "usageBoards_other": "Quadros: {{names}}",
+        "usageClients_one": "Cliente: {{names}}",
+        "usageClients_other": "Clientes: {{names}}",
+        "usageTickets_one": "{{count}} ticket de suporte",
+        "usageTickets_other": "{{count}} tickets de suporte"
+      },
+      "description": "Gerencie políticas de acordo de nível de serviço que definem metas de tempo de resposta e resolução",
+      "empty": "Nenhuma política de SLA encontrada. Clique em \"Adicionar política\" para criar a primeira.",
+      "errors": {
+        "deleteFailed": "Não foi possível excluir a política. Tente novamente.",
+        "loadFailed": "Não foi possível carregar as políticas de SLA. Tente novamente.",
+        "setDefaultFailed": "Não foi possível definir a política padrão. Tente novamente."
+      },
+      "loading": "Carregando políticas de SLA...",
+      "title": "Políticas de SLA"
+    },
+    "status": {
+      "atRisk": "Em risco",
+      "breached": "Descumprido",
+      "onTrack": "Dentro do prazo",
+      "paused": "Pausado",
+      "resolutionBreached": "SLA de resolução descumprido",
+      "responseBreached": "SLA de resposta descumprido",
+      "tooltip": {
+        "resolutionBreachedBy": "Resolução: prazo excedido em {{time}}",
+        "resolutionRemaining": "Resolução: restam {{time}}",
+        "responseBreachedBy": "Resposta: prazo excedido em {{time}}",
+        "responseRemaining": "Resposta: restam {{time}}",
+        "statusLine": "Status do SLA: {{status}}",
+        "timerPaused": "Temporizador de SLA: pausado"
+      },
+      "unknown": "Desconhecido"
     }
   },
   "clientPortalLanguage": {
@@ -2445,6 +3074,171 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Permissão negada: não é possível criar a equipe.",
+        "update": "Permissão negada: não é possível atualizar a equipe.",
+        "modify": "Permissão negada: não é possível modificar a equipe.",
+        "modifyMembers": "Permissão negada: não é possível modificar os membros da equipe.",
+        "view": "Permissão negada: não é possível visualizar a equipe.",
+        "viewAll": "Permissão negada: não é possível visualizar as equipes.",
+        "assignManager": "Permissão negada: não é possível atribuir o gestor da equipe."
+      },
+      "notFoundRefresh": "Equipe não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "leadRequired": "Uma equipe precisa ter um líder. Selecione um líder e tente novamente.",
+      "inactiveUser": "Usuários inativos não podem ser adicionados a uma equipe.",
+      "cannotRemoveLead": "Não é possível remover o líder da equipe. Atribua um novo líder primeiro.",
+      "invalidValue": "Um dos valores de equipe selecionados é inválido. Atualize a página e tente novamente.",
+      "duplicateMember": "Este usuário já é membro da equipe.",
+      "referenceMissing": "O líder ou membro da equipe selecionado não é mais válido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da equipe.",
+      "missingFieldNamed": "Falta um campo obrigatório da equipe: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Permissão negada: você não tem permissão para visualizar as políticas de SLA",
+        "create": "Permissão negada: você não tem permissão para criar políticas de SLA",
+        "update": "Permissão negada: você não tem permissão para atualizar as políticas de SLA",
+        "delete": "Permissão negada: você não tem permissão para excluir políticas de SLA"
+      },
+      "policyNotFound": "Política de SLA não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "targetNotFound": "Meta da política de SLA não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "priorityNotFound": "Prioridade selecionada não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "clientNotFound": "Cliente selecionado não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "boardNotFound": "Quadro selecionado não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "ticketNotFound": "Ticket não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "duplicateTarget": "Já existe uma meta para esta prioridade nesta política.",
+      "pauseRequiresBoardStatus": "A configuração de pausa do SLA exige um status de ticket pertencente ao quadro.",
+      "invalidValue": "Um dos valores de SLA selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O registro de SLA ou o valor relacionado selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração do SLA conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores de SLA não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do SLA.",
+      "missingFieldNamed": "Falta um campo obrigatório do SLA: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Quadro não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "userNotFound": "Usuário responsável pelo escalonamento selecionado não encontrado. Atualize a página e escolha outro usuário.",
+      "configNotFound": "Configuração do responsável pelo escalonamento não encontrada. Ela pode já ter sido excluída.",
+      "recordInvalid": "Um dos registros do responsável pelo escalonamento selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O quadro ou o usuário selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já há um responsável pelo escalonamento configurado para este quadro e nível.",
+      "missingField": "Falta um campo obrigatório do responsável pelo escalonamento.",
+      "missingFieldNamed": "Falta um campo obrigatório do responsável pelo escalonamento: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores de status selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O registro relacionado selecionado para este status não existe mais. Atualize a página e tente novamente.",
+      "orderInUse": "Este número de ordem já está em uso. Escolha um número de ordem diferente.",
+      "duplicateName": "Já existe um status com este nome.",
+      "notAllowed": "Um dos valores de status não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do status.",
+      "missingFieldNamed": "Falta um campo obrigatório do status: {{field}}.",
+      "nameRequired": "O nome do status é obrigatório",
+      "nameEmpty": "O nome do status não pode ficar vazio",
+      "idRequired": "O ID do status é obrigatório",
+      "manageFromBoard": "Os status de ticket devem ser gerenciados nas configurações do quadro"
+    },
+    "priority": {
+      "notFound": "Prioridade não encontrada.",
+      "boardMissing": "O quadro selecionado não existe mais.",
+      "duplicate": "Já existe uma prioridade com estes dados.",
+      "referenceInvalid": "A referência de prioridade selecionada não é mais válida. Atualize a página e tente novamente.",
+      "invalidData": "Dados de prioridade inválidos. Verifique os detalhes da prioridade.",
+      "missingField": "Falta um campo obrigatório da prioridade.",
+      "missingFieldNamed": "Falta um campo obrigatório da prioridade: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Um dos usuários selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos usuários selecionados não existe mais. Atualize a página e tente novamente.",
+      "readClientInfoPermission": "Permissão negada: não é possível ler as informações de cliente do usuário"
+    },
+    "roles": {
+      "userNotFound": "Usuário não encontrado. Atualize a lista de usuários e tente novamente.",
+      "roleNotFound": "Função não encontrada. Atualize a lista de funções e tente novamente.",
+      "portalRoleOnMspUser": "Não é possível atribuir uma função do portal do cliente a um usuário MSP.",
+      "mspRoleOnPortalUser": "Não é possível atribuir uma função MSP a um usuário do portal do cliente.",
+      "invalidValue": "Um dos valores de usuário ou função selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O usuário ou a função selecionada não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Esse usuário já tem a função selecionada.",
+      "changePermission": "Permissão negada: você não tem permissão para alterar as funções dos usuários.",
+      "missingField": "Falta um campo obrigatório da função do usuário.",
+      "missingFieldNamed": "Falta um campo obrigatório da função do usuário: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "O contexto do tenant está ausente. Atualize a página e tente novamente.",
+      "notFound": "Segredo não encontrado. Ele pode já ter sido excluído. Atualize a página e tente novamente.",
+      "invalidName": "Nome de tenant ou de segredo inválido.",
+      "readOnly": "O armazenamento de segredos é somente leitura neste ambiente.",
+      "noDurablePath": "O armazenamento de segredos não está configurado para gravações duráveis neste ambiente.",
+      "recordInvalid": "Um dos registros de segredo selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de segredo selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um segredo com este nome.",
+      "missingField": "Falta um campo obrigatório do segredo.",
+      "missingFieldNamed": "Falta um campo obrigatório do segredo: {{field}}.",
+      "permissions": {
+        "create": "Permissão negada: não é possível criar segredos",
+        "update": "Permissão negada: não é possível atualizar segredos",
+        "delete": "Permissão negada: não é possível excluir segredos"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "O id do tenant é obrigatório.",
+      "invalidValue": "Um dos valores de configuração do tenant selecionados é inválido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório das configurações do tenant.",
+      "missingFieldNamed": "Falta um campo obrigatório das configurações do tenant: {{field}}.",
+      "invalidTimezone": "Fuso horário inválido: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Permissão negada: apenas administradores podem limpar os dados de onboarding.",
+        "update": "Permissão negada: não é possível atualizar as configurações",
+        "enableAiAssistant": "Permissão negada: não é possível ativar o Assistente de IA para este tenant"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Modelo do sistema não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "templateNotFound": "Modelo de notificação não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "categoryNotFound": "Categoria de notificação não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "subtypeNotFound": "Subtipo de notificação não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "notificationNotFound": "Notificação não encontrada. Ela pode já ter sido atualizada ou excluída.",
+      "recordInvalid": "Um dos registros de notificação selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de notificação selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma configuração de notificação com estes dados.",
+      "missingField": "Falta um campo obrigatório da notificação.",
+      "missingFieldNamed": "Falta um campo obrigatório da notificação: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Função ou permissão não encontrada. Atualize a lista de permissões e tente novamente.",
+      "ticketNotFound": "Ticket não encontrado. Atualize o ticket e tente novamente.",
+      "policyNotFound": "Política não encontrada. Atualize a lista de políticas e tente novamente.",
+      "invalidValue": "Um dos valores de função, permissão ou política selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de segurança selecionados não existe mais. Atualize a página e tente novamente.",
+      "permissionAlreadyAssigned": "Essa permissão já está atribuída a esta função.",
+      "duplicate": "Já existe um registro de segurança com estes dados.",
+      "missingField": "Falta um campo obrigatório de segurança.",
+      "missingFieldNamed": "Falta um campo obrigatório de segurança: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Permissão negada: administradores do portal do cliente só podem gerenciar funções do portal do cliente.",
+        "portalUsersOnly": "Permissão negada: administradores do portal do cliente só podem gerenciar usuários do portal do cliente.",
+        "portalAdminRequired": "Permissão negada: é necessário acesso de administrador do portal do cliente.",
+        "otherClientUsers": "Permissão negada: não é possível gerenciar usuários de outro cliente."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Usuários do portal do cliente não podem gerenciar domínios personalizados.",
+      "noPermission": "Você não tem permissão para gerenciar as configurações do portal do cliente.",
+      "required": "O domínio é obrigatório.",
+      "length": "O domínio deve ter entre 3 e 253 caracteres.",
+      "charset": "O domínio pode conter apenas letras, números, hifens e pontos.",
+      "needsDot": "O domínio deve incluir pelo menos um ponto.",
+      "notCanonicalHost": "Escolha um domínio diferente do host canônico.",
+      "noLeadingTrailingDot": "O domínio não pode começar nem terminar com um ponto.",
+      "notApplianceHost": "Escolha um domínio diferente do host principal deste appliance. O domínio personalizado do portal deve ser outro nome de host que seu proxy reverso encaminhe para cá.",
+      "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
+      "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
     }
   }
 }

@@ -368,23 +368,31 @@
   },
   "platform": {
     "modifiers": {
-      "meta": "meta",
+      "meta": "Meta",
       "ctrl": "Ctrl",
-      "alt": "Alt.",
-      "shift": "Mudança"
+      "alt": "Alt",
+      "shift": "Shift"
     },
     "keys": {
       "space": "Espaço"
     },
     "aria": {
-      "control": "Controlar",
-      "meta": "meta",
-      "alt": "Alt.",
-      "shift": "Mudança"
+      "control": "Ctrl",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
     }
   },
   "hud": {
     "combinations": "combinações",
     "thenPress": "então…"
+  },
+  "vim": {
+    "visualRowRange": "Intervalo visual de linhas",
+    "macro": {
+      "recording": "Gravando @{{register}}",
+      "recordPrompt": "Gravar macro: pressione um registrador",
+      "playPrompt": "Executar macro: pressione um registrador"
+    }
   }
 }

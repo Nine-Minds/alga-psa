@@ -653,6 +653,8 @@ async function cleanupClientDeleteArtifacts(
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_rates', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_locations', { client_id: clientId });
+  // After every table that references a profile, before the client itself.
+  await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_profiles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_payment_customers', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'tag_mappings', {
     tagged_type: 'client',

@@ -38,6 +38,8 @@ interface EmailProviderListProps {
   onResyncProvider?: (provider: EmailProvider) => Promise<void>;
   onRunDiagnostics: (provider: EmailProvider) => void;
   onAddClick?: () => void;
+  /** Provider-specific reconnect dispatch for auth_failure auto-pauses. */
+  onReconnect: (provider: EmailProvider) => void;
 }
 
 export function EmailProviderList({
@@ -52,7 +54,8 @@ export function EmailProviderList({
   onReconnectOAuth,
   onResyncProvider,
   onRunDiagnostics,
-  onAddClick
+  onAddClick,
+  onReconnect
 }: EmailProviderListProps) {
   const { t } = useTranslation('msp/email-providers');
   const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
@@ -223,6 +226,7 @@ export function EmailProviderList({
             onRunDiagnostics={onRunDiagnostics}
             onChangeDefaults={handleChangeDefaults}
             onTogglePause={handleTogglePause}
+            onReconnect={onReconnect}
           />
         ))}
       </div>

@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -309,7 +310,7 @@ describe('Contracts integration i18n coverage', () => {
       const xxValue = getLeaf(xx, key);
       expect(typeof deValue).toBe('string');
       expect(typeof xxValue).toBe('string');
-      expect((xxValue as string)).toContain('11111');
+      expect((xxValue as string)).toMatch(pseudoPattern('xx'));
     }
   });
 
@@ -334,7 +335,9 @@ describe('Contracts integration i18n coverage', () => {
     expect(contractDetailSource).toContain('return formatCurrency(majorUnits, currencyCode);');
 
     expect(reviewSource).toContain('useFormatters');
-    expect(reviewSource).toContain('const { formatCurrency } = useFormatters();');
+    // Matched loosely on purpose: the point is that formatCurrency comes from
+    // useFormatters, not that it is the only thing destructured from it.
+    expect(reviewSource).toMatch(/const \{[^}]*\bformatCurrency\b[^}]*\} = useFormatters\(\);/);
     expect(reviewSource).toContain('const formatMinorCurrency = (minorUnits: number | null | undefined) => {');
     expect(reviewSource).toContain('return formatCurrency(amount / 100, currencyCode, {');
   });

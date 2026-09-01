@@ -5,7 +5,11 @@ import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import logger from '../../core/logger';
 import { buildMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
+import { persistIngressPointer } from './inboundEmailProducer';
+import { getInboundDurableMode } from './inboundEmailDurableStore';
 import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
+import { classifyInboundAuthFailure } from './InboundEmailAuthFailurePolicy';
+import { randomBytes } from 'crypto';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -27,6 +31,53 @@ interface RenewalResult {
 interface ReconciliationResult {
   queuedMessages: number;
   switchedToPolling: boolean;
+  /**
+   * True when the pass stopped at the per-pass enqueue cap while Graph still
+   * had more messages in the window — i.e. the interval is NOT yet fully
+   * handed off and another pass is required.
+   */
+  moreRemaining?: boolean;
+  /** Message ids this pass handed off (enqueued), for multi-pass callers. */
+  enqueuedMessageIds?: string[];
+}
+
+/**
+ * Record a Microsoft token-health outcome on the provider's auth-failure
+ * counter. This covers providers whose subscription has gone quiet (polling
+ * mode / lapsed webhook) and therefore no longer receive pointer jobs: their
+ * only regular source access is the maintenance token check.
+ *
+ * Lazy-imported to avoid a static module cycle with the lifecycle service.
+ */
+async function recordTokenHealthOutcome(params: {
+  providerId: string;
+  tenant: string;
+  error?: unknown;
+}): Promise<void> {
+  try {
+    const { EmailProviderLifecycleService } = await import('./EmailProviderLifecycleService');
+    const lifecycle = new EmailProviderLifecycleService();
+    if (!params.error) {
+      await lifecycle.recordSourceAccessSuccess(params.providerId, params.tenant);
+      return;
+    }
+    const classification = classifyInboundAuthFailure({
+      providerType: 'microsoft',
+      error: params.error,
+    });
+    if (classification.kind !== 'unrecoverable_auth') return;
+    await lifecycle.recordUnrecoverableAuthFailure(
+      params.providerId,
+      params.tenant,
+      classification.code
+    );
+  } catch (error) {
+    logger.warn('Failed to record Microsoft token-health auth outcome', {
+      providerId: params.providerId,
+      tenant: params.tenant,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 const TOKEN_REFRESH_LOOK_AHEAD_MINUTES = 30;
@@ -51,6 +102,7 @@ export class EmailWebhookMaintenanceService {
 
     try {
       const candidates = await this.findActiveMicrosoftProviders(tenantId, providerId);
+      await this.backfillMicrosoftWebhookVerificationTokens(options, candidates);
       logger.info(`Found ${candidates.length} active Microsoft email providers`);
 
       const results: RenewalResult[] = [];
@@ -78,6 +130,42 @@ export class EmailWebhookMaintenanceService {
     }
   }
 
+  /**
+   * Rotate legacy/missing Graph clientState values before the webhook handler
+   * enforces them. Recreating the subscription is required because Graph's
+   * clientState is fixed at subscription creation.
+   */
+  async backfillMicrosoftWebhookVerificationTokens(
+    options: Pick<RenewalOptions, 'tenantId' | 'providerId'> = {},
+    candidates?: EmailProviderConfig[],
+  ): Promise<void> {
+    const providers = candidates || await this.findActiveMicrosoftProviders(options.tenantId, options.providerId);
+    for (const config of providers) {
+      const token = config.webhook_verification_token;
+      if (token && token !== 'email-webhook-verification' && token !== config.tenant) continue;
+
+      const replacement = randomBytes(32).toString('hex');
+      const knex = await getAdminConnection();
+      const updated = await tenantDb(knex, config.tenant)
+        .table('microsoft_email_provider_config')
+        .where({ email_provider_id: config.id })
+        .update({ webhook_verification_token: replacement, updated_at: new Date().toISOString() });
+      if (!updated) {
+        throw new Error(`Unable to backfill Microsoft webhook token for provider ${config.id}`);
+      }
+
+      config.webhook_verification_token = replacement;
+      const resolved = await buildMicrosoftEmailProviderConfig(config);
+      const adapter = new MicrosoftGraphAdapter(resolved);
+      await adapter.connect();
+      await adapter.registerWebhookSubscription();
+      logger.info('Backfilled Microsoft webhook verification token and recreated Graph subscription', {
+        providerId: config.id,
+        tenant: config.tenant,
+      });
+    }
+  }
+
   /** Reconcile only providers explicitly operating without webhooks. */
   async reconcilePollingProviders(options: Pick<RenewalOptions, 'tenantId' | 'providerId'> = {}): Promise<RenewalResult[]> {
     const candidates = await this.findActiveMicrosoftProviders(
@@ -91,7 +179,17 @@ export class EmailWebhookMaintenanceService {
       try {
         const resolvedConfig = await buildMicrosoftEmailProviderConfig(candidate);
         const adapter = new MicrosoftGraphAdapter(resolvedConfig);
-        await adapter.ensureTokenHealthy(TOKEN_REFRESH_LOOK_AHEAD_MINUTES);
+        try {
+          await adapter.ensureTokenHealthy(TOKEN_REFRESH_LOOK_AHEAD_MINUTES);
+          await recordTokenHealthOutcome({ providerId: candidate.id, tenant: candidate.tenant });
+        } catch (error: any) {
+          await recordTokenHealthOutcome({
+            providerId: candidate.id,
+            tenant: candidate.tenant,
+            error,
+          });
+          throw error;
+        }
         await this.updateProviderConnectionStatus(candidate.id, candidate.tenant, 'connected', null);
         await this.reconcileMissedMessages(adapter, resolvedConfig, false);
         results.push({
@@ -285,8 +383,14 @@ export class EmailWebhookMaintenanceService {
 
       try {
         await adapter.ensureTokenHealthy(TOKEN_REFRESH_LOOK_AHEAD_MINUTES);
+        await recordTokenHealthOutcome({ providerId: config.id, tenant: config.tenant });
         await this.updateProviderConnectionStatus(config.id, config.tenant, 'connected', null);
       } catch (error: any) {
+        await recordTokenHealthOutcome({
+          providerId: config.id,
+          tenant: config.tenant,
+          error,
+        });
         const message = error?.message || 'Microsoft token refresh failed';
         await this.updateProviderConnectionStatus(config.id, config.tenant, 'error', message);
         await this.updateHealthStatus(config.id, config.tenant, {
@@ -512,13 +616,114 @@ export class EmailWebhookMaintenanceService {
     };
   }
 
+  /**
+   * Public, bounded reconciliation entry point for the auth-failure recovery
+   * path. Accepts an explicit `since` boundary (the provider's saved
+   * `inbound_paused_at`) and preserves the internal algorithm's safety
+   * margin, cursor lock, overflow handling, and durable ingress behavior.
+   *
+   * Unlike renewal candidates, the provider may still be ingestion-paused when
+   * this runs — the recovery flow only clears the pause after this handoff is
+   * durable — so the loader must not apply the paused gate.
+   *
+   * A single pass enqueues at most the per-pass cap; `moreRemaining` reports
+   * whether Graph still holds unprocessed messages in the window so recovery
+   * callers can loop until the paused interval is exhausted. `handedOffIds`
+   * lets such callers treat previously handed-off messages as covered (the
+   * off/shadow modes have no ingress ledger to read that from). Recovery
+   * passes (explicit `since` and/or `handedOffIds`) only count monotonic
+   * coverage markers — this recovery's own hand-offs, non-terminal ingress
+   * rows, and settled legacy outcomes — so concurrent worker transitions
+   * between passes can never make an un-handed-off message look covered.
+   */
+  async reconcileProviderMessages(params: {
+    providerId: string;
+    tenant: string;
+    since: string | Date;
+    handedOffIds?: Set<string>;
+  }): Promise<{ queuedMessages: number; moreRemaining: boolean; enqueuedMessageIds: string[] }> {
+    const config = await this.loadMicrosoftProviderIgnoringPauseGate(params.providerId, params.tenant);
+    const resolvedConfig = await buildMicrosoftEmailProviderConfig(config);
+    const adapter = new MicrosoftGraphAdapter(resolvedConfig);
+    const result = await this.reconcileMissedMessages(
+      adapter,
+      resolvedConfig,
+      false,
+      new Date(params.since),
+      params.handedOffIds
+    );
+    return {
+      queuedMessages: result.queuedMessages,
+      moreRemaining: Boolean(result.moreRemaining),
+      enqueuedMessageIds: result.enqueuedMessageIds || [],
+    };
+  }
+
+  /** Like findActiveMicrosoftProviders but tenant-scoped, exact-provider, and without the paused gate. */
+  private async loadMicrosoftProviderIgnoringPauseGate(
+    providerId: string,
+    tenant: string
+  ): Promise<EmailProviderConfig> {
+    const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenant);
+    const query = db.table('email_providers as ep');
+    db.tenantJoin(
+      query,
+      'microsoft_email_provider_config as mpc',
+      'ep.id',
+      'mpc.email_provider_id',
+      { rootTenantColumn: 'ep.tenant' }
+    );
+    const row = await query
+      .where('ep.id', providerId)
+      .andWhere('ep.provider_type', 'microsoft')
+      .first(
+        'ep.id',
+        'ep.tenant',
+        'ep.provider_name',
+        'ep.provider_type',
+        'ep.mailbox',
+        'ep.is_active',
+        'ep.status',
+        'ep.last_sync_at',
+        'ep.error_message',
+        'ep.created_at',
+        'ep.updated_at',
+        'mpc.webhook_subscription_id',
+        'mpc.webhook_verification_token',
+        'mpc.webhook_expires_at',
+        'mpc.last_subscription_renewal',
+        'mpc.delivery_mode',
+        'mpc.last_webhook_delivery_at',
+        'mpc.webhook_silent_runs',
+        'mpc.next_subscription_probe_at',
+        'mpc.client_id',
+        'mpc.client_secret',
+        'mpc.tenant_id',
+        'mpc.access_token',
+        'mpc.refresh_token',
+        'mpc.token_expires_at',
+        'mpc.folder_filters',
+        'mpc.max_emails_per_sync',
+        'mpc.microsoft_profile_id',
+        'mpc.client_secret_ref'
+      );
+    if (!row) {
+      throw new Error(`Microsoft email provider ${providerId} not found for reconciliation`);
+    }
+    return this.mapRowToConfig(row);
+  }
+
   private async reconcileMissedMessages(
     adapter: MicrosoftGraphAdapter,
     config: EmailProviderConfig,
-    detectWebhookSilence: boolean
+    detectWebhookSilence: boolean,
+    sinceOverride?: Date,
+    handedOffIds?: Set<string>
   ): Promise<ReconciliationResult> {
     const knex = await getAdminConnection();
     const db = tenantDb(knex, config.tenant);
+    const durableEnforce = getInboundDurableMode() === 'enforce';
     const reconciliationState = await db.table('microsoft_email_provider_config')
       .where({ email_provider_id: config.id })
       .first(
@@ -528,7 +733,14 @@ export class EmailWebhookMaintenanceService {
     const lastReconciliationMs = reconciliationState?.last_reconciliation_at
       ? new Date(reconciliationState.last_reconciliation_at).getTime() - RECONCILE_SAFETY_MARGIN_MS
       : Date.now() - RECONCILE_WINDOW_CAP_MS;
-    const since = new Date(Math.max(lastReconciliationMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
+    // An explicit boundary (auth-pause recovery) keeps the same safety margin
+    // but is NOT clamped by the renewal window cap: the recovery contract
+    // requires the full paused interval to be reconciled, and multi-pass
+    // paging (the recovery loop) plus durable dedupe make re-enqueueing safe.
+    // The cap remains the default floor for renewal-driven reconciliation.
+    const since = sinceOverride
+      ? new Date(sinceOverride.getTime() - RECONCILE_SAFETY_MARGIN_MS)
+      : new Date(Math.max(lastReconciliationMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
     const maxCount = Math.max(
       1,
       Number(config.provider_config?.max_emails_per_sync || DEFAULT_RECONCILE_MAX_MESSAGES)
@@ -536,8 +748,25 @@ export class EmailWebhookMaintenanceService {
     let fetchLimit = maxCount;
     let messages: Array<{ id: string; receivedDateTime?: string }> = [];
     let unprocessedMessages: Array<{ id: string; receivedDateTime?: string }> = [];
-    const processedMessageIds = new Set<string>();
+    const processedMessageIds = new Set<string>(handedOffIds || []);
     const checkedMessageIds = new Set<string>();
+    // An auth-pause recovery pass (explicit `since` boundary and/or
+    // caller-seeded handed-off ids) must decide "is this message covered?"
+    // from markers that cannot regress under concurrent workers:
+    //   - ids THIS recovery durably handed off (handedOffIds) — except where
+    //     the durable ledger refutes the hand-off (the ingress row later
+    //     transitioned to `terminal_failed`: the pipeline gave up, e.g.
+    //     attempts burned against the dead credential),
+    //   - ingress rows that are still owned by the durable pipeline
+    //     (received/staging/retryable_failed/staged — never deleted, and a
+    //     sweep will process them),
+    //   - SETTLED legacy audit outcomes (success/skipped).
+    // A `terminal_failed` ingress row is NOT a hand-off, and a legacy
+    // 'processing'/'failed' row is not an import. Counting either as covered
+    // could declare the interval exhausted (`moreRemaining: false`) while a
+    // message was never durably handed off. Renewal passes keep the
+    // historical any-row semantics.
+    const recoveryPass = Boolean(sinceOverride) || Boolean(handedOffIds);
 
     // A capped oldest-first query can initially contain only messages from the
     // safety-margin overlap. Expand the read until either maxCount unprocessed
@@ -550,12 +779,47 @@ export class EmailWebhookMaintenanceService {
         .filter((messageId) => !checkedMessageIds.has(messageId));
 
       if (uncheckedMessageIds.length > 0) {
-        const processedRows = await db.table('email_processed_messages')
+        const processedQuery = db.table('email_processed_messages')
           .where({ provider_id: config.id })
-          .whereIn('message_id', uncheckedMessageIds)
-          .select('message_id');
+          .whereIn('message_id', uncheckedMessageIds);
+        if (recoveryPass) {
+          processedQuery.andWhere('processing_status', 'in', ['success', 'skipped']);
+        }
+        const processedRows = await processedQuery.select('message_id');
+        // Durable mode: a message with a NON-TERMINAL ingress row has been
+        // handed to the durable pipeline (received/staging = claimed by a
+        // worker, retryable_failed = owned by its backoff + recovery sweep,
+        // staged = settled) and must not be re-enqueued by reconciliation.
+        // Recovery passes additionally treat a `terminal_failed` row as NOT
+        // handed off — including revoking a seeded handedOffIds entry — and
+        // revive it on re-hand-off so the explicit hand-off results in
+        // processing.
+        let handedOffRows: Array<{ ingress_key: string; status?: string }> = [];
+        const terminalIngressIds = new Set<string>();
+        try {
+          handedOffRows = await db.table('inbound_email_ingress')
+            .where({ tenant: config.tenant, provider_id: config.id })
+            .whereIn('ingress_key', uncheckedMessageIds.map((id) => `message:${id}`))
+            .select('ingress_key', 'status');
+        } catch {
+          // Ledger not available yet (pre-durable deploy): legacy dedupe only.
+        }
         for (const messageId of uncheckedMessageIds) checkedMessageIds.add(messageId);
         for (const row of processedRows) processedMessageIds.add(String(row.message_id));
+        for (const row of handedOffRows) {
+          const key = String(row.ingress_key);
+          if (!key.startsWith('message:')) continue;
+          const messageId = key.slice('message:'.length);
+          if (recoveryPass && String(row.status) === 'terminal_failed') {
+            // The durable ledger refutes the hand-off: a terminal row will
+            // never be processed, so a seeded handedOffIds entry must not
+            // count as covered either.
+            terminalIngressIds.add(messageId);
+            continue;
+          }
+          processedMessageIds.add(messageId);
+        }
+        for (const messageId of terminalIngressIds) processedMessageIds.delete(messageId);
       }
 
       unprocessedMessages = messages
@@ -570,9 +834,14 @@ export class EmailWebhookMaintenanceService {
       : null;
     const completedAt = new Date().toISOString();
     const completedAtMs = new Date(completedAt).getTime();
-    const graphBatchMayHaveOverflow = unprocessedMessages.length >= maxCount && messages.length >= fetchLimit;
+    // The pass stopped at the per-pass enqueue cap while Graph still listed a
+    // full batch: more of the window may remain unprocessed. Multi-pass
+    // recovery callers must sweep again; the renewal path simply relies on its
+    // next scheduled run.
+    const moreRemaining = unprocessedMessages.length >= maxCount && messages.length >= fetchLimit;
+    const enqueuedMessageIds = unprocessedMessages.map((message) => message.id);
     let nextReconciliationAt = completedAt;
-    if (graphBatchMayHaveOverflow) {
+    if (moreRemaining) {
       const newestQueuedAtMs = Math.max(...unprocessedMessages.map((message) => {
         const receivedAtMs = message.receivedDateTime
           ? new Date(message.receivedDateTime).getTime()
@@ -608,18 +877,48 @@ export class EmailWebhookMaintenanceService {
       let queuedMessages = 0;
       const silenceEvidenceMessageIds = new Set<string>();
       for (const message of unprocessedMessages) {
-        await enqueueUnifiedInboundEmailQueueJob({
-          tenantId: config.tenant,
+        // Durable path: persist the ingress pointer before the Redis handoff so
+        // reconciliation never advances its cursor past an unstaged message.
+        // Recovery passes revive a terminally failed row: a terminal row is
+        // not a durable hand-off, and the explicit re-hand-off must result in
+        // processing (see the recoveryPass coverage rules above).
+        const durable = await persistIngressPointer({
+          tenant: config.tenant,
           providerId: config.id,
-          provider: 'microsoft',
+          providerType: 'microsoft',
+          reviveTerminal: recoveryPass,
           pointer: {
-            subscriptionId: config.webhook_subscription_id || 'reconcile',
-            messageId: message.id,
-            resource: 'maintenance-reconcile',
-            changeType: 'created',
+            providerType: 'microsoft',
+            providerMessageId: message.id,
+            extra: {
+              subscriptionId: config.webhook_subscription_id || 'reconcile',
+              resource: 'maintenance-reconcile',
+              changeType: 'created',
+              // Carried into the durable pointer so the staging worker can
+              // advance `last_reconciliation_at` only after THIS message's
+              // source is durably staged.
+              reconcileReceivedAt: message.receivedDateTime ?? null,
+            },
           },
         });
-        queuedMessages += 1;
+        if (durable.mode === 'enforce' && durable.ingressId) {
+          // Enforce: the durable pipeline is authoritative; no V1 pointer.
+          queuedMessages += 1;
+        } else {
+          // Off and shadow both keep the legacy V1 enqueue authoritative.
+          await enqueueUnifiedInboundEmailQueueJob({
+            tenantId: config.tenant,
+            providerId: config.id,
+            provider: 'microsoft',
+            pointer: {
+              subscriptionId: config.webhook_subscription_id || 'reconcile',
+              messageId: message.id,
+              resource: 'maintenance-reconcile',
+              changeType: 'created',
+            },
+          });
+          queuedMessages += 1;
+        }
 
         const receivedAtMs = message.receivedDateTime
           ? new Date(message.receivedDateTime).getTime()
@@ -633,12 +932,22 @@ export class EmailWebhookMaintenanceService {
         }
       }
 
-      await transactionDb.table('microsoft_email_provider_config')
-        .where({ email_provider_id: config.id })
-        .update({
-          last_reconciliation_at: nextReconciliationAt,
-          updated_at: completedAt,
-        });
+      // The Graph reconciliation cursor only ever advances past messages whose
+      // SOURCE is durably staged, not merely queued. In enforce mode the
+      // staging worker moves `last_reconciliation_at` to each staged message's
+      // received time (GREATEST); this transaction only persists the durable
+      // ingress pointers and never advances the cursor past an unstaged message.
+      // A crash or staging failure therefore leaves the cursor untouched and
+      // the message recoverable on the next reconcile pass. Off/shadow mode
+      // keeps the legacy V1 enqueue authoritative and advances as before.
+      if (!durableEnforce) {
+        await transactionDb.table('microsoft_email_provider_config')
+          .where({ email_provider_id: config.id })
+          .update({
+            last_reconciliation_at: nextReconciliationAt,
+            updated_at: completedAt,
+          });
+      }
 
       return {
         claimed: true as const,
@@ -653,13 +962,27 @@ export class EmailWebhookMaintenanceService {
         tenant: config.tenant,
         observedLastReconciliationAt: reconciliationState?.last_reconciliation_at || null,
       });
-      return { queuedMessages: 0, switchedToPolling: false };
+      // A cursor-lock mismatch means another actor moved/held the Graph
+      // cursor during this pass: THIS pass handed off nothing and proves
+      // nothing about coverage of the window it read. A recovery pass must
+      // report remaining work so the multi-pass recovery caller keeps the
+      // pause (or re-drives) instead of declaring the paused interval
+      // exhausted over messages that were never handed off — the next pass
+      // re-reads the cursor and picks up from the saved boundary. Renewal
+      // passes keep the historical clean-skip semantics: their next
+      // scheduled run re-covers the window.
+      return {
+        queuedMessages: 0,
+        switchedToPolling: false,
+        moreRemaining: recoveryPass ? true : false,
+        enqueuedMessageIds: [],
+      };
     }
 
     const { queuedMessages, silenceEvidenceCount } = enqueueResult;
 
     if (!detectWebhookSilence || silenceEvidenceCount === 0) {
-      return { queuedMessages, switchedToPolling: false };
+      return { queuedMessages, switchedToPolling: false, moreRemaining, enqueuedMessageIds };
     }
 
     const silenceUpdate = db.table('microsoft_email_provider_config')
@@ -681,14 +1004,14 @@ export class EmailWebhookMaintenanceService {
       updated_at: completedAt,
     });
     if (Number(updatedSilenceRows) !== 1) {
-      return { queuedMessages, switchedToPolling: false };
+      return { queuedMessages, switchedToPolling: false, moreRemaining, enqueuedMessageIds };
     }
     const latestSilenceState = await db.table('microsoft_email_provider_config')
       .where({ email_provider_id: config.id })
       .first('webhook_silent_runs');
     const silentRuns = Number(latestSilenceState?.webhook_silent_runs || 0);
     if (silentRuns < WEBHOOK_SILENT_RUN_THRESHOLD) {
-      return { queuedMessages, switchedToPolling: false };
+      return { queuedMessages, switchedToPolling: false, moreRemaining, enqueuedMessageIds };
     }
 
     const nextProbeAt = new Date(Date.now() + SUBSCRIPTION_PROBE_INTERVAL_MS).toISOString();
@@ -715,7 +1038,7 @@ export class EmailWebhookMaintenanceService {
     if (Number(transitionedRows) !== 1) {
       // A webhook reset or another mode transition won the race after the
       // increment. Never delete the subscription from stale state.
-      return { queuedMessages, switchedToPolling: false };
+      return { queuedMessages, switchedToPolling: false, moreRemaining, enqueuedMessageIds };
     }
 
     const reason = `${silentRuns} reconciliation runs imported messages without a webhook delivery`;
@@ -744,7 +1067,7 @@ export class EmailWebhookMaintenanceService {
       reason,
       nextProbeAt,
     });
-    return { queuedMessages, switchedToPolling: true };
+    return { queuedMessages, switchedToPolling: true, moreRemaining, enqueuedMessageIds };
   }
 
   private async updateProviderConnectionStatus(
@@ -754,7 +1077,29 @@ export class EmailWebhookMaintenanceService {
     errorMessage: string | null
   ): Promise<void> {
     const knex = await getAdminConnection();
-    await tenantDb(knex, tenant).table('email_providers')
+    const db = tenantDb(knex, tenant);
+
+    if (status === 'error') {
+      // The token-health failure may have just triggered the atomic
+      // auth-failure auto-pause, which already wrote the curated
+      // reconnect-required message. Overwriting it with the raw refresh-error
+      // text would leak provider error bodies onto the provider row and bury
+      // the actionable instruction.
+      const current = await db.table('email_providers')
+        .where({ id: providerId })
+        .first('inbound_paused_at', 'inbound_pause_reason') as
+        | { inbound_paused_at: string | null; inbound_pause_reason: string | null }
+        | undefined;
+      if (current?.inbound_paused_at && current.inbound_pause_reason === 'auth_failure') {
+        logger.info('Skipping connection-status overwrite for auth-failure auto-paused provider', {
+          providerId,
+          tenant,
+        });
+        return;
+      }
+    }
+
+    await db.table('email_providers')
       .where({ id: providerId })
       .update({
         status,
@@ -835,7 +1180,9 @@ export class EmailWebhookMaintenanceService {
       name: row.provider_name,
       provider_type: row.provider_type || 'microsoft',
       mailbox: row.mailbox,
-      folder_to_monitor: 'Inbox', // Default
+      folder_to_monitor: Array.isArray(row.folder_filters)
+        ? row.folder_filters[0] || 'Inbox'
+        : (() => { try { return JSON.parse(row.folder_filters || '[]')[0] || 'Inbox'; } catch { return 'Inbox'; } })(),
       active: row.is_active,
       webhook_notification_url: `${baseUrl}${webhookPath}`,
       webhook_subscription_id: row.webhook_subscription_id,

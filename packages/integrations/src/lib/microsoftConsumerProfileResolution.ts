@@ -74,6 +74,7 @@ export interface MicrosoftConsumerProfileResolution {
   tenantId: string;
   consumerType: MicrosoftProfileConsumer;
   profileId?: string;
+  profileDisplayName?: string;
   clientId?: string;
   clientSecret?: string;
   clientSecretRef?: string;
@@ -201,7 +202,20 @@ function getConsumerLabel(consumerType: MicrosoftProfileConsumer): string {
       return 'Calendar';
     case 'teams':
       return 'Teams';
+    case 'entra':
+      return 'Entra';
   }
+}
+
+/** Resolve an explicit persisted binding only; this is deliberately non-migrating. */
+export async function resolveMicrosoftConsumerProfileConfigBound(
+  tenantId: string,
+  consumerType: MicrosoftProfileConsumer
+): Promise<MicrosoftConsumerProfileResolution> {
+  const db = await getAdminConnection();
+  const secretProvider = await getSecretProviderInstance();
+  const binding = await getMicrosoftConsumerBindingRow(db, tenantId, consumerType);
+  return resolveConsumerProfileFromBinding({ db, tenantId, consumerType, secretProvider, binding });
 }
 
 function tenantScopedTable(db: any, table: string, tenant: string) {
@@ -480,34 +494,20 @@ async function ensureMicrosoftConsumerBindingMigration(
   return binding;
 }
 
-export async function resolveMicrosoftConsumerProfileConfig(
-  tenantId: string,
-  consumerType: MicrosoftProfileConsumer,
-  options?: { credentialPreference?: MicrosoftCredentialPreference }
-): Promise<MicrosoftConsumerProfileResolution> {
-  if (!(MICROSOFT_PROFILE_CONSUMERS as readonly string[]).includes(consumerType)) {
-    return {
-      status: 'not_configured',
-      tenantId,
-      consumerType,
-      message: 'Unsupported Microsoft consumer type',
-    };
-  }
-
-  const db = await getAdminConnection();
-  const secretProvider = await getSecretProviderInstance();
-
-  if (consumerType === 'email' && options?.credentialPreference === 'platform') {
-    const hostedEmailConfig = await resolveHostedMicrosoftEmailConfig(tenantId, secretProvider);
-    return hostedEmailConfig || {
-      status: 'not_configured',
-      tenantId,
-      consumerType,
-      message: 'Platform Microsoft credentials are not configured',
-    };
-  }
-
-  const binding = await ensureMicrosoftConsumerBindingMigration(db, tenantId, consumerType, secretProvider);
+/**
+ * Pure resolution core shared by the migrating and read-only entry points.
+ * Given an already-resolved binding (or none), derives the consumer profile
+ * status WITHOUT writing anything. Never calls the ensure/backfill helpers.
+ */
+async function resolveConsumerProfileFromBinding(input: {
+  db: any;
+  tenantId: string;
+  consumerType: MicrosoftProfileConsumer;
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>;
+  options?: { credentialPreference?: MicrosoftCredentialPreference };
+  binding: MicrosoftConsumerBindingRow | undefined;
+}): Promise<MicrosoftConsumerProfileResolution> {
+  const { db, tenantId, consumerType, secretProvider, options, binding } = input;
 
   if (!binding) {
     if (consumerType === 'email') {
@@ -600,10 +600,90 @@ export async function resolveMicrosoftConsumerProfileConfig(
     tenantId,
     consumerType,
     profileId: profile.profile_id,
+    profileDisplayName: profile.display_name,
     clientId: profile.client_id,
     clientSecret: clientSecret || undefined,
     clientSecretRef: profile.client_secret_ref,
     microsoftTenantId: normalizeTenantId(profile.tenant_id),
     credentialSource: 'binding',
   };
+}
+
+function isSupportedConsumerType(consumerType: MicrosoftProfileConsumer): boolean {
+  return (MICROSOFT_PROFILE_CONSUMERS as readonly string[]).includes(consumerType);
+}
+
+export async function resolveMicrosoftConsumerProfileConfig(
+  tenantId: string,
+  consumerType: MicrosoftProfileConsumer,
+  options?: { credentialPreference?: MicrosoftCredentialPreference }
+): Promise<MicrosoftConsumerProfileResolution> {
+  if (!isSupportedConsumerType(consumerType)) {
+    return {
+      status: 'not_configured',
+      tenantId,
+      consumerType,
+      message: 'Unsupported Microsoft consumer type',
+    };
+  }
+
+  const db = await getAdminConnection();
+  const secretProvider = await getSecretProviderInstance();
+
+  if (consumerType === 'email' && options?.credentialPreference === 'platform') {
+    const hostedEmailConfig = await resolveHostedMicrosoftEmailConfig(tenantId, secretProvider);
+    return hostedEmailConfig || {
+      status: 'not_configured',
+      tenantId,
+      consumerType,
+      message: 'Platform Microsoft credentials are not configured',
+    };
+  }
+
+  // Runtime resolution is allowed to migrate: auth, calendar, and inbound-email
+  // operations legitimately backfill legacy state so the tenant keeps working.
+  const binding = await ensureMicrosoftConsumerBindingMigration(db, tenantId, consumerType, secretProvider);
+  return resolveConsumerProfileFromBinding({ db, tenantId, consumerType, secretProvider, options, binding });
+}
+
+/**
+ * Read-only variant of `resolveMicrosoftConsumerProfileConfig`.
+ *
+ * Resolves the CURRENT persisted state without running the legacy profile
+ * backfill or the consumer-binding migration — the two `ensure*` helpers can
+ * insert profile/binding rows and write secrets. Status/settings read paths
+ * (`getMicrosoftEmailSetupReadiness`, `getMicrosoftIntegrationStatus`,
+ * `getMicrosoftConsumerSetupStatus`) must use this variant so a page load never
+ * mutates the database. Runtime consumers (auth, calendar, email OAuth and
+ * token refresh) intentionally keep using the migrating variant.
+ */
+export async function resolveMicrosoftConsumerProfileConfigReadOnly(
+  tenantId: string,
+  consumerType: MicrosoftProfileConsumer,
+  options?: { credentialPreference?: MicrosoftCredentialPreference }
+): Promise<MicrosoftConsumerProfileResolution> {
+  if (!isSupportedConsumerType(consumerType)) {
+    return {
+      status: 'not_configured',
+      tenantId,
+      consumerType,
+      message: 'Unsupported Microsoft consumer type',
+    };
+  }
+
+  const db = await getAdminConnection();
+  const secretProvider = await getSecretProviderInstance();
+
+  if (consumerType === 'email' && options?.credentialPreference === 'platform') {
+    const hostedEmailConfig = await resolveHostedMicrosoftEmailConfig(tenantId, secretProvider);
+    return hostedEmailConfig || {
+      status: 'not_configured',
+      tenantId,
+      consumerType,
+      message: 'Platform Microsoft credentials are not configured',
+    };
+  }
+
+  const binding = await getMicrosoftConsumerBindingRow(db, tenantId, consumerType);
+  return resolveConsumerProfileFromBinding({ db, tenantId, consumerType, secretProvider, options, binding });
 }

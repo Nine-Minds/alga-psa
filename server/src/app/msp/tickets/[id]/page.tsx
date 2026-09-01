@@ -58,16 +58,24 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
 }
 
 export async function generateMetadata({ params }: TicketDetailsPageProps): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
   try {
     const { id } = await params;
     const ticket = await getCachedTicket(id);
     if (ticket && 'ticket_number' in ticket) {
-      return { title: `Ticket #${ticket.ticket_number} - ${ticket.title}` };
+      return {
+        title: t('msp.tickets.detail.title', {
+          ticketNumber: ticket.ticket_number,
+          ticketTitle: ticket.title,
+          defaultValue: 'Ticket #{{ticketNumber}} - {{ticketTitle}}',
+        }),
+      };
     }
   } catch (error) {
     console.error('[generateMetadata] Failed to fetch ticket title:', error);
   }
-  return { title: 'Ticket Details' };
+  return { title: t('msp.tickets.detail.fallbackTitle', { defaultValue: 'Ticket Details' }) };
 }
 
 interface TicketDetailsPageProps {
@@ -188,7 +196,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
 
     const associatedAssets =
       !isAlgaDesk && ticketData.ticket?.client_id && ticketData.ticket?.ticket_id ? (
-        <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
+        <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse skeleton-fill h-32 rounded-lg"></div>}>
           <AssociatedAssets
             id="ticket-details-associated-assets"
             entityId={ticketData.ticket.ticket_id}
@@ -201,7 +209,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       ) : null;
     
     const detailsContent = (
-      <div id="ticket-details-container" className="bg-gray-100">
+      <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
         <Suspense fallback={<TicketDetailsSkeleton />}>
           <MspTicketDetailsContainerClient
             ticketData={ticketData as any}

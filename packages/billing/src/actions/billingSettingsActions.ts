@@ -31,7 +31,7 @@ const DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE: RecurringCadenceRolloutState = 'm
 type BillingSettingsActionError = ActionMessageError | ActionPermissionError;
 const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing_settings', 'update')) {
-    return permissionError('Permission denied: Cannot update billing settings');
+    return permissionError('Permission denied: Cannot update billing settings', 'msp/billing-settings:errors.permissions.updateSettings');
   }
   return null;
 };
@@ -57,6 +57,14 @@ export interface BillingSettings {
   defaultRecurringCadenceOwner?: CadenceOwner;
   recurringCadenceRolloutState?: RecurringCadenceRolloutState;
   recurringCadenceRolloutMessage?: string;
+  /** undefined = leave unchanged; true/false = client override; null = revert to tenant default. */
+  creditAutoApplyEnabled?: boolean | null;
+  /** undefined = leave unchanged; an order = client override; null = revert to tenant default. */
+  creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first' | null;
+  /** undefined = leave unchanged; 'all'/'restricted' = override; null = revert to tenant default (client) / coerced to 'all' (tenant). */
+  creditServiceTypeRestrictionMode?: 'all' | 'restricted' | null;
+  /** null = no restriction; array = restrict credit application to these service type ids. */
+  creditEligibleServiceTypeIds?: string[] | null;
 }
 
 export const getDefaultBillingSettings = withAuth(async (
@@ -64,7 +72,7 @@ export const getDefaultBillingSettings = withAuth(async (
   { tenant }
 ): Promise<BillingSettings | BillingSettingsActionError> => {
   if (!await hasPermission(user as any, 'billing_settings', 'read')) {
-    return permissionError('Permission denied: Cannot read billing settings');
+    return permissionError('Permission denied: Cannot read billing settings', 'msp/billing-settings:errors.permissions.readSettings');
   }
   const { knex } = await createTenantKnex();
 
@@ -108,25 +116,31 @@ export const getDefaultBillingSettings = withAuth(async (
       ? settings.renewal_due_date_action_policy
       : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY;
 
-  return {
-    zeroDollarInvoiceHandling: settings.zero_dollar_invoice_handling,
-    suppressZeroDollarInvoices: settings.suppress_zero_dollar_invoices,
-    defaultCurrencyCode: settings.default_currency_code ?? 'USD',
-    enableCreditExpiration: settings.enable_credit_expiration ?? true,
-    creditExpirationDays: settings.credit_expiration_days ?? 365,
-    creditExpirationNotificationDays: settings.credit_expiration_notification_days ?? [30, 7, 1],
-    defaultRenewalMode: renewalMode,
-    defaultNoticePeriodDays: settings.default_notice_period_days ?? DEFAULT_NOTICE_PERIOD_DAYS,
-    renewalDueDateActionPolicy,
-    renewalTicketBoardId: settings.renewal_ticket_board_id ?? undefined,
-    renewalTicketStatusId: settings.renewal_ticket_status_id ?? undefined,
-    renewalTicketPriority: settings.renewal_ticket_priority ?? undefined,
-    renewalTicketAssigneeId: settings.renewal_ticket_assignee_id ?? undefined,
-    defaultRecurringCadenceOwner: DEFAULT_RECURRING_CADENCE_OWNER,
-    recurringCadenceRolloutState: DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE,
-    recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
-  };
-});
+    return {
+      zeroDollarInvoiceHandling: settings.zero_dollar_invoice_handling,
+      suppressZeroDollarInvoices: settings.suppress_zero_dollar_invoices,
+      defaultCurrencyCode: settings.default_currency_code ?? 'USD',
+      enableCreditExpiration: settings.enable_credit_expiration ?? true,
+      creditExpirationDays: settings.credit_expiration_days ?? 365,
+      creditExpirationNotificationDays: settings.credit_expiration_notification_days ?? [30, 7, 1],
+      defaultRenewalMode: renewalMode,
+      defaultNoticePeriodDays: settings.default_notice_period_days ?? DEFAULT_NOTICE_PERIOD_DAYS,
+      renewalDueDateActionPolicy,
+      renewalTicketBoardId: settings.renewal_ticket_board_id ?? undefined,
+      renewalTicketStatusId: settings.renewal_ticket_status_id ?? undefined,
+      renewalTicketPriority: settings.renewal_ticket_priority ?? undefined,
+      renewalTicketAssigneeId: settings.renewal_ticket_assignee_id ?? undefined,
+      defaultRecurringCadenceOwner: DEFAULT_RECURRING_CADENCE_OWNER,
+      recurringCadenceRolloutState: DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE,
+      recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
+      creditAutoApplyEnabled: settings.credit_auto_apply_enabled ?? true,
+      creditApplicationOrder: settings.credit_application_order ?? 'expiration_first',
+      creditServiceTypeRestrictionMode: settings.credit_service_type_restriction_mode === 'restricted'
+        ? 'restricted'
+        : 'all',
+      creditEligibleServiceTypeIds: settings.credit_eligible_service_type_ids ?? null,
+    };
+  });
 
 export const updateDefaultBillingSettings = withAuth(async (
   user,
@@ -189,6 +203,33 @@ export const updateDefaultBillingSettings = withAuth(async (
     if (has('enableCreditExpiration')) columnValues.enable_credit_expiration = data.enableCreditExpiration;
     if (has('creditExpirationDays')) columnValues.credit_expiration_days = data.creditExpirationDays;
     if (has('creditExpirationNotificationDays')) columnValues.credit_expiration_notification_days = data.creditExpirationNotificationDays;
+    if (has('creditAutoApplyEnabled')) columnValues.credit_auto_apply_enabled = data.creditAutoApplyEnabled ?? true;
+    if (has('creditApplicationOrder')) columnValues.credit_application_order = data.creditApplicationOrder ?? 'expiration_first';
+
+    // Service-type restriction: mode is the source of truth; derive a single
+    // consistent mode + ids pair so the DB CHECK constraints always hold.
+    const creditRestriction = (() => {
+      const modeProvided = has('creditServiceTypeRestrictionMode');
+      const idsProvided = has('creditEligibleServiceTypeIds');
+      const ids = data.creditEligibleServiceTypeIds;
+      const idsArray = Array.isArray(ids) && ids.length > 0 ? ids : null;
+
+      if (modeProvided) {
+        const mode = data.creditServiceTypeRestrictionMode === 'restricted' ? 'restricted' as const : 'all' as const;
+        return { mode, ids: mode === 'restricted' && idsArray ? JSON.stringify(idsArray) : null };
+      }
+      if (idsProvided) {
+        return idsArray
+          ? { mode: 'restricted' as const, ids: JSON.stringify(idsArray) }
+          : { mode: 'all' as const, ids: null };
+      }
+      return null;
+    })();
+
+    if (creditRestriction) {
+      columnValues.credit_service_type_restriction_mode = creditRestriction.mode;
+      columnValues.credit_eligible_service_type_ids = creditRestriction.ids;
+    }
 
     if (existingSettings) {
       if (Object.keys(columnValues).length === 0) return;
@@ -213,6 +254,10 @@ export const updateDefaultBillingSettings = withAuth(async (
         renewal_ticket_status_id: data.renewalTicketStatusId ?? null,
         renewal_ticket_priority: data.renewalTicketPriority ?? null,
         renewal_ticket_assignee_id: data.renewalTicketAssigneeId ?? null,
+        credit_auto_apply_enabled: data.creditAutoApplyEnabled ?? true,
+        credit_application_order: data.creditApplicationOrder ?? 'expiration_first',
+        credit_service_type_restriction_mode: creditRestriction?.mode ?? 'all',
+        credit_eligible_service_type_ids: creditRestriction?.ids ?? null,
       });
     }
     });
@@ -232,7 +277,7 @@ export const getClientContractLineSettings = withAuth(async (
   clientId: string
 ): Promise<BillingSettings | null | BillingSettingsActionError> => {
   if (!await hasPermission(user as any, 'billing_settings', 'read')) {
-    return permissionError('Permission denied: Cannot read client billing settings');
+    return permissionError('Permission denied: Cannot read client billing settings', 'msp/billing-settings:errors.permissions.readClientSettings');
   }
   const { knex } = await createTenantKnex();
 
@@ -259,6 +304,12 @@ export const getClientContractLineSettings = withAuth(async (
     defaultRecurringCadenceOwner: DEFAULT_RECURRING_CADENCE_OWNER,
     recurringCadenceRolloutState: DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE,
     recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
+    creditAutoApplyEnabled: settings.credit_auto_apply_enabled ?? undefined,
+    creditApplicationOrder: settings.credit_application_order ?? undefined,
+    creditServiceTypeRestrictionMode: settings.credit_service_type_restriction_mode === 'all' || settings.credit_service_type_restriction_mode === 'restricted'
+      ? settings.credit_service_type_restriction_mode
+      : undefined,
+    creditEligibleServiceTypeIds: settings.credit_eligible_service_type_ids ?? null,
   };
 });
 
@@ -269,7 +320,7 @@ export const updateClientContractLineSettings = withAuth(async (
   data: BillingSettings | null // null to remove override
 ): Promise<{ success: boolean } | BillingSettingsActionError> => {
   if (!await hasPermission(user as any, 'billing_settings', 'update')) {
-    return permissionError('Permission denied: Cannot update client billing settings');
+    return permissionError('Permission denied: Cannot update client billing settings', 'msp/billing-settings:errors.permissions.updateClientSettings');
   }
   const { knex } = await createTenantKnex();
 
@@ -287,6 +338,10 @@ export const updateClientContractLineSettings = withAuth(async (
             creditExpirationNotificationDays: data.creditExpirationNotificationDays,
             hasExternalCredit: data.hasExternalCredit,
             externalCreditNote: data.externalCreditNote,
+            creditAutoApplyEnabled: data.creditAutoApplyEnabled,
+            creditApplicationOrder: data.creditApplicationOrder,
+            creditServiceTypeRestrictionMode: data.creditServiceTypeRestrictionMode,
+            creditEligibleServiceTypeIds: data.creditEligibleServiceTypeIds,
           }
         : null
     );

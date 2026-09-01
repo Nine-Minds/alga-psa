@@ -114,7 +114,9 @@
       "delete": "Impossibile eliminare il preventivo.",
       "duplicate": "Impossibile duplicare il preventivo.",
       "load": "Impossibile caricare le virgolette",
-      "send": "Impossibile inviare il preventivo."
+      "send": "Impossibile inviare il preventivo.",
+      "resend": "Impossibile rinviare il preventivo.",
+      "sendReminder": "Impossibile inviare il promemoria del preventivo."
     },
     "loading": "Caricamento preventivi...",
     "rowActions": {
@@ -153,7 +155,8 @@
       "previewPdf": "Anteprima PDF",
       "backToQuotes": "Torna ai preventivi",
       "backToTemplates": "Torna ai modelli di preventivo",
-      "convertToSalesOrder": "Converti in ordine di vendita"
+      "convertToSalesOrder": "Converti in ordine di vendita",
+      "convert": "Converti in…"
     },
     "headings": {
       "editQuote": "Modifica preventivo",
@@ -587,20 +590,26 @@
     "sections": {
       "contractItems": "Articoli contrattuali",
       "conversionMode": "Modalità di conversione",
-      "excludedItems": "Articoli esclusi",
       "excludedFromConversion": "Escluso dalla Conversione",
+      "excludedItems": "Articoli esclusi",
       "invoiceItems": "Elementi della fattura",
       "itemMappingPreview": "Anteprima della mappatura degli articoli",
+      "onSalesOrder": "Nell'ordine di vendita {{soNumber}}",
       "quoteTotal": "Totale preventivo",
+      "salesOrderItems": "Righe dell'ordine di vendita",
       "statusAfterConversion": "Stato dopo la conversione",
       "willBecomeContractLines": "Diventeranno linee contrattuali",
-      "willBecomeInvoiceCharges": "Diventeranno addebiti in fattura"
+      "willBecomeInvoiceCharges": "Diventeranno addebiti in fattura",
+      "willBecomeSalesOrderLines": "Diventeranno righe dell'ordine di vendita"
     },
     "empty": {
       "contractItems": "Nessun elemento ricorrente verrà convertito in un contratto.",
-      "invoiceItems": "Nessun elemento una tantum verrà convertito in una fattura."
+      "invoiceItems": "Nessun elemento una tantum verrà convertito in una fattura.",
+      "invoiceItemsOnSalesOrder": "Tutte le righe una tantum sono nell'ordine di vendita {{soNumber}} e verranno fatturate da lì all'evasione.",
+      "salesOrderItems": "Nessuna riga di prodotto passerà a un ordine di vendita."
     },
     "summary": {
+      "billedViaSalesOrder": "Fatturato dall'ordine di vendita {{soNumber}} all'evasione",
       "converted": "Convertito",
       "discount": "Sconto",
       "fixed": "fisso",
@@ -628,10 +637,11 @@
       "title": "Errore"
     },
     "salesOrder": {
-      "successTitle": "Ordine di vendita {{number}} creato",
-      "successBody": "Le righe di prodotto verranno fatturate all'evasione.",
+      "existingNote": "Questo preventivo è già stato convertito nell'ordine di vendita {{soNumber}}.",
+      "note": "Le righe di prodotto possono essere fatturate in due modi: creando un ordine di vendita per fatturarle all'evasione, oppure fatturandole direttamente. Creando l'ordine di vendita vengono escluse dalla conversione in fattura, così nulla viene fatturato due volte.",
       "openSalesOrders": "Apri ordini di vendita",
-      "note": "Le righe di prodotto una tantum passano a un ordine di vendita in bozza (fatturato all'evasione) e sono escluse da qualsiasi conversione in fattura bozza, così nulla viene fatturato due volte."
+      "successBody": "Le righe di prodotto verranno fatturate all'evasione.",
+      "successTitle": "Ordine di vendita {{number}} creato"
     }
   },
   "quoteApproval": {
@@ -725,7 +735,9 @@
       "notFound": "Modello di documento di preventivo non trovato.",
       "previewPipeline": "La pipeline di anteprima non è riuscita.",
       "saveFailed": "Impossibile salvare il modello di preventivo",
-      "unknownAstExport": "Errore di esportazione AST sconosciuto"
+      "unknownAstExport": "Errore di esportazione AST sconosciuto",
+      "quoteNotFound": "Impossibile caricare i dettagli del preventivo per l'anteprima.",
+      "quoteDetailLoad": "Caricamento dei dettagli del preventivo non riuscito."
     },
     "fields": {
       "layoutDetails": "Dettagli della disposizione",
@@ -749,7 +761,17 @@
       "sampleScenario": "Scenario campione",
       "selectScenario": "Seleziona scenario...",
       "selectScenarioPrompt": "Seleziona uno scenario di esempio per generare un'anteprima autorevole.",
-      "templateGenerationFailed": "Impossibile generare il modello di anteprima dall'area di lavoro corrente."
+      "templateGenerationFailed": "Impossibile generare il modello di anteprima dall'area di lavoro corrente.",
+      "source": {
+        "sample": "Esempio",
+        "existing": "Esistente"
+      },
+      "searchQuotes": "Cerca preventivi…",
+      "searchQuotesHint": "Cerca per numero o cliente…",
+      "noQuotesFound": "Nessun preventivo trovato.",
+      "selectQuote": "Seleziona preventivo",
+      "selectQuoteHint": "Seleziona un preventivo per l'anteprima con dati.",
+      "loadingQuoteDetails": "Caricamento dettagli preventivo…"
     },
     "pipeline": {
       "render": "Rendering",
@@ -787,6 +809,33 @@
     },
     "labels": {
       "custom": "Costume"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Autorizzazione negata: impossibile creare preventivi",
+      "update": "Autorizzazione negata: impossibile aggiornare i preventivi",
+      "read": "Autorizzazione negata: impossibile leggere i preventivi",
+      "delete": "Autorizzazione negata: impossibile eliminare i preventivi",
+      "readOne": "Autorizzazione negata: impossibile leggere il preventivo",
+      "approve": "Autorizzazione negata: impossibile approvare i preventivi",
+      "updateApprovalSettings": "Autorizzazione negata: impossibile aggiornare le impostazioni di approvazione dei preventivi",
+      "readDocumentTemplates": "Autorizzazione negata: impossibile leggere i modelli di documento del preventivo",
+      "modifyDocumentTemplates": "Autorizzazione negata: impossibile modificare i modelli di documento del preventivo",
+      "setDefaultDocumentTemplate": "Autorizzazione negata: impossibile impostare il modello di documento del preventivo predefinito",
+      "deleteDocumentTemplates": "Autorizzazione negata: impossibile eliminare i modelli di documento del preventivo"
+    },
+    "quote": {
+      "formInvalid": "Il modulo del preventivo contiene valori non validi. Controllarlo e riprovare.",
+      "notFoundRefresh": "Preventivo non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "itemNotFoundRefresh": "Voce del preventivo non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiornare la pagina e riprovare.",
+      "templateNotFoundRefresh": "Modello di preventivo non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori del preventivo selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il preventivo, il cliente, il contatto o il servizio selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica del preventivo è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori del preventivo non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio del preventivo.",
+      "missingFieldNamed": "Manca un campo obbligatorio del preventivo: {{field}}."
     }
   }
 }

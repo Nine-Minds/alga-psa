@@ -20,6 +20,10 @@
       "types": "./src/runtime.ts",
       "import": "./src/runtime.ts"
     },
+    "./lib/*": {
+      "types": "./src/lib/*.ts",
+      "import": "./src/lib/*.ts"
+    },
     "./components": {
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.mjs",

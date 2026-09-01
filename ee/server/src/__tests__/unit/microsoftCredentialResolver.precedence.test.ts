@@ -1,124 +1,97 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const getSecretProviderInstanceMock = vi.fn();
-
-vi.mock('@alga-psa/core/secrets', () => ({
-  getSecretProviderInstance: getSecretProviderInstanceMock,
+const mocks = vi.hoisted(() => ({
+  bindingFirst: vi.fn(),
+  profileFirst: vi.fn(),
+  getAdminConnection: vi.fn(),
+  getSecretProviderInstance: vi.fn(),
 }));
 
-describe('resolveMicrosoftCredentialsForTenant precedence', () => {
-  const originalClientId = process.env.MICROSOFT_CLIENT_ID;
-  const originalClientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-  const originalTenantId = process.env.MICROSOFT_TENANT_ID;
+vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: mocks.getAdminConnection }));
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: () => ({
+    table: (table: string) => ({
+      where: () => ({
+        first: () => table === 'microsoft_profile_consumer_bindings'
+          ? mocks.bindingFirst()
+          : mocks.profileFirst(),
+      }),
+    }),
+  }),
+}));
+vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: mocks.getSecretProviderInstance }));
 
+describe('resolveMicrosoftCredentialsForTenant', () => {
+  const priorClientId = process.env.MICROSOFT_CLIENT_ID;
+  const priorSecret = process.env.MICROSOFT_CLIENT_SECRET;
   beforeEach(() => {
     vi.resetModules();
-    getSecretProviderInstanceMock.mockReset();
-    delete process.env.MICROSOFT_CLIENT_ID;
-    delete process.env.MICROSOFT_CLIENT_SECRET;
-    delete process.env.MICROSOFT_TENANT_ID;
+    mocks.bindingFirst.mockReset();
+    mocks.profileFirst.mockReset();
+    mocks.getAdminConnection.mockReset().mockResolvedValue({});
+    mocks.getSecretProviderInstance.mockReset().mockResolvedValue({
+      getTenantSecret: vi.fn().mockResolvedValue('customer-secret'),
+    });
   });
-
   afterEach(() => {
-    if (originalClientId === undefined) {
-      delete process.env.MICROSOFT_CLIENT_ID;
-    } else {
-      process.env.MICROSOFT_CLIENT_ID = originalClientId;
-    }
-
-    if (originalClientSecret === undefined) {
-      delete process.env.MICROSOFT_CLIENT_SECRET;
-    } else {
-      process.env.MICROSOFT_CLIENT_SECRET = originalClientSecret;
-    }
-
-    if (originalTenantId === undefined) {
-      delete process.env.MICROSOFT_TENANT_ID;
-    } else {
-      process.env.MICROSOFT_TENANT_ID = originalTenantId;
-    }
+    if (priorClientId === undefined) delete process.env.MICROSOFT_CLIENT_ID; else process.env.MICROSOFT_CLIENT_ID = priorClientId;
+    if (priorSecret === undefined) delete process.env.MICROSOFT_CLIENT_SECRET; else process.env.MICROSOFT_CLIENT_SECRET = priorSecret;
   });
-
-  it('T042: prefers tenant-level Microsoft credentials when tenant id/secret pair exists', async () => {
-    process.env.MICROSOFT_CLIENT_ID = 'env-client-id';
-    process.env.MICROSOFT_CLIENT_SECRET = 'env-client-secret';
-    process.env.MICROSOFT_TENANT_ID = 'env-tenant-id';
-
-    const getTenantSecretMock = vi.fn(async (_tenant: string, key: string) => {
-      if (key === 'microsoft_client_id') return 'tenant-client-id';
-      if (key === 'microsoft_client_secret') return 'tenant-client-secret';
-      if (key === 'microsoft_tenant_id') return 'tenant-tenant-id';
-      return null;
+  it('uses only the explicit entra binding, ignoring environment credentials', async () => {
+    process.env.MICROSOFT_CLIENT_ID = 'vendor-app'; process.env.MICROSOFT_CLIENT_SECRET = 'vendor-secret';
+    mocks.bindingFirst.mockResolvedValue({ profile_id: 'profile-1' });
+    mocks.profileFirst.mockResolvedValue({
+      profile_id: 'profile-1',
+      display_name: 'MSP Entra App',
+      client_id: 'customer-app',
+      tenant_id: 'partner-tenant',
+      client_secret_ref: 'profile-1-secret',
+      capabilities: ['entra'],
+      is_archived: false,
     });
-    const getAppSecretMock = vi.fn(async () => 'app-fallback');
-    getSecretProviderInstanceMock.mockResolvedValue({
-      getTenantSecret: getTenantSecretMock,
-      getAppSecret: getAppSecretMock,
-    });
-
-    const { resolveMicrosoftCredentialsForTenant } = await import(
-      '@ee/lib/integrations/entra/auth/microsoftCredentialResolver'
-    );
-    const credentials = await resolveMicrosoftCredentialsForTenant('tenant-42');
-
-    expect(credentials).toEqual({
-      clientId: 'tenant-client-id',
-      clientSecret: 'tenant-client-secret',
-      tenantId: 'tenant-tenant-id',
-      source: 'tenant-secret',
-    });
-    expect(getAppSecretMock).not.toHaveBeenCalled();
+    const { resolveMicrosoftCredentialsForTenant } = await import('@ee/lib/integrations/entra/auth/microsoftCredentialResolver');
+    await expect(resolveMicrosoftCredentialsForTenant('tenant-42')).resolves.toEqual({ clientId: 'customer-app', clientSecret: 'customer-secret', tenantId: 'partner-tenant', source: 'profile', profileId: 'profile-1', profileDisplayName: 'MSP Entra App' });
+    expect(mocks.bindingFirst).toHaveBeenCalledOnce();
   });
-
-  it('T043: falls back to env credentials when tenant pair is absent', async () => {
-    process.env.MICROSOFT_CLIENT_ID = 'env-client-id-43';
-    process.env.MICROSOFT_CLIENT_SECRET = 'env-client-secret-43';
-    process.env.MICROSOFT_TENANT_ID = 'env-tenant-id-43';
-
-    const getTenantSecretMock = vi.fn(async () => null);
-    const getAppSecretMock = vi.fn(async () => 'app-fallback-43');
-    getSecretProviderInstanceMock.mockResolvedValue({
-      getTenantSecret: getTenantSecretMock,
-      getAppSecret: getAppSecretMock,
-    });
-
-    const { resolveMicrosoftCredentialsForTenant } = await import(
-      '@ee/lib/integrations/entra/auth/microsoftCredentialResolver'
-    );
-    const credentials = await resolveMicrosoftCredentialsForTenant('tenant-43');
-
-    expect(credentials).toEqual({
-      clientId: 'env-client-id-43',
-      clientSecret: 'env-client-secret-43',
-      tenantId: 'env-tenant-id-43',
-      source: 'env',
-    });
-    expect(getAppSecretMock).not.toHaveBeenCalled();
-  });
-
-  it('T044: falls back to app secrets when tenant and env credentials are absent', async () => {
-    const getTenantSecretMock = vi.fn(async () => null);
-    const getAppSecretMock = vi.fn(async (key: string) => {
-      if (key === 'MICROSOFT_CLIENT_ID') return 'app-client-id-44';
-      if (key === 'MICROSOFT_CLIENT_SECRET') return 'app-client-secret-44';
-      if (key === 'MICROSOFT_TENANT_ID') return 'app-tenant-id-44';
-      return null;
-    });
-    getSecretProviderInstanceMock.mockResolvedValue({
-      getTenantSecret: getTenantSecretMock,
-      getAppSecret: getAppSecretMock,
-    });
-
-    const { resolveMicrosoftCredentialsForTenant } = await import(
-      '@ee/lib/integrations/entra/auth/microsoftCredentialResolver'
-    );
-    const credentials = await resolveMicrosoftCredentialsForTenant('tenant-44');
-
-    expect(credentials).toEqual({
-      clientId: 'app-client-id-44',
-      clientSecret: 'app-client-secret-44',
-      tenantId: 'app-tenant-id-44',
-      source: 'app-secret',
-    });
+  it.each([
+    { binding: undefined },
+    { binding: { profile_id: 'gone' }, profile: undefined },
+    { binding: { profile_id: 'profile-1' }, profile: { profile_id: 'profile-1', is_archived: true } },
+    { binding: { profile_id: 'profile-1' }, profile: { profile_id: 'profile-1', is_archived: false, capabilities: ['email'] } },
+    {
+      binding: { profile_id: 'profile-1' },
+      profile: {
+        profile_id: 'profile-1',
+        display_name: 'MSP Entra App',
+        client_id: ' ',
+        tenant_id: 'partner-tenant',
+        client_secret_ref: 'profile-1-secret',
+        capabilities: ['entra'],
+        is_archived: false,
+      },
+    },
+    {
+      binding: { profile_id: 'profile-1' },
+      profile: {
+        profile_id: 'profile-1',
+        display_name: 'MSP Entra App',
+        client_id: 'customer-app',
+        tenant_id: 'partner-tenant',
+        client_secret_ref: 'profile-1-secret',
+        capabilities: ['entra'],
+        is_archived: false,
+      },
+      secret: ' ',
+    },
+  ])('returns null for unusable bindings', async ({ binding, profile, secret }) => {
+    mocks.bindingFirst.mockResolvedValue(binding);
+    mocks.profileFirst.mockResolvedValue(profile);
+    if (secret !== undefined) {
+      mocks.getSecretProviderInstance.mockResolvedValue({
+        getTenantSecret: vi.fn().mockResolvedValue(secret),
+      });
+    }
+    const { resolveMicrosoftCredentialsForTenant } = await import('@ee/lib/integrations/entra/auth/microsoftCredentialResolver');
+    await expect(resolveMicrosoftCredentialsForTenant('tenant-42')).resolves.toBeNull();
   });
 });

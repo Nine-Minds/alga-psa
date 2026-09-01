@@ -39,6 +39,7 @@ import {
   contractStatusChangedEventPayloadSchema,
   contractUpdatedEventPayloadSchema,
   creditExpiringEventPayloadSchema,
+  hourBlockExpiringEventPayloadSchema,
   creditNoteAppliedEventPayloadSchema,
   creditNoteCreatedEventPayloadSchema,
   creditNoteVoidedEventPayloadSchema,
@@ -53,6 +54,7 @@ import {
   paymentFailedEventPayloadSchema,
   paymentRecordedEventPayloadSchema,
   paymentRefundedEventPayloadSchema,
+  prepaidBalanceAlertScanRequestedEventPayloadSchema,
   recurringBillingRunCompletedEventPayloadSchema,
   recurringBillingRunFailedEventPayloadSchema,
   recurringBillingRunStartedEventPayloadSchema,
@@ -140,6 +142,7 @@ import {
   mediaProcessingSucceededEventPayloadSchema,
 } from './domain/assetMediaEventSchemas';
 import { maintenanceJobRequestedEventPayloadSchema } from './domain/maintenanceEventSchemas';
+import { inboundEmailProviderAutoPausedEventPayloadSchema } from './domain/inboundEmailEventSchemas';
 import {
   ticketApprovalGrantedEventPayloadSchema,
   ticketApprovalRejectedEventPayloadSchema,
@@ -195,6 +198,9 @@ export const EVENT_TYPES = [
   'TICKET_AUTO_CLOSE_WARNING',
   // Maintenance / system (worker emits; server subscriber runs the handler)
   'MAINTENANCE_JOB_REQUESTED',
+  // Inbound email (worker emits after atomic auth-failure auto-pause; server
+  // subscriber delivers admin notifications)
+  'INBOUND_EMAIL_PROVIDER_AUTO_PAUSED',
   'TICKET_ASSIGNED',
   'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_COMMENT_ADDED',
@@ -327,6 +333,8 @@ export const EVENT_TYPES = [
   'CREDIT_NOTE_APPLIED',
   'CREDIT_NOTE_VOIDED',
   'CREDIT_EXPIRING',
+  'PREPAID_BALANCE_ALERT_SCAN_REQUESTED',
+  'HOUR_BLOCK_EXPIRING',
   'CONTRACT_CREATED',
   'CONTRACT_UPDATED',
   'CONTRACT_DELETED',
@@ -561,6 +569,7 @@ export const TicketAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
   primaryAgentId: z.string().uuid(),      // Existing primary agent
   additionalAgentId: z.string().uuid(),   // New additional agent
   assignedByUserId: z.string().uuid(),    // Who performed the action
+  ...TicketNotificationSuppressionSchema,
 });
 
 // Project event payload schema
@@ -1152,6 +1161,7 @@ const TicketUpdatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketUpda
 const TicketClosedPayloadSchema = z.union([TicketEventPayloadSchema, ticketClosedEventPayloadSchema]);
 const TicketAutoCloseWarningPayloadSchema = z.union([TicketEventPayloadSchema, ticketAutoCloseWarningEventPayloadSchema]);
 const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
+const InboundEmailProviderAutoPausedPayloadSchema = inboundEmailProviderAutoPausedEventPayloadSchema;
 const TicketAssignedPayloadSchema = z.union([TicketEventPayloadSchema, ticketAssignedEventPayloadSchema]);
 const TicketResponseStateChangedPayloadSchemaV2 = z.union([
   TicketResponseStateChangedPayloadSchema,
@@ -1181,6 +1191,7 @@ export const EventPayloadSchemas = {
   TICKET_CLOSED: TicketClosedPayloadSchema,
   TICKET_AUTO_CLOSE_WARNING: TicketAutoCloseWarningPayloadSchema,
   MAINTENANCE_JOB_REQUESTED: MaintenanceJobRequestedPayloadSchema,
+  INBOUND_EMAIL_PROVIDER_AUTO_PAUSED: InboundEmailProviderAutoPausedPayloadSchema,
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketAssignedPayloadSchema,
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
@@ -1313,6 +1324,8 @@ export const EventPayloadSchemas = {
   CREDIT_NOTE_APPLIED: creditNoteAppliedEventPayloadSchema,
   CREDIT_NOTE_VOIDED: creditNoteVoidedEventPayloadSchema,
   CREDIT_EXPIRING: creditExpiringEventPayloadSchema,
+  PREPAID_BALANCE_ALERT_SCAN_REQUESTED: prepaidBalanceAlertScanRequestedEventPayloadSchema,
+  HOUR_BLOCK_EXPIRING: hourBlockExpiringEventPayloadSchema,
   CONTRACT_CREATED: ContractCreatedPayloadSchema,
   CONTRACT_UPDATED: ContractUpdatedPayloadSchema,
   CONTRACT_DELETED: ContractSearchEventPayloadSchema,
@@ -1566,6 +1579,8 @@ export type TagDefinitionDeletedEvent = z.infer<typeof EventSchemas.TAG_DEFINITI
 export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATED>;
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
 export type CreditExpiringEvent = z.infer<typeof EventSchemas.CREDIT_EXPIRING>;
+export type PrepaidBalanceAlertScanRequestedEvent = z.infer<typeof EventSchemas.PREPAID_BALANCE_ALERT_SCAN_REQUESTED>;
+export type HourBlockExpiringEvent = z.infer<typeof EventSchemas.HOUR_BLOCK_EXPIRING>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
 export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;
 export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;

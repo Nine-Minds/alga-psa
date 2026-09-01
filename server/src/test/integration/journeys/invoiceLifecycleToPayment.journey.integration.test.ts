@@ -13,6 +13,7 @@ import {
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
 } from '../../../../test-utils/billingTestHelpers';
+import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
 // P0 journey (docs: journey-first testing pivot): the AR through-line an MSP
 // actually walks — a recurring invoice generates as a draft, payment against a
@@ -160,7 +161,7 @@ describe('journey: invoice lifecycle → payment', () => {
     await assignServiceTaxRate(contextLike as any, '*', 'US-NY', { onlyUnset: true });
 
     const januaryCycleId = uuidv4();
-    await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: januaryCycleId,
       tenant: tenantId,
       client_id: clientId,

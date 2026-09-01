@@ -2,6 +2,8 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { ensureDefaultContractForClient } from './defaultContract';
 
+export type CreditServiceTypeRestrictionMode = 'all' | 'restricted';
+
 export type ClientBillingSettings = {
   zeroDollarInvoiceHandling?: 'normal' | 'finalized';
   suppressZeroDollarInvoices?: boolean;
@@ -12,6 +14,14 @@ export type ClientBillingSettings = {
   hasExternalCredit?: boolean;
   /** Free-text shown alongside the flag (e.g. "Paid through Dec 2026 by check"). */
   externalCreditNote?: string | null;
+  /** undefined = leave unchanged; true/false = client override; null = revert to tenant default. */
+  creditAutoApplyEnabled?: boolean | null;
+  /** undefined = leave unchanged; an order = client override; null = revert to tenant default. */
+  creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first' | null;
+  /** undefined = leave unchanged; 'all'/'restricted' = client override; null = revert to tenant default. */
+  creditServiceTypeRestrictionMode?: CreditServiceTypeRestrictionMode | null;
+  /** undefined = leave unchanged; non-empty array = restrict to these service type ids (pairs with mode 'restricted'); null = no ids. */
+  creditEligibleServiceTypeIds?: string[] | null;
 };
 
 type DbClientBillingSettings = {
@@ -24,6 +34,10 @@ type DbClientBillingSettings = {
   credit_expiration_notification_days: number[];
   has_external_credit: boolean;
   external_credit_note: string | null;
+  credit_auto_apply_enabled: boolean | null;
+  credit_application_order: string | null;
+  credit_service_type_restriction_mode: CreditServiceTypeRestrictionMode | null;
+  credit_eligible_service_type_ids: string[] | null;
 };
 
 async function ensureClientBillingSettingsRowInTransaction(
@@ -94,7 +108,11 @@ export async function getClientBillingSettings(
       'credit_expiration_days',
       'credit_expiration_notification_days',
       'has_external_credit',
-      'external_credit_note'
+      'external_credit_note',
+      'credit_auto_apply_enabled',
+      'credit_application_order',
+      'credit_service_type_restriction_mode',
+      'credit_eligible_service_type_ids'
     );
 
   if (!row) return null;
@@ -107,6 +125,14 @@ export async function getClientBillingSettings(
     creditExpirationNotificationDays: row.credit_expiration_notification_days,
     hasExternalCredit: row.has_external_credit,
     externalCreditNote: row.external_credit_note,
+    creditAutoApplyEnabled: row.credit_auto_apply_enabled ?? undefined,
+    creditApplicationOrder: (row.credit_application_order === 'expiration_first' || row.credit_application_order === 'oldest_first' || row.credit_application_order === 'newest_first')
+      ? row.credit_application_order
+      : undefined,
+    creditServiceTypeRestrictionMode: row.credit_service_type_restriction_mode === 'all' || row.credit_service_type_restriction_mode === 'restricted'
+      ? row.credit_service_type_restriction_mode
+      : undefined,
+    creditEligibleServiceTypeIds: row.credit_eligible_service_type_ids,
   };
 }
 
@@ -128,7 +154,7 @@ export async function updateClientBillingSettings(
     return;
   }
 
-  const updates: Partial<DbClientBillingSettings> = {};
+  const updates: Record<string, unknown> = {};
   if (settings.zeroDollarInvoiceHandling !== undefined) {
     updates.zero_dollar_invoice_handling = settings.zeroDollarInvoiceHandling;
   }
@@ -150,6 +176,36 @@ export async function updateClientBillingSettings(
   if (settings.externalCreditNote !== undefined) {
     updates.external_credit_note = settings.externalCreditNote;
   }
+  if (settings.creditAutoApplyEnabled !== undefined) {
+    updates.credit_auto_apply_enabled = settings.creditAutoApplyEnabled;
+  }
+  if (settings.creditApplicationOrder !== undefined) {
+    updates.credit_application_order = settings.creditApplicationOrder;
+  }
+  // Service-type restriction: mode is the source of truth; ids must stay
+  // consistent with it so the DB CHECK constraints hold. A non-null mode wins
+  // and nulls (or pairs) ids accordingly; an ids-only write still derives the
+  // mode so legacy callers stay consistent.
+  if (settings.creditServiceTypeRestrictionMode !== undefined) {
+    updates.credit_service_type_restriction_mode = settings.creditServiceTypeRestrictionMode;
+    if (settings.creditServiceTypeRestrictionMode === 'restricted') {
+      if (settings.creditEligibleServiceTypeIds !== undefined) {
+        updates.credit_eligible_service_type_ids = JSON.stringify(settings.creditEligibleServiceTypeIds);
+      }
+    } else {
+      // 'all' or null (inherit) => ids must be NULL.
+      updates.credit_eligible_service_type_ids = null;
+    }
+  } else if (settings.creditEligibleServiceTypeIds !== undefined) {
+    const ids = settings.creditEligibleServiceTypeIds;
+    if (ids === null || ids.length === 0) {
+      updates.credit_service_type_restriction_mode = null;
+      updates.credit_eligible_service_type_ids = null;
+    } else {
+      updates.credit_service_type_restriction_mode = 'restricted';
+      updates.credit_eligible_service_type_ids = JSON.stringify(ids);
+    }
+  }
 
   await ensureClientBillingSettingsRow(knexOrTrx, { tenant, clientId });
   await tenantDb(knexOrTrx, tenant).table('client_billing_settings')
@@ -159,4 +215,131 @@ export async function updateClientBillingSettings(
 
 function isKnexTransaction(knexOrTrx: Knex | Knex.Transaction): knexOrTrx is Knex.Transaction {
   return typeof (knexOrTrx as any).commit === 'function' && typeof (knexOrTrx as any).rollback === 'function';
+}
+
+export type CreditApplicationOrder = 'expiration_first' | 'oldest_first' | 'newest_first';
+
+export interface CreditDrawdownPolicy {
+  autoApplyEnabled: boolean;
+  applicationOrder: CreditApplicationOrder;
+  /** null = no restriction (all charges eligible); otherwise only these service_type ids. */
+  eligibleServiceTypeIds: string[] | null;
+  /** Effective restriction mode after client-over-tenant resolution. */
+  serviceTypeRestrictionMode: CreditServiceTypeRestrictionMode;
+}
+
+const CREDIT_APPLICATION_ORDERS: ReadonlySet<string> = new Set([
+  'expiration_first',
+  'oldest_first',
+  'newest_first',
+]);
+
+const CREDIT_SERVICE_TYPE_RESTRICTION_MODES: ReadonlySet<string> = new Set([
+  'all',
+  'restricted',
+]);
+
+function normalizeCreditApplicationOrder(value: unknown): CreditApplicationOrder {
+  return typeof value === 'string' && CREDIT_APPLICATION_ORDERS.has(value)
+    ? (value as CreditApplicationOrder)
+    : 'expiration_first';
+}
+
+function normalizeServiceTypeRestrictionMode(
+  value: unknown,
+  fallback: CreditServiceTypeRestrictionMode | null
+): CreditServiceTypeRestrictionMode | null {
+  return typeof value === 'string' && CREDIT_SERVICE_TYPE_RESTRICTION_MODES.has(value)
+    ? (value as CreditServiceTypeRestrictionMode)
+    : fallback;
+}
+
+function normalizeEligibleServiceTypeIds(value: unknown): string[] | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  let parsed: unknown = value;
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      throw new Error('Malformed credit_eligible_service_type_ids policy: expected a JSON array or null');
+    }
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error('Malformed credit_eligible_service_type_ids policy: expected a JSON array or null');
+  }
+
+  return parsed.map((id) => String(id));
+}
+
+/**
+ * Resolve the credit draw-down policy for a client: per-field first-non-null
+ * cascade from `client_billing_settings` over `default_billing_settings` to
+ * hardcoded behavior-preserving defaults (auto-apply on, expiration-first,
+ * no service-type restriction). Contract opt-out is not part of this cascade;
+ * it is a charge-level filter in the apply engine.
+ *
+ * Service-type restriction resolves mode-first: a non-null client mode wins and
+ * pairs with the client's own ids; a null client mode inherits the tenant's
+ * mode and ids (tenant row/column absent => 'all'). A client 'restricted' mode
+ * never pairs with tenant ids, and vice versa.
+ */
+export async function resolveCreditDrawdownPolicy(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<CreditDrawdownPolicy> {
+  const clientSettings = await tenantDb(knexOrTrx, tenant).table('client_billing_settings')
+    .where({ client_id: clientId, tenant })
+    .first();
+
+  const defaultSettings = await tenantDb(knexOrTrx, tenant).table('default_billing_settings')
+    .first();
+
+  let autoApplyEnabled = true;
+  if (typeof clientSettings?.credit_auto_apply_enabled === 'boolean') {
+    autoApplyEnabled = clientSettings.credit_auto_apply_enabled;
+  } else if (typeof defaultSettings?.credit_auto_apply_enabled === 'boolean') {
+    autoApplyEnabled = defaultSettings.credit_auto_apply_enabled;
+  }
+
+  let applicationOrder: CreditApplicationOrder = 'expiration_first';
+  if (clientSettings?.credit_application_order != null) {
+    applicationOrder = normalizeCreditApplicationOrder(clientSettings.credit_application_order);
+  } else if (defaultSettings?.credit_application_order != null) {
+    applicationOrder = normalizeCreditApplicationOrder(defaultSettings.credit_application_order);
+  }
+
+  const tenantMode = normalizeServiceTypeRestrictionMode(
+    defaultSettings?.credit_service_type_restriction_mode,
+    'all'
+  ) as CreditServiceTypeRestrictionMode;
+  const clientMode = normalizeServiceTypeRestrictionMode(
+    clientSettings?.credit_service_type_restriction_mode,
+    null
+  );
+
+  let serviceTypeRestrictionMode: CreditServiceTypeRestrictionMode;
+  let eligibleServiceTypeIds: string[] | null;
+  if (clientMode !== null) {
+    serviceTypeRestrictionMode = clientMode;
+    eligibleServiceTypeIds = clientMode === 'restricted'
+      ? normalizeEligibleServiceTypeIds(clientSettings.credit_eligible_service_type_ids)
+      : null;
+  } else {
+    serviceTypeRestrictionMode = tenantMode;
+    eligibleServiceTypeIds = tenantMode === 'restricted'
+      ? normalizeEligibleServiceTypeIds(defaultSettings?.credit_eligible_service_type_ids)
+      : null;
+  }
+
+  return {
+    autoApplyEnabled,
+    applicationOrder,
+    eligibleServiceTypeIds,
+    serviceTypeRestrictionMode,
+  };
 }

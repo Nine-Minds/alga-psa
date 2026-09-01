@@ -1,0 +1,2800 @@
+{
+  "$schema": "../lib/glossary.schema.json",
+  "locale": "pt",
+  "dialect": "pt-BR",
+  "displayName": "Português (Brasil)",
+  "description": "Brazilian Portuguese terminology, dialect, and audit allowlist for the AlgaPSA pt locale.",
+  "domainTerms": [
+    {
+      "id": "account",
+      "en-term": "account",
+      "pt-br-term": "conta",
+      "notes": "Use for user, MSP, or customer account concepts. Do not use European register variants."
+    },
+    {
+      "id": "action",
+      "en-term": "Action",
+      "pt-br-term": "Ação",
+      "notes": "Pack-consistent: 17 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "actions",
+      "en-term": "Actions",
+      "pt-br-term": "Ações",
+      "notes": "Pack-consistent: 105 uses across 33 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "active",
+      "en-term": "Active",
+      "pt-br-term": "Ativo",
+      "notes": "Pack-consistent: 84 uses across 25 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "actual-hours",
+      "en-term": "Actual Hours",
+      "pt-br-term": "Horas reais",
+      "notes": "Pack-consistent: 7 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "add",
+      "en-term": "Add",
+      "pt-br-term": "Adicionar",
+      "notes": "Pack-consistent: 15 uses across 12 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "add-item",
+      "en-term": "Add item",
+      "pt-br-term": "Adicionar item",
+      "notes": "Pack-consistent: 9 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "add-service",
+      "en-term": "Add Service",
+      "pt-br-term": "Adicionar serviço",
+      "notes": "Pack-consistent: 7 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "add-status",
+      "en-term": "Add status",
+      "pt-br-term": "Adicionar status",
+      "notes": "Pack-consistent: 10 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "additional-agents",
+      "en-term": "Additional Agents",
+      "pt-br-term": "Agentes adicionais",
+      "notes": "Pack-consistent: 7 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "address",
+      "en-term": "Address",
+      "pt-br-term": "Endereço",
+      "notes": "Pack-consistent: 7 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "agent",
+      "en-term": "Agent",
+      "pt-br-term": "Agente",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "all",
+      "en-term": "All",
+      "pt-br-term": "Todos",
+      "notes": "Pack-consistent: 19 uses across 15 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "all-categories",
+      "en-term": "All Categories",
+      "pt-br-term": "Todas as categorias",
+      "notes": "Pack-consistent: 12 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "all-clients",
+      "en-term": "All clients",
+      "pt-br-term": "Todos os clientes",
+      "notes": "Pack-consistent: 12 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "all-priorities",
+      "en-term": "All Priorities",
+      "pt-br-term": "Todas as prioridades",
+      "notes": "Pack-consistent: 11 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "all-statuses",
+      "en-term": "All statuses",
+      "pt-br-term": "Todos os status",
+      "notes": "Pack-consistent: 23 uses across 13 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "all-types",
+      "en-term": "All types",
+      "pt-br-term": "Todos os tipos",
+      "notes": "Pack-consistent: 14 uses across 12 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "all-users",
+      "en-term": "All users",
+      "pt-br-term": "Todos os usuários",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "annually",
+      "en-term": "Annually",
+      "pt-br-term": "Anualmente",
+      "notes": "Pack-consistent: 8 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "any",
+      "en-term": "Any",
+      "pt-br-term": "Qualquer",
+      "notes": "Pack-consistent: 6 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "apply",
+      "en-term": "Apply",
+      "pt-br-term": "Aplicar",
+      "notes": "Pack-consistent: 8 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "apply-filters",
+      "en-term": "Apply Filters",
+      "pt-br-term": "Aplicar filtros",
+      "notes": "Pack-consistent: 10 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "appointment",
+      "en-term": "appointment",
+      "pt-br-term": "compromisso",
+      "notes": "Use compromisso for calendar appointments; use agendamento when emphasizing the scheduling action."
+    },
+    {
+      "id": "appointment-requests",
+      "en-term": "Appointment Requests",
+      "pt-br-term": "Solicitações de agendamento",
+      "notes": "Pack-consistent: 7 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "approval",
+      "en-term": "approval",
+      "pt-br-term": "aprovação",
+      "notes": "Use for approval workflows, timesheets, invoices, and request approvals."
+    },
+    {
+      "id": "approve",
+      "en-term": "Approve",
+      "pt-br-term": "Aprovar",
+      "notes": "Pack-consistent: 11 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "approved",
+      "en-term": "Approved",
+      "pt-br-term": "Aprovado",
+      "notes": "Pack-consistent: 12 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "archived",
+      "en-term": "Archived",
+      "pt-br-term": "Arquivado",
+      "notes": "Pack-consistent: 16 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "asset",
+      "en-term": "asset",
+      "pt-br-term": "ativo",
+      "notes": "Use ativo/ativos for managed devices, inventory, or configuration assets."
+    },
+    {
+      "id": "asset-tag",
+      "en-term": "asset tag",
+      "pt-br-term": "Etiqueta de ativo",
+      "notes": "Pack-consistent: 7 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "assets",
+      "en-term": "Assets",
+      "pt-br-term": "Ativos",
+      "notes": "Pack-consistent: 18 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "assign",
+      "en-term": "Assign",
+      "pt-br-term": "Atribuir",
+      "notes": "Pack-consistent: 7 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "assigned-team",
+      "en-term": "Assigned Team",
+      "pt-br-term": "Equipe designada",
+      "notes": "Pack-consistent: 6 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "assigned-to",
+      "en-term": "Assigned to",
+      "pt-br-term": "Atribuído a",
+      "notes": "Pack-consistent: 16 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "assignee",
+      "en-term": "Assignee",
+      "pt-br-term": "Responsável",
+      "notes": "Pack-consistent: 9 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "assignment",
+      "en-term": "assignment",
+      "pt-br-term": "atribuição",
+      "notes": "Use atribuição for assigning tickets, tasks, users, or technicians."
+    },
+    {
+      "id": "attachments",
+      "en-term": "Attachments",
+      "pt-br-term": "Anexos",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "automation",
+      "en-term": "automation",
+      "pt-br-term": "automação",
+      "notes": "Use for workflow automation and automated operational behavior."
+    },
+    {
+      "id": "available",
+      "en-term": "Available",
+      "pt-br-term": "Disponível",
+      "notes": "Pack-consistent: 11 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "average-rating",
+      "en-term": "Average Rating",
+      "pt-br-term": "Avaliação média",
+      "notes": "Pack-consistent: 7 uses across 1 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "back",
+      "en-term": "Back",
+      "pt-br-term": "Voltar",
+      "notes": "Pack-consistent: 22 uses across 17 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "billed",
+      "en-term": "Billed",
+      "pt-br-term": "Faturado",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "billing",
+      "en-term": "billing",
+      "pt-br-term": "faturamento",
+      "notes": "Use faturamento for the billing product area and invoice-generation process."
+    },
+    {
+      "id": "billing-frequency",
+      "en-term": "Billing Frequency",
+      "pt-br-term": "Frequência de cobrança",
+      "notes": "Pack-consistent: 20 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "billing-method",
+      "en-term": "Billing method",
+      "pt-br-term": "Método de cobrança",
+      "notes": "Pack-consistent: 11 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "board",
+      "en-term": "board",
+      "pt-br-term": "quadro",
+      "notes": "Use quadro for ticket boards, kanban boards, and workflow boards."
+    },
+    {
+      "id": "boards",
+      "en-term": "Boards",
+      "pt-br-term": "Quadros",
+      "notes": "Pack-consistent: 10 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "bucket",
+      "en-term": "bucket",
+      "pt-br-term": "banco de horas",
+      "notes": "Use for prepaid or retainer hour pools. Keep bucket untranslated only in technical storage contexts."
+    },
+    {
+      "id": "budget",
+      "en-term": "budget",
+      "pt-br-term": "orçamento",
+      "notes": "Use orçamento only for project/financial budgets and spending limits. Never for sales quotes — those are cotações (see quote)."
+    },
+    {
+      "id": "calendar",
+      "en-term": "Calendar",
+      "pt-br-term": "Calendário",
+      "notes": "Pack-consistent: 10 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "cancel",
+      "en-term": "Cancel",
+      "pt-br-term": "Cancelar",
+      "notes": "Pack-consistent: 152 uses across 40 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "canceled",
+      "en-term": "Canceled",
+      "pt-br-term": "Cancelado",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "cancelled",
+      "en-term": "Cancelled",
+      "pt-br-term": "Cancelado",
+      "notes": "Pack-consistent: 13 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "categories",
+      "en-term": "Categories",
+      "pt-br-term": "Categorias",
+      "notes": "Pack-consistent: 8 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "category",
+      "en-term": "Category",
+      "pt-br-term": "Categoria",
+      "notes": "Pack-consistent: 27 uses across 15 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "checklist",
+      "en-term": "Checklist",
+      "pt-br-term": "Lista de verificação",
+      "notes": "Pack-consistent: 6 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "city",
+      "en-term": "City",
+      "pt-br-term": "Cidade",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "clear-filters",
+      "en-term": "Clear filters",
+      "pt-br-term": "Limpar filtros",
+      "notes": "Pack-consistent: 9 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "clear-selection",
+      "en-term": "Clear selection",
+      "pt-br-term": "Limpar seleção",
+      "notes": "Pack-consistent: 9 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "client",
+      "en-term": "client",
+      "pt-br-term": "cliente",
+      "notes": "Use cliente for customer organizations and client-portal users."
+    },
+    {
+      "id": "client-contracts",
+      "en-term": "Client Contracts",
+      "pt-br-term": "Contratos de clientes",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "client-details",
+      "en-term": "Client Details",
+      "pt-br-term": "Detalhes do cliente",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "client-id",
+      "en-term": "Client ID",
+      "pt-br-term": "ID do cliente",
+      "notes": "Pack-consistent: 6 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "client-name",
+      "en-term": "Client Name",
+      "pt-br-term": "Nome do cliente",
+      "notes": "Pack-consistent: 9 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "client-portal",
+      "en-term": "client portal",
+      "pt-br-term": "portal do cliente",
+      "notes": "Use portal do cliente for the customer-facing app."
+    },
+    {
+      "id": "clients",
+      "en-term": "Clients",
+      "pt-br-term": "Clientes",
+      "notes": "Pack-consistent: 15 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "close",
+      "en-term": "Close",
+      "pt-br-term": "Fechar",
+      "notes": "Pack-consistent: 41 uses across 21 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "closed",
+      "en-term": "Closed",
+      "pt-br-term": "Fechado",
+      "notes": "Pack-consistent: 12 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "comment",
+      "en-term": "comment",
+      "pt-br-term": "comentário",
+      "notes": "Use for ticket, project, task, and document comments."
+    },
+    {
+      "id": "completed",
+      "en-term": "Completed",
+      "pt-br-term": "Concluído",
+      "notes": "Pack-consistent: 15 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "confirm",
+      "en-term": "Confirm",
+      "pt-br-term": "Confirmar",
+      "notes": "Pack-consistent: 8 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "connect",
+      "en-term": "Connect",
+      "pt-br-term": "Conectar",
+      "notes": "Pack-consistent: 6 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "connected",
+      "en-term": "Connected",
+      "pt-br-term": "Conectado",
+      "notes": "Pack-consistent: 17 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "contact",
+      "en-term": "contact",
+      "pt-br-term": "contato",
+      "notes": "Brazilian spelling is contato. Do not use contacto."
+    },
+    {
+      "id": "contact-name",
+      "en-term": "Contact name",
+      "pt-br-term": "Nome do contato",
+      "notes": "Pack-consistent: 6 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "contacts",
+      "en-term": "contacts",
+      "pt-br-term": "Contatos",
+      "notes": "Pack-consistent: 11 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "continue",
+      "en-term": "Continue",
+      "pt-br-term": "Continuar",
+      "notes": "Pack-consistent: 13 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "continue-editing",
+      "en-term": "Continue Editing",
+      "pt-br-term": "Continuar editando",
+      "notes": "Pack-consistent: 7 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "contract",
+      "en-term": "contract",
+      "pt-br-term": "contrato",
+      "notes": "Use for service contracts, contract templates, and contract lines."
+    },
+    {
+      "id": "contract-anniversary",
+      "en-term": "Contract anniversary",
+      "pt-br-term": "Aniversário do contrato",
+      "notes": "Pack-consistent: 7 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "contract-line",
+      "en-term": "contract line",
+      "pt-br-term": "linha de contrato",
+      "notes": "Use for billable service lines associated with a contract."
+    },
+    {
+      "id": "contract-lines",
+      "en-term": "Contract Lines",
+      "pt-br-term": "Linhas de contrato",
+      "notes": "Pack-consistent: 9 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "contract-name",
+      "en-term": "Contract Name",
+      "pt-br-term": "Nome do contrato",
+      "notes": "Pack-consistent: 10 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "contracts",
+      "en-term": "Contracts",
+      "pt-br-term": "Contratos",
+      "notes": "Pack-consistent: 9 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "copied",
+      "en-term": "Copied",
+      "pt-br-term": "Copiado",
+      "notes": "Pack-consistent: 12 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "country",
+      "en-term": "Country",
+      "pt-br-term": "País",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "create",
+      "en-term": "Create",
+      "pt-br-term": "Criar",
+      "notes": "Pack-consistent: 18 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "create-template",
+      "en-term": "Create template",
+      "pt-br-term": "Criar modelo",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "create-ticket",
+      "en-term": "Create ticket",
+      "pt-br-term": "Criar ticket",
+      "notes": "Pack-consistent: 15 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "created",
+      "en-term": "Created",
+      "pt-br-term": "Criado",
+      "notes": "Pack-consistent: 38 uses across 21 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "credit",
+      "en-term": "credit",
+      "pt-br-term": "crédito",
+      "notes": "Use for account credits, credit balances, and credit memos."
+    },
+    {
+      "id": "credits",
+      "en-term": "Credits",
+      "pt-br-term": "Créditos",
+      "notes": "Pack-consistent: 8 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "critical",
+      "en-term": "Critical",
+      "pt-br-term": "Crítico",
+      "notes": "Pack-consistent: 7 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "currency",
+      "en-term": "Currency",
+      "pt-br-term": "Moeda",
+      "notes": "Pack-consistent: 26 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "current",
+      "en-term": "Current",
+      "pt-br-term": "Atual",
+      "notes": "Pack-consistent: 6 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "custom",
+      "en-term": "Custom",
+      "pt-br-term": "Personalizado",
+      "notes": "Pack-consistent: 13 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "custom-rate",
+      "en-term": "Custom Rate",
+      "pt-br-term": "Taxa personalizada",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "dashboard",
+      "en-term": "dashboard",
+      "pt-br-term": "painel",
+      "notes": "Use painel in prose. Dashboard may remain identical when used as a product/UI label in the allowlist."
+    },
+    {
+      "id": "date",
+      "en-term": "Date",
+      "pt-br-term": "Data",
+      "notes": "Pack-consistent: 20 uses across 15 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "day",
+      "en-term": "day",
+      "pt-br-term": "Dia",
+      "notes": "Pack-consistent: 8 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "days",
+      "en-term": "days",
+      "pt-br-term": "dias",
+      "notes": "Pack-consistent: 10 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "declined",
+      "en-term": "Declined",
+      "pt-br-term": "Recusado",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "default",
+      "en-term": "Default",
+      "pt-br-term": "Padrão",
+      "notes": "Pack-consistent: 26 uses across 15 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "default-contact",
+      "en-term": "Default contact",
+      "pt-br-term": "Contato padrão",
+      "notes": "Pack-consistent: 7 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "default-rate",
+      "en-term": "Default Rate",
+      "pt-br-term": "Taxa padrão",
+      "notes": "Pack-consistent: 6 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "delete",
+      "en-term": "Delete",
+      "pt-br-term": "Excluir",
+      "notes": "Pack-consistent: 70 uses across 31 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "delete-template",
+      "en-term": "Delete template",
+      "pt-br-term": "Excluir modelo",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "delivered",
+      "en-term": "Delivered",
+      "pt-br-term": "Entregue",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "description",
+      "en-term": "Description",
+      "pt-br-term": "Descrição",
+      "notes": "Pack-consistent: 88 uses across 29 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "details",
+      "en-term": "Details",
+      "pt-br-term": "Detalhes",
+      "notes": "Pack-consistent: 16 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "disabled",
+      "en-term": "Disabled",
+      "pt-br-term": "Desabilitado",
+      "notes": "Pack-consistent: 26 uses across 12 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "discard",
+      "en-term": "Discard",
+      "pt-br-term": "Descartar",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "discard-changes",
+      "en-term": "Discard Changes",
+      "pt-br-term": "Descartar alterações",
+      "notes": "Pack-consistent: 14 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "disconnect",
+      "en-term": "Disconnect",
+      "pt-br-term": "Desconectar",
+      "notes": "Pack-consistent: 14 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "disconnected",
+      "en-term": "Disconnected",
+      "pt-br-term": "Desconectado",
+      "notes": "Pack-consistent: 9 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "discounts",
+      "en-term": "Discounts",
+      "pt-br-term": "Descontos",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "dispatch",
+      "en-term": "dispatch",
+      "pt-br-term": "alocação",
+      "notes": "Use alocação for technician dispatch (e.g. \"Alocação de técnicos\") and dispatch boards. Do not use despacho, which reads as a shipping/legal dispatch in Brazilian Portuguese."
+    },
+    {
+      "id": "display-order",
+      "en-term": "Display Order",
+      "pt-br-term": "Ordem de exibição",
+      "notes": "Pack-consistent: 11 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "document",
+      "en-term": "document",
+      "pt-br-term": "documento",
+      "notes": "Use for uploaded documents, folders, sharing, and document management."
+    },
+    {
+      "id": "documents",
+      "en-term": "Documents",
+      "pt-br-term": "Documentos",
+      "notes": "Pack-consistent: 23 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "download-pdf",
+      "en-term": "Download PDF",
+      "pt-br-term": "Baixar PDF",
+      "notes": "Pack-consistent: 8 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "draft",
+      "en-term": "Draft",
+      "pt-br-term": "Rascunho",
+      "notes": "Pack-consistent: 25 uses across 12 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "due-date",
+      "en-term": "Due Date",
+      "pt-br-term": "Data de vencimento",
+      "notes": "Pack-consistent: 29 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "duration",
+      "en-term": "Duration",
+      "pt-br-term": "Duração",
+      "notes": "Pack-consistent: 23 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "edit",
+      "en-term": "Edit",
+      "pt-br-term": "Editar",
+      "notes": "Pack-consistent: 61 uses across 31 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "edit-asset",
+      "en-term": "Edit Asset",
+      "pt-br-term": "Editar recurso",
+      "notes": "Pack-consistent: 8 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "edit-location",
+      "en-term": "Edit location",
+      "pt-br-term": "Editar local",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "email",
+      "en-term": "email",
+      "pt-br-term": "email",
+      "notes": "Brazilian Portuguese commonly uses email without accent in product UI."
+    },
+    {
+      "id": "email-address",
+      "en-term": "email address",
+      "pt-br-term": "endereço de email",
+      "notes": "Use endereço de email for a single address field. For the plural section header (Email Addresses) use Emails or Endereços de email — native-reviewer suggestion 2026-07."
+    },
+    {
+      "id": "email-label",
+      "en-term": "email label",
+      "pt-br-term": "tipo de email",
+      "notes": "Use tipo de email for the label/type picker on an email row (mirrors tipo de telefone). Etiqueta de email is an acceptable alternative — native-reviewer suggestion 2026-07."
+    },
+    {
+      "id": "enable",
+      "en-term": "Enable",
+      "pt-br-term": "Habilitar",
+      "notes": "Pack-consistent: 8 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "enabled",
+      "en-term": "Enabled",
+      "pt-br-term": "Habilitado",
+      "notes": "Pack-consistent: 22 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "end",
+      "en-term": "End",
+      "pt-br-term": "Fim",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "end-date",
+      "en-term": "End Date",
+      "pt-br-term": "Data de término",
+      "notes": "Pack-consistent: 35 uses across 14 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "end-time",
+      "en-term": "End Time",
+      "pt-br-term": "Hora de término",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "error",
+      "en-term": "Error",
+      "pt-br-term": "Erro",
+      "notes": "Pack-consistent: 41 uses across 17 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "errors",
+      "en-term": "Errors",
+      "pt-br-term": "Erros",
+      "notes": "Pack-consistent: 8 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "estimated-hours",
+      "en-term": "Estimated Hours",
+      "pt-br-term": "Horas estimadas",
+      "notes": "Pack-consistent: 11 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "event",
+      "en-term": "Event",
+      "pt-br-term": "Evento",
+      "notes": "Pack-consistent: 8 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "expired",
+      "en-term": "Expired",
+      "pt-br-term": "Expirado",
+      "notes": "Pack-consistent: 19 uses across 14 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "export",
+      "en-term": "Export",
+      "pt-br-term": "Exportar",
+      "notes": "Pack-consistent: 8 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "export-csv",
+      "en-term": "Export CSV",
+      "pt-br-term": "Exportar CSV",
+      "notes": "Pack-consistent: 10 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "extension",
+      "en-term": "extension",
+      "pt-br-term": "extensão",
+      "notes": "Use for platform/product extensions and installed extension metadata."
+    },
+    {
+      "id": "extension-details",
+      "en-term": "Extension Details",
+      "pt-br-term": "Detalhes da extensão",
+      "notes": "Pack-consistent: 6 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "extension-settings",
+      "en-term": "Extension Settings",
+      "pt-br-term": "Configurações de extensão",
+      "notes": "Pack-consistent: 8 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "extensions",
+      "en-term": "Extensions",
+      "pt-br-term": "Extensões",
+      "notes": "Pack-consistent: 10 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "file",
+      "en-term": "file",
+      "pt-br-term": "arquivo",
+      "notes": "Use arquivo for files. Do not use ficheiro."
+    },
+    {
+      "id": "filter",
+      "en-term": "filter",
+      "pt-br-term": "filtro",
+      "notes": "Use as noun for UI filters; use filtrar for the action."
+    },
+    {
+      "id": "filters",
+      "en-term": "Filters",
+      "pt-br-term": "Filtros",
+      "notes": "Pack-consistent: 6 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "first-name",
+      "en-term": "First Name",
+      "pt-br-term": "Primeiro nome",
+      "notes": "Pack-consistent: 7 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "fixed",
+      "en-term": "Fixed",
+      "pt-br-term": "Fixo",
+      "notes": "Pack-consistent: 11 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "fixed-price",
+      "en-term": "Fixed price",
+      "pt-br-term": "Preço fixo",
+      "notes": "Pack-consistent: 10 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "from",
+      "en-term": "From",
+      "pt-br-term": "De",
+      "notes": "Pack-consistent: 14 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "fulfillment",
+      "en-term": "fulfillment",
+      "pt-br-term": "atendimento",
+      "notes": "Use atendimento for the sales-order fulfillment column and the matching customer-document label; entrega is the physical delivery."
+    },
+    {
+      "id": "ghost-usage",
+      "en-term": "ghost usage",
+      "pt-br-term": "Uso fantasma",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "hide",
+      "en-term": "Hide",
+      "pt-br-term": "Esconder",
+      "notes": "Pack-consistent: 6 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "hour",
+      "en-term": "Hour",
+      "pt-br-term": "hora",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "hourly",
+      "en-term": "Hourly",
+      "pt-br-term": "De hora em hora",
+      "notes": "Pack-consistent: 16 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "hourly-rate",
+      "en-term": "Hourly Rate",
+      "pt-br-term": "Taxa horária",
+      "notes": "Pack-consistent: 9 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "hourly-services",
+      "en-term": "Hourly Services",
+      "pt-br-term": "Serviços por hora",
+      "notes": "Pack-consistent: 11 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "hours",
+      "en-term": "Hours",
+      "pt-br-term": "Horas",
+      "notes": "Pack-consistent: 9 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "identity",
+      "en-term": "Identity",
+      "pt-br-term": "Identidade",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "import",
+      "en-term": "Import",
+      "pt-br-term": "Importar",
+      "notes": "Pack-consistent: 9 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "import-selected",
+      "en-term": "Import Selected",
+      "pt-br-term": "Importar selecionado",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "in-progress",
+      "en-term": "In progress",
+      "pt-br-term": "Em andamento",
+      "notes": "Pack-consistent: 7 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "inactive",
+      "en-term": "Inactive",
+      "pt-br-term": "Inativo",
+      "notes": "Pack-consistent: 49 uses across 18 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "industry",
+      "en-term": "industry",
+      "pt-br-term": "ramo de atividade",
+      "notes": "Use ramo de atividade for the client/CRM industry field — native-reviewer confirmed 2026-07. Indústria reads as the manufacturing sector in Brazilian Portuguese, not a business vertical."
+    },
+    {
+      "id": "interactions",
+      "en-term": "interactions",
+      "pt-br-term": "Interações",
+      "notes": "Pack-consistent: 11 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "internal",
+      "en-term": "Internal",
+      "pt-br-term": "Interno",
+      "notes": "Pack-consistent: 18 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "internal-notes",
+      "en-term": "Internal Notes",
+      "pt-br-term": "Notas internas",
+      "notes": "Pack-consistent: 7 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "inventory",
+      "en-term": "Inventory",
+      "pt-br-term": "Inventário",
+      "notes": "Pack-consistent: 6 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "invoice",
+      "en-term": "invoice",
+      "pt-br-term": "fatura",
+      "notes": "Use fatura for customer invoices in the product; avoid nota fiscal unless specifically referring to Brazilian tax documents."
+    },
+    {
+      "id": "invoice-number",
+      "en-term": "Invoice number",
+      "pt-br-term": "Número da fatura",
+      "notes": "Pack-consistent: 8 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "invoice-window",
+      "en-term": "Invoice window",
+      "pt-br-term": "Janela de fatura",
+      "notes": "Pack-consistent: 6 uses across 1 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "invoices",
+      "en-term": "Invoices",
+      "pt-br-term": "Faturas",
+      "notes": "Pack-consistent: 10 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "invoicing",
+      "en-term": "invoicing",
+      "pt-br-term": "faturamento",
+      "notes": "Use faturamento for the invoice-generation area/process."
+    },
+    {
+      "id": "job",
+      "en-term": "job",
+      "pt-br-term": "trabalho",
+      "notes": "Use trabalho for the background-job entity (job name, job history, job details). Use execução only when the context is a specific run/execution of a job; keep execução reserved for the run/execution sense so it does not collide with the job entity. Never use correr/correndo/corrida for the running state — use \"em execução\"."
+    },
+    {
+      "id": "just-now",
+      "en-term": "just now",
+      "pt-br-term": "Agora mesmo",
+      "notes": "Pack-consistent: 9 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "knowledge-base",
+      "en-term": "knowledge base",
+      "pt-br-term": "base de conhecimento",
+      "notes": "Use for KB articles, categories, and review flows."
+    },
+    {
+      "id": "last-login",
+      "en-term": "Last Login",
+      "pt-br-term": "Último login",
+      "notes": "Pack-consistent: 7 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "last-name",
+      "en-term": "Last Name",
+      "pt-br-term": "Sobrenome",
+      "notes": "Pack-consistent: 7 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "last-updated",
+      "en-term": "Last Updated",
+      "pt-br-term": "Última atualização",
+      "notes": "Pack-consistent: 10 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "leave-page",
+      "en-term": "Leave Page",
+      "pt-br-term": "Sair da página",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "license",
+      "en-term": "license",
+      "pt-br-term": "licença",
+      "notes": "Use for software licensing and activation."
+    },
+    {
+      "id": "line-items",
+      "en-term": "Line Items",
+      "pt-br-term": "Itens de linha",
+      "notes": "Pack-consistent: 9 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "list",
+      "en-term": "List",
+      "pt-br-term": "Lista",
+      "notes": "Pack-consistent: 7 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "load-more",
+      "en-term": "Load more",
+      "pt-br-term": "Carregar mais",
+      "notes": "Pack-consistent: 10 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "location",
+      "en-term": "location",
+      "pt-br-term": "local",
+      "notes": "Use local for client or service locations; use localização for map/GPS contexts."
+    },
+    {
+      "id": "maintenance",
+      "en-term": "Maintenance",
+      "pt-br-term": "Manutenção",
+      "notes": "Pack-consistent: 12 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "manage",
+      "en-term": "Manage",
+      "pt-br-term": "Gerenciar",
+      "notes": "Pack-consistent: 8 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "manual-renewal",
+      "en-term": "Manual renewal",
+      "pt-br-term": "Renovação manual",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "mapped",
+      "en-term": "mapped",
+      "pt-br-term": "Mapeado",
+      "notes": "Pack-consistent: 8 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "margin",
+      "en-term": "Margin",
+      "pt-br-term": "Margem",
+      "notes": "Pack-consistent: 8 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "medium",
+      "en-term": "Medium",
+      "pt-br-term": "Médio",
+      "notes": "Pack-consistent: 9 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "milestone",
+      "en-term": "milestone",
+      "pt-br-term": "meta",
+      "notes": "Use meta for project milestones (reviewer preference). Do not use marco."
+    },
+    {
+      "id": "minutes",
+      "en-term": "minutes",
+      "pt-br-term": "minutos",
+      "notes": "Pack-consistent: 8 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "mobile-phone-type",
+      "en-term": "mobile (phone type)",
+      "pt-br-term": "celular",
+      "notes": "Use Celular for the mobile phone-type label — native-reviewer confirmed 2026-07; Móvel is not used for phones in Brazil. Keep dispositivo móvel / dispositivos móveis for the mobile *device* category and aplicativo móvel for mobile apps."
+    },
+    {
+      "id": "month",
+      "en-term": "Month",
+      "pt-br-term": "Mês",
+      "notes": "Pack-consistent: 7 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "monthly",
+      "en-term": "Monthly",
+      "pt-br-term": "Mensal",
+      "notes": "Pack-consistent: 17 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "name",
+      "en-term": "Name",
+      "pt-br-term": "Nome",
+      "notes": "Pack-consistent: 71 uses across 21 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "needs-attention",
+      "en-term": "Needs attention",
+      "pt-br-term": "Precisa de atenção",
+      "notes": "Pack-consistent: 8 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "network",
+      "en-term": "Network",
+      "pt-br-term": "Rede",
+      "notes": "Pack-consistent: 6 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "never",
+      "en-term": "Never",
+      "pt-br-term": "Nunca",
+      "notes": "Pack-consistent: 22 uses across 12 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "new-password",
+      "en-term": "New Password",
+      "pt-br-term": "Nova senha",
+      "notes": "Pack-consistent: 10 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "new-quote",
+      "en-term": "New quote",
+      "pt-br-term": "Nova cotação",
+      "notes": "Pack-consistent: 6 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "next",
+      "en-term": "Next",
+      "pt-br-term": "Próximo",
+      "notes": "Pack-consistent: 18 uses across 12 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "no",
+      "en-term": "No",
+      "pt-br-term": "Não",
+      "notes": "Pack-consistent: 19 uses across 15 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "no-description",
+      "en-term": "No description",
+      "pt-br-term": "Sem descrição",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "not-assigned",
+      "en-term": "Not assigned",
+      "pt-br-term": "Não atribuído",
+      "notes": "Pack-consistent: 10 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "not-configured",
+      "en-term": "Not configured",
+      "pt-br-term": "Não configurado",
+      "notes": "Pack-consistent: 12 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "not-connected",
+      "en-term": "Not connected",
+      "pt-br-term": "Não conectado",
+      "notes": "Pack-consistent: 6 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "not-set",
+      "en-term": "Not set",
+      "pt-br-term": "Não definido",
+      "notes": "Pack-consistent: 20 uses across 13 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "notification",
+      "en-term": "notification",
+      "pt-br-term": "notificação",
+      "notes": "Use for in-app and email notifications."
+    },
+    {
+      "id": "notifications",
+      "en-term": "Notifications",
+      "pt-br-term": "Notificações",
+      "notes": "Pack-consistent: 9 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "number",
+      "en-term": "Number",
+      "pt-br-term": "Número",
+      "notes": "Pack-consistent: 7 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "onboarding",
+      "en-term": "onboarding",
+      "pt-br-term": "onboarding",
+      "notes": "Keep onboarding as a loanword — it is standard and consolidated in the Brazilian MSP/IT market, and avoids the ambiguity of integração (which also means integration). Do not use integração/integração inicial for onboarding, nor literal embarque."
+    },
+    {
+      "id": "ongoing",
+      "en-term": "Ongoing",
+      "pt-br-term": "Em andamento",
+      "notes": "Pack-consistent: 11 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "open-menu",
+      "en-term": "Open menu",
+      "pt-br-term": "Abrir menu",
+      "notes": "Pack-consistent: 26 uses across 16 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "opportunities",
+      "en-term": "opportunities",
+      "pt-br-term": "Oportunidades",
+      "notes": "Pack-consistent: 6 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "opportunity",
+      "en-term": "opportunity",
+      "pt-br-term": "oportunidade",
+      "notes": "CRM sales opportunity (feminine). Stage/status badges follow the deal-state convention Ganho / Perdido (masculine, as in negócio ganho); the mark actions agree with the opportunity: Marcar como ganha / Marcar como perdida. Convention pending native confirmation 2026-08-28."
+    },
+    {
+      "id": "optional",
+      "en-term": "Optional",
+      "pt-br-term": "Opcional",
+      "notes": "Pack-consistent: 8 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "order",
+      "en-term": "Order",
+      "pt-br-term": "Ordem",
+      "notes": "Pack-consistent: 15 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "other",
+      "en-term": "Other",
+      "pt-br-term": "Outro",
+      "notes": "Pack-consistent: 11 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "overview",
+      "en-term": "Overview",
+      "pt-br-term": "Visão geral",
+      "notes": "Pack-consistent: 9 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "password",
+      "en-term": "Password",
+      "pt-br-term": "Senha",
+      "notes": "Pack-consistent: 17 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "passwords",
+      "en-term": "Passwords",
+      "pt-br-term": "Senhas",
+      "notes": "Pack-consistent: 8 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "pause",
+      "en-term": "Pause",
+      "pt-br-term": "Pausa",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "paused",
+      "en-term": "Paused",
+      "pt-br-term": "Pausado",
+      "notes": "Pack-consistent: 13 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "payload",
+      "en-term": "Payload",
+      "pt-br-term": "Carga útil",
+      "notes": "Pack-consistent: 12 uses across 1 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "payment",
+      "en-term": "payment",
+      "pt-br-term": "pagamento",
+      "notes": "Use for invoice payments, online payments, and payment status."
+    },
+    {
+      "id": "payment-terms",
+      "en-term": "Payment Terms",
+      "pt-br-term": "Condições de pagamento",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "pending",
+      "en-term": "Pending",
+      "pt-br-term": "Pendente",
+      "notes": "Pack-consistent: 29 uses across 19 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "period",
+      "en-term": "Period",
+      "pt-br-term": "Período",
+      "notes": "Pack-consistent: 8 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "phase",
+      "en-term": "Phase",
+      "pt-br-term": "Fase",
+      "notes": "Pack-consistent: 12 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "phone",
+      "en-term": "Phone",
+      "pt-br-term": "Telefone",
+      "notes": "Pack-consistent: 19 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "phone-number",
+      "en-term": "Phone Number",
+      "pt-br-term": "Número de telefone",
+      "notes": "Pack-consistent: 9 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "pipeline",
+      "en-term": "pipeline",
+      "pt-br-term": "funil de vendas",
+      "notes": "Use funil de vendas para o pipeline comercial do CRM (confirmado pelo revisor nativo, alga0002243). Nunca gasoduto nem oleoduto: são dutos físicos."
+    },
+    {
+      "id": "po-number",
+      "en-term": "PO Number",
+      "pt-br-term": "Número do pedido de compra",
+      "notes": "Pack-consistent: 11 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "po-reference-customer-facing",
+      "en-term": "PO # / Your PO #",
+      "pt-br-term": "Referência nº / Sua referência nº",
+      "notes": "Customer-facing only: the PO-number field on invoices, quotes, packing slips (documents namespace) and the client-portal quote page (Número de referência). Native-reviewer request 2026-08-28 — neutral wording that fits services, avoids reading as a product purchase. MSP-side fields keep Número do pedido de compra."
+    },
+    {
+      "id": "postal-code",
+      "en-term": "Postal Code",
+      "pt-br-term": "Código postal",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "previous",
+      "en-term": "Previous",
+      "pt-br-term": "Anterior",
+      "notes": "Pack-consistent: 13 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "primary-email",
+      "en-term": "primary email",
+      "pt-br-term": "email principal",
+      "notes": "Use Email principal for the primary email field on contacts/clients — native-reviewer suggestion 2026-07."
+    },
+    {
+      "id": "print",
+      "en-term": "Print",
+      "pt-br-term": "Imprimir",
+      "notes": "Pack-consistent: 12 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "print-options",
+      "en-term": "Print options",
+      "pt-br-term": "Opções de impressão",
+      "notes": "Pack-consistent: 18 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "printer",
+      "en-term": "Printer",
+      "pt-br-term": "Impressora",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "priorities",
+      "en-term": "Priorities",
+      "pt-br-term": "Prioridades",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "priority",
+      "en-term": "priority",
+      "pt-br-term": "prioridade",
+      "notes": "Use for ticket, task, and workflow priority labels."
+    },
+    {
+      "id": "product",
+      "en-term": "Product",
+      "pt-br-term": "Produto",
+      "notes": "Pack-consistent: 31 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "products",
+      "en-term": "Products",
+      "pt-br-term": "Produtos",
+      "notes": "Pack-consistent: 12 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "profile",
+      "en-term": "Profile",
+      "pt-br-term": "Perfil",
+      "notes": "Pack-consistent: 8 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "progress",
+      "en-term": "progress",
+      "pt-br-term": "progresso",
+      "notes": "Use progresso for progress labels and indicators (e.g. onboarding progress). The all-caps micro-label PROGRESS renders as PROGRESSO to match the sibling locales (es PROGRESO, it AVANZAMENTO)."
+    },
+    {
+      "id": "project",
+      "en-term": "project",
+      "pt-br-term": "projeto",
+      "notes": "Use for project management, phases, tasks, budgets, and project templates."
+    },
+    {
+      "id": "project-phases",
+      "en-term": "Project Phases",
+      "pt-br-term": "Fases do projeto",
+      "notes": "Pack-consistent: 7 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "project-task",
+      "en-term": "Project Task",
+      "pt-br-term": "Tarefa do projeto",
+      "notes": "Pack-consistent: 9 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "project-tasks",
+      "en-term": "project tasks",
+      "pt-br-term": "Tarefas do projeto",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "projects",
+      "en-term": "Projects",
+      "pt-br-term": "Projetos",
+      "notes": "Pack-consistent: 17 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "provider",
+      "en-term": "Provider",
+      "pt-br-term": "Provedor",
+      "notes": "Pack-consistent: 7 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "publish",
+      "en-term": "Publish",
+      "pt-br-term": "Publicar",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "published",
+      "en-term": "Published",
+      "pt-br-term": "Publicado",
+      "notes": "Pack-consistent: 14 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "purchase-order",
+      "en-term": "purchase order",
+      "pt-br-term": "pedido de compra",
+      "notes": "Procurement concept on both sides: the client's PO enforced on contracts/invoices and vendor POs in inventory. Never ordem de compra — it reads as a product purchase order (native reviewer 2026-08-28) and drifted into feminine agreement. The bare abbreviation PO may stay as a loanword in compact badges/prefixes (PO restante, PO autorizado, PO {{number}}). A PO number is always número do pedido de compra; bare pedido is the sales order (Pedido nº)."
+    },
+    {
+      "id": "purchase-orders",
+      "en-term": "Purchase Orders",
+      "pt-br-term": "Pedidos de compra",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "quantity",
+      "en-term": "Quantity",
+      "pt-br-term": "Quantidade",
+      "notes": "Pack-consistent: 29 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "quarterly",
+      "en-term": "Quarterly",
+      "pt-br-term": "Trimestral",
+      "notes": "Pack-consistent: 9 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "quote",
+      "en-term": "quote",
+      "pt-br-term": "cotação",
+      "notes": "Use cotação (feminine: a cotação, cotações) for sales/service quotes — native-reviewer confirmed 2026-07. Never citação/citar (textual citation) and never orçamento, which is reserved for budgets (see budget)."
+    },
+    {
+      "id": "quotes",
+      "en-term": "Quotes",
+      "pt-br-term": "Cotações",
+      "notes": "Pack-consistent: 8 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "rate",
+      "en-term": "rate",
+      "pt-br-term": "tarifa",
+      "notes": "Use tarifa for a priced rate column on customer documents and keep preço unitário for unit price, so a document that shows both columns keeps them distinguishable."
+    },
+    {
+      "id": "received",
+      "en-term": "Received",
+      "pt-br-term": "Recebido",
+      "notes": "Pack-consistent: 9 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "recurring",
+      "en-term": "Recurring",
+      "pt-br-term": "Recorrente",
+      "notes": "Pack-consistent: 9 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "reference",
+      "en-term": "Reference",
+      "pt-br-term": "Referência",
+      "notes": "Pack-consistent: 8 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "refresh",
+      "en-term": "Refresh",
+      "pt-br-term": "Atualizar",
+      "notes": "Pack-consistent: 47 uses across 19 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "remaining",
+      "en-term": "Remaining",
+      "pt-br-term": "Restante",
+      "notes": "Pack-consistent: 10 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "remove",
+      "en-term": "Remove",
+      "pt-br-term": "Remover",
+      "notes": "Pack-consistent: 53 uses across 22 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "report",
+      "en-term": "report",
+      "pt-br-term": "relatório",
+      "notes": "Use for analytics, operational, billing, and audit reports."
+    },
+    {
+      "id": "reports",
+      "en-term": "Reports",
+      "pt-br-term": "Relatórios",
+      "notes": "Pack-consistent: 7 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "request",
+      "en-term": "request",
+      "pt-br-term": "solicitação",
+      "notes": "Use for service requests, approval requests, and appointment requests."
+    },
+    {
+      "id": "request-changes",
+      "en-term": "Request changes",
+      "pt-br-term": "Solicitar alterações",
+      "notes": "Pack-consistent: 7 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "required",
+      "en-term": "Required",
+      "pt-br-term": "Obrigatório",
+      "notes": "Pack-consistent: 19 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "reset",
+      "en-term": "Reset",
+      "pt-br-term": "Reiniciar",
+      "notes": "Pack-consistent: 57 uses across 22 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "response-state",
+      "en-term": "Response State",
+      "pt-br-term": "Estado de resposta",
+      "notes": "Pack-consistent: 6 uses across 1 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "responses",
+      "en-term": "Responses",
+      "pt-br-term": "Respostas",
+      "notes": "Pack-consistent: 7 uses across 1 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "retry",
+      "en-term": "Retry",
+      "pt-br-term": "Tentar novamente",
+      "notes": "Pack-consistent: 22 uses across 13 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "revoke",
+      "en-term": "Revoke",
+      "pt-br-term": "Revogar",
+      "notes": "Pack-consistent: 6 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "role",
+      "en-term": "Role",
+      "pt-br-term": "Papel",
+      "notes": "Pack-consistent: 11 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "roles",
+      "en-term": "Roles",
+      "pt-br-term": "Funções",
+      "notes": "Pack-consistent: 7 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "sales-orders",
+      "en-term": "Sales Orders",
+      "pt-br-term": "Pedidos de venda",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "save",
+      "en-term": "Save",
+      "pt-br-term": "Salvar",
+      "notes": "Pack-consistent: 55 uses across 28 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "save-changes",
+      "en-term": "Save Changes",
+      "pt-br-term": "Salvar alterações",
+      "notes": "Pack-consistent: 39 uses across 19 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "schedule",
+      "en-term": "schedule",
+      "pt-br-term": "agenda",
+      "notes": "Use agenda as a noun; use agendar/agendamento for the action or booking."
+    },
+    {
+      "id": "screen",
+      "en-term": "screen",
+      "pt-br-term": "tela",
+      "notes": "Use tela for UI screens. Do not use ecrã. Context nuance: use layout when referring to UI structure/design, and interface for a full system screen/interface."
+    },
+    {
+      "id": "search",
+      "en-term": "Search",
+      "pt-br-term": "Procurar",
+      "notes": "Pack-consistent: 24 uses across 16 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "security",
+      "en-term": "Security",
+      "pt-br-term": "Segurança",
+      "notes": "Pack-consistent: 9 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "select",
+      "en-term": "Select",
+      "pt-br-term": "Selecione",
+      "notes": "Pack-consistent: 12 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "select-all",
+      "en-term": "Select All",
+      "pt-br-term": "Selecionar tudo",
+      "notes": "Pack-consistent: 8 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "select-board",
+      "en-term": "Select board",
+      "pt-br-term": "Selecione o quadro",
+      "notes": "Pack-consistent: 12 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "select-client",
+      "en-term": "Select client",
+      "pt-br-term": "Selecione o cliente",
+      "notes": "Pack-consistent: 13 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "select-currency",
+      "en-term": "Select currency",
+      "pt-br-term": "Selecione a moeda",
+      "notes": "Pack-consistent: 8 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "select-date",
+      "en-term": "Select date",
+      "pt-br-term": "Selecione a data",
+      "notes": "Pack-consistent: 7 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "select-status",
+      "en-term": "Select status",
+      "pt-br-term": "Selecione o status",
+      "notes": "Pack-consistent: 16 uses across 11 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "select-user",
+      "en-term": "Select User",
+      "pt-br-term": "Selecione o usuário",
+      "notes": "Pack-consistent: 8 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "semi-annually",
+      "en-term": "Semi-Annually",
+      "pt-br-term": "Semestralmente",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "serial-number",
+      "en-term": "Serial number",
+      "pt-br-term": "Número de série",
+      "notes": "Pack-consistent: 11 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "server",
+      "en-term": "Server",
+      "pt-br-term": "Servidor",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "service",
+      "en-term": "service",
+      "pt-br-term": "serviço",
+      "notes": "Use for service catalog items, managed services, and support services."
+    },
+    {
+      "id": "service-catalog",
+      "en-term": "service catalog",
+      "pt-br-term": "catálogo de serviços",
+      "notes": "Use for the billing/service catalog product area."
+    },
+    {
+      "id": "service-name",
+      "en-term": "Service Name",
+      "pt-br-term": "Nome do serviço",
+      "notes": "Pack-consistent: 11 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "service-period",
+      "en-term": "Service Period",
+      "pt-br-term": "Período de serviço",
+      "notes": "Pack-consistent: 8 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "service-requests",
+      "en-term": "Service Requests",
+      "pt-br-term": "Solicitações de serviço",
+      "notes": "Pack-consistent: 10 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "services",
+      "en-term": "Services",
+      "pt-br-term": "Serviços",
+      "notes": "Pack-consistent: 11 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "settings",
+      "en-term": "settings",
+      "pt-br-term": "configurações",
+      "notes": "Use plural configurações for settings pages and controls."
+    },
+    {
+      "id": "simulate",
+      "en-term": "Simulate",
+      "pt-br-term": "Simular",
+      "notes": "Pack-consistent: 6 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "single-sign-on",
+      "en-term": "single sign-on",
+      "pt-br-term": "login único",
+      "notes": "Use Login único for the Single Sign-On feature name, tab labels, and titles; lowercase login único inside running text. Do not use Logon único — logon is a dated register for Brazilian product UI. Keep the abbreviation SSO untranslated (see identicalAllowlist)."
+    },
+    {
+      "id": "skip",
+      "en-term": "Skip",
+      "pt-br-term": "Pular",
+      "notes": "Pack-consistent: 9 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "sla",
+      "en-term": "SLA",
+      "pt-br-term": "SLA",
+      "notes": "Keep SLA as the standard abbreviation for service-level agreement."
+    },
+    {
+      "id": "stage-verbal",
+      "en-term": "Verbal (opportunity stage)",
+      "pt-br-term": "Acordo verbal",
+      "notes": "Stage for a verbal commitment. Never the bare adjective (verbal / verbais) — reviewer flagged it 2026-08-28 as grammatically incomplete."
+    },
+    {
+      "id": "stage-won-lost",
+      "en-term": "Won / Lost",
+      "pt-br-term": "Ganho / Perdido",
+      "notes": "Opportunity stage and status badges. Participle, never the verb form (Ganhou, Venceu). Mark won / Mark lost are actions: Marcar como ganha / Marcar como perdida — never a person named Marcos."
+    },
+    {
+      "id": "start",
+      "en-term": "Start",
+      "pt-br-term": "Começar",
+      "notes": "Pack-consistent: 10 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "start-date",
+      "en-term": "Start Date",
+      "pt-br-term": "Data de início",
+      "notes": "Pack-consistent: 35 uses across 14 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "start-time",
+      "en-term": "Start Time",
+      "pt-br-term": "Hora de início",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "started",
+      "en-term": "Started",
+      "pt-br-term": "Iniciado",
+      "notes": "Pack-consistent: 11 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "state",
+      "en-term": "State",
+      "pt-br-term": "Estado",
+      "notes": "Pack-consistent: 6 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "status",
+      "en-term": "status",
+      "pt-br-term": "status",
+      "notes": "Status is acceptable in Brazilian Portuguese and may remain identical."
+    },
+    {
+      "id": "statuses",
+      "en-term": "Statuses",
+      "pt-br-term": "Status",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "stock",
+      "en-term": "Stock",
+      "pt-br-term": "Estoque",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "subject",
+      "en-term": "Subject",
+      "pt-br-term": "Assunto",
+      "notes": "Pack-consistent: 10 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "submit",
+      "en-term": "Submit",
+      "pt-br-term": "Enviar",
+      "notes": "Pack-consistent: 6 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "submitted",
+      "en-term": "Submitted",
+      "pt-br-term": "Enviado",
+      "notes": "Pack-consistent: 7 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "success",
+      "en-term": "Success",
+      "pt-br-term": "Sucesso",
+      "notes": "Pack-consistent: 8 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "suggested",
+      "en-term": "suggested",
+      "pt-br-term": "Sugerido",
+      "notes": "Pack-consistent: 7 uses across 1 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "survey",
+      "en-term": "survey",
+      "pt-br-term": "pesquisa",
+      "notes": "Use pesquisa for satisfaction surveys and response analytics."
+    },
+    {
+      "id": "system",
+      "en-term": "System",
+      "pt-br-term": "Sistema",
+      "notes": "Pack-consistent: 21 uses across 10 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "tag",
+      "en-term": "tag",
+      "pt-br-term": "tag",
+      "notes": "Tag is an accepted loanword in Brazilian software UI."
+    },
+    {
+      "id": "tags",
+      "en-term": "Tags",
+      "pt-br-term": "Etiquetas",
+      "notes": "Pack-consistent: 22 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "task",
+      "en-term": "task",
+      "pt-br-term": "tarefa",
+      "notes": "Use for project tasks, workflow tasks, and task inbox items."
+    },
+    {
+      "id": "task-type",
+      "en-term": "Task Type",
+      "pt-br-term": "Tipo de tarefa",
+      "notes": "Pack-consistent: 7 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "tasks",
+      "en-term": "Tasks",
+      "pt-br-term": "Tarefas",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "tax",
+      "en-term": "tax",
+      "pt-br-term": "imposto",
+      "notes": "Use the neutral imposto for tax labels on customer documents; name a specific Brazilian tax (ICMS, ISS) only where that tax is actually meant."
+    },
+    {
+      "id": "team",
+      "en-term": "Team",
+      "pt-br-term": "Equipe",
+      "notes": "Pack-consistent: 8 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "technician",
+      "en-term": "technician",
+      "pt-br-term": "técnico",
+      "notes": "Use for field/service technicians and technician assignment."
+    },
+    {
+      "id": "template",
+      "en-term": "Template",
+      "pt-br-term": "Modelo",
+      "notes": "Pack-consistent: 9 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "template-name",
+      "en-term": "Template name",
+      "pt-br-term": "Nome do modelo",
+      "notes": "Pack-consistent: 8 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "templates",
+      "en-term": "Templates",
+      "pt-br-term": "Modelos",
+      "notes": "Pack-consistent: 6 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "tenant",
+      "en-term": "tenant",
+      "pt-br-term": "tenant",
+      "notes": "Keep tenant in developer/admin contexts; use organização only in user-facing prose when the customer organization is meant."
+    },
+    {
+      "id": "tenant-default",
+      "en-term": "tenant default",
+      "pt-br-term": "Padrão do locatário",
+      "notes": "Pack-consistent: 8 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "terminated",
+      "en-term": "Terminated",
+      "pt-br-term": "Terminado",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "ticket",
+      "en-term": "ticket",
+      "pt-br-term": "ticket",
+      "notes": "Keep ticket as a loanword — it is standard in the Brazilian MSP industry. ticket is masculine (o ticket, os tickets). Never use bilhete or ingresso, which imply an admission/travel ticket in Brazilian Portuguese."
+    },
+    {
+      "id": "ticket-defaults",
+      "en-term": "Ticket Defaults",
+      "pt-br-term": "Padrões de ticket",
+      "notes": "Pack-consistent: 6 uses across 1 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "time",
+      "en-term": "Time",
+      "pt-br-term": "Tempo",
+      "notes": "Pack-consistent: 10 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "time-entry",
+      "en-term": "time entry",
+      "pt-br-term": "lançamento de horas",
+      "notes": "Use lançamento de horas for billable time records; apontamento de horas is acceptable where space allows."
+    },
+    {
+      "id": "timeline",
+      "en-term": "Timeline",
+      "pt-br-term": "Linha do tempo",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "timesheet",
+      "en-term": "timesheet",
+      "pt-br-term": "planilha de horas",
+      "notes": "Use planilha de horas for grouped/submitted time entries and approval flows. Do not use folha de ponto, planilha de ponto, or quadro de horários — ponto implies attendance/clock-in, but this tracks billable hours."
+    },
+    {
+      "id": "title",
+      "en-term": "Title",
+      "pt-br-term": "Título",
+      "notes": "Pack-consistent: 25 uses across 13 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "to",
+      "en-term": "To",
+      "pt-br-term": "Para",
+      "notes": "Pack-consistent: 11 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "today",
+      "en-term": "Today",
+      "pt-br-term": "Hoje",
+      "notes": "Pack-consistent: 9 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "trigger-type",
+      "en-term": "Trigger type",
+      "pt-br-term": "Tipo de gatilho",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "type",
+      "en-term": "Type",
+      "pt-br-term": "Tipo",
+      "notes": "Pack-consistent: 38 uses across 18 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unassigned",
+      "en-term": "Unassigned",
+      "pt-br-term": "Não atribuído",
+      "notes": "Pack-consistent: 20 uses across 12 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unit",
+      "en-term": "unit",
+      "pt-br-term": "Unidade",
+      "notes": "Pack-consistent: 22 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unit-cost",
+      "en-term": "Unit cost",
+      "pt-br-term": "Custo unitário",
+      "notes": "Pack-consistent: 7 uses across 1 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unit-price",
+      "en-term": "unit price",
+      "pt-br-term": "preço unitário",
+      "notes": "Use preço unitário for the per-unit price column and tarifa for rate; never swap the two."
+    },
+    {
+      "id": "units",
+      "en-term": "units",
+      "pt-br-term": "unidades",
+      "notes": "Pack-consistent: 9 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unknown",
+      "en-term": "Unknown",
+      "pt-br-term": "Desconhecido",
+      "notes": "Pack-consistent: 50 uses across 23 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unknown-client",
+      "en-term": "Unknown Client",
+      "pt-br-term": "Cliente desconhecido",
+      "notes": "Pack-consistent: 14 uses across 8 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unknown-error",
+      "en-term": "Unknown error",
+      "pt-br-term": "Erro desconhecido",
+      "notes": "Pack-consistent: 15 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unknown-service",
+      "en-term": "Unknown Service",
+      "pt-br-term": "Serviço desconhecido",
+      "notes": "Pack-consistent: 11 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unlimited",
+      "en-term": "Unlimited",
+      "pt-br-term": "Ilimitado",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unmapped",
+      "en-term": "unmapped",
+      "pt-br-term": "Não mapeado",
+      "notes": "Pack-consistent: 7 uses across 1 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unmatched",
+      "en-term": "Unmatched",
+      "pt-br-term": "Incomparável",
+      "notes": "Pack-consistent: 7 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "unsaved-changes",
+      "en-term": "Unsaved changes",
+      "pt-br-term": "Alterações não salvas",
+      "notes": "Pack-consistent: 15 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "untitled",
+      "en-term": "Untitled",
+      "pt-br-term": "Sem título",
+      "notes": "Pack-consistent: 6 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "update",
+      "en-term": "Update",
+      "pt-br-term": "Atualizar",
+      "notes": "Pack-consistent: 12 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "updated",
+      "en-term": "Updated",
+      "pt-br-term": "Atualizado",
+      "notes": "Pack-consistent: 22 uses across 13 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "upload-file",
+      "en-term": "Upload file",
+      "pt-br-term": "Carregar arquivo",
+      "notes": "Pack-consistent: 6 uses across 5 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "usage",
+      "en-term": "Usage",
+      "pt-br-term": "Uso",
+      "notes": "Pack-consistent: 11 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "usage-based",
+      "en-term": "Usage Based",
+      "pt-br-term": "Baseado no uso",
+      "notes": "Pack-consistent: 9 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "usage-based-services",
+      "en-term": "Usage-Based Services",
+      "pt-br-term": "Serviços baseados em uso",
+      "notes": "Pack-consistent: 10 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "user",
+      "en-term": "user",
+      "pt-br-term": "usuário",
+      "notes": "Use usuário. Do not use utilizador."
+    },
+    {
+      "id": "valid-until",
+      "en-term": "Valid Until",
+      "pt-br-term": "Válido até",
+      "notes": "Pack-consistent: 6 uses across 3 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "value",
+      "en-term": "Value",
+      "pt-br-term": "Valor",
+      "notes": "Pack-consistent: 11 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "vendor",
+      "en-term": "vendor",
+      "pt-br-term": "Fornecedor",
+      "notes": "Pack-consistent: 14 uses across 2 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "version",
+      "en-term": "Version",
+      "pt-br-term": "Versão",
+      "notes": "Pack-consistent: 15 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "view",
+      "en-term": "View",
+      "pt-br-term": "Visualizar",
+      "notes": "Pack-consistent: 26 uses across 21 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "view-all",
+      "en-term": "View all",
+      "pt-br-term": "Ver tudo",
+      "notes": "Pack-consistent: 11 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "view-details",
+      "en-term": "View Details",
+      "pt-br-term": "Ver detalhes",
+      "notes": "Pack-consistent: 10 uses across 9 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "warning",
+      "en-term": "Warning",
+      "pt-br-term": "Aviso",
+      "notes": "Pack-consistent: 7 uses across 6 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "webhook",
+      "en-term": "webhook",
+      "pt-br-term": "webhook",
+      "notes": "Keep webhook as a technical loanword."
+    },
+    {
+      "id": "weekly",
+      "en-term": "Weekly",
+      "pt-br-term": "Semanalmente",
+      "notes": "Pack-consistent: 11 uses across 7 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "work-phone-type",
+      "en-term": "work (phone type)",
+      "pt-br-term": "trabalho",
+      "notes": "Use the noun Trabalho for the work phone-type label — native-reviewer confirmed 2026-07. Trabalhar is the verb \"to work\" and is wrong as a label; it stays valid inside sentences."
+    },
+    {
+      "id": "workflow",
+      "en-term": "workflow",
+      "pt-br-term": "fluxo de trabalho",
+      "notes": "Use fluxo de trabalho in regular UI copy. Workflow can remain in integration names or technical labels when branded."
+    },
+    {
+      "id": "workstation",
+      "en-term": "Workstation",
+      "pt-br-term": "Estação de trabalho",
+      "notes": "Pack-consistent: 6 uses across 4 namespaces (mined 2026-08-28, pending native review)."
+    },
+    {
+      "id": "yes",
+      "en-term": "Yes",
+      "pt-br-term": "Sim",
+      "notes": "Pack-consistent: 19 uses across 15 namespaces (mined 2026-08-28, pending native review)."
+    }
+  ],
+  "forbiddenTerms": [
+    {
+      "term": "autocarro",
+      "preferred": "ônibus",
+      "reason": "European Portuguese transport term; Brazilian Portuguese uses ônibus."
+    },
+    {
+      "term": "bilhete",
+      "preferred": "ticket",
+      "reason": "Wrong register for support tickets; bilhete means a pass/note. Use the loanword ticket."
+    },
+    {
+      "term": "casa de banho",
+      "preferred": "banheiro",
+      "reason": "European Portuguese phrase; Brazilian Portuguese uses banheiro."
+    },
+    {
+      "term": "cessionária",
+      "preferred": "responsável",
+      "reason": "Feminine of the mis-registered assignee term; use responsável."
+    },
+    {
+      "term": "cessionárias",
+      "preferred": "responsáveis",
+      "reason": "Feminine plural of the mis-registered assignee term; use responsáveis."
+    },
+    {
+      "term": "cessionário",
+      "preferred": "responsável",
+      "reason": "Wrong register for a ticket/work assignee; cessionário is a legal/financial transferee. Brazilian PSA UI uses responsável (or atribuído a)."
+    },
+    {
+      "term": "cessionários",
+      "preferred": "responsáveis",
+      "reason": "Plural of the mis-registered assignee term; use responsáveis."
+    },
+    {
+      "term": "citar",
+      "preferred": "cotação",
+      "reason": "Mis-registered quote noun; citar is the verb to cite. Sales quotes are cotações (native-reviewer confirmed)."
+    },
+    {
+      "term": "citação",
+      "preferred": "cotação",
+      "reason": "Wrong register for a sales quote; citação means a textual citation or legal summons. Use cotação (native-reviewer confirmed)."
+    },
+    {
+      "term": "citações",
+      "preferred": "cotações",
+      "reason": "Plural of the mis-registered quote term; use cotações."
+    },
+    {
+      "term": "comboio",
+      "preferred": "trem",
+      "reason": "European Portuguese transport term; Brazilian Portuguese uses trem."
+    },
+    {
+      "term": "conselho",
+      "preferred": "quadro",
+      "reason": "False friend for a kanban/ticket board; conselho is a board of directors or advice. Reported by the native reviewer in alga0002243.",
+      "enWhen": "\\bboards?\\b"
+    },
+    {
+      "term": "contacto",
+      "preferred": "contato",
+      "reason": "European spelling; Brazilian Portuguese uses contato."
+    },
+    {
+      "term": "corrida",
+      "preferred": "execução",
+      "reason": "Wrong register for a workflow run; corrida means a race/jog. Use execução."
+    },
+    {
+      "term": "corridas",
+      "preferred": "execuções",
+      "reason": "Plural of the mis-registered run term; use execuções."
+    },
+    {
+      "term": "ecrã",
+      "preferred": "tela",
+      "reason": "European Portuguese UI term; Brazilian Portuguese uses tela."
+    },
+    {
+      "term": "ficheiro",
+      "preferred": "arquivo",
+      "reason": "European Portuguese file term; Brazilian Portuguese uses arquivo."
+    },
+    {
+      "term": "gasoduto",
+      "preferred": "funil de vendas",
+      "reason": "A gas pipeline; the CRM sales pipeline is a funil de vendas. Reported by the native reviewer in alga0002243.",
+      "enWhen": "\\bpipelines?\\b"
+    },
+    {
+      "term": "indústria",
+      "preferred": "ramo de atividade",
+      "reason": "Wrong register for the client/CRM industry field; indústria reads as the manufacturing sector. Use ramo de atividade (native-reviewer confirmed)."
+    },
+    {
+      "term": "indústrias",
+      "preferred": "ramos de atividade",
+      "reason": "Plural of the mis-registered industry term; use ramos de atividade."
+    },
+    {
+      "term": "ingresso",
+      "preferred": "ticket",
+      "reason": "Wrong register for support tickets; ingresso means admission ticket. Use the loanword ticket."
+    },
+    {
+      "term": "logon",
+      "preferred": "login",
+      "reason": "Dated register for sign-in in Brazilian product UI; use login (and Login único for the Single Sign-On feature)."
+    },
+    {
+      "term": "oleoduto",
+      "preferred": "funil de vendas",
+      "reason": "An oil pipeline; the CRM sales pipeline is a funil de vendas.",
+      "enWhen": "\\bpipelines?\\b"
+    },
+    {
+      "term": "placa",
+      "preferred": "quadro",
+      "reason": "Wrong register for a board (kanban/ticket board); placa means a plate/sign/circuit board. Use quadro. Allowlist legit hardware compounds (e.g. placa-mãe) only if asset hardware copy needs them."
+    },
+    {
+      "term": "placas",
+      "preferred": "quadros",
+      "reason": "Plural of the mis-registered board term; use quadros."
+    },
+    {
+      "term": "rato",
+      "preferred": "mouse",
+      "reason": "European Portuguese device term; Brazilian Portuguese uses mouse."
+    },
+    {
+      "term": "registo",
+      "preferred": "registro",
+      "reason": "European spelling; Brazilian Portuguese uses registro."
+    },
+    {
+      "term": "telemóvel",
+      "preferred": "celular",
+      "reason": "European Portuguese phone term; Brazilian Portuguese uses celular."
+    },
+    {
+      "term": "utilizador",
+      "preferred": "usuário",
+      "reason": "European Portuguese user term; Brazilian Portuguese uses usuário."
+    },
+    {
+      "term": "ordem de compra",
+      "preferred": "pedido de compra",
+      "reason": "Reads as a product purchase order (native reviewer 2026-08-28); the product-wide term is pedido de compra. The customer-facing PO # field is Referência nº."
+    },
+    {
+      "term": "ordens de compra",
+      "preferred": "pedidos de compra",
+      "reason": "Plural of the banned ordem de compra."
+    },
+    {
+      "term": "número do pedido",
+      "preferred": "número do pedido de compra",
+      "reason": "Bare pedido is the sales order (Pedido nº); a PO number must carry de compra.",
+      "enWhen": "\\bPO\\b",
+      "unless": "número do pedido de compra"
+    },
+    {
+      "term": "número da po",
+      "preferred": "número do pedido de compra",
+      "reason": "Half-translated abbreviation."
+    },
+    {
+      "term": "verbais",
+      "preferred": "acordo verbal",
+      "reason": "Bare plural adjective as a stage label is grammatically incomplete (native reviewer 2026-08-28).",
+      "enWhen": "^Verbal$"
+    },
+    {
+      "term": "ganhou",
+      "preferred": "ganho",
+      "reason": "Stage/status badge is the participle, not the verb.",
+      "enWhen": "^Won"
+    },
+    {
+      "term": "marcos venceu",
+      "preferred": "marcar como ganha",
+      "reason": "Mark won was machine-translated as a person named Marcos winning."
+    },
+    {
+      "term": "marca perdida",
+      "preferred": "marcar como perdida",
+      "reason": "Mark lost was machine-translated as \"lost brand\"."
+    }
+  ],
+  "dialectRules": [
+    {
+      "id": "br-user-register",
+      "rule": "Prefer Brazilian product UI nouns: usuário, tela, arquivo, registro, celular, contato.",
+      "notes": "These are audited through forbiddenTerms and targeted glossary checks."
+    },
+    {
+      "id": "ticket-register",
+      "rule": "Keep the loanword ticket for support tickets (o ticket, os tickets).",
+      "notes": "chamado is acceptable legacy wording, but ticket is now the standard term. Admission/travel meanings such as bilhete and ingresso are forbidden."
+    },
+    {
+      "id": "quote-register",
+      "rule": "Translate the sales-quote noun as cotação (feminine); orçamento is only ever a budget.",
+      "notes": "Native-reviewer confirmed 2026-07. citação/citações/citar are audited through forbiddenTerms; watch gender agreement (cotação aceita, not aceito)."
+    },
+    {
+      "id": "type-labels-are-nouns",
+      "rule": "Contact/phone type labels are nouns: Trabalho, Celular, Residencial — never verbs (Trabalhar) or European terms (Telemóvel); Móvel is reserved for devices (dispositivo móvel).",
+      "notes": "Native-reviewer confirmed 2026-07 for the New Client page phone types."
+    },
+    {
+      "id": "invoice-register",
+      "rule": "Translate invoice as fatura unless a Brazilian tax document is explicitly meant.",
+      "notes": "Do not introduce nota fiscal into generic invoice UI copy."
+    },
+    {
+      "id": "loanwords",
+      "rule": "Keep common Brazilian software loanwords when they are standard or shorter than the literal alternative.",
+      "notes": "Examples: email, status, tag, webhook, API, SLA, ticket, onboarding."
+    },
+    {
+      "id": "interpolation",
+      "rule": "Preserve every {{variable}} exactly as in the English source.",
+      "notes": "Do not translate placeholders, braces, or variable names."
+    }
+  ],
+  "identicalAllowlist": {
+    "exact": [
+      "AI",
+      "API",
+      "CSV",
+      "Dashboard",
+      "Email",
+      "Excel",
+      "HTML",
+      "ID",
+      "JSON",
+      "KB",
+      "OK",
+      "PDF",
+      "Portal",
+      "SLA",
+      "SMS",
+      "SSO",
+      "Status",
+      "Total",
+      "URL",
+      "UUID",
+      "Vice",
+      "XML",
+      "ZIP",
+      "AlgaPSA",
+      "Microsoft",
+      "Microsoft 365",
+      "Google",
+      "Google Workspace",
+      "QuickBooks",
+      "QuickBooks Online",
+      "Stripe",
+      "NinjaOne",
+      "Tanium",
+      "Datto",
+      "Huntress",
+      "Teams",
+      "Outlook",
+      "Gmail",
+      "IMAP",
+      "SMTP",
+      "OAuth",
+      "Entra ID",
+      "Hudu",
+      "Emojis",
+      "Google OAuth",
+      "Microsoft OAuth",
+      "Software",
+      "Subtotal",
+      "Item",
+      "Visual",
+      "Vertical",
+      "Horizontal",
+      "Normal",
+      "Zoom",
+      "Xero",
+      "Xero CSV",
+      "T&M",
+      "Kanban",
+      "h",
+      "download",
+      "total",
+      "Individual",
+      "Local",
+      "Fax",
+      "Solo",
+      "Webhooks",
+      "HMAC-SHA256",
+      "Experimental",
+      "Manual",
+      "Temporal",
+      "Cron",
+      "OAuth2 (XOAUTH2)",
+      "TTL:",
+      "Hardware",
+      "Phishing/Spam",
+      "Designer",
+      "Vars",
+      "Beta",
+      "Alga",
+      "Google Play (Android)",
+      "Global",
+      "Editor",
+      "Ctrl",
+      "Ad hoc",
+      "Virtual",
+      "Firewall",
+      "Host",
+      "RAM (GB)",
+      "NVMe",
+      "Windows",
+      "macOS",
+      "Linux",
+      "iOS",
+      "Android",
+      "Wi-Fi",
+      "Pro",
+      "AlgaDesk",
+      "Tokens",
+      "Microsoft 365 (Microsoft Graph)",
+      "Kit",
+      "—",
+      "RMAs",
+      "Marketing",
+      "Kits",
+      "Agenda",
+      "Slug",
+      "Original",
+      "CIPP (CyberDrain Improved Partner Portal)",
+      "Microsoft Entra",
+      "Bot",
+      "item",
+      ",",
+      "EUR — Euro",
+      "Meta",
+      "Alt",
+      "Shift",
+      "×"
+    ],
+    "caseInsensitive": [
+      "api",
+      "csv",
+      "email",
+      "html",
+      "id",
+      "json",
+      "ok",
+      "pdf",
+      "sla",
+      "sms",
+      "sso",
+      "status",
+      "tag",
+      "ticket",
+      "tickets",
+      "onboarding",
+      "url",
+      "webhook",
+      "min",
+      "xml",
+      "zip",
+      "van",
+      "vans"
+    ],
+    "patterns": [
+      "^\\s*$",
+      "^\\.\\.\\.$",
+      "^-$",
+      "^[-+]?\\d+(?:[.,:]\\d+)?\\s*(?:%|ms|s|min|h|MB|GB|TB)?$",
+      "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "^[A-Z]{2,8}$",
+      "^#[0-9A-Fa-f]{3,8}$",
+      "^\\{\\{[^{}]+\\}\\}$",
+      "^[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|]*$",
+      "^v\\{\\{[^{}]+\\}\\}$",
+      "^Item \\{\\{[^{}]+\\}\\}$",
+      "^Tickets?:?$",
+      "^Ticket #?\\{\\{[^{}]+\\}\\}$",
+      "^Ticket #…$",
+      "^Subtotal: \\{\\{[^{}]+\\}\\}\\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{count\\}\\} min$",
+      "^PO \\{\\{number\\}\\}$",
+      "^Status ?[:*]? ?(?:\\{\\{[^{}]+\\}\\})?$",
+      "^Total: \\{\\{[^{}]+\\}\\}$",
+      "^\\(\\{\\{[^{}]+\\}\\}h\\)$",
+      "^\\{\\{[^{}]+\\}\\} • \\{\\{[^{}]+\\}\\}$",
+      "^URL:$",
+      "^~\\{\\{[^{}]+\\}\\}%$",
+      "^via \\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{[^{}]+\\}\\} ms$",
+      "^\\{\\{regionLabel\\}\\} - \\{\\{percentage\\}\\}% \\(\\{\\{description\\}\\}\\)$",
+      "^\\{\\{regionCode\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{description\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{taxType\\}\\} \\(\\{\\{countryCode\\}\\}\\) - \\{\\{percentage\\}\\}%$",
+      "^re_x+$",
+      "^Gmail: \\{\\{gmail\\}\\}(?: · Microsoft: \\{\\{microsoft\\}\\})? · IMAP: \\{\\{imap\\}\\}$",
+      "^\\{\\{name\\}\\} v\\{\\{version\\}\\}$",
+      "^\\(\\{\\{size\\}\\} KB\\)$",
+      "^Gmail: \\{\\{scopes\\}\\}$",
+      "^ID: \\{\\{id\\}\\}(?:\\.\\.\\.)?$",
+      "^Total:? ?(?:\\{\\{[^{}]+\\}\\}/\\{\\{[^{}]+\\}\\})?$",
+      "^\\{\\{count\\}\\}(?:ms|s)$",
+      "^\\{\\{minutes\\}\\}m \\{\\{seconds\\}\\}s$",
+      "^\\{\\{hours\\}\\}h \\{\\{minutes\\}\\}m$",
+      "^\\+1 \\(555\\) 123-4567$",
+      "^(?:John|Jane|Smith)$",
+      "^TK-$",
+      "^• (?:LAN/WAN|Firewall|Phishing/Spam)$",
+      "^corr-\\d+$",
+      "^Etc/GMT[+-]\\d+$",
+      "^Cron: \\{\\{cron\\}\\}$",
+      "^\\{\\{count\\}\\} total$",
+      "^Cmd/Ctrl\\+K$",
+      "^%$",
+      "^[0-9./\\n]+$",
+      "^https?://",
+      "^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$",
+      "^P\\{\\{number\\}\\}$",
+      "^\\{\\{hours\\}\\} h$",
+      "^\\{\\{pct\\}\\}%$",
+      "^\\{\\{amount\\}\\} MRR$",
+      "^\\{\\{amount\\}\\} NRR$",
+      "^\\{\\{value\\}\\}%$",
+      "^\\{\\{days\\}\\}d$",
+      "^\\{\\{count\\}\\} POs?$",
+      "^\\{\\{count\\}\\} SOs$",
+      "^\\{\\{count\\}\\} kits$",
+      "^\\{\\{type\\}\\} \\{\\{qty\\}\\} × \\{\\{name\\}\\}$",
+      "^\\(SN \\{\\{sn\\}\\}\\)$",
+      "^T[+-]\\{\\{days\\}\\}$"
+    ],
+    "notes": "This allowlist is intentionally conservative; audit tooling should report identical English unless it matches one of these exact values, case-insensitive loanwords, or technical patterns."
+  }
+}

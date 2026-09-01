@@ -6,9 +6,13 @@ const getEntraDirectRefreshTokenMock = vi.fn();
 const saveEntraDirectTokenSetMock = vi.fn();
 const saveEntraDirectRefreshTokenMock = vi.fn();
 
+const isAxiosErrorMock = (error: unknown): boolean =>
+  Boolean((error as { isAxiosError?: boolean } | null)?.isAxiosError);
+
 vi.mock('axios', () => ({
-  default: { post: axiosPostMock },
+  default: { post: axiosPostMock, isAxiosError: isAxiosErrorMock },
   post: axiosPostMock,
+  isAxiosError: isAxiosErrorMock,
 }));
 
 vi.mock('@ee/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
@@ -113,5 +117,37 @@ describe('refreshEntraDirectToken', () => {
     expect(saveEntraDirectTokenSetMock).not.toHaveBeenCalled();
     expect(saveEntraDirectRefreshTokenMock).toHaveBeenCalledWith('tenant-35', 'refresh-token-rotated');
     expect(result.accessToken).toBe('access-token-customer');
+  });
+
+  it('names the suberror and AADSTS code, and says reconnecting will not fix missing consent', async () => {
+    resolveMicrosoftCredentialsForTenantMock.mockResolvedValue({
+      clientId: 'client-id-35',
+      clientSecret: 'client-secret-35',
+      tenantId: null,
+      source: 'tenant-secret',
+    });
+    getEntraDirectRefreshTokenMock.mockResolvedValue('refresh-token-old');
+    axiosPostMock.mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        status: 400,
+        data: {
+          error: 'invalid_grant',
+          suberror: 'consent_required',
+          error_description:
+            "AADSTS65001: The user or administrator has not consented to use the application with ID 'client-id-35'.",
+        },
+      },
+    });
+
+    const { refreshEntraDirectAccessTokenForTenant } = await import(
+      '@ee/lib/integrations/entra/auth/refreshDirectToken'
+    );
+    await expect(
+      refreshEntraDirectAccessTokenForTenant('tenant-35', 'customer-tenant-guid')
+    ).rejects.toThrow(
+      'Microsoft rejected the stored credentials for this connection (invalid_grant, consent_required, AADSTS65001). '
+      + 'The app has not been granted admin consent in the managed tenant — grant consent there, then retry; reconnecting will not help.'
+    );
   });
 });

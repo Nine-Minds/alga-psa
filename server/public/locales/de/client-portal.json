@@ -282,7 +282,45 @@
       }
     },
     "captchaRequired": "Bitte schließen Sie die untenstehende Verifizierung ab und melden Sie sich anschließend erneut an.",
-    "tooManyAttempts": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte warten Sie einige Minuten, bevor Sie es erneut versuchen."
+    "tooManyAttempts": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte warten Sie einige Minuten, bevor Sie es erneut versuchen.",
+    "tenantDiscovery": {
+      "title": "Finden Sie Ihre Organisation",
+      "description": "Geben Sie Ihre E-Mail-Adresse ein, und wir senden Ihnen Anmeldelinks für alle Organisationen, auf die Sie Zugriff haben.",
+      "emailLabel": "E-Mail-Adresse",
+      "emailPlaceholder": "ihre.email@firma.com",
+      "submit": "Anmeldelinks senden",
+      "submitting": "Wird gesendet...",
+      "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "linksSent": "Prüfen Sie Ihren Posteingang auf Anmeldelinks",
+      "sent": {
+        "title": "Prüfen Sie Ihre E-Mails",
+        "description": "Falls ein Konto mit dieser E-Mail-Adresse existiert, haben wir Ihnen Anmeldelinks für jede Organisation gesendet, auf die Sie Zugriff haben.",
+        "noEmailReceived": "Keine E-Mail erhalten?",
+        "checkSpam": "Prüfen Sie Ihren Spam-Ordner",
+        "verifyAddress": "Prüfen Sie, ob die E-Mail-Adresse korrekt ist",
+        "contactSupport": "Wenden Sie sich an das Support-Team Ihrer Organisation",
+        "tryAnother": "Andere E-Mail-Adresse versuchen"
+      }
+    },
+    "register": {
+      "emailLabel": "E-Mail-Adresse",
+      "checkingEmail": "E-Mail wird geprüft...",
+      "existingContactsOnly": "Die Registrierung ist nur für bestehende Kontakte möglich. Bitte wenden Sie sich an Ihren Administrator.",
+      "contactVerified": "Kontakt bestätigt. Bitte legen Sie Ihr Passwort fest.",
+      "passwordPlaceholder": "Passwort erstellen",
+      "passwordMustContain": "Das Passwort muss enthalten:",
+      "completeRequiredFields": "Bitte füllen Sie die erforderlichen Felder aus:",
+      "creatingAccount": "Konto wird erstellt...",
+      "createAccount": "Konto erstellen",
+      "failed": "Registrierung fehlgeschlagen",
+      "unexpectedError": "Bei der Registrierung ist ein unerwarteter Fehler aufgetreten.",
+      "missing": {
+        "email": "E-Mail",
+        "validEmail": "Gültige E-Mail-Adresse",
+        "verifiedContact": "Bestätigte Kontakt-E-Mail-Adresse",
+        "validPassword": "Gültiges Passwort"
+      }
+    }
   },
   "account": {
     "title": "Konto",
@@ -358,7 +396,8 @@
       "recentInvoicesTitle": "Aktuelle Rechnungen",
       "billingHistoryTitle": "Abrechnungshistorie",
       "labels": {
-        "defaultTag": "(Standard)"
+        "defaultTag": "(Standard)",
+        "paysFor": "Zahlt für {{profile}}"
       },
       "actions": {
         "setDefault": "Als Standard festlegen",
@@ -372,7 +411,8 @@
         "expiryMonth": "Monat",
         "expiryYear": "Jahr",
         "cvv": "CVV",
-        "setAsDefault": "Als Standard-Zahlungsmethode festlegen"
+        "setAsDefault": "Als Standard-Zahlungsmethode festlegen",
+        "billingProfile": "Zahlt für"
       },
       "history": {
         "period": "Zeitraum",
@@ -654,13 +694,24 @@
       "clientNotFound": "Unternehmen nicht gefunden",
       "detailsLoadError": "Unternehmensdetails konnten nicht geladen werden",
       "updateError": "Unternehmensdetails konnten nicht aktualisiert werden"
+    },
+    "domain": {
+      "title": "Benutzerdefinierte Domain",
+      "description": "Pro-Mandanten können das Portal unter einer benutzerdefinierten Domain hosten. Ihre standardmäßig gehostete Adresse wird unten angezeigt.",
+      "defaultAddressLabel": "Standardadresse des Portals",
+      "upgradeHint": "Führen Sie ein Upgrade auf Pro durch, um eine gebrandete Kundenportal-Domain und automatische Zertifikate zu konfigurieren."
     }
   },
   "notifications": {
     "title": "Benachrichtigungen",
+    "bellUnreadAria": "Benachrichtigungen ({{unread}} ungelesen)",
+    "unreadDot": "Ungelesene Benachrichtigungen",
+    "reconnecting": "Verbindung wird wiederhergestellt...",
     "markAsRead": "Als gelesen markieren",
     "markAllAsRead": "Alle als gelesen markieren",
     "noNotifications": "Keine neuen Benachrichtigungen",
+    "unreadCount_one": "{{count}} ungelesene Benachrichtigung",
+    "unreadCount_other": "{{count}} ungelesene Benachrichtigungen",
     "settings": "Benachrichtigungseinstellungen",
     "viewAll": "Alle Benachrichtigungen anzeigen",
     "tabs": {
@@ -676,7 +727,13 @@
       "saveError": "Einstellung konnte nicht gespeichert werden",
       "noCategories": "Keine Benachrichtigungskategorien verfügbar",
       "emailPreferences": "E-Mail",
-      "internalPreferences": "Intern"
+      "internalPreferences": "Intern",
+      "priority": {
+        "high": "Hoch",
+        "normal": "Normal",
+        "low": "Niedrig"
+      },
+      "resetPriority": "Zurücksetzen"
     },
     "categories": {
       "tickets": "Tickets",
@@ -684,6 +741,29 @@
       "messages": "Nachrichten",
       "projects": "Projekte",
       "system": "System"
+    },
+    "needsAttention": "Erfordert Aufmerksamkeit ({{count}})",
+    "lowPriority": "Niedrige Priorität ({{count}})",
+    "filters": {
+      "title": "Benachrichtigungen filtern",
+      "description": "Wählen Sie Kriterien zum Filtern von Benachrichtigungsaktivitäten aus.",
+      "statusLabel": "Status",
+      "unreadOnly": "Nur ungelesene",
+      "showRead": "Gelesene anzeigen",
+      "categoryLabel": "Kategorie",
+      "allCategories": "Alle Kategorien",
+      "categoryPlaceholder": "Kategorie auswählen...",
+      "dateRangeLabel": "Datumsbereich",
+      "priorityLabel": "Priorität",
+      "allPriorities": "Alle Prioritäten",
+      "priorityPlaceholder": "Priorität auswählen...",
+      "reset": "Zurücksetzen",
+      "cancel": "Abbrechen",
+      "apply": "Filter anwenden"
+    },
+    "card": {
+      "unread": "Ungelesen",
+      "noMessage": "Keine Nachricht"
     }
   },
   "sidebar": {
@@ -734,5 +814,183 @@
     "createTicket": "Ticket erstellen",
     "createTicketForDevice": "Ticket für dieses Gerät erstellen",
     "rowActionsLabel": "Zeilenaktionen"
+  },
+  "billing": {
+    "columns": {
+      "service": "Dienst",
+      "notAvailable": "N/V"
+    },
+    "filters": {
+      "dateRange": "Datumsbereich",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "apply": "Filter anwenden"
+    },
+    "usageMetrics": {
+      "title": "Nutzungsmetriken",
+      "bucketHistoryTitle": "Nutzungsverlauf des Stundenkontingents",
+      "columns": {
+        "unitOfMeasure": "Maßeinheit",
+        "quantity": "Menge"
+      },
+      "empty": {
+        "title": "Keine Nutzungsmetriken verfügbar",
+        "description": "Für den ausgewählten Datumsbereich wurden keine Nutzungsmetriken erfasst."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Diensttyp",
+        "hours": "Stunden"
+      },
+      "empty": {
+        "title": "Keine Stundendaten verfügbar",
+        "description": "Für den ausgewählten Datumsbereich wurden keine abrechenbaren Stunden erfasst."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "Angebotsnr.",
+        "title": "Titel",
+        "amount": "Betrag",
+        "status": "Status",
+        "date": "Datum"
+      },
+      "draftQuote": "Angebotsentwurf {{count}}",
+      "empty": "Keine Angebote gefunden",
+      "errors": {
+        "loadFailed": "Angebote konnten nicht geladen werden"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Vertragslinie für Stundenkontingent",
+      "usage": "Nutzung",
+      "hoursUsed": "{{hours}} Stunden genutzt",
+      "hoursTotal": "{{hours}} Stunden insgesamt",
+      "rolloverHours": "Enthält {{hours}} Übertragsstunden"
+    },
+    "bucketHistory": {
+      "title": "Nutzungsverlauf",
+      "trendStable": "Stabil",
+      "current": "Aktuell",
+      "avgUsage": "Durchschn. Nutzung",
+      "peak": "Höchstwert",
+      "periods": "Zeiträume"
+    },
+    "invoicePreview": {
+      "loadFailed": "Rechnung konnte nicht geladen werden",
+      "unavailable": "Die Rechnungsvorschau kann nicht angezeigt werden."
+    },
+    "payment": {
+      "redirecting": "Weiterleitung zur Zahlung..."
+    },
+    "paymentSuccess": {
+      "unknownStart": "Unbekannter Beginn",
+      "unknownEnd": "Unbekanntes Ende",
+      "verifying": {
+        "title": "Zahlung wird überprüft",
+        "description": "Bitte warten Sie, während wir Ihre Zahlung bestätigen..."
+      },
+      "success": {
+        "title": "Zahlung erfolgreich!",
+        "thankYou": "Vielen Dank für Ihre Zahlung.",
+        "amountPaid": "Gezahlter Betrag: {{amount}}.",
+        "confirmationEmail": "Eine Bestätigungs-E-Mail wird an Ihre registrierte E-Mail-Adresse gesendet.",
+        "thankYouForInvoice": "Vielen Dank für Ihre Zahlung der Rechnung Nr. {{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Übersicht der Dienstzeiträume",
+        "description": "Diese Übersicht basiert auf den wiederkehrenden Detailzeiträumen der Rechnung und nicht allein auf den Abrechnungsdaten im Rechnungskopf."
+      },
+      "pending": {
+        "title": "Zahlung wird verarbeitet",
+        "description": "Ihre Zahlung wird verarbeitet. Dies kann einige Augenblicke dauern. Sie erhalten eine Bestätigungs-E-Mail, sobald die Zahlung abgeschlossen ist."
+      },
+      "failed": {
+        "title": "Zahlungsüberprüfung fehlgeschlagen",
+        "description": "Wir konnten Ihre Zahlung nicht bestätigen. Bitte wenden Sie sich an den Support."
+      },
+      "errors": {
+        "verificationFailed": "Zahlungsüberprüfung fehlgeschlagen",
+        "verifyFailed": "Zahlung konnte nicht überprüft werden",
+        "unexpected": "Bei der Überprüfung Ihrer Zahlung ist ein Fehler aufgetreten"
+      },
+      "actions": {
+        "backToBilling": "Zurück zur Abrechnung",
+        "viewInvoice": "Rechnung anzeigen"
+      }
+    },
+    "segments": {
+      "allSegments": "Gesamte Organisation",
+      "organizationTotalLabel": "Gesamtsumme Ihrer Organisation",
+      "periodLabel": "{{start}} bis {{end}}",
+      "selectorLabel": "Anzeigen",
+      "empty": "Keine abgerechneten Buchungen in diesem Zeitraum.",
+      "chargesTitle": "Buchungen in diesem Segment",
+      "noCharges": "Keine Buchungen in diesem Zeitraum."
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Name",
+      "type": "Typ",
+      "status": "Status",
+      "location": "Standort",
+      "lastUpdated": "Zuletzt aktualisiert"
+    },
+    "notAvailable": "N/V",
+    "detailsTitle": "Asset-Details"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Ihr Portal-Benutzer ist mit keinem Kontakt verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
+      "userNotLinkedToClient": "Ihr Portal-Benutzer ist mit keinem Kundenkonto verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
+      "contactNotLinkedToClient": "Ihr Kontakt ist mit keinem Kundenkonto verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
+      "clientNotFound": "Kundenkonto nicht gefunden. Es wurde möglicherweise gelöscht oder Sie haben keinen Zugriff mehr darauf.",
+      "serviceNotFound": "Service nicht gefunden oder nicht mehr aktiv. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "serviceUpgradeUnavailable": "Das Höherstufen von Services ist vorübergehend nicht verfügbar. Wenden Sie sich an den Support, um Ihren Tarif zu ändern."
+    },
+    "records": {
+      "invalid": "Einer der ausgewählten Datensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missing": "Einer der ausgewählten Datensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "access": {
+      "unauthorized": "Nicht autorisiert",
+      "projectBillingData": "Kein Zugriff auf Projektabrechnungsdaten",
+      "quoteData": "Kein Zugriff auf Angebotsdaten",
+      "invoiceData": "Kein Zugriff auf Rechnungsdaten",
+      "billingData": "Kein Zugriff auf Abrechnungsdaten",
+      "settingsUpdate": "Sie haben keine Berechtigung, diese Einstellungen zu ändern.",
+      "billingSegment": "Kein Zugriff auf dieses Abrechnungssegment"
+    },
+    "billing": {
+      "quoteNotFound": "Angebot nicht gefunden oder Zugriff verweigert",
+      "quoteStale": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot und versuchen Sie es erneut.",
+      "quoteStaleAccept": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot, bevor Sie es annehmen.",
+      "quoteStaleReject": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot, bevor Sie es ablehnen.",
+      "invoiceNotFound": "Rechnung nicht gefunden oder Zugriff verweigert",
+      "jobNotFound": "Auftrag nicht gefunden",
+      "quoteInvalidState": "Das Angebot befindet sich nicht in einem gültigen Status für diese Aktion",
+      "rejectionCommentRequired": "Ein Ablehnungskommentar ist erforderlich",
+      "emailSendFailed": "Der E-Mail-Versand konnte nicht gestartet werden"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket nicht gefunden oder Zugriff verweigert",
+      "invalidData": "Ungültige Ticketdaten"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Bitte überprüfen Sie die Angaben zur Sichtbarkeitsgruppe und versuchen Sie es erneut.",
+      "boardsUnavailable": "Eines oder mehrere ausgewählte Boards sind nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "contactNotFound": "Kontakt nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "otherClient": "Sie haben keine Berechtigung, Sichtbarkeitsgruppen eines anderen Kunden zu verwalten.",
+      "selectClientOrContact": "Wählen Sie einen Kunden oder Kontakt aus, bevor Sie Sichtbarkeitsgruppen verwalten.",
+      "groupNotFound": "Sichtbarkeitsgruppe nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "groupNotValidForContact": "Die ausgewählte Sichtbarkeitsgruppe ist für diesen Kontakt nicht gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Sichtbarkeitsgruppe fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Sichtbarkeitsgruppe fehlt: {{field}}.",
+      "recordInvalid": "Einer der ausgewählten Sichtbarkeitsgruppen-Datensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Sichtbarkeitsgruppe mit diesen Angaben existiert für diesen Kunden bereits.",
+      "invalidData": "Ungültige Daten für die Sichtbarkeitsgruppe. Bitte überprüfen Sie die Angaben und die ausgewählten Boards."
+    }
   }
 }

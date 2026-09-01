@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
-import { AppError } from '@alga-psa/core';
+import { AppError, sanitizeProviderMessage, toSafeProviderError } from '@alga-psa/core';
 import type {
   ExternalCompanyRecord,
   NormalizedCompanyPayload
@@ -10,20 +10,34 @@ import type {
 // Re-export types for dependent modules
 export type { ExternalCompanyRecord, NormalizedCompanyPayload } from '@alga-psa/types';
 
-const XERO_TOKEN_ENDPOINT = 'https://identity.xero.com/connect/token';
-const XERO_API_BASE_URL = 'https://api.xero.com/api.xro/2.0';
+// Env overrides exist so test environments can point at the Xero emulator
+// (packages/emulators/xero) or a local provider simulator
+// (tools/smoke-sim/accounting-provider-sim.mjs), mirroring
+// QBO_OAUTH_TOKEN_URL/QBO_API_BASE_URL for QBO and MICROSOFT_GRAPH_BASE_URL
+// for Graph.
+const XERO_TOKEN_ENDPOINT =
+  process.env.XERO_OAUTH_TOKEN_URL?.trim() || 'https://identity.xero.com/connect/token';
+const XERO_API_BASE_URL =
+  process.env.XERO_API_BASE_URL?.trim() || 'https://api.xero.com/api.xro/2.0';
 const XERO_CREDENTIALS_SECRET = 'xero_credentials';
 const XERO_CLIENT_ID_SECRET = 'xero_client_id';
 const XERO_CLIENT_SECRET_SECRET = 'xero_client_secret';
 const ACCESS_TOKEN_BUFFER_SECONDS = 300;
+// Minimum scope set covering shipped functionality: invoice export (POST/GET
+// /Invoices), contact export (GET/POST /Contacts), and read-only settings
+// lookups (GET /Accounts, /Items, /TaxRates, /TrackingCategories — all covered
+// by accounting.settings.read). No shipped flow calls the Payments or
+// BankTransactions APIs, so those scopes are not requested by default.
 const DEFAULT_XERO_SCOPES = [
   'offline_access',
-  'accounting.settings',
+  'accounting.settings.read',
   'accounting.invoices',
-  'accounting.banktransactions',
-  'accounting.payments',
   'accounting.contacts'
 ];
+
+// OAuth scope tokens are dot-separated lowercase identifiers such as
+// offline_access or accounting.settings.read.
+const XERO_SCOPE_TOKEN_PATTERN = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
 
 export const XERO_TOKEN_URL = XERO_TOKEN_ENDPOINT;
 export const XERO_CREDENTIALS_SECRET_NAME = XERO_CREDENTIALS_SECRET;
@@ -130,16 +144,56 @@ export async function getXeroDeploymentBaseUrl(secretProvider?: ISecretProvider)
   return computeBaseUrl(base);
 }
 
-export function getXeroOAuthScopes(): string[] {
+export type XeroOAuthScopeSource = 'default' | 'override';
+
+export interface XeroOAuthScopeConfig {
+  scopes: string[];
+  source: XeroOAuthScopeSource;
+  /** Override tokens rejected by validation; only present when an override was ignored. */
+  invalidOverrideScopes?: string[];
+}
+
+/**
+ * Resolve the OAuth scopes for new Xero authorizations.
+ *
+ * The XERO_OAUTH_SCOPES environment variable is an explicit deployment
+ * override (space-separated scope tokens). It is honoured only when every
+ * token is a well-formed scope; a malformed override is ignored in favour of
+ * the defaults, with the rejected tokens surfaced in the returned config so
+ * diagnostics can show them without inspecting the environment.
+ */
+export function getXeroOAuthScopeConfig(): XeroOAuthScopeConfig {
   const configured = readTrimmedSecret(process.env.XERO_OAUTH_SCOPES);
   if (!configured) {
-    return DEFAULT_XERO_SCOPES;
+    return { scopes: [...DEFAULT_XERO_SCOPES], source: 'default' };
   }
 
-  return configured
-    .split(/\s+/)
-    .map((scope) => scope.trim())
-    .filter(Boolean);
+  const requested = Array.from(
+    new Set(
+      configured
+        .split(/\s+/)
+        .map((scope) => scope.trim())
+        .filter(Boolean)
+    )
+  );
+  const invalidScopes = requested.filter((scope) => !XERO_SCOPE_TOKEN_PATTERN.test(scope));
+
+  if (requested.length === 0 || invalidScopes.length > 0) {
+    logger.warn('[XeroClientService] ignoring malformed XERO_OAUTH_SCOPES override; using default scopes', {
+      invalidScopes
+    });
+    return {
+      scopes: [...DEFAULT_XERO_SCOPES],
+      source: 'default',
+      invalidOverrideScopes: invalidScopes
+    };
+  }
+
+  return { scopes: requested, source: 'override' };
+}
+
+export function getXeroOAuthScopes(): string[] {
+  return getXeroOAuthScopeConfig().scopes;
 }
 
 export function getXeroOAuthScopesString(): string {
@@ -663,7 +717,7 @@ export class XeroClientService {
       logger.warn('[XeroClientService] failed to lookup contact after create', {
         tenantId: this.tenantId,
         connectionId: this.connection.connectionId,
-        error
+        error: toSafeProviderError('xero', error, { operation: 'findContactByName' })
       });
       return null;
     }
@@ -791,21 +845,23 @@ export class XeroClientService {
             null;
           const validationErrors = Array.isArray(element?.ValidationErrors)
             ? element.ValidationErrors.map((validation: Record<string, any>) => ({
-                message: validation.Message ?? 'Validation error',
+                message: sanitizeProviderMessage(validation.Message ?? 'Validation error'),
                 field: validation.Message?.includes(':')
                   ? validation.Message.split(':')[0]?.trim()
                   : undefined
               }))
             : [];
 
+          // Allowlisted fields only — never attach the raw provider element:
+          // it carries the full invoice (customer, line items, amounts).
           return {
             documentId: invoiceNumber ?? undefined,
             validationErrors,
-            message:
+            message: sanitizeProviderMessage(
               validationErrors.length > 0
                 ? validationErrors.map((item) => item.message).join('; ')
-                : 'Validation error',
-            raw: element
+                : 'Validation error'
+            )
           };
         });
 
@@ -823,15 +879,19 @@ export class XeroClientService {
         });
       }
 
+      // Reduce the provider response to allowlisted fields; the body itself
+      // can contain tokens, contact data, and invoice contents.
+      const safe = toSafeProviderError('xero', error, { correlationId });
       return new AppError('XERO_API_ERROR', 'Unexpected Xero API error', {
         status,
-        correlationId,
-        raw: data
+        correlationId: safe.correlationId,
+        providerErrorCode: safe.providerErrorCode,
+        providerMessage: safe.message
       });
     }
 
     return new AppError('XERO_UNKNOWN_ERROR', 'Unknown Xero client error', {
-      originalError: error
+      originalError: toSafeProviderError('xero', error)
     });
   }
 }
@@ -872,7 +932,11 @@ async function getTenantConnections(tenantId: string): Promise<XeroConnectionsSt
       return parsed as XeroConnectionsStore;
     }
   } catch (error) {
-    logger.error('[XeroClientService] failed to parse stored credentials', { tenantId, error });
+    // Parse errors can quote the stored secret payload; log only the error type.
+    logger.error('[XeroClientService] failed to parse stored credentials', {
+      tenantId,
+      errorName: error instanceof Error ? error.name : 'unknown'
+    });
   }
   return {};
 }

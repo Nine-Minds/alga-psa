@@ -1,7 +1,20 @@
 import { UnifiedInboundEmailQueueConsumer } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueConsumer';
+import { UnifiedInboundEmailQueueConsumerV2 } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueConsumerV2';
+import {
+  processUnifiedInboundEmailDurableJob,
+  renewPostgresLeaseForV2Job,
+} from '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessorV2';
+import { getInboundDurableMode } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
+import { assertInboundAuthPauseNotifierRegistered } from '@alga-psa/shared/services/email/inboundAuthPauseNotifier';
 import { processUnifiedInboundEmailQueueJob } from '../services/email/unifiedInboundEmailQueueJobProcessor';
+import { registerInboundAuthPauseNotifications } from '../services/email/inboundAuthPauseNotificationService';
 
 async function main(): Promise<void> {
+  // This process can perform the atomic auth-failure auto-pause; without a
+  // registered notifier those pauses would be silent to tenant admins.
+  registerInboundAuthPauseNotifications();
+  assertInboundAuthPauseNotifierRegistered('server/bin/unifiedInboundEmailQueueConsumer');
+
   const consumer = new UnifiedInboundEmailQueueConsumer({
     pollDelayMs: 250,
     handleJob: async (job) => {
@@ -20,13 +33,26 @@ async function main(): Promise<void> {
     },
   });
 
+  let durableConsumer: UnifiedInboundEmailQueueConsumerV2 | null = null;
+  if (getInboundDurableMode() !== 'off') {
+    durableConsumer = new UnifiedInboundEmailQueueConsumerV2({
+      pollDelayMs: 250,
+      renewPostgresLease: renewPostgresLeaseForV2Job,
+      handleJob: async (job, ctx) => processUnifiedInboundEmailDurableJob(job, ctx),
+    });
+  }
+
   const shutdown = () => {
     consumer.stop();
+    durableConsumer?.stop();
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 
-  await consumer.start();
+  await Promise.all([
+    consumer.start(),
+    durableConsumer ? durableConsumer.start() : Promise.resolve(),
+  ]);
 }
 
 main().catch((error) => {

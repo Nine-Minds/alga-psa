@@ -31,7 +31,7 @@ function statusClasses(status: Deployment['status']): string {
     case 'ready':
       return 'border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-500/15 dark:text-green-300';
     case 'staging':
-      return 'border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.15)] dark:text-primary-300';
+      return 'chip-primary border-[rgb(var(--color-primary-200))] dark:text-primary-300';
   }
 }
 
@@ -118,7 +118,7 @@ export function DeploymentsTile({ deployments }: { deployments: Deployment[] }) 
       subtitle={t('dashboard.deployments.subtitle', '{{count}} dated cutover(s)', { count: deployments.length })}
       icon={<CalendarClock className="h-4 w-4" />}
       action={
-        <span className="rounded bg-[rgb(var(--color-primary-50))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[rgb(var(--color-primary-700))]">
+        <span className="chip-primary rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
           {t('dashboard.deployments.eyebrow', 'This week')}
         </span>
       }

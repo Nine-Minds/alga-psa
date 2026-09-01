@@ -11,15 +11,20 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf, isManagerOfSubject } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-export const metadata: Metadata = {
-  title: 'Timesheet',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.timeEntry.timesheet.detail.title', { defaultValue: 'Timesheet' }),
+  };
+}
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -53,7 +58,7 @@ export default async function TimeSheetPage({ params }: { params: Promise<{ id: 
 
     const isManager = await isManagerOfSubject(db, tenant, currentUser.user_id, subjectUserId);
 
-    const canReverse = await hasPermission(currentUser, 'timesheet', 'reverse', db);
+    const canReverse = await hasPermission(currentUser, 'time_sheet', 'reverse', db);
     const hasInvoicedEntries = !!(await tenantDb(db, tenant).table('time_entries')
       .where({ time_sheet_id: timeSheet.id, invoiced: true })
       .first('entry_id'));

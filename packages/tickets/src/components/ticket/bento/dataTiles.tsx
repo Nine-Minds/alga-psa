@@ -3,9 +3,9 @@
 import React from 'react';
 import { Calendar, CalendarCheck, Phone, CreditCard, Plus } from 'lucide-react';
 import { fromZonedTime } from 'date-fns-tz';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { TeamsCallLink, useCallLinkContext } from '@alga-psa/ui/components/CallLink';
 import {
   BentoDateChip,
   BentoRow,
@@ -26,21 +26,23 @@ import {
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
 
-function formatShortDate(iso: string): { month: string; day: string } {
+// These run at module scope with no hook to read the app locale from, so it is
+// passed in: omitting it would format in the browser's locale, not the app's.
+function formatShortDate(iso: string, locale: string): { month: string; day: string } {
   const d = new Date(iso);
   return {
-    month: d.toLocaleString(undefined, { month: 'short' }),
+    month: d.toLocaleString(locale, { month: 'short' }),
     day: String(d.getDate()),
   };
 }
 
-function formatTimeRange(startIso: string, endIso: string): string {
+function formatTimeRange(startIso: string, endIso: string, locale: string): string {
   const start = new Date(startIso);
   const end = new Date(endIso);
   const sameDay = start.toDateString() === end.toDateString();
-  const time = (d: Date) => d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const time = (d: Date) => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
   if (sameDay) return `${time(start)} – ${time(end)}`;
-  const day = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const day = (d: Date) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   return `${day(start)} – ${day(end)}`;
 }
 
@@ -126,14 +128,15 @@ export function NextVisitTile({
 }
 
 function ScheduleRow({ id, entry, t }: { id: string; entry: TicketScheduleEntrySummary; t: (key: string, defaultValue: string) => string }) {
-  const date = formatShortDate(entry.scheduledStart);
+  const { locale } = useFormatters();
+  const date = formatShortDate(entry.scheduledStart, locale);
   return (
     <div id={id} className={`flex items-center gap-3 ${entry.isUpcoming ? '' : 'opacity-60'}`}>
       <BentoDateChip month={date.month} day={date.day} />
       <div className="min-w-0">
         <div className="text-sm font-medium text-[rgb(var(--color-text-800))] truncate">{entry.title || t('bento.tiles.scheduledWork', 'Scheduled work')}</div>
         <div className="text-xs text-[rgb(var(--color-text-500))] truncate">
-          {formatTimeRange(entry.scheduledStart, entry.scheduledEnd)}
+          {formatTimeRange(entry.scheduledStart, entry.scheduledEnd, locale)}
           {entry.assignedUserNames.length > 0 ? ` · ${entry.assignedUserNames.join(', ')}` : ''}
           {!entry.isUpcoming ? ` · ${t('bento.tiles.scheduleDone', 'done')}` : ''}
         </div>
@@ -156,12 +159,12 @@ function appointmentStatusVariant(status: string): BadgeVariant {
   }
 }
 
-function formatAppointmentDateTime(date: string | null, time: string | null, tz: string | null): string | null {
+function formatAppointmentDateTime(date: string | null, time: string | null, tz: string | null, locale: string): string | null {
   if (!date || !time) return null;
   try {
     const dt = fromZonedTime(`${date}T${time}:00`, tz || 'UTC');
     if (Number.isNaN(dt.getTime())) return null;
-    return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return dt.toLocaleString(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   } catch {
     return null;
   }
@@ -176,7 +179,8 @@ function AppointmentRequestRow({
   request: TicketAppointmentRequestSummary;
   t: (key: string, defaultValue: string) => string;
 }) {
-  const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone);
+  const { locale } = useFormatters();
+  const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone, locale);
   const duration = request.requestedDurationMinutes ? formatMinutes(request.requestedDurationMinutes) : null;
   return (
     <BentoRow id={id} align="start" className="justify-between">
@@ -252,18 +256,24 @@ export function CallsEmailsTile({
   ticketId,
   refreshKey = 0,
   viewAllHref,
+  callPhoneNumber,
   onLogInteraction,
+  onInteractionClick,
   initialData,
 }: {
   id: string;
   ticketId: string;
   refreshKey?: number;
   viewAllHref?: string;
+  callPhoneNumber?: string | null;
   /** When provided, renders a "Log" affordance in the header that opens the quick-add flow. */
   onLogInteraction?: () => void;
+  /** Opens the selected interaction in the workspace drawer. */
+  onInteractionClick?: (interactionId: string) => void;
   initialData?: Promise<TicketInteractionSummary[]>;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { teamsPhoneConnected } = useCallLinkContext();
   const { data, error, loading } = useTileData(
     () => getTicketInteractions(ticketId, { limit: 5 }),
     [ticketId, refreshKey],
@@ -272,6 +282,7 @@ export function CallsEmailsTile({
   );
 
   const showViewAll = Boolean(viewAllHref && data && data.length > 0);
+  const showCall = Boolean(teamsPhoneConnected && callPhoneNumber);
 
   return (
     <BentoTile
@@ -280,7 +291,7 @@ export function CallsEmailsTile({
       icon={<Phone className="h-4 w-4" />}
       error={error}
       action={
-        showViewAll || onLogInteraction ? (
+        showViewAll || showCall || onLogInteraction ? (
           <div className="flex items-center gap-2">
             {showViewAll ? (
               <a
@@ -290,6 +301,17 @@ export function CallsEmailsTile({
               >
                 {t('bento.tiles.viewAll', 'View all')}
               </a>
+            ) : null}
+            {showCall ? (
+              <TeamsCallLink
+                id={`${id}-call`}
+                phoneNumber={callPhoneNumber}
+                callIntent={{ ticketId }}
+                className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+              >
+                <Phone className="h-3 w-3" />
+                {t('bento.tiles.call', 'Call')}
+              </TeamsCallLink>
             ) : null}
             {onLogInteraction ? (
               <button
@@ -313,7 +335,13 @@ export function CallsEmailsTile({
       ) : (
         <BentoRowList>
           {data.map((interaction) => (
-            <InteractionRow key={interaction.interactionId} id={`${id}-row-${interaction.interactionId}`} interaction={interaction} t={t} />
+            <InteractionRow
+              key={interaction.interactionId}
+              id={`${id}-row-${interaction.interactionId}`}
+              interaction={interaction}
+              onClick={onInteractionClick ? () => onInteractionClick(interaction.interactionId) : undefined}
+              t={t}
+            />
           ))}
         </BentoRowList>
       )}
@@ -321,15 +349,43 @@ export function CallsEmailsTile({
   );
 }
 
-function InteractionRow({ id, interaction, t }: { id: string; interaction: TicketInteractionSummary; t: (key: string, defaultValue: string) => string }) {
+function InteractionRow({
+  id,
+  interaction,
+  onClick,
+  t,
+}: {
+  id: string;
+  interaction: TicketInteractionSummary;
+  onClick?: () => void;
+  t: (key: string, defaultValue: string) => string;
+}) {
+  const { locale } = useFormatters();
+  const label = interaction.title || interaction.typeName || t('bento.tiles.interaction', 'Interaction');
+  const date = new Date(interaction.interactionDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+
+  if (onClick) {
+    return (
+      <BentoRow id={id} stacked className="hover:bg-[rgb(var(--color-border-50))] rounded-sm">
+        <button
+          id={`${id}-open`}
+          type="button"
+          onClick={onClick}
+          className="flex w-full items-baseline gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] rounded-sm"
+        >
+          <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">{label}</span>
+          <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))] whitespace-nowrap">{date}</span>
+        </button>
+      </BentoRow>
+    );
+  }
+
   return (
     <BentoRow
       id={id}
-      meta={new Date(interaction.interactionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+      meta={date}
     >
-      <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">
-        {interaction.title || interaction.typeName || t('bento.tiles.interaction', 'Interaction')}
-      </span>
+      <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">{label}</span>
     </BentoRow>
   );
 }

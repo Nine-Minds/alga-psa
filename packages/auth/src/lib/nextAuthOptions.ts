@@ -129,19 +129,27 @@ const SESSION_COOKIE = getSessionCookieConfig();
 async function rejectRevokedOrUnverifiableSession(
     tenant: unknown,
     sessionId: unknown,
+    userId: unknown,
+    userType: unknown,
 ): Promise<boolean> {
     if (
         typeof tenant !== 'string'
         || tenant.length === 0
         || typeof sessionId !== 'string'
         || sessionId.length === 0
+        || typeof userId !== 'string'
+        || userId.length === 0
+        || (userType !== 'internal' && userType !== 'client')
     ) {
-        console.error('[auth] Tracked session is missing its tenant or session identifier.');
+        console.error('[auth] Tracked session is missing required identity claims.');
         return true;
     }
 
     try {
-        return await UserSession.isRevoked(tenant, sessionId);
+        return await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
+            userId,
+            userType,
+        });
     } catch (error) {
         console.error('[auth] Session revocation check failed closed:', error);
         return true;
@@ -2012,9 +2020,15 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 }
             }
 
-            // Check durable revocation state on every authenticated request.
-            // Missing/untracked sessions fail closed so SCIM revocation is terminal.
-            if (await rejectRevokedOrUnverifiableSession(token.tenant, token.session_id)) {
+            // Check durable revocation and canonical identity state on every
+            // authenticated request. Missing, untracked, or mismatched sessions
+            // fail closed.
+            if (await rejectRevokedOrUnverifiableSession(
+                token.tenant,
+                token.session_id,
+                token.id || token.sub,
+                token.user_type,
+            )) {
                 return null;
             }
 
@@ -2832,9 +2846,15 @@ export const options: NextAuthConfig = {
                 }
             }
 
-            // Check durable revocation state on every authenticated request.
-            // Missing/untracked sessions fail closed so SCIM revocation is terminal.
-            if (await rejectRevokedOrUnverifiableSession(token.tenant, token.session_id)) {
+            // Check durable revocation and canonical identity state on every
+            // authenticated request. Missing, untracked, or mismatched sessions
+            // fail closed.
+            if (await rejectRevokedOrUnverifiableSession(
+                token.tenant,
+                token.session_id,
+                token.id || token.sub,
+                token.user_type,
+            )) {
                 return null;
             }
 

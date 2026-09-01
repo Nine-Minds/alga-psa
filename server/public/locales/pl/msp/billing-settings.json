@@ -88,6 +88,43 @@
         "save": "Nie udało się zapisać ustawień"
       }
     },
+    "creditDrawdown": {
+      "title": "Wykorzystanie kredytu",
+      "description": "Kontroluj, kiedy kredyty klienta są stosowane do faktur i w jaki sposób są wykorzystywane.",
+      "fields": {
+        "autoApply": {
+          "label": "Automatycznie stosuj kredyt przy finalizacji",
+          "help": "Gdy ta opcja jest włączona, dostępny kredyt jest stosowany automatycznie podczas finalizacji faktury"
+        },
+        "order": {
+          "label": "Kolejność stosowania kredytu",
+          "placeholder": "Wybierz kolejność kredytu",
+          "help": "Wybierz kolejność, w jakiej kredyty są wykorzystywane"
+        },
+        "serviceTypes": {
+          "label": "Kwalifikujące się typy usług",
+          "help": "Wybierz, czy kredyt może być stosowany do wszystkich opłat, czy tylko do opłat za wybrane typy usług.",
+          "empty": "Nie skonfigurowano typów usług.",
+          "restricted": "Kredyt jest ograniczony do wybranych typów usług.",
+          "mode": {
+            "all": "Wszystkie typy usług",
+            "restricted": "Tylko wybrane typy"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Najpierw wygasające najwcześniej",
+        "oldestFirst": "Najpierw najstarszy kredyt",
+        "newestFirst": "Najpierw najnowszy kredyt"
+      },
+      "toast": {
+        "updated": "Ustawienia wykorzystania kredytu zostały zaktualizowane."
+      },
+      "errors": {
+        "load": "Nie udało się załadować ustawień",
+        "save": "Nie udało się zapisać ustawień"
+      }
+    },
     "renewal": {
       "title": "Automatyzacja odnowień",
       "description": "Skonfiguruj domyślne zachowanie, gdy umowy osiągną datę odnowienia.",
@@ -105,7 +142,7 @@
           "label": "Stan zgłoszenia odnowienia",
           "placeholderLoading": "Ładowanie statusów...",
           "placeholderSelect": "Wybierz stan",
-          "placeholderSelectBoardFirst": "Najpierw wybierz deskę",
+          "placeholderSelectBoardFirst": "Najpierw wybierz tablicę",
           "help": "Statusy zgłoszeń odnowienia są ograniczone do wybranej tablicy."
         }
       },
@@ -419,6 +456,46 @@
         "create": "Nie udało się utworzyć wakacji podatkowych.",
         "update": "Nie udało się zaktualizować wakacji podatkowych.",
         "delete": "Nie udało się usunąć wakacji podatkowych."
+      }
+    },
+    "delegation": {
+      "defaultProvider": "system księgowy",
+      "actions": {
+        "applying": "Stosowanie…"
+      },
+      "errors": {
+        "enableFailed": "Nie udało się włączyć zewnętrznego obliczania podatku."
+      },
+      "banner": {
+        "title": "Czy {{provider}} ma obliczać podatek?",
+        "description": "Połączono system {{provider}}. Większość klientów woli, aby system księgowy obsługiwał podatki, dzięki czemu oba rejestry księgowe pozostają zgodne — Alga zaksięguje faktury bez kwot podatku, system {{provider}} zastosuje swoje reguły podatkowe, a wynik zostanie zsynchronizowany z Alga. Alga nie jest pakietem podatkowym; zalecamy przekazanie tych obliczeń.",
+        "actions": {
+          "enable": "Używaj systemu {{provider}} do obliczania podatku",
+          "dismiss": "Nie teraz",
+          "dismissing": "Odrzucanie…"
+        },
+        "toast": {
+          "enabled": "Włączono zewnętrzne obliczanie podatku.",
+          "enabledWithProvider": "System {{provider}} będzie obliczać podatek na nowych fakturach."
+        },
+        "errors": {
+          "loadState": "Nie udało się wczytać stanu zalecenia dotyczącego przekazania obliczeń podatku.",
+          "dismissFailed": "Nie udało się odrzucić banera."
+        }
+      },
+      "nudge": {
+        "title": "Czy system {{provider}} ma obliczać podatek na przyszłych fakturach?",
+        "description": "Zalecane. Nowe faktury będą księgowane w systemie {{provider}} bez kwot podatku, system {{provider}} zastosuje swoje reguły podatkowe, a obliczony podatek zostanie zsynchronizowany z Alga, dzięki czemu oba rejestry księgowe pozostaną zgodne. Ustawienie można zmienić w dowolnym momencie w sekcji Rozliczenia → Ustawienia podatków.",
+        "actions": {
+          "enable": "Tak, używaj systemu {{provider}}",
+          "keepInternal": "Pozostaw obliczanie podatku w Alga"
+        },
+        "toast": {
+          "enabled": "System {{provider}} będzie obliczać podatek na nowych fakturach. Ustawienie można zmienić w ustawieniach rozliczeń."
+        },
+        "errors": {
+          "loadSettings": "Nie udało się wczytać bieżących ustawień podatków."
+        }
       }
     }
   },
@@ -1076,7 +1153,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Nie udało się załadować ustawień",
-    "failedToSaveSettings": "Nie udało się zapisać ustawień"
+    "failedToSaveSettings": "Nie udało się zapisać ustawień",
+    "permissions": {
+      "readSettings": "Odmowa uprawnień: nie można odczytać ustawień rozliczeń",
+      "updateSettings": "Odmowa uprawnień: nie można zaktualizować ustawień rozliczeń",
+      "readClientSettings": "Odmowa uprawnień: nie można odczytać ustawień rozliczeń klienta",
+      "updateClientSettings": "Odmowa uprawnień: nie można zaktualizować ustawień rozliczeń klienta",
+      "settingsRead": "Odmowa uprawnień: wymagane uprawnienie odczytu ustawień rozliczeń",
+      "settingsUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji ustawień rozliczeń",
+      "readTaxRates": "Odmowa uprawnień: nie można odczytywać stawek podatku",
+      "createTaxRates": "Odmowa uprawnień: nie można tworzyć stawek podatku",
+      "updateTaxRates": "Odmowa uprawnień: nie można aktualizować stawek podatku",
+      "updateTaxRegions": "Odmowa uprawnień: nie można aktualizować regionów podatkowych"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Odmowa uprawnień: stawki podatku w rozliczeniach nie są dostępne dla tej organizacji.",
+      "overlap": "Zakres dat stawki podatku nakłada się na istniejącą stawkę dla tego regionu.",
+      "regionRequired": "Region jest wymagany.",
+      "idRequired": "Do aktualizacji wymagany jest identyfikator stawki podatku.",
+      "notFound": "Nie znaleziono stawki podatku.",
+      "notFoundOrAlreadyDeleted": "Nie znaleziono stawki podatku lub została już usunięta.",
+      "invalid": "Wybrana stawka podatku lub region jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "regionInvalid": "Wybrany region podatkowy nie jest już prawidłowy. Odśwież stronę i wybierz inny region.",
+      "duplicate": "Dla tego regionu i zakresu dat istnieje już stawka podatku.",
+      "missingField": "Brakuje wymaganego pola stawki podatku.",
+      "missingFieldNamed": "Brakuje wymaganego pola stawki podatku: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Skonfiguruj co najmniej jedną aktywną stawkę podatku przed utworzeniem domyślnych ustawień podatkowych.",
+      "componentNotFound": "Nie znaleziono składnika podatku. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "bracketNotFound": "Nie znaleziono progu podatkowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "holidayNotFound": "Nie znaleziono wakacji podatkowych. Mogły zostać zaktualizowane lub usunięte. Odśwież stronę i spróbuj ponownie.",
+      "recordInvalid": "Jeden z wybranych rekordów podatkowych jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów podatkowych już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Rekord podatkowy o takich danych już istnieje.",
+      "notAllowed": "Jedna z wartości podatku jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola podatku.",
+      "missingFieldNamed": "Brakuje wymaganego pola podatku: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Region podatkowy o kodzie „{{code}}” już istnieje.",
+      "notFoundCode": "Nie znaleziono regionu podatkowego o kodzie „{{code}}”."
+    }
   },
   "toast": {
     "saved": "Zapisano pomyślnie"

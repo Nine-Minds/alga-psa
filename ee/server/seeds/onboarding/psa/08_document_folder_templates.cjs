@@ -17,6 +17,7 @@ const DEFAULTS = [
       { folder_path: '/Clients/Technical',               folder_name: 'Technical',      sort_order: 6,  is_client_visible: false },
       { folder_path: '/Clients/Technical/Runbooks',      folder_name: 'Runbooks',       sort_order: 7,  is_client_visible: false },
       { folder_path: '/Clients/Meeting Notes',           folder_name: 'Meeting Notes',  sort_order: 8,  is_client_visible: true },
+      { folder_path: '/Clients/Sales Orders',            folder_name: 'Sales Orders',   sort_order: 9,  is_client_visible: false },
     ],
   },
   {

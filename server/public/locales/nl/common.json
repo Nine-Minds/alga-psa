@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "Ongeldige hexadecimale kleur (bijv. #FF0000)",
+    "invalidHexText": "Ongeldige hexadecimale kleur (bijv. #FFFFFF)",
+    "customizeTagColors": "Labelkleuren aanpassen",
+    "chooseColor": "Kleur kiezen",
+    "quickSelect": "Snelle selectie",
+    "presetAriaLabel": "Vooraf ingestelde kleur {{number}} selecteren",
+    "backgroundColor": "Achtergrondkleur",
+    "textColor": "Tekstkleur",
+    "preview": "Voorbeeld",
+    "sampleTag": "Voorbeeldlabel",
+    "resetToDefault": "Standaardwaarden herstellen"
+  },
   "clientNameCell": {
     "noClient": "Geen klant"
   },
@@ -82,7 +95,8 @@
     "share": "Delen",
     "done": "Klaar",
     "continue": "Doorgaan",
-    "printSelected": "Geselecteerde afdrukken ({{count}})"
+    "printSelected": "Geselecteerde afdrukken ({{count}})",
+    "removeTag": "Label verwijderen"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -116,6 +130,15 @@
     "confirmDeletion": "Verwijderen bevestigen"
   },
   "errors": {
+    "validation": {
+      "required": "{{field}} is verplicht.",
+      "invalidType": "{{field}} heeft het verkeerde type.",
+      "invalidFormat": "{{field}} heeft een ongeldige indeling.",
+      "tooSmall": "{{field}} ligt onder de minimaal toegestane waarde of lengte.",
+      "tooLarge": "{{field}} overschrijdt de maximaal toegestane waarde of lengte.",
+      "unsupportedValue": "{{field}} heeft een niet-ondersteunde waarde.",
+      "invalidValue": "{{field}} heeft een ongeldige waarde."
+    },
     "auth": {
       "notAuthenticated": "Niet geauthenticeerd",
       "accessDenied": "Toegang geweigerd",
@@ -127,6 +150,14 @@
       "contactNotFound": "Gebruiker is niet gekoppeld aan een contact",
       "clientNotFound": "Contact is niet gekoppeld aan een bedrijf"
     },
+    "password": {
+      "currentIncorrect": "Het huidige wachtwoord is onjuist",
+      "changeFailed": "Wachtwoord wijzigen is mislukt",
+      "differentTenant": "Niet geautoriseerd: een gebruiker van een andere tenant kan niet worden gewijzigd",
+      "internalStaffRequired": "Niet geautoriseerd: rechten van interne medewerkers zijn vereist",
+      "adminRequired": "Niet geautoriseerd: beheerdersrechten zijn vereist",
+      "changeUserFailed": "Wachtwoord van gebruiker wijzigen is mislukt"
+    },
     "permissions": {
       "tickets": {
         "read": "Onvoldoende rechten om tickets te bekijken",
@@ -136,8 +167,26 @@
         "updateStatus": "Onvoldoende rechten om ticketstatus bij te werken",
         "addComments": "Onvoldoende rechten om opmerkingen toe te voegen",
         "updateComments": "Onvoldoende rechten om opmerkingen bij te werken",
-        "deleteComments": "Onvoldoende rechten om opmerkingen te verwijderen"
+        "deleteComments": "Onvoldoende rechten om opmerkingen te verwijderen",
+        "viewDocuments": "Onvoldoende rechten om ticketdocumenten te bekijken"
       }
+    },
+    "tags": {
+      "notFound": "Label niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde labelwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "textTooLongShort": "De labeltekst is te lang.",
+      "referenceMissing": "Het geselecteerde label of het gelabelde record bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "alreadyApplied": "Dat label is al toegepast op dit item.",
+      "duplicate": "Er bestaat al een label met deze gegevens.",
+      "notAllowed": "Een van de labelwaarden is niet toegestaan. Controleer het label en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht labelveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht labelveld: {{field}}.",
+      "textRequired": "Labeltekst is verplicht",
+      "textEmpty": "De labeltekst mag niet leeg zijn",
+      "textTooLong": "Labeltekst te lang (maximaal 50 tekens)",
+      "textInvalidCharacters": "De labeltekst bevat ongeldige tekens",
+      "backgroundColorInvalid": "Ongeldige indeling voor achtergrondkleur. Dit moet een geldige hexadecimale kleurcode zijn (bijv. #FF0000)",
+      "textColorInvalid": "Ongeldige indeling voor tekstkleur. Dit moet een geldige hexadecimale kleurcode zijn (bijv. #FFFFFF)"
     }
   },
   "time": {
@@ -162,6 +211,7 @@
     "selectLanguage": "Selecteer taal",
     "changeLanguage": "Taal wijzigen",
     "currentLanguage": "Huidige taal",
+    "previewLanguage": "Voorbeeldtaal",
     "preference": {
       "label": "Taalvoorkeur",
       "helper": "Selecteer uw voorkeurstaal voor de interface en e-mailmeldingen",
@@ -312,6 +362,107 @@
         "title": "Nog geen locaties toegevoegd",
         "description": "Klik op \"Locatie toevoegen\" om te beginnen"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Voer een geldige klantnaam in",
+        "required": "Klantnaam is verplicht",
+        "emojiOnly": "Deze naam bestaat volledig uit emoji.",
+        "tooShort": "Deze naam bestaat uit één teken — klopt dat?",
+        "abbreviationOnly": "Dit is alleen een rechtsvormafkorting, geen naam.",
+        "repeatedCharacters": "In deze naam wordt hetzelfde teken meerdere keren herhaald.",
+        "looksLikeUrl": "Dit lijkt eerder een webadres dan een naam.",
+        "noLettersOrNumbers": "Deze naam bevat geen letters of cijfers."
+      },
+      "contactName": {
+        "structural": "Voer een geldige contactnaam in",
+        "placeholder": "Dit lijkt eerder een tijdelijke aanduiding dan een persoon."
+      },
+      "email": {
+        "structural": "Voer een geldig e-mailadres in",
+        "required": "E-mailadres is verplicht",
+        "disposableDomain": "{{domain}} is een aanbieder van wegwerpmailboxen.",
+        "reservedDomain": "{{domain}} is gereserveerd voor documentatie en tests.",
+        "internalDomain": "{{domain}} is alleen binnen een privénetwerk bereikbaar."
+      },
+      "url": {
+        "structural": "Voer een geldige website-URL in (bijv. apple.com)",
+        "ipAddress": "Dit is een IP-adres en geen domeinnaam.",
+        "internalHost": "{{host}} is alleen binnen een privénetwerk bereikbaar.",
+        "reservedDomain": "{{host}} is gereserveerd voor documentatie en tests."
+      },
+      "phone": {
+        "structural": "Voer een geldig telefoonnummer in",
+        "repeatedDigits": "Dit nummer bestaat uit hetzelfde cijfer.",
+        "sequentialDigits": "Dit nummer loopt recht op of af over het toetsenblok.",
+        "fictionalRange": "Dit valt in het bereik 555-0100 dat voor fictie is gereserveerd."
+      },
+      "dismissWarning": "Sluiten",
+      "address": {
+        "emoji": "Adres mag geen emoji's bevatten",
+        "empty": "Adres mag niet leeg zijn",
+        "invalidCharacters": "Adres bevat ongeldige tekens",
+        "noLetters": "Adres moet letters bevatten",
+        "tooLong": "Adres mag maximaal 100 tekens bevatten"
+      },
+      "city": {
+        "emoji": "Plaatsnaam mag geen emoji's bevatten",
+        "empty": "Plaatsnaam mag niet leeg zijn",
+        "invalidCharacters": "Plaatsnaam bevat ongeldige tekens",
+        "noLetters": "Plaatsnaam moet letters bevatten",
+        "tooLong": "Plaatsnaam mag maximaal 100 tekens bevatten"
+      },
+      "stateProvince": {
+        "emoji": "Staat/provincie mag geen emoji's bevatten",
+        "empty": "Staat/provincie mag niet leeg zijn",
+        "invalidCharacters": "Staat/provincie bevat ongeldige tekens",
+        "noLetters": "Staat/provincie moet letters bevatten",
+        "tooLong": "Staat/provincie mag maximaal 100 tekens bevatten"
+      },
+      "postalCode": {
+        "au": "Voer een geldige Australische postcode in (bijv. 2000)",
+        "br": "Voer een geldige Braziliaanse postcode in (bijv. 01234-567)",
+        "ca": "Voer een geldige Canadese postcode in (bijv. K1A 0A6)",
+        "ch": "Voer een geldige Zwitserse postcode in (bijv. 8001)",
+        "de": "Voer een geldige Duitse postcode in (bijv. 10115)",
+        "emoji": "Postcode mag geen emoji's bevatten",
+        "es": "Voer een geldige Spaanse postcode in (bijv. 28001)",
+        "fr": "Voer een geldige Franse postcode in (bijv. 75001)",
+        "gb": "Voer een geldige Britse postcode in (bijv. SW1A 1AA)",
+        "generic": "Voer een geldige postcode in",
+        "in": "Voer een geldige Indiase postcode in (bijv. 110001)",
+        "it": "Voer een geldige Italiaanse postcode in (bijv. 00118)",
+        "jp": "Voer een geldige Japanse postcode in (bijv. 123-4567)",
+        "nl": "Voer een geldige Nederlandse postcode in (bijv. 1234AB)",
+        "onlySpaces": "Postcode mag niet alleen spaties bevatten",
+        "us": "Voer een geldige ZIP-code in (bijv. 12345 of 12345-6789)",
+        "usShort": "Voer een geldige ZIP-code in"
+      },
+      "industry": {
+        "invalidCharacters": "Branche bevat ongeldige tekens",
+        "noLetters": "Branche moet letters bevatten",
+        "tooLong": "Branche mag maximaal 100 tekens bevatten",
+        "tooShort": "Branche moet minimaal 2 tekens bevatten",
+        "tooShortText": "Branche moet minimaal 2 teksttekens bevatten"
+      },
+      "role": {
+        "noAlphanumeric": "Functie moet letters of cijfers bevatten",
+        "onlySpaces": "Functie mag niet alleen spaties bevatten",
+        "tooLong": "Functie mag maximaal 100 tekens bevatten"
+      },
+      "notes": {
+        "tooLong": "Notities mogen maximaal 2000 tekens bevatten"
+      },
+      "companySize": {
+        "emoji": "Bedrijfsgrootte mag geen emoji's bevatten",
+        "invalid": "Voer een geldige bedrijfsgrootte in (bijv. \"50\", \"10-50\", \"vijfhonderd\", \"2,5 mln\", \"klein\", \"grootbedrijf\")",
+        "tooLong": "Bedrijfsgrootte mag maximaal 50 tekens bevatten"
+      },
+      "annualRevenue": {
+        "emoji": "Jaaromzet mag geen emoji's bevatten",
+        "invalid": "Voer een geldige jaaromzet in (bijv. \"€ 1.000.000\", \"vijf miljoen\", \"2,5 mln\", \"10 mln-50 mln\", \"niet bekendgemaakt\")",
+        "tooLong": "Jaaromzet mag maximaal 50 tekens bevatten"
+      }
     }
   },
   "commentThread": {
@@ -319,7 +470,9 @@
     "replies_other": "{{count}} antwoorden",
     "collapse": "Inklappen",
     "expand": "Uitklappen",
-    "showInDrawer": "Tonen in zijpaneel"
+    "showInDrawer": "Tonen in zijpaneel",
+    "showEarlierReplies_one": "{{count}} eerder antwoord tonen",
+    "showEarlierReplies_other": "{{count}} eerdere antwoorden tonen"
   },
   "pagination": {
     "previous": "Vorige",
@@ -618,6 +771,23 @@
     "notes": "Notities"
   },
   "auth": {
+    "signOut": {
+      "title": "Afmelden",
+      "confirmation": "Weet u zeker dat u zich wilt afmelden?",
+      "signingOut": "Bezig met afmelden...",
+      "action": "Afmelden"
+    },
+    "passwordReset": {
+      "title": "Wachtwoord wijzigen vereist",
+      "description": "U gebruikt nog steeds een tijdelijk wachtwoord. Wijzig uw wachtwoord om uw account te beveiligen."
+    },
+    "twoFactor": {
+      "codeLabel": "2FA-code",
+      "verify": "Verifiëren",
+      "title": "Heel eenvoudig",
+      "instructions": "Voer de 6-cijferige code uit uw authenticator-app in.",
+      "digitsLeft": "Nog {{count}} cijfers"
+    },
     "messages": {
       "handoffMissingToken": "Het login-overdrachtstoken ontbreekt of is ongeldig. Log opnieuw in.",
       "handoffFinalizeFailed": "We konden uw inloggen niet voltooien. Probeer opnieuw in te loggen.",
@@ -628,6 +798,32 @@
       "resendFailed": "E-mail opnieuw verzenden is mislukt. Probeer het opnieuw.",
       "whatsNext": "Wat nu?",
       "didntReceive": "E-mail niet ontvangen?"
+    },
+    "sso": {
+      "signInWithMicrosoft": "Aanmelden met Microsoft",
+      "signInWithGoogle": "Aanmelden met Google",
+      "redirecting": "Doorverwijzen...",
+      "startFailed": "We konden het aanmelden via SSO niet starten. Controleer de providerconfiguratie en probeer het opnieuw."
+    },
+    "verify": {
+      "title": "E-mailverificatie niet meer beschikbaar",
+      "selfRegistrationRemoved": "Zelfregistratie via het e-maildomein wordt om veiligheidsredenen niet meer ondersteund.",
+      "existingContactsOnly": "Registratie is nu alleen beschikbaar voor bestaande contacten. Neem contact op met uw beheerder om eerst als contact te worden toegevoegd.",
+      "registerFromSignIn": "Als u al een bestaand contact bent, kunt u zich rechtstreeks registreren op de aanmeldpagina met uw contact-e-mailadres.",
+      "returnToSignIn": "Terug naar aanmelden"
+    },
+    "validation": {
+      "password": {
+        "required": "Wachtwoord is verplicht",
+        "tooShort": "Wachtwoord moet minimaal 8 tekens lang zijn",
+        "tooLong": "Wachtwoord mag maximaal 128 tekens lang zijn",
+        "missingUppercase": "Wachtwoord moet minimaal één hoofdletter bevatten",
+        "missingLowercase": "Wachtwoord moet minimaal één kleine letter bevatten",
+        "missingNumber": "Wachtwoord moet minimaal één cijfer bevatten",
+        "missingSpecialCharacter": "Wachtwoord moet minimaal één speciaal teken bevatten",
+        "tooCommon": "Wachtwoord komt te vaak voor. Kies een sterker wachtwoord",
+        "sequentialCharacters": "Wachtwoord mag geen opeenvolgende tekens bevatten"
+      }
     }
   },
   "share": {
@@ -643,7 +839,9 @@
       "downloadLimitReached": "De downloadlimiet is bereikt."
     },
     "downloadStarted": "Download succesvol gestart!",
-    "enterPassword": "Wachtwoord invoeren"
+    "enterPassword": "Wachtwoord invoeren",
+    "downloadsUsed": "{{used}} van {{max}} downloads gebruikt",
+    "expiresAt": "Verloopt: {{date}}"
   },
   "tickets": {
     "responseSource": {
@@ -1102,13 +1300,35 @@
     "noUsersAvailable": "Geen gebruikers beschikbaar",
     "searchBoards": "Borden zoeken...",
     "searchBoardsLabel": "Borden zoeken",
-    "noBoardsFound": "Geen borden gevonden"
+    "noBoardsFound": "Geen borden gevonden",
+    "notAssigned": "Niet toegewezen",
+    "searchUsersOrTeams": "Zoek gebruikers of teams...",
+    "unnamedUser": "Naamloze gebruiker",
+    "unnamedTeam": "Naamloos team"
+  },
+  "serviceTypeSelect": {
+    "placeholder": "Servicetype selecteren...",
+    "newNamePlaceholder": "Naam van het nieuwe servicetype...",
+    "addNew": "Nieuw servicetype toevoegen",
+    "deleteTitle": "Servicetype verwijderen",
+    "deleteConfirm": "Weet u zeker dat u dit servicetype wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "errors": {
+      "delete": "Dit servicetype kan niet worden verwijderd. Het wordt mogelijk gebruikt door bestaande services.",
+      "create": "Het servicetype kon niet worden gemaakt. Probeer het opnieuw."
+    }
   },
   "tagFilter": {
     "placeholder": "Filter op tags...",
     "filter": "Filteren",
     "selectedCount": "{{count}} geselecteerd",
     "clearAll": "Alles wissen"
+  },
+  "timePicker": {
+    "placeholder": "Tijd selecteren",
+    "hour": "Uur",
+    "minute": "Minuut",
+    "period": "Dagdeel",
+    "open": "Tijdkiezer openen"
   },
   "timezonePicker": {
     "selectPlaceholder": "Tijdzone selecteren...",
@@ -1289,5 +1509,94 @@
   },
   "richTextEditorSkeleton": {
     "loading": "Editor laden…"
+  },
+  "productBoundary": {
+    "upgrade": {
+      "title": "Beschikbaar in AlgaPSA",
+      "description": "Dit onderdeel maakt deel uit van het volledige AlgaPSA-product. AlgaDesk bevat alleen gerichte helpdeskfunctionaliteit.",
+      "cta": "Terug naar het AlgaDesk-dashboard"
+    },
+    "notFound": {
+      "title": "Pagina niet beschikbaar",
+      "description": "Deze pagina is niet beschikbaar in uw huidige productervaring.",
+      "cta": "Ga naar dashboard"
+    }
+  },
+  "notifications": {
+    "needsAttention": "Vereist aandacht ({{count}})",
+    "lowPriority": "Lage prioriteit ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Importconflicten oplossen",
+    "description": "Sommige items bestaan al. Kies hoe u elk conflict wilt afhandelen.",
+    "apply": "Oplossingen toepassen",
+    "reason": {
+      "name": "Conflict: deze naam bestaat al",
+      "order": "Conflict: volgorde {{order}} is al bezet",
+      "item": "Conflict: dit item bestaat al"
+    },
+    "skip": "Dit item overslaan",
+    "rename": "Importeren met een andere naam",
+    "newNamePlaceholder": "Voer een nieuwe naam in",
+    "reorder": "Importeren met een andere volgorde",
+    "newOrderPlaceholder": "Voer een nieuwe volgorde in"
+  },
+  "tags": {
+    "editTitle": "Label bewerken",
+    "noPermission": "U hebt geen rechten om labels te bewerken. Neem contact op met uw beheerder voor toegang.",
+    "preview": "Labelvoorbeeld",
+    "textLabel": "Labeltekst",
+    "textPlaceholder": "Voer labeltekst in",
+    "quickColors": "Kleuren snel kiezen",
+    "presetSwatch": "Achtergrond: {{background}}, tekst: {{text}}",
+    "backgroundColorLabel": "Achtergrondkleur",
+    "textColorLabel": "Tekstkleur",
+    "pickBackgroundColor": "Achtergrondkleur kiezen",
+    "pickTextColor": "Tekstkleur kiezen",
+    "resetColors": "Kleuren herstellen",
+    "deleteAll": "Alles verwijderen",
+    "deleting": "Verwijderen...",
+    "deleteAllTitle": "Alle labels verwijderen",
+    "deleteAllMessage": "Weet u zeker dat u alle labels met de tekst '{{tag}}' wilt verwijderen? Dit label wordt van alle {{entityType}} verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+    "deletedAll": "Alle labels '{{tag}}' zijn verwijderd",
+    "deleteFailed": "Labels konden niet worden verwijderd",
+    "saveFailed": "Labelwijzigingen konden niet worden opgeslagen",
+    "textRequired": "De labeltekst mag niet leeg zijn",
+    "updated": "Label bijgewerkt",
+    "entityTypes": {
+      "client": "klanten",
+      "contact": "contacten",
+      "ticket": "tickets",
+      "project": "projecten",
+      "project_task": "projecttaken",
+      "workflow_form": "workflowformulieren",
+      "document": "documenten",
+      "knowledge_base_article": "kennisbankartikelen",
+      "opportunity": "opportuniteiten"
+    }
+  },
+  "statusDialog": {
+    "nameRequired": "De statusnaam is verplicht",
+    "orderTaken": "Volgordenummer {{order}} is al in gebruik door '{{name}}'. Kies een ander volgordenummer.",
+    "updated": "Status bijgewerkt",
+    "created": "Status aangemaakt",
+    "orderInUse": "Dit volgordenummer is al in gebruik. Kies een ander volgordenummer.",
+    "updateFailed": "Status kon niet worden bijgewerkt",
+    "createFailed": "Status kon niet worden aangemaakt",
+    "submitUpdate": "Status bijwerken",
+    "submitAdd": "Status toevoegen",
+    "editTitle": "Status bewerken",
+    "addTitle": "Nieuwe status toevoegen",
+    "nameLabel": "Statusnaam",
+    "namePlaceholder": "bijv. In behandeling",
+    "orderLabel": "Volgordenummer (1-100, lagere nummers verschijnen eerst)",
+    "orderHelp": "Bepaalt de volgorde waarin statussen in keuzemenu's binnen het hele platform verschijnen.",
+    "usedOrders": "Gebruikte volgordenummers: {{orders}}",
+    "noUsedOrders": "Nog geen volgordenummers gebruikt",
+    "markClosed": "Markeren als afgesloten status",
+    "setDefault": "Instellen als standaardstatus voor nieuwe tickets"
+  },
+  "callLink": {
+    "teamsCall": "Bellen in Microsoft Teams"
   }
 }

@@ -14,6 +14,10 @@ import type { JobStatus } from '../types/job.js';
 import { registerJobRunnerAccessor } from '@alga-psa/jobs/runner';
 import { TemporalJobRunner } from '@alga-psa/jobs/runners/TemporalJobRunner';
 import { extensionScheduledInvocationHandler } from '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler';
+import {
+  KB_ARTICLE_IMPORT_JOB,
+  kbArticleImportHandler,
+} from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 // rmm/huntress poll + accounting-sync-cycle handlers import src-consumed vertical
@@ -24,8 +28,10 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 // them would pull the unresolvable handler module back into the worker's static graph.
 const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
+const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
 const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
+const PUBLISH_SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
@@ -98,6 +104,21 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     throw error;
   }
 
+  // KB article import: the handler's graph is Node-ESM clean (@alga-psa/db,
+  // @alga-psa/shared, marked/htmlparser2), so it runs here rather than being
+  // forwarded — forwarding would put the parse back on a web pod, which is the
+  // whole reason the import moved to a job.
+  try {
+    registerJobHandlerForActivities(KB_ARTICLE_IMPORT_JOB, async (jobId, data) => {
+      return kbArticleImportHandler(jobId, data as any);
+    });
+  } catch (error) {
+    logger.error('Failed to register KB article import handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+
   // RMM/Huntress polling: in EE these recurring jobs arrive as Temporal Schedules
   // that start genericJobWorkflow, which executes whatever is registered here. The
   // handlers import the src-consumed @alga-psa/integrations vertical, which the
@@ -119,6 +140,9 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     };
   registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
+  // Device sync reaches provider clients under ee/server, so it forwards to the
+  // server like the other RMM jobs rather than running in the worker.
+  registerJobHandlerForActivities(RMM_DEVICE_SYNC_JOB, forwardJobToServer(RMM_DEVICE_SYNC_JOB));
   registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
   registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
   // Teams meeting Graph cleanup (cancel/decline): the handler imports
@@ -127,6 +151,34 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // recurring sweep-teams-online-meetings maintenance job re-attempts any
   // cancel_pending rows if a forwarded run is lost.
   registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));
+  // Teams meeting recording/transcript capture, enqueued by the app's
+  // /api/teams/webhooks/recordings route when Graph notifies about a new
+  // artifact. Same constraint as the cleanup job: the handler imports
+  // src-consumed vertical packages (@alga-psa/clients, @alga-psa/scheduling),
+  // so it executes server-side via the event bus.
+  registerJobHandlerForActivities(
+    'process-teams-meeting-artifact-notification',
+    forwardJobToServer('process-teams-meeting-artifact-notification'),
+  );
+  // Teams Phone call journaling, enqueued by the app's
+  // /api/telephony/webhooks/teams-calls route when Graph notifies about a new
+  // call record. The handler reaches the EE Teams lib and the telephony core
+  // (both src-consumed), so it executes server-side via the event bus.
+  registerJobHandlerForActivities(
+    'process-telephony-call-notification',
+    forwardJobToServer('process-telephony-call-notification'),
+  );
+  // Invoice bundling/delivery, enqueued from billing UI actions via the shared
+  // enqueueImmediateJob seam. The handlers live server-side (StorageService,
+  // PDF generation), so the worker forwards them like the jobs above.
+  registerJobHandlerForActivities('invoice_zip', forwardJobToServer('invoice_zip'));
+  registerJobHandlerForActivities('invoice_email', forwardJobToServer('invoice_email'));
+  // Scheduled comment publication reaches server-local ticket settings and job
+  // modules, so execute it through the same server-side forwarding boundary.
+  registerJobHandlerForActivities(
+    PUBLISH_SCHEDULED_COMMENT_JOB,
+    forwardJobToServer(PUBLISH_SCHEDULED_COMMENT_JOB),
+  );
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /

@@ -15,6 +15,7 @@ import { IClient } from '@alga-psa/types';
 import { useToast } from '@alga-psa/ui';
 import { useRouter } from 'next/navigation';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import { getTemplates, applyTemplate } from '../../actions/projectTemplateActions';
 import { getAllClientsForProjects, getProjectStatuses } from '../../actions/projectActions';
@@ -24,6 +25,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { TEMPLATE_STATUS_MAPPINGS_UNRESOLVED_MESSAGE } from '../../lib/templateStatusMappingUtils';
 import { useTranslation } from 'react-i18next';
 
 interface ApplyTemplateDialogProps {
@@ -43,13 +45,16 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
   const { t } = useTranslation(['features/projects', 'common']);
   const router = useRouter();
   const { toast } = useToast();
+  const { renderQuickAddClient } = useQuickAddClient();
   const [templates, setTemplates] = useState<IProjectTemplate[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const pendingStatusSelectRef = React.useRef<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -97,6 +102,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
       setStartDate(undefined);
       setHasAttemptedSubmit(false);
       setValidationErrors([]);
+      setSubmitError(null);
       setOptions({
         copyPhases: true,
         copyStatuses: true,
@@ -179,11 +185,15 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
         }
       });
       if (isReturnedActionError(projectId)) {
-        toast({
-          title: t('templates.apply.loadErrorTitle', 'Error'),
-          description: getErrorMessage(projectId),
-          variant: 'destructive'
-        });
+        const message = getErrorMessage(projectId);
+        setSubmitError(message);
+        if (message !== TEMPLATE_STATUS_MAPPINGS_UNRESOLVED_MESSAGE) {
+          toast({
+            title: t('templates.apply.loadErrorTitle', 'Error'),
+            description: message,
+            variant: 'destructive'
+          });
+        }
         return;
       }
 
@@ -244,6 +254,21 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
       footer={footer}
     >
       <form id="apply-template-dialog-form" onSubmit={handleSubmit} className="space-y-6">
+          {submitError && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                <p className="text-sm">{submitError}</p>
+                {submitError === TEMPLATE_STATUS_MAPPINGS_UNRESOLVED_MESSAGE && (
+                  <a
+                    href={`/msp/projects/templates/${formData.template_id}`}
+                    className="mt-2 inline-block text-sm font-medium underline"
+                  >
+                    {t('templates.statuses.repair_status_columns')}
+                  </a>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
           {hasAttemptedSubmit && validationErrors.length > 0 && (
             <Alert variant="destructive">
               <AlertDescription>
@@ -301,6 +326,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
               onClientTypeFilterChange={setClientTypeFilter}
               placeholder={t('templates.apply.clientPlaceholder', 'Select a client')}
               className={hasAttemptedSubmit && !formData.client_id ? 'ring-1 ring-red-500' : ''}
+              onAddNew={() => setIsQuickAddClientOpen(true)}
             />
           </div>
 
@@ -428,6 +454,23 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
 
         </form>
     </Dialog>
+    {renderQuickAddClient({
+      open: isQuickAddClientOpen,
+      onOpenChange: setIsQuickAddClientOpen,
+      onClientAdded: (newClient) => {
+        setClients((currentClients) => {
+          const existingIndex = currentClients.findIndex(
+            (client) => client.client_id === newClient.client_id,
+          );
+          if (existingIndex === -1) return [...currentClients, newClient];
+          const nextClients = [...currentClients];
+          nextClients[existingIndex] = newClient;
+          return nextClients;
+        });
+        setFormData((current) => ({ ...current, client_id: newClient.client_id }));
+      },
+      skipSuccessDialog: true,
+    })}
     <QuickAddStatus
       open={showQuickAddStatus}
       onOpenChange={setShowQuickAddStatus}

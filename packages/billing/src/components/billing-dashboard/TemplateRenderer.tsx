@@ -15,13 +15,15 @@ interface TemplateRendererProps {
   template: IInvoiceTemplate | null; // Allow null template
   // Use the correct InvoiceViewModel type for the prop
   invoiceData: WasmInvoiceViewModel | null; // Allow null invoiceData
+  /** Real invoice being previewed; renders in its recipient's language. Omit for sample data. */
+  invoiceId?: string | null;
   renderOverride?: {
     html: string;
     css: string;
   } | null;
 }
 
-export function TemplateRenderer({ template, invoiceData, renderOverride = null }: TemplateRendererProps) {
+export function TemplateRenderer({ template, invoiceData, invoiceId = null, renderOverride = null }: TemplateRendererProps) {
   const { t } = useTranslation('msp/billing');
   const [renderedHtml, setRenderedHtml] = useState<string | null>(null);
   const [renderedCss, setRenderedCss] = useState<string | null>(null); // Added state for CSS
@@ -78,6 +80,7 @@ export function TemplateRenderer({ template, invoiceData, renderOverride = null 
 
         const { html, css } = await renderTemplateOnServer(templateId, processedInvoiceData, {
           templateAst: (template as any).templateAst ?? null,
+          invoiceId,
         });
 
         setRenderedHtml(html);
@@ -94,7 +97,7 @@ export function TemplateRenderer({ template, invoiceData, renderOverride = null 
     };
 
     performRender();
-  }, [template, invoiceData, renderOverride]); // Rerun effect when template/invoice/override changes
+  }, [template, invoiceData, invoiceId, renderOverride]); // Rerun effect when template/invoice/override changes
 
   if (isLoading) {
     return <div>{t('templateRenderer.loading', { defaultValue: 'Loading template preview...' })}</div>; // Or a Skeleton loader

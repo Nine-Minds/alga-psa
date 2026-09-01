@@ -11,10 +11,13 @@
     "clients": "Klanten",
     "opportunities": "Verkoopkansen",
     "contacts": "Contacten",
+    "interactions": "Interacties",
     "documents": "Documenten",
     "documentsAll": "Alle documenten",
     "knowledgeBase": "Kennisbank",
     "assets": "Assets",
+    "assetsAll": "Alle assets",
+    "assetsMaintenance": "Onderhoud",
     "inventory": {
       "label": "Inventaris",
       "sections": {
@@ -97,7 +100,8 @@
       "sequences": "Sequenties",
       "forms": "Formulieren",
       "channels": "Kanalen"
-    }
+    },
+    "passwords": "Wachtwoorden"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",
@@ -107,7 +111,10 @@
     "goToDashboard": "Ga naar dashboard",
     "logoAlt": "AlgaPSA-logo",
     "expandSidebar": "Zijbalk uitklappen",
-    "collapseSidebar": "Zijbalk inklappen"
+    "collapseSidebar": "Zijbalk inklappen",
+    "collapseSection": "{{section}} samenvouwen",
+    "expandSection": "{{section}} uitvouwen",
+    "appLogoAlt": "{{appName}}-logo"
   },
   "settings": {
     "sections": {
@@ -123,11 +130,13 @@
       "users": "Gebruikers",
       "teams": "Teams",
       "language": "Taal",
+      "appearance": "Weergave",
       "clientPortal": "Klantenportaal",
       "license": "Licentie",
       "ticketing": "Ticketbeheer",
       "sla": "SLA",
       "projects": "Projecten",
+      "assets": "Assets",
       "interactions": "Interacties",
       "opportunities": "Verkoopkansen",
       "notifications": "Meldingen",
@@ -734,5 +743,9 @@
       "permissionDescription": "U heeft geen rechten om marketing te bekijken. Vraag een beheerder om het leesrecht voor marketing.",
       "backToDashboard": "Ga naar dashboard"
     }
+  },
+  "githubStar": {
+    "label": "Ster geven",
+    "ariaLabel": "{{repository}} een ster geven op GitHub"
   }
 }

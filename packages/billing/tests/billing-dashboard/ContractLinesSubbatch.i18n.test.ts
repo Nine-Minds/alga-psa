@@ -509,7 +509,6 @@ describe('MSP contract-lines sub-batch i18n wiring contract', () => {
     const source = read('../../src/components/billing-dashboard/contract-lines/EditContractLineServiceQuantityDialog.tsx');
     expectSourceHasKeys(source, [
       'forms.editQuantity.dialogTitle',
-      'forms.editQuantity.heading',
       'forms.editQuantity.labels.quantity',
       'forms.editQuantity.labels.unitPriceOverrideOptional',
       'forms.editQuantity.helperText',

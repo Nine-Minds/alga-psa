@@ -10,6 +10,7 @@ import type {
   IProjectTemplateChecklistItem,
   IProjectTemplateDependency,
   IProjectTemplatePhase,
+  IProjectTemplateStatusMapping,
   IProjectTemplateTask,
   IProjectTemplateWithDetails,
 } from '@alga-psa/types';
@@ -35,6 +36,14 @@ import {
 } from '../services/applyProjectTemplate';
 import { OrderingService } from '../lib/orderingUtils';
 import { getTemplateDefaultStatusMappings } from '../lib/templateStatusMappingUtils';
+import {
+  countUnresolvedStatusMappings,
+  resolveTemplateStatusMappings,
+  replaceTemplateStatusMappingCore,
+  toTemplateStatusMappingDto,
+  isTemplateStatusMappingsUnresolvedError,
+  type TemplateStatusMappingRow,
+} from '../lib/projectTemplateStatusMappingResolution';
 import { generateKeyBetween } from 'fractional-indexing';
 
 type ProjectTemplateActionError = ActionMessageError | ActionPermissionError;
@@ -51,6 +60,7 @@ const EXPECTED_TEMPLATE_ACTION_MESSAGES = [
   'Task not found',
   'Status mapping not found',
   'Checklist item not found',
+  'This template has status columns that must be repaired before it can be applied.',
 ];
 
 function projectTemplateActionErrorFrom(error: unknown): ProjectTemplateActionError | null {
@@ -58,14 +68,22 @@ function projectTemplateActionErrorFrom(error: unknown): ProjectTemplateActionEr
     return error as ProjectTemplateActionError;
   }
 
+  if (isTemplateStatusMappingsUnresolvedError(error)) {
+    return actionError(error.message);
+  }
+
   const issues = (error as { issues?: unknown })?.issues;
   if (Array.isArray(issues) && issues.length > 0) {
-    return actionError('Template validation failed. Please review the template details and try again.');
+    return actionError('Template validation failed. Please review the template details and try again.', 'projects:errors.template.validationFailed');
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError('Template request contains an invalid UUID');
+    return actionError('Template request contains an invalid UUID', 'projects:errors.template.invalidUuid');
+  }
+  if (dbError?.code === '23503') {
+    console.error('[templateAction] Foreign key violation while applying template:', dbError);
+    return actionError('This template references statuses that no longer exist. Please repair its status columns and try again.', 'projects:errors.template.missingStatuses');
   }
 
   if (error instanceof Error) {
@@ -103,14 +121,9 @@ async function checkPermission(
   }
 }
 
-type ProjectTemplateStatusMappingRow = {
-  template_status_mapping_id: string;
+type ProjectTemplateStatusMappingRow = TemplateStatusMappingRow & {
   template_id: string;
-  template_phase_id?: string | null;
-  status_id?: string | null;
-  custom_status_name?: string | null;
-  custom_status_color?: string | null;
-  display_order: number;
+  tenant: string;
 };
 
 type WbsCodeRow = {
@@ -146,6 +159,22 @@ async function getScopedTemplateStatusMappings(
   }
 
   return await query as ProjectTemplateStatusMappingRow[];
+}
+
+/**
+ * Enrich persisted template mapping rows through the shared typed resolver so
+ * catalog precedence and unresolved detection live in one place.
+ */
+async function hydrateStatusMappings(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  rows: ProjectTemplateStatusMappingRow[]
+): Promise<IProjectTemplateStatusMapping[]> {
+  const resolved = await resolveTemplateStatusMappings(trx, tenant, rows);
+  return rows.map(
+    (row, index) =>
+      toTemplateStatusMappingDto(row, resolved[index]) as unknown as IProjectTemplateStatusMapping
+  );
 }
 
 /**
@@ -263,12 +292,25 @@ export const createTemplateFromProject = withAuth(async (
         ? phaseMap.get(mapping.phase_id) ?? null
         : null;
 
+      // Classify by which reference is actually present so the row satisfies
+      // the variant_shape_check: standard > tenant > inline (custom-name-only).
+      const standardStatusId = mapping.standard_status_id || null;
+      const tenantStatusId = mapping.status_id || null;
+      const statusSource = standardStatusId ? 'standard' : tenantStatusId ? 'tenant' : 'inline';
+      if (statusSource === 'inline' && !mapping.custom_name) {
+        throw new Error(
+          `Project status mapping ${mapping.project_status_mapping_id} has no status reference or custom name; cannot copy it into a template.`
+        );
+      }
       const [templateStatusMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
         .insert({
           tenant,
           template_id: template.template_id,
           template_phase_id: templatePhaseId,
-          status_id: mapping.status_id || mapping.standard_status_id,
+          status_id: statusSource === 'tenant' ? tenantStatusId : null,
+          standard_status_id: statusSource === 'standard' ? standardStatusId : null,
+          unresolved_status_id: null,
+          status_source: statusSource,
           custom_status_name: mapping.custom_name,
           display_order: mapping.display_order
         })
@@ -511,50 +553,10 @@ export const getTemplateWithDetails = withAuth(async (
       .orderBy('display_order')
   ]) as [IProjectTemplatePhase[], IProjectTemplateDependency[], ProjectTemplateStatusMappingRow[]];
 
-  // Enrich status mappings with actual status information
-  const statusMappings = await Promise.all(
-    rawStatusMappings.map(async (mapping) => {
-      if (mapping.status_id) {
-        // First, try standard_statuses (for standard statuses)
-        const standardStatus = await tenantDb(knex, tenant).table('standard_statuses')
-          .where({ standard_status_id: mapping.status_id })
-          .first();
-
-        if (standardStatus) {
-          return {
-            ...mapping,
-            status_name: standardStatus.name,
-            color: standardStatus.color || '#6B7280',
-            is_closed: standardStatus.is_closed,
-            icon: standardStatus.icon || null
-          };
-        }
-
-        // If not found, try statuses table (for custom statuses)
-        const customStatus = await tenantScopedTable(knex, 'statuses', tenant)
-          .where({ status_id: mapping.status_id })
-          .first();
-
-        if (customStatus) {
-          return {
-            ...mapping,
-            status_name: customStatus.name,
-            color: customStatus.color || '#6B7280',
-            is_closed: customStatus.is_closed,
-            icon: customStatus.icon || null
-          };
-        }
-      }
-
-      // If no status_id or status not found, use custom_status_name
-      return {
-        ...mapping,
-        status_name: mapping.custom_status_name || 'Status',
-        color: '#6B7280', // Default gray color
-        is_closed: false
-      };
-    })
-  );
+  // Resolve mappings through the shared typed resolver; catalog precedence and
+  // unresolved quarantine live there rather than per-read probing.
+  const statusMappings = await hydrateStatusMappings(knex, tenant, rawStatusMappings);
+  const unresolvedStatusMappingCount = await countUnresolvedStatusMappings(knex, tenant, templateId);
 
   const phaseIds = phases.map(p => p.template_phase_id);
   let tasks: IProjectTemplateTask[] = [];
@@ -592,7 +594,8 @@ export const getTemplateWithDetails = withAuth(async (
     dependencies,
     checklist_items: checklistItems,
     status_mappings: statusMappings,
-    task_assignments: taskAssignments
+    task_assignments: taskAssignments,
+    unresolved_status_mapping_count: unresolvedStatusMappingCount
   };
 });
 
@@ -826,6 +829,10 @@ export const duplicateTemplate = withAuth(async (
             ? phaseMap.get(mapping.template_phase_id) ?? null
             : null,
           status_id: mapping.status_id,
+          standard_status_id: mapping.standard_status_id,
+          unresolved_status_id: mapping.unresolved_status_id,
+          unresolved_reason: mapping.unresolved_reason,
+          status_source: mapping.status_source,
           custom_status_name: mapping.custom_status_name,
           display_order: mapping.display_order
         });
@@ -1650,7 +1657,7 @@ export const addTemplateStatusMapping = withAuth(async (
     status_id: string;
   },
   templatePhaseId?: string | null
-): Promise<any | ProjectTemplateActionError> => {
+): Promise<IProjectTemplateStatusMapping | ProjectTemplateActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -1675,25 +1682,56 @@ export const addTemplateStatusMapping = withAuth(async (
         template_id: templateId,
         template_phase_id: templatePhaseId ?? null,
         status_id: data.status_id,
+        standard_status_id: null,
+        unresolved_status_id: null,
+        unresolved_reason: null,
+        status_source: 'tenant',
         display_order: maxOrder + 1
       })
       .returning('*');
-
-    // Enrich with status info
-    const status = await tenantScopedTable(trx, 'statuses', tenant)
-      .where({ status_id: data.status_id })
-      .first();
 
     await tenantScopedTable(trx, 'project_templates', tenant)
       .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
 
-      return {
-        ...newMapping,
-        status_name: status?.name,
-        color: status?.color || '#6B7280',
-        is_closed: status?.is_closed
-      };
+      const [hydrated] = await hydrateStatusMappings(trx, tenant, [newMapping]);
+      return hydrated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
+});
+
+/**
+ * Replace an existing template status mapping in place, preserving the mapping
+ * identity and any task assignments that reference it. This is the repair
+ * mechanism for missing and ambiguous historical rows.
+ */
+export const replaceTemplateStatusMapping = withAuth(async (
+  user,
+  { tenant },
+  templateId: string,
+  templateStatusMappingId: string,
+  replacement: { type: 'tenant'; statusId: string } | { type: 'standard'; standardStatusId: string }
+): Promise<{ mapping: IProjectTemplateStatusMapping; unresolvedStatusMappingCount: number } | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await checkPermission(user, 'project', 'update', trx);
+      const result = await replaceTemplateStatusMappingCore(
+        trx,
+        tenant,
+        templateId,
+        templateStatusMappingId,
+        replacement
+      );
+
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: templateId })
+        .update({ updated_at: trx.fn.now() });
+
+      return result;
     });
   } catch (error) {
     return returnExpectedTemplateActionError(error);
@@ -1827,6 +1865,10 @@ export const copyTemplateStatusesToPhase = withAuth(async (
           template_id: templateId,
           template_phase_id: templatePhaseId,
           status_id: mapping.status_id,
+          standard_status_id: mapping.standard_status_id,
+          unresolved_status_id: mapping.unresolved_status_id,
+          unresolved_reason: mapping.unresolved_reason,
+          status_source: mapping.status_source,
           custom_status_name: mapping.custom_status_name,
           custom_status_color: mapping.custom_status_color ?? null,
           display_order: mapping.display_order,

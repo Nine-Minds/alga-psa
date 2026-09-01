@@ -42,6 +42,7 @@ import {
   BucketOverlayInput,
   upsertBucketOverlayInTransaction
 } from './bucketOverlayActions';
+import { createBucketPoolInTransaction } from './bucketPoolActions';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 import {
   contractWizardActionErrorFrom,
@@ -170,6 +171,25 @@ export type ClientContractWizardSubmission = {
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
   template_id?: string;
+  /**
+   * Flag-on line-level bucket pools (weighted-burn model). Each draft carries
+   * the line key it belongs to ('hourly' | 'usage'); pools are materialized
+   * after the corresponding wizard line is created.
+   */
+  bucket_pools?: ClientBucketPoolDraftInput[];
+};
+
+/** Flag-on wizard bucket pool draft (line-keyed; see ContractWizard's BucketPoolDraft). */
+export type ClientBucketPoolDraftInput = {
+  line_key?: 'hourly' | 'usage';
+  bucket_name?: string | null;
+  total_minutes: number;
+  overage_rate: number;
+  allow_rollover: boolean;
+  covers_all_services?: boolean;
+  after_hours_multiplier?: number | null;
+  business_hours_schedule_id?: string | null;
+  members: Array<{ service_id: string; burn_multiplier: number }>;
 };
 
 export type ClientTemplateSnapshot = {
@@ -308,7 +328,7 @@ export const createContractTemplateFromWizard = withAuth(async (
     const canCreateBilling = await hasPermission(user, 'billing', 'create');
     const canUpdateBilling = await hasPermission(user, 'billing', 'update');
     if (!canCreateBilling || !canUpdateBilling) {
-      return permissionError('Permission denied: Cannot create billing templates');
+      return permissionError('Permission denied: Cannot create billing templates', 'msp/contracts:errors.wizard.permissions.createTemplates');
     }
   }
 
@@ -800,7 +820,7 @@ export const createClientContractFromWizard = withAuth(async (
     const canCreateBilling = await hasPermission(user, 'billing', 'create');
     const canUpdateBilling = await hasPermission(user, 'billing', 'update');
     if (!canCreateBilling || !canUpdateBilling) {
-      return permissionError('Permission denied: Cannot create billing contracts');
+      return permissionError('Permission denied: Cannot create billing contracts', 'msp/contracts:errors.wizard.permissions.createContracts');
     }
   }
 
@@ -1154,6 +1174,8 @@ export const createClientContractFromWizard = withAuth(async (
 
     const createdContractLineIds: string[] = [];
     let primaryContractLineId: string | undefined;
+    let hourlyPlanId: string | undefined;
+    let usagePlanId: string | undefined;
     let nextDisplayOrder = 0;
   const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
@@ -1317,7 +1339,7 @@ export const createClientContractFromWizard = withAuth(async (
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
       } as any);
-      const hourlyPlanId = createdHourlyLine.contract_line_id!;
+      hourlyPlanId = createdHourlyLine.contract_line_id!;
       createdContractLineIds.push(hourlyPlanId);
       if (!primaryContractLineId) {
         primaryContractLineId = hourlyPlanId;
@@ -1372,7 +1394,7 @@ export const createClientContractFromWizard = withAuth(async (
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
       } as any);
-      const usagePlanId = createdUsageLine.contract_line_id!;
+      usagePlanId = createdUsageLine.contract_line_id!;
       createdContractLineIds.push(usagePlanId);
       if (!primaryContractLineId) {
         primaryContractLineId = usagePlanId;
@@ -1411,6 +1433,39 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       nextDisplayOrder += 1;
+    }
+
+    // Flag-on line-level bucket pools: materialize the wizard's pool drafts
+    // (weighted-burn model) onto the line the draft was authored for, after
+    // that line exists. Drafts whose line was not created (no services) are
+    // skipped — a pool without its member line cannot carry members.
+    const poolDrafts = Array.isArray(submission.bucket_pools) ? submission.bucket_pools : [];
+    if (poolDrafts.length > 0) {
+      const lineByKey: Record<string, string | undefined> = {
+        hourly: hourlyPlanId,
+        usage: usagePlanId,
+      };
+      for (const draft of poolDrafts) {
+        const targetLineId = lineByKey[draft.line_key ?? 'hourly'];
+        if (!targetLineId) continue;
+        await createBucketPoolInTransaction(
+          trx,
+          tenant,
+          targetLineId,
+          {
+            bucket_name: draft.bucket_name ?? null,
+            total_minutes: Math.max(0, Math.round(draft.total_minutes)),
+            overage_rate: Math.max(0, Math.round(draft.overage_rate)),
+            allow_rollover: draft.allow_rollover,
+            covers_all_services: draft.covers_all_services ?? false,
+            after_hours_multiplier: draft.after_hours_multiplier ?? null,
+            business_hours_schedule_id: draft.business_hours_schedule_id ?? null,
+          },
+          // Member rows are multiplier overrides under a catch-all, so the
+          // draft's members are preserved regardless of scope.
+          draft.members,
+        );
+      }
     }
 
     await createClientContractAssignment(trx, tenant, {
@@ -1584,7 +1639,7 @@ export const listContractTemplatesForWizard = withAuth(async (
   { tenant }
 ): Promise<TemplateOption[] | ContractWizardActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot list contract templates');
+    return permissionError('Permission denied: Cannot list contract templates', 'msp/contracts:errors.wizard.permissions.listTemplates');
   }
   const { knex } = await createTenantKnex();
 
@@ -1613,7 +1668,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
   templateId: string
 ): Promise<ClientTemplateSnapshot | ContractWizardActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot view contract template snapshot');
+    return permissionError('Permission denied: Cannot view contract template snapshot', 'msp/contracts:errors.wizard.permissions.viewSnapshot');
   }
   const { knex } = await createTenantKnex();
 
@@ -1622,7 +1677,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
     .first();
 
   if (!template) {
-    return actionError('Template not found');
+    return actionError('Template not found', 'msp/contracts:errors.wizard.templateNotFound');
   }
 
   const detailedLines = await fetchDetailedContractLines(knex, tenant, templateId);
@@ -1871,7 +1926,7 @@ export const getDraftContractForResume = withAuth(async (
     const canCreateBilling = await hasPermission(user, 'billing', 'create');
     const canUpdateBilling = await hasPermission(user, 'billing', 'update');
     if (!canCreateBilling || !canUpdateBilling) {
-      return permissionError('Permission denied: Cannot resume billing contracts');
+      return permissionError('Permission denied: Cannot resume billing contracts', 'msp/contracts:errors.wizard.permissions.resumeContracts');
     }
   }
 
@@ -1883,11 +1938,11 @@ export const getDraftContractForResume = withAuth(async (
     .first();
 
   if (!contract) {
-    return actionError('Contract not found');
+    return actionError('Contract not found', 'msp/contracts:errors.wizard.contractNotFound');
   }
 
   if (contract.status !== 'draft') {
-    return actionError('Contract is not a draft');
+    return actionError('Contract is not a draft', 'msp/contracts:errors.wizard.notDraft');
   }
 
   const clientContract = await tenantDb(knex, tenant).table('client_contracts')
@@ -1895,7 +1950,7 @@ export const getDraftContractForResume = withAuth(async (
     .first();
 
   if (!clientContract) {
-    return actionError('Draft contract is missing client assignment');
+    return actionError('Draft contract is missing client assignment', 'msp/contracts:errors.wizard.missingClient');
   }
 
   const detailedLines = await fetchDetailedContractLines(knex, tenant, contractId);
@@ -2069,7 +2124,7 @@ export const getDraftContractForResume = withAuth(async (
 
   const startDate = normalizeDateOnly(clientContract.start_date);
   if (!startDate) {
-    return actionError('Draft contract has an invalid start date');
+    return actionError('Draft contract has an invalid start date', 'msp/contracts:errors.wizard.invalidStartDate');
   }
 
   const renewalMode =

@@ -23,6 +23,15 @@ export default defineConfig({
     },
     logHeapUsage: true,
     testTimeout: 30000, // Increased for integration tests
+    server: {
+      deps: {
+        inline: [
+          'next-auth',
+          '@auth/core',
+          'next',
+        ],
+      },
+    },
     include: [
       'src/__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'src/__tests__/**/*.playwright.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
@@ -60,6 +69,8 @@ export default defineConfig({
       { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       { find: /^@alga-psa\/workflow-streams$/, replacement: `${path.resolve(__dirname, '../../packages/workflow-streams/src/streams/index.ts')}` },
+      // Resolve the EE workflows package from source so tests do not need its dist build.
+      { find: /^@alga-psa\/workflows(\/.*)?$/, replacement: `${path.resolve(__dirname, '../packages/workflows/src')}$1` },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src/index.ts')}` },
       { find: /^@alga-psa\/billing$/, replacement: `${path.resolve(__dirname, '../../packages/billing/src/index.ts')}` },
@@ -139,6 +150,7 @@ export default defineConfig({
       { find: '@main-server', replacement: path.resolve(__dirname, '../../server/src') },
       { find: '@main-test-utils', replacement: path.resolve(__dirname, '../../server/test-utils') },
       { find: 'server', replacement: path.resolve(__dirname, '../../server') },
+      { find: '@product/ext-proxy', replacement: path.resolve(__dirname, '../../packages/product-ext-proxy') },
 
       // Next.js server stubs for non-Next test runtime (required by next-auth env helpers).
       { find: 'fs', replacement: 'node:fs' },
@@ -147,13 +159,6 @@ export default defineConfig({
     ],
   },
   server: {
-    deps: {
-      inline: [
-        'next-auth',
-        '@auth/core',
-        'next',
-      ],
-    },
     fs: {
       allow: [path.resolve(__dirname, '../..')],
     },

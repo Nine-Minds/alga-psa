@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -420,12 +420,6 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
         </div>
       )}
     >
-      <DialogHeader>
-        <DialogTitle>
-          {t('addLines.selectPresetsTitle', { defaultValue: 'Select Contract Line Presets to Add' })}
-        </DialogTitle>
-      </DialogHeader>
-
       <DialogContent className="flex flex-col">
         <div className="space-y-4 flex flex-col h-full">
           {error && (

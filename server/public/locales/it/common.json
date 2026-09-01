@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "Colore esadecimale non valido (ad es. #FF0000)",
+    "invalidHexText": "Colore esadecimale non valido (ad es. #FFFFFF)",
+    "customizeTagColors": "Personalizza i colori dei tag",
+    "chooseColor": "Scegli colore",
+    "quickSelect": "Selezione rapida",
+    "presetAriaLabel": "Seleziona il colore predefinito {{number}}",
+    "backgroundColor": "Colore di sfondo",
+    "textColor": "Colore del testo",
+    "preview": "Anteprima",
+    "sampleTag": "Tag di esempio",
+    "resetToDefault": "Ripristina impostazioni predefinite"
+  },
   "clientNameCell": {
     "noClient": "Nessun cliente"
   },
@@ -82,7 +95,8 @@
     "share": "Condividi",
     "done": "Fatto",
     "continue": "Continua",
-    "printSelected": "Stampa selezionati ({{count}})"
+    "printSelected": "Stampa selezionati ({{count}})",
+    "removeTag": "Rimuovi tag"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -116,6 +130,15 @@
     "passwordMismatch": "Le password non coincidono"
   },
   "errors": {
+    "validation": {
+      "required": "{{field}} è obbligatorio.",
+      "invalidType": "{{field}} è del tipo errato.",
+      "invalidFormat": "{{field}} ha un formato non valido.",
+      "tooSmall": "{{field}} è inferiore al valore o alla lunghezza minima consentita.",
+      "tooLarge": "{{field}} supera il valore o la lunghezza massima consentita.",
+      "unsupportedValue": "{{field}} ha un valore non supportato.",
+      "invalidValue": "{{field}} ha un valore non valido."
+    },
     "auth": {
       "notAuthenticated": "Non autenticato",
       "accessDenied": "Accesso negato",
@@ -127,6 +150,14 @@
       "contactNotFound": "Utente non associato a un contatto",
       "clientNotFound": "Il contatto non è associato a un cliente"
     },
+    "password": {
+      "currentIncorrect": "La password attuale non è corretta",
+      "changeFailed": "Impossibile modificare la password",
+      "differentTenant": "Non autorizzato: non è possibile modificare un utente di un altro tenant",
+      "internalStaffRequired": "Non autorizzato: sono richiesti privilegi da personale interno",
+      "adminRequired": "Non autorizzato: sono richiesti privilegi di amministratore",
+      "changeUserFailed": "Impossibile modificare la password dell'utente"
+    },
     "permissions": {
       "tickets": {
         "read": "Permessi insufficienti per visualizzare i ticket",
@@ -136,14 +167,49 @@
         "updateStatus": "Permessi insufficienti per aggiornare lo stato del ticket",
         "addComments": "Permessi insufficienti per aggiungere commenti",
         "updateComments": "Permessi insufficienti per aggiornare i commenti",
-        "deleteComments": "Permessi insufficienti per eliminare i commenti"
+        "deleteComments": "Permessi insufficienti per eliminare i commenti",
+        "viewDocuments": "Autorizzazioni insufficienti per visualizzare i documenti del ticket"
       }
+    },
+    "tags": {
+      "notFound": "Tag non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori del tag selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "textTooLongShort": "Il testo del tag è troppo lungo.",
+      "referenceMissing": "Il tag o il record contrassegnato selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "alreadyApplied": "Questo tag è già applicato a questo elemento.",
+      "duplicate": "Esiste già un tag con questi dati.",
+      "notAllowed": "Uno dei valori del tag non è consentito. Controllare il tag e riprovare.",
+      "missingField": "Manca un campo obbligatorio del tag.",
+      "missingFieldNamed": "Manca un campo obbligatorio del tag: {{field}}.",
+      "textRequired": "Il testo del tag è obbligatorio",
+      "textEmpty": "Il testo del tag non può essere vuoto",
+      "textTooLong": "Testo del tag troppo lungo (massimo 50 caratteri)",
+      "textInvalidCharacters": "Il testo del tag contiene caratteri non validi",
+      "backgroundColorInvalid": "Formato del colore di sfondo non valido. Deve essere un codice colore esadecimale valido (ad es. #FF0000)",
+      "textColorInvalid": "Formato del colore del testo non valido. Deve essere un codice colore esadecimale valido (ad es. #FFFFFF)"
     }
   },
   "fields": {
     "notes": "Note"
   },
   "auth": {
+    "signOut": {
+      "title": "Disconnessione",
+      "confirmation": "Vuoi davvero uscire?",
+      "signingOut": "Disconnessione in corso...",
+      "action": "Esci"
+    },
+    "passwordReset": {
+      "title": "Modifica della password richiesta",
+      "description": "Stai ancora utilizzando una password temporanea. Modifica la tua password per proteggere il tuo account."
+    },
+    "twoFactor": {
+      "codeLabel": "Codice 2FA",
+      "verify": "Verifica",
+      "title": "Facilissimo",
+      "instructions": "Inserisci il codice a 6 cifre dell’app di autenticazione.",
+      "digitsLeft": "{{count}} cifre rimanenti"
+    },
     "messages": {
       "handoffMissingToken": "Il token di trasferimento dell'accesso è mancante o non valido. Accedi di nuovo.",
       "handoffFinalizeFailed": "Non siamo riusciti a finalizzare il tuo accesso. Prova ad accedere di nuovo.",
@@ -154,6 +220,32 @@
       "resendFailed": "Impossibile inviare nuovamente l'e-mail. Riprova.",
       "whatsNext": "Cosa fare ora?",
       "didntReceive": "Non hai ricevuto l'e-mail?"
+    },
+    "sso": {
+      "signInWithMicrosoft": "Accedi con Microsoft",
+      "signInWithGoogle": "Accedi con Google",
+      "redirecting": "Reindirizzamento...",
+      "startFailed": "Non è stato possibile avviare l'accesso SSO. Verifica la configurazione del provider e riprova."
+    },
+    "verify": {
+      "title": "Verifica email non più disponibile",
+      "selfRegistrationRemoved": "La registrazione autonoma tramite dominio email non è più supportata per motivi di sicurezza.",
+      "existingContactsOnly": "La registrazione ora è disponibile solo per i contatti esistenti. Contatta il tuo amministratore per farti aggiungere prima come contatto.",
+      "registerFromSignIn": "Se sei già un contatto esistente, puoi registrarti direttamente dalla pagina di accesso usando il tuo indirizzo email di contatto.",
+      "returnToSignIn": "Torna all'accesso"
+    },
+    "validation": {
+      "password": {
+        "required": "La password è obbligatoria",
+        "tooShort": "La password deve contenere almeno 8 caratteri",
+        "tooLong": "La password non può superare i 128 caratteri",
+        "missingUppercase": "La password deve contenere almeno una lettera maiuscola",
+        "missingLowercase": "La password deve contenere almeno una lettera minuscola",
+        "missingNumber": "La password deve contenere almeno un numero",
+        "missingSpecialCharacter": "La password deve contenere almeno un carattere speciale",
+        "tooCommon": "La password è troppo comune. Scegliere una password più sicura",
+        "sequentialCharacters": "La password non può contenere caratteri in sequenza"
+      }
     }
   },
   "share": {
@@ -169,7 +261,9 @@
       "downloadLimitReached": "Il limite di download è stato raggiunto."
     },
     "downloadStarted": "Download avviato con successo!",
-    "enterPassword": "Inserisci password"
+    "enterPassword": "Inserisci password",
+    "downloadsUsed": "{{used}} di {{max}} download utilizzati",
+    "expiresAt": "Scade il: {{date}}"
   },
   "tickets": {
     "responseSource": {
@@ -206,6 +300,7 @@
     "selectLanguage": "Seleziona lingua",
     "changeLanguage": "Cambia lingua",
     "currentLanguage": "Lingua corrente",
+    "previewLanguage": "Lingua dell’anteprima",
     "preference": {
       "label": "Preferenza lingua",
       "helper": "Seleziona la lingua preferita per l'interfaccia e le notifiche email",
@@ -356,6 +451,107 @@
         "title": "Nessuna sede aggiunta",
         "description": "Fai clic su \"Aggiungi sede\" per iniziare"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Inserisci un nome cliente valido",
+        "required": "Il nome del cliente è obbligatorio",
+        "emojiOnly": "Questo nome è composto solo da emoji.",
+        "tooShort": "Questo nome ha un solo carattere: è corretto?",
+        "abbreviationOnly": "Questa è solo un’abbreviazione societaria, non un nome.",
+        "repeatedCharacters": "Questo nome ripete più volte lo stesso carattere.",
+        "looksLikeUrl": "Sembra un indirizzo web più che un nome.",
+        "noLettersOrNumbers": "Questo nome non contiene lettere né numeri."
+      },
+      "contactName": {
+        "structural": "Inserisci un nome contatto valido",
+        "placeholder": "Sembra un segnaposto più che una persona."
+      },
+      "email": {
+        "structural": "Inserisci un indirizzo email valido",
+        "required": "L’indirizzo email è obbligatorio",
+        "disposableDomain": "{{domain}} è un provider di caselle usa e getta.",
+        "reservedDomain": "{{domain}} è riservato a documentazione e test.",
+        "internalDomain": "{{domain}} si risolve solo all’interno di una rete privata."
+      },
+      "url": {
+        "structural": "Inserisci un URL di sito web valido (ad es. apple.com)",
+        "ipAddress": "Questo è un indirizzo IP, non un nome di dominio.",
+        "internalHost": "{{host}} si risolve solo all’interno di una rete privata.",
+        "reservedDomain": "{{host}} è riservato a documentazione e test."
+      },
+      "phone": {
+        "structural": "Inserisci un numero di telefono valido",
+        "repeatedDigits": "Questo numero ripete sempre la stessa cifra.",
+        "sequentialDigits": "Questo numero percorre la tastiera in sequenza.",
+        "fictionalRange": "Rientra nell’intervallo 555-0100 riservato alla finzione."
+      },
+      "dismissWarning": "Ignora",
+      "address": {
+        "emoji": "L'indirizzo non può contenere emoji",
+        "empty": "L'indirizzo non può essere vuoto",
+        "invalidCharacters": "L'indirizzo contiene caratteri non validi",
+        "noLetters": "L'indirizzo deve contenere lettere",
+        "tooLong": "L'indirizzo non può superare i 100 caratteri"
+      },
+      "city": {
+        "emoji": "Il nome della città non può contenere emoji",
+        "empty": "Il nome della città non può essere vuoto",
+        "invalidCharacters": "Il nome della città contiene caratteri non validi",
+        "noLetters": "Il nome della città deve contenere lettere",
+        "tooLong": "Il nome della città non può superare i 100 caratteri"
+      },
+      "stateProvince": {
+        "emoji": "Stato/provincia non può contenere emoji",
+        "empty": "Stato/provincia non può essere vuoto",
+        "invalidCharacters": "Stato/provincia contiene caratteri non validi",
+        "noLetters": "Stato/provincia deve contenere lettere",
+        "tooLong": "Stato/provincia non può superare i 100 caratteri"
+      },
+      "postalCode": {
+        "au": "Inserisci un codice postale australiano valido (ad es. 2000)",
+        "br": "Inserisci un codice postale brasiliano valido (ad es. 01234-567)",
+        "ca": "Inserisci un codice postale canadese valido (ad es. K1A 0A6)",
+        "ch": "Inserisci un codice postale svizzero valido (ad es. 8001)",
+        "de": "Inserisci un codice postale tedesco valido (ad es. 10115)",
+        "emoji": "Il codice postale non può contenere emoji",
+        "es": "Inserisci un codice postale spagnolo valido (ad es. 28001)",
+        "fr": "Inserisci un codice postale francese valido (ad es. 75001)",
+        "gb": "Inserisci un codice postale britannico valido (ad es. SW1A 1AA)",
+        "generic": "Inserisci un codice postale valido",
+        "in": "Inserisci un codice postale indiano valido (ad es. 110001)",
+        "it": "Inserisci un codice postale italiano valido (ad es. 00118)",
+        "jp": "Inserisci un codice postale giapponese valido (ad es. 123-4567)",
+        "nl": "Inserisci un codice postale olandese valido (ad es. 1234AB)",
+        "onlySpaces": "Il codice postale non può contenere solo spazi",
+        "us": "Inserisci un codice ZIP valido (ad es. 12345 o 12345-6789)",
+        "usShort": "Inserisci un codice ZIP valido"
+      },
+      "industry": {
+        "invalidCharacters": "Il settore contiene caratteri non validi",
+        "noLetters": "Il settore deve contenere lettere",
+        "tooLong": "Il settore non può superare i 100 caratteri",
+        "tooShort": "Il settore deve contenere almeno 2 caratteri",
+        "tooShortText": "Il settore deve contenere almeno 2 caratteri di testo"
+      },
+      "role": {
+        "noAlphanumeric": "Il ruolo deve contenere lettere o numeri",
+        "onlySpaces": "Il ruolo non può contenere solo spazi",
+        "tooLong": "Il ruolo non può superare i 100 caratteri"
+      },
+      "notes": {
+        "tooLong": "Le note non possono superare i 2000 caratteri"
+      },
+      "companySize": {
+        "emoji": "Le dimensioni dell'azienda non possono contenere emoji",
+        "invalid": "Inserisci dimensioni aziendali valide (ad es. \"50\", \"10-50\", \"cinquecento\", \"2,5 Mln\", \"piccola\", \"grande impresa\")",
+        "tooLong": "Le dimensioni dell'azienda non possono superare i 50 caratteri"
+      },
+      "annualRevenue": {
+        "emoji": "Il fatturato annuo non può contenere emoji",
+        "invalid": "Inserisci un fatturato annuo valido (ad es. \"1.000.000 €\", \"cinque milioni\", \"2,5 Mln\", \"10-50 Mln\", \"non divulgato\")",
+        "tooLong": "Il fatturato annuo non può superare i 50 caratteri"
+      }
     }
   },
   "commentThread": {
@@ -363,7 +559,9 @@
     "replies_other": "{{count}} risposte",
     "collapse": "Comprimi",
     "expand": "Espandi",
-    "showInDrawer": "Mostra nel pannello"
+    "showInDrawer": "Mostra nel pannello",
+    "showEarlierReplies_one": "Mostra {{count}} risposta precedente",
+    "showEarlierReplies_other": "Mostra {{count}} risposte precedenti"
   },
   "pagination": {
     "previous": "Precedente",
@@ -1102,13 +1300,35 @@
     "noUsersAvailable": "Nessun utente disponibile",
     "searchBoards": "Cerca bacheche...",
     "searchBoardsLabel": "Cerca bacheche",
-    "noBoardsFound": "Nessuna bacheca trovata"
+    "noBoardsFound": "Nessuna bacheca trovata",
+    "notAssigned": "Non assegnato",
+    "searchUsersOrTeams": "Cerca utenti o team...",
+    "unnamedUser": "Utente senza nome",
+    "unnamedTeam": "Team senza nome"
+  },
+  "serviceTypeSelect": {
+    "placeholder": "Seleziona un tipo di servizio...",
+    "newNamePlaceholder": "Nome del nuovo tipo di servizio...",
+    "addNew": "Aggiungi un nuovo tipo di servizio",
+    "deleteTitle": "Elimina tipo di servizio",
+    "deleteConfirm": "Vuoi davvero eliminare questo tipo di servizio? L’operazione non può essere annullata.",
+    "errors": {
+      "delete": "Impossibile eliminare questo tipo di servizio. Potrebbe essere usato da servizi esistenti.",
+      "create": "Impossibile creare il tipo di servizio. Riprova."
+    }
   },
   "tagFilter": {
     "placeholder": "Filtra per tag...",
     "filter": "Filtra",
     "selectedCount": "{{count}} selezionati",
     "clearAll": "Cancella tutto"
+  },
+  "timePicker": {
+    "placeholder": "Seleziona un orario",
+    "hour": "Ora",
+    "minute": "Minuto",
+    "period": "Periodo",
+    "open": "Apri il selettore dell'orario"
   },
   "timezonePicker": {
     "selectPlaceholder": "Seleziona fuso orario...",
@@ -1289,5 +1509,94 @@
   },
   "richTextEditorSkeleton": {
     "loading": "Caricamento editor…"
+  },
+  "productBoundary": {
+    "upgrade": {
+      "title": "Disponibile in AlgaPSA",
+      "description": "Quest'area fa parte del prodotto AlgaPSA completo. AlgaDesk include solo le funzionalità di help desk.",
+      "cta": "Torna alla dashboard di AlgaDesk"
+    },
+    "notFound": {
+      "title": "Pagina non disponibile",
+      "description": "Questa pagina non è disponibile nella tua esperienza di prodotto attuale.",
+      "cta": "Vai alla dashboard"
+    }
+  },
+  "notifications": {
+    "needsAttention": "Richiede attenzione ({{count}})",
+    "lowPriority": "Priorità bassa ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Risolvi i conflitti di importazione",
+    "description": "Alcuni elementi esistono già. Scegli come gestire ogni conflitto.",
+    "apply": "Applica le risoluzioni",
+    "reason": {
+      "name": "Conflitto: questo nome esiste già",
+      "order": "Conflitto: l'ordine {{order}} è già occupato",
+      "item": "Conflitto: questo elemento esiste già"
+    },
+    "skip": "Salta questo elemento",
+    "rename": "Importa con un nome diverso",
+    "newNamePlaceholder": "Inserisci il nuovo nome",
+    "reorder": "Importa con un ordine diverso",
+    "newOrderPlaceholder": "Inserisci il nuovo ordine"
+  },
+  "tags": {
+    "editTitle": "Modifica tag",
+    "noPermission": "Non hai l'autorizzazione per modificare i tag. Contatta l'amministratore per ottenere l'accesso.",
+    "preview": "Anteprima del tag",
+    "textLabel": "Testo del tag",
+    "textPlaceholder": "Inserisci il testo del tag",
+    "quickColors": "Selezione rapida dei colori",
+    "presetSwatch": "Sfondo: {{background}}, testo: {{text}}",
+    "backgroundColorLabel": "Colore di sfondo",
+    "textColorLabel": "Colore del testo",
+    "pickBackgroundColor": "Scegli il colore di sfondo",
+    "pickTextColor": "Scegli il colore del testo",
+    "resetColors": "Reimposta i colori",
+    "deleteAll": "Elimina tutti",
+    "deleting": "Eliminazione...",
+    "deleteAllTitle": "Elimina tutti i tag",
+    "deleteAllMessage": "Vuoi davvero eliminare tutti i tag con il testo «{{tag}}»? Il tag verrà rimosso da tutti i {{entityType}}. Questa azione non può essere annullata.",
+    "deletedAll": "Tutti i tag «{{tag}}» sono stati eliminati",
+    "deleteFailed": "Impossibile eliminare i tag",
+    "saveFailed": "Impossibile salvare le modifiche al tag",
+    "textRequired": "Il testo del tag non può essere vuoto",
+    "updated": "Tag aggiornato correttamente",
+    "entityTypes": {
+      "client": "clienti",
+      "contact": "contatti",
+      "ticket": "ticket",
+      "project": "progetti",
+      "project_task": "attività di progetto",
+      "workflow_form": "moduli di workflow",
+      "document": "documenti",
+      "knowledge_base_article": "articoli della base di conoscenza",
+      "opportunity": "opportunità"
+    }
+  },
+  "statusDialog": {
+    "nameRequired": "Il nome dello stato è obbligatorio",
+    "orderTaken": "Il numero d'ordine {{order}} è già occupato da «{{name}}». Scegli un numero d'ordine diverso.",
+    "updated": "Stato aggiornato correttamente",
+    "created": "Stato creato correttamente",
+    "orderInUse": "Questo numero d'ordine è già in uso. Scegli un numero d'ordine diverso.",
+    "updateFailed": "Impossibile aggiornare lo stato",
+    "createFailed": "Impossibile creare lo stato",
+    "submitUpdate": "Aggiorna stato",
+    "submitAdd": "Aggiungi stato",
+    "editTitle": "Modifica stato",
+    "addTitle": "Aggiungi nuovo stato",
+    "nameLabel": "Nome dello stato",
+    "namePlaceholder": "ad es. In corso",
+    "orderLabel": "Numero d'ordine (1-100, i numeri più bassi compaiono per primi)",
+    "orderHelp": "Determina l'ordine in cui gli stati compaiono nei menu a discesa in tutta la piattaforma.",
+    "usedOrders": "Numeri d'ordine già usati: {{orders}}",
+    "noUsedOrders": "Nessun numero d'ordine ancora usato",
+    "markClosed": "Contrassegna come stato chiuso",
+    "setDefault": "Imposta come stato predefinito per i nuovi ticket"
+  },
+  "callLink": {
+    "teamsCall": "Chiama in Microsoft Teams"
   }
 }

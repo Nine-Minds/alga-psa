@@ -219,7 +219,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   };
 
   const footer = (
-    <div className="flex justify-between">
+    <div className="flex w-full justify-between">
       <Button id='cancel-button' variant="ghost" onClick={() => {
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
@@ -273,7 +273,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 value={projectName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setProjectName(e.target.value)}
                 placeholder={t('quickAdd.projectNamePlaceholder', 'Project Name *')}
-                className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${hasAttemptedSubmit && projectName.trim() === '' ? 'border-destructive' : 'border-gray-300'}`}
+                className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${hasAttemptedSubmit && projectName.trim() === '' ? 'border-destructive' : 'border-gray-300'}`}
                 rows={1}
                 autoFocus
               />
@@ -281,7 +281,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 value={description}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
                 placeholder={t('quickAdd.descriptionPlaceholder', 'Description')}
-                className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
                 rows={3}
               />
               <div>

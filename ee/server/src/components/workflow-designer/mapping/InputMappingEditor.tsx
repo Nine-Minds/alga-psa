@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
 } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -53,6 +52,12 @@ import {
   type WorkflowActionInputSourceModeValue,
 } from '../WorkflowActionInputSourceMode';
 import { useQuickAsk } from 'server/src/components/layout/QuickAskContext';
+import {
+  UpdatePatchSection,
+  buildWorkflowUpdateTargetPhrase,
+  isEditableWorkflowPatchValue,
+  isWorkflowUpdatePatchField,
+} from './UpdatePatchSection';
 import {
   ReferenceScopeSelector,
   buildReferenceSourceModel,
@@ -349,7 +354,7 @@ function isMappingValueSet(value: MappingValue | undefined, fieldType?: string):
 /**
  * Editor for a single mapping field
  */
-const MappingFieldEditor: React.FC<{
+export const MappingFieldEditor: React.FC<{
   field: ActionInputField;
   fieldPath?: string;
   value: MappingValue | undefined;
@@ -572,7 +577,7 @@ const MappingFieldEditor: React.FC<{
           <button
             id={`${idPrefix}-ask-ai`}
             type="button"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-purple-700 transition-colors hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:text-purple-200"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-[rgb(var(--color-primary-700))] transition-colors hover:text-[rgb(var(--color-primary-900))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:ring-offset-2 dark:text-[rgb(var(--color-primary-300))] dark:hover:text-[rgb(var(--color-primary-200))]"
             title={t('inputMappingEditor.askAi.shortcutHint', { defaultValue: showRegexAskAi ? 'Open Quick Ask for regex guidance' : 'Open Quick Ask for JSONata guidance' })}
             aria-label={t('inputMappingEditor.askAi.ariaLabel', { defaultValue: showRegexAskAi ? 'Ask AI for regex help' : 'Ask AI for JSONata help' })}
             onClick={openQuickAsk}
@@ -1011,12 +1016,6 @@ const FixedValueEditorShell: React.FC<{
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {t('inputMappingEditor.fixedValueDialog.title', {
-                defaultValue: 'Edit {{fieldName}}',
-                fieldName: field.name,
-              })}
-            </DialogTitle>
             <DialogDescription>
               {t('inputMappingEditor.fixedValueDialog.description', {
                 defaultValue: 'Use the larger editor for longer fixed-value content.',
@@ -1914,6 +1913,36 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     onChange({});
   }, [onChange]);
 
+  // Update-action patch UX (Option C): schema-driven detection of a `patch`
+  // object input. Whole-object references/expressions fall back to the
+  // generic editor so power users keep full control.
+  const patchField = useMemo(
+    () => targetFields.find(isWorkflowUpdatePatchField),
+    [targetFields]
+  );
+  const patchUxActive = Boolean(patchField) && isEditableWorkflowPatchValue(value[patchField?.name ?? 'patch']);
+  const targetIdField = useMemo(() => {
+    if (!patchField) return undefined;
+    return targetFields.find(
+      (field) => field !== patchField && field.required && field.name.endsWith('_id')
+    );
+  }, [patchField, targetFields]);
+  const patchMainFields = useMemo(
+    () => (patchField
+      ? targetFields.filter((field) => field !== patchField && field.required)
+      : []),
+    [patchField, targetFields]
+  );
+  const patchAdvancedFields = useMemo(
+    () => (patchField
+      ? targetFields.filter((field) => field !== patchField && !field.required)
+      : []),
+    [patchField, targetFields]
+  );
+  const targetPhrase = patchField
+    ? buildWorkflowUpdateTargetPhrase(t, targetIdField, targetIdField ? value[targetIdField.name] : undefined)
+    : '';
+
   if (targetFields.length === 0) {
     return (
       <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded border border-gray-200">
@@ -1996,7 +2025,39 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
         role="group"
         aria-label={t('inputMappingEditor.aria.fieldList', { defaultValue: 'Action input fields list' })}
       >
-        {targetFields.map((field) => {
+        {(patchUxActive ? patchMainFields : targetFields).map(renderFieldEntry)}
+        {patchUxActive && patchField && (
+          <>
+            <UpdatePatchSection
+              patchField={patchField}
+              value={value[patchField.name]}
+              onChange={(nextValue) => handleFieldChange(patchField.name, nextValue)}
+              rootInputMapping={value}
+              fieldOptions={fieldOptions}
+              stepId={stepId}
+              actionId={actionId}
+              disabled={disabled}
+              sourceTypeMap={sourceTypeMap}
+              expressionContext={expressionContext}
+              referenceBrowseContext={referenceBrowseContext}
+              targetPhrase={targetPhrase}
+            />
+            {patchAdvancedFields.length > 0 && (
+              <StructuredLiteralGroup
+                id={`update-patch-advanced-${stepId}`}
+                title={t('inputMappingEditor.updatePatch.advancedTitle', { defaultValue: 'Advanced' })}
+                defaultExpanded={false}
+              >
+                {patchAdvancedFields.map(renderFieldEntry)}
+              </StructuredLiteralGroup>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  function renderFieldEntry(field: ActionInputField): React.ReactNode {
           const suggestion = suggestionMap.get(field.name);
           const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
           const fieldIndex = allFieldNames.indexOf(field.name);
@@ -2101,7 +2162,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                     <button
                       id={`mapping-${stepId}-${field.name}-ask-ai`}
                       type="button"
-                      className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-purple-700 transition-colors hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:text-purple-200"
+                      className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-[rgb(var(--color-primary-700))] transition-colors hover:text-[rgb(var(--color-primary-900))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:ring-offset-2 dark:text-[rgb(var(--color-primary-300))] dark:hover:text-[rgb(var(--color-primary-200))]"
                       title={t('inputMappingEditor.askAi.shortcutHint', {
                         defaultValue: isRegexTransformActionId(actionId) ? 'Open Quick Ask for regex guidance' : 'Open Quick Ask for JSONata guidance'
                       })}
@@ -2129,10 +2190,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               </div>
             </div>
           );
-        })}
-      </div>
-    </div>
-  );
+  }
 };
 
 export default InputMappingEditor;

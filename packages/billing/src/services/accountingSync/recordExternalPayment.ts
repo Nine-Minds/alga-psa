@@ -2,6 +2,8 @@ import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { enqueueExternalPaymentPush } from './syncProducers';
+import { notifyInvoiceTerminalStatus } from './invoiceTerminalStatusHandlers';
+import { settlePrepaidReplenishmentInvoice } from '../../actions/invoiceModification';
 
 /**
  * Provider-agnostic landing for payments observed in an external system
@@ -48,6 +50,12 @@ export interface ExternalPaymentInput {
   /** Extra metadata merged into the transaction record */
   transactionMetadata?: Record<string, unknown>;
   transactionDescription?: string;
+  /**
+   * External Checkout Session/link id that just settled (when the payment came
+   * from a hosted Checkout). Passed to the terminal-status handler so the
+   * settling session's own link is never retired alongside stale links.
+   */
+  externalLinkId?: string;
 }
 
 export interface ExternalPaymentResult {
@@ -193,6 +201,10 @@ export async function recordExternalPayment(
     const paid = await sumPayments(trx, tenantId, input.invoiceId);
     const status = await applyStatus(trx, tenantId, invoice, paid);
 
+    if (status === 'paid') {
+      await settlePrepaidReplenishmentInvoice(trx, tenantId, input.invoiceId);
+    }
+
     await insertTransaction(trx, tenantId, {
       clientId: invoice.client_id,
       invoiceId: input.invoiceId,
@@ -219,6 +231,30 @@ export async function recordExternalPayment(
     amountCents: input.amount,
     provider: input.provider,
     referenceNumber: input.referenceNumber
+  });
+
+  // Every balance mutation is reconciled immediately, not just terminal ones.
+  // A partial payment or credit application leaves the invoice below the
+  // amount its Checkout session was created for, so any still-active link
+  // whose stored amount no longer matches the remaining balance must be
+  // retired now — not deferred until the next Pay Now/email demand. Registered
+  // EE handlers retire terminal links outright and retire stale-balance links
+  // when `balanceDue` is provided. Handler failures are isolated (logged,
+  // never thrown) so the payment recording itself is unaffected.
+  const balanceDue = computeBalanceDue({
+    totalAmount: Number(invoice.total_amount),
+    creditApplied: Number(invoice.credit_applied ?? 0),
+    totalPaid,
+  });
+
+  await notifyInvoiceTerminalStatus({
+    knex,
+    tenantId,
+    invoiceId: input.invoiceId,
+    newStatus,
+    balanceDue,
+    settledReference: input.referenceNumber,
+    settledExternalId: input.externalLinkId,
   });
 
   return {

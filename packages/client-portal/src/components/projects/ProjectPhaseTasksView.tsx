@@ -89,7 +89,7 @@ function ProgressBar({ percentage, size = 'md' }: { percentage: number; size?: '
   return (
     <div className={`w-full bg-gray-200 rounded-full ${height} overflow-hidden`}>
       <div
-        className={`bg-purple-600 ${height} rounded-full transition-all duration-300`}
+        className={`bg-[rgb(var(--color-primary-600))] ${height} rounded-full transition-all duration-300`}
         style={{ width: `${Math.min(percentage, 100)}%` }}
       />
     </div>
@@ -245,7 +245,7 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
           return (
             <div
               key={phase.phase_id}
-              className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden"
+              className="bg-[rgb(var(--color-card))] rounded-lg border border-gray-200 card-elevated overflow-hidden"
             >
               {/* Phase Header */}
               <div
@@ -304,7 +304,7 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
                     {/* Phase Completion - only if showPhaseCompletion is enabled */}
                     {showPhases && showPhaseCompletion && phase.completion_percentage !== undefined && (
                       <div className="text-right ml-4 min-w-[80px]">
-                        <div className="text-lg font-bold text-purple-600">
+                        <div className="text-lg font-bold text-[rgb(var(--color-primary-600))]">
                           {phase.completion_percentage}%
                         </div>
                         <div className="text-xs text-gray-500">

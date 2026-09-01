@@ -60,8 +60,6 @@
       "runNow": "Run now",
       "exportCsv": "Export CSV",
       "refresh": "Refresh",
-      "cancelSelected": "Cancel selected ({{count}})",
-      "clearSelection": "Clear selection",
       "details": "Details",
       "loadMore": "Load more",
       "preview": "Preview"
@@ -92,7 +90,12 @@
       "cancelMessage": "Cancel {{count}} selected run(s)? This cannot be undone.",
       "reasonLabel": "Reason",
       "cancelReasonPlaceholder": "Provide a reason for canceling",
-      "cancelConfirm": "Cancel runs"
+      "cancelConfirm": "Cancel runs",
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "cancel": "Cancel runs",
+        "clear": "Clear"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Failed to load workflow runs",
@@ -1094,6 +1097,15 @@
       "noFields": "No fields",
       "copyAllPaths": "Copy all paths",
       "copyAllFieldPaths": "Copy all field paths"
+    },
+    "logoAlt": "Workflow Editor Logo",
+    "nodes": {
+      "action": "Action:",
+      "process": "Process:",
+      "clientId": "Client ID:",
+      "clientSecret": "Client Secret:",
+      "tenantId": "Tenant ID:",
+      "userEmail": "User Email:"
     }
   },
   "actionInputFieldInfo": {
@@ -1354,7 +1366,9 @@
     "insertReferenceHeading": "Insert workflow reference",
     "errors": {
       "noCodeBlock": "References cannot be inserted inside code blocks. Move the cursor to another block and try again."
-    }
+    },
+    "placeholder": "Compose markdown text…",
+    "referenceHint": "References render as inline chips and persist as workflow-safe reference nodes."
   },
   "referenceSelector": {
     "placeholders": {
@@ -1369,7 +1383,10 @@
     "start": "Start",
     "insertStepHere": "Insert step here",
     "emptyDisabled": "No steps yet.",
-    "emptySelectPrompt": "Select a step from the panel to get started."
+    "emptySelectPrompt": "Select a step from the panel to get started.",
+    "patchSummary": {
+      "unchanged": "other fields unchanged"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Expression editor",
@@ -1485,6 +1502,37 @@
     "softEnumUseCustom": "Use \"{{value}}\"",
     "expression": {
       "placeholder": "e.g. payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Fields to change",
+      "targetFraming": "This step updates {{target}}.",
+      "summaryChanges": "Changes {{list}}",
+      "summaryChangesMore": "Changes {{list}} +{{count}} more",
+      "unchangedNote": "All other fields keep their current values.",
+      "emptyGuidance": "Add at least one field to change.",
+      "editChanges": "Edit changes…",
+      "dialogTitle": "Edit changes",
+      "dialogDescription": "Updating {{target}}. Only the fields listed on the right will change; everything else keeps its current value.",
+      "footerSummary": "{{count}} field(s) will change · everything else keeps its current value",
+      "done": "Done",
+      "added": "Added ✓",
+      "noChangesYet": "No changes yet. Pick a field on the left to start.",
+      "setFieldTo": "Set {{field}} to",
+      "removeChange": "Stop changing this field (it keeps its current value)",
+      "advancedTitle": "Advanced",
+      "group": {
+        "details": "Details",
+        "assignment": "Assignment",
+        "datesTags": "Dates & tags",
+        "advanced": "Advanced"
+      },
+      "target": {
+        "genericRecord": "record",
+        "unset": "the {{record}} selected above",
+        "fromReference": "the {{record}} from “{{source}}”",
+        "fromExpression": "the {{record}} chosen by an expression",
+        "fixed": "a specific {{record}}"
+      }
     }
   },
   "schemaReference": {
@@ -2316,7 +2364,6 @@
         }
       },
       "schemaModal": {
-        "title": "Schema",
         "close": "Close",
         "headerTitle": "Payload schema",
         "loading": "Loading…",
@@ -2326,7 +2373,6 @@
         "copyFailed": "Copy failed"
       },
       "metricsDialog": {
-        "title": "Metrics",
         "close": "Close",
         "headerTitle": "Metrics · {{eventType}}",
         "from": "From",
@@ -2353,7 +2399,6 @@
         "next": "Next"
       },
       "simulateDialog": {
-        "title": "Simulate event",
         "headerTitle": "Simulate · {{eventType}}",
         "submit": "Simulate",
         "submitting": "Submitting…",
@@ -2410,7 +2455,6 @@
       },
       "defineEventDialog": {
         "title": "Define custom event",
-        "headerTitle": "Define Custom Event",
         "cancel": "Cancel",
         "submit": "Create event",
         "submitting": "Creating…",
@@ -2525,5 +2569,25 @@
         "selectPriority": "Select or enter a priority"
       }
     }
+  },
+  "toggle": {
+    "disableTitle": "Disable Workflow",
+    "enableTitle": "Enable Workflow",
+    "confirmDisable": "Are you sure you want to disable this workflow?",
+    "confirmEnable": "Are you sure you want to enable this workflow?"
+  },
+  "mappingEditor": {
+    "error": {
+      "title": "Failed to Load Schema",
+      "retry": "Retry",
+      "retryWithCount": "Retry ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Attempt {{retryCount}} of {{maxRetries}}",
+      "maxRetriesReached": "Maximum retry attempts reached.",
+      "contactSupport": "Contact Support →"
+    }
+  },
+  "actionInputTypeHint": {
+    "coercible": "Type \"{{sourceType}}\" will be converted to \"{{targetType}}\"",
+    "incompatible": "Type \"{{sourceType}}\" is incompatible with expected \"{{targetType}}\""
   }
 }

@@ -24,6 +24,7 @@ interface InternalNotification {
   template_name: string;
   title: string;
   message: string;
+  priority?: 'high' | 'normal' | 'low' | null;
   link?: string | null;
   metadata?: Record<string, unknown> | null;
 }
@@ -63,6 +64,7 @@ export async function triggerPushForNotification(
       body: notification.message,
       ticketId: ticketId ?? '',
       tenant: notification.tenant,
+      priority: notification.priority ?? 'normal',
     }),
   );
 

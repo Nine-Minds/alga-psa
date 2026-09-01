@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -133,7 +134,7 @@ describe('ContractLines i18n wiring contract', () => {
     for (const key of keys) {
       const value = getLeaf(xx, key);
       expect(typeof value).toBe('string');
-      expect(value).toContain('11111');
+      expect(value).toMatch(pseudoPattern('xx'));
     }
   });
 });

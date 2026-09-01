@@ -150,7 +150,7 @@ function buildNlSystemPrompt(availableActions: TeamsNlAvailableAction[]): string
   ].join('\n');
 }
 
-async function resolveAnthropicApiKey(): Promise<string | null> {
+export async function resolveAnthropicApiKey(): Promise<string | null> {
   try {
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
     const provider = await getSecretProviderInstance();
@@ -238,14 +238,9 @@ export function createTeamsNlParseIntent(options: { timeoutMs?: number } = {}): 
 // --- Gating (AI Assistant add-on + tenant toggle + PostHog flag) ------------
 
 /**
- * AI Assistant add-on entitlement, using the same `tenant_addons` pattern as
- * {@link ../teamsAddOnGate} (which owns the Teams add-on check). Local here so
- * this module stays self-contained.
+ * AI Assistant add-on entitlement. This remains independent from the Teams
+ * release flag because AI Assistant is still a separately billed add-on.
  */
-// LEVERAGE: pattern tenant-addon-gate — third copy of the `tenant_addons` +
-// `expires_at` non-expiry query (see teamsAddOnGate.tenantHasTeamsAddOn); a
-// generic `tenantHasAddOn(knex, tenantId, key)` in the add-on gate would fold
-// this and the Teams check together.
 export async function tenantHasAiAssistantAddOn(knex: any, tenantId: string): Promise<boolean> {
   const row = await tenantDb(knex, tenantId)
     .table('tenant_addons')

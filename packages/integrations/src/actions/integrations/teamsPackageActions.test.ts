@@ -29,7 +29,6 @@ const hoisted = vi.hoisted(() => {
     appSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
-    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
   };
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -45,9 +44,6 @@ const hoisted = vi.hoisted(() => {
       }
       if (table === 'teams_integrations') {
         return state.teamsIntegrations;
-      }
-      if (table === 'tenant_addons') {
-        return state.tenantAddOns;
       }
       return [] as Array<Record<string, unknown>>;
     };
@@ -94,7 +90,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-const { microsoftProfiles, teamsIntegrations, tenantAddOns, tenantSecrets, appSecrets } = hoisted.state;
+const { microsoftProfiles, teamsIntegrations, tenantSecrets, appSecrets } = hoisted.state;
 const { hasPermissionMock, getTenantSecretMock, getAppSecretMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
@@ -181,8 +177,6 @@ describe('Teams app package actions', () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
-    tenantAddOns.length = 0;
-    tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
     tenantSecrets.clear();
     appSecrets.clear();
     hasPermissionMock.mockClear();
@@ -260,8 +254,13 @@ describe('Teams app package actions', () => {
     });
     expect(result.package?.manifest.bots[0]).toMatchObject({
       botId: 'teams-client-id',
-      scopes: ['personal'],
+      scopes: ['personal', 'groupChat', 'team'],
     });
+    expect(result.package?.manifest.bots[0]?.commandLists[0]?.scopes).toEqual([
+      'personal',
+      'groupChat',
+      'team',
+    ]);
     expect(result.package?.manifest.composeExtensions[0]?.commands.map((command) => command.id)).toEqual([
       'searchRecords',
       'createTicketFromMessage',

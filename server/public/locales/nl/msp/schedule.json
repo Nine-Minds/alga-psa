@@ -685,5 +685,34 @@
     "notAvailable": "N.v.t.",
     "title": "Interactiedetails",
     "unknownUser": "Onbekend"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Planningsitem niet gevonden.",
+      "invalid": "Het geselecteerde planningsitem is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "assigneesMissing": "Een of meer toegewezen gebruikers konden niet worden gevonden."
+    },
+    "activities": {
+      "otherUserForbidden": "Toestemming geweigerd: planningsactiviteiten van een andere gebruiker zijn niet zichtbaar"
+    },
+    "workItem": {
+      "adHocTimesRequired": "Voor ad-hocitems zijn een begintijd en een eindtijd verplicht.",
+      "typeUnsupported": "Dat type werkitem wordt niet ondersteund voor planning.",
+      "entryOrUserUnavailable": "Het geselecteerde planningsitem of de gebruiker is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw.",
+      "invalid": "Het geselecteerde werkitem is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde werkitem, planningsitem of de toegewezen persoon is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicateEntry": "Dat planningsitem bestaat al. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht planningsveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht planningsveld: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "Vergadering-ID is verplicht",
+      "refreshPermission": "Toestemming geweigerd: vergaderopnamen kunnen niet worden vernieuwd.",
+      "refreshFailed": "Kan de vergaderopnamen niet vernieuwen. Probeer het opnieuw.",
+      "graphForbidden": "Microsoft Graph heeft toegang tot de Teams-opname geweigerd. Controleer de opnamerechten en probeer het opnieuw.",
+      "graphNotFound": "De Teams-opname is niet meer beschikbaar via Microsoft Graph.",
+      "graphThrottled": "Microsoft Graph beperkt het downloaden van opnamen. Probeer het zo dadelijk opnieuw.",
+      "graphHttpStatus": "Microsoft Graph gaf HTTP {{status}} terug bij het downloaden van de Teams-opname."
+    }
   }
 }

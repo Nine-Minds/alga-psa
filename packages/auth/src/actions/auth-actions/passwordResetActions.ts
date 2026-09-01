@@ -1,14 +1,10 @@
 'use server'
 
 import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
-import { getAdminConnection } from '@alga-psa/db/admin';
 import { PasswordResetService } from '@alga-psa/auth';
 import { hashPassword } from '@alga-psa/core/encryption';
-import { isValidEmail } from '@alga-psa/validation';
 
-import { getAuthEmailRegistry } from '../../lib/emailRegistry';
-
-const PASSWORD_RESET_TENANT_DISCOVERY = 'tenant-discovery';
+import { recoverPassword } from '../useRegister';
 
 export interface RequestResetResult {
   success: boolean;
@@ -38,201 +34,23 @@ export interface CompleteResetResult {
 /**
  * Request a password reset for an email address
  * This is a public action that doesn't require authentication
+ *
+ * @deprecated Use `recoverPassword(email, portal)` directly. This adapter maps
+ * the legacy `internal|client` userType to the canonical `msp|client` portal
+ * parameter and delegates to `recoverPassword`, which mints the JWT consumed by
+ * the deployed `/auth/password-reset/set-new-password` page and returns the same
+ * enumeration-safe success value for every public outcome.
  */
 export async function requestPasswordReset(
   email: string,
   userType: 'internal' | 'client' = 'internal'
 ): Promise<RequestResetResult> {
-  console.log('[PasswordReset] Starting password reset request for:', email, 'userType:', userType);
-  
-  try {
-    if (!email) {
-      console.log('[PasswordReset] Email is required');
-      return { success: false, message: 'Email is required', error: 'Email is required' };
-    }
-
-    // Normalize email
-    const normalizedEmail = email.toLowerCase().trim();
-    console.log('[PasswordReset] Normalized email:', normalizedEmail);
-
-    // Validate email format
-    if (!isValidEmail(normalizedEmail)) {
-      return { success: false, message: 'Invalid email format', error: 'Invalid email format' };
-    }
-
-    // Use admin connection to search across all tenants
-    // For public password reset, we need to find the tenant from the user's email
-    console.log('[PasswordReset] Getting admin connection...');
-    const adminKnex = await getAdminConnection();
-    
-    // Find user across all tenants (this is a special case for password reset)
-    console.log('[PasswordReset] Searching for user with email:', normalizedEmail, 'and type:', userType);
-    const userInfo = await tenantDb(adminKnex, PASSWORD_RESET_TENANT_DISCOVERY)
-      .unscoped('users', 'tenant discovery for public password reset email lookup')
-      .where({
-        email: normalizedEmail,
-        user_type: userType,
-        is_inactive: false
-      })
-      .select('tenant', 'user_id', 'first_name', 'username')
-      .first();
-    
-    console.log('[PasswordReset] User search result:', userInfo ? 'User found' : 'User not found');
-    if (userInfo) {
-      console.log('[PasswordReset] User details - tenant:', userInfo.tenant, 'user_id:', userInfo.user_id);
-    }
-    
-    // Clean up admin connection
-    await adminKnex.destroy();
-
-    // Always return success for security (don't reveal if email exists)
-    if (!userInfo) {
-      console.log('[PasswordReset] No user found, returning success for security');
-      return { 
-        success: true, 
-        message: 'If an account exists with this email, you will receive a password reset link shortly.' 
-      };
-    }
-
-    // Now run the reset token creation in the user's tenant context
-    console.log('[PasswordReset] Running with tenant context:', userInfo.tenant);
-    const result = await runWithTenant(userInfo.tenant, async () => {
-      const { knex: tenantKnex, tenant } = await createTenantKnex(userInfo.tenant);
-
-      if (!tenant) {
-        console.error('[PasswordReset] Tenant context is missing!');
-        throw new Error('Tenant context is required');
-      }
-      console.log('[PasswordReset] Tenant context established:', tenant);
-
-      // Ensure at least one email provider path is configured before proceeding
-      console.log('[PasswordReset] Checking tenant email service configuration...');
-      const tenantEmailService = await getAuthEmailRegistry().getTenantEmailService(tenant);
-      let emailConfigured = await tenantEmailService.isConfigured();
-      console.log('[PasswordReset] Tenant email configured:', emailConfigured);
-      
-      if (!emailConfigured) {
-        console.log('[PasswordReset] Falling back to system email configuration check');
-        const systemEmailService = await getAuthEmailRegistry().getSystemEmailService();
-        emailConfigured = await systemEmailService.isConfigured();
-        console.log('[PasswordReset] System email configured:', emailConfigured);
-        if (!emailConfigured) {
-          console.error('[PasswordReset] Neither tenant nor system email service is configured!');
-          // Still return success for security
-          return { 
-            success: true, 
-            message: 'If an account exists with this email, you will receive a password reset link shortly.' 
-          };
-        }
-      }
-
-      // Use a transaction to ensure atomicity
-      const resetResult = await tenantKnex.transaction(async (trx) => {
-        // Create reset token within transaction
-        console.log('[PasswordReset] Creating reset token...');
-        const tokenResult = await PasswordResetService.createResetTokenWithTransaction(
-          normalizedEmail,
-          userType,  // No conversion needed - use 'internal' directly
-          trx,
-          tenant
-        );
-        console.log('[PasswordReset] Token creation result:', tokenResult);
-
-        if (!tokenResult.success || tokenResult.token === 'dummy') {
-          // Either rate limited or user doesn't exist
-          // Still return success for security
-          console.log('[PasswordReset] Token creation failed or dummy token, skipping email');
-          return { 
-            success: true, 
-            message: 'If an account exists with this email, you will receive a password reset link shortly.',
-            skipEmail: true
-          };
-        }
-
-        // Get the tenant's default client for email branding
-        const tenantDbForReset = tenantDb(trx, tenant);
-        const tenantDefaultClientQuery = tenantDbForReset.table('tenant_companies')
-          .where({ is_default: true });
-        const tenantDefaultClient = await tenantDbForReset.tenantJoin(
-          tenantDefaultClientQuery,
-          'clients',
-          'clients.client_id',
-          'tenant_companies.client_id'
-        )
-          .select('clients.*')
-          .first();
-        
-        const clientName = tenantDefaultClient?.client_name || 'Our Platform';
-        
-        // Get support email from default location if available
-        let supportEmail = 'support@example.com';
-        if (tenantDefaultClient) {
-          const defaultLocation = await tenantDbForReset.table('client_locations')
-            .where({ 
-              client_id: tenantDefaultClient.client_id,
-              is_default: true,
-              is_active: true
-            })
-            .first();
-          
-          if (defaultLocation?.email) {
-            supportEmail = defaultLocation.email;
-          }
-        }
-
-        // Generate password reset URL
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || (process.env.HOST ? `https://${process.env.HOST}` : '');
-        const resetUrl = `${baseUrl}/auth/reset-password?token=${encodeURIComponent(tokenResult.token || '')}`;
-
-        // Calculate expiration time for display
-        const expirationTime = '1 hour';
-
-        // Send password reset email - if this fails, transaction will rollback
-        console.log('[PasswordReset] Sending email to:', normalizedEmail);
-        console.log('[PasswordReset] Reset URL:', resetUrl);
-        console.log('[PasswordReset] Client name:', clientName);
-        console.log('[PasswordReset] Support email:', supportEmail);
-        
-        await getAuthEmailRegistry().sendPasswordResetEmail({
-          email: normalizedEmail,
-          userName: userInfo.first_name || userInfo.username || normalizedEmail,
-          resetLink: resetUrl,
-          expirationTime: expirationTime,
-          tenant: tenant,
-          supportEmail: supportEmail,
-          clientName: clientName
-        });
-        
-        console.log('[PasswordReset] Email sent successfully');
-
-        return {
-          success: true,
-          message: 'If an account exists with this email, you will receive a password reset link shortly.'
-        };
-      }).catch((error) => {
-        console.error('[PasswordReset] Transaction failed:', error);
-        console.error('[PasswordReset] Error stack:', error.stack);
-        // Still return success for security
-        return {
-          success: true,
-          message: 'If an account exists with this email, you will receive a password reset link shortly.'
-        };
-      });
-
-      return resetResult;
-    });
-
-    return result;
-
-  } catch (error) {
-    console.error('[PasswordReset] Error requesting password reset:', error);
-    console.error('[PasswordReset] Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
-    // Always return success for security (don't reveal errors)
-    return { 
-      success: true, 
-      message: 'If an account exists with this email, you will receive a password reset link shortly.' 
-    };
-  }
+  const portal = userType === 'client' ? 'client' : 'msp';
+  await recoverPassword(email, portal);
+  return {
+    success: true,
+    message: 'If an account exists with this email, you will receive a password reset link shortly.'
+  };
 }
 
 /**

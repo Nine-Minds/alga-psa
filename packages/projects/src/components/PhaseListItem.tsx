@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { IProjectPhase } from '@alga-psa/types';
 import { AlertTriangle, Pencil, Trash2, GripVertical, Columns3, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -90,6 +91,8 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   onReopen,
 }) => {
   const { t } = useTranslation('features/projects');
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const { money, symbol } = useCurrencyFormat();
   const isBillingView = viewMode === 'billing';
   const effectiveIsEditing = isEditing && !isBillingView;
@@ -269,7 +272,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={`relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group
-        ${isSelected ? 'bg-purple-50 dark:bg-purple-500/10' : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'}
+        ${isSelected ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-500)/0.1)]' : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'}
         ${isDragging ? styles.dragging + ' opacity-50 scale-95' : ''}
         ${isAnimating ? styles.entering : ''}
         ${taskDraggingOverPhaseId === phase.phase_id ? styles.taskDragOver : ''}
@@ -294,7 +297,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 ref={nameInputRef}
                 value={editingName}
                 onChange={(e) => onNameChange(e.target.value)}
-                className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent resize-none"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -304,7 +307,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
               <TextArea
                 value={editingDescription ?? ''}
                 onChange={(e) => onDescriptionChange(e.target.value || null)}
-                className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent resize-none"
                 placeholder={t('phases.descriptionPlaceholder')}
                 onClick={(e) => e.stopPropagation()}
                 rows={2}
@@ -421,11 +424,11 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                   </Tooltip>
                 )}
                 {isCompleted && (
-                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: new Date(phase.completed_at as string).toLocaleDateString() })}>
+                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: formatDate(new Date(phase.completed_at as string), { dateStyle: 'medium' }) })}>
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   </Tooltip>
                 )}
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300">
+                <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded text-xs font-medium">
                   {t('phases.taskCount', { count: taskCount ?? 0 })}
                 </span>
               </div>
@@ -448,12 +451,12 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-1">
               <div>
                 {t('phases.startLabel')}: {phase.start_date
-                  ? new Date(phase.start_date).toLocaleDateString()
+                  ? formatDate(new Date(phase.start_date), { dateStyle: 'medium' })
                   : t('phases.notSet')}
               </div>
               <div>
                 {t('phases.dueLabel')}: {phase.end_date
-                  ? new Date(phase.end_date).toLocaleDateString()
+                  ? formatDate(new Date(phase.end_date), { dateStyle: 'medium' })
                   : t('phases.notSet')}
               </div>
             </div>

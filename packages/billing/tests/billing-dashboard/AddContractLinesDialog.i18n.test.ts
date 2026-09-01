@@ -33,7 +33,6 @@ describe('AddContractLinesDialog i18n wiring contract', () => {
 
     const keyChecks = [
       'addLines.title',
-      'addLines.selectPresetsTitle',
       'addLines.filters.searchPlaceholder',
       'addLines.filters.allTypes',
       'addLines.filters.typePlaceholder',

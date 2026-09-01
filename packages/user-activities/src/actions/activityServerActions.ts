@@ -21,8 +21,10 @@ import {
   fetchTicketActivities as fetchTicketActivitiesInternal,
   fetchTimeEntryActivities as fetchTimeEntryActivitiesInternal,
   fetchWorkflowTaskActivities as fetchWorkflowTaskActivitiesInternal,
-  fetchNotificationActivities as fetchNotificationActivitiesInternal
+  fetchNotificationActivities as fetchNotificationActivitiesInternal,
+  fetchNotificationActivitiesPagedInternal
 } from "./activityAggregationActions";
+import type { PagedNotificationActivities } from "./activityAggregationActions";
 import { withAuth, hasPermission } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import {
@@ -178,6 +180,32 @@ export const fetchNotificationActivities = withAuth(async (
     return await fetchNotificationActivitiesInternal(user.user_id, tenant, filters) as NotificationActivity[];
   } catch (error) {
     console.error("Error fetching notification activities:", error);
+    throw error;
+  }
+});
+
+/**
+ * Server action to fetch a single offset/limit window of notification activities for
+ * the current user, together with the total matching count. Powers the numbered
+ * server-side pagination of the User Activities notifications card full view
+ * (task 29.8.46). Reuses the same query + filtering as fetchNotificationActivities.
+ *
+ * @param filters Optional filters (read/unread, category, date range, priority)
+ * @param offset  Zero-based index of the first item to return
+ * @param limit   Maximum number of items to return
+ * @returns Promise resolving to { activities, total }
+ */
+export const fetchNotificationActivitiesPaged = withAuth(async (
+  user,
+  { tenant },
+  filters: ActivityFilters = {},
+  offset: number = 0,
+  limit: number = 20
+): Promise<PagedNotificationActivities> => {
+  try {
+    return await fetchNotificationActivitiesPagedInternal(user.user_id, tenant, filters, offset, limit);
+  } catch (error) {
+    console.error("Error fetching paged notification activities:", error);
     throw error;
   }
 });

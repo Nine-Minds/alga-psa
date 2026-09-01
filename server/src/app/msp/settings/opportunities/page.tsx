@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { SettingsTab } from '@/components/settings/SettingsTab';
-import { getSettingsTabTitle } from '@/components/settings/settingsTabsRegistry';
+import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
 import OpportunitiesSettingsBody from './OpportunitiesSettingsBody';
 
-export const metadata: Metadata = { title: getSettingsTabTitle('opportunities') };
+export async function generateMetadata(): Promise<Metadata> {
+  return settingsTabMetadata('opportunities');
+}
 
 export default function OpportunitiesSettingsRoute() {
   return (

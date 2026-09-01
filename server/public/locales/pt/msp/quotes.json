@@ -57,7 +57,7 @@
       "description": "Descrição/Escopo",
       "discounts": "Descontos",
       "lineItems": "Itens de linha",
-      "poNumber": "Número do pedido",
+      "poNumber": "Número do pedido de compra",
       "quoteDate": "Data da cotação",
       "quoteLayout": "Layout de cotação",
       "subtotal": "Subtotal",
@@ -114,7 +114,9 @@
       "delete": "Falha ao excluir cotação.",
       "duplicate": "Falha ao duplicar a cotação.",
       "load": "Falha ao carregar cotações",
-      "send": "Falha ao enviar cotação."
+      "send": "Falha ao enviar cotação.",
+      "resend": "Falha ao reenviar cotação.",
+      "sendReminder": "Falha ao enviar lembrete da cotação."
     },
     "loading": "Carregando cotações...",
     "rowActions": {
@@ -153,7 +155,8 @@
       "previewPdf": "Visualizar PDF",
       "backToQuotes": "Voltar para cotações",
       "backToTemplates": "Voltar aos modelos de cotação",
-      "convertToSalesOrder": "Converter em pedido de venda"
+      "convertToSalesOrder": "Converter em pedido de venda",
+      "convert": "Converter em…"
     },
     "headings": {
       "editQuote": "Editar cotação",
@@ -316,8 +319,8 @@
     },
     "moreDetails": {
       "title": "Mais detalhes",
-      "subtitle": "Número do pedido, oportunidade, layout do PDF",
-      "poNumber": "Número do pedido",
+      "subtitle": "Número do pedido de compra, oportunidade, layout do PDF",
+      "poNumber": "Número do pedido de compra",
       "opportunity": "Oportunidade",
       "opportunityPlaceholder": "ID da oportunidade (opcional)",
       "pdfLayout": "Layout de PDF",
@@ -587,20 +590,26 @@
     "sections": {
       "contractItems": "Itens do contrato",
       "conversionMode": "Modo de conversão",
-      "excludedItems": "Itens excluídos",
       "excludedFromConversion": "Excluído da conversão",
+      "excludedItems": "Itens excluídos",
       "invoiceItems": "Itens de fatura",
       "itemMappingPreview": "Visualização do mapeamento de itens",
+      "onSalesOrder": "No pedido de venda {{soNumber}}",
       "quoteTotal": "Cotação Total",
+      "salesOrderItems": "Linhas do pedido de venda",
       "statusAfterConversion": "Status após a conversão",
       "willBecomeContractLines": "Se tornarão linhas de contrato",
-      "willBecomeInvoiceCharges": "Se tornarão cobranças de fatura"
+      "willBecomeInvoiceCharges": "Se tornarão cobranças de fatura",
+      "willBecomeSalesOrderLines": "Virarão linhas do pedido de venda"
     },
     "empty": {
       "contractItems": "Nenhum item recorrente será convertido em contrato.",
-      "invoiceItems": "Nenhum item único será convertido em uma fatura."
+      "invoiceItems": "Nenhum item único será convertido em uma fatura.",
+      "invoiceItemsOnSalesOrder": "Todas as linhas avulsas estão no pedido de venda {{soNumber}} e serão faturadas a partir dele no atendimento.",
+      "salesOrderItems": "Nenhuma linha de produto passará para um pedido de venda."
     },
     "summary": {
+      "billedViaSalesOrder": "Faturado a partir do pedido de venda {{soNumber}} no atendimento",
       "converted": "Convertido",
       "discount": "Desconto",
       "fixed": "fixo",
@@ -628,10 +637,11 @@
       "title": "Erro"
     },
     "salesOrder": {
-      "successTitle": "Pedido de venda {{number}} criado",
-      "successBody": "As linhas de produto serão faturadas na entrega.",
+      "existingNote": "Esta cotação já foi convertida no pedido de venda {{soNumber}}.",
+      "note": "As linhas de produto podem ser faturadas de duas formas: criando um pedido de venda para faturá-las no atendimento, ou faturando-as diretamente. Ao criar o pedido de venda, elas saem da conversão em fatura, assim nada é cobrado duas vezes.",
       "openSalesOrders": "Abrir pedidos de venda",
-      "note": "As linhas de produto avulsas passam para um pedido de venda em rascunho (faturado na entrega) e são excluídas de qualquer conversão em fatura de rascunho, para que nada seja cobrado em duplicidade."
+      "successBody": "As linhas de produto serão faturadas na entrega.",
+      "successTitle": "Pedido de venda {{number}} criado"
     }
   },
   "quoteApproval": {
@@ -725,7 +735,9 @@
       "notFound": "Modelo de documento de cotação não encontrado.",
       "previewPipeline": "Falha no pipeline de visualização.",
       "saveFailed": "Falha ao salvar o modelo de cotação",
-      "unknownAstExport": "Erro de exportação AST desconhecido"
+      "unknownAstExport": "Erro de exportação AST desconhecido",
+      "quoteNotFound": "Não foi possível carregar os detalhes da cotação para a visualização.",
+      "quoteDetailLoad": "Falha ao carregar os detalhes da cotação."
     },
     "fields": {
       "layoutDetails": "Detalhes do layout",
@@ -749,7 +761,17 @@
       "sampleScenario": "Cenário de amostra",
       "selectScenario": "Selecione o cenário...",
       "selectScenarioPrompt": "Selecione um cenário de amostra para gerar uma visualização oficial.",
-      "templateGenerationFailed": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual."
+      "templateGenerationFailed": "O modelo de visualização não pôde ser gerado no espaço de trabalho atual.",
+      "source": {
+        "sample": "Amostra",
+        "existing": "Existente"
+      },
+      "searchQuotes": "Pesquisar cotações...",
+      "searchQuotesHint": "Pesquise por número ou cliente...",
+      "noQuotesFound": "Nenhuma cotação encontrada.",
+      "selectQuote": "Selecione a cotação",
+      "selectQuoteHint": "Selecione uma cotação para visualizar a saída vinculada a dados.",
+      "loadingQuoteDetails": "Carregando detalhes da cotação..."
     },
     "pipeline": {
       "render": "Renderizar",
@@ -787,6 +809,33 @@
     },
     "labels": {
       "custom": "Personalizado"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Permissão negada: não é possível criar cotações",
+      "update": "Permissão negada: não é possível atualizar cotações",
+      "read": "Permissão negada: não é possível ler cotações",
+      "delete": "Permissão negada: não é possível excluir cotações",
+      "readOne": "Permissão negada: não é possível ler a cotação",
+      "approve": "Permissão negada: não é possível aprovar cotações",
+      "updateApprovalSettings": "Permissão negada: não é possível atualizar as configurações de aprovação de cotações",
+      "readDocumentTemplates": "Permissão negada: não é possível ler os modelos de documento de cotação",
+      "modifyDocumentTemplates": "Permissão negada: não é possível modificar os modelos de documento de cotação",
+      "setDefaultDocumentTemplate": "Permissão negada: não é possível definir o modelo de documento de cotação padrão",
+      "deleteDocumentTemplates": "Permissão negada: não é possível excluir os modelos de documento de cotação"
+    },
+    "quote": {
+      "formInvalid": "O formulário de cotação contém valores inválidos. Revise-o e tente novamente.",
+      "notFoundRefresh": "Cotação não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "itemNotFoundRefresh": "Item da cotação não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "templateNotFoundRefresh": "Modelo de cotação não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores de cotação selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "A cotação, cliente, contato ou serviço selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração da cotação conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores da cotação não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório da cotação.",
+      "missingFieldNamed": "Falta um campo obrigatório da cotação: {{field}}."
     }
   }
 }

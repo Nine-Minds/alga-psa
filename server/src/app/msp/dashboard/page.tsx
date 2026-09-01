@@ -8,10 +8,15 @@ import { isSelfHostLicensing } from '@alga-psa/licensing';
 import { DashboardOnboardingSkeleton, DashboardOnboardingSlot } from '@alga-psa/onboarding/components';
 import { isEnterprise } from '@/lib/features';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export const metadata: Metadata = {
-  title: 'Dashboard',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.dashboard.title', { defaultValue: 'Dashboard' }),
+  };
+}
 
 export const dynamic = 'force-dynamic';
 

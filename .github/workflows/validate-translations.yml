@@ -1,6 +1,7 @@
 name: Validate Translations
 
 on:
+  workflow_dispatch: # Allows manual triggering
   pull_request:
     paths:
       - 'server/public/locales/**'
@@ -10,6 +11,28 @@ on:
       - 'scripts/validate-translations.cjs'
       - 'scripts/generate-pseudo-locales.cjs'
       - 'scripts/find-missing-i18n-keys.cjs'
+      - 'tools/i18n/**'
+  # Merges are what the metrics sheet records — one point per commit that
+  # reached main, rather than a row for every push to every open PR.
+  push:
+    branches:
+      - main
+
+env:
+  # The three translation-quality jobs below fail the run when they find
+  # something. Failing is not the same as blocking: `main` lists no required
+  # status checks, so a red run here is a visible signal on the PR that nobody
+  # has to wait on. Making these gate a merge means adding them to branch
+  # protection — a separate, deliberate decision, not a side effect of this
+  # flag.
+  #
+  # Set to 'false' to go back to reporting findings on a green check. That was
+  # the rollout mode, and it hid a real defect: PR 3139 carried 11 untranslated
+  # strings in five packs and showed a passing tick, because the failure was
+  # swallowed before it reached the step.
+  #
+  # The two key-consistency jobs ignore this flag; they were always enforcing.
+  I18N_ENFORCE: 'true'
 
 jobs:
   validate:
@@ -43,3 +66,121 @@ jobs:
 
       - name: Scan components for unresolved i18n keys
         run: node scripts/find-missing-i18n-keys.cjs
+
+  # The jobs above prove the locale packs agree with English on *keys*. These
+  # prove the packs are actually in the right language, and that no component
+  # renders English that never reached a pack at all.
+  #
+  # Nothing here writes to the repo: the audits run with --no-write-report and
+  # read only the glossaries, so no job needs a commit back to a protected
+  # branch.
+  locale-quality:
+    name: Locale quality (glossaries, English placeholders)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Fails on English left in a pack, glossary forbidden-term violations, and
+      # unreadable or missing namespaces — none of which grow during ordinary
+      # work, so they are safe to gate on.
+      - name: Audit every locale against its glossary
+        run: node tools/i18n/ci-gate.mjs "Locale glossary audit" node tools/i18n/audit-all.cjs
+
+      - name: Check translated template parity
+        run: |
+          for locale in de es fr it nl pl pt; do
+            node tools/i18n/ci-gate.mjs "Template parity ($locale)" \
+              node tools/i18n/check-template-parity.cjs --locale "$locale"
+          done
+
+      # `if: always()`: a red run is exactly the data point the metrics sheet
+      # exists to capture.
+      - name: Collect locale metrics
+        if: always()
+        run: node tools/i18n/audit-all.cjs --json > locale-metrics.json || true
+
+      - name: Upload locale metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: locale-metrics
+          path: locale-metrics.json
+          retention-days: 30
+
+      # Appends one row per locale to the shared metrics sheet
+      # (docs/reference/test-metrics.md), on its own tab and reusing the same
+      # service account as record-test-metrics.mjs. No-op until the Google
+      # secrets exist, and never fails the run.
+      - name: Record metrics to Google Sheet
+        if: always() && github.event_name == 'push'
+        continue-on-error: true
+        run: node scripts/record-i18n-metrics.mjs
+        env:
+          I18N_METRICS_INPUT: locale-metrics.json
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
+  hardcoded-english:
+    name: Hardcoded English in UI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Only the high-severity list is gated — components that render JSX with
+      # no i18n wiring at all. The partial list carries the scanner's residual
+      # false positives (brand names, enum-ish values) and stays advisory.
+      - name: Scan for components with no i18n wiring
+        run: |
+          node tools/i18n/ci-gate.mjs "Components with no i18n wiring" \
+            node tools/i18n/find-untranslated-ui.cjs --fail-on-high
+
+      - name: Report hardcoded-English findings
+        if: always()
+        run: |
+          {
+            echo "## Hardcoded English in UI"
+            echo ""
+            echo "Advisory: partially-translated files. Known false positives —"
+            echo "brand names, enum-ish values, CSS strings."
+            echo ""
+            node tools/i18n/find-untranslated-ui.cjs --severity=partial || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  translation-tooling:
+    name: Translation tooling self-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Glossary schema conformance, audit/export CLI behaviour and template
+      # parity. baseline.test.mjs is excluded: it ratchets counts the gates now
+      # hold at zero outright, against a baseline file that is no longer
+      # tracked. It stays available locally.
+      - name: Run tools/i18n test suite
+        run: |
+          node tools/i18n/ci-gate.mjs "Translation tooling tests" \
+            node --test \
+              tools/i18n/tests/glossary.test.mjs \
+              tools/i18n/tests/audit-tooling.test.mjs \
+              tools/i18n/tests/template-parity.test.mjs

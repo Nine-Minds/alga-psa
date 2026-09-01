@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { SettingsTab } from '@/components/settings/SettingsTab';
-import { getSettingsTabTitle } from '@/components/settings/settingsTabsRegistry';
+import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
 import TimeEntrySettingsBody from './TimeEntrySettingsBody';
 
-export const metadata: Metadata = { title: getSettingsTabTitle('time-entry') };
+export async function generateMetadata(): Promise<Metadata> {
+  return settingsTabMetadata('time-entry');
+}
 
 export default function TimeEntrySettingsRoute() {
   return (

@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { TemplateAst } from '@alga-psa/types';
 
 import { type DocumentType, getDocumentTypeRegistryEntry } from './registry';
+import type { DocumentTemplateRef } from './resolution';
 
 const CUSTOM_TABLE = 'document_templates';
 const ASSIGNMENT_TABLE = 'document_template_assignments';
@@ -114,48 +115,49 @@ export async function deleteCustomDocumentTemplate(
   return knex(CUSTOM_TABLE).where({ tenant, document_type: documentType, template_id: templateId }).del();
 }
 
-/** Resolve an assignment row to a concrete AST (custom from DB, or standard from the registry). */
-async function assignmentToAst(
+/** Resolve an assignment row to a concrete template (custom from DB, or standard from the registry). */
+async function assignmentToTemplate(
   knex: Knex | Knex.Transaction,
   tenant: string,
   documentType: DocumentType,
   assignment: AssignmentRow | undefined,
-): Promise<TemplateAst | null> {
+): Promise<DocumentTemplateRef | null> {
   if (!assignment) return null;
   if (assignment.template_source === 'standard' && assignment.standard_template_code) {
-    return getDocumentTypeRegistryEntry(documentType).getStandardTemplateAstByCode(assignment.standard_template_code);
+    const ast = getDocumentTypeRegistryEntry(documentType).getStandardTemplateAstByCode(assignment.standard_template_code);
+    return ast ? { ast, templateId: assignment.standard_template_code, version: null } : null;
   }
   if (assignment.template_source === 'custom' && assignment.template_id) {
     const row = await getCustomDocumentTemplate(knex, tenant, documentType, assignment.template_id);
-    return row?.templateAst ?? null;
+    return row?.templateAst ? { ast: row.templateAst, templateId: row.template_id, version: row.version ?? null } : null;
   }
   return null;
 }
 
-/** The tenant-default template AST for a type, or null when none is assigned. */
-export async function fetchTenantDefaultTemplateAst(
+/** The tenant-default template for a type, or null when none is assigned. */
+export async function fetchTenantDefaultTemplate(
   knex: Knex | Knex.Transaction,
   tenant: string,
   documentType: DocumentType,
-): Promise<TemplateAst | null> {
+): Promise<DocumentTemplateRef | null> {
   const assignment = await knex(ASSIGNMENT_TABLE)
     .where({ tenant, document_type: documentType, scope_type: 'tenant' })
     .whereNull('scope_id')
     .first<AssignmentRow>();
-  return assignmentToAst(knex, tenant, documentType, assignment);
+  return assignmentToTemplate(knex, tenant, documentType, assignment);
 }
 
-/** A client-scoped override template AST for a type, or null when none is assigned. */
-export async function fetchClientOverrideTemplateAst(
+/** A client-scoped override template for a type, or null when none is assigned. */
+export async function fetchClientOverrideTemplate(
   knex: Knex | Knex.Transaction,
   tenant: string,
   documentType: DocumentType,
   clientId: string,
-): Promise<TemplateAst | null> {
+): Promise<DocumentTemplateRef | null> {
   const assignment = await knex(ASSIGNMENT_TABLE)
     .where({ tenant, document_type: documentType, scope_type: 'client', scope_id: clientId })
     .first<AssignmentRow>();
-  return assignmentToAst(knex, tenant, documentType, assignment);
+  return assignmentToTemplate(knex, tenant, documentType, assignment);
 }
 
 export type SetDefaultPayload =

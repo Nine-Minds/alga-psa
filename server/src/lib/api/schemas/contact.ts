@@ -10,18 +10,28 @@ import {
 } from '@alga-psa/shared/interfaces/contact.interfaces';
 import { 
   uuidSchema, 
-  emailSchema, 
   createListQuerySchema, 
   createUpdateSchema,
   baseFilterSchema,
   booleanTransform
 } from './common';
+import {
+  contactCoreFieldsSchema,
+  emailFieldSchema,
+  phoneExtensionSchema,
+  phoneFieldSchema
+} from '@alga-psa/validation';
+
+// Structural rules for name/email/phone come from @alga-psa/validation so the REST
+// API and the server actions accept and reject exactly the same inputs.
+const { full_name: contactNameField } = contactCoreFieldsSchema.shape;
 
 const contactPhoneCanonicalTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const contactEmailCanonicalTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
 const contactPhoneNumberInputSchema = z.object({
   contact_phone_number_id: uuidSchema.optional(),
-  phone_number: z.string().trim().min(1, 'Phone number is required'),
+  phone_number: phoneFieldSchema.pipe(z.string().min(1, 'Phone number is required')),
+  extension: phoneExtensionSchema.nullish(),
   canonical_type: contactPhoneCanonicalTypeSchema.nullish(),
   custom_type: z.string().trim().min(1).nullish(),
   is_default: z.boolean().optional(),
@@ -30,7 +40,7 @@ const contactPhoneNumberInputSchema = z.object({
 
 const contactEmailAddressInputSchema = z.object({
   contact_additional_email_address_id: uuidSchema.optional(),
-  email_address: emailSchema,
+  email_address: emailFieldSchema,
   canonical_type: contactEmailCanonicalTypeSchema.nullish(),
   custom_type: z.string().trim().min(1).nullish(),
   display_order: z.number().int().min(0).optional(),
@@ -39,6 +49,7 @@ const contactEmailAddressInputSchema = z.object({
 const contactPhoneNumberResponseSchema = z.object({
   contact_phone_number_id: uuidSchema,
   phone_number: z.string(),
+  extension: z.string().nullable().optional(),
   normalized_phone_number: z.string(),
   canonical_type: contactPhoneCanonicalTypeSchema.nullable(),
   custom_phone_type_id: uuidSchema.nullable().optional(),
@@ -59,10 +70,10 @@ const contactEmailAddressResponseSchema = z.object({
 
 // Create contact schema
 export const createContactSchema = z.object({
-  full_name: z.string().min(1, 'Full name is required').max(255),
+  full_name: contactNameField,
   client_id: uuidSchema.optional(),
   phone_numbers: z.array(contactPhoneNumberInputSchema).optional().default([]),
-  email: emailSchema,
+  email: emailFieldSchema,
   primary_email_canonical_type: contactEmailCanonicalTypeSchema.nullish(),
   primary_email_custom_type: z.string().trim().min(1).nullish(),
   primary_email_custom_type_id: uuidSchema.nullable().optional(),

@@ -12,7 +12,6 @@
       "downloadCsv": "CSV herunterladen",
       "edit": "Bearbeiten",
       "import": "Importieren",
-      "reactivate": "Reaktivieren",
       "remove": "Entfernen",
       "retry": "Wiederholen",
       "save": "Speichern",
@@ -181,7 +180,18 @@
     "shareTooltip": "Drucken, importieren und exportieren",
     "defaultClientDeleteError": "Der Standardkunde kann nicht gelöscht werden. Legen Sie zuerst in den allgemeinen Einstellungen einen anderen Kunden als Standard fest.",
     "clientNotFound": "Kunde nicht gefunden.",
-    "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden."
+    "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} ausgewählt",
+        "markInactive": "Als inaktiv markieren",
+        "reactivate": "Reaktivieren",
+        "delete": "Löschen",
+        "print": "Ausgewählte drucken",
+        "more": "Mehr",
+        "clear": "Auswahl aufheben"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Verkaufschancen",
@@ -479,6 +489,7 @@
     "email": "E-Mail",
     "emailPlaceholder": "E-Mail-Adresse",
     "phone": "Telefon",
+    "extension": "Durchwahl",
     "phonePlaceholder": "Telefonnummer",
     "name": "Name",
     "creating": "Wird erstellt...",
@@ -731,7 +742,10 @@
     "deactivateError": "Der Vertrag konnte nicht deaktiviert werden",
     "updateError": "Der Vertrag konnte nicht aktualisiert werden",
     "createContract": "Vertrag erstellen",
-    "quickAdd": "Schnell hinzufügen"
+    "quickAdd": "Schnell hinzufügen",
+    "billingProfile": "Abrechnungsprofil",
+    "billingProfileUnassigned": "Nicht zugeordnet",
+    "billingProfileUpdated": "Abrechnungsprofil aktualisiert"
   },
   "clientContractDialog": {
     "assignTitle": "Vertrag dem Kunden zuordnen",
@@ -909,6 +923,40 @@
     "updateError": "Die Einstellungen konnten nicht aktualisiert werden",
     "useDefaultSuccess": "Der Kunde verwendet nun die Standardeinstellungen für den Ablauf des Guthabens."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Einstellungen für die Guthabenverrechnung",
+    "useDefault": "Standardeinstellungen verwenden",
+    "useDefaultHelp": "Verwenden Sie die systemweiten Standardeinstellungen für die Guthabenverrechnung",
+    "useDefaultSuccess": "Der Kunde verwendet jetzt die Standardeinstellungen für die Guthabenverrechnung.",
+    "clientSpecificEnabled": "Kundenspezifische Einstellungen für die Guthabenverrechnung aktiviert.",
+    "autoApply": "Guthaben beim Abschluss automatisch verrechnen",
+    "autoApplyHelp": "Wenn aktiviert, wird verfügbares Guthaben automatisch verrechnet, sobald eine Rechnung abgeschlossen wird",
+    "orderLabel": "Reihenfolge der Guthabenverrechnung",
+    "selectOrder": "Guthabenreihenfolge auswählen",
+    "orderHelp": "Wählen Sie die Reihenfolge, in der Guthaben verbraucht wird",
+    "serviceTypesLabel": "Berechtigte Servicetypen",
+    "serviceTypesHelp": "Legen Sie fest, ob Guthaben auf alle Gebühren oder nur auf Gebühren für die ausgewählten Servicetypen angewendet werden kann.",
+    "noServiceTypes": "Keine Servicetypen konfiguriert.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Mandanten-Standard verwenden",
+        "all": "Alle Servicetypen",
+        "restricted": "Nur ausgewählte Typen",
+        "placeholder": "Servicetyp-Einschränkung auswählen"
+      },
+      "inheritedRestricted": "Mandanten-Standard: nur ausgewählte Typen ({{types}}).",
+      "restricted": "Guthaben ist auf die ausgewählten Servicetypen beschränkt. Wählen Sie mindestens einen aus, um zu speichern."
+    },
+    "order": {
+      "expirationFirst": "Bald ablaufende zuerst",
+      "oldestFirst": "Ältestes Guthaben zuerst",
+      "newestFirst": "Neuestes Guthaben zuerst"
+    },
+    "updatedSuccess": "Die Einstellungen für die Guthabenverrechnung wurden aktualisiert.",
+    "loadError": "Die Einstellungen konnten nicht geladen werden",
+    "saveError": "Einstellungen konnten nicht gespeichert werden",
+    "updateError": "Einstellungen konnten nicht aktualisiert werden"
+  },
   "clientExternalCreditSettings": {
     "title": "Externes Guthaben vorhanden",
     "enable": "Kunde hat Guthaben im Buchhaltungssystem",
@@ -922,18 +970,19 @@
     "noteUpdatedSuccess": "Der Hinweis zum externen Guthaben wurde aktualisiert."
   },
   "clientGridCard": {
-    "actions": "Client-Aktionen",
     "quickView": "Schnellansicht",
-    "defaultClient": "Standard-Client",
     "taxExempt": "Steuerbefreit",
     "taxExemptTooltip": "Dieser Kunde ist steuerbefreit – auf seine Rechnungen werden keine Steuern erhoben",
-    "type": "Typ:",
-    "address": "Adresse:",
-    "phone": "Telefon:",
-    "url": "URL:",
     "clientActions": "Client-Aktionen",
     "default": "Standard",
-    "selectClient": "Wählen Sie den Kunden {{name}} aus."
+    "selectClient": "Wählen Sie den Kunden {{name}} aus.",
+    "openTickets_one": "{{count}} offen",
+    "openTickets_other": "{{count}} offen",
+    "lifecycle": {
+      "prospect": "Interessent",
+      "former": "Ehemalig"
+    },
+    "noContactDetails": "Keine Kontaktdaten"
   },
   "clientLanguagePreference": {
     "title": "Client-Spracheinstellungen",
@@ -1315,6 +1364,7 @@
         "notes": "Notizen",
         "notesHelper": "Zusätzliche Hinweise zu diesem Standort",
         "phone": "Telefon",
+        "extension": "Durchwahl",
         "phoneHelper": "Telefonnummer für diesen Standort",
         "placeholder": {
           "addressLine1": "Adresse eingeben *",
@@ -1332,7 +1382,10 @@
         "stateProvince": "Bundesland/Provinz",
         "stateProvinceHelper": "Name des Bundesstaats oder der Provinz",
         "taxRegion": "Steuerregion",
-        "taxRegionHelper": "Wählen Sie die entsprechende Steuerregion aus"
+        "taxRegionHelper": "Wählen Sie die entsprechende Steuerregion aus",
+        "defaultBillingProfile": "Standard-Abrechnungsprofil",
+        "defaultBillingProfileNone": "Keines",
+        "defaultBillingProfileHelper": "Neue Tickets an diesem Standort starten mit diesem Abrechnungsprofil. Es kann im Ticket jederzeit geändert werden."
       },
       "listTitle": "Standorte",
       "loading": "Standorte werden geladen...",
@@ -1379,6 +1432,9 @@
       "viewTranscript": "Transkript anzeigen"
     },
     "quickAdd": {
+      "clientRequired": "Wählen Sie einen Kunden für diese Interaktion aus",
+      "contactPlaceholder": "Kontakt auswählen",
+      "selectClientFirst": "Zuerst Kunden auswählen",
       "teams": {
         "attendees": {
           "add": "Hinzufügen",
@@ -1407,6 +1463,16 @@
         "createFailed": "Teams-Besprechung konnte nicht erstellt werden",
         "createToggle": "Teams-Besprechung erstellen",
         "endRequired": "Zum Erstellen einer Teams-Besprechung ist eine Endzeit erforderlich",
+        "invitesDisabled": "E-Mail-Einladungen sind in den Einstellungen der Teams-Integration deaktiviert — Teilnehmer werden von Microsoft nicht benachrichtigt.",
+        "invitesSummary": "Microsoft sendet Kalendereinladungen per E-Mail an: {{recipients}}.",
+        "invitesSummaryYou": "Sie (Ersteller)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams ist für diesen Mandanten nicht aktiviert.",
+          "ee_disabled": "Die Teams-Integration erfordert die Enterprise Edition.",
+          "no_organizer": "In den Teams-Einstellungen ist kein Standard-Besprechungsorganisator konfiguriert.",
+          "not_configured": "Die Teams-Integration wurde nicht konfiguriert."
+        },
+        "scheduleSummary": "Ein Zeitplaneintrag wird zu Ihrem AlgaPSA-Kalender hinzugefügt.",
         "startRequired": "Zum Erstellen einer Teams-Besprechung ist eine Startzeit erforderlich",
         "unavailable": "Die Erstellung von Teams-Besprechungen ist für diesen Mandanten nicht verfügbar."
       },
@@ -1432,6 +1498,13 @@
       "allContacts": "Alle Kontakte",
       "allStatuses": "Alle Status",
       "allUsers": "Alle Benutzer",
+      "columns": { "type": "Typ", "title": "Titel", "client": "Kunde", "contact": "Kontakt", "user": "Benutzer", "date": "Datum", "status": "Status" },
+      "empty": "Keine Interaktionen entsprechen diesen Filtern.",
+      "loading": "Interaktionen werden geladen…",
+      "openClient": "Kunden {{name}} öffnen",
+      "openContact": "Kontakt {{name}} öffnen",
+      "openInteraction": "Interaktion {{title}} öffnen",
+      "openUser": "Benutzer {{name}} öffnen",
       "byUser": "Von {{name}}",
       "collapse": "Letzte Interaktionen einklappen",
       "contactsFromClient": "Kontakte des ausgewählten Kunden",
@@ -1566,6 +1639,206 @@
       "loading": "Kontakt wird geladen...",
       "notFound": "Kontakt nicht gefunden.",
       "loadFailed": "Kontakt konnte nicht geladen werden."
+    }
+  },
+  "clientBillingProfiles": {
+    "title": "Abrechnungsprofile",
+    "description": "Rechnen Sie einzelne Standorte, Rechtsträger oder Betriebsstätten innerhalb dieses Kunden getrennt ab. Buchungen werden über den Vertrag, die Vertragsposition oder das Arbeitselement einem Profil zugeordnet; ohne Zuordnung gilt das Standardprofil.",
+    "loading": "Abrechnungsprofile werden geladen…",
+    "defaultBadge": "Standard",
+    "rename": "Umbenennen",
+    "makeDefault": "Als Standard festlegen",
+    "archive": "Archivieren",
+    "delete": "Löschen",
+    "restore": "Wiederherstellen",
+    "archivedHeading": "Archiviert",
+    "addLabel": "Abrechnungsprofil hinzufügen",
+    "addPlaceholder": "z. B. Werk Nord",
+    "addButton": "Profil hinzufügen",
+    "created": "Abrechnungsprofil „{{name}}“ erstellt",
+    "renamed": "Abrechnungsprofil umbenannt",
+    "madeDefault": "„{{name}}“ ist jetzt das Standard-Abrechnungsprofil",
+    "archived": "„{{name}}“ archiviert",
+    "deleted": "„{{name}}“ gelöscht",
+    "restored": "„{{name}}“ wiederhergestellt",
+    "settings": "Abrechnungseinstellungen"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Abrechnungssegmente",
+    "restrictedHint": "Diese Person sieht nur die unten ausgewählten Segmente.",
+    "allHint": "Diese Person sieht alle Abrechnungssegmente, auch später hinzugefügte.",
+    "save": "Segmentzugriff speichern",
+    "saved": "Portal-Segmentzugriff aktualisiert",
+    "emptyWarning": "Wählen Sie mindestens ein Segment aus oder deaktivieren Sie die Einschränkung, um alle anzuzeigen."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Einstellungen des Abrechnungsprofils gespeichert",
+    "inherited": "Geerbt: {{value}}",
+    "notSet": "Nicht gesetzt",
+    "billsSeparately": "Separat abrechnen",
+    "billsSeparatelyHint": "Für dieses Profil eine eigene Rechnung erstellen – mit eigener Rechnungsadresse, Zahlungsart und Saldo.",
+    "billToName": "Rechnungsempfänger",
+    "billingEmail": "Rechnungs-E-Mail",
+    "poNumber": "Bestellnummer",
+    "taxIdNumber": "Steuernummer",
+    "taxExemptionCertificate": "Steuerbefreiungsbescheinigung",
+    "invoiceDeliveryMethod": "Rechnungsversand",
+    "billingCycle": "Abrechnungszyklus",
+    "paymentTerms": "Zahlungsbedingungen",
+    "taxExempt": "Steuerbefreit",
+    "taxExemptInherited": "Wird vom Kunden geerbt ({{value}})",
+    "regionNote": "Die Steuerregion wird hier nicht gesetzt. Sie richtet sich nach dem Leistungsort – Leistung, dann Standort der Vertragsposition, dann Kundenstandard."
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Prepaid-Saldo-Warnungen",
+    "scheduleHelp": "Die Prüfungen laufen täglich um 09:00 UTC. Beim Speichern wird nichts sofort gesendet.",
+    "creditSwitch": "Prepaid-Guthaben-Warnungen",
+    "creditSwitchHelp": "Warnen, wenn das verfügbare Prepaid-Guthaben unter den konfigurierten Schwellenwert fällt",
+    "creditThreshold": "Guthaben-Schwellenwert",
+    "creditThresholdPlaceholder": "z. B. 500,00",
+    "creditThresholdHelp": "Restliches Prepaid-Guthaben, das eine Warnung auslöst",
+    "creditCurrency": "Währung",
+    "creditAmountError": "Geben Sie einen positiven Guthaben-Schwellenwert ein",
+    "bucketSwitch": "Paketnutzungs-Warnungen",
+    "bucketSwitchHelp": "Warnen, wenn ein Prepaid-Stundenpaket den konfigurierten Verbrauch erreicht",
+    "bucketPercent": "Verbrauchsschwellenwert (%)",
+    "bucketPercentPlaceholder": "z. B. 80",
+    "bucketPercentHelp": "Prozentsatz der Paketkapazität, der eine Warnung auslöst",
+    "percentRangeError": "Geben Sie eine ganze Zahl von 1 bis 100 ein",
+    "notifyClient": "Auch den Rechnungsempfänger des Kunden per E-Mail benachrichtigen",
+    "notifyClientHelp": "Sendet die Warnung an den kanonischen Rechnungsempfänger des Kunden",
+    "replenishmentTier": "Wenn eine Warnung ausgelöst wird",
+    "replenishmentNotifyOnly": "Nur benachrichtigen",
+    "replenishmentDraft": "Auffüllungsrechnung als Entwurf erstellen und benachrichtigen",
+    "replenishmentAutoIssue": "Auffüllungsrechnung erstellen und ausstellen",
+    "replenishmentAmount": "Guthaben-Auffüllungsbetrag",
+    "replenishmentAmountHelp": "Betrag in der ausgewählten Währung. Paket-Warnungen verwenden die Minuten unten.",
+    "replenishmentAmountError": "Geben Sie einen positiven Auffüllungsbetrag in der ausgewählten Währung ein",
+    "replenishmentMinutes": "Paket-Auffüllung in Minuten",
+    "replenishmentMinutesError": "Geben Sie eine positive ganze Zahl an Minuten ein",
+    "replenishmentHorizon": "Auffüllung in diesen Tagen vor Vertragsende überspringen",
+    "replenishmentHorizonError": "Geben Sie eine Anzahl von Tagen von 0 bis 3650 ein",
+    "save": "Speichern",
+    "saveSuccess": "Prepaid-Saldo-Warnungseinstellungen gespeichert",
+    "saveError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht gespeichert werden",
+    "loadError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht geladen werden",
+    "contractOverrideTitle": "Vertragsspezifische Auffüllungsüberschreibung",
+    "contractOverrideContract": "Vertrag",
+    "contractOverrideInherit": "Kundenstandard verwenden",
+    "saveContractOverride": "Vertragsüberschreibung speichern",
+    "contractSaveSuccess": "Vertragsauffüllungsrichtlinie gespeichert",
+    "contractSaveError": "Vertragsauffüllungsrichtlinie konnte nicht gespeichert werden"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Kunde nicht gefunden",
+      "signInRequired": "Sie müssen angemeldet sein, um Kunden zu verwalten.",
+      "duplicateName": "Ein Kunde mit dem Namen „{{name}}“ existiert bereits. Bitte wählen Sie einen anderen Namen.",
+      "duplicate": "Ein Kunde mit diesen Angaben existiert bereits. Bitte prüfen Sie den Kundennamen.",
+      "referencedDataMissing": "Referenzierte Daten nicht gefunden. Bitte prüfen Sie Kundenbetreuer, Rechnungskontakt und zugehörige Kundeneinstellungen.",
+      "invalidValue": "Einer der ausgewählten Kundenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidData": "Ungültige Kundendaten übermittelt. Bitte prüfen Sie alle Felder und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Kundenfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Kundenfeld fehlt: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Berechtigung verweigert: Kunden können nicht gelesen werden",
+      "updateClients": "Berechtigung verweigert: Kunden können nicht aktualisiert werden"
+    },
+    "timeline": {
+      "invalidCursor": "Ungültiger Cursor für die Kundenchronik"
+    },
+    "location": {
+      "notFound": "Standort nicht gefunden oder nicht mehr aktiv.",
+      "defaultRequired": "Fügen Sie einen weiteren aktiven Standort hinzu oder wählen Sie einen anderen Standardstandort, bevor Sie diesen Standort als Standard entfernen.",
+      "missingField": "Erforderliches Standortfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Standortfeld fehlt: {{field}}.",
+      "referenceInvalid": "Der ausgewählte Kunde, das Land, die Steuerregion oder zugehörige Standortdaten sind nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein widersprüchlicher Standortdatensatz existiert bereits. Bitte aktualisieren Sie die Standorte und versuchen Sie es erneut.",
+      "invalidData": "Ungültige Standortdaten übermittelt. Bitte prüfen Sie die Adress- und Kontaktfelder."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Die eingehende E-Mail-Domain konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
+      "notFound": "Eingehende E-Mail-Domain nicht gefunden."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Erforderliches Feld für das eingehende Ticketziel fehlt.",
+      "missingFieldNamed": "Erforderliches Feld für das eingehende Ticketziel fehlt: {{field}}.",
+      "referenceInvalid": "Das ausgewählte eingehende Ticketziel ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "interaction": {
+      "notFound": "Interaktion nicht gefunden",
+      "signInRequired": "Sie müssen angemeldet sein, um Interaktionen zu verwalten.",
+      "identifierInvalid": "Einer der Interaktionsbezeichner ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Interaktionsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Interaktionsfeld fehlt: {{field}}.",
+      "referenceMissing": "Die ausgewählte Interaktion, der Kunde, Kontakt, Benutzer, Status oder Typ existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Interaktion mit diesen Angaben existiert bereits."
+    },
+    "interactionType": {
+      "notFound": "Interaktionstyp nicht gefunden oder Sie haben keinen Zugriff darauf.",
+      "missingField": "Erforderliches Feld für den Interaktionstyp fehlt.",
+      "missingFieldNamed": "Erforderliches Feld für den Interaktionstyp fehlt: {{field}}.",
+      "referenceInvalid": "Referenzierte Daten des Interaktionstyps sind nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein Interaktionstyp mit diesen Angaben existiert bereits.",
+      "invalidData": "Ungültige Daten für den Interaktionstyp übermittelt. Bitte prüfen Sie Name, Symbol und Anzeigereihenfolge."
+    },
+    "taxRate": {
+      "signInRequired": "Sie müssen angemeldet sein, um Steuersätze von Kunden zu aktualisieren.",
+      "invalidReference": "Der ausgewählte Kunde oder Steuersatz ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld für den Kundensteuersatz fehlt.",
+      "missingFieldNamed": "Erforderliches Feld für den Kundensteuersatz fehlt: {{field}}.",
+      "referenceMissing": "Der ausgewählte Kunde oder Steuersatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Dieser Steuersatz ist dem Kunden bereits zugeordnet.",
+      "associationNotFound": "Zuordnung des Kundensteuersatzes nicht gefunden.",
+      "rateNotFound": "Steuersatz mit der ID {{id}} nicht gefunden."
+    },
+    "alias": {
+      "required": "Alias ist erforderlich",
+      "tooLong": "Alias ist zu lang",
+      "addFailed": "Der Kundenalias konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut.",
+      "notFound": "Alias nicht gefunden."
+    },
+    "contractLine": {
+      "signInRequired": "Sie müssen angemeldet sein, um Vertragspositionen von Kunden zu verwalten.",
+      "refreshAssignment": "Bitte aktualisieren Sie die Vertragszuweisung und versuchen Sie es erneut.",
+      "sharedByAssignments": "Diese Vertragsposition wird von mehreren aktiven Zuweisungen gemeinsam genutzt. Bearbeiten Sie die jeweilige Vertragszuweisung, bevor Sie deren Positionen ändern.",
+      "duplicate": "Eine Vertragsposition mit diesen Angaben existiert für diesen Kunden bereits.",
+      "invalidReference": "Der ausgewählte Kunde oder die Vertragsposition ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Vertragsposition fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Vertragsposition fehlt: {{field}}.",
+      "referenceInvalid": "Die ausgewählte Referenz der Vertragsposition ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "storageUnavailable": "Der Speicher für Kundenvertragspositionen ist nicht verfügbar. Bitte versuchen Sie es später erneut.",
+      "invalidData": "Die Daten der Kundenvertragsposition sind ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "addFailed": "Die Kundenvertragsposition konnte nicht hinzugefügt werden."
+    },
+    "billingSettings": {
+      "updateDenied": "Berechtigung verweigert: Abrechnungseinstellungen können nicht aktualisiert werden",
+      "readRequired": "Berechtigung verweigert: Leserecht für billing_settings erforderlich",
+      "updateRequired": "Berechtigung verweigert: Änderungsrecht für billing_settings erforderlich",
+      "tenantContextMissing": "Mandantenkontext nicht gefunden",
+      "clientContextMissing": "Kundenkontext nicht gefunden",
+      "prepaidAlertsDisabled": "Warnungen zum Guthabenstand sind für diesen Arbeitsbereich nicht aktiviert",
+      "invalidPrepaidAlertSettings": "Ungültige Einstellungen für Guthabenwarnungen",
+      "prepaidAlertUpdateFailed": "Die Einstellungen für Guthabenwarnungen konnten nicht aktualisiert werden",
+      "contractReplenishmentUpdateFailed": "Vertragsauffüllungsrichtlinie konnte nicht aktualisiert werden"
+    },
+    "billingProfile": {
+      "signInRequired": "Sie müssen angemeldet sein, um Abrechnungsprofile zu verwalten.",
+      "duplicateDefault": "Dieser Kunde hat bereits ein Standard-Abrechnungsprofil.",
+      "stillReferenced": "Das Abrechnungsprofil wird noch verwendet und kann nicht entfernt werden.",
+      "defaultRequired": "Ein Kunde muss immer genau ein Standard-Abrechnungsprofil haben.",
+      "nameRequired": "Ein Abrechnungsprofil benötigt einen Namen.",
+      "notThisClient": "Dieses Abrechnungsprofil gehört nicht zu diesem Kunden.",
+      "archivedCannotBeDefault": "Ein archiviertes Abrechnungsprofil kann nicht als Standard festgelegt werden.",
+      "notFound": "Dieses Abrechnungsprofil existiert nicht mehr.",
+      "defaultCannotArchive": "Das Standard-Abrechnungsprofil kann nicht archiviert werden. Legen Sie zuerst ein anderes Profil als Standard fest.",
+      "defaultCannotDelete": "Das Standard-Abrechnungsprofil kann nicht gelöscht werden. Legen Sie zuerst ein anderes Profil als Standard fest.",
+      "inUse": "Dieses Abrechnungsprofil wird von {{references}} verwendet. Archivieren Sie es stattdessen – beim Löschen ginge verloren, wie diese Posten zugeordnet wurden.",
+      "recordNotFound": "Dieser Datensatz oder dieses Abrechnungsprofil existiert nicht mehr.",
+      "otherClient": "Dieses Abrechnungsprofil gehört zu einem anderen Kunden.",
+      "archived": "Dieses Abrechnungsprofil ist archiviert.",
+      "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden."
     }
   }
 }

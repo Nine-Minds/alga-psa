@@ -860,7 +860,7 @@
       "loadPriorities": "Impossibile caricare le priorità",
       "loadBoards": "Impossibile caricare le schede",
       "loadStatuses": "Impossibile caricare gli stati",
-      "requiredFields": "Inserisci titolo, consiglio, stato e priorità",
+      "requiredFields": "Inserisci titolo, bacheca, stato e priorità",
       "createFailed": "Impossibile creare il ticket"
     },
     "success": {
@@ -1162,14 +1162,6 @@
       "saveFailed": "Impossibile creare il programma di manutenzione"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documenti e password",
-    "description": "Scheda combinata per documenti relativi agli asset, credenziali e relativi record protetti",
-    "passwords": {
-      "title": "Password e segreti",
-      "comingSoon": "Presto disponibile la gestione sicura delle password."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Programmi di manutenzione",
     "description": "Scheda di gestione del programma di manutenzione per il servizio pianificato e il lavoro ricorrente",
@@ -1215,6 +1207,7 @@
     },
     "types": {
       "preventive": "Preventivo",
+      "corrective": "Correttivo",
       "inspection": "Ispezione",
       "calibration": "Calibrazione",
       "replacement": "Sostituzione"
@@ -1234,6 +1227,17 @@
         "title": "Elimina il programma di manutenzione",
         "message": "Sei sicuro di voler eliminare \"{{name}}\"? Questa azione non può essere annullata."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Centro di controllo manutenzione",
+    "description": "La prossima scadenza viene calcolata dalla data effettiva di completamento.",
+    "assetsLink": "Asset"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "È richiesta una data di esecuzione.",
+      "completeFailed": "Impossibile completare la manutenzione."
     }
   },
   "relatedAssetsTab": {
@@ -1489,6 +1493,36 @@
       "active": "attivo",
       "inactive": "inattivo",
       "maintenance": "manutenzione"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "Autorizzazione negata: impossibile leggere gli asset",
+      "readAssetTypes": "Autorizzazione negata: impossibile leggere i tipi di asset",
+      "manageAssetTypes": "Autorizzazione negata: impossibile gestire i tipi di asset",
+      "readDocuments": "Autorizzazione negata: impossibile leggere i documenti dell’asset",
+      "associateDocuments": "Autorizzazione negata: impossibile associare documenti agli asset",
+      "removeDocuments": "Autorizzazione negata: impossibile rimuovere documenti dagli asset",
+      "updateDocumentNotes": "Autorizzazione negata: impossibile aggiornare le note dei documenti dell’asset"
+    },
+    "asset": {
+      "notFoundRefresh": "Asset non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "clientNotFound": "Cliente non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "maintenanceNotFound": "Pianificazione della manutenzione non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "maintenanceMismatch": "Questo record di manutenzione non corrisponde all’asset selezionato. Aggiornare la pagina e riprovare.",
+      "locationUnavailable": "La sede selezionata non è disponibile per questo cliente.",
+      "selfRelation": "Un asset non può essere collegato a se stesso.",
+      "selectAtLeastOne": "Selezionare almeno un asset.",
+      "typeUnavailable": "Il tipo di asset non è disponibile. Scegliere un tipo di asset valido.",
+      "typeUnavailableNamed": "Il tipo di asset «{{assetType}}» non è disponibile. Scegliere un tipo di asset valido.",
+      "documentAssociationNotFound": "Associazione del documento non trovata. Potrebbe essere già stata rimossa. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori dell’asset selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "invalidDate": "Una delle date dell’asset selezionate non è valida. Controllare il modulo e riprovare.",
+      "referenceMissing": "L’asset, il documento o il record correlato selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica dell’asset è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori dell’asset non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio dell’asset.",
+      "missingFieldNamed": "Manca un campo obbligatorio dell’asset: {{field}}."
     }
   }
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TicketInterval } from '@alga-psa/types';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { formatDuration } from './utils';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -21,6 +21,8 @@ export function IntervalItem({
   onSelect
 }: IntervalItemProps) {
   const { t } = useTranslation('msp/time-entry');
+  // `[]` handed these to the browser's locale, so intervals stayed 12-hour English.
+  const { formatDate } = useFormatters();
   // Compact typography when rendered inside a Grid-layout bento tile.
   const isBento = useContentCardVariant() === 'bento';
   // Calculate duration if not provided
@@ -31,19 +33,25 @@ export function IntervalItem({
   );
   
   // Format dates for display
-  const startTime = new Date(interval.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const endTime = interval.endTime 
-    ? new Date(interval.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const startTime = formatDate(new Date(interval.startTime), { hour: '2-digit', minute: '2-digit' });
+  const endTime = interval.endTime
+    ? formatDate(new Date(interval.endTime), { hour: '2-digit', minute: '2-digit' })
     : t('intervalItem.now', { defaultValue: 'Now' });
-  const startDate = new Date(interval.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const startDate = formatDate(new Date(interval.startTime), { month: 'short', day: 'numeric' });
   
   const timeRange = `${startTime} - ${endTime}`;
 
   return (
     <div
       className={`${
-        isBento ? 'rounded-md border border-[rgb(var(--color-border-200))] p-2' : 'border rounded p-2'
-      } flex items-center ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}`}
+        isBento ? 'rounded-md border p-2' : 'border rounded p-2'
+      } flex items-center ${
+        isSelected
+          ? 'bg-[rgb(var(--color-table-selected))] border-[rgb(var(--color-primary-500)/0.55)]'
+          : isBento
+            ? 'border-[rgb(var(--color-border-200))]'
+            : ''
+      }`}
       id={`interval-item-${interval.id}`}
     >
       <Checkbox

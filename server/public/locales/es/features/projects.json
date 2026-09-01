@@ -189,6 +189,13 @@
     "wholeWord": "Palabra completa",
     "wholeWordShort": "Palabra",
     "clearSearch": "Limpiar búsqueda",
+    "spacing": {
+      "compact": "Compacto",
+      "spacious": "Amplio",
+      "decrease": "Disminuir el espaciado de la lista",
+      "increase": "Aumentar el espaciado de la lista",
+      "reset": "Restablecer el espaciado de la lista"
+    },
     "taskList": "Lista de tareas",
     "kanbanBoard": "Tablero Kanban",
     "kanbanBoardWithPhase": "Tablero Kanban: {{phaseName}}",
@@ -286,7 +293,8 @@
     "bulkTagsSuccess_one": "Etiquetas añadidas a {{count}} tarea",
     "bulkTagsSuccess_other": "Etiquetas añadidas a {{count}} tareas",
     "bulkTagsPartial": "No se pudieron añadir etiquetas a algunas tareas",
-    "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas"
+    "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas",
+    "taskTypeFallback": "Tarea"
   },
   "taskForm": {
     "addTitle": "Agregar tarea",
@@ -760,7 +768,8 @@
       "phasePlaceholder": "Seleccionar una fase",
       "statusLabel": "Estado",
       "statusPlaceholder": "Seleccionar un estado",
-      "linkTicketLabel": "Vincular el ticket a la tarea creada"
+      "linkTicketLabel": "Vincular el ticket a la tarea creada",
+      "createdSuccess": "La tarea se creó correctamente"
     },
     "linkTicketToTask": {
       "title": "Vincular ticket a tarea",
@@ -959,7 +968,17 @@
       "add_title": "Agregar columna de estado",
       "select_placeholder": "Seleccionar un estado...",
       "all_in_use": "Todos los estados disponibles están en uso",
-      "create_new": "Crear nuevo"
+      "create_new": "Crear nuevo",
+      "status_no_longer_exists": "El estado ya no existe",
+      "missing_status": "Estado faltante",
+      "ambiguous_status": "Estado histórico ambiguo",
+      "replace_placeholder": "Seleccionar estado de reemplazo...",
+      "replace_status": "Reemplazar estado",
+      "replacing": "Reemplazando...",
+      "replaced": "Columna de estado reemplazada",
+      "replace_failed": "No se pudo reemplazar la columna de estado",
+      "repair_status_columns": "Reparar columnas de estado",
+      "unresolved_apply_guard": "Las columnas de estado requieren reparación ({{count}})"
     },
     "list": {
       "title": "Plantillas de proyecto",
@@ -1047,7 +1066,8 @@
         "all": "Copiar todas las asignaciones"
       },
       "fixErrors": "Corrige los siguientes errores:",
-      "addStatus": "Agregar nuevo estado"
+      "addStatus": "Agregar nuevo estado",
+      "unresolved_guard": "Esta plantilla tiene columnas de estado que deben repararse antes de poder aplicarse."
     },
     "detail": {
       "description": "Descripción:",
@@ -1155,6 +1175,8 @@
       "doneEditing": "Terminar edición",
       "editChecklist": "Editar lista",
       "addChecklistItem": "Añadir un elemento",
+      "editChecklistItem": "Editar elemento de lista",
+      "removeChecklistItem": "Eliminar elemento de lista",
       "checklistItemPlaceholder": "Elemento de lista",
       "emptyChecklistItem": "Elemento vacío",
       "reorderChecklistItem": "Arrastrar para reordenar",
@@ -1345,7 +1367,9 @@
     "loadingProjects": "Cargando proyectos...",
     "noDescription": "No se proporcionó descripción",
     "noPhasesOrTasks": "No hay fases o tareas para mostrar",
-    "loadError": "Error al cargar los detalles del proyecto"
+    "loadError": "Error al cargar los detalles del proyecto",
+    "errorWithMessage": "Error: {{message}}",
+    "notFoundOrNoAccess": "No se encontró el proyecto o usted no tiene acceso a este proyecto."
   },
   "backToProjects": "Volver a Proyectos",
   "invalidProjectData": "Datos del proyecto inválidos",
@@ -1414,6 +1438,8 @@
     "newestFirst": "Más recientes primero",
     "oldestFirst": "Más antiguos primero",
     "addComment": "Agregar comentario",
+    "reply": "Responder",
+    "addFailed": "Error al agregar el comentario",
     "submitting": "Enviando...",
     "loading": "Cargando...",
     "empty": "Aún no hay comentarios. ¡Sé el primero en comentar!"
@@ -1426,6 +1452,8 @@
     "showPhasesDescription": "Los clientes verán tarjetas de fase con nombres, descripciones y rangos de fechas. Pueden seleccionar fases para ver las tareas asociadas.",
     "showCompletion": "Mostrar % de completado",
     "showCompletionDescription": "Mostrar una barra de progreso y porcentaje que indica cuántas tareas están completadas en cada fase.",
+    "showBilling": "Mostrar facturación",
+    "showBillingDescription": "Los clientes verán un resumen de facturación de solo lectura con el calendario de pagos, los importes y lo facturado hasta la fecha. Solo se aplica a proyectos con la facturación habilitada.",
     "showTasks": "Mostrar tareas",
     "showTasksDescription": "Los clientes pueden ver tareas individuales dentro de cada fase. Las tareas se muestran en un tablero Kanban o vista de lista agrupada por estado.",
     "visibleTaskFields": "Campos de tarea visibles",
@@ -1434,6 +1462,7 @@
     "summary": {
       "projectInfo": "Nombre del proyecto, descripción, fechas y progreso general",
       "budgetHours": "Horas presupuestadas: totales utilizados vs. presupuestados y % consumido",
+      "billing": "Resumen de facturación: calendario de pagos, importes y facturado hasta la fecha",
       "phaseInfo": "Nombres de fase, descripciones y rangos de fechas",
       "phaseCompletion": "Porcentaje de completado para cada fase",
       "taskDetails": "Detalles de tareas: {{fields}}",
@@ -1593,6 +1622,8 @@
     },
     "terms": {
       "fixed": "Precio fijo de {{total}} · facturación {{mode}}",
+      "lockedSummary_one": "{{count}} entrada por un total de {{amount}} está bloqueada y no cambiará.",
+      "lockedSummary_other": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán.",
       "edit": "Editar condiciones",
       "saved": "Condiciones de facturación actualizadas",
       "dialogTitle": "Editar condiciones de facturación"
@@ -1626,6 +1657,7 @@
       "milestone": "Hito",
       "trigger": "Desencadenante",
       "amount": "Importe",
+      "amountLocked": "Importe fijado en la aprobación",
       "status": "Estado",
       "invoice": "Factura",
       "empty": "Aún no hay hitos ni anticipos.",
@@ -1639,6 +1671,7 @@
       "phaseTrigger": "Finalización de fase",
       "phaseOverdue": "La fecha de finalización de la fase ya pasó — marque la fase como completada para que esta entrada quede lista",
       "approve": "Aprobar",
+      "unapprove": "Anular aprobación",
       "approveInvoice": "Aprobar y facturar",
       "hold": "Retener",
       "markReady": "Marcar como listo",
@@ -1648,6 +1681,7 @@
       "allocatedOver": "Asignación excedida en {{amount}}",
       "held": "Entrada retenida",
       "approved": "Entrada aprobada",
+      "unapproved": "Aprobación anulada",
       "invoiced": "Factura generada",
       "markedReady": "Marcada como lista",
       "canceled": "Entrada cancelada",
@@ -1682,6 +1716,8 @@
       "valuePercentage": "Porcentaje del total",
       "amount": "Importe ({{currency}})",
       "percentage": "Porcentaje",
+      "increaseTotal": "Aumentar el total del proyecto en este importe",
+      "increaseTotalHint": "Para trabajos adicionales o cambios de alcance. El total del proyecto aumenta y las asignaciones porcentuales existentes se recalculan sobre el nuevo total.",
       "trigger": "Desencadenante",
       "triggerPhase": "Finalización de fase",
       "triggerDate": "En una fecha",
@@ -1709,6 +1745,7 @@
       "behavior": "Al alcanzarlo",
       "notify": "Solo notificar",
       "hard": "Límite estricto (dar de baja)",
+      "hardHint": "La mano de obra y los materiales por encima del límite se dan de baja automáticamente.",
       "thresholds": "Notificar al (%)",
       "thresholdsHint": "Porcentajes del límite separados por comas.",
       "noCap": "Sin límite",
@@ -1784,6 +1821,49 @@
       "approved": "Aprobado: {{amount}}",
       "ready": "Listo: {{amount}}",
       "total": "Total: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Perfil de facturación",
+      "none": "Usar el perfil predeterminado del cliente",
+      "hint": "Los cargos de tiempo y de calendario de este proyecto se facturan a este perfil salvo que un contrato los reclame.",
+      "updated": "Perfil de facturación actualizado"
+    }
+  },
+  "taskTypes": {
+    "task": "Tarea",
+    "bug": "Error",
+    "feature": "Funcionalidad",
+    "improvement": "Mejora",
+    "epic": "Épica",
+    "story": "Historia"
+  },
+  "statusUpdate": {
+    "button": "Enviar actualización de estado",
+    "title": "Enviar actualización de estado",
+    "loading": "Cargando información del destinatario...",
+    "sending": "Enviando actualización de estado...",
+    "sent": "Actualización de estado enviada a {{email}}",
+    "send": "Enviar actualización",
+    "noRecipient": "No hay ninguna dirección de correo electrónico configurada para el contacto de cliente de este proyecto.",
+    "whatTheySee": "Su cliente verá:",
+    "additionalMessage": "Mensaje adicional",
+    "additionalMessagePlaceholder": "Agregue una nota personal para incluir en la actualización...",
+    "preview": "La actualización se enviará desde {{fromEmail}} en nombre de {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Contacto del proyecto",
+      "clientEmail": "Correo del cliente",
+      "none": "No se encontró correo"
+    },
+    "summary": {
+      "progress": "Avance general: {{percent}} % ({{closed}} de {{total}} tareas completadas)",
+      "budgetHours": "Horas presupuestadas: {{spent}} de {{budgeted}} horas utilizadas",
+      "budgetHoursHidden": "Las horas presupuestadas están ocultas por la configuración del portal de cliente de este proyecto",
+      "recentlyCompleted": "Completado recientemente: {{items}}",
+      "portalLink": "Un enlace al proyecto en el portal de cliente"
+    },
+    "errors": {
+      "loadRecipient": "No se pudo cargar la información del destinatario",
+      "sendFailed": "No se pudo enviar la actualización de estado"
     }
   }
 }

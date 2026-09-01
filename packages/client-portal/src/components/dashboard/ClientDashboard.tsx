@@ -16,6 +16,7 @@ import {
 import type { Asset, ProductCode } from '@alga-psa/types';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
 import { ClientAddTicket } from '../tickets/ClientAddTicket';
+import { PrepaidHoursCard } from './PrepaidHoursCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   Calendar,
@@ -473,7 +474,7 @@ export function ClientDashboard({
           return (
             <div
               key={card.id}
-              className="group flex flex-col rounded-xl border border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] p-5 transition-shadow hover:shadow-md"
+              className="group flex flex-col rounded-xl border border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] p-5 transition-shadow card-elevated card-elevated-hover"
             >
               {/* Link wraps just the metric area so clicks on the action Button below
                   don't bubble up and trigger the card's navigation. */}
@@ -513,6 +514,9 @@ export function ClientDashboard({
           );
         })}
       </div>
+
+      {/* Prepaid hours widget: self-gating on feature flag + billing access + bucket lines */}
+      {!isAlgaDeskPortal && <PrepaidHoursCard />}
 
       {/* Activity + side rail (Schedule + Devices) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
@@ -620,7 +624,7 @@ export function ClientDashboard({
                       key={appointment.appointment_request_id}
                       className="flex gap-2 rounded-md border border-[rgb(var(--color-border-100))] p-2 hover:border-[rgb(var(--color-primary-300))] transition-colors"
                     >
-                      <div className="flex w-12 flex-col items-center justify-center rounded bg-[rgb(var(--color-primary-50))] py-1.5 text-[rgb(var(--color-primary-700))]">
+                      <div className="chip-primary flex w-12 flex-col items-center justify-center rounded py-1.5">
                         <div className="text-[11px] font-semibold uppercase tracking-wider">
                           {dt ? dt.toLocaleDateString(locale, { month: 'short' }) : '—'}
                         </div>

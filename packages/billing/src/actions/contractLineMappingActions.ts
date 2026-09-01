@@ -44,28 +44,34 @@ function contractLineMappingActionErrorFrom(error: unknown): ContractLineMapping
 
   if (error instanceof Error) {
     if (error.message.startsWith('Base contract line') && error.message.includes('not found')) {
-      return actionError('The selected contract line is no longer available. Please refresh and try again.');
+      return actionError('The selected contract line is no longer available. Please refresh and try again.', 'msp/contract-lines:errors.line.unavailable');
     }
     if (error.message.startsWith('Template contract line') && error.message.includes('not found')) {
-      return actionError('The selected template line is no longer available. Please refresh and try again.');
+      return actionError('The selected template line is no longer available. Please refresh and try again.', 'msp/contract-lines:errors.templateLine.unavailable');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected contract line values is invalid. Please refresh and try again.');
+    return actionError('One of the selected contract line values is invalid. Please refresh and try again.', 'msp/contract-lines:errors.line.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required contract line field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required contract line field: ${dbError.column}.`,
+          'msp/contract-lines:errors.line.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required contract line field.', 'msp/contract-lines:errors.line.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected contract or contract line no longer exists. Please refresh and try again.');
+    return actionError('The selected contract or contract line no longer exists. Please refresh and try again.', 'msp/contract-lines:errors.line.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('This contract line is already associated with the selected contract.');
+    return actionError('This contract line is already associated with the selected contract.', 'msp/contract-lines:errors.mapping.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the contract line values is not allowed. Please review the form and try again.');
+    return actionError('One of the contract line values is not allowed. Please review the form and try again.', 'msp/contract-lines:errors.line.notAllowed');
   }
 
   return null;
@@ -245,33 +251,72 @@ export async function ensureTemplateLineSnapshot(
       });
   }
 
-  if (configs.length > 0) {
-    const configIds = (configs as any[]).map((c: any) => c.config_id);
+  // Weighted-burn pools: snapshot the line's FULL pool configuration (scope
+  // including catch-all, multi-member membership, per-service multipliers,
+  // after-hours rule, schedule reference) into the template pool tables. The
+  // template bucket_id is a first-class identifier inside the template — it is
+  // NEVER written into a config-id-keyed table, because those FKs expect base
+  // configuration ids. Runs even when no legacy configuration rows exist
+  // (flag-on pools have none).
+  const pools = await tenantScopedTable(knex, tenant, 'contract_line_buckets')
+    .where({ contract_line_id: contractLineId });
 
-    const bucketConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_bucket_config')
-      .whereIn('config_id', configIds);
+  for (const pool of pools) {
+    await tenantScopedTable(knex, tenant, 'contract_template_line_buckets')
+      .insert({
+        tenant,
+        bucket_id: pool.bucket_id,
+        template_line_id: contractLineId,
+        bucket_name: pool.bucket_name ?? null,
+        total_minutes: pool.total_minutes,
+        overage_rate: pool.overage_rate ?? 0,
+        allow_rollover: pool.allow_rollover,
+        billing_period: pool.billing_period ?? 'monthly',
+        after_hours_multiplier: pool.after_hours_multiplier ?? null,
+        business_hours_schedule_id: pool.business_hours_schedule_id ?? null,
+        covers_all_services: pool.covers_all_services,
+        created_at: now,
+        updated_at: now,
+      })
+      .onConflict(['tenant', 'bucket_id'])
+      .merge({
+        template_line_id: contractLineId,
+        bucket_name: pool.bucket_name ?? null,
+        total_minutes: pool.total_minutes,
+        overage_rate: pool.overage_rate ?? 0,
+        allow_rollover: pool.allow_rollover,
+        billing_period: pool.billing_period ?? 'monthly',
+        after_hours_multiplier: pool.after_hours_multiplier ?? null,
+        business_hours_schedule_id: pool.business_hours_schedule_id ?? null,
+        covers_all_services: pool.covers_all_services,
+        updated_at: now,
+      });
 
-    for (const bucket of bucketConfigs) {
-      await tenantScopedTable(knex, tenant, 'contract_template_line_service_bucket_config')
+    const poolMembers = await tenantScopedTable(knex, tenant, 'contract_line_bucket_services')
+      .where({ bucket_id: pool.bucket_id });
+
+    for (const member of poolMembers) {
+      await tenantScopedTable(knex, tenant, 'contract_template_line_bucket_services')
         .insert({
           tenant,
-          config_id: bucket.config_id,
-          total_minutes: bucket.total_minutes,
-          billing_period: bucket.billing_period,
-          overage_rate: bucket.overage_rate,
-          allow_rollover: bucket.allow_rollover,
-          created_at: bucket.created_at ?? now,
+          bucket_id: pool.bucket_id,
+          template_line_id: contractLineId,
+          service_id: member.service_id,
+          burn_multiplier: member.burn_multiplier ?? 1,
+          created_at: now,
           updated_at: now,
         })
-        .onConflict(['tenant', 'config_id'])
+        .onConflict(['tenant', 'bucket_id', 'service_id'])
         .merge({
-          total_minutes: bucket.total_minutes,
-          billing_period: bucket.billing_period,
-          overage_rate: bucket.overage_rate,
-          allow_rollover: bucket.allow_rollover,
+          template_line_id: contractLineId,
+          burn_multiplier: member.burn_multiplier ?? 1,
           updated_at: now,
         });
     }
+  }
+
+  if (configs.length > 0) {
+    const configIds = (configs as any[]).map((c: any) => c.config_id);
 
     const hourlyConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_hourly_config')
       .whereIn('config_id', configIds);

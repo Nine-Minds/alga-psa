@@ -1,5 +1,29 @@
 import type { TenantBranding } from '@alga-psa/tenancy/actions';
 
+/**
+ * Keep Community branding limited to portal branding controls. Recompute the
+ * cached CSS so a previously stored Enterprise-only `portalFollowsTheme` value
+ * cannot keep affecting a CE tenant after an edition change.
+ */
+export function scopeBrandingToEdition(
+  branding: TenantBranding | null,
+  enterprise: boolean,
+): TenantBranding | null {
+  if (!branding || enterprise) {
+    return branding;
+  }
+
+  const scopedBranding: TenantBranding = {
+    ...branding,
+    portalFollowsTheme: false,
+  };
+
+  return {
+    ...scopedBranding,
+    computedStyles: generateBrandingStyles(scopedBranding),
+  };
+}
+
 // Helper function to convert hex to RGB
 const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -184,11 +208,42 @@ const secondaryOverrides = `
 `;
 
 /**
+ * Side panel tint for the client portal. Scoped to the portal sidebar element so
+ * the MSP sidebar (which sits next to the settings preview) never recolors.
+ * Sidebar text stays light — the panel is dark in both themes.
+ */
+const sidebarOverrides = (shades: Record<number, string>): string => `
+
+    [data-automation-id="client-portal-sidebar"] {
+      --color-sidebar-bg: ${shades[800]};
+      --color-sidebar-hover: ${shades[700]};
+      --color-sidebar-icon: ${shades[300]};
+    }
+
+    html.dark [data-automation-id="client-portal-sidebar"] {
+      --color-sidebar-bg: ${shades[900]};
+      --color-sidebar-hover: ${shades[800]};
+      --color-sidebar-icon: ${shades[300]};
+    }`;
+
+/**
  * Generate CSS styles for tenant branding.
  * Each color is applied independently — if only one is set, the other falls
  * back to the globals.css palette rather than a hardcoded default.
+ *
+ * Client-portal branding colors never paint the MSP shell. The MSP app gets its
+ * colors from the organization theme; its white-label switch only permits the
+ * shared tenant logo/name. Keep the `msp` option as a defensive no-op so an
+ * accidental caller cannot leak portal colors into staff-facing UI.
  */
-export function generateBrandingStyles(branding: TenantBranding | null): string {
+export function generateBrandingStyles(
+  branding: TenantBranding | null,
+  options: { surface?: 'portal' | 'msp' } = {},
+): string {
+  if (options.surface === 'msp' || branding?.portalFollowsTheme) {
+    return '';
+  }
+
   const primaryShades = branding?.primaryColor ? generateColorShades(branding.primaryColor) : null;
   const secondaryShades = branding?.secondaryColor ? generateColorShades(branding.secondaryColor) : null;
 
@@ -209,6 +264,15 @@ export function generateBrandingStyles(branding: TenantBranding | null): string 
     secondaryDarkShades ? paletteVars('secondary', secondaryDarkShades) : '',
   ].filter(Boolean).join('\n');
 
+  const sidebarShades = branding?.portalSidebarStyle === 'primary'
+    ? primaryShades
+    : branding?.portalSidebarStyle === 'secondary'
+      ? secondaryShades
+      : branding?.portalSidebarStyle === 'custom' && branding?.portalSidebarColor
+        ? generateColorShades(branding.portalSidebarColor)
+        : null;
+  const sidebarBody = sidebarShades ? sidebarOverrides(sidebarShades) : '';
+
   return `
     :root {${rootBody}
     }
@@ -216,6 +280,6 @@ export function generateBrandingStyles(branding: TenantBranding | null): string 
     html.dark {${darkBody}
     }
     ${primaryShades ? primaryOverrides : ''}
-    ${secondaryShades ? secondaryOverrides : ''}
+    ${secondaryShades ? secondaryOverrides : ''}${sidebarBody}
   `;
 }

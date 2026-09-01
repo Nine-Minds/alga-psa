@@ -4,9 +4,9 @@
  * HuduLayoutCreateTypeButton plus the CE packages/assets components
  * (AssetTypesManager, AssetTypeSchemaEditor, CustomTypeFieldsPanel,
  * AssetTypeBreakdownCard, CustomTypeDetailsPanel, useAssetTypeOptions,
- * AssetForm, QuickAddAsset) and the SettingsPage Asset Types tab. Non-Hudu
- * sources declare their own `keyPattern`; template-literal keys (kind picker,
- * builtin type labels) are pinned via `extraKeys`.
+ * AssetForm, QuickAddAsset). Non-Hudu sources declare their own `keyPattern`;
+ * template-literal keys (kind picker, builtin type labels) are pinned via
+ * `extraKeys`.
  *
  * Two halves:
  * 1. Key resolution — every `t('integrations.hudu…' / 'integrations.categories.
@@ -73,8 +73,6 @@ import useAssetTypeOptionsSource from '@alga-psa/assets/components/shared/useAss
 import assetFormSource from '@alga-psa/assets/components/AssetForm.tsx?raw';
 // @ts-expect-error Vite raw import (static source scan).
 import quickAddAssetSource from '@alga-psa/assets/components/QuickAddAsset.tsx?raw';
-// @ts-expect-error Vite raw import (static source scan).
-import settingsPageSource from '@/components/settings/SettingsPage.tsx?raw';
 
 const repoRoot = path.resolve(process.cwd(), '..', '..');
 
@@ -309,14 +307,6 @@ const keySources: ScannedSource[] = [
     sweep: false,
     keyPattern: /^(assetForm|quickAddAsset|common)\./,
   },
-  {
-    label: 'SettingsPage.tsx (Asset Types tab)',
-    source: settingsPageSource as string,
-    namespace: 'msp/settings',
-    minKeys: 3,
-    sweep: false,
-    keyPattern: /^settings\.assetTypes\./,
-  },
 ];
 
 describe('T100/T321: every scanned translation key resolves in the en locale', () => {
@@ -335,7 +325,10 @@ describe('T100/T321: every scanned translation key resolves in the en locale', (
   });
 
   it('the two ClientDetails Hudu tab labels are exactly the expected keys', () => {
-    const keys = collectHuduKeys(clientDetailsSource as string).sort();
+    // The unified credentials-vault tab reuses `clientDetails.huduPasswordsTab`
+    // for its "Passwords" label (same label as the legacy Hudu-only tab), so the
+    // key legitimately appears twice in the source; dedupe before comparing.
+    const keys = [...new Set(collectHuduKeys(clientDetailsSource as string))].sort();
     expect(keys).toEqual(['clientDetails.huduPasswordsTab', 'clientDetails.huduTab']);
   });
 

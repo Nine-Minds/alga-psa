@@ -36,7 +36,8 @@ describe('ClientContractsTab upcoming renewals widget', () => {
     expect(source).toContain('const [renewalRows, setRenewalRows] = useState<RenewalQueueRow[]>([]);');
     expect(source).toContain('const syncRenewalRows = (rows: RenewalQueueRow[]) => {');
     expect(source).toContain('const refreshRenewalRows = async () => {');
-    expect(source).toContain('const renewalRows = await listRenewalQueueRows();');
+    expect(source).toContain('const [fetchedAssignments, renewalRows] = await Promise.all([');
+    expect(source).toContain('listRenewalQueueRows(),');
     expect(source).toContain('syncRenewalRows(renewalRows);');
   });
 

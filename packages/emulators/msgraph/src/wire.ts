@@ -2,8 +2,9 @@ import express from 'express';
 import type { NextFunction, Request, Response, Router } from 'express';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
-import { GraphApiError, publicSubscription } from './core';
+import { GraphApiError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
 import type { MsGraphCore } from './core';
+import { BOT_FRAMEWORK_ISSUER, botFrameworkJwks } from './botFramework';
 import { deliverNotifications, validateNotificationUrl } from './notifier';
 
 interface Authed {
@@ -14,14 +15,38 @@ function authed(res: Response): Authed {
   return res.locals.access as Authed;
 }
 
+function decodePath(path: string): string {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
 /**
- * Vendor surface: Microsoft login (OAuth2 v2.0) plus the Graph v1.0 routes
- * Alga's email integration uses. Point MICROSOFT_LOGIN_BASE_URL and
- * MICROSOFT_GRAPH_BASE_URL (including the /v1.0 suffix) at this emulator.
+ * Vendor surface: Microsoft login (OAuth2 v2.0), the Graph v1.0 routes Alga's
+ * email and Teams integrations use, and the Bot Framework connector plus its
+ * OpenID/JWKS surface. Point MICROSOFT_LOGIN_BASE_URL, MICROSOFT_GRAPH_BASE_URL
+ * (including the /v1.0 suffix) and TEAMS_BOT_OPENID_CONFIG_URL at this emulator.
  */
 export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   router.use(express.json());
   router.use(express.urlencoded({ extended: false }));
+
+  // --- Bot Framework identity provider ---
+  // Registered before the /:tenant login routes so the well-known paths win.
+
+  router.get('/v1/.well-known/openidconfiguration', (req, res) => {
+    res.json({
+      issuer: BOT_FRAMEWORK_ISSUER,
+      jwks_uri: `${req.protocol}://${req.get('host')}/v1/.well-known/keys`,
+      id_token_signing_alg_values_supported: ['RS256'],
+    });
+  });
+
+  router.get('/v1/.well-known/keys', (_req, res) => {
+    res.json(botFrameworkJwks());
+  });
 
   // --- Microsoft login surface ---
 
@@ -65,6 +90,57 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.redirect(302, callback.toString());
   });
 
+  // --- Bot Framework connector surface ---
+  // These hang off the root router, so they need their own auth + fault gate;
+  // the /v1.0 middleware below does not reach them.
+
+  router.use('/v3', (req, res, next) => {
+    const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+    res.locals.access = core.authenticate(bearer);
+    // req.path is mount-relative here, so fault keys read "POST /v3/...".
+    // Decoded, because the connector percent-encodes conversation ids and
+    // faults are armed with the readable id ("19:...@thread.v2").
+    const fault = core.consumeFault(`${req.method} /v3${decodePath(req.path)}`);
+    if (fault) {
+      res.status(fault.status).json(fault.body);
+      return;
+    }
+    next();
+  });
+
+  router.post('/v3/conversations', (req, res) => {
+    res.status(201).json({ id: core.createConversation(req.body ?? {}).id });
+  });
+
+  router.post('/v3/conversations/:conversationId/activities', (req, res) => {
+    const captured = core.recordBotActivity({
+      method: 'POST',
+      conversationId: String(req.params.conversationId),
+      activity: req.body ?? {},
+    });
+    res.json({ id: captured.id });
+  });
+
+  router.post('/v3/conversations/:conversationId/activities/:activityId', (req, res) => {
+    const captured = core.recordBotActivity({
+      method: 'POST',
+      conversationId: String(req.params.conversationId),
+      pathActivityId: String(req.params.activityId),
+      activity: req.body ?? {},
+    });
+    res.json({ id: captured.id });
+  });
+
+  router.put('/v3/conversations/:conversationId/activities/:activityId', (req, res) => {
+    const captured = core.recordBotActivity({
+      method: 'PUT',
+      conversationId: String(req.params.conversationId),
+      pathActivityId: String(req.params.activityId),
+      activity: req.body ?? {},
+    });
+    res.json({ id: captured.id });
+  });
+
   // --- Graph v1.0 surface ---
 
   const graph = express.Router();
@@ -84,6 +160,26 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   const mailboxUser = { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' };
   graph.get('/me', (_req, res) => res.json(mailboxUser));
 
+  // Graph simulator only: capture the send request for adapter smoke tests.
+  // It does not model Entra consent, Exchange Send As, or real mail delivery.
+  const captureSendMail = (req: Request, res: Response, mailbox: string | null) => {
+    const rawPath = req.originalUrl.split('?')[0];
+    const rawMailbox = rawPath.match(/^\/v1\.0\/users\/([^/]+)\/sendMail$/)?.[1] ?? null;
+    core.recordSendMail({
+      route: rawPath,
+      mailbox,
+      encodedMailbox: rawMailbox,
+      payload: req.body ?? {},
+      contentType: req.get('content-type') ?? null,
+    });
+    res.status(202).end();
+  };
+
+  graph.post('/me/sendMail', (req, res) => captureSendMail(req, res, null));
+  graph.post('/users/:mailbox/sendMail', (req, res) =>
+    captureSendMail(req, res, decodePath(String(req.params.mailbox)))
+  );
+
   // Entra self-tenant smoke surface. The production adapter deliberately uses
   // these standard Graph routes when ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=true,
   // avoiding a dependency on a real CSP/GDAP relationship during local tests.
@@ -101,7 +197,166 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       res.json(core.getDirectoryUser(userId));
       return;
     }
-    res.json(mailboxUser);
+    // Real Graph 404s unknown ids. Only the emulated mailbox identity keeps
+    // resolving un-seeded, for the email module's fixed test principal —
+    // answering every id used to mask lookup-failure handling bugs.
+    if (userId === mailboxUser.id || userId.toLowerCase() === mailboxUser.userPrincipalName.toLowerCase()) {
+      res.json(mailboxUser);
+      return;
+    }
+    throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound', message: `Resource '${userId}' does not exist.` } });
+  });
+
+  // Teams surface: activity feed notifications plus the channel/chat lookups
+  // the Teams integration resolves conversation targets with.
+  graph.post('/users/:userId/teamwork/sendActivityNotification', (req, res) => {
+    core.recordActivityNotification(String(req.params.userId), req.body ?? {});
+    res.status(202).end();
+  });
+
+  graph.get('/teams', (_req, res) => {
+    res.json({ value: [...core.teams.values()].map(publicTeam) });
+  });
+
+  graph.get('/teams/:teamId', (req, res) => {
+    res.json(publicTeam(core.getTeam(String(req.params.teamId))));
+  });
+
+  graph.get('/teams/:teamId/channels', (req, res) => {
+    res.json({ value: core.getTeam(String(req.params.teamId)).channels });
+  });
+
+  graph.get('/chats', (_req, res) => {
+    res.json({ value: [...core.chats.values()] });
+  });
+
+  graph.get('/chats/:chatId', (req, res) => {
+    res.json(core.getChat(String(req.params.chatId)));
+  });
+
+  graph.get('/chats/:chatId/messages', (req, res) => {
+    res.json({ value: core.listChatMessages(String(req.params.chatId)) });
+  });
+
+  // Meetings surface: calendar events that carry a Teams meeting, onlineMeetings
+  // (creation probe, join-URL resolution), and recording/transcript artifacts.
+  graph.post('/users/:userId/events', (req, res) => {
+    res.status(201).json(publicEvent(core.createCalendarEvent(String(req.params.userId), req.body ?? {})));
+  });
+
+  graph.patch('/users/:userId/events/:eventId', (req, res) => {
+    res.json(publicEvent(core.updateCalendarEvent(String(req.params.eventId), req.body ?? {})));
+  });
+
+  graph.delete('/users/:userId/events/:eventId', (req, res) => {
+    core.deleteCalendarEvent(String(req.params.eventId));
+    res.status(204).end();
+  });
+
+  graph.get('/users/:userId/onlineMeetings', (req, res) => {
+    const filter = String(req.query.$filter ?? '');
+    const match = filter.match(/JoinWebUrl\s+eq\s+'(.+)'$/i);
+    if (!match) {
+      res.json({ value: [...core.onlineMeetings.values()].map(publicOnlineMeeting) });
+      return;
+    }
+    const joinWebUrl = match[1].replace(/''/g, "'");
+    res.json({ value: core.findOnlineMeetingsByJoinUrl(joinWebUrl).map(publicOnlineMeeting) });
+  });
+
+  graph.post('/users/:userId/onlineMeetings', (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const meeting = core.createOnlineMeeting(String(req.params.userId), {
+      subject: typeof body.subject === 'string' ? body.subject : null,
+      startDateTime: typeof body.startDateTime === 'string' ? body.startDateTime : null,
+      endDateTime: typeof body.endDateTime === 'string' ? body.endDateTime : null,
+    });
+    res.status(201).json(publicOnlineMeeting(meeting));
+  });
+
+  graph.get('/users/:userId/onlineMeetings/:meetingId', (req, res) => {
+    res.json(publicOnlineMeeting(core.getOnlineMeeting(String(req.params.meetingId))));
+  });
+
+  graph.delete('/users/:userId/onlineMeetings/:meetingId', (req, res) => {
+    core.deleteOnlineMeeting(String(req.params.meetingId));
+    res.status(204).end();
+  });
+
+  for (const kind of ['recording', 'transcript'] as const) {
+    const segment = kind === 'recording' ? 'recordings' : 'transcripts';
+
+    graph.get(`/users/:userId/onlineMeetings/:meetingId/${segment}`, (req, res) => {
+      res.json({
+        value: core.listMeetingArtifacts(kind, String(req.params.meetingId)).map((artifact) => ({
+          id: artifact.id,
+          createdDateTime: artifact.createdDateTime,
+        })),
+      });
+    });
+
+    graph.get(`/users/:userId/onlineMeetings/:meetingId/${segment}/:artifactId/content`, (req, res) => {
+      const artifact = core.getMeetingArtifact(kind, String(req.params.meetingId), String(req.params.artifactId));
+      res.type(artifact.contentType).send(artifact.content);
+    });
+  }
+
+  // Teams Phone call artifacts live on the ad hoc call, not on an online
+  // meeting — a separate Graph surface with its own consent. Faithful to real
+  // Graph v1.0: enumeration ONLY via the getAllRecordings/getAllTranscripts
+  // functions (items carry callId); single-item get + /content by artifact id;
+  // deliberately NO per-call list route — that endpoint is fiction, and
+  // serving it is how the Entra-sync class of bug gets validated locally.
+  for (const kind of ['recording', 'transcript'] as const) {
+    const segment = kind === 'recording' ? 'recordings' : 'transcripts';
+
+    graph.get(`/users/:userId/adhocCalls/:callId/${segment}/:artifactId`, (req, res) => {
+      const artifact = core.getCallArtifact(kind, String(req.params.callId), String(req.params.artifactId));
+      res.json({ id: artifact.id, callId: artifact.callId, createdDateTime: artifact.createdDateTime });
+    });
+
+    graph.get(`/users/:userId/adhocCalls/:callId/${segment}/:artifactId/content`, (req, res) => {
+      const artifact = core.getCallArtifact(kind, String(req.params.callId), String(req.params.artifactId));
+      res.type(artifact.contentType).send(artifact.content);
+    });
+  }
+
+  // getAllRecordings(userId=...,startDateTime=...,endDateTime=...) — the
+  // OData function-call segment arrives literally (parens and commas are
+  // URL-legal), so it lands in :fn and is parsed here.
+  graph.get('/users/:userId/adhocCalls/:fn', (req, res) => {
+    const fn = String(req.params.fn);
+    const match = fn.match(/^(getAllRecordings|getAllTranscripts)\((.*)\)$/);
+    if (!match) {
+      throw new GraphApiError(400, { error: { code: 'BadRequest', message: `Resource not found for the segment '${fn}'.` } });
+    }
+    const kind = match[1] === 'getAllRecordings' ? ('recording' as const) : ('transcript' as const);
+    const args: Record<string, string> = {};
+    for (const pair of match[2].split(',')) {
+      const eq = pair.indexOf('=');
+      if (eq > 0) args[pair.slice(0, eq).trim()] = decodeURIComponent(pair.slice(eq + 1).trim().replace(/^'|'$/g, ''));
+    }
+    const organizer = args.userId || String(req.params.userId);
+    const value = core
+      .listAdhocArtifactsForOrganizer(kind, organizer, {
+        startDateTime: args.startDateTime,
+        endDateTime: args.endDateTime,
+      })
+      .map((artifact) => ({ id: artifact.id, callId: artifact.callId, createdDateTime: artifact.createdDateTime }));
+    res.json({ '@odata.count': value.length, value });
+  });
+
+  // Teams Phone CDR fetch. $expand=sessions is what the adapter asks for; the
+  // unexpanded shape omits sessions the way real Graph does.
+  graph.get('/communications/callRecords/:callRecordId', (req, res) => {
+    const record = core.getCallRecord(String(req.params.callRecordId));
+    const expand = String(req.query.$expand ?? '');
+    if (expand.split(',').map((value) => value.trim()).includes('sessions')) {
+      res.json(record);
+      return;
+    }
+    const { sessions: _sessions, ...withoutSessions } = record;
+    res.json(withoutSessions);
   });
 
   graph.post('/applications', (req, res) => {

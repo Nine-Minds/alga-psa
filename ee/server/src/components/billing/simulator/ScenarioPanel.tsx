@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
+import { DatePicker } from "@alga-psa/ui/components/DatePicker";
+import { dateFromString, dateToString } from "@alga-psa/ui/lib/dateInput";
 import { cn } from "@alga-psa/ui/lib/utils";
 import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import type {
@@ -46,7 +48,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
   Hourly: "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
   Usage: "bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
   Bucket:
-    "bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]",
+    "chip-primary",
 };
 
 const TypeBadge: React.FC<{ type: string }> = ({ type }) => {
@@ -1470,43 +1472,42 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                 key={index}
                 className="mt-1 grid grid-cols-[1fr_1fr_1fr_auto] gap-1"
               >
-                <input
-                  aria-label={t(
+                <DatePicker
+                  label={t(
                     "contractSimulator.scenario.fields.scheduleEffectiveDate",
                     { defaultValue: "Schedule effective date" },
                   )}
-                  type="date"
-                  className={fieldClass}
-                  value={schedule.effective_date.slice(0, 10)}
-                  onChange={(event) =>
+                  className="min-w-0"
+                  value={dateFromString(schedule.effective_date.slice(0, 10))}
+                  onChange={(date) =>
                     onPricingSchedulesChange(
                       pricingSchedules.map((candidate, candidateIndex) =>
                         candidateIndex === index
                           ? {
                               ...candidate,
-                              effective_date: `${event.target.value}T00:00:00Z`,
+                              effective_date: `${dateToString(date)}T00:00:00Z`,
                             }
                           : candidate,
                       ),
                     )
                   }
                 />
-                <input
-                  aria-label={t(
+                <DatePicker
+                  label={t(
                     "contractSimulator.scenario.fields.scheduleEndDate",
                     { defaultValue: "Schedule end date" },
                   )}
-                  type="date"
-                  className={fieldClass}
-                  value={schedule.end_date?.slice(0, 10) ?? ""}
-                  onChange={(event) =>
+                  clearable
+                  className="min-w-0"
+                  value={dateFromString(schedule.end_date?.slice(0, 10))}
+                  onChange={(date) =>
                     onPricingSchedulesChange(
                       pricingSchedules.map((candidate, candidateIndex) =>
                         candidateIndex === index
                           ? {
                               ...candidate,
-                              end_date: event.target.value
-                                ? `${event.target.value}T00:00:00Z`
+                              end_date: date
+                                ? `${dateToString(date)}T00:00:00Z`
                                 : null,
                             }
                           : candidate,

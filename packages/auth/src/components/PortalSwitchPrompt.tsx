@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { signOut } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Alert, AlertDescription } from '@alga-psa/ui/components';
 import { AlertCircle, LogOut, ArrowRight } from 'lucide-react';
+// Same page, same constraint as MspSignIn: 'msp/auth' is still loading when
+// this first renders, so suspense stays off and every key carries a
+// defaultValue.
+import { useTranslation } from 'react-i18next';
 
 interface PortalSwitchPromptProps {
   currentPortal: 'msp' | 'client';
@@ -20,10 +24,16 @@ export default function PortalSwitchPrompt({
   targetPortalSigninUrl,
   userEmail,
 }: PortalSwitchPromptProps) {
+  const { t } = useTranslation('msp/auth', { useSuspense: false });
   const [isSwitching, setIsSwitching] = useState(false);
 
-  const currentPortalName = currentPortal === 'msp' ? 'MSP Portal' : 'Client Portal';
-  const targetPortalName = targetPortal === 'msp' ? 'MSP Portal' : 'Client Portal';
+  const portalName = (portal: 'msp' | 'client') =>
+    portal === 'msp'
+      ? t('portalSwitch.mspPortal', 'MSP Portal')
+      : t('portalSwitch.clientPortal', 'Client Portal');
+
+  const currentPortalName = portalName(currentPortal);
+  const targetPortalName = portalName(targetPortal);
 
   const handleSwitch = async () => {
     setIsSwitching(true);
@@ -44,7 +54,7 @@ export default function PortalSwitchPrompt({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8FFFE] to-[#F0F9FF] dark:from-blue-950 dark:to-indigo-950 p-4">
+    <div className="min-h-screen flex items-center justify-center auth-page-surface p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -52,16 +62,27 @@ export default function PortalSwitchPrompt({
               <AlertCircle className="h-8 w-8 text-warning" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Portal Switch Required</CardTitle>
+          <CardTitle className="text-2xl">
+            {t('portalSwitch.title', 'Portal Switch Required')}
+          </CardTitle>
           <CardDescription className="text-base mt-2">
-            You're currently signed in to the <strong>{currentPortalName}</strong>
+            {/* The portal name is bold inside the sentence, so the sentence is
+                split around it rather than interpolated — translators reorder
+                clauses, and a raw <strong> in a JSON value cannot follow. */}
+            <span>
+              {t('portalSwitch.signedInToPrefix', "You're currently signed in to the ")}
+              <strong>{currentPortalName}</strong>
+              {t('portalSwitch.signedInToSuffix', '')}
+            </span>
             {userEmail && <span className="block mt-1 text-sm">({userEmail})</span>}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert variant="info">
             <AlertDescription>
-              To access the <strong>{targetPortalName}</strong>, you need to sign out of your current session.
+              {t('portalSwitch.signOutRequiredPrefix', 'To access the ')}
+              <strong>{targetPortalName}</strong>
+              {t('portalSwitch.signOutRequiredSuffix', ', you need to sign out of your current session.')}
             </AlertDescription>
           </Alert>
 
@@ -74,7 +95,7 @@ export default function PortalSwitchPrompt({
               onClick={handleStay}
             >
               <ArrowRight className="h-4 w-4 mr-2" />
-              Continue to {currentPortalName}
+              {t('portalSwitch.continueTo', 'Continue to {{portal}}', { portal: currentPortalName })}
             </Button>
 
             <Button
@@ -86,13 +107,19 @@ export default function PortalSwitchPrompt({
               disabled={isSwitching}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              {isSwitching ? 'Switching...' : `Sign Out and Switch to ${targetPortalName}`}
+              {isSwitching
+                ? t('portalSwitch.switching', 'Switching...')
+                : t('portalSwitch.signOutAndSwitch', 'Sign Out and Switch to {{portal}}', {
+                    portal: targetPortalName,
+                  })}
             </Button>
           </div>
 
           <p className="text-xs text-center text-muted-foreground mt-4">
-            Switching portals will sign you out of your current session.
-            You'll need to sign in again with the appropriate credentials.
+            {t(
+              'portalSwitch.footnote',
+              "Switching portals will sign you out of your current session. You'll need to sign in again with the appropriate credentials.",
+            )}
           </p>
         </CardContent>
       </Card>

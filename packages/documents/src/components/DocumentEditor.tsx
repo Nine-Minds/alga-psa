@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { toast } from 'react-hot-toast';
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -9,6 +10,14 @@ import { TableKit } from '@tiptap/extension-table';
 import { Emoticon } from '@alga-psa/ui/editor';
 import { marked } from 'marked';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import { EditorImage } from '../lib/editorImageExtension';
+import {
+  editorImageUploadMessage,
+  extractImageFiles,
+  insertUploadedImages,
+  isEditorImageFile,
+  uploadEditorImage,
+} from '../lib/editorImageUpload';
 import {
   detectBlockContentFormat,
   blockNoteJsonToProsemirrorJson,
@@ -27,6 +36,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { EditorToolbar } from './EditorToolbar';
 import styles from './DocumentEditor.module.css';
 
@@ -40,6 +50,8 @@ interface DocumentEditorProps {
   hideSaveButton?: boolean;
   /** Pre-loaded block_data. When provided (even as null), skips the getBlockContent fetch. */
   initialContent?: unknown;
+  /** Names inline image uploads after the article they were pasted into. */
+  imageNamePrefix?: string;
 }
 
 const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
@@ -54,7 +66,9 @@ export function DocumentEditor({
   onUnsavedChangesChange,
   hideSaveButton = false,
   initialContent,
+  imageNamePrefix,
 }: DocumentEditorProps) {
+  const { t } = useTranslation('features/documents');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -64,6 +78,23 @@ export function DocumentEditor({
 
   // Register unsaved changes for navigation protection
   useRegisterUnsavedChanges(`document-editor-${documentId}`, hasUnsavedChanges);
+
+  // useEditor captures its options once, so the toast handler reads t from a
+  // ref rather than closing over the first render's copy.
+  const tRef = useRef(t);
+  tRef.current = t;
+
+  const handleImageUploadError = useCallback((error: unknown) => {
+    toast.error(editorImageUploadMessage(error, tRef.current));
+  }, []);
+
+  const imageUploadOptionsRef = useRef({ userId, parentDocumentId: documentId, namePrefix: imageNamePrefix });
+  imageUploadOptionsRef.current = { userId, parentDocumentId: documentId, namePrefix: imageNamePrefix };
+
+  const uploadImage = useCallback(
+    async (file: File) => (await uploadEditorImage(file, imageUploadOptionsRef.current)).url,
+    []
+  );
 
   // Initialize the editor
   const editor = useEditor({
@@ -81,6 +112,7 @@ export function DocumentEditor({
         },
       }),
       Underline,
+      EditorImage,
       Emoticon,
     ],
     content: '<p></p>',
@@ -89,6 +121,16 @@ export function DocumentEditor({
         class: 'prose prose-sm sm:prose-base max-w-none dark:prose-invert focus:outline-none',
       },
       handlePaste: (view, event, slice) => {
+        const imageFiles = extractImageFiles(event.clipboardData?.items);
+        if (imageFiles.length > 0) {
+          event.preventDefault();
+          void insertUploadedImages(editor, imageFiles, {
+            ...imageUploadOptionsRef.current,
+            onError: handleImageUploadError,
+          });
+          return true;
+        }
+
         const plainText = event.clipboardData?.getData('text/plain');
         const htmlText = event.clipboardData?.getData('text/html');
 
@@ -111,6 +153,18 @@ export function DocumentEditor({
         }
 
         return false;
+      },
+      handleDrop: (view, event) => {
+        const imageFiles = Array.from(event.dataTransfer?.files ?? []).filter(isEditorImageFile);
+        if (imageFiles.length === 0) return false;
+        event.preventDefault();
+        const at = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
+        void insertUploadedImages(editor, imageFiles, {
+          ...imageUploadOptionsRef.current,
+          at,
+          onError: handleImageUploadError,
+        });
+        return true;
       },
     },
     onCreate: () => {
@@ -171,12 +225,12 @@ export function DocumentEditor({
             }
           } catch (parseError) {
             console.error('Error parsing content:', parseError);
-            setError('Failed to parse document content');
+            setError(t('messages.parseContentFailed', { defaultValue: 'Failed to parse document content' }));
           }
         }
       } catch (err) {
         console.error('Failed to load document content:', err);
-        setError('Failed to load document content');
+        setError(t('messages.loadContentFailed', { defaultValue: 'Failed to load document content' }));
       } finally {
         setIsLoading(false);
         // Mark content as loaded so future edits are tracked as unsaved changes
@@ -210,7 +264,7 @@ export function DocumentEditor({
       onUnsavedChangesChange?.(false);
     } catch (err) {
       console.error('Failed to save document:', err);
-      setError('Failed to save document');
+      setError(t('messages.saveFailed', { defaultValue: 'Failed to save document' }));
     } finally {
       setIsSaving(false);
     }
@@ -236,7 +290,9 @@ export function DocumentEditor({
   if (error) {
     return (
       <Card className="p-4">
-        <div className="text-red-500">Error: {error}</div>
+        <div className="text-red-500">
+          {t('editor.errorPrefix', { defaultValue: 'Error: {{message}}', message: error })}
+        </div>
       </Card>
     );
   }
@@ -250,27 +306,29 @@ export function DocumentEditor({
             onClick={handleSave}
             disabled={isLoading || isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving
+              ? t('actions.saving', { defaultValue: 'Saving...' })
+              : t('actions.save', { defaultValue: 'Save' })}
           </Button>
         </div>
       )}
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          Loading...
+          {t('editor.loading', { defaultValue: 'Loading...' })}
         </div>
       ) : (
         editor && editorReady && !editor.isDestroyed ? (
           <div
             className={styles.editorContainer}
-            data-placeholder={placeholder || 'Start writing...'}
+            data-placeholder={placeholder || t('editor.placeholder', { defaultValue: 'Start writing...' })}
           >
-            <EditorToolbar editor={editor} />
+            <EditorToolbar editor={editor} onUploadImage={uploadImage} onUploadError={handleImageUploadError} />
             <EditorContent editor={editor} />
           </div>
         ) : (
           <div className="flex justify-center items-center h-64">
-            Initializing editor...
+            {t('editor.initializing', { defaultValue: 'Initializing editor...' })}
           </div>
         )
       )}

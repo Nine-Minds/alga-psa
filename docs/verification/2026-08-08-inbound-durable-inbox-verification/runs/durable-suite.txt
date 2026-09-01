@@ -1,0 +1,14 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
+      Running tests with seed "1786223903109"
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+ ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (39 tests) 11536ms 148 MB heap used
+   ✓ Inbound email durable inbox (integration) > sweeper re-enqueues received, due retryable_failed, and expired-processing inbox rows  714ms
+
+ Test Files  1 passed (1)
+      Tests  39 passed (39)
+   Start at  21:18:23
+   Duration  12.28s (transform 545ms, setup 52ms, collect 378ms, tests 11.54s, environment 0ms, prepare 30ms)
+
+WALLCLOCK: 12.68s

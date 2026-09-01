@@ -18,10 +18,24 @@ describe('project task status tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(knex, 'statuses', tenant)");
     expect(source).toContain("tenantDb(knex, tenant).table('standard_statuses')");
     expect(source).toContain("tenantDb(trx, tenant).tenantJoin(usageQuery, 'projects as p', 'psm.project_id', 'p.project_id', { type: 'left' })");
+    // Template references must be counted by the tenant-scoped usage query so a
+    // direct server-action call cannot bypass the deletion precheck.
+    expect(source).toContain("tenantScopedTable(trx, 'project_template_status_mappings as ptsm', tenant)");
+    expect(source).toContain("tenantDb(trx, tenant).tenantJoin(usageQuery, 'project_templates as t', 'ptsm.template_id', 't.template_id', { type: 'left' })");
     expect(source).not.toContain(".where({ tenant,");
     expect(source).not.toContain(".where({ project_status_mapping_id: mappingId, tenant })");
     expect(source).not.toContain(".where({ project_status_mapping_id: mappingId, tenant })");
     expect(source).not.toContain(".where({ tenant, status_type: 'project_task' })");
     expect(source).not.toContain(".where({ status_id: statusId, tenant, status_type: 'project_task' })");
+  });
+
+  it('validateTenantProjectStatusDeletion and deleteTenantProjectStatus share the same guard', () => {
+    const validateSection = source.slice(source.indexOf('export const validateTenantProjectStatusDeletion'));
+    const deleteSection = source.slice(source.indexOf('export const deleteTenantProjectStatus'));
+    const guardCalls = (section: string) =>
+      (section.match(/buildTenantProjectStatusDeletionValidation\(trx, tenant, statusId\)/g) || []).length;
+    expect(guardCalls(validateSection)).toBeGreaterThanOrEqual(1);
+    expect(guardCalls(deleteSection)).toBeGreaterThanOrEqual(1);
+    expect(source).toContain('export async function buildTenantProjectStatusDeletionValidation');
   });
 });

@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { formatDistanceToNow } from 'date-fns';
-import { utcToLocal, formatDateTime, getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
@@ -33,6 +33,7 @@ import TicketInfo from "./TicketInfo";
 import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
+import { TicketCredentialsSection } from "./TicketCredentialsSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
@@ -96,7 +97,7 @@ import {
     type TicketDetailLayout,
 } from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
@@ -183,7 +184,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: TicketNotificationSuppressionValue
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -311,6 +312,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     disableAgentSchedule = false,
 }) => {
     const { t } = useTranslation('features/tickets');
+    // Hardcoded English, and a date that followed the browser's locale.
+    const { formatDate, locale } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -548,10 +551,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }), [t]);
     const [ticketInfoDirtyFields, setTicketInfoDirtyFields] = useState<string[]>([]);
 
-    // Grid | Entry layout toggle (per-user preference). Entry is the default
-    // and renders the existing layout untouched.
+    // Grid | Entry layout toggle (per-user preference). Grid is the default;
+    // a stored 'entry' preference keeps the existing layout untouched.
     const [layoutMode, setLayoutMode] = useState<TicketDetailLayout>(
-        bootstrap?.layoutPreference?.layout ?? 'entry',
+        bootstrap?.layoutPreference?.layout ?? 'grid',
     );
     const [timelinePrefOrder, setTimelinePrefOrder] = useState<'asc' | 'desc'>(
         bootstrap?.layoutPreference?.timelineOrder ?? 'asc',
@@ -1315,19 +1318,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const tz = getUserTimeZone();
         
         if (ticket.entered_at) {
-            const localDate = utcToLocal(ticket.entered_at, tz);
-            const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
-            const distance = formatDistanceToNow(new Date(ticket.entered_at));
-            setCreatedRelativeTime(`${formattedDate} (${distance} ago)`);
+            const formattedDate = formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
+            const distance = formatTicketRelativeToNow(ticket.entered_at, locale);
+            setCreatedRelativeTime(`${formattedDate} (${distance})`);
         }
-        
+
         if (ticket.updated_at) {
-            const localDate = utcToLocal(ticket.updated_at, tz);
-            const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
-            const distance = formatDistanceToNow(new Date(ticket.updated_at));
-            setUpdatedRelativeTime(`${formattedDate} (${distance} ago)`);
+            const formattedDate = formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
+            const distance = formatTicketRelativeToNow(ticket.updated_at, locale);
+            setUpdatedRelativeTime(`${formattedDate} (${distance})`);
         }
-    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat]);
+    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat, locale]);
 
     // Fetch tags when component mounts
     useEffect(() => {
@@ -1912,7 +1913,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         isInternal: boolean,
         isResolution: boolean,
         closeStatusId: string | null = null,
-        options?: TicketNotificationSuppressionValue
+        options?: TicketNotificationSuppressionValue,
+        schedule?: { publishAt: string; timeZone: string } | null,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -1960,13 +1962,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     JSON.stringify(newCommentContent),
                     isInternal,
                     isResolution,
-                    willCloseTicket
+                    willCloseTicket,
+                    schedule,
                 );
 
                 // Optimistically update the response state in UI to match server behavior:
                 // - Internal note: no change
                 // - Client-visible comment from internal user (MSP portal): awaiting client
-                if (!isInternal && responseStateTrackingEnabled) {
+                if (!isInternal && !schedule && responseStateTrackingEnabled) {
                     setTicket((prev: any) => ({
                         ...prev,
                         response_state: 'awaiting_client'
@@ -1988,7 +1991,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 }
 
                 // If this was a resolution note and a closed status was selected, close the ticket.
-                if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
+                if (!schedule && isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
                     if (options?.suppressContactNotifications) {
                         // Mirror handleSelectChange's pre-close check so unmet
                         // close rules open the override dialog (carrying the
@@ -2059,6 +2062,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         is_resolution: isResolution,
                         user_id: userId,
                         author_type: 'internal', // Will be overridden based on user type in the action
+                        ...(schedule ? {
+                            scheduled_publish_at: schedule.publishAt,
+                            scheduled_publish_tz: schedule.timeZone,
+                        } : {}),
                         // See email-subscriber suppression note above.
                         ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
                     });
@@ -2805,6 +2812,26 @@ const handleClose = () => {
         }
     };
 
+    const handleBillingProfileChange = async (newBillingProfileId: string | null) => {
+        try {
+            const result = await updateTicket(ticket.ticket_id!, {
+                billing_profile_id: newBillingProfileId
+            });
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
+
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                billing_profile_id: newBillingProfileId
+            }));
+
+            toast.success(t('messages.billingProfileUpdated', 'Billing profile updated'));
+        } catch (error) {
+            handleTicketActionError(error, t('messages.updateBillingProfileFailed', 'Failed to update billing profile'));
+        }
+    };
+
     const handleDeleteRequest = (conversation: IComment) => {
         // Only allow users to delete their own comments
         if (userId === conversation.user_id) {
@@ -3300,8 +3327,10 @@ const handleClose = () => {
                                                 id={`${id}-auto-close-banner`}
                                                 className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
                                             >
-                                                {`Will close automatically on ${new Date(autoCloseState.scheduled_close_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })} unless there's new activity.`}
-                                                {autoCloseState.warning_sent_at ? ' The customer has been warned.' : ''}
+                                                {t('details.autoClose', "Will close automatically on {{date}} unless there's new activity.", {
+                                                    date: formatDate(new Date(autoCloseState.scheduled_close_at), { year: 'numeric', month: 'long', day: 'numeric' }),
+                                                })}
+                                                {autoCloseState.warning_sent_at ? ` ${t('details.autoCloseWarned', 'The customer has been warned.')}` : ''}
                                             </div>
                                         )}
                                         {checklistSummary.requiredTotal > 0 && (
@@ -3329,8 +3358,8 @@ const handleClose = () => {
 
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
-            <div className="bg-gray-100 dark:bg-gray-900">
-                <div className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-900 py-2 flex gap-3">
+            <div className="bg-[rgb(var(--color-app-ground))]">
+                <div className="sticky top-0 z-10 bg-[rgb(var(--color-app-ground))] py-2 flex gap-3">
                     {!isInDrawer && (
                         <div className="flex-shrink-0 self-start">
                             <BackNav href="/msp/tickets"><span className="text-right">← {t('navigation.backTo', 'Back to')}<br />{t('navigation.tickets', 'Tickets')} </span></BackNav>
@@ -3410,8 +3439,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.created', 'Created')} {createdRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                const localDate = utcToLocal(ticket.entered_at, tz);
-                                return formatDateTime(localDate, tz, dateTimeFormat);
+                                return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
                             })()}
                         </p>
                     )}
@@ -3419,8 +3447,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.updated', 'Updated')} {updatedRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                const localDate = utcToLocal(ticket.updated_at, tz);
-                                return formatDateTime(localDate, tz, dateTimeFormat);
+                                return formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
                             })()}
                         </p>
                     )}
@@ -3762,7 +3789,7 @@ const handleClose = () => {
                 ) : (
                 <div className="flex gap-6 min-w-0">
                     <div className="flex-grow col-span-2 min-w-0" id="ticket-main-content">
-                        <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 dark:bg-gray-800 h-64 rounded-lg mb-6"></div>}>
+                        <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse skeleton-fill h-64 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
                                 <TicketInfo
                                     id={`${id}-info`}
@@ -3820,7 +3847,7 @@ const handleClose = () => {
                                 />
                             </div>
                         </Suspense>
-                        <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
+                        <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse skeleton-fill h-96 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
                                 <TicketConversation
                                     id={`${id}-conversation`}
@@ -3872,7 +3899,7 @@ const handleClose = () => {
                             />
                         </div>
 
-                        <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
+                        <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse skeleton-fill h-64 rounded-lg mb-6"></div>}>
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}
                                 ticketId={ticket.ticket_id || ''}
@@ -3887,9 +3914,14 @@ const handleClose = () => {
                             />
                         </Suspense>
 
+                        <TicketCredentialsSection
+                            ticketId={ticket.ticket_id || ''}
+                            clientId={ticket.client_id ?? null}
+                        />
+
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
-                        <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
+                        <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse skeleton-fill h-96 rounded-lg mb-6"></div>}>
                                 <TicketProperties
                                     id={`${id}-properties`}
                                     ticket={ticket}
@@ -3928,6 +3960,7 @@ const handleClose = () => {
                                 onChangeContact={handleContactChange}
                                 onChangeClient={handleClientChange}
                                 onChangeLocation={handleLocationChange}
+                                onChangeBillingProfile={handleBillingProfileChange}
                                 onClientFilterStateChange={setClientFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}

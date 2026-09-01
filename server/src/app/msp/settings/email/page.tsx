@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { SettingsTab } from '@/components/settings/SettingsTab';
-import { getSettingsTabTitle } from '@/components/settings/settingsTabsRegistry';
+import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
 import EmailSettingsBody from './EmailSettingsBody';
 
-export const metadata: Metadata = { title: getSettingsTabTitle('email') };
+export async function generateMetadata(): Promise<Metadata> {
+  return settingsTabMetadata('email');
+}
 
 export default function EmailSettingsRoute() {
   return (

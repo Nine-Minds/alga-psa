@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
-import { Pencil, Trash, Lock, CheckCircle, Cog, CornerUpLeft, MessageCircle } from 'lucide-react';
+import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { IComment } from '@alga-psa/types';
@@ -11,8 +11,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
+import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
@@ -22,8 +23,14 @@ import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
+import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
+import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
+import { cancelScheduledComment, rescheduleScheduledComment } from '../../actions/comment-actions/commentActions';
+import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 
 interface CommentItemProps {
   id?: string;
@@ -115,6 +122,30 @@ function parseCommentNoteContent(
   });
 }
 
+async function writeCommentToClipboard(html: string, text: string): Promise<void> {
+  const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+
+  if (html && typeof clipboard?.write === 'function' && typeof ClipboardItem === 'function') {
+    try {
+      await clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        }),
+      ]);
+      return;
+    } catch {
+      // Browsers that refuse the rich flavor still take plain text — fall through.
+    }
+  }
+
+  if (typeof clipboard?.writeText !== 'function') {
+    throw new Error('Clipboard unavailable');
+  }
+
+  await clipboard.writeText(text);
+}
+
 const CommentItem: React.FC<CommentItemProps> = ({
   id,
   conversation,
@@ -141,10 +172,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
+  // toLocaleString() follows the browser; comment timestamps belong to the app locale.
+  const { formatDate } = useFormatters();
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const copyResetTimeoutRef = useRef<number | null>(null);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
+  const [isScheduleMutating, setIsScheduleMutating] = useState(false);
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+  const [reschedulePublishAt, setReschedulePublishAt] = useState<Date | undefined>(undefined);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() =>
     parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'initial')
   );
@@ -152,6 +191,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const commentId = useMemo(() => 
     conversation.comment_id || currentComment?.comment_id || id || 'unknown',
     [conversation.comment_id, currentComment?.comment_id, id]
+  );
+
+  // Stable identity for the viewer: re-parsing inline on every render handed
+  // RichTextViewer a brand-new array each time, which is what made it rebuild
+  // its document and drop the reader's selection.
+  const displayContent = useMemo(
+    () => parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'display'),
+    [conversation.note, conversation.comment_id]
   );
 
   const resolvedAuthor = useMemo(
@@ -200,6 +247,43 @@ const CommentItem: React.FC<CommentItemProps> = ({
     return currentUserId === conversation.user_id;
   }, [conversation.user_id, currentUserId, isDeleted]);
 
+  const plainTextForCopy = useMemo(
+    () => extractTicketRichTextPlainText(conversation.note),
+    [conversation.note]
+  );
+  const canCopy = !isDeleted && plainTextForCopy.trim().length > 0;
+
+  useEffect(() => () => {
+    if (copyResetTimeoutRef.current !== null) {
+      window.clearTimeout(copyResetTimeoutRef.current);
+    }
+  }, []);
+
+  const handleCopyComment = useCallback(async () => {
+    try {
+      // Serialized on demand: only the copy click needs the HTML flavor.
+      await writeCommentToClipboard(extractTicketRichTextHtml(conversation.note), plainTextForCopy);
+      setCopyState('copied');
+    } catch {
+      setCopyState('error');
+    }
+
+    if (copyResetTimeoutRef.current !== null) {
+      window.clearTimeout(copyResetTimeoutRef.current);
+    }
+    copyResetTimeoutRef.current = window.setTimeout(() => {
+      copyResetTimeoutRef.current = null;
+      setCopyState('idle');
+    }, 2000);
+  }, [conversation.note, plainTextForCopy]);
+
+  const copyCommentLabel =
+    copyState === 'copied'
+      ? t('conversation.commentCopied', 'Copied')
+      : copyState === 'error'
+        ? t('conversation.commentCopyFailed', 'Copy failed')
+        : t('conversation.copyCommentAriaLabel', 'Copy comment text');
+
   const handleSave = () => {
     const updates: Partial<IComment> = {
       note: JSON.stringify(editedContent),
@@ -213,6 +297,25 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const handleContentChange = (blocks: PartialBlock[]) => {
     setEditedContent(blocks);
     onContentChange(blocks);
+  };
+  const handleReschedule = async () => {
+    const timeZone = conversation.scheduled_publish_tz || getUserTimeZone();
+    let date: Date;
+    try {
+      if (!reschedulePublishAt) throw new Error('Choose a publication time');
+      date = zonedWallTimeToUtc(dateToWallTimeString(reschedulePublishAt), timeZone);
+      if (date.getTime() <= Date.now()) throw new Error('Choose a future publication time');
+    } catch (error) {
+      setRescheduleError(error instanceof Error ? error.message : 'Choose a valid publication time');
+      return;
+    }
+    setIsScheduleMutating(true);
+    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); window.location.reload(); } finally { setIsScheduleMutating(false); }
+  };
+  const handleCancelSchedule = async () => {
+    if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
+    setIsScheduleMutating(true);
+    try { await cancelScheduledComment(commentId); window.location.reload(); } finally { setIsScheduleMutating(false); }
   };
 
   const editorContent = useMemo(() => {
@@ -399,6 +502,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     </span>
                   </Tooltip>
                 )}
+                {conversation.publish_state === 'scheduled' && conversation.scheduled_publish_at && (
+                  <span
+                    {...withDataAutomationId({ id: `${commentId}-scheduled-badge` })}
+                    className="rounded border border-[rgb(var(--badge-warning-border))] bg-[rgb(var(--badge-warning-bg))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--badge-warning-text))]"
+                    title={`Publishes ${conversation.scheduled_publish_tz || 'UTC'}`}
+                  >
+                    {t('conversation.scheduled', 'Scheduled')} · {t('conversation.publishes', 'Publishes')}{' '}
+                    {formatDate(new Date(conversation.scheduled_publish_at), { dateStyle: 'medium', timeStyle: 'short' })}{' '}
+                    {conversation.scheduled_publish_tz || 'UTC'}
+                  </span>
+                )}
                 {conversation.is_resolution && (
                   <Tooltip content={t('conversation.resolutionCommentTooltip')}>
                     <span {...withDataAutomationId({ id: `${commentId}-resolution-badge` })}>
@@ -450,7 +564,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     {...withDataAutomationId({ id: `${commentId}-timestamp` })}
                     className="text-xs font-normal text-gray-500 dark:text-[rgb(var(--color-text-400))] whitespace-nowrap"
                   >
-                    {new Date(conversation.created_at).toLocaleString(undefined, {
+                    {formatDate(new Date(conversation.created_at), {
                       month: 'short',
                       day: 'numeric',
                       hour: 'numeric',
@@ -478,7 +592,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   <p {...withDataAutomationId({ id: `${commentId}-timestamp` })} className="text-xs text-gray-500 dark:text-[rgb(var(--color-text-300))]">
                     {conversation.created_at && (
                       <span>
-                        {new Date(conversation.created_at).toLocaleString()}
+                        {formatDate(new Date(conversation.created_at), { dateStyle: 'medium', timeStyle: 'short' })}
                         {conversation.updated_at &&
                          new Date(conversation.updated_at).getTime() > new Date(conversation.created_at).getTime() &&
                          ` (${t('conversation.edited', 'edited')})`}
@@ -488,8 +602,25 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </div>
               )}
             </div>
-            {((onReply && !isDeleted) || canEdit) && (
+            {(canCopy || (onReply && !isDeleted) || canEdit) && (
               <div className="c-actions space-x-2">
+                {canCopy && (
+                  <Tooltip content={copyCommentLabel}>
+                    <Button
+                      id={`copy-comment-${conversation.comment_id}-button`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void handleCopyComment()}
+                      aria-label={copyCommentLabel}
+                    >
+                      {copyState === 'copied' ? (
+                        <Check className="w-4 h-4 text-emerald-500" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </Tooltip>
+                )}
                 {onReply && !isDeleted && (
                   <Button
                     id={`reply-comment-${conversation.comment_id}-button`}
@@ -503,6 +634,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 )}
                 {canEdit && (
                   <>
+                    {conversation.publish_state === 'scheduled' && (
+                      <>
+                        <Button id={`reschedule-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => { setReschedulePublishAt(undefined); setRescheduleError(null); setIsRescheduleOpen(true); }} aria-label={t('conversation.rescheduleComment', 'Reschedule comment')}>
+                          {t('conversation.reschedule', 'Reschedule')}
+                        </Button>
+                        <Button id={`cancel-scheduled-comment-${conversation.comment_id}-button`} variant="ghost" size="sm" disabled={isScheduleMutating} onClick={() => void handleCancelSchedule()} aria-label={t('conversation.cancelScheduledComment', 'Cancel scheduled comment')}>
+                          {t('conversation.cancel', 'Cancel')}
+                        </Button>
+                      </>
+                    )}
                     <Button
                       id={`edit-comment-${conversation.comment_id}-button`}
                       variant="ghost"
@@ -536,37 +677,32 @@ const CommentItem: React.FC<CommentItemProps> = ({
             ) : isEditing && currentComment?.comment_id === conversation.comment_id ? (
               editorContent
             ) : (
-            (() => {
-              const noteContent = conversation.note || '';
-              const parsed = parseCommentNoteContent(noteContent, conversation.comment_id, 'display');
-              if (process.env.NODE_ENV !== 'production') console.log('[CommentItem] render viewer', {
-                comment_id: conversation.comment_id,
-                updated_at: conversation.updated_at,
-                noteLen: (conversation.note || '').length,
-                usingArray: Array.isArray(parsed),
-                blocks: Array.isArray(parsed) ? (parsed as PartialBlock[]).length : undefined,
-              });
-              return (
-                <div
+              <div
                   {...withDataAutomationId({ id: `${commentId}-content` })}
                   className={`prose max-w-none w-full min-w-0 overflow-hidden break-words ${
                     isCompact
-                      ? // Compact: drop the editor's side-menu horizontal padding, and hide
-                        // BlockNote's always-appended trailing empty block (identified by its
-                        // ProseMirror trailing break) so a one-line comment reads as one line.
-                        'prose-sm mt-0.5 text-sm leading-snug [&_.bn-editor]:!px-0 [&_.bn-block-outer:last-child:has(br.ProseMirror-trailingBreak)]:hidden'
+                      ? // Compact: shrink the editor's side-menu horizontal padding to the 4px
+                        // node-selection ring width (offset by -mx-1 so text keeps its x), and
+                        // hide BlockNote's always-appended trailing empty block (identified by
+                        // its ProseMirror trailing break) so a one-line comment reads as one line.
+                        'prose-sm mt-0.5 -mx-1 text-sm leading-snug [&_.bn-editor]:!px-1 [&_.bn-block-outer:last-child:has(br.ProseMirror-trailingBreak)]:hidden'
                       : 'mt-1'
                   }`}
                   style={{ overflowWrap: 'anywhere' }}
                 >
-                  <RichTextViewer
-                    key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
-                    content={parsed as any}
-                    className="w-full min-w-0 max-w-full"
-                  />
-                </div>
-              );
-            })()
+                  <ClampedContent
+                    id={`${commentId}-clamp`}
+                    maxHeight={240}
+                    showMoreLabel={t('conversation.showMore', 'Show more')}
+                    showLessLabel={t('conversation.showLess', 'Show less')}
+                  >
+                    <RichTextViewer
+                      key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
+                      content={displayContent as any}
+                      className="w-full min-w-0 max-w-full"
+                    />
+                  </ClampedContent>
+              </div>
           )}
           {reactions && onToggleReaction && (
             <ReactionDisplay
@@ -579,6 +715,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
           )}
         </div>
       </div>
+      <Dialog
+        id={`reschedule-comment-${commentId}`}
+        isOpen={isRescheduleOpen}
+        onClose={() => setIsRescheduleOpen(false)}
+        title={t('conversation.rescheduleComment', 'Reschedule comment')}
+        className="max-w-md"
+        footer={<div className="flex justify-end gap-2"><Button id={`reschedule-comment-${commentId}-close`} variant="ghost" onClick={() => setIsRescheduleOpen(false)}>{t('common.cancel', 'Cancel')}</Button><Button id={`reschedule-comment-${commentId}-save`} disabled={isScheduleMutating} onClick={() => void handleReschedule()}>{t('conversation.reschedule', 'Reschedule')}</Button></div>}
+      >
+        <DialogContent>
+          <div className="space-y-2">
+            <DateTimePicker
+              id={`reschedule-comment-${commentId}-at`}
+              label={`${t('conversation.publishAt', 'Publish at')} (${conversation.scheduled_publish_tz || getUserTimeZone()})`}
+              value={reschedulePublishAt}
+              onChange={(date) => { setReschedulePublishAt(date); setRescheduleError(null); }}
+              minDate={new Date()}
+              clearable
+            />
+            {rescheduleError && <p className="text-sm text-[rgb(var(--color-accent-500))]">{rescheduleError}</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -183,6 +183,42 @@ function buildFullAvailability(overrides: Partial<Record<string, boolean>> = {})
   }));
 }
 
+/**
+ * The handler classifies connector failures with `instanceof`, so rejections
+ * have to carry the mocked class the module graph handed it — a plain Error
+ * with a status in its message is deliberately not a connector failure.
+ */
+async function connectorError(message: string, status: number): Promise<Error> {
+  const { BotConnectorRequestError } = await import(
+    '@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotConnector'
+  );
+  return new BotConnectorRequestError(message, status);
+}
+
+function buildMyTicketsSuccess() {
+  return buildActionSuccess('my_tickets', {
+    summary: { title: 'My tickets', text: 'Found 1 assigned ticket for the signed-in technician.' },
+    items: [
+      {
+        id: 'ticket-uuid-1',
+        displayId: 'ALGA-101',
+        title: 'ALGA-101',
+        summary: 'Printer offline • Open',
+        entityType: 'ticket',
+        links: [{ type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-1' }],
+      },
+    ],
+  });
+}
+
+function buildConnectorRequest(body: Record<string, unknown>): Request {
+  return new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ serviceUrl: 'https://smba.trafficmanager.net/amer/', ...body }),
+  });
+}
+
 function buildActionSuccess(actionId: string, overrides: Record<string, unknown> = {}) {
   return {
     success: true,
@@ -306,7 +342,7 @@ describe('teamsBotHandler', () => {
     expect(response.suggestedActions?.actions.map((action) => action.value)).toContain('ticket <number>');
   });
 
-  it('T267/T268: non-personal Teams contexts return a clear personal-scope-only response', async () => {
+  it('T267/T268: channel messages without the channel_bot capability get the enablement card', async () => {
     const response = await handleTeamsBotActivity(
       {
         ...buildPersonalMessageActivity('my tickets'),
@@ -318,8 +354,45 @@ describe('teamsBotHandler', () => {
       { tenantIdHint: 'tenant-1' }
     );
 
-    expect(response.text).toContain('personal and group chats');
-    expect(response.attachments?.[0]?.content.title).toBe('Unsupported conversation type');
+    expect(response.text).toContain('not enabled for team channels');
+    expect(response.attachments?.[0]?.content.title).toBe('Channels not enabled');
+  });
+
+  it('T269: channel messages with the channel_bot capability run commands with the @mention stripped', async () => {
+    resolveTeamsTenantContextMock.mockResolvedValue({
+      status: 'resolved',
+      tenantId: 'tenant-1',
+      installStatus: 'active',
+      enabledCapabilities: ['personal_bot', 'personal_tab', 'message_extension', 'channel_bot'],
+      appId: 'teams-app-1',
+      botId: 'teams-app-1',
+      microsoftTenantId: 'entra-tenant-1',
+    });
+    executeTeamsActionMock.mockResolvedValue({
+      success: true,
+      actionId: 'my_tickets',
+      surface: 'bot',
+      operation: 'lookup',
+      summary: { title: 'My tickets', text: 'Found 1 assigned ticket.' },
+      links: [],
+      items: [],
+    });
+
+    const response = await handleTeamsBotActivity(
+      {
+        ...buildPersonalMessageActivity('<at>AlgaPSA</at> my tickets'),
+        conversation: {
+          id: '19:channel-1@thread.tacv2',
+          conversationType: 'channel',
+        },
+      },
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ actionId: 'my_tickets' })
+    );
+    expect(response.text).toContain('Found 1 assigned ticket');
   });
 
   it('T261/T263/T265: ticket lookups render cards with Teams/PSA buttons and only tenant-allowed follow-up command shortcuts for the resolved ticket', async () => {
@@ -1654,7 +1727,9 @@ describe('teamsBotHandler', () => {
       })
     );
     sendBotActivityMock
-      .mockRejectedValueOnce(new Error('Failed to send Bot Framework activity (415 Unsupported Media Type): adaptive rejected'))
+      .mockRejectedValueOnce(
+        await connectorError('Failed to send Bot Framework activity (415 Unsupported Media Type): adaptive rejected', 415)
+      )
       .mockResolvedValueOnce({ status: 'sent' });
 
     const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
@@ -1690,6 +1765,62 @@ describe('teamsBotHandler', () => {
 
     const fallbackActivity = sendBotActivityMock.mock.calls[1][0].activity;
     expect(fallbackActivity.attachments?.[0]?.contentType).toBe('application/vnd.microsoft.card.hero');
+  });
+
+  /**
+   * The connector replays an expired token itself (see the connector's
+   * expired-token replay suite), so a 401 reaching the handler is a real
+   * credential problem — and must still never be mistaken for the client
+   * rejecting the Adaptive Card.
+   */
+  it('T071b: a 401 that survived the connector replay is logged, never downgraded to the hero card', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(buildMyTicketsSuccess());
+    const expiredToken = await connectorError(
+      'Failed to send Bot Framework activity (401 Unauthorized): token expired',
+      401
+    );
+    sendBotActivityMock.mockRejectedValueOnce(expiredToken);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const response = await handleTeamsBotActivityRequest(
+        buildConnectorRequest({ ...buildPersonalMessageActivity('my tickets'), id: 'activity-1' })
+      );
+
+      expect(response.status).toBe(200);
+      expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
+      expect(sendBotActivityMock.mock.calls[0][0].activity.attachments?.[0]?.contentType).toBe(
+        'application/vnd.microsoft.card.adaptive'
+      );
+      expect(consoleError).toHaveBeenCalledWith('[teams-bot] failed to send reply', expiredToken);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('T071b: a bot token acquisition failure is surfaced instead of retried or downgraded', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(buildMyTicketsSuccess());
+    // Thrown by the connector's token grant (e.g. a bad TEAMS_BOT_APP_PASSWORD),
+    // not by the activity dispatch: neither a resend nor the hero fallback can
+    // help, so the real cause has to reach the log verbatim.
+    const acquisitionError = new Error(
+      'Failed to acquire Bot Framework token (401 Unauthorized): invalid_client'
+    );
+    sendBotActivityMock.mockRejectedValueOnce(acquisitionError);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const response = await handleTeamsBotActivityRequest(
+        buildConnectorRequest({ ...buildPersonalMessageActivity('my tickets'), id: 'activity-1' })
+      );
+      expect(response.status).toBe(200);
+      expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
+      expect(consoleError).toHaveBeenCalledWith('[teams-bot] failed to send reply', acquisitionError);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('T072: the "Assign to me" card action executes assign_ticket and updates the card in place', async () => {
@@ -1750,7 +1881,7 @@ describe('teamsBotHandler', () => {
       })
     );
     updateBotActivityMock.mockRejectedValueOnce(
-      new Error('Failed to update Bot Framework activity (403 Forbidden): nope')
+      await connectorError('Failed to update Bot Framework activity (403 Forbidden): nope', 403)
     );
 
     const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
@@ -1771,6 +1902,41 @@ describe('teamsBotHandler', () => {
     });
 
     await handleTeamsBotActivityRequest(request);
+    expect(updateBotActivityMock).toHaveBeenCalledTimes(1);
+    expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * A transient 401 never reaches here — the connector replays it — so an
+   * unauthorized update means the credentials are genuinely bad, and the
+   * result still has to reach the user somehow.
+   */
+  it('T072: an in-place update that stays unauthorized falls back to a normal reply', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('assign_ticket', {
+        operation: 'mutation',
+        summary: { title: 'Ticket assigned', text: 'Ticket ALGA-101 was reassigned successfully.' },
+      })
+    );
+    updateBotActivityMock.mockRejectedValue(
+      await connectorError('Failed to update Bot Framework activity (401 Unauthorized): token expired', 401)
+    );
+
+    await handleTeamsBotActivityRequest(
+      buildConnectorRequest({
+        ...buildPersonalMessageActivity(''),
+        id: 'submit-activity-4',
+        replyToId: 'card-activity-4',
+        value: {
+          command: 'bot_card_action',
+          actionId: 'assign_ticket',
+          ticketId: 'ALGA-101',
+          idempotencyKey: 'card-idem-5',
+        },
+      })
+    );
+
     expect(updateBotActivityMock).toHaveBeenCalledTimes(1);
     expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
   });
@@ -1878,13 +2044,13 @@ describe('teamsBotHandler', () => {
     }
   });
 
-  it('T075: channel-scope messages get the friendly unsupported-scope reply with a docs link', async () => {
+  it('T075: unknown-scope messages get the friendly unsupported-scope reply with a docs link', async () => {
     const response = await handleTeamsBotActivity(
       {
         ...buildPersonalMessageActivity('my tickets'),
         conversation: {
           id: 'conversation-2',
-          conversationType: 'channel',
+          conversationType: 'meeting',
         },
       },
       { tenantIdHint: 'tenant-1' }
@@ -1894,7 +2060,7 @@ describe('teamsBotHandler', () => {
     expect(response.attachments?.[0]?.content.buttons).toContainEqual(
       expect.objectContaining({
         type: 'openUrl',
-        value: 'https://docs.algapsa.com/integrations/teams-setup#supported-scopes',
+        value: 'https://www.nineminds.com/documentation/microsoft-teams-integration',
       })
     );
   });

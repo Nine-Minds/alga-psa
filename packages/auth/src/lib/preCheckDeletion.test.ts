@@ -91,13 +91,15 @@ describe('preCheckDeletion permission mapping', () => {
     expect(action).toBe('delete');
   });
 
-  it('checks timeentry:delete (not time_entry:delete) when validating time_entry deletion', async () => {
+  // The deletion-config key and the permission resource are the same name now
+  // that RBAC no longer stores `timeentry`; no mapping entry should reappear.
+  it('checks time_entry:delete when validating time_entry deletion', async () => {
     getDeletionConfigMock.mockReturnValueOnce({ entityType: 'time_entry', dependencies: [] });
 
     await preCheckDeletion('time_entry', 'te-1');
 
     const [, resource, action] = hasPermissionMock.mock.calls[0];
-    expect(resource).toBe('timeentry');
+    expect(resource).toBe('time_entry');
     expect(action).toBe('delete');
   });
 });

@@ -8,6 +8,17 @@ export interface WizardData {
   confirmPassword?: string;
   locale?: string;
 
+  // MSP company location (default location on the MSP's own client record,
+  // seeded from the Stripe billing address at tenant creation)
+  companyLocationId?: string;
+  companyAddressLine1?: string;
+  companyAddressLine2?: string;
+  companyCity?: string;
+  companyStateProvince?: string;
+  companyPostalCode?: string;
+  companyCountryCode?: string;
+  companyCountryName?: string;
+
   // Team Members
   teamMembers: TeamMember[];
   createdTeamMemberEmails?: string[]; // Track which team members have been created

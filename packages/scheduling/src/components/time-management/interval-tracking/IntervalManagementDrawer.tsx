@@ -406,7 +406,7 @@ export function IntervalManagementDrawer({
         
         {/* Selection actions */}
         {selectedIntervalIds.length > 0 && (
-          <Card className="p-3 bg-blue-50 dark:bg-blue-900/20">
+          <Card className="p-3 bg-[rgb(var(--color-table-selected))]">
             <div className="flex items-center justify-between">
               <div>
                 <span className="font-medium">{t('intervals.selectedCount', { defaultValue: '{{count}} intervals selected', count: selectedIntervalIds.length })}</span>

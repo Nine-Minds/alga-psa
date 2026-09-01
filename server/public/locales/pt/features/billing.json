@@ -2,9 +2,12 @@
   "title": "Faturamento",
   "overview": "Visão geral",
   "tabs": {
-    "overview": "Visão geral",
+    "hoursByService": "Horas por serviço",
     "invoices": "Faturas",
-    "quotes": "Cotações"
+    "overview": "Visão geral",
+    "quotes": "Cotações",
+    "usageMetrics": "Métricas de uso",
+    "segments": "Por segmento"
   },
   "currentContractLine": "Linha de contrato atual",
   "nextInvoice": "Próxima fatura",
@@ -122,13 +125,33 @@
     "usage": "Uso",
     "overage": "Excedente",
     "noContractLineTitle": "Nenhuma linha de contrato bucket disponível",
-    "noContractLineDescription": "Não há linhas de contrato de intervalo ativas para sua conta."
+    "noContractLineDescription": "Não há linhas de contrato de intervalo ativas para sua conta.",
+    "remainingSummary": "Restam {{remaining}} horas de {{total}}",
+    "remainingSummaryWithRollover": "Restam {{remaining}} horas de {{total}} (incl. {{rollover}} de remanescente)",
+    "overageSummary": "{{hours}} horas acima do limite",
+    "overBucket": "LIMITE EXCEDIDO",
+    "usedHours": "{{hours}} h utilizadas",
+    "leftHours": "{{hours}} h restantes",
+    "overHours": "{{hours}} h ACIMA"
   },
   "messages": {
     "noInvoices": "Nenhuma fatura encontrada",
     "loadingInvoices": "Carregando faturas...",
     "paymentSuccessful": "Pagamento processado com sucesso",
     "paymentFailed": "Falha no pagamento. Por favor, tente novamente."
+  },
+  "paymentUnavailable": {
+    "title": "Pagamento indisponível",
+    "notConfigured": "O pagamento online não está disponível para esta fatura.",
+    "creationFailed": "Não foi possível iniciar o pagamento. Tente novamente.",
+    "alreadyPaid": "Esta fatura já foi paga.",
+    "invoiceUnavailable": "Esta fatura não está disponível para pagamento.",
+    "accessDenied": "Você não tem acesso para pagar esta fatura.",
+    "generic": "Não foi possível iniciar o pagamento online.",
+    "tryAgain": "Tentar novamente",
+    "backToBilling": "Voltar para cobrança",
+    "retryFailed": "Ainda não foi possível iniciar o pagamento. Tente novamente em instantes.",
+    "loading": "Carregando..."
   },
   "quotes": {
     "pendingQuotes": "Cotações pendentes",
@@ -151,6 +174,60 @@
     },
     "lineItems": {
       "searchPlaceholder": "Pesquise ou digite o nome do item personalizado..."
+    },
+    "detail": {
+      "accept": "Aceitar",
+      "acceptHint": "Ao aceitar, você confirma esta cotação. Seu provedor de serviços dará seguimento.",
+      "acceptHintOptional": "Ao aceitar, sua seleção de itens opcionais é enviada ao seu provedor de serviços para revisão.",
+      "acceptQuote": "Aceitar cotação",
+      "acceptedBanner": "Cotação aceita.",
+      "acceptedBannerOptional": "Cotação aceita. Os itens opcionais selecionados foram compartilhados com seu provedor de serviços.",
+      "backToQuotes": "Voltar às cotações",
+      "cancel": "Cancelar",
+      "columns": {
+        "amount": "Valor",
+        "description": "Descrição",
+        "qty": "Qtd.",
+        "rate": "Tarifa"
+      },
+      "confirmAccept": "Aceitar esta cotação? Seu provedor de serviços será notificado.",
+      "confirmAcceptOptional": "Aceitar esta cotação com a seleção atual de itens opcionais? Suas escolhas serão enviadas ao seu provedor de serviços para revisão.",
+      "confirmReject": "Rejeitar esta cotação e enviar seu comentário ao provedor de serviços? Ele poderá revisá-la e reenviá-la.",
+      "discounts": "Descontos",
+      "downloadFailed": "Falha ao baixar o PDF.",
+      "downloadFailedRetry": "Falha ao baixar o PDF. Tente novamente.",
+      "downloadPdf": "Baixar PDF",
+      "downloading": "Baixando...",
+      "exclude": "Excluir",
+      "excluded": "Excluído",
+      "fallbackTitle": "Cotação {{id}}",
+      "include": "Incluir",
+      "included": "Incluído",
+      "lineItems": "Itens",
+      "loading": "Carregando cotação...",
+      "notFound": "Cotação não encontrada",
+      "notes": "Observações",
+      "optional": "Opcional",
+      "optionalLockedHint": "A seleção de itens opcionais é bloqueada quando a cotação não está mais aguardando sua resposta.",
+      "optionalToggleHint": "Ative ou desative os itens opcionais para ver o total preferido antes de responder.",
+      "poNumber": "Número de referência",
+      "quoteDate": "Data da cotação",
+      "readyToRespond": "Pronto para responder?",
+      "reject": "Rejeitar",
+      "rejectCommentRequired": "Adicione um breve comentário antes de rejeitar esta cotação.",
+      "rejectPlaceholder": "Diga o que precisa mudar",
+      "rejectPrompt": "Se esta cotação não atende às suas necessidades, deixe um comentário para que seu provedor de serviços possa revisá-la.",
+      "rejectQuote": "Rejeitar cotação",
+      "rejectedBanner": "Cotação rejeitada.",
+      "rejectedBannerWithReason": "Cotação rejeitada: {{reason}}",
+      "savingSelections": "Salvando a seleção de itens opcionais...",
+      "scopeOfWork": "Escopo do trabalho",
+      "submitting": "Enviando...",
+      "subtotal": "Subtotal",
+      "tax": "Imposto",
+      "termsAndConditions": "Termos e condições",
+      "total": "Total",
+      "validUntil": "Válido até"
     }
   },
   "quoteForm": {
@@ -242,8 +319,8 @@
     },
     "moreDetails": {
       "title": "Mais detalhes",
-      "subtitle": "Número do pedido, oportunidade, layout do PDF",
-      "poNumber": "Número do pedido",
+      "subtitle": "Número do pedido de compra, oportunidade, layout do PDF",
+      "poNumber": "Número do pedido de compra",
       "opportunity": "Oportunidade",
       "opportunityPlaceholder": "ID da oportunidade (opcional)",
       "pdfLayout": "Layout de PDF",
@@ -335,6 +412,35 @@
     "availableCredit": "Crédito disponível",
     "appliedAutomatically": "Aplicado automaticamente à sua próxima fatura.",
     "credit": "Crédito",
-    "expires": "Expira em {{date}}"
+    "expires": "Expira em {{date}}",
+    "history": {
+      "viewHistory": "Ver histórico",
+      "title": "Histórico de créditos",
+      "empty": "Ainda não há atividade de crédito",
+      "issued": "Emitido",
+      "issuedWithInvoice": "Emitido — pré-pagamento n.º {{invoice}}",
+      "issuedForInvoice": "Emitido — fatura n.º {{invoice}}",
+      "issuedFromCreditNote": "Emitido a partir de nota de crédito",
+      "applied": "Aplicado",
+      "appliedToInvoice": "Aplicado à fatura n.º {{invoice}}",
+      "adjusted": "Ajustado",
+      "expired": "Expirado",
+      "transferred": "Transferido",
+      "transaction": "Atividade de crédito",
+      "balance": "saldo {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Horas pré-pagas",
+    "viewBilling": "Ver faturação"
+  },
+  "hourBlocks": {
+    "title": "Blocos de horas pré-pagos",
+    "blockLabel": "Bloco de {{service}}",
+    "expiringSoon": "Expira em {{days}}d",
+    "hoursLeft": "{{hours}}h restantes",
+    "expires": "Expira em {{date}}",
+    "recentBurn": "Uso recente",
+    "timeEntry": "Lançamento de horas"
   }
 }

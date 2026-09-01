@@ -2,7 +2,7 @@ import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { NextRequest } from 'next/server';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
 import { describeWithDb } from '../../../test-utils/requireDb';
@@ -85,6 +85,9 @@ vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => {
   };
 });
 
+const MONITORED_FOLDER_ID = vi.hoisted(() => 'monitored-inbox-folder-id');
+const inboundReopenCounters = vi.hoisted(() => new Map<string, number>());
+
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => {
   return {
     MicrosoftGraphAdapter: class MicrosoftGraphAdapter {
@@ -95,6 +98,14 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
       async downloadMessageSource(messageId: string) {
         return microsoftDownloadMessageSourceMock(messageId);
       }
+      // fetchMicrosoftMessageForPointer refuses any message that does not live in
+      // a monitored folder; the fixture's messages always do.
+      async getMessageParentFolderId(_messageId: string) {
+        return MONITORED_FOLDER_ID;
+      }
+      async resolveFolderIds(_folderFilters: unknown) {
+        return new Set([MONITORED_FOLDER_ID]);
+      }
     },
   };
 });
@@ -104,6 +115,18 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
   enqueueUnifiedInboundEmailQueueJob: (...args: any[]) =>
     enqueueUnifiedInboundEmailQueueJobMock(...args),
+  // checkInboundReopenRateLimit fails CLOSED, so a missing export here silently
+  // downgrades every reopen to comment-only. In-memory counters keep the
+  // backstop real without a Redis dependency; reset per test in afterEach.
+  getInboundEmailRedisClient: async () => ({
+    incr: async (key: string) => {
+      const next = (inboundReopenCounters.get(key) ?? 0) + 1;
+      inboundReopenCounters.set(key, next);
+      return next;
+    },
+    expire: async () => 1,
+    ttl: async () => 3600,
+  }),
 }));
 
 vi.mock('@alga-psa/storage', () => ({
@@ -305,6 +328,11 @@ async function setupInboundDefaults(params: { providerId: string; mailbox: strin
   return { defaultsId, subscriptionName };
 }
 
+// handleMicrosoftWebhookPost fails closed: a notification is rejected with 401
+// unless the provider has a stored verification token and the notification's
+// clientState matches it exactly.
+const MS_WEBHOOK_CLIENT_STATE = 'test-microsoft-webhook-client-state';
+
 async function setupMicrosoftProvider(params: {
   providerId: string;
   mailbox: string;
@@ -356,7 +384,7 @@ async function setupMicrosoftProvider(params: {
     token_expires_at: null,
     webhook_subscription_id: params.subscriptionId,
     webhook_expires_at: null,
-    webhook_verification_token: null,
+    webhook_verification_token: MS_WEBHOOK_CLIENT_STATE,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
@@ -518,8 +546,44 @@ async function ensureSecondaryOpenStatus(boardIdForStatus: string): Promise<stri
 describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   const cleanup: Array<() => Promise<void>> = [];
 
+  // Thread-header correlation is not sender-authenticated, so a reply matched by
+  // In-Reply-To/References is only applied to the ticket when the sender is the
+  // ticket's own client contact, an internal user, or an active watcher —
+  // otherwise it is quarantined as a thread-header hijack. Sender attribution
+  // additionally requires aligned SPF/DKIM (DMARC for internal identities), so a
+  // legitimate-reply fixture needs both a contact row and an auth-results header.
+  async function seedClientContactSender(email: string, fullName = 'Client Sender') {
+    const contactId = uuidv4();
+    await tenantTable('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: fullName,
+      email,
+      client_id: clientId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    // afterEach pops LIFO; unshift so the contact outlives the comments that
+    // reference it (comments_tenant_contact_id_fk).
+    cleanup.unshift(async () => {
+      await tenantTable('contacts').where({ contact_name_id: contactId }).delete();
+    });
+    return contactId;
+  }
+
+  // Aligned DKIM authorizes contact attribution; aligned DMARC is required
+  // before an internal identity is granted (see allowsInternalSenderAttribution).
+  function dkimPassHeaders(email: string) {
+    return { 'authentication-results': `mx.example.com; dkim=pass header.d=${email.split('@')[1]}` };
+  }
+
+  function dmarcPassHeaders(email: string) {
+    return { 'authentication-results': `mx.example.com; dmarc=pass header.from=${email.split('@')[1]}` };
+  }
+
   beforeAll(async () => {
     process.env.NEXTAUTH_URL = 'http://localhost:3000';
+    wireLocalTestDbEnv();
     db = await createTestDbConnection();
 
     const tenant = await discoveryTable<{ tenant: string }>(
@@ -578,6 +642,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = '';
     process.env.INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
     process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
+    inboundReopenCounters.clear();
     enqueueUnifiedInboundEmailQueueJobMock.mockClear();
     storageUploadMock.mockReset();
     storageUploadMock.mockImplementation(async (_buffer: Buffer, storagePath: string) => ({
@@ -807,7 +872,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       value: [
         {
           changeType: 'created',
-          clientState: 'ignored',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
           resource: `/users/${uuidv4()}/messages/${messageId}`,
           resourceData: {
             '@odata.type': '#microsoft.graph.message',
@@ -893,7 +958,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       value: [
         {
           changeType: 'created',
-          clientState: 'ignored',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
           resource: `/users/${uuidv4()}/messages/${messageId}`,
           resourceData: {
             '@odata.type': '#microsoft.graph.message',
@@ -1307,6 +1372,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `thread-sender-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail, 'Sender');
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1316,7 +1384,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: 'sender@example.com', name: 'Sender' },
+        from: { email: threadSenderEmail, name: 'Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Header threaded ticket',
         inReplyTo: originalMessageId,
@@ -1326,6 +1394,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -1453,6 +1522,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        headers: dmarcPassHeaders(internalReplyEmail),
       } as any,
     });
 
@@ -1577,6 +1647,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         references: [originalMessageId],
         body: { text: 'Follow-up requiring reopen', html: undefined },
         attachments: [],
+        headers: dmarcPassHeaders(internalReplyEmail),
       } as any,
     });
 
@@ -1650,6 +1721,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1659,13 +1733,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for reopen-disabled test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Any update?', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -1744,6 +1819,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
 
     const subject = `Re: Closed ticket for cutoff reroute test ${uuidv4().slice(0, 6)}`;
+    const threadSenderEmail = `client-cutoff-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1753,18 +1831,29 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-cutoff-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject,
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Need more work on this issue.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
     expect(result.outcome).toBe('created');
     expect(result.outcome === 'created' ? result.ticketId : null).not.toBe(oldTicketId);
+
+    // The reroute creates a ticket the fixture never inserted; it pins the
+    // sender's contact row (tickets_tenant_contact_name_id_foreign).
+    const reroutedTicketId = result.outcome === 'created' ? result.ticketId : null;
+    if (reroutedTicketId) {
+      cleanup.push(async () => {
+        await tenantTable('comments').where({ ticket_id: reroutedTicketId }).delete();
+        await deleteTicketRows(reroutedTicketId);
+      });
+    }
 
     const oldTicketAfter = await tenantTable('tickets').where({ ticket_id: oldTicketId }).first<any>();
     expect(oldTicketAfter.status_id).toBe(closedStatus.status_id);
@@ -1843,6 +1932,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-reopen-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1852,13 +1944,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-reopen-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for client reopen test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Can you continue this work?', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -1946,6 +2039,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-ack-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -1955,13 +2051,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-ack-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for client ACK suppression test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Thanks, all set.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2058,6 +2155,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-not-ack-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2067,13 +2167,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-not-ack-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for client NOT_ACK suppression test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Please reopen and continue work on this issue.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2164,6 +2265,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-addon-missing-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2173,13 +2277,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-addon-missing-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for missing AI add-on fallback test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Please proceed with additional work.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2270,6 +2375,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-ai-fallback-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2279,13 +2387,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-ai-fallback-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for AI fallback reopen test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Please continue work despite classification fallback.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2469,6 +2578,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await deleteTicketRows(ticketId);
     });
 
+    const threadSenderEmail = `client-meta-${uuidv4().slice(0, 6)}@example.com`;
+    await seedClientContactSender(threadSenderEmail);
+
     const result = await processInboundEmailInApp({
       tenantId,
       providerId,
@@ -2478,13 +2590,14 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         providerId,
         tenant: tenantId,
         receivedAt: new Date().toISOString(),
-        from: { email: `client-meta-${uuidv4().slice(0, 6)}@example.com`, name: 'Client Sender' },
+        from: { email: threadSenderEmail, name: 'Client Sender' },
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Re: Closed ticket for metadata test',
         inReplyTo: originalMessageId,
         references: [originalMessageId],
         body: { text: 'Thanks for closing this.', html: undefined },
         attachments: [],
+        headers: dkimPassHeaders(threadSenderEmail),
       } as any,
     });
 
@@ -2549,6 +2662,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject: 'Contact matched subject',
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -2630,6 +2746,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello from microsoft contact', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -2733,6 +2852,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           html: undefined,
         },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -2818,6 +2940,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${contactEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -2979,6 +3104,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${senderEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -3065,6 +3193,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${senderEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -3478,6 +3609,172 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  it('persists an internal sender-auth failure through the audit_logs tenant trigger', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-auth-audit-${uuidv4().slice(0, 6)}@example.com`;
+    const subscriptionId = `sub-auth-audit-${uuidv4()}`;
+    const { defaultsId } = await setupMicrosoftProvider({ providerId, mailbox, subscriptionId });
+    const internalUserId = uuidv4();
+    const internalEmail = `internal-auth-audit-${uuidv4().slice(0, 6)}@example.com`;
+    const messageId = `internal-auth-failure-${uuidv4()}@example.com`;
+    const subject = `Internal sender auth audit ${uuidv4().slice(0, 6)}`;
+
+    cleanup.push(async () => {
+      await tenantTable('email_processed_messages').where({ provider_id: providerId }).delete();
+      await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+    cleanup.push(async () => {
+      await tenantTable('users').where({ user_id: internalUserId }).delete();
+    });
+
+    await tenantTable('users').insert({
+      user_id: internalUserId,
+      tenant: tenantId,
+      username: `internal-auth-audit-${internalUserId.slice(0, 8)}`,
+      email: internalEmail,
+      first_name: 'Internal',
+      last_name: 'Audit',
+      hashed_password: 'not-a-real-hash',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+    });
+
+    // The real raw-MIME path must preserve the absent Authentication-Results
+    // header so sender attribution fails closed before the audit trigger fires.
+    microsoftDownloadMessageSourceMock = vi.fn().mockResolvedValue(
+      buildMicrosoftMime({
+        from: internalEmail,
+        to: mailbox,
+        subject,
+        messageId,
+        text: 'This message has no Authentication-Results header.',
+      })
+    );
+
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    const req = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        value: [{
+          changeType: 'created',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
+          resource: `/users/${uuidv4()}/messages/${messageId}`,
+          resourceData: {
+            '@odata.type': '#microsoft.graph.message',
+            '@odata.id': 'ignored',
+            id: messageId,
+            subject,
+          },
+          subscriptionExpirationDateTime: new Date(Date.now() + 60_000).toISOString(),
+          subscriptionId,
+          tenantId: 'ignored',
+        }],
+      }),
+    });
+    const response = await handleMicrosoftWebhookPost(req);
+    expect(response.status).toBe(200);
+    await processEnqueuedUnifiedJobs();
+
+    const ticket = await tenantTable('tickets').where({ title: subject }).first<any>();
+    expect(ticket).toBeDefined();
+
+    const audit = await tenantTable('audit_logs')
+      .where({
+        operation: 'inbound_email_internal_sender_auth_failed',
+        record_id: providerId,
+      })
+      .first<any>();
+    expect(audit).toMatchObject({
+      tenant: tenantId,
+      operation: 'inbound_email_internal_sender_auth_failed',
+      table_name: 'email_providers',
+      record_id: providerId,
+    });
+    expect(audit.details).toMatchObject({
+      emailId: `<${messageId}>`,
+      senderEmail: internalEmail,
+      authResults: null,
+    });
+
+    cleanup.push(async () => {
+      await tenantTable('audit_logs').where({ audit_id: audit.audit_id }).delete();
+      await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
+    });
+  });
+
+  it('does not mark an authenticated, matched internal sender as unmatched', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-auth-match-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+    const internalUserId = uuidv4();
+    const internalEmail = `internal-auth-match-${uuidv4().slice(0, 6)}@example.com`;
+    const emailId = `internal-auth-match-${uuidv4()}`;
+
+    cleanup.push(async () => {
+      await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+    cleanup.push(async () => {
+      await tenantTable('users').where({ user_id: internalUserId }).delete();
+    });
+
+    await tenantTable('users').insert({
+      user_id: internalUserId,
+      tenant: tenantId,
+      username: `internal-auth-match-${internalUserId.slice(0, 8)}`,
+      email: internalEmail,
+      first_name: 'Internal',
+      last_name: 'Match',
+      hashed_password: 'not-a-real-hash',
+      user_type: 'internal',
+      is_inactive: false,
+      created_at: db.fn.now(),
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: emailId,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: internalEmail, name: 'Internal Match' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: `Internal sender auth match ${uuidv4().slice(0, 6)}`,
+        body: { text: 'This sender is authenticated and matched.', html: undefined },
+        attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dmarc=pass header.from=${internalEmail.split('@')[1]}`,
+        },
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await tenantTable('tickets')
+      .whereRaw("email_metadata->>'messageId' = ?", [emailId])
+      .first<any>();
+    expect(ticket).toBeDefined();
+    const comment = await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).first<any>();
+    expect(comment).toMatchObject({ author_type: 'internal', user_id: internalUserId });
+    expect(comment.metadata).toMatchObject({ unmatchedSender: false });
+
+    cleanup.push(async () => {
+      await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
+    });
+  });
+
   it('Contact match: sender email is normalized from display-name format', async () => {
     const providerId = uuidv4();
     const mailbox = `support-contact-normalize-${uuidv4().slice(0, 6)}@example.com`;
@@ -3532,6 +3829,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         subject: 'Contact normalized sender subject',
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        headers: {
+          'authentication-results': `mx.example.com; dkim=pass header.d=${canonicalEmail.split('@')[1]}`,
+        },
       } as any,
     });
 
@@ -3902,6 +4202,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       subject,
       body: { text: 'Hello', html: undefined },
       attachments: [],
+      headers: {
+        'authentication-results': `mx.example.com; dkim=pass header.d=${senderEmail.split('@')[1]}`,
+      },
     } as any;
 
     const first = await processInboundEmailInApp({ tenantId, providerId, emailData });

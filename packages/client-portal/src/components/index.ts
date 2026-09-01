@@ -16,6 +16,7 @@ export { default as QuoteDetailPage } from './billing/QuoteDetailPage';
 export { default as ClientDocumentsPage } from './documents/ClientDocumentsPage';
 export { PaymentRedirect } from './billing/PaymentRedirect';
 export { default as PaymentSuccessContent } from './billing/PaymentSuccessContent';
+export { PaymentUnavailable } from './billing/PaymentUnavailable';
 
 export { default as ProjectsOverviewPage } from './projects/ProjectsOverviewPage';
 export { default as ProjectDetailView } from './projects/ProjectDetailView';

@@ -61,6 +61,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
+import { TaskCredentialsSection } from './TaskCredentialsSection';
 import TaskCommentThread from './TaskCommentThread';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
@@ -69,7 +70,6 @@ import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
@@ -85,6 +85,7 @@ import {
   isTaskRichTextEmpty,
 } from '../lib/taskRichText';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import checklistDnd from './ChecklistDragDrop.module.css';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
@@ -137,7 +138,8 @@ export default function TaskForm({
   printTitle,
 }: TaskFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
-  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  // Read 'en-US' outright, so it stayed American in every locale.
+  const { formatDate } = useFormatters();
   const billingIntegration = useProjectBillingIntegration();
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
@@ -1656,7 +1658,7 @@ export default function TaskForm({
           {printableHeader && (
             <div className="app-print-section">{printableHeader}</div>
           )}
-          {projectBillingUiEnabled && billingIntegration && (
+          {billingIntegration && (
             <billingIntegration.PaymentWarningBanner projectId={phase.project_id} />
           )}
           {/* Full width Title with Status dropdown */}
@@ -1699,7 +1701,7 @@ export default function TaskForm({
                 clearErrorIfSubmitted();
               }}
               placeholder={taskFormT('taskNamePlaceholder', 'Enter task name...')}
-              className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+              className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${
                 hasAttemptedSubmit && !taskName.trim() ? 'border-destructive' : 'border-gray-300'
               }`}
               rows={1}
@@ -1821,7 +1823,7 @@ export default function TaskForm({
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('createdAtLabel', 'Created At')}</label>
               {mode === 'edit' && task ? (
                 <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700">
-                  {new Date(task.created_at).toLocaleDateString('en-US', {
+                  {formatDate(new Date(task.created_at), {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
@@ -2263,6 +2265,13 @@ export default function TaskForm({
             />
           </div>
 
+          {/* Full width Passwords section (flag-gated; task attach point) */}
+          {mode === 'edit' && task && (
+            <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
+              <TaskCredentialsSection taskId={task.task_id} />
+            </div>
+          )}
+
           {/* Full width Comments section */}
           {mode === 'edit' && task && (
             <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
@@ -2278,7 +2287,7 @@ export default function TaskForm({
 
         {/* Action Buttons - only rendered inside form for drawer mode */}
         {inDrawer && (
-          <div className="pt-4 pb-2 border-t bg-white dark:bg-[rgb(var(--color-bg-1))] flex-shrink-0">
+          <div className="pt-4 pb-2 border-t bg-white dark:bg-[rgb(var(--color-card))] flex-shrink-0">
             {renderActionButtons(false)}
           </div>
         )}

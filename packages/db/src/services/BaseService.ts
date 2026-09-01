@@ -208,20 +208,23 @@ export abstract class BaseService<T = any> {
   }
 
   /**
-   * Get the columns available on this service's table.
+   * Get the columns available on a table (defaults to this service's table).
    */
-  protected async getTableColumns(conn: Knex | Knex.Transaction): Promise<Set<string>> {
-    let columnsPromise = tableColumnsCache.get(this.tableName);
+  protected async getTableColumns(
+    conn: Knex | Knex.Transaction,
+    targetTable: string = this.tableName
+  ): Promise<Set<string>> {
+    let columnsPromise = tableColumnsCache.get(targetTable);
 
     if (!columnsPromise) {
-      columnsPromise = conn(this.tableName)
+      columnsPromise = conn(targetTable)
         .columnInfo()
         .then(columnInfo => new Set(Object.keys(columnInfo)))
         .catch(error => {
-          tableColumnsCache.delete(this.tableName);
+          tableColumnsCache.delete(targetTable);
           throw error;
         });
-      tableColumnsCache.set(this.tableName, columnsPromise);
+      tableColumnsCache.set(targetTable, columnsPromise);
     }
 
     return columnsPromise;
@@ -229,12 +232,16 @@ export abstract class BaseService<T = any> {
 
   /**
    * Remove generated audit fields that are not present on the target table.
+   * Pass `targetTable` when the row will be written to a table other than this
+   * service's default `tableName` (e.g. a hand-rolled insert into `contracts`
+   * from a `contract_lines` service).
    */
   protected async filterAuditFields(
     conn: Knex | Knex.Transaction,
-    data: any
+    data: any,
+    targetTable: string = this.tableName
   ): Promise<any> {
-    const tableColumns = await this.getTableColumns(conn);
+    const tableColumns = await this.getTableColumns(conn, targetTable);
     const auditFields = new Set(Object.values(this.auditFields));
     const filteredData = { ...data };
 
@@ -242,11 +249,11 @@ export abstract class BaseService<T = any> {
       if (Object.prototype.hasOwnProperty.call(filteredData, field) && !tableColumns.has(field)) {
         delete filteredData[field];
 
-        const warningKey = `${this.tableName}:${field}`;
+        const warningKey = `${targetTable}:${field}`;
         if (!warnedMissingAuditFields.has(warningKey)) {
           warnedMissingAuditFields.add(warningKey);
           logger.warn(
-            `[db/BaseService] table "${this.tableName}" has no column "${field}"; skipping audit field`
+            `[db/BaseService] table "${targetTable}" has no column "${field}"; skipping audit field`
           );
         }
       }

@@ -32,13 +32,13 @@ describe('useFeatureFlag', () => {
 
   it('uses the server-bootstrapped value until PostHog delivers an update', async () => {
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <FeatureFlagBootstrapProvider initialFeatureFlags={{ 'project-billing-ui': true }}>
+      <FeatureFlagBootstrapProvider initialFeatureFlags={{ 'sample-bootstrapped-flag': true }}>
         {children}
       </FeatureFlagBootstrapProvider>
     );
 
     const { result } = renderHook(
-      () => useFeatureFlag('project-billing-ui', { defaultValue: false }),
+      () => useFeatureFlag('sample-bootstrapped-flag', { defaultValue: false }),
       { wrapper }
     );
 
@@ -61,13 +61,13 @@ describe('useFeatureFlag', () => {
     });
 
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <FeatureFlagBootstrapProvider initialFeatureFlags={{ 'project-billing-ui': true }}>
+      <FeatureFlagBootstrapProvider initialFeatureFlags={{ 'sample-bootstrapped-flag': true }}>
         {children}
       </FeatureFlagBootstrapProvider>
     );
 
     const { result } = renderHook(
-      () => useFeatureFlag('project-billing-ui', { defaultValue: false }),
+      () => useFeatureFlag('sample-bootstrapped-flag', { defaultValue: false }),
       { wrapper }
     );
 
@@ -76,6 +76,6 @@ describe('useFeatureFlag', () => {
     });
 
     expect(result.current.enabled).toBe(false);
-    expect(posthog.isFeatureEnabled).toHaveBeenCalledWith('project-billing-ui');
+    expect(posthog.isFeatureEnabled).toHaveBeenCalledWith('sample-bootstrapped-flag');
   });
 });

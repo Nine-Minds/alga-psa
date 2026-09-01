@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ROUTE_NAMESPACES } from '@alga-psa/core/i18n/config';
+import { pseudoPattern } from '../../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const;
@@ -107,11 +108,11 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
   it('T004: xx pseudo-locale resolves representative client surfaces to 11111', () => {
     const xx = readLocaleJson('xx', 'clients');
 
-    expect(getValue(xx, 'clientsPage.title')).toBe('11111');
-    expect(getValue(xx, 'clientDetails.title')).toBe('11111');
-    expect(getValue(xx, 'quickAddClient.title')).toBe('11111');
-    expect(getValue(xx, 'clientsImportDialog.title')).toBe('11111');
-    expect(getValue(xx, 'billingConfiguration.general')).toBe('11111');
+    expect(getValue(xx, 'clientsPage.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'clientDetails.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'quickAddClient.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'clientsImportDialog.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'billingConfiguration.general')).toMatch(pseudoPattern('xx'));
   });
 
   it('T010: contact locale files stay structurally aligned with English and preserve interpolation variables', () => {
@@ -129,11 +130,11 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
   it('T013: xx pseudo-locale resolves representative contact surfaces to 11111', () => {
     const xx = readLocaleJson('xx', 'contacts');
 
-    expect(getValue(xx, 'contactsPage.title')).toBe('11111');
-    expect(getValue(xx, 'contactDetails.title')).toBe('11111');
-    expect(getValue(xx, 'quickAddContact.title')).toBe('11111');
-    expect(getValue(xx, 'contactPhoneNumbersEditor.title')).toBe('11111');
-    expect(getValue(xx, 'contactPortalTab.title')).toBe('11111');
+    expect(getValue(xx, 'contactsPage.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'contactDetails.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'quickAddContact.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'contactPhoneNumbersEditor.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'contactPortalTab.title')).toMatch(pseudoPattern('xx'));
   });
 
   it('T020: asset locale files stay structurally aligned with English and preserve interpolation variables', () => {
@@ -151,12 +152,12 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
   it('T023: xx pseudo-locale resolves representative asset dashboard, drawer, tab, and panel surfaces to 11111', () => {
     const xx = readLocaleJson('xx', 'assets');
 
-    expect(getValue(xx, 'assetDashboardClient.title')).toBe('11111');
-    expect(getValue(xx, 'assetForm.title')).toBe('11111');
-    expect(getValue(xx, 'assetDetailDrawer.title')).toBe('11111');
-    expect(getValue(xx, 'maintenanceSchedulesTab.title')).toBe('11111');
-    expect(getValue(xx, 'assetInfoPanel.title')).toBe('11111');
-    expect(getValue(xx, 'assetNotesPanel.title')).toBe('11111');
+    expect(getValue(xx, 'assetDashboardClient.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'assetForm.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'assetDetailDrawer.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'maintenanceSchedulesTab.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'assetInfoPanel.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'assetNotesPanel.title')).toMatch(pseudoPattern('xx'));
   });
 
   it('T030: onboarding locale files stay structurally aligned with English and preserve interpolation variables', () => {
@@ -174,13 +175,13 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
   it('T033: xx pseudo-locale resolves representative onboarding wizard surfaces to 11111', () => {
     const xx = readLocaleJson('xx', 'onboarding');
 
-    expect(getValue(xx, 'onboardingWizard.title')).toBe('11111');
-    expect(getValue(xx, 'clientInfoStep.title')).toBe('11111');
-    expect(getValue(xx, 'teamMembersStep.title')).toBe('11111');
-    expect(getValue(xx, 'addClientStep.title')).toBe('11111');
-    expect(getValue(xx, 'clientContactStep.title')).toBe('11111');
-    expect(getValue(xx, 'billingSetupStep.title')).toBe('11111');
-    expect(getValue(xx, 'ticketingConfigStep.title')).toBe('11111');
+    expect(getValue(xx, 'onboardingWizard.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'clientInfoStep.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'teamMembersStep.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'addClientStep.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'clientContactStep.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'billingSetupStep.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'ticketingConfigStep.title')).toMatch(pseudoPattern('xx'));
   });
 
   it('T034: onboarding namespace keys do not collide with msp/dashboard onboarding keys', () => {
@@ -195,7 +196,9 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
   it('T040: ROUTE_NAMESPACES loads the new MSP feature namespaces on the expected routes', () => {
     expect(ROUTE_NAMESPACES['/msp/clients']).toEqual(['common', 'msp/core', 'msp/clients']);
     expect(ROUTE_NAMESPACES['/msp/contacts']).toEqual(['common', 'msp/core', 'msp/contacts']);
+    expect(ROUTE_NAMESPACES['/msp/interactions']).toEqual(['common', 'msp/core', 'msp/clients', 'msp/integrations']);
     expect(ROUTE_NAMESPACES['/msp/assets']).toEqual(['common', 'msp/core', 'msp/assets']);
+    expect(ROUTE_NAMESPACES['/msp/assets/maintenance']).toEqual(['common', 'msp/core', 'msp/assets']);
     expect(ROUTE_NAMESPACES['/msp/onboarding']).toEqual(['common', 'msp/core', 'msp/onboarding']);
   });
 
@@ -211,10 +214,10 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
       }
     }
 
-    expect(getValue(readLocaleJson('xx', 'clients'), 'clientsPage.title')).toBe('11111');
-    expect(getValue(readLocaleJson('yy', 'contacts'), 'contactsPage.title')).toBe('55555');
-    expect(getValue(readLocaleJson('xx', 'assets'), 'assetDashboardClient.title')).toBe('11111');
-    expect(getValue(readLocaleJson('yy', 'onboarding'), 'onboardingWizard.title')).toContain('55555');
+    expect(getValue(readLocaleJson('xx', 'clients'), 'clientsPage.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(readLocaleJson('yy', 'contacts'), 'contactsPage.title')).toMatch(pseudoPattern('yy'));
+    expect(getValue(readLocaleJson('xx', 'assets'), 'assetDashboardClient.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(readLocaleJson('yy', 'onboarding'), 'onboardingWizard.title')).toMatch(pseudoPattern('yy'));
   });
 
   it('T044: representative surfaces use the right namespaces and keep English fallbacks', () => {

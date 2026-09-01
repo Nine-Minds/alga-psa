@@ -386,5 +386,13 @@
   "hud": {
     "combinations": "combinaisons",
     "thenPress": "puis…"
+  },
+  "vim": {
+    "visualRowRange": "Plage visuelle de lignes",
+    "macro": {
+      "recording": "Enregistrement @{{register}}",
+      "recordPrompt": "Enregistrer une macro : appuyez sur un registre",
+      "playPrompt": "Exécuter une macro : appuyez sur un registre"
+    }
   }
 }

@@ -1,6 +1,8 @@
 'use server';
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
+import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import {
   IContractLineServiceConfiguration,
@@ -27,25 +29,31 @@ function contractLineServiceConfigActionErrorFrom(error: unknown): ContractLineS
       return actionError(error.message);
     }
     if (error.message.includes('not found')) {
-      return actionError('The selected service configuration is no longer available. Please refresh and try again.');
+      return actionError('The selected service configuration is no longer available. Please refresh and try again.', 'msp/contract-lines:errors.configuration.unavailable');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected service configuration values is invalid. Please refresh and try again.');
+    return actionError('One of the selected service configuration values is invalid. Please refresh and try again.', 'msp/contract-lines:errors.configuration.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required service configuration field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required service configuration field: ${dbError.column}.`,
+          'msp/contract-lines:errors.configuration.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required service configuration field.', 'msp/contract-lines:errors.configuration.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected contract line or service no longer exists. Please refresh and try again.');
+    return actionError('The selected contract line or service no longer exists. Please refresh and try again.', 'msp/contract-lines:errors.service.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('This service configuration already exists for the selected contract line.');
+    return actionError('This service configuration already exists for the selected contract line.', 'msp/contract-lines:errors.configuration.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the service configuration values is not allowed. Please review the form and try again.');
+    return actionError('One of the service configuration values is not allowed. Please review the form and try again.', 'msp/contract-lines:errors.configuration.notAllowed');
   }
 
   return null;
@@ -97,7 +105,7 @@ export const getConfigurationWithDetails = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'read')) {
-      return permissionError('Permission denied: billing read required');
+      return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {
@@ -122,7 +130,7 @@ export const getConfigurationsForPlan = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'read')) {
-      return permissionError('Permission denied: billing read required');
+      return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {
@@ -148,7 +156,7 @@ export const getConfigurationForService = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'read')) {
-      return permissionError('Permission denied: billing read required');
+      return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {
@@ -176,7 +184,7 @@ export const createConfiguration = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'create')) {
-      return permissionError('Permission denied: billing create required');
+      return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {
@@ -205,7 +213,7 @@ export const updateConfiguration = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'update')) {
-      return permissionError('Permission denied: billing update required');
+      return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {
@@ -231,7 +239,7 @@ export const deleteConfiguration = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'delete')) {
-      return permissionError('Permission denied: billing delete required');
+      return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {
@@ -259,7 +267,7 @@ export const upsertPlanServiceHourlyConfiguration = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'create')) {
-      return permissionError('Permission denied: billing create required');
+      return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {
@@ -287,15 +295,42 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'create')) {
-      return permissionError('Permission denied: billing create required');
+      return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('tenant context not found');
     }
     await assertContractLineIsAuthorableByLineId(knex, tenant, contractLineId);
-    const service = new ContractLineServiceConfigurationService(knex, tenant);
-    return service.upsertPlanServiceBucketConfiguration(contractLineId, serviceId, bucketConfigData);
+    // Route through the compat layer so the bucket overlay is materialized as
+    // the single-member pool the engine and burn service actually read. The
+    // legacy per-service tables are frozen; writing only those (as this action
+    // used to) silently produced buckets that never billed or burned.
+    const totalMinutes = bucketConfigData.total_minutes;
+    const overageRate = bucketConfigData.overage_rate;
+    if (totalMinutes == null || overageRate == null) {
+      return actionError('Missing required bucket overlay fields.', 'msp/contract-lines:errors.configuration.bucketOverlayFieldsMissing');
+    }
+    let configId = '';
+    await withTransaction(knex, async (trx) => {
+      configId = await upsertBucketOverlayInTransaction(
+        trx,
+        tenant,
+        contractLineId,
+        serviceId,
+        {
+          total_minutes: totalMinutes,
+          overage_rate: overageRate,
+          allow_rollover: bucketConfigData.allow_rollover ?? false,
+          billing_period: (bucketConfigData.billing_period ?? 'monthly') as 'weekly' | 'monthly',
+        },
+        null,
+        null,
+      );
+    });
+    // Backward-compatible success contract: the returned value must carry the
+    // configId (the pool identity serving this (line, service) overlay).
+    return { configId };
   } catch (error) {
     console.error(`Error upserting bucket configuration for contract line ${contractLineId} and service ${serviceId}:`, error);
     const expected = contractLineServiceConfigActionErrorFrom(error);
@@ -323,7 +358,7 @@ export const upsertPlanServiceConfiguration = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'create')) {
-      return permissionError('Permission denied: billing create required');
+      return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {
@@ -382,7 +417,7 @@ export const upsertUserTypeRatesForConfig = withAuth(async (
 ) => {
   try {
     if (!await hasPermission(user, 'billing', 'create')) {
-      return permissionError('Permission denied: billing create required');
+      return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
     }
     const { knex } = await createTenantKnex();
     if (!tenant) {

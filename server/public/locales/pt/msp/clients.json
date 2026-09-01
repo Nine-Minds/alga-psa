@@ -12,7 +12,6 @@
       "downloadCsv": "Baixar CSV",
       "edit": "Editar",
       "import": "Importar",
-      "reactivate": "Reativar",
       "remove": "Remover",
       "retry": "Tentar novamente",
       "save": "Salvar",
@@ -181,7 +180,18 @@
     "shareTooltip": "Imprimir, importar e exportar",
     "defaultClientDeleteError": "Não é possível excluir o cliente padrão. Defina primeiro outro cliente como padrão nas Configurações Gerais.",
     "clientNotFound": "Cliente não encontrado.",
-    "deletePermissionDenied": "Permissão negada: não é possível excluir clientes."
+    "deletePermissionDenied": "Permissão negada: não é possível excluir clientes.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selecionado",
+        "markInactive": "Marcar como inativo",
+        "reactivate": "Reativar",
+        "delete": "Excluir",
+        "print": "Imprimir selecionados",
+        "more": "Mais",
+        "clear": "Limpar seleção"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Oportunidades",
@@ -479,6 +489,7 @@
     "email": "E-mail",
     "emailPlaceholder": "Endereço de email",
     "phone": "Telefone",
+    "extension": "Ramal",
     "phonePlaceholder": "Número de telefone",
     "name": "Nome",
     "creating": "Criando...",
@@ -671,16 +682,16 @@
     "months": {
       "1": "Janeiro",
       "2": "Fevereiro",
-      "3": "Marchar",
-      "4": "abril",
-      "5": "Poderia",
+      "3": "Março",
+      "4": "Abril",
+      "5": "Maio",
       "6": "Junho",
       "7": "Julho",
       "8": "Agosto",
       "9": "Setembro",
-      "10": "outubro",
-      "11": "novembro",
-      "12": "dezembro"
+      "10": "Outubro",
+      "11": "Novembro",
+      "12": "Dezembro"
     },
     "weekdays": {
       "1": "Segunda-feira",
@@ -731,7 +742,10 @@
     "deactivateError": "Falha ao desativar contrato",
     "updateError": "Falha ao atualizar o contrato",
     "createContract": "Criar contrato",
-    "quickAdd": "Adição rápida"
+    "quickAdd": "Adição rápida",
+    "billingProfile": "Perfil de faturamento",
+    "billingProfileUnassigned": "Não atribuído",
+    "billingProfileUpdated": "Perfil de faturamento atualizado"
   },
   "clientContractDialog": {
     "assignTitle": "Atribuir contrato ao cliente",
@@ -909,6 +923,40 @@
     "updateError": "Falha ao atualizar as configurações",
     "useDefaultSuccess": "O cliente agora usará as configurações padrão de expiração de crédito."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Configurações de consumo de crédito",
+    "useDefault": "Usar configurações padrão",
+    "useDefaultHelp": "Use as configurações padrão de todo o sistema para consumo de crédito",
+    "useDefaultSuccess": "O cliente agora usará as configurações padrão de consumo de crédito.",
+    "clientSpecificEnabled": "Configurações de consumo de crédito específicas do cliente habilitadas.",
+    "autoApply": "Aplicar crédito automaticamente na finalização",
+    "autoApplyHelp": "Quando ativado, o crédito disponível é aplicado automaticamente quando uma fatura é finalizada",
+    "orderLabel": "Ordem de aplicação de crédito",
+    "selectOrder": "Selecione a ordem de crédito",
+    "orderHelp": "Escolha a ordem em que os créditos são consumidos",
+    "serviceTypesLabel": "Tipos de serviço elegíveis",
+    "serviceTypesHelp": "Escolha se o crédito pode ser aplicado a todas as cobranças ou apenas às cobranças dos tipos de serviço selecionados.",
+    "noServiceTypes": "Nenhum tipo de serviço configurado.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Usar o padrão do locatário",
+        "all": "Todos os tipos de serviço",
+        "restricted": "Somente os tipos selecionados",
+        "placeholder": "Selecionar a restrição de tipo de serviço"
+      },
+      "inheritedRestricted": "Padrão do locatário: somente os tipos selecionados ({{types}}).",
+      "restricted": "O crédito está restrito aos tipos de serviço selecionados. Selecione pelo menos um para salvar."
+    },
+    "order": {
+      "expirationFirst": "Vencimento mais próximo primeiro",
+      "oldestFirst": "Crédito mais antigo primeiro",
+      "newestFirst": "Crédito mais recente primeiro"
+    },
+    "updatedSuccess": "As configurações de consumo de crédito foram atualizadas.",
+    "loadError": "Falha ao carregar as configurações",
+    "saveError": "Falha ao salvar as configurações",
+    "updateError": "Falha ao atualizar as configurações"
+  },
   "clientExternalCreditSettings": {
     "title": "Crédito externo registrado",
     "enable": "O cliente possui crédito no sistema contábil",
@@ -922,18 +970,19 @@
     "noteUpdatedSuccess": "A nota de crédito externo foi atualizada."
   },
   "clientGridCard": {
-    "actions": "Ações do cliente",
     "quickView": "Visualização rápida",
-    "defaultClient": "Cliente padrão",
     "taxExempt": "Isento de impostos",
     "taxExemptTooltip": "Este cliente está isento de impostos - nenhum imposto será aplicado às suas faturas",
-    "type": "Tipo:",
-    "address": "Endereço:",
-    "phone": "Telefone:",
-    "url": "URL:",
     "clientActions": "Ações do cliente",
     "default": "Padrão",
-    "selectClient": "Selecione o cliente {{name}}"
+    "selectClient": "Selecione o cliente {{name}}",
+    "openTickets_one": "{{count}} aberto",
+    "openTickets_other": "{{count}} abertos",
+    "lifecycle": {
+      "prospect": "Cliente potencial",
+      "former": "Anterior"
+    },
+    "noContactDetails": "Sem dados de contato"
   },
   "clientLanguagePreference": {
     "title": "Configurações de idioma do cliente",
@@ -1315,6 +1364,7 @@
         "notes": "Notas",
         "notesHelper": "Notas adicionais sobre este local",
         "phone": "Telefone",
+        "extension": "Ramal",
         "phoneHelper": "Número de telefone deste local",
         "placeholder": {
           "addressLine1": "Insira o endereço *",
@@ -1332,7 +1382,10 @@
         "stateProvince": "Estado/Província",
         "stateProvinceHelper": "Nome do estado ou província",
         "taxRegion": "Região Fiscal",
-        "taxRegionHelper": "Selecione a região fiscal aplicável"
+        "taxRegionHelper": "Selecione a região fiscal aplicável",
+        "defaultBillingProfile": "Perfil de faturamento padrão",
+        "defaultBillingProfileNone": "Nenhum",
+        "defaultBillingProfileHelper": "Novos tickets nesta localização começam com este perfil de faturamento. Pode sempre ser alterado no ticket."
       },
       "listTitle": "Locais",
       "loading": "Carregando locais...",
@@ -1379,6 +1432,9 @@
       "viewTranscript": "Ver transcrição"
     },
     "quickAdd": {
+      "clientRequired": "Selecione um cliente para esta interação",
+      "contactPlaceholder": "Selecionar contato",
+      "selectClientFirst": "Selecione primeiro um cliente",
       "teams": {
         "attendees": {
           "add": "Adicionar",
@@ -1407,6 +1463,16 @@
         "createFailed": "Falha ao criar reunião do Teams",
         "createToggle": "Criar reunião do Teams",
         "endRequired": "O horário de término é necessário para criar uma reunião do Teams",
+        "invitesDisabled": "Os convites por e-mail estão desativados nas configurações da integração do Teams: a Microsoft não notificará os participantes.",
+        "invitesSummary": "A Microsoft enviará convites de calendário por e-mail para: {{recipients}}.",
+        "invitesSummaryYou": "você (criador)",
+        "reason": {
+          "feature_disabled": "O Microsoft Teams não está habilitado para este locatário.",
+          "ee_disabled": "A integração do Teams requer a Enterprise Edition.",
+          "no_organizer": "Nenhum organizador de reunião padrão está configurado nas configurações do Teams.",
+          "not_configured": "A integração do Teams não foi configurada."
+        },
+        "scheduleSummary": "Uma entrada de agendamento será adicionada ao seu calendário do AlgaPSA.",
         "startRequired": "A hora de início é necessária para criar uma reunião do Teams",
         "unavailable": "A criação de reuniões do Teams não está disponível para este locatário."
       },
@@ -1432,6 +1498,21 @@
       "allContacts": "Todos os contatos",
       "allStatuses": "Todos os status",
       "allUsers": "Todos os usuários",
+      "columns": {
+        "type": "Tipo",
+        "title": "Título",
+        "client": "Cliente",
+        "contact": "Contato",
+        "user": "Usuário",
+        "date": "Data",
+        "status": "Status"
+      },
+      "empty": "Nenhuma interação corresponde a estes filtros.",
+      "loading": "Carregando interações…",
+      "openClient": "Abrir cliente {{name}}",
+      "openContact": "Abrir contato {{name}}",
+      "openInteraction": "Abrir interação {{title}}",
+      "openUser": "Abrir usuário {{name}}",
       "byUser": "Por {{name}}",
       "collapse": "Recolher interações recentes",
       "contactsFromClient": "Contatos do cliente selecionado",
@@ -1566,6 +1647,206 @@
       "loading": "Carregando contato...",
       "notFound": "Contato não encontrado.",
       "loadFailed": "Falha ao carregar o contato."
+    }
+  },
+  "clientBillingProfiles": {
+    "title": "Perfis de faturamento",
+    "description": "Fature separadamente instalações, entidades ou unidades dentro deste cliente. Os encargos são atribuídos a um perfil através do contrato, da linha de contrato ou do item de trabalho de onde provêm; o que não estiver atribuído recai no perfil padrão.",
+    "loading": "A carregar perfis de faturamento…",
+    "defaultBadge": "Predefinido",
+    "rename": "Mudar o nome",
+    "makeDefault": "Definir como padrão",
+    "archive": "Arquivar",
+    "delete": "Eliminar",
+    "restore": "Restaurar",
+    "archivedHeading": "Arquivados",
+    "addLabel": "Adicionar um perfil de faturamento",
+    "addPlaceholder": "ex.: Unidade Norte",
+    "addButton": "Adicionar perfil",
+    "created": "Perfil de faturamento «{{name}}» criado",
+    "renamed": "Perfil de faturamento renomeado",
+    "madeDefault": "«{{name}}» é agora o perfil de faturamento padrão",
+    "archived": "«{{name}}» arquivado",
+    "deleted": "«{{name}}» eliminado",
+    "restored": "«{{name}}» restaurado",
+    "settings": "Configurações de faturamento"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segmentos de faturamento",
+    "restrictedHint": "Este usuário vê apenas os segmentos selecionados abaixo.",
+    "allHint": "Este usuário vê todos os segmentos de faturamento, incluindo os adicionados depois.",
+    "save": "Salvar acesso aos segmentos",
+    "saved": "Acesso aos segmentos do portal atualizado",
+    "emptyWarning": "Selecione ao menos um segmento, ou desative a restrição para mostrar todos."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Configurações do perfil de faturamento salvas",
+    "inherited": "Herdado: {{value}}",
+    "notSet": "Não definido",
+    "billsSeparately": "Faturar separadamente",
+    "billsSeparatelyHint": "Gerar uma fatura separada para este perfil, com seu próprio destinatário, forma de pagamento e saldo.",
+    "billToName": "Nome de faturamento",
+    "billingEmail": "E-mail de faturamento",
+    "poNumber": "Número do pedido de compra",
+    "taxIdNumber": "Número fiscal",
+    "taxExemptionCertificate": "Certificado de isenção fiscal",
+    "invoiceDeliveryMethod": "Forma de envio das faturas",
+    "billingCycle": "Ciclo de faturamento",
+    "paymentTerms": "Condições de pagamento",
+    "taxExempt": "Isento de imposto",
+    "taxExemptInherited": "Herdado do cliente ({{value}})",
+    "regionNote": "A região fiscal não é definida aqui. Ela segue o local de entrega — o serviço, depois a localização da linha de contrato, depois o padrão do cliente."
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Alertas de saldo pré-pago",
+    "scheduleHelp": "As verificações são executadas diariamente às 09:00 UTC. Salvar não envia nada imediatamente.",
+    "creditSwitch": "Alertas de crédito pré-pago",
+    "creditSwitchHelp": "Alertar quando o crédito pré-pago disponível cair abaixo do limite configurado",
+    "creditThreshold": "Limite de crédito",
+    "creditThresholdPlaceholder": "ex.: 500,00",
+    "creditThresholdHelp": "Crédito pré-pago restante que aciona um alerta",
+    "creditCurrency": "Moeda",
+    "creditAmountError": "Informe um limite de crédito positivo",
+    "bucketSwitch": "Alertas de uso de pacote",
+    "bucketSwitchHelp": "Alertar quando um pacote de horas pré-pago atingir o consumo configurado",
+    "bucketPercent": "Limite de consumo (%)",
+    "bucketPercentPlaceholder": "ex.: 80",
+    "bucketPercentHelp": "Percentual da capacidade do pacote que aciona um alerta",
+    "percentRangeError": "Informe um número inteiro de 1 a 100",
+    "notifyClient": "Enviar também um e-mail ao destinatário de faturamento do cliente",
+    "notifyClientHelp": "Envia o alerta ao destinatário de faturamento canônico do cliente",
+    "replenishmentTier": "Quando um alerta é disparado",
+    "replenishmentNotifyOnly": "Apenas notificar",
+    "replenishmentDraft": "Criar um rascunho de fatura de reabastecimento e notificar",
+    "replenishmentAutoIssue": "Criar e emitir uma fatura de reabastecimento",
+    "replenishmentAmount": "Valor de reabastecimento de crédito",
+    "replenishmentAmountHelp": "Valor na moeda selecionada. Os alertas de pacote usam os minutos abaixo.",
+    "replenishmentAmountError": "Informe um valor de reabastecimento positivo na moeda selecionada",
+    "replenishmentMinutes": "Minutos de reabastecimento do pacote",
+    "replenishmentMinutesError": "Informe um número inteiro positivo de minutos",
+    "replenishmentHorizon": "Ignorar o reabastecimento dentro deste número de dias do fim do contrato",
+    "replenishmentHorizonError": "Informe um número de dias de 0 a 3650",
+    "save": "Salvar",
+    "saveSuccess": "Configurações de alerta de saldo pré-pago salvas",
+    "saveError": "Não foi possível salvar as configurações de alerta de saldo pré-pago",
+    "loadError": "Não foi possível carregar as configurações de alerta de saldo pré-pago",
+    "contractOverrideTitle": "Substituição de reabastecimento do contrato",
+    "contractOverrideContract": "Contrato",
+    "contractOverrideInherit": "Usar padrão do cliente",
+    "saveContractOverride": "Salvar substituição do contrato",
+    "contractSaveSuccess": "Política de reabastecimento do contrato salva",
+    "contractSaveError": "Não foi possível salvar a política de reabastecimento do contrato"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Cliente não encontrado",
+      "signInRequired": "Você precisa estar conectado para gerenciar clientes.",
+      "duplicateName": "Já existe um cliente com o nome \"{{name}}\". Escolha um nome diferente.",
+      "duplicate": "Já existe um cliente com estes dados. Verifique o nome do cliente.",
+      "referencedDataMissing": "Dados referenciados não encontrados. Verifique o gerente de conta, o contato de faturamento e as configurações de cliente relacionadas.",
+      "invalidValue": "Um dos valores de cliente selecionados é inválido. Atualize a página e tente novamente.",
+      "invalidData": "Dados de cliente inválidos. Verifique todos os campos e tente novamente.",
+      "missingField": "Falta um campo obrigatório do cliente.",
+      "missingFieldNamed": "Falta um campo obrigatório do cliente: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Permissão negada: não é possível ler clientes",
+      "updateClients": "Permissão negada: não é possível atualizar clientes"
+    },
+    "timeline": {
+      "invalidCursor": "Cursor de linha do tempo do cliente inválido"
+    },
+    "location": {
+      "notFound": "Local não encontrado ou não está mais ativo.",
+      "defaultRequired": "Adicione outro local ativo ou escolha um padrão diferente antes de remover este local como padrão.",
+      "missingField": "Falta um campo obrigatório do local.",
+      "missingFieldNamed": "Falta um campo obrigatório do local: {{field}}.",
+      "referenceInvalid": "O cliente, o país, a região fiscal ou os dados de local relacionados selecionados não são mais válidos. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro de local conflitante. Atualize os locais e tente novamente.",
+      "invalidData": "Dados de local inválidos. Verifique os campos de endereço e contato."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Não foi possível adicionar o domínio de e-mail de entrada. Tente novamente.",
+      "notFound": "Domínio de e-mail de entrada não encontrado."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Falta um campo obrigatório do destino de tickets de entrada.",
+      "missingFieldNamed": "Falta um campo obrigatório do destino de tickets de entrada: {{field}}.",
+      "referenceInvalid": "O destino de tickets de entrada selecionado não é mais válido. Atualize a página e tente novamente."
+    },
+    "interaction": {
+      "notFound": "Interação não encontrada",
+      "signInRequired": "Você precisa estar conectado para gerenciar interações.",
+      "identifierInvalid": "Um dos identificadores de interação é inválido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da interação.",
+      "missingFieldNamed": "Falta um campo obrigatório da interação: {{field}}.",
+      "referenceMissing": "A interação, o cliente, o contato, o usuário, o status ou o tipo selecionados não existem mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma interação com estes dados."
+    },
+    "interactionType": {
+      "notFound": "Tipo de interação não encontrado ou você não tem acesso a ele.",
+      "missingField": "Falta um campo obrigatório do tipo de interação.",
+      "missingFieldNamed": "Falta um campo obrigatório do tipo de interação: {{field}}.",
+      "referenceInvalid": "Os dados referenciados do tipo de interação não são mais válidos. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um tipo de interação com estes dados.",
+      "invalidData": "Dados de tipo de interação inválidos. Verifique o nome, o ícone e a ordem de exibição."
+    },
+    "taxRate": {
+      "signInRequired": "Você precisa estar conectado para atualizar as alíquotas de imposto do cliente.",
+      "invalidReference": "O cliente ou a alíquota de imposto selecionados são inválidos. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da alíquota de imposto do cliente.",
+      "missingFieldNamed": "Falta um campo obrigatório da alíquota de imposto do cliente: {{field}}.",
+      "referenceMissing": "O cliente ou a alíquota de imposto selecionados não existem mais. Atualize a página e tente novamente.",
+      "duplicate": "Esta alíquota de imposto já está associada ao cliente.",
+      "associationNotFound": "Associação da alíquota de imposto do cliente não encontrada.",
+      "rateNotFound": "Alíquota de imposto com o ID {{id}} não encontrada."
+    },
+    "alias": {
+      "required": "O alias é obrigatório",
+      "tooLong": "O alias é muito longo",
+      "addFailed": "Não foi possível adicionar o alias do cliente. Tente novamente.",
+      "notFound": "Alias não encontrado."
+    },
+    "contractLine": {
+      "signInRequired": "Você precisa estar conectado para gerenciar as linhas de contrato do cliente.",
+      "refreshAssignment": "Atualize a atribuição de contrato e tente novamente.",
+      "sharedByAssignments": "Esta linha de contrato é compartilhada por várias atribuições ativas. Edite a atribuição de contrato específica antes de alterar suas linhas.",
+      "duplicate": "Já existe uma linha de contrato com estes dados para este cliente.",
+      "invalidReference": "O cliente ou a linha de contrato selecionados são inválidos. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da linha de contrato.",
+      "missingFieldNamed": "Falta um campo obrigatório da linha de contrato: {{field}}.",
+      "referenceInvalid": "A referência da linha de contrato selecionada não é mais válida. Atualize a página e tente novamente.",
+      "storageUnavailable": "O armazenamento de linhas de contrato do cliente está indisponível. Tente novamente mais tarde.",
+      "invalidData": "Os dados da linha de contrato do cliente são inválidos. Atualize a página e tente novamente.",
+      "addFailed": "Não foi possível adicionar a linha de contrato do cliente."
+    },
+    "billingSettings": {
+      "updateDenied": "Permissão negada: não é possível atualizar as configurações de faturamento",
+      "readRequired": "Permissão negada: é necessária permissão de leitura de billing_settings",
+      "updateRequired": "Permissão negada: é necessária permissão de atualização de billing_settings",
+      "tenantContextMissing": "Contexto de tenant não encontrado",
+      "clientContextMissing": "Contexto de cliente não encontrado",
+      "prepaidAlertsDisabled": "Os alertas de saldo pré-pago não estão habilitados para este espaço de trabalho",
+      "invalidPrepaidAlertSettings": "Configurações de alerta de saldo pré-pago inválidas",
+      "prepaidAlertUpdateFailed": "Não foi possível atualizar as configurações de alerta de saldo pré-pago",
+      "contractReplenishmentUpdateFailed": "Não foi possível atualizar a política de reabastecimento do contrato"
+    },
+    "billingProfile": {
+      "signInRequired": "Você precisa estar conectado para gerenciar perfis de faturamento.",
+      "duplicateDefault": "Este cliente já tem um perfil de faturamento padrão.",
+      "stillReferenced": "O perfil de faturamento ainda está em uso e não pode ser removido.",
+      "defaultRequired": "Um cliente deve sempre ter exatamente um perfil de faturamento padrão.",
+      "nameRequired": "Um perfil de faturamento precisa de um nome.",
+      "notThisClient": "Esse perfil de faturamento não pertence a este cliente.",
+      "archivedCannotBeDefault": "Um perfil de faturamento arquivado não pode ser definido como padrão.",
+      "notFound": "Esse perfil de faturamento não existe mais.",
+      "defaultCannotArchive": "O perfil de faturamento padrão não pode ser arquivado. Defina outro perfil como padrão primeiro.",
+      "defaultCannotDelete": "O perfil de faturamento padrão não pode ser excluído. Defina outro perfil como padrão primeiro.",
+      "inUse": "Este perfil de faturamento é usado por {{references}}. Arquive-o em vez de excluí-lo — a exclusão apagaria como essas cobranças foram atribuídas.",
+      "recordNotFound": "Esse registro ou perfil de faturamento não existe mais.",
+      "otherClient": "Esse perfil de faturamento pertence a outro cliente.",
+      "archived": "Esse perfil de faturamento está arquivado.",
+      "selectionNotThisClient": "Um dos perfis de faturamento selecionados não pertence a este cliente."
     }
   }
 }

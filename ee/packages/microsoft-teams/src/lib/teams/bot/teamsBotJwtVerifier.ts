@@ -1,9 +1,24 @@
 import { createLocalJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { isTeamsEmulatorModeEnabled } from '../emulatorMode';
 import { readBotCredentialsFromEnv } from './teamsBotConnector';
 
 const BOT_FRAMEWORK_OPENID_URL =
   'https://login.botframework.com/v1/.well-known/openidconfiguration';
 const BOT_FRAMEWORK_ISSUER = 'https://api.botframework.com';
+
+/**
+ * With the emulator gate explicitly on, the OpenID discovery document may be
+ * redirected at a local emulator (algasim), which publishes its own JWKS and
+ * signs the activities it injects. Verification itself is untouched: signature,
+ * issuer, and audience are still fully checked against whatever JWKS is
+ * discovered.
+ */
+function openIdConfigUrl(): string {
+  if (!isTeamsEmulatorModeEnabled()) {
+    return BOT_FRAMEWORK_OPENID_URL;
+  }
+  return process.env.TEAMS_BOT_OPENID_CONFIG_URL?.trim() || BOT_FRAMEWORK_OPENID_URL;
+}
 
 interface OpenIdConfig {
   jwks_uri?: string;
@@ -17,6 +32,19 @@ interface CachedJwksContext {
 }
 
 const JWKS_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const EMULATOR_JWKS_CACHE_TTL_MS = 30 * 1000;
+
+/**
+ * A restarted emulator regenerates its signing keypair, so caching its JWKS for
+ * 12h would reject every injected activity until the app itself is restarted.
+ * Keying off the resolved URL keeps production — and any run without the
+ * override — on the long TTL automatically.
+ */
+function jwksCacheTtlMs(): number {
+  return openIdConfigUrl() === BOT_FRAMEWORK_OPENID_URL
+    ? JWKS_CACHE_TTL_MS
+    : EMULATOR_JWKS_CACHE_TTL_MS;
+}
 
 let cachedContext: CachedJwksContext | null = null;
 let inFlightConfigFetch: Promise<CachedJwksContext> | null = null;
@@ -27,7 +55,7 @@ export function resetTeamsBotJwksCacheForTests(): void {
 }
 
 async function loadJwksContext(): Promise<CachedJwksContext> {
-  if (cachedContext && Date.now() - cachedContext.refreshedAt < JWKS_CACHE_TTL_MS) {
+  if (cachedContext && Date.now() - cachedContext.refreshedAt < jwksCacheTtlMs()) {
     return cachedContext;
   }
 
@@ -36,7 +64,7 @@ async function loadJwksContext(): Promise<CachedJwksContext> {
   }
 
   inFlightConfigFetch = (async () => {
-    const response = await fetch(BOT_FRAMEWORK_OPENID_URL);
+    const response = await fetch(openIdConfigUrl());
     if (!response.ok) {
       throw new Error(
         `Failed to fetch Bot Framework OpenID config (${response.status} ${response.statusText})`

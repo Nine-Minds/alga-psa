@@ -77,7 +77,9 @@
     "invoiceAmount": "Rechnungsbetrag:",
     "selectCreditToApply": "Gutschrift zum Anwenden auswählen",
     "amountToApply": "Anzuwendender Betrag",
-    "creditOrderNote": "Gutschriften werden nach Ablaufdatum angewendet (älteste zuerst)",
+    "creditOrderNoteExpirationFirst": "Gutschriften werden nach Ablaufdatum angewendet (bald ablaufende zuerst)",
+    "creditOrderNoteOldestFirst": "Gutschriften werden nach Erstellungsdatum angewendet (älteste zuerst)",
+    "creditOrderNoteNewestFirst": "Gutschriften werden nach Erstellungsdatum angewendet (neueste zuerst)",
     "noCreditsAvailable": "Für diesen Kunden sind keine Gutschriften verfügbar",
     "failedToLoadCredits": "Verfügbare Gutschriften konnten nicht geladen werden",
     "selectCreditError": "Bitte wählen Sie eine Gutschrift aus und geben Sie einen gültigen Betrag ein",
@@ -141,7 +143,9 @@
       "reason": "Warum wird diese Gutschrift übertragen?"
     },
     "hints": {
-      "amount": "Bis zu {{amount}} verfügbar"
+      "amount": "Bis zu {{amount}} verfügbar",
+      "currencyMatch": "Der ausgewählte Kunde verwendet dieselbe Währung.",
+      "currencyMismatch": "Der ausgewählte Kunde verwendet eine andere Währung; eine Umrechnung kann erfolgen."
     },
     "impact": {
       "current": "Aktuelles Restguthaben",
@@ -190,6 +194,25 @@
       "validAmount": "Bitte geben Sie einen gültigen Betrag ein",
       "loadClientsFailed": "Kunden konnten nicht geladen werden. Bitte erneut versuchen.",
       "submitFailed": "Guthaben konnte nicht hinzugefügt werden. Bitte erneut versuchen."
+    }
+  },
+  "errors": {
+    "credit": {
+      "notFoundRefresh": "Gutschrift nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "originalTransactionMissing": "Die ursprüngliche Gutschriftbuchung konnte nicht gefunden werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "sourceNotFound": "Quellgutschrift nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "targetClientNotFound": "Zielkunde nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "insufficientTransferAmount": "Der verbleibende Betrag reicht für die Übertragung nicht aus.",
+      "invalidValue": "Einer der ausgewählten Gutschriftwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Gutschrift, der Kunde, die Rechnung oder Buchung existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Es existiert bereits eine widersprüchliche Gutschriftbuchung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der Gutschriftwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Gutschriftfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Gutschriftfeld fehlt: {{field}}."
+    },
+    "prepaidAlerts": {
+      "settingsInvalid": "Ungültige Einstellungen für Warnungen zum Guthabenstand",
+      "updateFailed": "Die Einstellungen für Warnungen zum Guthabenstand konnten nicht aktualisiert werden"
     }
   }
 }

@@ -69,10 +69,15 @@
     "suggestedDefaultsLoaded_other": "Standards für {{count}} Entitätstypen geladen",
     "suggestedDefaultsLoadFailed": "Vorgeschlagene Standards konnten nicht geladen werden",
     "entityTypesAllConfigured": "Alle Entitätstypen haben bereits Standardordner konfiguriert",
-    "defaultFoldersLoadFailed": "Standardordner konnten nicht geladen werden"
+    "defaultFoldersLoadFailed": "Standardordner konnten nicht geladen werden",
+    "parseContentFailed": "Dokumentinhalt konnte nicht analysiert werden"
   },
   "validation": {
-    "nameRequired": "Dokumentname ist erforderlich"
+    "nameRequired": "Dokumentname ist erforderlich",
+    "typeRequired": "Dokumenttyp ist erforderlich",
+    "userIdRequired": "Benutzer-ID ist erforderlich",
+    "orderNumberRequired": "Auftragsnummer ist erforderlich",
+    "contentRequired": "Inhalt ist erforderlich"
   },
   "bulkActions": {
     "selected_one": "{{count}} Dokument ausgewählt",
@@ -239,7 +244,9 @@
     "cascadeMakeVisible": "Möchten Sie auch alle {{count}} Dokument(e) in \"{{name}}\" für das Kundenportal sichtbar machen?",
     "cascadeMakeHidden": "Möchten Sie auch alle {{count}} Dokument(e) in \"{{name}}\" im Kundenportal ausblenden?",
     "cascadeYes": "Ja, Dokumente aktualisieren",
-    "cascadeNo": "Nein, nur Ordner"
+    "cascadeNo": "Nein, nur Ordner",
+    "visibleToClients": "Für Kunden sichtbar",
+    "hiddenFromClients": "Für Kunden ausgeblendet"
   },
   "empty": {
     "default": "Keine Dokumente gefunden"
@@ -283,5 +290,79 @@
     "pageOf": "Seite {{current}} von {{total}}",
     "previous": "Zurück"
   },
-  "ticketDocuments": "Ticket-Dokumente"
+  "ticketDocuments": "Ticket-Dokumente",
+  "actions": {
+    "save": "Speichern",
+    "saving": "Wird gespeichert...",
+    "cancel": "Abbrechen"
+  },
+  "card": {
+    "noDate": "Kein Datum",
+    "reflectionLabel": "Dokumentkarte"
+  },
+  "editor": {
+    "loading": "Wird geladen...",
+    "initializing": "Editor wird initialisiert...",
+    "placeholder": "Beginnen Sie zu schreiben...",
+    "errorPrefix": "Fehler: {{message}}",
+    "status": {
+      "offline": "Offline — Änderungen werden nach Wiederherstellung der Verbindung synchronisiert",
+      "allChangesSaved": "Alle Änderungen gespeichert",
+      "syncing": "{{status}} (wird synchronisiert)"
+    },
+    "connection": {
+      "connected": "Verbunden",
+      "connecting": "Verbindung wird hergestellt",
+      "disconnected": "Getrennt"
+    },
+    "presence": {
+      "unknownUser": "Benutzer"
+    },
+    "toolbar": {
+      "bold": "Fett (Strg+B)",
+      "italic": "Kursiv (Strg+I)",
+      "underline": "Unterstrichen (Strg+U)",
+      "strikethrough": "Durchgestrichen",
+      "code": "Quellcode",
+      "heading1": "Überschrift 1",
+      "heading2": "Überschrift 2",
+      "bulletList": "Aufzählung",
+      "orderedList": "Nummerierte Liste",
+      "quote": "Blockzitat",
+      "link": "Verknüpfung",
+      "image": "Bild einfügen",
+      "linkPrompt": "URL",
+      "imagePrompt": "Bild-URL"
+    },
+    "imageUpload": {
+      "failed": "Bild-Upload fehlgeschlagen",
+      "tooLarge": "Das Bild überschreitet das Upload-Limit von 10 MB",
+      "notAnImage": "Nur Bilddateien können in den Editor eingefügt werden",
+      "noSession": "Melden Sie sich erneut an, um Bilder hochzuladen"
+    }
+  },
+  "form": {
+    "errorsHeading": "Beheben Sie die folgenden Fehler:",
+    "submit": "Dokument erstellen",
+    "fields": {
+      "documentName": "Dokumentname *",
+      "documentType": "Dokumenttyp *",
+      "userId": "Benutzer-ID *",
+      "contactNameId": "Kontaktname-ID",
+      "clientId": "Kunden-ID",
+      "ticketId": "Ticket-ID",
+      "orderNumber": "Auftragsnummer *",
+      "content": "Inhalt *"
+    }
+  },
+  "previewPane": {
+    "loading": "Vorschau wird geladen...",
+    "pdfDocument": "PDF-Dokument",
+    "videoFile": "Videodatei",
+    "notAvailable": "Vorschau nicht verfügbar",
+    "altPdf": "Vorschau von {{name}}",
+    "altVideoThumbnail": "Vorschaubild von {{name}}",
+    "pageCount_one": "{{count}} Seite",
+    "pageCount_other": "{{count}} Seiten"
+  }
 }

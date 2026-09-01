@@ -814,6 +814,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   <TemplateRenderer
                     template={selectedTemplate}
                     invoiceData={detailedInvoiceData}
+                    invoiceId={invoiceId}
                   />
                 </PaperInvoice>
               </div>

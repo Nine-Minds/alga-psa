@@ -34,7 +34,7 @@ export async function ensureStorageTables(): Promise<void> {
   try {
     const { rows } = await db.raw('SELECT current_database() AS name');
     const currentDatabase = rows?.[0]?.name as string | undefined;
-    const safeDbName = (currentDatabase ?? 'sebastian_test').replace(/"/g, '""');
+    const safeDbName = (currentDatabase ?? 'test_database').replace(/"/g, '""');
 
     // Best-effort only: the dbConfig bootstrap already provisions app_user
     // with the right password. Never ALTER the role — it is cluster-wide and

@@ -386,5 +386,13 @@
   "hud": {
     "combinations": "combinations",
     "thenPress": "then…"
+  },
+  "vim": {
+    "macro": {
+      "recording": "Recording @{{register}}",
+      "recordPrompt": "Record macro: press register",
+      "playPrompt": "Play macro: press register"
+    },
+    "visualRowRange": "Visual row range"
   }
 }

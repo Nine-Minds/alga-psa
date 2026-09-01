@@ -1,11 +1,14 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { describeWithDb } from '../../../test-utils/requireDb';
 import { exportWorkflowAuditLogsAction } from '@alga-psa/workflows/actions';
 import { createTenantKnex, getCurrentTenantId, tenantDb } from '@alga-psa/db';
 import { getCurrentUser, hasPermission } from '@alga-psa/auth';
+
+const describeDb = await describeWithDb();
 
 let tenantId = '';
 let userId = '';
@@ -60,7 +63,6 @@ let tenantColumns: ColumnMap;
 let userColumns: ColumnMap;
 let workflowColumns: ColumnMap;
 let runColumns: ColumnMap;
-let dbAvailable = true;
 
 function hasColumn(columns: ColumnMap, name: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, name);
@@ -90,23 +92,16 @@ async function insertAuditLog(tenant: string, row: Record<string, unknown>) {
   });
 }
 
-describe('workflow audit export integration', () => {
+describeDb('workflow audit export integration', () => {
   beforeAll(async () => {
-    try {
-      db = await createTestDbConnection();
-      tenantColumns = await schemaTable('tenants').columnInfo();
-      userColumns = await schemaTable('users').columnInfo();
-      workflowColumns = await schemaTable('workflow_definitions').columnInfo();
-      runColumns = await schemaTable('workflow_runs').columnInfo();
-    } catch {
-      dbAvailable = false;
-    }
+    db = await createTestDbConnection();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    workflowColumns = await schemaTable('workflow_definitions').columnInfo();
+    runColumns = await schemaTable('workflow_runs').columnInfo();
   }, 180_000);
 
   beforeEach(async () => {
-    if (!dbAvailable) {
-      return;
-    }
     tenantId = uuidv4();
     userId = uuidv4();
 
@@ -140,15 +135,10 @@ describe('workflow audit export integration', () => {
   });
 
   afterAll(async () => {
-    if (dbAvailable) {
-      await db.destroy();
-    }
+    await db?.destroy();
   });
 
   it('T008: CSV export returns business-readable columns and JSON export remains raw redacted rows', async () => {
-    if (!dbAvailable) {
-      return;
-    }
     const workflowId = uuidv4();
 
     await tenantTable(tenantId, 'workflow_definitions').insert({
@@ -217,10 +207,6 @@ describe('workflow audit export integration', () => {
   });
 
   it('T009: export still fails fast when permission or tenant scope validation fails', async () => {
-    if (!dbAvailable) {
-      return;
-    }
-
     const workflowId = uuidv4();
     await tenantTable(tenantId, 'workflow_definitions').insert({
       workflow_id: workflowId,
@@ -270,10 +256,6 @@ describe('workflow audit export integration', () => {
   });
 
   it('T010: export callers can use existing inputs and receive unchanged CSV content type + filename pattern', async () => {
-    if (!dbAvailable) {
-      return;
-    }
-
     const workflowId = uuidv4();
     const runId = uuidv4();
     const now = new Date().toISOString();

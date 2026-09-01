@@ -3,16 +3,56 @@
 
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoTimelineTile } from './BentoTimelineTile';
 
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
 
 vi.mock('next/dynamic', () => ({
-  default: () => () => <div data-testid="composer-editor" />,
+  default: () => ({ onContentChange }: { onContentChange: (content: unknown[]) => void }) => (
+    <button data-testid="composer-editor" type="button" onClick={() => onContentChange([])} />
+  ),
+}));
+
+vi.mock('@alga-psa/core', () => ({
+  getUserTimeZone: () => 'America/New_York',
+  zonedWallTimeToUtc: () => new Date('2026-08-23T13:30:00.000Z'),
+  dateToWallTimeString: () => '2026-08-23T09:30',
+}));
+
+// The design-system DateTimePicker (calendar + time-rail panel) has its own
+// suite; here we stub it to a labeled input so this test stays focused on the
+// composer's lane isolation and schedule-param plumbing, and can drive a Date.
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
+  DateTimePicker: ({ id, label, value, onChange }: {
+    id?: string;
+    label?: string;
+    value?: Date;
+    onChange: (date: Date | undefined) => void;
+  }) => (
+    <input
+      id={id}
+      data-testid="datetimepicker"
+      aria-label={label}
+      value={value ? value.toISOString() : ''}
+      onChange={(event) => onChange(event.target.value ? new Date(event.target.value) : undefined)}
+    />
+  ),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  // Components under test format dates through useFormatters; the real hook
+  // reads the locale off the provider this test does not mount.
+  useFormatters: () => ({
+    locale: 'en',
+    formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en', options).format(typeof date === 'string' ? new Date(date) : date),
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', options).format(value),
+    formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
+    formatRelativeTime: (date: Date | string) => String(date),
+  }),
   useTranslation: () => ({
     t: (_key: string, fallback?: string, values?: Record<string, unknown>) => {
       let result = fallback ?? _key;
@@ -47,7 +87,19 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Label', () => ({
-  Label: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  Label: ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => (
+    <label htmlFor={htmlFor}>{children}</label>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/Input', () => ({
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+}));
+
+vi.mock('@alga-psa/ui/components/Switch', () => ({
+  Switch: ({ id, checked, onCheckedChange }: { id: string; checked: boolean; onCheckedChange: (checked: boolean) => void }) => (
+    <button id={id} type="button" role="switch" aria-checked={checked} onClick={() => onCheckedChange(!checked)} />
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
@@ -133,12 +185,24 @@ const defaultProps: BentoTimelineTileProps = {
 };
 
 function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
-  return render(<BentoTimelineTile {...defaultProps} {...overrides} />);
+  const result = render(<BentoTimelineTile {...defaultProps} {...overrides} />);
+  // The composer is collapsed behind the header button until asked for.
+  fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+  return result;
 }
 
 describe('BentoTimelineTile composer heading', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The composer rejects instants that are not in the future, so pin the
+    // clock behind the mocked 2026-08-23T13:30Z schedule; on a real clock this
+    // suite starts failing the moment that instant becomes the past.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-08-23T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('shows the contact heading only in the client lane', () => {
@@ -166,5 +230,69 @@ describe('BentoTimelineTile composer heading', () => {
 
     fireEvent.click(document.getElementById('ticket-timeline-composer-lane-resolution')!);
     expect(screen.queryByText('Write a reply')).not.toBeInTheDocument();
+  });
+
+  it('schedules a client-visible comment with the resolved instant and user time zone', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    renderTimeline({ onAddNewComment });
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Schedule' }));
+    const publishAt = screen.getByLabelText('Publish at (America/New_York)');
+    fireEvent.change(publishAt, { target: { value: '2026-08-23T09:30' } });
+    expect(screen.getByText(/Resolved instant: 2026-08-23T13:30:00.000Z/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenCalledWith(
+        false,
+        false,
+        null,
+        undefined,
+        { publishAt: '2026-08-23T13:30:00.000Z', timeZone: 'America/New_York' },
+      );
+      expect(document.getElementById('ticket-timeline-composer')).toBeNull();
+    });
+  });
+
+  it('does not expose scheduling controls in the internal lane', () => {
+    renderTimeline();
+
+    expect(document.getElementById('ticket-timeline-composer-schedule-toggle')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Internal' }));
+    expect(document.getElementById('ticket-timeline-composer-schedule-toggle')).toBeNull();
+  });
+
+  it.each([
+    { lane: 'Internal', isInternal: true, isResolution: false },
+    { lane: 'Resolution', isInternal: false, isResolution: true },
+  ])('allows an ordinary $lane comment after leaving an invalid client schedule', async ({ lane, isInternal, isResolution }) => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    renderTimeline({ onAddNewComment });
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Schedule' }));
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: lane }));
+
+    const send = screen.getByRole('button', { name: 'Send' });
+    expect(send).toBeEnabled();
+    fireEvent.click(send);
+
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenCalledWith(isInternal, isResolution, null, undefined, null);
+    });
+  });
+
+  it('clears a scheduled draft when cancelled before reopening the composer', () => {
+    renderTimeline();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Schedule' }));
+    expect(screen.getByLabelText('Publish at (America/New_York)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
+
+    expect(screen.getByRole('switch', { name: 'Schedule' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.queryByLabelText('Publish at (America/New_York)')).not.toBeInTheDocument();
   });
 });

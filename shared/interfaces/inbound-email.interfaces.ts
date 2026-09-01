@@ -9,7 +9,7 @@ export interface EmailProviderConfig {
   folder_to_monitor: string; // Defaults to 'Inbox'
   active: boolean;
   inboundPausedAt?: string | null;
-  inboundPauseReason?: 'manual' | 'tenant_cancelled' | null;
+  inboundPauseReason?: 'manual' | 'tenant_cancelled' | 'auth_failure' | null;
   // Common webhook fields as real columns
   webhook_notification_url: string;
   webhook_subscription_id?: string;
@@ -149,6 +149,10 @@ export interface EmailMessage {
 }
 
 export interface EmailMessageDetails extends EmailMessage {
+  /** Provider-assigned identity, kept separate from the RFC 5322 display id. */
+  providerIdentity?: string;
+  /** SHA-256 of the exact raw MIME bytes used to construct this message. */
+  sourceSha256?: string;
   // Additional details that might be available when fetching full message
   headers?: Record<string, string>;
   messageSize?: number;
@@ -242,3 +246,91 @@ export interface EmailQueueJob {
   // Optional email data for cases where we already have the email content (e.g., MailHog)
   emailData?: EmailMessage;
 }
+
+// ===========================================================================
+// Durable inbound email pipeline (V2 contracts)
+// ===========================================================================
+
+/**
+ * Versioned work types carried by the V2 Redis transport. Payloads contain only
+ * durable record IDs — never MIME or attachment content.
+ */
+export type DurableInboundEmailWorkType =
+  | 'stage_ingress'
+  | 'process_inbox'
+  | 'process_artifact'
+  | 'publish_outbox'
+  | 'republish_outbox_event';
+
+export interface UnifiedInboundEmailQueueJobV2 {
+  schemaVersion: 2;
+  workType: DurableInboundEmailWorkType;
+  tenantId: string;
+  /** Durable record id for the work type: ingress_id, inbox_id, artifact_key (per inbox), or outbox_id. */
+  recordId: string;
+  /** Secondary id used to disambiguate artifact/outbox rows scoped to an inbox. */
+  inboxId?: string;
+  jobId: string;
+  enqueuedAt: string;
+  attempt: number;
+  maxAttempts: number;
+}
+
+/** Claim ownership record for a V2 queue job. */
+export interface ClaimedInboundEmailQueueJobV2 {
+  job: UnifiedInboundEmailQueueJobV2;
+  originalPayload: string;
+  claimToken: string;
+  consumerId: string;
+  claimedAt: string;
+  leaseExpiresAt: string;
+}
+
+/** Dispositions a V2 consumer can return for a handled wake-up. */
+export type InboundEmailQueueDisposition =
+  | { disposition: 'ack'; outcome?: string; reason?: string }
+  | { disposition: 'retry'; error: string }
+  | { disposition: 'defer'; untilIso: string; reason?: string };
+
+/** Structured durable-inbox terminal outcome stored on `inbound_email_inbox`. */
+export type InboundEmailInboxOutcomeKind = 'created' | 'replied' | 'skipped' | 'reconciled';
+
+export type InboundEmailDurableMode = 'off' | 'shadow' | 'enforce';
+
+/**
+ * Minimal shape of the durable inbox row as read by workers. Full row columns
+ * are handled by the durable store; this captures the fields workers rely on.
+ */
+export interface InboundEmailInboxRecord {
+  tenant: string;
+  inbox_id: string;
+  ingress_id: string | null;
+  provider_id: string;
+  provider_type: InboundProviderType;
+  normalized_message_id: string;
+  provider_message_id: string | null;
+  rfc_message_id: string | null;
+  source_object_key: string | null;
+  source_sha256: string | null;
+  source_size_bytes: string | number | null;
+  source_staged_at: string | Date | null;
+  envelope: Record<string, unknown>;
+  legacy_imported: boolean;
+  status: string;
+  attempt_count: number;
+  lease_owner: string | null;
+  lease_token: string | null;
+  lease_version: number;
+  lease_expires_at: string | Date | null;
+  next_attempt_at: string | Date | null;
+  outcome_kind: InboundEmailInboxOutcomeKind | null;
+  outcome_reason: string | null;
+  ticket_id: string | null;
+  comment_id: string | null;
+  last_error: string | null;
+  error_details: Record<string, unknown> | null;
+  received_at: string | Date;
+  completed_at: string | Date | null;
+}
+
+export type InboundProviderType = 'microsoft' | 'google' | 'imap';

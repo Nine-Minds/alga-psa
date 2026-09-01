@@ -224,6 +224,14 @@
       "heading": "Comprar créditos ou gerenciar a assinatura",
       "body": "Recargas, recarga automática e alterações de assinatura são feitas na loja da Nine Minds.",
       "openStore": "Abrir a loja"
+    },
+    "status": {
+      "canceled": "Cancelado",
+      "unpaid": "Não pago",
+      "none": "Sem assinatura",
+      "active": "Ativo",
+      "trialing": "Teste",
+      "past_due": "Vencido"
     }
   },
   "managementPage": {
@@ -347,5 +355,9 @@
       "startTrial": "Falha ao iniciar a avaliação.",
       "refreshLicense": "Falha ao atualizar a licença."
     }
+  },
+  "errors": {
+    "notSignedIn": "Não autorizado. Faça login para gerenciar o licenciamento.",
+    "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas"
   }
 }

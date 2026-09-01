@@ -9,9 +9,13 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Assets',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.assets.title', { defaultValue: 'Assets' }),
+  };
+}
 
 export default async function AssetsPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/assets', scope: 'msp' });

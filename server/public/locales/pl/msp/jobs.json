@@ -138,5 +138,14 @@
       "success_many": "Usunięto {{count}} zadań z historii.",
       "success_other": "Usunięto {{count}} zadania z historii."
     }
+  },
+  "page": {
+    "heading": "Monitorowanie zadań",
+    "recentJobs": "Ostatnie zadania"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Nie znaleziono zadania w tle. Mogło wygasnąć lub zostać usunięte."
+    }
   }
 }

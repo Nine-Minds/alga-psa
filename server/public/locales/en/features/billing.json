@@ -2,9 +2,12 @@
   "title": "Billing",
   "overview": "Overview",
   "tabs": {
-    "overview": "Overview",
+    "hoursByService": "Hours by Service",
     "invoices": "Invoices",
-    "quotes": "Quotes"
+    "overview": "Overview",
+    "quotes": "Quotes",
+    "usageMetrics": "Usage Metrics",
+    "segments": "By segment"
   },
   "currentContractLine": "Current Contract Line",
   "nextInvoice": "Next Invoice",
@@ -122,13 +125,33 @@
     "usage": "Usage",
     "overage": "Overage",
     "noContractLineTitle": "No bucket contract lines available",
-    "noContractLineDescription": "There are no active bucket contract lines for your account."
+    "noContractLineDescription": "There are no active bucket contract lines for your account.",
+    "remainingSummary": "{{remaining}} hours left of {{total}}",
+    "remainingSummaryWithRollover": "{{remaining}} hours left of {{total}} (incl. {{rollover}} rollover)",
+    "overageSummary": "{{hours}} hours over",
+    "overBucket": "OVER BUCKET",
+    "usedHours": "{{hours}}h used",
+    "leftHours": "{{hours}}h left",
+    "overHours": "{{hours}}h OVER"
   },
   "messages": {
     "noInvoices": "No invoices found",
     "loadingInvoices": "Loading invoices...",
     "paymentSuccessful": "Payment processed successfully",
     "paymentFailed": "Payment failed. Please try again."
+  },
+  "paymentUnavailable": {
+    "title": "Payment Unavailable",
+    "notConfigured": "Online payment is not available for this invoice.",
+    "creationFailed": "We could not start the payment. Please try again.",
+    "alreadyPaid": "This invoice has already been paid.",
+    "invoiceUnavailable": "This invoice is not available for payment.",
+    "accessDenied": "You do not have access to pay this invoice.",
+    "generic": "Online payment could not be started.",
+    "tryAgain": "Try again",
+    "backToBilling": "Back to billing",
+    "retryFailed": "We still could not start the payment. Please try again in a moment.",
+    "loading": "Loading..."
   },
   "quotes": {
     "pendingQuotes": "Pending Quotes",
@@ -151,6 +174,60 @@
     },
     "lineItems": {
       "searchPlaceholder": "Search or type custom item name..."
+    },
+    "detail": {
+      "accept": "Accept",
+      "acceptHint": "Accepting confirms this quote. The MSP will proceed accordingly.",
+      "acceptHintOptional": "Accepting sends your optional-item selections to the MSP for review.",
+      "acceptQuote": "Accept Quote",
+      "acceptedBanner": "Quote accepted.",
+      "acceptedBannerOptional": "Quote accepted. Your selected optional items have been shared with the MSP.",
+      "backToQuotes": "Back to Quotes",
+      "cancel": "Cancel",
+      "columns": {
+        "amount": "Amount",
+        "description": "Description",
+        "qty": "Qty",
+        "rate": "Rate"
+      },
+      "confirmAccept": "Accept this quote? The MSP will be notified.",
+      "confirmAcceptOptional": "Accept this quote with your current optional item selections? Your choices will be sent to the MSP for review.",
+      "confirmReject": "Reject this quote and send your comment to the MSP? They may revise and resend the quote.",
+      "discounts": "Discounts",
+      "downloadFailed": "Failed to download PDF.",
+      "downloadFailedRetry": "Failed to download PDF. Please try again.",
+      "downloadPdf": "Download PDF",
+      "downloading": "Downloading...",
+      "exclude": "Exclude",
+      "excluded": "Excluded",
+      "fallbackTitle": "Quote {{id}}",
+      "include": "Include",
+      "included": "Included",
+      "lineItems": "Line Items",
+      "loading": "Loading quote...",
+      "notFound": "Quote not found",
+      "notes": "Notes",
+      "optional": "Optional",
+      "optionalLockedHint": "Optional item selections are locked once the quote is no longer awaiting your response.",
+      "optionalToggleHint": "Toggle optional items to preview your preferred quote total before responding.",
+      "poNumber": "PO Number",
+      "quoteDate": "Quote Date",
+      "readyToRespond": "Ready to respond?",
+      "reject": "Reject",
+      "rejectCommentRequired": "Please add a short comment before rejecting this quote.",
+      "rejectPlaceholder": "Tell the MSP what needs to change",
+      "rejectPrompt": "If this quote doesn't work for you, leave a comment so the MSP can revise it.",
+      "rejectQuote": "Reject Quote",
+      "rejectedBanner": "Quote rejected.",
+      "rejectedBannerWithReason": "Quote rejected: {{reason}}",
+      "savingSelections": "Saving optional item selections...",
+      "scopeOfWork": "Scope of Work",
+      "submitting": "Submitting...",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "termsAndConditions": "Terms & Conditions",
+      "total": "Total",
+      "validUntil": "Valid Until"
     }
   },
   "quoteForm": {
@@ -335,6 +412,35 @@
     "availableCredit": "Available Credit",
     "appliedAutomatically": "Applied automatically to your next invoice.",
     "credit": "Credit",
-    "expires": "Expires {{date}}"
+    "expires": "Expires {{date}}",
+    "history": {
+      "viewHistory": "View history",
+      "title": "Credit History",
+      "empty": "No credit activity yet",
+      "issued": "Issued",
+      "issuedWithInvoice": "Issued — prepayment #{{invoice}}",
+      "issuedForInvoice": "Issued — invoice #{{invoice}}",
+      "issuedFromCreditNote": "Issued from credit note",
+      "applied": "Applied",
+      "appliedToInvoice": "Applied to invoice #{{invoice}}",
+      "adjusted": "Adjusted",
+      "expired": "Expired",
+      "transferred": "Transferred",
+      "transaction": "Credit activity",
+      "balance": "balance {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Prepaid hours",
+    "viewBilling": "View billing"
+  },
+  "hourBlocks": {
+    "title": "Prepaid Hour Blocks",
+    "blockLabel": "{{service}} block",
+    "expiringSoon": "Expires in {{days}}d",
+    "hoursLeft": "{{hours}}h left",
+    "expires": "Expires {{date}}",
+    "recentBurn": "Recent usage",
+    "timeEntry": "Time entry"
   }
 }

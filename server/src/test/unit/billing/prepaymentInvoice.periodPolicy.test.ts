@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 type Row = Record<string, any>;
 
 function createMockDb() {
@@ -162,5 +172,17 @@ describe('prepayment invoice service-period policy', () => {
     expect(mocks.db.accessedTables).not.toContain('invoice_charge_details');
     expect(mocks.buildCreditNoteCreatedPayload).not.toHaveBeenCalled();
     expect(mocks.publishWorkflowEvent).not.toHaveBeenCalled();
+  });
+
+  it('rejects fractional prepayment amounts and preserves an optional credit description', async () => {
+    await expect(createPrepaymentInvoice('client-1', 50.5)).rejects.toThrow(
+      'Prepayment amount must be a positive integer in minor units',
+    );
+
+    await createPrepaymentInvoice('client-1', 5000, undefined, undefined, 'Annual prepayment');
+
+    expect(mocks.db.tables.invoices[0]).toMatchObject({
+      prepayment_description: 'Annual prepayment',
+    });
   });
 });

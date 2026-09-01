@@ -506,6 +506,7 @@ describe('Project Templates Integration Tests', () => {
             tenant: context.tenantId,
             template_id: template.template_id,
             status_id: null,
+            status_source: 'inline',
             custom_status_name: 'To Do',
             display_order: 1
           },
@@ -513,6 +514,7 @@ describe('Project Templates Integration Tests', () => {
             tenant: context.tenantId,
             template_id: template.template_id,
             status_id: null,
+            status_source: 'inline',
             custom_status_name: 'Done',
             display_order: 2
           }
@@ -567,6 +569,7 @@ describe('Project Templates Integration Tests', () => {
 
       expect(invalidUpdateResult).toEqual({
         actionError: 'Project validation failed. Please review the project details and try again.',
+        messageKey: 'projects:errors.project.validationFailed',
       });
       const projectAfterInvalidUpdate = await tenantTable('projects')
         .where({ project_id: projectId })
@@ -719,6 +722,7 @@ describe('Project Templates Integration Tests', () => {
             tenant: context.tenantId,
             template_id: template.template_id,
             status_id: null,
+            status_source: 'inline',
             custom_status_name: 'Backlog',
             display_order: 1
           },
@@ -726,6 +730,7 @@ describe('Project Templates Integration Tests', () => {
             tenant: context.tenantId,
             template_id: template.template_id,
             status_id: null,
+            status_source: 'inline',
             custom_status_name: 'In Review',
             display_order: 2
           },
@@ -733,6 +738,7 @@ describe('Project Templates Integration Tests', () => {
             tenant: context.tenantId,
             template_id: template.template_id,
             status_id: null,
+            status_source: 'inline',
             custom_status_name: 'Completed',
             display_order: 3
           }
@@ -760,7 +766,14 @@ describe('Project Templates Integration Tests', () => {
         .orderBy('display_order');
 
       expect(projectStatusMappings).toHaveLength(3);
-      expect(projectStatusMappings[0].custom_name).toBe('Backlog');
+      // Inline template statuses are materialized as tenant statuses on apply;
+      // the project mapping references the created status rather than copying
+      // the name into custom_name.
+      expect(projectStatusMappings[0].status_id).toBeTruthy();
+      const backlogStatus = await tenantTable('statuses')
+        .where({ status_id: projectStatusMappings[0].status_id })
+        .first();
+      expect(backlogStatus.name).toBe('Backlog');
       expect(projectStatusMappings[0].display_order).toBe(1);
       expect(projectStatusMappings[0].is_visible).toBe(true);
     });
@@ -910,6 +923,7 @@ describe('Project Templates Integration Tests', () => {
         .insert({
           tenant: context.tenantId,
           template_id: template.template_id,
+          status_source: 'inline',
           custom_status_name: 'Custom Status',
           display_order: 1
         });

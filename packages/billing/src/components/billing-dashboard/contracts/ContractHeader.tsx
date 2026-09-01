@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ContractStatus, IContract } from '@alga-psa/types';
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
 import { Calendar, CalendarClock, FileCheck, Layers3, Coins } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { toPlainDate } from '@alga-psa/core';
 
@@ -22,7 +22,9 @@ type SummaryStat = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
 
-const formatDate = (value?: string | Date | null, emptyLabel: string = '—'): string => {
+// These live at module scope, so they take the locale rather than omitting it:
+// an omitted locale is not "neutral", it is whatever the browser is set to.
+const formatDate = (locale: string, value?: string | Date | null, emptyLabel: string = '—'): string => {
   if (!value) {
     return emptyLabel;
   }
@@ -32,14 +34,14 @@ const formatDate = (value?: string | Date | null, emptyLabel: string = '—'): s
     return emptyLabel;
   }
 
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date);
 };
 
 // start_date/end_date are calendar dates stored as UTC-midnight timestamps.
 // Format via toPlainDate + noon-UTC so the day matches the detail body and never
 // shifts in negative-offset timezones. (Use formatDate above for true instants
 // like updated_at, where local-time rendering is intended.)
-const formatCalendarDate = (value?: string | Date | null, emptyLabel: string = '—'): string => {
+const formatCalendarDate = (locale: string, value?: string | Date | null, emptyLabel: string = '—'): string => {
   if (!value) {
     return emptyLabel;
   }
@@ -47,22 +49,23 @@ const formatCalendarDate = (value?: string | Date | null, emptyLabel: string = '
   try {
     const plainDate = toPlainDate(value);
     const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(displayDate);
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(displayDate);
   } catch {
     return emptyLabel;
   }
 };
 
-const formatNumber = (value?: number, emptyLabel: string = '—'): string => {
+const formatNumber = (locale: string, value?: number, emptyLabel: string = '—'): string => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return emptyLabel;
   }
 
-  return value.toLocaleString();
+  return value.toLocaleString(locale);
 };
 
 const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, liveStatus }) => {
   const { t } = useTranslation('msp/contracts');
+  const { locale } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
   const emptyLabel = t('common.notAvailable', { defaultValue: '—' });
   const status = liveStatus ?? contract.status;
@@ -81,13 +84,13 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, live
     },
     {
       label: t('contractHeader.labels.contractLines', { defaultValue: 'Contract Lines' }),
-      value: summary ? formatNumber(summary.contractLineCount, emptyLabel) : emptyLabel,
+      value: summary ? formatNumber(locale, summary.contractLineCount, emptyLabel) : emptyLabel,
       icon: Layers3,
     },
     {
       label: t('contractHeader.labels.startDate', { defaultValue: 'Start Date' }),
       value: summary?.earliestStartDate
-        ? formatCalendarDate(summary.earliestStartDate, emptyLabel)
+        ? formatCalendarDate(locale, summary.earliestStartDate, emptyLabel)
         : summary
           ? emptyLabel
           : emptyLabel,
@@ -97,7 +100,7 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, live
       label: t('contractHeader.labels.endDate', { defaultValue: 'End Date' }),
       value: summary
         ? summary.latestEndDate
-          ? formatCalendarDate(summary.latestEndDate, emptyLabel)
+          ? formatCalendarDate(locale, summary.latestEndDate, emptyLabel)
           : summary.totalClientAssignments > 0
             ? t('contractHeader.values.ongoing', { defaultValue: 'Ongoing' })
             : emptyLabel
@@ -106,7 +109,7 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, live
     },
     {
       label: t('contractHeader.labels.lastUpdated', { defaultValue: 'Last Updated' }),
-      value: formatDate(contract.updated_at, emptyLabel),
+      value: formatDate(locale, contract.updated_at, emptyLabel),
       icon: CalendarClock,
     },
   ];
@@ -114,7 +117,7 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, live
   const hasSummary = Boolean(summary);
 
   return (
-    <div className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-card p-4 shadow-sm">
+    <div className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-card p-4 card-elevated">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-bold text-foreground">{contract.contract_name}</h1>

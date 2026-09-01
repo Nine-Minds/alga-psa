@@ -2,6 +2,7 @@ import {
   createExternalEntityMapping,
   deleteExternalEntityMapping,
   getExternalEntityMappings,
+  getQboAutomatedSalesTaxMode,
   getQboItems,
   getQboTaxCodes,
   getQboTerms,
@@ -10,6 +11,7 @@ import {
   updateExternalEntityMapping,
   type CreateMappingData,
   type ExternalEntityMapping,
+  type QboTaxCode,
   type UpdateMappingData
 } from '@alga-psa/integrations/actions';
 import type { IService, ITaxRegion } from '@alga-psa/types';
@@ -53,12 +55,112 @@ function throwIfActionError(value: unknown): void {
   }
 }
 
+/**
+ * Resolves a key against the caller's translator, falling back to the English
+ * default when this module is built without one (the Playwright and unit
+ * harnesses construct modules directly).
+ */
+function translate(t: TFn | undefined, key: string, defaultValue: string, vars?: Record<string, unknown>): string {
+  return t ? t(key, { defaultValue, ...vars }) : interpolate(defaultValue, vars);
+}
+
+function interpolate(template: string, vars?: Record<string, unknown>): string {
+  if (!vars) return template;
+  return template.replace(/\{\{(\w+)\}\}/g, (match, name) =>
+    name in vars ? String(vars[name]) : match
+  );
+}
+
+/**
+ * QBO's US pseudo tax codes, offered when the connected realm runs Automated
+ * Sales Tax: TAX lets Intuit's AST engine pick the rate; NON opts a line out.
+ * Intuit ships exactly these two on every US company file and no others can be
+ * created, so the ids are literals rather than anything catalog-derived.
+ */
+export function getQboAstPseudoTaxCodes(t?: TFn): Array<{ id: string; name: string }> {
+  return [
+    {
+      id: 'TAX',
+      name: translate(
+        t,
+        'integrations.qbo.taxCodes.pseudo.taxable',
+        'TAX — taxable (Automated Sales Tax picks the rate)'
+      )
+    },
+    {
+      id: 'NON',
+      name: translate(t, 'integrations.qbo.taxCodes.pseudo.nonTaxable', 'NON — non-taxable')
+    }
+  ];
+}
+
+function formatRatePercent(ratePercent: number): string {
+  return `${Number(ratePercent.toFixed(3))}%`;
+}
+
+/**
+ * Labels a whole tax-code catalog, disambiguating collisions.
+ *
+ * Intuit's support team has confirmed that Automated Sales Tax generates tax
+ * codes with duplicate names on purpose — same name, different id, different
+ * underlying rate set. Two entries reading "NM-Roosevelt-Roosevelt (5.5%)" give
+ * the user no way to choose, so any label shared by more than one code carries
+ * its QuickBooks id.
+ */
+export function formatQboTaxCodeOptions(
+  taxCodes: QboTaxCode[],
+  t?: TFn
+): Array<{ id: string; name: string }> {
+  const labels = taxCodes.map((taxCode) => formatQboTaxCodeLabel(taxCode, t));
+
+  const labelCounts = new Map<string, number>();
+  for (const label of labels) {
+    labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+  }
+
+  return taxCodes.map((taxCode, index) => {
+    const label = labels[index];
+    return {
+      id: taxCode.id,
+      name:
+        (labelCounts.get(label) ?? 0) > 1
+          ? translate(t, 'integrations.qbo.taxCodes.labelWithId', '{{label}} · ID {{id}}', {
+              label,
+              id: taxCode.id
+            })
+          : label
+    };
+  });
+}
+
+/**
+ * Builds a human-readable label for a QBO tax code: the name plus its combined
+ * rate when known, else its description when that adds information. AST company
+ * files carry auto-generated codes whose bare names are opaque without this.
+ */
+export function formatQboTaxCodeLabel(taxCode: QboTaxCode, t?: TFn): string {
+  const name = taxCode.name || taxCode.id;
+  if (taxCode.ratePercent !== null && taxCode.ratePercent !== undefined) {
+    return translate(t, 'integrations.qbo.taxCodes.labelWithRate', '{{name}} ({{rate}})', {
+      name,
+      rate: formatRatePercent(taxCode.ratePercent)
+    });
+  }
+  if (taxCode.description && taxCode.description !== name) {
+    return translate(t, 'integrations.qbo.taxCodes.labelWithDescription', '{{name}} — {{description}}', {
+      name,
+      description: taxCode.description
+    });
+  }
+  return name;
+}
+
 export function createQboLiveMappingModules(t?: TFn): AccountingMappingModule[] {
   const tab = (key: string, fallback: string) =>
     t ? t(`integrations.accounting.modules.tabs.${key}`, { defaultValue: fallback }) : fallback;
   return [
     createServiceModule(tab('itemsServices', 'Items / Services')),
-    createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
+    createTaxCodeModule(tab('taxCodes', 'Tax Codes'), t),
     createPaymentTermModule(tab('paymentTerms', 'Payment Terms'))
   ];
 }
@@ -152,7 +254,7 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
   };
 }
 
-function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
+function createTaxCodeModule(tabLabel: string, t?: TFn): AccountingMappingModule {
   return {
     id: 'qbo-live-tax-code-mappings',
     adapterType: ADAPTER_TYPE,
@@ -199,13 +301,26 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
         algaEntityType: 'tax_code',
         loadAlgaEntities: getTaxRegions,
         loadExternalEntities: async (currentContext) => {
-          const taxCodesResult = await getQboTaxCodes({ realmId: currentContext.realmId ?? null });
+          const realmId = currentContext.realmId ?? null;
+          const [taxCodesResult, astResult] = await Promise.all([
+            getQboTaxCodes({ realmId }),
+            getQboAutomatedSalesTaxMode({ realmId })
+          ]);
           throwIfActionError(taxCodesResult);
-          const taxCodes = taxCodesResult as Array<{ id: string; name: string }>;
-          return taxCodes.map((taxCode) => ({
-            id: taxCode.id,
-            name: taxCode.name
-          }));
+          throwIfActionError(astResult);
+
+          const taxCodes = taxCodesResult as QboTaxCode[];
+          const options = formatQboTaxCodeOptions(taxCodes, t);
+
+          if ((astResult as { enabled: boolean }).enabled) {
+            const catalogIds = new Set(options.map((option) => option.id));
+            return [
+              ...getQboAstPseudoTaxCodes(t).filter((pseudo) => !catalogIds.has(pseudo.id)),
+              ...options
+            ];
+          }
+
+          return options;
         },
         mapAlga: (region) => ({
           id: region.region_code,
@@ -346,8 +461,7 @@ function createMapping({
     alga_entity_id: input.algaEntityId,
     external_entity_id: input.externalEntityId,
     external_realm_id: context.realmId ?? null,
-    metadata: input.metadata ?? null,
-    sync_status: 'manual_link'
+    metadata: input.metadata ?? null
   };
 
   return createExternalEntityMapping(payload).then((result) => {
@@ -365,9 +479,15 @@ function updateMapping(
   }
 ): Promise<ExternalEntityMapping> {
   const payload: UpdateMappingData = {
-    external_entity_id: input.externalEntityId,
-    metadata: input.metadata ?? null
+    external_entity_id: input.externalEntityId
   };
+
+  // An omitted metadata leaves the stored value alone; only an explicit null
+  // clears it. Coercing undefined to null here would erase module-owned keys
+  // the caller never had a chance to resend.
+  if (input.metadata !== undefined) {
+    payload.metadata = input.metadata;
+  }
 
   if (input.algaEntityId) {
     payload.alga_entity_id = input.algaEntityId;

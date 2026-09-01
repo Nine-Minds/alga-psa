@@ -9,17 +9,27 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { ExternalLink, Link2, RefreshCw } from 'lucide-react';
 import {
   disconnectQbo,
+  getQboAutomatedSalesTaxMode,
   getQboConnectionStatus,
-  saveQboCredentials
+  saveQboCredentials,
+  setQboAutomatedSalesTaxMode
 } from '../../../actions/qboActions';
 import { QboLiveMappingManager } from '../../qbo/QboLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type QboStatus = Awaited<ReturnType<typeof getQboConnectionStatus>>;
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * The setup guide lives in this repository rather than on a docs site, so the
+ * link points at the published source. Update both together.
+ */
+const QBO_SETUP_GUIDE_URL =
+  'https://github.com/Nine-Minds/alga-psa/blob/main/docs/integrations/quickbooks.md';
 
 interface QboIntegrationSettingsProps {
   syncHealthSlot?: React.ReactNode;
@@ -36,6 +46,16 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
       return t('integrations.qbo.settings.callback.oauthFailed', { defaultValue: 'The QuickBooks OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.' });
     case 'invalid_state':
       return t('integrations.qbo.settings.callback.invalidState', { defaultValue: 'The QuickBooks OAuth state was invalid or expired. Start the connect flow again.' });
+    case 'state_replayed':
+      return t('integrations.qbo.settings.callback.stateReplayed', { defaultValue: 'This QuickBooks connection request was already used. Start the connect flow again.' });
+    case 'session_expired':
+      return t('integrations.qbo.settings.callback.sessionExpired', { defaultValue: 'Your session is no longer valid. Sign in and start the QuickBooks connection again.' });
+    case 'user_mismatch':
+      return t('integrations.qbo.settings.callback.userMismatch', { defaultValue: 'This QuickBooks connection request belongs to another user. Sign in as the user who started it and try again.' });
+    case 'tenant_mismatch':
+      return t('integrations.qbo.settings.callback.tenantMismatch', { defaultValue: 'This QuickBooks connection request belongs to another workspace. Sign in to the correct workspace and start again.' });
+    case 'forbidden':
+      return t('integrations.qbo.settings.callback.forbidden', { defaultValue: 'You no longer have permission to manage accounting connections. Ask an administrator for access.' });
     case 'missing_params':
       return t('integrations.qbo.settings.callback.missingParams', { defaultValue: 'The QuickBooks callback was missing required parameters. Start the connect flow again.' });
     case 'access_denied':
@@ -66,6 +86,8 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [clientId, setClientId] = React.useState('');
   const [clientSecret, setClientSecret] = React.useState('');
+  const [automatedSalesTax, setAutomatedSalesTax] = React.useState(false);
+  const [savingAutomatedSalesTax, setSavingAutomatedSalesTax] = React.useState(false);
 
   const oauthStatus = searchParams?.get('qbo_status');
   const oauthError = React.useMemo(
@@ -79,12 +101,55 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
     try {
       const result = await getQboConnectionStatus();
       setStatus(result);
+
+      const realmId = result.defaultConnection?.realmId ?? null;
+      if (realmId) {
+        const astResult = await getQboAutomatedSalesTaxMode({ realmId });
+        setAutomatedSalesTax('enabled' in astResult ? astResult.enabled : false);
+      } else {
+        setAutomatedSalesTax(false);
+      }
     } catch (err) {
       setError(t('integrations.qbo.settings.errors.load', { defaultValue: 'Failed to load QuickBooks settings.' }));
     } finally {
       setLoading(false);
     }
   }, [t]);
+
+  const handleAutomatedSalesTaxChange = async (enabled: boolean) => {
+    const realmId = status?.defaultConnection?.realmId;
+    if (!realmId) return;
+
+    setSavingAutomatedSalesTax(true);
+    setError(null);
+    setSuccessMessage(null);
+    // Optimistic, then reconciled by load() — the switch must not feel laggy.
+    setAutomatedSalesTax(enabled);
+
+    try {
+      const result = await setQboAutomatedSalesTaxMode({ realmId, enabled });
+      if (!result.success) {
+        setAutomatedSalesTax(!enabled);
+        setError(result.error ?? t('integrations.qbo.settings.errors.automatedSalesTax', { defaultValue: 'Failed to update Automated Sales Tax mode.' }));
+        return;
+      }
+      setSuccessMessage(
+        enabled
+          ? t('integrations.qbo.settings.automatedSalesTax.enabledMessage', { defaultValue: 'QuickBooks will now calculate sales tax on delegated invoices for this company.' })
+          : t('integrations.qbo.settings.automatedSalesTax.disabledMessage', { defaultValue: 'Automated Sales Tax mode is off. Alga keeps calculating tax for this company.' })
+      );
+      await load();
+    } catch {
+      // A throw here — the action never reached the server, or the deployment
+      // restarted mid-click — must not leave the optimistic flip standing as if
+      // it saved. Which way tax is calculated is too consequential to show a
+      // state we have no confirmation of.
+      setAutomatedSalesTax(!enabled);
+      setError(t('integrations.qbo.settings.errors.automatedSalesTax', { defaultValue: 'Failed to update Automated Sales Tax mode.' }));
+    } finally {
+      setSavingAutomatedSalesTax(false);
+    }
+  };
 
   React.useEffect(() => {
     void load();
@@ -177,6 +242,18 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
             <p className="mt-2">
               {t('integrations.qbo.settings.howItWorksDescription', { defaultValue: 'Save QuickBooks app credentials here, complete the Intuit OAuth flow, and AlgaPSA will use the connected QuickBooks company as the default live context for exports and mappings.' })}
             </p>
+            <p className="mt-3">
+              <a
+                id="qbo-setup-guide-link"
+                href={QBO_SETUP_GUIDE_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 font-medium text-foreground underline underline-offset-4"
+              >
+                {t('integrations.qbo.settings.setupGuideLink', { defaultValue: 'QuickBooks setup guide' })}
+                <ExternalLink className="h-4 w-4 opacity-80" />
+              </a>
+            </p>
           </div>
 
           <Alert variant="info" id="qbo-integration-manual-alternative-alert">
@@ -195,9 +272,9 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
 
       <Card id="qbo-integration-credentials-card">
         <CardHeader>
-          <CardTitle>{t('integrations.qbo.settings.tenantOauthTitle', { defaultValue: 'Tenant-Owned OAuth App' })}</CardTitle>
+          <CardTitle>{t('integrations.qbo.settings.tenantOauthTitle', { defaultValue: 'Intuit App Credentials' })}</CardTitle>
           <CardDescription>
-            {t('integrations.qbo.settings.tenantOauthDescription', { defaultValue: 'Paste the Intuit app credentials registered for this tenant, or leave blank to use the application-level QuickBooks app if one is configured. Secret values are never returned to the browser after they are saved.' })}
+            {t('integrations.qbo.settings.tenantOauthDescription', { defaultValue: 'Which Intuit app this tenant connects through. Secret values are never returned to the browser after they are saved.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -205,6 +282,19 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
             <div className="text-sm text-muted-foreground">{t('integrations.qbo.settings.loading', { defaultValue: 'Loading QuickBooks settings…' })}</div>
           ) : (
             <>
+              {/* Whether a shared app exists is the whole difference between
+                  "click Connect" and "go register an Intuit app first", so it is
+                  stated before the credential fields rather than after them. */}
+              <Alert variant="info" id="qbo-credential-source-alert">
+                <AlertDescription>
+                  {status?.credentials.source === 'app'
+                    ? t('integrations.qbo.settings.credentialSource.app', { defaultValue: 'This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Fill in the fields below only if you want this tenant to use its own Intuit app instead.' })
+                    : status?.credentials.source === 'tenant'
+                      ? t('integrations.qbo.settings.credentialSource.tenant', { defaultValue: 'This tenant connects through its own Intuit app, using the credentials stored below.' })
+                      : t('integrations.qbo.settings.credentialSource.none', { defaultValue: 'No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.' })}
+                </AlertDescription>
+              </Alert>
+
               <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">{t('integrations.qbo.settings.redirectUri', { defaultValue: 'Redirect URI' })}</p>
@@ -353,6 +443,29 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
               </AlertDescription>
             </Alert>
           )}
+
+          {defaultConnection ? (
+            <div className="rounded-lg border p-4" id="qbo-automated-sales-tax-section">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="qbo-automated-sales-tax-toggle" className="text-sm font-medium">
+                    {t('integrations.qbo.settings.automatedSalesTax.label', { defaultValue: 'QuickBooks calculates sales tax' })}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t('integrations.qbo.settings.automatedSalesTax.hint', { defaultValue: 'Turn this on when this QuickBooks company uses Automated Sales Tax, so exported invoices are taxed by Intuit from the customer address and the tax comes back to Alga.' })}
+                  </p>
+                </div>
+                {/* No `label` prop: Switch renders its own label beside the
+                    thumb when given one, which would repeat the Label above. */}
+                <Switch
+                  id="qbo-automated-sales-tax-toggle"
+                  checked={automatedSalesTax}
+                  disabled={savingAutomatedSalesTax || loading}
+                  onCheckedChange={(checked) => void handleAutomatedSalesTaxChange(checked)}
+                />
+              </div>
+            </div>
+          ) : null}
 
           {status?.error && defaultConnection ? (
             <Alert variant={status.connected ? 'info' : 'destructive'}>

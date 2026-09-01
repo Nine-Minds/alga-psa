@@ -1,6 +1,5 @@
-import React from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { ActivityIndicator, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { TicketTag } from "../../../api/tags";
 import { Card } from "../../../ui/components/Card";
@@ -8,6 +7,7 @@ import { SectionHeader } from "../../../ui/components/SectionHeader";
 import { useTheme } from "../../../ui/ThemeContext";
 import { getTagChipColors } from "../../../ui/tagColors";
 import { ActionChip } from "./ActionChip";
+import { SectionCollapseToggle } from "./SectionCollapseToggle";
 
 export function TagsSection({
   tags,
@@ -17,7 +17,7 @@ export function TagsSection({
   actionError,
   updating,
   onAddPress,
-  onRemoveTag,
+  initiallyCollapsed = false,
 }: {
   tags: TicketTag[];
   loading: boolean;
@@ -26,10 +26,11 @@ export function TagsSection({
   actionError: string | null;
   updating: boolean;
   onAddPress: () => void;
-  onRemoveTag: (tag: TicketTag) => void;
+  initiallyCollapsed?: boolean;
 }) {
   const { t } = useTranslation("tickets");
   const { mode, colors, spacing, typography } = useTheme();
+  const [collapsed, setCollapsed] = useState(initiallyCollapsed);
 
   if (hidden) return null;
 
@@ -38,14 +39,25 @@ export function TagsSection({
       <SectionHeader
         title={t("tags.title", { defaultValue: "Tags" })}
         action={(
-          <ActionChip
-            label={t("tags.addTag", { defaultValue: "Add tag" })}
-            disabled={updating}
-            onPress={onAddPress}
-          />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+            {!collapsed ? (
+              <ActionChip
+                label={t("tags.editTags", { defaultValue: "Edit tags" })}
+                disabled={updating}
+                onPress={onAddPress}
+              />
+            ) : null}
+            <SectionCollapseToggle
+              collapsed={collapsed}
+              onToggle={() => setCollapsed((value) => !value)}
+              summary={String(tags.length)}
+              sectionLabel={t("tags.title", "Tags")}
+            />
+          </View>
         )}
       />
 
+      {collapsed ? null : <>
       {error ? (
         <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
           {error}
@@ -77,24 +89,13 @@ export function TagsSection({
                   borderWidth: 1,
                   borderColor: chip.borderColor,
                   backgroundColor: chip.backgroundColor,
-                  paddingLeft: spacing.md,
-                  paddingRight: spacing.xs,
+                  paddingHorizontal: spacing.md,
                   paddingVertical: 4,
                 }}
               >
                 <Text style={{ ...typography.caption, color: chip.textColor, fontWeight: "600" }}>
                   {tag.tag_text}
                 </Text>
-                <Pressable
-                  onPress={() => onRemoveTag(tag)}
-                  disabled={updating}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("tags.removeTag", { tag: tag.tag_text, defaultValue: "Remove tag {{tag}}" })}
-                  hitSlop={8}
-                  style={{ marginLeft: spacing.xs, padding: 2, opacity: updating ? 0.5 : 1 }}
-                >
-                  <Feather name="x" size={14} color={chip.textColor} />
-                </Pressable>
               </View>
             );
           })}
@@ -106,6 +107,7 @@ export function TagsSection({
           {actionError}
         </Text>
       ) : null}
+      </>}
     </Card>
   );
 }

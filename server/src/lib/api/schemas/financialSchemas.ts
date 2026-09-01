@@ -189,7 +189,7 @@ export const applyCreditToInvoiceSchema = z.object({
 
 export const createPrepaymentInvoiceSchema = z.object({
   client_id: uuidSchema,
-  amount: amountSchema,
+  amount: monetaryAmountSchema,
   manual_expiration_date: dateSchema.optional()
 });
 
@@ -646,6 +646,9 @@ export const defaultBillingSettingsSchema = z.object({
   enable_credit_expiration: z.boolean(),
   credit_expiration_days: z.number().int().min(1),
   credit_expiration_notification_days: z.array(z.number().int().min(1)),
+  credit_auto_apply_enabled: z.boolean().optional(),
+  credit_application_order: z.enum(['expiration_first', 'oldest_first', 'newest_first']).optional(),
+  credit_eligible_service_type_ids: z.array(z.string().uuid()).nullable().optional(),
   default_recurring_cadence_owner: z.enum(['client', 'contract']).default('client'),
   recurring_cadence_rollout_state: z.literal('mixed_enabled').default('mixed_enabled'),
   recurring_cadence_rollout_message: z.string().default(CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE)
@@ -658,6 +661,9 @@ export const clientContractLineSettingsSchema = z.object({
   enable_credit_expiration: z.boolean().optional(),
   credit_expiration_days: z.number().int().min(1).optional(),
   credit_expiration_notification_days: z.array(z.number().int().min(1)).optional(),
+  credit_auto_apply_enabled: z.boolean().optional(),
+  credit_application_order: z.enum(['expiration_first', 'oldest_first', 'newest_first']).optional(),
+  credit_eligible_service_type_ids: z.array(z.string().uuid()).nullable().optional(),
   default_recurring_cadence_owner: z.enum(['client', 'contract']).optional(),
   recurring_cadence_rollout_state: z.literal('mixed_enabled').optional(),
   recurring_cadence_rollout_message: z.string().optional()
@@ -669,6 +675,9 @@ export const updateBillingSettingsSchema = z.object({
   enable_credit_expiration: z.boolean().optional(),
   credit_expiration_days: z.number().int().min(1).optional(),
   credit_expiration_notification_days: z.array(z.number().int().min(1)).optional(),
+  credit_auto_apply_enabled: z.boolean().optional(),
+  credit_application_order: z.enum(['expiration_first', 'oldest_first', 'newest_first']).optional(),
+  credit_eligible_service_type_ids: z.array(z.string().uuid()).nullable().optional(),
   default_recurring_cadence_owner: z.enum(['client', 'contract']).optional()
 });
 

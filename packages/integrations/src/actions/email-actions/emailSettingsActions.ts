@@ -18,6 +18,7 @@ import {
   isActionMessageError,
   type ActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { isValidEmail } from '@alga-psa/validation';
 
 type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
   defaultFromDomain?: string | null;
@@ -170,7 +171,7 @@ export const getEmailSettings = withAuth(async (
     return toEmailSettingsView(sanitizedSettings, knex, tenant || '');
   } catch (error: any) {
     console.error('Error fetching email settings:', error);
-    return actionError('Failed to fetch email settings');
+    return actionError('Failed to fetch email settings', 'msp/email-providers:errors.settings.fetchFailed');
   }
 });
 
@@ -205,7 +206,7 @@ export const updateEmailSettings = withAuth(async (
       const requested = mergedProviderConfigs.find(config => config.providerType === 'microsoft');
       const requestedProviderId = requested?.config?.inboundProviderId || requested?.providerId;
       if (!requestedProviderId || requestedProviderId === 'microsoft-provider') {
-        return actionError('Choose a Microsoft 365 mailbox for outbound email');
+        return actionError('Choose a Microsoft 365 mailbox for outbound email', 'msp/email-providers:errors.settings.mailboxRequired');
       }
 
       const microsoftProvider = await tenantDb(knex, tenant).table('email_providers')
@@ -217,10 +218,10 @@ export const updateEmailSettings = withAuth(async (
         .first('id', 'mailbox', 'provider_name', 'sender_display_name', 'status');
 
       if (!microsoftProvider) {
-        return actionError('The selected Microsoft 365 mailbox is not active or no longer exists');
+        return actionError('The selected Microsoft 365 mailbox is not active or no longer exists', 'msp/email-providers:errors.settings.mailboxInactive');
       }
       if (microsoftProvider.status !== 'connected') {
-        return actionError('Reconnect the selected Microsoft 365 mailbox before using it for outbound email');
+        return actionError('Reconnect the selected Microsoft 365 mailbox before using it for outbound email', 'msp/email-providers:errors.settings.mailboxReconnect');
       }
 
       if (
@@ -228,7 +229,9 @@ export const updateEmailSettings = withAuth(async (
         && nextTicketingFromEmail.toLowerCase() !== microsoftProvider.mailbox.toLowerCase()
       ) {
         return actionError(
-          `Ticket email identity must use the selected Microsoft 365 mailbox (${microsoftProvider.mailbox}). Update the Ticket emails address before saving.`
+          `Ticket email identity must use the selected Microsoft 365 mailbox (${microsoftProvider.mailbox}). Update the Ticket emails address before saving.`,
+          'msp/email-providers:errors.settings.ticketIdentityMustMatchMailbox',
+          { mailbox: microsoftProvider.mailbox },
         );
       }
 
@@ -273,15 +276,55 @@ export const updateEmailSettings = withAuth(async (
       updatedAt: now
     };
 
+    // Reject malformed sender data before it persists: a junk config.from
+    // propagates into default_from_domain and every synthesized fallback sender.
+    // Only the fields present in this update are checked, so tenants carrying
+    // legacy junk can still save unrelated settings.
+    if (updates.providerConfigs) {
+      // Provider switches resend stored configs verbatim, so an unchanged
+      // (possibly legacy-junk) From must pass — only new values are checked.
+      const existingFromByType = new Map(
+        (existingSettings?.providerConfigs ?? []).map(config => [
+          config.providerType,
+          typeof config.config?.from === 'string' ? config.config.from.trim() : '',
+        ])
+      );
+      for (const config of normalizedProviderConfigs) {
+        const configFrom = typeof config.config?.from === 'string' ? config.config.from.trim() : '';
+        if (!configFrom || isValidEmail(configFrom)) {
+          continue;
+        }
+        if (configFrom === existingFromByType.get(config.providerType)) {
+          continue;
+        }
+        return actionError(
+          `The ${config.providerType} From address must be a valid email address`,
+          'msp/email-providers:errors.settings.providerFromAddressInvalid',
+          { provider: config.providerType },
+        );
+      }
+    }
+    if (
+      hasOwnUpdate(updates, 'ticketingFromEmail')
+      && mergedSettings.ticketingFromEmail
+      && !isValidEmail(mergedSettings.ticketingFromEmail)
+    ) {
+      return actionError('Ticketing From address must be a valid email address', 'msp/email-providers:errors.settings.ticketingFromInvalid');
+    }
+
     const targetDomain = mergedSettings.defaultFromDomain?.trim().toLowerCase();
+    // Same schema as the address checks: a domain is valid iff an address on it is.
+    if (hasOwnUpdate(updates, 'defaultFromDomain') && targetDomain && !isValidEmail(`sender@${targetDomain}`)) {
+      return actionError('Outbound sending domain must be a valid domain (e.g. example.com)', 'msp/email-providers:errors.settings.outboundDomainInvalid');
+    }
     if (mergedSettings.ticketingFromEmail) {
       if (!targetDomain) {
-        return actionError('Configure an outbound domain before choosing a ticketing From address');
+        return actionError('Configure an outbound domain before choosing a ticketing From address', 'msp/email-providers:errors.settings.outboundDomainRequired');
       }
 
       const fromDomain = extractDomain(mergedSettings.ticketingFromEmail);
       if (!fromDomain || fromDomain !== targetDomain) {
-        return actionError('Ticketing From address must use the configured outbound domain');
+        return actionError('Ticketing From address must use the configured outbound domain', 'msp/email-providers:errors.settings.ticketingFromDomainMismatch');
       }
     }
 
@@ -327,13 +370,13 @@ export const updateEmailSettings = withAuth(async (
       return updatedSettings;
     }
     if (!updatedSettings) {
-      return actionError('Failed to retrieve updated settings');
+      return actionError('Failed to retrieve updated settings', 'msp/email-providers:errors.settings.refreshFailed');
     }
     
     return updatedSettings;
   } catch (error: any) {
     console.error('Error updating email settings:', error);
-    return actionError('Failed to update email settings');
+    return actionError('Failed to update email settings', 'msp/email-providers:errors.settings.updateFailed');
   }
 });
 
@@ -359,7 +402,7 @@ export const getMicrosoftOutboundMailboxes = withAuth(async (
     };
   } catch (error) {
     console.error('Error fetching Microsoft outbound mailboxes:', error);
-    return actionError('Failed to load Microsoft 365 mailboxes');
+    return actionError('Failed to load Microsoft 365 mailboxes', 'msp/email-providers:errors.settings.mailboxesLoadFailed');
   }
 });
 

@@ -24,6 +24,21 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 export type TenantSecretActionError = ActionMessageError | ActionPermissionError;
+export type TenantSecretListResult = { secrets: TenantSecretMetadata[]; permissionDenied: boolean };
+export type TenantSecretStoragePosture = { writable: boolean; reason?: 'READ_ONLY_PROVIDER' | 'NO_DURABLE_PATH' };
+
+function tenantSecretStoragePosture(): TenantSecretStoragePosture {
+  const provider = process.env.SECRET_WRITE_PROVIDER || 'filesystem';
+  if (provider === 'vault') return { writable: true };
+  if (provider === 'filesystem' && process.env.SECRET_FS_BASE_PATH) return { writable: true };
+  return { writable: false, reason: provider === 'filesystem' ? 'NO_DURABLE_PATH' : 'READ_ONLY_PROVIDER' };
+}
+
+function requireDurableTenantSecretStorage(): void {
+  if (!tenantSecretStoragePosture().writable) {
+    throw new Error('Secret storage is read-only in this environment. Configure Vault or SECRET_FS_BASE_PATH.');
+  }
+}
 
 function tenantSecretActionErrorFrom(error: unknown): TenantSecretActionError | null {
   if (error instanceof z.ZodError) {
@@ -38,34 +53,40 @@ function tenantSecretActionErrorFrom(error: unknown): TenantSecretActionError | 
       return permissionError(message);
     }
     if (message === 'Tenant not found') {
-      return actionError('Tenant context is missing. Please refresh and try again.');
+      return actionError('Tenant context is missing. Please refresh and try again.', 'msp/settings:errors.secrets.tenantContextMissing');
     }
     if (/^Secret with name ".+" already exists$/.test(message)) {
       return actionError(message);
     }
     if (/^Secret with name ".+" not found$/.test(message)) {
-      return actionError('Secret not found. It may have already been deleted. Please refresh and try again.');
+      return actionError('Secret not found. It may have already been deleted. Please refresh and try again.', 'msp/settings:errors.secrets.notFound');
     }
     if (message === 'Invalid tenantId or secret name.' || message === 'Missing tenantId or secret name.') {
-      return actionError('Invalid tenant or secret name.');
+      return actionError('Invalid tenant or secret name.', 'msp/settings:errors.secrets.invalidName');
     }
     if (message.includes('read-only') || message.includes('Cannot set tenant secrets') || message.includes('Cannot delete tenant secrets')) {
-      return actionError('Secret storage is read-only in this environment.');
+      return actionError('Secret storage is read-only in this environment.', 'msp/settings:errors.secrets.readOnly');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected secret records is invalid. Please refresh and try again.');
+    return actionError('One of the selected secret records is invalid. Please refresh and try again.', 'msp/settings:errors.secrets.recordInvalid');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required secret field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required secret field: ${dbError.column}.`,
+          'msp/settings:errors.secrets.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required secret field.', 'msp/settings:errors.secrets.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected secret records no longer exists. Please refresh and try again.');
+    return actionError('One of the selected secret records no longer exists. Please refresh and try again.', 'msp/settings:errors.secrets.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A secret with this name already exists.');
+    return actionError('A secret with this name already exists.', 'msp/settings:errors.secrets.duplicate');
   }
 
   return null;
@@ -76,20 +97,22 @@ function tenantSecretActionErrorFrom(error: unknown): TenantSecretActionError | 
  * Returns metadata only - never includes actual secret values.
  * Requires secrets.view permission.
  */
-export const listTenantSecrets = withAuth(async (user, { tenant }): Promise<TenantSecretMetadata[]> => {
+export const listTenantSecrets = withAuth(async (user, { tenant }): Promise<TenantSecretListResult> => {
   const { knex } = await createTenantKnex();
 
-  // Secrets are an optional capability in some environments (e.g. local/dev stacks or older schemas).
-  // If the backing tables don't exist, treat secrets as "not configured" and return no entries.
-  if (!tenant) return [];
-  if (!(await knex.schema.hasTable('tenant_secrets'))) return [];
+  if (!tenant) return { secrets: [], permissionDenied: false };
 
   // Check for secrets.view permission
   const canView = await hasPermission(user, 'secrets', 'view', knex);
-  if (!canView) return [];
+  if (!canView) return { secrets: [], permissionDenied: true };
 
   const provider = createTenantSecretProvider(knex, tenant);
-  return provider.list();
+  return { secrets: await provider.list(), permissionDenied: false };
+});
+
+/** Report only whether writes would survive across application instances. */
+export const getTenantSecretStoragePosture = withAuth(async (): Promise<TenantSecretStoragePosture> => {
+  return tenantSecretStoragePosture();
 });
 
 /**
@@ -101,7 +124,7 @@ export const getSecretMetadata = withAuth(async (user, { tenant }, name: string)
     const { knex } = await createTenantKnex();
 
     if (!tenant) {
-      return actionError('Tenant context is missing. Please refresh and try again.');
+      return actionError('Tenant context is missing. Please refresh and try again.', 'msp/settings:errors.secrets.tenantContextMissing');
     }
 
     const provider = createTenantSecretProvider(knex, tenant);
@@ -121,7 +144,7 @@ export const secretExists = withAuth(async (user, { tenant }, name: string): Pro
     const { knex } = await createTenantKnex();
 
     if (!tenant) {
-      return actionError('Tenant context is missing. Please refresh and try again.');
+      return actionError('Tenant context is missing. Please refresh and try again.', 'msp/settings:errors.secrets.tenantContextMissing');
     }
 
     const provider = createTenantSecretProvider(knex, tenant);
@@ -145,14 +168,15 @@ export const createSecret = withAuth(async (user, { tenant }, input: CreateTenan
     const { knex } = await createTenantKnex();
 
     if (!tenant) {
-      return actionError('Tenant context is missing. Please refresh and try again.');
+      return actionError('Tenant context is missing. Please refresh and try again.', 'msp/settings:errors.secrets.tenantContextMissing');
     }
 
     // Check for secrets.manage permission
     const canManage = await hasPermission(user, 'secrets', 'manage', knex);
     if (!canManage) {
-      return permissionError('Permission denied: Cannot create secrets');
+      return permissionError('Permission denied: Cannot create secrets', 'msp/settings:errors.secrets.permissions.create');
     }
+    requireDurableTenantSecretStorage();
 
     const provider = createTenantSecretProvider(knex, tenant);
     return await provider.create(input, user.user_id);
@@ -181,14 +205,15 @@ export const updateSecret = withAuth(async (
     const { knex } = await createTenantKnex();
 
     if (!tenant) {
-      return actionError('Tenant context is missing. Please refresh and try again.');
+      return actionError('Tenant context is missing. Please refresh and try again.', 'msp/settings:errors.secrets.tenantContextMissing');
     }
 
     // Check for secrets.manage permission
     const canManage = await hasPermission(user, 'secrets', 'manage', knex);
     if (!canManage) {
-      return permissionError('Permission denied: Cannot update secrets');
+      return permissionError('Permission denied: Cannot update secrets', 'msp/settings:errors.secrets.permissions.update');
     }
+    requireDurableTenantSecretStorage();
 
     const provider = createTenantSecretProvider(knex, tenant);
     return await provider.update(name, input, user.user_id);
@@ -210,14 +235,15 @@ export const deleteSecret = withAuth(async (user, { tenant }, name: string): Pro
     const { knex } = await createTenantKnex();
 
     if (!tenant) {
-      return actionError('Tenant context is missing. Please refresh and try again.');
+      return actionError('Tenant context is missing. Please refresh and try again.', 'msp/settings:errors.secrets.tenantContextMissing');
     }
 
     // Check for secrets.manage permission
     const canManage = await hasPermission(user, 'secrets', 'manage', knex);
     if (!canManage) {
-      return permissionError('Permission denied: Cannot delete secrets');
+      return permissionError('Permission denied: Cannot delete secrets', 'msp/settings:errors.secrets.permissions.delete');
     }
+    requireDurableTenantSecretStorage();
 
     const provider = createTenantSecretProvider(knex, tenant);
     await provider.delete(name, user.user_id);
@@ -261,6 +287,10 @@ export const getSecretUsage = withAuth(async (user, { tenant }): Promise<Map<str
 
   if (!tenant) {
     throw new Error('Tenant not found');
+  }
+
+  if (!(await hasPermission(user, 'secrets', 'view', knex))) {
+    return new Map();
   }
 
   const provider = createTenantSecretProvider(knex, tenant);

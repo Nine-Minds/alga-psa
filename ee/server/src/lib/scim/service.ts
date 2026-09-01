@@ -678,7 +678,7 @@ export class ScimProvisioningService {
 
 export const SCIM_SERVICE_PROVIDER_CONFIG = {
   schemas: ['urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig'],
-  documentationUri: 'https://docs.algapsa.com/integrations/scim',
+  documentationUri: 'https://www.nineminds.com/documentation/scim-user-provisioning',
   patch: { supported: true },
   bulk: { supported: false, maxOperations: 0, maxPayloadSize: 0 },
   filter: { supported: true, maxResults: 200 },

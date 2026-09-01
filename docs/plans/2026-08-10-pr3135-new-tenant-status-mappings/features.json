@@ -1,0 +1,26 @@
+[
+  {
+    "id": "F001",
+    "description": "The AD-to-M365 onboarding seed writes each of its four template mappings as an explicit tenant-source variant with a tenant status ID and null standard and unresolved IDs.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "A newly created tenant can run onboarding seeds 06 and 07 in order against the PR 3135 typed schema and receive exactly four AD-to-M365 status mappings.",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F003",
+    "description": "Every seeded AD-to-M365 mapping references a project-task status owned by the same tenant, even when another tenant has matching status names.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions", "Risks and Edge Cases"]
+  },
+  {
+    "id": "F004",
+    "description": "The seeded AD-to-M365 template passes production runtime status resolution and, when practical, can be applied with usable tenant-backed project status mappings.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  }
+]

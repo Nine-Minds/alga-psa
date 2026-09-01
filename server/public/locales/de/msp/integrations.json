@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft hat Sie angemeldet, den Zugriff auf Ihre verwaltete Mandantenliste jedoch verweigert. Ein globaler Administrator muss die Administratorzustimmung für die angeforderten Berechtigungen erteilen. Es wurde nichts gespeichert – versuchen Sie es nach erteilter Zustimmung erneut.",
             "expired": "Der Verbindungsversuch ist abgelaufen, bevor er abgeschlossen war. Es wurde nichts gespeichert – starten Sie die Verbindung erneut.",
             "generic": "Microsoft Entra wurde nicht verbunden, und es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
-            "validationFailed": "Microsoft hat Sie angemeldet, aber Ihre verwaltete Mandantenliste konnte nicht gelesen werden, daher wurde nichts gespeichert. Prüfen Sie die Berechtigungen der Verbindung und versuchen Sie es erneut."
+            "validationFailed": "Microsoft hat Sie angemeldet, aber die verwaltete Mandantenliste konnte nicht gelesen werden; es wurde nichts gespeichert. Ihre Berechtigungen wurden akzeptiert — meist ist der Partner-Mandant nicht in Microsoft 365 Lighthouse eingebunden oder es bestehen keine aktiven GDAP-Beziehungen.",
+            "tokenRejected": "Microsoft hat das Zugriffstoken der Verbindung abgelehnt; es wurde nichts gespeichert. Starten Sie die Verbindung erneut."
           },
           "cippServerLabel": "CIPP-Server",
           "connectingSuffix": " (Verbindung wird hergestellt...)",
@@ -862,7 +863,8 @@
         "overview": {
           "connectionTypeLabel": "Verbindungstyp:",
           "label": "Übersicht",
-          "mappedTenantsLabel": "Zugeordnete Mandanten:"
+          "mappedTenantsLabel": "Zugeordnete Mandanten:",
+          "microsoftAppLabel": "Microsoft-App:"
         },
         "skipped": {
           "empty": "Derzeit sind keine Mandanten als übersprungen markiert.",
@@ -919,6 +921,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "App-Registrierung hinzufügen",
+          "bindFailed": "Die Microsoft-App-Auswahl für Entra konnte nicht gespeichert werden.",
+          "emptyBody": "Die Direktverbindung läuft über die App-Registrierung Ihrer eigenen Organisation. Registrieren Sie eine mandantenfähige App in Ihrer Partnerorganisation, fügen Sie die Entra-Redirect URI hinzu und erteilen Sie die Administratoreinwilligung für ManagedTenants.Read.All und Directory.Read.All.",
+          "label": "Microsoft-App-Registrierung",
+          "placeholder": "App-Registrierung auswählen",
+          "reconnectRequired": "Wählen Sie eine Microsoft-App-Registrierung aus und stellen Sie die Verbindung erneut her.",
+          "redirectUriLabel": "In Entra hinzuzufügende Redirect URI",
+          "scopesLabel": "Delegierte Berechtigungsbereiche (Administratoreinwilligung erforderlich)"
+        },
         "backToCurrentStep": "Zurück zu {{step}}",
         "chooser": {
           "cipp": {
@@ -939,9 +951,10 @@
             "description": "Alga spricht über Ihre Partnerbeziehung mit Microsoft Graph.",
             "label": "Direkter Microsoft-Partner",
             "prerequisites": {
-              "appRegistration": "Für diesen Mandanten konfigurierte Microsoft-OAuth-Anmeldedaten.",
+              "appRegistration": "Eine unten ausgewählte Microsoft-App-Registrierung – die Direktverbindung nutzt immer die App Ihrer eigenen Organisation.",
               "globalAdmin": "Einen globalen Administrator, der die Berechtigungen genehmigen kann.",
-              "partnerRelationship": "Eine Partnerbeziehung (GDAP) mit den verwalteten Mandanten."
+              "partnerRelationship": "Eine Partnerbeziehung (GDAP) mit den verwalteten Mandanten.",
+              "lighthouse": "Microsoft 365 Lighthouse ist in Ihrem Partner-Mandanten eingerichtet."
             }
           },
           "directReassurance": "Sie sehen die Berechtigungsabfrage, bevor irgendetwas erteilt wird.",
@@ -954,6 +967,7 @@
         "description": "Holen Sie die Personen aus den von Ihnen verwalteten Microsoft-Mandanten als Kundenkontakte nach Alga. In Ihre Kontakte wird nichts geschrieben, bevor Sie eine Vorschau gesehen und freigegeben haben.",
         "directConsent": {
           "adminNote": "Ein globaler Administrator muss diese Berechtigungen genehmigen. Andernfalls wird die Anmeldung abgeschlossen, die Verbindung jedoch abgelehnt, und es wird nichts gespeichert.",
+          "appRegistration": "App-Registrierung: {{name}}.",
           "cancel": "Abbrechen",
           "continue": "Weiter zu Microsoft",
           "intro": "Sie verlassen Alga und melden sich bei Microsoft an. Diese Berechtigungen werden angefordert.",
@@ -1570,7 +1584,8 @@
           "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
           "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
           "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
-          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut."
+          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut.",
+          "optionsLoadFailed": "Die Optionen für die Einrichtung von Microsoft-E-Mail konnten nicht geladen werden."
         },
         "fields": {
           "clientId": "Client ID",
@@ -1659,7 +1674,13 @@
           "email": {
             "description": "Wählen Sie das Microsoft-Profil für eingehende und ausgehende Outlook-E-Mails aus.",
             "label": "E-Mail",
-            "reconnect": "Bestehende Outlook-E-Mail-Verbindungen müssen erneut autorisiert werden, um Mail.Send zu gewähren, bevor sie ausgehende E-Mails senden können."
+            "reconnect": "Bestehende Outlook-E-Mail-Verbindungen müssen erneut autorisiert werden, um Mail.Send zu gewähren, bevor sie ausgehende E-Mails senden können.",
+            "perProviderIssuerNote": "Bestehende Postfachverbindungen behalten ihre aktuelle Microsoft-App, bis sie neu verbunden werden. Diese Auswahl gilt für neue Postfachverbindungen."
+          },
+          "entra": {
+            "description": "Wählen Sie die Microsoft-App für die Entra-Synchronisierung über GDAP und Lighthouse.",
+            "label": "Entra Direkt",
+            "reconnect": "Das Ändern dieser App trennt die aktuelle Entra-Verbindung und erfordert eine erneute Einwilligung."
           },
           "mspSso": {
             "description": "Wählen Sie aus, welches Microsoft-Profil die MSP-SSO-Anmeldedomänen, die Microsoft-Anmeldung und die Tenant-Erkennung unterstützt.",
@@ -1717,6 +1738,9 @@
           "currentProfileTitle": "Aktuelle Profilwerte",
           "emailRedirect": "Redirect-URI für eingehende E-Mails",
           "emailTitle": "E-Mail-Anleitung",
+          "entraConsent": "Anforderung",
+          "entraConsentValue": "Registrieren Sie diese App als mandantenfähig und erteilen Sie die Administratoreinwilligung in Ihrer Partnerorganisation.",
+          "entraTitle": "Entra Direkt",
           "mspSsoTitle": "MSP-SSO-Anleitung",
           "notConfigured": "Nicht konfiguriert",
           "redirectUri": "Redirect URI",
@@ -1828,11 +1852,16 @@
         "callback": {
           "accessDenied": "Der QuickBooks-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
           "configMissing": "QuickBooks OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret nicht vollständig konfiguriert waren.",
+          "forbidden": "Sie haben keine Berechtigung mehr, Buchhaltungsverbindungen zu verwalten. Bitten Sie einen Administrator um Zugriff.",
           "generic": "QuickBooks hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der QuickBooks-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
           "missingParams": "Dem QuickBooks-Callback fehlten erforderliche Parameter. Starten Sie den Verbindungs-Flow erneut.",
           "oauthFailed": "Der QuickBooks-OAuth-Callback ist fehlgeschlagen. Versuchen Sie, die Verbindung erneut herzustellen. Bei weiterhin bestehendem Problem überprüfen Sie Ihre Redirect-URI und Scopes.",
-          "tokenExchangeFailed": "Intuit hat die erwarteten Token nicht zurückgegeben. Versuchen Sie, die Verbindung erneut herzustellen."
+          "sessionExpired": "Ihre Sitzung ist nicht mehr gültig. Melden Sie sich an und starten Sie die QuickBooks-Verbindung erneut.",
+          "stateReplayed": "Diese QuickBooks-Verbindungsanfrage wurde bereits verwendet. Starten Sie den Verbindungs-Flow erneut.",
+          "tenantMismatch": "Diese QuickBooks-Verbindungsanfrage gehört zu einem anderen Arbeitsbereich. Melden Sie sich im richtigen Arbeitsbereich an und starten Sie erneut.",
+          "tokenExchangeFailed": "Intuit hat die erwarteten Token nicht zurückgegeben. Versuchen Sie, die Verbindung erneut herzustellen.",
+          "userMismatch": "Diese QuickBooks-Verbindungsanfrage gehört einem anderen Benutzer. Melden Sie sich als der Benutzer an, der sie gestartet hat, und versuchen Sie es erneut."
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Fügen Sie Ihre Intuit-App-Client-ID ein",
@@ -1857,6 +1886,7 @@
         "environmentProduction": "Produktion",
         "environmentSandbox": "Sandbox",
         "errors": {
+          "automatedSalesTax": "Der Automated-Sales-Tax-Modus konnte nicht aktualisiert werden.",
           "disconnect": "QuickBooks konnte nicht getrennt werden.",
           "load": "QuickBooks-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden."
@@ -1878,9 +1908,21 @@
         "requiredScopes": "Erforderliche Scopes",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
-        "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Intuit-App-Anmeldedaten ein, oder lassen Sie das Feld leer, um die QuickBooks-App auf Anwendungsebene zu verwenden, sofern eine konfiguriert ist. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
-        "tenantOauthTitle": "Mandanteneigene OAuth-App",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Über welche Intuit-App sich dieser Mandant verbindet. Secrets werden nach dem Speichern nie an den Browser zurückgegeben.",
+        "tenantOauthTitle": "Intuit-App-Zugangsdaten",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "Der Automated-Sales-Tax-Modus ist aus. Alga berechnet die Steuer für dieses Unternehmen weiterhin selbst.",
+          "enabledMessage": "QuickBooks berechnet die Umsatzsteuer für delegierte Rechnungen dieses Unternehmens ab sofort selbst.",
+          "hint": "Aktivieren Sie dies, wenn dieses QuickBooks-Unternehmen Automated Sales Tax verwendet. Intuit besteuert exportierte Rechnungen dann anhand der Kundenadresse und die Steuer fließt nach Alga zurück.",
+          "label": "QuickBooks berechnet die Umsatzsteuer"
+        },
+        "credentialSource": {
+          "app": "Diese Installation stellt eine gemeinsame Intuit-App bereit — Sie können QuickBooks verbinden, ohne selbst eine zu registrieren. Füllen Sie die Felder unten nur aus, wenn dieser Mandant stattdessen eine eigene Intuit-App verwenden soll.",
+          "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine im Intuit-Developer-Portal und fügen Sie Client-ID und Secret unten ein — die Einrichtungsanleitung führt Sie durch die Schritte.",
+          "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten."
+        },
+        "setupGuideLink": "QuickBooks-Einrichtungsanleitung"
       },
       "sync": {
         "healthCardTitle": "Synchronisierungsstatus",
@@ -1921,9 +1963,219 @@
         "saving": "Speichern…",
         "undepositedFunds": "Nicht eingezahlte Mittel (Standard)",
         "catalogLoadError": "Die Konfigurationsoptionen für die QuickBooks-Synchronisierung konnten nicht geladen werden."
+      },
+      "itemImport": {
+        "description": "Importieren Sie Ihre QuickBooks-Produkte und -Dienste für das verbundene QuickBooks-Unternehmen in den Alga-Servicekatalog. QuickBooks bleibt die maßgebliche Quelle für Namen, Sätze, SKUs, Beschreibungen und Kosten; Abrechnungsmethode, Maßeinheit und Diensttyp werden hier festgelegt und anschließend von Alga verwaltet. Dieser Schritt ist optional — überspringen Sie ihn mit „Weiter“.",
+        "defaults": {
+          "title": "Vorgaben für importierte Artikel",
+          "serviceType": "Diensttyp (erforderlich)",
+          "serviceTypePlaceholder": "Wählen Sie einen Diensttyp aus…",
+          "unitOfMeasure": "Maßeinheit",
+          "serviceBillingMethod": "Abrechnungsmethode für Dienste",
+          "productBillingMethod": "Abrechnungsmethode für Produkte",
+          "includeInactive": "Inaktive QuickBooks-Artikel einbeziehen (werden als inaktiv importiert)"
+        },
+        "billingMethods": {
+          "fixed": "Festpreis",
+          "hourly": "Stündlich",
+          "usage": "Nutzungsbasiert"
+        },
+        "actions": {
+          "preview": "Importvorschau",
+          "previewing": "Vorschau wird geladen…",
+          "previewRequiresServiceType": "Wählen Sie einen Diensttyp aus, um die Vorschau zu aktivieren.",
+          "execute": "Import ausführen",
+          "executing": "Wird importiert…"
+        },
+        "preview": {
+          "summary": "Für das verbundene Unternehmen wurden {{total}} QuickBooks-Artikel gefunden (Realm {{realm}}): {{create}} werden erstellt, {{update}} aktualisiert, {{link}} verknüpft und {{skip}} übersprungen. Es wurden noch keine Daten geschrieben.",
+          "groups": {
+            "create": "Werden erstellt",
+            "update": "Werden aktualisiert",
+            "link": "Werden verknüpft (bereits übereinstimmend)",
+            "skip": "Werden übersprungen"
+          },
+          "qboName": "QuickBooks-Name: {{name}} (importiert als „{{importedAs}}“)"
+        },
+        "flags": {
+          "inactive": "In QuickBooks inaktiv",
+          "unmappedTax": "Steuercode nicht zugeordnet",
+          "skuConflict": "SKU-Konflikt",
+          "nameCollision": "Name bereits zugeordnet",
+          "categorySkipped": "Kategorie (nicht importiert)"
+        },
+        "result": {
+          "summary": "Import abgeschlossen: {{created}} erstellt, {{updated}} aktualisiert, {{linked}} verknüpft, {{skipped}} übersprungen.",
+          "summaryWithErrors": "Import abgeschlossen: {{created}} erstellt, {{updated}} aktualisiert, {{linked}} verknüpft, {{skipped}} übersprungen, {{failed}} fehlgeschlagen."
+        },
+        "errors": {
+          "previewFailed": "Die Importvorschau konnte nicht geladen werden.",
+          "executeFailed": "Der Import ist fehlgeschlagen."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · Kennung {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — nicht steuerpflichtig",
+          "taxable": "TAX — steuerpflichtig (Automated Sales Tax bestimmt den Satz)"
+        }
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Alarmautomatisierung",
+        "description": "Konfigurieren Sie, wie eingehende RMM-Alarme verarbeitet, unterdrückt und in Tickets umgewandelt werden.",
+        "loading": "Einstellungen für die Alarmautomatisierung werden geladen…",
+        "actions": {
+          "addRule": "Regel hinzufügen",
+          "addWindow": "Fenster hinzufügen",
+          "cancel": "Abbrechen",
+          "confirm": "Bestätigen",
+          "deleteRule": "Regel löschen",
+          "deleteWindow": "Fenster löschen",
+          "editRule": "Regel bearbeiten",
+          "editWindow": "Fenster bearbeiten",
+          "moveDown": "Nach unten verschieben",
+          "moveUp": "Nach oben verschieben",
+          "savePolling": "Abfrageeinstellungen speichern",
+          "saveRule": "Regel speichern",
+          "saveWindow": "Fenster speichern",
+          "saving": "Wird gespeichert…"
+        },
+        "days": {
+          "sun": "So",
+          "mon": "Mo",
+          "tue": "Di",
+          "wed": "Mi",
+          "thu": "Do",
+          "fri": "Fr",
+          "sat": "Sa"
+        },
+        "dialogs": {
+          "addRule": "Alarmregel hinzufügen",
+          "addWindow": "Wartungsfenster hinzufügen",
+          "editRule": "Regel bearbeiten: {{name}}",
+          "editWindow": "Fenster bearbeiten: {{name}}"
+        },
+        "errors": {
+          "loadRules": "Alarmregeln konnten nicht geladen werden",
+          "loadSettings": "Einstellungen für die Alarmautomatisierung konnten nicht geladen werden",
+          "unknown": "Unbekannter Fehler"
+        },
+        "fields": {
+          "active": "Aktiv",
+          "commaSeparated": "Durch Kommas getrennt",
+          "description": "Beschreibung",
+          "nameRequired": "Name *",
+          "optionalDescription": "Optionale Beschreibung",
+          "ruleName": "Regelname",
+          "windowName": "Fenstername"
+        },
+        "polling": {
+          "title": "Alarmabfrage",
+          "description": "Alga ruft regelmäßig aktive Alarme vom RMM ab, um Ereignisse zu erfassen, die ein Webhook verpasst hat. Konfigurieren Sie unten das Abfrageintervall.",
+          "enabled": "Abfrage aktiviert",
+          "interval": "Intervall (Minuten, 5–60)",
+          "intervalError": "Das Intervall muss zwischen 5 und 60 Minuten liegen.",
+          "lastPolled": "Zuletzt abgefragt: {{time}}"
+        },
+        "rules": {
+          "title": "Alarmregeln",
+          "description": "Regeln werden von oben nach unten ausgewertet. Die erste passende Regel wird angewendet. Eine Regel ohne Bedingungen gilt für alle Alarme.",
+          "empty": "Keine Regeln konfiguriert. Alarme werden ohne Automatisierung verarbeitet.",
+          "actions": "Aktionen",
+          "activityTypes": "Aktivitätstypen",
+          "activityTypesPlaceholder": "z. B. Festplatte, CPU (durch Kommas getrennt)",
+          "alertClasses": "Alarmklassen",
+          "assignToUser": "Benutzer zuweisen",
+          "autoResolve": "Ticket automatisch lösen, wenn der Alarm behoben ist",
+          "board": "Board",
+          "catchAllHelp": "Keine Bedingungen festgelegt — diese Regel gilt für alle eingehenden Alarme.",
+          "createTicket": "Ticket erstellen",
+          "defaultBoard": "Standard-Board",
+          "defaultClosedStatus": "Standardstatus für geschlossene Tickets",
+          "descriptionTemplate": "Vorlage für die Ticketbeschreibung",
+          "descriptionTemplatePlaceholder": "z. B. Alarm auf {{device}}: {{message}}",
+          "keywords": "Schlüsselwörter",
+          "mapFromSeverity": "Aus Schweregrad ableiten",
+          "matchConditions": "Abgleichbedingungen",
+          "messagePattern": "Nachrichtenmuster (regulärer Ausdruck)",
+          "messagePatternPlaceholder": "z. B. (?i)disk.*full",
+          "notifyUsers": "Benutzer benachrichtigen",
+          "organizationsFilter": "Organisationen (Filter)",
+          "placeholders": "Platzhalter",
+          "priorityOverride": "Priorität überschreiben",
+          "resetOnClose": "Alarm zurücksetzen, wenn das Ticket geschlossen wird",
+          "resolveStatus": "Lösungsstatus",
+          "severities": "Schweregrade",
+          "sourceTypes": "Quelltypen",
+          "titleTemplate": "Vorlage für den Tickettitel",
+          "titleTemplatePlaceholder": "z. B. [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Nicht zugewiesen"
+        },
+        "schedule": {
+          "crossesMidnight": "Die Endzeit liegt vor der Startzeit — das Fenster reicht über Mitternacht.",
+          "days": "Tage",
+          "endTime": "Endzeit",
+          "endsAt": "Endet am",
+          "none": "Kein Zeitplan",
+          "oneOff": "Einmalig",
+          "startTime": "Startzeit",
+          "startsAt": "Beginnt am",
+          "timezone": "Zeitzone",
+          "type": "Zeitplantyp",
+          "weekly": "Wöchentlich {{days}} {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Wöchentlich wiederkehrend"
+        },
+        "scope": {
+          "title": "Geltungsbereich",
+          "allClients": "Alle Kunden",
+          "allRmm": "Alle RMM-Systeme",
+          "allRmmHelp": "Das Fenster unterdrückt Alarme aus allen RMM-Integrationen.",
+          "clientOptional": "Kunde (optional — leer lassen für alle Kunden)",
+          "loadingClients": "Kunden werden geladen…",
+          "onlyThisIntegration": "Nur diese Integration",
+          "otherIntegration": "Andere Integration",
+          "thisIntegration": "Diese Integration",
+          "thisIntegrationHelp": "Das Fenster unterdrückt nur Alarme aus dieser Integration."
+        },
+        "severities": {
+          "critical": "Kritisch",
+          "major": "Schwerwiegend",
+          "moderate": "Mittel",
+          "minor": "Gering",
+          "none": "Keiner"
+        },
+        "summary": {
+          "autoResolve": "Automatisch lösen",
+          "createsTicket": "Erstellt ein Ticket"
+        },
+        "toasts": {
+          "deleteFailed": "Löschen fehlgeschlagen",
+          "invalidInterval": "Ungültiges Intervall",
+          "namedItemSaved": "„{{name}}“ wurde gespeichert.",
+          "pollingSaved": "Abfrageeinstellungen gespeichert",
+          "reorderFailed": "Neusortierung fehlgeschlagen",
+          "ruleCreated": "Regel erstellt",
+          "ruleDeleted": "Regel gelöscht",
+          "ruleUpdated": "Regel aktualisiert",
+          "saveFailed": "Speichern fehlgeschlagen",
+          "updateFailed": "Aktualisierung fehlgeschlagen",
+          "windowCreated": "Fenster erstellt",
+          "windowDeleted": "Fenster gelöscht",
+          "windowUpdated": "Fenster aktualisiert"
+        },
+        "validation": {
+          "invalidRegex": "Ungültiger regulärer Ausdruck"
+        },
+        "windows": {
+          "title": "Wartungsfenster",
+          "description": "Alarme, die während eines aktiven Fensters eingehen, werden unterdrückt und erstellen keine Tickets.",
+          "empty": "Keine Wartungsfenster konfiguriert."
+        }
+      },
       "ninjaOne": {
         "loading": "NinjaOne-Integrationseinstellungen werden geladen...",
         "card": {
@@ -2472,6 +2724,29 @@
           "updateContact": "Standardkontakt konnte nicht aktualisiert werden",
           "updateAutoSync": "Auto-Sync-Einstellung konnte nicht aktualisiert werden"
         }
+      },
+      "deviceSync": {
+        "title": "Geplante Gerätesynchronisierung",
+        "description": "Aktualisieren Sie dieses Geräteinventar nach einem Zeitplan, statt auf eine manuelle Vollsynchronisierung zu warten. Jeder Lauf ruft die Anbieter-API auf, und bei manchen Anbietern liest auch ein inkrementeller Lauf die vollständige Geräteliste, sodass ein kürzeres Intervall entsprechend mehr API-Aufrufe verursacht.",
+        "enabledLabel": "Geräte nach Zeitplan synchronisieren",
+        "intervalLabel": "Ausführen alle (Minuten)",
+        "intervalHelp": "Wählen Sie zwischen {{min}} und {{max}} Minuten. Ein kürzeres Intervall hält die Gerätedaten aktueller und ruft die Anbieter-API häufiger auf.",
+        "intervalInvalid": "Geben Sie eine ganze Zahl von Minuten zwischen {{min}} und {{max}} ein.",
+        "lastScheduledRun": "Letzter geplanter Lauf: {{time}}",
+        "lastScheduledRunNever": "Die geplante Synchronisierung wurde noch nicht ausgeführt.",
+        "lastAnySync": "Letzte Synchronisierung jeder Art, einschließlich manueller Vollsynchronisierungen: {{time}}",
+        "lastAnySyncNever": "Es wurde noch keine Gerätesynchronisierung jeglicher Art ausgeführt.",
+        "lastSyncError": "Die letzte Synchronisierung ist fehlgeschlagen: {{error}}",
+        "actions": {
+          "save": "Synchronisierungszeitplan speichern",
+          "saving": "Wird gespeichert..."
+        },
+        "success": {
+          "saved": "Zeitplan für die Gerätesynchronisierung gespeichert. Der Scheduler wendet ihn innerhalb weniger Minuten an."
+        },
+        "errors": {
+          "saveFailed": "Der Zeitplan für die Gerätesynchronisierung konnte nicht gespeichert werden."
+        }
       }
     },
     "sso": {
@@ -2581,9 +2856,17 @@
             "description": "Persönliche Teams-Aktivitäts-Benachrichtigungen zustellen.",
             "label": "Aktivitätsbenachrichtigungen"
           },
+          "channelBot": {
+            "description": "Dem Bot erlauben, zu antworten, wenn er in Teamkanälen mit @ erwähnt wird. Bot-Antworten (einschließlich Ticketdetails) sind für alle Kanalmitglieder sichtbar.",
+            "label": "Kanal-Bot"
+          },
           "groupChatBot": {
             "description": "Dem Bot erlauben, in Teams-Gruppenchats zu antworten. Bot-Antworten (einschließlich Ticketdetails) sind für alle Mitglieder des Chats sichtbar.",
             "label": "Gruppenchat-Bot"
+          },
+          "guestTicketSubmission": {
+            "description": "Kundenkontakten, die dem Bot schreiben, das Erstellen von Tickets ohne Anmeldung ermöglichen. Absender werden anhand ihrer verifizierten Microsoft-Identität Kontakten zugeordnet; nicht zugeordnete Absender werden abgelehnt.",
+            "label": "Ticketerstellung durch Gäste"
           },
           "messageExtension": {
             "description": "Nachschlagefunktionen und nachrichtengesteuerte PSA-Aktionen aktivieren.",
@@ -2740,7 +3023,6 @@
           "test": {
             "sent": "Teams-Testnachricht gesendet.",
             "failed": "Teams-Testnachricht fehlgeschlagen.",
-            "addonInactive": "Das Teams-Add-on ist für diesen Mandanten nicht aktiv.",
             "integrationInactive": "Aktivieren Sie die Teams-Integration, bevor Sie eine Testnachricht senden.",
             "capabilityDisabled": "Aktivieren Sie die Funktion für den persönlichen Bot, bevor Sie eine Testnachricht senden.",
             "botNotConfigured": "Konfigurieren Sie die Teams-Bot-Anmeldedaten, bevor Sie eine Testnachricht senden.",
@@ -2749,7 +3031,6 @@
             "skipped": "Die Teams-Testnachricht wurde übersprungen."
           },
           "steps": {
-            "addonEntitlement": "Teams-Add-on-Berechtigung",
             "integrationStatus": "Status der Teams-Integration",
             "capabilities": "Teams-Funktionen",
             "microsoftProfile": "Bereitschaft des Microsoft-Profils",
@@ -2761,7 +3042,6 @@
             "recentDeliveryHealth": "Aktueller Zustand der Teams-Zustellung"
           },
           "recommendation": {
-            "addon": "Aktivieren Sie das Microsoft Teams-Add-on für diesen Mandanten.",
             "activate": "Aktivieren Sie die Teams-Integration in den Einstellungen.",
             "capabilities": "Aktivieren Sie den persönlichen Bot und Aktivitätsbenachrichtigungen für Teams.",
             "profile": "Wählen Sie ein bereites Microsoft-Profil für Teams aus.",
@@ -2951,9 +3231,9 @@
               "cause": "Der Empfänger hat sich nicht mit Microsoft bei AlgaPSA angemeldet, daher besteht keine Kontozuordnung.",
               "remedy": "Lassen Sie den Benutzer sich mit Microsoft anmelden (MSP-Portal-SSO oder die Teams-Registerkarte), damit sein Konto zugeordnet wird."
             },
-            "addon_inactive": {
-              "cause": "Das Teams-Add-on ist abgelaufen oder nicht vorhanden, daher werden Sendungen übersprungen, während die Konfiguration erhalten bleibt.",
-              "remedy": "Erneuern Sie das Teams-Add-on für diesen Mandanten."
+            "feature_disabled": {
+              "cause": "Die Teams-Funktion war für diesen Mandanten deaktiviert, als die Zustellung versucht wurde (vor 1.5).",
+              "remedy": "Teams ist jetzt allgemein verfügbar; wiederholen Sie den Versand."
             },
             "integration_inactive": {
               "cause": "Die Teams-Integration ist für diesen Mandanten nicht aktiv.",
@@ -2984,26 +3264,6 @@
               "remedy": "Prüfen Sie die Serverprotokolle auf die Details des Zustellungsfehlers und führen Sie die Diagnose erneut aus."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams-Add-on",
-          "description": "Die Microsoft Teams-Integration erfordert das Teams-Add-on für diesen Mandanten.",
-          "includedTitle": "Was enthalten ist",
-          "feature": {
-            "tab": "Persönliche Registerkarte: Öffnen Sie AlgaPSA in Microsoft Teams.",
-            "bot": "Persönlicher und Gruppenchat-Bot für Tickets, Genehmigungen, Zeiten und Notizen.",
-            "messageExtension": "Nachrichtenerweiterung und Schnellaktionen, um aus jeder Nachricht heraus auf PSA-Datensätze zu reagieren.",
-            "meetings": "Teams-Besprechungen bei Terminbestätigungen mit echten Outlook/Teams-Kalendereinladungen.",
-            "recordings": "Automatische Erfassung von Besprechungsaufzeichnungen und Transkripten in Interaktionen.",
-            "notifications": "Activity-Feed- und Bot-DM-Benachrichtigungen für Zuweisungen, Antworten, Genehmigungen und SLA-Risiko."
-          },
-          "cta": "Teams-Add-on kaufen",
-          "nonBilling": "Wenden Sie sich an einen Abrechnungsadministrator, um das Teams-Add-on für diesen Mandanten zu kaufen."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams-Add-on abgelaufen",
-          "message": "Das Microsoft Teams-Add-on ist abgelaufen. Ihre Konfiguration und Ihr Zustellungsverlauf bleiben erhalten, aber Teams-Benachrichtigungen werden übersprungen, bis das Add-on erneuert wird.",
-          "cta": "Teams-Add-on erneuern"
         },
         "staleManifest": {
           "title": "Teams-App-Paket ist veraltet",
@@ -3177,11 +3437,16 @@
           "accessDenied": "Der Xero-Zugriff wurde abgelehnt, bevor die Verbindung abgeschlossen werden konnte.",
           "configMissing": "Xero OAuth konnte nicht gestartet werden, da die Client-ID und das Client Secret des Mandanten nicht vollständig konfiguriert waren.",
           "connectionsUnmapped": "Xero hat Organisationen zurückgegeben, aber keine enthielt die zum Speichern einer Verbindung erforderlichen Kennungen.",
+          "forbidden": "Sie haben keine Berechtigung mehr, Buchhaltungsverbindungen zu verwalten. Bitten Sie einen Administrator um Zugriff.",
           "generic": "Xero hat einen OAuth-Fehler zurückgegeben: {{code}}",
           "invalidState": "Der Xero-OAuth-Status war ungültig oder abgelaufen. Starten Sie den Verbindungs-Flow erneut.",
           "missingParams": "Dem Xero-Callback fehlten erforderliche Parameter. Starten Sie den Verbindungs-Flow erneut.",
           "noConnections": "Xero hat für dieses Login keine Organisationen zurückgegeben. Überprüfen Sie Ihre Xero-App und den Organisationszugriff und versuchen Sie es erneut.",
-          "oauthFailed": "Der Xero-OAuth-Callback ist fehlgeschlagen. Versuchen Sie, die Verbindung erneut herzustellen. Bei weiterhin bestehendem Problem überprüfen Sie Ihre Redirect-URI und Scopes."
+          "oauthFailed": "Der Xero-OAuth-Callback ist fehlgeschlagen. Versuchen Sie, die Verbindung erneut herzustellen. Bei weiterhin bestehendem Problem überprüfen Sie Ihre Redirect-URI und Scopes.",
+          "sessionExpired": "Ihre Sitzung ist nicht mehr gültig. Melden Sie sich an und starten Sie die Xero-Verbindung erneut.",
+          "stateReplayed": "Diese Xero-Verbindungsanfrage wurde bereits verwendet. Starten Sie den Verbindungs-Flow erneut.",
+          "tenantMismatch": "Diese Xero-Verbindungsanfrage gehört zu einem anderen Arbeitsbereich. Melden Sie sich im richtigen Arbeitsbereich an und starten Sie erneut.",
+          "userMismatch": "Diese Xero-Verbindungsanfrage gehört einem anderen Benutzer. Melden Sie sich als der Benutzer an, der sie gestartet hat, und versuchen Sie es erneut."
         },
         "clientIdLabel": "Xero Client ID",
         "clientIdPlaceholder": "Fügen Sie Ihre mandanteneigene Xero Client ID ein",
@@ -3221,6 +3486,9 @@
         "noClientSecret": "Für diesen Mandanten ist noch kein Client Secret gespeichert.",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Erforderliche Scopes",
+        "scopeOverride": "Deployment-Überschreibung (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "Die Überschreibung XERO_OAUTH_SCOPES wurde ignoriert, da sie ungültige Einträge enthält ({{scopes}}). Stattdessen werden die Standard-Scopes verwendet.",
+        "scopeReconnectNote": "Diese Scopes gelten für neue Autorisierungen. Eine bestehende Verbindung behält die ursprünglich gewährten Scopes; um den aktuellen Satz anzuwenden, trennen Sie Xero und verbinden Sie es erneut. Sie können diese App auch unter „Verbundene Apps“ in Xero entfernen, um frühere Berechtigungen zu widerrufen.",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
         "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Xero-App-Anmeldedaten ein. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
@@ -3309,6 +3577,185 @@
       },
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
+    },
+    "telephony": {
+      "status": {
+        "active": "Aktiv",
+        "error": "Fehler",
+        "disabled": "Deaktiviert",
+        "notConfigured": "Nicht eingerichtet"
+      },
+      "providers": {
+        "teamsPhone": {
+          "description": "Protokolliert Teams-Phone-Anrufe nach Gesprächsende als Interaktionen. Anrufverlauf, kein Live-Screenpop.",
+          "prerequisite": "Richten Sie zuerst die Microsoft-Teams-Integration ein — Teams Phone nutzt deren Microsoft-Profil."
+        }
+      },
+      "subscriptionExpires": "Abonnement wird erneuert vor",
+      "lastNotification": "Letzte Anrufbenachrichtigung",
+      "autoTicket": "Für zugeordnete Anrufe automatisch ein Ticket erstellen",
+      "unknownNumber": "Unbekannte Nummer",
+      "actions": {
+        "enable": "Aktivieren",
+        "disable": "Deaktivieren"
+      },
+      "matchStatus": {
+        "matched": "Zugeordnet",
+        "ambiguous": "Mehrdeutig",
+        "unmatched": "Nicht zugeordnet",
+        "resolved": "Geklärt"
+      },
+      "callsPanel": {
+        "title": "Anrufe"
+      },
+      "recentCalls": {
+        "title": "Letzte Anrufe",
+        "description": "Wird nach Gesprächsende erfasst — Microsoft Graph veröffentlicht Anrufdatensätze erst danach, dies ist also ein Verlauf und kein Live-Feed.",
+        "empty": "Noch keine Anrufe erfasst.",
+        "createTicket": "Ticket erstellen",
+        "openTicket": "Ticket öffnen",
+        "linkTicket": "Mit Ticket verknüpfen",
+        "selectTicket": "Ticket auswählen…",
+        "noLinkableTickets": "Keine offenen Tickets"
+      },
+      "unmatched": {
+        "title": "Anrufe ohne Zuordnung",
+        "description": "Nummern, die wir nicht zuordnen konnten, und Nummern, die mehrere Kontakte teilen. Das Klären eines Anrufs legt ihn in der richtigen Chronik ab.",
+        "empty": "Jeder erfasste Anruf ist zugeordnet.",
+        "assignTo": "Zuordnen zu",
+        "searchPlaceholder": "Kontakte und Kunden suchen…",
+        "noTargets": "Keine passenden Kontakte oder Kunden.",
+        "chooseTarget": "Einem Kunden zuordnen…"
+      },
+      "forbidden": "Sie haben keine Berechtigung, die Telefonie-Einstellungen dieses Mandanten anzuzeigen.",
+      "paywall": {
+        "title": "Telefonie",
+        "description": "Telefonie-Integrationen sind für diesen Mandanten nicht verfügbar.",
+        "unavailable": "Telefonie-Integrationen sind für diesen Mandanten nicht verfügbar.",
+        "ceOnly": "Telefonie-Integrationen sind nur in der Enterprise Edition verfügbar.",
+        "includedTitle": "Enthalten",
+        "cta": "Integrationen verwalten",
+        "feature": {
+          "recognition": "Anrufererkennung anhand von Kontakten und Kunden bei jedem erfassten Anruf.",
+          "history": "Anrufverlauf in der Kontakt- und Kundenchronik als vollwertige Interaktionen.",
+          "tickets": "Aus einem Anruf ein Ticket erstellen oder den Anruf mit einem laufenden Ticket verknüpfen.",
+          "queue": "Eine Warteschlange für nicht zugeordnete und mehrdeutige Nummern, damit kein Anruf geraten wird.",
+          "providers": "Heute Teams Phone; derselbe Anrufkern trägt künftige Anbieter."
+        }
+      }
+    }
+  },
+  "errors": {
+    "rmm": {
+      "invalidInput": "Überprüfen Sie die Einstellungen der RMM-Warnungsautomatisierung und versuchen Sie es erneut.",
+      "permissions": {
+        "read": "Unzureichende Berechtigungen zum Anzeigen der Einstellungen für die RMM-Warnungsautomatisierung.",
+        "update": "Unzureichende Berechtigungen zum Verwalten der Einstellungen für die RMM-Warnungsautomatisierung."
+      },
+      "integrationNotFound": "RMM-Integration nicht gefunden.",
+      "nothingToUpdate": "Es sind keine Änderungen zu speichern.",
+      "ruleNotFound": "Warnungsregel nicht gefunden.",
+      "windowNotFound": "Wartungsfenster nicht gefunden.",
+      "pollIntervalRange": "Das Abfrageintervall muss zwischen 5 und 60 Minuten liegen.",
+      "validation": {
+        "scheduleRequired": "Ein Zeitfenster benötigt entweder eine Start- und Endzeit oder eine wöchentliche Wiederholung.",
+        "startBeforeEnd": "Die Startzeit muss vor der Endzeit liegen.",
+        "timesMustDiffer": "Start- und Endzeit müssen unterschiedlich sein. Verwenden Sie mehrere Tage für ein Zeitfenster, das einen ganzen Tag umfasst.",
+        "unknownTimezone": "Unbekannte Zeitzone: {{timezone}}.",
+        "messagePatternInvalid": "Das Nachrichtenmuster ist kein gültiger regulärer Ausdruck."
+      }
+    },
+    "mappings": {
+      "viewPermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen anzuzeigen.",
+      "managePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen zu verwalten.",
+      "loadFailed": "Zuordnungsdaten können nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "duplicate": "Für dieses Objekt existiert bereits eine Zuordnung. Bearbeiten Sie stattdessen die vorhandene Zuordnung.",
+      "saveFailed": "Die Zuordnung kann nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "idRequiredForUpdate": "Für die Aktualisierung ist die Zuordnungs-ID erforderlich.",
+      "noUpdateData": "Es wurden keine Aktualisierungsdaten übermittelt.",
+      "updateFailed": "Die Zuordnung kann nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "idRequiredForDelete": "Für das Löschen ist die Zuordnungs-ID erforderlich.",
+      "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie die Zuordnungen und versuchen Sie es erneut.",
+      "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    },
+    "qbo": {
+      "enterpriseOnly": "Die QuickBooks-Online-Integration ist nur in der Enterprise Edition verfügbar.",
+      "viewPermission": "Verboten: Sie haben keine Berechtigung, die Einstellungen der QuickBooks-Integration anzuzeigen.",
+      "accounts": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Konten laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Konten laden.",
+        "loadFailed": "QuickBooks-Konten konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "classes": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Klassen laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Klassen laden.",
+        "loadFailed": "QuickBooks-Klassen konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "departments": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Abteilungen laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Abteilungen laden.",
+        "loadFailed": "QuickBooks-Abteilungen konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "items": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Artikel laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Artikel laden.",
+        "loadFailed": "QuickBooks-Artikel konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "taxCodes": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Steuercodes laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Steuercodes laden.",
+        "loadFailed": "QuickBooks-Steuercodes konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "customers": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Kunden laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Kunden laden.",
+        "loadFailed": "QuickBooks-Kunden konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "paymentTerms": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Zahlungsbedingungen laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Zahlungsbedingungen laden.",
+        "loadFailed": "QuickBooks-Zahlungsbedingungen konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "Die Xero-Integration ist nur in der Enterprise Edition verfügbar.",
+      "viewPermission": "Verboten: Sie haben keine Berechtigung, die Einstellungen der Xero-Integration anzuzeigen.",
+      "organisationDisconnected": "Die ausgewählte Xero-Organisation ist nicht mehr verbunden. Verbinden Sie Xero neu und versuchen Sie es erneut.",
+      "accounts": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Konten laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Konten laden.",
+        "loadFailed": "Xero-Konten konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Konten geladen wurden. Versuchen Sie es erneut."
+      },
+      "items": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Artikel laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Artikel laden.",
+        "loadFailed": "Xero-Artikel konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Artikel geladen wurden. Versuchen Sie es erneut."
+      },
+      "taxRates": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Steuersätze laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Steuersätze laden.",
+        "loadFailed": "Xero-Steuersätze konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Steuersätze geladen wurden. Versuchen Sie es erneut."
+      },
+      "trackingCategories": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Nachverfolgungskategorien laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Nachverfolgungskategorien laden.",
+        "loadFailed": "Xero-Nachverfolgungskategorien konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Nachverfolgungskategorien geladen wurden. Versuchen Sie es erneut."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "Der Benutzer hat keine Berechtigung, Integrationseinstellungen zu verwalten",
+      "manageBillingPermission": "Der Benutzer hat keine Berechtigung, die Abrechnung zu verwalten",
+      "viewBillingPermission": "Der Benutzer hat keine Berechtigung, Abrechnungseinstellungen anzuzeigen",
+      "contentRequired": "CSV-Inhalt ist erforderlich"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits im System ohne Kundenzuordnung",
+      "emailOnAnotherClient": "Diese E-Mail-Adresse ist bereits einem anderen Kunden zugeordnet",
+      "emailOnAnotherClientNamed": "Diese E-Mail-Adresse ist bereits {{clientName}} zugeordnet"
     }
   }
 }

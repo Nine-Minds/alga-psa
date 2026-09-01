@@ -83,23 +83,6 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     expect(names).not.toContain('License');
   });
 
-  it('hides Opportunities from settings navigation when its feature flag is disabled', async () => {
-    useFeatureFlag.mockImplementation((flagKey: string) => flagKey !== 'opportunities-module');
-
-    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
-
-    await waitFor(() => expect(sidebarPropsSpy).toHaveBeenCalled());
-
-    const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
-      settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
-    };
-    const settingsNames = latestProps.settingsSectionsOverride.flatMap((section) =>
-      section.items.map((item) => item.name),
-    );
-
-    expect(settingsNames).not.toContain('Opportunities');
-  });
-
   it('T005: AlgaDesk shell keeps only allowed nav and uses AlgaDesk branding labels', async () => {
     useProduct.mockReturnValue({ productCode: 'algadesk', edition: 'enterprise' });
 
@@ -168,7 +151,25 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     expect(mainNames).not.toContain('Workflows');
     expect(mainNames).not.toContain('Extensions');
     expect(settingsNames).not.toContain('Extensions');
+    expect(settingsNames).not.toContain('Appearance');
     expect(latestProps.extensionsSectionsOverride).toEqual([]);
+  });
+
+  it('shows Appearance and Passwords in the enterprise shell', async () => {
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        menuSections: Array<{ items: Array<{ name: string }> }>;
+        settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+      };
+      const menuNames = latestProps.menuSections.flatMap((section) => section.items.map((item) => item.name));
+      const settingsNames = latestProps.settingsSectionsOverride.flatMap((section) =>
+        section.items.map((item) => item.name),
+      );
+      expect(menuNames).toContain('Passwords');
+      expect(settingsNames).toContain('Appearance');
+    });
   });
 
   it('recursively keeps CE-visible children and still applies feature access', () => {

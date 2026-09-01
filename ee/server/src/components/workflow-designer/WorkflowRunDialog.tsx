@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { dateFromString, dateTimeFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -225,25 +228,6 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
 };
 
 const UUID_SAMPLE_VALUE = '00000000-0000-4000-8000-000000000001';
-
-const toDateTimeLocalInputValue = (value: string): string => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
-const fromDateTimeLocalInputValue = (value: string): string => {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toISOString();
-};
 
 const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, path: Array<string | number> = []): unknown => {
   const resolved = resolveSchemaRef(schema, root);
@@ -1447,30 +1431,60 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       );
     }
 
-    const inputType = resolved.format === 'date-time' ? 'datetime-local' : resolved.format === 'date' ? 'date' : 'text';
-    const renderedValue = (() => {
-      if (value == null) return '';
-      if (resolved.format === 'date-time' && typeof value === 'string') {
-        return toDateTimeLocalInputValue(value);
-      }
-      return String(value);
-    })();
+    const isNumeric = type === 'number' || type === 'integer';
+    const dateFormat = !isNumeric && (resolved.format === 'date' || resolved.format === 'date-time')
+      ? resolved.format
+      : null;
+
+    if (dateFormat) {
+      const rawValue = typeof value === 'string' ? value : '';
+      const commit = (next: Date | undefined) => {
+        const serialized = !next
+          ? null
+          : dateFormat === 'date-time' ? next.toISOString() : dateToString(next);
+        updateFormValue((prev) => setValueAtPath(prev, path, serialized));
+      };
+
+      return (
+        <div className="space-y-1">
+          {commonHeader}
+          {dateFormat === 'date-time' ? (
+            <DateTimePicker
+              id={`run-form-${fieldPath}`}
+              label={label}
+              required={isRequired}
+              clearable
+              value={dateTimeFromString(rawValue)}
+              onChange={commit}
+            />
+          ) : (
+            <DatePicker
+              id={`run-form-${fieldPath}`}
+              label={label}
+              required={isRequired}
+              clearable
+              value={dateFromString(rawValue)}
+              onChange={commit}
+            />
+          )}
+          {description}
+          {fieldErrors.map((err) => (
+            <div key={`${fieldPath}-err`} className="text-xs text-destructive">{err.message}</div>
+          ))}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-1">
         {commonHeader}
         <Input
           id={`run-form-${fieldPath}`}
-          type={type === 'number' || type === 'integer' ? 'number' : inputType}
-          value={renderedValue}
+          type={isNumeric ? 'number' : 'text'}
+          value={value == null ? '' : String(value)}
           onChange={(event) => {
             const raw = event.target.value;
-            const parsed = raw === ''
-              ? null
-              : (type === 'number' || type === 'integer'
-                ? Number(raw)
-                : resolved.format === 'date-time'
-                  ? fromDateTimeLocalInputValue(raw)
-                  : raw);
+            const parsed = raw === '' ? null : (isNumeric ? Number(raw) : raw);
             updateFormValue((prev) => setValueAtPath(prev, path, parsed));
           }}
         />
@@ -1509,9 +1523,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const segmentedButtonClass = (active: boolean) =>
     active
       ? 'border-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]'
-      : 'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-100))]';
+      : 'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]';
   const utilityButtonClass =
-    'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-100))]';
+    'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]';
 
   return (
     <Dialog

@@ -93,7 +93,7 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
                 </span>
               )}
             </span>
-            <div className="flex items-center flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               {!isFocus && (
                 <Button
                   id={`view-week-${tech.user_id}`}

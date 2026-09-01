@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "De hoeveelheid moet groter zijn dan nul",
         "updateFailed": "Kan aantal niet updaten"
       },
-      "heading": "Pas de hoeveelheid aan",
       "helperText": "Laat dit veld leeg als u de productcatalogusprijs voor de valuta van dit contract wilt gebruiken.",
       "labels": {
         "quantity": "Hoeveelheid",
@@ -802,5 +801,49 @@
     },
     "label": "Contractregeltype",
     "placeholder": "Selecteer het type contractregel"
+  },
+  "errors": {
+    "line": {
+      "unavailable": "De geselecteerde contractregel is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde waarden van de contractregel is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde contract of de contractregel bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze wijziging van de contractregel conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de waarden van de contractregel is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de contractregel.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de contractregel: {{field}}."
+    },
+    "templateLine": {
+      "unavailable": "De geselecteerde sjabloonregel is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "mapping": {
+      "duplicate": "Deze contractregel is al gekoppeld aan het geselecteerde contract."
+    },
+    "preset": {
+      "invalidValue": "Een van de geselecteerde waarden van de voorinstelling voor contractregels is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde voorinstelling voor contractregels, het contract of de service bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze wijziging van de voorinstelling voor contractregels conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de waarden van de voorinstelling voor contractregels is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de voorinstelling voor contractregels.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de voorinstelling voor contractregels: {{field}}.",
+      "notFoundDuringUpdate": "Voorinstelling voor contractregels met ID {{presetId}} niet gevonden tijdens het bijwerken."
+    },
+    "service": {
+      "unavailable": "De geselecteerde service van de contractregel is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde contractregel of service bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Deze service is al gekoppeld aan de geselecteerde contractregel.",
+      "notAllowed": "Een van de servicewaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "addedOnce": "Een service kan maar één keer worden toegevoegd bij het bewerken van een contractregel.",
+      "removedOnce": "Een service kan maar één keer worden verwijderd bij het bewerken van een contractregel.",
+      "addedAndRemoved": "Dezelfde service kan niet in één bewerking van een contractregel worden toegevoegd en verwijderd."
+    },
+    "configuration": {
+      "unavailable": "De geselecteerde serviceconfiguratie is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde waarden van de serviceconfiguratie is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Deze serviceconfiguratie bestaat al voor de geselecteerde contractregel.",
+      "notAllowed": "Een van de waarden van de serviceconfiguratie is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de serviceconfiguratie.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de serviceconfiguratie: {{field}}.",
+      "bucketOverlayFieldsMissing": "Er ontbreken verplichte velden van de urenbundel-overlay."
+    }
   }
 }

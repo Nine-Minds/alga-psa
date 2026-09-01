@@ -45,7 +45,7 @@ describe('Microsoft providers-first form contracts', () => {
   it('T019: Microsoft email form delegates app setup to Providers', () => {
     expect(emailFormSource).not.toContain('Use your own Microsoft app');
     expect(emailFormSource).not.toContain('Redirect URI');
-    expect(emailFormSource).toContain('Set up in Providers');
+    expect(emailFormSource).toContain('Set it up in Providers');
     expect(emailFormSource).toContain('Open Providers');
     expect(emailFormSource).toContain('/msp/settings/integrations?category=providers');
   });
@@ -55,8 +55,13 @@ describe('Microsoft providers-first form contracts', () => {
       "@alga-psa/integrations/components/email/MicrosoftProviderForm"
     );
     expect(emailFormSource).toContain('emailSetup?: MicrosoftEmailSetupReadiness | null');
-    expect(emailFormSource).toContain('providerSetupReady');
-    expect(emailFormSource).toContain('Microsoft is set up. Sign in as this mailbox to finish.');
+    // Progressive disclosure: the issuer picker is the only readiness surface.
+    // Sign-in is gated on the selected issuer, never on a global setup banner,
+    // and pending admin consent surfaces only as own-app path status.
+    expect(emailFormSource).toContain('ownAppPendingConsent');
+    expect(emailFormSource).not.toContain('providerSetupReady');
+    expect(emailFormSource).not.toContain('Microsoft is set up. Sign in as this mailbox to finish.');
+    expect(emailFormSource).toContain("disabled={issuerOptionsLoading || !selectedIssuer || oauthStatus === 'authorizing'}");
     expect(emailFormSource).toContain('Sign in with Microsoft');
     expect(emailFormSource).toContain('/msp/settings/integrations?category=providers');
   });
@@ -84,7 +89,9 @@ describe('Microsoft providers-first form contracts', () => {
   it('T020/T021: Microsoft calendar form uses providers-first CTA and saves without manual credentials', () => {
     expect(calendarFormSource).toContain('Microsoft provider settings are not configured.');
     expect(calendarFormSource).toContain('configure-microsoft-calendar-providers-link');
-    expect(calendarFormSource).toContain('/msp/settings?category=providers');
+    // tab=integrations is required — without it the settings page ignores the
+    // category param and lands on the default tab.
+    expect(calendarFormSource).toContain('/msp/settings?tab=integrations&category=providers');
 
     expect(calendarFormSource).toContain('createCalendarProvider({');
     expect(calendarFormSource).toContain("client_id: ''");
@@ -92,16 +99,20 @@ describe('Microsoft providers-first form contracts', () => {
     expect(calendarFormSource).toContain("tenant_id: ''");
   });
 
-  it('T022: Microsoft email persistence derives credentials from tenant providers secrets instead of form fields', () => {
-    expect(emailActionsSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
-    expect(emailActionsSource).toContain("credentialPreference: 'tenant'");
+  it('T022: Microsoft email persistence requires an explicit issuer and never falls back to the Email binding on create/save', () => {
+    expect(emailActionsSource).toContain('resolveMicrosoftEmailIssuerChoice(tenant, issuer)');
+    expect(emailActionsSource).toContain('preserveIssuingApp');
+    expect(emailActionsSource).toContain('CLIENT_MISMATCH_RECONNECT_REQUIRED');
+    expect(emailActionsSource).toContain('ISSUER_REQUIRED');
+    expect(emailActionsSource).toContain('explicit selection fails loudly');
+    // The silent tenant-binding fallback on new writes is gone; the binding may
+    // only inform the UI default and the legacy runtime backfill.
+    expect(emailActionsSource).not.toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
+    expect(emailActionsSource).not.toContain("credentialPreference: 'tenant'");
     expect(emailActionsSource).not.toContain('microsoftCredentialSource');
     expect(emailActionsSource).toContain('getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri');
     expect(emailActionsSource).toContain(
-      "const effectiveClientId = microsoftProfile.clientId || '';"
-    );
-    expect(emailActionsSource).toContain(
-      "const effectiveClientSecret = microsoftProfile.clientSecret || '';"
+      'let effectiveClientId = resolution.clientId;'
     );
     expect(emailActionsSource).toContain('microsoft_profile_id: pinnedProfileId');
     expect(emailActionsSource).toContain('client_secret_ref: pinnedClientSecretRef');

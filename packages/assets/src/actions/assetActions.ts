@@ -32,6 +32,11 @@ import {
     WarrantyStatus,
     DeletionValidationResult,
     AssetFact,
+    AssetMaintenanceOccurrence,
+    AssetMaintenanceOccurrenceStatus,
+    MaintenanceOccurrenceFilters,
+    MaintenanceOccurrenceListResult,
+    MaintenanceAggregates,
 } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { validateData } from '@alga-psa/validation';
@@ -54,7 +59,9 @@ import {
     createAssetRelationshipSchema
 } from '../lib/schemas/asset.schema';
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
+import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
+import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
@@ -165,10 +172,15 @@ function normalizeBulkAssetIds(assetIds: string[]): string[] {
     return ids;
 }
 
-function assetActionErrorMessage(error: unknown, fallback: string): string {
+// Reports failure as a bare string, so withAuth's boundary never sees the
+// payload's messageKey. Localize before flattening.
+async function assetActionErrorMessage(error: unknown, fallback: string): Promise<string> {
     const expected = expectedAssetActionError(error);
     if (expected) {
-        const candidate = expected as unknown as { permissionError?: unknown; actionError?: unknown };
+        const candidate = (await localizeActionError(expected)) as unknown as {
+            permissionError?: unknown;
+            actionError?: unknown;
+        };
         return typeof candidate.permissionError === 'string'
             ? candidate.permissionError
             : String(candidate.actionError ?? fallback);
@@ -191,6 +203,19 @@ function assetActionErrorMessage(error: unknown, fallback: string): string {
 
 function expectedAssetActionError(error: unknown): AssetActionError | null {
     return assetActionErrorFrom(error);
+}
+
+function serializedAssetValidationError(error: z.ZodError): Error {
+    return new Error(JSON.stringify({
+        kind: 'validation',
+        issues: error.issues.map((issue) => ({
+            path: issue.path,
+            message: issue.message,
+            code: issue.code,
+            ...('received' in issue ? { received: issue.received } : {}),
+            ...('params' in issue ? { params: issue.params } : {}),
+        })),
+    }));
 }
 
 function buildBulkAssetActionResponse(results: BulkAssetActionResult[]): BulkAssetActionResponse {
@@ -839,31 +864,20 @@ function formatAssetForOutput(asset: any): Asset {
 }
 
 /**
- * Actor-injectable asset creation core (no withAuth). Shared by the createAsset
- * server action (passes the session user id) and sessionless callers such as
- * the Hudu background sync (passes a resolved tenant audit user id). Permission
- * checks live in the withAuth wrapper; this core trusts its caller.
+ * Transaction-scoped asset creation core: validates, resolves the asset
+ * type and location, and writes the asset, its extension row, and its
+ * history record inside the caller's transaction. Callers own the commit,
+ * so a migration applier can bind this write atomically with its own
+ * ledger rows. Post-commit workflow events are the caller's concern
+ * (createAssetRecord publishes them after its own commit).
  */
-export async function createAssetRecord(
-    knex: Knex,
+export async function createAssetInTransaction(
+    trx: Knex.Transaction,
     tenant: string,
     actorUserId: string,
     data: CreateAssetRequest,
-    // Importers (e.g. Hudu) project best-effort attributes and must never fail
-    // on a required custom field the source didn't supply; they pass false.
     options?: { requireCustomAttributes?: boolean }
 ): Promise<Asset> {
-    try {
-        // Validate input data first
-        try {
-            validateData(createAssetSchema, data);
-        } catch (error) {
-            console.error('Input validation error:', error);
-            throw new Error('Invalid asset input data. Review required fields and try again.');
-        }
-
-        // Start transaction
-        const result = await knex.transaction(async (trx: Knex.Transaction) => {
             // Validate the input data
             const validatedData = validateData(createAssetSchema, data);
 
@@ -941,8 +955,42 @@ export async function createAssetRecord(
             const completeAsset = await getAssetWithExtensions(trx, tenant, asset.asset_id);
 
             // Format the asset data properly before returning
-            return formatAssetForOutput(completeAsset);
-        });
+            return formatAssetForOutput(completeAsset) as Asset;
+}
+
+/**
+ * Actor-injectable asset creation core (no withAuth). Shared by the createAsset
+ * server action (passes the session user id) and sessionless callers such as
+ * the Hudu background sync (passes a resolved tenant audit user id). Permission
+ * checks live in the withAuth wrapper; this core trusts its caller. It owns
+ * its transaction; callers that must commit atomically with other writes use
+ * createAssetInTransaction and publish events themselves.
+ */
+export async function createAssetRecord(
+    knex: Knex,
+    tenant: string,
+    actorUserId: string,
+    data: CreateAssetRequest,
+    // Importers (e.g. Hudu) project best-effort attributes and must never fail
+    // on a required custom field the source didn't supply; they pass false.
+    options?: { requireCustomAttributes?: boolean }
+): Promise<Asset> {
+    try {
+        // Validate input data first
+        try {
+            validateData(createAssetSchema, data);
+        } catch (error) {
+            console.error('Input validation error:', error);
+            if (error instanceof z.ZodError) {
+                throw serializedAssetValidationError(error);
+            }
+            throw new Error('Invalid asset input data. Review required fields and try again.');
+        }
+
+        // Start transaction
+        const result = await knex.transaction(async (trx: Knex.Transaction) =>
+            createAssetInTransaction(trx, tenant, actorUserId, data, options)
+        );
 
         // Validate the formatted output
         try {
@@ -993,12 +1041,8 @@ export async function createAssetRecord(
         } catch (error) {
             console.error('Output validation error:', error);
             // Extract Zod validation details if available
-            if (error && typeof error === 'object' && 'issues' in error) {
-                const zodError = error as { issues: Array<{ path: (string | number)[]; message: string }> };
-                const details = zodError.issues
-                    .map(issue => `${issue.path.join('.')}: ${issue.message}`)
-                    .join('; ');
-                throw new Error(`Asset validation failed: ${details}`);
+            if (error instanceof z.ZodError) {
+                throw serializedAssetValidationError(error);
             }
             throw new Error('Server error: Invalid output data format');
         }
@@ -1291,14 +1335,7 @@ export async function updateAssetRecord(
         if (error instanceof z.ZodError) {
             // Serialize field-level issues so the client can render them inline + in a toast
             // without losing the user's in-progress form data.
-            throw new Error(JSON.stringify({
-                kind: 'validation',
-                issues: error.issues.map((issue) => ({
-                    path: issue.path,
-                    message: issue.message,
-                    code: issue.code,
-                })),
-            }));
+            throw serializedAssetValidationError(error);
         }
         if (isTypedAssetWriteError(error)) {
             // invalid_asset_type / attribute-schema issues already carry a
@@ -1471,7 +1508,7 @@ export async function deleteAssetRecord(
             success: false,
             canDelete: false,
             code: 'VALIDATION_FAILED',
-            message: assetActionErrorMessage(expected, 'Failed to delete asset'),
+            message: await assetActionErrorMessage(expected, 'Failed to delete asset'),
             dependencies: [],
             alternatives: []
         };
@@ -1530,7 +1567,7 @@ export const bulkUpdateAssets = withAuth(async (
                     return {
                         asset_id,
                         success: false,
-                        error: assetActionErrorMessage(expected, 'Failed to update asset'),
+                        error: await assetActionErrorMessage(expected, 'Failed to update asset'),
                     };
                 }
                 return { asset_id, success: true, asset };
@@ -1538,7 +1575,7 @@ export const bulkUpdateAssets = withAuth(async (
                 return {
                     asset_id,
                     success: false,
-                    error: assetActionErrorMessage(error, 'Failed to update asset'),
+                    error: await assetActionErrorMessage(error, 'Failed to update asset'),
                 };
             }
         }
@@ -1580,7 +1617,7 @@ export const bulkDeleteAssets = withAuth(async (
                     return {
                         asset_id,
                         success: false,
-                        error: assetActionErrorMessage(expected, 'Failed to delete asset'),
+                        error: await assetActionErrorMessage(expected, 'Failed to delete asset'),
                     };
                 }
                 const success = result.success === true;
@@ -1593,7 +1630,7 @@ export const bulkDeleteAssets = withAuth(async (
                 return {
                     asset_id,
                     success: false,
-                    error: assetActionErrorMessage(error, 'Failed to delete asset'),
+                    error: await assetActionErrorMessage(error, 'Failed to delete asset'),
                 };
             }
         }
@@ -2056,6 +2093,16 @@ export const createMaintenanceSchedule = withAuth(async (user, { tenant }, data:
                     }
                 });
 
+            if (createdSchedule.is_active) {
+                await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).insert({
+                    tenant,
+                    schedule_id: createdSchedule.schedule_id,
+                    asset_id: createdSchedule.asset_id,
+                    due_date: createdSchedule.next_maintenance,
+                    status: 'open',
+                });
+            }
+
             return createdSchedule;
         });
 
@@ -2109,7 +2156,7 @@ export const updateMaintenanceSchedule = withAuth(async (
         const schedule = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const existingSchedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
                 .where({ schedule_id })
-                .select('asset_id')
+                .select('*')
                 .first();
 
             if (!existingSchedule) {
@@ -2144,6 +2191,19 @@ export const updateMaintenanceSchedule = withAuth(async (
                             )
                         `, [JSON.stringify(validatedData.schedule_name || updatedSchedule.schedule_name)])
                     });
+                await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant)
+                    .where({ schedule_id, status: 'open' })
+                    .update({ due_date: validatedData.next_maintenance, updated_at: trx.fn.now() });
+            }
+
+            if (validatedData.is_active === false && existingSchedule.is_active) {
+                await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant)
+                    .where({ schedule_id, status: 'open' })
+                    .update({ status: 'cancelled', closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
+            } else if (validatedData.is_active === true && !existingSchedule.is_active && !updatedSchedule.archived_at) {
+                await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant)
+                    .insert({ tenant, schedule_id, asset_id: updatedSchedule.asset_id, due_date: updatedSchedule.next_maintenance, status: 'open' })
+                    .onConflict().ignore();
             }
 
             return updatedSchedule;
@@ -2199,10 +2259,20 @@ export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, sched
 
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
 
-            return await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
+            const history = await tenantScopedTable(trx, 'asset_maintenance_history', tenant)
                 .where({ schedule_id })
-                .delete()
-                .returning(['asset_id']);
+                .count('* as count')
+                .first();
+            if (Number(history?.count || 0) > 0) {
+                await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant)
+                    .where({ schedule_id, status: 'open' })
+                    .update({ status: 'cancelled', closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
+                return await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
+                    .where({ schedule_id })
+                    .update({ is_active: false, archived_at: trx.fn.now(), updated_at: trx.fn.now() })
+                    .returning(['asset_id']);
+            }
+            return await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id }).delete().returning(['asset_id']);
         });
 
         revalidatePath('/assets');
@@ -2215,6 +2285,278 @@ export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, sched
         if (expected) return expected;
         throw error;
     }
+});
+
+function asOccurrence(row: any): AssetMaintenanceOccurrence {
+    const asIso = (value: unknown) => value instanceof Date ? value.toISOString() : String(value);
+    return {
+        ...row,
+        due_date: asIso(row.due_date),
+        created_at: asIso(row.created_at),
+        updated_at: asIso(row.updated_at),
+        closed_at: row.closed_at ? asIso(row.closed_at) : undefined,
+        performed_at: row.performed_at ? asIso(row.performed_at) : undefined,
+        ticket_id: row.ticket_id || undefined,
+        history_id: row.history_id || undefined,
+        skip_reason: row.skip_reason || undefined,
+        closed_by: row.closed_by || undefined,
+        maintenance_data: row.maintenance_data || undefined,
+    } as AssetMaintenanceOccurrence;
+}
+
+async function getOccurrenceForMutation(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: AssetAuthUser,
+    occurrence_id: string,
+): Promise<any> {
+    const occurrence = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant)
+        .where({ occurrence_id })
+        .forUpdate()
+        .first();
+    if (!occurrence) throw new Error('Maintenance occurrence not found');
+    await createAuthorizedAssetReadContextForUser(trx, tenant, user, occurrence.asset_id);
+    return occurrence;
+}
+
+async function openNextOccurrence(
+    trx: Knex.Transaction,
+    tenant: string,
+    schedule: any,
+    dueDate: Date,
+): Promise<any> {
+    const [next] = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant)
+        .insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, due_date: dueDate, status: 'open' })
+        .returning('*');
+    return next;
+}
+
+/** Tenant-wide work queue. Authorization is evaluated per asset after structural tenant scoping. */
+export const listMaintenanceOccurrences = withAuth(async (
+    user, { tenant }, filters: MaintenanceOccurrenceFilters = {}
+): Promise<MaintenanceOccurrenceListResult | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'asset', 'read', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot read maintenance occurrences'))!;
+    try {
+        return await withTransaction(knex, async (trx) => {
+            const page = Math.max(1, filters.page || 1);
+            const limit = Math.min(10000, Math.max(1, filters.limit || 50));
+            const db = tenantDb(trx, tenant);
+            const query = tenantScopedTable(trx, 'asset_maintenance_occurrences as o', tenant)
+                .select(
+                    'o.*',
+                    's.schedule_name',
+                    's.maintenance_type',
+                    's.frequency',
+                    's.frequency_interval',
+                    's.schedule_config',
+                    's.last_maintenance',
+                    'a.name as asset_name',
+                    'a.asset_type',
+                    'a.asset_tag',
+                    'a.location as asset_location',
+                    'a.client_id',
+                    'c.client_name',
+                    't.title as ticket_title',
+                    't.ticket_number',
+                    't.is_closed as ticket_closed',
+                    't.assigned_to as ticket_assigned_to',
+                    'ticket_assignee.first_name as ticket_assignee_first_name',
+                    'ticket_assignee.last_name as ticket_assignee_last_name',
+                    'schedule_creator.first_name as schedule_created_by_first_name',
+                    'schedule_creator.last_name as schedule_created_by_last_name',
+                    'h.performed_at',
+                    'h.performed_by',
+                    'h.description as completion_notes',
+                    'h.maintenance_data',
+                    'performed_by_user.first_name as performed_by_first_name',
+                    'performed_by_user.last_name as performed_by_last_name',
+                    'closed_by_user.first_name as closed_by_first_name',
+                    'closed_by_user.last_name as closed_by_last_name',
+                )
+                .whereNull('s.archived_at');
+            db.tenantJoin(query, 'asset_maintenance_schedules as s', 'o.schedule_id', 's.schedule_id');
+            db.tenantJoin(query, 'assets as a', 'o.asset_id', 'a.asset_id');
+            db.tenantJoin(query, 'clients as c', 'a.client_id', 'c.client_id', { type: 'left' });
+            db.tenantJoin(query, 'tickets as t', 'o.ticket_id', 't.ticket_id', { type: 'left' });
+            db.tenantJoin(query, 'asset_maintenance_history as h', 'o.history_id', 'h.history_id', { type: 'left' });
+            db.tenantJoin(query, 'users as performed_by_user', 'h.performed_by', 'performed_by_user.user_id', { type: 'left' });
+            db.tenantJoin(query, 'users as closed_by_user', 'o.closed_by', 'closed_by_user.user_id', { type: 'left' });
+            db.tenantJoin(query, 'users as ticket_assignee', 't.assigned_to', 'ticket_assignee.user_id', { type: 'left' });
+            db.tenantJoin(query, 'users as schedule_creator', 's.created_by', 'schedule_creator.user_id', { type: 'left' });
+            if (filters.status?.length) query.whereIn('o.status', filters.status);
+            if (filters.client_id) query.where('a.client_id', filters.client_id);
+            if (filters.asset_id) query.where('o.asset_id', filters.asset_id);
+            if (filters.asset_type) query.where('a.asset_type', filters.asset_type);
+            if (filters.maintenance_type) query.where('s.maintenance_type', filters.maintenance_type);
+            if (filters.due_from) query.where('o.due_date', '>=', filters.due_from);
+            if (filters.due_to) query.where('o.due_date', '<=', filters.due_to);
+            if (filters.search?.trim()) query.where((builder) => builder.whereILike('s.schedule_name', `%${filters.search!.trim()}%`).orWhereILike('a.name', `%${filters.search!.trim()}%`).orWhereILike('c.client_name', `%${filters.search!.trim()}%`));
+            const rows = await query.orderByRaw("CASE WHEN o.status = 'open' THEN 0 ELSE 1 END").orderBy('o.due_date', 'asc');
+            const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+            const decisions = await Promise.all(rows.map((row: any) => authorizeAssetReadDecision(trx, tenant, context, { asset_id: row.asset_id, client_id: row.client_id })));
+            const permitted = rows.filter((_: any, index: number) => decisions[index]?.allowed);
+            return { occurrences: permitted.slice((page - 1) * limit, page * limit).map(asOccurrence), total: permitted.length };
+        });
+    } catch (error) {
+        const expected = expectedAssetActionError(error); if (expected) return expected; throw error;
+    }
+});
+
+export const getMaintenanceAggregates = withAuth(async (user, { tenant }): Promise<MaintenanceAggregates | AssetActionError> => {
+    // Aggregate over the same asset-authorized occurrence set as the queue.
+    const result = await listMaintenanceOccurrences({ status: ['open'], limit: 10000 });
+    const expected = assetActionErrorFrom(result); if (expected) return expected;
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrow = new Date(todayStart); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const sevenDays = new Date(todayStart); sevenDays.setUTCDate(sevenDays.getUTCDate() + 8);
+    const all = result.occurrences;
+    const overdue = all.filter((o) => new Date(o.due_date) < todayStart).length;
+    const due_today = all.filter((o) => new Date(o.due_date) >= todayStart && new Date(o.due_date) < tomorrow).length;
+    const upcoming_7d = all.filter((o) => new Date(o.due_date) >= tomorrow && new Date(o.due_date) < sevenDays).length;
+    const { knex } = await createTenantKnex();
+    const { compliance_90d, open_maintenance_tickets } = await withTransaction(knex, async (trx) => {
+        const since = new Date(now); since.setUTCDate(since.getUTCDate() - 90);
+        const rows = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).whereIn('status', ['completed', 'skipped']).where('due_date', '>=', since).select('due_date', 'closed_at', 'status');
+        const completed = rows.filter((row: any) => row.status === 'completed');
+        const compliance_90d = completed.length === 0 ? 0 : (completed.filter((row: any) => row.closed_at && new Date(row.closed_at) <= new Date(row.due_date)).length / completed.length) * 100;
+
+        // Tickets outlive their occurrence's open state. Query every linked occurrence,
+        // constrain the ticket/status joins structurally by tenant, then apply the same
+        // per-asset authorization decision used by the maintenance queue before counting.
+        const db = tenantDb(trx, tenant);
+        const ticketQuery = tenantScopedTable(trx, 'asset_maintenance_occurrences as o', tenant)
+            .select('o.ticket_id', 'o.asset_id', 'a.client_id')
+            .whereNotNull('o.ticket_id');
+        db.tenantJoin(ticketQuery, 'tickets as t', 'o.ticket_id', 't.ticket_id');
+        db.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id');
+        db.tenantJoin(ticketQuery, 'assets as a', 'o.asset_id', 'a.asset_id');
+        const openTicketOccurrences = await ticketQuery.where('s.is_closed', false);
+        const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+        const decisions = await Promise.all(openTicketOccurrences.map((row: any) => authorizeAssetReadDecision(trx, tenant, context, { asset_id: row.asset_id, client_id: row.client_id })));
+        const open_maintenance_tickets = new Set(openTicketOccurrences
+            .filter((_: any, index: number) => decisions[index]?.allowed)
+            .map((row: any) => row.ticket_id)).size;
+
+        return { compliance_90d, open_maintenance_tickets };
+    });
+    return { overdue, due_today, upcoming_7d, open_maintenance_tickets, compliance_90d };
+});
+
+/** Stamp the ticket created through the composition-layer QuickAddTicket. The row lock makes retries idempotent. */
+export const createOccurrenceTicket = withAuth(async (user, { tenant }, occurrence_id: string, ticket_id: string): Promise<AssetMaintenanceOccurrence | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'asset', 'update', knex) || !await hasPermission(user, 'ticket', 'read', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot create maintenance ticket'))!;
+    try {
+        const occurrence = await withTransaction(knex, async (trx) => {
+            const current = await getOccurrenceForMutation(trx, tenant, user as AssetAuthUser, occurrence_id);
+            if (current.status !== 'open') throw new Error('Maintenance occurrence is no longer open');
+            if (current.ticket_id) return current;
+            const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id }).first();
+            if (!ticket) throw new Error('Maintenance ticket not found');
+            // Quick Add has already created this association by the time its callback
+            // reaches us. Keep the association and occurrence stamp in this transaction,
+            // but treat that pre-existing link as the expected retry path.
+            await tenantScopedTable(trx, 'asset_associations', tenant)
+                .insert({ tenant, asset_id: current.asset_id, entity_id: ticket_id, entity_type: 'ticket', relationship_type: 'affected', created_by: user.user_id, created_at: trx.fn.now() })
+                .onConflict(['tenant', 'asset_id', 'entity_id', 'entity_type'])
+                .ignore();
+            const [updated] = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).update({ ticket_id, updated_at: trx.fn.now() }).returning('*');
+            return updated;
+        });
+        return asOccurrence(occurrence);
+    } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
+});
+
+export const completeOccurrence = withAuth(async (user, { tenant }, input: { occurrence_id: string; performed_at?: string; notes?: string; maintenance_data?: Record<string, unknown>; asset_id?: string }): Promise<AssetMaintenanceOccurrence | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'asset', 'update', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot complete maintenance'))!;
+    try {
+        const next = await withTransaction(knex, async (trx) => {
+            const occurrence = await getOccurrenceForMutation(trx, tenant, user as AssetAuthUser, input.occurrence_id);
+            if (input.asset_id && input.asset_id !== occurrence.asset_id) throw new Error('Maintenance occurrence does not belong to the provided asset');
+            if (occurrence.status !== 'open') throw new Error('Maintenance occurrence has already been closed');
+            const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: occurrence.schedule_id, asset_id: occurrence.asset_id, is_active: true }).forUpdate().first();
+            if (!schedule || schedule.archived_at) throw new Error('Maintenance schedule is inactive');
+            // A maintenance completion is a calendar-date event. Canonical UTC
+            // midnight storage keeps existing timestamp columns and reports
+            // compatible while calendar-date renderers preserve the selected day.
+            const performedDate = toCalendarDateString(input.performed_at || new Date());
+            if (!performedDate) throw new Error('A performed date is required');
+            const performedAt = toISOTimestamp(toPlainDate(performedDate));
+            const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
+            const [history] = await tenantScopedTable(trx, 'asset_maintenance_history', tenant).insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, maintenance_type: schedule.maintenance_type, description: input.notes || `${schedule.maintenance_type} maintenance completed`, maintenance_data: input.maintenance_data || {}, performed_at: performedAt, performed_by: user.user_id }).returning('*');
+            await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id: occurrence.occurrence_id, status: 'open' }).update({ status: 'completed', history_id: history.history_id, closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
+            await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ last_maintenance: performedAt, next_maintenance: nextDue, updated_at: trx.fn.now() });
+            await tenantScopedTable(trx, 'asset_maintenance_notifications', tenant).insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, notification_type: 'upcoming', notification_date: nextDue, notification_data: { schedule_name: schedule.schedule_name, maintenance_type: schedule.maintenance_type } });
+            return openNextOccurrence(trx, tenant, schedule, nextDue);
+        });
+        revalidatePath('/msp/assets/maintenance');
+        return asOccurrence(next);
+    } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
+});
+
+export const skipOccurrence = withAuth(async (user, { tenant }, occurrence_id: string, reason: string): Promise<AssetMaintenanceOccurrence | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!reason.trim()) return expectedAssetActionError(new Error('A skip reason is required'))!;
+    if (!await hasPermission(user, 'asset', 'update', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot skip maintenance'))!;
+    try {
+        const next = await withTransaction(knex, async (trx) => {
+            const occurrence = await getOccurrenceForMutation(trx, tenant, user as AssetAuthUser, occurrence_id);
+            if (occurrence.status !== 'open') throw new Error('Maintenance occurrence has already been closed');
+            const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: occurrence.schedule_id, asset_id: occurrence.asset_id, is_active: true }).forUpdate().first();
+            if (!schedule || schedule.archived_at) throw new Error('Maintenance schedule is inactive');
+            const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval);
+            await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).update({ status: 'skipped', skip_reason: reason.trim(), closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
+            await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ next_maintenance: nextDue, updated_at: trx.fn.now() });
+            return openNextOccurrence(trx, tenant, schedule, nextDue);
+        });
+        revalidatePath('/msp/assets/maintenance'); return asOccurrence(next);
+    } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
+});
+
+export const setSchedulePaused = withAuth(async (user, { tenant }, schedule_id: string, paused: boolean): Promise<void | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'asset', 'update', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot update maintenance schedule'))!;
+    try {
+        await withTransaction(knex, async (trx) => {
+            const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id }).forUpdate().first();
+            if (!schedule) throw new Error('Maintenance schedule not found');
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, schedule.asset_id);
+            if (schedule.archived_at) throw new Error('Maintenance schedule is archived');
+            await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id }).update({ is_active: !paused, updated_at: trx.fn.now() });
+            if (paused) await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ schedule_id, status: 'open' }).update({ status: 'cancelled', closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
+            else await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).insert({ tenant, schedule_id, asset_id: schedule.asset_id, due_date: schedule.next_maintenance, status: 'open' }).onConflict().ignore();
+        });
+        revalidatePath('/msp/assets/maintenance');
+    } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
+});
+
+export const listMaintenanceAssignableUsers = withAuth(async (user, { tenant }): Promise<{ user_id: string; first_name: string; last_name: string }[] | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'asset', 'read', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot read assets'))!;
+    try {
+        return await withTransaction(knex, async (trx) => tenantScopedTable(trx, 'users', tenant)
+            .where({ user_type: 'internal', is_inactive: false })
+            .select('user_id', 'first_name', 'last_name')
+            .orderBy(['first_name', 'last_name']));
+    } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
+});
+
+export const setOccurrenceTicketAssignee = withAuth(async (user, { tenant }, occurrence_id: string, assignee_user_id: string | null): Promise<void | AssetActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'asset', 'update', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot update maintenance occurrence'))!;
+    try {
+        await withTransaction(knex, async (trx) => {
+            const occurrence = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).first();
+            if (!occurrence) throw new Error('Maintenance occurrence not found');
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, occurrence.asset_id);
+            if (!occurrence.ticket_id) throw new Error('Occurrence has no linked ticket to assign');
+            await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: occurrence.ticket_id }).update({ assigned_to: assignee_user_id, updated_at: trx.fn.now(), updated_by: user.user_id });
+        });
+        revalidatePath('/msp/assets/maintenance');
+    } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
 });
 
 export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: CreateMaintenanceHistoryRequest): Promise<AssetMaintenanceHistory | AssetActionError> => {
@@ -2485,9 +2827,15 @@ async function fetchAssetMaintenanceReport(
         )
         .first() as unknown as { total_schedules: string; active_schedules: string; last_maintenance: string | null; next_maintenance: string | null } | undefined;
 
-    const history = await tenantScopedTable(db, 'asset_maintenance_history', tenant)
-        .where({ asset_id })
-        .orderBy('performed_at', 'desc');
+    const historyQuery = tenantScopedTable(db, 'asset_maintenance_history as h', tenant)
+        .where({ 'h.asset_id': asset_id })
+        .select(
+            'h.*',
+            db.raw("NULLIF(CONCAT_WS(' ', performed_by_user.first_name, performed_by_user.last_name), '') as performed_by_name")
+        )
+        .orderBy('h.performed_at', 'desc');
+    tenantDb(db, tenant).tenantJoin(historyQuery, 'users as performed_by_user', 'h.performed_by', 'performed_by_user.user_id', { type: 'left' });
+    const history = await historyQuery;
 
     const completed = await tenantScopedTable(db, 'asset_maintenance_history', tenant)
         .where({ asset_id })
@@ -2525,6 +2873,7 @@ async function fetchAssetMaintenanceReport(
         compliance_rate,
         maintenance_history: history.map((record: any): AssetMaintenanceHistory => ({
             ...record,
+            notes: record.description ?? record.notes,
             performed_at: typeof record.performed_at === 'string'
                 ? record.performed_at
                 : new Date(record.performed_at).toISOString(),

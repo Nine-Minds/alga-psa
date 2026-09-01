@@ -88,6 +88,43 @@
         "save": "Falha ao salvar as configurações"
       }
     },
+    "creditDrawdown": {
+      "title": "Consumo de crédito",
+      "description": "Controle quando os créditos do cliente são aplicados às faturas e como são consumidos.",
+      "fields": {
+        "autoApply": {
+          "label": "Aplicar crédito automaticamente na finalização",
+          "help": "Quando ativado, o crédito disponível é aplicado automaticamente quando uma fatura é finalizada"
+        },
+        "order": {
+          "label": "Ordem de aplicação de crédito",
+          "placeholder": "Selecione a ordem de crédito",
+          "help": "Escolha a ordem em que os créditos são consumidos"
+        },
+        "serviceTypes": {
+          "label": "Tipos de serviço elegíveis",
+          "help": "Escolha se o crédito pode ser aplicado a todas as cobranças ou apenas às cobranças dos tipos de serviço selecionados.",
+          "empty": "Nenhum tipo de serviço configurado.",
+          "restricted": "O crédito está restrito aos tipos de serviço selecionados.",
+          "mode": {
+            "all": "Todos os tipos de serviço",
+            "restricted": "Somente os tipos selecionados"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Vencimento mais próximo primeiro",
+        "oldestFirst": "Crédito mais antigo primeiro",
+        "newestFirst": "Crédito mais recente primeiro"
+      },
+      "toast": {
+        "updated": "As configurações de consumo de crédito foram atualizadas."
+      },
+      "errors": {
+        "load": "Falha ao carregar as configurações",
+        "save": "Falha ao salvar as configurações"
+      }
+    },
     "renewal": {
       "title": "Automação de renovação",
       "description": "Configure o comportamento padrão quando os contratos atingirem a data de renovação.",
@@ -419,6 +456,46 @@
         "create": "Falha ao criar isenção fiscal.",
         "update": "Falha ao atualizar a isenção fiscal.",
         "delete": "Falha ao excluir isenção fiscal."
+      }
+    },
+    "delegation": {
+      "defaultProvider": "seu sistema contábil",
+      "actions": {
+        "applying": "Aplicando…"
+      },
+      "errors": {
+        "enableFailed": "Falha ao habilitar o cálculo externo de impostos."
+      },
+      "banner": {
+        "title": "Permitir que {{provider}} calcule os impostos?",
+        "description": "{{provider}} está conectado. A maioria dos clientes prefere que o sistema contábil cuide dos impostos para manter os dois livros contábeis alinhados — Alga enviará faturas sem valores de impostos, {{provider}} aplicará suas regras fiscais e o resultado será sincronizado de volta com Alga. Alga não é um sistema fiscal; recomendamos delegar esse cálculo.",
+        "actions": {
+          "enable": "Usar {{provider}} para calcular impostos",
+          "dismiss": "Agora não",
+          "dismissing": "Dispensando…"
+        },
+        "toast": {
+          "enabled": "Cálculo externo de impostos habilitado.",
+          "enabledWithProvider": "{{provider}} calculará os impostos nas novas faturas."
+        },
+        "errors": {
+          "loadState": "Não foi possível carregar o estado da recomendação para delegar os impostos.",
+          "dismissFailed": "Falha ao dispensar o aviso."
+        }
+      },
+      "nudge": {
+        "title": "Permitir que {{provider}} calcule os impostos nas faturas futuras?",
+        "description": "Recomendado. As novas faturas serão enviadas para {{provider}} sem valores de impostos, {{provider}} aplicará suas regras fiscais e o imposto calculado será sincronizado de volta com Alga, mantendo os dois livros contábeis alinhados. Você pode alterar essa opção a qualquer momento em Faturamento → Configurações de impostos.",
+        "actions": {
+          "enable": "Sim, usar {{provider}}",
+          "keepInternal": "Manter o cálculo de impostos no Alga"
+        },
+        "toast": {
+          "enabled": "{{provider}} calculará os impostos nas novas faturas. Você pode alterar essa opção nas configurações de faturamento."
+        },
+        "errors": {
+          "loadSettings": "Não foi possível carregar as configurações atuais de impostos."
+        }
       }
     }
   },
@@ -1074,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Falha ao carregar as configurações",
-    "failedToSaveSettings": "Falha ao salvar as configurações"
+    "failedToSaveSettings": "Falha ao salvar as configurações",
+    "permissions": {
+      "readSettings": "Permissão negada: não é possível ler as configurações de faturamento",
+      "updateSettings": "Permissão negada: não é possível atualizar as configurações de faturamento",
+      "readClientSettings": "Permissão negada: não é possível ler as configurações de faturamento do cliente",
+      "updateClientSettings": "Permissão negada: não é possível atualizar as configurações de faturamento do cliente",
+      "settingsRead": "Permissão negada: é necessária permissão de leitura das configurações de faturamento",
+      "settingsUpdate": "Permissão negada: é necessária permissão de atualização das configurações de faturamento",
+      "readTaxRates": "Permissão negada: não é possível ler as alíquotas de imposto",
+      "createTaxRates": "Permissão negada: não é possível criar alíquotas de imposto",
+      "updateTaxRates": "Permissão negada: não é possível atualizar as alíquotas de imposto",
+      "updateTaxRegions": "Permissão negada: não é possível atualizar as regiões fiscais"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Permissão negada: as alíquotas de imposto de faturamento não estão disponíveis para este tenant.",
+      "overlap": "O intervalo de datas da alíquota de imposto se sobrepõe a uma alíquota existente para esta região.",
+      "regionRequired": "A região é obrigatória.",
+      "idRequired": "O ID da alíquota de imposto é obrigatório para atualizações.",
+      "notFound": "Alíquota de imposto não encontrada.",
+      "notFoundOrAlreadyDeleted": "Alíquota de imposto não encontrada ou já excluída.",
+      "invalid": "A alíquota de imposto ou a região selecionada é inválida. Atualize a página e tente novamente.",
+      "regionInvalid": "A região fiscal selecionada não é mais válida. Atualize a página e escolha outra região.",
+      "duplicate": "Já existe uma alíquota de imposto para esta região e intervalo de datas.",
+      "missingField": "Falta um campo obrigatório da alíquota de imposto.",
+      "missingFieldNamed": "Falta um campo obrigatório da alíquota de imposto: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Configure pelo menos uma alíquota de imposto ativa antes de criar as configurações fiscais padrão.",
+      "componentNotFound": "Componente de imposto não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "bracketNotFound": "Faixa de imposto não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "holidayNotFound": "Isenção fiscal não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "recordInvalid": "Um dos registros fiscais selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros fiscais selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro fiscal com esses dados.",
+      "notAllowed": "Um dos valores de imposto não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório de imposto.",
+      "missingFieldNamed": "Falta um campo obrigatório de imposto: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Já existe uma região fiscal com o código \"{{code}}\".",
+      "notFoundCode": "Região fiscal com o código \"{{code}}\" não encontrada."
+    }
   },
   "toast": {
     "saved": "Salvo com sucesso"

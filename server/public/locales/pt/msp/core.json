@@ -11,10 +11,13 @@
     "clients": "Clientes",
     "opportunities": "Oportunidades",
     "contacts": "Contatos",
+    "interactions": "Interações",
     "documents": "Documentos",
     "documentsAll": "Todos os documentos",
     "knowledgeBase": "Base de conhecimento",
     "assets": "Ativos",
+    "assetsAll": "Todos os ativos",
+    "assetsMaintenance": "Manutenção",
     "inventory": {
       "label": "Inventário",
       "sections": {
@@ -27,20 +30,20 @@
     },
     "inventoryDashboard": "Painel",
     "inventoryStock": "Estoque",
-    "inventoryLocations": "Localizações de Estoque",
-    "inventoryUnits": "Unidades de Estoque",
+    "inventoryLocations": "Localizações de estoque",
+    "inventoryUnits": "Unidades de estoque",
     "inventoryVendors": "Fornecedores",
-    "inventoryPurchaseOrders": "Pedidos de Compra",
-    "inventoryVendorBills": "Faturas de Fornecedores",
-    "inventorySalesOrders": "Pedidos de Venda",
+    "inventoryPurchaseOrders": "Pedidos de compra",
+    "inventoryVendorBills": "Faturas de fornecedores",
+    "inventorySalesOrders": "Pedidos de venda",
     "inventoryDocumentLayouts": "Layouts de documentos",
     "inventoryTransfers": "Transferências",
-    "inventoryCounts": "Contagens Cíclicas",
+    "inventoryCounts": "Contagens cíclicas",
     "inventoryWriteOffs": "Baixas",
     "inventoryMargin": "Margem",
-    "inventoryGhostUsage": "Uso Fantasma",
+    "inventoryGhostUsage": "Uso fantasma",
     "inventoryRma": "RMA",
-    "inventoryLoaners": "Unidades de Empréstimo",
+    "inventoryLoaners": "Unidades de empréstimo",
     "inventoryKits": "Kits",
     "timeManagement": "Gerenciamento de tempo",
     "timeEntry": "Lançamento de horas",
@@ -97,7 +100,8 @@
       "sequences": "Sequências",
       "forms": "Formulários",
       "channels": "Canais"
-    }
+    },
+    "passwords": "Senhas"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",
@@ -107,7 +111,10 @@
     "goToDashboard": "Vá para o painel",
     "logoAlt": "Alga Logo",
     "expandSidebar": "Expandir barra lateral",
-    "collapseSidebar": "Recolher barra lateral"
+    "collapseSidebar": "Recolher barra lateral",
+    "collapseSection": "Recolher {{section}}",
+    "expandSection": "Expandir {{section}}",
+    "appLogoAlt": "Logotipo do {{appName}}"
   },
   "settings": {
     "sections": {
@@ -123,11 +130,13 @@
       "users": "Usuários",
       "teams": "Teams",
       "language": "Linguagem",
+      "appearance": "Aparência",
       "clientPortal": "Portal do cliente",
       "license": "Licença",
       "ticketing": "Tickets",
       "sla": "SLA",
       "projects": "Projetos",
+      "assets": "Ativos",
       "interactions": "Interações",
       "opportunities": "Oportunidades",
       "notifications": "Notificações",
@@ -151,7 +160,7 @@
     "quickAccess": "Acesso rápido ao perfil e conta.",
     "profile": "Perfil",
     "account": "Conta",
-    "signOut": "sair",
+    "signOut": "Sair",
     "quickAsk": {
       "ariaLabel": "Pergunte à IA sobre este fluxo de trabalho",
       "title": "Pergunte à IA",
@@ -734,5 +743,9 @@
       "permissionDescription": "Você não tem permissão para ver marketing. Peça a um administrador a permissão de leitura de marketing.",
       "backToDashboard": "Ir para o painel"
     }
+  },
+  "githubStar": {
+    "label": "Marcar com estrela",
+    "ariaLabel": "Marcar {{repository}} com estrela no GitHub"
   }
 }

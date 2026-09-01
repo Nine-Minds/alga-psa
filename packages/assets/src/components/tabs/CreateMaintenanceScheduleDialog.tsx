@@ -10,6 +10,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { createMaintenanceSchedule, updateMaintenanceSchedule } from '../../actions/assetActions';
 import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
+import { toCalendarDateString, toCalendarDisplayDate } from '@alga-psa/core';
 import type {
   MaintenanceType,
   MaintenanceFrequency,
@@ -54,7 +55,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
       setMaintenanceType(schedule.maintenance_type);
       setFrequency(schedule.frequency);
       setFrequencyInterval(schedule.frequency_interval.toString());
-      setNextMaintenance(schedule.next_maintenance ? new Date(schedule.next_maintenance) : undefined);
+      setNextMaintenance(toCalendarDisplayDate(schedule.next_maintenance) ?? undefined);
       setIsActive(schedule.is_active);
     } else {
       // Reset form for new schedule
@@ -70,6 +71,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
 
   const maintenanceTypeOptions = [
     { value: 'preventive', label: t('maintenanceSchedulesTab.types.preventive', { defaultValue: 'Preventive' }) },
+    { value: 'corrective', label: t('maintenanceSchedulesTab.types.corrective', { defaultValue: 'Corrective' }) },
     { value: 'inspection', label: t('maintenanceSchedulesTab.types.inspection', { defaultValue: 'Inspection' }) },
     { value: 'calibration', label: t('maintenanceSchedulesTab.types.calibration', { defaultValue: 'Calibration' }) },
     { value: 'replacement', label: t('maintenanceSchedulesTab.types.replacement', { defaultValue: 'Replacement' }) }
@@ -134,7 +136,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
         frequency: frequency as MaintenanceFrequency,
         frequency_interval: interval,
         schedule_config: {},
-        next_maintenance: nextMaintenance.toISOString()
+        next_maintenance: toCalendarDateString(nextMaintenance)!
       };
 
       // Only include description if it's not empty
@@ -318,7 +320,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
                 className="mt-1"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 {frequency && t('maintenanceSchedulesTab.frequency.every', {
                   count: parseInt(frequencyInterval, 10) || 0,
                   frequency: t(`maintenanceSchedulesTab.frequency.units.${frequency}`, {

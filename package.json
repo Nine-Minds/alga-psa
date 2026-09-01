@@ -2,7 +2,7 @@
   "name": "sebastian-monorepo",
   "private": true,
   "engines": {
-    "node": ">=20 <25"
+    "node": ">=22 <27"
   },
   "workspaces": [
     "server",
@@ -25,6 +25,9 @@
     "migrate": "knex migrate:latest",
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",
+    "test:i18n": "node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs && node tools/i18n/audit-all.cjs && node tools/i18n/find-untranslated-ui.cjs --fail-on-high && node --test tools/i18n/tests/glossary.test.mjs tools/i18n/tests/audit-tooling.test.mjs tools/i18n/tests/template-parity.test.mjs",
+    "i18n:audit": "node tools/i18n/audit-all.cjs",
+    "i18n:untranslated-ui": "node tools/i18n/find-untranslated-ui.cjs",
     "generate:proto": "mkdir -p ee/server/src/generated && protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=ee/server/src/generated --ts_proto_opt=esModuleInterop=true,outputServices=false,useExactTypes=false --proto_path=ee/server/protos workflow.proto",
     "mcp:registry:generate": "node ee/scripts/generate-chat-registry.mjs",
     "dev": "WIRE_PORT=\"$(sed -n 's/^PORT=//p' server/.env.local 2>/dev/null | tail -n 1)\"; PORT=\"${WIRE_PORT:-3000}\" NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_TUI=false npx nx next:dev server",
@@ -64,6 +67,8 @@
     "test:workflow-runtime-v2-compose-smoke": "node scripts/workflow-runtime-v2-compose-smoke.mjs",
     "guard:ext-v2": "git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' ':!**/apiRegistry.generated.ts' ':!**/registry.generated.ts' || true; test $(git grep -nE \"ee/server/src/lib/extensions/ui/(descriptors|pages|tabs|navigation)|ee/server/src/lib/extensions/security/propWhitelist\\.ts|ee/server/src/lib/extensions/schemas/(manifest\\.schema|extension-points\\.schema)\\.ts|ee/server/src/lib/extensions/validator\\.ts|/api/extensions/\" -- 'server/**' 'ee/server/**' 'shared/**' 'services/**' ':!**/*.md' ':!**/node_modules/**' ':!**/dist/**' ':!**/build/**' ':!**/.next/**' ':!**/out/**' ':!**/apiRegistry.generated.ts' ':!**/registry.generated.ts' | wc -l) -eq 0",
     "guard:no-tracked-env-backups": "node scripts/guard-no-tracked-env-backups.mjs",
+    "guard:microsoft-graph-endpoints": "node --test tools/microsoft-graph/validate-endpoints.test.mjs && node tools/microsoft-graph/validate-endpoints.mjs",
+    "guard:microsoft-graph-endpoints:update": "node tools/microsoft-graph/update-metadata.mjs",
     "playwright:bootstrap-db": "node --import tsx/esm scripts/bootstrap-playwright-db.ts",
     "test:nx": "vitest run --config tools/nx-tests/vitest.config.ts",
     "affected:test": "NX_DAEMON=false nx affected -t test --output-style=static",
@@ -160,6 +165,7 @@
     "moment": "^2.30.1",
     "next": "16.2.12",
     "next-auth": "^5.0.0-beta.32",
+    "next-themes": "^0.4.6",
     "node-vault": "^0.10.2",
     "nodemailer": "^9.0.3",
     "null-loader": "^4.0.1",
@@ -175,6 +181,7 @@
     "qrcode": "^1.5.4",
     "querystring-es3": "^0.2.1",
     "radash": "^12.1.0",
+    "rate-limiter-flexible": "^5.0.5",
     "react": "^19.2.4",
     "react-big-calendar": "^1.15.0",
     "react-day-picker": "^9.5.0",

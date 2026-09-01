@@ -14,20 +14,28 @@ const policyEngine = new PolicyEngine();
 
 export interface AuthActionPermissionError {
   readonly permissionError: string;
+  readonly messageKey?: string;
+  readonly messageParams?: Record<string, string | number>;
 }
 
 export interface AuthActionMessageError {
   readonly actionError: string;
+  readonly messageKey?: string;
+  readonly messageParams?: Record<string, string | number>;
 }
 
 export type AuthActionError = AuthActionPermissionError | AuthActionMessageError;
 
-function permissionError(message: string): AuthActionPermissionError {
-  return { permissionError: message };
+function permissionError(message: string, messageKey?: string): AuthActionPermissionError {
+  return { permissionError: message, ...(messageKey ? { messageKey } : {}) };
 }
 
-function actionError(message: string): AuthActionMessageError {
-  return { actionError: message };
+function actionError(message: string, messageKey?: string, messageParams?: Record<string, string | number>): AuthActionMessageError {
+  return {
+    actionError: message,
+    ...(messageKey ? { messageKey } : {}),
+    ...(messageParams ? { messageParams } : {}),
+  };
 }
 
 function isAuthActionError(value: unknown): value is AuthActionError {
@@ -52,34 +60,40 @@ function authActionErrorFrom(error: unknown): AuthActionError | null {
       return permissionError(message);
     }
     if (message === 'Role not found') {
-      return actionError('Role not found. Refresh the role list and try again.');
+      return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
     }
     if (message === 'User not found') {
-      return actionError('User not found. Refresh the user list and try again.');
+      return actionError('User not found. Refresh the user list and try again.', 'msp/settings:errors.roles.userNotFound');
     }
     if (message === 'Ticket not found') {
-      return actionError('Ticket not found. Refresh the ticket and try again.');
+      return actionError('Ticket not found. Refresh the ticket and try again.', 'msp/settings:errors.security.ticketNotFound');
     }
     if (message === 'Role or permission not found for this tenant') {
-      return actionError('Role or permission not found. Refresh the permissions list and try again.');
+      return actionError('Role or permission not found. Refresh the permissions list and try again.', 'msp/settings:errors.security.roleNotFound');
     }
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected role, permission, or policy values is invalid. Please refresh and try again.');
+    return actionError('One of the selected role, permission, or policy values is invalid. Please refresh and try again.', 'msp/settings:errors.security.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required security field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required security field: ${dbError.column}.`,
+          'msp/settings:errors.security.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required security field.', 'msp/settings:errors.security.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected security records no longer exists. Please refresh and try again.');
+    return actionError('One of the selected security records no longer exists. Please refresh and try again.', 'msp/settings:errors.security.referenceMissing');
   }
   if (dbError?.code === '23505') {
     if (dbError.constraint?.includes('role_permissions')) {
-      return actionError('That permission is already assigned to this role.');
+      return actionError('That permission is already assigned to this role.', 'msp/settings:errors.security.permissionAlreadyAssigned');
     }
-    return actionError('A security record with these details already exists.');
+    return actionError('A security record with these details already exists.', 'msp/settings:errors.security.duplicate');
   }
 
   return null;
@@ -137,15 +151,15 @@ async function checkClientPortalRoleScope(
   }
 
   if (!role.client) {
-    return permissionError('Permission denied: Client portal admins may only manage client portal roles.');
+    return permissionError('Permission denied: Client portal admins may only manage client portal roles.', 'msp/settings:errors.security.permissions.portalRolesOnly');
   }
 
   if (targetUser.user_type !== 'client') {
-    return permissionError('Permission denied: Client portal admins may only manage client portal users.');
+    return permissionError('Permission denied: Client portal admins may only manage client portal users.', 'msp/settings:errors.security.permissions.portalUsersOnly');
   }
 
   if (!currentUser.contact_id) {
-    return permissionError('Permission denied: Client portal admin access is required.');
+    return permissionError('Permission denied: Client portal admin access is required.', 'msp/settings:errors.security.permissions.portalAdminRequired');
   }
 
   const scopedDb = tenantDb(trx, tenant);
@@ -163,11 +177,11 @@ async function checkClientPortalRoleScope(
   ]);
 
   if (!actorContact?.is_client_admin || !actorContact.client_id) {
-    return permissionError('Permission denied: Client portal admin access is required.');
+    return permissionError('Permission denied: Client portal admin access is required.', 'msp/settings:errors.security.permissions.portalAdminRequired');
   }
 
   if (!targetContact?.client_id || targetContact.client_id !== actorContact.client_id) {
-    return permissionError('Permission denied: Cannot manage users for another client.');
+    return permissionError('Permission denied: Cannot manage users for another client.', 'msp/settings:errors.security.permissions.otherClientUsers');
   }
 
   return null;
@@ -205,7 +219,7 @@ export const updateRole = withAuth(async (user, { tenant }, roleId: string, role
             .update({ role_name: roleName })
             .returning('*');
         if (!updatedRole) {
-            return actionError('Role not found. Refresh the role list and try again.');
+            return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
         }
         return updatedRole;
     });
@@ -304,7 +318,7 @@ export const assignPermissionToRole = withAuth(async (user, { tenant }, roleId: 
         ]);
 
         if (!role || !permission) {
-            return actionError('Role or permission not found. Refresh the permissions list and try again.');
+            return actionError('Role or permission not found. Refresh the permissions list and try again.', 'msp/settings:errors.security.roleNotFound');
         }
 
         // Then insert the role permission
@@ -336,7 +350,7 @@ export const removePermissionFromRole = withAuth(async (user, { tenant }, roleId
         ]);
 
         if (!role || !permission) {
-            return actionError('Role or permission not found. Refresh the permissions list and try again.');
+            return actionError('Role or permission not found. Refresh the permissions list and try again.', 'msp/settings:errors.security.roleNotFound');
         }
 
         await tenantScopedTable(trx, 'role_permissions', tenant)
@@ -373,15 +387,15 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
             ? await hasPermission(currentUser, 'client', 'update', trx)
             : false;
         if (!canUpdateUsers && !canManageClientRole) {
-            return permissionError('Permission denied: You do not have permission to change user roles.');
+            return permissionError('Permission denied: You do not have permission to change user roles.', 'msp/settings:errors.roles.changePermission');
         }
 
         if (!user) {
-            return actionError('User not found. Refresh the user list and try again.');
+            return actionError('User not found. Refresh the user list and try again.', 'msp/settings:errors.roles.userNotFound');
         }
 
         if (!role) {
-            return actionError('Role not found. Refresh the role list and try again.');
+            return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
         }
 
         // Client-portal callers: only client-flagged roles on client users of
@@ -393,11 +407,11 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
 
         // Validate role compatibility based on user type
         if (user.user_type === 'internal' && !role.msp) {
-            return actionError('Cannot assign a client portal role to an MSP user.');
+            return actionError('Cannot assign a client portal role to an MSP user.', 'msp/settings:errors.roles.portalRoleOnMspUser');
         }
 
         if (user.user_type === 'client' && !role.client) {
-            return actionError('Cannot assign an MSP role to a client portal user.');
+            return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
         }
 
         const [userRole] = await tenantScopedTable(trx, 'user_roles', tenant)
@@ -425,11 +439,11 @@ export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userI
             ? await hasPermission(currentUser, 'client', 'update', trx)
             : false;
         if (!canUpdateUsers && !canManageClientRole) {
-            return permissionError('Permission denied: You do not have permission to change user roles.');
+            return permissionError('Permission denied: You do not have permission to change user roles.', 'msp/settings:errors.roles.changePermission');
         }
 
         if (!role) {
-            return actionError('Role not found. Refresh the role list and try again.');
+            return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
         }
 
         // Client-portal callers: only client-flagged roles on client users of
@@ -574,7 +588,7 @@ export const updatePolicy = withAuth(async (user, { tenant }, policyId: string, 
             })
             .returning('*');
         if (!updatedPolicy) {
-            return actionError('Policy not found. Refresh the policy list and try again.');
+            return actionError('Policy not found. Refresh the policy list and try again.', 'msp/settings:errors.security.policyNotFound');
         }
         policyEngine.removePolicy(updatedPolicy);
         policyEngine.addPolicy(updatedPolicy);
@@ -594,7 +608,7 @@ export const deletePolicy = withAuth(async (user, { tenant }, policyId: string):
         await assertSecuritySettingsPermission(user, 'delete', trx);
         const deletedPolicy = await tenantScopedTable(trx, 'policies', tenant).where({ policy_id: policyId }).first();
         if (!deletedPolicy) {
-            return actionError('Policy not found. Refresh the policy list and try again.');
+            return actionError('Policy not found. Refresh the policy list and try again.', 'msp/settings:errors.security.policyNotFound');
         }
         await tenantScopedTable(trx, 'policies', tenant).where({ policy_id: policyId }).del();
         policyEngine.removePolicy(deletedPolicy);

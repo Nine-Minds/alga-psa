@@ -88,6 +88,43 @@
         "save": "No se pudo guardar la configuración"
       }
     },
+    "creditDrawdown": {
+      "title": "Consumo de crédito",
+      "description": "Controle cuándo se aplican los créditos del cliente a las facturas y cómo se consumen.",
+      "fields": {
+        "autoApply": {
+          "label": "Aplicar crédito automáticamente al finalizar",
+          "help": "Cuando está habilitado, el crédito disponible se aplica automáticamente al finalizar una factura"
+        },
+        "order": {
+          "label": "Orden de aplicación del crédito",
+          "placeholder": "Seleccione el orden del crédito",
+          "help": "Elija el orden en que se consumen los créditos"
+        },
+        "serviceTypes": {
+          "label": "Tipos de servicio elegibles",
+          "help": "Elija si el crédito se puede aplicar a todos los cargos o solo a los cargos de los tipos de servicio seleccionados.",
+          "empty": "No hay tipos de servicio configurados.",
+          "restricted": "El crédito está restringido a los tipos de servicio seleccionados.",
+          "mode": {
+            "all": "Todos los tipos de servicio",
+            "restricted": "Solo los tipos seleccionados"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Primero los que vencen antes",
+        "oldestFirst": "Primero el crédito más antiguo",
+        "newestFirst": "Primero el crédito más reciente"
+      },
+      "toast": {
+        "updated": "Se actualizó la configuración de consumo de crédito."
+      },
+      "errors": {
+        "load": "No se pudo cargar la configuración",
+        "save": "No se pudo guardar la configuración"
+      }
+    },
     "renewal": {
       "title": "Automatización de renovación",
       "description": "Configure el comportamiento predeterminado cuando los contratos lleguen a su fecha de renovación.",
@@ -419,6 +456,46 @@
         "create": "No se pudo crear la exención fiscal.",
         "update": "No se pudo actualizar la moratoria fiscal.",
         "delete": "No se pudo eliminar la moratoria fiscal."
+      }
+    },
+    "delegation": {
+      "defaultProvider": "su sistema contable",
+      "actions": {
+        "applying": "Aplicando…"
+      },
+      "errors": {
+        "enableFailed": "No se pudo habilitar el cálculo externo de impuestos."
+      },
+      "banner": {
+        "title": "¿Desea que {{provider}} calcule los impuestos?",
+        "description": "{{provider}} está conectado. La mayoría de los clientes prefiere que su sistema contable gestione los impuestos para mantener ambos libros contables sincronizados — Alga enviará las facturas sin importes de impuestos, {{provider}} aplicará sus reglas fiscales y el resultado se sincronizará de vuelta con Alga. Alga no es un paquete fiscal; recomendamos delegar el cálculo.",
+        "actions": {
+          "enable": "Usar {{provider}} para calcular impuestos",
+          "dismiss": "Ahora no",
+          "dismissing": "Descartando…"
+        },
+        "toast": {
+          "enabled": "Cálculo externo de impuestos habilitado.",
+          "enabledWithProvider": "{{provider}} calculará los impuestos de las facturas nuevas."
+        },
+        "errors": {
+          "loadState": "No se pudo cargar el estado de la recomendación para delegar los impuestos.",
+          "dismissFailed": "No se pudo descartar el aviso."
+        }
+      },
+      "nudge": {
+        "title": "¿Desea que {{provider}} calcule los impuestos de las facturas futuras?",
+        "description": "Recomendado. Las facturas nuevas se enviarán a {{provider}} sin importes de impuestos, {{provider}} aplicará sus reglas fiscales y el impuesto calculado se sincronizará de vuelta con Alga para mantener ambos libros contables sincronizados. Puede cambiar esta opción en cualquier momento en Facturación → Configuración de impuestos.",
+        "actions": {
+          "enable": "Sí, usar {{provider}}",
+          "keepInternal": "Mantener el cálculo de impuestos en Alga"
+        },
+        "toast": {
+          "enabled": "{{provider}} calculará los impuestos de las facturas nuevas. Puede cambiar esta opción en la configuración de facturación."
+        },
+        "errors": {
+          "loadSettings": "No se pudo cargar la configuración actual de impuestos."
+        }
       }
     }
   },
@@ -1074,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "No se pudo cargar la configuración",
-    "failedToSaveSettings": "No se pudo guardar la configuración"
+    "failedToSaveSettings": "No se pudo guardar la configuración",
+    "permissions": {
+      "readSettings": "Permiso denegado: no se pueden leer los ajustes de facturación",
+      "updateSettings": "Permiso denegado: no se pueden actualizar los ajustes de facturación",
+      "readClientSettings": "Permiso denegado: no se pueden leer los ajustes de facturación del cliente",
+      "updateClientSettings": "Permiso denegado: no se pueden actualizar los ajustes de facturación del cliente",
+      "settingsRead": "Permiso denegado: se requiere permiso de lectura de los ajustes de facturación",
+      "settingsUpdate": "Permiso denegado: se requiere permiso de actualización de los ajustes de facturación",
+      "readTaxRates": "Permiso denegado: no se pueden leer las tasas de impuesto",
+      "createTaxRates": "Permiso denegado: no se pueden crear tasas de impuesto",
+      "updateTaxRates": "Permiso denegado: no se pueden actualizar las tasas de impuesto",
+      "updateTaxRegions": "Permiso denegado: no se pueden actualizar las regiones fiscales"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Permiso denegado: las tasas de impuesto de facturación no están disponibles para este inquilino.",
+      "overlap": "El intervalo de fechas de la tasa de impuesto se solapa con una tasa existente para esta región.",
+      "regionRequired": "La región es obligatoria.",
+      "idRequired": "Se requiere el ID de la tasa de impuesto para las actualizaciones.",
+      "notFound": "No se encontró la tasa de impuesto.",
+      "notFoundOrAlreadyDeleted": "No se encontró la tasa de impuesto o ya fue eliminada.",
+      "invalid": "La tasa de impuesto o la región seleccionada no es válida. Actualice la página e inténtelo de nuevo.",
+      "regionInvalid": "La región fiscal seleccionada ya no es válida. Actualice la página y elija otra región.",
+      "duplicate": "Ya existe una tasa de impuesto para esta región e intervalo de fechas.",
+      "missingField": "Falta un campo obligatorio de la tasa de impuesto.",
+      "missingFieldNamed": "Falta un campo obligatorio de la tasa de impuesto: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Configure al menos una tasa de impuesto activa antes de crear los ajustes fiscales predeterminados.",
+      "componentNotFound": "No se encontró el componente fiscal. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "bracketNotFound": "No se encontró el tramo impositivo. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "holidayNotFound": "No se encontró la exención fiscal. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "recordInvalid": "Uno de los registros fiscales seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros fiscales seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un registro fiscal con esos datos.",
+      "notAllowed": "Uno de los valores fiscales no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de impuestos.",
+      "missingFieldNamed": "Falta un campo obligatorio de impuestos: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Ya existe una región fiscal con el código «{{code}}».",
+      "notFoundCode": "No se encontró la región fiscal con el código «{{code}}»."
+    }
   },
   "toast": {
     "saved": "Guardado exitosamente"

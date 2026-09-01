@@ -1,0 +1,35 @@
+                          Table "public.inbound_email_ingress"
+      Column      |           Type           | Collation | Nullable |      Default      
+------------------+--------------------------+-----------+----------+-------------------
+ tenant           | uuid                     |           | not null | 
+ ingress_id       | uuid                     |           | not null | gen_random_uuid()
+ provider_id      | uuid                     |           | not null | 
+ provider_type    | text                     |           | not null | 
+ ingress_key      | text                     |           | not null | 
+ provider_pointer | jsonb                    |           | not null | 
+ status           | text                     |           | not null | 'received'::text
+ attempt_count    | integer                  |           | not null | 0
+ lease_owner      | text                     |           |          | 
+ lease_token      | uuid                     |           |          | 
+ lease_version    | bigint                   |           | not null | '0'::bigint
+ lease_expires_at | timestamp with time zone |           |          | 
+ next_attempt_at  | timestamp with time zone |           |          | 
+ last_error       | text                     |           |          | 
+ error_details    | jsonb                    |           |          | 
+ received_at      | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ created_at       | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ updated_at       | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ completed_at     | timestamp with time zone |           |          | 
+Indexes:
+    "inbound_email_ingress_pkey" PRIMARY KEY, btree (tenant, ingress_id)
+    "inbound_email_ingress_due_idx" btree (tenant, status, next_attempt_at, lease_expires_at)
+    "inbound_email_ingress_provider_key_unique" UNIQUE CONSTRAINT, btree (tenant, provider_id, ingress_key)
+Check constraints:
+    "inbound_email_ingress_attempt_count_check" CHECK (attempt_count >= 0)
+    "inbound_email_ingress_retryable_next_attempt_check" CHECK (status <> 'retryable_failed'::text OR next_attempt_at IS NOT NULL)
+    "inbound_email_ingress_staging_lease_check" CHECK (status <> 'staging'::text OR lease_owner IS NOT NULL AND lease_token IS NOT NULL AND lease_expires_at IS NOT NULL)
+    "inbound_email_ingress_status_check" CHECK (status = ANY (ARRAY['received'::text, 'staging'::text, 'staged'::text, 'retryable_failed'::text, 'terminal_failed'::text]))
+    "inbound_email_ingress_terminal_lease_check" CHECK ((status <> ALL (ARRAY['staged'::text, 'terminal_failed'::text])) OR completed_at IS NOT NULL AND lease_owner IS NULL AND lease_token IS NULL AND lease_expires_at IS NULL)
+Referenced by:
+    TABLE "inbound_email_inbox" CONSTRAINT "inbound_email_inbox_tenant_ingress_id_foreign" FOREIGN KEY (tenant, ingress_id) REFERENCES inbound_email_ingress(tenant, ingress_id)
+

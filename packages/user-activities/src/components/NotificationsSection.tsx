@@ -3,16 +3,17 @@
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ActivityFilters, NotificationActivity } from "@alga-psa/types";
+import { ActivityFilters, ActivityPriority, NotificationActivity } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { NotificationCard } from "./NotificationCard";
-import { fetchNotificationActivities } from "@alga-psa/user-activities/actions";
+import { fetchNotificationActivities, fetchNotificationActivitiesPaged } from "@alga-psa/user-activities/actions";
 import { NotificationSectionFiltersDialog } from "./filters/NotificationSectionFiltersDialog";
 import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 import { getCurrentUser } from "@alga-psa/user-composition/actions";
 import { Badge } from "@alga-psa/ui/components/Badge";
+import Pagination from '@alga-psa/ui/components/Pagination';
 import { useInternalNotifications } from "@alga-psa/notifications/hooks";
 import { useSession } from 'next-auth/react';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
@@ -22,11 +23,34 @@ interface NotificationsSectionProps {
   limit?: number;
   onViewAll?: () => void;
   noCard?: boolean;
+  /**
+   * Full-view mode (task 29.8.46): render the numbered server-side pager and
+   * priority filter chips instead of the fixed 5-item preview.
+   */
+  fullMode?: boolean;
 }
 
 const DEFAULT_TAB = 'unread';
+// Page size for the full-view server-side pagination.
+const FULL_MODE_PAGE_SIZE = 20;
+type PriorityFilterKey = 'all' | 'high' | 'normal' | 'low';
 
-export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: NotificationsSectionProps) {
+// Map a priority filter chip to the ActivityPriority value stored on notification
+// activities (stored 'normal' → ActivityPriority.MEDIUM).
+function priorityKeyToActivityPriority(key: PriorityFilterKey): ActivityPriority | undefined {
+  switch (key) {
+    case 'high':
+      return ActivityPriority.HIGH;
+    case 'normal':
+      return ActivityPriority.MEDIUM;
+    case 'low':
+      return ActivityPriority.LOW;
+    default:
+      return undefined;
+  }
+}
+
+export function NotificationsSection({ limit = 5, onViewAll, noCard = false, fullMode = false }: NotificationsSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const { data: session } = useSession();
   const searchParams = useSearchParams();
@@ -48,6 +72,21 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     isClosed: false // Default: show unread only
   });
 
+  // Full-view (flag-on) server-side pagination state.
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // Derive the active priority chip from the shared notification filters, so the
+  // chips and the filter dialog stay in sync off a single source of truth.
+  const activePriorityKey: PriorityFilterKey =
+    notificationFilters.priority?.includes(ActivityPriority.HIGH)
+      ? 'high'
+      : notificationFilters.priority?.includes(ActivityPriority.MEDIUM)
+        ? 'normal'
+        : notificationFilters.priority?.includes(ActivityPriority.LOW)
+          ? 'low'
+          : 'all';
+
   // Use real-time notifications hook to detect changes
   const tenant = session?.user?.tenant;
   const userId = session?.user?.id;
@@ -68,22 +107,43 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
       setLoading(true);
       setError(null);
 
-      // Fetch notification activities using current filters
-      const result = await fetchNotificationActivities(filters);
+      if (fullMode) {
+        // Full view (flag on): server-side paginated window + total count. The
+        // underlying fetch already orders newest-first (chronological).
+        const offset = (currentPage - 1) * FULL_MODE_PAGE_SIZE;
+        const { activities: paged, total } = await fetchNotificationActivitiesPaged(
+          filters,
+          offset,
+          FULL_MODE_PAGE_SIZE
+        );
+        setActivities(paged);
+        setTotalCount(total);
+      } else {
+        // Fetch notification activities using current filters
+        const result = await fetchNotificationActivities(filters);
 
-      // Sort by creation date (newest first)
-      const sortedActivities = result.sort((a: NotificationActivity, b: NotificationActivity) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
+        // Sort by creation date (newest first)
+        const sortedActivities = result.sort((a: NotificationActivity, b: NotificationActivity) => {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
 
-      setActivities(sortedActivities.slice(0, limit));
+        setActivities(sortedActivities.slice(0, limit));
+      }
     } catch (err) {
       console.error('Error loading notification activities:', err);
       setError(t('sections.notifications.errors.loadFailed', { defaultValue: 'Failed to load notification activities. Please try again later.' }));
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, fullMode, currentPage]);
+
+  // In full view, reset to the first page whenever the effective filters change so
+  // the user is never stranded on an out-of-range page.
+  useEffect(() => {
+    if (fullMode) {
+      setCurrentPage(1);
+    }
+  }, [notificationFilters, fullMode]);
 
   // Load activities initially and when filters change
   useEffect(() => {
@@ -251,42 +311,106 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     </div>
   );
 
+  // Apply a priority filter chip by writing the shared notification filters (the
+  // filter dialog reads/writes the same `priority` key, keeping the two in sync).
+  const handlePriorityChip = (key: PriorityFilterKey) => {
+    setNotificationFilters(prev => {
+      const next = { ...prev };
+      const mapped = priorityKeyToActivityPriority(key);
+      if (mapped) {
+        next.priority = [mapped];
+      } else {
+        delete next.priority;
+      }
+      return next;
+    });
+  };
+
+  // Priority filter chips (full view only). Chronological order is preserved; the
+  // chips only narrow the list, they never regroup it.
+  const priorityChips = (
+    <div className="flex flex-wrap items-center gap-2 mb-4">
+      <span className="text-sm font-medium text-gray-600 mr-1">
+        {t('sections.notifications.priority.label', { defaultValue: 'Priority' })}
+      </span>
+      {(['all', 'high', 'normal', 'low'] as PriorityFilterKey[]).map(key => (
+        <Button
+          key={key}
+          id={`notification-priority-filter-${key}`}
+          variant={activePriorityKey === key ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handlePriorityChip(key)}
+          disabled={loading}
+        >
+          {t(`sections.notifications.priority.${key}`, {
+            defaultValue: key === 'all' ? 'All' : key === 'high' ? 'High' : key === 'normal' ? 'Normal' : 'Low',
+          })}
+        </Button>
+      ))}
+    </div>
+  );
+
   // Render notifications content
   const renderNotifications = () => {
-    if (loading) {
+    const body = (() => {
+      if (loading) {
+        return (
+          <div className="flex justify-center items-center h-40">
+            <p className="text-gray-500">{t('sections.notifications.states.loading', { defaultValue: 'Loading notification activities...' })}</p>
+          </div>
+        );
+      }
+
+      if (error) {
+        return (
+          <div className="flex justify-center items-center h-40">
+            <p className="text-destructive">{error}</p>
+          </div>
+        );
+      }
+
+      if (activities.length === 0) {
+        return (
+          <div className="flex justify-center items-center h-40">
+            <p className="text-gray-500">{t('sections.notifications.states.empty', { defaultValue: 'No notification activities found' })}</p>
+          </div>
+        );
+      }
+
       return (
-        <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">{t('sections.notifications.states.loading', { defaultValue: 'Loading notification activities...' })}</p>
+        <div className="grid grid-cols-1 gap-4">
+          {activities.map(activity => (
+            <NotificationCard
+              key={activity.id}
+              activity={activity}
+              onViewDetails={() => openActivityDrawer(activity)}
+              onActionComplete={handleRefresh}
+            />
+          ))}
         </div>
       );
+    })();
+
+    // Flag off / preview mode: identical markup to before.
+    if (!fullMode) {
+      return body;
     }
 
-    if (error) {
-      return (
-        <div className="flex justify-center items-center h-40">
-          <p className="text-destructive">{error}</p>
-        </div>
-      );
-    }
-
-    if (activities.length === 0) {
-      return (
-        <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">{t('sections.notifications.states.empty', { defaultValue: 'No notification activities found' })}</p>
-        </div>
-      );
-    }
-
+    // Flag on / full view: priority chips above the list, numbered server-side pager below.
     return (
-      <div className="grid grid-cols-1 gap-4">
-        {activities.map(activity => (
-          <NotificationCard
-            key={activity.id}
-            activity={activity}
-            onViewDetails={() => openActivityDrawer(activity)}
-            onActionComplete={handleRefresh}
+      <div>
+        {priorityChips}
+        {body}
+        {totalCount > FULL_MODE_PAGE_SIZE && (
+          <Pagination
+            id="notification-activities-pagination"
+            totalItems={totalCount}
+            itemsPerPage={FULL_MODE_PAGE_SIZE}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            variant="clients"
           />
-        ))}
+        )}
       </div>
     );
   };

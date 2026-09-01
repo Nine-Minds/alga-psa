@@ -4,16 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
-import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
+import { ContractWizardData } from '../ContractWizard';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import { Plus, X, Clock, Coins } from 'lucide-react';
 import { getCurrencySymbol } from '@alga-psa/core';
-import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
-import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
+import { BucketPoolDraftEditor } from './BucketPoolDraftEditor';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -22,6 +22,34 @@ interface HourlyServicesStepProps {
 
 export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
+  const [bucketSchedules, setBucketSchedules] = React.useState<Array<{
+    schedule_id: string;
+    schedule_name: string;
+    is_default: boolean;
+  }>>([]);
+  const [bucketScheduleLoadError, setBucketScheduleLoadError] = React.useState(false);
+
+  React.useEffect(() => {
+    let isActive = true;
+    void (async () => {
+      try {
+        const schedules = await listBucketBusinessHoursSchedules();
+        if (isActive && Array.isArray(schedules)) {
+          setBucketScheduleLoadError(false);
+          setBucketSchedules(schedules.map((schedule) => ({
+            schedule_id: schedule.schedule_id,
+            schedule_name: schedule.schedule_name,
+            is_default: Boolean(schedule.is_default),
+          })));
+        }
+      } catch {
+        if (isActive) setBucketScheduleLoadError(true);
+      }
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, []);
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
   // Legacy default_rate (untagged) from service_catalog, shown as a hint when no currency-specific price exists.
   const [legacyDefaultRates, setLegacyDefaultRates] = useState<Record<number, number | null>>({});
@@ -42,7 +70,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     updateData({
       hourly_services: [
         ...data.hourly_services,
-        { service_id: '', service_name: '', hourly_rate: undefined, bucket_overlay: undefined },
+        { service_id: '', service_name: '', hourly_rate: undefined },
       ],
     });
   };
@@ -77,40 +105,6 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
   const handleRateChange = (index: number, cents: number) => {
     const next = [...data.hourly_services];
     next[index] = { ...next[index], hourly_rate: cents };
-    updateData({ hourly_services: next });
-  };
-
-  const defaultOverlay = (billingFrequency: string): BucketOverlayInput => ({
-    total_minutes: undefined,
-    overage_rate: undefined,
-    allow_rollover: false,
-    billing_period: billingFrequency as 'monthly' | 'weekly',
-  });
-
-  const toggleBucketOverlay = (index: number, enabled: boolean) => {
-    const next = [...data.hourly_services];
-    if (enabled) {
-      const existing = next[index].bucket_overlay;
-      const effectiveBillingFrequency = data.hourly_billing_frequency ?? data.billing_frequency;
-      next[index] = {
-        ...next[index],
-        bucket_overlay: existing ? { ...existing } : defaultOverlay(effectiveBillingFrequency),
-      };
-    } else {
-      next[index] = {
-        ...next[index],
-        bucket_overlay: undefined,
-      };
-    }
-    updateData({ hourly_services: next });
-  };
-
-  const updateBucketOverlay = (index: number, overlay: BucketOverlayInput) => {
-    const next = [...data.hourly_services];
-    next[index] = {
-      ...next[index],
-      bucket_overlay: { ...overlay },
-    };
     updateData({ hourly_services: next });
   };
 
@@ -290,22 +284,6 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 ) : null}
               </div>
 
-              <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
-                <SwitchWithLabel
-                  label={t('wizardHourly.labels.setBucketOfHours', { defaultValue: 'Set bucket of hours' })}
-                  checked={Boolean(service.bucket_overlay)}
-                  onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
-                />
-                {service.bucket_overlay && (
-                  <BucketOverlayFields
-                    mode="hours"
-                    value={service.bucket_overlay ?? defaultOverlay(data.hourly_billing_frequency ?? data.billing_frequency)}
-                    onChange={(next) => updateBucketOverlay(index, next)}
-                    automationId={`hourly-bucket-${index}`}
-                    billingFrequency={data.hourly_billing_frequency ?? data.billing_frequency}
-                  />
-                )}
-              </div>
             </div>
 
             <Button
@@ -342,6 +320,30 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
           </p>
         </div>
       )}
+
+      <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
+        <BucketPoolDraftEditor
+          pools={(data.bucket_pools ?? []).filter((pool) => (pool.line_key ?? 'hourly') === 'hourly')}
+          lineServices={data.hourly_services
+            .filter((service) => service.service_id)
+            .map((service) => ({
+              service_id: service.service_id,
+              service_name: service.service_name || service.service_id,
+            }))}
+          schedules={bucketSchedules}
+          lineKey="hourly"
+          currencyCode={data.currency_code || 'USD'}
+          scheduleLoadError={bucketScheduleLoadError}
+          onChange={(pools) => {
+            updateData({
+              bucket_pools: [
+                ...(data.bucket_pools ?? []).filter((pool) => (pool.line_key ?? 'hourly') !== 'hourly'),
+                ...pools,
+              ],
+            });
+          }}
+        />
+      </div>
 
       {data.hourly_services.length > 0 && (
         <BillingFrequencyOverrideSelect
@@ -390,66 +392,6 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                   </strong>{' '}
                   {formatBillingFrequency(data.hourly_billing_frequency)}
                 </p>
-              )}
-              {data.hourly_services.some((service) => service.bucket_overlay) && (
-                <div className="pt-2">
-                  <p className="font-semibold">
-                    {t('wizardHourly.summary.labels.bucketsHeading', { defaultValue: 'Buckets:' })}
-                  </p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    {data.hourly_services.map((service, index) => {
-                      if (!service.bucket_overlay) return null;
-                      const overlay = service.bucket_overlay;
-                      const includedHours =
-                        overlay.total_minutes !== undefined ? overlay.total_minutes / 60 : undefined;
-                      const serviceLabel =
-                        service.service_name ||
-                        t('wizardHourly.summary.labels.serviceFallback', {
-                          defaultValue: 'Service {{index}}',
-                          index: index + 1,
-                        });
-                      return (
-                        <li key={`hourly-bucket-summary-${index}`}>
-                          <span className="block">
-                            <strong>{serviceLabel}</strong>
-                          </span>
-                          {includedHours !== undefined && (
-                            <span className="block">
-                              <strong>
-                                {t('wizardHourly.summary.labels.includedHours', { defaultValue: 'Included Hours:' })}
-                              </strong>{' '}
-                              {t('wizardHourly.summary.values.hours', {
-                                defaultValue: '{{count}} hours',
-                                count: includedHours,
-                              })}
-                            </span>
-                          )}
-                          {overlay.overage_rate !== undefined && (
-                            <span className="block">
-                              <strong>
-                                {t('wizardHourly.summary.labels.overageRate', { defaultValue: 'Overage Rate:' })}
-                              </strong>{' '}
-                              {t('wizardHourly.summary.values.overageRatePerHour', {
-                                defaultValue: '{{rate}}/hour',
-                                rate: formatCurrency(overlay.overage_rate),
-                              })}
-                            </span>
-                          )}
-                          {overlay.allow_rollover !== undefined && (
-                            <span className="block">
-                              <strong>
-                                {t('wizardHourly.summary.labels.rollover', { defaultValue: 'Rollover:' })}
-                              </strong>{' '}
-                              {overlay.allow_rollover
-                                ? t('wizardHourly.summary.values.rolloverEnabled', { defaultValue: 'Enabled' })
-                                : t('wizardHourly.summary.values.rolloverDisabled', { defaultValue: 'Disabled' })}
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
               )}
             </div>
           </AlertDescription>

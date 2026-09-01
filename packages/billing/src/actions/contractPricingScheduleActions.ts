@@ -31,6 +31,22 @@ async function getContractAuthoringError(
   return null;
 }
 
+/**
+ * custom_rate is an integer minor-unit amount in the contract currency;
+ * null clears the rate back to the contract default.
+ */
+function getCustomRateValidationError(customRate: number | null | undefined): string | null {
+  if (customRate === undefined || customRate === null) {
+    return null;
+  }
+
+  if (typeof customRate !== 'number' || !Number.isInteger(customRate) || customRate < 0) {
+    return 'Custom rate must be a non-negative integer amount in the currency\'s minor units';
+  }
+
+  return null;
+}
+
 
 /**
  * Get all pricing schedules for a contract
@@ -43,12 +59,12 @@ export const getPricingSchedulesByContract = withAuth(async (
   contractId: string
 ): Promise<IContractPricingSchedule[] | PricingScheduleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    return actionError('Tenant not found');
+    return actionError('Tenant not found', 'msp/billing:errors.context.tenantNotFound');
   }
 
   const db = tenantDb(knex, tenant);
@@ -73,12 +89,12 @@ export const getPricingScheduleById = withAuth(async (
   scheduleId: string
 ): Promise<IContractPricingSchedule | null | PricingScheduleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    return actionError('Tenant not found');
+    return actionError('Tenant not found', 'msp/billing:errors.context.tenantNotFound');
   }
 
   const db = tenantDb(knex, tenant);
@@ -130,16 +146,21 @@ export const createPricingSchedule = withAuth(async (
   scheduleData: Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>
 ): Promise<PricingScheduleMutationResult> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    return actionError('Tenant not found');
+    return actionError('Tenant not found', 'msp/billing:errors.context.tenantNotFound');
   }
   const authoringError = await getContractAuthoringError(knex, tenant, scheduleData.contract_id);
   if (authoringError) {
     return actionError(authoringError);
+  }
+
+  const customRateError = getCustomRateValidationError(scheduleData.custom_rate);
+  if (customRateError) {
+    return actionError(customRateError);
   }
   const db = tenantDb(knex, tenant);
 
@@ -155,7 +176,7 @@ export const createPricingSchedule = withAuth(async (
 
   // Validate that end_date is after effective_date if provided
   if (endDate && endDate <= scheduleData.effective_date) {
-    return actionError('End date must be after effective date');
+    return actionError('End date must be after effective date', 'msp/contracts:errors.pricingSchedule.endAfterEffective');
   }
 
   // Check for overlapping schedules
@@ -185,7 +206,7 @@ export const createPricingSchedule = withAuth(async (
     .first();
 
   if (overlapping) {
-    return actionError('This schedule overlaps with an existing pricing schedule');
+    return actionError('This schedule overlaps with an existing pricing schedule', 'msp/contracts:errors.pricingSchedule.overlaps');
   }
 
   const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
@@ -214,12 +235,12 @@ export const updatePricingSchedule = withAuth(async (
   scheduleData: Partial<Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'contract_id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>>
 ): Promise<PricingScheduleMutationResult> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    return actionError('Tenant not found');
+    return actionError('Tenant not found', 'msp/billing:errors.context.tenantNotFound');
   }
 
   // Get existing schedule
@@ -231,11 +252,16 @@ export const updatePricingSchedule = withAuth(async (
     .first();
 
   if (!existingSchedule) {
-    return actionError('Pricing schedule not found');
+    return actionError('Pricing schedule not found', 'msp/contracts:errors.pricingSchedule.notFound');
   }
   const authoringError = await getContractAuthoringError(knex, tenant, existingSchedule.contract_id);
   if (authoringError) {
     return actionError(authoringError);
+  }
+
+  const customRateError = getCustomRateValidationError(scheduleData.custom_rate);
+  if (customRateError) {
+    return actionError(customRateError);
   }
 
   // Calculate end_date from duration if provided
@@ -251,7 +277,7 @@ export const updatePricingSchedule = withAuth(async (
   }
 
   if (endDate && endDate <= effectiveDate) {
-    return actionError('End date must be after effective date');
+    return actionError('End date must be after effective date', 'msp/contracts:errors.pricingSchedule.endAfterEffective');
   }
 
   // Check for overlapping schedules (excluding current schedule)
@@ -282,7 +308,7 @@ export const updatePricingSchedule = withAuth(async (
     .first();
 
   if (overlapping) {
-    return actionError('This schedule would overlap with an existing pricing schedule');
+    return actionError('This schedule would overlap with an existing pricing schedule', 'msp/contracts:errors.pricingSchedule.wouldOverlap');
   }
 
   const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
@@ -310,12 +336,12 @@ export const deletePricingSchedule = withAuth(async (
   scheduleId: string
 ): Promise<PricingScheduleDeleteResult> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    return permissionError('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    return actionError('Tenant not found');
+    return actionError('Tenant not found', 'msp/billing:errors.context.tenantNotFound');
   }
   const db = tenantDb(knex, tenant);
   const existingSchedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
@@ -353,12 +379,12 @@ export const getActivePricingScheduleByContract = withAuth(async (
   date?: Date
 ): Promise<IContractPricingSchedule | null | PricingScheduleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    return actionError('Tenant not found');
+    return actionError('Tenant not found', 'msp/billing:errors.context.tenantNotFound');
   }
 
   const checkDate = date || new Date();

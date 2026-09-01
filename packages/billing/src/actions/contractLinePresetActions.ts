@@ -24,6 +24,7 @@ import ContractLineFixedConfig from '../models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
 import {
     actionError,
     permissionError,
@@ -54,19 +55,25 @@ function contractLinePresetActionErrorFrom(error: unknown): ContractLinePresetAc
 
     const dbError = error as { code?: string; column?: string; constraint?: string };
     if (dbError?.code === '22P02') {
-        return actionError('One of the selected contract line preset values is invalid. Please refresh and try again.');
+        return actionError('One of the selected contract line preset values is invalid. Please refresh and try again.', 'msp/contract-lines:errors.preset.invalidValue');
     }
     if (dbError?.code === '23502') {
-        return actionError(`Missing required contract line preset field${dbError.column ? `: ${dbError.column}` : ''}.`);
+        return dbError.column
+          ? actionError(
+              `Missing required contract line preset field: ${dbError.column}.`,
+              'msp/contract-lines:errors.preset.missingFieldNamed',
+              { field: dbError.column },
+            )
+          : actionError('Missing required contract line preset field.', 'msp/contract-lines:errors.preset.missingField');
     }
     if (dbError?.code === '23503') {
-        return actionError('The selected contract line preset, contract, or service no longer exists. Please refresh and try again.');
+        return actionError('The selected contract line preset, contract, or service no longer exists. Please refresh and try again.', 'msp/contract-lines:errors.preset.referenceMissing');
     }
     if (dbError?.code === '23505') {
-        return actionError('This contract line preset change conflicts with an existing record. Please refresh and try again.');
+        return actionError('This contract line preset change conflicts with an existing record. Please refresh and try again.', 'msp/contract-lines:errors.preset.conflict');
     }
     if (dbError?.code === '23514') {
-        return actionError('One of the contract line preset values is not allowed. Please review the form and try again.');
+        return actionError('One of the contract line preset values is not allowed. Please review the form and try again.', 'msp/contract-lines:errors.preset.notAllowed');
     }
 
     return null;
@@ -202,7 +209,11 @@ export const updateContractLinePreset = withAuth(async (
         }
         if (error instanceof Error) {
             if (error.message.includes('not found')) {
-                return actionError(`Contract Line Preset with ID ${presetId} not found during update.`);
+                return actionError(
+                    `Contract Line Preset with ID ${presetId} not found during update.`,
+                    'msp/contract-lines:errors.preset.notFoundDuringUpdate',
+                    { presetId },
+                );
             }
             throw error;
         }
@@ -248,6 +259,30 @@ export const getContractLinePresetServices = withAuth(async (user, { tenant }, p
         });
     } catch (error) {
         console.error(`Error fetching services for preset ${presetId}:`, error);
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        throw error;
+    }
+});
+
+/**
+ * Get the service count for every contract line preset in a single round trip
+ */
+export const getContractLinePresetServiceCounts = withAuth(async (user, { tenant }): Promise<Record<string, number> | ContractLinePresetActionError> => {
+    try {
+        const { knex } = await createTenantKnex();
+
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(user, 'billing', 'read')) {
+                throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line preset services');
+            }
+
+            return await ContractLinePresetService.getServiceCountsByPreset(trx);
+        });
+    } catch (error) {
+        console.error('Error fetching contract line preset service counts:', error);
         const expected = contractLinePresetActionErrorFrom(error);
         if (expected) {
             return expected;
@@ -526,28 +561,23 @@ export const copyPresetToContractLine = withAuth(async (
                     if (presetService.bucket_total_minutes != null && presetService.bucket_overage_rate != null) {
                         console.log(`[copyPresetToContractLine] Creating bucket overlay for service ${presetService.service_id}`);
 
-                        const bucketConfigId = uuidv4();
-
-                        // Create bucket service configuration
-                        const bucketConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-                            contract_line_id: contractLineId,
-                            service_id: presetService.service_id,
-                            configuration_type: 'Bucket',
-                            custom_rate: undefined,
-                            quantity: undefined,
-                            instance_name: undefined,
-                            tenant: tenantId
-                        };
-
-                        // Create bucket-specific config matching the contract line's billing frequency
-                        const bucketTypeConfig = {
-                            total_minutes: Math.max(0, Math.round(presetService.bucket_total_minutes)),
-                            billing_period: contractLine.billing_frequency,
-                            overage_rate: Math.max(0, Math.round(presetService.bucket_overage_rate)),
-                            allow_rollover: presetService.bucket_allow_rollover ?? false
-                        };
-
-                        await configService.createConfiguration(bucketConfig, bucketTypeConfig);
+                        // Route through the compat layer so the overlay is
+                        // created as the single-member 1x pool for this
+                        // (line, service) under the weighted-burn model.
+                        await upsertBucketOverlayInTransaction(
+                            trx,
+                            tenantId,
+                            contractLineId,
+                            presetService.service_id,
+                            {
+                                total_minutes: Math.max(0, Math.round(presetService.bucket_total_minutes)),
+                                overage_rate: Math.max(0, Math.round(presetService.bucket_overage_rate)),
+                                allow_rollover: presetService.bucket_allow_rollover ?? false,
+                                billing_period: (contractLine.billing_frequency as 'weekly' | 'monthly') ?? 'monthly',
+                            },
+                            null,
+                            null,
+                        );
 
                         console.log(`[copyPresetToContractLine] Successfully created bucket configuration for service ${presetService.service_id}`);
                     }
@@ -768,24 +798,22 @@ export const createCustomContractLine = withAuth(async (
                     serviceConfig.bucket_overlay.total_minutes != null &&
                     serviceConfig.bucket_overlay.overage_rate != null) {
 
-                    const bucketConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-                        contract_line_id: contractLineId,
-                        service_id: serviceConfig.service_id,
-                        configuration_type: 'Bucket',
-                        custom_rate: undefined,
-                        quantity: undefined,
-                        instance_name: undefined,
-                        tenant: tenantId
-                    };
-
-                    const bucketTypeConfig = {
-                        total_minutes: Math.max(0, Math.round(serviceConfig.bucket_overlay.total_minutes)),
-                        billing_period: serviceConfig.bucket_overlay.billing_period || input.billing_frequency,
-                        overage_rate: Math.max(0, Math.round(serviceConfig.bucket_overlay.overage_rate)),
-                        allow_rollover: serviceConfig.bucket_overlay.allow_rollover ?? false
-                    };
-
-                    await configService.createConfiguration(bucketConfig, bucketTypeConfig);
+                    // Route through the compat layer so the overlay is created
+                    // as the single-member 1x pool for this (line, service).
+                    await upsertBucketOverlayInTransaction(
+                        trx,
+                        tenantId,
+                        contractLineId,
+                        serviceConfig.service_id,
+                        {
+                            total_minutes: Math.max(0, Math.round(serviceConfig.bucket_overlay.total_minutes)),
+                            overage_rate: Math.max(0, Math.round(serviceConfig.bucket_overlay.overage_rate)),
+                            allow_rollover: serviceConfig.bucket_overlay.allow_rollover ?? false,
+                            billing_period: (serviceConfig.bucket_overlay.billing_period || input.billing_frequency) as 'weekly' | 'monthly',
+                        },
+                        null,
+                        null,
+                    );
                 }
             }
 

@@ -8,7 +8,12 @@ import { revalidatePath } from 'next/cache';
 import { ISecretProvider } from '@alga-psa/core';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { createTenantKnex } from '@alga-psa/db';
 import { notifyQboConnectionChanged } from '../lib/qbo/qboConnectionChangeProvider';
+import {
+  isQboAutomatedSalesTaxEnabled,
+  setQboAutomatedSalesTaxEnabled
+} from '../lib/qbo/qboTaxSettings';
 import {
   actionError,
   permissionError,
@@ -53,6 +58,13 @@ export interface QboCredentialStatus {
   ready: boolean;
   clientIdMasked?: string;
   clientSecretMasked?: string;
+  /**
+   * Which Intuit app the OAuth flow will actually use: 'tenant' for credentials
+   * this tenant registered itself, 'app' for the deployment-wide app a hosted
+   * operator configured. Null when neither resolves. Provenance only — the
+   * app-level values themselves never leave the server.
+   */
+  source?: 'tenant' | 'app' | null;
 }
 
 export interface QboConnectionStatus {
@@ -104,8 +116,70 @@ function qboConnectionStatusError(
   };
 }
 
-function qboCatalogNotConnected(catalogName: string): QboCatalogActionError {
-  return actionError(`Connect QuickBooks before loading ${catalogName}.`);
+type QboCatalog =
+  | 'accounts'
+  | 'classes'
+  | 'departments'
+  | 'items'
+  | 'taxCodes'
+  | 'customers'
+  | 'paymentTerms';
+
+const QBO_CATALOG_LABELS: Record<QboCatalog, string> = {
+  accounts: 'QuickBooks accounts',
+  classes: 'QuickBooks classes',
+  departments: 'QuickBooks departments',
+  items: 'QuickBooks items',
+  taxCodes: 'QuickBooks tax codes',
+  customers: 'QuickBooks customers',
+  paymentTerms: 'QuickBooks payment terms',
+};
+
+// A frame plus an English catalogue name does not translate, so every catalogue
+// names its own whole sentence.
+const QBO_CATALOG_KEYS: Record<QboCatalog, { notConnected: string; reconnect: string; loadFailed: string }> = {
+  accounts: {
+    notConnected: 'msp/integrations:errors.qbo.accounts.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.accounts.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.accounts.loadFailed',
+  },
+  classes: {
+    notConnected: 'msp/integrations:errors.qbo.classes.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.classes.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.classes.loadFailed',
+  },
+  departments: {
+    notConnected: 'msp/integrations:errors.qbo.departments.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.departments.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.departments.loadFailed',
+  },
+  items: {
+    notConnected: 'msp/integrations:errors.qbo.items.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.items.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.items.loadFailed',
+  },
+  taxCodes: {
+    notConnected: 'msp/integrations:errors.qbo.taxCodes.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.taxCodes.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.taxCodes.loadFailed',
+  },
+  customers: {
+    notConnected: 'msp/integrations:errors.qbo.customers.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.customers.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.customers.loadFailed',
+  },
+  paymentTerms: {
+    notConnected: 'msp/integrations:errors.qbo.paymentTerms.notConnected',
+    reconnect: 'msp/integrations:errors.qbo.paymentTerms.reconnect',
+    loadFailed: 'msp/integrations:errors.qbo.paymentTerms.loadFailed',
+  },
+};
+
+function qboCatalogNotConnected(catalog: QboCatalog): QboCatalogActionError {
+  return actionError(
+    `Connect QuickBooks before loading ${QBO_CATALOG_LABELS[catalog]}.`,
+    QBO_CATALOG_KEYS[catalog].notConnected,
+  );
 }
 
 function isQboReconnectError(error: unknown): boolean {
@@ -155,13 +229,18 @@ function qboConnectionStatusMessage(error: unknown): string {
   return 'Could not check QuickBooks connection status. Try again, or reconnect QuickBooks if the problem persists.';
 }
 
-function qboCatalogFetchError(catalogName: string, errors: unknown[]): QboCatalogActionError {
+function qboCatalogFetchError(catalog: QboCatalog, errors: unknown[]): QboCatalogActionError {
+  const catalogName = QBO_CATALOG_LABELS[catalog];
   if (errors.some(isQboReconnectError)) {
-    return actionError(`Reconnect QuickBooks before loading ${catalogName}.`);
+    return actionError(
+      `Reconnect QuickBooks before loading ${catalogName}.`,
+      QBO_CATALOG_KEYS[catalog].reconnect,
+    );
   }
 
   return actionError(
-    `Could not load ${catalogName}. Try again, or reconnect QuickBooks if the problem persists.`
+    `Could not load ${catalogName}. Try again, or reconnect QuickBooks if the problem persists.`,
+    QBO_CATALOG_KEYS[catalog].loadFailed,
   );
 }
 
@@ -201,6 +280,19 @@ type QboTaxCodeRow = {
   id?: string;
   Name?: string;
   name?: string;
+  Description?: string;
+  Active?: boolean;
+  SalesTaxRateList?: {
+    TaxRateDetail?: Array<{
+      TaxRateRef?: { value?: string; name?: string };
+      TaxTypeApplicable?: string;
+    }>;
+  };
+};
+
+type QboTaxRateRow = {
+  Id?: string;
+  RateValue?: number | string;
 };
 
 type QboTermRow = {
@@ -226,6 +318,31 @@ type QboCustomerRow = {
 
 function buildCacheKey(tenantId: string, realmId: string | null, scope: string): string {
   return `${tenantId}:${realmId ?? 'default'}:${scope}`;
+}
+
+const QBO_QUERY_PAGE_SIZE = 1000;
+
+/**
+ * Pages through a QBO query using STARTPOSITION/MAXRESULTS until exhausted.
+ * QBO returns only 100 rows when MAXRESULTS is omitted and caps it at 1000, so
+ * an unpaged query silently truncates any catalog past the first hundred — an
+ * Automated Sales Tax company accumulates a tax code per jurisdiction it bills
+ * into, and a long-lived company file outgrows that quickly.
+ */
+async function queryAllPages<T>(qboClient: QboClientService, baseQuery: string): Promise<T[]> {
+  const rows: T[] = [];
+  let startPosition = 1;
+
+  while (true) {
+    const page = await qboClient.query<T>(
+      `${baseQuery} STARTPOSITION ${startPosition} MAXRESULTS ${QBO_QUERY_PAGE_SIZE}`
+    );
+    rows.push(...page);
+    if (page.length < QBO_QUERY_PAGE_SIZE) break;
+    startPosition += QBO_QUERY_PAGE_SIZE;
+  }
+
+  return rows;
 }
 
 function getCachedValue<T>(
@@ -291,10 +408,27 @@ function normalizeItemRow(row: QboItemRow): QboItem {
   };
 }
 
-function normalizeTaxCodeRow(row: QboTaxCodeRow): QboTaxCode {
+function normalizeTaxCodeRow(
+  row: QboTaxCodeRow,
+  ratePercentByTaxRateId: Map<string, number>
+): QboTaxCode {
+  // A tax code's effective rate is the sum of its sales-rate components
+  // (TaxGroup codes combine several TaxRates, e.g. state + county).
+  let ratePercent: number | null = null;
+  for (const detail of row.SalesTaxRateList?.TaxRateDetail ?? []) {
+    const rateId = detail.TaxRateRef?.value;
+    if (!rateId) continue;
+    const rate = ratePercentByTaxRateId.get(rateId);
+    if (rate === undefined) continue;
+    ratePercent = (ratePercent ?? 0) + rate;
+  }
+
+  const description = row.Description?.trim();
   return {
     id: row.Id ?? row.id ?? '',
-    name: row.Name ?? row.name ?? ''
+    name: row.Name ?? row.name ?? '',
+    description: description && description.length > 0 ? description : null,
+    ratePercent
   };
 }
 
@@ -322,12 +456,12 @@ async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
 
 async function getQboCatalogAccessError(user: IUserWithRoles): Promise<QboCatalogActionError | null> {
   if (!isEnterpriseEdition()) {
-    return actionError('QuickBooks Online integration is only available in Enterprise Edition.');
+    return actionError('QuickBooks Online integration is only available in Enterprise Edition.', 'msp/integrations:errors.qbo.enterpriseOnly');
   }
 
   const allowed = await hasPermission(user, 'billing_settings', 'read');
   if (!allowed) {
-    return permissionError('Forbidden: You do not have permission to view QuickBooks integration settings.');
+    return permissionError('Forbidden: You do not have permission to view QuickBooks integration settings.', 'msp/integrations:errors.qbo.viewPermission');
   }
 
   return null;
@@ -477,6 +611,10 @@ export interface QboItem { // Exporting for use in components
 export interface QboTaxCode { // Exporting for use in components
   id: string; // QBO TaxCodeRef.value
   name: string; // Qbo TaxCode Name
+  /** QBO TaxCode.Description when it adds information beyond the name. */
+  description?: string | null;
+  /** Combined sales rate (%) summed from the code's TaxRate components, when resolvable. */
+  ratePercent?: number | null;
 }
 
 export interface QboTerm { // Exporting for use in components
@@ -581,7 +719,7 @@ export const getQboAccounts = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO accounts: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks accounts');
+    return qboCatalogNotConnected('accounts');
   }
 
   const errors: unknown[] = [];
@@ -603,7 +741,7 @@ export const getQboAccounts = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO accounts for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks accounts', errors);
+  return qboCatalogFetchError('accounts', errors);
 });
 
 /**
@@ -630,7 +768,7 @@ export const getQboClasses = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO classes: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks classes');
+    return qboCatalogNotConnected('classes');
   }
 
   const errors: unknown[] = [];
@@ -652,7 +790,7 @@ export const getQboClasses = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO classes for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks classes', errors);
+  return qboCatalogFetchError('classes', errors);
 });
 
 /**
@@ -679,7 +817,7 @@ export const getQboDepartments = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO departments: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks departments');
+    return qboCatalogNotConnected('departments');
   }
 
   const errors: unknown[] = [];
@@ -699,7 +837,7 @@ export const getQboDepartments = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO departments for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks departments', errors);
+  return qboCatalogFetchError('departments', errors);
 });
 
 /**
@@ -727,7 +865,7 @@ export const getQboItems = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO items: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks items');
+    return qboCatalogNotConnected('items');
   }
 
   const errors: unknown[] = [];
@@ -747,7 +885,7 @@ export const getQboItems = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO items for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks items', errors);
+  return qboCatalogFetchError('items', errors);
 });
 
 /**
@@ -789,7 +927,8 @@ export const getQboConnectionStatus = withAuth(async (
     clientSecretConfigured: Boolean(clientSecret),
     ready: Boolean(resolvedCredentials),
     clientIdMasked: clientId ? maskSecret(clientId) : undefined,
-    clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined
+    clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined,
+    source: resolvedCredentials?.source ?? null
   };
   const baseStatus = {
     redirectUri,
@@ -1014,7 +1153,7 @@ export const getQboTaxCodes = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO tax codes: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks tax codes');
+    return qboCatalogNotConnected('taxCodes');
   }
 
   const errors: unknown[] = [];
@@ -1022,8 +1161,34 @@ export const getQboTaxCodes = withAuth(async (
     try {
       logger.debug('Fetching QBO tax codes', { tenantId: tenant, realmId });
       const qboClient = await QboClientService.create(tenant, realmId);
-      const qboTaxCodes = await qboClient.query<QboTaxCodeRow>('SELECT Id, Name FROM TaxCode');
-      const mappedTaxCodes = qboTaxCodes.map(normalizeTaxCodeRow);
+
+      // SELECT * so the nested SalesTaxRateList comes back — Intuit's own
+      // documented TaxCode response carries the rate components only under it,
+      // and naming columns omits them. TaxRates then supply the percentages so
+      // labels can read "Name (7.25%)".
+      const [taxCodeRows, taxRateRows] = await Promise.all([
+        queryAllPages<QboTaxCodeRow>(qboClient, 'SELECT * FROM TaxCode'),
+        queryAllPages<QboTaxRateRow>(qboClient, 'SELECT Id, RateValue FROM TaxRate')
+      ]);
+
+      const ratePercentByTaxRateId = new Map<string, number>();
+      for (const rate of taxRateRows) {
+        if (!rate.Id) continue;
+        const value = Number(rate.RateValue);
+        if (Number.isFinite(value)) {
+          ratePercentByTaxRateId.set(rate.Id, value);
+        }
+      }
+
+      // Filtered here rather than as `WHERE Active = true`, which QBO does
+      // support: Intuit's published TaxCode response omits Active entirely on
+      // the TAX and NON pseudo codes, so a server-side filter would silently
+      // drop exactly the two entries an Automated Sales Tax company needs.
+      // Inactive codes leave the pick list either way; existing mappings that
+      // point at them stay readable via the persisted display-name metadata.
+      const mappedTaxCodes = taxCodeRows
+        .filter((row) => row.Active !== false)
+        .map((row) => normalizeTaxCodeRow(row, ratePercentByTaxRateId));
       setCachedValue(taxCodeCache, buildCacheKey(tenant, realmId, 'tax-codes'), mappedTaxCodes);
       return [...mappedTaxCodes];
     } catch (error) {
@@ -1034,7 +1199,69 @@ export const getQboTaxCodes = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO tax codes for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks tax codes', errors);
+  return qboCatalogFetchError('taxCodes', errors);
+});
+
+/**
+ * Reads whether QuickBooks Automated Sales Tax (AST) mode is enabled for a realm.
+ */
+export const getQboAutomatedSalesTaxMode = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<{ enabled: boolean } | QboCatalogActionError> => {
+  const accessError = await getQboCatalogAccessError(user);
+  if (accessError) return accessError;
+
+  const { knex } = await createTenantKnex();
+  const enabled = await isQboAutomatedSalesTaxEnabled(knex, tenant, options.realmId ?? null);
+  return { enabled };
+});
+
+/**
+ * Enables or disables QuickBooks Automated Sales Tax (AST) mode for a realm.
+ * With AST on, tax-delegated exports carry line TaxCodeRefs (mapped value,
+ * else TAX/NON) so Intuit's AST engine taxes the lines; the computed tax then
+ * flows back through the existing external tax import path.
+ */
+export const setQboAutomatedSalesTaxMode = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId: string; enabled: boolean }
+): Promise<{ success: boolean; enabled?: boolean; error?: string }> => {
+  try {
+    const accessError = await getQboUpdateAccessError(user);
+    if (accessError) {
+      return { success: false, error: accessError };
+    }
+
+    if (!options.realmId) {
+      return { success: false, error: 'A connected QuickBooks company is required to change Automated Sales Tax mode.' };
+    }
+
+    const { knex } = await createTenantKnex();
+    const realms = await setQboAutomatedSalesTaxEnabled(knex, tenant, options.realmId, options.enabled);
+
+    // The tax-code pick list is assembled from the cached catalog plus the
+    // TAX/NON pseudo codes, and the pseudo codes appear only under AST — so the
+    // cached list is wrong the moment this flag flips.
+    clearAllCatalogCachesForTenant(tenant);
+
+    logger.info('QBO Automated Sales Tax mode updated', {
+      tenantId: tenant,
+      realmId: options.realmId,
+      enabled: options.enabled
+    });
+
+    return { success: true, enabled: realms.includes(options.realmId) };
+  } catch (error: unknown) {
+    logger.error('Failed to update QBO Automated Sales Tax mode', {
+      tenantId: tenant,
+      realmId: options.realmId,
+      error
+    });
+    return { success: false, error: 'Failed to update Automated Sales Tax mode. Please try again.' };
+  }
 });
 
 /**
@@ -1067,7 +1294,7 @@ export const getQboCustomers = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO customers: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks customers');
+    return qboCatalogNotConnected('customers');
   }
 
   const errors: unknown[] = [];
@@ -1076,18 +1303,11 @@ export const getQboCustomers = withAuth(async (
       logger.debug('Fetching QBO customers', { tenantId: tenant, realmId });
       const qboClient = await QboClientService.create(tenant, realmId);
 
-      const PAGE_SIZE = 1000;
-      const allCustomers: QboCustomer[] = [];
-      let startPosition = 1;
-
-      while (true) {
-        const page = await qboClient.query<QboCustomerRow>(
-          `SELECT Id, DisplayName, Active FROM Customer STARTPOSITION ${startPosition} MAXRESULTS ${PAGE_SIZE}`
-        );
-        allCustomers.push(...page.map(normalizeCustomerRow));
-        if (page.length < PAGE_SIZE) break;
-        startPosition += PAGE_SIZE;
-      }
+      const customerRows = await queryAllPages<QboCustomerRow>(
+        qboClient,
+        'SELECT Id, DisplayName, Active FROM Customer'
+      );
+      const allCustomers = customerRows.map(normalizeCustomerRow);
 
       setCachedValue(customerCache, buildCacheKey(tenant, realmId, 'customers'), allCustomers);
       return [...allCustomers];
@@ -1099,7 +1319,7 @@ export const getQboCustomers = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO customers for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks customers', errors);
+  return qboCatalogFetchError('customers', errors);
 });
 
 export const getQboTerms = withAuth(async (
@@ -1122,7 +1342,7 @@ export const getQboTerms = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO terms: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('QuickBooks payment terms');
+    return qboCatalogNotConnected('paymentTerms');
   }
 
   const errors: unknown[] = [];
@@ -1142,5 +1362,5 @@ export const getQboTerms = withAuth(async (
   }
 
   logger.warn('Unable to fetch QBO terms for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('QuickBooks payment terms', errors);
+  return qboCatalogFetchError('paymentTerms', errors);
 });

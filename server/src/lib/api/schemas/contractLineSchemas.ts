@@ -322,27 +322,52 @@ export const planServiceWithConfigResponseSchema = z.object({
 // ============================================================================
 
 // Contract
-export const createContractSchema = z.object({
+// `client_id` is the owning client per the public v1 contract; `owner_client_id`
+// remains accepted as an internal alias. At least one must be supplied. The
+// create/update shape is strict so unsupported fields are rejected, not silently
+// stripped (which would hide caller data loss).
+const contractCreateShape = {
+  client_id: uuidSchema.optional(),
   contract_name: z.string().min(1, 'Contract name is required').max(255),
   contract_description: z.string().optional(),
-  owner_client_id: uuidSchema,
+  owner_client_id: uuidSchema.optional(),
   billing_frequency: billingFrequencySchema,
+  start_date: dateSchema,
+  end_date: dateSchema.nullable().optional(),
   status: contractStatusSchema.optional(),
   is_active: z.boolean().optional().default(true)
+};
+
+const contractCreateObject = z.object(contractCreateShape).strict();
+
+// `createUpdateSchema` needs a `ZodObject`, so the ownership check lives on a
+// refinement of the object rather than replacing it.
+export const createContractSchema = contractCreateObject.superRefine((data, ctx) => {
+  if (!data.client_id && !data.owner_client_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'client_id is required',
+      path: ['client_id'],
+    });
+  }
 });
 
-export const updateContractSchema = createUpdateSchema(createContractSchema);
+export const updateContractSchema = createUpdateSchema(contractCreateObject);
 
 export const contractResponseSchema = z.object({
   contract_id: uuidSchema,
   contract_name: z.string(),
   contract_description: z.string().nullable(),
   owner_client_id: uuidSchema,
+  client_id: uuidSchema.nullable().optional(),
   owner_client_name: z.string().nullable().optional(),
   billing_frequency: billingFrequencySchema,
   status: contractStatusSchema,
   is_active: z.boolean(),
   is_system_managed_default: z.boolean().optional(),
+  is_template: z.boolean().optional(),
+  start_date: z.string().datetime().nullable().optional(),
+  end_date: z.string().datetime().nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,

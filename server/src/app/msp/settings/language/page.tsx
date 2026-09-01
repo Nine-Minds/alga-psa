@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { SettingsTab } from '@/components/settings/SettingsTab';
-import { getSettingsTabTitle } from '@/components/settings/settingsTabsRegistry';
+import { settingsTabMetadata } from '@/components/settings/settingsTabMetadata';
 import MspLanguageSettings from '@/components/settings/general/MspLanguageSettings';
 
-export const metadata: Metadata = { title: getSettingsTabTitle('language') };
+export async function generateMetadata(): Promise<Metadata> {
+  return settingsTabMetadata('language');
+}
 
 export default function LanguageSettingsRoute() {
   return (

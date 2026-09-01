@@ -9,6 +9,7 @@ export interface MobileFeatureCapabilities {
   features: {
     inventory: boolean;
     opportunities: boolean;
+    opportunitiesCreate: boolean;
   };
 }
 
@@ -28,20 +29,23 @@ export class MobileCapabilitiesService extends BaseService<never> {
         features: {
           inventory: false,
           opportunities: false,
+          opportunitiesCreate: false,
         },
       };
     }
 
     const knex = await this.getDbForContext(context);
-    const [inventory, opportunities] = await Promise.all([
+    const [inventory, opportunities, opportunitiesCreate] = await Promise.all([
       hasPermission(context.user, 'inventory', 'read', knex),
       hasPermission(context.user, 'opportunities', 'read', knex),
+      hasPermission(context.user, 'opportunities', 'create', knex),
     ]);
 
     return {
       features: {
         inventory,
         opportunities,
+        opportunitiesCreate,
       },
     };
   }

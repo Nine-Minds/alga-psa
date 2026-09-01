@@ -105,6 +105,30 @@ const activities = proxyActivities<{
   },
 });
 
+// KB imports hold a row lock while parsing and creating one article. Two
+// attempts cover a transient worker/activity failure without allowing the
+// generic three-attempt policy to keep an expensive bad input alive longer.
+// The name is inlined to keep the workflow bundle independent of jobs package
+// runtime modules (and avoid a worker dependency cycle).
+const KB_ARTICLE_IMPORT_JOB = 'kb-article-import';
+const kbArticleImportActivities = proxyActivities<{
+  executeJobHandler(input: {
+    jobId: string;
+    jobName: string;
+    tenantId: string;
+    jobExecutionId: string;
+    data: Record<string, unknown>;
+  }): Promise<{ success: boolean; error?: string; result?: Record<string, unknown> }>;
+}>({
+  startToCloseTimeout: '10m',
+  retry: {
+    maximumAttempts: 2,
+    backoffCoefficient: 2.0,
+    initialInterval: '1s',
+    maximumInterval: '30s',
+  },
+});
+
 // Define signals
 export const cancelJobSignal = defineSignal<[CancelJobSignal]>('cancelJob');
 export const updateProgressSignal = defineSignal<[UpdateProgressSignal]>('updateProgress');
@@ -227,7 +251,10 @@ export async function genericJobWorkflow(
     // Execute the job handler
     log.info('Executing job handler', { jobId, jobName });
 
-    const result = await activities.executeJobHandler({
+    const handlerActivities = jobName === KB_ARTICLE_IMPORT_JOB
+      ? kbArticleImportActivities
+      : activities;
+    const result = await handlerActivities.executeJobHandler({
       jobId,
       jobName,
       tenantId,

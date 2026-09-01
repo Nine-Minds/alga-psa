@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -29,10 +30,19 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import { EditorImage } from '../lib/editorImageExtension';
+import {
+  editorImageUploadMessage,
+  extractImageFiles,
+  insertUploadedImages,
+  isEditorImageFile,
+  uploadEditorImage,
+} from '../lib/editorImageUpload';
 import {
   blockNoteJsonToProsemirrorJson,
   detectBlockContentFormat,
@@ -72,6 +82,8 @@ interface CollaborativeEditorProps {
   initialContent?: unknown;
   /** Whether the AI assistant experimental feature is enabled. */
   aiAssistantEnabled?: boolean;
+  /** Names inline image uploads after the article they were pasted into. */
+  imageNamePrefix?: string;
 }
 
 const USER_COLORS = [
@@ -101,14 +113,15 @@ const getUserColor = (userId: string) => {
 
 const buildPresenceUsers = (
   states: Array<[number, { user?: PresenceUser }]>,
-  fallbackColor: string
+  fallbackColor: string,
+  fallbackName: string
 ) => {
   const users = states
     .map(([clientId, state]) => {
       if (!state.user) return null;
       return {
         id: state.user.id || `${clientId}`,
-        name: state.user.name || 'User',
+        name: state.user.name || fallbackName,
         color: state.user.color || fallbackColor,
       } as PresenceUser;
     })
@@ -135,7 +148,9 @@ export function CollaborativeEditor({
   onUsersChange,
   initialContent,
   aiAssistantEnabled = false,
+  imageNamePrefix,
 }: CollaborativeEditorProps) {
+  const { t } = useTranslation('features/documents');
   const roomName = useMemo(() => `document:${tenantId}:${documentId}`, [tenantId, documentId]);
   const { provider, ydoc } = useMemo(
     () =>
@@ -159,6 +174,16 @@ export function CollaborativeEditor({
   const hasInitializedContent = useRef(false);
   const initialContentRef = useRef(initialContent);
 
+  // Parents commonly pass these as inline arrows, so their identity changes on
+  // every parent render. Held in refs so the provider effect below can leave
+  // them out of its dependency list.
+  const onConnectionStatusChangeRef = useRef(onConnectionStatusChange);
+  const onSyncStateChangeRef = useRef(onSyncStateChange);
+  const onUsersChangeRef = useRef(onUsersChange);
+  onConnectionStatusChangeRef.current = onConnectionStatusChange;
+  onSyncStateChangeRef.current = onSyncStateChange;
+  onUsersChangeRef.current = onUsersChange;
+
   const handleEmojiStateChange = useCallback((state: EmojiSuggestionState) => {
     setEmojiState(state);
   }, []);
@@ -166,6 +191,27 @@ export function CollaborativeEditor({
   const handleMentionStateChange = useCallback((state: MentionSuggestionState) => {
     setMentionState(state);
   }, []);
+
+  // useEditor captures its options once, so the toast handler reads t from a
+  // ref rather than closing over the first render's copy.
+  const tRef = useRef(t);
+  tRef.current = t;
+
+  const handleImageUploadError = useCallback((error: unknown) => {
+    toast.error(editorImageUploadMessage(error, tRef.current));
+  }, []);
+
+  const imageUploadOptions = useMemo(
+    () => ({ userId, parentDocumentId: documentId, namePrefix: imageNamePrefix }),
+    [userId, documentId, imageNamePrefix]
+  );
+  const imageUploadOptionsRef = useRef(imageUploadOptions);
+  imageUploadOptionsRef.current = imageUploadOptions;
+
+  const uploadImage = useCallback(
+    async (file: File) => (await uploadEditorImage(file, imageUploadOptionsRef.current)).url,
+    []
+  );
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -184,6 +230,7 @@ export function CollaborativeEditor({
         },
       }),
       Underline,
+      EditorImage,
       Emoticon,
       MentionNode,
       AiResponseBlock,
@@ -228,6 +275,15 @@ export function CollaborativeEditor({
       },
       handleDOMEvents: {
         paste: (_view, event) => {
+          const imageFiles = extractImageFiles(event.clipboardData?.items);
+          if (imageFiles.length > 0) {
+            event.preventDefault();
+            void insertUploadedImages(editor, imageFiles, {
+              ...imageUploadOptionsRef.current,
+              onError: handleImageUploadError,
+            });
+            return true;
+          }
           const plainText = event.clipboardData?.getData('text/plain');
           const htmlText = event.clipboardData?.getData('text/html');
           return handleMarkdownPaste(plainText, htmlText, (html) => {
@@ -235,6 +291,18 @@ export function CollaborativeEditor({
               parseOptions: { preserveWhitespace: false },
             });
           });
+        },
+        drop: (view, event) => {
+          const imageFiles = Array.from(event.dataTransfer?.files ?? []).filter(isEditorImageFile);
+          if (imageFiles.length === 0) return false;
+          event.preventDefault();
+          const at = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
+          void insertUploadedImages(editor, imageFiles, {
+            ...imageUploadOptionsRef.current,
+            at,
+            onError: handleImageUploadError,
+          });
+          return true;
         },
       },
     },
@@ -264,12 +332,12 @@ export function CollaborativeEditor({
 
     const handleStatus = ({ status }: { status: ConnectionStatus }) => {
       setConnectionStatus(status);
-      onConnectionStatusChange?.(status);
+      onConnectionStatusChangeRef.current?.(status);
     };
 
     const handleSynced = ({ state }: { state: boolean }) => {
       setIsSynced(state);
-      onSyncStateChange?.(state);
+      onSyncStateChangeRef.current?.(state);
     };
 
     const handleUnsyncedChanges = (count: number) => {
@@ -279,9 +347,13 @@ export function CollaborativeEditor({
     const handleAwarenessChange = () => {
       const awarenessStates = provider.awareness?.getStates?.();
       if (!awarenessStates) return;
-      const users = buildPresenceUsers(Array.from(awarenessStates.entries()), userColor);
+      const users = buildPresenceUsers(
+        Array.from(awarenessStates.entries()),
+        userColor,
+        t('editor.presence.unknownUser', { defaultValue: 'User' })
+      );
       setConnectedUsers(users);
-      onUsersChange?.(users);
+      onUsersChangeRef.current?.(users);
     };
 
     provider.on('status', handleStatus);
@@ -302,7 +374,11 @@ export function CollaborativeEditor({
       provider.destroy();
       ydoc.destroy();
     };
-  }, [provider, ydoc, userId, userName, userColor, onConnectionStatusChange, onSyncStateChange, onUsersChange]);
+    // `t` and the callback props are deliberately not dependencies: re-running
+    // this destroys the Yjs provider, which silently detaches the editor from
+    // Hocuspocus (local edits stop reaching the server) and leaves the room
+    // empty for the next snapshot save.
+  }, [provider, ydoc, userId, userName, userColor]);
 
   useEffect(() => {
     if (!editor || !editorReady) return;
@@ -396,16 +472,20 @@ export function CollaborativeEditor({
   }, [editor, editorReady, provider, ydoc, documentId]);
 
   const saveStatus = connectionStatus === 'disconnected'
-    ? 'Offline — changes will sync when reconnected'
+    ? t('editor.status.offline', { defaultValue: 'Offline — changes will sync when reconnected' })
     : hasUnsyncedChanges
-      ? 'Saving...'
-      : 'All changes saved';
+      ? t('actions.saving', { defaultValue: 'Saving...' })
+      : t('editor.status.allChangesSaved', { defaultValue: 'All changes saved' });
+
+  const saveStatusLabel = connectionStatus === 'connected' && !isSynced
+    ? t('editor.status.syncing', { defaultValue: '{{status}} (syncing)', status: saveStatus })
+    : saveStatus;
 
   const connectionLabel = connectionStatus === 'connected'
-    ? 'Connected'
+    ? t('editor.connection.connected', { defaultValue: 'Connected' })
     : connectionStatus === 'connecting'
-      ? 'Connecting'
-      : 'Disconnected';
+      ? t('editor.connection.connecting', { defaultValue: 'Connecting' })
+      : t('editor.connection.disconnected', { defaultValue: 'Disconnected' });
 
   return (
     <Card className="p-4">
@@ -420,20 +500,17 @@ export function CollaborativeEditor({
             <span className={styles.statusDot} />
             <span>{connectionLabel}</span>
           </div>
-          <div className={styles.saveStatus}>
-            {saveStatus}
-            {connectionStatus === 'connected' && !isSynced ? ' (syncing)' : ''}
-          </div>
+          <div className={styles.saveStatus}>{saveStatusLabel}</div>
         </div>
       </div>
 
       {editor && editorReady && !editor.isDestroyed ? (
         <div
           className={styles.editorContainer}
-          data-placeholder={placeholder || 'Start writing...'}
+          data-placeholder={placeholder || t('editor.placeholder', { defaultValue: 'Start writing...' })}
           style={{ position: 'relative' }}
         >
-          <EditorToolbar editor={editor} />
+          <EditorToolbar editor={editor} onUploadImage={uploadImage} onUploadError={handleImageUploadError} />
           <EditorContent editor={editor} />
           <EmojiSuggestionPopup editor={editor} suggestionState={emojiState} />
           {searchMentions && (
@@ -446,7 +523,9 @@ export function CollaborativeEditor({
           )}
         </div>
       ) : (
-        <div className="flex justify-center items-center h-64">Initializing editor...</div>
+        <div className="flex justify-center items-center h-64">
+          {t('editor.initializing', { defaultValue: 'Initializing editor...' })}
+        </div>
       )}
     </Card>
   );

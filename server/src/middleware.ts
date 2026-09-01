@@ -50,6 +50,45 @@ function corsPreflightResponse(origin: string | null): NextResponse {
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
 
+export interface ClientPortalThemeRequestContext {
+  isClientPortal: boolean;
+  portalDomain?: string;
+  tenantSlug?: string;
+}
+
+/**
+ * Preserve the tenant hints carried by canonical client-portal auth URLs.
+ * The root layout cannot read search params, so middleware promotes these
+ * validated values to request headers for server-rendered theme resolution.
+ */
+export function getClientPortalThemeRequestContext(
+  pathname: string,
+  searchParams: URLSearchParams,
+): ClientPortalThemeRequestContext {
+  const rawPortalDomain = searchParams.get('portalDomain')?.trim() ?? '';
+  const portalDomain = rawPortalDomain.length <= 253
+    && /^[a-z0-9.-]+(?::\d+)?$/i.test(rawPortalDomain)
+    ? rawPortalDomain.toLowerCase()
+    : undefined;
+
+  const rawTenantSlug = searchParams.get('tenant')?.trim() ?? '';
+  const tenantSlug = /^[a-f0-9]{12}$/i.test(rawTenantSlug)
+    ? rawTenantSlug.toLowerCase()
+    : undefined;
+
+  const isClientPortal = pathname.includes('/client-portal')
+    || (pathname.startsWith('/auth/') && (
+      searchParams.get('portal') === 'client'
+      || Boolean(portalDomain)
+    ));
+
+  return {
+    isClientPortal,
+    ...(isClientPortal && portalDomain ? { portalDomain } : {}),
+    ...(isClientPortal && tenantSlug ? { tenantSlug } : {}),
+  };
+}
+
 // Helper function to get canonical URL (reads env var dynamically for testing)
 function getCanonicalUrl(): URL | null {
   return process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
@@ -72,6 +111,7 @@ const apiKeySkipPaths = [
   '/api/teams/bot/',
   '/api/teams/message-extension/',
   '/api/teams/webhooks/',  // Microsoft Graph change notifications; authenticated via clientState secret in the route
+  '/api/telephony/webhooks/',  // Microsoft Graph callRecords notifications; authenticated via clientState secret in the route
   '/api/teams/package/download',
   '/api/online-meetings/recordings/',
   '/api/client-portal/domain-session',
@@ -98,6 +138,9 @@ const apiKeySkipPaths = [
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)
   '/api/chat/',
+  // AMP migration workspace uploads (MSP UI): session-authenticated in-route
+  // via getCurrentUser + import_export permission checks.
+  '/api/migrations/',
   // Remote MCP server authenticates in-route (Alga API key OR IdP-delegated Bearer token)
   '/api/mcp',
   // MCP admin/provisioning APIs authenticate in-route (session admin OR API key)
@@ -153,6 +196,19 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
       (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation')));
+}
+
+export function hasContradictoryPortalIdentity(user: {
+  user_type?: unknown;
+  clientId?: unknown;
+  contactId?: unknown;
+} | null | undefined): boolean {
+  if (user?.user_type !== 'internal') {
+    return false;
+  }
+
+  return (typeof user.clientId === 'string' && user.clientId.length > 0)
+    || (typeof user.contactId === 'string' && user.contactId.length > 0);
 }
 
 export function getVanityClientPortalInternalRedirectTarget(args: {
@@ -240,6 +296,19 @@ const _middleware = auth((request) => {
   // Clone request headers so we can pass additional metadata downstream
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', pathname);
+  const clientPortalThemeContext = getClientPortalThemeRequestContext(
+    pathname,
+    request.nextUrl.searchParams,
+  );
+  if (clientPortalThemeContext.isClientPortal) {
+    requestHeaders.set('x-client-portal-theme-context', '1');
+  }
+  if (clientPortalThemeContext.portalDomain) {
+    requestHeaders.set('x-client-portal-domain', clientPortalThemeContext.portalDomain);
+  }
+  if (clientPortalThemeContext.tenantSlug) {
+    requestHeaders.set('x-client-portal-tenant-slug', clientPortalThemeContext.tenantSlug);
+  }
 
   // Create a response that will be modified throughout the middleware chain
   let response = NextResponse.next({
@@ -247,6 +316,45 @@ const _middleware = auth((request) => {
       headers: requestHeaders,
     },
   });
+
+  // Edge middleware cannot query the database, but client-scoped identifiers
+  // are incompatible with an internal user. Reject this contradictory token
+  // immediately; the Node session gate performs the definitive DB comparison.
+  if (
+    !pathname.startsWith('/api/auth/')
+    && hasContradictoryPortalIdentity(request.auth?.user)
+  ) {
+    console.warn('[middleware] rejecting contradictory internal/client session claims', {
+      tenant: request.auth?.user?.tenant,
+      userId: request.auth?.user?.id,
+    });
+
+    const invalidResponse = pathname.startsWith('/api/')
+      ? NextResponse.json({ error: 'Invalid session identity' }, { status: 401 })
+      : (() => {
+          const loginUrl = request.nextUrl.clone();
+          loginUrl.pathname = pathname.includes('/client-portal')
+            ? '/auth/client-portal/signin'
+            : '/auth/msp/signin';
+          loginUrl.search = '';
+          loginUrl.searchParams.set('error', 'SessionTypeMismatch');
+          return NextResponse.redirect(loginUrl);
+        })();
+
+    const sessionCookieName = getSessionCookieName();
+    const sessionCookies = request.cookies.getAll().filter(({ name }) =>
+      name === sessionCookieName || name.startsWith(`${sessionCookieName}.`)
+    );
+    if (sessionCookies.length === 0) {
+      invalidResponse.cookies.delete(sessionCookieName);
+    } else {
+      for (const { name } of sessionCookies) {
+        invalidResponse.cookies.delete(name);
+      }
+    }
+
+    return applyCorsHeaders(invalidResponse, origin);
+  }
 
   // Add pathname header for use in layouts (e.g., for branding injection)
   response.headers.set('x-pathname', pathname);

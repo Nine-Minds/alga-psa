@@ -87,3 +87,26 @@ export function formatBytes(bytes: number, decimals: number = 2): string {
   return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
+// Placeholder values stamped on client_locations rows whose real address is
+// unknown (tenant provisioning, the company→location migration). Storage keeps
+// them to satisfy NOT NULL constraints; rendered addresses must omit them.
+export const ADDRESS_PLACEHOLDER = 'N/A';
+export const COUNTRY_CODE_PLACEHOLDER = 'XX';
+export const COUNTRY_NAME_PLACEHOLDER = 'Unknown';
+
+/** Address field for display: trimmed, with the 'N/A' placeholder blanked. */
+export function displayAddressField(value?: unknown): string {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  return trimmed === ADDRESS_PLACEHOLDER ? '' : trimmed;
+}
+
+/** Country for display: empty when only the XX/Unknown placeholder is stored. */
+export function displayCountry(countryName?: unknown, countryCode?: unknown): string {
+  const name = typeof countryName === 'string' ? countryName.trim() : '';
+  const code = typeof countryCode === 'string' ? countryCode.trim() : '';
+  if (name === COUNTRY_NAME_PLACEHOLDER || code.toUpperCase() === COUNTRY_CODE_PLACEHOLDER) {
+    return '';
+  }
+  return name || code;
+}
+

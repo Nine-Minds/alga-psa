@@ -12,7 +12,6 @@
       "downloadCsv": "CSV downloaden",
       "edit": "Bewerken",
       "import": "Importeren",
-      "reactivate": "Opnieuw activeren",
       "remove": "Verwijderen",
       "retry": "Opnieuw proberen",
       "save": "Opslaan",
@@ -181,7 +180,18 @@
     "shareTooltip": "Afdrukken, importeren en exporteren",
     "defaultClientDeleteError": "De standaardklant kan niet worden verwijderd. Stel eerst een andere klant als standaard in bij Algemene instellingen.",
     "clientNotFound": "Klant niet gevonden.",
-    "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd."
+    "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd.",
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "markInactive": "Markeer als inactief",
+        "reactivate": "Opnieuw activeren",
+        "delete": "Verwijderen",
+        "print": "Geselecteerde afdrukken",
+        "more": "Meer",
+        "clear": "Selectie wissen"
+      }
+    }
   },
   "clientDetails": {
     "opportunities": "Verkoopkansen",
@@ -479,6 +489,7 @@
     "email": "E-mail",
     "emailPlaceholder": "E-mailadres",
     "phone": "Telefoon",
+    "extension": "Toestelnummer",
     "phonePlaceholder": "Telefoonnummer",
     "name": "Naam",
     "creating": "Aanmaken...",
@@ -672,15 +683,15 @@
       "1": "Januari",
       "2": "Februari",
       "3": "Maart",
-      "4": "april",
-      "5": "Kunnen",
-      "6": "juni",
-      "7": "juli",
-      "8": "augustus",
-      "9": "september",
-      "10": "oktober",
+      "4": "April",
+      "5": "Mei",
+      "6": "Juni",
+      "7": "Juli",
+      "8": "Augustus",
+      "9": "September",
+      "10": "Oktober",
       "11": "November",
-      "12": "december"
+      "12": "December"
     },
     "weekdays": {
       "1": "Maandag",
@@ -731,7 +742,10 @@
     "deactivateError": "Kan het contract niet deactiveren",
     "updateError": "Kan contract niet updaten",
     "createContract": "Contract aanmaken",
-    "quickAdd": "Snel toevoegen"
+    "quickAdd": "Snel toevoegen",
+    "billingProfile": "Facturatieprofiel",
+    "billingProfileUnassigned": "Niet toegewezen",
+    "billingProfileUpdated": "Facturatieprofiel bijgewerkt"
   },
   "clientContractDialog": {
     "assignTitle": "Wijs contract toe aan klant",
@@ -909,6 +923,40 @@
     "updateError": "Kan de instellingen niet updaten",
     "useDefaultSuccess": "Klant gebruikt nu de standaardinstellingen voor het verlopen van het krediet."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Instellingen voor kredietopname",
+    "useDefault": "Standaardinstellingen gebruiken",
+    "useDefaultHelp": "Gebruik de systeembrede standaardinstellingen voor kredietopname",
+    "useDefaultSuccess": "De klant gebruikt nu de standaardinstellingen voor kredietopname.",
+    "clientSpecificEnabled": "Klantspecifieke instellingen voor kredietopname zijn ingeschakeld.",
+    "autoApply": "Krediet automatisch toepassen bij finalisatie",
+    "autoApplyHelp": "Indien ingeschakeld, wordt beschikbaar krediet automatisch toegepast wanneer een factuur wordt gefinaliseerd",
+    "orderLabel": "Volgorde van krediettoepassing",
+    "selectOrder": "Selecteer kredietvolgorde",
+    "orderHelp": "Kies de volgorde waarin kredieten worden verbruikt",
+    "serviceTypesLabel": "In aanmerking komende servicetypen",
+    "serviceTypesHelp": "Kies of krediet kan worden toegepast op alle kosten of alleen op kosten voor de geselecteerde servicetypen.",
+    "noServiceTypes": "Geen servicetypen geconfigureerd.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Standaard van de tenant gebruiken",
+        "all": "Alle servicetypen",
+        "restricted": "Alleen geselecteerde typen",
+        "placeholder": "Selecteer servicetype-beperking"
+      },
+      "inheritedRestricted": "Standaard van de tenant: alleen geselecteerde typen ({{types}}).",
+      "restricted": "Krediet is beperkt tot de geselecteerde servicetypen. Selecteer er minstens één om op te slaan."
+    },
+    "order": {
+      "expirationFirst": "Eerst het snelst vervallende",
+      "oldestFirst": "Oudste krediet eerst",
+      "newestFirst": "Nieuwste krediet eerst"
+    },
+    "updatedSuccess": "De instellingen voor kredietopname zijn bijgewerkt.",
+    "loadError": "Kan instellingen niet laden",
+    "saveError": "Kan instellingen niet opslaan",
+    "updateError": "Kan de instellingen niet bijwerken"
+  },
   "clientExternalCreditSettings": {
     "title": "Extern tegoed geregistreerd",
     "enable": "Klant heeft tegoed in het boekhoudsysteem",
@@ -922,18 +970,19 @@
     "noteUpdatedSuccess": "De notitie over het externe tegoed is bijgewerkt."
   },
   "clientGridCard": {
-    "actions": "Klantacties",
     "quickView": "Snelle weergave",
-    "defaultClient": "Standaardklant",
     "taxExempt": "Belasting vrijgesteld",
     "taxExemptTooltip": "Deze klant is vrijgesteld van belasting. Er wordt geen belasting geheven op zijn facturen",
-    "type": "Type:",
-    "address": "Adres:",
-    "phone": "Telefoon:",
-    "url": "URL:",
     "clientActions": "Klantacties",
     "default": "Standaard",
-    "selectClient": "Selecteer klant {{name}}"
+    "selectClient": "Selecteer klant {{name}}",
+    "openTickets_one": "{{count}} open",
+    "openTickets_other": "{{count}} open",
+    "lifecycle": {
+      "prospect": "Prospect",
+      "former": "Voormalig"
+    },
+    "noContactDetails": "Geen contactgegevens"
   },
   "clientLanguagePreference": {
     "title": "Taalinstellingen van de client",
@@ -1315,6 +1364,7 @@
         "notes": "Opmerkingen",
         "notesHelper": "Aanvullende opmerkingen over deze locatie",
         "phone": "Telefoon",
+        "extension": "Toestelnummer",
         "phoneHelper": "Telefoonnummer voor deze locatie",
         "placeholder": {
           "addressLine1": "Voer adres in *",
@@ -1332,7 +1382,10 @@
         "stateProvince": "Staat/Provincie",
         "stateProvinceHelper": "Naam van staat of provincie",
         "taxRegion": "Belastingregio",
-        "taxRegionHelper": "Selecteer de toepasselijke belastingregio"
+        "taxRegionHelper": "Selecteer de toepasselijke belastingregio",
+        "defaultBillingProfile": "Standaard facturatieprofiel",
+        "defaultBillingProfileNone": "Geen",
+        "defaultBillingProfileHelper": "Nieuwe tickets op deze locatie starten met dit facturatieprofiel. Het kan altijd op het ticket worden gewijzigd."
       },
       "listTitle": "Locaties",
       "loading": "Locaties laden...",
@@ -1379,6 +1432,9 @@
       "viewTranscript": "Transcriptie bekijken"
     },
     "quickAdd": {
+      "clientRequired": "Selecteer een klant voor deze interactie",
+      "contactPlaceholder": "Contact selecteren",
+      "selectClientFirst": "Selecteer eerst een klant",
       "teams": {
         "attendees": {
           "add": "Toevoegen",
@@ -1407,6 +1463,16 @@
         "createFailed": "Kan Teams-vergadering niet aanmaken",
         "createToggle": "Teams-vergadering aanmaken",
         "endRequired": "Eindtijd is vereist om een Teams-vergadering aan te maken",
+        "invitesDisabled": "E-mailuitnodigingen zijn uitgeschakeld in de instellingen van de Teams-integratie: deelnemers worden niet door Microsoft op de hoogte gebracht.",
+        "invitesSummary": "Microsoft e-mailt agenda-uitnodigingen naar: {{recipients}}.",
+        "invitesSummaryYou": "u (maker)",
+        "reason": {
+          "feature_disabled": "Microsoft Teams is niet ingeschakeld voor deze tenant.",
+          "ee_disabled": "De Teams-integratie vereist de Enterprise Edition.",
+          "no_organizer": "Er is geen standaard vergaderingsorganisator geconfigureerd in de Teams-instellingen.",
+          "not_configured": "De Teams-integratie is niet geconfigureerd."
+        },
+        "scheduleSummary": "Er wordt een planningsinvoer toegevoegd aan uw AlgaPSA-agenda.",
         "startRequired": "Starttijd is vereist om een Teams-vergadering aan te maken",
         "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
       },
@@ -1432,6 +1498,13 @@
       "allContacts": "Alle contacten",
       "allStatuses": "Alle statussen",
       "allUsers": "Alle gebruikers",
+      "columns": { "type": "Type", "title": "Titel", "client": "Klant", "contact": "Contact", "user": "Gebruiker", "date": "Datum", "status": "Status" },
+      "empty": "Geen interacties komen overeen met deze filters.",
+      "loading": "Interacties laden…",
+      "openClient": "Klant {{name}} openen",
+      "openContact": "Contact {{name}} openen",
+      "openInteraction": "Interactie {{title}} openen",
+      "openUser": "Gebruiker {{name}} openen",
       "byUser": "Door {{name}}",
       "collapse": "Recente interacties samenvouwen",
       "contactsFromClient": "Contacten van de geselecteerde klant",
@@ -1566,6 +1639,206 @@
       "loading": "Contactpersoon laden...",
       "notFound": "Contactpersoon niet gevonden.",
       "loadFailed": "Kan contactpersoon niet laden."
+    }
+  },
+  "clientBillingProfiles": {
+    "title": "Facturatieprofielen",
+    "description": "Factureer afzonderlijke locaties, entiteiten of vestigingen binnen deze klant. Kosten worden aan een profiel toegewezen via het contract, de contractregel of het werkitem waar ze vandaan komen; wat niet is toegewezen valt terug op het standaardprofiel.",
+    "loading": "Facturatieprofielen laden…",
+    "defaultBadge": "Standaard",
+    "rename": "Naam wijzigen",
+    "makeDefault": "Als standaard instellen",
+    "archive": "Archiveren",
+    "delete": "Verwijderen",
+    "restore": "Herstellen",
+    "archivedHeading": "Gearchiveerd",
+    "addLabel": "Facturatieprofiel toevoegen",
+    "addPlaceholder": "bijv. Vestiging Noord",
+    "addButton": "Profiel toevoegen",
+    "created": "Facturatieprofiel “{{name}}” aangemaakt",
+    "renamed": "Facturatieprofiel hernoemd",
+    "madeDefault": "“{{name}}” is nu het standaard facturatieprofiel",
+    "archived": "“{{name}}” gearchiveerd",
+    "deleted": "“{{name}}” verwijderd",
+    "restored": "“{{name}}” hersteld",
+    "settings": "Facturatie-instellingen"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Facturatiesegmenten",
+    "restrictedHint": "Deze gebruiker ziet alleen de hieronder geselecteerde segmenten.",
+    "allHint": "Deze gebruiker ziet alle facturatiesegmenten, ook later toegevoegde.",
+    "save": "Segmenttoegang opslaan",
+    "saved": "Portaalsegmenttoegang bijgewerkt",
+    "emptyWarning": "Selecteer minstens één segment, of zet de beperking uit om ze allemaal te tonen."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Instellingen facturatieprofiel opgeslagen",
+    "inherited": "Geërfd: {{value}}",
+    "notSet": "Niet ingesteld",
+    "billsSeparately": "Apart factureren",
+    "billsSeparatelyHint": "Maak een aparte factuur voor dit profiel, met een eigen factuuradres, betaalmethode en saldo.",
+    "billToName": "Factuurnaam",
+    "billingEmail": "Factuur-e-mail",
+    "poNumber": "Inkoopordernummer",
+    "taxIdNumber": "Btw-nummer",
+    "taxExemptionCertificate": "Vrijstellingsverklaring",
+    "invoiceDeliveryMethod": "Factuurverzending",
+    "billingCycle": "Facturatiecyclus",
+    "paymentTerms": "Betalingsvoorwaarden",
+    "taxExempt": "Btw-vrijgesteld",
+    "taxExemptInherited": "Geërfd van de klant ({{value}})",
+    "regionNote": "De belastingregio wordt hier niet ingesteld. Die volgt de plaats van levering — de dienst, dan de locatie van de contractregel, dan de standaard van de klant."
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Prepaid-saldo-meldingen",
+    "scheduleHelp": "Controles draaien dagelijks om 09:00 UTC. Opslaan verzendt niets onmiddellijk.",
+    "creditSwitch": "Prepaid-tegoedmeldingen",
+    "creditSwitchHelp": "Waarschuwen wanneer het beschikbare prepaid-tegoed onder de geconfigureerde drempel komt",
+    "creditThreshold": "Tegoeddrempel",
+    "creditThresholdPlaceholder": "bijv. 500,00",
+    "creditThresholdHelp": "Resterend prepaid-tegoed dat een melding activeert",
+    "creditCurrency": "Valuta",
+    "creditAmountError": "Voer een positieve tegoeddrempel in",
+    "bucketSwitch": "Pakketgebruikmeldingen",
+    "bucketSwitchHelp": "Waarschuwen wanneer een prepaid-urenpakket het geconfigureerde verbruik bereikt",
+    "bucketPercent": "Verbruiksdrempel (%)",
+    "bucketPercentPlaceholder": "bijv. 80",
+    "bucketPercentHelp": "Percentage van de pakketcapaciteit dat een melding activeert",
+    "percentRangeError": "Voer een geheel getal van 1 tot 100 in",
+    "notifyClient": "De facturatie-ontvanger van de klant ook e-mailen",
+    "notifyClientHelp": "Verstuurt de melding naar de canonieke facturatie-ontvanger van de klant",
+    "replenishmentTier": "Wanneer een melding afgaat",
+    "replenishmentNotifyOnly": "Alleen melden",
+    "replenishmentDraft": "Conceptaanvullingsfactuur maken en melden",
+    "replenishmentAutoIssue": "Aanvullingsfactuur maken en uitgeven",
+    "replenishmentAmount": "Tegoedaanvullingsbedrag",
+    "replenishmentAmountHelp": "Bedrag in de geselecteerde valuta. Pakketmeldingen gebruiken de minuten hieronder.",
+    "replenishmentAmountError": "Voer een positief aanvullingsbedrag in de geselecteerde valuta in",
+    "replenishmentMinutes": "Pakketaanvulling in minuten",
+    "replenishmentMinutesError": "Voer een positief geheel aantal minuten in",
+    "replenishmentHorizon": "Aanvulling overslaan binnen dit aantal dagen voor het einde van het contract",
+    "replenishmentHorizonError": "Voer een aantal dagen van 0 tot 3650 in",
+    "save": "Opslaan",
+    "saveSuccess": "Prepaid-saldomeldinginstellingen opgeslagen",
+    "saveError": "Prepaid-saldomeldinginstellingen konden niet worden opgeslagen",
+    "loadError": "Prepaid-saldomeldinginstellingen konden niet worden geladen",
+    "contractOverrideTitle": "Contractaanvullingsoverschrijving",
+    "contractOverrideContract": "Contract",
+    "contractOverrideInherit": "Standaard van klant gebruiken",
+    "saveContractOverride": "Contractoverschrijving opslaan",
+    "contractSaveSuccess": "Contractaanvullingsbeleid opgeslagen",
+    "contractSaveError": "Contractaanvullingsbeleid kon niet worden opgeslagen"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Klant niet gevonden",
+      "signInRequired": "U moet aangemeld zijn om klanten te beheren.",
+      "duplicateName": "Er bestaat al een klant met de naam ‘{{name}}’. Kies een andere naam.",
+      "duplicate": "Er bestaat al een klant met deze gegevens. Controleer de klantnaam.",
+      "referencedDataMissing": "Gerefereerde gegevens niet gevonden. Controleer de accountmanager, het factuurcontact en de bijbehorende klantinstellingen.",
+      "invalidValue": "Een van de geselecteerde klantwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidData": "Ongeldige klantgegevens opgegeven. Controleer alle velden en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht klantveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht klantveld: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Toestemming geweigerd: klanten kunnen niet worden gelezen",
+      "updateClients": "Toestemming geweigerd: klanten kunnen niet worden bijgewerkt"
+    },
+    "timeline": {
+      "invalidCursor": "Ongeldige cursor voor klanttijdlijn"
+    },
+    "location": {
+      "notFound": "Locatie niet gevonden of niet langer actief.",
+      "defaultRequired": "Voeg een andere actieve locatie toe of kies een andere standaardlocatie voordat u deze locatie als standaard verwijdert.",
+      "missingField": "Er ontbreekt een verplicht locatieveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht locatieveld: {{field}}.",
+      "referenceInvalid": "De geselecteerde klant, het land, de belastingregio of de bijbehorende locatiegegevens zijn niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een conflicterend locatierecord. Vernieuw de locaties en probeer het opnieuw.",
+      "invalidData": "Ongeldige locatiegegevens opgegeven. Controleer de adres- en contactvelden."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Het inkomende e-maildomein kon niet worden toegevoegd. Probeer het opnieuw.",
+      "notFound": "Inkomend e-maildomein niet gevonden."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Er ontbreekt een verplicht veld van de inkomende ticketbestemming.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de inkomende ticketbestemming: {{field}}.",
+      "referenceInvalid": "De geselecteerde inkomende ticketbestemming is niet langer geldig. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "interaction": {
+      "notFound": "Interactie niet gevonden",
+      "signInRequired": "U moet aangemeld zijn om interacties te beheren.",
+      "identifierInvalid": "Een van de interactie-ID’s is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht interactieveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht interactieveld: {{field}}.",
+      "referenceMissing": "De geselecteerde interactie, klant, contactpersoon, gebruiker, status of het type bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een interactie met deze gegevens."
+    },
+    "interactionType": {
+      "notFound": "Interactietype niet gevonden of u hebt er geen toegang toe.",
+      "missingField": "Er ontbreekt een verplicht veld van het interactietype.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het interactietype: {{field}}.",
+      "referenceInvalid": "De gerefereerde gegevens van het interactietype zijn niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een interactietype met deze gegevens.",
+      "invalidData": "Ongeldige gegevens voor het interactietype opgegeven. Controleer de naam, het pictogram en de weergavevolgorde."
+    },
+    "taxRate": {
+      "signInRequired": "U moet aangemeld zijn om belastingtarieven van klanten bij te werken.",
+      "invalidReference": "De geselecteerde klant of het belastingtarief is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van het belastingtarief van de klant.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het belastingtarief van de klant: {{field}}.",
+      "referenceMissing": "De geselecteerde klant of het belastingtarief bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Dit belastingtarief is al gekoppeld aan de klant.",
+      "associationNotFound": "Koppeling van het belastingtarief van de klant niet gevonden.",
+      "rateNotFound": "Belastingtarief met ID {{id}} niet gevonden."
+    },
+    "alias": {
+      "required": "Alias is verplicht",
+      "tooLong": "Alias is te lang",
+      "addFailed": "De klantalias kon niet worden toegevoegd. Probeer het opnieuw.",
+      "notFound": "Alias niet gevonden."
+    },
+    "contractLine": {
+      "signInRequired": "U moet aangemeld zijn om contractregels van klanten te beheren.",
+      "refreshAssignment": "Vernieuw de contracttoewijzing en probeer het opnieuw.",
+      "sharedByAssignments": "Deze contractregel wordt gedeeld door meerdere actieve toewijzingen. Bewerk de specifieke contracttoewijzing voordat u de regels ervan wijzigt.",
+      "duplicate": "Er bestaat al een contractregel met deze gegevens voor deze klant.",
+      "invalidReference": "De geselecteerde klant of contractregel is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de contractregel.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de contractregel: {{field}}.",
+      "referenceInvalid": "De geselecteerde contractregelreferentie is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "storageUnavailable": "De opslag van contractregels van klanten is niet beschikbaar. Probeer het later opnieuw.",
+      "invalidData": "De gegevens van de contractregel van de klant zijn ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "addFailed": "De contractregel van de klant kon niet worden toegevoegd."
+    },
+    "billingSettings": {
+      "updateDenied": "Toestemming geweigerd: factureringsinstellingen kunnen niet worden bijgewerkt",
+      "readRequired": "Toestemming geweigerd: leesrecht voor billing_settings vereist",
+      "updateRequired": "Toestemming geweigerd: bijwerkrecht voor billing_settings vereist",
+      "tenantContextMissing": "Tenantcontext niet gevonden",
+      "clientContextMissing": "Klantcontext niet gevonden",
+      "prepaidAlertsDisabled": "Waarschuwingen voor prepaidsaldo zijn niet ingeschakeld voor deze werkruimte",
+      "invalidPrepaidAlertSettings": "Ongeldige instellingen voor prepaidsaldowaarschuwingen",
+      "prepaidAlertUpdateFailed": "De instellingen voor prepaidsaldowaarschuwingen konden niet worden bijgewerkt",
+      "contractReplenishmentUpdateFailed": "Contractaanvullingsbeleid kon niet worden bijgewerkt"
+    },
+    "billingProfile": {
+      "signInRequired": "U moet aangemeld zijn om facturatieprofielen te beheren.",
+      "duplicateDefault": "Deze klant heeft al een standaard facturatieprofiel.",
+      "stillReferenced": "Het facturatieprofiel wordt nog gebruikt en kan niet worden verwijderd.",
+      "defaultRequired": "Een klant moet altijd precies één standaard facturatieprofiel hebben.",
+      "nameRequired": "Een facturatieprofiel heeft een naam nodig.",
+      "notThisClient": "Dat facturatieprofiel hoort niet bij deze klant.",
+      "archivedCannotBeDefault": "Een gearchiveerd facturatieprofiel kan niet als standaard worden ingesteld.",
+      "notFound": "Dat facturatieprofiel bestaat niet meer.",
+      "defaultCannotArchive": "Het standaard facturatieprofiel kan niet worden gearchiveerd. Stel eerst een ander profiel in als standaard.",
+      "defaultCannotDelete": "Het standaard facturatieprofiel kan niet worden verwijderd. Stel eerst een ander profiel in als standaard.",
+      "inUse": "Dit facturatieprofiel wordt gebruikt door {{references}}. Archiveer het in plaats van het te verwijderen — verwijderen zou wissen hoe die kosten zijn toegewezen.",
+      "recordNotFound": "Dat record of facturatieprofiel bestaat niet meer.",
+      "otherClient": "Dat facturatieprofiel hoort bij een andere klant.",
+      "archived": "Dat facturatieprofiel is gearchiveerd.",
+      "selectionNotThisClient": "Een van de geselecteerde facturatieprofielen hoort niet bij deze klant."
     }
   }
 }

@@ -1,0 +1,56 @@
+[
+  {
+    "id": "T001",
+    "description": "The authorization URL for both connect and reconnect contains Mail.Send.Shared alongside the existing scopes.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "Graph-simulator smoke: sendMail posts to /me/sendMail when the configured mailbox equals the authenticated user, and to /users/{encoded-mailbox}/sendMail when it does not, including the expected send payload; focused adapter coverage retains the case/whitespace and unresolved-user paths. This is not a real Microsoft tenant send.",
+    "implemented": true,
+    "featureIds": ["F004", "F005", "F006", "F007", "F008"]
+  },
+  {
+    "id": "T003",
+    "description": "A shared mailbox whose token carries Mail.Send but not Mail.Send.Shared is refused at initialization with an error naming the missing scope, while the same token sending from its own mailbox initializes successfully.",
+    "implemented": false,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T004",
+    "description": "A Graph 403 on a token that holds every required scope is reported as an Exchange delegation failure naming the mailbox and authorizing user, and a 403 on a token missing the scope is reported as a scope failure; both retain the Graph error code and request id.",
+    "implemented": false,
+    "featureIds": ["F011", "F012", "F013"]
+  },
+  {
+    "id": "T005",
+    "description": "System-Resend fallback smoke: a tenant with a custom sending domain uses the configured verified EMAIL_FROM envelope From, preserves the tenant display name, and sets Reply-To to the tenant address.",
+    "implemented": true,
+    "featureIds": ["F014", "F015", "F016"]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed: a failed outbound send records the outbound state on provider health, and a subsequent successful send clears it.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed: the affected-tenant report returns providers whose stored token lacks the scope their mailbox requires and excludes providers whose mailbox matches the authenticated user.",
+    "implemented": false,
+    "featureIds": ["F019", "F022"]
+  },
+  {
+    "id": "T009",
+    "description": "The provisioned application manifest declares Mail.Send and Mail.Send.Shared alongside the existing permissions, and every scope the adapter requests at authorize time is present in the manifest.",
+    "implemented": true,
+    "featureIds": ["F001", "F023", "F024"]
+  },
+  {
+    "id": "T008",
+    "description": "The email settings screen shows the outbound failure reason and remediation for a provider that cannot send, and shows nothing for a healthy provider.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  }
+]

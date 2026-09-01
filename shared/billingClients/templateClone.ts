@@ -43,7 +43,11 @@ export async function cloneTemplateContractLine(
     throw new Error(`Template contract line ${templateContractLineId} not found`);
   }
 
-  await cloneServices(trx, tenant, templateContractLineId, contractLineId);
+  // Full pool config round-trip: when the template carries template pool rows,
+  // clone the WHOLE pool (scope incl. catch-all, membership, multipliers,
+  // schedule, after-hours rule) and skip the legacy per-config bucket clone.
+  const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateContractLineId, contractLineId);
+  await cloneServices(trx, tenant, templateContractLineId, contractLineId, hasTemplatePools);
 
   const templateCustomRate = await resolveTemplateCustomRate(trx, tenant, templateContractId, templateContractLineId);
   const appliedCustomRate = overrideRate ?? templateCustomRate;
@@ -60,7 +64,74 @@ export async function cloneTemplateContractLine(
   return { appliedCustomRate };
 }
 
-async function cloneServices(trx: Knex.Transaction, tenant: string, templateContractLineId: string, contractLineId: string) {
+/**
+ * Clone a template line's bucket POOLS (weighted-burn model) into a live
+ * contract line. Returns true when the template carried pool rows (i.e. the
+ * pool config was cloned here and the legacy per-config bucket clone must be
+ * skipped), false when the template predates the pool tables and the caller
+ * should fall back to cloning the legacy single-member bucket configs.
+ */
+/**
+ * LEVERAGE: pattern template-pool-roundtrip — every template clone path
+ * (shared/billingClients/templateClone, billing's templateClone, and the two
+ * contractLineRepository copies) must copy a line's bucket POOLS in full
+ * (scope, membership, multipliers, schedule, after-hours rule); this module
+ * owns that copy so the paths stay in lockstep.
+ */
+export async function cloneTemplateLinePools(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  templateContractLineId: string,
+  contractLineId: string
+): Promise<boolean> {
+  const db = tenantDb(trx, tenant);
+  const templatePools = await db.table('contract_template_line_buckets')
+    .where('template_line_id', templateContractLineId)
+    .select('*');
+
+  if (!templatePools || templatePools.length === 0) {
+    return false;
+  }
+
+  for (const pool of templatePools) {
+    const newBucketId = uuidv4();
+    await db.table('contract_line_buckets').insert({
+      tenant,
+      bucket_id: newBucketId,
+      contract_line_id: contractLineId,
+      bucket_name: pool.bucket_name ?? null,
+      total_minutes: pool.total_minutes,
+      overage_rate: normalizeNumeric(pool.overage_rate) ?? 0,
+      allow_rollover: pool.allow_rollover,
+      billing_period: pool.billing_period ?? 'monthly',
+      after_hours_multiplier: pool.after_hours_multiplier ?? null,
+      business_hours_schedule_id: pool.business_hours_schedule_id ?? null,
+      covers_all_services: pool.covers_all_services,
+      created_at: trx.fn.now(),
+      updated_at: trx.fn.now(),
+    });
+
+    const members = await db.table('contract_template_line_bucket_services')
+      .where('bucket_id', pool.bucket_id)
+      .select('service_id', 'burn_multiplier');
+
+    for (const member of members) {
+      await db.table('contract_line_bucket_services').insert({
+        tenant,
+        bucket_id: newBucketId,
+        service_id: member.service_id,
+        contract_line_id: contractLineId,
+        burn_multiplier: Number(member.burn_multiplier) || 1,
+        created_at: trx.fn.now(),
+        updated_at: trx.fn.now(),
+      });
+    }
+  }
+
+  return true;
+}
+
+async function cloneServices(trx: Knex.Transaction, tenant: string, templateContractLineId: string, contractLineId: string, hasTemplatePools = false) {
   type TemplateServiceRow = {
     service_id: string;
     quantity: number | null;
@@ -89,7 +160,7 @@ async function cloneServices(trx: Knex.Transaction, tenant: string, templateCont
         custom_rate: normalizeNumeric(service.custom_rate)
       });
 
-    await cloneServiceConfiguration(trx, tenant, templateContractLineId, contractLineId, service.service_id);
+    await cloneServiceConfiguration(trx, tenant, templateContractLineId, contractLineId, service.service_id, hasTemplatePools);
   }
 }
 
@@ -105,7 +176,8 @@ async function cloneServiceConfiguration(
   tenant: string,
   templateContractLineId: string,
   contractLineId: string,
-  serviceId: string
+  serviceId: string,
+  hasTemplatePools: boolean
 ) {
   const db = tenantDb(trx, tenant);
   const configurations = await db.table<TemplateServiceConfigurationRow>('contract_template_line_service_configuration')
@@ -128,8 +200,11 @@ async function cloneServiceConfiguration(
       updated_at: trx.fn.now()
     });
 
-    if (configuration.configuration_type === 'Bucket') {
-      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId);
+    // When the template carries pool rows, the pools were already cloned in
+    // full by cloneTemplateLinePools — cloning the legacy per-config bucket
+    // here would mint a duplicate pool.
+    if (configuration.configuration_type === 'Bucket' && !hasTemplatePools) {
+      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId, contractLineId, serviceId);
     }
 
     if (configuration.configuration_type === 'Hourly') {
@@ -153,7 +228,14 @@ type TemplateBucketConfigRow = {
   allow_rollover: boolean;
 };
 
-async function cloneBucketConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string) {
+async function cloneBucketConfig(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceConfigId: string,
+  targetConfigId: string,
+  contractLineId: string,
+  serviceId: string
+) {
   const db = tenantDb(trx, tenant);
   const bucketConfig = await db.table<TemplateBucketConfigRow>('contract_template_line_service_bucket_config')
     .where('config_id', sourceConfigId)
@@ -161,13 +243,30 @@ async function cloneBucketConfig(trx: Knex.Transaction, tenant: string, sourceCo
 
   if (!bucketConfig) return;
 
-  await db.table('contract_line_service_bucket_config').insert({
+  // Weighted-burn model: a bucket is a line-owned pool with a single-member 1x
+  // member row. The legacy contract_line_service_bucket_config table is frozen;
+  // cloning into it would produce a bucket that never bills or burns.
+  await db.table('contract_line_buckets').insert({
     tenant,
-    config_id: targetConfigId,
+    bucket_id: targetConfigId,
+    contract_line_id: contractLineId,
+    bucket_name: null,
     total_minutes: bucketConfig.total_minutes,
-    billing_period: bucketConfig.billing_period,
     overage_rate: normalizeNumeric(bucketConfig.overage_rate) ?? 0,
     allow_rollover: bucketConfig.allow_rollover,
+    billing_period: bucketConfig.billing_period,
+    after_hours_multiplier: null,
+    business_hours_schedule_id: null,
+    covers_all_services: false,
+    created_at: trx.fn.now(),
+    updated_at: trx.fn.now()
+  });
+  await db.table('contract_line_bucket_services').insert({
+    tenant,
+    bucket_id: targetConfigId,
+    service_id: serviceId,
+    contract_line_id: contractLineId,
+    burn_multiplier: 1,
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });

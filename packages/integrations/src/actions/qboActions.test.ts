@@ -81,6 +81,54 @@ vi.mock('axios', () => ({
   }
 }));
 
+/**
+ * In-memory stand-in for the tenant_settings row, so the AST settings tests
+ * exercise the real read-merge-write instead of a mocked-out one.
+ */
+const tenantSettingsRow = vi.hoisted(() => ({ current: null as null | { settings: any } }));
+
+vi.mock('@alga-psa/db', () => {
+  const makeTable = () => {
+    const builder: any = {
+      select: () => builder,
+      forUpdate: () => builder,
+      first: async () => tenantSettingsRow.current,
+      update: async (patch: any) => {
+        const settings = typeof patch.settings === 'string' ? JSON.parse(patch.settings) : patch.settings;
+        tenantSettingsRow.current = { settings };
+        return 1;
+      },
+      insert: (row: any) => {
+        const settings = typeof row.settings === 'string' ? JSON.parse(row.settings) : row.settings;
+        const chain: any = {
+          onConflict: () => chain,
+          merge: async () => {
+            tenantSettingsRow.current = { settings };
+            return 1;
+          },
+          then: (resolve: any) => {
+            tenantSettingsRow.current = { settings };
+            return Promise.resolve(1).then(resolve);
+          }
+        };
+        return chain;
+      }
+    };
+    return builder;
+  };
+
+  const knexStub: any = {
+    table: () => makeTable(),
+    fn: { now: () => 'now()' },
+    transaction: async (cb: any) => cb(knexStub)
+  };
+
+  return {
+    createTenantKnex: async () => ({ knex: knexStub, tenant: 'tenant-1' }),
+    tenantDb: () => knexStub
+  };
+});
+
 vi.mock('../lib/qbo/qboClientService', () => ({
   QBO_CLIENT_ID_SECRET_NAME: 'qbo_client_id',
   QBO_CLIENT_SECRET_SECRET_NAME: 'qbo_client_secret',
@@ -100,7 +148,11 @@ import {
   disconnectQbo,
   getQboAccounts,
   getQboClasses,
-  getQboDepartments
+  getQboDepartments,
+  getQboTaxCodes,
+  getQboAutomatedSalesTaxMode,
+  setQboAutomatedSalesTaxMode,
+  resetQboCatalogCacheForTenant
 } from './qboActions';
 
 describe('QBO integration actions', () => {
@@ -111,6 +163,8 @@ describe('QBO integration actions', () => {
     mockUser = { user_id: 'user-1', user_type: 'internal' };
     mockCtx = { tenant: 'tenant-1' };
     tenantSecrets.clear();
+    tenantSettingsRow.current = null;
+    resetQboCatalogCacheForTenant('tenant-1');
     vi.clearAllMocks();
     hasPermissionMock.mockResolvedValue(true);
     resolveQboOAuthCredentialsMock.mockResolvedValue({
@@ -341,7 +395,8 @@ describe('QBO integration actions', () => {
     const result = await getQboAccounts();
 
     expect(result).toEqual({
-      actionError: 'Connect QuickBooks before loading QuickBooks accounts.'
+      actionError: 'Connect QuickBooks before loading QuickBooks accounts.',
+      messageKey: 'msp/integrations:errors.qbo.accounts.notConnected'
     });
     expect(qboClientCreateMock).not.toHaveBeenCalled();
   });
@@ -360,7 +415,8 @@ describe('QBO integration actions', () => {
     const result = await getQboAccounts();
 
     expect(result).toEqual({
-      actionError: 'Reconnect QuickBooks before loading QuickBooks accounts.'
+      actionError: 'Reconnect QuickBooks before loading QuickBooks accounts.',
+      messageKey: 'msp/integrations:errors.qbo.accounts.reconnect'
     });
   });
 
@@ -413,5 +469,189 @@ describe('QBO integration actions', () => {
     expect(result).toHaveLength(2);
     expect(result[0]).toEqual({ id: 'dept-1', name: 'East Region' });
     expect(result[1]).toEqual({ id: 'dept-2', name: 'West Region' });
+  });
+  // --- Tax code catalog ---
+
+  const seedRealm = (realmId: string) => {
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify({
+      [realmId]: {
+        accessToken: 'at', refreshToken: 'rt', realmId,
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+      }
+    }));
+  };
+
+  /** Answers TaxCode / TaxRate queries, honouring STARTPOSITION and MAXRESULTS. */
+  const makePagingQueryMock = (taxCodes: any[], taxRates: any[]) =>
+    vi.fn(async (query: string) => {
+      const page = /STARTPOSITION (\d+) MAXRESULTS (\d+)/.exec(query);
+      const start = page ? Number(page[1]) : 1;
+      const max = page ? Number(page[2]) : 100;
+      const source = /FROM TaxRate/i.test(query) ? taxRates : taxCodes;
+      return source.slice(start - 1, start - 1 + max);
+    });
+
+  it('getQboTaxCodes: pages past the 100-row default and returns every code', async () => {
+    seedRealm('realm-tax-1');
+    // 1200 forces a second page at the 1000-row MAXRESULTS ceiling.
+    const taxCodes = Array.from({ length: 1200 }, (_unused, index) => ({
+      Id: `tc-${index}`,
+      Name: `Region ${index}`,
+      Active: true
+    }));
+    const queryMock = makePagingQueryMock(taxCodes, []);
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboTaxCodes({ realmId: 'realm-tax-1' });
+
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
+    expect(result).toHaveLength(1200);
+    expect(result[1199].id).toBe('tc-1199');
+
+    const taxCodePages = queryMock.mock.calls
+      .map((call) => String(call[0]))
+      .filter((query) => /FROM TaxCode/i.test(query));
+    expect(taxCodePages).toEqual([
+      'SELECT * FROM TaxCode STARTPOSITION 1 MAXRESULTS 1000',
+      'SELECT * FROM TaxCode STARTPOSITION 1001 MAXRESULTS 1000'
+    ]);
+  });
+
+  it('getQboTaxCodes: sums the component rates of a tax group', async () => {
+    seedRealm('realm-tax-2');
+    const queryMock = makePagingQueryMock(
+      [
+        {
+          Id: '4',
+          Name: 'CA-Santa Clara-Santa Clara',
+          Active: true,
+          SalesTaxRateList: {
+            TaxRateDetail: [
+              { TaxRateRef: { value: 'r1' } },
+              { TaxRateRef: { value: 'r2' } },
+              { TaxRateRef: { value: 'r3' } }
+            ]
+          }
+        }
+      ],
+      [
+        { Id: 'r1', RateValue: 6.25 },
+        { Id: 'r2', RateValue: 1 },
+        { Id: 'r3', RateValue: 1.75 }
+      ]
+    );
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboTaxCodes({ realmId: 'realm-tax-2' });
+
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
+    expect(result[0].ratePercent).toBeCloseTo(9, 10);
+  });
+
+  it('getQboTaxCodes: leaves ratePercent null when no component rate resolves', async () => {
+    seedRealm('realm-tax-3');
+    const queryMock = makePagingQueryMock(
+      [{ Id: '9', Name: 'Mystery', Active: true, SalesTaxRateList: { TaxRateDetail: [{ TaxRateRef: { value: 'missing' } }] } }],
+      []
+    );
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboTaxCodes({ realmId: 'realm-tax-3' });
+
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
+    expect(result[0].ratePercent).toBeNull();
+  });
+
+  it('getQboTaxCodes: drops inactive codes but keeps codes with no Active field', async () => {
+    seedRealm('realm-tax-4');
+    // Intuit omits Active on the TAX/NON pseudo codes, so "absent" must not
+    // mean "inactive" — a server-side WHERE Active = true would lose them.
+    const queryMock = makePagingQueryMock(
+      [
+        { Id: 'tc-1', Name: 'Live', Active: true },
+        { Id: 'tc-2', Name: 'Retired', Active: false },
+        { Id: 'TAX', Name: 'TAX' },
+        { Id: 'NON', Name: 'NON' }
+      ],
+      []
+    );
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboTaxCodes({ realmId: 'realm-tax-4' });
+
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
+    expect(result.map((code) => code.id)).toEqual(['tc-1', 'TAX', 'NON']);
+  });
+
+  it('getQboTaxCodes: carries Description through for codes with no resolvable rate', async () => {
+    seedRealm('realm-tax-5');
+    const queryMock = makePagingQueryMock(
+      [{ Id: 'tc-1', Name: 'GST', Active: true, Description: 'Goods and services' }],
+      []
+    );
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboTaxCodes({ realmId: 'realm-tax-5' });
+
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
+    expect(result[0].description).toBe('Goods and services');
+  });
+
+  // --- Automated Sales Tax mode ---
+
+  it('getQboAutomatedSalesTaxMode: defaults to off for an unconfigured tenant', async () => {
+    const result = await getQboAutomatedSalesTaxMode({ realmId: 'realm-ast' });
+    expect(result).toEqual({ enabled: false });
+  });
+
+  it('setQboAutomatedSalesTaxMode: round-trips per realm', async () => {
+    const saved = await setQboAutomatedSalesTaxMode({ realmId: 'realm-ast', enabled: true });
+    expect(saved).toEqual({ success: true, enabled: true });
+
+    expect(await getQboAutomatedSalesTaxMode({ realmId: 'realm-ast' })).toEqual({ enabled: true });
+    // The flag is per realm, not per tenant.
+    expect(await getQboAutomatedSalesTaxMode({ realmId: 'other-realm' })).toEqual({ enabled: false });
+
+    const cleared = await setQboAutomatedSalesTaxMode({ realmId: 'realm-ast', enabled: false });
+    expect(cleared).toEqual({ success: true, enabled: false });
+    expect(await getQboAutomatedSalesTaxMode({ realmId: 'realm-ast' })).toEqual({ enabled: false });
+  });
+
+  it('setQboAutomatedSalesTaxMode: preserves sibling settings subtrees', async () => {
+    tenantSettingsRow.current = {
+      settings: {
+        accountingSync: { autoProvisionCustomers: true, defaultRealm: 'realm-ast' },
+        clientPortal: { enabled: true }
+      }
+    };
+
+    await setQboAutomatedSalesTaxMode({ realmId: 'realm-ast', enabled: true });
+
+    expect(tenantSettingsRow.current.settings.accountingSync).toEqual({
+      autoProvisionCustomers: true,
+      defaultRealm: 'realm-ast'
+    });
+    expect(tenantSettingsRow.current.settings.clientPortal).toEqual({ enabled: true });
+    expect(tenantSettingsRow.current.settings.qboAutomatedSalesTax).toEqual({ realms: ['realm-ast'] });
+  });
+
+  it('setQboAutomatedSalesTaxMode: keeps other realms when one is turned off', async () => {
+    await setQboAutomatedSalesTaxMode({ realmId: 'realm-a', enabled: true });
+    await setQboAutomatedSalesTaxMode({ realmId: 'realm-b', enabled: true });
+    await setQboAutomatedSalesTaxMode({ realmId: 'realm-a', enabled: false });
+
+    expect(tenantSettingsRow.current!.settings.qboAutomatedSalesTax).toEqual({ realms: ['realm-b'] });
+  });
+
+  it('setQboAutomatedSalesTaxMode: refuses a request with no realm', async () => {
+    const result = await setQboAutomatedSalesTaxMode({ realmId: '', enabled: true });
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/connected QuickBooks company/i);
   });
 });

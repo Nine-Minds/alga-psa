@@ -32,6 +32,7 @@ export default function AddCreditButton() {
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const currencyCode = clients.find((client) => client.client_id === selectedClient)?.default_currency_code || 'USD';
 
   useEffect(() => {
     if (!isAddCreditModalOpen || clients.length > 0) return;
@@ -90,7 +91,7 @@ export default function AddCreditButton() {
       setError(null);
 
       // The ledger stores minor units (cents); the form takes major units.
-      const amountInCents = toMinorUnits(amount, i18n.language);
+      const amountInCents = toMinorUnits(amount, i18n.language, currencyCode);
 
       const result = await grantCredit(
         selectedClient,
@@ -149,7 +150,7 @@ export default function AddCreditButton() {
             <div>
               <Label className="text-sm font-medium">
                 {t('addCredit.fields.client', { defaultValue: 'Client' })}{' '}
-                <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+                <span className="text-[rgb(var(--color-destructive))]">*</span>
               </Label>
               <div className="mt-1">
                 <ClientPicker
@@ -172,6 +173,7 @@ export default function AddCreditButton() {
                 required
                 value={amount}
                 onChange={setAmount}
+                currencyCode={currencyCode}
                 placeholder={t('addCredit.placeholders.amount', { defaultValue: 'Enter amount' })}
               />
             </div>

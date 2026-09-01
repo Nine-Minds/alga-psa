@@ -9,7 +9,7 @@ import {
   buildNotificationSentPayload,
 } from '@alga-psa/workflow-streams';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
-import { tenantHasTeamsAddOn } from '../teams/teamsAddOnGate';
+import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import { buildTeamsNotificationDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
 import { sendBotActivity, type SendBotActivityInput } from '../teams/bot/teamsBotConnector';
 import { getLatestTeamsConversationReferenceImpl } from '../teams/bot/teamsConversationReferences';
@@ -255,8 +255,6 @@ function safePublishNotificationWorkflowEvent(params: Parameters<typeof publishW
 
 export function mapTeamsNotificationSkipReasonToDeliveryErrorCode(reason: string): TeamsDeliveryErrorCode {
   switch (reason) {
-    case 'addon_inactive':
-      return 'addon_inactive';
     case 'integration_inactive':
       return 'integration_inactive';
     case 'missing_user_linkage':
@@ -458,13 +456,6 @@ export async function deliverTeamsNotificationImpl(
   }
 
   const { knex } = await createTenantKnex(notification.tenant);
-  if (!(await tenantHasTeamsAddOn(knex, notification.tenant))) {
-    return recordSkippedTeamsNotification({
-      notification,
-      category,
-      reason: 'addon_inactive',
-    });
-  }
 
   const integration = await getTeamsIntegrationRow(knex, notification.tenant);
 
@@ -609,7 +600,7 @@ async function deliverTeamsActivityFeedNotification(params: {
     });
 
     const response = await sendGraphActivityNotificationWithRetry({
-      url: `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(recipientLink.providerAccountId)}/teamwork/sendActivityNotification`,
+      url: `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(recipientLink.providerAccountId)}/teamwork/sendActivityNotification`,
       init: {
         method: 'POST',
         headers: {

@@ -34,7 +34,39 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   searchUsersForMentions: vi.fn(),
 }));
 
+// The reschedule dialog uses the design-system DateTimePicker (own suite); stub
+// it to a labeled input so this test can assert the field renders without
+// mounting the calendar/time-rail panel.
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
+  DateTimePicker: ({ id, label, value, onChange }: {
+    id?: string;
+    label?: string;
+    value?: Date;
+    onChange: (date: Date | undefined) => void;
+  }) => (
+    <input
+      id={id}
+      data-testid="datetimepicker"
+      aria-label={label}
+      value={value ? value.toISOString() : ''}
+      onChange={(event) => onChange(event.target.value ? new Date(event.target.value) : undefined)}
+    />
+  ),
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  // Components under test format dates through useFormatters; the real hook
+  // reads the locale off the provider this test does not mount.
+  useFormatters: () => ({
+    locale: 'en',
+    formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en', options).format(typeof date === 'string' ? new Date(date) : date),
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', options).format(value),
+    formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
+    formatRelativeTime: (date: Date | string) => String(date),
+  }),
   useTranslation: () => ({
     t: (_key: string, defaultValue: string) => defaultValue,
   }),
@@ -76,6 +108,38 @@ const userMap = {
 };
 
 describe('CommentItem metadata debug control', () => {
+  it('shows scheduled state and opens an accessible reschedule dialog for the author', async () => {
+    const user = userEvent.setup();
+    render(
+      <CommentItem
+        conversation={buildComment({
+          publish_state: 'scheduled',
+          scheduled_publish_at: '2026-08-23T13:30:00.000Z',
+          scheduled_publish_tz: 'America/New_York',
+        })}
+        currentUserId="user-1"
+        isEditing={false}
+        currentComment={null}
+        ticketId="t1"
+        userMap={userMap}
+        contactMap={{}}
+        onContentChange={() => {}}
+        onSave={() => {}}
+        onClose={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
+    );
+
+    expect(screen.getByText(/Scheduled.*Publishes/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel scheduled comment' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reschedule comment' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // The reschedule field is the design-system DateTimePicker, not a raw
+    // native datetime-local input.
+    expect(screen.getByLabelText(/Publish at/)).toHaveAttribute('data-testid', 'datetimepicker');
+  });
+
   it('T053: wires Reply in the hover/focus action row and keeps c-actions reveal CSS', async () => {
     const user = userEvent.setup();
     const onReply = vi.fn();

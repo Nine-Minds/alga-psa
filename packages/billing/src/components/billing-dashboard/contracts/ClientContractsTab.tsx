@@ -48,7 +48,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface ClientContractsTabProps {
@@ -80,6 +80,7 @@ const toWidgetRenewalRows = (rows: RenewalQueueRow[]): RenewalQueueRow[] =>
 
 const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded, refreshTrigger }) => {
   const { t } = useTranslation('msp/contracts');
+  const { formatDate } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
   const router = useRouter();
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
@@ -127,12 +128,14 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const fetchClientContracts = async () => {
     try {
       setIsLoading(true);
-      const fetchedAssignments = await getContractsWithClients();
+      const [fetchedAssignments, renewalRows] = await Promise.all([
+        getContractsWithClients(),
+        listRenewalQueueRows(),
+      ]);
       if (isActionMessageError(fetchedAssignments) || isActionPermissionError(fetchedAssignments)) {
         setError(getErrorMessage(fetchedAssignments));
         return;
       }
-      const renewalRows = await listRenewalQueueRows();
       if (isActionPermissionError(renewalRows)) {
         handleError(renewalRows.permissionError);
         return;
@@ -301,7 +304,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     try {
       const plainDate = toPlainDate(value as string | Date);
       const dateOnly = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-      return dateOnly.toLocaleDateString();
+      return formatDate(dateOnly);
     } catch {
       return t('contractsList.empty.dash', { defaultValue: '—' });
     }
@@ -834,7 +837,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                       setDraftToResume(null);
                       setShowClientWizard(true);
                     }}
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-[rgb(var(--color-primary-600))] text-white hover:from-blue-700 hover:to-[rgb(var(--color-primary-700))]"
                   >
                     <Wand2 className="h-4 w-4" />
                     {t('contractsList.actions.createContract', { defaultValue: 'Create Contract' })}
@@ -860,7 +863,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
             <TabsContent value="upcoming-renewals">
               <section
                 data-testid="upcoming-renewals-widget"
-                className="mb-4 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-100))] p-4"
+                className="mb-4 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-100))] p-4"
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>

@@ -4,7 +4,8 @@ import { DEFAULT_INVOICE_PRINT_SETTINGS, TEMPLATE_AST_VERSION } from '@alga-psa/
 const cloneAst = (ast: TemplateAst): TemplateAst =>
   JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
-const buildSharedBindings = (): NonNullable<TemplateAst['bindings']> => ({
+/** The invoice document's binding catalog — also what the designer's field picker generates from. */
+export const buildInvoiceTemplateBindings = (): NonNullable<TemplateAst['bindings']> => ({
   values: {
     invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
     issueDate: { id: 'issueDate', kind: 'value', path: 'issueDate' },
@@ -67,7 +68,7 @@ const buildStandardDefaultAst = (templateName: string): TemplateAst => ({
     templateName,
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
-  bindings: buildSharedBindings(),
+  bindings: buildInvoiceTemplateBindings(),
   layout: {
     id: 'root',
     type: 'document',
@@ -75,25 +76,25 @@ const buildStandardDefaultAst = (templateName: string): TemplateAst => ({
       {
         id: 'header',
         type: 'section',
-        title: 'Invoice',
+        title: { i18nKey: 'labels.invoice', defaultValue: 'Invoice' },
         children: [
           {
             id: 'invoice-number',
             type: 'field',
-            label: 'Invoice #',
+            label: { i18nKey: 'labels.invoiceNumber', defaultValue: 'Invoice #' },
             binding: { bindingId: 'invoiceNumber' },
           },
           {
             id: 'issue-date',
             type: 'field',
-            label: 'Issue Date',
+            label: { i18nKey: 'labels.issueDate', defaultValue: 'Issue Date' },
             binding: { bindingId: 'issueDate' },
             format: 'date',
           },
           {
             id: 'due-date',
             type: 'field',
-            label: 'Due Date',
+            label: { i18nKey: 'labels.dueDate', defaultValue: 'Due Date' },
             binding: { bindingId: 'dueDate' },
             format: 'date',
           },
@@ -109,26 +110,26 @@ const buildStandardDefaultAst = (templateName: string): TemplateAst => ({
         columns: [
           {
             id: 'description',
-            header: 'Description',
+            header: { i18nKey: 'labels.description', defaultValue: 'Description' },
             value: { type: 'path', path: 'description' },
           },
           {
             id: 'quantity',
-            header: 'Qty',
+            header: { i18nKey: 'labels.qty', defaultValue: 'Qty' },
             value: { type: 'path', path: 'quantity' },
             format: 'number',
             style: { inline: { textAlign: 'right' } },
           },
           {
             id: 'unit-price',
-            header: 'Rate',
+            header: { i18nKey: 'labels.rate', defaultValue: 'Rate' },
             value: { type: 'path', path: 'unitPrice' },
             format: 'currency',
             style: { inline: { textAlign: 'right' } },
           },
           {
             id: 'line-total',
-            header: 'Amount',
+            header: { i18nKey: 'labels.amount', defaultValue: 'Amount' },
             value: { type: 'path', path: 'total' },
             format: 'currency',
             style: { inline: { textAlign: 'right' } },
@@ -140,9 +141,9 @@ const buildStandardDefaultAst = (templateName: string): TemplateAst => ({
         type: 'totals',
         sourceBinding: { bindingId: 'lineItems' },
         rows: [
-          { id: 'subtotal', label: 'Subtotal', value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
-          { id: 'tax', label: 'Tax', value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
-          { id: 'total', label: 'Total', value: { type: 'binding', bindingId: 'total' }, format: 'currency', emphasize: true },
+          { id: 'subtotal', label: { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' }, value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
+          { id: 'tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
+          { id: 'total', label: { i18nKey: 'labels.total', defaultValue: 'Total' }, value: { type: 'binding', bindingId: 'total' }, format: 'currency', emphasize: true },
         ],
       },
     ],
@@ -156,7 +157,7 @@ const buildStandardDetailedAst = (): TemplateAst => ({
     templateName: 'Detailed Template',
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
-  bindings: buildSharedBindings(),
+  bindings: buildInvoiceTemplateBindings(),
   layout: {
     id: 'root',
     type: 'document',
@@ -248,7 +249,7 @@ const buildStandardDetailedAst = (): TemplateAst => ({
               {
                 id: 'invoice-title',
                 type: 'text',
-                content: { type: 'literal', value: 'INVOICE' },
+                content: { type: 'i18n', i18nKey: 'labels.invoiceTitle', defaultValue: 'INVOICE' },
                 style: {
                   inline: {
                     fontSize: '22px',
@@ -261,14 +262,14 @@ const buildStandardDetailedAst = (): TemplateAst => ({
               {
                 id: 'invoice-number',
                 type: 'field',
-                label: 'Invoice #',
+                label: { i18nKey: 'labels.invoiceNumber', defaultValue: 'Invoice #' },
                 binding: { bindingId: 'invoiceNumber' },
                 style: { inline: { justifyContent: 'space-between' } },
               },
               {
                 id: 'issue-date',
                 type: 'field',
-                label: 'Issue Date',
+                label: { i18nKey: 'labels.issueDate', defaultValue: 'Issue Date' },
                 binding: { bindingId: 'issueDate' },
                 format: 'date',
                 style: { inline: { justifyContent: 'space-between' } },
@@ -276,7 +277,7 @@ const buildStandardDetailedAst = (): TemplateAst => ({
               {
                 id: 'due-date',
                 type: 'field',
-                label: 'Due Date',
+                label: { i18nKey: 'labels.dueDate', defaultValue: 'Due Date' },
                 binding: { bindingId: 'dueDate' },
                 format: 'date',
                 style: { inline: { justifyContent: 'space-between' } },
@@ -284,7 +285,7 @@ const buildStandardDetailedAst = (): TemplateAst => ({
               {
                 id: 'po-number',
                 type: 'field',
-                label: 'PO #',
+                label: { i18nKey: 'labels.poNumber', defaultValue: 'PO #' },
                 binding: { bindingId: 'poNumber' },
                 emptyValue: '-',
                 style: { inline: { justifyContent: 'space-between' } },
@@ -329,7 +330,7 @@ const buildStandardDetailedAst = (): TemplateAst => ({
               {
                 id: 'from-label',
                 type: 'text',
-                content: { type: 'literal', value: 'From' },
+                content: { type: 'i18n', i18nKey: 'labels.from', defaultValue: 'From' },
                 style: {
                   inline: {
                     color: '#6b7280',
@@ -369,7 +370,7 @@ const buildStandardDetailedAst = (): TemplateAst => ({
               {
                 id: 'bill-to-label',
                 type: 'text',
-                content: { type: 'literal', value: 'Bill To' },
+                content: { type: 'i18n', i18nKey: 'labels.billTo', defaultValue: 'Bill To' },
                 style: {
                   inline: {
                     color: '#6b7280',
@@ -409,31 +410,31 @@ const buildStandardDetailedAst = (): TemplateAst => ({
           sourceBinding: { bindingId: 'lineItems' },
           itemBinding: 'item',
         },
-        emptyStateText: 'No billable line items',
+        emptyStateText: { i18nKey: 'labels.emptyState.noBillableLineItems', defaultValue: 'No billable line items' },
         columns: [
           {
             id: 'description',
-            header: 'Description',
+            header: { i18nKey: 'labels.description', defaultValue: 'Description' },
             value: { type: 'path', path: 'description' },
             style: { inline: { width: '50%' } },
           },
           {
             id: 'quantity',
-            header: 'Qty',
+            header: { i18nKey: 'labels.qty', defaultValue: 'Qty' },
             value: { type: 'path', path: 'quantity' },
             format: 'number',
             style: { inline: { textAlign: 'right', width: '14%' } },
           },
           {
             id: 'unit-price',
-            header: 'Rate',
+            header: { i18nKey: 'labels.rate', defaultValue: 'Rate' },
             value: { type: 'path', path: 'unitPrice' },
             format: 'currency',
             style: { inline: { textAlign: 'right', width: '18%' } },
           },
           {
             id: 'line-total',
-            header: 'Amount',
+            header: { i18nKey: 'labels.amount', defaultValue: 'Amount' },
             value: { type: 'path', path: 'total' },
             format: 'currency',
             style: { inline: { textAlign: 'right', width: '18%' } },
@@ -462,19 +463,19 @@ const buildStandardDetailedAst = (): TemplateAst => ({
             rows: [
               {
                 id: 'subtotal',
-                label: 'Subtotal',
+                label: { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' },
                 value: { type: 'binding', bindingId: 'subtotal' },
                 format: 'currency',
               },
               {
                 id: 'tax',
-                label: 'Tax',
+                label: { i18nKey: 'labels.tax', defaultValue: 'Tax' },
                 value: { type: 'binding', bindingId: 'tax' },
                 format: 'currency',
               },
               {
                 id: 'total',
-                label: 'Total',
+                label: { i18nKey: 'labels.total', defaultValue: 'Total' },
                 value: { type: 'binding', bindingId: 'total' },
                 format: 'currency',
                 emphasize: true,
@@ -498,7 +499,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
     templateName: 'Grouped Template',
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
-  bindings: buildSharedBindings(),
+  bindings: buildInvoiceTemplateBindings(),
   layout: {
     id: 'root',
     type: 'document',
@@ -533,11 +534,11 @@ const buildStandardGroupedAst = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { minWidth: '280px', border: '1px solid #d1d5db', borderRadius: '10px', padding: '14px 16px', backgroundColor: '#f9fafb', gap: '6px' } },
             children: [
-              { id: 'invoice-title', type: 'text', content: { type: 'literal', value: 'INVOICE' }, style: { inline: { fontSize: '22px', fontWeight: 700, margin: '0 0 4px 0', lineHeight: 1.1 } } },
-              { id: 'invoice-number', type: 'field', label: 'Invoice #', binding: { bindingId: 'invoiceNumber' }, style: { inline: { justifyContent: 'space-between' } } },
-              { id: 'issue-date', type: 'field', label: 'Issue Date', binding: { bindingId: 'issueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
-              { id: 'due-date', type: 'field', label: 'Due Date', binding: { bindingId: 'dueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
-              { id: 'po-number', type: 'field', label: 'PO #', binding: { bindingId: 'poNumber' }, emptyValue: '-', style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'invoice-title', type: 'text', content: { type: 'i18n', i18nKey: 'labels.invoiceTitle', defaultValue: 'INVOICE' }, style: { inline: { fontSize: '22px', fontWeight: 700, margin: '0 0 4px 0', lineHeight: 1.1 } } },
+              { id: 'invoice-number', type: 'field', label: { i18nKey: 'labels.invoiceNumber', defaultValue: 'Invoice #' }, binding: { bindingId: 'invoiceNumber' }, style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'issue-date', type: 'field', label: { i18nKey: 'labels.issueDate', defaultValue: 'Issue Date' }, binding: { bindingId: 'issueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'due-date', type: 'field', label: { i18nKey: 'labels.dueDate', defaultValue: 'Due Date' }, binding: { bindingId: 'dueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'po-number', type: 'field', label: { i18nKey: 'labels.poNumber', defaultValue: 'PO #' }, binding: { bindingId: 'poNumber' }, emptyValue: '-', style: { inline: { justifyContent: 'space-between' } } },
             ],
           },
         ],
@@ -557,7 +558,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
             children: [
-              { id: 'from-label', type: 'text', content: { type: 'literal', value: 'From' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
+              { id: 'from-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.from', defaultValue: 'From' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
               { id: 'from-name', type: 'text', content: { type: 'binding', bindingId: 'tenantClientName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },
               { id: 'from-address', type: 'text', content: { type: 'binding', bindingId: 'tenantClientAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },
             ],
@@ -568,7 +569,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
             children: [
-              { id: 'bill-to-label', type: 'text', content: { type: 'literal', value: 'Bill To' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
+              { id: 'bill-to-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.billTo', defaultValue: 'Bill To' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
               { id: 'bill-to-name', type: 'text', content: { type: 'binding', bindingId: 'customerName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },
               { id: 'bill-to-address', type: 'text', content: { type: 'binding', bindingId: 'customerAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },
             ],
@@ -579,7 +580,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
       {
         id: 'recurring-section-label',
         type: 'text',
-        content: { type: 'literal', value: 'Monthly Items' },
+        content: { type: 'i18n', i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' },
         style: { inline: { fontSize: '14px', fontWeight: 700, color: '#ffffff', backgroundColor: '#7c45d3', padding: '6px 12px', borderRadius: '6px 6px 0 0', margin: '0' } },
       },
       {
@@ -588,19 +589,19 @@ const buildStandardGroupedAst = (): TemplateAst => ({
         style: { inline: { margin: '0 0 16px 0', border: '1px solid #e5e7eb', borderRadius: '0 6px 6px 6px' } },
         headerStyle: { inline: { backgroundColor: '#7c45d3', color: '#ffffff' } },
         repeat: { sourceBinding: { bindingId: 'recurringItems' }, itemBinding: 'item' },
-        emptyStateText: 'No monthly items',
+        emptyStateText: { i18nKey: 'labels.emptyState.noMonthlyItems', defaultValue: 'No monthly items' },
         columns: [
-          { id: 'description', header: 'Description', value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } },
-          { id: 'unit-price', header: 'Price', value: { type: 'path', path: 'unitPrice' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
-          { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
-          { id: 'line-total', header: 'Amount', value: { type: 'path', path: 'total' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } },
+          { id: 'unit-price', header: { i18nKey: 'labels.price', defaultValue: 'Price' }, value: { type: 'path', path: 'unitPrice' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+          { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
+          { id: 'line-total', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
         ],
       },
       // ── One-time items table ──────────────────────────────────────
       {
         id: 'onetime-section-label',
         type: 'text',
-        content: { type: 'literal', value: 'One-time Items' },
+        content: { type: 'i18n', i18nKey: 'labels.oneTimeItems', defaultValue: 'One-time Items' },
         style: { inline: { fontSize: '14px', fontWeight: 700, color: '#ffffff', backgroundColor: '#7c45d3', padding: '6px 12px', borderRadius: '6px 6px 0 0', margin: '0' } },
       },
       {
@@ -609,12 +610,12 @@ const buildStandardGroupedAst = (): TemplateAst => ({
         style: { inline: { margin: '0 0 16px 0', border: '1px solid #e5e7eb', borderRadius: '0 6px 6px 6px' } },
         headerStyle: { inline: { backgroundColor: '#7c45d3', color: '#ffffff' } },
         repeat: { sourceBinding: { bindingId: 'onetimeItems' }, itemBinding: 'item' },
-        emptyStateText: 'No one-time items',
+        emptyStateText: { i18nKey: 'labels.emptyState.noOneTimeItems', defaultValue: 'No one-time items' },
         columns: [
-          { id: 'description', header: 'Description', value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } },
-          { id: 'unit-price', header: 'Price', value: { type: 'path', path: 'unitPrice' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
-          { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
-          { id: 'line-total', header: 'Amount', value: { type: 'path', path: 'total' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } },
+          { id: 'unit-price', header: { i18nKey: 'labels.price', defaultValue: 'Price' }, value: { type: 'path', path: 'unitPrice' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+          { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
+          { id: 'line-total', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
         ],
       },
       // ── Notes + Totals side-by-side ───────────────────────────────
@@ -630,7 +631,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px', minHeight: '80px' } },
             children: [
-              { id: 'notes-label', type: 'text', content: { type: 'literal', value: 'Notes' }, style: { inline: { fontWeight: 700, fontSize: '14px', margin: '0 0 6px 0' } } },
+              { id: 'notes-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.notes', defaultValue: 'Notes' }, style: { inline: { fontWeight: 700, fontSize: '14px', margin: '0 0 6px 0' } } },
               { id: 'notes-text', type: 'text', content: { type: 'binding', bindingId: 'notes' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
             ],
           },
@@ -640,12 +641,12 @@ const buildStandardGroupedAst = (): TemplateAst => ({
             style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 12px', backgroundColor: '#f9fafb' } },
             sourceBinding: { bindingId: 'lineItems' },
             rows: [
-              { id: 'monthly-subtotal', label: 'Monthly', value: { type: 'binding', bindingId: 'recurringSubtotal' }, format: 'currency' },
-              { id: 'monthly-tax', label: 'Tax', value: { type: 'binding', bindingId: 'recurringTax' }, format: 'currency' },
-              { id: 'monthly-total', label: 'Monthly Total', value: { type: 'binding', bindingId: 'recurringTotal' }, format: 'currency', emphasize: true, style: { inline: { backgroundColor: '#7c45d3', color: '#ffffff', padding: '4px 6px', borderRadius: '4px', margin: '2px 0' } } },
-              { id: 'onetime-subtotal', label: 'One-time', value: { type: 'binding', bindingId: 'onetimeSubtotal' }, format: 'currency' },
-              { id: 'onetime-tax', label: 'Tax', value: { type: 'binding', bindingId: 'onetimeTax' }, format: 'currency' },
-              { id: 'onetime-total', label: 'One-time Total', value: { type: 'binding', bindingId: 'onetimeTotal' }, format: 'currency', emphasize: true, style: { inline: { backgroundColor: '#7c45d3', color: '#ffffff', padding: '4px 6px', borderRadius: '4px', margin: '2px 0' } } },
+              { id: 'monthly-subtotal', label: { i18nKey: 'labels.monthly', defaultValue: 'Monthly' }, value: { type: 'binding', bindingId: 'recurringSubtotal' }, format: 'currency' },
+              { id: 'monthly-tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, value: { type: 'binding', bindingId: 'recurringTax' }, format: 'currency' },
+              { id: 'monthly-total', label: { i18nKey: 'labels.monthlyTotal', defaultValue: 'Monthly Total' }, value: { type: 'binding', bindingId: 'recurringTotal' }, format: 'currency', emphasize: true, style: { inline: { backgroundColor: '#7c45d3', color: '#ffffff', padding: '4px 6px', borderRadius: '4px', margin: '2px 0' } } },
+              { id: 'onetime-subtotal', label: { i18nKey: 'labels.oneTime', defaultValue: 'One-time' }, value: { type: 'binding', bindingId: 'onetimeSubtotal' }, format: 'currency' },
+              { id: 'onetime-tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, value: { type: 'binding', bindingId: 'onetimeTax' }, format: 'currency' },
+              { id: 'onetime-total', label: { i18nKey: 'labels.oneTimeTotal', defaultValue: 'One-time Total' }, value: { type: 'binding', bindingId: 'onetimeTotal' }, format: 'currency', emphasize: true, style: { inline: { backgroundColor: '#7c45d3', color: '#ffffff', padding: '4px 6px', borderRadius: '4px', margin: '2px 0' } } },
             ],
           },
         ],
@@ -672,7 +673,7 @@ const buildStandardByLocationAst = (): TemplateAst => ({
     templateName: 'Standard Invoice By Location',
     printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
   },
-  bindings: buildSharedBindings(),
+  bindings: buildInvoiceTemplateBindings(),
   layout: {
     id: 'root',
     type: 'document',
@@ -707,11 +708,11 @@ const buildStandardByLocationAst = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { minWidth: '280px', border: '1px solid #d1d5db', borderRadius: '10px', padding: '14px 16px', backgroundColor: '#f9fafb', gap: '6px' } },
             children: [
-              { id: 'invoice-title', type: 'text', content: { type: 'literal', value: 'INVOICE' }, style: { inline: { fontSize: '22px', fontWeight: 700, margin: '0 0 4px 0', lineHeight: 1.1 } } },
-              { id: 'invoice-number', type: 'field', label: 'Invoice #', binding: { bindingId: 'invoiceNumber' }, style: { inline: { justifyContent: 'space-between' } } },
-              { id: 'issue-date', type: 'field', label: 'Issue Date', binding: { bindingId: 'issueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
-              { id: 'due-date', type: 'field', label: 'Due Date', binding: { bindingId: 'dueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
-              { id: 'po-number', type: 'field', label: 'PO #', binding: { bindingId: 'poNumber' }, emptyValue: '-', style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'invoice-title', type: 'text', content: { type: 'i18n', i18nKey: 'labels.invoiceTitle', defaultValue: 'INVOICE' }, style: { inline: { fontSize: '22px', fontWeight: 700, margin: '0 0 4px 0', lineHeight: 1.1 } } },
+              { id: 'invoice-number', type: 'field', label: { i18nKey: 'labels.invoiceNumber', defaultValue: 'Invoice #' }, binding: { bindingId: 'invoiceNumber' }, style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'issue-date', type: 'field', label: { i18nKey: 'labels.issueDate', defaultValue: 'Issue Date' }, binding: { bindingId: 'issueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'due-date', type: 'field', label: { i18nKey: 'labels.dueDate', defaultValue: 'Due Date' }, binding: { bindingId: 'dueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'po-number', type: 'field', label: { i18nKey: 'labels.poNumber', defaultValue: 'PO #' }, binding: { bindingId: 'poNumber' }, emptyValue: '-', style: { inline: { justifyContent: 'space-between' } } },
             ],
           },
         ],
@@ -730,7 +731,7 @@ const buildStandardByLocationAst = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
             children: [
-              { id: 'from-label', type: 'text', content: { type: 'literal', value: 'From' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
+              { id: 'from-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.from', defaultValue: 'From' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
               { id: 'from-name', type: 'text', content: { type: 'binding', bindingId: 'tenantClientName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },
               { id: 'from-address', type: 'text', content: { type: 'binding', bindingId: 'tenantClientAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },
             ],
@@ -741,7 +742,7 @@ const buildStandardByLocationAst = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
             children: [
-              { id: 'bill-to-label', type: 'text', content: { type: 'literal', value: 'Bill To' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
+              { id: 'bill-to-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.billTo', defaultValue: 'Bill To' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
               { id: 'bill-to-name', type: 'text', content: { type: 'binding', bindingId: 'customerName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },
               { id: 'bill-to-address', type: 'text', content: { type: 'binding', bindingId: 'customerAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },
             ],
@@ -777,12 +778,12 @@ const buildStandardByLocationAst = (): TemplateAst => ({
             type: 'dynamic-table',
             style: { inline: { margin: '0', border: '1px solid #e5e7eb', borderRadius: '0 0 6px 6px' } },
             repeat: { sourceBinding: { bindingId: 'group.items' }, itemBinding: 'item' },
-            emptyStateText: 'No billable line items',
+            emptyStateText: { i18nKey: 'labels.emptyState.noBillableLineItems', defaultValue: 'No billable line items' },
             columns: [
-              { id: 'description', header: 'Description', value: { type: 'path', path: 'description' }, style: { inline: { width: '52%' } } },
-              { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '12%' } } },
-              { id: 'unit-price', header: 'Rate', value: { type: 'path', path: 'unitPrice' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
-              { id: 'line-total', header: 'Amount', value: { type: 'path', path: 'total' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+              { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '52%' } } },
+              { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '12%' } } },
+              { id: 'unit-price', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'unitPrice' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+              { id: 'line-total', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
             ],
           },
           {
@@ -791,7 +792,7 @@ const buildStandardByLocationAst = (): TemplateAst => ({
             direction: 'row',
             style: { inline: { justifyContent: 'space-between', padding: '6px 12px', backgroundColor: '#f9fafb', borderRadius: '0 0 6px 6px' } },
             children: [
-              { id: 'location-band-subtotal-label', type: 'text', content: { type: 'literal', value: 'Location Subtotal' }, style: { inline: { fontWeight: 700 } } },
+              { id: 'location-band-subtotal-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.locationSubtotal', defaultValue: 'Location Subtotal' }, style: { inline: { fontWeight: 700 } } },
               { id: 'location-band-subtotal-value', type: 'text', content: { type: 'path', path: 'subtotal|currency' }, style: { inline: { fontWeight: 700, textAlign: 'right' } } },
             ],
           },
@@ -810,9 +811,9 @@ const buildStandardByLocationAst = (): TemplateAst => ({
             style: { inline: { width: '300px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 12px', backgroundColor: '#f9fafb' } },
             sourceBinding: { bindingId: 'lineItems' },
             rows: [
-              { id: 'subtotal', label: 'Subtotal', value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
-              { id: 'tax', label: 'Tax', value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
-              { id: 'total', label: 'Total', value: { type: 'binding', bindingId: 'total' }, format: 'currency', emphasize: true },
+              { id: 'subtotal', label: { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' }, value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
+              { id: 'tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
+              { id: 'total', label: { i18nKey: 'labels.total', defaultValue: 'Total' }, value: { type: 'binding', bindingId: 'total' }, format: 'currency', emphasize: true },
             ],
           },
         ],

@@ -1,0 +1,1620 @@
+/**
+ * Native credentials store integration tests against the REAL dev DB:
+ * CRUD round-trip, tenant isolation, restricted-row hiding in list for
+ * non-granted users, reveal writes a fail-closed audit, and the permission
+ * seed migration is idempotent. Follows the hudu-company-mappings direct-DB
+ * pattern: random tenant + cleanup, admin connection (RLS enforced by the
+ * scoped queries' tenant predicates).
+ */
+
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import knexFactory, { type Knex } from 'knex';
+import fs from 'node:fs';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { config as loadDotEnv } from 'dotenv';
+import type { IUserWithRoles } from '@alga-psa/types';
+
+import { createTenantKnex, resetTenantConnectionPool, tenantDb } from '@alga-psa/db';
+
+const require = createRequire(import.meta.url);
+const repoRoot = path.resolve(process.cwd(), '..', '..');
+
+// Load the wired-in dev DB connection (server/.env.local) into the test env.
+loadDotEnv({ path: path.join(repoRoot, 'server', '.env.local'), override: true });
+
+// Snapshot the prior value BEFORE this suite sets it, so teardown can restore
+// exactly: delete when it was previously unset, otherwise restore the string.
+// The key is deliberately NOT persisted to server/.env.local — this suite
+// supplies its own ephemeral value, in-process only.
+const priorCredentialEncryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
+// Force the AES-256-GCM scheme unless Vault Transit is configured (the
+// scheme-transition test re-sets these in-process and clears them again).
+delete process.env.ALGA_VAULT_ADDR;
+delete process.env.VAULT_ADDR;
+
+function readPostgresPassword(): string {
+  try {
+    return fs.readFileSync(path.join(repoRoot, 'secrets', 'postgres_password'), 'utf8').trim();
+  } catch {
+    return process.env.DB_PASSWORD_ADMIN || 'postpass123';
+  }
+}
+
+/** Connect to the dev DB the same way the other direct-DB integration tests do. */
+async function createDevDb(): Promise<Knex> {
+  return knexFactory({
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password: readPostgresPassword(),
+      database: process.env.DB_NAME_SERVER || 'server',
+    },
+    pool: { min: 1, max: 1 },
+  });
+}
+
+vi.mock('@alga-psa/core/logger', () => ({
+  default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
+// The setEntityCredentials replace path anchors Hudu-ref removal to the
+// CALLER's rendered snapshot (the baseline it submits), never to a save-time
+// live probe: a ref the caller did not see at list load is preserved even if
+// it would resolve visible at save time, and a concurrently reattached row
+// (new association_id) survives a stale baseline. This suite has no live Hudu,
+// so stub the single HTTP boundary — createHuduClient — and drive
+// getAssetPassword per test; everything else (resolveByIds, the company
+// mapping, bundle scope, the list path's integration gate) stays real.
+const { createHuduClientMock } = vi.hoisted(() => ({ createHuduClientMock: vi.fn() }));
+
+vi.mock('@ee/lib/integrations/hudu/huduClient', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  createHuduClient: createHuduClientMock,
+}));
+
+import { HuduRequestError } from '../../lib/integrations/hudu/huduClient';
+
+let db: Knex;
+let tenantId: string;
+let clientId: string;
+let ownerUser: string;
+let grantedUser: string;
+let strangerUser: string;
+
+// Deletion order matters for FKs: child rows first, then users/clients, then
+// the tenant itself. `permissions` / `role_permissions` are included because
+// the permission-seed idempotency test writes them for the test tenant and a
+// leftover `permissions` row would block the final `tenants` delete.
+const CLEANUP_TABLES = [
+  'credential_access_grants',
+  'credential_associations',
+  'credentials',
+  'role_permissions',
+  'permissions',
+  'audit_logs',
+];
+
+async function seedUsers(tenant: string): Promise<void> {
+  const insert = (username: string): Promise<string> => {
+    const userId = randomUUID();
+    return db('users')
+      .insert({
+        tenant,
+        user_id: userId,
+        username,
+        email: `${username}@example.test`,
+        hashed_password: 'hashed_password_here',
+        is_inactive: false,
+        user_type: 'internal',
+      })
+      .returning('user_id')
+      .then((rows: Array<{ user_id: string }>) => rows[0].user_id);
+  };
+  ownerUser = await insert('owner-user');
+  grantedUser = await insert('granted-user');
+  strangerUser = await insert('stranger-user');
+}
+
+/**
+ * Remove every fixture the test created for a tenant. Failures PROPAGATE: a
+ * broken cleanup must fail the run loudly instead of leaving debris in the
+ * shared dev DB (previous versions swallowed errors and left temp tenants).
+ */
+async function removeTestTenantFixtures(targetTenant: string): Promise<void> {
+  for (const table of CLEANUP_TABLES) {
+    await db(table).where({ tenant: targetTenant }).del();
+  }
+  await db('users').where({ tenant: targetTenant }).del();
+  await db('clients').where({ tenant: targetTenant }).del();
+  await db('tenants').where({ tenant: targetTenant }).del();
+}
+
+/**
+ * Per-test cleanup: clear credential rows + the permission fixtures the
+ * idempotency test writes, then re-seed fresh users. The client and tenant
+ * created in beforeAll are preserved across tests.
+ */
+async function clearPerTestFixtures(): Promise<void> {
+  for (const table of CLEANUP_TABLES) {
+    await db(table).where({ tenant: tenantId }).del();
+  }
+  await seedUsers(tenantId);
+}
+
+function userFor(userId: string): IUserWithRoles {
+  return {
+    user_id: userId,
+    tenant: tenantId,
+    username: userId,
+    email: `${userId}@example.test`,
+    is_inactive: false,
+    user_type: 'internal',
+    roles: [],
+  };
+}
+
+import {
+  NativeCredentialSource,
+  nativeCredentialSource,
+} from '../../lib/credentials/nativeSource';
+import { resetCredentialAesKeyCache } from '../../lib/credentials/encryption';
+
+describe('native credentials store — DB integration', () => {
+  const HOOK_TIMEOUT = 120_000;
+
+  beforeAll(async () => {
+    // The native store encrypts with AES-256-GCM unless Vault Transit is
+    // configured; supply a test key ephemerally (never NEXTAUTH_SECRET — that
+    // fallback deliberately does not exist). Set here, not at module load, so
+    // the process env is only touched when this suite actually runs.
+    process.env.CREDENTIAL_ENCRYPTION_KEY =
+      priorCredentialEncryptionKey ?? 'integration-test-credential-key';
+    db = await createDevDb();
+    await db.raw('select 1');
+
+    tenantId = randomUUID();
+    await db('tenants').insert({
+      tenant: tenantId,
+      client_name: 'Credentials Integration Tenant',
+      email: `credentials-it-${tenantId}@example.test`,
+    });
+    const [client] = await db('clients')
+      .insert({ tenant: tenantId, client_name: 'Acme Corp' })
+      .returning('client_id');
+    clientId = client.client_id;
+    await seedUsers(tenantId);
+  }, HOOK_TIMEOUT);
+
+  afterAll(async () => {
+    try {
+      if (db && tenantId) {
+        await removeTestTenantFixtures(tenantId);
+      }
+    } finally {
+      // Restore the encryption-key env exactly as it was before this suite —
+      // runs even when the suite fails (unset ⇒ delete, set ⇒ restore string).
+      if (priorCredentialEncryptionKey === undefined) {
+        delete process.env.CREDENTIAL_ENCRYPTION_KEY;
+      } else {
+        process.env.CREDENTIAL_ENCRYPTION_KEY = priorCredentialEncryptionKey;
+      }
+      await db?.destroy();
+    }
+  }, HOOK_TIMEOUT);
+
+  beforeEach(async () => {
+    await clearPerTestFixtures();
+  });
+
+  it('creates an encrypted row and lists only rows the user may see', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Domain Admin', username: 'admin@example.com', password: 'P@ssw0rd!', url: 'https://portal.example.com' }
+    );
+
+    expect(summary).toMatchObject({
+      source: 'alga',
+      clientId,
+      name: 'Domain Admin',
+      username: 'admin@example.com',
+      isRestricted: false,
+    });
+    // The summary never carries the plaintext.
+    expect(JSON.stringify(summary)).not.toContain('P@ssw0rd!');
+
+    const rows = await db('credentials').where({ tenant: tenantId, credential_id: summary.id });
+    expect(rows).toHaveLength(1);
+    // Ciphertext only — never plaintext in the DB.
+    expect(String(rows[0].password_ciphertext)).not.toContain('P@ssw0rd!');
+    expect(['vault-transit:v1', 'aes-256-gcm:v1']).toContain(rows[0].encryption_scheme);
+  });
+
+  it('hides restricted rows from non-granted users in list/search', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Secret Router Admin', password: 'hunter2' }
+    );
+
+    // Restrict to the granted user.
+    await source.setRestriction(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { isRestricted: true, grants: [{ subjectType: 'user', subjectId: grantedUser }] }
+    );
+
+    // Owner sees it.
+    const ownerList = await source.list(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { search: 'Router' }
+    );
+    expect(ownerList.map((row) => row.id)).toContain(summary.id);
+
+    // Granted user sees it.
+    const grantedList = await source.list(
+      { tenant: tenantId, userId: grantedUser, user: userFor(grantedUser) },
+      { search: 'Router' }
+    );
+    expect(grantedList.map((row) => row.id)).toContain(summary.id);
+
+    // Stranger sees nothing — hidden entirely, not shown-but-locked.
+    const strangerList = await source.list(
+      { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) },
+      { search: 'Router' }
+    );
+    expect(strangerList).toHaveLength(0);
+
+    // And an unrestricted credential is visible to everyone.
+    const open = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Public Printer Login', password: 'open' }
+    );
+    const openList = await source.list(
+      { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) },
+      { search: 'Printer' }
+    );
+    expect(openList.map((row) => row.id)).toContain(open.id);
+  });
+
+  it('reveals only to an authorized user and writes a fail-closed audit row', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'VPN Gateway', password: 'vpn-secret' }
+    );
+
+    // Owner reveal succeeds and writes an audit row.
+    const reveal = await source.reveal(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id
+    );
+    expect(reveal.state).toBe('ok');
+    expect(reveal.password).toBe('vpn-secret');
+
+    const audits = await db('audit_logs')
+      .where({ tenant: tenantId })
+      .where('operation', 'credential_reveal');
+    expect(audits.length).toBeGreaterThan(0);
+    // Audit details never contain the value.
+    for (const audit of audits) {
+      expect(JSON.stringify(audit)).not.toContain('vpn-secret');
+    }
+  });
+
+  it('rejects reveal to a user with no grant on a restricted row', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Root Password', password: 'root-secret' }
+    );
+    await source.setRestriction(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { isRestricted: true, grants: [] }
+    );
+
+    const reveal = await source.reveal(
+      { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) },
+      summary.id
+    );
+    expect(reveal.state).toBe('no_access');
+    expect(reveal.password).toBeUndefined();
+  });
+
+  it('getDetail hides restricted rows from non-granted users (no metadata or grant-list leak)', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      {
+        clientId,
+        name: 'Hidden Detail',
+        username: 'root@hidden',
+        url: 'https://hidden.local',
+        description: 'classified notes',
+        password: 'x',
+      }
+    );
+    await source.setRestriction(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { isRestricted: true, grants: [{ subjectType: 'user', subjectId: grantedUser }] }
+    );
+
+    // Granted user sees metadata + the grant list.
+    const grantedDetail = await source.getDetail(
+      { tenant: tenantId, userId: grantedUser, user: userFor(grantedUser) },
+      summary.id
+    );
+    expect(grantedDetail).not.toBeNull();
+    expect(grantedDetail?.name).toBe('Hidden Detail');
+    expect(grantedDetail?.grants).toEqual([{ subjectType: 'user', subjectId: grantedUser }]);
+
+    // Stranger gets null — existence is never confirmed, no metadata/grant leak.
+    const strangerDetail = await source.getDetail(
+      { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) },
+      summary.id
+    );
+    expect(strangerDetail).toBeNull();
+  });
+
+  it('restricted rows cannot be un-restricted or mutated by users without a grant', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Escalation Target', password: 'root-secret' }
+    );
+    await source.setRestriction(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { isRestricted: true, grants: [] }
+    );
+
+    const stranger = { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) };
+
+    // Un-restrict escalation attempt behaves as not_found (no existence leak).
+    await expect(
+      source.setRestriction(stranger, summary.id, { isRestricted: false, grants: [] })
+    ).rejects.toMatchObject({ code: 'CREDENTIAL_NOT_FOUND' });
+
+    // update / remove / setAssociations on a row the caller cannot see also fail.
+    await expect(source.update(stranger, summary.id, { name: 'Renamed' })).rejects.toMatchObject({
+      code: 'CREDENTIAL_NOT_FOUND',
+    });
+    await expect(
+      source.setAssociations(stranger, summary.id, { attachments: [] })
+    ).rejects.toMatchObject({ code: 'CREDENTIAL_NOT_FOUND' });
+    await expect(source.remove(stranger, summary.id)).rejects.toMatchObject({
+      code: 'CREDENTIAL_NOT_FOUND',
+    });
+
+    // The row is untouched and still restricted.
+    const row = await db('credentials').where({ tenant: tenantId, credential_id: summary.id }).first();
+    expect(row.is_restricted).toBe(true);
+    expect(row.name).toBe('Escalation Target');
+  });
+
+  it('re-encrypts BOTH value fields under the new scheme on a single-field edit (scheme transition safe)', async () => {
+    // Create under the AES scheme (no Vault Transit configured).
+    delete process.env.ALGA_VAULT_ADDR;
+    delete process.env.VAULT_ADDR;
+    resetCredentialAesKeyCache();
+
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Scheme Transition Row', password: 'old-password', otpSecret: 'JBSWY3DPEHPK3PXP' }
+    );
+
+    let row = await db('credentials').where({ tenant: tenantId, credential_id: summary.id }).first();
+    expect(row.encryption_scheme).toBe('aes-256-gcm:v1');
+
+    // Switch the ambient write scheme to Vault Transit (mocked HTTP round-trip).
+    process.env.ALGA_VAULT_ADDR = 'https://vault.example.test';
+    process.env.ALGA_VAULT_TOKEN = 'vault-token';
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, string>;
+      if (String(url).includes('/encrypt/')) {
+        const plaintext = Buffer.from(body.plaintext as string, 'base64').toString('utf8');
+        return new Response(
+          JSON.stringify({
+            data: { ciphertext: `vault:v1:${Buffer.from(plaintext, 'utf8').toString('base64')}` },
+          }),
+          { status: 200 }
+        );
+      }
+      if (String(url).includes('/decrypt/')) {
+        const plaintext = Buffer.from(String(body.ciphertext ?? '').replace(/^vault:v1:/, ''), 'base64').toString('utf8');
+        return new Response(
+          JSON.stringify({ data: { plaintext: Buffer.from(plaintext, 'utf8').toString('base64') } }),
+          { status: 200 }
+        );
+      }
+      return new Response('{}', { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      // Edit ONLY the password; the OTP seed is left unchanged.
+      await source.update(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id,
+        { password: 'rotated-password' }
+      );
+
+      row = await db('credentials').where({ tenant: tenantId, credential_id: summary.id }).first();
+      expect(row.encryption_scheme).toBe('vault-transit:v1');
+      expect(String(row.password_ciphertext)).toMatch(/^vault:v1:/);
+      // The unchanged OTP seed was re-encrypted under the NEW scheme too.
+      expect(String(row.otp_secret_ciphertext)).toMatch(/^vault:v1:/);
+
+      // Both fields still decrypt under the new scheme (no silent loss).
+      const reveal = await source.reveal(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id
+      );
+      expect(reveal.state).toBe('ok');
+      expect(reveal.password).toBe('rotated-password');
+      expect(reveal.otpCode?.code).toMatch(/^\d{6}$/);
+    } finally {
+      delete process.env.ALGA_VAULT_ADDR;
+      delete process.env.VAULT_ADDR;
+      vi.unstubAllGlobals();
+      resetCredentialAesKeyCache();
+    }
+  });
+
+  it('update re-encrypts values and delete removes the row + audit trails', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Backup Account', password: 'old-password' }
+    );
+
+    const updated = await source.update(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { password: 'new-password', name: 'Backup Account (rotated)' }
+    );
+    expect(updated.name).toBe('Backup Account (rotated)');
+
+    const reveal = await source.reveal(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id
+    );
+    expect(reveal.password).toBe('new-password');
+
+    await source.remove(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id
+    );
+    const rows = await db('credentials').where({ tenant: tenantId, credential_id: summary.id });
+    expect(rows).toHaveLength(0);
+  });
+
+  it('isolates rows across tenants (no cross-tenant leakage)', async () => {
+    const otherTenant = randomUUID();
+    const otherClient = randomUUID();
+    await db('tenants').insert({
+      tenant: otherTenant,
+      client_name: 'Other Tenant',
+      email: `other-${otherTenant}@example.test`,
+    });
+    await db('clients').insert({ tenant: otherTenant, client_id: otherClient, client_name: 'Other Client' });
+    const otherUserId = randomUUID();
+    await db('users').insert({
+      tenant: otherTenant,
+      user_id: otherUserId,
+      username: 'other-tenant-user',
+      email: `other-user-${otherTenant}@example.test`,
+      hashed_password: 'hashed_password_here',
+      is_inactive: false,
+      user_type: 'internal',
+    });
+
+    try {
+      const otherSource = new NativeCredentialSource();
+      const otherSummary = await otherSource.create(
+        { tenant: otherTenant, userId: otherUserId, user: userFor(otherUserId) },
+        { clientId: otherClient, name: 'Other Tenant Secret', password: 'other-secret' }
+      );
+
+      // Listing from the primary tenant never surfaces the other tenant's row.
+      const primaryList = await nativeCredentialSource.list(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        {}
+      );
+      expect(primaryList.map((row) => row.id)).not.toContain(otherSummary.id);
+    } finally {
+      await removeTestTenantFixtures(otherTenant);
+    }
+  });
+
+  it('the permission seed migration is idempotent', async () => {
+    const migration = require(
+      path.resolve(repoRoot, 'server', 'migrations', '20260811110000_add_credential_permissions.cjs')
+    );
+    await migration.up(db);
+    await migration.up(db);
+
+    const count = await db('permissions').where({ tenant: tenantId, resource: 'credential' }).count('* as c').first();
+    expect(Number(count?.c)).toBe(5);
+  });
+
+  it('serves credential reads/writes on a NON-superuser pooled connection with no app.current_tenant GUC (prod parity)', async () => {
+    // Regression for the RLS removal: the app connects as a non-superuser
+    // through pooled connections where `app.current_tenant` may be unset. With
+    // the old RLS policies this failed with "unrecognized configuration
+    // parameter"; now the credential tables have no RLS and the tenantDb
+    // facade carries the tenant predicate instead. This test drives the REAL
+    // NativeCredentialSource over a dedicated non-superuser role connection
+    // with the GUC never set, proving pooled prod connections work.
+    const roleName = `credentials_it_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    const rolePassword = `it-${randomUUID().replace(/-/g, '')}`;
+
+    // Create a dedicated non-superuser role (LOGIN, no superuser, no RLS bypass).
+    await db.raw(`CREATE ROLE "${roleName}" LOGIN PASSWORD '${rolePassword}' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`);
+    await db.raw(`GRANT USAGE ON SCHEMA public TO "${roleName}"`);
+    // Broad app-like privileges so the full source path (kernel bundle reads,
+    // client names, grants, audit) can run — mirrors what app_user effectively
+    // has in dev; the role is dropped at the end of the test.
+    await db.raw(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "${roleName}"`);
+
+    // Point the tenant pool at the non-superuser role and reset the cached pool
+    // so createTenantKnex() inside the source connects as that role. The dev
+    // stack routes the app pool through pgbouncer (port 6472) whose auth_file
+    // only lists known roles, so the fresh role connects DIRECTLY to postgres
+    // (port 5472) — still a real non-superuser application connection.
+    const prevUser = process.env.DB_USER_SERVER;
+    const prevPassword = process.env.DB_PASSWORD_SERVER;
+    const prevPort = process.env.DB_PORT;
+    try {
+      process.env.DB_USER_SERVER = roleName;
+      process.env.DB_PASSWORD_SERVER = rolePassword;
+      process.env.DB_PORT = String(process.env.DB_PORT === '6472' ? '5472' : process.env.DB_PORT ?? '5432');
+      await resetTenantConnectionPool();
+
+      // Prove the pool is genuinely non-superuser and the GUC is unset.
+      const probe = await createTenantKnex(tenantId);
+      const who = await probe.knex.raw('select current_user as u, current_setting(\'app.current_tenant\', true) as guc');
+      expect(String(who.rows[0].u)).toBe(roleName);
+      expect(who.rows[0].guc).toBeNull();
+
+      const source = new NativeCredentialSource();
+      const summary = await source.create(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        { clientId, name: 'Non-Superuser Row', password: 'plain-prod-value' }
+      );
+
+      const list = await source.list(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        { search: 'Non-Superuser' }
+      );
+      expect(list.map((row) => row.id)).toContain(summary.id);
+
+      const reveal = await source.reveal(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id
+      );
+      expect(reveal.state).toBe('ok');
+      expect(reveal.password).toBe('plain-prod-value');
+
+      await source.update(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id,
+        { name: 'Non-Superuser Row (rotated)' }
+      );
+      await source.remove(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id
+      );
+      const gone = await db('credentials').where({ tenant: tenantId, credential_id: summary.id });
+      expect(gone).toHaveLength(0);
+    } finally {
+      // Restore the app_user pool + env so other tests in this file and any
+      // later file in the same worker keep using the normal connection.
+      if (prevUser === undefined) delete process.env.DB_USER_SERVER;
+      else process.env.DB_USER_SERVER = prevUser;
+      if (prevPassword === undefined) delete process.env.DB_PASSWORD_SERVER;
+      else process.env.DB_PASSWORD_SERVER = prevPassword;
+      if (prevPort === undefined) delete process.env.DB_PORT;
+      else process.env.DB_PORT = prevPort;
+      await resetTenantConnectionPool();
+      // Revoke the granted privileges first — a role with outstanding grants
+      // cannot be dropped ("objects depend on it").
+      await db.raw(`REVOKE ALL ON ALL TABLES IN SCHEMA public FROM "${roleName}"`).catch(() => undefined);
+      await db.raw(`REVOKE ALL ON SCHEMA public FROM "${roleName}"`).catch(() => undefined);
+      await db.raw(`DROP ROLE IF EXISTS "${roleName}"`);
+    }
+  });
+});
+
+describe('credential associations — entity-wide (same-client + CRUD + migration constraints)', () => {
+  // Fully self-contained suite: its own tenant + users + clients, so the
+  // suite order and the first suite's afterAll teardown can never interfere.
+  let assocTenant: string;
+  let clientA: string;
+  let clientB: string;
+  let ownerId: string;
+  let strangerId: string;
+  let assocDb: Knex;
+  let priorAssocKey: string | undefined;
+
+  function userForId(userId: string): IUserWithRoles {
+    return {
+      user_id: userId,
+      tenant: assocTenant,
+      username: userId,
+      email: `${userId}@example.test`,
+      is_inactive: false,
+      user_type: 'internal',
+      roles: [],
+    };
+  }
+
+  const ASSOC_CLEANUP = [
+    'credential_access_grants',
+    'credential_associations',
+    'credentials',
+    'audit_logs',
+  ];
+
+  async function seedEntity(entityType: string, clientForEntity: string): Promise<string> {
+    switch (entityType) {
+      case 'ticket': {
+        const [row] = await assocDb('tickets').insert({ tenant: assocTenant, ticket_number: `T-${randomUUID().slice(0, 8)}`, client_id: clientForEntity }).returning('ticket_id');
+        return row.ticket_id;
+      }
+      case 'asset': {
+        const [row] = await assocDb('assets').insert({ tenant: assocTenant, asset_tag: `AST-${randomUUID().slice(0, 8)}`, name: 'Test Asset', status: 'active', client_id: clientForEntity }).returning('asset_id');
+        return row.asset_id;
+      }
+      case 'contact': {
+        const [row] = await assocDb('contacts').insert({ tenant: assocTenant, client_id: clientForEntity }).returning('contact_name_id');
+        return row.contact_name_id;
+      }
+      case 'contract': {
+        const contractId = randomUUID();
+        await assocDb('client_contracts').insert({ tenant: assocTenant, contract_id: contractId, client_id: clientForEntity, start_date: new Date() });
+        return contractId;
+      }
+      case 'project_task': {
+        const projectId = randomUUID();
+        const suffix = randomUUID().slice(0, 8);
+        const orderNumber = Math.floor(Math.random() * 1_000_000);
+        const [status] = await assocDb('statuses').insert({ tenant: assocTenant, name: `Active-${suffix}`, status_type: 'project', order_number: orderNumber, is_closed: false, item_type: 'project' }).returning('status_id');
+        await assocDb('projects').insert({ tenant: assocTenant, project_id: projectId, project_name: `P-${suffix}`, status: status.status_id, wbs_code: suffix, client_id: clientForEntity, project_number: suffix });
+        const phaseId = randomUUID();
+        await assocDb('project_phases').insert({ tenant: assocTenant, phase_id: phaseId, project_id: projectId, phase_name: 'Phase', status: 'active', order_number: orderNumber, wbs_code: `${suffix}.1` });
+        const [row] = await assocDb('project_tasks').insert({ tenant: assocTenant, phase_id: phaseId, task_name: 'Task', wbs_code: `${suffix}.1.1` }).returning('task_id');
+        return row.task_id;
+      }
+      case 'quote': {
+        const [row] = await assocDb('quotes').insert({ tenant: assocTenant, title: 'Test Quote', client_id: clientForEntity }).returning('quote_id');
+        return row.quote_id;
+      }
+      case 'document': {
+        const documentId = randomUUID();
+        await assocDb('documents').insert({ tenant: assocTenant, document_id: documentId, document_name: 'Doc', user_id: ownerId, created_by: ownerId }).returning('document_id');
+        return documentId;
+      }
+      default:
+        throw new Error(`unhandled ${entityType}`);
+    }
+  }
+
+  async function createCredentialFor(client: string, name = 'Assoc Cred'): Promise<string> {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      { clientId: client, name, password: 'pw' }
+    );
+    return summary.id;
+  }
+
+  /** One hudu_integrations row per tenant — upsert the active flag, never a second insert. */
+  async function upsertHuduIntegration(isActive: boolean): Promise<void> {
+    await assocDb('hudu_integrations')
+      .insert({ tenant: assocTenant, is_active: isActive, updated_at: new Date() })
+      .onConflict('tenant')
+      .merge(['is_active', 'updated_at']);
+  }
+
+  /** Bundle-map a Hudu company to a client so the ref resolves in the caller's scope. */
+  async function mapHuduCompany(companyId: string, client: string): Promise<void> {
+    // The mapping is one-to-one per client; drop any prior hudu mapping for this
+    // tenant before inserting this test's own.
+    await assocDb('tenant_external_entity_mappings')
+      .where({ tenant: assocTenant, integration_type: 'hudu', alga_entity_type: 'client' })
+      .del();
+    await assocDb('tenant_external_entity_mappings').insert({
+      tenant: assocTenant,
+      integration_type: 'hudu',
+      alga_entity_type: 'client',
+      alga_entity_id: client,
+      external_entity_id: companyId,
+    });
+  }
+
+  beforeAll(async () => {
+    // The first suite restores (clears) CREDENTIAL_ENCRYPTION_KEY in its own
+    // afterAll; this suite is self-contained, so supply its own ephemeral key
+    // and restore the prior value in afterAll.
+    priorAssocKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
+    process.env.CREDENTIAL_ENCRYPTION_KEY = 'assoc-integration-test-key';
+
+    assocDb = await createDevDb();
+    await assocDb.raw('select 1');
+
+    assocTenant = randomUUID();
+    await assocDb('tenants').insert({
+      tenant: assocTenant,
+      client_name: 'Assoc Integration Tenant',
+      email: `assoc-it-${assocTenant}@example.test`,
+    });
+    const [a] = await assocDb('clients').insert({ tenant: assocTenant, client_name: 'Assoc A' }).returning('client_id');
+    const [b] = await assocDb('clients').insert({ tenant: assocTenant, client_name: 'Assoc B' }).returning('client_id');
+    clientA = a.client_id;
+    clientB = b.client_id;
+
+    const insertUser = async (username: string): Promise<string> => {
+      const userId = randomUUID();
+      await assocDb('users').insert({
+        tenant: assocTenant,
+        user_id: userId,
+        username,
+        email: `${username}@example.test`,
+        hashed_password: 'hashed_password_here',
+        is_inactive: false,
+        user_type: 'internal',
+      });
+      return userId;
+    };
+    ownerId = await insertUser('assoc-owner');
+    strangerId = await insertUser('assoc-stranger');
+  }, 120_000);
+
+  afterAll(async () => {
+    try {
+      for (const table of ASSOC_CLEANUP) {
+        await assocDb(table).where({ tenant: assocTenant }).del();
+      }
+      await assocDb('project_tasks').where({ tenant: assocTenant }).del();
+      await assocDb('project_phases').where({ tenant: assocTenant }).del();
+      await assocDb('projects').where({ tenant: assocTenant }).del();
+      await assocDb('statuses').where({ tenant: assocTenant }).del();
+      await assocDb('client_contracts').where({ tenant: assocTenant }).del();
+      await assocDb('quotes').where({ tenant: assocTenant }).del();
+      await assocDb('tickets').where({ tenant: assocTenant }).del();
+      await assocDb('assets').where({ tenant: assocTenant }).del();
+      await assocDb('contacts').where({ tenant: assocTenant }).del();
+      await assocDb('documents').where({ tenant: assocTenant }).del();
+      await assocDb('clients').where({ tenant: assocTenant }).del();
+      await assocDb('users').where({ tenant: assocTenant }).del();
+      await assocDb('tenants').where({ tenant: assocTenant }).del();
+    } finally {
+      if (priorAssocKey === undefined) delete process.env.CREDENTIAL_ENCRYPTION_KEY;
+      else process.env.CREDENTIAL_ENCRYPTION_KEY = priorAssocKey;
+      await assocDb?.destroy();
+    }
+  }, 120_000);
+
+  it('the migration CHECKs accept every roster type and reject unknowns/one-of violations', async () => {
+    const typeCheck = await assocDb.raw(`
+      SELECT pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE conname = 'credential_associations_entity_type_check'
+    `);
+    expect(typeCheck.rows[0].def).toContain("'asset'");
+    expect(typeCheck.rows[0].def).toContain("'quote'");
+    expect(typeCheck.rows[0].def).toContain("'team'");
+
+    const oneOf = await assocDb.raw(`
+      SELECT pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE conname = 'credential_associations_oneof_ref_check'
+    `);
+    expect(oneOf.rows[0].def).toContain('credential_id IS NOT NULL');
+    expect(oneOf.rows[0].def).toContain('credential_ref IS NOT NULL');
+
+    // Unknown entity_type is rejected by the CHECK.
+    await expect(
+      assocDb('credential_associations').insert({ tenant: assocTenant, credential_ref: 'hudu:1:1', entity_id: randomUUID(), entity_type: 'bogus' })
+    ).rejects.toThrow(/entity_type/);
+
+    // Exactly-one-of is enforced: both set, and neither set, are rejected.
+    await expect(
+      assocDb('credential_associations').insert({ tenant: assocTenant, credential_id: randomUUID(), credential_ref: 'hudu:1:1', entity_id: randomUUID(), entity_type: 'ticket' })
+    ).rejects.toThrow(/oneof/);
+  });
+
+  it('resolveEntityClientId resolves the owning client for every client-bound type and null for clientless', async () => {
+    const { resolveEntityClientId } = await import('@ee/lib/credentials/associations');
+    const knex = await createTenantKnex(assocTenant);
+    try {
+      for (const entityType of ['ticket', 'asset', 'contact', 'contract', 'project_task', 'quote']) {
+        const entityId = await seedEntity(entityType, clientB);
+        const resolved = await resolveEntityClientId(knex.knex, assocTenant, entityType as never, entityId);
+        expect(resolved, entityType).toBe(clientB);
+      }
+      for (const entityType of ['document', 'team', 'tenant', 'user']) {
+        const resolved = await resolveEntityClientId(knex.knex, assocTenant, entityType as never, randomUUID());
+        expect(resolved, entityType).toBeNull();
+      }
+    } finally {
+      // NOTE: deliberately NOT destroying this knex — createTenantKnex returns
+      // the process-wide shared pool; destroying it mid-suite breaks later
+      // tests' ability to acquire connections.
+    }
+  });
+
+  it('addCredentialToEntity rejects a same-client mismatch per bound type and accepts on match', async () => {
+    const { addCredentialToEntity } = await import('@ee/lib/credentials/associations');
+    const credClientB = await createCredentialFor(clientB, 'Bound B');
+
+    for (const entityType of ['ticket', 'asset', 'contact', 'contract', 'project_task', 'quote']) {
+      const entityForA = await seedEntity(entityType, clientA);
+      const entityForB = await seedEntity(entityType, clientB);
+
+      const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+
+      // Attaching a clientB credential to a clientA entity is rejected.
+      await expect(
+        addCredentialToEntity(ctx, entityType as never, entityForA, credClientB)
+      ).rejects.toMatchObject({ code: 'CREDENTIAL_CLIENT_MISMATCH' });
+
+      // Attaching to a same-client entity succeeds.
+      await addCredentialToEntity(ctx, entityType as never, entityForB, credClientB);
+
+      const rows = await assocDb('credential_associations')
+        .where({ tenant: assocTenant, entity_id: entityForB, entity_type: entityType })
+        .select('credential_id');
+      expect(rows).toHaveLength(1);
+      expect(rows[0].credential_id).toBe(credClientB);
+    }
+  });
+
+  it('clientless entity types attach freely regardless of owning client', async () => {
+    const { addCredentialToEntity } = await import('@ee/lib/credentials/associations');
+    const credClientB = await createCredentialFor(clientB, 'Free Doc');
+    const documentId = await seedEntity('document', clientA);
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+
+    await addCredentialToEntity(ctx, 'document' as never, documentId, credClientB);
+
+    const rows = await assocDb('credential_associations')
+      .where({ tenant: assocTenant, entity_id: documentId, entity_type: 'document' })
+      .select('credential_ref', 'credential_id');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].credential_id).toBe(credClientB);
+  });
+
+  it('removeCredentialFromEntity detaches the row; setEntityCredentials replaces the full set', async () => {
+    const { addCredentialToEntity, removeCredentialFromEntity, setEntityCredentials } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const credA1 = await createCredentialFor(clientA, 'Set A1');
+    const credA2 = await createCredentialFor(clientA, 'Set A2');
+    const ticketForA = await seedEntity('ticket', clientA);
+
+    await addCredentialToEntity(ctx, 'ticket', ticketForA, credA1);
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [credA1, credA2]);
+    let rows = await assocDb('credential_associations')
+      .where({ tenant: assocTenant, entity_id: ticketForA, entity_type: 'ticket' })
+      .select('credential_id');
+    expect(rows.map((r) => r.credential_id).sort()).toEqual([credA1, credA2].sort());
+
+    await removeCredentialFromEntity(ctx, 'ticket', ticketForA, credA1);
+    rows = await assocDb('credential_associations')
+      .where({ tenant: assocTenant, entity_id: ticketForA, entity_type: 'ticket' })
+      .select('credential_id');
+    expect(rows.map((r) => r.credential_id)).toEqual([credA2]);
+  });
+
+  it('a restricted credential a caller cannot see cannot be associated (no existence leak)', async () => {
+    const { addCredentialToEntity } = await import('@ee/lib/credentials/associations');
+    const source = new NativeCredentialSource();
+    const restricted = await source.create(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      { clientId: clientA, name: 'Hidden Assoc', password: 'x' }
+    );
+    await source.setRestriction(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      restricted.id,
+      { isRestricted: true, grants: [] }
+    );
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await expect(
+      addCredentialToEntity(
+        { tenant: assocTenant, userId: strangerId, user: userForId(strangerId) },
+        'ticket',
+        ticketForA,
+        restricted.id
+      )
+    ).rejects.toMatchObject({ code: 'CREDENTIAL_NOT_FOUND' });
+  });
+
+  it('nativeSource.listByIds resolves native ids under kernel scope and hides restricted rows', async () => {
+    const source = new NativeCredentialSource();
+    const open = await source.create(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      { clientId: clientA, name: 'List Open', password: 'x' }
+    );
+    const hidden = await source.create(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      { clientId: clientA, name: 'List Hidden', password: 'x' }
+    );
+    await source.setRestriction(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      hidden.id,
+      { isRestricted: true, grants: [] }
+    );
+
+    const asOwner = await source.listByIds(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      [open.id, hidden.id]
+    );
+    expect(asOwner.map((r) => r.id).sort()).toEqual([open.id, hidden.id].sort());
+
+    const asStranger = await source.listByIds(
+      { tenant: assocTenant, userId: strangerId, user: userForId(strangerId) },
+      [open.id, hidden.id]
+    );
+    // Restricted row hidden; the open row resolves (association row untouched).
+    expect(asStranger.map((r) => r.id)).toEqual([open.id]);
+  });
+
+  it('update rejects reassigning a credential with a client-bound association to another client (ticket); row and associations unchanged, no audit', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'Reassign Ticket');
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: cred,
+      entity_id: ticketForA,
+      entity_type: 'ticket',
+    });
+
+    // Reassigning a clientA credential that is attached to a clientA ticket
+    // to client B is rejected (same-client invariant that create/setAssociations
+    // enforce).
+    await expect(source.update(ctx, cred, { clientId: clientB })).rejects.toMatchObject({
+      code: 'CREDENTIAL_CLIENT_MISMATCH',
+    });
+
+    const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+    expect(row.client_id).toBe(clientA);
+    expect(row.name).toBe('Reassign Ticket');
+    const associations = await assocDb('credential_associations').where({ tenant: assocTenant, credential_id: cred });
+    expect(associations).toHaveLength(1);
+    expect(associations[0].entity_type).toBe('ticket');
+    // No audit row for a rejected write (the update never committed).
+    const audits = await assocDb('audit_logs')
+      .where({ tenant: assocTenant, operation: 'credential_updated', record_id: cred });
+    expect(audits).toHaveLength(0);
+  });
+
+  it('update rejects reassignment for every other client-bound type via the shared resolver', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    for (const entityType of ['asset', 'contact', 'contract', 'project_task', 'quote']) {
+      const cred = await createCredentialFor(clientA, `Reassign ${entityType}`);
+      const entityForA = await seedEntity(entityType, clientA);
+      await assocDb('credential_associations').insert({
+        tenant: assocTenant,
+        credential_id: cred,
+        entity_id: entityForA,
+        entity_type: entityType,
+      });
+
+      await expect(source.update(ctx, cred, { clientId: clientB })).rejects.toMatchObject({
+        code: 'CREDENTIAL_CLIENT_MISMATCH',
+      });
+
+      const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+      expect(row.client_id).toBe(clientA);
+    }
+  });
+
+  it('update succeeds when the clientId is unchanged or omitted even with client-bound associations', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'No-op Client');
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: cred,
+      entity_id: ticketForA,
+      entity_type: 'ticket',
+    });
+
+    // Explicitly passing the SAME client is not a reassignment and succeeds.
+    const updated = await source.update(ctx, cred, { clientId: clientA, name: 'No-op Client (touched)' });
+    expect(updated.name).toBe('No-op Client (touched)');
+
+    // Omitting clientId entirely also succeeds.
+    const renamed = await source.update(ctx, cred, { name: 'No-op Client (renamed)' });
+    expect(renamed.name).toBe('No-op Client (renamed)');
+
+    const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+    expect(row.client_id).toBe(clientA);
+  });
+
+  it('update allows reassignment for a credential with only clientless associations (document, user)', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'Clientless Reassign');
+    const documentId = await seedEntity('document', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: cred,
+      entity_id: documentId,
+      entity_type: 'document',
+    });
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: cred,
+      entity_id: ownerId,
+      entity_type: 'user',
+    });
+
+    const updated = await source.update(ctx, cred, { clientId: clientB, name: 'Clientless Reassign (moved)' });
+    expect(updated.name).toBe('Clientless Reassign (moved)');
+
+    const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+    expect(row.client_id).toBe(clientB);
+    // Both clientless association rows survive the reassignment untouched.
+    const associations = await assocDb('credential_associations').where({ tenant: assocTenant, credential_id: cred });
+    expect(associations.map((a) => a.entity_type).sort()).toEqual(['document', 'user']);
+  });
+
+  it('update allows reassignment for a credential with no associations', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'Unattached Reassign');
+
+    const updated = await source.update(ctx, cred, { clientId: clientB });
+    expect(updated.clientId).toBe(clientB);
+
+    const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+    expect(row.client_id).toBe(clientB);
+  });
+
+  it('reassign/attach race: the credential row lock serializes reassignment against association writes (same-client invariant)', async () => {
+    const { addCredentialToEntity } = await import('@ee/lib/credentials/associations');
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'Race Credential');
+    const ticketForA = await seedEntity('ticket', clientA);
+
+    // Control connection gates the attach's association INSERT with a SHARE
+    // ROW EXCLUSIVE lock: it conflicts with the INSERT's ROW EXCLUSIVE (so the
+    // attach pauses AFTER its same-client check but BEFORE its insert lands)
+    // yet is compatible with every SELECT/UPDATE the reassignment path runs.
+    // This forces the exact race window: the attach has already certified
+    // owner A, and the reassignment is free to read the pre-attach state.
+    //
+    // NOTE: block detection is via pg_locks, NOT pg_stat_activity query text —
+    // through pgbouncer a lock-blocked statement is rendered 'idle in
+    // transaction' with a stale query. And the local role app_user_1 carries
+    // lock_timeout=8s, so the gate must be released well inside that budget.
+    const control = knexFactory({
+      client: 'pg',
+      connection: {
+        host: process.env.DB_HOST || '127.0.0.1',
+        port: 5472,
+        user: process.env.DB_USER_ADMIN || 'postgres',
+        password: readPostgresPassword(),
+        database: process.env.DB_NAME_SERVER || 'server',
+      },
+      pool: { min: 1, max: 1 },
+    });
+    const waitForBlockedLock = async (relname: string, timeoutMs = 6000): Promise<boolean> => {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const res = await control.raw(
+          `SELECT count(*)::int AS c
+             FROM pg_locks l
+             LEFT JOIN pg_class c ON c.oid = l.relation
+            WHERE l.pid <> pg_backend_pid() AND l.granted = false AND c.relname = ?`,
+          [relname]
+        );
+        if (Number(res.rows?.[0]?.c ?? 0) > 0) return true;
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      return false;
+    };
+
+    try {
+      await control.raw('BEGIN');
+      await control.raw('LOCK TABLE credential_associations IN SHARE ROW EXCLUSIVE MODE');
+
+      // Start the ATTACH first: with the fix it takes the credential row FOR
+      // UPDATE immediately, so it owns the lock for the whole mutation and is
+      // parked at its association INSERT by the SRE gate.
+      const attachPromise = addCredentialToEntity(ctx, 'ticket', ticketForA, cred).then(
+        () => 'attached' as const,
+        (error: unknown) =>
+          `attach-failed:${(error as { code?: string } | null)?.code ?? String(error)}`
+      );
+      expect(await waitForBlockedLock('credential_associations')).toBe(true);
+
+      // Start the reassignment. With the fix its first statement (FOR UPDATE on
+      // the credential row) blocks on the attach's held lock; WITHOUT the fix
+      // it is a plain read that does not block, and it commits client B while
+      // the attach still believes the owner is A.
+      const reassignPromise = source.update(ctx, cred, { clientId: clientB }).then(
+        () => 'reassigned' as const,
+        (error: unknown) => `reassign-rejected:${(error as { code?: string } | null)?.code ?? String(error)}`
+      );
+      // The fixed reassignment's FIRST statement is FOR UPDATE on the credential
+      // row the attach holds, so it stays pending until the gate releases.
+      // WITHOUT the fix it is a plain read that does not block: it completes
+      // immediately and commits client B while the attach still sees owner A.
+      const reassignStayedPending = await Promise.race([
+        reassignPromise.then(() => false, () => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 500)),
+      ]);
+
+      // Release the gate: the attach's insert lands, then the reassignment
+      // proceeds against committed state. Well inside the 8s lock_timeout.
+      await control.raw('COMMIT');
+
+      const attachOutcome = await attachPromise;
+      const reassignOutcome = await reassignPromise;
+
+      // The serialize point must have been exercised (this is what fails
+      // against the pre-fix code, whose reassignment never blocks).
+      expect(reassignStayedPending).toBe(true);
+
+      // Same-client invariant after the race: a credential owned by B must
+      // never be associated with the client-A ticket.
+      const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+      const associations = await assocDb('credential_associations').where({ tenant: assocTenant, credential_id: cred });
+      const crossClient =
+        row.client_id === clientB &&
+        associations.some((a) => a.entity_type === 'ticket' && a.entity_id === ticketForA);
+      expect(crossClient).toBe(false);
+
+      // Deterministic outcome in this orchestration: the attach committed first,
+      // so the reassignment is rejected against the now-visible association.
+      expect(attachOutcome).toBe('attached');
+      expect(reassignOutcome).toBe('reassign-rejected:CREDENTIAL_CLIENT_MISMATCH');
+    } finally {
+      await control.raw('ROLLBACK').catch(() => undefined);
+      await control.destroy();
+    }
+  });
+
+  it('reassign/replace race: the credential row lock serializes reassignment against setEntityCredentials (same-client invariant)', async () => {
+    const { setEntityCredentials } = await import('@ee/lib/credentials/associations');
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const existing = await createCredentialFor(clientA, 'Replace Existing');
+    const fresh = await createCredentialFor(clientA, 'Replace Fresh');
+    const ticketForA = await seedEntity('ticket', clientA);
+    await (await import('@ee/lib/credentials/associations')).addCredentialToEntity(ctx, 'ticket', ticketForA, existing);
+
+    // Control connection gates the replace's association INSERT (the NEW row
+    // for `fresh`) with SHARE ROW EXCLUSIVE: the replace pauses AFTER its
+    // same-client pre-check but BEFORE the insert lands, while its
+    // lockCredentialRowsForWrite row lock on `fresh` is held for the whole
+    // mutation. SRE is compatible with every SELECT the replace/reassign run.
+    const control = knexFactory({
+      client: 'pg',
+      connection: {
+        host: process.env.DB_HOST || '127.0.0.1',
+        port: 5472,
+        user: process.env.DB_USER_ADMIN || 'postgres',
+        password: readPostgresPassword(),
+        database: process.env.DB_NAME_SERVER || 'server',
+      },
+      pool: { min: 1, max: 1 },
+    });
+    const waitForBlockedLock = async (relname: string, timeoutMs = 6000): Promise<boolean> => {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const res = await control.raw(
+          `SELECT count(*)::int AS c
+             FROM pg_locks l
+             LEFT JOIN pg_class c ON c.oid = l.relation
+            WHERE l.pid <> pg_backend_pid() AND l.granted = false AND c.relname = ?`,
+          [relname]
+        );
+        if (Number(res.rows?.[0]?.c ?? 0) > 0) return true;
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      return false;
+    };
+
+    try {
+      await control.raw('BEGIN');
+      await control.raw('LOCK TABLE credential_associations IN SHARE ROW EXCLUSIVE MODE');
+
+      // Start the REPLACE first: with the fix it takes the credential row FOR
+      // UPDATE on `fresh` immediately (held for the whole mutation) and is
+      // parked at its association INSERT by the SRE gate.
+      const replacePromise = setEntityCredentials(ctx, 'ticket', ticketForA, [existing, fresh]).then(
+        () => 'replaced' as const,
+        (error: unknown) => `replace-failed:${(error as { code?: string } | null)?.code ?? String(error)}`
+      );
+      expect(await waitForBlockedLock('credential_associations')).toBe(true);
+
+      // Start the reassignment of `fresh`. With the fix its FIRST statement
+      // (FOR UPDATE on the credential row the replace holds) blocks; WITHOUT
+      // the fix it is a plain read that does not block and commits client B
+      // while the replace still believes the owner is A.
+      const reassignPromise = source.update(ctx, fresh, { clientId: clientB }).then(
+        () => 'reassigned' as const,
+        (error: unknown) => `reassign-rejected:${(error as { code?: string } | null)?.code ?? String(error)}`
+      );
+      const reassignStayedPending = await Promise.race([
+        reassignPromise.then(() => false, () => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 500)),
+      ]);
+
+      // Release the gate: the replace's insert lands, then the reassignment
+      // proceeds against committed state. Well inside the 8s lock_timeout.
+      await control.raw('COMMIT');
+
+      const replaceOutcome = await replacePromise;
+      const reassignOutcome = await reassignPromise;
+
+      // The serialize point must have been exercised (fails against the pre-fix
+      // code, whose reassignment never blocks).
+      expect(reassignStayedPending).toBe(true);
+
+      // Same-client invariant after the race: a credential owned by B must
+      // never be associated with the client-A ticket.
+      const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: fresh }).first();
+      const associations = await assocDb('credential_associations').where({ tenant: assocTenant, credential_id: fresh });
+      const crossClient =
+        row.client_id === clientB &&
+        associations.some((a) => a.entity_type === 'ticket' && a.entity_id === ticketForA);
+      expect(crossClient).toBe(false);
+
+      // Deterministic outcome in this orchestration: the replace committed first,
+      // so the reassignment is rejected against the now-visible association.
+      expect(replaceOutcome).toBe('replaced');
+      expect(reassignOutcome).toBe('reassign-rejected:CREDENTIAL_CLIENT_MISMATCH');
+    } finally {
+      await control.raw('ROLLBACK').catch(() => undefined);
+      await control.destroy();
+    }
+  });
+
+  it('setEntityCredentials preserves associations to restricted credentials the caller cannot see (no silent detach, no existence leak)', async () => {
+    const { addCredentialToEntity, setEntityCredentials, loadAssociationsForEntity } = await import(
+      '@ee/lib/credentials/associations'
+    );
+    const source = new NativeCredentialSource();
+    const ownerCtx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const strangerCtx = { tenant: assocTenant, userId: strangerId, user: userForId(strangerId) };
+
+    // A restricted credential hidden from everyone but the owner, and an open
+    // credential visible to everyone — both attached to the same ticket.
+    const hidden = await source.create(ownerCtx, { clientId: clientA, name: 'Hidden Restrict', password: 'x' });
+    await source.setRestriction(ownerCtx, hidden.id, { isRestricted: true, grants: [] });
+    const open = await source.create(ownerCtx, { clientId: clientA, name: 'Open Cred', password: 'x' });
+    const ticketForA = await seedEntity('ticket', clientA);
+    await addCredentialToEntity(ownerCtx, 'ticket', ticketForA, hidden.id);
+    await addCredentialToEntity(ownerCtx, 'ticket', ticketForA, open.id);
+
+    // The stranger sees only the open credential in the entity's list, so a
+    // link-manage save of an empty selection replaces the VISIBLE set only.
+    const strangerList = await source.listByIds(strangerCtx, [hidden.id, open.id]);
+    expect(strangerList.map((r) => r.id)).toEqual([open.id]);
+
+    await setEntityCredentials(strangerCtx, 'ticket', ticketForA, []);
+
+    // The hidden restricted association survives untouched; the visible open
+    // one was removed (the caller explicitly replaced with an empty set).
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_id).sort()).toEqual([hidden.id]);
+
+    // The stranger's own read lens still hides the restricted credential (its
+    // existence was never confirmed by the replace — setEntityCredentials
+    // returns void, and the hidden row was neither removed nor reported).
+    const strangerEntityList = await source.listByIds(strangerCtx, [hidden.id, open.id]);
+    expect(strangerEntityList.map((r) => r.id)).toEqual([open.id]);
+  });
+
+  it('setEntityCredentials preserves hudu ref associations the caller cannot resolve (no silent detach, no existence leak)', async () => {
+    const { addCredentialToEntity, setEntityCredentials, loadAssociationsForEntity } = await import(
+      '@ee/lib/credentials/associations'
+    );
+    const { huduCredentialSource } = await import('@ee/lib/credentials/huduSource');
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+
+    // An open native credential the caller CAN see, plus a ref-only
+    // association row pointing at an UNMAPPED Hudu company. resolveOwnerClientId
+    // is bundle-scope-only (no live Hudu round-trip), so for this tenant the
+    // ref resolves null for every caller — hidden exactly like a restricted
+    // row, the way the entity-list lens would omit it.
+    const open = await source.create(ctx, { clientId: clientA, name: 'Open Ref Neighbor', password: 'x' });
+    const ticketForA = await seedEntity('ticket', clientA);
+    await addCredentialToEntity(ctx, 'ticket', ticketForA, open.id);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: null,
+      credential_ref: 'hudu:999:77',
+      entity_id: ticketForA,
+      entity_type: 'ticket',
+    });
+
+    // The caller cannot see the ref (fail-closed null — indistinguishable from
+    // out-of-scope, so the replace below must not treat it as removable).
+    expect(await huduCredentialSource.resolveOwnerClientId(ctx, 'hudu:999:77')).toBeNull();
+
+    // Replace the full set with only the visible native credential.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [open.id]);
+
+    // The hidden ref row survives untouched; the visible native one stays
+    // because it is in the desired set.
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref ?? r.credential_id).sort()).toEqual(['hudu:999:77', open.id].sort());
+
+    // A replace that drops the visible native row must still preserve the ref.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+    const after = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(after.map((r) => r.credential_ref ?? r.credential_id)).toEqual(['hudu:999:77']);
+  });
+
+  it('updateCredential (read-only associations summary) never detaches hidden hudu ref rows', async () => {
+    const { addCredentialToEntity, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+
+    const open = await source.create(ctx, { clientId: clientA, name: 'Edit Ref Neighbor', password: 'x' });
+    const ticketForA = await seedEntity('ticket', clientA);
+    await addCredentialToEntity(ctx, 'ticket', ticketForA, open.id);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: null,
+      credential_ref: 'hudu:998:12',
+      entity_id: ticketForA,
+      entity_type: 'ticket',
+    });
+
+    // Editing the credential (no association input on the update path) must
+    // leave the hidden ref association in place — the read-only summary in the
+    // edit dialog cannot detach rows the caller never saw.
+    await source.update(ctx, open.id, { name: 'Edit Ref Neighbor (renamed)' });
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref ?? r.credential_id).sort()).toEqual(['hudu:998:12', open.id].sort());
+  });
+
+  // ---- Hudu refs: removal anchored to the caller's rendered snapshot (defect 29.8.44 mitigation round) ----
+  //
+  // A bundle-mapped ref can be ABSENT from the caller-visible live list even
+  // though the mapping resolves (integration inactive, live lookup failure at
+  // list load, or confirmed 404). The caller never formed intent about it, so
+  // a replace that omits it must preserve it. The replace path's only detach
+  // authority is the caller's rendered snapshot (the baseline: ref +
+  // association-row identity); absent a baseline, or when the row identity has
+  // moved, the ref is preserved. Each race test discriminates against the
+  // pre-fix save-time probe, which detached whatever a save-time lookup found
+  // visible.
+
+  it('setEntityCredentials preserves a bundle-mapped hudu ref when the integration is inactive (no detach, no audit)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:500:77';
+    createHuduClientMock.mockReset();
+
+    // Bundle-mapped (company 500 → clientA) so the caller's scope includes it —
+    // pre-fix, resolveOwnerClientId resolves it and the replace detaches it.
+    await mapHuduCompany('500', clientA);
+    await upsertHuduIntegration(false);
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    // The caller's rendered snapshot showed no Hudu rows at all (the
+    // integration is inactive), so the baseline is empty and the omission
+    // expresses no intent.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], []);
+
+    // Preserved, and no detach audit was written.
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
+    const detachAudits = await assocDb('audit_logs')
+      .where({ tenant: assocTenant, operation: 'credential_detached', record_id: ref });
+    expect(detachAudits).toHaveLength(0);
+    // The replace path performs NO Hudu HTTP round-trip — removal intent is
+    // anchored to the rendered snapshot, never to a save-time probe.
+    expect(createHuduClientMock).not.toHaveBeenCalled();
+  });
+
+  it('setEntityCredentials preserves a bundle-mapped hudu ref when the live lookup failed at list load (transport/API error)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:501:78';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('501', clientA);
+    await upsertHuduIntegration(true);
+    // The caller's list load hit a transport error, so the ref was never in
+    // its rendered snapshot (empty baseline); the ref below is what a save-time
+    // lookup would see.
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => {
+        throw new HuduRequestError({ kind: 'server_error', status: 503, message: 'Hudu unavailable' });
+      }),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], []);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
+  });
+
+  it('setEntityCredentials detaches a hudu ref the caller saw and deliberately omitted (positive control, with audit)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:502:79';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('502', clientA);
+    await upsertHuduIntegration(true);
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => ({ id: 79, company_id: 502, name: 'Visible Hudu Cred' })),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    const [row] = await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    }).returning('association_id');
+
+    // The caller's rendered snapshot: the entity list resolved the ref live and
+    // yielded its exact association-row identity. Deliberately omitting a row it
+    // saw is the only detach the replace path may perform.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], [{ ref, associationId: row.association_id }]);
+
+    // The row is gone, and the detach is audited with the same
+    // credential_detached semantics as the per-row detach path.
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([]);
+    const detachAudits = await assocDb('audit_logs')
+      .where({ tenant: assocTenant, operation: 'credential_detached', record_id: ref });
+    expect(detachAudits).toHaveLength(1);
+  });
+
+  it('setEntityCredentials preserves a hudu ref Hudu confirms gone (404); pruning stays on the list/prune path', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:503:80';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('503', clientA);
+    await upsertHuduIntegration(true);
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => {
+        throw new HuduRequestError({ kind: 'not_found', status: 404, message: 'Hudu record gone' });
+      }),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    // Confirmed 404 must NOT be detached by the replace path — the row is left
+    // for the list path's lazy-prune (pruneAssociationRefs), the sole remover
+    // of confirmed-gone refs.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], []);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
+  });
+
+  it('Race A: a hudu ref hidden at caller list load but visible at save time is preserved (no detach, no audit)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:510:90';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('510', clientA);
+    await upsertHuduIntegration(true);
+    // At SAVE time the ref resolves positively visible — a save-time probe
+    // would mark it removable. But the caller's list load (T0) happened while
+    // the row was hidden (transport blip / attached after the snapshot), so its
+    // rendered snapshot shows no Hudu rows and the baseline is empty.
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => ({ id: 90, company_id: 510, name: 'Race A Visible Now' })),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    // The caller never saw the ref (empty baseline); its save omits it only
+    // because it did not know the row existed. Pre-fix, the save-time probe
+    // confirms it visible and detaches — wrong, and this test fails there.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], []);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
+    const detachAudits = await assocDb('audit_logs')
+      .where({ tenant: assocTenant, operation: 'credential_detached', record_id: ref });
+    expect(detachAudits).toHaveLength(0);
+  });
+
+  it('Race B: a hudu ref concurrently detached and reattached between snapshot and save survives (fresh row untouched)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:511:91';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('511', clientA);
+    await upsertHuduIntegration(true);
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => ({ id: 91, company_id: 511, name: 'Race B Reattached' })),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    const [snapshotRow] = await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    }).returning('association_id');
+
+    // Between the caller's snapshot (T0) and its save (T1) another actor
+    // detaches that association row and reattaches the SAME ref as a NEW row.
+    await assocDb('credential_associations').where({ tenant: assocTenant, association_id: snapshotRow.association_id }).del();
+    const [reattachedRow] = await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    }).returning('association_id');
+    expect(reattachedRow.association_id).not.toBe(snapshotRow.association_id);
+
+    // The stale replacement names the OLD row identity. Pre-fix, the save-time
+    // probe marks the ref visible and the delete (keyed by ref string) destroys
+    // the fresh row; the fix keys the delete to the snapshot's row identity, so
+    // the fresh row survives.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], [{ ref, associationId: snapshotRow.association_id }]);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => ({ ref: r.credential_ref, associationId: r.association_id }))).toEqual([
+      { ref, associationId: reattachedRow.association_id },
+    ]);
+  });
+
+  it('setEntityCredentials invoked without a baseline preserves a visible hudu ref (fail-closed degradation for older callers)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:512:92';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('512', clientA);
+    await upsertHuduIntegration(true);
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => ({ id: 92, company_id: 512, name: 'No Baseline Visible' })),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    // A caller that never rendered the entity list (or a legacy integration)
+    // has no baseline; the fail-closed degradation is "preserve every Hudu
+    // ref", never "detach". Pre-fix, the save-time probe detaches it here.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
+  });
+});

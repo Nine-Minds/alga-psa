@@ -12,7 +12,6 @@
       "resyncError": "Nie udało się ponownie zsynchronizować dostawcy IMAP",
       "resyncStarted": "Rozpoczęto ponowną synchronizację dla {{providerName}}.",
       "resyncRecovered": "Ponownie połączono z {{providerName}}.",
-      "enterpriseOnly": "Przychodząca poczta e-mail usługi Microsoft 365 jest dostępna tylko w Pro.",
       "loadProvidersError": "Nie udało się wczytać dostawców poczty e-mail"
     },
     "editDrawer": {
@@ -21,14 +20,8 @@
     },
     "header": {
       "title": "Konfiguracja dostawcy poczty e-mail",
-      "description": {
-        "enterprise": "Skonfiguruj dostawców usług Gmail, Microsoft 365 lub IMAP, aby odbierać i przetwarzać przychodzące wiadomości e-mail jako zgłoszenia",
-        "standard": "Skonfiguruj dostawców Gmaila lub IMAP, aby odbierali i przetwarzali przychodzące wiadomości e-mail jako zgłoszenia"
-      },
-      "counts": {
-        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
-        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
-      }
+      "description": "Skonfiguruj dostawców usług Gmail, Microsoft 365 lub IMAP, aby odbierać i przetwarzać przychodzące wiadomości e-mail jako zgłoszenia",
+      "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
       "addProvider": "Dodaj dostawcę poczty e-mail"
@@ -42,6 +35,7 @@
       "title": "Instrukcje konfiguracji",
       "microsoft": {
         "title": "Konfiguracja Microsoft 365",
+        "ownApp": "Skorzystaj z własnej aplikacji Microsoft — zarejestruj ją w Azure AD (Microsoft Entra ID), przyznaj uprawnienia poczty i podłącz ją do skrzynki Microsoft 365.",
         "providersPointer": "Konfiguracją aplikacji Microsoft zarządza się w sekcji Dostawcy.",
         "openProviders": "Otwórz Dostawców"
       },
@@ -117,10 +111,7 @@
     "actions": {
       "cancel": "Anuluj"
     },
-    "help": {
-      "enterprise": "Wybierz dostawcę, z którego korzysta już Twoja organizacja. Jeśli korzystasz z Google Workspace, wybierz Gmail; jeśli korzystasz z Microsoft 365, wybierz Microsoft 365. Możesz to zmienić później, usuwając i ponownie konfigurując dostawcę poczty e-mail.",
-      "standard": "Wybierz dostawcę, z którego korzysta już Twoja organizacja. Jeśli korzystasz z Google Workspace, wybierz Gmail; w przeciwnym razie wybierz IMAP. Możesz to zmienić później, usuwając i ponownie konfigurując dostawcę poczty e-mail."
-    }
+    "help": "Wybierz dostawcę, z którego korzysta już Twoja organizacja. Jeśli korzystasz z Google Workspace, wybierz Gmail; jeśli korzystasz z Microsoft 365, wybierz Microsoft 365. Możesz to zmienić później, usuwając i ponownie konfigurując dostawcę poczty e-mail."
   },
   "wizard": {
     "title": {
@@ -168,7 +159,8 @@
       "resyncMailbox": "Zsynchronizuj ponownie skrzynkę pocztową",
       "pause": "Wstrzymaj pocztę przychodzącą",
       "resume": "Wznów pocztę przychodzącą",
-      "delete": "Usuń dostawcę"
+      "delete": "Usuń dostawcę",
+      "runGmailDiagnostics": "Uruchom diagnostykę dostarczania Gmaila"
     },
     "feedback": {
       "paused": "Poczta przychodząca wstrzymana.",
@@ -176,6 +168,11 @@
       "pauseError": "Nie udało się zmienić stanu wstrzymania poczty przychodzącej."
     },
     "pausedHelp": "Wiadomości odebrane w czasie, gdy ta skrzynka jest wstrzymana, nie są importowane wstecznie.",
+    "authFailure": {
+      "title": "E-mail przychodzący wstrzymany — wymagane ponowne połączenie",
+      "description": "E-mail przychodzący dla {{mailbox}} został wstrzymany, ponieważ jego dane logowania przestały działać. Wiadomości nie znikną — pozostają w skrzynce źródłowej i zostaną zaimportowane po ponownym połączeniu.",
+      "action": "Połącz ponownie"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Ostatnia synchronizacja",
@@ -217,6 +214,14 @@
       "title": "Nie skonfigurowano dostawców poczty e-mail",
       "description": "Dodaj dostawcę poczty e-mail, aby rozpocząć odbieranie i przetwarzanie przychodzących wiadomości e-mail jako zgłoszeń.",
       "action": "Dodaj dostawcę poczty e-mail"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail nie przesyła już tutaj nowej poczty",
+      "expiredDescription": "Obserwacja Gmaila dla {{mailbox}} wygasła, więc Google przestało publikować powiadomienia. Wiadomości nie są tracone — pozostają w skrzynce. Użyj Odśwież Pub/Sub i oglądaj, aby wznowić dostarczanie.",
+      "missingTitle": "Dostarczanie push z Gmaila nie jest zarejestrowane",
+      "missingDescription": "Dla {{mailbox}} nie zarejestrowano obserwacji Gmaila, więc żadna poczta przychodząca nie dotrze. Użyj Odśwież Pub/Sub i oglądaj, aby ją zarejestrować.",
+      "expiringTitle": "Dostarczanie push z Gmaila wygaśnie w ciągu doby",
+      "expiringDescription": "Obserwacje Gmaila trwają siedem dni. Użyj Odśwież Pub/Sub i oglądaj, zanim ta wygaśnie, w przeciwnym razie poczta przychodząca ustanie bez dalszego ostrzeżenia."
     }
   },
   "forms": {
@@ -246,6 +251,9 @@
         "authorizing": "Autoryzuję...",
         "authorized": "Upoważniony",
         "authorizeAccess": "Autoryzuj dostęp"
+      },
+      "messages": {
+        "setupIncomplete": "Dostawca zapisany, ale konfiguracja niekompletna: {{error}}"
       }
     },
     "microsoft": {
@@ -260,7 +268,8 @@
         "popupBlocked": "Nie udało się otworzyć wyskakującego okienka OAuth. Zezwól na wyświetlanie wyskakujących okienek w tej witrynie.",
         "closedEarly": "Okno autoryzacji zostało zamknięte przed zakończeniem. Spróbuj ponownie.",
         "authorizationFailed": "Autoryzacja nie powiodła się",
-        "senderDisplayNameInvalid": "Nazwa wyświetlana nie może zawierać cudzysłowów, nawiasów ostrych ani znaków nowego wiersza"
+        "senderDisplayNameInvalid": "Nazwa wyświetlana nie może zawierać cudzysłowów, nawiasów ostrych ani znaków nowego wiersza",
+        "issuerRequired": "Wybierz aplikację Microsoft przed zalogowaniem się"
       },
       "requiredFields": {
         "providerName": "Nazwa konfiguracji",
@@ -292,12 +301,24 @@
         "maxEmailsPerSync": "Maksymalna liczba e-maili na synchronizację"
       },
       "readiness": {
-        "checking": "Sprawdzanie konfiguracji Microsoft…",
-        "ready": "Microsoft jest skonfigurowany. Zaloguj się za pomocą tej skrzynki pocztowej, aby zakończyć.",
-        "pending": "Oczekiwanie na administratora Microsoft 365. Konfiguracja została rozpoczęta w sekcji Dostawcy, ale nie została jeszcze zatwierdzona.",
-        "openProviders": "Otwórz Dostawców",
-        "notConfigured": "Microsoft nie jest jeszcze skonfigurowany. Skonfiguruj go raz w sekcji Dostawcy, a następnie wróć.",
-        "setUpInProviders": "Skonfiguruj w sekcji Dostawcy"
+        "openProviders": "Otwórz Dostawców"
+      },
+      "issuer": {
+        "title": "Aplikacja Microsoft, która autoryzuje tę skrzynkę pocztową",
+        "description": "Wybierz, która aplikacja loguje się jako ta skrzynka pocztowa. Ten wybór jest zapisywany wraz ze skrzynką pocztową i nie wpływa na inne usługi.",
+        "managedLabel": "Aplikacja AlgaPSA (zarządzana przez Nine Minds)",
+        "managedDescription": "Po Twojej stronie nie jest wymagana żadna rejestracja aplikacji Microsoft.",
+        "recommended": "Zalecana",
+        "currentApp": "Bieżąca aplikacja: {{app}}",
+        "selectedApp": "Wybrana aplikacja: {{app}}",
+        "pendingReauth": "Ponowna autoryzacja w toku",
+        "switchWarning": "Zmiana aplikacji Microsoft wymaga ponownego połączenia tej skrzynki pocztowej. Zaloguj się ponownie przez Microsoft, aby dokończyć zmianę.",
+        "noneAvailable": "Aby połączyć Microsoft 365, najpierw skonfiguruj aplikację Microsoft u Dostawców, a następnie wróć tutaj.",
+        "retry": "Spróbuj ponownie",
+        "pendingConsentEmpty": "Twoja aplikacja Microsoft czeka na zatwierdzenie przez administratora Microsoft 365. Po zatwierdzeniu u Dostawców wróć tutaj, aby się zalogować.",
+        "pendingConsentHint": "Twoja własna aplikacja Microsoft nadal czeka na zatwierdzenie przez administratora Microsoft 365.",
+        "ownAppPrompt": "Wolisz zalogować się za pomocą własnej aplikacji Microsoft?",
+        "ownAppSetupLink": "Skonfiguruj ją u Dostawców"
       }
     },
     "gmail": {
@@ -765,7 +786,7 @@
         "authHint": "Pozostaw nazwę użytkownika i hasło puste, jeśli przekaźnik akceptuje pocztę bez uwierzytelniania.",
         "fromLabel": "Adres nadawcy",
         "fromPlaceholder": "noreply@przyklad.pl",
-        "fromHelp": "Domyślny adres nadawcy dla poczty wychodzącej.",
+        "fromHelp": "Domyślny nadawca całej poczty wychodzącej. Wiadomości zgłoszeń mogą używać własnej tożsamości poniżej.",
         "security": {
           "title": "Bezpieczeństwo połączenia",
           "secure": "Użyj niejawnego TLS (SSL przy połączeniu, zwykle port 465)",
@@ -842,7 +863,7 @@
           "description": "Oddziel identyfikację nadawcy zaproszeń do portalu, wiadomości o resetowaniu haseł, faktur, aktualizacji projektów i ogólnych powiadomień od routingu zgłoszeń.",
           "addressLabel": "Adres nadawcy",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "To adres marki używany przez serwer SMTP do wysyłania wiadomości e-mail niezwiązanych ze zgłoszeniami.",
+          "smtpAddressHelp": "Ustalany przez adres nadawcy w konfiguracji SMTP powyżej. Cała poczta niezwiązana ze zgłoszeniami jest wysyłana z tego adresu.",
           "lockedAddressHelp": "Ten adres wynika z aktywnej domeny zarządzanej lub wybranej skrzynki pocztowej Microsoft 365.",
           "nameLabel": "Wyświetlana nazwa nadawcy",
           "namePlaceholder": "Nazwa Twojej firmy",
@@ -1070,6 +1091,72 @@
       "subject": "Temat",
       "title": "Przetestuj tę regułę",
       "to": "Do"
+    }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Nie udało się pobrać domen",
+      "invalidFormat": "Nieprawidłowy format domeny",
+      "duplicate": "Domena już istnieje",
+      "addFailed": "Nie udało się dodać domeny. Spróbuj ponownie.",
+      "notFound": "Nie znaleziono domeny",
+      "verifyFailed": "Nie udało się zweryfikować domeny. Spróbuj ponownie.",
+      "stillReferenced": "Domena jest nadal używana i nie można jej usunąć.",
+      "deleteFailed": "Nie udało się usunąć domeny. Spróbuj ponownie."
+    },
+    "provider": {
+      "saveFailed": "Nie udało się zapisać dostawcy poczty e-mail. Sprawdź ustawienia i spróbuj ponownie.",
+      "updateFailed": "Nie udało się zaktualizować dostawcy poczty e-mail. Sprawdź ustawienia i spróbuj ponownie.",
+      "notFound": "Nie znaleziono dostawcy poczty e-mail",
+      "deleteFailed": "Nie udało się usunąć dostawcy poczty e-mail"
+    },
+    "settings": {
+      "fetchFailed": "Nie udało się pobrać ustawień poczty e-mail",
+      "mailboxRequired": "Wybierz skrzynkę pocztową Microsoft 365 do poczty wychodzącej",
+      "mailboxInactive": "Wybrana skrzynka pocztowa Microsoft 365 nie jest aktywna lub już nie istnieje",
+      "mailboxReconnect": "Połącz ponownie wybraną skrzynkę pocztową Microsoft 365, zanim użyjesz jej do poczty wychodzącej",
+      "ticketIdentityMustMatchMailbox": "Tożsamość e-mail zgłoszeń musi korzystać z wybranej skrzynki pocztowej Microsoft 365 ({{mailbox}}). Zaktualizuj adres e-mail zgłoszeń przed zapisaniem.",
+      "providerFromAddressInvalid": "Adres nadawcy dla {{provider}} musi być prawidłowym adresem e-mail",
+      "ticketingFromInvalid": "Adres nadawcy zgłoszeń musi być prawidłowym adresem e-mail",
+      "outboundDomainInvalid": "Domena wysyłki wychodzącej musi być prawidłową domeną (np. example.com)",
+      "outboundDomainRequired": "Skonfiguruj domenę wychodzącą przed wyborem adresu nadawcy zgłoszeń",
+      "ticketingFromDomainMismatch": "Adres nadawcy zgłoszeń musi korzystać ze skonfigurowanej domeny wychodzącej",
+      "refreshFailed": "Nie udało się pobrać zaktualizowanych ustawień",
+      "updateFailed": "Nie udało się zaktualizować ustawień poczty e-mail",
+      "mailboxesLoadFailed": "Nie udało się wczytać skrzynek pocztowych Microsoft 365"
+    },
+    "inboundRules": {
+      "notFound": "Nie znaleziono reguły poczty przychodzącej",
+      "invalidOrdering": "Nieprawidłowe dane kolejności reguł",
+      "aliasRequired": "Alias jest wymagany",
+      "aliasTooLong": "Alias jest za długi",
+      "clientRequired": "Klient jest wymagany",
+      "invalidSampleEmail": "Nieprawidłowy przykładowy e-mail",
+      "permissionDenied": "Nie masz uprawnień do zarządzania regułami poczty przychodzącej.",
+      "ticketDefaultsUnavailable": "Wskazany zestaw domyślnych ustawień zgłoszeń nie istnieje lub jest nieaktywny.",
+      "orderingMismatch": "Kolejność nie odpowiada bieżącemu zestawowi reguł.",
+      "clientNotFound": "Nie znaleziono klienta.",
+      "aliasAlreadyAssigned": "Alias „{{alias}}” jest już przypisany do klienta.",
+      "invalidRegex": "Nieprawidłowe wyrażenie regularne.",
+      "fallbackDestinationRequired": "Miejsce docelowe rezerwowe jest wymagane, gdy zachowanie bez dopasowania korzysta z takiego miejsca docelowego."
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Konfiguracja o tej krótkiej nazwie już istnieje",
+      "createFailed": "Nie udało się utworzyć ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie.",
+      "notFound": "Nie znaleziono konfiguracji ustawień domyślnych",
+      "updateFailed": "Nie udało się zaktualizować ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Odmowa uprawnień: nie można odczytać opcji pól zgłoszenia",
+      "loadFailed": {
+        "ticketFieldOptions": "Nie udało się wczytać opcji pól zgłoszenia. Spróbuj ponownie.",
+        "boards": "Nie udało się wczytać tablic. Spróbuj ponownie.",
+        "statuses": "Nie udało się wczytać statusów. Spróbuj ponownie.",
+        "priorities": "Nie udało się wczytać priorytetów. Spróbuj ponownie.",
+        "categories": "Nie udało się wczytać kategorii. Spróbuj ponownie.",
+        "clients": "Nie udało się wczytać klientów. Spróbuj ponownie.",
+        "users": "Nie udało się wczytać użytkowników. Spróbuj ponownie."
+      }
     }
   }
 }

@@ -11,7 +11,15 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { assignContractLineToClient } from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from 'server/src/lib/db';
+import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';
 
+
+// billingCycleActions imports hasPermission from '@alga-psa/auth/rbac'. The
+// shared mock testMocks declares for that specifier does not reach this file's
+// module graph, so the real check ran and denied a roleless fixture user.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true)),
+}));
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
@@ -329,7 +337,7 @@ describe('Client Billing Cycle Anchors', () => {
       });
 
     // Seed an old "last active" cycle so we have to backfill multiple cycles to reach 2026-01-09.
-    await db('client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: uuidv4(),
       tenant: tenantId,
       client_id: clientId,
@@ -429,7 +437,7 @@ describe('Client Billing Cycle Anchors', () => {
     const invoicedCycleId = uuidv4();
     const futureCycleId = uuidv4();
 
-    await db('client_billing_cycles').insert([
+    await seedBillingCycle(db, tenantId, [
       {
         billing_cycle_id: invoicedCycleId,
         tenant: tenantId,
@@ -543,7 +551,7 @@ describe('Client Billing Cycle Anchors', () => {
     const invoicedCycleId = uuidv4();
     const futureCycleId = uuidv4();
 
-    await db('client_billing_cycles').insert([
+    await seedBillingCycle(db, tenantId, [
       {
         billing_cycle_id: invoicedCycleId,
         tenant: tenantId,
@@ -647,7 +655,7 @@ describe('Client Billing Cycle Anchors', () => {
 
     // Seed a future client billing cycle to prove schedule management records remain available.
     const futureCycleId = uuidv4();
-    await db('client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: futureCycleId,
       tenant: tenantId,
       client_id: clientId,

@@ -10,6 +10,8 @@ import {
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { runWithApiKeyUser } from '@alga-psa/auth';
 import { 
   runWithTenant 
 } from '../../db';
@@ -27,6 +29,7 @@ import {
   NotFoundError,
   ValidationError,
   ConflictError,
+  assertInternalApiUser,
   createSuccessResponse,
   createPaginatedResponse,
   handleApiError
@@ -82,12 +85,11 @@ export abstract class ApiBaseController {
       throw new UnauthorizedError('Invalid API key');
     }
 
-    // Get user within tenant context
+    // Get user within tenant context. The internal-user assertion is the
+    // context-construction defense: a permissively mocked validator cannot
+    // admit a client user into a user-key API context.
     const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-    if (!user) {
-      throw new UnauthorizedError('User not found');
-    }
+    assertInternalApiUser(user);
 
     // Create extended request with context
     const apiRequest = req as AuthenticatedApiRequest;
@@ -102,6 +104,16 @@ export abstract class ApiBaseController {
     await this.assertProductApiAccess(apiRequest);
 
     return apiRequest;
+  }
+
+  /**
+   * Run a handler with the API-key user AND tenant established, so downstream
+   * `withAuth`-wrapped server actions resolve the API-key identity instead of
+   * treating the request as session-less (which threw a generic 500).
+   */
+  protected runWithApiKeyContext<T>(apiRequest: AuthenticatedApiRequest, fn: () => Promise<T>): Promise<T> {
+    const user = apiRequest.context.user as unknown as IUserWithRoles;
+    return runWithApiKeyUser(user, () => runWithTenant(apiRequest.context.tenant, fn));
   }
 
   /**
@@ -228,7 +240,7 @@ export abstract class ApiBaseController {
         // Authenticate
         const apiRequest = await this.authenticate(req);
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, this.options.permissions?.list || 'read');
 
@@ -285,7 +297,7 @@ export abstract class ApiBaseController {
         // Authenticate
         const apiRequest = await this.authenticate(req);
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
 
@@ -316,7 +328,7 @@ export abstract class ApiBaseController {
         // Authenticate
         const apiRequest = await this.authenticate(req);
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, this.options.permissions?.create || 'create');
 
@@ -356,7 +368,7 @@ export abstract class ApiBaseController {
         // Authenticate
         const apiRequest = await this.authenticate(req);
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
 
@@ -396,7 +408,7 @@ export abstract class ApiBaseController {
         // Authenticate
         const apiRequest = await this.authenticate(req);
         // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, this.options.permissions?.delete || 'delete');
 

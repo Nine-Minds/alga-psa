@@ -170,6 +170,10 @@ vi.mock('../src/components/billing-dashboard/contracts/BucketOverlayFields', () 
   BucketOverlayFields: () => null,
 }));
 
+vi.mock('../src/components/billing-dashboard/contracts/BucketPoolEditor', () => ({
+  BucketPoolEditor: () => null,
+}));
+
 const existingServiceConfiguration = {
   service: {
     service_id: 'existing-service',

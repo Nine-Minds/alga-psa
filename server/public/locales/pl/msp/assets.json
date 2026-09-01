@@ -1178,14 +1178,6 @@
       "saveFailed": "Nie udało się utworzyć harmonogramu konserwacji"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Dokumenty i hasła",
-    "description": "Połączona karta zawierająca dokumenty zasobów, dane uwierzytelniające i powiązane bezpieczne zapisy",
-    "passwords": {
-      "title": "Hasła i tajemnice",
-      "comingSoon": "Już wkrótce bezpieczne zarządzanie hasłami."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Harmonogramy konserwacji",
     "description": "Zakładka zarządzania harmonogramem konserwacji dla planowanych usług i prac cyklicznych",
@@ -1243,6 +1235,7 @@
     },
     "types": {
       "preventive": "Zapobiegawczy",
+      "corrective": "Korygujący",
       "inspection": "Kontrola",
       "calibration": "Kalibrowanie",
       "replacement": "Wymiana"
@@ -1262,6 +1255,17 @@
         "title": "Usuń harmonogram konserwacji",
         "message": "Czy na pewno chcesz usunąć „{{name}}”? Tej akcji nie można cofnąć."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Centrum zarządzania konserwacją",
+    "description": "Następny termin jest obliczany na podstawie rzeczywistej daty ukończenia.",
+    "assetsLink": "Zasoby"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Wymagana jest data wykonania.",
+      "completeFailed": "Nie udało się ukończyć konserwacji."
     }
   },
   "relatedAssetsTab": {
@@ -1517,6 +1521,36 @@
       "active": "aktywny",
       "inactive": "nieaktywny",
       "maintenance": "konserwacja"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "Odmowa uprawnień: nie można odczytywać zasobów",
+      "readAssetTypes": "Odmowa uprawnień: nie można odczytywać typów zasobów",
+      "manageAssetTypes": "Odmowa uprawnień: nie można zarządzać typami zasobów",
+      "readDocuments": "Odmowa uprawnień: nie można odczytywać dokumentów zasobu",
+      "associateDocuments": "Odmowa uprawnień: nie można powiązać dokumentów z zasobami",
+      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów",
+      "updateDocumentNotes": "Odmowa uprawnień: nie można aktualizować notatek dokumentów zasobu"
+    },
+    "asset": {
+      "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "clientNotFound": "Nie znaleziono klienta. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "maintenanceNotFound": "Nie znaleziono harmonogramu konserwacji. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "maintenanceMismatch": "Ten rekord konserwacji nie odpowiada wybranemu zasobowi. Odśwież stronę i spróbuj ponownie.",
+      "locationUnavailable": "Wybrana lokalizacja nie jest dostępna dla tego klienta.",
+      "selfRelation": "Zasobu nie można powiązać z samym sobą.",
+      "selectAtLeastOne": "Wybierz co najmniej jeden zasób.",
+      "typeUnavailable": "Typ zasobu jest niedostępny. Wybierz prawidłowy typ zasobu.",
+      "typeUnavailableNamed": "Typ zasobu „{{assetType}}” jest niedostępny. Wybierz prawidłowy typ zasobu.",
+      "documentAssociationNotFound": "Nie znaleziono powiązania dokumentu. Mogło już zostać usunięte. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości zasobu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "invalidDate": "Jedna z wybranych dat zasobu jest nieprawidłowa. Sprawdź formularz i spróbuj ponownie.",
+      "referenceMissing": "Wybrany zasób, dokument lub powiązany rekord już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana zasobu jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości zasobu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola zasobu.",
+      "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}."
     }
   }
 }

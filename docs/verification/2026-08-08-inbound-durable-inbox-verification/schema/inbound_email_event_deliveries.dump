@@ -1,0 +1,30 @@
+                      Table "public.inbound_email_event_deliveries"
+      Column      |           Type           | Collation | Nullable |      Default       
+------------------+--------------------------+-----------+----------+--------------------
+ tenant           | uuid                     |           | not null | 
+ outbox_id        | uuid                     |           | not null | 
+ consumer         | text                     |           | not null | 
+ created_at       | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ status           | text                     |           | not null | 'delivering'::text
+ attempt_count    | integer                  |           | not null | 0
+ lease_owner      | text                     |           |          | 
+ lease_token      | uuid                     |           |          | 
+ lease_version    | bigint                   |           | not null | 0
+ lease_expires_at | timestamp with time zone |           |          | 
+ next_attempt_at  | timestamp with time zone |           |          | 
+ last_error       | text                     |           |          | 
+ updated_at       | timestamp with time zone |           | not null | now()
+ completed_at     | timestamp with time zone |           |          | 
+Indexes:
+    "inbound_email_event_deliveries_pkey" PRIMARY KEY, btree (tenant, outbox_id, consumer)
+    "inbound_email_event_deliveries_lookup_idx" btree (tenant, consumer, created_at)
+    "inbound_email_event_deliveries_recovery_idx" btree (tenant, status, next_attempt_at, lease_expires_at)
+Check constraints:
+    "inbound_email_event_deliveries_attempt_count_check" CHECK (attempt_count >= 0)
+    "inbound_email_event_deliveries_delivering_lease_check" CHECK (status <> 'delivering'::text OR lease_owner IS NOT NULL AND lease_token IS NOT NULL AND lease_expires_at IS NOT NULL)
+    "inbound_email_event_deliveries_retryable_next_attempt_check" CHECK (status <> 'retryable_failed'::text OR next_attempt_at IS NOT NULL)
+    "inbound_email_event_deliveries_status_check" CHECK (status = ANY (ARRAY['delivering'::text, 'delivered'::text, 'retryable_failed'::text, 'terminal_failed'::text]))
+    "inbound_email_event_deliveries_terminal_lease_check" CHECK ((status <> ALL (ARRAY['delivered'::text, 'terminal_failed'::text])) OR lease_owner IS NULL AND lease_token IS NULL AND lease_expires_at IS NULL AND completed_at IS NOT NULL)
+Foreign-key constraints:
+    "inbound_email_event_deliveries_tenant_outbox_id_foreign" FOREIGN KEY (tenant, outbox_id) REFERENCES inbound_email_outbox(tenant, outbox_id)
+

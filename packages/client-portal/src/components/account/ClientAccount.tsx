@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/component
 import { Table } from '@alga-psa/ui/components/Table';
 import { getClientClient } from '@alga-psa/client-portal/actions';
 import { getClientContractLine, getClientInvoices } from '@alga-psa/client-portal/actions';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -27,6 +27,7 @@ export default function ClientAccount() {
   const [client, setClient] = useState<IClient | null>(null);
   const [contractLine, setContractLine] = useState<IClientContractLine | null>(null);
   const { money } = useCurrencyFormat();
+  const { formatDate: formatLocalizedDate } = useFormatters();
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,11 +48,13 @@ export default function ClientAccount() {
     if (!date) return tProfile('account.notAvailable', 'N/A');
     try {
       const d = new Date(typeof date === 'string' ? date : date.toString());
-      return d.toLocaleDateString();
+      // toLocaleDateString() with no locale follows the browser, not the app's
+      // resolved locale — useFormatters is bound to the i18n locale.
+      return formatLocalizedDate(d);
     } catch {
       return tProfile('account.notAvailable', 'N/A');
     }
-  }, [tProfile]);
+  }, [tProfile, formatLocalizedDate]);
 
   useEffect(() => {
     let mounted = true;

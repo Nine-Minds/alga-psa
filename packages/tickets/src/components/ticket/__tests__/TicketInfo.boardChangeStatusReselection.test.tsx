@@ -94,8 +94,8 @@ vi.mock('@alga-psa/ui/components/DatePicker', () => ({
   DatePicker: () => <div data-testid="date-picker" />,
 }));
 
-vi.mock('@alga-psa/ui/components/TimePicker', () => ({
-  TimePicker: () => <div data-testid="time-picker" />,
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
+  DateTimePicker: () => <div data-testid="date-time-picker" />,
 }));
 
 vi.mock('@alga-psa/tags/components', () => ({

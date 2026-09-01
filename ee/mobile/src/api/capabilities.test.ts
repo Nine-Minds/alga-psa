@@ -8,7 +8,7 @@ function mockClient(response: unknown): ApiClient {
 
 describe("capabilities api", () => {
   it("calls GET /api/v1/mobile/me/capabilities with the api key", async () => {
-    const client = mockClient({ ok: true, data: { data: { features: { inventory: true, opportunities: false } } } });
+    const client = mockClient({ ok: true, data: { data: { features: { inventory: true, opportunities: false, opportunitiesCreate: false } } } });
     const signal = new AbortController().signal;
 
     await getMyCapabilities(client, { apiKey: "api-key-1", signal });

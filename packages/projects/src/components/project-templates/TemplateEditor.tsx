@@ -108,6 +108,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../../lib/useTaskTypeLabel';
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -168,6 +169,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const [tasks, setTasks] = useState<IProjectTemplateTask[]>(initialTemplate.tasks || []);
   const [statusMappings, setStatusMappings] = useState<IProjectTemplateStatusMapping[]>(
     initialTemplate.status_mappings || []
+  );
+  const [unresolvedStatusMappingCount, setUnresolvedStatusMappingCount] = useState<number>(
+    initialTemplate.unresolved_status_mapping_count ?? 0
   );
   const [taskAssignments, setTaskAssignments] = useState<IProjectTemplateTaskAssignment[]>(
     initialTemplate.task_assignments || []
@@ -928,6 +932,20 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     setStatusMappings((prev) => [...prev, newMapping]);
   };
 
+  const handleStatusReplaced = (result: {
+    mapping: IProjectTemplateStatusMapping;
+    unresolvedStatusMappingCount: number;
+  }) => {
+    setStatusMappings((prev) =>
+      prev.map((m) =>
+        m.template_status_mapping_id === result.mapping.template_status_mapping_id
+          ? result.mapping
+          : m
+      )
+    );
+    setUnresolvedStatusMappingCount(result.unresolvedStatusMappingCount);
+  };
+
   const handleStatusRemoved = (mappingId: string) => {
     setStatusMappings((prev) => prev.filter((m) => m.template_status_mapping_id !== mappingId));
     // Clear status from tasks that used this mapping
@@ -1113,6 +1131,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           }}
           onPhaseStatusesRemoved={handlePhaseStatusesRemoved}
           onStatusReordered={handleStatusReordered}
+          onStatusReplaced={handleStatusReplaced}
         />
       )}
 
@@ -1185,10 +1204,27 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 onChange={handleViewModeChange}
                 options={viewOptions}
               />
-              <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
-                <Rocket className="h-4 w-4 mr-2" />
-                {t('templates.editor.useTemplate', 'Use Template')}
-              </Button>
+              {unresolvedStatusMappingCount > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-destructive font-medium">
+                    {t('templates.statuses.unresolved_apply_guard', {
+                      count: unresolvedStatusMappingCount,
+                    })}
+                  </span>
+                  <Button
+                    id="repair-status-columns"
+                    variant="outline"
+                    onClick={() => setShowStatusManager(true)}
+                  >
+                    {t('templates.statuses.repair_status_columns')}
+                  </Button>
+                </div>
+              ) : (
+                <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
+                  <Rocket className="h-4 w-4 mr-2" />
+                  {t('templates.editor.useTemplate', 'Use Template')}
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -1338,7 +1374,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           id="add-first-phase"
                           variant="ghost"
                           size="sm"
-                          className="text-purple-600 hover:text-purple-700 mt-1"
+                          className="text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] mt-1"
                           onClick={handleAddPhase}
                         >
                           {t('templates.editor.addFirstPhase', 'Add your first phase')}
@@ -1363,10 +1399,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           onDragEnd={handlePhaseDragEnd}
                           className={`${styles.phaseItem} relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group ${
                             selectedPhase?.template_phase_id === phase.template_phase_id
-                              ? 'bg-purple-50 dark:bg-purple-500/10'
+                              ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-500)/0.1)]'
                               : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'
                           } ${draggedPhaseId === phase.template_phase_id ? 'opacity-50' : ''} ${
-                            isPhaseDrop ? styles.dragOver + ' ring-2 ring-purple-400' : ''
+                            isPhaseDrop ? styles.dragOver + ' ring-2 ring-[rgb(var(--color-primary-400))]' : ''
                           } ${
                             isTaskDrop && !isCurrentPhaseForTask
                               ? 'ring-2 ring-blue-400 bg-primary/10 scale-[1.02]'
@@ -1476,7 +1512,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 <div className="flex items-start justify-between gap-2">
                                   <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
                                   {phaseTaskCounts[phase.template_phase_id] !== undefined && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
+                                  <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0">
                                       {phaseTaskCounts[phase.template_phase_id]} {t(phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks.title', phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks')}
                                     </span>
                                   )}
@@ -1941,7 +1977,7 @@ function TemplateStatusColumn({
   return (
     <div
       className={`${styles.kanbanColumn} rounded-lg transition-all duration-200 border-2 border-solid ${
-        isDraggedOver && draggedTaskId ? 'border-purple-500 ' + styles.dragOver : ''
+        isDraggedOver && draggedTaskId ? 'border-[rgb(var(--color-primary-500))] ' + styles.dragOver : ''
       }`}
       style={{
         width: `${columnWidth}px`,
@@ -2099,6 +2135,7 @@ function TaskCard({
   zoomLevel = 50,
 }: TaskCardProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
@@ -2134,12 +2171,12 @@ function TaskCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={() => onEdit(task)}
-      className={`${styles.taskCard} relative bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-sm transition-all duration-200 flex flex-col cursor-pointer hover:shadow-md ${zoomScales.cardPadding} ${zoomScales.cardGap} ${
+      className={`${styles.taskCard} relative bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg card-elevated card-elevated-hover transition-all duration-200 flex flex-col cursor-pointer ${zoomScales.cardPadding} ${zoomScales.cardGap} ${
         isDragging ? styles.dragging : ''
       }`}
     >
       {/* Task type indicator */}
-      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskType?.type_name || taskTypeKey}>
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskTypeLabel(taskType, taskTypeKey)}>
         <Icon className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'} style={{ color: iconColor }} />
       </div>
 
@@ -2204,7 +2241,7 @@ function TaskCard({
             id={`toggle-title-${task.template_task_id}`}
             variant="ghost"
             size="sm"
-            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
+            className={`${zoomScales.metaSize} text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
             onClick={(e) => {
               e.stopPropagation();
               setIsTitleExpanded(!isTitleExpanded);
@@ -2231,7 +2268,7 @@ function TaskCard({
               id={`toggle-desc-${task.template_task_id}`}
               variant="ghost"
               size="sm"
-              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
+              className={`${zoomScales.metaSize} text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);

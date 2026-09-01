@@ -5,37 +5,28 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@alga-psa/ui/components/Dialog';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Label } from '@alga-psa/ui/components/Label';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { Switch } from '@alga-psa/ui/components/Switch';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
 import {
   archiveMicrosoftProfile,
-  createMicrosoftProfile,
   getMicrosoftIntegrationStatus,
   listMicrosoftConsumerBindings,
   resetMicrosoftProvidersToDisconnected,
+  runMicrosoftEmailIssuerBackfill,
   setDefaultMicrosoftProfile,
   setMicrosoftConsumerBinding,
-  updateMicrosoftProfile,
 } from '../../../actions/integrations/microsoftActions';
+import { isMicrosoftConsumerEnterpriseEdition } from '../../../lib/microsoftConsumerVisibility';
 import {
-  getVisibleMicrosoftConsumerTypes,
-  isMicrosoftConsumerEnterpriseEdition,
-} from '../../../lib/microsoftConsumerVisibility';
+  getCapabilityDescriptors,
+  getConsumerDescriptors,
+  MicrosoftProfileFormDialog,
+} from './MicrosoftProfileFormDialog';
+import type { MicrosoftConsumerDescriptor, TranslateFn } from './MicrosoftProfileFormDialog';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailabilityCore';
 import { MicrosoftEmailSetupDialog } from './MicrosoftEmailSetupDialog';
 import { getMicrosoftEmailAdminConsentUrl } from '../../../actions/integrations/microsoftEmailSetupActions';
@@ -60,33 +51,6 @@ type MicrosoftProfile = NonNullable<MicrosoftIntegrationStatus['profiles']>[numb
 type MicrosoftConsumerBinding = NonNullable<MicrosoftConsumerBindingsResult['bindings']>[number];
 type MicrosoftConsumerType = MicrosoftConsumerBinding['consumerType'];
 type ProfileDialogMode = 'create' | 'edit';
-
-interface ProfileFormState {
-  displayName: string;
-  clientId: string;
-  clientSecret: string;
-  tenantId: string;
-  capabilities: MicrosoftConsumerType[];
-  setAsDefault: boolean;
-}
-
-interface MicrosoftConsumerDescriptor {
-  consumerType: MicrosoftConsumerType;
-  consumerLabel: string;
-  description: string;
-  reconnectMessage?: string;
-}
-
-const DEFAULT_FORM_STATE: ProfileFormState = {
-  displayName: '',
-  clientId: '',
-  clientSecret: '',
-  tenantId: 'common',
-  capabilities: ['msp_sso', 'email', 'calendar', 'teams'],
-  setAsDefault: false,
-};
-
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 function getReadinessMessages(profile: MicrosoftProfile, t: TranslateFn): string[] {
   const messages: string[] = [];
@@ -164,49 +128,6 @@ function GuidanceBlock({
         ))}
       </div>
     </div>
-  );
-}
-
-function getConsumerDescriptors(showTeamsUi: boolean, t: TranslateFn): MicrosoftConsumerDescriptor[] {
-  const visibleConsumers = getVisibleMicrosoftConsumerTypes(isMicrosoftConsumerEnterpriseEdition()).filter(
-    (consumerType) => showTeamsUi || consumerType !== 'teams'
-  );
-
-  return visibleConsumers.map((consumerType) => {
-    switch (consumerType) {
-      case 'msp_sso':
-        return {
-          consumerType,
-          consumerLabel: t('integrations.microsoft.settings.consumers.mspSso.label', { defaultValue: 'Staff sign-in' }),
-          description: t('integrations.microsoft.settings.consumers.mspSso.description', { defaultValue: 'Choose the Microsoft app for staff sign-in and login-domain discovery.' }),
-        };
-      case 'email':
-        return {
-          consumerType,
-          consumerLabel: t('integrations.microsoft.settings.consumers.email.label', { defaultValue: 'Outlook email' }),
-          description: t('integrations.microsoft.settings.consumers.email.description', { defaultValue: 'Choose the Microsoft app for Outlook inbound and outbound email.' }),
-          reconnectMessage: t('integrations.microsoft.settings.consumers.email.reconnect', { defaultValue: 'Existing Outlook email connections need re-authorization to grant Mail.Send before they can send outbound email.' }),
-        };
-      case 'calendar':
-        return {
-          consumerType,
-          consumerLabel: t('integrations.microsoft.settings.consumers.calendar.label', { defaultValue: 'Outlook Calendar' }),
-          description: t('integrations.microsoft.settings.consumers.calendar.description', { defaultValue: 'Choose the Microsoft app for Outlook calendar sync.' }),
-          reconnectMessage: t('integrations.microsoft.settings.consumers.calendar.reconnect', { defaultValue: 'Existing Outlook calendar connections may need re-authorization after changing the Microsoft app.' }),
-        };
-      case 'teams':
-        return {
-          consumerType,
-          consumerLabel: t('integrations.microsoft.settings.consumers.teams.label', { defaultValue: 'Teams' }),
-          description: t('integrations.microsoft.settings.consumers.teams.description', { defaultValue: 'Choose the Microsoft app for Teams installation and auth flows.' }),
-        };
-    }
-  });
-}
-
-function getCapabilityDescriptors(showTeamsUi: boolean, t: TranslateFn): MicrosoftConsumerDescriptor[] {
-  return getConsumerDescriptors(true, t).filter(
-    (descriptor) => showTeamsUi || descriptor.consumerType !== 'teams'
   );
 }
 
@@ -341,6 +262,14 @@ function getGuidanceBlocks(
         ],
       }
     );
+    blocks.push({
+      title: t('integrations.microsoft.settings.guidance.entraTitle', { defaultValue: 'Entra Direct' }),
+      items: [
+        { label: t('integrations.microsoft.settings.guidance.redirectUri', { defaultValue: 'Redirect URI' }), value: status?.redirectUris?.entra || unavailable },
+        { label: t('integrations.microsoft.settings.guidance.scopes', { defaultValue: 'Scopes' }), value: (status?.scopes?.entra || []).join(', ') || unavailable },
+        { label: t('integrations.microsoft.settings.guidance.entraConsent', { defaultValue: 'Requirement' }), value: t('integrations.microsoft.settings.guidance.entraConsentValue', { defaultValue: 'Register this app as multitenant and grant admin consent in your partner Microsoft tenant.' }) },
+      ],
+    });
   }
 
   if (showTeamsUi) {
@@ -383,7 +312,6 @@ export function MicrosoftIntegrationSettings({
   const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
   const [resetting, setResetting] = React.useState(false);
   const [resetDialogOpen, setResetDialogOpen] = React.useState(false);
   const [settingDefaultId, setSettingDefaultId] = React.useState<string | null>(null);
@@ -395,8 +323,6 @@ export function MicrosoftIntegrationSettings({
   const [editingProfile, setEditingProfile] = React.useState<MicrosoftProfile | null>(null);
   const [archiveTarget, setArchiveTarget] = React.useState<MicrosoftProfile | null>(null);
   const [isArchiving, setIsArchiving] = React.useState(false);
-  const [formState, setFormState] = React.useState<ProfileFormState>(DEFAULT_FORM_STATE);
-  const [formError, setFormError] = React.useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const advancedChoiceInitializedRef = React.useRef(false);
   const [emailSetupOpen, setEmailSetupOpen] = React.useState(false);
@@ -438,6 +364,10 @@ export function MicrosoftIntegrationSettings({
     setError(null);
 
     const [statusResult, bindingsResult] = await Promise.all([
+      // PURE READ. Loading this page must never write to
+      // microsoft_email_provider_config (the Teams settings page shares this
+      // status action to build its profile picker). The conservative same-client
+      // issuer backfill runs only from the deliberate save/reconnect handler.
       getMicrosoftIntegrationStatus(),
       listMicrosoftConsumerBindings(),
     ]);
@@ -510,126 +440,31 @@ export function MicrosoftIntegrationSettings({
   const closeDialog = React.useCallback(() => {
     setDialogMode(null);
     setEditingProfile(null);
-    setFormState(DEFAULT_FORM_STATE);
-    setFormError(null);
   }, []);
 
   const openCreateDialog = React.useCallback(() => {
     setDialogMode('create');
     setEditingProfile(null);
-    setFormError(null);
-    setFormState({
-      ...DEFAULT_FORM_STATE,
-      tenantId: status?.config?.tenantId || 'common',
-      capabilities: capabilityDescriptors.map((descriptor) => descriptor.consumerType),
-      setAsDefault: !profiles.some((profile) => profile.isDefault && !profile.isArchived),
-    });
-  }, [capabilityDescriptors, profiles, status?.config?.tenantId]);
+  }, []);
 
   const openEditDialog = React.useCallback((profile: MicrosoftProfile) => {
     setDialogMode('edit');
     setEditingProfile(profile);
-    setFormError(null);
-    setFormState({
-      displayName: profile.displayName,
-      clientId: profile.clientId || '',
-      clientSecret: '',
-      tenantId: profile.tenantId || 'common',
-      capabilities: profile.capabilities ?? DEFAULT_FORM_STATE.capabilities,
-      setAsDefault: profile.isDefault,
-    });
   }, []);
 
-  const setFormValue = React.useCallback(
-    <K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) => {
-      setFormState((current) => ({ ...current, [key]: value }));
-    },
-    []
-  );
-
-  const validateForm = React.useCallback(() => {
-    if (!formState.displayName.trim()) return t('integrations.microsoft.settings.validation.displayNameRequired', { defaultValue: 'Microsoft app display name is required' });
-    if (!formState.clientId.trim()) return t('integrations.microsoft.settings.validation.clientIdRequired', { defaultValue: 'Microsoft OAuth Client ID is required' });
-    if (!formState.tenantId.trim()) return t('integrations.microsoft.settings.validation.tenantIdRequired', { defaultValue: 'Microsoft tenant ID is required' });
-    if (dialogMode === 'create' && !formState.clientSecret.trim()) {
-      return t('integrations.microsoft.settings.validation.clientSecretRequired', { defaultValue: 'Microsoft OAuth Client Secret is required' });
-    }
-
-    return null;
-  }, [dialogMode, formState.clientId, formState.clientSecret, formState.displayName, formState.tenantId, t]);
-
-  const toggleCapability = React.useCallback((consumerType: MicrosoftConsumerType, checked: boolean) => {
-    setFormState((current) => {
-      const nextCapabilities = new Set(current.capabilities);
-      if (checked) {
-        nextCapabilities.add(consumerType);
-      } else {
-        nextCapabilities.delete(consumerType);
-      }
-
-      return {
-        ...current,
-        capabilities: [...nextCapabilities],
-      };
-    });
-  }, []);
-
-  const handleSave = React.useCallback(async () => {
-    const validationError = validateForm();
-    if (validationError) {
-      setFormError(validationError);
-      return;
-    }
-
+  const handleProfileSaved = React.useCallback(async () => {
+    setDialogMode(null);
+    setEditingProfile(null);
+    // Deliberate mutation, not a load side effect: the conservative same-client
+    // issuer backfill pins legacy email providers to the app just saved. It is
+    // best-effort here — a backfill failure must not fail the profile save.
     try {
-      setSaving(true);
-      setFormError(null);
-
-      const payload = {
-        displayName: formState.displayName,
-        clientId: formState.clientId,
-        clientSecret: formState.clientSecret,
-        tenantId: formState.tenantId,
-        capabilities: formState.capabilities,
-      };
-
-      const result =
-        dialogMode === 'create'
-          ? await createMicrosoftProfile({
-              ...payload,
-              setAsDefault: formState.setAsDefault,
-            })
-          : await updateMicrosoftProfile({
-              profileId: editingProfile?.profileId || '',
-              ...payload,
-            });
-
-      if (!result.success) {
-        const message = t('integrations.microsoft.settings.errors.saveProfile', { defaultValue: 'Failed to save Microsoft app' });
-        setFormError(message);
-        toast({
-          title: t('integrations.microsoft.settings.toasts.saveFailedTitle', { defaultValue: 'Unable to save Microsoft app' }),
-          description: message,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({
-        title: dialogMode === 'create'
-          ? t('integrations.microsoft.settings.toasts.profileCreated', { defaultValue: 'Microsoft app created' })
-          : t('integrations.microsoft.settings.toasts.profileUpdated', { defaultValue: 'Microsoft app updated' }),
-        description:
-          dialogMode === 'create'
-            ? t('integrations.microsoft.settings.toasts.profileCreatedDescription', { defaultValue: 'Choose which services can use this Microsoft app.' })
-            : t('integrations.microsoft.settings.toasts.profileUpdatedDescription', { defaultValue: 'Microsoft app changes saved.' }),
-      });
-      closeDialog();
-      await load();
-    } finally {
-      setSaving(false);
+      await runMicrosoftEmailIssuerBackfill();
+    } catch (backfillErr) {
+      console.warn('Microsoft email issuer backfill after profile save failed', backfillErr);
     }
-  }, [closeDialog, dialogMode, editingProfile?.profileId, formState, load, toast, validateForm, t]);
+    await load();
+  }, [load]);
 
   const handleArchive = React.useCallback(async () => {
     if (!archiveTarget) {
@@ -760,11 +595,6 @@ export function MicrosoftIntegrationSettings({
     },
     [bindingByConsumer, load, toast, t]
   );
-
-  const dialogTitle = dialogMode === 'create'
-    ? t('integrations.microsoft.settings.dialog.createTitle', { defaultValue: 'Create Microsoft app registration' })
-    : t('integrations.microsoft.settings.dialog.editTitle', { defaultValue: 'Edit Microsoft app registration' });
-  const currentSecretMasked = editingProfile?.clientSecretMasked;
 
   return (
     <>
@@ -1027,6 +857,16 @@ export function MicrosoftIntegrationSettings({
                         </Alert>
                       </div>
                     )}
+
+                    {consumer.consumerType === 'email' && (
+                      <div className="lg:col-span-3">
+                        <p className="text-xs text-muted-foreground">
+                          {t('integrations.microsoft.settings.consumers.email.perProviderIssuerNote', {
+                            defaultValue: 'Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections.',
+                          })}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1249,138 +1089,23 @@ export function MicrosoftIntegrationSettings({
         </CardContent>
       </Card>
 
-      <Dialog
-        id="microsoft-profile-dialog"
-        isOpen={dialogMode !== null}
-        onClose={closeDialog}
-        title={dialogTitle}
-        footer={
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              id="microsoft-profile-cancel"
-              type="button"
-              variant="outline"
-              onClick={closeDialog}
-              disabled={saving}
-            >
-              {t('integrations.microsoft.settings.dialog.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button id="microsoft-profile-save" type="button" onClick={() => void handleSave()} disabled={saving}>
-              {saving
-                ? t('integrations.microsoft.settings.dialog.saving', { defaultValue: 'Saving…' })
-                : dialogMode === 'create'
-                  ? t('integrations.microsoft.settings.dialog.createProfile', { defaultValue: 'Create app registration' })
-                  : t('integrations.microsoft.settings.dialog.saveChanges', { defaultValue: 'Save Changes' })}
-            </Button>
-          </div>
-        }
-      >
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{dialogTitle}</DialogTitle>
-            <DialogDescription>
-              {dialogMode === 'create'
-                ? t('integrations.microsoft.settings.dialog.descriptionCreate', { defaultValue: 'Create a Microsoft app registration, then choose which services can use it.' })
-                : t('integrations.microsoft.settings.dialog.descriptionEdit', { defaultValue: 'Update this Microsoft app registration. Leave the secret blank to keep the existing value.' })}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-2 md:grid-cols-2">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="microsoft-profile-display-name">{t('integrations.microsoft.settings.dialog.displayName', { defaultValue: 'Display name' })}</Label>
-              <Input
-                id="microsoft-profile-display-name"
-                value={formState.displayName}
-                onChange={(event) => setFormValue('displayName', event.target.value)}
-                placeholder={t('integrations.microsoft.settings.dialog.displayNamePlaceholder', { defaultValue: 'Acme production app' })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="microsoft-profile-client-id">{t('integrations.microsoft.settings.dialog.clientId', { defaultValue: 'Client ID' })}</Label>
-              <Input
-                id="microsoft-profile-client-id"
-                value={formState.clientId}
-                onChange={(event) => setFormValue('clientId', event.target.value)}
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="microsoft-profile-tenant-id">{t('integrations.microsoft.settings.dialog.tenantId', { defaultValue: 'Microsoft tenant ID' })}</Label>
-              <Input
-                id="microsoft-profile-tenant-id"
-                value={formState.tenantId}
-                onChange={(event) => setFormValue('tenantId', event.target.value)}
-                placeholder="common"
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="microsoft-profile-client-secret">{t('integrations.microsoft.settings.dialog.clientSecret', { defaultValue: 'Client secret' })}</Label>
-              <Input
-                id="microsoft-profile-client-secret"
-                type="password"
-                value={formState.clientSecret}
-                onChange={(event) => setFormValue('clientSecret', event.target.value)}
-                placeholder={
-                  dialogMode === 'edit'
-                    ? t('integrations.microsoft.settings.dialog.clientSecretPlaceholderEdit', { defaultValue: 'Leave blank to keep the current secret' })
-                    : t('integrations.microsoft.settings.dialog.clientSecretPlaceholder', { defaultValue: 'Enter client secret' })
-                }
-              />
-              {dialogMode === 'edit' && currentSecretMasked && (
-                <p className="text-xs text-muted-foreground">
-                  {t('integrations.microsoft.settings.dialog.storedSecretHint', { defaultValue: 'Stored secret: {{secret}}. Leave this field empty to keep it unchanged.', secret: currentSecretMasked })}
-                </p>
-              )}
-            </div>
-
-            {dialogMode === 'create' && (
-              <div className="rounded-lg border bg-muted/10 p-3 md:col-span-2">
-                <Switch
-                  id="microsoft-profile-set-default"
-                  checked={formState.setAsDefault}
-                  onCheckedChange={(checked) => setFormValue('setAsDefault', checked)}
-                  label={t('integrations.microsoft.settings.dialog.setDefault', { defaultValue: 'Set this as the default Microsoft app' })}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {t('integrations.microsoft.settings.dialog.setDefaultHelp', { defaultValue: 'Some setup flows still need a default app. Service choices above decide which app each service uses.' })}
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-3 md:col-span-2">
-              <div>
-                <Label>{t('integrations.microsoft.settings.dialog.capabilities', { defaultValue: 'Services this app can handle' })}</Label>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t('integrations.microsoft.settings.dialog.capabilitiesHelp', { defaultValue: 'Only checked services can use this Microsoft app.' })}
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {capabilityDescriptors.map((capability) => (
-                  <div key={capability.consumerType} className="rounded-lg border bg-muted/10 p-3">
-                    <Checkbox
-                      id={`microsoft-profile-capability-${capability.consumerType}`}
-                      checked={formState.capabilities.includes(capability.consumerType)}
-                      onChange={(event) => toggleCapability(capability.consumerType, event.currentTarget.checked)}
-                      label={capability.consumerLabel}
-                    />
-                    <p className="mt-2 text-xs text-muted-foreground">{capability.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {formError && (
-            <Alert variant="destructive">
-              <AlertDescription>{formError}</AlertDescription>
-            </Alert>
-          )}
-
-        </DialogContent>
-      </Dialog>
+      <MicrosoftProfileFormDialog
+        open={dialogMode !== null}
+        mode={dialogMode ?? 'create'}
+        profile={editingProfile}
+        initialTenantId={status?.config?.tenantId || 'common'}
+        initialCapabilities={capabilityDescriptors
+          .map((descriptor) => descriptor.consumerType)
+          // Entra capability is a deliberate opt-in: the Azure app must be
+          // configured for the Entra flow, so it is never pre-ticked here.
+          .filter((consumerType) => consumerType !== 'entra')}
+        initialSetAsDefault={!profiles.some((profile) => profile.isDefault && !profile.isArchived)}
+        showTeamsUi={showTeamsUi}
+        onOpenChange={(open) => {
+          if (!open) closeDialog();
+        }}
+        onSaved={() => void handleProfileSaved()}
+      />
 
       <MicrosoftEmailSetupDialog
         isOpen={emailSetupOpen}

@@ -2,17 +2,27 @@ import { redirect } from 'next/navigation';
 import { ClientPortalSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
 import { ClientPortalTenantDiscovery } from '@alga-psa/client-portal/components';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
-import { getTenantBrandingByDomain, getTenantLocaleByDomain } from '@alga-psa/tenancy/actions';
+import {
+  getTenantBrandingByDomain,
+  getTenantBrandingBySlug,
+  getTenantLocaleByDomain,
+  getTenantLocaleBySlug,
+} from '@alga-psa/tenancy/actions';
 import { getSession } from '@alga-psa/auth';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { recordPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
 import type { Metadata } from 'next';
+import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { PortalBrandingStyles } from '@/lib/auth/portalBranding';
 
-export const metadata: Metadata = {
-  title: 'Client Portal Sign In',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('auth.clientPortal.signin.title', { defaultValue: 'Client Portal Sign In' }),
+  };
+}
 
 export default async function ClientSignInPage({
   searchParams,
@@ -60,14 +70,19 @@ export default async function ClientSignInPage({
           ? `/auth/client-portal/signin?${queryParams.toString()}`
           : '/auth/client-portal/signin';
 
+        // Same trap the tenant-discovery branch fell into: returned outside any
+        // provider, this interstitial rendered English at every locale.
+        const switchLocale = await getServerLocale();
         return (
-          <PortalSwitchPrompt
-            currentPortal="msp"
-            targetPortal="client"
-            currentPortalUrl="/msp/dashboard"
-            targetPortalSigninUrl={targetUrl}
-            userEmail={session.user.email}
-          />
+          <I18nWrapper portal="client" initialLocale={switchLocale}>
+            <PortalSwitchPrompt
+              currentPortal="msp"
+              targetPortal="client"
+              currentPortalUrl="/msp/dashboard"
+              targetPortalSigninUrl={targetUrl}
+              userEmail={session.user.email}
+            />
+          </I18nWrapper>
         );
       } else {
         // Valid session, not revoked, correct user type - redirect
@@ -76,18 +91,33 @@ export default async function ClientSignInPage({
     }
   }
 
-  // If no tenant slug and no vanity domain, show tenant discovery form
+  // If no tenant slug and no vanity domain, show tenant discovery form. There is
+  // no tenant to resolve a locale from here, so fall back to the anonymous
+  // resolution the MSP sign-in page uses.
   if (!tenantSlug && !portalDomain) {
-    return <ClientPortalTenantDiscovery callbackUrl={callbackUrl} />;
+    const discoveryLocale = await getServerLocale();
+    return (
+      <I18nWrapper portal="client" initialLocale={discoveryLocale}>
+        <ClientPortalTenantDiscovery callbackUrl={callbackUrl} />
+      </I18nWrapper>
+    );
   }
 
-  // Fetch tenant branding and locale based on portalDomain (if present)
+  // Fetch tenant branding and locale based on portalDomain (if present).
+  // Without a vanity host the tenant is still known — the `?tenant=` slug names
+  // it — so the portal language resolves from that instead. Otherwise a tenant
+  // with no custom domain gets English regardless of what it configured.
   const [branding, locale] = portalDomain
     ? await Promise.all([
         getTenantBrandingByDomain(portalDomain),
         getTenantLocaleByDomain(portalDomain),
       ])
-    : [null, null];
+    : tenantSlug
+      ? await Promise.all([
+          getTenantBrandingBySlug(tenantSlug),
+          getTenantLocaleBySlug(tenantSlug),
+        ])
+      : [null, null];
 
   return (
     <I18nWrapper portal="client" initialLocale={locale || undefined}>

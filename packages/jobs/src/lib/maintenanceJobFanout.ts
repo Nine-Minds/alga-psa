@@ -8,18 +8,31 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 // outside the package use '@alga-psa/jobs/handlers/<name>'.
 import { expiredCreditsHandler } from './handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler } from './handlers/expiringCreditsNotificationHandler';
+import {
+  PREPAID_BALANCE_ALERT_SCAN_JOB,
+  prepaidBalanceAlertScanHandler,
+} from './handlers/prepaidBalanceAlertScanHandler';
+import { expiredHourBlocksHandler } from './handlers/expiredHourBlocksHandler';
+import { expiringHourBlocksNotificationHandler } from './handlers/expiringHourBlocksNotificationHandler';
 import { handleReconcileBucketUsage } from './handlers/reconcileBucketUsageHandler';
+import { handleReconcileHourBlockAllocations } from './handlers/reconcileHourBlockAllocationsHandler';
 import { processRenewalQueueHandler } from './handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler } from './handlers/autoCloseTicketsHandler';
 import { SEARCH_RECONCILE_JOB_NAME, searchReconcileHandler } from './handlers/searchReconcileHandler';
 import { verifyGoogleCalendarProvisioning } from './handlers/calendarWebhookMaintenanceHandler';
 import { renewGoogleGmailWatchSubscriptions } from './handlers/googleGmailWatchRenewalHandler';
 import { renewTeamsMeetingArtifactSubscriptions } from './handlers/teamsMeetingArtifactWebhookHandler';
+import { renewTelephonyCallSubscriptions } from './handlers/telephonyCallNotificationHandler';
+import {
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+  telephonyCallArtifactSweepHandler,
+} from './handlers/telephonyCallArtifactHandler';
 import { teamsMeetingSweepHandler, TEAMS_MEETING_SWEEP_JOB } from './handlers/teamsMeetingSweepHandler';
 import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeScanHandler';
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
 import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob } from './handlers/cleanupWebhookDeliveriesJob';
+import { inboundEmailRecoveryHandler } from './handlers/inboundEmailRecoveryHandler';
 
 const RENEWAL_HORIZON_DAYS = 90;
 const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
@@ -34,18 +47,25 @@ type MaintenanceJobDef =
 const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'expired-credits': { scope: 'tenant', run: (tenantId) => expiredCreditsHandler({ tenantId }) },
   'expiring-credits-notification': { scope: 'tenant', run: (tenantId) => expiringCreditsNotificationHandler({ tenantId }) },
+  [PREPAID_BALANCE_ALERT_SCAN_JOB]: { scope: 'tenant', run: (tenantId) => prepaidBalanceAlertScanHandler({ tenantId }) },
+  'expired-hour-blocks': { scope: 'tenant', run: (tenantId) => expiredHourBlocksHandler({ tenantId }) },
+  'expiring-hour-blocks-notification': { scope: 'tenant', run: (tenantId) => expiringHourBlocksNotificationHandler({ tenantId }) },
   'reconcile-bucket-usage': { scope: 'tenant', run: (tenantId) => handleReconcileBucketUsage({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
+  'reconcile-hour-block-allocations': { scope: 'tenant', run: (tenantId) => handleReconcileHourBlockAllocations({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
   'process-renewal-queue': { scope: 'tenant', run: (tenantId) => processRenewalQueueHandler({ tenantId, horizonDays: RENEWAL_HORIZON_DAYS }) },
   'auto-close-tickets': { scope: 'tenant', run: (tenantId) => autoCloseTicketsHandler({ tenantId }) },
   [SEARCH_RECONCILE_JOB_NAME]: { scope: 'tenant', run: (tenantId) => searchReconcileHandler({ tenantId }) },
   'verify-google-calendar-pubsub': { scope: 'tenant', run: (tenantId) => verifyGoogleCalendarProvisioning({ tenantId }) },
   'renew-google-gmail-watch': { scope: 'tenant', run: (tenantId) => renewGoogleGmailWatchSubscriptions({ tenantId }) },
   'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }) },
+  'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }) },
+  [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }) },
   [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }) },
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
+  'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }) },
 };
 
 export type MaintenanceJobResult = {

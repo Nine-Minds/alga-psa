@@ -28,6 +28,7 @@ vi.mock("../screens/SettingsScreen", () => ({ SettingsScreen: () => null }));
 vi.mock("../screens/InventoryScreen", () => ({ InventoryScreen: () => null }));
 vi.mock("../screens/OpportunitiesScreen", () => ({ OpportunitiesScreen: () => null }));
 vi.mock("./TicketsStackNavigator", () => ({ TicketsStackNavigator: () => null }));
+vi.mock("../features/timer/components/HeaderTimerChip", () => ({ HeaderTimerChip: () => null }));
 
 let features = { inventory: false, opportunities: false };
 vi.mock("../capabilities/CapabilitiesContext", () => ({

@@ -1,47 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const getSessionMock = vi.hoisted(() => vi.fn());
+const getCurrentUserWithRevocationCheckMock = vi.hoisted(() => vi.fn());
 const hasPermissionMock = vi.hoisted(() => vi.fn());
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const resolveXeroOAuthCredentialsMock = vi.hoisted(() => vi.fn());
 const getXeroRedirectUriMock = vi.hoisted(() => vi.fn());
 const getXeroOAuthScopesStringMock = vi.hoisted(() => vi.fn());
+const getXeroOAuthScopeConfigMock = vi.hoisted(() => vi.fn());
 const upsertStoredXeroConnectionsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
+const getSecretMock = vi.hoisted(() => vi.fn());
 const axiosPostMock = vi.hoisted(() => vi.fn());
 const axiosGetMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
 const loggerErrorMock = vi.hoisted(() => vi.fn());
+const createRedisClientMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@alga-psa/auth', () => {
-  const withAuth = (handler: (...handlerArgs: any[]) => any) =>
-    async (...args: any[]) => {
-      const session = await getSessionMock();
-      const user = session?.user;
-      if (!user) {
-        throw new Error('Unauthorized');
-      }
-      return handler(user, { tenant: user.tenant }, ...args);
-    };
-
-  const withOptionalAuth = (handler: (...handlerArgs: any[]) => any) =>
-    async (...args: any[]) => {
-      const session = await getSessionMock();
-      const user = session?.user ?? null;
-      return handler(user, user ? { tenant: user.tenant } : null, ...args);
-    };
-
-  return {
-    getSession: getSessionMock,
-    getCurrentUser: vi.fn(async () => (await getSessionMock())?.user ?? null),
-    withAuth,
-    withOptionalAuth
-  };
-});
-
-vi.mock('@alga-psa/auth/rbac', () => ({
+// The connect and callback routes resolve and re-authorize the live user via the
+// central accounting-connection policy (getCurrentUserWithRevocationCheck +
+// hasPermission), so both must be present on the auth mock.
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUserWithRevocationCheck: getCurrentUserWithRevocationCheckMock,
   hasPermission: hasPermissionMock
 }));
 
@@ -50,7 +31,8 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
-  getSecretProviderInstance: getSecretProviderInstanceMock
+  getSecretProviderInstance: getSecretProviderInstanceMock,
+  getSecret: getSecretMock
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -61,11 +43,20 @@ vi.mock('@alga-psa/core/logger', () => ({
   }
 }));
 
+vi.mock('@alga-psa/event-bus', () => ({
+  getRedisConfig: () => ({ url: 'redis://localhost:6379' })
+}));
+
+vi.mock('redis', () => ({
+  createClient: createRedisClientMock
+}));
+
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   XERO_TOKEN_URL: 'https://identity.xero.com/connect/token',
   resolveXeroOAuthCredentials: resolveXeroOAuthCredentialsMock,
   getXeroRedirectUri: getXeroRedirectUriMock,
   getXeroOAuthScopesString: getXeroOAuthScopesStringMock,
+  getXeroOAuthScopeConfig: getXeroOAuthScopeConfigMock,
   upsertStoredXeroConnections: upsertStoredXeroConnectionsMock
 }));
 
@@ -76,22 +67,71 @@ vi.mock('axios', () => ({
   }
 }));
 
+const liveUser = {
+  id: 'user-1',
+  user_id: 'user-1',
+  tenant: 'tenant-1',
+  user_type: 'internal',
+  roles: ['admin']
+};
+
+// Some test environments do not expose NextResponse.cookies; parse the raw
+// Set-Cookie header instead so the connect response's CSRF cookie is readable.
+function cookieValueFrom(response: Response, name: string): string {
+  const setCookie = response.headers.get('set-cookie') ?? '';
+  const match = setCookie.match(new RegExp(`${name}=([^;]+)`));
+  if (!match) {
+    throw new Error(`Set-Cookie header missing ${name}`);
+  }
+  return match[1];
+}
+
+// The Xero state is an opaque nonce keying a single-use, server-side attempt
+// record that holds the encrypted PKCE verifier and every binding. Drive the
+// real connect route so a valid attempt exists, then return the issued state
+// nonce and the CSRF cookie the initiating browser would carry.
+async function seedAttemptViaConnect(): Promise<{ state: string; csrfCookie: string }> {
+  const { GET: connectGET } = await import('@/app/api/integrations/xero/connect/route');
+  const connectRes = await connectGET(
+    new NextRequest('https://example.com/api/integrations/xero/connect')
+  );
+  const state = new URL(connectRes.headers.get('location')!).searchParams.get('state')!;
+  const csrfCookie = cookieValueFrom(connectRes, 'alga_xero_oauth_csrf');
+  return { state, csrfCookie };
+}
+
+function buildCallbackRequest(params: {
+  state: string;
+  csrfCookie?: string;
+  code?: string;
+}): NextRequest {
+  const search = new URLSearchParams();
+  if (params.code !== undefined) {
+    search.set('code', params.code);
+  }
+  search.set('state', params.state);
+  const headers = params.csrfCookie
+    ? { cookie: `alga_xero_oauth_csrf=${params.csrfCookie}` }
+    : undefined;
+  return new NextRequest(
+    `https://example.com/api/integrations/xero/callback?${search.toString()}`,
+    { headers }
+  );
+}
+
 describe('Xero OAuth routes', () => {
   const originalEdition = process.env.EDITION;
   const originalPublicEdition = process.env.NEXT_PUBLIC_EDITION;
 
   beforeEach(() => {
     vi.resetModules();
+    // Clear accumulated call history and any queued one-off implementations so
+    // each test's call-count assertions see only its own invocations; every
+    // implementation below is re-established immediately after.
+    vi.resetAllMocks();
     process.env.EDITION = 'ee';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
-    getSessionMock.mockResolvedValue({
-      user: {
-        id: 'user-1',
-        tenant: 'tenant-1',
-        user_type: 'internal',
-        roles: ['admin']
-      }
-    });
+    getCurrentUserWithRevocationCheckMock.mockResolvedValue({ ...liveUser });
     hasPermissionMock.mockResolvedValue(true);
     createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-1' });
     getSecretProviderInstanceMock.mockResolvedValue({});
@@ -102,8 +142,12 @@ describe('Xero OAuth routes', () => {
     });
     getXeroRedirectUriMock.mockResolvedValue('https://example.com/api/integrations/xero/callback');
     getXeroOAuthScopesStringMock.mockReturnValue(
-      'offline_access accounting.settings accounting.invoices accounting.banktransactions accounting.payments accounting.contacts'
+      'offline_access accounting.settings.read accounting.invoices accounting.contacts'
     );
+    getXeroOAuthScopeConfigMock.mockReturnValue({
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts'],
+      source: 'default'
+    });
     upsertStoredXeroConnectionsMock.mockResolvedValue({});
     axiosPostMock.mockResolvedValue({
       data: {
@@ -111,7 +155,7 @@ describe('Xero OAuth routes', () => {
         refresh_token: 'refresh-token',
         expires_in: 1800,
         refresh_token_expires_in: 3600,
-        scope: 'offline_access accounting.invoices accounting.banktransactions accounting.payments'
+        scope: 'offline_access accounting.settings.read accounting.invoices accounting.contacts'
       }
     });
     axiosGetMock.mockResolvedValue({
@@ -122,6 +166,10 @@ describe('Xero OAuth routes', () => {
           tenantName: 'Acme Holdings'
         }
       ]
+    });
+    getSecretMock.mockResolvedValue('test-verifier-key');
+    createRedisClientMock.mockImplementation(() => {
+      throw new Error('redis unavailable');
     });
   });
 
@@ -170,10 +218,21 @@ describe('Xero OAuth routes', () => {
     });
   });
 
-  it('T011/T032/T033: connect route uses tenant-owned credentials and logs tenant context plus credential source without secret values', async () => {
+  it('connect route requires the accounting connection-admin permission', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
     const { GET } = await import('@/app/api/integrations/xero/connect/route');
 
-    const response = await GET();
+    const response = await GET(new NextRequest('https://example.com/api/integrations/xero/connect'));
+
+    expect(response.status).toBe(403);
+    expect(axiosPostMock).not.toHaveBeenCalled();
+  });
+
+  it('T011/T032/T033: connect route uses tenant-owned credentials, emits an opaque state, and logs tenant context plus credential source without secret values', async () => {
+    const { GET } = await import('@/app/api/integrations/xero/connect/route');
+
+    const response = await GET(new NextRequest('https://example.com/api/integrations/xero/connect'));
 
     expect(hasPermissionMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -183,36 +242,47 @@ describe('Xero OAuth routes', () => {
       'billing_settings',
       'update'
     );
-    expect(resolveXeroOAuthCredentialsMock).toHaveBeenCalledWith('tenant-1', {});
+    expect(resolveXeroOAuthCredentialsMock).toHaveBeenCalledWith('tenant-1', expect.anything());
     expect(response.status).toBe(307);
 
     const location = response.headers.get('location');
     expect(location).toContain('https://login.xero.com/identity/connect/authorize');
     expect(location).toContain('client_id=tenant-client-id');
+    // URLSearchParams form-encodes spaces as '+'.
+    expect(location).toContain(
+      'scope=offline_access+accounting.settings.read+accounting.invoices+accounting.contacts'
+    );
+    expect(location).not.toContain('banktransactions');
+    expect(location).not.toContain('accounting.payments');
     expect(location).toContain(
       encodeURIComponent('https://example.com/api/integrations/xero/callback')
     );
+
+    // The state is an opaque 256-bit nonce (43-char base64url), not a decoded
+    // JSON payload carrying a verifier or tenant id.
+    const state = new URL(location!).searchParams.get('state')!;
+    expect(state).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const decodedState = Buffer.from(state, 'base64url').toString('utf-8');
+    expect(decodedState).not.toContain('codeVerifier');
+    expect(decodedState).not.toContain('tenantId');
+
     expect(loggerInfoMock).toHaveBeenCalledWith('[xeroOAuth] Starting Xero OAuth connect flow', {
       tenantId: 'tenant-1',
-      credentialSource: 'tenant'
+      userId: 'user-1',
+      credentialSource: 'tenant',
+      scopeSource: 'default',
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts']
     });
     expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('tenant-client-secret');
   });
 
   it('T012: callback exchanges the code with tenant-owned credentials and persists returned Xero connections', async () => {
-    const { GET } = await import('@/app/api/integrations/xero/callback/route');
-    const state = Buffer.from(
-      JSON.stringify({
-        tenantId: 'tenant-1',
-        csrf: 'csrf-token',
-        codeVerifier: 'verifier-123'
-      })
-    ).toString('base64url');
+    // Drive the real connect route so a single-use server-side attempt exists.
+    const { state, csrfCookie } = await seedAttemptViaConnect();
+    const { GET: callbackGET } = await import('@/app/api/integrations/xero/callback/route');
 
-    const response = await GET(
-      new NextRequest(`https://example.com/api/integrations/xero/callback?code=auth-code&state=${state}`, {
-        headers: { cookie: 'alga_xero_oauth_csrf=csrf-token' }
-      })
+    const response = await callbackGET(
+      buildCallbackRequest({ state, csrfCookie, code: 'auth-code' })
     );
 
     expect(axiosPostMock).toHaveBeenCalledWith(
@@ -240,24 +310,78 @@ describe('Xero OAuth routes', () => {
     );
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('xero_status=success');
+
+    // The state is single-use: a second callback with the same state is
+    // rejected before any second token exchange.
+    const replay = await callbackGET(
+      new NextRequest(
+        `https://example.com/api/integrations/xero/callback?code=auth-code&state=${state}`,
+        { headers: { cookie: `alga_xero_oauth_csrf=${csrfCookie}` } }
+      )
+    );
+    expect(replay.headers.get('location')).toContain('xero_error=invalid_state');
+    expect(axiosPostMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('callback denies and stores nothing when the connection-admin permission was revoked', async () => {
+    // Seed a valid attempt while the initiating user still holds the permission,
+    // then revoke it before the callback lands.
+    const { state, csrfCookie } = await seedAttemptViaConnect();
+    hasPermissionMock.mockResolvedValue(false);
+
+    const { GET: callbackGET } = await import('@/app/api/integrations/xero/callback/route');
+
+    const response = await callbackGET(
+      buildCallbackRequest({ state, csrfCookie, code: 'auth-code' })
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('xero_error=forbidden');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredXeroConnectionsMock).not.toHaveBeenCalled();
+  });
+
+  it('callback denies and stores nothing when a different user completes the flow', async () => {
+    // Seed the attempt as the initiating user, then have a different live user
+    // present the callback.
+    const { state, csrfCookie } = await seedAttemptViaConnect();
+    getCurrentUserWithRevocationCheckMock.mockResolvedValue({ ...liveUser, id: 'user-2', user_id: 'user-2' });
+
+    const { GET: callbackGET } = await import('@/app/api/integrations/xero/callback/route');
+
+    const response = await callbackGET(
+      buildCallbackRequest({ state, csrfCookie, code: 'auth-code' })
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('xero_error=user_mismatch');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredXeroConnectionsMock).not.toHaveBeenCalled();
+  });
+
+  it('callback rejects a CSRF cookie that does not match the attempt token', async () => {
+    const { state } = await seedAttemptViaConnect();
+
+    const { GET: callbackGET } = await import('@/app/api/integrations/xero/callback/route');
+
+    const response = await callbackGET(
+      buildCallbackRequest({ state, csrfCookie: 'a-different-token', code: 'auth-code' })
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('xero_error=csrf_mismatch');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredXeroConnectionsMock).not.toHaveBeenCalled();
   });
 
   it('T013: callback redirects with a usable error when Xero returns no connections', async () => {
     axiosGetMock.mockResolvedValueOnce({ data: [] });
 
-    const { GET } = await import('@/app/api/integrations/xero/callback/route');
-    const state = Buffer.from(
-      JSON.stringify({
-        tenantId: 'tenant-1',
-        csrf: 'csrf-token',
-        codeVerifier: 'verifier-123'
-      })
-    ).toString('base64url');
+    const { state, csrfCookie } = await seedAttemptViaConnect();
+    const { GET: callbackGET } = await import('@/app/api/integrations/xero/callback/route');
 
-    const response = await GET(
-      new NextRequest(`https://example.com/api/integrations/xero/callback?code=auth-code&state=${state}`, {
-        headers: { cookie: 'alga_xero_oauth_csrf=csrf-token' }
-      })
+    const response = await callbackGET(
+      buildCallbackRequest({ state, csrfCookie, code: 'auth-code' })
     );
 
     expect(response.status).toBe(307);

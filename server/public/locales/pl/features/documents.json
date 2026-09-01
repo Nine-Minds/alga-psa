@@ -77,10 +77,15 @@
     "moveDocumentsSuccess_few": "{{count}} dokumenty przeniesiono do {{destination}}",
     "moveDocumentsSuccess_many": "{{count}} dokumentów przeniesiono do {{destination}}",
     "suggestedDefaultsLoaded_few": "Wczytano wartości domyślne dla {{count}} typów encji",
-    "suggestedDefaultsLoaded_many": "Wczytano wartości domyślne dla {{count}} typów encji"
+    "suggestedDefaultsLoaded_many": "Wczytano wartości domyślne dla {{count}} typów encji",
+    "parseContentFailed": "Nie udało się przeanalizować zawartości dokumentu"
   },
   "validation": {
-    "nameRequired": "Nazwa dokumentu jest wymagana"
+    "nameRequired": "Nazwa dokumentu jest wymagana",
+    "typeRequired": "Typ dokumentu jest wymagany",
+    "userIdRequired": "Identyfikator użytkownika jest wymagany",
+    "orderNumberRequired": "Numer zamówienia jest wymagany",
+    "contentRequired": "Zawartość jest wymagana"
   },
   "bulkActions": {
     "selected_one": "Wybrano {{count}} dokument",
@@ -253,7 +258,9 @@
     "cascadeMakeVisible": "Czy chcesz również udostępnić {{count}} dokument(ów) w \"{{name}}\" w portalu klienta?",
     "cascadeMakeHidden": "Czy chcesz również ukryć {{count}} dokument(ów) w \"{{name}}\" w portalu klienta?",
     "cascadeYes": "Tak, zaktualizuj dokumenty",
-    "cascadeNo": "Nie, tylko folder"
+    "cascadeNo": "Nie, tylko folder",
+    "visibleToClients": "Widoczny dla klientów",
+    "hiddenFromClients": "Ukryty przed klientami"
   },
   "empty": {
     "default": "Nie znaleziono dokumentów"
@@ -297,5 +304,81 @@
     "pageOf": "Strona {{current}} z {{total}}",
     "previous": "Poprzednia"
   },
-  "ticketDocuments": "Dokumenty zgłoszenia"
+  "ticketDocuments": "Dokumenty zgłoszenia",
+  "actions": {
+    "save": "Zapisz",
+    "saving": "Zapisywanie...",
+    "cancel": "Anuluj"
+  },
+  "card": {
+    "noDate": "Brak daty",
+    "reflectionLabel": "Karta dokumentu"
+  },
+  "editor": {
+    "loading": "Wczytywanie...",
+    "initializing": "Inicjowanie edytora...",
+    "placeholder": "Zacznij pisać...",
+    "errorPrefix": "Błąd: {{message}}",
+    "status": {
+      "offline": "Brak połączenia — zmiany zostaną zsynchronizowane po ponownym połączeniu",
+      "allChangesSaved": "Wszystkie zmiany zostały zapisane",
+      "syncing": "{{status}} (synchronizowanie)"
+    },
+    "connection": {
+      "connected": "Połączono",
+      "connecting": "Łączenie",
+      "disconnected": "Rozłączono"
+    },
+    "presence": {
+      "unknownUser": "Użytkownik"
+    },
+    "toolbar": {
+      "bold": "Pogrubienie (Ctrl+B)",
+      "italic": "Kursywa (Ctrl+I)",
+      "underline": "Podkreślenie (Ctrl+U)",
+      "strikethrough": "Przekreślenie",
+      "code": "Kod",
+      "heading1": "Nagłówek 1",
+      "heading2": "Nagłówek 2",
+      "bulletList": "Lista punktowana",
+      "orderedList": "Lista numerowana",
+      "quote": "Blok przytoczenia",
+      "link": "Odnośnik",
+      "image": "Wstaw obraz",
+      "linkPrompt": "URL",
+      "imagePrompt": "Adres URL obrazu"
+    },
+    "imageUpload": {
+      "failed": "Przesyłanie obrazu nie powiodło się",
+      "tooLarge": "Obraz przekracza limit przesyłania 10 MB",
+      "notAnImage": "Do edytora można wstawiać tylko pliki obrazów",
+      "noSession": "Zaloguj się ponownie, aby przesyłać obrazy"
+    }
+  },
+  "form": {
+    "errorsHeading": "Popraw następujące błędy:",
+    "submit": "Utwórz dokument",
+    "fields": {
+      "documentName": "Nazwa dokumentu *",
+      "documentType": "Typ dokumentu *",
+      "userId": "Identyfikator użytkownika *",
+      "contactNameId": "Identyfikator nazwy kontaktu",
+      "clientId": "Identyfikator klienta",
+      "ticketId": "Identyfikator zgłoszenia",
+      "orderNumber": "Numer zamówienia *",
+      "content": "Zawartość *"
+    }
+  },
+  "previewPane": {
+    "loading": "Wczytywanie podglądu...",
+    "pdfDocument": "Dokument PDF",
+    "videoFile": "Plik wideo",
+    "notAvailable": "Podgląd niedostępny",
+    "altPdf": "Podgląd dokumentu {{name}}",
+    "altVideoThumbnail": "Miniatura pliku {{name}}",
+    "pageCount_one": "{{count}} strona",
+    "pageCount_few": "{{count}} strony",
+    "pageCount_many": "{{count}} stron",
+    "pageCount_other": "{{count}} strony"
+  }
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { notFound } from 'next/navigation';
 import DocumentTemplatesPage from '@alga-psa/billing/components/billing-dashboard/documents/DocumentTemplatesPage';
 import {
@@ -10,10 +11,20 @@ export async function generateMetadata(
   { params }: { params: Promise<{ type: string }> },
 ): Promise<Metadata> {
   const { type } = await params;
+  const { t } = await getServerTranslation(undefined, 'metadata');
   if (!isDocumentType(type)) {
-    return { title: 'Document Layouts' };
+    return {
+      title: t('msp.documentTemplates.detail.fallbackTitle', { defaultValue: 'Document Layouts' }),
+    };
   }
-  return { title: `${getDocumentTypeRegistryEntry(type).label} Layouts` };
+  // The registry label itself still comes from packages/billing in English —
+  // packages/* is outside the current i18n sweep.
+  return {
+    title: t('msp.documentTemplates.detail.title', {
+      documentType: getDocumentTypeRegistryEntry(type).label,
+      defaultValue: '{{documentType}} Layouts',
+    }),
+  };
 }
 
 export default async function DocumentTemplatesRoute(

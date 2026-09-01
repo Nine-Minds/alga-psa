@@ -53,7 +53,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
   },
   {
     group: 'msp_core_helpdesk',
-    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
+    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/interactions', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
   },
   {
@@ -62,6 +62,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
       '/msp/billing',
       '/msp/projects',
       '/msp/assets',
+      '/msp/credentials',
       '/msp/documents',
       '/msp/jobs',
       '/msp/user-activities',
@@ -88,6 +89,11 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
 ];
 
 export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
+  {
+    group: 'portal_helpdesk_root_alias',
+    dynamicPatterns: [/^\/client-portal$/],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
+  },
   {
     group: 'portal_helpdesk',
     staticPrefixes: ['/client-portal/dashboard', '/client-portal/tickets', '/client-portal/knowledge-base', '/client-portal/profile', '/client-portal/client-settings'],
@@ -201,6 +207,18 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: false, algadesk: false },
   },
   {
+    // Alga Migration Package (AMP) import workspace: tenant-scoped upload,
+    // spreadsheet conversion, dry-run reporting and export endpoints, gated
+    // by the import_export permission. Administrative onboarding surface, not
+    // v1 API, so it never appears in /api/v1/meta metadata. PSA-only.
+    group: 'api_amp_migrations',
+    staticPrefixes: [
+      '/api/migrations',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
     // SCIM 2.0 service provider for directory-driven user lifecycle. Entra
     // authenticates with a tenant-scoped bearer token, so these endpoints are
     // not v1 API surface and never appear in /api/v1/meta metadata. PSA-only,
@@ -208,6 +226,18 @@ export const API_RULES: readonly ApiRule[] = [
     group: 'api_scim_provisioning',
     staticPrefixes: [
       '/api/scim',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
+    // Telephony provider webhooks (Microsoft Graph callRecords notifications).
+    // Graph authenticates with the per-subscription clientState secret the
+    // route verifies, so these are not v1 API surface and never appear in
+    // /api/v1/meta metadata. PSA-only, matching the Microsoft Teams integration.
+    group: 'api_telephony_webhooks',
+    staticPrefixes: [
+      '/api/telephony',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: false, algadesk: false },
@@ -256,7 +286,8 @@ export function resolveProductRouteBehavior(productCode: ProductCode, pathname: 
     return getAllowedSettingsTabIds(productCode).has(settingsSegment) ? 'allowed' : 'not_found';
   }
 
-  const rules = pathname.startsWith('/client-portal/') ? PORTAL_ROUTE_RULES : MSP_ROUTE_RULES;
+  const rules =
+    pathname === '/client-portal' || pathname.startsWith('/client-portal/') ? PORTAL_ROUTE_RULES : MSP_ROUTE_RULES;
   const matched = rules.find((rule) => matchesRule(pathname, rule));
   if (!matched) {
     return productCode === 'algadesk' ? 'not_found' : 'allowed';

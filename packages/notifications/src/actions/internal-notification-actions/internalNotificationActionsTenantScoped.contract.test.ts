@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const source = readFileSync(resolve(__dirname, 'internalNotificationActions.ts'), 'utf8');
+const source = [
+  'internalNotificationActions.ts',
+  'createNotificationCore.ts',
+].map((fileName) => readFileSync(resolve(__dirname, fileName), 'utf8')).join('\n');
 
 describe('internal notification actions tenant-scoped query contract', () => {
   it('uses structural tenant scoping for tenant-owned internal notification roots', () => {

@@ -15,6 +15,20 @@ Instead of storing sensitive data in environment variables or configuration file
 
 All secrets are stored in the `secrets/` directory at the project root. Each secret is stored in its own file:
 
+> **Bootstrap:** `./scripts/generate-secrets.sh` is the persisted, idempotent
+> bootstrap for the Compose flow. On a **fresh** directory it creates every
+> required secret file with a cryptographically random value (mode `0600`) and
+> **never overwrites an existing file**, so it is safe to re-run. On an
+> **existing/partial** installation it preserves every established value, the
+> only auto-add is the newly introduced `credential_encryption_key` (no
+> ciphertext was ever encrypted with it), and it **fails loudly** instead of
+> regenerating any other missing/empty established secret — silently replacing a
+> live deployment's database/auth/encryption secret would break database
+> access, invalidate sessions, or make encrypted data unrecoverable. It is
+> invoked automatically by `scripts/docker-compose-wrapper.sh` before
+> `docker compose` and by `scripts/validate-secrets.sh` before validation; a
+> generator failure stops both callers (`set -e`).
+
 ### Database Secrets
 - `postgres_password` - PostgreSQL admin password (used by 'postgres' user for administration)
 - `db_password_server` - Application user password (used by 'app_user' for application database access)
@@ -30,6 +44,7 @@ All secrets are stored in the `secrets/` directory at the project root. Each sec
 - `crypto_key` - Encryption key for sensitive data
 - `token_secret_key` - JWT signing key
 - `nextauth_secret` - NextAuth.js secret key
+- `credential_encryption_key` - Credentials vault encryption key (EE). Auto-generated per deployment; rotation invalidates previously stored vault ciphertext and is a follow-up.
 
 ### OAuth Secrets
 - `google_oauth_client_id` - Google OAuth client ID
@@ -132,6 +147,7 @@ echo 'your-secure-password' > secrets/redis_password
 echo 'your-32-char-min-key' > secrets/crypto_key
 echo 'your-32-char-min-key' > secrets/token_secret_key
 echo 'your-32-char-min-key' > secrets/nextauth_secret
+echo "$(openssl rand -base64 32)" > secrets/credential_encryption_key
 
 # Email & OAuth
 echo 'your-email-password' > secrets/email_password

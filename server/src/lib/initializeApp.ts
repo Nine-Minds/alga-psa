@@ -1,6 +1,6 @@
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
-import { logger, registerFeatureFlagChecker, registerJobEnqueuer } from '@alga-psa/core';
+import { logger, registerFeatureFlagChecker, registerJobEnqueuer, registerScheduledJobEnqueuer, registerScheduledJobCanceler } from '@alga-psa/core';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
@@ -61,6 +61,24 @@ export async function initializeApp() {
 
     await bootstrapInboundWebhookActions();
     logger.info('Inbound webhook actions bootstrapped');
+
+    // Register the admin-notification implementation for the inbound
+    // auth-failure auto-pause (the shared lifecycle service owns the pause
+    // transition but cannot depend on @alga-psa/notifications).
+    try {
+      const { registerInboundAuthPauseNotifications } = await import(
+        '../services/email/inboundAuthPauseNotificationService'
+      );
+      registerInboundAuthPauseNotifications();
+      const { assertInboundAuthPauseNotifierRegistered } = await import(
+        '@alga-psa/shared/services/email/inboundAuthPauseNotifier'
+      );
+      assertInboundAuthPauseNotifierRegistered('server/initializeApp');
+      logger.info('Inbound auth-pause notifications registered');
+    } catch (error) {
+      logger.error('Failed to register inbound auth-pause notifications:', error);
+    }
+
 
     // Validate secret uniqueness first (must succeed)
     try {
@@ -135,16 +153,40 @@ export async function initializeApp() {
       EmailProviderManager: EmailProviderManager as any,
     });
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
-    // Let vertical packages (billing, client-portal) enqueue jobs without
-    // importing @alga-psa/jobs (which would create a vertical -> jobs cycle).
+    // Let vertical packages (billing, client-portal, documents) enqueue jobs
+    // without importing @alga-psa/jobs (which would create a vertical -> jobs
+    // cycle). Goes through the runner seam — Temporal on EE, pg-boss on CE —
+    // not the pg-boss-only JobScheduler: on EE nothing calls boss.work(), so
+    // jobs sent straight to pg-boss sat queued forever.
     registerJobEnqueuer(async (jobName, data) => {
-      const jobService = await JobService.create();
-      const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob(
+      const runner = await initializeJobRunner();
+      const payload = data as Record<string, unknown>;
+      const userId =
+        typeof payload.user_id === 'string'
+          ? payload.user_id
+          : typeof payload.userId === 'string'
+            ? payload.userId
+            : undefined;
+      const result = await runner.scheduleJob(
         jobName,
-        data as Parameters<typeof jobService.createAndScheduleJob>[1],
-        'immediate',
+        data as never,
+        userId ? { userId } : undefined,
       );
-      return { jobId: jobRecord.id as string, scheduledJobId };
+      return { jobId: result.jobId, scheduledJobId: result.externalId ?? null };
+    });
+    // Same seam for future-dated jobs (e.g. scheduled client-visible comment
+    // publication): the tickets package schedules/cancels without importing
+    // @alga-psa/jobs. Backed by the runner registered in initializeJobRunner.
+    registerScheduledJobEnqueuer(async (jobName, data, runAt, options) => {
+      const { getJobRunner } = await import('@alga-psa/jobs/runner');
+      const runner = await getJobRunner();
+      const scheduled = await runner.scheduleJobAt(jobName, data as any, runAt, options);
+      return { jobId: scheduled.jobId as string, scheduledJobId: scheduled.externalId ?? null };
+    });
+    registerScheduledJobCanceler(async (jobId, tenantId) => {
+      const { getJobRunner } = await import('@alga-psa/jobs/runner');
+      const runner = await getJobRunner();
+      return runner.cancelJob(jobId, tenantId);
     });
     // Converge the accounting-sync schedule the moment a tenant connects or
     // disconnects QuickBooks, so connected-only scheduling doesn't wait for the
@@ -303,6 +345,23 @@ export async function initializeApp() {
     // Initialize enterprise features
     if (isEnterprise) {
 
+      // The credentials vault (EE, Pro tier) must be encryptable at boot, not
+      // on the user's first save: a non-empty password save throws today when
+      // the credential encryption key is missing. Fail loud & early here so a
+      // misconfigured vault is caught at startup with an actionable message
+      // instead of surfacing as a vague save error to the first technician
+      // who tries to store a password.
+      try {
+        const { assertCredentialEncryptionConfigured } = await import(
+          '@enterprise/lib/credentials/encryption'
+        );
+        await assertCredentialEncryptionConfigured();
+        logger.info('Credential vault encryption configuration validated');
+      } catch (error) {
+        logger.error('Credential vault encryption configuration failed:', error);
+        throw error;
+      }
+
       // Register EE implementations for the auth package's SSO registry
       // (NextAuth provider callbacks call into @alga-psa/auth's registry; EE must register the real implementations)
       try {
@@ -434,6 +493,12 @@ async function initializeJobScheduler(storageService: StorageService) {
   try {
     const jobRunner = await initializeJobRunner();
     logger.info(`Job runner initialized: ${jobRunner.getRunnerType()}`);
+    try {
+      const { reconcileScheduledCommentPublications } = await import('./jobs/handlers/publishScheduledCommentHandler');
+      await reconcileScheduledCommentPublications();
+    } catch (error) {
+      logger.error('Failed to reconcile scheduled comment publications:', error);
+    }
 
     if (isEnterprise) {
       try {

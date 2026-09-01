@@ -397,7 +397,6 @@ describe('Credit Application Tests', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     await setupDefaultTax(clientId);
@@ -466,7 +465,6 @@ describe('Credit Application Tests', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     await setupDefaultTax(clientId);
@@ -560,7 +558,6 @@ describe('Credit Application Tests', () => {
       billing_cycle: 'monthly',
       region_code: 'US-NY',
       is_tax_exempt: false,
-      credit_balance: 0
     });
 
     await setupDefaultTax(clientId);
@@ -650,7 +647,6 @@ describe('Credit Application Tests', () => {
         billing_cycle: 'monthly',
         region_code: 'US-NY',
         is_tax_exempt: false,
-        credit_balance: 0
       }
     );
 
@@ -751,7 +747,6 @@ describe('Credit Application Tests', () => {
         billing_cycle: 'monthly',
         region_code: 'US-NY',
         is_tax_exempt: false,
-        credit_balance: 0
       }
     );
 
@@ -846,7 +841,6 @@ describe('Credit Application Tests', () => {
         billing_cycle: 'monthly',
         region_code: 'US-NY',
         is_tax_exempt: false,
-        credit_balance: 0
       }
     );
 
@@ -920,7 +914,6 @@ describe('Credit Application Tests', () => {
         billing_cycle: 'monthly',
         region_code: 'US-NY',
         is_tax_exempt: false,
-        credit_balance: 0
       }
     );
 
@@ -1018,7 +1011,6 @@ describe('Credit Application Tests', () => {
         billing_cycle: 'monthly',
         region_code: 'US-NY',
         is_tax_exempt: false,
-        credit_balance: 0
       }
     );
 
@@ -1091,7 +1083,6 @@ describe('Credit Application Tests', () => {
         billing_cycle: 'monthly',
         region_code: 'US-NY',
         is_tax_exempt: false,
-        credit_balance: 0
       }
     );
 
@@ -1164,7 +1155,6 @@ describe('Credit Application Tests', () => {
         billing_cycle: 'monthly',
         region_code: 'US-NY',
         is_tax_exempt: false,
-        credit_balance: 0
       }
     );
 

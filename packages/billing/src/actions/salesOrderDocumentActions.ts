@@ -4,9 +4,11 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import { TenantEmailService } from '@alga-psa/email';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-import { createPDFGenerationService } from '../services/pdfGenerationService';
+import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
+import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import {
   buildSalesOrderConfirmationEmailContent,
   dedupeRecipients,
@@ -54,21 +56,50 @@ export const downloadSalesOrderPDF = withAuth(
       );
     }
 
-    const pdfGenerationService = createPDFGenerationService(tenant);
-    const pdfBuffer = await pdfGenerationService.generatePDF({
-      salesOrderId: soId,
-      salesOrderDocumentType: documentType,
-      userId: user.user_id,
-    });
+    const pdfBuffer = await renderStoredSalesOrderPdf(tenant, soId, documentType, user.user_id);
 
     return { pdfData: Array.from(pdfBuffer), soNumber: so.so_number, documentType };
   },
 );
 
 /**
- * Resolve the recipient email(s) for a Sales Order: any explicitly-passed addresses, else the
- * client's billing email. (SOs carry only a client_id — no contact — so the client billing email is
- * the canonical recipient, mirroring how a quote falls back to clients.billing_email.)
+ * File the Sales Order document (reusing an already-filed one) and hand back its bytes, so a
+ * download and the emailed copy are the same stored artifact rather than two independent renders.
+ */
+async function renderStoredSalesOrderPdf(
+  tenant: string,
+  soId: string,
+  documentType: SalesOrderDocumentType,
+  userId: string,
+): Promise<Buffer> {
+  const pdfGenerationService = createPDFGenerationService(tenant);
+
+  try {
+    const stored = await pdfGenerationService.generateAndStore({
+      salesOrderId: soId,
+      salesOrderDocumentType: documentType,
+      userId,
+    });
+
+    const { buffer } = await StorageService.downloadFile(stored.file_id);
+    return Buffer.from(buffer);
+  } catch (error) {
+    // Filing is what makes the document findable, but it is not what the caller
+    // asked for: an unavailable document store must not cost them the PDF.
+    console.error('[salesOrderDocument] Falling back to an unfiled render:', error);
+    return pdfGenerationService.generatePDF({
+      salesOrderId: soId,
+      salesOrderDocumentType: documentType,
+      userId,
+    });
+  }
+}
+
+/**
+ * Resolve the recipient email(s) for a Sales Order: any explicitly-passed addresses, then the
+ * client's billing recipient. An SO carries only a client_id — no contact of its own — so the
+ * recipient is whoever `resolveInvoiceBillingRecipient` would send that client's invoice to
+ * (billing contact, then clients.billing_email, then a billing or default location email).
  */
 async function resolveSalesOrderRecipients(
   knex: any,
@@ -76,14 +107,11 @@ async function resolveSalesOrderRecipients(
   clientId: string | null | undefined,
   explicit: string[] = [],
 ): Promise<{ recipients: string[]; clientName: string | null }> {
-  const client = clientId
-    ? await knex('clients')
-        .select('billing_email', 'client_name')
-        .where({ tenant, client_id: clientId })
-        .first()
+  const recipient = clientId
+    ? await resolveInvoiceBillingRecipient({ knexOrTrx: knex, tenantId: tenant, clientId })
     : null;
-  const recipients = dedupeRecipients([...explicit, client?.billing_email ?? '']);
-  return { recipients, clientName: client?.client_name ?? null };
+  const recipients = dedupeRecipients([...explicit, recipient?.recipientEmail ?? '']);
+  return { recipients, clientName: recipient?.clientName || null };
 }
 
 /**
@@ -139,11 +167,7 @@ export const emailSalesOrderConfirmation = withAuth(
       };
     }
 
-    const pdfBuffer = await createPDFGenerationService(tenant).generatePDF({
-      salesOrderId: soId,
-      salesOrderDocumentType: 'sales-order',
-      userId: user.user_id,
-    });
+    const pdfBuffer = await renderStoredSalesOrderPdf(tenant, soId, 'sales-order', user.user_id);
 
     const soNumber = so.so_number ?? soId;
     const tenantRow = await knex('tenants').select('client_name').where({ tenant }).first();
@@ -167,6 +191,11 @@ export const emailSalesOrderConfirmation = withAuth(
       entityId: soId,
       userId: user.user_id,
     });
+
+    if (result.success) {
+      // Sent, so the filed confirmation may now be shown in the client portal.
+      await publishGeneratedDocumentsToClient(tenant, 'sales_order', soId).catch(() => undefined);
+    }
 
     return {
       success: result.success,

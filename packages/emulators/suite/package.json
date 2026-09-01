@@ -26,7 +26,9 @@
     "@alga-psa/emulator-msgraph": "*",
     "@alga-psa/emulator-qbo": "*",
     "@alga-psa/emulator-smtp-sink": "*",
-    "@alga-psa/emulator-webhook-sink": "*"
+    "@alga-psa/emulator-stripe": "*",
+    "@alga-psa/emulator-webhook-sink": "*",
+    "@alga-psa/emulator-xero": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

@@ -16,6 +16,7 @@ import {
   linkClientToQboCustomer,
   bulkLinkExactCustomerMatches,
   createQboCustomerForClient,
+  createQboSubCustomerForProfile,
 } from '../../actions/qboOnboardingActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing-owned onboarding panel reads the QBO customer catalog directly (same bridge as the accounting export adapter)
 import { getQboCustomers } from '@alga-psa/integrations/actions/qboActions';
@@ -55,6 +56,10 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
         clientId: row.clientId,
         externalId,
         externalName,
+        // Present only on a sub-customer row; the mapping is then keyed on the
+        // profile, so a client and its site can point at different QuickBooks
+        // customers without colliding (F122).
+        billingProfileId: row.billingProfileId,
       });
       if (result.linked) {
         onLinked();
@@ -72,7 +77,15 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
     setWorking(true);
     setFeedback(null);
     try {
-      const result = await createQboCustomerForClient(row.clientId);
+      // A sub-customer must be created under its parent, which is a different
+      // call — the client-level one would make a top-level customer whose
+      // balance never rolls up to the client (F118).
+      const result = row.billingProfileId
+        ? await createQboSubCustomerForProfile({
+            clientId: row.clientId,
+            billingProfileId: row.billingProfileId,
+          })
+        : await createQboCustomerForClient(row.clientId);
       if (result.created) {
         onLinked();
       } else {
@@ -95,7 +108,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">{row.mappedExternalName}</span>
         <Button
-          id={`qbo-customer-link-${row.clientId}`}
+          id={`qbo-customer-link-${row.billingProfileId ?? row.clientId}`}
           type="button"
           variant="outline"
           size="sm"
@@ -123,7 +136,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
       <div className="flex items-center gap-2">
         <span className="text-xs text-muted-foreground">Exact: {row.suggestion.externalName}</span>
         <Button
-          id={`qbo-customer-link-${row.clientId}`}
+          id={`qbo-customer-link-${row.billingProfileId ?? row.clientId}`}
           type="button"
           size="sm"
           disabled={working}
@@ -142,7 +155,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Suggestion: {row.suggestion.externalName}</span>
           <Button
-            id={`qbo-customer-link-${row.clientId}`}
+            id={`qbo-customer-link-${row.billingProfileId ?? row.clientId}`}
             type="button"
             size="sm"
             variant="outline"
@@ -152,7 +165,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
             {working ? 'Linking…' : 'Confirm'}
           </Button>
           <Button
-            id={`qbo-customer-search-${row.clientId}`}
+            id={`qbo-customer-search-${row.billingProfileId ?? row.clientId}`}
             type="button"
             size="sm"
             variant="ghost"
@@ -179,7 +192,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <Button
-          id={`qbo-customer-link-${row.clientId}`}
+          id={`qbo-customer-link-${row.billingProfileId ?? row.clientId}`}
           type="button"
           size="sm"
           variant="outline"
@@ -188,7 +201,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
           Link to QBO Customer
         </Button>
         <Button
-          id={`qbo-customer-create-${row.clientId}`}
+          id={`qbo-customer-create-${row.billingProfileId ?? row.clientId}`}
           type="button"
           size="sm"
           variant="outline"
@@ -197,7 +210,7 @@ function RowAction({ row, qboCustomers, onLinked }: RowActionProps) {
         >
           {working ? 'Creating…' : 'Create in QuickBooks'}
         </Button>
-        <Button id={`qbo-customer-leave-${row.clientId}`} type="button" size="sm" variant="ghost" disabled={working}>
+        <Button id={`qbo-customer-leave-${row.billingProfileId ?? row.clientId}`} type="button" size="sm" variant="ghost" disabled={working}>
           Leave
         </Button>
       </div>
@@ -358,8 +371,18 @@ export function QboCustomerMappingPanel() {
             </thead>
             <tbody className="divide-y">
               {rows.map((row) => (
-                <tr key={row.clientId} className="py-2">
-                  <td className="py-2 pr-4 font-medium">{row.clientName}</td>
+                <tr key={row.billingProfileId ?? row.clientId} className="py-2">
+                  <td className="py-2 pr-4 font-medium">
+                    {row.clientName}
+                    {/* Says plainly what a sub-customer is, because "Acme:Site
+                        B" in a customer list is otherwise easy to mistake for a
+                        second, unrelated customer. */}
+                    {row.billingProfileId && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        sub-customer
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2 pr-4">
                     {row.mappedExternalId ? (
                       <Badge variant="success" className="text-xs">

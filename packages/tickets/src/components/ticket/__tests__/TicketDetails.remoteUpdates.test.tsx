@@ -5,6 +5,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
+import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
 const {
   routerPushMock,
@@ -158,6 +159,18 @@ vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  // Components under test format dates through useFormatters; the real hook
+  // reads the locale off the provider this test does not mount.
+  useFormatters: () => ({
+    locale: 'en',
+    formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en', options).format(typeof date === 'string' ? new Date(date) : date),
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', options).format(value),
+    formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
+    formatRelativeTime: (date: Date | string) => String(date),
+  }),
   useTranslation: () => ({
     t: (_key: string, fallback?: string | Record<string, unknown>) => {
       // Mirror i18next's t(key, options) form where options carries defaultValue.
@@ -404,6 +417,7 @@ const enabledBoard = {
 function renderTicketDetails() {
   return render(
     <TicketDetails
+      bootstrap={entryLayoutBootstrap}
       initialTicket={baseTicket}
       initialBoard={enabledBoard}
       statusOptions={[
@@ -465,6 +479,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -511,6 +526,7 @@ describe('TicketDetails remote live updates', () => {
       act(() => {
         view.rerender(
           <TicketDetails
+            bootstrap={entryLayoutBootstrap}
             initialTicket={baseTicket}
             initialBoard={enabledBoard}
             statusOptions={[
@@ -566,6 +582,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -615,6 +632,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -664,6 +682,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -717,6 +736,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -763,6 +783,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[

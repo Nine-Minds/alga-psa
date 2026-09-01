@@ -11,10 +11,13 @@
     "clients": "Klienci",
     "opportunities": "Szanse sprzedażowe",
     "contacts": "Kontakty",
+    "interactions": "Interakcje",
     "documents": "Dokumenty",
     "documentsAll": "Wszystkie dokumenty",
     "knowledgeBase": "Baza wiedzy",
     "assets": "Zasoby",
+    "assetsAll": "Wszystkie zasoby",
+    "assetsMaintenance": "Konserwacja",
     "inventory": {
       "label": "Zapasy",
       "sections": {
@@ -97,7 +100,8 @@
       "sequences": "Sekwencje",
       "forms": "Formularze",
       "channels": "Kanały"
-    }
+    },
+    "passwords": "Hasła"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",
@@ -107,7 +111,10 @@
     "goToDashboard": "Przejdź do pulpitu",
     "logoAlt": "Logo AlgaPSA",
     "expandSidebar": "Rozwiń pasek boczny",
-    "collapseSidebar": "Zwiń pasek boczny"
+    "collapseSidebar": "Zwiń pasek boczny",
+    "collapseSection": "Zwiń {{section}}",
+    "expandSection": "Rozwiń {{section}}",
+    "appLogoAlt": "Logo {{appName}}"
   },
   "settings": {
     "sections": {
@@ -123,11 +130,13 @@
       "users": "Użytkownicy",
       "teams": "Zespoły",
       "language": "Język",
+      "appearance": "Wygląd",
       "clientPortal": "Portal klienta",
       "license": "Licencja",
       "ticketing": "Obsługa zgłoszeń",
       "sla": "SLA",
       "projects": "Projekty",
+      "assets": "Zasoby",
       "interactions": "Interakcje",
       "opportunities": "Szanse sprzedażowe",
       "notifications": "Powiadomienia",
@@ -734,5 +743,9 @@
       "permissionDescription": "Nie masz uprawnień do wyświetlania marketingu. Poproś administratora o uprawnienie odczytu marketingu.",
       "backToDashboard": "Przejdź do pulpitu"
     }
+  },
+  "githubStar": {
+    "label": "Oznacz gwiazdką",
+    "ariaLabel": "Oznacz {{repository}} gwiazdką w serwisie GitHub"
   }
 }

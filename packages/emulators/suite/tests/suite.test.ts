@@ -27,7 +27,9 @@ describe('emulator suite', () => {
       'msgraph',
       'qbo',
       'smtp-sink',
+      'stripe',
       'webhook-sink',
+      'xero',
     ]);
     const ports = catalog.emulators.map((emu: any) => emu.port);
     expect(new Set(ports).size).toBe(ports.length);

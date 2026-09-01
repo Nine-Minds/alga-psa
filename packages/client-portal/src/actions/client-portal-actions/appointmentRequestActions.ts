@@ -4,6 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction, normalizeIanaTimeZone, resolveEffectiveTimeZone, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
@@ -205,7 +206,7 @@ async function getTenantSettings(tenant: string): Promise<TenantSettings> {
       contactEmail: tenantSettings.supportEmail || tenantSettings.contactEmail || 'support@company.com',
       contactPhone: tenantSettings.supportPhone || tenantSettings.contactPhone || '',
       tenantName,
-      defaultLocale: tenantSettings.defaultLocale || 'en',
+      defaultLocale: normalizeLocale(tenantSettings.defaultLocale) ?? 'en',
     };
   });
 }

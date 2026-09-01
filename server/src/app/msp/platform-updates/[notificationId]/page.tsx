@@ -1,13 +1,18 @@
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { notFound } from 'next/navigation';
 import { getActivePlatformNotifications } from '@enterprise/lib/platformNotifications/actions';
 import { PlatformUpdateDetail } from '@/components/platform-updates/PlatformUpdateDetail';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Platform Update',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.platformUpdates.detail.title', { defaultValue: 'Platform Update' }),
+  };
+}
 
 interface PageProps {
   params: Promise<{ notificationId: string }>;

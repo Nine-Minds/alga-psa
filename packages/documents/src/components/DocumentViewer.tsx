@@ -5,6 +5,8 @@ import { EditorContent, useEditor, type JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { EditorImage } from '../lib/editorImageExtension';
 import {
   blockNoteJsonToProsemirrorJson,
   detectBlockContentFormat,
@@ -27,6 +29,7 @@ const getProseMirrorContent = (content: unknown): JSONContent => {
 };
 
 export function DocumentViewer({ content }: DocumentViewerProps) {
+  const { t } = useTranslation('features/documents');
   const resolvedContent = useMemo(() => getProseMirrorContent(content), [content]);
 
   const editor = useEditor({
@@ -44,6 +47,7 @@ export function DocumentViewer({ content }: DocumentViewerProps) {
         },
       }),
       Underline,
+      EditorImage,
     ],
     content: resolvedContent,
     editorProps: {
@@ -59,7 +63,11 @@ export function DocumentViewer({ content }: DocumentViewerProps) {
   }, [editor, resolvedContent]);
 
   if (!editor || editor.isDestroyed) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        {t('editor.loading', { defaultValue: 'Loading...' })}
+      </div>
+    );
   }
 
   return <EditorContent editor={editor} />;

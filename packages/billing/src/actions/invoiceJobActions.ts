@@ -4,18 +4,21 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { getInvoiceForRendering } from './invoiceQueries';
-import { createPDFGenerationService } from '../services/pdfGenerationService';
+import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { SystemEmailProviderFactory } from '@alga-psa/email';
 import { EmailMessage, EmailAddress } from '@alga-psa/types';
 import { formatCurrency, dateValueToDate, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { resolveEmailLocale, getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
-import type { IContact } from '@alga-psa/types';
 import Handlebars from 'handlebars';
 import fs from 'fs/promises';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getClientById } from '@alga-psa/shared/billingClients/clients';
+import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
+import { ensureInvoiceEmailLinks } from '../services/ensureInvoiceEmailLinks';
+import { getInvoiceEmailLinkContext } from './invoiceEmailLinkContext';
 import type { Knex } from 'knex';
 
 interface InitialJobData {
@@ -45,13 +48,6 @@ export type ScheduleInvoiceJobResult =
   | { jobId: string }
   | InvoiceJobActionError;
 
-function actionError(message: string): InvoiceJobActionError {
-  return { actionError: message };
-}
-
-function permissionError(message: string): InvoiceJobActionError {
-  return { permissionError: message };
-}
 
 function isInvoiceJobActionError(value: unknown): value is InvoiceJobActionError {
   return Boolean(
@@ -74,11 +70,11 @@ export const scheduleInvoiceZipAction = withAuth(async (
   invoiceIds: string[]
 ): Promise<ScheduleInvoiceJobResult> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   if (!invoiceIds || invoiceIds.length === 0) {
-    return actionError('Select at least one invoice to generate PDFs.');
+    return actionError('Select at least one invoice to generate PDFs.', 'msp/invoicing:errors.jobs.selectInvoicesPdf');
   }
   const steps = [
     ...invoiceIds.map((id, index) => ({
@@ -109,7 +105,7 @@ export const scheduleInvoiceZipAction = withAuth(async (
   try {
     const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_zip', jobData);
     if (!scheduledJobId) {
-      return actionError(INVOICE_ZIP_SCHEDULE_FAILURE);
+      return actionError(INVOICE_ZIP_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.schedulePdfFailed');
     }
     return { jobId };
   } catch (error) {
@@ -119,7 +115,7 @@ export const scheduleInvoiceZipAction = withAuth(async (
       invoiceIds,
     });
 
-    return actionError(INVOICE_ZIP_SCHEDULE_FAILURE);
+    return actionError(INVOICE_ZIP_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.schedulePdfFailed');
   }
 });
 
@@ -129,11 +125,11 @@ export const scheduleInvoiceEmailAction = withAuth(async (
   invoiceIds: string[]
 ): Promise<ScheduleInvoiceJobResult> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
   }
 
   if (!invoiceIds || invoiceIds.length === 0) {
-    return actionError('Select at least one invoice to email.');
+    return actionError('Select at least one invoice to email.', 'msp/invoicing:errors.jobs.selectInvoicesEmail');
   }
   const { knex } = await createTenantKnex();
 
@@ -144,11 +140,15 @@ export const scheduleInvoiceEmailAction = withAuth(async (
       return invoice;
     }
     if (!invoice) {
-      return actionError(`Invoice ${invoiceId} was not found.`);
+      return actionError(`Invoice ${invoiceId} was not found.`, 'msp/invoicing:errors.invoice.notFoundNumbered', { invoiceId });
     }
     const client = await getClientById(knex, tenant, invoice.client_id);
     if (!client) {
-      return actionError(`Client not found for invoice ${invoice.invoice_number}.`);
+      return actionError(
+        `Client not found for invoice ${invoice.invoice_number}.`,
+        'msp/invoicing:errors.invoice.clientNotFoundForInvoice',
+        { invoiceNumber: invoice.invoice_number },
+      );
     }
     invoiceDetails.push({
       invoiceId,
@@ -185,7 +185,7 @@ export const scheduleInvoiceEmailAction = withAuth(async (
   try {
     const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_email', jobData);
     if (!scheduledJobId) {
-      return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE);
+      return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.scheduleEmailFailed');
     }
 
     return { jobId };
@@ -199,7 +199,7 @@ export const scheduleInvoiceEmailAction = withAuth(async (
         clientName: d.clientName,
       })),
     });
-    return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE);
+    return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.scheduleEmailFailed');
   }
 });
 
@@ -210,7 +210,7 @@ export interface InvoiceEmailRecipientInfo {
 
   recipientEmail: string;
   recipientName: string;
-  recipientSource: 'billing_contact' | 'billing_email' | 'client_email' | 'none';
+  recipientSource: 'billing_contact' | 'billing_email' | 'billing_location' | 'default_location' | 'client_email' | 'none';
 
   totalAmount: string;
   currencyCode: string;
@@ -223,7 +223,7 @@ export interface InvoiceEmailRecipientInfo {
 
 export interface GetInvoiceEmailRecipientsResult {
   recipients: InvoiceEmailRecipientInfo[];
-  errors: Array<{ invoiceId: string; error: string }>;
+  errors: Array<{ invoiceId: string; error: string; messageKey?: string }>;
 }
 
 export const getInvoiceEmailRecipientAction = withAuth(async (
@@ -232,16 +232,16 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
   invoiceIds: string[]
 ): Promise<GetInvoiceEmailRecipientsResult | InvoiceJobActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
 
   if (!invoiceIds || invoiceIds.length === 0) {
-    return actionError('Select at least one invoice.');
+    return actionError('Select at least one invoice.', 'msp/invoicing:errors.jobs.selectInvoices');
   }
 
   const recipients: InvoiceEmailRecipientInfo[] = [];
-  const errors: Array<{ invoiceId: string; error: string }> = [];
+  const errors: Array<{ invoiceId: string; error: string; messageKey?: string }> = [];
 
   const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
 
@@ -266,30 +266,15 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         continue;
       }
 
-      let recipientEmail = '';
-      let recipientName = client.client_name;
-      let recipientSource: InvoiceEmailRecipientInfo['recipientSource'] = 'none';
+      const resolved = await resolveInvoiceBillingRecipient({
+        knexOrTrx: knex,
+        tenantId: tenant,
+        clientId: invoice.client_id,
+      });
 
-      if (client.billing_contact_id) {
-        const contact = await tenantDb(knex, tenant).table<IContact>('contacts')
-          .where({ contact_name_id: client.billing_contact_id })
-          .first();
-        if (contact && contact.email) {
-          recipientEmail = contact.email;
-          recipientName = contact.full_name;
-          recipientSource = 'billing_contact';
-        }
-      }
-
-      if (!recipientEmail && (client as any).billing_email) {
-        recipientEmail = (client as any).billing_email;
-        recipientSource = 'billing_email';
-      }
-
-      if (!recipientEmail && (client as any).location_email) {
-        recipientEmail = (client as any).location_email;
-        recipientSource = 'client_email';
-      }
+      let recipientEmail = resolved.recipientEmail;
+      let recipientName = resolved.recipientName || client.client_name;
+      let recipientSource: InvoiceEmailRecipientInfo['recipientSource'] = resolved.recipientSource;
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
       const amountLocale = await getTenantDefaultLocale(tenant, 'client');
@@ -331,7 +316,11 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         userId: user.user_id,
         invoiceId,
       });
-      errors.push({ invoiceId, error: INVOICE_EMAIL_RECIPIENT_FAILURE });
+      errors.push({
+        invoiceId,
+        error: INVOICE_EMAIL_RECIPIENT_FAILURE,
+        messageKey: 'msp/invoicing:errors.jobs.recipientFailed',
+      });
     }
   }
 
@@ -343,6 +332,7 @@ export interface SendInvoiceEmailResult {
   invoiceNumber: string;
   recipientEmail: string;
   error?: string;
+  messageKey?: string;
 }
 
 export interface SendInvoiceEmailsResult {
@@ -438,17 +428,17 @@ export const sendInvoiceEmailAction = withAuth(async (
   customMessage?: string
 ): Promise<SendInvoiceEmailsResult | InvoiceJobActionError> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
   }
   const { knex } = await createTenantKnex();
 
   if (!invoiceIds || invoiceIds.length === 0) {
-    return actionError('Select at least one invoice to email.');
+    return actionError('Select at least one invoice to email.', 'msp/invoicing:errors.jobs.selectInvoicesEmail');
   }
 
   const emailProvider = await SystemEmailProviderFactory.createProvider();
   if (!emailProvider) {
-    return actionError('Email is not configured. Please configure email settings in Settings before sending invoices.');
+    return actionError('Email is not configured. Please configure email settings in Settings before sending invoices.', 'msp/invoicing:errors.jobs.emailNotConfigured');
   }
 
   const pdfService = createPDFGenerationService(tenant);
@@ -493,20 +483,14 @@ export const sendInvoiceEmailAction = withAuth(async (
         continue;
       }
 
-      let recipientEmail = (client as any).location_email || '';
-      let recipientName = client.client_name;
+      const resolved = await resolveInvoiceBillingRecipient({
+        knexOrTrx: knex,
+        tenantId: tenant,
+        clientId: invoice.client_id,
+      });
 
-      if (client.billing_contact_id) {
-        const contact = await tenantDb(knex, tenant).table<IContact>('contacts')
-          .where({ contact_name_id: client.billing_contact_id })
-          .first();
-        if (contact) {
-          recipientEmail = contact.email;
-          recipientName = contact.full_name;
-        }
-      } else if ((client as any).billing_email) {
-        recipientEmail = (client as any).billing_email;
-      }
+      let recipientEmail = resolved.recipientEmail;
+      let recipientName = resolved.recipientName || client.client_name;
 
       if (!isValidEmail(recipientEmail)) {
         results.push({
@@ -561,6 +545,15 @@ export const sendInvoiceEmailAction = withAuth(async (
         clientId: client.client_id,
       });
 
+      const linkContext = await getInvoiceEmailLinkContext(tenant, {
+        invoice_id: invoice.invoice_id,
+        status: invoice.status,
+        finalized_at: invoice.finalized_at,
+        invoice_type: invoice.invoice_type,
+        total_amount: invoice.total_amount,
+        credit_applied: invoice.credit_applied,
+      });
+
       const emailTemplate = await getInvoiceEmailTemplate(knex, tenant, recipientLocale);
       const templateContext = {
         invoice: {
@@ -568,6 +561,8 @@ export const sendInvoiceEmailAction = withAuth(async (
           amount: totalAmount,
           invoiceDate,
           dueDate,
+          paymentUrl: linkContext.paymentUrl || '',
+          portalUrl: linkContext.portalUrl || '',
         },
         client: {
           name: client.client_name,
@@ -585,8 +580,17 @@ export const sendInvoiceEmailAction = withAuth(async (
       // Subject and plain-text are not HTML — disable Handlebars' HTML escape
       // so characters like `"` in client/invoice names don't render as `&quot;`.
       const subject = Handlebars.compile(emailTemplate.subject, { noEscape: true })(templateContext);
-      const html = Handlebars.compile(emailTemplate.html_content)(templateContext);
-      const text = Handlebars.compile(emailTemplate.text_content, { noEscape: true })(templateContext);
+      const renderedHtml = Handlebars.compile(emailTemplate.html_content)(templateContext);
+      const renderedText = Handlebars.compile(emailTemplate.text_content, { noEscape: true })(templateContext);
+
+      // Tenant-authored templates may not reference the new variables. Append
+      // missing CTAs so the email still carries the payment/portal links.
+      const { html, text } = ensureInvoiceEmailLinks({
+        html: renderedHtml,
+        text: renderedText,
+        paymentUrl: linkContext.paymentUrl,
+        portalUrl: linkContext.portalUrl,
+      });
 
       const from: EmailAddress = { email: fromEmail, name: companyName };
       const to: EmailAddress[] = [{ email: recipientEmail, name: recipientName }];
@@ -614,6 +618,15 @@ export const sendInvoiceEmailAction = withAuth(async (
 
       await emailProvider.sendEmail(message, tenant);
 
+      // The invoice has now reached the client, so the filed document may be
+      // shown in the client portal.
+      await publishGeneratedDocumentsToClient(tenant, 'invoice', invoiceId).catch((error) => {
+        logger.warn('[sendInvoiceEmailAction] Failed to publish invoice document to client', {
+          error,
+          invoiceId,
+        });
+      });
+
       results.push({
         success: true,
         invoiceNumber: invoice.invoice_number,
@@ -630,6 +643,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         invoiceNumber: invoiceId,
         recipientEmail: '',
         error: INVOICE_EMAIL_SEND_FAILURE,
+        messageKey: 'msp/invoicing:errors.jobs.sendFailed',
       });
     } finally {
       if (tempPdfPath) {

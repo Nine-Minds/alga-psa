@@ -8,17 +8,28 @@ import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import { preloadLocaleResources } from "@/lib/i18n/preloadLocaleResources";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
+import { isEnterprise } from "@alga-psa/core/features";
+import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain";
+import { getTenantThemeByTenantId } from "@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions";
+import { resolveMspBranding } from "@/components/layout/mspBranding";
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 // This template overrides the root layout's template for all /msp/* pages.
 // The default includes the suffix because defaults bypass their own template
 // (i.e. 'Dashboard | AlgaPSA' is rendered literally, not wrapped by the template).
-export const metadata: Metadata = {
-  title: {
-    template: '%s | AlgaPSA',
-    default: 'Dashboard | AlgaPSA',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: {
+      // '%s' is Next's own slot for the child route's title, not an i18next
+      // placeholder — it passes through translation untouched.
+      template: '%s | AlgaPSA',
+      default: t('msp.layout.defaultTitle', { defaultValue: 'Dashboard | AlgaPSA' }),
+    },
+  };
+}
 
 export default async function MspLayout({
   children,
@@ -70,8 +81,21 @@ export default async function MspLayout({
   const selfHostLicensing = await isSelfHostLicensing();
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
 
+  // Client-portal branding must never leak into the staff app by itself. The
+  // dedicated Enterprise white-label setting is the explicit MSP opt-in.
+  const tenantId = session.user.tenant;
+  const tenantTheme = isEnterprise && tenantId
+    ? await getTenantThemeByTenantId(tenantId).catch(() => null)
+    : null;
+  const mspWhiteLabel = tenantTheme?.mspWhiteLabel === true;
+  const tenantBranding = mspWhiteLabel && tenantId
+    ? await getTenantBrandingByTenantId(tenantId).catch(() => null)
+    : null;
+  const mspBranding = resolveMspBranding(tenantBranding, { isEnterprise, mspWhiteLabel });
+
   return (
     <MspLayoutClient
+      mspBranding={mspBranding}
       session={session}
       currencyCode={currencyCode}
       productCode={productCode}

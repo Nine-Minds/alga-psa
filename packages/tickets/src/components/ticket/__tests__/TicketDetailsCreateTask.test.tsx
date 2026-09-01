@@ -5,6 +5,7 @@ import React from 'react';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
+import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
 let lastTicketInfoProps: any = null;
 
@@ -113,6 +114,18 @@ vi.mock('@alga-psa/ui/services', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  // Components under test format dates through useFormatters; the real hook
+  // reads the locale off the provider this test does not mount.
+  useFormatters: () => ({
+    locale: 'en',
+    formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en', options).format(typeof date === 'string' ? new Date(date) : date),
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', options).format(value),
+    formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
+    formatRelativeTime: (date: Date | string) => String(date),
+  }),
   useTranslation: () => ({
     t: (_key: string, fallback?: string | Record<string, unknown>) => {
       // Mirror i18next's t(key, options) form where options carries defaultValue.
@@ -176,7 +189,8 @@ vi.mock('../../actions/ticketDisplaySettings', () => ({
 }));
 
 vi.mock('@alga-psa/tags/actions', () => ({
-  findTagsByEntityId: vi.fn().mockResolvedValue([])
+  findTagsByEntityId: vi.fn().mockResolvedValue([]),
+  isTagActionError: () => false,
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -218,6 +232,7 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeamById: vi.fn().mockResolvedValue(null),
   getTeams: vi.fn().mockResolvedValue([]),
+  isTeamActionError: () => false,
 }));
 
 vi.mock('@alga-psa/documents/actions/documentActions', () => ({
@@ -286,6 +301,7 @@ describe('TicketDetails toolbar actions', () => {
 
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket as any}
         renderCreateProjectTask={renderCreateProjectTask}
       />
@@ -295,7 +311,7 @@ describe('TicketDetails toolbar actions', () => {
   });
 
   it('does not render create task button when renderCreateProjectTask is missing', () => {
-    render(<TicketDetails initialTicket={baseTicket as any} />);
+    render(<TicketDetails bootstrap={entryLayoutBootstrap} initialTicket={baseTicket as any} />);
 
     expect(lastTicketInfoProps.renderProjectTaskActions).toBeUndefined();
   });
@@ -303,6 +319,7 @@ describe('TicketDetails toolbar actions', () => {
   it('exposes the resolve-and-close action for an open ticket with a closed board status', () => {
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket as any}
         statusOptions={[
           { value: 'status-1', label: 'Open', board_id: 'board-1', is_closed: false },
@@ -318,6 +335,7 @@ describe('TicketDetails toolbar actions', () => {
   it('hides the resolve-and-close action after the ticket is closed', () => {
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={{ ...baseTicket, status_id: 'status-closed' } as any}
         statusOptions={[
           { value: 'status-closed', label: 'Resolved', board_id: 'board-1', is_closed: true },

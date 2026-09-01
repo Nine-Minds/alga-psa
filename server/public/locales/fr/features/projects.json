@@ -189,6 +189,13 @@
     "wholeWord": "Mot entier",
     "wholeWordShort": "Mot",
     "clearSearch": "Effacer la recherche",
+    "spacing": {
+      "compact": "Compacte",
+      "spacious": "Spacieux",
+      "decrease": "Réduire l'espacement de la liste",
+      "increase": "Augmenter l'espacement de la liste",
+      "reset": "Réinitialiser l'espacement de la liste"
+    },
     "taskList": "Liste des tâches",
     "kanbanBoard": "Tableau Kanban",
     "kanbanBoardWithPhase": "Tableau Kanban : {{phaseName}}",
@@ -286,7 +293,8 @@
     "bulkTagsSuccess_one": "Étiquettes ajoutées à {{count}} tâche",
     "bulkTagsSuccess_other": "Étiquettes ajoutées à {{count}} tâches",
     "bulkTagsPartial": "Impossible d'ajouter des étiquettes à certaines tâches",
-    "bulkTagsFailure": "Échec de l'ajout d'étiquettes aux tâches sélectionnées"
+    "bulkTagsFailure": "Échec de l'ajout d'étiquettes aux tâches sélectionnées",
+    "taskTypeFallback": "Tâche"
   },
   "taskForm": {
     "addTitle": "Ajouter une tâche",
@@ -538,15 +546,34 @@
     "billed": "Facturé",
     "pending": "En attente",
     "unbilledTotal": "Non facturé ({{currency}}) : ",
-    "priceCurrency": "Devise du prix", "salePrice": "Prix de vente", "catalogUnitCost": "Coût unitaire du catalogue", "costNotConfigured": "Non configuré",
-    "invoiceDestination": "Facture", "invoiceNextProject": "Prochaine facture du projet", "invoiceSeparate": "Facture de produits distincte",
-    "invoiceProjectCompletion": "À l'achèvement du projet", "invoiceOnHold": "En attente", "currencySeparateHelp": "Les produits dans une autre devise font l’objet d’une facture de produits distincte.",
-    "invoiceColumn": "Facture", "editProduct": "Modifier le produit", "removeProduct": "Retirer le produit", "salePriceOverrideHelp": "Ce prix s'applique uniquement à cette ligne de produit du projet.",
-    "updateFailed": "Échec de la mise à jour du produit", "updatedSuccess": "Produit mis à jour", "createProductInvoices": "Créer les factures de produits",
-    "invoiceReviewTitle": "Vérifier les factures de produits", "invoiceReviewHelp": "Les produits admissibles sont présélectionnés. Une facture provisoire sera créée pour chaque devise.",
-    "invoiceReviewFailed": "Impossible de charger la vérification de la facture", "invoiceCreateFailed": "Échec de la création des factures de produits", "invoiceCreatedSuccess": "Nombre de factures provisoires de produits créées : {{count}}",
-    "createDrafts": "Créer les brouillons", "draftPreview": "Brouillon en {{currency}} ({{count}} produit(s))", "invoiceLinksHelp": "Les factures provisoires ont été créées. Ouvrez chaque groupe de devises pour les vérifier.",
-    "currencyDraftLink": "Facture provisoire en {{currency}}", "productCount": "{{count}} produit(s)", "productsMovedToHoldOnClose": "{{count}} produit(s) associé(s) placé(s) en attente, car leur événement de facturation a été annulé."
+    "priceCurrency": "Devise du prix",
+    "salePrice": "Prix de vente",
+    "catalogUnitCost": "Coût unitaire du catalogue",
+    "costNotConfigured": "Non configuré",
+    "invoiceDestination": "Facture",
+    "invoiceNextProject": "Prochaine facture du projet",
+    "invoiceSeparate": "Facture de produits distincte",
+    "invoiceProjectCompletion": "À l'achèvement du projet",
+    "invoiceOnHold": "En attente",
+    "currencySeparateHelp": "Les produits dans une autre devise font l’objet d’une facture de produits distincte.",
+    "invoiceColumn": "Facture",
+    "editProduct": "Modifier le produit",
+    "removeProduct": "Retirer le produit",
+    "salePriceOverrideHelp": "Ce prix s'applique uniquement à cette ligne de produit du projet.",
+    "updateFailed": "Échec de la mise à jour du produit",
+    "updatedSuccess": "Produit mis à jour",
+    "createProductInvoices": "Créer les factures de produits",
+    "invoiceReviewTitle": "Vérifier les factures de produits",
+    "invoiceReviewHelp": "Les produits admissibles sont présélectionnés. Une facture provisoire sera créée pour chaque devise.",
+    "invoiceReviewFailed": "Impossible de charger la vérification de la facture",
+    "invoiceCreateFailed": "Échec de la création des factures de produits",
+    "invoiceCreatedSuccess": "Nombre de factures provisoires de produits créées : {{count}}",
+    "createDrafts": "Créer les brouillons",
+    "draftPreview": "Brouillon en {{currency}} ({{count}} produit(s))",
+    "invoiceLinksHelp": "Les factures provisoires ont été créées. Ouvrez chaque groupe de devises pour les vérifier.",
+    "currencyDraftLink": "Facture provisoire en {{currency}}",
+    "productCount": "{{count}} produit(s)",
+    "productsMovedToHoldOnClose": "{{count}} produit(s) associé(s) placé(s) en attente, car leur événement de facturation a été annulé."
   },
   "export": {
     "title": "Exporter les tâches du projet",
@@ -741,7 +768,8 @@
       "phasePlaceholder": "Sélectionner une phase",
       "statusLabel": "Statut",
       "statusPlaceholder": "Sélectionner un statut",
-      "linkTicketLabel": "Lier le ticket à la tâche créée"
+      "linkTicketLabel": "Lier le ticket à la tâche créée",
+      "createdSuccess": "La tâche a été créée avec succès"
     },
     "linkTicketToTask": {
       "title": "Lier le ticket à la tâche",
@@ -940,7 +968,17 @@
       "add_title": "Ajouter une colonne de statut",
       "select_placeholder": "Sélectionner un statut...",
       "all_in_use": "Tous les statuts disponibles sont utilisés",
-      "create_new": "Créer nouveau"
+      "create_new": "Créer nouveau",
+      "status_no_longer_exists": "Le statut n'existe plus",
+      "missing_status": "Statut manquant",
+      "ambiguous_status": "Statut historique ambigu",
+      "replace_placeholder": "Sélectionner un statut de remplacement...",
+      "replace_status": "Remplacer le statut",
+      "replacing": "Remplacement...",
+      "replaced": "Colonne de statut remplacée",
+      "replace_failed": "Échec du remplacement de la colonne de statut",
+      "repair_status_columns": "Réparer les colonnes de statut",
+      "unresolved_apply_guard": "Les colonnes de statut doivent être réparées ({{count}})"
     },
     "list": {
       "title": "Modèles de projet",
@@ -1028,7 +1066,8 @@
         "all": "Copier toutes les affectations"
       },
       "fixErrors": "Veuillez corriger les erreurs suivantes :",
-      "addStatus": "Ajouter un nouveau statut"
+      "addStatus": "Ajouter un nouveau statut",
+      "unresolved_guard": "Ce modèle a des colonnes de statut qui doivent être réparées avant de pouvoir être appliqué."
     },
     "detail": {
       "description": "Description :",
@@ -1136,6 +1175,8 @@
       "doneEditing": "Terminer la modification",
       "editChecklist": "Modifier la checklist",
       "addChecklistItem": "Ajouter un élément",
+      "editChecklistItem": "Modifier l'élément de checklist",
+      "removeChecklistItem": "Supprimer l'élément de checklist",
       "checklistItemPlaceholder": "Élément de checklist",
       "emptyChecklistItem": "Élément vide",
       "reorderChecklistItem": "Glisser pour réorganiser",
@@ -1326,7 +1367,9 @@
     "loadingProjects": "Chargement des projets...",
     "noDescription": "Aucune description fournie",
     "noPhasesOrTasks": "Aucune phase ou tâche à afficher",
-    "loadError": "Échec du chargement des détails du projet"
+    "loadError": "Échec du chargement des détails du projet",
+    "errorWithMessage": "Erreur : {{message}}",
+    "notFoundOrNoAccess": "Projet introuvable ou vous n'avez pas accès à ce projet."
   },
   "backToProjects": "Retour aux Projets",
   "invalidProjectData": "Données de projet invalides",
@@ -1395,6 +1438,8 @@
     "newestFirst": "Plus récents en premier",
     "oldestFirst": "Plus anciens en premier",
     "addComment": "Ajouter un commentaire",
+    "reply": "Répondre",
+    "addFailed": "Échec de l'ajout du commentaire",
     "submitting": "Envoi...",
     "loading": "Chargement...",
     "empty": "Pas encore de commentaires. Soyez le premier à commenter !"
@@ -1407,6 +1452,8 @@
     "showPhasesDescription": "Les clients verront des fiches de phase avec noms, descriptions et plages de dates. Ils peuvent sélectionner les phases pour voir les tâches associées.",
     "showCompletion": "Afficher le % de complétion",
     "showCompletionDescription": "Afficher une barre de progression et un pourcentage montrant combien de tâches sont terminées dans chaque phase.",
+    "showBilling": "Afficher la facturation",
+    "showBillingDescription": "Les clients verront un récapitulatif de facturation en lecture seule avec le calendrier de paiement, les montants et le facturé à ce jour. Ne s'applique qu'aux projets dont la facturation est activée.",
     "showTasks": "Afficher les tâches",
     "showTasksDescription": "Les clients peuvent voir les tâches individuelles dans chaque phase. Les tâches sont affichées en tableau Kanban ou en liste groupée par statut.",
     "visibleTaskFields": "Champs de tâche visibles",
@@ -1415,6 +1462,7 @@
     "summary": {
       "projectInfo": "Nom du projet, description, dates et progression globale",
       "budgetHours": "Heures budgétées : totaux consommés vs. budgétés et % utilisé",
+      "billing": "Récapitulatif de facturation : calendrier de paiement, montants et facturé à ce jour",
       "phaseInfo": "Noms des phases, descriptions et plages de dates",
       "phaseCompletion": "Pourcentage de complétion pour chaque phase",
       "taskDetails": "Détails des tâches : {{fields}}",
@@ -1574,6 +1622,8 @@
     },
     "terms": {
       "fixed": "Prix fixe de {{total}} · facturation {{mode}}",
+      "lockedSummary_one": "{{count}} élément totalisant {{amount}} est verrouillé et ne changera pas.",
+      "lockedSummary_other": "{{count}} éléments totalisant {{amount}} sont verrouillés et ne changeront pas.",
       "edit": "Modifier les conditions",
       "saved": "Conditions de facturation mises à jour",
       "dialogTitle": "Modifier les conditions de facturation"
@@ -1607,6 +1657,7 @@
       "milestone": "Jalon",
       "trigger": "Déclencheur",
       "amount": "Montant",
+      "amountLocked": "Montant figé à l'approbation",
       "status": "Statut",
       "invoice": "Facture",
       "empty": "Aucun jalon ni acompte pour le moment.",
@@ -1620,6 +1671,7 @@
       "phaseTrigger": "Achèvement de la phase",
       "phaseOverdue": "La date de fin de la phase est dépassée — marquez la phase comme terminée pour rendre cette entrée prête",
       "approve": "Approuver",
+      "unapprove": "Annuler l'approbation",
       "approveInvoice": "Approuver et facturer",
       "hold": "Suspendre",
       "markReady": "Marquer comme prêt",
@@ -1629,6 +1681,7 @@
       "allocatedOver": "Sur-réparti de {{amount}}",
       "held": "Élément suspendu",
       "approved": "Élément approuvé",
+      "unapproved": "Approbation annulée",
       "invoiced": "Facture générée",
       "markedReady": "Marqué comme prêt",
       "canceled": "Élément annulé",
@@ -1639,10 +1692,16 @@
       "holdReasonRequired": "Un motif de suspension est requis",
       "heldReason": "Suspendu : {{reason}}",
       "releaseHold": "Lever la suspension",
-      "holdReleased": "Suspension levée", "productsMovedToHold": "{{count}} produit(s) associé(s) placé(s) en attente", "setProjectTotal": "Définir le total du projet sur {{amount}}",
-      "recalculateTitle": "Recalculer le total du projet", "currentProjectTotal": "Total actuel du projet", "currentScheduleSum": "Somme actuelle du calendrier",
-      "resultingProjectTotal": "Total du projet obtenu", "recalculateWarning": "Les entrées en pourcentage modifiables deviendront des montants fixes afin que les montants affichés ne changent pas.",
-      "confirmSetProjectTotal": "Définir le total du projet", "totalRecalculated": "Total du projet mis à jour à partir du calendrier"
+      "holdReleased": "Suspension levée",
+      "productsMovedToHold": "{{count}} produit(s) associé(s) placé(s) en attente",
+      "setProjectTotal": "Définir le total du projet sur {{amount}}",
+      "recalculateTitle": "Recalculer le total du projet",
+      "currentProjectTotal": "Total actuel du projet",
+      "currentScheduleSum": "Somme actuelle du calendrier",
+      "resultingProjectTotal": "Total du projet obtenu",
+      "recalculateWarning": "Les entrées en pourcentage modifiables deviendront des montants fixes afin que les montants affichés ne changent pas.",
+      "confirmSetProjectTotal": "Définir le total du projet",
+      "totalRecalculated": "Total du projet mis à jour à partir du calendrier"
     },
     "entry": {
       "addTitle": "Ajouter un jalon ou un acompte",
@@ -1657,6 +1716,8 @@
       "valuePercentage": "Pourcentage du total",
       "amount": "Montant ({{currency}})",
       "percentage": "Pourcentage",
+      "increaseTotal": "Augmenter le total du projet de ce montant",
+      "increaseTotalHint": "Pour les travaux supplémentaires ou les changements de périmètre. Le total du projet augmente et les répartitions en pourcentage existantes sont recalculées sur le nouveau total.",
       "trigger": "Déclencheur",
       "triggerPhase": "Achèvement de la phase",
       "triggerDate": "À une date",
@@ -1684,6 +1745,7 @@
       "behavior": "Une fois atteint",
       "notify": "Notifier uniquement",
       "hard": "Plafond strict (passer en perte)",
+      "hardHint": "La main-d'œuvre et les matériaux au-delà du plafond sont automatiquement passés en perte.",
       "thresholds": "Notifier à (%)",
       "thresholdsHint": "Pourcentages du plafond séparés par des virgules.",
       "noCap": "Aucun plafond",
@@ -1759,6 +1821,49 @@
       "approved": "Approuvé : {{amount}}",
       "ready": "Prêt : {{amount}}",
       "total": "Total: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Profil de facturation",
+      "none": "Utiliser le profil par défaut du client",
+      "hint": "Les charges de temps et d'échéancier de ce projet sont facturées à ce profil, sauf si un contrat les revendique.",
+      "updated": "Profil de facturation mis à jour"
+    }
+  },
+  "taskTypes": {
+    "task": "Tâche",
+    "bug": "Bogue",
+    "feature": "Fonctionnalité",
+    "improvement": "Amélioration",
+    "epic": "Épopée",
+    "story": "Récit"
+  },
+  "statusUpdate": {
+    "button": "Envoyer un point d’avancement",
+    "title": "Envoyer un point d’avancement",
+    "loading": "Chargement des informations du destinataire...",
+    "sending": "Envoi du point d’avancement...",
+    "sent": "Point d’avancement envoyé à {{email}}",
+    "send": "Envoyer le point",
+    "noRecipient": "Aucune adresse e-mail n’est configurée pour le contact client de ce projet.",
+    "whatTheySee": "Votre client verra :",
+    "additionalMessage": "Message complémentaire",
+    "additionalMessagePlaceholder": "Ajoutez une note personnelle à inclure dans le point...",
+    "preview": "Le point sera envoyé depuis {{fromEmail}} au nom de {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Contact du projet",
+      "clientEmail": "E-mail du client",
+      "none": "Aucun e-mail trouvé"
+    },
+    "summary": {
+      "progress": "Avancement global : {{percent}} % ({{closed}} sur {{total}} tâches terminées)",
+      "budgetHours": "Heures budgétées : {{spent}} sur {{budgeted}} heures utilisées",
+      "budgetHoursHidden": "Les heures budgétées sont masquées par les paramètres du portail client de ce projet",
+      "recentlyCompleted": "Terminé récemment : {{items}}",
+      "portalLink": "Un lien vers le projet dans le portail client"
+    },
+    "errors": {
+      "loadRecipient": "Échec du chargement des informations du destinataire",
+      "sendFailed": "Échec de l’envoi du point d’avancement"
     }
   }
 }

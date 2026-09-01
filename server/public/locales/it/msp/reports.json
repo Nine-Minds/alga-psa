@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Assistenza tecnica",
       "operations": "Operazioni",
-      "billing": "Fatturazione"
+      "billing": "Fatturazione",
+      "inventory": "Inventario"
     },
     "badges": {
       "planned": "Pianificato"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Visualizza report",
       "openInBilling": "Apri in fatturazione",
+      "openReport": "Apri report",
       "requiresTier": "Richiede {{tier}}",
       "comingSoon": "In arrivo"
     },
@@ -57,11 +59,14 @@
       "noDate": "Nessuna data",
       "notAvailable": "n/d",
       "noEmailChannels": "Nessun canale email configurato.",
-      "noCapacity": "n/d — nessuna capacità impostata"
+      "noCapacity": "n/d — nessuna capacità impostata",
+      "noEstimate": "n/d — nessuna stima impostata",
+      "noOverruns": "Nessuna attività ha superato la propria stima."
     },
     "fallbackTitle": "Report",
     "dateRange": {
-      "lastDays": "Ultimi {{count}} giorni"
+      "lastDays": "Ultimi {{count}} giorni",
+      "allActiveProjects": "Tutti i progetti attivi, dall’inizio"
     },
     "units": {
       "daysWithCount": "{{count}} giorni"
@@ -101,7 +106,13 @@
       "capacityHours": "Ore di capacità",
       "utilization": "Utilizzo",
       "usersWithoutCapacity": "Capacità mancante",
-      "activeUsers": "Utenti attivi"
+      "activeUsers": "Utenti attivi",
+      "activeProjects": "Progetti attivi",
+      "budgetedHours": "Ore a budget",
+      "estimatedHours": "Ore stimate",
+      "actualHours": "Ore effettive",
+      "projectsOverEstimate": "Oltre la stima",
+      "projectsOverBudget": "Oltre il budget"
     },
     "sections": {
       "openByStatus": "Aperti per stato",
@@ -120,7 +131,10 @@
       "bucketUsage": "Uso pacchetto",
       "performanceByAssignee": "Prestazioni per assegnatario",
       "closedByAssignee": "Chiusi per assegnatario",
-      "utilizationByUser": "Utilizzo per utente"
+      "utilizationByUser": "Utilizzo per utente",
+      "hoursByProject": "Ore per progetto",
+      "hoursByPhase": "Ore per fase",
+      "largestTaskOverruns": "Maggiori sforamenti per attività"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -150,6 +164,26 @@
       "contractReports": {
         "title": "Report contratti",
         "description": "Ricavi dei contratti, rinnovi, utilizzo dei pacchetti e redditività."
+      },
+      "inventoryMargin": {
+        "title": "Report sul margine",
+        "description": "Ricavo, costo del venduto e margine per prodotto dagli ordini di vendita evasi."
+      },
+      "inventoryWriteOffs": {
+        "title": "Svalutazioni",
+        "description": "Cali di magazzino e rettifiche svalutate, per motivo e periodo."
+      },
+      "inventoryGhostUsage": {
+        "title": "Utilizzo fantasma",
+        "description": "Ticket hardware chiusi senza parti registrate — costi che l'officina potrebbe aver assorbito."
+      },
+      "deferredRevenue": {
+        "title": "Ricavi differiti",
+        "description": "Passività anticipata tra i clienti: saldi dei crediti e ore di pacchetto ore non consumate per mese."
+      },
+      "projectHours": {
+        "title": "Ore di progetto rispetto alle stime",
+        "description": "Ore registrate rispetto alle stime delle attività e ai budget di progetto, con le fasi che sforano."
       }
     },
     "table": {
@@ -173,7 +207,17 @@
       "workedHours": "Ore lavorate",
       "capacityHours": "Ore di capacità",
       "utilization": "Utilizzo",
-      "capacityEstimated": "Stimato dalla capacità settimanale; nessun orario di lavoro impostato."
+      "capacityEstimated": "Stimato dalla capacità settimanale; nessun orario di lavoro impostato.",
+      "project": "Progetto",
+      "client": "Cliente",
+      "phase": "Fase",
+      "task": "Attività",
+      "budgetedHours": "A budget",
+      "estimatedHours": "Stimate",
+      "actualHours": "Effettive",
+      "variance": "Scostamento",
+      "estimateUsed": "Stima utilizzata",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} attività completate"
     },
     "statusValues": {
       "connected": "Connesso",
@@ -425,6 +469,75 @@
       "totalClients": "Clienti totali",
       "activeAssignments": "Assegnazioni attive",
       "totalBilled": "Totale fatturato"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Ricavi differiti / passività anticipata",
+    "description": "Riepilogo per cliente e per mese dei saldi dei crediti del cliente e delle ore di pacchetto ore anticipate non consumate.",
+    "printSubtitle": "Mese {{month}}",
+    "printTable": "Riepilogo per cliente",
+    "empty": "Nessuna passività anticipata per questo mese.",
+    "actions": {
+      "csv": "Scarica CSV"
+    },
+    "errors": {
+      "load": "Impossibile caricare il report dei ricavi differiti."
+    },
+    "summary": {
+      "totalLiability": "Passività anticipata totale",
+      "credits": "Crediti",
+      "hours": "Ore anticipate",
+      "delta": "Variazione rispetto al mese precedente"
+    },
+    "table": {
+      "client": "Cliente",
+      "credits": "Crediti",
+      "hours": "Ore anticipate",
+      "total": "Saldo finale totale",
+      "opening": "Apertura",
+      "issued": "Emessi",
+      "applied": "Applicati",
+      "expired": "Scaduti",
+      "adjustments": "Rett.",
+      "closing": "Chiusura",
+      "currencyHeading": "Valuta",
+      "noClients": "Nessun cliente con saldi anticipati questo mese.",
+      "tenantTotal": "Totale tenant"
+    },
+    "detail": {
+      "credits": "Saldi dei crediti",
+      "noCredits": "Nessuna voce di credito.",
+      "date": "Emesso",
+      "description": "Descrizione",
+      "remaining": "Residuo",
+      "expires": "Scade",
+      "qbo": "QBO",
+      "reachable": "Sincronizzato",
+      "notReachable": "Non in QBO",
+      "notReachableTitle": "I crediti di pagamento anticipato / deposito di progetto non vengono mai esportati in QuickBooks — Alga è il sistema di riferimento.",
+      "buckets": "Ore di pacchetto ore anticipate",
+      "noBuckets": "Nessun periodo di pacchetto ore anticipato.",
+      "line": "Riga",
+      "period": "Periodo",
+      "included": "Incluse",
+      "used": "Utilizzate",
+      "value": "Valore",
+      "feeSource": "Tariffa",
+      "rollover": "riporto",
+      "notBilled": "Non ancora fatturato",
+      "billed": "Fatturato"
+    },
+    "csv": {
+      "client": "Cliente",
+      "currency": "Valuta"
+    }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Uno dei record del report selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno dei record del report selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del report.",
+      "missingFieldNamed": "Manca un campo obbligatorio del report: {{field}}."
     }
   }
 }

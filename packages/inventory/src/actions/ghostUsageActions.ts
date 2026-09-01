@@ -31,7 +31,7 @@ export const getGhostUsageReport = withAuth(async (
   _filters: GhostUsageFilters = {},
 ): Promise<GhostUsageReportResult | GhostUsageActionError> => {
   if (!(await hasPermission(_user, 'inventory', 'read'))) {
-    return permissionError('Permission denied: inventory:read required');
+    return permissionError('Permission denied: inventory:read required', 'features/inventory:errors.permissions.inventoryRead');
   }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) =>
@@ -46,7 +46,7 @@ export const setGhostUsageDisposition = withAuth(async (
   _input: { review_id: string; disposition: GhostDisposition },
 ): Promise<void | GhostUsageActionError> => {
   if (!(await hasPermission(_user, 'inventory', 'update'))) {
-    return permissionError('Permission denied: inventory:update required');
+    return permissionError('Permission denied: inventory:update required', 'features/inventory:errors.permissions.inventoryUpdate');
   }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -58,7 +58,7 @@ export const setGhostUsageDisposition = withAuth(async (
       _input.disposition,
     );
     if (!updated) {
-      return actionError('Review not found. It may have already been updated. Refresh and try again.');
+      return actionError('Review not found. It may have already been updated. Refresh and try again.', 'features/inventory:errors.ghostUsage.reviewNotFound');
     }
   });
 });

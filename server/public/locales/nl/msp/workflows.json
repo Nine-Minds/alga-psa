@@ -60,8 +60,6 @@
       "runNow": "Nu uitvoeren",
       "exportCsv": "CSV exporteren",
       "refresh": "Vernieuwen",
-      "cancelSelected": "Selectie annuleren ({{count}})",
-      "clearSelection": "Selectie wissen",
       "details": "Details",
       "loadMore": "Meer laden",
       "preview": "Voorbeeld"
@@ -92,7 +90,12 @@
       "cancelMessage": "{{count}} geselecteerde uitvoering(en) annuleren? Dit kan niet ongedaan worden gemaakt.",
       "reasonLabel": "Reden",
       "cancelReasonPlaceholder": "Geef een reden voor annulering",
-      "cancelConfirm": "Uitvoeringen annuleren"
+      "cancelConfirm": "Uitvoeringen annuleren",
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "cancel": "Uitvoeringen annuleren",
+        "clear": "Selectie wissen"
+      }
     },
     "toasts": {
       "loadRunsFailed": "Kan uitvoeringen niet laden",
@@ -936,7 +939,7 @@
       "showPalette": "Palet weergeven",
       "hidePalette": "Palet verbergen",
       "searchPlaceholder": "Zoeken",
-      "dragHint": "Sleep naar de pijplijn om toe te voegen",
+      "dragHint": "Sleep naar de pipeline om toe te voegen",
       "chooseAction": "Kies een actie nadat u deze stap hebt toegevoegd",
       "returnsSummary": "Retourneert: {{list}}{{suffix}}",
       "categories": {
@@ -1216,6 +1219,15 @@
       "noFields": "Geen velden",
       "copyAllPaths": "Alle paden kopiëren",
       "copyAllFieldPaths": "Alle veldpaden kopiëren"
+    },
+    "logoAlt": "Logo van de workfloweditor",
+    "nodes": {
+      "action": "Actie:",
+      "process": "Proces:",
+      "clientId": "Client-ID:",
+      "clientSecret": "Clientgeheim:",
+      "tenantId": "Tenant-ID:",
+      "userEmail": "Gebruikers-e-mailadres:"
     }
   },
   "actionInputFieldInfo": {
@@ -1476,7 +1488,9 @@
     "insertReferenceHeading": "Workflowreferentie invoegen",
     "errors": {
       "noCodeBlock": "Referenties kunnen niet in codeblokken worden ingevoegd. Plaats de cursor in een ander blok en probeer het opnieuw."
-    }
+    },
+    "placeholder": "Markdown-tekst opstellen…",
+    "referenceHint": "Verwijzingen worden weergegeven als inline chips en bewaard als workflowveilige verwijzingsnodes."
   },
   "referenceSelector": {
     "placeholders": {
@@ -1491,7 +1505,10 @@
     "start": "Start",
     "insertStepHere": "Stap hier invoegen",
     "emptyDisabled": "Nog geen stappen.",
-    "emptySelectPrompt": "Selecteer een stap in het paneel om te beginnen."
+    "emptySelectPrompt": "Selecteer een stap in het paneel om te beginnen.",
+    "patchSummary": {
+      "unchanged": "overige velden ongewijzigd"
+    }
   },
   "expressionEditor": {
     "ariaLabel": "Expressie-editor",
@@ -1607,6 +1624,37 @@
     "softEnumUseCustom": "\"{{value}}\" gebruiken",
     "expression": {
       "placeholder": "bv. payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Te wijzigen velden",
+      "targetFraming": "Deze stap werkt {{target}} bij.",
+      "summaryChanges": "Wijzigt {{list}}",
+      "summaryChangesMore": "Wijzigt {{list}} +{{count}} meer",
+      "unchangedNote": "Alle andere velden behouden hun huidige waarden.",
+      "emptyGuidance": "Voeg minimaal één te wijzigen veld toe.",
+      "editChanges": "Wijzigingen bewerken…",
+      "dialogTitle": "Wijzigingen bewerken",
+      "dialogDescription": "{{target}} wordt bijgewerkt. Alleen de rechts vermelde velden worden gewijzigd; al het andere behoudt de huidige waarde.",
+      "footerSummary": "{{count}} veld(en) worden gewijzigd · al het andere behoudt de huidige waarde",
+      "done": "Klaar",
+      "added": "Toegevoegd ✓",
+      "noChangesYet": "Nog geen wijzigingen. Kies links een veld om te beginnen.",
+      "setFieldTo": "Stel {{field}} in op",
+      "removeChange": "Dit veld niet meer wijzigen (het behoudt de huidige waarde)",
+      "advancedTitle": "Geavanceerd",
+      "group": {
+        "details": "Details",
+        "assignment": "Toewijzing",
+        "datesTags": "Datums en tags",
+        "advanced": "Geavanceerd"
+      },
+      "target": {
+        "genericRecord": "item",
+        "unset": "het hierboven geselecteerde {{record}}",
+        "fromReference": "het {{record}} uit \"{{source}}\"",
+        "fromExpression": "het {{record}} gekozen door een expressie",
+        "fixed": "een specifiek {{record}}"
+      }
     }
   },
   "schemaReference": {
@@ -1733,7 +1781,7 @@
       "lastSuccessfulStep": "Laatste geslaagde stap: {{label}}"
     },
     "pipeline": {
-      "title": "Uitvoeringspijplijn",
+      "title": "Uitvoeringspipeline",
       "emptyBranch": "Geen stappen in deze vertakking.",
       "view": {
         "graph": "Grafiek",
@@ -1774,7 +1822,7 @@
     },
     "stepDetails": {
       "title": "Stapdetails",
-      "empty": "Selecteer een stap in de pijplijn om invoer, uitvoer en snapshots te bekijken.",
+      "empty": "Selecteer een stap in de pipeline om invoer, uitvoer en snapshots te bekijken.",
       "fields": {
         "step": "Stap"
       },
@@ -2438,7 +2486,6 @@
         }
       },
       "schemaModal": {
-        "title": "Schema",
         "close": "Sluiten",
         "headerTitle": "Payload-schema",
         "loading": "Laden…",
@@ -2448,7 +2495,6 @@
         "copyFailed": "Kopiëren mislukt"
       },
       "metricsDialog": {
-        "title": "Statistieken",
         "close": "Sluiten",
         "headerTitle": "Statistieken · {{eventType}}",
         "from": "Vanaf",
@@ -2475,7 +2521,6 @@
         "next": "Volgende"
       },
       "simulateDialog": {
-        "title": "Gebeurtenis simuleren",
         "headerTitle": "Simuleren · {{eventType}}",
         "submit": "Simuleren",
         "submitting": "Verzenden…",
@@ -2532,7 +2577,6 @@
       },
       "defineEventDialog": {
         "title": "Aangepaste gebeurtenis definiëren",
-        "headerTitle": "Aangepaste gebeurtenis definiëren",
         "cancel": "Annuleren",
         "submit": "Gebeurtenis maken",
         "submitting": "Maken…",
@@ -2647,5 +2691,25 @@
         "selectPriority": "Selecteer of voer een prioriteit in"
       }
     }
+  },
+  "toggle": {
+    "disableTitle": "Workflow uitschakelen",
+    "enableTitle": "Workflow inschakelen",
+    "confirmDisable": "Weet u zeker dat u deze workflow wilt uitschakelen?",
+    "confirmEnable": "Weet u zeker dat u deze workflow wilt inschakelen?"
+  },
+  "mappingEditor": {
+    "error": {
+      "title": "Schema laden mislukt",
+      "retry": "Opnieuw proberen",
+      "retryWithCount": "Opnieuw proberen ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Poging {{retryCount}} van {{maxRetries}}",
+      "maxRetriesReached": "Maximaal aantal pogingen bereikt.",
+      "contactSupport": "Contact opnemen met support →"
+    }
+  },
+  "actionInputTypeHint": {
+    "coercible": "Type \"{{sourceType}}\" wordt geconverteerd naar \"{{targetType}}\"",
+    "incompatible": "Type \"{{sourceType}}\" is niet compatibel met het verwachte type \"{{targetType}}\""
   }
 }

@@ -77,7 +77,9 @@
     "invoiceAmount": "Montant de la facture :",
     "selectCreditToApply": "Sélectionner un crédit à appliquer",
     "amountToApply": "Montant à appliquer",
-    "creditOrderNote": "Les crédits sont appliqués par date d'expiration (les plus anciens d'abord)",
+    "creditOrderNoteExpirationFirst": "Les crédits sont appliqués par date d'expiration (expirant le plus tôt en premier)",
+    "creditOrderNoteOldestFirst": "Les crédits sont appliqués par date de création (le plus ancien en premier)",
+    "creditOrderNoteNewestFirst": "Les crédits sont appliqués par date de création (le plus récent en premier)",
     "noCreditsAvailable": "Aucun crédit disponible pour ce client",
     "failedToLoadCredits": "Impossible de charger les crédits disponibles",
     "selectCreditError": "Veuillez sélectionner un crédit et saisir un montant valide",
@@ -141,7 +143,9 @@
       "reason": "Pourquoi ce crédit est-il transféré ?"
     },
     "hints": {
-      "amount": "Jusqu'à {{amount}} disponible"
+      "amount": "Jusqu'à {{amount}} disponible",
+      "currencyMatch": "Le client sélectionné utilise la même devise.",
+      "currencyMismatch": "Le client sélectionné utilise une devise différente ; une conversion peut s’appliquer."
     },
     "impact": {
       "current": "Restant actuel",
@@ -190,6 +194,25 @@
       "validAmount": "Veuillez saisir un montant valide",
       "loadClientsFailed": "Impossible de charger les clients. Veuillez réessayer.",
       "submitFailed": "Impossible d'ajouter le crédit. Veuillez réessayer."
+    }
+  },
+  "errors": {
+    "credit": {
+      "notFoundRefresh": "Crédit introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "originalTransactionMissing": "La transaction de crédit d’origine est introuvable. Veuillez actualiser la page et réessayer.",
+      "sourceNotFound": "Crédit source introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "targetClientNotFound": "Client cible introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "insufficientTransferAmount": "Le montant restant est insuffisant pour le transfert.",
+      "invalidValue": "L’une des valeurs de crédit sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "Le crédit, le client, la facture ou la transaction sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Une transaction de crédit en conflit existe déjà. Veuillez actualiser la page et réessayer.",
+      "notAllowed": "L’une des valeurs du crédit n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire du crédit est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du crédit est manquant : {{field}}."
+    },
+    "prepaidAlerts": {
+      "settingsInvalid": "Paramètres d’alerte de solde prépayé non valides",
+      "updateFailed": "Échec de la mise à jour des paramètres d’alerte de solde prépayé"
     }
   }
 }

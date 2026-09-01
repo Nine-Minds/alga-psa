@@ -1,0 +1,14 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
+      Running tests with seed "1786417854722"
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+ ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (45 tests) 11618ms 145 MB heap used
+   ✓ Inbound email durable inbox (integration) > core processing succeeds from the staged source when the provider message is gone  655ms
+ ✓ src/test/integration/internal-notifications/eventSubscribers.integration.test.ts (26 tests) 11493ms 332 MB heap used
+
+ Test Files  2 passed (2)
+      Tests  71 passed (71)
+   Start at  03:10:54
+   Duration  24.05s (transform 1.50s, setup 61ms, collect 517ms, tests 23.11s, environment 0ms, prepare 35ms)
+

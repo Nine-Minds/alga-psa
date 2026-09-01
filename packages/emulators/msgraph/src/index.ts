@@ -15,4 +15,20 @@ const msgraphEmulator: EmulatorPackage<MsGraphCore> = {
 export default msgraphEmulator;
 export { msgraphEmulator as emulator };
 export { GraphApiError, MsGraphCore } from './core';
-export type { GraphApplication, GraphMessage, GraphServicePrincipal, GraphSubscription } from './core';
+export type {
+  ActivityNotificationRecord,
+  BotConfig,
+  BotConversation,
+  CapturedBotActivity,
+  CapturedSendMail,
+  GraphApplication,
+  GraphChat,
+  GraphChatMessage,
+  GraphMessage,
+  GraphServicePrincipal,
+  GraphSubscription,
+  GraphTeam,
+  GraphTeamChannel,
+  InboundBotActivityInput,
+} from './core';
+export { BOT_FRAMEWORK_ISSUER } from './botFramework';

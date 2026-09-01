@@ -3,6 +3,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
 import { getDocumentByFileId, toggleDocumentVisibility } from '@alga-psa/documents/actions/documentActions';
 import { AlertTriangle, Eye, ImageIcon } from 'lucide-react';
@@ -42,6 +43,7 @@ type VisibilityInfo = {
 // ---------------------------------------------------------------------------
 
 export default function DocumentImagePickerWidget({ currentSrc, onSourceChange }: Props) {
+  const { t } = useTranslation('msp/invoicing');
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [visibility, setVisibility] = useState<VisibilityInfo | null>(null);
   const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
@@ -117,7 +119,7 @@ export default function DocumentImagePickerWidget({ currentSrc, onSourceChange }
         onClick={() => setIsPickerOpen(true)}
       >
         <ImageIcon className="mr-1.5 h-3.5 w-3.5" />
-        Browse Documents
+        {t('invoiceDesigner.imagePicker.browse', { defaultValue: 'Browse Documents' })}
       </Button>
 
       {/* Visibility warning */}
@@ -126,8 +128,11 @@ export default function DocumentImagePickerWidget({ currentSrc, onSourceChange }
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <p className="text-xs text-amber-800 dark:text-amber-300">
-              <span className="font-semibold">{visibility.documentName}</span> is hidden from clients.
-              It will not appear on quotes or invoices viewed through the client portal.
+              {t('invoiceDesigner.imagePicker.hiddenFromClients', {
+                defaultValue:
+                  '{{document}} is hidden from clients. It will not appear on quotes or invoices viewed through the client portal.',
+                document: visibility.documentName,
+              })}
             </p>
           </div>
           <Button
@@ -139,7 +144,9 @@ export default function DocumentImagePickerWidget({ currentSrc, onSourceChange }
             onClick={handleMakeVisible}
           >
             <Eye className="mr-1.5 h-3.5 w-3.5" />
-            {isTogglingVisibility ? 'Updating...' : 'Mark as visible to clients'}
+            {isTogglingVisibility
+              ? t('invoiceDesigner.imagePicker.updating', { defaultValue: 'Updating...' })
+              : t('invoiceDesigner.imagePicker.markVisible', { defaultValue: 'Mark as visible to clients' })}
           </Button>
         </div>
       )}
@@ -148,7 +155,7 @@ export default function DocumentImagePickerWidget({ currentSrc, onSourceChange }
       {visibility && visibility.isClientVisible && (
         <p className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-400">
           <Eye className="h-3.5 w-3.5" />
-          Visible in client portal
+          {t('invoiceDesigner.imagePicker.visibleInPortal', { defaultValue: 'Visible in client portal' })}
         </p>
       )}
 
@@ -159,8 +166,10 @@ export default function DocumentImagePickerWidget({ currentSrc, onSourceChange }
         onClose={() => setIsPickerOpen(false)}
         singleSelect
         typeFilter="image"
-        title="Select Image"
-        description="Choose an image from your documents to use in this template."
+        title={t('invoiceDesigner.imagePicker.dialogTitle', { defaultValue: 'Select Image' })}
+        description={t('invoiceDesigner.imagePicker.dialogDescription', {
+          defaultValue: 'Choose an image from your documents to use in this template.',
+        })}
         onDocumentSelected={handleDocumentSelected}
       />
     </div>

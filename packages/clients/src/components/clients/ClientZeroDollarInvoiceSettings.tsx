@@ -4,7 +4,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getClientContractLineSettingsAsync,
   updateClientContractLineSettingsAsync
@@ -51,7 +51,9 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
         suppressZeroDollarInvoices: settings?.suppressZeroDollarInvoices || false,
       };
       const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
         toast.success(t('clientZeroDollarInvoiceSettings.updatedSuccess', { defaultValue: 'Zero-dollar invoice settings have been updated.' }));
@@ -68,7 +70,9 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
         suppressZeroDollarInvoices: checked,
       };
       const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
         toast.success(t('clientZeroDollarInvoiceSettings.updatedSuccess', { defaultValue: 'Zero-dollar invoice settings have been updated.' }));
@@ -83,7 +87,9 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
       if (checked) {
         // Remove client override
         const result = await updateClientContractLineSettingsAsync(clientId, null);
-        if (result.success) {
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+        } else if (result.success) {
           setSettings(null);
           setUseDefault(true);
           toast.success(t('clientZeroDollarInvoiceSettings.useDefaultSuccess', { defaultValue: 'Client will now use default zero-dollar invoice settings.' }));
@@ -95,7 +101,9 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
           suppressZeroDollarInvoices: settings?.suppressZeroDollarInvoices || false,
         };
         const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
-        if (result.success) {
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+        } else if (result.success) {
           setSettings(newSettings);
           setUseDefault(false);
           toast.success(t('clientZeroDollarInvoiceSettings.clientSpecificEnabled', { defaultValue: 'Client-specific zero-dollar invoice settings enabled.' }));

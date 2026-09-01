@@ -333,6 +333,7 @@
     },
     "fields": {
       "phoneNumber": "Numéro de téléphone",
+      "extension": "Poste",
       "phoneType": "Type de téléphone",
       "customPhoneType": "Type de téléphone personnalisé",
       "customTypePlaceholder": "Sélectionnez ou saisissez un type de téléphone personnalisé",
@@ -344,6 +345,7 @@
       "selectExactlyOneDefault": "Sélectionnez exactement un numéro de téléphone par défaut.",
       "phoneRow": "Téléphone {{number}}",
       "enterCompletePhoneNumber": "Saisissez un numéro de téléphone complet.",
+      "includeCountryCallingCode": "Indiquez l’indicatif du pays, en commençant par +.",
       "enterCustomPhoneType": "Saisissez un type de téléphone personnalisé.",
       "customTypesUnique": "Les libellés des types de téléphone personnalisés doivent être uniques."
     },
@@ -703,6 +705,29 @@
       "saved": "Contact mis a jour",
       "saveFailed": "Impossible de mettre a jour le contact",
       "saveFailedDescription": "Impossible de mettre à jour le contact. Réessayez."
+    }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Contact introuvable",
+      "otherClient": "Autorisation refusée : impossible de gérer les contacts d’un autre client",
+      "notAssociatedWithClient": "Le contact n’est associé à aucun client",
+      "emailExists": "Un contact avec cette adresse e-mail existe déjà dans le système",
+      "fieldRequired": "{{field}} est obligatoire",
+      "clientInvalid": "Le client sélectionné n’est plus valide",
+      "duplicate": "Un contact avec ces informations existe déjà.",
+      "destinationInvalid": "Le client ou la destination des tickets entrants sélectionné n’est plus valide",
+      "invalidDataRefresh": "Données de contact non valides. Veuillez actualiser la page et réessayer.",
+      "invalidDataFields": "Données de contact non valides. Veuillez vérifier tous les champs et réessayer.",
+      "bulkEmailExists": "Un ou plusieurs contacts ont déjà cette adresse e-mail",
+      "invalidReference": "Référence non valide dans les données de mise à jour",
+      "visibilityMissingField": "Un champ obligatoire du groupe de visibilité est manquant.",
+      "visibilityMissingFieldNamed": "Un champ obligatoire du groupe de visibilité est manquant : {{field}}.",
+      "visibilityReferenceInvalid": "Le contact, le groupe de visibilité ou le tableau sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "visibilityDuplicate": "Un groupe de visibilité avec ces informations existe déjà pour ce client.",
+      "visibilityInvalidData": "Données de groupe de visibilité non valides. Veuillez vérifier les informations du groupe et les tableaux sélectionnés.",
+      "groupNameRequired": "Le nom du groupe est obligatoire",
+      "readPermission": "Autorisation refusée : impossible de lire des contacts"
     }
   }
 }

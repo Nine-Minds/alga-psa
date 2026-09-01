@@ -85,6 +85,17 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
   const router = useRouter();
   const style = getNotificationStyle(notification.status);
 
+  // Configurable notification priorities (task 29.8.46): priority (the stored,
+  // config-resolved value carried on the activity) styles the panel — high gets
+  // a muted attention-red left accent, low renders dimmed. The type icon/styling
+  // above is unchanged. Distinct from the ticket priority rendered from
+  // metadata.changes.priority.
+  const priorityContainerClass = notification.priority === 'high'
+    ? ' border-l-4 border-rose-500'
+    : notification.priority === 'low'
+      ? ' opacity-70'
+      : '';
+
   const handleNavigateToEntity = () => {
     if (notification.link) {
       // Check entity type from link
@@ -301,7 +312,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
   const isInternalComment = notification.metadata?.comment?.isInternal || false;
 
   return (
-    <div className="h-full flex flex-col bg-white" id="notification-detail-view">
+    <div className={`h-full flex flex-col bg-white${priorityContainerClass}`} id="notification-detail-view">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-gray-200">
         <div className="px-6 py-4">

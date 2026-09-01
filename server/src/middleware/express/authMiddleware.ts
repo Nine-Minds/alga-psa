@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { UserSession } from '@alga-psa/db/models/UserSession';
 import { getSessionCookieName } from 'server/src/lib/auth/sessionCookies';
 import { resolveDeploymentCapabilities } from '../../lib/deployment/deploymentProfile';
 import { resolveRequestHost, resolveRequestProto } from '../../lib/deployment/requestHost';
@@ -431,7 +432,33 @@ export async function sessionAuthMiddleware(
 
     const userType = token.user_type as string;
     const tenant = token.tenant as string;
+    const userId = ((token as any).id || token.sub) as string | undefined;
+    const sessionId = token.session_id as string | undefined;
     const isClientPortal = req.path.includes('/client-portal');
+
+    if (
+      !tenant
+      || !userId
+      || !sessionId
+      || (userType !== 'internal' && userType !== 'client')
+      || await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
+        userId,
+        userType,
+      })
+    ) {
+      console.warn('[auth] Rejecting session whose claims do not match its database user', {
+        tenant,
+        userId,
+        sessionId,
+        claimedUserType: userType,
+      });
+      res.clearCookie(getSessionCookieName(), { path: '/' });
+      if (isClientPortal) {
+        return res.redirect(buildClientPortalSigninUrl(req, { error: 'SessionTypeMismatch' }));
+      }
+      const callbackUrl = encodeURIComponent(req.originalUrl);
+      return res.redirect(`/auth/msp/signin?error=SessionTypeMismatch&callbackUrl=${callbackUrl}`);
+    }
 
     // Enforce access rules based on user type
     if (isClientPortal && userType !== 'client') {
@@ -449,7 +476,7 @@ export async function sessionAuthMiddleware(
 
 	    // Store user info for downstream middleware
 	    req.user = {
-	      id: (token as any).id || token.sub || '',
+	      id: userId,
 	      tenant: tenant,
 	      userType: userType
 	    };

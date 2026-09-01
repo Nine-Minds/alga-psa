@@ -1,0 +1,25 @@
+Pre-fix failure evidence for the after-commit deferral tests (mitigation round).
+
+The three new DB-backed external-effect timing tests and the new unit tests were
+run against a temporary revert of the production fix (the pre-fix
+createNotificationFromTemplateInternal fired publish/broadcast/hooks inside the
+open transaction). Both rollback tests FAILED exactly as expected — the
+external effect fired once even though the transaction rolled back:
+
+  - DB-backed "external effects are emitted zero times when the ledger
+    transaction rolls back after the notification insert":
+    `expect(effectPublishWorkflowEventSpy).not.toHaveBeenCalled()` failed with
+    "Number of calls: 1" — pre-fix the NOTIFICATION_SENT publish fired while the
+    transaction was still open, then the completion-mark failure rolled the
+    notification row back, leaving an orphaned external effect.
+  - Unit "called inside an enclosing transaction that rolls back: emits nothing
+    and never commits": `expect(publishWorkflowEventMock).not.toHaveBeenCalled()`
+    failed with "Number of calls: 1" — pre-fix the publish fired on the enclosing
+    transaction that then rolled back.
+
+The success-exactly-once and replay-skip tests pass on both pre-fix and post-fix
+code (their counts are unchanged by the deferral); they pin the at-most-once
+semantics so a future regression cannot silently add duplicate effects.
+
+After restoring the fix, all suites pass (durable 45/45, subscriber 29/29,
+combined 74/74, unit internal-notifications 146/146).

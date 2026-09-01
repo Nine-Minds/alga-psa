@@ -13,11 +13,30 @@ import {
   ProjectDateReadinessJobData,
 } from './handlers/projectDateReadinessHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
+import {
+  KB_ARTICLE_IMPORT_JOB,
+  kbArticleImportHandler,
+  KbArticleImportJobData,
+} from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import {
   expiringCreditsNotificationHandler,
   ExpiringCreditsNotificationJobData,
 } from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
+import {
+  PREPAID_BALANCE_ALERT_SCAN_JOB,
+  prepaidBalanceAlertScanHandler,
+  PrepaidBalanceAlertScanJobData,
+} from '@alga-psa/jobs/handlers/prepaidBalanceAlertScanHandler';
+import {
+  expiredHourBlocksHandler,
+  ExpiredHourBlocksJobData,
+} from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
+import {
+  expiringHourBlocksNotificationHandler,
+  ExpiringHourBlocksNotificationJobData,
+} from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
@@ -28,6 +47,10 @@ import {
   handleReconcileBucketUsage,
   ReconcileBucketUsageJobData,
 } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
+import {
+  handleReconcileHourBlockAllocations,
+  ReconcileHourBlockAllocationsJobData,
+} from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import {
   processRenewalQueueHandler,
   RenewalQueueProcessorJobData,
@@ -49,6 +72,17 @@ import {
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
+import {
+  renewTelephonyCallSubscriptions,
+  processTelephonyCallNotification,
+  TelephonyCallSubscriptionRenewalJobData,
+  TelephonyCallNotificationJobData,
+} from '@alga-psa/jobs/handlers/telephonyCallNotificationHandler';
+import {
+  telephonyCallArtifactSweepHandler,
+  TelephonyCallArtifactSweepJobData,
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/telephonyCallArtifactHandler';
 import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
@@ -75,10 +109,13 @@ import {
 import {
   rmmAlertReconciliationHandler,
   huntressIncidentPollHandler,
+  rmmDeviceSyncHandler,
   RmmAlertReconciliationJobData,
+  RmmDeviceSyncJobData,
   HuntressIncidentPollJobData,
   RMM_ALERT_RECONCILIATION_JOB,
   HUNTRESS_INCIDENT_POLL_JOB,
+  RMM_DEVICE_SYNC_JOB,
 } from '@alga-psa/jobs/handlers/rmmAlertPollingHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
@@ -114,6 +151,16 @@ import {
   marketingSendSequenceStepsHandler,
   MarketingJobData,
 } from './handlers/marketingJobs';
+import {
+  INBOUND_EMAIL_RECOVERY_JOB,
+  inboundEmailRecoveryHandler,
+  InboundEmailRecoveryJobData,
+} from './handlers/inboundEmailRecoveryHandler';
+import {
+  PUBLISH_SCHEDULED_COMMENT_JOB,
+  publishScheduledCommentHandler,
+  PublishScheduledCommentJobData,
+} from './handlers/publishScheduledCommentHandler';
 
 /**
  * Options for registering handlers
@@ -158,6 +205,12 @@ export async function registerAllJobHandlers(
   const resolvedStorageService = storageService ?? new StorageService();
 
   const registerOpts = { force };
+
+  JobHandlerRegistry.register<PublishScheduledCommentJobData & BaseJobData>({
+    name: PUBLISH_SCHEDULED_COMMENT_JOB,
+    handler: async (_jobId, data) => publishScheduledCommentHandler(data),
+    retry: { maxAttempts: 3 },
+  }, registerOpts);
 
   // ============================================================================
   // BILLING & INVOICE HANDLERS
@@ -246,6 +299,43 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // Prepaid balance alert scan handler (daily 09:00 UTC low-balance scan;
+  // server-free: publishes PREPAID_BALANCE_ALERT_SCAN_REQUESTED)
+  JobHandlerRegistry.register<PrepaidBalanceAlertScanJobData & BaseJobData>(
+    {
+      name: PREPAID_BALANCE_ALERT_SCAN_JOB,
+      handler: async (_jobId, data) => {
+        await prepaidBalanceAlertScanHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Expired hour blocks handler
+  JobHandlerRegistry.register<ExpiredHourBlocksJobData & BaseJobData>(
+    {
+      name: 'expired-hour-blocks',
+      handler: async (_jobId, data) => {
+        await expiredHourBlocksHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Expiring hour blocks notification handler
+  JobHandlerRegistry.register<ExpiringHourBlocksNotificationJobData & BaseJobData>(
+    {
+      name: 'expiring-hour-blocks-notification',
+      handler: async (_jobId, data) => {
+        await expiringHourBlocksNotificationHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
   JobHandlerRegistry.register<ExpireQuotesJobData & BaseJobData>(
     {
       name: 'expire-quotes',
@@ -303,6 +393,35 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // AMP migration apply handler. Retries are safe by construction: the
+  // identity ledger skips every record already applied under its source key.
+  JobHandlerRegistry.register<MigrationApplyJobData & BaseJobData>(
+    {
+      name: 'migration_apply',
+      handler: async (jobId, data) => {
+        await handleMigrationApplyJob({ id: jobId, data } as any);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 3600000, // 1 hour for large packages
+    },
+    registerOpts
+  );
+
+  // KB article import handler — parses staged markdown/HTML off the web
+  // request. Retries are safe: kb_import_files rows are consumed only while
+  // they are still 'pending'.
+  JobHandlerRegistry.register<KbArticleImportJobData & BaseJobData>(
+    {
+      name: KB_ARTICLE_IMPORT_JOB,
+      handler: async (jobId, data) => {
+        await kbArticleImportHandler(jobId, data);
+      },
+      retry: { maxAttempts: 2 },
+      timeoutMs: 600000, // 10 minutes for large imports
+    },
+    registerOpts
+  );
+
   // ============================================================================
   // USAGE & RECONCILIATION HANDLERS
   // ============================================================================
@@ -337,6 +456,18 @@ export async function registerAllJobHandlers(
       name: 'reconcile-bucket-usage',
       handler: async (jobId, data) => {
         await handleReconcileBucketUsage({ id: jobId, data } as Job<ReconcileBucketUsageJobData>);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Reconcile hour-block allocation handler
+  JobHandlerRegistry.register<ReconcileHourBlockAllocationsJobData & BaseJobData>(
+    {
+      name: 'reconcile-hour-block-allocations',
+      handler: async (jobId, data) => {
+        await handleReconcileHourBlockAllocations({ id: jobId, data } as Job<ReconcileHourBlockAllocationsJobData>);
       },
       retry: { maxAttempts: 3 },
     },
@@ -503,6 +634,39 @@ export async function registerAllJobHandlers(
       registerOpts
     );
 
+    JobHandlerRegistry.register<TelephonyCallSubscriptionRenewalJobData & BaseJobData>(
+      {
+        name: 'renew-telephony-call-subscriptions',
+        handler: async (_jobId, data) => {
+          await renewTelephonyCallSubscriptions(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TelephonyCallNotificationJobData & BaseJobData>(
+      {
+        name: 'process-telephony-call-notification',
+        handler: async (_jobId, data) => {
+          await processTelephonyCallNotification(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TelephonyCallArtifactSweepJobData & BaseJobData>(
+      {
+        name: TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+        handler: async (_jobId, data) => {
+          await telephonyCallArtifactSweepHandler(data);
+        },
+        retry: { maxAttempts: 2 },
+      },
+      registerOpts
+    );
+
     JobHandlerRegistry.register<TeamsMeetingCleanupJobData & BaseJobData>(
       {
         name: TEAMS_MEETING_CLEANUP_JOB,
@@ -563,6 +727,22 @@ export async function registerAllJobHandlers(
   }
 
   // ============================================================================
+  // INBOUND EMAIL RECOVERY (per-tenant durable sweep/backfill/mirror)
+  // ============================================================================
+
+  JobHandlerRegistry.register<InboundEmailRecoveryJobData & BaseJobData>(
+    {
+      name: INBOUND_EMAIL_RECOVERY_JOB,
+      handler: async (_jobId, data) => {
+        await inboundEmailRecoveryHandler(data as any);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000, // 5 minutes
+    },
+    registerOpts
+  );
+
+  // ============================================================================
   // ENTERPRISE-ONLY HANDLERS
   // ============================================================================
 
@@ -605,6 +785,20 @@ export async function registerAllJobHandlers(
       },
       retry: { maxAttempts: 3 },
       timeoutMs: 600000,
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<RmmDeviceSyncJobData & BaseJobData>(
+    {
+      name: RMM_DEVICE_SYNC_JOB,
+      handler: async (jobId, data) => {
+        await rmmDeviceSyncHandler(jobId, data);
+      },
+      retry: { maxAttempts: 3 },
+      // A device sync walks the provider's whole device list; give it more
+      // room than an alert poll, which only reads recent alerts.
+      timeoutMs: 1800000,
     },
     registerOpts
   );
@@ -683,15 +877,20 @@ export function getAvailableJobHandlers(): string[] {
     // Credits
     'expired-credits',
     'expiring-credits-notification',
+    PREPAID_BALANCE_ALERT_SCAN_JOB,
+    'expired-hour-blocks',
+    'expiring-hour-blocks-notification',
     'opportunity-discipline',
     'opportunity-weekly-digest',
     'opportunity-generators',
     // Assets & Import
     'asset_import',
+    KB_ARTICLE_IMPORT_JOB,
     // Usage & Reconciliation
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
     SEARCH_RECONCILE_JOB_NAME,
     'reconcile-bucket-usage',
+    'reconcile-hour-block-allocations',
     'process-renewal-queue',
     // Marketing
     MARKETING_FLIP_DUE_POSTS_JOB,
@@ -707,7 +906,7 @@ export function getAvailableJobHandlers(): string[] {
       process.env.EDITION === 'enterprise'
       || process.env.EDITION === 'ee'
       || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
-        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification']
+        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification', 'renew-telephony-call-subscriptions', 'process-telephony-call-notification', TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]
         : []
     ),
     // SLA

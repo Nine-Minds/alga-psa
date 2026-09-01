@@ -7678,6 +7678,319 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_integrations_rmm",
+    "method": "get",
+    "path": "/api/v1/integrations/rmm",
+    "displayName": "List RMM integrations",
+    "summary": "List RMM integrations",
+    "description": "Status of every configured RMM integration, including whether a recurring device sync is scheduled, its cadence, and when it last ran.",
+    "tags": [
+      "RMM Integrations"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "array",
+      "items": {
+        "$ref": "#/components/schemas/RmmIntegrationStatus"
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_integrations_rmm_provider",
+    "method": "get",
+    "path": "/api/v1/integrations/rmm/{provider}",
+    "displayName": "Get an RMM integration",
+    "summary": "Get an RMM integration",
+    "description": "Status of a single RMM integration.",
+    "tags": [
+      "RMM Integrations"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "schema": {
+          "type": "string",
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "RMM provider slug."
+        },
+        "integrationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the integration is connected and enabled."
+        },
+        "syncStatus": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Last sync outcome: 'completed', 'error', 'syncing', or 'pending'."
+        },
+        "syncError": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Failure detail from the last run, when it failed."
+        },
+        "connectedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "lastSyncAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Any sync, scheduled or manual. A manual full sync advances this too."
+        },
+        "lastIncrementalSyncAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Only the recurring device sync writes this. Use it, not lastSyncAt, to answer whether the schedule is actually running: an integration can show a recent lastSyncAt from one manual sync while nothing recurring has ever run."
+        },
+        "deviceCount": {
+          "type": "integer",
+          "description": "Assets currently attributed to this provider."
+        },
+        "deviceSyncEnabled": {
+          "type": "boolean",
+          "description": "Whether a recurring device sync is scheduled."
+        },
+        "deviceSyncIntervalMinutes": {
+          "type": "integer",
+          "description": "Cadence in minutes, 15 to 1440. Meaningful only when deviceSyncEnabled is true."
+        }
+      },
+      "required": [
+        "provider",
+        "integrationId",
+        "isActive",
+        "syncStatus",
+        "syncError",
+        "connectedAt",
+        "lastSyncAt",
+        "lastIncrementalSyncAt",
+        "deviceCount",
+        "deviceSyncEnabled",
+        "deviceSyncIntervalMinutes"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_integrations_rmm_provider_devicesync",
+    "method": "put",
+    "path": "/api/v1/integrations/rmm/{provider}/device-sync",
+    "displayName": "Configure the scheduled device sync",
+    "summary": "Configure the scheduled device sync",
+    "description": "Turns the recurring device sync on or off and sets its cadence. Writes desired state only — the scheduler reconciles the actual schedule within a few minutes, so a change is not instantaneous. Returns the integration status after the write.",
+    "tags": [
+      "RMM Integrations"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "schema": {
+          "type": "string",
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Turn the recurring device sync on or off."
+        },
+        "intervalMinutes": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 1440,
+          "description": "Cadence in minutes. Defaults to 60. Values outside 15 to 1440 are rejected rather than clamped, so the stored cadence is always the one requested. Every run spends provider API quota, and on some providers an incremental run still reads the whole device list."
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "RMM provider slug."
+        },
+        "integrationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the integration is connected and enabled."
+        },
+        "syncStatus": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Last sync outcome: 'completed', 'error', 'syncing', or 'pending'."
+        },
+        "syncError": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Failure detail from the last run, when it failed."
+        },
+        "connectedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "lastSyncAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Any sync, scheduled or manual. A manual full sync advances this too."
+        },
+        "lastIncrementalSyncAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Only the recurring device sync writes this. Use it, not lastSyncAt, to answer whether the schedule is actually running: an integration can show a recent lastSyncAt from one manual sync while nothing recurring has ever run."
+        },
+        "deviceCount": {
+          "type": "integer",
+          "description": "Assets currently attributed to this provider."
+        },
+        "deviceSyncEnabled": {
+          "type": "boolean",
+          "description": "Whether a recurring device sync is scheduled."
+        },
+        "deviceSyncIntervalMinutes": {
+          "type": "integer",
+          "description": "Cadence in minutes, 15 to 1440. Meaningful only when deviceSyncEnabled is true."
+        }
+      },
+      "required": [
+        "provider",
+        "integrationId",
+        "isActive",
+        "syncStatus",
+        "syncError",
+        "connectedAt",
+        "lastSyncAt",
+        "lastIncrementalSyncAt",
+        "deviceCount",
+        "deviceSyncEnabled",
+        "deviceSyncIntervalMinutes"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_integrations_rmm_provider_sync",
+    "method": "post",
+    "path": "/api/v1/integrations/rmm/{provider}/sync",
+    "displayName": "Run a device sync now",
+    "summary": "Run a device sync now",
+    "description": "Runs a device sync immediately, through the same code path as the scheduled job. Synchronous: the response is sent when the sync finishes, which on a large estate can take minutes. A provider failure returns an error and leaves the sync cursor untouched, so the unread window is retried rather than skipped.",
+    "tags": [
+      "RMM Integrations"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "schema": {
+          "type": "string",
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "syncType": {
+          "type": "string",
+          "enum": [
+            "full",
+            "incremental"
+          ],
+          "description": "Defaults to incremental, which resumes from the same cursor the schedule uses. 'full' re-reads every device regardless of when it was last seen."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "syncType": {
+          "type": "string",
+          "enum": [
+            "full",
+            "incremental"
+          ]
+        },
+        "devicesProcessed": {
+          "type": "integer"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "provider",
+        "syncType",
+        "devicesProcessed",
+        "startedAt",
+        "finishedAt"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_automation_executions",
     "method": "get",
     "path": "/api/v1/automation/executions",
@@ -10082,8 +10395,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   "website": {
-                    "type": "string",
-                    "format": "uri"
+                    "type": "string"
                   },
                   "parent_client_id": {
                     "type": "string",
@@ -10538,8 +10850,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string",
-                  "format": "uri"
+                  "type": "string"
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -10840,8 +11151,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string",
-                  "format": "uri"
+                  "type": "string"
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -11261,8 +11571,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string",
-                  "format": "uri"
+                  "type": "string"
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -11715,7 +12024,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ]
               },
+              "phone_extension": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "fax": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fax_extension": {
                 "type": [
                   "string",
                   "null"
@@ -11970,7 +12291,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "phone_extension": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "fax": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "fax_extension": {
               "type": [
                 "string",
                 "null"
@@ -15557,7 +15890,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/email/oauth/initiate",
     "displayName": "Initiate email OAuth flow",
     "summary": "Initiate email OAuth flow",
-    "description": "Starts the OAuth 2.0 authorization flow for a Google or Microsoft email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit.",
+    "description": "Starts the OAuth 2.0 authorization flow for a Google email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit. Microsoft mailbox OAuth is not served by this unsigned route: it must be initiated from the mailbox form with an explicit application selection so the callback receives a signed state token.",
     "tags": [
       "Email"
     ],
@@ -15884,7 +16217,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward GET request to extension runner",
     "summary": "Forward GET request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute; and relays the runner response. GET requests do not read a body and do not generate an idempotency key. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. GET requests do not read a body and do not generate an idempotency key.",
     "tags": [
       "Extension Gateway"
     ],
@@ -15930,26 +16263,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -15965,7 +16278,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward POST request to extension runner",
     "summary": "Forward POST request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16011,26 +16324,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16051,7 +16344,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward PUT request to extension runner",
     "summary": "Forward PUT request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16097,26 +16390,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16137,7 +16410,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward PATCH request to extension runner",
     "summary": "Forward PATCH request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16183,26 +16456,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16223,7 +16476,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward DELETE request to extension runner",
     "summary": "Forward DELETE request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16269,26 +16522,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -44625,30 +44858,112 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_tickets_id",
     "method": "put",
     "path": "/api/v1/tickets/{id}",
-    "displayName": "Update ticket",
-    "summary": "Update ticket",
-    "description": "Updates ticket UUID.",
+    "displayName": "Update Ticket",
+    "summary": "Update a ticket with optional silent-notification controls",
+    "description": "Updates one or more ticket fields. Set suppressContactNotifications=true to avoid customer email and portal notifications for this operation. Set suppressInternalNotifications=true as well to also avoid agent and watcher notifications; internal suppression requires customer suppression. Silent updates still create normal audit, workflow, and webhook records.",
     "tags": [
       "Work Management v1"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "UUID path identifier from underlying resource tables.",
+        "description": "Ticket identifier.",
         "schema": {
           "type": "string",
-          "format": "uuid",
-          "description": "UUID path identifier from underlying resource tables."
+          "format": "uuid"
         }
       }
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "board_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "location_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_name_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "status_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "category_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "subcategory_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "attributes": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "override_close_rules": {
+          "type": "boolean"
+        },
+        "override_close_rules_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "Suppress customer-facing email and portal notifications for this update."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "Also suppress agent and watcher email, in-app, and push notifications. Requires suppressContactNotifications=true."
+        }
+      },
+      "minProperties": 1
     },
     "responseBodySchema": {
       "type": "object",
@@ -44676,7 +44991,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data"
       ]
-    }
+    },
+    "examples": [
+      {
+        "name": "Silently change ticket priority for everyone",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "body": {
+            "priority_id": "44444444-4444-4444-4444-444444444444",
+            "suppressContactNotifications": true,
+            "suppressInternalNotifications": true
+          }
+        },
+        "notes": "The priority change remains visible in ticket history and webhooks, but no customer, agent, or watcher notification is sent."
+      }
+    ]
   },
   {
     "id": "delete-_api_v1_tickets_id",
@@ -44736,7 +45067,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/assignment",
     "displayName": "Update ticket assignment",
     "summary": "Update ticket assignment",
-    "description": "Updates ticket assignment target.",
+    "description": "Updates the primary ticket assignment, with optional per-operation notification suppression.",
     "tags": [
       "Work Management v1"
     ],
@@ -44756,8 +45087,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "When true, suppresses customer-facing email and portal notifications for this operation."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true."
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -44939,7 +45285,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/comments",
     "displayName": "Add Ticket Comment",
     "summary": "Add a comment to a ticket",
-    "description": "Adds a client or internal comment to the specified ticket.",
+    "description": "Adds a client or internal comment to the specified ticket. Silent flags suppress the comment notification without hiding the comment from ticket history, workflows, or webhooks.",
     "tags": [
       "Work Management v1"
     ],
@@ -44969,10 +45315,32 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "When true, records the comment as internal only.",
           "default": false
         },
+        "is_resolution": {
+          "type": "boolean",
+          "description": "When true, marks the comment as a resolution.",
+          "default": false
+        },
+        "parent_comment_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional parent comment for a threaded reply."
+        },
         "time_spent": {
           "type": "number",
           "description": "Optional time (in minutes) to log with the comment.",
           "minimum": 0
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "Suppress customer-facing notification delivery for this comment."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "Also suppress agent and watcher notifications for this comment. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -45013,7 +45381,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/status",
     "displayName": "Update ticket status",
     "summary": "Update ticket status",
-    "description": "Updates status for ticket UUID.",
+    "description": "Updates ticket status, with optional per-operation notification suppression.",
     "tags": [
       "Work Management v1"
     ],
@@ -45033,8 +45401,40 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "status_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "closed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "closed_by": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "override_close_rules": {
+          "type": "boolean"
+        },
+        "override_close_rules_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "When true, suppresses customer-facing email and portal notifications for this operation."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true."
+        }
+      },
+      "required": [
+        "status_id"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -49024,6 +49424,208 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_id_checklist",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/checklist",
+    "displayName": "List ticket checklist items",
+    "summary": "List ticket checklist items",
+    "description": "Returns ticket checklist items in display order, including required state and completion attribution.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_checklist",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/checklist",
+    "displayName": "Add a ticket checklist item",
+    "summary": "Add a ticket checklist item",
+    "description": "Adds a manual checklist item to the end of the ticket checklist.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "item_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Checklist item name."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_required": {
+          "type": "boolean",
+          "description": "Whether the item gates ticket closure. Defaults to true."
+        }
+      },
+      "required": [
+        "item_name"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_tickets_id_checklist_itemid",
+    "method": "patch",
+    "path": "/api/v1/tickets/{id}/checklist/{itemId}",
+    "displayName": "Set ticket checklist item completion",
+    "summary": "Set ticket checklist item completion",
+    "description": "Completes or uncompletes an item. Completion records the authenticated user and time; uncompletion clears the current signoff while preserving it in ticket audit history.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "itemId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket checklist item UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket checklist item UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "completed": {
+          "type": "boolean",
+          "description": "True to complete the item; false to remove its completion signoff."
+        }
+      },
+      "required": [
+        "completed"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_documents_documentid",
     "method": "get",
     "path": "/api/v1/tickets/{id}/documents/{documentId}",
@@ -49207,7 +49809,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/agents",
     "displayName": "Add a ticket additional agent",
     "summary": "Add a ticket additional agent",
-    "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
+    "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
     "tags": [
       "Work Management v1"
     ],
@@ -49237,6 +49839,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "maxLength": 50,
           "description": "Resource role recorded on the assignment; defaults to support."
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "When true, suppresses customer-facing email and portal notifications for this operation."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -49313,7 +49923,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/team",
     "displayName": "Assign a team to a ticket",
     "summary": "Assign a team to a ticket",
-    "description": "Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team's active members as team_member additional agents. Returns the updated ticket. A team without a lead is rejected with 400.",
+    "description": "Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team's active members as team_member additional agents. Optional suppression flags silence the assignment notification. Returns the updated ticket. A team without a lead is rejected with 400.",
     "tags": [
       "Work Management v1"
     ],
@@ -49340,10 +49950,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Team to assign to the ticket."
         },
         "suppressContactNotifications": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "When true, suppresses customer-facing email and portal notifications for this operation."
         },
         "suppressInternalNotifications": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -51842,14 +52454,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           ],
           "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
         },
-        "next_action": {
-          "type": "string",
-          "minLength": 1
-        },
-        "next_action_due": {
-          "type": "string",
-          "format": "date-time"
-        },
         "generator_key": {
           "type": [
             "string",
@@ -51981,6 +52585,142 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "user_name"
             ]
           }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_id_steps",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}/steps",
+    "displayName": "List opportunity steps",
+    "summary": "List opportunity steps",
+    "description": "Lists the current opportunity plan, including done, current, and planned steps.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_steps_stepid_complete",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/steps/{stepId}/complete",
+    "displayName": "Complete opportunity step",
+    "summary": "Complete opportunity step",
+    "description": "Completes a current step and promotes an existing planned successor or creates a replacement action.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "stepId",
+        "in": "path",
+        "required": true,
+        "description": "Step UUID from opportunity_steps.step_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Step UUID from opportunity_steps.step_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "next_step_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "next_action": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "next_action_due": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "checkpoint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won"
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -52671,6 +53411,585 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "data": {
           "type": "object",
           "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_forecast",
+    "method": "get",
+    "path": "/api/v1/opportunities/forecast",
+    "displayName": "Get forecast band",
+    "summary": "Get forecast band",
+    "description": "Returns floor and ceiling MRR/NRR with per-deal composition for a period. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "start",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      {
+        "name": "end",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_calibration",
+    "method": "get",
+    "path": "/api/v1/opportunities/calibration",
+    "displayName": "Get seller calibration",
+    "summary": "Get seller calibration",
+    "description": "Returns declared-confidence outcomes and new-logo agreement attach rate per seller. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_meetingsessions",
+    "method": "post",
+    "path": "/api/v1/opportunities/meeting-sessions",
+    "displayName": "Start meeting session",
+    "summary": "Start meeting session",
+    "description": "Starts or resumes the caller’s same-day pipeline meeting session. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_meetingsessions_active",
+    "method": "get",
+    "path": "/api/v1/opportunities/meeting-sessions/active",
+    "displayName": "Get active meeting session",
+    "summary": "Get active meeting session",
+    "description": "Returns the caller’s resumable same-day meeting session and reviews. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_meetingsessions_sessionid_reviews",
+    "method": "post",
+    "path": "/api/v1/opportunities/meeting-sessions/{sessionId}/reviews",
+    "displayName": "Mark deal reviewed",
+    "summary": "Mark deal reviewed",
+    "description": "Creates or updates the review marker for a deal in a meeting session. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "opportunity_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "opportunity_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_id_commitments",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}/commitments",
+    "displayName": "List commitments",
+    "summary": "List commitments",
+    "description": "Lists the promises recorded for an opportunity. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_commitments",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/commitments",
+    "displayName": "Create commitment",
+    "summary": "Create commitment",
+    "description": "Records an unresolved promise on an opportunity. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "description"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_opportunities_id_commitments_commitmentid",
+    "method": "put",
+    "path": "/api/v1/opportunities/{id}/commitments/{commitmentId}",
+    "displayName": "Update commitment",
+    "summary": "Update commitment",
+    "description": "Edits or resolves a commitment to a downstream artifact or explicit decline. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "commitmentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "quote_line",
+            "agreement_line",
+            "project_task",
+            "declined"
+          ]
+        },
+        "resolution_ref_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_opportunities_id_commitments_commitmentid",
+    "method": "delete",
+    "path": "/api/v1/opportunities/{id}/commitments/{commitmentId}",
+    "displayName": "Delete commitment",
+    "summary": "Delete commitment",
+    "description": "Deletes a commitment. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "commitmentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_opportunities_qbr_clientid",
+    "method": "get",
+    "path": "/api/v1/opportunities/qbr/{clientId}",
+    "displayName": "Get QBR trigger pack",
+    "summary": "Get QBR trigger pack",
+    "description": "Assembles renewal, aging/EOL asset, ticket-trend, and whitespace triggers for an account. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_qbr_clientid_opportunities",
+    "method": "post",
+    "path": "/api/v1/opportunities/qbr/{clientId}/opportunities",
+    "displayName": "Create QBR opportunities",
+    "summary": "Create QBR opportunities",
+    "description": "Batch-creates typed opportunities from current QBR trigger keys. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "trigger_keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "trigger_keys"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_qbr_yield",
+    "method": "get",
+    "path": "/api/v1/opportunities/qbr/yield",
+    "displayName": "Get QBR yield",
+    "summary": "Get QBR yield",
+    "description": "Returns fired, created, and won trigger counts by account and account manager. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_rollups",
+    "method": "get",
+    "path": "/api/v1/opportunities/rollups",
+    "displayName": "Get seller rollups",
+    "summary": "Get seller rollups",
+    "description": "Returns period pipeline, outcomes, and attach rate by seller. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "start",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      {
+        "name": "end",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
         },
         "meta": {
           "type": "object",
@@ -55649,6 +56968,35 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "post-_api_v1_inventory_counts_sessionid_cancel",
+    "method": "post",
+    "path": "/api/v1/inventory/counts/{sessionId}/cancel",
+    "displayName": "Cancel a cycle count session",
+    "summary": "Cancel a cycle count session",
+    "description": "Cancels an in-progress cycle count and returns the cancelled session. Quantities already recorded against the session stay on it but are never applied to stock levels, since only approval posts them. Cancelling an already-cancelled session returns it unchanged; an approved session cannot be cancelled.",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
     "id": "get-_api_v1_inventory_purchaseorders",
     "method": "get",
     "path": "/api/v1/inventory/purchase-orders",
@@ -55957,11 +57305,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "opportunities": {
                   "type": "boolean"
+                },
+                "opportunitiesCreate": {
+                  "type": "boolean"
                 }
               },
               "required": [
                 "inventory",
-                "opportunities"
+                "opportunities",
+                "opportunitiesCreate"
               ]
             }
           },

@@ -265,11 +265,13 @@ describe('ClientCommandCenter', () => {
     it('drops the billing and inventory tiles', async () => {
       renderCenter({ isAlgaDeskMode: true });
 
-      await waitFor(() => expect(screen.getByText('Service')).toBeInTheDocument());
+      // Gate on a pulse-dependent card so the snapshot has actually loaded before
+      // asserting tile presence — the 'Service' label alone races the async pulse
+      // fetch under load and can resolve before the mosaic finishes rendering.
+      await waitFor(() => expect(document.getElementById('cc-card-record')).not.toBeNull());
       expect(document.getElementById('cc-card-money')).toBeNull();
       expect(document.getElementById('cc-card-install-base')).toBeNull();
       expect(document.getElementById('cc-card-people')).not.toBeNull();
-      expect(document.getElementById('cc-card-record')).not.toBeNull();
     });
 
     it('keeps them for PSA tenants', async () => {

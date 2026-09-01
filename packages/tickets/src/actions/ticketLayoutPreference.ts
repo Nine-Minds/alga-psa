@@ -15,7 +15,7 @@ export interface TicketLayoutPreference {
 }
 
 const DEFAULT_LAYOUT_PREFERENCE: TicketLayoutPreference = {
-  layout: 'entry',
+  layout: 'grid',
   timelineOrder: 'asc',
 };
 
@@ -28,31 +28,37 @@ function ticketLayoutActionErrorFrom(error: unknown): TicketActionError | null {
       return permissionError(error.message);
     }
     if (error.message === 'Tenant required' || error.message === 'user.user_id required') {
-      return actionError('Your session is missing required ticket preference context. Please refresh and try again.');
+      return actionError('Your session is missing required ticket preference context. Please refresh and try again.', 'features/tickets:errors.layoutPreference.contextMissing');
     }
     if (error.message === 'Current user not found') {
-      return actionError('Current user not found. Please refresh and sign in again.');
+      return actionError('Current user not found. Please refresh and sign in again.', 'features/tickets:errors.layoutPreference.userNotFound');
     }
     if (error.message.startsWith('Invalid ticket detail layout')) {
-      return actionError('Invalid ticket detail layout. Please refresh and try again.');
+      return actionError('Invalid ticket detail layout. Please refresh and try again.', 'features/tickets:errors.layoutPreference.invalidLayout');
     }
     if (error.message.startsWith('Invalid ticket timeline order')) {
-      return actionError('Invalid ticket timeline order. Please refresh and try again.');
+      return actionError('Invalid ticket timeline order. Please refresh and try again.', 'features/tickets:errors.layoutPreference.invalidTimelineOrder');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the ticket layout preference values is invalid. Please refresh and try again.');
+    return actionError('One of the ticket layout preference values is invalid. Please refresh and try again.', 'features/tickets:errors.layoutPreference.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required ticket preference field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required ticket preference field: ${dbError.column}.`,
+          'features/tickets:errors.layoutPreference.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required ticket preference field.', 'features/tickets:errors.layoutPreference.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The current user for these ticket preferences no longer exists. Please refresh and sign in again.');
+    return actionError('The current user for these ticket preferences no longer exists. Please refresh and sign in again.', 'features/tickets:errors.layoutPreference.userMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('Ticket layout preferences were updated concurrently. Please refresh and try again.');
+    return actionError('Ticket layout preferences were updated concurrently. Please refresh and try again.', 'features/tickets:errors.layoutPreference.concurrentUpdate');
   }
 
   return null;

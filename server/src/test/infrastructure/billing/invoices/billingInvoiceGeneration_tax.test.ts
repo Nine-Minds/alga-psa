@@ -9,6 +9,8 @@ import {
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
   ensureClientPlanBundlesTable as ensureClientContractsTable,
+  ensureClientBillingEmail,
+  seedBillingChargeSources,
   unwrapManualInvoice
 } from '../../../../../test-utils/billingTestHelpers';
 import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
@@ -204,10 +206,13 @@ describe('Billing Invoice Tax Calculations', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
         url: '',
         is_inactive: false
       }, 'client_id');
+
+      // Invoice generation refuses a client with no billing recipient; fixtures
+      // that insert the row directly have to seed one.
+      await ensureClientBillingEmail(context, client_id);
 
       // Ensure tax region exists
       await tenantTable(context, 'tax_regions').insert({
@@ -229,10 +234,15 @@ describe('Billing Invoice Tax Calculations', () => {
       const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
       // Set up client tax settings
+      // Tax settings are keyed per billing profile since S7 — reverse-charge
+      // applicability is a property of the entity being billed (D9). The
+      // fixture seeds the client's default profile's row, which is what the
+      // pre-S7 schema held.
       await tenantTable(context, 'client_tax_settings').insert({
         client_id: client_id,
         tenant: context.tenantId,
-        is_reverse_charge_applicable: false
+        is_reverse_charge_applicable: false,
+        billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
       });
 
       // Set up client tax rate relationship
@@ -310,12 +320,15 @@ describe('Billing Invoice Tax Calculations', () => {
         client_id: uuidv4(),
         region_code: 'US-NY',
         is_tax_exempt: false,
-        credit_balance: 0,
         url: '',
         is_inactive: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString()
       }, 'client_id');
+
+      // Invoice generation refuses a client with no billing recipient; fixtures
+      // that insert the row directly have to seed one.
+      await ensureClientBillingEmail(context, clientId);
 
       await tenantTable(context, 'tax_regions').insert([
         {
@@ -344,10 +357,15 @@ describe('Billing Invoice Tax Calculations', () => {
         is_active: true
       }, 'tax_rate_id');
 
+      // Tax settings are keyed per billing profile since S7 — reverse-charge
+      // applicability is a property of the entity being billed (D9). The
+      // fixture seeds the client's default profile's row, which is what the
+      // pre-S7 schema held.
       await tenantTable(context, 'client_tax_settings').insert({
         client_id: clientId,
         tenant: context.tenantId,
-        is_reverse_charge_applicable: false
+        is_reverse_charge_applicable: false,
+        billing_profile_id: await context.ensureDefaultBillingProfileId(clientId),
       });
 
       await tenantTable(context, 'client_tax_rates').insert({
@@ -458,6 +476,10 @@ describe('Billing Invoice Tax Calculations', () => {
         finalAmount: 1500
       };
 
+      // persistInvoiceCharges marks each usage charge's source row invoiced and
+      // throws when there is none behind a fabricated usageId.
+      await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>, { clientId: clientId });
+
       const createdInvoice = await createInvoiceFromBillingResult(
         billingResult,
         clientId,
@@ -497,10 +519,13 @@ describe('Billing Invoice Tax Calculations', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
         url: '',
         is_inactive: false
       }, 'client_id');
+
+      // Invoice generation refuses a client with no billing recipient; fixtures
+      // that insert the row directly have to seed one.
+      await ensureClientBillingEmail(context, client_id);
 
       // Ensure tax region exists
       await tenantTable(context, 'tax_regions').insert({
@@ -519,10 +544,15 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'tax_rate_id');
 
       // Set up client tax settings
+      // Tax settings are keyed per billing profile since S7 — reverse-charge
+      // applicability is a property of the entity being billed (D9). The
+      // fixture seeds the client's default profile's row, which is what the
+      // pre-S7 schema held.
       await tenantTable(context, 'client_tax_settings').insert({
         client_id: client_id,
         tenant: context.tenantId,
-        is_reverse_charge_applicable: false
+        is_reverse_charge_applicable: false,
+        billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
       });
 
       // Set up client tax rate relationship
@@ -632,10 +662,13 @@ describe('Billing Invoice Tax Calculations', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        credit_balance: 0,
         url: '',
         is_inactive: false
       }, 'client_id');
+
+      // Invoice generation refuses a client with no billing recipient; fixtures
+      // that insert the row directly have to seed one.
+      await ensureClientBillingEmail(context, client_id);
 
       // Ensure tax region exists
       await tenantTable(context, 'tax_regions').insert({
@@ -656,10 +689,15 @@ describe('Billing Invoice Tax Calculations', () => {
       const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
       // Set up client tax settings
+      // Tax settings are keyed per billing profile since S7 — reverse-charge
+      // applicability is a property of the entity being billed (D9). The
+      // fixture seeds the client's default profile's row, which is what the
+      // pre-S7 schema held.
       await tenantTable(context, 'client_tax_settings').insert({
         client_id: client_id,
         tenant: context.tenantId,
-        is_reverse_charge_applicable: false
+        is_reverse_charge_applicable: false,
+        billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
       });
 
       // Set up client tax rate relationship
@@ -751,10 +789,13 @@ describe('Billing Invoice Tax Calculations', () => {
       is_tax_exempt: true, // Set client as tax exempt
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
-      credit_balance: 0,
       url: '',
       is_inactive: false
     }, 'client_id');
+
+    // Invoice generation refuses a client with no billing recipient; fixtures
+    // that insert the row directly have to seed one.
+    await ensureClientBillingEmail(context, client_id);
 
     // Ensure tax region exists
     await tenantTable(context, 'tax_regions').insert({
@@ -773,10 +814,15 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'tax_rate_id');
 
     // Set up client tax settings
+    // Tax settings are keyed per billing profile since S7 — reverse-charge
+    // applicability is a property of the entity being billed (D9). The
+    // fixture seeds the client's default profile's row, which is what the
+    // pre-S7 schema held.
     await tenantTable(context, 'client_tax_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
-      is_reverse_charge_applicable: false
+      is_reverse_charge_applicable: false,
+      billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
     });
 
     // Set up client tax rate relationship
@@ -844,6 +890,10 @@ describe('Billing Invoice Tax Calculations', () => {
       finalAmount: 10000
     };
 
+    // persistInvoiceCharges marks each usage charge's source row invoiced and
+    // throws when there is none behind a fabricated usageId.
+    await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>, { clientId: client_id });
+
     const createdInvoice = await createInvoiceFromBillingResult(
       billingResult,
       client_id,
@@ -881,10 +931,13 @@ describe('Billing Invoice Tax Calculations', () => {
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
-      credit_balance: 0,
       url: '',
       is_inactive: false
     }, 'client_id');
+
+    // Invoice generation refuses a client with no billing recipient; fixtures
+    // that insert the row directly have to seed one.
+    await ensureClientBillingEmail(context, client_id);
 
     // Ensure tax region exists
     await tenantTable(context, 'tax_regions').insert({
@@ -905,10 +958,15 @@ describe('Billing Invoice Tax Calculations', () => {
     const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
     // Set up client tax settings
+    // Tax settings are keyed per billing profile since S7 — reverse-charge
+    // applicability is a property of the entity being billed (D9). The
+    // fixture seeds the client's default profile's row, which is what the
+    // pre-S7 schema held.
     await tenantTable(context, 'client_tax_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
-      is_reverse_charge_applicable: false
+      is_reverse_charge_applicable: false,
+      billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
     });
 
     // Set up client tax rate relationship
@@ -965,12 +1023,15 @@ describe('Billing Invoice Tax Calculations', () => {
       client_id: uuidv4(),
       region_code: 'US-NY', // Default tax region
       is_tax_exempt: false,
-      credit_balance: 0,
       url: '',
       is_inactive: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString()
     }, 'client_id');
+
+    // Invoice generation refuses a client with no billing recipient; fixtures
+    // that insert the row directly have to seed one.
+    await ensureClientBillingEmail(context, client_id);
 
     // Ensure tax regions exist
     await tenantTable(context, 'tax_regions').insert([
@@ -1012,10 +1073,15 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'tax_rate_id');
 
     // Set up client tax settings
+    // Tax settings are keyed per billing profile since S7 — reverse-charge
+    // applicability is a property of the entity being billed (D9). The
+    // fixture seeds the client's default profile's row, which is what the
+    // pre-S7 schema held.
     await tenantTable(context, 'client_tax_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
-      is_reverse_charge_applicable: false
+      is_reverse_charge_applicable: false,
+      billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
     });
 
     // Set up client tax rate relationship
@@ -1238,6 +1304,10 @@ describe('Billing Invoice Tax Calculations', () => {
       finalAmount: 30000
     };
 
+    // persistInvoiceCharges marks each usage charge's source row invoiced and
+    // throws when there is none behind a fabricated usageId.
+    await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>, { clientId: context.clientId });
+
     const createdInvoice = await createInvoiceFromBillingResult(
       billingResult,
       context.clientId,
@@ -1285,12 +1355,15 @@ describe('Billing Invoice Tax Calculations', () => {
       client_id: uuidv4(),
       region_code: 'US-NY', // Client has a tax region
       is_tax_exempt: false, // NOT tax exempt - reverse charge is different
-      credit_balance: 0,
       url: '',
       is_inactive: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString()
     }, 'client_id');
+
+    // Invoice generation refuses a client with no billing recipient; fixtures
+    // that insert the row directly have to seed one.
+    await ensureClientBillingEmail(context, clientId);
 
     // Ensure tax region exists with active tax rate
     await tenantTable(context, 'tax_regions').insert({
@@ -1311,10 +1384,15 @@ describe('Billing Invoice Tax Calculations', () => {
     const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
     // Set up client tax settings WITH REVERSE CHARGE ENABLED
+    // Tax settings are keyed per billing profile since S7 — reverse-charge
+    // applicability is a property of the entity being billed (D9). The
+    // fixture seeds the client's default profile's row, which is what the
+    // pre-S7 schema held.
     await tenantTable(context, 'client_tax_settings').insert({
       client_id: clientId,
       tenant: context.tenantId,
-      is_reverse_charge_applicable: true // This is the key setting
+      is_reverse_charge_applicable: true, // This is the key setting
+      billing_profile_id: await context.ensureDefaultBillingProfileId(clientId),
     });
 
     // Set up client tax rate relationship (would normally cause tax to be applied)

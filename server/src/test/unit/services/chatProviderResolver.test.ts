@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const openAiConfigs = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 const getSecretMock = vi.hoisted(() => vi.fn());
+const rolloutEnabledMock = vi.hoisted(() => vi.fn());
 const googleAccessTokenState = vi.hoisted(() => ({ token: 'adc-token' as string | undefined }));
 const licensingMocks = vi.hoisted(() => ({
   getLicenseStateRow: vi.fn(),
@@ -30,6 +31,10 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@alga-psa/licensing', () => licensingMocks);
+
+vi.mock('@ee/lib/aiGateway/rollout', () => ({
+  isAiUsageBillingEnabled: rolloutEnabledMock,
+}));
 
 vi.mock('google-auth-library', () => ({
   GoogleAuth: class {
@@ -95,6 +100,10 @@ describe('resolveChatProvider()', () => {
   beforeEach(() => {
     vi.resetModules();
     getSecretMock.mockReset();
+    rolloutEnabledMock.mockReset();
+    rolloutEnabledMock.mockImplementation(
+      async () => process.env.AI_GATEWAY_ROLLOUT_ALL === 'true',
+    );
     openAiConfigs.splice(0, openAiConfigs.length);
     licensingMocks.getLicenseStateRow.mockReset();
     licensingMocks.isSelfHostLicensing.mockReset();

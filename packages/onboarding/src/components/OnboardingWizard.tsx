@@ -184,7 +184,13 @@ export function OnboardingWizard({
             lastName: wizardData.lastName,
             tenantName: wizardData.tenantName,
             email: wizardData.email,
-            newPassword: wizardData.newPassword
+            newPassword: wizardData.newPassword,
+            companyAddressLine1: wizardData.companyAddressLine1,
+            companyAddressLine2: wizardData.companyAddressLine2,
+            companyCity: wizardData.companyCity,
+            companyStateProvince: wizardData.companyStateProvince,
+            companyPostalCode: wizardData.companyPostalCode,
+            companyCountryCode: wizardData.companyCountryCode
           });
           if (!clientResult.success) {
             setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || t('onboardingWizard.errors.saveClientInfo', {
@@ -640,9 +646,9 @@ export function OnboardingWizard({
               })}
             </p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[rgb(var(--color-card))] rounded-lg card-elevated border border-gray-200 p-6">
             {wizardBody}
-            {wizardNavigation}
+            <div className="mt-8 pt-6 border-t">{wizardNavigation}</div>
           </div>
         </div>
       </div>

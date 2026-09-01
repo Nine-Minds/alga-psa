@@ -18,6 +18,9 @@ function baseInput(overrides: Partial<AuthorizationEvaluationInput> = {}): Autho
       tenant: 'tenant-a',
       userId: 'user-1',
       userType: 'client',
+      // Client subjects resolve to a same_client built-in rule; a client with
+      // no resolvable client scope fails closed even without a record.
+      clientId: 'client-1',
     },
     resource: {
       type: 'invoice',

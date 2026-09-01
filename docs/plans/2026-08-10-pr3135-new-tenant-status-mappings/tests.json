@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T001",
+    "description": "Real-PostgreSQL integration: after the PR 3135 typed migration, create an isolated tenant, run onboarding seeds 06 and 07 in order, and assert the AD-to-M365 template has exactly four mappings for To Do, In Progress, Blocked, and Done; every row has status_source tenant, a non-null status_id, null standard_status_id and unresolved_status_id, and joins to a project_task status owned by that tenant.",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "Tenant-isolation guard in the same real-PostgreSQL suite: create another tenant with identically named project-task statuses and prove seed 07 references only the target tenant's status IDs.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Runtime integration: resolve the seeded template with the production resolver and preferably apply it using the required fixtures, asserting no unresolved mapping error and tenant-backed project status mappings for the created project.",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F004"]
+  }
+]

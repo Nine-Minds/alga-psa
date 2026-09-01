@@ -2,10 +2,22 @@
 
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLineDisambiguation';
-import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
+import { getEligibleContractLines } from '@alga-psa/billing/lib/contractLineDisambiguation';
+import {
+  buildContractLineAttributionDecision,
+  resolveDeterministicContractLineSelection,
+} from '../lib/contractLineDisambiguation.shared';
+import {
+  ICreateUsageRecord,
+  IUpdateUsageRecord,
+  IUsageFilter,
+  IUsageRecord,
+  CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
+  type ContractLineSelectionReason,
+  type ContractLineSource,
+} from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
+import { adjustQuantityDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
 import {
   bucketUsageErrorMessage,
   findBucketUsageError,
@@ -31,6 +43,32 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+async function resolveUsageAttribution(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  clientId: string;
+  serviceId: string;
+  usageDate: string | Date;
+}) {
+  const eligibleLines = await getEligibleContractLines(
+    params.trx,
+    params.tenant,
+    params.clientId,
+    params.serviceId,
+    params.usageDate,
+  );
+  const selection = resolveDeterministicContractLineSelection(eligibleLines);
+  return {
+    selection,
+    decision: buildContractLineAttributionDecision({
+      kind: 'usage_record',
+      recordId: 'usage-write',
+      selection,
+      allowBucketOverlay: true,
+    }),
+  };
+}
+
 function usageActionErrorFrom(error: unknown): UsageActionError | null {
   // Typed bucket failures name their cause; prefer them over the string match.
   const bucketError = findBucketUsageError(error);
@@ -44,25 +82,31 @@ function usageActionErrorFrom(error: unknown): UsageActionError | null {
       return permissionError(message);
     }
     if (message.includes('Usage record') && message.includes('not found')) {
-      return actionError('Usage record not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Usage record not found. It may have been deleted. Please refresh and try again.', 'msp/billing:errors.usage.notFoundRefresh');
     }
     if (message.includes('Failed to update bucket usage') || message.includes('Bucket usage update failed')) {
-      return actionError('Unable to update bucket usage for this usage record. Please refresh and try again.');
+      return actionError('Unable to update bucket usage for this usage record. Please refresh and try again.', 'msp/billing:errors.usage.bucketUpdateFailed');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected usage record, client, service, or contract line is invalid. Please refresh and try again.');
+    return actionError('The selected usage record, client, service, or contract line is invalid. Please refresh and try again.', 'msp/billing:errors.usage.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required usage field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required usage field: ${dbError.column}.`,
+          'msp/billing:errors.usage.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required usage field.', 'msp/billing:errors.usage.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected client, service, or contract line is no longer valid. Please refresh and try again.');
+    return actionError('The selected client, service, or contract line is no longer valid. Please refresh and try again.', 'msp/billing:errors.usage.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A conflicting usage record already exists. Please refresh and try again.');
+    return actionError('A conflicting usage record already exists. Please refresh and try again.', 'msp/billing:errors.usage.duplicate');
   }
 
   return null;
@@ -70,7 +114,7 @@ function usageActionErrorFrom(error: unknown): UsageActionError | null {
 
 export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreateUsageRecord): Promise<IUsageRecord | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -78,22 +122,30 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
     return await knex.transaction(async (trx) => {
     // If no contract line ID is provided, try to determine the default one
     let contractLineId = data.contract_line_id;
+    let contractLineSource: ContractLineSource | null = data.contract_line_id
+      ? 'explicit'
+      : null;
+    let contractLineUnresolvedReason: ContractLineSelectionReason | null = null;
     if (!contractLineId && data.service_id && data.client_id) {
       try {
-        // Use trx for consistency if determineDefaultContractLine needs DB access within transaction
-        const defaultPlanId = await determineDefaultContractLine(
-          data.client_id,
-          data.service_id,
-          data.usage_date
-          // trx // Removed transaction argument
-        );
-
-        if (defaultPlanId) {
-          contractLineId = defaultPlanId;
+        const { selection, decision } = await resolveUsageAttribution({
+          trx,
+          tenant,
+          clientId: data.client_id,
+          serviceId: data.service_id,
+          usageDate: data.usage_date,
+        });
+        if (decision.action === 'assign') {
+          contractLineId = decision.contractLineId;
+          contractLineSource = CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
+        } else {
+          contractLineSource = 'unresolved';
+          contractLineUnresolvedReason = decision.reason;
         }
       } catch (error) {
         console.error('Error determining default contract line:', error);
-        // Potentially rethrow or handle if this is critical
+        contractLineSource = 'unresolved';
+        contractLineUnresolvedReason = 'error';
       }
     }
 
@@ -106,6 +158,8 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
         quantity: data.quantity,
         usage_date: data.usage_date,
         contract_line_id: contractLineId, // Use determined or provided plan ID
+        contract_line_source: contractLineSource,
+        contract_line_unresolved_reason: contractLineUnresolvedReason,
       })
       .returning('*');
 
@@ -114,42 +168,30 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
     }
 
     // --- Bucket Usage Update Logic ---
-    if (record.service_id && record.client_id && record.contract_line_id) {
-      const overlayConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
-        .where({
-          contract_line_id: record.contract_line_id,
-          service_id: record.service_id,
-          configuration_type: 'Bucket'
-        })
-        .first('config_id');
-
-      if (overlayConfig) {
-        console.log(`Usage record ${record.usage_id} linked to Bucket contract line ${record.contract_line_id}. Updating usage.`);
-
-        // Assuming 1 quantity = 1 hour/unit for buckets
-        const hoursDelta = record.quantity || 0;
-
-        if (hoursDelta !== 0) {
-          try {
-            const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-              trx,
-              record.client_id,
-              record.service_id,
-              record.usage_date // Use usage record's date
-            );
-
-            await updateBucketUsageMinutes(
-              trx,
-              bucketUsageRecord.usage_id,
-              hoursDelta
-            );
-            console.log(`Successfully updated bucket usage for usage record ${record.usage_id}`);
-          } catch (bucketError) {
-            console.error(`Error updating bucket usage for usage record ${record.usage_id}:`, bucketError);
-            if (isBucketUsageError(bucketError)) throw bucketError;
-            throw new Error(`Bucket usage update failed for usage record ${record.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-          }
+    if (record.service_id && record.client_id) {
+      // Scope-resolution gate + weighted burn, resolved under the record's own
+      // (client, line) context (usage draws have no time span — member
+      // multiplier only, no after-hours proration).
+      try {
+        const appliedDelta = await adjustQuantityDraw(
+          trx,
+          tenant,
+          record.client_id,
+          {
+            service_id: record.service_id,
+            quantity: record.quantity || 0,
+            usage_date: record.usage_date,
+            contract_line_id: record.contract_line_id ?? null,
+          },
+          1,
+        );
+        if (appliedDelta !== 0) {
+          console.log(`Successfully updated bucket usage for usage record ${record.usage_id} (weighted delta ${appliedDelta})`);
         }
+      } catch (bucketError) {
+        console.error(`Error updating bucket usage for usage record ${record.usage_id}:`, bucketError);
+        if (isBucketUsageError(bucketError)) throw bucketError;
+        throw new Error(`Bucket usage update failed for usage record ${record.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
       }
     }
     // --- End Bucket Usage Update Logic ---
@@ -169,7 +211,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
 
 export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdateUsageRecord): Promise<IUsageRecord | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -186,26 +228,45 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     const oldQuantity = originalRecord.quantity || 0;
 
     // 2. Determine the final contract line ID
-    let finalContractLineId = data.contract_line_id;
+    let finalContractLineId: string | null | undefined = data.contract_line_id;
+    let finalContractLineSource: ContractLineSource | null = data.contract_line_id
+      ? 'explicit'
+      : (originalRecord.contract_line_source ?? null);
+    let finalContractLineUnresolvedReason: ContractLineSelectionReason | null =
+      originalRecord.contract_line_unresolved_reason ?? null;
     // If plan ID is explicitly set to null/undefined OR not provided in update payload, try determining default
     if (finalContractLineId === null || finalContractLineId === undefined) {
       const clientIdForPlan = data.client_id || originalRecord.client_id;
       const serviceIdForPlan = data.service_id || originalRecord.service_id;
       if (clientIdForPlan && serviceIdForPlan) {
         try {
-          const defaultPlanId = await determineDefaultContractLine(
-            clientIdForPlan,
-            serviceIdForPlan,
-            data.usage_date || originalRecord.usage_date
-            // trx // Removed transaction argument
-          );
-          finalContractLineId = defaultPlanId || undefined; // Use default or undefined if none found
+          const { selection, decision } = await resolveUsageAttribution({
+            trx,
+            tenant,
+            clientId: clientIdForPlan,
+            serviceId: serviceIdForPlan,
+            usageDate: data.usage_date || originalRecord.usage_date,
+          });
+          if (decision.action === 'assign') {
+            finalContractLineId = decision.contractLineId;
+            finalContractLineSource = CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
+            finalContractLineUnresolvedReason = null;
+          } else {
+            finalContractLineId = null;
+            finalContractLineSource = 'unresolved';
+            finalContractLineUnresolvedReason = decision.reason;
+          }
         } catch (error) {
           console.error('Error determining default contract line during update:', error);
-          finalContractLineId = originalRecord.contract_line_id; // Fallback to original if determination fails? Or keep as null? Keeping null for now.
+          // Resolver failure must not create a mixed attribution tuple. Keep
+          // the original line/source/reason together until a later explicit
+          // edit or reconciliation can replace the tuple atomically.
+          finalContractLineId = originalRecord.contract_line_id ?? null;
+          finalContractLineSource = originalRecord.contract_line_source ?? null;
+          finalContractLineUnresolvedReason = originalRecord.contract_line_unresolved_reason ?? null;
         }
       } else {
-         finalContractLineId = originalRecord.contract_line_id; // Fallback if client/service IDs are missing
+        finalContractLineId = originalRecord.contract_line_id; // Fallback if client/service IDs are missing
       }
     }
 
@@ -217,7 +278,8 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
         ...(data.quantity !== undefined && { quantity: data.quantity }),
         ...(data.usage_date !== undefined && { usage_date: data.usage_date }),
         contract_line_id: finalContractLineId, // Always update the plan ID based on determination logic
-        // updated_at is likely handled by DB trigger/default, removed from payload
+        contract_line_source: finalContractLineSource,
+        contract_line_unresolved_reason: finalContractLineUnresolvedReason,
     };
 
 
@@ -231,51 +293,56 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     }
 
     // --- Bucket Usage Update Logic ---
-    // We need to adjust bucket usage based on the change in quantity *if* the record is linked to a bucket plan *after* the update.
-    // This handles adding/removing quantity from a bucket-linked record, or changing a record to become bucket-linked.
-    // It currently DOES NOT handle removing quantity when a record is changed *away* from a bucket plan. That requires more complex logic checking the original plan type.
-
-    if (updatedRecord.service_id && updatedRecord.client_id && updatedRecord.contract_line_id) {
-      const overlayConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
-        .where({
-          contract_line_id: updatedRecord.contract_line_id,
-          service_id: updatedRecord.service_id,
-          configuration_type: 'Bucket'
-        })
-        .first('config_id');
-
-      if (overlayConfig) {
-        console.log(`Updated usage record ${updatedRecord.usage_id} linked to Bucket contract line ${updatedRecord.contract_line_id}. Updating usage.`);
-
-        const newQuantity = updatedRecord.quantity || 0;
-        const quantityDelta = newQuantity - oldQuantity;
-        // Assuming 1 quantity = 1 hour/unit
-        const hoursDelta = quantityDelta;
-
-        if (hoursDelta !== 0) {
-          try {
-            const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-              trx,
-              updatedRecord.client_id,
-              updatedRecord.service_id,
-              updatedRecord.usage_date // Use updated usage date
-            );
-
-            await updateBucketUsageMinutes(
-              trx,
-              bucketUsageRecord.usage_id,
-              hoursDelta
-            );
-            console.log(`Successfully updated bucket usage for usage record ${updatedRecord.usage_id}`);
-          } catch (bucketError) {
-            console.error(`Error updating bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
-            if (isBucketUsageError(bucketError)) throw bucketError;
-            throw new Error(`Bucket usage update failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-          }
-        }
+    // Two independent draws, each resolved from ITS OWN record side: reverse
+    // the OLD record's burn under the OLD record's own (client, line) context,
+    // then apply the NEW record's burn under the NEW record's own (client,
+    // line) context. This is correct when the record moves clients/lines and
+    // when the record moves off a bucketed service (old burn reversed even
+    // though the new side resolves no bucket).
+    try {
+      const reversedDelta = await adjustQuantityDraw(
+        trx,
+        tenant,
+        originalRecord.client_id,
+        {
+          service_id: originalRecord.service_id,
+          quantity: oldQuantity,
+          usage_date: originalRecord.usage_date,
+          contract_line_id: originalRecord.contract_line_id ?? null,
+        },
+        -1,
+      );
+      if (reversedDelta !== 0) {
+        console.log(`Reversed bucket usage for usage record ${updatedRecord.usage_id} (weighted ${reversedDelta})`);
       }
-      // TODO: Add logic here to handle the case where the *original* record was bucket-linked but the *updated* one is not.
-      // This would involve checking originalRecord.contract_line_id's type and applying a negative delta of -oldQuantity.
+    } catch (bucketError) {
+      console.error(`Error reversing bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
+      if (isBucketUsageError(bucketError)) throw bucketError;
+      throw new Error(`Bucket usage reversal failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+    }
+
+    if (updatedRecord.service_id && updatedRecord.client_id) {
+      try {
+        const appliedDelta = await adjustQuantityDraw(
+          trx,
+          tenant,
+          updatedRecord.client_id,
+          {
+            service_id: updatedRecord.service_id,
+            quantity: updatedRecord.quantity || 0,
+            usage_date: updatedRecord.usage_date,
+            contract_line_id: updatedRecord.contract_line_id ?? null,
+          },
+          1,
+        );
+        if (appliedDelta !== 0) {
+          console.log(`Successfully updated bucket usage for usage record ${updatedRecord.usage_id} (weighted delta ${appliedDelta})`);
+        }
+      } catch (bucketError) {
+        console.error(`Error updating bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
+        if (isBucketUsageError(bucketError)) throw bucketError;
+        throw new Error(`Bucket usage update failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+      }
     }
     // --- End Bucket Usage Update Logic ---
 
@@ -291,7 +358,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
 
 export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: string): Promise<void | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    return permissionError('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -304,48 +371,33 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
     if (!recordToDelete) {
       console.warn(`Usage record ${usageId} not found for deletion.`);
-      return actionError('Usage record not found. It may have already been deleted.');
+      return actionError('Usage record not found. It may have already been deleted.', 'msp/billing:errors.usage.alreadyDeleted');
     }
 
     // --- Bucket Usage Update Logic (Before Delete) ---
-    if (recordToDelete.service_id && recordToDelete.client_id && recordToDelete.contract_line_id) {
-      const overlayConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
-        .where({
-          contract_line_id: recordToDelete.contract_line_id,
-          service_id: recordToDelete.service_id,
-          configuration_type: 'Bucket'
-        })
-        .first('config_id');
-
-      if (overlayConfig) {
-        console.log(`Usage record ${usageId} linked to Bucket contract line ${recordToDelete.contract_line_id}. Updating usage before delete.`);
-
-        const quantity = recordToDelete.quantity || 0;
-        // Calculate NEGATIVE delta assuming 1 quantity = 1 hour/unit
-        const hoursDelta = -quantity;
-
-        if (hoursDelta !== 0) {
-          try {
-            // Find the record - it should exist if usage was previously logged
-            const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-              trx,
-              recordToDelete.client_id,
-              recordToDelete.service_id,
-              recordToDelete.usage_date // Use record's usage date
-            );
-
-            await updateBucketUsageMinutes(
-              trx,
-              bucketUsageRecord.usage_id,
-              hoursDelta // Apply negative delta
-            );
-            console.log(`Successfully updated (decremented) bucket usage for deleted usage record ${usageId}`);
-          } catch (bucketError) {
-            console.error(`Error updating bucket usage before deleting usage record ${usageId}:`, bucketError);
-            if (isBucketUsageError(bucketError)) throw bucketError;
-            throw new Error(`Bucket usage update failed before deleting usage record ${usageId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-          }
+    if (recordToDelete.service_id && recordToDelete.client_id) {
+      // Scope-resolution gate + weighted burn, resolved under the deleted
+      // record's OWN (client, line) context, negative on delete.
+      try {
+        const reversedDelta = await adjustQuantityDraw(
+          trx,
+          tenant,
+          recordToDelete.client_id,
+          {
+            service_id: recordToDelete.service_id,
+            quantity: recordToDelete.quantity || 0,
+            usage_date: recordToDelete.usage_date,
+            contract_line_id: recordToDelete.contract_line_id ?? null,
+          },
+          -1,
+        );
+        if (reversedDelta !== 0) {
+          console.log(`Successfully updated (decremented) bucket usage for deleted usage record ${usageId} (weighted delta ${reversedDelta})`);
         }
+      } catch (bucketError) {
+        console.error(`Error updating bucket usage before deleting usage record ${usageId}:`, bucketError);
+        if (isBucketUsageError(bucketError)) throw bucketError;
+        throw new Error(`Bucket usage update failed before deleting usage record ${usageId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
       }
     }
     // --- End Bucket Usage Update Logic ---
@@ -378,7 +430,7 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
 export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsageFilter): Promise<IUsageRecord[] | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   try {
     const { knex } = await createTenantKnex();

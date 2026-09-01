@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { 
-  generateMicrosoftAuthUrl, 
-  generateGoogleAuthUrl, 
+import {
+  generateGoogleAuthUrl,
   generateNonce,
-  OAuthState 
+  OAuthState
 } from '@/utils/email/oauthHelpers';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
@@ -28,18 +27,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
     }
 
+    // Microsoft mailbox OAuth must go through the signed explicit-selection
+    // flow (initiateEmailOAuth server action), which issues a
+    // base64url(JSON).HMAC state token that the callback verifies. This
+    // unsigned HTTP initiate must never mint Microsoft state: the callback
+    // rejects unsigned state, so a Microsoft flow started here could never
+    // complete and would only teach callers the wrong path.
+    if (provider === 'microsoft') {
+      return NextResponse.json({
+        error: 'Microsoft mailbox OAuth must be initiated from the mailbox form with an explicit application selection.',
+      }, { status: 400 });
+    }
+
     // Get OAuth credentials - use hosted credentials for EE or tenant-specific secrets for CE
     const secretProvider = await getSecretProviderInstance();
     let clientId: string | null = null;
     let effectiveRedirectUri = redirectUri;
 
-    if (provider === 'google') {
-      // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
-      clientId = await secretProvider.getTenantSecret(user.tenant, 'google_client_id') || null;
-    } else {
-      // Microsoft remains as-is.
-      clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id') || null;
-    }
+    // Microsoft was rejected above: only Google flows through this unsigned
+    // HTTP initiate, and Google is always tenant-owned (CE and EE) — no
+    // fallback to app-level secrets.
+    clientId = await secretProvider.getTenantSecret(user.tenant, 'google_client_id') || null;
 
     if (!effectiveRedirectUri) {
       const base =
@@ -69,23 +77,11 @@ export async function POST(request: NextRequest) {
     };
 
     // Generate authorization URL
-    // For multi-tenant Azure AD apps, always use 'common' for the authorization URL
-    // This allows users from any Azure AD tenant to authenticate
-    const msTenantAuthority = 'common';
-
-    const authUrl = provider === 'microsoft'
-      ? generateMicrosoftAuthUrl(
-          clientId,
-          state.redirectUri,
-          state,
-          undefined as any,
-          msTenantAuthority
-        )
-      : generateGoogleAuthUrl(
-          clientId,
-          state.redirectUri,
-          state
-        );
+    const authUrl = generateGoogleAuthUrl(
+      clientId,
+      state.redirectUri,
+      state
+    );
 
     return NextResponse.json({
       success: true,

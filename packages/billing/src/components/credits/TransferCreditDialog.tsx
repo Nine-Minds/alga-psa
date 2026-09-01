@@ -122,7 +122,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
             <div>
               <Label className="text-sm font-medium">
                 {t('transferDialog.fields.targetClient', { defaultValue: 'To Client' })}{' '}
-                <span className="text-[rgb(var(--color-destructive-500))]">*</span>
+                <span className="text-[rgb(var(--color-destructive))]">*</span>
               </Label>
               <div className="mt-1">
                 <ClientPicker
@@ -134,6 +134,15 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
                   onFilterStateChange={setFilterState}
                   disabledClientIds={new Set([credit.client_id])}
                 />
+                {targetClientId && (() => {
+                  const target = clients.find((client) => client.client_id === targetClientId);
+                  const targetCurrency = target?.default_currency_code || 'USD';
+                  return <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+                    {targetCurrency === creditCurrency
+                      ? t('transferDialog.hints.currencyMatch', { defaultValue: 'Target client currency: {{currency}}', currency: targetCurrency })
+                      : t('transferDialog.hints.currencyMismatch', { defaultValue: 'Target client uses {{currency}}; credits can only be transferred to a {{sourceCurrency}} client.', currency: targetCurrency, sourceCurrency: creditCurrency })}
+                  </p>;
+                })()}
               </div>
             </div>
 
@@ -144,6 +153,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
                 required
                 value={amount}
                 onChange={setAmount}
+                currencyCode={creditCurrency}
               />
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 {t('transferDialog.hints.amount', {
@@ -167,7 +177,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
               />
             </div>
 
-            <div className="bg-[rgb(var(--color-background-100))] p-4 rounded-md">
+            <div className="bg-[rgb(var(--color-border-100))] p-4 rounded-md">
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <span className="text-[rgb(var(--color-text-500))]">
                   {t('transferDialog.impact.current', { defaultValue: 'Current Remaining' })}:

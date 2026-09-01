@@ -1,0 +1,618 @@
+{
+  "clientPortal": {
+    "dashboard": {
+      "title": "Painel"
+    },
+    "devices": {
+      "title": "Meus dispositivos"
+    },
+    "documents": {
+      "title": "Documentos"
+    },
+    "licenses": {
+      "title": "Licenças"
+    },
+    "projects": {
+      "title": "Projetos",
+      "detail": {
+        "fallbackTitle": "Detalhes do projeto"
+      }
+    },
+    "appointments": {
+      "layout": {
+        "title": "Compromissos"
+      },
+      "detail": {
+        "layout": {
+          "title": "Detalhes do compromisso"
+        }
+      }
+    },
+    "billing": {
+      "invoices": {
+        "detail": {
+          "pay": {
+            "title": "Pagar fatura"
+          },
+          "paymentSuccess": {
+            "title": "Pagamento concluído"
+          }
+        }
+      },
+      "quotes": {
+        "detail": {
+          "title": "Detalhes da cotação"
+        }
+      },
+      "title": "Faturamento"
+    },
+    "clientSettings": {
+      "description": "Gerencie as configurações da sua empresa",
+      "title": "Configurações da empresa"
+    },
+    "tickets": {
+      "detail": {
+        "title": "Ticket nº {{ticketNumber}} - {{ticketTitle}}",
+        "fallbackTitle": "Detalhes do ticket"
+      },
+      "layout": {
+        "title": "Tickets de cliente"
+      }
+    },
+    "account": {
+      "layout": {
+        "title": "Conta"
+      }
+    },
+    "extensions": {
+      "detail": {
+        "title": "Extensão"
+      }
+    },
+    "knowledgeBase": {
+      "layout": {
+        "title": "Base de conhecimento"
+      }
+    },
+    "profile": {
+      "layout": {
+        "title": "Perfil"
+      }
+    },
+    "requestServices": {
+      "detail": {
+        "title": "Solicitação de serviço"
+      },
+      "myRequests": {
+        "detail": {
+          "title": "Detalhes da solicitação"
+        },
+        "title": "Minhas solicitações"
+      },
+      "title": "Solicitar serviços"
+    },
+    "layout": {
+      "titleTemplate": "%s | Portal do cliente",
+      "defaultTitle": "Painel | Portal do cliente"
+    }
+  },
+  "msp": {
+    "chat": {
+      "title": "Bate-papo"
+    },
+    "clients": {
+      "title": "Clientes",
+      "detail": {
+        "fallbackTitle": "Detalhes do cliente"
+      }
+    },
+    "contacts": {
+      "title": "Contatos",
+      "detail": {
+        "fallbackTitle": "Detalhes de contato",
+        "activity": {
+          "title": "{{contactName}} - Atividade",
+          "fallbackTitle": "Atividade do contato"
+        }
+      }
+    },
+    "createAsset": {
+      "title": "Criar ativo"
+    },
+    "createClient": {
+      "title": "Criar cliente"
+    },
+    "createProject": {
+      "title": "Criar projeto"
+    },
+    "createTicket": {
+      "title": "Criar ticket"
+    },
+    "dashboard": {
+      "title": "Painel"
+    },
+    "extensions": {
+      "layout": {
+        "title": "Extensões"
+      },
+      "detail": {
+        "debug": {
+          "layout": {
+            "title": "Depuração da extensão"
+          }
+        }
+      }
+    },
+    "inventory": {
+      "counts": {
+        "title": "Contagens Cíclicas"
+      },
+      "ghostUsage": {
+        "title": "Uso Fantasma"
+      },
+      "loaners": {
+        "title": "Unidades de Empréstimo"
+      },
+      "locations": {
+        "title": "Localizações de Estoque"
+      },
+      "margin": {
+        "title": "Relatório de Margem"
+      },
+      "stock": {
+        "title": "Estoque"
+      },
+      "transfers": {
+        "title": "Transferências"
+      },
+      "units": {
+        "title": "Unidades de Estoque"
+      },
+      "vendorBills": {
+        "title": "Faturas de Fornecedores"
+      },
+      "vendors": {
+        "title": "Fornecedores"
+      },
+      "writeOffs": {
+        "title": "Baixas"
+      },
+      "kits": {
+        "title": "Kits"
+      },
+      "purchaseOrders": {
+        "title": "Pedidos de compra"
+      },
+      "salesOrders": {
+        "title": "Pedidos de venda"
+      },
+      "title": "Inventário",
+      "rma": {
+        "title": "RMA"
+      }
+    },
+    "jobs": {
+      "title": "Trabalhos"
+    },
+    "knowledgeBase": {
+      "title": "Base de conhecimento",
+      "review": {
+        "title": "Revisão da base de conhecimento"
+      }
+    },
+    "projects": {
+      "detail": {
+        "tasks": {
+          "detail": {
+            "title": "Tarefa do Projeto"
+          }
+        },
+        "fallbackTitle": "Detalhes do projeto"
+      },
+      "title": "Projetos",
+      "templates": {
+        "layout": {
+          "title": "Modelos de projeto"
+        },
+        "detail": {
+          "layout": {
+            "title": "Detalhes do modelo"
+          }
+        }
+      }
+    },
+    "quoteApprovals": {
+      "title": "Aprovações de cotação"
+    },
+    "quoteDocumentTemplates": {
+      "title": "Layouts de cotação"
+    },
+    "reports": {
+      "title": "Relatórios",
+      "deferredRevenue": {
+        "title": "Receita diferida"
+      }
+    },
+    "schedule": {
+      "title": "Agendar"
+    },
+    "securitySettings": {
+      "title": "Configurações de segurança"
+    },
+    "serviceRequests": {
+      "title": "Solicitações de serviço",
+      "detail": {
+        "fallbackTitle": "Solicitação de serviço"
+      }
+    },
+    "surveys": {
+      "dashboard": {
+        "title": "Painel de pesquisas"
+      },
+      "analytics": {
+        "title": "Análises de pesquisas"
+      },
+      "responses": {
+        "title": "Respostas das pesquisas",
+        "detail": {
+          "title": "Detalhes da resposta"
+        }
+      },
+      "settings": {
+        "title": "Configurações de pesquisas"
+      },
+      "title": "Pesquisas"
+    },
+    "technicianDispatch": {
+      "title": "Alocação de Técnicos"
+    },
+    "tickets": {
+      "export": {
+        "title": "Exportar tickets"
+      },
+      "bulkAssign": {
+        "title": "Atribuir tickets"
+      },
+      "bulkDueDate": {
+        "title": "Definir data de vencimento"
+      },
+      "bulkPriority": {
+        "title": "Definir prioridade"
+      },
+      "bulkStatus": {
+        "title": "Definir status"
+      },
+      "bulkTags": {
+        "title": "Definir tags"
+      },
+      "import": {
+        "title": "Importar tickets"
+      },
+      "title": "Tickets",
+      "detail": {
+        "title": "Ticket nº {{ticketNumber}} - {{ticketTitle}}",
+        "fallbackTitle": "Detalhes do ticket"
+      }
+    },
+    "userActivities": {
+      "title": "Atividades do usuário"
+    },
+    "workflowEditor": {
+      "new": {
+        "title": "Novo fluxo de trabalho"
+      },
+      "title": "Editor de fluxo de trabalho",
+      "detail": {
+        "title": "Editar fluxo de trabalho"
+      }
+    },
+    "documentTemplates": {
+      "detail": {
+        "fallbackTitle": "Layouts de documentos",
+        "title": "Layouts de {{documentType}}"
+      }
+    },
+    "settings": {
+      "title": "Configurações",
+      "extensions": {
+        "description": "Gerenciar extensões",
+        "detail": {
+          "description": "Ver detalhes da extensão",
+          "layout": {
+            "title": "Configurações de extensão"
+          },
+          "settings": {
+            "description": "Definir configurações de extensão",
+            "title": "Configurações de extensão",
+            "layout": {
+              "title": "Configuração da extensão"
+            }
+          },
+          "title": "Detalhes da extensão"
+        },
+        "layout": {
+          "title": "Configurações de extensão"
+        },
+        "title": "Extensões"
+      },
+      "notifications": {
+        "layout": {
+          "title": "Configurações de notificação"
+        }
+      },
+      "sla": {
+        "layout": {
+          "title": "Configurações de SLA"
+        }
+      }
+    },
+    "assets": {
+      "automation": {
+        "title": "Automação de ativos"
+      },
+      "imports": {
+        "title": "Importações de ativos"
+      },
+      "integrations": {
+        "title": "Integrações de ativos"
+      },
+      "maintenance": {
+        "title": "Manutenção de ativos"
+      },
+      "policies": {
+        "title": "Políticas de ativos"
+      },
+      "detail": {
+        "edit": {
+          "title": "Editar recurso",
+          "description": "Editar detalhes do ativo"
+        },
+        "fallbackTitle": "Detalhes do ativo"
+      },
+      "title": "Ativos"
+    },
+    "createContact": {
+      "title": "Criar contato"
+    },
+    "createOpportunity": {
+      "title": "Criar oportunidade"
+    },
+    "createProduct": {
+      "title": "Criar produto"
+    },
+    "createService": {
+      "title": "Criar serviço"
+    },
+    "invoices": {
+      "detail": {
+        "title": "Fatura"
+      }
+    },
+    "marketing": {
+      "calendar": {
+        "title": "Calendário de marketing"
+      },
+      "campaigns": {
+        "title": "Campanhas de marketing"
+      },
+      "channels": {
+        "title": "Canais de marketing"
+      },
+      "content": {
+        "title": "Conteúdo de marketing"
+      },
+      "forms": {
+        "title": "Formulários de marketing"
+      },
+      "posts": {
+        "title": "Publicações de marketing"
+      },
+      "sequences": {
+        "title": "Sequências de marketing"
+      },
+      "title": "Marketing"
+    },
+    "onboarding": {
+      "layout": {
+        "title": "Onboarding"
+      }
+    },
+    "platformUpdates": {
+      "detail": {
+        "title": "Atualização da plataforma"
+      }
+    },
+    "search": {
+      "title": "Busca"
+    },
+    "timeEntry": {
+      "timesheet": {
+        "detail": {
+          "title": "Planilha de horas"
+        }
+      },
+      "title": "Lançamento de horas"
+    },
+    "workflowControl": {
+      "title": "Controle de fluxos de trabalho"
+    },
+    "account": {
+      "layout": {
+        "title": "Conta"
+      }
+    },
+    "addOns": {
+      "layout": {
+        "title": "Complementos"
+      }
+    },
+    "billing": {
+      "title": "Cobrança",
+      "credits": {
+        "title": "Créditos"
+      }
+    },
+    "documents": {
+      "title": "Documentos"
+    },
+    "emailLogs": {
+      "title": "Registros de e-mail"
+    },
+    "profile": {
+      "layout": {
+        "title": "Perfil"
+      }
+    },
+    "workflows": {
+      "runs": {
+        "detail": {
+          "layout": {
+            "title": "Execução do Fluxo de Trabalho"
+          }
+        }
+      },
+      "title": "Fluxos de trabalho"
+    },
+    "shareDocument": {
+      "title": "Compartilhar documento"
+    },
+    "test": {
+      "collab": {
+        "title": "Teste de colaboração"
+      },
+      "layout": {
+        "title": "Teste"
+      },
+      "onboarding": {
+        "layout": {
+          "title": "Teste de onboarding"
+        }
+      },
+      "uiKit": {
+        "layout": {
+          "title": "Kit de interface"
+        }
+      }
+    },
+    "timeSheetApprovals": {
+      "title": "Aprovações de planilhas de horas"
+    },
+    "layout": {
+      "defaultTitle": "Painel | AlgaPSA"
+    }
+  },
+  "auth": {
+    "clientPortal": {
+      "handoff": {
+        "title": "Entrando"
+      },
+      "signin": {
+        "title": "Login do portal do cliente"
+      },
+      "forgotPassword": {
+        "layout": {
+          "title": "Esqueci minha senha"
+        }
+      }
+    },
+    "msp": {
+      "signin": {
+        "title": "Login do MSP"
+      },
+      "forgotPassword": {
+        "layout": {
+          "title": "Esqueci minha senha"
+        }
+      }
+    },
+    "verify": {
+      "layout": {
+        "description": "Verifique seu endereço de email para concluir o cadastro",
+        "title": "Verificar email"
+      }
+    },
+    "signin": {
+      "title": "Entrar"
+    },
+    "verifyEmail": {
+      "layout": {
+        "title": "Verificar email"
+      }
+    },
+    "checkEmail": {
+      "layout": {
+        "title": "Verifique seu email"
+      }
+    },
+    "passwordReset": {
+      "confirmation": {
+        "layout": {
+          "title": "Redefinição de senha"
+        }
+      },
+      "setNewPassword": {
+        "layout": {
+          "title": "Definir nova senha"
+        }
+      }
+    },
+    "portal": {
+      "setup": {
+        "layout": {
+          "title": "Configuração do portal"
+        }
+      }
+    },
+    "register": {
+      "layout": {
+        "title": "Cadastrar"
+      }
+    },
+    "team": {
+      "setup": {
+        "layout": {
+          "title": "Configuração da equipe"
+        }
+      }
+    },
+    "layout": {
+      "defaultTitle": "Entrar | AlgaPSA"
+    }
+  },
+  "app": {
+    "keywords": "MSP, provedor de serviços gerenciados, serviços de TI, gerenciamento de redes, serviços em nuvem",
+    "description": "Aplicativo para provedores de serviços gerenciados"
+  },
+  "teams": {
+    "tab": {
+      "title": "Orientação de Equipes"
+    },
+    "auth": {
+      "popupComplete": {
+        "title": "Autenticação do Teams"
+      }
+    }
+  },
+  "share": {
+    "detail": {
+      "layout": {
+        "title": "Documento compartilhado"
+      }
+    }
+  },
+  "static": {
+    "layout": {
+      "title": "AlgaPSA"
+    },
+    "masterTerms": {
+      "layout": {
+        "title": "Termos gerais"
+      }
+    },
+    "privacyPolicy": {
+      "layout": {
+        "title": "Política de privacidade"
+      }
+    }
+  }
+}

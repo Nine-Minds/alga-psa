@@ -5,8 +5,10 @@ export const TEAMS_CAPABILITIES = [
   'personal_tab',
   'personal_bot',
   'group_chat_bot',
+  'channel_bot',
   'message_extension',
   'activity_notifications',
+  'guest_ticket_submission',
 ] as const;
 export type TeamsCapability = typeof TEAMS_CAPABILITIES[number];
 

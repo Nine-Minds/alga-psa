@@ -20,12 +20,15 @@ import type {
   ClientPulseMoney,
   ClientPulseNotes,
   ClientPulsePeople,
+  ClientPulseProfileAr,
   ClientPulseRecord,
   ClientPulseService,
   ClientPulseTicketSla,
   ClientPulseWarranty,
   ClientPulseWip,
 } from '../lib/commandCenterTypes';
+import { listClientBillingProfiles } from '@alga-psa/shared/billingClients/billingProfiles';
+import { ageInvoicesByProfile, summariseClientAr } from '@alga-psa/shared/billingClients/billingProfileAr';
 
 type ClientPulseLocations = ClientPulse['locations'];
 type ClientPulseActionError = ActionMessageError | ActionPermissionError;
@@ -38,7 +41,7 @@ function clientPulseActionErrorFrom(error: unknown): ClientPulseActionError | nu
     return permissionError(error.message);
   }
   if (error.message === 'Client not found') {
-    return actionError('Client not found');
+    return actionError('Client not found', 'msp/clients:errors.client.notFound');
   }
   return null;
 }
@@ -409,7 +412,17 @@ async function fetchService(
     .leftJoin('users as assigned_user', function joinAssignedUser() {
       this.on('t.assigned_to', '=', 'assigned_user.user_id').andOn('t.tenant', '=', 'assigned_user.tenant');
     })
-    .where({ 't.tenant': tenant, 't.client_id': clientId, 't.is_closed': false })
+    // Open-ness comes from the ticket's STATUS, not the denormalized
+    // tickets.is_closed column. That column is stale on ~24% of production
+    // tickets (545/2261 as of 2026-08, every one saying "open" while its status
+    // says closed), which had this panel reporting roughly double the open count
+    // the tickets board shows for the same client. Same predicate as
+    // getBoardListStats, so the two screens cannot disagree.
+    .leftJoin('statuses as s', function joinStatuses() {
+      this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
+    })
+    .where({ 't.tenant': tenant, 't.client_id': clientId })
+    .whereRaw('s.is_closed IS NOT TRUE')
     .select(
       't.ticket_id',
       't.ticket_number',
@@ -550,7 +563,12 @@ async function fetchService(
     .join('tickets as t', function joinTickets() {
       this.on('lc.ticket_id', '=', 't.ticket_id').andOn('lc.tenant', '=', 't.tenant');
     })
-    .where({ 't.tenant': tenant, 't.client_id': clientId, 't.is_closed': false })
+    // Status-backed, matching fetchService above and getBoardListStats.
+    .leftJoin('statuses as s', function joinWaitingStatuses() {
+      this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
+    })
+    .where({ 't.tenant': tenant, 't.client_id': clientId })
+    .whereRaw('s.is_closed IS NOT TRUE')
     .andWhere('lc.rn', 1)
     .andWhere('lc.author_type', 'client')
     .select('t.ticket_id', 't.ticket_number', 'lc.created_at')
@@ -611,6 +629,7 @@ async function fetchMoney(
         'i.total_amount',
         'i.credit_applied',
         'i.currency_code',
+        'i.billing_profile_id',
         'ip.paid_amount',
       ),
     trx('invoices')
@@ -683,33 +702,27 @@ async function fetchMoney(
       .first(),
   ]);
 
-  const aging = {
-    currentCents: 0,
-    d30Cents: 0,
-    d60Cents: 0,
-    d90PlusCents: 0,
-  };
-  let outstandingTotalCents = 0;
-  let unpaidInvoiceCount = 0;
-
-  for (const row of invoiceRows as any[]) {
-    const outstanding = toNumber(row.total_amount) - toNumber(row.credit_applied) - toNumber(row.paid_amount);
-    if (outstanding <= 0) continue;
-
-    outstandingTotalCents += outstanding;
-    unpaidInvoiceCount += 1;
-
-    const pastDueDays = daysPastDue(row.due_date, nowMs);
-    if (!row.due_date || pastDueDays <= 0) {
-      aging.currentCents += outstanding;
-    } else if (pastDueDays <= 30) {
-      aging.d30Cents += outstanding;
-    } else if (pastDueDays <= 60) {
-      aging.d60Cents += outstanding;
-    } else {
-      aging.d90PlusCents += outstanding;
-    }
-  }
+  // Aging is bucketed per billing profile and rolled up (F113, F115). The
+  // client totals below are the sum of the rows, computed from the same
+  // invoices — so a segmented client comparing the two can never find a gap.
+  const profiles = await listClientBillingProfiles(trx, tenant, clientId, { includeInactive: true });
+  const aged = ageInvoicesByProfile(invoiceRows as any[], nowMs);
+  const arSummary = summariseClientAr({
+    profiles,
+    aged,
+    creditByProfile: new Map(),
+  });
+  const { aging, outstandingTotalCents, unpaidInvoiceCount } = arSummary;
+  const agingByProfile: ClientPulseProfileAr[] | undefined = arSummary.isSegmented
+    ? arSummary.rows.map((row) => ({
+        billingProfileId: row.billingProfileId,
+        name: row.name,
+        isDefault: row.isDefault,
+        aging: row.aging,
+        outstandingTotalCents: row.outstandingTotalCents,
+        unpaidInvoiceCount: row.unpaidInvoiceCount,
+      }))
+    : undefined;
 
   const draftInvoices = (draftRows as any[]).map((row) => ({
     invoice_id: row.invoice_id,
@@ -766,6 +779,7 @@ async function fetchMoney(
   return {
     money: {
       aging,
+      ...(agingByProfile ? { agingByProfile } : {}),
       outstandingTotalCents,
       unpaidInvoiceCount,
       draftInvoices,

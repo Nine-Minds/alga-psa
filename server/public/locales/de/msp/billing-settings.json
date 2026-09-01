@@ -88,6 +88,43 @@
         "save": "Einstellungen konnten nicht gespeichert werden"
       }
     },
+    "creditDrawdown": {
+      "title": "Guthabenverrechnung",
+      "description": "Legen Sie fest, wann Kundenguthaben mit Rechnungen verrechnet wird und wie es verbraucht wird.",
+      "fields": {
+        "autoApply": {
+          "label": "Guthaben beim Abschluss automatisch verrechnen",
+          "help": "Wenn aktiviert, wird verfügbares Guthaben automatisch verrechnet, sobald eine Rechnung abgeschlossen wird"
+        },
+        "order": {
+          "label": "Reihenfolge der Guthabenverrechnung",
+          "placeholder": "Guthabenreihenfolge auswählen",
+          "help": "Wählen Sie die Reihenfolge, in der Guthaben verbraucht wird"
+        },
+        "serviceTypes": {
+          "label": "Berechtigte Servicetypen",
+          "help": "Legen Sie fest, ob Guthaben auf alle Gebühren oder nur auf Gebühren für die ausgewählten Servicetypen angewendet werden kann.",
+          "empty": "Keine Servicetypen konfiguriert.",
+          "restricted": "Guthaben ist auf die ausgewählten Servicetypen beschränkt.",
+          "mode": {
+            "all": "Alle Servicetypen",
+            "restricted": "Nur ausgewählte Typen"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Bald ablaufende zuerst",
+        "oldestFirst": "Ältestes Guthaben zuerst",
+        "newestFirst": "Neuestes Guthaben zuerst"
+      },
+      "toast": {
+        "updated": "Die Einstellungen für die Guthabenverrechnung wurden aktualisiert."
+      },
+      "errors": {
+        "load": "Die Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden"
+      }
+    },
     "renewal": {
       "title": "Erneuerungsautomatisierung",
       "description": "Konfigurieren Sie das Standardverhalten, wenn Verträge ihr Verlängerungsdatum erreichen.",
@@ -419,6 +456,46 @@
         "create": "Steuerbefreiung konnte nicht erstellt werden.",
         "update": "Steuerurlaub konnte nicht aktualisiert werden.",
         "delete": "Steuerurlaub konnte nicht gelöscht werden."
+      }
+    },
+    "delegation": {
+      "defaultProvider": "Ihr Buchhaltungssystem",
+      "actions": {
+        "applying": "Wird angewendet…"
+      },
+      "errors": {
+        "enableFailed": "Die externe Steuerberechnung konnte nicht aktiviert werden."
+      },
+      "banner": {
+        "title": "Soll {{provider}} die Steuer berechnen?",
+        "description": "{{provider}} ist verbunden. Die meisten Kunden lassen die Steuer bevorzugt von ihrem Buchhaltungssystem verarbeiten, damit beide Hauptbücher abgestimmt bleiben — Alga übermittelt Rechnungen ohne Steuerbeträge, die in {{provider}} hinterlegten Steuerregeln werden angewendet und das Ergebnis wird mit Alga synchronisiert. Alga ist kein Steuerprogramm; wir empfehlen, die Berechnung zu delegieren.",
+        "actions": {
+          "enable": "{{provider}} für die Steuerberechnung verwenden",
+          "dismiss": "Nicht jetzt",
+          "dismissing": "Wird ausgeblendet…"
+        },
+        "toast": {
+          "enabled": "Externe Steuerberechnung aktiviert.",
+          "enabledWithProvider": "Bei neuen Rechnungen berechnet {{provider}} die Steuer."
+        },
+        "errors": {
+          "loadState": "Der Status der Empfehlung zur Steuerdelegierung konnte nicht geladen werden.",
+          "dismissFailed": "Das Banner konnte nicht ausgeblendet werden."
+        }
+      },
+      "nudge": {
+        "title": "Soll {{provider}} die Steuer auf zukünftigen Rechnungen berechnen?",
+        "description": "Empfohlen. Neue Rechnungen werden ohne Steuerbeträge an {{provider}} übermittelt, {{provider}} wendet die hinterlegten Steuerregeln an und anschließend wird die berechnete Steuer zurück an Alga synchronisiert, sodass beide Hauptbücher abgestimmt bleiben. Sie können dies jederzeit unter Abrechnung → Steuereinstellungen ändern.",
+        "actions": {
+          "enable": "Ja, {{provider}} verwenden",
+          "keepInternal": "Steuer weiterhin von Alga berechnen lassen"
+        },
+        "toast": {
+          "enabled": "Bei neuen Rechnungen berechnet {{provider}} die Steuer. Sie können dies in den Abrechnungseinstellungen ändern."
+        },
+        "errors": {
+          "loadSettings": "Die aktuellen Steuereinstellungen konnten nicht geladen werden."
+        }
       }
     }
   },
@@ -1074,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Die Einstellungen konnten nicht geladen werden",
-    "failedToSaveSettings": "Einstellungen konnten nicht gespeichert werden"
+    "failedToSaveSettings": "Einstellungen konnten nicht gespeichert werden",
+    "permissions": {
+      "readSettings": "Berechtigung verweigert: Abrechnungseinstellungen können nicht gelesen werden",
+      "updateSettings": "Berechtigung verweigert: Abrechnungseinstellungen können nicht aktualisiert werden",
+      "readClientSettings": "Berechtigung verweigert: Abrechnungseinstellungen des Kunden können nicht gelesen werden",
+      "updateClientSettings": "Berechtigung verweigert: Abrechnungseinstellungen des Kunden können nicht aktualisiert werden",
+      "settingsRead": "Berechtigung verweigert: Leseberechtigung für Abrechnungseinstellungen erforderlich",
+      "settingsUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Abrechnungseinstellungen erforderlich",
+      "readTaxRates": "Berechtigung verweigert: Steuersätze können nicht gelesen werden",
+      "createTaxRates": "Berechtigung verweigert: Steuersätze können nicht erstellt werden",
+      "updateTaxRates": "Berechtigung verweigert: Steuersätze können nicht aktualisiert werden",
+      "updateTaxRegions": "Berechtigung verweigert: Steuerregionen können nicht aktualisiert werden"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Berechtigung verweigert: Abrechnungssteuersätze sind für diesen Mandanten nicht verfügbar.",
+      "overlap": "Der Zeitraum des Steuersatzes überschneidet sich mit einem vorhandenen Satz für diese Region.",
+      "regionRequired": "Die Region ist erforderlich.",
+      "idRequired": "Für Aktualisierungen ist die Steuersatz-ID erforderlich.",
+      "notFound": "Steuersatz nicht gefunden.",
+      "notFoundOrAlreadyDeleted": "Steuersatz nicht gefunden oder bereits gelöscht.",
+      "invalid": "Der ausgewählte Steuersatz oder die Region ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "regionInvalid": "Die ausgewählte Steuerregion ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und wählen Sie eine andere Region.",
+      "duplicate": "Für diese Region und diesen Zeitraum existiert bereits ein Steuersatz.",
+      "missingField": "Erforderliches Steuersatzfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Steuersatzfeld fehlt: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Konfigurieren Sie mindestens einen aktiven Steuersatz, bevor Sie Standard-Steuereinstellungen erstellen.",
+      "componentNotFound": "Steuerkomponente nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "bracketNotFound": "Steuerstufe nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "holidayNotFound": "Steuerbefreiungszeitraum nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "recordInvalid": "Einer der ausgewählten Steuerdatensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Steuerdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein Steuerdatensatz mit diesen Angaben existiert bereits.",
+      "notAllowed": "Einer der Steuerwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Steuerfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Steuerfeld fehlt: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Eine Steuerregion mit dem Code „{{code}}“ existiert bereits.",
+      "notFoundCode": "Steuerregion mit dem Code „{{code}}“ nicht gefunden."
+    }
   },
   "toast": {
     "saved": "Erfolgreich gespeichert"

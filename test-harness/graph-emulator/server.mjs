@@ -62,13 +62,18 @@ function requireAccess(req, res) {
   return record;
 }
 
-function issueTokens(clientId, existingRefreshToken) {
+function issueTokens(clientId, existingRefreshToken, authorityTenant = 'common') {
   const accessToken = `access-${randomUUID()}`;
   const refreshToken = existingRefreshToken && !state.rotateRefreshTokens
     ? existingRefreshToken
     : `refresh-${randomUUID()}`;
   state.accessTokens.set(accessToken, {
     clientId,
+    // Real Microsoft issues tenant-scoped tokens: the authority segment of
+    // login.microsoftonline.com/{tenant}/... decides whose directory /users
+    // answers for. The Entra direct adapter leans on this for GDAP customer
+    // reads, so the emulator must not ignore it.
+    authorityTenant,
     expiresAt: Date.now() + state.accessTokenTtlSeconds * 1000,
   });
   state.refreshTokens.set(refreshToken, { clientId, revoked: false });
@@ -208,6 +213,7 @@ async function handler(req, res) {
   if (req.method === 'POST' && /\/oauth2\/v2\.0\/token$/.test(url.pathname)) {
     const fault = injectedFault('token');
     if (fault) return json(res, fault.status, fault.body);
+    const authorityTenant = (url.pathname.match(/^\/([^/]+)\/oauth2\/v2\.0\/token$/) || [])[1] || 'common';
     const input = await body(req);
     if (state.clients.get(String(input.client_id)) !== String(input.client_secret)) {
       return json(res, 401, { error: 'invalid_client' });
@@ -218,14 +224,14 @@ async function handler(req, res) {
         return json(res, 400, { error: 'invalid_grant' });
       }
       state.codes.delete(String(input.code));
-      return json(res, 200, issueTokens(String(input.client_id)));
+      return json(res, 200, issueTokens(String(input.client_id), undefined, authorityTenant));
     }
     if (input.grant_type === 'refresh_token') {
       const refresh = state.refreshTokens.get(String(input.refresh_token));
       if (!refresh || refresh.revoked || refresh.clientId !== input.client_id) {
         return json(res, 400, { error: 'invalid_grant' });
       }
-      return json(res, 200, issueTokens(String(input.client_id), String(input.refresh_token)));
+      return json(res, 200, issueTokens(String(input.client_id), String(input.refresh_token), authorityTenant));
     }
     return json(res, 400, { error: 'unsupported_grant_type' });
   }
@@ -234,14 +240,25 @@ async function handler(req, res) {
   // key, so it is handled before the Graph access-token gate.
   if (handleCippApi(req, res, url, json)) return;
 
-  if (!url.pathname.startsWith('/v1.0/')) return json(res, 404, { error: 'not_found' });
+  const versionMatch = url.pathname.match(/^\/(v1\.0|beta)\//);
+  if (!versionMatch) return json(res, 404, { error: 'not_found' });
   const access = requireAccess(req, res);
   if (!access) return;
-  const graphPath = url.pathname.slice('/v1.0'.length);
+  const graphPath = url.pathname.slice(versionMatch[1].length + 1);
+  // Faithful to real Graph: managedTenants (Microsoft 365 Lighthouse) exists
+  // only on beta. Serving it on v1.0 here is what let the v1.0 bug ship.
+  if (versionMatch[1] === 'v1.0' && graphPath.startsWith('/tenantRelationships/managedTenants')) {
+    return json(res, 400, {
+      error: {
+        code: 'BadRequest',
+        message: "Resource not found for the segment 'managedTenants'.",
+      },
+    });
+  }
   const fault = injectedFault(`${req.method} ${graphPath}`);
   if (fault) return json(res, fault.status, fault.body);
 
-  if (handleEntraGraph(req, res, graphPath, url, json)) return;
+  if (await handleEntraGraph(req, res, graphPath, url, json, access, body)) return;
 
   if (req.method === 'GET' && (graphPath === '/me' || /^\/users\/[^/]+$/.test(graphPath))) {
     return json(res, 200, { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' });

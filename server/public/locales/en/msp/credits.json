@@ -102,7 +102,9 @@
     "invoiceAmount": "Invoice Amount:",
     "selectCreditToApply": "Select Credit to Apply",
     "amountToApply": "Amount to Apply",
-    "creditOrderNote": "Credits are applied in order of expiration date (oldest first)",
+    "creditOrderNoteExpirationFirst": "Credits are applied in order of expiration date (soonest first)",
+    "creditOrderNoteOldestFirst": "Credits are applied in order of creation date (oldest first)",
+    "creditOrderNoteNewestFirst": "Credits are applied in order of creation date (newest first)",
     "noCreditsAvailable": "No credits available for this client",
     "failedToLoadCredits": "Failed to load available credits",
     "selectCreditError": "Please select a credit and enter a valid amount",
@@ -166,7 +168,9 @@
       "reason": "Why is this credit being transferred?"
     },
     "hints": {
-      "amount": "Up to {{amount}} available"
+      "amount": "Up to {{amount}} available",
+      "currencyMatch": "The selected client uses the same currency.",
+      "currencyMismatch": "The selected client uses a different currency; conversion may apply."
     },
     "impact": {
       "current": "Current Remaining",
@@ -191,5 +195,24 @@
     "recurringLineagePreserved": "Recurring source lineage preserved",
     "financialOnly": "Financial Only",
     "noRecurringServicePeriod": "No recurring service period"
+  },
+  "errors": {
+    "credit": {
+      "notFoundRefresh": "Credit not found. It may have been updated or deleted. Please refresh and try again.",
+      "originalTransactionMissing": "The original credit transaction could not be found. Please refresh and try again.",
+      "sourceNotFound": "Source credit not found. It may have been updated or deleted. Please refresh and try again.",
+      "targetClientNotFound": "Target client not found. It may have been updated or deleted. Please refresh and try again.",
+      "insufficientTransferAmount": "Insufficient remaining amount for transfer.",
+      "invalidValue": "One of the selected credit values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected credit, client, invoice, or transaction no longer exists. Please refresh and try again.",
+      "duplicate": "A conflicting credit transaction already exists. Please refresh and try again.",
+      "notAllowed": "One of the credit values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required credit field.",
+      "missingFieldNamed": "Missing required credit field: {{field}}."
+    },
+    "prepaidAlerts": {
+      "settingsInvalid": "Invalid prepaid balance alert settings",
+      "updateFailed": "Failed to update prepaid balance alert settings"
+    }
   }
 }

@@ -329,6 +329,33 @@
         "help": "Torna-se o padrão da organização para todos: funcionários do MSP e usuários do portal do cliente. Usuários e clientes individuais podem substituí-lo posteriormente."
       }
     },
+    "address": {
+      "title": "Endereço da empresa",
+      "description": "Preenchido com os seus dados de faturação — reveja e corrija se necessário. Este endereço aparece nas suas faturas e orçamentos.",
+      "fields": {
+        "addressLine1": {
+          "label": "Endereço linha 1",
+          "placeholder": "Rua Principal 123"
+        },
+        "addressLine2": {
+          "label": "Endereço linha 2",
+          "placeholder": "Sala 100"
+        },
+        "city": {
+          "label": "Cidade"
+        },
+        "stateProvince": {
+          "label": "Estado/Província"
+        },
+        "postalCode": {
+          "label": "Código postal"
+        },
+        "country": {
+          "label": "País",
+          "placeholder": "Selecionar país"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "Redefinição de senha necessária",
@@ -482,7 +509,7 @@
         "delete": "Falha ao excluir o quadro.",
         "defaultRequired": "Pelo menos um quadro deve ser definido como padrão",
         "defaultUpdate": "Falha ao definir quadro padrão",
-        "duplicate": "O conselho já existe",
+        "duplicate": "O quadro já existe",
         "create": "Falha ao criar o quadro. Por favor, tente novamente."
       },
       "delete": {
@@ -500,7 +527,7 @@
         "title": "Adicionar novo quadro",
         "fields": {
           "name": {
-            "label": "Nome do Conselho *",
+            "label": "Nome do Quadro *",
             "placeholder": "Digite o nome do quadro"
           },
           "description": {
@@ -630,7 +657,7 @@
       },
       "title": "Status",
       "description": "Os status são configurados por quadro. Selecione um quadro abaixo para definir o ciclo de vida dos tickets nesse quadro. O status aberto padrão do quadro selecionado é atribuído automaticamente aos novos tickets criados nesse quadro.",
-      "tip": "Os conselhos não compartilham status. Troque de quadro aqui para revisar ou alterar o conjunto de status de cada quadro.",
+      "tip": "Os quadros não compartilham status. Troque de quadro aqui para revisar ou alterar o conjunto de status de cada quadro.",
       "fields": {
         "board": {
           "label": "Quadro",

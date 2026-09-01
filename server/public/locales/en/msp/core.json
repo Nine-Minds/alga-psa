@@ -21,10 +21,14 @@
       "channels": "Channels"
     },
     "contacts": "Contacts",
+    "interactions": "Interactions",
     "documents": "Documents",
     "documentsAll": "All Documents",
     "knowledgeBase": "Knowledge Base",
     "assets": "Assets",
+    "assetsAll": "All Assets",
+    "assetsMaintenance": "Maintenance",
+    "passwords": "Passwords",
     "inventory": {
       "label": "Inventory",
       "sections": {
@@ -459,7 +463,10 @@
     "goToDashboard": "Go to dashboard",
     "logoAlt": "AlgaPSA Logo",
     "expandSidebar": "Expand sidebar",
-    "collapseSidebar": "Collapse sidebar"
+    "collapseSidebar": "Collapse sidebar",
+    "collapseSection": "Collapse {{section}}",
+    "expandSection": "Expand {{section}}",
+    "appLogoAlt": "{{appName}} Logo"
   },
   "settings": {
     "sections": {
@@ -475,11 +482,13 @@
       "users": "Users",
       "teams": "Teams",
       "language": "Language",
+      "appearance": "Appearance",
       "clientPortal": "Client Portal",
       "license": "License",
       "ticketing": "Ticketing",
       "sla": "SLA",
       "projects": "Projects",
+      "assets": "Assets",
       "interactions": "Interactions",
       "opportunities": "Opportunities",
       "notifications": "Notifications",
@@ -734,5 +743,9 @@
     "title": "Taking you to setup",
     "description": "Your workspace needs a quick setup before you can use the dashboard.",
     "action": "Continue to setup"
+  },
+  "githubStar": {
+    "label": "Star",
+    "ariaLabel": "Star {{repository}} on GitHub"
   }
 }

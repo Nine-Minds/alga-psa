@@ -2,7 +2,6 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import axios from 'axios';
 import type {
   EmailMessageDetails,
   EmailProviderConfig,
@@ -18,6 +17,11 @@ import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAda
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
 import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automatedMessage';
+import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
+import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
+import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
+import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
+import { createHash } from 'node:crypto';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -187,88 +191,7 @@ function isImapAuthenticationError(error: any): boolean {
   return false;
 }
 
-async function getImapOauthSecrets(provider: {
-  id: string;
-  tenant: string;
-}): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
-  const secretProvider = await getSecretProviderInstance();
-  const clientSecret =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_oauth_client_secret_${provider.id}`)) ?? null;
-  const refreshToken =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_refresh_token_${provider.id}`)) ?? null;
-  return { clientSecret, refreshToken };
-}
-
-async function refreshImapAccessToken(params: {
-  provider: {
-    id: string;
-    tenant: string;
-    oauth_token_url?: string | null;
-    oauth_client_id?: string | null;
-    oauth_client_secret?: string | null;
-    refresh_token?: string | null;
-    access_token?: string | null;
-    token_expires_at?: string | null;
-  };
-  db: Awaited<ReturnType<typeof getAdminConnection>>;
-}): Promise<string> {
-  const { provider, db } = params;
-  if (!provider.oauth_token_url || !provider.oauth_client_id) {
-    throw new Error('IMAP OAuth token URL or client ID missing');
-  }
-
-  const { clientSecret, refreshToken } = await getImapOauthSecrets({
-    id: provider.id,
-    tenant: provider.tenant,
-  });
-  const effectiveRefreshToken = refreshToken || provider.refresh_token;
-  const effectiveClientSecret = clientSecret || provider.oauth_client_secret;
-  if (!effectiveRefreshToken) {
-    throw new Error('IMAP OAuth refresh token missing');
-  }
-
-  const paramsBody = new URLSearchParams();
-  paramsBody.append('grant_type', 'refresh_token');
-  paramsBody.append('refresh_token', effectiveRefreshToken);
-  paramsBody.append('client_id', provider.oauth_client_id);
-  if (effectiveClientSecret) {
-    paramsBody.append('client_secret', effectiveClientSecret);
-  }
-
-  const response = await axios.post(provider.oauth_token_url, paramsBody, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
-  const accessToken = asNonEmptyString(response?.data?.access_token);
-  if (!accessToken) {
-    throw new Error('IMAP OAuth refresh returned no access token');
-  }
-
-  const expiresInSeconds = Number(response?.data?.expires_in || 3600);
-  const expiresAt = new Date(
-    Date.now() + (Number.isFinite(expiresInSeconds) ? expiresInSeconds : 3600) * 1000
-  ).toISOString();
-
-  await tenantDb(db, provider.tenant).table('imap_email_provider_config')
-    .where({ email_provider_id: provider.id })
-    .update({
-      access_token: accessToken,
-      token_expires_at: expiresAt,
-      updated_at: db.fn.now(),
-    });
-
-  provider.access_token = accessToken;
-  provider.token_expires_at = expiresAt;
-  console.info('[UnifiedInboundEmailQueueJobProcessor] refreshed IMAP OAuth access token', {
-    event: 'imap_oauth_refresh',
-    tenantId: provider.tenant,
-    providerId: provider.id,
-    expiresAt,
-  });
-
-  return accessToken;
-}
-
-async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<EmailProviderConfig> {
+export async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<EmailProviderConfig> {
   const db = await getAdminConnection();
   const tenantScopedDb = tenantDb(db, job.tenantId);
   const query = tenantScopedDb.table('microsoft_email_provider_config as mc');
@@ -288,7 +211,9 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
       db.raw('mc.token_expires_at as mc_token_expires_at'),
       db.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
       db.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
-      db.raw('mc.folder_filters as mc_folder_filters')
+      db.raw('mc.folder_filters as mc_folder_filters'),
+      db.raw('mc.microsoft_profile_id as mc_microsoft_profile_id'),
+      db.raw('mc.client_secret_ref as mc_client_secret_ref')
     )) as any;
 
   if (!row) {
@@ -330,11 +255,18 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
       access_token: (row as any).mc_access_token,
       refresh_token: (row as any).mc_refresh_token,
       token_expires_at: (row as any).mc_token_expires_at,
+      folder_filters: (row as any).mc_folder_filters,
+      // The persisted profile pin is authoritative for which app issued the
+      // refresh token. Propagate it so buildMicrosoftEmailProviderConfig
+      // resolves ONLY through the pinned profile and fails closed when the
+      // pin is unresolvable — never silently falls back to the Email binding.
+      microsoft_profile_id: (row as any).mc_microsoft_profile_id ?? null,
+      client_secret_ref: (row as any).mc_client_secret_ref ?? null,
     },
   } as any);
 }
 
-async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<{
+export async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<{
   provider: any;
   googleConfig: any;
   config: EmailProviderConfig;
@@ -380,6 +312,7 @@ async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Prom
       token_expires_at: googleConfig.token_expires_at,
       history_id: googleConfig.history_id,
       watch_expiration: googleConfig.watch_expiration,
+      label_filters: googleConfig.label_filters,
     },
   } as any;
 
@@ -398,6 +331,12 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const to = params.parsed.to?.value || [];
   const cc = params.parsed.cc?.value || [];
   const messageId = asNonEmptyString(params.parsed.messageId) || params.fallbackMessageId;
+  // Deliberately do not feed the RFC Message-ID into this derivation: it is
+  // display/threading data and may be supplied by an attacker.
+  const providerIdentity = normalizeInboundMessageIdentity({
+    providerType: params.provider,
+    providerMessageId: params.fallbackMessageId,
+  })?.normalized;
   const references = extractMessageIds(params.parsed.references);
   const inReplyTo = extractMessageIds(params.parsed.inReplyTo)[0];
   const threadId = references[0] || inReplyTo;
@@ -410,6 +349,27 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
   const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
   const resolvedHeaders: Record<string, string> = {};
+  // Preserve Authentication-Results from raw MIME for the sender-auth gate.
+  // mailparser normalizes header names in its Map, while Gmail already supplies
+  // a record via GmailAdapter.
+  const parsedHeaders = params.parsed.headers;
+  if (parsedHeaders?.forEach) {
+    parsedHeaders.forEach((value: unknown, key: string) => {
+      const headerName = key.toLowerCase();
+      // These names are processor metadata, never wire data. Only the verified
+      // listRewrite branch below may add them to the downstream header bag.
+      if (headerName.startsWith('x-resolved-') || headerName.startsWith('x-list-')) {
+        return;
+      }
+      if (typeof value === 'string') {
+        resolvedHeaders[headerName] = value;
+      } else if (Array.isArray(value)) {
+        // Header order is wire order: the first Authentication-Results block is
+        // our receiving MTA's topmost result. Preserve each block for the gate.
+        resolvedHeaders[headerName] = value.filter((item): item is string => typeof item === 'string').join('\n');
+      }
+    });
+  }
   if (listRewrite) {
     resolvedHeaders['x-list-address'] = listRewrite.listAddress;
     resolvedHeaders['x-resolved-original-sender'] = listRewrite.sender.email;
@@ -425,6 +385,8 @@ function mapParsedMimeToEmailMessageDetails(params: {
 
   return {
     id: messageId,
+    providerIdentity,
+    sourceSha256: createHash('sha256').update(params.rawMimeBuffer).digest('hex'),
     provider: params.provider,
     providerId: params.providerId,
     tenant: params.tenant,
@@ -472,7 +434,7 @@ function mapParsedMimeToEmailMessageDetails(params: {
   };
 }
 
-async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
+export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
   if (job.provider !== 'microsoft') {
     throw new Error('invalid provider for microsoft fetch');
   }
@@ -504,6 +466,8 @@ async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob)
     throw error;
   }
 
+  await assertMicrosoftMessageInMonitoredFolders(adapter, job.pointer.messageId, config.provider_config?.folder_filters);
+
   const parsed: any = await withTimeout(
     simpleParser(rawMimeBuffer),
     parseTimeoutMs,
@@ -520,7 +484,19 @@ async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob)
   });
 }
 
-async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
+export async function assertMicrosoftMessageInMonitoredFolders(
+  adapter: Pick<MicrosoftGraphAdapter, 'getMessageParentFolderId' | 'resolveFolderIds'>,
+  messageId: string,
+  folderFilters: unknown,
+): Promise<void> {
+  const parentFolderId = await adapter.getMessageParentFolderId(messageId);
+  const monitoredFolderIds = await adapter.resolveFolderIds(folderFilters);
+  if (!parentFolderId || !monitoredFolderIds.has(parentFolderId)) {
+    throw new SourceMessageUnavailableError('microsoft_message_outside_monitored_folder');
+  }
+}
+
+export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
   if (job.provider !== 'imap') {
     throw new Error('invalid provider for imap fetch');
   }
@@ -725,7 +701,7 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
   throw new Error('imap_auth_retry_exhausted');
 }
 
-async function fetchEmailPayloadsForJob(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails[]> {
+export async function fetchEmailPayloadsForJob(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails[]> {
   if (job.provider === 'microsoft') {
     return [await fetchMicrosoftMessageForPointer(job)];
   }
@@ -762,8 +738,19 @@ async function persistGoogleHistoryCursor(job: UnifiedInboundEmailQueueJob): Pro
   if (!historyId) return;
 
   const db = await getAdminConnection();
+  // Monotonic AT THE DATABASE WRITE ITSELF (compare-and-set): the predicate
+  // compares against the CURRENT row, so a slower job holding an older
+  // pointer historyId can never overwrite a newer cursor another worker
+  // already persisted — there is no application-level read-compare-write
+  // window. history_id is a varchar column of Gmail numeric historyId
+  // strings, so both sides cast to bigint; a NULL baseline always accepts,
+  // and a non-numeric legacy value is left untouched.
   await tenantDb(db, job.tenantId).table('google_email_provider_config')
     .where({ email_provider_id: job.providerId })
+    .whereRaw(
+      '(history_id IS NULL OR (history_id ~ ? AND history_id::bigint < ?::bigint))',
+      ['^[0-9]+$', historyId]
+    )
     .update({
       history_id: historyId,
       updated_at: db.fn.now(),
@@ -790,6 +777,8 @@ async function insertProcessingRecord(params: {
   try {
     await tenantDb(db, params.job.tenantId).table('email_processed_messages').insert({
       message_id: params.externalIdentity,
+      provider_message_id: params.emailData?.providerIdentity || null,
+      source_sha256: params.emailData?.sourceSha256 || null,
       provider_id: params.job.providerId,
       tenant: params.job.tenantId,
       processed_at: new Date(),
@@ -964,7 +953,59 @@ export async function processUnifiedInboundEmailQueueJob(
         reason: `source_unavailable:${error.reason}`,
       };
     }
+
+    // Only strictly classified terminal credential failures advance the
+    // consecutive auth-failure counter; everything else (throttling, server
+    // errors, timeouts, transport failures, downstream processing) does not.
+    // The original error still propagates: the existing queue retry policy
+    // stays authoritative, and once the threshold trips, the pause gate above
+    // stops the next attempt.
+    const classification = classifyInboundAuthFailure({
+      providerType: job.provider,
+      error,
+    });
+    if (classification.kind === 'unrecoverable_auth') {
+      try {
+        const outcome = await new EmailProviderLifecycleService().recordUnrecoverableAuthFailure(
+          job.providerId,
+          job.tenantId,
+          classification.code
+        );
+        if (outcome.autoPaused) {
+          console.info('[UnifiedInboundEmailQueueJobProcessor] provider auto-paused after repeated auth failures', {
+            event: 'inbound_email_provider_auto_paused',
+            tenantId: job.tenantId,
+            providerId: job.providerId,
+            provider: job.provider,
+            authFailureCode: classification.code,
+            count: outcome.count,
+          });
+        }
+      } catch (recordError) {
+        console.warn('[UnifiedInboundEmailQueueJobProcessor] failed to record auth failure', {
+          event: 'inbound_email_auth_failure_record_failed',
+          tenantId: job.tenantId,
+          providerId: job.providerId,
+          authFailureCode: classification.code,
+          error: recordError instanceof Error ? recordError.message : String(recordError),
+        });
+      }
+    }
     throw error;
+  }
+
+  // Any successful source access — including an empty fetch — resets the
+  // consecutive auth-failure counter before downstream ticket processing,
+  // so application failures never inflate the credential-failure count.
+  try {
+    await new EmailProviderLifecycleService().recordSourceAccessSuccess(job.providerId, job.tenantId);
+  } catch (resetError) {
+    console.warn('[UnifiedInboundEmailQueueJobProcessor] failed to reset auth-failure counter', {
+      event: 'inbound_email_auth_failure_reset_failed',
+      tenantId: job.tenantId,
+      providerId: job.providerId,
+      error: resetError instanceof Error ? resetError.message : String(resetError),
+    });
   }
 
   if (payloads.length === 0) {
@@ -980,10 +1021,12 @@ export async function processUnifiedInboundEmailQueueJob(
   let processedCount = 0;
   let dedupedCount = 0;
   for (const emailData of payloads) {
-    const identityBase = asNonEmptyString(emailData.id) || `${job.jobId}:${processedCount}`;
-    const externalIdentity = normalizeExternalMessageIdentity({
+    // The provider identity + MIME digest are the database idempotency key.
+    // RFC Message-ID is retained solely as a legacy fallback when a provider
+    // does not expose a usable native identity.
+    const externalIdentity = emailData.providerIdentity || normalizeExternalMessageIdentity({
       provider: job.provider,
-      messageId: identityBase,
+      messageId: asNonEmptyString(emailData.id) || `${job.jobId}:${processedCount}`,
     });
     const inserted = await insertProcessingRecord({
       job,

@@ -29,12 +29,15 @@ import type { PortalDomainStatusResponse } from '@alga-psa/tenancy/actions/tenan
 import type { PortalDomainStatus } from 'server/src/models/PortalDomainModel';
 
 // Operator-facing reverse-proxy setup guide for appliance ("direct") deployments.
-// TODO(appliance-portal-domains): point at the published docs URL once it lands.
-const PROXY_SETUP_DOC_URL = 'https://docs.algapsa.com/client-portal/appliance-custom-portal-domain';
+const PROXY_SETUP_DOC_URL = 'https://github.com/Nine-Minds/alga-psa/blob/main/ee/docs/guides/appliance-custom-portal-domain-proxy.md';
 
 interface StatusBadgeConfig {
   label: string;
   variant: BadgeVariant;
+}
+
+interface ClientPortalDomainSettingsProps {
+  headerAction?: React.ReactNode;
 }
 
 type PortalDomainActionError = ActionMessageError | ActionPermissionError;
@@ -101,7 +104,7 @@ function isPortalDomainActionError(value: unknown): value is PortalDomainActionE
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
-const ClientPortalDomainSettings = () => {
+const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettingsProps) => {
   const { t } = useTranslation('msp/settings');
   const getStatusBadge = useStatusBadge();
   const [portalStatus, setPortalStatus] = useState<PortalDomainStatusResponse | null>(null);
@@ -282,16 +285,21 @@ const ClientPortalDomainSettings = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          <span className="flex flex-wrap items-center gap-2">
-            <AtSign className="h-5 w-5" />
-            {t('clientPortal.domain.title')}
-            <Badge variant={badge.variant}>{badge.label}</Badge>
-          </span>
-        </CardTitle>
-        <CardDescription>
-          {t('clientPortal.domain.description')}
-        </CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1.5">
+            <CardTitle>
+              <span className="flex flex-wrap items-center gap-2">
+                <AtSign className="h-5 w-5" />
+                {t('clientPortal.domain.title')}
+                <Badge variant={badge.variant}>{badge.label}</Badge>
+              </span>
+            </CardTitle>
+            <CardDescription>
+              {t('clientPortal.domain.description')}
+            </CardDescription>
+          </div>
+          {headerAction && <div className="shrink-0">{headerAction}</div>}
+        </div>
       </CardHeader>
       <CardContent>
         {portalError && (
@@ -305,8 +313,8 @@ const ClientPortalDomainSettings = () => {
         )}
         {portalLoading ? (
           <div className="space-y-3">
-            <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
-            <div className="h-24 animate-pulse rounded bg-gray-100" />
+            <div className="h-5 w-48 animate-pulse rounded skeleton-fill" />
+            <div className="h-24 animate-pulse rounded skeleton-fill" />
           </div>
         ) : (
           <div className="space-y-6">
@@ -393,7 +401,7 @@ const ClientPortalDomainSettings = () => {
                 ) : (
                   <p className="text-xs text-gray-500">
                     {t('clientPortal.domain.form.helpTextPrefix')}
-                    <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost}</code>
+                    <code className="rounded bg-[rgb(var(--color-border-200))] px-1 py-0.5">{portalStatus?.canonicalHost}</code>
                     {t('clientPortal.domain.form.helpTextSuffix')}
                   </p>
                 )}
@@ -458,7 +466,7 @@ const ClientPortalDomainSettings = () => {
                 <ol className="mt-2 list-decimal space-y-2 pl-4">
                   <li>
                     {t('clientPortal.domain.appliance.step1Prefix')}
-                    <code className="rounded bg-gray-100 px-1 py-0.5">{proxyTargetHost}</code>
+                    <code className="rounded bg-[rgb(var(--color-border-200))] px-1 py-0.5">{proxyTargetHost}</code>
                     {t('clientPortal.domain.appliance.step1Suffix')}
                   </li>
                   <li>{t('clientPortal.domain.appliance.step2')}</li>
@@ -481,7 +489,7 @@ const ClientPortalDomainSettings = () => {
                 <ol className="mt-2 list-decimal space-y-2 pl-4">
                   <li>
                     {t('clientPortal.domain.checklist.step1Prefix')}
-                    <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost ?? t('clientPortal.domain.checklist.canonicalHostFallback')}</code>
+                    <code className="rounded bg-[rgb(var(--color-border-200))] px-1 py-0.5">{portalStatus?.canonicalHost ?? t('clientPortal.domain.checklist.canonicalHostFallback')}</code>
                     {t('clientPortal.domain.checklist.step1Suffix')}
                   </li>
                   <li>{t('clientPortal.domain.checklist.step2')}</li>

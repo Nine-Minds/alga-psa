@@ -114,7 +114,9 @@
       "delete": "Kan offerte niet verwijderen.",
       "duplicate": "Kan de offerte niet dupliceren.",
       "load": "Kan offertes niet laden",
-      "send": "Kan de offerte niet verzenden."
+      "send": "Kan de offerte niet verzenden.",
+      "resend": "Kan de offerte niet opnieuw verzenden.",
+      "sendReminder": "Kan de herinnering voor de offerte niet verzenden."
     },
     "loading": "Offertes laden...",
     "rowActions": {
@@ -153,7 +155,8 @@
       "previewPdf": "Pdf-voorvertoning",
       "backToQuotes": "Terug naar offertes",
       "backToTemplates": "Terug naar offertesjablonen",
-      "convertToSalesOrder": "Converteren naar verkooporder"
+      "convertToSalesOrder": "Converteren naar verkooporder",
+      "convert": "Omzetten naar…"
     },
     "headings": {
       "editQuote": "Offerte bewerken",
@@ -587,20 +590,26 @@
     "sections": {
       "contractItems": "Contractartikelen",
       "conversionMode": "Conversiemodus",
-      "excludedItems": "Uitgesloten artikelen",
       "excludedFromConversion": "Uitgesloten van conversie",
+      "excludedItems": "Uitgesloten artikelen",
       "invoiceItems": "Factuurartikelen",
       "itemMappingPreview": "Voorbeeld van itemtoewijzing",
+      "onSalesOrder": "Op verkooporder {{soNumber}}",
       "quoteTotal": "Offerte Totaal",
+      "salesOrderItems": "Verkooporderregels",
       "statusAfterConversion": "Status na conversie",
       "willBecomeContractLines": "Worden contractregels",
-      "willBecomeInvoiceCharges": "Worden factuurkosten"
+      "willBecomeInvoiceCharges": "Worden factuurkosten",
+      "willBecomeSalesOrderLines": "Worden verkooporderregels"
     },
     "empty": {
       "contractItems": "Terugkerende items worden niet omgezet in een contract.",
-      "invoiceItems": "Eenmalige items worden niet omgezet in een factuur."
+      "invoiceItems": "Eenmalige items worden niet omgezet in een factuur.",
+      "invoiceItemsOnSalesOrder": "Alle eenmalige regels staan op verkooporder {{soNumber}} en worden van daaruit gefactureerd bij levering.",
+      "salesOrderItems": "Er gaan geen productregels naar een verkooporder."
     },
     "summary": {
+      "billedViaSalesOrder": "Wordt bij levering gefactureerd via verkooporder {{soNumber}}",
       "converted": "Geconverteerd",
       "discount": "Korting",
       "fixed": "vast",
@@ -628,10 +637,11 @@
       "title": "Fout"
     },
     "salesOrder": {
-      "successTitle": "Verkooporder {{number}} aangemaakt",
-      "successBody": "Productregels worden bij levering gefactureerd.",
+      "existingNote": "Deze offerte is al omgezet naar verkooporder {{soNumber}}.",
+      "note": "Productregels kunnen op twee manieren worden gefactureerd: maak een verkooporder om ze bij levering te factureren, of factureer ze direct. Bij het aanmaken van de verkooporder vallen ze buiten de factuurconversie, zodat niets dubbel wordt gefactureerd.",
       "openSalesOrders": "Verkooporders openen",
-      "note": "Eenmalige productregels gaan naar een concept-verkooporder (gefactureerd bij levering) en worden uitgesloten van elke conversie naar een conceptfactuur, zodat niets dubbel wordt gefactureerd."
+      "successBody": "Productregels worden bij levering gefactureerd.",
+      "successTitle": "Verkooporder {{number}} aangemaakt"
     }
   },
   "quoteApproval": {
@@ -723,9 +733,11 @@
       "load": "Kan de offertesjablooneditor niet laden",
       "nameRequired": "Sjabloonnaam is vereist.",
       "notFound": "Offertedocumentsjabloon niet gevonden.",
-      "previewPipeline": "Preview-pijplijn is mislukt.",
+      "previewPipeline": "Preview-pipeline is mislukt.",
       "saveFailed": "Kan offertesjabloon niet opslaan",
-      "unknownAstExport": "Onbekende AST-exportfout"
+      "unknownAstExport": "Onbekende AST-exportfout",
+      "quoteNotFound": "Offertedetails konden niet worden geladen voor de voorvertoning.",
+      "quoteDetailLoad": "Laden van offertedetails is mislukt."
     },
     "fields": {
       "layoutDetails": "Indelingsdetails",
@@ -749,10 +761,20 @@
       "sampleScenario": "Voorbeeldscenario",
       "selectScenario": "Scenario selecteren...",
       "selectScenarioPrompt": "Selecteer een voorbeeldscenario om een ​​gezaghebbende preview te genereren.",
-      "templateGenerationFailed": "Voorbeeldsjabloon kan niet worden gegenereerd vanuit de huidige werkruimte."
+      "templateGenerationFailed": "Voorbeeldsjabloon kan niet worden gegenereerd vanuit de huidige werkruimte.",
+      "source": {
+        "sample": "Voorbeeld",
+        "existing": "Bestaand"
+      },
+      "searchQuotes": "Offertes zoeken…",
+      "searchQuotesHint": "Zoek op nummer of klant…",
+      "noQuotesFound": "Geen offertes gevonden.",
+      "selectQuote": "Offerte kiezen",
+      "selectQuoteHint": "Kies een offerte voor een gegevensgebonden voorvertoning.",
+      "loadingQuoteDetails": "Offertedetails worden geladen…"
     },
     "pipeline": {
-      "render": "Veroorzaken",
+      "render": "Renderen",
       "shape": "Vorm",
       "renderFailed": "Renderen mislukt.",
       "shapeFailed": "Shape mislukt.",
@@ -787,6 +809,33 @@
     },
     "labels": {
       "custom": "Aangepast"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Toestemming geweigerd: offertes kunnen niet worden aangemaakt",
+      "update": "Toestemming geweigerd: offertes kunnen niet worden bijgewerkt",
+      "read": "Toestemming geweigerd: offertes kunnen niet worden gelezen",
+      "delete": "Toestemming geweigerd: offertes kunnen niet worden verwijderd",
+      "readOne": "Toestemming geweigerd: de offerte kan niet worden gelezen",
+      "approve": "Toestemming geweigerd: offertes kunnen niet worden goedgekeurd",
+      "updateApprovalSettings": "Toestemming geweigerd: de goedkeuringsinstellingen voor offertes kunnen niet worden bijgewerkt",
+      "readDocumentTemplates": "Toestemming geweigerd: documentsjablonen voor offertes kunnen niet worden gelezen",
+      "modifyDocumentTemplates": "Toestemming geweigerd: documentsjablonen voor offertes kunnen niet worden gewijzigd",
+      "setDefaultDocumentTemplate": "Toestemming geweigerd: het standaarddocumentsjabloon voor offertes kan niet worden ingesteld",
+      "deleteDocumentTemplates": "Toestemming geweigerd: documentsjablonen voor offertes kunnen niet worden verwijderd"
+    },
+    "quote": {
+      "formInvalid": "Het offerteformulier bevat ongeldige waarden. Controleer het en probeer het opnieuw.",
+      "notFoundRefresh": "Offerte niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "itemNotFoundRefresh": "Offerteregel niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "templateNotFoundRefresh": "Offertesjabloon niet gevonden. Mogelijk is het bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde offertewaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde offerte, klant, het contact of de service bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze wijziging van de offerte conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de offertewaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht offerteveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht offerteveld: {{field}}."
     }
   }
 }

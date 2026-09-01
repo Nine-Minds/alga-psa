@@ -82,8 +82,8 @@
       "linkQuote": "Vincular um orçamento existente",
       "loadFailed": "Falha ao carregar a oportunidade",
       "loading": "Carregando oportunidade...",
-      "markLost": "Marca perdida",
-      "markWon": "Marcos venceu",
+      "markLost": "Marcar como perdida",
+      "markWon": "Marcar como ganha",
       "metadataTitle": "Oportunidade",
       "nextAction": "Próxima ação",
       "nextActionOverdue": "Próxima ação · atrasada",
@@ -147,7 +147,7 @@
       "plusOneTime": "+ {{amount}} único",
       "thisQuarter": "Este trimestre ({{q}})",
       "weighted": "{{stage}} · ponderado {{pct}}%",
-      "won": "Venceu este período"
+      "won": "Ganho neste período"
     },
     "linkQuoteDialog": {
       "confirm": "Vincular cotação",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "O que a equipa deve saber se isto voltar?",
       "reason": "Motivo",
       "reasonPlaceholder": "Por que não avançou?",
-      "submit": "Marca perdida",
-      "title": "Marca perdida"
+      "submit": "Marcar como perdida",
+      "title": "Marcar como perdida"
     },
     "lossReason": {
       "chose_competitor": "Escolha um concorrente",
@@ -185,10 +185,10 @@
     },
     "meeting": {
       "daysAgo": "{{count}} dias atrás",
-      "done": "Pipeline revisado. {{count}} negócios registrados.",
+      "done": "Funil de vendas revisado. {{count}} negócios registrados.",
       "evidenceSays": "As evidências dizem",
       "gap": "A confiança é {{confidence}} mas a evidência para em {{stage}}. O que o cliente realmente fez?",
-      "intro": "Conduz a reunião semanal de pipeline um negócio por vez, começando pelo mais parado, com a evidência ao lado da confiança do responsável. Marque cada negócio como revisado e a sessão fica registrada, para mostrar que todo o pipeline foi percorrido.",
+      "intro": "Conduz a reunião semanal do funil de vendas um negócio por vez, começando pelo mais parado, com a evidência ao lado da confiança do responsável. Marque cada negócio como revisado e a sessão fica registrada, para mostrar que todo o funil de vendas foi percorrido.",
       "keys": "← voltar · → revisado",
       "markReviewed": "Revisado → próximo",
       "next": "Próxima ação:",
@@ -197,7 +197,7 @@
       "repSays": "Proprietário diz",
       "reviewed": "Revisado",
       "silence": "Último toque",
-      "title": "Revisão do pipeline"
+      "title": "Revisão do funil de vendas"
     },
     "new": "Nova oportunidade",
     "onePager": {
@@ -225,10 +225,10 @@
       "doToday": "Faça hoje",
       "goingQuiet": "Ficando quieto",
       "lesson": {
-        "reviewPipeline": "Revise o pipeline",
+        "reviewPipeline": "Revise o funil de vendas",
         "viewAssessmentDeals": "Ver ofertas de avaliação"
       },
-      "markLost": "Marca perdida",
+      "markLost": "Marcar como perdida",
       "moneyFound": "Dinheiro encontrado",
       "moneyFoundSource": "de faturamento, contratos e ativos",
       "needsYou_one": "{{count}} coisa precisa de você hoje.",
@@ -256,23 +256,23 @@
       "byStage": "Por fase",
       "closing30": "Fecha em 30 dias",
       "deals": "Negócios",
-      "emptyBody": "Abra um negócio e os totais do pipeline aparecerão aqui.",
+      "emptyBody": "Abra um negócio e os totais do funil de vendas aparecerão aqui.",
       "emptyTitle": "Ainda não há nada a relatar",
-      "intro": "O pipeline aberto como está hoje, agrupado pela moeda em que cada negócio é precificado. Abra um total para ver os estágios por trás dele e selecione um estágio para revisar os negócios contados.",
-      "loading": "Carregando relatório do pipeline",
+      "intro": "O funil de vendas aberto como está hoje, agrupado pela moeda em que cada negócio é precificado. Abra um total para ver os estágios por trás dele e selecione um estágio para revisar os negócios contados.",
+      "loading": "Carregando relatório do funil de vendas",
       "newMrrQuarter": "Novo MRR neste trimestre",
       "openCount": "{{n}} abertas",
       "openForecast": "Abrir a previsão calibrada",
-      "openPipeline": "Pipeline aberto",
+      "openPipeline": "Funil de vendas aberto",
       "plusOneTime": "+ {{amount}} único",
       "print": "Imprimir",
       "printCurrencies": "Moedas",
-      "printCurrencySection": "Pipeline em {{currency}}",
+      "printCurrencySection": "Funil de vendas em {{currency}}",
       "printQuarter": "Trimestre",
       "printSubtitle": "Em {{date}}",
-      "printTitle": "Relatório do pipeline",
+      "printTitle": "Relatório do funil de vendas",
       "rate": "taxa base de {{pct}}%",
-      "unavailable": "Os totais do pipeline estão temporariamente indisponíveis.",
+      "unavailable": "Os totais do funil de vendas estão temporariamente indisponíveis.",
       "view": "Ver",
       "weighted": "Previsão ponderada",
       "weightedNote": "Taxas base por estágio",
@@ -340,9 +340,9 @@
       "openCount": "Oportunidades abertas",
       "opportunityCount_one": "{{count}} oportunidade",
       "opportunityCount_other": "{{count}} oportunidades",
-      "pipelineByStage": "Pipeline por estágio",
+      "pipelineByStage": "Funil de vendas por estágio",
       "stalled": "Parado",
-      "subtitle": "Pipeline aberto e trabalho de acompanhamento que precisa de atenção.",
+      "subtitle": "Funil de vendas aberto e trabalho de acompanhamento que precisa de atenção.",
       "title": "Instantâneo da oportunidade",
       "unavailable": "Os totais de oportunidades estão temporariamente indisponíveis. Oportunidades abertas para continuar trabalhando."
     },
@@ -352,12 +352,12 @@
       "lost": "Perdido",
       "proposed": "Proposto",
       "qualified": "Qualificado",
-      "verbal": "verbais",
-      "won": "Ganhou"
+      "verbal": "Acordo verbal",
+      "won": "Ganho"
     },
     "status": {
       "lost": "Perdido",
-      "won": "Ganhou"
+      "won": "Ganho"
     },
     "steps": {
       "add": "Adicionar um passo",
@@ -427,10 +427,10 @@
       "snooze": "Adiar"
     },
     "tabs": {
-      "board": "Conselho",
+      "board": "Quadro",
       "forecast": "Previsão",
       "meeting": "Reunião",
-      "pipeline": "Gasoduto",
+      "pipeline": "Funil de Vendas",
       "queue": "Fila",
       "reports": "Relatórios",
       "suggestions": "Sugestões"
@@ -464,7 +464,7 @@
       "whitespaceSuggestionCreated": "Sugestão pronta para revisão",
       "whitespaceSuggestionDismissed": "Esta sugestão foi rejeitada anteriormente",
       "whitespaceSuggestionKnown": "Esta sugestão já é conhecida",
-      "won": "Ganhou"
+      "won": "Ganho"
     },
     "type": {
       "expansion": "Expansão",
@@ -548,7 +548,7 @@
     "winDialog": {
       "body": "O negócio é fechado como ganho.",
       "bodyProspect": "{{client}} torna-se um cliente ativo.",
-      "confirm": "Marcos venceu",
+      "confirm": "Marcar como ganha",
       "convertQuote": "Converter uma cotação aceita em um rascunho de contrato (opcional)",
       "nextConvert": "Converta o orçamento aceito em um contrato abaixo, ou depois na tela do orçamento.",
       "nextSendQuote": "Nenhum orçamento aceito está vinculado ainda. Envie o orçamento, obtenha a aprovação e depois converta em contrato. Você ainda pode marcar como ganho agora.",
@@ -558,7 +558,7 @@
       "projectStart": "Data de início",
       "projectStatus": "Estado inicial",
       "projectTemplate": "Crie um projeto de integração (opcional)",
-      "title": "Marcos venceu"
+      "title": "Marcar como ganha"
     }
   }
 }

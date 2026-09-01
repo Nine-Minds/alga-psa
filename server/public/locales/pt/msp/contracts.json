@@ -99,8 +99,8 @@
   },
   "po": {
     "labels": {
-      "amount": "Valor da ordem de compra",
-      "number": "Número do pedido",
+      "amount": "Valor do pedido de compra",
+      "number": "Número do pedido de compra",
       "required": "Pedido de compra obrigatório"
     }
   },
@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "ID do contrato do cliente: {{id}}",
+      "creditDrawdownOptOut": "Excluir do consumo de crédito",
       "empty": "Este contrato ainda não está atribuído a um cliente.",
       "endDate": "Data de término",
       "endDateLabel": "Data de término da atribuição",
@@ -289,7 +290,7 @@
     },
     "po": {
       "prefix": "PO",
-      "requiredForContract": "Ordem de compra necessária para este contrato."
+      "requiredForContract": "Pedido de compra obrigatório para este contrato."
     },
     "status": {
       "active": "Ativo",
@@ -366,14 +367,14 @@
       "useTenantDefaultsLabel": "Usar padrões de renovação de locatário"
     },
     "po": {
-      "amountLabel": "Valor do pedido (opcional)",
+      "amountLabel": "Valor do pedido de compra (opcional)",
       "amountPlaceholder": "0.00",
       "comingSoon": "Integração de faturas em breve. As configurações serão salvas, mas a aplicação do pedido de compra não estará ativa até uma versão futura.",
       "noteLabel": "Observação:",
-      "numberLabel": "Número do pedido *",
+      "numberLabel": "Número do pedido de compra *",
       "numberPlaceholder": "por exemplo, PO-2024-12345",
-      "requirePurchaseOrder": "Exigir ordem de compra",
-      "requirePurchaseOrderTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de ordem de compra seja fornecido."
+      "requirePurchaseOrder": "Exigir pedido de compra",
+      "requirePurchaseOrderTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de pedido de compra seja fornecido."
     },
     "presetDetails": {
       "defaultBaseRate": "Taxa básica padrão:",
@@ -469,6 +470,12 @@
       "collapseLine": "Recolher linha de contrato",
       "createCustom": "Criar personalizado",
       "expandLine": "Expandir linha de contrato"
+    },
+    "billingProfile": {
+      "hint": "Os encargos desta linha são faturados neste perfil, substituindo o contrato.",
+      "label": "Perfil de faturamento",
+      "none": "Usar o perfil do contrato",
+      "updated": "Perfil de faturamento atualizado"
     },
     "bucket": {
       "billingPeriod": "Período de cobrança: {{period}}",
@@ -641,7 +648,6 @@
       "title": "Configuração de cobrança por tempo"
     },
     "loading": "Carregando predefinições de linha de contrato...",
-    "selectPresetsTitle": "Selecione predefinições de linha de contrato para adicionar",
     "selection": {
       "deselectPreset": "Desmarcar predefinição",
       "selectPreset": "Selecione predefinição",
@@ -1150,8 +1156,8 @@
         "start": "Começar",
         "end": "Fim",
         "poRequired": "Pedido de compra obrigatório",
-        "poNumber": "Número do pedido",
-        "poAmount": "Valor da ordem de compra"
+        "poNumber": "Número do pedido de compra",
+        "poAmount": "Valor do pedido de compra"
       },
       "status": {
         "active": "Ativo",
@@ -1180,7 +1186,7 @@
         "clearNames": "Use nomes de contratos claros e descritivos (por exemplo, \"Acme Corp - MSP Services Q4 2024\")",
         "endDates": "Defina datas de término para contratos por prazo determinado para rastrear datas de renovação",
         "partialPeriodAdjustment": "Use o ajuste de período parcial quando as datas do contrato cobrirem apenas parte de um período de serviço",
-        "poNumbers": "Adicione números de ordem de compra quando exigido pelas políticas de compras do cliente"
+        "poNumbers": "Adicione números de pedido de compra quando exigido pelas políticas de compras do cliente"
       },
       "title": "Melhores Práticas"
     },
@@ -1387,16 +1393,16 @@
     "heading": "Noções básicas do contrato",
     "po": {
       "amountHint": "Valor total autorizado no pedido de compra.",
-      "amountLabel": "Valor da ordem de compra",
+      "amountLabel": "Valor do pedido de compra",
       "noteLabel": "Observação:",
-      "noteText": "A aplicação da ordem de compra será aplicada quando a automação de faturas estiver habilitada. Configure agora para ficar à frente.",
+      "noteText": "A exigência de pedido de compra será aplicada quando a automação de faturas estiver habilitada. Configure agora para ficar à frente.",
       "numberHint": "Número de referência do pedido de compra do cliente.",
-      "numberLabel": "Número do pedido",
+      "numberLabel": "Número do pedido de compra",
       "numberPlaceholder": "por exemplo, PO-2024-12345",
-      "requireForInvoicing": "Exigir ordem de compra para faturamento",
-      "requireHint": "Bloqueie a geração de fatura se o pedido não for fornecido.",
-      "requireTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de ordem de compra seja fornecido.",
-      "title": "Ordem de compra (opcional)"
+      "requireForInvoicing": "Exigir pedido de compra para faturamento",
+      "requireHint": "Bloqueie a geração de fatura se o pedido de compra não for fornecido.",
+      "requireTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de pedido de compra seja fornecido.",
+      "title": "Pedido de compra (opcional)"
     },
     "renewal": {
       "evergreen": {
@@ -1429,9 +1435,9 @@
         "currency": "Moeda:",
         "noticePeriod": "Período de aviso prévio:",
         "period": "Período:",
-        "poAmount": "Valor da ordem de compra:",
-        "poNumber": "Número da PO:",
-        "poRequired": "PO necessário:",
+        "poAmount": "Valor do pedido de compra:",
+        "poNumber": "Número do pedido de compra:",
+        "poRequired": "Pedido de compra obrigatório:",
         "renewalMode": "Modo de renovação:",
         "renewalTerm": "Prazo de renovação:"
       },
@@ -1672,9 +1678,9 @@
     },
     "po": {
       "title": "Requisitos do pedido de compra",
-      "requiredLabel": "PO necessário:",
-      "numberLabel": "Número da PO:",
-      "amountLabel": "Valor da ordem de compra:"
+      "requiredLabel": "Pedido de compra obrigatório:",
+      "numberLabel": "Número do pedido de compra:",
+      "amountLabel": "Valor do pedido de compra:"
     },
     "bucket": {
       "includedHours": "Horas {{formattedValue}}",
@@ -2171,8 +2177,8 @@
     },
     "runBar": {
       "compareToggle": "Mostrar alterações em relação ao contrato atual",
-      "horizonOption": "{{count}} períodos de faturamento",
-      "lastRun": "Simulação atualizada · {{count}} períodos de faturamento",
+      "horizonOption": "{{count}} períodos de faturamento do cliente",
+      "lastRun": "Simulação atualizada · {{count}} períodos de faturamento do cliente",
       "neverRun": "Ainda não simulado",
       "simulate": "Simular",
       "simulating": "Simulando…",
@@ -2322,6 +2328,108 @@
     "unavailable": {
       "description": "O simulador de contratos está disponível no AlgaPSA Pro.",
       "title": "Recurso Pro"
+    }
+  },
+  "bucketPools": {
+    "heading": "Bancos de horas",
+    "actions": {
+      "addPool": "Adicionar banco",
+      "create": "Criar banco",
+      "cancel": "Cancelar",
+      "remove": "Remover",
+      "applyRule": "Aplicar regra fora do horário"
+    },
+    "loading": "Carregando bancos de horas…",
+    "empty": "Nenhum banco de horas nesta linha. Adicione um banco para incluir horas pré-pagas.",
+    "labels": {
+      "catchAll": "Todos os serviços desta linha",
+      "pool": "Banco de horas",
+      "scopeCatchAll": "Cobre todos os serviços da linha (os serviços membros substituem o multiplicador)",
+      "scopeMembers": "Somente serviços membros",
+      "totalHours": "Horas totais",
+      "overageRate": "Taxa de excedente por hora",
+      "rollover": "Permitir transferência de saldo",
+      "afterHours": "Multiplicador de consumo fora do horário",
+      "afterHoursMultiplier": "Multiplicador (ex.: 1,5)",
+      "schedule": "Agenda de horário comercial",
+      "default": "padrão",
+      "members": "Serviços membros",
+      "multiplier": "×",
+      "noMembers": "Nenhum serviço membro vinculado.",
+      "noServicesOnLine": "Adicione um serviço a esta linha de contrato antes de criar um banco de horas.",
+      "selectService": "Selecione um serviço…",
+      "poolName": "Nome do banco (opcional)",
+      "poolNamePlaceholder": "ex.: Horas padrão",
+      "coversAll": "Cobre todos os serviços desta linha",
+      "burnMultiplier": "Multiplicador de consumo"
+    },
+    "badges": {
+      "dormant": "nenhum serviço vinculado — nada é consumido deste banco"
+    },
+    "errors": {
+      "catchAllExists": "Esta linha já tem um banco abrangente.",
+      "invalidAfterHoursRule": "Insira uma regra válida fora do horário.",
+      "scheduleLoadFailed": "Não foi possível carregar as agendas de horário comercial.",
+      "scheduleRequired": "Selecione uma agenda de horário comercial antes de aplicar esta regra."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Banco de horas para esta linha",
+    "empty": "Ainda não há bancos de horas nesta linha. Adicione um banco para incluir horas pré-pagas."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Permissão negada: não é possível modificar as linhas de contrato",
+      "deleteContracts": "Permissão negada: não é possível excluir contratos de faturamento"
+    },
+    "contract": {
+      "hasInvoices": "Este contrato possui faturas associadas e não pode ser excluído.",
+      "invalidValue": "Um dos valores de contrato selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O contrato, cliente ou registro relacionado selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração do contrato conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores do contrato não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do contrato.",
+      "missingFieldNamed": "Falta um campo obrigatório do contrato: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Permissão negada: não é possível criar modelos de faturamento",
+        "createContracts": "Permissão negada: não é possível criar contratos de faturamento",
+        "listTemplates": "Permissão negada: não é possível listar os modelos de contrato",
+        "viewSnapshot": "Permissão negada: não é possível visualizar o instantâneo do modelo de contrato",
+        "resumeContracts": "Permissão negada: não é possível retomar contratos de faturamento"
+      },
+      "templateNotFound": "Modelo não encontrado",
+      "contractNotFound": "Contrato não encontrado",
+      "notDraft": "O contrato não é um rascunho",
+      "missingClient": "Falta a atribuição de cliente no contrato em rascunho",
+      "invalidStartDate": "O contrato em rascunho tem uma data de início inválida",
+      "recordInvalid": "Um dos registros selecionados do assistente de contrato não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro correspondente do assistente de contrato."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "A data de término deve ser posterior à data de vigência",
+      "overlaps": "Esta agenda se sobrepõe a uma agenda de preços existente",
+      "wouldOverlap": "Esta agenda se sobreporia a uma agenda de preços existente",
+      "notFound": "Agenda de preços não encontrada"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Permissão negada: não é possível ler a fila de renovações",
+        "update": "Permissão negada: não é possível atualizar a fila de renovações",
+        "ownerOtherTenant": "Permissão negada: não é possível atribuir renovações a um usuário de outro tenant.",
+        "contractOtherTenant": "Permissão negada: não é possível concluir a renovação com um contrato de outro tenant."
+      },
+      "clientContractIdRequired": "O id do contrato do cliente é obrigatório.",
+      "workItemNotFound": "Item de trabalho de renovação não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "snoozeDateRequired": "Escolha uma data de adiamento antes de salvar.",
+      "snoozeDateInvalid": "Escolha uma data de adiamento válida.",
+      "snoozeDateFuture": "Escolha uma data de adiamento futura.",
+      "ownerInvalid": "Escolha um responsável de renovação válido.",
+      "ownerUnavailable": "O responsável de renovação selecionado não está mais disponível. Atualize a página e tente novamente.",
+      "activatedContractIdRequired": "O id do contrato de renovação ativado é obrigatório.",
+      "contractNotActive": "O contrato de renovação ativado não está mais ativo. Atualize a página e tente novamente.",
+      "manualRetryDueOnly": "A nova tentativa manual só está disponível para ciclos de renovação vencidos."
     }
   }
 }

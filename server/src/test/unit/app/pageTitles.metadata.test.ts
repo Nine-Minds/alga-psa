@@ -16,18 +16,6 @@ function hasMetadataExport(content: string): boolean {
   return METADATA_EXPORT_RE.test(content);
 }
 
-function expectStaticTitle(relativePath: string, title: string): void {
-  const content = read(relativePath);
-  expect(content).toMatch(/export const metadata/);
-  expect(content).toContain(`title: '${title}'`);
-}
-
-function expectDynamicTitle(relativePath: string, title: string): void {
-  const content = read(relativePath);
-  expect(content).toMatch(/generateMetadata/);
-  expect(content).toContain(`title: '${title}'`);
-}
-
 // For routes that translate their title via generateMetadata and pass the English
 // string as the i18n `defaultValue` instead of a literal `title: '...'`.
 function expectTranslatedTitle(relativePath: string, defaultValue: string): void {
@@ -86,24 +74,23 @@ describe('route title metadata coverage', () => {
   it('T002: MSP layout exports the AlgaPSA title template', () => {
     const content = read('server/src/app/msp/layout.tsx');
     expect(content).toContain("template: '%s | AlgaPSA'");
-    expect(content).toContain("default: 'Dashboard | AlgaPSA'");
+    expect(content).toContain("defaultValue: 'Dashboard | AlgaPSA'");
   });
 
   it('T003: Client Portal layout exports the client portal title template', () => {
     const content = read('server/src/app/client-portal/layout.tsx');
-    expect(content).toContain("template: '%s | Client Portal'");
-    expect(content).toContain("default: 'Dashboard | Client Portal'");
+    expect(content).toContain("defaultValue: '%s | Client Portal'");
+    expect(content).toContain("defaultValue: 'Dashboard | Client Portal'");
   });
 
   it('T004: Auth layout exports the AlgaPSA auth title template', () => {
     const content = read('server/src/app/auth/layout.tsx');
     expect(content).toContain("template: '%s | AlgaPSA'");
-    expect(content).toContain("default: 'Sign In | AlgaPSA'");
+    expect(content).toContain("defaultValue: 'Sign In | AlgaPSA'");
   });
 
-  it('T005: Static layout exports the AlgaPSA default title', () => {
-    const content = read('server/src/app/static/layout.tsx');
-    expect(content).toContain("title: 'AlgaPSA'");
+  it('T005: Static layout translates the AlgaPSA default title', () => {
+    expectTranslatedTitle('server/src/app/static/layout.tsx', 'AlgaPSA');
   });
 
   it('T006: static MSP routes export the expected titles', () => {
@@ -115,6 +102,7 @@ describe('route title metadata coverage', () => {
       ['server/src/app/msp/tickets/page.tsx', 'Tickets'],
       ['server/src/app/msp/clients/page.tsx', 'Clients'],
       ['server/src/app/msp/contacts/page.tsx', 'Contacts'],
+      ['server/src/app/msp/interactions/page.tsx', 'Interactions'],
       ['server/src/app/msp/projects/page.tsx', 'Projects'],
       ['server/src/app/msp/projects/templates/layout.tsx', 'Project Templates'],
       ['server/src/app/msp/assets/page.tsx', 'Assets'],
@@ -156,7 +144,7 @@ describe('route title metadata coverage', () => {
     ] as const;
 
     for (const [relativePath, title] of staticMspRoutes) {
-      expectStaticTitle(relativePath, title);
+      expectTranslatedTitle(relativePath, title);
     }
   });
 
@@ -171,11 +159,11 @@ describe('route title metadata coverage', () => {
     ] as const;
 
     for (const [relativePath, title] of dynamicMspRoutes) {
-      expectDynamicTitle(relativePath, title);
+      expectTranslatedTitle(relativePath, title);
     }
   });
 
-  it('T007b: dynamic MSP routes with static-only titles use export const metadata', () => {
+  it('T007b: dynamic MSP routes with static-only titles translate them via generateMetadata', () => {
     const staticDynamicRoutes = [
       ['server/src/app/msp/projects/templates/[templateId]/layout.tsx', 'Template Details'],
       ['server/src/app/msp/time-entry/timesheet/[id]/page.tsx', 'Timesheet'],
@@ -188,35 +176,71 @@ describe('route title metadata coverage', () => {
     ] as const;
 
     for (const [relativePath, title] of staticDynamicRoutes) {
-      expectStaticTitle(relativePath, title);
+      expectTranslatedTitle(relativePath, title);
     }
   });
 
-  it('T007c: single-route tabbed pages derive the title from the ?tab= param', () => {
+  it('T007c: single-route tabbed pages derive a translated title from the ?tab= param', () => {
     // Billing and Settings are single routes whose sections are selected via the
     // `?tab=` query param. They use generateMetadata to mirror the active section
     // in the browser tab title, falling back to the page name.
-    const tabbedRoutes = [
-      {
-        path: 'server/src/app/msp/billing/page.tsx',
-        fallback: 'Billing',
-        sampleTitles: ['Invoicing', 'Quotes', 'Reports'],
-      },
-      {
-        path: 'server/src/app/msp/settings/page.tsx',
-        fallback: 'Settings',
-        sampleTitles: ['Integrations', 'Users', 'Email'],
-      },
-    ] as const;
+    //
+    // This assertion used to require the literal strings 'Billing', 'Invoicing',
+    // 'Quotes' and 'Reports' in the page — which is exactly what an untranslated
+    // hardcoded title map looks like, so the test passed *because* the bug was
+    // there. Titles must now resolve through the tab strip's labelKey.
+    const billing = read('server/src/app/msp/billing/page.tsx');
+    expect(billing).toMatch(/generateMetadata/);
+    expect(billing).toContain('searchParams');
+    expect(billing).toContain('getServerTranslation');
+    expect(billing).toContain('billingTabDefinitions');
+    expect(billing).toContain('definition.labelKey');
+    expect(billing).toContain("t('msp.billing.title'");
+    // No second, untranslated copy of the section titles.
+    expect(billing).not.toMatch(/BILLING_TAB_TITLES/);
 
-    for (const { path, fallback, sampleTitles } of tabbedRoutes) {
-      const content = read(path);
-      expect(content).toMatch(/generateMetadata/);
-      expect(content).toContain('searchParams');
-      expect(content).toContain(`'${fallback}'`);
-      for (const title of sampleTitles) {
-        expect(content).toContain(`'${title}'`);
+    // Settings resolves the active section's label through the tab registry
+    // rather than carrying its own copy of the titles.
+    const settings = read('server/src/app/msp/settings/page.tsx');
+    expect(settings).toMatch(/generateMetadata/);
+    expect(settings).toContain('searchParams');
+    expect(settings).toContain('settingsTabMetadata');
+    expect(settings).toContain("'Settings'");
+
+    const registry = read('server/src/components/settings/settingsTabsRegistry.ts');
+    for (const title of ['Integrations', 'Users', 'Email']) {
+      expect(registry).toContain(`title: '${title}'`);
+    }
+  });
+
+  it('T007d: every billing tab title resolves in every shipped locale', () => {
+    // The ?tab= titles are only as translated as the bundles behind them: a
+    // labelKey missing from a locale silently falls back to its English
+    // defaultValue, which is the failure this route just came out of.
+    const config = read('packages/billing/src/components/billing-dashboard/billingTabsConfig.ts');
+    const labelKeys = [...config.matchAll(/labelKey:\s*'([^']+)'/g)].map((match) => match[1]);
+    expect(labelKeys.length).toBeGreaterThan(0);
+
+    const localesDir = path.join(repoRoot, 'server/public/locales');
+    const locales = fs
+      .readdirSync(localesDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+
+    for (const locale of locales) {
+      const bundle = JSON.parse(read(`server/public/locales/${locale}/msp/billing.json`));
+      const metadata = JSON.parse(read(`server/public/locales/${locale}/metadata.json`));
+
+      for (const key of labelKeys) {
+        const resolved = key
+          .split('.')
+          .reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], bundle);
+        expect(typeof resolved, `${locale} is missing msp/billing:${key}`).toBe('string');
       }
+
+      expect(typeof metadata?.msp?.billing?.title, `${locale} is missing msp.billing.title`).toBe(
+        'string'
+      );
     }
   });
 
@@ -232,7 +256,7 @@ describe('route title metadata coverage', () => {
     ] as const;
 
     for (const [relativePath, title] of staticClientPortalRoutes) {
-      expectStaticTitle(relativePath, title);
+      expectTranslatedTitle(relativePath, title);
     }
   });
 
@@ -243,11 +267,11 @@ describe('route title metadata coverage', () => {
     ] as const;
 
     for (const [relativePath, title] of dynamicClientPortalRoutes) {
-      expectDynamicTitle(relativePath, title);
+      expectTranslatedTitle(relativePath, title);
     }
   });
 
-  it('T009b: dynamic Client Portal routes with static-only titles use export const metadata', () => {
+  it('T009b: dynamic Client Portal routes with static-only titles translate them via generateMetadata', () => {
     const staticDynamicRoutes = [
       ['server/src/app/client-portal/appointments/[appointmentRequestId]/layout.tsx', 'Appointment Details'],
       ['server/src/app/client-portal/billing/invoices/[invoiceId]/pay/page.tsx', 'Pay Invoice'],
@@ -255,7 +279,7 @@ describe('route title metadata coverage', () => {
     ] as const;
 
     for (const [relativePath, title] of staticDynamicRoutes) {
-      expectStaticTitle(relativePath, title);
+      expectTranslatedTitle(relativePath, title);
     }
   });
 
@@ -276,25 +300,25 @@ describe('route title metadata coverage', () => {
     ] as const;
 
     for (const [relativePath, title] of authRoutes) {
-      expectStaticTitle(relativePath, title);
+      expectTranslatedTitle(relativePath, title);
     }
   });
 
   it('T011: static and public routes export the expected titles', () => {
-    expectStaticTitle('server/src/app/static/master_terms/layout.tsx', 'Master Terms');
-    expectStaticTitle('server/src/app/static/privacy_policy/layout.tsx', 'Privacy Policy');
+    expectTranslatedTitle('server/src/app/static/master_terms/layout.tsx', 'Master Terms');
+    expectTranslatedTitle('server/src/app/static/privacy_policy/layout.tsx', 'Privacy Policy');
   });
 
   it('T012: existing asset edit metadata stays template-compatible', () => {
-    expectStaticTitle('server/src/app/msp/assets/[asset_id]/edit/page.tsx', 'Edit Asset');
+    expectTranslatedTitle('server/src/app/msp/assets/[asset_id]/edit/page.tsx', 'Edit Asset');
   });
 
   it('T013: auth verify layout metadata stays template-compatible', () => {
-    expectStaticTitle('server/src/app/auth/verify/layout.tsx', 'Verify Email');
+    expectTranslatedTitle('server/src/app/auth/verify/layout.tsx', 'Verify Email');
   });
 
   it('T014: client settings page metadata stays template-compatible', () => {
-    expectStaticTitle('server/src/app/client-portal/client-settings/page.tsx', 'Company Settings');
+    expectTranslatedTitle('server/src/app/client-portal/client-settings/page.tsx', 'Company Settings');
   });
 
   it('T015: MSP extension re-export remains metadata-compatible', () => {
@@ -326,20 +350,19 @@ describe('route title metadata coverage', () => {
   });
 
   it('T021: layout defaults cover pages without page-level metadata', () => {
-    expect(read('server/src/app/msp/layout.tsx')).toContain("default: 'Dashboard | AlgaPSA'");
-    expect(read('server/src/app/client-portal/layout.tsx')).toContain("default: 'Dashboard | Client Portal'");
-    expect(read('server/src/app/auth/layout.tsx')).toContain("default: 'Sign In | AlgaPSA'");
+    expect(read('server/src/app/msp/layout.tsx')).toContain("defaultValue: 'Dashboard | AlgaPSA'");
+    expect(read('server/src/app/client-portal/layout.tsx')).toContain("defaultValue: 'Dashboard | Client Portal'");
+    expect(read('server/src/app/auth/layout.tsx')).toContain("defaultValue: 'Sign In | AlgaPSA'");
 
     expect(read('server/src/app/auth/verify/page.tsx')).not.toMatch(/export const metadata|generateMetadata/);
     expect(read('server/src/app/msp/account/page.tsx')).not.toMatch(/export const metadata|generateMetadata/);
 
-    expect(read('server/src/app/auth/verify/layout.tsx')).toContain("title: 'Verify Email'");
-    expect(read('server/src/app/msp/account/layout.tsx')).toContain("title: 'Account'");
+    expectTranslatedTitle('server/src/app/auth/verify/layout.tsx', 'Verify Email');
+    expectTranslatedTitle('server/src/app/msp/account/layout.tsx', 'Account');
   });
 
   it('T022: added uncovered community routes export the expected titles', () => {
-    expectStaticTitle('server/src/app/msp/documents/page.tsx', 'Documents');
-    expectStaticTitle('server/src/app/test-routing/page.tsx', 'Test Routing');
+    expectTranslatedTitle('server/src/app/msp/documents/page.tsx', 'Documents');
   });
 
   it('T023: EE layouts export the expected title templates', () => {
@@ -349,16 +372,16 @@ describe('route title metadata coverage', () => {
 
     const eeMspLayout = read('ee/server/src/app/msp/layout.tsx');
     expect(eeMspLayout).toContain("template: '%s | AlgaPSA'");
-    expect(eeMspLayout).toContain("default: 'Dashboard | AlgaPSA'");
+    expect(eeMspLayout).toContain("defaultValue: 'Dashboard | AlgaPSA'");
 
     const eeClientPortalLayout = read('ee/server/src/app/client-portal/layout.tsx');
-    expect(eeClientPortalLayout).toContain("template: '%s | Client Portal'");
-    expect(eeClientPortalLayout).toContain("default: 'Dashboard | Client Portal'");
+    expect(eeClientPortalLayout).toContain("defaultValue: '%s | Client Portal'");
+    expect(eeClientPortalLayout).toContain("defaultValue: 'Dashboard | Client Portal'");
   });
 
   it('T024: EE MSP routes export the expected titles', () => {
-    expectStaticTitle('ee/server/src/app/msp/chat/page.tsx', 'Chat');
-    expectStaticTitle('ee/server/src/app/msp/settings/page.tsx', 'Settings');
+    expectTranslatedTitle('ee/server/src/app/msp/chat/page.tsx', 'Chat');
+    expectTranslatedTitle('ee/server/src/app/msp/settings/page.tsx', 'Settings');
   });
 
   it('T024b: license purchase layouts translate their title via generateMetadata', () => {
@@ -370,8 +393,8 @@ describe('route title metadata coverage', () => {
     expectTranslatedTitle('ee/server/src/app/msp/licenses/purchase/success/layout.tsx', 'Purchase Success');
   });
 
-  it('T025: EE Client Portal extension route exports a static title', () => {
-    expectStaticTitle('ee/server/src/app/client-portal/extensions/[id]/page.tsx', 'Extension');
+  it('T025: EE Client Portal extension route translates its title', () => {
+    expectTranslatedTitle('ee/server/src/app/client-portal/extensions/[id]/page.tsx', 'Extension');
   });
 
   it('T027: newly covered routes export the expected titles', () => {
@@ -398,7 +421,7 @@ describe('route title metadata coverage', () => {
     ] as const;
 
     for (const [relativePath, title] of newStaticRoutes) {
-      expectStaticTitle(relativePath, title);
+      expectTranslatedTitle(relativePath, title);
     }
   });
 

@@ -12,7 +12,7 @@ import { getAllClients, getContactsByClient, getAllContacts } from '@alga-psa/cl
 import { addContact, getContactsEligibleForInvitation } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions/portal-actions/portalInvitationActions';
 import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
-import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions/portal-actions/clientPortalLinkActions';
+import { CopyClientPortalLinkButton } from './CopyClientPortalLinkButton';
 import { sendUserInvitation, getUserInvitations, revokeUserInvitation, type UserInvitationErrorCode } from '@alga-psa/users/actions/user-actions/userInvitationActions';
 
 type PendingUserInvitation = Awaited<ReturnType<typeof getUserInvitations>>[number];
@@ -71,6 +71,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { IUser, IRole } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -79,16 +80,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/component
 import { Search, Eye, EyeOff } from 'lucide-react';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
-import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
+import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { parseContactActionError } from '@alga-psa/clients/lib/contactActionErrorCodes';
 import OrgChart from './org-chart/OrgChart';
 import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
 import { useTier } from '@/context/TierContext';
 
 const UserManagement = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
 
   const translatePortalInvitationError = (
     result: { error?: string; errorCode?: PortalInvitationErrorCode },
@@ -149,6 +153,7 @@ const UserManagement = (): React.JSX.Element => {
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [fieldErrors, setFieldErrors] = useState<{
     first_name: string[];
     last_name: string[];
@@ -159,7 +164,6 @@ const UserManagement = (): React.JSX.Element => {
     email: []
   });
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
-  const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
   const [userView, setUserView] = useState<'list' | 'org'>('list');
   const [pendingInvitations, setPendingInvitations] = useState<PendingUserInvitation[]>([]);
   const [revokingInvitationId, setRevokingInvitationId] = useState<string | null>(null);
@@ -271,10 +275,14 @@ const UserManagement = (): React.JSX.Element => {
         error = validateContactName(value);
         if (error) errors = [error];
         break;
-      case 'email':
-        error = validateEmailAddress(value);
+      case 'email': {
+        const result = translateFieldValidation(validateEmailAddressField(value), tValidation);
+        error = result.error;
         if (error) errors = [error];
+        // Plausibility only; never gates the invite.
+        setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
         break;
+      }
       default:
         errors = [];
     }
@@ -325,37 +333,6 @@ const UserManagement = (): React.JSX.Element => {
       } catch (err) {
         console.error('Error fetching license usage:', err);
       }
-    }
-  };
-
-  const handleCopyPortalLink = async (): Promise<void> => {
-    if (isCopyingPortalLink) {
-      return;
-    }
-
-    try {
-      setIsCopyingPortalLink(true);
-      const linkResult = await getTenantPortalLoginLink();
-      if (!linkResult.success) {
-        toast.error(linkResult.error);
-        return;
-      }
-
-      const portalLink = linkResult.data;
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(portalLink.url);
-        toast.success(
-          portalLink.source === 'vanity'
-            ? t('users.messages.success.copiedVanityLink')
-            : t('users.messages.success.copiedCanonicalLink')
-        );
-      } else {
-        toast.error(t('users.messages.error.clipboardUnavailable'));
-      }
-    } catch (error) {
-      handleError(error, t('users.messages.error.copyPortalLink'));
-    } finally {
-      setIsCopyingPortalLink(false);
     }
   };
 
@@ -552,14 +529,13 @@ const fetchContacts = async (): Promise<void> => {
               }
             } catch (contactError: any) {
               // Handle contact creation errors
-              let errorMsg: string;
-              if (contactError.message?.includes('EMAIL_EXISTS:')) {
-                errorMsg = contactError.message.replace('EMAIL_EXISTS:', '').trim();
-              } else if (contactError.message?.includes('VALIDATION_ERROR:')) {
-                errorMsg = contactError.message.replace('VALIDATION_ERROR:', '').trim();
-              } else {
-                errorMsg = 'Failed to create contact: ' + (contactError.message || 'Unknown error');
-              }
+              const { code, detail } = parseContactActionError(contactError?.message ?? '');
+              const errorMsg = code === 'EMAIL_EXISTS' || code === 'VALIDATION_ERROR'
+                ? detail
+                : t('users.messages.error.createContact', {
+                    defaultValue: 'Failed to create contact: {{reason}}',
+                    reason: contactError?.message || t('users.messages.error.unknown', { defaultValue: 'Unknown error' }),
+                  });
               handleError(contactError, errorMsg);
               setError(errorMsg);
               return; // Stop execution to prevent further processing
@@ -568,7 +544,7 @@ const fetchContacts = async (): Promise<void> => {
           await fetchUsers();
         } else {
           // Use unified password validation
-          const passwordError = validatePassword(newUser.password);
+          const passwordError = validatePassword(newUser.password, tValidation);
           if (passwordError) {
             toast.error(passwordError);
             return;
@@ -611,7 +587,7 @@ const fetchContacts = async (): Promise<void> => {
         await fetchPendingInvitations();
       } else {
         // Create MSP user immediately with the admin-provided password
-        const passwordError = validatePassword(newUser.password);
+        const passwordError = validatePassword(newUser.password, tValidation);
         if (passwordError) {
           toast.error(passwordError);
           return;
@@ -790,6 +766,7 @@ const fetchContacts = async (): Promise<void> => {
                 }}
                 className={fieldErrors.email.length > 0 ? 'border-destructive' : ''}
               />
+              <FieldWarnings warnings={fieldWarnings.email ?? []} />
               {fieldErrors.email.length > 0 && (
                 <div className="text-sm text-destructive mt-1">
                   {fieldErrors.email.map((error, idx) => (
@@ -1021,14 +998,7 @@ const fetchContacts = async (): Promise<void> => {
   const renderCreateUserActions = () => (
     <div className="flex items-center gap-3">
       {portalType === 'client' && (
-        <Button
-          id="copy-client-portal-link-button"
-          variant="outline"
-          onClick={handleCopyPortalLink}
-          disabled={isCopyingPortalLink}
-        >
-          {isCopyingPortalLink ? t('users.actions.copying') : t('users.actions.copyPortalLink')}
-        </Button>
+        <CopyClientPortalLinkButton id="copy-client-portal-link-users-button" />
       )}
       {!showNewUserForm && (
         <div className="flex flex-col items-end gap-1">
@@ -1101,7 +1071,7 @@ const fetchContacts = async (): Promise<void> => {
                     placeholder={t('users.search')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+                    className="border-2 border-gray-200 focus:border-[rgb(var(--color-primary-500))] rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
                   />
                   <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 </div>
@@ -1213,7 +1183,7 @@ const fetchContacts = async (): Promise<void> => {
                     placeholder={t('users.search')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+                    className="border-2 border-gray-200 focus:border-[rgb(var(--color-primary-500))] rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
                   />
                   <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 </div>

@@ -153,6 +153,7 @@ const HOOK_TIMEOUT = 180_000;
 const FROM_DOMAIN = 'journeymail.example';
 
 let processInboundEmailInApp: typeof import('@alga-psa/shared/services/email/processInboundEmailInApp').processInboundEmailInApp;
+let normalizeRfc822MessageId: (value: string | null | undefined) => string | null;
 let handleTicketEvent: typeof import('@/lib/eventBus/subscribers/ticketEmailSubscriber').handleTicketEvent;
 
 let boardId: string;
@@ -295,6 +296,9 @@ describe('journey: inbound email → ticket → threaded reply → agent reply o
     ({ processInboundEmailInApp } = await import(
       '@alga-psa/shared/services/email/processInboundEmailInApp'
     ));
+    ({ normalizeRfc822MessageId } = await import(
+      '@alga-psa/shared/services/email/inboundEmailIdentity'
+    ));
     ({ handleTicketEvent } = await import(
       '@/lib/eventBus/subscribers/ticketEmailSubscriber'
     ));
@@ -307,6 +311,7 @@ describe('journey: inbound email → ticket → threaded reply → agent reply o
   it('routes the thread end to end: new ticket, same-thread comment, threaded agent reply out, customer reply back in', async () => {
     const MSG1 = `<journey-cust-1-${uuidv4().slice(0, 8)}@customer.example>`;
     const MSG2 = `<journey-cust-2-${uuidv4().slice(0, 8)}@customer.example>`;
+    const NORM_MSG1 = normalizeRfc822MessageId(MSG1) as string;
     const PROVIDER_THREAD = `journey-thread-${uuidv4().slice(0, 8)}`;
     const SUBJECT = `Printer on fire ${uuidv4().slice(0, 6)}`;
 
@@ -318,6 +323,13 @@ describe('journey: inbound email → ticket → threaded reply → agent reply o
       from: { email: contactEmail, name: 'Pat Customer' },
       to: [{ email: providerMailbox, name: 'Support' }],
       attachments: [],
+      // Real provider-fetched mail carries the receiving MTA's
+      // Authentication-Results; exact-contact attribution now requires an
+      // aligned SPF/DKIM pass (sender-forgery gate). DKIM header.d is aligned
+      // to the contact's From domain.
+      headers: {
+        'Authentication-Results': `mx.google.com; dkim=pass header.d=${contactEmail.split('@')[1]}; spf=pass smtp.mailfrom=${contactEmail}`,
+      },
       ...overrides,
     });
 
@@ -348,7 +360,7 @@ describe('journey: inbound email → ticket → threaded reply → agent reply o
     expect(ticket.board_id).toBe(boardId);
     expect(ticket.title).toBe(SUBJECT);
     // The customer's Message-ID is the thread anchor for everything below.
-    expect(ticket.email_metadata?.messageId).toBe(MSG1);
+    expect(ticket.email_metadata?.messageId).toBe(NORM_MSG1);
     expect(ticket.email_metadata?.threadId).toBe(PROVIDER_THREAD);
 
     // --- Step 2: second email on the SAME thread (In-Reply-To / References /
@@ -438,12 +450,12 @@ describe('journey: inbound email → ticket → threaded reply → agent reply o
     expect(String(outbound.from?.email)).toContain(`@${FROM_DOMAIN}`);
 
     // The threading seam: the reply threads into the customer's original email.
-    expect(outbound.headers?.['In-Reply-To']).toBe(MSG1);
-    expect(String(outbound.headers?.References)).toContain(MSG1);
+    expect(outbound.headers?.['In-Reply-To']).toBe(NORM_MSG1);
+    expect(String(outbound.headers?.References)).toContain(NORM_MSG1);
     // Alga stamps its own wire Message-ID on the configured sending domain.
     const outboundMessageId = outbound.headers?.['Message-ID'];
     expect(outboundMessageId).toBeTruthy();
-    expect(outboundMessageId).not.toBe(MSG1);
+    expect(outboundMessageId).not.toBe(NORM_MSG1);
     expect(outboundMessageId).toContain(`@${FROM_DOMAIN}`);
     // RFC 3834: notifications are marked auto-generated.
     expect(outbound.headers?.['Auto-Submitted']).toBe('auto-generated');

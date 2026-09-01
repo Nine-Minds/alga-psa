@@ -13,7 +13,7 @@ export const getAssetCountsByType = withAuth(async (user, { tenant }): Promise<R
   const { knex } = await createTenantKnex();
 
   if (!await hasPermission(user, 'asset', 'read')) {
-    return permissionError('Permission denied: Cannot read assets');
+    return permissionError('Permission denied: Cannot read assets', 'msp/assets:errors.permissions.readAssets');
   }
 
   const rows = await tenantDb(knex, tenant).table('assets')

@@ -685,5 +685,34 @@
     "notAvailable": "N/D",
     "title": "Dettagli dell'interazione",
     "unknownUser": "Sconosciuto"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Voce di pianificazione non trovata.",
+      "invalid": "La voce di pianificazione selezionata non è valida. Aggiornare la pagina e riprovare.",
+      "assigneesMissing": "Non è stato possibile trovare uno o più utenti assegnati."
+    },
+    "activities": {
+      "otherUserForbidden": "Autorizzazione negata: impossibile visualizzare le attività di pianificazione di un altro utente"
+    },
+    "workItem": {
+      "adHocTimesRequired": "Per le voci ad hoc sono obbligatorie l’ora di inizio e l’ora di fine.",
+      "typeUnsupported": "Questo tipo di elemento di lavoro non è supportato per la pianificazione.",
+      "entryOrUserUnavailable": "La voce di pianificazione o l’utente selezionato non è più disponibile. Aggiornare la pagina e riprovare.",
+      "invalid": "L’elemento di lavoro selezionato non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "L’elemento di lavoro, la voce di pianificazione o l’assegnatario selezionato non è più valido. Aggiornare la pagina e riprovare.",
+      "duplicateEntry": "Questa voce di pianificazione esiste già. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della pianificazione.",
+      "missingFieldNamed": "Manca un campo obbligatorio della pianificazione: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "L’ID della riunione è obbligatorio",
+      "refreshPermission": "Autorizzazione negata: impossibile aggiornare le registrazioni delle riunioni.",
+      "refreshFailed": "Impossibile aggiornare le registrazioni delle riunioni. Riprovare.",
+      "graphForbidden": "Microsoft Graph ha negato l’accesso alla registrazione di Teams. Controllare le autorizzazioni di registrazione e riprovare.",
+      "graphNotFound": "La registrazione di Teams non è più disponibile tramite Microsoft Graph.",
+      "graphThrottled": "Microsoft Graph sta limitando i download delle registrazioni. Riprovare tra poco.",
+      "graphHttpStatus": "Microsoft Graph ha restituito HTTP {{status}} durante il download della registrazione di Teams."
+    }
   }
 }

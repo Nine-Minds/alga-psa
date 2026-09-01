@@ -324,7 +324,7 @@ const CustomSelect = ({
                   value={PLACEHOLDER_VALUE}
                   className={`
                     relative flex items-center px-3 py-2 text-sm rounded text-muted-foreground
-                    cursor-default bg-background select-none
+                    cursor-default select-none
                     ${customStyles?.item || ''}
                   `}
                   disabled
@@ -362,7 +362,7 @@ const CustomSelect = ({
                     data-[disabled]:pointer-events-none data-[disabled]:cursor-not-allowed
                     data-[disabled]:opacity-50 data-[disabled]:hover:bg-transparent data-[disabled]:focus:bg-transparent
                     ${option.dropdownHint ? 'flex-col items-start' : 'items-center whitespace-nowrap'}
-                    ${option.className || 'bg-background'}
+                    ${option.className || ''}
                     ${customStyles?.item || ''}
                   `}
                 >

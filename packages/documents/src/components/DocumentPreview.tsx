@@ -5,6 +5,7 @@ import type { IDocument } from '@alga-psa/types';
 import Image from 'next/image';
 import { getDocumentPreview } from '../actions/documentActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface DocumentPreviewProps {
     document: IDocument;
@@ -12,6 +13,7 @@ interface DocumentPreviewProps {
 }
 
 const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.JSX.Element | null => {
+    const { t } = useTranslation('features/documents');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [preview, setPreview] = useState<{
@@ -53,7 +55,7 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
                 }
             } catch (err) {
                 console.error('Failed to load document preview:', err);
-                setError('Failed to load preview');
+                setError(t('previewLoadFailed', { defaultValue: 'Failed to load preview' }));
             } finally {
                 setIsLoading(false);
             }
@@ -70,7 +72,9 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
     if (isLoading) {
         return (
             <div className={`flex items-center justify-center h-48 bg-[rgb(var(--color-border-100))] rounded-md ${className}`}>
-                <span className="text-[rgb(var(--color-text-600))]">Loading preview...</span>
+                <span className="text-[rgb(var(--color-text-600))]">
+                    {t('previewPane.loading', { defaultValue: 'Loading preview...' })}
+                </span>
             </div>
         );
     }
@@ -107,22 +111,38 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
                         {/* Preview image — invert in dark mode so white PDF pages become dark */}
                         <Image
                             src={preview.previewImage}
-                            alt={`Preview of ${document.document_name}`}
+                            alt={t('previewPane.altPdf', { defaultValue: 'Preview of {{name}}', name: document.document_name })}
                             fill
                             className="object-contain dark:invert dark:hue-rotate-180"
                         />
-                        {/* Page count overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-sm p-2 text-center">
-                            {preview.pageCount} {preview.pageCount === 1 ? 'page' : 'pages'}
-                        </div>
+                        {/* Page count overlay — omitted entirely when the count is
+                            unknown, rather than asserting "0 pages" for a PDF whose
+                            page count simply was not extracted. */}
+                        {preview.pageCount != null && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-sm p-2 text-center">
+                                {t('previewPane.pageCount', {
+                                    defaultValue_one: '{{count}} page',
+                                    defaultValue_other: '{{count}} pages',
+                                    count: preview.pageCount,
+                                })}
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center">
-                            <p className="text-[rgb(var(--color-text-600))] font-medium">PDF Document</p>
-                            <p className="text-sm text-[rgb(var(--color-text-500))]">
-                                {preview.pageCount} {preview.pageCount === 1 ? 'page' : 'pages'}
+                            <p className="text-[rgb(var(--color-text-600))] font-medium">
+                                {t('previewPane.pdfDocument', { defaultValue: 'PDF Document' })}
                             </p>
+                            {preview.pageCount != null && (
+                                <p className="text-sm text-[rgb(var(--color-text-500))]">
+                                    {t('previewPane.pageCount', {
+                                        defaultValue_one: '{{count}} page',
+                                        defaultValue_other: '{{count}} pages',
+                                        count: preview.pageCount,
+                                    })}
+                                </p>
+                            )}
                         </div>
                     </div>
                 )}
@@ -158,7 +178,7 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
                 <div className={`relative w-full h-48 ${className}`}>
                     <Image
                         src={preview.previewImage}
-                        alt={`Thumbnail of ${document.document_name}`}
+                        alt={t('previewPane.altVideoThumbnail', { defaultValue: 'Thumbnail of {{name}}', name: document.document_name })}
                         fill
                         className="object-contain rounded-md bg-black"
                     />
@@ -180,7 +200,9 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
                     <svg className="w-16 h-16 text-[rgb(var(--color-text-400))] mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                     </svg>
-                    <span className="text-[rgb(var(--color-text-400))]">Video File</span>
+                    <span className="text-[rgb(var(--color-text-400))]">
+                        {t('previewPane.videoFile', { defaultValue: 'Video File' })}
+                    </span>
                 </div>
             </div>
         );
@@ -189,7 +211,9 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
     // Default preview for unsupported types
     return (
         <div className={`flex items-center justify-center h-48 bg-[rgb(var(--color-border-100))] rounded-md ${className}`}>
-            <span className="text-[rgb(var(--color-text-600))]">Preview not available</span>
+            <span className="text-[rgb(var(--color-text-600))]">
+                {t('previewPane.notAvailable', { defaultValue: 'Preview not available' })}
+            </span>
         </div>
     );
 };

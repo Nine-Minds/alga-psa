@@ -3,6 +3,23 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import { resolveProductCode } from '@alga-psa/types';
+import { withAuth, withAuthCheck } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';import {
+  getPrepaidBalanceAlertSettingsDb,
+  updatePrepaidBalanceAlertSettingsDb,
+  getPrepaidReplenishmentContractOverridesDb,
+  updatePrepaidReplenishmentContractOverrideDb,
+  prepaidBalanceAlertSettingsInputSchema,
+  type PrepaidBalanceAlertSettingsInput,
+  type PrepaidBalanceAlertSettingsWithDefault,
+  type PrepaidReplenishmentContractOverride,
+} from '@shared/billingClients/prepaidBalanceAlertSettings';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type {
   BillingCycleType,
   IContract,
@@ -55,6 +72,8 @@ import {
   type BillingCycleCreationResult,
   type BillingHistoryBootstrapPreview,
   type ClientBillingSettings,
+  type CreditDrawdownPolicy,
+  resolveCreditDrawdownPolicy,
   type ServiceListOptions,
   type PaginatedServicesResponse,
   type UpdateClientBillingScheduleInput,
@@ -63,7 +82,6 @@ import {
   previewClientCadenceScheduleChange,
   type ClientCadenceChangePreview,
 } from '@alga-psa/shared/billingClients';
-import { withAuth, withAuthCheck } from '@alga-psa/auth';
 
 export const createDefaultTaxSettingsAsync = withAuth(async (
   _user,
@@ -110,11 +128,17 @@ export const getClientContractLineSettingsAsync = withAuth(async (
 });
 
 export const updateClientContractLineSettingsAsync = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   settings: ClientBillingSettings | null
-): Promise<{ success: true }> => {
+): Promise<{ success: true } | ActionPermissionError> => {
+  // Client billing settings are billing configuration: mirror the tenant-level
+  // gate in billingSettingsActions so authentication alone cannot mutate them.
+  if (!await hasPermission(user, 'billing_settings', 'update')) {
+    return permissionError('Permission denied: Cannot update billing settings', 'msp/clients:errors.billingSettings.updateDenied');
+  }
+
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -122,6 +146,18 @@ export const updateClientContractLineSettingsAsync = withAuth(async (
   });
 
   return { success: true };
+});
+
+export const getResolvedCreditDrawdownPolicyAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<CreditDrawdownPolicy> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return resolveCreditDrawdownPolicy(trx, tenant, clientId);
+  });
 });
 
 export const createNextBillingCycleAsync = withAuth(async (
@@ -480,3 +516,104 @@ export const getEffectiveTaxSourceForClientAsync = withAuth(async (
     return getEffectiveTaxSourceForClient(trx, tenant, clientId);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Prepaid balance alert policy (task 29.8.20). Clients UI path: gated on
+// billing_settings read/update permissions, delegating persistence to the
+// shared module.
+// ---------------------------------------------------------------------------
+
+export type PrepaidBalanceAlertSettingsReadResult =
+  | PrepaidBalanceAlertSettingsWithDefault
+  | ActionMessageError
+  | ActionPermissionError;
+
+export type PrepaidBalanceAlertSettingsUpdateResult =
+  | { success: true }
+  | ActionMessageError
+  | ActionPermissionError;
+
+export const getPrepaidBalanceAlertSettingsAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string | null
+): Promise<PrepaidBalanceAlertSettingsReadResult> => {
+  if (!tenant) {
+    return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
+  }
+  if (!(await hasPermission(_user, 'billing_settings', 'read'))) {
+    return permissionError('Permission denied: billing_settings read required', 'msp/clients:errors.billingSettings.readRequired');
+  }
+
+  const { knex } = await createTenantKnex();
+  if (!clientId) {
+    return actionError('Client context not found', 'msp/clients:errors.billingSettings.clientContextMissing');
+  }
+  const result = await getPrepaidBalanceAlertSettingsDb(knex, tenant, clientId);
+  return result ?? actionError('Client not found', 'msp/clients:errors.client.notFound');
+});
+
+export const updatePrepaidBalanceAlertSettingsAsync = withAuth(async (
+  _user,
+  { tenant },
+  input: PrepaidBalanceAlertSettingsInput
+): Promise<PrepaidBalanceAlertSettingsUpdateResult> => {
+  if (!tenant) {
+    return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
+  }
+  if (!(await hasPermission(_user, 'billing_settings', 'update'))) {
+    return permissionError('Permission denied: billing_settings update required', 'msp/clients:errors.billingSettings.updateRequired');
+  }
+
+  const parsed = prepaidBalanceAlertSettingsInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return actionError('Invalid prepaid balance alert settings', 'msp/clients:errors.billingSettings.invalidPrepaidAlertSettings');
+  }
+
+  try {
+    const { knex } = await createTenantKnex();
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await updatePrepaidBalanceAlertSettingsDb(trx, tenant, parsed.data);
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating prepaid balance alert settings:', error);
+    return actionError('Failed to update prepaid balance alert settings', 'msp/clients:errors.billingSettings.prepaidAlertUpdateFailed');
+  }
+});
+
+export const getPrepaidReplenishmentContractOverridesAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string,
+): Promise<PrepaidReplenishmentContractOverride[] | ActionMessageError | ActionPermissionError> => {
+  if (!tenant) return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
+  if (!(await hasPermission(_user, 'billing_settings', 'read'))) return permissionError('Permission denied: billing_settings read required', 'msp/clients:errors.billingSettings.readRequired');
+  const { knex } = await createTenantKnex();
+  return getPrepaidReplenishmentContractOverridesDb(knex, tenant, clientId);
+});
+
+export const updatePrepaidReplenishmentContractOverrideAsync = withAuth(async (
+  _user,
+  { tenant },
+  input: {
+    clientId: string;
+    clientContractId: string;
+    prepaidReplenishmentTier: 'notify' | 'draft' | 'auto_issue' | null;
+    prepaidCreditReplenishmentAmount: number | null;
+    prepaidBucketReplenishmentMinutes: number | null;
+    prepaidReplenishmentHorizonDays: number | null;
+  },
+): Promise<{ success: true } | ActionMessageError | ActionPermissionError> => {
+  if (!tenant) return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
+  if (!(await hasPermission(_user, 'billing_settings', 'update'))) return permissionError('Permission denied: billing_settings update required', 'msp/clients:errors.billingSettings.updateRequired');
+  try {
+    const { knex } = await createTenantKnex();
+    await updatePrepaidReplenishmentContractOverrideDb(knex, tenant, input);
+    return { success: true };
+  } catch {
+    return actionError('Failed to update contract replenishment policy', 'msp/clients:errors.billingSettings.contractReplenishmentUpdateFailed');
+  }
+});
+
+export type { PrepaidBalanceAlertSettingsInput } from '@shared/billingClients/prepaidBalanceAlertSettings';

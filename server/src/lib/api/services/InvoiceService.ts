@@ -35,9 +35,12 @@ import {
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import { clearPrepaidReplenishmentForInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
+import { settlePrepaidReplenishmentInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
+import { notifyInvoiceTerminalStatus } from '@alga-psa/billing/services';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import InvoiceModel from '@alga-psa/billing/models/invoice';
 
@@ -84,6 +87,7 @@ import {
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { getClientDefaultBillingProfileId } from '@alga-psa/billing/lib/billing/billingProfileLookup';
 
 type DeferredEvent = () => Promise<void>;
 
@@ -342,13 +346,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           .select(
             'cl.client_id',
             'cl.tenant',
-            trx.raw(`CONCAT_WS(', ', 
-              cl.address_line1, 
-              cl.address_line2, 
-              cl.city, 
-              cl.state_province, 
-              cl.postal_code, 
-              cl.country_name
+            trx.raw(`CONCAT_WS(', ',
+              NULLIF(cl.address_line1, 'N/A'),
+              cl.address_line2,
+              NULLIF(cl.city, 'N/A'),
+              cl.state_province,
+              cl.postal_code,
+              NULLIF(cl.country_name, 'Unknown')
             ) as formatted_address`)
           )
           .where(function() {
@@ -522,7 +526,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Prepare invoice data
-      const invoiceData = {
+      const invoiceData = await this.filterAuditFields(trx, {
         invoice_id: uuidv4(),
         invoice_number: invoiceNumber,
         client_id: data.client_id,
@@ -545,7 +549,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         tenant: context.tenant,
         created_at: new Date(),
         updated_at: new Date()
-      };
+      }, 'invoices');
 
       // Insert invoice
       const [invoice] = await tenantDb(trx, context.tenant).table('invoices').insert(invoiceData).returning('*');
@@ -682,6 +686,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       const occurredAt = new Date().toISOString();
       const previousStatus = String(existing.status);
       const newStatus = updateData.status ? String(updateData.status) : previousStatus;
+
+      if (newStatus === 'paid') {
+        await settlePrepaidReplenishmentInvoice(trx, context.tenant, id);
+      }
 
       const previousDueDate = toIsoDateString(existing.due_date);
       const nextDueDate = updateData.due_date ? toIsoDateString(updateData.due_date) : previousDueDate;
@@ -834,6 +842,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         invoice.status === 'paid' ||
         hasCanonicalRecurringDetailPeriods
       );
+
+      await clearPrepaidReplenishmentForInvoice(trx, context.tenant, id);
 
       if (softCancelled) {
         // Soft delete - mark as cancelled
@@ -1138,6 +1148,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
+    let finalStatus: string | null = null;
+    let finalBalanceDue = 0;
 
     await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
@@ -1225,6 +1237,9 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
+      finalStatus = newStatus;
+      finalBalanceDue = Number(invoice.total_amount) - totalPaid;
+
       await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .update({
@@ -1232,6 +1247,10 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_by: context.userId,
           updated_at: new Date()
         });
+
+      if (newStatus === 'paid') {
+        await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
+      }
 
         const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
 
@@ -1285,6 +1304,20 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     await publishDeferredEvents(deferredEvents);
 
+    // Reconcile any still-active Checkout sessions immediately: a manual
+    // payment can flip the invoice to paid (retire all) or reduce the balance
+    // (retire only the links whose stored amount no longer matches). Failures
+    // are isolated inside the registry, so this never affects the response.
+    if (finalStatus) {
+      await notifyInvoiceTerminalStatus({
+        knex,
+        tenantId: context.tenant,
+        invoiceId: data.invoice_id,
+        newStatus: finalStatus,
+        balanceDue: finalBalanceDue,
+      });
+    }
+
     // Re-fetch after commit: getById runs on a pooled (non-transaction)
     // connection, so it must read the row only after the tx commits.
     return this.getById(data.invoice_id, context) as Promise<IInvoice>;
@@ -1306,6 +1339,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
+    let finalStatus: string | null = null;
+    let finalBalanceDue = 0;
 
     const invoice = await tenantDb(knex, context.tenant).table('invoices')
       .where({ invoice_id: data.invoice_id })
@@ -1358,6 +1393,9 @@ export class InvoiceService extends BaseService<IInvoice> {
           newStatus = 'partially_applied';
         }
 
+        finalStatus = newStatus;
+        finalBalanceDue = Number(invoice.total_amount) - totalPaid;
+
         await tenantDb(trx, context.tenant).table('invoices')
           .where({ invoice_id: data.invoice_id })
           .update({
@@ -1365,6 +1403,10 @@ export class InvoiceService extends BaseService<IInvoice> {
             updated_by: context.userId,
             updated_at: new Date()
           });
+
+        if (newStatus === 'paid') {
+          await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
+        }
 
         // Calculate remaining balance after credit application
         const remainingBalance = invoice.total_amount - totalPaid;
@@ -1425,6 +1467,19 @@ export class InvoiceService extends BaseService<IInvoice> {
     }
 
     await publishDeferredEvents(deferredEvents);
+
+    // Reconcile any still-active Checkout sessions immediately: a credit
+    // application can flip the invoice to paid (retire all) or reduce the
+    // balance (retire only the links whose stored amount no longer matches).
+    if (finalStatus) {
+      await notifyInvoiceTerminalStatus({
+        knex,
+        tenantId: context.tenant,
+        invoiceId: data.invoice_id,
+        newStatus: finalStatus,
+        balanceDue: finalBalanceDue,
+      });
+    }
 
     return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
@@ -2307,7 +2362,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         'c.client_id',
         'c.client_name',
         'c.billing_email as email',
-        trx.raw(`CONCAT_WS(', ', cl.address_line1, cl.address_line2, cl.city, cl.state_province, cl.postal_code, cl.country_name) as billing_address`),
+        trx.raw(`CONCAT_WS(', ', NULLIF(cl.address_line1, 'N/A'), cl.address_line2, NULLIF(cl.city, 'N/A'), cl.state_province, cl.postal_code, NULLIF(cl.country_name, 'Unknown')) as billing_address`),
         'cl.phone as phone_no'
       )
       .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
@@ -2373,36 +2428,56 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async createInvoiceLineItems(invoiceId: string, lineItems: any[], trx: Knex.Transaction, context: ServiceContext): Promise<void> {
-    const lineItemsData = lineItems.map((item, index) => ({
-      item_id: uuidv4(),
-      invoice_id: invoiceId,
-      service_id: item.service_id,
-      contract_line_id: item.contract_line_id,
-      description: item.description,
-      quantity: item.quantity || 1,
-      unit_price: item.unit_price,
-      total_price: item.total_price,
-      tax_amount: item.tax_amount || 0,
-      net_amount: item.net_amount || item.total_price,
-      tax_region: item.tax_region,
-      tax_rate: item.tax_rate,
-      is_manual: item.is_manual || false,
-      is_taxable: item.is_taxable,
-      is_discount: item.is_discount || false,
-      discount_type: item.discount_type,
-      discount_percentage: item.discount_percentage,
-      applies_to_item_id: item.applies_to_item_id,
-      applies_to_service_id: item.applies_to_service_id,
-      client_contract_id: item.client_contract_id,
-      contract_name: item.contract_name,
-      is_bundle_header: (item.is_bundle_header ?? item.is_bundle_header) || false,
-      parent_item_id: item.parent_item_id,
-      rate: item.rate,
-      tenant: context.tenant,
-      created_at: new Date()
-    }));
+    // Line items persist to the canonical `invoice_charges` table (surfaced to
+    // the `invoice_items` view). `total_price`/`net_amount` are calculated
+    // server-side from `unit_price`/`quantity` when the caller omits them.
+    // Fallbacks use nullish checks only: `quantity` (and the derived amounts)
+    // may legitimately be zero, and `||` would silently rewrite a valid 0.
+    // Every persisted charge carries an attribution. An API-supplied line item
+    // can name a profile explicitly; otherwise the chain terminates at the
+    // client default (F033).
+    const invoice = await tenantDb(trx, context.tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .select('client_id')
+      .first();
+    const defaultBillingProfileId = invoice?.client_id
+      ? await getClientDefaultBillingProfileId(trx, context.tenant, invoice.client_id)
+      : null;
 
-    await tenantDb(trx, context.tenant).table('invoice_line_items').insert(lineItemsData);
+    const lineItemsData = lineItems.map((item) => {
+      const quantity = item.quantity ?? 1;
+      const unitPrice = item.unit_price ?? 0;
+      const totalPrice = item.total_price ?? Number(unitPrice) * Number(quantity);
+      return {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: item.service_id,
+        description: item.description,
+        quantity,
+        unit_price: item.unit_price,
+        total_price: totalPrice,
+        tax_amount: item.tax_amount ?? 0,
+        net_amount: item.net_amount ?? totalPrice,
+        tax_region: item.tax_region,
+        tax_rate: item.tax_rate,
+        is_manual: item.is_manual || false,
+        is_taxable: item.is_taxable,
+        is_discount: item.is_discount || false,
+        discount_type: item.discount_type,
+        discount_percentage: item.discount_percentage,
+        applies_to_item_id: item.applies_to_item_id,
+        applies_to_service_id: item.applies_to_service_id,
+        client_contract_id: item.client_contract_id,
+        location_id: item.location_id,
+        billing_profile_id: item.billing_profile_id ?? defaultBillingProfileId,
+        billing_profile_source: item.billing_profile_id ? 'explicit' : 'client_default',
+        created_by: context.userId,
+        tenant: context.tenant,
+        created_at: new Date()
+      };
+    });
+
+    await tenantDb(trx, context.tenant).table('invoice_charges').insert(lineItemsData);
 
     for (const item of lineItemsData) {
       await publishEvent({

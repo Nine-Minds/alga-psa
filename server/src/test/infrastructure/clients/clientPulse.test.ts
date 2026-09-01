@@ -995,7 +995,6 @@ describe('client pulse infrastructure', () => {
       created_at: NOW.toISOString(),
       updated_at: NOW.toISOString(),
       is_inactive: false,
-      credit_balance: 0,
       properties: {},
     });
 

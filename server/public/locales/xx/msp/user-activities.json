@@ -1,528 +1,537 @@
 {
   "dashboard": {
-    "title": "11111",
+    "title": "⟦Ŭşḗř Ȧƈŧīṽīŧīḗş⟧",
     "viewSwitcher": {
-      "cards": "11111",
-      "table": "11111"
+      "cards": "⟦Ƈȧřḓş⟧",
+      "table": "⟦Ŧȧƀŀḗ⟧"
     },
     "sections": {
-      "notifications": "11111",
-      "schedule": "11111"
+      "notifications": "⟦Ƞȯŧīƒīƈȧŧīȯƞş⟧",
+      "schedule": "⟦Şƈħḗḓŭŀḗ⟧"
     },
-    "filteredTitle": "11111",
-    "allActivitiesTitle": "11111"
+    "filteredTitle": "⟦Ƒīŀŧḗřḗḓ Ȧƈŧīṽīŧīḗş⟧",
+    "allActivitiesTitle": "⟦Ȧŀŀ Ȧƈŧīṽīŧīḗş⟧"
   },
   "table": {
     "title": {
-      "all": "11111"
+      "all": "⟦Ȧŀŀ Ȧƈŧīṽīŧīḗş⟧"
     },
     "columns": {
-      "type": "11111",
-      "title": "11111",
-      "status": "11111",
-      "priority": "11111",
-      "dueDate": "11111",
-      "actions": "11111"
+      "type": "⟦Ŧẏƥḗ⟧",
+      "title": "⟦Ŧīŧŀḗ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "priority": "⟦Ƥřīȯřīŧẏ⟧",
+      "dueDate": "⟦Ḓŭḗ Ḓȧŧḗ⟧",
+      "actions": "⟦Ȧƈŧīȯƞş⟧"
     },
     "values": {
-      "noDueDate": "11111",
-      "emDash": "11111",
-      "unread": "11111",
-      "recurringEvent": "11111",
-      "adHocBadge": "11111"
+      "noDueDate": "⟦Ƞȯ ḓŭḗ ḓȧŧḗ⟧",
+      "emDash": "⟦—⟧",
+      "unread": "⟦Ŭƞřḗȧḓ⟧",
+      "recurringEvent": "⟦Řḗƈŭřřīƞɠ Ḗṽḗƞŧ⟧",
+      "adHocBadge": "⟦Ȧḓ ħȯƈ⟧"
     },
     "actions": {
-      "refresh": "11111",
-      "print": "11111"
+      "refresh": "⟦Řḗƒřḗşħ⟧",
+      "print": "⟦Ƥřīƞŧ⟧"
     },
     "viewSwitcher": {
-      "flat": "11111",
-      "grouped": "11111"
+      "flat": "⟦Ƒŀȧŧ⟧",
+      "grouped": "⟦Ɠřȯŭƥḗḓ⟧"
     },
     "states": {
-      "noActivities": "11111",
-      "noMatching": "11111"
+      "noActivities": "⟦Ƞȯ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ⟧",
+      "noMatching": "⟦Ƞȯ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ ḿȧŧƈħīƞɠ ƒīŀŧḗřş⟧"
     },
     "errors": {
-      "loadFailed": "11111",
-      "addAdHocFailed": "11111"
+      "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧",
+      "addAdHocFailed": "⟦Ƒȧīŀḗḓ ŧȯ ȧḓḓ ȧḓ-ħȯƈ īŧḗḿ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
     },
     "activityTypes": {
-      "schedule": "11111",
-      "projectTask": "11111",
-      "ticket": "11111",
-      "timeEntry": "11111",
-      "workflowTask": "11111",
-      "notification": "11111",
-      "unknown": "11111",
-      "activity": "11111"
+      "schedule": "⟦Şƈħḗḓŭŀḗ⟧",
+      "projectTask": "⟦Ƥřȯĵḗƈŧ Ŧȧşķ⟧",
+      "ticket": "⟦Ŧīƈķḗŧ⟧",
+      "timeEntry": "⟦Ŧīḿḗ Ḗƞŧřẏ⟧",
+      "workflowTask": "⟦Ẇȯřķƒŀȯẇ Ŧȧşķ⟧",
+      "notification": "⟦Ƞȯŧīƒīƈȧŧīȯƞ⟧",
+      "unknown": "⟦Ŭƞķƞȯẇƞ⟧",
+      "activity": "⟦Ȧƈŧīṽīŧẏ⟧"
     },
     "print": {
       "optionsDialog": {
-        "title": "11111",
-        "description": "11111"
+        "title": "⟦Ƥřīƞŧ ȯƥŧīȯƞş⟧",
+        "description": "⟦Ƈħȯȯşḗ ẇħīƈħ ƈȯŀŭḿƞş ŧȯ īƞƈŀŭḓḗ ẇħḗƞ ƥřīƞŧīƞɠ ȧƈŧīṽīŧīḗş.⟧"
       }
     },
     "adHoc": {
-      "addPlaceholder": "11111",
-      "addButton": "11111",
-      "markDone": "11111",
-      "markNotDone": "11111",
-      "convertToTicket": "11111",
-      "convertToTask": "11111"
+      "addPlaceholder": "⟦Ȧḓḓ Ȧƈŧīṽīŧẏ⟧",
+      "addButton": "⟦Ȧḓḓ⟧",
+      "markDone": "⟦Ḿȧřķ ȧş ḓȯƞḗ⟧",
+      "markNotDone": "⟦Ḿȧřķ ȧş ƞȯŧ ḓȯƞḗ⟧",
+      "convertToTicket": "⟦Ƈȯƞṽḗřŧ ŧȯ ŧīƈķḗŧ⟧",
+      "convertToTask": "⟦Ƈȯƞṽḗřŧ ŧȯ ƥřȯĵḗƈŧ ŧȧşķ⟧"
     },
     "viewingUser": {
-      "label": "11111",
-      "me": "11111"
+      "label": "⟦Ṽīḗẇīƞɠ:⟧",
+      "me": "⟦Ḿẏ ȧƈŧīṽīŧīḗş⟧"
     }
   },
   "card": {
-    "noDescription": "11111",
-    "due": "11111 {{date}} 11111",
-    "recurringEvent": "11111",
-    "unread": "11111",
-    "noMessage": "11111",
-    "estimatedHours": "11111 {{hours}} 11111",
-    "duration": "11111 {{hours}} 11111",
-    "hasForm": "11111",
-    "roles": "11111 {{roles}} 11111"
+    "noDescription": "⟦Ƞȯ ḓḗşƈřīƥŧīȯƞ ƥřȯṽīḓḗḓ⟧",
+    "due": "⟦Ḓŭḗ: {{date}}⟧",
+    "recurringEvent": "⟦Řḗƈŭřřīƞɠ Ḗṽḗƞŧ⟧",
+    "unread": "⟦Ŭƞřḗȧḓ⟧",
+    "noMessage": "⟦Ƞȯ ḿḗşşȧɠḗ⟧",
+    "estimatedHours": "⟦Ḗşŧ: {{hours}}ħ⟧",
+    "duration": "⟦Ḓŭřȧŧīȯƞ: {{hours}}ħ⟧",
+    "hasForm": "⟦Ħȧş ƒȯřḿ⟧",
+    "roles": "⟦Řȯŀḗş: {{roles}}⟧"
   },
   "drawer": {
-    "loading": "11111",
-    "errorLoadingTitle": "11111",
-    "errorLoadingMessage": "11111",
-    "userNotAuthenticated": "11111",
-    "scheduleEntryNotFound": "11111",
-    "timeEntryNotFound": "11111",
-    "unknownWorkItem": "11111",
-    "timeEntryDetailsTitle": "11111",
-    "errorLoadingTimeEntry": "11111",
-    "workflowTaskTitle": "11111",
-    "noAdditionalDetails": "11111",
-    "failedToLoadDocument": "11111",
-    "notificationNotFound": "11111",
-    "failedToLoadTicket": "11111",
-    "failedToLoadTask": "11111",
-    "unsupportedTitle": "11111",
-    "unsupportedDescription": "11111 {{activityType}} 11111",
-    "saveDocumentSuccess": "11111",
-    "saveDocumentError": "11111",
-    "timeEntryUpdatedSuccess": "11111",
-    "timeEntryUpdatedError": "11111",
-    "backToNotification": "11111",
-    "documentTitleEdit": "11111",
-    "documentTitleViewer": "11111",
+    "loading": "⟦Ŀȯȧḓīƞɠ...⟧",
+    "errorLoadingTitle": "⟦Ḗřřȯř ŀȯȧḓīƞɠ ȧƈŧīṽīŧẏ ḓḗŧȧīŀş⟧",
+    "errorLoadingMessage": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧƈŧīṽīŧẏ ḓḗŧȧīŀş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧",
+    "userNotAuthenticated": "⟦Ŭşḗř ƞȯŧ ȧŭŧħḗƞŧīƈȧŧḗḓ⟧",
+    "scheduleEntryNotFound": "⟦Şƈħḗḓŭŀḗ ḗƞŧřẏ ƞȯŧ ƒȯŭƞḓ⟧",
+    "timeEntryNotFound": "⟦Ŧīḿḗ ḗƞŧřẏ ƞȯŧ ƒȯŭƞḓ⟧",
+    "unknownWorkItem": "⟦Ŭƞķƞȯẇƞ Ẇȯřķ Īŧḗḿ⟧",
+    "timeEntryDetailsTitle": "⟦Ŧīḿḗ Ḗƞŧřẏ Ḓḗŧȧīŀş⟧",
+    "errorLoadingTimeEntry": "⟦Ḗřřȯř ŀȯȧḓīƞɠ ŧīḿḗ ḗƞŧřẏ⟧",
+    "workflowTaskTitle": "⟦Ẇȯřķƒŀȯẇ Ŧȧşķ⟧",
+    "noAdditionalDetails": "⟦Ƞȯ ȧḓḓīŧīȯƞȧŀ ḓḗŧȧīŀş ȧṽȧīŀȧƀŀḗ.⟧",
+    "failedToLoadDocument": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓȯƈŭḿḗƞŧ ƈȯƞŧḗƞŧ⟧",
+    "notificationNotFound": "⟦Ƞȯŧīƒīƈȧŧīȯƞ ƞȯŧ ƒȯŭƞḓ⟧",
+    "failedToLoadTicket": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ḓḗŧȧīŀş⟧",
+    "failedToLoadTask": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧşķ ḓḗŧȧīŀş⟧",
+    "unsupportedTitle": "⟦Ŭƞşŭƥƥȯřŧḗḓ Ȧƈŧīṽīŧẏ Ŧẏƥḗ⟧",
+    "unsupportedDescription": "⟦Ŧħīş ȧƈŧīṽīŧẏ ŧẏƥḗ ({{activityType}}) īş ƞȯŧ şŭƥƥȯřŧḗḓ īƞ ŧħḗ ḓḗŧȧīŀ ṽīḗẇḗř.⟧",
+    "saveDocumentSuccess": "⟦Ḓȯƈŭḿḗƞŧ şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "saveDocumentError": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ḓȯƈŭḿḗƞŧ⟧",
+    "timeEntryUpdatedSuccess": "⟦Ŧīḿḗ ḗƞŧřẏ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
+    "timeEntryUpdatedError": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧīḿḗ ḗƞŧřẏ⟧",
+    "backToNotification": "⟦Ɓȧƈķ ŧȯ Ƞȯŧīƒīƈȧŧīȯƞ⟧",
+    "documentTitleEdit": "⟦Ḗḓīŧ Ḓȯƈŭḿḗƞŧ⟧",
+    "documentTitleViewer": "⟦Ḓȯƈŭḿḗƞŧ Ṽīḗẇḗř⟧",
     "actions": {
-      "edit": "11111",
-      "cancel": "11111",
-      "save": "11111",
-      "saving": "11111"
+      "edit": "⟦Ḗḓīŧ⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "save": "⟦Şȧṽḗ⟧",
+      "saving": "⟦Şȧṽīƞɠ...⟧"
     },
     "menu": {
-      "openMenu": "11111",
-      "goToPage": "11111",
-      "dismissError": "11111 {{message}} 11111"
+      "openMenu": "⟦Ȯƥḗƞ ḿḗƞŭ⟧",
+      "goToPage": "⟦Ɠȯ ŧȯ ƥȧɠḗ⟧",
+      "dismissError": "⟦Ƒȧīŀḗḓ ŧȯ ḓīşḿīşş ŧȧşķ: {{message}}⟧"
     },
-    "retryLater": "11111",
+    "retryLater": "⟦Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧",
     "adHoc": {
-      "endBeforeStart": "11111",
+      "endBeforeStart": "⟦Ḗƞḓ ŧīḿḗ ḿŭşŧ ƀḗ ȧƒŧḗř ŧħḗ şŧȧřŧ ŧīḿḗ.⟧",
       "fields": {
-        "end": "11111",
-        "noTime": "11111",
-        "notes": "11111",
-        "notesPlaceholder": "11111",
-        "start": "11111",
-        "title": "11111",
-        "titlePlaceholder": "11111"
+        "end": "⟦Ḗƞḓ (ȯƥŧīȯƞȧŀ)⟧",
+        "noTime": "⟦Ƞȯ ŧīḿḗ⟧",
+        "notes": "⟦Ƞȯŧḗş⟧",
+        "notesPlaceholder": "⟦Ȧḓḓ ƞȯŧḗş…⟧",
+        "start": "⟦Şŧȧřŧ (ȯƥŧīȯƞȧŀ)⟧",
+        "title": "⟦Ŧīŧŀḗ⟧",
+        "titlePlaceholder": "⟦Ŧīŧŀḗ⟧"
       },
-      "loadError": "11111",
-      "saveError": "11111",
-      "saveSuccess": "11111",
-      "statusDone": "11111",
-      "statusOpen": "11111",
-      "title": "11111",
-      "toggleDoneError": "11111"
+      "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧħīş īŧḗḿ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧",
+      "saveError": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ īŧḗḿ.⟧",
+      "saveSuccess": "⟦Īŧḗḿ şȧṽḗḓ⟧",
+      "statusDone": "⟦Ḓȯƞḗ⟧",
+      "statusOpen": "⟦Ȯƥḗƞ⟧",
+      "title": "⟦Ȧḓ ħȯƈ īŧḗḿ⟧",
+      "toggleDoneError": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ īŧḗḿ.⟧"
     },
-    "enterpriseOnly": "11111",
-    "nextAction": "11111",
-    "overdueSince": "11111 {{date}} 11111",
-    "dueOn": "11111 {{date}} 11111",
-    "stage": "11111",
-    "confidence": "11111",
-    "owner": "11111",
-    "expectedClose": "11111",
-    "mrr": "11111",
-    "nrr": "11111",
-    "hardware": "11111",
-    "contact": "11111",
-    "linkedQuotes": "11111",
-    "openOpportunity": "11111",
-    "opportunityNotFound": "11111"
+    "enterpriseOnly": "⟦Ẇȯřķƒŀȯẇ ŧȧşķş ȧřḗ ȧ Ƥřȯ ƒḗȧŧŭřḗ.⟧",
+    "nextAction": "⟦Ƞḗẋŧ ȧƈŧīȯƞ⟧",
+    "overdueSince": "⟦Ȯṽḗřḓŭḗ şīƞƈḗ {{date}}⟧",
+    "dueOn": "⟦Ḓŭḗ {{date}}⟧",
+    "stage": "⟦Şŧȧɠḗ⟧",
+    "confidence": "⟦Ƈȯƞƒīḓḗƞƈḗ⟧",
+    "owner": "⟦Ȯẇƞḗř⟧",
+    "expectedClose": "⟦Ḗẋƥḗƈŧḗḓ ƈŀȯşḗ⟧",
+    "mrr": "⟦ḾŘŘ⟧",
+    "nrr": "⟦ȠŘŘ⟧",
+    "hardware": "⟦Ħȧřḓẇȧřḗ⟧",
+    "contact": "⟦Ƈȯƞŧȧƈŧ⟧",
+    "linkedQuotes": "⟦Ŀīƞķḗḓ ʠŭȯŧḗş⟧",
+    "openOpportunity": "⟦Ȯƥḗƞ Ȯƥƥȯřŧŭƞīŧẏ⟧",
+    "opportunityNotFound": "⟦Ȯƥƥȯřŧŭƞīŧẏ ƞȯŧ ƒȯŭƞḓ.⟧"
   },
   "groupedView": {
-    "addGroup": "11111",
-    "groupNamePlaceholder": "11111",
+    "addGroup": "⟦Ȧḓḓ Ɠřȯŭƥ⟧",
+    "groupNamePlaceholder": "⟦Ɠřȯŭƥ ƞȧḿḗ⟧",
     "ariaLabels": {
-      "dragToReorder": "11111",
-      "dragToReorderGroup": "11111",
-      "expandGroup": "11111",
-      "collapseGroup": "11111",
-      "renameGroup": "11111",
-      "deleteGroup": "11111"
+      "dragToReorder": "⟦Ḓřȧɠ ŧȯ řḗȯřḓḗř⟧",
+      "dragToReorderGroup": "⟦Ḓřȧɠ ŧȯ řḗȯřḓḗř ɠřȯŭƥ⟧",
+      "expandGroup": "⟦Ḗẋƥȧƞḓ ɠřȯŭƥ⟧",
+      "collapseGroup": "⟦Ƈȯŀŀȧƥşḗ ɠřȯŭƥ⟧",
+      "renameGroup": "⟦Řḗƞȧḿḗ ɠřȯŭƥ⟧",
+      "deleteGroup": "⟦Ḓḗŀḗŧḗ ɠřȯŭƥ⟧"
     },
-    "dropActivitiesHere": "11111",
-    "ungroupedHeading": "11111",
-    "allInGroups": "11111",
+    "dropActivitiesHere": "⟦Ḓřȯƥ ȧƈŧīṽīŧīḗş ħḗřḗ⟧",
+    "ungroupedHeading": "⟦Ŭƞɠřȯŭƥḗḓ⟧",
+    "allInGroups": "⟦Ȧŀŀ ȧƈŧīṽīŧīḗş ȧřḗ īƞ ɠřȯŭƥş⟧",
     "columns": {
-      "title": "11111",
-      "status": "11111",
-      "priority": "11111",
-      "dueDate": "11111"
+      "title": "⟦Ŧīŧŀḗ⟧",
+      "status": "⟦Şŧȧŧŭş⟧",
+      "priority": "⟦Ƥřīȯřīŧẏ⟧",
+      "dueDate": "⟦Ḓŭḗ Ḓȧŧḗ⟧"
     }
   },
   "printable": {
-    "defaultTitle": "11111",
-    "ungroupedHeading": "11111",
-    "empty": "11111"
+    "defaultTitle": "⟦Ȧƈŧīṽīŧīḗş⟧",
+    "ungroupedHeading": "⟦Ŭƞɠřȯŭƥḗḓ⟧",
+    "empty": "⟦(ḗḿƥŧẏ)⟧"
   },
   "sections": {
     "projects": {
-      "title": "11111",
+      "title": "⟦Ƥřȯĵḗƈŧ Ŧȧşķş⟧",
       "actions": {
-        "refresh": "11111",
-        "filter": "11111",
-        "reset": "11111",
-        "viewAll": "11111"
+        "refresh": "⟦Řḗƒřḗşħ⟧",
+        "filter": "⟦Ƒīŀŧḗř⟧",
+        "reset": "⟦Řḗşḗŧ⟧",
+        "viewAll": "⟦Ṽīḗẇ Ȧŀŀ⟧"
       },
       "ariaLabels": {
-        "refresh": "11111",
-        "filter": "11111"
+        "refresh": "⟦Řḗƒřḗşħ Ƥřȯĵḗƈŧ Ŧȧşķş⟧",
+        "filter": "⟦Ƒīŀŧḗř Ƥřȯĵḗƈŧ Ŧȧşķş⟧"
       },
       "states": {
-        "loading": "11111",
-        "empty": "11111"
+        "loading": "⟦Ŀȯȧḓīƞɠ ƥřȯĵḗƈŧ ȧƈŧīṽīŧīḗş...⟧",
+        "empty": "⟦Ƞȯ ƥřȯĵḗƈŧ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ⟧"
       },
       "errors": {
-        "loadFailed": "11111"
+        "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřȯĵḗƈŧ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧"
       },
       "filterDialog": {
-        "title": "11111",
-        "description": "11111",
+        "title": "⟦Ƒīŀŧḗř Ƥřȯĵḗƈŧ Ŧȧşķş⟧",
+        "description": "⟦Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř ƥřȯĵḗƈŧ ŧȧşķ ȧƈŧīṽīŧīḗş.⟧",
         "fields": {
-          "search": "11111",
-          "searchPlaceholder": "11111",
-          "project": "11111",
-          "projectPlaceholder": "11111",
-          "allProjects": "11111",
-          "phase": "11111",
-          "phasePlaceholder": "11111",
-          "phaseLoadingPlaceholder": "11111",
-          "phaseSelectFirstPlaceholder": "11111",
-          "allPhases": "11111",
-          "priority": "11111",
-          "priorityPlaceholder": "11111",
-          "allPriorities": "11111",
-          "dueDateRange": "11111",
-          "createdDateRange": "11111",
-          "showClosedTasks": "11111"
+          "search": "⟦Şḗȧřƈħ⟧",
+          "searchPlaceholder": "⟦Şḗȧřƈħ ŧīŧŀḗ, ḓḗşƈřīƥŧīȯƞ⟧",
+          "project": "⟦Ƥřȯĵḗƈŧ⟧",
+          "projectPlaceholder": "⟦Şḗŀḗƈŧ Ƥřȯĵḗƈŧ...⟧",
+          "allProjects": "⟦Ȧŀŀ Ƥřȯĵḗƈŧş⟧",
+          "phase": "⟦Ƥħȧşḗ⟧",
+          "phasePlaceholder": "⟦Şḗŀḗƈŧ Ƥħȧşḗ...⟧",
+          "phaseLoadingPlaceholder": "⟦Ŀȯȧḓīƞɠ ƥħȧşḗş...⟧",
+          "phaseSelectFirstPlaceholder": "⟦Şḗŀḗƈŧ ȧ ƥřȯĵḗƈŧ ƒīřşŧ⟧",
+          "allPhases": "⟦Ȧŀŀ Ƥħȧşḗş⟧",
+          "priority": "⟦Ƥřīȯřīŧẏ⟧",
+          "priorityPlaceholder": "⟦Şḗŀḗƈŧ Ƥřīȯřīŧẏ...⟧",
+          "allPriorities": "⟦Ȧŀŀ Ƥřīȯřīŧīḗş⟧",
+          "dueDateRange": "⟦Ḓŭḗ Ḓȧŧḗ Řȧƞɠḗ⟧",
+          "createdDateRange": "⟦Ƈřḗȧŧḗḓ Ḓȧŧḗ Řȧƞɠḗ⟧",
+          "showClosedTasks": "⟦Şħȯẇ Ƈŀȯşḗḓ Ŧȧşķş⟧"
         },
         "actions": {
-          "reset": "11111",
-          "cancel": "11111",
-          "apply": "11111",
-          "clearDates": "11111"
+          "reset": "⟦Řḗşḗŧ⟧",
+          "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+          "apply": "⟦Ȧƥƥŀẏ Ƒīŀŧḗřş⟧",
+          "clearDates": "⟦Ƈŀḗȧř⟧"
         }
       }
     },
     "tickets": {
-      "title": "11111",
+      "title": "⟦Ŧīƈķḗŧş⟧",
       "actions": {
-        "refresh": "11111",
-        "filter": "11111",
-        "reset": "11111",
-        "viewAll": "11111"
+        "refresh": "⟦Řḗƒřḗşħ⟧",
+        "filter": "⟦Ƒīŀŧḗř⟧",
+        "reset": "⟦Řḗşḗŧ⟧",
+        "viewAll": "⟦Ṽīḗẇ Ȧŀŀ⟧"
       },
       "ariaLabels": {
-        "refresh": "11111",
-        "filter": "11111"
+        "refresh": "⟦Řḗƒřḗşħ Ŧīƈķḗŧş⟧",
+        "filter": "⟦Ƒīŀŧḗř Ŧīƈķḗŧş⟧"
       },
       "states": {
-        "loading": "11111",
-        "empty": "11111"
+        "loading": "⟦Ŀȯȧḓīƞɠ ŧīƈķḗŧ ȧƈŧīṽīŧīḗş...⟧",
+        "empty": "⟦Ƞȯ ŧīƈķḗŧ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ⟧"
       },
       "errors": {
-        "loadFailed": "11111"
+        "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧"
       },
       "filterDialog": {
-        "title": "11111",
-        "description": "11111",
+        "title": "⟦Ƒīŀŧḗř Ŧīƈķḗŧş⟧",
+        "description": "⟦Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř ŧīƈķḗŧ ȧƈŧīṽīŧīḗş.⟧",
         "fields": {
-          "search": "11111",
-          "searchPlaceholder": "11111",
-          "client": "11111",
-          "contact": "11111",
-          "status": "11111",
-          "statusPlaceholder": "11111",
-          "allStatuses": "11111",
-          "priority": "11111",
-          "priorityPlaceholder": "11111",
-          "allPriorities": "11111",
-          "dueDateRange": "11111",
-          "createdDateRange": "11111",
-          "showClosedTickets": "11111"
+          "search": "⟦Şḗȧřƈħ⟧",
+          "searchPlaceholder": "⟦Şḗȧřƈħ ŧīŧŀḗ, ḓḗşƈřīƥŧīȯƞ, ŧīƈķḗŧ #⟧",
+          "client": "⟦Ƈŀīḗƞŧ⟧",
+          "contact": "⟦Ƈȯƞŧȧƈŧ⟧",
+          "status": "⟦Şŧȧŧŭş⟧",
+          "statusPlaceholder": "⟦Şḗŀḗƈŧ Şŧȧŧŭş...⟧",
+          "allStatuses": "⟦Ȧŀŀ Şŧȧŧŭşḗş⟧",
+          "priority": "⟦Ƥřīȯřīŧẏ⟧",
+          "priorityPlaceholder": "⟦Şḗŀḗƈŧ Ƥřīȯřīŧẏ...⟧",
+          "allPriorities": "⟦Ȧŀŀ Ƥřīȯřīŧīḗş⟧",
+          "dueDateRange": "⟦Ḓŭḗ Ḓȧŧḗ Řȧƞɠḗ⟧",
+          "createdDateRange": "⟦Ƈřḗȧŧḗḓ Ḓȧŧḗ Řȧƞɠḗ⟧",
+          "showClosedTickets": "⟦Şħȯẇ Ƈŀȯşḗḓ Ŧīƈķḗŧş⟧"
         },
         "actions": {
-          "reset": "11111",
-          "cancel": "11111",
-          "apply": "11111",
-          "clearDates": "11111"
+          "reset": "⟦Řḗşḗŧ⟧",
+          "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+          "apply": "⟦Ȧƥƥŀẏ Ƒīŀŧḗřş⟧",
+          "clearDates": "⟦Ƈŀḗȧř⟧"
         }
       }
     },
     "workflowTasks": {
-      "title": "11111",
-      "drawerTitle": "11111",
+      "title": "⟦Ẇȯřķƒŀȯẇ Ŧȧşķş⟧",
+      "drawerTitle": "⟦Ẇȯřķƒŀȯẇ Ŧȧşķş⟧",
       "actions": {
-        "refresh": "11111",
-        "filter": "11111",
-        "reset": "11111",
-        "viewAll": "11111"
+        "refresh": "⟦Řḗƒřḗşħ⟧",
+        "filter": "⟦Ƒīŀŧḗř⟧",
+        "reset": "⟦Řḗşḗŧ⟧",
+        "viewAll": "⟦Ṽīḗẇ Ȧŀŀ⟧"
       },
       "ariaLabels": {
-        "refresh": "11111",
-        "filter": "11111"
+        "refresh": "⟦Řḗƒřḗşħ Ẇȯřķƒŀȯẇ Ŧȧşķş⟧",
+        "filter": "⟦Ƒīŀŧḗř Ẇȯřķƒŀȯẇ Ŧȧşķş⟧"
       },
       "states": {
-        "loading": "11111",
-        "empty": "11111"
+        "loading": "⟦Ŀȯȧḓīƞɠ ẇȯřķƒŀȯẇ ŧȧşķ ȧƈŧīṽīŧīḗş...⟧",
+        "empty": "⟦Ƞȯ ẇȯřķƒŀȯẇ ŧȧşķ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ⟧"
       },
       "errors": {
-        "loadFailed": "11111"
+        "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ẇȯřķƒŀȯẇ ŧȧşķ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧"
       },
       "filterDialog": {
-        "title": "11111",
-        "description": "11111",
+        "title": "⟦Ƒīŀŧḗř Ẇȯřķƒŀȯẇ Ŧȧşķş⟧",
+        "description": "⟦Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř ẇȯřķƒŀȯẇ ŧȧşķ ȧƈŧīṽīŧīḗş.⟧",
         "fields": {
-          "search": "11111",
-          "searchPlaceholder": "11111",
-          "workflowExecution": "11111",
-          "workflowExecutionPlaceholder": "11111",
-          "allExecutions": "11111",
-          "priority": "11111",
-          "priorityPlaceholder": "11111",
-          "allPriorities": "11111",
-          "priorityHigh": "11111",
-          "priorityMedium": "11111",
-          "priorityLow": "11111",
-          "dueDateRange": "11111",
-          "createdDateRange": "11111",
-          "showClosedTasks": "11111",
-          "includeHiddenTasks": "11111"
+          "search": "⟦Şḗȧřƈħ⟧",
+          "searchPlaceholder": "⟦Şḗȧřƈħ ŧīŧŀḗ, ḓḗşƈřīƥŧīȯƞ⟧",
+          "workflowExecution": "⟦Ẇȯřķƒŀȯẇ Ḗẋḗƈŭŧīȯƞ⟧",
+          "workflowExecutionPlaceholder": "⟦Şḗŀḗƈŧ Ẇȯřķƒŀȯẇ Ḗẋḗƈŭŧīȯƞ...⟧",
+          "allExecutions": "⟦Ȧŀŀ Ḗẋḗƈŭŧīȯƞş⟧",
+          "priority": "⟦Ƥřīȯřīŧẏ⟧",
+          "priorityPlaceholder": "⟦Şḗŀḗƈŧ Ƥřīȯřīŧẏ...⟧",
+          "allPriorities": "⟦Ȧŀŀ Ƥřīȯřīŧīḗş⟧",
+          "priorityHigh": "⟦Ħīɠħ⟧",
+          "priorityMedium": "⟦Ḿḗḓīŭḿ⟧",
+          "priorityLow": "⟦Ŀȯẇ⟧",
+          "dueDateRange": "⟦Ḓŭḗ Ḓȧŧḗ Řȧƞɠḗ⟧",
+          "createdDateRange": "⟦Ƈřḗȧŧḗḓ Ḓȧŧḗ Řȧƞɠḗ⟧",
+          "showClosedTasks": "⟦Şħȯẇ Ƈŀȯşḗḓ Ŧȧşķş⟧",
+          "includeHiddenTasks": "⟦Īƞƈŀŭḓḗ Ħīḓḓḗƞ Ŧȧşķş⟧"
         },
         "actions": {
-          "reset": "11111",
-          "cancel": "11111",
-          "apply": "11111",
-          "clearDates": "11111"
+          "reset": "⟦Řḗşḗŧ⟧",
+          "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+          "apply": "⟦Ȧƥƥŀẏ Ƒīŀŧḗřş⟧",
+          "clearDates": "⟦Ƈŀḗȧř⟧"
         }
       },
       "listDrawer": {
-        "searchPlaceholder": "11111",
-        "filters": "11111",
-        "refresh": "11111",
-        "sortBy": "11111",
+        "searchPlaceholder": "⟦Şḗȧřƈħ ŧȧşķş...⟧",
+        "filters": "⟦Ƒīŀŧḗřş⟧",
+        "refresh": "⟦Řḗƒřḗşħ⟧",
+        "sortBy": "⟦Şȯřŧ ƀẏ:⟧",
         "sortOptions": {
-          "priority": "11111",
-          "dueDate": "11111",
-          "createdAt": "11111",
-          "title": "11111"
+          "priority": "⟦Ƥřīȯřīŧẏ⟧",
+          "dueDate": "⟦Ḓŭḗ Ḓȧŧḗ⟧",
+          "createdAt": "⟦Ƈřḗȧŧḗḓ Ḓȧŧḗ⟧",
+          "title": "⟦Ŧīŧŀḗ⟧"
         },
-        "ascending": "11111",
-        "descending": "11111",
+        "ascending": "⟦Ȧşƈḗƞḓīƞɠ⟧",
+        "descending": "⟦Ḓḗşƈḗƞḓīƞɠ⟧",
         "states": {
-          "loading": "11111",
-          "empty": "11111"
+          "loading": "⟦Ŀȯȧḓīƞɠ ẇȯřķƒŀȯẇ ŧȧşķş...⟧",
+          "empty": "⟦Ƞȯ ẇȯřķƒŀȯẇ ŧȧşķş ƒȯŭƞḓ⟧"
         },
         "errors": {
-          "loadFailed": "11111"
+          "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ẇȯřķƒŀȯẇ ŧȧşķş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧"
         }
       }
     },
     "schedule": {
-      "title": "11111",
+      "title": "⟦Şƈħḗḓŭŀḗ⟧",
       "actions": {
-        "refresh": "11111",
-        "filter": "11111",
-        "reset": "11111",
-        "viewAll": "11111"
+        "refresh": "⟦Řḗƒřḗşħ⟧",
+        "filter": "⟦Ƒīŀŧḗř⟧",
+        "reset": "⟦Řḗşḗŧ⟧",
+        "viewAll": "⟦Ṽīḗẇ Ȧŀŀ⟧"
       },
       "states": {
-        "loading": "11111",
-        "empty": "11111"
+        "loading": "⟦Ŀȯȧḓīƞɠ şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş...⟧",
+        "empty": "⟦Ƞȯ şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ⟧"
       },
       "errors": {
-        "loadFailed": "11111",
-        "refreshFailed": "11111",
-        "addAdHocFailed": "11111"
+        "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧",
+        "refreshFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧",
+        "addAdHocFailed": "⟦Ƒȧīŀḗḓ ŧȯ ȧḓḓ ȧƈŧīṽīŧẏ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
       },
       "filterDialog": {
-        "title": "11111",
-        "description": "11111",
+        "title": "⟦Ƒīŀŧḗř Şƈħḗḓŭŀḗ Ḗƞŧřīḗş⟧",
+        "description": "⟦Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř şƈħḗḓŭŀḗ ȧƈŧīṽīŧīḗş.⟧",
         "fields": {
-          "search": "11111",
-          "searchPlaceholder": "11111",
-          "dateRange": "11111",
-          "workItemType": "11111",
-          "workItemTypePlaceholder": "11111",
-          "allTypes": "11111",
-          "ticket": "11111",
-          "projectTask": "11111",
-          "workflowTask": "11111",
-          "showClosedEntries": "11111",
-          "showRecurringOnly": "11111"
+          "search": "⟦Şḗȧřƈħ⟧",
+          "searchPlaceholder": "⟦Şḗȧřƈħ ŧīŧŀḗ, ḓḗşƈřīƥŧīȯƞ⟧",
+          "dateRange": "⟦Ḓȧŧḗ Řȧƞɠḗ⟧",
+          "workItemType": "⟦Řḗŀȧŧḗḓ Ẇȯřķ Īŧḗḿ Ŧẏƥḗ⟧",
+          "workItemTypePlaceholder": "⟦Şḗŀḗƈŧ Ẇȯřķ Īŧḗḿ Ŧẏƥḗ...⟧",
+          "allTypes": "⟦Ȧŀŀ Ŧẏƥḗş⟧",
+          "ticket": "⟦Ŧīƈķḗŧ⟧",
+          "projectTask": "⟦Ƥřȯĵḗƈŧ Ŧȧşķ⟧",
+          "workflowTask": "⟦Ẇȯřķƒŀȯẇ Ŧȧşķ⟧",
+          "showClosedEntries": "⟦Şħȯẇ Ƈŀȯşḗḓ Ḗƞŧřīḗş⟧",
+          "showRecurringOnly": "⟦Şħȯẇ Řḗƈŭřřīƞɠ Ȯƞŀẏ⟧"
         },
         "actions": {
-          "reset": "11111",
-          "cancel": "11111",
-          "apply": "11111"
+          "reset": "⟦Řḗşḗŧ⟧",
+          "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+          "apply": "⟦Ȧƥƥŀẏ Ƒīŀŧḗřş⟧"
         }
       }
     },
     "notifications": {
-      "title": "11111",
+      "title": "⟦Ƞȯŧīƒīƈȧŧīȯƞş⟧",
       "actions": {
-        "refresh": "11111",
-        "filter": "11111",
-        "reset": "11111",
-        "viewAll": "11111"
+        "refresh": "⟦Řḗƒřḗşħ⟧",
+        "filter": "⟦Ƒīŀŧḗř⟧",
+        "reset": "⟦Řḗşḗŧ⟧",
+        "viewAll": "⟦Ṽīḗẇ Ȧŀŀ⟧"
       },
       "ariaLabels": {
-        "refresh": "11111",
-        "filter": "11111"
+        "refresh": "⟦Řḗƒřḗşħ Ƞȯŧīƒīƈȧŧīȯƞş⟧",
+        "filter": "⟦Ƒīŀŧḗř Ƞȯŧīƒīƈȧŧīȯƞş⟧"
       },
       "tabs": {
-        "unread": "11111",
-        "all": "11111",
-        "read": "11111"
+        "unread": "⟦Ŭƞřḗȧḓ⟧",
+        "all": "⟦Ȧŀŀ⟧",
+        "read": "⟦Řḗȧḓ⟧"
       },
       "states": {
-        "loading": "11111",
-        "empty": "11111"
+        "loading": "⟦Ŀȯȧḓīƞɠ ƞȯŧīƒīƈȧŧīȯƞ ȧƈŧīṽīŧīḗş...⟧",
+        "empty": "⟦Ƞȯ ƞȯŧīƒīƈȧŧīȯƞ ȧƈŧīṽīŧīḗş ƒȯŭƞḓ⟧"
       },
       "errors": {
-        "loadFailed": "11111"
+        "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƞȯŧīƒīƈȧŧīȯƞ ȧƈŧīṽīŧīḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ŀȧŧḗř.⟧"
       },
       "filterDialog": {
-        "title": "11111",
-        "description": "11111",
+        "title": "⟦Ƒīŀŧḗř Ƞȯŧīƒīƈȧŧīȯƞş⟧",
+        "description": "⟦Şḗŀḗƈŧ ƈřīŧḗřīȧ ŧȯ ƒīŀŧḗř ƞȯŧīƒīƈȧŧīȯƞ ȧƈŧīṽīŧīḗş.⟧",
         "fields": {
-          "status": "11111",
-          "unreadOnly": "11111",
-          "showRead": "11111",
-          "category": "11111",
-          "categoryPlaceholder": "11111",
-          "allCategories": "11111",
+          "status": "⟦Şŧȧŧŭş⟧",
+          "unreadOnly": "⟦Ŭƞřḗȧḓ Ȯƞŀẏ⟧",
+          "showRead": "⟦Şħȯẇ Řḗȧḓ⟧",
+          "category": "⟦Ƈȧŧḗɠȯřẏ⟧",
+          "categoryPlaceholder": "⟦Şḗŀḗƈŧ Ƈȧŧḗɠȯřẏ...⟧",
+          "allCategories": "⟦Ȧŀŀ Ƈȧŧḗɠȯřīḗş⟧",
           "categories": {
-            "tickets": "11111",
-            "projects": "11111",
-            "invoices": "11111",
-            "system": "11111"
+            "tickets": "⟦Ŧīƈķḗŧş⟧",
+            "projects": "⟦Ƥřȯĵḗƈŧş⟧",
+            "invoices": "⟦Īƞṽȯīƈḗş⟧",
+            "system": "⟦Şẏşŧḗḿ⟧"
           },
-          "dateRange": "11111"
+          "dateRange": "⟦Ḓȧŧḗ Řȧƞɠḗ⟧"
         },
         "actions": {
-          "reset": "11111",
-          "cancel": "11111",
-          "apply": "11111"
+          "reset": "⟦Řḗşḗŧ⟧",
+          "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+          "apply": "⟦Ȧƥƥŀẏ Ƒīŀŧḗřş⟧"
         }
+      },
+      "priority": {
+        "label": "⟦Ƥřīȯřīŧẏ⟧",
+        "all": "⟦Ȧŀŀ⟧",
+        "allPriorities": "⟦Ȧŀŀ Ƥřīȯřīŧīḗş⟧",
+        "placeholder": "⟦Şḗŀḗƈŧ Ƥřīȯřīŧẏ...⟧",
+        "high": "⟦Ħīɠħ⟧",
+        "normal": "⟦Ƞȯřḿȧŀ⟧",
+        "low": "⟦Ŀȯẇ⟧"
       }
     }
   },
   "pickers": {
     "priority": {
-      "loading": "11111",
-      "empty": "11111",
-      "none": "11111"
+      "loading": "⟦Ŀȯȧḓīƞɠ...⟧",
+      "empty": "⟦Ƞȯ ƥřīȯřīŧīḗş ȧṽȧīŀȧƀŀḗ⟧",
+      "none": "⟦Ƞȯƞḗ⟧"
     },
     "status": {
-      "loading": "11111",
-      "empty": "11111",
-      "closedSuffix": "11111"
+      "loading": "⟦Ŀȯȧḓīƞɠ...⟧",
+      "empty": "⟦Ƞȯ şŧȧŧŭşḗş ȧṽȧīŀȧƀŀḗ⟧",
+      "closedSuffix": "⟦ƈŀȯşḗḓ⟧"
     }
   },
   "filters": {
     "labels": {
-      "types": "11111",
-      "tickets": "11111",
-      "tasks": "11111",
-      "priority": "11111",
-      "search": "11111",
-      "dueDate": "11111",
-      "showClosed": "11111",
-      "client": "11111",
-      "dueDateShort": "11111",
-      "createdShort": "11111",
-      "tags": "11111",
-      "tagsSelected": "11111 {{count}} 11111",
-      "tasksCompact": "11111",
-      "ticketsCompact": "11111",
-      "opportunityScope": "11111"
+      "types": "⟦Ŧẏƥḗş:⟧",
+      "tickets": "⟦Ŧīƈķḗŧş:⟧",
+      "tasks": "⟦Ŧȧşķş:⟧",
+      "priority": "⟦Ƥřīȯřīŧẏ⟧",
+      "search": "⟦Şḗȧřƈħ⟧",
+      "dueDate": "⟦Ḓŭḗ Ḓȧŧḗ⟧",
+      "showClosed": "⟦Şħȯẇ ƈŀȯşḗḓ⟧",
+      "client": "⟦Ƈŀīḗƞŧ⟧",
+      "dueDateShort": "⟦Ḓŭḗ⟧",
+      "createdShort": "⟦Ƈřḗȧŧḗḓ⟧",
+      "tags": "⟦Ŧȧɠş⟧",
+      "tagsSelected": "⟦{{count}} ŧȧɠş⟧",
+      "tasksCompact": "⟦Ŧȧşķş⟧",
+      "ticketsCompact": "⟦Ŧīƈķḗŧş⟧",
+      "opportunityScope": "⟦Ḓḗȧŀ ẇȯřķ⟧"
     },
     "activityTypeOptions": {
-      "schedule": "11111",
-      "projectTask": "11111",
-      "ticket": "11111",
-      "workflowTask": "11111"
+      "schedule": "⟦Şƈħḗḓŭŀḗ⟧",
+      "projectTask": "⟦Ƥřȯĵḗƈŧ Ŧȧşķş⟧",
+      "ticket": "⟦Ŧīƈķḗŧş⟧",
+      "workflowTask": "⟦Ẇȯřķƒŀȯẇ Ŧȧşķş⟧"
     },
     "placeholders": {
-      "allBoards": "11111",
-      "allStatuses": "11111",
-      "allProjects": "11111",
-      "allPriorities": "11111",
-      "selectPriority": "11111",
-      "search": "11111",
-      "searchBoards": "11111",
-      "searchStatuses": "11111",
-      "searchProjects": "11111",
-      "allClients": "11111",
-      "fromDateShort": "11111",
-      "projectTaskTags": "11111",
-      "ticketTags": "11111",
-      "toDateShort": "11111"
+      "allBoards": "⟦Ȧŀŀ Ɓȯȧřḓş⟧",
+      "allStatuses": "⟦Ȧŀŀ Şŧȧŧŭşḗş⟧",
+      "allProjects": "⟦Ȧŀŀ Ƥřȯĵḗƈŧş⟧",
+      "allPriorities": "⟦Ȧŀŀ Ƥřīȯřīŧīḗş⟧",
+      "selectPriority": "⟦Şḗŀḗƈŧ Ƥřīȯřīŧẏ...⟧",
+      "search": "⟦Şḗȧřƈħ ȧƈŧīṽīŧīḗş...⟧",
+      "searchBoards": "⟦Şḗȧřƈħ ƀȯȧřḓş...⟧",
+      "searchStatuses": "⟦Şḗȧřƈħ şŧȧŧŭşḗş...⟧",
+      "searchProjects": "⟦Şḗȧřƈħ ƥřȯĵḗƈŧş...⟧",
+      "allClients": "⟦Ȧŀŀ Ƈŀīḗƞŧş⟧",
+      "fromDateShort": "⟦Ƒřȯḿ⟧",
+      "projectTaskTags": "⟦Ƒīŀŧḗř ŧȧşķ ŧȧɠş...⟧",
+      "ticketTags": "⟦Ƒīŀŧḗř ŧīƈķḗŧ ŧȧɠş...⟧",
+      "toDateShort": "⟦Ŧȯ⟧"
     },
     "actions": {
-      "reset": "11111",
-      "clearClient": "11111",
-      "clearDueDate": "11111",
-      "clearCreatedDate": "11111"
+      "reset": "⟦Řḗşḗŧ⟧",
+      "clearClient": "⟦Ƈŀḗȧř ƈŀīḗƞŧ ƒīŀŧḗř⟧",
+      "clearDueDate": "⟦Ƈŀḗȧř ḓŭḗ ḓȧŧḗ ƒīŀŧḗř⟧",
+      "clearCreatedDate": "⟦Ƈŀḗȧř ƈřḗȧŧḗḓ ḓȧŧḗ ƒīŀŧḗř⟧"
     },
-    "statusClosedSuffix": "11111",
+    "statusClosedSuffix": "⟦ (ƈŀȯşḗḓ)⟧",
     "summary": {
-      "boards_one": "11111 {{count}} 11111",
-      "boards_other": "11111 {{count}} 11111",
-      "statuses_one": "11111 {{count}} 11111",
-      "statuses_other": "11111 {{count}} 11111",
-      "projects_one": "11111 {{count}} 11111",
-      "projects_other": "11111 {{count}} 11111",
-      "phases_one": "11111 {{count}} 11111",
-      "phases_other": "11111 {{count}} 11111",
-      "excludingName": "11111 {{name}} 11111",
-      "excludingCount_one": "11111 {{count}} 11111",
-      "excludingCount_other": "11111 {{count}} 11111",
-      "boards": "11111 {{count}} 11111",
-      "excludingCount": "11111 {{count}} 11111",
-      "phases": "11111 {{count}} 11111",
-      "projects": "11111 {{count}} 11111",
-      "statuses": "11111 {{count}} 11111"
+      "boards_one": "⟦{{count}} ƀȯȧřḓ⟧",
+      "boards_other": "⟦{{count}} ƀȯȧřḓş⟧",
+      "statuses_one": "⟦{{count}} şŧȧŧŭş⟧",
+      "statuses_other": "⟦{{count}} şŧȧŧŭşḗş⟧",
+      "projects_one": "⟦{{count}} ƥřȯĵḗƈŧ⟧",
+      "projects_other": "⟦{{count}} ƥřȯĵḗƈŧş⟧",
+      "phases_one": "⟦{{count}} ƥħȧşḗ⟧",
+      "phases_other": "⟦{{count}} ƥħȧşḗş⟧",
+      "excludingName": "⟦ḗẋƈŀ {{name}}⟧",
+      "excludingCount_one": "⟦ḗẋƈŀ {{count}}⟧",
+      "excludingCount_other": "⟦ḗẋƈŀ {{count}}⟧",
+      "boards": "⟦{{count}} ƀȯȧřḓş⟧",
+      "excludingCount": "⟦ḗẋƈŀ {{count}}⟧",
+      "phases": "⟦{{count}} ƥħȧşḗş⟧",
+      "projects": "⟦{{count}} ƥřȯĵḗƈŧş⟧",
+      "statuses": "⟦{{count}} şŧȧŧŭşḗş⟧"
     },
     "opportunityScopeOptions": {
-      "assigned": "11111",
-      "owned": "11111",
-      "all": "11111"
+      "assigned": "⟦Ḓḗȧŀ şŧḗƥş ȧşşīɠƞḗḓ⟧",
+      "owned": "⟦Ḓḗȧŀ şŧḗƥş ȯƞ ȯẇƞḗḓ ḓḗȧŀş⟧",
+      "all": "⟦Ḓḗȧŀ şŧḗƥş ȧşşīɠƞḗḓ ȯř ȯẇƞḗḓ⟧"
     }
   },
   "actions": {
-    "print": "11111",
-    "printOptions": "11111"
+    "print": "⟦Ƥřīƞŧ⟧",
+    "printOptions": "⟦Ƥřīƞŧ ȯƥŧīȯƞş⟧"
   }
 }

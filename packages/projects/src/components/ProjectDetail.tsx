@@ -8,6 +8,7 @@ import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import { extractTaskDescriptionText } from '../lib/taskRichText';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import {
   projectKanbanHiddenStatusesKey,
   getKanbanStatusIdentity,
@@ -77,7 +78,6 @@ import type { ITeam } from '@alga-psa/types';
 import RemoveTeamDialog from './RemoveTeamDialog';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
@@ -241,11 +241,8 @@ export default function ProjectDetail({
   onUrlUpdate
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   const { money } = useCurrencyFormat();
-  const {
-    enabled: projectBillingUiEnabled,
-    loading: projectBillingUiLoading,
-  } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   // Billing surfaces are injected from the composition layer (billing package
   // implements them); null when no provider is mounted → billing UI hidden.
   const billingIntegration = useProjectBillingIntegration();
@@ -671,10 +668,10 @@ export default function ProjectDetail({
 
   // Phase → billing badge (F136) and phase → "all tasks closed" (F138) maps.
   const phaseBillingBadges = useMemo(() => (
-    projectBillingUiEnabled && billingOverview?.config
+    billingOverview?.config
       ? derivePhaseBillingBadges(billingOverview.entries, billingOverview.config.currency, billingToday)
       : {}
-  ), [billingOverview, billingToday, projectBillingUiEnabled]);
+  ), [billingOverview, billingToday]);
 
   const phaseAllTasksClosed = useMemo(() => {
     const result: Record<string, boolean> = {};
@@ -692,25 +689,21 @@ export default function ProjectDetail({
     return result;
   }, [projectTasks, phaseStatusLookup]);
 
-  // A persisted Billing preference is ambient discovery, not direct access.
-  // Keep explicit ?view=billing links functional while the UI flag is off.
+  // Fall back to kanban when a persisted Billing preference outlives the
+  // permission or the billing composition that made it reachable.
   useEffect(() => {
     if (
       !isViewModeLoading
-      && !projectBillingUiLoading
       && viewMode === 'billing'
-      && (!canViewBilling || !billingIntegration || (!projectBillingUiEnabled && initialViewMode !== 'billing'))
+      && (!canViewBilling || !billingIntegration)
     ) {
       setViewMode('kanban');
     }
   }, [
     isViewModeLoading,
-    projectBillingUiLoading,
     viewMode,
     canViewBilling,
     billingIntegration,
-    projectBillingUiEnabled,
-    initialViewMode,
     setViewMode,
   ]);
 
@@ -734,7 +727,7 @@ export default function ProjectDetail({
       setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? result.phase : p)));
       void refreshBilling();
       const readyEntry = result.ready_entries[0];
-      if (readyEntry && canViewBilling && projectBillingUiEnabled) {
+      if (readyEntry && canViewBilling) {
         // F139 — deep link into the billing view and highlight the freshly ready entry.
         toast.success(
           (toastRef) => (
@@ -761,7 +754,7 @@ export default function ProjectDetail({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
     }
-  }, [refreshBilling, canViewBilling, projectBillingUiEnabled, t, setViewMode]);
+  }, [refreshBilling, canViewBilling, t, setViewMode]);
 
   const handleReopenPhase = useCallback(async (phase: IProjectPhase) => {
     try {
@@ -781,11 +774,11 @@ export default function ProjectDetail({
       { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
       { value: 'list', label: t('listView', 'List'), icon: List },
     ];
-    if (canViewBilling && projectBillingUiEnabled && billingIntegration) {
+    if (canViewBilling && billingIntegration) {
       options.push({ value: 'billing', label: t('billingView', 'Billing'), icon: Receipt });
     }
     return options;
-  }, [t, canViewBilling, projectBillingUiEnabled, billingIntegration]);
+  }, [t, canViewBilling, billingIntegration]);
 
   const readyEntryCount = useMemo(
     () => (billingOverview?.entries ?? []).filter((entry) => entry.status === 'ready').length,
@@ -1457,6 +1450,7 @@ export default function ProjectDetail({
       // previous one, preserving the relative order at the drop position.
       let prevBefore: string | null = safeBefore;
       const statusUpdatedById = new Map<string, IProjectTask>();
+      const movedIds: string[] = [];
       for (const task of tasksToMove) {
         try {
           if (task.phase_id !== newPhaseId) {
@@ -1489,6 +1483,7 @@ export default function ProjectDetail({
             statusUpdatedById.set(task.task_id, updatedTask);
           }
           prevBefore = task.task_id;
+          movedIds.push(task.task_id);
           success++;
         } catch (error) {
           console.error(`Failed to move task ${task.task_id}:`, error);
@@ -1536,6 +1531,9 @@ export default function ProjectDetail({
           }),
         );
       }
+      // Drop the moved tasks from the selection so a follow-up drag doesn't
+      // carry them along. Failed tasks stay selected for a retry.
+      setTasksSelected(movedIds, false);
       return;
     }
 
@@ -1577,7 +1575,7 @@ export default function ProjectDetail({
     } catch (error) {
       handleError(error, 'Failed to move task');
     }
-  }, [allProjectTasks, selectedTaskIds, selectedPhase, t]);
+  }, [allProjectTasks, selectedTaskIds, selectedPhase, setTasksSelected, t]);
   
   // Handle tag changes
   const handleProjectTagsChange = (tags: ITag[]) => {
@@ -2008,7 +2006,7 @@ export default function ProjectDetail({
 
     try {
       const statusUpdatedById = new Map<string, IProjectTask>();
-      let movedInCount = 0;
+      const movedInIds: string[] = [];
       let failed = 0;
 
       // Reposition same-phase tasks at the drop location, grouped consecutively
@@ -2033,7 +2031,7 @@ export default function ProjectDetail({
       for (const task of otherPhaseTasks) {
         try {
           unwrapActionResult(await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId));
-          movedInCount++;
+          movedInIds.push(task.task_id);
         } catch (error) {
           console.error(`Failed to move task ${task.task_id}:`, error);
           failed++;
@@ -2088,7 +2086,7 @@ export default function ProjectDetail({
         }, 500);
       }
 
-      const total = statusUpdatedById.size + movedInCount;
+      const total = statusUpdatedById.size + movedInIds.length;
       if (failed === 0) {
         toast.success(
           t('projectDetail.bulkTasksMovedSuccess', '{{count}} tasks moved', { count: total }),
@@ -2101,6 +2099,10 @@ export default function ProjectDetail({
           }),
         );
       }
+
+      // Drop the moved tasks from the selection so a follow-up drag doesn't
+      // carry them along. Failed tasks stay selected for a retry.
+      setTasksSelected([...statusUpdatedById.keys(), ...movedInIds], false);
     } catch (error) {
       handleError(error, 'Failed to move tasks');
     }
@@ -2532,6 +2534,9 @@ export default function ProjectDetail({
           }),
         );
       }
+      // Drop the moved tasks from the selection so a follow-up drag doesn't
+      // carry them along. Failed tasks stay selected for a retry.
+      setTasksSelected([...movedById.keys()], false);
       setMoveConfirmation(null);
       return;
     }
@@ -3652,17 +3657,17 @@ export default function ProjectDetail({
               onValueChange={setSelectedTaskTypeFilter}
               options={[
                 { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
-                ...taskTypes.map(t => {
-                  const Icon = taskTypeIcons[t.type_key] || ClipboardList;
+                ...taskTypes.map(taskType => {
+                  const Icon = taskTypeIcons[taskType.type_key] || ClipboardList;
                   return {
-                    value: t.type_key,
+                    value: taskType.type_key,
                     label: (
                       <div className="flex items-center gap-2">
                         <Icon
                           className="w-4 h-4"
-                          style={{ color: t.color || '#6B7280' }}
+                          style={{ color: taskType.color || '#6B7280' }}
                         />
-                        <span>{t.type_name}</span>
+                        <span>{taskTypeLabel(taskType)}</span>
                       </div>
                     )
                   };
@@ -3950,17 +3955,17 @@ export default function ProjectDetail({
               onValueChange={setSelectedTaskTypeFilter}
               options={[
                 { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
-                ...taskTypes.map(t => {
-                  const Icon = taskTypeIcons[t.type_key] || ClipboardList;
+                ...taskTypes.map(taskType => {
+                  const Icon = taskTypeIcons[taskType.type_key] || ClipboardList;
                   return {
-                    value: t.type_key,
+                    value: taskType.type_key,
                     label: (
                       <div className="flex items-center gap-2">
                         <Icon
                           className="w-4 h-4"
-                          style={{ color: t.color || '#6B7280' }}
+                          style={{ color: taskType.color || '#6B7280' }}
                         />
-                        <span>{t.type_name}</span>
+                        <span>{taskTypeLabel(taskType)}</span>
                       </div>
                     )
                   };
@@ -4169,6 +4174,7 @@ export default function ProjectDetail({
             users={users}
             taskTypes={taskTypes}
             statuses={displayedKanbanStatuses}
+            effectiveStatuses={projectStatuses}
             isAddingTask={isAddingTask}
             selectedPhase={!!selectedPhase}
             ticketLinks={phaseTicketLinks}
@@ -4218,7 +4224,7 @@ export default function ProjectDetail({
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
-        {projectBillingUiEnabled && billingIntegration && (
+        {billingIntegration && (
           <billingIntegration.PaymentWarningBanner projectId={project.project_id} className="mb-3 flex-shrink-0" />
         )}
         <div className={styles.contentWrapper}>

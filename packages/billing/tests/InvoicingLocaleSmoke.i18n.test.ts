@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function readJson<T>(relativePath: string): T {
   return JSON.parse(
@@ -50,6 +51,10 @@ describe('Invoicing locale smoke', () => {
       'common',
       'designer',
       'projectBilling',
+      'invoiceDesigner',
+      'draftInvoiceDetails',
+      'documentTemplates',
+      'errors',
     ]);
   });
 
@@ -72,7 +77,7 @@ describe('Invoicing locale smoke', () => {
     ];
 
     for (const key of pseudoKeys) {
-      expect(getLeaf(xx, key)).toBe('11111');
+      expect(getLeaf(xx, key)).toMatch(pseudoPattern('xx'));
     }
   });
 
@@ -92,7 +97,7 @@ describe('Invoicing locale smoke', () => {
     ];
 
     for (const key of pseudoKeys) {
-      expect(getLeaf(xx, key)).toBe('11111');
+      expect(getLeaf(xx, key)).toMatch(pseudoPattern('xx'));
     }
   });
 
