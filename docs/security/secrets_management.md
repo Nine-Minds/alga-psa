@@ -200,9 +200,13 @@ independent of the process umask:
   `O_DIRECTORY|O_NOFOLLOW`, children resolve through the held descriptor
   (via `/proc/self/fd` where the platform provides it), and the chain is
   re-verified against the anchored identity at the write, rename, and unlink
-  boundaries. A component that changes mid-operation aborts the operation; a
-  change after the final check cannot redirect it, because the syscalls resolve
-  through the descriptor rather than the path.
+  boundaries. Missing `tenants/` and tenant directories are created the same
+  way — a non-recursive `mkdir` resolved through the parent's descriptor,
+  followed by an `O_NOFOLLOW` open and a handle `chmod` — so directory
+  preparation resolves through the same anchors as the write. A component that
+  changes mid-operation aborts the operation; a change after the final check
+  cannot redirect it, because the syscalls resolve through the descriptor
+  rather than the path.
 - The provider refuses to write through symlinks or non-regular files, and
   validates the secret root before the first write. A root the service **owns**
   but that is merely too permissive (e.g. `0755` from a looser umask or a

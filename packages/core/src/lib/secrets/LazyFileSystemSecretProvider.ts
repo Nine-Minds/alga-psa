@@ -1,11 +1,9 @@
 import type { ISecretProvider } from './ISecretProvider';
 import {
   appSecretPath,
-  ensurePrivateDirectory,
   ensureWriteBasePath,
   readFileContentSafe,
   resolveBasePath,
-  tenantDir,
   tenantSecretPath,
   unlinkTenantSecret,
   validateSecretComponent,
@@ -116,10 +114,11 @@ export class FileSystemSecretProvider implements ISecretProvider {
     }
 
     try {
-      await ensurePrivateDirectory(await tenantDir(basePath, tenantId));
       // Anchors the root → tenants/ → tenant-dir chain for the duration of the
-      // write and re-verifies it at the write and rename boundaries, so a path
-      // component swapped after the validation above cannot redirect the write.
+      // write, creating any missing directory through the held anchors, and
+      // re-verifies the chain at the write and rename boundaries — so neither
+      // directory preparation nor the write can follow a path component
+      // swapped after the validation above.
       await writeTenantSecret(basePath, tenantId, name, value);
       console.debug(`Successfully wrote tenant secret: ${filePath}`);
     } catch (error: unknown) {

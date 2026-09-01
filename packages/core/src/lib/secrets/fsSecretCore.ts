@@ -26,12 +26,16 @@
  *   the chain root → `tenants/` → tenant directory is opened component by
  *   component with `O_DIRECTORY|O_NOFOLLOW`, each child resolved through the
  *   parent's held descriptor (via `/proc/self/fd/<fd>/…` where available, so
- *   the kernel resolves from the directory inode, not the path). The chain is
- *   re-verified against the anchored identity (same dev/ino, every component a
- *   real non-symlink directory) immediately before the temp-file write, before
- *   the rename, and after it; any change aborts the operation. The temp write,
- *   rename, and unlink themselves resolve through the anchor, so a path
- *   component swapped mid-operation cannot redirect them.
+ *   the kernel resolves from the directory inode, not the path). Missing
+ *   `tenants/` and tenant directories are created the same way — a
+ *   non-recursive `mkdir` resolved through the parent's anchor, followed by an
+ *   `O_NOFOLLOW` open and a handle `chmod` — so directory preparation can no
+ *   more be redirected by a swapped path component than the write itself. The
+ *   chain is re-verified against the anchored identity (same dev/ino, every
+ *   component a real non-symlink directory) immediately before the temp-file
+ *   write, before the rename, and after it; any change aborts the operation.
+ *   The temp write, rename, and unlink themselves resolve through the anchor,
+ *   so a path component swapped mid-operation cannot redirect them.
  * - The secret root is validated before writes (real directory, not a symlink,
  *   owned by the running user). A root we own but whose mode is too permissive
  *   is tightened to `0o700` in place (the non-destructive repair path); writes
@@ -494,6 +498,81 @@ async function openAnchoredDirChain(rootPath: string, components: string[]): Pro
 }
 
 /**
+ * Ensures `name` exists as a real (non-symlink) `0o700` directory inside the
+ * anchored directory `parent`, resolving every operation through the parent's
+ * anchor. The `mkdir` is non-recursive — the only component it may ever create
+ * is `name` itself, inside the held parent inode — and `mkdir(2)` refuses to
+ * create through an existing symlink at the final component (`EEXIST`), so a
+ * swapped parent path can neither receive a new directory nor have an existing
+ * one chmodded through this call. The child is then opened with
+ * `O_DIRECTORY|O_NOFOLLOW` (a symlink or non-directory planted at the name is
+ * refused, and ownership is verified) and its mode is corrected to `0o700`
+ * through the held handle where the platform allows it.
+ */
+async function ensureChildDirAnchored(parent: AnchoredDirHandle, name: string): Promise<AnchoredDirHandle> {
+  const [fs, p] = await Promise.all([getFs(), getPath()]);
+  const childOp = p.join(parent.opPath, name);
+  const childLogical = p.join(parent.dirPath, name);
+
+  try {
+    // mkdir mode is umask-masked (which can only ever remove bits from 0o700,
+    // never add group/other access); the mode check below corrects it through
+    // the handle.
+    await fs.mkdir(childOp, { mode: SECRET_DIR_MODE });
+  } catch (error: unknown) {
+    if (!isErrno(error) || error.code !== 'EEXIST') {
+      throw error;
+    }
+  }
+
+  const child = await openDirAnchored(childOp, childLogical);
+  try {
+    if ((child.stat.mode & 0o777) !== SECRET_DIR_MODE) {
+      if (child.handle) {
+        // fchmod on the held handle: immune to any concurrent path state.
+        await child.handle.chmod(SECRET_DIR_MODE);
+        child.stat = await child.handle.stat();
+      } else {
+        await fs.chmod(child.opPath, SECRET_DIR_MODE);
+        const restat = await lstatOrNull(child.opPath);
+        if (!restat) {
+          throw unsafeLocation(childLogical, 'the directory mode could not be corrected');
+        }
+        child.stat = restat;
+      }
+      if ((child.stat.mode & 0o777) !== SECRET_DIR_MODE) {
+        throw unsafeLocation(childLogical, 'the directory mode could not be corrected');
+      }
+    }
+    return child;
+  } catch (error) {
+    await closeAnchored(child);
+    throw error;
+  }
+}
+
+/**
+ * Opens the directory chain `rootPath` → `components…` like
+ * {@link openAnchoredDirChain}, creating any missing component through its
+ * parent's held descriptor. Used by the write path so tenant-directory
+ * preparation resolves through the same anchors as the write itself and can
+ * never follow a swapped path component.
+ */
+async function openOrCreateAnchoredDirChain(rootPath: string, components: string[]): Promise<AnchoredDirHandle> {
+  let current = await openDirAnchored(rootPath, rootPath);
+  for (const name of components) {
+    let next: AnchoredDirHandle;
+    try {
+      next = await ensureChildDirAnchored(current, name);
+    } finally {
+      await closeAnchored(current);
+    }
+    current = next;
+  }
+  return current;
+}
+
+/**
  * Re-verifies, at an operation boundary, that every controlled path component
  * is still a real (non-symlink) directory and that the final component still
  * resolves to the anchored directory identity (same dev/ino). Any change —
@@ -649,8 +728,11 @@ export async function writeTenantSecretAtomic(filePath: string, value: string): 
  * anchored: root, `tenants/`, and the tenant directory are opened component by
  * component with `O_DIRECTORY|O_NOFOLLOW`, each resolved through its parent's
  * descriptor, and the chain is re-verified at the write and rename boundaries.
- * A path component swapped at any point either fails the operation closed or
- * is bypassed entirely by the anchored resolution — it can never redirect the
+ * Missing `tenants/` and tenant directories are created through the same
+ * anchors (see {@link ensureChildDirAnchored}), so preparation is as immune to
+ * a swapped component as the write. A path component swapped at any point
+ * either fails the operation closed or is bypassed entirely by the anchored
+ * resolution — it can never redirect a directory creation, a chmod, or the
  * write outside the store.
  */
 export async function writeTenantSecret(
@@ -663,7 +745,7 @@ export async function writeTenantSecret(
   await tenantSecretPath(basePath, tenantId, name); // validates all components
   const root = p.resolve(basePath);
   const chain = [root, p.join(root, TENANTS_SUBDIR), p.join(root, TENANTS_SUBDIR, tenantId)];
-  const dir = await openAnchoredDirChain(root, [TENANTS_SUBDIR, tenantId]);
+  const dir = await openOrCreateAnchoredDirChain(root, [TENANTS_SUBDIR, tenantId]);
   try {
     await writeSecretFileInDir(dir, chain, name, value);
   } finally {
