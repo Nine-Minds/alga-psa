@@ -3,7 +3,7 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { isEnterprise, isFeatureFlagEnabled, RELEASE_V1_5_FEATURE_FLAG } from '@alga-psa/core/features';
+import { isEnterprise } from '@alga-psa/core/features';
 import { v4 as uuidv4 } from 'uuid';
 import {
   availabilitySettingSchema,
@@ -110,13 +110,6 @@ export const getTeamsMeetingsTabState = withAuth(async (
       return { success: true, data: { visible: false, organizerUpn: null } };
     }
 
-    if (!(await isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
-      tenantId: tenant,
-      userId: user?.user_id,
-    }))) {
-      return { success: true, data: { visible: false, organizerUpn: null } };
-    }
-
     const integration = await tenantDb(db, tenant).table('teams_integrations')
       .select('install_status', 'default_meeting_organizer_upn')
       .first();
@@ -150,13 +143,6 @@ export const setDefaultMeetingOrganizer = withAuth(async (
     const hasTeamsIntegrationsTable = await db.schema.hasTable('teams_integrations');
     if (!hasTeamsIntegrationsTable) {
       return { success: false, error: 'Teams integration is not available in this environment' };
-    }
-
-    if (!(await isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
-      tenantId: tenant,
-      userId: user?.user_id,
-    }))) {
-      return { success: false, error: 'Microsoft Teams meetings are not enabled for this tenant.' };
     }
 
     const scopedDb = tenantDb(db, tenant);
@@ -203,13 +189,6 @@ export const verifyMeetingOrganizer = withAuth(async (
 
     if (!isEnterprise) {
       return { success: true, data: { valid: false, reason: 'ee_disabled' } };
-    }
-
-    if (!(await isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
-      tenantId: tenant,
-      userId: user?.user_id,
-    }))) {
-      return { success: true, data: { valid: false, reason: 'feature_disabled' } };
     }
 
     const organizerUpn = (input.upn || '').trim();

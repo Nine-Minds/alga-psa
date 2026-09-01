@@ -2,7 +2,7 @@ import axios, { type AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
 import { notifyQboConnectionChanged } from './qboConnectionChangeProvider';
 import type { QboTenantCredentials } from './types';
-import { AppError } from '@alga-psa/core';
+import { AppError, sanitizeProviderMessage, toSafeProviderError, type SafeProviderError } from '@alga-psa/core';
 import type {
   AccountingChangeSet,
   AccountingExternalChange,
@@ -31,18 +31,11 @@ function extractIntuitTid(headers: unknown): string | undefined {
 
 // Never log or store a raw AxiosError: its request config carries the
 // Authorization header (Bearer/Basic credentials) and request body (refresh
-// token), and these logs ship to a shared aggregator. Reduce it to the safe,
-// useful fields.
-function describeAxiosError(error: unknown): Record<string, unknown> {
-  if (axios.isAxiosError(error)) {
-    return {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      intuitTid: extractIntuitTid(error.response?.headers)
-    };
-  }
-  return { message: error instanceof Error ? error.message : String(error) };
+// token), and response bodies can carry customer/invoice data, and these
+// logs ship to a shared aggregator. Reduce it to the allowlisted safe fields
+// via the shared accounting-provider serializer.
+function describeAxiosError(error: unknown, operation?: string): SafeProviderError {
+  return toSafeProviderError('qbo', error, { operation });
 }
 
 // Env overrides exist so test environments can point at the QBO emulator
@@ -262,7 +255,10 @@ export async function getStoredQboCredentialsMap(tenantId: string): Promise<Reco
     }
     return allCredentials;
   } catch (error) {
-    logger.error(`Error parsing QBO credentials for tenant ${tenantId}:`, error);
+    // Parse errors can quote the stored secret payload; log only the error type.
+    logger.error(
+      `Error parsing QBO credentials for tenant ${tenantId}: ${error instanceof Error ? error.name : 'unknown error'}`
+    );
     return {};
   }
 }
@@ -354,12 +350,12 @@ export class QboClientService {
       try {
         await this.refreshToken();
       } catch (error) {
-        const errorInfo = describeAxiosError(error);
+        const errorInfo = describeAxiosError(error, 'tokenRefresh');
         logger.error({ tenantId: this.tenantId, realmId: this.realmId, ...errorInfo }, 'Failed to refresh QBO token');
         if (axios.isAxiosError(error) && error.response?.status === 400) {
-          throw new AppError('QBO_AUTH_ERROR', 'Failed to refresh QBO token. Please re-authenticate.', { originalError: errorInfo, intuitTid: errorInfo.intuitTid });
+          throw new AppError('QBO_AUTH_ERROR', 'Failed to refresh QBO token. Please re-authenticate.', { originalError: errorInfo, intuitTid: errorInfo.correlationId });
         }
-        throw new AppError('QBO_REFRESH_FAILED', 'An error occurred during QBO token refresh.', { originalError: errorInfo, intuitTid: errorInfo.intuitTid });
+        throw new AppError('QBO_REFRESH_FAILED', 'An error occurred during QBO token refresh.', { originalError: errorInfo, intuitTid: errorInfo.correlationId });
       }
     }
 
@@ -421,7 +417,7 @@ export class QboClientService {
       logger.info({ tenantId: this.tenantId, realmId: this.realmId }, 'Successfully refreshed QBO token.');
     } catch (error) {
       logger.error(
-        { tenantId: this.tenantId, realmId: this.realmId, ...describeAxiosError(error) },
+        { tenantId: this.tenantId, realmId: this.realmId, ...describeAxiosError(error, 'tokenRefresh') },
         'Error refreshing QBO token'
       );
       throw error;
@@ -510,15 +506,18 @@ export class QboClientService {
 
         if (status === 404) {
           throw new AppError('QBO_NOT_FOUND', `QBO ${entityType ?? 'entity'} not found.`, {
-            originalError: describeAxiosError(error),
+            originalError: describeAxiosError(error, operation),
             qboOperation: operation,
             qboEntityType: entityType,
             intuitTid
           });
         }
 
-        const payload = error.response?.data ?? describeAxiosError(error);
-        throw this.mapQboError(payload, operation, entityType, intuitTid);
+        // The raw response body stays in memory only: mapQboError extracts the
+        // stable code/message from it and attaches nothing but allowlisted
+        // fields to the AppError.
+        const payload = error.response?.data ?? describeAxiosError(error, operation);
+        throw this.mapQboError(payload, operation, entityType, intuitTid, status);
       }
 
       if (error instanceof AppError) {
@@ -526,7 +525,7 @@ export class QboClientService {
       }
 
       throw new AppError('QBO_API_ERROR', 'QuickBooks request failed.', {
-        originalError: error,
+        originalError: describeAxiosError(error, operation),
         qboOperation: operation,
         qboEntityType: entityType
       });
@@ -900,7 +899,7 @@ export class QboClientService {
     }
   }
 
-  private mapQboError(err: any, operation: string, entityType?: string, intuitTid?: string): AppError {
+  private mapQboError(err: any, operation: string, entityType?: string, intuitTid?: string, status?: number): AppError {
     let message = `QBO API Error during ${operation}`;
     if (entityType) {
       message += ` on ${entityType}`;
@@ -913,7 +912,9 @@ export class QboClientService {
       null;
 
     if (qboError) {
-      message += `: ${qboError.Message ?? 'Unknown QBO Error'} (Code: ${qboError.code ?? 'N/A'}, Detail: ${qboError.Detail ?? 'N/A'})`;
+      // Keep the stable provider Message and code; omit Detail — it often
+      // embeds entity contents (customer names, invoice fields).
+      message += `: ${qboError.Message ?? 'Unknown QBO Error'} (Code: ${qboError.code ?? 'N/A'})`;
 
       // Intuit error codes: 5010 = Stale Object (SyncToken mismatch),
       // 6240 = Duplicate Name Exists. 5010 must be matched before the
@@ -945,8 +946,15 @@ export class QboClientService {
       message += ` (intuit_tid: ${intuitTid})`;
     }
 
-    return new AppError(code, message, {
-      originalError: err,
+    // Allowlisted details only: never attach the provider response body — it
+    // can contain customer names, invoice contents, and request metadata.
+    return new AppError(code, sanitizeProviderMessage(message), {
+      provider: 'qbo',
+      status,
+      providerErrorCode:
+        typeof qboError?.code === 'string' || typeof qboError?.code === 'number'
+          ? String(qboError.code)
+          : undefined,
       qboOperation: operation,
       qboEntityType: entityType,
       intuitTid
@@ -958,10 +966,15 @@ export async function getQboClient(tenantId: string, realmId?: string | null): P
   try {
     return await QboClientService.create(tenantId, realmId);
   } catch (error) {
-    logger.error({ tenantId, realmId, error }, 'Failed to create QBO client service instance');
+    logger.error(
+      { tenantId, realmId, ...describeAxiosError(error, 'createClient') },
+      'Failed to create QBO client service instance'
+    );
     if (error instanceof AppError) {
       throw error;
     }
-    throw new AppError('QBO_INIT_FAILED', 'Failed to initialize QuickBooks Online connection.', { originalError: error });
+    throw new AppError('QBO_INIT_FAILED', 'Failed to initialize QuickBooks Online connection.', {
+      originalError: describeAxiosError(error, 'createClient')
+    });
   }
 }

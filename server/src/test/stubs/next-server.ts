@@ -49,75 +49,114 @@ class StubResponseCookies {
     return this;
   }
 
-  delete(name: string): this {
-    return this.set(name, '', { maxAge: 0 });
-  }
-
-  // Next.js ResponseCookies also exposes get()/getAll(), reading back the
-  // cookies that were set on this response. Tests inspect the CSRF cookie's
-  // value and attributes, so parse them out of the serialized set-cookie
-  // header(s). Last write for a given name wins, mirroring Next semantics.
+  // Mirrors Next.js ResponseCookies.get: returns the most recently set cookie
+  // for `name`, parsed back from the set-cookie header(s), with its attributes.
   get(name: string): (StubCookieObjectForm) | undefined {
+    const raw =
+      typeof (this.headers as any).getSetCookie === 'function'
+        ? (this.headers as any).getSetCookie()
+        : (this.headers.get('set-cookie') ? [this.headers.get('set-cookie') as string] : []);
+
     let found: StubCookieObjectForm | undefined;
-    for (const cookie of this.getAll()) {
-      if (cookie.name === name) found = cookie;
+    for (const header of raw as string[]) {
+      const segments = header.split(';').map((s) => s.trim()).filter(Boolean);
+      if (!segments.length) continue;
+      const eq = segments[0].indexOf('=');
+      if (eq === -1) continue;
+      const cookieName = segments[0].slice(0, eq);
+      if (cookieName !== name) continue;
+
+      const parsed: StubCookieObjectForm = {
+        name: cookieName,
+        value: decodeURIComponent(segments[0].slice(eq + 1))
+      };
+      for (const attr of segments.slice(1)) {
+        const aEq = attr.indexOf('=');
+        const key = (aEq === -1 ? attr : attr.slice(0, aEq)).toLowerCase();
+        const val = aEq === -1 ? undefined : attr.slice(aEq + 1);
+        if (key === 'path') parsed.path = val;
+        else if (key === 'domain') parsed.domain = val;
+        else if (key === 'max-age' && val !== undefined) parsed.maxAge = Number(val);
+        else if (key === 'expires' && val !== undefined) parsed.expires = new Date(val);
+        else if (key === 'httponly') parsed.httpOnly = true;
+        else if (key === 'secure') parsed.secure = true;
+        else if (key === 'samesite' && val !== undefined)
+          parsed.sameSite = val.toLowerCase() as StubCookieSetOptions['sameSite'];
+      }
+      // Keep scanning so the last matching set-cookie wins (most recent).
+      found = parsed;
     }
     return found;
   }
 
-  getAll(): StubCookieObjectForm[] {
-    const raw =
-      typeof (this.headers as any).getSetCookie === 'function'
-        ? ((this.headers as any).getSetCookie() as string[])
-        : this.headers.get('set-cookie')
-          ? [this.headers.get('set-cookie') as string]
-          : [];
-
-    const cookies: StubCookieObjectForm[] = [];
-    for (const serialized of raw) {
-      const segments = serialized.split(';').map((s) => s.trim()).filter(Boolean);
-      if (segments.length === 0) continue;
-      const [pair, ...attrs] = segments;
-      const eq = pair.indexOf('=');
-      if (eq === -1) continue;
-      const cookie: StubCookieObjectForm = {
-        name: pair.slice(0, eq).trim(),
-        value: decodeURIComponent(pair.slice(eq + 1).trim()),
-      };
-      for (const attr of attrs) {
-        const aeq = attr.indexOf('=');
-        const key = (aeq === -1 ? attr : attr.slice(0, aeq)).trim().toLowerCase();
-        const val = aeq === -1 ? undefined : attr.slice(aeq + 1).trim();
-        switch (key) {
-          case 'path':
-            cookie.path = val;
-            break;
-          case 'domain':
-            cookie.domain = val;
-            break;
-          case 'max-age':
-            cookie.maxAge = val === undefined ? undefined : Number(val);
-            break;
-          case 'expires':
-            cookie.expires = val === undefined ? undefined : new Date(val);
-            break;
-          case 'httponly':
-            cookie.httpOnly = true;
-            break;
-          case 'secure':
-            cookie.secure = true;
-            break;
-          case 'samesite':
-            cookie.sameSite = (val ?? '').toLowerCase() as StubCookieSetOptions['sameSite'];
-            break;
-          default:
-            break;
-        }
-      }
-      cookies.push(cookie);
-    }
-    return cookies;
+  delete(name: string): this {
+    return this.set(name, '', { maxAge: 0 });
   }
+
+  // Next's ResponseCookies reads back what the route just set, attributes
+  // included. Reparse the Set-Cookie headers rather than caching state so
+  // cookies written straight onto the headers are visible too.
+  get(name: string): StubCookieObjectForm | undefined {
+    const matches = this.getAll().filter((cookie) => cookie.name === name);
+    return matches.length === 0 ? undefined : matches[matches.length - 1];
+  }
+
+  getAll(): StubCookieObjectForm[] {
+    return this.rawCookies().map((raw) => parseSetCookie(raw));
+  }
+
+  has(name: string): boolean {
+    return this.get(name) !== undefined;
+  }
+
+  private rawCookies(): string[] {
+    const headers = this.headers as Headers & { getSetCookie?: () => string[] };
+    if (typeof headers.getSetCookie === 'function') {
+      return headers.getSetCookie();
+    }
+    const joined = this.headers.get('set-cookie');
+    return joined ? [joined] : [];
+  }
+}
+
+function parseSetCookie(raw: string): StubCookieObjectForm {
+  const [pair, ...attributes] = raw.split(';');
+  const idx = pair.indexOf('=');
+  const cookie: StubCookieObjectForm = {
+    name: (idx === -1 ? pair : pair.slice(0, idx)).trim(),
+    value: idx === -1 ? '' : decodeURIComponent(pair.slice(idx + 1).trim()),
+  };
+
+  for (const attribute of attributes) {
+    const attrIdx = attribute.indexOf('=');
+    const key = (attrIdx === -1 ? attribute : attribute.slice(0, attrIdx)).trim().toLowerCase();
+    const attrValue = attrIdx === -1 ? '' : attribute.slice(attrIdx + 1).trim();
+    switch (key) {
+      case 'path':
+        cookie.path = attrValue;
+        break;
+      case 'domain':
+        cookie.domain = attrValue;
+        break;
+      case 'max-age':
+        cookie.maxAge = Number(attrValue);
+        break;
+      case 'expires':
+        cookie.expires = new Date(attrValue);
+        break;
+      case 'httponly':
+        cookie.httpOnly = true;
+        break;
+      case 'secure':
+        cookie.secure = true;
+        break;
+      case 'samesite':
+        cookie.sameSite = attrValue.toLowerCase() as StubCookieSetOptions['sameSite'];
+        break;
+    }
+  }
+
+  return cookie;
 }
 
 class StubRequestCookies {

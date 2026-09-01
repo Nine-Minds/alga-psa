@@ -3032,7 +3032,6 @@
           "test": {
             "sent": "Mensaje de prueba de Teams enviado.",
             "failed": "Error en el mensaje de prueba de Teams.",
-            "featureDisabled": "Microsoft Teams no está habilitado para este inquilino.",
             "integrationInactive": "Active la integración de Teams antes de enviar un mensaje de prueba.",
             "capabilityDisabled": "Habilite la capacidad de bot personal antes de enviar un mensaje de prueba.",
             "botNotConfigured": "Configure las credenciales del bot de Teams antes de enviar un mensaje de prueba.",
@@ -3041,7 +3040,6 @@
             "skipped": "Se omitió el mensaje de prueba de Teams."
           },
           "steps": {
-            "featureFlag": "Habilitación de la función Microsoft Teams",
             "integrationStatus": "Estado de la integración de Teams",
             "capabilities": "Capacidades de Teams",
             "microsoftProfile": "Disponibilidad del perfil de Microsoft",
@@ -3053,7 +3051,6 @@
             "recentDeliveryHealth": "Estado reciente de la entrega de Teams"
           },
           "recommendation": {
-            "featureFlag": "Habilite Microsoft Teams para este inquilino.",
             "activate": "Active la integración de Teams en la configuración.",
             "capabilities": "Habilite el bot personal y las notificaciones de actividad para Teams.",
             "profile": "Seleccione un perfil de Microsoft listo para Teams.",
@@ -3244,8 +3241,8 @@
               "remedy": "Haga que el usuario inicie sesión con Microsoft (SSO del portal MSP o la pestaña de Teams) para que su cuenta quede asignada."
             },
             "feature_disabled": {
-              "cause": "Microsoft Teams no está habilitado para este inquilino, por lo que los envíos se omiten mientras se conserva la configuración.",
-              "remedy": "Habilite la función de la versión 1.5 para este inquilino."
+              "cause": "La función de Teams estaba deshabilitada para este inquilino cuando se intentó la entrega (antes de 1.5).",
+              "remedy": "Teams ya está disponible de forma general; reintente el envío."
             },
             "integration_inactive": {
               "cause": "La integración de Teams no está activa para este inquilino.",

@@ -168,7 +168,7 @@ async function renderPage(props: Record<string, unknown> = {}) {
   const { default: IntegrationsSettingsPage } = await import(
     '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
   );
-  return render(<IntegrationsSettingsPage teamsFeatureEnabled {...props} />);
+  return render(<IntegrationsSettingsPage {...props} />);
 }
 
 describe('IntegrationsSettingsPage communication sub-navigation', () => {
@@ -231,16 +231,6 @@ describe('IntegrationsSettingsPage communication sub-navigation', () => {
 
     expect(container.querySelector('#integration-subsection-communication-telephony')).not.toHaveAttribute('hidden');
     expect(screen.getByTestId('telephony-integration-settings-shell')).toBeInTheDocument();
-  });
-
-  it('omits the telephony sub-section when the release feature is disabled', async () => {
-    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
-
-    await renderPage({ teamsFeatureEnabled: false });
-
-    expect(screen.queryByTestId('telephony-integration-settings-shell')).not.toBeInTheDocument();
-    expect(screen.queryByText('Telephony', { selector: 'button *, button' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Manage add-ons' })).not.toBeInTheDocument();
   });
 
   it('T005: CE lands on Inbound Email and never mounts the telephony settings', async () => {

@@ -94,7 +94,7 @@ In `Settings -> Integrations -> Microsoft Teams`, click `Run diagnostics`.
 
 The diagnostics panel reports:
 
-- Whether `release-v1-5-feature` and the Teams integration are active.
+- Whether the Teams integration is active.
 - Whether a Microsoft profile and Teams package are configured.
 - Whether the organizer can be resolved for recording/transcript capture.
 - The recording/transcript permission checklist: `Calendars.ReadWrite`, `OnlineMeetingRecording.Read.All`, `OnlineMeetingTranscript.Read.All`, and Exchange mailbox scoping.

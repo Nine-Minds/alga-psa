@@ -8,11 +8,6 @@ export {
 } from './lib/phoneNumbers';
 export { auditContactPhoneNormalization, matchCallParty } from './lib/callMatching';
 export {
-  assertTelephonyFeatureAccess,
-  TelephonyFeatureDisabledError,
-  tenantHasTelephonyFeatureAccess,
-} from './lib/telephonyFeatureGate';
-export {
   buildCallInteractionNotes,
   buildCallInteractionTitle,
   CALL_INTERACTION_TYPE_NAME,

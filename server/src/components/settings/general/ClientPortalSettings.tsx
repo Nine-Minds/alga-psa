@@ -39,14 +39,13 @@ import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions/tenant-actions/portalDomainActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useActionPolling, useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useActionPolling } from '@alga-psa/ui/hooks';
 import {
   getClientPortalFeatureSettings,
   updateClientPortalFeatureSettings,
 } from '@alga-psa/client-portal/actions/client-portal-actions/clientPortalFeatureSettingsActions';
 
 const UNSET_LOCALE_VALUE = '__inherit__';
-const RELEASE_V1_5_FLAG = 'release-v1-5-feature';
 const DEFAULT_PORTAL_HERO_GRADIENT: PortalHeroGradient = 'primary-shades';
 const DEFAULT_PORTAL_SIDEBAR_STYLE: PortalSidebarStyle = 'default';
 
@@ -85,8 +84,7 @@ const ClientPortalSettings = () => {
   // Only Enterprise puts the tenant mark on MSP surfaces, so only there does the
   // portal logo deserve the extra sentence.
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  const releaseV15Flag = useFeatureFlag(RELEASE_V1_5_FLAG, { defaultValue: false });
-  const advancedAppearanceEnabled = isEEAvailable && releaseV15Flag.enabled;
+  const advancedAppearanceEnabled = isEEAvailable;
   const [brandingLoading, setBrandingLoading] = useState(true);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');

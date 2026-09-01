@@ -16,21 +16,16 @@ interface LaunchTimeEntryParams {
   context: TimeEntryWorkItemContext;
   onComplete?: () => void;
   existingEntryId?: string;
-  // release-v1-5-feature launch feedback. Absent/false reproduces the legacy
-  // toast behavior exactly (plain toast, legacy copy); true switches to the
-  // deduplicated long-lived blocked toast with the refreshed copy.
-  enhancedLaunchFeedback?: boolean;
 }
 
 // Precondition failures happen before any dialog opens, so this toast is the only
 // feedback the user gets. Keep it on screen long enough to read, and reuse one id
 // so repeated clicks refresh the message instead of looking like a dead button.
-const launchBlockedToastV15 = (message: string) => {
+const launchBlockedToast = (message: string) => {
   toast.error(message, { id: 'time-entry-launch-blocked', duration: 10000 });
 };
 
-const NO_TIME_PERIOD_MESSAGE_LEGACY = 'No active time period found. Please configure time periods before entering time.';
-const NO_TIME_PERIOD_MESSAGE_V15 = 'No time period covers today, so time can’t be entered yet. Ask an administrator to create time periods under Settings → Time Entry.';
+const NO_TIME_PERIOD_MESSAGE = 'No time period covers today, so time can’t be entered yet. Ask an administrator to create time periods under Settings → Time Entry.';
 
 const buildWorkItem = (context: TimeEntryWorkItemContext): Omit<IExtendedWorkItem, 'tenant'> => {
   return {
@@ -70,18 +65,7 @@ const deriveDefaultTimes = (context: TimeEntryWorkItemContext) => {
   return { defaultStartTime: undefined, defaultEndTime: undefined };
 };
 
-export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, context, onComplete, existingEntryId, enhancedLaunchFeedback }: LaunchTimeEntryParams): Promise<void> {
-  // release-v1-5-feature gate: flag off keeps the exact legacy toast surface
-  // (plain toast.error, legacy copy); flag on gets the deduplicated long-lived
-  // blocked toast with the refreshed copy.
-  const launchBlockedToast = (message: string) => {
-    if (enhancedLaunchFeedback) {
-      launchBlockedToastV15(message);
-    } else {
-      toast.error(message);
-    }
-  };
-
+export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, context, onComplete, existingEntryId }: LaunchTimeEntryParams): Promise<void> {
   try {
     const user = await getCurrentUser();
     if (!user?.user_id) {
@@ -108,7 +92,7 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
       return;
     }
     if (!currentTimePeriod) {
-      launchBlockedToast(enhancedLaunchFeedback ? NO_TIME_PERIOD_MESSAGE_V15 : NO_TIME_PERIOD_MESSAGE_LEGACY);
+      launchBlockedToast(NO_TIME_PERIOD_MESSAGE);
       return;
     }
 

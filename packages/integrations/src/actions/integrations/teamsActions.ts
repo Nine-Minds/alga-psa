@@ -26,7 +26,14 @@ import type {
 
 type EeTeamsDiagnosticsActions = typeof import('@alga-psa/ee-microsoft-teams/actions');
 export type TeamsDiagnosticsReport = Awaited<ReturnType<EeTeamsDiagnosticsActions['runTeamsDiagnosticsImpl']>>;
-export type TeamsTestMessageResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['sendTeamsTestMessageImpl']>>;
+export type TeamsTestMessageResult =
+  | Awaited<ReturnType<EeTeamsDiagnosticsActions['sendTeamsTestMessageImpl']>>
+  | {
+      status: 'skipped';
+      reason: 'ee_unavailable';
+      detail: string;
+      deliveryId: null;
+    };
 
 // F054-F056 live-validation results (typed via the EE impls through the /actions facade).
 export type TeamsGraphCredentialValidationResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['validateTeamsGraphCredentialsImpl']>>;
@@ -613,8 +620,8 @@ export const runTeamsDiagnostics = withAuth(async (
       overallStatus: 'fail',
       steps: [
         {
-          id: 'feature_flag',
-          title: 'Teams feature availability',
+          id: 'availability',
+          title: 'Teams availability',
           status: 'fail',
           detail: availability.message,
           durationMs: 0,
@@ -638,10 +645,10 @@ export const sendTeamsTestMessage = withAuth(async (
   if (availability.enabled === false) {
     return {
       status: 'skipped',
-      reason: 'feature_disabled',
+      reason: 'ee_unavailable',
       detail: availability.message,
       deliveryId: null,
-    } as TeamsTestMessageResult;
+    };
   }
 
   const actions = await loadEeTeamsActions();

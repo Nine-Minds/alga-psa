@@ -3032,7 +3032,6 @@
           "test": {
             "sent": "Teams-testbericht verzonden.",
             "failed": "Teams-testbericht mislukt.",
-            "featureDisabled": "Microsoft Teams is niet ingeschakeld voor deze tenant.",
             "integrationInactive": "Activeer de Teams-integratie voordat u een testbericht verzendt.",
             "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat u een testbericht verzendt.",
             "botNotConfigured": "Configureer de Teams-botreferenties voordat u een testbericht verzendt.",
@@ -3041,7 +3040,6 @@
             "skipped": "Het Teams-testbericht is overgeslagen."
           },
           "steps": {
-            "featureFlag": "Microsoft Teams-functievrijgave",
             "integrationStatus": "Status van Teams-integratie",
             "capabilities": "Teams-mogelijkheden",
             "microsoftProfile": "Gereedheid van Microsoft-profiel",
@@ -3053,7 +3051,6 @@
             "recentDeliveryHealth": "Recente Teams-leveringsstatus"
           },
           "recommendation": {
-            "featureFlag": "Schakel Microsoft Teams in voor deze tenant.",
             "activate": "Activeer de Teams-integratie in de instellingen.",
             "capabilities": "Schakel de persoonlijke bot en activiteitsmeldingen voor Teams in.",
             "profile": "Selecteer een gereed Microsoft-profiel voor Teams.",
@@ -3244,8 +3241,8 @@
               "remedy": "Laat de gebruiker zich aanmelden met Microsoft (MSP-portal-SSO of het Teams-tabblad) zodat hun account wordt gekoppeld."
             },
             "feature_disabled": {
-              "cause": "Microsoft Teams is niet ingeschakeld voor deze tenant, dus verzendingen worden overgeslagen terwijl de configuratie behouden blijft.",
-              "remedy": "Schakel de versie 1.5-functie in voor deze tenant."
+              "cause": "De Teams-functie was uitgeschakeld voor deze tenant toen de bezorging werd geprobeerd (vóór 1.5).",
+              "remedy": "Teams is nu algemeen beschikbaar; probeer het verzenden opnieuw."
             },
             "integration_inactive": {
               "cause": "De Teams-integratie is niet actief voor deze tenant.",

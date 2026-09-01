@@ -3055,7 +3055,6 @@
           "test": {
             "sent": "Teams test message sent.",
             "failed": "Teams test message failed.",
-            "featureDisabled": "Microsoft Teams integration is not enabled for this tenant.",
             "integrationInactive": "Activate the Teams integration before sending a test message.",
             "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
             "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
@@ -3064,7 +3063,6 @@
             "skipped": "Teams test message was skipped."
           },
           "steps": {
-            "featureFlag": "Teams feature availability",
             "integrationStatus": "Teams integration status",
             "capabilities": "Teams capabilities",
             "microsoftProfile": "Microsoft profile readiness",
@@ -3076,7 +3074,6 @@
             "recentDeliveryHealth": "Recent Teams delivery health"
           },
           "recommendation": {
-            "featureFlag": "Enable release-v1-5-feature for this tenant.",
             "activate": "Activate the Teams integration in settings.",
             "capabilities": "Enable personal bot and activity notifications for Teams.",
             "profile": "Select a ready Microsoft profile for Teams.",
@@ -3267,8 +3264,8 @@
               "remedy": "Have the user sign in with Microsoft (MSP portal SSO or the Teams tab) so their account is mapped."
             },
             "feature_disabled": {
-              "cause": "The Teams release feature is disabled, so sends are skipped.",
-              "remedy": "Enable release-v1-5-feature for this tenant."
+              "cause": "The Teams feature was disabled for this tenant when the delivery was attempted (pre-1.5).",
+              "remedy": "Teams is now generally available; retry the send."
             },
             "integration_inactive": {
               "cause": "The Teams integration is not active for this tenant.",

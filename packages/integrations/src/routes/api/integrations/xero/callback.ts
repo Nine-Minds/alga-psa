@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import logger from '@alga-psa/core/logger';
+import { toSafeProviderError } from '@alga-psa/core';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     response = await handleCallbackRequest(request);
   } catch (error) {
     logger.error('[xeroOAuth] Unexpected Xero OAuth callback failure', {
-      errorCode: error instanceof Error ? error.constructor.name : 'unknown_error'
+      error: toSafeProviderError('xero', error, { operation: 'oauthCallback' })
     });
     response = createRedirect(FAILURE_PATH, { xero_error: 'unexpected_failure' });
   }
@@ -258,7 +259,16 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
     const accessToken: string | undefined = tokenData.access_token;
     const refreshToken: string | undefined = tokenData.refresh_token;
     if (!accessToken || !refreshToken) {
-      logger.error('[xeroOAuth] Token response missing access or refresh token', { tenantId });
+      // Token-exchange responses are sensitive even when malformed: whatever
+      // Xero returned may still contain tokens or request metadata. Log only
+      // which expected fields were absent.
+      logger.error('[xeroOAuth] token response missing expected fields', {
+        tenantId,
+        missingFields: [
+          !accessToken ? 'access_token' : null,
+          !refreshToken ? 'refresh_token' : null
+        ].filter(Boolean)
+      });
       return createRedirect(FAILURE_PATH, { xero_error: 'token_exchange_failed' });
     }
 
@@ -373,11 +383,12 @@ async function handleCallbackRequest(request: NextRequest): Promise<NextResponse
 
     return createRedirect(SUCCESS_PATH);
   } catch (error) {
+    // The failed request may be the token exchange itself: reduce to the safe
+    // allowlist (status, provider error code, sanitized message, correlation
+    // ID) — never the response body or request config.
     logger.error('[xeroOAuth] Failed to complete Xero OAuth callback', {
       tenantId,
-      errorCode: axios.isAxiosError(error)
-        ? `status_${String(error.response?.status ?? 'unknown')}`
-        : 'unknown_error'
+      error: toSafeProviderError('xero', error, { operation: 'tokenExchange' })
     });
     return createRedirect(FAILURE_PATH, { xero_error: 'oauth_failed' });
   }
