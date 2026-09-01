@@ -1221,6 +1221,10 @@ const nextConfig = {
     incomingRequests: {
       ignore: [/\/callback([\/?]|$)/],
     },
+    // Server-function timing lines serialize the action's arguments, which for
+    // several settings actions include field values users just typed. Keep the
+    // timing noise off entirely. Dev-only — same scope as incomingRequests.
+    serverFunctions: false,
   },
   // SWC compiler: strip console.* in production output (excluding error/warn).
   // Cuts bytes; minify pass also has less to walk.
