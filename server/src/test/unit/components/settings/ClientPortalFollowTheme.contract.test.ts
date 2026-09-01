@@ -28,9 +28,8 @@ describe('client portal follows the organization theme', () => {
     expect(settingsSource).toContain('data-automation-id="client-portal-follow-theme-switch"');
   });
 
-  it('keeps the advanced appearance UI behind Enterprise and the v1.5 release flag', () => {
-    expect(settingsSource).toContain("useFeatureFlag(RELEASE_V1_5_FLAG, { defaultValue: false })");
-    expect(settingsSource).toContain('isEEAvailable && releaseV15Flag.enabled');
+  it('keeps the advanced appearance UI behind Enterprise', () => {
+    expect(settingsSource).toContain('const advancedAppearanceEnabled = isEEAvailable');
     expect(settingsSource).toMatch(
       /<ClientPortalDomainSettings\s+headerAction=\{advancedAppearanceEnabled \? \(\s*<CopyClientPortalLinkButton/,
     );
@@ -38,9 +37,8 @@ describe('client portal follows the organization theme', () => {
       /advancedAppearanceEnabled && \(\s*<div className="flex justify-end">\s*<CopyClientPortalLinkButton/,
     );
     expect(settingsSource).not.toContain('clientPortal.branding.help.companyLogoMsp');
-    expect(appearancePageSource).toContain("'release-v1-5-feature'");
-    expect(appearancePageSource).toContain('isEnterprise && await checkFeatureFlag');
-    expect(sidebarSource).toContain("useFeatureFlag('release-v1-5-feature', { defaultValue: false })");
+    expect(appearancePageSource).toContain('if (!isEnterprise)');
+    expect(sidebarSource).not.toContain('release-v1-5-feature');
   });
 
   it('keeps the CE logo variants and client-portal sidebar color available', () => {

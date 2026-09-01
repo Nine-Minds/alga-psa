@@ -3023,7 +3023,6 @@
           "test": {
             "sent": "Message de test Teams envoyé.",
             "failed": "Échec du message de test Teams.",
-            "featureDisabled": "Microsoft Teams n'est pas activé pour ce locataire.",
             "integrationInactive": "Activez l'intégration Teams avant d'envoyer un message de test.",
             "capabilityDisabled": "Activez la fonctionnalité de bot personnel avant d'envoyer un message de test.",
             "botNotConfigured": "Configurez les identifiants du bot Teams avant d'envoyer un message de test.",
@@ -3032,7 +3031,6 @@
             "skipped": "Le message de test Teams a été ignoré."
           },
           "steps": {
-            "featureFlag": "Activation de la fonctionnalité Microsoft Teams",
             "integrationStatus": "État de l'intégration Teams",
             "capabilities": "Fonctionnalités Teams",
             "microsoftProfile": "Disponibilité du profil Microsoft",
@@ -3044,7 +3042,6 @@
             "recentDeliveryHealth": "Santé récente de la distribution Teams"
           },
           "recommendation": {
-            "featureFlag": "Activez Microsoft Teams pour ce locataire.",
             "activate": "Activez l'intégration Teams dans les paramètres.",
             "capabilities": "Activez le bot personnel et les notifications d'activité pour Teams.",
             "profile": "Sélectionnez un profil Microsoft prêt pour Teams.",
@@ -3235,8 +3232,8 @@
               "remedy": "Demandez à l'utilisateur de se connecter avec Microsoft (SSO du portail MSP ou l'onglet Teams) afin que son compte soit associé."
             },
             "feature_disabled": {
-              "cause": "Microsoft Teams n'est pas activé pour ce locataire, les envois sont donc ignorés tandis que la configuration est conservée.",
-              "remedy": "Activez la fonctionnalité de la version 1.5 pour ce locataire."
+              "cause": "La fonctionnalité Teams était désactivée pour ce locataire lors de la tentative d'envoi (avant 1.5).",
+              "remedy": "Teams est désormais disponible pour tous ; relancez l'envoi."
             },
             "integration_inactive": {
               "cause": "L'intégration Teams n'est pas active pour ce locataire.",

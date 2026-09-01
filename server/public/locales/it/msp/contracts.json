@@ -833,7 +833,6 @@
         "editPricingSchedule": "Modifica pianificazione dei prezzi"
       },
       "validation": {
-        "currencySettingsLoading": "Le impostazioni della valuta sono ancora in caricamento; riprova tra un momento",
         "customRatePositive": "La tariffa personalizzata deve essere un numero positivo",
         "customRateRequired": "La tariffa personalizzata è obbligatoria quando non si utilizza la tariffa predefinita",
         "durationPositive": "La durata deve essere un numero positivo",

@@ -4,7 +4,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { AlertCircle, Bell, CheckCircle, Info } from 'lucide-react';
 import { markAsReadAction } from '@alga-psa/notifications/actions';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { NotificationActivity } from '@alga-psa/types';
 
@@ -58,16 +57,13 @@ export function ClientNotificationCard({
   onOpen,
 }: ClientNotificationCardProps) {
   const { t } = useTranslation('client-portal');
-  // Flag off: markup/behavior exactly as today. Flag on: priority ring/dim + indicator.
-  const { enabled: priorityEnabled } = useFeatureFlag('release-v1-5-feature');
-  const priorityCardClass = priorityEnabled
-    ? activity.priority === 'high'
-      ? ' ring-1 ring-rose-400'
-      : activity.priority === 'low'
-        ? ' opacity-70'
-        : ''
-    : '';
-  const priorityIndicator = priorityEnabled ? PRIORITY_INDICATOR[activity.priority] : undefined;
+  // Priority ring/dim + indicator (task 29.8.46).
+  const priorityCardClass = activity.priority === 'high'
+    ? ' ring-1 ring-rose-400'
+    : activity.priority === 'low'
+      ? ' opacity-70'
+      : '';
+  const priorityIndicator = PRIORITY_INDICATOR[activity.priority];
 
   const handleClick = async () => {
     if (!activity.isRead) {

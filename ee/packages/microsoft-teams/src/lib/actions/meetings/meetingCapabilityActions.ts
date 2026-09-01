@@ -2,7 +2,6 @@
 
 import { isEnterprise } from '@alga-psa/core/features';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { tenantHasTeamsFeatureAccess } from '../../teams/teamsFeatureGate';
 
 type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'error';
 
@@ -15,7 +14,7 @@ interface TeamsMeetingCapabilityRow {
   send_meeting_invites?: boolean | null;
 }
 
-export type TeamsMeetingCapabilityReason = 'ee_disabled' | 'feature_disabled' | 'not_configured' | 'no_organizer';
+export type TeamsMeetingCapabilityReason = 'ee_disabled' | 'not_configured' | 'no_organizer';
 export type TeamsRecordingCapabilityReason = 'meeting_unavailable' | 'missing_organizer_object_id';
 
 export interface TeamsMeetingCapabilityResult {
@@ -39,9 +38,6 @@ export async function getTeamsMeetingCapability(
   }
 
   const { knex } = await createTenantKnex(tenantId);
-  if (!(await tenantHasTeamsFeatureAccess(tenantId))) {
-    return { available: false, reason: 'feature_disabled', recordingsAvailable: false, recordingReason: 'meeting_unavailable' };
-  }
 
   const integration = await tenantDb(knex, tenantId).table<TeamsMeetingCapabilityRow>('teams_integrations')
     .first();

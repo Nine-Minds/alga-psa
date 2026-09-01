@@ -1162,14 +1162,6 @@
       "saveFailed": "No se pudo crear el programa de mantenimiento"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documentos y contraseñas",
-    "description": "Ficha combinada para documentos de activos, credenciales y registros seguros relacionados",
-    "passwords": {
-      "title": "Contraseñas y secretos",
-      "comingSoon": "Próximamente gestión segura de contraseñas."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Horarios de mantenimiento",
     "description": "Pestaña de gestión del programa de mantenimiento para servicios planificados y trabajos recurrentes",

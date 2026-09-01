@@ -3,9 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import {
-  PREPAID_BALANCE_ALERT_FLAG,
   getPrepaidBalanceAlertSettingsDb,
   updatePrepaidBalanceAlertSettingsDb,
   prepaidBalanceAlertSettingsInputSchema,
@@ -22,17 +20,6 @@ import {
 type ReadResult = PrepaidBalanceAlertSettingsWithDefault | ActionMessageError | ActionPermissionError;
 type UpdateResult = { success: true } | ActionMessageError | ActionPermissionError;
 
-const FLAG_DISABLED_MESSAGE = 'Prepaid balance alerts are not enabled for this workspace';
-
-async function featureEnabled(tenantId: string): Promise<boolean> {
-  try {
-    return await isFeatureFlagEnabled(PREPAID_BALANCE_ALERT_FLAG, { tenantId });
-  } catch {
-    // Missing, unavailable, or throwing flag infrastructure fails closed.
-    return false;
-  }
-}
-
 /**
  * Read the prepaid balance alert policy for one client. Tenant/client scoping
  * comes from the authenticated session; no caller-provided tenant is accepted.
@@ -44,9 +31,6 @@ export const getPrepaidBalanceAlertSettings = withAuth(async (
 ): Promise<ReadResult> => {
   if (!tenant) {
     return actionError('Tenant context not found', 'msp/billing:errors.context.tenantContextNotFound');
-  }
-  if (!(await featureEnabled(tenant))) {
-    return actionError(FLAG_DISABLED_MESSAGE);
   }
   if (!(await hasPermission(user, 'billing_settings', 'read'))) {
     return permissionError('Permission denied: billing_settings read required', 'msp/billing-settings:errors.permissions.settingsRead');
@@ -73,9 +57,6 @@ export const updatePrepaidBalanceAlertSettings = withAuth(async (
 ): Promise<UpdateResult> => {
   if (!tenant) {
     return actionError('Tenant context not found', 'msp/billing:errors.context.tenantContextNotFound');
-  }
-  if (!(await featureEnabled(tenant))) {
-    return actionError(FLAG_DISABLED_MESSAGE);
   }
   if (!(await hasPermission(user, 'billing_settings', 'update'))) {
     return permissionError('Permission denied: billing_settings update required', 'msp/billing-settings:errors.permissions.settingsUpdate');

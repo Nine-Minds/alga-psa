@@ -53,8 +53,8 @@ export const TEAMS_DELIVERY_ERROR_REMEDIES: Record<TeamsDeliveryErrorCode, Teams
   ),
   feature_disabled: entry(
     'feature_disabled',
-    'The Teams release feature is disabled, so sends are skipped.',
-    'Enable release-v1-5-feature for this tenant.',
+    'The Teams feature was disabled for this tenant when the delivery was attempted (pre-1.5).',
+    'Teams is now generally available; retry the send.',
   ),
   integration_inactive: entry(
     'integration_inactive',
