@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import { IPurchaseOrder } from '@alga-psa/types';
 import {
   actionError,
@@ -258,8 +259,7 @@ export const createPoFromLowStock = withAuth(async (user, { tenant }): Promise<C
       const vendor = await trx('vendors').where({ tenant, vendor_id: vendorId }).first();
       if (!vendor) continue;
 
-      const numRes = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
-      const poNumber = numRes.rows[0].number;
+      const poNumber = await SharedNumberingService.getNextNumber('PURCHASE_ORDER', { knex: trx, tenant });
 
       const [po] = await trx('purchase_orders')
         .insert({
