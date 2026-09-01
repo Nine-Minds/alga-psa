@@ -313,7 +313,7 @@ const ResourcesMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => (
         aria-label={t('header.resources.ariaLabel', { defaultValue: 'Resources and help' })}
         className="h-9 w-9"
       >
-        <HelpCircle className="h-5 w-5 text-gray-600" />
+        <HelpCircle className="h-5 w-5" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="min-w-[220px]">
