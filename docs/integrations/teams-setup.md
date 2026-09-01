@@ -31,7 +31,7 @@ The generated Teams app manifest registers the bot under the tenant's Microsoft 
 
 ## Prerequisites
 
-- Enterprise Edition with `release-v1-5-feature` enabled for the tenant.
+- Enterprise Edition.
 - An AlgaPSA deployment reachable over public HTTPS. `NEXT_PUBLIC_BASE_URL` (or `NEXTAUTH_URL`) must be set to that URL; the Teams app package and webhook URLs are derived from it.
 - Admin access to the Microsoft Entra admin center and the Azure portal.
 - Permission to upload custom apps in the Teams admin center (or a Teams custom-app policy that allows sideloading).
@@ -172,7 +172,6 @@ In `Settings -> Integrations -> Microsoft Teams`, click `Run diagnostics`. The r
 
 | Step id | Checks |
 |---|---|
-| `feature_flag` | `release-v1-5-feature` is enabled for the tenant |
 | `integration_status` | The integration is saved and `active` |
 | `capabilities` | `personal_bot` and `activity_notifications` are enabled |
 | `microsoft_profile` | The selected profile exists, is not archived, and has credentials |
@@ -210,7 +209,7 @@ The result records a delivery row you can inspect in the delivery log in the Tea
 | Recordings play but you want them stored in Alga rather than proxied live | `Download recordings` is off, so Alga streams from Graph on each request instead of persisting a copy | Enable `Download recordings` in Teams settings. Newly captured recordings are then stored via the file service (and survive a later Graph content outage); enable `Expose recordings in client portal` if client-portal users should see them |
 | Activity notifications not arriving; delivery log shows `graph_unauthorized` | `TeamsActivity.Send` application permission not consented, or the Graph token was rejected (`401`/`403`) | Re-check [step 2](#2-grant-graph-application-permissions) and grant admin consent |
 | Delivery log shows `graph_not_found` | The Teams app is not installed for the recipient, so Graph cannot target them | Install (or org-allow) the app for that user ([step 5](#5-generate-and-upload-the-teams-app-package)) |
-| Delivery log shows `feature_disabled` | `release-v1-5-feature` is disabled, so sends are skipped | Enable the release flag for the tenant |
+| Delivery log shows `feature_disabled` | The delivery predates the 1.5 release, when Teams was disabled for the tenant | Retry the send; Teams is now enabled for all tenants |
 | Delivery log shows `package_misconfigured` | The app package was never generated, or delivery prerequisites (app ID, base URL) are missing | Generate the package in Teams settings, then retry |
 | Delivery log shows `graph_throttled` or `graph_server_error` | Microsoft Graph throttling (`429`) or a Graph outage (`5xx`); these retry | Wait; investigate only if they persist |
 | Calendar invites not received by participants | `Send calendar invites to participants` is off, or the invite landed in spam | Turn the toggle on in Teams settings. Give the organizer mailbox a clear display name (for example `Acme Scheduling`) so invites read sensibly and pass spam filtering |

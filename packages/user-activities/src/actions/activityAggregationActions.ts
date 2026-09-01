@@ -1455,8 +1455,7 @@ function sortActivities(
  */
 function applyNotificationActivityFilters(
   queryBuilder: Knex.QueryBuilder,
-  filters: ActivityFilters,
-  priorityFeatureEnabled: boolean
+  filters: ActivityFilters
 ): void {
   if (filters.isClosed === false) {
     queryBuilder.where('internal_notifications.is_read', false);
@@ -1476,41 +1475,16 @@ function applyNotificationActivityFilters(
 
   if (!filters.priority?.length) return;
 
-  if (priorityFeatureEnabled) {
-    const storedPriorities = filters.priority.map((priority) =>
-      priority === ActivityPriority.MEDIUM ? 'normal' : priority
-    );
-    queryBuilder.whereIn('internal_notifications.priority', storedPriorities);
-    return;
-  }
-
-  const legacyTypes: string[] = [];
-  if (filters.priority.includes(ActivityPriority.HIGH)) legacyTypes.push('error');
-  if (filters.priority.includes(ActivityPriority.MEDIUM)) legacyTypes.push('warning');
-  const includesLegacyLow = filters.priority.includes(ActivityPriority.LOW);
-
-  queryBuilder.where(function legacyPriorityFilter() {
-    if (legacyTypes.length > 0) {
-      this.whereIn('internal_notifications.type', legacyTypes);
-    }
-    if (includesLegacyLow) {
-      const addLowClause = legacyTypes.length > 0 ? this.orWhere.bind(this) : this.where.bind(this);
-      addLowClause(function legacyLowPriority() {
-        this.whereNull('internal_notifications.type')
-          .orWhereNotIn('internal_notifications.type', ['error', 'warning']);
-      });
-    }
-  });
+  const storedPriorities = filters.priority.map((priority) =>
+    priority === ActivityPriority.MEDIUM ? 'normal' : priority
+  );
+  queryBuilder.whereIn('internal_notifications.priority', storedPriorities);
 }
 
-function mapNotificationActivity(
-  notification: any,
-  priorityFeatureEnabled: boolean
-): NotificationActivity {
+function mapNotificationActivity(notification: any): NotificationActivity {
   const priority = mapStoredNotificationPriority(
     notification.priority,
-    notification.type,
-    priorityFeatureEnabled
+    notification.type
   );
   const toIsoString = (value: unknown): string => {
     const parsed = value ? new Date(value as string | number | Date) : new Date();
@@ -1549,14 +1523,13 @@ function buildNotificationActivitiesQuery(
   trx: Knex.Transaction,
   tenant: string,
   userId: string,
-  filters: ActivityFilters,
-  priorityFeatureEnabled: boolean
+  filters: ActivityFilters
 ): Knex.QueryBuilder {
   return tenantDb(trx, tenant).table('internal_notifications')
     .where('internal_notifications.user_id', userId)
     .whereNull('internal_notifications.deleted_at')
     .modify((queryBuilder) => {
-      applyNotificationActivityFilters(queryBuilder, filters, priorityFeatureEnabled);
+      applyNotificationActivityFilters(queryBuilder, filters);
     });
 }
 
@@ -1571,17 +1544,13 @@ export async function fetchNotificationActivities(
 
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) throw new Error('Tenant is required');
-    const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1-5-feature', {
-      tenantId: tenant,
-      userId,
-    });
 
     const notifications = await withTransaction(db, async (trx: Knex.Transaction) =>
-      buildNotificationActivitiesQuery(trx, tenant, userId, filters, priorityFeatureEnabled)
+      buildNotificationActivitiesQuery(trx, tenant, userId, filters)
         .orderBy('internal_notifications.created_at', 'desc')
     );
     const activities = notifications.map((notification: any) =>
-      mapNotificationActivity(notification, priorityFeatureEnabled)
+      mapNotificationActivity(notification)
     );
 
     if (activities.length > 0) {
@@ -1620,10 +1589,6 @@ export async function fetchNotificationActivitiesPagedInternal(
 
   const { knex: db, tenant } = await createTenantKnex(tenantId);
   if (!tenant) throw new Error('Tenant is required');
-  const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1-5-feature', {
-    tenantId: tenant,
-    userId,
-  });
   const safeOffset = Math.max(0, Math.floor(offset));
   const safeLimit = Math.max(0, Math.min(100, Math.floor(limit)));
 
@@ -1632,8 +1597,7 @@ export async function fetchNotificationActivitiesPagedInternal(
       trx,
       tenant,
       userId,
-      filters,
-      priorityFeatureEnabled
+      filters
     );
     const [{ count }] = await baseQuery.clone().count('* as count');
     const rows = await baseQuery.clone()
@@ -1642,7 +1606,7 @@ export async function fetchNotificationActivitiesPagedInternal(
       .limit(safeLimit);
 
     return {
-      activities: rows.map((row: any) => mapNotificationActivity(row, priorityFeatureEnabled)),
+      activities: rows.map((row: any) => mapNotificationActivity(row)),
       total: Number(count),
     };
   });

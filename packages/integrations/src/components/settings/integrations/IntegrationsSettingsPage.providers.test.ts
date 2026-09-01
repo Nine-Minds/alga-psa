@@ -21,7 +21,7 @@ describe('IntegrationsSettingsPage providers tab', () => {
     // compact top-level action that deep-links there instead of rendering the domain panel inline.
     expect(source).not.toContain("import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings'");
     expect(source).not.toContain('<MspSsoLoginDomainsSettings />');
-    expect(source).toContain('<ProviderCredentialsWorkbench canUseTeams={teamsFeatureEnabled && isEEAvailable} isEnterpriseEdition={isEEAvailable} />');
+    expect(source).toContain('<ProviderCredentialsWorkbench canUseTeams={isEEAvailable} isEnterpriseEdition={isEEAvailable} />');
     expect(source).not.toContain("t('integrations.items.google.cardTitle')");
     expect(workbenchSource).toContain('id="msp-sso-moved-link"');
     expect(workbenchSource).toContain("router.push('/msp/security-settings?tab=single-sign-on')");
@@ -33,7 +33,7 @@ describe('IntegrationsSettingsPage providers tab', () => {
     expect(source).not.toContain('<TeamsIntegrationSettings />');
     expect(source).toContain("id: 'communication'");
     expect(source).toContain("id: 'teams'");
-    expect(source).toContain('...(teamsFeatureEnabled && isEEAvailable ? [{');
+    expect(source).toContain('...(isEEAvailable ? [{');
     expect(source).toContain('component: TeamsEnterpriseIntegrationSettings');
     expect(source).toContain("t('integrations.categories.communication.description')");
     expect(source).toContain("t('integrations.categories.providers.description.ee')");

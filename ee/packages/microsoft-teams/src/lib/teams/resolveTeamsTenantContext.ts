@@ -1,5 +1,4 @@
 import { getAdminConnection, getTenantIdBySlug, tenantDb } from '@alga-psa/db';
-import { tenantHasTeamsFeatureAccess } from './teamsFeatureGate';
 import {
   TEAMS_CAPABILITIES,
   type TeamsCapability,
@@ -182,11 +181,7 @@ export async function resolveTeamsTenantContext(
   const microsoftTenantId = normalizeOptionalString(input.microsoftTenantId);
   const db = await getAdminConnection();
   const rows = await queryTeamsIntegrationRows(db, explicitTenantId, microsoftTenantId);
-  const eligibleRows = (await Promise.all(rows.map(async (row) =>
-    isRowEligible(row, input.requiredCapability) && await tenantHasTeamsFeatureAccess(row.tenant)
-      ? row
-      : null
-  ))).filter((row): row is TeamsTenantContextRow => row !== null);
+  const eligibleRows = rows.filter((row) => isRowEligible(row, input.requiredCapability));
 
   if (eligibleRows.length === 1) {
     return mapRow(eligibleRows[0]);
@@ -212,11 +207,9 @@ export async function resolveTeamsTenantContext(
     );
     if (clientMatch && (!explicitTenantId || clientMatch.tenant === explicitTenantId)) {
       const clientTenantRows = await queryTeamsIntegrationRows(db, clientMatch.tenant, null);
-      const clientTenantEligible = (await Promise.all(clientTenantRows.map(async (row) =>
-        isRowEligible(row, input.requiredCapability) && await tenantHasTeamsFeatureAccess(row.tenant)
-          ? row
-          : null
-      ))).filter((row): row is TeamsTenantContextRow => row !== null);
+      const clientTenantEligible = clientTenantRows.filter((row) =>
+        isRowEligible(row, input.requiredCapability)
+      );
       if (clientTenantEligible.length === 1) {
         return { ...mapRow(clientTenantEligible[0]), entraMatchedClientId: clientMatch.clientId };
       }

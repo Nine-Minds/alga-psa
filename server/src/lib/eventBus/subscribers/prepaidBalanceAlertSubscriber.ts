@@ -2,23 +2,17 @@
  * Prepaid balance alert subscriber (task 29.8.20).
  *
  * Handles PREPAID_BALANCE_ALERT_SCAN_REQUESTED published by the daily 09:00 UTC
- * maintenance handler. This subscriber is the only layer allowed to evaluate
- * the feature flag, query ledgers, resolve recipients, or invoke
- * notifications. It fails closed: while `release-v1-5-feature` is disabled or
- * its checker is unavailable, the scan performs no alert/delivery/notification
- * writes.
+ * maintenance handler. This subscriber is the only layer allowed to query
+ * ledgers, resolve recipients, or invoke notifications.
  */
 
 import logger from '@alga-psa/core/logger';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { evaluatePrepaidBalanceAlertsForTenant } from './prepaidBalanceAlertEvaluator';
 import { planAndDrainDeliveriesForTenant } from './prepaidBalanceAlertDelivery';
 import { replenishOpenPrepaidBalanceAlerts } from './prepaidAutoReplenishment';
-
-export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1-5-feature';
 
 let isRegistered = false;
 
@@ -44,54 +38,19 @@ export async function unregisterPrepaidBalanceAlertSubscriber(): Promise<void> {
   logger.info('[PrepaidBalanceAlertSubscriber] Unregistered');
 }
 
-async function featureEnabled(tenantId: string): Promise<boolean> {
-  try {
-    return await isFeatureFlagEnabled(PREPAID_BALANCE_ALERT_FLAG, { tenantId });
-  } catch {
-    // Missing, unavailable, or throwing flag infrastructure fails closed.
-    return false;
-  }
-}
-
 export async function handlePrepaidBalanceAlertScanRequested(event: unknown): Promise<void> {
   const validated = EventSchemas.PREPAID_BALANCE_ALERT_SCAN_REQUESTED.parse(event);
   const { tenantId, clientId } = validated.payload;
 
   try {
     await runWithTenant(tenantId, async () => {
-      const enabled = await featureEnabled(tenantId);
-      if (!enabled) {
-        logger.info('[PrepaidBalanceAlertSubscriber] Feature flag disabled; skipping scan', { tenantId });
-        return;
-      }
-
       const { knex } = await createTenantKnex();
       const evaluation = await evaluatePrepaidBalanceAlertsForTenant(knex, tenantId, clientId);
       // Replenishment is the action half of this same alert episode. It runs
       // after evaluation has opened/rearmed subjects, and before delivery so
       // the existing alert notification can mention the linked draft/issued
       // action without creating a second detector or scan rail.
-      const replenishmentEnabled = await featureEnabled(tenantId);
-      const replenishment = replenishmentEnabled
-        ? await replenishOpenPrepaidBalanceAlerts(knex, tenantId, clientId)
-        : {
-            considered: 0,
-            created: 0,
-            autoIssued: 0,
-            skipped: 0,
-            unchanged: 0,
-            failed: 0,
-          };
-      if (!replenishmentEnabled) {
-        logger.info('[PrepaidBalanceAlertSubscriber] Feature flag disabled before replenishment; skipping action', { tenantId });
-      }
-      // Delivery has its own fail-closed boundary. If the flag is disabled
-      // while a scan is evaluating, no recipient planning, claim, retry, or
-      // notification side effect proceeds from that point.
-      if (!(await featureEnabled(tenantId))) {
-        logger.info('[PrepaidBalanceAlertSubscriber] Feature flag disabled before delivery; skipping drain', { tenantId });
-        return;
-      }
+      const replenishment = await replenishOpenPrepaidBalanceAlerts(knex, tenantId, clientId);
       const delivery = await planAndDrainDeliveriesForTenant(knex, tenantId);
 
       logger.info('[PrepaidBalanceAlertSubscriber] Prepaid balance alert scan complete', {

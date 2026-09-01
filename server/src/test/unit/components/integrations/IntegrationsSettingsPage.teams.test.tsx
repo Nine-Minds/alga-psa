@@ -187,7 +187,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
     );
 
-    render(<IntegrationsSettingsPage teamsFeatureEnabled />);
+    render(<IntegrationsSettingsPage />);
 
     expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
     expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();
@@ -215,14 +215,14 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
   });
 
-  it('T040/T065/T066/T071/T072/T077/T078/T084/T097/T098/T389/T390/T391/T392/T395/T396/T403/T404/T417/T418/T420: renders Teams only in Communication when EE mode and the tenant flag are enabled', async () => {
+  it('T040/T065/T066/T071/T072/T077/T078/T084/T097/T098/T389/T390/T391/T392/T395/T396/T403/T404/T417/T418/T420: renders Teams only in Communication when EE mode is enabled', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
     const { default: IntegrationsSettingsPage } = await import(
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
     );
 
-    render(<IntegrationsSettingsPage teamsFeatureEnabled />);
+    render(<IntegrationsSettingsPage />);
 
     expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
     expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();
@@ -233,28 +233,4 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByText('Microsoft Integration Settings')).not.toBeInTheDocument();
   });
 
-  it('keeps Teams settings and navigation out of view when the release feature is disabled', async () => {
-    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
-    useFeatureFlagMock.mockImplementation(() => ({
-      enabled: false,
-      isLoading: false,
-      error: null,
-      value: false,
-    }));
-
-    const { default: IntegrationsSettingsPage } = await import(
-      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
-    );
-
-    render(<IntegrationsSettingsPage teamsFeatureEnabled={false} />);
-
-    expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
-    expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();
-    expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('teams-integration-disabled-shell')).not.toBeInTheDocument();
-    expect(screen.queryByText('Microsoft Teams integration disabled')).not.toBeInTheDocument();
-    expect(screen.queryByText('Microsoft Teams integration is disabled for this tenant.')).not.toBeInTheDocument();
-    expect(screen.queryByText('Microsoft Teams', { selector: 'button *, button' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Manage add-ons' })).not.toBeInTheDocument();
-  });
 });

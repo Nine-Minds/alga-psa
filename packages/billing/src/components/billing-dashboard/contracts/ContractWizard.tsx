@@ -39,7 +39,6 @@ import {
   getUnsupportedRecurringAuthoringCombinationMessage,
 } from "@shared/billingClients/recurringAuthoringValidation";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
-import { useFeatureFlag } from "@alga-psa/ui/hooks";
 
 const REQUIRED_STEPS = [0, 5];
 const MIN_NOTICE_PERIOD_DAYS = 0;
@@ -302,10 +301,6 @@ export function ContractWizard({
   initialClientId,
 }: ContractWizardProps) {
   const { t } = useTranslation("msp/contracts");
-  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag(
-    "release-v1-5-feature",
-    { defaultValue: false },
-  );
   const initialWizardDataRef = useRef<ContractWizardData | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -555,15 +550,11 @@ export function ContractWizard({
         fixed_base_rate: wizardData.fixed_base_rate,
         fixed_billing_frequency: wizardData.fixed_billing_frequency,
         enable_proration: wizardData.enable_proration,
-        hourly_services: bucketPoolEditorEnabled
-          ? (wizardData.hourly_services ?? []).map(withoutLegacyBucketOverlay)
-          : (wizardData.hourly_services ?? []),
+        hourly_services: (wizardData.hourly_services ?? []).map(withoutLegacyBucketOverlay),
         hourly_billing_frequency: wizardData.hourly_billing_frequency,
         fixed_services: wizardData.fixed_services ?? [],
         product_services: wizardData.product_services ?? [],
-        usage_services: bucketPoolEditorEnabled
-          ? (wizardData.usage_services ?? []).map(withoutLegacyBucketOverlay)
-          : (wizardData.usage_services ?? []),
+        usage_services: (wizardData.usage_services ?? []).map(withoutLegacyBucketOverlay),
         usage_billing_frequency: wizardData.usage_billing_frequency,
         minimum_billable_time: wizardData.minimum_billable_time,
         round_up_to_nearest: wizardData.round_up_to_nearest,
@@ -572,14 +563,9 @@ export function ContractWizard({
         template_id: wizardData.template_id,
       };
 
-      // The release-v1-5-feature flag selects exactly one bucket-authoring
-      // path. Flag OFF: the legacy per-service bucket_overlay payload is
-      // submitted and bucket_pools is never present. Flag ON: the pool payload
-      // is submitted and the conflicting legacy bucket_overlay fields are
-      // stripped from every service. Never both.
-      if (bucketPoolEditorEnabled) {
-        submission.bucket_pools = wizardData.bucket_pools ?? [];
-      }
+      // Bucket authoring is line-level pools; conflicting legacy
+      // bucket_overlay fields are stripped from every service above.
+      submission.bucket_pools = wizardData.bucket_pools ?? [];
       return submission;
     };
 

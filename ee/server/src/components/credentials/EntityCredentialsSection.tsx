@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Generic entity "Passwords" section (EE-only, Pro tier, flag-gated).
+ * Generic entity "Passwords" section (EE-only, Pro tier).
  *
  * The per-entity section embed for credential attachments — the credentials
  * analog of documents' shared section (documents render through
@@ -24,17 +24,15 @@
  * // shared entity-attachments engine is a follow-up card (plan §scope
  * // expansion, decision 2).
  *
- * The ENTIRE section — chrome included — is gated on the
- * `release-v1-5-feature` flag: flag off renders nothing. Below-Pro tenants get
- * a one-line upgrade teaser instead of the vault (the nav item and client tab
- * are hidden for them, so this is where they learn the feature exists); the
- * full FeatureUpgradeNotice stays on the global screen.
+ * Below-Pro tenants get a one-line upgrade teaser instead of the vault (the
+ * nav item and client tab are hidden for them, so this is where they learn
+ * the feature exists); the full FeatureUpgradeNotice stays on the global
+ * screen.
  */
 
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -325,18 +323,12 @@ export function EntityCredentialsSection({
   titleKey = 'credentials.section.title',
 }: EntityCredentialsSectionProps) {
   const { t } = useTranslation('msp/credentials');
-  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
-  const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
   const { hasFeature } = useTier();
   const isBento = useContentCardVariant() === 'bento';
 
   const cardId = `${entityType}-credentials-section`;
   const teaserId = `${entityType}-credentials-tier-teaser`;
   const viewPlansId = `${entityType}-credentials-view-plans`;
-
-  if (!flagEnabled) {
-    return null;
-  }
 
   if (!hasFeature(TIER_FEATURES.CREDENTIALS)) {
     const teaserBody = (

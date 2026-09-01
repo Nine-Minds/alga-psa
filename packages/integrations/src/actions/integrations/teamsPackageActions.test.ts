@@ -29,7 +29,6 @@ const hoisted = vi.hoisted(() => {
     appSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
-    featureEnabled: true,
   };
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -112,11 +111,6 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/core/features', () => ({
-  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
-  isFeatureFlagEnabled: vi.fn(async () => hoisted.state.featureEnabled),
-}));
-
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: hoisted.knexMock }),
   tenantDb: (conn: any, tenant: string) => ({
@@ -183,7 +177,6 @@ describe('Teams app package actions', () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
-    hoisted.state.featureEnabled = true;
     tenantSecrets.clear();
     appSecrets.clear();
     hasPermissionMock.mockClear();
@@ -206,18 +199,6 @@ describe('Teams app package actions', () => {
     expect(result).toEqual({
       success: false,
       error: 'Microsoft Teams integration is only available in Enterprise Edition.',
-    });
-    expect(hasPermissionMock).not.toHaveBeenCalled();
-  });
-
-  it('returns feature-disabled package results before loading Teams state', async () => {
-    hoisted.state.featureEnabled = false;
-
-    const result = await getTeamsAppPackageStatus();
-
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft Teams integration is not enabled for this tenant.',
     });
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });

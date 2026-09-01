@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const hoisted = vi.hoisted(() => {
   const state = {
     hasPermission: true,
-    featureEnabled: true,
     integrations: [] as Array<Record<string, unknown>>,
     profiles: [] as Array<Record<string, unknown>>,
     conversationReferences: [] as Array<Record<string, unknown>>,
@@ -181,11 +180,6 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: hoisted.createTenantKnexMock,
 }));
 
-vi.mock('@alga-psa/core/features', () => ({
-  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
-  isFeatureFlagEnabled: vi.fn(async () => hoisted.state.featureEnabled),
-}));
-
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hoisted.hasPermissionMock,
 }));
@@ -317,7 +311,6 @@ function resetTeamsState() {
     process.env.EDITION = 'enterprise';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     hoisted.state.hasPermission = true;
-    hoisted.state.featureEnabled = true;
     hoisted.state.integrations.length = 0;
     hoisted.state.profiles.length = 0;
     hoisted.state.conversationReferences.length = 0;
@@ -350,24 +343,6 @@ describe('Teams diagnostics test message action', () => {
 
     await expect(send()).rejects.toThrow('Forbidden');
     expect(hoisted.hasPermissionMock).toHaveBeenCalledWith(USER, 'system_settings', 'update');
-  });
-
-  it('records skipped feature_disabled and does not send when the release feature is off', async () => {
-    hoisted.state.featureEnabled = false;
-
-    await expect(send()).resolves.toMatchObject({
-      status: 'skipped',
-      reason: 'feature_disabled',
-    });
-    expect(hoisted.sendBotActivityMock).not.toHaveBeenCalled();
-    expect(hoisted.state.deliveries).toHaveLength(1);
-    expect(hoisted.state.deliveries[0]).toMatchObject({
-      tenant: TENANT,
-      category: 'test',
-      destination_type: 'bot_test',
-      status: 'skipped',
-      error_code: 'feature_disabled',
-    });
   });
 
   it('returns integration_inactive when the integration is not active', async () => {
@@ -543,7 +518,6 @@ describe('Teams diagnostics report action', () => {
     const report = await diagnose();
 
     expect(report.steps.map((step) => step.id)).toEqual([
-      'feature_flag',
       'integration_status',
       'capabilities',
       'microsoft_profile',
@@ -558,18 +532,6 @@ describe('Teams diagnostics report action', () => {
       'recent_delivery_health',
     ]);
     expect(report.steps.every((step) => ['pass', 'warn', 'fail', 'skip'].includes(step.status))).toBe(true);
-  });
-
-  it('fails the release feature check with a recommendation when the feature is unavailable', async () => {
-    healthyTenant();
-    hoisted.state.featureEnabled = false;
-
-    const report = await diagnose();
-    expect(report.steps.find((step) => step.id === 'feature_flag')).toMatchObject({
-      status: 'fail',
-      data: { reason: 'feature_disabled' },
-    });
-    expect(report.recommendations).toContain('Enable release-v1-5-feature for this tenant.');
   });
 
   it('fails when no integration row exists and warns when it is not active', async () => {

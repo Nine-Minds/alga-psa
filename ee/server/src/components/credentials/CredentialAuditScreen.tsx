@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Vault-wide audit log screen (EE-only, Pro tier, flag-gated).
+ * Vault-wide audit log screen (EE-only, Pro tier).
  *
- * Gating mirrors CredentialsScreen: `release-v1-5-feature` flag, EE edition
- * (implicit — this module is only reachable from EE via the `@enterprise`
- * alias), and `getCredentialsContext` (tier). `credential:audit` is a
+ * Gating mirrors CredentialsScreen: EE edition (implicit — this module is
+ * only reachable from EE via the `@enterprise` alias) and
+ * `getCredentialsContext` (tier). `credential:audit` is a
  * distinct permission: the screen renders a forbidden state (audit.forbidden)
  * when the viewer can see the vault but not its audit trail, so the tab and
  * this route share one server-provided `canAudit` gate.
@@ -29,7 +29,6 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Activity, Eye, KeyRound, PencilLine, RefreshCw, SlidersHorizontal, Users } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getAllUsers } from '@alga-psa/user-composition/actions';
@@ -134,8 +133,6 @@ function hasActiveFilters(filters: CredentialAuditFilterState): boolean {
 
 export function CredentialAuditScreen() {
   const { t } = useTranslation('msp/credentials');
-  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
-  const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
 
   const [context, setContext] = useState<CredentialsContext | null>(null);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -181,7 +178,6 @@ export function CredentialAuditScreen() {
   }, [events]);
 
   useEffect(() => {
-    if (!flagEnabled) return;
     let cancelled = false;
     void getCredentialsContext().then((ctx) => {
       if (!cancelled) setContext(ctx);
@@ -191,10 +187,9 @@ export function CredentialAuditScreen() {
     return () => {
       cancelled = true;
     };
-  }, [flagEnabled]);
+  }, []);
 
   useEffect(() => {
-    if (!flagEnabled) return;
     let cancelled = false;
     getAllClients(false)
       .then((list) => {
@@ -209,7 +204,7 @@ export function CredentialAuditScreen() {
     return () => {
       cancelled = true;
     };
-  }, [flagEnabled]);
+  }, []);
 
   const toggleOperationFilter = useCallback((filterOperations: CredentialAuditEventOperation[]) => {
     setOperations((prev) => {
@@ -228,10 +223,6 @@ export function CredentialAuditScreen() {
     setFrom('');
     setTo('');
   }, []);
-
-  if (!flagEnabled) {
-    return null;
-  }
 
   if (!context) {
     return (

@@ -13,17 +13,15 @@ import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
 import { LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
 import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/types';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function UserActivitiesDashboard() {
   const { t } = useTranslation('msp/user-activities');
-  const { enabled } = useFeatureFlag('release-v1-5-feature');
   const searchParams = useSearchParams();
   // Bell "View all notifications" deep-links here with ?focus=notifications. Treat it
-  // as an EPHEMERAL card-view override (task 29.8.46) — only honoured with the flag on.
-  const focusNotifications = enabled && searchParams?.get('focus') === 'notifications';
+  // as an EPHEMERAL card-view override (task 29.8.46).
+  const focusNotifications = searchParams?.get('focus') === 'notifications';
   // Define view mode type
   type UserActivitiesViewMode = 'cards' | 'table';
 
@@ -81,13 +79,8 @@ export function UserActivitiesDashboard() {
   const handleViewAll = (types: ActivityType[]) => {
     const filters: ActivityFiltersType = { types, isClosed: false };
     setTableInitialFilters(filters);
-    if (enabled) {
-      // Flag on: switch to the table view ephemerally; do NOT persist the preference.
-      setEphemeralView('table');
-    } else {
-      // Flag off: preserve today's behaviour (persist 'table' for every section).
-      setViewModePreference('table');
-    }
+    // Switch to the table view ephemerally; do NOT persist the preference.
+    setEphemeralView('table');
   };
 
   // Specific handlers calling the generic one
@@ -200,22 +193,19 @@ export function UserActivitiesDashboard() {
   // Handler for view change (the ViewSwitcher — the only writer of the saved preference)
   const handleViewChange = (newView: UserActivitiesViewMode) => {
     setViewModePreference(newView);
-    // Flag on: an explicit switch also wins over any ephemeral/focus override this visit.
-    if (enabled) {
-      setEphemeralView(newView);
-    }
+    // An explicit switch also wins over any ephemeral/focus override this visit.
+    setEphemeralView(newView);
     if (newView === 'table') {
       setTableInitialFilters(null); // Reset specific filters when switching to table view
     }
   };
 
-  // Effective view mode. Flag off: exactly the saved preference (today's behaviour).
-  // Flag on: an ephemeral override wins, else the focus deep link forces cards, else pref.
-  const effectiveViewMode: UserActivitiesViewMode = enabled
-    ? (ephemeralView ?? (focusNotifications ? 'cards' : viewMode))
-    : viewMode;
+  // Effective view mode: an ephemeral override wins, else the focus deep link
+  // forces cards, else the saved preference.
+  const effectiveViewMode: UserActivitiesViewMode =
+    ephemeralView ?? (focusNotifications ? 'cards' : viewMode);
 
-  // Focus-mode card layout (flag on): notifications expanded to full mode, the other
+  // Focus-mode card layout: notifications expanded to full mode, the other
   // sections rendered collapsed below — still present and expandable.
   const focusCardViewContent = (
     <div className="space-y-6">
@@ -324,12 +314,12 @@ export function UserActivitiesDashboard() {
     </div>
   );
 
-  // Pick the main content. Table always wins when selected; otherwise the focus deep
-  // link (flag on) renders the focus layout, else the standard card view.
+  // Pick the main content. Table always wins when selected; otherwise the focus
+  // deep link renders the focus layout, else the standard card view.
   let mainContent: React.ReactNode;
   if (effectiveViewMode === 'table') {
     mainContent = tableViewContent;
-  } else if (enabled && focusNotifications) {
+  } else if (focusNotifications) {
     mainContent = focusCardViewContent;
   } else {
     mainContent = cardViewContent;

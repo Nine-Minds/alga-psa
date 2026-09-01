@@ -77,7 +77,6 @@
     "invoiceAmount": "Importe de la factura:",
     "selectCreditToApply": "Seleccionar crédito para aplicar",
     "amountToApply": "Importe a aplicar",
-    "creditOrderNote": "Los créditos se aplican por fecha de vencimiento (primero los más antiguos)",
     "creditOrderNoteExpirationFirst": "Los créditos se aplican por fecha de vencimiento (primero los que vencen antes)",
     "creditOrderNoteOldestFirst": "Los créditos se aplican por fecha de creación (primero el crédito más antiguo)",
     "creditOrderNoteNewestFirst": "Los créditos se aplican por fecha de creación (primero el crédito más reciente)",

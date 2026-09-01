@@ -49,6 +49,46 @@ class StubResponseCookies {
     return this;
   }
 
+  // Mirrors Next.js ResponseCookies.get: returns the most recently set cookie
+  // for `name`, parsed back from the set-cookie header(s), with its attributes.
+  get(name: string): (StubCookieObjectForm) | undefined {
+    const raw =
+      typeof (this.headers as any).getSetCookie === 'function'
+        ? (this.headers as any).getSetCookie()
+        : (this.headers.get('set-cookie') ? [this.headers.get('set-cookie') as string] : []);
+
+    let found: StubCookieObjectForm | undefined;
+    for (const header of raw as string[]) {
+      const segments = header.split(';').map((s) => s.trim()).filter(Boolean);
+      if (!segments.length) continue;
+      const eq = segments[0].indexOf('=');
+      if (eq === -1) continue;
+      const cookieName = segments[0].slice(0, eq);
+      if (cookieName !== name) continue;
+
+      const parsed: StubCookieObjectForm = {
+        name: cookieName,
+        value: decodeURIComponent(segments[0].slice(eq + 1))
+      };
+      for (const attr of segments.slice(1)) {
+        const aEq = attr.indexOf('=');
+        const key = (aEq === -1 ? attr : attr.slice(0, aEq)).toLowerCase();
+        const val = aEq === -1 ? undefined : attr.slice(aEq + 1);
+        if (key === 'path') parsed.path = val;
+        else if (key === 'domain') parsed.domain = val;
+        else if (key === 'max-age' && val !== undefined) parsed.maxAge = Number(val);
+        else if (key === 'expires' && val !== undefined) parsed.expires = new Date(val);
+        else if (key === 'httponly') parsed.httpOnly = true;
+        else if (key === 'secure') parsed.secure = true;
+        else if (key === 'samesite' && val !== undefined)
+          parsed.sameSite = val.toLowerCase() as StubCookieSetOptions['sameSite'];
+      }
+      // Keep scanning so the last matching set-cookie wins (most recent).
+      found = parsed;
+    }
+    return found;
+  }
+
   delete(name: string): this {
     return this.set(name, '', { maxAge: 0 });
   }

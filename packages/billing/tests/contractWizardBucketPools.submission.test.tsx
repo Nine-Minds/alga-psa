@@ -1,12 +1,9 @@
 // @vitest-environment jsdom
 /**
- * ContractWizard bucket-authoring submission exclusivity (behavioral).
+ * ContractWizard bucket-authoring submission (behavioral).
  *
- * The release-v1-5-feature flag must select exactly one submission path:
- *   - flag OFF: the legacy per-service bucket_overlay payload is submitted and
- *     `bucket_pools` is never present on the payload;
- *   - flag ON: the pool payload is submitted and no conflicting legacy
- *     `bucket_overlay` fields travel on any service.
+ * The pool payload is submitted and no conflicting legacy `bucket_overlay`
+ * fields travel on any service.
  *
  * These tests drive the real ContractWizard submit path end to end
  * (buildSubmissionData -> createClientContractFromWizard) and assert on the
@@ -37,12 +34,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
 });
 
 const mocks = vi.hoisted(() => ({
-  useFeatureFlag: vi.fn(),
   createClientContractFromWizard: vi.fn(),
-}));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: (...args: unknown[]) => mocks.useFeatureFlag(...args),
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
@@ -149,7 +141,7 @@ const POOL_DRAFT = {
   members: [{ service_id: 'svc-1', burn_multiplier: 2 }],
 };
 
-describe('ContractWizard bucket-authoring submission exclusivity (flag states)', () => {
+describe('ContractWizard bucket-authoring submission', () => {
   let ContractWizard: typeof import('../src/components/billing-dashboard/contracts/ContractWizard')['ContractWizard'];
 
   beforeAll(async () => {
@@ -203,26 +195,7 @@ describe('ContractWizard bucket-authoring submission exclusivity (flag states)',
     return mocks.createClientContractFromWizard.mock.calls[0][0];
   }
 
-  it('flag-off submission carries the legacy bucket_overlay payload and never includes bucket_pools', async () => {
-    mocks.useFeatureFlag.mockReturnValue({ enabled: false, loading: false, error: null });
-
-    renderWizard();
-    const submission = await submitDraft();
-
-    // Legacy per-service bucket overlay survives on the submitted services.
-    expect(submission.hourly_services).toHaveLength(1);
-    expect(submission.hourly_services[0].bucket_overlay).toMatchObject({
-      total_minutes: 600,
-      overage_rate: 15000,
-      allow_rollover: true,
-    });
-    // Flag OFF: bucket_pools is never present on the submission.
-    expect(submission).not.toHaveProperty('bucket_pools');
-  });
-
-  it('flag-on submission carries the pool payload and strips conflicting legacy bucket_overlay fields', async () => {
-    mocks.useFeatureFlag.mockReturnValue({ enabled: true, loading: false, error: null });
-
+  it('submission carries the pool payload and strips conflicting legacy bucket_overlay fields', async () => {
     renderWizard({
       // Stale legacy overlay left in wizard state: the flag-on submit path must
       // not let it travel alongside the pool payload.

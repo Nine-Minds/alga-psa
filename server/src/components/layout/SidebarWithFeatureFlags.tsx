@@ -18,6 +18,7 @@ import {
 } from '@/config/menuConfig';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useTier } from '@/context/TierContext';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
@@ -117,12 +118,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
-  const releaseV15Flag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
-  const releaseV15Enabled =
-    typeof releaseV15Flag === 'boolean' ? releaseV15Flag : releaseV15Flag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
   const { hasFeature } = useTier();
+  // Mirrors the menuConfig tier gate so the vault nav item tracks the tenant tier.
+  const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
   const { productCode, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
 
@@ -180,7 +180,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       ...section,
       items: section.items
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
-        .filter((item) => item.name !== 'Passwords' || releaseV15Enabled)
+        .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
         .map((item) => {
         if (item.name === 'Workflows') {
           const filteredSubItems = item.subItems?.filter((subItem) => {
@@ -200,25 +200,17 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       productCode,
       filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, releaseV15Enabled]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
-    const releaseSections = editionSections
-      .map((section) => ({
-        ...section,
-        items: section.items.filter(
-          (item) => item.href !== '/msp/settings/appearance' || releaseV15Enabled,
-        ),
-      }))
-      .filter((section) => section.items.length > 0);
-    const productSections = filterMenuSectionsByProduct(productCode, releaseSections);
+    const productSections = filterMenuSectionsByProduct(productCode, editionSections);
 
     return filterNavigationSectionsBySelfHost(
       productSections,
       selfHostMode,
     );
-  }, [edition, productCode, releaseV15Enabled, selfHostMode]);
+  }, [edition, productCode, selfHostMode]);
 
   const billingSections = useMemo(
     () => filterNavigationSectionsByEdition(billingNavigationSections, edition),

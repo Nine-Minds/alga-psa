@@ -833,7 +833,6 @@
         "editPricingSchedule": "Edit Pricing Schedule"
       },
       "validation": {
-        "currencySettingsLoading": "Currency settings are still loading; try again in a moment",
         "customRatePositive": "Custom rate must be a positive number",
         "customRateRequired": "Custom rate is required when not using default rate",
         "durationPositive": "Duration must be a positive number",

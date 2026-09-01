@@ -1162,14 +1162,6 @@
       "saveFailed": "Fehler beim Erstellen des Wartungsplans"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Dokumente und Passwörter",
-    "description": "Kombinierte Registerkarte für Asset-Dokumente, Anmeldeinformationen und zugehörige sichere Datensätze",
-    "passwords": {
-      "title": "Passwörter und Geheimnisse",
-      "comingSoon": "Sichere Passwortverwaltung bald verfügbar."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Wartungspläne",
     "description": "Registerkarte „Wartungsplanverwaltung“ für geplante Wartungsarbeiten und wiederkehrende Arbeiten",

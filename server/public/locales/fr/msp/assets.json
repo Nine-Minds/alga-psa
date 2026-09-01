@@ -1162,14 +1162,6 @@
       "saveFailed": "Échec de la création du calendrier de maintenance"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documents et mots de passe",
-    "description": "Onglet combiné pour les documents d'actifs, les informations d'identification et les enregistrements sécurisés associés",
-    "passwords": {
-      "title": "Mots de passe et secrets",
-      "comingSoon": "Gestion sécurisée des mots de passe bientôt disponible."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Calendriers d'entretien",
     "description": "Onglet de gestion du calendrier de maintenance pour les services planifiés et les travaux récurrents",

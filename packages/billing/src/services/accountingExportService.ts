@@ -24,7 +24,7 @@ import {
 import { AccountingExportValidation } from './accountingExportValidation';
 import { getExternalTaxImportService } from './externalTaxImportService';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { AppError } from '@alga-psa/core';
+import { AppError, sanitizeProviderMessage } from '@alga-psa/core';
 import { getXeroCsvSettingsForTenant } from '@alga-psa/integrations/runtime';
 import logger from '@alga-psa/core/logger';
 
@@ -466,18 +466,20 @@ export class AccountingExportService {
     adapterType: string,
     failure: AccountingExportDeliveryDocumentFailure
   ): Promise<void> {
-    const metadata = {
+    const metadata = sanitizeExportErrorMetadata({
       adapterType,
       documentId: failure.documentId,
       ...(failure.metadata ?? {})
-    };
+    });
+    // Delivery failure messages originate from the provider adapter as well.
+    const failureMessage = sanitizeProviderMessage(failure.message);
 
     if (failure.lineIds.length === 0) {
       await this.repository.addError({
         batch_id: batchId,
         line_id: null,
         code: failure.code,
-        message: failure.message,
+        message: failureMessage,
         metadata
       });
       return;
@@ -487,13 +489,13 @@ export class AccountingExportService {
       await this.repository.updateLine(lineId, {
         status: 'failed',
         external_document_ref: null,
-        notes: failure.message
+        notes: failureMessage
       });
       await this.repository.addError({
         batch_id: batchId,
         line_id: lineId,
         code: failure.code,
-        message: failure.message,
+        message: failureMessage,
         metadata
       });
     }
@@ -542,28 +544,33 @@ export class AccountingExportService {
       const document = documentId ? documentsById.get(documentId) : undefined;
       const lineIds = document?.lineIds ?? [];
 
+      // Both the top-level detail message and per-item validation messages are
+      // provider-sourced strings; scrub them before they land in the durable
+      // error message / line notes columns.
       const validationMessages = Array.isArray(detail.validationErrors)
         ? detail.validationErrors
             .map((item: any) => item?.message)
             .filter((message: unknown): message is string => typeof message === 'string' && message.trim().length > 0)
+            .map((message: string) => sanitizeProviderMessage(message))
         : [];
 
       const detailMessageParts = [
-        typeof detail.message === 'string' ? detail.message : undefined,
+        typeof detail.message === 'string' ? sanitizeProviderMessage(detail.message) : undefined,
         ...validationMessages
       ].filter((part): part is string => Boolean(part));
 
       const detailMessage =
-        detailMessageParts.length > 0 ? detailMessageParts.join(' | ') : error.message;
+        detailMessageParts.length > 0 ? detailMessageParts.join(' | ') : sanitizeProviderMessage(error.message);
 
-      const metadata = {
+      // Batch error metadata is readable with billing settings access, so it
+      // holds allowlisted diagnostics only — never raw provider payloads.
+      const metadata = sanitizeExportErrorMetadata({
         adapterType,
         adapterCode: error.code,
         documentId: documentId ?? null,
         correlationId: correlationId ?? null,
-        validationErrors: Array.isArray(detail.validationErrors) ? detail.validationErrors : undefined,
-        raw: detail.raw ?? undefined
-      };
+        validationErrors: Array.isArray(detail.validationErrors) ? detail.validationErrors : undefined
+      });
 
       if (lineIds.length > 0) {
         for (const lineId of lineIds) {
@@ -656,6 +663,35 @@ export class AccountingExportService {
       }
     }
   }
+}
+
+/**
+ * Batch error metadata is later readable through the billing settings UI/API,
+ * so only allowlisted diagnostics may be persisted. Strips raw provider
+ * payload keys wherever an adapter forwarded them and reduces validation
+ * errors to `{ message, field }` pairs.
+ */
+function sanitizeExportErrorMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if (key === 'raw' || key === 'originalError') {
+      continue;
+    }
+    if (key === 'validationErrors' && Array.isArray(value)) {
+      result[key] = value.map((item) => {
+        const entry = (item ?? {}) as Record<string, unknown>;
+        return {
+          // Validation messages come from the provider, so they get the same
+          // token/secret scrubbing as every other provider-sourced string.
+          message: typeof entry.message === 'string' ? sanitizeProviderMessage(entry.message) : 'Validation error',
+          field: typeof entry.field === 'string' ? entry.field : undefined
+        };
+      });
+      continue;
+    }
+    result[key] = value;
+  }
+  return result;
 }
 
 function collectTransactionIds(lines: AccountingExportLine[]): string[] {

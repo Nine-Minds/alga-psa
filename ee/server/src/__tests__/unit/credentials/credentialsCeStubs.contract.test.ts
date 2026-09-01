@@ -84,7 +84,7 @@ describe('credentials vault — CE stub contracts', () => {
   });
 });
 
-describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
+describe('credentials vault — gating and legacy Hudu tab preservation', () => {
   it('ClientDetails still registers the legacy Hudu-only Passwords tab when the vault gate is off', () => {
     const source = readRepoFile(
       'packages/clients/src/components/clients/ClientDetails.tsx'
@@ -109,7 +109,7 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
     expect(huduPasswordsSection).toContain('<HuduClientPasswordsTab clientId={client.client_id} />');
   });
 
-  it('the asset section preserves the legacy placeholder when the flag is off and the vault card when on', () => {
+  it('the asset section renders the vault card through @enterprise', () => {
     const wrapper = readRepoFile(
       'packages/assets/src/components/tabs/AssetCredentialsSection.tsx'
     );
@@ -121,14 +121,8 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
       'ee/server/src/components/credentials/EntityCredentialsSection.tsx'
     );
 
-    // Shared wrapper: flag-gated. Flag off => the legacy placeholder card
-    // renders in both EE and CE builds; flag on => the vault section loads via
-    // @enterprise (EE renders the card, CE renders nothing).
-    expect(wrapper).toContain("useFeatureFlag('release-v1-5-feature'");
-    expect(wrapper).toContain('if (!flagEnabled) {');
-    expect(wrapper).toContain("t('documentsPasswordsTab.passwords.title'");
-    expect(wrapper).toContain("t('documentsPasswordsTab.passwords.comingSoon'");
-    expect(wrapper).toContain('Secure password management coming soon.');
+    // Shared wrapper: the vault section loads via @enterprise (EE renders the
+    // card, CE renders nothing).
     expect(wrapper).toContain(
       "import('@enterprise/components/credentials/AssetCredentialsSection')"
     );
@@ -140,41 +134,24 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
     expect(tab).not.toContain('Secure password management coming soon');
 
     // The EE asset section is the generic entity section scoped to the asset;
-    // the GENERIC section gates its Card + header on the flag (flag off =>
-    // null, never an empty title-only card) and derives the asset ids.
+    // the GENERIC section derives the asset ids.
     expect(eeSection).toContain('EntityCredentialsSection');
     expect(eeSection).toContain('entityType="asset"');
-    expect(eeGenericSection).toContain("useFeatureFlag('release-v1-5-feature'");
-    expect(eeGenericSection).toContain('if (!flagEnabled) {');
-    expect(eeGenericSection).toContain('return null;');
     expect(eeGenericSection).toContain('id={cardId}');
     expect(eeGenericSection).toContain('`${entityType}-credentials-section`');
   });
 
-  it('the client gate requires the release flag, EE, and the tier probe (useCredentialsVaultTab)', () => {
+  it('the client gate requires EE and the tier probe (useCredentialsVaultTab)', () => {
     const hook = readRepoFile('packages/clients/src/components/clients/useCredentialsVaultTab.ts');
     expect(hook).toContain("isEnterprise");
-    expect(hook).toContain("useFeatureFlag('release-v1-5-feature'");
     expect(hook).toContain("getCredentialsContext");
-    expect(hook).toContain('visible: enabled && flagEnabled && tierOk');
+    expect(hook).toContain('visible: enabled && tierOk');
   });
 
-  it('the global screen renders nothing when the release flag is off (flag gate in component)', () => {
-    const screen = readRepoFile(
-      'ee/server/src/components/credentials/CredentialsScreen.tsx'
-    );
-    expect(screen).toContain("useFeatureFlag('release-v1-5-feature'");
-    expect(screen).toContain('if (!flagEnabled) {');
-    expect(screen).toContain('return null;');
-  });
-
-  it('the sidebar hides the Passwords nav item when the release flag is off', () => {
-    const sidebar = readRepoFile('server/src/components/layout/SidebarWithFeatureFlags.tsx');
+  it('the Passwords nav item is tier and edition gated in menuConfig', () => {
     const menuConfig = readRepoFile('server/src/config/menuConfig.ts');
 
-    expect(sidebar).toContain("useFeatureFlag('release-v1-5-feature'");
-    expect(sidebar).toContain("item.name !== 'Passwords' || credentialsVaultEnabled");
-    // The nav item itself is tier+edition gated (hidden on CE and below pro).
+    // The nav item is tier+edition gated (hidden on CE and below pro).
     expect(menuConfig).toContain("name: 'Passwords'");
     expect(menuConfig).toContain('requiredFeature: TIER_FEATURES.CREDENTIALS');
     expect(menuConfig).toContain('availableEditions: ENTERPRISE_ONLY_EDITIONS');

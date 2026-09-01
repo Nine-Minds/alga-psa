@@ -8,11 +8,7 @@ import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import { preloadLocaleResources } from "@/lib/i18n/preloadLocaleResources";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
-import {
-  isEnterprise,
-  isFeatureFlagEnabled,
-  RELEASE_V1_5_FEATURE_FLAG,
-} from "@alga-psa/core/features";
+import { isEnterprise } from "@alga-psa/core/features";
 import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain";
 import { getTenantThemeByTenantId } from "@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions";
 import { resolveMspBranding } from "@/components/layout/mspBranding";
@@ -88,12 +84,6 @@ export default async function MspLayout({
   // Client-portal branding must never leak into the staff app by itself. The
   // dedicated Enterprise white-label setting is the explicit MSP opt-in.
   const tenantId = session.user.tenant;
-  const teamsFeatureEnabled = isEnterprise && tenantId
-    ? await isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
-        tenantId,
-        userId: session.user.id,
-      }).catch(() => false)
-    : false;
   const tenantTheme = isEnterprise && tenantId
     ? await getTenantThemeByTenantId(tenantId).catch(() => null)
     : null;
@@ -115,7 +105,6 @@ export default async function MspLayout({
       preloadedLocaleResources={preloadedLocaleResources}
       onboardingResolvedServerSide={onboardingResolvedServerSide}
       selfHostLicensing={selfHostLicensing}
-      teamsFeatureEnabled={teamsFeatureEnabled}
     >
       {children}
       {modal}

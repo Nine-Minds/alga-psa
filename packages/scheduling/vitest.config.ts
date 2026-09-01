@@ -6,7 +6,13 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
-    testTimeout: 10000,
+    // 20s, matching the other heavy action-layer packages (billing, tickets,
+    // client-portal, integrations). Mock factories here close over module-level
+    // consts, so tests must defer to `await import(...)` inside the test body;
+    // the first test to do so pays the entire cold transform of the
+    // source-aliased graph aliased below (~1.2s idle, 10s+ on a loaded CI
+    // runner) while every later test in the file runs in ~1ms.
+    testTimeout: 20000,
   },
   resolve: {
     alias: [

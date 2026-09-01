@@ -1162,14 +1162,6 @@
       "saveFailed": "Failed to create maintenance schedule"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documents & Passwords",
-    "description": "Combined tab for asset documents, credentials, and related secure records",
-    "passwords": {
-      "title": "Passwords & Secrets",
-      "comingSoon": "Secure password management coming soon."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Maintenance Schedules",
     "description": "Maintenance schedule management tab for planned service and recurring work",

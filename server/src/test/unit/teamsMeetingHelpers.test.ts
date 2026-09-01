@@ -7,7 +7,6 @@ const loggerWarnMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
 const renewTeamsMeetingArtifactSubscriptionsMock = vi.hoisted(() => vi.fn(async () => []));
 const enterpriseState = vi.hoisted(() => ({ value: true }));
-const featureState = vi.hoisted(() => ({ value: true }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
@@ -20,8 +19,6 @@ vi.mock('@alga-psa/core/features', () => ({
   get isEnterprise() {
     return enterpriseState.value;
   },
-  RELEASE_V1_5_FEATURE_FLAG: 'release-v1-5-feature',
-  isFeatureFlagEnabled: vi.fn(async () => featureState.value),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -81,7 +78,6 @@ describe('Teams meeting helpers', () => {
 
   beforeEach(() => {
     enterpriseState.value = true;
-    featureState.value = true;
     createTenantKnexMock.mockReset();
     resolveProviderConfigMock.mockReset();
     fetchMicrosoftGraphAppTokenMock.mockReset();
@@ -265,27 +261,6 @@ describe('Teams meeting helpers', () => {
         },
         type: 'required',
       }]);
-    });
-
-    it('returns null without calling Graph when the release feature is disabled', async () => {
-      featureState.value = false;
-      const db = buildTeamsIntegrationKnex({
-        tenant: 'tenant-1',
-        install_status: 'active',
-        selected_profile_id: 'profile-1',
-        default_meeting_organizer_upn: 'organizer@example.com',
-      });
-      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
-
-      await expect(createTeamsMeeting({
-        tenantId: 'tenant-1',
-        subject: 'Virtual consultation',
-        startDateTime: '2026-04-24T14:00:00.000Z',
-        endDateTime: '2026-04-24T14:30:00.000Z',
-      })).resolves.toBeNull();
-
-      expect(fetchMicrosoftGraphAppTokenMock).not.toHaveBeenCalled();
-      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('returns null and logs a warning when Graph responds 403', async () => {
@@ -820,24 +795,6 @@ describe('Teams meeting helpers', () => {
   });
 
   describe('getTeamsMeetingCapability', () => {
-    it('returns feature_disabled when the release feature is disabled', async () => {
-      featureState.value = false;
-      const db = buildTeamsIntegrationKnex({
-        tenant: 'tenant-1',
-        install_status: 'active',
-        selected_profile_id: 'profile-1',
-        default_meeting_organizer_upn: 'organizer@example.com',
-      });
-      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
-
-      await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
-        available: false,
-        reason: 'feature_disabled',
-        recordingsAvailable: false,
-        recordingReason: 'meeting_unavailable',
-      });
-    });
-
     it('returns not_configured when no teams integration row exists', async () => {
       const db = buildTeamsIntegrationKnex(undefined);
       createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
@@ -1049,22 +1006,6 @@ describe('Teams meeting helpers', () => {
         startDateTime: '2026-04-24T14:00:00.000Z',
         endDateTime: '2026-04-24T14:30:00.000Z',
       })).resolves.toEqual({ status: 'skipped', reason: 'not_configured' });
-    });
-
-    it('T041: create returns skipped/feature_disabled when the release feature is disabled', async () => {
-      featureState.value = false;
-      const db = buildTeamsIntegrationKnex(readyIntegrationRow);
-      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
-
-      await expect(createTeamsMeetingWithResult({
-        tenantId: 'tenant-1',
-        subject: 'Virtual consultation',
-        startDateTime: '2026-04-24T14:00:00.000Z',
-        endDateTime: '2026-04-24T14:30:00.000Z',
-      })).resolves.toEqual({ status: 'skipped', reason: 'feature_disabled' });
-
-      expect(fetchMicrosoftGraphAppTokenMock).not.toHaveBeenCalled();
-      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('T027: strips attendees when send_meeting_invites is false and includes them when the column is absent', async () => {

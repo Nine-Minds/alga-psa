@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import type { CanonicalCallRecord } from '../types';
 
 /**
@@ -151,10 +150,6 @@ function table(name: string): any[] {
   return hoisted.rowsFor(name);
 }
 
-function enableReleaseFeature(): void {
-  registerFeatureFlagChecker(async () => true);
-}
-
 function seedTenantBasics(): void {
   table('system_interaction_types').push({ tenant: TENANT, type_id: 'type-call', type_name: 'Call' });
   table('users').push({
@@ -214,22 +209,10 @@ describe('ingestCanonicalCall', () => {
     }
     hoisted.interactionCreate.mockClear();
     hoisted.createTicketWithRetry.mockClear();
-    registerFeatureFlagChecker(async () => false);
     seedTenantBasics();
   });
 
-  it('T027: refuses a tenant when the release feature is disabled and writes nothing', async () => {
-    knownContact();
-
-    const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
-
-    expect(outcome).toEqual({ status: 'skipped', reason: 'feature_disabled' });
-    expect(table('telephony_call_records')).toHaveLength(0);
-    expect(hoisted.interactionCreate).not.toHaveBeenCalled();
-  });
-
   it('rejects a payload that is not a canonical call record', async () => {
-    enableReleaseFeature();
 
     const outcome = await ingestCanonicalCall({
       tenantId: TENANT,
@@ -241,7 +224,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T024: a matched inbound call is stored and filed as a Call interaction', async () => {
-    enableReleaseFeature();
     knownContact();
 
     const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
@@ -276,7 +258,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('uses the tenant own-company country to normalize and match national numbers', async () => {
-    enableReleaseFeature();
     setTenantCountry('GB');
     table('contact_phone_numbers').push({
       tenant: TENANT,
@@ -305,7 +286,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('leaves a national number unmatched when the tenant country is not configured', async () => {
-    enableReleaseFeature();
 
     const outcome = await ingestCanonicalCall({
       tenantId: TENANT,
@@ -321,7 +301,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T023: the same provider call id ingested twice keeps one record and one interaction', async () => {
-    enableReleaseFeature();
     knownContact();
 
     const first = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
@@ -345,7 +324,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T025: an unmatched call is recorded without an interaction', async () => {
-    enableReleaseFeature();
 
     const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
 
@@ -359,7 +337,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T025: a contact with no client still persists the call instead of losing it', async () => {
-    enableReleaseFeature();
     // contacts.client_id is nullable by design, so the ladder can match a
     // contact and still have nowhere to file the interaction.
     table('contact_phone_numbers').push({
@@ -385,7 +362,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T025: an ambiguous call is recorded with its candidates and no attribution', async () => {
-    enableReleaseFeature();
     knownContact();
     table('contact_phone_numbers').push({
       tenant: TENANT,
@@ -406,7 +382,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T029: an outbound call matches on the callee and titles as outbound', async () => {
-    enableReleaseFeature();
     table('contact_phone_numbers').push({
       tenant: TENANT,
       contact_name_id: 'contact-scarecrow',
@@ -436,7 +411,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('uses a matching outbound call intent to file the call on its originating ticket', async () => {
-    enableReleaseFeature();
     table('telephony_call_intents').push({
       tenant: TENANT,
       intent_id: 'intent-ticket-1',
@@ -483,7 +457,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('does not consume another Teams user\'s outbound intent', async () => {
-    enableReleaseFeature();
     table('telephony_call_intents').push({
       tenant: TENANT,
       intent_id: 'intent-other-user',
@@ -517,7 +490,6 @@ describe('ingestCanonicalCall', () => {
   });
 
   it('T024: a client-only match still files the call on the client timeline', async () => {
-    enableReleaseFeature();
     table('client_locations').push({ tenant: TENANT, client_id: 'client-emerald', phone: '+1 (555) 123-4567' });
 
     const outcome = await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall });
@@ -535,7 +507,6 @@ describe('resolveCallMatch', () => {
     }
     hoisted.interactionCreate.mockClear();
     seedTenantBasics();
-    enableReleaseFeature();
   });
 
   it('T026: resolving an unmatched call mints the interaction and stamps the record', async () => {
@@ -635,7 +606,6 @@ describe('autoCreateTicketForCall', () => {
     hoisted.interactionCreate.mockClear();
     hoisted.createTicketWithRetry.mockClear();
     seedTenantBasics();
-    enableReleaseFeature();
   });
 
   it('T043: a matched call yields a ticket carrying the call attribution', async () => {

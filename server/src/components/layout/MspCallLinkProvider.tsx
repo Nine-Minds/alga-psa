@@ -6,18 +6,18 @@ import {
   createTelephonyCallIntent,
   getTelephonyCallLinkState,
 } from '@alga-psa/integrations/actions/integrations/telephonyActions';
+import { isEnterprise } from '@alga-psa/core/features';
 
 /**
  * Supplies click-to-call affordances with the tenant's live integration state.
  * The Teams deep link is hidden unless Teams is active; ticket call actions
  * additionally require the Teams Phone provider, while `tel:` always remains.
+ * Teams/telephony are Enterprise-only, so CE never probes the server.
  */
 export function MspCallLinkProvider({
   children,
-  teamsFeatureEnabled = false,
 }: {
   children: React.ReactNode;
-  teamsFeatureEnabled?: boolean;
 }) {
   const [state, setState] = React.useState({
     teamsIntegrationActive: false,
@@ -26,7 +26,7 @@ export function MspCallLinkProvider({
 
   React.useEffect(() => {
     let cancelled = false;
-    if (!teamsFeatureEnabled) {
+    if (!isEnterprise) {
       setState({ teamsIntegrationActive: false, teamsPhoneConnected: false });
       return () => { cancelled = true; };
     }
@@ -47,7 +47,7 @@ export function MspCallLinkProvider({
       });
 
     return () => { cancelled = true; };
-  }, [teamsFeatureEnabled]);
+  }, []);
 
   const recordCallIntent = React.useCallback(async (input: { ticketId: string; phoneNumber: string }) => {
     // A failed intent must never prevent the Teams deep link from opening. The

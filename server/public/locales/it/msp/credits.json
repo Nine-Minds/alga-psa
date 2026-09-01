@@ -77,7 +77,6 @@
     "invoiceAmount": "Importo fattura:",
     "selectCreditToApply": "Seleziona il credito da applicare",
     "amountToApply": "Importo da applicare",
-    "creditOrderNote": "I crediti vengono applicati in ordine di scadenza (prima i più vecchi)",
     "creditOrderNoteExpirationFirst": "I crediti vengono applicati in ordine di scadenza (prima quelli in scadenza)",
     "creditOrderNoteOldestFirst": "I crediti vengono applicati in ordine di creazione (prima il credito più vecchio)",
     "creditOrderNoteNewestFirst": "I crediti vengono applicati in ordine di creazione (prima il credito più recente)",

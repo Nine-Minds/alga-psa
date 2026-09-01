@@ -252,6 +252,8 @@ export default defineConfig({
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/teams$/, replacement: path.resolve(__dirname, '../packages/teams/src/index.ts') },
       { find: /^@alga-psa\/teams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/teams/src/$1') },
+      { find: /^@alga-psa\/telephony$/, replacement: path.resolve(__dirname, '../packages/telephony/src/index.ts') },
+      { find: /^@alga-psa\/telephony\/(.*)$/, replacement: path.resolve(__dirname, '../packages/telephony/src/$1') },
       { find: /^@alga-psa\/product-extension-actions$/, replacement: path.resolve(__dirname, '../packages/product-extension-actions/oss/entry.ts') },
       { find: /^@alga-psa\/tags$/, replacement: path.resolve(__dirname, '../packages/tags/src/index.ts') },
       { find: /^@alga-psa\/tags\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tags/src/$1') },

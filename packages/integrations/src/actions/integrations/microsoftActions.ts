@@ -2,7 +2,6 @@
 
 import { randomUUID } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { isFeatureFlagEnabled, RELEASE_V1_5_FEATURE_FLAG } from '@alga-psa/core/features';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -1606,12 +1605,6 @@ export const setMicrosoftConsumerBinding = withAuth(async (
     }
 
     const { knex } = await createTenantKnex();
-    if (input.consumerType === 'teams' && !(await isFeatureFlagEnabled(RELEASE_V1_5_FEATURE_FLAG, {
-      tenantId: tenant,
-      userId: (user as any)?.user_id,
-    }))) {
-      return { success: false, error: 'Microsoft Teams integration is not enabled for this tenant.' };
-    }
 
     const secretProvider = await getSecretProviderInstance();
 

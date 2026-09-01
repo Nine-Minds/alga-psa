@@ -1162,14 +1162,6 @@
       "saveFailed": "Falha ao criar cronograma de manutenção"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documentos e Senhas",
-    "description": "Guia combinada para documentos de ativos, credenciais e registros seguros relacionados",
-    "passwords": {
-      "title": "Senhas e segredos",
-      "comingSoon": "Gerenciamento seguro de senhas em breve."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Cronogramas de manutenção",
     "description": "Guia de gerenciamento do cronograma de manutenção para serviços planejados e trabalhos recorrentes",

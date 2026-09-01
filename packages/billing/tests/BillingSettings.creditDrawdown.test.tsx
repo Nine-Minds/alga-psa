@@ -9,12 +9,6 @@ import "@testing-library/jest-dom/vitest";
 const searchParamsState = vi.hoisted(() => ({
   params: null as URLSearchParams | null,
 }));
-const featureFlagState = vi.hoisted(() => ({
-  enabled: false,
-  loading: true,
-  error: null as Error | null,
-}));
-const useFeatureFlagMock = vi.hoisted(() => vi.fn(() => featureFlagState));
 const useCollapsiblePreferenceMock = vi.hoisted(() =>
   vi.fn(() => [false, () => {}] as [boolean, (v: boolean | ((p: boolean) => boolean)) => void])
 );
@@ -30,7 +24,6 @@ vi.mock("next/dynamic", () => ({
 }));
 
 vi.mock("@alga-psa/ui/hooks", () => ({
-  useFeatureFlag: (...args: unknown[]) => useFeatureFlagMock(...args),
   useCollapsiblePreference: (...args: unknown[]) => useCollapsiblePreferenceMock(...args),
 }));
 
@@ -88,7 +81,7 @@ vi.mock("@alga-psa/reference-data/components/settings/NumberingSettings", () => 
   default: () => null,
 }));
 
-describe("BillingSettings credit draw-down feature flag", () => {
+describe("BillingSettings credit draw-down", () => {
   let BillingSettings: React.ComponentType;
 
   beforeAll(async () => {
@@ -98,29 +91,13 @@ describe("BillingSettings credit draw-down feature flag", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     searchParamsState.params = new URLSearchParams();
-    featureFlagState.enabled = false;
-    featureFlagState.loading = true;
-    featureFlagState.error = null;
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it("does not render credit draw-down controls when the flag is off", async () => {
-    render(<BillingSettings />);
-
-    expect(await screen.findByText("General")).toBeInTheDocument();
-    expect(screen.queryByTestId("credit-drawdown-settings")).not.toBeInTheDocument();
-    expect(useFeatureFlagMock).toHaveBeenCalledWith("release-v1-5-feature", {
-      defaultValue: false,
-    });
-  });
-
-  it("renders credit draw-down controls when the flag is enabled", async () => {
-    featureFlagState.enabled = true;
-    featureFlagState.loading = false;
-
+  it("renders the credit draw-down controls", async () => {
     render(<BillingSettings />);
 
     expect(await screen.findByTestId("credit-drawdown-settings")).toBeInTheDocument();
