@@ -252,6 +252,8 @@ export default defineConfig({
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/teams$/, replacement: path.resolve(__dirname, '../packages/teams/src/index.ts') },
       { find: /^@alga-psa\/teams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/teams/src/$1') },
+      { find: /^@alga-psa\/telephony$/, replacement: path.resolve(__dirname, '../packages/telephony/src/index.ts') },
+      { find: /^@alga-psa\/telephony\/(.*)$/, replacement: path.resolve(__dirname, '../packages/telephony/src/$1') },
       { find: /^@alga-psa\/product-extension-actions$/, replacement: path.resolve(__dirname, '../packages/product-extension-actions/oss/entry.ts') },
       { find: /^@alga-psa\/tags$/, replacement: path.resolve(__dirname, '../packages/tags/src/index.ts') },
       { find: /^@alga-psa\/tags\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tags/src/$1') },
@@ -302,6 +304,7 @@ export default defineConfig({
       { find: /^@alga-psa\/emulator-smtp-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/smtp-sink/src/index.ts') },
       { find: /^@alga-psa\/emulator-stripe$/, replacement: path.resolve(__dirname, '../packages/emulators/stripe/src/index.ts') },
       { find: /^@alga-psa\/emulator-webhook-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/webhook-sink/src/index.ts') },
+      { find: /^@alga-psa\/emulator-xero$/, replacement: path.resolve(__dirname, '../packages/emulators/xero/src/index.ts') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },

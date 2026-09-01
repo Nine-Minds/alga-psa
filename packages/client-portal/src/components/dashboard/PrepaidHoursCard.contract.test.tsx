@@ -6,19 +6,9 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrepaidHoursCard } from './PrepaidHoursCard';
 
-const featureFlagState = vi.hoisted(() => ({
-  enabled: false,
-  loading: false,
-  error: null as Error | null,
-}));
-
 const checkClientPortalPermissionsMock = vi.hoisted(() => vi.fn());
 const getClientBucketUsageMock = vi.hoisted(() => vi.fn());
 const getClientHourBlocksMock = vi.hoisted(() => vi.fn());
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => featureFlagState,
-}));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
@@ -74,12 +64,9 @@ function bucketRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('PrepaidHoursCard dashboard widget (release-v1-5-feature)', () => {
+describe('PrepaidHoursCard dashboard widget', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    featureFlagState.enabled = false;
-    featureFlagState.loading = false;
-    featureFlagState.error = null;
     checkClientPortalPermissionsMock.mockResolvedValue({ hasBillingAccess: true });
     getClientBucketUsageMock.mockResolvedValue([bucketRow()]);
     getClientHourBlocksMock.mockResolvedValue([]);
@@ -89,13 +76,7 @@ describe('PrepaidHoursCard dashboard widget (release-v1-5-feature)', () => {
     cleanup();
   });
 
-  it('T163: renders nothing when the flag is off', () => {
-    const { container } = render(<PrepaidHoursCard />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
   it('T164: renders nothing without billing access', async () => {
-    featureFlagState.enabled = true;
     checkClientPortalPermissionsMock.mockResolvedValue({ hasBillingAccess: false });
     const { container } = render(<PrepaidHoursCard />);
     await vi.waitFor(() => expect(checkClientPortalPermissionsMock).toHaveBeenCalled());
@@ -104,7 +85,6 @@ describe('PrepaidHoursCard dashboard widget (release-v1-5-feature)', () => {
   });
 
   it('T165: renders nothing when the bucket action returns a permission error', async () => {
-    featureFlagState.enabled = true;
     getClientBucketUsageMock.mockResolvedValue({ permissionError: 'Unauthorized' });
     const { container } = render(<PrepaidHoursCard />);
     await vi.waitFor(() => expect(getClientBucketUsageMock).toHaveBeenCalled());
@@ -112,7 +92,6 @@ describe('PrepaidHoursCard dashboard widget (release-v1-5-feature)', () => {
   });
 
   it('T166: renders nothing when there are no bucket lines', async () => {
-    featureFlagState.enabled = true;
     getClientBucketUsageMock.mockResolvedValue([]);
     const { container } = render(<PrepaidHoursCard />);
     await vi.waitFor(() => expect(getClientBucketUsageMock).toHaveBeenCalled());
@@ -120,7 +99,6 @@ describe('PrepaidHoursCard dashboard widget (release-v1-5-feature)', () => {
   });
 
   it('T167: renders the card with a per-line meter and a View billing link when all gates pass', async () => {
-    featureFlagState.enabled = true;
     render(<PrepaidHoursCard />);
 
     expect(await screen.findByText('Prepaid hours')).toBeInTheDocument();
@@ -134,7 +112,6 @@ describe('PrepaidHoursCard dashboard widget (release-v1-5-feature)', () => {
   });
 
   it('T168: overage rows render a red OVER badge instead of a negative number', async () => {
-    featureFlagState.enabled = true;
     getClientBucketUsageMock.mockResolvedValue([
       bucketRow({ minutes_used: 1500, percentage_used: 113.64, remaining_minutes: -180 }),
     ]);

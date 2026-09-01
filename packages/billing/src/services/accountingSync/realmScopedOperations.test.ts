@@ -53,6 +53,18 @@ function makeRealmLedger() {
     findByAlgaIdAnyRealm: vi.fn(async (entityType: string, entityId: string) =>
       rows.filter((r) => r.alga_entity_type === entityType && r.alga_entity_id === entityId)
     ),
+    // A row for this entity that exists but is NOT consumable for the given
+    // realm: tombstoned, realm-less, or bound to a different realm.
+    findNonConsumable: vi.fn(async (entityType: string, entityId: string, realm: string) =>
+      rows.find(
+        (r) =>
+          r.alga_entity_type === entityType &&
+          r.alga_entity_id === entityId &&
+          (r.deleted_at != null ||
+            r.external_realm_id == null ||
+            r.external_realm_id !== realm)
+      )
+    ),
     findByExternalId: vi.fn(async (entityType: string, externalId: string, realm: string) =>
       rows.find(
         (r) =>

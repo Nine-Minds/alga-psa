@@ -41,6 +41,7 @@ function makeLedger(overrides: any = {}) {
     findByAlgaId: vi.fn(async () => undefined),
     findByAlgaIdAnyRealm: vi.fn(async () => []),
     findByExternalId: vi.fn(async () => undefined),
+    findNonConsumable: vi.fn(async () => undefined),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn().mockReturnThis(),
@@ -466,6 +467,9 @@ describe('drainApplyCreditOps', () => {
 
     // CreditMemo balance check still runs; the customer read should not.
     qboReadMock.mockResolvedValueOnce({ Id: 'qbo-cm-42', Balance: 100 });
+    // Target invoice revalidation runs, but its CustomerRef is not consulted
+    // because the mapping metadata already carries one.
+    qboReadMock.mockResolvedValueOnce({ Id: 'qbo-inv-99', CustomerRef: { value: 'customer-on-remote' } });
     qboCreateMock.mockResolvedValueOnce({ Id: 'qbo-payment-2' });
     const stats = makeStats();
 
@@ -480,9 +484,10 @@ describe('drainApplyCreditOps', () => {
       stats
     });
 
-    // Should NOT have read the Invoice because customerId was in metadata
-    expect(qboReadMock).toHaveBeenCalledTimes(1);
+    // CM balance check + target-invoice revalidation; no customer-ref read.
+    expect(qboReadMock).toHaveBeenCalledTimes(2);
     expect(qboReadMock).toHaveBeenCalledWith('CreditMemo', 'qbo-cm-42');
+    expect(qboReadMock).toHaveBeenCalledWith('Invoice', 'qbo-inv-99');
     expect(qboCreateMock).toHaveBeenCalledWith(
       'Payment',
       expect.objectContaining({ CustomerRef: { value: 'customer-from-meta' } })
@@ -593,6 +598,7 @@ describe('drainApplyCreditOps', () => {
     });
 
     qboReadMock.mockResolvedValueOnce({ Id: 'qbo-cm-42', Balance: 100 });
+    qboReadMock.mockResolvedValueOnce({ Id: 'qbo-inv-99', CustomerRef: { value: 'customer-77' } });
     qboCreateMock.mockResolvedValueOnce({ Id: 'qbo-payment-3' });
 
     const exceptions = makeExceptions();

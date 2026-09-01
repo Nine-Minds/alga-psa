@@ -15,8 +15,8 @@ export async function generateMetadata(): Promise<Metadata> {
  * Vault-wide audit log screen (`/msp/credentials/audit`).
  *
  * Session-gated exactly like `credentials/page.tsx`. The EE implementation
- * re-checks `release-v1-5-feature` + `getCredentialsContext` (tier) and
- * renders the `credential:audit` forbidden state when the viewer may see the
+ * re-checks `getCredentialsContext` (tier) and renders the
+ * `credential:audit` forbidden state when the viewer may see the
  * vault but not its audit trail. CE builds resolve the `@enterprise` import
  * to the render-null stub.
  */

@@ -141,8 +141,6 @@ interface IntegrationsSettingsPageProps {
   canUseEntraSync?: boolean;
   /** Whether the user can use CIPP (Pro feature) */
   canUseCipp?: boolean;
-  /** Whether release-v1.5 Teams and telephony functionality is enabled. */
-  teamsFeatureEnabled?: boolean;
   /** Slot for QBO sync health panel (injected from billing to avoid a circular dep) */
   qboSyncHealthSlot?: React.ReactNode;
   /** Slot for QBO onboarding wizard entry (injected from billing to avoid a circular dep) */
@@ -211,7 +209,6 @@ function CategorySubSections({ category }: { category: IntegrationCategory }) {
 const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   canUseEntraSync = true,
   canUseCipp = true,
-  teamsFeatureEnabled = false,
   qboSyncHealthSlot,
   qboOnboardingSlot,
 }) => {
@@ -303,7 +300,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
             </Card>
           ),
         },
-        ...(teamsFeatureEnabled && isEEAvailable ? [{
+        ...(isEEAvailable ? [{
           id: 'teams',
           name: t('integrations.items.teams.name'),
           description: t('integrations.items.teams.description'),
@@ -324,7 +321,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
       // own a sub-section so a Teams admin is not scrolling past call history.
       subSections: [
         { id: 'email', label: t('integrations.items.email.name'), icon: Mail, integrationIds: ['email'] },
-        ...(teamsFeatureEnabled && isEEAvailable ? [{ id: 'microsoft-teams', label: t('integrations.items.teams.name'), icon: Cloud, integrationIds: ['teams'] },
+        ...(isEEAvailable ? [{ id: 'microsoft-teams', label: t('integrations.items.teams.name'), icon: Cloud, integrationIds: ['teams'] },
         {
           id: 'telephony',
           label: t('integrations.items.telephony.name', { defaultValue: 'Telephony' }),
@@ -361,7 +358,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           description: isEEAvailable
             ? t('integrations.items.google.description.ee')
             : t('integrations.items.google.description.oss'),
-          component: () => <ProviderCredentialsWorkbench canUseTeams={teamsFeatureEnabled && isEEAvailable} isEnterpriseEdition={isEEAvailable} />,
+          component: () => <ProviderCredentialsWorkbench canUseTeams={isEEAvailable} isEnterpriseEdition={isEEAvailable} />,
         },
       ],
     },
@@ -405,7 +402,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, teamsFeatureEnabled, isEEAvailable, isHuduEnabled, t]);
+  ], [canUseCipp, canUseEntraSync, isEEAvailable, isHuduEnabled, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {

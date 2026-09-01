@@ -14,9 +14,6 @@ import { useSession } from 'next-auth/react';
 interface NotificationDropdownProps {
   notifications: InternalNotification[];
   unreadCount: number;
-  // Configurable notification priorities (task 29.8.46). When true, the panel
-  // groups by tier; when false/undefined it renders today's flat list.
-  priorityEnabled?: boolean;
   isLoading: boolean;
   error: string | null;
   isConnected: boolean;
@@ -29,7 +26,6 @@ interface NotificationDropdownProps {
 export function NotificationDropdown({
   notifications,
   unreadCount,
-  priorityEnabled = false,
   isLoading,
   error,
   isConnected,
@@ -173,7 +169,7 @@ export function NotificationDropdown({
             <p className="text-sm text-[rgb(var(--color-text-500))] font-medium">No notifications</p>
             <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">You're all caught up!</p>
           </div>
-        ) : priorityEnabled ? (
+        ) : (
           (() => {
             // Group by tier, preserving the incoming chronological order.
             const high = notifications.filter((n) => n.priority === 'high');
@@ -186,7 +182,6 @@ export function NotificationDropdown({
                   <NotificationItem
                     key={notification.internal_notification_id}
                     notification={notification}
-                    priorityEnabled
                     onClick={() => handleNotificationClick(notification)}
                   />
                 ))}
@@ -227,16 +222,6 @@ export function NotificationDropdown({
               </div>
             );
           })()
-        ) : (
-          <div className="divide-y divide-[rgb(var(--color-border-100))]">
-            {notifications.map((notification) => (
-              <NotificationItem
-                key={notification.internal_notification_id}
-                notification={notification}
-                onClick={() => handleNotificationClick(notification)}
-              />
-            ))}
-          </div>
         )}
       </div>
 
@@ -247,9 +232,7 @@ export function NotificationDropdown({
             href={
               userType === 'client'
                 ? '/client-portal/profile?tab=activity'
-                : priorityEnabled
-                  ? '/msp/user-activities?focus=notifications'
-                  : '/msp/user-activities'
+                : '/msp/user-activities?focus=notifications'
             }
             onClick={onClose}
             className="flex items-center justify-center px-4 py-3 text-sm font-medium text-main-600 hover:text-main-700 hover:bg-[rgb(var(--color-border-50))] transition-colors"

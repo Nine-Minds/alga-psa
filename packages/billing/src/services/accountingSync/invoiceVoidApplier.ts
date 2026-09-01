@@ -55,24 +55,25 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
   }
 
   for (const op of pending) {
+    // Exact tenant + provider + entity type + realm match, no NULL-realm
+    // fallback, tombstones excluded: a mapping in another company or one that
+    // was unlinked must never drive a void in this company.
     const mapping = await deps.ledger.findByAlgaId('invoice', op.alga_entity_id, deps.targetRealm);
 
     if (!mapping) {
-      // Distinguish "never exported" (nothing to void — done) from "mapped,
-      // but not to this realm" (a void here would be aimed at the wrong
-      // company file — fail without touching the provider).
-      const otherRealmRows = await deps.ledger.findByAlgaIdAnyRealm('invoice', op.alga_entity_id);
-      if (otherRealmRows.length > 0) {
-        const mappedRealms = otherRealmRows.map((row) => row.external_realm_id ?? '(none)');
-        const message =
-          `Invoice ${op.alga_entity_id} is mapped to realm(s) [${mappedRealms.join(', ')}], ` +
-          `not the operation realm ${deps.targetRealm}; refusing to void`;
-        logger.warn('[invoiceVoidApplier] Mapping realm mismatch; refusing to void', {
+      const blocked = await deps.ledger.findNonConsumable('invoice', op.alga_entity_id, deps.targetRealm);
+      if (blocked) {
+        const reason = blocked.deleted_at
+          ? 'invoice was unlinked from QuickBooks'
+          : 'invoice maps to a different QuickBooks company';
+        const message = `Cannot void in QuickBooks: ${reason}. Relink the invoice mapping to this company first.`;
+        logger.warn('[invoiceVoidApplier] Void blocked by non-consumable mapping', {
           opId: op.op_id,
           tenantId: deps.tenantId,
           invoiceId: op.alga_entity_id,
-          operationRealm: deps.targetRealm,
-          mappedRealms
+          mappingId: blocked.id,
+          deleted: Boolean(blocked.deleted_at),
+          externalRealm: blocked.external_realm_id
         });
         const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
         deps.stats.opsFailed += 1;
@@ -81,14 +82,16 @@ export async function drainVoidInvoiceOps(deps: DrainDeps): Promise<void> {
             type: 'accounting_sync_export_error',
             entityType: 'invoice',
             entityId: op.alga_entity_id,
-            title: 'Invoice void skipped — mapping belongs to a different QuickBooks company',
+            title: 'Invoice void blocked — mapping is unlinked or points at another company',
             context: {
-              reason: 'mapping_realm_mismatch',
               alga_entity_id: op.alga_entity_id,
-              operation_realm: deps.targetRealm,
-              mapped_realms: mappedRealms,
+              external_entity_id: blocked.external_entity_id,
+              attempts: op.attempts + 1,
               message,
-              details: message
+              details:
+                `${message} The QuickBooks document was not touched. ` +
+                'Relink the invoice in the accounting mapping screen, then retry the void.',
+              realm: deps.targetRealm
             }
           });
           deps.stats.exceptionsCreated += 1;

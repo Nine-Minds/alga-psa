@@ -10,7 +10,6 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Button } from "@alga-psa/ui/components/Button";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { RotateCcw } from "lucide-react";
-import { useFeatureFlag } from "@alga-psa/ui/hooks";
 import {
   getInternalNotificationCategoriesAction as getInternalCategoriesAction,
   getSubtypesAction as getInternalSubtypesAction,
@@ -27,9 +26,6 @@ import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 export function InternalNotificationPreferences() {
   const { t, i18n } = useTranslation('client-portal');
-  // Priority configuration is gated behind the v1.5 release flag. With the flag
-  // off this component renders exactly as before (switches only).
-  const { enabled: priorityEnabled } = useFeatureFlag('release-v1-5-feature');
   const { data: session } = useSession();
   const [categories, setCategories] = useState<InternalNotificationCategory[]>([]);
   const [subtypes, setSubtypes] = useState<Record<number, InternalNotificationSubtype[]>>({});
@@ -263,50 +259,39 @@ export function InternalNotificationPreferences() {
                 return (
                   <div key={`${category.internal_notification_category_id}-${subtype.internal_notification_subtype_id}-${index}`} className="flex items-center justify-between">
                     <Label className="text-sm">{subtype.display_title || subtype.name}</Label>
-                    {priorityEnabled ? (
-                      <div className="flex items-center gap-2">
-                        <CustomSelect
-                          id={`user-internal-subtype-priority-${subtype.internal_notification_subtype_id}`}
+                    <div className="flex items-center gap-2">
+                      <CustomSelect
+                        id={`user-internal-subtype-priority-${subtype.internal_notification_subtype_id}`}
+                        size="sm"
+                        value={getSubtypeEffectivePriority(
+                          category.internal_notification_category_id,
+                          subtype.internal_notification_subtype_id
+                        )}
+                        options={priorityOptions}
+                        disabled={!category.is_enabled || !subtype.is_enabled || !isEnabled || !subtypeEnabled}
+                        onValueChange={(v) => handleSubtypePriorityChange(
+                          category.internal_notification_category_id,
+                          subtype.internal_notification_subtype_id,
+                          v as InternalNotificationPriority
+                        )}
+                      />
+                      {subtypeHasPriorityOverride(subtype.internal_notification_subtype_id) && (
+                        <Button
+                          id={`reset-user-internal-subtype-priority-${subtype.internal_notification_subtype_id}`}
+                          variant="ghost"
                           size="sm"
-                          value={getSubtypeEffectivePriority(
-                            category.internal_notification_category_id,
-                            subtype.internal_notification_subtype_id
-                          )}
-                          options={priorityOptions}
-                          disabled={!category.is_enabled || !subtype.is_enabled || !isEnabled || !subtypeEnabled}
-                          onValueChange={(v) => handleSubtypePriorityChange(
+                          className="h-8 w-8 p-0"
+                          title={t('notifications.preferences.resetPriority', 'Reset')}
+                          aria-label={t('notifications.preferences.resetPriority', 'Reset')}
+                          onClick={() => handleSubtypePriorityChange(
                             category.internal_notification_category_id,
                             subtype.internal_notification_subtype_id,
-                            v as InternalNotificationPriority
+                            null
                           )}
-                        />
-                        {subtypeHasPriorityOverride(subtype.internal_notification_subtype_id) && (
-                          <Button
-                            id={`reset-user-internal-subtype-priority-${subtype.internal_notification_subtype_id}`}
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            title={t('notifications.preferences.resetPriority', 'Reset')}
-                            aria-label={t('notifications.preferences.resetPriority', 'Reset')}
-                            onClick={() => handleSubtypePriorityChange(
-                              category.internal_notification_category_id,
-                              subtype.internal_notification_subtype_id,
-                              null
-                            )}
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Switch
-                          checked={subtypeEnabled}
-                          disabled={!category.is_enabled || !subtype.is_enabled || !isEnabled}
-                          onCheckedChange={() => handleSubtypeToggle(
-                            category.internal_notification_category_id,
-                            subtype.internal_notification_subtype_id
-                          )}
-                        />
-                      </div>
-                    ) : (
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Switch
                         checked={subtypeEnabled}
                         disabled={!category.is_enabled || !subtype.is_enabled || !isEnabled}
@@ -315,7 +300,7 @@ export function InternalNotificationPreferences() {
                           subtype.internal_notification_subtype_id
                         )}
                       />
-                    )}
+                    </div>
                   </div>
                 );
               })}

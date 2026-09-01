@@ -25,6 +25,7 @@ function makeFakeLedger(overrides: Partial<Record<string, any>> = {}) {
     findByAlgaId: vi.fn(async () => undefined),
     findByAlgaIdAnyRealm: vi.fn(async () => []),
     findByExternalId: vi.fn(async () => undefined),
+    findNonConsumable: vi.fn(async () => undefined),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn().mockReturnThis()
@@ -64,7 +65,13 @@ function makeKnex(invoiceRow: { client_id: string } | null = { client_id: 'clien
 function makeQboClient(paymentResponse: any = { Id: 'qbo-pay-1', SyncToken: '5' }) {
   return {
     create: vi.fn(async () => paymentResponse),
-    read: vi.fn(async () => null)
+    read: vi.fn(async (entityType: string) => {
+      // The applier revalidates the target invoice immediately before pushing.
+      if (entityType === 'Invoice') {
+        return { Id: 'qbo-inv-100', SyncToken: '0', TotalAmt: 50, Balance: 25 };
+      }
+      return null;
+    })
   };
 }
 

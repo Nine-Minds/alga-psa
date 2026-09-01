@@ -183,6 +183,25 @@ export class XeroAdapter implements AccountingExportAdapter {
         invoiceId,
         targetRealm
       });
+
+      // Export suppression: a tombstoned (unlinked) mapping must never be
+      // re-exported as a brand-new remote document. Unlink is an explicit
+      // stop — a later export requires an explicit relink-or-recreate choice.
+      if (!existingMapping) {
+        const unlinked = await invoiceMappingRepository.findUnlinkedInvoiceMapping({
+          tenantId,
+          adapterType: this.type,
+          invoiceId,
+          targetRealm: context.batch.target_realm ?? null
+        });
+        if (unlinked) {
+          throw new AppError(
+            'XERO_EXPORT_UNLINKED_DOCUMENT',
+            `Invoice ${invoiceId} was unlinked from Xero (external id ${unlinked.externalInvoiceId}). ` +
+              'Relink it or explicitly re-create it before exporting — nothing was written to Xero.'
+          );
+        }
+      }
       const storedChargeLineMappings = Array.isArray(
         (existingMapping?.metadata as any)?.chargeLineMappings
       )
@@ -618,6 +637,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       .where('integration_type', this.type)
       .whereIn('alga_entity_type', ['client'])
       .whereIn('alga_entity_id', Array.from(clientIds))
+      .whereNull('deleted_at')
       .modify((qb) => {
         // Realm-exact: a contact mapping from another Xero organisation (or a
         // legacy realm-less row) must not select the contact this batch

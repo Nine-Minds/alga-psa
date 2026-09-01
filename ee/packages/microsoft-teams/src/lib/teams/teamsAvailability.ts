@@ -1,5 +1,3 @@
-import { tenantHasTeamsFeatureAccess } from './teamsFeatureGate';
-
 export type TeamsAvailabilityDisabledReason =
   | 'ce_unavailable'
   | 'tenant_not_configured'
@@ -68,25 +66,5 @@ export function resolveTeamsAvailability(input: ResolveTeamsAvailabilityInput = 
 }
 
 export async function getTeamsAvailability(input: GetTeamsAvailabilityInput = {}): Promise<TeamsAvailability> {
-  const enterpriseEnabled = input.isEnterpriseEdition ?? isTeamsEnterpriseEdition();
-  const tenantId = (input.tenantId || '').trim();
-
-  if (!enterpriseEnabled) {
-    return disabledAvailability('ce_unavailable');
-  }
-
-  if (input.requireTenantContext !== false && !tenantId) {
-    return disabledAvailability('tenant_not_configured');
-  }
-
-  if (tenantId) {
-    if (!(await tenantHasTeamsFeatureAccess(tenantId, input.userId))) {
-      return disabledAvailability('feature_disabled');
-    }
-  }
-
-  return {
-    enabled: true,
-    reason: 'enabled',
-  };
+  return resolveTeamsAvailability(input);
 }

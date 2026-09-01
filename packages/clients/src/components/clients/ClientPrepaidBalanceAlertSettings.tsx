@@ -8,7 +8,6 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CURRENCY_OPTIONS, currencyFractionDigits } from '@alga-psa/core';
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import toast from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -24,8 +23,6 @@ import {
   updatePrepaidReplenishmentContractOverrideAsync,
   type PrepaidBalanceAlertSettingsInput,
 } from '../../lib/billingHelpers';
-
-const PREPAID_BALANCE_ALERT_FLAG = 'release-v1-5-feature';
 
 interface ClientPrepaidBalanceAlertSettingsProps {
   clientId: string;
@@ -111,17 +108,14 @@ const isUsableSettingsResult = (value: unknown): value is {
 };
 
 /**
- * Per-client prepaid balance alert policy. Fully gated behind
- * `release-v1-5-feature`: while the flag is loading, unavailable, or disabled
- * the card renders nothing (no skeleton, spacer, or altered tab markup).
- * Saving only persists the policy; the daily 09:00 UTC scan evaluates it.
+ * Per-client prepaid balance alert policy. Saving only persists the policy;
+ * the daily 09:00 UTC scan evaluates it.
  */
 const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSettingsProps> = ({
   clientId,
   defaultCurrencyCode,
 }) => {
   const { t } = useTranslation('msp/clients');
-  const { enabled, loading } = useFeatureFlag(PREPAID_BALANCE_ALERT_FLAG, { defaultValue: false });
 
   const [settingsLoadState, setSettingsLoadState] = useState<SettingsLoadState>('not-loaded');
   const [loadedClientId, setLoadedClientId] = useState<string | null>(null);
@@ -148,18 +142,6 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
     if (!clientId) {
       setLoadedClientId(null);
       setSettingsLoadState('failed');
-      return;
-    }
-    // Keep the card busy while the flag itself is still resolving so a user
-    // cannot Save empty defaults in the window before the async fetch runs.
-    if (loading) {
-      setLoadedClientId(null);
-      setSettingsLoadState('not-loaded');
-      return;
-    }
-    if (!enabled) {
-      setLoadedClientId(null);
-      setSettingsLoadState('not-loaded');
       return;
     }
     let cancelled = false;
@@ -238,11 +220,7 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, loading, clientId]);
-
-  if (loading || !enabled) {
-    return null;
-  }
+  }, [clientId]);
 
   const parseCreditMinorUnits = (): number | null => {
     if (!creditEnabled) return null;
