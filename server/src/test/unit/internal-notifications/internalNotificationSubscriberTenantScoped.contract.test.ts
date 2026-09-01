@@ -170,4 +170,22 @@ describe('internal notification subscriber tenant-scoped query contract', () => 
     expect(appointmentCancelledSection).toContain("tenantScopedTable(db, 'users as u', tenantId)");
     expect(appointmentCancelledSection).not.toContain("'u.tenant': tenantId");
   });
+
+  it('resolves the ticket-updated actor from both payload shapes and guards the lookup', () => {
+    const ticketUpdatedSection = sectionBetween('async function handleTicketUpdated', 'async function handleTicketClosed');
+
+    // TICKET_UPDATED is validated by a union: server actions send `userId`, the
+    // REST API sends only `updatedByUserId` (Zod strips the unmatched field).
+    // Reading `userId` alone left the actor undefined for every API-driven update,
+    // and binding it into Knex threw "Undefined binding(s) detected [user_id]",
+    // silently dropping the internal notification.
+    expect(ticketUpdatedSection).toContain('payload.updatedByUserId ?? payload.userId');
+
+    // The actor must never be destructured straight off the payload again.
+    expect(ticketUpdatedSection).not.toContain('const { tenantId, ticketId, userId, changes } = payload;');
+
+    // An unknown actor must skip the users lookup rather than bind undefined.
+    expect(ticketUpdatedSection).toContain('performedByUserId\n      ? await tenantScopedTable(db, \'users\', tenantId)');
+    expect(ticketUpdatedSection).not.toContain(".where('user_id', userId)");
+  });
 });
