@@ -3494,7 +3494,10 @@
         "tenantOauthDescription": "Collez les identifiants de l'application Xero enregistrés pour ce tenant. Les valeurs de secret ne sont jamais renvoyées au navigateur après l'enregistrement.",
         "tenantOauthTitle": "Application OAuth propre au tenant",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "scopeOverride": "Remplacement de déploiement (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "Le remplacement XERO_OAUTH_SCOPES a été ignoré car il contient des entrées invalides ({{scopes}}). Les portées par défaut sont utilisées à la place.",
+        "scopeReconnectNote": "Ces portées s'appliquent aux nouvelles autorisations. Une connexion existante conserve les portées qui lui ont été accordées à l'origine ; pour appliquer l'ensemble actuel, déconnectez puis reconnectez Xero. Vous pouvez aussi retirer cette application des applications connectées dans Xero pour révoquer les autorisations antérieures."
       }
     },
     "stripe": {
@@ -3676,7 +3679,8 @@
       "updateFailed": "Impossible de mettre à jour la correspondance. Veuillez réessayer.",
       "idRequiredForDelete": "L’identifiant de la correspondance est obligatoire pour la suppression.",
       "notFound": "Correspondance introuvable. Actualisez les correspondances et réessayez.",
-      "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer."
+      "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer.",
+      "scopeRequired": "Les recherches de correspondances nécessitent une intégration, un type d'entité et une portée de realm."
     },
     "qbo": {
       "enterpriseOnly": "L’intégration QuickBooks Online n’est disponible que dans l’édition Enterprise.",

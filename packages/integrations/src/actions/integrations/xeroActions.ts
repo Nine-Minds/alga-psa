@@ -34,12 +34,18 @@ async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
   }
 }
 
+/**
+ * Catalog contents (accounts, items, tax rates, tracking categories) require
+ * accounting_catalog:read — granted by default to Admin and Finance only.
+ * Connection diagnostics stay on billing_settings:read via
+ * checkBillingReadAccess so status screens work without catalog access.
+ */
 async function getXeroCatalogAccessError(user: IUserWithRoles): Promise<XeroCatalogActionError | null> {
   if (!isEnterpriseEdition()) {
     return actionError('Xero integration is only available in Enterprise Edition.', 'msp/integrations:errors.xero.enterpriseOnly');
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_catalog', 'read');
   if (!allowed) {
     return permissionError('Forbidden: You do not have permission to view Xero integration settings.', 'msp/integrations:errors.xero.viewPermission');
   }

@@ -3494,7 +3494,10 @@
         "tenantOauthDescription": "Incolla le credenziali dell'app Xero registrate per questo tenant. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
         "tenantOauthTitle": "App OAuth di proprietà del tenant",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "scopeOverride": "Override di distribuzione (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "L'override XERO_OAUTH_SCOPES è stato ignorato perché contiene voci non valide ({{scopes}}). Vengono invece utilizzati gli ambiti predefiniti.",
+        "scopeReconnectNote": "Questi ambiti si applicano alle nuove autorizzazioni. Una connessione esistente mantiene gli ambiti concessi in origine; per applicare l'insieme corrente, disconnetti e riconnetti Xero. Puoi anche rimuovere questa app dalle app connesse in Xero per revocare le concessioni precedenti."
       }
     },
     "stripe": {
@@ -3676,7 +3679,8 @@
       "updateFailed": "Impossibile aggiornare la mappatura. Riprovare.",
       "idRequiredForDelete": "Per l’eliminazione è necessario l’ID della mappatura.",
       "notFound": "Mappatura non trovata. Aggiornare le mappature e riprovare.",
-      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare."
+      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare.",
+      "scopeRequired": "Le ricerche di mappature richiedono un'integrazione, un tipo di entità e un ambito realm."
     },
     "qbo": {
       "enterpriseOnly": "L’integrazione con QuickBooks Online è disponibile solo nella Enterprise Edition.",

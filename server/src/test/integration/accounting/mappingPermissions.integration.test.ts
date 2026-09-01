@@ -134,7 +134,8 @@ describe('Accounting mapping permissions', () => {
     const remaining = await getExternalEntityMappings({
       integrationType: 'quickbooks_online',
       algaEntityType: 'service',
-      algaEntityId: serviceId
+      algaEntityId: serviceId,
+      externalRealmId: CONNECTED_REALM
     });
 
     expect(remaining).toHaveLength(0);
@@ -149,6 +150,7 @@ describe('Accounting mapping permissions', () => {
       alga_entity_type: 'service',
       alga_entity_id: 'svc-support',
       external_entity_id: 'SUP-001',
+      external_realm_id: CONNECTED_REALM,
       sync_status: 'synced',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -183,7 +185,8 @@ describe('Accounting mapping permissions', () => {
     const visible = await getExternalEntityMappings({
       integrationType: 'quickbooks_online',
       algaEntityType: 'service',
-      algaEntityId: 'svc-support'
+      algaEntityId: 'svc-support',
+      externalRealmId: CONNECTED_REALM
     });
     expect(visible).toHaveLength(1);
 
@@ -214,7 +217,8 @@ describe('Accounting mapping permissions', () => {
     const afterAttempts = await getExternalEntityMappings({
       integrationType: 'quickbooks_online',
       algaEntityType: 'service',
-      algaEntityId: 'svc-support'
+      algaEntityId: 'svc-support',
+      externalRealmId: CONNECTED_REALM
     });
     expect(afterAttempts).toHaveLength(1);
     expect(afterAttempts[0].external_entity_id).toBe('SUP-001');

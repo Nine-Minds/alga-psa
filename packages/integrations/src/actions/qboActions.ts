@@ -454,12 +454,18 @@ async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
   }
 }
 
+/**
+ * Catalog contents (customers, accounts, classes, departments, items, tax
+ * codes, terms) require accounting_catalog:read — granted by default to Admin
+ * and Finance only. Connection diagnostics stay on billing_settings:read via
+ * checkBillingReadAccess so status screens work without catalog access.
+ */
 async function getQboCatalogAccessError(user: IUserWithRoles): Promise<QboCatalogActionError | null> {
   if (!isEnterpriseEdition()) {
     return actionError('QuickBooks Online integration is only available in Enterprise Edition.', 'msp/integrations:errors.qbo.enterpriseOnly');
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_catalog', 'read');
   if (!allowed) {
     return permissionError('Forbidden: You do not have permission to view QuickBooks integration settings.', 'msp/integrations:errors.qbo.viewPermission');
   }
@@ -508,20 +514,78 @@ async function getTenantCredentialMap(tenantId: string): Promise<QboCredentialsM
   }
 }
 
-function resolveRealmPriority(
+type QboRealmResolution =
+  | { realmId: string }
+  | { failure: 'not_connected' | 'invalid_realm' };
+
+/**
+ * Resolves the single realm a catalog read is allowed to touch. An explicitly
+ * requested realm must be one of the tenant's connected realms — otherwise the
+ * request fails closed with no provider query at all. Only when no realm is
+ * requested does the tenant's first connected realm serve as the default;
+ * there is never a fallback from one realm to another.
+ */
+function resolveCatalogRealm(
   credentials: QboCredentialsMap,
-  preferredRealmId?: string | null
-): string[] {
+  requestedRealmId: string | null
+): QboRealmResolution {
   const realmIds = Object.keys(credentials);
-  if (!preferredRealmId) {
-    return realmIds;
+  if (requestedRealmId) {
+    return realmIds.includes(requestedRealmId)
+      ? { realmId: requestedRealmId }
+      : { failure: 'invalid_realm' };
+  }
+  const [defaultRealmId] = realmIds;
+  return defaultRealmId ? { realmId: defaultRealmId } : { failure: 'not_connected' };
+}
+
+/**
+ * Shared catalog fetch: resolve exactly one realm, contact the provider only
+ * when that realm is valid, and surface a calm reconnect/not-connected error
+ * otherwise.
+ */
+async function fetchQboCatalog<T>(
+  tenant: string,
+  catalog: QboCatalog,
+  requestedRealmId: string | null,
+  fetchRows: (client: QboClientService) => Promise<T[]>
+): Promise<{ realmId: string; rows: T[] } | QboCatalogActionError> {
+  const credentials = await getTenantCredentialMap(tenant);
+  const resolution = resolveCatalogRealm(credentials, requestedRealmId);
+
+  if ('failure' in resolution) {
+    if (resolution.failure === 'invalid_realm') {
+      logger.warn('QBO catalog requested for a realm that is not connected', {
+        tenantId: tenant,
+        catalog,
+        requestedRealmId
+      });
+      return actionError(
+        `Reconnect QuickBooks before loading ${QBO_CATALOG_LABELS[catalog]}.`,
+        QBO_CATALOG_KEYS[catalog].reconnect,
+      );
+    }
+    logger.warn('Unable to load QBO catalog: no credential entries found', {
+      tenantId: tenant,
+      catalog
+    });
+    return qboCatalogNotConnected(catalog);
   }
 
-  if (realmIds.includes(preferredRealmId)) {
-    return [preferredRealmId, ...realmIds.filter((realmId) => realmId !== preferredRealmId)];
+  try {
+    logger.debug('Fetching QBO catalog', { tenantId: tenant, catalog, realmId: resolution.realmId });
+    const qboClient = await QboClientService.create(tenant, resolution.realmId);
+    const rows = await fetchRows(qboClient);
+    return { realmId: resolution.realmId, rows };
+  } catch (error) {
+    logger.warn('Failed to fetch QBO catalog', {
+      tenantId: tenant,
+      catalog,
+      realmId: resolution.realmId,
+      error
+    });
+    return qboCatalogFetchError(catalog, [error]);
   }
-
-  return realmIds;
 }
 
 export async function getTenantQboCredentials(
@@ -714,34 +778,16 @@ export const getQboAccounts = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'accounts', targetRealm, async (qboClient) => {
+    const rows = await qboClient.query<QboAccountRow>('SELECT Id, Name, AccountType FROM Account');
+    return rows
+      .map(normalizeAccountRow)
+      .filter((a) => DEPOSIT_ACCOUNT_TYPES.has(a.accountType));
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO accounts: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('accounts');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO accounts', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const rows = await qboClient.query<QboAccountRow>('SELECT Id, Name, AccountType FROM Account');
-      const filtered = rows
-        .map(normalizeAccountRow)
-        .filter((a) => DEPOSIT_ACCOUNT_TYPES.has(a.accountType));
-      setCachedValue(accountCache, buildCacheKey(tenant, realmId, 'accounts'), filtered);
-      return [...filtered];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO accounts', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO accounts for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('accounts', errors);
+  setCachedValue(accountCache, buildCacheKey(tenant, result.realmId, 'accounts'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -763,34 +809,16 @@ export const getQboClasses = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'classes', targetRealm, async (qboClient) => {
+    const rows = await qboClient.query<QboClassRow>('SELECT Id, Name FROM Class');
+    return rows
+      .filter((r) => r.Active !== false)
+      .map(normalizeClassRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO classes: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('classes');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO classes', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const rows = await qboClient.query<QboClassRow>('SELECT Id, Name FROM Class');
-      const mapped = rows
-        .filter((r) => r.Active !== false)
-        .map(normalizeClassRow);
-      setCachedValue(classCache, buildCacheKey(tenant, realmId, 'classes'), mapped);
-      return [...mapped];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO classes', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO classes for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('classes', errors);
+  setCachedValue(classCache, buildCacheKey(tenant, result.realmId, 'classes'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -812,32 +840,14 @@ export const getQboDepartments = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'departments', targetRealm, async (qboClient) => {
+    const rows = await qboClient.query<QboDepartmentRow>('SELECT Id, Name FROM Department');
+    return rows.map(normalizeDepartmentRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO departments: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('departments');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO departments', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const rows = await qboClient.query<QboDepartmentRow>('SELECT Id, Name FROM Department');
-      const mapped = rows.map(normalizeDepartmentRow);
-      setCachedValue(departmentCache, buildCacheKey(tenant, realmId, 'departments'), mapped);
-      return [...mapped];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO departments', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO departments for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('departments', errors);
+  setCachedValue(departmentCache, buildCacheKey(tenant, result.realmId, 'departments'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -860,32 +870,14 @@ export const getQboItems = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'items', targetRealm, async (qboClient) => {
+    const qboItems = await qboClient.query<QboItemRow>('SELECT Id, Name FROM Item');
+    return qboItems.map(normalizeItemRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO items: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('items');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO items', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const qboItems = await qboClient.query<QboItemRow>('SELECT Id, Name FROM Item');
-      const mappedItems = qboItems.map(normalizeItemRow);
-      setCachedValue(itemCache, buildCacheKey(tenant, realmId, 'items'), mappedItems);
-      return [...mappedItems];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO items', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO items for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('items', errors);
+  setCachedValue(itemCache, buildCacheKey(tenant, result.realmId, 'items'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -1148,58 +1140,40 @@ export const getQboTaxCodes = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'taxCodes', targetRealm, async (qboClient) => {
+    // SELECT * so the nested SalesTaxRateList comes back — Intuit's own
+    // documented TaxCode response carries the rate components only under it,
+    // and naming columns omits them. TaxRates then supply the percentages so
+    // labels can read "Name (7.25%)". Normalization below keeps only the
+    // id/name/description/rate fields the pick list renders.
+    const [taxCodeRows, taxRateRows] = await Promise.all([
+      queryAllPages<QboTaxCodeRow>(qboClient, 'SELECT * FROM TaxCode'),
+      queryAllPages<QboTaxRateRow>(qboClient, 'SELECT Id, RateValue FROM TaxRate')
+    ]);
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO tax codes: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('taxCodes');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO tax codes', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-
-      // SELECT * so the nested SalesTaxRateList comes back — Intuit's own
-      // documented TaxCode response carries the rate components only under it,
-      // and naming columns omits them. TaxRates then supply the percentages so
-      // labels can read "Name (7.25%)".
-      const [taxCodeRows, taxRateRows] = await Promise.all([
-        queryAllPages<QboTaxCodeRow>(qboClient, 'SELECT * FROM TaxCode'),
-        queryAllPages<QboTaxRateRow>(qboClient, 'SELECT Id, RateValue FROM TaxRate')
-      ]);
-
-      const ratePercentByTaxRateId = new Map<string, number>();
-      for (const rate of taxRateRows) {
-        if (!rate.Id) continue;
-        const value = Number(rate.RateValue);
-        if (Number.isFinite(value)) {
-          ratePercentByTaxRateId.set(rate.Id, value);
-        }
+    const ratePercentByTaxRateId = new Map<string, number>();
+    for (const rate of taxRateRows) {
+      if (!rate.Id) continue;
+      const value = Number(rate.RateValue);
+      if (Number.isFinite(value)) {
+        ratePercentByTaxRateId.set(rate.Id, value);
       }
-
-      // Filtered here rather than as `WHERE Active = true`, which QBO does
-      // support: Intuit's published TaxCode response omits Active entirely on
-      // the TAX and NON pseudo codes, so a server-side filter would silently
-      // drop exactly the two entries an Automated Sales Tax company needs.
-      // Inactive codes leave the pick list either way; existing mappings that
-      // point at them stay readable via the persisted display-name metadata.
-      const mappedTaxCodes = taxCodeRows
-        .filter((row) => row.Active !== false)
-        .map((row) => normalizeTaxCodeRow(row, ratePercentByTaxRateId));
-      setCachedValue(taxCodeCache, buildCacheKey(tenant, realmId, 'tax-codes'), mappedTaxCodes);
-      return [...mappedTaxCodes];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO tax codes', { tenantId: tenant, realmId, error });
-      continue;
     }
-  }
 
-  logger.warn('Unable to fetch QBO tax codes for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('taxCodes', errors);
+    // Filtered here rather than as `WHERE Active = true`, which QBO does
+    // support: Intuit's published TaxCode response omits Active entirely on
+    // the TAX and NON pseudo codes, so a server-side filter would silently
+    // drop exactly the two entries an Automated Sales Tax company needs.
+    // Inactive codes leave the pick list either way; existing mappings that
+    // point at them stay readable via the persisted display-name metadata.
+    return taxCodeRows
+      .filter((row) => row.Active !== false)
+      .map((row) => normalizeTaxCodeRow(row, ratePercentByTaxRateId));
+  });
+  if (!('rows' in result)) return result;
+
+  setCachedValue(taxCodeCache, buildCacheKey(tenant, result.realmId, 'tax-codes'), result.rows);
+  return [...result.rows];
 });
 
 /**
@@ -1289,37 +1263,17 @@ export const getQboCustomers = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'customers', targetRealm, async (qboClient) => {
+    const customerRows = await queryAllPages<QboCustomerRow>(
+      qboClient,
+      'SELECT Id, DisplayName, Active FROM Customer'
+    );
+    return customerRows.map(normalizeCustomerRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO customers: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('customers');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO customers', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-
-      const customerRows = await queryAllPages<QboCustomerRow>(
-        qboClient,
-        'SELECT Id, DisplayName, Active FROM Customer'
-      );
-      const allCustomers = customerRows.map(normalizeCustomerRow);
-
-      setCachedValue(customerCache, buildCacheKey(tenant, realmId, 'customers'), allCustomers);
-      return [...allCustomers];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO customers', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO customers for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('customers', errors);
+  setCachedValue(customerCache, buildCacheKey(tenant, result.realmId, 'customers'), result.rows);
+  return [...result.rows];
 });
 
 export const getQboTerms = withAuth(async (
@@ -1337,30 +1291,12 @@ export const getQboTerms = withAuth(async (
     return [...cached];
   }
 
-  const credentials = await getTenantCredentialMap(tenant);
-  const candidateRealmIds = resolveRealmPriority(credentials, targetRealm);
+  const result = await fetchQboCatalog(tenant, 'paymentTerms', targetRealm, async (qboClient) => {
+    const qboTerms = await qboClient.query<QboTermRow>('SELECT Id, Name FROM Term');
+    return qboTerms.map(normalizeTermRow);
+  });
+  if (!('rows' in result)) return result;
 
-  if (candidateRealmIds.length === 0) {
-    logger.warn('Unable to load QBO terms: no credential entries found', { tenantId: tenant });
-    return qboCatalogNotConnected('paymentTerms');
-  }
-
-  const errors: unknown[] = [];
-  for (const realmId of candidateRealmIds) {
-    try {
-      logger.debug('Fetching QBO terms', { tenantId: tenant, realmId });
-      const qboClient = await QboClientService.create(tenant, realmId);
-      const qboTerms = await qboClient.query<QboTermRow>('SELECT Id, Name FROM Term');
-      const mappedTerms = qboTerms.map(normalizeTermRow);
-      setCachedValue(termCache, buildCacheKey(tenant, realmId, 'terms'), mappedTerms);
-      return [...mappedTerms];
-    } catch (error) {
-      errors.push(error);
-      logger.warn('Failed to fetch QBO terms', { tenantId: tenant, realmId, error });
-      continue;
-    }
-  }
-
-  logger.warn('Unable to fetch QBO terms for any realm', { tenantId: tenant });
-  return qboCatalogFetchError('paymentTerms', errors);
+  setCachedValue(termCache, buildCacheKey(tenant, result.realmId, 'terms'), result.rows);
+  return [...result.rows];
 });
