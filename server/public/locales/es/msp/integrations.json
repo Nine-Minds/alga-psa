@@ -76,7 +76,7 @@
         },
         "noPermission": {
           "title": "Sin acceso a las integraciones de contabilidad",
-          "description": "No tienes permiso para ver ni configurar las integraciones de contabilidad. Solicita acceso a un administrador."
+          "description": "No tiene permiso para ver ni configurar las integraciones de contabilidad. Solicite acceso a un administrador."
         }
       },
       "modules": {
@@ -220,12 +220,12 @@
           "mappings": {
             "description": "Asigne clientes, servicios, códigos fiscales y condiciones de pago de Alga a los identificadores usados en su empresa de QuickBooks. Estos valores se utilizan al generar la exportación CSV.",
             "title": "Asignaciones CSV de QuickBooks",
-            "permissionNotice": "Editar las asignaciones CSV requiere la capacidad manage-mappings. Pídele a un administrador que la conceda."
+            "permissionNotice": "Editar las asignaciones CSV requiere la capacidad manage-mappings. Solicite a un administrador que la conceda."
           },
           "note": "Nota: Configure las asignaciones abajo antes de exportar. Las exportaciones CSV y la importación de impuestos se gestionan desde Facturación → Exportaciones contables.",
           "title": "Integración CSV de QuickBooks"
         },
-        "noPermissionDescription": "No tienes permiso para ver ni configurar las integraciones de contabilidad."
+        "noPermissionDescription": "No tiene permiso para ver ni configurar las integraciones de contabilidad."
       },
       "taxImport": {
         "actions": {
@@ -1906,7 +1906,7 @@
           "placeholderAlert": "El administrador de asignaciones estará disponible después de conectar la primera empresa de QuickBooks y establecerla como contexto predeterminado de QuickBooks en vivo.",
           "placeholderDescription": "Conecte una empresa de QuickBooks antes de configurar las asignaciones de artículos e impuestos de QuickBooks en vivo.",
           "title": "Asignación y configuración de QuickBooks en vivo",
-          "permissionNotice": "Puedes ver la empresa conectada, pero editar las asignaciones requiere la capacidad manage-mappings. Pídele a un administrador que la conceda."
+          "permissionNotice": "Puede ver la empresa conectada, pero editar las asignaciones requiere la capacidad manage-mappings. Solicite a un administrador que la conceda."
         },
         "noClientId": "Aún no hay ningún client ID almacenado para este inquilino.",
         "noClientSecret": "Aún no hay ningún client secret almacenado para este inquilino.",
@@ -1930,8 +1930,8 @@
           "tenant": "Este inquilino se conecta mediante su propia app de Intuit, con las credenciales guardadas abajo."
         },
         "setupGuideLink": "Guía de configuración de QuickBooks",
-        "noPermissionDescription": "No tienes permiso para ver ni configurar las integraciones de contabilidad.",
-        "connectionsPermissionNotice": "Puedes ver la configuración de QuickBooks, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Pídele a un administrador que la conceda."
+        "noPermissionDescription": "No tiene permiso para ver ni configurar las integraciones de contabilidad.",
+        "connectionsPermissionNotice": "Puede ver la configuración de QuickBooks, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda."
       },
       "sync": {
         "healthCardTitle": "Estado de sincronización",
@@ -3344,7 +3344,7 @@
             "s4": "Importar el CSV de contactos de Xero de vuelta en Alga para sincronizar las actualizaciones"
           },
           "workflowTitle": "Flujo de sincronización de clientes",
-          "permissionNotice": "Exportar e importar clientes requiere la capacidad execute-exports. Pídele a un administrador que la conceda."
+          "permissionNotice": "Exportar e importar clientes requiere la capacidad execute-exports. Solicite a un administrador que la conceda."
         },
         "settings": {
           "dateFormat": "Formato de fecha",
@@ -3369,7 +3369,7 @@
           "mappings": {
             "description": "Asigne clientes, servicios y códigos fiscales de Alga a los identificadores usados en su organización de Xero. Estos valores se utilizan al generar la exportación CSV.",
             "title": "Asignaciones CSV de Xero",
-            "permissionNotice": "Editar las asignaciones CSV requiere la capacidad manage-mappings. Pídele a un administrador que la conceda."
+            "permissionNotice": "Editar las asignaciones CSV requiere la capacidad manage-mappings. Solicite a un administrador que la conceda."
           },
           "overview": {
             "description": "Exporte facturas a CSV para importación manual en Xero e importe datos fiscales desde los informes de Xero.",
@@ -3422,8 +3422,8 @@
             "trackingDescription": "La exportación CSV incluye columnas de categorías de seguimiento que vinculan cada factura de Xero con su origen en Alga. Cuando importa impuestos desde Xero, estas categorías de seguimiento se usan para emparejar facturas automáticamente; no se necesita conciliación manual.",
             "trackingTitle": "Categorías de seguimiento para conciliación"
           },
-          "noPermissionDescription": "No tienes permiso para ver ni configurar las integraciones de contabilidad.",
-          "connectionsPermissionNotice": "Puedes ver la configuración de Xero CSV, pero cambiarla requiere la capacidad manage-connections. Pídele a un administrador que la conceda."
+          "noPermissionDescription": "No tiene permiso para ver ni configurar las integraciones de contabilidad.",
+          "connectionsPermissionNotice": "Puede ver la configuración de Xero CSV, pero cambiarla requiere la capacidad manage-connections. Solicite a un administrador que la conceda."
         }
       },
       "live": {
@@ -3494,7 +3494,7 @@
           "placeholderAlert": "El administrador de asignaciones estará disponible después de conectar la primera organización de Xero y establecerla como contexto predeterminado de Xero en vivo.",
           "placeholderDescription": "Conecte una organización de Xero en vivo antes de configurar las asignaciones de artículos e impuestos de Xero en vivo.",
           "title": "Asignación y configuración de Xero en vivo",
-          "permissionNotice": "Puedes ver la organización conectada predeterminada, pero editar las asignaciones requiere la capacidad manage-mappings. Pídele a un administrador que la conceda."
+          "permissionNotice": "Puede ver la organización conectada predeterminada, pero editar las asignaciones requiere la capacidad manage-mappings. Solicite a un administrador que la conceda."
         },
         "noClientId": "Aún no hay ningún client ID almacenado para este inquilino.",
         "noClientSecret": "Aún no hay ningún client secret almacenado para este inquilino.",
@@ -3509,8 +3509,8 @@
         "tenantOauthTitle": "Aplicación OAuth propia del inquilino",
         "title": "Xero",
         "xeroCsv": "Xero CSV",
-        "noPermissionDescription": "No tienes permiso para ver ni configurar las integraciones de contabilidad.",
-        "connectionsPermissionNotice": "Puedes ver la configuración de Xero, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Pídele a un administrador que la conceda."
+        "noPermissionDescription": "No tiene permiso para ver ni configurar las integraciones de contabilidad.",
+        "connectionsPermissionNotice": "Puede ver la configuración de Xero, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda."
       }
     },
     "stripe": {
