@@ -345,6 +345,15 @@ html[data-theme-pair="high-contrast"] .chip-danger    { background-color: rgb(va
     color: rgb(var(--color-text-400)) !important;
 }
 
+/* High contrast compresses the text ramp onto the ink, so text-400 lands a
+   shade off the typed value in light and a shade off white in dark — the hint
+   stops reading as a hint. The pair gets its own placeholder rung instead. The
+   rail search keeps the rule below. */
+html[data-theme-pair="high-contrast"] :not(.app-sidebar-search-input)::placeholder,
+html[data-theme-pair="high-contrast"] [data-placeholder] {
+    color: rgb(var(--color-text-placeholder)) !important;
+}
+
 /* The rail can remain dark while the page is using a light theme. Its search
    hint must therefore use a rail token, not the page's placeholder token. */
 .app-sidebar-search-input::placeholder {
@@ -2013,6 +2022,9 @@ html.light[data-theme-pair="high-contrast"] {
     --color-text-700: 17 24 39;
     --color-text-800: 0 0 0;
     --color-text-900: 0 0 0;
+    /* The ramp keeps text-400 next to the ink here, so a hint would read as a
+       typed value. Gray-500 still clears AA on the white card. */
+    --color-text-placeholder: 107 114 128;
 
     --color-switch-thumb: 255 255 255;
 
@@ -2150,6 +2162,9 @@ html.dark[data-theme-pair="high-contrast"] {
     --color-text-700: 243 244 246;
     --color-text-800: 255 255 255;
     --color-text-900: 255 255 255;
+    /* Mirror of the light rung: dim enough to separate from the white value,
+       still AA on the black card. */
+    --color-text-placeholder: 123 131 143;
 
     --color-switch-thumb: 255 255 255;
 
