@@ -117,7 +117,10 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
       }
     } catch (err) {
       console.error(err);
-      setError(t('numbering.errors.save'));
+      // Surface the server's validation message (e.g. an unknown date token)
+      // instead of a generic failure, and close the dialog so it is readable.
+      setError(err instanceof Error && err.message ? err.message : t('numbering.errors.save'));
+      setShowConfirmation(false);
     }
   };
 
