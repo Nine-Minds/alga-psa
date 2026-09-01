@@ -200,6 +200,12 @@
         }
       }
     },
+    "resources": {
+      "ariaLabel": "Zasoby i pomoc",
+      "title": "Zasoby",
+      "documentation": "Dokumentacja",
+      "support": "Skontaktuj się z pomocą techniczną"
+    },
     "jobs": {
       "ariaLabel": "Wyświetl aktywność zadań w tle",
       "title": "Zadania w tle",

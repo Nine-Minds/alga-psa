@@ -29,16 +29,6 @@ vi.mock('redis', () => ({
   }),
 }));
 
-vi.mock('redis', () => ({
-  createClient: vi.fn(() => {
-    throw new Error('redis unavailable');
-  }),
-}));
-
-vi.mock('@alga-psa/event-bus', () => ({
-  getRedisConfig: () => ({ url: 'redis://localhost:6379' }),
-}));
-
 vi.mock('@alga-psa/core/logger', () => ({
   default: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
@@ -51,7 +41,21 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
     source: 'tenant',
   })),
   upsertStoredXeroConnections: vi.fn(async () => undefined),
+  getXeroTokenUrl: () => 'https://identity.xero.com/connect/token',
+  getXeroConnectionsUrl: () => 'https://api.xero.com/connections',
   XERO_TOKEN_URL: 'https://identity.xero.com/connect/token',
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-a' })),
+}));
+
+vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
+  isProviderDisconnectActive: vi.fn(async () => false),
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed'),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero',
 }));
 
 vi.mock('axios', () => {
@@ -63,7 +67,6 @@ vi.mock('axios', () => {
 import { GET } from '@alga-psa/integrations/routes/api/integrations/xero/callback';
 import { XERO_OAUTH_CSRF_COOKIE } from '@alga-psa/integrations/lib/xero/oauthCsrf';
 import { getCurrentUserWithRevocationCheck, hasPermission } from '@alga-psa/auth';
-import { storeAccountingOAuthNonce } from '@alga-psa/integrations/lib/accountingOAuthStateStore';
 import * as xeroMocks from '@alga-psa/integrations/lib/xero/xeroClientService';
 import {
   storeXeroConnectAttempt,
@@ -136,8 +139,6 @@ describe('Xero OAuth callback CSRF and tenant validation', () => {
     vi.mocked(axios.get).mockResolvedValue({
       data: [{ id: 'conn-1', tenantId: 'xero-tenant-1', tenantName: 'Acme' }],
     });
-    // The callback consumes the state nonce; make it present for success paths.
-    await storeAccountingOAuthNonce('xero', 'nonce-1');
   });
 
   it('rejects a callback without the CSRF cookie without consuming the attempt', async () => {

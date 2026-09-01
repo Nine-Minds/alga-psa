@@ -98,11 +98,10 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
   }));
 
   company.get('/companyinfo/:companyId', (req, res) => {
-    const realmId = String((req.params as Record<string, string>).realmId);
     res.json({
       CompanyInfo: {
-        Id: realmId,
-        CompanyName: `Alga Emulated Co (${realmId})`,
+        Id: core.realmId,
+        CompanyName: core.sim.options.companyName,
         Country: 'US',
         CompanyStartDate: '2020-01-01',
       },

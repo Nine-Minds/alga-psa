@@ -13,6 +13,7 @@ const getQboRedirectUriMock = vi.hoisted(() => vi.fn());
 const getQboOAuthScopesStringMock = vi.hoisted(() => vi.fn());
 const upsertStoredQboCredentialsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
+const isProviderDisconnectActiveMock = vi.hoisted(() => vi.fn());
 const storeAccountingOAuthNonceMock = vi.hoisted(() => vi.fn());
 const consumeAccountingOAuthNonceMock = vi.hoisted(() => vi.fn());
 const axiosPostMock = vi.hoisted(() => vi.fn());
@@ -60,6 +61,17 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   upsertStoredQboCredentials: upsertStoredQboCredentialsMock
 }));
 
+vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
+  isProviderDisconnectActive: isProviderDisconnectActiveMock,
+  getProviderDisconnectStatusInfo: vi.fn(async () => null),
+  getProviderCredentialWriteDisposition: vi.fn(async (knex, tenant, provider) =>
+    (await isProviderDisconnectActiveMock(knex, tenant, provider)) ? 'disconnect_in_progress' : 'allowed'
+  ),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero'
+}));
+
 vi.mock('axios', () => ({
   default: {
     post: axiosPostMock
@@ -105,10 +117,13 @@ describe('QBO OAuth routes', () => {
     process.env.NEXTAUTH_SECRET = SIGNING_SECRET;
     getCurrentUserWithRevocationCheckMock.mockResolvedValue({ ...liveUser });
     hasPermissionMock.mockResolvedValue(true);
-    createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-1' });
+    createTenantKnexMock.mockResolvedValue({ tenant: 'tenant-1', knex: {} });
     getSecretProviderInstanceMock.mockResolvedValue({});
     storeAccountingOAuthNonceMock.mockResolvedValue(undefined);
-    consumeAccountingOAuthNonceMock.mockResolvedValue(true);
+    consumeAccountingOAuthNonceMock.mockResolvedValue({
+      tenantId: 'tenant-1',
+      initiatedAt: '2026-08-31T12:00:00.000Z'
+    });
     resolveQboOAuthCredentialsMock.mockResolvedValue({
       clientId: 'tenant-client-id',
       clientSecret: 'tenant-client-secret',
@@ -117,6 +132,7 @@ describe('QBO OAuth routes', () => {
     getQboRedirectUriMock.mockResolvedValue('https://example.com/api/integrations/qbo/callback');
     getQboOAuthScopesStringMock.mockReturnValue('com.intuit.quickbooks.accounting');
     upsertStoredQboCredentialsMock.mockResolvedValue(undefined);
+    isProviderDisconnectActiveMock.mockResolvedValue(false);
     axiosPostMock.mockResolvedValue({
       data: {
         access_token: 'access-token',
@@ -214,7 +230,11 @@ describe('QBO OAuth routes', () => {
     expect(setCookie).toContain('Path=/api/integrations/qbo');
 
     // The nonce backing the issued state is registered for single use.
-    expect(storeAccountingOAuthNonceMock).toHaveBeenCalledWith('qbo', expect.any(String));
+    expect(storeAccountingOAuthNonceMock).toHaveBeenCalledWith(
+      'qbo',
+      expect.any(String),
+      expect.objectContaining({ tenantId: 'tenant-1', initiatedAt: expect.any(String) })
+    );
 
     expect(loggerInfoMock).toHaveBeenCalledWith('[qboOAuth] Starting QuickBooks OAuth connect flow', {
       tenantId: 'tenant-1',
@@ -267,7 +287,8 @@ describe('QBO OAuth routes', () => {
         realmId: 'realm-1',
         accessToken: 'access-token',
         refreshToken: 'refresh-token'
-      })
+      }),
+      { authorizationFlowStartedAt: '2026-08-31T12:00:00.000Z' }
     );
     expect(response.status).toBe(307);
     const location = response.headers.get('location') ?? '';
@@ -328,7 +349,7 @@ describe('QBO OAuth routes', () => {
   });
 
   it('callback denies a replayed state (already consumed) with no side effects', async () => {
-    consumeAccountingOAuthNonceMock.mockResolvedValue(false);
+    consumeAccountingOAuthNonceMock.mockResolvedValue(null);
 
     const { stateParam, cookieValue } = createQboOAuthState({
       tenantId: 'tenant-1',
@@ -428,5 +449,40 @@ describe('QBO OAuth routes', () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('qbo_error=missing_params');
+  });
+
+  it('callback rejects with disconnect_in_progress while a QuickBooks disconnect is active and never stores credentials', async () => {
+    isProviderDisconnectActiveMock.mockResolvedValue(true);
+    // The connect route registered the state nonce for single use.
+    consumeAccountingOAuthNonceMock.mockResolvedValue({
+      tenantId: 'tenant-1',
+      initiatedAt: '2026-08-31T12:00:00.000Z'
+    });
+
+    const { stateParam, cookieValue } = createQboOAuthState({
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      secret: SIGNING_SECRET
+    });
+
+    const { GET } = await import('@/app/api/integrations/qbo/callback/route');
+
+    const response = await GET(
+      buildCallbackRequest({
+        query: { code: 'auth-code', state: stateParam, realmId: 'realm-1' },
+        cookieValue
+      })
+    );
+
+    expect(response.status).toBe(307);
+    const location = response.headers.get('location') ?? '';
+    expect(location).toContain('qbo_status=failure');
+    expect(location).toContain('qbo_error=disconnect_in_progress');
+    expect(axiosPostMock).not.toHaveBeenCalled();
+    expect(upsertStoredQboCredentialsMock).not.toHaveBeenCalled();
+    expect(isProviderDisconnectActiveMock).toHaveBeenCalledTimes(1);
+    expect(isProviderDisconnectActiveMock.mock.calls[0]).toEqual(
+      expect.arrayContaining(['tenant-1', 'quickbooks_online'])
+    );
   });
 });

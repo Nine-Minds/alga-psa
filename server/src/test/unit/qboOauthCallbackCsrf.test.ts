@@ -11,6 +11,18 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(),
 }));
 
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-a' })),
+}));
+
+vi.mock('@alga-psa/integrations/lib/providerDisconnect', () => ({
+  isProviderDisconnectActive: vi.fn(async () => false),
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed'),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero',
+}));
+
 vi.mock('redis', () => ({
   createClient: vi.fn(() => {
     throw new Error('redis unavailable');
@@ -151,7 +163,10 @@ describe('QBO OAuth callback CSRF and tenant validation', () => {
     });
     // The callback consumes the state nonce; make it present for the default
     // success path (the CSRF tests that reject before consumption are unaffected).
-    return storeAccountingOAuthNonce('qbo', validState.payload.nonce);
+    return storeAccountingOAuthNonce('qbo', validState.payload.nonce, {
+      tenantId,
+      initiatedAt: validState.payload.initiatedAt,
+    });
   });
 
   it('rejects a callback without the signed state cookie', async () => {

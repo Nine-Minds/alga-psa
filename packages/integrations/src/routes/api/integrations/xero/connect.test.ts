@@ -47,6 +47,13 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
 }));
 
+vi.mock('../../../../lib/providerDisconnect', () => ({
+  getProviderDisconnectStatusInfo: vi.fn(async () => null),
+  isProviderDisconnectActive: vi.fn(async () => false),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
+  PROVIDER_XERO: 'xero',
+}));
+
 vi.mock('../../../../lib/xero/xeroClientService', () => ({
   XERO_TOKEN_URL: 'https://identity.xero.com/connect/token',
   getXeroRedirectUri: mocks.getXeroRedirectUri,

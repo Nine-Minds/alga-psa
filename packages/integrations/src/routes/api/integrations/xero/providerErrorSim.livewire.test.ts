@@ -108,6 +108,23 @@ vi.mock('../../../../lib/oauth/oauthCsrf', () => ({
   buildOauthCsrfCookieOptions: () => ({ path: '/' })
 }));
 
+// The credential-write provenance gate runs a tenant DB lookup before the live
+// token exchange. It is plumbing, not part of the provider-error path under
+// test: stub the DB handle and report the normal "allowed" (no active
+// disconnect) disposition so the callback reaches the simulator over the wire.
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: TENANT_ID }))
+}));
+
+vi.mock('../../../../lib/providerDisconnect', () => ({
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed'),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
+  getProviderDisconnectStatusInfo: vi.fn(async () => null),
+  isProviderDisconnectActive: vi.fn(async () => false),
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero'
+}));
+
 async function waitForSim(): Promise<void> {
   const deadline = Date.now() + 10000;
   for (;;) {

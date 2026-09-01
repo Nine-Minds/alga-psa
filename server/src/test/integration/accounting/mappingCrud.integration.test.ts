@@ -130,7 +130,8 @@ describe('Accounting Mapping CRUD integration', () => {
     const listed = await getExternalEntityMappings({
       integrationType,
       algaEntityType: 'service',
-      algaEntityId: serviceId
+      algaEntityId: serviceId,
+      externalRealmId: CONNECTED_REALM
     });
 
     expect(listed).toHaveLength(1);
@@ -149,7 +150,8 @@ describe('Accounting Mapping CRUD integration', () => {
     const finalList = await getExternalEntityMappings({
       integrationType,
       algaEntityType: 'service',
-      algaEntityId: serviceId
+      algaEntityId: serviceId,
+      externalRealmId: CONNECTED_REALM
     });
 
     expect(finalList).toHaveLength(0);

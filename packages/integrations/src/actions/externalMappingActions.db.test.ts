@@ -300,6 +300,33 @@ describe('createExternalEntityMapping — the generic surface is constrained', (
   });
 });
 
+describe('getExternalEntityMappings — exact read scope', () => {
+  it('does not cross provider, realm, entity-type, or tenant boundaries', async () => {
+    const wanted = await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'wanted' });
+    await seedMapping({ integration_type: 'xero', external_realm_id: xeroRealm, alga_entity_id: serviceA });
+    await seedMapping({ external_realm_id: 'realm-other', alga_entity_id: uuidv4() });
+    await seedMapping({ alga_entity_type: 'client', alga_entity_id: clientA });
+    const tenantBRow = await seedMapping({
+      tenant: tenantB,
+      alga_entity_id: serviceB,
+      external_entity_id: 'tenant-b-same-realm',
+    });
+
+    const listed = await (getExternalEntityMappings as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      {
+        integrationType: 'quickbooks_online',
+        algaEntityType: 'service',
+        externalRealmId: realmA,
+      }
+    );
+
+    expect(listed.map((row: any) => row.id)).toEqual([wanted.id]);
+    expect(listed.map((row: any) => row.id)).not.toContain(tenantBRow.id);
+  });
+});
+
 describe('createExternalEntityMapping — sync state is server-derived, not caller-supplied', () => {
   it('ignores a caller-supplied sync_status on create: stores manual_link and audits derived state', async () => {
     const result = await (createExternalEntityMapping as any)(
@@ -579,7 +606,11 @@ describe('unlink (tombstone) and explicit relink', () => {
     const listed = await (getExternalEntityMappings as any)(
       { user_id: 'u' },
       { tenant: tenantA },
-      { integrationType: 'quickbooks_online' }
+      {
+        integrationType: 'quickbooks_online',
+        algaEntityType: 'service',
+        externalRealmId: realmA,
+      }
     );
     expect(listed.find((m: any) => m.id === id)).toBeUndefined();
 

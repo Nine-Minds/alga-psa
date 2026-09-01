@@ -6,6 +6,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getStoredQboCredentialsMap, QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { isProviderDisconnectActive, PROVIDER_QBO } from '@alga-psa/integrations/lib/providerDisconnect';
 import {
   getAccountingSyncSettings,
   updateAccountingSyncSettings,
@@ -50,6 +51,21 @@ async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
   }
 }
 
+/**
+ * Explicit guard for sync/export entry points: a disconnect record in any
+ * non-finalized state means provider cleanup is in flight and credentials are
+ * tombstoned, so sync must not start. The tombstoned credentials are the
+ * backstop; this check gives a clear reason instead of a generic "not
+ * connected" error.
+ */
+async function assertNoActiveProviderDisconnect(tenantId: string): Promise<void> {
+  const { knex } = await createTenantKnex();
+  const active = await isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => false);
+  if (active) {
+    throw new Error('QuickBooks is being disconnected. Sync and exports are paused until the disconnect completes.');
+  }
+}
+
 export const getAccountingSyncSettingsAction = withAuth(async (
   user,
   { tenant }
@@ -86,6 +102,7 @@ export const runAccountingSyncNow = withAuth(async (
 ): Promise<RunCycleResult> => {
   assertEnterpriseEdition();
   await checkBillingUpdateAccess(user);
+  await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
   const realm = await resolveDefaultRealm(knex, tenant);
@@ -120,6 +137,7 @@ export const queueInvoiceSync = withAuth(async (
 ): Promise<{ queued: boolean; error?: string }> => {
   assertEnterpriseEdition();
   await checkBillingUpdateAccess(user);
+  await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
   const realm = await resolveDefaultRealm(knex, tenant);
@@ -147,6 +165,7 @@ export const resolveAccountingDriftReExport = withAuth(async (
 ): Promise<{ queued: boolean; error?: string }> => {
   assertEnterpriseEdition();
   await checkBillingUpdateAccess(user);
+  await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
   const realm = await resolveDefaultRealm(knex, tenant);

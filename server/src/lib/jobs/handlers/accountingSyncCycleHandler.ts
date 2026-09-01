@@ -12,6 +12,11 @@ import {
 } from '@alga-psa/billing/services';
 import { getStoredQboCredentialsMap } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroClientService';
+import {
+  isProviderDisconnectActive,
+  PROVIDER_QBO,
+  PROVIDER_XERO,
+} from '@alga-psa/integrations/lib/providerDisconnect';
 
 export interface AccountingSyncCycleJobData extends BaseJobData {
   tenantId: string;
@@ -42,6 +47,22 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
   }
 
   const knex = await getConnection(tenantId);
+
+  // Explicit early guard (the credential tombstone is the backstop): while a
+  // provider disconnect is pending, no sync cycle may start.
+  const [qboBlocked, xeroBlocked] = await Promise.all([
+    isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => false),
+    isProviderDisconnectActive(knex, tenantId, PROVIDER_XERO).catch(() => false),
+  ]);
+  if (qboBlocked || xeroBlocked) {
+    logger.info('[accountingSync] Cycle skipped: provider disconnect in progress', {
+      tenantId,
+      qboBlocked,
+      xeroBlocked,
+    });
+    return;
+  }
+
   const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
   if (!integration) {
     return; // cycle guard: no connection, nothing to do

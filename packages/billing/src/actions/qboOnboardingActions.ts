@@ -3,7 +3,8 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- onboarding actions consult QBO customers and connection state */
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { auditLog, createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
@@ -56,9 +57,56 @@ async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
   if (!allowed) throw new Error('Forbidden');
 }
 
+/**
+ * Reads that enumerate remote accounting data (QBO customers, historical
+ * invoices) require accounting_catalog:read — Admin and Finance by default.
+ * Wizard state and other connection diagnostics stay on billing_settings:read.
+ */
+async function checkAccountingCatalogReadAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_catalog', 'read');
+  if (!allowed) throw new Error('Forbidden');
+}
+
 async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
   const allowed = await hasPermission(user, 'billing_settings', 'update');
   if (!allowed) throw new Error('Forbidden');
+}
+
+/**
+ * Records that an onboarding/reconciliation read swept the remote catalog.
+ * Counts only — never the customer or invoice data that came back. Best
+ * effort: an audit hiccup must not fail the read itself.
+ */
+async function auditBroadAccountingRead(
+  knex: Knex,
+  tenant: string,
+  userId: string | undefined,
+  realm: string,
+  action: string,
+  counts: Record<string, number>
+): Promise<void> {
+  try {
+    // auditLog (and the audit_logs RLS/tenant trigger) read the
+    // app.current_tenant GUC, which server-action request handling does not
+    // establish — so set it transaction-locally around the insert.
+    await withTransaction(knex, async (trx) => {
+      await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenant]);
+      await auditLog(trx, {
+        userId,
+        operation: 'ACCOUNTING_CATALOG_READ',
+        tableName: 'tenant_external_entity_mappings',
+        recordId: realm,
+        changedData: {},
+        details: { action, realm, ...counts }
+      });
+    });
+  } catch (error) {
+    logger.warn('[qboOnboarding] Failed to audit accounting catalog read', {
+      action,
+      realm,
+      error: error instanceof Error ? error.message : error
+    });
+  }
 }
 
 async function requireDefaultRealm(tenantId: string): Promise<string> {
@@ -105,7 +153,7 @@ export const getCustomerMatchCandidates = withAuth(async (
   error?: string;
 }> => {
   assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+  await checkAccountingCatalogReadAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -234,6 +282,11 @@ export const getCustomerMatchCandidates = withAuth(async (
       } as (typeof rows)[number]);
     }
   }
+
+  await auditBroadAccountingRead(knex, tenant, user?.user_id, realm, 'getCustomerMatchCandidates', {
+    localClients: clientRows.length,
+    remoteCustomers: qboCustomers.length
+  });
 
   return { rows: [...rows, ...profileRows], ...(catalogError ? { error: catalogError } : {}) };
 });
@@ -489,7 +542,7 @@ export const getHistoricalInvoiceMatches = withAuth(async (
   input?: { windowStart?: string }
 ): Promise<{ confident: HistMatch[]; review: Array<HistMatch & { reason: string }> }> => {
   assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+  await checkAccountingCatalogReadAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -544,6 +597,11 @@ export const getHistoricalInvoiceMatches = withAuth(async (
   const clientMappings = new Map<string, string>(
     clientMappingRows.map((r) => [r.external_entity_id, r.alga_entity_id])
   );
+
+  await auditBroadAccountingRead(knex, tenant, user?.user_id, realm, 'getHistoricalInvoiceMatches', {
+    localInvoices: allAlgaInvoices.length,
+    remoteInvoices: qboInvoices.length
+  });
 
   return matchHistoricalInvoices(allAlgaInvoices, qboInvoices, clientMappings);
 });

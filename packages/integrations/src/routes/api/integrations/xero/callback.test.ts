@@ -32,6 +32,17 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: mocks.getSecret,
 }));
 
+// The callback re-checks the disconnect gate before writing connections; mock
+// the DB and gate so the happy path under test is deterministic.
+vi.mock('../../../../lib/providerDisconnect', () => ({
+  getProviderDisconnectStatusInfo: vi.fn(async () => null),
+  isProviderDisconnectActive: vi.fn(async () => false),
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed'),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero',
+}));
+
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: mocks.loggerInfo, warn: mocks.loggerWarn, error: mocks.loggerError },
 }));
@@ -63,6 +74,8 @@ vi.mock('../../../../lib/xero/xeroClientService', () => ({
   resolveXeroOAuthCredentials: mocks.resolveXeroOAuthCredentials,
   getXeroOAuthScopeConfig: mocks.getXeroOAuthScopeConfig,
   upsertStoredXeroConnections: mocks.upsertStoredXeroConnections,
+  getXeroTokenUrl: () => 'https://identity.xero.com/connect/token',
+  getXeroConnectionsUrl: () => 'https://api.xero.com/connections',
 }));
 
 import { GET as connectGET } from './connect';
@@ -238,7 +251,10 @@ describe('Xero OAuth callback route', () => {
           refreshToken: 'refresh-token-1',
         }),
       }),
-      { prioritize: ['conn-1'] }
+      {
+        prioritize: ['conn-1'],
+        authorizationFlowStartedAt: expect.any(String),
+      }
     );
 
     // The attempt record is consumed on success.

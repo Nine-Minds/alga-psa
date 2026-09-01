@@ -50,6 +50,13 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'account_management', action: 'read', msp: true, client: false, description: 'Read account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'update', msp: true, client: false, description: 'Update account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
+  // Remote accounting catalogs (QuickBooks Online / Xero customers, accounts,
+  // classes, departments, items, tax codes, terms, tracking categories) and the
+  // accounting entity-mapping reads that pair local records with them. Narrower
+  // than billing_settings:read on purpose: connection diagnostics stay on
+  // billing_settings while catalog contents require this grant.
+  { resource: 'accounting_catalog', action: 'read', msp: true, client: false, description: 'View remote accounting catalogs (QuickBooks Online, Xero) and accounting entity mappings', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
+
   { resource: 'asset', action: 'create', msp: true, client: false, description: 'Create new assets and equipment records', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
   { resource: 'asset', action: 'delete', msp: true, client: false, description: 'Remove assets from the system', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'asset', action: 'read', msp: true, client: false, description: 'View asset details and inventory', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },

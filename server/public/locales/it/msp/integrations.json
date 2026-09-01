@@ -1840,7 +1840,9 @@
           "reconnect": "Riconnetti QuickBooks",
           "refresh": "Aggiorna",
           "saveCredentials": "Salva credenziali QuickBooks",
-          "saving": "Salvataggio…"
+          "saving": "Salvataggio…",
+          "retryDisconnect": "Riprova disconnessione",
+          "forceFinalizeDisconnect": "Finalizza forzatamente"
         },
         "badges": {
           "connectionExpired": "La connessione richiede attenzione",
@@ -1852,6 +1854,7 @@
         "callback": {
           "accessDenied": "L'accesso a QuickBooks è stato negato prima del completamento della connessione.",
           "configMissing": "Impossibile avviare QuickBooks OAuth perché il client ID e il client secret non erano completamente configurati.",
+          "disconnectInProgress": "QuickBooks è in fase di disconnessione. Completa o finalizza la disconnessione prima di riconnetterti.",
           "forbidden": "Non disponi più dell'autorizzazione per gestire le connessioni contabili. Richiedi l'accesso a un amministratore.",
           "generic": "QuickBooks ha restituito un errore OAuth: {{code}}",
           "invalidState": "Lo stato OAuth di QuickBooks non era valido o è scaduto. Riavvia il flusso di connessione.",
@@ -1922,7 +1925,18 @@
           "none": "Non è ancora disponibile alcuna app Intuit. Registrane una nel portale Intuit Developer e incolla qui sotto client ID e secret: la guida alla configurazione spiega come fare.",
           "tenant": "Questo tenant si collega tramite la propria app Intuit, con le credenziali salvate qui sotto."
         },
-        "setupGuideLink": "Guida alla configurazione di QuickBooks"
+        "setupGuideLink": "Guida alla configurazione di QuickBooks",
+        "disconnectPending": "QuickBooks è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
+        "disconnectForceFinalized": "La disconnessione di QuickBooks è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo della finalizzazione forzata della disconnessione di QuickBooks (registrato nel registro di audit):",
+          "inProgressTitle": "Disconnessione di QuickBooks in corso",
+          "inProgressDescription": "Le concessioni lato provider sono in fase di revoca. La sincronizzazione e le esportazioni restano in pausa finché ogni azienda connessa non risulta revocata.",
+          "targetRevoked": "revocata",
+          "targetFailed": "richiede attenzione",
+          "targetPending": "in sospeso",
+          "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit."
+        }
       },
       "sync": {
         "healthCardTitle": "Stato della sincronizzazione",
@@ -3424,7 +3438,9 @@
           "reconnect": "Riconnetti Xero",
           "refresh": "Aggiorna",
           "saveCredentials": "Salva credenziali Xero",
-          "saving": "Salvataggio…"
+          "saving": "Salvataggio…",
+          "retryDisconnect": "Riprova disconnessione",
+          "forceFinalizeDisconnect": "Finalizza forzatamente"
         },
         "badges": {
           "connectionExpired": "Connessione scaduta",
@@ -3437,6 +3453,7 @@
           "accessDenied": "L'accesso a Xero è stato negato prima del completamento della connessione.",
           "configMissing": "Impossibile avviare Xero OAuth perché il client ID e il client secret del tenant non erano completamente configurati.",
           "connectionsUnmapped": "Xero ha restituito organizzazioni, ma nessuna includeva gli identificatori richiesti per salvare una connessione.",
+          "disconnectInProgress": "Xero è in fase di disconnessione. Completa o finalizza la disconnessione prima di riconnetterti.",
           "forbidden": "Non disponi più dell'autorizzazione per gestire le connessioni contabili. Richiedi l'accesso a un amministratore.",
           "generic": "Xero ha restituito un errore OAuth: {{code}}",
           "invalidState": "Lo stato OAuth di Xero non era valido o è scaduto. Riavvia il flusso di connessione.",
@@ -3494,7 +3511,19 @@
         "tenantOauthDescription": "Incolla le credenziali dell'app Xero registrate per questo tenant. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
         "tenantOauthTitle": "App OAuth di proprietà del tenant",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "disconnectPending": "Xero è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
+        "disconnectForceFinalized": "La disconnessione di Xero è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
+        "disconnect": {
+          "forceFinalizePrompt": "Motivo della finalizzazione forzata della disconnessione di Xero (registrato nel registro di audit):",
+          "inProgressTitle": "Disconnessione di Xero in corso",
+          "inProgressDescription": "Le connessioni lato provider sono in fase di revoca. La sincronizzazione e le esportazioni restano in pausa finché ogni connessione non risulta rimossa.",
+          "grantTarget": "Revoca della concessione OAuth",
+          "targetRevoked": "revocata",
+          "targetFailed": "richiede attenzione",
+          "targetPending": "in sospeso",
+          "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit."
+        }
       }
     },
     "stripe": {
@@ -3676,7 +3705,8 @@
       "updateFailed": "Impossibile aggiornare la mappatura. Riprovare.",
       "idRequiredForDelete": "Per l’eliminazione è necessario l’ID della mappatura.",
       "notFound": "Mappatura non trovata. Aggiornare le mappature e riprovare.",
-      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare."
+      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare.",
+      "scopeRequired": "Le ricerche di mappature richiedono un'integrazione, un tipo di entità e un ambito realm."
     },
     "qbo": {
       "enterpriseOnly": "L’integrazione con QuickBooks Online è disponibile solo nella Enterprise Edition.",
