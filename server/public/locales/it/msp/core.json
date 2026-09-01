@@ -107,7 +107,7 @@
     "backToMain": "Torna al principale",
     "searchPlaceholder": "Cerca",
     "settings": "Impostazioni",
-    "support": "Supporto",
+    "resources": "Risorse",
     "goToDashboard": "Vai alla dashboard",
     "logoAlt": "Logo AlgaPSA",
     "expandSidebar": "Espandi barra laterale",
@@ -199,6 +199,12 @@
           "description": "Aggiungi un nuovo prodotto al catalogo"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Risorse e aiuto",
+      "title": "Risorse",
+      "documentation": "Documentazione",
+      "support": "Contatta l'assistenza"
     },
     "jobs": {
       "ariaLabel": "Visualizza l'attività dei job in background",

@@ -107,7 +107,7 @@
     "backToMain": "Terug naar hoofd",
     "searchPlaceholder": "Zoeken",
     "settings": "Instellingen",
-    "support": "Ondersteuning",
+    "resources": "Bronnen",
     "goToDashboard": "Ga naar dashboard",
     "logoAlt": "AlgaPSA-logo",
     "expandSidebar": "Zijbalk uitklappen",
@@ -199,6 +199,12 @@
           "description": "Voeg een nieuw product toe aan uw catalogus"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Bronnen en hulp",
+      "title": "Bronnen",
+      "documentation": "Documentatie",
+      "support": "Contact opnemen met support"
     },
     "jobs": {
       "ariaLabel": "Activiteit van achtergrondtaken bekijken",

@@ -25,7 +25,6 @@ import {
   Gauge,
   Ghost,
   Handshake,
-  HelpCircle,
   Home,
   KeyRound,
   Layers3,
@@ -292,7 +291,7 @@ export const bottomMenuItems: MenuItem[] = [
       },
     ]
   },
-  { name: 'Support', translationKey: 'sidebar.support', icon: HelpCircle, href: 'https://www.nineminds.com/support' },
+  { name: 'Resources', translationKey: 'sidebar.resources', icon: BookOpen, href: 'https://www.nineminds.com/documentation' },
 ];
 
 // Settings navigation sections - used when sidebar is in 'settings' mode

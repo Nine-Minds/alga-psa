@@ -107,7 +107,7 @@
     "backToMain": "Voltar ao principal",
     "searchPlaceholder": "Procurar",
     "settings": "Configurações",
-    "support": "Apoiar",
+    "resources": "Recursos",
     "goToDashboard": "Vá para o painel",
     "logoAlt": "Alga Logo",
     "expandSidebar": "Expandir barra lateral",
@@ -204,6 +204,12 @@
           "description": "Adicione um novo produto ao seu catálogo"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Recursos e ajuda",
+      "title": "Recursos",
+      "documentation": "Documentação",
+      "support": "Falar com o suporte"
     },
     "jobs": {
       "ariaLabel": "Ver atividade de trabalho em segundo plano",
