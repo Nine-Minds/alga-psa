@@ -1244,7 +1244,14 @@
     },
     "errors": {
       "load": "Failed to load numbering settings.",
-      "save": "Failed to update settings."
+      "save": "Failed to update settings.",
+      "dateFormat": {
+        "notText": "Date format must be text.",
+        "unmatchedBrace": "Date format has an unmatched { or }. Write tokens as {{supported}}.",
+        "unknownToken": "Unknown token {{tokens}}. Supported tokens: {{supported}}.",
+        "unknownTokens": "Unknown tokens {{tokens}}. Supported tokens: {{supported}}.",
+        "tooLong": "Date format expands to {{length}} characters, exceeding the {{max}} character limit."
+      }
     }
   },
   "payment": {

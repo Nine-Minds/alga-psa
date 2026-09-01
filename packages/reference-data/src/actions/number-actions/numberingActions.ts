@@ -5,7 +5,7 @@ import { withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { NUMBERING_DEFAULTS, type EntityType } from '@alga-psa/shared/services/numberingService';
-import { validateNumberDateFormat } from '@alga-psa/shared/services/numberingFormat';
+import { validateNumberDateFormat, type NumberDateFormatErrorCode } from '@alga-psa/shared/services/numberingFormat';
 
 export interface NumberSettings {
   prefix: string;
@@ -23,6 +23,9 @@ export interface NumberSettingsView extends NumberSettings {
 export interface UpdateResponse {
   success: boolean;
   error?: string;
+  /** Set for date-format failures so the client renders a translated message. */
+  errorCode?: NumberDateFormatErrorCode;
+  errorParams?: Record<string, string | number>;
   settings?: NumberSettings;
 }
 
@@ -147,7 +150,12 @@ export const updateNumberSettings = withAuth(async (
           entityType === 'INVOICE' ? { maxExpandedLength: invoiceDateFormatBudget(finalSettings) } : {}
         );
         if (!validation.valid) {
-          return { success: false, error: validation.error };
+          return {
+            success: false,
+            error: validation.error,
+            errorCode: validation.errorCode,
+            errorParams: validation.errorParams,
+          };
         }
       }
 

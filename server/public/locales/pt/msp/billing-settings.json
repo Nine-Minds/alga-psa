@@ -1244,7 +1244,14 @@
     },
     "errors": {
       "load": "Falha ao carregar as configurações de numeração.",
-      "save": "Falha ao atualizar as configurações."
+      "save": "Falha ao atualizar as configurações.",
+      "dateFormat": {
+        "notText": "O formato de data deve ser texto.",
+        "unmatchedBrace": "O formato de data tem uma chave { ou } sem par. Escreva os marcadores assim: {{supported}}.",
+        "unknownToken": "Marcador desconhecido {{tokens}}. Marcadores compatíveis: {{supported}}.",
+        "unknownTokens": "Marcadores desconhecidos {{tokens}}. Marcadores compatíveis: {{supported}}.",
+        "tooLong": "O formato de data resulta em {{length}} caracteres e ultrapassa o limite de {{max}} caracteres."
+      }
     }
   },
   "payment": {

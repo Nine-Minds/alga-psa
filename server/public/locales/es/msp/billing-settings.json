@@ -1244,7 +1244,14 @@
     },
     "errors": {
       "load": "No se pudo cargar la configuración de numeración.",
-      "save": "No se pudo actualizar la configuración."
+      "save": "No se pudo actualizar la configuración.",
+      "dateFormat": {
+        "notText": "El formato de fecha debe ser texto.",
+        "unmatchedBrace": "El formato de fecha tiene una llave { o } sin cerrar. Escriba los marcadores así: {{supported}}.",
+        "unknownToken": "Marcador desconocido {{tokens}}. Marcadores admitidos: {{supported}}.",
+        "unknownTokens": "Marcadores desconocidos {{tokens}}. Marcadores admitidos: {{supported}}.",
+        "tooLong": "El formato de fecha se expande a {{length}} caracteres y supera el límite de {{max}} caracteres."
+      }
     }
   },
   "payment": {

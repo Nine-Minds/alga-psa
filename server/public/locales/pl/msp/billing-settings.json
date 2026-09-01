@@ -1246,7 +1246,14 @@
     },
     "errors": {
       "load": "Nie udało się załadować ustawień numeracji.",
-      "save": "Nie udało się zaktualizować ustawień."
+      "save": "Nie udało się zaktualizować ustawień.",
+      "dateFormat": {
+        "notText": "Format daty musi być tekstem.",
+        "unmatchedBrace": "Format daty zawiera niedomknięty nawias { lub }. Zapisz znaczniki w postaci {{supported}}.",
+        "unknownToken": "Nieznany znacznik {{tokens}}. Obsługiwane znaczniki: {{supported}}.",
+        "unknownTokens": "Nieznane znaczniki {{tokens}}. Obsługiwane znaczniki: {{supported}}.",
+        "tooLong": "Format daty rozwija się do {{length}} znaków i przekracza limit {{max}} znaków."
+      }
     }
   },
   "payment": {

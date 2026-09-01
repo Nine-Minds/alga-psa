@@ -113,7 +113,12 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         setIsEditing(false);
         setShowConfirmation(false);
       } else {
-        throw new Error(result.error || t('numbering.errors.save'));
+        // Date-format failures carry a code so the admin reads the message in
+        // their own language; anything else falls back to the server's text.
+        const message = result.errorCode
+          ? t(`numbering.errors.dateFormat.${result.errorCode}`, result.errorParams)
+          : result.error;
+        throw new Error(message || t('numbering.errors.save'));
       }
     } catch (err) {
       console.error(err);

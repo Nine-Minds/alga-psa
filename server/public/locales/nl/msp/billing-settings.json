@@ -1244,7 +1244,14 @@
     },
     "errors": {
       "load": "Kan nummeringsinstellingen niet laden.",
-      "save": "Kan instellingen niet bijwerken."
+      "save": "Kan instellingen niet bijwerken.",
+      "dateFormat": {
+        "notText": "De datumnotatie moet tekst zijn.",
+        "unmatchedBrace": "De datumnotatie bevat een niet-gesloten { of }. Schrijf tijdelijke aanduidingen als {{supported}}.",
+        "unknownToken": "Onbekende tijdelijke aanduiding {{tokens}}. Ondersteunde aanduidingen: {{supported}}.",
+        "unknownTokens": "Onbekende tijdelijke aanduidingen {{tokens}}. Ondersteunde aanduidingen: {{supported}}.",
+        "tooLong": "De datumnotatie levert {{length}} tekens op en overschrijdt de limiet van {{max}} tekens."
+      }
     }
   },
   "payment": {

@@ -1244,7 +1244,14 @@
     },
     "errors": {
       "load": "Échec du chargement des paramètres de numérotation.",
-      "save": "Échec de la mise à jour des paramètres."
+      "save": "Échec de la mise à jour des paramètres.",
+      "dateFormat": {
+        "notText": "Le format de date doit être du texte.",
+        "unmatchedBrace": "Le format de date contient une accolade { ou } non fermée. Écrivez les marqueurs ainsi : {{supported}}.",
+        "unknownToken": "Marqueur inconnu {{tokens}}. Marqueurs pris en charge : {{supported}}.",
+        "unknownTokens": "Marqueurs inconnus {{tokens}}. Marqueurs pris en charge : {{supported}}.",
+        "tooLong": "Le format de date produit {{length}} caractères et dépasse la limite de {{max}} caractères."
+      }
     }
   },
   "payment": {

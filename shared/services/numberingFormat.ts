@@ -41,9 +41,21 @@ export const NUMBER_PREFIX_TOKENS: Record<string, NumberPrefixToken> = {
 
 export const NUMBER_PREFIX_TOKEN_NAMES = Object.keys(NUMBER_PREFIX_TOKENS);
 
+/** Key suffix under `numbering.errors.dateFormat` in msp/billing-settings. */
+export type NumberDateFormatErrorCode =
+  | 'notText'
+  | 'unmatchedBrace'
+  | 'unknownToken'
+  | 'unknownTokens'
+  | 'tooLong';
+
 export interface NumberDateFormatValidation {
   valid: boolean;
+  /** English fallback, for server logs and callers with no translator. */
   error?: string;
+  /** Set on failure so the UI can translate rather than echo the English. */
+  errorCode?: NumberDateFormatErrorCode;
+  errorParams?: Record<string, string | number>;
 }
 
 export interface ValidateNumberDateFormatOptions {
@@ -111,21 +123,31 @@ export function validateNumberDateFormat(
   options: ValidateNumberDateFormatOptions = {},
 ): NumberDateFormatValidation {
   if (typeof template !== 'string') {
-    return { valid: false, error: 'Date format must be a string' };
+    return { valid: false, error: 'Date format must be text', errorCode: 'notText' };
   }
   if (template === '') return { valid: true };
 
   if (!/^[^{}]*(\{[^{}]*\}[^{}]*)*$/.test(template)) {
-    return { valid: false, error: `Date format has an unmatched { or }. Write tokens as ${tokenList()}` };
+    return {
+      valid: false,
+      error: `Date format has an unmatched { or }. Write tokens as ${tokenList()}`,
+      errorCode: 'unmatchedBrace',
+      errorParams: { supported: tokenList() },
+    };
   }
 
   const unknown = Array.from(template.matchAll(/\{([^{}]*)\}/g))
     .map((match) => match[1])
     .filter((name) => !getToken(name));
   if (unknown.length > 0) {
+    const tokens = unknown.map((name) => `{${name}}`).join(', ');
     return {
       valid: false,
-      error: `Unknown token${unknown.length > 1 ? 's' : ''} ${unknown.map((name) => `{${name}}`).join(', ')}. Supported tokens: ${tokenList()}`,
+      error: `Unknown token${unknown.length > 1 ? 's' : ''} ${tokens}. Supported tokens: ${tokenList()}`,
+      // Two codes rather than an i18next count: plural rules differ per locale
+      // and the singular case is the one admins actually hit.
+      errorCode: unknown.length > 1 ? 'unknownTokens' : 'unknownToken',
+      errorParams: { tokens, supported: tokenList() },
     };
   }
 
@@ -134,6 +156,8 @@ export function validateNumberDateFormat(
     return {
       valid: false,
       error: `Date format expands to ${expandedFormatLength(template)} characters, exceeding the ${maxExpandedLength} character limit`,
+      errorCode: 'tooLong',
+      errorParams: { length: expandedFormatLength(template), max: maxExpandedLength },
     };
   }
 

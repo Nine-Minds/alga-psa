@@ -1,9 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   NUMBER_PREFIX_TOKEN_NAMES,
   expandDateFormat,
   expandedFormatLength,
   validateNumberDateFormat,
+  type NumberDateFormatErrorCode,
 } from '@shared/services/numberingFormat';
 
 const AUG_31_2026_UTC = new Date('2026-08-31T15:00:00Z');
@@ -73,5 +76,43 @@ describe('validateNumberDateFormat', () => {
 
   it('measures the expanded length, not the template length', () => {
     expect(expandedFormatLength('{YYYY}-{MM}-{DD}-')).toBe(11);
+  });
+});
+
+describe('date-format failures reach the admin translated', () => {
+  const LOCALES_DIR = path.resolve(__dirname, '../../../../public/locales');
+  const locales = fs.readdirSync(LOCALES_DIR).filter((entry) =>
+    fs.statSync(path.join(LOCALES_DIR, entry)).isDirectory(),
+  );
+
+  // Every rejection the settings form can provoke, with the interpolation it
+  // hands i18next. A message without its code renders as raw English.
+  const failures: Array<{ code: NumberDateFormatErrorCode; params: string[]; result: ReturnType<typeof validateNumberDateFormat> }> = [
+    { code: 'notText', params: [], result: validateNumberDateFormat(undefined as unknown as string) },
+    { code: 'unmatchedBrace', params: ['supported'], result: validateNumberDateFormat('{YYYY') },
+    { code: 'unknownToken', params: ['tokens', 'supported'], result: validateNumberDateFormat('{YYY}-') },
+    { code: 'unknownTokens', params: ['tokens', 'supported'], result: validateNumberDateFormat('{YYY}-{MMM}-') },
+    { code: 'tooLong', params: ['length', 'max'], result: validateNumberDateFormat('{YYYY}-{MM}-{DD}-', { maxExpandedLength: 10 }) },
+  ];
+
+  it.each(failures)('tags $code with its parameters', ({ code, params, result }) => {
+    expect(result.valid).toBe(false);
+    expect(result.errorCode).toBe(code);
+    params.forEach((param) => expect(result.errorParams).toHaveProperty(param));
+  });
+
+  it.each(locales)('%s translates every date-format failure', (locale) => {
+    const pack = JSON.parse(
+      fs.readFileSync(path.join(LOCALES_DIR, locale, 'msp/billing-settings.json'), 'utf8'),
+    );
+    const messages = pack.numbering?.errors?.dateFormat ?? {};
+
+    failures.forEach(({ code, params }) => {
+      const message = messages[code];
+      expect(message, `${locale} is missing numbering.errors.dateFormat.${code}`).toBeTruthy();
+      params.forEach((param) =>
+        expect(message, `${locale} ${code} drops {{${param}}}`).toContain(`{{${param}}}`),
+      );
+    });
   });
 });

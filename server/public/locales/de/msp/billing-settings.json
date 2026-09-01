@@ -1244,7 +1244,14 @@
     },
     "errors": {
       "load": "Fehler beim Laden der Nummerierungseinstellungen.",
-      "save": "Fehler beim Aktualisieren der Einstellungen."
+      "save": "Fehler beim Aktualisieren der Einstellungen.",
+      "dateFormat": {
+        "notText": "Das Datumsformat muss Text sein.",
+        "unmatchedBrace": "Im Datumsformat fehlt eine öffnende oder schließende Klammer. Platzhalter so schreiben: {{supported}}.",
+        "unknownToken": "Unbekannter Platzhalter {{tokens}}. Unterstützte Platzhalter: {{supported}}.",
+        "unknownTokens": "Unbekannte Platzhalter {{tokens}}. Unterstützte Platzhalter: {{supported}}.",
+        "tooLong": "Das Datumsformat ergibt {{length}} Zeichen und überschreitet damit das Limit von {{max}} Zeichen."
+      }
     }
   },
   "payment": {

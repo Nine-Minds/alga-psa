@@ -1244,7 +1244,14 @@
     },
     "errors": {
       "load": "Impossibile caricare le impostazioni di numerazione.",
-      "save": "Impossibile aggiornare le impostazioni."
+      "save": "Impossibile aggiornare le impostazioni.",
+      "dateFormat": {
+        "notText": "Il formato data deve essere testo.",
+        "unmatchedBrace": "Il formato data contiene una parentesi { o } non chiusa. Scrivi i segnaposto così: {{supported}}.",
+        "unknownToken": "Segnaposto sconosciuto {{tokens}}. Segnaposto supportati: {{supported}}.",
+        "unknownTokens": "Segnaposto sconosciuti {{tokens}}. Segnaposto supportati: {{supported}}.",
+        "tooLong": "Il formato data si espande in {{length}} caratteri e supera il limite di {{max}} caratteri."
+      }
     }
   },
   "payment": {
