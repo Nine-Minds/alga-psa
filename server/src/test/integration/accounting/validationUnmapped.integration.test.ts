@@ -95,7 +95,8 @@ describe('Accounting export validation – unmapped services', () => {
 
     // Map the customer so batch validation doesn't additionally flag
     // missing_customer_mapping — this suite exercises service/tax/term/realm
-    // gaps, not the customer-provisioning gate.
+    // gaps, not the customer-provisioning gate. The customer check is
+    // realm-exact, so the mapping must live in the batch's target realm.
     await ctx.db('tenant_external_entity_mappings').insert({
       id: uuidv4(),
       tenant: ctx.tenantId,
@@ -103,7 +104,7 @@ describe('Accounting export validation – unmapped services', () => {
       alga_entity_type: 'client',
       alga_entity_id: ctx.clientId,
       external_entity_id: 'QB-CUST-1',
-      external_realm_id: null,
+      external_realm_id: 'realm-1',
       sync_status: 'synced',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

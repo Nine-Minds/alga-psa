@@ -145,6 +145,8 @@ describe('Accounting export batch lifecycle integration', () => {
 
     const now = new Date().toISOString();
 
+    // Mappings are realm-scoped: customer validation is realm-exact, so the
+    // seeded rows must carry the batch's target realm to clear validation.
     await ctx.db('tenant_external_entity_mappings').insert({
       id: uuidv4(),
       tenant: ctx.tenantId,
@@ -152,6 +154,7 @@ describe('Accounting export batch lifecycle integration', () => {
       alga_entity_type: 'service',
       alga_entity_id: serviceId,
       external_entity_id: `QBO-ITEM-${uuidv4()}`,
+      external_realm_id: 'realm-001',
       sync_status: 'synced',
       created_at: now,
       updated_at: now
@@ -169,6 +172,7 @@ describe('Accounting export batch lifecycle integration', () => {
         alga_entity_type: 'client',
         alga_entity_id: ctx.clientId,
         external_entity_id: `QBO-CUST-${uuidv4()}`,
+        external_realm_id: 'realm-001',
         sync_status: 'synced',
         created_at: now,
         updated_at: now
