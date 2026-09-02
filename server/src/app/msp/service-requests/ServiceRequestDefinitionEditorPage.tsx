@@ -703,6 +703,7 @@ export default function ServiceRequestDefinitionEditorPage() {
 
   const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
   const isTicketOnlyExecution = data?.execution.executionProvider === 'ticket-only';
+  const isStoreOnlyExecution = data?.execution.executionProvider === 'store-only';
   const hasLivePublishedVersion = Boolean(data?.publish.publishedVersionNumber);
   const draftLifecycleLabel = getServiceRequestDraftLifecycleLabel(
     data?.lifecycleState,
@@ -1528,6 +1529,17 @@ export default function ServiceRequestDefinitionEditorPage() {
             }}
           />
         </div>
+        {isStoreOnlyExecution && (
+          <div
+            id="service-request-store-only-explanation"
+            className="space-y-1 rounded border p-3 bg-[rgb(var(--color-border-100))]"
+          >
+            <h3 className="text-sm font-semibold">{t('editor.execution.storeOnly.title')}</h3>
+            <p className="text-sm text-[rgb(var(--color-text-600))]">
+              {t('editor.execution.storeOnly.description')}
+            </p>
+          </div>
+        )}
         {isTicketOnlyExecution && (
           <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
             <h3 className="text-sm font-semibold">{t('editor.execution.ticketRouting.title')}</h3>

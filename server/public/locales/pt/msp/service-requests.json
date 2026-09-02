@@ -124,6 +124,10 @@
         "descriptionPrefix": "Descrição Prefixo",
         "save": "Salvar roteamento de tickets"
       },
+      "storeOnly": {
+        "title": "Somente armazenar",
+        "description": "Os envios concluídos são retidos com suas respostas e anexos no histórico de solicitações. Nenhum ticket de suporte é criado."
+      },
       "workflow": {
         "title": "Configuração do fluxo de trabalho",
         "workflowId": "ID do fluxo de trabalho",

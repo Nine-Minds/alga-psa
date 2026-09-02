@@ -124,6 +124,10 @@
         "descriptionPrefix": "Prefisso della descrizione",
         "save": "Salva instradamento dei ticket"
       },
+      "storeOnly": {
+        "title": "Solo archiviazione",
+        "description": "Gli invii completati vengono conservati con le risposte e gli allegati nella cronologia delle richieste. Non viene creato alcun ticket di supporto."
+      },
       "workflow": {
         "title": "Configurazione del workflow",
         "workflowId": "ID workflow",

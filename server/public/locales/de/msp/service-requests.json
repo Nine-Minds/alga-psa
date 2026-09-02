@@ -124,6 +124,10 @@
         "descriptionPrefix": "Beschreibungspräfix",
         "save": "Ticket-Routing speichern"
       },
+      "storeOnly": {
+        "title": "Nur speichern",
+        "description": "Abgeschlossene Einsendungen werden mit ihren Antworten und Anhängen im Anfrageverlauf aufbewahrt. Es wird kein Support-Ticket erstellt."
+      },
       "workflow": {
         "title": "Workflow-Konfiguration",
         "workflowId": "Workflow-ID",

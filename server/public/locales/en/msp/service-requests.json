@@ -124,6 +124,10 @@
         "descriptionPrefix": "Description Prefix",
         "save": "Save Ticket Routing"
       },
+      "storeOnly": {
+        "title": "Store Only",
+        "description": "Completed submissions are retained with their answers and attachments in request history. No support ticket is created."
+      },
       "workflow": {
         "title": "Workflow Configuration",
         "workflowId": "Workflow ID",

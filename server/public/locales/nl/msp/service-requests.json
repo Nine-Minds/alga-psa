@@ -124,6 +124,10 @@
         "descriptionPrefix": "Beschrijvingsprefix",
         "save": "Ticketrouting opslaan"
       },
+      "storeOnly": {
+        "title": "Alleen opslaan",
+        "description": "Voltooide inzendingen worden met hun antwoorden en bijlagen bewaard in de aanvraaggeschiedenis. Er wordt geen supportticket aangemaakt."
+      },
       "workflow": {
         "title": "Workflowconfiguratie",
         "workflowId": "Workflow-ID",

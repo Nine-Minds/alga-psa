@@ -24,6 +24,14 @@ export interface SubmitPortalServiceRequestInput {
   contactId?: string | null;
   payload: Record<string, unknown>;
   attachments?: ServiceRequestSubmissionAttachmentInput[];
+  /**
+   * Opaque idempotency key generated once per rendered portal form attempt and
+   * resubmitted unchanged on retries. Scoped per tenant + requester +
+   * definition: a repeated key returns the already-created submission instead
+   * of inserting a new row or re-running the execution provider. Optional so
+   * callers without retry semantics keep their existing behavior.
+   */
+  clientSubmissionKey?: string | null;
 }
 
 export interface SubmitPortalServiceRequestResult {
@@ -36,6 +44,69 @@ export interface SubmitPortalServiceRequestResult {
    * (e.g. a Stripe Checkout URL). Not persisted on the submission.
    */
   redirectUrl?: string;
+  /**
+   * True when the client submission key matched an existing submission and
+   * that submission's stored state was returned without executing the
+   * provider again. Replays never carry a redirectUrl.
+   */
+  replayed?: boolean;
+}
+
+const CLIENT_SUBMISSION_KEY_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const CLIENT_SUBMISSION_KEY_UNIQUE_INDEX = 'service_request_submissions_client_key_unique';
+
+interface ExistingSubmissionByClientKeyRow {
+  submission_id: string;
+  execution_status: 'pending' | 'succeeded' | 'failed';
+  created_ticket_id: string | null;
+  workflow_execution_id: string | null;
+}
+
+function toReplayedSubmissionResult(
+  row: ExistingSubmissionByClientKeyRow
+): SubmitPortalServiceRequestResult {
+  return {
+    submissionId: row.submission_id,
+    executionStatus: row.execution_status,
+    createdTicketId: row.created_ticket_id ?? undefined,
+    workflowExecutionId: row.workflow_execution_id ?? undefined,
+    replayed: true,
+  };
+}
+
+async function findSubmissionByClientKey(
+  knex: Knex,
+  tenant: string,
+  scope: {
+    requesterUserId: string;
+    definitionId: string;
+    clientSubmissionKey: string;
+  }
+): Promise<ExistingSubmissionByClientKeyRow | null> {
+  const row = await tenantDb(knex, tenant).table('service_request_submissions')
+    .where({
+      requester_user_id: scope.requesterUserId,
+      definition_id: scope.definitionId,
+      client_submission_key: scope.clientSubmissionKey,
+    })
+    .first<ExistingSubmissionByClientKeyRow | undefined>(
+      'submission_id',
+      'execution_status',
+      'created_ticket_id',
+      'workflow_execution_id'
+    );
+
+  return row ?? null;
+}
+
+function isClientSubmissionKeyConflict(error: unknown): boolean {
+  const candidate = error as { code?: string; constraint?: string } | null;
+  return (
+    candidate?.code === '23505' &&
+    candidate?.constraint === CLIENT_SUBMISSION_KEY_UNIQUE_INDEX
+  );
 }
 
 function isMissingRequiredValue(value: unknown): boolean {
@@ -99,7 +170,26 @@ export async function submitPortalServiceRequest(
     contactId = null,
     payload,
     attachments = [],
+    clientSubmissionKey = null,
   } = input;
+
+  if (clientSubmissionKey !== null && !CLIENT_SUBMISSION_KEY_PATTERN.test(clientSubmissionKey)) {
+    throw new Error('Client submission key must be a UUID');
+  }
+
+  // Idempotent replay: a repeated key from the same requester for the same
+  // definition returns the stored submission (terminal or still pending) and
+  // never re-runs validation, persistence, or the execution provider.
+  if (clientSubmissionKey) {
+    const existingSubmission = await findSubmissionByClientKey(knex, tenant, {
+      requesterUserId,
+      definitionId,
+      clientSubmissionKey,
+    });
+    if (existingSubmission) {
+      return toReplayedSubmissionResult(existingSubmission);
+    }
+  }
 
   const definitionDetail = await getVisiblePublishedServiceRequestDefinitionDetail(
     knex,
@@ -162,43 +252,64 @@ export async function submitPortalServiceRequest(
     }
   }
 
-  const submissionId = await knex.transaction(async (trx) => {
-    const db = tenantDb(trx, tenant);
-    const [submissionRow] = await db.table('service_request_submissions')
-      .insert({
-        tenant,
-        definition_id: definitionDetail.definitionId,
-        definition_version_id: definitionDetail.versionId,
-        requester_user_id: requesterUserId,
-        client_id: clientId,
-        contact_id: contactId,
-        request_name: definitionDetail.title,
-        submitted_payload: payload,
-        execution_status: 'pending',
-      })
-      .returning('submission_id');
-
-    const submissionId: string = submissionRow.submission_id;
-
-    if (attachments.length > 0) {
-      await db.table('service_request_submission_attachments').insert(
-        attachments.map((attachment) => ({
+  let submissionId: string;
+  try {
+    submissionId = await knex.transaction(async (trx) => {
+      const db = tenantDb(trx, tenant);
+      const [submissionRow] = await db.table('service_request_submissions')
+        .insert({
           tenant,
-          submission_id: submissionId,
-          field_key: attachment.fieldKey,
-          file_id: attachment.fileId,
-          file_name: attachment.fileName ?? null,
-          mime_type: attachment.mimeType ?? null,
-          file_size:
-            typeof attachment.fileSize === 'number'
-              ? Math.max(0, Math.floor(attachment.fileSize))
-              : null,
-        }))
-      );
-    }
+          definition_id: definitionDetail.definitionId,
+          definition_version_id: definitionDetail.versionId,
+          requester_user_id: requesterUserId,
+          client_id: clientId,
+          contact_id: contactId,
+          request_name: definitionDetail.title,
+          submitted_payload: payload,
+          execution_status: 'pending',
+          client_submission_key: clientSubmissionKey,
+        })
+        .returning('submission_id');
 
-    return submissionId;
-  });
+      const submissionId: string = submissionRow.submission_id;
+
+      if (attachments.length > 0) {
+        await db.table('service_request_submission_attachments').insert(
+          attachments.map((attachment) => ({
+            tenant,
+            submission_id: submissionId,
+            field_key: attachment.fieldKey,
+            file_id: attachment.fileId,
+            file_name: attachment.fileName ?? null,
+            mime_type: attachment.mimeType ?? null,
+            file_size:
+              typeof attachment.fileSize === 'number'
+                ? Math.max(0, Math.floor(attachment.fileSize))
+                : null,
+          }))
+        );
+      }
+
+      return submissionId;
+    });
+  } catch (error) {
+    // Concurrent same-key retry: another request won the unique index between
+    // the pre-insert lookup and this insert. The transaction above (a
+    // savepoint when a caller passed an outer transaction) has rolled back,
+    // so load and return the winning row instead of executing the provider a
+    // second time.
+    if (clientSubmissionKey && isClientSubmissionKeyConflict(error)) {
+      const winningSubmission = await findSubmissionByClientKey(knex, tenant, {
+        requesterUserId,
+        definitionId,
+        clientSubmissionKey,
+      });
+      if (winningSubmission) {
+        return toReplayedSubmissionResult(winningSubmission);
+      }
+    }
+    throw error;
+  }
 
   await publishServiceRequestSubmissionSearchEvent(
     'SERVICE_REQUEST_SUBMISSION_CREATED',

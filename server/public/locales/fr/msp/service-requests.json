@@ -124,6 +124,10 @@
         "descriptionPrefix": "Préfixe de description",
         "save": "Enregistrer le routage des tickets"
       },
+      "storeOnly": {
+        "title": "Stockage uniquement",
+        "description": "Les soumissions terminées sont conservées avec leurs réponses et pièces jointes dans l'historique des demandes. Aucun ticket de support n'est créé."
+      },
       "workflow": {
         "title": "Configuration du workflow",
         "workflowId": "ID du workflow",

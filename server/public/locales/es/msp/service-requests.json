@@ -124,6 +124,10 @@
         "descriptionPrefix": "Prefijo de descripción",
         "save": "Guardar enrutamiento de tickets"
       },
+      "storeOnly": {
+        "title": "Solo almacenar",
+        "description": "Los envíos completados se conservan con sus respuestas y archivos adjuntos en el historial de solicitudes. No se crea ningún ticket de soporte."
+      },
       "workflow": {
         "title": "Configuración del flujo de trabajo",
         "workflowId": "ID del flujo de trabajo",

@@ -87,12 +87,12 @@
         "unchecked": "Niezaznaczone"
       },
       "types": {
-      "short-text": "krótki tekst",
-      "long-text": "długi tekst",
-      "select": "lista wyboru",
-      "checkbox": "pole wyboru",
-      "date": "data",
-      "file-upload": "przesyłanie pliku"
+        "short-text": "krótki tekst",
+        "long-text": "długi tekst",
+        "select": "lista wyboru",
+        "checkbox": "pole wyboru",
+        "date": "data",
+        "file-upload": "przesyłanie pliku"
       }
     },
     "execution": {
@@ -123,6 +123,10 @@
         "titleFieldKey": "Klucz pola tytułu",
         "descriptionPrefix": "Prefiks opisu",
         "save": "Zapisz routing zgłoszeń"
+      },
+      "storeOnly": {
+        "title": "Tylko zapis",
+        "description": "Ukończone zgłoszenia formularza są zachowywane wraz z odpowiedziami i załącznikami w historii wniosków. Nie jest tworzone żadne zgłoszenie wsparcia."
       },
       "workflow": {
         "title": "Konfiguracja workflow",
