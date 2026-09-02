@@ -382,14 +382,16 @@ const XeroCsvIntegrationSettings: React.FC = () => {
             </AlertDescription>
           </Alert>
         </CardContent>
-        <CardFooter className="justify-end">
-          <Button id="xero-csv-open-accounting-exports" asChild size="lg">
-            <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
-              {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
-              <ExternalLink className="h-4 w-4 opacity-90" />
-            </Link>
-          </Button>
-        </CardFooter>
+        {caps.exportsExecute && (
+          <CardFooter className="justify-end">
+            <Button id="xero-csv-open-accounting-exports" asChild size="lg">
+              <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
+                {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
+                <ExternalLink className="h-4 w-4 opacity-90" />
+              </Link>
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

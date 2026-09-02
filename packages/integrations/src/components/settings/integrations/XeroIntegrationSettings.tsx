@@ -525,12 +525,14 @@ export default function XeroIntegrationSettings() {
                 : t('integrations.xero.settings.actions.disconnect', { defaultValue: 'Disconnect Xero' })}
             </Button>
 
-            <Button id="xero-open-accounting-exports" asChild variant="outline">
-              <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
-                {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
-                <ExternalLink className="h-4 w-4 opacity-80" />
-              </Link>
-            </Button>
+            {caps.exportsExecute && (
+              <Button id="xero-open-accounting-exports" asChild variant="outline">
+                <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
+                  {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
+                  <ExternalLink className="h-4 w-4 opacity-80" />
+                </Link>
+              </Button>
+            )}
           </div>
         </CardFooter>
       </Card>

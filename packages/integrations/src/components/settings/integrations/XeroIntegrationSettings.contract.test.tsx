@@ -51,6 +51,15 @@ vi.mock('./useAccountingCapabilities', () => ({
 describe('XeroIntegrationSettings contracts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    accountingCapsState.current = {
+      catalogRead: true,
+      connectionsManage: true,
+      mappingsManage: true,
+      exportsExecute: true,
+      remoteMutate: true,
+      hasAny: true,
+      loaded: true,
+    };
     useSearchParamsMock.mockReturnValue(new URLSearchParams('accounting_integration=xero'));
     getXeroConnectionStatusMock.mockResolvedValue({
       connections: [],
@@ -153,6 +162,26 @@ describe('XeroIntegrationSettings contracts', () => {
 
     expect((await screen.findAllByText('Xero CSV remains available')).length).toBeGreaterThan(0);
     expect(screen.getByText(/Billing → Accounting Exports/)).toBeInTheDocument();
+  });
+
+  it('shows the Accounting Exports link only with exports_execute', async () => {
+    const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
+
+    render(<XeroIntegrationSettings />);
+    expect(await screen.findByRole('link', { name: 'Open Accounting Exports' })).toHaveAttribute(
+      'href',
+      '/msp/billing?tab=accounting-exports',
+    );
+
+    cleanup();
+    accountingCapsState.current = {
+      ...accountingCapsState.current,
+      exportsExecute: false,
+    };
+    render(<XeroIntegrationSettings />);
+
+    await waitFor(() => expect(getXeroConnectionStatusMock).toHaveBeenCalled());
+    expect(screen.queryByRole('link', { name: 'Open Accounting Exports' })).not.toBeInTheDocument();
   });
 
   it('T021: renders the live Xero mapping area only when a default connected organisation exists', async () => {
