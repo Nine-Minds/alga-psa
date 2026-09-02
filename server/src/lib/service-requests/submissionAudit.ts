@@ -7,11 +7,13 @@
  * destination mode (store-only and ticket-only alike). It mirrors the
  * accounting audit writer (packages/db/src/lib/accountingAudit.ts): the row is
  * written inside a transaction with the `app.current_tenant` GUC set (the
- * auditLog helper skips inserts when the GUC is unset).
+ * auditLog helper skips inserts when the GUC is unset; setting it here in the
+ * same transaction makes that skip path unreachable).
  *
- * Audit writes are best-effort: the immutable submission row is the durable
- * record, so a failed audit insert is logged and swallowed rather than failing
- * or rolling back the submission itself.
+ * Audit writes are mandatory, not best-effort: callers pass the transaction
+ * that carries the submission write itself, so a failed audit insert
+ * propagates and rolls back the enclosing write. A stored submission can
+ * therefore never exist without its durable audit history.
  */
 
 import type { Knex } from 'knex';
@@ -31,28 +33,30 @@ export interface ServiceRequestSubmissionAuditParams {
   details?: Record<string, unknown>;
 }
 
+/**
+ * Writes one audit event. When `knex` is already a transaction the inner
+ * `knex.transaction` call becomes a savepoint, so the event joins the caller's
+ * transaction and a failure rolls the whole write back. Throws on failure —
+ * never swallow this from a submission write path.
+ */
 export async function recordServiceRequestSubmissionAudit(
   knex: Knex,
   tenant: string,
   operation: ServiceRequestSubmissionAuditOperation,
   params: ServiceRequestSubmissionAuditParams
 ): Promise<void> {
-  try {
-    await knex.transaction(async (trx) => {
-      await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenant]);
-      await auditLog(trx, {
-        userId: params.userId ?? undefined,
-        operation,
-        tableName: 'service_request_submissions',
-        recordId: params.submissionId,
-        changedData: params.changedData ?? {},
-        details: {
-          tenant,
-          ...params.details,
-        },
-      });
+  await knex.transaction(async (trx) => {
+    await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenant]);
+    await auditLog(trx, {
+      userId: params.userId ?? undefined,
+      operation,
+      tableName: 'service_request_submissions',
+      recordId: params.submissionId,
+      changedData: params.changedData ?? {},
+      details: {
+        tenant,
+        ...params.details,
+      },
     });
-  } catch (error) {
-    console.error('Failed to record service request submission audit event:', error);
-  }
+  });
 }

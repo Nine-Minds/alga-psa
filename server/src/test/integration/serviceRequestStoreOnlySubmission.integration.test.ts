@@ -246,6 +246,73 @@ const REPRESENTATIVE_PAYLOAD = {
   notes: 'Starts Monday; needs laptop and badge.',
 };
 
+/**
+ * Every tenant-scoped table the ticket execution path can write besides the
+ * submission itself: the ticket row, ticket collaborators/comments, checklist
+ * auto-apply, workflow events, and notification delivery. Store-only
+ * submissions must leave all of them untouched.
+ */
+const TICKET_SIDE_EFFECT_TABLES = [
+  'tickets',
+  'ticket_resources',
+  'ticket_checklist_items',
+  'comments',
+  'workflow_runs',
+  'workflow_runtime_events',
+  'internal_notifications',
+  'notification_logs',
+] as const;
+
+async function countTicketSideEffects(tenant: string): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const table of TICKET_SIDE_EFFECT_TABLES) {
+    counts[table] = await countRows(tenant, table);
+  }
+  return counts;
+}
+
+const ZERO_TICKET_SIDE_EFFECTS: Record<string, number> = Object.fromEntries(
+  TICKET_SIDE_EFFECT_TABLES.map((table) => [table, 0])
+);
+
+const AUDIT_FAILURE_TRIGGER = 'test_service_request_audit_failure';
+
+/**
+ * Installs a tenant-scoped BEFORE INSERT trigger on audit_logs that rejects
+ * the given submission audit operation, simulating a durable-history write
+ * failure without touching any other tenant or table. The suite connection
+ * holds admin role membership (dbConfig grants it), so trigger DDL is allowed.
+ */
+async function withFailingSubmissionAudit(
+  tenant: string,
+  operation: string,
+  run: () => Promise<void>
+): Promise<void> {
+  await db.raw(`
+    CREATE OR REPLACE FUNCTION ${AUDIT_FAILURE_TRIGGER}() RETURNS trigger AS $$
+    BEGIN
+      IF NEW.table_name = 'service_request_submissions'
+        AND NEW.details->>'tenant' = '${tenant}'
+        AND NEW.operation = '${operation}' THEN
+        RAISE EXCEPTION 'audit write rejected by test';
+      END IF;
+      RETURN NEW;
+    END
+    $$ LANGUAGE plpgsql;
+  `);
+  await db.raw(`
+    CREATE TRIGGER ${AUDIT_FAILURE_TRIGGER}
+    BEFORE INSERT ON audit_logs
+    FOR EACH ROW EXECUTE FUNCTION ${AUDIT_FAILURE_TRIGGER}();
+  `);
+  try {
+    await run();
+  } finally {
+    await db.raw(`DROP TRIGGER IF EXISTS ${AUDIT_FAILURE_TRIGGER} ON audit_logs`);
+    await db.raw(`DROP FUNCTION IF EXISTS ${AUDIT_FAILURE_TRIGGER}()`);
+  }
+}
+
 describe('service request store-only submissions', () => {
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
@@ -922,5 +989,140 @@ describe('service request store-only submissions', () => {
 
     expect(await countRows(fixture.tenant, 'service_request_submissions')).toBe(0);
     expect(await countRows(fixture.tenant, 'tickets')).toBe(0);
+  });
+
+  it('store-only writes no ticket, ticket notification, or ticket workflow event/side effect while ticket-only writes exactly the one ticket', async () => {
+    const fixture = await createSubmissionFixture();
+    const storeOnlyDefinitionId = uuidv4();
+    const ticketOnlyDefinitionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId: storeOnlyDefinitionId,
+      versionId: uuidv4(),
+      executionProvider: 'store-only',
+    });
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId: ticketOnlyDefinitionId,
+      versionId: uuidv4(),
+      executionProvider: 'ticket-only',
+      executionConfig: ticketRoutingConfig(fixture),
+    });
+
+    const storeOnlyResult = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId: storeOnlyDefinitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: REPRESENTATIVE_PAYLOAD,
+    });
+    expect(storeOnlyResult.executionStatus).toBe('succeeded');
+
+    // The stored submission is the store-only mode's only write: every
+    // ticket-adjacent table stays empty.
+    expect(await countTicketSideEffects(fixture.tenant)).toEqual(ZERO_TICKET_SIDE_EFFECTS);
+
+    const ticketResult = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId: ticketOnlyDefinitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: REPRESENTATIVE_PAYLOAD,
+    });
+    expect(ticketResult.executionStatus).toBe('succeeded');
+    expect(ticketResult.createdTicketId).toBeTruthy();
+
+    // Ticket mode's synchronous footprint is exactly one ticket row.
+    expect(await countTicketSideEffects(fixture.tenant)).toEqual({
+      ...ZERO_TICKET_SIDE_EFFECTS,
+      tickets: 1,
+    });
+  });
+
+  it('a submission whose created audit event cannot be recorded does not persist at all', async () => {
+    const fixture = await createSubmissionFixture();
+    const definitionId = uuidv4();
+    const fileId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId: uuidv4(),
+      executionProvider: 'store-only',
+    });
+    await seedExternalFile(fixture.tenant, fileId, fixture.requesterUserId);
+
+    await withFailingSubmissionAudit(
+      fixture.tenant,
+      'service_request_submission_created',
+      async () => {
+        await expect(
+          submitPortalServiceRequest({
+            knex: db,
+            tenant: fixture.tenant,
+            definitionId,
+            requesterUserId: fixture.requesterUserId,
+            clientId: fixture.clientId,
+            payload: REPRESENTATIVE_PAYLOAD,
+            attachments: [{ fieldKey: 'evidence', fileId, fileName: 'evidence.pdf' }],
+          })
+        ).rejects.toThrow('Failed to write audit log');
+      }
+    );
+
+    // The audit write shares the submission transaction, so nothing survives:
+    // no submission, no attachment rows, no partial audit history.
+    expect(await countRows(fixture.tenant, 'service_request_submissions')).toBe(0);
+    expect(await countRows(fixture.tenant, 'service_request_submission_attachments')).toBe(0);
+    expect(await countRows(fixture.tenant, 'audit_logs')).toBe(0);
+  });
+
+  it('an execution outcome whose audit event cannot be recorded keeps status and history consistent', async () => {
+    const fixture = await createSubmissionFixture();
+    const definitionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId: uuidv4(),
+      executionProvider: 'store-only',
+    });
+
+    await withFailingSubmissionAudit(
+      fixture.tenant,
+      'service_request_submission_execution_succeeded',
+      async () => {
+        await expect(
+          submitPortalServiceRequest({
+            knex: db,
+            tenant: fixture.tenant,
+            definitionId,
+            requesterUserId: fixture.requesterUserId,
+            clientId: fixture.clientId,
+            payload: REPRESENTATIVE_PAYLOAD,
+          })
+        ).rejects.toThrow('Failed to write audit log');
+      }
+    );
+
+    // The status transition rolled back with its audit event: the submission
+    // stays pending rather than reporting success without durable history.
+    const [submission] = await tenantTable(fixture.tenant, 'service_request_submissions').select(
+      'submission_id',
+      'execution_status'
+    );
+    expect(submission.execution_status).toBe('pending');
+
+    const events = await listServiceRequestSubmissionAuditEvents(
+      db,
+      fixture.tenant,
+      submission.submission_id
+    );
+    expect(events.map((event) => event.operation)).toEqual([
+      'service_request_submission_created',
+    ]);
   });
 });

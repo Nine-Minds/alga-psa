@@ -5,6 +5,7 @@ import {
   getServiceRequestExecutionProvider,
   getServiceRequestFormBehaviorProvider,
 } from './providers/registry';
+import type { ServiceRequestExecutionResult } from './providers/contracts';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 import { recordServiceRequestSubmissionAudit } from './submissionAudit';
 
@@ -100,6 +101,74 @@ async function findSubmissionByClientKey(
     );
 
   return row ?? null;
+}
+
+/**
+ * Persists an execution-state transition and its audit event atomically: the
+ * status update and the outcome audit row commit together or not at all, so a
+ * submission's stored execution state can never diverge from its durable
+ * history. An audit failure here propagates to the caller instead of being
+ * swallowed.
+ */
+async function recordSubmissionExecutionOutcome(
+  knex: Knex,
+  tenant: string,
+  args: {
+    submissionId: string;
+    requesterUserId: string;
+    executionProvider: string;
+  } & (
+    | {
+        executionStatus: 'succeeded';
+        createdTicketId?: string | null;
+        workflowExecutionId?: string | null;
+      }
+    | {
+        executionStatus: 'failed';
+        errorSummary: string;
+      }
+  )
+): Promise<void> {
+  await knex.transaction(async (trx) => {
+    const db = tenantDb(trx, tenant);
+
+    if (args.executionStatus === 'succeeded') {
+      await db.table('service_request_submissions')
+        .where({ submission_id: args.submissionId })
+        .update({
+          execution_status: 'succeeded',
+          created_ticket_id: args.createdTicketId ?? null,
+          workflow_execution_id: args.workflowExecutionId ?? null,
+          execution_error_summary: null,
+          updated_at: trx.fn.now(),
+        });
+      await recordServiceRequestSubmissionAudit(trx, tenant, 'service_request_submission_execution_succeeded', {
+        submissionId: args.submissionId,
+        userId: args.requesterUserId,
+        changedData: {
+          execution_status: 'succeeded',
+          created_ticket_id: args.createdTicketId ?? null,
+          workflow_execution_id: args.workflowExecutionId ?? null,
+        },
+        details: { execution_provider: args.executionProvider },
+      });
+      return;
+    }
+
+    await db.table('service_request_submissions')
+      .where({ submission_id: args.submissionId })
+      .update({
+        execution_status: 'failed',
+        execution_error_summary: args.errorSummary,
+        updated_at: trx.fn.now(),
+      });
+    await recordServiceRequestSubmissionAudit(trx, tenant, 'service_request_submission_execution_failed', {
+      submissionId: args.submissionId,
+      userId: args.requesterUserId,
+      changedData: { execution_status: 'failed' },
+      details: { error_summary: args.errorSummary },
+    });
+  });
 }
 
 function isClientSubmissionKeyConflict(error: unknown): boolean {
@@ -291,6 +360,20 @@ export async function submitPortalServiceRequest(
         );
       }
 
+      // The created audit event shares this transaction: a submission that
+      // cannot record its durable history must not persist at all.
+      await recordServiceRequestSubmissionAudit(trx, tenant, 'service_request_submission_created', {
+        submissionId,
+        userId: requesterUserId,
+        changedData: { execution_status: 'pending' },
+        details: {
+          definition_id: definitionDetail.definitionId,
+          definition_version_id: definitionDetail.versionId,
+          client_id: clientId,
+          execution_provider: definitionDetail.executionProvider,
+        },
+      });
+
       return submissionId;
     });
   } catch (error) {
@@ -325,28 +408,16 @@ export async function submitPortalServiceRequest(
     },
   );
 
-  await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_created', {
-    submissionId,
-    userId: requesterUserId,
-    changedData: { execution_status: 'pending' },
-    details: {
-      definition_id: definitionDetail.definitionId,
-      definition_version_id: definitionDetail.versionId,
-      client_id: clientId,
-      execution_provider: definitionDetail.executionProvider,
-    },
-  });
-
   const executionProvider = getServiceRequestExecutionProvider(definitionDetail.executionProvider);
   if (!executionProvider) {
     const errorSummary = `Execution provider "${definitionDetail.executionProvider}" is not registered.`;
-    await tenantDb(knex, tenant).table('service_request_submissions')
-      .where({ submission_id: submissionId })
-      .update({
-        execution_status: 'failed',
-        execution_error_summary: errorSummary,
-        updated_at: knex.fn.now(),
-      });
+    await recordSubmissionExecutionOutcome(knex, tenant, {
+      submissionId,
+      requesterUserId,
+      executionProvider: definitionDetail.executionProvider,
+      executionStatus: 'failed',
+      errorSummary,
+    });
     await publishServiceRequestSubmissionSearchEvent(
       'SERVICE_REQUEST_SUBMISSION_UPDATED',
       tenant,
@@ -359,20 +430,19 @@ export async function submitPortalServiceRequest(
         changedFields: ['execution_status', 'execution_error_summary'],
       },
     );
-    await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_execution_failed', {
-      submissionId,
-      userId: requesterUserId,
-      changedData: { execution_status: 'failed' },
-      details: { error_summary: errorSummary },
-    });
     return {
       submissionId,
       executionStatus: 'failed',
     };
   }
 
+  // Only the provider call itself is guarded: a provider error becomes a
+  // failed outcome, but a failure while persisting the outcome (status update
+  // + its mandatory audit event) must propagate to the caller rather than be
+  // relabeled as a provider failure.
+  let executionResult: ServiceRequestExecutionResult;
   try {
-    const executionResult = await executionProvider.execute({
+    executionResult = await executionProvider.execute({
       knex,
       tenant,
       definitionId: definitionDetail.definitionId,
@@ -384,119 +454,75 @@ export async function submitPortalServiceRequest(
       payload,
       config: definitionDetail.executionConfig,
     });
-
-    if (executionResult.status === 'succeeded') {
-      await tenantDb(knex, tenant).table('service_request_submissions')
-        .where({ submission_id: submissionId })
-        .update({
-          execution_status: 'succeeded',
-          created_ticket_id: executionResult.createdTicketId ?? null,
-          workflow_execution_id: executionResult.workflowExecutionId ?? null,
-          execution_error_summary: null,
-          updated_at: knex.fn.now(),
-        });
-
-      await publishServiceRequestSubmissionSearchEvent(
-        'SERVICE_REQUEST_SUBMISSION_UPDATED',
-        tenant,
-        submissionId,
-        {
-          definitionId: definitionDetail.definitionId,
-          clientId,
-          requesterUserId,
-          executionStatus: 'succeeded',
-          changedFields: [
-            'execution_status',
-            'created_ticket_id',
-            'workflow_execution_id',
-            'execution_error_summary',
-          ],
-        },
-      );
-
-      await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_execution_succeeded', {
-        submissionId,
-        userId: requesterUserId,
-        changedData: {
-          execution_status: 'succeeded',
-          created_ticket_id: executionResult.createdTicketId ?? null,
-          workflow_execution_id: executionResult.workflowExecutionId ?? null,
-        },
-        details: { execution_provider: definitionDetail.executionProvider },
-      });
-
-      return {
-        submissionId,
-        executionStatus: 'succeeded',
-        createdTicketId: executionResult.createdTicketId,
-        workflowExecutionId: executionResult.workflowExecutionId,
-        redirectUrl: executionResult.redirectUrl,
-      };
-    }
-
-    await tenantDb(knex, tenant).table('service_request_submissions')
-      .where({ submission_id: submissionId })
-      .update({
-        execution_status: 'failed',
-        execution_error_summary: executionResult.errorSummary ?? 'Execution failed.',
-        updated_at: knex.fn.now(),
-      });
-    await publishServiceRequestSubmissionSearchEvent(
-      'SERVICE_REQUEST_SUBMISSION_UPDATED',
-      tenant,
-      submissionId,
-      {
-        definitionId: definitionDetail.definitionId,
-        clientId,
-        requesterUserId,
-        executionStatus: 'failed',
-        changedFields: ['execution_status', 'execution_error_summary'],
-      },
-    );
-    await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_execution_failed', {
-      submissionId,
-      userId: requesterUserId,
-      changedData: { execution_status: 'failed' },
-      details: { error_summary: executionResult.errorSummary ?? 'Execution failed.' },
-    });
-    return {
-      submissionId,
-      executionStatus: 'failed',
-      createdTicketId: executionResult.createdTicketId,
-      workflowExecutionId: executionResult.workflowExecutionId,
-    };
   } catch (error) {
-    const errorSummary = error instanceof Error ? error.message : 'Execution failed.';
-    await tenantDb(knex, tenant).table('service_request_submissions')
-      .where({ submission_id: submissionId })
-      .update({
-        execution_status: 'failed',
-        execution_error_summary: errorSummary,
-        updated_at: knex.fn.now(),
-      });
-    await publishServiceRequestSubmissionSearchEvent(
-      'SERVICE_REQUEST_SUBMISSION_UPDATED',
-      tenant,
-      submissionId,
-      {
-        definitionId: definitionDetail.definitionId,
-        clientId,
-        requesterUserId,
-        executionStatus: 'failed',
-        changedFields: ['execution_status', 'execution_error_summary'],
-      },
-    );
-    await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_execution_failed', {
-      submissionId,
-      userId: requesterUserId,
-      changedData: { execution_status: 'failed' },
-      details: { error_summary: errorSummary },
-    });
-    return {
-      submissionId,
-      executionStatus: 'failed',
+    executionResult = {
+      status: 'failed',
+      errorSummary: error instanceof Error ? error.message : 'Execution failed.',
     };
   }
+
+  if (executionResult.status === 'succeeded') {
+    await recordSubmissionExecutionOutcome(knex, tenant, {
+      submissionId,
+      requesterUserId,
+      executionProvider: definitionDetail.executionProvider,
+      executionStatus: 'succeeded',
+      createdTicketId: executionResult.createdTicketId ?? null,
+      workflowExecutionId: executionResult.workflowExecutionId ?? null,
+    });
+
+    await publishServiceRequestSubmissionSearchEvent(
+      'SERVICE_REQUEST_SUBMISSION_UPDATED',
+      tenant,
+      submissionId,
+      {
+        definitionId: definitionDetail.definitionId,
+        clientId,
+        requesterUserId,
+        executionStatus: 'succeeded',
+        changedFields: [
+          'execution_status',
+          'created_ticket_id',
+          'workflow_execution_id',
+          'execution_error_summary',
+        ],
+      },
+    );
+
+    return {
+      submissionId,
+      executionStatus: 'succeeded',
+      createdTicketId: executionResult.createdTicketId,
+      workflowExecutionId: executionResult.workflowExecutionId,
+      redirectUrl: executionResult.redirectUrl,
+    };
+  }
+
+  await recordSubmissionExecutionOutcome(knex, tenant, {
+    submissionId,
+    requesterUserId,
+    executionProvider: definitionDetail.executionProvider,
+    executionStatus: 'failed',
+    errorSummary: executionResult.errorSummary ?? 'Execution failed.',
+  });
+  await publishServiceRequestSubmissionSearchEvent(
+    'SERVICE_REQUEST_SUBMISSION_UPDATED',
+    tenant,
+    submissionId,
+    {
+      definitionId: definitionDetail.definitionId,
+      clientId,
+      requesterUserId,
+      executionStatus: 'failed',
+      changedFields: ['execution_status', 'execution_error_summary'],
+    },
+  );
+  return {
+    submissionId,
+    executionStatus: 'failed',
+    createdTicketId: executionResult.createdTicketId,
+    workflowExecutionId: executionResult.workflowExecutionId,
+  };
 }
 
 export async function deleteServiceRequestSubmission(input: {
