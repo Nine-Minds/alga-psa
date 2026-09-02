@@ -91,6 +91,26 @@ NEXTAUTH_SESSION_EXPIRES=86400  # Required: Number greater than 0
 - Development: both use `http://localhost:3000`
 - Production: both use `https://your-domain.com`
 
+#### Deployment profile (DEPLOYMENT_PROFILE)
+```
+DEPLOYMENT_PROFILE=hosted  # Optional: 'hosted' (default) or 'appliance'
+```
+
+`hosted` is the default and needs no configuration. Set `appliance` only for a
+self-hosted install whose reverse proxy cannot preserve the original `Host`
+header. Appliance mode changes two things:
+
+- **`X-Forwarded-Host` is trusted** as the request host. Because that header decides
+  which tenant's branded portal is served, only enable appliance mode when every
+  path to the server goes through a proxy that sets `Host` / `X-Forwarded-Host`
+  itself and discards client-supplied values. Never expose an appliance-mode server
+  directly to the internet.
+- **Enterprise Edition provisions custom client-portal domains directly** instead of
+  through the hosted DNS and certificate workflow: a domain entered in Settings →
+  Client Portal activates immediately and your proxy owns DNS, TLS, and routing.
+  Community Edition always provisions directly, with or without this setting. See the
+  [custom domain reverse proxy guide](../features/client-portal/custom-domain-reverse-proxy.md).
+
 #### Crypto Settings (CRYPTO_*)
 ```
 CRYPTO_SALT_BYTES=16

@@ -33,7 +33,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActi
 import { getTenantThemeAction } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
 import { customThemePresetFor, type CustomThemeTokens } from '@alga-psa/tenancy/lib/customTheme';
 import { useBranding } from '@alga-psa/tenancy/components/providers/BrandingProvider';
-import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/entry';
+import ClientPortalDomainSettings from './ClientPortalDomainSettings';
 import { CopyClientPortalLinkButton } from './CopyClientPortalLinkButton';
 import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions/tenant-actions/portalDomainActions';

@@ -10,16 +10,16 @@ import {
   type PortalDomainStatus,
   normalizeHostname,
   type PortalDomain,
-} from 'server/src/models/PortalDomainModel';
+} from '@/models/PortalDomainModel';
 import type {
   PortalDomainStatusResponse,
   PortalDomainRegistrationRequest,
   PortalDomainRegistrationResult,
 } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
-import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
-import { getPortalDomainProvisioner } from '@ee/lib/portal-domains/provisioner';
+import { isEnterpriseEdition } from '@/lib/features';
+import { resolvePortalDomainProvisioning } from '@/lib/portal-domains/provisioner';
 import { getPortalDomainLastSeen } from '@/lib/portal-domains/portalDomainSeen';
-import type { IUser } from 'server/src/interfaces/auth.interfaces';
+import type { IUser } from '@/interfaces/auth.interfaces';
 import { analytics } from '@/lib/analytics/posthog';
 import {
   actionError,
@@ -63,7 +63,7 @@ function buildVerificationDetails(record: PortalDomain | null, canonicalHost: st
 
 function createStatusResponse(record: PortalDomain | null, canonicalHost: string): PortalDomainStatusResponse {
   const statusMessage = record?.statusMessage ?? 'No custom domain registered yet.';
-  const mode = resolveDeploymentCapabilities().portalDomain.provisioner;
+  const { mode } = resolvePortalDomainProvisioning();
 
   return {
     domain: record?.domain ?? null,
@@ -77,8 +77,11 @@ function createStatusResponse(record: PortalDomain | null, canonicalHost: string
     lastSyncedResourceVersion: record?.lastSyncedResourceVersion ?? null,
     createdAt: toIsoString(record?.createdAt),
     updatedAt: toIsoString(record?.updatedAt),
+    // Every build has a driver (`direct` is the universal fallback), so the
+    // server-side status is always editable; the read-only `false` only comes
+    // from the tenancy package's stub used by the client portal.
     isEditable: true,
-    edition: 'ee',
+    edition: isEnterpriseEdition() ? 'ee' : 'ce',
     mode,
   };
 }
@@ -144,7 +147,7 @@ function getNextAuthHostname(): string | null {
 }
 
 function validateDirectModeDomain(domain: string): ActionMessageError | null {
-  if (resolveDeploymentCapabilities().portalDomain.provisioner !== 'direct') {
+  if (resolvePortalDomainProvisioning().mode !== 'direct') {
     return null;
   }
 
@@ -157,8 +160,8 @@ function validateDirectModeDomain(domain: string): ActionMessageError | null {
 }
 
 async function computeNeverSeenOnHost(record: PortalDomain | null): Promise<boolean> {
-  // Appliance ("direct") only, and only once an active domain has had time to be wired up.
-  if (resolveDeploymentCapabilities().portalDomain.provisioner !== 'direct') {
+  // Direct mode only, and only once an active domain has had time to be wired up.
+  if (resolvePortalDomainProvisioning().mode !== 'direct') {
     return false;
   }
   if (!record || record.status !== 'active' || !record.domain) {
@@ -201,6 +204,7 @@ export const requestPortalDomainRegistrationAction = withAuth(async (
     return permissionFailure;
   }
 
+  const { provisioner } = resolvePortalDomainProvisioning();
   const canonicalHost = computeCanonicalHost(tenant);
   const existing = await getPortalDomain(knex, tenant);
   const normalizedDomain = validateRequestedDomain(request.domain, canonicalHost);
@@ -215,7 +219,6 @@ export const requestPortalDomainRegistrationAction = withAuth(async (
 
   const domainChanged = existing ? existing.domain !== normalizedDomain : false;
 
-  const provisioner = getPortalDomainProvisioner();
   const { enqueued } = await provisioner.register({
     knex,
     tenant,
@@ -247,7 +250,7 @@ export const refreshPortalDomainStatusAction = withAuth(async (user, { tenant })
   const current = await getPortalDomain(knex, tenant);
 
   if (current) {
-    await getPortalDomainProvisioner().refresh({ knex, tenant, existing: current });
+    await resolvePortalDomainProvisioning().provisioner.refresh({ knex, tenant, existing: current });
   }
 
   const status = await fetchStatus(knex, tenant);
@@ -279,7 +282,7 @@ export const retryPortalDomainRegistrationAction = withAuth(async (user, { tenan
     return actionError('Retry is only available after a failed registration.', 'msp/settings:errors.clientPortalDomain.retryOnlyAfterFailure');
   }
 
-  await getPortalDomainProvisioner().retry({ knex, tenant, existing: current });
+  await resolvePortalDomainProvisioning().provisioner.retry({ knex, tenant, existing: current });
 
   const status = await fetchStatus(knex, tenant);
 
@@ -305,7 +308,7 @@ export const disablePortalDomainAction = withAuth(async (user, { tenant }): Prom
     return fetchStatus(knex, tenant);
   }
 
-  await getPortalDomainProvisioner().disable({ knex, tenant, existing });
+  await resolvePortalDomainProvisioning().provisioner.disable({ knex, tenant, existing });
 
   const status = await fetchStatus(knex, tenant);
 

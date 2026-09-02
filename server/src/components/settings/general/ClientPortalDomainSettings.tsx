@@ -24,12 +24,12 @@ import {
   refreshPortalDomainStatusAction,
   requestPortalDomainRegistrationAction,
   retryPortalDomainRegistrationAction,
-} from '@ee/lib/actions/tenant-actions/portalDomainActions';
+} from '@/lib/actions/tenant-actions/portalDomainActions';
 import type { PortalDomainStatusResponse } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
-import type { PortalDomainStatus } from 'server/src/models/PortalDomainModel';
+import type { PortalDomainStatus } from '@/models/PortalDomainModel';
 
 // Operator-facing reverse-proxy setup guide for appliance ("direct") deployments.
-const PROXY_SETUP_DOC_URL = 'https://github.com/Nine-Minds/alga-psa/blob/main/ee/docs/guides/appliance-custom-portal-domain-proxy.md';
+const PROXY_SETUP_DOC_URL = 'https://github.com/Nine-Minds/alga-psa/blob/main/docs/features/client-portal/custom-domain-reverse-proxy.md';
 
 interface StatusBadgeConfig {
   label: string;

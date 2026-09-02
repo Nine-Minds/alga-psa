@@ -1,7 +1,11 @@
-# Appliance Custom Portal Domain — Reverse Proxy Setup
+# Custom Portal Domain — Reverse Proxy Setup (self-hosted)
 
-This guide is for operators of the **on-premise appliance** who want to serve the client
-portal on a branded domain (a "vanity domain") such as `portal.acme.com`.
+This guide is for operators of a **self-hosted** Alga PSA install who want to serve the client
+portal on a branded domain (a "vanity domain") such as `portal.acme.com`. It applies to
+Community Edition out of the box, with no configuration flag, and to Enterprise Edition
+running as the on-premise appliance (`DEPLOYMENT_PROFILE=appliance`, see the
+[configuration guide](../../getting-started/configuration_guide.md#deployment-profile-deployment_profile)).
+Below, "the appliance" means your self-hosted server.
 
 Unlike the hosted cloud, the appliance does **not** verify DNS, issue TLS certificates, or
 configure ingress for you. You bring your own reverse proxy; the appliance just records the
@@ -22,10 +26,27 @@ DNS and your proxy *first*.
 For the portal's cross-domain sign-in to work, the appliance must see the request as arriving
 on the custom host over HTTPS. Your proxy must therefore send:
 
-- `Host: portal.acme.com` — the original host. If your proxy rewrites `Host`, set
-  `X-Forwarded-Host: portal.acme.com` instead (the appliance trusts it in appliance mode).
+- `Host: portal.acme.com` — the original host. If your proxy cannot preserve `Host`, send
+  `X-Forwarded-Host: portal.acme.com` instead and set `DEPLOYMENT_PROFILE=appliance` so the
+  server trusts it (see the security note below).
 - `X-Forwarded-Proto: https` — so the appliance sets secure cookies and builds `https://`
   redirects (it receives plain HTTP behind your TLS-terminating proxy).
+
+## Security: the proxy is the trust boundary
+
+Prefer forwarding `Host` unchanged and leaving `DEPLOYMENT_PROFILE` unset; the server then
+never trusts a forwarded host header. With `DEPLOYMENT_PROFILE=appliance` the server trusts
+the first value of `X-Forwarded-Host` as the request host. That is the only way to recover
+the original host when a proxy rewrites `Host`, but it also means anyone who can send that
+header directly to the appliance can pick which tenant's branded portal they are served. If
+you enable it, keep the trust at your proxy:
+
+- The proxy must **set** `Host` / `X-Forwarded-Host` itself (nginx `proxy_set_header`, Caddy
+  `header_up`), which replaces whatever the client sent. Never configure it to append to or
+  pass through a client-supplied `X-Forwarded-Host`.
+- Port `3000` must be reachable **only from the proxy** (firewall, private network, or a
+  container network that is not published).
+- Do not set `DEPLOYMENT_PROFILE=appliance` on an install that is exposed without a proxy.
 
 ## Example: nginx
 
@@ -75,14 +96,15 @@ to the default host. You can then retire the DNS record and proxy server block.
 
 **"No requests have reached portal.acme.com yet" warning in Settings.**
 The appliance has not observed any traffic arriving on the custom host. Almost always this
-means your proxy is **not forwarding the `Host` header** (or `X-Forwarded-Host`). Re-check the
-`proxy_set_header Host $host;` (nginx) / `header_up Host {host}` (Caddy) line and that DNS
-points at the proxy. Note: if the proxy rewrites `Host` *and* sends no `X-Forwarded-Host`, the
-appliance cannot detect the original host at all — so always send at least one of them.
+means your proxy is **not forwarding the `Host` header** (or `X-Forwarded-Host` with
+`DEPLOYMENT_PROFILE=appliance`). Re-check the `proxy_set_header Host $host;` (nginx) /
+`header_up Host {host}` (Caddy) line and that DNS points at the proxy. Note: if the proxy
+rewrites `Host` *and* sends no trusted `X-Forwarded-Host`, the appliance cannot detect the
+original host at all — so always send at least one of them.
 
 **Visiting the domain bounces to the default host and never signs in.**
 Same root cause: the appliance saw the request as the canonical host because `Host` was
-rewritten. Forward `Host` (or `X-Forwarded-Host`).
+rewritten. Forward `Host` (or `X-Forwarded-Host` with `DEPLOYMENT_PROFILE=appliance`).
 
 **Sign-in succeeds but immediately logs out / "insecure cookie" behavior.**
 Your proxy is not sending `X-Forwarded-Proto: https`. The appliance then treats the request as
