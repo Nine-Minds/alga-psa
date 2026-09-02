@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates"
     ],
@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates"
     ],
@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates"
     ],
@@ -29,7 +29,7 @@
   {
     "id": "F004",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates"
     ],
@@ -38,7 +38,7 @@
   {
     "id": "F005",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates"
     ],
@@ -47,7 +47,7 @@
   {
     "id": "F006",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates"
     ],
@@ -56,7 +56,7 @@
   {
     "id": "F007",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates"
     ],
@@ -65,7 +65,7 @@
   {
     "id": "F008",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates",
       "Security / Permissions"
@@ -75,7 +75,7 @@
   {
     "id": "F009",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates"
     ],
@@ -84,7 +84,7 @@
   {
     "id": "F010",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR2 Provider registry"
     ],
@@ -93,7 +93,7 @@
   {
     "id": "F011",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR2 Provider registry"
     ],
@@ -102,7 +102,7 @@
   {
     "id": "F012",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR2 Provider registry"
     ],
@@ -111,7 +111,7 @@
   {
     "id": "F013",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR2 Provider registry"
     ],
@@ -120,7 +120,7 @@
   {
     "id": "F014",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR2 Provider registry"
     ],
@@ -129,7 +129,7 @@
   {
     "id": "F015",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR2 Provider registry"
     ],
@@ -138,7 +138,7 @@
   {
     "id": "F016",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR2 Provider registry",
       "UX / UI Notes"
@@ -148,7 +148,7 @@
   {
     "id": "F017",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR2 Provider registry"
     ],
@@ -157,7 +157,7 @@
   {
     "id": "F018",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3 EE package"
     ],
@@ -166,7 +166,7 @@
   {
     "id": "F019",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3 EE package"
     ],
@@ -175,7 +175,7 @@
   {
     "id": "F020",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3 EE package"
     ],
@@ -184,7 +184,7 @@
   {
     "id": "F021",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3 EE package"
     ],
@@ -193,7 +193,7 @@
   {
     "id": "F022",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3 EE package",
       "Non-functional Requirements"
@@ -203,7 +203,7 @@
   {
     "id": "F023",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR4 Provider state"
     ],
@@ -212,7 +212,7 @@
   {
     "id": "F024",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR4 Provider state"
     ],
@@ -221,7 +221,7 @@
   {
     "id": "F025",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR4 Provider state"
     ],
@@ -230,7 +230,7 @@
   {
     "id": "F026",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR4 Provider state"
     ],
@@ -239,7 +239,7 @@
   {
     "id": "F027",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR4 Provider state"
     ],
@@ -248,7 +248,7 @@
   {
     "id": "F028",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR4 Provider state"
     ],
@@ -257,7 +257,7 @@
   {
     "id": "F029",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR4 Provider state"
     ],
@@ -266,7 +266,7 @@
   {
     "id": "F030",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes"
     ],
@@ -275,7 +275,7 @@
   {
     "id": "F031",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes"
     ],
@@ -284,7 +284,7 @@
   {
     "id": "F032",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes"
     ],
@@ -293,7 +293,7 @@
   {
     "id": "F033",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes"
     ],
@@ -302,7 +302,7 @@
   {
     "id": "F034",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes",
       "Security / Permissions"
@@ -312,7 +312,7 @@
   {
     "id": "F035",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes"
     ],
@@ -321,7 +321,7 @@
   {
     "id": "F036",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes"
     ],
@@ -330,7 +330,7 @@
   {
     "id": "F037",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes"
     ],
@@ -339,7 +339,7 @@
   {
     "id": "F038",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes"
     ],
@@ -348,7 +348,7 @@
   {
     "id": "F039",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5 Routes"
     ],
@@ -357,7 +357,7 @@
   {
     "id": "F040",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -366,7 +366,7 @@
   {
     "id": "F041",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -375,7 +375,7 @@
   {
     "id": "F042",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -384,7 +384,7 @@
   {
     "id": "F043",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -393,7 +393,7 @@
   {
     "id": "F044",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -402,7 +402,7 @@
   {
     "id": "F045",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -411,7 +411,7 @@
   {
     "id": "F046",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -420,7 +420,7 @@
   {
     "id": "F047",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -429,7 +429,7 @@
   {
     "id": "F048",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -438,7 +438,7 @@
   {
     "id": "F049",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6 Lookup and search"
     ],
@@ -447,7 +447,7 @@
   {
     "id": "F050",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call"
     ],
@@ -456,7 +456,7 @@
   {
     "id": "F051",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call"
     ],
@@ -465,7 +465,7 @@
   {
     "id": "F052",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call"
     ],
@@ -474,7 +474,7 @@
   {
     "id": "F053",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call"
     ],
@@ -483,7 +483,7 @@
   {
     "id": "F054",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call"
     ],
@@ -492,7 +492,7 @@
   {
     "id": "F055",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call"
     ],
@@ -501,7 +501,7 @@
   {
     "id": "F056",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call",
       "Non-functional Requirements"
@@ -511,7 +511,7 @@
   {
     "id": "F057",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call"
     ],
@@ -520,7 +520,7 @@
   {
     "id": "F058",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call"
     ],
@@ -529,7 +529,7 @@
   {
     "id": "F059",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call"
     ],
@@ -538,7 +538,7 @@
   {
     "id": "F060",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7 Report-call",
       "Acceptance Criteria (Definition of Done)"
@@ -548,7 +548,7 @@
   {
     "id": "F061",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8 Template"
     ],
@@ -557,7 +557,7 @@
   {
     "id": "F062",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8 Template"
     ],
@@ -566,7 +566,7 @@
   {
     "id": "F063",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8 Template"
     ],
@@ -575,7 +575,7 @@
   {
     "id": "F064",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8 Template"
     ],
@@ -584,7 +584,7 @@
   {
     "id": "F065",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8 Template"
     ],
@@ -593,7 +593,7 @@
   {
     "id": "F066",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8 Template",
       "Security / Permissions"
@@ -603,7 +603,7 @@
   {
     "id": "F067",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8 Template"
     ],
@@ -612,7 +612,7 @@
   {
     "id": "F068",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR9 Settings card",
       "UX / UI Notes"
@@ -622,7 +622,7 @@
   {
     "id": "F069",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR9 Settings card",
       "UX / UI Notes"
@@ -632,7 +632,7 @@
   {
     "id": "F070",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR9 Settings card"
     ],
@@ -641,7 +641,7 @@
   {
     "id": "F071",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR9 Settings card",
       "UX / UI Notes"
@@ -651,7 +651,7 @@
   {
     "id": "F072",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR9 Settings card",
       "UX / UI Notes"
@@ -661,7 +661,7 @@
   {
     "id": "F073",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],
@@ -670,7 +670,7 @@
   {
     "id": "F074",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR9 Settings card",
       "Security / Permissions"
@@ -680,7 +680,7 @@
   {
     "id": "F075",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR10 Emulator"
     ],
@@ -689,7 +689,7 @@
   {
     "id": "F076",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR10 Emulator"
     ],
@@ -698,7 +698,7 @@
   {
     "id": "F077",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR10 Emulator"
     ],
@@ -707,7 +707,7 @@
   {
     "id": "F078",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR10 Emulator"
     ],
@@ -716,7 +716,7 @@
   {
     "id": "F079",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR10 Emulator"
     ],
@@ -725,7 +725,7 @@
   {
     "id": "F080",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR10 Emulator"
     ],
@@ -734,7 +734,7 @@
   {
     "id": "F081",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR10 Emulator"
     ],
@@ -743,7 +743,7 @@
   {
     "id": "F082",
     "commitGroup": "i18n",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Data / API / Integrations"
@@ -753,7 +753,7 @@
   {
     "id": "F083",
     "commitGroup": "i18n",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
@@ -762,7 +762,7 @@
   {
     "id": "F084",
     "commitGroup": "i18n",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1 Gates"
     ],
@@ -771,7 +771,7 @@
   {
     "id": "F085",
     "commitGroup": "regression",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements"
     ],
@@ -780,7 +780,7 @@
   {
     "id": "F086",
     "commitGroup": "regression",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements"
     ],

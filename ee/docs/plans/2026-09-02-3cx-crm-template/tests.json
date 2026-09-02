@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ],
@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ],
@@ -20,7 +20,7 @@
   {
     "id": "T003",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ],
@@ -29,7 +29,7 @@
   {
     "id": "T004",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ],
@@ -38,7 +38,7 @@
   {
     "id": "T005",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ],
@@ -47,7 +47,7 @@
   {
     "id": "T006",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
@@ -56,7 +56,7 @@
   {
     "id": "T007",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
@@ -65,7 +65,7 @@
   {
     "id": "T008",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],
@@ -74,7 +74,7 @@
   {
     "id": "T009",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],
@@ -83,7 +83,7 @@
   {
     "id": "T010",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ],
@@ -92,7 +92,7 @@
   {
     "id": "T011",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ],
@@ -101,7 +101,7 @@
   {
     "id": "T012",
     "commitGroup": "flag-and-tier",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ],
@@ -110,7 +110,7 @@
   {
     "id": "T013",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ],
@@ -119,7 +119,7 @@
   {
     "id": "T014",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ],
@@ -128,7 +128,7 @@
   {
     "id": "T015",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ],
@@ -137,7 +137,7 @@
   {
     "id": "T016",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ],
@@ -146,7 +146,7 @@
   {
     "id": "T017",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ],
@@ -155,7 +155,7 @@
   {
     "id": "T018",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],
@@ -164,7 +164,7 @@
   {
     "id": "T019",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],
@@ -173,7 +173,7 @@
   {
     "id": "T020",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],
@@ -182,7 +182,7 @@
   {
     "id": "T021",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ],
@@ -191,7 +191,7 @@
   {
     "id": "T022",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ],
@@ -200,7 +200,7 @@
   {
     "id": "T023",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ],
@@ -209,7 +209,7 @@
   {
     "id": "T024",
     "commitGroup": "provider-registry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ],
@@ -218,7 +218,7 @@
   {
     "id": "T025",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ],
@@ -227,7 +227,7 @@
   {
     "id": "T026",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ],
@@ -236,7 +236,7 @@
   {
     "id": "T027",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ],
@@ -245,7 +245,7 @@
   {
     "id": "T028",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ],
@@ -254,7 +254,7 @@
   {
     "id": "T029",
     "commitGroup": "ee-package-scaffold",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ],
@@ -263,7 +263,7 @@
   {
     "id": "T030",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ],
@@ -272,7 +272,7 @@
   {
     "id": "T031",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ],
@@ -281,7 +281,7 @@
   {
     "id": "T032",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ],
@@ -290,7 +290,7 @@
   {
     "id": "T033",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ],
@@ -299,7 +299,7 @@
   {
     "id": "T034",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ],
@@ -308,7 +308,7 @@
   {
     "id": "T035",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ],
@@ -317,7 +317,7 @@
   {
     "id": "T036",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ],
@@ -326,7 +326,7 @@
   {
     "id": "T037",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ],
@@ -335,7 +335,7 @@
   {
     "id": "T038",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ],
@@ -344,7 +344,7 @@
   {
     "id": "T039",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ],
@@ -353,7 +353,7 @@
   {
     "id": "T040",
     "commitGroup": "threecx-provider-state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F026",
@@ -364,7 +364,7 @@
   {
     "id": "T041",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ],
@@ -373,7 +373,7 @@
   {
     "id": "T042",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ],
@@ -382,7 +382,7 @@
   {
     "id": "T043",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ],
@@ -391,7 +391,7 @@
   {
     "id": "T044",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ],
@@ -400,7 +400,7 @@
   {
     "id": "T045",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ],
@@ -409,7 +409,7 @@
   {
     "id": "T046",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ],
@@ -418,7 +418,7 @@
   {
     "id": "T047",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ],
@@ -427,7 +427,7 @@
   {
     "id": "T048",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ],
@@ -436,7 +436,7 @@
   {
     "id": "T049",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ],
@@ -445,7 +445,7 @@
   {
     "id": "T050",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ],
@@ -454,7 +454,7 @@
   {
     "id": "T051",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ],
@@ -463,7 +463,7 @@
   {
     "id": "T052",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ],
@@ -472,7 +472,7 @@
   {
     "id": "T053",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ],
@@ -481,7 +481,7 @@
   {
     "id": "T054",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ],
@@ -490,7 +490,7 @@
   {
     "id": "T055",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ],
@@ -499,7 +499,7 @@
   {
     "id": "T056",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ],
@@ -508,7 +508,7 @@
   {
     "id": "T057",
     "commitGroup": "threecx-routes-auth",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ],
@@ -517,7 +517,7 @@
   {
     "id": "T058",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ],
@@ -526,7 +526,7 @@
   {
     "id": "T059",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ],
@@ -535,7 +535,7 @@
   {
     "id": "T060",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ],
@@ -544,7 +544,7 @@
   {
     "id": "T061",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ],
@@ -553,7 +553,7 @@
   {
     "id": "T062",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ],
@@ -562,7 +562,7 @@
   {
     "id": "T063",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ],
@@ -571,7 +571,7 @@
   {
     "id": "T064",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ],
@@ -580,7 +580,7 @@
   {
     "id": "T065",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ],
@@ -589,7 +589,7 @@
   {
     "id": "T066",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ],
@@ -598,7 +598,7 @@
   {
     "id": "T067",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ],
@@ -607,7 +607,7 @@
   {
     "id": "T068",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ],
@@ -616,7 +616,7 @@
   {
     "id": "T069",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ],
@@ -625,7 +625,7 @@
   {
     "id": "T070",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ],
@@ -634,7 +634,7 @@
   {
     "id": "T071",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ],
@@ -643,7 +643,7 @@
   {
     "id": "T072",
     "commitGroup": "threecx-lookup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041",
       "F046",
@@ -654,7 +654,7 @@
   {
     "id": "T073",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ],
@@ -663,7 +663,7 @@
   {
     "id": "T074",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ],
@@ -672,7 +672,7 @@
   {
     "id": "T075",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ],
@@ -681,7 +681,7 @@
   {
     "id": "T076",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ],
@@ -690,7 +690,7 @@
   {
     "id": "T077",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ],
@@ -699,7 +699,7 @@
   {
     "id": "T078",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ],
@@ -708,7 +708,7 @@
   {
     "id": "T079",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ],
@@ -717,7 +717,7 @@
   {
     "id": "T080",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ],
@@ -726,7 +726,7 @@
   {
     "id": "T081",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ],
@@ -735,7 +735,7 @@
   {
     "id": "T082",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ],
@@ -744,7 +744,7 @@
   {
     "id": "T083",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ],
@@ -753,7 +753,7 @@
   {
     "id": "T084",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ],
@@ -762,7 +762,7 @@
   {
     "id": "T085",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ],
@@ -771,7 +771,7 @@
   {
     "id": "T086",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ],
@@ -780,7 +780,7 @@
   {
     "id": "T087",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ],
@@ -789,7 +789,7 @@
   {
     "id": "T088",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ],
@@ -798,7 +798,7 @@
   {
     "id": "T089",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ],
@@ -807,7 +807,7 @@
   {
     "id": "T090",
     "commitGroup": "threecx-report-call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ],
@@ -816,7 +816,7 @@
   {
     "id": "T091",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ],
@@ -825,7 +825,7 @@
   {
     "id": "T092",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ],
@@ -834,7 +834,7 @@
   {
     "id": "T093",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ],
@@ -843,7 +843,7 @@
   {
     "id": "T094",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ],
@@ -852,7 +852,7 @@
   {
     "id": "T095",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ],
@@ -861,7 +861,7 @@
   {
     "id": "T096",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ],
@@ -870,7 +870,7 @@
   {
     "id": "T097",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ],
@@ -879,7 +879,7 @@
   {
     "id": "T098",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ],
@@ -888,7 +888,7 @@
   {
     "id": "T099",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ],
@@ -897,7 +897,7 @@
   {
     "id": "T100",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ],
@@ -906,7 +906,7 @@
   {
     "id": "T101",
     "commitGroup": "threecx-template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ],
@@ -915,7 +915,7 @@
   {
     "id": "T102",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ],
@@ -924,7 +924,7 @@
   {
     "id": "T103",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ],
@@ -933,7 +933,7 @@
   {
     "id": "T104",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ],
@@ -942,7 +942,7 @@
   {
     "id": "T105",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ],
@@ -951,7 +951,7 @@
   {
     "id": "T106",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ],
@@ -960,7 +960,7 @@
   {
     "id": "T107",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ],
@@ -969,7 +969,7 @@
   {
     "id": "T108",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ],
@@ -978,7 +978,7 @@
   {
     "id": "T109",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ],
@@ -987,7 +987,7 @@
   {
     "id": "T110",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ],
@@ -996,7 +996,7 @@
   {
     "id": "T111",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ],
@@ -1005,7 +1005,7 @@
   {
     "id": "T112",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ],
@@ -1014,7 +1014,7 @@
   {
     "id": "T113",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ],
@@ -1023,7 +1023,7 @@
   {
     "id": "T114",
     "commitGroup": "threecx-settings-card",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071",
       "F068"
@@ -1033,7 +1033,7 @@
   {
     "id": "T115",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ],
@@ -1042,7 +1042,7 @@
   {
     "id": "T116",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ],
@@ -1051,7 +1051,7 @@
   {
     "id": "T117",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ],
@@ -1060,7 +1060,7 @@
   {
     "id": "T118",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ],
@@ -1069,7 +1069,7 @@
   {
     "id": "T119",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ],
@@ -1078,7 +1078,7 @@
   {
     "id": "T120",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ],
@@ -1087,7 +1087,7 @@
   {
     "id": "T121",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ],
@@ -1096,7 +1096,7 @@
   {
     "id": "T122",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ],
@@ -1105,7 +1105,7 @@
   {
     "id": "T123",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ],
@@ -1114,7 +1114,7 @@
   {
     "id": "T124",
     "commitGroup": "emulator-threecx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077",
       "F058",
@@ -1125,7 +1125,7 @@
   {
     "id": "T125",
     "commitGroup": "i18n",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ],
@@ -1134,7 +1134,7 @@
   {
     "id": "T126",
     "commitGroup": "i18n",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ],
@@ -1143,7 +1143,7 @@
   {
     "id": "T127",
     "commitGroup": "i18n",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ],
@@ -1152,7 +1152,7 @@
   {
     "id": "T128",
     "commitGroup": "i18n",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ],
@@ -1161,7 +1161,7 @@
   {
     "id": "T129",
     "commitGroup": "regression",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ],
@@ -1170,7 +1170,7 @@
   {
     "id": "T130",
     "commitGroup": "regression",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ],
@@ -1179,7 +1179,7 @@
   {
     "id": "T131",
     "commitGroup": "regression",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ],
