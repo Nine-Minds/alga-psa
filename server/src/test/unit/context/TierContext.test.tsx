@@ -151,8 +151,8 @@ describe('TierContext', () => {
     const { result } = renderHook(() => useTier(), { wrapper });
 
     expect(result.current.isSoloProTrial).toBe(true);
-    // TEAMS_INTEGRATION is add-on-only, so a Solo -> Pro trial does not unlock it.
-    expect(result.current.hasFeature(TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
+    // The Teams add-on is gone: a Solo -> Pro trial unlocks TEAMS_INTEGRATION by tier.
+    expect(result.current.hasFeature(TIER_FEATURES.TEAMS_INTEGRATION)).toBe(true);
   });
 
   it('reverts Solo -> Pro trial feature access after the trial end passes', () => {
@@ -171,7 +171,7 @@ describe('TierContext', () => {
     const { result } = renderHook(() => useTier(), { wrapper });
 
     expect(result.current.isSoloProTrial).toBe(false);
-    // TEAMS_INTEGRATION remains add-on-only after the trial expires.
+    // Back on Solo, TEAMS_INTEGRATION (Pro minimum) locks again after the trial expires.
     expect(result.current.hasFeature(TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
   });
 });

@@ -71,6 +71,7 @@ const FEATURE_TRANSLATION_KEYS: Record<TIER_FEATURES, string> = {
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'features.teamsIntegration',
   [TIER_FEATURES.SCIM_PROVISIONING]: 'features.scimProvisioning',
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'features.advancedAuthorizationBundles',
+  [TIER_FEATURES.PBX_TELEPHONY]: 'features.pbxTelephony',
 };
 
 type AccountManagementProps = {
