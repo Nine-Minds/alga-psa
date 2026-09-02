@@ -97,6 +97,9 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   getDefaultQboRealmId: vi.fn(async () => 'realm-1'),
   getStoredQboCredentialsMap: vi.fn(async () => ({ 'realm-1': {} })),
+  QboClientService: {
+    create: vi.fn(async () => ({ read: vi.fn(async () => ({ Id: 'remote-invoice' })) })),
+  },
 }));
 
 import { wireLocalTestDbEnv, createTestDbConnection } from '../../../../test-utils/dbConfig';

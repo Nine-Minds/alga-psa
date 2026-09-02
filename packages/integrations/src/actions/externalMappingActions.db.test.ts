@@ -192,8 +192,24 @@ async function lastAudit(tenantId: string, operation: string) {
 }
 
 describe('createExternalEntityMapping — the generic surface is constrained', () => {
-  it('rejects money-moving entity types (invoice / payment / credit) before any write', async () => {
-    for (const entityType of ['invoice', 'invoice_payment', 'credit_application']) {
+  it('routes invoice mappings through the shared invoice guard and rejects unsupported payment/credit types', async () => {
+    const missingInvoiceResult = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      {
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'invoice',
+        alga_entity_id: uuidv4(),
+        external_entity_id: uuidv4(),
+        external_realm_id: realmA,
+      }
+    );
+    expect(missingInvoiceResult).toMatchObject({
+      actionError: expect.stringContaining('no longer exists'),
+    });
+    expect(qboReadMock).not.toHaveBeenCalled();
+
+    for (const entityType of ['invoice_payment', 'credit_application']) {
       const result = await (createExternalEntityMapping as any)(
         { user_id: 'u' },
         { tenant: tenantA },
@@ -519,7 +535,7 @@ describe('createExternalEntityMapping — Xero catalog links are proven against 
 });
 
 describe('updateExternalEntityMapping — retarget rules', () => {
-  it('rejects retargeting a money-moving mapping through the generic action', async () => {
+  it('routes an invoice retarget through the shared invoice guard', async () => {
     const { id } = await seedMapping({ alga_entity_type: 'invoice' });
     const result = await (updateExternalEntityMapping as any)(
       { user_id: 'u' },
@@ -527,7 +543,8 @@ describe('updateExternalEntityMapping — retarget rules', () => {
       id,
       { external_entity_id: uuidv4() }
     );
-    expect(result).toMatchObject({ actionError: expect.stringContaining('cannot be edited here') });
+    expect(result).toMatchObject({ actionError: expect.stringContaining('no longer exists') });
+    expect(qboReadMock).not.toHaveBeenCalled();
   });
 
   it('accepts a catalog retarget, revalidates the remote, and audits the change', async () => {

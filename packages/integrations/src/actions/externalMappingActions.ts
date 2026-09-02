@@ -118,11 +118,7 @@ export interface UpdateMappingData {
   metadata?: Record<string, unknown> | null;
 }
 
-/**
- * Entity types the generic mapping UI may write. Invoice / payment / credit
- * mappings move money in the accounting system, so they are only created by
- * the vetted onboarding and reconciliation workflows — never from the browser.
- */
+/** Entity types exposed by the generic catalog-mapping UI. */
 const CATALOG_ENTITY_TYPES = new Set([
   'service',
   'service_category',
@@ -130,6 +126,14 @@ const CATALOG_ENTITY_TYPES = new Set([
   'payment_term',
   'client',
 ]);
+
+/**
+ * Entity types accepted by the mutation actions. Invoice mappings are also
+ * written by onboarding/reconciliation callers through this shared action, so
+ * they remain supported here under the invoice-row lock. The catalog UI does
+ * not expose them, and payment/credit mappings remain rejected.
+ */
+const MUTABLE_MAPPING_ENTITY_TYPES = new Set([...CATALOG_ENTITY_TYPES, 'invoice']);
 
 /** Realms are meaningful for these providers and must name a connected realm. */
 const REALM_BASED_INTEGRATION_TYPES = new Set(['quickbooks_online', 'xero']);
@@ -256,6 +260,15 @@ async function assertLocalEntityOwnership(
       }
       return;
     }
+    case 'invoice': {
+      const row = await db.table('invoices').where({ invoice_id: entityId }).first('invoice_id');
+      if (!row) {
+        throw new ExpectedExternalMappingError(
+          `Cannot map invoice ${entityId}: it does not exist for this tenant.`
+        );
+      }
+      return;
+    }
     default:
       throw new ExpectedExternalMappingError(
         `Mapping entity type ${entityType} is not managed by the mapping screen.`
@@ -329,6 +342,14 @@ function assertCatalogEntityType(entityType: string): void {
   }
 }
 
+function assertMutableMappingEntityType(entityType: string): void {
+  if (!MUTABLE_MAPPING_ENTITY_TYPES.has(entityType)) {
+    throw new ExpectedExternalMappingError(
+      `Mapping entity type ${entityType} is managed by the accounting sync workflow and cannot be edited here.`
+    );
+  }
+}
+
 function assertKnownIntegrationType(integrationType: string): void {
   if (!KNOWN_INTEGRATION_TYPES.has(integrationType)) {
     throw new ExpectedExternalMappingError(`Unknown accounting provider ${integrationType}.`);
@@ -342,6 +363,7 @@ const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
   tax_code: 'TaxCode',
   payment_term: 'Term',
   client: 'Customer',
+  invoice: 'Invoice',
 };
 
 /**
@@ -697,16 +719,16 @@ export const createExternalEntityMapping = withAuth(async (
   });
 
   try {
-    // Provider, entity type, realm and sync state are validated server-side;
-    // money-moving entity types are rejected here entirely.
+    // Provider, entity type, realm and sync state are validated server-side.
+    // Invoice mappings additionally take the shared invoice-row lock below;
+    // other money-moving entity types remain unsupported by this action.
     assertKnownIntegrationType(integration_type);
-    assertCatalogEntityType(alga_entity_type);
+    assertMutableMappingEntityType(alga_entity_type);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Keep invoice-typed writes serialized with invoice void. The generic
-      // catalog surface currently rejects invoice mappings above, but the
-      // guard stays adjacent to the write so a future vetted expansion cannot
-      // reintroduce an unlocked invoice mapping path.
+      // Keep invoice-typed writes serialized with invoice void. The persisted
+      // mapping cannot land after a void commits because this guard re-checks
+      // the invoice status while holding the same row lock as the void path.
       if (alga_entity_type === 'invoice') {
         await lockInvoiceForExternalSync(trx, tenant, alga_entity_id);
       }
@@ -951,9 +973,9 @@ export const updateExternalEntityMapping = withAuth(async (
         );
       }
 
-      // Money-moving and realm/provider/type fields are not editable here —
-      // they belong to the vetted sync workflow.
-      assertCatalogEntityType(before.alga_entity_type);
+      // Realm, provider and entity-type fields are not editable here. The
+      // persisted entity type determines whether the invoice lock is required.
+      assertMutableMappingEntityType(before.alga_entity_type);
       assertKnownIntegrationType(before.integration_type);
 
       // Invoice mapping writes share the same invoice-row lock as exports and
@@ -1127,7 +1149,7 @@ export const deleteExternalEntityMapping = withAuth(async (
         throw new ExpectedExternalMappingError('Mapping not found. Refresh mappings and try again.');
       }
 
-      assertCatalogEntityType(before.alga_entity_type);
+      assertMutableMappingEntityType(before.alga_entity_type);
 
       if (before.deleted_at) {
         return { before, after: before };
