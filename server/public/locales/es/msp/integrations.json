@@ -14,6 +14,7 @@
         "manualEntryHelp": "Introduzca el identificador exactamente como aparece en su sistema contable.",
         "metadataLabel": "Metadatos (JSON)",
         "metadataPlaceholder": "Metadatos opcionales en formato JSON",
+        "noKindOptions": "No se encontraron registros utilizables de este tipo en la organización conectada.",
         "realmIdLabel": "ID de Realm",
         "saveMapping": "Guardar asignación",
         "saving": "Guardando…",
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "Guía de configuración de QuickBooks",
         "noPermissionDescription": "No tiene permiso para ver ni configurar las integraciones de contabilidad.",
-        "connectionsPermissionNotice": "Puede ver la configuración de QuickBooks, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda."
-,
+        "connectionsPermissionNotice": "Puede ver la configuración de QuickBooks, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda.",
         "disconnectPending": "QuickBooks se está desconectando. La sincronización y las exportaciones están en pausa hasta que se complete la limpieza del proveedor; la desconexión sigue reintentándose automáticamente.",
         "disconnectForceFinalized": "La desconexión de QuickBooks se finalizó de forma forzada. No se pudo confirmar la limpieza del proveedor, por lo que las credenciales se eliminaron localmente con un registro de auditoría.",
         "disconnect": {
@@ -3528,8 +3528,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "No tiene permiso para ver ni configurar las integraciones de contabilidad.",
-        "connectionsPermissionNotice": "Puede ver la configuración de Xero, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda."
-,
+        "connectionsPermissionNotice": "Puede ver la configuración de Xero, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda.",
         "disconnectPending": "Xero se está desconectando. La sincronización y las exportaciones están en pausa hasta que se complete la limpieza del proveedor; la desconexión sigue reintentándose automáticamente.",
         "disconnectForceFinalized": "La desconexión de Xero se finalizó de forma forzada. No se pudo confirmar la limpieza del proveedor, por lo que las credenciales se eliminaron localmente con un registro de auditoría.",
         "disconnect": {
@@ -3725,8 +3724,7 @@
       "notFound": "No se encontró la asignación. Actualice las asignaciones e inténtelo de nuevo.",
       "deleteFailed": "No se puede eliminar la asignación. Inténtelo de nuevo.",
       "invoiceCancelled": "La factura ha sido anulada y no puede asignarse a la integración contable.",
-      "invoiceNotFound": "La factura ya no existe y no puede asignarse a la integración contable."
-,
+      "invoiceNotFound": "La factura ya no existe y no puede asignarse a la integración contable.",
       "scopeRequired": "Las búsquedas de asignaciones requieren una integración, un tipo de entidad y un ámbito de realm."
     },
     "qbo": {

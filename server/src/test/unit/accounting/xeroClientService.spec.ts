@@ -202,6 +202,41 @@ describe('XeroClientService – REST usage', () => {
     expect(axiosMock.request).toHaveBeenCalledTimes(1);
   });
 
+  it('account-code-only lines omit the ItemCode property entirely from the wire payload', async () => {
+    const { service, payload } = createService();
+    // Account mode: the adapter sets accountCode and leaves itemCode unset.
+    payload.lines = [
+      {
+        lineId: 'line-account-only',
+        description: 'IT Professional Services',
+        amountCents: 20_000,
+        quantity: 2,
+        unitAmountCents: 10_000,
+        accountCode: '200',
+        taxType: 'OUTPUT'
+      }
+    ];
+
+    axiosMock.request.mockImplementation(async (config: AxiosRequestConfig) => {
+      const body = config.data.Invoices[0];
+      const line = body.LineItems[0];
+      // Xero rejects ItemCode values that are not real items — the property
+      // must be absent, not empty (support case alga0002321).
+      expect(Object.prototype.hasOwnProperty.call(line, 'ItemCode')).toBe(false);
+      expect(line.AccountCode).toBe('200');
+      expect(line.TaxType).toBe('OUTPUT');
+      expect(line.Quantity).toBe(2);
+      expect(line.UnitAmount).toBe(100);
+      expect(body.LineAmountTypes).toBe('Exclusive');
+      return {
+        data: { Invoices: [{ InvoiceID: 'guid-acct', InvoiceNumber: 'INV-2002' }] }
+      };
+    });
+
+    await service.createInvoices([payload]);
+    expect(axiosMock.request).toHaveBeenCalledTimes(1);
+  });
+
   it('flattens canonical service-period ranges into Xero line descriptions while keeping null-period lines unchanged', async () => {
     const { service, payload } = createService({
       lines: [

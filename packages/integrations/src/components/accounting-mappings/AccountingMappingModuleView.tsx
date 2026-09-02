@@ -24,6 +24,13 @@ import type { ColumnDefinition } from '@alga-psa/types';
 type DisplayMapping = ExternalEntityMapping & {
   algaName?: string;
   externalName?: string;
+  /**
+   * Set only for modules with an externalTarget config: the stored target no
+   * longer exists in the live provider catalog (legacy code that stopped
+   * resolving, archived record). Rendered as an explicit invalid state that
+   * demands a re-selection.
+   */
+  externalTargetMissing?: boolean;
 };
 
 type AccountingMappingModuleViewProps = {
@@ -61,7 +68,12 @@ export function AccountingMappingModuleView({
       setAlgaOptions(result.algaEntities);
       setExternalOptions(result.externalEntities);
 
-      const display = enrichMappings(result.mappings, result.algaEntities, result.externalEntities);
+      const display = enrichMappings(
+        result.mappings,
+        result.algaEntities,
+        result.externalEntities,
+        module
+      );
       setMappings(display);
     } catch (loadError) {
       setError(getErrorMessage(loadError));
@@ -175,8 +187,22 @@ export function AccountingMappingModuleView({
       {
         title: module.labels.externalColumn,
         dataIndex: 'externalName',
-        render: (_value: unknown, record: DisplayMapping) =>
-          record.externalName ?? record.external_entity_id ?? t('integrations.accounting.moduleView.notAvailable', { defaultValue: 'N/A' })
+        render: (_value: unknown, record: DisplayMapping) => {
+          const name =
+            record.externalName ?? record.external_entity_id ??
+            t('integrations.accounting.moduleView.notAvailable', { defaultValue: 'N/A' });
+          if (record.externalTargetMissing && module.externalTarget) {
+            return (
+              <div className="space-y-1" data-testid={`${module.id}-invalid-target-${record.id}`}>
+                <span>{name}</span>
+                <p className="text-xs text-[rgb(var(--badge-warning-text))]">
+                  {module.externalTarget.invalidNotice}
+                </p>
+              </div>
+            );
+          }
+          return name;
+        }
       },
       {
         title: t('integrations.accounting.moduleView.actionsColumn', { defaultValue: 'Actions' }),
@@ -317,22 +343,31 @@ export function AccountingMappingModuleView({
 function enrichMappings(
   mappings: ExternalEntityMapping[],
   algaEntities: Array<{ id: string; name: string }>,
-  externalEntities: Array<{ id: string; name: string }>
+  externalEntities: Array<{ id: string; name: string }>,
+  module: AccountingMappingModule
 ): DisplayMapping[] {
   const algaLookup = new Map(algaEntities.map((entity) => [entity.id, entity.name]));
   const externalLookup = new Map(externalEntities.map((entity) => [entity.id, entity.name]));
 
-  return mappings.map((mapping) => ({
-    ...mapping,
-    algaName: algaLookup.get(mapping.alga_entity_id),
-    // The live catalog wins — it is the current truth. The name captured when
-    // the mapping was saved is the fallback, and it is the only thing standing
-    // between the user and a bare QuickBooks id once the catalog stops carrying
-    // the entity: deactivated tax codes, a realm switch, the AST pseudo codes.
-    externalName:
-      externalLookup.get(mapping.external_entity_id) ??
-      readExternalDisplayName(mapping.metadata)
-  }));
+  return mappings.map((mapping) => {
+    // Multi-catalog modules address options by (kind, code) — a bare code is
+    // ambiguous because an Item Code and an Account Code can be equal strings.
+    const lookupId = module.externalTarget
+      ? module.externalTarget.optionIdForMapping(mapping)
+      : mapping.external_entity_id;
+    const liveName = externalLookup.get(lookupId);
+
+    return {
+      ...mapping,
+      algaName: algaLookup.get(mapping.alga_entity_id),
+      // The live catalog wins — it is the current truth. The name captured when
+      // the mapping was saved is the fallback, and it is the only thing standing
+      // between the user and a bare QuickBooks id once the catalog stops carrying
+      // the entity: deactivated tax codes, a realm switch, the AST pseudo codes.
+      externalName: liveName ?? readExternalDisplayName(mapping.metadata),
+      externalTargetMissing: Boolean(module.externalTarget) && liveName === undefined
+    };
+  });
 }
 
 function readExternalDisplayName(metadata: unknown): string | undefined {

@@ -20,6 +20,10 @@ import {
   XeroTrackingCategoryOption,
   XeroTaxComponentPayload
 } from '@alga-psa/integrations/lib/xero/xeroClientService';
+import {
+  readXeroServiceTargetKind,
+  XeroServiceTargetKind
+} from '@alga-psa/integrations/lib/xero/xeroServiceMappingTarget';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
@@ -362,6 +366,46 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         const servicePeriod = resolveXeroLineServicePeriod(line);
 
+        // The mapping's target kind is explicit metadata, never inferred from
+        // the shape of the stored code: an Item Code and an Account Code can
+        // hold identical strings, and guessing would silently change the
+        // accounting classification. Legacy mappings without a kind are item
+        // mappings — that is the only semantics they ever had.
+        const targetKind: XeroServiceTargetKind | null = readXeroServiceTargetKind(
+          serviceMapping.metadata ?? null
+        );
+        if (targetKind === null) {
+          throw new AppError(
+            'XERO_SERVICE_MAPPING_KIND_INVALID',
+            `Service ${charge.service_id} has a Xero mapping with an unrecognised target kind; ` +
+              're-save the mapping as a Xero Item or a Xero Revenue Account.'
+          );
+        }
+
+        let itemCode: string | undefined;
+        let accountCode: string | undefined;
+        if (targetKind === 'account') {
+          // Account-code-only line: AccountCode is sent and ItemCode is
+          // omitted ENTIRELY — an empty ItemCode or a display name would be
+          // rejected by Xero (support case alga0002321).
+          accountCode =
+            safeString(lineResolution.accountCode) ??
+            safeString(serviceMapping.external_entity_id);
+          if (!accountCode) {
+            throw new AppError(
+              'XERO_ACCOUNT_CODE_MISSING',
+              `Service ${charge.service_id} is mapped to a Xero revenue account but no account code is stored.`
+            );
+          }
+        } else {
+          itemCode =
+            safeString(lineResolution.itemCode) ??
+            safeString(serviceMetadata.itemCode) ??
+            safeString(serviceMapping.external_entity_id);
+          accountCode =
+            safeString(lineResolution.accountCode) ?? safeString(serviceMetadata.accountCode);
+        }
+
         const payload: XeroInvoiceLinePayload = {
           lineId: line.line_id,
           externalLineItemId: knownChargeToXeroLineItemId.get(line.document_line_id) ?? null,
@@ -369,12 +413,8 @@ export class XeroAdapter implements AccountingExportAdapter {
           description,
           quantity: coerceChargeDecimal(charge.quantity) ?? 1,
           unitAmountCents,
-          itemCode:
-            safeString(lineResolution.itemCode) ??
-            safeString(serviceMetadata.itemCode) ??
-            safeString(serviceMapping.external_entity_id),
-          accountCode:
-            safeString(lineResolution.accountCode) ?? safeString(serviceMetadata.accountCode),
+          itemCode,
+          accountCode,
           taxType: taxType ?? undefined,
           taxAmountCents,
           taxComponents: taxComponents ?? null,
@@ -382,6 +422,27 @@ export class XeroAdapter implements AccountingExportAdapter {
           servicePeriodStart: servicePeriod.servicePeriodStart,
           servicePeriodEnd: servicePeriod.servicePeriodEnd
         };
+
+        // Export evidence: snapshot how this line's service mapping resolved
+        // (kind, code, realm) onto the stored line so a failed batch can be
+        // diagnosed later without reconstructing mutable mapping state. This
+        // is evidence, not an input — transform re-resolves from the current
+        // mapping on every run, so a retry after remediation picks up the fix
+        // while the refreshed snapshot keeps recording what was actually used.
+        await tenantDb(knex, tenantId).table('accounting_export_lines')
+          .where({ line_id: line.line_id })
+          .update({
+            mapping_resolution: JSON.stringify({
+              ...lineResolution,
+              serviceTarget: {
+                kind: targetKind,
+                code: targetKind === 'account' ? accountCode : itemCode ?? null,
+                realm: targetRealm,
+                source: serviceMapping.source
+              }
+            }),
+            updated_at: new Date().toISOString()
+          });
 
         lineItems.push(payload);
         chargeIds.push(line.document_line_id);
