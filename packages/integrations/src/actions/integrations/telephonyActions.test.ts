@@ -181,6 +181,13 @@ const hoisted = vi.hoisted(() => {
     deactivateMock: vi.fn(async () => undefined),
     autoTicketPolicyMock: vi.fn(async () => undefined),
     availabilityMock: vi.fn(async () => ({ enabled: true }) as any),
+    providerAvailabilityMock: vi.fn(async (_provider: string) => ({ enabled: true, reason: 'enabled' }) as any),
+    threecxStateMock: vi.fn(async () => ({ provider: '3cx', status: 'not_configured', autoCreateTickets: false }) as any),
+    activateThreecxMock: vi.fn(async () => ({ provider: '3cx', status: 'active', apiKey: 'threecx-key' }) as any),
+    deactivateThreecxMock: vi.fn(async () => ({ provider: '3cx', status: 'disabled' }) as any),
+    setThreecxAutoMock: vi.fn(async () => ({ provider: '3cx', status: 'active' }) as any),
+    renderTemplateMock: vi.fn(() => '<Crm Name="AlgaPSA" />'),
+    stampTemplateMock: vi.fn(async () => undefined),
     resolveCallMatchMock: vi.fn(async () => ({ status: 'resolved', interactionId: 'interaction-new' }) as any),
   };
 });
@@ -201,6 +208,13 @@ const {
   activateMock,
   autoTicketPolicyMock,
   availabilityMock,
+  providerAvailabilityMock,
+  threecxStateMock,
+  activateThreecxMock,
+  deactivateThreecxMock,
+  setThreecxAutoMock,
+  renderTemplateMock,
+  stampTemplateMock,
   createTicketMock,
   deactivateMock,
   hasPermissionMock,
@@ -227,6 +241,7 @@ vi.mock('@alga-psa/db', () => ({
     table: (table: string) => conn(table).where({ tenant }),
     tenantJoin: () => undefined,
   }),
+  buildTenantPortalSlug: (tenantId: string) => tenantId.replace(/-/g, '').slice(0, 12),
 }));
 
 vi.mock('@alga-psa/shared/models/ticketModel', () => ({
@@ -242,8 +257,20 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib', () => ({
   setTeamsPhoneAutoTicketPolicy: hoisted.autoTicketPolicyMock,
 }));
 
+vi.mock('@alga-psa/ee-threecx/lib', () => ({
+  getThreecxProviderState: hoisted.threecxStateMock,
+  activateThreecxProvider: hoisted.activateThreecxMock,
+  deactivateThreecxProvider: hoisted.deactivateThreecxMock,
+  setThreecxAutoCreateTickets: hoisted.setThreecxAutoMock,
+  THREECX_TEMPLATE_VERSION: 7,
+  renderThreecxTemplate: hoisted.renderTemplateMock,
+  stampThreecxTemplateVersion: hoisted.stampTemplateMock,
+  threecxTemplateFilename: (slug: string) => `algapsa-3cx-${slug}.xml`,
+}));
+
 vi.mock('../../lib/telephonyAvailability', () => ({
   getTelephonyAvailability: hoisted.availabilityMock,
+  getTelephonyProviderAvailability: hoisted.providerAvailabilityMock,
   resolveTelephonyAvailability: () => ({ enabled: true }),
 }));
 
@@ -252,17 +279,20 @@ vi.mock('../../lib/telephonyAvailability', () => ({
 vi.mock('@alga-psa/telephony', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   resolveCallMatch: hoisted.resolveCallMatchMock,
+  resolveTenantPhoneCountryCode: async () => 'US',
 }));
 
 import {
   createTelephonyCallIntent,
   createTicketFromTelephonyCall,
+  downloadThreecxTemplate,
   getTelephonyCallLinkState,
   getTelephonyOverview,
   linkTelephonyCallToTicket,
   listTelephonyLinkableTickets,
   listTelephonyResolutionTargets,
   resolveTelephonyCall,
+  setTelephonyAutoCreateTickets,
   setTelephonyAutoTicketPolicy,
   setTelephonyProviderEnabled,
 } from './telephonyActions';
@@ -284,6 +314,15 @@ describe('telephony link-to-ticket', () => {
     hasPermissionMock.mockResolvedValue(true);
     availabilityMock.mockClear();
     availabilityMock.mockResolvedValue({ enabled: true } as any);
+    providerAvailabilityMock.mockClear();
+    providerAvailabilityMock.mockResolvedValue({ enabled: true, reason: 'enabled' } as any);
+    threecxStateMock.mockClear();
+    threecxStateMock.mockResolvedValue({ provider: '3cx', status: 'not_configured', autoCreateTickets: false } as any);
+    activateThreecxMock.mockClear();
+    deactivateThreecxMock.mockClear();
+    setThreecxAutoMock.mockClear();
+    renderTemplateMock.mockClear();
+    stampTemplateMock.mockClear();
     resolveCallMatchMock.mockClear();
     resolveCallMatchMock.mockResolvedValue({ status: 'resolved', interactionId: 'interaction-new' } as any);
     createTicketMock.mockClear();
@@ -645,6 +684,32 @@ describe('telephony link-to-ticket', () => {
       expect(result).toMatchObject({ success: true, canManage: false, canResolve: false });
     });
 
+    it('T016: returns one card per registry entry, each with providerAvailability', async () => {
+      addCall();
+
+      const result = await getTelephonyOverview();
+
+      expect(result.available).toBe(true);
+      expect(result.providers.map((card) => card.provider)).toEqual(['teams-phone', '3cx']);
+      for (const card of result.providers) {
+        expect(card.providerAvailability).toMatchObject({ enabled: true, reason: 'enabled' });
+      }
+    });
+
+    it('T017: the 3cx card reports tier_required for a solo tenant', async () => {
+      addCall();
+      providerAvailabilityMock.mockImplementation(async (provider: string) =>
+        provider === '3cx'
+          ? { enabled: false, reason: 'tier_required', message: 'This telephony provider requires the Pro plan.' }
+          : { enabled: true, reason: 'enabled' },
+      );
+
+      const result = await getTelephonyOverview();
+
+      const threecx = result.providers.find((card) => card.provider === '3cx');
+      expect(threecx?.providerAvailability).toMatchObject({ enabled: false, reason: 'tier_required' });
+    });
+
     it('T044: an unentitled tenant sees the paywall, not the call log', async () => {
       addCall();
       availabilityMock.mockResolvedValue({
@@ -720,8 +785,8 @@ describe('telephony link-to-ticket', () => {
   });
 
   describe('provider activation', () => {
-    it('T030: activation is refused when the release feature is disabled', async () => {
-      availabilityMock.mockResolvedValue({
+    it('T030: activation is refused when the provider availability is disabled', async () => {
+      providerAvailabilityMock.mockResolvedValue({
         enabled: false,
         reason: 'feature_disabled',
         message: 'Telephony integrations are not enabled for this tenant.',
@@ -732,6 +797,47 @@ describe('telephony link-to-ticket', () => {
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/not enabled/);
       expect(activateMock).not.toHaveBeenCalled();
+    });
+
+    it('T018/T025: enabling 3cx dispatches to activateThreecxProvider and surfaces the generated key', async () => {
+      await expect(setTelephonyProviderEnabled({ provider: '3cx', enabled: true }))
+        .resolves.toEqual({ success: true, apiKey: 'threecx-key' });
+      expect(activateThreecxMock).toHaveBeenCalledWith('tenant-1');
+      expect(activateMock).not.toHaveBeenCalled();
+    });
+
+    it('T025: enabling 3cx on an existing key returns no key', async () => {
+      activateThreecxMock.mockResolvedValueOnce({ provider: '3cx', status: 'active', apiKey: null } as any);
+      await expect(setTelephonyProviderEnabled({ provider: '3cx', enabled: true }))
+        .resolves.toEqual({ success: true });
+    });
+
+    it('T019: enabling teams-phone still calls activateTeamsPhoneProvider', async () => {
+      await expect(setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: true }))
+        .resolves.toEqual({ success: true });
+      expect(activateMock).toHaveBeenCalledWith('tenant-1');
+      expect(activateThreecxMock).not.toHaveBeenCalled();
+    });
+
+    it('T020: enabling 3cx is refused with the availability message when disabled', async () => {
+      providerAvailabilityMock.mockImplementation(async (provider: string) =>
+        provider === '3cx'
+          ? { enabled: false, reason: 'tier_required', message: 'This telephony provider requires the Pro plan.' }
+          : { enabled: true, reason: 'enabled' },
+      );
+
+      const result = await setTelephonyProviderEnabled({ provider: '3cx', enabled: true });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Pro plan/);
+      expect(activateThreecxMock).not.toHaveBeenCalled();
+    });
+
+    it('T021: the auto-create-tickets toggle dispatches to the 3cx module only', async () => {
+      await expect(setTelephonyAutoCreateTickets({ provider: '3cx', autoCreateTickets: true }))
+        .resolves.toEqual({ success: true });
+      expect(setThreecxAutoMock).toHaveBeenCalledWith('tenant-1', true);
+      expect(autoTicketPolicyMock).not.toHaveBeenCalled();
     });
 
     it('T030: enabling the provider activates it, disabling deactivates it', async () => {
@@ -773,6 +879,36 @@ describe('telephony link-to-ticket', () => {
       const denied = await setTelephonyAutoTicketPolicy({ provider: 'teams-phone', autoCreateTickets: true });
       expect(denied.success).toBe(false);
       expect(autoTicketPolicyMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('3CX template download', () => {
+    it('T099: returns the rendered XML with an attachment content-disposition', async () => {
+      const result = await downloadThreecxTemplate();
+
+      expect(result.success).toBe(true);
+      expect(result.filename).toMatch(/^algapsa-3cx-.+\.xml$/);
+      expect(result.contentType).toBe('application/xml');
+      expect(result.contentDisposition).toContain('attachment');
+      expect(result.contentDisposition).toContain(result.filename!);
+      expect(result.xml).toContain('AlgaPSA');
+    });
+
+    it('T100: refuses a user without canManageTelephony', async () => {
+      hasPermissionMock.mockResolvedValue(false);
+
+      const result = await downloadThreecxTemplate();
+
+      expect(result.success).toBe(false);
+      expect(renderTemplateMock).not.toHaveBeenCalled();
+      expect(stampTemplateMock).not.toHaveBeenCalled();
+    });
+
+    it('T101: stamps config.templateVersion with the renderer version', async () => {
+      await downloadThreecxTemplate();
+
+      expect(renderTemplateMock).toHaveBeenCalledWith(expect.objectContaining({ templateVersion: 7 }));
+      expect(stampTemplateMock).toHaveBeenCalledWith('tenant-1', 7);
     });
   });
 

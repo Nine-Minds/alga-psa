@@ -5,7 +5,18 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import type { IClient } from '@alga-psa/types';
-import { getTelephonyAvailability } from '../../lib/telephonyAvailability';
+import { getTelephonyAvailability, getTelephonyProviderAvailability } from '../../lib/telephonyAvailability';
+import type { TelephonyAvailability } from '../../lib/telephonyAvailability';
+import {
+  getTelephonyProviderRegistryEntry,
+  TELEPHONY_PROVIDER_REGISTRY,
+} from '../../lib/telephony/providerRegistry';
+
+export interface TelephonyProviderAvailabilitySummary {
+  enabled: boolean;
+  reason: string;
+  message?: string;
+}
 
 export interface TelephonyProviderCard {
   provider: string;
@@ -17,6 +28,8 @@ export interface TelephonyProviderCard {
   lastNotificationAt: string | null;
   /** Teams Phone additionally needs a Teams-capable Microsoft profile. */
   prerequisiteMet: boolean;
+  /** Per-provider entitlement (edition + tier), from getTelephonyProviderAvailability. */
+  providerAvailability?: TelephonyProviderAvailabilitySummary;
 }
 
 export interface TelephonyCallSummary {
@@ -344,6 +357,12 @@ async function loadEeTelephony(): Promise<EeTelephonyModule> {
   return import('@alga-psa/ee-microsoft-teams/lib') as Promise<EeTelephonyModule>;
 }
 
+function toProviderAvailabilitySummary(availability: TelephonyAvailability): TelephonyProviderAvailabilitySummary {
+  return availability.enabled
+    ? { enabled: true, reason: availability.reason }
+    : { enabled: false, reason: availability.reason, message: availability.message };
+}
+
 export const getTelephonyOverview = withAuth(async (user, { tenant }): Promise<TelephonyOverview> => {
   const refusal = (error: string): TelephonyOverview => ({
     success: false,
@@ -383,8 +402,24 @@ export const getTelephonyOverview = withAuth(async (user, { tenant }): Promise<T
     };
   }
 
-  const ee = await loadEeTelephony();
-  const teamsPhone = await ee.getTeamsPhoneProviderState(tenant);
+  const providers = await Promise.all(
+    TELEPHONY_PROVIDER_REGISTRY.map(async (entry): Promise<TelephonyProviderCard> => {
+      const providerAvailability = await getTelephonyProviderAvailability(entry.id, { tenantId: tenant });
+      const adapter = await entry.loadEe();
+      const state = await adapter.getProviderState(tenant);
+      return {
+        provider: entry.id,
+        status: state.status,
+        autoCreateTickets: state.autoCreateTickets,
+        subscriptionId: state.subscriptionId,
+        subscriptionExpiresAt: state.subscriptionExpiresAt,
+        lastError: state.lastError,
+        lastNotificationAt: state.lastNotificationAt,
+        prerequisiteMet: state.prerequisiteMet,
+        providerAvailability: toProviderAvailabilitySummary(providerAvailability),
+      };
+    }),
+  );
 
   const [recent, unresolved] = await Promise.all([
     listCalls(tenant, { limit: 10 }),
@@ -396,73 +431,211 @@ export const getTelephonyOverview = withAuth(async (user, { tenant }): Promise<T
     available: true,
     canManage,
     canResolve,
-    providers: [
-      {
-        provider: teamsPhone.provider,
-        status: teamsPhone.status,
-        autoCreateTickets: teamsPhone.autoCreateTickets,
-        subscriptionId: teamsPhone.subscriptionId,
-        subscriptionExpiresAt: teamsPhone.subscriptionExpiresAt,
-        lastError: teamsPhone.lastError,
-        lastNotificationAt: teamsPhone.lastNotificationAt,
-        prerequisiteMet: teamsPhone.teamsConfigured,
-      },
-    ],
+    providers,
     recentCalls: recent.map(toSummary),
     unresolvedCalls: unresolved.map(toSummary),
   };
 });
 
 /**
- * Entitlement + authorization for every mutating telephony action. The add-on
- * lookup is what stops provider activation and subscription creation on a
- * tenant that is not entitled to Teams — the ingestion path is deny-by-default,
- * but nothing else was re-checking it.
+ * Entitlement + authorization for every mutating telephony action, scoped to
+ * the target provider: the class-wide edition/tenant check plus the provider's
+ * own tier gate (Pro for 3CX). Stops activation and subscription creation on a
+ * tenant that is not entitled to that provider.
  */
-async function requireManageableTenant(user: unknown, tenant: string): Promise<string | null> {
-  const availability = await getTelephonyAvailability({ tenantId: tenant });
-  if (availability.enabled === false) {
-    return availability.message;
+async function requireManageableProvider(
+  user: unknown,
+  tenant: string,
+  provider: string,
+): Promise<{ error: string } | { entry: (typeof TELEPHONY_PROVIDER_REGISTRY)[number] }> {
+  const entry = getTelephonyProviderRegistryEntry(provider);
+  if (!entry) {
+    return { error: `Unknown telephony provider: ${provider}` };
   }
-  return requireTelephonyAdmin(user);
+  const availability = await getTelephonyProviderAvailability(entry.id, { tenantId: tenant });
+  if (availability.enabled === false) {
+    return { error: availability.message };
+  }
+  const denied = await requireTelephonyAdmin(user);
+  if (denied) {
+    return { error: denied };
+  }
+  return { entry };
 }
 
 export const setTelephonyProviderEnabled = withAuth(async (
   user,
   { tenant },
   input: { provider: string; enabled: boolean },
-): Promise<{ success: boolean; error?: string }> => {
-  const denied = await requireManageableTenant(user, tenant);
-  if (denied) {
-    return { success: false, error: denied };
+): Promise<{ success: boolean; error?: string; apiKey?: string }> => {
+  const gate = await requireManageableProvider(user, tenant, input.provider);
+  if ('error' in gate) {
+    return { success: false, error: gate.error };
   }
 
-  const ee = await loadEeTelephony();
+  const adapter = await gate.entry.loadEe();
   try {
     if (input.enabled) {
-      await ee.activateTeamsPhoneProvider(tenant);
-    } else {
-      await ee.deactivateTeamsPhoneProvider(tenant);
+      const result = await adapter.activateProvider(tenant);
+      // The full key is returned only on the activation that generated it
+      // (3CX); Teams activation has no key and returns nothing to surface.
+      const apiKey =
+        result && typeof result === 'object' && 'apiKey' in result
+          ? ((result as { apiKey?: string | null }).apiKey ?? undefined)
+          : undefined;
+      return apiKey ? { success: true, apiKey } : { success: true };
     }
+    await adapter.deactivateProvider(tenant);
     return { success: true };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 });
 
-export const setTelephonyAutoTicketPolicy = withAuth(async (
+export const setTelephonyAutoCreateTickets = withAuth(async (
   user,
   { tenant },
   input: { provider: string; autoCreateTickets: boolean },
 ): Promise<{ success: boolean; error?: string }> => {
-  const denied = await requireManageableTenant(user, tenant);
-  if (denied) {
-    return { success: false, error: denied };
+  const gate = await requireManageableProvider(user, tenant, input.provider);
+  if ('error' in gate) {
+    return { success: false, error: gate.error };
   }
 
-  const ee = await loadEeTelephony();
-  await ee.setTeamsPhoneAutoTicketPolicy(tenant, input.autoCreateTickets);
+  const adapter = await gate.entry.loadEe();
+  await adapter.setAutoCreateTickets(tenant, input.autoCreateTickets);
   return { success: true };
+});
+
+/** @deprecated Kept for existing callers; dispatches through the registry. */
+export const setTelephonyAutoTicketPolicy = setTelephonyAutoCreateTickets;
+
+export interface ThreecxTemplateDownload {
+  success: boolean;
+  error?: string;
+  filename?: string;
+  contentType?: string;
+  contentDisposition?: string;
+  xml?: string;
+}
+
+/**
+ * Renders the tenant's 3CX CRM template for download. Requires the same
+ * telephony-admin permission as the toggles, and stamps config.templateVersion
+ * so the card can tell an admin their console template is out of date.
+ */
+export const downloadThreecxTemplate = withAuth(async (
+  user,
+  { tenant },
+): Promise<ThreecxTemplateDownload> => {
+  const gate = await requireManageableProvider(user, tenant, '3cx');
+  if ('error' in gate) {
+    return { success: false, error: gate.error };
+  }
+
+  const { buildTenantPortalSlug } = await import('@alga-psa/db');
+  const { createTenantKnex } = await import('@alga-psa/db');
+  const { resolveTenantPhoneCountryCode } = await import('@alga-psa/telephony');
+  const ee = await import('@alga-psa/ee-threecx/lib');
+
+  const tenantSlug = buildTenantPortalSlug(tenant);
+  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL ?? '').trim();
+  const { knex } = await createTenantKnex(tenant);
+  const country = await resolveTenantPhoneCountryCode(knex, tenant);
+
+  const templateVersion = ee.THREECX_TEMPLATE_VERSION;
+  const xml = ee.renderThreecxTemplate({ baseUrl, tenantSlug, templateVersion, country });
+  await ee.stampThreecxTemplateVersion(tenant, templateVersion);
+
+  const filename = ee.threecxTemplateFilename(tenantSlug);
+  return {
+    success: true,
+    filename,
+    contentType: 'application/xml',
+    contentDisposition: `attachment; filename="${filename}"`,
+    xml,
+  };
+});
+
+export interface ThreecxCardState {
+  success: boolean;
+  error?: string;
+  available: boolean;
+  reason?: string;
+  canManage: boolean;
+  status: 'not_configured' | 'active' | 'disabled' | 'error';
+  autoCreateTickets: boolean;
+  keyLastFour: string | null;
+  keyRotatedAt: string | null;
+  templateVersion: number;
+  endpointBaseUrl: string;
+}
+
+function threecxEndpointBaseUrl(tenantSlug: string): string {
+  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL ?? '').trim().replace(/\/$/, '');
+  return `${baseUrl}/api/telephony/3cx/${tenantSlug}/`;
+}
+
+/** Read model for the 3CX settings card: provider state plus the endpoint URL. */
+export const getThreecxCardState = withAuth(async (user, { tenant }): Promise<ThreecxCardState> => {
+  const empty = (over: Partial<ThreecxCardState> = {}): ThreecxCardState => ({
+    success: true,
+    available: false,
+    canManage: false,
+    status: 'not_configured',
+    autoCreateTickets: false,
+    keyLastFour: null,
+    keyRotatedAt: null,
+    templateVersion: 0,
+    endpointBaseUrl: '',
+    ...over,
+  });
+
+  if (isClientPortalUser(user)) {
+    return empty({ success: false, error: 'Forbidden' });
+  }
+
+  const canManage = await canManageTelephony(user);
+  const availability = await getTelephonyProviderAvailability('3cx', { tenantId: tenant });
+  if (availability.enabled === false) {
+    return empty({ canManage, available: false, reason: availability.reason });
+  }
+
+  const { buildTenantPortalSlug } = await import('@alga-psa/db');
+  const ee = await import('@alga-psa/ee-threecx/lib');
+  const state = await ee.getThreecxProviderState(tenant);
+  const tenantSlug = buildTenantPortalSlug(tenant);
+
+  return {
+    success: true,
+    available: true,
+    canManage,
+    status: state.status,
+    autoCreateTickets: state.autoCreateTickets,
+    keyLastFour: state.keyLastFour,
+    keyRotatedAt: state.keyRotatedAt,
+    templateVersion: state.templateVersion,
+    endpointBaseUrl: threecxEndpointBaseUrl(tenantSlug),
+  };
+});
+
+/** Rotates the 3CX API key and returns the full new key once. */
+export const rotateThreecxApiKey = withAuth(async (
+  user,
+  { tenant },
+): Promise<{ success: boolean; error?: string; apiKey?: string }> => {
+  const gate = await requireManageableProvider(user, tenant, '3cx');
+  if ('error' in gate) {
+    return { success: false, error: gate.error };
+  }
+
+  const ee = await import('@alga-psa/ee-threecx/lib');
+  try {
+    const result = await ee.rotateThreecxApiKey(tenant);
+    return { success: true, apiKey: result.apiKey };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
 });
 
 export const resolveTelephonyCall = withAuth(async (

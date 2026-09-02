@@ -15,7 +15,7 @@ export type CallModality = (typeof CALL_MODALITIES)[number];
 export const CALL_MATCH_STATUSES = ['matched', 'ambiguous', 'unmatched', 'resolved'] as const;
 export type CallMatchStatus = (typeof CALL_MATCH_STATUSES)[number];
 
-export const TELEPHONY_PROVIDERS = ['teams-phone'] as const;
+export const TELEPHONY_PROVIDERS = ['teams-phone', '3cx'] as const;
 export type TelephonyProviderKind = (typeof TELEPHONY_PROVIDERS)[number];
 
 export const canonicalPhoneNumberSchema = z.object({
