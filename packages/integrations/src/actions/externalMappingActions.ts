@@ -3,7 +3,11 @@
 import logger from '@alga-psa/core/logger';
 import {
   auditLog,
+  ACCOUNTING_EXPORT_INVOICE_CANCELLED,
+  ACCOUNTING_EXPORT_INVOICE_NOT_FOUND,
   createTenantKnex,
+  lockInvoiceForExternalSync,
+  lockInvoicesForExternalSync,
   tenantDb,
   withTransaction,
   writeAccountingAudit,
@@ -699,6 +703,14 @@ export const createExternalEntityMapping = withAuth(async (
     assertCatalogEntityType(alga_entity_type);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Keep invoice-typed writes serialized with invoice void. The generic
+      // catalog surface currently rejects invoice mappings above, but the
+      // guard stays adjacent to the write so a future vetted expansion cannot
+      // reintroduce an unlocked invoice mapping path.
+      if (alga_entity_type === 'invoice') {
+        await lockInvoiceForExternalSync(trx, tenant, alga_entity_id);
+      }
+
       await assertRealmAllowed(tenant, integration_type, external_realm_id);
       await assertLocalEntityOwnership(trx, tenant, alga_entity_type, alga_entity_id);
 
@@ -858,6 +870,19 @@ export const createExternalEntityMapping = withAuth(async (
       );
     }
 
+    if (error?.code === ACCOUNTING_EXPORT_INVOICE_CANCELLED) {
+      return actionError(
+        'The invoice has been voided and cannot be mapped to the accounting integration.',
+        'msp/integrations:errors.mappings.invoiceCancelled'
+      );
+    }
+    if (error?.code === ACCOUNTING_EXPORT_INVOICE_NOT_FOUND) {
+      return actionError(
+        'The invoice no longer exists and cannot be mapped to the accounting integration.',
+        'msp/integrations:errors.mappings.invoiceNotFound'
+      );
+    }
+
     if (error instanceof ExpectedExternalMappingError) {
       return actionError(error.message);
     }
@@ -889,7 +914,16 @@ export const updateExternalEntityMapping = withAuth(async (
   if (!mappingId) {
     return actionError('Mapping ID is required for update.', 'msp/integrations:errors.mappings.idRequiredForUpdate');
   }
-  if (Object.keys(updates).length === 0) {
+
+  // Pick only the declared editable fields. A direct server-action caller can
+  // send extra JSON keys despite the TypeScript signature; those keys must
+  // never reach the database or turn a catalog mapping into an invoice mapping.
+  const updatePayload: Partial<ExternalEntityMapping> = {};
+  if (updates.alga_entity_id !== undefined) updatePayload.alga_entity_id = updates.alga_entity_id;
+  if (updates.external_entity_id !== undefined) updatePayload.external_entity_id = updates.external_entity_id;
+  if (updates.metadata !== undefined) updatePayload.metadata = updates.metadata ?? null;
+
+  if (Object.keys(updatePayload).length === 0) {
     return actionError('No update data provided.', 'msp/integrations:errors.mappings.noUpdateData');
   }
 
@@ -922,9 +956,17 @@ export const updateExternalEntityMapping = withAuth(async (
       assertCatalogEntityType(before.alga_entity_type);
       assertKnownIntegrationType(before.integration_type);
 
-      const updatePayload: Partial<ExternalEntityMapping> = {};
-      if (updates.external_entity_id !== undefined) {
-        if (!updates.external_entity_id) {
+      // Invoice mapping writes share the same invoice-row lock as exports and
+      // voids. The persisted type controls this decision; caller-supplied type
+      // fields were discarded when updatePayload was built above. Lock both
+      // invoice rows in stable order when retargeting the local invoice.
+      if (before.alga_entity_type === 'invoice') {
+        const targetInvoiceId = updatePayload.alga_entity_id ?? before.alga_entity_id;
+        await lockInvoicesForExternalSync(trx, tenant, [before.alga_entity_id, targetInvoiceId]);
+      }
+
+      if (updatePayload.external_entity_id !== undefined) {
+        if (!updatePayload.external_entity_id) {
           throw new ExpectedExternalMappingError('External entity id is required.');
         }
         if (before.external_realm_id) {
@@ -932,21 +974,16 @@ export const updateExternalEntityMapping = withAuth(async (
             tenant,
             before.integration_type,
             before.alga_entity_type,
-            updates.external_entity_id,
+            updatePayload.external_entity_id,
             before.external_realm_id
           );
         }
-        updatePayload.external_entity_id = updates.external_entity_id;
       }
-      if (updates.metadata !== undefined) {
-        updatePayload.metadata = updates.metadata ?? null;
-      }
-      if (updates.alga_entity_id !== undefined) {
-        if (!updates.alga_entity_id) {
+      if (updatePayload.alga_entity_id !== undefined) {
+        if (!updatePayload.alga_entity_id) {
           throw new ExpectedExternalMappingError('Alga entity id is required.');
         }
-        await assertLocalEntityOwnership(trx, tenant, before.alga_entity_type, updates.alga_entity_id);
-        updatePayload.alga_entity_id = updates.alga_entity_id;
+        await assertLocalEntityOwnership(trx, tenant, before.alga_entity_type, updatePayload.alga_entity_id);
       }
       updatePayload.updated_at = new Date().toISOString();
 
@@ -1030,10 +1067,23 @@ export const updateExternalEntityMapping = withAuth(async (
     if (error instanceof ExpectedExternalMappingError) {
       return actionError(error.message);
     }
-    if ((error as { code?: string } | null)?.code === '23505') {
+    const updateError = error as { code?: string } | null;
+    if (updateError?.code === '23505') {
       return actionError(
         'A mapping already exists for this entity. Edit the existing mapping instead.',
         'msp/integrations:errors.mappings.duplicate'
+      );
+    }
+    if (updateError?.code === ACCOUNTING_EXPORT_INVOICE_CANCELLED) {
+      return actionError(
+        'The invoice has been voided and cannot be mapped to the accounting integration.',
+        'msp/integrations:errors.mappings.invoiceCancelled'
+      );
+    }
+    if (updateError?.code === ACCOUNTING_EXPORT_INVOICE_NOT_FOUND) {
+      return actionError(
+        'The invoice no longer exists and cannot be mapped to the accounting integration.',
+        'msp/integrations:errors.mappings.invoiceNotFound'
       );
     }
     return actionError(

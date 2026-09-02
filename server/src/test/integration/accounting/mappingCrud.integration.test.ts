@@ -165,13 +165,13 @@ describe('Accounting Mapping CRUD integration', () => {
     // payload are dropped — a non-invoice row can never be rewritten into an
     // invoice-typed mapping (which would need the shared invoice lock and a
     // cancelled check).
-    const serviceId = 'svc-immutable';
+    const serviceId = await createTestService(ctx, { service_name: 'Immutable Mapping Service' });
     const created = await createExternalEntityMapping({
       integration_type: integrationType,
       alga_entity_type: 'service',
       alga_entity_id: serviceId,
       external_entity_id: 'QBO-ITEM-FIXED',
-      external_realm_id: 'realm-1',
+      external_realm_id: CONNECTED_REALM,
     });
 
     const updated = await updateExternalEntityMapping(created.id, {
@@ -195,12 +195,13 @@ describe('Accounting Mapping CRUD integration', () => {
   });
 
   it('refuses an update payload that only carried forbidden fields', async () => {
-    const serviceId = 'svc-forged-only';
+    const serviceId = await createTestService(ctx, { service_name: 'Forbidden Fields Mapping Service' });
     const created = await createExternalEntityMapping({
       integration_type: integrationType,
       alga_entity_type: 'service',
       alga_entity_id: serviceId,
       external_entity_id: 'QBO-ITEM-UNTOUCHED',
+      external_realm_id: CONNECTED_REALM,
     });
 
     const result = await updateExternalEntityMapping(created.id, {

@@ -16,6 +16,8 @@ const remote = vi.hoisted(() => {
   return {
     tenantSecrets,
     qboClientCreateCalls: { count: 0 },
+    qboClientCreateAllowed: { value: false },
+    qboRead: vi.fn(async (_entityType: string, entityId: string) => ({ Id: entityId })),
     getStoredQboCredentialsMap: vi.fn(async () => ({}) as Record<string, unknown>),
     getDefaultQboRealmId: vi.fn(async () => null),
     resolveQboOAuthCredentials: vi.fn(async () => ({
@@ -40,7 +42,18 @@ const remote = vi.hoisted(() => {
 // mocked: the role matrix must read real role_permissions from the database.
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../test-utils/authModuleMock');
-  return createAuthModuleMock();
+  const authMock = createAuthModuleMock();
+  return {
+    ...authMock,
+    getCurrentUserWithRevocationCheck: authMock.getCurrentUser,
+    // Main's centralized accounting-connection authorization imports
+    // hasPermission from the bare auth facade. Keep this role-matrix test on
+    // the real database-backed RBAC path, matching its direct rbac imports.
+    hasPermission: async (...args: Parameters<typeof authMock.hasPermission>) => {
+      const rbac = await import('@alga-psa/auth/rbac');
+      return rbac.hasPermission(...args);
+    },
+  };
 });
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -60,6 +73,9 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', async (importOriginal
     QboClientService: {
       create: vi.fn(async () => {
         remote.qboClientCreateCalls.count += 1;
+        if (remote.qboClientCreateAllowed.value) {
+          return { read: remote.qboRead };
+        }
         throw new Error('remote boundary must not be reached');
       }),
     },
@@ -115,6 +131,7 @@ import {
   createQboOAuthState,
   getQboStateSigningSecret,
 } from '@alga-psa/integrations/lib/qbo/qboOAuthState';
+import { storeAccountingOAuthNonce } from '@alga-psa/integrations/lib/accountingOAuthStateStore';
 import { GET as legacyXeroCsvClientExport } from '../../../app/api/v1/accounting-exports/xero-csv/client-export/route';
 import { POST as legacyXeroCsvClientImport } from '../../../app/api/v1/accounting-exports/xero-csv/client-import/route';
 
@@ -404,6 +421,8 @@ describe('accounting integration capability role matrix', () => {
 
   beforeEach(() => {
     remote.qboClientCreateCalls.count = 0;
+    remote.qboClientCreateAllowed.value = false;
+    remote.qboRead.mockClear();
     // The secret-provider spies are module-level and shared across the whole
     // file: clear their call history between tests so the denial assertions
     // (`not.toHaveBeenCalled`) never see calls made by an earlier allow test.
@@ -503,13 +522,18 @@ describe('accounting integration capability role matrix', () => {
     });
 
     it('allows Admin and Finance (mappings_manage) and writes a value-free audit entry', async () => {
-      const clientId = await seedClient('Matrix Mapping Client 2');
+      remote.getStoredQboCredentialsMap.mockResolvedValue({
+        'realm-1': { accessToken: 'x', refreshToken: 'y', realmId: 'realm-1' },
+      } as Record<string, unknown>);
+      remote.qboClientCreateAllowed.value = true;
+
       for (const userId of [adminUserId, financeUserId]) {
+        const clientId = await seedClient(`Matrix Mapping Client ${userId.slice(0, 8)}`);
         runAs(userId);
         const result = await createExternalEntityMapping({
           integration_type: 'quickbooks_online',
           alga_entity_type: 'client',
-          alga_entity_id: `${clientId}-${userId.slice(0, 8)}`,
+          alga_entity_id: clientId,
           external_entity_id: `QBO-CUST-${userId.slice(0, 8)}`,
           external_realm_id: 'realm-1',
         });
@@ -583,7 +607,7 @@ describe('accounting integration capability role matrix', () => {
       remote.tenantSecrets.set(`${tenantId}:qbo_credentials`, JSON.stringify({ 'realm-1': { accessToken: leakedToken } }));
       runAs(adminUserId);
       const result = await disconnectQbo();
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, status: 'disconnected' });
 
       const auditRows = await readAuditRows('accounting_disconnected', adminUserId);
       expect(auditRows).toHaveLength(1);
@@ -837,9 +861,17 @@ describe('accounting integration capability role matrix', () => {
   });
 
   describe('OAuth callback refuses users who lost connections_manage', () => {
-    async function buildCallbackRequest(): Promise<Request> {
+    async function buildCallbackRequest(userId: string): Promise<Request> {
       const signingSecret = await getQboStateSigningSecret();
-      const { stateParam, cookieValue } = createQboOAuthState({ tenantId, secret: signingSecret ?? '' });
+      const { stateParam, cookieValue, payload } = createQboOAuthState({
+        tenantId,
+        userId,
+        secret: signingSecret ?? '',
+      });
+      await storeAccountingOAuthNonce('qbo', payload.nonce, {
+        tenantId,
+        initiatedAt: payload.initiatedAt,
+      });
       const url = `https://example.test/api/integrations/qbo/callback?code=abc&state=${stateParam}&realmId=realm-1`;
       return new Request(url, {
         headers: { cookie: `${QBO_OAUTH_STATE_COOKIE}=${encodeURIComponent(cookieValue)}` },
@@ -847,7 +879,7 @@ describe('accounting integration capability role matrix', () => {
     }
 
     it('redirects a Finance session to the failure path with qbo_error=forbidden', async () => {
-      const request = await buildCallbackRequest();
+      const request = await buildCallbackRequest(financeUserId);
 
       runAs(financeUserId);
       const { GET: qboCallback } = await import('@alga-psa/integrations/routes/api/integrations/qbo/callback');
@@ -859,7 +891,7 @@ describe('accounting integration capability role matrix', () => {
     });
 
     it('lets an Admin session complete and records an accounting_connected audit entry', async () => {
-      const request = await buildCallbackRequest();
+      const request = await buildCallbackRequest(adminUserId);
 
       runAs(adminUserId);
       const { GET: qboCallback } = await import('@alga-psa/integrations/routes/api/integrations/qbo/callback');
