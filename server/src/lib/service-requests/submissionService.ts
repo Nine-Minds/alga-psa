@@ -59,6 +59,19 @@ const CLIENT_SUBMISSION_KEY_PATTERN =
 
 const CLIENT_SUBMISSION_KEY_UNIQUE_INDEX = 'service_request_submissions_client_key_unique';
 
+/**
+ * Matches the client-submission-key unique index by the constraint name a
+ * unique violation reports. Plain Postgres reports the bare index name, but
+ * Citus executes the insert against a shard and reports the shard-local index
+ * name with a numeric shard-id suffix (e.g.
+ * `service_request_submissions_client_key_unique_102008`), so both shapes must
+ * be recognized. The suffix is anchored to `_<digits>` so a differently named
+ * index sharing the prefix can never match.
+ */
+const CLIENT_SUBMISSION_KEY_UNIQUE_INDEX_NAME_PATTERN = new RegExp(
+  `^${CLIENT_SUBMISSION_KEY_UNIQUE_INDEX}(_\\d+)?$`
+);
+
 interface ExistingSubmissionByClientKeyRow {
   submission_id: string;
   execution_status: 'pending' | 'succeeded' | 'failed';
@@ -171,11 +184,12 @@ async function recordSubmissionExecutionOutcome(
   });
 }
 
-function isClientSubmissionKeyConflict(error: unknown): boolean {
+export function isClientSubmissionKeyConflict(error: unknown): boolean {
   const candidate = error as { code?: string; constraint?: string } | null;
   return (
     candidate?.code === '23505' &&
-    candidate?.constraint === CLIENT_SUBMISSION_KEY_UNIQUE_INDEX
+    typeof candidate?.constraint === 'string' &&
+    CLIENT_SUBMISSION_KEY_UNIQUE_INDEX_NAME_PATTERN.test(candidate.constraint)
   );
 }
 
