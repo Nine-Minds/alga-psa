@@ -511,7 +511,7 @@ export class UserService extends BaseService<IUser> {
         }
       } else {
         // Admin changing another user's password - must have admin permission
-        const hasAdminAccess = await hasPermission(context.user!, 'user', 'admin');
+        const hasAdminAccess = await hasPermission(context.user!, 'user', 'admin', trx);
         if (!hasAdminAccess) {
           throw new ForbiddenError('Only administrators can change other users\' passwords');
         }

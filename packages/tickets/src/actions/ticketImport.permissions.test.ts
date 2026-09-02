@@ -147,7 +147,7 @@ describe('importTickets authorization', () => {
     allowAllExcept(['ticket', 'create']);
 
     expect(await importOutcome()).toBe('denied');
-    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'ticket', 'create');
+    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'ticket', 'create', expect.anything());
   });
 
   it('requires client:create before minting clients from the CSV', async () => {
@@ -184,9 +184,9 @@ describe('importTickets authorization', () => {
 
     await runImport().catch(() => undefined);
 
-    expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'client', 'create');
-    expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'priority', 'create');
-    expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'contact', 'create');
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'client', 'create', expect.anything());
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'priority', 'create', expect.anything());
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'contact', 'create', expect.anything());
   });
 });
 

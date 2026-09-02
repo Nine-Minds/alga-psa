@@ -74,7 +74,7 @@ describe('sales order invoicing billing source contract', () => {
     it('requires a billing grant on both the create and append branches', () => {
       const body = readInvoiceActionBody();
       expect(body).toContain("const billingAction = existingDraft ? 'update' : 'create'");
-      expect(body).toContain("hasPermission(user, 'billing', billingAction)");
+      expect(body).toContain("hasPermission(user, 'billing', billingAction, trx)");
     });
 
     it('locks an appendable draft so concurrent appends serialize on it', () => {
