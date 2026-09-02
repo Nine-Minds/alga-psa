@@ -22,6 +22,7 @@ This starts every emulator on its default port and the console at
 | `smtp-sink` | `@alga-psa/emulator-smtp-sink` | 4040 | SMTP capture (MailHog stand-in) |
 | `stripe` | `@alga-psa/emulator-stripe` | 4050 | Stripe /v1 API (customers, Checkout sessions) + simulated hosted Checkout with signed webhooks |
 | `xero` | `@alga-psa/emulator-xero` | 4060 | Xero identity OAuth + connections list + api.xro/2.0 accounting API (invoices, contacts, settings) |
+| `threecx` | `@alga-psa/emulator-threecx` | 4070 | 3CX CRM engine client: dials the AlgaPSA 3CX routes (lookup, search, report-call) with the bearer key and records every exchange |
 
 The control API and console share port 9500. Override ports with
 `ALGASIM_CONTROL_PORT` and `ALGASIM_PORT_<ID>` (e.g. `ALGASIM_PORT_SMTP_SINK`).
