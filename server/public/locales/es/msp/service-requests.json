@@ -203,7 +203,17 @@
       "executionError": "Error de ejecución",
       "submittedAtStatus": "{{date}} · {{status}}",
       "loadingTicket": "Cargando…",
-      "ticketLoadError": "No se pudieron cargar los detalles del ticket."
+      "ticketLoadError": "No se pudieron cargar los detalles del ticket.",
+      "formVersion": "Versión del formulario",
+      "formVersionValue": "Versión {{version}}",
+      "historyTitle": "Historial",
+      "historyEmpty": "No se ha registrado historial para este envío.",
+      "historyActor": "por {{actor}}",
+      "historyOperations": {
+        "service_request_submission_created": "Envío creado",
+        "service_request_submission_execution_succeeded": "Ejecución correcta",
+        "service_request_submission_execution_failed": "Error de ejecución"
+      }
     }
   },
   "icons": {

@@ -203,7 +203,17 @@
       "executionError": "Erro de execução",
       "submittedAtStatus": "{{date}} · {{status}}",
       "loadingTicket": "Carregando…",
-      "ticketLoadError": "Falha ao carregar detalhes do ticket."
+      "ticketLoadError": "Falha ao carregar detalhes do ticket.",
+      "formVersion": "Versão do formulário",
+      "formVersionValue": "Versão {{version}}",
+      "historyTitle": "Histórico",
+      "historyEmpty": "Nenhum histórico registrado para este envio.",
+      "historyActor": "por {{actor}}",
+      "historyOperations": {
+        "service_request_submission_created": "Envio criado",
+        "service_request_submission_execution_succeeded": "Execução bem-sucedida",
+        "service_request_submission_execution_failed": "Falha na execução"
+      }
     }
   },
   "icons": {

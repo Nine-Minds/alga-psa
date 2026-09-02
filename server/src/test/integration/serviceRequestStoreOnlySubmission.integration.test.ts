@@ -8,7 +8,9 @@ import {
   getClientServiceRequestSubmissionDetail,
   getServiceRequestSubmissionDetailForDefinition,
   listClientServiceRequestSubmissions,
+  listServiceRequestSubmissionAuditEvents,
 } from '../../lib/service-requests/submissionHistory';
+import { recordServiceRequestSubmissionAudit } from '../../lib/service-requests/submissionAudit';
 import { getServiceRequestDefinitionEditorData } from '../../lib/service-requests/definitionEditor';
 import { validateServiceRequestDefinitionForPublish } from '../../lib/service-requests/definitionValidation';
 
@@ -52,6 +54,7 @@ function schemaTable(table: string) {
 }
 
 async function cleanupTenant(tenant: string): Promise<void> {
+  await tenantTable(tenant, 'audit_logs').del();
   await tenantTable(tenant, 'service_request_submission_attachments').del();
   await tenantTable(tenant, 'service_request_submissions').del();
   await tenantTable(tenant, 'service_request_definition_versions').del();
@@ -374,6 +377,208 @@ describe('service request store-only submissions', () => {
     expect(submission.created_ticket_id).toBe(result.createdTicketId);
 
     expect(await countRows(fixture.tenant, 'tickets')).toBe(1);
+  });
+
+  it('store-only submissions expose the captured version number and an actor-attributed audit history on both detail surfaces, recorded once across retries', async () => {
+    const fixture = await createSubmissionFixture();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const clientSubmissionKey = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId,
+      executionProvider: 'store-only',
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: REPRESENTATIVE_PAYLOAD,
+      clientSubmissionKey,
+    });
+    expect(result.executionStatus).toBe('succeeded');
+
+    const clientDetail = await getClientServiceRequestSubmissionDetail(
+      db,
+      fixture.tenant,
+      fixture.clientId,
+      result.submissionId
+    );
+    expect(clientDetail?.definition_version_number).toBe(1);
+    expect(clientDetail?.audit_events.map((event) => event.operation)).toEqual([
+      'service_request_submission_created',
+      'service_request_submission_execution_succeeded',
+    ]);
+    for (const event of clientDetail?.audit_events ?? []) {
+      expect(event.timestamp).toBeTruthy();
+      expect(event.user_id).toBe(fixture.requesterUserId);
+      expect(event.actor_name).toBe(`requester-${fixture.tenant.slice(0, 8)}`);
+    }
+
+    const adminDetail = await getServiceRequestSubmissionDetailForDefinition(
+      db,
+      fixture.tenant,
+      definitionId,
+      result.submissionId
+    );
+    expect(adminDetail?.definition_version_number).toBe(1);
+    expect(adminDetail?.audit_events.map((event) => event.operation)).toEqual([
+      'service_request_submission_created',
+      'service_request_submission_execution_succeeded',
+    ]);
+
+    // A same-key replay returns the stored submission without re-running the
+    // provider, so it must not append duplicate lifecycle events.
+    const retry = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: REPRESENTATIVE_PAYLOAD,
+      clientSubmissionKey,
+    });
+    expect(retry.replayed).toBe(true);
+    const eventsAfterRetry = await listServiceRequestSubmissionAuditEvents(
+      db,
+      fixture.tenant,
+      result.submissionId
+    );
+    expect(eventsAfterRetry).toHaveLength(2);
+  });
+
+  it('ticket-only submissions record the same durable audit lifecycle', async () => {
+    const fixture = await createSubmissionFixture();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId,
+      executionProvider: 'ticket-only',
+      executionConfig: ticketRoutingConfig(fixture),
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: REPRESENTATIVE_PAYLOAD,
+    });
+    expect(result.executionStatus).toBe('succeeded');
+
+    const events = await listServiceRequestSubmissionAuditEvents(
+      db,
+      fixture.tenant,
+      result.submissionId
+    );
+    expect(events.map((event) => event.operation)).toEqual([
+      'service_request_submission_created',
+      'service_request_submission_execution_succeeded',
+    ]);
+  });
+
+  it('legacy submissions without recorded events return an empty audit history and still expose the captured version', async () => {
+    const fixture = await createSubmissionFixture();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const submissionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId,
+      executionProvider: 'store-only',
+    });
+
+    // Pre-existing submission created before audit recording shipped.
+    await tenantTable(fixture.tenant, 'service_request_submissions').insert({
+      tenant: fixture.tenant,
+      submission_id: submissionId,
+      definition_id: definitionId,
+      definition_version_id: versionId,
+      requester_user_id: fixture.requesterUserId,
+      client_id: fixture.clientId,
+      request_name: 'Onboarding Questionnaire',
+      submitted_payload: REPRESENTATIVE_PAYLOAD,
+      execution_status: 'succeeded',
+    });
+
+    const clientDetail = await getClientServiceRequestSubmissionDetail(
+      db,
+      fixture.tenant,
+      fixture.clientId,
+      submissionId
+    );
+    expect(clientDetail?.definition_version_number).toBe(1);
+    expect(clientDetail?.audit_events).toEqual([]);
+
+    const adminDetail = await getServiceRequestSubmissionDetailForDefinition(
+      db,
+      fixture.tenant,
+      definitionId,
+      submissionId
+    );
+    expect(adminDetail?.definition_version_number).toBe(1);
+    expect(adminDetail?.audit_events).toEqual([]);
+  });
+
+  it('audit history is tenant-scoped: a foreign tenant event for the same record id is not returned', async () => {
+    const fixture = await createSubmissionFixture();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const foreignTenant = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId,
+      executionProvider: 'store-only',
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: REPRESENTATIVE_PAYLOAD,
+    });
+
+    // Same record id written under another tenant must never leak into this
+    // tenant's history.
+    await recordServiceRequestSubmissionAudit(
+      db,
+      foreignTenant,
+      'service_request_submission_created',
+      { submissionId: result.submissionId }
+    );
+
+    try {
+      const events = await listServiceRequestSubmissionAuditEvents(
+        db,
+        fixture.tenant,
+        result.submissionId
+      );
+      expect(events).toHaveLength(2);
+
+      const foreignEvents = await listServiceRequestSubmissionAuditEvents(
+        db,
+        foreignTenant,
+        result.submissionId
+      );
+      expect(foreignEvents).toHaveLength(1);
+    } finally {
+      await tenantTable(foreignTenant, 'audit_logs').del();
+    }
   });
 
   it('sequential same-key retries return the original store-only submission without a second row', async () => {

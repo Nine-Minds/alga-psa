@@ -203,7 +203,17 @@
       "executionError": "Ausführungsfehler",
       "submittedAtStatus": "{{date}} · {{status}}",
       "loadingTicket": "Wird geladen…",
-      "ticketLoadError": "Ticketdetails konnten nicht geladen werden."
+      "ticketLoadError": "Ticketdetails konnten nicht geladen werden.",
+      "formVersion": "Formularversion",
+      "formVersionValue": "Version {{version}}",
+      "historyTitle": "Verlauf",
+      "historyEmpty": "Für diese Einreichung wurde kein Verlauf aufgezeichnet.",
+      "historyActor": "von {{actor}}",
+      "historyOperations": {
+        "service_request_submission_created": "Einreichung erstellt",
+        "service_request_submission_execution_succeeded": "Ausführung erfolgreich",
+        "service_request_submission_execution_failed": "Ausführung fehlgeschlagen"
+      }
     }
   },
   "icons": {

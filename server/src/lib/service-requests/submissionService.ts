@@ -6,6 +6,7 @@ import {
   getServiceRequestFormBehaviorProvider,
 } from './providers/registry';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
+import { recordServiceRequestSubmissionAudit } from './submissionAudit';
 
 export interface ServiceRequestSubmissionAttachmentInput {
   fieldKey: string;
@@ -324,6 +325,18 @@ export async function submitPortalServiceRequest(
     },
   );
 
+  await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_created', {
+    submissionId,
+    userId: requesterUserId,
+    changedData: { execution_status: 'pending' },
+    details: {
+      definition_id: definitionDetail.definitionId,
+      definition_version_id: definitionDetail.versionId,
+      client_id: clientId,
+      execution_provider: definitionDetail.executionProvider,
+    },
+  });
+
   const executionProvider = getServiceRequestExecutionProvider(definitionDetail.executionProvider);
   if (!executionProvider) {
     const errorSummary = `Execution provider "${definitionDetail.executionProvider}" is not registered.`;
@@ -346,6 +359,12 @@ export async function submitPortalServiceRequest(
         changedFields: ['execution_status', 'execution_error_summary'],
       },
     );
+    await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_execution_failed', {
+      submissionId,
+      userId: requesterUserId,
+      changedData: { execution_status: 'failed' },
+      details: { error_summary: errorSummary },
+    });
     return {
       submissionId,
       executionStatus: 'failed',
@@ -395,6 +414,17 @@ export async function submitPortalServiceRequest(
         },
       );
 
+      await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_execution_succeeded', {
+        submissionId,
+        userId: requesterUserId,
+        changedData: {
+          execution_status: 'succeeded',
+          created_ticket_id: executionResult.createdTicketId ?? null,
+          workflow_execution_id: executionResult.workflowExecutionId ?? null,
+        },
+        details: { execution_provider: definitionDetail.executionProvider },
+      });
+
       return {
         submissionId,
         executionStatus: 'succeeded',
@@ -423,6 +453,12 @@ export async function submitPortalServiceRequest(
         changedFields: ['execution_status', 'execution_error_summary'],
       },
     );
+    await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_execution_failed', {
+      submissionId,
+      userId: requesterUserId,
+      changedData: { execution_status: 'failed' },
+      details: { error_summary: executionResult.errorSummary ?? 'Execution failed.' },
+    });
     return {
       submissionId,
       executionStatus: 'failed',
@@ -450,6 +486,12 @@ export async function submitPortalServiceRequest(
         changedFields: ['execution_status', 'execution_error_summary'],
       },
     );
+    await recordServiceRequestSubmissionAudit(knex, tenant, 'service_request_submission_execution_failed', {
+      submissionId,
+      userId: requesterUserId,
+      changedData: { execution_status: 'failed' },
+      details: { error_summary: errorSummary },
+    });
     return {
       submissionId,
       executionStatus: 'failed',

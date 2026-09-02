@@ -127,15 +127,26 @@ interface DefinitionSubmissionRow {
   submitted_at: string | Date;
 }
 
+interface DefinitionSubmissionAuditEvent {
+  audit_id: string;
+  operation: string;
+  user_id: string | null;
+  actor_name: string | null;
+  timestamp: string | Date;
+  details: Record<string, unknown>;
+}
+
 interface DefinitionSubmissionDetail extends DefinitionSubmissionRow {
   definition_id: string;
   definition_version_id: string;
+  definition_version_number: number;
   submitted_payload: Record<string, unknown>;
   execution_error_summary: string | null;
   requester_user_name: string | null;
   client_name: string | null;
   contact_name: string | null;
   created_ticket_display: string | null;
+  audit_events: DefinitionSubmissionAuditEvent[];
 }
 
 function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -1949,6 +1960,12 @@ export default function ServiceRequestDefinitionEditorPage() {
             <div className="text-sm font-semibold">{t('editor.submissions.detailTitle')}</div>
             <FieldRow label={t('editor.submissions.submissionId')} value={selectedSubmissionDetail.submission_id} />
             <FieldRow
+              label={t('editor.submissions.formVersion')}
+              value={t('editor.submissions.formVersionValue', {
+                version: selectedSubmissionDetail.definition_version_number,
+              })}
+            />
+            <FieldRow
               label={t('editor.submissions.requesterUser')}
               value={
                 selectedSubmissionDetail.requester_user_name ??
@@ -1987,6 +2004,33 @@ export default function ServiceRequestDefinitionEditorPage() {
               label={t('editor.submissions.executionError')}
               value={selectedSubmissionDetail.execution_error_summary ?? '-'}
             />
+            <div className="pt-2">
+              <div className="text-sm font-semibold">{t('editor.submissions.historyTitle')}</div>
+              {selectedSubmissionDetail.audit_events.length === 0 ? (
+                <div className="text-sm text-[rgb(var(--color-text-600))]">
+                  {t('editor.submissions.historyEmpty')}
+                </div>
+              ) : (
+                <ol className="mt-1 space-y-1">
+                  {selectedSubmissionDetail.audit_events.map((event) => (
+                    <li key={event.audit_id} className="text-sm">
+                      <span className="font-medium">
+                        {t(`editor.submissions.historyOperations.${event.operation}`, {
+                          defaultValue: event.operation,
+                        })}
+                      </span>
+                      <span className="text-[rgb(var(--color-text-600))]">
+                        {' · '}
+                        {formatDate(new Date(event.timestamp), { dateStyle: 'medium', timeStyle: 'short' })}
+                        {event.actor_name
+                          ? ` · ${t('editor.submissions.historyActor', { actor: event.actor_name })}`
+                          : ''}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
             <pre className="text-xs bg-white p-2 rounded overflow-auto">
               {JSON.stringify(selectedSubmissionDetail.submitted_payload, null, 2)}
             </pre>

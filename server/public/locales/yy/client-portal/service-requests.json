@@ -1,7 +1,7 @@
 {
   "catalog": {
     "title": "〖Şḗřṽīƈḗ Řḗʠŭḗşŧş ·······〗",
-    "description": "〖Şŭƀḿīŧ ȧ şŧřŭƈŧŭřḗḓ řḗʠŭḗşŧ ȧƞḓ ẇḗ'ŀŀ ƈřḗȧŧḗ ȧ ŧīƈķḗŧ ƒȯř īŧ ȧŭŧȯḿȧŧīƈȧŀŀẏ. ······························〗",
+    "description": "〖Şŭƀḿīŧ ȧ şŧřŭƈŧŭřḗḓ řḗʠŭḗşŧ ȧƞḓ ẇḗ'ŀŀ ŧȧķḗ ƈȧřḗ ȯƒ ŧħḗ řḗşŧ. ························〗",
     "myRequests": "〖Ḿẏ Řḗʠŭḗşŧş ·····〗",
     "empty": "〖Ƞȯ řḗʠŭḗşŧ şḗřṽīƈḗş ȧřḗ ƈŭřřḗƞŧŀẏ ȧṽȧīŀȧƀŀḗ. ··················〗",
     "fallbackCategory": "〖Şḗřṽīƈḗ ···〗",
@@ -56,7 +56,16 @@
     "attachmentsTitle": "〖Ȧŧŧȧƈħḿḗƞŧş ·····〗",
     "noAttachments": "〖Ƞȯ ȧŧŧȧƈħḿḗƞŧş īƞƈŀŭḓḗḓ. ··········〗",
     "fileIdLabel": "〖Ƒīŀḗ ĪḒ: {{id}} ······〗",
-    "fileTypeLabel": "〖Ŧẏƥḗ: {{mime}} ······〗"
+    "fileTypeLabel": "〖Ŧẏƥḗ: {{mime}} ······〗",
+    "versionLabel": "〖Ṽḗřşīȯƞ {{version}} ········〗",
+    "historyTitle": "〖Ħīşŧȯřẏ ···〗",
+    "historyEmpty": "〖Ƞȯ ħīşŧȯřẏ řḗƈȯřḓḗḓ ẏḗŧ. ··········〗",
+    "historyActor": "〖ƀẏ {{actor}} ·····〗",
+    "historyOperations": {
+      "service_request_submission_created": "〖Řḗʠŭḗşŧ şŭƀḿīŧŧḗḓ ·······〗",
+      "service_request_submission_execution_succeeded": "〖Řḗʠŭḗşŧ ƥřȯƈḗşşīƞɠ ƈȯḿƥŀḗŧḗḓ ············〗",
+      "service_request_submission_execution_failed": "〖Řḗʠŭḗşŧ ƥřȯƈḗşşīƞɠ ƒȧīŀḗḓ ··········〗"
+    }
   },
   "recent": {
     "title": "〖Ẏȯŭř řḗƈḗƞŧ řḗʠŭḗşŧş ········〗",

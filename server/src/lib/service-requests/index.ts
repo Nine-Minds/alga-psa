@@ -6,6 +6,7 @@ export * from './definitionLifecycle';
 export * from './definitionManagement';
 export * from './definitionEditor';
 export * from './basicFormBuilder';
+export * from './submissionAudit';
 export * from './submissionHistory';
 export * from './portalCatalog';
 export * from './portalDetail';

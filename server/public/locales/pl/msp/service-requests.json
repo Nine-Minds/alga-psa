@@ -203,7 +203,17 @@
       "executionError": "Błąd wykonania",
       "submittedAtStatus": "{{date}} · {{status}}",
       "loadingTicket": "Ładowanie…",
-      "ticketLoadError": "Nie udało się wczytać szczegółów zgłoszenia."
+      "ticketLoadError": "Nie udało się wczytać szczegółów zgłoszenia.",
+      "formVersion": "Wersja formularza",
+      "formVersionValue": "Wersja {{version}}",
+      "historyTitle": "Historia",
+      "historyEmpty": "Brak zarejestrowanej historii dla tego zgłoszenia.",
+      "historyActor": "przez {{actor}}",
+      "historyOperations": {
+        "service_request_submission_created": "Zgłoszenie utworzone",
+        "service_request_submission_execution_succeeded": "Wykonanie powiodło się",
+        "service_request_submission_execution_failed": "Wykonanie nie powiodło się"
+      }
     }
   },
   "icons": {
