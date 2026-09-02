@@ -80,6 +80,22 @@ const DIST_PROVIDER = path.join(REPO_ROOT, 'packages/core/dist/lib/secrets/LazyF
 const SECRET_VALUE = 'super-secret-value-that-must-never-be-logged';
 
 /**
+ * Every helper below shells out synchronously with `execFileSync`. A synchronous
+ * spawn blocks the vitest worker inside native code, where the runner's per-test
+ * timeout — which only fires from the JS event loop — cannot reach it: a child
+ * that never exits wedges the worker for the life of the process. Under the full
+ * server suite that surfaces as the whole run stalling until the job's wall-clock
+ * cap. Bounding every child with an OS-level `timeout` (enforced by libuv, not the
+ * event loop) turns any such stall into a fast, visible failure instead of an
+ * invisible hang. `killSignal: 'SIGKILL'` guarantees a stuck child is actually
+ * reaped, and a generous `maxBuffer` keeps large diagnostic output from being the
+ * thing that trips the bound. The limit sits far above the sub-second these
+ * children normally take, so it only ever fires on a genuine stall.
+ */
+const SUBPROCESS_TIMEOUT_MS = 120_000;
+const SUBPROCESS_BOUNDS = { timeout: SUBPROCESS_TIMEOUT_MS, killSignal: 'SIGKILL', maxBuffer: 16 * 1024 * 1024 } as const;
+
+/**
  * The repair script's chown branches only run as root with --uid. A user
  * namespace (`unshare -r --map-auto`) provides an unprivileged fake root with
  * a mapped subordinate uid range, letting those branches execute for real.
@@ -102,7 +118,7 @@ const HAS_USERNS_CHOWN = (() => {
         '-c',
         'set -e; d=$(mktemp -d); f="$d/probe"; : > "$f"; chown 1 "$f"; chown 0 "$f"; rm -rf "$d"',
       ],
-      { stdio: 'ignore' },
+      { stdio: 'ignore', ...SUBPROCESS_BOUNDS },
     );
     return true;
   } catch {
@@ -119,6 +135,7 @@ async function runProviderProgram(program: string, args: string[] = []): Promise
       cwd: REPO_ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      ...SUBPROCESS_BOUNDS,
     });
     return { stdout, stderr: '' };
   } catch (error) {
@@ -857,6 +874,7 @@ describe('FileSystemSecretProvider provider round trip', () => {
         cwd: probeDir,
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
+        ...SUBPROCESS_BOUNDS,
       });
 
       expect(await readFile(resultPath, 'utf-8')).toBe(SECRET_VALUE);
@@ -882,7 +900,7 @@ describe('repair script', () => {
 
   function runRepairScript(args: string[]): { status: number; output: string } {
     try {
-      const output = execFileSync('bash', [REPAIR_SCRIPT, ...args], { encoding: 'utf8' });
+      const output = execFileSync('bash', [REPAIR_SCRIPT, ...args], { encoding: 'utf8', ...SUBPROCESS_BOUNDS });
       return { status: 0, output };
     } catch (error) {
       const err = error as { status?: number; stdout?: string; stderr?: string; message: string };
@@ -924,7 +942,7 @@ describe('repair script', () => {
     const store = await createMisModesStore();
     const secretFile = path.join(store, 'tenants', 't1', 'token');
 
-    execFileSync('bash', [REPAIR_SCRIPT, '--apply', '--path', store], { encoding: 'utf8' });
+    execFileSync('bash', [REPAIR_SCRIPT, '--apply', '--path', store], { encoding: 'utf8', ...SUBPROCESS_BOUNDS });
 
     expect((await fsPromises.lstat(store)).mode & 0o777).toBe(SECRET_DIR_MODE);
     expect((await fsPromises.lstat(path.join(store, 'tenants', 't1'))).mode & 0o777).toBe(SECRET_DIR_MODE);
@@ -1039,6 +1057,7 @@ describe('repair script', () => {
     ].join('\n');
     const output = execFileSync('unshare', ['-r', '--map-auto', 'bash', '-c', script, REPAIR_SCRIPT, store], {
       encoding: 'utf8',
+      ...SUBPROCESS_BOUNDS,
     });
 
     // The root had both a wrong mode and (relative to --uid 1) a wrong owner:
@@ -1075,6 +1094,7 @@ describe('repair script', () => {
     ].join('\n');
     const output = execFileSync('unshare', ['-r', '--map-auto', 'bash', '-c', script, REPAIR_SCRIPT, store], {
       encoding: 'utf8',
+      ...SUBPROCESS_BOUNDS,
     });
 
     expect(output).toContain('Owner mismatch');
