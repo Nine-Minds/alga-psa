@@ -1173,7 +1173,7 @@ export const disconnectQbo = withAuth(async (
 
 /**
  * Fetches a list of TaxCodes from QuickBooks Online.
- * Respects the requested realm and falls back to other connected realms.
+ * A requested realm must be connected; unknown realms return a validation error.
  */
 export const getQboTaxCodes = withAuth(async (
   user,
@@ -1290,12 +1290,12 @@ export const setQboAutomatedSalesTaxMode = withAuth(async (
 
 /**
  * Fetches a list of Terms from QuickBooks Online.
- * Respects the requested realm and falls back to other connected realms.
+ * A requested realm must be connected; unknown realms return a validation error.
  */
 /**
  * Fetches a paged list of Customers from QuickBooks Online.
  * Pages through all results using STARTPOSITION/MAXRESULTS (1000 per page).
- * Respects the requested realm and falls back to other connected realms.
+ * A requested realm must be connected; unknown realms return a validation error.
  * Results are cached for CATALOG_CACHE_TTL_MS per (tenant, realm) pair.
  */
 export const getQboCustomers = withAuth(async (

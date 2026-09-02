@@ -25,6 +25,9 @@ export default defineConfig({
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
       'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
+      // Behavioral coverage for realm-exact QBO mapping resolution — listed
+      // explicitly for the same reason as the suites above.
+      'src/services/accountingSync/realmScopedOperations.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

@@ -29,7 +29,7 @@ import {
   CLIENT_ENTITY_TYPE,
   resolveInvoiceExportTarget,
 } from '@alga-psa/shared/billingClients/billingProfileExternalMapping';
-import { QboClientService, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
 import { isQboAutomatedSalesTaxEnabled } from '@alga-psa/integrations/lib/qbo/qboTaxSettings';
 import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
@@ -227,11 +227,14 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   }
 
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
-    const { knex } = await createTenantKnex();
     const tenantId = context.batch.tenant;
     if (!tenantId) {
       throw new Error('QuickBooks adapter requires batch tenant identifier');
     }
+    if (!context.batch.target_realm) {
+      throw new Error('QuickBooks adapter requires an immutable batch target realm to transform invoices');
+    }
+    const { knex } = await createTenantKnex();
 
     if (context.batch.export_type === 'vendor_bill') {
       return this.transformVendorBills(context, knex, tenantId);
@@ -630,9 +633,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       throw new Error('QuickBooks adapter requires batch tenant identifier for delivery');
     }
 
-    const realmId = context.batch.target_realm ?? await getDefaultQboRealmId(tenantId);
+    const realmId = context.batch.target_realm;
     if (!realmId) {
-      throw new Error('QuickBooks adapter requires a connected QuickBooks Online company to deliver invoices');
+      throw new Error('QuickBooks adapter requires an immutable batch target realm to deliver invoices');
     }
     const qboClient = await QboClientService.create(tenantId, realmId);
 
@@ -1008,8 +1011,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       .whereNull('deleted_at')
       .select('external_entity_id', 'metadata');
 
-    // Exact realm match only — a NULL-realm or other-realm row is never a
-    // stand-in for the connected company.
+    // Realm-exact: QBO entity ids are company-local, so a mapping only means
+    // anything within its own realm. Legacy realm-less rows are never usable
+    // for a remote write — they await backfill or reconciliation.
     if (params.targetRealm) {
       query.andWhere('external_realm_id', params.targetRealm);
     } else {
@@ -1047,7 +1051,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         created_at: now,
         updated_at: now
       })
-      .onConflict(['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
+      // Matches idx_unique_alga_mapping, which includes the realm expression —
+      // the same local entity may be mapped once per realm.
+      .onConflict(knex.raw("(tenant, integration_type, alga_entity_type, alga_entity_id, COALESCE(external_realm_id, ''))"))
       .merge({
         external_entity_id: params.externalEntityId,
         external_realm_id: params.targetRealm ?? null,
@@ -1280,8 +1286,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       .whereIn('alga_entity_id', [...clientIds, ...profileIds])
       .whereNull('deleted_at')
       .modify((qb) => {
-        // Exact realm match only — a NULL-realm or other-realm customer mapping
-        // must never put this company's customer ref on a document.
+        // Realm-exact: a customer/profile mapping from another realm (or a
+        // legacy realm-less row) must not select the QBO customer this batch
+        // exports against.
         if (context.batch.target_realm) {
           qb.andWhere('external_realm_id', context.batch.target_realm);
         } else {
@@ -1336,7 +1343,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         .where({
           integration_type: this.type,
           alga_entity_type: 'invoice',
-          external_entity_id: externalInvoiceRef
+          external_entity_id: externalInvoiceRef,
+          // QBO ids are company-local: the same Invoice id can exist in two
+          // realms, so the metadata lookup must be scoped to the realm the
+          // invoice was fetched from.
+          external_realm_id: targetRealm
         })
         .first();
 

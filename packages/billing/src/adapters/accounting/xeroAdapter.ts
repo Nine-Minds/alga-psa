@@ -146,6 +146,10 @@ export class XeroAdapter implements AccountingExportAdapter {
     if (!tenantId) {
       throw new AppError('XERO_TENANT_REQUIRED', 'Xero export requires batch tenant identifier');
     }
+    const targetRealm = context.batch.target_realm;
+    if (!targetRealm) {
+      throw new AppError('XERO_REALM_REQUIRED', 'Xero export requires an immutable batch target realm');
+    }
 
     const { knex } = await createTenantKnex();
     const companySyncService = CompanyAccountingSyncService.create({
@@ -177,7 +181,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         tenantId,
         adapterType: this.type,
         invoiceId,
-        targetRealm: context.batch.target_realm ?? null
+        targetRealm
       });
 
       // Export suppression: a tombstoned (unlinked) mapping must never be
@@ -240,7 +244,7 @@ export class XeroAdapter implements AccountingExportAdapter {
           adapterType: this.type,
           companyId: clientId,
           payload: companyPayload,
-          targetRealm: context.batch.target_realm ?? null
+          targetRealm
         });
 
         if (!mappingResolution) {
@@ -251,7 +255,7 @@ export class XeroAdapter implements AccountingExportAdapter {
           clientId,
           mappingResolution,
           this.type,
-          context.batch.target_realm ?? null
+          targetRealm
         );
         clientData.mappings.set(clientId, clientMapping);
       }
@@ -450,9 +454,13 @@ export class XeroAdapter implements AccountingExportAdapter {
     if (!tenantId) {
       throw new AppError('XERO_TENANT_REQUIRED', 'Xero export requires batch tenant identifier');
     }
+    const targetRealm = context.batch.target_realm;
+    if (!targetRealm) {
+      throw new AppError('XERO_REALM_REQUIRED', 'Xero export requires an immutable batch target realm');
+    }
 
     const { knex } = await createTenantKnex();
-    const client = await XeroClientService.create(tenantId, context.batch.target_realm ?? null);
+    const client = await XeroClientService.create(tenantId, targetRealm);
     const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const documents = transformResult.documents;
@@ -517,7 +525,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         adapterType: this.type,
         invoiceId: document.documentId,
         externalInvoiceId: externalRef,
-        targetRealm: context.batch.target_realm ?? undefined,
+        targetRealm,
         metadata
       });
 
@@ -631,8 +639,9 @@ export class XeroAdapter implements AccountingExportAdapter {
       .whereIn('alga_entity_id', Array.from(clientIds))
       .whereNull('deleted_at')
       .modify((qb) => {
-        // Exact realm match only — a NULL-realm or other-org contact mapping
-        // must never put this org's contact id on a document.
+        // Realm-exact: a contact mapping from another Xero organisation (or a
+        // legacy realm-less row) must not select the contact this batch
+        // exports against.
         if (context.batch.target_realm) {
           qb.andWhere('external_realm_id', context.batch.target_realm);
         } else {
@@ -665,7 +674,14 @@ export class XeroAdapter implements AccountingExportAdapter {
       }
       const tenantId = tenant;
 
-      const client = await XeroClientService.create(tenantId, targetRealm ?? null);
+      if (!targetRealm) {
+        return {
+          success: false,
+          error: 'Xero adapter requires targetRealm to fetch invoices'
+        };
+      }
+
+      const client = await XeroClientService.create(tenantId, targetRealm);
       const xeroInvoice = await client.getInvoice(externalInvoiceRef);
 
       if (!xeroInvoice) {
@@ -681,7 +697,8 @@ export class XeroAdapter implements AccountingExportAdapter {
         .where({
           integration_type: this.type,
           alga_entity_type: 'invoice',
-          external_entity_id: externalInvoiceRef
+          external_entity_id: externalInvoiceRef,
+          external_realm_id: targetRealm
         })
         .first();
 
