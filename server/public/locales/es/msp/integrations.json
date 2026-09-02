@@ -1934,8 +1934,7 @@
         },
         "setupGuideLink": "Guía de configuración de QuickBooks",
         "noPermissionDescription": "No tiene permiso para ver ni configurar las integraciones de contabilidad.",
-        "connectionsPermissionNotice": "Puede ver la configuración de QuickBooks, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda."
-,
+        "connectionsPermissionNotice": "Puede ver la configuración de QuickBooks, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda.",
         "disconnectPending": "QuickBooks se está desconectando. La sincronización y las exportaciones están en pausa hasta que se complete la limpieza del proveedor; la desconexión sigue reintentándose automáticamente.",
         "disconnectForceFinalized": "La desconexión de QuickBooks se finalizó de forma forzada. No se pudo confirmar la limpieza del proveedor, por lo que las credenciales se eliminaron localmente con un registro de auditoría.",
         "disconnect": {
@@ -3528,8 +3527,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "No tiene permiso para ver ni configurar las integraciones de contabilidad.",
-        "connectionsPermissionNotice": "Puede ver la configuración de Xero, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda."
-,
+        "connectionsPermissionNotice": "Puede ver la configuración de Xero, pero guardar credenciales, conectar y desconectar requieren la capacidad manage-connections. Solicite a un administrador que la conceda.",
         "disconnectPending": "Xero se está desconectando. La sincronización y las exportaciones están en pausa hasta que se complete la limpieza del proveedor; la desconexión sigue reintentándose automáticamente.",
         "disconnectForceFinalized": "La desconexión de Xero se finalizó de forma forzada. No se pudo confirmar la limpieza del proveedor, por lo que las credenciales se eliminaron localmente con un registro de auditoría.",
         "disconnect": {
@@ -3635,7 +3633,20 @@
       "providers": {
         "teamsPhone": {
           "description": "Registra las llamadas de Teams Phone como interacciones al terminar cada llamada. Historial de llamadas, no aviso en pantalla en vivo.",
-          "prerequisite": "Configure primero la integración de Microsoft Teams: Teams Phone reutiliza su perfil de Microsoft."
+          "prerequisite": "Configure primero la integración de Microsoft Teams: Teams Phone reutiliza su perfil de Microsoft.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Registra las llamadas de 3CX como interacciones y reconoce a los llamantes en el cliente de 3CX mediante la plantilla CRM.",
+          "permission": "Necesita el permiso de configuración del sistema para gestionar la integración de 3CX.",
+          "endpoint": "URL base del endpoint",
+          "copy": "Copiar",
+          "apiKey": "Clave de API",
+          "rotate": "Rotar",
+          "fullKeyWarning": "Copie esta clave ahora — no se volverá a mostrar.",
+          "download": "Descargar plantilla",
+          "tierRequired": "La telefonía 3CX requiere el plan Pro."
         }
       },
       "subscriptionExpires": "La suscripción se renueva antes de",
@@ -3725,8 +3736,7 @@
       "notFound": "No se encontró la asignación. Actualice las asignaciones e inténtelo de nuevo.",
       "deleteFailed": "No se puede eliminar la asignación. Inténtelo de nuevo.",
       "invoiceCancelled": "La factura ha sido anulada y no puede asignarse a la integración contable.",
-      "invoiceNotFound": "La factura ya no existe y no puede asignarse a la integración contable."
-,
+      "invoiceNotFound": "La factura ya no existe y no puede asignarse a la integración contable.",
       "scopeRequired": "Las búsquedas de asignaciones requieren una integración, un tipo de entidad y un ámbito de realm."
     },
     "qbo": {

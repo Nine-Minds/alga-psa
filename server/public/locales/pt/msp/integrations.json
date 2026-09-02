@@ -1934,8 +1934,7 @@
         },
         "setupGuideLink": "Guia de configuração do QuickBooks",
         "noPermissionDescription": "Você não tem permissão para visualizar ou configurar integrações contábeis.",
-        "connectionsPermissionNotice": "Você pode visualizar as configurações do QuickBooks, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la."
-,
+        "connectionsPermissionNotice": "Você pode visualizar as configurações do QuickBooks, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la.",
         "disconnectPending": "O QuickBooks está sendo desconectado. A sincronização e as exportações ficam pausadas até que a limpeza do provedor seja concluída; a desconexão continua tentando novamente automaticamente.",
         "disconnectForceFinalized": "A desconexão do QuickBooks foi finalizada à força. Não foi possível confirmar a limpeza do provedor, portanto as credenciais foram removidas localmente com um registro de auditoria.",
         "disconnect": {
@@ -3528,8 +3527,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Você não tem permissão para visualizar ou configurar integrações contábeis.",
-        "connectionsPermissionNotice": "Você pode visualizar as configurações do Xero, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la."
-,
+        "connectionsPermissionNotice": "Você pode visualizar as configurações do Xero, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la.",
         "disconnectPending": "O Xero está sendo desconectado. A sincronização e as exportações ficam pausadas até que a limpeza do provedor seja concluída; a desconexão continua tentando novamente automaticamente.",
         "disconnectForceFinalized": "A desconexão do Xero foi finalizada à força. Não foi possível confirmar a limpeza do provedor, portanto as credenciais foram removidas localmente com um registro de auditoria.",
         "disconnect": {
@@ -3635,7 +3633,20 @@
       "providers": {
         "teamsPhone": {
           "description": "Registra as chamadas do Teams Phone como interações assim que cada chamada termina. Histórico de chamadas, não alerta na tela em tempo real.",
-          "prerequisite": "Configure primeiro a integração com o Microsoft Teams — o Teams Phone reaproveita o perfil Microsoft dela."
+          "prerequisite": "Configure primeiro a integração com o Microsoft Teams — o Teams Phone reaproveita o perfil Microsoft dela.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Registra chamadas do 3CX como interações e reconhece os autores das chamadas no cliente 3CX por meio do modelo CRM.",
+          "permission": "Você precisa da permissão de configurações do sistema para gerenciar a integração do 3CX.",
+          "endpoint": "URL base do endpoint",
+          "copy": "Copiar",
+          "apiKey": "Chave de API",
+          "rotate": "Rotacionar",
+          "fullKeyWarning": "Copie esta chave agora — ela não será mostrada novamente.",
+          "download": "Baixar modelo",
+          "tierRequired": "A telefonia 3CX requer o plano Pro."
         }
       },
       "subscriptionExpires": "A assinatura é renovada antes de",
@@ -3725,8 +3736,7 @@
       "notFound": "Mapeamento não encontrado. Atualize os mapeamentos e tente novamente.",
       "deleteFailed": "Não é possível excluir o mapeamento. Tente novamente.",
       "invoiceCancelled": "A fatura foi anulada e não pode ser mapeada para a integração contábil.",
-      "invoiceNotFound": "A fatura não existe mais e não pode ser mapeada para a integração contábil."
-,
+      "invoiceNotFound": "A fatura não existe mais e não pode ser mapeada para a integração contábil.",
       "scopeRequired": "As consultas de mapeamento exigem uma integração, um tipo de entidade e um escopo de realm."
     },
     "qbo": {

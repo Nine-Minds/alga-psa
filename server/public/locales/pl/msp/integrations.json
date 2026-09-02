@@ -1934,8 +1934,7 @@
         },
         "setupGuideLink": "Przewodnik konfiguracji QuickBooks",
         "noPermissionDescription": "Nie masz uprawnień do wyświetlania ani konfigurowania integracji księgowych.",
-        "connectionsPermissionNotice": "Możesz wyświetlić ustawienia QuickBooks, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie."
-,
+        "connectionsPermissionNotice": "Możesz wyświetlić ustawienia QuickBooks, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie.",
         "disconnectPending": "Trwa rozłączanie QuickBooks. Synchronizacja i eksporty są wstrzymane do czasu zakończenia czyszczenia po stronie dostawcy; rozłączanie jest automatycznie ponawiane.",
         "disconnectForceFinalized": "Rozłączanie QuickBooks zostało przymusowo sfinalizowane. Nie udało się potwierdzić czyszczenia po stronie dostawcy, dlatego poświadczenia zostały usunięte lokalnie wraz z wpisem audytowym.",
         "disconnect": {
@@ -3528,8 +3527,7 @@
         "title": "Xero",
         "xeroCsv": "Plik CSV Xero",
         "noPermissionDescription": "Nie masz uprawnień do wyświetlania ani konfigurowania integracji księgowych.",
-        "connectionsPermissionNotice": "Możesz wyświetlić ustawienia Xero, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie."
-,
+        "connectionsPermissionNotice": "Możesz wyświetlić ustawienia Xero, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie.",
         "disconnectPending": "Trwa rozłączanie Xero. Synchronizacja i eksporty są wstrzymane do czasu zakończenia czyszczenia po stronie dostawcy; rozłączanie jest automatycznie ponawiane.",
         "disconnectForceFinalized": "Rozłączanie Xero zostało przymusowo sfinalizowane. Nie udało się potwierdzić czyszczenia po stronie dostawcy, dlatego poświadczenia zostały usunięte lokalnie wraz z wpisem audytowym.",
         "disconnect": {
@@ -3635,7 +3633,20 @@
       "providers": {
         "teamsPhone": {
           "description": "Zapisuje rozmowy Teams Phone jako interakcje po zakończeniu każdego połączenia. Historia rozmów, a nie podgląd na żywo.",
-          "prerequisite": "Najpierw skonfiguruj integrację z Microsoft Teams — Teams Phone korzysta z jej profilu Microsoft."
+          "prerequisite": "Najpierw skonfiguruj integrację z Microsoft Teams — Teams Phone korzysta z jej profilu Microsoft.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Zapisuje połączenia 3CX jako interakcje i rozpoznaje dzwoniących w kliencie 3CX za pomocą szablonu CRM.",
+          "permission": "Do zarządzania integracją 3CX potrzebujesz uprawnienia ustawień systemowych.",
+          "endpoint": "Bazowy adres URL punktu końcowego",
+          "copy": "Kopiuj",
+          "apiKey": "Klucz API",
+          "rotate": "Rotuj",
+          "fullKeyWarning": "Skopiuj ten klucz teraz — nie zostanie pokazany ponownie.",
+          "download": "Pobierz szablon",
+          "tierRequired": "Telefonia 3CX wymaga planu Pro."
         }
       },
       "subscriptionExpires": "Subskrypcja odnowi się przed",
@@ -3725,8 +3736,7 @@
       "notFound": "Nie znaleziono powiązania. Odśwież powiązania i spróbuj ponownie.",
       "deleteFailed": "Nie można usunąć powiązania. Spróbuj ponownie.",
       "invoiceCancelled": "Faktura została anulowana i nie można jej zmapować do integracji księgowej.",
-      "invoiceNotFound": "Faktura już nie istnieje i nie można jej zmapować do integracji księgowej."
-,
+      "invoiceNotFound": "Faktura już nie istnieje i nie można jej zmapować do integracji księgowej.",
       "scopeRequired": "Wyszukiwanie mapowań wymaga integracji, typu encji i zakresu realm."
     },
     "qbo": {

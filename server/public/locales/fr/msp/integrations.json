@@ -1934,8 +1934,7 @@
         },
         "setupGuideLink": "Guide de configuration QuickBooks",
         "noPermissionDescription": "Vous n'avez pas l'autorisation d'afficher ou de configurer les intégrations comptables.",
-        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder."
-,
+        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder.",
         "disconnectPending": "QuickBooks est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
         "disconnectForceFinalized": "La déconnexion de QuickBooks a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
         "disconnect": {
@@ -3528,8 +3527,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Vous n'avez pas l'autorisation d'afficher ou de configurer les intégrations comptables.",
-        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres Xero, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder."
-,
+        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres Xero, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder.",
         "disconnectPending": "Xero est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
         "disconnectForceFinalized": "La déconnexion de Xero a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
         "disconnect": {
@@ -3635,7 +3633,20 @@
       "providers": {
         "teamsPhone": {
           "description": "Journalise les appels Teams Phone comme interactions une fois l'appel terminé. Historique d'appels, pas de remontée d'écran en direct.",
-          "prerequisite": "Configurez d'abord l'intégration Microsoft Teams : Teams Phone réutilise son profil Microsoft."
+          "prerequisite": "Configurez d'abord l'intégration Microsoft Teams : Teams Phone réutilise son profil Microsoft.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Journalise les appels 3CX en interactions et reconnaît les appelants dans le client 3CX via le modèle CRM.",
+          "permission": "Vous avez besoin de l’autorisation « paramètres système » pour gérer l’intégration 3CX.",
+          "endpoint": "URL de base du point de terminaison",
+          "copy": "Copier",
+          "apiKey": "Clé API",
+          "rotate": "Faire tourner",
+          "fullKeyWarning": "Copiez cette clé maintenant — elle ne sera plus affichée.",
+          "download": "Télécharger le modèle",
+          "tierRequired": "La téléphonie 3CX nécessite le forfait Pro."
         }
       },
       "subscriptionExpires": "L'abonnement se renouvelle avant le",
@@ -3725,8 +3736,7 @@
       "notFound": "Correspondance introuvable. Actualisez les correspondances et réessayez.",
       "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer.",
       "invoiceCancelled": "La facture a été annulée et ne peut pas être mappée à l'intégration comptable.",
-      "invoiceNotFound": "La facture n'existe plus et ne peut pas être mappée à l'intégration comptable."
-,
+      "invoiceNotFound": "La facture n'existe plus et ne peut pas être mappée à l'intégration comptable.",
       "scopeRequired": "Les recherches de correspondances nécessitent une intégration, un type d'entité et une portée de realm."
     },
     "qbo": {

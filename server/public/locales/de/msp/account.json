@@ -58,7 +58,8 @@
     "cipp": "CIPP-Integration – verbinden Sie Ihre CIPP-Instanz für die mandantenübergreifende Entra-Verwaltung",
     "teamsIntegration": "Microsoft Teams – Meeting-Integration und Teams-Bot für Ticket-Benachrichtigungen",
     "advancedAuthorizationBundles": "Erweiterte Autorisierungs-Bundles – erstellen und verwalten Sie wiederverwendbare ABAC-Einschränkungs-Bundles",
-    "scimProvisioning": "SCIM-Benutzerbereitstellung — synchronisiert die Benutzeraktivierung mit Ihrem Identitätsanbieter"
+    "scimProvisioning": "SCIM-Benutzerbereitstellung — synchronisiert die Benutzeraktivierung mit Ihrem Identitätsanbieter",
+    "pbxTelephony": "PBX-Telefonie – verbinden Sie eine 3CX-Telefonanlage für Anrufererkennung und Anrufprotokollierung"
   },
   "summary": {
     "licensesUsed": "Verwendete Lizenzen",
