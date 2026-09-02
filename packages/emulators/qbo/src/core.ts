@@ -41,9 +41,11 @@ export interface QboEmulatorConfig {
  * needs: client credentials, bearer tokens on the host clock, and reset.
  */
 export class QboEmulatorCore implements EmulatorCore {
-  sim: QboSimulator;
   readonly realmId = 'realm-sim';
+  /** Which company the "user" picks in the authorize flow (Intuit's company picker). */
+  authorizeRealmId: string | null = null;
   accessTokenTtlSeconds = 3600;
+  private readonly sims = new Map<string, QboSimulator>();
   private readonly clients = new Map<string, string>();
   private readonly authCodes = new Map<string, { clientId: string; redirectUri: string }>();
   private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
@@ -51,38 +53,69 @@ export class QboEmulatorCore implements EmulatorCore {
   private idCounter = 0;
 
   constructor(readonly env: HostEnv) {
-    this.sim = new QboSimulator({ realmId: this.realmId });
+    this.sims.set(this.realmId, new QboSimulator({ realmId: this.realmId }));
+  }
+
+  /** The default company file — most scenarios only ever use this one. */
+  get sim(): QboSimulator {
+    return this.sims.get(this.realmId)!;
+  }
+
+  /**
+   * Resolve a company file by realm. Unknown realms fail exactly like Intuit
+   * rejecting a realm the connection is not authorized for.
+   */
+  simFor(realmId?: string | null): QboSimulator {
+    const sim = this.sims.get(realmId ?? this.realmId);
+    if (!sim) {
+      throw new QboWireError(403, '3202', `Realm ${realmId} is not authorized for this connection`);
+    }
+    return sim;
+  }
+
+  /** Add (or reset) a separately-stated company file under its own realm id. */
+  addRealm(realmId: string): { realmId: string } {
+    this.sims.set(realmId, new QboSimulator({ realmId }));
+    return { realmId };
+  }
+
+  realmIds(): string[] {
+    return [...this.sims.keys()];
   }
 
   reset(): void {
-    this.sim = new QboSimulator({ realmId: this.realmId });
+    this.sims.clear();
+    this.sims.set(this.realmId, new QboSimulator({ realmId: this.realmId }));
     this.clients.clear();
     this.authCodes.clear();
     this.accessTokens.clear();
     this.refreshTokens.clear();
     this.accessTokenTtlSeconds = 3600;
+    this.authorizeRealmId = null;
   }
 
-  configure(config: Partial<QboEmulatorConfig>): QboEmulatorConfig {
+  configure(config: Partial<QboEmulatorConfig>, realmId?: string | null): QboEmulatorConfig {
+    const sim = this.simFor(realmId);
     if (config.autoApplyCredits !== undefined) {
-      this.sim.options.autoApplyCredits = config.autoApplyCredits;
+      sim.options.autoApplyCredits = config.autoApplyCredits;
     }
     if (config.taxAdjustmentCents !== undefined) {
-      this.sim.options.taxAdjustmentCents = config.taxAdjustmentCents;
+      sim.options.taxAdjustmentCents = config.taxAdjustmentCents;
     }
     if (config.automatedSalesTaxDefaultTaxCodeId !== undefined) {
-      this.sim.options.automatedSalesTax = config.automatedSalesTaxDefaultTaxCodeId
+      sim.options.automatedSalesTax = config.automatedSalesTaxDefaultTaxCodeId
         ? { defaultTaxCodeId: config.automatedSalesTaxDefaultTaxCodeId }
         : undefined;
     }
-    return this.config();
+    return this.config(realmId);
   }
 
-  config(): QboEmulatorConfig {
+  config(realmId?: string | null): QboEmulatorConfig {
+    const sim = this.simFor(realmId);
     return {
-      autoApplyCredits: Boolean(this.sim.options.autoApplyCredits),
-      taxAdjustmentCents: this.sim.options.taxAdjustmentCents ?? 0,
-      automatedSalesTaxDefaultTaxCodeId: this.sim.options.automatedSalesTax?.defaultTaxCodeId ?? null,
+      autoApplyCredits: Boolean(sim.options.autoApplyCredits),
+      taxAdjustmentCents: sim.options.taxAdjustmentCents ?? 0,
+      automatedSalesTaxDefaultTaxCodeId: sim.options.automatedSalesTax?.defaultTaxCodeId ?? null,
     };
   }
 

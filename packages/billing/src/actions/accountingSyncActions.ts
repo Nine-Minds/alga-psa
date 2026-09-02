@@ -255,7 +255,7 @@ export const resolveAccountingDriftAccept = withAuth(async (
   const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
   const mapping = await ledger.findByAlgaId('invoice', invoiceId, realm);
   if (!mapping) {
-    return { resolved: false, error: 'Invoice has no QuickBooks mapping.' };
+    return { resolved: false, error: 'Invoice has no QuickBooks mapping for the connected company.' };
   }
 
   const metadata = mapping.metadata ?? {};

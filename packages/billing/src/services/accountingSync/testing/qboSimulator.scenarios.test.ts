@@ -45,6 +45,9 @@ function makeStatefulLedger() {
     findByAlgaId: vi.fn(async (entityType: string, entityId: string) =>
       rows.find((r) => r.alga_entity_type === entityType && r.alga_entity_id === entityId)
     ),
+    findByAlgaIdAnyRealm: vi.fn(async (entityType: string, entityId: string) =>
+      rows.filter((r) => r.alga_entity_type === entityType && r.alga_entity_id === entityId)
+    ),
     findByExternalId: vi.fn(async (entityType: string, externalId: string) =>
       rows.find((r) => r.alga_entity_type === entityType && r.external_entity_id === externalId) ?? null
     ),
