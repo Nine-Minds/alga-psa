@@ -387,7 +387,10 @@
       "loadingBatches": "Caricamento batch...",
       "empty": "Nessun batch di esportazione ancora.",
       "loadingDetails": "Caricamento dettagli batch...",
-      "batchNotFound": "Lotto non trovato."
+      "batchNotFound": "Lotto non trovato.",
+      "checkingAccess": "Verifica dell'accesso...",
+      "accessDeniedTitle": "Accesso negato",
+      "accessDeniedDescription": "Non disponi dell'autorizzazione per accedere alle esportazioni contabili."
     },
     "createDialog": {
       "title": "Nuova esportazione contabile",

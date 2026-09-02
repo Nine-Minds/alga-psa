@@ -387,7 +387,10 @@
       "loadingBatches": "Ładowanie partii...",
       "empty": "Nie ma jeszcze partii eksportowych.",
       "loadingDetails": "Ładowanie szczegółów partii...",
-      "batchNotFound": "Nie znaleziono partii."
+      "batchNotFound": "Nie znaleziono partii.",
+      "checkingAccess": "Sprawdzanie dostępu...",
+      "accessDeniedTitle": "Odmowa dostępu",
+      "accessDeniedDescription": "Nie masz uprawnień dostępu do eksportów księgowych."
     },
     "createDialog": {
       "title": "Nowy eksport księgowy",
