@@ -261,6 +261,8 @@ const nextConfig = {
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
       '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : '../packages/ee/src/index.ts',
       '@alga-psa/ee-microsoft-teams/': isEE ? '../ee/packages/microsoft-teams/src/' : '../packages/ee/src/',
+      '@alga-psa/ee-threecx': isEE ? '../ee/packages/threecx/src/index.ts' : '../packages/ee/src/index.ts',
+      '@alga-psa/ee-threecx/': isEE ? '../ee/packages/threecx/src/' : '../packages/ee/src/',
       '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@alga-psa/tags': '../packages/tags/src',
@@ -640,6 +642,9 @@ const nextConfig = {
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
       '@alga-psa/ee-microsoft-teams': isEE
         ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
+        : path.join(__dirname, '../packages/ee/src'),
+      '@alga-psa/ee-threecx': isEE
+        ? path.join(__dirname, '../ee/packages/threecx/src')
         : path.join(__dirname, '../packages/ee/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),

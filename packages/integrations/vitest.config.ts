@@ -75,6 +75,8 @@ export default defineConfig({
       { find: /^@alga-psa\/integrations\/(.*)$/, replacement: path.resolve(__dirname, './src/$1') },
       { find: /^@alga-psa\/ee-microsoft-teams$/, replacement: path.resolve(__dirname, '../../ee/packages/microsoft-teams/src/index.ts') },
       { find: /^@alga-psa\/ee-microsoft-teams\/(.*)$/, replacement: path.resolve(__dirname, '../../ee/packages/microsoft-teams/src/$1') },
+      { find: /^@alga-psa\/ee-threecx$/, replacement: path.resolve(__dirname, '../../ee/packages/threecx/src/index.ts') },
+      { find: /^@alga-psa\/ee-threecx\/(.*)$/, replacement: path.resolve(__dirname, '../../ee/packages/threecx/src/$1') },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
       { find: /^@shared$/, replacement: path.resolve(__dirname, '../../shared') },

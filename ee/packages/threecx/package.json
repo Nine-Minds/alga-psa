@@ -1,0 +1,40 @@
+{
+  "name": "@alga-psa/ee-threecx",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./lib": {
+      "import": "./src/lib/index.ts",
+      "types": "./src/lib/index.ts"
+    },
+    "./lib/*": {
+      "import": "./src/lib/*.ts",
+      "types": "./src/lib/*.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/telephony": "*",
+    "@alga-psa/types": "*"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}

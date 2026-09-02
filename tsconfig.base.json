@@ -86,6 +86,8 @@
       "@alga-psa/ee-calendar/*": ["ee/packages/calendar/src/*"],
       "@alga-psa/ee-microsoft-teams": ["ee/packages/microsoft-teams/src/index.ts"],
       "@alga-psa/ee-microsoft-teams/*": ["ee/packages/microsoft-teams/src/*"],
+      "@alga-psa/ee-threecx": ["ee/packages/threecx/src/index.ts"],
+      "@alga-psa/ee-threecx/*": ["ee/packages/threecx/src/*"],
       "@alga-psa/ee-stubs": ["packages/ee/src/index.ts"],
       "@alga-psa/ee-stubs/*": ["packages/ee/src/*"],
       "@alga-psa/workflow-streams": ["packages/workflow-streams/src/streams"],
