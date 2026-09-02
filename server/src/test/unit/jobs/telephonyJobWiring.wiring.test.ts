@@ -19,6 +19,7 @@ const maintenanceFanoutSource = read('packages/jobs/src/lib/maintenanceJobFanout
 const setupSchedulesSource = read('ee/temporal-workflows/src/schedules/setupSchedules.ts');
 const middlewareSource = read('server/src/middleware.ts');
 const handlerSource = read('packages/jobs/src/lib/handlers/telephonyCallNotificationHandler.ts');
+const canonicalHandlerSource = read('packages/jobs/src/lib/handlers/telephonyCanonicalCallHandler.ts');
 
 describe('Telephony job wiring', () => {
   it('T036: the Temporal worker forwards the call notification back to the server', () => {
@@ -32,6 +33,31 @@ describe('Telephony job wiring', () => {
     expect(registerHandlersSource).toContain('await processTelephonyCallNotification(data);');
     expect(registerHandlersSource).toContain("name: 'renew-telephony-call-subscriptions',");
     expect(registerHandlersSource).toContain('await renewTelephonyCallSubscriptions(data);');
+  });
+
+  it('T084: the Temporal worker forwards the canonical-call job to the server', () => {
+    expect(jobActivitiesSource).toContain(
+      "registerJobHandlerForActivities(\n    'process-telephony-canonical-call',\n    forwardJobToServer('process-telephony-canonical-call'),\n  );",
+    );
+  });
+
+  it('T084: the canonical-call handler is registered EE-only with maxAttempts 3', () => {
+    expect(registerHandlersSource).toContain("name: 'process-telephony-canonical-call',");
+    expect(registerHandlersSource).toContain('await processTelephonyCanonicalCall(data);');
+    // Registration lives inside the includeEnterprise branch beside the other
+    // telephony handlers, and the EE job-name allowlist includes it.
+    expect(registerHandlersSource).toContain("'process-telephony-canonical-call'");
+    const registration = registerHandlersSource.slice(
+      registerHandlersSource.indexOf("name: 'process-telephony-canonical-call',"),
+    );
+    expect(registration).toContain('retry: { maxAttempts: 3 }');
+  });
+
+  it('T089: both call handlers run the shared post-ingest auto-ticket tail', () => {
+    expect(handlerSource).toContain("import { runTelephonyAutoTicketTail } from './telephonyPostIngest';");
+    expect(handlerSource).toContain('await runTelephonyAutoTicketTail(');
+    expect(canonicalHandlerSource).toContain("import { runTelephonyAutoTicketTail } from './telephonyPostIngest';");
+    expect(canonicalHandlerSource).toContain('await runTelephonyAutoTicketTail(');
   });
 
   it('T028: the notification handler sets tenant context before touching the database', () => {
