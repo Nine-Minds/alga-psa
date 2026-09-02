@@ -225,6 +225,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
     return resolvedAuthor.displayName;
   };
 
+  // An unmatched inbound email still names its sender, so the avatar shows those
+  // initials; the Unknown User placeholder is kept only when nothing identifies
+  // the author.
+  const inboundSenderLabel = inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
+  const unknownAuthorAvatarName =
+    !conversation.is_system_generated && inboundSenderLabel
+      ? inboundSenderLabel
+      : t('conversation.unknownUser');
+
   const getAuthorEmail = () => {
     if (conversation.is_system_generated) return null;
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
@@ -458,7 +467,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId=""
-              userName={t('conversation.unknownUser')}
+              userName={unknownAuthorAvatarName}
               avatarUrl={null}
               size={isCompact ? 'sm' : 'md'}
             />
