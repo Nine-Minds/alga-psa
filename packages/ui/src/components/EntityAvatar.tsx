@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useTheme } from 'next-themes';
 import { generateEntityColor, adaptColorsForDarkMode } from '../lib/colorUtils';
 import { cn } from '../lib/utils';
-import Spinner from './Spinner';
 
 export type EntityAvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number;
 export type ImageLoadingStatus = 'idle' | 'loading' | 'loaded' | 'error';
@@ -98,28 +97,30 @@ export const EntityAvatar = ({
   const [imageStatus, setImageStatus] = React.useState<ImageLoadingStatus>(imageUrl ? 'loading' : 'idle');
   const imgRef = React.useRef<HTMLImageElement>(null);
 
-  // Check if image is already cached on mount
-  React.useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current.naturalHeight !== 0) {
-      // Image is already loaded from cache
-      setImageStatus('loaded');
-    }
+  // A request that finished before React attached load/error (server-rendered
+  // markup, a warm cache, a remount) never fires either handler, so read the
+  // outcome straight off the element instead of waiting forever.
+  const syncStatusFromElement = React.useCallback(() => {
+    const img = imgRef.current;
+    if (!img?.complete || !img.getAttribute('src')) return;
+    setImageStatus(img.naturalWidth === 0 ? 'error' : 'loaded');
   }, []);
+
+  // Check if image is already resolved on mount
+  React.useEffect(() => {
+    syncStatusFromElement();
+  }, [syncStatusFromElement]);
 
   // Reset state when imageUrl changes
   React.useEffect(() => {
     if (imageUrl) {
-      // Check if the new image is already cached
-      if (imgRef.current?.complete && imgRef.current.naturalHeight !== 0) {
-        setImageStatus('loaded');
-      } else {
-        setImageStatus('loading');
-      }
+      setImageStatus('loading');
+      syncStatusFromElement();
     } else {
       setImageStatus('idle');
     }
-  }, [imageUrl]);
-  
+  }, [imageUrl, syncStatusFromElement]);
+
   const handleImgError = () => {
     setImageStatus('error');
   };
@@ -147,56 +148,49 @@ export const EntityAvatar = ({
     className
   );
 
-  // Determine if we should show the shimmer effect
-  const showShimmer = imageStatus === 'loading' && imageUrl;
-  
-  // Determine if we should show the fallback (initials)
-  const showFallback = !imageUrl || imageStatus === 'error';
+  const showImage = Boolean(imageUrl) && imageStatus !== 'error';
+
+  // Initials are the placeholder, not a spinner: an avatar whose file is slow,
+  // missing or forbidden still has to say who it belongs to. They stay mounted
+  // underneath until the image has actually painted.
+  const showFallback = !showImage || imageStatus !== 'loaded';
 
   return (
     <div className={combinedClassName} style={sizeStyle}>
-      {/* Fallback with initials */}
-      {showFallback && (
-        <div
-          style={{
-            backgroundColor: fallbackColors.background,
-            color: fallbackColors.text,
-            fontSize: sizeStyle.fontSize,
-          }}
-          className={cn(
-            'flex h-full w-full items-center justify-center font-semibold',
-            sizeClassName
-          )}
-        >
-          {initials}
-        </div>
-      )}
-      
-      {/* Image when available */}
-      {imageUrl && imageStatus !== 'error' && (
-        <div className="relative h-full w-full">
-          {/* Loading shimmer effect */}
-          {showShimmer && (
-            <div className={cn('absolute inset-0 flex items-center justify-center skeleton-fill animate-pulse overflow-hidden', radiusClass)}>
-              <Spinner size="sm" className="opacity-70 scale-75" />
-            </div>
-          )}
-          
-          {/* Actual image with transition */}
+      <div className="relative h-full w-full">
+        {/* Fallback with initials */}
+        {showFallback && (
+          <div
+            style={{
+              backgroundColor: fallbackColors.background,
+              color: fallbackColors.text,
+              fontSize: sizeStyle.fontSize,
+            }}
+            className={cn(
+              'absolute inset-0 flex h-full w-full items-center justify-center font-semibold',
+              sizeClassName
+            )}
+          >
+            {initials}
+          </div>
+        )}
+
+        {/* Image when available */}
+        {showImage && (
           <img
             ref={imgRef}
-            src={imageUrl}
+            src={imageUrl!}
             alt={altText || `${entityName || 'Entity'} image`}
             className={cn(
-              "h-full w-full object-cover transition-opacity duration-300",
+              'absolute inset-0 h-full w-full object-cover transition-opacity duration-300',
               imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
             )}
             onError={handleImgError}
             onLoad={handleImgLoad}
             loading="lazy"
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
