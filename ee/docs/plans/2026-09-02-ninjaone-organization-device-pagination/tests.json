@@ -1,0 +1,6 @@
+[
+  {"id":"T001","description":"Mock more than 200 organization devices across full pages with no Link header plus a final short page; assert all devices and advancing after parameters.","featureIds":["F002","F003","F006"],"implemented":false},
+  {"id":"T002","description":"Mock a usable Link next cursor and assert the next request follows it and returns the combined result.","featureIds":["F001","F006"],"implemented":false},
+  {"id":"T003","description":"For a full page whose final device has no usable id, assert the client rejects and does not issue another request.","featureIds":["F004","F007"],"implemented":false},
+  {"id":"T004","description":"Return a repeated/non-advancing cursor or last id and assert the client rejects after a bounded number of calls rather than looping or succeeding partially.","featureIds":["F005","F007"],"implemented":false}
+]
